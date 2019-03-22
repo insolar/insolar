@@ -26,7 +26,7 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type zerologAdapter struct {
@@ -49,7 +49,7 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 }
 
 // WithFields return copy of adapter with predefined fields.
-func (z *zerologAdapter) WithFields(fields map[string]interface{}) core.Logger {
+func (z *zerologAdapter) WithFields(fields map[string]interface{}) insolar.Logger {
 	w := z.logger.With()
 	for key, value := range fields {
 		w = w.Interface(key, value)
@@ -58,7 +58,7 @@ func (z *zerologAdapter) WithFields(fields map[string]interface{}) core.Logger {
 }
 
 // WithField return copy of adapter with predefined single field.
-func (z *zerologAdapter) WithField(key string, value interface{}) core.Logger {
+func (z *zerologAdapter) WithField(key string, value interface{}) insolar.Logger {
 	return &zerologAdapter{z.logger.With().Interface(key, value).Logger()}
 }
 

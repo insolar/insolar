@@ -22,8 +22,8 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/pulse"
@@ -37,8 +37,8 @@ func TestPulse_Components(t *testing.T) {
 	dbStorage := pulse.NewStorageDB()
 	dbStorage.DB = db.NewMemoryMockDB()
 
-	var pulses []core.Pulse
-	f := fuzz.New().Funcs(func(p *core.Pulse, c fuzz.Continue) {
+	var pulses []insolar.Pulse
+	f := fuzz.New().Funcs(func(p *insolar.Pulse, c fuzz.Continue) {
 		p.PulseNumber = gen.PulseNumber()
 		_, err := rand.Read(p.Entropy[:])
 		require.NoError(t, err)
@@ -46,7 +46,7 @@ func TestPulse_Components(t *testing.T) {
 	f.NilChance(0).NumElements(10, 20)
 	f.Fuzz(&pulses)
 
-	var appended []core.Pulse
+	var appended []insolar.Pulse
 	latest := pulses[0]
 	for i, p := range pulses {
 		// Append appends if pulse is greater.

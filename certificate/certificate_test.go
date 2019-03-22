@@ -21,8 +21,8 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 )
@@ -45,7 +45,7 @@ func TestNewCertificate_BadCert(t *testing.T) {
 	require.Contains(t, err.Error(), "failed to parse certificate json")
 }
 
-func checkKeys(cert *Certificate, cs core.CryptographyService, t *testing.T) {
+func checkKeys(cert *Certificate, cs insolar.CryptographyService, t *testing.T) {
 	kp := platformpolicy.NewKeyProcessor()
 
 	pubKey, err := cs.GetPublicKey()

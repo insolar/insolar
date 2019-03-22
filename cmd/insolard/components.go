@@ -24,11 +24,11 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/delegationtoken"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/genesis"
 	"github.com/insolar/insolar/genesisdataprovider"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/logicrunner"
@@ -45,10 +45,10 @@ import (
 )
 
 type bootstrapComponents struct {
-	CryptographyService        core.CryptographyService
-	PlatformCryptographyScheme core.PlatformCryptographyScheme
-	KeyStore                   core.KeyStore
-	KeyProcessor               core.KeyProcessor
+	CryptographyService        insolar.CryptographyService
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme
+	KeyStore                   insolar.KeyStore
+	KeyProcessor               insolar.KeyProcessor
 }
 
 func initBootstrapComponents(ctx context.Context, cfg configuration.Configuration) bootstrapComponents {
@@ -76,8 +76,8 @@ func initCertificateManager(
 	ctx context.Context,
 	cfg configuration.Configuration,
 	isBootstrap bool,
-	cryptographyService core.CryptographyService,
-	keyProcessor core.KeyProcessor,
+	cryptographyService insolar.CryptographyService,
+	keyProcessor insolar.KeyProcessor,
 ) *certificate.CertificateManager {
 	var certManager *certificate.CertificateManager
 	var err error
@@ -100,18 +100,18 @@ func initCertificateManager(
 func initComponents(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	cryptographyService core.CryptographyService,
-	platformCryptographyScheme core.PlatformCryptographyScheme,
-	keyStore core.KeyStore,
-	keyProcessor core.KeyProcessor,
-	certManager core.CertificateManager,
+	cryptographyService insolar.CryptographyService,
+	platformCryptographyScheme insolar.PlatformCryptographyScheme,
+	keyStore insolar.KeyStore,
+	keyProcessor insolar.KeyProcessor,
+	certManager insolar.CertificateManager,
 	isGenesis bool,
 	genesisConfigPath string,
 	genesisKeyOut string,
 
 ) (*component.Manager, error) {
 	cm := component.Manager{}
-	terminationHandler := core.NewTerminationHandler()
+	terminationHandler := insolar.NewTerminationHandler()
 
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
@@ -128,7 +128,7 @@ func initComponents(
 	messageBus, err := messagebus.NewMessageBus(cfg)
 	checkError(ctx, err, "failed to start MessageBus")
 
-	var gen core.Genesis
+	var gen insolar.Genesis
 	if isGenesis {
 		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath, genesisKeyOut)
 		checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")

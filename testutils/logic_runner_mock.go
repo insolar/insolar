@@ -3,7 +3,7 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "LogicRunner" can be found in github.com/insolar/insolar/core
+The original interface "LogicRunner" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	context "context"
@@ -11,42 +11,42 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//LogicRunnerMock implements github.com/insolar/insolar/core.LogicRunner
+//LogicRunnerMock implements github.com/insolar/insolar/insolar.LogicRunner
 type LogicRunnerMock struct {
 	t minimock.Tester
 
-	ExecuteFunc       func(p context.Context, p1 core.Parcel) (r core.Reply, r1 error)
+	ExecuteFunc       func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error)
 	ExecuteCounter    uint64
 	ExecutePreCounter uint64
 	ExecuteMock       mLogicRunnerMockExecute
 
-	HandleExecutorResultsMessageFunc       func(p context.Context, p1 core.Parcel) (r core.Reply, r1 error)
+	HandleExecutorResultsMessageFunc       func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error)
 	HandleExecutorResultsMessageCounter    uint64
 	HandleExecutorResultsMessagePreCounter uint64
 	HandleExecutorResultsMessageMock       mLogicRunnerMockHandleExecutorResultsMessage
 
-	HandleValidateCaseBindMessageFunc       func(p context.Context, p1 core.Parcel) (r core.Reply, r1 error)
+	HandleValidateCaseBindMessageFunc       func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error)
 	HandleValidateCaseBindMessageCounter    uint64
 	HandleValidateCaseBindMessagePreCounter uint64
 	HandleValidateCaseBindMessageMock       mLogicRunnerMockHandleValidateCaseBindMessage
 
-	HandleValidationResultsMessageFunc       func(p context.Context, p1 core.Parcel) (r core.Reply, r1 error)
+	HandleValidationResultsMessageFunc       func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error)
 	HandleValidationResultsMessageCounter    uint64
 	HandleValidationResultsMessagePreCounter uint64
 	HandleValidationResultsMessageMock       mLogicRunnerMockHandleValidationResultsMessage
 
-	OnPulseFunc       func(p context.Context, p1 core.Pulse) (r error)
+	OnPulseFunc       func(p context.Context, p1 insolar.Pulse) (r error)
 	OnPulseCounter    uint64
 	OnPulsePreCounter uint64
 	OnPulseMock       mLogicRunnerMockOnPulse
 }
 
-//NewLogicRunnerMock returns a mock for github.com/insolar/insolar/core.LogicRunner
+//NewLogicRunnerMock returns a mock for github.com/insolar/insolar/insolar.LogicRunner
 func NewLogicRunnerMock(t minimock.Tester) *LogicRunnerMock {
 	m := &LogicRunnerMock{t: t}
 
@@ -76,16 +76,16 @@ type LogicRunnerMockExecuteExpectation struct {
 
 type LogicRunnerMockExecuteInput struct {
 	p  context.Context
-	p1 core.Parcel
+	p1 insolar.Parcel
 }
 
 type LogicRunnerMockExecuteResult struct {
-	r  core.Reply
+	r  insolar.Reply
 	r1 error
 }
 
 //Expect specifies that invocation of LogicRunner.Execute is expected from 1 to Infinity times
-func (m *mLogicRunnerMockExecute) Expect(p context.Context, p1 core.Parcel) *mLogicRunnerMockExecute {
+func (m *mLogicRunnerMockExecute) Expect(p context.Context, p1 insolar.Parcel) *mLogicRunnerMockExecute {
 	m.mock.ExecuteFunc = nil
 	m.expectationSeries = nil
 
@@ -97,7 +97,7 @@ func (m *mLogicRunnerMockExecute) Expect(p context.Context, p1 core.Parcel) *mLo
 }
 
 //Return specifies results of invocation of LogicRunner.Execute
-func (m *mLogicRunnerMockExecute) Return(r core.Reply, r1 error) *LogicRunnerMock {
+func (m *mLogicRunnerMockExecute) Return(r insolar.Reply, r1 error) *LogicRunnerMock {
 	m.mock.ExecuteFunc = nil
 	m.expectationSeries = nil
 
@@ -109,7 +109,7 @@ func (m *mLogicRunnerMockExecute) Return(r core.Reply, r1 error) *LogicRunnerMoc
 }
 
 //ExpectOnce specifies that invocation of LogicRunner.Execute is expected once
-func (m *mLogicRunnerMockExecute) ExpectOnce(p context.Context, p1 core.Parcel) *LogicRunnerMockExecuteExpectation {
+func (m *mLogicRunnerMockExecute) ExpectOnce(p context.Context, p1 insolar.Parcel) *LogicRunnerMockExecuteExpectation {
 	m.mock.ExecuteFunc = nil
 	m.mainExpectation = nil
 
@@ -119,12 +119,12 @@ func (m *mLogicRunnerMockExecute) ExpectOnce(p context.Context, p1 core.Parcel) 
 	return expectation
 }
 
-func (e *LogicRunnerMockExecuteExpectation) Return(r core.Reply, r1 error) {
+func (e *LogicRunnerMockExecuteExpectation) Return(r insolar.Reply, r1 error) {
 	e.result = &LogicRunnerMockExecuteResult{r, r1}
 }
 
 //Set uses given function f as a mock of LogicRunner.Execute method
-func (m *mLogicRunnerMockExecute) Set(f func(p context.Context, p1 core.Parcel) (r core.Reply, r1 error)) *LogicRunnerMock {
+func (m *mLogicRunnerMockExecute) Set(f func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error)) *LogicRunnerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -132,8 +132,8 @@ func (m *mLogicRunnerMockExecute) Set(f func(p context.Context, p1 core.Parcel) 
 	return m.mock
 }
 
-//Execute implements github.com/insolar/insolar/core.LogicRunner interface
-func (m *LogicRunnerMock) Execute(p context.Context, p1 core.Parcel) (r core.Reply, r1 error) {
+//Execute implements github.com/insolar/insolar/insolar.LogicRunner interface
+func (m *LogicRunnerMock) Execute(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.ExecutePreCounter, 1)
 	defer atomic.AddUint64(&m.ExecuteCounter, 1)
 
@@ -227,16 +227,16 @@ type LogicRunnerMockHandleExecutorResultsMessageExpectation struct {
 
 type LogicRunnerMockHandleExecutorResultsMessageInput struct {
 	p  context.Context
-	p1 core.Parcel
+	p1 insolar.Parcel
 }
 
 type LogicRunnerMockHandleExecutorResultsMessageResult struct {
-	r  core.Reply
+	r  insolar.Reply
 	r1 error
 }
 
 //Expect specifies that invocation of LogicRunner.HandleExecutorResultsMessage is expected from 1 to Infinity times
-func (m *mLogicRunnerMockHandleExecutorResultsMessage) Expect(p context.Context, p1 core.Parcel) *mLogicRunnerMockHandleExecutorResultsMessage {
+func (m *mLogicRunnerMockHandleExecutorResultsMessage) Expect(p context.Context, p1 insolar.Parcel) *mLogicRunnerMockHandleExecutorResultsMessage {
 	m.mock.HandleExecutorResultsMessageFunc = nil
 	m.expectationSeries = nil
 
@@ -248,7 +248,7 @@ func (m *mLogicRunnerMockHandleExecutorResultsMessage) Expect(p context.Context,
 }
 
 //Return specifies results of invocation of LogicRunner.HandleExecutorResultsMessage
-func (m *mLogicRunnerMockHandleExecutorResultsMessage) Return(r core.Reply, r1 error) *LogicRunnerMock {
+func (m *mLogicRunnerMockHandleExecutorResultsMessage) Return(r insolar.Reply, r1 error) *LogicRunnerMock {
 	m.mock.HandleExecutorResultsMessageFunc = nil
 	m.expectationSeries = nil
 
@@ -260,7 +260,7 @@ func (m *mLogicRunnerMockHandleExecutorResultsMessage) Return(r core.Reply, r1 e
 }
 
 //ExpectOnce specifies that invocation of LogicRunner.HandleExecutorResultsMessage is expected once
-func (m *mLogicRunnerMockHandleExecutorResultsMessage) ExpectOnce(p context.Context, p1 core.Parcel) *LogicRunnerMockHandleExecutorResultsMessageExpectation {
+func (m *mLogicRunnerMockHandleExecutorResultsMessage) ExpectOnce(p context.Context, p1 insolar.Parcel) *LogicRunnerMockHandleExecutorResultsMessageExpectation {
 	m.mock.HandleExecutorResultsMessageFunc = nil
 	m.mainExpectation = nil
 
@@ -270,12 +270,12 @@ func (m *mLogicRunnerMockHandleExecutorResultsMessage) ExpectOnce(p context.Cont
 	return expectation
 }
 
-func (e *LogicRunnerMockHandleExecutorResultsMessageExpectation) Return(r core.Reply, r1 error) {
+func (e *LogicRunnerMockHandleExecutorResultsMessageExpectation) Return(r insolar.Reply, r1 error) {
 	e.result = &LogicRunnerMockHandleExecutorResultsMessageResult{r, r1}
 }
 
 //Set uses given function f as a mock of LogicRunner.HandleExecutorResultsMessage method
-func (m *mLogicRunnerMockHandleExecutorResultsMessage) Set(f func(p context.Context, p1 core.Parcel) (r core.Reply, r1 error)) *LogicRunnerMock {
+func (m *mLogicRunnerMockHandleExecutorResultsMessage) Set(f func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error)) *LogicRunnerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -283,8 +283,8 @@ func (m *mLogicRunnerMockHandleExecutorResultsMessage) Set(f func(p context.Cont
 	return m.mock
 }
 
-//HandleExecutorResultsMessage implements github.com/insolar/insolar/core.LogicRunner interface
-func (m *LogicRunnerMock) HandleExecutorResultsMessage(p context.Context, p1 core.Parcel) (r core.Reply, r1 error) {
+//HandleExecutorResultsMessage implements github.com/insolar/insolar/insolar.LogicRunner interface
+func (m *LogicRunnerMock) HandleExecutorResultsMessage(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.HandleExecutorResultsMessagePreCounter, 1)
 	defer atomic.AddUint64(&m.HandleExecutorResultsMessageCounter, 1)
 
@@ -378,16 +378,16 @@ type LogicRunnerMockHandleValidateCaseBindMessageExpectation struct {
 
 type LogicRunnerMockHandleValidateCaseBindMessageInput struct {
 	p  context.Context
-	p1 core.Parcel
+	p1 insolar.Parcel
 }
 
 type LogicRunnerMockHandleValidateCaseBindMessageResult struct {
-	r  core.Reply
+	r  insolar.Reply
 	r1 error
 }
 
 //Expect specifies that invocation of LogicRunner.HandleValidateCaseBindMessage is expected from 1 to Infinity times
-func (m *mLogicRunnerMockHandleValidateCaseBindMessage) Expect(p context.Context, p1 core.Parcel) *mLogicRunnerMockHandleValidateCaseBindMessage {
+func (m *mLogicRunnerMockHandleValidateCaseBindMessage) Expect(p context.Context, p1 insolar.Parcel) *mLogicRunnerMockHandleValidateCaseBindMessage {
 	m.mock.HandleValidateCaseBindMessageFunc = nil
 	m.expectationSeries = nil
 
@@ -399,7 +399,7 @@ func (m *mLogicRunnerMockHandleValidateCaseBindMessage) Expect(p context.Context
 }
 
 //Return specifies results of invocation of LogicRunner.HandleValidateCaseBindMessage
-func (m *mLogicRunnerMockHandleValidateCaseBindMessage) Return(r core.Reply, r1 error) *LogicRunnerMock {
+func (m *mLogicRunnerMockHandleValidateCaseBindMessage) Return(r insolar.Reply, r1 error) *LogicRunnerMock {
 	m.mock.HandleValidateCaseBindMessageFunc = nil
 	m.expectationSeries = nil
 
@@ -411,7 +411,7 @@ func (m *mLogicRunnerMockHandleValidateCaseBindMessage) Return(r core.Reply, r1 
 }
 
 //ExpectOnce specifies that invocation of LogicRunner.HandleValidateCaseBindMessage is expected once
-func (m *mLogicRunnerMockHandleValidateCaseBindMessage) ExpectOnce(p context.Context, p1 core.Parcel) *LogicRunnerMockHandleValidateCaseBindMessageExpectation {
+func (m *mLogicRunnerMockHandleValidateCaseBindMessage) ExpectOnce(p context.Context, p1 insolar.Parcel) *LogicRunnerMockHandleValidateCaseBindMessageExpectation {
 	m.mock.HandleValidateCaseBindMessageFunc = nil
 	m.mainExpectation = nil
 
@@ -421,12 +421,12 @@ func (m *mLogicRunnerMockHandleValidateCaseBindMessage) ExpectOnce(p context.Con
 	return expectation
 }
 
-func (e *LogicRunnerMockHandleValidateCaseBindMessageExpectation) Return(r core.Reply, r1 error) {
+func (e *LogicRunnerMockHandleValidateCaseBindMessageExpectation) Return(r insolar.Reply, r1 error) {
 	e.result = &LogicRunnerMockHandleValidateCaseBindMessageResult{r, r1}
 }
 
 //Set uses given function f as a mock of LogicRunner.HandleValidateCaseBindMessage method
-func (m *mLogicRunnerMockHandleValidateCaseBindMessage) Set(f func(p context.Context, p1 core.Parcel) (r core.Reply, r1 error)) *LogicRunnerMock {
+func (m *mLogicRunnerMockHandleValidateCaseBindMessage) Set(f func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error)) *LogicRunnerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -434,8 +434,8 @@ func (m *mLogicRunnerMockHandleValidateCaseBindMessage) Set(f func(p context.Con
 	return m.mock
 }
 
-//HandleValidateCaseBindMessage implements github.com/insolar/insolar/core.LogicRunner interface
-func (m *LogicRunnerMock) HandleValidateCaseBindMessage(p context.Context, p1 core.Parcel) (r core.Reply, r1 error) {
+//HandleValidateCaseBindMessage implements github.com/insolar/insolar/insolar.LogicRunner interface
+func (m *LogicRunnerMock) HandleValidateCaseBindMessage(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.HandleValidateCaseBindMessagePreCounter, 1)
 	defer atomic.AddUint64(&m.HandleValidateCaseBindMessageCounter, 1)
 
@@ -529,16 +529,16 @@ type LogicRunnerMockHandleValidationResultsMessageExpectation struct {
 
 type LogicRunnerMockHandleValidationResultsMessageInput struct {
 	p  context.Context
-	p1 core.Parcel
+	p1 insolar.Parcel
 }
 
 type LogicRunnerMockHandleValidationResultsMessageResult struct {
-	r  core.Reply
+	r  insolar.Reply
 	r1 error
 }
 
 //Expect specifies that invocation of LogicRunner.HandleValidationResultsMessage is expected from 1 to Infinity times
-func (m *mLogicRunnerMockHandleValidationResultsMessage) Expect(p context.Context, p1 core.Parcel) *mLogicRunnerMockHandleValidationResultsMessage {
+func (m *mLogicRunnerMockHandleValidationResultsMessage) Expect(p context.Context, p1 insolar.Parcel) *mLogicRunnerMockHandleValidationResultsMessage {
 	m.mock.HandleValidationResultsMessageFunc = nil
 	m.expectationSeries = nil
 
@@ -550,7 +550,7 @@ func (m *mLogicRunnerMockHandleValidationResultsMessage) Expect(p context.Contex
 }
 
 //Return specifies results of invocation of LogicRunner.HandleValidationResultsMessage
-func (m *mLogicRunnerMockHandleValidationResultsMessage) Return(r core.Reply, r1 error) *LogicRunnerMock {
+func (m *mLogicRunnerMockHandleValidationResultsMessage) Return(r insolar.Reply, r1 error) *LogicRunnerMock {
 	m.mock.HandleValidationResultsMessageFunc = nil
 	m.expectationSeries = nil
 
@@ -562,7 +562,7 @@ func (m *mLogicRunnerMockHandleValidationResultsMessage) Return(r core.Reply, r1
 }
 
 //ExpectOnce specifies that invocation of LogicRunner.HandleValidationResultsMessage is expected once
-func (m *mLogicRunnerMockHandleValidationResultsMessage) ExpectOnce(p context.Context, p1 core.Parcel) *LogicRunnerMockHandleValidationResultsMessageExpectation {
+func (m *mLogicRunnerMockHandleValidationResultsMessage) ExpectOnce(p context.Context, p1 insolar.Parcel) *LogicRunnerMockHandleValidationResultsMessageExpectation {
 	m.mock.HandleValidationResultsMessageFunc = nil
 	m.mainExpectation = nil
 
@@ -572,12 +572,12 @@ func (m *mLogicRunnerMockHandleValidationResultsMessage) ExpectOnce(p context.Co
 	return expectation
 }
 
-func (e *LogicRunnerMockHandleValidationResultsMessageExpectation) Return(r core.Reply, r1 error) {
+func (e *LogicRunnerMockHandleValidationResultsMessageExpectation) Return(r insolar.Reply, r1 error) {
 	e.result = &LogicRunnerMockHandleValidationResultsMessageResult{r, r1}
 }
 
 //Set uses given function f as a mock of LogicRunner.HandleValidationResultsMessage method
-func (m *mLogicRunnerMockHandleValidationResultsMessage) Set(f func(p context.Context, p1 core.Parcel) (r core.Reply, r1 error)) *LogicRunnerMock {
+func (m *mLogicRunnerMockHandleValidationResultsMessage) Set(f func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error)) *LogicRunnerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -585,8 +585,8 @@ func (m *mLogicRunnerMockHandleValidationResultsMessage) Set(f func(p context.Co
 	return m.mock
 }
 
-//HandleValidationResultsMessage implements github.com/insolar/insolar/core.LogicRunner interface
-func (m *LogicRunnerMock) HandleValidationResultsMessage(p context.Context, p1 core.Parcel) (r core.Reply, r1 error) {
+//HandleValidationResultsMessage implements github.com/insolar/insolar/insolar.LogicRunner interface
+func (m *LogicRunnerMock) HandleValidationResultsMessage(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.HandleValidationResultsMessagePreCounter, 1)
 	defer atomic.AddUint64(&m.HandleValidationResultsMessageCounter, 1)
 
@@ -680,7 +680,7 @@ type LogicRunnerMockOnPulseExpectation struct {
 
 type LogicRunnerMockOnPulseInput struct {
 	p  context.Context
-	p1 core.Pulse
+	p1 insolar.Pulse
 }
 
 type LogicRunnerMockOnPulseResult struct {
@@ -688,7 +688,7 @@ type LogicRunnerMockOnPulseResult struct {
 }
 
 //Expect specifies that invocation of LogicRunner.OnPulse is expected from 1 to Infinity times
-func (m *mLogicRunnerMockOnPulse) Expect(p context.Context, p1 core.Pulse) *mLogicRunnerMockOnPulse {
+func (m *mLogicRunnerMockOnPulse) Expect(p context.Context, p1 insolar.Pulse) *mLogicRunnerMockOnPulse {
 	m.mock.OnPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -712,7 +712,7 @@ func (m *mLogicRunnerMockOnPulse) Return(r error) *LogicRunnerMock {
 }
 
 //ExpectOnce specifies that invocation of LogicRunner.OnPulse is expected once
-func (m *mLogicRunnerMockOnPulse) ExpectOnce(p context.Context, p1 core.Pulse) *LogicRunnerMockOnPulseExpectation {
+func (m *mLogicRunnerMockOnPulse) ExpectOnce(p context.Context, p1 insolar.Pulse) *LogicRunnerMockOnPulseExpectation {
 	m.mock.OnPulseFunc = nil
 	m.mainExpectation = nil
 
@@ -727,7 +727,7 @@ func (e *LogicRunnerMockOnPulseExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of LogicRunner.OnPulse method
-func (m *mLogicRunnerMockOnPulse) Set(f func(p context.Context, p1 core.Pulse) (r error)) *LogicRunnerMock {
+func (m *mLogicRunnerMockOnPulse) Set(f func(p context.Context, p1 insolar.Pulse) (r error)) *LogicRunnerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -735,8 +735,8 @@ func (m *mLogicRunnerMockOnPulse) Set(f func(p context.Context, p1 core.Pulse) (
 	return m.mock
 }
 
-//OnPulse implements github.com/insolar/insolar/core.LogicRunner interface
-func (m *LogicRunnerMock) OnPulse(p context.Context, p1 core.Pulse) (r error) {
+//OnPulse implements github.com/insolar/insolar/insolar.LogicRunner interface
+func (m *LogicRunnerMock) OnPulse(p context.Context, p1 insolar.Pulse) (r error) {
 	counter := atomic.AddUint64(&m.OnPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.OnPulseCounter, 1)
 

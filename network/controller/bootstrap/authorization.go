@@ -59,7 +59,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -81,15 +81,15 @@ const (
 type AuthorizationController interface {
 	component.Initer
 
-	Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert core.AuthorizationCertificate) (SessionID, error)
+	Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert insolar.AuthorizationCertificate) (SessionID, error)
 	Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error
 }
 
 type authorizationController struct {
-	NodeKeeper         network.NodeKeeper        `inject:""`
-	NetworkCoordinator core.NetworkCoordinator   `inject:""`
-	SessionManager     SessionManager            `inject:""`
-	Transport          network.InternalTransport `inject:""`
+	NodeKeeper         network.NodeKeeper         `inject:""`
+	NetworkCoordinator insolar.NetworkCoordinator `inject:""`
+	SessionManager     SessionManager             `inject:""`
+	Transport          network.InternalTransport  `inject:""`
 
 	options *common.Options
 }
@@ -136,7 +136,7 @@ func init() {
 }
 
 // Authorize node on the discovery node (step 2 of the bootstrap process)
-func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert core.AuthorizationCertificate) (SessionID, error) {
+func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert insolar.AuthorizationCertificate) (SessionID, error) {
 	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discoveryNode.Host)
 	inslogger.FromContext(ctx).Infof("cert: %s", cert)
 

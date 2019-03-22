@@ -55,7 +55,7 @@ import (
 	"encoding/gob"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -74,10 +74,10 @@ type ChallengeResponseController interface {
 }
 
 type challengeResponseController struct {
-	SessionManager SessionManager            `inject:""`
-	Cryptography   core.CryptographyService  `inject:""`
-	NodeKeeper     network.NodeKeeper        `inject:""`
-	Transport      network.InternalTransport `inject:""`
+	SessionManager SessionManager              `inject:""`
+	Cryptography   insolar.CryptographyService `inject:""`
+	NodeKeeper     network.NodeKeeper          `inject:""`
+	Transport      network.InternalTransport   `inject:""`
 
 	options *common.Options
 }
@@ -85,7 +85,7 @@ type challengeResponseController struct {
 type Nonce []byte
 type SignedNonce []byte
 
-// Node                           Discovery Node
+// NetworkNode                           Discovery NetworkNode
 //  1| ------ ChallengeRequest -----> |
 //  2| <-- SignedChallengeResponse -- |
 //  3| --- SignedChallengeRequest --> |
@@ -127,9 +127,9 @@ type ChallengeResponse struct {
 }
 
 type ChallengePayload struct {
-	// CurrentPulse  core.Pulse
-	// State         core.NetworkState
-	AssignShortID core.ShortNodeID
+	// CurrentPulse  insolar.Pulse
+	// State         insolar.NetworkState
+	AssignShortID insolar.ShortNodeID
 }
 
 func init() {
@@ -195,7 +195,7 @@ func (cr *challengeResponseController) processChallenge2(ctx context.Context, re
 	if err != nil {
 		return cr.buildChallenge2ErrorResponse(ctx, request, err.Error()), nil
 	}
-	sign := core.SignatureFromBytes(data.SignedDiscoveryNonce)
+	sign := insolar.SignatureFromBytes(data.SignedDiscoveryNonce)
 	success := cr.Cryptography.Verify(cert.GetPublicKey(), sign, Xor(data.XorNonce, discoveryNonce))
 	if !success {
 		return cr.buildChallenge2ErrorResponse(ctx, request, "node %s signature check failed"), nil
@@ -294,7 +294,7 @@ func (cr *challengeResponseController) Execute(ctx context.Context, discoveryNod
 	inslogger.FromContext(ctx).Debugf("Discovery DiscoveryNonce: %s", base58.Encode(data.DiscoveryNonce))
 	inslogger.FromContext(ctx).Debugf("Discovery XorDiscoveryNonce: %s", base58.Encode(data.XorDiscoveryNonce))
 
-	sign := core.SignatureFromBytes(data.SignedNonce)
+	sign := insolar.SignatureFromBytes(data.SignedNonce)
 	success := cr.Cryptography.Verify(discoveryNode.Node.GetPublicKey(), sign, Xor(nonce, data.XorDiscoveryNonce))
 	if !success {
 		return nil, errors.New("Error checking signed nonce from discovery node")

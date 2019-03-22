@@ -23,7 +23,7 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
 )
@@ -51,12 +51,12 @@ type DBContext interface {
 
 	IterateRecordsOnPulse(
 		ctx context.Context,
-		jetID core.RecordID,
-		pulse core.PulseNumber,
-		handler func(id core.RecordID, rec object.Record) error,
+		jetID insolar.ID,
+		pulse insolar.PulseNumber,
+		handler func(id insolar.ID, rec object.Record) error,
 	) error
 
-	StoreKeyValues(ctx context.Context, kvs []core.KV) error
+	StoreKeyValues(ctx context.Context, kvs []insolar.KV) error
 
 	GetBadgerDB() *badger.DB
 
@@ -76,7 +76,7 @@ type DBContext interface {
 
 // DB represents BadgerDB storage implementation.
 type DB struct {
-	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 
 	db *badger.DB
 
@@ -232,15 +232,15 @@ func (db *DB) GetBadgerDB() *badger.DB {
 // IterateRecordsOnPulse iterates over records on provided Jet ID and Pulse.
 func (db *DB) IterateRecordsOnPulse(
 	ctx context.Context,
-	jetID core.RecordID,
-	pulse core.PulseNumber,
-	handler func(id core.RecordID, rec object.Record) error,
+	jetID insolar.ID,
+	pulse insolar.PulseNumber,
+	handler func(id insolar.ID, rec object.Record) error,
 ) error {
-	jetPrefix := core.JetID(jetID).Prefix()
+	jetPrefix := insolar.JetID(jetID).Prefix()
 	prefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
-		id := core.NewRecordID(pulse, k)
+		id := insolar.NewID(pulse, k)
 		rec := object.DeserializeRecord(v)
 		err := handler(*id, rec)
 		if err != nil {
@@ -251,7 +251,7 @@ func (db *DB) IterateRecordsOnPulse(
 }
 
 // StoreKeyValues stores provided key/value pairs.
-func (db *DB) StoreKeyValues(ctx context.Context, kvs []core.KV) error {
+func (db *DB) StoreKeyValues(ctx context.Context, kvs []insolar.KV) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
 		for _, rec := range kvs {
 			err := tx.set(ctx, rec.K, rec.V)
@@ -263,7 +263,7 @@ func (db *DB) StoreKeyValues(ctx context.Context, kvs []core.KV) error {
 	})
 }
 
-func (db *DB) GetPlatformCryptographyScheme() core.PlatformCryptographyScheme {
+func (db *DB) GetPlatformCryptographyScheme() insolar.PlatformCryptographyScheme {
 	return db.PlatformCryptographyScheme
 }
 

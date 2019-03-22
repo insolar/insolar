@@ -22,7 +22,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
@@ -31,7 +31,7 @@ import (
 
 type GenesisState interface {
 	component.Initer
-	GenesisRef() *core.RecordRef
+	GenesisRef() *insolar.Reference
 }
 
 type genesisInitializer struct {
@@ -40,7 +40,7 @@ type genesisInitializer struct {
 	PulseTracker  storage.PulseTracker  `inject:""`
 	DropModifier  drop.Modifier         `inject:""`
 
-	genesisRef *core.RecordRef
+	genesisRef *insolar.Reference
 }
 
 func NewGenesisInitializer() GenesisState {
@@ -50,31 +50,31 @@ func NewGenesisInitializer() GenesisState {
 // GenesisRef returns the genesis record reference.
 //
 // Genesis record is the parent for all top-level records.
-func (gi *genesisInitializer) GenesisRef() *core.RecordRef {
+func (gi *genesisInitializer) GenesisRef() *insolar.Reference {
 	return gi.genesisRef
 }
 
 func (gi *genesisInitializer) Init(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("start storage bootstrap")
-	jetID := *core.NewJetID(0, nil)
+	jetID := *insolar.NewJetID(0, nil)
 
-	getGenesisRef := func() (*core.RecordRef, error) {
+	getGenesisRef := func() (*insolar.Reference, error) {
 		buff, err := gi.DB.Get(ctx, storage.GenesisPrefixKey())
 		if err != nil {
 			return nil, err
 		}
-		var genesisRef core.RecordRef
+		var genesisRef insolar.Reference
 		copy(genesisRef[:], buff)
 		return &genesisRef, nil
 	}
 
-	createGenesisRecord := func() (*core.RecordRef, error) {
+	createGenesisRecord := func() (*insolar.Reference, error) {
 		err := gi.PulseTracker.AddPulse(
 			ctx,
-			core.Pulse{
-				PulseNumber: core.GenesisPulse.PulseNumber,
-				Entropy:     core.GenesisPulse.Entropy,
+			insolar.Pulse{
+				PulseNumber: insolar.GenesisPulse.PulseNumber,
+				Entropy:     insolar.GenesisPulse.Entropy,
 			},
 		)
 		if err != nil {
@@ -90,13 +90,13 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		genesisID, err := gi.ObjectStorage.SetRecord(ctx, core.RecordID(jetID), lastPulse.Pulse.PulseNumber, &object.GenesisRecord{})
+		genesisID, err := gi.ObjectStorage.SetRecord(ctx, insolar.ID(jetID), lastPulse.Pulse.PulseNumber, &object.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}
 		err = gi.ObjectStorage.SetObjectIndex(
 			ctx,
-			core.RecordID(jetID),
+			insolar.ID(jetID),
 			genesisID,
 			&object.Lifeline{LatestState: genesisID, LatestStateApproved: genesisID},
 		)
@@ -104,13 +104,13 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 			return nil, err
 		}
 
-		genesisRef := core.NewRecordRef(*genesisID, *genesisID)
+		genesisRef := insolar.NewReference(*genesisID, *genesisID)
 		return genesisRef, gi.DB.Set(ctx, storage.GenesisPrefixKey(), genesisRef[:])
 	}
 
 	var err error
 	gi.genesisRef, err = getGenesisRef()
-	if err == core.ErrNotFound {
+	if err == insolar.ErrNotFound {
 		gi.genesisRef, err = createGenesisRecord()
 	}
 	if err != nil {

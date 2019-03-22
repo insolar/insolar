@@ -22,8 +22,8 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/require"
 )
@@ -38,8 +38,8 @@ func TestDropStorageMemory_Set(t *testing.T) {
 	ms := NewStorageMemory()
 
 	var drops []Drop
-	genPulses := map[core.PulseNumber]struct{}{}
-	genJets := map[core.JetID]struct{}{}
+	genPulses := map[insolar.PulseNumber]struct{}{}
+	genJets := map[insolar.JetID]struct{}{}
 
 	f := fuzz.New().Funcs(func(jd *Drop, c fuzz.Continue) {
 		pn := gen.PulseNumber()

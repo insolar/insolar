@@ -53,7 +53,7 @@ package packets
 import (
 	"crypto"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
@@ -83,15 +83,15 @@ func (p1p *Phase1Packet) Clone() ConsensusPacket {
 	return &clone
 }
 
-func (p1p *Phase1Packet) GetOrigin() core.ShortNodeID {
+func (p1p *Phase1Packet) GetOrigin() insolar.ShortNodeID {
 	return p1p.packetHeader.OriginNodeID
 }
 
-func (p1p *Phase1Packet) GetTarget() core.ShortNodeID {
+func (p1p *Phase1Packet) GetTarget() insolar.ShortNodeID {
 	return p1p.packetHeader.TargetNodeID
 }
 
-func (p1p *Phase1Packet) SetRouting(origin, target core.ShortNodeID) {
+func (p1p *Phase1Packet) SetRouting(origin, target insolar.ShortNodeID) {
 	p1p.packetHeader.OriginNodeID = origin
 	p1p.packetHeader.TargetNodeID = target
 	p1p.packetHeader.HasRouting = true
@@ -101,19 +101,19 @@ func (p1p *Phase1Packet) GetType() PacketType {
 	return p1p.packetHeader.PacketT
 }
 
-func (p1p *Phase1Packet) Verify(crypto core.CryptographyService, key crypto.PublicKey) error {
+func (p1p *Phase1Packet) Verify(crypto insolar.CryptographyService, key crypto.PublicKey) error {
 	raw, err := p1p.rawBytes()
 	if err != nil {
 		return errors.Wrap(err, "Failed to get raw part of phase 1 packet")
 	}
-	valid := crypto.Verify(key, core.SignatureFromBytes(p1p.Signature[:]), raw)
+	valid := crypto.Verify(key, insolar.SignatureFromBytes(p1p.Signature[:]), raw)
 	if !valid {
 		return errors.New("bad signature")
 	}
 	return nil
 }
 
-func (p1p *Phase1Packet) Sign(cryptographyService core.CryptographyService) error {
+func (p1p *Phase1Packet) Sign(cryptographyService insolar.CryptographyService) error {
 	raw, err := p1p.rawBytes()
 	if err != nil {
 		return errors.Wrap(err, "Failed to get raw part of phase 1 packet")
@@ -126,7 +126,7 @@ func (p1p *Phase1Packet) Sign(cryptographyService core.CryptographyService) erro
 	return nil
 }
 
-func NewPhase1Packet(pulse core.Pulse) *Phase1Packet {
+func NewPhase1Packet(pulse insolar.Pulse) *Phase1Packet {
 	result := &Phase1Packet{}
 	result.packetHeader.PacketT = Phase1
 	result.packetHeader.Pulse = uint32(pulse.PulseNumber)
@@ -134,7 +134,7 @@ func NewPhase1Packet(pulse core.Pulse) *Phase1Packet {
 	return result
 }
 
-func pulseToDataExt(pulse core.Pulse) PulseDataExt {
+func pulseToDataExt(pulse insolar.Pulse) PulseDataExt {
 	result := PulseDataExt{}
 	result.Entropy = pulse.Entropy
 	result.EpochPulseNo = uint32(pulse.EpochPulseNumber)
@@ -145,13 +145,13 @@ func pulseToDataExt(pulse core.Pulse) PulseDataExt {
 	return result
 }
 
-func dataToPulse(number core.PulseNumber, data PulseDataExt) core.Pulse {
-	result := core.Pulse{}
+func dataToPulse(number insolar.PulseNumber, data PulseDataExt) insolar.Pulse {
+	result := insolar.Pulse{}
 	result.PulseNumber = number
 	result.Entropy = data.Entropy
 	result.EpochPulseNumber = int(data.EpochPulseNo)
-	result.NextPulseNumber = number + core.PulseNumber(data.NextPulseDelta)
-	result.PrevPulseNumber = number - core.PulseNumber(data.PrevPulseDelta)
+	result.NextPulseNumber = number + insolar.PulseNumber(data.NextPulseDelta)
+	result.PrevPulseNumber = number - insolar.PulseNumber(data.PrevPulseDelta)
 	result.OriginID = data.OriginID
 	result.PulseTimestamp = int64(data.PulseTimestamp)
 	return result
@@ -165,12 +165,12 @@ func (p1p *Phase1Packet) hasSection2() bool {
 	return p1p.packetHeader.f01
 }
 
-func (p1p *Phase1Packet) GetPulseNumber() core.PulseNumber {
-	return core.PulseNumber(p1p.packetHeader.Pulse)
+func (p1p *Phase1Packet) GetPulseNumber() insolar.PulseNumber {
+	return insolar.PulseNumber(p1p.packetHeader.Pulse)
 }
 
-func (p1p *Phase1Packet) GetPulse() core.Pulse {
-	return dataToPulse(core.PulseNumber(p1p.packetHeader.Pulse), p1p.pulseData)
+func (p1p *Phase1Packet) GetPulse() insolar.Pulse {
+	return dataToPulse(insolar.PulseNumber(p1p.packetHeader.Pulse), p1p.pulseData)
 }
 
 func (p1p *Phase1Packet) GetPulseProof() *NodePulseProof {

@@ -19,9 +19,9 @@ package goplugin
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 func TestTypeCompatibility(t *testing.T) {
-	var _ core.MachineLogicExecutor = (*GoPlugin)(nil)
+	var _ insolar.MachineLogicExecutor = (*GoPlugin)(nil)
 }

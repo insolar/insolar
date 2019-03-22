@@ -20,7 +20,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/sync/errgroup"
@@ -56,14 +56,14 @@ func TestCurrent_OneThread(t *testing.T) {
 
 	pStorage := NewPulseStorage()
 	pStorage.PulseTracker = NewPulseTrackerMock(t)
-	pStorage.Set(core.GenesisPulse)
+	pStorage.Set(insolar.GenesisPulse)
 
 	// Act
 	pulse, err := pStorage.Current(ctx)
 
 	// Assert
 	require.NoError(t, err)
-	require.Equal(t, core.GenesisPulse, pulse)
+	require.Equal(t, insolar.GenesisPulse, pulse)
 }
 
 func TestCurrent_ThreeThreads(t *testing.T) {
@@ -76,7 +76,7 @@ func TestCurrent_ThreeThreads(t *testing.T) {
 
 	pStorage := NewPulseStorage()
 	pStorage.PulseTracker = NewPulseTrackerMock(t)
-	pStorage.Set(&core.Pulse{PulseNumber: core.FirstPulseNumber})
+	pStorage.Set(&insolar.Pulse{PulseNumber: insolar.FirstPulseNumber})
 
 	var mu sync.Mutex
 	getStorage := func() *PulseStorage {
@@ -89,7 +89,7 @@ func TestCurrent_ThreeThreads(t *testing.T) {
 	var g errgroup.Group
 	g.Go(func() error {
 		// race here on Set
-		getStorage().Set(&core.Pulse{PulseNumber: core.FirstPulseNumber + 123})
+		getStorage().Set(&insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 123})
 		return nil
 	})
 	g.Go(func() error {
@@ -106,5 +106,5 @@ func TestCurrent_ThreeThreads(t *testing.T) {
 
 	// Assert
 	require.NoError(t, err)
-	require.Equal(t, core.GenesisPulse.PulseNumber+123, pulse.PulseNumber)
+	require.Equal(t, insolar.GenesisPulse.PulseNumber+123, pulse.PulseNumber)
 }

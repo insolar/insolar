@@ -31,8 +31,8 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -61,7 +61,7 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 		return &pulsartestutils.MockListener{}, nil
 	}
 	storage := pulsartestutils.NewPulsarStorageMock(t)
-	storage.GetLastPulseMock.Return(&core.Pulse{PulseNumber: 123}, nil)
+	storage.GetLastPulseMock.Return(&insolar.Pulse{PulseNumber: 123}, nil)
 
 	keyProcessor := platformpolicy.NewKeyProcessor()
 	privateKey, err := keyProcessor.GeneratePrivateKey()
@@ -112,7 +112,7 @@ func TestNewPulsar_WithNeighbours(t *testing.T) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	storage := pulsartestutils.NewPulsarStorageMock(t)
-	storage.GetLastPulseMock.Return(&core.Pulse{PulseNumber: 123}, nil)
+	storage.GetLastPulseMock.Return(&insolar.Pulse{PulseNumber: 123}, nil)
 
 	factoryMock := NewRPCClientWrapperFactoryMock(t)
 	clientMock := NewRPCClientWrapperMock(t)
@@ -418,10 +418,10 @@ func TestPulsar_StartConsensusProcess_WithWrongPulseNumber(t *testing.T) {
 	switcherMock.GetStateMock.Return(WaitingForStart)
 	pulsar := &Pulsar{
 		StateSwitcher:         switcherMock,
-		ProcessingPulseNumber: core.PulseNumber(123),
-		lastPulse:             &core.Pulse{PulseNumber: core.PulseNumber(122)},
+		ProcessingPulseNumber: insolar.PulseNumber(123),
+		lastPulse:             &insolar.Pulse{PulseNumber: insolar.PulseNumber(122)},
 	}
-	err := pulsar.StartConsensusProcess(ctx, core.PulseNumber(121))
+	err := pulsar.StartConsensusProcess(ctx, insolar.PulseNumber(121))
 
 	require.Error(t, err, "wrong state status or pulse number, state - WaitingForStart, received pulse - 121, last pulse - 122, processing pulse - 123")
 }
@@ -448,10 +448,10 @@ func TestPulsar_StartConsensusProcess_Success(t *testing.T) {
 		PlatformCryptographyScheme: scheme,
 		ownedBftRow:                map[string]*BftCell{},
 	}
-	pulsar.ProcessingPulseNumber = core.PulseNumber(120)
-	pulsar.SetLastPulse(&core.Pulse{PulseNumber: core.PulseNumber(2)})
+	pulsar.ProcessingPulseNumber = insolar.PulseNumber(120)
+	pulsar.SetLastPulse(&insolar.Pulse{PulseNumber: insolar.PulseNumber(2)})
 	pulsar.StateSwitcher = mockSwitcher
-	expectedPulse := core.PulseNumber(123)
+	expectedPulse := insolar.PulseNumber(123)
 
 	err := pulsar.StartConsensusProcess(ctx, expectedPulse)
 
@@ -471,7 +471,7 @@ func TestPulsar_broadcastSignatureOfEntropy_StateFailed(t *testing.T) {
 			"1": {},
 		},
 		StateSwitcher:         switcher,
-		ProcessingPulseNumber: core.PulseNumber(123),
+		ProcessingPulseNumber: insolar.PulseNumber(123),
 	}
 
 	pulsar.broadcastSignatureOfEntropy(ctx)
@@ -529,7 +529,7 @@ func TestPulsar_broadcastVector_StateFailed(t *testing.T) {
 		},
 		ownedBftRow:           map[string]*BftCell{},
 		StateSwitcher:         mockSwitcher,
-		ProcessingPulseNumber: core.PulseNumber(123),
+		ProcessingPulseNumber: insolar.PulseNumber(123),
 	}
 
 	pulsar.broadcastVector(ctx)
@@ -552,7 +552,7 @@ func TestPulsar_broadcastVector_SendToNeighbours(t *testing.T) {
 	cryptoService := cryptography.NewKeyBoundCryptographyService(privateKey)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
-	generatedEntropy := core.Entropy(pulsartestutils.MockEntropy)
+	generatedEntropy := insolar.Entropy(pulsartestutils.MockEntropy)
 	pulsar := Pulsar{
 		Neighbours: map[string]*Neighbour{
 			"1": {OutgoingClient: mockClientWrapper, ConnectionAddress: "first"},
@@ -589,7 +589,7 @@ func TestPulsar_broadcastEntropy_StateFailed(t *testing.T) {
 		},
 		ownedBftRow:           map[string]*BftCell{},
 		StateSwitcher:         mockSwitcher,
-		ProcessingPulseNumber: core.PulseNumber(123),
+		ProcessingPulseNumber: insolar.PulseNumber(123),
 	}
 
 	pulsar.broadcastEntropy(ctx)
@@ -612,7 +612,7 @@ func TestPulsar_broadcastEntropy_SendToNeighbours(t *testing.T) {
 	cryptoService := cryptography.NewKeyBoundCryptographyService(privateKey)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
-	generatedEntropy := core.Entropy(pulsartestutils.MockEntropy)
+	generatedEntropy := insolar.Entropy(pulsartestutils.MockEntropy)
 	pulsar := Pulsar{
 		Neighbours: map[string]*Neighbour{
 			"1": {OutgoingClient: mockClientWrapper, ConnectionAddress: "first"},
@@ -684,7 +684,7 @@ func TestPulsar_sendVector_TwoPulsars(t *testing.T) {
 		bftGrid:                    map[string]map[string]*BftCell{},
 	}
 
-	generatedEntropy := core.Entropy(pulsartestutils.MockEntropy)
+	generatedEntropy := insolar.Entropy(pulsartestutils.MockEntropy)
 	pulsar.generatedEntropy = &generatedEntropy
 	pulsar.Neighbours["1"] = &Neighbour{OutgoingClient: mockClientWrapper, ConnectionAddress: "first"}
 	mockClientWrapper.On("Go", ReceiveVector.String(), mock.Anything, nil, (chan *rpc.Call)(nil)).Return(replyChan)
@@ -737,7 +737,7 @@ func TestPulsar_sendEntropy_TwoPulsars(t *testing.T) {
 		ownedBftRow:                map[string]*BftCell{},
 		PlatformCryptographyScheme: scheme,
 	}
-	generatedEntropy := core.Entropy(pulsartestutils.MockEntropy)
+	generatedEntropy := insolar.Entropy(pulsartestutils.MockEntropy)
 	pulsar.generatedEntropy = &generatedEntropy
 	pulsar.Neighbours["1"] = &Neighbour{OutgoingClient: mockClientWrapper, ConnectionAddress: "first"}
 	mockClientWrapper.On("Go", ReceiveEntropy.String(), mock.Anything, nil, (chan *rpc.Call)(nil)).Return(replyChan)
@@ -782,10 +782,10 @@ func TestPulsar_verify_Standalone_Success(t *testing.T) {
 		StateSwitcher:                  mockSwitcher,
 		PlatformCryptographyScheme:     platformpolicy.NewPlatformCryptographyScheme(),
 		CryptographyService:            cryptography.NewKeyBoundCryptographyService(key),
-		CurrentSlotSenderConfirmations: make(map[string]core.PulseSenderConfirmation),
+		CurrentSlotSenderConfirmations: make(map[string]insolar.PulseSenderConfirmation),
 	}
 	pulsar.PublicKeyRaw = "testKey"
-	generatedEntropy := core.Entropy(pulsartestutils.MockEntropy)
+	generatedEntropy := insolar.Entropy(pulsartestutils.MockEntropy)
 	pulsar.generatedEntropy = &generatedEntropy
 	pulsar.ownedBftRow = map[string]*BftCell{}
 	pulsar.bftGrid = map[string]map[string]*BftCell{}
@@ -794,7 +794,7 @@ func TestPulsar_verify_Standalone_Success(t *testing.T) {
 
 	require.Equal(t, uint64(1), mockSwitcher.SwitchToStateCounter)
 	require.Equal(t, "testKey", pulsar.PublicKeyRaw)
-	require.Equal(t, core.Entropy(pulsartestutils.MockEntropy), *pulsar.GetGeneratedEntropy())
+	require.Equal(t, insolar.Entropy(pulsartestutils.MockEntropy), *pulsar.GetGeneratedEntropy())
 	mockSwitcher.MinimockFinish()
 }
 
@@ -826,7 +826,7 @@ func TestPulsar_verify_NotEnoughForConsensus_Success(t *testing.T) {
 	require.Equal(t, uint64(1), mockSwitcher.SwitchToStateCounter)
 }
 
-func prepareEntropy(t *testing.T, service core.CryptographyService) (entropy core.Entropy, sign []byte) {
+func prepareEntropy(t *testing.T, service insolar.CryptographyService) (entropy insolar.Entropy, sign []byte) {
 	entropy = (&entropygenerator.StandardEntropyGenerator{}).GenerateEntropy()
 	fetchedSign, err := service.Sign(entropy[:])
 	require.NoError(t, err)
@@ -868,14 +868,14 @@ func TestPulsar_verify_Success(t *testing.T) {
 	thirdCryptoService := cryptography.NewKeyBoundCryptographyService(thirdPrivate)
 
 	pulsar := &Pulsar{
-		KeyProcessor:                   platformpolicy.NewKeyProcessor(),
-		StateSwitcher:                  mockSwitcher,
-		CryptographyService:            pulsarCryptoService,
-		PlatformCryptographyScheme:     platformpolicy.NewPlatformCryptographyScheme(),
-		PublicKeyRaw:                   currentPulsarPublicKey,
-		ownedBftRow:                    map[string]*BftCell{},
-		bftGrid:                        map[string]map[string]*BftCell{},
-		CurrentSlotSenderConfirmations: map[string]core.PulseSenderConfirmation{},
+		KeyProcessor:               platformpolicy.NewKeyProcessor(),
+		StateSwitcher:              mockSwitcher,
+		CryptographyService:        pulsarCryptoService,
+		PlatformCryptographyScheme: platformpolicy.NewPlatformCryptographyScheme(),
+		PublicKeyRaw:               currentPulsarPublicKey,
+		ownedBftRow:                map[string]*BftCell{},
+		bftGrid:                    map[string]map[string]*BftCell{},
+		CurrentSlotSenderConfirmations: map[string]insolar.PulseSenderConfirmation{},
 		Neighbours: map[string]*Neighbour{
 			publicKeySecond: {PublicKey: pub2, OutgoingClient: &clientMock},
 			publicKeyThird:  {PublicKey: pub3, OutgoingClient: &clientMock},
@@ -902,9 +902,9 @@ func TestPulsar_verify_Success(t *testing.T) {
 		publicKeySecond:        {Entropy: secondEntropy, Sign: secondSign, IsEntropyReceived: true},
 		publicKeyThird:         {Entropy: thirdEntropy, Sign: thirdSign, IsEntropyReceived: true},
 	}
-	var expectedEntropy core.Entropy
-	for _, tempEntropy := range []core.Entropy{firstEntropy, secondEntropy, thirdEntropy} {
-		for byteIndex := 0; byteIndex < core.EntropySize; byteIndex++ {
+	var expectedEntropy insolar.Entropy
+	for _, tempEntropy := range []insolar.Entropy{firstEntropy, secondEntropy, thirdEntropy} {
+		for byteIndex := 0; byteIndex < insolar.EntropySize; byteIndex++ {
 			expectedEntropy[byteIndex] ^= tempEntropy[byteIndex]
 		}
 	}

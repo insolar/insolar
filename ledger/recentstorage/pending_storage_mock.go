@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,27 +20,27 @@ import (
 type PendingStorageMock struct {
 	t minimock.Tester
 
-	AddPendingRequestFunc       func(p context.Context, p1 core.RecordID, p2 core.RecordID)
+	AddPendingRequestFunc       func(p context.Context, p1 insolar.ID, p2 insolar.ID)
 	AddPendingRequestCounter    uint64
 	AddPendingRequestPreCounter uint64
 	AddPendingRequestMock       mPendingStorageMockAddPendingRequest
 
-	GetRequestsFunc       func() (r map[core.RecordID]PendingObjectContext)
+	GetRequestsFunc       func() (r map[insolar.ID]PendingObjectContext)
 	GetRequestsCounter    uint64
 	GetRequestsPreCounter uint64
 	GetRequestsMock       mPendingStorageMockGetRequests
 
-	GetRequestsForObjectFunc       func(p core.RecordID) (r []core.RecordID)
+	GetRequestsForObjectFunc       func(p insolar.ID) (r []insolar.ID)
 	GetRequestsForObjectCounter    uint64
 	GetRequestsForObjectPreCounter uint64
 	GetRequestsForObjectMock       mPendingStorageMockGetRequestsForObject
 
-	RemovePendingRequestFunc       func(p context.Context, p1 core.RecordID, p2 core.RecordID)
+	RemovePendingRequestFunc       func(p context.Context, p1 insolar.ID, p2 insolar.ID)
 	RemovePendingRequestCounter    uint64
 	RemovePendingRequestPreCounter uint64
 	RemovePendingRequestMock       mPendingStorageMockRemovePendingRequest
 
-	SetContextToObjectFunc       func(p context.Context, p1 core.RecordID, p2 PendingObjectContext)
+	SetContextToObjectFunc       func(p context.Context, p1 insolar.ID, p2 PendingObjectContext)
 	SetContextToObjectCounter    uint64
 	SetContextToObjectPreCounter uint64
 	SetContextToObjectMock       mPendingStorageMockSetContextToObject
@@ -75,12 +75,12 @@ type PendingStorageMockAddPendingRequestExpectation struct {
 
 type PendingStorageMockAddPendingRequestInput struct {
 	p  context.Context
-	p1 core.RecordID
-	p2 core.RecordID
+	p1 insolar.ID
+	p2 insolar.ID
 }
 
 //Expect specifies that invocation of PendingStorage.AddPendingRequest is expected from 1 to Infinity times
-func (m *mPendingStorageMockAddPendingRequest) Expect(p context.Context, p1 core.RecordID, p2 core.RecordID) *mPendingStorageMockAddPendingRequest {
+func (m *mPendingStorageMockAddPendingRequest) Expect(p context.Context, p1 insolar.ID, p2 insolar.ID) *mPendingStorageMockAddPendingRequest {
 	m.mock.AddPendingRequestFunc = nil
 	m.expectationSeries = nil
 
@@ -104,7 +104,7 @@ func (m *mPendingStorageMockAddPendingRequest) Return() *PendingStorageMock {
 }
 
 //ExpectOnce specifies that invocation of PendingStorage.AddPendingRequest is expected once
-func (m *mPendingStorageMockAddPendingRequest) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.RecordID) *PendingStorageMockAddPendingRequestExpectation {
+func (m *mPendingStorageMockAddPendingRequest) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.ID) *PendingStorageMockAddPendingRequestExpectation {
 	m.mock.AddPendingRequestFunc = nil
 	m.mainExpectation = nil
 
@@ -115,7 +115,7 @@ func (m *mPendingStorageMockAddPendingRequest) ExpectOnce(p context.Context, p1 
 }
 
 //Set uses given function f as a mock of PendingStorage.AddPendingRequest method
-func (m *mPendingStorageMockAddPendingRequest) Set(f func(p context.Context, p1 core.RecordID, p2 core.RecordID)) *PendingStorageMock {
+func (m *mPendingStorageMockAddPendingRequest) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.ID)) *PendingStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -124,7 +124,7 @@ func (m *mPendingStorageMockAddPendingRequest) Set(f func(p context.Context, p1 
 }
 
 //AddPendingRequest implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
-func (m *PendingStorageMock) AddPendingRequest(p context.Context, p1 core.RecordID, p2 core.RecordID) {
+func (m *PendingStorageMock) AddPendingRequest(p context.Context, p1 insolar.ID, p2 insolar.ID) {
 	counter := atomic.AddUint64(&m.AddPendingRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.AddPendingRequestCounter, 1)
 
@@ -199,7 +199,7 @@ type PendingStorageMockGetRequestsExpectation struct {
 }
 
 type PendingStorageMockGetRequestsResult struct {
-	r map[core.RecordID]PendingObjectContext
+	r map[insolar.ID]PendingObjectContext
 }
 
 //Expect specifies that invocation of PendingStorage.GetRequests is expected from 1 to Infinity times
@@ -215,7 +215,7 @@ func (m *mPendingStorageMockGetRequests) Expect() *mPendingStorageMockGetRequest
 }
 
 //Return specifies results of invocation of PendingStorage.GetRequests
-func (m *mPendingStorageMockGetRequests) Return(r map[core.RecordID]PendingObjectContext) *PendingStorageMock {
+func (m *mPendingStorageMockGetRequests) Return(r map[insolar.ID]PendingObjectContext) *PendingStorageMock {
 	m.mock.GetRequestsFunc = nil
 	m.expectationSeries = nil
 
@@ -237,12 +237,12 @@ func (m *mPendingStorageMockGetRequests) ExpectOnce() *PendingStorageMockGetRequ
 	return expectation
 }
 
-func (e *PendingStorageMockGetRequestsExpectation) Return(r map[core.RecordID]PendingObjectContext) {
+func (e *PendingStorageMockGetRequestsExpectation) Return(r map[insolar.ID]PendingObjectContext) {
 	e.result = &PendingStorageMockGetRequestsResult{r}
 }
 
 //Set uses given function f as a mock of PendingStorage.GetRequests method
-func (m *mPendingStorageMockGetRequests) Set(f func() (r map[core.RecordID]PendingObjectContext)) *PendingStorageMock {
+func (m *mPendingStorageMockGetRequests) Set(f func() (r map[insolar.ID]PendingObjectContext)) *PendingStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -251,7 +251,7 @@ func (m *mPendingStorageMockGetRequests) Set(f func() (r map[core.RecordID]Pendi
 }
 
 //GetRequests implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
-func (m *PendingStorageMock) GetRequests() (r map[core.RecordID]PendingObjectContext) {
+func (m *PendingStorageMock) GetRequests() (r map[insolar.ID]PendingObjectContext) {
 	counter := atomic.AddUint64(&m.GetRequestsPreCounter, 1)
 	defer atomic.AddUint64(&m.GetRequestsCounter, 1)
 
@@ -334,15 +334,15 @@ type PendingStorageMockGetRequestsForObjectExpectation struct {
 }
 
 type PendingStorageMockGetRequestsForObjectInput struct {
-	p core.RecordID
+	p insolar.ID
 }
 
 type PendingStorageMockGetRequestsForObjectResult struct {
-	r []core.RecordID
+	r []insolar.ID
 }
 
 //Expect specifies that invocation of PendingStorage.GetRequestsForObject is expected from 1 to Infinity times
-func (m *mPendingStorageMockGetRequestsForObject) Expect(p core.RecordID) *mPendingStorageMockGetRequestsForObject {
+func (m *mPendingStorageMockGetRequestsForObject) Expect(p insolar.ID) *mPendingStorageMockGetRequestsForObject {
 	m.mock.GetRequestsForObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -354,7 +354,7 @@ func (m *mPendingStorageMockGetRequestsForObject) Expect(p core.RecordID) *mPend
 }
 
 //Return specifies results of invocation of PendingStorage.GetRequestsForObject
-func (m *mPendingStorageMockGetRequestsForObject) Return(r []core.RecordID) *PendingStorageMock {
+func (m *mPendingStorageMockGetRequestsForObject) Return(r []insolar.ID) *PendingStorageMock {
 	m.mock.GetRequestsForObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -366,7 +366,7 @@ func (m *mPendingStorageMockGetRequestsForObject) Return(r []core.RecordID) *Pen
 }
 
 //ExpectOnce specifies that invocation of PendingStorage.GetRequestsForObject is expected once
-func (m *mPendingStorageMockGetRequestsForObject) ExpectOnce(p core.RecordID) *PendingStorageMockGetRequestsForObjectExpectation {
+func (m *mPendingStorageMockGetRequestsForObject) ExpectOnce(p insolar.ID) *PendingStorageMockGetRequestsForObjectExpectation {
 	m.mock.GetRequestsForObjectFunc = nil
 	m.mainExpectation = nil
 
@@ -376,12 +376,12 @@ func (m *mPendingStorageMockGetRequestsForObject) ExpectOnce(p core.RecordID) *P
 	return expectation
 }
 
-func (e *PendingStorageMockGetRequestsForObjectExpectation) Return(r []core.RecordID) {
+func (e *PendingStorageMockGetRequestsForObjectExpectation) Return(r []insolar.ID) {
 	e.result = &PendingStorageMockGetRequestsForObjectResult{r}
 }
 
 //Set uses given function f as a mock of PendingStorage.GetRequestsForObject method
-func (m *mPendingStorageMockGetRequestsForObject) Set(f func(p core.RecordID) (r []core.RecordID)) *PendingStorageMock {
+func (m *mPendingStorageMockGetRequestsForObject) Set(f func(p insolar.ID) (r []insolar.ID)) *PendingStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -390,7 +390,7 @@ func (m *mPendingStorageMockGetRequestsForObject) Set(f func(p core.RecordID) (r
 }
 
 //GetRequestsForObject implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
-func (m *PendingStorageMock) GetRequestsForObject(p core.RecordID) (r []core.RecordID) {
+func (m *PendingStorageMock) GetRequestsForObject(p insolar.ID) (r []insolar.ID) {
 	counter := atomic.AddUint64(&m.GetRequestsForObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.GetRequestsForObjectCounter, 1)
 
@@ -481,12 +481,12 @@ type PendingStorageMockRemovePendingRequestExpectation struct {
 
 type PendingStorageMockRemovePendingRequestInput struct {
 	p  context.Context
-	p1 core.RecordID
-	p2 core.RecordID
+	p1 insolar.ID
+	p2 insolar.ID
 }
 
 //Expect specifies that invocation of PendingStorage.RemovePendingRequest is expected from 1 to Infinity times
-func (m *mPendingStorageMockRemovePendingRequest) Expect(p context.Context, p1 core.RecordID, p2 core.RecordID) *mPendingStorageMockRemovePendingRequest {
+func (m *mPendingStorageMockRemovePendingRequest) Expect(p context.Context, p1 insolar.ID, p2 insolar.ID) *mPendingStorageMockRemovePendingRequest {
 	m.mock.RemovePendingRequestFunc = nil
 	m.expectationSeries = nil
 
@@ -510,7 +510,7 @@ func (m *mPendingStorageMockRemovePendingRequest) Return() *PendingStorageMock {
 }
 
 //ExpectOnce specifies that invocation of PendingStorage.RemovePendingRequest is expected once
-func (m *mPendingStorageMockRemovePendingRequest) ExpectOnce(p context.Context, p1 core.RecordID, p2 core.RecordID) *PendingStorageMockRemovePendingRequestExpectation {
+func (m *mPendingStorageMockRemovePendingRequest) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.ID) *PendingStorageMockRemovePendingRequestExpectation {
 	m.mock.RemovePendingRequestFunc = nil
 	m.mainExpectation = nil
 
@@ -521,7 +521,7 @@ func (m *mPendingStorageMockRemovePendingRequest) ExpectOnce(p context.Context, 
 }
 
 //Set uses given function f as a mock of PendingStorage.RemovePendingRequest method
-func (m *mPendingStorageMockRemovePendingRequest) Set(f func(p context.Context, p1 core.RecordID, p2 core.RecordID)) *PendingStorageMock {
+func (m *mPendingStorageMockRemovePendingRequest) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.ID)) *PendingStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -530,7 +530,7 @@ func (m *mPendingStorageMockRemovePendingRequest) Set(f func(p context.Context, 
 }
 
 //RemovePendingRequest implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
-func (m *PendingStorageMock) RemovePendingRequest(p context.Context, p1 core.RecordID, p2 core.RecordID) {
+func (m *PendingStorageMock) RemovePendingRequest(p context.Context, p1 insolar.ID, p2 insolar.ID) {
 	counter := atomic.AddUint64(&m.RemovePendingRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.RemovePendingRequestCounter, 1)
 
@@ -606,12 +606,12 @@ type PendingStorageMockSetContextToObjectExpectation struct {
 
 type PendingStorageMockSetContextToObjectInput struct {
 	p  context.Context
-	p1 core.RecordID
+	p1 insolar.ID
 	p2 PendingObjectContext
 }
 
 //Expect specifies that invocation of PendingStorage.SetContextToObject is expected from 1 to Infinity times
-func (m *mPendingStorageMockSetContextToObject) Expect(p context.Context, p1 core.RecordID, p2 PendingObjectContext) *mPendingStorageMockSetContextToObject {
+func (m *mPendingStorageMockSetContextToObject) Expect(p context.Context, p1 insolar.ID, p2 PendingObjectContext) *mPendingStorageMockSetContextToObject {
 	m.mock.SetContextToObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -635,7 +635,7 @@ func (m *mPendingStorageMockSetContextToObject) Return() *PendingStorageMock {
 }
 
 //ExpectOnce specifies that invocation of PendingStorage.SetContextToObject is expected once
-func (m *mPendingStorageMockSetContextToObject) ExpectOnce(p context.Context, p1 core.RecordID, p2 PendingObjectContext) *PendingStorageMockSetContextToObjectExpectation {
+func (m *mPendingStorageMockSetContextToObject) ExpectOnce(p context.Context, p1 insolar.ID, p2 PendingObjectContext) *PendingStorageMockSetContextToObjectExpectation {
 	m.mock.SetContextToObjectFunc = nil
 	m.mainExpectation = nil
 
@@ -646,7 +646,7 @@ func (m *mPendingStorageMockSetContextToObject) ExpectOnce(p context.Context, p1
 }
 
 //Set uses given function f as a mock of PendingStorage.SetContextToObject method
-func (m *mPendingStorageMockSetContextToObject) Set(f func(p context.Context, p1 core.RecordID, p2 PendingObjectContext)) *PendingStorageMock {
+func (m *mPendingStorageMockSetContextToObject) Set(f func(p context.Context, p1 insolar.ID, p2 PendingObjectContext)) *PendingStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -655,7 +655,7 @@ func (m *mPendingStorageMockSetContextToObject) Set(f func(p context.Context, p1
 }
 
 //SetContextToObject implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
-func (m *PendingStorageMock) SetContextToObject(p context.Context, p1 core.RecordID, p2 PendingObjectContext) {
+func (m *PendingStorageMock) SetContextToObject(p context.Context, p1 insolar.ID, p2 PendingObjectContext) {
 	counter := atomic.AddUint64(&m.SetContextToObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.SetContextToObjectCounter, 1)
 

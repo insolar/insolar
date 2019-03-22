@@ -68,8 +68,8 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -248,7 +248,7 @@ func (s *testSuite) waitForConsensus(consensusCount int) {
 	}
 }
 
-func (s *testSuite) waitForConsensusExcept(consensusCount int, exception core.RecordRef) {
+func (s *testSuite) waitForConsensusExcept(consensusCount int, exception insolar.Reference) {
 	for i := 0; i < consensusCount; i++ {
 		for _, n := range s.fixture().bootstrapNodes {
 			if n.id.Equal(exception) {
@@ -295,10 +295,10 @@ func (s *testSuite) StopNode(node *networkNode) {
 }
 
 type networkNode struct {
-	id                  core.RecordRef
-	role                core.StaticRole
+	id                  insolar.Reference
+	role                insolar.StaticRole
 	privateKey          crypto.PrivateKey
-	cryptographyService core.CryptographyService
+	cryptographyService insolar.CryptographyService
 	host                string
 	ctx                 context.Context
 
@@ -340,7 +340,7 @@ func (n *networkNode) init() error {
 	return err
 }
 
-func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManager, core.CryptographyService) {
+func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManager, insolar.CryptographyService) {
 	pubKey, err := node.cryptographyService.GetPublicKey()
 	s.Require().NoError(err)
 
@@ -380,13 +380,13 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 	return certificate.NewCertificateManager(cert), node.cryptographyService
 }
 
-func RandomRole() core.StaticRole {
+func RandomRole() insolar.StaticRole {
 	i := rand.Int()%3 + 1
-	return core.StaticRole(i)
+	return insolar.StaticRole(i)
 }
 
 type terminationHandler struct {
-	NodeID core.RecordRef
+	NodeID insolar.Reference
 }
 
 func (t *terminationHandler) Abort() {
@@ -394,23 +394,23 @@ func (t *terminationHandler) Abort() {
 }
 
 type pulseManagerMock struct {
-	pulse core.Pulse
+	pulse insolar.Pulse
 	lock  sync.Mutex
 
 	keeper network.NodeKeeper
 }
 
 func newPulseManagerMock(keeper network.NodeKeeper) *pulseManagerMock {
-	return &pulseManagerMock{pulse: *core.GenesisPulse, keeper: keeper}
+	return &pulseManagerMock{pulse: *insolar.GenesisPulse, keeper: keeper}
 }
 
-func (p *pulseManagerMock) Current(ctx context.Context) (*core.Pulse, error) {
+func (p *pulseManagerMock) Current(ctx context.Context) (*insolar.Pulse, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	return &p.pulse, nil
 }
 
-func (p *pulseManagerMock) Set(ctx context.Context, pulse core.Pulse, persist bool) error {
+func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse, persist bool) error {
 	p.lock.Lock()
 	p.pulse = pulse
 	p.lock.Unlock()
@@ -431,7 +431,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	s.Require().NoError(err)
 
 	netCoordinator := testutils.NewNetworkCoordinatorMock(s.T())
-	netCoordinator.ValidateCertMock.Set(func(p context.Context, p1 core.AuthorizationCertificate) (bool, error) {
+	netCoordinator.ValidateCertMock.Set(func(p context.Context, p1 insolar.AuthorizationCertificate) (bool, error) {
 		return true, nil
 	})
 

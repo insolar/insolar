@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -26,7 +26,7 @@ type tapeMock struct {
 	GetPreCounter uint64
 	GetMock       mtapeMockGet
 
-	SetFunc       func(p context.Context, p1 []byte, p2 core.Reply, p3 error) (r error)
+	SetFunc       func(p context.Context, p1 []byte, p2 insolar.Reply, p3 error) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mtapeMockSet
@@ -217,7 +217,7 @@ type tapeMockSetExpectation struct {
 type tapeMockSetInput struct {
 	p  context.Context
 	p1 []byte
-	p2 core.Reply
+	p2 insolar.Reply
 	p3 error
 }
 
@@ -226,7 +226,7 @@ type tapeMockSetResult struct {
 }
 
 //Expect specifies that invocation of tape.Set is expected from 1 to Infinity times
-func (m *mtapeMockSet) Expect(p context.Context, p1 []byte, p2 core.Reply, p3 error) *mtapeMockSet {
+func (m *mtapeMockSet) Expect(p context.Context, p1 []byte, p2 insolar.Reply, p3 error) *mtapeMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
@@ -250,7 +250,7 @@ func (m *mtapeMockSet) Return(r error) *tapeMock {
 }
 
 //ExpectOnce specifies that invocation of tape.Set is expected once
-func (m *mtapeMockSet) ExpectOnce(p context.Context, p1 []byte, p2 core.Reply, p3 error) *tapeMockSetExpectation {
+func (m *mtapeMockSet) ExpectOnce(p context.Context, p1 []byte, p2 insolar.Reply, p3 error) *tapeMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
@@ -265,7 +265,7 @@ func (e *tapeMockSetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of tape.Set method
-func (m *mtapeMockSet) Set(f func(p context.Context, p1 []byte, p2 core.Reply, p3 error) (r error)) *tapeMock {
+func (m *mtapeMockSet) Set(f func(p context.Context, p1 []byte, p2 insolar.Reply, p3 error) (r error)) *tapeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -274,7 +274,7 @@ func (m *mtapeMockSet) Set(f func(p context.Context, p1 []byte, p2 core.Reply, p
 }
 
 //Set implements github.com/insolar/insolar/messagebus.tape interface
-func (m *tapeMock) Set(p context.Context, p1 []byte, p2 core.Reply, p3 error) (r error) {
+func (m *tapeMock) Set(p context.Context, p1 []byte, p2 insolar.Reply, p3 error) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 

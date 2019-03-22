@@ -53,7 +53,7 @@ package packets
 import (
 	"crypto"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
 
@@ -76,33 +76,33 @@ func (p3p *Phase3Packet) GetType() PacketType {
 	return p3p.packetHeader.PacketT
 }
 
-func (p3p *Phase3Packet) GetOrigin() core.ShortNodeID {
+func (p3p *Phase3Packet) GetOrigin() insolar.ShortNodeID {
 	return p3p.packetHeader.OriginNodeID
 }
 
-func (p3p *Phase3Packet) GetTarget() core.ShortNodeID {
+func (p3p *Phase3Packet) GetTarget() insolar.ShortNodeID {
 	return p3p.packetHeader.TargetNodeID
 }
 
-func (p3p *Phase3Packet) SetRouting(origin, target core.ShortNodeID) {
+func (p3p *Phase3Packet) SetRouting(origin, target insolar.ShortNodeID) {
 	p3p.packetHeader.OriginNodeID = origin
 	p3p.packetHeader.TargetNodeID = target
 	p3p.packetHeader.HasRouting = true
 }
 
-func (p3p *Phase3Packet) Verify(crypto core.CryptographyService, key crypto.PublicKey) error {
+func (p3p *Phase3Packet) Verify(crypto insolar.CryptographyService, key crypto.PublicKey) error {
 	raw, err := p3p.rawBytes()
 	if err != nil {
 		return errors.Wrap(err, "Failed to get raw part of phase 3 packet")
 	}
-	valid := crypto.Verify(key, core.SignatureFromBytes(p3p.SignatureHeaderSection1[:]), raw)
+	valid := crypto.Verify(key, insolar.SignatureFromBytes(p3p.SignatureHeaderSection1[:]), raw)
 	if !valid {
 		return errors.New("bad signature")
 	}
 	return nil
 }
 
-func (p3p *Phase3Packet) Sign(cryptographyService core.CryptographyService) error {
+func (p3p *Phase3Packet) Sign(cryptographyService insolar.CryptographyService) error {
 	raw, err := p3p.rawBytes()
 	if err != nil {
 		return errors.Wrap(err, "Failed to get raw part of phase 3 packet")
@@ -115,7 +115,7 @@ func (p3p *Phase3Packet) Sign(cryptographyService core.CryptographyService) erro
 	return nil
 }
 
-func NewPhase3Packet(number core.PulseNumber, globuleHashSignature GlobuleHashSignature, bitSet BitSet) *Phase3Packet {
+func NewPhase3Packet(number insolar.PulseNumber, globuleHashSignature GlobuleHashSignature, bitSet BitSet) *Phase3Packet {
 	result := &Phase3Packet{
 		globuleHashSignature: globuleHashSignature,
 		bitset:               bitSet,
@@ -133,6 +133,6 @@ func (p3p *Phase3Packet) GetGlobuleHashSignature() GlobuleHashSignature {
 	return p3p.globuleHashSignature
 }
 
-func (p3p *Phase3Packet) GetPulseNumber() core.PulseNumber {
-	return core.PulseNumber(p3p.packetHeader.Pulse)
+func (p3p *Phase3Packet) GetPulseNumber() insolar.PulseNumber {
+	return insolar.PulseNumber(p3p.packetHeader.Pulse)
 }

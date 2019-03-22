@@ -19,7 +19,7 @@ package extractor
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/stretchr/testify/require"
 )
@@ -27,7 +27,7 @@ import (
 func TestPublicKeyResponse(t *testing.T) {
 	testValue := "test_public_key"
 
-	data, err := core.Serialize([]interface{}{testValue, nil})
+	data, err := insolar.Serialize([]interface{}{testValue, nil})
 	require.NoError(t, err)
 
 	result, err := PublicKeyResponse(data)
@@ -40,7 +40,7 @@ func TestPublicKeyResponse_ErrorResponse(t *testing.T) {
 	testValue := "test_public_key"
 	contractErr := &foundation.Error{S: "Custom test error"}
 
-	data, err := core.Serialize([]interface{}{testValue, contractErr})
+	data, err := insolar.Serialize([]interface{}{testValue, contractErr})
 	require.NoError(t, err)
 
 	result, err := PublicKeyResponse(data)
@@ -53,7 +53,7 @@ func TestPublicKeyResponse_ErrorResponse(t *testing.T) {
 func TestPublicKeyResponse_UnmarshalError(t *testing.T) {
 	testValue := "some_no_valid_data"
 
-	data, err := core.Serialize(testValue)
+	data, err := insolar.Serialize(testValue)
 	require.NoError(t, err)
 
 	result, err := PublicKeyResponse(data)
@@ -68,7 +68,7 @@ func TestCallResponse(t *testing.T) {
 		"int_value":    uint64(1),
 	}
 
-	data, err := core.Serialize([]interface{}{testValue, nil})
+	data, err := insolar.Serialize([]interface{}{testValue, nil})
 	require.NoError(t, err)
 
 	result, contractErr, err := CallResponse(data)
@@ -81,7 +81,7 @@ func TestCallResponse(t *testing.T) {
 func TestCallResponse_UnmarshalError(t *testing.T) {
 	testValue := "some_no_valid_data"
 
-	data, err := core.Serialize(testValue)
+	data, err := insolar.Serialize(testValue)
 	require.NoError(t, err)
 
 	result, contractErr, err := CallResponse(data)

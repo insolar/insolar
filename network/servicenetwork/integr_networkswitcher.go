@@ -54,25 +54,25 @@ import (
 	"context"
 	"sync/atomic"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type testNetworkSwitcher struct {
 	state int32
 }
 
-func NewTestNetworkSwitcher() core.NetworkSwitcher {
-	state := int32(core.VoidNetworkState)
+func NewTestNetworkSwitcher() insolar.NetworkSwitcher {
+	state := int32(insolar.VoidNetworkState)
 	return &testNetworkSwitcher{state: state}
 }
 
-func (t *testNetworkSwitcher) GetState() core.NetworkState {
+func (t *testNetworkSwitcher) GetState() insolar.NetworkState {
 	s := atomic.LoadInt32(&t.state)
-	return core.NetworkState(s)
+	return insolar.NetworkState(s)
 }
 
-func (t *testNetworkSwitcher) OnPulse(context.Context, core.Pulse) error {
-	newState := int32(core.CompleteNetworkState)
+func (t *testNetworkSwitcher) OnPulse(context.Context, insolar.Pulse) error {
+	newState := int32(insolar.CompleteNetworkState)
 	atomic.StoreInt32(&t.state, newState)
 	return nil
 }

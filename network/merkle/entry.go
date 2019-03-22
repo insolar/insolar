@@ -53,12 +53,12 @@ package merkle
 import (
 	"sort"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
 
 type PulseEntry struct {
-	Pulse *core.Pulse
+	Pulse *insolar.Pulse
 }
 
 func (pe *PulseEntry) hash(helper *merkleHelper) []byte {
@@ -67,17 +67,17 @@ func (pe *PulseEntry) hash(helper *merkleHelper) []byte {
 
 type GlobuleEntry struct {
 	*PulseEntry
-	ProofSet      map[core.Node]*PulseProof
+	ProofSet      map[insolar.NetworkNode]*PulseProof
 	PulseHash     []byte
 	PrevCloudHash []byte
-	GlobuleID     core.GlobuleID
+	GlobuleID     insolar.GlobuleID
 }
 
 func (ge *GlobuleEntry) hash(helper *merkleHelper) ([]byte, error) {
 	nodeEntryByRole := nodeEntryByRole(ge.PulseEntry, ge.ProofSet)
 	var bucketHashes [][]byte
 
-	for _, role := range core.AllStaticRoles {
+	for _, role := range insolar.AllStaticRoles {
 		roleEntries, ok := nodeEntryByRole[role]
 		if !ok {
 			continue
@@ -129,7 +129,7 @@ func (ce *CloudEntry) hash(helper *merkleHelper) ([]byte, error) {
 type nodeEntry struct {
 	*PulseEntry
 	PulseProof *PulseProof
-	Node       core.Node
+	Node       insolar.NetworkNode
 }
 
 func (ne *nodeEntry) hash(helper *merkleHelper) []byte {
@@ -138,8 +138,8 @@ func (ne *nodeEntry) hash(helper *merkleHelper) []byte {
 	return helper.nodeHash(ne.PulseProof.Signature.Bytes(), nodeInfoHash)
 }
 
-func nodeEntryByRole(pulseEntry *PulseEntry, nodeProofs map[core.Node]*PulseProof) map[core.StaticRole][]*nodeEntry {
-	roleMap := make(map[core.StaticRole][]*nodeEntry)
+func nodeEntryByRole(pulseEntry *PulseEntry, nodeProofs map[insolar.NetworkNode]*PulseProof) map[insolar.StaticRole][]*nodeEntry {
+	roleMap := make(map[insolar.StaticRole][]*nodeEntry)
 	for node, pulseProof := range nodeProofs {
 		role := node.Role()
 		roleMap[role] = append(roleMap[role], &nodeEntry{

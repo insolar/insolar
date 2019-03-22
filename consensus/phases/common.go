@@ -54,7 +54,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/consensus"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"go.opencensus.io/stats"
@@ -64,11 +64,11 @@ func validateProofs(
 	calculator merkle.Calculator,
 	unsyncList network.UnsyncList,
 	pulseHash merkle.OriginHash,
-	proofs map[core.RecordRef]*merkle.PulseProof,
-) (valid map[core.Node]*merkle.PulseProof, fault map[core.RecordRef]*merkle.PulseProof) {
+	proofs map[insolar.Reference]*merkle.PulseProof,
+) (valid map[insolar.NetworkNode]*merkle.PulseProof, fault map[insolar.Reference]*merkle.PulseProof) {
 
-	validProofs := make(map[core.Node]*merkle.PulseProof)
-	faultProofs := make(map[core.RecordRef]*merkle.PulseProof)
+	validProofs := make(map[insolar.NetworkNode]*merkle.PulseProof)
+	faultProofs := make(map[insolar.Reference]*merkle.PulseProof)
 	for nodeID, proof := range proofs {
 		valid := validateProof(calculator, unsyncList, pulseHash, nodeID, proof)
 		if valid {
@@ -84,7 +84,7 @@ func validateProof(
 	calculator merkle.Calculator,
 	unsyncList network.UnsyncList,
 	pulseHash merkle.OriginHash,
-	nodeID core.RecordRef,
+	nodeID insolar.Reference,
 	proof *merkle.PulseProof) bool {
 
 	node := unsyncList.GetActiveNode(nodeID)

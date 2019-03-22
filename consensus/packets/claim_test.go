@@ -53,7 +53,7 @@ package packets
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -94,8 +94,8 @@ func TestNodeViolationBlame(t *testing.T) {
 
 func makeNodeJoinClaim(withSignature bool) *NodeJoinClaim {
 	nodeJoinClaim := &NodeJoinClaim{}
-	nodeJoinClaim.ShortNodeID = core.ShortNodeID(77)
-	nodeJoinClaim.RelayNodeID = core.ShortNodeID(26)
+	nodeJoinClaim.ShortNodeID = insolar.ShortNodeID(77)
+	nodeJoinClaim.RelayNodeID = insolar.ShortNodeID(26)
 	nodeJoinClaim.ProtocolVersionAndFlags = uint32(99)
 	nodeJoinClaim.JoinsAfter = uint32(67)
 	nodeJoinClaim.NodeRoleRecID = 32

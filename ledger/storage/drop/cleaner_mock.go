@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -19,7 +19,7 @@ import (
 type CleanerMock struct {
 	t minimock.Tester
 
-	DeleteFunc       func(p core.PulseNumber)
+	DeleteFunc       func(p insolar.PulseNumber)
 	DeleteCounter    uint64
 	DeletePreCounter uint64
 	DeleteMock       mCleanerMockDelete
@@ -49,11 +49,11 @@ type CleanerMockDeleteExpectation struct {
 }
 
 type CleanerMockDeleteInput struct {
-	p core.PulseNumber
+	p insolar.PulseNumber
 }
 
 //Expect specifies that invocation of Cleaner.Delete is expected from 1 to Infinity times
-func (m *mCleanerMockDelete) Expect(p core.PulseNumber) *mCleanerMockDelete {
+func (m *mCleanerMockDelete) Expect(p insolar.PulseNumber) *mCleanerMockDelete {
 	m.mock.DeleteFunc = nil
 	m.expectationSeries = nil
 
@@ -77,7 +77,7 @@ func (m *mCleanerMockDelete) Return() *CleanerMock {
 }
 
 //ExpectOnce specifies that invocation of Cleaner.Delete is expected once
-func (m *mCleanerMockDelete) ExpectOnce(p core.PulseNumber) *CleanerMockDeleteExpectation {
+func (m *mCleanerMockDelete) ExpectOnce(p insolar.PulseNumber) *CleanerMockDeleteExpectation {
 	m.mock.DeleteFunc = nil
 	m.mainExpectation = nil
 
@@ -88,7 +88,7 @@ func (m *mCleanerMockDelete) ExpectOnce(p core.PulseNumber) *CleanerMockDeleteEx
 }
 
 //Set uses given function f as a mock of Cleaner.Delete method
-func (m *mCleanerMockDelete) Set(f func(p core.PulseNumber)) *CleanerMock {
+func (m *mCleanerMockDelete) Set(f func(p insolar.PulseNumber)) *CleanerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -97,7 +97,7 @@ func (m *mCleanerMockDelete) Set(f func(p core.PulseNumber)) *CleanerMock {
 }
 
 //Delete implements github.com/insolar/insolar/ledger/storage/drop.Cleaner interface
-func (m *CleanerMock) Delete(p core.PulseNumber) {
+func (m *CleanerMock) Delete(p insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteCounter, 1)
 
