@@ -442,6 +442,10 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	h.ObjectStorage = s.objectStorage
 
 	h.RecentStorageProvider = provideMock
+	idLock := storage.NewIDLockerMock(s.T())
+	idLock.RLockMock.Return()
+	idLock.RUnlockMock.Return()
+	h.IDLocker = idLock
 
 	delegateType := *genRandomRef(0)
 	delegate := *genRandomRef(0)
@@ -672,6 +676,11 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
+
+	idLock := storage.NewIDLockerMock(s.T())
+	idLock.RLockMock.Return()
+	idLock.RUnlockMock.Return()
+	h.IDLocker = idLock
 
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
