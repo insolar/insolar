@@ -3,7 +3,7 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Network" can be found in github.com/insolar/insolar/core
+The original interface "Network" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	context "context"
@@ -11,37 +11,37 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//NetworkMock implements github.com/insolar/insolar/core.Network
+//NetworkMock implements github.com/insolar/insolar/insolar.Network
 type NetworkMock struct {
 	t minimock.Tester
 
-	LeaveFunc       func(p context.Context, p1 core.PulseNumber)
+	LeaveFunc       func(p context.Context, p1 insolar.PulseNumber)
 	LeaveCounter    uint64
 	LeavePreCounter uint64
 	LeaveMock       mNetworkMockLeave
 
-	RemoteProcedureRegisterFunc       func(p string, p1 core.RemoteProcedure)
+	RemoteProcedureRegisterFunc       func(p string, p1 insolar.RemoteProcedure)
 	RemoteProcedureRegisterCounter    uint64
 	RemoteProcedureRegisterPreCounter uint64
 	RemoteProcedureRegisterMock       mNetworkMockRemoteProcedureRegister
 
-	SendCascadeMessageFunc       func(p core.Cascade, p1 string, p2 core.Parcel) (r error)
+	SendCascadeMessageFunc       func(p insolar.Cascade, p1 string, p2 insolar.Parcel) (r error)
 	SendCascadeMessageCounter    uint64
 	SendCascadeMessagePreCounter uint64
 	SendCascadeMessageMock       mNetworkMockSendCascadeMessage
 
-	SendMessageFunc       func(p core.RecordRef, p1 string, p2 core.Parcel) (r []byte, r1 error)
+	SendMessageFunc       func(p insolar.Reference, p1 string, p2 insolar.Parcel) (r []byte, r1 error)
 	SendMessageCounter    uint64
 	SendMessagePreCounter uint64
 	SendMessageMock       mNetworkMockSendMessage
 }
 
-//NewNetworkMock returns a mock for github.com/insolar/insolar/core.Network
+//NewNetworkMock returns a mock for github.com/insolar/insolar/insolar.Network
 func NewNetworkMock(t minimock.Tester) *NetworkMock {
 	m := &NetworkMock{t: t}
 
@@ -69,11 +69,11 @@ type NetworkMockLeaveExpectation struct {
 
 type NetworkMockLeaveInput struct {
 	p  context.Context
-	p1 core.PulseNumber
+	p1 insolar.PulseNumber
 }
 
 //Expect specifies that invocation of Network.Leave is expected from 1 to Infinity times
-func (m *mNetworkMockLeave) Expect(p context.Context, p1 core.PulseNumber) *mNetworkMockLeave {
+func (m *mNetworkMockLeave) Expect(p context.Context, p1 insolar.PulseNumber) *mNetworkMockLeave {
 	m.mock.LeaveFunc = nil
 	m.expectationSeries = nil
 
@@ -97,7 +97,7 @@ func (m *mNetworkMockLeave) Return() *NetworkMock {
 }
 
 //ExpectOnce specifies that invocation of Network.Leave is expected once
-func (m *mNetworkMockLeave) ExpectOnce(p context.Context, p1 core.PulseNumber) *NetworkMockLeaveExpectation {
+func (m *mNetworkMockLeave) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *NetworkMockLeaveExpectation {
 	m.mock.LeaveFunc = nil
 	m.mainExpectation = nil
 
@@ -108,7 +108,7 @@ func (m *mNetworkMockLeave) ExpectOnce(p context.Context, p1 core.PulseNumber) *
 }
 
 //Set uses given function f as a mock of Network.Leave method
-func (m *mNetworkMockLeave) Set(f func(p context.Context, p1 core.PulseNumber)) *NetworkMock {
+func (m *mNetworkMockLeave) Set(f func(p context.Context, p1 insolar.PulseNumber)) *NetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -116,8 +116,8 @@ func (m *mNetworkMockLeave) Set(f func(p context.Context, p1 core.PulseNumber)) 
 	return m.mock
 }
 
-//Leave implements github.com/insolar/insolar/core.Network interface
-func (m *NetworkMock) Leave(p context.Context, p1 core.PulseNumber) {
+//Leave implements github.com/insolar/insolar/insolar.Network interface
+func (m *NetworkMock) Leave(p context.Context, p1 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.LeavePreCounter, 1)
 	defer atomic.AddUint64(&m.LeaveCounter, 1)
 
@@ -193,11 +193,11 @@ type NetworkMockRemoteProcedureRegisterExpectation struct {
 
 type NetworkMockRemoteProcedureRegisterInput struct {
 	p  string
-	p1 core.RemoteProcedure
+	p1 insolar.RemoteProcedure
 }
 
 //Expect specifies that invocation of Network.RemoteProcedureRegister is expected from 1 to Infinity times
-func (m *mNetworkMockRemoteProcedureRegister) Expect(p string, p1 core.RemoteProcedure) *mNetworkMockRemoteProcedureRegister {
+func (m *mNetworkMockRemoteProcedureRegister) Expect(p string, p1 insolar.RemoteProcedure) *mNetworkMockRemoteProcedureRegister {
 	m.mock.RemoteProcedureRegisterFunc = nil
 	m.expectationSeries = nil
 
@@ -221,7 +221,7 @@ func (m *mNetworkMockRemoteProcedureRegister) Return() *NetworkMock {
 }
 
 //ExpectOnce specifies that invocation of Network.RemoteProcedureRegister is expected once
-func (m *mNetworkMockRemoteProcedureRegister) ExpectOnce(p string, p1 core.RemoteProcedure) *NetworkMockRemoteProcedureRegisterExpectation {
+func (m *mNetworkMockRemoteProcedureRegister) ExpectOnce(p string, p1 insolar.RemoteProcedure) *NetworkMockRemoteProcedureRegisterExpectation {
 	m.mock.RemoteProcedureRegisterFunc = nil
 	m.mainExpectation = nil
 
@@ -232,7 +232,7 @@ func (m *mNetworkMockRemoteProcedureRegister) ExpectOnce(p string, p1 core.Remot
 }
 
 //Set uses given function f as a mock of Network.RemoteProcedureRegister method
-func (m *mNetworkMockRemoteProcedureRegister) Set(f func(p string, p1 core.RemoteProcedure)) *NetworkMock {
+func (m *mNetworkMockRemoteProcedureRegister) Set(f func(p string, p1 insolar.RemoteProcedure)) *NetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -240,8 +240,8 @@ func (m *mNetworkMockRemoteProcedureRegister) Set(f func(p string, p1 core.Remot
 	return m.mock
 }
 
-//RemoteProcedureRegister implements github.com/insolar/insolar/core.Network interface
-func (m *NetworkMock) RemoteProcedureRegister(p string, p1 core.RemoteProcedure) {
+//RemoteProcedureRegister implements github.com/insolar/insolar/insolar.Network interface
+func (m *NetworkMock) RemoteProcedureRegister(p string, p1 insolar.RemoteProcedure) {
 	counter := atomic.AddUint64(&m.RemoteProcedureRegisterPreCounter, 1)
 	defer atomic.AddUint64(&m.RemoteProcedureRegisterCounter, 1)
 
@@ -317,9 +317,9 @@ type NetworkMockSendCascadeMessageExpectation struct {
 }
 
 type NetworkMockSendCascadeMessageInput struct {
-	p  core.Cascade
+	p  insolar.Cascade
 	p1 string
-	p2 core.Parcel
+	p2 insolar.Parcel
 }
 
 type NetworkMockSendCascadeMessageResult struct {
@@ -327,7 +327,7 @@ type NetworkMockSendCascadeMessageResult struct {
 }
 
 //Expect specifies that invocation of Network.SendCascadeMessage is expected from 1 to Infinity times
-func (m *mNetworkMockSendCascadeMessage) Expect(p core.Cascade, p1 string, p2 core.Parcel) *mNetworkMockSendCascadeMessage {
+func (m *mNetworkMockSendCascadeMessage) Expect(p insolar.Cascade, p1 string, p2 insolar.Parcel) *mNetworkMockSendCascadeMessage {
 	m.mock.SendCascadeMessageFunc = nil
 	m.expectationSeries = nil
 
@@ -351,7 +351,7 @@ func (m *mNetworkMockSendCascadeMessage) Return(r error) *NetworkMock {
 }
 
 //ExpectOnce specifies that invocation of Network.SendCascadeMessage is expected once
-func (m *mNetworkMockSendCascadeMessage) ExpectOnce(p core.Cascade, p1 string, p2 core.Parcel) *NetworkMockSendCascadeMessageExpectation {
+func (m *mNetworkMockSendCascadeMessage) ExpectOnce(p insolar.Cascade, p1 string, p2 insolar.Parcel) *NetworkMockSendCascadeMessageExpectation {
 	m.mock.SendCascadeMessageFunc = nil
 	m.mainExpectation = nil
 
@@ -366,7 +366,7 @@ func (e *NetworkMockSendCascadeMessageExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of Network.SendCascadeMessage method
-func (m *mNetworkMockSendCascadeMessage) Set(f func(p core.Cascade, p1 string, p2 core.Parcel) (r error)) *NetworkMock {
+func (m *mNetworkMockSendCascadeMessage) Set(f func(p insolar.Cascade, p1 string, p2 insolar.Parcel) (r error)) *NetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -374,8 +374,8 @@ func (m *mNetworkMockSendCascadeMessage) Set(f func(p core.Cascade, p1 string, p
 	return m.mock
 }
 
-//SendCascadeMessage implements github.com/insolar/insolar/core.Network interface
-func (m *NetworkMock) SendCascadeMessage(p core.Cascade, p1 string, p2 core.Parcel) (r error) {
+//SendCascadeMessage implements github.com/insolar/insolar/insolar.Network interface
+func (m *NetworkMock) SendCascadeMessage(p insolar.Cascade, p1 string, p2 insolar.Parcel) (r error) {
 	counter := atomic.AddUint64(&m.SendCascadeMessagePreCounter, 1)
 	defer atomic.AddUint64(&m.SendCascadeMessageCounter, 1)
 
@@ -466,9 +466,9 @@ type NetworkMockSendMessageExpectation struct {
 }
 
 type NetworkMockSendMessageInput struct {
-	p  core.RecordRef
+	p  insolar.Reference
 	p1 string
-	p2 core.Parcel
+	p2 insolar.Parcel
 }
 
 type NetworkMockSendMessageResult struct {
@@ -477,7 +477,7 @@ type NetworkMockSendMessageResult struct {
 }
 
 //Expect specifies that invocation of Network.SendMessage is expected from 1 to Infinity times
-func (m *mNetworkMockSendMessage) Expect(p core.RecordRef, p1 string, p2 core.Parcel) *mNetworkMockSendMessage {
+func (m *mNetworkMockSendMessage) Expect(p insolar.Reference, p1 string, p2 insolar.Parcel) *mNetworkMockSendMessage {
 	m.mock.SendMessageFunc = nil
 	m.expectationSeries = nil
 
@@ -501,7 +501,7 @@ func (m *mNetworkMockSendMessage) Return(r []byte, r1 error) *NetworkMock {
 }
 
 //ExpectOnce specifies that invocation of Network.SendMessage is expected once
-func (m *mNetworkMockSendMessage) ExpectOnce(p core.RecordRef, p1 string, p2 core.Parcel) *NetworkMockSendMessageExpectation {
+func (m *mNetworkMockSendMessage) ExpectOnce(p insolar.Reference, p1 string, p2 insolar.Parcel) *NetworkMockSendMessageExpectation {
 	m.mock.SendMessageFunc = nil
 	m.mainExpectation = nil
 
@@ -516,7 +516,7 @@ func (e *NetworkMockSendMessageExpectation) Return(r []byte, r1 error) {
 }
 
 //Set uses given function f as a mock of Network.SendMessage method
-func (m *mNetworkMockSendMessage) Set(f func(p core.RecordRef, p1 string, p2 core.Parcel) (r []byte, r1 error)) *NetworkMock {
+func (m *mNetworkMockSendMessage) Set(f func(p insolar.Reference, p1 string, p2 insolar.Parcel) (r []byte, r1 error)) *NetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -524,8 +524,8 @@ func (m *mNetworkMockSendMessage) Set(f func(p core.RecordRef, p1 string, p2 cor
 	return m.mock
 }
 
-//SendMessage implements github.com/insolar/insolar/core.Network interface
-func (m *NetworkMock) SendMessage(p core.RecordRef, p1 string, p2 core.Parcel) (r []byte, r1 error) {
+//SendMessage implements github.com/insolar/insolar/insolar.Network interface
+func (m *NetworkMock) SendMessage(p insolar.Reference, p1 string, p2 insolar.Parcel) (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.SendMessagePreCounter, 1)
 	defer atomic.AddUint64(&m.SendMessageCounter, 1)
 
