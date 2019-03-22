@@ -26,52 +26,38 @@ import (
 
 // NewResponseSendAdapter creates new instance of adapter for sending response
 func NewResponseSendAdapter() PulseConveyorAdapterTaskSink {
-	return NewAdapterWithQueue(NewResponseSender())
+	return NewAdapterWithQueue(NewSendResponseProcessor())
 }
 
-// ResponseSenderTask is task for adapter for sending response
-type ResponseSenderTask struct {
+// SendResponseTask is task for adapter for sending response
+type SendResponseTask struct {
 	Future core.ConveyorFuture
 	Result core.Reply
 }
 
-// ResponseSender is worker for adapter for sending response
-type ResponseSender struct{}
+// SendResponseProcessor is worker for adapter for sending response
+type SendResponseProcessor struct{}
 
 // NewResponseSender returns new instance of worker which sending response
-func NewResponseSender() Processor {
-	return &ResponseSender{}
+func NewSendResponseProcessor() Processor {
+	return &SendResponseProcessor{}
 }
 
 // Process implements Processor interface
-func (rs *ResponseSender) Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo) Events {
-	payload, ok := task.taskPayload.(ResponseSenderTask)
+func (rs *SendResponseProcessor) Process(task AdapterTask, nestedEventHelper NestedEventHelper, cancelInfo CancelInfo) interface{} {
+	payload, ok := task.TaskPayload.(SendResponseTask)
 	var msg interface{}
 
 	if !ok {
-		msg = errors.Errorf("[ ResponseSender.Process ] Incorrect payload type: %T", task.taskPayload)
-		return Events{RespPayload: msg}
+		msg = errors.Errorf("[ SendResponseProcessor.Process ] Incorrect payload type: %T", task.TaskPayload)
+		return msg
 	}
 
-	done := make(chan bool, 1)
-	go func(payload ResponseSenderTask) {
-		res := payload.Result
-		f := payload.Future
-		f.SetResult(res)
-		done <- true
-	}(payload)
+	res := payload.Result
+	f := payload.Future
+	f.SetResult(res)
 
-	select {
-	case <-cancelInfo.Cancel():
-		log.Info("[ ResponseSender.Process ] Cancel. Return Nil as Response")
-		msg = nil
-	case <-cancelInfo.Flush():
-		log.Info("[ ResponseSender.Process ] Flush. DON'T Return Response")
-		return Events{Flushed: true}
-	case <-done:
-		msg = fmt.Sprintf("Response was send successfully")
-	}
-
-	log.Info("[ ResponseSender.Process ] response message is", msg)
-	return Events{RespPayload: msg}
+	msg = fmt.Sprintf("Response was send successfully")
+	log.Info("[ SendResponseProcessor.Process ] response message is", msg)
+	return msg
 }

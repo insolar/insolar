@@ -47,7 +47,7 @@ type AdapterTask struct {
 	respSink    AdaptorToSlotResponseSink
 	elementID   idType
 	handlerID   idType
-	taskPayload interface{}
+	TaskPayload interface{}
 }
 
 // AdapterResponse contains info with adapter response
@@ -100,18 +100,19 @@ type AdapterNestedEvent struct {
 type CancelInfo interface {
 	Cancel() <-chan bool
 	Flush() <-chan bool
+	IsCanceled() bool
+	IsFlushed() bool
 	ID() uint64
 }
 
-type Events struct {
-	RespPayload        interface{}
-	NestedEventPayload []interface{}
-	Flushed            bool
+// NestedEventHelper is helper for sending nested event from Processor
+type NestedEventHelper interface {
+	Send(eventPayload interface{})
 }
 
 // Processor is iface for processing task for adapter
 type Processor interface {
-	Process(adapterID uint32, task AdapterTask, cancelInfo CancelInfo) Events
+	Process(task AdapterTask, nestedEventHelper NestedEventHelper, cancelInfo CancelInfo) interface{}
 }
 
 // NewAdapterWithQueue creates new instance of Adapter
