@@ -46,4 +46,6 @@ const (
 	ScopePulse Scope = 1
 	// ScopeJetDrop is the scope for a jet drop storage.
 	ScopeJetDrop Scope = 3
+	// ScopeJetDrop is the scope for a jet drop storage.
+	ScopeIndex Scope = 4
 )

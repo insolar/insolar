@@ -20,21 +20,24 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestInMemoryIndex(t *testing.T) {
+func TestIndex_Components(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
 
-	indexStorage := object.NewIndexMemory()
+	indexMemory := object.NewIndexMemory()
+	indexDB := object.NewIndexDB()
+	indexDB.DB = db.NewMemoryMockDB()
 
 	type tempIndex struct {
 		id  insolar.ID
@@ -57,18 +60,27 @@ func TestInMemoryIndex(t *testing.T) {
 
 	t.Run("saves correct index-value", func(t *testing.T) {
 		for _, i := range indices {
-			err := indexStorage.Set(ctx, i.id, i.idx)
-			require.NoError(t, err)
+			memErr := indexMemory.Set(ctx, i.id, i.idx)
+			dbErr := indexDB.Set(ctx, i.id, i.idx)
+			require.NoError(t, memErr)
+			require.NoError(t, dbErr)
 		}
 
 		for _, i := range indices {
-			resIndex, err := indexStorage.ForID(ctx, i.id)
-			require.NoError(t, err)
+			resIndexMem, memErr := indexMemory.ForID(ctx, i.id)
+			resIndexDB, dbErr := indexDB.ForID(ctx, i.id)
+			require.NoError(t, memErr)
+			require.NoError(t, dbErr)
 
-			assert.Equal(t, i.idx, resIndex)
-			assert.Equal(t, i.idx.JetID, resIndex.JetID)
-			assert.Equal(t, i.idx.LatestState, resIndex.LatestState)
-			assert.Equal(t, i.idx.LatestUpdate, resIndex.LatestUpdate)
+			assert.Equal(t, i.idx, resIndexMem)
+			assert.Equal(t, i.idx.JetID, resIndexMem.JetID)
+			assert.Equal(t, i.idx.LatestState, resIndexMem.LatestState)
+			assert.Equal(t, i.idx.LatestUpdate, resIndexMem.LatestUpdate)
+
+			assert.Equal(t, i.idx, resIndexDB)
+			assert.Equal(t, i.idx.JetID, resIndexDB.JetID)
+			assert.Equal(t, i.idx.LatestState, resIndexDB.LatestState)
+			assert.Equal(t, i.idx.LatestUpdate, resIndexDB.LatestUpdate)
 		}
 	})
 
@@ -76,24 +88,34 @@ func TestInMemoryIndex(t *testing.T) {
 		t.Parallel()
 
 		for i := int32(0); i < rand.Int31n(10); i++ {
-			_, err := indexStorage.ForID(ctx, gen.ID())
-			require.Error(t, err)
-			assert.Equal(t, object.ErrNotFound, err)
+			_, memErr := indexMemory.ForID(ctx, gen.ID())
+			_, dbErr := indexDB.ForID(ctx, gen.ID())
+			require.Error(t, memErr)
+			require.Error(t, dbErr)
+			assert.Equal(t, object.ErrNotFound, memErr)
+			assert.Equal(t, object.ErrNotFound, dbErr)
 		}
 	})
 
 	t.Run("override indices is ok", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := object.NewIndexMemory()
+		indexMemory := object.NewIndexMemory()
+		indexDB := object.NewIndexDB()
+		indexDB.DB = db.NewMemoryMockDB()
+
 		for _, i := range indices {
-			err := indexStorage.Set(ctx, i.id, i.idx)
-			require.NoError(t, err)
+			memErr := indexMemory.Set(ctx, i.id, i.idx)
+			dbErr := indexDB.Set(ctx, i.id, i.idx)
+			require.NoError(t, memErr)
+			require.NoError(t, dbErr)
 		}
 
 		for _, i := range indices {
-			err := indexStorage.Set(ctx, i.id, i.idx)
-			assert.NoError(t, err)
+			memErr := indexMemory.Set(ctx, i.id, i.idx)
+			dbErr := indexDB.Set(ctx, i.id, i.idx)
+			assert.NoError(t, memErr)
+			assert.NoError(t, dbErr)
 		}
 	})
 }
