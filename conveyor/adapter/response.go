@@ -91,5 +91,5 @@ func (r *ResponseSenderHelper) SendResponse(element slot.SlotElementHelper, resu
 		Result: result,
 	}
 	err := element.SendTask(ResponseSenderAdapterID, response, respHandlerID)
-	return errors.Wrap(err, "[ ResponseSenderHelper.SendResponse ]")
+	return errors.Wrap(err, "[ ResponseSenderHelper.SendResponse ] Can't SendTask")
 }
