@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"testing"
 
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -72,7 +72,7 @@ func (s *exporterSuite) BeforeTest(suiteName, testName string) {
 	s.ctx = inslogger.TestContext(s.T())
 	s.jetID = *core.NewJetID(0, nil)
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	db, cleaner := storagetest.TmpDB(s.ctx, nil, s.T())
 	s.cleaner = cleaner
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()

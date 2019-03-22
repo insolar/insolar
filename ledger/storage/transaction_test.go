@@ -61,7 +61,9 @@ func (s *txnSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	idLocker := storage.NewIDLocker()
+
+	db, cleaner := storagetest.TmpDB(s.ctx, idLocker, s.T())
 
 	s.db = db
 	s.cleaner = cleaner

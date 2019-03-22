@@ -80,7 +80,7 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	tempDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tempDB, cleaner := storagetest.TmpDB(s.ctx, nil, s.T())
 	s.cleaner = cleaner
 	s.db = tempDB
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
@@ -200,6 +200,8 @@ func getTestData(s *amSuite) (
 	idLockerMock := storage.NewIDLockerMock(s.T())
 	idLockerMock.LockMock.Return()
 	idLockerMock.UnlockMock.Return()
+	idLockerMock.RLockMock.Return()
+	idLockerMock.RUnlockMock.Return()
 
 	handler.IDLocker = idLockerMock
 
@@ -834,6 +836,8 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	handler.RecentStorageProvider = provideMock
 
 	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock.RLockMock.Return()
+	idLockMock.RUnlockMock.Return()
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 	handler.IDLocker = idLockMock

@@ -67,7 +67,7 @@ func (s *storageSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, nil, s.T())
 	s.db = tmpDB
 	s.cleaner = cleaner
 
@@ -214,7 +214,7 @@ func (s *storageSuite) TestDB_AddPulse() {
 
 func TestDB_Close(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	tmpDB, cleaner := storagetest.TmpDB(ctx, t)
+	tmpDB, cleaner := storagetest.TmpDB(ctx, nil, t)
 
 	jetID := testutils.RandomJet()
 

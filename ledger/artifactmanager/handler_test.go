@@ -78,7 +78,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, nil, s.T())
 	s.cleaner = cleaner
 	s.db = tmpDB
 	s.scheme = testutils.NewPlatformCryptographyScheme()
@@ -142,6 +142,11 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
+
+	idLock := storage.NewIDLockerMock(s.T())
+	idLock.RLockMock.Return()
+	idLock.RUnlockMock.Return()
+	h.IDLocker = idLock
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -311,6 +316,11 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
+
+	locker := storage.NewIDLockerMock(s.T())
+	locker.RLockMock.Return()
+	locker.RUnlockMock.Return()
+	h.IDLocker = locker
 
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
