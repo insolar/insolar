@@ -28,8 +28,8 @@ import (
 	jww "github.com/spf13/jwalterweatherman"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -178,7 +178,7 @@ func main() {
 	<-waitChannel
 }
 
-func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (context.Context, core.Logger) {
+func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (context.Context, insolar.Logger) {
 	inslog, err := log.NewLog(cfg)
 	if err != nil {
 		panic(err)

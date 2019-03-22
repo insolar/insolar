@@ -20,14 +20,14 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
-// PulseStorage implements core.PulseStorage
+// PulseStorage implements insolar.PulseStorage
 type PulseStorage struct {
 	PulseTracker PulseTracker `inject:""`
 	rwLock       sync.RWMutex
-	currentPulse *core.Pulse
+	currentPulse *insolar.Pulse
 }
 
 // NewPulseStorage creates new pulse storage
@@ -36,7 +36,7 @@ func NewPulseStorage() *PulseStorage {
 }
 
 // Current returns current pulse of the system
-func (ps *PulseStorage) Current(ctx context.Context) (*core.Pulse, error) {
+func (ps *PulseStorage) Current(ctx context.Context) (*insolar.Pulse, error) {
 	ps.rwLock.RLock()
 
 	if ps.currentPulse == nil {
@@ -60,7 +60,7 @@ func (ps *PulseStorage) Current(ctx context.Context) (*core.Pulse, error) {
 	return ps.currentPulse, nil
 }
 
-func (ps *PulseStorage) Set(pulse *core.Pulse) {
+func (ps *PulseStorage) Set(pulse *insolar.Pulse) {
 	ps.currentPulse = pulse
 }
 

@@ -36,7 +36,7 @@ import (
 	yaml "gopkg.in/yaml.v2"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/pkg/errors"
 )
@@ -215,7 +215,7 @@ func waitForNet() error {
 				fmt.Println("[ waitForNet ] Problem with port " + port + ". Err: " + err.Error())
 				break
 			}
-			if resp.NetworkState != core.CompleteNetworkState.String() {
+			if resp.NetworkState != insolar.CompleteNetworkState.String() {
 				fmt.Println("[ waitForNet ] Good response from port " + port + ". Net is not ready. Response: " + resp.NetworkState)
 				break
 			}

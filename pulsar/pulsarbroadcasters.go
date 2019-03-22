@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -122,7 +122,7 @@ func (currentPulsar *Pulsar) broadcastEntropy(ctx context.Context) {
 	}
 }
 
-func (currentPulsar *Pulsar) sendPulseToPulsars(ctx context.Context, pulse core.Pulse) {
+func (currentPulsar *Pulsar) sendPulseToPulsars(ctx context.Context, pulse insolar.Pulse) {
 	logger := inslogger.FromContext(ctx)
 	ctx, span := instracer.StartSpan(ctx, "Pulsar.sendPulseToPulsars")
 	defer span.End()
@@ -202,7 +202,7 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 	}
 
 	payload := PulseSenderConfirmationPayload{
-		core.PulseSenderConfirmation{
+		insolar.PulseSenderConfirmation{
 			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
 			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
 			PulseNumber:     currentPulsar.ProcessingPulseNumber,
@@ -221,7 +221,7 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 		return
 	}
 	confirmation := PulseSenderConfirmationPayload{
-		core.PulseSenderConfirmation{
+		insolar.PulseSenderConfirmation{
 			PulseNumber:     currentPulsar.ProcessingPulseNumber,
 			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
 			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
@@ -258,11 +258,11 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 	}
 
 	currentPulsar.currentSlotSenderConfirmationsLock.RLock()
-	pulseForSending := core.Pulse{
+	pulseForSending := insolar.Pulse{
 		PulseNumber:      currentPulsar.ProcessingPulseNumber,
 		Entropy:          *currentPulsar.GetCurrentSlotEntropy(),
 		Signs:            currentPulsar.CurrentSlotSenderConfirmations,
-		NextPulseNumber:  currentPulsar.ProcessingPulseNumber + core.PulseNumber(currentPulsar.Config.NumberDelta),
+		NextPulseNumber:  currentPulsar.ProcessingPulseNumber + insolar.PulseNumber(currentPulsar.Config.NumberDelta),
 		PrevPulseNumber:  currentPulsar.lastPulse.PulseNumber,
 		EpochPulseNumber: 1,
 		OriginID:         [16]byte{206, 41, 229, 190, 7, 240, 162, 155, 121, 245, 207, 56, 161, 67, 189, 0},

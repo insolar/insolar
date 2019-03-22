@@ -17,10 +17,10 @@
 package signer
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // UnmarshalParams unmarshalls params
 func UnmarshalParams(data []byte, to ...interface{}) error {
-	return core.Deserialize(data, to)
+	return insolar.Deserialize(data, to)
 }

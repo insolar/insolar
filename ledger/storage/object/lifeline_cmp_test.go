@@ -20,9 +20,9 @@ import (
 	"math/rand"
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar"
+	"github.com/google/gofuzz"
 	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/stretchr/testify/assert"

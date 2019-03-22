@@ -3,7 +3,7 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "KeyProcessor" can be found in github.com/insolar/insolar/core
+The original interface "KeyProcessor" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	crypto "crypto"
@@ -15,7 +15,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//KeyProcessorMock implements github.com/insolar/insolar/core.KeyProcessor
+//KeyProcessorMock implements github.com/insolar/insolar/insolar.KeyProcessor
 type KeyProcessorMock struct {
 	t minimock.Tester
 
@@ -60,7 +60,7 @@ type KeyProcessorMock struct {
 	ImportPublicKeyPEMMock       mKeyProcessorMockImportPublicKeyPEM
 }
 
-//NewKeyProcessorMock returns a mock for github.com/insolar/insolar/core.KeyProcessor
+//NewKeyProcessorMock returns a mock for github.com/insolar/insolar/insolar.KeyProcessor
 func NewKeyProcessorMock(t minimock.Tester) *KeyProcessorMock {
 	m := &KeyProcessorMock{t: t}
 
@@ -148,7 +148,7 @@ func (m *mKeyProcessorMockExportPrivateKeyPEM) Set(f func(p crypto.PrivateKey) (
 	return m.mock
 }
 
-//ExportPrivateKeyPEM implements github.com/insolar/insolar/core.KeyProcessor interface
+//ExportPrivateKeyPEM implements github.com/insolar/insolar/insolar.KeyProcessor interface
 func (m *KeyProcessorMock) ExportPrivateKeyPEM(p crypto.PrivateKey) (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.ExportPrivateKeyPEMPreCounter, 1)
 	defer atomic.AddUint64(&m.ExportPrivateKeyPEMCounter, 1)
@@ -298,7 +298,7 @@ func (m *mKeyProcessorMockExportPublicKeyBinary) Set(f func(p crypto.PublicKey) 
 	return m.mock
 }
 
-//ExportPublicKeyBinary implements github.com/insolar/insolar/core.KeyProcessor interface
+//ExportPublicKeyBinary implements github.com/insolar/insolar/insolar.KeyProcessor interface
 func (m *KeyProcessorMock) ExportPublicKeyBinary(p crypto.PublicKey) (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.ExportPublicKeyBinaryPreCounter, 1)
 	defer atomic.AddUint64(&m.ExportPublicKeyBinaryCounter, 1)
@@ -448,7 +448,7 @@ func (m *mKeyProcessorMockExportPublicKeyPEM) Set(f func(p crypto.PublicKey) (r 
 	return m.mock
 }
 
-//ExportPublicKeyPEM implements github.com/insolar/insolar/core.KeyProcessor interface
+//ExportPublicKeyPEM implements github.com/insolar/insolar/insolar.KeyProcessor interface
 func (m *KeyProcessorMock) ExportPublicKeyPEM(p crypto.PublicKey) (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.ExportPublicKeyPEMPreCounter, 1)
 	defer atomic.AddUint64(&m.ExportPublicKeyPEMCounter, 1)
@@ -597,7 +597,7 @@ func (m *mKeyProcessorMockExtractPublicKey) Set(f func(p crypto.PrivateKey) (r c
 	return m.mock
 }
 
-//ExtractPublicKey implements github.com/insolar/insolar/core.KeyProcessor interface
+//ExtractPublicKey implements github.com/insolar/insolar/insolar.KeyProcessor interface
 func (m *KeyProcessorMock) ExtractPublicKey(p crypto.PrivateKey) (r crypto.PublicKey) {
 	counter := atomic.AddUint64(&m.ExtractPublicKeyPreCounter, 1)
 	defer atomic.AddUint64(&m.ExtractPublicKeyCounter, 1)
@@ -740,7 +740,7 @@ func (m *mKeyProcessorMockGeneratePrivateKey) Set(f func() (r crypto.PrivateKey,
 	return m.mock
 }
 
-//GeneratePrivateKey implements github.com/insolar/insolar/core.KeyProcessor interface
+//GeneratePrivateKey implements github.com/insolar/insolar/insolar.KeyProcessor interface
 func (m *KeyProcessorMock) GeneratePrivateKey() (r crypto.PrivateKey, r1 error) {
 	counter := atomic.AddUint64(&m.GeneratePrivateKeyPreCounter, 1)
 	defer atomic.AddUint64(&m.GeneratePrivateKeyCounter, 1)
@@ -882,7 +882,7 @@ func (m *mKeyProcessorMockImportPrivateKeyPEM) Set(f func(p []byte) (r crypto.Pr
 	return m.mock
 }
 
-//ImportPrivateKeyPEM implements github.com/insolar/insolar/core.KeyProcessor interface
+//ImportPrivateKeyPEM implements github.com/insolar/insolar/insolar.KeyProcessor interface
 func (m *KeyProcessorMock) ImportPrivateKeyPEM(p []byte) (r crypto.PrivateKey, r1 error) {
 	counter := atomic.AddUint64(&m.ImportPrivateKeyPEMPreCounter, 1)
 	defer atomic.AddUint64(&m.ImportPrivateKeyPEMCounter, 1)
@@ -1032,7 +1032,7 @@ func (m *mKeyProcessorMockImportPublicKeyBinary) Set(f func(p []byte) (r crypto.
 	return m.mock
 }
 
-//ImportPublicKeyBinary implements github.com/insolar/insolar/core.KeyProcessor interface
+//ImportPublicKeyBinary implements github.com/insolar/insolar/insolar.KeyProcessor interface
 func (m *KeyProcessorMock) ImportPublicKeyBinary(p []byte) (r crypto.PublicKey, r1 error) {
 	counter := atomic.AddUint64(&m.ImportPublicKeyBinaryPreCounter, 1)
 	defer atomic.AddUint64(&m.ImportPublicKeyBinaryCounter, 1)
@@ -1182,7 +1182,7 @@ func (m *mKeyProcessorMockImportPublicKeyPEM) Set(f func(p []byte) (r crypto.Pub
 	return m.mock
 }
 
-//ImportPublicKeyPEM implements github.com/insolar/insolar/core.KeyProcessor interface
+//ImportPublicKeyPEM implements github.com/insolar/insolar/insolar.KeyProcessor interface
 func (m *KeyProcessorMock) ImportPublicKeyPEM(p []byte) (r crypto.PublicKey, r1 error) {
 	counter := atomic.AddUint64(&m.ImportPublicKeyPEMPreCounter, 1)
 	defer atomic.AddUint64(&m.ImportPublicKeyPEMCounter, 1)

@@ -19,21 +19,21 @@ package terminationhandler
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 )
 
 type testTerminationHandler struct{}
 
-func NewTestHandler() core.TerminationHandler {
+func NewTestHandler() insolar.TerminationHandler {
 	return &testTerminationHandler{}
 }
 
 func (t *testTerminationHandler) Abort() {
-	log.Error("Node leave acknowledged by network. Goodbye!")
+	log.Error("NetworkNode leave acknowledged by network. Goodbye!")
 }
 
-func (t testTerminationHandler) Leave(ctx context.Context, leaveAfterPulses core.PulseNumber) chan core.LeaveApproved {
+func (t testTerminationHandler) Leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) chan insolar.LeaveApproved {
 	panic("implement me")
 }
 

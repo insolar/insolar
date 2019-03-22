@@ -20,17 +20,17 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
 type ecdsaSignerWrapper struct {
 	privateKey *ecdsa.PrivateKey
-	hasher     core.Hasher
+	hasher     insolar.Hasher
 }
 
-func (sw *ecdsaSignerWrapper) Sign(data []byte) (*core.Signature, error) {
+func (sw *ecdsaSignerWrapper) Sign(data []byte) (*insolar.Signature, error) {
 	hash := sw.hasher.Hash(data)
 
 	r, s, err := ecdsa.Sign(rand.Reader, sw.privateKey, hash)
@@ -43,16 +43,16 @@ func (sw *ecdsaSignerWrapper) Sign(data []byte) (*core.Signature, error) {
 		return nil, errors.Wrap(err, "[ Sign ] could't sign data")
 	}
 
-	signature := core.SignatureFromBytes(ecdsaSignature)
+	signature := insolar.SignatureFromBytes(ecdsaSignature)
 	return &signature, nil
 }
 
 type ecdsaVerifyWrapper struct {
 	publicKey *ecdsa.PublicKey
-	hasher    core.Hasher
+	hasher    insolar.Hasher
 }
 
-func (sw *ecdsaVerifyWrapper) Verify(signature core.Signature, data []byte) bool {
+func (sw *ecdsaVerifyWrapper) Verify(signature insolar.Signature, data []byte) bool {
 	if signature.Bytes() == nil {
 		return false
 	}

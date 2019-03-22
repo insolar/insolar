@@ -19,8 +19,8 @@ package pulsar
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/stretchr/testify/require"
@@ -148,19 +148,19 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 		secondEntropy := entropyGenerator.GenerateEntropy()
 		pulseEntropy := entropyGenerator.GenerateEntropy()
 		pulsePayload := &PulsePayload{
-			Pulse: core.Pulse{
+			Pulse: insolar.Pulse{
 				Entropy: pulseEntropy,
-				Signs: map[string]core.PulseSenderConfirmation{
-					"first":  core.PulseSenderConfirmation{Entropy: firstEntropy},
-					"second": core.PulseSenderConfirmation{Entropy: secondEntropy},
+				Signs: map[string]insolar.PulseSenderConfirmation{
+					"first":  insolar.PulseSenderConfirmation{Entropy: firstEntropy},
+					"second": insolar.PulseSenderConfirmation{Entropy: secondEntropy},
 				},
 			}}
 		secondPulsePayload := &PulsePayload{
-			Pulse: core.Pulse{
+			Pulse: insolar.Pulse{
 				Entropy: pulseEntropy,
-				Signs: map[string]core.PulseSenderConfirmation{
-					"second": core.PulseSenderConfirmation{Entropy: secondEntropy},
-					"first":  core.PulseSenderConfirmation{Entropy: firstEntropy},
+				Signs: map[string]insolar.PulseSenderConfirmation{
+					"second": insolar.PulseSenderConfirmation{Entropy: secondEntropy},
+					"first":  insolar.PulseSenderConfirmation{Entropy: firstEntropy},
 				},
 			}}
 
@@ -195,7 +195,7 @@ func TestPreparePayloadAndCheckIt(t *testing.T) {
 	t.Run("PulseSenderConfirmationPayload", func(t *testing.T) {
 		// Arrange
 		entropyGenerator := entropygenerator.StandardEntropyGenerator{}
-		payloadBody := &PulseSenderConfirmationPayload{core.PulseSenderConfirmation{Entropy: entropyGenerator.GenerateEntropy()}}
+		payloadBody := &PulseSenderConfirmationPayload{insolar.PulseSenderConfirmation{Entropy: entropyGenerator.GenerateEntropy()}}
 
 		// Act
 		payload, firstError := pulsar.preparePayload(payloadBody)

@@ -56,30 +56,30 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type terminationHandler struct {
 	sync.Mutex
-	done        chan core.LeaveApproved
+	done        chan insolar.LeaveApproved
 	terminating bool
 
-	Network      core.Network      `inject:""`
-	PulseStorage core.PulseStorage `inject:""`
+	Network      insolar.Network      `inject:""`
+	PulseStorage insolar.PulseStorage `inject:""`
 }
 
-func NewHandler(nw core.Network) core.TerminationHandler {
+func NewHandler(nw insolar.Network) insolar.TerminationHandler {
 	return &terminationHandler{Network: nw}
 }
 
 // TODO take ETA by role of node
-func (t *terminationHandler) Leave(ctx context.Context, leaveAfterPulses core.PulseNumber) chan core.LeaveApproved {
+func (t *terminationHandler) Leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) chan insolar.LeaveApproved {
 	t.Lock()
 	defer t.Unlock()
 
 	if !t.terminating {
 		t.terminating = true
-		t.done = make(chan core.LeaveApproved, 1)
+		t.done = make(chan insolar.LeaveApproved, 1)
 
 		if leaveAfterPulses == 0 {
 			inslogger.FromContext(ctx).Debug("terminationHandler.Leave() with 0")

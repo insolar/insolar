@@ -3,7 +3,7 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "PulseDistributor" can be found in github.com/insolar/insolar/core
+The original interface "PulseDistributor" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	context "context"
@@ -11,22 +11,22 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//PulseDistributorMock implements github.com/insolar/insolar/core.PulseDistributor
+//PulseDistributorMock implements github.com/insolar/insolar/insolar.PulseDistributor
 type PulseDistributorMock struct {
 	t minimock.Tester
 
-	DistributeFunc       func(p context.Context, p1 core.Pulse)
+	DistributeFunc       func(p context.Context, p1 insolar.Pulse)
 	DistributeCounter    uint64
 	DistributePreCounter uint64
 	DistributeMock       mPulseDistributorMockDistribute
 }
 
-//NewPulseDistributorMock returns a mock for github.com/insolar/insolar/core.PulseDistributor
+//NewPulseDistributorMock returns a mock for github.com/insolar/insolar/insolar.PulseDistributor
 func NewPulseDistributorMock(t minimock.Tester) *PulseDistributorMock {
 	m := &PulseDistributorMock{t: t}
 
@@ -51,11 +51,11 @@ type PulseDistributorMockDistributeExpectation struct {
 
 type PulseDistributorMockDistributeInput struct {
 	p  context.Context
-	p1 core.Pulse
+	p1 insolar.Pulse
 }
 
 //Expect specifies that invocation of PulseDistributor.Distribute is expected from 1 to Infinity times
-func (m *mPulseDistributorMockDistribute) Expect(p context.Context, p1 core.Pulse) *mPulseDistributorMockDistribute {
+func (m *mPulseDistributorMockDistribute) Expect(p context.Context, p1 insolar.Pulse) *mPulseDistributorMockDistribute {
 	m.mock.DistributeFunc = nil
 	m.expectationSeries = nil
 
@@ -79,7 +79,7 @@ func (m *mPulseDistributorMockDistribute) Return() *PulseDistributorMock {
 }
 
 //ExpectOnce specifies that invocation of PulseDistributor.Distribute is expected once
-func (m *mPulseDistributorMockDistribute) ExpectOnce(p context.Context, p1 core.Pulse) *PulseDistributorMockDistributeExpectation {
+func (m *mPulseDistributorMockDistribute) ExpectOnce(p context.Context, p1 insolar.Pulse) *PulseDistributorMockDistributeExpectation {
 	m.mock.DistributeFunc = nil
 	m.mainExpectation = nil
 
@@ -90,7 +90,7 @@ func (m *mPulseDistributorMockDistribute) ExpectOnce(p context.Context, p1 core.
 }
 
 //Set uses given function f as a mock of PulseDistributor.Distribute method
-func (m *mPulseDistributorMockDistribute) Set(f func(p context.Context, p1 core.Pulse)) *PulseDistributorMock {
+func (m *mPulseDistributorMockDistribute) Set(f func(p context.Context, p1 insolar.Pulse)) *PulseDistributorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -98,8 +98,8 @@ func (m *mPulseDistributorMockDistribute) Set(f func(p context.Context, p1 core.
 	return m.mock
 }
 
-//Distribute implements github.com/insolar/insolar/core.PulseDistributor interface
-func (m *PulseDistributorMock) Distribute(p context.Context, p1 core.Pulse) {
+//Distribute implements github.com/insolar/insolar/insolar.PulseDistributor interface
+func (m *PulseDistributorMock) Distribute(p context.Context, p1 insolar.Pulse) {
 	counter := atomic.AddUint64(&m.DistributePreCounter, 1)
 	defer atomic.AddUint64(&m.DistributeCounter, 1)
 

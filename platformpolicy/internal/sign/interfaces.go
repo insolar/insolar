@@ -19,10 +19,10 @@ package sign
 import (
 	"crypto"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type AlgorithmProvider interface {
-	Sign(crypto.PrivateKey) core.Signer
-	Verify(crypto.PublicKey) core.Verifier
+	Sign(crypto.PrivateKey) insolar.Signer
+	Verify(crypto.PublicKey) insolar.Verifier
 }

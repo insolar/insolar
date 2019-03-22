@@ -19,24 +19,24 @@ package extractor
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNodeInfoResponse(t *testing.T) {
 	testPK := "test_public_key"
-	testRole := core.StaticRoleVirtual
+	testRole := insolar.StaticRoleVirtual
 
 	testValue := struct {
 		PublicKey string
-		Role      core.StaticRole
+		Role      insolar.StaticRole
 	}{
 		PublicKey: testPK,
 		Role:      testRole,
 	}
 
-	data, err := core.Serialize([]interface{}{testValue, nil})
+	data, err := insolar.Serialize([]interface{}{testValue, nil})
 	require.NoError(t, err)
 
 	pk, role, err := NodeInfoResponse(data)
@@ -48,18 +48,18 @@ func TestNodeInfoResponse(t *testing.T) {
 
 func TestNodeInfoResponse_ErrorResponse(t *testing.T) {
 	testPK := "test_public_key"
-	testRole := core.StaticRoleVirtual
+	testRole := insolar.StaticRoleVirtual
 
 	testValue := struct {
 		PublicKey string
-		Role      core.StaticRole
+		Role      insolar.StaticRole
 	}{
 		PublicKey: testPK,
 		Role:      testRole,
 	}
 	contractErr := &foundation.Error{S: "Custom test error"}
 
-	data, err := core.Serialize([]interface{}{testValue, contractErr})
+	data, err := insolar.Serialize([]interface{}{testValue, contractErr})
 	require.NoError(t, err)
 
 	pk, role, err := NodeInfoResponse(data)
@@ -73,7 +73,7 @@ func TestNodeInfoResponse_ErrorResponse(t *testing.T) {
 func TestNodeInfoResponse_UnmarshalError(t *testing.T) {
 	testValue := "some_no_valid_data"
 
-	data, err := core.Serialize(testValue)
+	data, err := insolar.Serialize(testValue)
 	require.NoError(t, err)
 
 	pk, role, err := NodeInfoResponse(data)

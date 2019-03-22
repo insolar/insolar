@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -19,12 +19,12 @@ import (
 type JetIndexModifierMock struct {
 	t minimock.Tester
 
-	AddFunc       func(p core.RecordID, p1 core.JetID)
+	AddFunc       func(p insolar.ID, p1 insolar.JetID)
 	AddCounter    uint64
 	AddPreCounter uint64
 	AddMock       mJetIndexModifierMockAdd
 
-	DeleteFunc       func(p core.RecordID, p1 core.JetID)
+	DeleteFunc       func(p insolar.ID, p1 insolar.JetID)
 	DeleteCounter    uint64
 	DeletePreCounter uint64
 	DeleteMock       mJetIndexModifierMockDelete
@@ -55,12 +55,12 @@ type JetIndexModifierMockAddExpectation struct {
 }
 
 type JetIndexModifierMockAddInput struct {
-	p  core.RecordID
-	p1 core.JetID
+	p  insolar.ID
+	p1 insolar.JetID
 }
 
 //Expect specifies that invocation of JetIndexModifier.Add is expected from 1 to Infinity times
-func (m *mJetIndexModifierMockAdd) Expect(p core.RecordID, p1 core.JetID) *mJetIndexModifierMockAdd {
+func (m *mJetIndexModifierMockAdd) Expect(p insolar.ID, p1 insolar.JetID) *mJetIndexModifierMockAdd {
 	m.mock.AddFunc = nil
 	m.expectationSeries = nil
 
@@ -84,7 +84,7 @@ func (m *mJetIndexModifierMockAdd) Return() *JetIndexModifierMock {
 }
 
 //ExpectOnce specifies that invocation of JetIndexModifier.Add is expected once
-func (m *mJetIndexModifierMockAdd) ExpectOnce(p core.RecordID, p1 core.JetID) *JetIndexModifierMockAddExpectation {
+func (m *mJetIndexModifierMockAdd) ExpectOnce(p insolar.ID, p1 insolar.JetID) *JetIndexModifierMockAddExpectation {
 	m.mock.AddFunc = nil
 	m.mainExpectation = nil
 
@@ -95,7 +95,7 @@ func (m *mJetIndexModifierMockAdd) ExpectOnce(p core.RecordID, p1 core.JetID) *J
 }
 
 //Set uses given function f as a mock of JetIndexModifier.Add method
-func (m *mJetIndexModifierMockAdd) Set(f func(p core.RecordID, p1 core.JetID)) *JetIndexModifierMock {
+func (m *mJetIndexModifierMockAdd) Set(f func(p insolar.ID, p1 insolar.JetID)) *JetIndexModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -104,7 +104,7 @@ func (m *mJetIndexModifierMockAdd) Set(f func(p core.RecordID, p1 core.JetID)) *
 }
 
 //Add implements github.com/insolar/insolar/ledger/storage/db.JetIndexModifier interface
-func (m *JetIndexModifierMock) Add(p core.RecordID, p1 core.JetID) {
+func (m *JetIndexModifierMock) Add(p insolar.ID, p1 insolar.JetID) {
 	counter := atomic.AddUint64(&m.AddPreCounter, 1)
 	defer atomic.AddUint64(&m.AddCounter, 1)
 
@@ -179,12 +179,12 @@ type JetIndexModifierMockDeleteExpectation struct {
 }
 
 type JetIndexModifierMockDeleteInput struct {
-	p  core.RecordID
-	p1 core.JetID
+	p  insolar.ID
+	p1 insolar.JetID
 }
 
 //Expect specifies that invocation of JetIndexModifier.Delete is expected from 1 to Infinity times
-func (m *mJetIndexModifierMockDelete) Expect(p core.RecordID, p1 core.JetID) *mJetIndexModifierMockDelete {
+func (m *mJetIndexModifierMockDelete) Expect(p insolar.ID, p1 insolar.JetID) *mJetIndexModifierMockDelete {
 	m.mock.DeleteFunc = nil
 	m.expectationSeries = nil
 
@@ -208,7 +208,7 @@ func (m *mJetIndexModifierMockDelete) Return() *JetIndexModifierMock {
 }
 
 //ExpectOnce specifies that invocation of JetIndexModifier.Delete is expected once
-func (m *mJetIndexModifierMockDelete) ExpectOnce(p core.RecordID, p1 core.JetID) *JetIndexModifierMockDeleteExpectation {
+func (m *mJetIndexModifierMockDelete) ExpectOnce(p insolar.ID, p1 insolar.JetID) *JetIndexModifierMockDeleteExpectation {
 	m.mock.DeleteFunc = nil
 	m.mainExpectation = nil
 
@@ -219,7 +219,7 @@ func (m *mJetIndexModifierMockDelete) ExpectOnce(p core.RecordID, p1 core.JetID)
 }
 
 //Set uses given function f as a mock of JetIndexModifier.Delete method
-func (m *mJetIndexModifierMockDelete) Set(f func(p core.RecordID, p1 core.JetID)) *JetIndexModifierMock {
+func (m *mJetIndexModifierMockDelete) Set(f func(p insolar.ID, p1 insolar.JetID)) *JetIndexModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -228,7 +228,7 @@ func (m *mJetIndexModifierMockDelete) Set(f func(p core.RecordID, p1 core.JetID)
 }
 
 //Delete implements github.com/insolar/insolar/ledger/storage/db.JetIndexModifier interface
-func (m *JetIndexModifierMock) Delete(p core.RecordID, p1 core.JetID) {
+func (m *JetIndexModifierMock) Delete(p insolar.ID, p1 insolar.JetID) {
 	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteCounter, 1)
 

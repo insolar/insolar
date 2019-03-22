@@ -22,15 +22,15 @@ import (
 	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/db"
 )
 
 type jetPulse struct {
-	jetID core.JetID
-	pn    core.PulseNumber
+	jetID insolar.JetID
+	pn    insolar.PulseNumber
 }
 
 func TestDropStorageMemory(t *testing.T) {

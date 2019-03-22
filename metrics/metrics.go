@@ -29,7 +29,7 @@ import (
 	"go.opencensus.io/zpages"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/pprof"
@@ -77,7 +77,7 @@ func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *promet
 // We can use it for easier check in metrics creation code.
 var ErrBind = errors.New("Failed to bind")
 
-// Start is implementation of core.Component interface.
+// Start is implementation of insolar.Component interface.
 func (m *Metrics) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 
@@ -108,7 +108,7 @@ func (m *Metrics) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop is implementation of core.Component interface.
+// Stop is implementation of insolar.Component interface.
 func (m *Metrics) Stop(ctx context.Context) error {
 	const timeOut = 3
 	inslogger.FromContext(ctx).Info("Shutting down metrics server")
@@ -129,7 +129,7 @@ func (m *Metrics) AddrString() string {
 
 // errorLogger wrapper for error logs.
 type errorLogger struct {
-	core.Logger
+	insolar.Logger
 }
 
 // Println is wrapper method for ErrorLn.

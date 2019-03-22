@@ -19,22 +19,22 @@ package storage
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/object"
 )
 
 // Store is used by context unaware clients who can work inside transactions as well as outside.
 type Store interface {
-	GetRecord(ctx context.Context, jetID core.RecordID, ref *core.RecordID) (object.Record, error)
-	SetRecord(ctx context.Context, jetID core.RecordID, pulseNumber core.PulseNumber, rec object.Record) (*core.RecordID, error)
-	GetBlob(ctx context.Context, jetID core.RecordID, ref *core.RecordID) ([]byte, error)
-	SetBlob(ctx context.Context, jetID core.RecordID, number core.PulseNumber, blob []byte) (*core.RecordID, error)
+	GetRecord(ctx context.Context, jetID insolar.ID, ref *insolar.ID) (object.Record, error)
+	SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec object.Record) (*insolar.ID, error)
+	GetBlob(ctx context.Context, jetID insolar.ID, ref *insolar.ID) ([]byte, error)
+	SetBlob(ctx context.Context, jetID insolar.ID, number insolar.PulseNumber, blob []byte) (*insolar.ID, error)
 
-	GetObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID, forupdate bool) (*object.Lifeline, error)
-	SetObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID, idx *object.Lifeline) error
-	RemoveObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID) error
+	GetObjectIndex(ctx context.Context, jetID insolar.ID, ref *insolar.ID, forupdate bool) (*object.Lifeline, error)
+	SetObjectIndex(ctx context.Context, jetID insolar.ID, ref *insolar.ID, idx *object.Lifeline) error
+	RemoveObjectIndex(ctx context.Context, jetID insolar.ID, ref *insolar.ID) error
 
-	// Deprecated: use core.PulseStorage.Current() instead
+	// Deprecated: use insolar.PulseStorage.Current() instead
 	GetLatestPulse(ctx context.Context) (*Pulse, error)
-	GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error)
+	GetPulse(ctx context.Context, num insolar.PulseNumber) (*Pulse, error)
 }

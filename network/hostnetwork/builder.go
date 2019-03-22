@@ -51,7 +51,7 @@
 package hostnetwork
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
@@ -75,7 +75,7 @@ func (b *Builder) Data(data interface{}) network.RequestBuilder {
 	return b
 }
 
-func (b *Builder) GetSender() core.RecordRef {
+func (b *Builder) GetSender() insolar.Reference {
 	return b.sender.NodeID
 }
 

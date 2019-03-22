@@ -58,11 +58,11 @@ import (
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/contract/rootdomain"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/delegationtoken"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
@@ -105,15 +105,15 @@ func (s *LogicRunnerFuncSuite) SetupSuite() {
 	}
 }
 
-func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr core.LogicRunner) {
-	mb.ReRegister(core.TypeCallMethod, lr.Execute)
-	mb.ReRegister(core.TypeCallConstructor, lr.Execute)
-	mb.ReRegister(core.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
-	mb.ReRegister(core.TypeValidationResults, lr.HandleValidationResultsMessage)
-	mb.ReRegister(core.TypeExecutorResults, lr.HandleExecutorResultsMessage)
+func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr insolar.LogicRunner) {
+	mb.ReRegister(insolar.TypeCallMethod, lr.Execute)
+	mb.ReRegister(insolar.TypeCallConstructor, lr.Execute)
+	mb.ReRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
+	mb.ReRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
+	mb.ReRegister(insolar.TypeExecutorResults, lr.HandleExecutorResultsMessage)
 }
 
-func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (core.LogicRunner, core.ArtifactManager, *goplugintestutils.ContractsBuilder, core.PulseManager, func()) {
+func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, insolar.ArtifactManager, *goplugintestutils.ContractsBuilder, insolar.PulseManager, func()) {
 	ctx := context.TODO()
 	lrSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 	rundSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
@@ -132,8 +132,8 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (core.LogicRunner, core.Artifac
 	s.NoError(err, "Initialize runner")
 
 	mock := testutils.NewCryptographyServiceMock(s.T())
-	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
-		signature := core.SignatureFromBytes(nil)
+	mock.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
 	}
 	mock.GetPublicKeyFunc = func() (crypto.PublicKey, error) {
@@ -148,8 +148,8 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (core.LogicRunner, core.Artifac
 	nw := network.GetTestNetwork()
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, db, cleaner := ledgertestutils.TmpLedger(
-		s.T(), "", core.StaticRoleLightMaterial,
-		core.Components{
+		s.T(), "", insolar.StaticRoleLightMaterial,
+		insolar.Components{
 			LogicRunner: lr,
 			NodeNetwork: nk,
 			MessageBus:  mb,
@@ -195,23 +195,23 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (core.LogicRunner, core.Artifac
 	}
 }
 
-func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr core.LogicRunner, pm core.PulseManager) {
+func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr insolar.LogicRunner, pm insolar.PulseManager) {
 	pulseStorage := pm.(*pulsemanager.PulseManager).PulseStorage
 	currentPulse, _ := pulseStorage.Current(ctx)
 
 	newPulseNumber := currentPulse.PulseNumber + 1
 	err := pm.Set(
 		ctx,
-		core.Pulse{PulseNumber: newPulseNumber, Entropy: core.Entropy{}},
+		insolar.Pulse{PulseNumber: newPulseNumber, Entropy: insolar.Entropy{}},
 		true,
 	)
 	s.Require().NoError(err)
 
-	rootJetId := *core.NewJetID(0, nil)
+	rootJetId := *insolar.NewJetID(0, nil)
 	_, err = lr.(*LogicRunner).MessageBus.Send(
 		ctx,
 		&message.HotData{
-			Jet:             *core.NewRecordRef(core.DomainID, core.RecordID(rootJetId)),
+			Jet:             *insolar.NewReference(insolar.DomainID, insolar.ID(rootJetId)),
 			Drop:            drop.Drop{Pulse: 1, JetID: rootJetId},
 			RecentObjects:   nil,
 			PendingRequests: nil,
@@ -221,21 +221,21 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr core
 	s.Require().NoError(err)
 }
 
-func mockCryptographyService(t *testing.T) core.CryptographyService {
+func mockCryptographyService(t *testing.T) insolar.CryptographyService {
 	mock := testutils.NewCryptographyServiceMock(t)
-	mock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
-		signature := core.SignatureFromBytes(nil)
+	mock.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
 	}
-	mock.VerifyFunc = func(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool) {
+	mock.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
 		return true
 	}
 	return mock
 }
 
-func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, mustfail ...core.RecordRef) {
+func ValidateAllResults(t testing.TB, ctx context.Context, lr insolar.LogicRunner, mustfail ...insolar.Reference) {
 	return // TODO REMOVE
-	failmap := make(map[core.RecordRef]struct{})
+	failmap := make(map[insolar.Reference]struct{})
 	for _, r := range mustfail {
 		failmap[r] = struct{}{}
 	}
@@ -262,16 +262,16 @@ func ValidateAllResults(t testing.TB, ctx context.Context, lr core.LogicRunner, 
 }
 
 func executeMethod(
-	ctx context.Context, lr core.LogicRunner, pm core.PulseManager,
-	objRef core.RecordRef, proxyPrototype core.RecordRef,
+	ctx context.Context, lr insolar.LogicRunner, pm insolar.PulseManager,
+	objRef insolar.Reference, proxyPrototype insolar.Reference,
 	nonce uint64,
 	method string, arguments ...interface{},
 ) (
-	core.Reply, error,
+	insolar.Reply, error,
 ) {
 	ctx = inslogger.ContextWithTrace(ctx, utils.RandTraceID())
 
-	argsSerialized, err := core.Serialize(arguments)
+	argsSerialized, err := insolar.Serialize(arguments)
 	if err != nil {
 		return nil, err
 	}
@@ -287,17 +287,17 @@ func executeMethod(
 	return rep, err
 }
 
-func firstMethodRes(t *testing.T, resp core.Reply) interface{} {
+func firstMethodRes(t *testing.T, resp insolar.Reply) interface{} {
 	res := goplugintestutils.CBORUnMarshal(t, resp.(*reply.CallMethod).Result)
 	return res.([]interface{})[0]
 }
 
 func (s *LogicRunnerFuncSuite) TestTypeCompatibilityError() {
-	var _ core.LogicRunner = (*LogicRunner)(nil)
+	var _ insolar.LogicRunner = (*LogicRunner)(nil)
 }
 
-func getRefFromID(id *core.RecordID) *core.RecordRef {
-	ref := core.RecordRef{}
+func getRefFromID(id *insolar.ID) *insolar.Reference {
+	ref := insolar.Reference{}
 	ref.SetRecord(*id)
 	return &ref
 }
@@ -372,12 +372,12 @@ package main
 
 import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 import "github.com/insolar/insolar/application/proxy/two"
-import "github.com/insolar/insolar/core"
+import "github.com/insolar/insolar/insolar"
 import "errors"
 
 type One struct {
 	foundation.BaseContract
-	Friend core.RecordRef
+	Friend insolar.Reference
 }
 
 func (r *One) Hello(s string) (string, error) {
@@ -405,7 +405,7 @@ func (r *One) Again(s string) (string, error) {
 	return "Hi, " + s + "! Two said: " + res, nil
 }
 
-func (r *One)GetFriend() (core.RecordRef, error) {
+func (r *One)GetFriend() (insolar.Reference, error) {
 	return r.Friend, nil
 }
 
@@ -497,7 +497,7 @@ func (r *Two) GetPayloadString() (string, error) {
 	resp, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "GetFriend")
 	s.NoError(err, "contract call")
 	r0 := firstMethodRes(s.T(), resp).([]uint8)
-	var two core.RecordRef
+	var two insolar.Reference
 	for i := 0; i < 64; i++ {
 		two[i] = r0[i]
 	}
@@ -1066,22 +1066,22 @@ func (r *Two) Hello() (*string, error) {
 
 type Caller struct {
 	member string
-	lr     core.LogicRunner
-	cs     core.CryptographyService
+	lr     insolar.LogicRunner
+	cs     insolar.CryptographyService
 	suite  *LogicRunnerFuncSuite
 }
 
-func (s *Caller) SignedCall(ctx context.Context, pm core.PulseManager, rootDomain core.RecordRef, method string, proxyPrototype core.RecordRef, params []interface{}) interface{} {
+func (s *Caller) SignedCall(ctx context.Context, pm insolar.PulseManager, rootDomain insolar.Reference, method string, proxyPrototype insolar.Reference, params []interface{}) interface{} {
 	seed := make([]byte, 32)
 	_, err := rand.Read(seed)
 	s.suite.NoError(err)
 
 	buf := goplugintestutils.CBORMarshal(s.suite.T(), params)
 
-	memberRef, err := core.NewRefFromBase58(s.member)
+	memberRef, err := insolar.NewReferenceFromBase58(s.member)
 	s.suite.Require().NoError(err)
 
-	args, err := core.MarshalArgs(
+	args, err := insolar.MarshalArgs(
 		*memberRef,
 		method,
 		buf,
@@ -1146,7 +1146,7 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
 		ctx,
-		core.RecordRef{},
+		insolar.Reference{},
 		*rootDomainRef,
 		*am.GenesisRef(),
 		*cb.Prototypes["rootdomain"],
@@ -1181,7 +1181,7 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 
 	_, err = am.ActivateObject(
 		ctx,
-		core.RecordRef{},
+		insolar.Reference{},
 		*rootMemberRef,
 		*rootDomainRef,
 		*cb.Prototypes["member"],
@@ -1191,7 +1191,7 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	s.NoError(err)
 
 	// Updating root domain with root member
-	_, err = am.UpdateObject(ctx, core.RecordRef{}, core.RecordRef{}, rootDomainDesc, goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}))
+	_, err = am.UpdateObject(ctx, insolar.Reference{}, insolar.Reference{}, rootDomainDesc, goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}))
 	s.NoError(err)
 
 	csRoot := cryptography.NewKeyBoundCryptographyService(rootKey)
@@ -1319,24 +1319,24 @@ func New(n int) (*Child, error) {
 	s.Equal(uint64(0), firstMethodRes(s.T(), resp))
 
 	mb := lr.(*LogicRunner).MessageBus.(*testmessagebus.TestMessageBus)
-	toValidate := make([]core.Parcel, 0)
-	mb.ReRegister(core.TypeValidateCaseBind, func(ctx context.Context, m core.Parcel) (core.Reply, error) {
+	toValidate := make([]insolar.Parcel, 0)
+	mb.ReRegister(insolar.TypeValidateCaseBind, func(ctx context.Context, m insolar.Parcel) (insolar.Reply, error) {
 		toValidate = append(toValidate, m)
 		return nil, nil
 	})
-	toExecute := make([]core.Parcel, 0)
-	mb.ReRegister(core.TypeExecutorResults, func(ctx context.Context, m core.Parcel) (core.Reply, error) {
+	toExecute := make([]insolar.Parcel, 0)
+	mb.ReRegister(insolar.TypeExecutorResults, func(ctx context.Context, m insolar.Parcel) (insolar.Reply, error) {
 		toExecute = append(toExecute, m)
 		return nil, nil
 	})
-	toCheckValidate := make([]core.Parcel, 0)
-	mb.ReRegister(core.TypeValidationResults, func(ctx context.Context, m core.Parcel) (core.Reply, error) {
+	toCheckValidate := make([]insolar.Parcel, 0)
+	mb.ReRegister(insolar.TypeValidationResults, func(ctx context.Context, m insolar.Parcel) (insolar.Reply, error) {
 		toCheckValidate = append(toCheckValidate, m)
 		return nil, nil
 	})
 
-	newPulse := core.Pulse{PulseNumber: 1231234, Entropy: core.Entropy{}}
-	err = lr.(*LogicRunner).PulseStorage.(core.PulseManager).Set(
+	newPulse := insolar.Pulse{PulseNumber: 1231234, Entropy: insolar.Entropy{}}
+	err = lr.(*LogicRunner).PulseStorage.(insolar.PulseManager).Set(
 		ctx, newPulse, true,
 	)
 	s.NoError(err)
@@ -1479,13 +1479,13 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/application/proxy/allowance"
 	"github.com/insolar/insolar/application/proxy/wallet"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 type One struct {
 	foundation.BaseContract
 }
 func (r *One) CreateAllowance(member string) (error) {
-	memberRef, refErr := core.NewRefFromBase58(member)
+	memberRef, refErr := insolar.NewReferenceFromBase58(member)
 	if refErr != nil {
 		return refErr
 	}
@@ -1517,7 +1517,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
 		ctx,
-		core.RecordRef{},
+		insolar.Reference{},
 		*rootDomainRef,
 		*am.GenesisRef(),
 		*cb.Prototypes["rootdomain"],
@@ -1550,7 +1550,7 @@ func (r *One) CreateAllowance(member string) (error) {
 
 	_, err = am.ActivateObject(
 		ctx,
-		core.RecordRef{},
+		insolar.Reference{},
 		*rootMemberRef,
 		*rootDomainRef,
 		*cb.Prototypes["member"],
@@ -1560,7 +1560,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	s.NoError(err)
 
 	// Updating root domain with root member
-	_, err = am.UpdateObject(ctx, core.RecordRef{}, core.RecordRef{}, rootDomainDesc, goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}))
+	_, err = am.UpdateObject(ctx, insolar.Reference{}, insolar.Reference{}, rootDomainDesc, goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}))
 	s.NoError(err)
 
 	cs := cryptography.NewKeyBoundCryptographyService(rootKey)
@@ -1577,7 +1577,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	s.NotEqual("", memberRef)
 
 	// Call CreateAllowance method in custom contract
-	domain, err := core.NewRefFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	domain, err := insolar.NewReferenceFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
 	s.Require().NoError(err)
 	contractID, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallConstructor{}})
 	s.NoError(err)
@@ -1617,15 +1617,15 @@ func (s *LogicRunnerFuncSuite) TestGetParentError() {
 package main
  import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 import "github.com/insolar/insolar/application/proxy/two"
-import "github.com/insolar/insolar/core"
+import "github.com/insolar/insolar/insolar"
  type One struct {
 	foundation.BaseContract
 }
- func (r *One) AddChildAndReturnMyselfAsParent() (core.RecordRef, error) {
+ func (r *One) AddChildAndReturnMyselfAsParent() (insolar.Reference, error) {
 	holder := two.New()
 	friend, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return core.RecordRef{}, err
+		return insolar.Reference{}, err
 	}
 
  	return friend.GetParent()
@@ -1634,7 +1634,7 @@ import "github.com/insolar/insolar/core"
 	var contractTwoCode = `
 package main
  import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
  type Two struct {
@@ -1643,7 +1643,7 @@ package main
  func New() (*Two, error) {
 	return &Two{}, nil
 }
- func (r *Two) GetParent() (core.RecordRef, error) {
+ func (r *Two) GetParent() (insolar.Reference, error) {
 	return *r.GetContext().Parent, nil
 }
  `
@@ -1723,7 +1723,7 @@ func (r *One) ShortSleep() (error) {
 		log.Debugf("!!!!! Pulse start")
 		err = pm.Set(
 			ctx,
-			core.Pulse{PulseNumber: 1, Entropy: core.Entropy{}},
+			insolar.Pulse{PulseNumber: 1, Entropy: insolar.Entropy{}},
 			true,
 		)
 		log.Debugf("!!!!! Pulse end")
@@ -1740,16 +1740,16 @@ func (r *One) ShortSleep() (error) {
 	s.Contains(err.Error(), "abort execution: new Pulse coming")
 }
 
-func getLogicRunnerWithoutValidation(lr core.LogicRunner) *LogicRunner {
+func getLogicRunnerWithoutValidation(lr insolar.LogicRunner) *LogicRunner {
 	rlr := lr.(*LogicRunner)
 	newmb := rlr.MessageBus.(*testmessagebus.TestMessageBus)
 
-	emptyFunc := func(context.Context, core.Parcel) (res core.Reply, err error) {
+	emptyFunc := func(context.Context, insolar.Parcel) (res insolar.Reply, err error) {
 		return nil, nil
 	}
 
-	newmb.ReRegister(core.TypeValidationResults, emptyFunc)
-	newmb.ReRegister(core.TypeExecutorResults, emptyFunc)
+	newmb.ReRegister(insolar.TypeValidationResults, emptyFunc)
+	newmb.ReRegister(insolar.TypeExecutorResults, emptyFunc)
 
 	rlr.MessageBus = newmb
 
@@ -1802,7 +1802,7 @@ func (r *One) EmptyMethod() (error) {
 	rlr := lr.(*LogicRunner)
 	gp, err := goplugin.NewGoPlugin(rlr.Cfg, rlr.MessageBus, rlr.ArtifactManager)
 
-	callContext := &core.LogicCallContext{
+	callContext := &insolar.LogicCallContext{
 		Caller:          nil,
 		Callee:          nil,
 		Request:         nil,
@@ -1852,25 +1852,25 @@ func (s *LogicRunnerFuncSuite) TestGetRemoteDataError() {
 package main
  import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
  import "github.com/insolar/insolar/application/proxy/two"
- import "github.com/insolar/insolar/core"
+ import "github.com/insolar/insolar/insolar"
  type One struct {
 	foundation.BaseContract
  }
- func (r *One) GetChildCode() (core.RecordRef, error) {
+ func (r *One) GetChildCode() (insolar.Reference, error) {
 	holder := two.New()
 	child, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return core.RecordRef{}, err
+		return insolar.Reference{}, err
 	}
 
  	return child.GetCode()
  }
 
- func (r *One) GetChildPrototype() (core.RecordRef, error) {
+ func (r *One) GetChildPrototype() (insolar.Reference, error) {
 	holder := two.New()
 	child, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return core.RecordRef{}, err
+		return insolar.Reference{}, err
 	}
 
  	return child.GetPrototype()
@@ -1983,14 +1983,14 @@ package main
 import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/application/proxy/first"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type Contract struct {
 	foundation.BaseContract
 }
 
-func (c *Contract) Test(firstRef *core.RecordRef) (string, error) {
+func (c *Contract) Test(firstRef *insolar.Reference) (string, error) {
 	return first.GetObject(*firstRef).GetName()
 }
 `
@@ -2044,8 +2044,8 @@ func (c *First) GetName() (string, error) {
 	s.Equal(map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: proxy call error: try to call method of prototype as method of another prototype"}), res[1])
 }
 
-func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am core.ArtifactManager, cb *goplugintestutils.ContractsBuilder, contractName string) (*core.RecordRef, *core.RecordRef) {
-	domain, err := core.NewRefFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am insolar.ArtifactManager, cb *goplugintestutils.ContractsBuilder, contractName string) (*insolar.Reference, *insolar.Reference) {
+	domain, err := insolar.NewReferenceFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
 	s.Require().NoError(err)
 	contractID, err := am.RegisterRequest(
 		ctx,

@@ -55,7 +55,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/suite"
@@ -118,13 +118,13 @@ func (s *LeaveTestSuite) TestLeaveNow() {
 }
 
 func (s *LeaveTestSuite) TestLeaveEta() {
-	mockPulseNumber := core.PulseNumber(2000000000)
-	testPulse := &core.Pulse{PulseNumber: core.PulseNumber(mockPulseNumber)}
+	mockPulseNumber := insolar.PulseNumber(2000000000)
+	testPulse := &insolar.Pulse{PulseNumber: insolar.PulseNumber(mockPulseNumber)}
 	pulseDelta := testPulse.NextPulseNumber - testPulse.PulseNumber
-	leaveAfter := core.PulseNumber(5)
+	leaveAfter := insolar.PulseNumber(5)
 
 	//s.pulseStorage.CurrentMock.Return(testPulse, nil)
-	s.pulseStorage.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
+	s.pulseStorage.CurrentFunc = func(p context.Context) (r *insolar.Pulse, r1 error) {
 		return testPulse, nil
 	}
 	s.network.LeaveMock.Expect(s.ctx, mockPulseNumber+leaveAfter*pulseDelta)
@@ -143,7 +143,7 @@ type OnLeaveApprovedTestSuite struct {
 
 func (s *OnLeaveApprovedTestSuite) TestBasicUsage() {
 	s.handler.terminating = true
-	s.handler.done = make(chan core.LeaveApproved, 1)
+	s.handler.done = make(chan insolar.LeaveApproved, 1)
 
 	s.handler.OnLeaveApproved(s.ctx)
 

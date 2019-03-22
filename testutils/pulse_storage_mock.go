@@ -3,7 +3,7 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "PulseStorage" can be found in github.com/insolar/insolar/core
+The original interface "PulseStorage" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	context "context"
@@ -11,22 +11,22 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//PulseStorageMock implements github.com/insolar/insolar/core.PulseStorage
+//PulseStorageMock implements github.com/insolar/insolar/insolar.PulseStorage
 type PulseStorageMock struct {
 	t minimock.Tester
 
-	CurrentFunc       func(p context.Context) (r *core.Pulse, r1 error)
+	CurrentFunc       func(p context.Context) (r *insolar.Pulse, r1 error)
 	CurrentCounter    uint64
 	CurrentPreCounter uint64
 	CurrentMock       mPulseStorageMockCurrent
 }
 
-//NewPulseStorageMock returns a mock for github.com/insolar/insolar/core.PulseStorage
+//NewPulseStorageMock returns a mock for github.com/insolar/insolar/insolar.PulseStorage
 func NewPulseStorageMock(t minimock.Tester) *PulseStorageMock {
 	m := &PulseStorageMock{t: t}
 
@@ -55,7 +55,7 @@ type PulseStorageMockCurrentInput struct {
 }
 
 type PulseStorageMockCurrentResult struct {
-	r  *core.Pulse
+	r  *insolar.Pulse
 	r1 error
 }
 
@@ -72,7 +72,7 @@ func (m *mPulseStorageMockCurrent) Expect(p context.Context) *mPulseStorageMockC
 }
 
 //Return specifies results of invocation of PulseStorage.Current
-func (m *mPulseStorageMockCurrent) Return(r *core.Pulse, r1 error) *PulseStorageMock {
+func (m *mPulseStorageMockCurrent) Return(r *insolar.Pulse, r1 error) *PulseStorageMock {
 	m.mock.CurrentFunc = nil
 	m.expectationSeries = nil
 
@@ -94,12 +94,12 @@ func (m *mPulseStorageMockCurrent) ExpectOnce(p context.Context) *PulseStorageMo
 	return expectation
 }
 
-func (e *PulseStorageMockCurrentExpectation) Return(r *core.Pulse, r1 error) {
+func (e *PulseStorageMockCurrentExpectation) Return(r *insolar.Pulse, r1 error) {
 	e.result = &PulseStorageMockCurrentResult{r, r1}
 }
 
 //Set uses given function f as a mock of PulseStorage.Current method
-func (m *mPulseStorageMockCurrent) Set(f func(p context.Context) (r *core.Pulse, r1 error)) *PulseStorageMock {
+func (m *mPulseStorageMockCurrent) Set(f func(p context.Context) (r *insolar.Pulse, r1 error)) *PulseStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -107,8 +107,8 @@ func (m *mPulseStorageMockCurrent) Set(f func(p context.Context) (r *core.Pulse,
 	return m.mock
 }
 
-//Current implements github.com/insolar/insolar/core.PulseStorage interface
-func (m *PulseStorageMock) Current(p context.Context) (r *core.Pulse, r1 error) {
+//Current implements github.com/insolar/insolar/insolar.PulseStorage interface
+func (m *PulseStorageMock) Current(p context.Context) (r *insolar.Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.CurrentPreCounter, 1)
 	defer atomic.AddUint64(&m.CurrentCounter, 1)
 

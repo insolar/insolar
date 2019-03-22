@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -19,12 +19,12 @@ import (
 type PulseRangeHasherMock struct {
 	t minimock.Tester
 
-	GetRangeHashFunc       func(p core.PulseRange) (r []byte, r1 error)
+	GetRangeHashFunc       func(p insolar.PulseRange) (r []byte, r1 error)
 	GetRangeHashCounter    uint64
 	GetRangeHashPreCounter uint64
 	GetRangeHashMock       mPulseRangeHasherMockGetRangeHash
 
-	ValidateRangeHashFunc       func(p core.PulseRange, p1 []byte) (r bool, r1 error)
+	ValidateRangeHashFunc       func(p insolar.PulseRange, p1 []byte) (r bool, r1 error)
 	ValidateRangeHashCounter    uint64
 	ValidateRangeHashPreCounter uint64
 	ValidateRangeHashMock       mPulseRangeHasherMockValidateRangeHash
@@ -56,7 +56,7 @@ type PulseRangeHasherMockGetRangeHashExpectation struct {
 }
 
 type PulseRangeHasherMockGetRangeHashInput struct {
-	p core.PulseRange
+	p insolar.PulseRange
 }
 
 type PulseRangeHasherMockGetRangeHashResult struct {
@@ -65,7 +65,7 @@ type PulseRangeHasherMockGetRangeHashResult struct {
 }
 
 //Expect specifies that invocation of PulseRangeHasher.GetRangeHash is expected from 1 to Infinity times
-func (m *mPulseRangeHasherMockGetRangeHash) Expect(p core.PulseRange) *mPulseRangeHasherMockGetRangeHash {
+func (m *mPulseRangeHasherMockGetRangeHash) Expect(p insolar.PulseRange) *mPulseRangeHasherMockGetRangeHash {
 	m.mock.GetRangeHashFunc = nil
 	m.expectationSeries = nil
 
@@ -89,7 +89,7 @@ func (m *mPulseRangeHasherMockGetRangeHash) Return(r []byte, r1 error) *PulseRan
 }
 
 //ExpectOnce specifies that invocation of PulseRangeHasher.GetRangeHash is expected once
-func (m *mPulseRangeHasherMockGetRangeHash) ExpectOnce(p core.PulseRange) *PulseRangeHasherMockGetRangeHashExpectation {
+func (m *mPulseRangeHasherMockGetRangeHash) ExpectOnce(p insolar.PulseRange) *PulseRangeHasherMockGetRangeHashExpectation {
 	m.mock.GetRangeHashFunc = nil
 	m.mainExpectation = nil
 
@@ -104,7 +104,7 @@ func (e *PulseRangeHasherMockGetRangeHashExpectation) Return(r []byte, r1 error)
 }
 
 //Set uses given function f as a mock of PulseRangeHasher.GetRangeHash method
-func (m *mPulseRangeHasherMockGetRangeHash) Set(f func(p core.PulseRange) (r []byte, r1 error)) *PulseRangeHasherMock {
+func (m *mPulseRangeHasherMockGetRangeHash) Set(f func(p insolar.PulseRange) (r []byte, r1 error)) *PulseRangeHasherMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -113,7 +113,7 @@ func (m *mPulseRangeHasherMockGetRangeHash) Set(f func(p core.PulseRange) (r []b
 }
 
 //GetRangeHash implements github.com/insolar/insolar/network/storage.PulseRangeHasher interface
-func (m *PulseRangeHasherMock) GetRangeHash(p core.PulseRange) (r []byte, r1 error) {
+func (m *PulseRangeHasherMock) GetRangeHash(p insolar.PulseRange) (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.GetRangeHashPreCounter, 1)
 	defer atomic.AddUint64(&m.GetRangeHashCounter, 1)
 
@@ -206,7 +206,7 @@ type PulseRangeHasherMockValidateRangeHashExpectation struct {
 }
 
 type PulseRangeHasherMockValidateRangeHashInput struct {
-	p  core.PulseRange
+	p  insolar.PulseRange
 	p1 []byte
 }
 
@@ -216,7 +216,7 @@ type PulseRangeHasherMockValidateRangeHashResult struct {
 }
 
 //Expect specifies that invocation of PulseRangeHasher.ValidateRangeHash is expected from 1 to Infinity times
-func (m *mPulseRangeHasherMockValidateRangeHash) Expect(p core.PulseRange, p1 []byte) *mPulseRangeHasherMockValidateRangeHash {
+func (m *mPulseRangeHasherMockValidateRangeHash) Expect(p insolar.PulseRange, p1 []byte) *mPulseRangeHasherMockValidateRangeHash {
 	m.mock.ValidateRangeHashFunc = nil
 	m.expectationSeries = nil
 
@@ -240,7 +240,7 @@ func (m *mPulseRangeHasherMockValidateRangeHash) Return(r bool, r1 error) *Pulse
 }
 
 //ExpectOnce specifies that invocation of PulseRangeHasher.ValidateRangeHash is expected once
-func (m *mPulseRangeHasherMockValidateRangeHash) ExpectOnce(p core.PulseRange, p1 []byte) *PulseRangeHasherMockValidateRangeHashExpectation {
+func (m *mPulseRangeHasherMockValidateRangeHash) ExpectOnce(p insolar.PulseRange, p1 []byte) *PulseRangeHasherMockValidateRangeHashExpectation {
 	m.mock.ValidateRangeHashFunc = nil
 	m.mainExpectation = nil
 
@@ -255,7 +255,7 @@ func (e *PulseRangeHasherMockValidateRangeHashExpectation) Return(r bool, r1 err
 }
 
 //Set uses given function f as a mock of PulseRangeHasher.ValidateRangeHash method
-func (m *mPulseRangeHasherMockValidateRangeHash) Set(f func(p core.PulseRange, p1 []byte) (r bool, r1 error)) *PulseRangeHasherMock {
+func (m *mPulseRangeHasherMockValidateRangeHash) Set(f func(p insolar.PulseRange, p1 []byte) (r bool, r1 error)) *PulseRangeHasherMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -264,7 +264,7 @@ func (m *mPulseRangeHasherMockValidateRangeHash) Set(f func(p core.PulseRange, p
 }
 
 //ValidateRangeHash implements github.com/insolar/insolar/network/storage.PulseRangeHasher interface
-func (m *PulseRangeHasherMock) ValidateRangeHash(p core.PulseRange, p1 []byte) (r bool, r1 error) {
+func (m *PulseRangeHasherMock) ValidateRangeHash(p insolar.PulseRange, p1 []byte) (r bool, r1 error) {
 	counter := atomic.AddUint64(&m.ValidateRangeHashPreCounter, 1)
 	defer atomic.AddUint64(&m.ValidateRangeHashCounter, 1)
 

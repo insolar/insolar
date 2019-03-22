@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/db"
 )
 
@@ -35,7 +35,7 @@ func NewStorageDB() *dropStorageDB { // nolint: golint
 
 type dropDbKey struct {
 	jetPrefix []byte
-	pn        core.PulseNumber
+	pn        insolar.PulseNumber
 }
 
 func (dk *dropDbKey) Scope() db.Scope {
@@ -47,7 +47,7 @@ func (dk *dropDbKey) ID() []byte {
 }
 
 // ForPulse returns a Drop for a provided pulse, that is stored in a db.
-func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (Drop, error) {
+func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (Drop, error) {
 	k := dropDbKey{jetID.Prefix(), pulse}
 
 	buf, err := ds.DB.Get(&k)
@@ -79,6 +79,6 @@ func (ds *dropStorageDB) Set(ctx context.Context, drop Drop) error {
 
 // Delete methods removes a drop from a storage. But the method mustn't be called for a db storage.
 // Because db storage must be used only on a heavy-node.
-func (ds *dropStorageDB) Delete(pulse core.PulseNumber) {
+func (ds *dropStorageDB) Delete(pulse insolar.PulseNumber) {
 	panic("mustn't be called. because db storage must work only on a heavy node. heavy mustn't remove any data")
 }

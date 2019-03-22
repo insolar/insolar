@@ -22,15 +22,14 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/testutils"
@@ -52,12 +51,12 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 
 	t.Run("active nodes storage returns error", func(t *testing.T) {
 		ans.InRoleMock.Expect(
-			100, core.StaticRoleLightMaterial,
+			100, insolar.StaticRoleLightMaterial,
 		).Return(
 			nil, errors.New("some"),
 		)
 
-		nodes, err := jtu.otherNodesForPulse(ctx, core.PulseNumber(100))
+		nodes, err := jtu.otherNodesForPulse(ctx, insolar.PulseNumber(100))
 		require.Error(t, err)
 		require.Empty(t, nodes)
 	})
@@ -68,24 +67,24 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 	t.Run("no active nodes at all", func(t *testing.T) {
 
 		ans.InRoleMock.Expect(
-			100, core.StaticRoleLightMaterial,
+			100, insolar.StaticRoleLightMaterial,
 		).Return(
 			[]insolar.Node{}, nil,
 		)
 
-		nodes, err := jtu.otherNodesForPulse(ctx, core.PulseNumber(100))
+		nodes, err := jtu.otherNodesForPulse(ctx, insolar.PulseNumber(100))
 		require.Error(t, err)
 		require.Empty(t, nodes)
 	})
 
 	t.Run("one active node, it's me", func(t *testing.T) {
 		ans.InRoleMock.Expect(
-			100, core.StaticRoleLightMaterial,
+			100, insolar.StaticRoleLightMaterial,
 		).Return(
 			[]insolar.Node{{ID: meRef}}, nil,
 		)
 
-		nodes, err := jtu.otherNodesForPulse(ctx, core.PulseNumber(100))
+		nodes, err := jtu.otherNodesForPulse(ctx, insolar.PulseNumber(100))
 		require.Error(t, err)
 		require.Empty(t, nodes)
 	})
@@ -93,12 +92,12 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 	t.Run("active node", func(t *testing.T) {
 		someNode := insolar.Node{ID: gen.Reference()}
 		ans.InRoleMock.Expect(
-			100, core.StaticRoleLightMaterial,
+			100, insolar.StaticRoleLightMaterial,
 		).Return(
 			[]insolar.Node{someNode}, nil,
 		)
 
-		nodes, err := jtu.otherNodesForPulse(ctx, core.PulseNumber(100))
+		nodes, err := jtu.otherNodesForPulse(ctx, insolar.PulseNumber(100))
 		require.NoError(t, err)
 		require.Contains(t, nodes, someNode)
 	})
@@ -108,12 +107,12 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 		someNode := insolar.Node{ID: gen.Reference()}
 
 		ans.InRoleMock.Expect(
-			100, core.StaticRoleLightMaterial,
+			100, insolar.StaticRoleLightMaterial,
 		).Return(
 			[]insolar.Node{someNode, meNode}, nil,
 		)
 
-		nodes, err := jtu.otherNodesForPulse(ctx, core.PulseNumber(100))
+		nodes, err := jtu.otherNodesForPulse(ctx, insolar.PulseNumber(100))
 		require.NoError(t, err)
 		require.Contains(t, nodes, someNode)
 		require.NotContains(t, nodes, meNode)
@@ -140,7 +139,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 	jc.MeMock.Return(meRef)
 
 	ans.InRoleMock.Expect(
-		100, core.StaticRoleLightMaterial,
+		100, insolar.StaticRoleLightMaterial,
 	).Return(
 		[]insolar.Node{{ID: gen.Reference()}}, nil,
 	)
@@ -150,7 +149,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 
 		mb.SendMock.Return(nil, errors.New("some"))
 
-		jetID, err := jtu.fetchActualJetFromOtherNodes(ctx, target, core.PulseNumber(100))
+		jetID, err := jtu.fetchActualJetFromOtherNodes(ctx, target, insolar.PulseNumber(100))
 		require.Error(t, err)
 		require.Nil(t, jetID)
 	})
@@ -159,11 +158,11 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 		target := testutils.RandomID()
 
 		mb.SendMock.Return(
-			&reply.Jet{ID: core.RecordID(*core.NewJetID(0, nil)), Actual: false},
+			&reply.Jet{ID: insolar.ID(*insolar.NewJetID(0, nil)), Actual: false},
 			nil,
 		)
 
-		jetID, err := jtu.fetchActualJetFromOtherNodes(ctx, target, core.PulseNumber(100))
+		jetID, err := jtu.fetchActualJetFromOtherNodes(ctx, target, insolar.PulseNumber(100))
 		require.Error(t, err)
 		require.Nil(t, jetID)
 	})
@@ -171,13 +170,13 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 		target := testutils.RandomID()
 
 		mb.SendMock.Return(
-			&reply.Jet{ID: core.RecordID(*core.NewJetID(0, nil)), Actual: true},
+			&reply.Jet{ID: insolar.ID(*insolar.NewJetID(0, nil)), Actual: true},
 			nil,
 		)
 
-		jetID, err := jtu.fetchActualJetFromOtherNodes(ctx, target, core.PulseNumber(100))
+		jetID, err := jtu.fetchActualJetFromOtherNodes(ctx, target, insolar.PulseNumber(100))
 		require.NoError(t, err)
-		require.Equal(t, core.RecordID(*core.NewJetID(0, nil)), *jetID)
+		require.Equal(t, insolar.ID(*insolar.NewJetID(0, nil)), *jetID)
 	})
 
 	// TODO: multiple nodes returned different results
@@ -204,11 +203,11 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	target := testutils.RandomID()
 
 	t.Run("quick reply, data is up to date", func(t *testing.T) {
-		fjmr := *core.NewJetID(0, nil)
+		fjmr := *insolar.NewJetID(0, nil)
 		js.ForIDMock.Return(fjmr, true)
-		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
+		jetID, err := jtu.fetchJet(ctx, target, insolar.PulseNumber(100))
 		require.NoError(t, err)
-		require.Equal(t, fjmr, core.JetID(*jetID))
+		require.Equal(t, fjmr, insolar.JetID(*jetID))
 	})
 
 	t.Run("fetch jet from friends", func(t *testing.T) {
@@ -216,26 +215,26 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 		jc.MeMock.Return(meRef)
 
 		ans.InRoleMock.Expect(
-			100, core.StaticRoleLightMaterial,
+			100, insolar.StaticRoleLightMaterial,
 		).Return(
 			[]insolar.Node{{ID: gen.Reference()}}, nil,
 		)
 		mb.SendMock.Return(
-			&reply.Jet{ID: core.RecordID(*core.NewJetID(0, nil)), Actual: true},
+			&reply.Jet{ID: insolar.ID(*insolar.NewJetID(0, nil)), Actual: true},
 			nil,
 		)
 
-		fjm := *core.NewJetID(0, nil)
+		fjm := *insolar.NewJetID(0, nil)
 		js.ForIDMock.Return(fjm, false)
-		js.UpdateFunc = func(ctx context.Context, pn core.PulseNumber, actual bool, jets ...core.JetID) {
-			require.Equal(t, core.PulseNumber(100), pn)
+		js.UpdateFunc = func(ctx context.Context, pn insolar.PulseNumber, actual bool, jets ...insolar.JetID) {
+			require.Equal(t, insolar.PulseNumber(100), pn)
 			require.True(t, actual)
-			require.Equal(t, []core.JetID{*core.NewJetID(0, nil)}, jets)
+			require.Equal(t, []insolar.JetID{*insolar.NewJetID(0, nil)}, jets)
 		}
 
-		jetID, err := jtu.fetchJet(ctx, target, core.PulseNumber(100))
+		jetID, err := jtu.fetchJet(ctx, target, insolar.PulseNumber(100))
 		require.NoError(t, err)
-		require.Equal(t, core.RecordID(*core.NewJetID(0, nil)), *jetID)
+		require.Equal(t, insolar.ID(*insolar.NewJetID(0, nil)), *jetID)
 	})
 }
 
@@ -265,19 +264,19 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 
 	dataMu := sync.Mutex{}
 
-	first := core.RecordID(*core.NewJetID(2, []byte{0}))
-	second := core.RecordID(*core.NewJetID(2, []byte{0}))
-	third := core.RecordID(*core.NewJetID(2, []byte{0}))
-	fourth := core.RecordID(*core.NewJetID(2, []byte{0}))
+	first := insolar.ID(*insolar.NewJetID(2, []byte{0}))
+	second := insolar.ID(*insolar.NewJetID(2, []byte{0}))
+	third := insolar.ID(*insolar.NewJetID(2, []byte{0}))
+	fourth := insolar.ID(*insolar.NewJetID(2, []byte{0}))
 
-	data := map[byte]*core.RecordID{
+	data := map[byte]*insolar.ID{
 		0:   &first,  // 00
 		128: &second, // 10
 		64:  &third,  // 01
 		192: &fourth, // 11
 	}
 
-	mb.SendFunc = func(ctx context.Context, msg core.Message, opt *core.MessageSendOptions) (core.Reply, error) {
+	mb.SendFunc = func(ctx context.Context, msg insolar.Message, opt *insolar.MessageSendOptions) (insolar.Reply, error) {
 		dataMu.Lock()
 		defer dataMu.Unlock()
 
@@ -292,7 +291,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 		treeMu := sync.Mutex{}
 		tree := jet.NewTree(false)
 
-		js.UpdateFunc = func(ctx context.Context, pn core.PulseNumber, actual bool, jets ...core.JetID) {
+		js.UpdateFunc = func(ctx context.Context, pn insolar.PulseNumber, actual bool, jets ...insolar.JetID) {
 			treeMu.Lock()
 			defer treeMu.Unlock()
 
@@ -300,7 +299,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 				tree.Update(id, actual)
 			}
 		}
-		js.ForIDFunc = func(ctx context.Context, pulse core.PulseNumber, id core.RecordID) (core.JetID, bool) {
+		js.ForIDFunc = func(ctx context.Context, pulse insolar.PulseNumber, id insolar.ID) (insolar.JetID, bool) {
 			treeMu.Lock()
 			defer treeMu.Unlock()
 
@@ -312,9 +311,9 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 
 		for _, b := range []byte{0, 128, 192} {
 			go func(b byte) {
-				target := core.NewRecordID(0, []byte{b})
+				target := insolar.NewID(0, []byte{b})
 
-				jetID, err := jtu.fetchJet(ctx, *target, core.PulseNumber(100))
+				jetID, err := jtu.fetchJet(ctx, *target, insolar.PulseNumber(100))
 				require.NoError(t, err)
 
 				dataMu.Lock()
@@ -326,7 +325,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 		}
 		go func() {
 			dataMu.Lock()
-			jtu.releaseJet(ctx, *data[128], core.PulseNumber(100))
+			jtu.releaseJet(ctx, *data[128], insolar.PulseNumber(100))
 			dataMu.Unlock()
 
 			wg.Done()

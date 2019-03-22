@@ -22,7 +22,7 @@ import (
 	"encoding/hex"
 	"errors"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/ugorji/go/codec"
 )
 
@@ -55,7 +55,7 @@ func toPulse(raw []byte) (*Pulse, error) {
 }
 
 // GetPulse returns pulse for provided pulse number.
-func (m *TransactionManager) GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
+func (m *TransactionManager) GetPulse(ctx context.Context, num insolar.PulseNumber) (*Pulse, error) {
 	buf, err := m.get(ctx, prefixkey(scopeIDPulse, num.Bytes()))
 	if err != nil {
 		return nil, err
@@ -71,22 +71,22 @@ func (m *TransactionManager) GetPulse(ctx context.Context, num core.PulseNumber)
 }
 
 // AddPulse saves new pulse data and updates index.
-func (pt *pulseTracker) AddPulse(ctx context.Context, pulse core.Pulse) error {
+func (pt *pulseTracker) AddPulse(ctx context.Context, pulse insolar.Pulse) error {
 	return pt.DB.Update(ctx, func(tx *TransactionManager) error {
 		var (
-			previousPulseNumber  core.PulseNumber
+			previousPulseNumber  insolar.PulseNumber
 			previousSerialNumber int
 		)
 
 		_, err := tx.get(ctx, prefixkey(scopeIDPulse, pulse.PulseNumber.Bytes()))
 		if err == nil {
 			return ErrOverride
-		} else if err != core.ErrNotFound {
+		} else if err != insolar.ErrNotFound {
 			return err
 		}
 
 		previousPulse, err := tx.GetLatestPulse(ctx)
-		if err != nil && err != core.ErrNotFound {
+		if err != nil && err != insolar.ErrNotFound {
 			return err
 		}
 
@@ -124,7 +124,7 @@ func (pt *pulseTracker) AddPulse(ctx context.Context, pulse core.Pulse) error {
 }
 
 // GetPulse returns pulse for provided pulse number.
-func (pt *pulseTracker) GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
+func (pt *pulseTracker) GetPulse(ctx context.Context, num insolar.PulseNumber) (*Pulse, error) {
 	var (
 		pulse *Pulse
 		err   error
@@ -140,7 +140,7 @@ func (pt *pulseTracker) GetPulse(ctx context.Context, num core.PulseNumber) (*Pu
 }
 
 // GetPreviousPulse returns pulse for provided pulse number.
-func (pt *pulseTracker) GetPreviousPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error) {
+func (pt *pulseTracker) GetPreviousPulse(ctx context.Context, num insolar.PulseNumber) (*Pulse, error) {
 	var (
 		pulse *Pulse
 		err   error
@@ -165,7 +165,7 @@ func (pt *pulseTracker) GetPreviousPulse(ctx context.Context, num core.PulseNumb
 }
 
 // GetNthPrevPulse returns Nth previous pulse from some pulse number
-func (pt *pulseTracker) GetNthPrevPulse(ctx context.Context, n uint, num core.PulseNumber) (*Pulse, error) {
+func (pt *pulseTracker) GetNthPrevPulse(ctx context.Context, n uint, num insolar.PulseNumber) (*Pulse, error) {
 	pulse, err := pt.GetPulse(ctx, num)
 	if err != nil {
 		return nil, err
@@ -175,7 +175,7 @@ func (pt *pulseTracker) GetNthPrevPulse(ctx context.Context, n uint, num core.Pu
 		for n > 0 {
 			if pulse.Prev == nil {
 				pulse = nil
-				return core.ErrNotFound
+				return insolar.ErrNotFound
 			}
 			pulse, err = tx.GetPulse(ctx, *pulse.Prev)
 			if err != nil {
@@ -201,13 +201,13 @@ func (m *TransactionManager) GetLatestPulse(ctx context.Context) (*Pulse, error)
 	return toPulse(buf)
 }
 
-// Deprecated: use core.PulseStorage.Current() instead (or private getLatestPulse if applicable).
+// Deprecated: use insolar.PulseStorage.Current() instead (or private getLatestPulse if applicable).
 func (pt *pulseTracker) GetLatestPulse(ctx context.Context) (*Pulse, error) {
 	return pt.getLatestPulse(ctx)
 }
 
 // DeletePulse delete pulse data.
-func (pt *pulseTracker) DeletePulse(ctx context.Context, num core.PulseNumber) error {
+func (pt *pulseTracker) DeletePulse(ctx context.Context, num insolar.PulseNumber) error {
 	return errors.New("DB pulse removal is forbidden")
 }
 
@@ -221,18 +221,18 @@ func (pt *pulseTracker) getLatestPulse(ctx context.Context) (*Pulse, error) {
 	return tx.GetLatestPulse(ctx)
 }
 
-func pulseNumFromKey(from int, key []byte) core.PulseNumber {
-	return core.NewPulseNumber(key[from : from+core.PulseNumberSize])
+func pulseNumFromKey(from int, key []byte) insolar.PulseNumber {
+	return insolar.NewPulseNumber(key[from : from+insolar.PulseNumberSize])
 }
 
 // Key type for wrapping storage binary key.
 type Key []byte
 
 // PulseNumber returns pulse number for provided storage binary key.
-func (b Key) PulseNumber() core.PulseNumber {
+func (b Key) PulseNumber() insolar.PulseNumber {
 	// by default expect jetID after:
 	// offset in this case: is 1 + RecordHashSize (jet length) - 1 minus jet prefix
-	from := core.RecordHashSize
+	from := insolar.RecordHashSize
 	switch b[0] {
 	case scopeIDPulse:
 		from = 1

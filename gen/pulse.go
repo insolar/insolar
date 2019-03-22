@@ -18,11 +18,11 @@ package gen
 
 import (
 	"github.com/google/gofuzz"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // PulseNumber generates random pulse number (excluding special cases).
-func PulseNumber() (pn core.PulseNumber) {
+func PulseNumber() (pn insolar.PulseNumber) {
 	fuzz.New().NilChance(0).Fuzz(&pn)
 	return
 }

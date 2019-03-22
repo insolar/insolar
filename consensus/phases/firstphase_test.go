@@ -55,7 +55,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/merkle"
@@ -67,9 +67,9 @@ import (
 func TestFirstPhase_HandlePulse(t *testing.T) {
 	firstPhase := &FirstPhaseImpl{}
 
-	node := nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
+	node := nodenetwork.NewNode(insolar.Reference{}, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
 	nodeKeeper := nodenetwork.NewNodeKeeper(node)
-	nodeKeeper.SetInitialSnapshot([]core.Node{node})
+	nodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{node})
 
 	pulseCalculatorMock := merkle.NewCalculatorMock(t)
 	communicatorMock := NewCommunicatorMock(t)
@@ -77,11 +77,11 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 	terminationHandler := testutils.NewTerminationHandlerMock(t)
 
 	cryptoServ := testutils.NewCryptographyServiceMock(t)
-	cryptoServ.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
-		signature := core.SignatureFromBytes(nil)
+	cryptoServ.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
 	}
-	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool) {
+	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
 		return true
 	}
 

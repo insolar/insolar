@@ -54,20 +54,20 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
 
-func initRefs(count int) []core.RecordRef {
-	result := make([]core.RecordRef, count)
+func initRefs(count int) []insolar.Reference {
+	result := make([]insolar.Reference, count)
 	for i := 0; i < count; i++ {
 		result[i] = testutils.RandomRef()
 	}
 	return result
 }
 
-func initBitCells(refs []core.RecordRef) []BitSetCell {
+func initBitCells(refs []insolar.Reference) []BitSetCell {
 	result := make([]BitSetCell, len(refs))
 	for i, ref := range refs {
 		result[i] = BitSetCell{NodeID: ref, State: TimedOut}
@@ -75,7 +75,7 @@ func initBitCells(refs []core.RecordRef) []BitSetCell {
 	return result
 }
 
-func initDiffBitCells(refs []core.RecordRef) []BitSetCell {
+func initDiffBitCells(refs []insolar.Reference) []BitSetCell {
 	result := make([]BitSetCell, len(refs))
 	for i := 0; i < len(refs)/2+1; i++ {
 		result[i] = BitSetCell{NodeID: refs[i], State: TimedOut}
@@ -87,17 +87,17 @@ func initDiffBitCells(refs []core.RecordRef) []BitSetCell {
 }
 
 type BitSetMapperMock struct {
-	refs []core.RecordRef
+	refs []insolar.Reference
 }
 
-func (bsmm *BitSetMapperMock) IndexToRef(index int) (core.RecordRef, error) {
+func (bsmm *BitSetMapperMock) IndexToRef(index int) (insolar.Reference, error) {
 	if index > len(bsmm.refs)-1 {
 		return testutils.RandomRef(), ErrBitSetOutOfRange
 	}
 	return bsmm.refs[index], nil
 }
 
-func (bsmm *BitSetMapperMock) RefToIndex(nodeID core.RecordRef) (int, error) {
+func (bsmm *BitSetMapperMock) RefToIndex(nodeID insolar.Reference) (int, error) {
 	for i, ref := range bsmm.refs {
 		if ref == nodeID {
 			return i, nil
@@ -245,7 +245,7 @@ func TestBitSet_ThousandDiffStates(t *testing.T) {
 	testSerializeDeserialize(t, refs, cells, false)
 }
 
-func testSerializeDeserialize(t *testing.T, refs []core.RecordRef, cells []BitSetCell, compressed bool) {
+func testSerializeDeserialize(t *testing.T, refs []insolar.Reference, cells []BitSetCell, compressed bool) {
 	mapper := &BitSetMapperMock{refs: refs}
 
 	bitset, _ := NewBitSetImpl(len(cells), compressed)

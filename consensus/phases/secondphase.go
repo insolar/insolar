@@ -55,7 +55,7 @@ import (
 
 	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
@@ -68,8 +68,8 @@ import (
 )
 
 type SecondPhase interface {
-	Execute(ctx context.Context, pulse *core.Pulse, state *FirstPhaseState) (*SecondPhaseState, error)
-	Execute21(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*SecondPhaseState, error)
+	Execute(ctx context.Context, pulse *insolar.Pulse, state *FirstPhaseState) (*SecondPhaseState, error)
+	Execute21(ctx context.Context, pulse *insolar.Pulse, state *SecondPhaseState) (*SecondPhaseState, error)
 }
 
 func NewSecondPhase() SecondPhase {
@@ -77,13 +77,13 @@ func NewSecondPhase() SecondPhase {
 }
 
 type SecondPhaseImpl struct {
-	NodeKeeper   network.NodeKeeper       `inject:""`
-	Calculator   merkle.Calculator        `inject:""`
-	Communicator Communicator             `inject:""`
-	Cryptography core.CryptographyService `inject:""`
+	NodeKeeper   network.NodeKeeper          `inject:""`
+	Calculator   merkle.Calculator           `inject:""`
+	Communicator Communicator                `inject:""`
+	Cryptography insolar.CryptographyService `inject:""`
 }
 
-func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state *FirstPhaseState) (*SecondPhaseState, error) {
+func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, state *FirstPhaseState) (*SecondPhaseState, error) {
 	logger := inslogger.FromContext(ctx)
 	ctx, span := instracer.StartSpan(ctx, "SecondPhase.Execute")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
@@ -157,12 +157,12 @@ func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state
 		}
 
 		type none struct{}
-		newActive := make(map[core.RecordRef]none)
+		newActive := make(map[insolar.Reference]none)
 		for _, active := range matrixCalculation.Active {
 			newActive[active] = none{}
 		}
 
-		newProofs := make(map[core.Node]*merkle.PulseProof)
+		newProofs := make(map[insolar.NetworkNode]*merkle.PulseProof)
 		for node, proof := range state.ValidProofs {
 			_, ok := newActive[node.ID()]
 			if !ok {
@@ -199,7 +199,7 @@ func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state
 	}, nil
 }
 
-func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*SecondPhaseState, error) {
+func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *insolar.Pulse, state *SecondPhaseState) (*SecondPhaseState, error) {
 	ctx, span := instracer.StartSpan(ctx, "SecondPhase.Execute21")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
 	defer span.End()
@@ -258,7 +258,7 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 
 		merkleProof := &merkle.PulseProof{
 			BaseProof: merkle.BaseProof{
-				Signature: core.SignatureFromBytes(result.NodePulseProof.Signature()),
+				Signature: insolar.SignatureFromBytes(result.NodePulseProof.Signature()),
 			},
 			StateHash: result.NodePulseProof.StateHash(),
 		}
@@ -289,7 +289,7 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-2.1 ] Failed to apply changes to current bitset")
 	}
-	claimMap := make(map[core.RecordRef][]packets.ReferendumClaim)
+	claimMap := make(map[insolar.Reference][]packets.ReferendumClaim)
 	for index, claim := range claims {
 		ref, err := state.UnsyncList.IndexToRef(int(index))
 		if err != nil {
@@ -334,7 +334,7 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 	return state, nil
 }
 
-func (sp *SecondPhaseImpl) generatePhase2Bitset(list network.UnsyncList, proofs map[core.Node]*merkle.PulseProof, pulseNumber core.PulseNumber) (packets.BitSet, error) {
+func (sp *SecondPhaseImpl) generatePhase2Bitset(list network.UnsyncList, proofs map[insolar.NetworkNode]*merkle.PulseProof, pulseNumber insolar.PulseNumber) (packets.BitSet, error) {
 	bitset, err := packets.NewBitSet(list.Length())
 	if err != nil {
 		return nil, err
@@ -357,16 +357,16 @@ func (sp *SecondPhaseImpl) generatePhase2Bitset(list network.UnsyncList, proofs 
 	return bitset, nil
 }
 
-func getNodeState(node core.Node, pulseNumber core.PulseNumber) packets.BitSetState {
+func getNodeState(node insolar.NetworkNode, pulseNumber insolar.PulseNumber) packets.BitSetState {
 	state := packets.Legit
-	if node.GetState() == core.NodeLeaving && node.LeavingETA() < pulseNumber {
+	if node.GetState() == insolar.NodeLeaving && node.LeavingETA() < pulseNumber {
 		state = packets.TimedOut
 	}
 
 	return state
 }
 
-func (sp *SecondPhaseImpl) checkPacketSignature(packet *packets.Phase2Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
+func (sp *SecondPhaseImpl) checkPacketSignature(packet *packets.Phase2Packet, recordRef insolar.Reference, unsyncList network.UnsyncList) error {
 	activeNode := unsyncList.GetActiveNode(recordRef)
 	if activeNode == nil {
 		return errors.New("failed to get active node")

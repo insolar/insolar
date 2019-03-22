@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,27 +20,27 @@ import (
 type RecentIndexStorageMock struct {
 	t minimock.Tester
 
-	AddObjectFunc       func(p context.Context, p1 core.RecordID)
+	AddObjectFunc       func(p context.Context, p1 insolar.ID)
 	AddObjectCounter    uint64
 	AddObjectPreCounter uint64
 	AddObjectMock       mRecentIndexStorageMockAddObject
 
-	AddObjectWithTLLFunc       func(p context.Context, p1 core.RecordID, p2 int)
+	AddObjectWithTLLFunc       func(p context.Context, p1 insolar.ID, p2 int)
 	AddObjectWithTLLCounter    uint64
 	AddObjectWithTLLPreCounter uint64
 	AddObjectWithTLLMock       mRecentIndexStorageMockAddObjectWithTLL
 
-	DecreaseIndexTTLFunc       func(p context.Context) (r []core.RecordID)
+	DecreaseIndexTTLFunc       func(p context.Context) (r []insolar.ID)
 	DecreaseIndexTTLCounter    uint64
 	DecreaseIndexTTLPreCounter uint64
 	DecreaseIndexTTLMock       mRecentIndexStorageMockDecreaseIndexTTL
 
-	FilterNotExistWithLockFunc       func(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID))
+	FilterNotExistWithLockFunc       func(p context.Context, p1 []insolar.ID, p2 func(p []insolar.ID))
 	FilterNotExistWithLockCounter    uint64
 	FilterNotExistWithLockPreCounter uint64
 	FilterNotExistWithLockMock       mRecentIndexStorageMockFilterNotExistWithLock
 
-	GetObjectsFunc       func() (r map[core.RecordID]int)
+	GetObjectsFunc       func() (r map[insolar.ID]int)
 	GetObjectsCounter    uint64
 	GetObjectsPreCounter uint64
 	GetObjectsMock       mRecentIndexStorageMockGetObjects
@@ -75,11 +75,11 @@ type RecentIndexStorageMockAddObjectExpectation struct {
 
 type RecentIndexStorageMockAddObjectInput struct {
 	p  context.Context
-	p1 core.RecordID
+	p1 insolar.ID
 }
 
 //Expect specifies that invocation of RecentIndexStorage.AddObject is expected from 1 to Infinity times
-func (m *mRecentIndexStorageMockAddObject) Expect(p context.Context, p1 core.RecordID) *mRecentIndexStorageMockAddObject {
+func (m *mRecentIndexStorageMockAddObject) Expect(p context.Context, p1 insolar.ID) *mRecentIndexStorageMockAddObject {
 	m.mock.AddObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -103,7 +103,7 @@ func (m *mRecentIndexStorageMockAddObject) Return() *RecentIndexStorageMock {
 }
 
 //ExpectOnce specifies that invocation of RecentIndexStorage.AddObject is expected once
-func (m *mRecentIndexStorageMockAddObject) ExpectOnce(p context.Context, p1 core.RecordID) *RecentIndexStorageMockAddObjectExpectation {
+func (m *mRecentIndexStorageMockAddObject) ExpectOnce(p context.Context, p1 insolar.ID) *RecentIndexStorageMockAddObjectExpectation {
 	m.mock.AddObjectFunc = nil
 	m.mainExpectation = nil
 
@@ -114,7 +114,7 @@ func (m *mRecentIndexStorageMockAddObject) ExpectOnce(p context.Context, p1 core
 }
 
 //Set uses given function f as a mock of RecentIndexStorage.AddObject method
-func (m *mRecentIndexStorageMockAddObject) Set(f func(p context.Context, p1 core.RecordID)) *RecentIndexStorageMock {
+func (m *mRecentIndexStorageMockAddObject) Set(f func(p context.Context, p1 insolar.ID)) *RecentIndexStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -123,7 +123,7 @@ func (m *mRecentIndexStorageMockAddObject) Set(f func(p context.Context, p1 core
 }
 
 //AddObject implements github.com/insolar/insolar/ledger/recentstorage.RecentIndexStorage interface
-func (m *RecentIndexStorageMock) AddObject(p context.Context, p1 core.RecordID) {
+func (m *RecentIndexStorageMock) AddObject(p context.Context, p1 insolar.ID) {
 	counter := atomic.AddUint64(&m.AddObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.AddObjectCounter, 1)
 
@@ -199,12 +199,12 @@ type RecentIndexStorageMockAddObjectWithTLLExpectation struct {
 
 type RecentIndexStorageMockAddObjectWithTLLInput struct {
 	p  context.Context
-	p1 core.RecordID
+	p1 insolar.ID
 	p2 int
 }
 
 //Expect specifies that invocation of RecentIndexStorage.AddObjectWithTLL is expected from 1 to Infinity times
-func (m *mRecentIndexStorageMockAddObjectWithTLL) Expect(p context.Context, p1 core.RecordID, p2 int) *mRecentIndexStorageMockAddObjectWithTLL {
+func (m *mRecentIndexStorageMockAddObjectWithTLL) Expect(p context.Context, p1 insolar.ID, p2 int) *mRecentIndexStorageMockAddObjectWithTLL {
 	m.mock.AddObjectWithTLLFunc = nil
 	m.expectationSeries = nil
 
@@ -228,7 +228,7 @@ func (m *mRecentIndexStorageMockAddObjectWithTLL) Return() *RecentIndexStorageMo
 }
 
 //ExpectOnce specifies that invocation of RecentIndexStorage.AddObjectWithTLL is expected once
-func (m *mRecentIndexStorageMockAddObjectWithTLL) ExpectOnce(p context.Context, p1 core.RecordID, p2 int) *RecentIndexStorageMockAddObjectWithTLLExpectation {
+func (m *mRecentIndexStorageMockAddObjectWithTLL) ExpectOnce(p context.Context, p1 insolar.ID, p2 int) *RecentIndexStorageMockAddObjectWithTLLExpectation {
 	m.mock.AddObjectWithTLLFunc = nil
 	m.mainExpectation = nil
 
@@ -239,7 +239,7 @@ func (m *mRecentIndexStorageMockAddObjectWithTLL) ExpectOnce(p context.Context, 
 }
 
 //Set uses given function f as a mock of RecentIndexStorage.AddObjectWithTLL method
-func (m *mRecentIndexStorageMockAddObjectWithTLL) Set(f func(p context.Context, p1 core.RecordID, p2 int)) *RecentIndexStorageMock {
+func (m *mRecentIndexStorageMockAddObjectWithTLL) Set(f func(p context.Context, p1 insolar.ID, p2 int)) *RecentIndexStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -248,7 +248,7 @@ func (m *mRecentIndexStorageMockAddObjectWithTLL) Set(f func(p context.Context, 
 }
 
 //AddObjectWithTLL implements github.com/insolar/insolar/ledger/recentstorage.RecentIndexStorage interface
-func (m *RecentIndexStorageMock) AddObjectWithTLL(p context.Context, p1 core.RecordID, p2 int) {
+func (m *RecentIndexStorageMock) AddObjectWithTLL(p context.Context, p1 insolar.ID, p2 int) {
 	counter := atomic.AddUint64(&m.AddObjectWithTLLPreCounter, 1)
 	defer atomic.AddUint64(&m.AddObjectWithTLLCounter, 1)
 
@@ -328,7 +328,7 @@ type RecentIndexStorageMockDecreaseIndexTTLInput struct {
 }
 
 type RecentIndexStorageMockDecreaseIndexTTLResult struct {
-	r []core.RecordID
+	r []insolar.ID
 }
 
 //Expect specifies that invocation of RecentIndexStorage.DecreaseIndexTTL is expected from 1 to Infinity times
@@ -344,7 +344,7 @@ func (m *mRecentIndexStorageMockDecreaseIndexTTL) Expect(p context.Context) *mRe
 }
 
 //Return specifies results of invocation of RecentIndexStorage.DecreaseIndexTTL
-func (m *mRecentIndexStorageMockDecreaseIndexTTL) Return(r []core.RecordID) *RecentIndexStorageMock {
+func (m *mRecentIndexStorageMockDecreaseIndexTTL) Return(r []insolar.ID) *RecentIndexStorageMock {
 	m.mock.DecreaseIndexTTLFunc = nil
 	m.expectationSeries = nil
 
@@ -366,12 +366,12 @@ func (m *mRecentIndexStorageMockDecreaseIndexTTL) ExpectOnce(p context.Context) 
 	return expectation
 }
 
-func (e *RecentIndexStorageMockDecreaseIndexTTLExpectation) Return(r []core.RecordID) {
+func (e *RecentIndexStorageMockDecreaseIndexTTLExpectation) Return(r []insolar.ID) {
 	e.result = &RecentIndexStorageMockDecreaseIndexTTLResult{r}
 }
 
 //Set uses given function f as a mock of RecentIndexStorage.DecreaseIndexTTL method
-func (m *mRecentIndexStorageMockDecreaseIndexTTL) Set(f func(p context.Context) (r []core.RecordID)) *RecentIndexStorageMock {
+func (m *mRecentIndexStorageMockDecreaseIndexTTL) Set(f func(p context.Context) (r []insolar.ID)) *RecentIndexStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -380,7 +380,7 @@ func (m *mRecentIndexStorageMockDecreaseIndexTTL) Set(f func(p context.Context) 
 }
 
 //DecreaseIndexTTL implements github.com/insolar/insolar/ledger/recentstorage.RecentIndexStorage interface
-func (m *RecentIndexStorageMock) DecreaseIndexTTL(p context.Context) (r []core.RecordID) {
+func (m *RecentIndexStorageMock) DecreaseIndexTTL(p context.Context) (r []insolar.ID) {
 	counter := atomic.AddUint64(&m.DecreaseIndexTTLPreCounter, 1)
 	defer atomic.AddUint64(&m.DecreaseIndexTTLCounter, 1)
 
@@ -471,12 +471,12 @@ type RecentIndexStorageMockFilterNotExistWithLockExpectation struct {
 
 type RecentIndexStorageMockFilterNotExistWithLockInput struct {
 	p  context.Context
-	p1 []core.RecordID
-	p2 func(p []core.RecordID)
+	p1 []insolar.ID
+	p2 func(p []insolar.ID)
 }
 
 //Expect specifies that invocation of RecentIndexStorage.FilterNotExistWithLock is expected from 1 to Infinity times
-func (m *mRecentIndexStorageMockFilterNotExistWithLock) Expect(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID)) *mRecentIndexStorageMockFilterNotExistWithLock {
+func (m *mRecentIndexStorageMockFilterNotExistWithLock) Expect(p context.Context, p1 []insolar.ID, p2 func(p []insolar.ID)) *mRecentIndexStorageMockFilterNotExistWithLock {
 	m.mock.FilterNotExistWithLockFunc = nil
 	m.expectationSeries = nil
 
@@ -500,7 +500,7 @@ func (m *mRecentIndexStorageMockFilterNotExistWithLock) Return() *RecentIndexSto
 }
 
 //ExpectOnce specifies that invocation of RecentIndexStorage.FilterNotExistWithLock is expected once
-func (m *mRecentIndexStorageMockFilterNotExistWithLock) ExpectOnce(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID)) *RecentIndexStorageMockFilterNotExistWithLockExpectation {
+func (m *mRecentIndexStorageMockFilterNotExistWithLock) ExpectOnce(p context.Context, p1 []insolar.ID, p2 func(p []insolar.ID)) *RecentIndexStorageMockFilterNotExistWithLockExpectation {
 	m.mock.FilterNotExistWithLockFunc = nil
 	m.mainExpectation = nil
 
@@ -511,7 +511,7 @@ func (m *mRecentIndexStorageMockFilterNotExistWithLock) ExpectOnce(p context.Con
 }
 
 //Set uses given function f as a mock of RecentIndexStorage.FilterNotExistWithLock method
-func (m *mRecentIndexStorageMockFilterNotExistWithLock) Set(f func(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID))) *RecentIndexStorageMock {
+func (m *mRecentIndexStorageMockFilterNotExistWithLock) Set(f func(p context.Context, p1 []insolar.ID, p2 func(p []insolar.ID))) *RecentIndexStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -520,7 +520,7 @@ func (m *mRecentIndexStorageMockFilterNotExistWithLock) Set(f func(p context.Con
 }
 
 //FilterNotExistWithLock implements github.com/insolar/insolar/ledger/recentstorage.RecentIndexStorage interface
-func (m *RecentIndexStorageMock) FilterNotExistWithLock(p context.Context, p1 []core.RecordID, p2 func(p []core.RecordID)) {
+func (m *RecentIndexStorageMock) FilterNotExistWithLock(p context.Context, p1 []insolar.ID, p2 func(p []insolar.ID)) {
 	counter := atomic.AddUint64(&m.FilterNotExistWithLockPreCounter, 1)
 	defer atomic.AddUint64(&m.FilterNotExistWithLockCounter, 1)
 
@@ -595,7 +595,7 @@ type RecentIndexStorageMockGetObjectsExpectation struct {
 }
 
 type RecentIndexStorageMockGetObjectsResult struct {
-	r map[core.RecordID]int
+	r map[insolar.ID]int
 }
 
 //Expect specifies that invocation of RecentIndexStorage.GetObjects is expected from 1 to Infinity times
@@ -611,7 +611,7 @@ func (m *mRecentIndexStorageMockGetObjects) Expect() *mRecentIndexStorageMockGet
 }
 
 //Return specifies results of invocation of RecentIndexStorage.GetObjects
-func (m *mRecentIndexStorageMockGetObjects) Return(r map[core.RecordID]int) *RecentIndexStorageMock {
+func (m *mRecentIndexStorageMockGetObjects) Return(r map[insolar.ID]int) *RecentIndexStorageMock {
 	m.mock.GetObjectsFunc = nil
 	m.expectationSeries = nil
 
@@ -633,12 +633,12 @@ func (m *mRecentIndexStorageMockGetObjects) ExpectOnce() *RecentIndexStorageMock
 	return expectation
 }
 
-func (e *RecentIndexStorageMockGetObjectsExpectation) Return(r map[core.RecordID]int) {
+func (e *RecentIndexStorageMockGetObjectsExpectation) Return(r map[insolar.ID]int) {
 	e.result = &RecentIndexStorageMockGetObjectsResult{r}
 }
 
 //Set uses given function f as a mock of RecentIndexStorage.GetObjects method
-func (m *mRecentIndexStorageMockGetObjects) Set(f func() (r map[core.RecordID]int)) *RecentIndexStorageMock {
+func (m *mRecentIndexStorageMockGetObjects) Set(f func() (r map[insolar.ID]int)) *RecentIndexStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -647,7 +647,7 @@ func (m *mRecentIndexStorageMockGetObjects) Set(f func() (r map[core.RecordID]in
 }
 
 //GetObjects implements github.com/insolar/insolar/ledger/recentstorage.RecentIndexStorage interface
-func (m *RecentIndexStorageMock) GetObjects() (r map[core.RecordID]int) {
+func (m *RecentIndexStorageMock) GetObjects() (r map[insolar.ID]int) {
 	counter := atomic.AddUint64(&m.GetObjectsPreCounter, 1)
 	defer atomic.AddUint64(&m.GetObjectsCounter, 1)
 
