@@ -43,7 +43,7 @@ func NewWaiter() Processor {
 }
 
 // Process implements Processor interface
-func (w *Waiter) Process(task AdapterTask, nestedEventHelper NestedEventHelper) interface{} {
+func (w *Waiter) Process(task AdapterTask, nestedEventHelper NestedEventHelper, cancelInfo CancelInfo) interface{} {
 	log.Info("[ Waiter.Process ] Start.")
 
 	payload, ok := task.TaskPayload.(WaiterTask)

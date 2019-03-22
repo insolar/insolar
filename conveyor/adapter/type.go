@@ -110,7 +110,7 @@ type NestedEventHelper interface {
 
 // Processor is iface for processing task for adapter
 type Processor interface {
-	Process(task AdapterTask, nestedEventHelper NestedEventHelper) interface{}
+	Process(task AdapterTask, nestedEventHelper NestedEventHelper, cancelInfo CancelInfo) interface{}
 }
 
 // NewAdapterWithQueue creates new instance of Adapter

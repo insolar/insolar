@@ -257,16 +257,17 @@ func (a *CancellableQueueAdapter) FlushNodeTasks(nodeID idType) {
 func (a *CancellableQueueAdapter) process(cancellableTask queueTask) {
 	adapterTask := cancellableTask.task
 	respSink := adapterTask.respSink
+	cancelInfo := cancellableTask.cancelInfo
 
 	select {
-	case <-cancellableTask.cancelInfo.Cancel():
+	case <-cancelInfo.Cancel():
 		log.Info("[ CancellableQueueAdapter.process ] Task was canceled")
 		respSink.PushResponse(a.adapterID, adapterTask.elementID, adapterTask.handlerID, nil)
-	case <-cancellableTask.cancelInfo.Flush():
+	case <-cancelInfo.Flush():
 		log.Info("[ CancellableQueueAdapter.process ] Task was flushed. Don't push Response")
 	default:
 		helper := newNestedEventHelper(adapterTask, a.adapterID)
-		respPayload := a.processor.Process(adapterTask, helper)
+		respPayload := a.processor.Process(adapterTask, helper, cancelInfo)
 		respSink.PushResponse(a.adapterID, adapterTask.elementID, adapterTask.handlerID, respPayload)
 		// TODO: remove cancelInfo from a.taskHolder
 	}
