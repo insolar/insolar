@@ -187,14 +187,3 @@ func (os *objectStorage) SetObjectIndex(
 		return tx.SetObjectIndex(ctx, jetID, id, idx)
 	})
 }
-
-// RemoveObjectIndex removes an index of an object
-func (os *objectStorage) RemoveObjectIndex(
-	ctx context.Context,
-	jetID core.RecordID,
-	ref *core.RecordID,
-) error {
-	return os.DB.Update(ctx, func(tx *TransactionManager) error {
-		return tx.RemoveObjectIndex(ctx, jetID, ref)
-	})
-}

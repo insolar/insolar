@@ -197,18 +197,6 @@ func (m *TransactionManager) SetObjectIndex(
 	return m.set(ctx, k, encoded)
 }
 
-// RemoveObjectIndex removes an index of an object
-func (m *TransactionManager) RemoveObjectIndex(
-	ctx context.Context,
-	jetID core.RecordID,
-	ref *core.RecordID,
-) error {
-	m.lockOnID(ref)
-	prefix := core.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDLifeline, prefix, ref[:])
-	return m.remove(ctx, k)
-}
-
 // set stores value by key.
 func (m *TransactionManager) set(ctx context.Context, key, value []byte) error {
 	m.txupdates[string(key)] = keyval{k: key, v: value}

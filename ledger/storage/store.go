@@ -32,7 +32,6 @@ type Store interface {
 
 	GetObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID, forupdate bool) (*object.Lifeline, error)
 	SetObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID, idx *object.Lifeline) error
-	RemoveObjectIndex(ctx context.Context, jetID core.RecordID, ref *core.RecordID) error
 
 	// Deprecated: use core.PulseStorage.Current() instead
 	GetLatestPulse(ctx context.Context) (*Pulse, error)
