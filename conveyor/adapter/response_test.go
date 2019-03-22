@@ -148,7 +148,7 @@ func (mr *mockReply) Type() core.ReplyType {
 	return 0
 }
 
-func TestResponseSenderHelper(t *testing.T) {
+func TestSendResponseHelper(t *testing.T) {
 	f := messagebus.NewFuture()
 	event := core.ConveyorPendingMessage{Future: f}
 	testReply := &mockReply{data: "Put-in"}
@@ -164,7 +164,7 @@ func TestResponseSenderHelper(t *testing.T) {
 	}
 
 	adapterCatalog := newCatalog()
-	err := adapterCatalog.responseSenderHelper.SendResponse(slotElementHelperMock, testReply, 42)
+	err := adapterCatalog.sendResponseHelper.SendResponse(slotElementHelperMock, testReply, 42)
 	require.NoError(t, err)
 
 	gotReply, err := f.GetResult(time.Second)
@@ -172,13 +172,13 @@ func TestResponseSenderHelper(t *testing.T) {
 	require.Equal(t, testReply, gotReply)
 }
 
-func TestResponseSenderHelper_BadInput(t *testing.T) {
+func TestSendResponseHelper_BadInput(t *testing.T) {
 	slotElementHelperMock := slot.NewSlotElementHelperMock(t)
 	slotElementHelperMock.GetInputEventFunc = func() (r interface{}) {
 		return 33
 	}
 	adapterCatalog := newCatalog()
-	err := adapterCatalog.responseSenderHelper.SendResponse(slotElementHelperMock, &mockReply{}, 44)
+	err := adapterCatalog.sendResponseHelper.SendResponse(slotElementHelperMock, &mockReply{}, 44)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "Input event is not core.ConveyorPendingMessage")
 }

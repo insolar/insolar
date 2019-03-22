@@ -63,7 +63,7 @@ func (rs *SendResponseProcessor) Process(task AdapterTask, nestedEventHelper Nes
 	return msg
 }
 
-// ResponseSenderHelper is helper for ResponseSender
+// SendResponseHelper is helper for SendResponseTask
 type SendResponseHelper struct{}
 
 // SendResponse makes correct message and send it to adapter
