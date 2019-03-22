@@ -43,7 +43,7 @@ func NewWaiter() Processor {
 }
 
 // Process implements Processor interface
-func (w *Waiter) Process(task AdapterTask) Events {
+func (w *Waiter) Process(task AdapterTask, nestedEventHelper NestedEventHelper) interface{} {
 	log.Info("[ Waiter.Process ] Start.")
 
 	payload, ok := task.TaskPayload.(WaiterTask)
@@ -51,12 +51,12 @@ func (w *Waiter) Process(task AdapterTask) Events {
 
 	if !ok {
 		msg = errors.Errorf("[ Waiter.Process ] Incorrect payload type: %T", task.TaskPayload)
-		return Events{RespPayload: msg}
+		return msg
 	}
 
 	time.Sleep(time.Duration(payload.waitPeriodMilliseconds) * time.Millisecond)
 	msg = fmt.Sprintf("Work completed successfully. Waited %d millisecond", payload.waitPeriodMilliseconds)
 	log.Info("[ Waiter.Process ] ", msg)
 
-	return Events{RespPayload: msg}
+	return msg
 }

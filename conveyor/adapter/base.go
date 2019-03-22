@@ -265,11 +265,25 @@ func (a *CancellableQueueAdapter) process(cancellableTask queueTask) {
 	case <-cancellableTask.cancelInfo.Flush():
 		log.Info("[ CancellableQueueAdapter.process ] Task was flushed. Don't push Response")
 	default:
-		event := a.processor.Process(adapterTask)
-		for nestedEvent := range event.NestedEventPayload {
-			respSink.PushNestedEvent(a.adapterID, adapterTask.elementID, adapterTask.handlerID, nestedEvent)
-		}
-		respSink.PushResponse(a.adapterID, adapterTask.elementID, adapterTask.handlerID, event.RespPayload)
+		helper := newNestedEventHelper(adapterTask, a.adapterID)
+		respPayload := a.processor.Process(adapterTask, helper)
+		respSink.PushResponse(a.adapterID, adapterTask.elementID, adapterTask.handlerID, respPayload)
 		// TODO: remove cancelInfo from a.taskHolder
 	}
+}
+
+type nestedEventHelper struct {
+	adapterTask AdapterTask
+	adapterID   uint32
+}
+
+func newNestedEventHelper(adapterTask AdapterTask, adapterID uint32) NestedEventHelper {
+	return &nestedEventHelper{
+		adapterTask: adapterTask,
+		adapterID:   adapterID,
+	}
+}
+
+func (h *nestedEventHelper) Send(eventPayload interface{}) {
+	h.adapterTask.respSink.PushNestedEvent(h.adapterID, h.adapterTask.elementID, h.adapterTask.handlerID, eventPayload)
 }

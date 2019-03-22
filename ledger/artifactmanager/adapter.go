@@ -53,12 +53,12 @@ func NewGetCodeProcessor() adapter.Processor {
 }
 
 // Process implements Processor interface
-func (p *GetCodeProcessor) Process(task adapter.AdapterTask) adapter.Events {
+func (p *GetCodeProcessor) Process(task adapter.AdapterTask, nestedEventHelper adapter.NestedEventHelper) interface{} {
 	payload, ok := task.TaskPayload.(GetCodeTask)
 	var msg GetCodeResp
 	if !ok {
 		msg.Err = errors.Errorf("[ GetCodeProcessor.Process ] Incorrect payload type: %T", task.TaskPayload)
-		return adapter.Events{RespPayload: msg}
+		return msg
 	}
 
 	ctx := context.Background()
@@ -66,5 +66,5 @@ func (p *GetCodeProcessor) Process(task adapter.AdapterTask) adapter.Events {
 	msg = GetCodeResp{parcel, err}
 	log.Info("[ GetCodeProcessor.Process ] Process was dome successfully")
 
-	return adapter.Events{RespPayload: msg}
+	return msg
 }

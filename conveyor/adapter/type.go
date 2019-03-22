@@ -103,14 +103,14 @@ type CancelInfo interface {
 	ID() uint64
 }
 
-type Events struct {
-	RespPayload        interface{}
-	NestedEventPayload []interface{}
+// NestedEventHelper is helper for sending nested event from Processor
+type NestedEventHelper interface {
+	Send(eventPayload interface{})
 }
 
 // Processor is iface for processing task for adapter
 type Processor interface {
-	Process(task AdapterTask) Events
+	Process(task AdapterTask, nestedEventHelper NestedEventHelper) interface{}
 }
 
 // NewAdapterWithQueue creates new instance of Adapter

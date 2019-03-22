@@ -44,13 +44,13 @@ func NewResponseSender() Processor {
 }
 
 // Process implements Processor interface
-func (rs *ResponseSender) Process(task AdapterTask) Events {
+func (rs *ResponseSender) Process(task AdapterTask, nestedEventHelper NestedEventHelper) interface{} {
 	payload, ok := task.TaskPayload.(ResponseSenderTask)
 	var msg interface{}
 
 	if !ok {
 		msg = errors.Errorf("[ ResponseSender.Process ] Incorrect payload type: %T", task.TaskPayload)
-		return Events{RespPayload: msg}
+		return msg
 	}
 
 	res := payload.Result
@@ -59,5 +59,5 @@ func (rs *ResponseSender) Process(task AdapterTask) Events {
 
 	msg = fmt.Sprintf("Response was send successfully")
 	log.Info("[ ResponseSender.Process ] response message is", msg)
-	return Events{RespPayload: msg}
+	return msg
 }
