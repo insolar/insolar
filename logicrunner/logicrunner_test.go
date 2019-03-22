@@ -211,7 +211,7 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr inso
 	_, err = lr.(*LogicRunner).MessageBus.Send(
 		ctx,
 		&message.HotData{
-			Jet:             *insolar.NewRecordRef(insolar.DomainID, insolar.RecordID(rootJetId)),
+			Jet:             *insolar.NewReference(insolar.DomainID, insolar.ID(rootJetId)),
 			Drop:            drop.Drop{Pulse: 1, JetID: rootJetId},
 			RecentObjects:   nil,
 			PendingRequests: nil,
@@ -233,9 +233,9 @@ func mockCryptographyService(t *testing.T) insolar.CryptographyService {
 	return mock
 }
 
-func ValidateAllResults(t testing.TB, ctx context.Context, lr insolar.LogicRunner, mustfail ...insolar.RecordRef) {
+func ValidateAllResults(t testing.TB, ctx context.Context, lr insolar.LogicRunner, mustfail ...insolar.Reference) {
 	return // TODO REMOVE
-	failmap := make(map[insolar.RecordRef]struct{})
+	failmap := make(map[insolar.Reference]struct{})
 	for _, r := range mustfail {
 		failmap[r] = struct{}{}
 	}
@@ -263,7 +263,7 @@ func ValidateAllResults(t testing.TB, ctx context.Context, lr insolar.LogicRunne
 
 func executeMethod(
 	ctx context.Context, lr insolar.LogicRunner, pm insolar.PulseManager,
-	objRef insolar.RecordRef, proxyPrototype insolar.RecordRef,
+	objRef insolar.Reference, proxyPrototype insolar.Reference,
 	nonce uint64,
 	method string, arguments ...interface{},
 ) (
@@ -296,8 +296,8 @@ func (s *LogicRunnerFuncSuite) TestTypeCompatibilityError() {
 	var _ insolar.LogicRunner = (*LogicRunner)(nil)
 }
 
-func getRefFromID(id *insolar.RecordID) *insolar.RecordRef {
-	ref := insolar.RecordRef{}
+func getRefFromID(id *insolar.ID) *insolar.Reference {
+	ref := insolar.Reference{}
 	ref.SetRecord(*id)
 	return &ref
 }
@@ -377,7 +377,7 @@ import "errors"
 
 type One struct {
 	foundation.BaseContract
-	Friend insolar.RecordRef
+	Friend insolar.Reference
 }
 
 func (r *One) Hello(s string) (string, error) {
@@ -405,7 +405,7 @@ func (r *One) Again(s string) (string, error) {
 	return "Hi, " + s + "! Two said: " + res, nil
 }
 
-func (r *One)GetFriend() (insolar.RecordRef, error) {
+func (r *One)GetFriend() (insolar.Reference, error) {
 	return r.Friend, nil
 }
 
@@ -497,7 +497,7 @@ func (r *Two) GetPayloadString() (string, error) {
 	resp, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "GetFriend")
 	s.NoError(err, "contract call")
 	r0 := firstMethodRes(s.T(), resp).([]uint8)
-	var two insolar.RecordRef
+	var two insolar.Reference
 	for i := 0; i < 64; i++ {
 		two[i] = r0[i]
 	}
@@ -1071,14 +1071,14 @@ type Caller struct {
 	suite  *LogicRunnerFuncSuite
 }
 
-func (s *Caller) SignedCall(ctx context.Context, pm insolar.PulseManager, rootDomain insolar.RecordRef, method string, proxyPrototype insolar.RecordRef, params []interface{}) interface{} {
+func (s *Caller) SignedCall(ctx context.Context, pm insolar.PulseManager, rootDomain insolar.Reference, method string, proxyPrototype insolar.Reference, params []interface{}) interface{} {
 	seed := make([]byte, 32)
 	_, err := rand.Read(seed)
 	s.suite.NoError(err)
 
 	buf := goplugintestutils.CBORMarshal(s.suite.T(), params)
 
-	memberRef, err := insolar.NewRefFromBase58(s.member)
+	memberRef, err := insolar.NewReferenceFromBase58(s.member)
 	s.suite.Require().NoError(err)
 
 	args, err := insolar.MarshalArgs(
@@ -1146,7 +1146,7 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
 		ctx,
-		insolar.RecordRef{},
+		insolar.Reference{},
 		*rootDomainRef,
 		*am.GenesisRef(),
 		*cb.Prototypes["rootdomain"],
@@ -1181,7 +1181,7 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 
 	_, err = am.ActivateObject(
 		ctx,
-		insolar.RecordRef{},
+		insolar.Reference{},
 		*rootMemberRef,
 		*rootDomainRef,
 		*cb.Prototypes["member"],
@@ -1191,7 +1191,7 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	s.NoError(err)
 
 	// Updating root domain with root member
-	_, err = am.UpdateObject(ctx, insolar.RecordRef{}, insolar.RecordRef{}, rootDomainDesc, goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}))
+	_, err = am.UpdateObject(ctx, insolar.Reference{}, insolar.Reference{}, rootDomainDesc, goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}))
 	s.NoError(err)
 
 	csRoot := cryptography.NewKeyBoundCryptographyService(rootKey)
@@ -1485,7 +1485,7 @@ type One struct {
 	foundation.BaseContract
 }
 func (r *One) CreateAllowance(member string) (error) {
-	memberRef, refErr := insolar.NewRefFromBase58(member)
+	memberRef, refErr := insolar.NewReferenceFromBase58(member)
 	if refErr != nil {
 		return refErr
 	}
@@ -1517,7 +1517,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
 		ctx,
-		insolar.RecordRef{},
+		insolar.Reference{},
 		*rootDomainRef,
 		*am.GenesisRef(),
 		*cb.Prototypes["rootdomain"],
@@ -1550,7 +1550,7 @@ func (r *One) CreateAllowance(member string) (error) {
 
 	_, err = am.ActivateObject(
 		ctx,
-		insolar.RecordRef{},
+		insolar.Reference{},
 		*rootMemberRef,
 		*rootDomainRef,
 		*cb.Prototypes["member"],
@@ -1560,7 +1560,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	s.NoError(err)
 
 	// Updating root domain with root member
-	_, err = am.UpdateObject(ctx, insolar.RecordRef{}, insolar.RecordRef{}, rootDomainDesc, goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}))
+	_, err = am.UpdateObject(ctx, insolar.Reference{}, insolar.Reference{}, rootDomainDesc, goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}))
 	s.NoError(err)
 
 	cs := cryptography.NewKeyBoundCryptographyService(rootKey)
@@ -1577,7 +1577,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	s.NotEqual("", memberRef)
 
 	// Call CreateAllowance method in custom contract
-	domain, err := insolar.NewRefFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	domain, err := insolar.NewReferenceFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
 	s.Require().NoError(err)
 	contractID, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallConstructor{}})
 	s.NoError(err)
@@ -1621,11 +1621,11 @@ import "github.com/insolar/insolar/insolar"
  type One struct {
 	foundation.BaseContract
 }
- func (r *One) AddChildAndReturnMyselfAsParent() (insolar.RecordRef, error) {
+ func (r *One) AddChildAndReturnMyselfAsParent() (insolar.Reference, error) {
 	holder := two.New()
 	friend, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return insolar.RecordRef{}, err
+		return insolar.Reference{}, err
 	}
 
  	return friend.GetParent()
@@ -1643,7 +1643,7 @@ package main
  func New() (*Two, error) {
 	return &Two{}, nil
 }
- func (r *Two) GetParent() (insolar.RecordRef, error) {
+ func (r *Two) GetParent() (insolar.Reference, error) {
 	return *r.GetContext().Parent, nil
 }
  `
@@ -1856,21 +1856,21 @@ package main
  type One struct {
 	foundation.BaseContract
  }
- func (r *One) GetChildCode() (insolar.RecordRef, error) {
+ func (r *One) GetChildCode() (insolar.Reference, error) {
 	holder := two.New()
 	child, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return insolar.RecordRef{}, err
+		return insolar.Reference{}, err
 	}
 
  	return child.GetCode()
  }
 
- func (r *One) GetChildPrototype() (insolar.RecordRef, error) {
+ func (r *One) GetChildPrototype() (insolar.Reference, error) {
 	holder := two.New()
 	child, err := holder.AsChild(r.GetReference())
 	if err != nil {
-		return insolar.RecordRef{}, err
+		return insolar.Reference{}, err
 	}
 
  	return child.GetPrototype()
@@ -1990,7 +1990,7 @@ type Contract struct {
 	foundation.BaseContract
 }
 
-func (c *Contract) Test(firstRef *insolar.RecordRef) (string, error) {
+func (c *Contract) Test(firstRef *insolar.Reference) (string, error) {
 	return first.GetObject(*firstRef).GetName()
 }
 `
@@ -2044,8 +2044,8 @@ func (c *First) GetName() (string, error) {
 	s.Equal(map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: proxy call error: try to call method of prototype as method of another prototype"}), res[1])
 }
 
-func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am insolar.ArtifactManager, cb *goplugintestutils.ContractsBuilder, contractName string) (*insolar.RecordRef, *insolar.RecordRef) {
-	domain, err := insolar.NewRefFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am insolar.ArtifactManager, cb *goplugintestutils.ContractsBuilder, contractName string) (*insolar.Reference, *insolar.Reference) {
+	domain, err := insolar.NewReferenceFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
 	s.Require().NoError(err)
 	contractID, err := am.RegisterRequest(
 		ctx,

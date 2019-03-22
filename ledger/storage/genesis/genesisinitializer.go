@@ -31,7 +31,7 @@ import (
 
 type GenesisState interface {
 	component.Initer
-	GenesisRef() *insolar.RecordRef
+	GenesisRef() *insolar.Reference
 }
 
 type genesisInitializer struct {
@@ -40,7 +40,7 @@ type genesisInitializer struct {
 	PulseTracker  storage.PulseTracker  `inject:""`
 	DropModifier  drop.Modifier         `inject:""`
 
-	genesisRef *insolar.RecordRef
+	genesisRef *insolar.Reference
 }
 
 func NewGenesisInitializer() GenesisState {
@@ -50,7 +50,7 @@ func NewGenesisInitializer() GenesisState {
 // GenesisRef returns the genesis record reference.
 //
 // Genesis record is the parent for all top-level records.
-func (gi *genesisInitializer) GenesisRef() *insolar.RecordRef {
+func (gi *genesisInitializer) GenesisRef() *insolar.Reference {
 	return gi.genesisRef
 }
 
@@ -59,17 +59,17 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 	inslog.Info("start storage bootstrap")
 	jetID := *insolar.NewJetID(0, nil)
 
-	getGenesisRef := func() (*insolar.RecordRef, error) {
+	getGenesisRef := func() (*insolar.Reference, error) {
 		buff, err := gi.DB.Get(ctx, storage.GenesisPrefixKey())
 		if err != nil {
 			return nil, err
 		}
-		var genesisRef insolar.RecordRef
+		var genesisRef insolar.Reference
 		copy(genesisRef[:], buff)
 		return &genesisRef, nil
 	}
 
-	createGenesisRecord := func() (*insolar.RecordRef, error) {
+	createGenesisRecord := func() (*insolar.Reference, error) {
 		err := gi.PulseTracker.AddPulse(
 			ctx,
 			insolar.Pulse{
@@ -90,13 +90,13 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		genesisID, err := gi.ObjectStorage.SetRecord(ctx, insolar.RecordID(jetID), lastPulse.Pulse.PulseNumber, &object.GenesisRecord{})
+		genesisID, err := gi.ObjectStorage.SetRecord(ctx, insolar.ID(jetID), lastPulse.Pulse.PulseNumber, &object.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}
 		err = gi.ObjectStorage.SetObjectIndex(
 			ctx,
-			insolar.RecordID(jetID),
+			insolar.ID(jetID),
 			genesisID,
 			&object.Lifeline{LatestState: genesisID, LatestStateApproved: genesisID},
 		)
@@ -104,7 +104,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 			return nil, err
 		}
 
-		genesisRef := insolar.NewRecordRef(*genesisID, *genesisID)
+		genesisRef := insolar.NewReference(*genesisID, *genesisID)
 		return genesisRef, gi.DB.Set(ctx, storage.GenesisPrefixKey(), genesisRef[:])
 	}
 

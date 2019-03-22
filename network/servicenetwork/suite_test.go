@@ -248,7 +248,7 @@ func (s *testSuite) waitForConsensus(consensusCount int) {
 	}
 }
 
-func (s *testSuite) waitForConsensusExcept(consensusCount int, exception insolar.RecordRef) {
+func (s *testSuite) waitForConsensusExcept(consensusCount int, exception insolar.Reference) {
 	for i := 0; i < consensusCount; i++ {
 		for _, n := range s.fixture().bootstrapNodes {
 			if n.id.Equal(exception) {
@@ -295,7 +295,7 @@ func (s *testSuite) StopNode(node *networkNode) {
 }
 
 type networkNode struct {
-	id                  insolar.RecordRef
+	id                  insolar.Reference
 	role                insolar.StaticRole
 	privateKey          crypto.PrivateKey
 	cryptographyService insolar.CryptographyService
@@ -386,7 +386,7 @@ func RandomRole() insolar.StaticRole {
 }
 
 type terminationHandler struct {
-	NodeID insolar.RecordRef
+	NodeID insolar.Reference
 }
 
 func (t *terminationHandler) Abort() {

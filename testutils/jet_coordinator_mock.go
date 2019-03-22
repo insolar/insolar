@@ -20,12 +20,12 @@ import (
 type JetCoordinatorMock struct {
 	t minimock.Tester
 
-	HeavyFunc       func(p context.Context, p1 insolar.PulseNumber) (r *insolar.RecordRef, r1 error)
+	HeavyFunc       func(p context.Context, p1 insolar.PulseNumber) (r *insolar.Reference, r1 error)
 	HeavyCounter    uint64
 	HeavyPreCounter uint64
 	HeavyMock       mJetCoordinatorMockHeavy
 
-	IsAuthorizedFunc       func(p context.Context, p1 insolar.DynamicRole, p2 insolar.RecordID, p3 insolar.PulseNumber, p4 insolar.RecordRef) (r bool, r1 error)
+	IsAuthorizedFunc       func(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber, p4 insolar.Reference) (r bool, r1 error)
 	IsAuthorizedCounter    uint64
 	IsAuthorizedPreCounter uint64
 	IsAuthorizedMock       mJetCoordinatorMockIsAuthorized
@@ -35,52 +35,52 @@ type JetCoordinatorMock struct {
 	IsBeyondLimitPreCounter uint64
 	IsBeyondLimitMock       mJetCoordinatorMockIsBeyondLimit
 
-	LightExecutorForJetFunc       func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r *insolar.RecordRef, r1 error)
+	LightExecutorForJetFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r *insolar.Reference, r1 error)
 	LightExecutorForJetCounter    uint64
 	LightExecutorForJetPreCounter uint64
 	LightExecutorForJetMock       mJetCoordinatorMockLightExecutorForJet
 
-	LightExecutorForObjectFunc       func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r *insolar.RecordRef, r1 error)
+	LightExecutorForObjectFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r *insolar.Reference, r1 error)
 	LightExecutorForObjectCounter    uint64
 	LightExecutorForObjectPreCounter uint64
 	LightExecutorForObjectMock       mJetCoordinatorMockLightExecutorForObject
 
-	LightValidatorsForJetFunc       func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r []insolar.RecordRef, r1 error)
+	LightValidatorsForJetFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r []insolar.Reference, r1 error)
 	LightValidatorsForJetCounter    uint64
 	LightValidatorsForJetPreCounter uint64
 	LightValidatorsForJetMock       mJetCoordinatorMockLightValidatorsForJet
 
-	LightValidatorsForObjectFunc       func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r []insolar.RecordRef, r1 error)
+	LightValidatorsForObjectFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r []insolar.Reference, r1 error)
 	LightValidatorsForObjectCounter    uint64
 	LightValidatorsForObjectPreCounter uint64
 	LightValidatorsForObjectMock       mJetCoordinatorMockLightValidatorsForObject
 
-	MeFunc       func() (r insolar.RecordRef)
+	MeFunc       func() (r insolar.Reference)
 	MeCounter    uint64
 	MePreCounter uint64
 	MeMock       mJetCoordinatorMockMe
 
-	NodeForJetFunc       func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.RecordRef, r1 error)
+	NodeForJetFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.Reference, r1 error)
 	NodeForJetCounter    uint64
 	NodeForJetPreCounter uint64
 	NodeForJetMock       mJetCoordinatorMockNodeForJet
 
-	NodeForObjectFunc       func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.RecordRef, r1 error)
+	NodeForObjectFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.Reference, r1 error)
 	NodeForObjectCounter    uint64
 	NodeForObjectPreCounter uint64
 	NodeForObjectMock       mJetCoordinatorMockNodeForObject
 
-	QueryRoleFunc       func(p context.Context, p1 insolar.DynamicRole, p2 insolar.RecordID, p3 insolar.PulseNumber) (r []insolar.RecordRef, r1 error)
+	QueryRoleFunc       func(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber) (r []insolar.Reference, r1 error)
 	QueryRoleCounter    uint64
 	QueryRolePreCounter uint64
 	QueryRoleMock       mJetCoordinatorMockQueryRole
 
-	VirtualExecutorForObjectFunc       func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r *insolar.RecordRef, r1 error)
+	VirtualExecutorForObjectFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r *insolar.Reference, r1 error)
 	VirtualExecutorForObjectCounter    uint64
 	VirtualExecutorForObjectPreCounter uint64
 	VirtualExecutorForObjectMock       mJetCoordinatorMockVirtualExecutorForObject
 
-	VirtualValidatorsForObjectFunc       func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r []insolar.RecordRef, r1 error)
+	VirtualValidatorsForObjectFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r []insolar.Reference, r1 error)
 	VirtualValidatorsForObjectCounter    uint64
 	VirtualValidatorsForObjectPreCounter uint64
 	VirtualValidatorsForObjectMock       mJetCoordinatorMockVirtualValidatorsForObject
@@ -128,7 +128,7 @@ type JetCoordinatorMockHeavyInput struct {
 }
 
 type JetCoordinatorMockHeavyResult struct {
-	r  *insolar.RecordRef
+	r  *insolar.Reference
 	r1 error
 }
 
@@ -145,7 +145,7 @@ func (m *mJetCoordinatorMockHeavy) Expect(p context.Context, p1 insolar.PulseNum
 }
 
 //Return specifies results of invocation of JetCoordinator.Heavy
-func (m *mJetCoordinatorMockHeavy) Return(r *insolar.RecordRef, r1 error) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockHeavy) Return(r *insolar.Reference, r1 error) *JetCoordinatorMock {
 	m.mock.HeavyFunc = nil
 	m.expectationSeries = nil
 
@@ -167,12 +167,12 @@ func (m *mJetCoordinatorMockHeavy) ExpectOnce(p context.Context, p1 insolar.Puls
 	return expectation
 }
 
-func (e *JetCoordinatorMockHeavyExpectation) Return(r *insolar.RecordRef, r1 error) {
+func (e *JetCoordinatorMockHeavyExpectation) Return(r *insolar.Reference, r1 error) {
 	e.result = &JetCoordinatorMockHeavyResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.Heavy method
-func (m *mJetCoordinatorMockHeavy) Set(f func(p context.Context, p1 insolar.PulseNumber) (r *insolar.RecordRef, r1 error)) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockHeavy) Set(f func(p context.Context, p1 insolar.PulseNumber) (r *insolar.Reference, r1 error)) *JetCoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -181,7 +181,7 @@ func (m *mJetCoordinatorMockHeavy) Set(f func(p context.Context, p1 insolar.Puls
 }
 
 //Heavy implements github.com/insolar/insolar/insolar.JetCoordinator interface
-func (m *JetCoordinatorMock) Heavy(p context.Context, p1 insolar.PulseNumber) (r *insolar.RecordRef, r1 error) {
+func (m *JetCoordinatorMock) Heavy(p context.Context, p1 insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.HeavyPreCounter, 1)
 	defer atomic.AddUint64(&m.HeavyCounter, 1)
 
@@ -276,9 +276,9 @@ type JetCoordinatorMockIsAuthorizedExpectation struct {
 type JetCoordinatorMockIsAuthorizedInput struct {
 	p  context.Context
 	p1 insolar.DynamicRole
-	p2 insolar.RecordID
+	p2 insolar.ID
 	p3 insolar.PulseNumber
-	p4 insolar.RecordRef
+	p4 insolar.Reference
 }
 
 type JetCoordinatorMockIsAuthorizedResult struct {
@@ -287,7 +287,7 @@ type JetCoordinatorMockIsAuthorizedResult struct {
 }
 
 //Expect specifies that invocation of JetCoordinator.IsAuthorized is expected from 1 to Infinity times
-func (m *mJetCoordinatorMockIsAuthorized) Expect(p context.Context, p1 insolar.DynamicRole, p2 insolar.RecordID, p3 insolar.PulseNumber, p4 insolar.RecordRef) *mJetCoordinatorMockIsAuthorized {
+func (m *mJetCoordinatorMockIsAuthorized) Expect(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber, p4 insolar.Reference) *mJetCoordinatorMockIsAuthorized {
 	m.mock.IsAuthorizedFunc = nil
 	m.expectationSeries = nil
 
@@ -311,7 +311,7 @@ func (m *mJetCoordinatorMockIsAuthorized) Return(r bool, r1 error) *JetCoordinat
 }
 
 //ExpectOnce specifies that invocation of JetCoordinator.IsAuthorized is expected once
-func (m *mJetCoordinatorMockIsAuthorized) ExpectOnce(p context.Context, p1 insolar.DynamicRole, p2 insolar.RecordID, p3 insolar.PulseNumber, p4 insolar.RecordRef) *JetCoordinatorMockIsAuthorizedExpectation {
+func (m *mJetCoordinatorMockIsAuthorized) ExpectOnce(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber, p4 insolar.Reference) *JetCoordinatorMockIsAuthorizedExpectation {
 	m.mock.IsAuthorizedFunc = nil
 	m.mainExpectation = nil
 
@@ -326,7 +326,7 @@ func (e *JetCoordinatorMockIsAuthorizedExpectation) Return(r bool, r1 error) {
 }
 
 //Set uses given function f as a mock of JetCoordinator.IsAuthorized method
-func (m *mJetCoordinatorMockIsAuthorized) Set(f func(p context.Context, p1 insolar.DynamicRole, p2 insolar.RecordID, p3 insolar.PulseNumber, p4 insolar.RecordRef) (r bool, r1 error)) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockIsAuthorized) Set(f func(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber, p4 insolar.Reference) (r bool, r1 error)) *JetCoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -335,7 +335,7 @@ func (m *mJetCoordinatorMockIsAuthorized) Set(f func(p context.Context, p1 insol
 }
 
 //IsAuthorized implements github.com/insolar/insolar/insolar.JetCoordinator interface
-func (m *JetCoordinatorMock) IsAuthorized(p context.Context, p1 insolar.DynamicRole, p2 insolar.RecordID, p3 insolar.PulseNumber, p4 insolar.RecordRef) (r bool, r1 error) {
+func (m *JetCoordinatorMock) IsAuthorized(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber, p4 insolar.Reference) (r bool, r1 error) {
 	counter := atomic.AddUint64(&m.IsAuthorizedPreCounter, 1)
 	defer atomic.AddUint64(&m.IsAuthorizedCounter, 1)
 
@@ -581,17 +581,17 @@ type JetCoordinatorMockLightExecutorForJetExpectation struct {
 
 type JetCoordinatorMockLightExecutorForJetInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 	p2 insolar.PulseNumber
 }
 
 type JetCoordinatorMockLightExecutorForJetResult struct {
-	r  *insolar.RecordRef
+	r  *insolar.Reference
 	r1 error
 }
 
 //Expect specifies that invocation of JetCoordinator.LightExecutorForJet is expected from 1 to Infinity times
-func (m *mJetCoordinatorMockLightExecutorForJet) Expect(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *mJetCoordinatorMockLightExecutorForJet {
+func (m *mJetCoordinatorMockLightExecutorForJet) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *mJetCoordinatorMockLightExecutorForJet {
 	m.mock.LightExecutorForJetFunc = nil
 	m.expectationSeries = nil
 
@@ -603,7 +603,7 @@ func (m *mJetCoordinatorMockLightExecutorForJet) Expect(p context.Context, p1 in
 }
 
 //Return specifies results of invocation of JetCoordinator.LightExecutorForJet
-func (m *mJetCoordinatorMockLightExecutorForJet) Return(r *insolar.RecordRef, r1 error) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockLightExecutorForJet) Return(r *insolar.Reference, r1 error) *JetCoordinatorMock {
 	m.mock.LightExecutorForJetFunc = nil
 	m.expectationSeries = nil
 
@@ -615,7 +615,7 @@ func (m *mJetCoordinatorMockLightExecutorForJet) Return(r *insolar.RecordRef, r1
 }
 
 //ExpectOnce specifies that invocation of JetCoordinator.LightExecutorForJet is expected once
-func (m *mJetCoordinatorMockLightExecutorForJet) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *JetCoordinatorMockLightExecutorForJetExpectation {
+func (m *mJetCoordinatorMockLightExecutorForJet) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *JetCoordinatorMockLightExecutorForJetExpectation {
 	m.mock.LightExecutorForJetFunc = nil
 	m.mainExpectation = nil
 
@@ -625,12 +625,12 @@ func (m *mJetCoordinatorMockLightExecutorForJet) ExpectOnce(p context.Context, p
 	return expectation
 }
 
-func (e *JetCoordinatorMockLightExecutorForJetExpectation) Return(r *insolar.RecordRef, r1 error) {
+func (e *JetCoordinatorMockLightExecutorForJetExpectation) Return(r *insolar.Reference, r1 error) {
 	e.result = &JetCoordinatorMockLightExecutorForJetResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.LightExecutorForJet method
-func (m *mJetCoordinatorMockLightExecutorForJet) Set(f func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r *insolar.RecordRef, r1 error)) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockLightExecutorForJet) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r *insolar.Reference, r1 error)) *JetCoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -639,7 +639,7 @@ func (m *mJetCoordinatorMockLightExecutorForJet) Set(f func(p context.Context, p
 }
 
 //LightExecutorForJet implements github.com/insolar/insolar/insolar.JetCoordinator interface
-func (m *JetCoordinatorMock) LightExecutorForJet(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r *insolar.RecordRef, r1 error) {
+func (m *JetCoordinatorMock) LightExecutorForJet(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.LightExecutorForJetPreCounter, 1)
 	defer atomic.AddUint64(&m.LightExecutorForJetCounter, 1)
 
@@ -733,17 +733,17 @@ type JetCoordinatorMockLightExecutorForObjectExpectation struct {
 
 type JetCoordinatorMockLightExecutorForObjectInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 	p2 insolar.PulseNumber
 }
 
 type JetCoordinatorMockLightExecutorForObjectResult struct {
-	r  *insolar.RecordRef
+	r  *insolar.Reference
 	r1 error
 }
 
 //Expect specifies that invocation of JetCoordinator.LightExecutorForObject is expected from 1 to Infinity times
-func (m *mJetCoordinatorMockLightExecutorForObject) Expect(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *mJetCoordinatorMockLightExecutorForObject {
+func (m *mJetCoordinatorMockLightExecutorForObject) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *mJetCoordinatorMockLightExecutorForObject {
 	m.mock.LightExecutorForObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -755,7 +755,7 @@ func (m *mJetCoordinatorMockLightExecutorForObject) Expect(p context.Context, p1
 }
 
 //Return specifies results of invocation of JetCoordinator.LightExecutorForObject
-func (m *mJetCoordinatorMockLightExecutorForObject) Return(r *insolar.RecordRef, r1 error) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockLightExecutorForObject) Return(r *insolar.Reference, r1 error) *JetCoordinatorMock {
 	m.mock.LightExecutorForObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -767,7 +767,7 @@ func (m *mJetCoordinatorMockLightExecutorForObject) Return(r *insolar.RecordRef,
 }
 
 //ExpectOnce specifies that invocation of JetCoordinator.LightExecutorForObject is expected once
-func (m *mJetCoordinatorMockLightExecutorForObject) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *JetCoordinatorMockLightExecutorForObjectExpectation {
+func (m *mJetCoordinatorMockLightExecutorForObject) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *JetCoordinatorMockLightExecutorForObjectExpectation {
 	m.mock.LightExecutorForObjectFunc = nil
 	m.mainExpectation = nil
 
@@ -777,12 +777,12 @@ func (m *mJetCoordinatorMockLightExecutorForObject) ExpectOnce(p context.Context
 	return expectation
 }
 
-func (e *JetCoordinatorMockLightExecutorForObjectExpectation) Return(r *insolar.RecordRef, r1 error) {
+func (e *JetCoordinatorMockLightExecutorForObjectExpectation) Return(r *insolar.Reference, r1 error) {
 	e.result = &JetCoordinatorMockLightExecutorForObjectResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.LightExecutorForObject method
-func (m *mJetCoordinatorMockLightExecutorForObject) Set(f func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r *insolar.RecordRef, r1 error)) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockLightExecutorForObject) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r *insolar.Reference, r1 error)) *JetCoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -791,7 +791,7 @@ func (m *mJetCoordinatorMockLightExecutorForObject) Set(f func(p context.Context
 }
 
 //LightExecutorForObject implements github.com/insolar/insolar/insolar.JetCoordinator interface
-func (m *JetCoordinatorMock) LightExecutorForObject(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r *insolar.RecordRef, r1 error) {
+func (m *JetCoordinatorMock) LightExecutorForObject(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.LightExecutorForObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.LightExecutorForObjectCounter, 1)
 
@@ -885,17 +885,17 @@ type JetCoordinatorMockLightValidatorsForJetExpectation struct {
 
 type JetCoordinatorMockLightValidatorsForJetInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 	p2 insolar.PulseNumber
 }
 
 type JetCoordinatorMockLightValidatorsForJetResult struct {
-	r  []insolar.RecordRef
+	r  []insolar.Reference
 	r1 error
 }
 
 //Expect specifies that invocation of JetCoordinator.LightValidatorsForJet is expected from 1 to Infinity times
-func (m *mJetCoordinatorMockLightValidatorsForJet) Expect(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *mJetCoordinatorMockLightValidatorsForJet {
+func (m *mJetCoordinatorMockLightValidatorsForJet) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *mJetCoordinatorMockLightValidatorsForJet {
 	m.mock.LightValidatorsForJetFunc = nil
 	m.expectationSeries = nil
 
@@ -907,7 +907,7 @@ func (m *mJetCoordinatorMockLightValidatorsForJet) Expect(p context.Context, p1 
 }
 
 //Return specifies results of invocation of JetCoordinator.LightValidatorsForJet
-func (m *mJetCoordinatorMockLightValidatorsForJet) Return(r []insolar.RecordRef, r1 error) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockLightValidatorsForJet) Return(r []insolar.Reference, r1 error) *JetCoordinatorMock {
 	m.mock.LightValidatorsForJetFunc = nil
 	m.expectationSeries = nil
 
@@ -919,7 +919,7 @@ func (m *mJetCoordinatorMockLightValidatorsForJet) Return(r []insolar.RecordRef,
 }
 
 //ExpectOnce specifies that invocation of JetCoordinator.LightValidatorsForJet is expected once
-func (m *mJetCoordinatorMockLightValidatorsForJet) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *JetCoordinatorMockLightValidatorsForJetExpectation {
+func (m *mJetCoordinatorMockLightValidatorsForJet) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *JetCoordinatorMockLightValidatorsForJetExpectation {
 	m.mock.LightValidatorsForJetFunc = nil
 	m.mainExpectation = nil
 
@@ -929,12 +929,12 @@ func (m *mJetCoordinatorMockLightValidatorsForJet) ExpectOnce(p context.Context,
 	return expectation
 }
 
-func (e *JetCoordinatorMockLightValidatorsForJetExpectation) Return(r []insolar.RecordRef, r1 error) {
+func (e *JetCoordinatorMockLightValidatorsForJetExpectation) Return(r []insolar.Reference, r1 error) {
 	e.result = &JetCoordinatorMockLightValidatorsForJetResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.LightValidatorsForJet method
-func (m *mJetCoordinatorMockLightValidatorsForJet) Set(f func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r []insolar.RecordRef, r1 error)) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockLightValidatorsForJet) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r []insolar.Reference, r1 error)) *JetCoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -943,7 +943,7 @@ func (m *mJetCoordinatorMockLightValidatorsForJet) Set(f func(p context.Context,
 }
 
 //LightValidatorsForJet implements github.com/insolar/insolar/insolar.JetCoordinator interface
-func (m *JetCoordinatorMock) LightValidatorsForJet(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r []insolar.RecordRef, r1 error) {
+func (m *JetCoordinatorMock) LightValidatorsForJet(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r []insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.LightValidatorsForJetPreCounter, 1)
 	defer atomic.AddUint64(&m.LightValidatorsForJetCounter, 1)
 
@@ -1037,17 +1037,17 @@ type JetCoordinatorMockLightValidatorsForObjectExpectation struct {
 
 type JetCoordinatorMockLightValidatorsForObjectInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 	p2 insolar.PulseNumber
 }
 
 type JetCoordinatorMockLightValidatorsForObjectResult struct {
-	r  []insolar.RecordRef
+	r  []insolar.Reference
 	r1 error
 }
 
 //Expect specifies that invocation of JetCoordinator.LightValidatorsForObject is expected from 1 to Infinity times
-func (m *mJetCoordinatorMockLightValidatorsForObject) Expect(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *mJetCoordinatorMockLightValidatorsForObject {
+func (m *mJetCoordinatorMockLightValidatorsForObject) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *mJetCoordinatorMockLightValidatorsForObject {
 	m.mock.LightValidatorsForObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -1059,7 +1059,7 @@ func (m *mJetCoordinatorMockLightValidatorsForObject) Expect(p context.Context, 
 }
 
 //Return specifies results of invocation of JetCoordinator.LightValidatorsForObject
-func (m *mJetCoordinatorMockLightValidatorsForObject) Return(r []insolar.RecordRef, r1 error) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockLightValidatorsForObject) Return(r []insolar.Reference, r1 error) *JetCoordinatorMock {
 	m.mock.LightValidatorsForObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -1071,7 +1071,7 @@ func (m *mJetCoordinatorMockLightValidatorsForObject) Return(r []insolar.RecordR
 }
 
 //ExpectOnce specifies that invocation of JetCoordinator.LightValidatorsForObject is expected once
-func (m *mJetCoordinatorMockLightValidatorsForObject) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *JetCoordinatorMockLightValidatorsForObjectExpectation {
+func (m *mJetCoordinatorMockLightValidatorsForObject) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *JetCoordinatorMockLightValidatorsForObjectExpectation {
 	m.mock.LightValidatorsForObjectFunc = nil
 	m.mainExpectation = nil
 
@@ -1081,12 +1081,12 @@ func (m *mJetCoordinatorMockLightValidatorsForObject) ExpectOnce(p context.Conte
 	return expectation
 }
 
-func (e *JetCoordinatorMockLightValidatorsForObjectExpectation) Return(r []insolar.RecordRef, r1 error) {
+func (e *JetCoordinatorMockLightValidatorsForObjectExpectation) Return(r []insolar.Reference, r1 error) {
 	e.result = &JetCoordinatorMockLightValidatorsForObjectResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.LightValidatorsForObject method
-func (m *mJetCoordinatorMockLightValidatorsForObject) Set(f func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r []insolar.RecordRef, r1 error)) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockLightValidatorsForObject) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r []insolar.Reference, r1 error)) *JetCoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1095,7 +1095,7 @@ func (m *mJetCoordinatorMockLightValidatorsForObject) Set(f func(p context.Conte
 }
 
 //LightValidatorsForObject implements github.com/insolar/insolar/insolar.JetCoordinator interface
-func (m *JetCoordinatorMock) LightValidatorsForObject(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r []insolar.RecordRef, r1 error) {
+func (m *JetCoordinatorMock) LightValidatorsForObject(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r []insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.LightValidatorsForObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.LightValidatorsForObjectCounter, 1)
 
@@ -1187,7 +1187,7 @@ type JetCoordinatorMockMeExpectation struct {
 }
 
 type JetCoordinatorMockMeResult struct {
-	r insolar.RecordRef
+	r insolar.Reference
 }
 
 //Expect specifies that invocation of JetCoordinator.Me is expected from 1 to Infinity times
@@ -1203,7 +1203,7 @@ func (m *mJetCoordinatorMockMe) Expect() *mJetCoordinatorMockMe {
 }
 
 //Return specifies results of invocation of JetCoordinator.Me
-func (m *mJetCoordinatorMockMe) Return(r insolar.RecordRef) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockMe) Return(r insolar.Reference) *JetCoordinatorMock {
 	m.mock.MeFunc = nil
 	m.expectationSeries = nil
 
@@ -1225,12 +1225,12 @@ func (m *mJetCoordinatorMockMe) ExpectOnce() *JetCoordinatorMockMeExpectation {
 	return expectation
 }
 
-func (e *JetCoordinatorMockMeExpectation) Return(r insolar.RecordRef) {
+func (e *JetCoordinatorMockMeExpectation) Return(r insolar.Reference) {
 	e.result = &JetCoordinatorMockMeResult{r}
 }
 
 //Set uses given function f as a mock of JetCoordinator.Me method
-func (m *mJetCoordinatorMockMe) Set(f func() (r insolar.RecordRef)) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockMe) Set(f func() (r insolar.Reference)) *JetCoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1239,7 +1239,7 @@ func (m *mJetCoordinatorMockMe) Set(f func() (r insolar.RecordRef)) *JetCoordina
 }
 
 //Me implements github.com/insolar/insolar/insolar.JetCoordinator interface
-func (m *JetCoordinatorMock) Me() (r insolar.RecordRef) {
+func (m *JetCoordinatorMock) Me() (r insolar.Reference) {
 	counter := atomic.AddUint64(&m.MePreCounter, 1)
 	defer atomic.AddUint64(&m.MeCounter, 1)
 
@@ -1323,18 +1323,18 @@ type JetCoordinatorMockNodeForJetExpectation struct {
 
 type JetCoordinatorMockNodeForJetInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 	p2 insolar.PulseNumber
 	p3 insolar.PulseNumber
 }
 
 type JetCoordinatorMockNodeForJetResult struct {
-	r  *insolar.RecordRef
+	r  *insolar.Reference
 	r1 error
 }
 
 //Expect specifies that invocation of JetCoordinator.NodeForJet is expected from 1 to Infinity times
-func (m *mJetCoordinatorMockNodeForJet) Expect(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) *mJetCoordinatorMockNodeForJet {
+func (m *mJetCoordinatorMockNodeForJet) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) *mJetCoordinatorMockNodeForJet {
 	m.mock.NodeForJetFunc = nil
 	m.expectationSeries = nil
 
@@ -1346,7 +1346,7 @@ func (m *mJetCoordinatorMockNodeForJet) Expect(p context.Context, p1 insolar.Rec
 }
 
 //Return specifies results of invocation of JetCoordinator.NodeForJet
-func (m *mJetCoordinatorMockNodeForJet) Return(r *insolar.RecordRef, r1 error) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockNodeForJet) Return(r *insolar.Reference, r1 error) *JetCoordinatorMock {
 	m.mock.NodeForJetFunc = nil
 	m.expectationSeries = nil
 
@@ -1358,7 +1358,7 @@ func (m *mJetCoordinatorMockNodeForJet) Return(r *insolar.RecordRef, r1 error) *
 }
 
 //ExpectOnce specifies that invocation of JetCoordinator.NodeForJet is expected once
-func (m *mJetCoordinatorMockNodeForJet) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) *JetCoordinatorMockNodeForJetExpectation {
+func (m *mJetCoordinatorMockNodeForJet) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) *JetCoordinatorMockNodeForJetExpectation {
 	m.mock.NodeForJetFunc = nil
 	m.mainExpectation = nil
 
@@ -1368,12 +1368,12 @@ func (m *mJetCoordinatorMockNodeForJet) ExpectOnce(p context.Context, p1 insolar
 	return expectation
 }
 
-func (e *JetCoordinatorMockNodeForJetExpectation) Return(r *insolar.RecordRef, r1 error) {
+func (e *JetCoordinatorMockNodeForJetExpectation) Return(r *insolar.Reference, r1 error) {
 	e.result = &JetCoordinatorMockNodeForJetResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.NodeForJet method
-func (m *mJetCoordinatorMockNodeForJet) Set(f func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.RecordRef, r1 error)) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockNodeForJet) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.Reference, r1 error)) *JetCoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1382,7 +1382,7 @@ func (m *mJetCoordinatorMockNodeForJet) Set(f func(p context.Context, p1 insolar
 }
 
 //NodeForJet implements github.com/insolar/insolar/insolar.JetCoordinator interface
-func (m *JetCoordinatorMock) NodeForJet(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.RecordRef, r1 error) {
+func (m *JetCoordinatorMock) NodeForJet(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.NodeForJetPreCounter, 1)
 	defer atomic.AddUint64(&m.NodeForJetCounter, 1)
 
@@ -1476,18 +1476,18 @@ type JetCoordinatorMockNodeForObjectExpectation struct {
 
 type JetCoordinatorMockNodeForObjectInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 	p2 insolar.PulseNumber
 	p3 insolar.PulseNumber
 }
 
 type JetCoordinatorMockNodeForObjectResult struct {
-	r  *insolar.RecordRef
+	r  *insolar.Reference
 	r1 error
 }
 
 //Expect specifies that invocation of JetCoordinator.NodeForObject is expected from 1 to Infinity times
-func (m *mJetCoordinatorMockNodeForObject) Expect(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) *mJetCoordinatorMockNodeForObject {
+func (m *mJetCoordinatorMockNodeForObject) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) *mJetCoordinatorMockNodeForObject {
 	m.mock.NodeForObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -1499,7 +1499,7 @@ func (m *mJetCoordinatorMockNodeForObject) Expect(p context.Context, p1 insolar.
 }
 
 //Return specifies results of invocation of JetCoordinator.NodeForObject
-func (m *mJetCoordinatorMockNodeForObject) Return(r *insolar.RecordRef, r1 error) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockNodeForObject) Return(r *insolar.Reference, r1 error) *JetCoordinatorMock {
 	m.mock.NodeForObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -1511,7 +1511,7 @@ func (m *mJetCoordinatorMockNodeForObject) Return(r *insolar.RecordRef, r1 error
 }
 
 //ExpectOnce specifies that invocation of JetCoordinator.NodeForObject is expected once
-func (m *mJetCoordinatorMockNodeForObject) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) *JetCoordinatorMockNodeForObjectExpectation {
+func (m *mJetCoordinatorMockNodeForObject) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) *JetCoordinatorMockNodeForObjectExpectation {
 	m.mock.NodeForObjectFunc = nil
 	m.mainExpectation = nil
 
@@ -1521,12 +1521,12 @@ func (m *mJetCoordinatorMockNodeForObject) ExpectOnce(p context.Context, p1 inso
 	return expectation
 }
 
-func (e *JetCoordinatorMockNodeForObjectExpectation) Return(r *insolar.RecordRef, r1 error) {
+func (e *JetCoordinatorMockNodeForObjectExpectation) Return(r *insolar.Reference, r1 error) {
 	e.result = &JetCoordinatorMockNodeForObjectResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.NodeForObject method
-func (m *mJetCoordinatorMockNodeForObject) Set(f func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.RecordRef, r1 error)) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockNodeForObject) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.Reference, r1 error)) *JetCoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1535,7 +1535,7 @@ func (m *mJetCoordinatorMockNodeForObject) Set(f func(p context.Context, p1 inso
 }
 
 //NodeForObject implements github.com/insolar/insolar/insolar.JetCoordinator interface
-func (m *JetCoordinatorMock) NodeForObject(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.RecordRef, r1 error) {
+func (m *JetCoordinatorMock) NodeForObject(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.NodeForObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.NodeForObjectCounter, 1)
 
@@ -1630,17 +1630,17 @@ type JetCoordinatorMockQueryRoleExpectation struct {
 type JetCoordinatorMockQueryRoleInput struct {
 	p  context.Context
 	p1 insolar.DynamicRole
-	p2 insolar.RecordID
+	p2 insolar.ID
 	p3 insolar.PulseNumber
 }
 
 type JetCoordinatorMockQueryRoleResult struct {
-	r  []insolar.RecordRef
+	r  []insolar.Reference
 	r1 error
 }
 
 //Expect specifies that invocation of JetCoordinator.QueryRole is expected from 1 to Infinity times
-func (m *mJetCoordinatorMockQueryRole) Expect(p context.Context, p1 insolar.DynamicRole, p2 insolar.RecordID, p3 insolar.PulseNumber) *mJetCoordinatorMockQueryRole {
+func (m *mJetCoordinatorMockQueryRole) Expect(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber) *mJetCoordinatorMockQueryRole {
 	m.mock.QueryRoleFunc = nil
 	m.expectationSeries = nil
 
@@ -1652,7 +1652,7 @@ func (m *mJetCoordinatorMockQueryRole) Expect(p context.Context, p1 insolar.Dyna
 }
 
 //Return specifies results of invocation of JetCoordinator.QueryRole
-func (m *mJetCoordinatorMockQueryRole) Return(r []insolar.RecordRef, r1 error) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockQueryRole) Return(r []insolar.Reference, r1 error) *JetCoordinatorMock {
 	m.mock.QueryRoleFunc = nil
 	m.expectationSeries = nil
 
@@ -1664,7 +1664,7 @@ func (m *mJetCoordinatorMockQueryRole) Return(r []insolar.RecordRef, r1 error) *
 }
 
 //ExpectOnce specifies that invocation of JetCoordinator.QueryRole is expected once
-func (m *mJetCoordinatorMockQueryRole) ExpectOnce(p context.Context, p1 insolar.DynamicRole, p2 insolar.RecordID, p3 insolar.PulseNumber) *JetCoordinatorMockQueryRoleExpectation {
+func (m *mJetCoordinatorMockQueryRole) ExpectOnce(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber) *JetCoordinatorMockQueryRoleExpectation {
 	m.mock.QueryRoleFunc = nil
 	m.mainExpectation = nil
 
@@ -1674,12 +1674,12 @@ func (m *mJetCoordinatorMockQueryRole) ExpectOnce(p context.Context, p1 insolar.
 	return expectation
 }
 
-func (e *JetCoordinatorMockQueryRoleExpectation) Return(r []insolar.RecordRef, r1 error) {
+func (e *JetCoordinatorMockQueryRoleExpectation) Return(r []insolar.Reference, r1 error) {
 	e.result = &JetCoordinatorMockQueryRoleResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.QueryRole method
-func (m *mJetCoordinatorMockQueryRole) Set(f func(p context.Context, p1 insolar.DynamicRole, p2 insolar.RecordID, p3 insolar.PulseNumber) (r []insolar.RecordRef, r1 error)) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockQueryRole) Set(f func(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber) (r []insolar.Reference, r1 error)) *JetCoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1688,7 +1688,7 @@ func (m *mJetCoordinatorMockQueryRole) Set(f func(p context.Context, p1 insolar.
 }
 
 //QueryRole implements github.com/insolar/insolar/insolar.JetCoordinator interface
-func (m *JetCoordinatorMock) QueryRole(p context.Context, p1 insolar.DynamicRole, p2 insolar.RecordID, p3 insolar.PulseNumber) (r []insolar.RecordRef, r1 error) {
+func (m *JetCoordinatorMock) QueryRole(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber) (r []insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.QueryRolePreCounter, 1)
 	defer atomic.AddUint64(&m.QueryRoleCounter, 1)
 
@@ -1782,17 +1782,17 @@ type JetCoordinatorMockVirtualExecutorForObjectExpectation struct {
 
 type JetCoordinatorMockVirtualExecutorForObjectInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 	p2 insolar.PulseNumber
 }
 
 type JetCoordinatorMockVirtualExecutorForObjectResult struct {
-	r  *insolar.RecordRef
+	r  *insolar.Reference
 	r1 error
 }
 
 //Expect specifies that invocation of JetCoordinator.VirtualExecutorForObject is expected from 1 to Infinity times
-func (m *mJetCoordinatorMockVirtualExecutorForObject) Expect(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *mJetCoordinatorMockVirtualExecutorForObject {
+func (m *mJetCoordinatorMockVirtualExecutorForObject) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *mJetCoordinatorMockVirtualExecutorForObject {
 	m.mock.VirtualExecutorForObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -1804,7 +1804,7 @@ func (m *mJetCoordinatorMockVirtualExecutorForObject) Expect(p context.Context, 
 }
 
 //Return specifies results of invocation of JetCoordinator.VirtualExecutorForObject
-func (m *mJetCoordinatorMockVirtualExecutorForObject) Return(r *insolar.RecordRef, r1 error) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockVirtualExecutorForObject) Return(r *insolar.Reference, r1 error) *JetCoordinatorMock {
 	m.mock.VirtualExecutorForObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -1816,7 +1816,7 @@ func (m *mJetCoordinatorMockVirtualExecutorForObject) Return(r *insolar.RecordRe
 }
 
 //ExpectOnce specifies that invocation of JetCoordinator.VirtualExecutorForObject is expected once
-func (m *mJetCoordinatorMockVirtualExecutorForObject) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *JetCoordinatorMockVirtualExecutorForObjectExpectation {
+func (m *mJetCoordinatorMockVirtualExecutorForObject) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *JetCoordinatorMockVirtualExecutorForObjectExpectation {
 	m.mock.VirtualExecutorForObjectFunc = nil
 	m.mainExpectation = nil
 
@@ -1826,12 +1826,12 @@ func (m *mJetCoordinatorMockVirtualExecutorForObject) ExpectOnce(p context.Conte
 	return expectation
 }
 
-func (e *JetCoordinatorMockVirtualExecutorForObjectExpectation) Return(r *insolar.RecordRef, r1 error) {
+func (e *JetCoordinatorMockVirtualExecutorForObjectExpectation) Return(r *insolar.Reference, r1 error) {
 	e.result = &JetCoordinatorMockVirtualExecutorForObjectResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.VirtualExecutorForObject method
-func (m *mJetCoordinatorMockVirtualExecutorForObject) Set(f func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r *insolar.RecordRef, r1 error)) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockVirtualExecutorForObject) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r *insolar.Reference, r1 error)) *JetCoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1840,7 +1840,7 @@ func (m *mJetCoordinatorMockVirtualExecutorForObject) Set(f func(p context.Conte
 }
 
 //VirtualExecutorForObject implements github.com/insolar/insolar/insolar.JetCoordinator interface
-func (m *JetCoordinatorMock) VirtualExecutorForObject(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r *insolar.RecordRef, r1 error) {
+func (m *JetCoordinatorMock) VirtualExecutorForObject(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r *insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.VirtualExecutorForObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.VirtualExecutorForObjectCounter, 1)
 
@@ -1934,17 +1934,17 @@ type JetCoordinatorMockVirtualValidatorsForObjectExpectation struct {
 
 type JetCoordinatorMockVirtualValidatorsForObjectInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 	p2 insolar.PulseNumber
 }
 
 type JetCoordinatorMockVirtualValidatorsForObjectResult struct {
-	r  []insolar.RecordRef
+	r  []insolar.Reference
 	r1 error
 }
 
 //Expect specifies that invocation of JetCoordinator.VirtualValidatorsForObject is expected from 1 to Infinity times
-func (m *mJetCoordinatorMockVirtualValidatorsForObject) Expect(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *mJetCoordinatorMockVirtualValidatorsForObject {
+func (m *mJetCoordinatorMockVirtualValidatorsForObject) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *mJetCoordinatorMockVirtualValidatorsForObject {
 	m.mock.VirtualValidatorsForObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -1956,7 +1956,7 @@ func (m *mJetCoordinatorMockVirtualValidatorsForObject) Expect(p context.Context
 }
 
 //Return specifies results of invocation of JetCoordinator.VirtualValidatorsForObject
-func (m *mJetCoordinatorMockVirtualValidatorsForObject) Return(r []insolar.RecordRef, r1 error) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockVirtualValidatorsForObject) Return(r []insolar.Reference, r1 error) *JetCoordinatorMock {
 	m.mock.VirtualValidatorsForObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -1968,7 +1968,7 @@ func (m *mJetCoordinatorMockVirtualValidatorsForObject) Return(r []insolar.Recor
 }
 
 //ExpectOnce specifies that invocation of JetCoordinator.VirtualValidatorsForObject is expected once
-func (m *mJetCoordinatorMockVirtualValidatorsForObject) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *JetCoordinatorMockVirtualValidatorsForObjectExpectation {
+func (m *mJetCoordinatorMockVirtualValidatorsForObject) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *JetCoordinatorMockVirtualValidatorsForObjectExpectation {
 	m.mock.VirtualValidatorsForObjectFunc = nil
 	m.mainExpectation = nil
 
@@ -1978,12 +1978,12 @@ func (m *mJetCoordinatorMockVirtualValidatorsForObject) ExpectOnce(p context.Con
 	return expectation
 }
 
-func (e *JetCoordinatorMockVirtualValidatorsForObjectExpectation) Return(r []insolar.RecordRef, r1 error) {
+func (e *JetCoordinatorMockVirtualValidatorsForObjectExpectation) Return(r []insolar.Reference, r1 error) {
 	e.result = &JetCoordinatorMockVirtualValidatorsForObjectResult{r, r1}
 }
 
 //Set uses given function f as a mock of JetCoordinator.VirtualValidatorsForObject method
-func (m *mJetCoordinatorMockVirtualValidatorsForObject) Set(f func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r []insolar.RecordRef, r1 error)) *JetCoordinatorMock {
+func (m *mJetCoordinatorMockVirtualValidatorsForObject) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r []insolar.Reference, r1 error)) *JetCoordinatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1992,7 +1992,7 @@ func (m *mJetCoordinatorMockVirtualValidatorsForObject) Set(f func(p context.Con
 }
 
 //VirtualValidatorsForObject implements github.com/insolar/insolar/insolar.JetCoordinator interface
-func (m *JetCoordinatorMock) VirtualValidatorsForObject(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r []insolar.RecordRef, r1 error) {
+func (m *JetCoordinatorMock) VirtualValidatorsForObject(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r []insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.VirtualValidatorsForObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.VirtualValidatorsForObjectCounter, 1)
 

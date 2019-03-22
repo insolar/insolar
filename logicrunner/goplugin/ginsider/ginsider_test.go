@@ -69,7 +69,7 @@ func (s *HealthCheckSuite) TestHealthCheck() {
 	gi := NewGoInsider(tmpDir, protocol, socket)
 
 	refString := "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"
-	ref, err := insolar.NewRefFromBase58(refString)
+	ref, err := insolar.NewReferenceFromBase58(refString)
 	s.Require().NoError(err)
 	err = gi.AddPlugin(*ref, tmpDir+"/main.so")
 	s.Require().NoError(err, "failed to add plugin")

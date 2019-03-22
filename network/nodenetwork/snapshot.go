@@ -78,7 +78,7 @@ func (s *Snapshot) GetPulse() insolar.PulseNumber {
 }
 
 // NewSnapshot create new snapshot for pulse.
-func NewSnapshot(number insolar.PulseNumber, nodes map[insolar.RecordRef]insolar.NetworkNode) *Snapshot {
+func NewSnapshot(number insolar.PulseNumber, nodes map[insolar.Reference]insolar.NetworkNode) *Snapshot {
 	return &Snapshot{
 		pulse: number,
 		// TODO: pass actual state
@@ -89,7 +89,7 @@ func NewSnapshot(number insolar.PulseNumber, nodes map[insolar.RecordRef]insolar
 
 // splitNodes temporary method to create snapshot lists. Will be replaced by special function that will take in count
 // previous snapshot and approved claims.
-func splitNodes(nodes map[insolar.RecordRef]insolar.NetworkNode) [ListLength][]insolar.NetworkNode {
+func splitNodes(nodes map[insolar.Reference]insolar.NetworkNode) [ListLength][]insolar.NetworkNode {
 	var result [ListLength][]insolar.NetworkNode
 	for i := 0; i < int(ListLength); i++ {
 		result[i] = make([]insolar.NetworkNode, 0)

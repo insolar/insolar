@@ -32,7 +32,7 @@ import (
 
 func mockContractRequesterWithError(t *testing.T) *testutils.ContractRequesterMock {
 	contractRequesterMock := testutils.NewContractRequesterMock(t)
-	contractRequesterMock.SendRequestFunc = func(p context.Context, p1 *insolar.RecordRef, p2 string, p3 []interface{}) (r insolar.Reply, r1 error) {
+	contractRequesterMock.SendRequestFunc = func(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}) (r insolar.Reply, r1 error) {
 		return nil, errors.New("test reasons")
 	}
 	return contractRequesterMock
@@ -40,15 +40,15 @@ func mockContractRequesterWithError(t *testing.T) *testutils.ContractRequesterMo
 
 func mockContractRequester(t *testing.T, res insolar.Reply) *testutils.ContractRequesterMock {
 	contractRequesterMock := testutils.NewContractRequesterMock(t)
-	contractRequesterMock.SendRequestFunc = func(p context.Context, p1 *insolar.RecordRef, p2 string, p3 []interface{}) (r insolar.Reply, r1 error) {
+	contractRequesterMock.SendRequestFunc = func(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}) (r insolar.Reply, r1 error) {
 		return res, nil
 	}
 	return contractRequesterMock
 }
 
-func mockCertificateManager(t *testing.T, rootDomainRef *insolar.RecordRef) *testutils.CertificateManagerMock {
+func mockCertificateManager(t *testing.T, rootDomainRef *insolar.Reference) *testutils.CertificateManagerMock {
 	certificateMock := testutils.NewCertificateMock(t)
-	certificateMock.GetRootDomainReferenceFunc = func() (r *insolar.RecordRef) {
+	certificateMock.GetRootDomainReferenceFunc = func() (r *insolar.Reference) {
 		return rootDomainRef
 	}
 
@@ -59,7 +59,7 @@ func mockCertificateManager(t *testing.T, rootDomainRef *insolar.RecordRef) *tes
 	return certificateManagerMock
 }
 
-func mockInfoResult(rootMemberRef insolar.RecordRef, nodeDomainRef insolar.RecordRef) insolar.Reply {
+func mockInfoResult(rootMemberRef insolar.Reference, nodeDomainRef insolar.Reference) insolar.Reply {
 	result := map[string]interface{}{
 		"root_member": rootMemberRef.String(),
 		"node_domain": nodeDomainRef.String(),

@@ -273,10 +273,10 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	if classReference == "" {
 		hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
 		codeHash := hasher.Hash([]byte(pf.code))
-		ref := insolar.NewRecordRef(insolar.RecordID{}, *insolar.NewRecordID(0, codeHash))
+		ref := insolar.NewReference(insolar.ID{}, *insolar.NewID(0, codeHash))
 		classReference = ref.String()
 	}
-	_, err = insolar.NewRefFromBase58(classReference)
+	_, err = insolar.NewReferenceFromBase58(classReference)
 	if err != nil {
 		return errors.Wrap(err, "can't write proxy: ")
 	}

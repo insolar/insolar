@@ -109,7 +109,7 @@ func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manag
 }
 
 // SendMessage sends a message from MessageBus.
-func (n *ServiceNetwork) SendMessage(nodeID insolar.RecordRef, method string, msg insolar.Parcel) ([]byte, error) {
+func (n *ServiceNetwork) SendMessage(nodeID insolar.Reference, method string, msg insolar.Parcel) ([]byte, error) {
 	return n.Controller.SendMessage(nodeID, method, msg)
 }
 

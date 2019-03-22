@@ -98,24 +98,24 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 
 	// Arrange
 	jetID := insolar.ZeroJetID
-	objID := insolar.RecordID{}
+	objID := insolar.ID{}
 
 	lr := testutils.NewLogicRunnerMock(s.T())
 	lr.OnPulseMock.Return(nil)
 
 	firstID, _ := s.objectStorage.SetRecord(
 		s.ctx,
-		insolar.RecordID(jetID),
+		insolar.ID(jetID),
 		insolar.GenesisPulse.PulseNumber,
 		&object.ObjectActivateRecord{})
 	firstIndex := object.Lifeline{
 		LatestState: firstID,
 	}
-	_ = s.objectStorage.SetObjectIndex(s.ctx, insolar.RecordID(jetID), firstID, &firstIndex)
+	_ = s.objectStorage.SetObjectIndex(s.ctx, insolar.ID(jetID), firstID, &firstIndex)
 	codeRecord := &object.CodeRecord{}
 	secondID, _ := s.objectStorage.SetRecord(
 		s.ctx,
-		insolar.RecordID(jetID),
+		insolar.ID(jetID),
 		insolar.GenesisPulse.PulseNumber,
 		codeRecord,
 	)
@@ -125,12 +125,12 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	// TODO: @andreyromancev. 12.01.19. Uncomment to check if this doesn't delete indexes it should not.
 	// recentMock.ClearZeroTTLObjectsMock.Return()
 	// recentMock.ClearObjectsMock.Return()
-	indexMock.GetObjectsMock.Return(map[insolar.RecordID]int{
+	indexMock.GetObjectsMock.Return(map[insolar.ID]int{
 		*firstID: 1,
 	})
 	pendingMock.GetRequestsMock.Return(
-		map[insolar.RecordID]recentstorage.PendingObjectContext{
-			objID: {Requests: []insolar.RecordID{*secondID}},
+		map[insolar.ID]recentstorage.PendingObjectContext{
+			objID: {Requests: []insolar.ID{*secondID}},
 		})
 
 	providerMock := recentstorage.NewProviderMock(s.T())
@@ -165,14 +165,14 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 
 	nodeMock := network.NewNodeMock(s.T())
 	nodeMock.RoleMock.Return(insolar.StaticRoleLightMaterial)
-	nodeMock.IDMock.Return(insolar.RecordRef{})
+	nodeMock.IDMock.Return(insolar.Reference{})
 
 	nodeNetworkMock := network.NewNodeNetworkMock(s.T())
 	nodeNetworkMock.GetWorkingNodesMock.Return([]insolar.NetworkNode{nodeMock})
 	nodeNetworkMock.GetOriginMock.Return(nodeMock)
 
 	jetCoordinatorMock := testutils.NewJetCoordinatorMock(s.T())
-	executor := insolar.NewRecordRef(insolar.RecordID{}, *insolar.NewRecordID(123, []byte{3, 2, 1}))
+	executor := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, []byte{3, 2, 1}))
 	jetCoordinatorMock.LightExecutorForJetMock.Return(executor, nil)
 	jetCoordinatorMock.MeMock.Return(*executor)
 
@@ -214,7 +214,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	require.NoError(s.T(), err)
 	// // TODO: @andreyromancev. 12.01.19. put 1, when dynamic split is working.
 	assert.Equal(s.T(), uint64(2), mbMock.SendMinimockCounter()) // 1 validator drop (no split)
-	savedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, insolar.RecordID(jetID), firstID, false)
+	savedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, insolar.ID(jetID), firstID, false)
 	require.NoError(s.T(), err)
 
 	// Assert

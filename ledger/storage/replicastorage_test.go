@@ -42,7 +42,7 @@ type replicaSuite struct {
 
 	replicaStorage storage.ReplicaStorage
 
-	jetID insolar.RecordID
+	jetID insolar.ID
 }
 
 func NewReplicaSuite() *replicaSuite {
@@ -121,7 +121,7 @@ func (s *replicaSuite) Test_SyncClientJetPulses() {
 
 func (s *replicaSuite) Test_GetAllSyncClientJets() {
 	tt := []struct {
-		jetID  insolar.RecordID
+		jetID  insolar.ID
 		pulses []insolar.PulseNumber
 	}{
 		{

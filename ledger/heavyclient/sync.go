@@ -69,7 +69,7 @@ func (c *JetClient) HeavySync(
 	}
 
 	replicator := storage.NewReplicaIter(
-		ctx, c.db, insolar.RecordID(jetID), pn, pn+1, c.opts.SyncMessageLimit)
+		ctx, c.db, insolar.ID(jetID), pn, pn+1, c.opts.SyncMessageLimit)
 	for {
 		recs, err := replicator.NextRecords()
 		if err == storage.ErrReplicatorDone {

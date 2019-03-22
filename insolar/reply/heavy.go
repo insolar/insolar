@@ -31,7 +31,7 @@ const (
 type HeavyError struct {
 	Message  string
 	SubType  ErrType
-	JetID    insolar.RecordID
+	JetID    insolar.ID
 	PulseNum insolar.PulseNumber
 }
 

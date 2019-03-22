@@ -65,7 +65,7 @@ type FirstPhaseState struct {
 	PulseProof *merkle.PulseProof
 
 	ValidProofs map[insolar.NetworkNode]*merkle.PulseProof
-	FaultProofs map[insolar.RecordRef]*merkle.PulseProof
+	FaultProofs map[insolar.Reference]*merkle.PulseProof
 
 	UnsyncList   network.UnsyncList
 	ClaimHandler *claimhandler.ClaimHandler

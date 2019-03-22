@@ -23,7 +23,7 @@ import (
 // Cascade contains routing data for cascade sending
 type Cascade struct {
 	// NodeIds contains the slice of node identifiers that will receive the message
-	NodeIds []RecordRef
+	NodeIds []Reference
 	// GeneratedEntropy is used for pseudorandom cascade building
 	Entropy Entropy
 	// Replication factor is the number of children nodes of the each node of the cascade
@@ -36,7 +36,7 @@ type RemoteProcedure func(ctx context.Context, args [][]byte) ([]byte, error)
 // Network is interface for network modules facade.
 type Network interface {
 	// SendParcel sends a message.
-	SendMessage(nodeID RecordRef, method string, msg Parcel) ([]byte, error)
+	SendMessage(nodeID Reference, method string, msg Parcel) ([]byte, error)
 	// SendCascadeMessage sends a message.
 	SendCascadeMessage(data Cascade, method string, msg Parcel) error
 	// RemoteProcedureRegister is remote procedure register func.

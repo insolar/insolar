@@ -62,13 +62,13 @@ type ReplicaIter struct {
 func NewReplicaIter(
 	ctx context.Context,
 	dbContext DBContext,
-	jetID insolar.RecordID,
+	jetID insolar.ID,
 	start insolar.PulseNumber,
 	end insolar.PulseNumber,
 	limit int,
 ) *ReplicaIter {
 	// fmt.Printf("CALL NewReplicaIter [%v:%v] (jet=%v)\n", start, end, jetID)
-	newit := func(prefixbyte byte, jetID insolar.RecordID, start, end insolar.PulseNumber) *iterstate {
+	newit := func(prefixbyte byte, jetID insolar.ID, start, end insolar.PulseNumber) *iterstate {
 		prefix := []byte{prefixbyte}
 		jetPrefix := insolar.JetID(jetID).Prefix()
 		iter := &iterstate{prefix: prefix}

@@ -72,7 +72,7 @@ func main() {
 			log.Fatal("code param format is <ref>:</path/to/plugin.so>")
 			os.Exit(1)
 		}
-		ref, err := insolar.NewRefFromBase58(codeSlice[0])
+		ref, err := insolar.NewReferenceFromBase58(codeSlice[0])
 		if err != nil {
 			log.Fatalf("Couldn't parse ref: %s", err.Error())
 			os.Exit(1)

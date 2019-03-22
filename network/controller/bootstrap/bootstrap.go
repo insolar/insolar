@@ -110,7 +110,7 @@ type bootstrapper struct {
 
 	bootstrapLock chan struct{}
 
-	genesisRequestsReceived map[insolar.RecordRef]*GenesisRequest
+	genesisRequestsReceived map[insolar.Reference]*GenesisRequest
 	genesisLock             sync.Mutex
 
 	firstPulseTime time.Time
@@ -120,14 +120,14 @@ func (bc *bootstrapper) GetFirstFakePulseTime() time.Time {
 	return bc.firstPulseTime
 }
 
-func (bc *bootstrapper) getRequest(ref insolar.RecordRef) *GenesisRequest {
+func (bc *bootstrapper) getRequest(ref insolar.Reference) *GenesisRequest {
 	bc.genesisLock.Lock()
 	defer bc.genesisLock.Unlock()
 
 	return bc.genesisRequestsReceived[ref]
 }
 
-func (bc *bootstrapper) setRequest(ref insolar.RecordRef, req *GenesisRequest) {
+func (bc *bootstrapper) setRequest(ref insolar.Reference, req *GenesisRequest) {
 	bc.genesisLock.Lock()
 	defer bc.genesisLock.Unlock()
 
@@ -160,7 +160,7 @@ type StartSessionResponse struct {
 }
 
 type NodeStruct struct {
-	ID      insolar.RecordRef
+	ID      insolar.Reference
 	SID     insolar.ShortNodeID
 	Role    insolar.StaticRole
 	PK      []byte
@@ -596,6 +596,6 @@ func NewBootstrapper(options *common.Options) Bootstrapper {
 		options:       options,
 		bootstrapLock: make(chan struct{}),
 
-		genesisRequestsReceived: make(map[insolar.RecordRef]*GenesisRequest),
+		genesisRequestsReceived: make(map[insolar.Reference]*GenesisRequest),
 	}
 }

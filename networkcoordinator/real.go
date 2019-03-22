@@ -83,7 +83,7 @@ func newRealNetworkCoordinator(
 }
 
 // GetCert method generates cert by requesting signs from discovery nodes
-func (rnc *realNetworkCoordinator) GetCert(ctx context.Context, registeredNodeRef *insolar.RecordRef) (insolar.Certificate, error) {
+func (rnc *realNetworkCoordinator) GetCert(ctx context.Context, registeredNodeRef *insolar.Reference) (insolar.Certificate, error) {
 	pKey, role, err := rnc.getNodeInfo(ctx, registeredNodeRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ GetCert ] Couldn't get node info")
@@ -106,7 +106,7 @@ func (rnc *realNetworkCoordinator) GetCert(ctx context.Context, registeredNodeRe
 }
 
 // requestCertSign method requests sign from single discovery node
-func (rnc *realNetworkCoordinator) requestCertSign(ctx context.Context, discoveryNode insolar.DiscoveryNode, registeredNodeRef *insolar.RecordRef) ([]byte, error) {
+func (rnc *realNetworkCoordinator) requestCertSign(ctx context.Context, discoveryNode insolar.DiscoveryNode, registeredNodeRef *insolar.Reference) ([]byte, error) {
 	var sign []byte
 	var err error
 
@@ -147,7 +147,7 @@ func (rnc *realNetworkCoordinator) signCertHandler(ctx context.Context, p insola
 }
 
 // signCert returns certificate sign fore node
-func (rnc *realNetworkCoordinator) signCert(ctx context.Context, registeredNodeRef *insolar.RecordRef) ([]byte, error) {
+func (rnc *realNetworkCoordinator) signCert(ctx context.Context, registeredNodeRef *insolar.Reference) ([]byte, error) {
 	pKey, role, err := rnc.getNodeInfo(ctx, registeredNodeRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SignCert ] Couldn't extract response")
@@ -163,7 +163,7 @@ func (rnc *realNetworkCoordinator) signCert(ctx context.Context, registeredNodeR
 }
 
 // getNodeInfo request info from ledger
-func (rnc *realNetworkCoordinator) getNodeInfo(ctx context.Context, nodeRef *insolar.RecordRef) (string, string, error) {
+func (rnc *realNetworkCoordinator) getNodeInfo(ctx context.Context, nodeRef *insolar.Reference) (string, string, error) {
 	res, err := rnc.ContractRequester.SendRequest(ctx, nodeRef, "GetNodeInfo", []interface{}{})
 	if err != nil {
 		return "", "", errors.Wrap(err, "[ GetCert ] Couldn't call GetNodeInfo")

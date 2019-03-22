@@ -33,11 +33,11 @@ type keyval struct {
 type TransactionManager struct {
 	db        *DB
 	update    bool
-	locks     []*insolar.RecordID
+	locks     []*insolar.ID
 	txupdates map[string]keyval
 }
 
-func (m *TransactionManager) lockOnID(id *insolar.RecordID) {
+func (m *TransactionManager) lockOnID(id *insolar.ID) {
 	m.db.idlocker.Lock(id)
 	m.locks = append(m.locks, id)
 }
@@ -80,7 +80,7 @@ func (m *TransactionManager) Discard() {
 // GetRequest returns request record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRequest(ctx context.Context, jetID insolar.RecordID, id *insolar.RecordID) (object.Request, error) {
+func (m *TransactionManager) GetRequest(ctx context.Context, jetID insolar.ID, id *insolar.ID) (object.Request, error) {
 	rec, err := m.GetRecord(ctx, jetID, id)
 	if err != nil {
 		return nil, err
@@ -91,14 +91,14 @@ func (m *TransactionManager) GetRequest(ctx context.Context, jetID insolar.Recor
 }
 
 // GetBlob returns binary value stored by record ID.
-func (m *TransactionManager) GetBlob(ctx context.Context, jetID insolar.RecordID, id *insolar.RecordID) ([]byte, error) {
+func (m *TransactionManager) GetBlob(ctx context.Context, jetID insolar.ID, id *insolar.ID) ([]byte, error) {
 	jetPrefix := insolar.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
 	return m.get(ctx, k)
 }
 
 // SetBlob saves binary value for provided pulse.
-func (m *TransactionManager) SetBlob(ctx context.Context, jetID insolar.RecordID, pulseNumber insolar.PulseNumber, blob []byte) (*insolar.RecordID, error) {
+func (m *TransactionManager) SetBlob(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, blob []byte) (*insolar.ID, error) {
 	id := object.CalculateIDForBlob(m.db.PlatformCryptographyScheme, pulseNumber, blob)
 	jetPrefix := insolar.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
@@ -125,7 +125,7 @@ func (m *TransactionManager) SetBlob(ctx context.Context, jetID insolar.RecordID
 // GetRecord returns record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRecord(ctx context.Context, jetID insolar.RecordID, id *insolar.RecordID) (object.Record, error) {
+func (m *TransactionManager) GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (object.Record, error) {
 	jetPrefix := insolar.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDRecord, jetPrefix, id[:])
 	buf, err := m.get(ctx, k)
@@ -139,7 +139,7 @@ func (m *TransactionManager) GetRecord(ctx context.Context, jetID insolar.Record
 //
 // If record exists returns both *record.ID and ErrOverride error.
 // If record not found returns nil and ErrNotFound error
-func (m *TransactionManager) SetRecord(ctx context.Context, jetID insolar.RecordID, pulseNumber insolar.PulseNumber, rec object.Record) (*insolar.RecordID, error) {
+func (m *TransactionManager) SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec object.Record) (*insolar.ID, error) {
 	id := object.NewRecordIDFromRecord(m.db.PlatformCryptographyScheme, pulseNumber, rec)
 	prefix := insolar.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDRecord, prefix, id[:])
@@ -164,8 +164,8 @@ func (m *TransactionManager) SetRecord(ctx context.Context, jetID insolar.Record
 // GetObjectIndex fetches object lifeline index.
 func (m *TransactionManager) GetObjectIndex(
 	ctx context.Context,
-	jetID insolar.RecordID,
-	id *insolar.RecordID,
+	jetID insolar.ID,
+	id *insolar.ID,
 	forupdate bool,
 ) (*object.Lifeline, error) {
 	if forupdate {
@@ -184,14 +184,14 @@ func (m *TransactionManager) GetObjectIndex(
 // SetObjectIndex stores object lifeline index.
 func (m *TransactionManager) SetObjectIndex(
 	ctx context.Context,
-	jetID insolar.RecordID,
-	id *insolar.RecordID,
+	jetID insolar.ID,
+	id *insolar.ID,
 	idx *object.Lifeline,
 ) error {
 	prefix := insolar.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDLifeline, prefix, id[:])
 	if idx.Delegates == nil {
-		idx.Delegates = map[insolar.RecordRef]insolar.RecordRef{}
+		idx.Delegates = map[insolar.Reference]insolar.Reference{}
 	}
 	encoded := object.Encode(*idx)
 	return m.set(ctx, k, encoded)
@@ -200,8 +200,8 @@ func (m *TransactionManager) SetObjectIndex(
 // RemoveObjectIndex removes an index of an object
 func (m *TransactionManager) RemoveObjectIndex(
 	ctx context.Context,
-	jetID insolar.RecordID,
-	ref *insolar.RecordID,
+	jetID insolar.ID,
+	ref *insolar.ID,
 ) error {
 	m.lockOnID(ref)
 	prefix := insolar.JetID(jetID).Prefix()

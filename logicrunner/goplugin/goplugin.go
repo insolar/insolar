@@ -148,7 +148,7 @@ func (gp *GoPlugin) CallMethodRPC(ctx context.Context, req rpctypes.DownCallMeth
 // CallMethod runs a method on an object in controlled environment
 func (gp *GoPlugin) CallMethod(
 	ctx context.Context, callContext *insolar.LogicCallContext,
-	code insolar.RecordRef, data []byte,
+	code insolar.Reference, data []byte,
 	method string, args insolar.Arguments,
 ) (
 	[]byte, insolar.Arguments, error,
@@ -200,7 +200,7 @@ func (gp *GoPlugin) CallConstructorRPC(ctx context.Context, req rpctypes.DownCal
 // CallConstructor runs a constructor of a contract in controlled environment
 func (gp *GoPlugin) CallConstructor(
 	ctx context.Context, callContext *insolar.LogicCallContext,
-	code insolar.RecordRef, name string, args insolar.Arguments,
+	code insolar.Reference, name string, args insolar.Arguments,
 ) (
 	[]byte, error,
 ) {

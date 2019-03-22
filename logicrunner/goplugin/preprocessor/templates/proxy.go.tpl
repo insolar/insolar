@@ -28,14 +28,14 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewRefFromBase58("{{ .ClassReference }}")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("{{ .ClassReference }}")
 
 
 // {{ .ContractType }} holds proxy type
 type {{ .ContractType }} struct {
-	Reference insolar.RecordRef
-	Prototype insolar.RecordRef
-	Code insolar.RecordRef
+	Reference insolar.Reference
+	Prototype insolar.Reference
+	Code insolar.Reference
 }
 
 // ContractConstructorHolder holds logic with object construction
@@ -45,7 +45,7 @@ type ContractConstructorHolder struct {
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef insolar.RecordRef) (*{{ .ContractType }}, error) {
+func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*{{ .ContractType }}, error) {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
@@ -54,7 +54,7 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.RecordRef) (*{{ .Cont
 }
 
 // AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef insolar.RecordRef) (*{{ .ContractType }}, error) {
+func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*{{ .ContractType }}, error) {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
@@ -63,17 +63,17 @@ func (r *ContractConstructorHolder) AsDelegate(objRef insolar.RecordRef) (*{{ .C
 }
 
 // GetObject returns proxy object
-func GetObject(ref insolar.RecordRef) (r *{{ .ContractType }}) {
+func GetObject(ref insolar.Reference) (r *{{ .ContractType }}) {
 	return &{{ .ContractType }}{Reference: ref}
 }
 
 // GetPrototype returns reference to the prototype
-func GetPrototype() insolar.RecordRef {
+func GetPrototype() insolar.Reference {
 	return *PrototypeReference
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object insolar.RecordRef) (*{{ .ContractType }}, error) {
+func GetImplementationFrom(object insolar.Reference) (*{{ .ContractType }}, error) {
 	ref, err := proxyctx.Current.GetDelegate(object, *PrototypeReference)
 	if err != nil {
 		return nil, err
@@ -97,15 +97,15 @@ func {{ $func.Name }}( {{ $func.Arguments }} ) *ContractConstructorHolder {
 {{ end }}
 
 // GetReference returns reference of the object
-func (r *{{ $.ContractType }}) GetReference() insolar.RecordRef {
+func (r *{{ $.ContractType }}) GetReference() insolar.Reference {
 	return r.Reference
 }
 
 // GetPrototype returns reference to the code
-func (r *{{ $.ContractType }}) GetPrototype() (insolar.RecordRef, error) {
+func (r *{{ $.ContractType }}) GetPrototype() (insolar.Reference, error) {
 	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
-		var ret0 insolar.RecordRef
+		var ret0 insolar.Reference
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
@@ -132,10 +132,10 @@ func (r *{{ $.ContractType }}) GetPrototype() (insolar.RecordRef, error) {
 }
 
 // GetCode returns reference to the code
-func (r *{{ $.ContractType }}) GetCode() (insolar.RecordRef, error) {
+func (r *{{ $.ContractType }}) GetCode() (insolar.Reference, error) {
 	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
-		var ret0 insolar.RecordRef
+		var ret0 insolar.Reference
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1

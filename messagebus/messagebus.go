@@ -174,17 +174,17 @@ func (mb *MessageBus) SendParcel(
 	readBarrier(ctx, &mb.globalLock)
 
 	var (
-		nodes []insolar.RecordRef
+		nodes []insolar.Reference
 		err   error
 	)
 	if options != nil && options.Receiver != nil {
-		nodes = []insolar.RecordRef{*options.Receiver}
+		nodes = []insolar.Reference{*options.Receiver}
 	} else {
 		// TODO: send to all actors of the role if nil Target
 		target := parcel.DefaultTarget()
 		// FIXME: @andreyromancev. 21.12.18. Temp hack. All messages should have a default target.
 		if target == nil {
-			target = &insolar.RecordRef{}
+			target = &insolar.Reference{}
 		}
 		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), *target.Record(), currentPulse.PulseNumber)
 		if err != nil {

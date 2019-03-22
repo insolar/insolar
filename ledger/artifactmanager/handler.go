@@ -371,7 +371,7 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel insolar.Parce
 	codeRec, err := h.getCode(ctx, msg.Code.Record())
 	if err == insolar.ErrNotFound {
 		// We don't have code record. Must be on another node.
-		node, err := h.JetCoordinator.NodeForJet(ctx, insolar.RecordID(jetID), parcel.Pulse(), msg.Code.Record().Pulse())
+		node, err := h.JetCoordinator.NodeForJet(ctx, insolar.ID(jetID), parcel.Pulse(), msg.Code.Record().Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -380,7 +380,7 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel insolar.Parce
 	if err != nil {
 		return nil, err
 	}
-	code, err := h.ObjectStorage.GetBlob(ctx, insolar.RecordID(jetID), codeRec.Code)
+	code, err := h.ObjectStorage.GetBlob(ctx, insolar.ID(jetID), codeRec.Code)
 	if err != nil {
 		return nil, err
 	}
@@ -428,7 +428,7 @@ func (h *MessageHandler) handleGetObject(
 	}
 
 	// Determine object state id.
-	var stateID *insolar.RecordID
+	var stateID *insolar.ID
 	if msg.State != nil {
 		stateID = msg.State
 	} else {
@@ -443,7 +443,7 @@ func (h *MessageHandler) handleGetObject(
 	}
 
 	var (
-		stateJet *insolar.RecordID
+		stateJet *insolar.ID
 	)
 	if h.isHeavy {
 		stateJet = &jetID
@@ -483,7 +483,7 @@ func (h *MessageHandler) handleGetObject(
 
 		// FIXME: after migration on JetID in all components. - @nordicdyno 13.03.2019
 		stateJetID, actual := h.JetStorage.ForID(ctx, stateID.Pulse(), *msg.Head.Record())
-		stateJet = (*insolar.RecordID)(&stateJetID)
+		stateJet = (*insolar.ID)(&stateJetID)
 
 		if !actual {
 			actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Head.Record(), stateID.Pulse())
@@ -540,7 +540,7 @@ func (h *MessageHandler) handleGetObject(
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 	}
 
-	var childPointer *insolar.RecordID
+	var childPointer *insolar.ID
 	if idx.ChildPointer != nil {
 		childPointer = idx.ChildPointer
 	}
@@ -581,7 +581,7 @@ func (h *MessageHandler) handleGetJet(ctx context.Context, parcel insolar.Parcel
 
 	jetID, actual := h.JetStorage.ForID(ctx, msg.Pulse, msg.Object)
 
-	return &reply.Jet{ID: insolar.RecordID(jetID), Actual: actual}, nil
+	return &reply.Jet{ID: insolar.ID(jetID), Actual: actual}, nil
 }
 
 func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
@@ -654,8 +654,8 @@ func (h *MessageHandler) handleGetChildren(
 	}
 
 	var (
-		refs         []insolar.RecordRef
-		currentChild *insolar.RecordID
+		refs         []insolar.Reference
+		currentChild *insolar.ID
 	)
 
 	// Counting from specified child or the latest.
@@ -670,7 +670,7 @@ func (h *MessageHandler) handleGetChildren(
 		return &reply.Children{Refs: nil, NextFrom: nil}, nil
 	}
 
-	var childJet *insolar.RecordID
+	var childJet *insolar.ID
 	if h.isHeavy {
 		childJet = &jetID
 	} else {
@@ -688,7 +688,7 @@ func (h *MessageHandler) handleGetChildren(
 
 		// FIXME: after migration on JetID in all components. - @nordicdyno 13.03.2019
 		childJetID, actual := h.JetStorage.ForID(ctx, currentChild.Pulse(), *msg.Parent.Record())
-		childJet = (*insolar.RecordID)(&childJetID)
+		childJet = (*insolar.ID)(&childJetID)
 
 		if !actual {
 			actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Parent.Record(), currentChild.Pulse())
@@ -912,7 +912,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 
 	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 
-	var child *insolar.RecordID
+	var child *insolar.ID
 	err := h.DBContext.Update(ctx, func(tx *storage.TransactionManager) error {
 		idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
 		if err == insolar.ErrNotFound {
@@ -1094,10 +1094,10 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel insol
 	return &reply.OK{}, nil
 }
 
-func (h *MessageHandler) getCode(ctx context.Context, id *insolar.RecordID) (*object.CodeRecord, error) {
+func (h *MessageHandler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeRecord, error) {
 	jetID := *insolar.NewJetID(0, nil)
 
-	rec, err := h.ObjectStorage.GetRecord(ctx, insolar.RecordID(jetID), id)
+	rec, err := h.ObjectStorage.GetRecord(ctx, insolar.ID(jetID), id)
 	if err != nil {
 		return nil, err
 	}
@@ -1123,7 +1123,7 @@ func validateState(old object.State, new object.State) error {
 }
 
 func (h *MessageHandler) saveIndexFromHeavy(
-	ctx context.Context, jetID insolar.RecordID, obj insolar.RecordRef, heavy *insolar.RecordRef,
+	ctx context.Context, jetID insolar.ID, obj insolar.Reference, heavy *insolar.Reference,
 ) (*object.Lifeline, error) {
 	genericReply, err := h.Bus.Send(ctx, &message.GetObjectIndex{
 		Object: obj,
@@ -1147,7 +1147,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 }
 
 func (h *MessageHandler) fetchObject(
-	ctx context.Context, obj insolar.RecordRef, node insolar.RecordRef, stateID *insolar.RecordID, pulse insolar.PulseNumber,
+	ctx context.Context, obj insolar.Reference, node insolar.Reference, stateID *insolar.ID, pulse insolar.PulseNumber,
 ) (*reply.Object, error) {
 	sender := BuildSender(
 		h.Bus.Send,
@@ -1206,7 +1206,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 	pendingStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
 	logger.Debugf("received %d pending requests", len(msg.PendingRequests))
 
-	var notificationList []insolar.RecordID
+	var notificationList []insolar.ID
 	for objID, objContext := range msg.PendingRequests {
 		if !objContext.Active {
 			notificationList = append(notificationList, objID)
@@ -1218,7 +1218,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 
 	go func() {
 		for _, objID := range notificationList {
-			go func(objID insolar.RecordID) {
+			go func(objID insolar.ID) {
 				rep, err := h.Bus.Send(ctx, &message.AbandonedRequestsNotification{
 					Object: objID,
 				}, nil)

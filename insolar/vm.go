@@ -38,14 +38,14 @@ const (
 type MachineLogicExecutor interface {
 	CallMethod(
 		ctx context.Context, callContext *LogicCallContext,
-		code RecordRef, data []byte,
+		code Reference, data []byte,
 		method string, args Arguments,
 	) (
 		newObjectState []byte, methodResults Arguments, err error,
 	)
 	CallConstructor(
 		ctx context.Context, callContext *LogicCallContext,
-		code RecordRef, name string, args Arguments,
+		code Reference, name string, args Arguments,
 	) (
 		objectState []byte, err error,
 	)
@@ -65,13 +65,13 @@ type LogicRunner interface {
 // LogicCallContext is a context of contract execution
 type LogicCallContext struct {
 	Mode            string     // either "execution" or "validation"
-	Callee          *RecordRef // Contract that was called
-	Request         *RecordRef // ref of request
-	Prototype       *RecordRef // Image of the callee
-	Code            *RecordRef // ref of contract code
-	CallerPrototype *RecordRef // Image of the caller
-	Parent          *RecordRef // Parent of the callee
-	Caller          *RecordRef // Contract that made the call
+	Callee          *Reference // Contract that was called
+	Request         *Reference // ref of request
+	Prototype       *Reference // Image of the callee
+	Code            *Reference // ref of contract code
+	CallerPrototype *Reference // Image of the caller
+	Parent          *Reference // Parent of the callee
+	Caller          *Reference // Contract that made the call
 	Time            time.Time  // Time when call was made
 	Pulse           Pulse      // Number of the pulse
 	TraceID         string

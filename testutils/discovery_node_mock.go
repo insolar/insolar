@@ -23,7 +23,7 @@ type DiscoveryNodeMock struct {
 	GetHostPreCounter uint64
 	GetHostMock       mDiscoveryNodeMockGetHost
 
-	GetNodeRefFunc       func() (r *insolar.RecordRef)
+	GetNodeRefFunc       func() (r *insolar.Reference)
 	GetNodeRefCounter    uint64
 	GetNodeRefPreCounter uint64
 	GetNodeRefMock       mDiscoveryNodeMockGetNodeRef
@@ -194,7 +194,7 @@ type DiscoveryNodeMockGetNodeRefExpectation struct {
 }
 
 type DiscoveryNodeMockGetNodeRefResult struct {
-	r *insolar.RecordRef
+	r *insolar.Reference
 }
 
 //Expect specifies that invocation of DiscoveryNode.GetNodeRef is expected from 1 to Infinity times
@@ -210,7 +210,7 @@ func (m *mDiscoveryNodeMockGetNodeRef) Expect() *mDiscoveryNodeMockGetNodeRef {
 }
 
 //Return specifies results of invocation of DiscoveryNode.GetNodeRef
-func (m *mDiscoveryNodeMockGetNodeRef) Return(r *insolar.RecordRef) *DiscoveryNodeMock {
+func (m *mDiscoveryNodeMockGetNodeRef) Return(r *insolar.Reference) *DiscoveryNodeMock {
 	m.mock.GetNodeRefFunc = nil
 	m.expectationSeries = nil
 
@@ -232,12 +232,12 @@ func (m *mDiscoveryNodeMockGetNodeRef) ExpectOnce() *DiscoveryNodeMockGetNodeRef
 	return expectation
 }
 
-func (e *DiscoveryNodeMockGetNodeRefExpectation) Return(r *insolar.RecordRef) {
+func (e *DiscoveryNodeMockGetNodeRefExpectation) Return(r *insolar.Reference) {
 	e.result = &DiscoveryNodeMockGetNodeRefResult{r}
 }
 
 //Set uses given function f as a mock of DiscoveryNode.GetNodeRef method
-func (m *mDiscoveryNodeMockGetNodeRef) Set(f func() (r *insolar.RecordRef)) *DiscoveryNodeMock {
+func (m *mDiscoveryNodeMockGetNodeRef) Set(f func() (r *insolar.Reference)) *DiscoveryNodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -246,7 +246,7 @@ func (m *mDiscoveryNodeMockGetNodeRef) Set(f func() (r *insolar.RecordRef)) *Dis
 }
 
 //GetNodeRef implements github.com/insolar/insolar/insolar.DiscoveryNode interface
-func (m *DiscoveryNodeMock) GetNodeRef() (r *insolar.RecordRef) {
+func (m *DiscoveryNodeMock) GetNodeRef() (r *insolar.Reference) {
 	counter := atomic.AddUint64(&m.GetNodeRefPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodeRefCounter, 1)
 

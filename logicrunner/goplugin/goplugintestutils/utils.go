@@ -58,13 +58,13 @@ func WriteFile(dir string, name string, text string) error {
 
 // TestCodeDescriptor implementation for tests
 type TestCodeDescriptor struct {
-	ARef         insolar.RecordRef
+	ARef         insolar.Reference
 	ACode        []byte
 	AMachineType insolar.MachineType
 }
 
 // Ref implementation for tests
-func (t *TestCodeDescriptor) Ref() *insolar.RecordRef {
+func (t *TestCodeDescriptor) Ref() *insolar.Reference {
 	return &t.ARef
 }
 
@@ -81,12 +81,12 @@ func (t *TestCodeDescriptor) Code() ([]byte, error) {
 // TestObjectDescriptor implementation for tests
 type TestObjectDescriptor struct {
 	AM                *TestArtifactManager
-	ARef              *insolar.RecordRef
+	ARef              *insolar.Reference
 	Data              []byte
-	State             *insolar.RecordID
-	PrototypeRef      *insolar.RecordRef
-	Delegates         map[insolar.RecordRef]insolar.RecordRef
-	ChildrenContainer []insolar.RecordRef
+	State             *insolar.ID
+	PrototypeRef      *insolar.Reference
+	Delegates         map[insolar.Reference]insolar.Reference
+	ChildrenContainer []insolar.Reference
 }
 
 func (t *TestObjectDescriptor) HasPendingRequests() bool {
@@ -94,22 +94,22 @@ func (t *TestObjectDescriptor) HasPendingRequests() bool {
 }
 
 // Parent implementation for tests
-func (t *TestObjectDescriptor) Parent() *insolar.RecordRef {
+func (t *TestObjectDescriptor) Parent() *insolar.Reference {
 	panic("implement me")
 }
 
 // ChildPointer implementation for tests
-func (t *TestObjectDescriptor) ChildPointer() *insolar.RecordID {
+func (t *TestObjectDescriptor) ChildPointer() *insolar.ID {
 	panic("not implemented")
 }
 
 // HeadRef implementation for tests
-func (t *TestObjectDescriptor) HeadRef() *insolar.RecordRef {
+func (t *TestObjectDescriptor) HeadRef() *insolar.Reference {
 	return t.ARef
 }
 
 // StateID implementation for tests
-func (t *TestObjectDescriptor) StateID() *insolar.RecordID {
+func (t *TestObjectDescriptor) StateID() *insolar.ID {
 	return t.State
 }
 
@@ -129,7 +129,7 @@ func (t *TestObjectDescriptor) IsPrototype() bool {
 }
 
 // Prototype implementation for tests
-func (t *TestObjectDescriptor) Prototype() (*insolar.RecordRef, error) {
+func (t *TestObjectDescriptor) Prototype() (*insolar.Reference, error) {
 	if t.PrototypeRef == nil {
 		panic("No prototype")
 	}
@@ -137,7 +137,7 @@ func (t *TestObjectDescriptor) Prototype() (*insolar.RecordRef, error) {
 }
 
 // Code implementation for tests
-func (t *TestObjectDescriptor) Code() (*insolar.RecordRef, error) {
+func (t *TestObjectDescriptor) Code() (*insolar.Reference, error) {
 	if t.PrototypeRef == nil {
 		panic("No code")
 	}
@@ -147,16 +147,16 @@ func (t *TestObjectDescriptor) Code() (*insolar.RecordRef, error) {
 // TestArtifactManager implementation for tests
 type TestArtifactManager struct {
 	Types      []insolar.MachineType
-	Codes      map[insolar.RecordRef]*TestCodeDescriptor
-	Objects    map[insolar.RecordRef]*TestObjectDescriptor
-	Prototypes map[insolar.RecordRef]*TestObjectDescriptor
+	Codes      map[insolar.Reference]*TestCodeDescriptor
+	Objects    map[insolar.Reference]*TestObjectDescriptor
+	Prototypes map[insolar.Reference]*TestObjectDescriptor
 }
 
-func (t *TestArtifactManager) GetPendingRequest(ctx context.Context, objectID insolar.RecordID) (insolar.Parcel, error) {
+func (t *TestArtifactManager) GetPendingRequest(ctx context.Context, objectID insolar.ID) (insolar.Parcel, error) {
 	panic("implement me")
 }
 
-func (t *TestArtifactManager) HasPendingRequests(ctx context.Context, object insolar.RecordRef) (bool, error) {
+func (t *TestArtifactManager) HasPendingRequests(ctx context.Context, object insolar.Reference) (bool, error) {
 	panic("implement me")
 }
 
@@ -166,37 +166,37 @@ func (t *TestArtifactManager) State() ([]byte, error) {
 }
 
 // GetChildren implementation for tests
-func (t *TestArtifactManager) GetChildren(ctx context.Context, parent insolar.RecordRef, pulse *insolar.PulseNumber) (insolar.RefIterator, error) {
+func (t *TestArtifactManager) GetChildren(ctx context.Context, parent insolar.Reference, pulse *insolar.PulseNumber) (insolar.RefIterator, error) {
 	panic("implement me")
 }
 
 // NewTestArtifactManager implementation for tests
 func NewTestArtifactManager() *TestArtifactManager {
 	return &TestArtifactManager{
-		Codes:      make(map[insolar.RecordRef]*TestCodeDescriptor),
-		Objects:    make(map[insolar.RecordRef]*TestObjectDescriptor),
-		Prototypes: make(map[insolar.RecordRef]*TestObjectDescriptor),
+		Codes:      make(map[insolar.Reference]*TestCodeDescriptor),
+		Objects:    make(map[insolar.Reference]*TestObjectDescriptor),
+		Prototypes: make(map[insolar.Reference]*TestObjectDescriptor),
 	}
 }
 
 // GenesisRef implementation for tests
-func (t *TestArtifactManager) GenesisRef() *insolar.RecordRef { return &insolar.RecordRef{} }
+func (t *TestArtifactManager) GenesisRef() *insolar.Reference { return &insolar.Reference{} }
 
 // RegisterRequest implementation for tests
-func (t *TestArtifactManager) RegisterRequest(ctx context.Context, obj insolar.RecordRef, parcel insolar.Parcel) (*insolar.RecordID, error) {
+func (t *TestArtifactManager) RegisterRequest(ctx context.Context, obj insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error) {
 	nonce := testutils.RandomID()
 	return &nonce, nil
 }
 
 // RegisterResult saves VM method call result.
 func (t *TestArtifactManager) RegisterResult(
-	ctx context.Context, object, request insolar.RecordRef, payload []byte,
-) (*insolar.RecordID, error) {
+	ctx context.Context, object, request insolar.Reference, payload []byte,
+) (*insolar.ID, error) {
 	panic("implement me")
 }
 
 // GetObject implementation for tests
-func (t *TestArtifactManager) GetObject(ctx context.Context, object insolar.RecordRef, state *insolar.RecordID, approved bool) (insolar.ObjectDescriptor, error) {
+func (t *TestArtifactManager) GetObject(ctx context.Context, object insolar.Reference, state *insolar.ID, approved bool) (insolar.ObjectDescriptor, error) {
 	res, ok := t.Objects[object]
 	if !ok {
 		return nil, errors.New("No object")
@@ -205,7 +205,7 @@ func (t *TestArtifactManager) GetObject(ctx context.Context, object insolar.Reco
 }
 
 // GetDelegate implementation for tests
-func (t *TestArtifactManager) GetDelegate(ctx context.Context, head, asClass insolar.RecordRef) (*insolar.RecordRef, error) {
+func (t *TestArtifactManager) GetDelegate(ctx context.Context, head, asClass insolar.Reference) (*insolar.Reference, error) {
 	obj, ok := t.Objects[head]
 	if !ok {
 		return nil, errors.New("No object")
@@ -220,12 +220,12 @@ func (t *TestArtifactManager) GetDelegate(ctx context.Context, head, asClass ins
 }
 
 // DeclareType implementation for tests
-func (t *TestArtifactManager) DeclareType(ctx context.Context, domain insolar.RecordRef, request insolar.RecordRef, typeDec []byte) (*insolar.RecordID, error) {
+func (t *TestArtifactManager) DeclareType(ctx context.Context, domain insolar.Reference, request insolar.Reference, typeDec []byte) (*insolar.ID, error) {
 	panic("not implemented")
 }
 
 // DeployCode implementation for tests
-func (t *TestArtifactManager) DeployCode(ctx context.Context, domain insolar.RecordRef, request insolar.RecordRef, code []byte, mt insolar.MachineType) (*insolar.RecordID, error) {
+func (t *TestArtifactManager) DeployCode(ctx context.Context, domain insolar.Reference, request insolar.Reference, code []byte, mt insolar.MachineType) (*insolar.ID, error) {
 	ref := testutils.RandomRef()
 
 	t.Codes[ref] = &TestCodeDescriptor{
@@ -238,7 +238,7 @@ func (t *TestArtifactManager) DeployCode(ctx context.Context, domain insolar.Rec
 }
 
 // GetCode implementation for tests
-func (t *TestArtifactManager) GetCode(ctx context.Context, code insolar.RecordRef) (insolar.CodeDescriptor, error) {
+func (t *TestArtifactManager) GetCode(ctx context.Context, code insolar.Reference) (insolar.CodeDescriptor, error) {
 	res, ok := t.Codes[code]
 	if !ok {
 		return nil, errors.New("No code")
@@ -249,7 +249,7 @@ func (t *TestArtifactManager) GetCode(ctx context.Context, code insolar.RecordRe
 // ActivatePrototype implementation for tests
 func (t *TestArtifactManager) ActivatePrototype(
 	ctx context.Context,
-	domain, request, parent, code insolar.RecordRef,
+	domain, request, parent, code insolar.Reference,
 	memory []byte,
 ) (insolar.ObjectDescriptor, error) {
 	id := testutils.RandomID()
@@ -260,7 +260,7 @@ func (t *TestArtifactManager) ActivatePrototype(
 		Data:         memory,
 		State:        &id,
 		PrototypeRef: &code,
-		Delegates:    make(map[insolar.RecordRef]insolar.RecordRef),
+		Delegates:    make(map[insolar.Reference]insolar.Reference),
 	}
 
 	return t.Objects[request], nil
@@ -269,7 +269,7 @@ func (t *TestArtifactManager) ActivatePrototype(
 // ActivateObject implementation for tests
 func (t *TestArtifactManager) ActivateObject(
 	ctx context.Context,
-	domain, request, parent, prototype insolar.RecordRef,
+	domain, request, parent, prototype insolar.Reference,
 	asDelegate bool,
 	memory []byte,
 ) (insolar.ObjectDescriptor, error) {
@@ -281,7 +281,7 @@ func (t *TestArtifactManager) ActivateObject(
 		Data:         memory,
 		State:        &id,
 		PrototypeRef: &prototype,
-		Delegates:    make(map[insolar.RecordRef]insolar.RecordRef),
+		Delegates:    make(map[insolar.Reference]insolar.Reference),
 	}
 	if asDelegate {
 		pObj, ok := t.Objects[parent]
@@ -298,19 +298,19 @@ func (t *TestArtifactManager) ActivateObject(
 // DeactivateObject implementation for tests
 func (t *TestArtifactManager) DeactivateObject(
 	ctx context.Context,
-	domain insolar.RecordRef, request insolar.RecordRef, obj insolar.ObjectDescriptor,
-) (*insolar.RecordID, error) {
+	domain insolar.Reference, request insolar.Reference, obj insolar.ObjectDescriptor,
+) (*insolar.ID, error) {
 	panic("not implemented")
 }
 
 // UpdatePrototype implementation for tests
 func (t *TestArtifactManager) UpdatePrototype(
 	ctx context.Context,
-	domain insolar.RecordRef,
-	request insolar.RecordRef,
+	domain insolar.Reference,
+	request insolar.Reference,
 	object insolar.ObjectDescriptor,
 	memory []byte,
-	code *insolar.RecordRef,
+	code *insolar.Reference,
 ) (insolar.ObjectDescriptor, error) {
 	objDesc, ok := t.Prototypes[*object.HeadRef()]
 	if !ok {
@@ -326,8 +326,8 @@ func (t *TestArtifactManager) UpdatePrototype(
 // UpdateObject implementation for tests
 func (t *TestArtifactManager) UpdateObject(
 	ctx context.Context,
-	domain insolar.RecordRef,
-	request insolar.RecordRef,
+	domain insolar.Reference,
+	request insolar.Reference,
 	object insolar.ObjectDescriptor,
 	memory []byte,
 ) (insolar.ObjectDescriptor, error) {
@@ -345,8 +345,8 @@ func (t *TestArtifactManager) UpdateObject(
 // RegisterValidation implementation for tests
 func (t *TestArtifactManager) RegisterValidation(
 	ctx context.Context,
-	object insolar.RecordRef,
-	state insolar.RecordID,
+	object insolar.Reference,
+	state insolar.ID,
 	isValid bool,
 	validationMessages []insolar.Message,
 ) error {
@@ -379,14 +379,14 @@ func CBORUnMarshalToSlice(t testing.TB, in []byte) []interface{} {
 func AMPublishCode(
 	t testing.TB,
 	am insolar.ArtifactManager,
-	domain insolar.RecordRef,
-	request insolar.RecordRef,
+	domain insolar.Reference,
+	request insolar.Reference,
 	mtype insolar.MachineType,
 	code []byte,
 ) (
-	typeRef *insolar.RecordRef,
-	codeRef *insolar.RecordRef,
-	protoRef *insolar.RecordRef,
+	typeRef *insolar.Reference,
+	codeRef *insolar.Reference,
+	protoRef *insolar.Reference,
 	err error,
 ) {
 	ctx := context.TODO()
@@ -394,13 +394,13 @@ func AMPublishCode(
 		ctx, domain, request, code, mtype,
 	)
 	assert.NoError(t, err, "create code on ledger")
-	codeRef = &insolar.RecordRef{}
+	codeRef = &insolar.Reference{}
 	codeRef.SetRecord(*codeID)
 
 	nonce := testutils.RandomRef()
 	protoID, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}})
 	assert.NoError(t, err)
-	protoRef = &insolar.RecordRef{}
+	protoRef = &insolar.Reference{}
 	protoRef.SetRecord(*protoID)
 	_, err = am.ActivatePrototype(ctx, domain, *protoRef, *am.GenesisRef(), *codeRef, nil)
 	assert.NoError(t, err, "create template for contract data")
@@ -414,8 +414,8 @@ type ContractsBuilder struct {
 
 	ArtifactManager insolar.ArtifactManager
 	IccPath         string
-	Prototypes      map[string]*insolar.RecordRef
-	Codes           map[string]*insolar.RecordRef
+	Prototypes      map[string]*insolar.Reference
+	Codes           map[string]*insolar.Reference
 }
 
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
@@ -428,8 +428,8 @@ func NewContractBuilder(am insolar.ArtifactManager, icc string) *ContractsBuilde
 
 	cb := &ContractsBuilder{
 		root:            tmpDir,
-		Prototypes:      make(map[string]*insolar.RecordRef),
-		Codes:           make(map[string]*insolar.RecordRef),
+		Prototypes:      make(map[string]*insolar.Reference),
+		Codes:           make(map[string]*insolar.Reference),
 		ArtifactManager: am,
 		IccPath:         icc}
 	return cb
@@ -457,7 +457,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
 		}
 
-		protoRef := insolar.RecordRef{}
+		protoRef := insolar.Reference{}
 		protoRef.SetRecord(*protoID)
 		log.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
 		cb.Prototypes[name] = &protoRef
@@ -503,10 +503,10 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		log.Debugf("Deploying code for contract %q", name)
 		codeID, err := cb.ArtifactManager.DeployCode(
 			ctx,
-			insolar.RecordRef{}, *insolar.NewRecordRef(insolar.RecordID{}, *codeReq),
+			insolar.Reference{}, *insolar.NewReference(insolar.ID{}, *codeReq),
 			pluginBinary, insolar.MachineTypeGoPlugin,
 		)
-		codeRef := &insolar.RecordRef{}
+		codeRef := &insolar.Reference{}
 		codeRef.SetRecord(*codeID)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't SetRecord")
@@ -517,7 +517,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		// FIXME: It's a temporary fix and should not be here. Ii will NOT work properly on production. Remove it ASAP!
 		_, err = cb.ArtifactManager.ActivatePrototype(
 			ctx,
-			insolar.RecordRef{},
+			insolar.Reference{},
 			*cb.Prototypes[name],
 			*cb.ArtifactManager.GenesisRef(), // FIXME: Only bootstrap can do this!
 			*codeRef,

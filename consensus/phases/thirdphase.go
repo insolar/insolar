@@ -165,7 +165,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, sta
 	}, nil
 }
 
-func (tp *ThirdPhaseImpl) checkPacketSignature(packet *packets.Phase3Packet, recordRef insolar.RecordRef, unsyncList network.UnsyncList) error {
+func (tp *ThirdPhaseImpl) checkPacketSignature(packet *packets.Phase3Packet, recordRef insolar.Reference, unsyncList network.UnsyncList) error {
 	activeNode := unsyncList.GetActiveNode(recordRef)
 	if activeNode == nil {
 		return errors.New("failed to get active node")

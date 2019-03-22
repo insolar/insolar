@@ -51,9 +51,9 @@ type DBContext interface {
 
 	IterateRecordsOnPulse(
 		ctx context.Context,
-		jetID insolar.RecordID,
+		jetID insolar.ID,
 		pulse insolar.PulseNumber,
-		handler func(id insolar.RecordID, rec object.Record) error,
+		handler func(id insolar.ID, rec object.Record) error,
 	) error
 
 	StoreKeyValues(ctx context.Context, kvs []insolar.KV) error
@@ -232,15 +232,15 @@ func (db *DB) GetBadgerDB() *badger.DB {
 // IterateRecordsOnPulse iterates over records on provided Jet ID and Pulse.
 func (db *DB) IterateRecordsOnPulse(
 	ctx context.Context,
-	jetID insolar.RecordID,
+	jetID insolar.ID,
 	pulse insolar.PulseNumber,
-	handler func(id insolar.RecordID, rec object.Record) error,
+	handler func(id insolar.ID, rec object.Record) error,
 ) error {
 	jetPrefix := insolar.JetID(jetID).Prefix()
 	prefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
-		id := insolar.NewRecordID(pulse, k)
+		id := insolar.NewID(pulse, k)
 		rec := object.DeserializeRecord(v)
 		err := handler(*id, rec)
 		if err != nil {

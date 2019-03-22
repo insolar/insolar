@@ -20,12 +20,12 @@ import (
 type ProviderMock struct {
 	t minimock.Tester
 
-	CloneIndexStorageFunc       func(p context.Context, p1 insolar.RecordID, p2 insolar.RecordID)
+	CloneIndexStorageFunc       func(p context.Context, p1 insolar.ID, p2 insolar.ID)
 	CloneIndexStorageCounter    uint64
 	CloneIndexStoragePreCounter uint64
 	CloneIndexStorageMock       mProviderMockCloneIndexStorage
 
-	ClonePendingStorageFunc       func(p context.Context, p1 insolar.RecordID, p2 insolar.RecordID)
+	ClonePendingStorageFunc       func(p context.Context, p1 insolar.ID, p2 insolar.ID)
 	ClonePendingStorageCounter    uint64
 	ClonePendingStoragePreCounter uint64
 	ClonePendingStorageMock       mProviderMockClonePendingStorage
@@ -35,22 +35,22 @@ type ProviderMock struct {
 	CountPreCounter uint64
 	CountMock       mProviderMockCount
 
-	DecreaseIndexesTTLFunc       func(p context.Context) (r map[insolar.RecordID][]insolar.RecordID)
+	DecreaseIndexesTTLFunc       func(p context.Context) (r map[insolar.ID][]insolar.ID)
 	DecreaseIndexesTTLCounter    uint64
 	DecreaseIndexesTTLPreCounter uint64
 	DecreaseIndexesTTLMock       mProviderMockDecreaseIndexesTTL
 
-	GetIndexStorageFunc       func(p context.Context, p1 insolar.RecordID) (r RecentIndexStorage)
+	GetIndexStorageFunc       func(p context.Context, p1 insolar.ID) (r RecentIndexStorage)
 	GetIndexStorageCounter    uint64
 	GetIndexStoragePreCounter uint64
 	GetIndexStorageMock       mProviderMockGetIndexStorage
 
-	GetPendingStorageFunc       func(p context.Context, p1 insolar.RecordID) (r PendingStorage)
+	GetPendingStorageFunc       func(p context.Context, p1 insolar.ID) (r PendingStorage)
 	GetPendingStorageCounter    uint64
 	GetPendingStoragePreCounter uint64
 	GetPendingStorageMock       mProviderMockGetPendingStorage
 
-	RemovePendingStorageFunc       func(p context.Context, p1 insolar.RecordID)
+	RemovePendingStorageFunc       func(p context.Context, p1 insolar.ID)
 	RemovePendingStorageCounter    uint64
 	RemovePendingStoragePreCounter uint64
 	RemovePendingStorageMock       mProviderMockRemovePendingStorage
@@ -87,12 +87,12 @@ type ProviderMockCloneIndexStorageExpectation struct {
 
 type ProviderMockCloneIndexStorageInput struct {
 	p  context.Context
-	p1 insolar.RecordID
-	p2 insolar.RecordID
+	p1 insolar.ID
+	p2 insolar.ID
 }
 
 //Expect specifies that invocation of Provider.CloneIndexStorage is expected from 1 to Infinity times
-func (m *mProviderMockCloneIndexStorage) Expect(p context.Context, p1 insolar.RecordID, p2 insolar.RecordID) *mProviderMockCloneIndexStorage {
+func (m *mProviderMockCloneIndexStorage) Expect(p context.Context, p1 insolar.ID, p2 insolar.ID) *mProviderMockCloneIndexStorage {
 	m.mock.CloneIndexStorageFunc = nil
 	m.expectationSeries = nil
 
@@ -116,7 +116,7 @@ func (m *mProviderMockCloneIndexStorage) Return() *ProviderMock {
 }
 
 //ExpectOnce specifies that invocation of Provider.CloneIndexStorage is expected once
-func (m *mProviderMockCloneIndexStorage) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 insolar.RecordID) *ProviderMockCloneIndexStorageExpectation {
+func (m *mProviderMockCloneIndexStorage) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.ID) *ProviderMockCloneIndexStorageExpectation {
 	m.mock.CloneIndexStorageFunc = nil
 	m.mainExpectation = nil
 
@@ -127,7 +127,7 @@ func (m *mProviderMockCloneIndexStorage) ExpectOnce(p context.Context, p1 insola
 }
 
 //Set uses given function f as a mock of Provider.CloneIndexStorage method
-func (m *mProviderMockCloneIndexStorage) Set(f func(p context.Context, p1 insolar.RecordID, p2 insolar.RecordID)) *ProviderMock {
+func (m *mProviderMockCloneIndexStorage) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.ID)) *ProviderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -136,7 +136,7 @@ func (m *mProviderMockCloneIndexStorage) Set(f func(p context.Context, p1 insola
 }
 
 //CloneIndexStorage implements github.com/insolar/insolar/ledger/recentstorage.Provider interface
-func (m *ProviderMock) CloneIndexStorage(p context.Context, p1 insolar.RecordID, p2 insolar.RecordID) {
+func (m *ProviderMock) CloneIndexStorage(p context.Context, p1 insolar.ID, p2 insolar.ID) {
 	counter := atomic.AddUint64(&m.CloneIndexStoragePreCounter, 1)
 	defer atomic.AddUint64(&m.CloneIndexStorageCounter, 1)
 
@@ -212,12 +212,12 @@ type ProviderMockClonePendingStorageExpectation struct {
 
 type ProviderMockClonePendingStorageInput struct {
 	p  context.Context
-	p1 insolar.RecordID
-	p2 insolar.RecordID
+	p1 insolar.ID
+	p2 insolar.ID
 }
 
 //Expect specifies that invocation of Provider.ClonePendingStorage is expected from 1 to Infinity times
-func (m *mProviderMockClonePendingStorage) Expect(p context.Context, p1 insolar.RecordID, p2 insolar.RecordID) *mProviderMockClonePendingStorage {
+func (m *mProviderMockClonePendingStorage) Expect(p context.Context, p1 insolar.ID, p2 insolar.ID) *mProviderMockClonePendingStorage {
 	m.mock.ClonePendingStorageFunc = nil
 	m.expectationSeries = nil
 
@@ -241,7 +241,7 @@ func (m *mProviderMockClonePendingStorage) Return() *ProviderMock {
 }
 
 //ExpectOnce specifies that invocation of Provider.ClonePendingStorage is expected once
-func (m *mProviderMockClonePendingStorage) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 insolar.RecordID) *ProviderMockClonePendingStorageExpectation {
+func (m *mProviderMockClonePendingStorage) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.ID) *ProviderMockClonePendingStorageExpectation {
 	m.mock.ClonePendingStorageFunc = nil
 	m.mainExpectation = nil
 
@@ -252,7 +252,7 @@ func (m *mProviderMockClonePendingStorage) ExpectOnce(p context.Context, p1 inso
 }
 
 //Set uses given function f as a mock of Provider.ClonePendingStorage method
-func (m *mProviderMockClonePendingStorage) Set(f func(p context.Context, p1 insolar.RecordID, p2 insolar.RecordID)) *ProviderMock {
+func (m *mProviderMockClonePendingStorage) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.ID)) *ProviderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -261,7 +261,7 @@ func (m *mProviderMockClonePendingStorage) Set(f func(p context.Context, p1 inso
 }
 
 //ClonePendingStorage implements github.com/insolar/insolar/ledger/recentstorage.Provider interface
-func (m *ProviderMock) ClonePendingStorage(p context.Context, p1 insolar.RecordID, p2 insolar.RecordID) {
+func (m *ProviderMock) ClonePendingStorage(p context.Context, p1 insolar.ID, p2 insolar.ID) {
 	counter := atomic.AddUint64(&m.ClonePendingStoragePreCounter, 1)
 	defer atomic.AddUint64(&m.ClonePendingStorageCounter, 1)
 
@@ -475,7 +475,7 @@ type ProviderMockDecreaseIndexesTTLInput struct {
 }
 
 type ProviderMockDecreaseIndexesTTLResult struct {
-	r map[insolar.RecordID][]insolar.RecordID
+	r map[insolar.ID][]insolar.ID
 }
 
 //Expect specifies that invocation of Provider.DecreaseIndexesTTL is expected from 1 to Infinity times
@@ -491,7 +491,7 @@ func (m *mProviderMockDecreaseIndexesTTL) Expect(p context.Context) *mProviderMo
 }
 
 //Return specifies results of invocation of Provider.DecreaseIndexesTTL
-func (m *mProviderMockDecreaseIndexesTTL) Return(r map[insolar.RecordID][]insolar.RecordID) *ProviderMock {
+func (m *mProviderMockDecreaseIndexesTTL) Return(r map[insolar.ID][]insolar.ID) *ProviderMock {
 	m.mock.DecreaseIndexesTTLFunc = nil
 	m.expectationSeries = nil
 
@@ -513,12 +513,12 @@ func (m *mProviderMockDecreaseIndexesTTL) ExpectOnce(p context.Context) *Provide
 	return expectation
 }
 
-func (e *ProviderMockDecreaseIndexesTTLExpectation) Return(r map[insolar.RecordID][]insolar.RecordID) {
+func (e *ProviderMockDecreaseIndexesTTLExpectation) Return(r map[insolar.ID][]insolar.ID) {
 	e.result = &ProviderMockDecreaseIndexesTTLResult{r}
 }
 
 //Set uses given function f as a mock of Provider.DecreaseIndexesTTL method
-func (m *mProviderMockDecreaseIndexesTTL) Set(f func(p context.Context) (r map[insolar.RecordID][]insolar.RecordID)) *ProviderMock {
+func (m *mProviderMockDecreaseIndexesTTL) Set(f func(p context.Context) (r map[insolar.ID][]insolar.ID)) *ProviderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -527,7 +527,7 @@ func (m *mProviderMockDecreaseIndexesTTL) Set(f func(p context.Context) (r map[i
 }
 
 //DecreaseIndexesTTL implements github.com/insolar/insolar/ledger/recentstorage.Provider interface
-func (m *ProviderMock) DecreaseIndexesTTL(p context.Context) (r map[insolar.RecordID][]insolar.RecordID) {
+func (m *ProviderMock) DecreaseIndexesTTL(p context.Context) (r map[insolar.ID][]insolar.ID) {
 	counter := atomic.AddUint64(&m.DecreaseIndexesTTLPreCounter, 1)
 	defer atomic.AddUint64(&m.DecreaseIndexesTTLCounter, 1)
 
@@ -619,7 +619,7 @@ type ProviderMockGetIndexStorageExpectation struct {
 
 type ProviderMockGetIndexStorageInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 }
 
 type ProviderMockGetIndexStorageResult struct {
@@ -627,7 +627,7 @@ type ProviderMockGetIndexStorageResult struct {
 }
 
 //Expect specifies that invocation of Provider.GetIndexStorage is expected from 1 to Infinity times
-func (m *mProviderMockGetIndexStorage) Expect(p context.Context, p1 insolar.RecordID) *mProviderMockGetIndexStorage {
+func (m *mProviderMockGetIndexStorage) Expect(p context.Context, p1 insolar.ID) *mProviderMockGetIndexStorage {
 	m.mock.GetIndexStorageFunc = nil
 	m.expectationSeries = nil
 
@@ -651,7 +651,7 @@ func (m *mProviderMockGetIndexStorage) Return(r RecentIndexStorage) *ProviderMoc
 }
 
 //ExpectOnce specifies that invocation of Provider.GetIndexStorage is expected once
-func (m *mProviderMockGetIndexStorage) ExpectOnce(p context.Context, p1 insolar.RecordID) *ProviderMockGetIndexStorageExpectation {
+func (m *mProviderMockGetIndexStorage) ExpectOnce(p context.Context, p1 insolar.ID) *ProviderMockGetIndexStorageExpectation {
 	m.mock.GetIndexStorageFunc = nil
 	m.mainExpectation = nil
 
@@ -666,7 +666,7 @@ func (e *ProviderMockGetIndexStorageExpectation) Return(r RecentIndexStorage) {
 }
 
 //Set uses given function f as a mock of Provider.GetIndexStorage method
-func (m *mProviderMockGetIndexStorage) Set(f func(p context.Context, p1 insolar.RecordID) (r RecentIndexStorage)) *ProviderMock {
+func (m *mProviderMockGetIndexStorage) Set(f func(p context.Context, p1 insolar.ID) (r RecentIndexStorage)) *ProviderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -675,7 +675,7 @@ func (m *mProviderMockGetIndexStorage) Set(f func(p context.Context, p1 insolar.
 }
 
 //GetIndexStorage implements github.com/insolar/insolar/ledger/recentstorage.Provider interface
-func (m *ProviderMock) GetIndexStorage(p context.Context, p1 insolar.RecordID) (r RecentIndexStorage) {
+func (m *ProviderMock) GetIndexStorage(p context.Context, p1 insolar.ID) (r RecentIndexStorage) {
 	counter := atomic.AddUint64(&m.GetIndexStoragePreCounter, 1)
 	defer atomic.AddUint64(&m.GetIndexStorageCounter, 1)
 
@@ -767,7 +767,7 @@ type ProviderMockGetPendingStorageExpectation struct {
 
 type ProviderMockGetPendingStorageInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 }
 
 type ProviderMockGetPendingStorageResult struct {
@@ -775,7 +775,7 @@ type ProviderMockGetPendingStorageResult struct {
 }
 
 //Expect specifies that invocation of Provider.GetPendingStorage is expected from 1 to Infinity times
-func (m *mProviderMockGetPendingStorage) Expect(p context.Context, p1 insolar.RecordID) *mProviderMockGetPendingStorage {
+func (m *mProviderMockGetPendingStorage) Expect(p context.Context, p1 insolar.ID) *mProviderMockGetPendingStorage {
 	m.mock.GetPendingStorageFunc = nil
 	m.expectationSeries = nil
 
@@ -799,7 +799,7 @@ func (m *mProviderMockGetPendingStorage) Return(r PendingStorage) *ProviderMock 
 }
 
 //ExpectOnce specifies that invocation of Provider.GetPendingStorage is expected once
-func (m *mProviderMockGetPendingStorage) ExpectOnce(p context.Context, p1 insolar.RecordID) *ProviderMockGetPendingStorageExpectation {
+func (m *mProviderMockGetPendingStorage) ExpectOnce(p context.Context, p1 insolar.ID) *ProviderMockGetPendingStorageExpectation {
 	m.mock.GetPendingStorageFunc = nil
 	m.mainExpectation = nil
 
@@ -814,7 +814,7 @@ func (e *ProviderMockGetPendingStorageExpectation) Return(r PendingStorage) {
 }
 
 //Set uses given function f as a mock of Provider.GetPendingStorage method
-func (m *mProviderMockGetPendingStorage) Set(f func(p context.Context, p1 insolar.RecordID) (r PendingStorage)) *ProviderMock {
+func (m *mProviderMockGetPendingStorage) Set(f func(p context.Context, p1 insolar.ID) (r PendingStorage)) *ProviderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -823,7 +823,7 @@ func (m *mProviderMockGetPendingStorage) Set(f func(p context.Context, p1 insola
 }
 
 //GetPendingStorage implements github.com/insolar/insolar/ledger/recentstorage.Provider interface
-func (m *ProviderMock) GetPendingStorage(p context.Context, p1 insolar.RecordID) (r PendingStorage) {
+func (m *ProviderMock) GetPendingStorage(p context.Context, p1 insolar.ID) (r PendingStorage) {
 	counter := atomic.AddUint64(&m.GetPendingStoragePreCounter, 1)
 	defer atomic.AddUint64(&m.GetPendingStorageCounter, 1)
 
@@ -914,11 +914,11 @@ type ProviderMockRemovePendingStorageExpectation struct {
 
 type ProviderMockRemovePendingStorageInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 }
 
 //Expect specifies that invocation of Provider.RemovePendingStorage is expected from 1 to Infinity times
-func (m *mProviderMockRemovePendingStorage) Expect(p context.Context, p1 insolar.RecordID) *mProviderMockRemovePendingStorage {
+func (m *mProviderMockRemovePendingStorage) Expect(p context.Context, p1 insolar.ID) *mProviderMockRemovePendingStorage {
 	m.mock.RemovePendingStorageFunc = nil
 	m.expectationSeries = nil
 
@@ -942,7 +942,7 @@ func (m *mProviderMockRemovePendingStorage) Return() *ProviderMock {
 }
 
 //ExpectOnce specifies that invocation of Provider.RemovePendingStorage is expected once
-func (m *mProviderMockRemovePendingStorage) ExpectOnce(p context.Context, p1 insolar.RecordID) *ProviderMockRemovePendingStorageExpectation {
+func (m *mProviderMockRemovePendingStorage) ExpectOnce(p context.Context, p1 insolar.ID) *ProviderMockRemovePendingStorageExpectation {
 	m.mock.RemovePendingStorageFunc = nil
 	m.mainExpectation = nil
 
@@ -953,7 +953,7 @@ func (m *mProviderMockRemovePendingStorage) ExpectOnce(p context.Context, p1 ins
 }
 
 //Set uses given function f as a mock of Provider.RemovePendingStorage method
-func (m *mProviderMockRemovePendingStorage) Set(f func(p context.Context, p1 insolar.RecordID)) *ProviderMock {
+func (m *mProviderMockRemovePendingStorage) Set(f func(p context.Context, p1 insolar.ID)) *ProviderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -962,7 +962,7 @@ func (m *mProviderMockRemovePendingStorage) Set(f func(p context.Context, p1 ins
 }
 
 //RemovePendingStorage implements github.com/insolar/insolar/ledger/recentstorage.Provider interface
-func (m *ProviderMock) RemovePendingStorage(p context.Context, p1 insolar.RecordID) {
+func (m *ProviderMock) RemovePendingStorage(p context.Context, p1 insolar.ID) {
 	counter := atomic.AddUint64(&m.RemovePendingStoragePreCounter, 1)
 	defer atomic.AddUint64(&m.RemovePendingStorageCounter, 1)
 

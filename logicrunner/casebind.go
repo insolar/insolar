@@ -32,7 +32,7 @@ import (
 
 type CaseRequest struct {
 	Parcel     insolar.Parcel
-	Request    insolar.RecordRef
+	Request    insolar.Reference
 	MessageBus insolar.MessageBus
 	Reply      insolar.Reply
 	Error      string
@@ -253,7 +253,7 @@ func (lr *LogicRunner) HandleExecutorResultsMessage(ctx context.Context, inmsg i
 	}
 
 	// validation things
-	// c := lr.GetConsensus(ctx, msg.RecordRef)
+	// c := lr.GetConsensus(ctx, msg.Reference)
 	// c.AddExecutor(ctx, inmsg, msg)
 
 	return &reply.OK{}, nil

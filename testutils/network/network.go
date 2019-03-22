@@ -23,7 +23,7 @@ import (
 type testNetwork struct {
 }
 
-func (n *testNetwork) SendMessage(nodeID insolar.RecordRef, method string, msg insolar.Parcel) ([]byte, error) {
+func (n *testNetwork) SendMessage(nodeID insolar.Reference, method string, msg insolar.Parcel) ([]byte, error) {
 	return make([]byte, 0), nil
 }
 func (n *testNetwork) SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error {

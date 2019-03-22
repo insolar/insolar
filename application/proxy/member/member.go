@@ -24,13 +24,13 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewRefFromBase58("11112iUv3DtroK1K7h9ecs6LYqKKdPUeRy4zmpPWwAf.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("111145AjNzRRnnH8VizADQ2AW6o7inysgAx6FqCpFn.11111111111111111111111111111111")
 
 // Member holds proxy type
 type Member struct {
-	Reference insolar.RecordRef
-	Prototype insolar.RecordRef
-	Code      insolar.RecordRef
+	Reference insolar.Reference
+	Prototype insolar.Reference
+	Code      insolar.Reference
 }
 
 // ContractConstructorHolder holds logic with object construction
@@ -40,7 +40,7 @@ type ContractConstructorHolder struct {
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef insolar.RecordRef) (*Member, error) {
+func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*Member, error) {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (r *ContractConstructorHolder) AsChild(objRef insolar.RecordRef) (*Member, 
 }
 
 // AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef insolar.RecordRef) (*Member, error) {
+func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*Member, error) {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
@@ -58,17 +58,17 @@ func (r *ContractConstructorHolder) AsDelegate(objRef insolar.RecordRef) (*Membe
 }
 
 // GetObject returns proxy object
-func GetObject(ref insolar.RecordRef) (r *Member) {
+func GetObject(ref insolar.Reference) (r *Member) {
 	return &Member{Reference: ref}
 }
 
 // GetPrototype returns reference to the prototype
-func GetPrototype() insolar.RecordRef {
+func GetPrototype() insolar.Reference {
 	return *PrototypeReference
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object insolar.RecordRef) (*Member, error) {
+func GetImplementationFrom(object insolar.Reference) (*Member, error) {
 	ref, err := proxyctx.Current.GetDelegate(object, *PrototypeReference)
 	if err != nil {
 		return nil, err
@@ -92,15 +92,15 @@ func New(name string, key string) *ContractConstructorHolder {
 }
 
 // GetReference returns reference of the object
-func (r *Member) GetReference() insolar.RecordRef {
+func (r *Member) GetReference() insolar.Reference {
 	return r.Reference
 }
 
 // GetPrototype returns reference to the code
-func (r *Member) GetPrototype() (insolar.RecordRef, error) {
+func (r *Member) GetPrototype() (insolar.Reference, error) {
 	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
-		var ret0 insolar.RecordRef
+		var ret0 insolar.Reference
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
@@ -127,10 +127,10 @@ func (r *Member) GetPrototype() (insolar.RecordRef, error) {
 }
 
 // GetCode returns reference to the code
-func (r *Member) GetCode() (insolar.RecordRef, error) {
+func (r *Member) GetCode() (insolar.Reference, error) {
 	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
-		var ret0 insolar.RecordRef
+		var ret0 insolar.Reference
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
@@ -260,7 +260,7 @@ func (r *Member) GetPublicKeyNoWait() error {
 }
 
 // Call is proxy generated method
-func (r *Member) Call(rootDomain insolar.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
+func (r *Member) Call(rootDomain insolar.Reference, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
 	var args [5]interface{}
 	args[0] = rootDomain
 	args[1] = method
@@ -298,7 +298,7 @@ func (r *Member) Call(rootDomain insolar.RecordRef, method string, params []byte
 }
 
 // CallNoWait is proxy generated method
-func (r *Member) CallNoWait(rootDomain insolar.RecordRef, method string, params []byte, seed []byte, sign []byte) error {
+func (r *Member) CallNoWait(rootDomain insolar.Reference, method string, params []byte, seed []byte, sign []byte) error {
 	var args [5]interface{}
 	args[0] = rootDomain
 	args[1] = method

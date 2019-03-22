@@ -88,11 +88,11 @@ type ReferendumClaim interface {
 }
 
 type ClaimSupplementary interface {
-	AddSupplementaryInfo(nodeID insolar.RecordRef)
+	AddSupplementaryInfo(nodeID insolar.Reference)
 }
 
 type SignedClaim interface {
-	GetNodeID() insolar.RecordRef
+	GetNodeID() insolar.Reference
 	GetPublicKey() (crypto.PublicKey, error)
 	SerializeRaw() ([]byte, error)
 	GetSignature() []byte
@@ -176,7 +176,7 @@ type NodeJoinClaim struct {
 	ProtocolVersionAndFlags uint32
 	JoinsAfter              uint32
 	NodeRoleRecID           insolar.StaticRole
-	NodeRef                 insolar.RecordRef
+	NodeRef                 insolar.Reference
 	NodeAddress             NodeAddress
 	NodePK                  [PublicKeyLength]byte
 	Signature               [SignatureLength]byte
@@ -187,7 +187,7 @@ func (njc *NodeJoinClaim) Clone() ReferendumClaim {
 	return &result
 }
 
-func (njc *NodeJoinClaim) GetNodeID() insolar.RecordRef {
+func (njc *NodeJoinClaim) GetNodeID() insolar.Reference {
 	return njc.NodeRef
 }
 
@@ -234,7 +234,7 @@ func (nac *NodeAnnounceClaim) SetCloudHash(cloudHash []byte) {
 // Should be executed with the next pulse. Type 1, len == 0.
 type NodeLeaveClaim struct {
 	// additional field that is not serialized and is set from transport layer on packet receive
-	NodeID insolar.RecordRef
+	NodeID insolar.Reference
 	ETA    insolar.PulseNumber
 }
 
@@ -243,7 +243,7 @@ func (nlc *NodeLeaveClaim) Clone() ReferendumClaim {
 	return &result
 }
 
-func (nlc *NodeLeaveClaim) AddSupplementaryInfo(nodeID insolar.RecordRef) {
+func (nlc *NodeLeaveClaim) AddSupplementaryInfo(nodeID insolar.Reference) {
 	nlc.NodeID = nodeID
 }
 

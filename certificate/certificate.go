@@ -55,8 +55,8 @@ func NewBootstrapNode(pubKey crypto.PublicKey, publicKey, host, noderef string) 
 }
 
 // GetNodeRef returns reference of bootstrap node
-func (bn *BootstrapNode) GetNodeRef() *insolar.RecordRef {
-	ref, err := insolar.NewRefFromBase58(bn.NodeRef)
+func (bn *BootstrapNode) GetNodeRef() *insolar.Reference {
+	ref, err := insolar.NewReferenceFromBase58(bn.NodeRef)
 	if err != nil {
 		log.Errorf("Invalid bootstrap node reference: %s\n", bn.NodeRef)
 		return nil
@@ -119,7 +119,7 @@ func newCertificate(publicKey crypto.PublicKey, keyProcessor insolar.KeyProcesso
 		return nil, errors.Wrap(err, "[ newCertificate ] Incorrect fields")
 	}
 
-	cert.DiscoverySigns = make(map[insolar.RecordRef][]byte)
+	cert.DiscoverySigns = make(map[insolar.Reference][]byte)
 	for _, node := range cert.BootstrapNodes {
 		cert.DiscoverySigns[*(node.GetNodeRef())] = node.NodeSign
 	}
@@ -182,8 +182,8 @@ func (cert *Certificate) fillExtraFields(keyProcessor insolar.KeyProcessor) erro
 }
 
 // GetRootDomainReference returns RootDomain reference
-func (cert *Certificate) GetRootDomainReference() *insolar.RecordRef {
-	ref, err := insolar.NewRefFromBase58(cert.RootDomainReference)
+func (cert *Certificate) GetRootDomainReference() *insolar.Reference {
+	ref, err := insolar.NewReferenceFromBase58(cert.RootDomainReference)
 	if err != nil {
 		log.Errorf("Invalid domain reference in cert: %s\n", cert.Reference)
 		return nil

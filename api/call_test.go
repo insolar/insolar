@@ -116,7 +116,7 @@ func TestTimeoutSuite(t *testing.T) {
 	require.NoError(t, err)
 
 	cert := testutils.NewCertificateMock(t)
-	cert.GetRootDomainReferenceFunc = func() (r *insolar.RecordRef) {
+	cert.GetRootDomainReferenceFunc = func() (r *insolar.Reference) {
 		ref := testutils.RandomRef()
 		return &ref
 	}
@@ -127,7 +127,7 @@ func TestTimeoutSuite(t *testing.T) {
 	}
 
 	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(p context.Context, p1 *insolar.RecordRef, method string, p3 []interface{}) (insolar.Reply, error) {
+	cr.SendRequestFunc = func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}) (insolar.Reply, error) {
 		switch method {
 		case "GetPublicKey":
 			var result = string(pKeyString)

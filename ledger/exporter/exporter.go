@@ -150,7 +150,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse insolar.PulseNumber, si
 
 func (e *Exporter) exportPulse(ctx context.Context, jetID insolar.JetID, pulse *insolar.Pulse) (*pulseData, error) {
 	records := recordsData{}
-	err := e.DB.IterateRecordsOnPulse(ctx, insolar.RecordID(jetID), pulse.PulseNumber, func(id insolar.RecordID, rec object.Record) error {
+	err := e.DB.IterateRecordsOnPulse(ctx, insolar.ID(jetID), pulse.PulseNumber, func(id insolar.ID, rec object.Record) error {
 		pl := e.getPayload(ctx, jetID, rec)
 
 		records[string(base58.Encode(id[:]))] = recordData{
@@ -179,7 +179,7 @@ func (e *Exporter) getPayload(ctx context.Context, jetID insolar.JetID, rec obje
 		if r.GetMemory() == nil {
 			break
 		}
-		blob, err := e.ObjectStorage.GetBlob(ctx, insolar.RecordID(jetID), r.GetMemory())
+		blob, err := e.ObjectStorage.GetBlob(ctx, insolar.ID(jetID), r.GetMemory())
 		if err != nil {
 			inslogger.FromContext(ctx).Errorf("getPayload failed to GetBlob (jet: %s)", jetID.DebugString())
 			return payload{}

@@ -79,31 +79,31 @@ type Communicator interface {
 		originClaim *packets.NodeAnnounceClaim,
 		participants []insolar.NetworkNode,
 		packet *packets.Phase1Packet,
-	) (map[insolar.RecordRef]*packets.Phase1Packet, error)
+	) (map[insolar.Reference]*packets.Phase1Packet, error)
 	// ExchangePhase2 used in second consensus step to exchange data between participants
 	ExchangePhase2(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
-		participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.RecordRef]*packets.Phase2Packet, error)
+		participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.Reference]*packets.Phase2Packet, error)
 	// ExchangePhase21 is used between phases 2 and 3 of consensus to send additional MissingNode requests
 	ExchangePhase21(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
 		packet *packets.Phase2Packet, additionalRequests []*AdditionalRequest) ([]packets.ReferendumVote, error)
 	// ExchangePhase3 used in third consensus step to exchange data between participants
-	ExchangePhase3(ctx context.Context, participants []insolar.NetworkNode, packet *packets.Phase3Packet) (map[insolar.RecordRef]*packets.Phase3Packet, error)
+	ExchangePhase3(ctx context.Context, participants []insolar.NetworkNode, packet *packets.Phase3Packet) (map[insolar.Reference]*packets.Phase3Packet, error)
 
 	component.Initer
 }
 
 type phase1Result struct {
-	id     insolar.RecordRef
+	id     insolar.Reference
 	packet *packets.Phase1Packet
 }
 
 type phase2Result struct {
-	id     insolar.RecordRef
+	id     insolar.Reference
 	packet *packets.Phase2Packet
 }
 
 type phase3Result struct {
-	id     insolar.RecordRef
+	id     insolar.Reference
 	packet *packets.Phase3Packet
 }
 
@@ -172,7 +172,7 @@ func (nc *ConsensusCommunicator) sendRequestToNodes(ctx context.Context, partici
 func (nc *ConsensusCommunicator) sendRequestToNodesWithOrigin(ctx context.Context, originClaim *packets.NodeAnnounceClaim,
 	participants []insolar.NetworkNode, packet *packets.Phase1Packet) error {
 
-	requests := make(map[insolar.RecordRef]packets.ConsensusPacket)
+	requests := make(map[insolar.Reference]packets.ConsensusPacket)
 	for _, participant := range participants {
 		if participant.ID().Equal(nc.NodeKeeper.GetOrigin().ID()) {
 			continue
@@ -186,7 +186,7 @@ func (nc *ConsensusCommunicator) sendRequestToNodesWithOrigin(ctx context.Contex
 	}
 
 	for ref, req := range requests {
-		go func(ctx context.Context, node insolar.RecordRef, consensusPacket packets.ConsensusPacket) {
+		go func(ctx context.Context, node insolar.Reference, consensusPacket packets.ConsensusPacket) {
 			logger := inslogger.FromContext(ctx)
 			logger.Debug("Send phase1 request with origin to %s", node)
 			err := nc.ConsensusNetwork.SignAndSendPacket(consensusPacket, node, nc.Cryptography)
@@ -269,20 +269,20 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 	originClaim *packets.NodeAnnounceClaim,
 	participants []insolar.NetworkNode,
 	packet *packets.Phase1Packet,
-) (map[insolar.RecordRef]*packets.Phase1Packet, error) {
+) (map[insolar.Reference]*packets.Phase1Packet, error) {
 	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase1")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
 	defer span.End()
 	logger := inslogger.FromContext(ctx)
 
-	result := make(map[insolar.RecordRef]*packets.Phase1Packet, len(participants))
+	result := make(map[insolar.Reference]*packets.Phase1Packet, len(participants))
 	result[nc.ConsensusNetwork.GetNodeID()] = packet
 	nc.setPulseNumber(packet.GetPulse().PulseNumber)
 
 	var request *packets.Phase1Packet
 
 	type none struct{}
-	sentRequests := make(map[insolar.RecordRef]none)
+	sentRequests := make(map[insolar.Reference]none)
 
 	// TODO: awful, need rework
 	if originClaim == nil {
@@ -304,7 +304,7 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 		sentRequests[p.ID()] = none{}
 	}
 
-	shouldSendResponse := func(ref insolar.RecordRef) bool {
+	shouldSendResponse := func(ref insolar.Reference) bool {
 		_, ok := sentRequests[ref]
 		return !ok
 	}
@@ -361,20 +361,20 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 
 // ExchangePhase2 used in second consensus phase to exchange data between participants
 func (nc *ConsensusCommunicator) ExchangePhase2(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
-	participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.RecordRef]*packets.Phase2Packet, error) {
+	participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.Reference]*packets.Phase2Packet, error) {
 	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase2")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
 	defer span.End()
 	logger := inslogger.FromContext(ctx)
 
-	result := make(map[insolar.RecordRef]*packets.Phase2Packet, len(participants))
+	result := make(map[insolar.Reference]*packets.Phase2Packet, len(participants))
 
 	result[nc.ConsensusNetwork.GetNodeID()] = packet
 
 	nc.sendRequestToNodes(ctx, participants, packet)
 
 	type none struct{}
-	sentRequests := make(map[insolar.RecordRef]none)
+	sentRequests := make(map[insolar.Reference]none)
 
 	shouldSendResponse := func(p *phase2Result) bool {
 		_, ok := sentRequests[p.id]
@@ -422,7 +422,7 @@ func (nc *ConsensusCommunicator) ExchangePhase2(ctx context.Context, list networ
 	}
 }
 
-func selectCandidate(candidates []insolar.RecordRef) insolar.RecordRef {
+func selectCandidate(candidates []insolar.Reference) insolar.Reference {
 	// TODO: make it random
 	if len(candidates) == 0 {
 		panic("candidates list should have at least 1 candidate (check consensus state matrix calculation routines)")
@@ -460,7 +460,7 @@ func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, list netwo
 	logger := inslogger.FromContext(ctx)
 
 	type none struct{}
-	incoming := make(map[insolar.RecordRef]none)
+	incoming := make(map[insolar.Reference]none)
 	responsesFilter := make(map[int]none)
 	for _, req := range additionalRequests {
 		responsesFilter[req.RequestIndex] = none{}
@@ -539,8 +539,8 @@ func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, list netwo
 }
 
 // ExchangePhase3 used in third consensus step to exchange data between participants
-func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participants []insolar.NetworkNode, packet *packets.Phase3Packet) (map[insolar.RecordRef]*packets.Phase3Packet, error) {
-	result := make(map[insolar.RecordRef]*packets.Phase3Packet, len(participants))
+func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participants []insolar.NetworkNode, packet *packets.Phase3Packet) (map[insolar.Reference]*packets.Phase3Packet, error) {
+	result := make(map[insolar.Reference]*packets.Phase3Packet, len(participants))
 	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase3")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
 	defer span.End()
@@ -551,7 +551,7 @@ func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participant
 	nc.sendRequestToNodes(ctx, participants, packet)
 
 	type none struct{}
-	sentRequests := make(map[insolar.RecordRef]none)
+	sentRequests := make(map[insolar.Reference]none)
 
 	shouldSendResponse := func(p *phase3Result) bool {
 		_, ok := sentRequests[p.id]
@@ -590,7 +590,7 @@ func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participant
 	}
 }
 
-func (nc *ConsensusCommunicator) phase1DataHandler(packet packets.ConsensusPacket, sender insolar.RecordRef) {
+func (nc *ConsensusCommunicator) phase1DataHandler(packet packets.ConsensusPacket, sender insolar.Reference) {
 	p, ok := packet.(*packets.Phase1Packet)
 	if !ok {
 		log.Error("invalid Phase1Packet")
@@ -611,7 +611,7 @@ func (nc *ConsensusCommunicator) phase1DataHandler(packet packets.ConsensusPacke
 	nc.phase1result <- phase1Result{id: sender, packet: p}
 }
 
-func (nc *ConsensusCommunicator) phase2DataHandler(packet packets.ConsensusPacket, sender insolar.RecordRef) {
+func (nc *ConsensusCommunicator) phase2DataHandler(packet packets.ConsensusPacket, sender insolar.Reference) {
 	p, ok := packet.(*packets.Phase2Packet)
 	if !ok {
 		log.Error("invalid Phase2Packet")
@@ -628,7 +628,7 @@ func (nc *ConsensusCommunicator) phase2DataHandler(packet packets.ConsensusPacke
 	nc.phase2result <- phase2Result{id: sender, packet: p}
 }
 
-func (nc *ConsensusCommunicator) phase3DataHandler(packet packets.ConsensusPacket, sender insolar.RecordRef) {
+func (nc *ConsensusCommunicator) phase3DataHandler(packet packets.ConsensusPacket, sender insolar.Reference) {
 	p, ok := packet.(*packets.Phase3Packet)
 	if !ok {
 		log.Warn("failed to cast a type 3 packet to phase3packet")

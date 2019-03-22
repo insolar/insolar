@@ -396,7 +396,7 @@ func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
 		&message.PendingFinished{Reference: objectRef},
 	)
 
-	parcel.DefaultTargetMock.Return(&insolar.RecordRef{})
+	parcel.DefaultTargetMock.Return(&insolar.Reference{})
 
 	re, err := suite.lr.HandlePendingFinishedMessage(suite.ctx, parcel)
 	suite.Require().NoError(err)
@@ -478,7 +478,7 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 		&message.StillExecuting{Reference: objectRef},
 	)
 
-	parcel.DefaultTargetMock.Return(&insolar.RecordRef{})
+	parcel.DefaultTargetMock.Return(&insolar.Reference{})
 
 	// check that creation of new execution state is handled (on StillExecuting Message)
 	re, err := suite.lr.HandleStillExecutingMessage(suite.ctx, parcel)
@@ -705,7 +705,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	suite.ps.CurrentMock.Return(&pulse, nil)
 
 	suite.jc.IsAuthorizedFunc = func(
-		ctx context.Context, role insolar.DynamicRole, id insolar.RecordID, pn insolar.PulseNumber, obj insolar.RecordRef,
+		ctx context.Context, role insolar.DynamicRole, id insolar.ID, pn insolar.PulseNumber, obj insolar.Reference,
 	) (bool, error) {
 		return true, nil
 	}
@@ -736,7 +736,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	suite.am.GetCodeMock.Return(cd, nil)
 
 	suite.am.GetObjectFunc = func(
-		ctx context.Context, obj insolar.RecordRef, st *insolar.RecordID, approved bool,
+		ctx context.Context, obj insolar.Reference, st *insolar.ID, approved bool,
 	) (insolar.ObjectDescriptor, error) {
 		switch obj {
 		case objectRef:
@@ -893,7 +893,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			}
 
 			suite.jc.IsAuthorizedFunc = func(
-				ctx context.Context, role insolar.DynamicRole, id insolar.RecordID, pnArg insolar.PulseNumber, obj insolar.RecordRef,
+				ctx context.Context, role insolar.DynamicRole, id insolar.ID, pnArg insolar.PulseNumber, obj insolar.Reference,
 			) (bool, error) {
 				if pnArg == 101 {
 					return false, nil
@@ -910,7 +910,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			}
 
 			if test.when > whenIsAuthorized {
-				suite.am.RegisterRequestFunc = func(ctx context.Context, r insolar.RecordRef, msg insolar.Parcel) (*insolar.RecordID, error) {
+				suite.am.RegisterRequestFunc = func(ctx context.Context, r insolar.Reference, msg insolar.Parcel) (*insolar.ID, error) {
 					if test.when == whenRegisterRequest {
 						<-changePulse()
 					}
@@ -921,7 +921,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			}
 
 			if test.when > whenRegisterRequest {
-				suite.am.HasPendingRequestsFunc = func(ctx context.Context, r insolar.RecordRef) (bool, error) {
+				suite.am.HasPendingRequestsFunc = func(ctx context.Context, r insolar.Reference) (bool, error) {
 					if test.when == whenHasPendingRequest {
 						<-changePulse()
 					}
@@ -932,7 +932,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 
 			if test.when > whenHasPendingRequest {
 				mle.CallMethodFunc = func(
-					ctx context.Context, lctx *insolar.LogicCallContext, r insolar.RecordRef,
+					ctx context.Context, lctx *insolar.LogicCallContext, r insolar.Reference,
 					mem []byte, method string, args insolar.Arguments,
 				) ([]byte, insolar.Arguments, error) {
 					if test.when == whenCallMethod {
@@ -961,7 +961,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				cd.RefMock.Return(&codeRef)
 
 				suite.am.GetObjectFunc = func(
-					ctx context.Context, obj insolar.RecordRef, st *insolar.RecordID, approved bool,
+					ctx context.Context, obj insolar.Reference, st *insolar.ID, approved bool,
 				) (insolar.ObjectDescriptor, error) {
 					switch obj {
 					case objectRef:
@@ -975,8 +975,8 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				suite.am.GetCodeMock.Return(cd, nil)
 
 				suite.am.RegisterResultFunc = func(
-					ctx context.Context, r1 insolar.RecordRef, r2 insolar.RecordRef, mem []byte,
-				) (*insolar.RecordID, error) {
+					ctx context.Context, r1 insolar.Reference, r2 insolar.Reference, mem []byte,
+				) (*insolar.ID, error) {
 					resId := testutils.RandomID()
 					return &resId, nil
 				}
@@ -1045,7 +1045,7 @@ type LogicRunnerOnPulseTestSuite struct {
 	LogicRunnerCommonTestSuite
 
 	pulse     insolar.Pulse
-	objectRef insolar.RecordRef
+	objectRef insolar.Reference
 }
 
 func (s *LogicRunnerOnPulseTestSuite) BeforeTest(suiteName, testName string) {
@@ -1068,7 +1068,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestEmptyLR() {
 // We aren't next executor and we're not executing it
 // Expecting empty state of object
 func (s *LogicRunnerOnPulseTestSuite) TestEmptyES() {
-	s.jc.MeMock.Return(insolar.RecordRef{})
+	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(false, nil)
 
 	s.lr.state[s.objectRef] = &ObjectState{
@@ -1084,7 +1084,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestEmptyES() {
 // We aren't next executor and we're not executing it
 // Expecting empty execution state
 func (s *LogicRunnerOnPulseTestSuite) TestEmptyESWithValidation() {
-	s.jc.MeMock.Return(insolar.RecordRef{})
+	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(false, nil)
 
 	s.lr.state[s.objectRef] = &ObjectState{
@@ -1103,7 +1103,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestEmptyESWithValidation() {
 // We aren't next executor but we're currently executing
 // Expecting we send message to new executor and moving state to InPending
 func (s *LogicRunnerOnPulseTestSuite) TestESWithValidationCurrent() {
-	s.jc.MeMock.Return(insolar.RecordRef{})
+	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.mb.SendMock.Return(&reply.ID{}, nil)
 
@@ -1122,7 +1122,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestESWithValidationCurrent() {
 // We aren't next executor but we're currently executing and queue isn't empty.
 // Expecting we send message to new executor and moving state to InPending
 func (s *LogicRunnerOnPulseTestSuite) TestWithNotEmptyQueue() {
-	s.jc.MeMock.Return(insolar.RecordRef{})
+	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.mb.SendMock.Return(&reply.ID{}, nil)
 
@@ -1143,7 +1143,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithNotEmptyQueue() {
 // We aren't next executor but we're currently executing.
 // Expecting sending message to new executor and moving state to InPending
 func (s *LogicRunnerOnPulseTestSuite) TestWithEmptyQueue() {
-	s.jc.MeMock.Return(insolar.RecordRef{})
+	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.mb.SendMock.Return(&reply.ID{}, nil)
 
@@ -1164,7 +1164,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithEmptyQueue() {
 // Executor is on the same node and we're currently executing
 // Expecting task to be moved to NotPending
 func (s *LogicRunnerOnPulseTestSuite) TestExecutorSameNode() {
-	s.jc.MeMock.Return(insolar.RecordRef{})
+	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
 	s.lr.state[s.objectRef] = &ObjectState{
@@ -1184,7 +1184,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestExecutorSameNode() {
 // We're the next executor, task was currently executing and in InPending.
 // Expecting task to moved from InPending -> NotPending
 func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer1() {
-	s.jc.MeMock.Return(insolar.RecordRef{})
+	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
 	s.lr.state[s.objectRef] = &ObjectState{
@@ -1204,7 +1204,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer1() {
 // We're the next executor and no one confirmed that this task is executing
 // move task from InPending -> NotPending
 func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer2() {
-	s.jc.MeMock.Return(insolar.RecordRef{})
+	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
 	s.am.GetPendingRequestMock.Return(nil, insolar.ErrNoPendingRequest)
@@ -1228,7 +1228,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer2() {
 // still in pending
 // but we expect that previous executor come to us for token
 func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer3() {
-	s.jc.MeMock.Return(insolar.RecordRef{})
+	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(true, nil)
 
 	s.lr.state[s.objectRef] = &ObjectState{
@@ -1252,7 +1252,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer3() {
 
 // We're not the next executor, so we must send this task to the next executor
 func (s *LogicRunnerOnPulseTestSuite) TestSendTaskToNextExecutor() {
-	s.jc.MeMock.Return(insolar.RecordRef{})
+	s.jc.MeMock.Return(insolar.Reference{})
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.mb.SendMock.Return(&reply.ID{}, nil)
 
@@ -1275,7 +1275,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestSendTaskToNextExecutor() {
 
 func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
-	s.jc.MeMock.Return(insolar.RecordRef{})
+	s.jc.MeMock.Return(insolar.Reference{})
 
 	var testCases = map[string]struct {
 		queue           []ExecutionQueueElement
@@ -1341,7 +1341,7 @@ type LRUnsafeGetLedgerPendingRequestTestSuite struct {
 	LogicRunnerCommonTestSuite
 
 	pulse                 insolar.Pulse
-	ref                   insolar.RecordRef
+	ref                   insolar.Reference
 	currentPulseNumber    insolar.PulseNumber
 	oldRequestPulseNumber insolar.PulseNumber
 }
@@ -1405,7 +1405,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestDoesNotAuthorized() {
 	// we doesn't authorized (pulse change in time we process function)
 	s.ps.CurrentMock.Return(&insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
 	s.jc.IsAuthorizedMock.Return(false, nil)
-	s.jc.MeMock.Return(insolar.RecordRef{})
+	s.jc.MeMock.Return(insolar.Reference{})
 
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
 	s.Require().Nil(es.LedgerQueueElement)
@@ -1422,7 +1422,7 @@ func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequ
 
 	s.ps.CurrentMock.Return(&insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
 	s.jc.IsAuthorizedMock.Return(true, nil)
-	s.jc.MeMock.Return(insolar.RecordRef{})
+	s.jc.MeMock.Return(insolar.Reference{})
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
 
 	s.Require().Equal(true, es.LedgerHasMoreRequests)

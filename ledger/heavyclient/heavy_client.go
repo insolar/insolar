@@ -78,7 +78,7 @@ func NewJetClient(
 	dropAccessor drop.Accessor,
 	cleaner storage.Cleaner,
 	db storage.DBContext,
-	jetID insolar.RecordID,
+	jetID insolar.ID,
 	opts Options,
 ) *JetClient {
 	jsc := &JetClient{
@@ -117,7 +117,7 @@ func (c *JetClient) addPulses(ctx context.Context, pns []insolar.PulseNumber) {
 	c.muPulses.Lock()
 	c.leftPulses = append(c.leftPulses, pns...)
 
-	if err := c.replicaStorage.SetSyncClientJetPulses(ctx, insolar.RecordID(c.jetID), c.leftPulses); err != nil {
+	if err := c.replicaStorage.SetSyncClientJetPulses(ctx, insolar.ID(c.jetID), c.leftPulses); err != nil {
 		inslogger.FromContext(ctx).Errorf(
 			"attempt to persist jet sync state failed: jetID=%v: %v", c.jetID, err.Error())
 	}
@@ -147,7 +147,7 @@ func (c *JetClient) unshiftPulse(ctx context.Context) *insolar.PulseNumber {
 	copy(shifted, c.leftPulses[1:])
 	c.leftPulses = shifted
 
-	if err := c.replicaStorage.SetSyncClientJetPulses(ctx, insolar.RecordID(c.jetID), c.leftPulses); err != nil {
+	if err := c.replicaStorage.SetSyncClientJetPulses(ctx, insolar.ID(c.jetID), c.leftPulses); err != nil {
 		inslogger.FromContext(ctx).Errorf(
 			"attempt to persist jet sync state failed: jetID=%v: %v", c.jetID, err.Error())
 	}

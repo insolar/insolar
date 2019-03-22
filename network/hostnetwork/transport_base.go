@@ -125,7 +125,7 @@ func (h *transportBase) PublicAddress() string {
 }
 
 // GetNodeID get current node ID.
-func (h *transportBase) GetNodeID() insolar.RecordRef {
+func (h *transportBase) GetNodeID() insolar.Reference {
 	return h.origin.NodeID
 }
 
@@ -139,7 +139,7 @@ func getOrigin(tp transport.Transport, id string) (*host.Host, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving address")
 	}
-	nodeID, err := insolar.NewRefFromBase58(id)
+	nodeID, err := insolar.NewReferenceFromBase58(id)
 	if err != nil {
 		return nil, errors.Wrap(err, "error parsing NodeID from string")
 	}

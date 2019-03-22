@@ -108,7 +108,7 @@ func (s *cleanerSuite) Test_RemoveRecords() {
 	jetID00 := testutils.JetFromString("00")
 	jetID01 := testutils.JetFromString("01")
 	jetID11 := testutils.JetFromString("11")
-	jets := []insolar.RecordID{jetID00, jetID01, jetID11}
+	jets := []insolar.ID{jetID00, jetID01, jetID11}
 
 	// should remove all records in rmJetID on pulses 1, 2, but all in pulse 3 for rmJetID should left
 	// and other jets records should not be removed too
@@ -170,13 +170,13 @@ func (s *cleanerSuite) Test_RemoveJetIndexes() {
 	jetID00 := testutils.JetFromString("00")
 	jetID01 := testutils.JetFromString("01")
 	jetID11 := testutils.JetFromString("11")
-	jets := []insolar.RecordID{jetID00, jetID01, jetID11}
+	jets := []insolar.ID{jetID00, jetID01, jetID11}
 
 	// should remove records in Pulse 1, 2, but left 3
 	var checks []cleanChecker
 	until := 2
 	rmJetID := jetID01
-	var removeIndexes []insolar.RecordID
+	var removeIndexes []insolar.ID
 
 	for _, jetID := range jets {
 		for i := 1; i <= 3; i++ {
@@ -206,7 +206,7 @@ func (s *cleanerSuite) Test_RemoveJetIndexes() {
 	}
 
 	recent := recentstorage.NewRecentIndexStorageMock(s.T())
-	recent.FilterNotExistWithLockFunc = func(ctx context.Context, candidates []insolar.RecordID, fn func(fordelete []insolar.RecordID)) {
+	recent.FilterNotExistWithLockFunc = func(ctx context.Context, candidates []insolar.ID, fn func(fordelete []insolar.ID)) {
 		fn(candidates)
 	}
 
@@ -226,8 +226,8 @@ type cleanChecker interface {
 
 type cleanCase struct {
 	rectype    string
-	id         *insolar.RecordID
-	jetID      insolar.RecordID
+	id         *insolar.ID
+	jetID      insolar.ID
 	pulseNum   insolar.PulseNumber
 	shouldLeft bool
 }

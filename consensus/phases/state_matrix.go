@@ -75,7 +75,7 @@ func NewStateMatrix(mapper packets.BitSetMapper) *StateMatrix {
 	return &StateMatrix{data: data, mapper: mapper}
 }
 
-func (sm *StateMatrix) ApplyBitSet(sender insolar.RecordRef, set packets.BitSet) error {
+func (sm *StateMatrix) ApplyBitSet(sender insolar.Reference, set packets.BitSet) error {
 	array, err := set.GetTristateArray()
 	if err != nil {
 		return errors.Wrap(err, "Can't get tristate array from bitset")
@@ -93,28 +93,28 @@ func (sm *StateMatrix) ApplyBitSet(sender insolar.RecordRef, set packets.BitSet)
 
 type AdditionalRequest struct {
 	RequestIndex int
-	Candidates   []insolar.RecordRef
+	Candidates   []insolar.Reference
 }
 
 type Phase2MatrixState struct {
 	// wether any nodes in current consensus need to advance to phase 2.1
 	NeedPhase21 bool
 
-	Active                   []insolar.RecordRef
-	TimedOut                 []insolar.RecordRef
+	Active                   []insolar.Reference
+	TimedOut                 []insolar.Reference
 	AdditionalRequestsPhase2 []*AdditionalRequest
 }
 
 func newPhase2MatrixState() *Phase2MatrixState {
 	return &Phase2MatrixState{
 		NeedPhase21:              false,
-		Active:                   make([]insolar.RecordRef, 0),
-		TimedOut:                 make([]insolar.RecordRef, 0),
+		Active:                   make([]insolar.Reference, 0),
+		TimedOut:                 make([]insolar.Reference, 0),
 		AdditionalRequestsPhase2: make([]*AdditionalRequest, 0),
 	}
 }
 
-func (sm *StateMatrix) CalculatePhase2(origin insolar.RecordRef) (*Phase2MatrixState, error) {
+func (sm *StateMatrix) CalculatePhase2(origin insolar.Reference) (*Phase2MatrixState, error) {
 	originIndex, err := sm.mapper.RefToIndex(origin)
 	if err != nil {
 		return nil, errors.Wrap(err, "Can't map origin reference to matrix index")
@@ -161,7 +161,7 @@ func (sm *StateMatrix) CalculatePhase2(origin insolar.RecordRef) (*Phase2MatrixS
 	return result, nil
 }
 
-func (sm *StateMatrix) ReceivedProofFromNode(origin, nodeID insolar.RecordRef) error {
+func (sm *StateMatrix) ReceivedProofFromNode(origin, nodeID insolar.Reference) error {
 	originIndex, err := sm.mapper.RefToIndex(origin)
 	if err != nil {
 		return errors.Wrap(err, "Can't map origin reference to matrix index")
@@ -175,7 +175,7 @@ func (sm *StateMatrix) ReceivedProofFromNode(origin, nodeID insolar.RecordRef) e
 }
 
 func (sm *StateMatrix) calculateAdditionalRequest(timedOutNodeIndex int) (*AdditionalRequest, error) {
-	candidates := make([]insolar.RecordRef, 0)
+	candidates := make([]insolar.Reference, 0)
 	for i := 0; i < len(sm.data); i++ {
 		if sm.data[i][timedOutNodeIndex] != packets.Legit {
 			continue

@@ -46,8 +46,8 @@ import (
 	"github.com/insolar/insolar/testutils/testmessagebus"
 )
 
-func byteRecorRef(b byte) insolar.RecordRef {
-	var ref insolar.RecordRef
+func byteRecorRef(b byte) insolar.Reference {
+	var ref insolar.Reference
 	ref[insolar.RecordRefSize-1] = b
 	return ref
 }
@@ -129,7 +129,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.NoError(t, err)
 
 	// TODO: use proper conversion
-	reqref := insolar.RecordRef{}
+	reqref := insolar.Reference{}
 	reqref.SetRecord(*contract)
 
 	_, err = am.ActivateObject(

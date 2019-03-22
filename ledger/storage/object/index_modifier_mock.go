@@ -20,7 +20,7 @@ import (
 type IndexModifierMock struct {
 	t minimock.Tester
 
-	SetFunc       func(p context.Context, p1 insolar.RecordID, p2 Lifeline) (r error)
+	SetFunc       func(p context.Context, p1 insolar.ID, p2 Lifeline) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mIndexModifierMockSet
@@ -52,7 +52,7 @@ type IndexModifierMockSetExpectation struct {
 
 type IndexModifierMockSetInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 	p2 Lifeline
 }
 
@@ -61,7 +61,7 @@ type IndexModifierMockSetResult struct {
 }
 
 //Expect specifies that invocation of IndexModifier.Set is expected from 1 to Infinity times
-func (m *mIndexModifierMockSet) Expect(p context.Context, p1 insolar.RecordID, p2 Lifeline) *mIndexModifierMockSet {
+func (m *mIndexModifierMockSet) Expect(p context.Context, p1 insolar.ID, p2 Lifeline) *mIndexModifierMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
@@ -85,7 +85,7 @@ func (m *mIndexModifierMockSet) Return(r error) *IndexModifierMock {
 }
 
 //ExpectOnce specifies that invocation of IndexModifier.Set is expected once
-func (m *mIndexModifierMockSet) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 Lifeline) *IndexModifierMockSetExpectation {
+func (m *mIndexModifierMockSet) ExpectOnce(p context.Context, p1 insolar.ID, p2 Lifeline) *IndexModifierMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
@@ -100,7 +100,7 @@ func (e *IndexModifierMockSetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of IndexModifier.Set method
-func (m *mIndexModifierMockSet) Set(f func(p context.Context, p1 insolar.RecordID, p2 Lifeline) (r error)) *IndexModifierMock {
+func (m *mIndexModifierMockSet) Set(f func(p context.Context, p1 insolar.ID, p2 Lifeline) (r error)) *IndexModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -109,7 +109,7 @@ func (m *mIndexModifierMockSet) Set(f func(p context.Context, p1 insolar.RecordI
 }
 
 //Set implements github.com/insolar/insolar/ledger/storage/object.IndexModifier interface
-func (m *IndexModifierMock) Set(p context.Context, p1 insolar.RecordID, p2 Lifeline) (r error) {
+func (m *IndexModifierMock) Set(p context.Context, p1 insolar.ID, p2 Lifeline) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 

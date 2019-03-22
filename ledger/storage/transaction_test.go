@@ -108,10 +108,10 @@ which try reads and writes the same key simultaneously
 */
 
 func (s *txnSuite) TestStore_Transaction_LockOnUpdate() {
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
-	objid := insolar.NewRecordID(100500, nil)
-	idxid := insolar.NewRecordID(0, nil)
+	objid := insolar.NewID(100500, nil)
+	idxid := insolar.NewID(0, nil)
 	objvalue0 := &object.Lifeline{
 		LatestState: objid,
 	}

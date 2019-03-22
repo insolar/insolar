@@ -84,7 +84,7 @@ func geometricProgressionSum(a int, r int, n int) int {
 	return a * (1 - S) / (1 - r)
 }
 
-func calcHash(scheme insolar.PlatformCryptographyScheme, nodeID insolar.RecordRef, entropy insolar.Entropy) []byte {
+func calcHash(scheme insolar.PlatformCryptographyScheme, nodeID insolar.Reference, entropy insolar.Entropy) []byte {
 	data := make([]byte, insolar.RecordRefSize)
 	copy(data, nodeID[:])
 	for i, d := range data {
@@ -99,7 +99,7 @@ func calcHash(scheme insolar.PlatformCryptographyScheme, nodeID insolar.RecordRe
 	return h.Sum(nil)
 }
 
-func getNextCascadeLayerIndexes(nodeIds []insolar.RecordRef, currentNode insolar.RecordRef, replicationFactor uint) (startIndex, endIndex int) {
+func getNextCascadeLayerIndexes(nodeIds []insolar.Reference, currentNode insolar.Reference, replicationFactor uint) (startIndex, endIndex int) {
 	depth := 0
 	j := 0
 	layerWidth := replicationFactor
@@ -137,8 +137,8 @@ func getNextCascadeLayerIndexes(nodeIds []insolar.RecordRef, currentNode insolar
 }
 
 // CalculateNextNodes get nodes of the next cascade layer from the input nodes slice
-func CalculateNextNodes(scheme insolar.PlatformCryptographyScheme, data insolar.Cascade, currentNode *insolar.RecordRef) (nextNodeIds []insolar.RecordRef, err error) {
-	nodeIds := make([]insolar.RecordRef, len(data.NodeIds))
+func CalculateNextNodes(scheme insolar.PlatformCryptographyScheme, data insolar.Cascade, currentNode *insolar.Reference) (nextNodeIds []insolar.Reference, err error) {
+	nodeIds := make([]insolar.Reference, len(data.NodeIds))
 	copy(nodeIds, data.NodeIds)
 
 	// catching possible panic from calcHash

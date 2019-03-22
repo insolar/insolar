@@ -71,7 +71,7 @@ const (
 
 // BitSetCell is structure that contains the state of the node
 type BitSetCell struct {
-	NodeID insolar.RecordRef
+	NodeID insolar.Reference
 	State  BitSetState
 }
 
@@ -88,9 +88,9 @@ var (
 // BitSetMapper contains the mapping from bitset index to node ID (and vice versa)
 type BitSetMapper interface {
 	// IndexToRef get ID of the node that is stored on the specified internal index
-	IndexToRef(index int) (insolar.RecordRef, error)
+	IndexToRef(index int) (insolar.Reference, error)
 	// RefToIndex get bitset internal index where the specified node state is stored
-	RefToIndex(nodeID insolar.RecordRef) (int, error)
+	RefToIndex(nodeID insolar.Reference) (int, error)
 	// Length returns required length of the bitset
 	Length() int
 }

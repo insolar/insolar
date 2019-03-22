@@ -78,42 +78,42 @@ const (
 
 func TestCalculateNextNodes(t *testing.T) {
 	//	t.Skip()
-	nodeIds := make([]insolar.RecordRef, 0)
+	nodeIds := make([]insolar.Reference, 0)
 
-	ref, err := insolar.NewRefFromBase58(id1Str + domainStr)
+	ref, err := insolar.NewReferenceFromBase58(id1Str + domainStr)
 	require.NoError(t, err)
 	nodeIds = append(nodeIds, *ref)
-	ref, err = insolar.NewRefFromBase58(id2Str + domainStr)
+	ref, err = insolar.NewReferenceFromBase58(id2Str + domainStr)
 	require.NoError(t, err)
 	nodeIds = append(nodeIds, *ref)
-	ref, err = insolar.NewRefFromBase58(id3Str + domainStr)
+	ref, err = insolar.NewReferenceFromBase58(id3Str + domainStr)
 	require.NoError(t, err)
 	nodeIds = append(nodeIds, *ref)
-	ref, err = insolar.NewRefFromBase58(id4Str + domainStr)
+	ref, err = insolar.NewReferenceFromBase58(id4Str + domainStr)
 	require.NoError(t, err)
 	nodeIds = append(nodeIds, *ref)
-	ref, err = insolar.NewRefFromBase58(id5Str + domainStr)
+	ref, err = insolar.NewReferenceFromBase58(id5Str + domainStr)
 	require.NoError(t, err)
 	nodeIds = append(nodeIds, *ref)
-	ref, err = insolar.NewRefFromBase58(id6Str + domainStr)
+	ref, err = insolar.NewReferenceFromBase58(id6Str + domainStr)
 	require.NoError(t, err)
 	nodeIds = append(nodeIds, *ref)
-	ref, err = insolar.NewRefFromBase58(id7Str + domainStr)
+	ref, err = insolar.NewReferenceFromBase58(id7Str + domainStr)
 	require.NoError(t, err)
 	nodeIds = append(nodeIds, *ref)
-	ref, err = insolar.NewRefFromBase58(id8Str + domainStr)
+	ref, err = insolar.NewReferenceFromBase58(id8Str + domainStr)
 	require.NoError(t, err)
 	nodeIds = append(nodeIds, *ref)
-	ref, err = insolar.NewRefFromBase58(id9Str + domainStr)
+	ref, err = insolar.NewReferenceFromBase58(id9Str + domainStr)
 	require.NoError(t, err)
 	nodeIds = append(nodeIds, *ref)
-	ref, err = insolar.NewRefFromBase58(id10Str + domainStr)
+	ref, err = insolar.NewReferenceFromBase58(id10Str + domainStr)
 	require.NoError(t, err)
 	nodeIds = append(nodeIds, *ref)
-	ref, err = insolar.NewRefFromBase58(id11Str + domainStr)
+	ref, err = insolar.NewReferenceFromBase58(id11Str + domainStr)
 	require.NoError(t, err)
 	nodeIds = append(nodeIds, *ref)
-	ref, err = insolar.NewRefFromBase58(id12Str + domainStr)
+	ref, err = insolar.NewReferenceFromBase58(id12Str + domainStr)
 	require.NoError(t, err)
 	nodeIds = append(nodeIds, *ref)
 
@@ -125,11 +125,11 @@ func TestCalculateNextNodes(t *testing.T) {
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
 	r, _ := CalculateNextNodes(pcs, c, nil)
-	require.Equal(t, []insolar.RecordRef{nodeIds[3], nodeIds[8]}, r)
+	require.Equal(t, []insolar.Reference{nodeIds[3], nodeIds[8]}, r)
 	r, _ = CalculateNextNodes(pcs, c, &nodeIds[3])
-	require.Equal(t, []insolar.RecordRef{nodeIds[1], nodeIds[6]}, r)
+	require.Equal(t, []insolar.Reference{nodeIds[1], nodeIds[6]}, r)
 	r, _ = CalculateNextNodes(pcs, c, &nodeIds[1])
-	require.Equal(t, []insolar.RecordRef{nodeIds[4], nodeIds[7]}, r)
+	require.Equal(t, []insolar.Reference{nodeIds[4], nodeIds[7]}, r)
 }
 
 func Test_geometricProgressionSum(t *testing.T) {
@@ -140,7 +140,7 @@ func Test_geometricProgressionSum(t *testing.T) {
 func Test_calcHash(t *testing.T) {
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 
-	ref, err := insolar.NewRefFromBase58("4SxZ6BSx6qBP41nqQgtsFW5EF3JLDxYscZeVQnviPUGZ.4P3FnY89dNJKiR3qTzMvSbgryVwnxMspus6JrwrAYiVG")
+	ref, err := insolar.NewReferenceFromBase58("4SxZ6BSx6qBP41nqQgtsFW5EF3JLDxYscZeVQnviPUGZ.4P3FnY89dNJKiR3qTzMvSbgryVwnxMspus6JrwrAYiVG")
 	require.NoError(t, err)
 	c, _ := hex.DecodeString("b87473cbc572fd5afc8f165c6b554939068e870490bac3077daf6f9f9ec83df6dbe2d50c061d7034617c24f2d841bc9800121f9f43f90ba91bd8b646df0642ad")
 	require.Equal(t, c, calcHash(pcs, *ref, insolar.Entropy{0}))
@@ -148,7 +148,7 @@ func Test_calcHash(t *testing.T) {
 
 func Test_getNextCascadeLayerIndexes(t *testing.T) {
 	// nodeIds := []string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"}
-	nodeIds := make([]insolar.RecordRef, 0, 12)
+	nodeIds := make([]insolar.Reference, 0, 12)
 	for i := 0; i < 11; i++ {
 		nodeIds = append(nodeIds, testutils.RandomRef())
 	}

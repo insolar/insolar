@@ -103,7 +103,7 @@ func (nc *NetworkCoordinator) IsStarted() bool {
 }
 
 // GetCert method returns node certificate by requesting sign from discovery nodes
-func (nc *NetworkCoordinator) GetCert(ctx context.Context, registeredNodeRef *insolar.RecordRef) (insolar.Certificate, error) {
+func (nc *NetworkCoordinator) GetCert(ctx context.Context, registeredNodeRef *insolar.Reference) (insolar.Certificate, error) {
 	return nc.getCoordinator().GetCert(ctx, registeredNodeRef)
 }
 

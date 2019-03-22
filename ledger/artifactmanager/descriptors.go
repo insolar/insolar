@@ -31,13 +31,13 @@ import (
 type CodeDescriptor struct {
 	code        []byte
 	machineType insolar.MachineType
-	ref         insolar.RecordRef
+	ref         insolar.Reference
 
 	ctx context.Context
 }
 
 // Ref returns reference to represented code record.
-func (d *CodeDescriptor) Ref() *insolar.RecordRef {
+func (d *CodeDescriptor) Ref() *insolar.Reference {
 	return &d.ref
 }
 
@@ -56,13 +56,13 @@ type ObjectDescriptor struct {
 	ctx context.Context
 	am  *LedgerArtifactManager
 
-	head         insolar.RecordRef
-	state        insolar.RecordID
-	prototype    *insolar.RecordRef
+	head         insolar.Reference
+	state        insolar.ID
+	prototype    *insolar.Reference
 	isPrototype  bool
-	childPointer *insolar.RecordID // can be nil.
+	childPointer *insolar.ID // can be nil.
 	memory       []byte
-	parent       insolar.RecordRef
+	parent       insolar.Reference
 }
 
 // IsPrototype determines if the object is a prototype.
@@ -71,7 +71,7 @@ func (d *ObjectDescriptor) IsPrototype() bool {
 }
 
 // Code returns code reference.
-func (d *ObjectDescriptor) Code() (*insolar.RecordRef, error) {
+func (d *ObjectDescriptor) Code() (*insolar.Reference, error) {
 	if !d.IsPrototype() {
 		return nil, errors.New("object is not a prototype")
 	}
@@ -82,7 +82,7 @@ func (d *ObjectDescriptor) Code() (*insolar.RecordRef, error) {
 }
 
 // Prototype returns prototype reference.
-func (d *ObjectDescriptor) Prototype() (*insolar.RecordRef, error) {
+func (d *ObjectDescriptor) Prototype() (*insolar.Reference, error) {
 	if d.IsPrototype() {
 		return nil, errors.New("object is not an instance")
 	}
@@ -93,17 +93,17 @@ func (d *ObjectDescriptor) Prototype() (*insolar.RecordRef, error) {
 }
 
 // HeadRef returns reference to represented object record.
-func (d *ObjectDescriptor) HeadRef() *insolar.RecordRef {
+func (d *ObjectDescriptor) HeadRef() *insolar.Reference {
 	return &d.head
 }
 
 // StateID returns reference to object state record.
-func (d *ObjectDescriptor) StateID() *insolar.RecordID {
+func (d *ObjectDescriptor) StateID() *insolar.ID {
 	return &d.state
 }
 
 // ChildPointer returns the latest child for this object.
-func (d *ObjectDescriptor) ChildPointer() *insolar.RecordID {
+func (d *ObjectDescriptor) ChildPointer() *insolar.ID {
 	return d.childPointer
 }
 
@@ -118,7 +118,7 @@ func (d *ObjectDescriptor) Children(pulse *insolar.PulseNumber) (insolar.RefIter
 }
 
 // Parent returns object's parent.
-func (d *ObjectDescriptor) Parent() *insolar.RecordRef {
+func (d *ObjectDescriptor) Parent() *insolar.Reference {
 	return &d.parent
 }
 
@@ -144,11 +144,11 @@ func (d *ObjectDescriptor) Parent() *insolar.RecordRef {
 type ChildIterator struct {
 	ctx         context.Context
 	senderChain Sender
-	parent      insolar.RecordRef
+	parent      insolar.Reference
 	chunkSize   int
 	fromPulse   *insolar.PulseNumber
-	fromChild   *insolar.RecordID
-	buff        []insolar.RecordRef
+	fromChild   *insolar.ID
+	buff        []insolar.Reference
 	buffIndex   int
 	canFetch    bool
 }
@@ -157,7 +157,7 @@ type ChildIterator struct {
 func NewChildIterator(
 	ctx context.Context,
 	senderChain Sender,
-	parent insolar.RecordRef,
+	parent insolar.Reference,
 	fromPulse *insolar.PulseNumber,
 	chunkSize int,
 ) (*ChildIterator, error) {
@@ -182,7 +182,7 @@ func (i *ChildIterator) HasNext() bool {
 }
 
 // Next returns next element.
-func (i *ChildIterator) Next() (*insolar.RecordRef, error) {
+func (i *ChildIterator) Next() (*insolar.Reference, error) {
 	// Get element from buffer.
 	if !i.hasInBuffer() && i.canFetch {
 		err := i.fetch()
@@ -199,7 +199,7 @@ func (i *ChildIterator) Next() (*insolar.RecordRef, error) {
 	return ref, nil
 }
 
-func (i *ChildIterator) nextFromBuffer() *insolar.RecordRef {
+func (i *ChildIterator) nextFromBuffer() *insolar.Reference {
 	if !i.hasInBuffer() {
 		return nil
 	}

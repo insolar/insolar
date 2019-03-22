@@ -86,12 +86,12 @@ func AtomicLoadAndIncrementUint64(addr *uint64) uint64 {
 }
 
 // GenerateShortID generate short ID for node without checking collisions
-func GenerateShortID(ref insolar.RecordRef) insolar.ShortNodeID {
+func GenerateShortID(ref insolar.Reference) insolar.ShortNodeID {
 	return insolar.ShortNodeID(GenerateUintShortID(ref))
 }
 
 // GenerateShortID generate short ID for node without checking collisions
-func GenerateUintShortID(ref insolar.RecordRef) uint32 {
+func GenerateUintShortID(ref insolar.Reference) uint32 {
 	return crc32.ChecksumIEEE(ref[:])
 }
 

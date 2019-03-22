@@ -99,7 +99,7 @@ func TestQueue_Pop(t *testing.T) {
 	}
 }
 
-func getJoinClaim(t *testing.T, ref insolar.RecordRef) *packets.NodeJoinClaim {
+func getJoinClaim(t *testing.T, ref insolar.Reference) *packets.NodeJoinClaim {
 	nodeJoinClaim := &packets.NodeJoinClaim{}
 	nodeJoinClaim.ShortNodeID = insolar.ShortNodeID(77)
 	nodeJoinClaim.RelayNodeID = insolar.ShortNodeID(26)

@@ -57,28 +57,28 @@ import (
 type none struct{}
 
 type recordRefSet struct {
-	data map[insolar.RecordRef]none
+	data map[insolar.Reference]none
 }
 
 func newRecordRefSet() *recordRefSet {
-	return &recordRefSet{data: make(map[insolar.RecordRef]none)}
+	return &recordRefSet{data: make(map[insolar.Reference]none)}
 }
 
-func (s *recordRefSet) Add(ref insolar.RecordRef) {
+func (s *recordRefSet) Add(ref insolar.Reference) {
 	s.data[ref] = none{}
 }
 
-func (s *recordRefSet) Remove(ref insolar.RecordRef) {
+func (s *recordRefSet) Remove(ref insolar.Reference) {
 	delete(s.data, ref)
 }
 
-func (s *recordRefSet) Contains(ref insolar.RecordRef) bool {
+func (s *recordRefSet) Contains(ref insolar.Reference) bool {
 	_, ok := s.data[ref]
 	return ok
 }
 
-func (s *recordRefSet) Collect() []insolar.RecordRef {
-	result := make([]insolar.RecordRef, len(s.data))
+func (s *recordRefSet) Collect() []insolar.Reference {
+	result := make([]insolar.Reference, len(s.data))
 	i := 0
 	for ref := range s.data {
 		result[i] = ref

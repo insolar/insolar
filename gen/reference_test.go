@@ -27,7 +27,7 @@ import (
 func TestGen_JetID(t *testing.T) {
 	for i := 0; i < 10000; i++ {
 		jetID := JetID()
-		recID := (*insolar.RecordID)(&jetID)
+		recID := (*insolar.ID)(&jetID)
 		require.Equalf(t,
 			insolar.PulseNumberJet, recID.Pulse(),
 			"pulse number should be insolar.PulseNumberJet. jet: %v", recID.DebugString())

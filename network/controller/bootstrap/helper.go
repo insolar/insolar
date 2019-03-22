@@ -70,7 +70,7 @@ func CheckShortIDCollision(keeper network.NodeKeeper, id insolar.ShortNodeID) bo
 }
 
 // GenerateShortID correct ShortID of the node so it does not conflict with existing active node list
-func GenerateShortID(keeper network.NodeKeeper, nodeID insolar.RecordRef) insolar.ShortNodeID {
+func GenerateShortID(keeper network.NodeKeeper, nodeID insolar.Reference) insolar.ShortNodeID {
 	shortID := utils.GenerateShortID(nodeID)
 	if !CheckShortIDCollision(keeper, shortID) {
 		return shortID
@@ -114,7 +114,7 @@ func generateNonConflictingID(sortedSlice []insolar.ShortNodeID, conflictingID i
 	}
 }
 
-func RemoveOrigin(discoveryNodes []insolar.DiscoveryNode, origin insolar.RecordRef) ([]insolar.DiscoveryNode, error) {
+func RemoveOrigin(discoveryNodes []insolar.DiscoveryNode, origin insolar.Reference) ([]insolar.DiscoveryNode, error) {
 	for i, discoveryNode := range discoveryNodes {
 		if origin.Equal(*discoveryNode.GetNodeRef()) {
 			return append(discoveryNodes[:i], discoveryNodes[i+1:]...), nil
@@ -123,7 +123,7 @@ func RemoveOrigin(discoveryNodes []insolar.DiscoveryNode, origin insolar.RecordR
 	return nil, errors.New("Origin not found in discovery nodes list")
 }
 
-func FindDiscovery(cert insolar.Certificate, ref insolar.RecordRef) insolar.DiscoveryNode {
+func FindDiscovery(cert insolar.Certificate, ref insolar.Reference) insolar.DiscoveryNode {
 	bNodes := cert.GetDiscoveryNodes()
 	for _, discoveryNode := range bNodes {
 		if ref.Equal(*discoveryNode.GetNodeRef()) {

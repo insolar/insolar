@@ -28,7 +28,7 @@ func GetTestNodekeeper(cs insolar.CryptographyService) network.NodeKeeper {
 		panic(err)
 	}
 
-	ref, err := insolar.NewRefFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	ref, err := insolar.NewReferenceFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
 	if err != nil {
 		panic(err)
 	}

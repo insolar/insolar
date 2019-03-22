@@ -27,7 +27,7 @@ import (
 // DownCallMethodReq is a set of arguments for CallMethod RPC in the runner
 type DownCallMethodReq struct { // todo it may use foundation.Context
 	Context   *insolar.LogicCallContext
-	Code      insolar.RecordRef
+	Code      insolar.Reference
 	Data      []byte
 	Method    string
 	Arguments insolar.Arguments
@@ -42,7 +42,7 @@ type DownCallMethodResp struct {
 // DownCallConstructorReq is a set of arguments for CallConstructor RPC
 // in the runner
 type DownCallConstructorReq struct {
-	Code      insolar.RecordRef
+	Code      insolar.Reference
 	Name      string
 	Arguments insolar.Arguments
 	Context   *insolar.LogicCallContext
@@ -56,9 +56,9 @@ type DownCallConstructorResp struct {
 // UpBaseReq  is a base type for all insgorund -> logicrunner requests
 type UpBaseReq struct {
 	Mode      string
-	Callee    insolar.RecordRef
-	Prototype insolar.RecordRef
-	Request   insolar.RecordRef
+	Callee    insolar.Reference
+	Prototype insolar.Reference
+	Request   insolar.Reference
 }
 
 // UpRespIface interface for UpBaseReq descendant responses
@@ -68,7 +68,7 @@ type UpRespIface interface{}
 type UpGetCodeReq struct {
 	UpBaseReq
 	MType insolar.MachineType
-	Code  insolar.RecordRef
+	Code  insolar.Reference
 }
 
 // UpGetCodeResp is response from GetCode RPC in goplugin
@@ -80,10 +80,10 @@ type UpGetCodeResp struct {
 type UpRouteReq struct {
 	UpBaseReq
 	Wait           bool
-	Object         insolar.RecordRef
+	Object         insolar.Reference
 	Method         string
 	Arguments      insolar.Arguments
-	ProxyPrototype insolar.RecordRef
+	ProxyPrototype insolar.Reference
 }
 
 // UpRouteResp is response from Send RPC in goplugin
@@ -94,23 +94,23 @@ type UpRouteResp struct {
 // UpSaveAsChildReq is a set of arguments for SaveAsChild RPC in goplugin
 type UpSaveAsChildReq struct {
 	UpBaseReq
-	Parent          insolar.RecordRef
-	Prototype       insolar.RecordRef
+	Parent          insolar.Reference
+	Prototype       insolar.Reference
 	ConstructorName string
 	ArgsSerialized  []byte
 }
 
 // UpSaveAsChildResp is a set of arguments for SaveAsChild RPC in goplugin
 type UpSaveAsChildResp struct {
-	Reference *insolar.RecordRef
+	Reference *insolar.Reference
 }
 
 // UpGetObjChildrenIteratorReq is a set of arguments for GetObjChildrenIterator RPC in goplugin
 type UpGetObjChildrenIteratorReq struct {
 	UpBaseReq
 	IteratorID string
-	Obj        insolar.RecordRef
-	Prototype  insolar.RecordRef
+	Obj        insolar.Reference
+	Prototype  insolar.Reference
 }
 
 // UpGetObjChildrenIteratorResp is response from GetObjChildren RPC in goplugin
@@ -121,34 +121,34 @@ type UpGetObjChildrenIteratorResp struct {
 // ChildIterator hold an iterator data of GetObjChildrenIterator method
 type ChildIterator struct {
 	ID       string
-	Buff     []insolar.RecordRef
+	Buff     []insolar.Reference
 	CanFetch bool
 }
 
 // UpSaveAsDelegateReq is a set of arguments for SaveAsDelegate RPC in goplugin
 type UpSaveAsDelegateReq struct {
 	UpBaseReq
-	Into            insolar.RecordRef
-	Prototype       insolar.RecordRef
+	Into            insolar.Reference
+	Prototype       insolar.Reference
 	ConstructorName string
 	ArgsSerialized  []byte
 }
 
 // UpSaveAsDelegateResp is response from SaveAsDelegate RPC in goplugin
 type UpSaveAsDelegateResp struct {
-	Reference *insolar.RecordRef
+	Reference *insolar.Reference
 }
 
 // UpGetDelegateReq is a set of arguments for GetDelegate RPC in goplugin
 type UpGetDelegateReq struct {
 	UpBaseReq
-	Object insolar.RecordRef
-	OfType insolar.RecordRef
+	Object insolar.Reference
+	OfType insolar.Reference
 }
 
 // UpGetDelegateResp is response from GetDelegate RPC in goplugin
 type UpGetDelegateResp struct {
-	Object insolar.RecordRef
+	Object insolar.Reference
 }
 
 // UpDeactivateObjectReq is a set of arguments for DeactivateObject RPC in goplugin

@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-//RecordID and RecordRef serialization tests
+//ID and Reference serialization tests
 
 func TestNewIDFromBase58(t *testing.T) {
 	id := testutils.RandomID()
@@ -49,8 +49,8 @@ func TestNewRefFromBase58(t *testing.T) {
 	domainID := testutils.RandomID()
 	refStr := recordID.String() + insolar.RecordRefIDSeparator + domainID.String()
 
-	expectedRef := insolar.NewRecordRef(domainID, recordID)
-	actualRef, err := insolar.NewRefFromBase58(refStr)
+	expectedRef := insolar.NewReference(domainID, recordID)
+	actualRef, err := insolar.NewReferenceFromBase58(refStr)
 	require.NoError(t, err)
 
 	assert.Equal(t, expectedRef, actualRef)
@@ -64,36 +64,36 @@ func TestRecordRef_String(t *testing.T) {
 }
 
 func TestRecordID_DebugString_Jet(t *testing.T) {
-	j := insolar.RecordID(*insolar.NewJetID(0, []byte{}))
+	j := insolar.ID(*insolar.NewJetID(0, []byte{}))
 	assert.Equal(t, "[JET 0 -]", j.DebugString())
 
-	j = insolar.RecordID(*insolar.NewJetID(1, []byte{}))
+	j = insolar.ID(*insolar.NewJetID(1, []byte{}))
 	assert.Equal(t, "[JET 1 0]", j.DebugString())
-	j = insolar.RecordID(*insolar.NewJetID(2, []byte{}))
+	j = insolar.ID(*insolar.NewJetID(2, []byte{}))
 	assert.Equal(t, "[JET 2 00]", j.DebugString())
 
-	j = insolar.RecordID(*insolar.NewJetID(1, []byte{128}))
+	j = insolar.ID(*insolar.NewJetID(1, []byte{128}))
 	assert.Equal(t, "[JET 1 1]", j.DebugString())
-	j = insolar.RecordID(*insolar.NewJetID(2, []byte{192}))
+	j = insolar.ID(*insolar.NewJetID(2, []byte{192}))
 	assert.Equal(t, "[JET 2 11]", j.DebugString())
 }
 
 func BenchmarkRecordID_DebugString_ZeroDepth(b *testing.B) {
-	jet := insolar.RecordID(*insolar.NewJetID(0, []byte{}))
+	jet := insolar.ID(*insolar.NewJetID(0, []byte{}))
 	for n := 0; n < b.N; n++ {
 		jet.DebugString()
 	}
 }
 
 func BenchmarkRecordID_DebugString_Depth1(b *testing.B) {
-	jet := insolar.RecordID(*insolar.NewJetID(1, []byte{128}))
+	jet := insolar.ID(*insolar.NewJetID(1, []byte{128}))
 	for n := 0; n < b.N; n++ {
 		jet.DebugString()
 	}
 }
 
 func BenchmarkRecordID_DebugString_Depth5(b *testing.B) {
-	jet := insolar.RecordID(*insolar.NewJetID(5, []byte{128}))
+	jet := insolar.ID(*insolar.NewJetID(5, []byte{128}))
 	for n := 0; n < b.N; n++ {
 		jet.DebugString()
 	}

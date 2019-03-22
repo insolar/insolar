@@ -61,7 +61,7 @@ import (
 
 type consensusInfo struct {
 	lock                       sync.RWMutex
-	tempMapR                   map[insolar.RecordRef]*host.Host
+	tempMapR                   map[insolar.Reference]*host.Host
 	tempMapS                   map[insolar.ShortNodeID]*host.Host
 	nodesJoinedDuringPrevPulse bool
 	isJoiner                   bool
@@ -88,7 +88,7 @@ func (ci *consensusInfo) NodesJoinedDuringPreviousPulse() bool {
 	return ci.nodesJoinedDuringPrevPulse
 }
 
-func (ci *consensusInfo) AddTemporaryMapping(nodeID insolar.RecordRef, shortID insolar.ShortNodeID, address string) error {
+func (ci *consensusInfo) AddTemporaryMapping(nodeID insolar.Reference, shortID insolar.ShortNodeID, address string) error {
 	consensusAddress, err := incrementPort(address)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to increment port for address %s", address)
@@ -112,7 +112,7 @@ func (ci *consensusInfo) ResolveConsensus(shortID insolar.ShortNodeID) *host.Hos
 	return ci.tempMapS[shortID]
 }
 
-func (ci *consensusInfo) ResolveConsensusRef(nodeID insolar.RecordRef) *host.Host {
+func (ci *consensusInfo) ResolveConsensusRef(nodeID insolar.Reference) *host.Host {
 	ci.lock.RLock()
 	defer ci.lock.RUnlock()
 
@@ -123,14 +123,14 @@ func (ci *consensusInfo) flush(nodesJoinedDuringPrevPulse bool) {
 	ci.lock.Lock()
 	defer ci.lock.Unlock()
 
-	ci.tempMapR = make(map[insolar.RecordRef]*host.Host)
+	ci.tempMapR = make(map[insolar.Reference]*host.Host)
 	ci.tempMapS = make(map[insolar.ShortNodeID]*host.Host)
 	ci.nodesJoinedDuringPrevPulse = nodesJoinedDuringPrevPulse
 }
 
 func newConsensusInfo() *consensusInfo {
 	return &consensusInfo{
-		tempMapR: make(map[insolar.RecordRef]*host.Host),
+		tempMapR: make(map[insolar.Reference]*host.Host),
 		tempMapS: make(map[insolar.ShortNodeID]*host.Host),
 	}
 }

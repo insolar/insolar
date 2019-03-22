@@ -92,7 +92,7 @@ var hashtestsRecordsMutate = []struct {
 			&CodeRecord{
 				Code: CalculateIDForBlob(pcs, insolar.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
 				SideEffectRecord: SideEffectRecord{
-					Domain: insolar.RecordRef{1, 2, 3},
+					Domain: insolar.Reference{1, 2, 3},
 				},
 			},
 		},

@@ -79,22 +79,22 @@ func ApprovedJoinersCount(requestedJoinersCount, activeNodesCount int) int {
 }
 
 type ClaimHandler struct {
-	claims      map[insolar.RecordRef][]packets.ReferendumClaim
+	claims      map[insolar.Reference][]packets.ReferendumClaim
 	activeCount int
 }
 
-func NewClaimHandler(activeNodesCount int, claims map[insolar.RecordRef][]packets.ReferendumClaim) *ClaimHandler {
+func NewClaimHandler(activeNodesCount int, claims map[insolar.Reference][]packets.ReferendumClaim) *ClaimHandler {
 	return &ClaimHandler{
 		activeCount: activeNodesCount,
 		claims:      claims,
 	}
 }
 
-func (ch *ClaimHandler) SetClaimsFromNode(node insolar.RecordRef, claims []packets.ReferendumClaim) {
+func (ch *ClaimHandler) SetClaimsFromNode(node insolar.Reference, claims []packets.ReferendumClaim) {
 	ch.claims[node] = claims
 }
 
-func (ch *ClaimHandler) GetClaimsFromNode(node insolar.RecordRef) []packets.ReferendumClaim {
+func (ch *ClaimHandler) GetClaimsFromNode(node insolar.Reference) []packets.ReferendumClaim {
 	return ch.claims[node]
 }
 
@@ -113,9 +113,9 @@ type ClaimSplit struct {
 }
 
 type none struct{}
-type recordRefSet map[insolar.RecordRef]none
+type recordRefSet map[insolar.Reference]none
 
-func (ch *ClaimHandler) FilterClaims(approvedNodes []insolar.RecordRef, entropy insolar.Entropy) ClaimSplit {
+func (ch *ClaimHandler) FilterClaims(approvedNodes []insolar.Reference, entropy insolar.Entropy) ClaimSplit {
 	knownClaims := make(recordRefSet)
 	queue := Queue{}
 
@@ -181,6 +181,6 @@ func (ch *ClaimHandler) getApprovedJoinClaims(queue *Queue) []*packets.NodeJoinC
 	return res
 }
 
-func getPriority(ref insolar.RecordRef, entropy insolar.Entropy) []byte {
+func getPriority(ref insolar.Reference, entropy insolar.Entropy) []byte {
 	return utils.CircleXOR(ref[:], entropy[:])
 }

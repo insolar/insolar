@@ -66,13 +66,13 @@ func (m *middleware) addFieldsToLogger(handler insolar.MessageHandler) insolar.M
 
 type jetKey struct{}
 
-func contextWithJet(ctx context.Context, jetID insolar.RecordID) context.Context {
+func contextWithJet(ctx context.Context, jetID insolar.ID) context.Context {
 	return context.WithValue(ctx, jetKey{}, jetID)
 }
 
-func jetFromContext(ctx context.Context) insolar.RecordID {
+func jetFromContext(ctx context.Context) insolar.ID {
 	val := ctx.Value(jetKey{})
-	j, ok := val.(insolar.RecordID)
+	j, ok := val.(insolar.ID)
 	if !ok {
 		panic("failed to extract jet from context")
 	}
@@ -82,11 +82,11 @@ func jetFromContext(ctx context.Context) insolar.RecordID {
 
 func (m *middleware) zeroJetForHeavy(handler insolar.MessageHandler) insolar.MessageHandler {
 	return func(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-		return handler(contextWithJet(ctx, insolar.RecordID(*insolar.NewJetID(0, nil))), parcel)
+		return handler(contextWithJet(ctx, insolar.ID(*insolar.NewJetID(0, nil))), parcel)
 	}
 }
 
-func addJetIDToLogger(ctx context.Context, jetID insolar.RecordID) context.Context {
+func addJetIDToLogger(ctx context.Context, jetID insolar.ID) context.Context {
 	ctx, _ = inslogger.WithField(ctx, "jetid", jetID.DebugString())
 
 	return ctx
@@ -101,7 +101,7 @@ func (m *middleware) checkJet(handler insolar.MessageHandler) insolar.MessageHan
 
 		// FIXME: @andreyromancev. 17.01.19. Temporary allow any genesis request. Remove it.
 		if parcel.Pulse() == insolar.FirstPulseNumber {
-			return handler(contextWithJet(ctx, insolar.RecordID(*insolar.NewJetID(0, nil))), parcel)
+			return handler(contextWithJet(ctx, insolar.ID(*insolar.NewJetID(0, nil))), parcel)
 		}
 
 		// Check token jet.
@@ -130,11 +130,11 @@ func (m *middleware) checkJet(handler insolar.MessageHandler) insolar.MessageHan
 				}).Error("jet is not actual")
 			}
 
-			return handler(contextWithJet(ctx, insolar.RecordID(jetID)), parcel)
+			return handler(contextWithJet(ctx, insolar.ID(jetID)), parcel)
 		}
 
 		// Calculate jet for current pulse.
-		var jetID insolar.RecordID
+		var jetID insolar.ID
 		if msg.DefaultTarget().Record().Pulse() == insolar.PulseNumberJet {
 			jetID = *msg.DefaultTarget().Record()
 		} else {

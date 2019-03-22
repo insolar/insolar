@@ -138,13 +138,13 @@ func (s *exporterSuite) TestExporter_Export() {
 	blobData.Data.Field = "anotherValue"
 	codec.NewEncoderBytes(&mem, &codec.CborHandle{}).MustEncode(blobData)
 
-	blobID, err := s.objectStorage.SetBlob(s.ctx, insolar.RecordID(s.jetID), Pulse10, mem)
+	blobID, err := s.objectStorage.SetBlob(s.ctx, insolar.ID(s.jetID), Pulse10, mem)
 	require.NoError(s.T(), err)
 
-	_, err = s.objectStorage.SetRecord(s.ctx, insolar.RecordID(s.jetID), Pulse10, &object.GenesisRecord{})
+	_, err = s.objectStorage.SetRecord(s.ctx, insolar.ID(s.jetID), Pulse10, &object.GenesisRecord{})
 	require.NoError(s.T(), err)
 
-	objectID, err := s.objectStorage.SetRecord(s.ctx, insolar.RecordID(s.jetID), Pulse10, &object.ObjectActivateRecord{
+	objectID, err := s.objectStorage.SetRecord(s.ctx, insolar.ID(s.jetID), Pulse10, &object.ObjectActivateRecord{
 		ObjectStateRecord: object.ObjectStateRecord{
 			Memory: blobID,
 		},
@@ -159,7 +159,7 @@ func (s *exporterSuite) TestExporter_Export() {
 	msgHash := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher().Hash(message.ToBytes(msg))
 	requestID, err := s.objectStorage.SetRecord(
 		s.ctx,
-		insolar.RecordID(s.jetID),
+		insolar.ID(s.jetID),
 		Pulse10,
 		&object.RequestRecord{
 			MessageHash: msgHash,
@@ -232,9 +232,9 @@ func (s *exporterSuite) TestExporter_ExportGetBlobFailed() {
 		require.NoError(s.T(), err)
 	}
 
-	_, err := s.objectStorage.SetRecord(s.ctx, insolar.RecordID(s.jetID), insolar.FirstPulseNumber+10, &object.ObjectActivateRecord{
+	_, err := s.objectStorage.SetRecord(s.ctx, insolar.ID(s.jetID), insolar.FirstPulseNumber+10, &object.ObjectActivateRecord{
 		ObjectStateRecord: object.ObjectStateRecord{
-			Memory: &insolar.RecordID{},
+			Memory: &insolar.ID{},
 		},
 		IsDelegate: true,
 	})

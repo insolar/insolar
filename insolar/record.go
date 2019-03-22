@@ -33,148 +33,148 @@ const (
 	RecordHashSize = 28
 	// RecordIDSize is relative record address.
 	RecordIDSize = PulseNumberSize + RecordHashSize
-	// RecordHashOffset is a offset where hash bytes starts in RecordID.
+	// RecordHashOffset is a offset where hash bytes starts in ID.
 	RecordHashOffset = PulseNumberSize
 	// RecordRefSize is absolute records address (including domain ID).
 	RecordRefSize = RecordIDSize * 2
-	// RecordRefIDSeparator is character that separates RecordID from DomainID in serialized RecordRef.
+	// RecordRefIDSeparator is character that separates ID from DomainID in serialized Reference.
 	RecordRefIDSeparator = "."
 )
 
-// RecordID is a unified record ID.
-type RecordID [RecordIDSize]byte
+// ID is a unified record ID.
+type ID [RecordIDSize]byte
 
-// String implements stringer on RecordID and returns base58 encoded value
-func (id *RecordID) String() string {
+// String implements stringer on ID and returns base58 encoded value
+func (id *ID) String() string {
 	return base58.Encode(id[:])
 }
 
-// NewRecordID generates RecordID byte representation.
-func NewRecordID(pulse PulseNumber, hash []byte) *RecordID {
-	var id RecordID
+// NewID generates ID byte representation.
+func NewID(pulse PulseNumber, hash []byte) *ID {
+	var id ID
 	copy(id[:PulseNumberSize], pulse.Bytes())
 	copy(id[RecordHashOffset:], hash)
 	return &id
 }
 
-// Bytes returns byte slice of RecordID.
-func (id *RecordID) Bytes() []byte {
+// Bytes returns byte slice of ID.
+func (id *ID) Bytes() []byte {
 	return id[:]
 }
 
-// Pulse returns a copy of Pulse part of RecordID.
-func (id *RecordID) Pulse() PulseNumber {
+// Pulse returns a copy of Pulse part of ID.
+func (id *ID) Pulse() PulseNumber {
 	pulse := binary.BigEndian.Uint32(id[:PulseNumberSize])
 	return PulseNumber(pulse)
 }
 
-// Hash returns a copy of Hash part of RecordID.
-func (id *RecordID) Hash() []byte {
+// Hash returns a copy of Hash part of ID.
+func (id *ID) Hash() []byte {
 	recHash := make([]byte, RecordHashSize)
 	copy(recHash, id[RecordHashOffset:])
 	return recHash
 }
 
 // Equal checks if reference points to the same record.
-func (id *RecordID) Equal(other *RecordID) bool {
+func (id *ID) Equal(other *ID) bool {
 	if id == nil || other == nil {
 		return false
 	}
 	return *id == *other
 }
 
-// NewIDFromBase58 deserializes RecordID from base58 encoded string.
-func NewIDFromBase58(str string) (*RecordID, error) {
+// NewIDFromBase58 deserializes ID from base58 encoded string.
+func NewIDFromBase58(str string) (*ID, error) {
 	decoded := base58.Decode(str)
 	if len(decoded) != RecordIDSize {
-		return nil, errors.New("bad RecordID size")
+		return nil, errors.New("bad ID size")
 	}
-	var id RecordID
+	var id ID
 	copy(id[:], decoded)
 	return &id, nil
 }
 
 // MarshalJSON serializes ID into JSON.
-func (id *RecordID) MarshalJSON() ([]byte, error) {
+func (id *ID) MarshalJSON() ([]byte, error) {
 	if id == nil {
 		return json.Marshal(nil)
 	}
 	return json.Marshal(id.String())
 }
 
-// RecordRef is a unified record reference.
-type RecordRef [RecordRefSize]byte
+// Reference is a unified record reference.
+type Reference [RecordRefSize]byte
 
-// NewRecordRef returns RecordRef composed from domain and record
-func NewRecordRef(domain RecordID, record RecordID) *RecordRef {
-	var ref RecordRef
+// NewReference returns Reference composed from domain and record
+func NewReference(domain ID, record ID) *Reference {
+	var ref Reference
 	ref.SetDomain(domain)
 	ref.SetRecord(record)
 	return &ref
 }
 
-// SetDomain set domain's RecordID.
-func (ref *RecordRef) SetDomain(recID RecordID) {
+// SetDomain set domain's ID.
+func (ref *Reference) SetDomain(recID ID) {
 	copy(ref[RecordIDSize:], recID[:])
 }
 
-// SetRecord set record's RecordID.
-func (ref *RecordRef) SetRecord(recID RecordID) {
+// SetRecord set record's ID.
+func (ref *Reference) SetRecord(recID ID) {
 	copy(ref[:RecordIDSize], recID[:])
 }
 
 // Domain returns domain ID part of reference.
-func (ref RecordRef) Domain() *RecordID {
-	var id RecordID
+func (ref Reference) Domain() *ID {
+	var id ID
 	copy(id[:], ref[RecordIDSize:])
 	return &id
 }
 
-// Record returns record's RecordID.
-func (ref *RecordRef) Record() *RecordID {
+// Record returns record's ID.
+func (ref *Reference) Record() *ID {
 	if ref == nil {
 		return nil
 	}
-	var id RecordID
+	var id ID
 	copy(id[:], ref[:RecordIDSize])
 	return &id
 }
 
-// String outputs base58 RecordRef representation.
-func (ref RecordRef) String() string {
+// String outputs base58 Reference representation.
+func (ref Reference) String() string {
 	return ref.Record().String() + RecordRefIDSeparator + ref.Domain().String()
 }
 
 // FromSlice : After CBOR Marshal/Unmarshal Ref can be converted to byte slice, this converts it back
-func (ref RecordRef) FromSlice(from []byte) RecordRef {
+func (ref Reference) FromSlice(from []byte) Reference {
 	for i := 0; i < RecordRefSize; i++ {
 		ref[i] = from[i]
 	}
 	return ref
 }
 
-// Bytes returns byte slice of RecordRef.
-func (ref RecordRef) Bytes() []byte {
+// Bytes returns byte slice of Reference.
+func (ref Reference) Bytes() []byte {
 	return ref[:]
 }
 
 // Equal checks if reference points to the same record.
-func (ref RecordRef) Equal(other RecordRef) bool {
+func (ref Reference) Equal(other Reference) bool {
 	return ref == other
 }
 
 // IsEmpty - check for void
-func (ref RecordRef) IsEmpty() bool {
-	return ref.Equal(RecordRef{})
+func (ref Reference) IsEmpty() bool {
+	return ref.Equal(Reference{})
 }
 
 // Compare compares two record references
-func (ref RecordRef) Compare(other RecordRef) int {
+func (ref Reference) Compare(other Reference) int {
 	return bytes.Compare(ref.Bytes(), other.Bytes())
 }
 
-// NewRefFromBase58 deserializes reference from base58 encoded string.
-func NewRefFromBase58(str string) (*RecordRef, error) {
+// NewReferenceFromBase58 deserializes reference from base58 encoded string.
+func NewReferenceFromBase58(str string) (*Reference, error) {
 	parts := strings.SplitN(str, RecordRefIDSeparator, 2)
 	if len(parts) < 2 {
 		return nil, errors.New("bad reference format")
@@ -187,11 +187,11 @@ func NewRefFromBase58(str string) (*RecordRef, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "bad domain part")
 	}
-	return NewRecordRef(*domainID, *recordID), nil
+	return NewReference(*domainID, *recordID), nil
 }
 
 // MarshalJSON serializes reference into JSON.
-func (ref *RecordRef) MarshalJSON() ([]byte, error) {
+func (ref *Reference) MarshalJSON() ([]byte, error) {
 	if ref == nil {
 		return json.Marshal(nil)
 	}
@@ -199,7 +199,7 @@ func (ref *RecordRef) MarshalJSON() ([]byte, error) {
 }
 
 // DebugString prints ID in human readable form.
-func (id *RecordID) DebugString() string {
+func (id *ID) DebugString() string {
 	if id == nil {
 		return "<nil>"
 	}

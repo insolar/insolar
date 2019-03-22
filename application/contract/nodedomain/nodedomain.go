@@ -39,7 +39,7 @@ func NewNodeDomain() (*NodeDomain, error) {
 	}, nil
 }
 
-func (nd *NodeDomain) getNodeRecord(ref insolar.RecordRef) *noderecord.NodeRecord {
+func (nd *NodeDomain) getNodeRecord(ref insolar.Reference) *noderecord.NodeRecord {
 	return noderecord.GetObject(ref)
 }
 
@@ -76,7 +76,7 @@ func (nd *NodeDomain) GetNodeRefByPK(publicKey string) (string, error) {
 }
 
 // RemoveNode deletes node from registry
-func (nd *NodeDomain) RemoveNode(nodeRef insolar.RecordRef) error {
+func (nd *NodeDomain) RemoveNode(nodeRef insolar.Reference) error {
 	node := nd.getNodeRecord(nodeRef)
 	nodePK, err := node.GetPublicKey()
 	if err != nil {

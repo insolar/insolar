@@ -43,7 +43,7 @@ type Pool struct {
 	clientDefaults Options
 
 	sync.Mutex
-	clients map[insolar.RecordID]*JetClient
+	clients map[insolar.ID]*JetClient
 
 	cleanupGroup singleflight.Group
 }
@@ -68,7 +68,7 @@ func NewPool(
 		clientDefaults: clientDefaults,
 		cleaner:        cleaner,
 		db:             db,
-		clients:        map[insolar.RecordID]*JetClient{},
+		clients:        map[insolar.ID]*JetClient{},
 	}
 }
 
@@ -94,7 +94,7 @@ func (scp *Pool) Stop(ctx context.Context) {
 // Bool flag 'shouldrun' controls should heavy client be started (if not already) or not.
 func (scp *Pool) AddPulsesToSyncClient(
 	ctx context.Context,
-	jetID insolar.RecordID,
+	jetID insolar.ID,
 	shouldrun bool,
 	pns ...insolar.PulseNumber,
 ) *JetClient {
@@ -149,7 +149,7 @@ func (scp *Pool) LightCleanup(
 	ctx context.Context,
 	untilPN insolar.PulseNumber,
 	rsp recentstorage.Provider,
-	jetIndexesRemoved map[insolar.RecordID][]insolar.RecordID,
+	jetIndexesRemoved map[insolar.ID][]insolar.ID,
 ) error {
 	inslog := inslogger.FromContext(ctx)
 	start := time.Now()
@@ -186,7 +186,7 @@ func (scp *Pool) LightCleanup(
 			jetPrefixSeen[prefixKey] = struct{}{}
 
 			// TODO: fill candidates here
-			candidates := jetIndexesRemoved[insolar.RecordID(jetID)]
+			candidates := jetIndexesRemoved[insolar.ID(jetID)]
 
 			if (len(candidates) == 0) && skipRecordsCleanup {
 				continue
@@ -205,8 +205,8 @@ func (scp *Pool) LightCleanup(
 						untilPN, jetID.DebugString())
 
 					if len(candidates) > 0 {
-						jetRecentStore := rsp.GetIndexStorage(ctx, insolar.RecordID(jetID))
-						idxsRmStat, err := scp.cleaner.CleanJetIndexes(ctx, insolar.RecordID(jetID), jetRecentStore, candidates)
+						jetRecentStore := rsp.GetIndexStorage(ctx, insolar.ID(jetID))
+						idxsRmStat, err := scp.cleaner.CleanJetIndexes(ctx, insolar.ID(jetID), jetRecentStore, candidates)
 						if err != nil {
 							inslogger.FromContext(ctx).Errorf("Error on indexes cleanup (pulse < %v, jet = %v): %v",
 								untilPN, jetID.DebugString(), err)
@@ -219,7 +219,7 @@ func (scp *Pool) LightCleanup(
 						return nil, nil
 					}
 
-					recsRmStat, err := scp.cleaner.CleanJetRecordsUntilPulse(ctx, insolar.RecordID(jetID), untilPN)
+					recsRmStat, err := scp.cleaner.CleanJetRecordsUntilPulse(ctx, insolar.ID(jetID), untilPN)
 					if err != nil {
 						inslogger.FromContext(ctx).Errorf("Error on light cleanup (pulse < %v, jet = %v): %v",
 							untilPN, jetID.DebugString(), err)

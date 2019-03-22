@@ -20,7 +20,7 @@ import (
 type ModifierMock struct {
 	t minimock.Tester
 
-	SetFunc       func(p context.Context, p1 insolar.RecordID, p2 Blob) (r error)
+	SetFunc       func(p context.Context, p1 insolar.ID, p2 Blob) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mModifierMockSet
@@ -52,7 +52,7 @@ type ModifierMockSetExpectation struct {
 
 type ModifierMockSetInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 	p2 Blob
 }
 
@@ -61,7 +61,7 @@ type ModifierMockSetResult struct {
 }
 
 //Expect specifies that invocation of Modifier.Set is expected from 1 to Infinity times
-func (m *mModifierMockSet) Expect(p context.Context, p1 insolar.RecordID, p2 Blob) *mModifierMockSet {
+func (m *mModifierMockSet) Expect(p context.Context, p1 insolar.ID, p2 Blob) *mModifierMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
@@ -85,7 +85,7 @@ func (m *mModifierMockSet) Return(r error) *ModifierMock {
 }
 
 //ExpectOnce specifies that invocation of Modifier.Set is expected once
-func (m *mModifierMockSet) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 Blob) *ModifierMockSetExpectation {
+func (m *mModifierMockSet) ExpectOnce(p context.Context, p1 insolar.ID, p2 Blob) *ModifierMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
@@ -100,7 +100,7 @@ func (e *ModifierMockSetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of Modifier.Set method
-func (m *mModifierMockSet) Set(f func(p context.Context, p1 insolar.RecordID, p2 Blob) (r error)) *ModifierMock {
+func (m *mModifierMockSet) Set(f func(p context.Context, p1 insolar.ID, p2 Blob) (r error)) *ModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -109,7 +109,7 @@ func (m *mModifierMockSet) Set(f func(p context.Context, p1 insolar.RecordID, p2
 }
 
 //Set implements github.com/insolar/insolar/ledger/storage/blob.Modifier interface
-func (m *ModifierMock) Set(p context.Context, p1 insolar.RecordID, p2 Blob) (r error) {
+func (m *ModifierMock) Set(p context.Context, p1 insolar.ID, p2 Blob) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 

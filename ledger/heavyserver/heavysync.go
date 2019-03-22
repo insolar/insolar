@@ -35,7 +35,7 @@ import (
 
 const defaultTimeout = time.Second * 10
 
-func errSyncInProgress(jetID insolar.RecordID, pn insolar.PulseNumber) *reply.HeavyError {
+func errSyncInProgress(jetID insolar.ID, pn insolar.PulseNumber) *reply.HeavyError {
 	return &reply.HeavyError{
 		Message:  "Heavy node sync in progress",
 		SubType:  reply.ErrHeavySyncInProgress,
@@ -94,7 +94,7 @@ func NewSync(db storage.DBContext) *Sync {
 	}
 }
 
-func (s *Sync) checkIsNextPulse(ctx context.Context, jetID insolar.RecordID, jetstate *syncstate, pn insolar.PulseNumber) error {
+func (s *Sync) checkIsNextPulse(ctx context.Context, jetID insolar.ID, jetstate *syncstate, pn insolar.PulseNumber) error {
 	var (
 		checkpoint insolar.PulseNumber
 		err        error
@@ -121,7 +121,7 @@ func (s *Sync) checkIsNextPulse(ctx context.Context, jetID insolar.RecordID, jet
 	return nil
 }
 
-func (s *Sync) getJetSyncState(ctx context.Context, jetID insolar.RecordID) *syncstate {
+func (s *Sync) getJetSyncState(ctx context.Context, jetID insolar.ID) *syncstate {
 	var jp jetprefix
 	jpBuf := insolar.JetID(jetID).Prefix()
 	copy(jp[:], jpBuf)
@@ -136,7 +136,7 @@ func (s *Sync) getJetSyncState(ctx context.Context, jetID insolar.RecordID) *syn
 }
 
 // Start try to start heavy sync for provided pulse.
-func (s *Sync) Start(ctx context.Context, jetID insolar.RecordID, pn insolar.PulseNumber) error {
+func (s *Sync) Start(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber) error {
 	jetState := s.getJetSyncState(ctx, jetID)
 	jetState.Lock()
 	defer jetState.Unlock()
@@ -165,7 +165,7 @@ func (s *Sync) Start(ctx context.Context, jetID insolar.RecordID, pn insolar.Pul
 // Store stores recieved key/value pairs at heavy storage.
 //
 // TODO: check actual jet and pulse in keys
-func (s *Sync) Store(ctx context.Context, jetID insolar.RecordID, pn insolar.PulseNumber, kvs []insolar.KV) error {
+func (s *Sync) Store(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber, kvs []insolar.KV) error {
 	inslog := inslogger.FromContext(ctx)
 	jetState := s.getJetSyncState(ctx, jetID)
 
@@ -229,7 +229,7 @@ func (s *Sync) StoreDrop(ctx context.Context, jetID insolar.JetID, rawDrop []byt
 // Stop successfully stops replication for specified pulse.
 //
 // TODO: call Stop if range sync too long
-func (s *Sync) Stop(ctx context.Context, jetID insolar.RecordID, pn insolar.PulseNumber) error {
+func (s *Sync) Stop(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber) error {
 	jetState := s.getJetSyncState(ctx, jetID)
 	jetState.Lock()
 	defer jetState.Unlock()
@@ -257,7 +257,7 @@ func (s *Sync) Stop(ctx context.Context, jetID insolar.RecordID, pn insolar.Puls
 }
 
 // Reset resets sync for provided pulse.
-func (s *Sync) Reset(ctx context.Context, jetID insolar.RecordID, pn insolar.PulseNumber) error {
+func (s *Sync) Reset(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber) error {
 	jetState := s.getJetSyncState(ctx, jetID)
 	jetState.Lock()
 	defer jetState.Unlock()

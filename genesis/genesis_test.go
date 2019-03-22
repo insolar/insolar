@@ -35,14 +35,14 @@ const testDataPath = "gentestdata"
 
 func mockArtifactManager(t *testing.T) *testutils.ArtifactManagerMock {
 	amMock := testutils.NewArtifactManagerMock(t)
-	amMock.RegisterRequestFunc = func(p context.Context, p1 insolar.RecordRef, p2 insolar.Parcel) (r *insolar.RecordID, r1 error) {
+	amMock.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
 		id := testutils.RandomID()
 		return &id, nil
 	}
-	amMock.ActivateObjectFunc = func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.RecordRef, p4 insolar.RecordRef, p5 bool, p6 []byte) (r insolar.ObjectDescriptor, r1 error) {
+	amMock.ActivateObjectFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r insolar.ObjectDescriptor, r1 error) {
 		return testutils.NewObjectDescriptorMock(t), nil
 	}
-	amMock.RegisterResultFunc = func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 []byte) (r *insolar.RecordID, r1 error) {
+	amMock.RegisterResultFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error) {
 		id := testutils.RandomID()
 		return &id, nil
 	}
@@ -51,7 +51,7 @@ func mockArtifactManager(t *testing.T) *testutils.ArtifactManagerMock {
 
 func mockArtifactManagerWithRegisterRequestError(t *testing.T) *testutils.ArtifactManagerMock {
 	amMock := testutils.NewArtifactManagerMock(t)
-	amMock.RegisterRequestFunc = func(p context.Context, p1 insolar.RecordRef, p2 insolar.Parcel) (r *insolar.RecordID, r1 error) {
+	amMock.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
 		return nil, errors.New("test reasons")
 	}
 	return amMock
@@ -210,11 +210,11 @@ func TestActivateNodeRecord_RegisterRequest_Err(t *testing.T) {
 
 func TestActivateNodeRecord_Activate_Err(t *testing.T) {
 	am := testutils.NewArtifactManagerMock(t)
-	am.RegisterRequestFunc = func(p context.Context, p1 insolar.RecordRef, p2 insolar.Parcel) (r *insolar.RecordID, r1 error) {
+	am.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
 		id := testutils.RandomID()
 		return &id, nil
 	}
-	am.ActivateObjectFunc = func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.RecordRef, p4 insolar.RecordRef, p5 bool, p6 []byte) (r insolar.ObjectDescriptor, r1 error) {
+	am.ActivateObjectFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r insolar.ObjectDescriptor, r1 error) {
 		return nil, errors.New("test reasons")
 	}
 
@@ -237,14 +237,14 @@ func TestActivateNodeRecord_Activate_Err(t *testing.T) {
 
 func TestActivateNodeRecord_RegisterResult_Err(t *testing.T) {
 	am := testutils.NewArtifactManagerMock(t)
-	am.RegisterRequestFunc = func(p context.Context, p1 insolar.RecordRef, p2 insolar.Parcel) (r *insolar.RecordID, r1 error) {
+	am.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
 		id := testutils.RandomID()
 		return &id, nil
 	}
-	am.ActivateObjectFunc = func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.RecordRef, p4 insolar.RecordRef, p5 bool, p6 []byte) (r insolar.ObjectDescriptor, r1 error) {
+	am.ActivateObjectFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r insolar.ObjectDescriptor, r1 error) {
 		return testutils.NewObjectDescriptorMock(t), nil
 	}
-	am.RegisterResultFunc = func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 []byte) (r *insolar.RecordID, r1 error) {
+	am.RegisterResultFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error) {
 		return nil, errors.New("test reasons")
 	}
 

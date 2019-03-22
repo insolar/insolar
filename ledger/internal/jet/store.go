@@ -33,7 +33,7 @@ type lockedTree struct {
 	t *Tree
 }
 
-func (lt *lockedTree) find(recordID insolar.RecordID) (insolar.JetID, bool) {
+func (lt *lockedTree) find(recordID insolar.ID) (insolar.JetID, bool) {
 	lt.RLock()
 	defer lt.RUnlock()
 	return lt.t.Find(recordID)
@@ -84,7 +84,7 @@ func (s *Store) All(ctx context.Context, pulse insolar.PulseNumber) []insolar.Je
 
 // ForID finds jet in jet tree for provided pulse and object.
 // Always returns jet id and activity flag for this jet.
-func (s *Store) ForID(ctx context.Context, pulse insolar.PulseNumber, recordID insolar.RecordID) (insolar.JetID, bool) {
+func (s *Store) ForID(ctx context.Context, pulse insolar.PulseNumber, recordID insolar.ID) (insolar.JetID, bool) {
 	return s.ltreeForPulse(pulse).find(recordID)
 }
 

@@ -158,7 +158,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 		target := testutils.RandomID()
 
 		mb.SendMock.Return(
-			&reply.Jet{ID: insolar.RecordID(*insolar.NewJetID(0, nil)), Actual: false},
+			&reply.Jet{ID: insolar.ID(*insolar.NewJetID(0, nil)), Actual: false},
 			nil,
 		)
 
@@ -170,13 +170,13 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 		target := testutils.RandomID()
 
 		mb.SendMock.Return(
-			&reply.Jet{ID: insolar.RecordID(*insolar.NewJetID(0, nil)), Actual: true},
+			&reply.Jet{ID: insolar.ID(*insolar.NewJetID(0, nil)), Actual: true},
 			nil,
 		)
 
 		jetID, err := jtu.fetchActualJetFromOtherNodes(ctx, target, insolar.PulseNumber(100))
 		require.NoError(t, err)
-		require.Equal(t, insolar.RecordID(*insolar.NewJetID(0, nil)), *jetID)
+		require.Equal(t, insolar.ID(*insolar.NewJetID(0, nil)), *jetID)
 	})
 
 	// TODO: multiple nodes returned different results
@@ -220,7 +220,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 			[]insolar.Node{{ID: gen.Reference()}}, nil,
 		)
 		mb.SendMock.Return(
-			&reply.Jet{ID: insolar.RecordID(*insolar.NewJetID(0, nil)), Actual: true},
+			&reply.Jet{ID: insolar.ID(*insolar.NewJetID(0, nil)), Actual: true},
 			nil,
 		)
 
@@ -234,7 +234,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 
 		jetID, err := jtu.fetchJet(ctx, target, insolar.PulseNumber(100))
 		require.NoError(t, err)
-		require.Equal(t, insolar.RecordID(*insolar.NewJetID(0, nil)), *jetID)
+		require.Equal(t, insolar.ID(*insolar.NewJetID(0, nil)), *jetID)
 	})
 }
 
@@ -264,12 +264,12 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 
 	dataMu := sync.Mutex{}
 
-	first := insolar.RecordID(*insolar.NewJetID(2, []byte{0}))
-	second := insolar.RecordID(*insolar.NewJetID(2, []byte{0}))
-	third := insolar.RecordID(*insolar.NewJetID(2, []byte{0}))
-	fourth := insolar.RecordID(*insolar.NewJetID(2, []byte{0}))
+	first := insolar.ID(*insolar.NewJetID(2, []byte{0}))
+	second := insolar.ID(*insolar.NewJetID(2, []byte{0}))
+	third := insolar.ID(*insolar.NewJetID(2, []byte{0}))
+	fourth := insolar.ID(*insolar.NewJetID(2, []byte{0}))
 
-	data := map[byte]*insolar.RecordID{
+	data := map[byte]*insolar.ID{
 		0:   &first,  // 00
 		128: &second, // 10
 		64:  &third,  // 01
@@ -299,7 +299,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 				tree.Update(id, actual)
 			}
 		}
-		js.ForIDFunc = func(ctx context.Context, pulse insolar.PulseNumber, id insolar.RecordID) (insolar.JetID, bool) {
+		js.ForIDFunc = func(ctx context.Context, pulse insolar.PulseNumber, id insolar.ID) (insolar.JetID, bool) {
 			treeMu.Lock()
 			defer treeMu.Unlock()
 
@@ -311,7 +311,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 
 		for _, b := range []byte{0, 128, 192} {
 			go func(b byte) {
-				target := insolar.NewRecordID(0, []byte{b})
+				target := insolar.NewID(0, []byte{b})
 
 				jetID, err := jtu.fetchJet(ctx, *target, insolar.PulseNumber(100))
 				require.NoError(t, err)

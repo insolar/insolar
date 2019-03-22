@@ -82,7 +82,7 @@ const (
 )
 
 type Session struct {
-	NodeID insolar.RecordRef
+	NodeID insolar.Reference
 	Cert   insolar.AuthorizationCertificate
 	State  SessionState
 
@@ -107,7 +107,7 @@ type SessionManager interface {
 	component.Starter
 	component.Stopper
 
-	NewSession(ref insolar.RecordRef, cert insolar.AuthorizationCertificate, ttl time.Duration) SessionID
+	NewSession(ref insolar.Reference, cert insolar.AuthorizationCertificate, ttl time.Duration) SessionID
 	CheckSession(id SessionID, expected SessionState) error
 	SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) error
 	GetChallengeData(id SessionID) (insolar.AuthorizationCertificate, Nonce, error)
@@ -161,7 +161,7 @@ func (sm *sessionManager) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (sm *sessionManager) NewSession(ref insolar.RecordRef, cert insolar.AuthorizationCertificate, ttl time.Duration) SessionID {
+func (sm *sessionManager) NewSession(ref insolar.Reference, cert insolar.AuthorizationCertificate, ttl time.Duration) SessionID {
 	id := utils.AtomicLoadAndIncrementUint64(&sm.sequence)
 	session := &Session{
 		NodeID: ref,

@@ -65,7 +65,7 @@ func randomUint64() uint64 {
 }
 
 // SendRequest makes synchronously call to method of contract by its ref without additional information
-func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.RecordRef, method string, argsIn []interface{}) (insolar.Reply, error) {
+func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}) (insolar.Reply, error) {
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
 	defer span.End()
 
@@ -85,7 +85,7 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Recor
 	return routResult, nil
 }
 
-func (cr *ContractRequester) CallMethod(ctx context.Context, base insolar.Message, async bool, ref *insolar.RecordRef, method string, argsIn insolar.Arguments, mustPrototype *insolar.RecordRef) (insolar.Reply, error) {
+func (cr *ContractRequester) CallMethod(ctx context.Context, base insolar.Message, async bool, ref *insolar.Reference, method string, argsIn insolar.Arguments, mustPrototype *insolar.Reference) (insolar.Reply, error) {
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.CallMethod "+method)
 	defer span.End()
 
@@ -179,8 +179,8 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base insolar.Messag
 }
 
 func (cr *ContractRequester) CallConstructor(ctx context.Context, base insolar.Message, async bool,
-	prototype *insolar.RecordRef, to *insolar.RecordRef, method string,
-	argsIn insolar.Arguments, saveAs int) (*insolar.RecordRef, error) {
+	prototype *insolar.Reference, to *insolar.Reference, method string,
+	argsIn insolar.Arguments, saveAs int) (*insolar.Reference, error) {
 	baseMessage, ok := base.(*message.BaseLogicMessage)
 	if !ok {
 		return nil, errors.New("Wrong type for BaseMessage")

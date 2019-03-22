@@ -49,7 +49,7 @@ type storageSuite struct {
 	dropAccessor  drop.Accessor
 	pulseTracker  storage.PulseTracker
 
-	jetID insolar.RecordID
+	jetID insolar.ID
 }
 
 func NewStorageSuite() *storageSuite {
@@ -108,7 +108,7 @@ func (s *storageSuite) AfterTest(suiteName, testName string) {
 }
 
 func (s *storageSuite) TestDB_GetRecordNotFound() {
-	rec, err := s.objectStorage.GetRecord(s.ctx, s.jetID, &insolar.RecordID{})
+	rec, err := s.objectStorage.GetRecord(s.ctx, s.jetID, &insolar.ID{})
 	assert.Equal(s.T(), err, insolar.ErrNotFound)
 	assert.Nil(s.T(), rec)
 }
@@ -127,16 +127,16 @@ func (s *storageSuite) TestDB_SetRecord() {
 }
 
 func (s *storageSuite) TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex() {
-	idx, err := s.objectStorage.GetObjectIndex(s.ctx, s.jetID, insolar.NewRecordID(0, hexhash("5000")), false)
+	idx, err := s.objectStorage.GetObjectIndex(s.ctx, s.jetID, insolar.NewID(0, hexhash("5000")), false)
 	assert.Equal(s.T(), insolar.ErrNotFound, err)
 	assert.Nil(s.T(), idx)
 }
 
 func (s *storageSuite) TestDB_SetObjectIndex_StoresCorrectDataInStorage() {
 	idx := object.Lifeline{
-		LatestState: insolar.NewRecordID(0, hexhash("20")),
+		LatestState: insolar.NewID(0, hexhash("20")),
 	}
-	zeroid := insolar.NewRecordID(0, hexhash(""))
+	zeroid := insolar.NewID(0, hexhash(""))
 	err := s.objectStorage.SetObjectIndex(s.ctx, s.jetID, zeroid, &idx)
 	assert.Nil(s.T(), err)
 
@@ -150,10 +150,10 @@ func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 	jetID := testutils.RandomJet()
 
 	idx := object.Lifeline{
-		LatestState:  insolar.NewRecordID(0, hexhash("20")),
+		LatestState:  insolar.NewID(0, hexhash("20")),
 		LatestUpdate: 1239,
 	}
-	zeroid := insolar.NewRecordID(0, hexhash(""))
+	zeroid := insolar.NewID(0, hexhash(""))
 
 	// Act
 	err := s.objectStorage.SetObjectIndex(s.ctx, jetID, zeroid, &idx)
@@ -245,7 +245,7 @@ func TestDB_Close(t *testing.T) {
 
 	cleaner()
 
-	rec, err := os.GetRecord(ctx, jetID, &insolar.RecordID{})
+	rec, err := os.GetRecord(ctx, jetID, &insolar.ID{})
 	assert.Nil(t, rec)
 	assert.Equal(t, err, storage.ErrClosed)
 

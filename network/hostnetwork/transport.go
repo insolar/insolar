@@ -77,7 +77,7 @@ type hostTransport struct {
 
 type packetWrapper packet.Packet
 
-func (p *packetWrapper) GetSender() insolar.RecordRef {
+func (p *packetWrapper) GetSender() insolar.Reference {
 	return p.Sender.NodeID
 }
 

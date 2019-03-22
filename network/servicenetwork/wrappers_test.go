@@ -77,7 +77,7 @@ func (n *nodeKeeperWrapper) GetConsensusInfo() network.ConsensusInfo {
 	return n.original.GetConsensusInfo()
 }
 
-func (n *nodeKeeperWrapper) GetWorkingNode(ref insolar.RecordRef) insolar.NetworkNode {
+func (n *nodeKeeperWrapper) GetWorkingNode(ref insolar.Reference) insolar.NetworkNode {
 	return n.original.GetWorkingNode(ref)
 }
 
@@ -85,7 +85,7 @@ func (n *nodeKeeperWrapper) GetWorkingNodes() []insolar.NetworkNode {
 	return n.original.GetWorkingNodes()
 }
 
-func (n *nodeKeeperWrapper) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.RecordRef {
+func (n *nodeKeeperWrapper) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
 	return n.original.GetWorkingNodesByRole(role)
 }
 

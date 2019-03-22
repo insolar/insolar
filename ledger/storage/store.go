@@ -25,14 +25,14 @@ import (
 
 // Store is used by context unaware clients who can work inside transactions as well as outside.
 type Store interface {
-	GetRecord(ctx context.Context, jetID insolar.RecordID, ref *insolar.RecordID) (object.Record, error)
-	SetRecord(ctx context.Context, jetID insolar.RecordID, pulseNumber insolar.PulseNumber, rec object.Record) (*insolar.RecordID, error)
-	GetBlob(ctx context.Context, jetID insolar.RecordID, ref *insolar.RecordID) ([]byte, error)
-	SetBlob(ctx context.Context, jetID insolar.RecordID, number insolar.PulseNumber, blob []byte) (*insolar.RecordID, error)
+	GetRecord(ctx context.Context, jetID insolar.ID, ref *insolar.ID) (object.Record, error)
+	SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec object.Record) (*insolar.ID, error)
+	GetBlob(ctx context.Context, jetID insolar.ID, ref *insolar.ID) ([]byte, error)
+	SetBlob(ctx context.Context, jetID insolar.ID, number insolar.PulseNumber, blob []byte) (*insolar.ID, error)
 
-	GetObjectIndex(ctx context.Context, jetID insolar.RecordID, ref *insolar.RecordID, forupdate bool) (*object.Lifeline, error)
-	SetObjectIndex(ctx context.Context, jetID insolar.RecordID, ref *insolar.RecordID, idx *object.Lifeline) error
-	RemoveObjectIndex(ctx context.Context, jetID insolar.RecordID, ref *insolar.RecordID) error
+	GetObjectIndex(ctx context.Context, jetID insolar.ID, ref *insolar.ID, forupdate bool) (*object.Lifeline, error)
+	SetObjectIndex(ctx context.Context, jetID insolar.ID, ref *insolar.ID, idx *object.Lifeline) error
+	RemoveObjectIndex(ctx context.Context, jetID insolar.ID, ref *insolar.ID) error
 
 	// Deprecated: use insolar.PulseStorage.Current() instead
 	GetLatestPulse(ctx context.Context) (*Pulse, error)

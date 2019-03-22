@@ -79,7 +79,7 @@ type RPCController interface {
 	// hack for DI, else we receive ServiceNetwork injection in RPCController instead of rpcController that leads to stack overflow
 	IAmRPCController()
 
-	SendMessage(nodeID insolar.RecordRef, name string, msg insolar.Parcel) ([]byte, error)
+	SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error)
 	SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error
 	RemoteProcedureRegister(name string, method insolar.RemoteProcedure)
 }
@@ -172,7 +172,7 @@ func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data insol
 		return errors.New("replication factor should not be zero")
 	}
 
-	var nextNodes []insolar.RecordRef
+	var nextNodes []insolar.Reference
 	var err error
 
 	if findCurrentNode {
@@ -204,7 +204,7 @@ func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data insol
 	return nil
 }
 
-func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data insolar.Cascade, nodeID insolar.RecordRef,
+func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data insolar.Cascade, nodeID insolar.Reference,
 	method string, args [][]byte) error {
 
 	_, span := instracer.StartSpan(context.Background(), "RPCController.requestCascadeSendMessage")
@@ -241,7 +241,7 @@ func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data in
 	return nil
 }
 
-func (rpc *rpcController) SendMessage(nodeID insolar.RecordRef, name string, msg insolar.Parcel) ([]byte, error) {
+func (rpc *rpcController) SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error) {
 	msgBytes := message.ParcelToBytes(msg)
 	ctx := context.Background() // TODO: ctx as argument
 	ctx = insmetrics.InsertTag(ctx, tagMessageType, msg.Type().String())

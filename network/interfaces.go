@@ -71,7 +71,7 @@ type BootstrapResult struct {
 type Controller interface {
 	component.Initer
 	// SendParcel send message to nodeID.
-	SendMessage(nodeID insolar.RecordRef, name string, msg insolar.Parcel) ([]byte, error)
+	SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error)
 	// RemoteProcedureRegister register remote procedure that will be executed when message is received.
 	RemoteProcedureRegister(name string, method insolar.RemoteProcedure)
 	// SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
@@ -96,10 +96,10 @@ type HostNetwork interface {
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 	// GetNodeID get current node ID.
-	GetNodeID() insolar.RecordRef
+	GetNodeID() insolar.Reference
 
 	// SendRequest send request to a remote node.
-	SendRequest(ctx context.Context, request Request, receiver insolar.RecordRef) (Future, error)
+	SendRequest(ctx context.Context, request Request, receiver insolar.Reference) (Future, error)
 	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 	RegisterRequestHandler(t types.PacketType, handler RequestHandler)
 	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
@@ -108,7 +108,7 @@ type HostNetwork interface {
 	BuildResponse(ctx context.Context, request Request, responseData interface{}) Response
 }
 
-type ConsensusPacketHandler func(incomingPacket consensus.ConsensusPacket, sender insolar.RecordRef)
+type ConsensusPacketHandler func(incomingPacket consensus.ConsensusPacket, sender insolar.Reference)
 
 //go:generate minimock -i github.com/insolar/insolar/network.ConsensusNetwork -o ../testutils/network -s _mock.go
 type ConsensusNetwork interface {
@@ -117,10 +117,10 @@ type ConsensusNetwork interface {
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 	// GetNodeID get current node ID.
-	GetNodeID() insolar.RecordRef
+	GetNodeID() insolar.Reference
 
 	// SignAndSendPacket send request to a remote node.
-	SignAndSendPacket(packet consensus.ConsensusPacket, receiver insolar.RecordRef, service insolar.CryptographyService) error
+	SignAndSendPacket(packet consensus.ConsensusPacket, receiver insolar.Reference, service insolar.CryptographyService) error
 	// RegisterPacketHandler register a handler function to process incoming requests of a specific type.
 	RegisterPacketHandler(t consensus.PacketType, handler ConsensusPacketHandler)
 }
@@ -130,7 +130,7 @@ type RequestID uint64
 
 // Packet is a packet that is transported via network by HostNetwork.
 type Packet interface {
-	GetSender() insolar.RecordRef
+	GetSender() insolar.Reference
 	GetSenderHost() *host.Host
 	GetType() types.PacketType
 	GetData() interface{}
@@ -207,11 +207,11 @@ type ConsensusInfo interface {
 	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
 	NodesJoinedDuringPreviousPulse() bool
 	// AddTemporaryMapping add temporary mapping till the next pulse for consensus
-	AddTemporaryMapping(nodeID insolar.RecordRef, shortID insolar.ShortNodeID, address string) error
+	AddTemporaryMapping(nodeID insolar.Reference, shortID insolar.ShortNodeID, address string) error
 	// ResolveConsensus get temporary mapping by short ID
 	ResolveConsensus(shortID insolar.ShortNodeID) *host.Host
 	// ResolveConsensusRef get temporary mapping by node ID
-	ResolveConsensusRef(nodeID insolar.RecordRef) *host.Host
+	ResolveConsensusRef(nodeID insolar.Reference) *host.Host
 	// SetIsJoiner instruct current node whether it should perform consensus as joiner or not
 	SetIsJoiner(isJoiner bool)
 	// IsJoiner true if current node should perform consensus as joiner
@@ -225,21 +225,21 @@ type UnsyncList interface {
 	// AddNode add node to the snapshot of the current consensus
 	AddNode(node insolar.NetworkNode, bitsetIndex uint16)
 	// AddProof add node pulse proof of a specific node
-	AddProof(nodeID insolar.RecordRef, proof *consensus.NodePulseProof)
+	AddProof(nodeID insolar.Reference, proof *consensus.NodePulseProof)
 	// GetProof get node pulse proof of a specific node
-	GetProof(nodeID insolar.RecordRef) *consensus.NodePulseProof
+	GetProof(nodeID insolar.Reference) *consensus.NodePulseProof
 	// GetGlobuleHashSignature get globule hash signature of a specific node
-	GetGlobuleHashSignature(ref insolar.RecordRef) (consensus.GlobuleHashSignature, bool)
+	GetGlobuleHashSignature(ref insolar.Reference) (consensus.GlobuleHashSignature, bool)
 	// SetGlobuleHashSignature set globule hash signature of a specific node
-	SetGlobuleHashSignature(insolar.RecordRef, consensus.GlobuleHashSignature)
+	SetGlobuleHashSignature(insolar.Reference, consensus.GlobuleHashSignature)
 	// GetActiveNode get active node by reference ID for current consensus
-	GetActiveNode(ref insolar.RecordRef) insolar.NetworkNode
+	GetActiveNode(ref insolar.Reference) insolar.NetworkNode
 	// GetActiveNodes get active nodes for current consensus
 	GetActiveNodes() []insolar.NetworkNode
 	// GetOrigin get origin node for the current insolard
 	GetOrigin() insolar.NetworkNode
 	// RemoveNode remove node
-	RemoveNode(nodeID insolar.RecordRef)
+	RemoveNode(nodeID insolar.Reference)
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.
@@ -250,11 +250,11 @@ type PartitionPolicy interface {
 // RoutingTable contains all routing information of the network.
 type RoutingTable interface {
 	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
-	Resolve(insolar.RecordRef) (*host.Host, error)
+	Resolve(insolar.Reference) (*host.Host, error)
 	// ResolveConsensus ShortID -> NodeID, Address for node inside current globe for current consensus.
 	ResolveConsensus(insolar.ShortNodeID) (*host.Host, error)
 	// ResolveConsensusRef NodeID -> ShortID, Address for node inside current globe for current consensus.
-	ResolveConsensusRef(insolar.RecordRef) (*host.Host, error)
+	ResolveConsensusRef(insolar.Reference) (*host.Host, error)
 	// AddToKnownHosts add host to routing table.
 	AddToKnownHosts(*host.Host)
 	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
@@ -270,7 +270,7 @@ type InternalTransport interface {
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 	// GetNodeID get current node ID.
-	GetNodeID() insolar.RecordRef
+	GetNodeID() insolar.Reference
 
 	// SendRequestPacket send request packet to a remote node.
 	SendRequestPacket(ctx context.Context, request Request, receiver *host.Host) (Future, error)
@@ -303,14 +303,14 @@ type Snapshot interface {
 // Accessor is interface that provides read access to nodekeeper internal snapshot
 type Accessor interface {
 	// GetWorkingNode get working node by its reference. Returns nil if node is not found.
-	GetWorkingNode(ref insolar.RecordRef) insolar.NetworkNode
+	GetWorkingNode(ref insolar.Reference) insolar.NetworkNode
 	// GetWorkingNodes get working nodes.
 	GetWorkingNodes() []insolar.NetworkNode
 	// GetWorkingNodesByRole get working nodes by role
-	GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.RecordRef
+	GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference
 
 	// GetActiveNode returns active node.
-	GetActiveNode(ref insolar.RecordRef) insolar.NetworkNode
+	GetActiveNode(ref insolar.Reference) insolar.NetworkNode
 	// GetActiveNodes returns active nodes.
 	GetActiveNodes() []insolar.NetworkNode
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.

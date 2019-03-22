@@ -59,7 +59,7 @@ import (
 )
 
 func TestGetSnapshotActiveNodes(t *testing.T) {
-	m := make(map[insolar.RecordRef]insolar.NetworkNode)
+	m := make(map[insolar.Reference]insolar.NetworkNode)
 
 	node := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1:0", "")
 	node.SetState(insolar.NodeReady)

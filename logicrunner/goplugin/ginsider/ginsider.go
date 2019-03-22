@@ -56,7 +56,7 @@ type GoInsider struct {
 	upstreamMutex  sync.Mutex // lock UpstreamClient change
 	UpstreamClient *rpc.Client
 
-	plugins      map[insolar.RecordRef]*pluginRec
+	plugins      map[insolar.Reference]*pluginRec
 	pluginsMutex sync.Mutex
 }
 
@@ -64,7 +64,7 @@ type GoInsider struct {
 func NewGoInsider(path, network, address string) *GoInsider {
 	//TODO: check that path exist, it's a directory and writable
 	res := GoInsider{dir: path, upstreamProtocol: network, upstreamAddress: address}
-	res.plugins = make(map[insolar.RecordRef]*pluginRec)
+	res.plugins = make(map[insolar.Reference]*pluginRec)
 	proxyctx.Current = &res
 	return &res
 }
@@ -203,7 +203,7 @@ func (gi *GoInsider) Upstream() (*rpc.Client, error) {
 
 // ObtainCode returns path on the file system to the plugin, fetches it from a provider
 // if it's not in the storage
-func (gi *GoInsider) ObtainCode(ctx context.Context, ref insolar.RecordRef) (string, error) {
+func (gi *GoInsider) ObtainCode(ctx context.Context, ref insolar.Reference) (string, error) {
 	path := filepath.Join(gi.dir, ref.String())
 	_, err := os.Stat(path)
 
@@ -244,7 +244,7 @@ func (gi *GoInsider) ObtainCode(ctx context.Context, ref insolar.RecordRef) (str
 
 // Plugin loads Go plugin by reference and returns `*plugin.Plugin`
 // ready to lookup symbols
-func (gi *GoInsider) Plugin(ctx context.Context, ref insolar.RecordRef) (*plugin.Plugin, error) {
+func (gi *GoInsider) Plugin(ctx context.Context, ref insolar.Reference) (*plugin.Plugin, error) {
 	rec := gi.getPluginRec(ref)
 
 	rec.Lock()
@@ -271,7 +271,7 @@ func (gi *GoInsider) Plugin(ctx context.Context, ref insolar.RecordRef) (*plugin
 
 // getPluginRec return existed gi.plugins[ref] or create a new one
 // also set gi.plugins[ref].Lock()
-func (gi *GoInsider) getPluginRec(ref insolar.RecordRef) *pluginRec {
+func (gi *GoInsider) getPluginRec(ref insolar.Reference) *pluginRec {
 	gi.pluginsMutex.Lock()
 	defer gi.pluginsMutex.Unlock()
 
@@ -298,7 +298,7 @@ func MakeUpBaseReq() rpctypes.UpBaseReq {
 }
 
 // RouteCall ...
-func (gi *GoInsider) RouteCall(ref insolar.RecordRef, wait bool, method string, args []byte, proxyPrototype insolar.RecordRef) ([]byte, error) {
+func (gi *GoInsider) RouteCall(ref insolar.Reference, wait bool, method string, args []byte, proxyPrototype insolar.Reference) ([]byte, error) {
 	client, err := gi.Upstream()
 	if err != nil {
 		return nil, err
@@ -326,10 +326,10 @@ func (gi *GoInsider) RouteCall(ref insolar.RecordRef, wait bool, method string, 
 }
 
 // SaveAsChild ...
-func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.RecordRef, constructorName string, argsSerialized []byte) (insolar.RecordRef, error) {
+func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.Reference, constructorName string, argsSerialized []byte) (insolar.Reference, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return insolar.RecordRef{}, err
+		return insolar.Reference{}, err
 	}
 
 	req := rpctypes.UpSaveAsChildReq{
@@ -347,7 +347,7 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.RecordRef, construc
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return insolar.RecordRef{}, errors.Wrap(err, "[ SaveAsChild ] on calling main API")
+		return insolar.Reference{}, errors.Wrap(err, "[ SaveAsChild ] on calling main API")
 	}
 
 	return *res.Reference, nil
@@ -356,7 +356,7 @@ func (gi *GoInsider) SaveAsChild(parentRef, classRef insolar.RecordRef, construc
 // GetObjChildrenIterator rpc call to insolard service, returns iterator over children of object with specified prototype
 // at first time call it without iteratorID
 // iteratorID is a cache key on service side, use it in all calls, except first
-func (gi *GoInsider) GetObjChildrenIterator(obj insolar.RecordRef, prototype insolar.RecordRef, iteratorID string) (*proxyctx.ChildrenTypedIterator, error) {
+func (gi *GoInsider) GetObjChildrenIterator(obj insolar.Reference, prototype insolar.Reference, iteratorID string) (*proxyctx.ChildrenTypedIterator, error) {
 	client, err := gi.Upstream()
 	if err != nil {
 		return &proxyctx.ChildrenTypedIterator{}, err
@@ -389,10 +389,10 @@ func (gi *GoInsider) GetObjChildrenIterator(obj insolar.RecordRef, prototype ins
 }
 
 // SaveAsDelegate ...
-func (gi *GoInsider) SaveAsDelegate(intoRef, classRef insolar.RecordRef, constructorName string, argsSerialized []byte) (insolar.RecordRef, error) {
+func (gi *GoInsider) SaveAsDelegate(intoRef, classRef insolar.Reference, constructorName string, argsSerialized []byte) (insolar.Reference, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return insolar.RecordRef{}, err
+		return insolar.Reference{}, err
 	}
 
 	req := rpctypes.UpSaveAsDelegateReq{
@@ -410,17 +410,17 @@ func (gi *GoInsider) SaveAsDelegate(intoRef, classRef insolar.RecordRef, constru
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return insolar.RecordRef{}, errors.Wrap(err, "[ SaveAsDelegate ] on calling main API")
+		return insolar.Reference{}, errors.Wrap(err, "[ SaveAsDelegate ] on calling main API")
 	}
 
 	return *res.Reference, nil
 }
 
 // GetDelegate ...
-func (gi *GoInsider) GetDelegate(object, ofType insolar.RecordRef) (insolar.RecordRef, error) {
+func (gi *GoInsider) GetDelegate(object, ofType insolar.Reference) (insolar.Reference, error) {
 	client, err := gi.Upstream()
 	if err != nil {
-		return insolar.RecordRef{}, err
+		return insolar.Reference{}, err
 	}
 
 	req := rpctypes.UpGetDelegateReq{
@@ -436,14 +436,14 @@ func (gi *GoInsider) GetDelegate(object, ofType insolar.RecordRef) (insolar.Reco
 			log.Error("Insgorund can't connect to Insolard")
 			os.Exit(0)
 		}
-		return insolar.RecordRef{}, errors.Wrap(err, "[ GetDelegate ] on calling main API")
+		return insolar.Reference{}, errors.Wrap(err, "[ GetDelegate ] on calling main API")
 	}
 
 	return res.Object, nil
 }
 
 // DeactivateObject ...
-func (gi *GoInsider) DeactivateObject(object insolar.RecordRef) error {
+func (gi *GoInsider) DeactivateObject(object insolar.Reference) error {
 	client, err := gi.Upstream()
 	if err != nil {
 		return err
@@ -489,7 +489,7 @@ func (gi *GoInsider) MakeErrorSerializable(e error) error {
 }
 
 // AddPlugin inject plugin by ref in gi memory
-func (gi *GoInsider) AddPlugin(ref insolar.RecordRef, path string) error {
+func (gi *GoInsider) AddPlugin(ref insolar.Reference, path string) error {
 	rec := gi.getPluginRec(ref)
 
 	rec.Lock()

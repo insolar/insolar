@@ -25,8 +25,8 @@ type HelloWorld struct {
 }
 
 // CodeRef returns something strange
-func CodeRef() insolar.RecordRef {
-	var ref insolar.RecordRef
+func CodeRef() insolar.Reference {
+	var ref insolar.Reference
 	ref[insolar.RecordRefSize-1] = 1
 	return ref
 }

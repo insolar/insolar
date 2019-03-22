@@ -59,7 +59,7 @@ import (
 // Coordinator interface contains NetworkState dependent methods
 type Coordinator interface {
 	// GetCert returns certificate object by node reference, using discovery nodes for signing
-	GetCert(context.Context, *insolar.RecordRef) (insolar.Certificate, error)
+	GetCert(context.Context, *insolar.Reference) (insolar.Certificate, error)
 
 	// SetPulse uses PulseManager component for saving pulse info
 	SetPulse(ctx context.Context, pulse insolar.Pulse) error

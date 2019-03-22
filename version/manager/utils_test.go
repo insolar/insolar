@@ -25,7 +25,7 @@ import (
 )
 
 func newActiveNode(ver string) insolar.NetworkNode {
-	return nodenetwork.NewNode(insolar.RecordRef{255}, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", ver)
+	return nodenetwork.NewNode(insolar.Reference{255}, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", ver)
 }
 
 func TestGetMapOfVersions(t *testing.T) {

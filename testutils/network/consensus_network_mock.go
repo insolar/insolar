@@ -22,7 +22,7 @@ import (
 type ConsensusNetworkMock struct {
 	t minimock.Tester
 
-	GetNodeIDFunc       func() (r insolar.RecordRef)
+	GetNodeIDFunc       func() (r insolar.Reference)
 	GetNodeIDCounter    uint64
 	GetNodeIDPreCounter uint64
 	GetNodeIDMock       mConsensusNetworkMockGetNodeID
@@ -37,7 +37,7 @@ type ConsensusNetworkMock struct {
 	RegisterPacketHandlerPreCounter uint64
 	RegisterPacketHandlerMock       mConsensusNetworkMockRegisterPacketHandler
 
-	SignAndSendPacketFunc       func(p packets.ConsensusPacket, p1 insolar.RecordRef, p2 insolar.CryptographyService) (r error)
+	SignAndSendPacketFunc       func(p packets.ConsensusPacket, p1 insolar.Reference, p2 insolar.CryptographyService) (r error)
 	SignAndSendPacketCounter    uint64
 	SignAndSendPacketPreCounter uint64
 	SignAndSendPacketMock       mConsensusNetworkMockSignAndSendPacket
@@ -82,7 +82,7 @@ type ConsensusNetworkMockGetNodeIDExpectation struct {
 }
 
 type ConsensusNetworkMockGetNodeIDResult struct {
-	r insolar.RecordRef
+	r insolar.Reference
 }
 
 //Expect specifies that invocation of ConsensusNetwork.GetNodeID is expected from 1 to Infinity times
@@ -98,7 +98,7 @@ func (m *mConsensusNetworkMockGetNodeID) Expect() *mConsensusNetworkMockGetNodeI
 }
 
 //Return specifies results of invocation of ConsensusNetwork.GetNodeID
-func (m *mConsensusNetworkMockGetNodeID) Return(r insolar.RecordRef) *ConsensusNetworkMock {
+func (m *mConsensusNetworkMockGetNodeID) Return(r insolar.Reference) *ConsensusNetworkMock {
 	m.mock.GetNodeIDFunc = nil
 	m.expectationSeries = nil
 
@@ -120,12 +120,12 @@ func (m *mConsensusNetworkMockGetNodeID) ExpectOnce() *ConsensusNetworkMockGetNo
 	return expectation
 }
 
-func (e *ConsensusNetworkMockGetNodeIDExpectation) Return(r insolar.RecordRef) {
+func (e *ConsensusNetworkMockGetNodeIDExpectation) Return(r insolar.Reference) {
 	e.result = &ConsensusNetworkMockGetNodeIDResult{r}
 }
 
 //Set uses given function f as a mock of ConsensusNetwork.GetNodeID method
-func (m *mConsensusNetworkMockGetNodeID) Set(f func() (r insolar.RecordRef)) *ConsensusNetworkMock {
+func (m *mConsensusNetworkMockGetNodeID) Set(f func() (r insolar.Reference)) *ConsensusNetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -134,7 +134,7 @@ func (m *mConsensusNetworkMockGetNodeID) Set(f func() (r insolar.RecordRef)) *Co
 }
 
 //GetNodeID implements github.com/insolar/insolar/network.ConsensusNetwork interface
-func (m *ConsensusNetworkMock) GetNodeID() (r insolar.RecordRef) {
+func (m *ConsensusNetworkMock) GetNodeID() (r insolar.Reference) {
 	counter := atomic.AddUint64(&m.GetNodeIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodeIDCounter, 1)
 
@@ -476,7 +476,7 @@ type ConsensusNetworkMockSignAndSendPacketExpectation struct {
 
 type ConsensusNetworkMockSignAndSendPacketInput struct {
 	p  packets.ConsensusPacket
-	p1 insolar.RecordRef
+	p1 insolar.Reference
 	p2 insolar.CryptographyService
 }
 
@@ -485,7 +485,7 @@ type ConsensusNetworkMockSignAndSendPacketResult struct {
 }
 
 //Expect specifies that invocation of ConsensusNetwork.SignAndSendPacket is expected from 1 to Infinity times
-func (m *mConsensusNetworkMockSignAndSendPacket) Expect(p packets.ConsensusPacket, p1 insolar.RecordRef, p2 insolar.CryptographyService) *mConsensusNetworkMockSignAndSendPacket {
+func (m *mConsensusNetworkMockSignAndSendPacket) Expect(p packets.ConsensusPacket, p1 insolar.Reference, p2 insolar.CryptographyService) *mConsensusNetworkMockSignAndSendPacket {
 	m.mock.SignAndSendPacketFunc = nil
 	m.expectationSeries = nil
 
@@ -509,7 +509,7 @@ func (m *mConsensusNetworkMockSignAndSendPacket) Return(r error) *ConsensusNetwo
 }
 
 //ExpectOnce specifies that invocation of ConsensusNetwork.SignAndSendPacket is expected once
-func (m *mConsensusNetworkMockSignAndSendPacket) ExpectOnce(p packets.ConsensusPacket, p1 insolar.RecordRef, p2 insolar.CryptographyService) *ConsensusNetworkMockSignAndSendPacketExpectation {
+func (m *mConsensusNetworkMockSignAndSendPacket) ExpectOnce(p packets.ConsensusPacket, p1 insolar.Reference, p2 insolar.CryptographyService) *ConsensusNetworkMockSignAndSendPacketExpectation {
 	m.mock.SignAndSendPacketFunc = nil
 	m.mainExpectation = nil
 
@@ -524,7 +524,7 @@ func (e *ConsensusNetworkMockSignAndSendPacketExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of ConsensusNetwork.SignAndSendPacket method
-func (m *mConsensusNetworkMockSignAndSendPacket) Set(f func(p packets.ConsensusPacket, p1 insolar.RecordRef, p2 insolar.CryptographyService) (r error)) *ConsensusNetworkMock {
+func (m *mConsensusNetworkMockSignAndSendPacket) Set(f func(p packets.ConsensusPacket, p1 insolar.Reference, p2 insolar.CryptographyService) (r error)) *ConsensusNetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -533,7 +533,7 @@ func (m *mConsensusNetworkMockSignAndSendPacket) Set(f func(p packets.ConsensusP
 }
 
 //SignAndSendPacket implements github.com/insolar/insolar/network.ConsensusNetwork interface
-func (m *ConsensusNetworkMock) SignAndSendPacket(p packets.ConsensusPacket, p1 insolar.RecordRef, p2 insolar.CryptographyService) (r error) {
+func (m *ConsensusNetworkMock) SignAndSendPacket(p packets.ConsensusPacket, p1 insolar.Reference, p2 insolar.CryptographyService) (r error) {
 	counter := atomic.AddUint64(&m.SignAndSendPacketPreCounter, 1)
 	defer atomic.AddUint64(&m.SignAndSendPacketCounter, 1)
 

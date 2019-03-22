@@ -77,9 +77,9 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	pm := pulsemanager.NewPulseManager(conf)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)
-	jc.LightExecutorForJetMock.Return(&insolar.RecordRef{}, nil)
-	jc.HeavyMock.Return(&insolar.RecordRef{}, nil)
-	jc.MeMock.Return(insolar.RecordRef{})
+	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
+	jc.HeavyMock.Return(&insolar.Reference{}, nil)
+	jc.MeMock.Return(insolar.Reference{})
 	jc.IsBeyondLimitMock.Return(false, nil)
 
 	// Init components.
@@ -98,7 +98,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 		}
 	}
 	if c.NodeNetwork == nil {
-		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(insolar.RecordRef{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
+		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(insolar.Reference{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
 	certificate := testutils.NewCertificateMock(t)
@@ -200,7 +200,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	}
 
 	if closeJets {
-		err := pm.HotDataWaiter.Unlock(ctx, insolar.RecordID(*insolar.NewJetID(0, nil)))
+		err := pm.HotDataWaiter.Unlock(ctx, insolar.ID(*insolar.NewJetID(0, nil)))
 		require.NoError(t, err)
 	}
 

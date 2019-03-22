@@ -27,7 +27,7 @@ import (
 // Accessor provides an interface for accessing jet IDs.
 type Accessor interface {
 	All(ctx context.Context, pulse insolar.PulseNumber) []insolar.JetID
-	ForID(ctx context.Context, pulse insolar.PulseNumber, recordID insolar.RecordID) (insolar.JetID, bool)
+	ForID(ctx context.Context, pulse insolar.PulseNumber, recordID insolar.ID) (insolar.JetID, bool)
 }
 
 // Modifier provides an interface for modifying jet IDs.

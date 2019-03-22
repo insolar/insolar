@@ -53,7 +53,7 @@ func (s *NodeCertService) Get(r *http.Request, args *NodeCertArgs, reply *NodeCe
 
 	inslog.Infof("[ NodeCertService.Get ] Incoming request: %s", r.RequestURI)
 
-	nodeRef, err := insolar.NewRefFromBase58(args.Ref)
+	nodeRef, err := insolar.NewReferenceFromBase58(args.Ref)
 	if err != nil {
 		return errors.Wrap(err, "[ NodeCertService.Get ] failed to parse args.Ref")
 	}

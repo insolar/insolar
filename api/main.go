@@ -180,7 +180,7 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.Publi
 		return publicKey, nil
 	}
 
-	reference, err := insolar.NewRefFromBase58(ref)
+	reference, err := insolar.NewReferenceFromBase58(ref)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't parse ref")
 	}

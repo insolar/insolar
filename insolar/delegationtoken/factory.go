@@ -56,7 +56,7 @@ func (f *delegationTokenFactory) IssuePendingExecution(
 
 // IssueGetObjectRedirect creates new token for provided message.
 func (f *delegationTokenFactory) IssueGetObjectRedirect(
-	sender *insolar.RecordRef, redirectedMessage insolar.Message,
+	sender *insolar.Reference, redirectedMessage insolar.Message,
 ) (insolar.DelegationToken, error) {
 	parsedMessage := redirectedMessage.(*message.GetObject)
 	dataForSign := append(sender.Bytes(), message.ToBytes(parsedMessage)...)
@@ -69,7 +69,7 @@ func (f *delegationTokenFactory) IssueGetObjectRedirect(
 
 // IssueGetChildrenRedirect creates new token for provided message.
 func (f *delegationTokenFactory) IssueGetChildrenRedirect(
-	sender *insolar.RecordRef, redirectedMessage insolar.Message,
+	sender *insolar.Reference, redirectedMessage insolar.Message,
 ) (insolar.DelegationToken, error) {
 	parsedMessage := redirectedMessage.(*message.GetChildren)
 	dataForSign := append(sender.Bytes(), message.ToBytes(parsedMessage)...)
@@ -82,7 +82,7 @@ func (f *delegationTokenFactory) IssueGetChildrenRedirect(
 
 // IssueGetCodeRedirect creates new token for provided message.
 func (f *delegationTokenFactory) IssueGetCodeRedirect(
-	sender *insolar.RecordRef, redirectedMessage insolar.Message,
+	sender *insolar.Reference, redirectedMessage insolar.Message,
 ) (insolar.DelegationToken, error) {
 	parsedMessage := redirectedMessage.(*message.GetCode)
 	dataForSign := append(sender.Bytes(), message.ToBytes(parsedMessage)...)

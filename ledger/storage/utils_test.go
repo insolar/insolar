@@ -50,9 +50,9 @@ func hexhash(hash string) []byte {
 	return b
 }
 
-func referenceWithHashes(domainhash, recordhash string) insolar.RecordRef {
+func referenceWithHashes(domainhash, recordhash string) insolar.Reference {
 	dh := hexhash(domainhash)
 	rh := hexhash(recordhash)
 
-	return *insolar.NewRecordRef(*insolar.NewRecordID(0, dh), *insolar.NewRecordID(0, rh))
+	return *insolar.NewReference(*insolar.NewID(0, dh), *insolar.NewID(0, rh))
 }

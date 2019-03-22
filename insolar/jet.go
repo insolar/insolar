@@ -34,7 +34,7 @@ const (
 )
 
 // JetID should be used, when id is a jetID
-type JetID RecordID
+type JetID ID
 
 // ZeroJetID is value of an empty Jet ID
 var ZeroJetID = *NewJetID(0, nil)
@@ -50,7 +50,7 @@ func NewJetID(depth uint8, prefix []byte) *JetID {
 
 // Depth extracts depth from a jet id.
 func (id JetID) Depth() uint8 {
-	recordID := RecordID(id)
+	recordID := ID(id)
 	if recordID.Pulse() != PulseNumberJet {
 		panic(fmt.Sprintf("provided id %b is not a jet id", id))
 	}
@@ -59,7 +59,7 @@ func (id JetID) Depth() uint8 {
 
 // Prefix extracts prefix from a jet id.
 func (id JetID) Prefix() []byte {
-	recordID := RecordID(id)
+	recordID := ID(id)
 	if recordID.Pulse() != PulseNumberJet {
 		panic(fmt.Sprintf("provided id %b is not a jet id", id))
 	}

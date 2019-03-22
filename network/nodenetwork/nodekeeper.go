@@ -154,7 +154,7 @@ func (nk *nodekeeper) SetInitialSnapshot(nodes []insolar.NetworkNode) {
 	nk.activeLock.Lock()
 	defer nk.activeLock.Unlock()
 
-	nodesMap := make(map[insolar.RecordRef]insolar.NetworkNode)
+	nodesMap := make(map[insolar.Reference]insolar.NetworkNode)
 	for _, node := range nodes {
 		nodesMap[node.ID()] = node
 	}
@@ -174,11 +174,11 @@ func (nk *nodekeeper) GetConsensusInfo() network.ConsensusInfo {
 	return nk.consensusInfo
 }
 
-func (nk *nodekeeper) GetWorkingNode(ref insolar.RecordRef) insolar.NetworkNode {
+func (nk *nodekeeper) GetWorkingNode(ref insolar.Reference) insolar.NetworkNode {
 	return nk.GetAccessor().GetWorkingNode(ref)
 }
 
-func (nk *nodekeeper) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.RecordRef {
+func (nk *nodekeeper) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
 	return nk.GetAccessor().GetWorkingNodesByRole(role)
 }
 

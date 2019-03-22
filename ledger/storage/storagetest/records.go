@@ -31,9 +31,9 @@ func AddRandIndex(
 	ctx context.Context,
 	// t *testing.T,
 	objectStorage storage.ObjectStorage,
-	jetID insolar.RecordID,
+	jetID insolar.ID,
 	pulsenum insolar.PulseNumber,
-) (*insolar.RecordID, error) {
+) (*insolar.ID, error) {
 	parentID := testutils.RandomID()
 	err := objectStorage.SetObjectIndex(ctx, jetID, &parentID, &object.Lifeline{
 		LatestState: &parentID,
@@ -45,9 +45,9 @@ func AddRandIndex(
 func AddRandBlob(
 	ctx context.Context,
 	objectStorage storage.ObjectStorage,
-	jetID insolar.RecordID,
+	jetID insolar.ID,
 	pulsenum insolar.PulseNumber,
-) (*insolar.RecordID, error) {
+) (*insolar.ID, error) {
 	randID := testutils.RandomID()
 	return objectStorage.SetBlob(ctx, jetID, pulsenum, randID[:])
 }
@@ -56,9 +56,9 @@ func AddRandBlob(
 func AddRandRecord(
 	ctx context.Context,
 	objectStorage storage.ObjectStorage,
-	jetID insolar.RecordID,
+	jetID insolar.ID,
 	pulsenum insolar.PulseNumber,
-) (*insolar.RecordID, error) {
+) (*insolar.ID, error) {
 
 	randID := testutils.RandomID()
 	record := object.CodeRecord{
@@ -77,7 +77,7 @@ func AddRandDrop(
 	ctx context.Context,
 	modifier drop.Modifier,
 	accessor drop.Accessor,
-	jetID insolar.RecordID,
+	jetID insolar.ID,
 	pulsenum insolar.PulseNumber,
 ) (*drop.Drop, error) {
 

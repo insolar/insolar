@@ -55,7 +55,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	nn := network.NewNodeNetworkMock(t)
 	nn.GetOriginFunc = func() (r insolar.NetworkNode) {
 		n := network.NewNodeMock(t)
-		n.IDMock.Return(insolar.RecordRef{})
+		n.IDMock.Return(insolar.Reference{})
 		return n
 	}
 
@@ -85,7 +85,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	parcel.TypeFunc = func() insolar.MessageType {
 		return testType
 	}
-	parcel.GetSenderFunc = func() (r insolar.RecordRef) {
+	parcel.GetSenderFunc = func() (r insolar.Reference) {
 		return testutils.RandomRef()
 	}
 	parcel.MessageMock.Return(&message.GetObject{})

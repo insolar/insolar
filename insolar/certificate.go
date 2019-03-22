@@ -21,7 +21,7 @@ import (
 )
 
 type NodeMeta interface {
-	GetNodeRef() *RecordRef
+	GetNodeRef() *Reference
 	GetPublicKey() crypto.PublicKey
 }
 
@@ -30,7 +30,7 @@ type NodeMeta interface {
 type Certificate interface {
 	AuthorizationCertificate
 
-	GetRootDomainReference() *RecordRef
+	GetRootDomainReference() *Reference
 	GetDiscoveryNodes() []DiscoveryNode
 }
 
@@ -47,7 +47,7 @@ type AuthorizationCertificate interface {
 
 	GetRole() StaticRole
 	SerializeNodePart() []byte
-	GetDiscoverySigns() map[RecordRef][]byte
+	GetDiscoverySigns() map[Reference][]byte
 }
 
 // CertificateManager interface provides methods to manage nodes certificate

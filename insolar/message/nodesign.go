@@ -22,15 +22,15 @@ import (
 
 type NodeSignPayloadInt interface {
 	insolar.Message
-	GetNodeRef() *insolar.RecordRef
+	GetNodeRef() *insolar.Reference
 }
 
 type NodeSignPayload struct {
-	NodeRef *insolar.RecordRef
+	NodeRef *insolar.Reference
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (nsp *NodeSignPayload) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (nsp *NodeSignPayload) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return nil, insolar.DynamicRoleUndefined
 }
 
@@ -40,12 +40,12 @@ func (nsp *NodeSignPayload) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (nsp *NodeSignPayload) DefaultTarget() *insolar.RecordRef {
+func (nsp *NodeSignPayload) DefaultTarget() *insolar.Reference {
 	return nsp.NodeRef
 }
 
 // GetCaller implementation of Message interface.
-func (NodeSignPayload) GetCaller() *insolar.RecordRef {
+func (NodeSignPayload) GetCaller() *insolar.Reference {
 	return nil
 }
 
@@ -54,6 +54,6 @@ func (nsp *NodeSignPayload) Type() insolar.MessageType {
 	return insolar.TypeNodeSignRequest
 }
 
-func (nsp *NodeSignPayload) GetNodeRef() *insolar.RecordRef {
+func (nsp *NodeSignPayload) GetNodeRef() *insolar.Reference {
 	return nsp.NodeRef
 }

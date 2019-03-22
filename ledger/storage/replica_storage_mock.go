@@ -20,32 +20,32 @@ import (
 type ReplicaStorageMock struct {
 	t minimock.Tester
 
-	GetAllNonEmptySyncClientJetsFunc       func(p context.Context) (r map[insolar.RecordID][]insolar.PulseNumber, r1 error)
+	GetAllNonEmptySyncClientJetsFunc       func(p context.Context) (r map[insolar.ID][]insolar.PulseNumber, r1 error)
 	GetAllNonEmptySyncClientJetsCounter    uint64
 	GetAllNonEmptySyncClientJetsPreCounter uint64
 	GetAllNonEmptySyncClientJetsMock       mReplicaStorageMockGetAllNonEmptySyncClientJets
 
-	GetAllSyncClientJetsFunc       func(p context.Context) (r map[insolar.RecordID][]insolar.PulseNumber, r1 error)
+	GetAllSyncClientJetsFunc       func(p context.Context) (r map[insolar.ID][]insolar.PulseNumber, r1 error)
 	GetAllSyncClientJetsCounter    uint64
 	GetAllSyncClientJetsPreCounter uint64
 	GetAllSyncClientJetsMock       mReplicaStorageMockGetAllSyncClientJets
 
-	GetHeavySyncedPulseFunc       func(p context.Context, p1 insolar.RecordID) (r insolar.PulseNumber, r1 error)
+	GetHeavySyncedPulseFunc       func(p context.Context, p1 insolar.ID) (r insolar.PulseNumber, r1 error)
 	GetHeavySyncedPulseCounter    uint64
 	GetHeavySyncedPulsePreCounter uint64
 	GetHeavySyncedPulseMock       mReplicaStorageMockGetHeavySyncedPulse
 
-	GetSyncClientJetPulsesFunc       func(p context.Context, p1 insolar.RecordID) (r []insolar.PulseNumber, r1 error)
+	GetSyncClientJetPulsesFunc       func(p context.Context, p1 insolar.ID) (r []insolar.PulseNumber, r1 error)
 	GetSyncClientJetPulsesCounter    uint64
 	GetSyncClientJetPulsesPreCounter uint64
 	GetSyncClientJetPulsesMock       mReplicaStorageMockGetSyncClientJetPulses
 
-	SetHeavySyncedPulseFunc       func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r error)
+	SetHeavySyncedPulseFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r error)
 	SetHeavySyncedPulseCounter    uint64
 	SetHeavySyncedPulsePreCounter uint64
 	SetHeavySyncedPulseMock       mReplicaStorageMockSetHeavySyncedPulse
 
-	SetSyncClientJetPulsesFunc       func(p context.Context, p1 insolar.RecordID, p2 []insolar.PulseNumber) (r error)
+	SetSyncClientJetPulsesFunc       func(p context.Context, p1 insolar.ID, p2 []insolar.PulseNumber) (r error)
 	SetSyncClientJetPulsesCounter    uint64
 	SetSyncClientJetPulsesPreCounter uint64
 	SetSyncClientJetPulsesMock       mReplicaStorageMockSetSyncClientJetPulses
@@ -85,7 +85,7 @@ type ReplicaStorageMockGetAllNonEmptySyncClientJetsInput struct {
 }
 
 type ReplicaStorageMockGetAllNonEmptySyncClientJetsResult struct {
-	r  map[insolar.RecordID][]insolar.PulseNumber
+	r  map[insolar.ID][]insolar.PulseNumber
 	r1 error
 }
 
@@ -102,7 +102,7 @@ func (m *mReplicaStorageMockGetAllNonEmptySyncClientJets) Expect(p context.Conte
 }
 
 //Return specifies results of invocation of ReplicaStorage.GetAllNonEmptySyncClientJets
-func (m *mReplicaStorageMockGetAllNonEmptySyncClientJets) Return(r map[insolar.RecordID][]insolar.PulseNumber, r1 error) *ReplicaStorageMock {
+func (m *mReplicaStorageMockGetAllNonEmptySyncClientJets) Return(r map[insolar.ID][]insolar.PulseNumber, r1 error) *ReplicaStorageMock {
 	m.mock.GetAllNonEmptySyncClientJetsFunc = nil
 	m.expectationSeries = nil
 
@@ -124,12 +124,12 @@ func (m *mReplicaStorageMockGetAllNonEmptySyncClientJets) ExpectOnce(p context.C
 	return expectation
 }
 
-func (e *ReplicaStorageMockGetAllNonEmptySyncClientJetsExpectation) Return(r map[insolar.RecordID][]insolar.PulseNumber, r1 error) {
+func (e *ReplicaStorageMockGetAllNonEmptySyncClientJetsExpectation) Return(r map[insolar.ID][]insolar.PulseNumber, r1 error) {
 	e.result = &ReplicaStorageMockGetAllNonEmptySyncClientJetsResult{r, r1}
 }
 
 //Set uses given function f as a mock of ReplicaStorage.GetAllNonEmptySyncClientJets method
-func (m *mReplicaStorageMockGetAllNonEmptySyncClientJets) Set(f func(p context.Context) (r map[insolar.RecordID][]insolar.PulseNumber, r1 error)) *ReplicaStorageMock {
+func (m *mReplicaStorageMockGetAllNonEmptySyncClientJets) Set(f func(p context.Context) (r map[insolar.ID][]insolar.PulseNumber, r1 error)) *ReplicaStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -138,7 +138,7 @@ func (m *mReplicaStorageMockGetAllNonEmptySyncClientJets) Set(f func(p context.C
 }
 
 //GetAllNonEmptySyncClientJets implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
-func (m *ReplicaStorageMock) GetAllNonEmptySyncClientJets(p context.Context) (r map[insolar.RecordID][]insolar.PulseNumber, r1 error) {
+func (m *ReplicaStorageMock) GetAllNonEmptySyncClientJets(p context.Context) (r map[insolar.ID][]insolar.PulseNumber, r1 error) {
 	counter := atomic.AddUint64(&m.GetAllNonEmptySyncClientJetsPreCounter, 1)
 	defer atomic.AddUint64(&m.GetAllNonEmptySyncClientJetsCounter, 1)
 
@@ -235,7 +235,7 @@ type ReplicaStorageMockGetAllSyncClientJetsInput struct {
 }
 
 type ReplicaStorageMockGetAllSyncClientJetsResult struct {
-	r  map[insolar.RecordID][]insolar.PulseNumber
+	r  map[insolar.ID][]insolar.PulseNumber
 	r1 error
 }
 
@@ -252,7 +252,7 @@ func (m *mReplicaStorageMockGetAllSyncClientJets) Expect(p context.Context) *mRe
 }
 
 //Return specifies results of invocation of ReplicaStorage.GetAllSyncClientJets
-func (m *mReplicaStorageMockGetAllSyncClientJets) Return(r map[insolar.RecordID][]insolar.PulseNumber, r1 error) *ReplicaStorageMock {
+func (m *mReplicaStorageMockGetAllSyncClientJets) Return(r map[insolar.ID][]insolar.PulseNumber, r1 error) *ReplicaStorageMock {
 	m.mock.GetAllSyncClientJetsFunc = nil
 	m.expectationSeries = nil
 
@@ -274,12 +274,12 @@ func (m *mReplicaStorageMockGetAllSyncClientJets) ExpectOnce(p context.Context) 
 	return expectation
 }
 
-func (e *ReplicaStorageMockGetAllSyncClientJetsExpectation) Return(r map[insolar.RecordID][]insolar.PulseNumber, r1 error) {
+func (e *ReplicaStorageMockGetAllSyncClientJetsExpectation) Return(r map[insolar.ID][]insolar.PulseNumber, r1 error) {
 	e.result = &ReplicaStorageMockGetAllSyncClientJetsResult{r, r1}
 }
 
 //Set uses given function f as a mock of ReplicaStorage.GetAllSyncClientJets method
-func (m *mReplicaStorageMockGetAllSyncClientJets) Set(f func(p context.Context) (r map[insolar.RecordID][]insolar.PulseNumber, r1 error)) *ReplicaStorageMock {
+func (m *mReplicaStorageMockGetAllSyncClientJets) Set(f func(p context.Context) (r map[insolar.ID][]insolar.PulseNumber, r1 error)) *ReplicaStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -288,7 +288,7 @@ func (m *mReplicaStorageMockGetAllSyncClientJets) Set(f func(p context.Context) 
 }
 
 //GetAllSyncClientJets implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
-func (m *ReplicaStorageMock) GetAllSyncClientJets(p context.Context) (r map[insolar.RecordID][]insolar.PulseNumber, r1 error) {
+func (m *ReplicaStorageMock) GetAllSyncClientJets(p context.Context) (r map[insolar.ID][]insolar.PulseNumber, r1 error) {
 	counter := atomic.AddUint64(&m.GetAllSyncClientJetsPreCounter, 1)
 	defer atomic.AddUint64(&m.GetAllSyncClientJetsCounter, 1)
 
@@ -382,7 +382,7 @@ type ReplicaStorageMockGetHeavySyncedPulseExpectation struct {
 
 type ReplicaStorageMockGetHeavySyncedPulseInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 }
 
 type ReplicaStorageMockGetHeavySyncedPulseResult struct {
@@ -391,7 +391,7 @@ type ReplicaStorageMockGetHeavySyncedPulseResult struct {
 }
 
 //Expect specifies that invocation of ReplicaStorage.GetHeavySyncedPulse is expected from 1 to Infinity times
-func (m *mReplicaStorageMockGetHeavySyncedPulse) Expect(p context.Context, p1 insolar.RecordID) *mReplicaStorageMockGetHeavySyncedPulse {
+func (m *mReplicaStorageMockGetHeavySyncedPulse) Expect(p context.Context, p1 insolar.ID) *mReplicaStorageMockGetHeavySyncedPulse {
 	m.mock.GetHeavySyncedPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -415,7 +415,7 @@ func (m *mReplicaStorageMockGetHeavySyncedPulse) Return(r insolar.PulseNumber, r
 }
 
 //ExpectOnce specifies that invocation of ReplicaStorage.GetHeavySyncedPulse is expected once
-func (m *mReplicaStorageMockGetHeavySyncedPulse) ExpectOnce(p context.Context, p1 insolar.RecordID) *ReplicaStorageMockGetHeavySyncedPulseExpectation {
+func (m *mReplicaStorageMockGetHeavySyncedPulse) ExpectOnce(p context.Context, p1 insolar.ID) *ReplicaStorageMockGetHeavySyncedPulseExpectation {
 	m.mock.GetHeavySyncedPulseFunc = nil
 	m.mainExpectation = nil
 
@@ -430,7 +430,7 @@ func (e *ReplicaStorageMockGetHeavySyncedPulseExpectation) Return(r insolar.Puls
 }
 
 //Set uses given function f as a mock of ReplicaStorage.GetHeavySyncedPulse method
-func (m *mReplicaStorageMockGetHeavySyncedPulse) Set(f func(p context.Context, p1 insolar.RecordID) (r insolar.PulseNumber, r1 error)) *ReplicaStorageMock {
+func (m *mReplicaStorageMockGetHeavySyncedPulse) Set(f func(p context.Context, p1 insolar.ID) (r insolar.PulseNumber, r1 error)) *ReplicaStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -439,7 +439,7 @@ func (m *mReplicaStorageMockGetHeavySyncedPulse) Set(f func(p context.Context, p
 }
 
 //GetHeavySyncedPulse implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
-func (m *ReplicaStorageMock) GetHeavySyncedPulse(p context.Context, p1 insolar.RecordID) (r insolar.PulseNumber, r1 error) {
+func (m *ReplicaStorageMock) GetHeavySyncedPulse(p context.Context, p1 insolar.ID) (r insolar.PulseNumber, r1 error) {
 	counter := atomic.AddUint64(&m.GetHeavySyncedPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.GetHeavySyncedPulseCounter, 1)
 
@@ -533,7 +533,7 @@ type ReplicaStorageMockGetSyncClientJetPulsesExpectation struct {
 
 type ReplicaStorageMockGetSyncClientJetPulsesInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 }
 
 type ReplicaStorageMockGetSyncClientJetPulsesResult struct {
@@ -542,7 +542,7 @@ type ReplicaStorageMockGetSyncClientJetPulsesResult struct {
 }
 
 //Expect specifies that invocation of ReplicaStorage.GetSyncClientJetPulses is expected from 1 to Infinity times
-func (m *mReplicaStorageMockGetSyncClientJetPulses) Expect(p context.Context, p1 insolar.RecordID) *mReplicaStorageMockGetSyncClientJetPulses {
+func (m *mReplicaStorageMockGetSyncClientJetPulses) Expect(p context.Context, p1 insolar.ID) *mReplicaStorageMockGetSyncClientJetPulses {
 	m.mock.GetSyncClientJetPulsesFunc = nil
 	m.expectationSeries = nil
 
@@ -566,7 +566,7 @@ func (m *mReplicaStorageMockGetSyncClientJetPulses) Return(r []insolar.PulseNumb
 }
 
 //ExpectOnce specifies that invocation of ReplicaStorage.GetSyncClientJetPulses is expected once
-func (m *mReplicaStorageMockGetSyncClientJetPulses) ExpectOnce(p context.Context, p1 insolar.RecordID) *ReplicaStorageMockGetSyncClientJetPulsesExpectation {
+func (m *mReplicaStorageMockGetSyncClientJetPulses) ExpectOnce(p context.Context, p1 insolar.ID) *ReplicaStorageMockGetSyncClientJetPulsesExpectation {
 	m.mock.GetSyncClientJetPulsesFunc = nil
 	m.mainExpectation = nil
 
@@ -581,7 +581,7 @@ func (e *ReplicaStorageMockGetSyncClientJetPulsesExpectation) Return(r []insolar
 }
 
 //Set uses given function f as a mock of ReplicaStorage.GetSyncClientJetPulses method
-func (m *mReplicaStorageMockGetSyncClientJetPulses) Set(f func(p context.Context, p1 insolar.RecordID) (r []insolar.PulseNumber, r1 error)) *ReplicaStorageMock {
+func (m *mReplicaStorageMockGetSyncClientJetPulses) Set(f func(p context.Context, p1 insolar.ID) (r []insolar.PulseNumber, r1 error)) *ReplicaStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -590,7 +590,7 @@ func (m *mReplicaStorageMockGetSyncClientJetPulses) Set(f func(p context.Context
 }
 
 //GetSyncClientJetPulses implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
-func (m *ReplicaStorageMock) GetSyncClientJetPulses(p context.Context, p1 insolar.RecordID) (r []insolar.PulseNumber, r1 error) {
+func (m *ReplicaStorageMock) GetSyncClientJetPulses(p context.Context, p1 insolar.ID) (r []insolar.PulseNumber, r1 error) {
 	counter := atomic.AddUint64(&m.GetSyncClientJetPulsesPreCounter, 1)
 	defer atomic.AddUint64(&m.GetSyncClientJetPulsesCounter, 1)
 
@@ -684,7 +684,7 @@ type ReplicaStorageMockSetHeavySyncedPulseExpectation struct {
 
 type ReplicaStorageMockSetHeavySyncedPulseInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 	p2 insolar.PulseNumber
 }
 
@@ -693,7 +693,7 @@ type ReplicaStorageMockSetHeavySyncedPulseResult struct {
 }
 
 //Expect specifies that invocation of ReplicaStorage.SetHeavySyncedPulse is expected from 1 to Infinity times
-func (m *mReplicaStorageMockSetHeavySyncedPulse) Expect(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *mReplicaStorageMockSetHeavySyncedPulse {
+func (m *mReplicaStorageMockSetHeavySyncedPulse) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *mReplicaStorageMockSetHeavySyncedPulse {
 	m.mock.SetHeavySyncedPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -717,7 +717,7 @@ func (m *mReplicaStorageMockSetHeavySyncedPulse) Return(r error) *ReplicaStorage
 }
 
 //ExpectOnce specifies that invocation of ReplicaStorage.SetHeavySyncedPulse is expected once
-func (m *mReplicaStorageMockSetHeavySyncedPulse) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) *ReplicaStorageMockSetHeavySyncedPulseExpectation {
+func (m *mReplicaStorageMockSetHeavySyncedPulse) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *ReplicaStorageMockSetHeavySyncedPulseExpectation {
 	m.mock.SetHeavySyncedPulseFunc = nil
 	m.mainExpectation = nil
 
@@ -732,7 +732,7 @@ func (e *ReplicaStorageMockSetHeavySyncedPulseExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of ReplicaStorage.SetHeavySyncedPulse method
-func (m *mReplicaStorageMockSetHeavySyncedPulse) Set(f func(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r error)) *ReplicaStorageMock {
+func (m *mReplicaStorageMockSetHeavySyncedPulse) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r error)) *ReplicaStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -741,7 +741,7 @@ func (m *mReplicaStorageMockSetHeavySyncedPulse) Set(f func(p context.Context, p
 }
 
 //SetHeavySyncedPulse implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
-func (m *ReplicaStorageMock) SetHeavySyncedPulse(p context.Context, p1 insolar.RecordID, p2 insolar.PulseNumber) (r error) {
+func (m *ReplicaStorageMock) SetHeavySyncedPulse(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r error) {
 	counter := atomic.AddUint64(&m.SetHeavySyncedPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.SetHeavySyncedPulseCounter, 1)
 
@@ -833,7 +833,7 @@ type ReplicaStorageMockSetSyncClientJetPulsesExpectation struct {
 
 type ReplicaStorageMockSetSyncClientJetPulsesInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 	p2 []insolar.PulseNumber
 }
 
@@ -842,7 +842,7 @@ type ReplicaStorageMockSetSyncClientJetPulsesResult struct {
 }
 
 //Expect specifies that invocation of ReplicaStorage.SetSyncClientJetPulses is expected from 1 to Infinity times
-func (m *mReplicaStorageMockSetSyncClientJetPulses) Expect(p context.Context, p1 insolar.RecordID, p2 []insolar.PulseNumber) *mReplicaStorageMockSetSyncClientJetPulses {
+func (m *mReplicaStorageMockSetSyncClientJetPulses) Expect(p context.Context, p1 insolar.ID, p2 []insolar.PulseNumber) *mReplicaStorageMockSetSyncClientJetPulses {
 	m.mock.SetSyncClientJetPulsesFunc = nil
 	m.expectationSeries = nil
 
@@ -866,7 +866,7 @@ func (m *mReplicaStorageMockSetSyncClientJetPulses) Return(r error) *ReplicaStor
 }
 
 //ExpectOnce specifies that invocation of ReplicaStorage.SetSyncClientJetPulses is expected once
-func (m *mReplicaStorageMockSetSyncClientJetPulses) ExpectOnce(p context.Context, p1 insolar.RecordID, p2 []insolar.PulseNumber) *ReplicaStorageMockSetSyncClientJetPulsesExpectation {
+func (m *mReplicaStorageMockSetSyncClientJetPulses) ExpectOnce(p context.Context, p1 insolar.ID, p2 []insolar.PulseNumber) *ReplicaStorageMockSetSyncClientJetPulsesExpectation {
 	m.mock.SetSyncClientJetPulsesFunc = nil
 	m.mainExpectation = nil
 
@@ -881,7 +881,7 @@ func (e *ReplicaStorageMockSetSyncClientJetPulsesExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of ReplicaStorage.SetSyncClientJetPulses method
-func (m *mReplicaStorageMockSetSyncClientJetPulses) Set(f func(p context.Context, p1 insolar.RecordID, p2 []insolar.PulseNumber) (r error)) *ReplicaStorageMock {
+func (m *mReplicaStorageMockSetSyncClientJetPulses) Set(f func(p context.Context, p1 insolar.ID, p2 []insolar.PulseNumber) (r error)) *ReplicaStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -890,7 +890,7 @@ func (m *mReplicaStorageMockSetSyncClientJetPulses) Set(f func(p context.Context
 }
 
 //SetSyncClientJetPulses implements github.com/insolar/insolar/ledger/storage.ReplicaStorage interface
-func (m *ReplicaStorageMock) SetSyncClientJetPulses(p context.Context, p1 insolar.RecordID, p2 []insolar.PulseNumber) (r error) {
+func (m *ReplicaStorageMock) SetSyncClientJetPulses(p context.Context, p1 insolar.ID, p2 []insolar.PulseNumber) (r error) {
 	counter := atomic.AddUint64(&m.SetSyncClientJetPulsesPreCounter, 1)
 	defer atomic.AddUint64(&m.SetSyncClientJetPulsesCounter, 1)
 

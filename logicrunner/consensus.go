@@ -123,7 +123,7 @@ func (c *Consensus) GetValidatorSignatures() (messages []insolar.Message) {
 }
 
 // FindRequestBefore returns request placed before step (last valid request)
-func (c *Consensus) FindRequestBefore(steps int) *insolar.RecordID {
+func (c *Consensus) FindRequestBefore(steps int) *insolar.ID {
 	// TODO: resurrect this part
 	return nil
 }

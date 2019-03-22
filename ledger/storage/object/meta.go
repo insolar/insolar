@@ -27,7 +27,7 @@ type GenesisRecord struct {
 }
 
 // PrevStateID returns previous state id.
-func (r *GenesisRecord) PrevStateID() *insolar.RecordID {
+func (r *GenesisRecord) PrevStateID() *insolar.ID {
 	return nil
 }
 
@@ -42,12 +42,12 @@ func (r *GenesisRecord) WriteHashData(w io.Writer) (int, error) {
 }
 
 // GetMemory returns state memory.
-func (*GenesisRecord) GetMemory() *insolar.RecordID {
+func (*GenesisRecord) GetMemory() *insolar.ID {
 	return nil
 }
 
 // GetImage returns state code.
-func (*GenesisRecord) GetImage() *insolar.RecordRef {
+func (*GenesisRecord) GetImage() *insolar.Reference {
 	return nil
 }
 
@@ -58,9 +58,9 @@ func (*GenesisRecord) GetIsPrototype() bool {
 
 // ChildRecord is a child activation record. Its used for children iterating.
 type ChildRecord struct {
-	PrevChild *insolar.RecordID
+	PrevChild *insolar.ID
 
-	Ref insolar.RecordRef // Reference to the child's head.
+	Ref insolar.Reference // Reference to the child's head.
 }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.

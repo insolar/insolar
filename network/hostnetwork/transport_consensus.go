@@ -93,7 +93,7 @@ func (tc *transportConsensus) RegisterPacketHandler(t packets.PacketType, handle
 }
 
 func (tc *transportConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
-	receiver insolar.RecordRef, service insolar.CryptographyService) error {
+	receiver insolar.Reference, service insolar.CryptographyService) error {
 
 	receiverHost, err := tc.Resolver.ResolveConsensusRef(receiver)
 	if err != nil {

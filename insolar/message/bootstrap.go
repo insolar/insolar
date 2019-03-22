@@ -27,7 +27,7 @@ type GenesisRequest struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (*GenesisRequest) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (*GenesisRequest) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return nil, 0
 }
 
@@ -37,8 +37,8 @@ func (*GenesisRequest) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (gr *GenesisRequest) DefaultTarget() *insolar.RecordRef {
-	return &insolar.RecordRef{}
+func (gr *GenesisRequest) DefaultTarget() *insolar.Reference {
+	return &insolar.Reference{}
 }
 
 // Type implementation for genesis request.
@@ -47,6 +47,6 @@ func (*GenesisRequest) Type() insolar.MessageType {
 }
 
 // GetCaller implementation for genesis request.
-func (*GenesisRequest) GetCaller() *insolar.RecordRef {
+func (*GenesisRequest) GetCaller() *insolar.Reference {
 	return nil
 }

@@ -135,7 +135,7 @@ func TestJetStorage_ForID_Fuzz(t *testing.T) {
 	var jets = map[string]struct{}{}
 
 	// findBestMatch returns best match JetID for provided recordID, searches JetID in `jets` set.
-	findBestMatch := func(id insolar.RecordID) insolar.JetID {
+	findBestMatch := func(id insolar.ID) insolar.JetID {
 		// search in substrings
 		idbits := bitsToString(id.Hash())
 		var stat = map[string]int{}
@@ -163,10 +163,10 @@ func TestJetStorage_ForID_Fuzz(t *testing.T) {
 		return NewIDFromString(found)
 	}
 
-	var searches []insolar.RecordID
+	var searches []insolar.ID
 	s := NewStore()
 	// generate jet IDs, add them to jet store (actually to underlying jet tree)
-	// fill searches list with RecordID with hashes what should match with generated Jet ID
+	// fill searches list with ID with hashes what should match with generated Jet ID
 	for i := 0; i < 100; i++ {
 		jetID := gen.JetID()
 		prefix, depth := jetID.Prefix(), jetID.Depth()
@@ -185,7 +185,7 @@ func TestJetStorage_ForID_Fuzz(t *testing.T) {
 		jets[s[:depth]] = struct{}{}
 	}
 
-	// check is RecordID match proper JetID
+	// check is ID match proper JetID
 	for _, searchID := range searches {
 		found, _ := s.ForID(ctx, pn, searchID)
 		expect := findBestMatch(searchID)

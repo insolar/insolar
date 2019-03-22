@@ -44,7 +44,7 @@ import (
 
 const maxQueueLength = 10
 
-type Ref = insolar.RecordRef
+type Ref = insolar.Reference
 
 // Context of one contract execution
 type ObjectState struct {
@@ -642,7 +642,7 @@ func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *Executio
 	}
 }
 
-func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *ExecutionState) *insolar.RecordRef {
+func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *ExecutionState) *insolar.Reference {
 	es.Lock()
 	if es.LedgerQueueElement != nil || !es.LedgerHasMoreRequests {
 		es.Unlock()
@@ -1016,7 +1016,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 					messages = append(
 						messages,
 						//&message.ValidateCaseBind{
-						//	RecordRef: ref,
+						//	Reference: ref,
 						//	Requests:  requests,
 						//	Pulse:     pulse,
 						//},

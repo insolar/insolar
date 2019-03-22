@@ -228,7 +228,7 @@ func init() {
 	// Bootstrap
 	gob.Register(&GenesisRequest{})
 	gob.Register(&Parcel{})
-	gob.Register(insolar.RecordRef{})
+	gob.Register(insolar.Reference{})
 	gob.Register(&GetChildren{})
 
 	// NodeCert

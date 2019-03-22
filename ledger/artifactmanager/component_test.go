@@ -120,8 +120,8 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 	}
 
 	jcMock := testutils.NewJetCoordinatorMock(s.T())
-	jcMock.LightExecutorForJetMock.Return(&insolar.RecordRef{}, nil)
-	jcMock.MeMock.Return(insolar.RecordRef{})
+	jcMock.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
+	jcMock.MeMock.Return(insolar.Reference{})
 
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
@@ -157,7 +157,7 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 	handler.JetCoordinator = jcMock
 
 	handler.HotDataWaiter = NewHotDataWaiterConcrete()
-	err := handler.HotDataWaiter.Unlock(s.ctx, insolar.RecordID(jetID))
+	err := handler.HotDataWaiter.Unlock(s.ctx, insolar.ID(jetID))
 	require.NoError(s.T(), err)
 
 	err = handler.Init(s.ctx)
@@ -181,7 +181,7 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 	assert.True(s.T(), has)
 
 	// Register result.
-	reqRef := *insolar.NewRecordRef(insolar.DomainID, *reqID)
+	reqRef := *insolar.NewReference(insolar.DomainID, *reqID)
 	_, err = am.RegisterResult(s.ctx, objRef, reqRef, nil)
 	require.NoError(s.T(), err)
 

@@ -154,7 +154,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	// Mock N2: we are light material
 	nodeMock := network.NewNodeMock(s.T())
 	nodeMock.RoleMock.Return(insolar.StaticRoleLightMaterial)
-	nodeMock.IDMock.Return(insolar.RecordRef{})
+	nodeMock.IDMock.Return(insolar.Reference{})
 
 	// Mock N3: nodenet returns mocked node (above)
 	// and add stub for GetActiveNodes
@@ -172,16 +172,16 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	recentMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	recentMock.GetObjectsMock.Return(nil)
 	recentMock.AddObjectMock.Return()
-	recentMock.DecreaseIndexTTLMock.Return([]insolar.RecordID{})
+	recentMock.DecreaseIndexTTLMock.Return([]insolar.ID{})
 	recentMock.FilterNotExistWithLockMock.Return()
 
 	pendingStorageMock := recentstorage.NewPendingStorageMock(s.T())
-	pendingStorageMock.GetRequestsMock.Return(map[insolar.RecordID]recentstorage.PendingObjectContext{})
+	pendingStorageMock.GetRequestsMock.Return(map[insolar.ID]recentstorage.PendingObjectContext{})
 
 	// Mock6: JetCoordinatorMock
 	jcMock := testutils.NewJetCoordinatorMock(s.T())
-	jcMock.LightExecutorForJetMock.Return(&insolar.RecordRef{}, nil)
-	jcMock.MeMock.Return(insolar.RecordRef{})
+	jcMock.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
+	jcMock.MeMock.Return(insolar.Reference{})
 
 	// Mock N7: GIL mock
 	gilMock := testutils.NewGlobalInsolarLockMock(s.T())
@@ -290,7 +290,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	providerMock.CloneIndexStorageMock.Return()
 	providerMock.ClonePendingStorageMock.Return()
 	providerMock.RemovePendingStorageMock.Return()
-	providerMock.DecreaseIndexesTTLMock.Return(map[insolar.RecordID][]insolar.RecordID{})
+	providerMock.DecreaseIndexesTTLMock.Return(map[insolar.ID][]insolar.ID{})
 	pm.RecentStorageProvider = providerMock
 
 	pm.ActiveListSwapper = alsMock
@@ -309,7 +309,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 
 	for i := 0; i < 2; i++ {
 		// fmt.Printf("%v: call addRecords for pulse %v\n", t.Name(), lastpulse)
-		addRecords(s.ctx, s.T(), s.objectStorage, insolar.RecordID(jetID), insolar.PulseNumber(lastpulse+i))
+		addRecords(s.ctx, s.T(), s.objectStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse+i))
 	}
 
 	fmt.Println("Case1: sync after db fill and with new received pulses")
@@ -322,7 +322,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	fmt.Println("Case2: sync during db fill")
 	for i := 0; i < 2; i++ {
 		// fill DB with records, indexes (TODO: add blobs)
-		addRecords(s.ctx, s.T(), s.objectStorage, insolar.RecordID(jetID), insolar.PulseNumber(lastpulse))
+		addRecords(s.ctx, s.T(), s.objectStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse))
 
 		lastpulse++
 		err = setpulse(s.ctx, pm, lastpulse)
@@ -358,7 +358,7 @@ func addRecords(
 	ctx context.Context,
 	t *testing.T,
 	objectStorage storage.ObjectStorage,
-	jetID insolar.RecordID,
+	jetID insolar.ID,
 	pn insolar.PulseNumber,
 ) {
 	// set record

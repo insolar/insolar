@@ -84,10 +84,10 @@ type Message interface {
 	Type() MessageType
 
 	// GetCaller returns initiator of this event.
-	GetCaller() *RecordRef
+	GetCaller() *Reference
 
 	// DefaultTarget returns of target of this event.
-	DefaultTarget() *RecordRef
+	DefaultTarget() *Reference
 
 	// DefaultRole returns role for this event
 	DefaultRole() DynamicRole
@@ -96,12 +96,12 @@ type Message interface {
 	// verify sender required to 's "caller" for sender
 	// verification purpose. If nil then check of sender's role is not
 	// provided by the message bus
-	AllowedSenderObjectAndRole() (*RecordRef, DynamicRole)
+	AllowedSenderObjectAndRole() (*Reference, DynamicRole)
 }
 
 type MessageSignature interface {
 	GetSign() []byte
-	GetSender() RecordRef
+	GetSender() Reference
 }
 
 // Parcel by senders private key.
@@ -129,14 +129,14 @@ type RedirectReply interface {
 	// Redirected creates redirected message from redirect data.
 	Redirected(genericMsg Message) Message
 	// GetReceiver returns node reference to send message to.
-	GetReceiver() *RecordRef
+	GetReceiver() *Reference
 	// GetToken returns delegation token.
 	GetToken() DelegationToken
 }
 
 // MessageSendOptions represents options for message sending.
 type MessageSendOptions struct {
-	Receiver *RecordRef
+	Receiver *Reference
 	Token    DelegationToken
 }
 

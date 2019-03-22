@@ -54,7 +54,7 @@ func NewBuiltIn(eb insolar.MessageBus, am insolar.ArtifactManager) *BuiltIn {
 	return &bi
 }
 
-func (bi *BuiltIn) CallConstructor(ctx context.Context, callCtx *insolar.LogicCallContext, code insolar.RecordRef, name string, args insolar.Arguments) (objectState []byte, err error) {
+func (bi *BuiltIn) CallConstructor(ctx context.Context, callCtx *insolar.LogicCallContext, code insolar.Reference, name string, args insolar.Arguments) (objectState []byte, err error) {
 	panic("implement me")
 }
 
@@ -63,7 +63,7 @@ func (bi *BuiltIn) Stop() error {
 }
 
 // CallMethod runs a method on contract
-func (bi *BuiltIn) CallMethod(ctx context.Context, callCtx *insolar.LogicCallContext, codeRef insolar.RecordRef, data []byte, method string, args insolar.Arguments) (newObjectState []byte, methodResults insolar.Arguments, err error) {
+func (bi *BuiltIn) CallMethod(ctx context.Context, callCtx *insolar.LogicCallContext, codeRef insolar.Reference, data []byte, method string, args insolar.Arguments) (newObjectState []byte, methodResults insolar.Arguments, err error) {
 	am := bi.AM
 	ctx, span := instracer.StartSpan(ctx, "buildin.CallMethod")
 	defer span.End()

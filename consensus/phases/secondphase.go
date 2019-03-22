@@ -157,7 +157,7 @@ func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, st
 		}
 
 		type none struct{}
-		newActive := make(map[insolar.RecordRef]none)
+		newActive := make(map[insolar.Reference]none)
 		for _, active := range matrixCalculation.Active {
 			newActive[active] = none{}
 		}
@@ -289,7 +289,7 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *insolar.Pulse, 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-2.1 ] Failed to apply changes to current bitset")
 	}
-	claimMap := make(map[insolar.RecordRef][]packets.ReferendumClaim)
+	claimMap := make(map[insolar.Reference][]packets.ReferendumClaim)
 	for index, claim := range claims {
 		ref, err := state.UnsyncList.IndexToRef(int(index))
 		if err != nil {
@@ -366,7 +366,7 @@ func getNodeState(node insolar.NetworkNode, pulseNumber insolar.PulseNumber) pac
 	return state
 }
 
-func (sp *SecondPhaseImpl) checkPacketSignature(packet *packets.Phase2Packet, recordRef insolar.RecordRef, unsyncList network.UnsyncList) error {
+func (sp *SecondPhaseImpl) checkPacketSignature(packet *packets.Phase2Packet, recordRef insolar.Reference, unsyncList network.UnsyncList) error {
 	activeNode := unsyncList.GetActiveNode(recordRef)
 	if activeNode == nil {
 		return errors.New("failed to get active node")

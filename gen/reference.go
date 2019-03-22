@@ -23,7 +23,7 @@ import (
 )
 
 // ID generates random id.
-func ID() (id insolar.RecordID) {
+func ID() (id insolar.ID) {
 	fuzz.New().NilChance(0).Fuzz(&id)
 	return
 }
@@ -43,7 +43,7 @@ func JetID() (jetID insolar.JetID) {
 }
 
 // Reference generates random reference.
-func Reference() (ref insolar.RecordRef) {
+func Reference() (ref insolar.Reference) {
 	fuzz.New().NilChance(0).Fuzz(&ref)
 	return
 }

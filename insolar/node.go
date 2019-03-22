@@ -18,6 +18,6 @@ package insolar
 
 // Node represents insolar node.
 type Node struct {
-	ID   RecordRef
+	ID   Reference
 	Role StaticRole
 }

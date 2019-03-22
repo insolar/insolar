@@ -33,13 +33,13 @@ func (e *Code) Type() insolar.ReplyType {
 
 // Object is object from storage.
 type Object struct {
-	Head         insolar.RecordRef
-	State        insolar.RecordID
-	Prototype    *insolar.RecordRef
+	Head         insolar.Reference
+	State        insolar.ID
+	Prototype    *insolar.Reference
 	IsPrototype  bool
-	ChildPointer *insolar.RecordID
+	ChildPointer *insolar.ID
 	Memory       []byte
-	Parent       insolar.RecordRef
+	Parent       insolar.Reference
 }
 
 // Type implementation of Reply interface.
@@ -49,7 +49,7 @@ func (e *Object) Type() insolar.ReplyType {
 
 // Delegate is delegate reference from storage.
 type Delegate struct {
-	Head insolar.RecordRef
+	Head insolar.Reference
 }
 
 // Type implementation of Reply interface.
@@ -59,7 +59,7 @@ func (e *Delegate) Type() insolar.ReplyType {
 
 // ID is common reaction for methods returning id to lifeline states.
 type ID struct {
-	ID insolar.RecordID
+	ID insolar.ID
 }
 
 // Type implementation of Reply interface.
@@ -69,8 +69,8 @@ func (e *ID) Type() insolar.ReplyType {
 
 // Children is common reaction for methods returning id to lifeline states.
 type Children struct {
-	Refs     []insolar.RecordRef
-	NextFrom *insolar.RecordID
+	Refs     []insolar.Reference
+	NextFrom *insolar.ID
 }
 
 // Type implementation of Reply interface.
@@ -90,7 +90,7 @@ func (e *ObjectIndex) Type() insolar.ReplyType {
 
 // JetMiss is returned for miscalculated jets due to incomplete jet tree.
 type JetMiss struct {
-	JetID insolar.RecordID
+	JetID insolar.ID
 }
 
 // Type implementation of Reply interface.
@@ -110,7 +110,7 @@ func (e *HasPendingRequests) Type() insolar.ReplyType {
 
 // Jet contains jet.
 type Jet struct {
-	ID     insolar.RecordID
+	ID     insolar.ID
 	Actual bool
 }
 
@@ -121,7 +121,7 @@ func (r *Jet) Type() insolar.ReplyType {
 
 // Request contains jet.
 type Request struct {
-	ID     insolar.RecordID
+	ID     insolar.ID
 	Record []byte
 }
 

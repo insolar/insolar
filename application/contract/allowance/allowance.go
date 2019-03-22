@@ -27,7 +27,7 @@ import (
 
 type Allowance struct {
 	foundation.BaseContract
-	To         insolar.RecordRef
+	To         insolar.Reference
 	Amount     uint
 	ExpireTime int64
 }
@@ -70,7 +70,7 @@ func (a *Allowance) GetExpiredBalance() (uint, error) {
 }
 
 // New check is caller wallet and makes new allowance
-func New(to *insolar.RecordRef, amount uint, expire int64) (*Allowance, error) {
+func New(to *insolar.Reference, amount uint, expire int64) (*Allowance, error) {
 	if !wallet.PrototypeReference.Equal(*foundation.GetContext().CallerPrototype) {
 		return nil, fmt.Errorf("[ New Allowance ] : Can't create allowance from not wallet contract")
 	}

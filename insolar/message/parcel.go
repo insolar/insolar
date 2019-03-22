@@ -27,13 +27,13 @@ import (
 
 // ParcelFactory is used for creating parcels
 type ParcelFactory interface {
-	Create(context.Context, insolar.Message, insolar.RecordRef, insolar.DelegationToken, insolar.Pulse) (insolar.Parcel, error)
+	Create(context.Context, insolar.Message, insolar.Reference, insolar.DelegationToken, insolar.Pulse) (insolar.Parcel, error)
 	Validate(crypto.PublicKey, insolar.Parcel) error
 }
 
 // Parcel is a message signed by senders private key.
 type Parcel struct {
-	Sender        insolar.RecordRef
+	Sender        insolar.Reference
 	Msg           insolar.Message
 	Signature     []byte
 	LogTraceID    string
@@ -43,7 +43,7 @@ type Parcel struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (p *Parcel) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (p *Parcel) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return p.Msg.AllowedSenderObjectAndRole()
 }
 
@@ -53,7 +53,7 @@ func (p *Parcel) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (p *Parcel) DefaultTarget() *insolar.RecordRef {
+func (p *Parcel) DefaultTarget() *insolar.Reference {
 	return p.Msg.DefaultTarget()
 }
 
@@ -84,7 +84,7 @@ func (p *Parcel) Type() insolar.MessageType {
 }
 
 // GetCaller returns initiator of this event.
-func (p *Parcel) GetCaller() *insolar.RecordRef {
+func (p *Parcel) GetCaller() *insolar.Reference {
 	return p.Msg.GetCaller()
 }
 
@@ -92,7 +92,7 @@ func (p *Parcel) GetSign() []byte {
 	return p.Signature
 }
 
-func (p *Parcel) GetSender() insolar.RecordRef {
+func (p *Parcel) GetSender() insolar.Reference {
 	return p.Sender
 }
 

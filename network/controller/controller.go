@@ -78,7 +78,7 @@ func (c *Controller) GetLastIgnoredPulse() insolar.PulseNumber {
 }
 
 // SendParcel send message to nodeID.
-func (c *Controller) SendMessage(nodeID insolar.RecordRef, name string, msg insolar.Parcel) ([]byte, error) {
+func (c *Controller) SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error) {
 	return c.RPCController.SendMessage(nodeID, name, msg)
 }
 

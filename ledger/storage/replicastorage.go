@@ -30,12 +30,12 @@ import (
 // ReplicaStorage is a heavy-based storage
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.ReplicaStorage -o ./ -s _mock.go
 type ReplicaStorage interface {
-	SetHeavySyncedPulse(ctx context.Context, jetID insolar.RecordID, pulsenum insolar.PulseNumber) error
-	GetHeavySyncedPulse(ctx context.Context, jetID insolar.RecordID) (pn insolar.PulseNumber, err error)
-	GetSyncClientJetPulses(ctx context.Context, jetID insolar.RecordID) ([]insolar.PulseNumber, error)
-	SetSyncClientJetPulses(ctx context.Context, jetID insolar.RecordID, pns []insolar.PulseNumber) error
-	GetAllSyncClientJets(ctx context.Context) (map[insolar.RecordID][]insolar.PulseNumber, error)
-	GetAllNonEmptySyncClientJets(ctx context.Context) (map[insolar.RecordID][]insolar.PulseNumber, error)
+	SetHeavySyncedPulse(ctx context.Context, jetID insolar.ID, pulsenum insolar.PulseNumber) error
+	GetHeavySyncedPulse(ctx context.Context, jetID insolar.ID) (pn insolar.PulseNumber, err error)
+	GetSyncClientJetPulses(ctx context.Context, jetID insolar.ID) ([]insolar.PulseNumber, error)
+	SetSyncClientJetPulses(ctx context.Context, jetID insolar.ID, pns []insolar.PulseNumber) error
+	GetAllSyncClientJets(ctx context.Context) (map[insolar.ID][]insolar.PulseNumber, error)
+	GetAllNonEmptySyncClientJets(ctx context.Context) (map[insolar.ID][]insolar.PulseNumber, error)
 }
 
 type replicaStorage struct {
@@ -47,14 +47,14 @@ func NewReplicaStorage() ReplicaStorage {
 }
 
 // SetHeavySyncedPulse saves last successfuly synced pulse number on heavy node.
-func (rs *replicaStorage) SetHeavySyncedPulse(ctx context.Context, jetID insolar.RecordID, pulsenum insolar.PulseNumber) error {
+func (rs *replicaStorage) SetHeavySyncedPulse(ctx context.Context, jetID insolar.ID, pulsenum insolar.PulseNumber) error {
 	return rs.DB.Update(ctx, func(tx *TransactionManager) error {
 		return tx.set(ctx, prefixkey(scopeIDSystem, jetID[:], []byte{sysLastSyncedPulseOnHeavy}), pulsenum.Bytes())
 	})
 }
 
 // GetHeavySyncedPulse returns last successfuly synced pulse number on heavy node.
-func (rs *replicaStorage) GetHeavySyncedPulse(ctx context.Context, jetID insolar.RecordID) (pn insolar.PulseNumber, err error) {
+func (rs *replicaStorage) GetHeavySyncedPulse(ctx context.Context, jetID insolar.ID) (pn insolar.PulseNumber, err error) {
 	var buf []byte
 	buf, err = rs.DB.Get(ctx, prefixkey(scopeIDSystem, jetID[:], []byte{sysLastSyncedPulseOnHeavy}))
 	if err == nil {
@@ -72,7 +72,7 @@ func sysHeavyClientStateKeyForJet(jetID []byte) []byte {
 }
 
 // GetSyncClientJetPulses returns all jet's pulses not synced to heavy.
-func (rs *replicaStorage) GetSyncClientJetPulses(ctx context.Context, jetID insolar.RecordID) ([]insolar.PulseNumber, error) {
+func (rs *replicaStorage) GetSyncClientJetPulses(ctx context.Context, jetID insolar.ID) ([]insolar.PulseNumber, error) {
 	k := sysHeavyClientStateKeyForJet(jetID[:])
 	buf, err := rs.DB.Get(ctx, k)
 	if err == insolar.ErrNotFound {
@@ -90,7 +90,7 @@ func decodePulsesList(r io.Reader) (pns []insolar.PulseNumber, err error) {
 }
 
 // SetSyncClientJetPulses saves all jet's pulses not synced to heavy.
-func (rs *replicaStorage) SetSyncClientJetPulses(ctx context.Context, jetID insolar.RecordID, pns []insolar.PulseNumber) error {
+func (rs *replicaStorage) SetSyncClientJetPulses(ctx context.Context, jetID insolar.ID, pns []insolar.PulseNumber) error {
 	k := sysHeavyClientStateKeyForJet(jetID[:])
 	var buf bytes.Buffer
 	enc := gob.NewEncoder(&buf)
@@ -102,8 +102,8 @@ func (rs *replicaStorage) SetSyncClientJetPulses(ctx context.Context, jetID inso
 }
 
 // GetAllSyncClientJets returns map of all jet's processed by node.
-func (rs *replicaStorage) GetAllSyncClientJets(ctx context.Context) (map[insolar.RecordID][]insolar.PulseNumber, error) {
-	jets := map[insolar.RecordID][]insolar.PulseNumber{}
+func (rs *replicaStorage) GetAllSyncClientJets(ctx context.Context) (map[insolar.ID][]insolar.PulseNumber, error) {
+	jets := map[insolar.ID][]insolar.PulseNumber{}
 	err := rs.DB.GetBadgerDB().View(func(txn *badger.Txn) error {
 		it := txn.NewIterator(badger.DefaultIteratorOptions)
 		defer it.Close()
@@ -123,7 +123,7 @@ func (rs *replicaStorage) GetAllSyncClientJets(ctx context.Context) (map[insolar
 				return err
 			}
 
-			var jetID insolar.RecordID
+			var jetID insolar.ID
 			offset := len(sysHeavyClientStatePrefix)
 			copy(jetID[:], key[offset:offset+len(jetID)])
 			jets[jetID] = syncPulses
@@ -137,7 +137,7 @@ func (rs *replicaStorage) GetAllSyncClientJets(ctx context.Context) (map[insolar
 }
 
 // GetAllNonEmptySyncClientJets returns map of all jet's if they have non empty list pulses to sync.
-func (rs *replicaStorage) GetAllNonEmptySyncClientJets(ctx context.Context) (map[insolar.RecordID][]insolar.PulseNumber, error) {
+func (rs *replicaStorage) GetAllNonEmptySyncClientJets(ctx context.Context) (map[insolar.ID][]insolar.PulseNumber, error) {
 	states, err := rs.GetAllSyncClientJets(ctx)
 	if err != nil {
 		return nil, err

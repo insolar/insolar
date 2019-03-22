@@ -33,7 +33,7 @@ type Wallet struct {
 }
 
 // Transfer transfers money to given wallet
-func (w *Wallet) Transfer(amount uint, to *insolar.RecordRef) error {
+func (w *Wallet) Transfer(amount uint, to *insolar.Reference) error {
 
 	toWallet, err := wallet.GetImplementationFrom(*to)
 	if err != nil {
@@ -62,7 +62,7 @@ func (w *Wallet) Transfer(amount uint, to *insolar.RecordRef) error {
 }
 
 // Accept transforms allowance to balance
-func (w *Wallet) Accept(aRef *insolar.RecordRef) error {
+func (w *Wallet) Accept(aRef *insolar.Reference) error {
 	b, err := allowance.GetObject(*aRef).TakeAmount()
 	if err != nil {
 		return fmt.Errorf("[ Accept ] Can't take amount: %s", err.Error())

@@ -25,12 +25,12 @@ type UnsyncListMock struct {
 	AddNodePreCounter uint64
 	AddNodeMock       mUnsyncListMockAddNode
 
-	AddProofFunc       func(p insolar.RecordRef, p1 *packets.NodePulseProof)
+	AddProofFunc       func(p insolar.Reference, p1 *packets.NodePulseProof)
 	AddProofCounter    uint64
 	AddProofPreCounter uint64
 	AddProofMock       mUnsyncListMockAddProof
 
-	GetActiveNodeFunc       func(p insolar.RecordRef) (r insolar.NetworkNode)
+	GetActiveNodeFunc       func(p insolar.Reference) (r insolar.NetworkNode)
 	GetActiveNodeCounter    uint64
 	GetActiveNodePreCounter uint64
 	GetActiveNodeMock       mUnsyncListMockGetActiveNode
@@ -40,7 +40,7 @@ type UnsyncListMock struct {
 	GetActiveNodesPreCounter uint64
 	GetActiveNodesMock       mUnsyncListMockGetActiveNodes
 
-	GetGlobuleHashSignatureFunc       func(p insolar.RecordRef) (r packets.GlobuleHashSignature, r1 bool)
+	GetGlobuleHashSignatureFunc       func(p insolar.Reference) (r packets.GlobuleHashSignature, r1 bool)
 	GetGlobuleHashSignatureCounter    uint64
 	GetGlobuleHashSignaturePreCounter uint64
 	GetGlobuleHashSignatureMock       mUnsyncListMockGetGlobuleHashSignature
@@ -50,12 +50,12 @@ type UnsyncListMock struct {
 	GetOriginPreCounter uint64
 	GetOriginMock       mUnsyncListMockGetOrigin
 
-	GetProofFunc       func(p insolar.RecordRef) (r *packets.NodePulseProof)
+	GetProofFunc       func(p insolar.Reference) (r *packets.NodePulseProof)
 	GetProofCounter    uint64
 	GetProofPreCounter uint64
 	GetProofMock       mUnsyncListMockGetProof
 
-	IndexToRefFunc       func(p int) (r insolar.RecordRef, r1 error)
+	IndexToRefFunc       func(p int) (r insolar.Reference, r1 error)
 	IndexToRefCounter    uint64
 	IndexToRefPreCounter uint64
 	IndexToRefMock       mUnsyncListMockIndexToRef
@@ -65,17 +65,17 @@ type UnsyncListMock struct {
 	LengthPreCounter uint64
 	LengthMock       mUnsyncListMockLength
 
-	RefToIndexFunc       func(p insolar.RecordRef) (r int, r1 error)
+	RefToIndexFunc       func(p insolar.Reference) (r int, r1 error)
 	RefToIndexCounter    uint64
 	RefToIndexPreCounter uint64
 	RefToIndexMock       mUnsyncListMockRefToIndex
 
-	RemoveNodeFunc       func(p insolar.RecordRef)
+	RemoveNodeFunc       func(p insolar.Reference)
 	RemoveNodeCounter    uint64
 	RemoveNodePreCounter uint64
 	RemoveNodeMock       mUnsyncListMockRemoveNode
 
-	SetGlobuleHashSignatureFunc       func(p insolar.RecordRef, p1 packets.GlobuleHashSignature)
+	SetGlobuleHashSignatureFunc       func(p insolar.Reference, p1 packets.GlobuleHashSignature)
 	SetGlobuleHashSignatureCounter    uint64
 	SetGlobuleHashSignaturePreCounter uint64
 	SetGlobuleHashSignatureMock       mUnsyncListMockSetGlobuleHashSignature
@@ -240,12 +240,12 @@ type UnsyncListMockAddProofExpectation struct {
 }
 
 type UnsyncListMockAddProofInput struct {
-	p  insolar.RecordRef
+	p  insolar.Reference
 	p1 *packets.NodePulseProof
 }
 
 //Expect specifies that invocation of UnsyncList.AddProof is expected from 1 to Infinity times
-func (m *mUnsyncListMockAddProof) Expect(p insolar.RecordRef, p1 *packets.NodePulseProof) *mUnsyncListMockAddProof {
+func (m *mUnsyncListMockAddProof) Expect(p insolar.Reference, p1 *packets.NodePulseProof) *mUnsyncListMockAddProof {
 	m.mock.AddProofFunc = nil
 	m.expectationSeries = nil
 
@@ -269,7 +269,7 @@ func (m *mUnsyncListMockAddProof) Return() *UnsyncListMock {
 }
 
 //ExpectOnce specifies that invocation of UnsyncList.AddProof is expected once
-func (m *mUnsyncListMockAddProof) ExpectOnce(p insolar.RecordRef, p1 *packets.NodePulseProof) *UnsyncListMockAddProofExpectation {
+func (m *mUnsyncListMockAddProof) ExpectOnce(p insolar.Reference, p1 *packets.NodePulseProof) *UnsyncListMockAddProofExpectation {
 	m.mock.AddProofFunc = nil
 	m.mainExpectation = nil
 
@@ -280,7 +280,7 @@ func (m *mUnsyncListMockAddProof) ExpectOnce(p insolar.RecordRef, p1 *packets.No
 }
 
 //Set uses given function f as a mock of UnsyncList.AddProof method
-func (m *mUnsyncListMockAddProof) Set(f func(p insolar.RecordRef, p1 *packets.NodePulseProof)) *UnsyncListMock {
+func (m *mUnsyncListMockAddProof) Set(f func(p insolar.Reference, p1 *packets.NodePulseProof)) *UnsyncListMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -289,7 +289,7 @@ func (m *mUnsyncListMockAddProof) Set(f func(p insolar.RecordRef, p1 *packets.No
 }
 
 //AddProof implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) AddProof(p insolar.RecordRef, p1 *packets.NodePulseProof) {
+func (m *UnsyncListMock) AddProof(p insolar.Reference, p1 *packets.NodePulseProof) {
 	counter := atomic.AddUint64(&m.AddProofPreCounter, 1)
 	defer atomic.AddUint64(&m.AddProofCounter, 1)
 
@@ -365,7 +365,7 @@ type UnsyncListMockGetActiveNodeExpectation struct {
 }
 
 type UnsyncListMockGetActiveNodeInput struct {
-	p insolar.RecordRef
+	p insolar.Reference
 }
 
 type UnsyncListMockGetActiveNodeResult struct {
@@ -373,7 +373,7 @@ type UnsyncListMockGetActiveNodeResult struct {
 }
 
 //Expect specifies that invocation of UnsyncList.GetActiveNode is expected from 1 to Infinity times
-func (m *mUnsyncListMockGetActiveNode) Expect(p insolar.RecordRef) *mUnsyncListMockGetActiveNode {
+func (m *mUnsyncListMockGetActiveNode) Expect(p insolar.Reference) *mUnsyncListMockGetActiveNode {
 	m.mock.GetActiveNodeFunc = nil
 	m.expectationSeries = nil
 
@@ -397,7 +397,7 @@ func (m *mUnsyncListMockGetActiveNode) Return(r insolar.NetworkNode) *UnsyncList
 }
 
 //ExpectOnce specifies that invocation of UnsyncList.GetActiveNode is expected once
-func (m *mUnsyncListMockGetActiveNode) ExpectOnce(p insolar.RecordRef) *UnsyncListMockGetActiveNodeExpectation {
+func (m *mUnsyncListMockGetActiveNode) ExpectOnce(p insolar.Reference) *UnsyncListMockGetActiveNodeExpectation {
 	m.mock.GetActiveNodeFunc = nil
 	m.mainExpectation = nil
 
@@ -412,7 +412,7 @@ func (e *UnsyncListMockGetActiveNodeExpectation) Return(r insolar.NetworkNode) {
 }
 
 //Set uses given function f as a mock of UnsyncList.GetActiveNode method
-func (m *mUnsyncListMockGetActiveNode) Set(f func(p insolar.RecordRef) (r insolar.NetworkNode)) *UnsyncListMock {
+func (m *mUnsyncListMockGetActiveNode) Set(f func(p insolar.Reference) (r insolar.NetworkNode)) *UnsyncListMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -421,7 +421,7 @@ func (m *mUnsyncListMockGetActiveNode) Set(f func(p insolar.RecordRef) (r insola
 }
 
 //GetActiveNode implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) GetActiveNode(p insolar.RecordRef) (r insolar.NetworkNode) {
+func (m *UnsyncListMock) GetActiveNode(p insolar.Reference) (r insolar.NetworkNode) {
 	counter := atomic.AddUint64(&m.GetActiveNodePreCounter, 1)
 	defer atomic.AddUint64(&m.GetActiveNodeCounter, 1)
 
@@ -646,7 +646,7 @@ type UnsyncListMockGetGlobuleHashSignatureExpectation struct {
 }
 
 type UnsyncListMockGetGlobuleHashSignatureInput struct {
-	p insolar.RecordRef
+	p insolar.Reference
 }
 
 type UnsyncListMockGetGlobuleHashSignatureResult struct {
@@ -655,7 +655,7 @@ type UnsyncListMockGetGlobuleHashSignatureResult struct {
 }
 
 //Expect specifies that invocation of UnsyncList.GetGlobuleHashSignature is expected from 1 to Infinity times
-func (m *mUnsyncListMockGetGlobuleHashSignature) Expect(p insolar.RecordRef) *mUnsyncListMockGetGlobuleHashSignature {
+func (m *mUnsyncListMockGetGlobuleHashSignature) Expect(p insolar.Reference) *mUnsyncListMockGetGlobuleHashSignature {
 	m.mock.GetGlobuleHashSignatureFunc = nil
 	m.expectationSeries = nil
 
@@ -679,7 +679,7 @@ func (m *mUnsyncListMockGetGlobuleHashSignature) Return(r packets.GlobuleHashSig
 }
 
 //ExpectOnce specifies that invocation of UnsyncList.GetGlobuleHashSignature is expected once
-func (m *mUnsyncListMockGetGlobuleHashSignature) ExpectOnce(p insolar.RecordRef) *UnsyncListMockGetGlobuleHashSignatureExpectation {
+func (m *mUnsyncListMockGetGlobuleHashSignature) ExpectOnce(p insolar.Reference) *UnsyncListMockGetGlobuleHashSignatureExpectation {
 	m.mock.GetGlobuleHashSignatureFunc = nil
 	m.mainExpectation = nil
 
@@ -694,7 +694,7 @@ func (e *UnsyncListMockGetGlobuleHashSignatureExpectation) Return(r packets.Glob
 }
 
 //Set uses given function f as a mock of UnsyncList.GetGlobuleHashSignature method
-func (m *mUnsyncListMockGetGlobuleHashSignature) Set(f func(p insolar.RecordRef) (r packets.GlobuleHashSignature, r1 bool)) *UnsyncListMock {
+func (m *mUnsyncListMockGetGlobuleHashSignature) Set(f func(p insolar.Reference) (r packets.GlobuleHashSignature, r1 bool)) *UnsyncListMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -703,7 +703,7 @@ func (m *mUnsyncListMockGetGlobuleHashSignature) Set(f func(p insolar.RecordRef)
 }
 
 //GetGlobuleHashSignature implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) GetGlobuleHashSignature(p insolar.RecordRef) (r packets.GlobuleHashSignature, r1 bool) {
+func (m *UnsyncListMock) GetGlobuleHashSignature(p insolar.Reference) (r packets.GlobuleHashSignature, r1 bool) {
 	counter := atomic.AddUint64(&m.GetGlobuleHashSignaturePreCounter, 1)
 	defer atomic.AddUint64(&m.GetGlobuleHashSignatureCounter, 1)
 
@@ -930,7 +930,7 @@ type UnsyncListMockGetProofExpectation struct {
 }
 
 type UnsyncListMockGetProofInput struct {
-	p insolar.RecordRef
+	p insolar.Reference
 }
 
 type UnsyncListMockGetProofResult struct {
@@ -938,7 +938,7 @@ type UnsyncListMockGetProofResult struct {
 }
 
 //Expect specifies that invocation of UnsyncList.GetProof is expected from 1 to Infinity times
-func (m *mUnsyncListMockGetProof) Expect(p insolar.RecordRef) *mUnsyncListMockGetProof {
+func (m *mUnsyncListMockGetProof) Expect(p insolar.Reference) *mUnsyncListMockGetProof {
 	m.mock.GetProofFunc = nil
 	m.expectationSeries = nil
 
@@ -962,7 +962,7 @@ func (m *mUnsyncListMockGetProof) Return(r *packets.NodePulseProof) *UnsyncListM
 }
 
 //ExpectOnce specifies that invocation of UnsyncList.GetProof is expected once
-func (m *mUnsyncListMockGetProof) ExpectOnce(p insolar.RecordRef) *UnsyncListMockGetProofExpectation {
+func (m *mUnsyncListMockGetProof) ExpectOnce(p insolar.Reference) *UnsyncListMockGetProofExpectation {
 	m.mock.GetProofFunc = nil
 	m.mainExpectation = nil
 
@@ -977,7 +977,7 @@ func (e *UnsyncListMockGetProofExpectation) Return(r *packets.NodePulseProof) {
 }
 
 //Set uses given function f as a mock of UnsyncList.GetProof method
-func (m *mUnsyncListMockGetProof) Set(f func(p insolar.RecordRef) (r *packets.NodePulseProof)) *UnsyncListMock {
+func (m *mUnsyncListMockGetProof) Set(f func(p insolar.Reference) (r *packets.NodePulseProof)) *UnsyncListMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -986,7 +986,7 @@ func (m *mUnsyncListMockGetProof) Set(f func(p insolar.RecordRef) (r *packets.No
 }
 
 //GetProof implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) GetProof(p insolar.RecordRef) (r *packets.NodePulseProof) {
+func (m *UnsyncListMock) GetProof(p insolar.Reference) (r *packets.NodePulseProof) {
 	counter := atomic.AddUint64(&m.GetProofPreCounter, 1)
 	defer atomic.AddUint64(&m.GetProofCounter, 1)
 
@@ -1081,7 +1081,7 @@ type UnsyncListMockIndexToRefInput struct {
 }
 
 type UnsyncListMockIndexToRefResult struct {
-	r  insolar.RecordRef
+	r  insolar.Reference
 	r1 error
 }
 
@@ -1098,7 +1098,7 @@ func (m *mUnsyncListMockIndexToRef) Expect(p int) *mUnsyncListMockIndexToRef {
 }
 
 //Return specifies results of invocation of UnsyncList.IndexToRef
-func (m *mUnsyncListMockIndexToRef) Return(r insolar.RecordRef, r1 error) *UnsyncListMock {
+func (m *mUnsyncListMockIndexToRef) Return(r insolar.Reference, r1 error) *UnsyncListMock {
 	m.mock.IndexToRefFunc = nil
 	m.expectationSeries = nil
 
@@ -1120,12 +1120,12 @@ func (m *mUnsyncListMockIndexToRef) ExpectOnce(p int) *UnsyncListMockIndexToRefE
 	return expectation
 }
 
-func (e *UnsyncListMockIndexToRefExpectation) Return(r insolar.RecordRef, r1 error) {
+func (e *UnsyncListMockIndexToRefExpectation) Return(r insolar.Reference, r1 error) {
 	e.result = &UnsyncListMockIndexToRefResult{r, r1}
 }
 
 //Set uses given function f as a mock of UnsyncList.IndexToRef method
-func (m *mUnsyncListMockIndexToRef) Set(f func(p int) (r insolar.RecordRef, r1 error)) *UnsyncListMock {
+func (m *mUnsyncListMockIndexToRef) Set(f func(p int) (r insolar.Reference, r1 error)) *UnsyncListMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1134,7 +1134,7 @@ func (m *mUnsyncListMockIndexToRef) Set(f func(p int) (r insolar.RecordRef, r1 e
 }
 
 //IndexToRef implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) IndexToRef(p int) (r insolar.RecordRef, r1 error) {
+func (m *UnsyncListMock) IndexToRef(p int) (r insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.IndexToRefPreCounter, 1)
 	defer atomic.AddUint64(&m.IndexToRefCounter, 1)
 
@@ -1361,7 +1361,7 @@ type UnsyncListMockRefToIndexExpectation struct {
 }
 
 type UnsyncListMockRefToIndexInput struct {
-	p insolar.RecordRef
+	p insolar.Reference
 }
 
 type UnsyncListMockRefToIndexResult struct {
@@ -1370,7 +1370,7 @@ type UnsyncListMockRefToIndexResult struct {
 }
 
 //Expect specifies that invocation of UnsyncList.RefToIndex is expected from 1 to Infinity times
-func (m *mUnsyncListMockRefToIndex) Expect(p insolar.RecordRef) *mUnsyncListMockRefToIndex {
+func (m *mUnsyncListMockRefToIndex) Expect(p insolar.Reference) *mUnsyncListMockRefToIndex {
 	m.mock.RefToIndexFunc = nil
 	m.expectationSeries = nil
 
@@ -1394,7 +1394,7 @@ func (m *mUnsyncListMockRefToIndex) Return(r int, r1 error) *UnsyncListMock {
 }
 
 //ExpectOnce specifies that invocation of UnsyncList.RefToIndex is expected once
-func (m *mUnsyncListMockRefToIndex) ExpectOnce(p insolar.RecordRef) *UnsyncListMockRefToIndexExpectation {
+func (m *mUnsyncListMockRefToIndex) ExpectOnce(p insolar.Reference) *UnsyncListMockRefToIndexExpectation {
 	m.mock.RefToIndexFunc = nil
 	m.mainExpectation = nil
 
@@ -1409,7 +1409,7 @@ func (e *UnsyncListMockRefToIndexExpectation) Return(r int, r1 error) {
 }
 
 //Set uses given function f as a mock of UnsyncList.RefToIndex method
-func (m *mUnsyncListMockRefToIndex) Set(f func(p insolar.RecordRef) (r int, r1 error)) *UnsyncListMock {
+func (m *mUnsyncListMockRefToIndex) Set(f func(p insolar.Reference) (r int, r1 error)) *UnsyncListMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1418,7 +1418,7 @@ func (m *mUnsyncListMockRefToIndex) Set(f func(p insolar.RecordRef) (r int, r1 e
 }
 
 //RefToIndex implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) RefToIndex(p insolar.RecordRef) (r int, r1 error) {
+func (m *UnsyncListMock) RefToIndex(p insolar.Reference) (r int, r1 error) {
 	counter := atomic.AddUint64(&m.RefToIndexPreCounter, 1)
 	defer atomic.AddUint64(&m.RefToIndexCounter, 1)
 
@@ -1510,11 +1510,11 @@ type UnsyncListMockRemoveNodeExpectation struct {
 }
 
 type UnsyncListMockRemoveNodeInput struct {
-	p insolar.RecordRef
+	p insolar.Reference
 }
 
 //Expect specifies that invocation of UnsyncList.RemoveNode is expected from 1 to Infinity times
-func (m *mUnsyncListMockRemoveNode) Expect(p insolar.RecordRef) *mUnsyncListMockRemoveNode {
+func (m *mUnsyncListMockRemoveNode) Expect(p insolar.Reference) *mUnsyncListMockRemoveNode {
 	m.mock.RemoveNodeFunc = nil
 	m.expectationSeries = nil
 
@@ -1538,7 +1538,7 @@ func (m *mUnsyncListMockRemoveNode) Return() *UnsyncListMock {
 }
 
 //ExpectOnce specifies that invocation of UnsyncList.RemoveNode is expected once
-func (m *mUnsyncListMockRemoveNode) ExpectOnce(p insolar.RecordRef) *UnsyncListMockRemoveNodeExpectation {
+func (m *mUnsyncListMockRemoveNode) ExpectOnce(p insolar.Reference) *UnsyncListMockRemoveNodeExpectation {
 	m.mock.RemoveNodeFunc = nil
 	m.mainExpectation = nil
 
@@ -1549,7 +1549,7 @@ func (m *mUnsyncListMockRemoveNode) ExpectOnce(p insolar.RecordRef) *UnsyncListM
 }
 
 //Set uses given function f as a mock of UnsyncList.RemoveNode method
-func (m *mUnsyncListMockRemoveNode) Set(f func(p insolar.RecordRef)) *UnsyncListMock {
+func (m *mUnsyncListMockRemoveNode) Set(f func(p insolar.Reference)) *UnsyncListMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1558,7 +1558,7 @@ func (m *mUnsyncListMockRemoveNode) Set(f func(p insolar.RecordRef)) *UnsyncList
 }
 
 //RemoveNode implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) RemoveNode(p insolar.RecordRef) {
+func (m *UnsyncListMock) RemoveNode(p insolar.Reference) {
 	counter := atomic.AddUint64(&m.RemoveNodePreCounter, 1)
 	defer atomic.AddUint64(&m.RemoveNodeCounter, 1)
 
@@ -1633,12 +1633,12 @@ type UnsyncListMockSetGlobuleHashSignatureExpectation struct {
 }
 
 type UnsyncListMockSetGlobuleHashSignatureInput struct {
-	p  insolar.RecordRef
+	p  insolar.Reference
 	p1 packets.GlobuleHashSignature
 }
 
 //Expect specifies that invocation of UnsyncList.SetGlobuleHashSignature is expected from 1 to Infinity times
-func (m *mUnsyncListMockSetGlobuleHashSignature) Expect(p insolar.RecordRef, p1 packets.GlobuleHashSignature) *mUnsyncListMockSetGlobuleHashSignature {
+func (m *mUnsyncListMockSetGlobuleHashSignature) Expect(p insolar.Reference, p1 packets.GlobuleHashSignature) *mUnsyncListMockSetGlobuleHashSignature {
 	m.mock.SetGlobuleHashSignatureFunc = nil
 	m.expectationSeries = nil
 
@@ -1662,7 +1662,7 @@ func (m *mUnsyncListMockSetGlobuleHashSignature) Return() *UnsyncListMock {
 }
 
 //ExpectOnce specifies that invocation of UnsyncList.SetGlobuleHashSignature is expected once
-func (m *mUnsyncListMockSetGlobuleHashSignature) ExpectOnce(p insolar.RecordRef, p1 packets.GlobuleHashSignature) *UnsyncListMockSetGlobuleHashSignatureExpectation {
+func (m *mUnsyncListMockSetGlobuleHashSignature) ExpectOnce(p insolar.Reference, p1 packets.GlobuleHashSignature) *UnsyncListMockSetGlobuleHashSignatureExpectation {
 	m.mock.SetGlobuleHashSignatureFunc = nil
 	m.mainExpectation = nil
 
@@ -1673,7 +1673,7 @@ func (m *mUnsyncListMockSetGlobuleHashSignature) ExpectOnce(p insolar.RecordRef,
 }
 
 //Set uses given function f as a mock of UnsyncList.SetGlobuleHashSignature method
-func (m *mUnsyncListMockSetGlobuleHashSignature) Set(f func(p insolar.RecordRef, p1 packets.GlobuleHashSignature)) *UnsyncListMock {
+func (m *mUnsyncListMockSetGlobuleHashSignature) Set(f func(p insolar.Reference, p1 packets.GlobuleHashSignature)) *UnsyncListMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1682,7 +1682,7 @@ func (m *mUnsyncListMockSetGlobuleHashSignature) Set(f func(p insolar.RecordRef,
 }
 
 //SetGlobuleHashSignature implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) SetGlobuleHashSignature(p insolar.RecordRef, p1 packets.GlobuleHashSignature) {
+func (m *UnsyncListMock) SetGlobuleHashSignature(p insolar.Reference, p1 packets.GlobuleHashSignature) {
 	counter := atomic.AddUint64(&m.SetGlobuleHashSignaturePreCounter, 1)
 	defer atomic.AddUint64(&m.SetGlobuleHashSignatureCounter, 1)
 

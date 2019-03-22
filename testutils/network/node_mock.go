@@ -38,7 +38,7 @@ type NodeMock struct {
 	GetStatePreCounter uint64
 	GetStateMock       mNodeMockGetState
 
-	IDFunc       func() (r core.RecordRef)
+	IDFunc       func() (r core.Reference)
 	IDCounter    uint64
 	IDPreCounter uint64
 	IDMock       mNodeMockID
@@ -638,7 +638,7 @@ type NodeMockIDExpectation struct {
 }
 
 type NodeMockIDResult struct {
-	r core.RecordRef
+	r core.Reference
 }
 
 //Expect specifies that invocation of NetworkNode.ID is expected from 1 to Infinity times
@@ -654,7 +654,7 @@ func (m *mNodeMockID) Expect() *mNodeMockID {
 }
 
 //Return specifies results of invocation of NetworkNode.ID
-func (m *mNodeMockID) Return(r core.RecordRef) *NodeMock {
+func (m *mNodeMockID) Return(r core.Reference) *NodeMock {
 	m.mock.IDFunc = nil
 	m.expectationSeries = nil
 
@@ -676,12 +676,12 @@ func (m *mNodeMockID) ExpectOnce() *NodeMockIDExpectation {
 	return expectation
 }
 
-func (e *NodeMockIDExpectation) Return(r core.RecordRef) {
+func (e *NodeMockIDExpectation) Return(r core.Reference) {
 	e.result = &NodeMockIDResult{r}
 }
 
 //Set uses given function f as a mock of NetworkNode.ID method
-func (m *mNodeMockID) Set(f func() (r core.RecordRef)) *NodeMock {
+func (m *mNodeMockID) Set(f func() (r core.Reference)) *NodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -690,7 +690,7 @@ func (m *mNodeMockID) Set(f func() (r core.RecordRef)) *NodeMock {
 }
 
 //ID implements github.com/insolar/insolar/insolar.NetworkNode interface
-func (m *NodeMock) ID() (r core.RecordRef) {
+func (m *NodeMock) ID() (r core.Reference) {
 	counter := atomic.AddUint64(&m.IDPreCounter, 1)
 	defer atomic.AddUint64(&m.IDCounter, 1)
 

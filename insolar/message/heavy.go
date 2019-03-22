@@ -30,7 +30,7 @@ type HeavyPayload struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (*HeavyPayload) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (*HeavyPayload) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return nil, 0
 }
 
@@ -40,12 +40,12 @@ func (*HeavyPayload) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (hp *HeavyPayload) DefaultTarget() *insolar.RecordRef {
-	return &insolar.RecordRef{}
+func (hp *HeavyPayload) DefaultTarget() *insolar.Reference {
+	return &insolar.Reference{}
 }
 
 // GetCaller implementation of Message interface.
-func (HeavyPayload) GetCaller() *insolar.RecordRef {
+func (HeavyPayload) GetCaller() *insolar.Reference {
 	return nil
 }
 
@@ -62,13 +62,13 @@ type HeavyStartStop struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (*HeavyStartStop) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (*HeavyStartStop) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return nil, 0
 }
 
 // DefaultTarget returns of target of this event.
-func (*HeavyStartStop) DefaultTarget() *insolar.RecordRef {
-	return &insolar.RecordRef{}
+func (*HeavyStartStop) DefaultTarget() *insolar.Reference {
+	return &insolar.Reference{}
 }
 
 // DefaultRole returns role for this event
@@ -77,7 +77,7 @@ func (*HeavyStartStop) DefaultRole() insolar.DynamicRole {
 }
 
 // GetCaller implementation of Message interface.
-func (HeavyStartStop) GetCaller() *insolar.RecordRef {
+func (HeavyStartStop) GetCaller() *insolar.Reference {
 	return nil
 }
 

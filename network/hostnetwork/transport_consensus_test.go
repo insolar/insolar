@@ -88,7 +88,7 @@ func createTwoConsensusNetworks(id1, id2 insolar.ShortNodeID) (t1, t2 network.Co
 		return nil, nil, err
 	}
 
-	ref1, err := insolar.NewRefFromBase58(ID2 + DOMAIN)
+	ref1, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -96,7 +96,7 @@ func createTwoConsensusNetworks(id1, id2 insolar.ShortNodeID) (t1, t2 network.Co
 	if err != nil {
 		return nil, nil, err
 	}
-	ref2, err := insolar.NewRefFromBase58(ID2 + DOMAIN)
+	ref2, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -121,7 +121,7 @@ func (t *consensusTransportSuite) sendPacket(packet consensus.ConsensusPacket) (
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	handler := func(incomingPacket consensus.ConsensusPacket, sender insolar.RecordRef) {
+	handler := func(incomingPacket consensus.ConsensusPacket, sender insolar.Reference) {
 		log.Info("handler triggered")
 		wg.Done()
 	}
@@ -197,7 +197,7 @@ func (t *consensusTransportSuite) sendPacketAndVerify(packet consensus.Consensus
 
 	result := make(chan bool, 1)
 
-	handler := func(incomingPacket consensus.ConsensusPacket, sender insolar.RecordRef) {
+	handler := func(incomingPacket consensus.ConsensusPacket, sender insolar.Reference) {
 		log.Info("handler triggered")
 		pk, err := t.crypto.GetPublicKey()
 		if err != nil {

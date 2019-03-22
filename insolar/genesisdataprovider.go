@@ -20,7 +20,7 @@ import "context"
 
 // GenesisDataProvider is the global genesis data provider handler. Other system parts communicate with genesis data provider through it.
 type GenesisDataProvider interface {
-	GetRootDomain(ctx context.Context) *RecordRef
-	GetNodeDomain(ctx context.Context) (*RecordRef, error)
-	GetRootMember(ctx context.Context) (*RecordRef, error)
+	GetRootDomain(ctx context.Context) *Reference
+	GetNodeDomain(ctx context.Context) (*Reference, error)
+	GetRootMember(ctx context.Context) (*Reference, error)
 }

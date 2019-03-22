@@ -64,7 +64,7 @@ func newZeroNetworkCoordinator() *zeroNetworkCoordinator {
 	return &zeroNetworkCoordinator{}
 }
 
-func (znc *zeroNetworkCoordinator) GetCert(ctx context.Context, nodeRef *insolar.RecordRef) (insolar.Certificate, error) {
+func (znc *zeroNetworkCoordinator) GetCert(ctx context.Context, nodeRef *insolar.Reference) (insolar.Certificate, error) {
 	return nil, errors.New("GetCert is not allowed in Zero Network")
 }
 

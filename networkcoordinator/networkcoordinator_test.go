@@ -139,7 +139,7 @@ func mockReply(t *testing.T) []byte {
 	return []byte(node)
 }
 
-func mockMessageBus(t *testing.T, ok bool, ref *insolar.RecordRef, discovery *insolar.RecordRef) *testutils.MessageBusMock {
+func mockMessageBus(t *testing.T, ok bool, ref *insolar.Reference, discovery *insolar.Reference) *testutils.MessageBusMock {
 	mb := testutils.NewMessageBusMock(t)
 	mb.MustRegisterFunc = func(p insolar.MessageType, handler insolar.MessageHandler) {
 		require.Equal(t, p, insolar.TypeNodeSignRequest)
@@ -157,7 +157,7 @@ func mockMessageBus(t *testing.T, ok bool, ref *insolar.RecordRef, discovery *in
 	return mb
 }
 
-func mockCertificateManager(t *testing.T, certNodeRef *insolar.RecordRef, discoveryNodeRef *insolar.RecordRef, unsignCertOk bool) *testutils.CertificateManagerMock {
+func mockCertificateManager(t *testing.T, certNodeRef *insolar.Reference, discoveryNodeRef *insolar.Reference, unsignCertOk bool) *testutils.CertificateManagerMock {
 	cm := testutils.NewCertificateManagerMock(t)
 	cm.GetCertificateFunc = func() insolar.Certificate {
 		return &certificate.Certificate{

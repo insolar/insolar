@@ -31,8 +31,8 @@ type GenesisDataProvider struct {
 	CertificateManager insolar.CertificateManager `inject:""`
 	ContractRequester  insolar.ContractRequester  `inject:""`
 
-	rootMemberRef *insolar.RecordRef
-	nodeDomainRef *insolar.RecordRef
+	rootMemberRef *insolar.Reference
+	nodeDomainRef *insolar.Reference
 	lock          sync.RWMutex
 }
 
@@ -51,12 +51,12 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] Can't extract response")
 	}
-	rootMemberRef, err := insolar.NewRefFromBase58(info.RootMember)
+	rootMemberRef, err := insolar.NewReferenceFromBase58(info.RootMember)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] Failed to parse info.RootMember")
 	}
 	gdp.rootMemberRef = rootMemberRef
-	nodeDomainRef, err := insolar.NewRefFromBase58(info.NodeDomain)
+	nodeDomainRef, err := insolar.NewReferenceFromBase58(info.NodeDomain)
 	if err != nil {
 		return errors.Wrap(err, "[ setInfo ] Failed to parse info.NodeDomain")
 	}
@@ -66,12 +66,12 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 }
 
 // GetRootDomain returns reference to RootDomain
-func (gdp *GenesisDataProvider) GetRootDomain(ctx context.Context) *insolar.RecordRef {
+func (gdp *GenesisDataProvider) GetRootDomain(ctx context.Context) *insolar.Reference {
 	return gdp.CertificateManager.GetCertificate().GetRootDomainReference()
 }
 
 // GetNodeDomain returns reference to NodeDomain
-func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*insolar.RecordRef, error) {
+func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*insolar.Reference, error) {
 	gdp.lock.Lock()
 	defer gdp.lock.Unlock()
 	if gdp.nodeDomainRef == nil {
@@ -84,7 +84,7 @@ func (gdp *GenesisDataProvider) GetNodeDomain(ctx context.Context) (*insolar.Rec
 }
 
 // GetRootMember returns reference to RootMember
-func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) (*insolar.RecordRef, error) {
+func (gdp *GenesisDataProvider) GetRootMember(ctx context.Context) (*insolar.Reference, error) {
 	gdp.lock.Lock()
 	defer gdp.lock.Unlock()
 	if gdp.rootMemberRef == nil {

@@ -20,77 +20,77 @@ import (
 type ArtifactManagerMock struct {
 	t minimock.Tester
 
-	ActivateObjectFunc       func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.RecordRef, p4 insolar.RecordRef, p5 bool, p6 []byte) (r insolar.ObjectDescriptor, r1 error)
+	ActivateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r insolar.ObjectDescriptor, r1 error)
 	ActivateObjectCounter    uint64
 	ActivateObjectPreCounter uint64
 	ActivateObjectMock       mArtifactManagerMockActivateObject
 
-	ActivatePrototypeFunc       func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.RecordRef, p4 insolar.RecordRef, p5 []byte) (r insolar.ObjectDescriptor, r1 error)
+	ActivatePrototypeFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) (r insolar.ObjectDescriptor, r1 error)
 	ActivatePrototypeCounter    uint64
 	ActivatePrototypePreCounter uint64
 	ActivatePrototypeMock       mArtifactManagerMockActivatePrototype
 
-	DeactivateObjectFunc       func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.ObjectDescriptor) (r *insolar.RecordID, r1 error)
+	DeactivateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.ObjectDescriptor) (r *insolar.ID, r1 error)
 	DeactivateObjectCounter    uint64
 	DeactivateObjectPreCounter uint64
 	DeactivateObjectMock       mArtifactManagerMockDeactivateObject
 
-	DeclareTypeFunc       func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 []byte) (r *insolar.RecordID, r1 error)
+	DeclareTypeFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error)
 	DeclareTypeCounter    uint64
 	DeclareTypePreCounter uint64
 	DeclareTypeMock       mArtifactManagerMockDeclareType
 
-	DeployCodeFunc       func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 []byte, p4 insolar.MachineType) (r *insolar.RecordID, r1 error)
+	DeployCodeFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte, p4 insolar.MachineType) (r *insolar.ID, r1 error)
 	DeployCodeCounter    uint64
 	DeployCodePreCounter uint64
 	DeployCodeMock       mArtifactManagerMockDeployCode
 
-	GenesisRefFunc       func() (r *insolar.RecordRef)
+	GenesisRefFunc       func() (r *insolar.Reference)
 	GenesisRefCounter    uint64
 	GenesisRefPreCounter uint64
 	GenesisRefMock       mArtifactManagerMockGenesisRef
 
-	GetChildrenFunc       func(p context.Context, p1 insolar.RecordRef, p2 *insolar.PulseNumber) (r insolar.RefIterator, r1 error)
+	GetChildrenFunc       func(p context.Context, p1 insolar.Reference, p2 *insolar.PulseNumber) (r insolar.RefIterator, r1 error)
 	GetChildrenCounter    uint64
 	GetChildrenPreCounter uint64
 	GetChildrenMock       mArtifactManagerMockGetChildren
 
-	GetCodeFunc       func(p context.Context, p1 insolar.RecordRef) (r insolar.CodeDescriptor, r1 error)
+	GetCodeFunc       func(p context.Context, p1 insolar.Reference) (r insolar.CodeDescriptor, r1 error)
 	GetCodeCounter    uint64
 	GetCodePreCounter uint64
 	GetCodeMock       mArtifactManagerMockGetCode
 
-	GetDelegateFunc       func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef) (r *insolar.RecordRef, r1 error)
+	GetDelegateFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference) (r *insolar.Reference, r1 error)
 	GetDelegateCounter    uint64
 	GetDelegatePreCounter uint64
 	GetDelegateMock       mArtifactManagerMockGetDelegate
 
-	GetObjectFunc       func(p context.Context, p1 insolar.RecordRef, p2 *insolar.RecordID, p3 bool) (r insolar.ObjectDescriptor, r1 error)
+	GetObjectFunc       func(p context.Context, p1 insolar.Reference, p2 *insolar.ID, p3 bool) (r insolar.ObjectDescriptor, r1 error)
 	GetObjectCounter    uint64
 	GetObjectPreCounter uint64
 	GetObjectMock       mArtifactManagerMockGetObject
 
-	GetPendingRequestFunc       func(p context.Context, p1 insolar.RecordID) (r insolar.Parcel, r1 error)
+	GetPendingRequestFunc       func(p context.Context, p1 insolar.ID) (r insolar.Parcel, r1 error)
 	GetPendingRequestCounter    uint64
 	GetPendingRequestPreCounter uint64
 	GetPendingRequestMock       mArtifactManagerMockGetPendingRequest
 
-	HasPendingRequestsFunc       func(p context.Context, p1 insolar.RecordRef) (r bool, r1 error)
+	HasPendingRequestsFunc       func(p context.Context, p1 insolar.Reference) (r bool, r1 error)
 	HasPendingRequestsCounter    uint64
 	HasPendingRequestsPreCounter uint64
 	HasPendingRequestsMock       mArtifactManagerMockHasPendingRequests
 
-	RegisterRequestFunc       func(p context.Context, p1 insolar.RecordRef, p2 insolar.Parcel) (r *insolar.RecordID, r1 error)
+	RegisterRequestFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error)
 	RegisterRequestCounter    uint64
 	RegisterRequestPreCounter uint64
 	RegisterRequestMock       mArtifactManagerMockRegisterRequest
 
-	RegisterResultFunc       func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 []byte) (r *insolar.RecordID, r1 error)
+	RegisterResultFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error)
 	RegisterResultCounter    uint64
 	RegisterResultPreCounter uint64
 	RegisterResultMock       mArtifactManagerMockRegisterResult
 
-	RegisterValidationFunc       func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordID, p3 bool, p4 []insolar.Message) (r error)
+	RegisterValidationFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.ID, p3 bool, p4 []insolar.Message) (r error)
 	RegisterValidationCounter    uint64
 	RegisterValidationPreCounter uint64
 	RegisterValidationMock       mArtifactManagerMockRegisterValidation
@@ -100,12 +100,12 @@ type ArtifactManagerMock struct {
 	StatePreCounter uint64
 	StateMock       mArtifactManagerMockState
 
-	UpdateObjectFunc       func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.ObjectDescriptor, p4 []byte) (r insolar.ObjectDescriptor, r1 error)
+	UpdateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.ObjectDescriptor, p4 []byte) (r insolar.ObjectDescriptor, r1 error)
 	UpdateObjectCounter    uint64
 	UpdateObjectPreCounter uint64
 	UpdateObjectMock       mArtifactManagerMockUpdateObject
 
-	UpdatePrototypeFunc       func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.ObjectDescriptor, p4 []byte, p5 *insolar.RecordRef) (r insolar.ObjectDescriptor, r1 error)
+	UpdatePrototypeFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.ObjectDescriptor, p4 []byte, p5 *insolar.Reference) (r insolar.ObjectDescriptor, r1 error)
 	UpdatePrototypeCounter    uint64
 	UpdatePrototypePreCounter uint64
 	UpdatePrototypeMock       mArtifactManagerMockUpdatePrototype
@@ -154,10 +154,10 @@ type ArtifactManagerMockActivateObjectExpectation struct {
 
 type ArtifactManagerMockActivateObjectInput struct {
 	p  context.Context
-	p1 insolar.RecordRef
-	p2 insolar.RecordRef
-	p3 insolar.RecordRef
-	p4 insolar.RecordRef
+	p1 insolar.Reference
+	p2 insolar.Reference
+	p3 insolar.Reference
+	p4 insolar.Reference
 	p5 bool
 	p6 []byte
 }
@@ -168,7 +168,7 @@ type ArtifactManagerMockActivateObjectResult struct {
 }
 
 //Expect specifies that invocation of ArtifactManager.ActivateObject is expected from 1 to Infinity times
-func (m *mArtifactManagerMockActivateObject) Expect(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.RecordRef, p4 insolar.RecordRef, p5 bool, p6 []byte) *mArtifactManagerMockActivateObject {
+func (m *mArtifactManagerMockActivateObject) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) *mArtifactManagerMockActivateObject {
 	m.mock.ActivateObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -192,7 +192,7 @@ func (m *mArtifactManagerMockActivateObject) Return(r insolar.ObjectDescriptor, 
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.ActivateObject is expected once
-func (m *mArtifactManagerMockActivateObject) ExpectOnce(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.RecordRef, p4 insolar.RecordRef, p5 bool, p6 []byte) *ArtifactManagerMockActivateObjectExpectation {
+func (m *mArtifactManagerMockActivateObject) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) *ArtifactManagerMockActivateObjectExpectation {
 	m.mock.ActivateObjectFunc = nil
 	m.mainExpectation = nil
 
@@ -207,7 +207,7 @@ func (e *ArtifactManagerMockActivateObjectExpectation) Return(r insolar.ObjectDe
 }
 
 //Set uses given function f as a mock of ArtifactManager.ActivateObject method
-func (m *mArtifactManagerMockActivateObject) Set(f func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.RecordRef, p4 insolar.RecordRef, p5 bool, p6 []byte) (r insolar.ObjectDescriptor, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockActivateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r insolar.ObjectDescriptor, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -216,7 +216,7 @@ func (m *mArtifactManagerMockActivateObject) Set(f func(p context.Context, p1 in
 }
 
 //ActivateObject implements github.com/insolar/insolar/insolar.ArtifactManager interface
-func (m *ArtifactManagerMock) ActivateObject(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.RecordRef, p4 insolar.RecordRef, p5 bool, p6 []byte) (r insolar.ObjectDescriptor, r1 error) {
+func (m *ArtifactManagerMock) ActivateObject(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r insolar.ObjectDescriptor, r1 error) {
 	counter := atomic.AddUint64(&m.ActivateObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.ActivateObjectCounter, 1)
 
@@ -310,10 +310,10 @@ type ArtifactManagerMockActivatePrototypeExpectation struct {
 
 type ArtifactManagerMockActivatePrototypeInput struct {
 	p  context.Context
-	p1 insolar.RecordRef
-	p2 insolar.RecordRef
-	p3 insolar.RecordRef
-	p4 insolar.RecordRef
+	p1 insolar.Reference
+	p2 insolar.Reference
+	p3 insolar.Reference
+	p4 insolar.Reference
 	p5 []byte
 }
 
@@ -323,7 +323,7 @@ type ArtifactManagerMockActivatePrototypeResult struct {
 }
 
 //Expect specifies that invocation of ArtifactManager.ActivatePrototype is expected from 1 to Infinity times
-func (m *mArtifactManagerMockActivatePrototype) Expect(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.RecordRef, p4 insolar.RecordRef, p5 []byte) *mArtifactManagerMockActivatePrototype {
+func (m *mArtifactManagerMockActivatePrototype) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) *mArtifactManagerMockActivatePrototype {
 	m.mock.ActivatePrototypeFunc = nil
 	m.expectationSeries = nil
 
@@ -347,7 +347,7 @@ func (m *mArtifactManagerMockActivatePrototype) Return(r insolar.ObjectDescripto
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.ActivatePrototype is expected once
-func (m *mArtifactManagerMockActivatePrototype) ExpectOnce(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.RecordRef, p4 insolar.RecordRef, p5 []byte) *ArtifactManagerMockActivatePrototypeExpectation {
+func (m *mArtifactManagerMockActivatePrototype) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) *ArtifactManagerMockActivatePrototypeExpectation {
 	m.mock.ActivatePrototypeFunc = nil
 	m.mainExpectation = nil
 
@@ -362,7 +362,7 @@ func (e *ArtifactManagerMockActivatePrototypeExpectation) Return(r insolar.Objec
 }
 
 //Set uses given function f as a mock of ArtifactManager.ActivatePrototype method
-func (m *mArtifactManagerMockActivatePrototype) Set(f func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.RecordRef, p4 insolar.RecordRef, p5 []byte) (r insolar.ObjectDescriptor, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockActivatePrototype) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) (r insolar.ObjectDescriptor, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -371,7 +371,7 @@ func (m *mArtifactManagerMockActivatePrototype) Set(f func(p context.Context, p1
 }
 
 //ActivatePrototype implements github.com/insolar/insolar/insolar.ArtifactManager interface
-func (m *ArtifactManagerMock) ActivatePrototype(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.RecordRef, p4 insolar.RecordRef, p5 []byte) (r insolar.ObjectDescriptor, r1 error) {
+func (m *ArtifactManagerMock) ActivatePrototype(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 []byte) (r insolar.ObjectDescriptor, r1 error) {
 	counter := atomic.AddUint64(&m.ActivatePrototypePreCounter, 1)
 	defer atomic.AddUint64(&m.ActivatePrototypeCounter, 1)
 
@@ -465,18 +465,18 @@ type ArtifactManagerMockDeactivateObjectExpectation struct {
 
 type ArtifactManagerMockDeactivateObjectInput struct {
 	p  context.Context
-	p1 insolar.RecordRef
-	p2 insolar.RecordRef
+	p1 insolar.Reference
+	p2 insolar.Reference
 	p3 insolar.ObjectDescriptor
 }
 
 type ArtifactManagerMockDeactivateObjectResult struct {
-	r  *insolar.RecordID
+	r  *insolar.ID
 	r1 error
 }
 
 //Expect specifies that invocation of ArtifactManager.DeactivateObject is expected from 1 to Infinity times
-func (m *mArtifactManagerMockDeactivateObject) Expect(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.ObjectDescriptor) *mArtifactManagerMockDeactivateObject {
+func (m *mArtifactManagerMockDeactivateObject) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.ObjectDescriptor) *mArtifactManagerMockDeactivateObject {
 	m.mock.DeactivateObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -488,7 +488,7 @@ func (m *mArtifactManagerMockDeactivateObject) Expect(p context.Context, p1 inso
 }
 
 //Return specifies results of invocation of ArtifactManager.DeactivateObject
-func (m *mArtifactManagerMockDeactivateObject) Return(r *insolar.RecordID, r1 error) *ArtifactManagerMock {
+func (m *mArtifactManagerMockDeactivateObject) Return(r *insolar.ID, r1 error) *ArtifactManagerMock {
 	m.mock.DeactivateObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -500,7 +500,7 @@ func (m *mArtifactManagerMockDeactivateObject) Return(r *insolar.RecordID, r1 er
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.DeactivateObject is expected once
-func (m *mArtifactManagerMockDeactivateObject) ExpectOnce(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.ObjectDescriptor) *ArtifactManagerMockDeactivateObjectExpectation {
+func (m *mArtifactManagerMockDeactivateObject) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.ObjectDescriptor) *ArtifactManagerMockDeactivateObjectExpectation {
 	m.mock.DeactivateObjectFunc = nil
 	m.mainExpectation = nil
 
@@ -510,12 +510,12 @@ func (m *mArtifactManagerMockDeactivateObject) ExpectOnce(p context.Context, p1 
 	return expectation
 }
 
-func (e *ArtifactManagerMockDeactivateObjectExpectation) Return(r *insolar.RecordID, r1 error) {
+func (e *ArtifactManagerMockDeactivateObjectExpectation) Return(r *insolar.ID, r1 error) {
 	e.result = &ArtifactManagerMockDeactivateObjectResult{r, r1}
 }
 
 //Set uses given function f as a mock of ArtifactManager.DeactivateObject method
-func (m *mArtifactManagerMockDeactivateObject) Set(f func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.ObjectDescriptor) (r *insolar.RecordID, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockDeactivateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.ObjectDescriptor) (r *insolar.ID, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -524,7 +524,7 @@ func (m *mArtifactManagerMockDeactivateObject) Set(f func(p context.Context, p1 
 }
 
 //DeactivateObject implements github.com/insolar/insolar/insolar.ArtifactManager interface
-func (m *ArtifactManagerMock) DeactivateObject(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.ObjectDescriptor) (r *insolar.RecordID, r1 error) {
+func (m *ArtifactManagerMock) DeactivateObject(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.ObjectDescriptor) (r *insolar.ID, r1 error) {
 	counter := atomic.AddUint64(&m.DeactivateObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.DeactivateObjectCounter, 1)
 
@@ -618,18 +618,18 @@ type ArtifactManagerMockDeclareTypeExpectation struct {
 
 type ArtifactManagerMockDeclareTypeInput struct {
 	p  context.Context
-	p1 insolar.RecordRef
-	p2 insolar.RecordRef
+	p1 insolar.Reference
+	p2 insolar.Reference
 	p3 []byte
 }
 
 type ArtifactManagerMockDeclareTypeResult struct {
-	r  *insolar.RecordID
+	r  *insolar.ID
 	r1 error
 }
 
 //Expect specifies that invocation of ArtifactManager.DeclareType is expected from 1 to Infinity times
-func (m *mArtifactManagerMockDeclareType) Expect(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 []byte) *mArtifactManagerMockDeclareType {
+func (m *mArtifactManagerMockDeclareType) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) *mArtifactManagerMockDeclareType {
 	m.mock.DeclareTypeFunc = nil
 	m.expectationSeries = nil
 
@@ -641,7 +641,7 @@ func (m *mArtifactManagerMockDeclareType) Expect(p context.Context, p1 insolar.R
 }
 
 //Return specifies results of invocation of ArtifactManager.DeclareType
-func (m *mArtifactManagerMockDeclareType) Return(r *insolar.RecordID, r1 error) *ArtifactManagerMock {
+func (m *mArtifactManagerMockDeclareType) Return(r *insolar.ID, r1 error) *ArtifactManagerMock {
 	m.mock.DeclareTypeFunc = nil
 	m.expectationSeries = nil
 
@@ -653,7 +653,7 @@ func (m *mArtifactManagerMockDeclareType) Return(r *insolar.RecordID, r1 error) 
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.DeclareType is expected once
-func (m *mArtifactManagerMockDeclareType) ExpectOnce(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 []byte) *ArtifactManagerMockDeclareTypeExpectation {
+func (m *mArtifactManagerMockDeclareType) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) *ArtifactManagerMockDeclareTypeExpectation {
 	m.mock.DeclareTypeFunc = nil
 	m.mainExpectation = nil
 
@@ -663,12 +663,12 @@ func (m *mArtifactManagerMockDeclareType) ExpectOnce(p context.Context, p1 insol
 	return expectation
 }
 
-func (e *ArtifactManagerMockDeclareTypeExpectation) Return(r *insolar.RecordID, r1 error) {
+func (e *ArtifactManagerMockDeclareTypeExpectation) Return(r *insolar.ID, r1 error) {
 	e.result = &ArtifactManagerMockDeclareTypeResult{r, r1}
 }
 
 //Set uses given function f as a mock of ArtifactManager.DeclareType method
-func (m *mArtifactManagerMockDeclareType) Set(f func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 []byte) (r *insolar.RecordID, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockDeclareType) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -677,7 +677,7 @@ func (m *mArtifactManagerMockDeclareType) Set(f func(p context.Context, p1 insol
 }
 
 //DeclareType implements github.com/insolar/insolar/insolar.ArtifactManager interface
-func (m *ArtifactManagerMock) DeclareType(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 []byte) (r *insolar.RecordID, r1 error) {
+func (m *ArtifactManagerMock) DeclareType(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error) {
 	counter := atomic.AddUint64(&m.DeclareTypePreCounter, 1)
 	defer atomic.AddUint64(&m.DeclareTypeCounter, 1)
 
@@ -771,19 +771,19 @@ type ArtifactManagerMockDeployCodeExpectation struct {
 
 type ArtifactManagerMockDeployCodeInput struct {
 	p  context.Context
-	p1 insolar.RecordRef
-	p2 insolar.RecordRef
+	p1 insolar.Reference
+	p2 insolar.Reference
 	p3 []byte
 	p4 insolar.MachineType
 }
 
 type ArtifactManagerMockDeployCodeResult struct {
-	r  *insolar.RecordID
+	r  *insolar.ID
 	r1 error
 }
 
 //Expect specifies that invocation of ArtifactManager.DeployCode is expected from 1 to Infinity times
-func (m *mArtifactManagerMockDeployCode) Expect(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 []byte, p4 insolar.MachineType) *mArtifactManagerMockDeployCode {
+func (m *mArtifactManagerMockDeployCode) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte, p4 insolar.MachineType) *mArtifactManagerMockDeployCode {
 	m.mock.DeployCodeFunc = nil
 	m.expectationSeries = nil
 
@@ -795,7 +795,7 @@ func (m *mArtifactManagerMockDeployCode) Expect(p context.Context, p1 insolar.Re
 }
 
 //Return specifies results of invocation of ArtifactManager.DeployCode
-func (m *mArtifactManagerMockDeployCode) Return(r *insolar.RecordID, r1 error) *ArtifactManagerMock {
+func (m *mArtifactManagerMockDeployCode) Return(r *insolar.ID, r1 error) *ArtifactManagerMock {
 	m.mock.DeployCodeFunc = nil
 	m.expectationSeries = nil
 
@@ -807,7 +807,7 @@ func (m *mArtifactManagerMockDeployCode) Return(r *insolar.RecordID, r1 error) *
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.DeployCode is expected once
-func (m *mArtifactManagerMockDeployCode) ExpectOnce(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 []byte, p4 insolar.MachineType) *ArtifactManagerMockDeployCodeExpectation {
+func (m *mArtifactManagerMockDeployCode) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte, p4 insolar.MachineType) *ArtifactManagerMockDeployCodeExpectation {
 	m.mock.DeployCodeFunc = nil
 	m.mainExpectation = nil
 
@@ -817,12 +817,12 @@ func (m *mArtifactManagerMockDeployCode) ExpectOnce(p context.Context, p1 insola
 	return expectation
 }
 
-func (e *ArtifactManagerMockDeployCodeExpectation) Return(r *insolar.RecordID, r1 error) {
+func (e *ArtifactManagerMockDeployCodeExpectation) Return(r *insolar.ID, r1 error) {
 	e.result = &ArtifactManagerMockDeployCodeResult{r, r1}
 }
 
 //Set uses given function f as a mock of ArtifactManager.DeployCode method
-func (m *mArtifactManagerMockDeployCode) Set(f func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 []byte, p4 insolar.MachineType) (r *insolar.RecordID, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockDeployCode) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte, p4 insolar.MachineType) (r *insolar.ID, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -831,7 +831,7 @@ func (m *mArtifactManagerMockDeployCode) Set(f func(p context.Context, p1 insola
 }
 
 //DeployCode implements github.com/insolar/insolar/insolar.ArtifactManager interface
-func (m *ArtifactManagerMock) DeployCode(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 []byte, p4 insolar.MachineType) (r *insolar.RecordID, r1 error) {
+func (m *ArtifactManagerMock) DeployCode(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte, p4 insolar.MachineType) (r *insolar.ID, r1 error) {
 	counter := atomic.AddUint64(&m.DeployCodePreCounter, 1)
 	defer atomic.AddUint64(&m.DeployCodeCounter, 1)
 
@@ -923,7 +923,7 @@ type ArtifactManagerMockGenesisRefExpectation struct {
 }
 
 type ArtifactManagerMockGenesisRefResult struct {
-	r *insolar.RecordRef
+	r *insolar.Reference
 }
 
 //Expect specifies that invocation of ArtifactManager.GenesisRef is expected from 1 to Infinity times
@@ -939,7 +939,7 @@ func (m *mArtifactManagerMockGenesisRef) Expect() *mArtifactManagerMockGenesisRe
 }
 
 //Return specifies results of invocation of ArtifactManager.GenesisRef
-func (m *mArtifactManagerMockGenesisRef) Return(r *insolar.RecordRef) *ArtifactManagerMock {
+func (m *mArtifactManagerMockGenesisRef) Return(r *insolar.Reference) *ArtifactManagerMock {
 	m.mock.GenesisRefFunc = nil
 	m.expectationSeries = nil
 
@@ -961,12 +961,12 @@ func (m *mArtifactManagerMockGenesisRef) ExpectOnce() *ArtifactManagerMockGenesi
 	return expectation
 }
 
-func (e *ArtifactManagerMockGenesisRefExpectation) Return(r *insolar.RecordRef) {
+func (e *ArtifactManagerMockGenesisRefExpectation) Return(r *insolar.Reference) {
 	e.result = &ArtifactManagerMockGenesisRefResult{r}
 }
 
 //Set uses given function f as a mock of ArtifactManager.GenesisRef method
-func (m *mArtifactManagerMockGenesisRef) Set(f func() (r *insolar.RecordRef)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockGenesisRef) Set(f func() (r *insolar.Reference)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -975,7 +975,7 @@ func (m *mArtifactManagerMockGenesisRef) Set(f func() (r *insolar.RecordRef)) *A
 }
 
 //GenesisRef implements github.com/insolar/insolar/insolar.ArtifactManager interface
-func (m *ArtifactManagerMock) GenesisRef() (r *insolar.RecordRef) {
+func (m *ArtifactManagerMock) GenesisRef() (r *insolar.Reference) {
 	counter := atomic.AddUint64(&m.GenesisRefPreCounter, 1)
 	defer atomic.AddUint64(&m.GenesisRefCounter, 1)
 
@@ -1059,7 +1059,7 @@ type ArtifactManagerMockGetChildrenExpectation struct {
 
 type ArtifactManagerMockGetChildrenInput struct {
 	p  context.Context
-	p1 insolar.RecordRef
+	p1 insolar.Reference
 	p2 *insolar.PulseNumber
 }
 
@@ -1069,7 +1069,7 @@ type ArtifactManagerMockGetChildrenResult struct {
 }
 
 //Expect specifies that invocation of ArtifactManager.GetChildren is expected from 1 to Infinity times
-func (m *mArtifactManagerMockGetChildren) Expect(p context.Context, p1 insolar.RecordRef, p2 *insolar.PulseNumber) *mArtifactManagerMockGetChildren {
+func (m *mArtifactManagerMockGetChildren) Expect(p context.Context, p1 insolar.Reference, p2 *insolar.PulseNumber) *mArtifactManagerMockGetChildren {
 	m.mock.GetChildrenFunc = nil
 	m.expectationSeries = nil
 
@@ -1093,7 +1093,7 @@ func (m *mArtifactManagerMockGetChildren) Return(r insolar.RefIterator, r1 error
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.GetChildren is expected once
-func (m *mArtifactManagerMockGetChildren) ExpectOnce(p context.Context, p1 insolar.RecordRef, p2 *insolar.PulseNumber) *ArtifactManagerMockGetChildrenExpectation {
+func (m *mArtifactManagerMockGetChildren) ExpectOnce(p context.Context, p1 insolar.Reference, p2 *insolar.PulseNumber) *ArtifactManagerMockGetChildrenExpectation {
 	m.mock.GetChildrenFunc = nil
 	m.mainExpectation = nil
 
@@ -1108,7 +1108,7 @@ func (e *ArtifactManagerMockGetChildrenExpectation) Return(r insolar.RefIterator
 }
 
 //Set uses given function f as a mock of ArtifactManager.GetChildren method
-func (m *mArtifactManagerMockGetChildren) Set(f func(p context.Context, p1 insolar.RecordRef, p2 *insolar.PulseNumber) (r insolar.RefIterator, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockGetChildren) Set(f func(p context.Context, p1 insolar.Reference, p2 *insolar.PulseNumber) (r insolar.RefIterator, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1117,7 +1117,7 @@ func (m *mArtifactManagerMockGetChildren) Set(f func(p context.Context, p1 insol
 }
 
 //GetChildren implements github.com/insolar/insolar/insolar.ArtifactManager interface
-func (m *ArtifactManagerMock) GetChildren(p context.Context, p1 insolar.RecordRef, p2 *insolar.PulseNumber) (r insolar.RefIterator, r1 error) {
+func (m *ArtifactManagerMock) GetChildren(p context.Context, p1 insolar.Reference, p2 *insolar.PulseNumber) (r insolar.RefIterator, r1 error) {
 	counter := atomic.AddUint64(&m.GetChildrenPreCounter, 1)
 	defer atomic.AddUint64(&m.GetChildrenCounter, 1)
 
@@ -1211,7 +1211,7 @@ type ArtifactManagerMockGetCodeExpectation struct {
 
 type ArtifactManagerMockGetCodeInput struct {
 	p  context.Context
-	p1 insolar.RecordRef
+	p1 insolar.Reference
 }
 
 type ArtifactManagerMockGetCodeResult struct {
@@ -1220,7 +1220,7 @@ type ArtifactManagerMockGetCodeResult struct {
 }
 
 //Expect specifies that invocation of ArtifactManager.GetCode is expected from 1 to Infinity times
-func (m *mArtifactManagerMockGetCode) Expect(p context.Context, p1 insolar.RecordRef) *mArtifactManagerMockGetCode {
+func (m *mArtifactManagerMockGetCode) Expect(p context.Context, p1 insolar.Reference) *mArtifactManagerMockGetCode {
 	m.mock.GetCodeFunc = nil
 	m.expectationSeries = nil
 
@@ -1244,7 +1244,7 @@ func (m *mArtifactManagerMockGetCode) Return(r insolar.CodeDescriptor, r1 error)
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.GetCode is expected once
-func (m *mArtifactManagerMockGetCode) ExpectOnce(p context.Context, p1 insolar.RecordRef) *ArtifactManagerMockGetCodeExpectation {
+func (m *mArtifactManagerMockGetCode) ExpectOnce(p context.Context, p1 insolar.Reference) *ArtifactManagerMockGetCodeExpectation {
 	m.mock.GetCodeFunc = nil
 	m.mainExpectation = nil
 
@@ -1259,7 +1259,7 @@ func (e *ArtifactManagerMockGetCodeExpectation) Return(r insolar.CodeDescriptor,
 }
 
 //Set uses given function f as a mock of ArtifactManager.GetCode method
-func (m *mArtifactManagerMockGetCode) Set(f func(p context.Context, p1 insolar.RecordRef) (r insolar.CodeDescriptor, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockGetCode) Set(f func(p context.Context, p1 insolar.Reference) (r insolar.CodeDescriptor, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1268,7 +1268,7 @@ func (m *mArtifactManagerMockGetCode) Set(f func(p context.Context, p1 insolar.R
 }
 
 //GetCode implements github.com/insolar/insolar/insolar.ArtifactManager interface
-func (m *ArtifactManagerMock) GetCode(p context.Context, p1 insolar.RecordRef) (r insolar.CodeDescriptor, r1 error) {
+func (m *ArtifactManagerMock) GetCode(p context.Context, p1 insolar.Reference) (r insolar.CodeDescriptor, r1 error) {
 	counter := atomic.AddUint64(&m.GetCodePreCounter, 1)
 	defer atomic.AddUint64(&m.GetCodeCounter, 1)
 
@@ -1362,17 +1362,17 @@ type ArtifactManagerMockGetDelegateExpectation struct {
 
 type ArtifactManagerMockGetDelegateInput struct {
 	p  context.Context
-	p1 insolar.RecordRef
-	p2 insolar.RecordRef
+	p1 insolar.Reference
+	p2 insolar.Reference
 }
 
 type ArtifactManagerMockGetDelegateResult struct {
-	r  *insolar.RecordRef
+	r  *insolar.Reference
 	r1 error
 }
 
 //Expect specifies that invocation of ArtifactManager.GetDelegate is expected from 1 to Infinity times
-func (m *mArtifactManagerMockGetDelegate) Expect(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef) *mArtifactManagerMockGetDelegate {
+func (m *mArtifactManagerMockGetDelegate) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference) *mArtifactManagerMockGetDelegate {
 	m.mock.GetDelegateFunc = nil
 	m.expectationSeries = nil
 
@@ -1384,7 +1384,7 @@ func (m *mArtifactManagerMockGetDelegate) Expect(p context.Context, p1 insolar.R
 }
 
 //Return specifies results of invocation of ArtifactManager.GetDelegate
-func (m *mArtifactManagerMockGetDelegate) Return(r *insolar.RecordRef, r1 error) *ArtifactManagerMock {
+func (m *mArtifactManagerMockGetDelegate) Return(r *insolar.Reference, r1 error) *ArtifactManagerMock {
 	m.mock.GetDelegateFunc = nil
 	m.expectationSeries = nil
 
@@ -1396,7 +1396,7 @@ func (m *mArtifactManagerMockGetDelegate) Return(r *insolar.RecordRef, r1 error)
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.GetDelegate is expected once
-func (m *mArtifactManagerMockGetDelegate) ExpectOnce(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef) *ArtifactManagerMockGetDelegateExpectation {
+func (m *mArtifactManagerMockGetDelegate) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference) *ArtifactManagerMockGetDelegateExpectation {
 	m.mock.GetDelegateFunc = nil
 	m.mainExpectation = nil
 
@@ -1406,12 +1406,12 @@ func (m *mArtifactManagerMockGetDelegate) ExpectOnce(p context.Context, p1 insol
 	return expectation
 }
 
-func (e *ArtifactManagerMockGetDelegateExpectation) Return(r *insolar.RecordRef, r1 error) {
+func (e *ArtifactManagerMockGetDelegateExpectation) Return(r *insolar.Reference, r1 error) {
 	e.result = &ArtifactManagerMockGetDelegateResult{r, r1}
 }
 
 //Set uses given function f as a mock of ArtifactManager.GetDelegate method
-func (m *mArtifactManagerMockGetDelegate) Set(f func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef) (r *insolar.RecordRef, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockGetDelegate) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference) (r *insolar.Reference, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1420,7 +1420,7 @@ func (m *mArtifactManagerMockGetDelegate) Set(f func(p context.Context, p1 insol
 }
 
 //GetDelegate implements github.com/insolar/insolar/insolar.ArtifactManager interface
-func (m *ArtifactManagerMock) GetDelegate(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef) (r *insolar.RecordRef, r1 error) {
+func (m *ArtifactManagerMock) GetDelegate(p context.Context, p1 insolar.Reference, p2 insolar.Reference) (r *insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.GetDelegatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetDelegateCounter, 1)
 
@@ -1514,8 +1514,8 @@ type ArtifactManagerMockGetObjectExpectation struct {
 
 type ArtifactManagerMockGetObjectInput struct {
 	p  context.Context
-	p1 insolar.RecordRef
-	p2 *insolar.RecordID
+	p1 insolar.Reference
+	p2 *insolar.ID
 	p3 bool
 }
 
@@ -1525,7 +1525,7 @@ type ArtifactManagerMockGetObjectResult struct {
 }
 
 //Expect specifies that invocation of ArtifactManager.GetObject is expected from 1 to Infinity times
-func (m *mArtifactManagerMockGetObject) Expect(p context.Context, p1 insolar.RecordRef, p2 *insolar.RecordID, p3 bool) *mArtifactManagerMockGetObject {
+func (m *mArtifactManagerMockGetObject) Expect(p context.Context, p1 insolar.Reference, p2 *insolar.ID, p3 bool) *mArtifactManagerMockGetObject {
 	m.mock.GetObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -1549,7 +1549,7 @@ func (m *mArtifactManagerMockGetObject) Return(r insolar.ObjectDescriptor, r1 er
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.GetObject is expected once
-func (m *mArtifactManagerMockGetObject) ExpectOnce(p context.Context, p1 insolar.RecordRef, p2 *insolar.RecordID, p3 bool) *ArtifactManagerMockGetObjectExpectation {
+func (m *mArtifactManagerMockGetObject) ExpectOnce(p context.Context, p1 insolar.Reference, p2 *insolar.ID, p3 bool) *ArtifactManagerMockGetObjectExpectation {
 	m.mock.GetObjectFunc = nil
 	m.mainExpectation = nil
 
@@ -1564,7 +1564,7 @@ func (e *ArtifactManagerMockGetObjectExpectation) Return(r insolar.ObjectDescrip
 }
 
 //Set uses given function f as a mock of ArtifactManager.GetObject method
-func (m *mArtifactManagerMockGetObject) Set(f func(p context.Context, p1 insolar.RecordRef, p2 *insolar.RecordID, p3 bool) (r insolar.ObjectDescriptor, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockGetObject) Set(f func(p context.Context, p1 insolar.Reference, p2 *insolar.ID, p3 bool) (r insolar.ObjectDescriptor, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1573,7 +1573,7 @@ func (m *mArtifactManagerMockGetObject) Set(f func(p context.Context, p1 insolar
 }
 
 //GetObject implements github.com/insolar/insolar/insolar.ArtifactManager interface
-func (m *ArtifactManagerMock) GetObject(p context.Context, p1 insolar.RecordRef, p2 *insolar.RecordID, p3 bool) (r insolar.ObjectDescriptor, r1 error) {
+func (m *ArtifactManagerMock) GetObject(p context.Context, p1 insolar.Reference, p2 *insolar.ID, p3 bool) (r insolar.ObjectDescriptor, r1 error) {
 	counter := atomic.AddUint64(&m.GetObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.GetObjectCounter, 1)
 
@@ -1667,7 +1667,7 @@ type ArtifactManagerMockGetPendingRequestExpectation struct {
 
 type ArtifactManagerMockGetPendingRequestInput struct {
 	p  context.Context
-	p1 insolar.RecordID
+	p1 insolar.ID
 }
 
 type ArtifactManagerMockGetPendingRequestResult struct {
@@ -1676,7 +1676,7 @@ type ArtifactManagerMockGetPendingRequestResult struct {
 }
 
 //Expect specifies that invocation of ArtifactManager.GetPendingRequest is expected from 1 to Infinity times
-func (m *mArtifactManagerMockGetPendingRequest) Expect(p context.Context, p1 insolar.RecordID) *mArtifactManagerMockGetPendingRequest {
+func (m *mArtifactManagerMockGetPendingRequest) Expect(p context.Context, p1 insolar.ID) *mArtifactManagerMockGetPendingRequest {
 	m.mock.GetPendingRequestFunc = nil
 	m.expectationSeries = nil
 
@@ -1700,7 +1700,7 @@ func (m *mArtifactManagerMockGetPendingRequest) Return(r insolar.Parcel, r1 erro
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.GetPendingRequest is expected once
-func (m *mArtifactManagerMockGetPendingRequest) ExpectOnce(p context.Context, p1 insolar.RecordID) *ArtifactManagerMockGetPendingRequestExpectation {
+func (m *mArtifactManagerMockGetPendingRequest) ExpectOnce(p context.Context, p1 insolar.ID) *ArtifactManagerMockGetPendingRequestExpectation {
 	m.mock.GetPendingRequestFunc = nil
 	m.mainExpectation = nil
 
@@ -1715,7 +1715,7 @@ func (e *ArtifactManagerMockGetPendingRequestExpectation) Return(r insolar.Parce
 }
 
 //Set uses given function f as a mock of ArtifactManager.GetPendingRequest method
-func (m *mArtifactManagerMockGetPendingRequest) Set(f func(p context.Context, p1 insolar.RecordID) (r insolar.Parcel, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockGetPendingRequest) Set(f func(p context.Context, p1 insolar.ID) (r insolar.Parcel, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1724,7 +1724,7 @@ func (m *mArtifactManagerMockGetPendingRequest) Set(f func(p context.Context, p1
 }
 
 //GetPendingRequest implements github.com/insolar/insolar/insolar.ArtifactManager interface
-func (m *ArtifactManagerMock) GetPendingRequest(p context.Context, p1 insolar.RecordID) (r insolar.Parcel, r1 error) {
+func (m *ArtifactManagerMock) GetPendingRequest(p context.Context, p1 insolar.ID) (r insolar.Parcel, r1 error) {
 	counter := atomic.AddUint64(&m.GetPendingRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPendingRequestCounter, 1)
 
@@ -1818,7 +1818,7 @@ type ArtifactManagerMockHasPendingRequestsExpectation struct {
 
 type ArtifactManagerMockHasPendingRequestsInput struct {
 	p  context.Context
-	p1 insolar.RecordRef
+	p1 insolar.Reference
 }
 
 type ArtifactManagerMockHasPendingRequestsResult struct {
@@ -1827,7 +1827,7 @@ type ArtifactManagerMockHasPendingRequestsResult struct {
 }
 
 //Expect specifies that invocation of ArtifactManager.HasPendingRequests is expected from 1 to Infinity times
-func (m *mArtifactManagerMockHasPendingRequests) Expect(p context.Context, p1 insolar.RecordRef) *mArtifactManagerMockHasPendingRequests {
+func (m *mArtifactManagerMockHasPendingRequests) Expect(p context.Context, p1 insolar.Reference) *mArtifactManagerMockHasPendingRequests {
 	m.mock.HasPendingRequestsFunc = nil
 	m.expectationSeries = nil
 
@@ -1851,7 +1851,7 @@ func (m *mArtifactManagerMockHasPendingRequests) Return(r bool, r1 error) *Artif
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.HasPendingRequests is expected once
-func (m *mArtifactManagerMockHasPendingRequests) ExpectOnce(p context.Context, p1 insolar.RecordRef) *ArtifactManagerMockHasPendingRequestsExpectation {
+func (m *mArtifactManagerMockHasPendingRequests) ExpectOnce(p context.Context, p1 insolar.Reference) *ArtifactManagerMockHasPendingRequestsExpectation {
 	m.mock.HasPendingRequestsFunc = nil
 	m.mainExpectation = nil
 
@@ -1866,7 +1866,7 @@ func (e *ArtifactManagerMockHasPendingRequestsExpectation) Return(r bool, r1 err
 }
 
 //Set uses given function f as a mock of ArtifactManager.HasPendingRequests method
-func (m *mArtifactManagerMockHasPendingRequests) Set(f func(p context.Context, p1 insolar.RecordRef) (r bool, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockHasPendingRequests) Set(f func(p context.Context, p1 insolar.Reference) (r bool, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1875,7 +1875,7 @@ func (m *mArtifactManagerMockHasPendingRequests) Set(f func(p context.Context, p
 }
 
 //HasPendingRequests implements github.com/insolar/insolar/insolar.ArtifactManager interface
-func (m *ArtifactManagerMock) HasPendingRequests(p context.Context, p1 insolar.RecordRef) (r bool, r1 error) {
+func (m *ArtifactManagerMock) HasPendingRequests(p context.Context, p1 insolar.Reference) (r bool, r1 error) {
 	counter := atomic.AddUint64(&m.HasPendingRequestsPreCounter, 1)
 	defer atomic.AddUint64(&m.HasPendingRequestsCounter, 1)
 
@@ -1969,17 +1969,17 @@ type ArtifactManagerMockRegisterRequestExpectation struct {
 
 type ArtifactManagerMockRegisterRequestInput struct {
 	p  context.Context
-	p1 insolar.RecordRef
+	p1 insolar.Reference
 	p2 insolar.Parcel
 }
 
 type ArtifactManagerMockRegisterRequestResult struct {
-	r  *insolar.RecordID
+	r  *insolar.ID
 	r1 error
 }
 
 //Expect specifies that invocation of ArtifactManager.RegisterRequest is expected from 1 to Infinity times
-func (m *mArtifactManagerMockRegisterRequest) Expect(p context.Context, p1 insolar.RecordRef, p2 insolar.Parcel) *mArtifactManagerMockRegisterRequest {
+func (m *mArtifactManagerMockRegisterRequest) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) *mArtifactManagerMockRegisterRequest {
 	m.mock.RegisterRequestFunc = nil
 	m.expectationSeries = nil
 
@@ -1991,7 +1991,7 @@ func (m *mArtifactManagerMockRegisterRequest) Expect(p context.Context, p1 insol
 }
 
 //Return specifies results of invocation of ArtifactManager.RegisterRequest
-func (m *mArtifactManagerMockRegisterRequest) Return(r *insolar.RecordID, r1 error) *ArtifactManagerMock {
+func (m *mArtifactManagerMockRegisterRequest) Return(r *insolar.ID, r1 error) *ArtifactManagerMock {
 	m.mock.RegisterRequestFunc = nil
 	m.expectationSeries = nil
 
@@ -2003,7 +2003,7 @@ func (m *mArtifactManagerMockRegisterRequest) Return(r *insolar.RecordID, r1 err
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.RegisterRequest is expected once
-func (m *mArtifactManagerMockRegisterRequest) ExpectOnce(p context.Context, p1 insolar.RecordRef, p2 insolar.Parcel) *ArtifactManagerMockRegisterRequestExpectation {
+func (m *mArtifactManagerMockRegisterRequest) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) *ArtifactManagerMockRegisterRequestExpectation {
 	m.mock.RegisterRequestFunc = nil
 	m.mainExpectation = nil
 
@@ -2013,12 +2013,12 @@ func (m *mArtifactManagerMockRegisterRequest) ExpectOnce(p context.Context, p1 i
 	return expectation
 }
 
-func (e *ArtifactManagerMockRegisterRequestExpectation) Return(r *insolar.RecordID, r1 error) {
+func (e *ArtifactManagerMockRegisterRequestExpectation) Return(r *insolar.ID, r1 error) {
 	e.result = &ArtifactManagerMockRegisterRequestResult{r, r1}
 }
 
 //Set uses given function f as a mock of ArtifactManager.RegisterRequest method
-func (m *mArtifactManagerMockRegisterRequest) Set(f func(p context.Context, p1 insolar.RecordRef, p2 insolar.Parcel) (r *insolar.RecordID, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockRegisterRequest) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -2027,7 +2027,7 @@ func (m *mArtifactManagerMockRegisterRequest) Set(f func(p context.Context, p1 i
 }
 
 //RegisterRequest implements github.com/insolar/insolar/insolar.ArtifactManager interface
-func (m *ArtifactManagerMock) RegisterRequest(p context.Context, p1 insolar.RecordRef, p2 insolar.Parcel) (r *insolar.RecordID, r1 error) {
+func (m *ArtifactManagerMock) RegisterRequest(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
 	counter := atomic.AddUint64(&m.RegisterRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.RegisterRequestCounter, 1)
 
@@ -2121,18 +2121,18 @@ type ArtifactManagerMockRegisterResultExpectation struct {
 
 type ArtifactManagerMockRegisterResultInput struct {
 	p  context.Context
-	p1 insolar.RecordRef
-	p2 insolar.RecordRef
+	p1 insolar.Reference
+	p2 insolar.Reference
 	p3 []byte
 }
 
 type ArtifactManagerMockRegisterResultResult struct {
-	r  *insolar.RecordID
+	r  *insolar.ID
 	r1 error
 }
 
 //Expect specifies that invocation of ArtifactManager.RegisterResult is expected from 1 to Infinity times
-func (m *mArtifactManagerMockRegisterResult) Expect(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 []byte) *mArtifactManagerMockRegisterResult {
+func (m *mArtifactManagerMockRegisterResult) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) *mArtifactManagerMockRegisterResult {
 	m.mock.RegisterResultFunc = nil
 	m.expectationSeries = nil
 
@@ -2144,7 +2144,7 @@ func (m *mArtifactManagerMockRegisterResult) Expect(p context.Context, p1 insola
 }
 
 //Return specifies results of invocation of ArtifactManager.RegisterResult
-func (m *mArtifactManagerMockRegisterResult) Return(r *insolar.RecordID, r1 error) *ArtifactManagerMock {
+func (m *mArtifactManagerMockRegisterResult) Return(r *insolar.ID, r1 error) *ArtifactManagerMock {
 	m.mock.RegisterResultFunc = nil
 	m.expectationSeries = nil
 
@@ -2156,7 +2156,7 @@ func (m *mArtifactManagerMockRegisterResult) Return(r *insolar.RecordID, r1 erro
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.RegisterResult is expected once
-func (m *mArtifactManagerMockRegisterResult) ExpectOnce(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 []byte) *ArtifactManagerMockRegisterResultExpectation {
+func (m *mArtifactManagerMockRegisterResult) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) *ArtifactManagerMockRegisterResultExpectation {
 	m.mock.RegisterResultFunc = nil
 	m.mainExpectation = nil
 
@@ -2166,12 +2166,12 @@ func (m *mArtifactManagerMockRegisterResult) ExpectOnce(p context.Context, p1 in
 	return expectation
 }
 
-func (e *ArtifactManagerMockRegisterResultExpectation) Return(r *insolar.RecordID, r1 error) {
+func (e *ArtifactManagerMockRegisterResultExpectation) Return(r *insolar.ID, r1 error) {
 	e.result = &ArtifactManagerMockRegisterResultResult{r, r1}
 }
 
 //Set uses given function f as a mock of ArtifactManager.RegisterResult method
-func (m *mArtifactManagerMockRegisterResult) Set(f func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 []byte) (r *insolar.RecordID, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockRegisterResult) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -2180,7 +2180,7 @@ func (m *mArtifactManagerMockRegisterResult) Set(f func(p context.Context, p1 in
 }
 
 //RegisterResult implements github.com/insolar/insolar/insolar.ArtifactManager interface
-func (m *ArtifactManagerMock) RegisterResult(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 []byte) (r *insolar.RecordID, r1 error) {
+func (m *ArtifactManagerMock) RegisterResult(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error) {
 	counter := atomic.AddUint64(&m.RegisterResultPreCounter, 1)
 	defer atomic.AddUint64(&m.RegisterResultCounter, 1)
 
@@ -2274,8 +2274,8 @@ type ArtifactManagerMockRegisterValidationExpectation struct {
 
 type ArtifactManagerMockRegisterValidationInput struct {
 	p  context.Context
-	p1 insolar.RecordRef
-	p2 insolar.RecordID
+	p1 insolar.Reference
+	p2 insolar.ID
 	p3 bool
 	p4 []insolar.Message
 }
@@ -2285,7 +2285,7 @@ type ArtifactManagerMockRegisterValidationResult struct {
 }
 
 //Expect specifies that invocation of ArtifactManager.RegisterValidation is expected from 1 to Infinity times
-func (m *mArtifactManagerMockRegisterValidation) Expect(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordID, p3 bool, p4 []insolar.Message) *mArtifactManagerMockRegisterValidation {
+func (m *mArtifactManagerMockRegisterValidation) Expect(p context.Context, p1 insolar.Reference, p2 insolar.ID, p3 bool, p4 []insolar.Message) *mArtifactManagerMockRegisterValidation {
 	m.mock.RegisterValidationFunc = nil
 	m.expectationSeries = nil
 
@@ -2309,7 +2309,7 @@ func (m *mArtifactManagerMockRegisterValidation) Return(r error) *ArtifactManage
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.RegisterValidation is expected once
-func (m *mArtifactManagerMockRegisterValidation) ExpectOnce(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordID, p3 bool, p4 []insolar.Message) *ArtifactManagerMockRegisterValidationExpectation {
+func (m *mArtifactManagerMockRegisterValidation) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.ID, p3 bool, p4 []insolar.Message) *ArtifactManagerMockRegisterValidationExpectation {
 	m.mock.RegisterValidationFunc = nil
 	m.mainExpectation = nil
 
@@ -2324,7 +2324,7 @@ func (e *ArtifactManagerMockRegisterValidationExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of ArtifactManager.RegisterValidation method
-func (m *mArtifactManagerMockRegisterValidation) Set(f func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordID, p3 bool, p4 []insolar.Message) (r error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockRegisterValidation) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.ID, p3 bool, p4 []insolar.Message) (r error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -2333,7 +2333,7 @@ func (m *mArtifactManagerMockRegisterValidation) Set(f func(p context.Context, p
 }
 
 //RegisterValidation implements github.com/insolar/insolar/insolar.ArtifactManager interface
-func (m *ArtifactManagerMock) RegisterValidation(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordID, p3 bool, p4 []insolar.Message) (r error) {
+func (m *ArtifactManagerMock) RegisterValidation(p context.Context, p1 insolar.Reference, p2 insolar.ID, p3 bool, p4 []insolar.Message) (r error) {
 	counter := atomic.AddUint64(&m.RegisterValidationPreCounter, 1)
 	defer atomic.AddUint64(&m.RegisterValidationCounter, 1)
 
@@ -2562,8 +2562,8 @@ type ArtifactManagerMockUpdateObjectExpectation struct {
 
 type ArtifactManagerMockUpdateObjectInput struct {
 	p  context.Context
-	p1 insolar.RecordRef
-	p2 insolar.RecordRef
+	p1 insolar.Reference
+	p2 insolar.Reference
 	p3 insolar.ObjectDescriptor
 	p4 []byte
 }
@@ -2574,7 +2574,7 @@ type ArtifactManagerMockUpdateObjectResult struct {
 }
 
 //Expect specifies that invocation of ArtifactManager.UpdateObject is expected from 1 to Infinity times
-func (m *mArtifactManagerMockUpdateObject) Expect(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.ObjectDescriptor, p4 []byte) *mArtifactManagerMockUpdateObject {
+func (m *mArtifactManagerMockUpdateObject) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.ObjectDescriptor, p4 []byte) *mArtifactManagerMockUpdateObject {
 	m.mock.UpdateObjectFunc = nil
 	m.expectationSeries = nil
 
@@ -2598,7 +2598,7 @@ func (m *mArtifactManagerMockUpdateObject) Return(r insolar.ObjectDescriptor, r1
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.UpdateObject is expected once
-func (m *mArtifactManagerMockUpdateObject) ExpectOnce(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.ObjectDescriptor, p4 []byte) *ArtifactManagerMockUpdateObjectExpectation {
+func (m *mArtifactManagerMockUpdateObject) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.ObjectDescriptor, p4 []byte) *ArtifactManagerMockUpdateObjectExpectation {
 	m.mock.UpdateObjectFunc = nil
 	m.mainExpectation = nil
 
@@ -2613,7 +2613,7 @@ func (e *ArtifactManagerMockUpdateObjectExpectation) Return(r insolar.ObjectDesc
 }
 
 //Set uses given function f as a mock of ArtifactManager.UpdateObject method
-func (m *mArtifactManagerMockUpdateObject) Set(f func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.ObjectDescriptor, p4 []byte) (r insolar.ObjectDescriptor, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockUpdateObject) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.ObjectDescriptor, p4 []byte) (r insolar.ObjectDescriptor, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -2622,7 +2622,7 @@ func (m *mArtifactManagerMockUpdateObject) Set(f func(p context.Context, p1 inso
 }
 
 //UpdateObject implements github.com/insolar/insolar/insolar.ArtifactManager interface
-func (m *ArtifactManagerMock) UpdateObject(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.ObjectDescriptor, p4 []byte) (r insolar.ObjectDescriptor, r1 error) {
+func (m *ArtifactManagerMock) UpdateObject(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.ObjectDescriptor, p4 []byte) (r insolar.ObjectDescriptor, r1 error) {
 	counter := atomic.AddUint64(&m.UpdateObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.UpdateObjectCounter, 1)
 
@@ -2716,11 +2716,11 @@ type ArtifactManagerMockUpdatePrototypeExpectation struct {
 
 type ArtifactManagerMockUpdatePrototypeInput struct {
 	p  context.Context
-	p1 insolar.RecordRef
-	p2 insolar.RecordRef
+	p1 insolar.Reference
+	p2 insolar.Reference
 	p3 insolar.ObjectDescriptor
 	p4 []byte
-	p5 *insolar.RecordRef
+	p5 *insolar.Reference
 }
 
 type ArtifactManagerMockUpdatePrototypeResult struct {
@@ -2729,7 +2729,7 @@ type ArtifactManagerMockUpdatePrototypeResult struct {
 }
 
 //Expect specifies that invocation of ArtifactManager.UpdatePrototype is expected from 1 to Infinity times
-func (m *mArtifactManagerMockUpdatePrototype) Expect(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.ObjectDescriptor, p4 []byte, p5 *insolar.RecordRef) *mArtifactManagerMockUpdatePrototype {
+func (m *mArtifactManagerMockUpdatePrototype) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.ObjectDescriptor, p4 []byte, p5 *insolar.Reference) *mArtifactManagerMockUpdatePrototype {
 	m.mock.UpdatePrototypeFunc = nil
 	m.expectationSeries = nil
 
@@ -2753,7 +2753,7 @@ func (m *mArtifactManagerMockUpdatePrototype) Return(r insolar.ObjectDescriptor,
 }
 
 //ExpectOnce specifies that invocation of ArtifactManager.UpdatePrototype is expected once
-func (m *mArtifactManagerMockUpdatePrototype) ExpectOnce(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.ObjectDescriptor, p4 []byte, p5 *insolar.RecordRef) *ArtifactManagerMockUpdatePrototypeExpectation {
+func (m *mArtifactManagerMockUpdatePrototype) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.ObjectDescriptor, p4 []byte, p5 *insolar.Reference) *ArtifactManagerMockUpdatePrototypeExpectation {
 	m.mock.UpdatePrototypeFunc = nil
 	m.mainExpectation = nil
 
@@ -2768,7 +2768,7 @@ func (e *ArtifactManagerMockUpdatePrototypeExpectation) Return(r insolar.ObjectD
 }
 
 //Set uses given function f as a mock of ArtifactManager.UpdatePrototype method
-func (m *mArtifactManagerMockUpdatePrototype) Set(f func(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.ObjectDescriptor, p4 []byte, p5 *insolar.RecordRef) (r insolar.ObjectDescriptor, r1 error)) *ArtifactManagerMock {
+func (m *mArtifactManagerMockUpdatePrototype) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.ObjectDescriptor, p4 []byte, p5 *insolar.Reference) (r insolar.ObjectDescriptor, r1 error)) *ArtifactManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -2777,7 +2777,7 @@ func (m *mArtifactManagerMockUpdatePrototype) Set(f func(p context.Context, p1 i
 }
 
 //UpdatePrototype implements github.com/insolar/insolar/insolar.ArtifactManager interface
-func (m *ArtifactManagerMock) UpdatePrototype(p context.Context, p1 insolar.RecordRef, p2 insolar.RecordRef, p3 insolar.ObjectDescriptor, p4 []byte, p5 *insolar.RecordRef) (r insolar.ObjectDescriptor, r1 error) {
+func (m *ArtifactManagerMock) UpdatePrototype(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.ObjectDescriptor, p4 []byte, p5 *insolar.Reference) (r insolar.ObjectDescriptor, r1 error) {
 	counter := atomic.AddUint64(&m.UpdatePrototypePreCounter, 1)
 	defer atomic.AddUint64(&m.UpdatePrototypeCounter, 1)
 

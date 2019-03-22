@@ -66,8 +66,8 @@ type ContractsBuilder struct {
 	root string
 
 	ArtifactManager insolar.ArtifactManager
-	Prototypes      map[string]*insolar.RecordRef
-	Codes           map[string]*insolar.RecordRef
+	Prototypes      map[string]*insolar.Reference
+	Codes           map[string]*insolar.Reference
 }
 
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
@@ -80,8 +80,8 @@ func NewContractBuilder(am insolar.ArtifactManager) *ContractsBuilder {
 
 	cb := &ContractsBuilder{
 		root:            tmpDir,
-		Prototypes:      make(map[string]*insolar.RecordRef),
-		Codes:           make(map[string]*insolar.RecordRef),
+		Prototypes:      make(map[string]*insolar.Reference),
+		Codes:           make(map[string]*insolar.Reference),
 		ArtifactManager: am}
 	return cb
 }
@@ -96,9 +96,9 @@ func (cb *ContractsBuilder) Clean() {
 }
 
 // Build ...
-func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*preprocessor.ParsedFile, domain *insolar.RecordID) error {
+func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*preprocessor.ParsedFile, domain *insolar.ID) error {
 
-	domainRef := insolar.NewRecordRef(*domain, *domain)
+	domainRef := insolar.NewReference(*domain, *domain)
 
 	for name := range contracts {
 		protoID, err := cb.ArtifactManager.RegisterRequest(
@@ -108,7 +108,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
 		}
 
-		protoRef := insolar.NewRecordRef(*domain, *protoID)
+		protoRef := insolar.NewReference(*domain, *protoID)
 		log.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
 		cb.Prototypes[name] = protoRef
 	}
@@ -169,10 +169,10 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 		log.Debugf("Deploying code for contract %q", name)
 		codeID, err := cb.ArtifactManager.DeployCode(
 			ctx,
-			*domainRef, *insolar.NewRecordRef(*domain, *codeReq),
+			*domainRef, *insolar.NewReference(*domain, *codeReq),
 			pluginBinary, insolar.MachineTypeGoPlugin,
 		)
-		codeRef := insolar.NewRecordRef(*domain, *codeID)
+		codeRef := insolar.NewReference(*domain, *codeID)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't SetRecord")
 		}

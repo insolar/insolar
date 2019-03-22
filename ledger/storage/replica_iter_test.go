@@ -192,7 +192,7 @@ func Test_StoreKeyValues(t *testing.T) {
 
 func (s *replicaIterSuite) Test_ReplicaIter_FirstPulse() {
 	// it's easy to test simple case with zero Jet
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	addRecords(s.ctx, s.T(), s.objectStorage, jetID, insolar.FirstPulseNumber)
 	replicator := storage.NewReplicaIter(s.ctx, s.db, jetID, insolar.FirstPulseNumber, insolar.FirstPulseNumber+1, 100500)
@@ -252,7 +252,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	var lastPulse insolar.PulseNumber
 	pulsescount := 2
 	// it's easy to test simple case with zero Jet
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	recsBefore, idxBefore := getallkeys(tmpDB.GetBadgerDB())
 	require.Nil(t, recsBefore)
@@ -358,7 +358,7 @@ func addRecords(
 	ctx context.Context,
 	t *testing.T,
 	objectStorage storage.ObjectStorage,
-	jetID insolar.RecordID,
+	jetID insolar.ID,
 	pulsenum insolar.PulseNumber,
 ) {
 	// set record

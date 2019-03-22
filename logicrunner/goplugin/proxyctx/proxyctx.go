@@ -22,12 +22,12 @@ import (
 
 // ProxyHelper interface with methods that are needed by contract proxies
 type ProxyHelper interface {
-	RouteCall(ref insolar.RecordRef, wait bool, method string, args []byte, proxyPrototype insolar.RecordRef) ([]byte, error)
-	SaveAsChild(parentRef, classRef insolar.RecordRef, constructorName string, argsSerialized []byte) (insolar.RecordRef, error)
-	GetObjChildrenIterator(head insolar.RecordRef, prototype insolar.RecordRef, iteratorID string) (*ChildrenTypedIterator, error)
-	SaveAsDelegate(parentRef, classRef insolar.RecordRef, constructorName string, argsSerialized []byte) (insolar.RecordRef, error)
-	GetDelegate(object, ofType insolar.RecordRef) (insolar.RecordRef, error)
-	DeactivateObject(object insolar.RecordRef) error
+	RouteCall(ref insolar.Reference, wait bool, method string, args []byte, proxyPrototype insolar.Reference) ([]byte, error)
+	SaveAsChild(parentRef, classRef insolar.Reference, constructorName string, argsSerialized []byte) (insolar.Reference, error)
+	GetObjChildrenIterator(head insolar.Reference, prototype insolar.Reference, iteratorID string) (*ChildrenTypedIterator, error)
+	SaveAsDelegate(parentRef, classRef insolar.Reference, constructorName string, argsSerialized []byte) (insolar.Reference, error)
+	GetDelegate(object, ofType insolar.Reference) (insolar.Reference, error)
+	DeactivateObject(object insolar.Reference) error
 	Serialize(what interface{}, to *[]byte) error
 	Deserialize(from []byte, into interface{}) error
 	MakeErrorSerializable(error) error
@@ -39,11 +39,11 @@ var Current ProxyHelper
 // ChildrenTypedIterator iterator over children of object with specified type
 // it uses cache on insolard service side, provided by IteratorID
 type ChildrenTypedIterator struct {
-	Parent         insolar.RecordRef
-	ChildPrototype insolar.RecordRef // only child of specified prototype, if childPrototype.IsEmpty - ignored
+	Parent         insolar.Reference
+	ChildPrototype insolar.Reference // only child of specified prototype, if childPrototype.IsEmpty - ignored
 
 	IteratorID string              // map key to iterators slice in logicrunner service
-	Buff       []insolar.RecordRef // bucket of objects from previous RPC call to service
+	Buff       []insolar.Reference // bucket of objects from previous RPC call to service
 	buffIndex  int                 // current element
 	CanFetch   bool                // if true, we can call RPC again and get new objects
 }
@@ -55,12 +55,12 @@ func (oi *ChildrenTypedIterator) HasNext() bool {
 
 // Next return next element from iterator cache or fetching new from service
 // return error only if fetch() fails
-func (oi *ChildrenTypedIterator) Next() (insolar.RecordRef, error) {
+func (oi *ChildrenTypedIterator) Next() (insolar.Reference, error) {
 	if !oi.hasInBuffer() && oi.CanFetch {
 		err := oi.fetch()
 		if err != nil {
 			oi.CanFetch = false
-			return insolar.RecordRef{}, err
+			return insolar.Reference{}, err
 		}
 	}
 
@@ -71,9 +71,9 @@ func (oi *ChildrenTypedIterator) hasInBuffer() bool {
 	return oi.buffIndex < len(oi.Buff)
 }
 
-func (oi *ChildrenTypedIterator) nextFromBuffer() insolar.RecordRef {
+func (oi *ChildrenTypedIterator) nextFromBuffer() insolar.Reference {
 	if !oi.hasInBuffer() {
-		return insolar.RecordRef{}
+		return insolar.Reference{}
 	}
 
 	result := oi.Buff[oi.buffIndex]

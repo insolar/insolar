@@ -120,7 +120,7 @@ func (s *heavySuite) TestLedgerArtifactManager_handleHeavy() {
 	// prepare mock
 	heavysync := testutils.NewHeavySyncMock(s.T())
 	heavysync.StartMock.Return(nil)
-	heavysync.StoreMock.Set(func(ctx context.Context, jetID insolar.RecordID, pn insolar.PulseNumber, kvs []insolar.KV) error {
+	heavysync.StoreMock.Set(func(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber, kvs []insolar.KV) error {
 		return s.db.StoreKeyValues(ctx, kvs)
 	})
 	heavysync.StoreDropMock.Return(nil)

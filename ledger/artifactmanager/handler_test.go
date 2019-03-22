@@ -123,7 +123,7 @@ func (s *handlerSuite) AfterTest(suiteName, testName string) {
 func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	tf := testutils.NewDelegationTokenFactoryMock(mc)
 	jc := testutils.NewJetCoordinatorMock(mc)
@@ -274,7 +274,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	tf := testutils.NewDelegationTokenFactoryMock(mc)
 	tf.IssueGetChildrenRedirectMock.Return(&delegationtoken.GetChildrenRedirectToken{Signature: []byte{1, 2, 3}}, nil)
@@ -401,7 +401,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -435,7 +435,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 
 	delegateType := *genRandomRef(0)
 	delegate := *genRandomRef(0)
-	objIndex := object.Lifeline{Delegates: map[insolar.RecordRef]insolar.RecordRef{delegateType: delegate}}
+	objIndex := object.Lifeline{Delegates: map[insolar.Reference]insolar.Reference{delegateType: delegate}}
 	msg := message.GetDelegate{
 		Head:   *genRandomRef(0),
 		AsType: delegateType,
@@ -474,7 +474,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -553,7 +553,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	// Arrange
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -618,7 +618,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 	msg := message.GetObjectIndex{
 		Object: *genRandomRef(0),
 	}
@@ -678,7 +678,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	msg := message.GetPendingRequests{
 		Object: *genRandomRef(0),
 	}
-	pendingRequests := []insolar.RecordID{
+	pendingRequests := []insolar.ID{
 		*genRandomID(insolar.FirstPulseNumber),
 		*genRandomID(insolar.FirstPulseNumber),
 	}
@@ -689,7 +689,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	certificate := testutils.NewCertificateMock(s.T())
 	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
 
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 	jc := testutils.NewJetCoordinatorMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
@@ -763,7 +763,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 
 	h.RecentStorageProvider = provideMock
 
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 	msg := message.GetCode{
 		Code: *genRandomRef(insolar.FirstPulseNumber),
 	}
@@ -806,7 +806,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -845,7 +845,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	amendHash := s.scheme.ReferenceHasher()
 	_, err := childRecord.WriteHashData(amendHash)
 	require.NoError(s.T(), err)
-	childID := insolar.NewRecordID(0, amendHash.Sum(nil))
+	childID := insolar.NewID(0, amendHash.Sum(nil))
 
 	msg := message.RegisterChild{
 		Record: object.SerializeRecord(&childRecord),
@@ -886,7 +886,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	// Arrange
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -953,7 +953,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 
-	firstID := insolar.NewRecordID(insolar.FirstPulseNumber, []byte{1, 2, 3})
+	firstID := insolar.NewID(insolar.FirstPulseNumber, []byte{1, 2, 3})
 	secondID := object.NewRecordIDFromRecord(s.scheme, insolar.FirstPulseNumber, &object.CodeRecord{})
 	thirdID := object.NewRecordIDFromRecord(s.scheme, insolar.FirstPulseNumber-1, &object.CodeRecord{})
 
@@ -969,20 +969,20 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	firstIndex := object.Encode(object.Lifeline{
 		LatestState: firstID,
 	})
-	err = s.objectStorage.SetObjectIndex(s.ctx, insolar.RecordID(jetID), firstID, &object.Lifeline{
+	err = s.objectStorage.SetObjectIndex(s.ctx, insolar.ID(jetID), firstID, &object.Lifeline{
 		LatestState: firstID,
 	})
 
 	hotIndexes := &message.HotData{
-		Jet:         *insolar.NewRecordRef(insolar.DomainID, insolar.RecordID(jetID)),
+		Jet:         *insolar.NewReference(insolar.DomainID, insolar.ID(jetID)),
 		PulseNumber: insolar.FirstPulseNumber,
-		RecentObjects: map[insolar.RecordID]message.HotIndex{
+		RecentObjects: map[insolar.ID]message.HotIndex{
 			*firstID: {
 				Index: firstIndex,
 				TTL:   320,
 			},
 		},
-		PendingRequests: map[insolar.RecordID]recentstorage.PendingObjectContext{
+		PendingRequests: map[insolar.ID]recentstorage.PendingObjectContext{
 			*secondID: {},
 			*thirdID:  {Active: true},
 		},
@@ -992,7 +992,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
 
-	pendingMock.SetContextToObjectFunc = func(p context.Context, p1 insolar.RecordID, p2 recentstorage.PendingObjectContext) {
+	pendingMock.SetContextToObjectFunc = func(p context.Context, p1 insolar.ID, p2 recentstorage.PendingObjectContext) {
 
 		if bytes.Equal(p1.Bytes(), secondID.Bytes()) {
 			require.Equal(s.T(), false, p2.Active)
@@ -1004,7 +1004,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		}
 		s.T().Fail()
 	}
-	indexMock.AddObjectWithTLLFunc = func(ctx context.Context, p insolar.RecordID, ttl int) {
+	indexMock.AddObjectWithTLLFunc = func(ctx context.Context, p insolar.ID, ttl int) {
 		require.Equal(s.T(), p, *firstID)
 		require.Equal(s.T(), 320, ttl)
 	}
@@ -1045,7 +1045,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -1129,7 +1129,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
 
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	req := object.RequestRecord{
 		MessageHash: []byte{1, 2, 3},

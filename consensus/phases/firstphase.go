@@ -177,9 +177,9 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 		logger.Warn("[ NET Consensus phase-1 ] Failed to record received packets metric: " + err.Error())
 	}
 
-	proofSet := make(map[insolar.RecordRef]*merkle.PulseProof)
-	rawProofs := make(map[insolar.RecordRef]*packets.NodePulseProof)
-	claimMap := make(map[insolar.RecordRef][]packets.ReferendumClaim)
+	proofSet := make(map[insolar.Reference]*merkle.PulseProof)
+	rawProofs := make(map[insolar.Reference]*packets.NodePulseProof)
+	claimMap := make(map[insolar.Reference][]packets.ReferendumClaim)
 	for ref, packet := range resultPackets {
 		err = nil
 		if !ref.Equal(fp.NodeKeeper.GetOrigin().ID()) {
@@ -240,7 +240,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 	}, nil
 }
 
-func (fp *FirstPhaseImpl) checkPacketSignature(packet *packets.Phase1Packet, recordRef insolar.RecordRef) error {
+func (fp *FirstPhaseImpl) checkPacketSignature(packet *packets.Phase1Packet, recordRef insolar.Reference) error {
 	if fp.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		return fp.checkPacketSignatureFromClaim(packet, recordRef)
 	}
@@ -253,7 +253,7 @@ func (fp *FirstPhaseImpl) checkPacketSignature(packet *packets.Phase1Packet, rec
 	return packet.Verify(fp.Cryptography, key)
 }
 
-func (fp *FirstPhaseImpl) checkPacketSignatureFromClaim(packet *packets.Phase1Packet, recordRef insolar.RecordRef) error {
+func (fp *FirstPhaseImpl) checkPacketSignatureFromClaim(packet *packets.Phase1Packet, recordRef insolar.Reference) error {
 	announceClaim := packet.GetAnnounceClaim()
 	if announceClaim == nil {
 		return errors.New("could not find announce claim")
@@ -265,7 +265,7 @@ func (fp *FirstPhaseImpl) checkPacketSignatureFromClaim(packet *packets.Phase1Pa
 	return packet.Verify(fp.Cryptography, pk)
 }
 
-func detectSparseBitsetLength(claims map[insolar.RecordRef][]packets.ReferendumClaim, nk network.NodeKeeper) (int, error) {
+func detectSparseBitsetLength(claims map[insolar.Reference][]packets.ReferendumClaim, nk network.NodeKeeper) (int, error) {
 	// TODO: NETD18-47
 	for _, claimList := range claims {
 		for _, claim := range claimList {
@@ -283,7 +283,7 @@ func detectSparseBitsetLength(claims map[insolar.RecordRef][]packets.ReferendumC
 	return 0, errors.New("no announce claims were received")
 }
 
-func (fp *FirstPhaseImpl) filterClaims(nodeID insolar.RecordRef, claims []packets.ReferendumClaim) []packets.ReferendumClaim {
+func (fp *FirstPhaseImpl) filterClaims(nodeID insolar.Reference, claims []packets.ReferendumClaim) []packets.ReferendumClaim {
 	result := make([]packets.ReferendumClaim, 0)
 	for _, claim := range claims {
 		signedClaim, ok := claim.(packets.SignedClaim)

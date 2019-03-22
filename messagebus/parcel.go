@@ -38,7 +38,7 @@ func NewParcelFactory() message.ParcelFactory {
 	return &parcelFactory{}
 }
 
-func (pf *parcelFactory) Create(ctx context.Context, msg insolar.Message, sender insolar.RecordRef, token insolar.DelegationToken, currentPulse insolar.Pulse) (insolar.Parcel, error) {
+func (pf *parcelFactory) Create(ctx context.Context, msg insolar.Message, sender insolar.Reference, token insolar.DelegationToken, currentPulse insolar.Pulse) (insolar.Parcel, error) {
 	if msg == nil {
 		return nil, errors.New("failed to signature a nil message")
 	}

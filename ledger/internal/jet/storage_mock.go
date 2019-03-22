@@ -35,7 +35,7 @@ type StorageMock struct {
 	DeletePreCounter uint64
 	DeleteMock       mStorageMockDelete
 
-	ForIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.RecordID) (r insolar.JetID, r1 bool)
+	ForIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r insolar.JetID, r1 bool)
 	ForIDCounter    uint64
 	ForIDPreCounter uint64
 	ForIDMock       mStorageMockForID
@@ -480,7 +480,7 @@ type StorageMockForIDExpectation struct {
 type StorageMockForIDInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
-	p2 insolar.RecordID
+	p2 insolar.ID
 }
 
 type StorageMockForIDResult struct {
@@ -489,7 +489,7 @@ type StorageMockForIDResult struct {
 }
 
 //Expect specifies that invocation of Storage.ForID is expected from 1 to Infinity times
-func (m *mStorageMockForID) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.RecordID) *mStorageMockForID {
+func (m *mStorageMockForID) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *mStorageMockForID {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
 
@@ -513,7 +513,7 @@ func (m *mStorageMockForID) Return(r insolar.JetID, r1 bool) *StorageMock {
 }
 
 //ExpectOnce specifies that invocation of Storage.ForID is expected once
-func (m *mStorageMockForID) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.RecordID) *StorageMockForIDExpectation {
+func (m *mStorageMockForID) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *StorageMockForIDExpectation {
 	m.mock.ForIDFunc = nil
 	m.mainExpectation = nil
 
@@ -528,7 +528,7 @@ func (e *StorageMockForIDExpectation) Return(r insolar.JetID, r1 bool) {
 }
 
 //Set uses given function f as a mock of Storage.ForID method
-func (m *mStorageMockForID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.RecordID) (r insolar.JetID, r1 bool)) *StorageMock {
+func (m *mStorageMockForID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r insolar.JetID, r1 bool)) *StorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -537,7 +537,7 @@ func (m *mStorageMockForID) Set(f func(p context.Context, p1 insolar.PulseNumber
 }
 
 //ForID implements github.com/insolar/insolar/ledger/internal/jet.Storage interface
-func (m *StorageMock) ForID(p context.Context, p1 insolar.PulseNumber, p2 insolar.RecordID) (r insolar.JetID, r1 bool) {
+func (m *StorageMock) ForID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r insolar.JetID, r1 bool) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
 

@@ -64,11 +64,11 @@ func validateProofs(
 	calculator merkle.Calculator,
 	unsyncList network.UnsyncList,
 	pulseHash merkle.OriginHash,
-	proofs map[insolar.RecordRef]*merkle.PulseProof,
-) (valid map[insolar.NetworkNode]*merkle.PulseProof, fault map[insolar.RecordRef]*merkle.PulseProof) {
+	proofs map[insolar.Reference]*merkle.PulseProof,
+) (valid map[insolar.NetworkNode]*merkle.PulseProof, fault map[insolar.Reference]*merkle.PulseProof) {
 
 	validProofs := make(map[insolar.NetworkNode]*merkle.PulseProof)
-	faultProofs := make(map[insolar.RecordRef]*merkle.PulseProof)
+	faultProofs := make(map[insolar.Reference]*merkle.PulseProof)
 	for nodeID, proof := range proofs {
 		valid := validateProof(calculator, unsyncList, pulseHash, nodeID, proof)
 		if valid {
@@ -84,7 +84,7 @@ func validateProof(
 	calculator merkle.Calculator,
 	unsyncList network.UnsyncList,
 	pulseHash merkle.OriginHash,
-	nodeID insolar.RecordRef,
+	nodeID insolar.Reference,
 	proof *merkle.PulseProof) bool {
 
 	node := unsyncList.GetActiveNode(nodeID)

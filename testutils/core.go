@@ -58,7 +58,7 @@ func RandomString() string {
 }
 
 // RandomRef generates random object reference
-func RandomRef() insolar.RecordRef {
+func RandomRef() insolar.Reference {
 	ref := [insolar.RecordRefSize]byte{}
 	_, err := rand.Read(ref[:])
 	if err != nil {
@@ -68,7 +68,7 @@ func RandomRef() insolar.RecordRef {
 }
 
 // RandomID generates random object ID
-func RandomID() insolar.RecordID {
+func RandomID() insolar.ID {
 	id := [insolar.RecordIDSize]byte{}
 	_, err := rand.Read(id[:])
 	if err != nil {
@@ -78,7 +78,7 @@ func RandomID() insolar.RecordID {
 }
 
 // RandomJet generates random jet with random depth.
-func RandomJet() insolar.RecordID {
+func RandomJet() insolar.ID {
 	// don't be too huge (i.e. 255)
 	n, err := rand.Int(rand.Reader, big.NewInt(128))
 	if err != nil {
@@ -90,19 +90,19 @@ func RandomJet() insolar.RecordID {
 }
 
 // RandomJetWithDepth generates random jet with provided depth.
-func RandomJetWithDepth(depth uint8) insolar.RecordID {
+func RandomJetWithDepth(depth uint8) insolar.ID {
 	jetbuf := make([]byte, insolar.RecordHashSize)
 	_, err := rand.Read(jetbuf)
 	if err != nil {
 		panic(err)
 	}
-	return insolar.RecordID(*insolar.NewJetID(depth, resetBits(jetbuf[1:], depth)))
+	return insolar.ID(*insolar.NewJetID(depth, resetBits(jetbuf[1:], depth)))
 }
 
-// JetFromString converts string representation of Jet to insolar.RecordID.
+// JetFromString converts string representation of Jet to insolar.ID.
 //
 // Examples: "010" converts to Jet with depth 3 and prefix "01".
-func JetFromString(s string) insolar.RecordID {
+func JetFromString(s string) insolar.ID {
 	jetPrefix := make([]byte, insolar.JetPrefixSize)
 	depth := uint8(len(s))
 	for i, char := range s {
@@ -118,7 +118,7 @@ func JetFromString(s string) insolar.RecordID {
 				"%v character is non 0 or 1, but %v (input string='%v')", i, char, s))
 		}
 	}
-	return insolar.RecordID(*insolar.NewJetID(depth, jetPrefix))
+	return insolar.ID(*insolar.NewJetID(depth, jetPrefix))
 
 }
 

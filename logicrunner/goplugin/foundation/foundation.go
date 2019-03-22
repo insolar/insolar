@@ -29,20 +29,20 @@ type BaseContract struct {
 
 // ProxyInterface interface any proxy of a contract implements
 type ProxyInterface interface {
-	GetReference() insolar.RecordRef
-	GetPrototype() (insolar.RecordRef, error)
-	GetCode() (insolar.RecordRef, error)
+	GetReference() insolar.Reference
+	GetPrototype() (insolar.Reference, error)
+	GetCode() (insolar.Reference, error)
 }
 
 // BaseContractInterface is an interface to deal with any contract same way
 type BaseContractInterface interface {
-	GetReference() insolar.RecordRef
-	GetPrototype() insolar.RecordRef
-	GetCode() insolar.RecordRef
+	GetReference() insolar.Reference
+	GetPrototype() insolar.Reference
+	GetCode() insolar.Reference
 }
 
 // GetReference - Returns public reference of contract
-func (bc *BaseContract) GetReference() insolar.RecordRef {
+func (bc *BaseContract) GetReference() insolar.Reference {
 	ctx := bc.GetContext()
 	if ctx.Callee == nil {
 		panic("context has no callee set")
@@ -51,12 +51,12 @@ func (bc *BaseContract) GetReference() insolar.RecordRef {
 }
 
 // GetPrototype - Returns prototype of contract
-func (bc *BaseContract) GetPrototype() insolar.RecordRef {
+func (bc *BaseContract) GetPrototype() insolar.Reference {
 	return *bc.GetContext().Prototype
 }
 
 // GetCode - Returns prototype of contract
-func (bc *BaseContract) GetCode() insolar.RecordRef {
+func (bc *BaseContract) GetCode() insolar.Reference {
 	return *bc.GetContext().Code
 }
 
@@ -78,18 +78,18 @@ func GetContext() *insolar.LogicCallContext {
 }
 
 // GetImplementationFor finds delegate typed r in object and returns it
-func GetImplementationFor(object, ofType insolar.RecordRef) (insolar.RecordRef, error) {
+func GetImplementationFor(object, ofType insolar.Reference) (insolar.Reference, error) {
 	return proxyctx.Current.GetDelegate(object, ofType)
 }
 
 // NewChildrenTypedIterator returns children with corresponding type iterator
-func (bc *BaseContract) NewChildrenTypedIterator(childPrototype insolar.RecordRef) (*proxyctx.ChildrenTypedIterator, error) {
+func (bc *BaseContract) NewChildrenTypedIterator(childPrototype insolar.Reference) (*proxyctx.ChildrenTypedIterator, error) {
 	return proxyctx.Current.GetObjChildrenIterator(bc.GetReference(), childPrototype, "")
 }
 
 // GetObject create proxy by address
 // unimplemented
-func GetObject(ref insolar.RecordRef) ProxyInterface {
+func GetObject(ref insolar.Reference) ProxyInterface {
 	panic("not implemented")
 }
 

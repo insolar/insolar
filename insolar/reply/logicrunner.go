@@ -22,7 +22,7 @@ import (
 
 // CallMethod - the most common reply
 type CallMethod struct {
-	Request insolar.RecordRef
+	Request insolar.Reference
 	Result  []byte
 }
 
@@ -32,7 +32,7 @@ func (r *CallMethod) Type() insolar.ReplyType {
 }
 
 type CallConstructor struct {
-	Object *insolar.RecordRef
+	Object *insolar.Reference
 }
 
 // Type returns type of the reply
@@ -41,7 +41,7 @@ func (r *CallConstructor) Type() insolar.ReplyType {
 }
 
 type RegisterRequest struct {
-	Request insolar.RecordRef
+	Request insolar.Reference
 }
 
 // Type returns type of the reply

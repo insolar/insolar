@@ -29,7 +29,7 @@ type AuthorizationCertificate struct {
 	PublicKey      string                       `json:"public_key"`
 	Reference      string                       `json:"reference"`
 	Role           string                       `json:"role"`
-	DiscoverySigns map[insolar.RecordRef][]byte `json:"-" codec:"discoverysigns"`
+	DiscoverySigns map[insolar.Reference][]byte `json:"-" codec:"discoverysigns"`
 
 	nodePublicKey crypto.PublicKey
 }
@@ -40,8 +40,8 @@ func (authCert *AuthorizationCertificate) GetPublicKey() crypto.PublicKey {
 }
 
 // GetNodeRef returns reference from node certificate
-func (authCert *AuthorizationCertificate) GetNodeRef() *insolar.RecordRef {
-	ref, err := insolar.NewRefFromBase58(authCert.Reference)
+func (authCert *AuthorizationCertificate) GetNodeRef() *insolar.Reference {
+	ref, err := insolar.NewReferenceFromBase58(authCert.Reference)
 	if err != nil {
 		log.Errorf("Invalid node reference in auth cert: %s\n", authCert.Reference)
 		return nil
@@ -55,7 +55,7 @@ func (authCert *AuthorizationCertificate) GetRole() insolar.StaticRole {
 }
 
 // GetDiscoverySigns return map of discovery nodes signs
-func (authCert *AuthorizationCertificate) GetDiscoverySigns() map[insolar.RecordRef][]byte {
+func (authCert *AuthorizationCertificate) GetDiscoverySigns() map[insolar.Reference][]byte {
 	return authCert.DiscoverySigns
 }
 

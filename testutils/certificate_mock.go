@@ -23,12 +23,12 @@ type CertificateMock struct {
 	GetDiscoveryNodesPreCounter uint64
 	GetDiscoveryNodesMock       mCertificateMockGetDiscoveryNodes
 
-	GetDiscoverySignsFunc       func() (r map[insolar.RecordRef][]byte)
+	GetDiscoverySignsFunc       func() (r map[insolar.Reference][]byte)
 	GetDiscoverySignsCounter    uint64
 	GetDiscoverySignsPreCounter uint64
 	GetDiscoverySignsMock       mCertificateMockGetDiscoverySigns
 
-	GetNodeRefFunc       func() (r *insolar.RecordRef)
+	GetNodeRefFunc       func() (r *insolar.Reference)
 	GetNodeRefCounter    uint64
 	GetNodeRefPreCounter uint64
 	GetNodeRefMock       mCertificateMockGetNodeRef
@@ -43,7 +43,7 @@ type CertificateMock struct {
 	GetRolePreCounter uint64
 	GetRoleMock       mCertificateMockGetRole
 
-	GetRootDomainReferenceFunc       func() (r *insolar.RecordRef)
+	GetRootDomainReferenceFunc       func() (r *insolar.Reference)
 	GetRootDomainReferenceCounter    uint64
 	GetRootDomainReferencePreCounter uint64
 	GetRootDomainReferenceMock       mCertificateMockGetRootDomainReference
@@ -218,7 +218,7 @@ type CertificateMockGetDiscoverySignsExpectation struct {
 }
 
 type CertificateMockGetDiscoverySignsResult struct {
-	r map[insolar.RecordRef][]byte
+	r map[insolar.Reference][]byte
 }
 
 //Expect specifies that invocation of Certificate.GetDiscoverySigns is expected from 1 to Infinity times
@@ -234,7 +234,7 @@ func (m *mCertificateMockGetDiscoverySigns) Expect() *mCertificateMockGetDiscove
 }
 
 //Return specifies results of invocation of Certificate.GetDiscoverySigns
-func (m *mCertificateMockGetDiscoverySigns) Return(r map[insolar.RecordRef][]byte) *CertificateMock {
+func (m *mCertificateMockGetDiscoverySigns) Return(r map[insolar.Reference][]byte) *CertificateMock {
 	m.mock.GetDiscoverySignsFunc = nil
 	m.expectationSeries = nil
 
@@ -256,12 +256,12 @@ func (m *mCertificateMockGetDiscoverySigns) ExpectOnce() *CertificateMockGetDisc
 	return expectation
 }
 
-func (e *CertificateMockGetDiscoverySignsExpectation) Return(r map[insolar.RecordRef][]byte) {
+func (e *CertificateMockGetDiscoverySignsExpectation) Return(r map[insolar.Reference][]byte) {
 	e.result = &CertificateMockGetDiscoverySignsResult{r}
 }
 
 //Set uses given function f as a mock of Certificate.GetDiscoverySigns method
-func (m *mCertificateMockGetDiscoverySigns) Set(f func() (r map[insolar.RecordRef][]byte)) *CertificateMock {
+func (m *mCertificateMockGetDiscoverySigns) Set(f func() (r map[insolar.Reference][]byte)) *CertificateMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -270,7 +270,7 @@ func (m *mCertificateMockGetDiscoverySigns) Set(f func() (r map[insolar.RecordRe
 }
 
 //GetDiscoverySigns implements github.com/insolar/insolar/insolar.Certificate interface
-func (m *CertificateMock) GetDiscoverySigns() (r map[insolar.RecordRef][]byte) {
+func (m *CertificateMock) GetDiscoverySigns() (r map[insolar.Reference][]byte) {
 	counter := atomic.AddUint64(&m.GetDiscoverySignsPreCounter, 1)
 	defer atomic.AddUint64(&m.GetDiscoverySignsCounter, 1)
 
@@ -352,7 +352,7 @@ type CertificateMockGetNodeRefExpectation struct {
 }
 
 type CertificateMockGetNodeRefResult struct {
-	r *insolar.RecordRef
+	r *insolar.Reference
 }
 
 //Expect specifies that invocation of Certificate.GetNodeRef is expected from 1 to Infinity times
@@ -368,7 +368,7 @@ func (m *mCertificateMockGetNodeRef) Expect() *mCertificateMockGetNodeRef {
 }
 
 //Return specifies results of invocation of Certificate.GetNodeRef
-func (m *mCertificateMockGetNodeRef) Return(r *insolar.RecordRef) *CertificateMock {
+func (m *mCertificateMockGetNodeRef) Return(r *insolar.Reference) *CertificateMock {
 	m.mock.GetNodeRefFunc = nil
 	m.expectationSeries = nil
 
@@ -390,12 +390,12 @@ func (m *mCertificateMockGetNodeRef) ExpectOnce() *CertificateMockGetNodeRefExpe
 	return expectation
 }
 
-func (e *CertificateMockGetNodeRefExpectation) Return(r *insolar.RecordRef) {
+func (e *CertificateMockGetNodeRefExpectation) Return(r *insolar.Reference) {
 	e.result = &CertificateMockGetNodeRefResult{r}
 }
 
 //Set uses given function f as a mock of Certificate.GetNodeRef method
-func (m *mCertificateMockGetNodeRef) Set(f func() (r *insolar.RecordRef)) *CertificateMock {
+func (m *mCertificateMockGetNodeRef) Set(f func() (r *insolar.Reference)) *CertificateMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -404,7 +404,7 @@ func (m *mCertificateMockGetNodeRef) Set(f func() (r *insolar.RecordRef)) *Certi
 }
 
 //GetNodeRef implements github.com/insolar/insolar/insolar.Certificate interface
-func (m *CertificateMock) GetNodeRef() (r *insolar.RecordRef) {
+func (m *CertificateMock) GetNodeRef() (r *insolar.Reference) {
 	counter := atomic.AddUint64(&m.GetNodeRefPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodeRefCounter, 1)
 
@@ -754,7 +754,7 @@ type CertificateMockGetRootDomainReferenceExpectation struct {
 }
 
 type CertificateMockGetRootDomainReferenceResult struct {
-	r *insolar.RecordRef
+	r *insolar.Reference
 }
 
 //Expect specifies that invocation of Certificate.GetRootDomainReference is expected from 1 to Infinity times
@@ -770,7 +770,7 @@ func (m *mCertificateMockGetRootDomainReference) Expect() *mCertificateMockGetRo
 }
 
 //Return specifies results of invocation of Certificate.GetRootDomainReference
-func (m *mCertificateMockGetRootDomainReference) Return(r *insolar.RecordRef) *CertificateMock {
+func (m *mCertificateMockGetRootDomainReference) Return(r *insolar.Reference) *CertificateMock {
 	m.mock.GetRootDomainReferenceFunc = nil
 	m.expectationSeries = nil
 
@@ -792,12 +792,12 @@ func (m *mCertificateMockGetRootDomainReference) ExpectOnce() *CertificateMockGe
 	return expectation
 }
 
-func (e *CertificateMockGetRootDomainReferenceExpectation) Return(r *insolar.RecordRef) {
+func (e *CertificateMockGetRootDomainReferenceExpectation) Return(r *insolar.Reference) {
 	e.result = &CertificateMockGetRootDomainReferenceResult{r}
 }
 
 //Set uses given function f as a mock of Certificate.GetRootDomainReference method
-func (m *mCertificateMockGetRootDomainReference) Set(f func() (r *insolar.RecordRef)) *CertificateMock {
+func (m *mCertificateMockGetRootDomainReference) Set(f func() (r *insolar.Reference)) *CertificateMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -806,7 +806,7 @@ func (m *mCertificateMockGetRootDomainReference) Set(f func() (r *insolar.Record
 }
 
 //GetRootDomainReference implements github.com/insolar/insolar/insolar.Certificate interface
-func (m *CertificateMock) GetRootDomainReference() (r *insolar.RecordRef) {
+func (m *CertificateMock) GetRootDomainReference() (r *insolar.Reference) {
 	counter := atomic.AddUint64(&m.GetRootDomainReferencePreCounter, 1)
 	defer atomic.AddUint64(&m.GetRootDomainReferenceCounter, 1)
 

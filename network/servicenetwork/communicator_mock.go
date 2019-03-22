@@ -59,7 +59,7 @@ const (
 
 type CommunicatorMock struct {
 	communicator phases.Communicator
-	ignoreFrom   insolar.RecordRef
+	ignoreFrom   insolar.Reference
 	testOpt      CommunicatorTestOpt
 }
 
@@ -68,7 +68,7 @@ func (cm *CommunicatorMock) ExchangePhase1(
 	originClaim *packets.NodeAnnounceClaim,
 	participants []insolar.NetworkNode,
 	packet *packets.Phase1Packet,
-) (map[insolar.RecordRef]*packets.Phase1Packet, error) {
+) (map[insolar.Reference]*packets.Phase1Packet, error) {
 	pckts, err := cm.communicator.ExchangePhase1(ctx, originClaim, participants, packet)
 	if err != nil {
 		return nil, err
@@ -81,7 +81,7 @@ func (cm *CommunicatorMock) ExchangePhase1(
 }
 
 func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
-	participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.RecordRef]*packets.Phase2Packet, error) {
+	participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.Reference]*packets.Phase2Packet, error) {
 
 	pckts, err := cm.communicator.ExchangePhase2(ctx, list, handler, participants, packet)
 	if err != nil {
@@ -100,7 +100,7 @@ func (cm *CommunicatorMock) ExchangePhase21(ctx context.Context, list network.Un
 	return cm.communicator.ExchangePhase21(ctx, list, handler, packet, additionalRequests)
 }
 
-func (cm *CommunicatorMock) ExchangePhase3(ctx context.Context, participants []insolar.NetworkNode, packet *packets.Phase3Packet) (map[insolar.RecordRef]*packets.Phase3Packet, error) {
+func (cm *CommunicatorMock) ExchangePhase3(ctx context.Context, participants []insolar.NetworkNode, packet *packets.Phase3Packet) (map[insolar.Reference]*packets.Phase3Packet, error) {
 	pckts, err := cm.communicator.ExchangePhase3(ctx, participants, packet)
 	if err != nil {
 		return nil, err

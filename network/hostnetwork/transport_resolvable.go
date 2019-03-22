@@ -71,12 +71,12 @@ func (tr *TransportResolvable) PublicAddress() string {
 }
 
 // GetNodeID get current node ID.
-func (tr *TransportResolvable) GetNodeID() insolar.RecordRef {
+func (tr *TransportResolvable) GetNodeID() insolar.Reference {
 	return tr.Transport.GetNodeID()
 }
 
 // SendRequest send request to a remote node.
-func (tr *TransportResolvable) SendRequest(ctx context.Context, request network.Request, receiver insolar.RecordRef) (network.Future, error) {
+func (tr *TransportResolvable) SendRequest(ctx context.Context, request network.Request, receiver insolar.Reference) (network.Future, error) {
 	h, err := tr.Resolver.Resolve(receiver)
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving NodeID -> Address")

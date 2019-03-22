@@ -104,10 +104,10 @@ func TestCorrectShortIDCollision(t *testing.T) {
 }
 
 type testNode struct {
-	ref insolar.RecordRef
+	ref insolar.Reference
 }
 
-func (t *testNode) GetNodeRef() *insolar.RecordRef {
+func (t *testNode) GetNodeRef() *insolar.Reference {
 	return &t.ref
 }
 

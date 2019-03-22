@@ -44,7 +44,7 @@ const (
 //go:generate minimock -i github.com/insolar/insolar/insolar.NetworkNode -o ../testutils/network -s _mock.go
 type NetworkNode interface {
 	// ID is the unique identifier of the node
-	ID() RecordRef
+	ID() Reference
 	// ShortID get short ID of node
 	ShortID() ShortNodeID
 	// Role is the candidate Role for the node
@@ -70,11 +70,11 @@ type NodeNetwork interface {
 	// GetOrigin get origin node for the current insolard. Returns nil if the current insolard is not a working node.
 	GetOrigin() NetworkNode
 	// GetWorkingNode get working node by its reference. Returns nil if node is not found.
-	GetWorkingNode(ref RecordRef) NetworkNode
+	GetWorkingNode(ref Reference) NetworkNode
 	// GetWorkingNodes get working nodes.
 	GetWorkingNodes() []NetworkNode
 	// GetWorkingNodesByRole get working nodes by role
-	GetWorkingNodesByRole(role DynamicRole) []RecordRef
+	GetWorkingNodesByRole(role DynamicRole) []Reference
 }
 
 // TODO: remove this interface when bootstrap mechanism completed

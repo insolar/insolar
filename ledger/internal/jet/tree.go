@@ -223,7 +223,7 @@ func (t *Tree) Clone(keep bool) *Tree {
 
 // Find returns jet for provided record ID.
 // If found jet is actual, the second argument will be true.
-func (t *Tree) Find(recordID insolar.RecordID) (insolar.JetID, bool) {
+func (t *Tree) Find(recordID insolar.ID) (insolar.JetID, bool) {
 	// if provided record ID is JetID, returns it as actual.
 	// TODO: describe case
 	if recordID.Pulse() == insolar.PulseNumberJet {

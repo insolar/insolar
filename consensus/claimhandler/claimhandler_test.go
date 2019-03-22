@@ -72,12 +72,12 @@ func TestClaimHandler_FilterClaims(t *testing.T) {
 	ref2 := testutils.RandomRef()
 	ref3 := testutils.RandomRef()
 
-	claims := make(map[insolar.RecordRef][]packets.ReferendumClaim)
-	claims[ref1] = []packets.ReferendumClaim{&packets.NodeBroadcast{}, &packets.NodeBroadcast{}, getJoinClaim(t, insolar.RecordRef{152})}
-	claims[ref2] = []packets.ReferendumClaim{getJoinClaim(t, insolar.RecordRef{0}), getJoinClaim(t, insolar.RecordRef{154})}
-	claims[ref3] = []packets.ReferendumClaim{getJoinClaim(t, insolar.RecordRef{1}), getJoinClaim(t, insolar.RecordRef{153})}
+	claims := make(map[insolar.Reference][]packets.ReferendumClaim)
+	claims[ref1] = []packets.ReferendumClaim{&packets.NodeBroadcast{}, &packets.NodeBroadcast{}, getJoinClaim(t, insolar.Reference{152})}
+	claims[ref2] = []packets.ReferendumClaim{getJoinClaim(t, insolar.Reference{0}), getJoinClaim(t, insolar.Reference{154})}
+	claims[ref3] = []packets.ReferendumClaim{getJoinClaim(t, insolar.Reference{1}), getJoinClaim(t, insolar.Reference{153})}
 
-	containsJoinClaim := func(claims []packets.ReferendumClaim, ref insolar.RecordRef) bool {
+	containsJoinClaim := func(claims []packets.ReferendumClaim, ref insolar.Reference) bool {
 		for _, claim := range claims {
 			joinClaim, ok := claim.(*packets.NodeJoinClaim)
 			if !ok {
@@ -91,29 +91,29 @@ func TestClaimHandler_FilterClaims(t *testing.T) {
 	}
 
 	handler := NewClaimHandler(6, claims)
-	result := handler.FilterClaims([]insolar.RecordRef{ref1, ref2, ref3}, insolar.Entropy{0})
+	result := handler.FilterClaims([]insolar.Reference{ref1, ref2, ref3}, insolar.Entropy{0})
 	// 2 NodeBroadcast + 2 JoinClaims
 	assert.Equal(t, 4, len(result.ApprovedClaims))
-	assert.True(t, containsJoinClaim(result.ApprovedClaims, insolar.RecordRef{154}))
-	assert.True(t, containsJoinClaim(result.ApprovedClaims, insolar.RecordRef{153}))
-	assert.False(t, containsJoinClaim(result.ApprovedClaims, insolar.RecordRef{0}))
-	assert.False(t, containsJoinClaim(result.ApprovedClaims, insolar.RecordRef{1}))
+	assert.True(t, containsJoinClaim(result.ApprovedClaims, insolar.Reference{154}))
+	assert.True(t, containsJoinClaim(result.ApprovedClaims, insolar.Reference{153}))
+	assert.False(t, containsJoinClaim(result.ApprovedClaims, insolar.Reference{0}))
+	assert.False(t, containsJoinClaim(result.ApprovedClaims, insolar.Reference{1}))
 
 	// 2 NodeBroadcast + 2 JoinClaims
-	result = handler.FilterClaims([]insolar.RecordRef{ref1, ref2}, insolar.Entropy{0})
+	result = handler.FilterClaims([]insolar.Reference{ref1, ref2}, insolar.Entropy{0})
 	assert.Equal(t, 4, len(result.ApprovedClaims))
-	assert.True(t, containsJoinClaim(result.ApprovedClaims, insolar.RecordRef{154}))
-	assert.True(t, containsJoinClaim(result.ApprovedClaims, insolar.RecordRef{152}))
-	assert.False(t, containsJoinClaim(result.ApprovedClaims, insolar.RecordRef{0}))
-	assert.False(t, containsJoinClaim(result.ApprovedClaims, insolar.RecordRef{1}))
+	assert.True(t, containsJoinClaim(result.ApprovedClaims, insolar.Reference{154}))
+	assert.True(t, containsJoinClaim(result.ApprovedClaims, insolar.Reference{152}))
+	assert.False(t, containsJoinClaim(result.ApprovedClaims, insolar.Reference{0}))
+	assert.False(t, containsJoinClaim(result.ApprovedClaims, insolar.Reference{1}))
 
 	// only 2 JoinClaims
-	result = handler.FilterClaims([]insolar.RecordRef{ref2, ref3}, insolar.Entropy{0})
+	result = handler.FilterClaims([]insolar.Reference{ref2, ref3}, insolar.Entropy{0})
 	assert.Equal(t, 2, len(result.ApprovedClaims))
-	assert.True(t, containsJoinClaim(result.ApprovedClaims, insolar.RecordRef{154}))
-	assert.True(t, containsJoinClaim(result.ApprovedClaims, insolar.RecordRef{153}))
-	assert.False(t, containsJoinClaim(result.ApprovedClaims, insolar.RecordRef{0}))
-	assert.False(t, containsJoinClaim(result.ApprovedClaims, insolar.RecordRef{1}))
+	assert.True(t, containsJoinClaim(result.ApprovedClaims, insolar.Reference{154}))
+	assert.True(t, containsJoinClaim(result.ApprovedClaims, insolar.Reference{153}))
+	assert.False(t, containsJoinClaim(result.ApprovedClaims, insolar.Reference{0}))
+	assert.False(t, containsJoinClaim(result.ApprovedClaims, insolar.Reference{1}))
 }
 
 func TestClaimHandler_GetClaims(t *testing.T) {
@@ -122,9 +122,9 @@ func TestClaimHandler_GetClaims(t *testing.T) {
 	ref2 := testutils.RandomRef()
 	ref3 := testutils.RandomRef()
 
-	claims := make(map[insolar.RecordRef][]packets.ReferendumClaim)
-	claims[ref1] = []packets.ReferendumClaim{&packets.NodeBroadcast{}, getJoinClaim(t, insolar.RecordRef{0})}
-	claims[ref2] = []packets.ReferendumClaim{getJoinClaim(t, insolar.RecordRef{1}), getJoinClaim(t, insolar.RecordRef{2})}
+	claims := make(map[insolar.Reference][]packets.ReferendumClaim)
+	claims[ref1] = []packets.ReferendumClaim{&packets.NodeBroadcast{}, getJoinClaim(t, insolar.Reference{0})}
+	claims[ref2] = []packets.ReferendumClaim{getJoinClaim(t, insolar.Reference{1}), getJoinClaim(t, insolar.Reference{2})}
 
 	handler := NewClaimHandler(6, claims)
 	assert.Equal(t, 4, len(handler.GetClaims()))

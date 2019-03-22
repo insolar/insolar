@@ -27,7 +27,7 @@ type HostNetworkMock struct {
 	BuildResponsePreCounter uint64
 	BuildResponseMock       mHostNetworkMockBuildResponse
 
-	GetNodeIDFunc       func() (r insolar.RecordRef)
+	GetNodeIDFunc       func() (r insolar.Reference)
 	GetNodeIDCounter    uint64
 	GetNodeIDPreCounter uint64
 	GetNodeIDMock       mHostNetworkMockGetNodeID
@@ -47,7 +47,7 @@ type HostNetworkMock struct {
 	RegisterRequestHandlerPreCounter uint64
 	RegisterRequestHandlerMock       mHostNetworkMockRegisterRequestHandler
 
-	SendRequestFunc       func(p context.Context, p1 network.Request, p2 insolar.RecordRef) (r network.Future, r1 error)
+	SendRequestFunc       func(p context.Context, p1 network.Request, p2 insolar.Reference) (r network.Future, r1 error)
 	SendRequestCounter    uint64
 	SendRequestPreCounter uint64
 	SendRequestMock       mHostNetworkMockSendRequest
@@ -231,7 +231,7 @@ type HostNetworkMockGetNodeIDExpectation struct {
 }
 
 type HostNetworkMockGetNodeIDResult struct {
-	r insolar.RecordRef
+	r insolar.Reference
 }
 
 //Expect specifies that invocation of HostNetwork.GetNodeID is expected from 1 to Infinity times
@@ -247,7 +247,7 @@ func (m *mHostNetworkMockGetNodeID) Expect() *mHostNetworkMockGetNodeID {
 }
 
 //Return specifies results of invocation of HostNetwork.GetNodeID
-func (m *mHostNetworkMockGetNodeID) Return(r insolar.RecordRef) *HostNetworkMock {
+func (m *mHostNetworkMockGetNodeID) Return(r insolar.Reference) *HostNetworkMock {
 	m.mock.GetNodeIDFunc = nil
 	m.expectationSeries = nil
 
@@ -269,12 +269,12 @@ func (m *mHostNetworkMockGetNodeID) ExpectOnce() *HostNetworkMockGetNodeIDExpect
 	return expectation
 }
 
-func (e *HostNetworkMockGetNodeIDExpectation) Return(r insolar.RecordRef) {
+func (e *HostNetworkMockGetNodeIDExpectation) Return(r insolar.Reference) {
 	e.result = &HostNetworkMockGetNodeIDResult{r}
 }
 
 //Set uses given function f as a mock of HostNetwork.GetNodeID method
-func (m *mHostNetworkMockGetNodeID) Set(f func() (r insolar.RecordRef)) *HostNetworkMock {
+func (m *mHostNetworkMockGetNodeID) Set(f func() (r insolar.Reference)) *HostNetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -283,7 +283,7 @@ func (m *mHostNetworkMockGetNodeID) Set(f func() (r insolar.RecordRef)) *HostNet
 }
 
 //GetNodeID implements github.com/insolar/insolar/network.HostNetwork interface
-func (m *HostNetworkMock) GetNodeID() (r insolar.RecordRef) {
+func (m *HostNetworkMock) GetNodeID() (r insolar.Reference) {
 	counter := atomic.AddUint64(&m.GetNodeIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodeIDCounter, 1)
 
@@ -760,7 +760,7 @@ type HostNetworkMockSendRequestExpectation struct {
 type HostNetworkMockSendRequestInput struct {
 	p  context.Context
 	p1 network.Request
-	p2 insolar.RecordRef
+	p2 insolar.Reference
 }
 
 type HostNetworkMockSendRequestResult struct {
@@ -769,7 +769,7 @@ type HostNetworkMockSendRequestResult struct {
 }
 
 //Expect specifies that invocation of HostNetwork.SendRequest is expected from 1 to Infinity times
-func (m *mHostNetworkMockSendRequest) Expect(p context.Context, p1 network.Request, p2 insolar.RecordRef) *mHostNetworkMockSendRequest {
+func (m *mHostNetworkMockSendRequest) Expect(p context.Context, p1 network.Request, p2 insolar.Reference) *mHostNetworkMockSendRequest {
 	m.mock.SendRequestFunc = nil
 	m.expectationSeries = nil
 
@@ -793,7 +793,7 @@ func (m *mHostNetworkMockSendRequest) Return(r network.Future, r1 error) *HostNe
 }
 
 //ExpectOnce specifies that invocation of HostNetwork.SendRequest is expected once
-func (m *mHostNetworkMockSendRequest) ExpectOnce(p context.Context, p1 network.Request, p2 insolar.RecordRef) *HostNetworkMockSendRequestExpectation {
+func (m *mHostNetworkMockSendRequest) ExpectOnce(p context.Context, p1 network.Request, p2 insolar.Reference) *HostNetworkMockSendRequestExpectation {
 	m.mock.SendRequestFunc = nil
 	m.mainExpectation = nil
 
@@ -808,7 +808,7 @@ func (e *HostNetworkMockSendRequestExpectation) Return(r network.Future, r1 erro
 }
 
 //Set uses given function f as a mock of HostNetwork.SendRequest method
-func (m *mHostNetworkMockSendRequest) Set(f func(p context.Context, p1 network.Request, p2 insolar.RecordRef) (r network.Future, r1 error)) *HostNetworkMock {
+func (m *mHostNetworkMockSendRequest) Set(f func(p context.Context, p1 network.Request, p2 insolar.Reference) (r network.Future, r1 error)) *HostNetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -817,7 +817,7 @@ func (m *mHostNetworkMockSendRequest) Set(f func(p context.Context, p1 network.R
 }
 
 //SendRequest implements github.com/insolar/insolar/network.HostNetwork interface
-func (m *HostNetworkMock) SendRequest(p context.Context, p1 network.Request, p2 insolar.RecordRef) (r network.Future, r1 error) {
+func (m *HostNetworkMock) SendRequest(p context.Context, p1 network.Request, p2 insolar.Reference) (r network.Future, r1 error) {
 	counter := atomic.AddUint64(&m.SendRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.SendRequestCounter, 1)
 

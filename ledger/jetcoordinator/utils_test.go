@@ -101,7 +101,7 @@ func benchSelectByEntropy(b *testing.B, valuescount int, count int) {
 }
 
 // compiler should avoid to optimize call of benched function
-var refresults []insolar.RecordRef
+var refresults []insolar.Reference
 
 func benchSelectByEntropyWrapped(b *testing.B, valuescount int, count int) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
@@ -111,7 +111,7 @@ func benchSelectByEntropyWrapped(b *testing.B, valuescount int, count int) {
 
 	values := make([]insolar.Node, 0, valuescount)
 	for i := 0; i < valuescount; i++ {
-		var coreref insolar.RecordRef
+		var coreref insolar.Reference
 		copy(coreref[:], randslice(64))
 		values = append(values, insolar.Node{ID: coreref})
 	}

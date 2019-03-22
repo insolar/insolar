@@ -26,8 +26,8 @@ import (
 
 // JetIndexModifier is an interface for modifying index records.
 type JetIndexModifier interface {
-	Add(id insolar.RecordID, jetID insolar.JetID)
-	Delete(id insolar.RecordID, jetID insolar.JetID)
+	Add(id insolar.ID, jetID insolar.JetID)
+	Delete(id insolar.ID, jetID insolar.JetID)
 }
 
 // JetIndex contains methods to implement quick access to data by jet. Indexes are stored in memory. Consider disk
@@ -37,7 +37,7 @@ type JetIndex struct {
 	storage map[insolar.JetID]recordSet
 }
 
-type recordSet map[insolar.RecordID]struct{}
+type recordSet map[insolar.ID]struct{}
 
 // NewJetIndex creates new index instance.
 func NewJetIndex() *JetIndex {
@@ -45,7 +45,7 @@ func NewJetIndex() *JetIndex {
 }
 
 // Add creates index record for specified id and jet. To remove clean up index, use "Delete" method.
-func (i *JetIndex) Add(id insolar.RecordID, jetID insolar.JetID) {
+func (i *JetIndex) Add(id insolar.ID, jetID insolar.JetID) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -58,7 +58,7 @@ func (i *JetIndex) Add(id insolar.RecordID, jetID insolar.JetID) {
 }
 
 // Delete removes specified id - jet record from index.
-func (i *JetIndex) Delete(id insolar.RecordID, jetID insolar.JetID) {
+func (i *JetIndex) Delete(id insolar.ID, jetID insolar.JetID) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 

@@ -127,24 +127,24 @@ func (s *amSuite) AfterTest(suiteName, testName string) {
 
 var (
 	domainID   = *genRandomID(0)
-	domainRef  = *insolar.NewRecordRef(domainID, domainID)
+	domainRef  = *insolar.NewReference(domainID, domainID)
 	requestRef = *genRandomRef(0)
 )
 
-func genRandomID(pulse insolar.PulseNumber) *insolar.RecordID {
+func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
 	buff := [insolar.RecordIDSize - insolar.PulseNumberSize]byte{}
 	_, err := rand.Read(buff[:])
 	if err != nil {
 		panic(err)
 	}
-	return insolar.NewRecordID(pulse, buff[:])
+	return insolar.NewID(pulse, buff[:])
 }
 
-func genRefWithID(id *insolar.RecordID) *insolar.RecordRef {
-	return insolar.NewRecordRef(domainID, *id)
+func genRefWithID(id *insolar.ID) *insolar.Reference {
+	return insolar.NewReference(domainID, *id)
 }
 
-func genRandomRef(pulse insolar.PulseNumber) *insolar.RecordRef {
+func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
 	return genRefWithID(genRandomID(pulse))
 }
 
@@ -198,10 +198,10 @@ func getTestData(s *amSuite) (
 	handler.Bus = mb
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	jc.LightExecutorForJetMock.Return(&insolar.RecordRef{}, nil)
-	jc.MeMock.Return(insolar.RecordRef{})
-	jc.HeavyMock.Return(&insolar.RecordRef{}, nil)
-	jc.NodeForJetMock.Return(&insolar.RecordRef{}, nil)
+	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
+	jc.MeMock.Return(insolar.Reference{})
+	jc.HeavyMock.Return(&insolar.Reference{}, nil)
+	jc.NodeForJetMock.Return(&insolar.Reference{}, nil)
 	jc.IsBeyondLimitMock.Return(false, nil)
 
 	handler.JetCoordinator = jc
@@ -227,7 +227,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest() {
 	parcel := message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa"}}
 	id, err := am.RegisterRequest(ctx, *am.GenesisRef(), &parcel)
 	assert.NoError(s.T(), err)
-	rec, err := os.GetRecord(ctx, insolar.RecordID(*insolar.NewJetID(0, nil)), id)
+	rec, err := os.GetRecord(ctx, insolar.ID(*insolar.NewJetID(0, nil)), id)
 	assert.NoError(s.T(), err)
 
 	assert.Equal(
@@ -249,8 +249,8 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 	}
 
 	jc := testutils.NewJetCoordinatorMock(s.T())
-	jc.LightExecutorForJetMock.Return(&insolar.RecordRef{}, nil)
-	jc.MeMock.Return(insolar.RecordRef{})
+	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
+	jc.MeMock.Return(insolar.Reference{})
 
 	amPulseStorageMock := testutils.NewPulseStorageMock(s.T())
 	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *insolar.Pulse, r1 error) {
@@ -291,7 +291,7 @@ func (s *amSuite) TestLedgerArtifactManager_DeclareType() {
 	typeDec := []byte{1, 2, 3}
 	id, err := am.DeclareType(ctx, domainRef, requestRef, typeDec)
 	assert.NoError(s.T(), err)
-	typeRec, err := os.GetRecord(ctx, insolar.RecordID(*insolar.NewJetID(0, nil)), id)
+	typeRec, err := os.GetRecord(ctx, insolar.ID(*insolar.NewJetID(0, nil)), id)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), &object.TypeRecord{
 		SideEffectRecord: object.SideEffectRecord{
@@ -313,7 +313,7 @@ func (s *amSuite) TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord() {
 		insolar.MachineTypeBuiltin,
 	)
 	assert.NoError(s.T(), err)
-	codeRec, err := os.GetRecord(ctx, insolar.RecordID(*insolar.NewJetID(0, nil)), id)
+	codeRec, err := os.GetRecord(ctx, insolar.ID(*insolar.NewJetID(0, nil)), id)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), codeRec, &object.CodeRecord{
 		SideEffectRecord: object.SideEffectRecord{
@@ -333,7 +333,7 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 	codeRef := genRandomRef(0)
 	parentID, _ := os.SetRecord(
 		ctx,
-		insolar.RecordID(jetID),
+		insolar.ID(jetID),
 		insolar.GenesisPulse.PulseNumber,
 		&object.ObjectActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
@@ -341,7 +341,7 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 			},
 		},
 	)
-	err := os.SetObjectIndex(ctx, insolar.RecordID(jetID), parentID, &object.Lifeline{
+	err := os.SetObjectIndex(ctx, insolar.ID(jetID), parentID, &object.Lifeline{
 		LatestState: parentID,
 	})
 	require.NoError(s.T(), err)
@@ -358,7 +358,7 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 	)
 	assert.Nil(s.T(), err)
 
-	activateRec, err := os.GetRecord(ctx, insolar.RecordID(jetID), objDesc.StateID())
+	activateRec, err := os.GetRecord(ctx, insolar.ID(jetID), objDesc.StateID())
 	assert.Nil(s.T(), err)
 	assert.Equal(s.T(), activateRec, &object.ObjectActivateRecord{
 		SideEffectRecord: object.SideEffectRecord{
@@ -374,14 +374,14 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 		IsDelegate: false,
 	})
 
-	idx, err := os.GetObjectIndex(ctx, insolar.RecordID(jetID), parentID, false)
+	idx, err := os.GetObjectIndex(ctx, insolar.ID(jetID), parentID, false)
 	assert.NoError(s.T(), err)
 
-	childRec, err := os.GetRecord(ctx, insolar.RecordID(jetID), idx.ChildPointer)
+	childRec, err := os.GetRecord(ctx, insolar.ID(jetID), idx.ChildPointer)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), objRef, childRec.(*object.ChildRecord).Ref)
 
-	idx, err = os.GetObjectIndex(ctx, insolar.RecordID(jetID), objRef.Record(), false)
+	idx, err = os.GetObjectIndex(ctx, insolar.ID(jetID), objRef.Record(), false)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), *objDesc.StateID(), *idx.LatestState)
 	assert.Equal(s.T(), *objDesc.Parent(), idx.Parent)
@@ -389,7 +389,7 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 
 func (s *amSuite) TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord() {
 	ctx, os, am := getTestData(s)
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	objID, _ := os.SetRecord(
 		ctx,
@@ -430,7 +430,7 @@ func (s *amSuite) TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecor
 
 func (s *amSuite) TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord() {
 	ctx, os, am := getTestData(s)
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	objID, _ := os.SetRecord(
 		ctx,
@@ -480,7 +480,7 @@ func (s *amSuite) TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord() 
 
 func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors() {
 	ctx, os, am := getTestData(s)
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	prototypeRef := genRandomRef(0)
 	parentRef := genRandomRef(0)
@@ -584,7 +584,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren() {
 	// t.Parallel()
 	ctx, os, am := getTestData(s)
 	// defer cleaner()
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	parentID, _ := os.SetRecord(
 		ctx,
@@ -766,7 +766,7 @@ func (s *amSuite) TestLedgerArtifactManager_HandleJetDrop() {
 		Record: object.SerializeRecord(&codeRecord),
 	}
 
-	jetID := insolar.RecordID(*insolar.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	rep, err := am.DefaultBus.Send(ctx, &message.JetDrop{
 		JetID: jetID,
@@ -792,7 +792,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	mb.PulseStorage = makePulseStorage(s)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.IsBeyondLimitMock.Return(false, nil)
-	jc.NodeForJetMock.Return(&insolar.RecordRef{}, nil)
+	jc.NodeForJetMock.Return(&insolar.Reference{}, nil)
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -902,12 +902,12 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 func (s *amSuite) TestLedgerArtifactManager_RegisterResult() {
 	ctx, os, am := getTestData(s)
 
-	objID := insolar.RecordID{1, 2, 3}
+	objID := insolar.ID{1, 2, 3}
 	request := genRandomRef(0)
-	requestID, err := am.RegisterResult(ctx, *insolar.NewRecordRef(insolar.RecordID{}, objID), *request, []byte{1, 2, 3})
+	requestID, err := am.RegisterResult(ctx, *insolar.NewReference(insolar.ID{}, objID), *request, []byte{1, 2, 3})
 	assert.NoError(s.T(), err)
 
-	rec, err := os.GetRecord(ctx, insolar.RecordID(*insolar.NewJetID(0, nil)), requestID)
+	rec, err := os.GetRecord(ctx, insolar.ID(*insolar.NewJetID(0, nil)), requestID)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), object.ResultRecord{
 		Object:  objID,
@@ -936,7 +936,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 		mb := testutils.NewMessageBusMock(mc)
 		am.DefaultBus = mb
 		mb.SendMock.Return(&reply.JetMiss{
-			JetID: insolar.RecordID(*insolar.NewJetID(5, []byte{1, 2, 3})),
+			JetID: insolar.ID(*insolar.NewJetID(5, []byte{1, 2, 3})),
 		}, nil)
 		_, err := am.RegisterRequest(s.ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.Error(t, err)
@@ -953,13 +953,13 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 				return &reply.ID{}, nil
 			}
 			retries--
-			return &reply.JetMiss{JetID: insolar.RecordID(*insolar.NewJetID(4, []byte{b_11010101}))}, nil
+			return &reply.JetMiss{JetID: insolar.ID(*insolar.NewJetID(4, []byte{b_11010101}))}, nil
 		}
 		_, err := am.RegisterRequest(s.ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.NoError(t, err)
 
 		jetID, actual := s.jetStorage.ForID(
-			s.ctx, insolar.FirstPulseNumber, *insolar.NewRecordID(0, []byte{0xD5}),
+			s.ctx, insolar.FirstPulseNumber, *insolar.NewID(0, []byte{0xD5}),
 		)
 
 		assert.Equal(t, insolar.NewJetID(4, []byte{b_1101}), &jetID, "proper jet ID for record")

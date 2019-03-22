@@ -20,17 +20,17 @@ import (
 type ContractRequesterMock struct {
 	t minimock.Tester
 
-	CallConstructorFunc       func(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.RecordRef, p4 *insolar.RecordRef, p5 string, p6 insolar.Arguments, p7 int) (r *insolar.RecordRef, r1 error)
+	CallConstructorFunc       func(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.Reference, p4 *insolar.Reference, p5 string, p6 insolar.Arguments, p7 int) (r *insolar.Reference, r1 error)
 	CallConstructorCounter    uint64
 	CallConstructorPreCounter uint64
 	CallConstructorMock       mContractRequesterMockCallConstructor
 
-	CallMethodFunc       func(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.RecordRef, p4 string, p5 insolar.Arguments, p6 *insolar.RecordRef) (r insolar.Reply, r1 error)
+	CallMethodFunc       func(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.Reference, p4 string, p5 insolar.Arguments, p6 *insolar.Reference) (r insolar.Reply, r1 error)
 	CallMethodCounter    uint64
 	CallMethodPreCounter uint64
 	CallMethodMock       mContractRequesterMockCallMethod
 
-	SendRequestFunc       func(p context.Context, p1 *insolar.RecordRef, p2 string, p3 []interface{}) (r insolar.Reply, r1 error)
+	SendRequestFunc       func(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}) (r insolar.Reply, r1 error)
 	SendRequestCounter    uint64
 	SendRequestPreCounter uint64
 	SendRequestMock       mContractRequesterMockSendRequest
@@ -66,20 +66,20 @@ type ContractRequesterMockCallConstructorInput struct {
 	p  context.Context
 	p1 insolar.Message
 	p2 bool
-	p3 *insolar.RecordRef
-	p4 *insolar.RecordRef
+	p3 *insolar.Reference
+	p4 *insolar.Reference
 	p5 string
 	p6 insolar.Arguments
 	p7 int
 }
 
 type ContractRequesterMockCallConstructorResult struct {
-	r  *insolar.RecordRef
+	r  *insolar.Reference
 	r1 error
 }
 
 //Expect specifies that invocation of ContractRequester.CallConstructor is expected from 1 to Infinity times
-func (m *mContractRequesterMockCallConstructor) Expect(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.RecordRef, p4 *insolar.RecordRef, p5 string, p6 insolar.Arguments, p7 int) *mContractRequesterMockCallConstructor {
+func (m *mContractRequesterMockCallConstructor) Expect(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.Reference, p4 *insolar.Reference, p5 string, p6 insolar.Arguments, p7 int) *mContractRequesterMockCallConstructor {
 	m.mock.CallConstructorFunc = nil
 	m.expectationSeries = nil
 
@@ -91,7 +91,7 @@ func (m *mContractRequesterMockCallConstructor) Expect(p context.Context, p1 ins
 }
 
 //Return specifies results of invocation of ContractRequester.CallConstructor
-func (m *mContractRequesterMockCallConstructor) Return(r *insolar.RecordRef, r1 error) *ContractRequesterMock {
+func (m *mContractRequesterMockCallConstructor) Return(r *insolar.Reference, r1 error) *ContractRequesterMock {
 	m.mock.CallConstructorFunc = nil
 	m.expectationSeries = nil
 
@@ -103,7 +103,7 @@ func (m *mContractRequesterMockCallConstructor) Return(r *insolar.RecordRef, r1 
 }
 
 //ExpectOnce specifies that invocation of ContractRequester.CallConstructor is expected once
-func (m *mContractRequesterMockCallConstructor) ExpectOnce(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.RecordRef, p4 *insolar.RecordRef, p5 string, p6 insolar.Arguments, p7 int) *ContractRequesterMockCallConstructorExpectation {
+func (m *mContractRequesterMockCallConstructor) ExpectOnce(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.Reference, p4 *insolar.Reference, p5 string, p6 insolar.Arguments, p7 int) *ContractRequesterMockCallConstructorExpectation {
 	m.mock.CallConstructorFunc = nil
 	m.mainExpectation = nil
 
@@ -113,12 +113,12 @@ func (m *mContractRequesterMockCallConstructor) ExpectOnce(p context.Context, p1
 	return expectation
 }
 
-func (e *ContractRequesterMockCallConstructorExpectation) Return(r *insolar.RecordRef, r1 error) {
+func (e *ContractRequesterMockCallConstructorExpectation) Return(r *insolar.Reference, r1 error) {
 	e.result = &ContractRequesterMockCallConstructorResult{r, r1}
 }
 
 //Set uses given function f as a mock of ContractRequester.CallConstructor method
-func (m *mContractRequesterMockCallConstructor) Set(f func(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.RecordRef, p4 *insolar.RecordRef, p5 string, p6 insolar.Arguments, p7 int) (r *insolar.RecordRef, r1 error)) *ContractRequesterMock {
+func (m *mContractRequesterMockCallConstructor) Set(f func(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.Reference, p4 *insolar.Reference, p5 string, p6 insolar.Arguments, p7 int) (r *insolar.Reference, r1 error)) *ContractRequesterMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -127,7 +127,7 @@ func (m *mContractRequesterMockCallConstructor) Set(f func(p context.Context, p1
 }
 
 //CallConstructor implements github.com/insolar/insolar/insolar.ContractRequester interface
-func (m *ContractRequesterMock) CallConstructor(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.RecordRef, p4 *insolar.RecordRef, p5 string, p6 insolar.Arguments, p7 int) (r *insolar.RecordRef, r1 error) {
+func (m *ContractRequesterMock) CallConstructor(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.Reference, p4 *insolar.Reference, p5 string, p6 insolar.Arguments, p7 int) (r *insolar.Reference, r1 error) {
 	counter := atomic.AddUint64(&m.CallConstructorPreCounter, 1)
 	defer atomic.AddUint64(&m.CallConstructorCounter, 1)
 
@@ -223,10 +223,10 @@ type ContractRequesterMockCallMethodInput struct {
 	p  context.Context
 	p1 insolar.Message
 	p2 bool
-	p3 *insolar.RecordRef
+	p3 *insolar.Reference
 	p4 string
 	p5 insolar.Arguments
-	p6 *insolar.RecordRef
+	p6 *insolar.Reference
 }
 
 type ContractRequesterMockCallMethodResult struct {
@@ -235,7 +235,7 @@ type ContractRequesterMockCallMethodResult struct {
 }
 
 //Expect specifies that invocation of ContractRequester.CallMethod is expected from 1 to Infinity times
-func (m *mContractRequesterMockCallMethod) Expect(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.RecordRef, p4 string, p5 insolar.Arguments, p6 *insolar.RecordRef) *mContractRequesterMockCallMethod {
+func (m *mContractRequesterMockCallMethod) Expect(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.Reference, p4 string, p5 insolar.Arguments, p6 *insolar.Reference) *mContractRequesterMockCallMethod {
 	m.mock.CallMethodFunc = nil
 	m.expectationSeries = nil
 
@@ -259,7 +259,7 @@ func (m *mContractRequesterMockCallMethod) Return(r insolar.Reply, r1 error) *Co
 }
 
 //ExpectOnce specifies that invocation of ContractRequester.CallMethod is expected once
-func (m *mContractRequesterMockCallMethod) ExpectOnce(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.RecordRef, p4 string, p5 insolar.Arguments, p6 *insolar.RecordRef) *ContractRequesterMockCallMethodExpectation {
+func (m *mContractRequesterMockCallMethod) ExpectOnce(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.Reference, p4 string, p5 insolar.Arguments, p6 *insolar.Reference) *ContractRequesterMockCallMethodExpectation {
 	m.mock.CallMethodFunc = nil
 	m.mainExpectation = nil
 
@@ -274,7 +274,7 @@ func (e *ContractRequesterMockCallMethodExpectation) Return(r insolar.Reply, r1 
 }
 
 //Set uses given function f as a mock of ContractRequester.CallMethod method
-func (m *mContractRequesterMockCallMethod) Set(f func(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.RecordRef, p4 string, p5 insolar.Arguments, p6 *insolar.RecordRef) (r insolar.Reply, r1 error)) *ContractRequesterMock {
+func (m *mContractRequesterMockCallMethod) Set(f func(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.Reference, p4 string, p5 insolar.Arguments, p6 *insolar.Reference) (r insolar.Reply, r1 error)) *ContractRequesterMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -283,7 +283,7 @@ func (m *mContractRequesterMockCallMethod) Set(f func(p context.Context, p1 inso
 }
 
 //CallMethod implements github.com/insolar/insolar/insolar.ContractRequester interface
-func (m *ContractRequesterMock) CallMethod(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.RecordRef, p4 string, p5 insolar.Arguments, p6 *insolar.RecordRef) (r insolar.Reply, r1 error) {
+func (m *ContractRequesterMock) CallMethod(p context.Context, p1 insolar.Message, p2 bool, p3 *insolar.Reference, p4 string, p5 insolar.Arguments, p6 *insolar.Reference) (r insolar.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.CallMethodPreCounter, 1)
 	defer atomic.AddUint64(&m.CallMethodCounter, 1)
 
@@ -377,7 +377,7 @@ type ContractRequesterMockSendRequestExpectation struct {
 
 type ContractRequesterMockSendRequestInput struct {
 	p  context.Context
-	p1 *insolar.RecordRef
+	p1 *insolar.Reference
 	p2 string
 	p3 []interface{}
 }
@@ -388,7 +388,7 @@ type ContractRequesterMockSendRequestResult struct {
 }
 
 //Expect specifies that invocation of ContractRequester.SendRequest is expected from 1 to Infinity times
-func (m *mContractRequesterMockSendRequest) Expect(p context.Context, p1 *insolar.RecordRef, p2 string, p3 []interface{}) *mContractRequesterMockSendRequest {
+func (m *mContractRequesterMockSendRequest) Expect(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}) *mContractRequesterMockSendRequest {
 	m.mock.SendRequestFunc = nil
 	m.expectationSeries = nil
 
@@ -412,7 +412,7 @@ func (m *mContractRequesterMockSendRequest) Return(r insolar.Reply, r1 error) *C
 }
 
 //ExpectOnce specifies that invocation of ContractRequester.SendRequest is expected once
-func (m *mContractRequesterMockSendRequest) ExpectOnce(p context.Context, p1 *insolar.RecordRef, p2 string, p3 []interface{}) *ContractRequesterMockSendRequestExpectation {
+func (m *mContractRequesterMockSendRequest) ExpectOnce(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}) *ContractRequesterMockSendRequestExpectation {
 	m.mock.SendRequestFunc = nil
 	m.mainExpectation = nil
 
@@ -427,7 +427,7 @@ func (e *ContractRequesterMockSendRequestExpectation) Return(r insolar.Reply, r1
 }
 
 //Set uses given function f as a mock of ContractRequester.SendRequest method
-func (m *mContractRequesterMockSendRequest) Set(f func(p context.Context, p1 *insolar.RecordRef, p2 string, p3 []interface{}) (r insolar.Reply, r1 error)) *ContractRequesterMock {
+func (m *mContractRequesterMockSendRequest) Set(f func(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}) (r insolar.Reply, r1 error)) *ContractRequesterMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -436,7 +436,7 @@ func (m *mContractRequesterMockSendRequest) Set(f func(p context.Context, p1 *in
 }
 
 //SendRequest implements github.com/insolar/insolar/insolar.ContractRequester interface
-func (m *ContractRequesterMock) SendRequest(p context.Context, p1 *insolar.RecordRef, p2 string, p3 []interface{}) (r insolar.Reply, r1 error) {
+func (m *ContractRequesterMock) SendRequest(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}) (r insolar.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.SendRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.SendRequestCounter, 1)
 

@@ -77,7 +77,7 @@ type MutableNode interface {
 }
 
 type node struct {
-	NodeID        insolar.RecordRef
+	NodeID        insolar.Reference
 	NodeShortID   uint32
 	NodeRole      insolar.StaticRole
 	NodePublicKey crypto.PublicKey
@@ -118,7 +118,7 @@ func (n *node) ChangeState() {
 }
 
 func newMutableNode(
-	id insolar.RecordRef,
+	id insolar.Reference,
 	role insolar.StaticRole,
 	publicKey crypto.PublicKey,
 	address, version string) MutableNode {
@@ -140,14 +140,14 @@ func newMutableNode(
 }
 
 func NewNode(
-	id insolar.RecordRef,
+	id insolar.Reference,
 	role insolar.StaticRole,
 	publicKey crypto.PublicKey,
 	address, version string) insolar.NetworkNode {
 	return newMutableNode(id, role, publicKey, address, version)
 }
 
-func (n *node) ID() insolar.RecordRef {
+func (n *node) ID() insolar.Reference {
 	return n.NodeID
 }
 

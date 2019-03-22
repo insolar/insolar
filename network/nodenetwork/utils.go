@@ -57,7 +57,7 @@ import (
 )
 
 type MergedListCopy struct {
-	ActiveList                 map[insolar.RecordRef]insolar.NetworkNode
+	ActiveList                 map[insolar.Reference]insolar.NetworkNode
 	NodesJoinedDuringPrevPulse bool
 }
 
@@ -80,7 +80,7 @@ func GetMergedCopy(nodes []insolar.NetworkNode, claims []consensus.ReferendumCla
 	}, nil
 }
 
-func mergeClaim(nodes map[insolar.RecordRef]insolar.NetworkNode, claim consensus.ReferendumClaim) (bool, error) {
+func mergeClaim(nodes map[insolar.Reference]insolar.NetworkNode, claim consensus.ReferendumClaim) (bool, error) {
 	isJoinClaim := false
 	switch t := claim.(type) {
 	case *consensus.NodeJoinClaim:

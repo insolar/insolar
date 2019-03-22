@@ -76,7 +76,7 @@ func (t *Table) ResolveConsensus(id insolar.ShortNodeID) (*host.Host, error) {
 	return h, nil
 }
 
-func (t *Table) ResolveConsensusRef(ref insolar.RecordRef) (*host.Host, error) {
+func (t *Table) ResolveConsensusRef(ref insolar.Reference) (*host.Host, error) {
 	node := t.NodeKeeper.GetAccessor().GetActiveNode(ref)
 	if node != nil {
 		return host.NewHostNS(node.ConsensusAddress(), node.ID(), node.ShortID())
@@ -88,11 +88,11 @@ func (t *Table) ResolveConsensusRef(ref insolar.RecordRef) (*host.Host, error) {
 	return h, nil
 }
 
-func (t *Table) isLocalNode(insolar.RecordRef) bool {
+func (t *Table) isLocalNode(insolar.Reference) bool {
 	return true
 }
 
-func (t *Table) resolveRemoteNode(ref insolar.RecordRef) (*host.Host, error) {
+func (t *Table) resolveRemoteNode(ref insolar.Reference) (*host.Host, error) {
 	return nil, errors.New("not implemented")
 }
 
@@ -101,7 +101,7 @@ func (t *Table) addRemoteHost(h *host.Host) {
 }
 
 // Resolve NodeID -> ShortID, Address. Can initiate network requests.
-func (t *Table) Resolve(ref insolar.RecordRef) (*host.Host, error) {
+func (t *Table) Resolve(ref insolar.Reference) (*host.Host, error) {
 	if t.isLocalNode(ref) {
 		node := t.NodeKeeper.GetAccessor().GetActiveNode(ref)
 		if node == nil {

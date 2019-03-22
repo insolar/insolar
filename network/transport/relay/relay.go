@@ -130,7 +130,7 @@ func (r *relay) NeedToRelay(targetAddress string) bool {
 	return false
 }
 
-func (r *relay) findClient(id insolar.RecordRef) (int, *host.Host) {
+func (r *relay) findClient(id insolar.Reference) (int, *host.Host) {
 	for idx, hostIterator := range r.clients {
 		if hostIterator.NodeID.Equal(id) {
 			return idx, hostIterator

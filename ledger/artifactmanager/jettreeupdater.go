@@ -38,11 +38,11 @@ type seqEntry struct {
 
 type seqKey struct {
 	pulse insolar.PulseNumber
-	jet   insolar.RecordID
+	jet   insolar.ID
 }
 
 type fetchResult struct {
-	jet *insolar.RecordID
+	jet *insolar.ID
 	err error
 }
 
@@ -72,20 +72,20 @@ func newJetTreeUpdater(
 }
 
 func (jtu *jetTreeUpdater) fetchJet(
-	ctx context.Context, target insolar.RecordID, pulse insolar.PulseNumber,
-) (*insolar.RecordID, error) {
+	ctx context.Context, target insolar.ID, pulse insolar.PulseNumber,
+) (*insolar.ID, error) {
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.fetch_jet")
 	defer span.End()
 
 	// Look in the local tree. Return if the actual jet found.
 	jetID, actual := jtu.JetStorage.ForID(ctx, pulse, target)
 	if actual {
-		return (*insolar.RecordID)(&jetID), nil
+		return (*insolar.ID)(&jetID), nil
 	}
 
 	// Not actual in our tree, asking neighbors for jet.
 	span.Annotate(nil, "tree in DB is not actual")
-	key := seqKey{pulse, insolar.RecordID(jetID)}
+	key := seqKey{pulse, insolar.ID(jetID)}
 
 	executing := false
 
@@ -127,7 +127,7 @@ func (jtu *jetTreeUpdater) fetchJet(
 	return resJet, nil
 }
 
-func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID insolar.RecordID, pulse insolar.PulseNumber) {
+func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) {
 	jtu.seqMutex.Lock()
 	defer jtu.seqMutex.Unlock()
 
@@ -145,14 +145,14 @@ func (jtu *jetTreeUpdater) releaseJet(ctx context.Context, jetID insolar.RecordI
 		if depth == 0 {
 			break
 		}
-		jetID = insolar.RecordID(jet.Parent(insolar.JetID(jetID)))
+		jetID = insolar.ID(jet.Parent(insolar.JetID(jetID)))
 		depth--
 	}
 }
 
 func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
-	ctx context.Context, target insolar.RecordID, pulse insolar.PulseNumber,
-) (*insolar.RecordID, error) {
+	ctx context.Context, target insolar.ID, pulse insolar.PulseNumber,
+) (*insolar.ID, error) {
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.fetch_jet_from_other_nodes")
 	defer span.End()
 
@@ -214,8 +214,8 @@ func (jtu *jetTreeUpdater) fetchActualJetFromOtherNodes(
 		}
 		wg.Wait()
 
-		seen := make(map[insolar.RecordID]struct{})
-		res := make([]*insolar.RecordID, 0)
+		seen := make(map[insolar.ID]struct{})
+		res := make([]*insolar.ID, 0)
 		for _, r := range replies {
 			if r == nil {
 				continue

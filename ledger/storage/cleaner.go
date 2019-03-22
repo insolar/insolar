@@ -33,15 +33,15 @@ import (
 type Cleaner interface {
 	CleanJetRecordsUntilPulse(
 		ctx context.Context,
-		jetID insolar.RecordID,
+		jetID insolar.ID,
 		pn insolar.PulseNumber,
 	) (map[string]RmStat, error)
 
 	CleanJetIndexes(
 		ctx context.Context,
-		jetID insolar.RecordID,
+		jetID insolar.ID,
 		recent recentstorage.RecentIndexStorage,
-		candidates []insolar.RecordID,
+		candidates []insolar.ID,
 	) (RmStat, error)
 }
 
@@ -78,7 +78,7 @@ func recordCleanupMetrics(ctx context.Context, stat map[string]RmStat) {
 // Returns removal statistics and cummulative error of sub cleanup methods.
 func (c *cleaner) CleanJetRecordsUntilPulse(
 	ctx context.Context,
-	jetID insolar.RecordID,
+	jetID insolar.ID,
 	pn insolar.PulseNumber,
 ) (map[string]RmStat, error) {
 	allstat := map[string]RmStat{}
@@ -106,20 +106,20 @@ func (c *cleaner) CleanJetRecordsUntilPulse(
 }
 
 // RemoveJetBlobsUntil removes for provided JetID all blobs older than provided pulse number.
-func (c *cleaner) RemoveJetBlobsUntil(ctx context.Context, jetID insolar.RecordID, pn insolar.PulseNumber) (RmStat, error) {
+func (c *cleaner) RemoveJetBlobsUntil(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber) (RmStat, error) {
 	return c.removeJetRecordsUntil(ctx, scopeIDBlob, jetID, pn)
 }
 
 // RemoveJetRecordsUntil removes for provided JetID all records older than provided pulse number.
 // In recods pending requests live, so we need recent storage here
-func (c *cleaner) RemoveJetRecordsUntil(ctx context.Context, jetID insolar.RecordID, pn insolar.PulseNumber) (RmStat, error) {
+func (c *cleaner) RemoveJetRecordsUntil(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber) (RmStat, error) {
 	return c.removeJetRecordsUntil(ctx, scopeIDRecord, jetID, pn)
 }
 
 func (c *cleaner) removeJetRecordsUntil(
 	ctx context.Context,
 	namespace byte,
-	jetID insolar.RecordID,
+	jetID insolar.ID,
 	pn insolar.PulseNumber,
 ) (RmStat, error) {
 	var stat RmStat
@@ -155,14 +155,14 @@ func (c *cleaner) removeJetRecordsUntil(
 // It locks recent jet store while works.
 func (c *cleaner) CleanJetIndexes(
 	ctx context.Context,
-	jetID insolar.RecordID,
+	jetID insolar.ID,
 	recent recentstorage.RecentIndexStorage,
-	candidates []insolar.RecordID,
+	candidates []insolar.ID,
 ) (RmStat, error) {
 	var stat RmStat
 	prefix := insolar.JetID(jetID).Prefix()
 
-	recent.FilterNotExistWithLock(ctx, candidates, func(fordelete []insolar.RecordID) {
+	recent.FilterNotExistWithLock(ctx, candidates, func(fordelete []insolar.ID) {
 		for _, recID := range fordelete {
 			stat.Scanned++
 			key := prefixkey(scopeIDLifeline, prefix, recID[:])

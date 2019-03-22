@@ -23,15 +23,15 @@ import (
 
 // GetObjectRedirectReply is a redirect-reply for get object
 type GetObjectRedirectReply struct {
-	Receiver *insolar.RecordRef
+	Receiver *insolar.Reference
 	Token    insolar.DelegationToken
 
-	StateID *insolar.RecordID
+	StateID *insolar.ID
 }
 
 // NewGetObjectRedirectReply return new GetObjectRedirectReply
 func NewGetObjectRedirectReply(
-	factory insolar.DelegationTokenFactory, parcel insolar.Parcel, receiver *insolar.RecordRef, state *insolar.RecordID,
+	factory insolar.DelegationTokenFactory, parcel insolar.Parcel, receiver *insolar.Reference, state *insolar.ID,
 ) (*GetObjectRedirectReply, error) {
 	var err error
 	rep := GetObjectRedirectReply{
@@ -48,7 +48,7 @@ func NewGetObjectRedirectReply(
 }
 
 // GetReceiver returns node reference to send message to.
-func (r *GetObjectRedirectReply) GetReceiver() *insolar.RecordRef {
+func (r *GetObjectRedirectReply) GetReceiver() *insolar.Reference {
 	return r.Receiver
 }
 
@@ -74,15 +74,15 @@ func (r *GetObjectRedirectReply) Redirected(genericMsg insolar.Message) insolar.
 
 // GetChildrenRedirectReply is a redirect reply for get children.
 type GetChildrenRedirectReply struct {
-	Receiver *insolar.RecordRef
+	Receiver *insolar.Reference
 	Token    insolar.DelegationToken
 
-	FromChild insolar.RecordID
+	FromChild insolar.ID
 }
 
 // NewGetChildrenRedirect creates a new instance of GetChildrenRedirectReply.
 func NewGetChildrenRedirect(
-	factory insolar.DelegationTokenFactory, parcel insolar.Parcel, receiver *insolar.RecordRef, fromChild insolar.RecordID,
+	factory insolar.DelegationTokenFactory, parcel insolar.Parcel, receiver *insolar.Reference, fromChild insolar.ID,
 ) (*GetChildrenRedirectReply, error) {
 	var err error
 	rep := GetChildrenRedirectReply{
@@ -99,7 +99,7 @@ func NewGetChildrenRedirect(
 }
 
 // GetReceiver returns node reference to send message to.
-func (r *GetChildrenRedirectReply) GetReceiver() *insolar.RecordRef {
+func (r *GetChildrenRedirectReply) GetReceiver() *insolar.Reference {
 	return r.Receiver
 }
 
@@ -126,13 +126,13 @@ func (r *GetChildrenRedirectReply) Redirected(genericMsg insolar.Message) insola
 
 // GetCodeRedirectReply is a redirect reply for get children.
 type GetCodeRedirectReply struct {
-	Receiver *insolar.RecordRef
+	Receiver *insolar.Reference
 	Token    insolar.DelegationToken
 }
 
 // NewGetCodeRedirect creates a new instance of GetChildrenRedirectReply.
 func NewGetCodeRedirect(
-	factory insolar.DelegationTokenFactory, parcel insolar.Parcel, receiver *insolar.RecordRef,
+	factory insolar.DelegationTokenFactory, parcel insolar.Parcel, receiver *insolar.Reference,
 ) (*GetCodeRedirectReply, error) {
 	var err error
 	rep := GetCodeRedirectReply{
@@ -148,7 +148,7 @@ func NewGetCodeRedirect(
 }
 
 // GetReceiver returns node reference to send message to.
-func (r *GetCodeRedirectReply) GetReceiver() *insolar.RecordRef {
+func (r *GetCodeRedirectReply) GetReceiver() *insolar.Reference {
 	return r.Receiver
 }
 

@@ -61,30 +61,30 @@ type PulseManager interface {
 //go:generate minimock -i github.com/insolar/insolar/insolar.JetCoordinator -o ../testutils -s _mock.go
 type JetCoordinator interface {
 	// Me returns current node.
-	Me() RecordRef
+	Me() Reference
 
 	// IsAuthorized checks for role on concrete pulse for the address.
-	IsAuthorized(ctx context.Context, role DynamicRole, obj RecordID, pulse PulseNumber, node RecordRef) (bool, error)
+	IsAuthorized(ctx context.Context, role DynamicRole, obj ID, pulse PulseNumber, node Reference) (bool, error)
 
 	// QueryRole returns node refs responsible for role bound operations for given object and pulse.
-	QueryRole(ctx context.Context, role DynamicRole, obj RecordID, pulse PulseNumber) ([]RecordRef, error)
+	QueryRole(ctx context.Context, role DynamicRole, obj ID, pulse PulseNumber) ([]Reference, error)
 
-	VirtualExecutorForObject(ctx context.Context, objID RecordID, pulse PulseNumber) (*RecordRef, error)
-	VirtualValidatorsForObject(ctx context.Context, objID RecordID, pulse PulseNumber) ([]RecordRef, error)
+	VirtualExecutorForObject(ctx context.Context, objID ID, pulse PulseNumber) (*Reference, error)
+	VirtualValidatorsForObject(ctx context.Context, objID ID, pulse PulseNumber) ([]Reference, error)
 
-	LightExecutorForObject(ctx context.Context, objID RecordID, pulse PulseNumber) (*RecordRef, error)
-	LightValidatorsForObject(ctx context.Context, objID RecordID, pulse PulseNumber) ([]RecordRef, error)
+	LightExecutorForObject(ctx context.Context, objID ID, pulse PulseNumber) (*Reference, error)
+	LightValidatorsForObject(ctx context.Context, objID ID, pulse PulseNumber) ([]Reference, error)
 	// LightExecutorForJet calculates light material executor for provided jet.
-	LightExecutorForJet(ctx context.Context, jetID RecordID, pulse PulseNumber) (*RecordRef, error)
-	LightValidatorsForJet(ctx context.Context, jetID RecordID, pulse PulseNumber) ([]RecordRef, error)
+	LightExecutorForJet(ctx context.Context, jetID ID, pulse PulseNumber) (*Reference, error)
+	LightValidatorsForJet(ctx context.Context, jetID ID, pulse PulseNumber) ([]Reference, error)
 
-	Heavy(ctx context.Context, pulse PulseNumber) (*RecordRef, error)
+	Heavy(ctx context.Context, pulse PulseNumber) (*Reference, error)
 
 	IsBeyondLimit(ctx context.Context, currentPN, targetPN PulseNumber) (bool, error)
-	NodeForJet(ctx context.Context, jetID RecordID, rootPN, targetPN PulseNumber) (*RecordRef, error)
+	NodeForJet(ctx context.Context, jetID ID, rootPN, targetPN PulseNumber) (*Reference, error)
 
 	// NodeForObject calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
-	NodeForObject(ctx context.Context, objectID RecordID, rootPN, targetPN PulseNumber) (*RecordRef, error)
+	NodeForObject(ctx context.Context, objectID ID, rootPN, targetPN PulseNumber) (*Reference, error)
 }
 
 // ArtifactManager is a high level storage interface.
@@ -93,56 +93,56 @@ type ArtifactManager interface {
 	// GenesisRef returns the root record reference.
 	//
 	// Root record is the parent for all top-level records.
-	GenesisRef() *RecordRef
+	GenesisRef() *Reference
 
 	// RegisterRequest creates request record in storage.
-	RegisterRequest(ctx context.Context, object RecordRef, parcel Parcel) (*RecordID, error)
+	RegisterRequest(ctx context.Context, object Reference, parcel Parcel) (*ID, error)
 
 	// RegisterValidation marks provided object state as approved or disapproved.
 	//
 	// When fetching object, validity can be specified.
-	RegisterValidation(ctx context.Context, object RecordRef, state RecordID, isValid bool, validationMessages []Message) error
+	RegisterValidation(ctx context.Context, object Reference, state ID, isValid bool, validationMessages []Message) error
 
 	// RegisterResult saves VM method call result.
-	RegisterResult(ctx context.Context, object, request RecordRef, payload []byte) (*RecordID, error)
+	RegisterResult(ctx context.Context, object, request Reference, payload []byte) (*ID, error)
 
 	// GetCode returns code from code record by provided reference according to provided machine preference.
 	//
 	// This method is used by VM to fetch code for execution.
-	GetCode(ctx context.Context, ref RecordRef) (CodeDescriptor, error)
+	GetCode(ctx context.Context, ref Reference) (CodeDescriptor, error)
 
 	// GetObject returns descriptor for provided state.
 	//
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
-	GetObject(ctx context.Context, head RecordRef, state *RecordID, approved bool) (ObjectDescriptor, error)
+	GetObject(ctx context.Context, head Reference, state *ID, approved bool) (ObjectDescriptor, error)
 
 	// GetPendingRequest returns a pending request for object.
-	GetPendingRequest(ctx context.Context, objectID RecordID) (Parcel, error)
+	GetPendingRequest(ctx context.Context, objectID ID) (Parcel, error)
 
 	// HasPendingRequests returns true if object has unclosed requests.
-	HasPendingRequests(ctx context.Context, object RecordRef) (bool, error)
+	HasPendingRequests(ctx context.Context, object Reference) (bool, error)
 
 	// GetDelegate returns provided object's delegate reference for provided type.
 	//
 	// Object delegate should be previously created for this object. If object delegate does not exist, an error will
 	// be returned.
-	GetDelegate(ctx context.Context, head, asType RecordRef) (*RecordRef, error)
+	GetDelegate(ctx context.Context, head, asType Reference) (*Reference, error)
 
 	// GetChildren returns children iterator.
 	//
 	// During iteration children refs will be fetched from remote source (parent object).
-	GetChildren(ctx context.Context, parent RecordRef, pulse *PulseNumber) (RefIterator, error)
+	GetChildren(ctx context.Context, parent Reference, pulse *PulseNumber) (RefIterator, error)
 
 	// DeclareType creates new type record in storage.
 	//
 	// Type is a contract interface. It contains one method signature.
-	DeclareType(ctx context.Context, domain, request RecordRef, typeDec []byte) (*RecordID, error)
+	DeclareType(ctx context.Context, domain, request Reference, typeDec []byte) (*ID, error)
 
 	// DeployCode creates new code record in storage.
 	//
 	// Code records are used to activate prototype.
-	DeployCode(ctx context.Context, domain, request RecordRef, code []byte, machineType MachineType) (*RecordID, error)
+	DeployCode(ctx context.Context, domain, request Reference, code []byte, machineType MachineType) (*ID, error)
 
 	// ActivatePrototype creates activate object record in storage. Provided prototype reference will be used as objects prototype
 	// memory as memory of created object. If memory is not provided, the prototype default memory will be used.
@@ -150,7 +150,7 @@ type ArtifactManager interface {
 	// Request reference will be this object's identifier and referred as "object head".
 	ActivatePrototype(
 		ctx context.Context,
-		domain, request, parent, code RecordRef,
+		domain, request, parent, code Reference,
 		memory []byte,
 	) (ObjectDescriptor, error)
 
@@ -160,7 +160,7 @@ type ArtifactManager interface {
 	// Request reference will be this object's identifier and referred as "object head".
 	ActivateObject(
 		ctx context.Context,
-		domain, request, parent, prototype RecordRef,
+		domain, request, parent, prototype Reference,
 		asDelegate bool,
 		memory []byte,
 	) (ObjectDescriptor, error)
@@ -171,10 +171,10 @@ type ArtifactManager interface {
 	// Returned reference will be the latest object state (exact) reference.
 	UpdatePrototype(
 		ctx context.Context,
-		domain, request RecordRef,
+		domain, request Reference,
 		obj ObjectDescriptor,
 		memory []byte,
-		code *RecordRef,
+		code *Reference,
 	) (ObjectDescriptor, error)
 
 	// UpdateObject creates amend object record in storage. Provided reference should be a reference to the head of the
@@ -183,7 +183,7 @@ type ArtifactManager interface {
 	// Returned reference will be the latest object state (exact) reference.
 	UpdateObject(
 		ctx context.Context,
-		domain, request RecordRef,
+		domain, request Reference,
 		obj ObjectDescriptor,
 		memory []byte,
 	) (ObjectDescriptor, error)
@@ -192,7 +192,7 @@ type ArtifactManager interface {
 	// of the object. If object is already deactivated, an error should be returned.
 	//
 	// Deactivated object cannot be changed.
-	DeactivateObject(ctx context.Context, domain, request RecordRef, obj ObjectDescriptor) (*RecordID, error)
+	DeactivateObject(ctx context.Context, domain, request Reference, obj ObjectDescriptor) (*ID, error)
 
 	// State returns hash state for artifact manager.
 	State() ([]byte, error)
@@ -202,7 +202,7 @@ type ArtifactManager interface {
 //go:generate minimock -i github.com/insolar/insolar/insolar.CodeDescriptor -o ../testutils -s _mock.go
 type CodeDescriptor interface {
 	// Ref returns reference to represented code record.
-	Ref() *RecordRef
+	Ref() *Reference
 
 	// MachineType returns code machine type for represented code.
 	MachineType() MachineType
@@ -215,10 +215,10 @@ type CodeDescriptor interface {
 //go:generate minimock -i github.com/insolar/insolar/insolar.ObjectDescriptor -o ../testutils -s _mock.go
 type ObjectDescriptor interface {
 	// HeadRef returns head reference to represented object record.
-	HeadRef() *RecordRef
+	HeadRef() *Reference
 
 	// StateID returns reference to object state record.
-	StateID() *RecordID
+	StateID() *ID
 
 	// Memory fetches object memory from storage.
 	Memory() []byte
@@ -227,24 +227,24 @@ type ObjectDescriptor interface {
 	IsPrototype() bool
 
 	// Code returns code reference.
-	Code() (*RecordRef, error)
+	Code() (*Reference, error)
 
 	// Prototype returns prototype reference.
-	Prototype() (*RecordRef, error)
+	Prototype() (*Reference, error)
 
 	// Children returns object's children references.
 	Children(pulse *PulseNumber) (RefIterator, error)
 
 	// ChildPointer returns the latest child for this object.
-	ChildPointer() *RecordID
+	ChildPointer() *ID
 
 	// Parent returns object's parent.
-	Parent() *RecordRef
+	Parent() *Reference
 }
 
 // RefIterator is used for iteration over affined children(parts) of container.
 type RefIterator interface {
-	Next() (*RecordRef, error)
+	Next() (*Reference, error)
 	HasNext() bool
 }
 
@@ -279,8 +279,8 @@ var (
 	// TODOJetID temporary stub for passing jet ID in ledger functions
 	// on period Jet ID full implementation
 	// TODO: remove it after jets support readyness - @nordicdyno 5.Dec.2018
-	TODOJetID = *NewRecordID(PulseNumberJet, nil)
-	DomainID  = *NewRecordID(0, nil)
+	TODOJetID = *NewID(PulseNumberJet, nil)
+	DomainID  = *NewID(0, nil)
 )
 
 // PulseStorage provides the interface for fetching current pulse of the system

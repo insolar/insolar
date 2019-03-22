@@ -92,7 +92,7 @@ func main() {
 		jaegerflush = instracer.ShouldRegisterJaeger(
 			ctx,
 			"pulsar",
-			insolar.RecordRef{}.String(),
+			insolar.Reference{}.String(),
 			jconf.AgentEndpoint,
 			jconf.CollectorEndpoint,
 			jconf.ProbabilityRate)

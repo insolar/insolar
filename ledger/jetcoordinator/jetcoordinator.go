@@ -58,7 +58,7 @@ const (
 )
 
 // Me returns current node.
-func (jc *JetCoordinator) Me() insolar.RecordRef {
+func (jc *JetCoordinator) Me() insolar.Reference {
 	return jc.NodeNet.GetOrigin().ID()
 }
 
@@ -66,9 +66,9 @@ func (jc *JetCoordinator) Me() insolar.RecordRef {
 func (jc *JetCoordinator) IsAuthorized(
 	ctx context.Context,
 	role insolar.DynamicRole,
-	obj insolar.RecordID,
+	obj insolar.ID,
 	pulse insolar.PulseNumber,
-	node insolar.RecordRef,
+	node insolar.Reference,
 ) (bool, error) {
 	nodes, err := jc.QueryRole(ctx, role, obj, pulse)
 	if err != nil {
@@ -86,16 +86,16 @@ func (jc *JetCoordinator) IsAuthorized(
 func (jc *JetCoordinator) QueryRole(
 	ctx context.Context,
 	role insolar.DynamicRole,
-	objID insolar.RecordID,
+	objID insolar.ID,
 	pulse insolar.PulseNumber,
-) ([]insolar.RecordRef, error) {
+) ([]insolar.Reference, error) {
 	switch role {
 	case insolar.DynamicRoleVirtualExecutor:
 		node, err := jc.VirtualExecutorForObject(ctx, objID, pulse)
 		if err != nil {
 			return nil, err
 		}
-		return []insolar.RecordRef{*node}, nil
+		return []insolar.Reference{*node}, nil
 
 	case insolar.DynamicRoleVirtualValidator:
 		return jc.VirtualValidatorsForObject(ctx, objID, pulse)
@@ -106,13 +106,13 @@ func (jc *JetCoordinator) QueryRole(
 			if err != nil {
 				return nil, err
 			}
-			return []insolar.RecordRef{*node}, nil
+			return []insolar.Reference{*node}, nil
 		}
 		node, err := jc.LightExecutorForObject(ctx, objID, pulse)
 		if err != nil {
 			return nil, err
 		}
-		return []insolar.RecordRef{*node}, nil
+		return []insolar.Reference{*node}, nil
 
 	case insolar.DynamicRoleLightValidator:
 		return jc.LightValidatorsForObject(ctx, objID, pulse)
@@ -122,7 +122,7 @@ func (jc *JetCoordinator) QueryRole(
 		if err != nil {
 			return nil, err
 		}
-		return []insolar.RecordRef{*node}, nil
+		return []insolar.Reference{*node}, nil
 	}
 
 	panic("unexpected role")
@@ -130,8 +130,8 @@ func (jc *JetCoordinator) QueryRole(
 
 // VirtualExecutorForObject returns list of VEs for a provided pulse and objID
 func (jc *JetCoordinator) VirtualExecutorForObject(
-	ctx context.Context, objID insolar.RecordID, pulse insolar.PulseNumber,
-) (*insolar.RecordRef, error) {
+	ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber,
+) (*insolar.Reference, error) {
 	nodes, err := jc.virtualsForObject(ctx, objID, pulse, VirtualExecutorCount)
 	if err != nil {
 		return nil, err
@@ -141,8 +141,8 @@ func (jc *JetCoordinator) VirtualExecutorForObject(
 
 // VirtualValidatorsForObject returns list of VVs for a provided pulse and objID
 func (jc *JetCoordinator) VirtualValidatorsForObject(
-	ctx context.Context, objID insolar.RecordID, pulse insolar.PulseNumber,
-) ([]insolar.RecordRef, error) {
+	ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber,
+) ([]insolar.Reference, error) {
 	nodes, err := jc.virtualsForObject(ctx, objID, pulse, VirtualValidatorCount+VirtualExecutorCount)
 	if err != nil {
 		return nil, err
@@ -154,8 +154,8 @@ func (jc *JetCoordinator) VirtualValidatorsForObject(
 
 // LightExecutorForJet returns list of LEs for a provided pulse and jetID
 func (jc *JetCoordinator) LightExecutorForJet(
-	ctx context.Context, jetID insolar.RecordID, pulse insolar.PulseNumber,
-) (*insolar.RecordRef, error) {
+	ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber,
+) (*insolar.Reference, error) {
 	nodes, err := jc.lightMaterialsForJet(ctx, jetID, pulse, MaterialExecutorCount)
 	if err != nil {
 		return nil, err
@@ -165,8 +165,8 @@ func (jc *JetCoordinator) LightExecutorForJet(
 
 // LightValidatorsForJet returns list of LVs for a provided pulse and jetID
 func (jc *JetCoordinator) LightValidatorsForJet(
-	ctx context.Context, jetID insolar.RecordID, pulse insolar.PulseNumber,
-) ([]insolar.RecordRef, error) {
+	ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber,
+) ([]insolar.Reference, error) {
 	nodes, err := jc.lightMaterialsForJet(ctx, jetID, pulse, MaterialValidatorCount+MaterialExecutorCount)
 	if err != nil {
 		return nil, err
@@ -178,22 +178,22 @@ func (jc *JetCoordinator) LightValidatorsForJet(
 
 // LightExecutorForObject returns list of LEs for a provided pulse and objID
 func (jc *JetCoordinator) LightExecutorForObject(
-	ctx context.Context, objID insolar.RecordID, pulse insolar.PulseNumber,
-) (*insolar.RecordRef, error) {
+	ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber,
+) (*insolar.Reference, error) {
 	jetID, _ := jc.JetAccessor.ForID(ctx, pulse, objID)
-	return jc.LightExecutorForJet(ctx, insolar.RecordID(jetID), pulse)
+	return jc.LightExecutorForJet(ctx, insolar.ID(jetID), pulse)
 }
 
 // LightValidatorsForObject returns list of LVs for a provided pulse and objID
 func (jc *JetCoordinator) LightValidatorsForObject(
-	ctx context.Context, objID insolar.RecordID, pulse insolar.PulseNumber,
-) ([]insolar.RecordRef, error) {
+	ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber,
+) ([]insolar.Reference, error) {
 	jetID, _ := jc.JetAccessor.ForID(ctx, pulse, objID)
-	return jc.LightValidatorsForJet(ctx, insolar.RecordID(jetID), pulse)
+	return jc.LightValidatorsForJet(ctx, insolar.ID(jetID), pulse)
 }
 
 // Heavy returns *insolar.RecorRef to a heavy of specific pulse
-func (jc *JetCoordinator) Heavy(ctx context.Context, pulse insolar.PulseNumber) (*insolar.RecordRef, error) {
+func (jc *JetCoordinator) Heavy(ctx context.Context, pulse insolar.PulseNumber) (*insolar.Reference, error) {
 	candidates, err := jc.Nodes.InRole(pulse, insolar.StaticRoleHeavyMaterial)
 	if err == node.ErrNoNodes {
 		return nil, err
@@ -248,7 +248,7 @@ func (jc *JetCoordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN
 }
 
 // NodeForJet calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
-func (jc *JetCoordinator) NodeForJet(ctx context.Context, jetID insolar.RecordID, rootPN, targetPN insolar.PulseNumber) (*insolar.RecordRef, error) {
+func (jc *JetCoordinator) NodeForJet(ctx context.Context, jetID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
 	toHeavy, err := jc.IsBeyondLimit(ctx, rootPN, targetPN)
 	if err != nil {
 		return nil, err
@@ -261,7 +261,7 @@ func (jc *JetCoordinator) NodeForJet(ctx context.Context, jetID insolar.RecordID
 }
 
 // NodeForObject calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
-func (jc *JetCoordinator) NodeForObject(ctx context.Context, objectID insolar.RecordID, rootPN, targetPN insolar.PulseNumber) (*insolar.RecordRef, error) {
+func (jc *JetCoordinator) NodeForObject(ctx context.Context, objectID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
 	toHeavy, err := jc.IsBeyondLimit(ctx, rootPN, targetPN)
 	if err != nil {
 		return nil, err
@@ -274,8 +274,8 @@ func (jc *JetCoordinator) NodeForObject(ctx context.Context, objectID insolar.Re
 }
 
 func (jc *JetCoordinator) virtualsForObject(
-	ctx context.Context, objID insolar.RecordID, pulse insolar.PulseNumber, count int,
-) ([]insolar.RecordRef, error) {
+	ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber, count int,
+) ([]insolar.Reference, error) {
 	candidates, err := jc.Nodes.InRole(pulse, insolar.StaticRoleVirtual)
 	if err == node.ErrNoNodes {
 		return nil, err
@@ -301,8 +301,8 @@ func (jc *JetCoordinator) virtualsForObject(
 }
 
 func (jc *JetCoordinator) lightMaterialsForJet(
-	ctx context.Context, jetID insolar.RecordID, pulse insolar.PulseNumber, count int,
-) ([]insolar.RecordRef, error) {
+	ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber, count int,
+) ([]insolar.Reference, error) {
 	prefix := insolar.JetID(jetID).Prefix()
 
 	candidates, err := jc.Nodes.InRole(pulse, insolar.StaticRoleLightMaterial)
@@ -352,7 +352,7 @@ func getRefs(
 	e []byte,
 	values []insolar.Node,
 	count int,
-) ([]insolar.RecordRef, error) {
+) ([]insolar.Reference, error) {
 	// TODO: remove sort when network provides sorted result from GetActiveNodesByRole (INS-890) - @nordicdyno 5.Dec.2018
 	sort.SliceStable(values, func(i, j int) bool {
 		v1 := values[i].ID
@@ -368,9 +368,9 @@ func getRefs(
 	if err != nil {
 		return nil, err
 	}
-	out := make([]insolar.RecordRef, 0, len(res))
+	out := make([]insolar.Reference, 0, len(res))
 	for _, value := range res {
-		out = append(out, value.(insolar.RecordRef))
+		out = append(out, value.(insolar.Reference))
 	}
 	return out, nil
 }

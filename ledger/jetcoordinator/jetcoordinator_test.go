@@ -108,9 +108,9 @@ func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
 	err := s.pulseTracker.AddPulse(s.ctx, insolar.Pulse{PulseNumber: 0, Entropy: insolar.Entropy{1, 2, 3}})
 	require.NoError(s.T(), err)
 	var nds []insolar.Node
-	var nodeRefs []insolar.RecordRef
+	var nodeRefs []insolar.Reference
 	for i := 0; i < 100; i++ {
-		ref := *insolar.NewRecordRef(insolar.DomainID, *insolar.NewRecordID(0, []byte{byte(i)}))
+		ref := *insolar.NewReference(insolar.DomainID, *insolar.NewID(0, []byte{byte(i)}))
 		nds = append(nds, insolar.Node{ID: ref, Role: insolar.StaticRoleLightMaterial})
 		nodeRefs = append(nodeRefs, ref)
 	}
@@ -118,7 +118,7 @@ func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
 
 	s.nodeStorage.InRoleMock.Return(nds, nil)
 
-	objID := insolar.NewRecordID(0, []byte{1, 42, 123})
+	objID := insolar.NewID(0, []byte{1, 42, 123})
 	s.jetStorage.Update(s.ctx, 0, true, *insolar.NewJetID(50, []byte{1, 42, 123}))
 
 	selected, err := s.coordinator.QueryRole(s.ctx, insolar.DynamicRoleLightValidator, *objID, 0)
@@ -126,7 +126,7 @@ func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
 	assert.Equal(s.T(), 3, len(selected))
 
 	// Indexes are hard-coded from previously calculated values.
-	assert.Equal(s.T(), []insolar.RecordRef{nodeRefs[16], nodeRefs[21], nodeRefs[78]}, selected)
+	assert.Equal(s.T(), []insolar.Reference{nodeRefs[16], nodeRefs[21], nodeRefs[78]}, selected)
 }
 
 func TestJetCoordinator_Me(t *testing.T) {
@@ -272,7 +272,7 @@ func TestJetCoordinator_NodeForJet_GoToHeavy(t *testing.T) {
 
 		return &storage.Pulse{SerialNumber: 24}, nil
 	}
-	expectedID := insolar.NewRecordRef(testutils.RandomID(), testutils.RandomID())
+	expectedID := insolar.NewReference(testutils.RandomID(), testutils.RandomID())
 	activeNodesStorageMock := node.NewAccessorMock(t)
 	activeNodesStorageMock.InRoleFunc = func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
 		require.Equal(t, insolar.FirstPulseNumber, int(p))
@@ -313,7 +313,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 
 		return &storage.Pulse{SerialNumber: 49}, nil
 	}
-	expectedID := insolar.NewRecordRef(testutils.RandomID(), testutils.RandomID())
+	expectedID := insolar.NewReference(testutils.RandomID(), testutils.RandomID())
 	activeNodesStorageMock := node.NewAccessorMock(t)
 	activeNodesStorageMock.InRoleFunc = func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
 		require.Equal(t, 0, int(p))

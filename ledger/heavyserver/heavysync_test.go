@@ -235,8 +235,8 @@ func (s *heavysyncSuite) TestHeavy_SyncLockOnPrefix() {
 	var pnum insolar.PulseNumber
 
 	// different jets with same prefix
-	jetID1 := insolar.RecordID(*insolar.NewJetID(1, []byte{}))
-	jetID2 := insolar.RecordID(*insolar.NewJetID(2, []byte{}))
+	jetID1 := insolar.ID(*insolar.NewJetID(1, []byte{}))
+	jetID2 := insolar.ID(*insolar.NewJetID(2, []byte{}))
 
 	sync := NewSync(s.db)
 	sync.ReplicaStorage = s.replicaStorage

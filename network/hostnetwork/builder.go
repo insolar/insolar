@@ -75,7 +75,7 @@ func (b *Builder) Data(data interface{}) network.RequestBuilder {
 	return b
 }
 
-func (b *Builder) GetSender() insolar.RecordRef {
+func (b *Builder) GetSender() insolar.Reference {
 	return b.sender.NodeID
 }
 

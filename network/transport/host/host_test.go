@@ -76,14 +76,14 @@ func TestHost_String(t *testing.T) {
 func TestHost_Equal(t *testing.T) {
 	id1 := testutils.RandomRef()
 	id2 := testutils.RandomRef()
-	idNil := insolar.RecordRef{}
+	idNil := insolar.Reference{}
 	addr1, _ := NewAddress("127.0.0.1:31337")
 	addr2, _ := NewAddress("10.10.11.11:12345")
 
 	tests := []struct {
-		id1   insolar.RecordRef
+		id1   insolar.Reference
 		addr1 *Address
-		id2   insolar.RecordRef
+		id2   insolar.Reference
 		addr2 *Address
 		equal bool
 		name  string

@@ -59,8 +59,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-func copyActiveNodes(nodes []insolar.NetworkNode) map[insolar.RecordRef]insolar.NetworkNode {
-	result := make(map[insolar.RecordRef]insolar.NetworkNode, len(nodes))
+func copyActiveNodes(nodes []insolar.NetworkNode) map[insolar.Reference]insolar.NetworkNode {
+	result := make(map[insolar.Reference]insolar.NetworkNode, len(nodes))
 	for _, node := range nodes {
 		node.(MutableNode).ChangeState()
 		result[node.ID()] = node
@@ -71,27 +71,27 @@ func copyActiveNodes(nodes []insolar.NetworkNode) map[insolar.RecordRef]insolar.
 type unsyncList struct {
 	length      int
 	origin      insolar.NetworkNode
-	activeNodes map[insolar.RecordRef]insolar.NetworkNode
-	refToIndex  map[insolar.RecordRef]int
-	proofs      map[insolar.RecordRef]*consensus.NodePulseProof
-	ghs         map[insolar.RecordRef]consensus.GlobuleHashSignature
-	indexToRef  map[int]insolar.RecordRef
+	activeNodes map[insolar.Reference]insolar.NetworkNode
+	refToIndex  map[insolar.Reference]int
+	proofs      map[insolar.Reference]*consensus.NodePulseProof
+	ghs         map[insolar.Reference]consensus.GlobuleHashSignature
+	indexToRef  map[int]insolar.Reference
 }
 
 func (ul *unsyncList) GetOrigin() insolar.NetworkNode {
 	return ul.origin
 }
 
-func (ul *unsyncList) GetGlobuleHashSignature(ref insolar.RecordRef) (consensus.GlobuleHashSignature, bool) {
+func (ul *unsyncList) GetGlobuleHashSignature(ref insolar.Reference) (consensus.GlobuleHashSignature, bool) {
 	ghs, ok := ul.ghs[ref]
 	return ghs, ok
 }
 
-func (ul *unsyncList) SetGlobuleHashSignature(ref insolar.RecordRef, ghs consensus.GlobuleHashSignature) {
+func (ul *unsyncList) SetGlobuleHashSignature(ref insolar.Reference, ghs consensus.GlobuleHashSignature) {
 	ul.ghs[ref] = ghs
 }
 
-func (ul *unsyncList) RemoveNode(nodeID insolar.RecordRef) {
+func (ul *unsyncList) RemoveNode(nodeID insolar.Reference) {
 	delete(ul.activeNodes, nodeID)
 	delete(ul.proofs, nodeID)
 	delete(ul.ghs, nodeID)
@@ -101,11 +101,11 @@ func (ul *unsyncList) AddNode(node insolar.NetworkNode, bitsetIndex uint16) {
 	ul.addNode(node, int(bitsetIndex))
 }
 
-func (ul *unsyncList) AddProof(nodeID insolar.RecordRef, proof *consensus.NodePulseProof) {
+func (ul *unsyncList) AddProof(nodeID insolar.Reference, proof *consensus.NodePulseProof) {
 	ul.proofs[nodeID] = proof
 }
 
-func (ul *unsyncList) GetProof(nodeID insolar.RecordRef) *consensus.NodePulseProof {
+func (ul *unsyncList) GetProof(nodeID insolar.Reference) *consensus.NodePulseProof {
 	return ul.proofs[nodeID]
 }
 
@@ -113,15 +113,15 @@ func newUnsyncList(origin insolar.NetworkNode, activeNodesSorted []insolar.Netwo
 	result := &unsyncList{
 		length:      length,
 		origin:      origin,
-		indexToRef:  make(map[int]insolar.RecordRef, len(activeNodesSorted)),
-		refToIndex:  make(map[insolar.RecordRef]int, len(activeNodesSorted)),
-		activeNodes: make(map[insolar.RecordRef]insolar.NetworkNode, len(activeNodesSorted)),
+		indexToRef:  make(map[int]insolar.Reference, len(activeNodesSorted)),
+		refToIndex:  make(map[insolar.Reference]int, len(activeNodesSorted)),
+		activeNodes: make(map[insolar.Reference]insolar.NetworkNode, len(activeNodesSorted)),
 	}
 	for i, node := range activeNodesSorted {
 		result.addNode(node, i)
 	}
-	result.proofs = make(map[insolar.RecordRef]*consensus.NodePulseProof)
-	result.ghs = make(map[insolar.RecordRef]consensus.GlobuleHashSignature)
+	result.proofs = make(map[insolar.Reference]*consensus.NodePulseProof)
+	result.ghs = make(map[insolar.Reference]consensus.GlobuleHashSignature)
 
 	return result
 }
@@ -142,7 +142,7 @@ func (ul *unsyncList) addNode(node insolar.NetworkNode, index int) {
 	ul.activeNodes[node.ID()] = node
 }
 
-func (ul *unsyncList) GetActiveNode(ref insolar.RecordRef) insolar.NetworkNode {
+func (ul *unsyncList) GetActiveNode(ref insolar.Reference) insolar.NetworkNode {
 	return ul.activeNodes[ref]
 }
 
@@ -150,7 +150,7 @@ func (ul *unsyncList) GetActiveNodes() []insolar.NetworkNode {
 	return sortedNodeList(ul.activeNodes)
 }
 
-func sortedNodeList(nodes map[insolar.RecordRef]insolar.NetworkNode) []insolar.NetworkNode {
+func sortedNodeList(nodes map[insolar.Reference]insolar.NetworkNode) []insolar.NetworkNode {
 	result := make([]insolar.NetworkNode, len(nodes))
 	i := 0
 	for _, node := range nodes {
@@ -163,18 +163,18 @@ func sortedNodeList(nodes map[insolar.RecordRef]insolar.NetworkNode) []insolar.N
 	return result
 }
 
-func (ul *unsyncList) IndexToRef(index int) (insolar.RecordRef, error) {
+func (ul *unsyncList) IndexToRef(index int) (insolar.Reference, error) {
 	if index < 0 || index >= ul.length {
-		return insolar.RecordRef{}, consensus.ErrBitSetOutOfRange
+		return insolar.Reference{}, consensus.ErrBitSetOutOfRange
 	}
 	result, ok := ul.indexToRef[index]
 	if !ok {
-		return insolar.RecordRef{}, consensus.ErrBitSetNodeIsMissing
+		return insolar.Reference{}, consensus.ErrBitSetNodeIsMissing
 	}
 	return result, nil
 }
 
-func (ul *unsyncList) RefToIndex(nodeID insolar.RecordRef) (int, error) {
+func (ul *unsyncList) RefToIndex(nodeID insolar.Reference) (int, error) {
 	index, ok := ul.refToIndex[nodeID]
 	if !ok {
 		return 0, consensus.ErrBitSetIncorrectNode

@@ -26,14 +26,14 @@ import (
 type Request interface {
 	Record
 	GetPayload() []byte
-	GetObject() insolar.RecordID
+	GetObject() insolar.ID
 }
 
 // RequestRecord is a contract execution request.
 type RequestRecord struct {
 	Parcel      []byte
 	MessageHash []byte
-	Object      insolar.RecordID
+	Object      insolar.ID
 }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
@@ -47,6 +47,6 @@ func (r *RequestRecord) GetPayload() []byte {
 }
 
 // GetObject returns request object.
-func (r *RequestRecord) GetObject() insolar.RecordID {
+func (r *RequestRecord) GetObject() insolar.ID {
 	return r.Object
 }

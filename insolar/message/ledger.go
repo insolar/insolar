@@ -27,7 +27,7 @@ type ledgerMessage struct {
 }
 
 // GetCaller implementation of Message interface.
-func (ledgerMessage) GetCaller() *insolar.RecordRef {
+func (ledgerMessage) GetCaller() *insolar.Reference {
 	return nil
 }
 
@@ -36,11 +36,11 @@ type SetRecord struct {
 	ledgerMessage
 
 	Record    []byte
-	TargetRef insolar.RecordRef
+	TargetRef insolar.Reference
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *SetRecord) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (m *SetRecord) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return &m.TargetRef, insolar.DynamicRoleVirtualExecutor
 }
 
@@ -50,7 +50,7 @@ func (*SetRecord) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (m *SetRecord) DefaultTarget() *insolar.RecordRef {
+func (m *SetRecord) DefaultTarget() *insolar.Reference {
 	return &m.TargetRef
 }
 
@@ -62,11 +62,11 @@ func (m *SetRecord) Type() insolar.MessageType {
 // GetCode retrieves code From storage.
 type GetCode struct {
 	ledgerMessage
-	Code insolar.RecordRef
+	Code insolar.Reference
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *GetCode) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (m *GetCode) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return &m.Code, insolar.DynamicRoleVirtualExecutor
 }
 
@@ -76,7 +76,7 @@ func (*GetCode) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (m *GetCode) DefaultTarget() *insolar.RecordRef {
+func (m *GetCode) DefaultTarget() *insolar.Reference {
 	return &m.Code
 }
 
@@ -88,13 +88,13 @@ func (*GetCode) Type() insolar.MessageType {
 // GetObject retrieves object From storage.
 type GetObject struct {
 	ledgerMessage
-	Head     insolar.RecordRef
-	State    *insolar.RecordID // If nil, will fetch the latest state.
+	Head     insolar.Reference
+	State    *insolar.ID // If nil, will fetch the latest state.
 	Approved bool
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *GetObject) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (m *GetObject) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return &m.Head, insolar.DynamicRoleVirtualExecutor
 }
 
@@ -104,7 +104,7 @@ func (*GetObject) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (m *GetObject) DefaultTarget() *insolar.RecordRef {
+func (m *GetObject) DefaultTarget() *insolar.Reference {
 	return &m.Head
 }
 
@@ -116,12 +116,12 @@ func (*GetObject) Type() insolar.MessageType {
 // GetDelegate retrieves object represented as provided type.
 type GetDelegate struct {
 	ledgerMessage
-	Head   insolar.RecordRef
-	AsType insolar.RecordRef
+	Head   insolar.Reference
+	AsType insolar.Reference
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *GetDelegate) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (m *GetDelegate) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return &m.Head, insolar.DynamicRoleVirtualExecutor
 }
 
@@ -131,7 +131,7 @@ func (*GetDelegate) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (m *GetDelegate) DefaultTarget() *insolar.RecordRef {
+func (m *GetDelegate) DefaultTarget() *insolar.Reference {
 	return &m.Head
 }
 
@@ -145,12 +145,12 @@ type UpdateObject struct {
 	ledgerMessage
 
 	Record []byte
-	Object insolar.RecordRef
+	Object insolar.Reference
 	Memory []byte
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *UpdateObject) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (m *UpdateObject) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return &m.Object, insolar.DynamicRoleVirtualExecutor
 }
 
@@ -160,7 +160,7 @@ func (*UpdateObject) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (m *UpdateObject) DefaultTarget() *insolar.RecordRef {
+func (m *UpdateObject) DefaultTarget() *insolar.Reference {
 	return &m.Object
 }
 
@@ -173,13 +173,13 @@ func (*UpdateObject) Type() insolar.MessageType {
 type RegisterChild struct {
 	ledgerMessage
 	Record []byte
-	Parent insolar.RecordRef
-	Child  insolar.RecordRef
-	AsType *insolar.RecordRef // If not nil, considered as delegate.
+	Parent insolar.Reference
+	Child  insolar.Reference
+	AsType *insolar.Reference // If not nil, considered as delegate.
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *RegisterChild) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (m *RegisterChild) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return &m.Child, insolar.DynamicRoleVirtualExecutor
 }
 
@@ -189,7 +189,7 @@ func (*RegisterChild) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (m *RegisterChild) DefaultTarget() *insolar.RecordRef {
+func (m *RegisterChild) DefaultTarget() *insolar.Reference {
 	return &m.Parent
 }
 
@@ -201,14 +201,14 @@ func (*RegisterChild) Type() insolar.MessageType {
 // GetChildren retrieves a chunk of children references.
 type GetChildren struct {
 	ledgerMessage
-	Parent    insolar.RecordRef
-	FromChild *insolar.RecordID
+	Parent    insolar.Reference
+	FromChild *insolar.ID
 	FromPulse *insolar.PulseNumber
 	Amount    int
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *GetChildren) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (m *GetChildren) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return &m.Parent, insolar.DynamicRoleVirtualExecutor
 }
 
@@ -218,7 +218,7 @@ func (*GetChildren) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (m *GetChildren) DefaultTarget() *insolar.RecordRef {
+func (m *GetChildren) DefaultTarget() *insolar.Reference {
 	return &m.Parent
 }
 
@@ -231,7 +231,7 @@ func (*GetChildren) Type() insolar.MessageType {
 type JetDrop struct {
 	ledgerMessage
 
-	JetID insolar.RecordID
+	JetID insolar.ID
 
 	Drop        []byte
 	Messages    [][]byte
@@ -239,7 +239,7 @@ type JetDrop struct {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *JetDrop) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (m *JetDrop) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	// This check is not needed, because Drop sender is explicitly checked in handler.
 	return nil, insolar.DynamicRoleUndefined
 }
@@ -250,8 +250,8 @@ func (*JetDrop) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (m *JetDrop) DefaultTarget() *insolar.RecordRef {
-	return insolar.NewRecordRef(insolar.RecordID{}, m.JetID)
+func (m *JetDrop) DefaultTarget() *insolar.Reference {
+	return insolar.NewReference(insolar.ID{}, m.JetID)
 }
 
 // Type implementation of Message interface.
@@ -263,14 +263,14 @@ func (*JetDrop) Type() insolar.MessageType {
 type ValidateRecord struct {
 	ledgerMessage
 
-	Object             insolar.RecordRef
-	State              insolar.RecordID
+	Object             insolar.Reference
+	State              insolar.ID
 	IsValid            bool
 	ValidationMessages []insolar.Message
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *ValidateRecord) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (m *ValidateRecord) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return &m.Object, insolar.DynamicRoleVirtualExecutor
 }
 
@@ -280,7 +280,7 @@ func (*ValidateRecord) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (m *ValidateRecord) DefaultTarget() *insolar.RecordRef {
+func (m *ValidateRecord) DefaultTarget() *insolar.Reference {
 	return &m.Object
 }
 
@@ -293,12 +293,12 @@ func (*ValidateRecord) Type() insolar.MessageType {
 type SetBlob struct {
 	ledgerMessage
 
-	TargetRef insolar.RecordRef
+	TargetRef insolar.Reference
 	Memory    []byte
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *SetBlob) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (m *SetBlob) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return &m.TargetRef, insolar.DynamicRoleVirtualExecutor
 }
 
@@ -308,7 +308,7 @@ func (*SetBlob) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (m *SetBlob) DefaultTarget() *insolar.RecordRef {
+func (m *SetBlob) DefaultTarget() *insolar.Reference {
 	return &m.TargetRef
 }
 
@@ -321,11 +321,11 @@ func (*SetBlob) Type() insolar.MessageType {
 type GetObjectIndex struct {
 	ledgerMessage
 
-	Object insolar.RecordRef
+	Object insolar.Reference
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *GetObjectIndex) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (m *GetObjectIndex) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return &m.Object, insolar.DynamicRoleLightExecutor
 }
 
@@ -335,7 +335,7 @@ func (*GetObjectIndex) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (m *GetObjectIndex) DefaultTarget() *insolar.RecordRef {
+func (m *GetObjectIndex) DefaultTarget() *insolar.Reference {
 	return &m.Object
 }
 
@@ -348,13 +348,13 @@ func (*GetObjectIndex) Type() insolar.MessageType {
 type ValidationCheck struct {
 	ledgerMessage
 
-	Object              insolar.RecordRef
-	ValidatedState      insolar.RecordID
-	LatestStateApproved *insolar.RecordID
+	Object              insolar.Reference
+	ValidatedState      insolar.ID
+	LatestStateApproved *insolar.ID
 }
 
 // DefaultTarget returns of target of this event.
-func (m *ValidationCheck) DefaultTarget() *insolar.RecordRef {
+func (m *ValidationCheck) DefaultTarget() *insolar.Reference {
 	return &m.Object
 }
 
@@ -364,7 +364,7 @@ func (m *ValidationCheck) DefaultRole() insolar.DynamicRole {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *ValidationCheck) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (m *ValidationCheck) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	// TODO: return smth real
 	return nil, 0
 }
@@ -377,15 +377,15 @@ func (*ValidationCheck) Type() insolar.MessageType {
 // HotData contains hot-data
 type HotData struct {
 	ledgerMessage
-	Jet             insolar.RecordRef
+	Jet             insolar.Reference
 	Drop            drop.Drop
-	RecentObjects   map[insolar.RecordID]HotIndex
-	PendingRequests map[insolar.RecordID]recentstorage.PendingObjectContext
+	RecentObjects   map[insolar.ID]HotIndex
+	PendingRequests map[insolar.ID]recentstorage.PendingObjectContext
 	PulseNumber     insolar.PulseNumber
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *HotData) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (m *HotData) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return nil, insolar.DynamicRoleUndefined
 }
 
@@ -395,7 +395,7 @@ func (*HotData) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (m *HotData) DefaultTarget() *insolar.RecordRef {
+func (m *HotData) DefaultTarget() *insolar.Reference {
 	return &m.Jet
 }
 
@@ -414,7 +414,7 @@ type HotIndex struct {
 type GetPendingRequests struct {
 	ledgerMessage
 
-	Object insolar.RecordRef
+	Object insolar.Reference
 }
 
 // Type implementation of Message interface.
@@ -423,7 +423,7 @@ func (*GetPendingRequests) Type() insolar.MessageType {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *GetPendingRequests) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (m *GetPendingRequests) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return &m.Object, insolar.DynamicRoleVirtualExecutor
 }
 
@@ -433,7 +433,7 @@ func (*GetPendingRequests) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (m *GetPendingRequests) DefaultTarget() *insolar.RecordRef {
+func (m *GetPendingRequests) DefaultTarget() *insolar.Reference {
 	return &m.Object
 }
 
@@ -441,7 +441,7 @@ func (m *GetPendingRequests) DefaultTarget() *insolar.RecordRef {
 type GetJet struct {
 	ledgerMessage
 
-	Object insolar.RecordID
+	Object insolar.ID
 	Pulse  insolar.PulseNumber
 }
 
@@ -451,8 +451,8 @@ func (*GetJet) Type() insolar.MessageType {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *GetJet) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
-	return insolar.NewRecordRef(insolar.DomainID, m.Object), insolar.DynamicRoleLightExecutor
+func (m *GetJet) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
+	return insolar.NewReference(insolar.DomainID, m.Object), insolar.DynamicRoleLightExecutor
 }
 
 // DefaultRole returns role for this event
@@ -461,15 +461,15 @@ func (*GetJet) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (m *GetJet) DefaultTarget() *insolar.RecordRef {
-	return insolar.NewRecordRef(insolar.DomainID, m.Object)
+func (m *GetJet) DefaultTarget() *insolar.Reference {
+	return insolar.NewReference(insolar.DomainID, m.Object)
 }
 
 // AbandonedRequestsNotification informs virtual node about unclosed requests.
 type AbandonedRequestsNotification struct {
 	ledgerMessage
 
-	Object insolar.RecordID
+	Object insolar.ID
 }
 
 // Type implementation of Message interface.
@@ -478,7 +478,7 @@ func (*AbandonedRequestsNotification) Type() insolar.MessageType {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *AbandonedRequestsNotification) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (m *AbandonedRequestsNotification) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return nil, insolar.DynamicRoleUndefined
 }
 
@@ -488,15 +488,15 @@ func (*AbandonedRequestsNotification) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (m *AbandonedRequestsNotification) DefaultTarget() *insolar.RecordRef {
-	return insolar.NewRecordRef(insolar.DomainID, m.Object)
+func (m *AbandonedRequestsNotification) DefaultTarget() *insolar.Reference {
+	return insolar.NewReference(insolar.DomainID, m.Object)
 }
 
 // GetRequest fetches request from ledger.
 type GetRequest struct {
 	ledgerMessage
 
-	Request insolar.RecordID
+	Request insolar.ID
 }
 
 // Type implementation of Message interface.
@@ -505,7 +505,7 @@ func (*GetRequest) Type() insolar.MessageType {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *GetRequest) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (m *GetRequest) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return nil, insolar.DynamicRoleUndefined
 }
 
@@ -515,15 +515,15 @@ func (*GetRequest) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (m *GetRequest) DefaultTarget() *insolar.RecordRef {
-	return insolar.NewRecordRef(insolar.DomainID, m.Request)
+func (m *GetRequest) DefaultTarget() *insolar.Reference {
+	return insolar.NewReference(insolar.DomainID, m.Request)
 }
 
 // GetPendingRequestID fetches a pending request id for an object from current LME
 type GetPendingRequestID struct {
 	ledgerMessage
 
-	ObjectID insolar.RecordID
+	ObjectID insolar.ID
 }
 
 // Type implementation of Message interface.
@@ -532,7 +532,7 @@ func (*GetPendingRequestID) Type() insolar.MessageType {
 }
 
 // AllowedSenderObjectAndRole implements interface method
-func (m *GetPendingRequestID) AllowedSenderObjectAndRole() (*insolar.RecordRef, insolar.DynamicRole) {
+func (m *GetPendingRequestID) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
 	return nil, insolar.DynamicRoleUndefined
 }
 
@@ -542,6 +542,6 @@ func (*GetPendingRequestID) DefaultRole() insolar.DynamicRole {
 }
 
 // DefaultTarget returns of target of this event.
-func (m *GetPendingRequestID) DefaultTarget() *insolar.RecordRef {
-	return insolar.NewRecordRef(insolar.DomainID, m.ObjectID)
+func (m *GetPendingRequestID) DefaultTarget() *insolar.Reference {
+	return insolar.NewReference(insolar.DomainID, m.ObjectID)
 }
