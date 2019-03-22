@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,7 +20,7 @@ import (
 type RecordAccessorMock struct {
 	t minimock.Tester
 
-	ForIDFunc       func(p context.Context, p1 core.RecordID) (r MaterialRecord, r1 error)
+	ForIDFunc       func(p context.Context, p1 insolar.ID) (r MaterialRecord, r1 error)
 	ForIDCounter    uint64
 	ForIDPreCounter uint64
 	ForIDMock       mRecordAccessorMockForID
@@ -52,7 +52,7 @@ type RecordAccessorMockForIDExpectation struct {
 
 type RecordAccessorMockForIDInput struct {
 	p  context.Context
-	p1 core.RecordID
+	p1 insolar.ID
 }
 
 type RecordAccessorMockForIDResult struct {
@@ -61,7 +61,7 @@ type RecordAccessorMockForIDResult struct {
 }
 
 //Expect specifies that invocation of RecordAccessor.ForID is expected from 1 to Infinity times
-func (m *mRecordAccessorMockForID) Expect(p context.Context, p1 core.RecordID) *mRecordAccessorMockForID {
+func (m *mRecordAccessorMockForID) Expect(p context.Context, p1 insolar.ID) *mRecordAccessorMockForID {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
 
@@ -85,7 +85,7 @@ func (m *mRecordAccessorMockForID) Return(r MaterialRecord, r1 error) *RecordAcc
 }
 
 //ExpectOnce specifies that invocation of RecordAccessor.ForID is expected once
-func (m *mRecordAccessorMockForID) ExpectOnce(p context.Context, p1 core.RecordID) *RecordAccessorMockForIDExpectation {
+func (m *mRecordAccessorMockForID) ExpectOnce(p context.Context, p1 insolar.ID) *RecordAccessorMockForIDExpectation {
 	m.mock.ForIDFunc = nil
 	m.mainExpectation = nil
 
@@ -100,7 +100,7 @@ func (e *RecordAccessorMockForIDExpectation) Return(r MaterialRecord, r1 error) 
 }
 
 //Set uses given function f as a mock of RecordAccessor.ForID method
-func (m *mRecordAccessorMockForID) Set(f func(p context.Context, p1 core.RecordID) (r MaterialRecord, r1 error)) *RecordAccessorMock {
+func (m *mRecordAccessorMockForID) Set(f func(p context.Context, p1 insolar.ID) (r MaterialRecord, r1 error)) *RecordAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -109,7 +109,7 @@ func (m *mRecordAccessorMockForID) Set(f func(p context.Context, p1 core.RecordI
 }
 
 //ForID implements github.com/insolar/insolar/ledger/storage/object.RecordAccessor interface
-func (m *RecordAccessorMock) ForID(p context.Context, p1 core.RecordID) (r MaterialRecord, r1 error) {
+func (m *RecordAccessorMock) ForID(p context.Context, p1 insolar.ID) (r MaterialRecord, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
 

@@ -21,8 +21,7 @@ import (
 	"io"
 	"sync"
 
-	"github.com/insolar/insolar"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"go.opencensus.io/stats"
 )
@@ -200,8 +199,8 @@ func EncodeRecord(rec MaterialRecord) []byte {
 }
 
 func DecodeRecord(buff []byte) MaterialRecord {
-	recBuff := buff[:len(buff)-core.RecordIDSize]
-	jetIDBuff := buff[len(buff)-core.RecordIDSize:]
+	recBuff := buff[:len(buff)-insolar.RecordIDSize]
+	jetIDBuff := buff[len(buff)-insolar.RecordIDSize:]
 
 	rec := DeserializeRecord(recBuff)
 
