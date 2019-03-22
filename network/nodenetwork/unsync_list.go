@@ -126,16 +126,6 @@ func newUnsyncList(origin insolar.NetworkNode, activeNodesSorted []insolar.Netwo
 	return result
 }
 
-func (ul *unsyncList) addNodes(nodes []insolar.NetworkNode) {
-	sort.Slice(nodes, func(i, j int) bool {
-		return nodes[i].ID().Compare(nodes[j].ID()) < 0
-	})
-
-	for index, node := range nodes {
-		ul.addNode(node, index)
-	}
-}
-
 func (ul *unsyncList) addNode(node insolar.NetworkNode, index int) {
 	ul.indexToRef[index] = node.ID()
 	ul.refToIndex[node.ID()] = index
