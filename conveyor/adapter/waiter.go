@@ -25,8 +25,8 @@ import (
 )
 
 // NewWaitAdapter creates new instance of SimpleWaitAdapter with Waiter as worker
-func NewWaitAdapter() PulseConveyorAdapterTaskSink {
-	return NewAdapterWithQueue(NewWaiter())
+func NewWaitAdapter(id idType) PulseConveyorAdapterTaskSink {
+	return NewAdapterWithQueue(NewWaiter(id), id)
 }
 
 // WaiterTask is task for adapter for waiting
@@ -38,7 +38,7 @@ type WaiterTask struct {
 type Waiter struct{}
 
 // NewWaiter returns new instance of worker which waiting
-func NewWaiter() Processor {
+func NewWaiter(id idType) Processor {
 	return &Waiter{}
 }
 
