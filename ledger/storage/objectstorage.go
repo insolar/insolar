@@ -97,19 +97,13 @@ func (os *objectStorage) SetBlob(ctx context.Context, jetID insolar.ID, pulseNum
 
 // GetRecord wraps matching transaction manager method.
 func (os *objectStorage) GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (object.VirtualRecord, error) {
-	var (
-		fetchedRecord object.VirtualRecord
-		err           error
-	)
-
-	err = os.DB.View(ctx, func(tx *TransactionManager) error {
-		fetchedRecord, err = tx.GetRecord(ctx, jetID, id)
-		return err
-	})
+	jetPrefix := insolar.JetID(jetID).Prefix()
+	k := prefixkey(scopeIDRecord, jetPrefix, id[:])
+	buf, err := os.DB.Get(ctx, k)
 	if err != nil {
 		return nil, err
 	}
-	return fetchedRecord, nil
+	return object.DeserializeRecord(buf), nil
 }
 
 // SetRecord wraps matching transaction manager method.

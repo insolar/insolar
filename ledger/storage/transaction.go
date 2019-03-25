@@ -65,19 +65,6 @@ func (m *TransactionManager) Discard() {
 	}
 }
 
-// GetRecord returns record from BadgerDB by *record.Reference.
-//
-// It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (object.VirtualRecord, error) {
-	jetPrefix := insolar.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDRecord, jetPrefix, id[:])
-	buf, err := m.get(ctx, k)
-	if err != nil {
-		return nil, err
-	}
-	return object.DeserializeRecord(buf), nil
-}
-
 // SetRecord stores record in BadgerDB and returns *record.ID of new record.
 //
 // If record exists returns both *record.ID and ErrOverride error.
