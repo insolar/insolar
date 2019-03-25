@@ -33,6 +33,11 @@ var (
 		"How many index-records have been saved in in-memory index storage",
 		stats.UnitDimensionless,
 	)
+	statRecordInMemoryCount = stats.Int64(
+		"recordstorage/inmemory/count",
+		"How many records have been saved in in-memory record storage",
+		stats.UnitDimensionless,
+	)
 )
 
 func init() {
@@ -41,6 +46,13 @@ func init() {
 			Name:        statIndexInMemoryCount.Name(),
 			Description: statIndexInMemoryCount.Description(),
 			Measure:     statIndexInMemoryCount,
+			Aggregation: view.Count(),
+			TagKeys:     []tag.Key{inmemoryStorage},
+		},
+		&view.View{
+			Name:        statRecordInMemoryCount.Name(),
+			Description: statRecordInMemoryCount.Description(),
+			Measure:     statRecordInMemoryCount,
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{inmemoryStorage},
 		},

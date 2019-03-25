@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -97,8 +97,8 @@ func (s *heavysyncSuite) AfterTest(suiteName, testName string) {
 
 func (s *heavysyncSuite) TestHeavy_SyncBasic() {
 	var err error
-	var pnum core.PulseNumber
-	kvalues := []core.KV{
+	var pnum insolar.PulseNumber
+	kvalues := []insolar.KV{
 		{K: []byte("100"), V: []byte("500")},
 	}
 
@@ -120,11 +120,11 @@ func (s *heavysyncSuite) TestHeavy_SyncBasic() {
 	err = sync.Start(s.ctx, jetID, pnum)
 	require.Error(s.T(), err, "last synced pulse is less when 'first pulse number'")
 
-	pnum = core.FirstPulseNumber
+	pnum = insolar.FirstPulseNumber
 	err = sync.Start(s.ctx, jetID, pnum)
 	require.Error(s.T(), err, "start from first pulse on empty storage")
 
-	pnum = core.FirstPulseNumber + 1
+	pnum = insolar.FirstPulseNumber + 1
 	err = sync.Start(s.ctx, jetID, pnum)
 	require.NoError(s.T(), err, "start sync on empty heavy jet with non first pulse number")
 
@@ -147,8 +147,8 @@ func (s *heavysyncSuite) TestHeavy_SyncBasic() {
 	require.NoError(s.T(), err)
 
 	// prepare pulse helper
-	preparepulse := func(pn core.PulseNumber) {
-		pulse := core.Pulse{PulseNumber: pn}
+	preparepulse := func(pn insolar.PulseNumber) {
+		pulse := insolar.Pulse{PulseNumber: pn}
 		err = s.pulseTracker.AddPulse(s.ctx, pulse)
 		require.NoError(s.T(), err)
 	}
@@ -186,11 +186,11 @@ func (s *heavysyncSuite) TestHeavy_SyncBasic() {
 
 func (s *heavysyncSuite) TestHeavy_SyncByJet() {
 	var err error
-	var pnum core.PulseNumber
-	kvalues1 := []core.KV{
+	var pnum insolar.PulseNumber
+	kvalues1 := []insolar.KV{
 		{K: []byte("1_11"), V: []byte("1_12")},
 	}
-	kvalues2 := []core.KV{
+	kvalues2 := []insolar.KV{
 		{K: []byte("2_21"), V: []byte("2_22")},
 	}
 
@@ -204,12 +204,12 @@ func (s *heavysyncSuite) TestHeavy_SyncByJet() {
 	sync := NewSync(s.db)
 	sync.ReplicaStorage = s.replicaStorage
 
-	pnum = core.FirstPulseNumber + 1
+	pnum = insolar.FirstPulseNumber + 1
 	pnumNext := pnum + 1
 	preparepulse(s, pnum)
 	preparepulse(s, pnumNext) // should set correct next for previous pulse
 
-	err = sync.Start(s.ctx, jetID1, core.FirstPulseNumber)
+	err = sync.Start(s.ctx, jetID1, insolar.FirstPulseNumber)
 	require.Error(s.T(), err)
 
 	err = sync.Start(s.ctx, jetID1, pnum)
@@ -232,16 +232,16 @@ func (s *heavysyncSuite) TestHeavy_SyncByJet() {
 
 func (s *heavysyncSuite) TestHeavy_SyncLockOnPrefix() {
 	var err error
-	var pnum core.PulseNumber
+	var pnum insolar.PulseNumber
 
 	// different jets with same prefix
-	jetID1 := core.RecordID(*core.NewJetID(1, []byte{}))
-	jetID2 := core.RecordID(*core.NewJetID(2, []byte{}))
+	jetID1 := insolar.ID(*insolar.NewJetID(1, []byte{}))
+	jetID2 := insolar.ID(*insolar.NewJetID(2, []byte{}))
 
 	sync := NewSync(s.db)
 	sync.ReplicaStorage = s.replicaStorage
 
-	pnum = core.FirstPulseNumber + 2
+	pnum = insolar.FirstPulseNumber + 2
 	// should set correct next for previous pulse
 	preparepulse(s, pnum-1)
 	preparepulse(s, pnum)
@@ -281,8 +281,8 @@ func (s *heavysyncSuite) TestHeavy_Timeout() {
 	state.Unlock()
 }
 
-func preparepulse(s *heavysyncSuite, pn core.PulseNumber) {
-	pulse := core.Pulse{PulseNumber: pn}
+func preparepulse(s *heavysyncSuite, pn insolar.PulseNumber) {
+	pulse := insolar.Pulse{PulseNumber: pn}
 	err := s.pulseTracker.AddPulse(s.ctx, pulse)
 	require.NoError(s.T(), err)
 }

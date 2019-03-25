@@ -31,7 +31,7 @@ import (
 	"time"
 
 	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
@@ -70,7 +70,7 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 	table.SetHeader([]string{
 		"URL",
 		"Network State",
-		"Node State",
+		"NetworkNode State",
 		"Pulse Number",
 		"Active List Size",
 		"Working List Size",
@@ -214,8 +214,8 @@ func collectNodesStatuses(conf *pulsewatcher.Config) ([][]string, bool) {
 				out.Result.Origin.Role,
 				"",
 			}
-			state = state && out.Result.NetworkState == core.CompleteNetworkState.String() &&
-				out.Result.NodeState == core.NodeReady.String()
+			state = state && out.Result.NetworkState == insolar.CompleteNetworkState.String() &&
+				out.Result.NodeState == insolar.NodeReady.String()
 			lock.Unlock()
 			wg.Done()
 		}(url, i)

@@ -51,12 +51,12 @@
 package packet
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // RequestPulse is data received from a pulsar.
 type RequestPulse struct {
-	Pulse core.Pulse
+	Pulse insolar.Pulse
 }
 
 // RequestGetRandomHosts is data for the call that returns random hosts of the Insolar network.

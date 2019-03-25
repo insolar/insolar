@@ -16,13 +16,13 @@
 
 package object
 
-import "github.com/insolar/insolar/core"
+import "github.com/insolar/insolar/insolar"
 
-func NewRecordIDFromRecord(scheme core.PlatformCryptographyScheme, pulse core.PulseNumber, rec Record) *core.RecordID {
+func NewRecordIDFromRecord(scheme insolar.PlatformCryptographyScheme, pulse insolar.PulseNumber, rec VirtualRecord) *insolar.ID {
 	hasher := scheme.ReferenceHasher()
 	_, err := rec.WriteHashData(hasher)
 	if err != nil {
 		panic(err)
 	}
-	return core.NewRecordID(pulse, hasher.Sum(nil))
+	return insolar.NewID(pulse, hasher.Sum(nil))
 }

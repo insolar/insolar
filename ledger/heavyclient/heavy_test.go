@@ -33,9 +33,9 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/internal/jet"
@@ -146,15 +146,15 @@ func (s *heavySuite) TestPulseManager_SendToHeavyWithRetry() {
 
 func sendToHeavy(s *heavySuite, withretry bool) {
 	// TODO: test should work with any JetID (add new test?) - 14.Dec.2018 @nordicdyno
-	jetID := core.ZeroJetID
+	jetID := insolar.ZeroJetID
 	// Mock N1: LR mock do nothing
 	lrMock := testutils.NewLogicRunnerMock(s.T())
 	lrMock.OnPulseMock.Return(nil)
 
 	// Mock N2: we are light material
 	nodeMock := network.NewNodeMock(s.T())
-	nodeMock.RoleMock.Return(core.StaticRoleLightMaterial)
-	nodeMock.IDMock.Return(core.RecordRef{})
+	nodeMock.RoleMock.Return(insolar.StaticRoleLightMaterial)
+	nodeMock.IDMock.Return(insolar.Reference{})
 
 	// Mock N3: nodenet returns mocked node (above)
 	// and add stub for GetActiveNodes
@@ -164,7 +164,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 
 	// Mock N4: message bus for Send method
 	busMock := testutils.NewMessageBusMock(s.T())
-	busMock.OnPulseFunc = func(context.Context, core.Pulse) error {
+	busMock.OnPulseFunc = func(context.Context, insolar.Pulse) error {
 		return nil
 	}
 
@@ -172,16 +172,16 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	recentMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	recentMock.GetObjectsMock.Return(nil)
 	recentMock.AddObjectMock.Return()
-	recentMock.DecreaseIndexTTLMock.Return([]core.RecordID{})
+	recentMock.DecreaseIndexTTLMock.Return([]insolar.ID{})
 	recentMock.FilterNotExistWithLockMock.Return()
 
 	pendingStorageMock := recentstorage.NewPendingStorageMock(s.T())
-	pendingStorageMock.GetRequestsMock.Return(map[core.RecordID]recentstorage.PendingObjectContext{})
+	pendingStorageMock.GetRequestsMock.Return(map[insolar.ID]recentstorage.PendingObjectContext{})
 
 	// Mock6: JetCoordinatorMock
 	jcMock := testutils.NewJetCoordinatorMock(s.T())
-	jcMock.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
-	jcMock.MeMock.Return(core.RecordRef{})
+	jcMock.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
+	jcMock.MeMock.Return(insolar.Reference{})
 
 	// Mock N7: GIL mock
 	gilMock := testutils.NewGlobalInsolarLockMock(s.T())
@@ -194,8 +194,8 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 
 	// Mock N9: Crypto things mock
 	cryptoServiceMock := testutils.NewCryptographyServiceMock(s.T())
-	cryptoServiceMock.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
-		signature := core.SignatureFromBytes(nil)
+	cryptoServiceMock.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
 	}
 	cryptoScheme := testutils.NewPlatformCryptographyScheme()
@@ -210,7 +210,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	}
 	syncmessagesPerMessage := map[int32]*messageStat{}
 	var bussendfailed int32
-	busMock.SendFunc = func(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+	busMock.SendFunc = func(ctx context.Context, msg insolar.Message, ops *insolar.MessageSendOptions) (insolar.Reply, error) {
 		// fmt.Printf("got msg: %T (%s)\n", msg, msg.Type())
 		heavymsg, ok := msg.(*message.HeavyPayload)
 		if ok {
@@ -290,7 +290,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	providerMock.CloneIndexStorageMock.Return()
 	providerMock.ClonePendingStorageMock.Return()
 	providerMock.RemovePendingStorageMock.Return()
-	providerMock.DecreaseIndexesTTLMock.Return(map[core.RecordID][]core.RecordID{})
+	providerMock.DecreaseIndexesTTLMock.Return(map[insolar.ID][]insolar.ID{})
 	pm.RecentStorageProvider = providerMock
 
 	pm.ActiveListSwapper = alsMock
@@ -303,13 +303,13 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	assert.NoError(s.T(), err)
 
 	// store last pulse as light material and set next one
-	lastpulse := core.FirstPulseNumber + 1
+	lastpulse := insolar.FirstPulseNumber + 1
 	err = setpulse(s.ctx, pm, lastpulse)
 	require.NoError(s.T(), err)
 
 	for i := 0; i < 2; i++ {
 		// fmt.Printf("%v: call addRecords for pulse %v\n", t.Name(), lastpulse)
-		addRecords(s.ctx, s.T(), s.objectStorage, core.RecordID(jetID), core.PulseNumber(lastpulse+i))
+		addRecords(s.ctx, s.T(), s.objectStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse+i))
 	}
 
 	fmt.Println("Case1: sync after db fill and with new received pulses")
@@ -322,7 +322,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	fmt.Println("Case2: sync during db fill")
 	for i := 0; i < 2; i++ {
 		// fill DB with records, indexes (TODO: add blobs)
-		addRecords(s.ctx, s.T(), s.objectStorage, core.RecordID(jetID), core.PulseNumber(lastpulse))
+		addRecords(s.ctx, s.T(), s.objectStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse))
 
 		lastpulse++
 		err = setpulse(s.ctx, pm, lastpulse)
@@ -350,23 +350,23 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	assert.Equal(s.T(), recs, synckeys, "synced keys are the same as records in storage")
 }
 
-func setpulse(ctx context.Context, pm core.PulseManager, pulsenum int) error {
-	return pm.Set(ctx, core.Pulse{PulseNumber: core.PulseNumber(pulsenum)}, true)
+func setpulse(ctx context.Context, pm insolar.PulseManager, pulsenum int) error {
+	return pm.Set(ctx, insolar.Pulse{PulseNumber: insolar.PulseNumber(pulsenum)}, true)
 }
 
 func addRecords(
 	ctx context.Context,
 	t *testing.T,
 	objectStorage storage.ObjectStorage,
-	jetID core.RecordID,
-	pn core.PulseNumber,
+	jetID insolar.ID,
+	pn insolar.PulseNumber,
 ) {
 	// set record
 	parentID, err := objectStorage.SetRecord(
 		ctx,
 		jetID,
 		pn,
-		&object.ObjectActivateRecord{
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: testutils.RandomRef(),
 			},

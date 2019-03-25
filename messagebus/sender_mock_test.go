@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -21,42 +21,42 @@ import (
 type senderMock struct {
 	t minimock.Tester
 
-	CreateParcelFunc       func(p context.Context, p1 core.Message, p2 core.DelegationToken, p3 core.Pulse) (r core.Parcel, r1 error)
+	CreateParcelFunc       func(p context.Context, p1 insolar.Message, p2 insolar.DelegationToken, p3 insolar.Pulse) (r insolar.Parcel, r1 error)
 	CreateParcelCounter    uint64
 	CreateParcelPreCounter uint64
 	CreateParcelMock       msenderMockCreateParcel
 
-	MustRegisterFunc       func(p core.MessageType, p1 core.MessageHandler)
+	MustRegisterFunc       func(p insolar.MessageType, p1 insolar.MessageHandler)
 	MustRegisterCounter    uint64
 	MustRegisterPreCounter uint64
 	MustRegisterMock       msenderMockMustRegister
 
-	NewPlayerFunc       func(p context.Context, p1 io.Reader) (r core.MessageBus, r1 error)
+	NewPlayerFunc       func(p context.Context, p1 io.Reader) (r insolar.MessageBus, r1 error)
 	NewPlayerCounter    uint64
 	NewPlayerPreCounter uint64
 	NewPlayerMock       msenderMockNewPlayer
 
-	NewRecorderFunc       func(p context.Context, p1 core.Pulse) (r core.MessageBus, r1 error)
+	NewRecorderFunc       func(p context.Context, p1 insolar.Pulse) (r insolar.MessageBus, r1 error)
 	NewRecorderCounter    uint64
 	NewRecorderPreCounter uint64
 	NewRecorderMock       msenderMockNewRecorder
 
-	OnPulseFunc       func(p context.Context, p1 core.Pulse) (r error)
+	OnPulseFunc       func(p context.Context, p1 insolar.Pulse) (r error)
 	OnPulseCounter    uint64
 	OnPulsePreCounter uint64
 	OnPulseMock       msenderMockOnPulse
 
-	RegisterFunc       func(p core.MessageType, p1 core.MessageHandler) (r error)
+	RegisterFunc       func(p insolar.MessageType, p1 insolar.MessageHandler) (r error)
 	RegisterCounter    uint64
 	RegisterPreCounter uint64
 	RegisterMock       msenderMockRegister
 
-	SendFunc       func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error)
+	SendFunc       func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error)
 	SendCounter    uint64
 	SendPreCounter uint64
 	SendMock       msenderMockSend
 
-	SendParcelFunc       func(p context.Context, p1 core.Parcel, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error)
+	SendParcelFunc       func(p context.Context, p1 insolar.Parcel, p2 insolar.Pulse, p3 *insolar.MessageSendOptions) (r insolar.Reply, r1 error)
 	SendParcelCounter    uint64
 	SendParcelPreCounter uint64
 	SendParcelMock       msenderMockSendParcel
@@ -95,18 +95,18 @@ type senderMockCreateParcelExpectation struct {
 
 type senderMockCreateParcelInput struct {
 	p  context.Context
-	p1 core.Message
-	p2 core.DelegationToken
-	p3 core.Pulse
+	p1 insolar.Message
+	p2 insolar.DelegationToken
+	p3 insolar.Pulse
 }
 
 type senderMockCreateParcelResult struct {
-	r  core.Parcel
+	r  insolar.Parcel
 	r1 error
 }
 
 //Expect specifies that invocation of sender.CreateParcel is expected from 1 to Infinity times
-func (m *msenderMockCreateParcel) Expect(p context.Context, p1 core.Message, p2 core.DelegationToken, p3 core.Pulse) *msenderMockCreateParcel {
+func (m *msenderMockCreateParcel) Expect(p context.Context, p1 insolar.Message, p2 insolar.DelegationToken, p3 insolar.Pulse) *msenderMockCreateParcel {
 	m.mock.CreateParcelFunc = nil
 	m.expectationSeries = nil
 
@@ -118,7 +118,7 @@ func (m *msenderMockCreateParcel) Expect(p context.Context, p1 core.Message, p2 
 }
 
 //Return specifies results of invocation of sender.CreateParcel
-func (m *msenderMockCreateParcel) Return(r core.Parcel, r1 error) *senderMock {
+func (m *msenderMockCreateParcel) Return(r insolar.Parcel, r1 error) *senderMock {
 	m.mock.CreateParcelFunc = nil
 	m.expectationSeries = nil
 
@@ -130,7 +130,7 @@ func (m *msenderMockCreateParcel) Return(r core.Parcel, r1 error) *senderMock {
 }
 
 //ExpectOnce specifies that invocation of sender.CreateParcel is expected once
-func (m *msenderMockCreateParcel) ExpectOnce(p context.Context, p1 core.Message, p2 core.DelegationToken, p3 core.Pulse) *senderMockCreateParcelExpectation {
+func (m *msenderMockCreateParcel) ExpectOnce(p context.Context, p1 insolar.Message, p2 insolar.DelegationToken, p3 insolar.Pulse) *senderMockCreateParcelExpectation {
 	m.mock.CreateParcelFunc = nil
 	m.mainExpectation = nil
 
@@ -140,12 +140,12 @@ func (m *msenderMockCreateParcel) ExpectOnce(p context.Context, p1 core.Message,
 	return expectation
 }
 
-func (e *senderMockCreateParcelExpectation) Return(r core.Parcel, r1 error) {
+func (e *senderMockCreateParcelExpectation) Return(r insolar.Parcel, r1 error) {
 	e.result = &senderMockCreateParcelResult{r, r1}
 }
 
 //Set uses given function f as a mock of sender.CreateParcel method
-func (m *msenderMockCreateParcel) Set(f func(p context.Context, p1 core.Message, p2 core.DelegationToken, p3 core.Pulse) (r core.Parcel, r1 error)) *senderMock {
+func (m *msenderMockCreateParcel) Set(f func(p context.Context, p1 insolar.Message, p2 insolar.DelegationToken, p3 insolar.Pulse) (r insolar.Parcel, r1 error)) *senderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -154,7 +154,7 @@ func (m *msenderMockCreateParcel) Set(f func(p context.Context, p1 core.Message,
 }
 
 //CreateParcel implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) CreateParcel(p context.Context, p1 core.Message, p2 core.DelegationToken, p3 core.Pulse) (r core.Parcel, r1 error) {
+func (m *senderMock) CreateParcel(p context.Context, p1 insolar.Message, p2 insolar.DelegationToken, p3 insolar.Pulse) (r insolar.Parcel, r1 error) {
 	counter := atomic.AddUint64(&m.CreateParcelPreCounter, 1)
 	defer atomic.AddUint64(&m.CreateParcelCounter, 1)
 
@@ -246,12 +246,12 @@ type senderMockMustRegisterExpectation struct {
 }
 
 type senderMockMustRegisterInput struct {
-	p  core.MessageType
-	p1 core.MessageHandler
+	p  insolar.MessageType
+	p1 insolar.MessageHandler
 }
 
 //Expect specifies that invocation of sender.MustRegister is expected from 1 to Infinity times
-func (m *msenderMockMustRegister) Expect(p core.MessageType, p1 core.MessageHandler) *msenderMockMustRegister {
+func (m *msenderMockMustRegister) Expect(p insolar.MessageType, p1 insolar.MessageHandler) *msenderMockMustRegister {
 	m.mock.MustRegisterFunc = nil
 	m.expectationSeries = nil
 
@@ -275,7 +275,7 @@ func (m *msenderMockMustRegister) Return() *senderMock {
 }
 
 //ExpectOnce specifies that invocation of sender.MustRegister is expected once
-func (m *msenderMockMustRegister) ExpectOnce(p core.MessageType, p1 core.MessageHandler) *senderMockMustRegisterExpectation {
+func (m *msenderMockMustRegister) ExpectOnce(p insolar.MessageType, p1 insolar.MessageHandler) *senderMockMustRegisterExpectation {
 	m.mock.MustRegisterFunc = nil
 	m.mainExpectation = nil
 
@@ -286,7 +286,7 @@ func (m *msenderMockMustRegister) ExpectOnce(p core.MessageType, p1 core.Message
 }
 
 //Set uses given function f as a mock of sender.MustRegister method
-func (m *msenderMockMustRegister) Set(f func(p core.MessageType, p1 core.MessageHandler)) *senderMock {
+func (m *msenderMockMustRegister) Set(f func(p insolar.MessageType, p1 insolar.MessageHandler)) *senderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -295,7 +295,7 @@ func (m *msenderMockMustRegister) Set(f func(p core.MessageType, p1 core.Message
 }
 
 //MustRegister implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) MustRegister(p core.MessageType, p1 core.MessageHandler) {
+func (m *senderMock) MustRegister(p insolar.MessageType, p1 insolar.MessageHandler) {
 	counter := atomic.AddUint64(&m.MustRegisterPreCounter, 1)
 	defer atomic.AddUint64(&m.MustRegisterCounter, 1)
 
@@ -376,7 +376,7 @@ type senderMockNewPlayerInput struct {
 }
 
 type senderMockNewPlayerResult struct {
-	r  core.MessageBus
+	r  insolar.MessageBus
 	r1 error
 }
 
@@ -393,7 +393,7 @@ func (m *msenderMockNewPlayer) Expect(p context.Context, p1 io.Reader) *msenderM
 }
 
 //Return specifies results of invocation of sender.NewPlayer
-func (m *msenderMockNewPlayer) Return(r core.MessageBus, r1 error) *senderMock {
+func (m *msenderMockNewPlayer) Return(r insolar.MessageBus, r1 error) *senderMock {
 	m.mock.NewPlayerFunc = nil
 	m.expectationSeries = nil
 
@@ -415,12 +415,12 @@ func (m *msenderMockNewPlayer) ExpectOnce(p context.Context, p1 io.Reader) *send
 	return expectation
 }
 
-func (e *senderMockNewPlayerExpectation) Return(r core.MessageBus, r1 error) {
+func (e *senderMockNewPlayerExpectation) Return(r insolar.MessageBus, r1 error) {
 	e.result = &senderMockNewPlayerResult{r, r1}
 }
 
 //Set uses given function f as a mock of sender.NewPlayer method
-func (m *msenderMockNewPlayer) Set(f func(p context.Context, p1 io.Reader) (r core.MessageBus, r1 error)) *senderMock {
+func (m *msenderMockNewPlayer) Set(f func(p context.Context, p1 io.Reader) (r insolar.MessageBus, r1 error)) *senderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -429,7 +429,7 @@ func (m *msenderMockNewPlayer) Set(f func(p context.Context, p1 io.Reader) (r co
 }
 
 //NewPlayer implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) NewPlayer(p context.Context, p1 io.Reader) (r core.MessageBus, r1 error) {
+func (m *senderMock) NewPlayer(p context.Context, p1 io.Reader) (r insolar.MessageBus, r1 error) {
 	counter := atomic.AddUint64(&m.NewPlayerPreCounter, 1)
 	defer atomic.AddUint64(&m.NewPlayerCounter, 1)
 
@@ -523,16 +523,16 @@ type senderMockNewRecorderExpectation struct {
 
 type senderMockNewRecorderInput struct {
 	p  context.Context
-	p1 core.Pulse
+	p1 insolar.Pulse
 }
 
 type senderMockNewRecorderResult struct {
-	r  core.MessageBus
+	r  insolar.MessageBus
 	r1 error
 }
 
 //Expect specifies that invocation of sender.NewRecorder is expected from 1 to Infinity times
-func (m *msenderMockNewRecorder) Expect(p context.Context, p1 core.Pulse) *msenderMockNewRecorder {
+func (m *msenderMockNewRecorder) Expect(p context.Context, p1 insolar.Pulse) *msenderMockNewRecorder {
 	m.mock.NewRecorderFunc = nil
 	m.expectationSeries = nil
 
@@ -544,7 +544,7 @@ func (m *msenderMockNewRecorder) Expect(p context.Context, p1 core.Pulse) *msend
 }
 
 //Return specifies results of invocation of sender.NewRecorder
-func (m *msenderMockNewRecorder) Return(r core.MessageBus, r1 error) *senderMock {
+func (m *msenderMockNewRecorder) Return(r insolar.MessageBus, r1 error) *senderMock {
 	m.mock.NewRecorderFunc = nil
 	m.expectationSeries = nil
 
@@ -556,7 +556,7 @@ func (m *msenderMockNewRecorder) Return(r core.MessageBus, r1 error) *senderMock
 }
 
 //ExpectOnce specifies that invocation of sender.NewRecorder is expected once
-func (m *msenderMockNewRecorder) ExpectOnce(p context.Context, p1 core.Pulse) *senderMockNewRecorderExpectation {
+func (m *msenderMockNewRecorder) ExpectOnce(p context.Context, p1 insolar.Pulse) *senderMockNewRecorderExpectation {
 	m.mock.NewRecorderFunc = nil
 	m.mainExpectation = nil
 
@@ -566,12 +566,12 @@ func (m *msenderMockNewRecorder) ExpectOnce(p context.Context, p1 core.Pulse) *s
 	return expectation
 }
 
-func (e *senderMockNewRecorderExpectation) Return(r core.MessageBus, r1 error) {
+func (e *senderMockNewRecorderExpectation) Return(r insolar.MessageBus, r1 error) {
 	e.result = &senderMockNewRecorderResult{r, r1}
 }
 
 //Set uses given function f as a mock of sender.NewRecorder method
-func (m *msenderMockNewRecorder) Set(f func(p context.Context, p1 core.Pulse) (r core.MessageBus, r1 error)) *senderMock {
+func (m *msenderMockNewRecorder) Set(f func(p context.Context, p1 insolar.Pulse) (r insolar.MessageBus, r1 error)) *senderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -580,7 +580,7 @@ func (m *msenderMockNewRecorder) Set(f func(p context.Context, p1 core.Pulse) (r
 }
 
 //NewRecorder implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) NewRecorder(p context.Context, p1 core.Pulse) (r core.MessageBus, r1 error) {
+func (m *senderMock) NewRecorder(p context.Context, p1 insolar.Pulse) (r insolar.MessageBus, r1 error) {
 	counter := atomic.AddUint64(&m.NewRecorderPreCounter, 1)
 	defer atomic.AddUint64(&m.NewRecorderCounter, 1)
 
@@ -674,7 +674,7 @@ type senderMockOnPulseExpectation struct {
 
 type senderMockOnPulseInput struct {
 	p  context.Context
-	p1 core.Pulse
+	p1 insolar.Pulse
 }
 
 type senderMockOnPulseResult struct {
@@ -682,7 +682,7 @@ type senderMockOnPulseResult struct {
 }
 
 //Expect specifies that invocation of sender.OnPulse is expected from 1 to Infinity times
-func (m *msenderMockOnPulse) Expect(p context.Context, p1 core.Pulse) *msenderMockOnPulse {
+func (m *msenderMockOnPulse) Expect(p context.Context, p1 insolar.Pulse) *msenderMockOnPulse {
 	m.mock.OnPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -706,7 +706,7 @@ func (m *msenderMockOnPulse) Return(r error) *senderMock {
 }
 
 //ExpectOnce specifies that invocation of sender.OnPulse is expected once
-func (m *msenderMockOnPulse) ExpectOnce(p context.Context, p1 core.Pulse) *senderMockOnPulseExpectation {
+func (m *msenderMockOnPulse) ExpectOnce(p context.Context, p1 insolar.Pulse) *senderMockOnPulseExpectation {
 	m.mock.OnPulseFunc = nil
 	m.mainExpectation = nil
 
@@ -721,7 +721,7 @@ func (e *senderMockOnPulseExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of sender.OnPulse method
-func (m *msenderMockOnPulse) Set(f func(p context.Context, p1 core.Pulse) (r error)) *senderMock {
+func (m *msenderMockOnPulse) Set(f func(p context.Context, p1 insolar.Pulse) (r error)) *senderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -730,7 +730,7 @@ func (m *msenderMockOnPulse) Set(f func(p context.Context, p1 core.Pulse) (r err
 }
 
 //OnPulse implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) OnPulse(p context.Context, p1 core.Pulse) (r error) {
+func (m *senderMock) OnPulse(p context.Context, p1 insolar.Pulse) (r error) {
 	counter := atomic.AddUint64(&m.OnPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.OnPulseCounter, 1)
 
@@ -821,8 +821,8 @@ type senderMockRegisterExpectation struct {
 }
 
 type senderMockRegisterInput struct {
-	p  core.MessageType
-	p1 core.MessageHandler
+	p  insolar.MessageType
+	p1 insolar.MessageHandler
 }
 
 type senderMockRegisterResult struct {
@@ -830,7 +830,7 @@ type senderMockRegisterResult struct {
 }
 
 //Expect specifies that invocation of sender.Register is expected from 1 to Infinity times
-func (m *msenderMockRegister) Expect(p core.MessageType, p1 core.MessageHandler) *msenderMockRegister {
+func (m *msenderMockRegister) Expect(p insolar.MessageType, p1 insolar.MessageHandler) *msenderMockRegister {
 	m.mock.RegisterFunc = nil
 	m.expectationSeries = nil
 
@@ -854,7 +854,7 @@ func (m *msenderMockRegister) Return(r error) *senderMock {
 }
 
 //ExpectOnce specifies that invocation of sender.Register is expected once
-func (m *msenderMockRegister) ExpectOnce(p core.MessageType, p1 core.MessageHandler) *senderMockRegisterExpectation {
+func (m *msenderMockRegister) ExpectOnce(p insolar.MessageType, p1 insolar.MessageHandler) *senderMockRegisterExpectation {
 	m.mock.RegisterFunc = nil
 	m.mainExpectation = nil
 
@@ -869,7 +869,7 @@ func (e *senderMockRegisterExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of sender.Register method
-func (m *msenderMockRegister) Set(f func(p core.MessageType, p1 core.MessageHandler) (r error)) *senderMock {
+func (m *msenderMockRegister) Set(f func(p insolar.MessageType, p1 insolar.MessageHandler) (r error)) *senderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -878,7 +878,7 @@ func (m *msenderMockRegister) Set(f func(p core.MessageType, p1 core.MessageHand
 }
 
 //Register implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) Register(p core.MessageType, p1 core.MessageHandler) (r error) {
+func (m *senderMock) Register(p insolar.MessageType, p1 insolar.MessageHandler) (r error) {
 	counter := atomic.AddUint64(&m.RegisterPreCounter, 1)
 	defer atomic.AddUint64(&m.RegisterCounter, 1)
 
@@ -970,17 +970,17 @@ type senderMockSendExpectation struct {
 
 type senderMockSendInput struct {
 	p  context.Context
-	p1 core.Message
-	p2 *core.MessageSendOptions
+	p1 insolar.Message
+	p2 *insolar.MessageSendOptions
 }
 
 type senderMockSendResult struct {
-	r  core.Reply
+	r  insolar.Reply
 	r1 error
 }
 
 //Expect specifies that invocation of sender.Send is expected from 1 to Infinity times
-func (m *msenderMockSend) Expect(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) *msenderMockSend {
+func (m *msenderMockSend) Expect(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) *msenderMockSend {
 	m.mock.SendFunc = nil
 	m.expectationSeries = nil
 
@@ -992,7 +992,7 @@ func (m *msenderMockSend) Expect(p context.Context, p1 core.Message, p2 *core.Me
 }
 
 //Return specifies results of invocation of sender.Send
-func (m *msenderMockSend) Return(r core.Reply, r1 error) *senderMock {
+func (m *msenderMockSend) Return(r insolar.Reply, r1 error) *senderMock {
 	m.mock.SendFunc = nil
 	m.expectationSeries = nil
 
@@ -1004,7 +1004,7 @@ func (m *msenderMockSend) Return(r core.Reply, r1 error) *senderMock {
 }
 
 //ExpectOnce specifies that invocation of sender.Send is expected once
-func (m *msenderMockSend) ExpectOnce(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) *senderMockSendExpectation {
+func (m *msenderMockSend) ExpectOnce(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) *senderMockSendExpectation {
 	m.mock.SendFunc = nil
 	m.mainExpectation = nil
 
@@ -1014,12 +1014,12 @@ func (m *msenderMockSend) ExpectOnce(p context.Context, p1 core.Message, p2 *cor
 	return expectation
 }
 
-func (e *senderMockSendExpectation) Return(r core.Reply, r1 error) {
+func (e *senderMockSendExpectation) Return(r insolar.Reply, r1 error) {
 	e.result = &senderMockSendResult{r, r1}
 }
 
 //Set uses given function f as a mock of sender.Send method
-func (m *msenderMockSend) Set(f func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error)) *senderMock {
+func (m *msenderMockSend) Set(f func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error)) *senderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1028,7 +1028,7 @@ func (m *msenderMockSend) Set(f func(p context.Context, p1 core.Message, p2 *cor
 }
 
 //Send implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) Send(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+func (m *senderMock) Send(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.SendPreCounter, 1)
 	defer atomic.AddUint64(&m.SendCounter, 1)
 
@@ -1122,18 +1122,18 @@ type senderMockSendParcelExpectation struct {
 
 type senderMockSendParcelInput struct {
 	p  context.Context
-	p1 core.Parcel
-	p2 core.Pulse
-	p3 *core.MessageSendOptions
+	p1 insolar.Parcel
+	p2 insolar.Pulse
+	p3 *insolar.MessageSendOptions
 }
 
 type senderMockSendParcelResult struct {
-	r  core.Reply
+	r  insolar.Reply
 	r1 error
 }
 
 //Expect specifies that invocation of sender.SendParcel is expected from 1 to Infinity times
-func (m *msenderMockSendParcel) Expect(p context.Context, p1 core.Parcel, p2 core.Pulse, p3 *core.MessageSendOptions) *msenderMockSendParcel {
+func (m *msenderMockSendParcel) Expect(p context.Context, p1 insolar.Parcel, p2 insolar.Pulse, p3 *insolar.MessageSendOptions) *msenderMockSendParcel {
 	m.mock.SendParcelFunc = nil
 	m.expectationSeries = nil
 
@@ -1145,7 +1145,7 @@ func (m *msenderMockSendParcel) Expect(p context.Context, p1 core.Parcel, p2 cor
 }
 
 //Return specifies results of invocation of sender.SendParcel
-func (m *msenderMockSendParcel) Return(r core.Reply, r1 error) *senderMock {
+func (m *msenderMockSendParcel) Return(r insolar.Reply, r1 error) *senderMock {
 	m.mock.SendParcelFunc = nil
 	m.expectationSeries = nil
 
@@ -1157,7 +1157,7 @@ func (m *msenderMockSendParcel) Return(r core.Reply, r1 error) *senderMock {
 }
 
 //ExpectOnce specifies that invocation of sender.SendParcel is expected once
-func (m *msenderMockSendParcel) ExpectOnce(p context.Context, p1 core.Parcel, p2 core.Pulse, p3 *core.MessageSendOptions) *senderMockSendParcelExpectation {
+func (m *msenderMockSendParcel) ExpectOnce(p context.Context, p1 insolar.Parcel, p2 insolar.Pulse, p3 *insolar.MessageSendOptions) *senderMockSendParcelExpectation {
 	m.mock.SendParcelFunc = nil
 	m.mainExpectation = nil
 
@@ -1167,12 +1167,12 @@ func (m *msenderMockSendParcel) ExpectOnce(p context.Context, p1 core.Parcel, p2
 	return expectation
 }
 
-func (e *senderMockSendParcelExpectation) Return(r core.Reply, r1 error) {
+func (e *senderMockSendParcelExpectation) Return(r insolar.Reply, r1 error) {
 	e.result = &senderMockSendParcelResult{r, r1}
 }
 
 //Set uses given function f as a mock of sender.SendParcel method
-func (m *msenderMockSendParcel) Set(f func(p context.Context, p1 core.Parcel, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error)) *senderMock {
+func (m *msenderMockSendParcel) Set(f func(p context.Context, p1 insolar.Parcel, p2 insolar.Pulse, p3 *insolar.MessageSendOptions) (r insolar.Reply, r1 error)) *senderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1181,7 +1181,7 @@ func (m *msenderMockSendParcel) Set(f func(p context.Context, p1 core.Parcel, p2
 }
 
 //SendParcel implements github.com/insolar/insolar/messagebus.sender interface
-func (m *senderMock) SendParcel(p context.Context, p1 core.Parcel, p2 core.Pulse, p3 *core.MessageSendOptions) (r core.Reply, r1 error) {
+func (m *senderMock) SendParcel(p context.Context, p1 insolar.Parcel, p2 insolar.Pulse, p3 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.SendParcelPreCounter, 1)
 	defer atomic.AddUint64(&m.SendParcelCounter, 1)
 

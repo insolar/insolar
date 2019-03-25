@@ -57,13 +57,13 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type PacketRoutable interface {
-	GetOrigin() core.ShortNodeID
-	GetTarget() core.ShortNodeID
-	SetRouting(origin, target core.ShortNodeID)
+	GetOrigin() insolar.ShortNodeID
+	GetTarget() insolar.ShortNodeID
+	SetRouting(origin, target insolar.ShortNodeID)
 }
 
 type Serializer interface {
@@ -76,8 +76,8 @@ type HeaderSkipDeserializer interface {
 }
 
 type SignedPacket interface {
-	Verify(cryptographyService core.CryptographyService, key crypto.PublicKey) error
-	Sign(core.CryptographyService) error
+	Verify(cryptographyService insolar.CryptographyService, key crypto.PublicKey) error
+	Sign(insolar.CryptographyService) error
 }
 
 type ConsensusPacket interface {

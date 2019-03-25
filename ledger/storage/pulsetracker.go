@@ -19,27 +19,27 @@ package storage
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // Pulse is a record containing pulse info.
 type Pulse struct {
-	Prev         *core.PulseNumber
-	Next         *core.PulseNumber
+	Prev         *insolar.PulseNumber
+	Next         *insolar.PulseNumber
 	SerialNumber int
-	Pulse        core.Pulse
+	Pulse        insolar.Pulse
 }
 
 // PulseTracker allows to modify state of the pulse inside storage (internal or external)
 // DEPRECATED
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.PulseTracker -o ./ -s _mock.go
 type PulseTracker interface {
-	GetPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error)
-	GetPreviousPulse(ctx context.Context, num core.PulseNumber) (*Pulse, error)
-	GetNthPrevPulse(ctx context.Context, n uint, from core.PulseNumber) (*Pulse, error)
+	GetPulse(ctx context.Context, num insolar.PulseNumber) (*Pulse, error)
+	GetPreviousPulse(ctx context.Context, num insolar.PulseNumber) (*Pulse, error)
+	GetNthPrevPulse(ctx context.Context, n uint, from insolar.PulseNumber) (*Pulse, error)
 	GetLatestPulse(ctx context.Context) (*Pulse, error)
 
-	AddPulse(ctx context.Context, pulse core.Pulse) error
+	AddPulse(ctx context.Context, pulse insolar.Pulse) error
 
-	DeletePulse(ctx context.Context, num core.PulseNumber) error
+	DeletePulse(ctx context.Context, num insolar.PulseNumber) error
 }

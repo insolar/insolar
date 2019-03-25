@@ -18,7 +18,7 @@ package slot
 
 import (
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // ReactivateMode represents reason of reactivating of slot element
@@ -69,8 +69,8 @@ type SlotElementReadOnly interface {
 // SlotDetails provides information about slot
 //go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/slot.SlotDetails -o ./ -s _mock.go
 type SlotDetails interface {
-	GetPulseNumber() core.PulseNumber // nolint: unused
-	GetNodeID() uint32                // nolint: unused
-	GetPulseData() core.Pulse         // nolint: unused
-	GetNodeData() interface{}         // nolint: unused
+	GetPulseNumber() insolar.PulseNumber // nolint: unused
+	GetNodeID() uint32                   // nolint: unused
+	GetPulseData() insolar.Pulse         // nolint: unused
+	GetNodeData() interface{}            // nolint: unused
 }

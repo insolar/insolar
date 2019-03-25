@@ -10,8 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,12 +19,12 @@ import (
 type AccessorMock struct {
 	t minimock.Tester
 
-	AllFunc       func(p core.PulseNumber) (r []insolar.Node, r1 error)
+	AllFunc       func(p insolar.PulseNumber) (r []insolar.Node, r1 error)
 	AllCounter    uint64
 	AllPreCounter uint64
 	AllMock       mAccessorMockAll
 
-	InRoleFunc       func(p core.PulseNumber, p1 core.StaticRole) (r []insolar.Node, r1 error)
+	InRoleFunc       func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error)
 	InRoleCounter    uint64
 	InRolePreCounter uint64
 	InRoleMock       mAccessorMockInRole
@@ -57,7 +56,7 @@ type AccessorMockAllExpectation struct {
 }
 
 type AccessorMockAllInput struct {
-	p core.PulseNumber
+	p insolar.PulseNumber
 }
 
 type AccessorMockAllResult struct {
@@ -66,7 +65,7 @@ type AccessorMockAllResult struct {
 }
 
 //Expect specifies that invocation of Accessor.All is expected from 1 to Infinity times
-func (m *mAccessorMockAll) Expect(p core.PulseNumber) *mAccessorMockAll {
+func (m *mAccessorMockAll) Expect(p insolar.PulseNumber) *mAccessorMockAll {
 	m.mock.AllFunc = nil
 	m.expectationSeries = nil
 
@@ -90,7 +89,7 @@ func (m *mAccessorMockAll) Return(r []insolar.Node, r1 error) *AccessorMock {
 }
 
 //ExpectOnce specifies that invocation of Accessor.All is expected once
-func (m *mAccessorMockAll) ExpectOnce(p core.PulseNumber) *AccessorMockAllExpectation {
+func (m *mAccessorMockAll) ExpectOnce(p insolar.PulseNumber) *AccessorMockAllExpectation {
 	m.mock.AllFunc = nil
 	m.mainExpectation = nil
 
@@ -105,7 +104,7 @@ func (e *AccessorMockAllExpectation) Return(r []insolar.Node, r1 error) {
 }
 
 //Set uses given function f as a mock of Accessor.All method
-func (m *mAccessorMockAll) Set(f func(p core.PulseNumber) (r []insolar.Node, r1 error)) *AccessorMock {
+func (m *mAccessorMockAll) Set(f func(p insolar.PulseNumber) (r []insolar.Node, r1 error)) *AccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -114,7 +113,7 @@ func (m *mAccessorMockAll) Set(f func(p core.PulseNumber) (r []insolar.Node, r1 
 }
 
 //All implements github.com/insolar/insolar/ledger/storage/node.Accessor interface
-func (m *AccessorMock) All(p core.PulseNumber) (r []insolar.Node, r1 error) {
+func (m *AccessorMock) All(p insolar.PulseNumber) (r []insolar.Node, r1 error) {
 	counter := atomic.AddUint64(&m.AllPreCounter, 1)
 	defer atomic.AddUint64(&m.AllCounter, 1)
 
@@ -207,8 +206,8 @@ type AccessorMockInRoleExpectation struct {
 }
 
 type AccessorMockInRoleInput struct {
-	p  core.PulseNumber
-	p1 core.StaticRole
+	p  insolar.PulseNumber
+	p1 insolar.StaticRole
 }
 
 type AccessorMockInRoleResult struct {
@@ -217,7 +216,7 @@ type AccessorMockInRoleResult struct {
 }
 
 //Expect specifies that invocation of Accessor.InRole is expected from 1 to Infinity times
-func (m *mAccessorMockInRole) Expect(p core.PulseNumber, p1 core.StaticRole) *mAccessorMockInRole {
+func (m *mAccessorMockInRole) Expect(p insolar.PulseNumber, p1 insolar.StaticRole) *mAccessorMockInRole {
 	m.mock.InRoleFunc = nil
 	m.expectationSeries = nil
 
@@ -241,7 +240,7 @@ func (m *mAccessorMockInRole) Return(r []insolar.Node, r1 error) *AccessorMock {
 }
 
 //ExpectOnce specifies that invocation of Accessor.InRole is expected once
-func (m *mAccessorMockInRole) ExpectOnce(p core.PulseNumber, p1 core.StaticRole) *AccessorMockInRoleExpectation {
+func (m *mAccessorMockInRole) ExpectOnce(p insolar.PulseNumber, p1 insolar.StaticRole) *AccessorMockInRoleExpectation {
 	m.mock.InRoleFunc = nil
 	m.mainExpectation = nil
 
@@ -256,7 +255,7 @@ func (e *AccessorMockInRoleExpectation) Return(r []insolar.Node, r1 error) {
 }
 
 //Set uses given function f as a mock of Accessor.InRole method
-func (m *mAccessorMockInRole) Set(f func(p core.PulseNumber, p1 core.StaticRole) (r []insolar.Node, r1 error)) *AccessorMock {
+func (m *mAccessorMockInRole) Set(f func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error)) *AccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -265,7 +264,7 @@ func (m *mAccessorMockInRole) Set(f func(p core.PulseNumber, p1 core.StaticRole)
 }
 
 //InRole implements github.com/insolar/insolar/ledger/storage/node.Accessor interface
-func (m *AccessorMock) InRole(p core.PulseNumber, p1 core.StaticRole) (r []insolar.Node, r1 error) {
+func (m *AccessorMock) InRole(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
 	counter := atomic.AddUint64(&m.InRolePreCounter, 1)
 	defer atomic.AddUint64(&m.InRoleCounter, 1)
 

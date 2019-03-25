@@ -57,7 +57,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -71,8 +71,8 @@ func makeDefaultPacketHeader(packetType PacketType) *PacketHeader {
 	packetHeader.f01 = true
 	// -------------------
 	packetHeader.Pulse = uint32(22)
-	packetHeader.OriginNodeID = core.ShortNodeID(42)
-	packetHeader.TargetNodeID = core.ShortNodeID(62)
+	packetHeader.OriginNodeID = insolar.ShortNodeID(42)
+	packetHeader.TargetNodeID = insolar.ShortNodeID(62)
 
 	return packetHeader
 }
@@ -116,7 +116,7 @@ func makeDefaultPulseDataExt() PulseDataExt {
 	pulseDataExt := PulseDataExt{}
 	pulseDataExt.NextPulseDelta = uint16(11)
 	pulseDataExt.PrevPulseDelta = uint16(12)
-	pulseDataExt.Entropy = core.Entropy{}
+	pulseDataExt.Entropy = insolar.Entropy{}
 	pulseDataExt.Entropy[1] = '3'
 	pulseDataExt.EpochPulseNo = uint32(21)
 	pulseDataExt.PulseTimestamp = uint32(33)
@@ -196,7 +196,7 @@ func TestNodePulseProofReadWrite_BadData(t *testing.T) {
 }
 
 func TestPhase1Packet_SetPulseProof(t *testing.T) {
-	p := NewPhase1Packet(core.Pulse{})
+	p := NewPhase1Packet(insolar.Pulse{})
 	proofStateHash := genRandomSlice(HashLength)
 	proofSignature := genRandomSlice(SignatureLength)
 
@@ -285,7 +285,7 @@ func TestParseAndCompactPulseAndCustomFlags(t *testing.T) {
 }
 
 func makePhase1Packet() *Phase1Packet {
-	phase1Packet := NewPhase1Packet(core.Pulse{})
+	phase1Packet := NewPhase1Packet(insolar.Pulse{})
 	phase1Packet.packetHeader = *makeDefaultPacketHeader(Phase1)
 	phase1Packet.pulseData = makeDefaultPulseDataExt()
 	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: randomArray66(), NodeStateHash: randomArray64()}

@@ -24,14 +24,14 @@ import (
 
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/queue"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
 )
 
-const testRealPulse = core.PulseNumber(1000)
+const testRealPulse = insolar.PulseNumber(1000)
 const testPulseDelta = 10
-const testUnknownPastPulse = core.PulseNumber(500)
-const testUnknownFuturePulse = core.PulseNumber(2000)
+const testUnknownPastPulse = insolar.PulseNumber(500)
+const testUnknownFuturePulse = insolar.PulseNumber(2000)
 
 func mockQueue(t *testing.T) *queue.IQueueMock {
 	qMock := queue.NewIQueueMock(t)
@@ -68,7 +68,7 @@ func mockQueueReturnFalse(t *testing.T) *queue.IQueueMock {
 	return qMock
 }
 
-func mockSlot(t *testing.T, q *queue.IQueueMock, pulseNumber core.PulseNumber, state constant.PulseState) *Slot {
+func mockSlot(t *testing.T, q *queue.IQueueMock, pulseNumber insolar.PulseNumber, state constant.PulseState) *Slot {
 	slot := &Slot{
 		inputQueue:  q,
 		pulseNumber: pulseNumber,
@@ -112,13 +112,13 @@ func testPulseConveyor(t *testing.T, isQueueOk bool) *PulseConveyor {
 	}
 	presentSlot := mockSlot(t, q, testRealPulse, constant.Present)
 	futureSlot := mockSlot(t, q, testRealPulse+testPulseDelta, constant.Future)
-	slotMap := make(map[core.PulseNumber]TaskPusher)
+	slotMap := make(map[insolar.PulseNumber]TaskPusher)
 	slotMap[testRealPulse] = presentSlot
 	slotMap[testRealPulse+testPulseDelta] = futureSlot
-	slotMap[core.AntiquePulseNumber] = mockSlot(t, q, core.AntiquePulseNumber, constant.Antique)
+	slotMap[insolar.AntiquePulseNumber] = mockSlot(t, q, insolar.AntiquePulseNumber, constant.Antique)
 
 	return &PulseConveyor{
-		state:              core.ConveyorActive,
+		state:              insolar.ConveyorActive,
 		slotMap:            slotMap,
 		futurePulseNumber:  &futureSlot.pulseNumber,
 		presentPulseNumber: &presentSlot.pulseNumber,
@@ -133,20 +133,20 @@ func TestNewPulseConveyor(t *testing.T) {
 
 func TestConveyor_GetState(t *testing.T) {
 	c := testPulseConveyor(t, true)
-	c.state = core.ConveyorPreparingPulse
+	c.state = insolar.ConveyorPreparingPulse
 
 	state := c.GetState()
-	require.Equal(t, core.ConveyorPreparingPulse, state)
+	require.Equal(t, insolar.ConveyorPreparingPulse, state)
 }
 
 var tests = []struct {
-	state          core.ConveyorState
+	state          insolar.ConveyorState
 	expectedResult bool
 }{
-	{core.ConveyorActive, true},
-	{core.ConveyorPreparingPulse, true},
-	{core.ConveyorShuttingDown, false},
-	{core.ConveyorInactive, false},
+	{insolar.ConveyorActive, true},
+	{insolar.ConveyorPreparingPulse, true},
+	{insolar.ConveyorShuttingDown, false},
+	{insolar.ConveyorInactive, false},
 }
 
 func TestConveyor_IsOperational(t *testing.T) {
@@ -164,7 +164,7 @@ func TestConveyor_InitiateShutdown(t *testing.T) {
 	c := testPulseConveyor(t, true)
 
 	c.InitiateShutdown(true)
-	require.Equal(t, core.ConveyorShuttingDown, c.state)
+	require.Equal(t, insolar.ConveyorShuttingDown, c.state)
 }
 
 func TestConveyor_SinkPush(t *testing.T) {
@@ -191,7 +191,7 @@ func TestConveyor_SinkPush_AntiqueSlot(t *testing.T) {
 
 	err := c.SinkPush(testUnknownPastPulse, data)
 	require.NoError(t, err)
-	c.slotMap[core.AntiquePulseNumber].(*Slot).inputQueue.(*queue.IQueueMock).SinkPushMock.Expect(data)
+	c.slotMap[insolar.AntiquePulseNumber].(*Slot).inputQueue.(*queue.IQueueMock).SinkPushMock.Expect(data)
 }
 
 func TestConveyor_SinkPush_UnknownSlot(t *testing.T) {
@@ -204,7 +204,7 @@ func TestConveyor_SinkPush_UnknownSlot(t *testing.T) {
 
 func TestConveyor_SinkPush_NotOperational(t *testing.T) {
 	c := testPulseConveyor(t, true)
-	c.state = core.ConveyorInactive
+	c.state = insolar.ConveyorInactive
 	data := "fancy_data"
 
 	err := c.SinkPush(testUnknownFuturePulse, data)
@@ -242,7 +242,7 @@ func TestConveyor_SinkPushAll_AntiqueSlot(t *testing.T) {
 
 	err := c.SinkPushAll(testUnknownPastPulse, data)
 	require.NoError(t, err)
-	c.slotMap[core.AntiquePulseNumber].(*Slot).inputQueue.(*queue.IQueueMock).SinkPushMock.Expect(data)
+	c.slotMap[insolar.AntiquePulseNumber].(*Slot).inputQueue.(*queue.IQueueMock).SinkPushMock.Expect(data)
 }
 
 func TestConveyor_SinkPushAll_UnknownSlot(t *testing.T) {
@@ -257,7 +257,7 @@ func TestConveyor_SinkPushAll_UnknownSlot(t *testing.T) {
 
 func TestConveyor_SinkPushAll_NotOperational(t *testing.T) {
 	c := testPulseConveyor(t, true)
-	c.state = core.ConveyorInactive
+	c.state = insolar.ConveyorInactive
 	data1 := "fancy_data_1"
 	data2 := "fancy_data_2"
 	data := []interface{}{data1, data2}
@@ -269,69 +269,69 @@ func TestConveyor_SinkPushAll_NotOperational(t *testing.T) {
 func TestConveyor_PreparePulse(t *testing.T) {
 	c := testPulseConveyor(t, true)
 	c.futurePulseData = nil
-	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
+	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	callback := mockCallback()
 
 	err := c.PreparePulse(pulse, callback)
 	require.NoError(t, err)
 	require.NotNil(t, c.futurePulseData)
-	require.Equal(t, core.ConveyorPreparingPulse, c.state)
+	require.Equal(t, insolar.ConveyorPreparingPulse, c.state)
 }
 
 func TestConveyor_PreparePulse_ForFirstTime(t *testing.T) {
 	c := testPulseConveyor(t, true)
 	c.futurePulseNumber = nil
-	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
+	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	callback := mockCallback()
 
 	err := c.PreparePulse(pulse, callback)
 	require.NoError(t, err)
 	require.NotNil(t, c.futurePulseData)
 	require.NotNil(t, c.futurePulseNumber)
-	require.Equal(t, core.ConveyorPreparingPulse, c.state)
+	require.Equal(t, insolar.ConveyorPreparingPulse, c.state)
 }
 
 func TestConveyor_PreparePulse_ShutDown(t *testing.T) {
 	c := testPulseConveyor(t, true)
-	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
-	c.state = core.ConveyorShuttingDown
+	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
+	c.state = insolar.ConveyorShuttingDown
 	callback := mockCallback()
 
 	err := c.PreparePulse(pulse, callback)
 
 	require.EqualError(t, err, "[ PreparePulse ] conveyor is shut down")
 	require.Nil(t, c.futurePulseData)
-	require.Equal(t, core.ConveyorShuttingDown, c.state)
+	require.Equal(t, insolar.ConveyorShuttingDown, c.state)
 }
 
 func TestConveyor_PreparePulse_AlreadyDone(t *testing.T) {
 	c := testPulseConveyor(t, true)
-	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
+	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	c.futurePulseData = &pulse
-	c.state = core.ConveyorPreparingPulse
+	c.state = insolar.ConveyorPreparingPulse
 	callback := mockCallback()
 
 	err := c.PreparePulse(pulse, callback)
 
 	require.EqualError(t, err, "[ PreparePulse ] preparation was already done")
-	require.Equal(t, core.ConveyorPreparingPulse, c.state)
+	require.Equal(t, insolar.ConveyorPreparingPulse, c.state)
 }
 
 func TestConveyor_PreparePulse_NotFuture(t *testing.T) {
 	c := testPulseConveyor(t, true)
-	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta + 10}
+	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta + 10}
 	callback := mockCallback()
 
 	err := c.PreparePulse(pulse, callback)
 	require.EqualError(t, err, "[ PreparePulse ] received future pulse is different from expected")
 	require.Nil(t, c.futurePulseData)
-	require.Equal(t, core.ConveyorActive, c.state)
+	require.Equal(t, insolar.ConveyorActive, c.state)
 }
 
 func TestConveyor_PreparePulse_PushSignalPresentPanic(t *testing.T) {
 	c := testPulseConveyor(t, false)
 	c.futurePulseNumber = nil
-	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
+	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	callback := mockCallback()
 	oldState := c.state
 
@@ -343,7 +343,7 @@ func TestConveyor_PreparePulse_PushSignalPresentPanic(t *testing.T) {
 
 func TestConveyor_PreparePulse_PushSignalFuturePanic(t *testing.T) {
 	c := testPulseConveyor(t, false)
-	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
+	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	callback := mockCallback()
 	oldState := c.state
 
@@ -355,30 +355,30 @@ func TestConveyor_PreparePulse_PushSignalFuturePanic(t *testing.T) {
 
 func TestConveyor_ActivatePulse(t *testing.T) {
 	c := testPulseConveyor(t, true)
-	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
+	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	c.futurePulseData = &pulse
 	newFutureSlot := mockSlot(t, mockQueue(t), pulse.NextPulseNumber, constant.Future)
 	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
-	c.state = core.ConveyorPreparingPulse
+	c.state = insolar.ConveyorPreparingPulse
 
 	err := c.ActivatePulse()
 
 	require.NoError(t, err)
 	require.Nil(t, c.futurePulseData)
-	require.Equal(t, core.ConveyorActive, c.state)
+	require.Equal(t, insolar.ConveyorActive, c.state)
 }
 
 func TestConveyor_ActivatePulse_ShutDown(t *testing.T) {
 	c := testPulseConveyor(t, true)
-	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
+	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	c.futurePulseData = &pulse
-	c.state = core.ConveyorShuttingDown
+	c.state = insolar.ConveyorShuttingDown
 
 	err := c.ActivatePulse()
 
 	require.EqualError(t, err, "[ ActivatePulse ] conveyor is shut down")
 	require.Equal(t, &pulse, c.futurePulseData)
-	require.Equal(t, core.ConveyorShuttingDown, c.state)
+	require.Equal(t, insolar.ConveyorShuttingDown, c.state)
 }
 
 func TestConveyor_ActivatePulse_NoPrepare(t *testing.T) {
@@ -388,27 +388,27 @@ func TestConveyor_ActivatePulse_NoPrepare(t *testing.T) {
 	err := c.ActivatePulse()
 
 	require.EqualError(t, err, "[ ActivatePulse ] preparation missing")
-	require.Equal(t, core.ConveyorActive, c.state)
+	require.Equal(t, insolar.ConveyorActive, c.state)
 }
 
 func TestConveyor_ActivatePulse_PushSignalErr(t *testing.T) {
 	c := testPulseConveyor(t, false)
-	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
+	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	c.futurePulseData = &pulse
 	newFutureSlot := NewWorkingSlot(constant.Future, pulse.NextPulseNumber, nil)
 	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
-	c.state = core.ConveyorPreparingPulse
+	c.state = insolar.ConveyorPreparingPulse
 
 	panicValue := fmt.Sprintf("[ ActivatePulse ] can't send signal to future slot (for pulse %d), error - test error", c.futurePulseNumber)
 	require.PanicsWithValue(t, panicValue, func() { c.ActivatePulse() })
 	require.NotNil(t, c.futurePulseData)
-	require.Equal(t, core.ConveyorPreparingPulse, c.state)
+	require.Equal(t, insolar.ConveyorPreparingPulse, c.state)
 }
 
 func TestConveyor_ActivatePreparePulse(t *testing.T) {
 	c := testPulseConveyor(t, true)
 	c.futurePulseData = nil
-	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
+	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	callback := mockCallback()
 
 	err := c.PreparePulse(pulse, callback)
@@ -424,7 +424,7 @@ func TestConveyor_ChangePulse(t *testing.T) {
 	conveyor, err := NewPulseConveyor()
 	require.NoError(t, err)
 	callback := mockCallback()
-	pulse := core.Pulse{PulseNumber: testRealPulse + testPulseDelta}
+	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	err = conveyor.PreparePulse(pulse, callback)
 	require.NoError(t, err)
 
@@ -442,7 +442,7 @@ func TestConveyor_ChangePulseMultipleTimes(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		callback := mockCallback()
 		pulseNumber += testPulseDelta
-		pulse := core.Pulse{PulseNumber: pulseNumber, NextPulseNumber: pulseNumber + testPulseDelta}
+		pulse := insolar.Pulse{PulseNumber: pulseNumber, NextPulseNumber: pulseNumber + testPulseDelta}
 		err = conveyor.PreparePulse(pulse, callback)
 		require.NoError(t, err)
 
@@ -483,7 +483,7 @@ func TestConveyor_ChangePulseMultipleTimes_WithEvents(t *testing.T) {
 
 		callback := mockCallback()
 		pulseNumber += testPulseDelta
-		pulse := core.Pulse{PulseNumber: pulseNumber, NextPulseNumber: pulseNumber + testPulseDelta}
+		pulse := insolar.Pulse{PulseNumber: pulseNumber, NextPulseNumber: pulseNumber + testPulseDelta}
 		err = conveyor.PreparePulse(pulse, callback)
 		require.NoError(t, err)
 

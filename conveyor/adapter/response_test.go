@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
@@ -31,17 +31,17 @@ import (
 
 type replyMock int
 
-func (replyMock) Type() core.ReplyType {
-	return core.ReplyType(124)
+func (replyMock) Type() insolar.ReplyType {
+	return insolar.ReplyType(124)
 }
 func testResponseSenderTask(t *testing.T) SendResponseTask {
 	res := replyMock(111)
 	return SendResponseTask{Future: mockConveyorFuture(t, res), Result: res}
 }
 
-func mockConveyorFuture(t *testing.T, result core.Reply) *testutils.ConveyorFutureMock {
+func mockConveyorFuture(t *testing.T, result insolar.Reply) *testutils.ConveyorFutureMock {
 	cfMock := testutils.NewConveyorFutureMock(t)
-	cfMock.SetResultFunc = func(p core.Reply) {
+	cfMock.SetResultFunc = func(p insolar.Reply) {
 		if result != p {
 			panic(fmt.Sprintf("Expected result %v, get %v", result, p))
 		}
@@ -144,13 +144,13 @@ type mockReply struct {
 	data string
 }
 
-func (mr *mockReply) Type() core.ReplyType {
+func (mr *mockReply) Type() insolar.ReplyType {
 	return 0
 }
 
 func TestSendResponseHelper(t *testing.T) {
 	f := messagebus.NewFuture()
-	event := core.ConveyorPendingMessage{Future: f}
+	event := insolar.ConveyorPendingMessage{Future: f}
 	testReply := &mockReply{data: "Put-in"}
 
 	slotElementHelperMock := slot.NewSlotElementHelperMock(t)
@@ -180,5 +180,5 @@ func TestSendResponseHelper_BadInput(t *testing.T) {
 	adapterCatalog := newCatalog()
 	err := adapterCatalog.sendResponseHelper.SendResponse(slotElementHelperMock, &mockReply{}, 44)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "Input event is not core.ConveyorPendingMessage")
+	require.Contains(t, err.Error(), "Input event is not insolar.ConveyorPendingMessage")
 }

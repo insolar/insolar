@@ -20,7 +20,7 @@ import (
 	"crypto"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy/internal/hash"
 	"github.com/insolar/insolar/platformpolicy/internal/sign"
 )
@@ -38,23 +38,23 @@ func (pcs *platformCryptographyScheme) SignatureSIze() int {
 	return sign.TwoBigIntBytesLength
 }
 
-func (pcs *platformCryptographyScheme) ReferenceHasher() core.Hasher {
+func (pcs *platformCryptographyScheme) ReferenceHasher() insolar.Hasher {
 	return pcs.HashProvider.Hash224bits()
 }
 
-func (pcs *platformCryptographyScheme) IntegrityHasher() core.Hasher {
+func (pcs *platformCryptographyScheme) IntegrityHasher() insolar.Hasher {
 	return pcs.HashProvider.Hash512bits()
 }
 
-func (pcs *platformCryptographyScheme) Signer(privateKey crypto.PrivateKey) core.Signer {
+func (pcs *platformCryptographyScheme) Signer(privateKey crypto.PrivateKey) insolar.Signer {
 	return pcs.SignProvider.Sign(privateKey)
 }
 
-func (pcs *platformCryptographyScheme) Verifier(publicKey crypto.PublicKey) core.Verifier {
+func (pcs *platformCryptographyScheme) Verifier(publicKey crypto.PublicKey) insolar.Verifier {
 	return pcs.SignProvider.Verify(publicKey)
 }
 
-func NewPlatformCryptographyScheme() core.PlatformCryptographyScheme {
+func NewPlatformCryptographyScheme() insolar.PlatformCryptographyScheme {
 	platformCryptographyScheme := &platformCryptographyScheme{}
 
 	manager := component.Manager{}

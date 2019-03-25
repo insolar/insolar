@@ -20,7 +20,7 @@ import (
 	"context"
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 )
@@ -30,28 +30,28 @@ func TestHandlerRouter_Build(t *testing.T) {
 
 	var result []string
 
-	firstWrap := func(core.MessageHandler) core.MessageHandler {
+	firstWrap := func(insolar.MessageHandler) insolar.MessageHandler {
 		result = append(result, "firstWrap")
-		return func(context.Context, core.Parcel) (core.Reply, error) {
+		return func(context.Context, insolar.Parcel) (insolar.Reply, error) {
 			return nil, errors.New("Not implemented")
 		}
 	}
 
-	secondWrap := func(core.MessageHandler) core.MessageHandler {
+	secondWrap := func(insolar.MessageHandler) insolar.MessageHandler {
 		result = append(result, "secondWrap")
-		return func(context.Context, core.Parcel) (core.Reply, error) {
+		return func(context.Context, insolar.Parcel) (insolar.Reply, error) {
 			return nil, errors.New("Not implemented")
 		}
 	}
 
-	thirdWrap := func(core.MessageHandler) core.MessageHandler {
+	thirdWrap := func(insolar.MessageHandler) insolar.MessageHandler {
 		result = append(result, "thirdWrap")
-		return func(context.Context, core.Parcel) (core.Reply, error) {
+		return func(context.Context, insolar.Parcel) (insolar.Reply, error) {
 			return nil, errors.New("Not implemented")
 		}
 	}
 
-	handler := func(context.Context, core.Parcel) (core.Reply, error) {
+	handler := func(context.Context, insolar.Parcel) (insolar.Reply, error) {
 		result = append(result, "handler")
 		return nil, errors.New("Not implemented")
 	}

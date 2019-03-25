@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,7 +20,7 @@ import (
 type CloudHashAppenderMock struct {
 	t minimock.Tester
 
-	AppendFunc       func(p context.Context, p1 core.PulseNumber, p2 []byte) (r error)
+	AppendFunc       func(p context.Context, p1 insolar.PulseNumber, p2 []byte) (r error)
 	AppendCounter    uint64
 	AppendPreCounter uint64
 	AppendMock       mCloudHashAppenderMockAppend
@@ -52,7 +52,7 @@ type CloudHashAppenderMockAppendExpectation struct {
 
 type CloudHashAppenderMockAppendInput struct {
 	p  context.Context
-	p1 core.PulseNumber
+	p1 insolar.PulseNumber
 	p2 []byte
 }
 
@@ -61,7 +61,7 @@ type CloudHashAppenderMockAppendResult struct {
 }
 
 //Expect specifies that invocation of CloudHashAppender.Append is expected from 1 to Infinity times
-func (m *mCloudHashAppenderMockAppend) Expect(p context.Context, p1 core.PulseNumber, p2 []byte) *mCloudHashAppenderMockAppend {
+func (m *mCloudHashAppenderMockAppend) Expect(p context.Context, p1 insolar.PulseNumber, p2 []byte) *mCloudHashAppenderMockAppend {
 	m.mock.AppendFunc = nil
 	m.expectationSeries = nil
 
@@ -85,7 +85,7 @@ func (m *mCloudHashAppenderMockAppend) Return(r error) *CloudHashAppenderMock {
 }
 
 //ExpectOnce specifies that invocation of CloudHashAppender.Append is expected once
-func (m *mCloudHashAppenderMockAppend) ExpectOnce(p context.Context, p1 core.PulseNumber, p2 []byte) *CloudHashAppenderMockAppendExpectation {
+func (m *mCloudHashAppenderMockAppend) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 []byte) *CloudHashAppenderMockAppendExpectation {
 	m.mock.AppendFunc = nil
 	m.mainExpectation = nil
 
@@ -100,7 +100,7 @@ func (e *CloudHashAppenderMockAppendExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of CloudHashAppender.Append method
-func (m *mCloudHashAppenderMockAppend) Set(f func(p context.Context, p1 core.PulseNumber, p2 []byte) (r error)) *CloudHashAppenderMock {
+func (m *mCloudHashAppenderMockAppend) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 []byte) (r error)) *CloudHashAppenderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -109,7 +109,7 @@ func (m *mCloudHashAppenderMockAppend) Set(f func(p context.Context, p1 core.Pul
 }
 
 //Append implements github.com/insolar/insolar/network/storage.CloudHashAppender interface
-func (m *CloudHashAppenderMock) Append(p context.Context, p1 core.PulseNumber, p2 []byte) (r error) {
+func (m *CloudHashAppenderMock) Append(p context.Context, p1 insolar.PulseNumber, p2 []byte) (r error) {
 	counter := atomic.AddUint64(&m.AppendPreCounter, 1)
 	defer atomic.AddUint64(&m.AppendCounter, 1)
 

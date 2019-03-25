@@ -17,22 +17,22 @@
 package network
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type testNetwork struct {
 }
 
-func (n *testNetwork) SendMessage(nodeID core.RecordRef, method string, msg core.Parcel) ([]byte, error) {
+func (n *testNetwork) SendMessage(nodeID insolar.Reference, method string, msg insolar.Parcel) ([]byte, error) {
 	return make([]byte, 0), nil
 }
-func (n *testNetwork) SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error {
+func (n *testNetwork) SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error {
 	return nil
 }
-func (n *testNetwork) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
+func (n *testNetwork) RemoteProcedureRegister(name string, method insolar.RemoteProcedure) {
 
 }
 
-func GetTestNetwork() core.Network {
+func GetTestNetwork() insolar.Network {
 	return &testNetwork{}
 }

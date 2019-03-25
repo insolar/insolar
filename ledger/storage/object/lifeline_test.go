@@ -19,9 +19,9 @@ package object
 import (
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar"
+	"github.com/google/gofuzz"
 	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/stretchr/testify/assert"
@@ -154,7 +154,7 @@ func TestCloneObjectLifeline(t *testing.T) {
 
 	currentIdx := lifeline()
 
-	clonedIdx := Clone(currentIdx)
+	clonedIdx := CloneIndex(currentIdx)
 
 	assert.Equal(t, currentIdx, clonedIdx)
 	assert.False(t, &currentIdx == &clonedIdx)
@@ -170,7 +170,7 @@ func delegates() (result map[insolar.Reference]insolar.Reference) {
 	return
 }
 
-func state() (state State) {
+func state() (state StateID) {
 	fuzz.New().NilChance(0).Fuzz(&state)
 	return
 }

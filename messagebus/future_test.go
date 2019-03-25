@@ -21,19 +21,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
 )
 
 func testFuture() future {
 	return future{
-		result: make(chan core.Reply, 1),
+		result: make(chan insolar.Reply, 1),
 	}
 }
 
 func TestNewFuture(t *testing.T) {
 	conveyorFuture := NewFuture()
-	require.Implements(t, (*core.ConveyorFuture)(nil), conveyorFuture)
+	require.Implements(t, (*insolar.ConveyorFuture)(nil), conveyorFuture)
 	f := conveyorFuture.(*future)
 	require.NotNil(t, f.result)
 	require.EqualValues(t, 0, f.finished)

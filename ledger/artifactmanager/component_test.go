@@ -23,8 +23,8 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/recentstorage"
@@ -47,7 +47,7 @@ type componentSuite struct {
 	cleaner func()
 	db      storage.DBContext
 
-	scheme        core.PlatformCryptographyScheme
+	scheme        insolar.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
@@ -110,21 +110,21 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
 
-	jetID := *core.NewJetID(0, nil)
+	jetID := *insolar.NewJetID(0, nil)
 
 	amPulseStorageMock := testutils.NewPulseStorageMock(s.T())
-	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
+	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *insolar.Pulse, r1 error) {
 		pulse, err := s.pulseTracker.GetLatestPulse(p)
 		require.NoError(s.T(), err)
 		return &pulse.Pulse, err
 	}
 
 	jcMock := testutils.NewJetCoordinatorMock(s.T())
-	jcMock.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
-	jcMock.MeMock.Return(core.RecordRef{})
+	jcMock.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
+	jcMock.MeMock.Return(insolar.Reference{})
 
 	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
+	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
 
 	cs := testutils.NewPlatformCryptographyScheme()
 	mb := testmessagebus.NewTestMessageBus(s.T())
@@ -157,22 +157,22 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 	handler.JetCoordinator = jcMock
 
 	handler.HotDataWaiter = NewHotDataWaiterConcrete()
-	err := handler.HotDataWaiter.Unlock(s.ctx, core.RecordID(jetID))
+	err := handler.HotDataWaiter.Unlock(s.ctx, insolar.ID(jetID))
 	require.NoError(s.T(), err)
 
 	err = handler.Init(s.ctx)
 	require.NoError(s.T(), err)
 	objRef := *genRandomRef(0)
 
-	s.jetStorage.Update(s.ctx, core.FirstPulseNumber, true, jetID)
-	s.jetStorage.Update(s.ctx, core.FirstPulseNumber+1, true, jetID)
+	s.jetStorage.Update(s.ctx, insolar.FirstPulseNumber, true, jetID)
+	s.jetStorage.Update(s.ctx, insolar.FirstPulseNumber+1, true, jetID)
 
 	// Register request
-	reqID, err := am.RegisterRequest(s.ctx, objRef, &message.Parcel{Msg: &message.CallMethod{}, PulseNumber: core.FirstPulseNumber})
+	reqID, err := am.RegisterRequest(s.ctx, objRef, &message.Parcel{Msg: &message.CallMethod{}, PulseNumber: insolar.FirstPulseNumber})
 	require.NoError(s.T(), err)
 
 	// Change pulse.
-	err = s.pulseTracker.AddPulse(s.ctx, core.Pulse{PulseNumber: core.FirstPulseNumber + 1})
+	err = s.pulseTracker.AddPulse(s.ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1})
 	require.NoError(s.T(), err)
 
 	// Should have pending request.
@@ -181,7 +181,7 @@ func (s *componentSuite) TestLedgerArtifactManager_PendingRequest() {
 	assert.True(s.T(), has)
 
 	// Register result.
-	reqRef := *core.NewRecordRef(core.DomainID, *reqID)
+	reqRef := *insolar.NewReference(insolar.DomainID, *reqID)
 	_, err = am.RegisterResult(s.ctx, objRef, reqRef, nil)
 	require.NoError(s.T(), err)
 

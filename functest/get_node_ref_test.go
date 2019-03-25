@@ -53,7 +53,7 @@ func TestGetNodeRefByNotExistsPK(t *testing.T) {
 
 	nodeRef, err := getNodeRefSignedCall(NOTEXISTINGPUBLICKEY)
 	require.Equal(t, "", nodeRef)
-	require.Contains(t, err.Error(), "[ GetNodeRefByPK ] Node not found by PK: ")
+	require.Contains(t, err.Error(), "[ GetNodeRefByPK ] NetworkNode not found by PK: ")
 }
 
 func TestGetNodeRefInvalidParams(t *testing.T) {

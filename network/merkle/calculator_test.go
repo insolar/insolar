@@ -56,8 +56,8 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
@@ -70,9 +70,9 @@ import (
 type calculatorSuite struct {
 	suite.Suite
 
-	pulse       *core.Pulse
-	nodeNetwork core.NodeNetwork
-	service     core.CryptographyService
+	pulse       *insolar.Pulse
+	nodeNetwork insolar.NodeNetwork
+	service     insolar.CryptographyService
 
 	calculator Calculator
 }
@@ -101,7 +101,7 @@ func (t *calculatorSuite) TestGetGlobuleProof() {
 	globuleEntry := &GlobuleEntry{
 		PulseEntry: pulseEntry,
 		PulseHash:  ph,
-		ProofSet: map[core.Node]*PulseProof{
+		ProofSet: map[insolar.NetworkNode]*PulseProof{
 			t.nodeNetwork.GetOrigin(): pp,
 		},
 		PrevCloudHash: prevCloudHash,
@@ -131,7 +131,7 @@ func (t *calculatorSuite) TestGetCloudProof() {
 	globuleEntry := &GlobuleEntry{
 		PulseEntry: pulseEntry,
 		PulseHash:  ph,
-		ProofSet: map[core.Node]*PulseProof{
+		ProofSet: map[insolar.NetworkNode]*PulseProof{
 			t.nodeNetwork.GetOrigin(): pp,
 		},
 		PrevCloudHash: prevCloudHash,
@@ -186,9 +186,9 @@ func TestCalculator(t *testing.T) {
 	err := cm.Init(context.Background())
 	require.NoError(t, err)
 
-	pulse := &core.Pulse{
-		PulseNumber:     core.PulseNumber(1337),
-		NextPulseNumber: core.PulseNumber(1347),
+	pulse := &insolar.Pulse{
+		PulseNumber:     insolar.PulseNumber(1337),
+		NextPulseNumber: insolar.PulseNumber(1347),
 		Entropy:         pulsartestutils.MockEntropyGenerator{}.GenerateEntropy(),
 	}
 

@@ -21,7 +21,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/insolar/message"
 )
 
 type ExecutionState struct {

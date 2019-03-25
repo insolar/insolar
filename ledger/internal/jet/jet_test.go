@@ -21,7 +21,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 func TestJet_Parent(t *testing.T) {
@@ -33,7 +33,7 @@ func TestJet_Parent(t *testing.T) {
 	gotParent := Parent(child)
 	require.Equal(t, parent, gotParent, "got proper parent")
 
-	emptyChild := *core.NewJetID(0, nil)
+	emptyChild := *insolar.NewJetID(0, nil)
 	emptyParent := Parent(emptyChild)
 	require.Equal(t, emptyChild, emptyParent, "for empty jet ID, got the same parent")
 }

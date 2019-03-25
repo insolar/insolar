@@ -3,7 +3,7 @@
 
 package object
 
-func TypeFromRecord(generic Record) TypeID {
+func TypeFromRecord(generic VirtualRecord) TypeID {
 	switch generic.(type) {
 	case *GenesisRecord:
 		return 100
@@ -19,9 +19,9 @@ func TypeFromRecord(generic Record) TypeID {
 		return 301
 	case *CodeRecord:
 		return 302
-	case *ObjectActivateRecord:
+	case *ActivateRecord:
 		return 303
-	case *ObjectAmendRecord:
+	case *AmendRecord:
 		return 304
 	case *DeactivationRecord:
 		return 305
@@ -30,7 +30,7 @@ func TypeFromRecord(generic Record) TypeID {
 	}
 }
 
-func RecordFromType(i TypeID) Record {
+func RecordFromType(i TypeID) VirtualRecord {
 	switch i {
 	case 100:
 		return new(GenesisRecord)
@@ -47,9 +47,9 @@ func RecordFromType(i TypeID) Record {
 	case 302:
 		return new(CodeRecord)
 	case 303:
-		return new(ObjectActivateRecord)
+		return new(ActivateRecord)
 	case 304:
-		return new(ObjectAmendRecord)
+		return new(AmendRecord)
 	case 305:
 		return new(DeactivationRecord)
 	default:
@@ -74,9 +74,9 @@ func (i TypeID) String() string {
 	case 302:
 		return "CodeRecord"
 	case 303:
-		return "ObjectActivateRecord"
+		return "ActivateRecord"
 	case 304:
-		return "ObjectAmendRecord"
+		return "AmendRecord"
 	case 305:
 		return "DeactivationRecord"
 	default:
