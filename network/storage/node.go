@@ -37,6 +37,7 @@ package storage
 import (
 	"context"
 	"github.com/insolar/insolar/network/node"
+	"sync"
 
 	"github.com/insolar/insolar/core"
 )
@@ -54,4 +55,32 @@ type SnapshotAccessor interface {
 // SnapshotAppender provides method for appending Snapshot to storage.
 type SnapshotAppender interface {
 	Append(ctx context.Context, pulse core.PulseNumber, snapshot *node.Snapshot) error
+}
+
+// NewSnapshotStorage constructor creates PulseStorage
+func NewSnapshotStorage() *SnapshotStorage {
+	return &SnapshotStorage{}
+}
+
+type SnapshotStorage struct {
+	DB   DB `inject:""`
+	lock sync.RWMutex
+}
+
+func (s *SnapshotStorage) Append(ctx context.Context, pulse core.PulseNumber, snapshot *node.Snapshot) error {
+	buff := node.EncodeSnapshot(snapshot)
+	return s.DB.Set(pulseKey(pulse), buff)
+}
+
+func (s *SnapshotStorage) ForPulseNumber(ctx context.Context, pulse core.PulseNumber) (*node.Snapshot, error) {
+	buf, err := s.DB.Get(pulseKey(pulse))
+	if err != nil {
+		return nil, err
+	}
+	result := node.DecodeSnapshot(buf)
+	return &result, nil
+}
+
+func (s *SnapshotStorage) Latest(ctx context.Context) (*node.Snapshot, error) {
+	panic("implement me")
 }

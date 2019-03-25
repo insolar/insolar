@@ -35,7 +35,9 @@
 package node
 
 import (
+	"bytes"
 	"github.com/insolar/insolar/core"
+	"github.com/ugorji/go/codec"
 )
 
 type ListType int
@@ -99,4 +101,17 @@ func nodeStateToListType(state core.NodeState) ListType {
 	}
 	// special case for no match
 	return ListLength
+}
+
+func EncodeSnapshot(s *Snapshot) []byte {
+	var buff bytes.Buffer
+	enc := codec.NewEncoder(&buff, &codec.JsonHandle{})
+	enc.MustEncode(s)
+	return buff.Bytes()
+}
+
+func DecodeSnapshot(buf []byte) (s Snapshot) {
+	dec := codec.NewDecoderBytes(buf, &codec.JsonHandle{})
+	dec.MustDecode(&s)
+	return s
 }
