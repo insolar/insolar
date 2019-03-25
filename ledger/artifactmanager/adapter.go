@@ -39,8 +39,8 @@ type GetCodeTask struct {
 
 // GetCodeResp is response for adapter for getting code
 type GetCodeResp struct {
-	Parcel insolar.Reply
-	Err    error
+	Reply insolar.Reply
+	Err   error
 }
 
 // GetCodeProcessor is worker for adapter for getting code
@@ -63,8 +63,8 @@ func (p *GetCodeProcessor) Process(task adapter.AdapterTask, nestedEventHelper a
 	}
 
 	ctx := context.Background()
-	parcel, err := p.Handlers.handleGetCode(ctx, payload.Parcel)
-	msg = GetCodeResp{parcel, err}
+	reply, err := p.Handlers.handleGetCode(ctx, payload.Parcel)
+	msg = GetCodeResp{reply, err}
 	log.Info("[ GetCodeProcessor.Process ] Process was dome successfully")
 
 	return msg

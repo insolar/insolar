@@ -16,12 +16,20 @@
 
 package adapter
 
+import (
+	"github.com/insolar/insolar/ledger/artifactmanager"
+)
+
 type Catalog struct {
-	sendResponseHelper SendResponseHelper
+	SendResponse SendResponseHelper
+	GetCode      artifactmanager.GetCodeHelper
 }
 
 func newCatalog() *Catalog {
 	return &Catalog{
-		sendResponseHelper: SendResponseHelper{},
+		SendResponse: SendResponseHelper{},
+		GetCode:      artifactmanager.GetCodeHelper{},
 	}
 }
+
+var CurrentCatalog = newCatalog()
