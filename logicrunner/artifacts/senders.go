@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package artifactmanager
+package artifacts
 
 import (
 	"context"
@@ -24,11 +24,31 @@ import (
 	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/internal/jet"
 )
+
+// PreSender is an alias for a function
+// which is working like a `middleware` for messagebus.Send
+type PreSender func(Sender) Sender
+
+// Sender is an alias for signature of messagebus.Send
+type Sender func(context.Context, insolar.Message, *insolar.MessageSendOptions) (insolar.Reply, error)
+
+// BuildSender allows us to build a chain of PreSender before calling Sender
+// The main idea of it is ability to make a different things before sending message
+// For example we can cache some replies. Another example is the sendAndFollow redirect method
+func BuildSender(sender Sender, preSenders ...PreSender) Sender {
+	result := sender
+
+	for i := range preSenders {
+		result = preSenders[len(preSenders)-1-i](result)
+	}
+
+	return result
+}
 
 // ledgerArtifactSenders is a some kind of a middleware layer
 // it contains cache meta-data for calls

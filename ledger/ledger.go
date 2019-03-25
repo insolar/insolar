@@ -19,7 +19,7 @@ package ledger
 import (
 	"context"
 
-	"github.com/insolar/insolar/ledger/internal/jet"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	db2 "github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"

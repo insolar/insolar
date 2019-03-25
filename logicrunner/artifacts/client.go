@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package artifactmanager
+package artifacts
 
 import (
 	"bytes"
@@ -25,11 +25,10 @@ import (
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/ledger/internal/jet"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/object"
 )
@@ -39,9 +38,8 @@ const (
 	jetMissRetryCount    = 10
 )
 
-// LedgerArtifactManager provides concrete API to storage for processing module.
-type LedgerArtifactManager struct {
-	DB           storage.DBContext    `inject:""`
+// Client provides concrete API to storage for processing module.
+type Client struct {
 	GenesisState genesis.GenesisState `inject:""`
 	JetStorage   jet.Storage          `inject:""`
 
@@ -55,14 +53,14 @@ type LedgerArtifactManager struct {
 }
 
 // State returns hash state for artifact manager.
-func (m *LedgerArtifactManager) State() ([]byte, error) {
+func (m *Client) State() ([]byte, error) {
 	// This is a temporary stab to simulate real hash.
 	return m.PlatformCryptographyScheme.IntegrityHasher().Hash([]byte{1, 2, 3}), nil
 }
 
 // NewArtifactManger creates new manager instance.
-func NewArtifactManger() *LedgerArtifactManager {
-	return &LedgerArtifactManager{
+func NewArtifactManger() *Client {
+	return &Client{
 		getChildrenChunkSize: getChildrenChunkSize,
 		senders:              newLedgerArtifactSenders(),
 	}
@@ -71,13 +69,13 @@ func NewArtifactManger() *LedgerArtifactManager {
 // GenesisRef returns the root record reference.
 //
 // Root record is the parent for all top-level records.
-func (m *LedgerArtifactManager) GenesisRef() *insolar.Reference {
+func (m *Client) GenesisRef() *insolar.Reference {
 	return m.GenesisState.GenesisRef()
 }
 
 // RegisterRequest sends message for request registration,
 // returns request record Ref if request successfully created or already exists.
-func (m *LedgerArtifactManager) RegisterRequest(
+func (m *Client) RegisterRequest(
 	ctx context.Context, obj insolar.Reference, parcel insolar.Parcel,
 ) (*insolar.ID, error) {
 	var err error
@@ -118,9 +116,9 @@ func (m *LedgerArtifactManager) RegisterRequest(
 // GetCode returns code from code record by provided reference according to provided machine preference.
 //
 // This method is used by VM to fetch code for execution.
-func (m *LedgerArtifactManager) GetCode(
+func (m *Client) GetCode(
 	ctx context.Context, code insolar.Reference,
-) (insolar.CodeDescriptor, error) {
+) (CodeDescriptor, error) {
 	var err error
 	instrumenter := instrument(ctx, "GetCode").err(&err)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode")
@@ -153,7 +151,7 @@ func (m *LedgerArtifactManager) GetCode(
 
 	switch rep := genericReact.(type) {
 	case *reply.Code:
-		desc := CodeDescriptor{
+		desc := codeDescriptor{
 			ctx:         ctx,
 			ref:         code,
 			machineType: rep.MachineType,
@@ -171,14 +169,14 @@ func (m *LedgerArtifactManager) GetCode(
 //
 // If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 // provide methods for fetching all related data.
-func (m *LedgerArtifactManager) GetObject(
+func (m *Client) GetObject(
 	ctx context.Context,
 	head insolar.Reference,
 	state *insolar.ID,
 	approved bool,
-) (insolar.ObjectDescriptor, error) {
+) (ObjectDescriptor, error) {
 	var (
-		desc *ObjectDescriptor
+		desc ObjectDescriptor
 		err  error
 	)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.Getobject")
@@ -219,7 +217,7 @@ func (m *LedgerArtifactManager) GetObject(
 
 	switch r := genericReact.(type) {
 	case *reply.Object:
-		desc = &ObjectDescriptor{
+		desc = &objectDescriptor{
 			ctx:          ctx,
 			am:           m,
 			head:         r.Head,
@@ -241,7 +239,7 @@ func (m *LedgerArtifactManager) GetObject(
 // GetPendingRequest returns an unclosed pending request
 // It takes an id from current LME
 // Then goes either to a light node or heavy node
-func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID insolar.ID) (insolar.Parcel, error) {
+func (m *Client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (insolar.Parcel, error) {
 	var err error
 	instrumenter := instrument(ctx, "GetRegisterRequest").err(&err)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetRegisterRequest")
@@ -317,7 +315,7 @@ func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID 
 }
 
 // HasPendingRequests returns true if object has unclosed requests.
-func (m *LedgerArtifactManager) HasPendingRequests(
+func (m *Client) HasPendingRequests(
 	ctx context.Context,
 	object insolar.Reference,
 ) (bool, error) {
@@ -353,7 +351,7 @@ func (m *LedgerArtifactManager) HasPendingRequests(
 //
 // Object delegate should be previously created for this object. If object delegate does not exist, an error will
 // be returned.
-func (m *LedgerArtifactManager) GetDelegate(
+func (m *Client) GetDelegate(
 	ctx context.Context, head, asType insolar.Reference,
 ) (*insolar.Reference, error) {
 	var err error
@@ -395,9 +393,9 @@ func (m *LedgerArtifactManager) GetDelegate(
 // GetChildren returns children iterator.
 //
 // During iteration children refs will be fetched from remote source (parent object).
-func (m *LedgerArtifactManager) GetChildren(
+func (m *Client) GetChildren(
 	ctx context.Context, parent insolar.Reference, pulse *insolar.PulseNumber,
-) (insolar.RefIterator, error) {
+) (RefIterator, error) {
 	var err error
 
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetChildren")
@@ -424,7 +422,7 @@ func (m *LedgerArtifactManager) GetChildren(
 // DeclareType creates new type record in storage.
 //
 // Type is a contract interface. It contains one method signature.
-func (m *LedgerArtifactManager) DeclareType(
+func (m *Client) DeclareType(
 	ctx context.Context, domain, request insolar.Reference, typeDec []byte,
 ) (*insolar.ID, error) {
 	var err error
@@ -461,7 +459,7 @@ func (m *LedgerArtifactManager) DeclareType(
 // DeployCode creates new code record in storage.
 //
 // CodeRef records are used to activate prototype or as migration code for an object.
-func (m *LedgerArtifactManager) DeployCode(
+func (m *Client) DeployCode(
 	ctx context.Context,
 	domain insolar.Reference,
 	request insolar.Reference,
@@ -516,11 +514,11 @@ func (m *LedgerArtifactManager) DeployCode(
 // memory as memory of created object. If memory is not provided, the prototype default memory will be used.
 //
 // Request reference will be this object's identifier and referred as "object head".
-func (m *LedgerArtifactManager) ActivatePrototype(
+func (m *Client) ActivatePrototype(
 	ctx context.Context,
 	domain, object, parent, code insolar.Reference,
 	memory []byte,
-) (insolar.ObjectDescriptor, error) {
+) (ObjectDescriptor, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.ActivatePrototype")
 	instrumenter := instrument(ctx, "ActivatePrototype").err(&err)
@@ -539,12 +537,12 @@ func (m *LedgerArtifactManager) ActivatePrototype(
 // memory as memory of created object. If memory is not provided, the prototype default memory will be used.
 //
 // Request reference will be this object's identifier and referred as "object head".
-func (m *LedgerArtifactManager) ActivateObject(
+func (m *Client) ActivateObject(
 	ctx context.Context,
 	domain, object, parent, prototype insolar.Reference,
 	asDelegate bool,
 	memory []byte,
-) (insolar.ObjectDescriptor, error) {
+) (ObjectDescriptor, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.ActivateObject")
 	instrumenter := instrument(ctx, "ActivateObject").err(&err)
@@ -563,8 +561,8 @@ func (m *LedgerArtifactManager) ActivateObject(
 // of the object. If object is already deactivated, an error should be returned.
 //
 // Deactivated object cannot be changed.
-func (m *LedgerArtifactManager) DeactivateObject(
-	ctx context.Context, domain, request insolar.Reference, obj insolar.ObjectDescriptor,
+func (m *Client) DeactivateObject(
+	ctx context.Context, domain, request insolar.Reference, obj ObjectDescriptor,
 ) (*insolar.ID, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.DeactivateObject")
@@ -602,13 +600,13 @@ func (m *LedgerArtifactManager) DeactivateObject(
 // prototype. Provided memory well be the new object memory.
 //
 // Returned reference will be the latest object state (exact) reference.
-func (m *LedgerArtifactManager) UpdatePrototype(
+func (m *Client) UpdatePrototype(
 	ctx context.Context,
 	domain, request insolar.Reference,
-	object insolar.ObjectDescriptor,
+	object ObjectDescriptor,
 	memory []byte,
 	code *insolar.Reference,
-) (insolar.ObjectDescriptor, error) {
+) (ObjectDescriptor, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.UpdatePrototype")
 	instrumenter := instrument(ctx, "UpdatePrototype").err(&err)
@@ -632,12 +630,12 @@ func (m *LedgerArtifactManager) UpdatePrototype(
 // object. Provided memory well be the new object memory.
 //
 // Returned reference will be the latest object state (exact) reference.
-func (m *LedgerArtifactManager) UpdateObject(
+func (m *Client) UpdateObject(
 	ctx context.Context,
 	domain, request insolar.Reference,
-	object insolar.ObjectDescriptor,
+	object ObjectDescriptor,
 	memory []byte,
-) (insolar.ObjectDescriptor, error) {
+) (ObjectDescriptor, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.UpdateObject")
 	instrumenter := instrument(ctx, "UpdateObject").err(&err)
@@ -660,7 +658,7 @@ func (m *LedgerArtifactManager) UpdateObject(
 // RegisterValidation marks provided object state as approved or disapproved.
 //
 // When fetching object, validity can be specified.
-func (m *LedgerArtifactManager) RegisterValidation(
+func (m *Client) RegisterValidation(
 	ctx context.Context,
 	object insolar.Reference,
 	state insolar.ID,
@@ -698,7 +696,7 @@ func (m *LedgerArtifactManager) RegisterValidation(
 }
 
 // RegisterResult saves VM method call result.
-func (m *LedgerArtifactManager) RegisterResult(
+func (m *Client) RegisterResult(
 	ctx context.Context, obj, request insolar.Reference, payload []byte,
 ) (*insolar.ID, error) {
 	var err error
@@ -731,7 +729,7 @@ func (m *LedgerArtifactManager) RegisterResult(
 }
 
 // pulse returns current PulseNumber for artifact manager
-func (m *LedgerArtifactManager) pulse(ctx context.Context) (pn insolar.PulseNumber, err error) {
+func (m *Client) pulse(ctx context.Context) (pn insolar.PulseNumber, err error) {
 	pulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
 		return
@@ -741,7 +739,7 @@ func (m *LedgerArtifactManager) pulse(ctx context.Context) (pn insolar.PulseNumb
 	return
 }
 
-func (m *LedgerArtifactManager) activateObject(
+func (m *Client) activateObject(
 	ctx context.Context,
 	domain insolar.Reference,
 	obj insolar.Reference,
@@ -750,7 +748,7 @@ func (m *LedgerArtifactManager) activateObject(
 	parent insolar.Reference,
 	asDelegate bool,
 	memory []byte,
-) (insolar.ObjectDescriptor, error) {
+) (ObjectDescriptor, error) {
 	parentDesc, err := m.GetObject(ctx, parent, nil, false)
 	if err != nil {
 		return nil, err
@@ -808,7 +806,7 @@ func (m *LedgerArtifactManager) activateObject(
 		return nil, errors.Wrap(err, "failed to activate")
 	}
 
-	return &ObjectDescriptor{
+	return &objectDescriptor{
 		ctx:          ctx,
 		am:           m,
 		head:         o.Head,
@@ -820,13 +818,13 @@ func (m *LedgerArtifactManager) activateObject(
 	}, nil
 }
 
-func (m *LedgerArtifactManager) updateObject(
+func (m *Client) updateObject(
 	ctx context.Context,
 	domain, request insolar.Reference,
-	obj insolar.ObjectDescriptor,
+	obj ObjectDescriptor,
 	code *insolar.Reference,
 	memory []byte,
-) (insolar.ObjectDescriptor, error) {
+) (ObjectDescriptor, error) {
 	var (
 		image *insolar.Reference
 		err   error
@@ -873,7 +871,7 @@ func (m *LedgerArtifactManager) updateObject(
 		return nil, errors.Wrap(err, "failed to update object")
 	}
 
-	return &ObjectDescriptor{
+	return &objectDescriptor{
 		ctx:          ctx,
 		am:           m,
 		head:         o.Head,
@@ -885,7 +883,7 @@ func (m *LedgerArtifactManager) updateObject(
 	}, nil
 }
 
-func (m *LedgerArtifactManager) setRecord(
+func (m *Client) setRecord(
 	ctx context.Context,
 	rec object.VirtualRecord,
 	target insolar.Reference,
@@ -913,7 +911,7 @@ func (m *LedgerArtifactManager) setRecord(
 	}
 }
 
-func (m *LedgerArtifactManager) setBlob(
+func (m *Client) setBlob(
 	ctx context.Context,
 	blob []byte,
 	target insolar.Reference,
@@ -941,7 +939,7 @@ func (m *LedgerArtifactManager) setBlob(
 	}
 }
 
-func (m *LedgerArtifactManager) sendUpdateObject(
+func (m *Client) sendUpdateObject(
 	ctx context.Context,
 	rec object.VirtualRecord,
 	obj insolar.Reference,
@@ -984,7 +982,7 @@ func (m *LedgerArtifactManager) sendUpdateObject(
 	}
 }
 
-func (m *LedgerArtifactManager) registerChild(
+func (m *Client) registerChild(
 	ctx context.Context,
 	rec object.VirtualRecord,
 	parent insolar.Reference,
