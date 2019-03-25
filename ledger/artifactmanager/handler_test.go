@@ -1058,7 +1058,7 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
-	nodeMock := network.NewNodeMock(s.T())
+	nodeMock := network.NewNetworkNodeMock(s.T())
 	nodeMock.RoleMock.Return(insolar.StaticRoleLightMaterial)
 	nodeNetworkMock := network.NewNodeNetworkMock(s.T())
 	nodeNetworkMock.GetOriginMock.Return(nodeMock)
