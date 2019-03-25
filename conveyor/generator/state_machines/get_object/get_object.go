@@ -60,7 +60,7 @@ func Register() {
 		Init(InitState, Init, CheckingJet).
 
 		Transition(CheckingJet, GetJet, WaitingCheckingJet).
-		AdapterResponse(CheckingJet, GetJetResponse, FetchingJet).
+		AdapterResponse(CheckingJet, GetJetResponse, FetchingJet, InvokeWaitingHotData).
 
 		Transition(FetchingJet, FetchJet, WaitingFetchingJet).
 		AdapterResponse(FetchingJet, FetchJetResponse, InvokeWaitingHotData).

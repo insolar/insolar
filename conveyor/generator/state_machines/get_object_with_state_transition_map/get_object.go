@@ -55,17 +55,26 @@ const (
 func Register() {
 	gen.AddMachine("GetObjectStateMachine").
 		RegisterTransitionsMap(
-			InitState,            gen.Asd{WaitingPresent, CheckingJet},
-			WaitingPresent,       gen.Asd{CheckingJet},
-			CheckingJet,          gen.Asd{WaitingCheckingJet, FetchingJet},
-			FetchingJet,          gen.Asd{WaitingFetchingJet, InvokeWaitingHotData},
-			InvokeWaitingHotData, gen.Asd{WaitingHotData, CheckingIndex},
-			CheckingIndex,        gen.Asd{WaitingCheckingIndex, CheckingState, FetchingIndex},
-			FetchingIndex,        gen.Asd{WaitingFetchingIndex, CheckingState},
-			CheckingState,        gen.Asd{WaitingCheckingState, Result, CheckingJetForState},
-			CheckingJetForState,  gen.Asd{WaitingCheckingJetForState, FetchingState, FetchingJetForState},
-			FetchingJetForState,  gen.Asd{WaitingFetchingJetForState, FetchingState},
-			FetchingState,        gen.Asd{WaitingFetchingState, Result},
+			InitState,            		gen.Asd{WaitingPresent, CheckingJet},
+			WaitingPresent,       		gen.Asd{CheckingJet},
+			CheckingJet,          		gen.Asd{WaitingCheckingJet},
+			WaitingCheckingJet,	  		gen.Asd{FetchingJet, InvokeWaitingHotData},
+			FetchingJet,          		gen.Asd{WaitingFetchingJet},
+			WaitingFetchingJet,   		gen.Asd{InvokeWaitingHotData},
+			InvokeWaitingHotData, 		gen.Asd{WaitingHotData},
+			WaitingHotData,		  		gen.Asd{CheckingIndex},
+			CheckingIndex,        		gen.Asd{WaitingCheckingIndex},
+			WaitingCheckingIndex, 		gen.Asd{CheckingState, FetchingIndex},
+			FetchingIndex,        		gen.Asd{WaitingFetchingIndex},
+			WaitingFetchingIndex, 		gen.Asd{CheckingState},
+			CheckingState,        		gen.Asd{WaitingCheckingState},
+			WaitingCheckingState, 		gen.Asd{Result, CheckingJetForState},
+			CheckingJetForState,  		gen.Asd{WaitingCheckingJetForState},
+			WaitingCheckingJetForState, gen.Asd{FetchingState, FetchingJetForState},
+			FetchingJetForState,  		gen.Asd{WaitingFetchingJetForState},
+			WaitingFetchingJetForState, gen.Asd{FetchingState},
+			FetchingState,        		gen.Asd{WaitingFetchingState},
+			WaitingFetchingState, 		gen.Asd{Result},
 		).
 
 		InitFuture(InitState, InitFuture).
