@@ -17,7 +17,7 @@
 package get_object
 
 import (
-	"ilyap/awesomeProject3/gen"
+	"github.com/insolar/insolar/conveyor/generator/generator/gen"
 
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
@@ -30,6 +30,7 @@ type TA1 struct{}
 
 const (
 	InitState gen.ElState = iota
+	WaitingPresent
 	CheckingJet
 	WaitingCheckingJet
 	FetchingJet
@@ -52,41 +53,50 @@ const (
 )
 
 func Register() {
+	gen.RegisterTransitionsMap(
+		FetchingJet, gen.Asd{InvokeWaitingHotData, InvokeWaitingHotData},
+	)
+
 	gen.AddMachine("GetObjectStateMachine").
-		RegisterTransitionFuture(InitState, InitFuture, CheckingJet).
-		RegisterTransition(InitState, Init, CheckingJet).
 
-		RegisterTransition(CheckingJet, GetJet, WaitingCheckingJet).
-		RegisterAdapterResponse(WaitingCheckingJet, GetJetResponse, InvokeWaitingHotData, FetchingJet).
+		TransitionFuture(InitState, InitFuture, WaitingPresent).
+		MigrationFuturePresent(WaitingPresent, MigrateToPresent, CheckingJet).
+		Transition(InitState, Init, CheckingJet).
 
-		RegisterTransition(FetchingJet, FetchJet, WaitingFetchingJet).
-		RegisterAdapterResponse(WaitingFetchingJet, FetchJetResponse, InvokeWaitingHotData).
+		Transition(CheckingJet, GetJet, WaitingCheckingJet).
+		AdapterResponse(CheckingJet, GetJetResponse).
 
-		RegisterTransition(InvokeWaitingHotData, WaitHotData, WaitingHotData).
-		RegisterAdapterResponse(WaitingHotData, WaitHotDataResponse, CheckingIndex).
+		Transition(FetchingJet, FetchJet, WaitingFetchingJet).
+		AdapterResponse(FetchingJet, FetchJetResponse, InvokeWaitingHotData).
 
-		RegisterTransition(CheckingIndex, CheckIndex, WaitingCheckingIndex).
-		RegisterAdapterResponse(WaitingCheckingIndex, WaitCheckIndex, CheckingState, FetchingIndex).
+		Transition(InvokeWaitingHotData, WaitHotData, WaitingHotData).
+		AdapterResponse(InvokeWaitingHotData, WaitHotDataResponse, CheckingIndex).
 
-		RegisterTransition(FetchingIndex, FetchIndex, WaitingFetchingIndex).
-		RegisterAdapterResponse(WaitingFetchingIndex, WaitFetchIndex, CheckingState).
+		Transition(CheckingIndex, CheckIndex, WaitingCheckingIndex).
+		AdapterResponse(CheckingIndex, WaitCheckIndex, CheckingState, FetchingIndex).
 
-		RegisterTransition(CheckingState, CheckState, WaitingCheckingState).
-		RegisterAdapterResponse(WaitingCheckingState, WaitCheckState, Result, CheckingJetForState).
+		Transition(FetchingIndex, FetchIndex, WaitingFetchingIndex).
+		AdapterResponse(FetchingIndex, WaitFetchIndex, CheckingState).
 
-		RegisterTransition(CheckingJetForState, CheckJetForState, WaitingCheckingJetForState).
-		RegisterAdapterResponse(WaitingCheckingJetForState, WaitCheckJetForState, FetchingState, FetchingJetForState).
+		Transition(CheckingState, CheckState, WaitingCheckingState).
+		AdapterResponse(CheckingState, WaitCheckState, Result, CheckingJetForState).
 
-		RegisterTransition(FetchingJetForState, FetchJetForState, WaitingFetchingJetForState).
-		RegisterAdapterResponse(WaitingFetchingJetForState, WaitFetchJetForState, FetchingState).
+		Transition(CheckingJetForState, CheckJetForState, WaitingCheckingJetForState).
+		AdapterResponse(CheckingJetForState, WaitCheckJetForState, FetchingState, FetchingJetForState).
 
-		RegisterTransition(FetchingState, FetchState, WaitingFetchingState).
-		RegisterAdapterResponse(WaitingFetchingState, WaitFetchState, Result)
+		Transition(FetchingJetForState, FetchJetForState, WaitingFetchingJetForState).
+		AdapterResponse(FetchingJetForState, WaitFetchJetForState, FetchingState).
+
+		Transition(FetchingState, FetchState, WaitingFetchingState).
+		AdapterResponse(FetchingState, WaitFetchState, Result)
 }
 
 func InitFuture(helper slot.SlotElementHelper, input Event, payload interface{}) (*Payload, fsm.ElementState) {
 	helper.DeactivateTill(slot.Response)
-	return payload.(*Payload), fsm.ElementState(CheckingJet)
+	return payload.(*Payload), fsm.ElementState(WaitingPresent)
+}
+func MigrateToPresent(input Event, payload *Payload) (*Payload, fsm.ElementState) {
+	return payload, fsm.ElementState(CheckingJet)
 }
 func Init(helper slot.SlotElementHelper, input Event, payload interface{}) (*Payload, fsm.ElementState) {
 	return payload.(*Payload), fsm.ElementState(CheckingJet)
