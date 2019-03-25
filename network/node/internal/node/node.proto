@@ -1,0 +1,23 @@
+syntax = "proto3";
+
+package node;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.populate_all)        = false;
+
+message Node {
+    option (gogoproto.face) = true;
+
+    bytes NodeID      = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    uint32 NodeShortID = 2;
+    uint32 NodeRole = 3;
+    bytes NodePublicKey = 4;
+    string NodeAddress = 5;
+    string CAddress = 6;
+    string NodeVersion = 7;
+    uint32 NodeLeavingETA = 8;
+    uint32 state = 9;
+}
+

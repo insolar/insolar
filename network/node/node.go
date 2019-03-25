@@ -61,6 +61,7 @@ import (
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
+	protonode "github.com/insolar/insolar/network/node/internal/node"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
@@ -230,4 +231,20 @@ func IncrementPort(address string) (string, error) {
 		port++
 	}
 	return fmt.Sprintf("%s:%d", parts[0], port), nil
+}
+
+func Encode(n insolar.NetworkNode) ([]byte, error) {
+
+	x := protonode.Node{
+		NodeID:         n.ID(),
+		NodeShortID:    uint32(n.ShortID()),
+		NodeRole:       uint32(n.Role()),
+		NodePublicKey:  n.PublicKey().([]byte),
+		NodeAddress:    n.Address(),
+		CAddress:       n.ConsensusAddress(),
+		NodeVersion:    n.Version(),
+		NodeLeavingETA: uint32(n.LeavingETA()),
+		State:          uint32(n.GetState()),
+	}
+	return x.XXX_Marshal(nil, true)
 }
