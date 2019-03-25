@@ -27,8 +27,6 @@ import (
 type Store interface {
 	GetRecord(ctx context.Context, jetID insolar.ID, ref *insolar.ID) (object.VirtualRecord, error)
 	SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec object.VirtualRecord) (*insolar.ID, error)
-	GetBlob(ctx context.Context, jetID insolar.ID, ref *insolar.ID) ([]byte, error)
-	SetBlob(ctx context.Context, jetID insolar.ID, number insolar.PulseNumber, blob []byte) (*insolar.ID, error)
 
 	GetObjectIndex(ctx context.Context, jetID insolar.ID, ref *insolar.ID) (*object.Lifeline, error)
 	SetObjectIndex(ctx context.Context, jetID insolar.ID, ref *insolar.ID, idx *object.Lifeline) error

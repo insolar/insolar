@@ -78,38 +78,6 @@ func (m *TransactionManager) GetRequest(ctx context.Context, jetID insolar.ID, i
 	return req, nil
 }
 
-// GetBlob returns binary value stored by record ID.
-func (m *TransactionManager) GetBlob(ctx context.Context, jetID insolar.ID, id *insolar.ID) ([]byte, error) {
-	jetPrefix := insolar.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
-	return m.get(ctx, k)
-}
-
-// SetBlob saves binary value for provided pulse.
-func (m *TransactionManager) SetBlob(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, blob []byte) (*insolar.ID, error) {
-	id := object.CalculateIDForBlob(m.db.PlatformCryptographyScheme, pulseNumber, blob)
-	jetPrefix := insolar.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
-
-	// TODO: @andreyromancev. 16.01.19. Blob override is ok.
-	// geterr := muxs.db.db.View(func(tx *badger.Txn) error {
-	// 	_, err := tx.Get(k)
-	// 	return err
-	// })
-	// if geterr == nil {
-	// 	return id, ErrOverride
-	// }
-	// if geterr != badger.ErrKeyNotFound {
-	// 	return nil, ErrNotFound
-	// }
-
-	err := m.set(ctx, k, blob)
-	if err != nil {
-		return nil, err
-	}
-	return id, nil
-}
-
 // GetRecord returns record from BadgerDB by *record.Reference.
 //
 // It returns ErrNotFound if the DB does not contain the key.

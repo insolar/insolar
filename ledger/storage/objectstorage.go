@@ -65,31 +65,30 @@ func NewObjectStorage() ObjectStorage {
 // GetBlob returns binary value stored by record ID.
 // TODO: switch from reference to passing blob id for consistency - @nordicdyno 6.Dec.2018
 func (os *objectStorage) GetBlob(ctx context.Context, jetID insolar.ID, id *insolar.ID) ([]byte, error) {
-	var (
-		blob []byte
-		err  error
-	)
-
-	err = os.DB.View(ctx, func(tx *TransactionManager) error {
-		blob, err = tx.GetBlob(ctx, jetID, id)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	return blob, nil
+	jetPrefix := insolar.JetID(jetID).Prefix()
+	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
+	return os.DB.Get(ctx, k)
 }
 
 // SetBlob saves binary value for provided pulse.
 func (os *objectStorage) SetBlob(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, blob []byte) (*insolar.ID, error) {
-	var (
-		id  *insolar.ID
-		err error
-	)
-	err = os.DB.Update(ctx, func(tx *TransactionManager) error {
-		id, err = tx.SetBlob(ctx, jetID, pulseNumber, blob)
-		return err
-	})
+	id := object.CalculateIDForBlob(os.PlatformCryptographyScheme, pulseNumber, blob)
+	jetPrefix := insolar.JetID(jetID).Prefix()
+	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
+
+	// TODO: @andreyromancev. 16.01.19. Blob override is ok.
+	// geterr := muxs.db.db.View(func(tx *badger.Txn) error {
+	// 	_, err := tx.Get(k)
+	// 	return err
+	// })
+	// if geterr == nil {
+	// 	return id, ErrOverride
+	// }
+	// if geterr != badger.ErrKeyNotFound {
+	// 	return nil, ErrNotFound
+	// }
+
+	err := os.DB.Set(ctx, k, blob)
 	if err != nil {
 		return nil, err
 	}
