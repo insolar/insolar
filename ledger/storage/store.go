@@ -25,8 +25,6 @@ import (
 
 // Store is used by context unaware clients who can work inside transactions as well as outside.
 type Store interface {
-	SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec object.VirtualRecord) (*insolar.ID, error)
-
 	GetObjectIndex(ctx context.Context, jetID insolar.ID, ref *insolar.ID) (*object.Lifeline, error)
 	SetObjectIndex(ctx context.Context, jetID insolar.ID, ref *insolar.ID, idx *object.Lifeline) error
 

@@ -65,32 +65,6 @@ func (m *TransactionManager) Discard() {
 	}
 }
 
-// SetRecord stores record in BadgerDB and returns *record.ID of new record.
-//
-// If record exists returns both *record.ID and ErrOverride error.
-// If record not found returns nil and ErrNotFound error
-func (m *TransactionManager) SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec object.VirtualRecord) (*insolar.ID, error) {
-	id := object.NewRecordIDFromRecord(m.db.PlatformCryptographyScheme, pulseNumber, rec)
-	prefix := insolar.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDRecord, prefix, id[:])
-	geterr := m.db.db.View(func(tx *badger.Txn) error {
-		_, err := tx.Get(k)
-		return err
-	})
-	if geterr == nil {
-		return id, ErrOverride
-	}
-	if geterr != badger.ErrKeyNotFound {
-		return nil, geterr
-	}
-
-	err := m.set(ctx, k, object.SerializeRecord(rec))
-	if err != nil {
-		return nil, err
-	}
-	return id, nil
-}
-
 // GetObjectIndex fetches object lifeline index.
 func (m *TransactionManager) GetObjectIndex(
 	ctx context.Context,

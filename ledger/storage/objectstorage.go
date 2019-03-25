@@ -108,14 +108,18 @@ func (os *objectStorage) GetRecord(ctx context.Context, jetID insolar.ID, id *in
 
 // SetRecord wraps matching transaction manager method.
 func (os *objectStorage) SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec object.VirtualRecord) (*insolar.ID, error) {
-	var (
-		id  *insolar.ID
-		err error
-	)
-	err = os.DB.Update(ctx, func(tx *TransactionManager) error {
-		id, err = tx.SetRecord(ctx, jetID, pulseNumber, rec)
-		return err
-	})
+	id := object.NewRecordIDFromRecord(os.PlatformCryptographyScheme, pulseNumber, rec)
+	prefix := insolar.JetID(jetID).Prefix()
+	k := prefixkey(scopeIDRecord, prefix, id[:])
+	_, geterr := os.DB.Get(ctx, k)
+	if geterr == nil {
+		return id, ErrOverride
+	}
+	if geterr != insolar.ErrNotFound {
+		return nil, geterr
+	}
+
+	err := os.DB.Set(ctx, k, object.SerializeRecord(rec))
 	if err != nil {
 		return nil, err
 	}
