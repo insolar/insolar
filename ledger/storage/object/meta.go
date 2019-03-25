@@ -31,8 +31,8 @@ func (r *GenesisRecord) PrevStateID() *insolar.ID {
 	return nil
 }
 
-// State returns state id.
-func (r *GenesisRecord) State() State {
+// StateID returns state id.
+func (r *GenesisRecord) ID() StateID {
 	return StateActivation
 }
 

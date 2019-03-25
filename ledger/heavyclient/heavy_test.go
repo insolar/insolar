@@ -366,7 +366,7 @@ func addRecords(
 		ctx,
 		jetID,
 		pn,
-		&object.ObjectActivateRecord{
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: testutils.RandomRef(),
 			},

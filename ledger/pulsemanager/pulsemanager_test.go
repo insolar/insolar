@@ -107,7 +107,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 		s.ctx,
 		insolar.ID(jetID),
 		insolar.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{})
+		&object.ActivateRecord{})
 	firstIndex := object.Lifeline{
 		LatestState: firstID,
 	}
@@ -156,7 +156,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 		require.Equal(s.T(), 1, len(objContext.Requests))
 
 		require.Equal(s.T(), 1, len(val.RecentObjects))
-		decodedIndex := object.Decode(val.RecentObjects[*firstID].Index)
+		decodedIndex := object.DecodeIndex(val.RecentObjects[*firstID].Index)
 		require.Equal(s.T(), firstIndex, decodedIndex)
 		require.Equal(s.T(), 1, val.RecentObjects[*firstID].TTL)
 

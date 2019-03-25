@@ -170,8 +170,8 @@ func getTestData(s *amSuite) (
 	handler := MessageHandler{
 		replayHandlers:             map[insolar.MessageType]insolar.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
-		conf:        &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
-		certificate: certificate,
+		conf:                       &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
+		certificate:                certificate,
 	}
 
 	handler.Nodes = s.nodeStorage
@@ -335,7 +335,7 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 		ctx,
 		insolar.ID(jetID),
 		insolar.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: *genRandomRef(0),
 			},
@@ -360,12 +360,12 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 
 	activateRec, err := os.GetRecord(ctx, insolar.ID(jetID), objDesc.StateID())
 	assert.Nil(s.T(), err)
-	assert.Equal(s.T(), activateRec, &object.ObjectActivateRecord{
+	assert.Equal(s.T(), activateRec, &object.ActivateRecord{
 		SideEffectRecord: object.SideEffectRecord{
 			Domain:  domainRef,
 			Request: objRef,
 		},
-		ObjectStateRecord: object.ObjectStateRecord{
+		StateRecord: object.StateRecord{
 			Memory:      object.CalculateIDForBlob(am.PlatformCryptographyScheme, insolar.GenesisPulse.PulseNumber, memory),
 			Image:       *codeRef,
 			IsPrototype: false,
@@ -395,7 +395,7 @@ func (s *amSuite) TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecor
 		ctx,
 		jetID,
 		insolar.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: *genRandomRef(0),
 			},
@@ -436,7 +436,7 @@ func (s *amSuite) TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord() 
 		ctx,
 		jetID,
 		insolar.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: *genRandomRef(0),
 			},
@@ -464,12 +464,12 @@ func (s *amSuite) TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord() 
 	assert.Nil(s.T(), err)
 	updateRec, err := os.GetRecord(ctx, jetID, obj.StateID())
 	assert.Nil(s.T(), err)
-	assert.Equal(s.T(), updateRec, &object.ObjectAmendRecord{
+	assert.Equal(s.T(), updateRec, &object.AmendRecord{
 		SideEffectRecord: object.SideEffectRecord{
 			Domain:  domainRef,
 			Request: requestRef,
 		},
-		ObjectStateRecord: object.ObjectStateRecord{
+		StateRecord: object.StateRecord{
 			Memory:      object.CalculateIDForBlob(am.PlatformCryptographyScheme, insolar.GenesisPulse.PulseNumber, memory),
 			Image:       *prototype,
 			IsPrototype: false,
@@ -489,11 +489,11 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(
 		ctx,
 		jetID,
 		insolar.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: domainRef,
 			},
-			ObjectStateRecord: object.ObjectStateRecord{
+			StateRecord: object.StateRecord{
 				Memory: object.CalculateIDForBlob(am.PlatformCryptographyScheme, insolar.GenesisPulse.PulseNumber, []byte{3}),
 			},
 			Parent: *parentRef,
@@ -502,11 +502,11 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(
 	require.NoError(s.T(), err)
 	_, err = os.SetBlob(ctx, jetID, insolar.GenesisPulse.PulseNumber, []byte{3})
 	require.NoError(s.T(), err)
-	objectAmendID, _ := os.SetRecord(ctx, jetID, insolar.GenesisPulse.PulseNumber, &object.ObjectAmendRecord{
+	objectAmendID, _ := os.SetRecord(ctx, jetID, insolar.GenesisPulse.PulseNumber, &object.AmendRecord{
 		SideEffectRecord: object.SideEffectRecord{
 			Domain: domainRef,
 		},
-		ObjectStateRecord: object.ObjectStateRecord{
+		StateRecord: object.StateRecord{
 			Memory: object.CalculateIDForBlob(am.PlatformCryptographyScheme, insolar.GenesisPulse.PulseNumber, []byte{4}),
 			Image:  *prototypeRef,
 		},
@@ -590,11 +590,11 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren() {
 		ctx,
 		jetID,
 		insolar.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: domainRef,
 			},
-			ObjectStateRecord: object.ObjectStateRecord{
+			StateRecord: object.StateRecord{
 				Memory: object.CalculateIDForBlob(am.PlatformCryptographyScheme, insolar.GenesisPulse.PulseNumber, []byte{0}),
 			},
 		})
@@ -813,8 +813,8 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	handler := MessageHandler{
 		replayHandlers:             map[insolar.MessageType]insolar.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
-		conf:        &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
-		certificate: certificate,
+		conf:                       &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
+		certificate:                certificate,
 	}
 
 	handler.Bus = mb

@@ -16,10 +16,10 @@
 
 package object
 
-var registry = map[TypeID]Record{}
+var registry = map[TypeID]VirtualRecord{}
 
 // Register makes provided record serializable. Should be called for each record in init().
-func register(id TypeID, r Record) {
+func register(id TypeID, r VirtualRecord) {
 	if _, ok := registry[id]; ok {
 		panic("duplicate record type")
 	}
@@ -28,8 +28,8 @@ func register(id TypeID, r Record) {
 }
 
 // Registered returns records by type.
-func Registered() map[TypeID]Record {
-	res := map[TypeID]Record{}
+func Registered() map[TypeID]VirtualRecord {
+	res := map[TypeID]VirtualRecord{}
 	for id, rec := range registry {
 		res[id] = rec
 	}
