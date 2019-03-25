@@ -189,7 +189,7 @@ func (i *IndexDB) ForID(ctx context.Context, id insolar.ID) (index Lifeline, err
 func (i *IndexDB) set(id insolar.ID, index Lifeline) error {
 	key := indexKey(id)
 
-	return i.DB.Set(key, Encode(index))
+	return i.DB.Set(key, EncodeIndex(index))
 }
 
 func (i *IndexDB) get(id insolar.ID) (index Lifeline, err error) {
@@ -201,6 +201,6 @@ func (i *IndexDB) get(id insolar.ID) (index Lifeline, err error) {
 	if err != nil {
 		return
 	}
-	index = Decode(buff)
+	index = DecodeIndex(buff)
 	return
 }
