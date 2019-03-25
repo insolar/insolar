@@ -54,37 +54,50 @@ const (
 
 func Register() {
 	gen.AddMachine("GetObjectStateMachine").
+		RegisterTransitionsMap(
+			InitState,            gen.Asd{WaitingPresent, CheckingJet},
+			WaitingPresent,       gen.Asd{CheckingJet},
+			CheckingJet,          gen.Asd{WaitingCheckingJet, FetchingJet},
+			FetchingJet,          gen.Asd{WaitingFetchingJet, InvokeWaitingHotData},
+			InvokeWaitingHotData, gen.Asd{WaitingHotData, CheckingIndex},
+			CheckingIndex,        gen.Asd{WaitingCheckingIndex, CheckingState, FetchingIndex},
+			FetchingIndex,        gen.Asd{WaitingFetchingIndex, CheckingState},
+			CheckingState,        gen.Asd{WaitingCheckingState, Result, CheckingJetForState},
+			CheckingJetForState,  gen.Asd{WaitingCheckingJetForState, FetchingState, FetchingJetForState},
+			FetchingJetForState,  gen.Asd{WaitingFetchingJetForState, FetchingState},
+			FetchingState,        gen.Asd{WaitingFetchingState, Result},
+		).
 
-		TransitionFuture(InitState, InitFuture, WaitingPresent).
-		MigrationFuturePresent(WaitingPresent, MigrateToPresent, CheckingJet).
-		Transition(InitState, Init, CheckingJet).
+		TransitionFuture(InitState, InitFuture).
+		MigrationFuturePresent(WaitingPresent, MigrateToPresent).
+		Transition(InitState, Init).
 
-		Transition(CheckingJet, GetJet, WaitingCheckingJet).
-		AdapterResponse(CheckingJet, GetJetResponse, FetchingJet).
+		Transition(CheckingJet, GetJet).
+		AdapterResponse(CheckingJet, GetJetResponse).
 
-		Transition(FetchingJet, FetchJet, WaitingFetchingJet).
-		AdapterResponse(FetchingJet, FetchJetResponse, InvokeWaitingHotData).
+		Transition(FetchingJet, FetchJet).
+		AdapterResponse(FetchingJet, FetchJetResponse).
 
-		Transition(InvokeWaitingHotData, WaitHotData, WaitingHotData).
-		AdapterResponse(InvokeWaitingHotData, WaitHotDataResponse, CheckingIndex).
+		Transition(InvokeWaitingHotData, WaitHotData).
+		AdapterResponse(InvokeWaitingHotData, WaitHotDataResponse).
 
-		Transition(CheckingIndex, CheckIndex, WaitingCheckingIndex).
-		AdapterResponse(CheckingIndex, WaitCheckIndex, CheckingState, FetchingIndex).
+		Transition(CheckingIndex, CheckIndex).
+		AdapterResponse(CheckingIndex, WaitCheckIndex).
 
-		Transition(FetchingIndex, FetchIndex, WaitingFetchingIndex).
-		AdapterResponse(FetchingIndex, WaitFetchIndex, CheckingState).
+		Transition(FetchingIndex, FetchIndex).
+		AdapterResponse(FetchingIndex, WaitFetchIndex).
 
-		Transition(CheckingState, CheckState, WaitingCheckingState).
-		AdapterResponse(CheckingState, WaitCheckState, Result, CheckingJetForState).
+		Transition(CheckingState, CheckState).
+		AdapterResponse(CheckingState, WaitCheckState).
 
-		Transition(CheckingJetForState, CheckJetForState, WaitingCheckingJetForState).
-		AdapterResponse(CheckingJetForState, WaitCheckJetForState, FetchingState, FetchingJetForState).
+		Transition(CheckingJetForState, CheckJetForState).
+		AdapterResponse(CheckingJetForState, WaitCheckJetForState).
 
-		Transition(FetchingJetForState, FetchJetForState, WaitingFetchingJetForState).
-		AdapterResponse(FetchingJetForState, WaitFetchJetForState, FetchingState).
+		Transition(FetchingJetForState, FetchJetForState).
+		AdapterResponse(FetchingJetForState, WaitFetchJetForState).
 
-		Transition(FetchingState, FetchState, WaitingFetchingState).
-		AdapterResponse(FetchingState, WaitFetchState, Result)
+		Transition(FetchingState, FetchState).
+		AdapterResponse(FetchingState, WaitFetchState)
 }
 
 func InitFuture(helper slot.SlotElementHelper, input CustomEvent, payload interface{}) (*CustomPayload, fsm.ElementState) {
@@ -204,3 +217,4 @@ func WaitFetchState(input CustomEvent, payload *CustomPayload, respPayload Custo
 	// todo update payload
 	return payload, fsm.ElementState(Result)
 }
+
