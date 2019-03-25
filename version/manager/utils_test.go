@@ -1,35 +1,35 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package manager
 
 import (
-	"github.com/insolar/insolar/network/node"
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
 )
 
-func newActiveNode(ver string) core.NetworkNode {
-	return node.NewNode(core.RecordRef{255}, core.StaticRoleUnknown, nil, "127.0.0.1:5432", ver)
+func newActiveNode(ver string) insolar.NetworkNode {
+	return nodenetwork.NewNode(insolar.Reference{255}, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", ver)
 }
 
 func TestGetMapOfVersions(t *testing.T) {
-	nodes := []core.NetworkNode{
+	nodes := []insolar.NetworkNode{
 		newActiveNode("v0.5.0"),
 		newActiveNode("v0.5.0"),
 		newActiveNode("v0.5.1"),
@@ -45,13 +45,13 @@ func TestGetMapOfVersions(t *testing.T) {
 }
 
 func TestProcessVersionConsensus(t *testing.T) {
-	nodes := []core.NetworkNode{
+	nodes := []insolar.NetworkNode{
 		newActiveNode("v0.5.0"),
 		newActiveNode("v0.5.0"),
 		newActiveNode("v0.5.1"),
 		newActiveNode("v0.5.1"),
 	}
-	assert.Error(t, ProcessVersionConsensus([]core.NetworkNode{}))
+	assert.Error(t, ProcessVersionConsensus([]insolar.NetworkNode{}))
 	assert.NoError(t, ProcessVersionConsensus(nodes))
 }
 

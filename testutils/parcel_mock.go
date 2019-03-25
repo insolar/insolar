@@ -3,7 +3,7 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Parcel" can be found in github.com/insolar/insolar/core
+The original interface "Parcel" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	context "context"
@@ -11,16 +11,16 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//ParcelMock implements github.com/insolar/insolar/core.Parcel
+//ParcelMock implements github.com/insolar/insolar/insolar.Parcel
 type ParcelMock struct {
 	t minimock.Tester
 
-	AllowedSenderObjectAndRoleFunc       func() (r *core.RecordRef, r1 core.DynamicRole)
+	AllowedSenderObjectAndRoleFunc       func() (r *insolar.Reference, r1 insolar.DynamicRole)
 	AllowedSenderObjectAndRoleCounter    uint64
 	AllowedSenderObjectAndRolePreCounter uint64
 	AllowedSenderObjectAndRoleMock       mParcelMockAllowedSenderObjectAndRole
@@ -30,27 +30,27 @@ type ParcelMock struct {
 	ContextPreCounter uint64
 	ContextMock       mParcelMockContext
 
-	DefaultRoleFunc       func() (r core.DynamicRole)
+	DefaultRoleFunc       func() (r insolar.DynamicRole)
 	DefaultRoleCounter    uint64
 	DefaultRolePreCounter uint64
 	DefaultRoleMock       mParcelMockDefaultRole
 
-	DefaultTargetFunc       func() (r *core.RecordRef)
+	DefaultTargetFunc       func() (r *insolar.Reference)
 	DefaultTargetCounter    uint64
 	DefaultTargetPreCounter uint64
 	DefaultTargetMock       mParcelMockDefaultTarget
 
-	DelegationTokenFunc       func() (r core.DelegationToken)
+	DelegationTokenFunc       func() (r insolar.DelegationToken)
 	DelegationTokenCounter    uint64
 	DelegationTokenPreCounter uint64
 	DelegationTokenMock       mParcelMockDelegationToken
 
-	GetCallerFunc       func() (r *core.RecordRef)
+	GetCallerFunc       func() (r *insolar.Reference)
 	GetCallerCounter    uint64
 	GetCallerPreCounter uint64
 	GetCallerMock       mParcelMockGetCaller
 
-	GetSenderFunc       func() (r core.RecordRef)
+	GetSenderFunc       func() (r insolar.Reference)
 	GetSenderCounter    uint64
 	GetSenderPreCounter uint64
 	GetSenderMock       mParcelMockGetSender
@@ -60,23 +60,23 @@ type ParcelMock struct {
 	GetSignPreCounter uint64
 	GetSignMock       mParcelMockGetSign
 
-	MessageFunc       func() (r core.Message)
+	MessageFunc       func() (r insolar.Message)
 	MessageCounter    uint64
 	MessagePreCounter uint64
 	MessageMock       mParcelMockMessage
 
-	PulseFunc       func() (r core.PulseNumber)
+	PulseFunc       func() (r insolar.PulseNumber)
 	PulseCounter    uint64
 	PulsePreCounter uint64
 	PulseMock       mParcelMockPulse
 
-	TypeFunc       func() (r core.MessageType)
+	TypeFunc       func() (r insolar.MessageType)
 	TypeCounter    uint64
 	TypePreCounter uint64
 	TypeMock       mParcelMockType
 }
 
-//NewParcelMock returns a mock for github.com/insolar/insolar/core.Parcel
+//NewParcelMock returns a mock for github.com/insolar/insolar/insolar.Parcel
 func NewParcelMock(t minimock.Tester) *ParcelMock {
 	m := &ParcelMock{t: t}
 
@@ -110,8 +110,8 @@ type ParcelMockAllowedSenderObjectAndRoleExpectation struct {
 }
 
 type ParcelMockAllowedSenderObjectAndRoleResult struct {
-	r  *core.RecordRef
-	r1 core.DynamicRole
+	r  *insolar.Reference
+	r1 insolar.DynamicRole
 }
 
 //Expect specifies that invocation of Parcel.AllowedSenderObjectAndRole is expected from 1 to Infinity times
@@ -127,7 +127,7 @@ func (m *mParcelMockAllowedSenderObjectAndRole) Expect() *mParcelMockAllowedSend
 }
 
 //Return specifies results of invocation of Parcel.AllowedSenderObjectAndRole
-func (m *mParcelMockAllowedSenderObjectAndRole) Return(r *core.RecordRef, r1 core.DynamicRole) *ParcelMock {
+func (m *mParcelMockAllowedSenderObjectAndRole) Return(r *insolar.Reference, r1 insolar.DynamicRole) *ParcelMock {
 	m.mock.AllowedSenderObjectAndRoleFunc = nil
 	m.expectationSeries = nil
 
@@ -149,12 +149,12 @@ func (m *mParcelMockAllowedSenderObjectAndRole) ExpectOnce() *ParcelMockAllowedS
 	return expectation
 }
 
-func (e *ParcelMockAllowedSenderObjectAndRoleExpectation) Return(r *core.RecordRef, r1 core.DynamicRole) {
+func (e *ParcelMockAllowedSenderObjectAndRoleExpectation) Return(r *insolar.Reference, r1 insolar.DynamicRole) {
 	e.result = &ParcelMockAllowedSenderObjectAndRoleResult{r, r1}
 }
 
 //Set uses given function f as a mock of Parcel.AllowedSenderObjectAndRole method
-func (m *mParcelMockAllowedSenderObjectAndRole) Set(f func() (r *core.RecordRef, r1 core.DynamicRole)) *ParcelMock {
+func (m *mParcelMockAllowedSenderObjectAndRole) Set(f func() (r *insolar.Reference, r1 insolar.DynamicRole)) *ParcelMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -162,8 +162,8 @@ func (m *mParcelMockAllowedSenderObjectAndRole) Set(f func() (r *core.RecordRef,
 	return m.mock
 }
 
-//AllowedSenderObjectAndRole implements github.com/insolar/insolar/core.Parcel interface
-func (m *ParcelMock) AllowedSenderObjectAndRole() (r *core.RecordRef, r1 core.DynamicRole) {
+//AllowedSenderObjectAndRole implements github.com/insolar/insolar/insolar.Parcel interface
+func (m *ParcelMock) AllowedSenderObjectAndRole() (r *insolar.Reference, r1 insolar.DynamicRole) {
 	counter := atomic.AddUint64(&m.AllowedSenderObjectAndRolePreCounter, 1)
 	defer atomic.AddUint64(&m.AllowedSenderObjectAndRoleCounter, 1)
 
@@ -303,7 +303,7 @@ func (m *mParcelMockContext) Set(f func(p context.Context) (r context.Context)) 
 	return m.mock
 }
 
-//Context implements github.com/insolar/insolar/core.Parcel interface
+//Context implements github.com/insolar/insolar/insolar.Parcel interface
 func (m *ParcelMock) Context(p context.Context) (r context.Context) {
 	counter := atomic.AddUint64(&m.ContextPreCounter, 1)
 	defer atomic.AddUint64(&m.ContextCounter, 1)
@@ -394,7 +394,7 @@ type ParcelMockDefaultRoleExpectation struct {
 }
 
 type ParcelMockDefaultRoleResult struct {
-	r core.DynamicRole
+	r insolar.DynamicRole
 }
 
 //Expect specifies that invocation of Parcel.DefaultRole is expected from 1 to Infinity times
@@ -410,7 +410,7 @@ func (m *mParcelMockDefaultRole) Expect() *mParcelMockDefaultRole {
 }
 
 //Return specifies results of invocation of Parcel.DefaultRole
-func (m *mParcelMockDefaultRole) Return(r core.DynamicRole) *ParcelMock {
+func (m *mParcelMockDefaultRole) Return(r insolar.DynamicRole) *ParcelMock {
 	m.mock.DefaultRoleFunc = nil
 	m.expectationSeries = nil
 
@@ -432,12 +432,12 @@ func (m *mParcelMockDefaultRole) ExpectOnce() *ParcelMockDefaultRoleExpectation 
 	return expectation
 }
 
-func (e *ParcelMockDefaultRoleExpectation) Return(r core.DynamicRole) {
+func (e *ParcelMockDefaultRoleExpectation) Return(r insolar.DynamicRole) {
 	e.result = &ParcelMockDefaultRoleResult{r}
 }
 
 //Set uses given function f as a mock of Parcel.DefaultRole method
-func (m *mParcelMockDefaultRole) Set(f func() (r core.DynamicRole)) *ParcelMock {
+func (m *mParcelMockDefaultRole) Set(f func() (r insolar.DynamicRole)) *ParcelMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -445,8 +445,8 @@ func (m *mParcelMockDefaultRole) Set(f func() (r core.DynamicRole)) *ParcelMock 
 	return m.mock
 }
 
-//DefaultRole implements github.com/insolar/insolar/core.Parcel interface
-func (m *ParcelMock) DefaultRole() (r core.DynamicRole) {
+//DefaultRole implements github.com/insolar/insolar/insolar.Parcel interface
+func (m *ParcelMock) DefaultRole() (r insolar.DynamicRole) {
 	counter := atomic.AddUint64(&m.DefaultRolePreCounter, 1)
 	defer atomic.AddUint64(&m.DefaultRoleCounter, 1)
 
@@ -528,7 +528,7 @@ type ParcelMockDefaultTargetExpectation struct {
 }
 
 type ParcelMockDefaultTargetResult struct {
-	r *core.RecordRef
+	r *insolar.Reference
 }
 
 //Expect specifies that invocation of Parcel.DefaultTarget is expected from 1 to Infinity times
@@ -544,7 +544,7 @@ func (m *mParcelMockDefaultTarget) Expect() *mParcelMockDefaultTarget {
 }
 
 //Return specifies results of invocation of Parcel.DefaultTarget
-func (m *mParcelMockDefaultTarget) Return(r *core.RecordRef) *ParcelMock {
+func (m *mParcelMockDefaultTarget) Return(r *insolar.Reference) *ParcelMock {
 	m.mock.DefaultTargetFunc = nil
 	m.expectationSeries = nil
 
@@ -566,12 +566,12 @@ func (m *mParcelMockDefaultTarget) ExpectOnce() *ParcelMockDefaultTargetExpectat
 	return expectation
 }
 
-func (e *ParcelMockDefaultTargetExpectation) Return(r *core.RecordRef) {
+func (e *ParcelMockDefaultTargetExpectation) Return(r *insolar.Reference) {
 	e.result = &ParcelMockDefaultTargetResult{r}
 }
 
 //Set uses given function f as a mock of Parcel.DefaultTarget method
-func (m *mParcelMockDefaultTarget) Set(f func() (r *core.RecordRef)) *ParcelMock {
+func (m *mParcelMockDefaultTarget) Set(f func() (r *insolar.Reference)) *ParcelMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -579,8 +579,8 @@ func (m *mParcelMockDefaultTarget) Set(f func() (r *core.RecordRef)) *ParcelMock
 	return m.mock
 }
 
-//DefaultTarget implements github.com/insolar/insolar/core.Parcel interface
-func (m *ParcelMock) DefaultTarget() (r *core.RecordRef) {
+//DefaultTarget implements github.com/insolar/insolar/insolar.Parcel interface
+func (m *ParcelMock) DefaultTarget() (r *insolar.Reference) {
 	counter := atomic.AddUint64(&m.DefaultTargetPreCounter, 1)
 	defer atomic.AddUint64(&m.DefaultTargetCounter, 1)
 
@@ -662,7 +662,7 @@ type ParcelMockDelegationTokenExpectation struct {
 }
 
 type ParcelMockDelegationTokenResult struct {
-	r core.DelegationToken
+	r insolar.DelegationToken
 }
 
 //Expect specifies that invocation of Parcel.DelegationToken is expected from 1 to Infinity times
@@ -678,7 +678,7 @@ func (m *mParcelMockDelegationToken) Expect() *mParcelMockDelegationToken {
 }
 
 //Return specifies results of invocation of Parcel.DelegationToken
-func (m *mParcelMockDelegationToken) Return(r core.DelegationToken) *ParcelMock {
+func (m *mParcelMockDelegationToken) Return(r insolar.DelegationToken) *ParcelMock {
 	m.mock.DelegationTokenFunc = nil
 	m.expectationSeries = nil
 
@@ -700,12 +700,12 @@ func (m *mParcelMockDelegationToken) ExpectOnce() *ParcelMockDelegationTokenExpe
 	return expectation
 }
 
-func (e *ParcelMockDelegationTokenExpectation) Return(r core.DelegationToken) {
+func (e *ParcelMockDelegationTokenExpectation) Return(r insolar.DelegationToken) {
 	e.result = &ParcelMockDelegationTokenResult{r}
 }
 
 //Set uses given function f as a mock of Parcel.DelegationToken method
-func (m *mParcelMockDelegationToken) Set(f func() (r core.DelegationToken)) *ParcelMock {
+func (m *mParcelMockDelegationToken) Set(f func() (r insolar.DelegationToken)) *ParcelMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -713,8 +713,8 @@ func (m *mParcelMockDelegationToken) Set(f func() (r core.DelegationToken)) *Par
 	return m.mock
 }
 
-//DelegationToken implements github.com/insolar/insolar/core.Parcel interface
-func (m *ParcelMock) DelegationToken() (r core.DelegationToken) {
+//DelegationToken implements github.com/insolar/insolar/insolar.Parcel interface
+func (m *ParcelMock) DelegationToken() (r insolar.DelegationToken) {
 	counter := atomic.AddUint64(&m.DelegationTokenPreCounter, 1)
 	defer atomic.AddUint64(&m.DelegationTokenCounter, 1)
 
@@ -796,7 +796,7 @@ type ParcelMockGetCallerExpectation struct {
 }
 
 type ParcelMockGetCallerResult struct {
-	r *core.RecordRef
+	r *insolar.Reference
 }
 
 //Expect specifies that invocation of Parcel.GetCaller is expected from 1 to Infinity times
@@ -812,7 +812,7 @@ func (m *mParcelMockGetCaller) Expect() *mParcelMockGetCaller {
 }
 
 //Return specifies results of invocation of Parcel.GetCaller
-func (m *mParcelMockGetCaller) Return(r *core.RecordRef) *ParcelMock {
+func (m *mParcelMockGetCaller) Return(r *insolar.Reference) *ParcelMock {
 	m.mock.GetCallerFunc = nil
 	m.expectationSeries = nil
 
@@ -834,12 +834,12 @@ func (m *mParcelMockGetCaller) ExpectOnce() *ParcelMockGetCallerExpectation {
 	return expectation
 }
 
-func (e *ParcelMockGetCallerExpectation) Return(r *core.RecordRef) {
+func (e *ParcelMockGetCallerExpectation) Return(r *insolar.Reference) {
 	e.result = &ParcelMockGetCallerResult{r}
 }
 
 //Set uses given function f as a mock of Parcel.GetCaller method
-func (m *mParcelMockGetCaller) Set(f func() (r *core.RecordRef)) *ParcelMock {
+func (m *mParcelMockGetCaller) Set(f func() (r *insolar.Reference)) *ParcelMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -847,8 +847,8 @@ func (m *mParcelMockGetCaller) Set(f func() (r *core.RecordRef)) *ParcelMock {
 	return m.mock
 }
 
-//GetCaller implements github.com/insolar/insolar/core.Parcel interface
-func (m *ParcelMock) GetCaller() (r *core.RecordRef) {
+//GetCaller implements github.com/insolar/insolar/insolar.Parcel interface
+func (m *ParcelMock) GetCaller() (r *insolar.Reference) {
 	counter := atomic.AddUint64(&m.GetCallerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetCallerCounter, 1)
 
@@ -930,7 +930,7 @@ type ParcelMockGetSenderExpectation struct {
 }
 
 type ParcelMockGetSenderResult struct {
-	r core.RecordRef
+	r insolar.Reference
 }
 
 //Expect specifies that invocation of Parcel.GetSender is expected from 1 to Infinity times
@@ -946,7 +946,7 @@ func (m *mParcelMockGetSender) Expect() *mParcelMockGetSender {
 }
 
 //Return specifies results of invocation of Parcel.GetSender
-func (m *mParcelMockGetSender) Return(r core.RecordRef) *ParcelMock {
+func (m *mParcelMockGetSender) Return(r insolar.Reference) *ParcelMock {
 	m.mock.GetSenderFunc = nil
 	m.expectationSeries = nil
 
@@ -968,12 +968,12 @@ func (m *mParcelMockGetSender) ExpectOnce() *ParcelMockGetSenderExpectation {
 	return expectation
 }
 
-func (e *ParcelMockGetSenderExpectation) Return(r core.RecordRef) {
+func (e *ParcelMockGetSenderExpectation) Return(r insolar.Reference) {
 	e.result = &ParcelMockGetSenderResult{r}
 }
 
 //Set uses given function f as a mock of Parcel.GetSender method
-func (m *mParcelMockGetSender) Set(f func() (r core.RecordRef)) *ParcelMock {
+func (m *mParcelMockGetSender) Set(f func() (r insolar.Reference)) *ParcelMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -981,8 +981,8 @@ func (m *mParcelMockGetSender) Set(f func() (r core.RecordRef)) *ParcelMock {
 	return m.mock
 }
 
-//GetSender implements github.com/insolar/insolar/core.Parcel interface
-func (m *ParcelMock) GetSender() (r core.RecordRef) {
+//GetSender implements github.com/insolar/insolar/insolar.Parcel interface
+func (m *ParcelMock) GetSender() (r insolar.Reference) {
 	counter := atomic.AddUint64(&m.GetSenderPreCounter, 1)
 	defer atomic.AddUint64(&m.GetSenderCounter, 1)
 
@@ -1115,7 +1115,7 @@ func (m *mParcelMockGetSign) Set(f func() (r []byte)) *ParcelMock {
 	return m.mock
 }
 
-//GetSign implements github.com/insolar/insolar/core.Parcel interface
+//GetSign implements github.com/insolar/insolar/insolar.Parcel interface
 func (m *ParcelMock) GetSign() (r []byte) {
 	counter := atomic.AddUint64(&m.GetSignPreCounter, 1)
 	defer atomic.AddUint64(&m.GetSignCounter, 1)
@@ -1198,7 +1198,7 @@ type ParcelMockMessageExpectation struct {
 }
 
 type ParcelMockMessageResult struct {
-	r core.Message
+	r insolar.Message
 }
 
 //Expect specifies that invocation of Parcel.Message is expected from 1 to Infinity times
@@ -1214,7 +1214,7 @@ func (m *mParcelMockMessage) Expect() *mParcelMockMessage {
 }
 
 //Return specifies results of invocation of Parcel.Message
-func (m *mParcelMockMessage) Return(r core.Message) *ParcelMock {
+func (m *mParcelMockMessage) Return(r insolar.Message) *ParcelMock {
 	m.mock.MessageFunc = nil
 	m.expectationSeries = nil
 
@@ -1236,12 +1236,12 @@ func (m *mParcelMockMessage) ExpectOnce() *ParcelMockMessageExpectation {
 	return expectation
 }
 
-func (e *ParcelMockMessageExpectation) Return(r core.Message) {
+func (e *ParcelMockMessageExpectation) Return(r insolar.Message) {
 	e.result = &ParcelMockMessageResult{r}
 }
 
 //Set uses given function f as a mock of Parcel.Message method
-func (m *mParcelMockMessage) Set(f func() (r core.Message)) *ParcelMock {
+func (m *mParcelMockMessage) Set(f func() (r insolar.Message)) *ParcelMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1249,8 +1249,8 @@ func (m *mParcelMockMessage) Set(f func() (r core.Message)) *ParcelMock {
 	return m.mock
 }
 
-//Message implements github.com/insolar/insolar/core.Parcel interface
-func (m *ParcelMock) Message() (r core.Message) {
+//Message implements github.com/insolar/insolar/insolar.Parcel interface
+func (m *ParcelMock) Message() (r insolar.Message) {
 	counter := atomic.AddUint64(&m.MessagePreCounter, 1)
 	defer atomic.AddUint64(&m.MessageCounter, 1)
 
@@ -1332,7 +1332,7 @@ type ParcelMockPulseExpectation struct {
 }
 
 type ParcelMockPulseResult struct {
-	r core.PulseNumber
+	r insolar.PulseNumber
 }
 
 //Expect specifies that invocation of Parcel.Pulse is expected from 1 to Infinity times
@@ -1348,7 +1348,7 @@ func (m *mParcelMockPulse) Expect() *mParcelMockPulse {
 }
 
 //Return specifies results of invocation of Parcel.Pulse
-func (m *mParcelMockPulse) Return(r core.PulseNumber) *ParcelMock {
+func (m *mParcelMockPulse) Return(r insolar.PulseNumber) *ParcelMock {
 	m.mock.PulseFunc = nil
 	m.expectationSeries = nil
 
@@ -1370,12 +1370,12 @@ func (m *mParcelMockPulse) ExpectOnce() *ParcelMockPulseExpectation {
 	return expectation
 }
 
-func (e *ParcelMockPulseExpectation) Return(r core.PulseNumber) {
+func (e *ParcelMockPulseExpectation) Return(r insolar.PulseNumber) {
 	e.result = &ParcelMockPulseResult{r}
 }
 
 //Set uses given function f as a mock of Parcel.Pulse method
-func (m *mParcelMockPulse) Set(f func() (r core.PulseNumber)) *ParcelMock {
+func (m *mParcelMockPulse) Set(f func() (r insolar.PulseNumber)) *ParcelMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1383,8 +1383,8 @@ func (m *mParcelMockPulse) Set(f func() (r core.PulseNumber)) *ParcelMock {
 	return m.mock
 }
 
-//Pulse implements github.com/insolar/insolar/core.Parcel interface
-func (m *ParcelMock) Pulse() (r core.PulseNumber) {
+//Pulse implements github.com/insolar/insolar/insolar.Parcel interface
+func (m *ParcelMock) Pulse() (r insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.PulsePreCounter, 1)
 	defer atomic.AddUint64(&m.PulseCounter, 1)
 
@@ -1466,7 +1466,7 @@ type ParcelMockTypeExpectation struct {
 }
 
 type ParcelMockTypeResult struct {
-	r core.MessageType
+	r insolar.MessageType
 }
 
 //Expect specifies that invocation of Parcel.Type is expected from 1 to Infinity times
@@ -1482,7 +1482,7 @@ func (m *mParcelMockType) Expect() *mParcelMockType {
 }
 
 //Return specifies results of invocation of Parcel.Type
-func (m *mParcelMockType) Return(r core.MessageType) *ParcelMock {
+func (m *mParcelMockType) Return(r insolar.MessageType) *ParcelMock {
 	m.mock.TypeFunc = nil
 	m.expectationSeries = nil
 
@@ -1504,12 +1504,12 @@ func (m *mParcelMockType) ExpectOnce() *ParcelMockTypeExpectation {
 	return expectation
 }
 
-func (e *ParcelMockTypeExpectation) Return(r core.MessageType) {
+func (e *ParcelMockTypeExpectation) Return(r insolar.MessageType) {
 	e.result = &ParcelMockTypeResult{r}
 }
 
 //Set uses given function f as a mock of Parcel.Type method
-func (m *mParcelMockType) Set(f func() (r core.MessageType)) *ParcelMock {
+func (m *mParcelMockType) Set(f func() (r insolar.MessageType)) *ParcelMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1517,8 +1517,8 @@ func (m *mParcelMockType) Set(f func() (r core.MessageType)) *ParcelMock {
 	return m.mock
 }
 
-//Type implements github.com/insolar/insolar/core.Parcel interface
-func (m *ParcelMock) Type() (r core.MessageType) {
+//Type implements github.com/insolar/insolar/insolar.Parcel interface
+func (m *ParcelMock) Type() (r insolar.MessageType) {
 	counter := atomic.AddUint64(&m.TypePreCounter, 1)
 	defer atomic.AddUint64(&m.TypeCounter, 1)
 

@@ -1,32 +1,32 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package noderecord
 
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // RecordInfo holds record info
 type RecordInfo struct {
 	PublicKey string
-	Role      core.StaticRole
+	Role      insolar.StaticRole
 }
 
 // NodeRecord contains info about node
@@ -45,8 +45,8 @@ func NewNodeRecord(publicKey string, roleStr string) (*NodeRecord, error) {
 		return nil, fmt.Errorf("[ NewNodeRecord ] role is required")
 	}
 
-	role := core.GetStaticRoleFromString(roleStr)
-	if role == core.StaticRoleUnknown {
+	role := insolar.GetStaticRoleFromString(roleStr)
+	if role == insolar.StaticRoleUnknown {
 		return nil, fmt.Errorf("Role is not supported: %s", roleStr)
 	}
 
@@ -73,7 +73,7 @@ func (nr *NodeRecord) GetPublicKey() (string, error) {
 }
 
 // GetRole returns role
-func (nr *NodeRecord) GetRole() (core.StaticRole, error) {
+func (nr *NodeRecord) GetRole() (insolar.StaticRole, error) {
 	return nr.Record.Role, nil
 }
 

@@ -1,36 +1,52 @@
-/*
- * The Clear BSD License
- *
- * Copyright (c) 2019 Insolar Technologies
- *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted (subject to the limitations in the disclaimer below) provided that
- * the following conditions are met:
- *
- *  * Redistributions of source code must retain the above copyright notice,
- *    this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *  * Neither the name of Insolar Technologies nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
- * BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
- * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
- * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+//
+// Modified BSD 3-Clause Clear License
+//
+// Copyright (c) 2019 Insolar Technologies GmbH
+//
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted (subject to the limitations in the disclaimer below) provided that
+// the following conditions are met:
+//  * Redistributions of source code must retain the above copyright notice, this list
+//    of conditions and the following disclaimer.
+//  * Redistributions in binary form must reproduce the above copyright notice, this list
+//    of conditions and the following disclaimer in the documentation and/or other materials
+//    provided with the distribution.
+//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+// BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
+// AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+// AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+// THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+// OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Notwithstanding any other provisions of this license, it is prohibited to:
+//    (a) use this software,
+//
+//    (b) prepare modifications and derivative works of this software,
+//
+//    (c) distribute this software (including without limitation in source code, binary or
+//        object code form), and
+//
+//    (d) reproduce copies of this software
+//
+//    for any commercial purposes, and/or
+//
+//    for the purposes of making available this software to third parties as a service,
+//    including, without limitation, any software-as-a-service, platform-as-a-service,
+//    infrastructure-as-a-service or other similar online service, irrespective of
+//    whether it competes with the products or services of Insolar Technologies GmbH.
+//
 
 package nodenetwork
 
@@ -44,7 +60,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	consensusMetrics "github.com/insolar/insolar/consensus"
 	consensus "github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport"
@@ -55,28 +71,28 @@ import (
 )
 
 // NewNodeNetwork create active node component
-func NewNodeNetwork(configuration configuration.HostNetwork, certificate core.Certificate) (core.NodeNetwork, error) {
+func NewNodeNetwork(configuration configuration.HostNetwork, certificate insolar.Certificate) (insolar.NodeNetwork, error) {
 	origin, err := createOrigin(configuration, certificate)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create origin node")
 	}
 	nodeKeeper := NewNodeKeeper(origin)
 	if !utils.OriginIsDiscovery(certificate) {
-		origin.(node.MutableNode).SetState(core.NodePending)
+		origin.(node.MutableNode).SetState(insolar.NodePending)
 	}
 	return nodeKeeper, nil
 }
 
-func createOrigin(configuration configuration.HostNetwork, certificate core.Certificate) (core.NetworkNode, error) {
+func createOrigin(configuration configuration.HostNetwork, certificate insolar.Certificate) (insolar.NetworkNode, error) {
 	publicAddress, err := resolveAddress(configuration)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to resolve public address")
 	}
 
 	role := certificate.GetRole()
-	if role == core.StaticRoleUnknown {
-		log.Info("[ createOrigin ] Use core.StaticRoleLightMaterial, since no role in certificate")
-		role = core.StaticRoleLightMaterial
+	if role == insolar.StaticRoleUnknown {
+		log.Info("[ createOrigin ] Use insolar.StaticRoleLightMaterial, since no role in certificate")
+		role = insolar.StaticRoleLightMaterial
 	}
 
 	return node.NewNode(
@@ -101,20 +117,20 @@ func resolveAddress(configuration configuration.HostNetwork) (string, error) {
 }
 
 // NewNodeKeeper create new NodeKeeper
-func NewNodeKeeper(origin core.NetworkNode) network.NodeKeeper {
+func NewNodeKeeper(origin insolar.NetworkNode) network.NodeKeeper {
 	nk := &nodekeeper{
 		origin:        origin,
 		claimQueue:    newClaimQueue(),
 		consensusInfo: newConsensusInfo(),
-		syncNodes:     make([]core.NetworkNode, 0),
+		syncNodes:     make([]insolar.NetworkNode, 0),
 		syncClaims:    make([]consensus.ReferendumClaim, 0),
 	}
-	nk.SetInitialSnapshot([]core.NetworkNode{})
+	nk.SetInitialSnapshot([]insolar.NetworkNode{})
 	return nk
 }
 
 type nodekeeper struct {
-	origin        core.NetworkNode
+	origin        insolar.NetworkNode
 	claimQueue    *claimQueue
 	consensusInfo *consensusInfo
 
@@ -126,24 +142,24 @@ type nodekeeper struct {
 	accessor   *node.Accessor
 
 	syncLock   sync.Mutex
-	syncNodes  []core.NetworkNode
+	syncNodes  []insolar.NetworkNode
 	syncClaims []consensus.ReferendumClaim
 
 	isBootstrap     bool
 	isBootstrapLock sync.RWMutex
 
-	Cryptography core.CryptographyService `inject:""`
+	Cryptography insolar.CryptographyService `inject:""`
 }
 
-func (nk *nodekeeper) SetInitialSnapshot(nodes []core.NetworkNode) {
+func (nk *nodekeeper) SetInitialSnapshot(nodes []insolar.NetworkNode) {
 	nk.activeLock.Lock()
 	defer nk.activeLock.Unlock()
 
-	nodesMap := make(map[core.RecordRef]core.NetworkNode)
+	nodesMap := make(map[insolar.Reference]insolar.NetworkNode)
 	for _, node := range nodes {
 		nodesMap[node.ID()] = node
 	}
-	nk.snapshot = node.NewSnapshot(core.FirstPulseNumber, nodesMap)
+	nk.snapshot = node.NewSnapshot(insolar.FirstPulseNumber, nodesMap)
 	nk.accessor = node.NewAccessor(nk.snapshot)
 	nk.syncNodes = nk.accessor.GetActiveNodes()
 }
@@ -159,11 +175,11 @@ func (nk *nodekeeper) GetConsensusInfo() network.ConsensusInfo {
 	return nk.consensusInfo
 }
 
-func (nk *nodekeeper) GetWorkingNode(ref core.RecordRef) core.NetworkNode {
+func (nk *nodekeeper) GetWorkingNode(ref insolar.Reference) insolar.NetworkNode {
 	return nk.GetAccessor().GetWorkingNode(ref)
 }
 
-func (nk *nodekeeper) GetWorkingNodesByRole(role core.DynamicRole) []core.RecordRef {
+func (nk *nodekeeper) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
 	return nk.GetAccessor().GetWorkingNodesByRole(role)
 }
 
@@ -180,17 +196,17 @@ func (nk *nodekeeper) Wipe(isDiscovery bool) {
 	nk.cloudHash = nil
 	nk.cloudHashLock.Unlock()
 
-	nk.SetInitialSnapshot([]core.NetworkNode{})
+	nk.SetInitialSnapshot([]insolar.NetworkNode{})
 
 	nk.activeLock.Lock()
 	defer nk.activeLock.Unlock()
 
 	nk.claimQueue = newClaimQueue()
 	nk.syncLock.Lock()
-	nk.syncNodes = make([]core.NetworkNode, 0)
+	nk.syncNodes = make([]insolar.NetworkNode, 0)
 	nk.syncClaims = make([]consensus.ReferendumClaim, 0)
 	if isDiscovery {
-		nk.origin.(node.MutableNode).SetState(core.NodeReady)
+		nk.origin.(node.MutableNode).SetState(insolar.NodeReady)
 	}
 	nk.syncLock.Unlock()
 }
@@ -213,7 +229,7 @@ func (nk *nodekeeper) SetIsBootstrapped(isBootstrap bool) {
 	nk.isBootstrap = isBootstrap
 }
 
-func (nk *nodekeeper) GetOrigin() core.NetworkNode {
+func (nk *nodekeeper) GetOrigin() insolar.NetworkNode {
 	nk.activeLock.RLock()
 	defer nk.activeLock.RUnlock()
 
@@ -234,7 +250,7 @@ func (nk *nodekeeper) SetCloudHash(cloudHash []byte) {
 	nk.cloudHash = cloudHash
 }
 
-func (nk *nodekeeper) GetWorkingNodes() []core.NetworkNode {
+func (nk *nodekeeper) GetWorkingNodes() []insolar.NetworkNode {
 	return nk.GetAccessor().GetWorkingNodes()
 }
 
@@ -270,7 +286,7 @@ func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
 	return newUnsyncList(nk.origin, nil, length)
 }
 
-func (nk *nodekeeper) Sync(ctx context.Context, nodes []core.NetworkNode, claims []consensus.ReferendumClaim) error {
+func (nk *nodekeeper) Sync(ctx context.Context, nodes []insolar.NetworkNode, claims []consensus.ReferendumClaim) error {
 	nk.syncLock.Lock()
 	defer nk.syncLock.Unlock()
 
@@ -295,7 +311,7 @@ func (nk *nodekeeper) Sync(ctx context.Context, nodes []core.NetworkNode, claims
 }
 
 // syncOrigin synchronize data in origin node with node from active list in case when they are different objects
-func (nk *nodekeeper) syncOrigin(n core.NetworkNode) {
+func (nk *nodekeeper) syncOrigin(n insolar.NetworkNode) {
 	if nk.origin == n {
 		return
 	}
@@ -320,7 +336,7 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 	inslogger.FromContext(ctx).Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
 		len(nk.accessor.GetActiveNodes()), len(mergeResult.ActiveList))
 
-	nk.snapshot = node.NewSnapshot(core.PulseNumber(0), mergeResult.ActiveList)
+	nk.snapshot = node.NewSnapshot(insolar.PulseNumber(0), mergeResult.ActiveList)
 	nk.accessor = node.NewAccessor(nk.snapshot)
 	stats.Record(ctx, consensusMetrics.ActiveNodes.M(int64(len(nk.accessor.GetActiveNodes()))))
 	nk.consensusInfo.flush(mergeResult.NodesJoinedDuringPrevPulse)
@@ -328,7 +344,7 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 }
 
 func (nk *nodekeeper) shouldExit(foundOrigin bool) bool {
-	return !foundOrigin && nk.origin.GetState() == core.NodeReady && len(nk.GetAccessor().GetActiveNodes()) != 0
+	return !foundOrigin && nk.origin.GetState() == insolar.NodeReady && len(nk.GetAccessor().GetActiveNodes()) != 0
 }
 
 func (nk *nodekeeper) nodeToSignedClaim() (*consensus.NodeJoinClaim, error) {

@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package artifactmanager
 
@@ -22,9 +22,9 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
@@ -33,9 +33,9 @@ import (
 type middleware struct {
 	objectStorage  storage.ObjectStorage
 	jetAccessor    jet.Accessor
-	jetCoordinator core.JetCoordinator
-	messageBus     core.MessageBus
-	pulseStorage   core.PulseStorage
+	jetCoordinator insolar.JetCoordinator
+	messageBus     insolar.MessageBus
+	pulseStorage   insolar.PulseStorage
 	hotDataWaiter  HotDataWaiter
 	conf           *configuration.Ledger
 	handler        *MessageHandler
@@ -56,8 +56,8 @@ func newMiddleware(
 	}
 }
 
-func (m *middleware) addFieldsToLogger(handler core.MessageHandler) core.MessageHandler {
-	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+func (m *middleware) addFieldsToLogger(handler insolar.MessageHandler) insolar.MessageHandler {
+	return func(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 		ctx, _ = inslogger.WithField(ctx, "targetid", parcel.DefaultTarget().String())
 
 		return handler(ctx, parcel)
@@ -66,13 +66,13 @@ func (m *middleware) addFieldsToLogger(handler core.MessageHandler) core.Message
 
 type jetKey struct{}
 
-func contextWithJet(ctx context.Context, jetID core.RecordID) context.Context {
+func contextWithJet(ctx context.Context, jetID insolar.ID) context.Context {
 	return context.WithValue(ctx, jetKey{}, jetID)
 }
 
-func jetFromContext(ctx context.Context) core.RecordID {
+func jetFromContext(ctx context.Context) insolar.ID {
 	val := ctx.Value(jetKey{})
-	j, ok := val.(core.RecordID)
+	j, ok := val.(insolar.ID)
 	if !ok {
 		panic("failed to extract jet from context")
 	}
@@ -80,28 +80,28 @@ func jetFromContext(ctx context.Context) core.RecordID {
 	return j
 }
 
-func (m *middleware) zeroJetForHeavy(handler core.MessageHandler) core.MessageHandler {
-	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
-		return handler(contextWithJet(ctx, core.RecordID(*core.NewJetID(0, nil))), parcel)
+func (m *middleware) zeroJetForHeavy(handler insolar.MessageHandler) insolar.MessageHandler {
+	return func(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
+		return handler(contextWithJet(ctx, insolar.ID(*insolar.NewJetID(0, nil))), parcel)
 	}
 }
 
-func addJetIDToLogger(ctx context.Context, jetID core.RecordID) context.Context {
+func addJetIDToLogger(ctx context.Context, jetID insolar.ID) context.Context {
 	ctx, _ = inslogger.WithField(ctx, "jetid", jetID.DebugString())
 
 	return ctx
 }
 
-func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
-	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+func (m *middleware) checkJet(handler insolar.MessageHandler) insolar.MessageHandler {
+	return func(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 		msg := parcel.Message()
 		if msg.DefaultTarget() == nil {
 			return nil, errors.New("unexpected message")
 		}
 
 		// FIXME: @andreyromancev. 17.01.19. Temporary allow any genesis request. Remove it.
-		if parcel.Pulse() == core.FirstPulseNumber {
-			return handler(contextWithJet(ctx, core.RecordID(*core.NewJetID(0, nil))), parcel)
+		if parcel.Pulse() == insolar.FirstPulseNumber {
+			return handler(contextWithJet(ctx, insolar.ID(*insolar.NewJetID(0, nil))), parcel)
 		}
 
 		// Check token jet.
@@ -130,12 +130,12 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 				}).Error("jet is not actual")
 			}
 
-			return handler(contextWithJet(ctx, core.RecordID(jetID)), parcel)
+			return handler(contextWithJet(ctx, insolar.ID(jetID)), parcel)
 		}
 
 		// Calculate jet for current pulse.
-		var jetID core.RecordID
-		if msg.DefaultTarget().Record().Pulse() == core.PulseNumberJet {
+		var jetID insolar.ID
+		if msg.DefaultTarget().Record().Pulse() == insolar.PulseNumberJet {
 			jetID = *msg.DefaultTarget().Record()
 		} else {
 			j, err := m.handler.jetTreeUpdater.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse())
@@ -162,11 +162,11 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 	}
 }
 
-func (m *middleware) waitForHotData(handler core.MessageHandler) core.MessageHandler {
-	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+func (m *middleware) waitForHotData(handler insolar.MessageHandler) insolar.MessageHandler {
+	return func(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 		// TODO: 15.01.2019 @egorikas
 		// Hack is needed for genesis
-		if parcel.Pulse() == core.FirstPulseNumber {
+		if parcel.Pulse() == insolar.FirstPulseNumber {
 			return handler(ctx, parcel)
 		}
 
@@ -185,8 +185,8 @@ func (m *middleware) waitForHotData(handler core.MessageHandler) core.MessageHan
 	}
 }
 
-func (m *middleware) releaseHotDataWaiters(handler core.MessageHandler) core.MessageHandler {
-	return func(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
+func (m *middleware) releaseHotDataWaiters(handler insolar.MessageHandler) insolar.MessageHandler {
+	return func(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 		rep, err := handler(ctx, parcel)
 
 		hotDataMessage := parcel.Message().(*message.HotData)

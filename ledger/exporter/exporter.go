@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package exporter
 
@@ -27,8 +27,8 @@ import (
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
@@ -41,7 +41,7 @@ type Exporter struct {
 	JetAccessor   jet.Accessor          `inject:""`
 	ObjectStorage storage.ObjectStorage `inject:""`
 	PulseTracker  storage.PulseTracker  `inject:""`
-	PulseStorage  core.PulseStorage     `inject:""`
+	PulseStorage  insolar.PulseStorage  `inject:""`
 
 	cfg configuration.Exporter
 }
@@ -64,7 +64,7 @@ func (p payload) MarshalJSON() ([]byte, error) {
 
 type recordData struct {
 	Type    string
-	Data    object.Record
+	Data    object.VirtualRecord
 	Payload payload
 }
 
@@ -72,13 +72,13 @@ type recordsData map[string]recordData
 
 type pulseData struct {
 	Records recordsData
-	Pulse   core.Pulse
-	JetID   core.JetID
+	Pulse   insolar.Pulse
+	JetID   insolar.JetID
 }
 
 // Export returns data view from storage.
-func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size int) (*core.StorageExportResult, error) {
-	result := core.StorageExportResult{Data: map[string]interface{}{}}
+func (e *Exporter) Export(ctx context.Context, fromPulse insolar.PulseNumber, size int) (*insolar.StorageExportResult, error) {
+	result := insolar.StorageExportResult{Data: map[string]interface{}{}}
 
 	currentPulse, err := e.PulseStorage.Current(ctx)
 	if err != nil {
@@ -86,7 +86,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 	}
 
 	counter := 0
-	fromPulsePN := core.PulseNumber(math.Max(float64(fromPulse), float64(core.GenesisPulse.PulseNumber)))
+	fromPulsePN := insolar.PulseNumber(math.Max(float64(fromPulse), float64(insolar.GenesisPulse.PulseNumber)))
 
 	if fromPulsePN > currentPulse.PulseNumber {
 		return nil, errors.Errorf("failed to fetch data: from-pulse[%v] > current-pulse[%v]",
@@ -95,7 +95,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 
 	_, err = e.PulseTracker.GetPulse(ctx, fromPulsePN)
 	if err != nil {
-		tryPulse, err := e.PulseTracker.GetPulse(ctx, core.GenesisPulse.PulseNumber)
+		tryPulse, err := e.PulseTracker.GetPulse(ctx, insolar.GenesisPulse.PulseNumber)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch genesis pulse data")
 		}
@@ -121,7 +121,7 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 		// @sergey.morozov 20.01.18 - Blocks are synced to Heavy node with a lag.
 		// We can't reliably predict this lag so we add threshold of N seconds.
 		pn := pulse.Pulse.PulseNumber
-		if pn >= (currentPulse.PrevPulseNumber - core.PulseNumber(e.cfg.ExportLag)) {
+		if pn >= (currentPulse.PrevPulseNumber - insolar.PulseNumber(e.cfg.ExportLag)) {
 			iterPulse = nil
 			break
 		}
@@ -148,9 +148,9 @@ func (e *Exporter) Export(ctx context.Context, fromPulse core.PulseNumber, size 
 	return &result, nil
 }
 
-func (e *Exporter) exportPulse(ctx context.Context, jetID core.JetID, pulse *core.Pulse) (*pulseData, error) {
+func (e *Exporter) exportPulse(ctx context.Context, jetID insolar.JetID, pulse *insolar.Pulse) (*pulseData, error) {
 	records := recordsData{}
-	err := e.DB.IterateRecordsOnPulse(ctx, core.RecordID(jetID), pulse.PulseNumber, func(id core.RecordID, rec object.Record) error {
+	err := e.DB.IterateRecordsOnPulse(ctx, insolar.ID(jetID), pulse.PulseNumber, func(id insolar.ID, rec object.VirtualRecord) error {
 		pl := e.getPayload(ctx, jetID, rec)
 
 		records[string(base58.Encode(id[:]))] = recordData{
@@ -173,13 +173,13 @@ func (e *Exporter) exportPulse(ctx context.Context, jetID core.JetID, pulse *cor
 	return &data, nil
 }
 
-func (e *Exporter) getPayload(ctx context.Context, jetID core.JetID, rec object.Record) payload {
+func (e *Exporter) getPayload(ctx context.Context, jetID insolar.JetID, rec object.VirtualRecord) payload {
 	switch r := rec.(type) {
-	case object.ObjectState:
+	case object.State:
 		if r.GetMemory() == nil {
 			break
 		}
-		blob, err := e.ObjectStorage.GetBlob(ctx, core.RecordID(jetID), r.GetMemory())
+		blob, err := e.ObjectStorage.GetBlob(ctx, insolar.ID(jetID), r.GetMemory())
 		if err != nil {
 			inslogger.FromContext(ctx).Errorf("getPayload failed to GetBlob (jet: %s)", jetID.DebugString())
 			return payload{}
@@ -223,7 +223,7 @@ func (e *Exporter) getPayload(ctx context.Context, jetID core.JetID, rec object.
 	return nil
 }
 
-func recordType(rec object.Record) string {
+func recordType(rec object.VirtualRecord) string {
 	switch rec.(type) {
 	case *object.GenesisRecord:
 		return "TypeGenesis"
@@ -239,9 +239,9 @@ func recordType(rec object.Record) string {
 		return "TypeType"
 	case *object.CodeRecord:
 		return "TypeCode"
-	case *object.ObjectActivateRecord:
+	case *object.ActivateRecord:
 		return "TypeActivate"
-	case *object.ObjectAmendRecord:
+	case *object.AmendRecord:
 		return "TypeAmend"
 	case *object.DeactivationRecord:
 		return "TypeDeactivate"

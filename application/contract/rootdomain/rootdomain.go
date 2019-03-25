@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package rootdomain
 
@@ -22,15 +22,15 @@ import (
 
 	"github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/application/proxy/wallet"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // RootDomain is smart contract representing entrance point to system
 type RootDomain struct {
 	foundation.BaseContract
-	RootMember    core.RecordRef
-	NodeDomainRef core.RecordRef
+	RootMember    insolar.Reference
+	NodeDomainRef insolar.Reference
 }
 
 var INSATTR_CreateMember_API = true
@@ -53,7 +53,7 @@ func (rd *RootDomain) CreateMember(name string, key string) (string, error) {
 }
 
 // GetRootMemberRef returns root member's reference
-func (rd *RootDomain) GetRootMemberRef() (*core.RecordRef, error) {
+func (rd *RootDomain) GetRootMemberRef() (*insolar.Reference, error) {
 	return &rd.RootMember, nil
 }
 
@@ -81,7 +81,7 @@ func (rd *RootDomain) getUserInfoMap(m *member.Member) (map[string]interface{}, 
 // DumpUserInfo processes dump user info request
 func (rd *RootDomain) DumpUserInfo(reference string) ([]byte, error) {
 	caller := *rd.GetContext().Caller
-	ref, err := core.NewRefFromBase58(reference)
+	ref, err := insolar.NewReferenceFromBase58(reference)
 	if err != nil {
 		return nil, fmt.Errorf("[ DumpUserInfo ] Failed to parse reference: %s", err.Error())
 	}
@@ -145,7 +145,7 @@ func (rd *RootDomain) Info() (interface{}, error) {
 }
 
 // GetNodeDomainRef returns reference of NodeDomain instance
-func (rd *RootDomain) GetNodeDomainRef() (core.RecordRef, error) {
+func (rd *RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
 	return rd.NodeDomainRef, nil
 }
 

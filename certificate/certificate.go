@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package certificate
 
@@ -26,7 +26,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -55,8 +55,8 @@ func NewBootstrapNode(pubKey crypto.PublicKey, publicKey, host, noderef string) 
 }
 
 // GetNodeRef returns reference of bootstrap node
-func (bn *BootstrapNode) GetNodeRef() *core.RecordRef {
-	ref, err := core.NewRefFromBase58(bn.NodeRef)
+func (bn *BootstrapNode) GetNodeRef() *insolar.Reference {
+	ref, err := insolar.NewReferenceFromBase58(bn.NodeRef)
 	if err != nil {
 		log.Errorf("Invalid bootstrap node reference: %s\n", bn.NodeRef)
 		return nil
@@ -98,7 +98,7 @@ type Certificate struct {
 	pulsarPublicKey []crypto.PublicKey
 }
 
-func newCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, data []byte) (*Certificate, error) {
+func newCertificate(publicKey crypto.PublicKey, keyProcessor insolar.KeyProcessor, data []byte) (*Certificate, error) {
 	cert := Certificate{}
 	err := json.Unmarshal(data, &cert)
 	if err != nil {
@@ -119,7 +119,7 @@ func newCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, 
 		return nil, errors.Wrap(err, "[ newCertificate ] Incorrect fields")
 	}
 
-	cert.DiscoverySigns = make(map[core.RecordRef][]byte)
+	cert.DiscoverySigns = make(map[insolar.Reference][]byte)
 	for _, node := range cert.BootstrapNodes {
 		cert.DiscoverySigns[*(node.GetNodeRef())] = node.NodeSign
 	}
@@ -154,7 +154,7 @@ func (cert *Certificate) SignNetworkPart(key crypto.PrivateKey) ([]byte, error) 
 	return sign.Bytes(), nil
 }
 
-func (cert *Certificate) fillExtraFields(keyProcessor core.KeyProcessor) error {
+func (cert *Certificate) fillExtraFields(keyProcessor insolar.KeyProcessor) error {
 	importedNodePubKey, err := keyProcessor.ImportPublicKeyPEM([]byte(cert.PublicKey))
 	if err != nil {
 		return errors.Wrapf(err, "[ fillExtraFields ] Bad PublicKey: %s", cert.PublicKey)
@@ -182,8 +182,8 @@ func (cert *Certificate) fillExtraFields(keyProcessor core.KeyProcessor) error {
 }
 
 // GetRootDomainReference returns RootDomain reference
-func (cert *Certificate) GetRootDomainReference() *core.RecordRef {
-	ref, err := core.NewRefFromBase58(cert.RootDomainReference)
+func (cert *Certificate) GetRootDomainReference() *insolar.Reference {
+	ref, err := insolar.NewReferenceFromBase58(cert.RootDomainReference)
 	if err != nil {
 		log.Errorf("Invalid domain reference in cert: %s\n", cert.Reference)
 		return nil
@@ -192,8 +192,8 @@ func (cert *Certificate) GetRootDomainReference() *core.RecordRef {
 }
 
 // GetDiscoveryNodes return bootstrap nodes array
-func (cert *Certificate) GetDiscoveryNodes() []core.DiscoveryNode {
-	result := make([]core.DiscoveryNode, 0)
+func (cert *Certificate) GetDiscoveryNodes() []insolar.DiscoveryNode {
+	result := make([]insolar.DiscoveryNode, 0)
 	for i := 0; i < len(cert.BootstrapNodes); i++ {
 		// we get node by pointer, so ranged for loop does not suite
 		result = append(result, &cert.BootstrapNodes[i])
@@ -212,7 +212,7 @@ func (cert *Certificate) Dump() (string, error) {
 }
 
 // ReadCertificate constructor creates new Certificate component
-func ReadCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, certPath string) (*Certificate, error) {
+func ReadCertificate(publicKey crypto.PublicKey, keyProcessor insolar.KeyProcessor, certPath string) (*Certificate, error) {
 	data, err := ioutil.ReadFile(filepath.Clean(certPath))
 	if err != nil {
 		return nil, errors.Wrapf(err, "[ ReadCertificate ] failed to read certificate from: %s", certPath)
@@ -225,7 +225,7 @@ func ReadCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor,
 }
 
 // ReadCertificateFromReader constructor creates new Certificate component
-func ReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, reader io.Reader) (*Certificate, error) {
+func ReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor insolar.KeyProcessor, reader io.Reader) (*Certificate, error) {
 	data, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return nil, errors.Wrapf(err, "[ ReadCertificateFromReader ] failed to read certificate data")
@@ -239,7 +239,7 @@ func ReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor core.Key
 
 // NewCertificatesWithKeys generate certificate from given keys
 // DEPRECATED, this method generates invalid certificate
-func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor) (*Certificate, error) {
+func NewCertificatesWithKeys(publicKey crypto.PublicKey, keyProcessor insolar.KeyProcessor) (*Certificate, error) {
 	cert := Certificate{}
 
 	cert.Reference = testutils.RandomRef().String()

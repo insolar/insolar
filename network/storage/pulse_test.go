@@ -38,7 +38,7 @@ import (
 	"context"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"os"
@@ -58,7 +58,7 @@ func TestNewPulseStorage(t *testing.T) {
 	cm.Register(badgerDB, ps)
 	cm.Inject()
 
-	pulse := core.Pulse{PulseNumber: 15}
+	pulse := insolar.Pulse{PulseNumber: 15}
 	err = ps.Append(ctx, pulse)
 	assert.NoError(t, err)
 

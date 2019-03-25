@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package exporter
 
@@ -30,8 +30,8 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
@@ -53,7 +53,7 @@ type exporterSuite struct {
 	pulseStorage  *storage.PulseStorage
 
 	exporter *Exporter
-	jetID    core.JetID
+	jetID    insolar.JetID
 }
 
 func NewExporterSuite() *exporterSuite {
@@ -70,7 +70,7 @@ func TestExporter(t *testing.T) {
 func (s *exporterSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
-	s.jetID = *core.NewJetID(0, nil)
+	s.jetID = *insolar.NewJetID(0, nil)
 
 	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
@@ -110,17 +110,17 @@ func (s *exporterSuite) AfterTest(suiteName, testName string) {
 
 func (s *exporterSuite) TestExporter_Export() {
 	var (
-		Pulse1  core.PulseNumber = core.FirstPulseNumber
-		Pulse10 core.PulseNumber = core.FirstPulseNumber + 10
-		Pulse20 core.PulseNumber = core.FirstPulseNumber + 20
+		Pulse1  insolar.PulseNumber = insolar.FirstPulseNumber
+		Pulse10 insolar.PulseNumber = insolar.FirstPulseNumber + 10
+		Pulse20 insolar.PulseNumber = insolar.FirstPulseNumber + 20
 	)
 
 	for i := 1; i <= 3; i++ {
 		err := s.pulseTracker.AddPulse(
 			s.ctx,
-			core.Pulse{
-				PulseNumber:     core.FirstPulseNumber + 10*core.PulseNumber(i),
-				PrevPulseNumber: core.FirstPulseNumber + 10*core.PulseNumber(i-1),
+			insolar.Pulse{
+				PulseNumber:     insolar.FirstPulseNumber + 10*insolar.PulseNumber(i),
+				PrevPulseNumber: insolar.FirstPulseNumber + 10*insolar.PulseNumber(i-1),
 				PulseTimestamp:  10 * int64(i+1),
 			},
 		)
@@ -138,14 +138,14 @@ func (s *exporterSuite) TestExporter_Export() {
 	blobData.Data.Field = "anotherValue"
 	codec.NewEncoderBytes(&mem, &codec.CborHandle{}).MustEncode(blobData)
 
-	blobID, err := s.objectStorage.SetBlob(s.ctx, core.RecordID(s.jetID), Pulse10, mem)
+	blobID, err := s.objectStorage.SetBlob(s.ctx, insolar.ID(s.jetID), Pulse10, mem)
 	require.NoError(s.T(), err)
 
-	_, err = s.objectStorage.SetRecord(s.ctx, core.RecordID(s.jetID), Pulse10, &object.GenesisRecord{})
+	_, err = s.objectStorage.SetRecord(s.ctx, insolar.ID(s.jetID), Pulse10, &object.GenesisRecord{})
 	require.NoError(s.T(), err)
 
-	objectID, err := s.objectStorage.SetRecord(s.ctx, core.RecordID(s.jetID), Pulse10, &object.ObjectActivateRecord{
-		ObjectStateRecord: object.ObjectStateRecord{
+	objectID, err := s.objectStorage.SetRecord(s.ctx, insolar.ID(s.jetID), Pulse10, &object.ActivateRecord{
+		StateRecord: object.StateRecord{
 			Memory: blobID,
 		},
 		IsDelegate: true,
@@ -154,12 +154,12 @@ func (s *exporterSuite) TestExporter_Export() {
 	objectID58 := base58.Encode(objectID[:])
 
 	msg := &message.CallConstructor{}
-	var parcel core.Parcel = &message.Parcel{Msg: msg}
+	var parcel insolar.Parcel = &message.Parcel{Msg: msg}
 
 	msgHash := platformpolicy.NewPlatformCryptographyScheme().IntegrityHasher().Hash(message.ToBytes(msg))
 	requestID, err := s.objectStorage.SetRecord(
 		s.ctx,
-		core.RecordID(s.jetID),
+		insolar.ID(s.jetID),
 		Pulse10,
 		&object.RequestRecord{
 			MessageHash: msgHash,
@@ -183,7 +183,7 @@ func (s *exporterSuite) TestExporter_Export() {
 	_, err = json.Marshal(result)
 	assert.NoError(s.T(), err)
 
-	pn2str := func(pn core.PulseNumber) string {
+	pn2str := func(pn insolar.PulseNumber) string {
 		return strconv.FormatUint(uint64(pn), 10)
 	}
 
@@ -201,7 +201,7 @@ func (s *exporterSuite) TestExporter_Export() {
 	obj, ok := records[objectID58]
 	if assert.True(s.T(), ok, "object not found by ID") {
 		assert.Equal(s.T(), "TypeActivate", obj.Type)
-		assert.Equal(s.T(), true, obj.Data.(*object.ObjectActivateRecord).IsDelegate)
+		assert.Equal(s.T(), true, obj.Data.(*object.ActivateRecord).IsDelegate)
 		assert.Equal(s.T(), "objectValue", obj.Payload["Memory"].(payload)["Field"])
 	}
 
@@ -209,7 +209,7 @@ func (s *exporterSuite) TestExporter_Export() {
 	if assert.True(s.T(), ok, "request not found by ID") {
 		assert.Equal(s.T(), "TypeCallRequest", request.Type)
 		assert.Equal(s.T(), msgHash, request.Data.(*object.RequestRecord).MessageHash)
-		assert.Equal(s.T(), core.TypeCallConstructor.String(), request.Payload["Type"])
+		assert.Equal(s.T(), insolar.TypeCallConstructor.String(), request.Payload["Type"])
 	}
 
 	_, err = s.exporter.Export(s.ctx, 100000, 2)
@@ -223,24 +223,24 @@ func (s *exporterSuite) TestExporter_ExportGetBlobFailed() {
 	for i := 1; i <= 3; i++ {
 		err := s.pulseTracker.AddPulse(
 			s.ctx,
-			core.Pulse{
-				PulseNumber:     core.FirstPulseNumber + 10*core.PulseNumber(i),
-				PrevPulseNumber: core.FirstPulseNumber + 10*core.PulseNumber(i-1),
+			insolar.Pulse{
+				PulseNumber:     insolar.FirstPulseNumber + 10*insolar.PulseNumber(i),
+				PrevPulseNumber: insolar.FirstPulseNumber + 10*insolar.PulseNumber(i-1),
 				PulseTimestamp:  10 * int64(i+1),
 			},
 		)
 		require.NoError(s.T(), err)
 	}
 
-	_, err := s.objectStorage.SetRecord(s.ctx, core.RecordID(s.jetID), core.FirstPulseNumber+10, &object.ObjectActivateRecord{
-		ObjectStateRecord: object.ObjectStateRecord{
-			Memory: &core.RecordID{},
+	_, err := s.objectStorage.SetRecord(s.ctx, insolar.ID(s.jetID), insolar.FirstPulseNumber+10, &object.ActivateRecord{
+		StateRecord: object.StateRecord{
+			Memory: &insolar.ID{},
 		},
 		IsDelegate: true,
 	})
 	require.NoError(s.T(), err)
 
-	result, err := s.exporter.Export(s.ctx, core.FirstPulseNumber+10, 10)
+	result, err := s.exporter.Export(s.ctx, insolar.FirstPulseNumber+10, 10)
 	assert.Equal(s.T(), 1, len(result.Data))
 	assert.Equal(s.T(), 1, result.Size)
 }

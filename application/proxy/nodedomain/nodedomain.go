@@ -1,36 +1,36 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package nodedomain
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = core.NewRefFromBase58("11112REXaZgXkiQJJbLfVuv2NTrD3CQZZ1bfMRzrRgj.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111qZFVP3dgzBKX7VfLTre2RpsU1DLSns1DwSghkA.11111111111111111111111111111111")
 
 // NodeDomain holds proxy type
 type NodeDomain struct {
-	Reference core.RecordRef
-	Prototype core.RecordRef
-	Code      core.RecordRef
+	Reference insolar.Reference
+	Prototype insolar.Reference
+	Code      insolar.Reference
 }
 
 // ContractConstructorHolder holds logic with object construction
@@ -40,7 +40,7 @@ type ContractConstructorHolder struct {
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*NodeDomain, error) {
+func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*NodeDomain, error) {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
@@ -49,7 +49,7 @@ func (r *ContractConstructorHolder) AsChild(objRef core.RecordRef) (*NodeDomain,
 }
 
 // AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*NodeDomain, error) {
+func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*NodeDomain, error) {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
@@ -58,17 +58,17 @@ func (r *ContractConstructorHolder) AsDelegate(objRef core.RecordRef) (*NodeDoma
 }
 
 // GetObject returns proxy object
-func GetObject(ref core.RecordRef) (r *NodeDomain) {
+func GetObject(ref insolar.Reference) (r *NodeDomain) {
 	return &NodeDomain{Reference: ref}
 }
 
 // GetPrototype returns reference to the prototype
-func GetPrototype() core.RecordRef {
+func GetPrototype() insolar.Reference {
 	return *PrototypeReference
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object core.RecordRef) (*NodeDomain, error) {
+func GetImplementationFrom(object insolar.Reference) (*NodeDomain, error) {
 	ref, err := proxyctx.Current.GetDelegate(object, *PrototypeReference)
 	if err != nil {
 		return nil, err
@@ -90,15 +90,15 @@ func NewNodeDomain() *ContractConstructorHolder {
 }
 
 // GetReference returns reference of the object
-func (r *NodeDomain) GetReference() core.RecordRef {
+func (r *NodeDomain) GetReference() insolar.Reference {
 	return r.Reference
 }
 
 // GetPrototype returns reference to the code
-func (r *NodeDomain) GetPrototype() (core.RecordRef, error) {
+func (r *NodeDomain) GetPrototype() (insolar.Reference, error) {
 	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
-		var ret0 core.RecordRef
+		var ret0 insolar.Reference
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
@@ -125,10 +125,10 @@ func (r *NodeDomain) GetPrototype() (core.RecordRef, error) {
 }
 
 // GetCode returns reference to the code
-func (r *NodeDomain) GetCode() (core.RecordRef, error) {
+func (r *NodeDomain) GetCode() (insolar.Reference, error) {
 	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
-		var ret0 core.RecordRef
+		var ret0 insolar.Reference
 		ret[0] = &ret0
 		var ret1 *foundation.Error
 		ret[1] = &ret1
@@ -264,7 +264,7 @@ func (r *NodeDomain) GetNodeRefByPKNoWait(publicKey string) error {
 }
 
 // RemoveNode is proxy generated method
-func (r *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
+func (r *NodeDomain) RemoveNode(nodeRef insolar.Reference) error {
 	var args [1]interface{}
 	args[0] = nodeRef
 
@@ -296,7 +296,7 @@ func (r *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 }
 
 // RemoveNodeNoWait is proxy generated method
-func (r *NodeDomain) RemoveNodeNoWait(nodeRef core.RecordRef) error {
+func (r *NodeDomain) RemoveNodeNoWait(nodeRef insolar.Reference) error {
 	var args [1]interface{}
 	args[0] = nodeRef
 

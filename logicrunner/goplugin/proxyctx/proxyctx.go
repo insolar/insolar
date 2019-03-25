@@ -1,33 +1,33 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package proxyctx
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // ProxyHelper interface with methods that are needed by contract proxies
 type ProxyHelper interface {
-	RouteCall(ref core.RecordRef, wait bool, method string, args []byte, proxyPrototype core.RecordRef) ([]byte, error)
-	SaveAsChild(parentRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error)
-	GetObjChildrenIterator(head core.RecordRef, prototype core.RecordRef, iteratorID string) (*ChildrenTypedIterator, error)
-	SaveAsDelegate(parentRef, classRef core.RecordRef, constructorName string, argsSerialized []byte) (core.RecordRef, error)
-	GetDelegate(object, ofType core.RecordRef) (core.RecordRef, error)
-	DeactivateObject(object core.RecordRef) error
+	RouteCall(ref insolar.Reference, wait bool, method string, args []byte, proxyPrototype insolar.Reference) ([]byte, error)
+	SaveAsChild(parentRef, classRef insolar.Reference, constructorName string, argsSerialized []byte) (insolar.Reference, error)
+	GetObjChildrenIterator(head insolar.Reference, prototype insolar.Reference, iteratorID string) (*ChildrenTypedIterator, error)
+	SaveAsDelegate(parentRef, classRef insolar.Reference, constructorName string, argsSerialized []byte) (insolar.Reference, error)
+	GetDelegate(object, ofType insolar.Reference) (insolar.Reference, error)
+	DeactivateObject(object insolar.Reference) error
 	Serialize(what interface{}, to *[]byte) error
 	Deserialize(from []byte, into interface{}) error
 	MakeErrorSerializable(error) error
@@ -39,13 +39,13 @@ var Current ProxyHelper
 // ChildrenTypedIterator iterator over children of object with specified type
 // it uses cache on insolard service side, provided by IteratorID
 type ChildrenTypedIterator struct {
-	Parent         core.RecordRef
-	ChildPrototype core.RecordRef // only child of specified prototype, if childPrototype.IsEmpty - ignored
+	Parent         insolar.Reference
+	ChildPrototype insolar.Reference // only child of specified prototype, if childPrototype.IsEmpty - ignored
 
-	IteratorID string           // map key to iterators slice in logicrunner service
-	Buff       []core.RecordRef // bucket of objects from previous RPC call to service
-	buffIndex  int              // current element
-	CanFetch   bool             // if true, we can call RPC again and get new objects
+	IteratorID string              // map key to iterators slice in logicrunner service
+	Buff       []insolar.Reference // bucket of objects from previous RPC call to service
+	buffIndex  int                 // current element
+	CanFetch   bool                // if true, we can call RPC again and get new objects
 }
 
 // HasNext return true if iterator has element in cache or can fetch data again
@@ -55,12 +55,12 @@ func (oi *ChildrenTypedIterator) HasNext() bool {
 
 // Next return next element from iterator cache or fetching new from service
 // return error only if fetch() fails
-func (oi *ChildrenTypedIterator) Next() (core.RecordRef, error) {
+func (oi *ChildrenTypedIterator) Next() (insolar.Reference, error) {
 	if !oi.hasInBuffer() && oi.CanFetch {
 		err := oi.fetch()
 		if err != nil {
 			oi.CanFetch = false
-			return core.RecordRef{}, err
+			return insolar.Reference{}, err
 		}
 	}
 
@@ -71,9 +71,9 @@ func (oi *ChildrenTypedIterator) hasInBuffer() bool {
 	return oi.buffIndex < len(oi.Buff)
 }
 
-func (oi *ChildrenTypedIterator) nextFromBuffer() core.RecordRef {
+func (oi *ChildrenTypedIterator) nextFromBuffer() insolar.Reference {
 	if !oi.hasInBuffer() {
-		return core.RecordRef{}
+		return insolar.Reference{}
 	}
 
 	result := oi.Buff[oi.buffIndex]

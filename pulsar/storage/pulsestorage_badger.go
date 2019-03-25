@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package pulsarstorage
 
@@ -23,7 +23,7 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
 
@@ -37,7 +37,7 @@ const (
 // NewDB returns pulsar.storage.db with BadgerDB instance initialized by opts.
 // Creates database in provided dir or in current directory if dir parameter is empty.
 func NewStorageBadger(conf configuration.Pulsar, opts *badger.Options) (PulsarStorage, error) {
-	gob.Register(core.Pulse{})
+	gob.Register(insolar.Pulse{})
 	opts = setOptions(opts)
 	dir, err := filepath.Abs(conf.Storage.DataDirectory)
 	if err != nil {
@@ -58,11 +58,11 @@ func NewStorageBadger(conf configuration.Pulsar, opts *badger.Options) (PulsarSt
 
 	pulse, err := db.GetLastPulse()
 	if pulse.PulseNumber == 0 || err != nil {
-		err = db.SavePulse(core.GenesisPulse)
+		err = db.SavePulse(insolar.GenesisPulse)
 		if err != nil {
 			return nil, errors.Wrap(err, "problems with init database")
 		}
-		err = db.SetLastPulse(core.GenesisPulse)
+		err = db.SetLastPulse(insolar.GenesisPulse)
 		if err != nil {
 			return nil, errors.Wrap(err, "problems with init database")
 		}
@@ -85,8 +85,8 @@ type BadgerStorageImpl struct {
 	db *badger.DB
 }
 
-func (storage *BadgerStorageImpl) GetLastPulse() (*core.Pulse, error) {
-	var pulseNumber core.Pulse
+func (storage *BadgerStorageImpl) GetLastPulse() (*insolar.Pulse, error) {
+	var pulseNumber insolar.Pulse
 
 	err := storage.db.View(func(txn *badger.Txn) error {
 		item, err := txn.Get([]byte(LastPulseRecordID))
@@ -110,7 +110,7 @@ func (storage *BadgerStorageImpl) GetLastPulse() (*core.Pulse, error) {
 	return &pulseNumber, err
 }
 
-func (storage *BadgerStorageImpl) SetLastPulse(pulse *core.Pulse) error {
+func (storage *BadgerStorageImpl) SetLastPulse(pulse *insolar.Pulse) error {
 	var buffer bytes.Buffer
 	enc := gob.NewEncoder(&buffer)
 	err := enc.Encode(pulse)
@@ -123,7 +123,7 @@ func (storage *BadgerStorageImpl) SetLastPulse(pulse *core.Pulse) error {
 	})
 }
 
-func (storage *BadgerStorageImpl) SavePulse(pulse *core.Pulse) error {
+func (storage *BadgerStorageImpl) SavePulse(pulse *insolar.Pulse) error {
 	var buffer bytes.Buffer
 	enc := gob.NewEncoder(&buffer)
 	err := enc.Encode(pulse)

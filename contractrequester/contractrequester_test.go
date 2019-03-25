@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package contractrequester
 
@@ -26,17 +26,17 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
-func mockMessageBus(t *testing.T, result core.Reply) *testutils.MessageBusMock {
+func mockMessageBus(t *testing.T, result insolar.Reply) *testutils.MessageBusMock {
 	mbMock := testutils.NewMessageBusMock(t)
-	mbMock.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mbMock.SendFunc = func(c context.Context, m insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 		return result, nil
 	}
 	return mbMock
@@ -61,7 +61,7 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	ref := testutils.RandomRef()
 
 	pm := testutils.NewPulseStorageMock(t)
-	pm.CurrentMock.Return(core.GenesisPulse, nil)
+	pm.CurrentMock.Return(insolar.GenesisPulse, nil)
 
 	mbm := mockMessageBus(t, &reply.RegisterRequest{})
 	cReq, err := New()
@@ -101,7 +101,7 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 	ref := testutils.RandomRef()
 
 	pm := testutils.NewPulseStorageMock(t)
-	pm.CurrentMock.Return(core.GenesisPulse, nil)
+	pm.CurrentMock.Return(insolar.GenesisPulse, nil)
 
 	mbm := mockMessageBus(t, &reply.CallMethod{})
 	cReq, err := New()
@@ -158,11 +158,11 @@ func TestCallMethodCanceled(t *testing.T) {
 	prototypeRef := testutils.RandomRef()
 	method := testutils.RandomString()
 
-	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 		return &reply.RegisterRequest{}, nil
 	}
 
-	_, err = cr.CallMethod(ctx, msg, false, &ref, method, core.Arguments{}, &prototypeRef)
+	_, err = cr.CallMethod(ctx, msg, false, &ref, method, insolar.Arguments{}, &prototypeRef)
 	require.Error(t, err)
 	assert.Contains(t, "canceled", err.Error())
 
@@ -191,7 +191,7 @@ func TestCallMethodWaitResults(t *testing.T) {
 	prototypeRef := testutils.RandomRef()
 	method := testutils.RandomString()
 
-	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 		go func() {
 			r, ok := p1.(*message.CallMethod)
 			require.Equal(t, ok, true)
@@ -205,6 +205,6 @@ func TestCallMethodWaitResults(t *testing.T) {
 		}()
 		return &reply.RegisterRequest{}, nil
 	}
-	_, err = cr.CallMethod(ctx, msg, false, &ref, method, core.Arguments{}, &prototypeRef)
+	_, err = cr.CallMethod(ctx, msg, false, &ref, method, insolar.Arguments{}, &prototypeRef)
 	require.NoError(t, err)
 }

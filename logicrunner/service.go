@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package logicrunner
 
@@ -28,15 +28,15 @@ import (
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
 // StartRPC starts RPC server for isolated executors to use
-func StartRPC(ctx context.Context, lr *LogicRunner, ps core.PulseStorage) *RPC {
+func StartRPC(ctx context.Context, lr *LogicRunner, ps insolar.PulseStorage) *RPC {
 	rpcService := &RPC{lr: lr, ps: ps}
 
 	rpcServer := rpc.NewServer()
@@ -63,7 +63,7 @@ func StartRPC(ctx context.Context, lr *LogicRunner, ps core.PulseStorage) *RPC {
 // RPC is a RPC interface for runner to use for various tasks, e.g. code fetching
 type RPC struct {
 	lr *LogicRunner
-	ps core.PulseStorage
+	ps insolar.PulseStorage
 }
 
 func recoverRPC(err *error) {
@@ -85,7 +85,7 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 	// we don't want to record GetCode messages because of cache
-	ctx = core.ContextWithMessageBus(ctx, gpr.lr.MessageBus)
+	ctx = insolar.ContextWithMessageBus(ctx, gpr.lr.MessageBus)
 	inslogger.FromContext(ctx).Debug("In RPC.GetCode ....")
 
 	am := gpr.lr.ArtifactManager
@@ -174,7 +174,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	return err
 }
 
-var iteratorMap = make(map[string]*core.RefIterator)
+var iteratorMap = make(map[string]*insolar.RefIterator)
 var iteratorMapLock = sync.RWMutex{}
 var iteratorBuffSize = 1000
 
@@ -234,7 +234,7 @@ func (gpr *RPC) GetObjChildrenIterator(
 		o, err := am.GetObject(ctx, *r, nil, false)
 
 		if err != nil {
-			if err == core.ErrDeactivated {
+			if err == insolar.ErrDeactivated {
 				continue
 			}
 			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't call GetObject on Next")

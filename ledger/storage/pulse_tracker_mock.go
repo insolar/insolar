@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,12 +20,12 @@ import (
 type PulseTrackerMock struct {
 	t minimock.Tester
 
-	AddPulseFunc       func(p context.Context, p1 core.Pulse) (r error)
+	AddPulseFunc       func(p context.Context, p1 insolar.Pulse) (r error)
 	AddPulseCounter    uint64
 	AddPulsePreCounter uint64
 	AddPulseMock       mPulseTrackerMockAddPulse
 
-	DeletePulseFunc       func(p context.Context, p1 core.PulseNumber) (r error)
+	DeletePulseFunc       func(p context.Context, p1 insolar.PulseNumber) (r error)
 	DeletePulseCounter    uint64
 	DeletePulsePreCounter uint64
 	DeletePulseMock       mPulseTrackerMockDeletePulse
@@ -35,17 +35,17 @@ type PulseTrackerMock struct {
 	GetLatestPulsePreCounter uint64
 	GetLatestPulseMock       mPulseTrackerMockGetLatestPulse
 
-	GetNthPrevPulseFunc       func(p context.Context, p1 uint, p2 core.PulseNumber) (r *Pulse, r1 error)
+	GetNthPrevPulseFunc       func(p context.Context, p1 uint, p2 insolar.PulseNumber) (r *Pulse, r1 error)
 	GetNthPrevPulseCounter    uint64
 	GetNthPrevPulsePreCounter uint64
 	GetNthPrevPulseMock       mPulseTrackerMockGetNthPrevPulse
 
-	GetPreviousPulseFunc       func(p context.Context, p1 core.PulseNumber) (r *Pulse, r1 error)
+	GetPreviousPulseFunc       func(p context.Context, p1 insolar.PulseNumber) (r *Pulse, r1 error)
 	GetPreviousPulseCounter    uint64
 	GetPreviousPulsePreCounter uint64
 	GetPreviousPulseMock       mPulseTrackerMockGetPreviousPulse
 
-	GetPulseFunc       func(p context.Context, p1 core.PulseNumber) (r *Pulse, r1 error)
+	GetPulseFunc       func(p context.Context, p1 insolar.PulseNumber) (r *Pulse, r1 error)
 	GetPulseCounter    uint64
 	GetPulsePreCounter uint64
 	GetPulseMock       mPulseTrackerMockGetPulse
@@ -82,7 +82,7 @@ type PulseTrackerMockAddPulseExpectation struct {
 
 type PulseTrackerMockAddPulseInput struct {
 	p  context.Context
-	p1 core.Pulse
+	p1 insolar.Pulse
 }
 
 type PulseTrackerMockAddPulseResult struct {
@@ -90,7 +90,7 @@ type PulseTrackerMockAddPulseResult struct {
 }
 
 //Expect specifies that invocation of PulseTracker.AddPulse is expected from 1 to Infinity times
-func (m *mPulseTrackerMockAddPulse) Expect(p context.Context, p1 core.Pulse) *mPulseTrackerMockAddPulse {
+func (m *mPulseTrackerMockAddPulse) Expect(p context.Context, p1 insolar.Pulse) *mPulseTrackerMockAddPulse {
 	m.mock.AddPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -114,7 +114,7 @@ func (m *mPulseTrackerMockAddPulse) Return(r error) *PulseTrackerMock {
 }
 
 //ExpectOnce specifies that invocation of PulseTracker.AddPulse is expected once
-func (m *mPulseTrackerMockAddPulse) ExpectOnce(p context.Context, p1 core.Pulse) *PulseTrackerMockAddPulseExpectation {
+func (m *mPulseTrackerMockAddPulse) ExpectOnce(p context.Context, p1 insolar.Pulse) *PulseTrackerMockAddPulseExpectation {
 	m.mock.AddPulseFunc = nil
 	m.mainExpectation = nil
 
@@ -129,7 +129,7 @@ func (e *PulseTrackerMockAddPulseExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of PulseTracker.AddPulse method
-func (m *mPulseTrackerMockAddPulse) Set(f func(p context.Context, p1 core.Pulse) (r error)) *PulseTrackerMock {
+func (m *mPulseTrackerMockAddPulse) Set(f func(p context.Context, p1 insolar.Pulse) (r error)) *PulseTrackerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -138,7 +138,7 @@ func (m *mPulseTrackerMockAddPulse) Set(f func(p context.Context, p1 core.Pulse)
 }
 
 //AddPulse implements github.com/insolar/insolar/ledger/storage.PulseTracker interface
-func (m *PulseTrackerMock) AddPulse(p context.Context, p1 core.Pulse) (r error) {
+func (m *PulseTrackerMock) AddPulse(p context.Context, p1 insolar.Pulse) (r error) {
 	counter := atomic.AddUint64(&m.AddPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.AddPulseCounter, 1)
 
@@ -230,7 +230,7 @@ type PulseTrackerMockDeletePulseExpectation struct {
 
 type PulseTrackerMockDeletePulseInput struct {
 	p  context.Context
-	p1 core.PulseNumber
+	p1 insolar.PulseNumber
 }
 
 type PulseTrackerMockDeletePulseResult struct {
@@ -238,7 +238,7 @@ type PulseTrackerMockDeletePulseResult struct {
 }
 
 //Expect specifies that invocation of PulseTracker.DeletePulse is expected from 1 to Infinity times
-func (m *mPulseTrackerMockDeletePulse) Expect(p context.Context, p1 core.PulseNumber) *mPulseTrackerMockDeletePulse {
+func (m *mPulseTrackerMockDeletePulse) Expect(p context.Context, p1 insolar.PulseNumber) *mPulseTrackerMockDeletePulse {
 	m.mock.DeletePulseFunc = nil
 	m.expectationSeries = nil
 
@@ -262,7 +262,7 @@ func (m *mPulseTrackerMockDeletePulse) Return(r error) *PulseTrackerMock {
 }
 
 //ExpectOnce specifies that invocation of PulseTracker.DeletePulse is expected once
-func (m *mPulseTrackerMockDeletePulse) ExpectOnce(p context.Context, p1 core.PulseNumber) *PulseTrackerMockDeletePulseExpectation {
+func (m *mPulseTrackerMockDeletePulse) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *PulseTrackerMockDeletePulseExpectation {
 	m.mock.DeletePulseFunc = nil
 	m.mainExpectation = nil
 
@@ -277,7 +277,7 @@ func (e *PulseTrackerMockDeletePulseExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of PulseTracker.DeletePulse method
-func (m *mPulseTrackerMockDeletePulse) Set(f func(p context.Context, p1 core.PulseNumber) (r error)) *PulseTrackerMock {
+func (m *mPulseTrackerMockDeletePulse) Set(f func(p context.Context, p1 insolar.PulseNumber) (r error)) *PulseTrackerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -286,7 +286,7 @@ func (m *mPulseTrackerMockDeletePulse) Set(f func(p context.Context, p1 core.Pul
 }
 
 //DeletePulse implements github.com/insolar/insolar/ledger/storage.PulseTracker interface
-func (m *PulseTrackerMock) DeletePulse(p context.Context, p1 core.PulseNumber) (r error) {
+func (m *PulseTrackerMock) DeletePulse(p context.Context, p1 insolar.PulseNumber) (r error) {
 	counter := atomic.AddUint64(&m.DeletePulsePreCounter, 1)
 	defer atomic.AddUint64(&m.DeletePulseCounter, 1)
 
@@ -529,7 +529,7 @@ type PulseTrackerMockGetNthPrevPulseExpectation struct {
 type PulseTrackerMockGetNthPrevPulseInput struct {
 	p  context.Context
 	p1 uint
-	p2 core.PulseNumber
+	p2 insolar.PulseNumber
 }
 
 type PulseTrackerMockGetNthPrevPulseResult struct {
@@ -538,7 +538,7 @@ type PulseTrackerMockGetNthPrevPulseResult struct {
 }
 
 //Expect specifies that invocation of PulseTracker.GetNthPrevPulse is expected from 1 to Infinity times
-func (m *mPulseTrackerMockGetNthPrevPulse) Expect(p context.Context, p1 uint, p2 core.PulseNumber) *mPulseTrackerMockGetNthPrevPulse {
+func (m *mPulseTrackerMockGetNthPrevPulse) Expect(p context.Context, p1 uint, p2 insolar.PulseNumber) *mPulseTrackerMockGetNthPrevPulse {
 	m.mock.GetNthPrevPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -562,7 +562,7 @@ func (m *mPulseTrackerMockGetNthPrevPulse) Return(r *Pulse, r1 error) *PulseTrac
 }
 
 //ExpectOnce specifies that invocation of PulseTracker.GetNthPrevPulse is expected once
-func (m *mPulseTrackerMockGetNthPrevPulse) ExpectOnce(p context.Context, p1 uint, p2 core.PulseNumber) *PulseTrackerMockGetNthPrevPulseExpectation {
+func (m *mPulseTrackerMockGetNthPrevPulse) ExpectOnce(p context.Context, p1 uint, p2 insolar.PulseNumber) *PulseTrackerMockGetNthPrevPulseExpectation {
 	m.mock.GetNthPrevPulseFunc = nil
 	m.mainExpectation = nil
 
@@ -577,7 +577,7 @@ func (e *PulseTrackerMockGetNthPrevPulseExpectation) Return(r *Pulse, r1 error) 
 }
 
 //Set uses given function f as a mock of PulseTracker.GetNthPrevPulse method
-func (m *mPulseTrackerMockGetNthPrevPulse) Set(f func(p context.Context, p1 uint, p2 core.PulseNumber) (r *Pulse, r1 error)) *PulseTrackerMock {
+func (m *mPulseTrackerMockGetNthPrevPulse) Set(f func(p context.Context, p1 uint, p2 insolar.PulseNumber) (r *Pulse, r1 error)) *PulseTrackerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -586,7 +586,7 @@ func (m *mPulseTrackerMockGetNthPrevPulse) Set(f func(p context.Context, p1 uint
 }
 
 //GetNthPrevPulse implements github.com/insolar/insolar/ledger/storage.PulseTracker interface
-func (m *PulseTrackerMock) GetNthPrevPulse(p context.Context, p1 uint, p2 core.PulseNumber) (r *Pulse, r1 error) {
+func (m *PulseTrackerMock) GetNthPrevPulse(p context.Context, p1 uint, p2 insolar.PulseNumber) (r *Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.GetNthPrevPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.GetNthPrevPulseCounter, 1)
 
@@ -680,7 +680,7 @@ type PulseTrackerMockGetPreviousPulseExpectation struct {
 
 type PulseTrackerMockGetPreviousPulseInput struct {
 	p  context.Context
-	p1 core.PulseNumber
+	p1 insolar.PulseNumber
 }
 
 type PulseTrackerMockGetPreviousPulseResult struct {
@@ -689,7 +689,7 @@ type PulseTrackerMockGetPreviousPulseResult struct {
 }
 
 //Expect specifies that invocation of PulseTracker.GetPreviousPulse is expected from 1 to Infinity times
-func (m *mPulseTrackerMockGetPreviousPulse) Expect(p context.Context, p1 core.PulseNumber) *mPulseTrackerMockGetPreviousPulse {
+func (m *mPulseTrackerMockGetPreviousPulse) Expect(p context.Context, p1 insolar.PulseNumber) *mPulseTrackerMockGetPreviousPulse {
 	m.mock.GetPreviousPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -713,7 +713,7 @@ func (m *mPulseTrackerMockGetPreviousPulse) Return(r *Pulse, r1 error) *PulseTra
 }
 
 //ExpectOnce specifies that invocation of PulseTracker.GetPreviousPulse is expected once
-func (m *mPulseTrackerMockGetPreviousPulse) ExpectOnce(p context.Context, p1 core.PulseNumber) *PulseTrackerMockGetPreviousPulseExpectation {
+func (m *mPulseTrackerMockGetPreviousPulse) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *PulseTrackerMockGetPreviousPulseExpectation {
 	m.mock.GetPreviousPulseFunc = nil
 	m.mainExpectation = nil
 
@@ -728,7 +728,7 @@ func (e *PulseTrackerMockGetPreviousPulseExpectation) Return(r *Pulse, r1 error)
 }
 
 //Set uses given function f as a mock of PulseTracker.GetPreviousPulse method
-func (m *mPulseTrackerMockGetPreviousPulse) Set(f func(p context.Context, p1 core.PulseNumber) (r *Pulse, r1 error)) *PulseTrackerMock {
+func (m *mPulseTrackerMockGetPreviousPulse) Set(f func(p context.Context, p1 insolar.PulseNumber) (r *Pulse, r1 error)) *PulseTrackerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -737,7 +737,7 @@ func (m *mPulseTrackerMockGetPreviousPulse) Set(f func(p context.Context, p1 cor
 }
 
 //GetPreviousPulse implements github.com/insolar/insolar/ledger/storage.PulseTracker interface
-func (m *PulseTrackerMock) GetPreviousPulse(p context.Context, p1 core.PulseNumber) (r *Pulse, r1 error) {
+func (m *PulseTrackerMock) GetPreviousPulse(p context.Context, p1 insolar.PulseNumber) (r *Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.GetPreviousPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.GetPreviousPulseCounter, 1)
 
@@ -831,7 +831,7 @@ type PulseTrackerMockGetPulseExpectation struct {
 
 type PulseTrackerMockGetPulseInput struct {
 	p  context.Context
-	p1 core.PulseNumber
+	p1 insolar.PulseNumber
 }
 
 type PulseTrackerMockGetPulseResult struct {
@@ -840,7 +840,7 @@ type PulseTrackerMockGetPulseResult struct {
 }
 
 //Expect specifies that invocation of PulseTracker.GetPulse is expected from 1 to Infinity times
-func (m *mPulseTrackerMockGetPulse) Expect(p context.Context, p1 core.PulseNumber) *mPulseTrackerMockGetPulse {
+func (m *mPulseTrackerMockGetPulse) Expect(p context.Context, p1 insolar.PulseNumber) *mPulseTrackerMockGetPulse {
 	m.mock.GetPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -864,7 +864,7 @@ func (m *mPulseTrackerMockGetPulse) Return(r *Pulse, r1 error) *PulseTrackerMock
 }
 
 //ExpectOnce specifies that invocation of PulseTracker.GetPulse is expected once
-func (m *mPulseTrackerMockGetPulse) ExpectOnce(p context.Context, p1 core.PulseNumber) *PulseTrackerMockGetPulseExpectation {
+func (m *mPulseTrackerMockGetPulse) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *PulseTrackerMockGetPulseExpectation {
 	m.mock.GetPulseFunc = nil
 	m.mainExpectation = nil
 
@@ -879,7 +879,7 @@ func (e *PulseTrackerMockGetPulseExpectation) Return(r *Pulse, r1 error) {
 }
 
 //Set uses given function f as a mock of PulseTracker.GetPulse method
-func (m *mPulseTrackerMockGetPulse) Set(f func(p context.Context, p1 core.PulseNumber) (r *Pulse, r1 error)) *PulseTrackerMock {
+func (m *mPulseTrackerMockGetPulse) Set(f func(p context.Context, p1 insolar.PulseNumber) (r *Pulse, r1 error)) *PulseTrackerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -888,7 +888,7 @@ func (m *mPulseTrackerMockGetPulse) Set(f func(p context.Context, p1 core.PulseN
 }
 
 //GetPulse implements github.com/insolar/insolar/ledger/storage.PulseTracker interface
-func (m *PulseTrackerMock) GetPulse(p context.Context, p1 core.PulseNumber) (r *Pulse, r1 error) {
+func (m *PulseTrackerMock) GetPulse(p context.Context, p1 insolar.PulseNumber) (r *Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.GetPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.GetPulseCounter, 1)
 

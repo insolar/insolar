@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package genesisdataprovider
 
@@ -22,8 +22,8 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
@@ -32,40 +32,40 @@ import (
 
 func mockContractRequesterWithError(t *testing.T) *testutils.ContractRequesterMock {
 	contractRequesterMock := testutils.NewContractRequesterMock(t)
-	contractRequesterMock.SendRequestFunc = func(p context.Context, p1 *core.RecordRef, p2 string, p3 []interface{}) (r core.Reply, r1 error) {
+	contractRequesterMock.SendRequestFunc = func(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}) (r insolar.Reply, r1 error) {
 		return nil, errors.New("test reasons")
 	}
 	return contractRequesterMock
 }
 
-func mockContractRequester(t *testing.T, res core.Reply) *testutils.ContractRequesterMock {
+func mockContractRequester(t *testing.T, res insolar.Reply) *testutils.ContractRequesterMock {
 	contractRequesterMock := testutils.NewContractRequesterMock(t)
-	contractRequesterMock.SendRequestFunc = func(p context.Context, p1 *core.RecordRef, p2 string, p3 []interface{}) (r core.Reply, r1 error) {
+	contractRequesterMock.SendRequestFunc = func(p context.Context, p1 *insolar.Reference, p2 string, p3 []interface{}) (r insolar.Reply, r1 error) {
 		return res, nil
 	}
 	return contractRequesterMock
 }
 
-func mockCertificateManager(t *testing.T, rootDomainRef *core.RecordRef) *testutils.CertificateManagerMock {
+func mockCertificateManager(t *testing.T, rootDomainRef *insolar.Reference) *testutils.CertificateManagerMock {
 	certificateMock := testutils.NewCertificateMock(t)
-	certificateMock.GetRootDomainReferenceFunc = func() (r *core.RecordRef) {
+	certificateMock.GetRootDomainReferenceFunc = func() (r *insolar.Reference) {
 		return rootDomainRef
 	}
 
 	certificateManagerMock := testutils.NewCertificateManagerMock(t)
-	certificateManagerMock.GetCertificateFunc = func() (r core.Certificate) {
+	certificateManagerMock.GetCertificateFunc = func() (r insolar.Certificate) {
 		return certificateMock
 	}
 	return certificateManagerMock
 }
 
-func mockInfoResult(rootMemberRef core.RecordRef, nodeDomainRef core.RecordRef) core.Reply {
+func mockInfoResult(rootMemberRef insolar.Reference, nodeDomainRef insolar.Reference) insolar.Reply {
 	result := map[string]interface{}{
 		"root_member": rootMemberRef.String(),
 		"node_domain": nodeDomainRef.String(),
 	}
 	resJSON, _ := json.Marshal(result)
-	resSer, _ := core.MarshalArgs(resJSON, nil)
+	resSer, _ := insolar.MarshalArgs(resJSON, nil)
 	return &reply.CallMethod{Result: resSer}
 }
 

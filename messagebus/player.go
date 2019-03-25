@@ -1,25 +1,25 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package messagebus
 
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // Player is a MessageBus wrapper that replays replies from provided tape. The tape can be created and by Recorder
@@ -27,12 +27,12 @@ import (
 type player struct {
 	sender
 	tape         tape
-	scheme       core.PlatformCryptographyScheme
-	pulseStorage core.PulseStorage
+	scheme       insolar.PlatformCryptographyScheme
+	pulseStorage insolar.PulseStorage
 }
 
 // newPlayer creates player instance. It will replay replies from provided tape.
-func newPlayer(s sender, tape tape, scheme core.PlatformCryptographyScheme, pulseStorage core.PulseStorage) *player {
+func newPlayer(s sender, tape tape, scheme insolar.PlatformCryptographyScheme, pulseStorage insolar.PulseStorage) *player {
 	return &player{
 		sender:       s,
 		tape:         tape,
@@ -43,7 +43,7 @@ func newPlayer(s sender, tape tape, scheme core.PlatformCryptographyScheme, puls
 
 // Send wraps MessageBus Send to reply replies from the tape. If reply for this message is not on the tape, an error
 // will be returned.
-func (p *player) Send(ctx context.Context, msg core.Message, ops *core.MessageSendOptions) (core.Reply, error) {
+func (p *player) Send(ctx context.Context, msg insolar.Message, ops *insolar.MessageSendOptions) (insolar.Reply, error) {
 	currentPulse, err := p.pulseStorage.Current(ctx)
 	if err != nil {
 		return nil, err
@@ -63,6 +63,6 @@ func (p *player) Send(ctx context.Context, msg core.Message, ops *core.MessageSe
 	return item.Reply, item.Error
 }
 
-func (p *player) OnPulse(context.Context, core.Pulse) error {
+func (p *player) OnPulse(context.Context, insolar.Pulse) error {
 	panic("This method must not be called")
 }

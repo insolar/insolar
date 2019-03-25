@@ -1,20 +1,20 @@
-// +build !race
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+// +build !race
 
 // TODO test failed in race test call. added build tag to ignore this test
 package ginsider
@@ -30,7 +30,7 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/testutils"
 )
@@ -69,7 +69,7 @@ func (s *HealthCheckSuite) TestHealthCheck() {
 	gi := NewGoInsider(tmpDir, protocol, socket)
 
 	refString := "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"
-	ref, err := core.NewRefFromBase58(refString)
+	ref, err := insolar.NewReferenceFromBase58(refString)
 	s.Require().NoError(err)
 	err = gi.AddPlugin(*ref, tmpDir+"/main.so")
 	s.Require().NoError(err, "failed to add plugin")
