@@ -20,7 +20,7 @@ import (
 type UnsyncListMock struct {
 	t minimock.Tester
 
-	AddNodeFunc       func(p core.Node, p1 uint16)
+	AddNodeFunc       func(p core.NetworkNode, p1 uint16)
 	AddNodeCounter    uint64
 	AddNodePreCounter uint64
 	AddNodeMock       mUnsyncListMockAddNode
@@ -30,12 +30,12 @@ type UnsyncListMock struct {
 	AddProofPreCounter uint64
 	AddProofMock       mUnsyncListMockAddProof
 
-	GetActiveNodeFunc       func(p core.RecordRef) (r core.Node)
+	GetActiveNodeFunc       func(p core.RecordRef) (r core.NetworkNode)
 	GetActiveNodeCounter    uint64
 	GetActiveNodePreCounter uint64
 	GetActiveNodeMock       mUnsyncListMockGetActiveNode
 
-	GetActiveNodesFunc       func() (r []core.Node)
+	GetActiveNodesFunc       func() (r []core.NetworkNode)
 	GetActiveNodesCounter    uint64
 	GetActiveNodesPreCounter uint64
 	GetActiveNodesMock       mUnsyncListMockGetActiveNodes
@@ -45,7 +45,7 @@ type UnsyncListMock struct {
 	GetGlobuleHashSignaturePreCounter uint64
 	GetGlobuleHashSignatureMock       mUnsyncListMockGetGlobuleHashSignature
 
-	GetOriginFunc       func() (r core.Node)
+	GetOriginFunc       func() (r core.NetworkNode)
 	GetOriginCounter    uint64
 	GetOriginPreCounter uint64
 	GetOriginMock       mUnsyncListMockGetOrigin
@@ -116,12 +116,12 @@ type UnsyncListMockAddNodeExpectation struct {
 }
 
 type UnsyncListMockAddNodeInput struct {
-	p  core.Node
+	p  core.NetworkNode
 	p1 uint16
 }
 
 //Expect specifies that invocation of UnsyncList.AddNode is expected from 1 to Infinity times
-func (m *mUnsyncListMockAddNode) Expect(p core.Node, p1 uint16) *mUnsyncListMockAddNode {
+func (m *mUnsyncListMockAddNode) Expect(p core.NetworkNode, p1 uint16) *mUnsyncListMockAddNode {
 	m.mock.AddNodeFunc = nil
 	m.expectationSeries = nil
 
@@ -145,7 +145,7 @@ func (m *mUnsyncListMockAddNode) Return() *UnsyncListMock {
 }
 
 //ExpectOnce specifies that invocation of UnsyncList.AddNode is expected once
-func (m *mUnsyncListMockAddNode) ExpectOnce(p core.Node, p1 uint16) *UnsyncListMockAddNodeExpectation {
+func (m *mUnsyncListMockAddNode) ExpectOnce(p core.NetworkNode, p1 uint16) *UnsyncListMockAddNodeExpectation {
 	m.mock.AddNodeFunc = nil
 	m.mainExpectation = nil
 
@@ -156,7 +156,7 @@ func (m *mUnsyncListMockAddNode) ExpectOnce(p core.Node, p1 uint16) *UnsyncListM
 }
 
 //Set uses given function f as a mock of UnsyncList.AddNode method
-func (m *mUnsyncListMockAddNode) Set(f func(p core.Node, p1 uint16)) *UnsyncListMock {
+func (m *mUnsyncListMockAddNode) Set(f func(p core.NetworkNode, p1 uint16)) *UnsyncListMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -165,7 +165,7 @@ func (m *mUnsyncListMockAddNode) Set(f func(p core.Node, p1 uint16)) *UnsyncList
 }
 
 //AddNode implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) AddNode(p core.Node, p1 uint16) {
+func (m *UnsyncListMock) AddNode(p core.NetworkNode, p1 uint16) {
 	counter := atomic.AddUint64(&m.AddNodePreCounter, 1)
 	defer atomic.AddUint64(&m.AddNodeCounter, 1)
 
@@ -369,7 +369,7 @@ type UnsyncListMockGetActiveNodeInput struct {
 }
 
 type UnsyncListMockGetActiveNodeResult struct {
-	r core.Node
+	r core.NetworkNode
 }
 
 //Expect specifies that invocation of UnsyncList.GetActiveNode is expected from 1 to Infinity times
@@ -385,7 +385,7 @@ func (m *mUnsyncListMockGetActiveNode) Expect(p core.RecordRef) *mUnsyncListMock
 }
 
 //Return specifies results of invocation of UnsyncList.GetActiveNode
-func (m *mUnsyncListMockGetActiveNode) Return(r core.Node) *UnsyncListMock {
+func (m *mUnsyncListMockGetActiveNode) Return(r core.NetworkNode) *UnsyncListMock {
 	m.mock.GetActiveNodeFunc = nil
 	m.expectationSeries = nil
 
@@ -407,12 +407,12 @@ func (m *mUnsyncListMockGetActiveNode) ExpectOnce(p core.RecordRef) *UnsyncListM
 	return expectation
 }
 
-func (e *UnsyncListMockGetActiveNodeExpectation) Return(r core.Node) {
+func (e *UnsyncListMockGetActiveNodeExpectation) Return(r core.NetworkNode) {
 	e.result = &UnsyncListMockGetActiveNodeResult{r}
 }
 
 //Set uses given function f as a mock of UnsyncList.GetActiveNode method
-func (m *mUnsyncListMockGetActiveNode) Set(f func(p core.RecordRef) (r core.Node)) *UnsyncListMock {
+func (m *mUnsyncListMockGetActiveNode) Set(f func(p core.RecordRef) (r core.NetworkNode)) *UnsyncListMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -421,7 +421,7 @@ func (m *mUnsyncListMockGetActiveNode) Set(f func(p core.RecordRef) (r core.Node
 }
 
 //GetActiveNode implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) GetActiveNode(p core.RecordRef) (r core.Node) {
+func (m *UnsyncListMock) GetActiveNode(p core.RecordRef) (r core.NetworkNode) {
 	counter := atomic.AddUint64(&m.GetActiveNodePreCounter, 1)
 	defer atomic.AddUint64(&m.GetActiveNodeCounter, 1)
 
@@ -511,7 +511,7 @@ type UnsyncListMockGetActiveNodesExpectation struct {
 }
 
 type UnsyncListMockGetActiveNodesResult struct {
-	r []core.Node
+	r []core.NetworkNode
 }
 
 //Expect specifies that invocation of UnsyncList.GetActiveNodes is expected from 1 to Infinity times
@@ -527,7 +527,7 @@ func (m *mUnsyncListMockGetActiveNodes) Expect() *mUnsyncListMockGetActiveNodes 
 }
 
 //Return specifies results of invocation of UnsyncList.GetActiveNodes
-func (m *mUnsyncListMockGetActiveNodes) Return(r []core.Node) *UnsyncListMock {
+func (m *mUnsyncListMockGetActiveNodes) Return(r []core.NetworkNode) *UnsyncListMock {
 	m.mock.GetActiveNodesFunc = nil
 	m.expectationSeries = nil
 
@@ -549,12 +549,12 @@ func (m *mUnsyncListMockGetActiveNodes) ExpectOnce() *UnsyncListMockGetActiveNod
 	return expectation
 }
 
-func (e *UnsyncListMockGetActiveNodesExpectation) Return(r []core.Node) {
+func (e *UnsyncListMockGetActiveNodesExpectation) Return(r []core.NetworkNode) {
 	e.result = &UnsyncListMockGetActiveNodesResult{r}
 }
 
 //Set uses given function f as a mock of UnsyncList.GetActiveNodes method
-func (m *mUnsyncListMockGetActiveNodes) Set(f func() (r []core.Node)) *UnsyncListMock {
+func (m *mUnsyncListMockGetActiveNodes) Set(f func() (r []core.NetworkNode)) *UnsyncListMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -563,7 +563,7 @@ func (m *mUnsyncListMockGetActiveNodes) Set(f func() (r []core.Node)) *UnsyncLis
 }
 
 //GetActiveNodes implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) GetActiveNodes() (r []core.Node) {
+func (m *UnsyncListMock) GetActiveNodes() (r []core.NetworkNode) {
 	counter := atomic.AddUint64(&m.GetActiveNodesPreCounter, 1)
 	defer atomic.AddUint64(&m.GetActiveNodesCounter, 1)
 
@@ -795,7 +795,7 @@ type UnsyncListMockGetOriginExpectation struct {
 }
 
 type UnsyncListMockGetOriginResult struct {
-	r core.Node
+	r core.NetworkNode
 }
 
 //Expect specifies that invocation of UnsyncList.GetOrigin is expected from 1 to Infinity times
@@ -811,7 +811,7 @@ func (m *mUnsyncListMockGetOrigin) Expect() *mUnsyncListMockGetOrigin {
 }
 
 //Return specifies results of invocation of UnsyncList.GetOrigin
-func (m *mUnsyncListMockGetOrigin) Return(r core.Node) *UnsyncListMock {
+func (m *mUnsyncListMockGetOrigin) Return(r core.NetworkNode) *UnsyncListMock {
 	m.mock.GetOriginFunc = nil
 	m.expectationSeries = nil
 
@@ -833,12 +833,12 @@ func (m *mUnsyncListMockGetOrigin) ExpectOnce() *UnsyncListMockGetOriginExpectat
 	return expectation
 }
 
-func (e *UnsyncListMockGetOriginExpectation) Return(r core.Node) {
+func (e *UnsyncListMockGetOriginExpectation) Return(r core.NetworkNode) {
 	e.result = &UnsyncListMockGetOriginResult{r}
 }
 
 //Set uses given function f as a mock of UnsyncList.GetOrigin method
-func (m *mUnsyncListMockGetOrigin) Set(f func() (r core.Node)) *UnsyncListMock {
+func (m *mUnsyncListMockGetOrigin) Set(f func() (r core.NetworkNode)) *UnsyncListMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -847,7 +847,7 @@ func (m *mUnsyncListMockGetOrigin) Set(f func() (r core.Node)) *UnsyncListMock {
 }
 
 //GetOrigin implements github.com/insolar/insolar/network.UnsyncList interface
-func (m *UnsyncListMock) GetOrigin() (r core.Node) {
+func (m *UnsyncListMock) GetOrigin() (r core.NetworkNode) {
 	counter := atomic.AddUint64(&m.GetOriginPreCounter, 1)
 	defer atomic.AddUint64(&m.GetOriginCounter, 1)
 

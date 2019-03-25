@@ -49,9 +49,9 @@ func validateProofs(
 	unsyncList network.UnsyncList,
 	pulseHash merkle.OriginHash,
 	proofs map[core.RecordRef]*merkle.PulseProof,
-) (valid map[core.Node]*merkle.PulseProof, fault map[core.RecordRef]*merkle.PulseProof) {
+) (valid map[core.NetworkNode]*merkle.PulseProof, fault map[core.RecordRef]*merkle.PulseProof) {
 
-	validProofs := make(map[core.Node]*merkle.PulseProof)
+	validProofs := make(map[core.NetworkNode]*merkle.PulseProof)
 	faultProofs := make(map[core.RecordRef]*merkle.PulseProof)
 	for nodeID, proof := range proofs {
 		valid := validateProof(calculator, unsyncList, pulseHash, nodeID, proof)

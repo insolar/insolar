@@ -41,8 +41,8 @@ const (
 	NodeLeaving
 )
 
-//go:generate minimock -i github.com/insolar/insolar/core.Node -o ../testutils/network -s _mock.go
-type Node interface {
+//go:generate minimock -i github.com/insolar/insolar/core.NetworkNode -o ../testutils/network -s _mock.go
+type NetworkNode interface {
 	// ID is the unique identifier of the node
 	ID() RecordRef
 	// ShortID get short ID of node
@@ -68,11 +68,11 @@ type Node interface {
 //go:generate minimock -i github.com/insolar/insolar/core.NodeNetwork -o ../testutils/network -s _mock.go
 type NodeNetwork interface {
 	// GetOrigin get origin node for the current insolard. Returns nil if the current insolard is not a working node.
-	GetOrigin() Node
+	GetOrigin() NetworkNode
 	// GetWorkingNode get working node by its reference. Returns nil if node is not found.
-	GetWorkingNode(ref RecordRef) Node
+	GetWorkingNode(ref RecordRef) NetworkNode
 	// GetWorkingNodes get working nodes.
-	GetWorkingNodes() []Node
+	GetWorkingNodes() []NetworkNode
 	// GetWorkingNodesByRole get working nodes by role
 	GetWorkingNodesByRole(role DynamicRole) []RecordRef
 }

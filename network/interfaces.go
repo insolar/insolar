@@ -160,7 +160,7 @@ type NodeKeeper interface {
 	// SetCloudHash set new cloud hash
 	SetCloudHash([]byte)
 	// SetInitialSnapshot set initial snapshot for nodekeeper
-	SetInitialSnapshot(nodes []core.Node)
+	SetInitialSnapshot(nodes []core.NetworkNode)
 	// GetAccessor get accessor to the internal snapshot for the current pulse
 	// TODO: add pulse to the function signature to get data of various pulses
 	GetAccessor() Accessor
@@ -178,7 +178,7 @@ type NodeKeeper interface {
 	// Should be called when GetConsensusInfo().IsJoiner() == true.
 	GetSparseUnsyncList(length int) UnsyncList
 	// Sync move unsync -> sync
-	Sync(context.Context, []core.Node, []consensus.ReferendumClaim) error
+	Sync(context.Context, []core.NetworkNode, []consensus.ReferendumClaim) error
 	// MoveSyncToActive merge sync list with active nodes
 	MoveSyncToActive(ctx context.Context) error
 	// GetConsensusInfo get additional info for the current consensus process
@@ -207,7 +207,7 @@ type ConsensusInfo interface {
 type UnsyncList interface {
 	consensus.BitSetMapper
 	// AddNode add node to the snapshot of the current consensus
-	AddNode(node core.Node, bitsetIndex uint16)
+	AddNode(node core.NetworkNode, bitsetIndex uint16)
 	// AddProof add node pulse proof of a specific node
 	AddProof(nodeID core.RecordRef, proof *consensus.NodePulseProof)
 	// GetProof get node pulse proof of a specific node
@@ -217,11 +217,11 @@ type UnsyncList interface {
 	// SetGlobuleHashSignature set globule hash signature of a specific node
 	SetGlobuleHashSignature(core.RecordRef, consensus.GlobuleHashSignature)
 	// GetActiveNode get active node by reference ID for current consensus
-	GetActiveNode(ref core.RecordRef) core.Node
+	GetActiveNode(ref core.RecordRef) core.NetworkNode
 	// GetActiveNodes get active nodes for current consensus
-	GetActiveNodes() []core.Node
+	GetActiveNodes() []core.NetworkNode
 	// GetOrigin get origin node for the current insolard
-	GetOrigin() core.Node
+	GetOrigin() core.NetworkNode
 	// RemoveNode remove node
 	RemoveNode(nodeID core.RecordRef)
 }
@@ -282,16 +282,16 @@ type ClaimQueue interface {
 // Accessor is interface that provides read access to nodekeeper internal snapshot
 type Accessor interface {
 	// GetWorkingNode get working node by its reference. Returns nil if node is not found.
-	GetWorkingNode(ref core.RecordRef) core.Node
+	GetWorkingNode(ref core.RecordRef) core.NetworkNode
 	// GetWorkingNodes get working nodes.
-	GetWorkingNodes() []core.Node
+	GetWorkingNodes() []core.NetworkNode
 	// GetWorkingNodesByRole get working nodes by role
 	GetWorkingNodesByRole(role core.DynamicRole) []core.RecordRef
 
 	// GetActiveNode returns active node.
-	GetActiveNode(ref core.RecordRef) core.Node
+	GetActiveNode(ref core.RecordRef) core.NetworkNode
 	// GetActiveNodes returns active nodes.
-	GetActiveNodes() []core.Node
+	GetActiveNodes() []core.NetworkNode
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
-	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
+	GetActiveNodeByShortID(shortID core.ShortNodeID) core.NetworkNode
 }

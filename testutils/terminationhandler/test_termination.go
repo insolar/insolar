@@ -28,5 +28,5 @@ func NewTestHandler() core.TerminationHandler {
 }
 
 func (t *testTerminationHandler) Abort() {
-	log.Error("Node leave acknowledged by network. Goodbye!")
+	log.Error("NetworkNode leave acknowledged by network. Goodbye!")
 }

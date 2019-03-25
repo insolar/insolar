@@ -19,17 +19,17 @@ import (
 type NodeNetworkMock struct {
 	t minimock.Tester
 
-	GetOriginFunc       func() (r core.Node)
+	GetOriginFunc       func() (r core.NetworkNode)
 	GetOriginCounter    uint64
 	GetOriginPreCounter uint64
 	GetOriginMock       mNodeNetworkMockGetOrigin
 
-	GetWorkingNodeFunc       func(p core.RecordRef) (r core.Node)
+	GetWorkingNodeFunc       func(p core.RecordRef) (r core.NetworkNode)
 	GetWorkingNodeCounter    uint64
 	GetWorkingNodePreCounter uint64
 	GetWorkingNodeMock       mNodeNetworkMockGetWorkingNode
 
-	GetWorkingNodesFunc       func() (r []core.Node)
+	GetWorkingNodesFunc       func() (r []core.NetworkNode)
 	GetWorkingNodesCounter    uint64
 	GetWorkingNodesPreCounter uint64
 	GetWorkingNodesMock       mNodeNetworkMockGetWorkingNodes
@@ -67,7 +67,7 @@ type NodeNetworkMockGetOriginExpectation struct {
 }
 
 type NodeNetworkMockGetOriginResult struct {
-	r core.Node
+	r core.NetworkNode
 }
 
 //Expect specifies that invocation of NodeNetwork.GetOrigin is expected from 1 to Infinity times
@@ -83,7 +83,7 @@ func (m *mNodeNetworkMockGetOrigin) Expect() *mNodeNetworkMockGetOrigin {
 }
 
 //Return specifies results of invocation of NodeNetwork.GetOrigin
-func (m *mNodeNetworkMockGetOrigin) Return(r core.Node) *NodeNetworkMock {
+func (m *mNodeNetworkMockGetOrigin) Return(r core.NetworkNode) *NodeNetworkMock {
 	m.mock.GetOriginFunc = nil
 	m.expectationSeries = nil
 
@@ -105,12 +105,12 @@ func (m *mNodeNetworkMockGetOrigin) ExpectOnce() *NodeNetworkMockGetOriginExpect
 	return expectation
 }
 
-func (e *NodeNetworkMockGetOriginExpectation) Return(r core.Node) {
+func (e *NodeNetworkMockGetOriginExpectation) Return(r core.NetworkNode) {
 	e.result = &NodeNetworkMockGetOriginResult{r}
 }
 
 //Set uses given function f as a mock of NodeNetwork.GetOrigin method
-func (m *mNodeNetworkMockGetOrigin) Set(f func() (r core.Node)) *NodeNetworkMock {
+func (m *mNodeNetworkMockGetOrigin) Set(f func() (r core.NetworkNode)) *NodeNetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -119,7 +119,7 @@ func (m *mNodeNetworkMockGetOrigin) Set(f func() (r core.Node)) *NodeNetworkMock
 }
 
 //GetOrigin implements github.com/insolar/insolar/core.NodeNetwork interface
-func (m *NodeNetworkMock) GetOrigin() (r core.Node) {
+func (m *NodeNetworkMock) GetOrigin() (r core.NetworkNode) {
 	counter := atomic.AddUint64(&m.GetOriginPreCounter, 1)
 	defer atomic.AddUint64(&m.GetOriginCounter, 1)
 
@@ -206,7 +206,7 @@ type NodeNetworkMockGetWorkingNodeInput struct {
 }
 
 type NodeNetworkMockGetWorkingNodeResult struct {
-	r core.Node
+	r core.NetworkNode
 }
 
 //Expect specifies that invocation of NodeNetwork.GetWorkingNode is expected from 1 to Infinity times
@@ -222,7 +222,7 @@ func (m *mNodeNetworkMockGetWorkingNode) Expect(p core.RecordRef) *mNodeNetworkM
 }
 
 //Return specifies results of invocation of NodeNetwork.GetWorkingNode
-func (m *mNodeNetworkMockGetWorkingNode) Return(r core.Node) *NodeNetworkMock {
+func (m *mNodeNetworkMockGetWorkingNode) Return(r core.NetworkNode) *NodeNetworkMock {
 	m.mock.GetWorkingNodeFunc = nil
 	m.expectationSeries = nil
 
@@ -244,12 +244,12 @@ func (m *mNodeNetworkMockGetWorkingNode) ExpectOnce(p core.RecordRef) *NodeNetwo
 	return expectation
 }
 
-func (e *NodeNetworkMockGetWorkingNodeExpectation) Return(r core.Node) {
+func (e *NodeNetworkMockGetWorkingNodeExpectation) Return(r core.NetworkNode) {
 	e.result = &NodeNetworkMockGetWorkingNodeResult{r}
 }
 
 //Set uses given function f as a mock of NodeNetwork.GetWorkingNode method
-func (m *mNodeNetworkMockGetWorkingNode) Set(f func(p core.RecordRef) (r core.Node)) *NodeNetworkMock {
+func (m *mNodeNetworkMockGetWorkingNode) Set(f func(p core.RecordRef) (r core.NetworkNode)) *NodeNetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -258,7 +258,7 @@ func (m *mNodeNetworkMockGetWorkingNode) Set(f func(p core.RecordRef) (r core.No
 }
 
 //GetWorkingNode implements github.com/insolar/insolar/core.NodeNetwork interface
-func (m *NodeNetworkMock) GetWorkingNode(p core.RecordRef) (r core.Node) {
+func (m *NodeNetworkMock) GetWorkingNode(p core.RecordRef) (r core.NetworkNode) {
 	counter := atomic.AddUint64(&m.GetWorkingNodePreCounter, 1)
 	defer atomic.AddUint64(&m.GetWorkingNodeCounter, 1)
 
@@ -348,7 +348,7 @@ type NodeNetworkMockGetWorkingNodesExpectation struct {
 }
 
 type NodeNetworkMockGetWorkingNodesResult struct {
-	r []core.Node
+	r []core.NetworkNode
 }
 
 //Expect specifies that invocation of NodeNetwork.GetWorkingNodes is expected from 1 to Infinity times
@@ -364,7 +364,7 @@ func (m *mNodeNetworkMockGetWorkingNodes) Expect() *mNodeNetworkMockGetWorkingNo
 }
 
 //Return specifies results of invocation of NodeNetwork.GetWorkingNodes
-func (m *mNodeNetworkMockGetWorkingNodes) Return(r []core.Node) *NodeNetworkMock {
+func (m *mNodeNetworkMockGetWorkingNodes) Return(r []core.NetworkNode) *NodeNetworkMock {
 	m.mock.GetWorkingNodesFunc = nil
 	m.expectationSeries = nil
 
@@ -386,12 +386,12 @@ func (m *mNodeNetworkMockGetWorkingNodes) ExpectOnce() *NodeNetworkMockGetWorkin
 	return expectation
 }
 
-func (e *NodeNetworkMockGetWorkingNodesExpectation) Return(r []core.Node) {
+func (e *NodeNetworkMockGetWorkingNodesExpectation) Return(r []core.NetworkNode) {
 	e.result = &NodeNetworkMockGetWorkingNodesResult{r}
 }
 
 //Set uses given function f as a mock of NodeNetwork.GetWorkingNodes method
-func (m *mNodeNetworkMockGetWorkingNodes) Set(f func() (r []core.Node)) *NodeNetworkMock {
+func (m *mNodeNetworkMockGetWorkingNodes) Set(f func() (r []core.NetworkNode)) *NodeNetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -400,7 +400,7 @@ func (m *mNodeNetworkMockGetWorkingNodes) Set(f func() (r []core.Node)) *NodeNet
 }
 
 //GetWorkingNodes implements github.com/insolar/insolar/core.NodeNetwork interface
-func (m *NodeNetworkMock) GetWorkingNodes() (r []core.Node) {
+func (m *NodeNetworkMock) GetWorkingNodes() (r []core.NetworkNode) {
 	counter := atomic.AddUint64(&m.GetWorkingNodesPreCounter, 1)
 	defer atomic.AddUint64(&m.GetWorkingNodesCounter, 1)
 

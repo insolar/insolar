@@ -54,7 +54,7 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 
 	node := node2.NewNode(core.RecordRef{}, core.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
 	nodeKeeper := nodenetwork.NewNodeKeeper(node)
-	nodeKeeper.SetInitialSnapshot([]core.Node{node})
+	nodeKeeper.SetInitialSnapshot([]core.NetworkNode{node})
 
 	pulseCalculatorMock := merkle.NewCalculatorMock(t)
 	communicatorMock := NewCommunicatorMock(t)

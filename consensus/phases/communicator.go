@@ -61,17 +61,17 @@ type Communicator interface {
 	ExchangePhase1(
 		ctx context.Context,
 		originClaim *packets.NodeAnnounceClaim,
-		participants []core.Node,
+		participants []core.NetworkNode,
 		packet *packets.Phase1Packet,
 	) (map[core.RecordRef]*packets.Phase1Packet, error)
 	// ExchangePhase2 used in second consensus step to exchange data between participants
 	ExchangePhase2(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
-		participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error)
+		participants []core.NetworkNode, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error)
 	// ExchangePhase21 is used between phases 2 and 3 of consensus to send additional MissingNode requests
 	ExchangePhase21(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
 		packet *packets.Phase2Packet, additionalRequests []*AdditionalRequest) ([]packets.ReferendumVote, error)
 	// ExchangePhase3 used in third consensus step to exchange data between participants
-	ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error)
+	ExchangePhase3(ctx context.Context, participants []core.NetworkNode, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error)
 
 	component.Initer
 }
@@ -131,13 +131,13 @@ func (nc *ConsensusCommunicator) setPulseNumber(new core.PulseNumber) bool {
 	return old < new && atomic.CompareAndSwapUint32(&nc.currentPulseNumber, uint32(old), uint32(new))
 }
 
-func (nc *ConsensusCommunicator) sendRequestToNodes(ctx context.Context, participants []core.Node, packet packets.ConsensusPacket) {
+func (nc *ConsensusCommunicator) sendRequestToNodes(ctx context.Context, participants []core.NetworkNode, packet packets.ConsensusPacket) {
 	for _, node := range participants {
 		if node.ID().Equal(nc.NodeKeeper.GetOrigin().ID()) {
 			continue
 		}
 
-		go func(ctx context.Context, n core.Node, packet packets.ConsensusPacket) {
+		go func(ctx context.Context, n core.NetworkNode, packet packets.ConsensusPacket) {
 			logger := inslogger.FromContext(ctx)
 			logger.Debugf("Send %s request to %s", packet.GetType(), n.ID())
 			err := nc.ConsensusNetwork.SignAndSendPacket(packet, n.ID(), nc.Cryptography)
@@ -154,7 +154,7 @@ func (nc *ConsensusCommunicator) sendRequestToNodes(ctx context.Context, partici
 }
 
 func (nc *ConsensusCommunicator) sendRequestToNodesWithOrigin(ctx context.Context, originClaim *packets.NodeAnnounceClaim,
-	participants []core.Node, packet *packets.Phase1Packet) error {
+	participants []core.NetworkNode, packet *packets.Phase1Packet) error {
 
 	requests := make(map[core.RecordRef]packets.ConsensusPacket)
 	for _, participant := range participants {
@@ -251,7 +251,7 @@ func (nc *ConsensusCommunicator) generatePhase2Response(ctx context.Context, ori
 func (nc *ConsensusCommunicator) ExchangePhase1(
 	ctx context.Context,
 	originClaim *packets.NodeAnnounceClaim,
-	participants []core.Node,
+	participants []core.NetworkNode,
 	packet *packets.Phase1Packet,
 ) (map[core.RecordRef]*packets.Phase1Packet, error) {
 	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase1")
@@ -345,7 +345,7 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 
 // ExchangePhase2 used in second consensus phase to exchange data between participants
 func (nc *ConsensusCommunicator) ExchangePhase2(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
-	participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
+	participants []core.NetworkNode, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
 	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase2")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
 	defer span.End()
@@ -523,7 +523,7 @@ func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, list netwo
 }
 
 // ExchangePhase3 used in third consensus step to exchange data between participants
-func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error) {
+func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participants []core.NetworkNode, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error) {
 	result := make(map[core.RecordRef]*packets.Phase3Packet, len(participants))
 	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase3")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))

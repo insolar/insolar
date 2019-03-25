@@ -79,7 +79,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
 	packet := packets.NewPhase3Packet(pulse.PulseNumber, gSign, state.BitSet)
 
-	nodes := make([]core.Node, 0)
+	nodes := make([]core.NetworkNode, 0)
 	for _, node := range state.MatrixState.Active {
 		nodes = append(nodes, state.UnsyncList.GetActiveNode(node))
 	}

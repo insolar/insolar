@@ -67,7 +67,7 @@ func NewNodeNetwork(configuration configuration.HostNetwork, certificate core.Ce
 	return nodeKeeper, nil
 }
 
-func createOrigin(configuration configuration.HostNetwork, certificate core.Certificate) (core.Node, error) {
+func createOrigin(configuration configuration.HostNetwork, certificate core.Certificate) (core.NetworkNode, error) {
 	publicAddress, err := resolveAddress(configuration)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to resolve public address")
@@ -101,20 +101,20 @@ func resolveAddress(configuration configuration.HostNetwork) (string, error) {
 }
 
 // NewNodeKeeper create new NodeKeeper
-func NewNodeKeeper(origin core.Node) network.NodeKeeper {
+func NewNodeKeeper(origin core.NetworkNode) network.NodeKeeper {
 	nk := &nodekeeper{
 		origin:        origin,
 		claimQueue:    newClaimQueue(),
 		consensusInfo: newConsensusInfo(),
-		syncNodes:     make([]core.Node, 0),
+		syncNodes:     make([]core.NetworkNode, 0),
 		syncClaims:    make([]consensus.ReferendumClaim, 0),
 	}
-	nk.SetInitialSnapshot([]core.Node{})
+	nk.SetInitialSnapshot([]core.NetworkNode{})
 	return nk
 }
 
 type nodekeeper struct {
-	origin        core.Node
+	origin        core.NetworkNode
 	claimQueue    *claimQueue
 	consensusInfo *consensusInfo
 
@@ -126,7 +126,7 @@ type nodekeeper struct {
 	accessor   *node.Accessor
 
 	syncLock   sync.Mutex
-	syncNodes  []core.Node
+	syncNodes  []core.NetworkNode
 	syncClaims []consensus.ReferendumClaim
 
 	isBootstrap     bool
@@ -135,11 +135,11 @@ type nodekeeper struct {
 	Cryptography core.CryptographyService `inject:""`
 }
 
-func (nk *nodekeeper) SetInitialSnapshot(nodes []core.Node) {
+func (nk *nodekeeper) SetInitialSnapshot(nodes []core.NetworkNode) {
 	nk.activeLock.Lock()
 	defer nk.activeLock.Unlock()
 
-	nodesMap := make(map[core.RecordRef]core.Node)
+	nodesMap := make(map[core.RecordRef]core.NetworkNode)
 	for _, node := range nodes {
 		nodesMap[node.ID()] = node
 	}
@@ -159,7 +159,7 @@ func (nk *nodekeeper) GetConsensusInfo() network.ConsensusInfo {
 	return nk.consensusInfo
 }
 
-func (nk *nodekeeper) GetWorkingNode(ref core.RecordRef) core.Node {
+func (nk *nodekeeper) GetWorkingNode(ref core.RecordRef) core.NetworkNode {
 	return nk.GetAccessor().GetWorkingNode(ref)
 }
 
@@ -180,14 +180,14 @@ func (nk *nodekeeper) Wipe(isDiscovery bool) {
 	nk.cloudHash = nil
 	nk.cloudHashLock.Unlock()
 
-	nk.SetInitialSnapshot([]core.Node{})
+	nk.SetInitialSnapshot([]core.NetworkNode{})
 
 	nk.activeLock.Lock()
 	defer nk.activeLock.Unlock()
 
 	nk.claimQueue = newClaimQueue()
 	nk.syncLock.Lock()
-	nk.syncNodes = make([]core.Node, 0)
+	nk.syncNodes = make([]core.NetworkNode, 0)
 	nk.syncClaims = make([]consensus.ReferendumClaim, 0)
 	if isDiscovery {
 		nk.origin.(node.MutableNode).SetState(core.NodeReady)
@@ -213,7 +213,7 @@ func (nk *nodekeeper) SetIsBootstrapped(isBootstrap bool) {
 	nk.isBootstrap = isBootstrap
 }
 
-func (nk *nodekeeper) GetOrigin() core.Node {
+func (nk *nodekeeper) GetOrigin() core.NetworkNode {
 	nk.activeLock.RLock()
 	defer nk.activeLock.RUnlock()
 
@@ -234,7 +234,7 @@ func (nk *nodekeeper) SetCloudHash(cloudHash []byte) {
 	nk.cloudHash = cloudHash
 }
 
-func (nk *nodekeeper) GetWorkingNodes() []core.Node {
+func (nk *nodekeeper) GetWorkingNodes() []core.NetworkNode {
 	return nk.GetAccessor().GetWorkingNodes()
 }
 
@@ -270,7 +270,7 @@ func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
 	return newUnsyncList(nk.origin, nil, length)
 }
 
-func (nk *nodekeeper) Sync(ctx context.Context, nodes []core.Node, claims []consensus.ReferendumClaim) error {
+func (nk *nodekeeper) Sync(ctx context.Context, nodes []core.NetworkNode, claims []consensus.ReferendumClaim) error {
 	nk.syncLock.Lock()
 	defer nk.syncLock.Unlock()
 
@@ -295,7 +295,7 @@ func (nk *nodekeeper) Sync(ctx context.Context, nodes []core.Node, claims []cons
 }
 
 // syncOrigin synchronize data in origin node with node from active list in case when they are different objects
-func (nk *nodekeeper) syncOrigin(n core.Node) {
+func (nk *nodekeeper) syncOrigin(n core.NetworkNode) {
 	if nk.origin == n {
 		return
 	}

@@ -146,7 +146,7 @@ func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state
 			newActive[active] = none{}
 		}
 
-		newProofs := make(map[core.Node]*merkle.PulseProof)
+		newProofs := make(map[core.NetworkNode]*merkle.PulseProof)
 		for node, proof := range state.ValidProofs {
 			_, ok := newActive[node.ID()]
 			if !ok {
@@ -318,7 +318,7 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *core.Pulse, sta
 	return state, nil
 }
 
-func (sp *SecondPhaseImpl) generatePhase2Bitset(list network.UnsyncList, proofs map[core.Node]*merkle.PulseProof, pulseNumber core.PulseNumber) (packets.BitSet, error) {
+func (sp *SecondPhaseImpl) generatePhase2Bitset(list network.UnsyncList, proofs map[core.NetworkNode]*merkle.PulseProof, pulseNumber core.PulseNumber) (packets.BitSet, error) {
 	bitset, err := packets.NewBitSet(list.Length())
 	if err != nil {
 		return nil, err
@@ -341,7 +341,7 @@ func (sp *SecondPhaseImpl) generatePhase2Bitset(list network.UnsyncList, proofs 
 	return bitset, nil
 }
 
-func getNodeState(node core.Node, pulseNumber core.PulseNumber) packets.BitSetState {
+func getNodeState(node core.NetworkNode, pulseNumber core.PulseNumber) packets.BitSetState {
 	state := packets.Legit
 	if node.GetState() == core.NodeLeaving && node.LeavingETA() < pulseNumber {
 		state = packets.TimedOut

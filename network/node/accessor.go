@@ -42,26 +42,26 @@ import (
 
 type Accessor struct {
 	snapshot  *Snapshot
-	refIndex  map[core.RecordRef]core.Node
-	sidIndex  map[core.ShortNodeID]core.Node
+	refIndex  map[core.RecordRef]core.NetworkNode
+	sidIndex  map[core.ShortNodeID]core.NetworkNode
 	roleIndex map[core.StaticRole]*recordRefSet
 	// should be removed in future
-	active []core.Node
+	active []core.NetworkNode
 }
 
-func (a *Accessor) GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node {
+func (a *Accessor) GetActiveNodeByShortID(shortID core.ShortNodeID) core.NetworkNode {
 	return a.sidIndex[shortID]
 }
 
-func (a *Accessor) GetActiveNodes() []core.Node {
+func (a *Accessor) GetActiveNodes() []core.NetworkNode {
 	return a.active
 }
 
-func (a *Accessor) GetActiveNode(ref core.RecordRef) core.Node {
+func (a *Accessor) GetActiveNode(ref core.RecordRef) core.NetworkNode {
 	return a.refIndex[ref]
 }
 
-func (a *Accessor) GetWorkingNode(ref core.RecordRef) core.Node {
+func (a *Accessor) GetWorkingNode(ref core.RecordRef) core.NetworkNode {
 	node := a.GetActiveNode(ref)
 	if node == nil || node.GetState() != core.NodeReady {
 		return nil
@@ -69,9 +69,9 @@ func (a *Accessor) GetWorkingNode(ref core.RecordRef) core.Node {
 	return node
 }
 
-func (a *Accessor) GetWorkingNodes() []core.Node {
+func (a *Accessor) GetWorkingNodes() []core.NetworkNode {
 	workingList := a.snapshot.nodeList[ListWorking]
-	result := make([]core.Node, len(workingList))
+	result := make([]core.NetworkNode, len(workingList))
 	copy(result, workingList)
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].ID().Compare(result[j].ID()) < 0
@@ -84,12 +84,12 @@ func (a *Accessor) GetWorkingNodesByRole(role core.DynamicRole) []core.RecordRef
 	return a.roleIndex[staticRole].Collect()
 }
 
-func GetSnapshotActiveNodes(snapshot *Snapshot) []core.Node {
+func GetSnapshotActiveNodes(snapshot *Snapshot) []core.NetworkNode {
 	joining := snapshot.nodeList[ListJoiner]
 	working := snapshot.nodeList[ListWorking]
 	leaving := snapshot.nodeList[ListLeaving]
 
-	result := make([]core.Node, len(joining)+len(working)+len(leaving))
+	result := make([]core.NetworkNode, len(joining)+len(working)+len(leaving))
 	copy(result[:len(joining)], joining[:])
 	copy(result[len(joining):len(joining)+len(working)], working[:])
 	copy(result[len(joining)+len(working):], leaving[:])
@@ -101,7 +101,7 @@ func GetSnapshotActiveNodes(snapshot *Snapshot) []core.Node {
 	return result
 }
 
-func (a *Accessor) addToRoleIndex(node core.Node) {
+func (a *Accessor) addToRoleIndex(node core.NetworkNode) {
 	if node.GetState() != core.NodeReady {
 		return
 	}
@@ -118,8 +118,8 @@ func (a *Accessor) addToRoleIndex(node core.Node) {
 func NewAccessor(snapshot *Snapshot) *Accessor {
 	result := &Accessor{
 		snapshot:  snapshot,
-		refIndex:  make(map[core.RecordRef]core.Node),
-		sidIndex:  make(map[core.ShortNodeID]core.Node),
+		refIndex:  make(map[core.RecordRef]core.NetworkNode),
+		sidIndex:  make(map[core.ShortNodeID]core.NetworkNode),
 		roleIndex: make(map[core.StaticRole]*recordRefSet),
 	}
 	result.active = GetSnapshotActiveNodes(snapshot)

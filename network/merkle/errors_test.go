@@ -104,7 +104,7 @@ func (t *calculatorErrorSuite) TestGetGlobuleProofSignError() {
 	globuleEntry := &GlobuleEntry{
 		PulseEntry: pulseEntry,
 		PulseHash:  nil,
-		ProofSet: map[core.Node]*PulseProof{
+		ProofSet: map[core.NetworkNode]*PulseProof{
 			t.nodeNetwork.GetOrigin(): {},
 		},
 		PrevCloudHash: prevCloudHash,

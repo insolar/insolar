@@ -45,7 +45,7 @@ func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
 		))
 
 	// dirty hack - we need 3 nodes as validators, pass one node 3 times
-	getValidator := func() core.Node {
+	getValidator := func() core.NetworkNode {
 		return node.NewNode(
 			*ref,
 			core.StaticRoleVirtual,
@@ -55,7 +55,7 @@ func GetTestNodekeeper(cs core.CryptographyService) network.NodeKeeper {
 			"",
 		)
 	}
-	nodes := []core.Node{getValidator(), getValidator(), getValidator()}
+	nodes := []core.NetworkNode{getValidator(), getValidator(), getValidator()}
 	keeper.SetInitialSnapshot(nodes)
 
 	return keeper

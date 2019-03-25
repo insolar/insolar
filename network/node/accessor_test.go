@@ -43,7 +43,7 @@ import (
 )
 
 func TestGetSnapshotActiveNodes(t *testing.T) {
-	m := make(map[core.RecordRef]core.Node)
+	m := make(map[core.RecordRef]core.NetworkNode)
 
 	node := newMutableNode(testutils.RandomRef(), core.StaticRoleVirtual, nil, "127.0.0.1:0", "")
 	node.SetState(core.NodeReady)

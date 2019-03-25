@@ -237,7 +237,7 @@ func (m *Member) getNodeRefCall(ref core.RecordRef, params []byte) (interface{},
 	nd := nodedomain.GetObject(nodeDomainRef)
 	nodeRef, err := nd.GetNodeRefByPK(publicKey)
 	if err != nil {
-		return nil, fmt.Errorf("[ getNodeRefCall ] Node not found: %s", err.Error())
+		return nil, fmt.Errorf("[ getNodeRefCall ] NetworkNode not found: %s", err.Error())
 	}
 
 	return nodeRef, nil

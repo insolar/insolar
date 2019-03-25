@@ -51,7 +51,7 @@ import (
 )
 
 type MutableNode interface {
-	core.Node
+	core.NetworkNode
 
 	SetShortID(shortID core.ShortNodeID)
 	SetState(state core.NodeState)
@@ -129,7 +129,7 @@ func NewNode(
 	id core.RecordRef,
 	role core.StaticRole,
 	publicKey crypto.PublicKey,
-	address, version string) core.Node {
+	address, version string) core.NetworkNode {
 	return newMutableNode(id, role, publicKey, address, version)
 }
 
@@ -185,7 +185,7 @@ func init() {
 	gob.Register(&node{})
 }
 
-func ClaimToNode(version string, claim *packets.NodeJoinClaim) (core.Node, error) {
+func ClaimToNode(version string, claim *packets.NodeJoinClaim) (core.NetworkNode, error) {
 	keyProc := platformpolicy.NewKeyProcessor()
 	key, err := keyProc.ImportPublicKeyBinary(claim.NodePK[:])
 	if err != nil {

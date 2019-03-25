@@ -243,7 +243,7 @@ func getClaimWithHeaderSize(claim ReferendumClaim) uint16 {
 	return getClaimSize(claim) + claimHeaderSize
 }
 
-func NodeToClaim(node core.Node) (*NodeJoinClaim, error) {
+func NodeToClaim(node core.NetworkNode) (*NodeJoinClaim, error) {
 	keyProc := platformpolicy.NewKeyProcessor()
 	exportedKey, err := keyProc.ExportPublicKeyBinary(node.PublicKey())
 	if err != nil {

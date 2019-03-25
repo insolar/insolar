@@ -51,7 +51,7 @@ func (pe *PulseEntry) hash(helper *merkleHelper) []byte {
 
 type GlobuleEntry struct {
 	*PulseEntry
-	ProofSet      map[core.Node]*PulseProof
+	ProofSet      map[core.NetworkNode]*PulseProof
 	PulseHash     []byte
 	PrevCloudHash []byte
 	GlobuleID     core.GlobuleID
@@ -113,7 +113,7 @@ func (ce *CloudEntry) hash(helper *merkleHelper) ([]byte, error) {
 type nodeEntry struct {
 	*PulseEntry
 	PulseProof *PulseProof
-	Node       core.Node
+	Node       core.NetworkNode
 }
 
 func (ne *nodeEntry) hash(helper *merkleHelper) []byte {
@@ -122,7 +122,7 @@ func (ne *nodeEntry) hash(helper *merkleHelper) []byte {
 	return helper.nodeHash(ne.PulseProof.Signature.Bytes(), nodeInfoHash)
 }
 
-func nodeEntryByRole(pulseEntry *PulseEntry, nodeProofs map[core.Node]*PulseProof) map[core.StaticRole][]*nodeEntry {
+func nodeEntryByRole(pulseEntry *PulseEntry, nodeProofs map[core.NetworkNode]*PulseProof) map[core.StaticRole][]*nodeEntry {
 	roleMap := make(map[core.StaticRole][]*nodeEntry)
 	for node, pulseProof := range nodeProofs {
 		role := node.Role()

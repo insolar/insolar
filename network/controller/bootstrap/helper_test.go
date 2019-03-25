@@ -46,11 +46,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newTestNode() core.Node {
+func newTestNode() core.NetworkNode {
 	return node.NewNode(testutils.RandomRef(), core.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
 }
 
-func newTestNodeWithShortID(id core.ShortNodeID) core.Node {
+func newTestNodeWithShortID(id core.ShortNodeID) core.NetworkNode {
 	n := newTestNode()
 	n.(node.MutableNode).SetShortID(id)
 	return n
@@ -58,7 +58,7 @@ func newTestNodeWithShortID(id core.ShortNodeID) core.Node {
 
 func TestCorrectShortIDCollision(t *testing.T) {
 	keeper := nodenetwork.NewNodeKeeper(newTestNode())
-	keeper.SetInitialSnapshot([]core.Node{
+	keeper.SetInitialSnapshot([]core.NetworkNode{
 		newTestNodeWithShortID(0),
 		newTestNodeWithShortID(1),
 		newTestNodeWithShortID(30),

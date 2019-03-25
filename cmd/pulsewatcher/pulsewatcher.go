@@ -70,7 +70,7 @@ func displayResultsTable(results [][]string, ready bool, buffer *bytes.Buffer) {
 	table.SetHeader([]string{
 		"URL",
 		"Network State",
-		"Node State",
+		"NetworkNode State",
 		"Pulse Number",
 		"Active List Size",
 		"Working List Size",
@@ -125,14 +125,14 @@ func parseInt64(str string) int64 {
 
 func displayResultsJSON(results [][]string, ready bool, buffer *bytes.Buffer) {
 	type DocumentItem struct {
-		URL string
-		NetworkState string
-		NodeState string
-		PulseNumber int64
-		ActiveListSize int64
+		URL             string
+		NetworkState    string
+		NodeState       string
+		PulseNumber     int64
+		ActiveListSize  int64
 		WorkingListSize int64
-		Role string
-		Error string
+		Role            string
+		Error           string
 	}
 
 	doc := make([]DocumentItem, len(results))

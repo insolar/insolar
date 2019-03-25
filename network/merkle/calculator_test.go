@@ -85,7 +85,7 @@ func (t *calculatorSuite) TestGetGlobuleProof() {
 	globuleEntry := &GlobuleEntry{
 		PulseEntry: pulseEntry,
 		PulseHash:  ph,
-		ProofSet: map[core.Node]*PulseProof{
+		ProofSet: map[core.NetworkNode]*PulseProof{
 			t.nodeNetwork.GetOrigin(): pp,
 		},
 		PrevCloudHash: prevCloudHash,
@@ -115,7 +115,7 @@ func (t *calculatorSuite) TestGetCloudProof() {
 	globuleEntry := &GlobuleEntry{
 		PulseEntry: pulseEntry,
 		PulseHash:  ph,
-		ProofSet: map[core.Node]*PulseProof{
+		ProofSet: map[core.NetworkNode]*PulseProof{
 			t.nodeNetwork.GetOrigin(): pp,
 		},
 		PrevCloudHash: prevCloudHash,

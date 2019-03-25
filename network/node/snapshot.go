@@ -56,7 +56,7 @@ type Snapshot struct {
 	pulse core.PulseNumber
 	state core.NetworkState
 
-	nodeList [ListLength][]core.Node
+	nodeList [ListLength][]core.NetworkNode
 }
 
 func (s *Snapshot) GetPulse() core.PulseNumber {
@@ -64,7 +64,7 @@ func (s *Snapshot) GetPulse() core.PulseNumber {
 }
 
 // NewSnapshot create new node for pulse.
-func NewSnapshot(number core.PulseNumber, nodes map[core.RecordRef]core.Node) *Snapshot {
+func NewSnapshot(number core.PulseNumber, nodes map[core.RecordRef]core.NetworkNode) *Snapshot {
 	return &Snapshot{
 		pulse: number,
 		// TODO: pass actual state
@@ -75,10 +75,10 @@ func NewSnapshot(number core.PulseNumber, nodes map[core.RecordRef]core.Node) *S
 
 // splitNodes temporary method to create node lists. Will be replaced by special function that will take in count
 // previous node and approved claims.
-func splitNodes(nodes map[core.RecordRef]core.Node) [ListLength][]core.Node {
-	var result [ListLength][]core.Node
+func splitNodes(nodes map[core.RecordRef]core.NetworkNode) [ListLength][]core.NetworkNode {
+	var result [ListLength][]core.NetworkNode
 	for i := 0; i < int(ListLength); i++ {
-		result[i] = make([]core.Node, 0)
+		result[i] = make([]core.NetworkNode, 0)
 	}
 	for _, node := range nodes {
 		listType := nodeStateToListType(node.GetState())

@@ -25,7 +25,7 @@ type TerminationHandler interface {
 type terminationHandler struct{}
 
 func (terminationHandler) Abort() {
-	panic("Node leave acknowledged by network. Goodbye!")
+	panic("NetworkNode leave acknowledged by network. Goodbye!")
 }
 
 func NewTerminationHandler() TerminationHandler {

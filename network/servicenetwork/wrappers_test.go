@@ -61,11 +61,11 @@ func (n *nodeKeeperWrapper) GetConsensusInfo() network.ConsensusInfo {
 	return n.original.GetConsensusInfo()
 }
 
-func (n *nodeKeeperWrapper) GetWorkingNode(ref core.RecordRef) core.Node {
+func (n *nodeKeeperWrapper) GetWorkingNode(ref core.RecordRef) core.NetworkNode {
 	return n.original.GetWorkingNode(ref)
 }
 
-func (n *nodeKeeperWrapper) GetWorkingNodes() []core.Node {
+func (n *nodeKeeperWrapper) GetWorkingNodes() []core.NetworkNode {
 	return n.original.GetWorkingNodes()
 }
 
@@ -88,7 +88,7 @@ func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *core.Pulse, pu
 	return res
 }
 
-func (n *nodeKeeperWrapper) GetOrigin() core.Node {
+func (n *nodeKeeperWrapper) GetOrigin() core.NetworkNode {
 	return n.original.GetOrigin()
 }
 
@@ -108,7 +108,7 @@ func (n *nodeKeeperWrapper) SetCloudHash(hash []byte) {
 	n.original.SetCloudHash(hash)
 }
 
-func (n *nodeKeeperWrapper) SetInitialSnapshot(nodes []core.Node) {
+func (n *nodeKeeperWrapper) SetInitialSnapshot(nodes []core.NetworkNode) {
 	n.original.SetInitialSnapshot(nodes)
 }
 
@@ -132,7 +132,7 @@ func (n *nodeKeeperWrapper) GetSparseUnsyncList(length int) network.UnsyncList {
 	return n.original.GetSparseUnsyncList(length)
 }
 
-func (n *nodeKeeperWrapper) Sync(ctx context.Context, nodes []core.Node, claims []consensus.ReferendumClaim) error {
+func (n *nodeKeeperWrapper) Sync(ctx context.Context, nodes []core.NetworkNode, claims []consensus.ReferendumClaim) error {
 	return n.original.Sync(ctx, nodes, claims)
 }
 

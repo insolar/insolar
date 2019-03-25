@@ -44,8 +44,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-func copyActiveNodes(nodes []core.Node) map[core.RecordRef]core.Node {
-	result := make(map[core.RecordRef]core.Node, len(nodes))
+func copyActiveNodes(nodes []core.NetworkNode) map[core.RecordRef]core.NetworkNode {
+	result := make(map[core.RecordRef]core.NetworkNode, len(nodes))
 	for _, n := range nodes {
 		n.(node.MutableNode).ChangeState()
 		result[n.ID()] = n
@@ -55,15 +55,15 @@ func copyActiveNodes(nodes []core.Node) map[core.RecordRef]core.Node {
 
 type unsyncList struct {
 	length      int
-	origin      core.Node
-	activeNodes map[core.RecordRef]core.Node
+	origin      core.NetworkNode
+	activeNodes map[core.RecordRef]core.NetworkNode
 	refToIndex  map[core.RecordRef]int
 	proofs      map[core.RecordRef]*consensus.NodePulseProof
 	ghs         map[core.RecordRef]consensus.GlobuleHashSignature
 	indexToRef  map[int]core.RecordRef
 }
 
-func (ul *unsyncList) GetOrigin() core.Node {
+func (ul *unsyncList) GetOrigin() core.NetworkNode {
 	return ul.origin
 }
 
@@ -82,7 +82,7 @@ func (ul *unsyncList) RemoveNode(nodeID core.RecordRef) {
 	delete(ul.ghs, nodeID)
 }
 
-func (ul *unsyncList) AddNode(node core.Node, bitsetIndex uint16) {
+func (ul *unsyncList) AddNode(node core.NetworkNode, bitsetIndex uint16) {
 	ul.addNode(node, int(bitsetIndex))
 }
 
@@ -94,13 +94,13 @@ func (ul *unsyncList) GetProof(nodeID core.RecordRef) *consensus.NodePulseProof 
 	return ul.proofs[nodeID]
 }
 
-func newUnsyncList(origin core.Node, activeNodesSorted []core.Node, length int) *unsyncList {
+func newUnsyncList(origin core.NetworkNode, activeNodesSorted []core.NetworkNode, length int) *unsyncList {
 	result := &unsyncList{
 		length:      length,
 		origin:      origin,
 		indexToRef:  make(map[int]core.RecordRef, len(activeNodesSorted)),
 		refToIndex:  make(map[core.RecordRef]int, len(activeNodesSorted)),
-		activeNodes: make(map[core.RecordRef]core.Node, len(activeNodesSorted)),
+		activeNodes: make(map[core.RecordRef]core.NetworkNode, len(activeNodesSorted)),
 	}
 	for i, node := range activeNodesSorted {
 		result.addNode(node, i)
@@ -111,7 +111,7 @@ func newUnsyncList(origin core.Node, activeNodesSorted []core.Node, length int) 
 	return result
 }
 
-func (ul *unsyncList) addNodes(nodes []core.Node) {
+func (ul *unsyncList) addNodes(nodes []core.NetworkNode) {
 	sort.Slice(nodes, func(i, j int) bool {
 		return nodes[i].ID().Compare(nodes[j].ID()) < 0
 	})
@@ -121,22 +121,22 @@ func (ul *unsyncList) addNodes(nodes []core.Node) {
 	}
 }
 
-func (ul *unsyncList) addNode(node core.Node, index int) {
+func (ul *unsyncList) addNode(node core.NetworkNode, index int) {
 	ul.indexToRef[index] = node.ID()
 	ul.refToIndex[node.ID()] = index
 	ul.activeNodes[node.ID()] = node
 }
 
-func (ul *unsyncList) GetActiveNode(ref core.RecordRef) core.Node {
+func (ul *unsyncList) GetActiveNode(ref core.RecordRef) core.NetworkNode {
 	return ul.activeNodes[ref]
 }
 
-func (ul *unsyncList) GetActiveNodes() []core.Node {
+func (ul *unsyncList) GetActiveNodes() []core.NetworkNode {
 	return sortedNodeList(ul.activeNodes)
 }
 
-func sortedNodeList(nodes map[core.RecordRef]core.Node) []core.Node {
-	result := make([]core.Node, len(nodes))
+func sortedNodeList(nodes map[core.RecordRef]core.NetworkNode) []core.NetworkNode {
+	result := make([]core.NetworkNode, len(nodes))
 	i := 0
 	for _, node := range nodes {
 		result[i] = node
@@ -181,7 +181,7 @@ func ApplyClaims(ul network.UnsyncList, claims []consensus.ReferendumClaim) erro
 		// TODO: fix version
 		node, err := node.ClaimToNode("", &c.NodeJoinClaim)
 		if err != nil {
-			return errors.Wrap(err, "[ AddClaims ] failed to convert Claim -> Node")
+			return errors.Wrap(err, "[ AddClaims ] failed to convert Claim -> NetworkNode")
 		}
 		// TODO: check these two
 		ul.AddNode(node, c.NodeAnnouncerIndex)

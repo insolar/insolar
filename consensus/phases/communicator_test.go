@@ -54,8 +54,8 @@ type communicatorSuite struct {
 	suite.Suite
 	componentManager component.Manager
 	communicator     Communicator
-	originNode       core.Node
-	participants     []core.Node
+	originNode       core.NetworkNode
+	participants     []core.NetworkNode
 	hostNetworkMock  *networkUtils.HostNetworkMock
 
 	consensusNetworkMock *networkUtils.ConsensusNetworkMock
@@ -104,7 +104,7 @@ func (s *communicatorSuite) SetupTest() {
 	s.NoError(err)
 }
 
-func makeRandomNode() core.Node {
+func makeRandomNode() core.NetworkNode {
 	return node.NewNode(testutils.RandomRef(), core.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
 }
 

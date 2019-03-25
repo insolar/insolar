@@ -69,7 +69,7 @@ type challengeResponseController struct {
 type Nonce []byte
 type SignedNonce []byte
 
-// Node                           Discovery Node
+// NetworkNode                           Discovery NetworkNode
 //  1| ------ ChallengeRequest -----> |
 //  2| <-- SignedChallengeResponse -- |
 //  3| --- SignedChallengeRequest --> |

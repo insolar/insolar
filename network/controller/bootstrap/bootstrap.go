@@ -60,7 +60,7 @@ import (
 )
 
 var (
-	ErrReconnectRequired = errors.New("Node should connect via consensus bootstrap")
+	ErrReconnectRequired = errors.New("NetworkNode should connect via consensus bootstrap")
 )
 
 type DiscoveryNode struct {
@@ -152,7 +152,7 @@ type NodeStruct struct {
 	Version string
 }
 
-func newNode(n *NodeStruct) (core.Node, error) {
+func newNode(n *NodeStruct) (core.NetworkNode, error) {
 	pk, err := platformpolicy.NewKeyProcessor().ImportPublicKeyBinary(n.PK)
 	if err != nil {
 		return nil, errors.Wrap(err, "error deserializing node public key")
@@ -164,7 +164,7 @@ func newNode(n *NodeStruct) (core.Node, error) {
 	return mNode, nil
 }
 
-func newNodeStruct(node core.Node) (*NodeStruct, error) {
+func newNodeStruct(node core.NetworkNode) (*NodeStruct, error) {
 	pk, err := platformpolicy.NewKeyProcessor().ExportPublicKeyBinary(node.PublicKey())
 	if err != nil {
 		return nil, errors.Wrap(err, "error serializing node public key")
@@ -244,17 +244,17 @@ func (bc *bootstrapper) GetLastPulse() core.PulseNumber {
 	return bc.lastPulse
 }
 
-func (bc *bootstrapper) checkActiveNode(node core.Node) error {
+func (bc *bootstrapper) checkActiveNode(node core.NetworkNode) error {
 	n := bc.NodeKeeper.GetAccessor().GetActiveNode(node.ID())
 	if n != nil {
-		return errors.Errorf("Node ID collision: %s", n.ID())
+		return errors.Errorf("NetworkNode ID collision: %s", n.ID())
 	}
 	n = bc.NodeKeeper.GetAccessor().GetActiveNodeByShortID(node.ShortID())
 	if n != nil {
 		return errors.Errorf("Short ID collision: %d", n.ShortID())
 	}
 	if node.Version() != bc.NodeKeeper.GetOrigin().Version() {
-		return errors.Errorf("Node %s version %s does not match origin version %s",
+		return errors.Errorf("NetworkNode %s version %s does not match origin version %s",
 			node.ID(), node.Version(), bc.NodeKeeper.GetOrigin().Version())
 	}
 	return nil
@@ -266,7 +266,7 @@ func (bc *bootstrapper) ZeroBootstrap(ctx context.Context) (*network.BootstrapRe
 		return nil, errors.Wrap(err, "failed to create a host")
 	}
 	inslogger.FromContext(ctx).Info("[ Bootstrap ] Zero bootstrap")
-	bc.NodeKeeper.SetInitialSnapshot([]core.Node{bc.NodeKeeper.GetOrigin()})
+	bc.NodeKeeper.SetInitialSnapshot([]core.NetworkNode{bc.NodeKeeper.GetOrigin()})
 	return &network.BootstrapResult{
 		Host: host,
 		// FirstPulseTime: nb.Bootstrapper.GetFirstFakePulseTime(),
@@ -341,7 +341,7 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 
 func (bc *bootstrapper) calculateLastIgnoredPulse(ctx context.Context, lastPulses []core.PulseNumber) core.PulseNumber {
 	maxLastPulse := bc.GetLastPulse()
-	inslogger.FromContext(ctx).Debugf("Node %s (origin) LastIgnoredPulse: %d", bc.NodeKeeper.GetOrigin().ID(), maxLastPulse)
+	inslogger.FromContext(ctx).Debugf("NetworkNode %s (origin) LastIgnoredPulse: %d", bc.NodeKeeper.GetOrigin().ID(), maxLastPulse)
 	for _, pulse := range lastPulses {
 		if pulse > maxLastPulse {
 			maxLastPulse = pulse
@@ -458,8 +458,8 @@ func (bc *bootstrapper) waitResultsFromChannel(ctx context.Context, ch <-chan *n
 	}
 }
 
-func (bc *bootstrapper) waitGenesisResults(ctx context.Context, ch <-chan *GenesisResponse, count int) ([]core.Node, []core.PulseNumber, error) {
-	result := make([]core.Node, 0)
+func (bc *bootstrapper) waitGenesisResults(ctx context.Context, ch <-chan *GenesisResponse, count int) ([]core.NetworkNode, []core.PulseNumber, error) {
+	result := make([]core.NetworkNode, 0)
 	lastPulses := make([]core.PulseNumber, 0)
 	for {
 		select {
@@ -470,7 +470,7 @@ func (bc *bootstrapper) waitGenesisResults(ctx context.Context, ch <-chan *Genes
 			}
 			result = append(result, discovery)
 			lastPulses = append(lastPulses, res.Response.LastPulse)
-			inslogger.FromContext(ctx).Debugf("Node %s LastIgnoredPulse: %d", discovery.ID(), res.Response.LastPulse)
+			inslogger.FromContext(ctx).Debugf("NetworkNode %s LastIgnoredPulse: %d", discovery.ID(), res.Response.LastPulse)
 			if len(result) == count {
 				return result, lastPulses, nil
 			}

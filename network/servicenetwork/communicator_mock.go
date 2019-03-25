@@ -66,7 +66,7 @@ type CommunicatorMock struct {
 func (cm *CommunicatorMock) ExchangePhase1(
 	ctx context.Context,
 	originClaim *packets.NodeAnnounceClaim,
-	participants []core.Node,
+	participants []core.NetworkNode,
 	packet *packets.Phase1Packet,
 ) (map[core.RecordRef]*packets.Phase1Packet, error) {
 	pckts, err := cm.communicator.ExchangePhase1(ctx, originClaim, participants, packet)
@@ -81,7 +81,7 @@ func (cm *CommunicatorMock) ExchangePhase1(
 }
 
 func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
-	participants []core.Node, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
+	participants []core.NetworkNode, packet *packets.Phase2Packet) (map[core.RecordRef]*packets.Phase2Packet, error) {
 
 	pckts, err := cm.communicator.ExchangePhase2(ctx, list, handler, participants, packet)
 	if err != nil {
@@ -100,7 +100,7 @@ func (cm *CommunicatorMock) ExchangePhase21(ctx context.Context, list network.Un
 	return cm.communicator.ExchangePhase21(ctx, list, handler, packet, additionalRequests)
 }
 
-func (cm *CommunicatorMock) ExchangePhase3(ctx context.Context, participants []core.Node, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error) {
+func (cm *CommunicatorMock) ExchangePhase3(ctx context.Context, participants []core.NetworkNode, packet *packets.Phase3Packet) (map[core.RecordRef]*packets.Phase3Packet, error) {
 	pckts, err := cm.communicator.ExchangePhase3(ctx, participants, packet)
 	if err != nil {
 		return nil, err

@@ -42,11 +42,11 @@ import (
 )
 
 type MergedListCopy struct {
-	ActiveList                 map[core.RecordRef]core.Node
+	ActiveList                 map[core.RecordRef]core.NetworkNode
 	NodesJoinedDuringPrevPulse bool
 }
 
-func GetMergedCopy(nodes []core.Node, claims []consensus.ReferendumClaim) (*MergedListCopy, error) {
+func GetMergedCopy(nodes []core.NetworkNode, claims []consensus.ReferendumClaim) (*MergedListCopy, error) {
 	nodesMap := copyActiveNodes(nodes)
 
 	var nodesJoinedDuringPrevPulse bool
@@ -65,7 +65,7 @@ func GetMergedCopy(nodes []core.Node, claims []consensus.ReferendumClaim) (*Merg
 	}, nil
 }
 
-func mergeClaim(nodes map[core.RecordRef]core.Node, claim consensus.ReferendumClaim) (bool, error) {
+func mergeClaim(nodes map[core.RecordRef]core.NetworkNode, claim consensus.ReferendumClaim) (bool, error) {
 	isJoinClaim := false
 	switch t := claim.(type) {
 	case *consensus.NodeJoinClaim:
@@ -73,7 +73,7 @@ func mergeClaim(nodes map[core.RecordRef]core.Node, claim consensus.ReferendumCl
 		// TODO: fix version
 		n, err := node.ClaimToNode("", t)
 		if err != nil {
-			return isJoinClaim, errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> Node")
+			return isJoinClaim, errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> NetworkNode")
 		}
 		n.(node.MutableNode).SetState(core.NodePending)
 		nodes[n.ID()] = n

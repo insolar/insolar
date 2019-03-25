@@ -70,7 +70,7 @@ func (nd *NodeDomain) RegisterNode(publicKey string, role string) (string, error
 func (nd *NodeDomain) GetNodeRefByPK(publicKey string) (string, error) {
 	nodeRef, ok := nd.NodeIndexPK[publicKey]
 	if !ok {
-		return nodeRef, fmt.Errorf("[ GetNodeRefByPK ] Node not found by PK: %s", publicKey)
+		return nodeRef, fmt.Errorf("[ GetNodeRefByPK ] NetworkNode not found by PK: %s", publicKey)
 	}
 	return nodeRef, nil
 }
@@ -80,7 +80,7 @@ func (nd *NodeDomain) RemoveNode(nodeRef core.RecordRef) error {
 	node := nd.getNodeRecord(nodeRef)
 	nodePK, err := node.GetPublicKey()
 	if err != nil {
-		return fmt.Errorf("[ RemoveNode ] Node not found by PK: %s", nodePK)
+		return fmt.Errorf("[ RemoveNode ] NetworkNode not found by PK: %s", nodePK)
 	}
 
 	delete(nd.NodeIndexPK, nodePK)

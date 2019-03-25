@@ -48,7 +48,7 @@ type FirstPhaseState struct {
 	PulseHash  merkle.OriginHash
 	PulseProof *merkle.PulseProof
 
-	ValidProofs map[core.Node]*merkle.PulseProof
+	ValidProofs map[core.NetworkNode]*merkle.PulseProof
 	FaultProofs map[core.RecordRef]*merkle.PulseProof
 
 	UnsyncList   network.UnsyncList
@@ -68,7 +68,7 @@ type SecondPhaseState struct {
 }
 
 type ThirdPhaseState struct {
-	ActiveNodes    []core.Node
+	ActiveNodes    []core.NetworkNode
 	UnsyncList     network.UnsyncList
 	GlobuleProof   *merkle.GlobuleProof
 	ApprovedClaims []packets.ReferendumClaim

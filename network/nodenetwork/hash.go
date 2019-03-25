@@ -53,7 +53,7 @@ func hashWriteChecked(hash hash.Hash, data []byte) {
 	}
 }
 
-func calculateNodeHash(scheme core.PlatformCryptographyScheme, processor core.KeyProcessor, node core.Node) []byte {
+func calculateNodeHash(scheme core.PlatformCryptographyScheme, processor core.KeyProcessor, node core.NetworkNode) []byte {
 	h := scheme.IntegrityHasher()
 	hashWriteChecked(h, node.ID().Bytes())
 
@@ -74,7 +74,7 @@ func calculateNodeHash(scheme core.PlatformCryptographyScheme, processor core.Ke
 }
 
 // CalculateHash calculates hash of active node list
-func CalculateHash(scheme core.PlatformCryptographyScheme, list []core.Node) (result []byte, err error) {
+func CalculateHash(scheme core.PlatformCryptographyScheme, list []core.NetworkNode) (result []byte, err error) {
 	// catch possible panic from hashWriteChecked in this function and in all calculateNodeHash funcs
 	defer func() {
 		if r := recover(); r != nil {
