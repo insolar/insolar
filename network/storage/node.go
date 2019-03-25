@@ -53,6 +53,7 @@ package storage
 import (
 	"context"
 	"github.com/insolar/insolar/network/node"
+	"sync"
 
 	"github.com/insolar/insolar/insolar"
 )
@@ -68,4 +69,32 @@ type SnapshotAccessor interface {
 //go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAppender -o ../../testutils/network -s _mock.go
 type SnapshotAppender interface {
 	Append(ctx context.Context, pulse insolar.PulseNumber, snapshot node.Snapshot) error
+}
+
+// NewSnapshotStorage constructor creates PulseStorage
+func NewSnapshotStorage() *SnapshotStorage {
+	return &SnapshotStorage{}
+}
+
+type SnapshotStorage struct {
+	DB   DB `inject:""`
+	lock sync.RWMutex
+}
+
+func (s *SnapshotStorage) Append(ctx context.Context, pulse insolar.PulseNumber, snapshot *node.Snapshot) error {
+	buff := node.EncodeSnapshot(snapshot)
+	return s.DB.Set(pulseKey(pulse), buff)
+}
+
+func (s *SnapshotStorage) ForPulseNumber(ctx context.Context, pulse insolar.PulseNumber) (*node.Snapshot, error) {
+	buf, err := s.DB.Get(pulseKey(pulse))
+	if err != nil {
+		return nil, err
+	}
+	result := node.DecodeSnapshot(buf)
+	return &result, nil
+}
+
+func (s *SnapshotStorage) Latest(ctx context.Context) (*node.Snapshot, error) {
+	panic("implement me")
 }
