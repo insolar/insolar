@@ -55,10 +55,11 @@ package servicenetwork
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/network/node"
 	"sync"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/phases"
@@ -123,9 +124,8 @@ func (s *testSuite) TestManyNodesConnect() {
 	joinersCount := 10
 	nodes := make([]*networkNode, 0)
 	for i := 0; i < joinersCount; i++ {
-		nodes = append(nodes, s.newNetworkNode(fmt.Sprintf("testNode_%d", i)))
-		s.preInitNode(nodes[i])
-		s.InitNode(nodes[i])
+		node := s.newNetworkNode(fmt.Sprintf("testNode_%d", i))
+		nodes = append(nodes, node)
 	}
 
 	wg := sync.WaitGroup{}
@@ -133,6 +133,8 @@ func (s *testSuite) TestManyNodesConnect() {
 
 	for _, node := range nodes {
 		go func(wg *sync.WaitGroup, node *networkNode) {
+			s.preInitNode(node)
+			s.InitNode(node)
 			s.StartNode(node)
 			wg.Done()
 		}(&wg, node)
@@ -140,11 +142,11 @@ func (s *testSuite) TestManyNodesConnect() {
 
 	wg.Wait()
 
-	defer func(s *testSuite) {
+	defer func() {
 		for _, node := range nodes {
 			s.StopNode(node)
 		}
-	}(s)
+	}()
 
 	s.waitForConsensus(5)
 
