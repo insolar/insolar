@@ -71,14 +71,7 @@ func (m *TransactionManager) GetObjectIndex(
 	jetID insolar.ID,
 	id *insolar.ID,
 ) (*object.Lifeline, error) {
-	prefix := insolar.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDLifeline, prefix, id[:])
-	buf, err := m.get(ctx, k)
-	if err != nil {
-		return nil, err
-	}
-	res := object.DecodeIndex(buf)
-	return &res, nil
+	panic("GetObjectIndex")
 }
 
 // SetObjectIndex stores object lifeline index.

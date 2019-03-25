@@ -152,17 +152,14 @@ func (os *objectStorage) GetObjectIndex(
 	jetID insolar.ID,
 	id *insolar.ID,
 ) (*object.Lifeline, error) {
-	tx, err := os.DB.BeginTransaction(false)
+	prefix := insolar.JetID(jetID).Prefix()
+	k := prefixkey(scopeIDLifeline, prefix, id[:])
+	buf, err := os.DB.Get(ctx, k)
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Discard()
-
-	idx, err := tx.GetObjectIndex(ctx, jetID, id)
-	if err != nil {
-		return nil, err
-	}
-	return idx, nil
+	res := object.DecodeIndex(buf)
+	return &res, nil
 }
 
 // SetObjectIndex wraps matching transaction manager method.
