@@ -409,8 +409,8 @@ func (h *MessageHandler) handleGetObject(
 		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
 	}
 
-	h.IDLocker.RLock(msg.Head.Record())
-	defer h.IDLocker.RUnlock(msg.Head.Record())
+	h.IDLocker.Lock(msg.Head.Record())
+	defer h.IDLocker.Unlock(msg.Head.Record())
 
 	// Fetch object index. If not found redirect.
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Head.Record())
@@ -597,8 +597,8 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
 	}
 
-	h.IDLocker.RLock(msg.Head.Record())
-	defer h.IDLocker.RUnlock(msg.Head.Record())
+	h.IDLocker.Lock(msg.Head.Record())
+	defer h.IDLocker.Unlock(msg.Head.Record())
 
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Head.Record())
 	if err == insolar.ErrNotFound {
@@ -640,8 +640,8 @@ func (h *MessageHandler) handleGetChildren(
 		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 	}
 
-	h.IDLocker.RLock(msg.Parent.Record())
-	defer h.IDLocker.RUnlock(msg.Parent.Record())
+	h.IDLocker.Lock(msg.Parent.Record())
+	defer h.IDLocker.Unlock(msg.Parent.Record())
 
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record())
 	if err == insolar.ErrNotFound {
@@ -1061,8 +1061,8 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insola
 	msg := parcel.Message().(*message.GetObjectIndex)
 	jetID := jetFromContext(ctx)
 
-	h.IDLocker.RLock(msg.Object.Record())
-	defer h.IDLocker.RUnlock(msg.Object.Record())
+	h.IDLocker.Lock(msg.Object.Record())
+	defer h.IDLocker.Unlock(msg.Object.Record())
 
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Object.Record())
 	if err != nil {
