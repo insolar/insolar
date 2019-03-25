@@ -25,7 +25,7 @@ import (
 	"encoding/pem"
 	"fmt"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy/internal/sign"
 	"github.com/pkg/errors"
 )
@@ -34,7 +34,7 @@ type keyProcessor struct {
 	curve elliptic.Curve
 }
 
-func NewKeyProcessor() core.KeyProcessor {
+func NewKeyProcessor() insolar.KeyProcessor {
 	return &keyProcessor{
 		curve: elliptic.P256(),
 	}

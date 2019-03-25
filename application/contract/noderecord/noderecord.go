@@ -19,14 +19,14 @@ package noderecord
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
 // RecordInfo holds record info
 type RecordInfo struct {
 	PublicKey string
-	Role      core.StaticRole
+	Role      insolar.StaticRole
 }
 
 // NodeRecord contains info about node
@@ -45,8 +45,8 @@ func NewNodeRecord(publicKey string, roleStr string) (*NodeRecord, error) {
 		return nil, fmt.Errorf("[ NewNodeRecord ] role is required")
 	}
 
-	role := core.GetStaticRoleFromString(roleStr)
-	if role == core.StaticRoleUnknown {
+	role := insolar.GetStaticRoleFromString(roleStr)
+	if role == insolar.StaticRoleUnknown {
 		return nil, fmt.Errorf("Role is not supported: %s", roleStr)
 	}
 
@@ -73,7 +73,7 @@ func (nr *NodeRecord) GetPublicKey() (string, error) {
 }
 
 // GetRole returns role
-func (nr *NodeRecord) GetRole() (core.StaticRole, error) {
+func (nr *NodeRecord) GetRole() (insolar.StaticRole, error) {
 	return nr.Record.Role, nil
 }
 

@@ -3,7 +3,7 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Conveyor" can be found in github.com/insolar/insolar/core
+The original interface "Conveyor" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	"sync/atomic"
@@ -11,12 +11,12 @@ import (
 
 	"github.com/gojuno/minimock"
 	queue "github.com/insolar/insolar/conveyor/queue"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//ConveyorMock implements github.com/insolar/insolar/core.Conveyor
+//ConveyorMock implements github.com/insolar/insolar/insolar.Conveyor
 type ConveyorMock struct {
 	t minimock.Tester
 
@@ -25,7 +25,7 @@ type ConveyorMock struct {
 	ActivatePulsePreCounter uint64
 	ActivatePulseMock       mConveyorMockActivatePulse
 
-	GetStateFunc       func() (r core.ConveyorState)
+	GetStateFunc       func() (r insolar.ConveyorState)
 	GetStateCounter    uint64
 	GetStatePreCounter uint64
 	GetStateMock       mConveyorMockGetState
@@ -40,23 +40,23 @@ type ConveyorMock struct {
 	IsOperationalPreCounter uint64
 	IsOperationalMock       mConveyorMockIsOperational
 
-	PreparePulseFunc       func(p core.Pulse, p1 queue.SyncDone) (r error)
+	PreparePulseFunc       func(p insolar.Pulse, p1 queue.SyncDone) (r error)
 	PreparePulseCounter    uint64
 	PreparePulsePreCounter uint64
 	PreparePulseMock       mConveyorMockPreparePulse
 
-	SinkPushFunc       func(p core.PulseNumber, p1 interface{}) (r error)
+	SinkPushFunc       func(p insolar.PulseNumber, p1 interface{}) (r error)
 	SinkPushCounter    uint64
 	SinkPushPreCounter uint64
 	SinkPushMock       mConveyorMockSinkPush
 
-	SinkPushAllFunc       func(p core.PulseNumber, p1 []interface{}) (r error)
+	SinkPushAllFunc       func(p insolar.PulseNumber, p1 []interface{}) (r error)
 	SinkPushAllCounter    uint64
 	SinkPushAllPreCounter uint64
 	SinkPushAllMock       mConveyorMockSinkPushAll
 }
 
-//NewConveyorMock returns a mock for github.com/insolar/insolar/core.Conveyor
+//NewConveyorMock returns a mock for github.com/insolar/insolar/insolar.Conveyor
 func NewConveyorMock(t minimock.Tester) *ConveyorMock {
 	m := &ConveyorMock{t: t}
 
@@ -137,7 +137,7 @@ func (m *mConveyorMockActivatePulse) Set(f func() (r error)) *ConveyorMock {
 	return m.mock
 }
 
-//ActivatePulse implements github.com/insolar/insolar/core.Conveyor interface
+//ActivatePulse implements github.com/insolar/insolar/insolar.Conveyor interface
 func (m *ConveyorMock) ActivatePulse() (r error) {
 	counter := atomic.AddUint64(&m.ActivatePulsePreCounter, 1)
 	defer atomic.AddUint64(&m.ActivatePulseCounter, 1)
@@ -220,7 +220,7 @@ type ConveyorMockGetStateExpectation struct {
 }
 
 type ConveyorMockGetStateResult struct {
-	r core.ConveyorState
+	r insolar.ConveyorState
 }
 
 //Expect specifies that invocation of Conveyor.GetState is expected from 1 to Infinity times
@@ -236,7 +236,7 @@ func (m *mConveyorMockGetState) Expect() *mConveyorMockGetState {
 }
 
 //Return specifies results of invocation of Conveyor.GetState
-func (m *mConveyorMockGetState) Return(r core.ConveyorState) *ConveyorMock {
+func (m *mConveyorMockGetState) Return(r insolar.ConveyorState) *ConveyorMock {
 	m.mock.GetStateFunc = nil
 	m.expectationSeries = nil
 
@@ -258,12 +258,12 @@ func (m *mConveyorMockGetState) ExpectOnce() *ConveyorMockGetStateExpectation {
 	return expectation
 }
 
-func (e *ConveyorMockGetStateExpectation) Return(r core.ConveyorState) {
+func (e *ConveyorMockGetStateExpectation) Return(r insolar.ConveyorState) {
 	e.result = &ConveyorMockGetStateResult{r}
 }
 
 //Set uses given function f as a mock of Conveyor.GetState method
-func (m *mConveyorMockGetState) Set(f func() (r core.ConveyorState)) *ConveyorMock {
+func (m *mConveyorMockGetState) Set(f func() (r insolar.ConveyorState)) *ConveyorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -271,8 +271,8 @@ func (m *mConveyorMockGetState) Set(f func() (r core.ConveyorState)) *ConveyorMo
 	return m.mock
 }
 
-//GetState implements github.com/insolar/insolar/core.Conveyor interface
-func (m *ConveyorMock) GetState() (r core.ConveyorState) {
+//GetState implements github.com/insolar/insolar/insolar.Conveyor interface
+func (m *ConveyorMock) GetState() (r insolar.ConveyorState) {
 	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetStateCounter, 1)
 
@@ -401,7 +401,7 @@ func (m *mConveyorMockInitiateShutdown) Set(f func(p bool)) *ConveyorMock {
 	return m.mock
 }
 
-//InitiateShutdown implements github.com/insolar/insolar/core.Conveyor interface
+//InitiateShutdown implements github.com/insolar/insolar/insolar.Conveyor interface
 func (m *ConveyorMock) InitiateShutdown(p bool) {
 	counter := atomic.AddUint64(&m.InitiateShutdownPreCounter, 1)
 	defer atomic.AddUint64(&m.InitiateShutdownCounter, 1)
@@ -528,7 +528,7 @@ func (m *mConveyorMockIsOperational) Set(f func() (r bool)) *ConveyorMock {
 	return m.mock
 }
 
-//IsOperational implements github.com/insolar/insolar/core.Conveyor interface
+//IsOperational implements github.com/insolar/insolar/insolar.Conveyor interface
 func (m *ConveyorMock) IsOperational() (r bool) {
 	counter := atomic.AddUint64(&m.IsOperationalPreCounter, 1)
 	defer atomic.AddUint64(&m.IsOperationalCounter, 1)
@@ -612,7 +612,7 @@ type ConveyorMockPreparePulseExpectation struct {
 }
 
 type ConveyorMockPreparePulseInput struct {
-	p  core.Pulse
+	p  insolar.Pulse
 	p1 queue.SyncDone
 }
 
@@ -621,7 +621,7 @@ type ConveyorMockPreparePulseResult struct {
 }
 
 //Expect specifies that invocation of Conveyor.PreparePulse is expected from 1 to Infinity times
-func (m *mConveyorMockPreparePulse) Expect(p core.Pulse, p1 queue.SyncDone) *mConveyorMockPreparePulse {
+func (m *mConveyorMockPreparePulse) Expect(p insolar.Pulse, p1 queue.SyncDone) *mConveyorMockPreparePulse {
 	m.mock.PreparePulseFunc = nil
 	m.expectationSeries = nil
 
@@ -645,7 +645,7 @@ func (m *mConveyorMockPreparePulse) Return(r error) *ConveyorMock {
 }
 
 //ExpectOnce specifies that invocation of Conveyor.PreparePulse is expected once
-func (m *mConveyorMockPreparePulse) ExpectOnce(p core.Pulse, p1 queue.SyncDone) *ConveyorMockPreparePulseExpectation {
+func (m *mConveyorMockPreparePulse) ExpectOnce(p insolar.Pulse, p1 queue.SyncDone) *ConveyorMockPreparePulseExpectation {
 	m.mock.PreparePulseFunc = nil
 	m.mainExpectation = nil
 
@@ -660,7 +660,7 @@ func (e *ConveyorMockPreparePulseExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of Conveyor.PreparePulse method
-func (m *mConveyorMockPreparePulse) Set(f func(p core.Pulse, p1 queue.SyncDone) (r error)) *ConveyorMock {
+func (m *mConveyorMockPreparePulse) Set(f func(p insolar.Pulse, p1 queue.SyncDone) (r error)) *ConveyorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -668,8 +668,8 @@ func (m *mConveyorMockPreparePulse) Set(f func(p core.Pulse, p1 queue.SyncDone) 
 	return m.mock
 }
 
-//PreparePulse implements github.com/insolar/insolar/core.Conveyor interface
-func (m *ConveyorMock) PreparePulse(p core.Pulse, p1 queue.SyncDone) (r error) {
+//PreparePulse implements github.com/insolar/insolar/insolar.Conveyor interface
+func (m *ConveyorMock) PreparePulse(p insolar.Pulse, p1 queue.SyncDone) (r error) {
 	counter := atomic.AddUint64(&m.PreparePulsePreCounter, 1)
 	defer atomic.AddUint64(&m.PreparePulseCounter, 1)
 
@@ -760,7 +760,7 @@ type ConveyorMockSinkPushExpectation struct {
 }
 
 type ConveyorMockSinkPushInput struct {
-	p  core.PulseNumber
+	p  insolar.PulseNumber
 	p1 interface{}
 }
 
@@ -769,7 +769,7 @@ type ConveyorMockSinkPushResult struct {
 }
 
 //Expect specifies that invocation of Conveyor.SinkPush is expected from 1 to Infinity times
-func (m *mConveyorMockSinkPush) Expect(p core.PulseNumber, p1 interface{}) *mConveyorMockSinkPush {
+func (m *mConveyorMockSinkPush) Expect(p insolar.PulseNumber, p1 interface{}) *mConveyorMockSinkPush {
 	m.mock.SinkPushFunc = nil
 	m.expectationSeries = nil
 
@@ -793,7 +793,7 @@ func (m *mConveyorMockSinkPush) Return(r error) *ConveyorMock {
 }
 
 //ExpectOnce specifies that invocation of Conveyor.SinkPush is expected once
-func (m *mConveyorMockSinkPush) ExpectOnce(p core.PulseNumber, p1 interface{}) *ConveyorMockSinkPushExpectation {
+func (m *mConveyorMockSinkPush) ExpectOnce(p insolar.PulseNumber, p1 interface{}) *ConveyorMockSinkPushExpectation {
 	m.mock.SinkPushFunc = nil
 	m.mainExpectation = nil
 
@@ -808,7 +808,7 @@ func (e *ConveyorMockSinkPushExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of Conveyor.SinkPush method
-func (m *mConveyorMockSinkPush) Set(f func(p core.PulseNumber, p1 interface{}) (r error)) *ConveyorMock {
+func (m *mConveyorMockSinkPush) Set(f func(p insolar.PulseNumber, p1 interface{}) (r error)) *ConveyorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -816,8 +816,8 @@ func (m *mConveyorMockSinkPush) Set(f func(p core.PulseNumber, p1 interface{}) (
 	return m.mock
 }
 
-//SinkPush implements github.com/insolar/insolar/core.Conveyor interface
-func (m *ConveyorMock) SinkPush(p core.PulseNumber, p1 interface{}) (r error) {
+//SinkPush implements github.com/insolar/insolar/insolar.Conveyor interface
+func (m *ConveyorMock) SinkPush(p insolar.PulseNumber, p1 interface{}) (r error) {
 	counter := atomic.AddUint64(&m.SinkPushPreCounter, 1)
 	defer atomic.AddUint64(&m.SinkPushCounter, 1)
 
@@ -908,7 +908,7 @@ type ConveyorMockSinkPushAllExpectation struct {
 }
 
 type ConveyorMockSinkPushAllInput struct {
-	p  core.PulseNumber
+	p  insolar.PulseNumber
 	p1 []interface{}
 }
 
@@ -917,7 +917,7 @@ type ConveyorMockSinkPushAllResult struct {
 }
 
 //Expect specifies that invocation of Conveyor.SinkPushAll is expected from 1 to Infinity times
-func (m *mConveyorMockSinkPushAll) Expect(p core.PulseNumber, p1 []interface{}) *mConveyorMockSinkPushAll {
+func (m *mConveyorMockSinkPushAll) Expect(p insolar.PulseNumber, p1 []interface{}) *mConveyorMockSinkPushAll {
 	m.mock.SinkPushAllFunc = nil
 	m.expectationSeries = nil
 
@@ -941,7 +941,7 @@ func (m *mConveyorMockSinkPushAll) Return(r error) *ConveyorMock {
 }
 
 //ExpectOnce specifies that invocation of Conveyor.SinkPushAll is expected once
-func (m *mConveyorMockSinkPushAll) ExpectOnce(p core.PulseNumber, p1 []interface{}) *ConveyorMockSinkPushAllExpectation {
+func (m *mConveyorMockSinkPushAll) ExpectOnce(p insolar.PulseNumber, p1 []interface{}) *ConveyorMockSinkPushAllExpectation {
 	m.mock.SinkPushAllFunc = nil
 	m.mainExpectation = nil
 
@@ -956,7 +956,7 @@ func (e *ConveyorMockSinkPushAllExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of Conveyor.SinkPushAll method
-func (m *mConveyorMockSinkPushAll) Set(f func(p core.PulseNumber, p1 []interface{}) (r error)) *ConveyorMock {
+func (m *mConveyorMockSinkPushAll) Set(f func(p insolar.PulseNumber, p1 []interface{}) (r error)) *ConveyorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -964,8 +964,8 @@ func (m *mConveyorMockSinkPushAll) Set(f func(p core.PulseNumber, p1 []interface
 	return m.mock
 }
 
-//SinkPushAll implements github.com/insolar/insolar/core.Conveyor interface
-func (m *ConveyorMock) SinkPushAll(p core.PulseNumber, p1 []interface{}) (r error) {
+//SinkPushAll implements github.com/insolar/insolar/insolar.Conveyor interface
+func (m *ConveyorMock) SinkPushAll(p insolar.PulseNumber, p1 []interface{}) (r error) {
 	counter := atomic.AddUint64(&m.SinkPushAllPreCounter, 1)
 	defer atomic.AddUint64(&m.SinkPushAllCounter, 1)
 

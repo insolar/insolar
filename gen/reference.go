@@ -19,31 +19,31 @@ package gen
 import (
 	fuzz "github.com/google/gofuzz"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // ID generates random id.
-func ID() (id core.RecordID) {
+func ID() (id insolar.ID) {
 	fuzz.New().NilChance(0).Fuzz(&id)
 	return
 }
 
 // JetID generates random jet id.
-func JetID() (jetID core.JetID) {
-	f := fuzz.New().Funcs(func(id *core.JetID, c fuzz.Continue) {
+func JetID() (jetID insolar.JetID) {
+	f := fuzz.New().Funcs(func(id *insolar.JetID, c fuzz.Continue) {
 		c.Fuzz(id)
 		// set special pulse number
-		copy(id[:core.PulseNumberSize], core.PulseNumberJet.Bytes())
+		copy(id[:insolar.PulseNumberSize], insolar.PulseNumberJet.Bytes())
 		// set depth
 		// adds 1 because Intn returns [0,n)
-		id[core.PulseNumberSize] = byte(c.Intn(core.JetMaximumDepth + 1))
+		id[insolar.PulseNumberSize] = byte(c.Intn(insolar.JetMaximumDepth + 1))
 	})
 	f.Fuzz(&jetID)
 	return
 }
 
 // Reference generates random reference.
-func Reference() (ref core.RecordRef) {
+func Reference() (ref insolar.Reference) {
 	fuzz.New().NilChance(0).Fuzz(&ref)
 	return
 }

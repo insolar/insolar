@@ -44,6 +44,10 @@ func (s Scope) Bytes() []byte {
 const (
 	// ScopePulse is the scope for pulse storage.
 	ScopePulse Scope = 1
+	// ScopeRecord is the scope for record storage.
+	ScopeRecord Scope = 2
 	// ScopeJetDrop is the scope for a jet drop storage.
 	ScopeJetDrop Scope = 3
+	// ScopeJetDrop is the scope for a jet drop storage.
+	ScopeIndex Scope = 4
 )

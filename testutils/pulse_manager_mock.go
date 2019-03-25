@@ -3,7 +3,7 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "PulseManager" can be found in github.com/insolar/insolar/core
+The original interface "PulseManager" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	context "context"
@@ -11,22 +11,22 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//PulseManagerMock implements github.com/insolar/insolar/core.PulseManager
+//PulseManagerMock implements github.com/insolar/insolar/insolar.PulseManager
 type PulseManagerMock struct {
 	t minimock.Tester
 
-	SetFunc       func(p context.Context, p1 core.Pulse, p2 bool) (r error)
+	SetFunc       func(p context.Context, p1 insolar.Pulse, p2 bool) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mPulseManagerMockSet
 }
 
-//NewPulseManagerMock returns a mock for github.com/insolar/insolar/core.PulseManager
+//NewPulseManagerMock returns a mock for github.com/insolar/insolar/insolar.PulseManager
 func NewPulseManagerMock(t minimock.Tester) *PulseManagerMock {
 	m := &PulseManagerMock{t: t}
 
@@ -52,7 +52,7 @@ type PulseManagerMockSetExpectation struct {
 
 type PulseManagerMockSetInput struct {
 	p  context.Context
-	p1 core.Pulse
+	p1 insolar.Pulse
 	p2 bool
 }
 
@@ -61,7 +61,7 @@ type PulseManagerMockSetResult struct {
 }
 
 //Expect specifies that invocation of PulseManager.Set is expected from 1 to Infinity times
-func (m *mPulseManagerMockSet) Expect(p context.Context, p1 core.Pulse, p2 bool) *mPulseManagerMockSet {
+func (m *mPulseManagerMockSet) Expect(p context.Context, p1 insolar.Pulse, p2 bool) *mPulseManagerMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
@@ -85,7 +85,7 @@ func (m *mPulseManagerMockSet) Return(r error) *PulseManagerMock {
 }
 
 //ExpectOnce specifies that invocation of PulseManager.Set is expected once
-func (m *mPulseManagerMockSet) ExpectOnce(p context.Context, p1 core.Pulse, p2 bool) *PulseManagerMockSetExpectation {
+func (m *mPulseManagerMockSet) ExpectOnce(p context.Context, p1 insolar.Pulse, p2 bool) *PulseManagerMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
@@ -100,7 +100,7 @@ func (e *PulseManagerMockSetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of PulseManager.Set method
-func (m *mPulseManagerMockSet) Set(f func(p context.Context, p1 core.Pulse, p2 bool) (r error)) *PulseManagerMock {
+func (m *mPulseManagerMockSet) Set(f func(p context.Context, p1 insolar.Pulse, p2 bool) (r error)) *PulseManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -108,8 +108,8 @@ func (m *mPulseManagerMockSet) Set(f func(p context.Context, p1 core.Pulse, p2 b
 	return m.mock
 }
 
-//Set implements github.com/insolar/insolar/core.PulseManager interface
-func (m *PulseManagerMock) Set(p context.Context, p1 core.Pulse, p2 bool) (r error) {
+//Set implements github.com/insolar/insolar/insolar.PulseManager interface
+func (m *PulseManagerMock) Set(p context.Context, p1 insolar.Pulse, p2 bool) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 

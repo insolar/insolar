@@ -55,7 +55,7 @@ import (
 
 	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -68,7 +68,7 @@ import (
 )
 
 type ThirdPhase interface {
-	Execute(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*ThirdPhaseState, error)
+	Execute(ctx context.Context, pulse *insolar.Pulse, state *SecondPhaseState) (*ThirdPhaseState, error)
 }
 
 func NewThirdPhase() ThirdPhase {
@@ -76,13 +76,13 @@ func NewThirdPhase() ThirdPhase {
 }
 
 type ThirdPhaseImpl struct {
-	Cryptography core.CryptographyService `inject:""`
-	Communicator Communicator             `inject:""`
-	NodeKeeper   network.NodeKeeper       `inject:""`
-	Calculator   merkle.Calculator        `inject:""`
+	Cryptography insolar.CryptographyService `inject:""`
+	Communicator Communicator                `inject:""`
+	NodeKeeper   network.NodeKeeper          `inject:""`
+	Calculator   merkle.Calculator           `inject:""`
 }
 
-func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state *SecondPhaseState) (*ThirdPhaseState, error) {
+func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, state *SecondPhaseState) (*ThirdPhaseState, error) {
 	ctx, span := instracer.StartSpan(ctx, "ThirdPhase.Execute")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
 	defer span.End()
@@ -95,7 +95,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
 	packet := packets.NewPhase3Packet(pulse.PulseNumber, gSign, state.BitSet)
 
-	nodes := make([]core.Node, 0)
+	nodes := make([]insolar.NetworkNode, 0)
 	for _, node := range state.MatrixState.Active {
 		nodes = append(nodes, state.UnsyncList.GetActiveNode(node))
 	}
@@ -134,7 +134,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 		}
 		proof := &merkle.GlobuleProof{
 			BaseProof: merkle.BaseProof{
-				Signature: core.SignatureFromBytes(ghs[:]),
+				Signature: insolar.SignatureFromBytes(ghs[:]),
 			},
 			PrevCloudHash: prevCloudHash,
 			GlobuleID:     state.GlobuleProof.GlobuleID,
@@ -165,7 +165,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse, state 
 	}, nil
 }
 
-func (tp *ThirdPhaseImpl) checkPacketSignature(packet *packets.Phase3Packet, recordRef core.RecordRef, unsyncList network.UnsyncList) error {
+func (tp *ThirdPhaseImpl) checkPacketSignature(packet *packets.Phase3Packet, recordRef insolar.Reference, unsyncList network.UnsyncList) error {
 	activeNode := unsyncList.GetActiveNode(recordRef)
 	if activeNode == nil {
 		return errors.New("failed to get active node")

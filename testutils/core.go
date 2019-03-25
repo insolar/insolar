@@ -23,7 +23,7 @@ import (
 	"hash"
 	"math/big"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/sha3"
 )
@@ -58,8 +58,8 @@ func RandomString() string {
 }
 
 // RandomRef generates random object reference
-func RandomRef() core.RecordRef {
-	ref := [core.RecordRefSize]byte{}
+func RandomRef() insolar.Reference {
+	ref := [insolar.RecordRefSize]byte{}
 	_, err := rand.Read(ref[:])
 	if err != nil {
 		panic(err)
@@ -68,8 +68,8 @@ func RandomRef() core.RecordRef {
 }
 
 // RandomID generates random object ID
-func RandomID() core.RecordID {
-	id := [core.RecordIDSize]byte{}
+func RandomID() insolar.ID {
+	id := [insolar.RecordIDSize]byte{}
 	_, err := rand.Read(id[:])
 	if err != nil {
 		panic(err)
@@ -78,7 +78,7 @@ func RandomID() core.RecordID {
 }
 
 // RandomJet generates random jet with random depth.
-func RandomJet() core.RecordID {
+func RandomJet() insolar.ID {
 	// don't be too huge (i.e. 255)
 	n, err := rand.Int(rand.Reader, big.NewInt(128))
 	if err != nil {
@@ -90,20 +90,20 @@ func RandomJet() core.RecordID {
 }
 
 // RandomJetWithDepth generates random jet with provided depth.
-func RandomJetWithDepth(depth uint8) core.RecordID {
-	jetbuf := make([]byte, core.RecordHashSize)
+func RandomJetWithDepth(depth uint8) insolar.ID {
+	jetbuf := make([]byte, insolar.RecordHashSize)
 	_, err := rand.Read(jetbuf)
 	if err != nil {
 		panic(err)
 	}
-	return core.RecordID(*core.NewJetID(depth, resetBits(jetbuf[1:], depth)))
+	return insolar.ID(*insolar.NewJetID(depth, resetBits(jetbuf[1:], depth)))
 }
 
-// JetFromString converts string representation of Jet to core.RecordID.
+// JetFromString converts string representation of Jet to insolar.ID.
 //
 // Examples: "010" converts to Jet with depth 3 and prefix "01".
-func JetFromString(s string) core.RecordID {
-	jetPrefix := make([]byte, core.JetPrefixSize)
+func JetFromString(s string) insolar.ID {
+	jetPrefix := make([]byte, insolar.JetPrefixSize)
 	depth := uint8(len(s))
 	for i, char := range s {
 		byteOffset := int(i / 8)
@@ -118,7 +118,7 @@ func JetFromString(s string) core.RecordID {
 				"%v character is non 0 or 1, but %v (input string='%v')", i, char, s))
 		}
 	}
-	return core.RecordID(*core.NewJetID(depth, jetPrefix))
+	return insolar.ID(*insolar.NewJetID(depth, jetPrefix))
 
 }
 
@@ -151,19 +151,19 @@ func (m *hasherMock) Hash(val []byte) []byte {
 	panic("not implemented")
 }
 
-func (m *cryptographySchemeMock) ReferenceHasher() core.Hasher {
+func (m *cryptographySchemeMock) ReferenceHasher() insolar.Hasher {
 	return &hasherMock{h: sha3.New512()}
 }
 
-func (m *cryptographySchemeMock) IntegrityHasher() core.Hasher {
+func (m *cryptographySchemeMock) IntegrityHasher() insolar.Hasher {
 	return &hasherMock{h: sha3.New512()}
 }
 
-func (m *cryptographySchemeMock) Signer(privateKey crypto.PrivateKey) core.Signer {
+func (m *cryptographySchemeMock) Signer(privateKey crypto.PrivateKey) insolar.Signer {
 	panic("not implemented")
 }
 
-func (m *cryptographySchemeMock) Verifier(publicKey crypto.PublicKey) core.Verifier {
+func (m *cryptographySchemeMock) Verifier(publicKey crypto.PublicKey) insolar.Verifier {
 	panic("not implemented")
 }
 
@@ -175,6 +175,6 @@ func (m *cryptographySchemeMock) SignatureSIze() int {
 	panic("not implemented")
 }
 
-func NewPlatformCryptographyScheme() core.PlatformCryptographyScheme {
+func NewPlatformCryptographyScheme() insolar.PlatformCryptographyScheme {
 	return &cryptographySchemeMock{}
 }

@@ -19,7 +19,7 @@ package noderecord
 import (
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
 )
 
@@ -29,8 +29,8 @@ var TestRole = "virtual"
 
 func TestNewNodeRecord(t *testing.T) {
 
-	r := core.GetStaticRoleFromString(TestRole)
-	require.NotEqual(t, core.StaticRoleUnknown, r)
+	r := insolar.GetStaticRoleFromString(TestRole)
+	require.NotEqual(t, insolar.StaticRoleUnknown, r)
 	record, err := NewNodeRecord(TestPubKey, TestRole)
 	require.NoError(t, err)
 	require.Equal(t, r, record.Record.Role)
@@ -38,8 +38,8 @@ func TestNewNodeRecord(t *testing.T) {
 }
 
 func TestFromString(t *testing.T) {
-	role := core.GetStaticRoleFromString("ZZZ")
-	require.Equal(t, core.StaticRoleUnknown, role)
+	role := insolar.GetStaticRoleFromString("ZZZ")
+	require.Equal(t, insolar.StaticRoleUnknown, role)
 }
 
 func TestNodeRecord_GetPublicKey(t *testing.T) {
@@ -56,7 +56,7 @@ func TestNodeRecord_GetNodeInfo(t *testing.T) {
 	info, err := record.GetNodeInfo()
 	require.NoError(t, err)
 	require.Equal(t, TestPubKey, info.PublicKey)
-	r := core.GetStaticRoleFromString(TestRole)
+	r := insolar.GetStaticRoleFromString(TestRole)
 	require.Equal(t, r, info.Role)
 }
 
@@ -65,6 +65,6 @@ func TestNodeRecord_GetRole(t *testing.T) {
 	require.NoError(t, err)
 	role, err := record.GetRole()
 	require.NoError(t, err)
-	r := core.GetStaticRoleFromString(TestRole)
+	r := insolar.GetStaticRoleFromString(TestRole)
 	require.Equal(t, r, role)
 }

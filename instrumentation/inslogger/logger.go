@@ -20,8 +20,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/utils"
 	logger "github.com/insolar/insolar/log"
 )
 
@@ -32,23 +32,23 @@ func TraceID(ctx context.Context) string {
 }
 
 // FromContext returns logger from context.
-func FromContext(ctx context.Context) core.Logger {
+func FromContext(ctx context.Context) insolar.Logger {
 	return getLogger(ctx)
 }
 
-// SetLogger returns context with provided core.Logger,
-func SetLogger(ctx context.Context, l core.Logger) context.Context {
+// SetLogger returns context with provided insolar.Logger,
+func SetLogger(ctx context.Context, l insolar.Logger) context.Context {
 	return context.WithValue(ctx, loggerKey{}, l)
 }
 
 // WithField returns context with logger initialized with provided field's key value and logger itself.
-func WithField(ctx context.Context, key string, value string) (context.Context, core.Logger) {
+func WithField(ctx context.Context, key string, value string) (context.Context, insolar.Logger) {
 	l := getLogger(ctx).WithField(key, value)
 	return SetLogger(ctx, l), l
 }
 
 // WithTraceField returns context with logger initialized with provided traceid value and logger itself.
-func WithTraceField(ctx context.Context, traceid string) (context.Context, core.Logger) {
+func WithTraceField(ctx context.Context, traceid string) (context.Context, insolar.Logger) {
 	ctx, err := utils.SetTraceID(ctx, traceid)
 	if err != nil {
 		getLogger(ctx).Error(err)
@@ -62,12 +62,12 @@ func ContextWithTrace(ctx context.Context, traceid string) context.Context {
 	return ctx
 }
 
-func getLogger(ctx context.Context) core.Logger {
+func getLogger(ctx context.Context) insolar.Logger {
 	l := ctx.Value(loggerKey{})
 	if l == nil {
 		return logger.GlobalLogger
 	}
-	return l.(core.Logger)
+	return l.(insolar.Logger)
 }
 
 // TestContext returns context with initalized log field "testname" equal t.Name() value.

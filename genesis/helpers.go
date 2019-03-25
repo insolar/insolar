@@ -24,7 +24,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
@@ -35,7 +35,7 @@ var pathToContracts = "application/contract/"
 func serializeInstance(contractInstance interface{}) ([]byte, error) {
 	var instanceData []byte
 
-	instanceData, err := core.Serialize(contractInstance)
+	instanceData, err := insolar.Serialize(contractInstance)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ serializeInstance ] Problem with CBORing")
 	}

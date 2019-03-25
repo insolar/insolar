@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/api/sdk"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/utils/backoff"
 	"github.com/pkg/errors"
 )
@@ -134,7 +134,7 @@ func (s *transferDifferentMembersScenario) startMember(ctx context.Context, inde
 
 			if err == nil {
 				retry = false
-			} else if strings.Contains(err.Error(), core.ErrTooManyPendingRequests.Error()) {
+			} else if strings.Contains(err.Error(), insolar.ErrTooManyPendingRequests.Error()) {
 				time.Sleep(bof.Duration())
 				atomic.AddInt32(&s.penRetries, 1)
 			} else {

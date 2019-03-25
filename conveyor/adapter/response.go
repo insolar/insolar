@@ -20,7 +20,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
@@ -32,8 +32,8 @@ func NewResponseSendAdapter() PulseConveyorAdapterTaskSink {
 
 // SendResponseTask is task for adapter for sending response
 type SendResponseTask struct {
-	Future core.ConveyorFuture
-	Result core.Reply
+	Future insolar.ConveyorFuture
+	Result insolar.Reply
 }
 
 // SendResponseProcessor is worker for adapter for sending response
@@ -67,11 +67,11 @@ func (rs *SendResponseProcessor) Process(task AdapterTask, nestedEventHelper Nes
 type SendResponseHelper struct{}
 
 // SendResponse makes correct message and send it to adapter
-func (r *SendResponseHelper) SendResponse(element slot.SlotElementHelper, result core.Reply, respHandlerID uint32) error {
+func (r *SendResponseHelper) SendResponse(element slot.SlotElementHelper, result insolar.Reply, respHandlerID uint32) error {
 
-	pendingMsg, ok := element.GetInputEvent().(core.ConveyorPendingMessage)
+	pendingMsg, ok := element.GetInputEvent().(insolar.ConveyorPendingMessage)
 	if !ok {
-		return errors.Errorf("[ SendResponseHelper.SendResponse ] Input event is not core.ConveyorPendingMessage: %T", element.GetInputEvent())
+		return errors.Errorf("[ SendResponseHelper.SendResponse ] Input event is not insolar.ConveyorPendingMessage: %T", element.GetInputEvent())
 	}
 
 	response := SendResponseTask{

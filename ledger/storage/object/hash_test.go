@@ -21,27 +21,27 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 )
 
-type recordgen func() Record
+type recordgen func() VirtualRecord
 
 var emptyRecordsGens = []recordgen{
 	// request records
-	func() Record { return &RequestRecord{} },
+	func() VirtualRecord { return &RequestRecord{} },
 	// result records
-	func() Record { return &ObjectActivateRecord{} },
-	func() Record { return &CodeRecord{} },
-	func() Record { return &DeactivationRecord{} },
-	func() Record { return &ObjectAmendRecord{} },
-	func() Record { return &TypeRecord{} },
-	func() Record { return &ChildRecord{} },
-	func() Record { return &GenesisRecord{} },
+	func() VirtualRecord { return &ActivateRecord{} },
+	func() VirtualRecord { return &CodeRecord{} },
+	func() VirtualRecord { return &DeactivationRecord{} },
+	func() VirtualRecord { return &AmendRecord{} },
+	func() VirtualRecord { return &TypeRecord{} },
+	func() VirtualRecord { return &ChildRecord{} },
+	func() VirtualRecord { return &GenesisRecord{} },
 }
 
-func getRecordHashData(rec Record) []byte {
+func getRecordHashData(rec VirtualRecord) []byte {
 	buff := bytes.NewBuffer(nil)
 	rec.WriteHashData(buff)
 	return buff.Bytes()
@@ -82,17 +82,17 @@ func Test_HashesTheSame(t *testing.T) {
 var pcs = platformpolicy.NewPlatformCryptographyScheme()
 var hashtestsRecordsMutate = []struct {
 	typ     string
-	records []Record
+	records []VirtualRecord
 }{
 	{
 		"CodeRecord",
-		[]Record{
+		[]VirtualRecord{
 			&CodeRecord{},
-			&CodeRecord{Code: CalculateIDForBlob(pcs, core.GenesisPulse.PulseNumber, []byte{1, 2, 3})},
+			&CodeRecord{Code: CalculateIDForBlob(pcs, insolar.GenesisPulse.PulseNumber, []byte{1, 2, 3})},
 			&CodeRecord{
-				Code: CalculateIDForBlob(pcs, core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
+				Code: CalculateIDForBlob(pcs, insolar.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
 				SideEffectRecord: SideEffectRecord{
-					Domain: core.RecordRef{1, 2, 3},
+					Domain: insolar.Reference{1, 2, 3},
 				},
 			},
 		},

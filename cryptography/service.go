@@ -20,16 +20,16 @@ import (
 	"crypto"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
 type nodeCryptographyService struct {
-	KeyStore                   core.KeyStore                   `inject:""`
-	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
-	KeyProcessor               core.KeyProcessor               `inject:""`
+	KeyStore                   insolar.KeyStore                   `inject:""`
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	KeyProcessor               insolar.KeyProcessor               `inject:""`
 }
 
 func (cs *nodeCryptographyService) GetPublicKey() (crypto.PublicKey, error) {
@@ -41,7 +41,7 @@ func (cs *nodeCryptographyService) GetPublicKey() (crypto.PublicKey, error) {
 	return cs.KeyProcessor.ExtractPublicKey(privateKey), nil
 }
 
-func (cs *nodeCryptographyService) Sign(payload []byte) (*core.Signature, error) {
+func (cs *nodeCryptographyService) Sign(payload []byte) (*insolar.Signature, error) {
 	privateKey, err := cs.KeyStore.GetPrivateKey("")
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Sign ] Failed to get private privateKey")
@@ -56,11 +56,11 @@ func (cs *nodeCryptographyService) Sign(payload []byte) (*core.Signature, error)
 	return signature, nil
 }
 
-func (cs *nodeCryptographyService) Verify(publicKey crypto.PublicKey, signature core.Signature, payload []byte) bool {
+func (cs *nodeCryptographyService) Verify(publicKey crypto.PublicKey, signature insolar.Signature, payload []byte) bool {
 	return cs.PlatformCryptographyScheme.Verifier(publicKey).Verify(signature, payload)
 }
 
-func NewCryptographyService() core.CryptographyService {
+func NewCryptographyService() insolar.CryptographyService {
 	return &nodeCryptographyService{}
 }
 
@@ -72,7 +72,7 @@ func (ipks *inPlaceKeyStore) GetPrivateKey(string) (crypto.PrivateKey, error) {
 	return ipks.privateKey, nil
 }
 
-func NewKeyBoundCryptographyService(privateKey crypto.PrivateKey) core.CryptographyService {
+func NewKeyBoundCryptographyService(privateKey crypto.PrivateKey) insolar.CryptographyService {
 	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
 	keyStore := &inPlaceKeyStore{privateKey: privateKey}
 	keyProcessor := platformpolicy.NewKeyProcessor()
@@ -85,7 +85,7 @@ func NewKeyBoundCryptographyService(privateKey crypto.PrivateKey) core.Cryptogra
 	return cryptographyService
 }
 
-func NewStorageBoundCryptographyService(path string) (core.CryptographyService, error) {
+func NewStorageBoundCryptographyService(path string) (insolar.CryptographyService, error) {
 	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
 	keyStore, err := keystore.NewKeyStore(path)
 	if err != nil {

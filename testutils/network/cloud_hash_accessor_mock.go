@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,7 +20,7 @@ import (
 type CloudHashAccessorMock struct {
 	t minimock.Tester
 
-	ForPulseNumberFunc       func(p context.Context, p1 core.PulseNumber) (r []byte, r1 error)
+	ForPulseNumberFunc       func(p context.Context, p1 insolar.PulseNumber) (r []byte, r1 error)
 	ForPulseNumberCounter    uint64
 	ForPulseNumberPreCounter uint64
 	ForPulseNumberMock       mCloudHashAccessorMockForPulseNumber
@@ -58,7 +58,7 @@ type CloudHashAccessorMockForPulseNumberExpectation struct {
 
 type CloudHashAccessorMockForPulseNumberInput struct {
 	p  context.Context
-	p1 core.PulseNumber
+	p1 insolar.PulseNumber
 }
 
 type CloudHashAccessorMockForPulseNumberResult struct {
@@ -67,7 +67,7 @@ type CloudHashAccessorMockForPulseNumberResult struct {
 }
 
 //Expect specifies that invocation of CloudHashAccessor.ForPulseNumber is expected from 1 to Infinity times
-func (m *mCloudHashAccessorMockForPulseNumber) Expect(p context.Context, p1 core.PulseNumber) *mCloudHashAccessorMockForPulseNumber {
+func (m *mCloudHashAccessorMockForPulseNumber) Expect(p context.Context, p1 insolar.PulseNumber) *mCloudHashAccessorMockForPulseNumber {
 	m.mock.ForPulseNumberFunc = nil
 	m.expectationSeries = nil
 
@@ -91,7 +91,7 @@ func (m *mCloudHashAccessorMockForPulseNumber) Return(r []byte, r1 error) *Cloud
 }
 
 //ExpectOnce specifies that invocation of CloudHashAccessor.ForPulseNumber is expected once
-func (m *mCloudHashAccessorMockForPulseNumber) ExpectOnce(p context.Context, p1 core.PulseNumber) *CloudHashAccessorMockForPulseNumberExpectation {
+func (m *mCloudHashAccessorMockForPulseNumber) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *CloudHashAccessorMockForPulseNumberExpectation {
 	m.mock.ForPulseNumberFunc = nil
 	m.mainExpectation = nil
 
@@ -106,7 +106,7 @@ func (e *CloudHashAccessorMockForPulseNumberExpectation) Return(r []byte, r1 err
 }
 
 //Set uses given function f as a mock of CloudHashAccessor.ForPulseNumber method
-func (m *mCloudHashAccessorMockForPulseNumber) Set(f func(p context.Context, p1 core.PulseNumber) (r []byte, r1 error)) *CloudHashAccessorMock {
+func (m *mCloudHashAccessorMockForPulseNumber) Set(f func(p context.Context, p1 insolar.PulseNumber) (r []byte, r1 error)) *CloudHashAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -115,7 +115,7 @@ func (m *mCloudHashAccessorMockForPulseNumber) Set(f func(p context.Context, p1 
 }
 
 //ForPulseNumber implements github.com/insolar/insolar/network/storage.CloudHashAccessor interface
-func (m *CloudHashAccessorMock) ForPulseNumber(p context.Context, p1 core.PulseNumber) (r []byte, r1 error) {
+func (m *CloudHashAccessorMock) ForPulseNumber(p context.Context, p1 insolar.PulseNumber) (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.ForPulseNumberPreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseNumberCounter, 1)
 

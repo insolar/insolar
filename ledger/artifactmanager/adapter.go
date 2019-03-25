@@ -20,7 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/conveyor/adapter"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
@@ -33,12 +33,12 @@ func NewGetCodeAdapter(cg GetCodeProcessor) adapter.PulseConveyorAdapterTaskSink
 // GetCodeTask is task for adapter for getting code
 type GetCodeTask struct {
 	// TODO: don't let adapter and component know about Parcel type, get every needed info in
-	Parcel core.Parcel
+	Parcel insolar.Parcel
 }
 
 // GetCodeResp is response for adapter for getting code
 type GetCodeResp struct {
-	Parcel core.Reply
+	Parcel insolar.Reply
 	Err    error
 }
 

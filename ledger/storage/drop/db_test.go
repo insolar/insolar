@@ -23,8 +23,8 @@ import (
 	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/db"
 )
@@ -36,7 +36,7 @@ func TestNewStorageDB(t *testing.T) {
 }
 
 type setInput struct {
-	jetID core.JetID
+	jetID insolar.JetID
 	dr    Drop
 }
 

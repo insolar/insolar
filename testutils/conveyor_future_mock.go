@@ -3,19 +3,19 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "ConveyorFuture" can be found in github.com/insolar/insolar/core
+The original interface "ConveyorFuture" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	"sync/atomic"
 	time "time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//ConveyorFutureMock implements github.com/insolar/insolar/core.ConveyorFuture
+//ConveyorFutureMock implements github.com/insolar/insolar/insolar.ConveyorFuture
 type ConveyorFutureMock struct {
 	t minimock.Tester
 
@@ -24,23 +24,23 @@ type ConveyorFutureMock struct {
 	CancelPreCounter uint64
 	CancelMock       mConveyorFutureMockCancel
 
-	GetResultFunc       func(p time.Duration) (r core.Reply, r1 error)
+	GetResultFunc       func(p time.Duration) (r insolar.Reply, r1 error)
 	GetResultCounter    uint64
 	GetResultPreCounter uint64
 	GetResultMock       mConveyorFutureMockGetResult
 
-	ResultFunc       func() (r <-chan core.Reply)
+	ResultFunc       func() (r <-chan insolar.Reply)
 	ResultCounter    uint64
 	ResultPreCounter uint64
 	ResultMock       mConveyorFutureMockResult
 
-	SetResultFunc       func(p core.Reply)
+	SetResultFunc       func(p insolar.Reply)
 	SetResultCounter    uint64
 	SetResultPreCounter uint64
 	SetResultMock       mConveyorFutureMockSetResult
 }
 
-//NewConveyorFutureMock returns a mock for github.com/insolar/insolar/core.ConveyorFuture
+//NewConveyorFutureMock returns a mock for github.com/insolar/insolar/insolar.ConveyorFuture
 func NewConveyorFutureMock(t minimock.Tester) *ConveyorFutureMock {
 	m := &ConveyorFutureMock{t: t}
 
@@ -109,7 +109,7 @@ func (m *mConveyorFutureMockCancel) Set(f func()) *ConveyorFutureMock {
 	return m.mock
 }
 
-//Cancel implements github.com/insolar/insolar/core.ConveyorFuture interface
+//Cancel implements github.com/insolar/insolar/insolar.ConveyorFuture interface
 func (m *ConveyorFutureMock) Cancel() {
 	counter := atomic.AddUint64(&m.CancelPreCounter, 1)
 	defer atomic.AddUint64(&m.CancelCounter, 1)
@@ -182,7 +182,7 @@ type ConveyorFutureMockGetResultInput struct {
 }
 
 type ConveyorFutureMockGetResultResult struct {
-	r  core.Reply
+	r  insolar.Reply
 	r1 error
 }
 
@@ -199,7 +199,7 @@ func (m *mConveyorFutureMockGetResult) Expect(p time.Duration) *mConveyorFutureM
 }
 
 //Return specifies results of invocation of ConveyorFuture.GetResult
-func (m *mConveyorFutureMockGetResult) Return(r core.Reply, r1 error) *ConveyorFutureMock {
+func (m *mConveyorFutureMockGetResult) Return(r insolar.Reply, r1 error) *ConveyorFutureMock {
 	m.mock.GetResultFunc = nil
 	m.expectationSeries = nil
 
@@ -221,12 +221,12 @@ func (m *mConveyorFutureMockGetResult) ExpectOnce(p time.Duration) *ConveyorFutu
 	return expectation
 }
 
-func (e *ConveyorFutureMockGetResultExpectation) Return(r core.Reply, r1 error) {
+func (e *ConveyorFutureMockGetResultExpectation) Return(r insolar.Reply, r1 error) {
 	e.result = &ConveyorFutureMockGetResultResult{r, r1}
 }
 
 //Set uses given function f as a mock of ConveyorFuture.GetResult method
-func (m *mConveyorFutureMockGetResult) Set(f func(p time.Duration) (r core.Reply, r1 error)) *ConveyorFutureMock {
+func (m *mConveyorFutureMockGetResult) Set(f func(p time.Duration) (r insolar.Reply, r1 error)) *ConveyorFutureMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -234,8 +234,8 @@ func (m *mConveyorFutureMockGetResult) Set(f func(p time.Duration) (r core.Reply
 	return m.mock
 }
 
-//GetResult implements github.com/insolar/insolar/core.ConveyorFuture interface
-func (m *ConveyorFutureMock) GetResult(p time.Duration) (r core.Reply, r1 error) {
+//GetResult implements github.com/insolar/insolar/insolar.ConveyorFuture interface
+func (m *ConveyorFutureMock) GetResult(p time.Duration) (r insolar.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.GetResultPreCounter, 1)
 	defer atomic.AddUint64(&m.GetResultCounter, 1)
 
@@ -327,7 +327,7 @@ type ConveyorFutureMockResultExpectation struct {
 }
 
 type ConveyorFutureMockResultResult struct {
-	r <-chan core.Reply
+	r <-chan insolar.Reply
 }
 
 //Expect specifies that invocation of ConveyorFuture.Result is expected from 1 to Infinity times
@@ -343,7 +343,7 @@ func (m *mConveyorFutureMockResult) Expect() *mConveyorFutureMockResult {
 }
 
 //Return specifies results of invocation of ConveyorFuture.Result
-func (m *mConveyorFutureMockResult) Return(r <-chan core.Reply) *ConveyorFutureMock {
+func (m *mConveyorFutureMockResult) Return(r <-chan insolar.Reply) *ConveyorFutureMock {
 	m.mock.ResultFunc = nil
 	m.expectationSeries = nil
 
@@ -365,12 +365,12 @@ func (m *mConveyorFutureMockResult) ExpectOnce() *ConveyorFutureMockResultExpect
 	return expectation
 }
 
-func (e *ConveyorFutureMockResultExpectation) Return(r <-chan core.Reply) {
+func (e *ConveyorFutureMockResultExpectation) Return(r <-chan insolar.Reply) {
 	e.result = &ConveyorFutureMockResultResult{r}
 }
 
 //Set uses given function f as a mock of ConveyorFuture.Result method
-func (m *mConveyorFutureMockResult) Set(f func() (r <-chan core.Reply)) *ConveyorFutureMock {
+func (m *mConveyorFutureMockResult) Set(f func() (r <-chan insolar.Reply)) *ConveyorFutureMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -378,8 +378,8 @@ func (m *mConveyorFutureMockResult) Set(f func() (r <-chan core.Reply)) *Conveyo
 	return m.mock
 }
 
-//Result implements github.com/insolar/insolar/core.ConveyorFuture interface
-func (m *ConveyorFutureMock) Result() (r <-chan core.Reply) {
+//Result implements github.com/insolar/insolar/insolar.ConveyorFuture interface
+func (m *ConveyorFutureMock) Result() (r <-chan insolar.Reply) {
 	counter := atomic.AddUint64(&m.ResultPreCounter, 1)
 	defer atomic.AddUint64(&m.ResultCounter, 1)
 
@@ -461,11 +461,11 @@ type ConveyorFutureMockSetResultExpectation struct {
 }
 
 type ConveyorFutureMockSetResultInput struct {
-	p core.Reply
+	p insolar.Reply
 }
 
 //Expect specifies that invocation of ConveyorFuture.SetResult is expected from 1 to Infinity times
-func (m *mConveyorFutureMockSetResult) Expect(p core.Reply) *mConveyorFutureMockSetResult {
+func (m *mConveyorFutureMockSetResult) Expect(p insolar.Reply) *mConveyorFutureMockSetResult {
 	m.mock.SetResultFunc = nil
 	m.expectationSeries = nil
 
@@ -489,7 +489,7 @@ func (m *mConveyorFutureMockSetResult) Return() *ConveyorFutureMock {
 }
 
 //ExpectOnce specifies that invocation of ConveyorFuture.SetResult is expected once
-func (m *mConveyorFutureMockSetResult) ExpectOnce(p core.Reply) *ConveyorFutureMockSetResultExpectation {
+func (m *mConveyorFutureMockSetResult) ExpectOnce(p insolar.Reply) *ConveyorFutureMockSetResultExpectation {
 	m.mock.SetResultFunc = nil
 	m.mainExpectation = nil
 
@@ -500,7 +500,7 @@ func (m *mConveyorFutureMockSetResult) ExpectOnce(p core.Reply) *ConveyorFutureM
 }
 
 //Set uses given function f as a mock of ConveyorFuture.SetResult method
-func (m *mConveyorFutureMockSetResult) Set(f func(p core.Reply)) *ConveyorFutureMock {
+func (m *mConveyorFutureMockSetResult) Set(f func(p insolar.Reply)) *ConveyorFutureMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -508,8 +508,8 @@ func (m *mConveyorFutureMockSetResult) Set(f func(p core.Reply)) *ConveyorFuture
 	return m.mock
 }
 
-//SetResult implements github.com/insolar/insolar/core.ConveyorFuture interface
-func (m *ConveyorFutureMock) SetResult(p core.Reply) {
+//SetResult implements github.com/insolar/insolar/insolar.ConveyorFuture interface
+func (m *ConveyorFutureMock) SetResult(p insolar.Reply) {
 	counter := atomic.AddUint64(&m.SetResultPreCounter, 1)
 	defer atomic.AddUint64(&m.SetResultCounter, 1)
 

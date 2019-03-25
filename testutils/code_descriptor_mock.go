@@ -3,17 +3,17 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "CodeDescriptor" can be found in github.com/insolar/insolar/core
+The original interface "CodeDescriptor" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 )
 
-//CodeDescriptorMock implements github.com/insolar/insolar/core.CodeDescriptor
+//CodeDescriptorMock implements github.com/insolar/insolar/insolar.CodeDescriptor
 type CodeDescriptorMock struct {
 	t minimock.Tester
 
@@ -22,18 +22,18 @@ type CodeDescriptorMock struct {
 	CodePreCounter uint64
 	CodeMock       mCodeDescriptorMockCode
 
-	MachineTypeFunc       func() (r core.MachineType)
+	MachineTypeFunc       func() (r insolar.MachineType)
 	MachineTypeCounter    uint64
 	MachineTypePreCounter uint64
 	MachineTypeMock       mCodeDescriptorMockMachineType
 
-	RefFunc       func() (r *core.RecordRef)
+	RefFunc       func() (r *insolar.Reference)
 	RefCounter    uint64
 	RefPreCounter uint64
 	RefMock       mCodeDescriptorMockRef
 }
 
-//NewCodeDescriptorMock returns a mock for github.com/insolar/insolar/core.CodeDescriptor
+//NewCodeDescriptorMock returns a mock for github.com/insolar/insolar/insolar.CodeDescriptor
 func NewCodeDescriptorMock(t minimock.Tester) *CodeDescriptorMock {
 	m := &CodeDescriptorMock{t: t}
 
@@ -111,7 +111,7 @@ func (m *mCodeDescriptorMockCode) Set(f func() (r []byte, r1 error)) *CodeDescri
 	return m.mock
 }
 
-//Code implements github.com/insolar/insolar/core.CodeDescriptor interface
+//Code implements github.com/insolar/insolar/insolar.CodeDescriptor interface
 func (m *CodeDescriptorMock) Code() (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.CodePreCounter, 1)
 	defer atomic.AddUint64(&m.CodeCounter, 1)
@@ -196,7 +196,7 @@ type CodeDescriptorMockMachineTypeExpectation struct {
 }
 
 type CodeDescriptorMockMachineTypeResult struct {
-	r core.MachineType
+	r insolar.MachineType
 }
 
 //Expect specifies that invocation of CodeDescriptor.MachineType is expected from 1 to Infinity times
@@ -212,7 +212,7 @@ func (m *mCodeDescriptorMockMachineType) Expect() *mCodeDescriptorMockMachineTyp
 }
 
 //Return specifies results of invocation of CodeDescriptor.MachineType
-func (m *mCodeDescriptorMockMachineType) Return(r core.MachineType) *CodeDescriptorMock {
+func (m *mCodeDescriptorMockMachineType) Return(r insolar.MachineType) *CodeDescriptorMock {
 	m.mock.MachineTypeFunc = nil
 	m.expectationSeries = nil
 
@@ -234,12 +234,12 @@ func (m *mCodeDescriptorMockMachineType) ExpectOnce() *CodeDescriptorMockMachine
 	return expectation
 }
 
-func (e *CodeDescriptorMockMachineTypeExpectation) Return(r core.MachineType) {
+func (e *CodeDescriptorMockMachineTypeExpectation) Return(r insolar.MachineType) {
 	e.result = &CodeDescriptorMockMachineTypeResult{r}
 }
 
 //Set uses given function f as a mock of CodeDescriptor.MachineType method
-func (m *mCodeDescriptorMockMachineType) Set(f func() (r core.MachineType)) *CodeDescriptorMock {
+func (m *mCodeDescriptorMockMachineType) Set(f func() (r insolar.MachineType)) *CodeDescriptorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -247,8 +247,8 @@ func (m *mCodeDescriptorMockMachineType) Set(f func() (r core.MachineType)) *Cod
 	return m.mock
 }
 
-//MachineType implements github.com/insolar/insolar/core.CodeDescriptor interface
-func (m *CodeDescriptorMock) MachineType() (r core.MachineType) {
+//MachineType implements github.com/insolar/insolar/insolar.CodeDescriptor interface
+func (m *CodeDescriptorMock) MachineType() (r insolar.MachineType) {
 	counter := atomic.AddUint64(&m.MachineTypePreCounter, 1)
 	defer atomic.AddUint64(&m.MachineTypeCounter, 1)
 
@@ -330,7 +330,7 @@ type CodeDescriptorMockRefExpectation struct {
 }
 
 type CodeDescriptorMockRefResult struct {
-	r *core.RecordRef
+	r *insolar.Reference
 }
 
 //Expect specifies that invocation of CodeDescriptor.Ref is expected from 1 to Infinity times
@@ -346,7 +346,7 @@ func (m *mCodeDescriptorMockRef) Expect() *mCodeDescriptorMockRef {
 }
 
 //Return specifies results of invocation of CodeDescriptor.Ref
-func (m *mCodeDescriptorMockRef) Return(r *core.RecordRef) *CodeDescriptorMock {
+func (m *mCodeDescriptorMockRef) Return(r *insolar.Reference) *CodeDescriptorMock {
 	m.mock.RefFunc = nil
 	m.expectationSeries = nil
 
@@ -368,12 +368,12 @@ func (m *mCodeDescriptorMockRef) ExpectOnce() *CodeDescriptorMockRefExpectation 
 	return expectation
 }
 
-func (e *CodeDescriptorMockRefExpectation) Return(r *core.RecordRef) {
+func (e *CodeDescriptorMockRefExpectation) Return(r *insolar.Reference) {
 	e.result = &CodeDescriptorMockRefResult{r}
 }
 
 //Set uses given function f as a mock of CodeDescriptor.Ref method
-func (m *mCodeDescriptorMockRef) Set(f func() (r *core.RecordRef)) *CodeDescriptorMock {
+func (m *mCodeDescriptorMockRef) Set(f func() (r *insolar.Reference)) *CodeDescriptorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -381,8 +381,8 @@ func (m *mCodeDescriptorMockRef) Set(f func() (r *core.RecordRef)) *CodeDescript
 	return m.mock
 }
 
-//Ref implements github.com/insolar/insolar/core.CodeDescriptor interface
-func (m *CodeDescriptorMock) Ref() (r *core.RecordRef) {
+//Ref implements github.com/insolar/insolar/insolar.CodeDescriptor interface
+func (m *CodeDescriptorMock) Ref() (r *insolar.Reference) {
 	counter := atomic.AddUint64(&m.RefPreCounter, 1)
 	defer atomic.AddUint64(&m.RefCounter, 1)
 

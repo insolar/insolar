@@ -27,9 +27,9 @@ import (
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/conveyor/queue"
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
@@ -54,7 +54,7 @@ type worker struct { // nolint: unused
 	activatePulseSync queue.SyncDone
 	preparePulseSync  queue.SyncDone
 
-	ctxLogger core.Logger
+	ctxLogger insolar.Logger
 }
 
 func newWorker(slot *Slot) worker {

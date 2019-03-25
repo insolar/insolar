@@ -21,7 +21,7 @@ import (
 	"crypto"
 	"sync"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
@@ -48,7 +48,7 @@ type BftCell struct {
 	isEntropyReceivedLock sync.RWMutex
 
 	Sign              []byte
-	Entropy           core.Entropy
+	Entropy           insolar.Entropy
 	IsEntropyReceived bool
 }
 
@@ -67,14 +67,14 @@ func (bftCell *BftCell) GetSign() []byte {
 }
 
 // SetEntropy sets Entropy in the thread-safe way
-func (bftCell *BftCell) SetEntropy(entropy core.Entropy) {
+func (bftCell *BftCell) SetEntropy(entropy insolar.Entropy) {
 	bftCell.entropyLock.Lock()
 	defer bftCell.entropyLock.Unlock()
 	bftCell.Entropy = entropy
 }
 
 // GetEntropy gets Entropy in the thread-safe way
-func (bftCell *BftCell) GetEntropy() core.Entropy {
+func (bftCell *BftCell) GetEntropy() insolar.Entropy {
 	bftCell.entropyLock.RLock()
 	defer bftCell.entropyLock.RUnlock()
 	return bftCell.Entropy
@@ -108,7 +108,7 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 		currentPulsar.SetCurrentSlotEntropy(currentPulsar.GetGeneratedEntropy())
 		currentPulsar.CurrentSlotPulseSender = currentPulsar.PublicKeyRaw
 
-		payload := PulseSenderConfirmationPayload{core.PulseSenderConfirmation{
+		payload := PulseSenderConfirmationPayload{insolar.PulseSenderConfirmation{
 			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
 			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
 			PulseNumber:     currentPulsar.ProcessingPulseNumber,
@@ -126,7 +126,7 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 		}
 
 		currentPulsar.currentSlotSenderConfirmationsLock.Lock()
-		currentPulsar.CurrentSlotSenderConfirmations[currentPulsar.PublicKeyRaw] = core.PulseSenderConfirmation{
+		currentPulsar.CurrentSlotSenderConfirmations[currentPulsar.PublicKeyRaw] = insolar.PulseSenderConfirmation{
 			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
 			Signature:       signature.Bytes(),
 			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
@@ -144,7 +144,7 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 		PubKey crypto.PublicKey
 	}
 
-	var finalEntropySet []core.Entropy
+	var finalEntropySet []insolar.Entropy
 
 	keys := []string{currentPulsar.PublicKeyRaw}
 	activePulsars := []*bftMember{{currentPulsar.PublicKeyRaw, currentPulsar.PublicKey}}
@@ -172,7 +172,7 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 			}
 
 			entropy := bftCell.GetEntropy()
-			ok := currentPulsar.CryptographyService.Verify(publicKey, core.SignatureFromBytes(bftCell.GetSign()), entropy[:])
+			ok := currentPulsar.CryptographyService.Verify(publicKey, insolar.SignatureFromBytes(bftCell.GetSign()), entropy[:])
 			if !ok {
 				currentColumnStat["nil"]++
 				continue
@@ -182,11 +182,11 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 		}
 
 		maxConfirmationsForEntropy := int(0)
-		var chosenEntropy core.Entropy
+		var chosenEntropy insolar.Entropy
 		for key, value := range currentColumnStat {
 			if value > maxConfirmationsForEntropy && key != "nil" {
 				maxConfirmationsForEntropy = value
-				copy(chosenEntropy[:], []byte(key)[:core.EntropySize])
+				copy(chosenEntropy[:], []byte(key)[:insolar.EntropySize])
 			}
 		}
 
@@ -206,17 +206,17 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 		return
 	}
 
-	var finalEntropy core.Entropy
+	var finalEntropy insolar.Entropy
 
 	for _, tempEntropy := range finalEntropySet {
-		for byteIndex := 0; byteIndex < core.EntropySize; byteIndex++ {
+		for byteIndex := 0; byteIndex < insolar.EntropySize; byteIndex++ {
 			finalEntropy[byteIndex] ^= tempEntropy[byteIndex]
 		}
 	}
 	currentPulsar.finalizeBft(ctx, finalEntropy, keys)
 }
 
-func (currentPulsar *Pulsar) finalizeBft(ctx context.Context, finalEntropy core.Entropy, activePulsars []string) {
+func (currentPulsar *Pulsar) finalizeBft(ctx context.Context, finalEntropy insolar.Entropy, activePulsars []string) {
 	ctx, span := instracer.StartSpan(ctx, "Pulsar.finalizeBft")
 	defer span.End()
 
@@ -229,7 +229,7 @@ func (currentPulsar *Pulsar) finalizeBft(ctx context.Context, finalEntropy core.
 	currentPulsar.CurrentSlotPulseSender = chosenPulsar[0]
 	if currentPulsar.CurrentSlotPulseSender == currentPulsar.PublicKeyRaw {
 		//here confirmation myself
-		payload := PulseSenderConfirmationPayload{core.PulseSenderConfirmation{
+		payload := PulseSenderConfirmationPayload{insolar.PulseSenderConfirmation{
 			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
 			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
 			PulseNumber:     currentPulsar.ProcessingPulseNumber,
@@ -247,7 +247,7 @@ func (currentPulsar *Pulsar) finalizeBft(ctx context.Context, finalEntropy core.
 		}
 
 		currentPulsar.currentSlotSenderConfirmationsLock.Lock()
-		currentPulsar.CurrentSlotSenderConfirmations[currentPulsar.PublicKeyRaw] = core.PulseSenderConfirmation{
+		currentPulsar.CurrentSlotSenderConfirmations[currentPulsar.PublicKeyRaw] = insolar.PulseSenderConfirmation{
 			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
 			Signature:       signature.Bytes(),
 			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),

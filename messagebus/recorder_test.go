@@ -21,9 +21,9 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -42,18 +42,18 @@ func TestRecorder_Send(t *testing.T) {
 	msgHash := GetMessageHash(pcs, &parcel)
 	expectedRep := reply.Object{Memory: []byte{1, 2, 3}}
 	s := NewsenderMock(mc)
-	s.CreateParcelFunc = func(p context.Context, p2 core.Message, p3 core.DelegationToken, p4 core.Pulse) (r core.Parcel, r1 error) {
+	s.CreateParcelFunc = func(p context.Context, p2 insolar.Message, p3 insolar.DelegationToken, p4 insolar.Pulse) (r insolar.Parcel, r1 error) {
 		return &message.Parcel{Msg: p2}, nil
 	}
 
 	tape := NewtapeMock(mc)
 	pulseStorageMock := testutils.NewPulseStorageMock(t)
-	pulseStorageMock.CurrentMock.Return(core.GenesisPulse, nil)
+	pulseStorageMock.CurrentMock.Return(insolar.GenesisPulse, nil)
 	recorder := newRecorder(s, tape, pcs, pulseStorageMock)
 
 	t.Run("with no reply on the tape sends the message and returns reply", func(t *testing.T) {
 		tape.SetMock.Expect(ctx, msgHash, &expectedRep, nil).Return(nil)
-		s.SendParcelMock.Expect(ctx, &parcel, *core.GenesisPulse, nil).Return(&expectedRep, nil)
+		s.SendParcelMock.Expect(ctx, &parcel, *insolar.GenesisPulse, nil).Return(&expectedRep, nil)
 
 		recorderReply, err := recorder.Send(ctx, &msg, nil)
 		require.NoError(t, err)

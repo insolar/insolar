@@ -20,7 +20,7 @@ import (
 	"encoding/json"
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/stretchr/testify/require"
 )
@@ -33,7 +33,7 @@ func TestInfoResponse(t *testing.T) {
 	expectedValue := Info{}
 	_ = json.Unmarshal(testValue, &expectedValue)
 
-	data, err := core.Serialize([]interface{}{testValue, nil})
+	data, err := insolar.Serialize([]interface{}{testValue, nil})
 	require.NoError(t, err)
 
 	info, err := InfoResponse(data)
@@ -49,7 +49,7 @@ func TestInfoResponse_ErrorResponse(t *testing.T) {
 	})
 	contractErr := &foundation.Error{S: "Custom test error"}
 
-	data, err := core.Serialize([]interface{}{testValue, contractErr})
+	data, err := insolar.Serialize([]interface{}{testValue, contractErr})
 	require.NoError(t, err)
 
 	info, err := InfoResponse(data)
@@ -62,7 +62,7 @@ func TestInfoResponse_ErrorResponse(t *testing.T) {
 func TestInfoResponse_UnmarshalError(t *testing.T) {
 	testValue := "some_no_valid_data"
 
-	data, err := core.Serialize(testValue)
+	data, err := insolar.Serialize(testValue)
 	require.NoError(t, err)
 
 	info, err := InfoResponse(data)

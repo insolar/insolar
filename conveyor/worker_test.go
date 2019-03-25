@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
+	"github.com/insolar/insolar/insolar"
 
 	//"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
@@ -31,7 +32,6 @@ import (
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/conveyor/queue"
-	"github.com/insolar/insolar/core"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
@@ -122,10 +122,10 @@ func TestMain(m *testing.M) {
 var testPulseStates = []constant.PulseState{constant.Future, constant.Present, constant.Past, constant.Antique}
 var testPulseStatesWithoutFuture = []constant.PulseState{constant.Present, constant.Past, constant.Antique}
 
-func makeSlotAndWorker(pulseState constant.PulseState, pulseNumber core.PulseNumber) (*Slot, worker) {
+func makeSlotAndWorker(pulseState constant.PulseState, pulseNumber insolar.PulseNumber) (*Slot, worker) {
 	slot := newSlot(pulseState, pulseNumber, nil)
 	worker := newWorker(slot)
-	slot.removeSlotCallback = func(number core.PulseNumber) {}
+	slot.removeSlotCallback = func(number insolar.PulseNumber) {}
 
 	return slot, worker
 }
@@ -678,7 +678,7 @@ func Test_migrate_MigrationHandler_Error(t *testing.T) {
 func Test_suspending_Past(t *testing.T) {
 	slot, worker := makeSlotAndWorker(constant.Past, 22)
 	removeSlot := false
-	slot.removeSlotCallback = func(number core.PulseNumber) {
+	slot.removeSlotCallback = func(number insolar.PulseNumber) {
 		removeSlot = true
 	}
 	oldSlot := *slot

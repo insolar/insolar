@@ -21,7 +21,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 var (
@@ -32,24 +32,24 @@ var (
 )
 
 type future struct {
-	result   chan core.Reply
+	result   chan insolar.Reply
 	finished uint64
 }
 
 // NewFuture creates new ConveyorFuture.
-func NewFuture() core.ConveyorFuture {
+func NewFuture() insolar.ConveyorFuture {
 	return &future{
-		result: make(chan core.Reply, 1),
+		result: make(chan insolar.Reply, 1),
 	}
 }
 
 // Result returns result packet channel.
-func (future *future) Result() <-chan core.Reply {
+func (future *future) Result() <-chan insolar.Reply {
 	return future.result
 }
 
 // SetResult write packet to the result channel.
-func (future *future) SetResult(res core.Reply) {
+func (future *future) SetResult(res insolar.Reply) {
 	if atomic.CompareAndSwapUint64(&future.finished, 0, 1) {
 		future.result <- res
 		future.finish()
@@ -57,7 +57,7 @@ func (future *future) SetResult(res core.Reply) {
 }
 
 // GetResult gets the future result from Result() channel with a timeout set to `duration`.
-func (future *future) GetResult(duration time.Duration) (core.Reply, error) {
+func (future *future) GetResult(duration time.Duration) (insolar.Reply, error) {
 	select {
 	case result, ok := <-future.Result():
 		if !ok {

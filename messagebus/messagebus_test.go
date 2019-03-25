@@ -26,36 +26,36 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
 )
 
-var testType = core.MessageType(123)
+var testType = insolar.MessageType(123)
 
 type replyMock int
 
-func (replyMock) Type() core.ReplyType {
-	return core.ReplyType(124)
+func (replyMock) Type() insolar.ReplyType {
+	return insolar.ReplyType(124)
 }
 
 var testReply replyMock = 124
 
-func testHandler(_ context.Context, _ core.Parcel) (core.Reply, error) {
+func testHandler(_ context.Context, _ insolar.Parcel) (insolar.Reply, error) {
 	return testReply, nil
 }
 
-func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) (*MessageBus, *testutils.PulseStorageMock, core.Parcel) {
+func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) (*MessageBus, *testutils.PulseStorageMock, insolar.Parcel) {
 	mb, err := NewMessageBus(configuration.Configuration{})
 	require.NoError(t, err)
 
 	net := network.GetTestNetwork()
 	jc := testutils.NewJetCoordinatorMock(t)
 	nn := network.NewNodeNetworkMock(t)
-	nn.GetOriginFunc = func() (r core.Node) {
+	nn.GetOriginFunc = func() (r insolar.NetworkNode) {
 		n := network.NewNodeMock(t)
-		n.IDMock.Return(core.RecordRef{})
+		n.IDMock.Return(insolar.Reference{})
 		return n
 	}
 
@@ -68,10 +68,10 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 
 	(&component.Manager{}).Inject(net, jc, nn, pcs, cs, dtf, pf, ps, mb, c)
 
-	ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
-		return &core.Pulse{
-			PulseNumber:     core.PulseNumber(currentPulse),
-			NextPulseNumber: core.PulseNumber(currentPulse + 1),
+	ps.CurrentFunc = func(ctx context.Context) (*insolar.Pulse, error) {
+		return &insolar.Pulse{
+			PulseNumber:     insolar.PulseNumber(currentPulse),
+			NextPulseNumber: insolar.PulseNumber(currentPulse + 1),
 		}, nil
 	}
 
@@ -80,13 +80,13 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 
 	parcel := testutils.NewParcelMock(t)
 
-	parcel.PulseFunc = func() core.PulseNumber {
-		return core.PulseNumber(msgPulse)
+	parcel.PulseFunc = func() insolar.PulseNumber {
+		return insolar.PulseNumber(msgPulse)
 	}
-	parcel.TypeFunc = func() core.MessageType {
+	parcel.TypeFunc = func() insolar.MessageType {
 		return testType
 	}
-	parcel.GetSenderFunc = func() (r core.RecordRef) {
+	parcel.GetSenderFunc = func() (r insolar.Reference) {
 		return testutils.RandomRef()
 	}
 	parcel.MessageMock.Return(&message.GetObject{})
@@ -121,12 +121,12 @@ func TestMessageBus_doDeliver_NextPulse(t *testing.T) {
 	pulseUpdated := false
 
 	var triggerUnlock int32
-	newPulse := &core.Pulse{
+	newPulse := &insolar.Pulse{
 		PulseNumber:     101,
 		NextPulseNumber: 102,
 	}
 	fn := ps.CurrentFunc
-	ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
+	ps.CurrentFunc = func(ctx context.Context) (*insolar.Pulse, error) {
 		if atomic.LoadInt32(&triggerUnlock) > 0 {
 			return newPulse, nil
 		}
@@ -152,18 +152,18 @@ func TestMessageBus_doDeliver_TwoAheadPulses(t *testing.T) {
 	ctx := context.Background()
 	mb, ps, parcel := prepare(t, ctx, 100, 102)
 
-	pulse := &core.Pulse{
+	pulse := &insolar.Pulse{
 		PulseNumber:     100,
 		NextPulseNumber: 101,
 	}
-	ps.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
+	ps.CurrentFunc = func(ctx context.Context) (*insolar.Pulse, error) {
 		return pulse, nil
 	}
 	go func() {
 		for i := 1; i <= 2; i++ {
-			pulse = &core.Pulse{
-				PulseNumber:     core.PulseNumber(100 + i),
-				NextPulseNumber: core.PulseNumber(100 + i + 1),
+			pulse = &insolar.Pulse{
+				PulseNumber:     insolar.PulseNumber(100 + i),
+				NextPulseNumber: insolar.PulseNumber(100 + i + 1),
 			}
 			err := mb.OnPulse(ctx, *pulse)
 			require.NoError(t, err)
@@ -172,5 +172,5 @@ func TestMessageBus_doDeliver_TwoAheadPulses(t *testing.T) {
 
 	_, err := mb.doDeliver(ctx, parcel)
 	require.NoError(t, err)
-	require.Equal(t, core.PulseNumber(102), pulse.PulseNumber)
+	require.Equal(t, insolar.PulseNumber(102), pulse.PulseNumber)
 }
