@@ -58,17 +58,19 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// SnapshotAccessor provides methods for accessing Snapshot.
 //go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAccessor -o ../../testutils/network -s _mock.go
+
+// SnapshotAccessor provides methods for accessing Snapshot.
 type SnapshotAccessor interface {
-	ForPulseNumber(context.Context, insolar.PulseNumber) (node.Snapshot, error)
+	ForPulseNumber(context.Context, insolar.PulseNumber) (*node.Snapshot, error)
 	Latest(ctx context.Context) (node.Snapshot, error)
 }
 
-// SnapshotAppender provides method for appending Snapshot to storage.
 //go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAppender -o ../../testutils/network -s _mock.go
+
+// SnapshotAppender provides method for appending Snapshot to storage.
 type SnapshotAppender interface {
-	Append(ctx context.Context, pulse insolar.PulseNumber, snapshot node.Snapshot) error
+	Append(ctx context.Context, pulse insolar.PulseNumber, snapshot *node.Snapshot) error
 }
 
 // NewSnapshotStorage constructor creates PulseStorage
@@ -82,6 +84,8 @@ type SnapshotStorage struct {
 }
 
 func (s *SnapshotStorage) Append(ctx context.Context, pulse insolar.PulseNumber, snapshot *node.Snapshot) error {
+	panic("implement me")
+
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -90,6 +94,7 @@ func (s *SnapshotStorage) Append(ctx context.Context, pulse insolar.PulseNumber,
 }
 
 func (s *SnapshotStorage) ForPulseNumber(ctx context.Context, pulse insolar.PulseNumber) (*node.Snapshot, error) {
+	panic("implement me")
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
