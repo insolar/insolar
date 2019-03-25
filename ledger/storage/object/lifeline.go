@@ -148,3 +148,59 @@ func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (index Lifeline,
 
 	return
 }
+
+type IndexDB struct {
+	DB   db.DB `inject:""`
+	lock sync.RWMutex
+}
+
+type indexKey insolar.ID
+
+func (k indexKey) Scope() db.Scope {
+	return db.ScopeIndex
+}
+
+func (k indexKey) ID() []byte {
+	res := insolar.ID(k)
+	return (&res).Bytes()
+}
+
+// NewIndexDB creates new DB storage instance.
+func NewIndexDB() *IndexDB {
+	return &IndexDB{}
+}
+
+// Set saves new index-value in storage.
+func (i *IndexDB) Set(ctx context.Context, id insolar.ID, index Lifeline) error {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	return i.set(id, index)
+}
+
+// ForID returns index for provided id.
+func (i *IndexDB) ForID(ctx context.Context, id insolar.ID) (index Lifeline, err error) {
+	i.lock.RLock()
+	defer i.lock.RUnlock()
+
+	return i.get(id)
+}
+
+func (i *IndexDB) set(id insolar.ID, index Lifeline) error {
+	key := indexKey(id)
+
+	return i.DB.Set(key, Encode(index))
+}
+
+func (i *IndexDB) get(id insolar.ID) (index Lifeline, err error) {
+	buff, err := i.DB.Get(indexKey(id))
+	if err == db.ErrNotFound {
+		err = ErrNotFound
+		return
+	}
+	if err != nil {
+		return
+	}
+	index = Decode(buff)
+	return
+}
