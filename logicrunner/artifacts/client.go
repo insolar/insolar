@@ -59,7 +59,7 @@ func (m *client) State() ([]byte, error) {
 }
 
 // NewClient creates new manager instance.
-func NewClient() *client {
+func NewClient() *client { // nolint
 	return &client{
 		getChildrenChunkSize: getChildrenChunkSize,
 		senders:              newLedgerArtifactSenders(),
