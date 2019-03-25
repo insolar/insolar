@@ -169,7 +169,11 @@ func (os *objectStorage) SetObjectIndex(
 	id *insolar.ID,
 	idx *object.Lifeline,
 ) error {
-	return os.DB.Update(ctx, func(tx *TransactionManager) error {
-		return tx.SetObjectIndex(ctx, jetID, id, idx)
-	})
+	prefix := insolar.JetID(jetID).Prefix()
+	k := prefixkey(scopeIDLifeline, prefix, id[:])
+	if idx.Delegates == nil {
+		idx.Delegates = map[insolar.Reference]insolar.Reference{}
+	}
+	encoded := object.EncodeIndex(*idx)
+	return os.DB.Set(ctx, k, encoded)
 }

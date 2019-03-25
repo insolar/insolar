@@ -21,7 +21,6 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/object"
 )
 
 type keyval struct {
@@ -63,31 +62,6 @@ func (m *TransactionManager) Discard() {
 	if m.update {
 		m.db.dropWG.Done()
 	}
-}
-
-// GetObjectIndex fetches object lifeline index.
-func (m *TransactionManager) GetObjectIndex(
-	ctx context.Context,
-	jetID insolar.ID,
-	id *insolar.ID,
-) (*object.Lifeline, error) {
-	panic("GetObjectIndex")
-}
-
-// SetObjectIndex stores object lifeline index.
-func (m *TransactionManager) SetObjectIndex(
-	ctx context.Context,
-	jetID insolar.ID,
-	id *insolar.ID,
-	idx *object.Lifeline,
-) error {
-	prefix := insolar.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDLifeline, prefix, id[:])
-	if idx.Delegates == nil {
-		idx.Delegates = map[insolar.Reference]insolar.Reference{}
-	}
-	encoded := object.EncodeIndex(*idx)
-	return m.set(ctx, k, encoded)
 }
 
 // set stores value by key.
