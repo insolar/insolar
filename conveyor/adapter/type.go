@@ -31,12 +31,13 @@ type PulseConveyorAdapterTaskSink interface {
 	CancelPulseTasks(pulseNumber uint32)
 	FlushPulseTasks(pulseNumber uint32)
 	FlushNodeTasks(nodeID idType)
+	GetAdapterID() uint32
 }
 
 // AdapterToSlotResponseSink is iface which helps to adapter to access to slot
 type AdapterToSlotResponseSink interface {
-	PushResponse(adapterID idType, elementID idType, handlerID idType, respPayload interface{})
-	PushNestedEvent(adapterID idType, parentElementID idType, handlerID idType, eventPayload interface{})
+	PushResponse(adapterID uint32, elementID uint32, handlerID uint32, respPayload interface{})
+	PushNestedEvent(adapterID uint32, parentElementID uint32, handlerID uint32, eventPayload interface{})
 	GetPulseNumber() uint32
 	GetNodeID() uint32
 	GetSlotDetails() slot.SlotDetails
@@ -96,6 +97,35 @@ type AdapterNestedEvent struct {
 	eventPayload    interface{}
 }
 
+func NewAdapterNestedEvent(adapterID uint32, parentElementID uint32, handlerID uint32, eventPayload interface{}) iadapter.NestedEvent {
+	return &AdapterNestedEvent{
+		adapterID:       adapterID,
+		parentElementID: parentElementID,
+		handlerID:       handlerID,
+		eventPayload:    eventPayload,
+	}
+}
+
+// GetHandlerID implements NestedEvent method
+func (a *AdapterNestedEvent) GetAdapterID() uint32 {
+	return a.adapterID
+}
+
+// GetParentElementID implements NestedEvent method
+func (a *AdapterNestedEvent) GetParentElementID() uint32 {
+	return a.parentElementID
+}
+
+// GetHandlerID implements NestedEvent method
+func (a *AdapterNestedEvent) GetHandlerID() uint32 {
+	return a.handlerID
+}
+
+// GetEventPayload implements NestedEvent method
+func (a *AdapterNestedEvent) GetEventPayload() interface{} {
+	return a.eventPayload
+}
+
 // CancelInfo provides info about cancellation
 type CancelInfo interface {
 	Cancel() <-chan bool
@@ -116,7 +146,7 @@ type Processor interface {
 }
 
 // NewAdapterWithQueue creates new instance of Adapter
-func NewAdapterWithQueue(processor Processor) PulseConveyorAdapterTaskSink {
+func NewAdapterWithQueue(processor Processor, id idType) PulseConveyorAdapterTaskSink {
 	adapter := &CancellableQueueAdapter{
 		queue:             queue.NewMutexQueue(),
 		processingStarted: 0,
@@ -124,6 +154,7 @@ func NewAdapterWithQueue(processor Processor) PulseConveyorAdapterTaskSink {
 		processingStopped: make(chan bool, 1),
 		taskHolder:        newTaskHolder(),
 		processor:         processor,
+		adapterID:         id,
 	}
 	started := make(chan bool, 1)
 	go adapter.StartProcessing(started)
