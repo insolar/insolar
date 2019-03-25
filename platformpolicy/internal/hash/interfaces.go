@@ -17,11 +17,11 @@
 package hash
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type AlgorithmProvider interface {
-	Hash224bits() core.Hasher
-	Hash256bits() core.Hasher
-	Hash512bits() core.Hasher
+	Hash224bits() insolar.Hasher
+	Hash256bits() insolar.Hasher
+	Hash512bits() insolar.Hasher
 }

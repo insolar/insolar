@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type mucount struct {
@@ -41,20 +41,20 @@ type IDLocker interface {
 //
 // TODO: for further optimization we could use sync.Pool for mutexes.
 type idLocker struct {
-	muxs map[core.RecordID]*mucount
+	muxs map[insolar.ID]*mucount
 	mu   sync.Mutex
 }
 
 // NewIDLocker creates new initialized IDLocker.
 func NewIDLocker() IDLocker {
 	return &idLocker{
-		muxs: make(map[core.RecordID]*mucount),
+		muxs: make(map[insolar.ID]*mucount),
 	}
 }
 
 // Lock locks mutex belonged to record ID.
 // If mutex does not exist, it will be created in concurrent safe fashion.
-func (l *idLocker) Lock(id *core.RecordID) {
+func (l *idLocker) Lock(id *insolar.ID) {
 	l.mu.Lock()
 	mc, ok := l.muxs[*id]
 	if !ok {
@@ -68,7 +68,7 @@ func (l *idLocker) Lock(id *core.RecordID) {
 }
 
 // Unlock unlocks mutex belonged to record ID.
-func (l *idLocker) Unlock(id *core.RecordID) {
+func (l *idLocker) Unlock(id *insolar.ID) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 

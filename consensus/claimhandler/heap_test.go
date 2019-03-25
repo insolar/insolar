@@ -56,7 +56,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 )
@@ -64,7 +64,7 @@ import (
 func TestQueue_PushClaim(t *testing.T) {
 	queue := Queue{}
 	elemCount := 20
-	entr := core.Entropy{}
+	entr := insolar.Entropy{}
 	_, err := rand.Read(entr[:])
 	assert.NoError(t, err)
 	for i := 0; i < elemCount; i++ {
@@ -77,7 +77,7 @@ func TestQueue_PushClaim(t *testing.T) {
 func TestQueue_Pop(t *testing.T) {
 	queue := Queue{}
 	elemCount := 20
-	entr := core.Entropy{}
+	entr := insolar.Entropy{}
 	_, err := rand.Read(entr[:])
 	assert.NoError(t, err)
 	for i := 0; i < elemCount; i++ {
@@ -99,10 +99,10 @@ func TestQueue_Pop(t *testing.T) {
 	}
 }
 
-func getJoinClaim(t *testing.T, ref core.RecordRef) *packets.NodeJoinClaim {
+func getJoinClaim(t *testing.T, ref insolar.Reference) *packets.NodeJoinClaim {
 	nodeJoinClaim := &packets.NodeJoinClaim{}
-	nodeJoinClaim.ShortNodeID = core.ShortNodeID(77)
-	nodeJoinClaim.RelayNodeID = core.ShortNodeID(26)
+	nodeJoinClaim.ShortNodeID = insolar.ShortNodeID(77)
+	nodeJoinClaim.RelayNodeID = insolar.ShortNodeID(26)
 	nodeJoinClaim.ProtocolVersionAndFlags = uint32(99)
 	nodeJoinClaim.JoinsAfter = uint32(67)
 	nodeJoinClaim.NodeRoleRecID = 32

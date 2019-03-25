@@ -22,7 +22,7 @@ import (
 	"github.com/insolar/insolar/application/contract/wallet/safemath"
 	"github.com/insolar/insolar/application/proxy/allowance"
 	"github.com/insolar/insolar/application/proxy/wallet"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
@@ -33,7 +33,7 @@ type Wallet struct {
 }
 
 // Transfer transfers money to given wallet
-func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
+func (w *Wallet) Transfer(amount uint, to *insolar.Reference) error {
 
 	toWallet, err := wallet.GetImplementationFrom(*to)
 	if err != nil {
@@ -62,7 +62,7 @@ func (w *Wallet) Transfer(amount uint, to *core.RecordRef) error {
 }
 
 // Accept transforms allowance to balance
-func (w *Wallet) Accept(aRef *core.RecordRef) error {
+func (w *Wallet) Accept(aRef *insolar.Reference) error {
 	b, err := allowance.GetObject(*aRef).TakeAmount()
 	if err != nil {
 		return fmt.Errorf("[ Accept ] Can't take amount: %s", err.Error())

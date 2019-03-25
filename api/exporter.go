@@ -22,7 +22,7 @@ import (
 	"strings"
 
 	jsonrpc "github.com/gorilla/rpc/v2/json2"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
 
@@ -37,7 +37,7 @@ type StorageExporterArgs struct {
 }
 
 // StorageExporterReply is reply for StorageExporter service requests.
-type StorageExporterReply = core.StorageExportResult
+type StorageExporterReply = insolar.StorageExportResult
 
 // StorageExporterService is a service that provides API for exporting storage data.
 type StorageExporterService struct {
@@ -88,7 +88,7 @@ func NewStorageExporterService(runner *Runner) *StorageExporterService {
 func (s *StorageExporterService) Export(r *http.Request, args *StorageExporterArgs, reply *StorageExporterReply) error {
 	exp := s.runner.StorageExporter
 	ctx := context.TODO()
-	result, err := exp.Export(ctx, core.PulseNumber(args.From), args.Size)
+	result, err := exp.Export(ctx, insolar.PulseNumber(args.From), args.Size)
 	if err != nil {
 		if strings.Contains(err.Error(), "failed to fetch pulse data") {
 			return &jsonrpc.Error{

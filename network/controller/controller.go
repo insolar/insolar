@@ -55,7 +55,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/controller/common"
@@ -69,26 +69,26 @@ type Controller struct {
 	Network       network.HostNetwork           `inject:""`
 }
 
-func (c *Controller) SetLastIgnoredPulse(number core.PulseNumber) {
+func (c *Controller) SetLastIgnoredPulse(number insolar.PulseNumber) {
 	c.Bootstrapper.SetLastPulse(number)
 }
 
-func (c *Controller) GetLastIgnoredPulse() core.PulseNumber {
+func (c *Controller) GetLastIgnoredPulse() insolar.PulseNumber {
 	return c.Bootstrapper.GetLastPulse()
 }
 
 // SendParcel send message to nodeID.
-func (c *Controller) SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error) {
+func (c *Controller) SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error) {
 	return c.RPCController.SendMessage(nodeID, name, msg)
 }
 
 // RemoteProcedureRegister register remote procedure that will be executed when message is received.
-func (c *Controller) RemoteProcedureRegister(name string, method core.RemoteProcedure) {
+func (c *Controller) RemoteProcedureRegister(name string, method insolar.RemoteProcedure) {
 	c.RPCController.RemoteProcedureRegister(name, method)
 }
 
 // SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
-func (c *Controller) SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error {
+func (c *Controller) SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error {
 	return c.RPCController.SendCascadeMessage(data, method, msg)
 }
 

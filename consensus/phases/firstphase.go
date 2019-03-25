@@ -57,7 +57,7 @@ import (
 	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -89,7 +89,7 @@ func consensusReachedWithPercent(resultLen, participanstLen int, percent float64
 }
 
 type FirstPhase interface {
-	Execute(ctx context.Context, pulse *core.Pulse) (*FirstPhaseState, error)
+	Execute(ctx context.Context, pulse *insolar.Pulse) (*FirstPhaseState, error)
 }
 
 func NewFirstPhase() FirstPhase {
@@ -97,14 +97,14 @@ func NewFirstPhase() FirstPhase {
 }
 
 type FirstPhaseImpl struct {
-	Calculator   merkle.Calculator        `inject:""`
-	Communicator Communicator             `inject:""`
-	Cryptography core.CryptographyService `inject:""`
-	NodeKeeper   network.NodeKeeper       `inject:""`
+	Calculator   merkle.Calculator           `inject:""`
+	Communicator Communicator                `inject:""`
+	Cryptography insolar.CryptographyService `inject:""`
+	NodeKeeper   network.NodeKeeper          `inject:""`
 }
 
 // Execute do first phase
-func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*FirstPhaseState, error) {
+func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*FirstPhaseState, error) {
 	entry := &merkle.PulseEntry{Pulse: pulse}
 	logger := inslogger.FromContext(ctx)
 	ctx, span := instracer.StartSpan(ctx, "FirstPhase.Execute")
@@ -177,9 +177,9 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 		logger.Warn("[ NET Consensus phase-1 ] Failed to record received packets metric: " + err.Error())
 	}
 
-	proofSet := make(map[core.RecordRef]*merkle.PulseProof)
-	rawProofs := make(map[core.RecordRef]*packets.NodePulseProof)
-	claimMap := make(map[core.RecordRef][]packets.ReferendumClaim)
+	proofSet := make(map[insolar.Reference]*merkle.PulseProof)
+	rawProofs := make(map[insolar.Reference]*packets.NodePulseProof)
+	claimMap := make(map[insolar.Reference][]packets.ReferendumClaim)
 	for ref, packet := range resultPackets {
 		err = nil
 		if !ref.Equal(fp.NodeKeeper.GetOrigin().ID()) {
@@ -193,7 +193,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 		rawProofs[ref] = rawProof
 		proofSet[ref] = &merkle.PulseProof{
 			BaseProof: merkle.BaseProof{
-				Signature: core.SignatureFromBytes(rawProof.Signature()),
+				Signature: insolar.SignatureFromBytes(rawProof.Signature()),
 			},
 			StateHash: rawProof.StateHash(),
 		}
@@ -240,7 +240,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *core.Pulse) (*Firs
 	}, nil
 }
 
-func (fp *FirstPhaseImpl) checkPacketSignature(packet *packets.Phase1Packet, recordRef core.RecordRef) error {
+func (fp *FirstPhaseImpl) checkPacketSignature(packet *packets.Phase1Packet, recordRef insolar.Reference) error {
 	if fp.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		return fp.checkPacketSignatureFromClaim(packet, recordRef)
 	}
@@ -253,7 +253,7 @@ func (fp *FirstPhaseImpl) checkPacketSignature(packet *packets.Phase1Packet, rec
 	return packet.Verify(fp.Cryptography, key)
 }
 
-func (fp *FirstPhaseImpl) checkPacketSignatureFromClaim(packet *packets.Phase1Packet, recordRef core.RecordRef) error {
+func (fp *FirstPhaseImpl) checkPacketSignatureFromClaim(packet *packets.Phase1Packet, recordRef insolar.Reference) error {
 	announceClaim := packet.GetAnnounceClaim()
 	if announceClaim == nil {
 		return errors.New("could not find announce claim")
@@ -265,7 +265,7 @@ func (fp *FirstPhaseImpl) checkPacketSignatureFromClaim(packet *packets.Phase1Pa
 	return packet.Verify(fp.Cryptography, pk)
 }
 
-func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClaim, nk network.NodeKeeper) (int, error) {
+func detectSparseBitsetLength(claims map[insolar.Reference][]packets.ReferendumClaim, nk network.NodeKeeper) (int, error) {
 	// TODO: NETD18-47
 	for _, claimList := range claims {
 		for _, claim := range claimList {
@@ -283,7 +283,7 @@ func detectSparseBitsetLength(claims map[core.RecordRef][]packets.ReferendumClai
 	return 0, errors.New("no announce claims were received")
 }
 
-func (fp *FirstPhaseImpl) filterClaims(nodeID core.RecordRef, claims []packets.ReferendumClaim) []packets.ReferendumClaim {
+func (fp *FirstPhaseImpl) filterClaims(nodeID insolar.Reference, claims []packets.ReferendumClaim) []packets.ReferendumClaim {
 	result := make([]packets.ReferendumClaim, 0)
 	for _, claim := range claims {
 		signedClaim, ok := claim.(packets.SignedClaim)
@@ -313,7 +313,7 @@ func (fp *FirstPhaseImpl) checkClaimSignature(claim packets.SignedClaim) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to serialize a claim")
 	}
-	success := fp.Cryptography.Verify(key, core.SignatureFromBytes(claim.GetSignature()), rawClaim)
+	success := fp.Cryptography.Verify(key, insolar.SignatureFromBytes(claim.GetSignature()), rawClaim)
 	if !success {
 		return errors.New("signature verification failed")
 	}

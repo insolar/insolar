@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/platformpolicy"
@@ -85,17 +85,17 @@ func (s *pulseSuite) AfterTest(suiteName, testName string) {
 }
 
 func (s *pulseSuite) TestDB_AddPulse_IncrementsSerialNumber() {
-	err := s.pulseTracker.AddPulse(s.ctx, core.Pulse{PulseNumber: 1})
+	err := s.pulseTracker.AddPulse(s.ctx, insolar.Pulse{PulseNumber: 1})
 	require.NoError(s.T(), err)
 	pulse, err := s.pulseTracker.GetPulse(s.ctx, 1)
 	assert.Equal(s.T(), 2, pulse.SerialNumber)
 
-	err = s.pulseTracker.AddPulse(s.ctx, core.Pulse{PulseNumber: 2})
+	err = s.pulseTracker.AddPulse(s.ctx, insolar.Pulse{PulseNumber: 2})
 	require.NoError(s.T(), err)
 	pulse, err = s.pulseTracker.GetPulse(s.ctx, 2)
 	assert.Equal(s.T(), 3, pulse.SerialNumber)
 
-	err = s.pulseTracker.AddPulse(s.ctx, core.Pulse{PulseNumber: 3})
+	err = s.pulseTracker.AddPulse(s.ctx, insolar.Pulse{PulseNumber: 3})
 	require.NoError(s.T(), err)
 	pulse, err = s.pulseTracker.GetPulse(s.ctx, 3)
 	assert.Equal(s.T(), 4, pulse.SerialNumber)

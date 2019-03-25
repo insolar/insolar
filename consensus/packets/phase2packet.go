@@ -53,7 +53,7 @@ package packets
 import (
 	"crypto"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
 
@@ -78,7 +78,7 @@ func (p2p *Phase2Packet) Clone() ConsensusPacket {
 	return &clone
 }
 
-func NewPhase2Packet(number core.PulseNumber) *Phase2Packet {
+func NewPhase2Packet(number insolar.PulseNumber) *Phase2Packet {
 	result := &Phase2Packet{}
 	result.packetHeader.PacketT = Phase2
 	result.packetHeader.Pulse = uint32(number)
@@ -89,26 +89,26 @@ func (p2p *Phase2Packet) GetType() PacketType {
 	return p2p.packetHeader.PacketT
 }
 
-func (p2p *Phase2Packet) GetOrigin() core.ShortNodeID {
+func (p2p *Phase2Packet) GetOrigin() insolar.ShortNodeID {
 	return p2p.packetHeader.OriginNodeID
 }
 
-func (p2p *Phase2Packet) GetTarget() core.ShortNodeID {
+func (p2p *Phase2Packet) GetTarget() insolar.ShortNodeID {
 	return p2p.packetHeader.TargetNodeID
 }
 
-func (p2p *Phase2Packet) SetRouting(origin, target core.ShortNodeID) {
+func (p2p *Phase2Packet) SetRouting(origin, target insolar.ShortNodeID) {
 	p2p.packetHeader.OriginNodeID = origin
 	p2p.packetHeader.TargetNodeID = target
 	p2p.packetHeader.HasRouting = true
 }
 
-func (p2p *Phase2Packet) Verify(crypto core.CryptographyService, key crypto.PublicKey) error {
+func (p2p *Phase2Packet) Verify(crypto insolar.CryptographyService, key crypto.PublicKey) error {
 	raw, err := p2p.rawFirstPart()
 	if err != nil {
 		return errors.Wrap(err, "Failed to get raw first part of phase 2 packet")
 	}
-	valid := crypto.Verify(key, core.SignatureFromBytes(p2p.SignatureHeaderSection1[:]), raw)
+	valid := crypto.Verify(key, insolar.SignatureFromBytes(p2p.SignatureHeaderSection1[:]), raw)
 	if !valid {
 		return errors.New("first part bad signature")
 	}
@@ -121,14 +121,14 @@ func (p2p *Phase2Packet) Verify(crypto core.CryptographyService, key crypto.Publ
 	if err != nil {
 		return errors.Wrap(err, "Failed to get raw second part of phase 2 packet")
 	}
-	valid = crypto.Verify(key, core.SignatureFromBytes(p2p.SignatureHeaderSection2[:]), raw)
+	valid = crypto.Verify(key, insolar.SignatureFromBytes(p2p.SignatureHeaderSection2[:]), raw)
 	if !valid {
 		return errors.New("second part bad signature")
 	}
 	return nil
 }
 
-func (p2p *Phase2Packet) Sign(cryptographyService core.CryptographyService) error {
+func (p2p *Phase2Packet) Sign(cryptographyService insolar.CryptographyService) error {
 	raw, err := p2p.rawFirstPart()
 	if err != nil {
 		return errors.Wrap(err, "Failed to get raw first part of phase 2 packet")
@@ -156,8 +156,8 @@ func (p2p *Phase2Packet) Sign(cryptographyService core.CryptographyService) erro
 	return nil
 }
 
-func (p2p *Phase2Packet) GetPulseNumber() core.PulseNumber {
-	return core.PulseNumber(p2p.packetHeader.Pulse)
+func (p2p *Phase2Packet) GetPulseNumber() insolar.PulseNumber {
+	return insolar.PulseNumber(p2p.packetHeader.Pulse)
 }
 
 func (p2p *Phase2Packet) IsPhase3Needed() bool {

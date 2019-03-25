@@ -21,7 +21,7 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/ugorji/go/codec"
 	"go.opencensus.io/stats"
@@ -50,13 +50,13 @@ type Lifeline struct {
 	ChildPointer        *insolar.ID // Meta record about child activation.
 	Parent              insolar.Reference
 	Delegates           map[insolar.Reference]insolar.Reference
-	State               State
+	State               StateID
 	LatestUpdate        insolar.PulseNumber
 	JetID               insolar.JetID
 }
 
-// Encode converts lifeline index into binary format.
-func Encode(index Lifeline) []byte {
+// EncodeIndex converts lifeline index into binary format.
+func EncodeIndex(index Lifeline) []byte {
 	buff := bytes.NewBuffer(nil)
 	enc := codec.NewEncoder(buff, &codec.CborHandle{})
 	enc.MustEncode(index)
@@ -64,16 +64,16 @@ func Encode(index Lifeline) []byte {
 	return buff.Bytes()
 }
 
-// Decode converts byte array into lifeline index struct.
-func Decode(buff []byte) (index Lifeline) {
+// DecodeIndex converts byte array into lifeline index struct.
+func DecodeIndex(buff []byte) (index Lifeline) {
 	dec := codec.NewDecoderBytes(buff, &codec.CborHandle{})
 	dec.MustDecode(&index)
 
 	return
 }
 
-// Clone returns copy of argument idx value.
-func Clone(idx Lifeline) Lifeline {
+// CloneIndex returns copy of argument idx value.
+func CloneIndex(idx Lifeline) Lifeline {
 	if idx.LatestState != nil {
 		tmp := *idx.LatestState
 		idx.LatestState = &tmp
@@ -108,7 +108,7 @@ type IndexMemory struct {
 	memory map[insolar.ID]Lifeline
 }
 
-// NewIndexMemory creates a new instance of Storage.
+// NewIndexMemory creates a new instance of IndexMemory storage.
 func NewIndexMemory() *IndexMemory {
 	return &IndexMemory{
 		memory:   map[insolar.ID]Lifeline{},
@@ -117,14 +117,14 @@ func NewIndexMemory() *IndexMemory {
 }
 
 // Set saves new Index-value in storage.
-func (s *IndexMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
+func (m *IndexMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) error {
+	m.lock.Lock()
+	defer m.lock.Unlock()
 
-	idx := Clone(index)
+	idx := CloneIndex(index)
 
-	s.memory[id] = idx
-	s.jetIndex.Add(id, idx.JetID)
+	m.memory[id] = idx
+	m.jetIndex.Add(id, idx.JetID)
 
 	stats.Record(ctx,
 		statIndexInMemoryCount.M(1),
@@ -134,17 +134,17 @@ func (s *IndexMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) er
 }
 
 // ForID returns Index for provided id.
-func (s *IndexMemory) ForID(ctx context.Context, id insolar.ID) (index Lifeline, err error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
+func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (index Lifeline, err error) {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
 
-	idx, ok := s.memory[id]
+	idx, ok := m.memory[id]
 	if !ok {
 		err = ErrNotFound
 		return
 	}
 
-	index = Clone(idx)
+	index = CloneIndex(idx)
 
 	return
 }

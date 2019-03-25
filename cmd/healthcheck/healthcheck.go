@@ -23,7 +23,7 @@ import (
 	"github.com/pkg/errors"
 	"github.com/spf13/pflag"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 	"github.com/insolar/insolar/testutils"
@@ -46,18 +46,18 @@ func main() {
 		os.Exit(2)
 	}
 
-	ref, err := core.NewRefFromBase58(*refString)
+	ref, err := insolar.NewReferenceFromBase58(*refString)
 	if err != nil {
 		log.Errorf("Failed to parse healthcheck contract ref: %s", err.Error())
 		os.Exit(2)
 	}
 
-	empty, _ := core.Serialize([]interface{}{})
+	empty, _ := insolar.Serialize([]interface{}{})
 
 	caller := testutils.RandomRef()
 	res := rpctypes.DownCallMethodResp{}
 	req := rpctypes.DownCallMethodReq{
-		Context:   &core.LogicCallContext{Caller: &caller},
+		Context:   &insolar.LogicCallContext{Caller: &caller},
 		Code:      *ref,
 		Data:      empty,
 		Method:    "Check",

@@ -20,7 +20,7 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )

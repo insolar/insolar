@@ -19,7 +19,7 @@ package messagebus
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // Sender is an internal interface used by recorder and player. It should not be publicated.
@@ -27,7 +27,7 @@ import (
 // Sender provides access to private MessageBus methods.
 //go:generate minimock -i github.com/insolar/insolar/messagebus.sender -o .
 type sender interface {
-	core.MessageBus
-	CreateParcel(ctx context.Context, msg core.Message, token core.DelegationToken, currentPulse core.Pulse) (core.Parcel, error)
-	SendParcel(ctx context.Context, msg core.Parcel, currentPulse core.Pulse, ops *core.MessageSendOptions) (core.Reply, error)
+	insolar.MessageBus
+	CreateParcel(ctx context.Context, msg insolar.Message, token insolar.DelegationToken, currentPulse insolar.Pulse) (insolar.Parcel, error)
+	SendParcel(ctx context.Context, msg insolar.Parcel, currentPulse insolar.Pulse, ops *insolar.MessageSendOptions) (insolar.Reply, error)
 }

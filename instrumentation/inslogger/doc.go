@@ -26,7 +26,7 @@ Examples:
 	// get logger from context
 	inslog := inslogger.FromContext(ctx)
 
-	// initalize logger (SomeNewLogger() should return core.Logger)
+	// initalize logger (SomeNewLogger() should return insolar.Logger)
 	inslogger.SetLogger(ctx, SomeNewLogger())
 
 Hints:

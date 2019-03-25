@@ -19,10 +19,9 @@ package node_test
 import (
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar"
-	"github.com/insolar/insolar/core"
+	"github.com/google/gofuzz"
 	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/stretchr/testify/assert"
 )
@@ -36,14 +35,14 @@ func TestNode(t *testing.T) {
 	{
 		f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
 			e.ID = gen.Reference()
-			e.Role = core.StaticRoleVirtual
+			e.Role = insolar.StaticRoleVirtual
 		})
 		f.NumElements(5, 10).NilChance(0).Fuzz(&virtuals)
 	}
 	{
 		f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
 			e.ID = gen.Reference()
-			e.Role = core.StaticRoleLightMaterial
+			e.Role = insolar.StaticRoleLightMaterial
 		})
 		f.NumElements(5, 10).NilChance(0).Fuzz(&materials)
 	}
@@ -64,7 +63,7 @@ func TestNode(t *testing.T) {
 	}
 	// Returns in role nodes.
 	{
-		result, err := storage.InRole(pulse, core.StaticRoleVirtual)
+		result, err := storage.InRole(pulse, insolar.StaticRoleVirtual)
 		assert.NoError(t, err)
 		assert.Equal(t, virtuals, result)
 	}

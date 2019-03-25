@@ -28,10 +28,10 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/delegationtoken"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/recentstorage"
@@ -55,7 +55,7 @@ type amSuite struct {
 	cleaner func()
 	db      storage.DBContext
 
-	scheme        core.PlatformCryptographyScheme
+	scheme        insolar.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
@@ -127,24 +127,24 @@ func (s *amSuite) AfterTest(suiteName, testName string) {
 
 var (
 	domainID   = *genRandomID(0)
-	domainRef  = *core.NewRecordRef(domainID, domainID)
+	domainRef  = *insolar.NewReference(domainID, domainID)
 	requestRef = *genRandomRef(0)
 )
 
-func genRandomID(pulse core.PulseNumber) *core.RecordID {
-	buff := [core.RecordIDSize - core.PulseNumberSize]byte{}
+func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
+	buff := [insolar.RecordIDSize - insolar.PulseNumberSize]byte{}
 	_, err := rand.Read(buff[:])
 	if err != nil {
 		panic(err)
 	}
-	return core.NewRecordID(pulse, buff[:])
+	return insolar.NewID(pulse, buff[:])
 }
 
-func genRefWithID(id *core.RecordID) *core.RecordRef {
-	return core.NewRecordRef(domainID, *id)
+func genRefWithID(id *insolar.ID) *insolar.Reference {
+	return insolar.NewReference(domainID, *id)
 }
 
-func genRandomRef(pulse core.PulseNumber) *core.RecordRef {
+func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
 	return genRefWithID(genRandomID(pulse))
 }
 
@@ -165,10 +165,10 @@ func getTestData(s *amSuite) (
 	mb.PulseStorage = pulseStorage
 
 	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
+	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
 
 	handler := MessageHandler{
-		replayHandlers:             map[core.MessageType]core.MessageHandler{},
+		replayHandlers:             map[insolar.MessageType]insolar.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
 		conf:                       &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
 		certificate:                certificate,
@@ -206,10 +206,10 @@ func getTestData(s *amSuite) (
 	handler.IDLocker = idLockerMock
 
 	jc := testutils.NewJetCoordinatorMock(mc)
-	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
-	jc.MeMock.Return(core.RecordRef{})
-	jc.HeavyMock.Return(&core.RecordRef{}, nil)
-	jc.NodeForJetMock.Return(&core.RecordRef{}, nil)
+	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
+	jc.MeMock.Return(insolar.Reference{})
+	jc.HeavyMock.Return(&insolar.Reference{}, nil)
+	jc.NodeForJetMock.Return(&insolar.Reference{}, nil)
 	jc.IsBeyondLimitMock.Return(false, nil)
 
 	handler.JetCoordinator = jc
@@ -235,7 +235,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest() {
 	parcel := message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa"}}
 	id, err := am.RegisterRequest(ctx, *am.GenesisRef(), &parcel)
 	assert.NoError(s.T(), err)
-	rec, err := os.GetRecord(ctx, core.RecordID(*core.NewJetID(0, nil)), id)
+	rec, err := os.GetRecord(ctx, insolar.ID(*insolar.NewJetID(0, nil)), id)
 	assert.NoError(s.T(), err)
 
 	assert.Equal(
@@ -250,18 +250,18 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 	codeRef := testutils.RandomRef()
 
 	mb := testutils.NewMessageBusMock(s.T())
-	mb.SendFunc = func(p context.Context, p1 core.Message, p3 *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(p context.Context, p1 insolar.Message, p3 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 		return &reply.Code{
 			Code: code,
 		}, nil
 	}
 
 	jc := testutils.NewJetCoordinatorMock(s.T())
-	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
-	jc.MeMock.Return(core.RecordRef{})
+	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
+	jc.MeMock.Return(insolar.Reference{})
 
 	amPulseStorageMock := testutils.NewPulseStorageMock(s.T())
-	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
+	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *insolar.Pulse, r1 error) {
 		pulse, err := s.pulseTracker.GetLatestPulse(p)
 		require.NoError(s.T(), err)
 		return &pulse.Pulse, err
@@ -281,7 +281,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), code, receivedCode)
 
-	mb.SendFunc = func(p context.Context, p1 core.Message, p3 *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(p context.Context, p1 insolar.Message, p3 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 		s.T().Fatal("Func must not be called here")
 		return nil, nil
 	}
@@ -299,7 +299,7 @@ func (s *amSuite) TestLedgerArtifactManager_DeclareType() {
 	typeDec := []byte{1, 2, 3}
 	id, err := am.DeclareType(ctx, domainRef, requestRef, typeDec)
 	assert.NoError(s.T(), err)
-	typeRec, err := os.GetRecord(ctx, core.RecordID(*core.NewJetID(0, nil)), id)
+	typeRec, err := os.GetRecord(ctx, insolar.ID(*insolar.NewJetID(0, nil)), id)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), &object.TypeRecord{
 		SideEffectRecord: object.SideEffectRecord{
@@ -318,38 +318,38 @@ func (s *amSuite) TestLedgerArtifactManager_DeployCode_CreatesCorrectRecord() {
 		domainRef,
 		requestRef,
 		[]byte{1, 2, 3},
-		core.MachineTypeBuiltin,
+		insolar.MachineTypeBuiltin,
 	)
 	assert.NoError(s.T(), err)
-	codeRec, err := os.GetRecord(ctx, core.RecordID(*core.NewJetID(0, nil)), id)
+	codeRec, err := os.GetRecord(ctx, insolar.ID(*insolar.NewJetID(0, nil)), id)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), codeRec, &object.CodeRecord{
 		SideEffectRecord: object.SideEffectRecord{
 			Domain:  domainRef,
 			Request: requestRef,
 		},
-		Code:        object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
-		MachineType: core.MachineTypeBuiltin,
+		Code:        object.CalculateIDForBlob(am.PlatformCryptographyScheme, insolar.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
+		MachineType: insolar.MachineTypeBuiltin,
 	})
 }
 
 func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord() {
 	ctx, os, am := getTestData(s)
-	jetID := *core.NewJetID(0, nil)
+	jetID := *insolar.NewJetID(0, nil)
 
 	memory := []byte{1, 2, 3}
 	codeRef := genRandomRef(0)
 	parentID, _ := os.SetRecord(
 		ctx,
-		core.RecordID(jetID),
-		core.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{
+		insolar.ID(jetID),
+		insolar.GenesisPulse.PulseNumber,
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: *genRandomRef(0),
 			},
 		},
 	)
-	err := os.SetObjectIndex(ctx, core.RecordID(jetID), parentID, &object.Lifeline{
+	err := os.SetObjectIndex(ctx, insolar.ID(jetID), parentID, &object.Lifeline{
 		LatestState: parentID,
 	})
 	require.NoError(s.T(), err)
@@ -366,15 +366,15 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 	)
 	assert.Nil(s.T(), err)
 
-	activateRec, err := os.GetRecord(ctx, core.RecordID(jetID), objDesc.StateID())
+	activateRec, err := os.GetRecord(ctx, insolar.ID(jetID), objDesc.StateID())
 	assert.Nil(s.T(), err)
-	assert.Equal(s.T(), activateRec, &object.ObjectActivateRecord{
+	assert.Equal(s.T(), activateRec, &object.ActivateRecord{
 		SideEffectRecord: object.SideEffectRecord{
 			Domain:  domainRef,
 			Request: objRef,
 		},
-		ObjectStateRecord: object.ObjectStateRecord{
-			Memory:      object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, memory),
+		StateRecord: object.StateRecord{
+			Memory:      object.CalculateIDForBlob(am.PlatformCryptographyScheme, insolar.GenesisPulse.PulseNumber, memory),
 			Image:       *codeRef,
 			IsPrototype: false,
 		},
@@ -382,14 +382,14 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 		IsDelegate: false,
 	})
 
-	idx, err := os.GetObjectIndex(ctx, core.RecordID(jetID), parentID, false)
+	idx, err := os.GetObjectIndex(ctx, insolar.ID(jetID), parentID, false)
 	assert.NoError(s.T(), err)
 
-	childRec, err := os.GetRecord(ctx, core.RecordID(jetID), idx.ChildPointer)
+	childRec, err := os.GetRecord(ctx, insolar.ID(jetID), idx.ChildPointer)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), objRef, childRec.(*object.ChildRecord).Ref)
 
-	idx, err = os.GetObjectIndex(ctx, core.RecordID(jetID), objRef.Record(), false)
+	idx, err = os.GetObjectIndex(ctx, insolar.ID(jetID), objRef.Record(), false)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), *objDesc.StateID(), *idx.LatestState)
 	assert.Equal(s.T(), *objDesc.Parent(), idx.Parent)
@@ -397,13 +397,13 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 
 func (s *amSuite) TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecord() {
 	ctx, os, am := getTestData(s)
-	jetID := core.RecordID(*core.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	objID, _ := os.SetRecord(
 		ctx,
 		jetID,
-		core.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{
+		insolar.GenesisPulse.PulseNumber,
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: *genRandomRef(0),
 			},
@@ -438,13 +438,13 @@ func (s *amSuite) TestLedgerArtifactManager_DeactivateObject_CreatesCorrectRecor
 
 func (s *amSuite) TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord() {
 	ctx, os, am := getTestData(s)
-	jetID := core.RecordID(*core.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	objID, _ := os.SetRecord(
 		ctx,
 		jetID,
-		core.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{
+		insolar.GenesisPulse.PulseNumber,
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: *genRandomRef(0),
 			},
@@ -472,13 +472,13 @@ func (s *amSuite) TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord() 
 	assert.Nil(s.T(), err)
 	updateRec, err := os.GetRecord(ctx, jetID, obj.StateID())
 	assert.Nil(s.T(), err)
-	assert.Equal(s.T(), updateRec, &object.ObjectAmendRecord{
+	assert.Equal(s.T(), updateRec, &object.AmendRecord{
 		SideEffectRecord: object.SideEffectRecord{
 			Domain:  domainRef,
 			Request: requestRef,
 		},
-		ObjectStateRecord: object.ObjectStateRecord{
-			Memory:      object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, memory),
+		StateRecord: object.StateRecord{
+			Memory:      object.CalculateIDForBlob(am.PlatformCryptographyScheme, insolar.GenesisPulse.PulseNumber, memory),
 			Image:       *prototype,
 			IsPrototype: false,
 		},
@@ -488,7 +488,7 @@ func (s *amSuite) TestLedgerArtifactManager_UpdateObject_CreatesCorrectRecord() 
 
 func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors() {
 	ctx, os, am := getTestData(s)
-	jetID := core.RecordID(*core.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	prototypeRef := genRandomRef(0)
 	parentRef := genRandomRef(0)
@@ -496,30 +496,30 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(
 	_, err := os.SetRecord(
 		ctx,
 		jetID,
-		core.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{
+		insolar.GenesisPulse.PulseNumber,
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: domainRef,
 			},
-			ObjectStateRecord: object.ObjectStateRecord{
-				Memory: object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{3}),
+			StateRecord: object.StateRecord{
+				Memory: object.CalculateIDForBlob(am.PlatformCryptographyScheme, insolar.GenesisPulse.PulseNumber, []byte{3}),
 			},
 			Parent: *parentRef,
 		},
 	)
 	require.NoError(s.T(), err)
-	_, err = os.SetBlob(ctx, jetID, core.GenesisPulse.PulseNumber, []byte{3})
+	_, err = os.SetBlob(ctx, jetID, insolar.GenesisPulse.PulseNumber, []byte{3})
 	require.NoError(s.T(), err)
-	objectAmendID, _ := os.SetRecord(ctx, jetID, core.GenesisPulse.PulseNumber, &object.ObjectAmendRecord{
+	objectAmendID, _ := os.SetRecord(ctx, jetID, insolar.GenesisPulse.PulseNumber, &object.AmendRecord{
 		SideEffectRecord: object.SideEffectRecord{
 			Domain: domainRef,
 		},
-		ObjectStateRecord: object.ObjectStateRecord{
-			Memory: object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{4}),
+		StateRecord: object.StateRecord{
+			Memory: object.CalculateIDForBlob(am.PlatformCryptographyScheme, insolar.GenesisPulse.PulseNumber, []byte{4}),
 			Image:  *prototypeRef,
 		},
 	})
-	_, err = os.SetBlob(ctx, jetID, core.GenesisPulse.PulseNumber, []byte{4})
+	_, err = os.SetBlob(ctx, jetID, insolar.GenesisPulse.PulseNumber, []byte{4})
 	require.NoError(s.T(), err)
 
 	objectIndex := object.Lifeline{
@@ -556,7 +556,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_FollowsRedirect() {
 
 	objRef := genRandomRef(0)
 	nodeRef := genRandomRef(0)
-	mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, m insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 		o = o.Safe()
 
 		switch m.(type) {
@@ -592,18 +592,18 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren() {
 	// t.Parallel()
 	ctx, os, am := getTestData(s)
 	// defer cleaner()
-	jetID := core.RecordID(*core.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	parentID, _ := os.SetRecord(
 		ctx,
 		jetID,
-		core.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{
+		insolar.GenesisPulse.PulseNumber,
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: domainRef,
 			},
-			ObjectStateRecord: object.ObjectStateRecord{
-				Memory: object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{0}),
+			StateRecord: object.StateRecord{
+				Memory: object.CalculateIDForBlob(am.PlatformCryptographyScheme, insolar.GenesisPulse.PulseNumber, []byte{0}),
 			},
 		})
 	child1Ref := genRandomRef(1)
@@ -613,14 +613,14 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren() {
 	childMeta1, _ := os.SetRecord(
 		ctx,
 		jetID,
-		core.GenesisPulse.PulseNumber,
+		insolar.GenesisPulse.PulseNumber,
 		&object.ChildRecord{
 			Ref: *child1Ref,
 		})
 	childMeta2, _ := os.SetRecord(
 		ctx,
 		jetID,
-		core.GenesisPulse.PulseNumber,
+		insolar.GenesisPulse.PulseNumber,
 		&object.ChildRecord{
 			PrevChild: childMeta1,
 			Ref:       *child2Ref,
@@ -628,7 +628,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren() {
 	childMeta3, _ := os.SetRecord(
 		ctx,
 		jetID,
-		core.GenesisPulse.PulseNumber,
+		insolar.GenesisPulse.PulseNumber,
 		&object.ChildRecord{
 			PrevChild: childMeta2,
 			Ref:       *child3Ref,
@@ -662,7 +662,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren() {
 	})
 
 	s.T().Run("returns correct children with pulse", func(t *testing.T) {
-		pn := core.PulseNumber(1)
+		pn := insolar.PulseNumber(1)
 		i, err := am.GetChildren(ctx, *genRefWithID(parentID), &pn)
 		require.NoError(t, err)
 		child, err := i.Next()
@@ -700,7 +700,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren() {
 
 	s.T().Run("doesn't fail when has no children to return", func(t *testing.T) {
 		am.getChildrenChunkSize = 1
-		pn := core.PulseNumber(3)
+		pn := insolar.PulseNumber(3)
 		i, err := am.GetChildren(ctx, *genRefWithID(parentID), &pn)
 		require.NoError(t, err)
 		child, err := i.Next()
@@ -720,7 +720,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren() {
 	})
 }
 
-func makePulseStorage(s *amSuite) core.PulseStorage {
+func makePulseStorage(s *amSuite) insolar.PulseStorage {
 	pulseStorage := storage.NewPulseStorage()
 	pulseStorage.PulseTracker = s.pulseTracker
 	pulse, err := s.pulseTracker.GetLatestPulse(s.ctx)
@@ -740,7 +740,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren_FollowsRedirect() {
 
 	objRef := genRandomRef(0)
 	nodeRef := genRandomRef(0)
-	mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(c context.Context, m insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 		o = o.Safe()
 		if o.Receiver == nil {
 			return &reply.GetChildrenRedirectReply{
@@ -767,21 +767,21 @@ func (s *amSuite) TestLedgerArtifactManager_HandleJetDrop() {
 	ctx, os, am := getTestData(s)
 
 	codeRecord := object.CodeRecord{
-		Code: object.CalculateIDForBlob(am.PlatformCryptographyScheme, core.GenesisPulse.PulseNumber, []byte{1, 2, 3, 3, 2, 1}),
+		Code: object.CalculateIDForBlob(am.PlatformCryptographyScheme, insolar.GenesisPulse.PulseNumber, []byte{1, 2, 3, 3, 2, 1}),
 	}
 
 	setRecordMessage := message.SetRecord{
 		Record: object.SerializeRecord(&codeRecord),
 	}
 
-	jetID := core.RecordID(*core.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	rep, err := am.DefaultBus.Send(ctx, &message.JetDrop{
 		JetID: jetID,
 		Messages: [][]byte{
 			message.ToBytes(&setRecordMessage),
 		},
-		PulseNumber: core.GenesisPulse.PulseNumber,
+		PulseNumber: insolar.GenesisPulse.PulseNumber,
 	}, nil)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), reply.OK{}, *rep.(*reply.OK))
@@ -800,7 +800,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	mb.PulseStorage = makePulseStorage(s)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.IsBeyondLimitMock.Return(false, nil)
-	jc.NodeForJetMock.Return(&core.RecordRef{}, nil)
+	jc.NodeForJetMock.Return(&insolar.Reference{}, nil)
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -816,10 +816,10 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	provideMock.CountMock.Return(0)
 
 	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(core.StaticRoleLightMaterial)
+	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
 
 	handler := MessageHandler{
-		replayHandlers:             map[core.MessageType]core.MessageHandler{},
+		replayHandlers:             map[insolar.MessageType]insolar.MessageHandler{},
 		PlatformCryptographyScheme: s.scheme,
 		conf:                       &configuration.Ledger{LightChainLimit: 3, PendingRequestsLimit: 10},
 		certificate:                certificate,
@@ -846,7 +846,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	require.NoError(s.T(), err)
 
 	amPulseStorageMock := testutils.NewPulseStorageMock(s.T())
-	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
+	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *insolar.Pulse, r1 error) {
 		pulse, err := s.pulseTracker.GetLatestPulse(p)
 		require.NoError(s.T(), err)
 		return &pulse.Pulse, err
@@ -890,7 +890,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	require.Equal(s.T(), *stateID1, *desc.StateID())
 
 	_, err = am.GetObject(s.ctx, *objRef, nil, true)
-	require.Equal(s.T(), err, core.ErrStateNotAvailable)
+	require.Equal(s.T(), err, insolar.ErrStateNotAvailable)
 
 	desc, err = am.GetObject(s.ctx, *objRef, nil, false)
 	require.NoError(s.T(), err)
@@ -917,12 +917,12 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 func (s *amSuite) TestLedgerArtifactManager_RegisterResult() {
 	ctx, os, am := getTestData(s)
 
-	objID := core.RecordID{1, 2, 3}
+	objID := insolar.ID{1, 2, 3}
 	request := genRandomRef(0)
-	requestID, err := am.RegisterResult(ctx, *core.NewRecordRef(core.RecordID{}, objID), *request, []byte{1, 2, 3})
+	requestID, err := am.RegisterResult(ctx, *insolar.NewReference(insolar.ID{}, objID), *request, []byte{1, 2, 3})
 	assert.NoError(s.T(), err)
 
-	rec, err := os.GetRecord(ctx, core.RecordID(*core.NewJetID(0, nil)), requestID)
+	rec, err := os.GetRecord(ctx, insolar.ID(*insolar.NewJetID(0, nil)), requestID)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), object.ResultRecord{
 		Object:  objID,
@@ -939,8 +939,8 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 	am := NewArtifactManger()
 	am.PlatformCryptographyScheme = cs
 	pulseStorageMock := testutils.NewPulseStorageMock(s.T())
-	pulseStorageMock.CurrentFunc = func(ctx context.Context) (*core.Pulse, error) {
-		return &core.Pulse{PulseNumber: core.FirstPulseNumber}, nil
+	pulseStorageMock.CurrentFunc = func(ctx context.Context) (*insolar.Pulse, error) {
+		return &insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, nil
 	}
 
 	am.PulseStorage = pulseStorageMock
@@ -951,7 +951,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 		mb := testutils.NewMessageBusMock(mc)
 		am.DefaultBus = mb
 		mb.SendMock.Return(&reply.JetMiss{
-			JetID: core.RecordID(*core.NewJetID(5, []byte{1, 2, 3})),
+			JetID: insolar.ID(*insolar.NewJetID(5, []byte{1, 2, 3})),
 		}, nil)
 		_, err := am.RegisterRequest(s.ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.Error(t, err)
@@ -963,21 +963,21 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 		mb := testutils.NewMessageBusMock(mc)
 		am.DefaultBus = mb
 		retries := 3
-		mb.SendFunc = func(c context.Context, m core.Message, o *core.MessageSendOptions) (r core.Reply, r1 error) {
+		mb.SendFunc = func(c context.Context, m insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 			if retries == 0 {
 				return &reply.ID{}, nil
 			}
 			retries--
-			return &reply.JetMiss{JetID: core.RecordID(*core.NewJetID(4, []byte{b_11010101}))}, nil
+			return &reply.JetMiss{JetID: insolar.ID(*insolar.NewJetID(4, []byte{b_11010101}))}, nil
 		}
 		_, err := am.RegisterRequest(s.ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.NoError(t, err)
 
 		jetID, actual := s.jetStorage.ForID(
-			s.ctx, core.FirstPulseNumber, *core.NewRecordID(0, []byte{0xD5}),
+			s.ctx, insolar.FirstPulseNumber, *insolar.NewID(0, []byte{0xD5}),
 		)
 
-		assert.Equal(t, core.NewJetID(4, []byte{b_1101}), &jetID, "proper jet ID for record")
+		assert.Equal(t, insolar.NewJetID(4, []byte{b_1101}), &jetID, "proper jet ID for record")
 		assert.True(t, actual, "jet ID is actual in tree")
 	})
 }
@@ -995,16 +995,16 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	jc.NodeForObjectMock.Return(&node, nil)
 
 	pulseStorageMock := testutils.NewPulseStorageMock(mc)
-	pulseStorageMock.CurrentMock.Return(core.GenesisPulse, nil)
+	pulseStorageMock.CurrentMock.Return(insolar.GenesisPulse, nil)
 
-	var parcel core.Parcel = &message.Parcel{PulseNumber: 123987}
+	var parcel insolar.Parcel = &message.Parcel{PulseNumber: 123987}
 	resRecord := object.RequestRecord{
 		Parcel: message.ParcelToBytes(parcel),
 	}
 	finalResponse := &reply.Request{Record: object.SerializeRecord(&resRecord)}
 
 	mb := testutils.NewMessageBusMock(s.T())
-	mb.SendFunc = func(p context.Context, p1 core.Message, p2 *core.MessageSendOptions) (r core.Reply, r1 error) {
+	mb.SendFunc = func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
 		switch mb.SendCounter {
 		case 0:
 			casted, ok := p1.(*message.GetPendingRequestID)

@@ -28,15 +28,15 @@ import (
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
 // StartRPC starts RPC server for isolated executors to use
-func StartRPC(ctx context.Context, lr *LogicRunner, ps core.PulseStorage) *RPC {
+func StartRPC(ctx context.Context, lr *LogicRunner, ps insolar.PulseStorage) *RPC {
 	rpcService := &RPC{lr: lr, ps: ps}
 
 	rpcServer := rpc.NewServer()
@@ -63,7 +63,7 @@ func StartRPC(ctx context.Context, lr *LogicRunner, ps core.PulseStorage) *RPC {
 // RPC is a RPC interface for runner to use for various tasks, e.g. code fetching
 type RPC struct {
 	lr *LogicRunner
-	ps core.PulseStorage
+	ps insolar.PulseStorage
 }
 
 func recoverRPC(err *error) {
@@ -85,7 +85,7 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 	// we don't want to record GetCode messages because of cache
-	ctx = core.ContextWithMessageBus(ctx, gpr.lr.MessageBus)
+	ctx = insolar.ContextWithMessageBus(ctx, gpr.lr.MessageBus)
 	inslogger.FromContext(ctx).Debug("In RPC.GetCode ....")
 
 	am := gpr.lr.ArtifactManager
@@ -174,7 +174,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	return err
 }
 
-var iteratorMap = make(map[string]*core.RefIterator)
+var iteratorMap = make(map[string]*insolar.RefIterator)
 var iteratorMapLock = sync.RWMutex{}
 var iteratorBuffSize = 1000
 
@@ -234,7 +234,7 @@ func (gpr *RPC) GetObjChildrenIterator(
 		o, err := am.GetObject(ctx, *r, nil, false)
 
 		if err != nil {
-			if err == core.ErrDeactivated {
+			if err == insolar.ErrDeactivated {
 				continue
 			}
 			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't call GetObject on Next")

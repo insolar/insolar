@@ -55,7 +55,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
@@ -64,7 +64,7 @@ import (
 // Fakepulsar needed when the network starts and can't receive a real pulse.
 
 // onPulse is a callbaback for pulse recv.
-// type callbackOnPulse func(ctx context.Context, pulse core.Pulse)
+// type callbackOnPulse func(ctx context.Context, pulse insolar.Pulse)
 
 // FakePulsar is a struct which uses at void network state.
 type FakePulsar struct {
@@ -75,8 +75,8 @@ type FakePulsar struct {
 
 	firstPulseTime     time.Time
 	pulseDuration      time.Duration
-	pulseNumberDelta   core.PulseNumber
-	currentPulseNumber core.PulseNumber
+	pulseNumberDelta   insolar.PulseNumber
+	currentPulseNumber insolar.PulseNumber
 }
 
 // NewFakePulsar creates and returns a new FakePulsar.
@@ -87,7 +87,7 @@ func NewFakePulsar(callback network.PulseHandler, pulseDuration time.Duration) *
 		running: false,
 
 		pulseDuration:    pulseDuration,
-		pulseNumberDelta: core.PulseNumber(pulseDuration.Seconds()),
+		pulseNumberDelta: insolar.PulseNumber(pulseDuration.Seconds()),
 	}
 }
 
@@ -160,19 +160,19 @@ func (fp *FakePulsar) Stop(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("Fake pulsar stopped")
 }
 
-func (fp *FakePulsar) newPulse() *core.Pulse {
-	return &core.Pulse{
+func (fp *FakePulsar) newPulse() *insolar.Pulse {
+	return &insolar.Pulse{
 		PulseTimestamp:   time.Now().Unix(),
-		PrevPulseNumber:  core.PulseNumber(fp.currentPulseNumber - fp.pulseNumberDelta),
-		PulseNumber:      core.PulseNumber(fp.currentPulseNumber),
-		NextPulseNumber:  core.PulseNumber(fp.currentPulseNumber + fp.pulseNumberDelta),
+		PrevPulseNumber:  insolar.PulseNumber(fp.currentPulseNumber - fp.pulseNumberDelta),
+		PulseNumber:      insolar.PulseNumber(fp.currentPulseNumber),
+		NextPulseNumber:  insolar.PulseNumber(fp.currentPulseNumber + fp.pulseNumberDelta),
 		EpochPulseNumber: -1,
-		Entropy:          core.Entropy{},
+		Entropy:          insolar.Entropy{},
 	}
 }
 
 type pulseInfo struct {
-	currentPulseNumber core.PulseNumber
+	currentPulseNumber insolar.PulseNumber
 	nextPulseAfter     time.Duration
 }
 
@@ -181,7 +181,7 @@ func calculatePulseInfo(targetTime, firstPulseTime time.Time, pulseDuration time
 		log.Warn("First pulse time `%s` is after then targetTime `%s`", firstPulseTime, targetTime)
 
 		return pulseInfo{
-			currentPulseNumber: core.PulseNumber(0),
+			currentPulseNumber: insolar.PulseNumber(0),
 			nextPulseAfter:     firstPulseTime.Sub(targetTime),
 		}
 	}
@@ -189,7 +189,7 @@ func calculatePulseInfo(targetTime, firstPulseTime time.Time, pulseDuration time
 	timeSinceFirstPulse := targetTime.Sub(firstPulseTime)
 
 	passedPulses := int64(timeSinceFirstPulse) / int64(pulseDuration)
-	currentPulseNumber := core.PulseNumber(passedPulses)
+	currentPulseNumber := insolar.PulseNumber(passedPulses)
 
 	passedPulsesDuration := time.Duration(int64(pulseDuration) * passedPulses)
 	nextPulseAfter := pulseDuration - (timeSinceFirstPulse - passedPulsesDuration)

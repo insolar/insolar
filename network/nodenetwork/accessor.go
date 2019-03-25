@@ -53,41 +53,41 @@ package nodenetwork
 import (
 	"sort"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type Accessor struct {
 	snapshot  *Snapshot
-	refIndex  map[core.RecordRef]core.Node
-	sidIndex  map[core.ShortNodeID]core.Node
-	roleIndex map[core.StaticRole]*recordRefSet
+	refIndex  map[insolar.Reference]insolar.NetworkNode
+	sidIndex  map[insolar.ShortNodeID]insolar.NetworkNode
+	roleIndex map[insolar.StaticRole]*recordRefSet
 	// should be removed in future
-	active []core.Node
+	active []insolar.NetworkNode
 }
 
-func (a *Accessor) GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node {
+func (a *Accessor) GetActiveNodeByShortID(shortID insolar.ShortNodeID) insolar.NetworkNode {
 	return a.sidIndex[shortID]
 }
 
-func (a *Accessor) GetActiveNodes() []core.Node {
+func (a *Accessor) GetActiveNodes() []insolar.NetworkNode {
 	return a.active
 }
 
-func (a *Accessor) GetActiveNode(ref core.RecordRef) core.Node {
+func (a *Accessor) GetActiveNode(ref insolar.Reference) insolar.NetworkNode {
 	return a.refIndex[ref]
 }
 
-func (a *Accessor) GetWorkingNode(ref core.RecordRef) core.Node {
+func (a *Accessor) GetWorkingNode(ref insolar.Reference) insolar.NetworkNode {
 	node := a.GetActiveNode(ref)
-	if node == nil || node.GetState() != core.NodeReady {
+	if node == nil || node.GetState() != insolar.NodeReady {
 		return nil
 	}
 	return node
 }
 
-func (a *Accessor) GetWorkingNodes() []core.Node {
+func (a *Accessor) GetWorkingNodes() []insolar.NetworkNode {
 	workingList := a.snapshot.nodeList[ListWorking]
-	result := make([]core.Node, len(workingList))
+	result := make([]insolar.NetworkNode, len(workingList))
 	copy(result, workingList)
 	sort.Slice(result, func(i, j int) bool {
 		return result[i].ID().Compare(result[j].ID()) < 0
@@ -95,17 +95,17 @@ func (a *Accessor) GetWorkingNodes() []core.Node {
 	return result
 }
 
-func (a *Accessor) GetWorkingNodesByRole(role core.DynamicRole) []core.RecordRef {
+func (a *Accessor) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
 	staticRole := dynamicToStaticRole(role)
 	return a.roleIndex[staticRole].Collect()
 }
 
-func GetSnapshotActiveNodes(snapshot *Snapshot) []core.Node {
+func GetSnapshotActiveNodes(snapshot *Snapshot) []insolar.NetworkNode {
 	joining := snapshot.nodeList[ListJoiner]
 	working := snapshot.nodeList[ListWorking]
 	leaving := snapshot.nodeList[ListLeaving]
 
-	result := make([]core.Node, len(joining)+len(working)+len(leaving))
+	result := make([]insolar.NetworkNode, len(joining)+len(working)+len(leaving))
 	copy(result[:len(joining)], joining[:])
 	copy(result[len(joining):len(joining)+len(working)], working[:])
 	copy(result[len(joining)+len(working):], leaving[:])
@@ -117,8 +117,8 @@ func GetSnapshotActiveNodes(snapshot *Snapshot) []core.Node {
 	return result
 }
 
-func (a *Accessor) addToRoleIndex(node core.Node) {
-	if node.GetState() != core.NodeReady {
+func (a *Accessor) addToRoleIndex(node insolar.NetworkNode) {
+	if node.GetState() != insolar.NodeReady {
 		return
 	}
 
@@ -134,34 +134,34 @@ func (a *Accessor) addToRoleIndex(node core.Node) {
 func NewAccessor(snapshot *Snapshot) *Accessor {
 	result := &Accessor{
 		snapshot:  snapshot,
-		refIndex:  make(map[core.RecordRef]core.Node),
-		sidIndex:  make(map[core.ShortNodeID]core.Node),
-		roleIndex: make(map[core.StaticRole]*recordRefSet),
+		refIndex:  make(map[insolar.Reference]insolar.NetworkNode),
+		sidIndex:  make(map[insolar.ShortNodeID]insolar.NetworkNode),
+		roleIndex: make(map[insolar.StaticRole]*recordRefSet),
 	}
 	result.active = GetSnapshotActiveNodes(snapshot)
 	for _, node := range result.active {
 		result.refIndex[node.ID()] = node
 		result.sidIndex[node.ShortID()] = node
-		if node.GetState() == core.NodeReady {
+		if node.GetState() == insolar.NodeReady {
 			result.addToRoleIndex(node)
 		}
 	}
 	return result
 }
 
-func dynamicToStaticRole(role core.DynamicRole) core.StaticRole {
+func dynamicToStaticRole(role insolar.DynamicRole) insolar.StaticRole {
 	switch role {
-	case core.DynamicRoleVirtualExecutor:
-		return core.StaticRoleVirtual
-	case core.DynamicRoleVirtualValidator:
-		return core.StaticRoleVirtual
-	case core.DynamicRoleLightExecutor:
-		return core.StaticRoleLightMaterial
-	case core.DynamicRoleLightValidator:
-		return core.StaticRoleLightMaterial
-	case core.DynamicRoleHeavyExecutor:
-		return core.StaticRoleHeavyMaterial
+	case insolar.DynamicRoleVirtualExecutor:
+		return insolar.StaticRoleVirtual
+	case insolar.DynamicRoleVirtualValidator:
+		return insolar.StaticRoleVirtual
+	case insolar.DynamicRoleLightExecutor:
+		return insolar.StaticRoleLightMaterial
+	case insolar.DynamicRoleLightValidator:
+		return insolar.StaticRoleLightMaterial
+	case insolar.DynamicRoleHeavyExecutor:
+		return insolar.StaticRoleHeavyMaterial
 	default:
-		return core.StaticRoleUnknown
+		return insolar.StaticRoleUnknown
 	}
 }

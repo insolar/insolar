@@ -19,10 +19,9 @@ package node
 import (
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar"
-	"github.com/insolar/insolar/core"
+	"github.com/google/gofuzz"
 	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -71,14 +70,14 @@ func TestNodeStorage_InRole(t *testing.T) {
 	{
 		f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
 			e.ID = gen.Reference()
-			e.Role = core.StaticRoleVirtual
+			e.Role = insolar.StaticRoleVirtual
 		})
 		f.NumElements(5, 10).NilChance(0).Fuzz(&virtuals)
 	}
 	{
 		f := fuzz.New().Funcs(func(e *insolar.Node, c fuzz.Continue) {
 			e.ID = gen.Reference()
-			e.Role = core.StaticRoleLightMaterial
+			e.Role = insolar.StaticRoleLightMaterial
 		})
 		f.NumElements(5, 10).NilChance(0).Fuzz(&materials)
 	}
@@ -89,12 +88,12 @@ func TestNodeStorage_InRole(t *testing.T) {
 		nodeStorage := NewStorage()
 		nodeStorage.nodes[pulse] = all
 		{
-			result, err := nodeStorage.InRole(pulse, core.StaticRoleVirtual)
+			result, err := nodeStorage.InRole(pulse, insolar.StaticRoleVirtual)
 			assert.NoError(t, err)
 			assert.Equal(t, virtuals, result)
 		}
 		{
-			result, err := nodeStorage.InRole(pulse, core.StaticRoleLightMaterial)
+			result, err := nodeStorage.InRole(pulse, insolar.StaticRoleLightMaterial)
 			assert.NoError(t, err)
 			assert.Equal(t, materials, result)
 		}
@@ -103,14 +102,14 @@ func TestNodeStorage_InRole(t *testing.T) {
 	t.Run("returns nil when empty nodes", func(t *testing.T) {
 		nodeStorage := NewStorage()
 		nodeStorage.nodes[pulse] = nil
-		result, err := nodeStorage.InRole(pulse, core.StaticRoleVirtual)
+		result, err := nodeStorage.InRole(pulse, insolar.StaticRoleVirtual)
 		assert.NoError(t, err)
 		assert.Nil(t, result)
 	})
 
 	t.Run("returns error when no nodes", func(t *testing.T) {
 		nodeStorage := NewStorage()
-		result, err := nodeStorage.InRole(pulse, core.StaticRoleVirtual)
+		result, err := nodeStorage.InRole(pulse, insolar.StaticRoleVirtual)
 		assert.Equal(t, ErrNoNodes, err)
 		assert.Nil(t, result)
 	})

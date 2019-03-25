@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 	network "github.com/insolar/insolar/network"
 
 	testify_assert "github.com/stretchr/testify/assert"
@@ -21,7 +21,7 @@ import (
 type SnapshotAccessorMock struct {
 	t minimock.Tester
 
-	ForPulseNumberFunc       func(p context.Context, p1 core.PulseNumber) (r network.Snapshot, r1 error)
+	ForPulseNumberFunc       func(p context.Context, p1 insolar.PulseNumber) (r network.Snapshot, r1 error)
 	ForPulseNumberCounter    uint64
 	ForPulseNumberPreCounter uint64
 	ForPulseNumberMock       mSnapshotAccessorMockForPulseNumber
@@ -59,7 +59,7 @@ type SnapshotAccessorMockForPulseNumberExpectation struct {
 
 type SnapshotAccessorMockForPulseNumberInput struct {
 	p  context.Context
-	p1 core.PulseNumber
+	p1 insolar.PulseNumber
 }
 
 type SnapshotAccessorMockForPulseNumberResult struct {
@@ -68,7 +68,7 @@ type SnapshotAccessorMockForPulseNumberResult struct {
 }
 
 //Expect specifies that invocation of SnapshotAccessor.ForPulseNumber is expected from 1 to Infinity times
-func (m *mSnapshotAccessorMockForPulseNumber) Expect(p context.Context, p1 core.PulseNumber) *mSnapshotAccessorMockForPulseNumber {
+func (m *mSnapshotAccessorMockForPulseNumber) Expect(p context.Context, p1 insolar.PulseNumber) *mSnapshotAccessorMockForPulseNumber {
 	m.mock.ForPulseNumberFunc = nil
 	m.expectationSeries = nil
 
@@ -92,7 +92,7 @@ func (m *mSnapshotAccessorMockForPulseNumber) Return(r network.Snapshot, r1 erro
 }
 
 //ExpectOnce specifies that invocation of SnapshotAccessor.ForPulseNumber is expected once
-func (m *mSnapshotAccessorMockForPulseNumber) ExpectOnce(p context.Context, p1 core.PulseNumber) *SnapshotAccessorMockForPulseNumberExpectation {
+func (m *mSnapshotAccessorMockForPulseNumber) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *SnapshotAccessorMockForPulseNumberExpectation {
 	m.mock.ForPulseNumberFunc = nil
 	m.mainExpectation = nil
 
@@ -107,7 +107,7 @@ func (e *SnapshotAccessorMockForPulseNumberExpectation) Return(r network.Snapsho
 }
 
 //Set uses given function f as a mock of SnapshotAccessor.ForPulseNumber method
-func (m *mSnapshotAccessorMockForPulseNumber) Set(f func(p context.Context, p1 core.PulseNumber) (r network.Snapshot, r1 error)) *SnapshotAccessorMock {
+func (m *mSnapshotAccessorMockForPulseNumber) Set(f func(p context.Context, p1 insolar.PulseNumber) (r network.Snapshot, r1 error)) *SnapshotAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -116,7 +116,7 @@ func (m *mSnapshotAccessorMockForPulseNumber) Set(f func(p context.Context, p1 c
 }
 
 //ForPulseNumber implements github.com/insolar/insolar/network/storage.SnapshotAccessor interface
-func (m *SnapshotAccessorMock) ForPulseNumber(p context.Context, p1 core.PulseNumber) (r network.Snapshot, r1 error) {
+func (m *SnapshotAccessorMock) ForPulseNumber(p context.Context, p1 insolar.PulseNumber) (r network.Snapshot, r1 error) {
 	counter := atomic.AddUint64(&m.ForPulseNumberPreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseNumberCounter, 1)
 

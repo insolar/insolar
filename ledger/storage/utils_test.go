@@ -20,11 +20,11 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 func zerohash() []byte {
-	b := make([]byte, core.RecordHashSize)
+	b := make([]byte, insolar.RecordHashSize)
 	return b
 }
 
@@ -50,9 +50,9 @@ func hexhash(hash string) []byte {
 	return b
 }
 
-func referenceWithHashes(domainhash, recordhash string) core.RecordRef {
+func referenceWithHashes(domainhash, recordhash string) insolar.Reference {
 	dh := hexhash(domainhash)
 	rh := hexhash(recordhash)
 
-	return *core.NewRecordRef(*core.NewRecordID(0, dh), *core.NewRecordID(0, rh))
+	return *insolar.NewReference(*insolar.NewID(0, dh), *insolar.NewID(0, rh))
 }

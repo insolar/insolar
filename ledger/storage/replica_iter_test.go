@@ -29,7 +29,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/db"
@@ -104,7 +104,7 @@ func (s *replicaIterSuite) AfterTest(suiteName, testName string) {
 	s.cleaner()
 }
 
-func pulseDelta(n int) core.PulseNumber { return core.PulseNumber(core.FirstPulseNumber + n) }
+func pulseDelta(n int) insolar.PulseNumber { return insolar.PulseNumber(insolar.FirstPulseNumber + n) }
 
 func Test_StoreKeyValues(t *testing.T) {
 	t.Parallel()
@@ -116,7 +116,7 @@ func Test_StoreKeyValues(t *testing.T) {
 		expectedrecs []key
 		expectedidxs []key
 	)
-	var allKVs []core.KV
+	var allKVs []insolar.KV
 	pulsescount := 3
 
 	func() {
@@ -145,7 +145,7 @@ func Test_StoreKeyValues(t *testing.T) {
 		defer cm.Stop(ctx)
 
 		for n := 0; n < pulsescount; n++ {
-			lastPulse := core.PulseNumber(pulseDelta(n))
+			lastPulse := insolar.PulseNumber(pulseDelta(n))
 			addRecords(ctx, t, os, jetID, lastPulse)
 		}
 
@@ -192,10 +192,10 @@ func Test_StoreKeyValues(t *testing.T) {
 
 func (s *replicaIterSuite) Test_ReplicaIter_FirstPulse() {
 	// it's easy to test simple case with zero Jet
-	jetID := core.RecordID(*core.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
-	addRecords(s.ctx, s.T(), s.objectStorage, jetID, core.FirstPulseNumber)
-	replicator := storage.NewReplicaIter(s.ctx, s.db, jetID, core.FirstPulseNumber, core.FirstPulseNumber+1, 100500)
+	addRecords(s.ctx, s.T(), s.objectStorage, jetID, insolar.FirstPulseNumber)
+	replicator := storage.NewReplicaIter(s.ctx, s.db, jetID, insolar.FirstPulseNumber, insolar.FirstPulseNumber+1, 100500)
 	var got []key
 	for i := 0; ; i++ {
 		if i > 50 {
@@ -249,10 +249,10 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	}
 	defer cm.Stop(ctx)
 
-	var lastPulse core.PulseNumber
+	var lastPulse insolar.PulseNumber
 	pulsescount := 2
 	// it's easy to test simple case with zero Jet
-	jetID := core.RecordID(*core.NewJetID(0, nil))
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	recsBefore, idxBefore := getallkeys(tmpDB.GetBadgerDB())
 	require.Nil(t, recsBefore)
@@ -358,15 +358,15 @@ func addRecords(
 	ctx context.Context,
 	t *testing.T,
 	objectStorage storage.ObjectStorage,
-	jetID core.RecordID,
-	pulsenum core.PulseNumber,
+	jetID insolar.ID,
+	pulsenum insolar.PulseNumber,
 ) {
 	// set record
 	parentID, err := objectStorage.SetRecord(
 		ctx,
 		jetID,
 		pulsenum,
-		&object.ObjectActivateRecord{
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: testutils.RandomRef(),
 			},

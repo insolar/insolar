@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"encoding/binary"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/ugorji/go/codec"
 )
 
@@ -37,7 +37,7 @@ func DeserializeType(buf []byte) TypeID {
 }
 
 // SerializeRecord returns binary representation of provided record.
-func SerializeRecord(rec Record) []byte {
+func SerializeRecord(rec VirtualRecord) []byte {
 	typeBytes := SerializeType(TypeFromRecord(rec))
 	buff := bytes.NewBuffer(typeBytes)
 	enc := codec.NewEncoder(buff, &codec.CborHandle{})
@@ -46,7 +46,7 @@ func SerializeRecord(rec Record) []byte {
 }
 
 // DeserializeRecord returns record decoded from bytes.
-func DeserializeRecord(buf []byte) Record {
+func DeserializeRecord(buf []byte) VirtualRecord {
 	t := DeserializeType(buf[:TypeIDSize])
 	dec := codec.NewDecoderBytes(buf[TypeIDSize:], &codec.CborHandle{})
 	rec := RecordFromType(t)
@@ -55,11 +55,11 @@ func DeserializeRecord(buf []byte) Record {
 }
 
 // CalculateIDForBlob calculate id for blob with using current pulse number
-func CalculateIDForBlob(scheme core.PlatformCryptographyScheme, pulseNumber core.PulseNumber, blob []byte) *core.RecordID {
+func CalculateIDForBlob(scheme insolar.PlatformCryptographyScheme, pulseNumber insolar.PulseNumber, blob []byte) *insolar.ID {
 	hasher := scheme.IntegrityHasher()
 	_, err := hasher.Write(blob)
 	if err != nil {
 		panic(err)
 	}
-	return core.NewRecordID(pulseNumber, hasher.Sum(nil))
+	return insolar.NewID(pulseNumber, hasher.Sum(nil))
 }

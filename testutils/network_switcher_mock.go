@@ -3,7 +3,7 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "NetworkSwitcher" can be found in github.com/insolar/insolar/core
+The original interface "NetworkSwitcher" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	context "context"
@@ -11,27 +11,27 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//NetworkSwitcherMock implements github.com/insolar/insolar/core.NetworkSwitcher
+//NetworkSwitcherMock implements github.com/insolar/insolar/insolar.NetworkSwitcher
 type NetworkSwitcherMock struct {
 	t minimock.Tester
 
-	GetStateFunc       func() (r core.NetworkState)
+	GetStateFunc       func() (r insolar.NetworkState)
 	GetStateCounter    uint64
 	GetStatePreCounter uint64
 	GetStateMock       mNetworkSwitcherMockGetState
 
-	OnPulseFunc       func(p context.Context, p1 core.Pulse) (r error)
+	OnPulseFunc       func(p context.Context, p1 insolar.Pulse) (r error)
 	OnPulseCounter    uint64
 	OnPulsePreCounter uint64
 	OnPulseMock       mNetworkSwitcherMockOnPulse
 }
 
-//NewNetworkSwitcherMock returns a mock for github.com/insolar/insolar/core.NetworkSwitcher
+//NewNetworkSwitcherMock returns a mock for github.com/insolar/insolar/insolar.NetworkSwitcher
 func NewNetworkSwitcherMock(t minimock.Tester) *NetworkSwitcherMock {
 	m := &NetworkSwitcherMock{t: t}
 
@@ -56,7 +56,7 @@ type NetworkSwitcherMockGetStateExpectation struct {
 }
 
 type NetworkSwitcherMockGetStateResult struct {
-	r core.NetworkState
+	r insolar.NetworkState
 }
 
 //Expect specifies that invocation of NetworkSwitcher.GetState is expected from 1 to Infinity times
@@ -72,7 +72,7 @@ func (m *mNetworkSwitcherMockGetState) Expect() *mNetworkSwitcherMockGetState {
 }
 
 //Return specifies results of invocation of NetworkSwitcher.GetState
-func (m *mNetworkSwitcherMockGetState) Return(r core.NetworkState) *NetworkSwitcherMock {
+func (m *mNetworkSwitcherMockGetState) Return(r insolar.NetworkState) *NetworkSwitcherMock {
 	m.mock.GetStateFunc = nil
 	m.expectationSeries = nil
 
@@ -94,12 +94,12 @@ func (m *mNetworkSwitcherMockGetState) ExpectOnce() *NetworkSwitcherMockGetState
 	return expectation
 }
 
-func (e *NetworkSwitcherMockGetStateExpectation) Return(r core.NetworkState) {
+func (e *NetworkSwitcherMockGetStateExpectation) Return(r insolar.NetworkState) {
 	e.result = &NetworkSwitcherMockGetStateResult{r}
 }
 
 //Set uses given function f as a mock of NetworkSwitcher.GetState method
-func (m *mNetworkSwitcherMockGetState) Set(f func() (r core.NetworkState)) *NetworkSwitcherMock {
+func (m *mNetworkSwitcherMockGetState) Set(f func() (r insolar.NetworkState)) *NetworkSwitcherMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -107,8 +107,8 @@ func (m *mNetworkSwitcherMockGetState) Set(f func() (r core.NetworkState)) *Netw
 	return m.mock
 }
 
-//GetState implements github.com/insolar/insolar/core.NetworkSwitcher interface
-func (m *NetworkSwitcherMock) GetState() (r core.NetworkState) {
+//GetState implements github.com/insolar/insolar/insolar.NetworkSwitcher interface
+func (m *NetworkSwitcherMock) GetState() (r insolar.NetworkState) {
 	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetStateCounter, 1)
 
@@ -192,7 +192,7 @@ type NetworkSwitcherMockOnPulseExpectation struct {
 
 type NetworkSwitcherMockOnPulseInput struct {
 	p  context.Context
-	p1 core.Pulse
+	p1 insolar.Pulse
 }
 
 type NetworkSwitcherMockOnPulseResult struct {
@@ -200,7 +200,7 @@ type NetworkSwitcherMockOnPulseResult struct {
 }
 
 //Expect specifies that invocation of NetworkSwitcher.OnPulse is expected from 1 to Infinity times
-func (m *mNetworkSwitcherMockOnPulse) Expect(p context.Context, p1 core.Pulse) *mNetworkSwitcherMockOnPulse {
+func (m *mNetworkSwitcherMockOnPulse) Expect(p context.Context, p1 insolar.Pulse) *mNetworkSwitcherMockOnPulse {
 	m.mock.OnPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -224,7 +224,7 @@ func (m *mNetworkSwitcherMockOnPulse) Return(r error) *NetworkSwitcherMock {
 }
 
 //ExpectOnce specifies that invocation of NetworkSwitcher.OnPulse is expected once
-func (m *mNetworkSwitcherMockOnPulse) ExpectOnce(p context.Context, p1 core.Pulse) *NetworkSwitcherMockOnPulseExpectation {
+func (m *mNetworkSwitcherMockOnPulse) ExpectOnce(p context.Context, p1 insolar.Pulse) *NetworkSwitcherMockOnPulseExpectation {
 	m.mock.OnPulseFunc = nil
 	m.mainExpectation = nil
 
@@ -239,7 +239,7 @@ func (e *NetworkSwitcherMockOnPulseExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of NetworkSwitcher.OnPulse method
-func (m *mNetworkSwitcherMockOnPulse) Set(f func(p context.Context, p1 core.Pulse) (r error)) *NetworkSwitcherMock {
+func (m *mNetworkSwitcherMockOnPulse) Set(f func(p context.Context, p1 insolar.Pulse) (r error)) *NetworkSwitcherMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -247,8 +247,8 @@ func (m *mNetworkSwitcherMockOnPulse) Set(f func(p context.Context, p1 core.Puls
 	return m.mock
 }
 
-//OnPulse implements github.com/insolar/insolar/core.NetworkSwitcher interface
-func (m *NetworkSwitcherMock) OnPulse(p context.Context, p1 core.Pulse) (r error) {
+//OnPulse implements github.com/insolar/insolar/insolar.NetworkSwitcher interface
+func (m *NetworkSwitcherMock) OnPulse(p context.Context, p1 insolar.Pulse) (r error) {
 	counter := atomic.AddUint64(&m.OnPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.OnPulseCounter, 1)
 

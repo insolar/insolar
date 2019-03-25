@@ -23,8 +23,8 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
@@ -39,7 +39,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/testutils/testmetrics"
 )
 
@@ -51,7 +51,7 @@ type metricSuite struct {
 	cleaner func()
 	db      storage.DBContext
 
-	scheme        core.PlatformCryptographyScheme
+	scheme        insolar.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
@@ -124,7 +124,7 @@ func (s *metricSuite) TestLedgerArtifactManager_Metrics() {
 	defer mc.Finish()
 
 	amPulseStorageMock := testutils.NewPulseStorageMock(s.T())
-	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *core.Pulse, r1 error) {
+	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *insolar.Pulse, r1 error) {
 		pulse, err := s.pulseTracker.GetLatestPulse(p)
 		require.NoError(s.T(), err)
 		return &pulse.Pulse, err

@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 func capture(f func()) string {
@@ -109,18 +109,18 @@ func TestLog_AddFields(t *testing.T) {
 	)
 	tt := []struct {
 		name    string
-		fieldfn func(la logrusAdapter) core.Logger
+		fieldfn func(la logrusAdapter) insolar.Logger
 	}{
 		{
 			name: "WithFields",
-			fieldfn: func(la logrusAdapter) core.Logger {
+			fieldfn: func(la logrusAdapter) insolar.Logger {
 				fields := map[string]interface{}{fieldname: fieldvalue}
 				return la.WithFields(fields)
 			},
 		},
 		{
 			name: "WithField",
-			fieldfn: func(la logrusAdapter) core.Logger {
+			fieldfn: func(la logrusAdapter) insolar.Logger {
 				return la.WithField(fieldname, fieldvalue)
 			},
 		},

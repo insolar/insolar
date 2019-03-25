@@ -55,8 +55,8 @@ import (
 	"crypto/rand"
 	"testing"
 
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -89,7 +89,7 @@ func TestVerifyPulseSignTrue(t *testing.T) {
 	controller := getController(t)
 	keyStr, privateKey := getKeys(t)
 
-	psc := core.PulseSenderConfirmation{
+	psc := insolar.PulseSenderConfirmation{
 		PulseNumber:     1,
 		ChosenPublicKey: string(keyStr[:]),
 		Entropy:         randomEntropy(),
@@ -106,7 +106,7 @@ func TestVerifyPulseSignTrue(t *testing.T) {
 	psc.Signature = sign.Bytes()
 
 	pulse := pulsar.NewPulse(1, 0, &entropygenerator.StandardEntropyGenerator{})
-	pulse.Signs = make(map[string]core.PulseSenderConfirmation, 1)
+	pulse.Signs = make(map[string]insolar.PulseSenderConfirmation, 1)
 	pulse.Signs["keystr"] = psc
 
 	valid, err := controller.verifyPulseSign(*pulse)
@@ -118,7 +118,7 @@ func TestVerifyPulseSignFalse(t *testing.T) {
 	controller := getController(t)
 	keyStr, _ := getKeys(t)
 
-	psc := core.PulseSenderConfirmation{
+	psc := insolar.PulseSenderConfirmation{
 		PulseNumber:     1,
 		ChosenPublicKey: string(keyStr[:]),
 		Entropy:         randomEntropy(),
@@ -127,7 +127,7 @@ func TestVerifyPulseSignFalse(t *testing.T) {
 	psc.Signature = []byte("test")
 
 	pulse := pulsar.NewPulse(1, 0, &entropygenerator.StandardEntropyGenerator{})
-	pulse.Signs = make(map[string]core.PulseSenderConfirmation, 1)
+	pulse.Signs = make(map[string]insolar.PulseSenderConfirmation, 1)
 	pulse.Signs["keystr"] = psc
 
 	valid, err := controller.verifyPulseSign(*pulse)

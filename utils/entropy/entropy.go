@@ -20,13 +20,13 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // SelectByEntropy selects value from list based on provided crypto scheme and entropy data.
 // Beware: requires sorted values for deterministic selection!
 func SelectByEntropy(
-	scheme core.PlatformCryptographyScheme,
+	scheme insolar.PlatformCryptographyScheme,
 	entropy []byte,
 	values []interface{},
 	count int,
