@@ -68,9 +68,9 @@ func Register() {
 			FetchingState,        gen.Asd{WaitingFetchingState, Result},
 		).
 
-		TransitionFuture(InitState, InitFuture).
+		InitFuture(InitState, InitFuture).
 		MigrationFuturePresent(WaitingPresent, MigrateToPresent).
-		Transition(InitState, Init).
+		Init(InitState, Init).
 
 		Transition(CheckingJet, GetJet).
 		AdapterResponse(CheckingJet, GetJetResponse).

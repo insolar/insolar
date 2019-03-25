@@ -55,9 +55,9 @@ const (
 func Register() {
 	gen.AddMachine("GetObjectStateMachine").
 
-		TransitionFuture(InitState, InitFuture, WaitingPresent).
+		InitFuture(InitState, InitFuture, WaitingPresent).
 		MigrationFuturePresent(WaitingPresent, MigrateToPresent, CheckingJet).
-		Transition(InitState, Init, CheckingJet).
+		Init(InitState, Init, CheckingJet).
 
 		Transition(CheckingJet, GetJet, WaitingCheckingJet).
 		AdapterResponse(CheckingJet, GetJetResponse, FetchingJet).
