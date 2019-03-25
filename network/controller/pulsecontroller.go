@@ -54,7 +54,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/packet"
@@ -68,13 +68,13 @@ type PulseController interface {
 }
 
 type pulseController struct {
-	PulseHandler        network.PulseHandler            `inject:""`
-	NodeKeeper          network.NodeKeeper              `inject:""`
-	CryptographyScheme  core.PlatformCryptographyScheme `inject:""`
-	KeyProcessor        core.KeyProcessor               `inject:""`
-	CryptographyService core.CryptographyService        `inject:""`
-	Resolver            network.RoutingTable            `inject:""`
-	Network             network.HostNetwork             `inject:""`
+	PulseHandler        network.PulseHandler               `inject:""`
+	NodeKeeper          network.NodeKeeper                 `inject:""`
+	CryptographyScheme  insolar.PlatformCryptographyScheme `inject:""`
+	KeyProcessor        insolar.KeyProcessor               `inject:""`
+	CryptographyService insolar.CryptographyService        `inject:""`
+	Resolver            network.RoutingTable               `inject:""`
+	Network             network.HostNetwork                `inject:""`
 }
 
 func (pc *pulseController) Init(ctx context.Context) error {
@@ -107,7 +107,7 @@ func (pc *pulseController) processGetRandomHosts(ctx context.Context, request ne
 	return pc.Network.BuildResponse(ctx, request, &packet.ResponseGetRandomHosts{Hosts: randomHosts}), nil
 }
 
-func (pc *pulseController) verifyPulseSign(pulse core.Pulse) (bool, error) {
+func (pc *pulseController) verifyPulseSign(pulse insolar.Pulse) (bool, error) {
 	hashProvider := pc.CryptographyScheme.IntegrityHasher()
 	if len(pulse.Signs) == 0 {
 		return false, errors.New("[ verifyPulseSign ] received empty pulse signs")
@@ -123,7 +123,7 @@ func (pc *pulseController) verifyPulseSign(pulse core.Pulse) (bool, error) {
 			return false, errors.Wrap(err, "[ verifyPulseSign ] error to import a public key")
 		}
 
-		verified := pc.CryptographyService.Verify(key, core.SignatureFromBytes(psc.Signature), hash)
+		verified := pc.CryptographyService.Verify(key, insolar.SignatureFromBytes(psc.Signature), hash)
 
 		if !verified {
 			return false, errors.New("[ verifyPulseSign ] error to verify a pulse")

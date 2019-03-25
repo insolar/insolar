@@ -51,7 +51,7 @@
 package packets
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 //go:generate stringer -type=PacketType
@@ -78,8 +78,8 @@ type PacketHeader struct {
 	f00   bool
 	Pulse uint32
 	//-----------------
-	OriginNodeID core.ShortNodeID
-	TargetNodeID core.ShortNodeID
+	OriginNodeID insolar.ShortNodeID
+	TargetNodeID insolar.ShortNodeID
 }
 
 // ------------------------------PULSE DATA------------------------------
@@ -91,7 +91,7 @@ type PulseDataExt struct {
 	OriginID       [16]byte
 	EpochPulseNo   uint32
 	PulseTimestamp uint32
-	Entropy        core.Entropy
+	Entropy        insolar.Entropy
 }
 
 // PulseData is a pulse data.

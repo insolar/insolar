@@ -3,39 +3,39 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "CertificateManager" can be found in github.com/insolar/insolar/core
+The original interface "CertificateManager" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//CertificateManagerMock implements github.com/insolar/insolar/core.CertificateManager
+//CertificateManagerMock implements github.com/insolar/insolar/insolar.CertificateManager
 type CertificateManagerMock struct {
 	t minimock.Tester
 
-	GetCertificateFunc       func() (r core.Certificate)
+	GetCertificateFunc       func() (r insolar.Certificate)
 	GetCertificateCounter    uint64
 	GetCertificatePreCounter uint64
 	GetCertificateMock       mCertificateManagerMockGetCertificate
 
-	NewUnsignedCertificateFunc       func(p string, p1 string, p2 string) (r core.Certificate, r1 error)
+	NewUnsignedCertificateFunc       func(p string, p1 string, p2 string) (r insolar.Certificate, r1 error)
 	NewUnsignedCertificateCounter    uint64
 	NewUnsignedCertificatePreCounter uint64
 	NewUnsignedCertificateMock       mCertificateManagerMockNewUnsignedCertificate
 
-	VerifyAuthorizationCertificateFunc       func(p core.AuthorizationCertificate) (r bool, r1 error)
+	VerifyAuthorizationCertificateFunc       func(p insolar.AuthorizationCertificate) (r bool, r1 error)
 	VerifyAuthorizationCertificateCounter    uint64
 	VerifyAuthorizationCertificatePreCounter uint64
 	VerifyAuthorizationCertificateMock       mCertificateManagerMockVerifyAuthorizationCertificate
 }
 
-//NewCertificateManagerMock returns a mock for github.com/insolar/insolar/core.CertificateManager
+//NewCertificateManagerMock returns a mock for github.com/insolar/insolar/insolar.CertificateManager
 func NewCertificateManagerMock(t minimock.Tester) *CertificateManagerMock {
 	m := &CertificateManagerMock{t: t}
 
@@ -61,7 +61,7 @@ type CertificateManagerMockGetCertificateExpectation struct {
 }
 
 type CertificateManagerMockGetCertificateResult struct {
-	r core.Certificate
+	r insolar.Certificate
 }
 
 //Expect specifies that invocation of CertificateManager.GetCertificate is expected from 1 to Infinity times
@@ -77,7 +77,7 @@ func (m *mCertificateManagerMockGetCertificate) Expect() *mCertificateManagerMoc
 }
 
 //Return specifies results of invocation of CertificateManager.GetCertificate
-func (m *mCertificateManagerMockGetCertificate) Return(r core.Certificate) *CertificateManagerMock {
+func (m *mCertificateManagerMockGetCertificate) Return(r insolar.Certificate) *CertificateManagerMock {
 	m.mock.GetCertificateFunc = nil
 	m.expectationSeries = nil
 
@@ -99,12 +99,12 @@ func (m *mCertificateManagerMockGetCertificate) ExpectOnce() *CertificateManager
 	return expectation
 }
 
-func (e *CertificateManagerMockGetCertificateExpectation) Return(r core.Certificate) {
+func (e *CertificateManagerMockGetCertificateExpectation) Return(r insolar.Certificate) {
 	e.result = &CertificateManagerMockGetCertificateResult{r}
 }
 
 //Set uses given function f as a mock of CertificateManager.GetCertificate method
-func (m *mCertificateManagerMockGetCertificate) Set(f func() (r core.Certificate)) *CertificateManagerMock {
+func (m *mCertificateManagerMockGetCertificate) Set(f func() (r insolar.Certificate)) *CertificateManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -112,8 +112,8 @@ func (m *mCertificateManagerMockGetCertificate) Set(f func() (r core.Certificate
 	return m.mock
 }
 
-//GetCertificate implements github.com/insolar/insolar/core.CertificateManager interface
-func (m *CertificateManagerMock) GetCertificate() (r core.Certificate) {
+//GetCertificate implements github.com/insolar/insolar/insolar.CertificateManager interface
+func (m *CertificateManagerMock) GetCertificate() (r insolar.Certificate) {
 	counter := atomic.AddUint64(&m.GetCertificatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetCertificateCounter, 1)
 
@@ -202,7 +202,7 @@ type CertificateManagerMockNewUnsignedCertificateInput struct {
 }
 
 type CertificateManagerMockNewUnsignedCertificateResult struct {
-	r  core.Certificate
+	r  insolar.Certificate
 	r1 error
 }
 
@@ -219,7 +219,7 @@ func (m *mCertificateManagerMockNewUnsignedCertificate) Expect(p string, p1 stri
 }
 
 //Return specifies results of invocation of CertificateManager.NewUnsignedCertificate
-func (m *mCertificateManagerMockNewUnsignedCertificate) Return(r core.Certificate, r1 error) *CertificateManagerMock {
+func (m *mCertificateManagerMockNewUnsignedCertificate) Return(r insolar.Certificate, r1 error) *CertificateManagerMock {
 	m.mock.NewUnsignedCertificateFunc = nil
 	m.expectationSeries = nil
 
@@ -241,12 +241,12 @@ func (m *mCertificateManagerMockNewUnsignedCertificate) ExpectOnce(p string, p1 
 	return expectation
 }
 
-func (e *CertificateManagerMockNewUnsignedCertificateExpectation) Return(r core.Certificate, r1 error) {
+func (e *CertificateManagerMockNewUnsignedCertificateExpectation) Return(r insolar.Certificate, r1 error) {
 	e.result = &CertificateManagerMockNewUnsignedCertificateResult{r, r1}
 }
 
 //Set uses given function f as a mock of CertificateManager.NewUnsignedCertificate method
-func (m *mCertificateManagerMockNewUnsignedCertificate) Set(f func(p string, p1 string, p2 string) (r core.Certificate, r1 error)) *CertificateManagerMock {
+func (m *mCertificateManagerMockNewUnsignedCertificate) Set(f func(p string, p1 string, p2 string) (r insolar.Certificate, r1 error)) *CertificateManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -254,8 +254,8 @@ func (m *mCertificateManagerMockNewUnsignedCertificate) Set(f func(p string, p1 
 	return m.mock
 }
 
-//NewUnsignedCertificate implements github.com/insolar/insolar/core.CertificateManager interface
-func (m *CertificateManagerMock) NewUnsignedCertificate(p string, p1 string, p2 string) (r core.Certificate, r1 error) {
+//NewUnsignedCertificate implements github.com/insolar/insolar/insolar.CertificateManager interface
+func (m *CertificateManagerMock) NewUnsignedCertificate(p string, p1 string, p2 string) (r insolar.Certificate, r1 error) {
 	counter := atomic.AddUint64(&m.NewUnsignedCertificatePreCounter, 1)
 	defer atomic.AddUint64(&m.NewUnsignedCertificateCounter, 1)
 
@@ -348,7 +348,7 @@ type CertificateManagerMockVerifyAuthorizationCertificateExpectation struct {
 }
 
 type CertificateManagerMockVerifyAuthorizationCertificateInput struct {
-	p core.AuthorizationCertificate
+	p insolar.AuthorizationCertificate
 }
 
 type CertificateManagerMockVerifyAuthorizationCertificateResult struct {
@@ -357,7 +357,7 @@ type CertificateManagerMockVerifyAuthorizationCertificateResult struct {
 }
 
 //Expect specifies that invocation of CertificateManager.VerifyAuthorizationCertificate is expected from 1 to Infinity times
-func (m *mCertificateManagerMockVerifyAuthorizationCertificate) Expect(p core.AuthorizationCertificate) *mCertificateManagerMockVerifyAuthorizationCertificate {
+func (m *mCertificateManagerMockVerifyAuthorizationCertificate) Expect(p insolar.AuthorizationCertificate) *mCertificateManagerMockVerifyAuthorizationCertificate {
 	m.mock.VerifyAuthorizationCertificateFunc = nil
 	m.expectationSeries = nil
 
@@ -381,7 +381,7 @@ func (m *mCertificateManagerMockVerifyAuthorizationCertificate) Return(r bool, r
 }
 
 //ExpectOnce specifies that invocation of CertificateManager.VerifyAuthorizationCertificate is expected once
-func (m *mCertificateManagerMockVerifyAuthorizationCertificate) ExpectOnce(p core.AuthorizationCertificate) *CertificateManagerMockVerifyAuthorizationCertificateExpectation {
+func (m *mCertificateManagerMockVerifyAuthorizationCertificate) ExpectOnce(p insolar.AuthorizationCertificate) *CertificateManagerMockVerifyAuthorizationCertificateExpectation {
 	m.mock.VerifyAuthorizationCertificateFunc = nil
 	m.mainExpectation = nil
 
@@ -396,7 +396,7 @@ func (e *CertificateManagerMockVerifyAuthorizationCertificateExpectation) Return
 }
 
 //Set uses given function f as a mock of CertificateManager.VerifyAuthorizationCertificate method
-func (m *mCertificateManagerMockVerifyAuthorizationCertificate) Set(f func(p core.AuthorizationCertificate) (r bool, r1 error)) *CertificateManagerMock {
+func (m *mCertificateManagerMockVerifyAuthorizationCertificate) Set(f func(p insolar.AuthorizationCertificate) (r bool, r1 error)) *CertificateManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -404,8 +404,8 @@ func (m *mCertificateManagerMockVerifyAuthorizationCertificate) Set(f func(p cor
 	return m.mock
 }
 
-//VerifyAuthorizationCertificate implements github.com/insolar/insolar/core.CertificateManager interface
-func (m *CertificateManagerMock) VerifyAuthorizationCertificate(p core.AuthorizationCertificate) (r bool, r1 error) {
+//VerifyAuthorizationCertificate implements github.com/insolar/insolar/insolar.CertificateManager interface
+func (m *CertificateManagerMock) VerifyAuthorizationCertificate(p insolar.AuthorizationCertificate) (r bool, r1 error) {
 	counter := atomic.AddUint64(&m.VerifyAuthorizationCertificatePreCounter, 1)
 	defer atomic.AddUint64(&m.VerifyAuthorizationCertificateCounter, 1)
 

@@ -26,7 +26,7 @@ Package api provides http/json APIto interact with our system
 	api, _ := NewRunner(&cfg)
 
 	// Create empty component map
-	cs := core.Components{}
+	cs := insolar.Components{}
 
 	// Run api server
 	_ = api.Start(cs)

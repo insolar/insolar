@@ -3,7 +3,7 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "CryptographyService" can be found in github.com/insolar/insolar/core
+The original interface "CryptographyService" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	crypto "crypto"
@@ -11,12 +11,12 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//CryptographyServiceMock implements github.com/insolar/insolar/core.CryptographyService
+//CryptographyServiceMock implements github.com/insolar/insolar/insolar.CryptographyService
 type CryptographyServiceMock struct {
 	t minimock.Tester
 
@@ -25,18 +25,18 @@ type CryptographyServiceMock struct {
 	GetPublicKeyPreCounter uint64
 	GetPublicKeyMock       mCryptographyServiceMockGetPublicKey
 
-	SignFunc       func(p []byte) (r *core.Signature, r1 error)
+	SignFunc       func(p []byte) (r *insolar.Signature, r1 error)
 	SignCounter    uint64
 	SignPreCounter uint64
 	SignMock       mCryptographyServiceMockSign
 
-	VerifyFunc       func(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool)
+	VerifyFunc       func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool)
 	VerifyCounter    uint64
 	VerifyPreCounter uint64
 	VerifyMock       mCryptographyServiceMockVerify
 }
 
-//NewCryptographyServiceMock returns a mock for github.com/insolar/insolar/core.CryptographyService
+//NewCryptographyServiceMock returns a mock for github.com/insolar/insolar/insolar.CryptographyService
 func NewCryptographyServiceMock(t minimock.Tester) *CryptographyServiceMock {
 	m := &CryptographyServiceMock{t: t}
 
@@ -114,7 +114,7 @@ func (m *mCryptographyServiceMockGetPublicKey) Set(f func() (r crypto.PublicKey,
 	return m.mock
 }
 
-//GetPublicKey implements github.com/insolar/insolar/core.CryptographyService interface
+//GetPublicKey implements github.com/insolar/insolar/insolar.CryptographyService interface
 func (m *CryptographyServiceMock) GetPublicKey() (r crypto.PublicKey, r1 error) {
 	counter := atomic.AddUint64(&m.GetPublicKeyPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPublicKeyCounter, 1)
@@ -204,7 +204,7 @@ type CryptographyServiceMockSignInput struct {
 }
 
 type CryptographyServiceMockSignResult struct {
-	r  *core.Signature
+	r  *insolar.Signature
 	r1 error
 }
 
@@ -221,7 +221,7 @@ func (m *mCryptographyServiceMockSign) Expect(p []byte) *mCryptographyServiceMoc
 }
 
 //Return specifies results of invocation of CryptographyService.Sign
-func (m *mCryptographyServiceMockSign) Return(r *core.Signature, r1 error) *CryptographyServiceMock {
+func (m *mCryptographyServiceMockSign) Return(r *insolar.Signature, r1 error) *CryptographyServiceMock {
 	m.mock.SignFunc = nil
 	m.expectationSeries = nil
 
@@ -243,12 +243,12 @@ func (m *mCryptographyServiceMockSign) ExpectOnce(p []byte) *CryptographyService
 	return expectation
 }
 
-func (e *CryptographyServiceMockSignExpectation) Return(r *core.Signature, r1 error) {
+func (e *CryptographyServiceMockSignExpectation) Return(r *insolar.Signature, r1 error) {
 	e.result = &CryptographyServiceMockSignResult{r, r1}
 }
 
 //Set uses given function f as a mock of CryptographyService.Sign method
-func (m *mCryptographyServiceMockSign) Set(f func(p []byte) (r *core.Signature, r1 error)) *CryptographyServiceMock {
+func (m *mCryptographyServiceMockSign) Set(f func(p []byte) (r *insolar.Signature, r1 error)) *CryptographyServiceMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -256,8 +256,8 @@ func (m *mCryptographyServiceMockSign) Set(f func(p []byte) (r *core.Signature, 
 	return m.mock
 }
 
-//Sign implements github.com/insolar/insolar/core.CryptographyService interface
-func (m *CryptographyServiceMock) Sign(p []byte) (r *core.Signature, r1 error) {
+//Sign implements github.com/insolar/insolar/insolar.CryptographyService interface
+func (m *CryptographyServiceMock) Sign(p []byte) (r *insolar.Signature, r1 error) {
 	counter := atomic.AddUint64(&m.SignPreCounter, 1)
 	defer atomic.AddUint64(&m.SignCounter, 1)
 
@@ -351,7 +351,7 @@ type CryptographyServiceMockVerifyExpectation struct {
 
 type CryptographyServiceMockVerifyInput struct {
 	p  crypto.PublicKey
-	p1 core.Signature
+	p1 insolar.Signature
 	p2 []byte
 }
 
@@ -360,7 +360,7 @@ type CryptographyServiceMockVerifyResult struct {
 }
 
 //Expect specifies that invocation of CryptographyService.Verify is expected from 1 to Infinity times
-func (m *mCryptographyServiceMockVerify) Expect(p crypto.PublicKey, p1 core.Signature, p2 []byte) *mCryptographyServiceMockVerify {
+func (m *mCryptographyServiceMockVerify) Expect(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) *mCryptographyServiceMockVerify {
 	m.mock.VerifyFunc = nil
 	m.expectationSeries = nil
 
@@ -384,7 +384,7 @@ func (m *mCryptographyServiceMockVerify) Return(r bool) *CryptographyServiceMock
 }
 
 //ExpectOnce specifies that invocation of CryptographyService.Verify is expected once
-func (m *mCryptographyServiceMockVerify) ExpectOnce(p crypto.PublicKey, p1 core.Signature, p2 []byte) *CryptographyServiceMockVerifyExpectation {
+func (m *mCryptographyServiceMockVerify) ExpectOnce(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) *CryptographyServiceMockVerifyExpectation {
 	m.mock.VerifyFunc = nil
 	m.mainExpectation = nil
 
@@ -399,7 +399,7 @@ func (e *CryptographyServiceMockVerifyExpectation) Return(r bool) {
 }
 
 //Set uses given function f as a mock of CryptographyService.Verify method
-func (m *mCryptographyServiceMockVerify) Set(f func(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool)) *CryptographyServiceMock {
+func (m *mCryptographyServiceMockVerify) Set(f func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool)) *CryptographyServiceMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -407,8 +407,8 @@ func (m *mCryptographyServiceMockVerify) Set(f func(p crypto.PublicKey, p1 core.
 	return m.mock
 }
 
-//Verify implements github.com/insolar/insolar/core.CryptographyService interface
-func (m *CryptographyServiceMock) Verify(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool) {
+//Verify implements github.com/insolar/insolar/insolar.CryptographyService interface
+func (m *CryptographyServiceMock) Verify(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
 	counter := atomic.AddUint64(&m.VerifyPreCounter, 1)
 	defer atomic.AddUint64(&m.VerifyCounter, 1)
 

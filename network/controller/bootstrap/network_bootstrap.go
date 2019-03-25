@@ -53,7 +53,7 @@ package bootstrap
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
@@ -64,12 +64,12 @@ import (
 
 type NetworkBootstrapper interface {
 	Bootstrap(ctx context.Context) (*network.BootstrapResult, error)
-	SetLastPulse(number core.PulseNumber)
-	GetLastPulse() core.PulseNumber
+	SetLastPulse(number insolar.PulseNumber)
+	GetLastPulse() insolar.PulseNumber
 }
 
 type networkBootstrapper struct {
-	Certificate         core.Certificate            `inject:""`
+	Certificate         insolar.Certificate         `inject:""`
 	Bootstrapper        Bootstrapper                `inject:""`
 	NodeKeeper          network.NodeKeeper          `inject:""`
 	SessionManager      SessionManager              `inject:""`
@@ -90,7 +90,7 @@ func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.Bootstra
 		// if the network is up and complete, we return discovery nodes via consensus
 		if err == ErrReconnectRequired {
 			log.Debugf("[ Bootstrap ] Connecting discovery node %s as joiner", nb.NodeKeeper.GetOrigin().ID())
-			nb.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetState(core.NodePending)
+			nb.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetState(insolar.NodePending)
 			result, err = nb.bootstrapJoiner(ctx)
 		}
 	} else {
@@ -103,11 +103,11 @@ func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.Bootstra
 	return result, nil
 }
 
-func (nb *networkBootstrapper) SetLastPulse(number core.PulseNumber) {
+func (nb *networkBootstrapper) SetLastPulse(number insolar.PulseNumber) {
 	nb.Bootstrapper.SetLastPulse(number)
 }
 
-func (nb *networkBootstrapper) GetLastPulse() core.PulseNumber {
+func (nb *networkBootstrapper) GetLastPulse() insolar.PulseNumber {
 	return nb.Bootstrapper.GetLastPulse()
 }
 

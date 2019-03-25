@@ -20,8 +20,8 @@ import (
 	"context"
 	"net/http"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/version"
@@ -77,7 +77,7 @@ func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusRep
 		nodes[i] = Node{
 			Reference: node.ID().String(),
 			Role:      node.Role().String(),
-			IsWorking: node.GetState() == core.NodeReady,
+			IsWorking: node.GetState() == insolar.NodeReady,
 		}
 	}
 
@@ -86,7 +86,7 @@ func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusRep
 	reply.Origin = Node{
 		Reference: origin.ID().String(),
 		Role:      origin.Role().String(),
-		IsWorking: origin.GetState() == core.NodeReady,
+		IsWorking: origin.GetState() == insolar.NodeReady,
 	}
 
 	pulse, err := s.runner.PulseStorage.Current(ctx)

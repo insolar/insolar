@@ -24,7 +24,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/suite"
 
@@ -51,14 +51,14 @@ func (suite *MainAPISuite) TestSerialization() {
 	var b bool = true
 	var c string = "test"
 
-	serArgs, err := core.MarshalArgs(a, b, c)
+	serArgs, err := insolar.MarshalArgs(a, b, c)
 	suite.NoError(err)
 	suite.NotNil(serArgs)
 
 	var aR uint
 	var bR bool
 	var cR string
-	rowResp, err := core.UnMarshalResponse(serArgs, []interface{}{aR, bR, cR})
+	rowResp, err := insolar.UnMarshalResponse(serArgs, []interface{}{aR, bR, cR})
 	suite.NoError(err)
 	suite.Len(rowResp, 3)
 	suite.Equal(reflect.TypeOf(a), reflect.TypeOf(rowResp[0]))

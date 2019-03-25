@@ -61,7 +61,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -79,12 +79,12 @@ import (
 const bootstrapTimeout time.Duration = 2 // seconds
 
 var (
-	ErrReconnectRequired = errors.New("Node should connect via consensus bootstrap")
+	ErrReconnectRequired = errors.New("NetworkNode should connect via consensus bootstrap")
 )
 
 type DiscoveryNode struct {
 	Host *host.Host
-	Node core.DiscoveryNode
+	Node insolar.DiscoveryNode
 }
 
 type Bootstrapper interface {
@@ -93,28 +93,28 @@ type Bootstrapper interface {
 	Bootstrap(ctx context.Context) (*network.BootstrapResult, *DiscoveryNode, error)
 	BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error)
 	ZeroBootstrap(ctx context.Context) (*network.BootstrapResult, error)
-	SetLastPulse(number core.PulseNumber)
-	GetLastPulse() core.PulseNumber
+	SetLastPulse(number insolar.PulseNumber)
+	GetLastPulse() insolar.PulseNumber
 	// GetFirstFakePulseTime() time.Time
 }
 
 type bootstrapper struct {
-	Certificate     core.Certificate          `inject:""`
+	Certificate     insolar.Certificate       `inject:""`
 	NodeKeeper      network.NodeKeeper        `inject:""`
-	NetworkSwitcher core.NetworkSwitcher      `inject:""`
+	NetworkSwitcher insolar.NetworkSwitcher   `inject:""`
 	Transport       network.InternalTransport `inject:""`
 
 	options *common.Options
 	pinger  *pinger.Pinger
 
-	lastPulse      core.PulseNumber
+	lastPulse      insolar.PulseNumber
 	lastPulseLock  sync.RWMutex
 	pulsePersisted bool
 
 	bootstrapLock       chan struct{}
 	cyclicBootstrapStop atomic.Value
 
-	genesisRequestsReceived map[core.RecordRef]*GenesisRequest
+	genesisRequestsReceived map[insolar.Reference]*GenesisRequest
 	genesisLock             sync.Mutex
 
 	firstPulseTime         time.Time
@@ -127,14 +127,14 @@ func (bc *bootstrapper) GetFirstFakePulseTime() time.Time {
 	return bc.firstPulseTime
 }
 
-func (bc *bootstrapper) getRequest(ref core.RecordRef) *GenesisRequest {
+func (bc *bootstrapper) getRequest(ref insolar.Reference) *GenesisRequest {
 	bc.genesisLock.Lock()
 	defer bc.genesisLock.Unlock()
 
 	return bc.genesisRequestsReceived[ref]
 }
 
-func (bc *bootstrapper) setRequest(ref core.RecordRef, req *GenesisRequest) {
+func (bc *bootstrapper) setRequest(ref insolar.Reference, req *GenesisRequest) {
 	bc.genesisLock.Lock()
 	defer bc.genesisLock.Unlock()
 
@@ -152,7 +152,7 @@ type NodeBootstrapResponse struct {
 }
 
 type GenesisRequest struct {
-	LastPulse core.PulseNumber
+	LastPulse insolar.PulseNumber
 	Discovery *NodeStruct
 }
 
@@ -168,15 +168,15 @@ type StartSessionResponse struct {
 }
 
 type NodeStruct struct {
-	ID      core.RecordRef
-	SID     core.ShortNodeID
-	Role    core.StaticRole
+	ID      insolar.Reference
+	SID     insolar.ShortNodeID
+	Role    insolar.StaticRole
 	PK      []byte
 	Address string
 	Version string
 }
 
-func newNode(n *NodeStruct) (core.Node, error) {
+func newNode(n *NodeStruct) (insolar.NetworkNode, error) {
 	pk, err := platformpolicy.NewKeyProcessor().ImportPublicKeyBinary(n.PK)
 	if err != nil {
 		return nil, errors.Wrap(err, "error deserializing node public key")
@@ -188,7 +188,7 @@ func newNode(n *NodeStruct) (core.Node, error) {
 	return mNode, nil
 }
 
-func newNodeStruct(node core.Node) (*NodeStruct, error) {
+func newNodeStruct(node insolar.NetworkNode) (*NodeStruct, error) {
 	pk, err := platformpolicy.NewKeyProcessor().ExportPublicKeyBinary(node.PublicKey())
 	if err != nil {
 		return nil, errors.Wrap(err, "error serializing node public key")
@@ -236,7 +236,7 @@ func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult
 	return result, &DiscoveryNode{result.Host, discovery}, nil
 }
 
-func (bc *bootstrapper) SetLastPulse(number core.PulseNumber) {
+func (bc *bootstrapper) SetLastPulse(number insolar.PulseNumber) {
 	_, span := instracer.StartSpan(context.Background(), "Bootstrapper.SetLastPulse wait lastPulseLock")
 	bc.lastPulseLock.Lock()
 	span.End()
@@ -249,7 +249,7 @@ func (bc *bootstrapper) SetLastPulse(number core.PulseNumber) {
 	}
 }
 
-func (bc *bootstrapper) forceSetLastPulse(number core.PulseNumber) {
+func (bc *bootstrapper) forceSetLastPulse(number insolar.PulseNumber) {
 	_, span := instracer.StartSpan(context.Background(), "Bootstrapper.forceSetLastPulse wait lastPulseLock")
 	bc.lastPulseLock.Lock()
 	span.End()
@@ -259,7 +259,7 @@ func (bc *bootstrapper) forceSetLastPulse(number core.PulseNumber) {
 	bc.lastPulse = number
 }
 
-func (bc *bootstrapper) GetLastPulse() core.PulseNumber {
+func (bc *bootstrapper) GetLastPulse() insolar.PulseNumber {
 	_, span := instracer.StartSpan(context.Background(), "Bootstrapper.GetLastPulse wait lastPulseLock")
 	bc.lastPulseLock.RLock()
 	span.End()
@@ -268,17 +268,17 @@ func (bc *bootstrapper) GetLastPulse() core.PulseNumber {
 	return bc.lastPulse
 }
 
-func (bc *bootstrapper) checkActiveNode(node core.Node) error {
+func (bc *bootstrapper) checkActiveNode(node insolar.NetworkNode) error {
 	n := bc.NodeKeeper.GetAccessor().GetActiveNode(node.ID())
 	if n != nil {
-		return errors.Errorf("Node ID collision: %s", n.ID())
+		return errors.Errorf("NetworkNode ID collision: %s", n.ID())
 	}
 	n = bc.NodeKeeper.GetAccessor().GetActiveNodeByShortID(node.ShortID())
 	if n != nil {
 		return errors.Errorf("Short ID collision: %d", n.ShortID())
 	}
 	if node.Version() != bc.NodeKeeper.GetOrigin().Version() {
-		return errors.Errorf("Node %s version %s does not match origin version %s",
+		return errors.Errorf("NetworkNode %s version %s does not match origin version %s",
 			node.ID(), node.Version(), bc.NodeKeeper.GetOrigin().Version())
 	}
 	return nil
@@ -290,7 +290,7 @@ func (bc *bootstrapper) ZeroBootstrap(ctx context.Context) (*network.BootstrapRe
 		return nil, errors.Wrap(err, "failed to create a host")
 	}
 	inslogger.FromContext(ctx).Info("[ Bootstrap ] Zero bootstrap")
-	bc.NodeKeeper.SetInitialSnapshot([]core.Node{bc.NodeKeeper.GetOrigin()})
+	bc.NodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{bc.NodeKeeper.GetOrigin()})
 	return &network.BootstrapResult{
 		Host: host,
 		// FirstPulseTime: nb.Bootstrapper.GetFirstFakePulseTime(),
@@ -353,10 +353,10 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 		if err != nil {
 			return nil, errors.Wrapf(err, "Discovery check of node %s failed", activeNode.ID())
 		}
-		activeNode.(nodenetwork.MutableNode).SetState(core.NodeUndefined)
+		activeNode.(nodenetwork.MutableNode).SetState(insolar.NodeUndefined)
 		activeNodesStr = append(activeNodesStr, activeNode.ID().String())
 	}
-	bc.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetState(core.NodeUndefined)
+	bc.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetState(insolar.NodeUndefined)
 	activeNodes = append(activeNodes, bc.NodeKeeper.GetOrigin())
 	bc.NodeKeeper.SetInitialSnapshot(activeNodes)
 	logger.Infof("[ BootstrapDiscovery ] Added active nodes: %s", strings.Join(activeNodesStr, ", "))
@@ -366,9 +366,9 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 	return parseBotstrapResults(bootstrapResults), nil
 }
 
-func (bc *bootstrapper) calculateLastIgnoredPulse(ctx context.Context, lastPulses []core.PulseNumber) core.PulseNumber {
+func (bc *bootstrapper) calculateLastIgnoredPulse(ctx context.Context, lastPulses []insolar.PulseNumber) insolar.PulseNumber {
 	maxLastPulse := bc.GetLastPulse()
-	inslogger.FromContext(ctx).Debugf("Node %s (origin) LastIgnoredPulse: %d", bc.NodeKeeper.GetOrigin().ID(), maxLastPulse)
+	inslogger.FromContext(ctx).Debugf("NetworkNode %s (origin) LastIgnoredPulse: %d", bc.NodeKeeper.GetOrigin().ID(), maxLastPulse)
 	for _, pulse := range lastPulses {
 		if pulse > maxLastPulse {
 			maxLastPulse = pulse
@@ -403,7 +403,7 @@ func (bc *bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (*
 	return data, nil
 }
 
-func (bc *bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryNodes []core.DiscoveryNode, needResponses int) <-chan *network.BootstrapResult {
+func (bc *bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryNodes []insolar.DiscoveryNode, needResponses int) <-chan *network.BootstrapResult {
 	// we need only one host to bootstrap
 	bootstrapResults := make(chan *network.BootstrapResult, needResponses)
 	for _, discoveryNode := range discoveryNodes {
@@ -485,9 +485,9 @@ func (bc *bootstrapper) waitResultsFromChannel(ctx context.Context, ch <-chan *n
 	}
 }
 
-func (bc *bootstrapper) waitGenesisResults(ctx context.Context, ch <-chan *GenesisResponse, count int) ([]core.Node, []core.PulseNumber, error) {
-	result := make([]core.Node, 0)
-	lastPulses := make([]core.PulseNumber, 0)
+func (bc *bootstrapper) waitGenesisResults(ctx context.Context, ch <-chan *GenesisResponse, count int) ([]insolar.NetworkNode, []insolar.PulseNumber, error) {
+	result := make([]insolar.NetworkNode, 0)
+	lastPulses := make([]insolar.PulseNumber, 0)
 	for {
 		select {
 		case res := <-ch:
@@ -497,7 +497,7 @@ func (bc *bootstrapper) waitGenesisResults(ctx context.Context, ch <-chan *Genes
 			}
 			result = append(result, discovery)
 			lastPulses = append(lastPulses, res.Response.LastPulse)
-			inslogger.FromContext(ctx).Debugf("Node %s LastIgnoredPulse: %d", discovery.ID(), res.Response.LastPulse)
+			inslogger.FromContext(ctx).Debugf("NetworkNode %s LastIgnoredPulse: %d", discovery.ID(), res.Response.LastPulse)
 			if len(result) == count {
 				return result, lastPulses, nil
 			}
@@ -586,7 +586,7 @@ func (bc *bootstrapper) StopCyclicBootstrap() {
 func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Request) (network.Response, error) {
 	// TODO: redirect logic to another node if needed
 	var code Code
-	if bc.NetworkSwitcher.GetState() == core.CompleteNetworkState {
+	if bc.NetworkSwitcher.GetState() == insolar.CompleteNetworkState {
 		code = ReconnectRequired
 	} else {
 		code = Accepted
@@ -636,7 +636,7 @@ func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(result 
 		options:       options,
 		bootstrapLock: make(chan struct{}),
 
-		genesisRequestsReceived: make(map[core.RecordRef]*GenesisRequest),
+		genesisRequestsReceived: make(map[insolar.Reference]*GenesisRequest),
 
 		reconnectToNewNetwork: reconnectToNewNetwork,
 	}

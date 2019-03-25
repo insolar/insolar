@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,12 +20,12 @@ import (
 type PulseCalculatorMock struct {
 	t minimock.Tester
 
-	BackwardsFunc       func(p context.Context, p1 core.PulseNumber, p2 int) (r core.Pulse, r1 error)
+	BackwardsFunc       func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error)
 	BackwardsCounter    uint64
 	BackwardsPreCounter uint64
 	BackwardsMock       mPulseCalculatorMockBackwards
 
-	ForwardsFunc       func(p context.Context, p1 core.PulseNumber, p2 int) (r core.Pulse, r1 error)
+	ForwardsFunc       func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error)
 	ForwardsCounter    uint64
 	ForwardsPreCounter uint64
 	ForwardsMock       mPulseCalculatorMockForwards
@@ -58,17 +58,17 @@ type PulseCalculatorMockBackwardsExpectation struct {
 
 type PulseCalculatorMockBackwardsInput struct {
 	p  context.Context
-	p1 core.PulseNumber
+	p1 insolar.PulseNumber
 	p2 int
 }
 
 type PulseCalculatorMockBackwardsResult struct {
-	r  core.Pulse
+	r  insolar.Pulse
 	r1 error
 }
 
 //Expect specifies that invocation of PulseCalculator.Backwards is expected from 1 to Infinity times
-func (m *mPulseCalculatorMockBackwards) Expect(p context.Context, p1 core.PulseNumber, p2 int) *mPulseCalculatorMockBackwards {
+func (m *mPulseCalculatorMockBackwards) Expect(p context.Context, p1 insolar.PulseNumber, p2 int) *mPulseCalculatorMockBackwards {
 	m.mock.BackwardsFunc = nil
 	m.expectationSeries = nil
 
@@ -80,7 +80,7 @@ func (m *mPulseCalculatorMockBackwards) Expect(p context.Context, p1 core.PulseN
 }
 
 //Return specifies results of invocation of PulseCalculator.Backwards
-func (m *mPulseCalculatorMockBackwards) Return(r core.Pulse, r1 error) *PulseCalculatorMock {
+func (m *mPulseCalculatorMockBackwards) Return(r insolar.Pulse, r1 error) *PulseCalculatorMock {
 	m.mock.BackwardsFunc = nil
 	m.expectationSeries = nil
 
@@ -92,7 +92,7 @@ func (m *mPulseCalculatorMockBackwards) Return(r core.Pulse, r1 error) *PulseCal
 }
 
 //ExpectOnce specifies that invocation of PulseCalculator.Backwards is expected once
-func (m *mPulseCalculatorMockBackwards) ExpectOnce(p context.Context, p1 core.PulseNumber, p2 int) *PulseCalculatorMockBackwardsExpectation {
+func (m *mPulseCalculatorMockBackwards) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 int) *PulseCalculatorMockBackwardsExpectation {
 	m.mock.BackwardsFunc = nil
 	m.mainExpectation = nil
 
@@ -102,12 +102,12 @@ func (m *mPulseCalculatorMockBackwards) ExpectOnce(p context.Context, p1 core.Pu
 	return expectation
 }
 
-func (e *PulseCalculatorMockBackwardsExpectation) Return(r core.Pulse, r1 error) {
+func (e *PulseCalculatorMockBackwardsExpectation) Return(r insolar.Pulse, r1 error) {
 	e.result = &PulseCalculatorMockBackwardsResult{r, r1}
 }
 
 //Set uses given function f as a mock of PulseCalculator.Backwards method
-func (m *mPulseCalculatorMockBackwards) Set(f func(p context.Context, p1 core.PulseNumber, p2 int) (r core.Pulse, r1 error)) *PulseCalculatorMock {
+func (m *mPulseCalculatorMockBackwards) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error)) *PulseCalculatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -116,7 +116,7 @@ func (m *mPulseCalculatorMockBackwards) Set(f func(p context.Context, p1 core.Pu
 }
 
 //Backwards implements github.com/insolar/insolar/network/storage.PulseCalculator interface
-func (m *PulseCalculatorMock) Backwards(p context.Context, p1 core.PulseNumber, p2 int) (r core.Pulse, r1 error) {
+func (m *PulseCalculatorMock) Backwards(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.BackwardsPreCounter, 1)
 	defer atomic.AddUint64(&m.BackwardsCounter, 1)
 
@@ -210,17 +210,17 @@ type PulseCalculatorMockForwardsExpectation struct {
 
 type PulseCalculatorMockForwardsInput struct {
 	p  context.Context
-	p1 core.PulseNumber
+	p1 insolar.PulseNumber
 	p2 int
 }
 
 type PulseCalculatorMockForwardsResult struct {
-	r  core.Pulse
+	r  insolar.Pulse
 	r1 error
 }
 
 //Expect specifies that invocation of PulseCalculator.Forwards is expected from 1 to Infinity times
-func (m *mPulseCalculatorMockForwards) Expect(p context.Context, p1 core.PulseNumber, p2 int) *mPulseCalculatorMockForwards {
+func (m *mPulseCalculatorMockForwards) Expect(p context.Context, p1 insolar.PulseNumber, p2 int) *mPulseCalculatorMockForwards {
 	m.mock.ForwardsFunc = nil
 	m.expectationSeries = nil
 
@@ -232,7 +232,7 @@ func (m *mPulseCalculatorMockForwards) Expect(p context.Context, p1 core.PulseNu
 }
 
 //Return specifies results of invocation of PulseCalculator.Forwards
-func (m *mPulseCalculatorMockForwards) Return(r core.Pulse, r1 error) *PulseCalculatorMock {
+func (m *mPulseCalculatorMockForwards) Return(r insolar.Pulse, r1 error) *PulseCalculatorMock {
 	m.mock.ForwardsFunc = nil
 	m.expectationSeries = nil
 
@@ -244,7 +244,7 @@ func (m *mPulseCalculatorMockForwards) Return(r core.Pulse, r1 error) *PulseCalc
 }
 
 //ExpectOnce specifies that invocation of PulseCalculator.Forwards is expected once
-func (m *mPulseCalculatorMockForwards) ExpectOnce(p context.Context, p1 core.PulseNumber, p2 int) *PulseCalculatorMockForwardsExpectation {
+func (m *mPulseCalculatorMockForwards) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 int) *PulseCalculatorMockForwardsExpectation {
 	m.mock.ForwardsFunc = nil
 	m.mainExpectation = nil
 
@@ -254,12 +254,12 @@ func (m *mPulseCalculatorMockForwards) ExpectOnce(p context.Context, p1 core.Pul
 	return expectation
 }
 
-func (e *PulseCalculatorMockForwardsExpectation) Return(r core.Pulse, r1 error) {
+func (e *PulseCalculatorMockForwardsExpectation) Return(r insolar.Pulse, r1 error) {
 	e.result = &PulseCalculatorMockForwardsResult{r, r1}
 }
 
 //Set uses given function f as a mock of PulseCalculator.Forwards method
-func (m *mPulseCalculatorMockForwards) Set(f func(p context.Context, p1 core.PulseNumber, p2 int) (r core.Pulse, r1 error)) *PulseCalculatorMock {
+func (m *mPulseCalculatorMockForwards) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error)) *PulseCalculatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -268,7 +268,7 @@ func (m *mPulseCalculatorMockForwards) Set(f func(p context.Context, p1 core.Pul
 }
 
 //Forwards implements github.com/insolar/insolar/network/storage.PulseCalculator interface
-func (m *PulseCalculatorMock) Forwards(p context.Context, p1 core.PulseNumber, p2 int) (r core.Pulse, r1 error) {
+func (m *PulseCalculatorMock) Forwards(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.ForwardsPreCounter, 1)
 	defer atomic.AddUint64(&m.ForwardsCounter, 1)
 

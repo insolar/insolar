@@ -25,7 +25,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type logrusAdapter struct {
@@ -63,14 +63,14 @@ func (l logrusAdapter) sourced() *logrus.Entry {
 }
 
 // WithFields return copy of adapter with predefined fields.
-func (l logrusAdapter) WithFields(fields map[string]interface{}) core.Logger {
+func (l logrusAdapter) WithFields(fields map[string]interface{}) insolar.Logger {
 	lcopy := l
 	lcopy.entry = l.entry.WithFields(logrus.Fields(fields))
 	return lcopy
 }
 
 // WithField return copy of adapter with predefined single field.
-func (l logrusAdapter) WithField(key string, value interface{}) core.Logger {
+func (l logrusAdapter) WithField(key string, value interface{}) insolar.Logger {
 	lcopy := l
 	lcopy.entry = l.entry.WithField(key, value)
 	return lcopy
@@ -202,7 +202,7 @@ func (l logrusAdapter) SetOutput(w io.Writer) {
 //
 // This is useful than logger methods called not from place they should report,
 // like helper functions.
-func WithSkipDelta(cl core.Logger, delta int) core.Logger {
+func WithSkipDelta(cl insolar.Logger, delta int) insolar.Logger {
 	l, ok := cl.(logrusAdapter)
 	if !ok {
 		return cl

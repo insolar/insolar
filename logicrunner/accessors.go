@@ -19,19 +19,19 @@ package logicrunner
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
 
 // RegisterExecutor registers an executor for particular `MachineType`
-func (lr *LogicRunner) RegisterExecutor(t core.MachineType, e core.MachineLogicExecutor) error {
+func (lr *LogicRunner) RegisterExecutor(t insolar.MachineType, e insolar.MachineLogicExecutor) error {
 	lr.Executors[int(t)] = e
 	return nil
 }
 
 // GetExecutor returns an executor for the `MachineType` if it was registered (`RegisterExecutor`),
 // returns error otherwise
-func (lr *LogicRunner) GetExecutor(t core.MachineType) (core.MachineLogicExecutor, error) {
+func (lr *LogicRunner) GetExecutor(t insolar.MachineType) (insolar.MachineLogicExecutor, error) {
 	if res := lr.Executors[int(t)]; res != nil {
 		return res, nil
 	}
@@ -73,7 +73,7 @@ func (lr *LogicRunner) MustObjectState(ref Ref) *ObjectState {
 	return res
 }
 
-func (lr *LogicRunner) pulse(ctx context.Context) *core.Pulse {
+func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
 	pulse, err := lr.PulseStorage.Current(ctx)
 	if err != nil {
 		panic(err)
@@ -90,7 +90,7 @@ func (lr *LogicRunner) GetConsensus(ctx context.Context, ref Ref) *Consensus {
 	if state.Consensus == nil {
 		validators, err := lr.JetCoordinator.QueryRole(
 			ctx,
-			core.DynamicRoleVirtualValidator,
+			insolar.DynamicRoleVirtualValidator,
 			*ref.Record(),
 			lr.pulse(ctx).PulseNumber,
 		)

@@ -58,7 +58,7 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/testutils"
@@ -70,8 +70,8 @@ type communicatorSuite struct {
 	suite.Suite
 	componentManager component.Manager
 	communicator     Communicator
-	originNode       core.Node
-	participants     []core.Node
+	originNode       insolar.NetworkNode
+	participants     []insolar.NetworkNode
 	hostNetworkMock  *networkUtils.HostNetworkMock
 
 	consensusNetworkMock *networkUtils.ConsensusNetworkMock
@@ -93,11 +93,11 @@ func (s *communicatorSuite) SetupTest() {
 	nodeN := networkUtils.NewNodeKeeperMock(s.T())
 
 	cryptoServ := testutils.NewCryptographyServiceMock(s.T())
-	cryptoServ.SignFunc = func(p []byte) (r *core.Signature, r1 error) {
-		signature := core.SignatureFromBytes(nil)
+	cryptoServ.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
 	}
-	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 core.Signature, p2 []byte) (r bool) {
+	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
 		return true
 	}
 
@@ -107,11 +107,11 @@ func (s *communicatorSuite) SetupTest() {
 
 	s.consensusNetworkMock.StartMock.Set(func(context.Context) error { return nil })
 
-	s.consensusNetworkMock.GetNodeIDMock.Set(func() (r core.RecordRef) {
+	s.consensusNetworkMock.GetNodeIDMock.Set(func() (r insolar.Reference) {
 		return s.originNode.ID()
 	})
 
-	s.pulseHandlerMock.HandlePulseMock.Set(func(p context.Context, p1 core.Pulse) {
+	s.pulseHandlerMock.HandlePulseMock.Set(func(p context.Context, p1 insolar.Pulse) {
 
 	})
 
@@ -120,8 +120,8 @@ func (s *communicatorSuite) SetupTest() {
 	s.NoError(err)
 }
 
-func makeRandomNode() core.Node {
-	return nodenetwork.NewNode(testutils.RandomRef(), core.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
+func makeRandomNode() insolar.NetworkNode {
+	return nodenetwork.NewNode(testutils.RandomRef(), insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
 }
 
 func (s *communicatorSuite) TestExchangeData() {

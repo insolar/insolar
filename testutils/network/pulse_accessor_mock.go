@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,12 +20,12 @@ import (
 type PulseAccessorMock struct {
 	t minimock.Tester
 
-	ForPulseNumberFunc       func(p context.Context, p1 core.PulseNumber) (r core.PulseNumber, r1 error)
+	ForPulseNumberFunc       func(p context.Context, p1 insolar.PulseNumber) (r insolar.PulseNumber, r1 error)
 	ForPulseNumberCounter    uint64
 	ForPulseNumberPreCounter uint64
 	ForPulseNumberMock       mPulseAccessorMockForPulseNumber
 
-	LatestFunc       func(p context.Context) (r core.Pulse, r1 error)
+	LatestFunc       func(p context.Context) (r insolar.Pulse, r1 error)
 	LatestCounter    uint64
 	LatestPreCounter uint64
 	LatestMock       mPulseAccessorMockLatest
@@ -58,16 +58,16 @@ type PulseAccessorMockForPulseNumberExpectation struct {
 
 type PulseAccessorMockForPulseNumberInput struct {
 	p  context.Context
-	p1 core.PulseNumber
+	p1 insolar.PulseNumber
 }
 
 type PulseAccessorMockForPulseNumberResult struct {
-	r  core.PulseNumber
+	r  insolar.PulseNumber
 	r1 error
 }
 
 //Expect specifies that invocation of PulseAccessor.ForPulseNumber is expected from 1 to Infinity times
-func (m *mPulseAccessorMockForPulseNumber) Expect(p context.Context, p1 core.PulseNumber) *mPulseAccessorMockForPulseNumber {
+func (m *mPulseAccessorMockForPulseNumber) Expect(p context.Context, p1 insolar.PulseNumber) *mPulseAccessorMockForPulseNumber {
 	m.mock.ForPulseNumberFunc = nil
 	m.expectationSeries = nil
 
@@ -79,7 +79,7 @@ func (m *mPulseAccessorMockForPulseNumber) Expect(p context.Context, p1 core.Pul
 }
 
 //Return specifies results of invocation of PulseAccessor.ForPulseNumber
-func (m *mPulseAccessorMockForPulseNumber) Return(r core.PulseNumber, r1 error) *PulseAccessorMock {
+func (m *mPulseAccessorMockForPulseNumber) Return(r insolar.PulseNumber, r1 error) *PulseAccessorMock {
 	m.mock.ForPulseNumberFunc = nil
 	m.expectationSeries = nil
 
@@ -91,7 +91,7 @@ func (m *mPulseAccessorMockForPulseNumber) Return(r core.PulseNumber, r1 error) 
 }
 
 //ExpectOnce specifies that invocation of PulseAccessor.ForPulseNumber is expected once
-func (m *mPulseAccessorMockForPulseNumber) ExpectOnce(p context.Context, p1 core.PulseNumber) *PulseAccessorMockForPulseNumberExpectation {
+func (m *mPulseAccessorMockForPulseNumber) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *PulseAccessorMockForPulseNumberExpectation {
 	m.mock.ForPulseNumberFunc = nil
 	m.mainExpectation = nil
 
@@ -101,12 +101,12 @@ func (m *mPulseAccessorMockForPulseNumber) ExpectOnce(p context.Context, p1 core
 	return expectation
 }
 
-func (e *PulseAccessorMockForPulseNumberExpectation) Return(r core.PulseNumber, r1 error) {
+func (e *PulseAccessorMockForPulseNumberExpectation) Return(r insolar.PulseNumber, r1 error) {
 	e.result = &PulseAccessorMockForPulseNumberResult{r, r1}
 }
 
 //Set uses given function f as a mock of PulseAccessor.ForPulseNumber method
-func (m *mPulseAccessorMockForPulseNumber) Set(f func(p context.Context, p1 core.PulseNumber) (r core.PulseNumber, r1 error)) *PulseAccessorMock {
+func (m *mPulseAccessorMockForPulseNumber) Set(f func(p context.Context, p1 insolar.PulseNumber) (r insolar.PulseNumber, r1 error)) *PulseAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -115,7 +115,7 @@ func (m *mPulseAccessorMockForPulseNumber) Set(f func(p context.Context, p1 core
 }
 
 //ForPulseNumber implements github.com/insolar/insolar/network/storage.PulseAccessor interface
-func (m *PulseAccessorMock) ForPulseNumber(p context.Context, p1 core.PulseNumber) (r core.PulseNumber, r1 error) {
+func (m *PulseAccessorMock) ForPulseNumber(p context.Context, p1 insolar.PulseNumber) (r insolar.PulseNumber, r1 error) {
 	counter := atomic.AddUint64(&m.ForPulseNumberPreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseNumberCounter, 1)
 
@@ -212,7 +212,7 @@ type PulseAccessorMockLatestInput struct {
 }
 
 type PulseAccessorMockLatestResult struct {
-	r  core.Pulse
+	r  insolar.Pulse
 	r1 error
 }
 
@@ -229,7 +229,7 @@ func (m *mPulseAccessorMockLatest) Expect(p context.Context) *mPulseAccessorMock
 }
 
 //Return specifies results of invocation of PulseAccessor.Latest
-func (m *mPulseAccessorMockLatest) Return(r core.Pulse, r1 error) *PulseAccessorMock {
+func (m *mPulseAccessorMockLatest) Return(r insolar.Pulse, r1 error) *PulseAccessorMock {
 	m.mock.LatestFunc = nil
 	m.expectationSeries = nil
 
@@ -251,12 +251,12 @@ func (m *mPulseAccessorMockLatest) ExpectOnce(p context.Context) *PulseAccessorM
 	return expectation
 }
 
-func (e *PulseAccessorMockLatestExpectation) Return(r core.Pulse, r1 error) {
+func (e *PulseAccessorMockLatestExpectation) Return(r insolar.Pulse, r1 error) {
 	e.result = &PulseAccessorMockLatestResult{r, r1}
 }
 
 //Set uses given function f as a mock of PulseAccessor.Latest method
-func (m *mPulseAccessorMockLatest) Set(f func(p context.Context) (r core.Pulse, r1 error)) *PulseAccessorMock {
+func (m *mPulseAccessorMockLatest) Set(f func(p context.Context) (r insolar.Pulse, r1 error)) *PulseAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -265,7 +265,7 @@ func (m *mPulseAccessorMockLatest) Set(f func(p context.Context) (r core.Pulse, 
 }
 
 //Latest implements github.com/insolar/insolar/network/storage.PulseAccessor interface
-func (m *PulseAccessorMock) Latest(p context.Context) (r core.Pulse, r1 error) {
+func (m *PulseAccessorMock) Latest(p context.Context) (r insolar.Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.LatestPreCounter, 1)
 	defer atomic.AddUint64(&m.LatestCounter, 1)
 

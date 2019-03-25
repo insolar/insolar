@@ -17,12 +17,12 @@
 package pulsarstorage
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type PulsarStorage interface {
-	GetLastPulse() (*core.Pulse, error)
-	SetLastPulse(pulse *core.Pulse) error
-	SavePulse(pulse *core.Pulse) error
+	GetLastPulse() (*insolar.Pulse, error)
+	SetLastPulse(pulse *insolar.Pulse) error
+	SavePulse(pulse *insolar.Pulse) error
 	Close() error
 }

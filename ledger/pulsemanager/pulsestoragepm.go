@@ -17,15 +17,15 @@
 package pulsemanager
 
 import (
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // It's a internal interface of pulse manager, you shouldn't use outside of pm
 //go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.pulseStoragePm -o ./ -s _mock.go
 type pulseStoragePm interface {
-	core.PulseStorage
+	insolar.PulseStorage
 
-	Set(pulse *core.Pulse)
+	Set(pulse *insolar.Pulse)
 
 	Lock()
 	Unlock()

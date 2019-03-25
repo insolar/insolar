@@ -54,16 +54,16 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/stretchr/testify/suite"
 )
 
 func (t *merkleHelperSuite) TestMerkleHelperPulseHash() {
-	pulse := &core.Pulse{
-		PulseNumber:     core.PulseNumber(1337),
-		NextPulseNumber: core.PulseNumber(1347),
+	pulse := &insolar.Pulse{
+		PulseNumber:     insolar.PulseNumber(1337),
+		NextPulseNumber: insolar.PulseNumber(1347),
 		Entropy:         pulsartestutils.MockEntropyGenerator{}.GenerateEntropy(),
 	}
 
@@ -128,7 +128,7 @@ func (t *merkleHelperSuite) TestMerkleHelperBucketEntryHash() {
 
 func (t *merkleHelperSuite) TestMerkleHelperBucketInfoHash() {
 	nodeCount := 1337
-	role := core.StaticRoleVirtual
+	role := insolar.StaticRoleVirtual
 
 	expectedHash, _ := hex.DecodeString(
 		"eeb9dd175bb0d139083eadae8020f5b8623cb694263e8aec199c97213c383daf6ba0a58e734429b914cad1e401db1619526b1dabb57c5a020cd2fffed1f0cdeb",

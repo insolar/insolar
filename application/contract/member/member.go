@@ -25,7 +25,7 @@ import (
 	"github.com/insolar/insolar/application/proxy/nodedomain"
 	"github.com/insolar/insolar/application/proxy/rootdomain"
 	"github.com/insolar/insolar/application/proxy/wallet"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
@@ -53,7 +53,7 @@ func New(name string, key string) (*Member, error) {
 }
 
 func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byte) error {
-	args, err := core.MarshalArgs(m.GetReference(), method, params, seed)
+	args, err := insolar.MarshalArgs(m.GetReference(), method, params, seed)
 	if err != nil {
 		return fmt.Errorf("[ verifySig ] Can't MarshalArgs: %s", err.Error())
 	}
@@ -77,7 +77,7 @@ func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byt
 var INSATTR_Call_API = true
 
 // Call method for authorized calls
-func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
+func (m *Member) Call(rootDomain insolar.Reference, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
 
 	switch method {
 	case "CreateMember":
@@ -107,7 +107,7 @@ func (m *Member) Call(rootDomain core.RecordRef, method string, params []byte, s
 	return nil, &foundation.Error{S: "Unknown method"}
 }
 
-func (m *Member) createMemberCall(ref core.RecordRef, params []byte) (interface{}, error) {
+func (m *Member) createMemberCall(ref insolar.Reference, params []byte) (interface{}, error) {
 	rootDomain := rootdomain.GetObject(ref)
 	var name string
 	var key string
@@ -131,7 +131,7 @@ func (m *Member) getBalanceCall(params []byte) (interface{}, error) {
 	if err := signer.UnmarshalParams(params, &member); err != nil {
 		return nil, fmt.Errorf("[ getBalanceCall ] : %s", err.Error())
 	}
-	memberRef, err := core.NewRefFromBase58(member)
+	memberRef, err := insolar.NewReferenceFromBase58(member)
 	if err != nil {
 		return nil, fmt.Errorf("[ getBalanceCall ] : %s", err.Error())
 	}
@@ -171,7 +171,7 @@ func (m *Member) transferCall(params []byte) (interface{}, error) {
 	default:
 		return nil, fmt.Errorf("Wrong type for amount %t", inAmount)
 	}
-	to, err := core.NewRefFromBase58(toStr)
+	to, err := insolar.NewReferenceFromBase58(toStr)
 	if err != nil {
 		return nil, fmt.Errorf("[ transferCall ] Failed to parse 'to' param: %s", err.Error())
 	}
@@ -186,7 +186,7 @@ func (m *Member) transferCall(params []byte) (interface{}, error) {
 	return nil, w.Transfer(amount, to)
 }
 
-func (m *Member) dumpUserInfoCall(ref core.RecordRef, params []byte) (interface{}, error) {
+func (m *Member) dumpUserInfoCall(ref insolar.Reference, params []byte) (interface{}, error) {
 	rootDomain := rootdomain.GetObject(ref)
 	var user string
 	if err := signer.UnmarshalParams(params, &user); err != nil {
@@ -195,12 +195,12 @@ func (m *Member) dumpUserInfoCall(ref core.RecordRef, params []byte) (interface{
 	return rootDomain.DumpUserInfo(user)
 }
 
-func (m *Member) dumpAllUsersCall(ref core.RecordRef) (interface{}, error) {
+func (m *Member) dumpAllUsersCall(ref insolar.Reference) (interface{}, error) {
 	rootDomain := rootdomain.GetObject(ref)
 	return rootDomain.DumpAllUsers()
 }
 
-func (m *Member) registerNodeCall(ref core.RecordRef, params []byte) (interface{}, error) {
+func (m *Member) registerNodeCall(ref insolar.Reference, params []byte) (interface{}, error) {
 	var publicKey string
 	var role string
 	if err := signer.UnmarshalParams(params, &publicKey, &role); err != nil {
@@ -222,7 +222,7 @@ func (m *Member) registerNodeCall(ref core.RecordRef, params []byte) (interface{
 	return string(cert), nil
 }
 
-func (m *Member) getNodeRefCall(ref core.RecordRef, params []byte) (interface{}, error) {
+func (m *Member) getNodeRefCall(ref insolar.Reference, params []byte) (interface{}, error) {
 	var publicKey string
 	if err := signer.UnmarshalParams(params, &publicKey); err != nil {
 		return nil, fmt.Errorf("[ getNodeRefCall ] Can't unmarshal params: %s", err.Error())
@@ -237,7 +237,7 @@ func (m *Member) getNodeRefCall(ref core.RecordRef, params []byte) (interface{},
 	nd := nodedomain.GetObject(nodeDomainRef)
 	nodeRef, err := nd.GetNodeRefByPK(publicKey)
 	if err != nil {
-		return nil, fmt.Errorf("[ getNodeRefCall ] Node not found: %s", err.Error())
+		return nil, fmt.Errorf("[ getNodeRefCall ] NetworkNode not found: %s", err.Error())
 	}
 
 	return nodeRef, nil

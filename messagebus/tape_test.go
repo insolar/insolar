@@ -26,9 +26,9 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -39,7 +39,7 @@ func TestGetMessageHash(t *testing.T) {
 
 func TestTape_SetGet(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	pn := core.PulseNumber(1)
+	pn := insolar.PulseNumber(1)
 
 	rep := reply.Object{Memory: []byte{9, 9, 9}}
 	rd, err := reply.Serialize(&rep)
@@ -61,7 +61,7 @@ func TestTape_SetGet(t *testing.T) {
 
 func TestTape_SetGet_WithError(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	pn := core.PulseNumber(1)
+	pn := insolar.PulseNumber(1)
 
 	expectedErr := fmt.Errorf("Error")
 	gotErr := fmt.Errorf("Error")
@@ -84,7 +84,7 @@ func TestTape_Write(t *testing.T) {
 
 	// 	// Prepare test data.
 	ctx := inslogger.TestContext(t)
-	pn := core.PulseNumber(core.FirstPulseNumber + 1000)
+	pn := insolar.PulseNumber(insolar.FirstPulseNumber + 1000)
 
 	tp := newMemoryTape(pn)
 

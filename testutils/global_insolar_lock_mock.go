@@ -3,7 +3,7 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "GlobalInsolarLock" can be found in github.com/insolar/insolar/core
+The original interface "GlobalInsolarLock" can be found in github.com/insolar/insolar/insolar
 */
 import (
 	context "context"
@@ -15,7 +15,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//GlobalInsolarLockMock implements github.com/insolar/insolar/core.GlobalInsolarLock
+//GlobalInsolarLockMock implements github.com/insolar/insolar/insolar.GlobalInsolarLock
 type GlobalInsolarLockMock struct {
 	t minimock.Tester
 
@@ -30,7 +30,7 @@ type GlobalInsolarLockMock struct {
 	ReleaseMock       mGlobalInsolarLockMockRelease
 }
 
-//NewGlobalInsolarLockMock returns a mock for github.com/insolar/insolar/core.GlobalInsolarLock
+//NewGlobalInsolarLockMock returns a mock for github.com/insolar/insolar/insolar.GlobalInsolarLock
 func NewGlobalInsolarLockMock(t minimock.Tester) *GlobalInsolarLockMock {
 	m := &GlobalInsolarLockMock{t: t}
 
@@ -102,7 +102,7 @@ func (m *mGlobalInsolarLockMockAcquire) Set(f func(p context.Context)) *GlobalIn
 	return m.mock
 }
 
-//Acquire implements github.com/insolar/insolar/core.GlobalInsolarLock interface
+//Acquire implements github.com/insolar/insolar/insolar.GlobalInsolarLock interface
 func (m *GlobalInsolarLockMock) Acquire(p context.Context) {
 	counter := atomic.AddUint64(&m.AcquirePreCounter, 1)
 	defer atomic.AddUint64(&m.AcquireCounter, 1)
@@ -225,7 +225,7 @@ func (m *mGlobalInsolarLockMockRelease) Set(f func(p context.Context)) *GlobalIn
 	return m.mock
 }
 
-//Release implements github.com/insolar/insolar/core.GlobalInsolarLock interface
+//Release implements github.com/insolar/insolar/insolar.GlobalInsolarLock interface
 func (m *GlobalInsolarLockMock) Release(p context.Context) {
 	counter := atomic.AddUint64(&m.ReleasePreCounter, 1)
 	defer atomic.AddUint64(&m.ReleaseCounter, 1)

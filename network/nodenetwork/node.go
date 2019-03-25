@@ -60,26 +60,26 @@ import (
 	"sync/atomic"
 
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
 type MutableNode interface {
-	core.Node
+	insolar.NetworkNode
 
-	SetShortID(shortID core.ShortNodeID)
-	SetState(state core.NodeState)
+	SetShortID(shortID insolar.ShortNodeID)
+	SetState(state insolar.NodeState)
 	ChangeState()
-	SetLeavingETA(number core.PulseNumber)
+	SetLeavingETA(number insolar.PulseNumber)
 	SetVersion(version string)
 }
 
 type node struct {
-	NodeID        core.RecordRef
+	NodeID        insolar.Reference
 	NodeShortID   uint32
-	NodeRole      core.StaticRole
+	NodeRole      insolar.StaticRole
 	NodePublicKey crypto.PublicKey
 
 	NodeAddress string
@@ -100,26 +100,26 @@ func (n *node) SetVersion(version string) {
 	n.NodeVersion = version
 }
 
-func (n *node) SetState(state core.NodeState) {
+func (n *node) SetState(state insolar.NodeState) {
 	atomic.StoreUint32(&n.state, uint32(state))
 }
 
-func (n *node) GetState() core.NodeState {
-	return core.NodeState(atomic.LoadUint32(&n.state))
+func (n *node) GetState() insolar.NodeState {
+	return insolar.NodeState(atomic.LoadUint32(&n.state))
 }
 
 func (n *node) ChangeState() {
 	// we don't expect concurrent changes, so do not CAS
 	currentState := atomic.LoadUint32(&n.state)
-	if currentState == uint32(core.NodeReady) {
+	if currentState == uint32(insolar.NodeReady) {
 		return
 	}
 	atomic.StoreUint32(&n.state, currentState+1)
 }
 
 func newMutableNode(
-	id core.RecordRef,
-	role core.StaticRole,
+	id insolar.Reference,
+	role insolar.StaticRole,
 	publicKey crypto.PublicKey,
 	address, version string) MutableNode {
 
@@ -135,27 +135,27 @@ func newMutableNode(
 		NodeAddress:   address,
 		CAddress:      consensusAddress,
 		NodeVersion:   version,
-		state:         uint32(core.NodeReady),
+		state:         uint32(insolar.NodeReady),
 	}
 }
 
 func NewNode(
-	id core.RecordRef,
-	role core.StaticRole,
+	id insolar.Reference,
+	role insolar.StaticRole,
 	publicKey crypto.PublicKey,
-	address, version string) core.Node {
+	address, version string) insolar.NetworkNode {
 	return newMutableNode(id, role, publicKey, address, version)
 }
 
-func (n *node) ID() core.RecordRef {
+func (n *node) ID() insolar.Reference {
 	return n.NodeID
 }
 
-func (n *node) ShortID() core.ShortNodeID {
-	return core.ShortNodeID(atomic.LoadUint32(&n.NodeShortID))
+func (n *node) ShortID() insolar.ShortNodeID {
+	return insolar.ShortNodeID(atomic.LoadUint32(&n.NodeShortID))
 }
 
-func (n *node) Role() core.StaticRole {
+func (n *node) Role() insolar.StaticRole {
 	return n.NodeRole
 }
 
@@ -171,7 +171,7 @@ func (n *node) ConsensusAddress() string {
 	return n.CAddress
 }
 
-func (n *node) GetGlobuleID() core.GlobuleID {
+func (n *node) GetGlobuleID() insolar.GlobuleID {
 	return 0
 }
 
@@ -182,16 +182,16 @@ func (n *node) Version() string {
 	return n.NodeVersion
 }
 
-func (n *node) SetShortID(id core.ShortNodeID) {
+func (n *node) SetShortID(id insolar.ShortNodeID) {
 	atomic.StoreUint32(&n.NodeShortID, uint32(id))
 }
 
-func (n *node) LeavingETA() core.PulseNumber {
-	return core.PulseNumber(atomic.LoadUint32(&n.NodeLeavingETA))
+func (n *node) LeavingETA() insolar.PulseNumber {
+	return insolar.PulseNumber(atomic.LoadUint32(&n.NodeLeavingETA))
 }
 
-func (n *node) SetLeavingETA(number core.PulseNumber) {
-	n.SetState(core.NodeLeaving)
+func (n *node) SetLeavingETA(number insolar.PulseNumber) {
+	n.SetState(insolar.NodeLeaving)
 	atomic.StoreUint32(&n.NodeLeavingETA, uint32(number))
 }
 
@@ -199,7 +199,7 @@ func init() {
 	gob.Register(&node{})
 }
 
-func ClaimToNode(version string, claim *packets.NodeJoinClaim) (core.Node, error) {
+func ClaimToNode(version string, claim *packets.NodeJoinClaim) (insolar.NetworkNode, error) {
 	keyProc := platformpolicy.NewKeyProcessor()
 	key, err := keyProc.ImportPublicKeyBinary(claim.NodePK[:])
 	if err != nil {

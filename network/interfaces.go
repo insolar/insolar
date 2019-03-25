@@ -56,7 +56,7 @@ import (
 
 	"github.com/insolar/insolar/component"
 	consensus "github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
@@ -72,20 +72,20 @@ type BootstrapResult struct {
 type Controller interface {
 	component.Initer
 	// SendParcel send message to nodeID.
-	SendMessage(nodeID core.RecordRef, name string, msg core.Parcel) ([]byte, error)
+	SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error)
 	// RemoteProcedureRegister register remote procedure that will be executed when message is received.
-	RemoteProcedureRegister(name string, method core.RemoteProcedure)
+	RemoteProcedureRegister(name string, method insolar.RemoteProcedure)
 	// SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
-	SendCascadeMessage(data core.Cascade, method string, msg core.Parcel) error
+	SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error
 	// Bootstrap init complex bootstrap process. Blocks until bootstrap is complete.
 	Bootstrap(ctx context.Context) (*BootstrapResult, error)
 
 	// TODO: workaround methods, should be deleted once network consensus is alive
 
 	// SetLastIgnoredPulse set pulse number after which we will begin setting new pulses to PulseManager
-	SetLastIgnoredPulse(number core.PulseNumber)
+	SetLastIgnoredPulse(number insolar.PulseNumber)
 	// GetLastIgnoredPulse get last pulse that will be ignored
-	GetLastIgnoredPulse() core.PulseNumber
+	GetLastIgnoredPulse() insolar.PulseNumber
 }
 
 // RequestHandler handler function to process incoming requests from network.
@@ -97,10 +97,10 @@ type HostNetwork interface {
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 	// GetNodeID get current node ID.
-	GetNodeID() core.RecordRef
+	GetNodeID() insolar.Reference
 
 	// SendRequest send request to a remote node.
-	SendRequest(ctx context.Context, request Request, receiver core.RecordRef) (Future, error)
+	SendRequest(ctx context.Context, request Request, receiver insolar.Reference) (Future, error)
 	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 	RegisterRequestHandler(t types.PacketType, handler RequestHandler)
 	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
@@ -109,7 +109,7 @@ type HostNetwork interface {
 	BuildResponse(ctx context.Context, request Request, responseData interface{}) Response
 }
 
-type ConsensusPacketHandler func(incomingPacket consensus.ConsensusPacket, sender core.RecordRef)
+type ConsensusPacketHandler func(incomingPacket consensus.ConsensusPacket, sender insolar.Reference)
 
 //go:generate minimock -i github.com/insolar/insolar/network.ConsensusNetwork -o ../testutils/network -s _mock.go
 type ConsensusNetwork interface {
@@ -118,10 +118,10 @@ type ConsensusNetwork interface {
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 	// GetNodeID get current node ID.
-	GetNodeID() core.RecordRef
+	GetNodeID() insolar.Reference
 
 	// SignAndSendPacket send request to a remote node.
-	SignAndSendPacket(packet consensus.ConsensusPacket, receiver core.RecordRef, service core.CryptographyService) error
+	SignAndSendPacket(packet consensus.ConsensusPacket, receiver insolar.Reference, service insolar.CryptographyService) error
 	// RegisterPacketHandler register a handler function to process incoming requests of a specific type.
 	RegisterPacketHandler(t consensus.PacketType, handler ConsensusPacketHandler)
 }
@@ -131,7 +131,7 @@ type RequestID uint64
 
 // Packet is a packet that is transported via network by HostNetwork.
 type Packet interface {
-	GetSender() core.RecordRef
+	GetSender() insolar.Reference
 	GetSenderHost() *host.Host
 	GetType() types.PacketType
 	GetData() interface{}
@@ -161,23 +161,23 @@ type RequestBuilder interface {
 // PulseHandler interface to process new pulse.
 //go:generate minimock -i github.com/insolar/insolar/network.PulseHandler -o ../testutils/network -s _mock.go
 type PulseHandler interface {
-	HandlePulse(ctx context.Context, pulse core.Pulse)
+	HandlePulse(ctx context.Context, pulse insolar.Pulse)
 }
 
 // NodeKeeper manages unsync, sync and active lists.
 //go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go
 type NodeKeeper interface {
-	core.NodeNetwork
+	insolar.NodeNetwork
 
 	// TODO: remove this interface when bootstrap mechanism completed
-	core.SwitcherWorkAround
+	insolar.SwitcherWorkAround
 
 	// GetCloudHash returns current cloud hash
 	GetCloudHash() []byte
 	// SetCloudHash set new cloud hash
 	SetCloudHash([]byte)
 	// SetInitialSnapshot set initial snapshot for nodekeeper
-	SetInitialSnapshot(nodes []core.Node)
+	SetInitialSnapshot(nodes []insolar.NetworkNode)
 	// GetAccessor get accessor to the internal snapshot for the current pulse
 	// TODO: add pulse to the function signature to get data of various pulses
 	GetAccessor() Accessor
@@ -195,7 +195,7 @@ type NodeKeeper interface {
 	// Should be called when GetConsensusInfo().IsJoiner() == true.
 	GetSparseUnsyncList(length int) UnsyncList
 	// Sync move unsync -> sync
-	Sync(context.Context, []core.Node, []consensus.ReferendumClaim) error
+	Sync(context.Context, []insolar.NetworkNode, []consensus.ReferendumClaim) error
 	// MoveSyncToActive merge sync list with active nodes
 	MoveSyncToActive(ctx context.Context) error
 	// GetConsensusInfo get additional info for the current consensus process
@@ -208,11 +208,11 @@ type ConsensusInfo interface {
 	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
 	NodesJoinedDuringPreviousPulse() bool
 	// AddTemporaryMapping add temporary mapping till the next pulse for consensus
-	AddTemporaryMapping(nodeID core.RecordRef, shortID core.ShortNodeID, address string) error
+	AddTemporaryMapping(nodeID insolar.Reference, shortID insolar.ShortNodeID, address string) error
 	// ResolveConsensus get temporary mapping by short ID
-	ResolveConsensus(shortID core.ShortNodeID) *host.Host
+	ResolveConsensus(shortID insolar.ShortNodeID) *host.Host
 	// ResolveConsensusRef get temporary mapping by node ID
-	ResolveConsensusRef(nodeID core.RecordRef) *host.Host
+	ResolveConsensusRef(nodeID insolar.Reference) *host.Host
 	// SetIsJoiner instruct current node whether it should perform consensus as joiner or not
 	SetIsJoiner(isJoiner bool)
 	// IsJoiner true if current node should perform consensus as joiner
@@ -224,23 +224,23 @@ type ConsensusInfo interface {
 type UnsyncList interface {
 	consensus.BitSetMapper
 	// AddNode add node to the snapshot of the current consensus
-	AddNode(node core.Node, bitsetIndex uint16)
+	AddNode(node insolar.NetworkNode, bitsetIndex uint16)
 	// AddProof add node pulse proof of a specific node
-	AddProof(nodeID core.RecordRef, proof *consensus.NodePulseProof)
+	AddProof(nodeID insolar.Reference, proof *consensus.NodePulseProof)
 	// GetProof get node pulse proof of a specific node
-	GetProof(nodeID core.RecordRef) *consensus.NodePulseProof
+	GetProof(nodeID insolar.Reference) *consensus.NodePulseProof
 	// GetGlobuleHashSignature get globule hash signature of a specific node
-	GetGlobuleHashSignature(ref core.RecordRef) (consensus.GlobuleHashSignature, bool)
+	GetGlobuleHashSignature(ref insolar.Reference) (consensus.GlobuleHashSignature, bool)
 	// SetGlobuleHashSignature set globule hash signature of a specific node
-	SetGlobuleHashSignature(core.RecordRef, consensus.GlobuleHashSignature)
+	SetGlobuleHashSignature(insolar.Reference, consensus.GlobuleHashSignature)
 	// GetActiveNode get active node by reference ID for current consensus
-	GetActiveNode(ref core.RecordRef) core.Node
+	GetActiveNode(ref insolar.Reference) insolar.NetworkNode
 	// GetActiveNodes get active nodes for current consensus
-	GetActiveNodes() []core.Node
+	GetActiveNodes() []insolar.NetworkNode
 	// GetOrigin get origin node for the current insolard
-	GetOrigin() core.Node
+	GetOrigin() insolar.NetworkNode
 	// RemoveNode remove node
-	RemoveNode(nodeID core.RecordRef)
+	RemoveNode(nodeID insolar.Reference)
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.
@@ -251,11 +251,11 @@ type PartitionPolicy interface {
 // RoutingTable contains all routing information of the network.
 type RoutingTable interface {
 	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
-	Resolve(core.RecordRef) (*host.Host, error)
+	Resolve(insolar.Reference) (*host.Host, error)
 	// ResolveConsensus ShortID -> NodeID, Address for node inside current globe for current consensus.
-	ResolveConsensus(core.ShortNodeID) (*host.Host, error)
+	ResolveConsensus(insolar.ShortNodeID) (*host.Host, error)
 	// ResolveConsensusRef NodeID -> ShortID, Address for node inside current globe for current consensus.
-	ResolveConsensusRef(core.RecordRef) (*host.Host, error)
+	ResolveConsensusRef(insolar.Reference) (*host.Host, error)
 	// AddToKnownHosts add host to routing table.
 	AddToKnownHosts(*host.Host)
 	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
@@ -271,7 +271,7 @@ type InternalTransport interface {
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 	// GetNodeID get current node ID.
-	GetNodeID() core.RecordRef
+	GetNodeID() insolar.Reference
 
 	// SendRequestPacket send request packet to a remote node.
 	SendRequestPacket(ctx context.Context, request Request, receiver *host.Host) (Future, error)
@@ -298,22 +298,22 @@ type ClaimQueue interface {
 
 // Snapshot contains node lists and network state for every pulse
 type Snapshot interface {
-	GetPulse() core.PulseNumber
+	GetPulse() insolar.PulseNumber
 }
 
 // Accessor is interface that provides read access to nodekeeper internal snapshot
 type Accessor interface {
 	// GetWorkingNode get working node by its reference. Returns nil if node is not found.
-	GetWorkingNode(ref core.RecordRef) core.Node
+	GetWorkingNode(ref insolar.Reference) insolar.NetworkNode
 	// GetWorkingNodes get working nodes.
-	GetWorkingNodes() []core.Node
+	GetWorkingNodes() []insolar.NetworkNode
 	// GetWorkingNodesByRole get working nodes by role
-	GetWorkingNodesByRole(role core.DynamicRole) []core.RecordRef
+	GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference
 
 	// GetActiveNode returns active node.
-	GetActiveNode(ref core.RecordRef) core.Node
+	GetActiveNode(ref insolar.Reference) insolar.NetworkNode
 	// GetActiveNodes returns active nodes.
-	GetActiveNodes() []core.Node
+	GetActiveNodes() []insolar.NetworkNode
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
-	GetActiveNodeByShortID(shortID core.ShortNodeID) core.Node
+	GetActiveNodeByShortID(shortID insolar.ShortNodeID) insolar.NetworkNode
 }

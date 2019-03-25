@@ -19,7 +19,7 @@ package extractor
 import (
 	"encoding/json"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/pkg/errors"
 )
@@ -35,7 +35,7 @@ type Info struct {
 func InfoResponse(data []byte) (*Info, error) {
 	var infoMap interface{}
 	var contractErr *foundation.Error
-	_, err := core.UnMarshalResponse(data, []interface{}{&infoMap, &contractErr})
+	_, err := insolar.UnMarshalResponse(data, []interface{}{&infoMap, &contractErr})
 	if err != nil {
 		return nil, errors.Wrap(err, "[ InfoResponse ] Can't unmarshal")
 	}

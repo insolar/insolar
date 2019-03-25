@@ -19,7 +19,7 @@ package blob
 import (
 	"context"
 
-	"github.com/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Accessor -o ./ -s _mock.go

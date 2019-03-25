@@ -21,7 +21,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -117,7 +117,7 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout(t *testing.T) {
 	go func() {
 		err := hdwGetter().Wait(inslogger.TestContext(t), jetID)
 		require.NotNil(t, err)
-		require.Equal(t, core.ErrHotDataTimeout, err)
+		require.Equal(t, insolar.ErrHotDataTimeout, err)
 		close(syncChannel)
 	}()
 
@@ -156,13 +156,13 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout_MultipleMembers(t *testing.T) {
 	go func() {
 		err := hdwGetter().Wait(inslogger.TestContext(t), jetID)
 		require.NotNil(t, err)
-		require.Equal(t, core.ErrHotDataTimeout, err)
+		require.Equal(t, insolar.ErrHotDataTimeout, err)
 		syncChannel <- struct{}{}
 	}()
 	go func() {
 		err := hdwGetter().Wait(inslogger.TestContext(t), secondJetID)
 		require.NotNil(t, err)
-		require.Equal(t, core.ErrHotDataTimeout, err)
+		require.Equal(t, insolar.ErrHotDataTimeout, err)
 		syncChannel <- struct{}{}
 	}()
 

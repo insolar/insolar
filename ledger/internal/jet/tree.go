@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type jet struct {
@@ -84,12 +84,12 @@ func (j *jet) Clone(keep bool) *jet {
 	return res
 }
 
-func (j *jet) ExtractLeafIDs(ids *[]core.JetID, path []byte, depth uint8) {
+func (j *jet) ExtractLeafIDs(ids *[]insolar.JetID, path []byte, depth uint8) {
 	if j == nil {
 		return
 	}
 	if j.Left == nil && j.Right == nil {
-		*ids = append(*ids, *core.NewJetID(depth, path))
+		*ids = append(*ids, *insolar.NewJetID(depth, path))
 		return
 	}
 
@@ -223,49 +223,49 @@ func (t *Tree) Clone(keep bool) *Tree {
 
 // Find returns jet for provided record ID.
 // If found jet is actual, the second argument will be true.
-func (t *Tree) Find(recordID core.RecordID) (core.JetID, bool) {
+func (t *Tree) Find(recordID insolar.ID) (insolar.JetID, bool) {
 	// if provided record ID is JetID, returns it as actual.
 	// TODO: describe case
-	if recordID.Pulse() == core.PulseNumberJet {
-		return core.JetID(recordID), true
+	if recordID.Pulse() == insolar.PulseNumberJet {
+		return insolar.JetID(recordID), true
 	}
 
 	hash := recordID.Hash()
 	j, depth := t.Head.Find(hash, 0)
-	id := *core.NewJetID(uint8(depth), resetBits(hash, depth))
+	id := *insolar.NewJetID(uint8(depth), resetBits(hash, depth))
 	return id, j.Actual
 }
 
 // Update add missing tree branches for provided prefix.
 // If 'setActual' is set, all encountered nodes will be marked as actual.
-func (t *Tree) Update(id core.JetID, setActual bool) {
+func (t *Tree) Update(id insolar.JetID, setActual bool) {
 	t.Head.Update(id.Prefix(), setActual, id.Depth(), 0)
 }
 
 // Split looks for provided jet and creates (and returns) two branches for it.
 // If provided jet is not found, an error will be returned.
-func (t *Tree) Split(id core.JetID) (core.JetID, core.JetID, error) {
+func (t *Tree) Split(id insolar.JetID) (insolar.JetID, insolar.JetID, error) {
 	depth, prefix := id.Depth(), id.Prefix()
 	j, foundDepth := t.Head.Find(prefix, 0)
 	if depth != foundDepth {
-		return core.ZeroJetID, core.ZeroJetID, errors.New("failed to split: incorrect jet provided")
+		return insolar.ZeroJetID, insolar.ZeroJetID, errors.New("failed to split: incorrect jet provided")
 	}
 
 	j.Left = &jet{}
 	leftPrefix := resetBits(prefix, depth)
-	left := core.NewJetID(depth+1, leftPrefix)
+	left := insolar.NewJetID(depth+1, leftPrefix)
 
 	j.Right = &jet{}
 	rightPrefix := resetBits(prefix, depth)
 	setBit(rightPrefix, depth)
-	right := core.NewJetID(depth+1, rightPrefix)
+	right := insolar.NewJetID(depth+1, rightPrefix)
 
 	return *left, *right, nil
 }
 
-func (t *Tree) LeafIDs() []core.JetID {
-	var ids []core.JetID
-	t.Head.ExtractLeafIDs(&ids, make([]byte, core.RecordHashSize), 0)
+func (t *Tree) LeafIDs() []insolar.JetID {
+	var ids []insolar.JetID
+	t.Head.ExtractLeafIDs(&ids, make([]byte, insolar.RecordHashSize), 0)
 	return ids
 }
 
