@@ -21,16 +21,16 @@ import (
 
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 
 	"github.com/insolar/insolar/conveyor/queue"
-	"github.com/insolar/insolar/core"
 	"github.com/stretchr/testify/require"
 )
 
-func testSlot(t *testing.T, isQueueOk bool, pulseNumber core.PulseNumber) *Slot {
+func testSlot(t *testing.T, isQueueOk bool, pulseNumber insolar.PulseNumber) *Slot {
 	var q *queue.IQueueMock
 	if isQueueOk {
 		q = mockQueue(t)
@@ -41,7 +41,7 @@ func testSlot(t *testing.T, isQueueOk bool, pulseNumber core.PulseNumber) *Slot 
 	return &Slot{
 		inputQueue:  q,
 		pulseNumber: pulseNumber,
-		pulse:       core.Pulse{PulseNumber: pulseNumber},
+		pulse:       insolar.Pulse{PulseNumber: pulseNumber},
 	}
 }
 
@@ -252,7 +252,7 @@ func TestSlot_getPulseData(t *testing.T) {
 	s := testSlot(t, true, testRealPulse)
 
 	pulse := s.GetPulseData()
-	require.Equal(t, core.Pulse{PulseNumber: testRealPulse}, pulse)
+	require.Equal(t, insolar.Pulse{PulseNumber: testRealPulse}, pulse)
 }
 
 func TestSlot_getNodeId(t *testing.T) {

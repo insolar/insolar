@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 )
 
 //SlotDetailsMock implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotDetails
@@ -27,12 +27,12 @@ type SlotDetailsMock struct {
 	GetNodeIDPreCounter uint64
 	GetNodeIDMock       mSlotDetailsMockGetNodeID
 
-	GetPulseDataFunc       func() (r core.Pulse)
+	GetPulseDataFunc       func() (r insolar.Pulse)
 	GetPulseDataCounter    uint64
 	GetPulseDataPreCounter uint64
 	GetPulseDataMock       mSlotDetailsMockGetPulseData
 
-	GetPulseNumberFunc       func() (r core.PulseNumber)
+	GetPulseNumberFunc       func() (r insolar.PulseNumber)
 	GetPulseNumberCounter    uint64
 	GetPulseNumberPreCounter uint64
 	GetPulseNumberMock       mSlotDetailsMockGetPulseNumber
@@ -333,7 +333,7 @@ type SlotDetailsMockGetPulseDataExpectation struct {
 }
 
 type SlotDetailsMockGetPulseDataResult struct {
-	r core.Pulse
+	r insolar.Pulse
 }
 
 //Expect specifies that invocation of SlotDetails.GetPulseData is expected from 1 to Infinity times
@@ -349,7 +349,7 @@ func (m *mSlotDetailsMockGetPulseData) Expect() *mSlotDetailsMockGetPulseData {
 }
 
 //Return specifies results of invocation of SlotDetails.GetPulseData
-func (m *mSlotDetailsMockGetPulseData) Return(r core.Pulse) *SlotDetailsMock {
+func (m *mSlotDetailsMockGetPulseData) Return(r insolar.Pulse) *SlotDetailsMock {
 	m.mock.GetPulseDataFunc = nil
 	m.expectationSeries = nil
 
@@ -371,12 +371,12 @@ func (m *mSlotDetailsMockGetPulseData) ExpectOnce() *SlotDetailsMockGetPulseData
 	return expectation
 }
 
-func (e *SlotDetailsMockGetPulseDataExpectation) Return(r core.Pulse) {
+func (e *SlotDetailsMockGetPulseDataExpectation) Return(r insolar.Pulse) {
 	e.result = &SlotDetailsMockGetPulseDataResult{r}
 }
 
 //Set uses given function f as a mock of SlotDetails.GetPulseData method
-func (m *mSlotDetailsMockGetPulseData) Set(f func() (r core.Pulse)) *SlotDetailsMock {
+func (m *mSlotDetailsMockGetPulseData) Set(f func() (r insolar.Pulse)) *SlotDetailsMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -385,7 +385,7 @@ func (m *mSlotDetailsMockGetPulseData) Set(f func() (r core.Pulse)) *SlotDetails
 }
 
 //GetPulseData implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotDetails interface
-func (m *SlotDetailsMock) GetPulseData() (r core.Pulse) {
+func (m *SlotDetailsMock) GetPulseData() (r insolar.Pulse) {
 	counter := atomic.AddUint64(&m.GetPulseDataPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPulseDataCounter, 1)
 
@@ -467,7 +467,7 @@ type SlotDetailsMockGetPulseNumberExpectation struct {
 }
 
 type SlotDetailsMockGetPulseNumberResult struct {
-	r core.PulseNumber
+	r insolar.PulseNumber
 }
 
 //Expect specifies that invocation of SlotDetails.GetPulseNumber is expected from 1 to Infinity times
@@ -483,7 +483,7 @@ func (m *mSlotDetailsMockGetPulseNumber) Expect() *mSlotDetailsMockGetPulseNumbe
 }
 
 //Return specifies results of invocation of SlotDetails.GetPulseNumber
-func (m *mSlotDetailsMockGetPulseNumber) Return(r core.PulseNumber) *SlotDetailsMock {
+func (m *mSlotDetailsMockGetPulseNumber) Return(r insolar.PulseNumber) *SlotDetailsMock {
 	m.mock.GetPulseNumberFunc = nil
 	m.expectationSeries = nil
 
@@ -505,12 +505,12 @@ func (m *mSlotDetailsMockGetPulseNumber) ExpectOnce() *SlotDetailsMockGetPulseNu
 	return expectation
 }
 
-func (e *SlotDetailsMockGetPulseNumberExpectation) Return(r core.PulseNumber) {
+func (e *SlotDetailsMockGetPulseNumberExpectation) Return(r insolar.PulseNumber) {
 	e.result = &SlotDetailsMockGetPulseNumberResult{r}
 }
 
 //Set uses given function f as a mock of SlotDetails.GetPulseNumber method
-func (m *mSlotDetailsMockGetPulseNumber) Set(f func() (r core.PulseNumber)) *SlotDetailsMock {
+func (m *mSlotDetailsMockGetPulseNumber) Set(f func() (r insolar.PulseNumber)) *SlotDetailsMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -519,7 +519,7 @@ func (m *mSlotDetailsMockGetPulseNumber) Set(f func() (r core.PulseNumber)) *Slo
 }
 
 //GetPulseNumber implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotDetails interface
-func (m *SlotDetailsMock) GetPulseNumber() (r core.PulseNumber) {
+func (m *SlotDetailsMock) GetPulseNumber() (r insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.GetPulseNumberPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPulseNumberCounter, 1)
 

@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,7 +20,7 @@ import (
 type PulseAppenderMock struct {
 	t minimock.Tester
 
-	AppendFunc       func(p context.Context, p1 core.Pulse) (r error)
+	AppendFunc       func(p context.Context, p1 insolar.Pulse) (r error)
 	AppendCounter    uint64
 	AppendPreCounter uint64
 	AppendMock       mPulseAppenderMockAppend
@@ -52,7 +52,7 @@ type PulseAppenderMockAppendExpectation struct {
 
 type PulseAppenderMockAppendInput struct {
 	p  context.Context
-	p1 core.Pulse
+	p1 insolar.Pulse
 }
 
 type PulseAppenderMockAppendResult struct {
@@ -60,7 +60,7 @@ type PulseAppenderMockAppendResult struct {
 }
 
 //Expect specifies that invocation of PulseAppender.Append is expected from 1 to Infinity times
-func (m *mPulseAppenderMockAppend) Expect(p context.Context, p1 core.Pulse) *mPulseAppenderMockAppend {
+func (m *mPulseAppenderMockAppend) Expect(p context.Context, p1 insolar.Pulse) *mPulseAppenderMockAppend {
 	m.mock.AppendFunc = nil
 	m.expectationSeries = nil
 
@@ -84,7 +84,7 @@ func (m *mPulseAppenderMockAppend) Return(r error) *PulseAppenderMock {
 }
 
 //ExpectOnce specifies that invocation of PulseAppender.Append is expected once
-func (m *mPulseAppenderMockAppend) ExpectOnce(p context.Context, p1 core.Pulse) *PulseAppenderMockAppendExpectation {
+func (m *mPulseAppenderMockAppend) ExpectOnce(p context.Context, p1 insolar.Pulse) *PulseAppenderMockAppendExpectation {
 	m.mock.AppendFunc = nil
 	m.mainExpectation = nil
 
@@ -99,7 +99,7 @@ func (e *PulseAppenderMockAppendExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of PulseAppender.Append method
-func (m *mPulseAppenderMockAppend) Set(f func(p context.Context, p1 core.Pulse) (r error)) *PulseAppenderMock {
+func (m *mPulseAppenderMockAppend) Set(f func(p context.Context, p1 insolar.Pulse) (r error)) *PulseAppenderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -108,7 +108,7 @@ func (m *mPulseAppenderMockAppend) Set(f func(p context.Context, p1 core.Pulse) 
 }
 
 //Append implements github.com/insolar/insolar/network/storage.PulseAppender interface
-func (m *PulseAppenderMock) Append(p context.Context, p1 core.Pulse) (r error) {
+func (m *PulseAppenderMock) Append(p context.Context, p1 insolar.Pulse) (r error) {
 	counter := atomic.AddUint64(&m.AppendPreCounter, 1)
 	defer atomic.AddUint64(&m.AppendCounter, 1)
 

@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package api
 
@@ -32,22 +32,22 @@ import (
 
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
 // Runner implements Component for API
 type Runner struct {
-	CertificateManager  core.CertificateManager  `inject:""`
-	StorageExporter     core.StorageExporter     `inject:""`
-	ContractRequester   core.ContractRequester   `inject:""`
-	NetworkCoordinator  core.NetworkCoordinator  `inject:""`
-	GenesisDataProvider core.GenesisDataProvider `inject:""`
-	NetworkSwitcher     core.NetworkSwitcher     `inject:""`
-	NodeNetwork         core.NodeNetwork         `inject:""`
-	PulseStorage        core.PulseStorage        `inject:""`
+	CertificateManager  insolar.CertificateManager  `inject:""`
+	StorageExporter     insolar.StorageExporter     `inject:""`
+	ContractRequester   insolar.ContractRequester   `inject:""`
+	NetworkCoordinator  insolar.NetworkCoordinator  `inject:""`
+	GenesisDataProvider insolar.GenesisDataProvider `inject:""`
+	NetworkSwitcher     insolar.NetworkSwitcher     `inject:""`
+	NodeNetwork         insolar.NodeNetwork         `inject:""`
+	PulseStorage        insolar.PulseStorage        `inject:""`
 	server              *http.Server
 	rpcServer           *rpc.Server
 	cfg                 *configuration.APIRunner
@@ -180,7 +180,7 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.Publi
 		return publicKey, nil
 	}
 
-	reference, err := core.NewRefFromBase58(ref)
+	reference, err := insolar.NewReferenceFromBase58(ref)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't parse ref")
 	}

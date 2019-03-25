@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package ledgertestutils
 
@@ -23,7 +23,7 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/artifactmanager"
@@ -48,7 +48,7 @@ import (
 // TmpLedger crteates ledger on top of temporary database.
 // Returns *ledger.Ledger and cleanup function.
 // FIXME: THIS METHOD IS DEPRECATED. USE MOCKS.
-func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Components, closeJets bool) (*ledger.Ledger, storage.DBContext, func()) {
+func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c insolar.Components, closeJets bool) (*ledger.Ledger, storage.DBContext, func()) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
@@ -77,9 +77,9 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	pm := pulsemanager.NewPulseManager(conf)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)
-	jc.LightExecutorForJetMock.Return(&core.RecordRef{}, nil)
-	jc.HeavyMock.Return(&core.RecordRef{}, nil)
-	jc.MeMock.Return(core.RecordRef{})
+	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
+	jc.HeavyMock.Return(&insolar.Reference{}, nil)
+	jc.MeMock.Return(insolar.Reference{})
 	jc.IsBeyondLimitMock.Return(false, nil)
 
 	// Init components.
@@ -98,7 +98,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 		}
 	}
 	if c.NodeNetwork == nil {
-		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(core.RecordRef{}, core.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
+		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(insolar.Reference{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
 	certificate := testutils.NewCertificateMock(t)
@@ -200,7 +200,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole core.StaticRole, c core.Co
 	}
 
 	if closeJets {
-		err := pm.HotDataWaiter.Unlock(ctx, core.RecordID(*core.NewJetID(0, nil)))
+		err := pm.HotDataWaiter.Unlock(ctx, insolar.ID(*insolar.NewJetID(0, nil)))
 		require.NoError(t, err)
 	}
 

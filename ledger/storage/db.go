@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package storage
 
@@ -23,7 +23,7 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
 )
@@ -51,12 +51,12 @@ type DBContext interface {
 
 	IterateRecordsOnPulse(
 		ctx context.Context,
-		jetID core.RecordID,
-		pulse core.PulseNumber,
-		handler func(id core.RecordID, rec object.Record) error,
+		jetID insolar.ID,
+		pulse insolar.PulseNumber,
+		handler func(id insolar.ID, rec object.VirtualRecord) error,
 	) error
 
-	StoreKeyValues(ctx context.Context, kvs []core.KV) error
+	StoreKeyValues(ctx context.Context, kvs []insolar.KV) error
 
 	GetBadgerDB() *badger.DB
 
@@ -76,7 +76,7 @@ type DBContext interface {
 
 // DB represents BadgerDB storage implementation.
 type DB struct {
-	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 
 	db *badger.DB
 
@@ -232,15 +232,15 @@ func (db *DB) GetBadgerDB() *badger.DB {
 // IterateRecordsOnPulse iterates over records on provided Jet ID and Pulse.
 func (db *DB) IterateRecordsOnPulse(
 	ctx context.Context,
-	jetID core.RecordID,
-	pulse core.PulseNumber,
-	handler func(id core.RecordID, rec object.Record) error,
+	jetID insolar.ID,
+	pulse insolar.PulseNumber,
+	handler func(id insolar.ID, rec object.VirtualRecord) error,
 ) error {
-	jetPrefix := core.JetID(jetID).Prefix()
+	jetPrefix := insolar.JetID(jetID).Prefix()
 	prefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
-		id := core.NewRecordID(pulse, k)
+		id := insolar.NewID(pulse, k)
 		rec := object.DeserializeRecord(v)
 		err := handler(*id, rec)
 		if err != nil {
@@ -251,7 +251,7 @@ func (db *DB) IterateRecordsOnPulse(
 }
 
 // StoreKeyValues stores provided key/value pairs.
-func (db *DB) StoreKeyValues(ctx context.Context, kvs []core.KV) error {
+func (db *DB) StoreKeyValues(ctx context.Context, kvs []insolar.KV) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
 		for _, rec := range kvs {
 			err := tx.set(ctx, rec.K, rec.V)
@@ -263,7 +263,7 @@ func (db *DB) StoreKeyValues(ctx context.Context, kvs []core.KV) error {
 	})
 }
 
-func (db *DB) GetPlatformCryptographyScheme() core.PlatformCryptographyScheme {
+func (db *DB) GetPlatformCryptographyScheme() insolar.PlatformCryptographyScheme {
 	return db.PlatformCryptographyScheme
 }
 

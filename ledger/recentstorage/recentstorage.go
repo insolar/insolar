@@ -1,41 +1,41 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package recentstorage
 
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // Provider provides different types of storages for a specific jet
 //go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.Provider -o ./ -s _mock.go
 type Provider interface {
-	GetIndexStorage(ctx context.Context, jetID core.RecordID) RecentIndexStorage
-	GetPendingStorage(ctx context.Context, jetID core.RecordID) PendingStorage
+	GetIndexStorage(ctx context.Context, jetID insolar.ID) RecentIndexStorage
+	GetPendingStorage(ctx context.Context, jetID insolar.ID) PendingStorage
 
 	Count() int
 
-	CloneIndexStorage(ctx context.Context, fromJetID, toJetID core.RecordID)
-	ClonePendingStorage(ctx context.Context, fromJetID, toJetID core.RecordID)
+	CloneIndexStorage(ctx context.Context, fromJetID, toJetID insolar.ID)
+	ClonePendingStorage(ctx context.Context, fromJetID, toJetID insolar.ID)
 
-	DecreaseIndexesTTL(ctx context.Context) map[core.RecordID][]core.RecordID
+	DecreaseIndexesTTL(ctx context.Context) map[insolar.ID][]insolar.ID
 
-	RemovePendingStorage(ctx context.Context, id core.RecordID)
+	RemovePendingStorage(ctx context.Context, id insolar.ID)
 }
 
 // RecentIndexStorage is a struct which contains `recent indexes` for a specific jet
@@ -43,23 +43,23 @@ type Provider interface {
 // If index is put to a recent storage, it'll be there for TTL-pulses at least
 //go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.RecentIndexStorage -o ./ -s _mock.go
 type RecentIndexStorage interface {
-	AddObject(ctx context.Context, id core.RecordID)
-	AddObjectWithTLL(ctx context.Context, id core.RecordID, ttl int)
+	AddObject(ctx context.Context, id insolar.ID)
+	AddObjectWithTLL(ctx context.Context, id insolar.ID, ttl int)
 
-	GetObjects() map[core.RecordID]int
+	GetObjects() map[insolar.ID]int
 
-	DecreaseIndexTTL(ctx context.Context) []core.RecordID
+	DecreaseIndexTTL(ctx context.Context) []insolar.ID
 
-	FilterNotExistWithLock(ctx context.Context, candidates []core.RecordID, fn func(filtered []core.RecordID))
+	FilterNotExistWithLock(ctx context.Context, candidates []insolar.ID, fn func(filtered []insolar.ID))
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.PendingStorage -o ./ -s _mock.go
 type PendingStorage interface {
-	AddPendingRequest(ctx context.Context, obj, req core.RecordID)
-	SetContextToObject(ctx context.Context, obj core.RecordID, objContext PendingObjectContext)
+	AddPendingRequest(ctx context.Context, obj, req insolar.ID)
+	SetContextToObject(ctx context.Context, obj insolar.ID, objContext PendingObjectContext)
 
-	GetRequests() map[core.RecordID]PendingObjectContext
-	GetRequestsForObject(obj core.RecordID) []core.RecordID
+	GetRequests() map[insolar.ID]PendingObjectContext
+	GetRequestsForObject(obj insolar.ID) []insolar.ID
 
-	RemovePendingRequest(ctx context.Context, obj, req core.RecordID)
+	RemovePendingRequest(ctx context.Context, obj, req insolar.ID)
 }

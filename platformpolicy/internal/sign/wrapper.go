@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package sign
 
@@ -20,17 +20,17 @@ import (
 	"crypto/ecdsa"
 	"crypto/rand"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
 type ecdsaSignerWrapper struct {
 	privateKey *ecdsa.PrivateKey
-	hasher     core.Hasher
+	hasher     insolar.Hasher
 }
 
-func (sw *ecdsaSignerWrapper) Sign(data []byte) (*core.Signature, error) {
+func (sw *ecdsaSignerWrapper) Sign(data []byte) (*insolar.Signature, error) {
 	hash := sw.hasher.Hash(data)
 
 	r, s, err := ecdsa.Sign(rand.Reader, sw.privateKey, hash)
@@ -43,16 +43,16 @@ func (sw *ecdsaSignerWrapper) Sign(data []byte) (*core.Signature, error) {
 		return nil, errors.Wrap(err, "[ Sign ] could't sign data")
 	}
 
-	signature := core.SignatureFromBytes(ecdsaSignature)
+	signature := insolar.SignatureFromBytes(ecdsaSignature)
 	return &signature, nil
 }
 
 type ecdsaVerifyWrapper struct {
 	publicKey *ecdsa.PublicKey
-	hasher    core.Hasher
+	hasher    insolar.Hasher
 }
 
-func (sw *ecdsaVerifyWrapper) Verify(signature core.Signature, data []byte) bool {
+func (sw *ecdsaVerifyWrapper) Verify(signature insolar.Signature, data []byte) bool {
 	if signature.Bytes() == nil {
 		return false
 	}

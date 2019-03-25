@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package logicrunner
 
@@ -20,15 +20,15 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/pkg/errors"
 )
 
 type ConsensusRecord struct {
 	Steps   int
 	Error   string
-	Message core.Parcel
+	Message insolar.Parcel
 }
 
 // Consensus is an object for one validation process where all validated results will be compared.
@@ -41,7 +41,7 @@ type Consensus struct {
 	Total    int
 	Results  map[Ref]ConsensusRecord
 	CaseBind CaseBind
-	Message  core.Parcel
+	Message  insolar.Parcel
 }
 
 func newConsensus(lr *LogicRunner, refs []Ref) *Consensus {
@@ -58,7 +58,7 @@ func newConsensus(lr *LogicRunner, refs []Ref) *Consensus {
 }
 
 // AddValidated adds results from validators
-func (c *Consensus) AddValidated(ctx context.Context, sm core.Parcel, msg *message.ValidationResults) error {
+func (c *Consensus) AddValidated(ctx context.Context, sm insolar.Parcel, msg *message.ValidationResults) error {
 	source := sm.GetSender()
 	c.Lock()
 	defer c.Unlock()
@@ -75,7 +75,7 @@ func (c *Consensus) AddValidated(ctx context.Context, sm core.Parcel, msg *messa
 	return nil
 }
 
-func (c *Consensus) AddExecutor(ctx context.Context, sm core.Parcel, msg *message.ExecutorResults) {
+func (c *Consensus) AddExecutor(ctx context.Context, sm insolar.Parcel, msg *message.ExecutorResults) {
 	c.Lock()
 	defer c.Unlock()
 	c.CaseBind = *NewCaseBindFromExecutorResultsMessage(msg)
@@ -115,7 +115,7 @@ func (c *Consensus) GetReference() Ref {
 }
 
 //
-func (c *Consensus) GetValidatorSignatures() (messages []core.Message) {
+func (c *Consensus) GetValidatorSignatures() (messages []insolar.Message) {
 	for _, x := range c.Results {
 		messages = append(messages, x.Message)
 	}
@@ -123,7 +123,7 @@ func (c *Consensus) GetValidatorSignatures() (messages []core.Message) {
 }
 
 // FindRequestBefore returns request placed before step (last valid request)
-func (c *Consensus) FindRequestBefore(steps int) *core.RecordID {
+func (c *Consensus) FindRequestBefore(steps int) *insolar.ID {
 	// TODO: resurrect this part
 	return nil
 }

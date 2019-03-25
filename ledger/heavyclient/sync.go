@@ -1,33 +1,33 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package heavyclient
 
 import (
 	"context"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
 )
 
-func messageToHeavy(ctx context.Context, bus core.MessageBus, msg core.Message) error {
+func messageToHeavy(ctx context.Context, bus insolar.MessageBus, msg insolar.Message) error {
 	busreply, buserr := bus.Send(ctx, msg, nil)
 	if buserr != nil {
 		return buserr
@@ -46,7 +46,7 @@ func messageToHeavy(ctx context.Context, bus core.MessageBus, msg core.Message) 
 // It syncs records from start to end of provided pulse numbers.
 func (c *JetClient) HeavySync(
 	ctx context.Context,
-	pn core.PulseNumber,
+	pn insolar.PulseNumber,
 ) error {
 	jetID := c.jetID
 	inslog := inslogger.FromContext(ctx)
@@ -69,7 +69,7 @@ func (c *JetClient) HeavySync(
 	}
 
 	replicator := storage.NewReplicaIter(
-		ctx, c.db, core.RecordID(jetID), pn, pn+1, c.opts.SyncMessageLimit)
+		ctx, c.db, insolar.ID(jetID), pn, pn+1, c.opts.SyncMessageLimit)
 	for {
 		recs, err := replicator.NextRecords()
 		if err == storage.ErrReplicatorDone {

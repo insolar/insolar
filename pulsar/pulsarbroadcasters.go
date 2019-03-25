@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package pulsar
 
@@ -20,7 +20,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -122,7 +122,7 @@ func (currentPulsar *Pulsar) broadcastEntropy(ctx context.Context) {
 	}
 }
 
-func (currentPulsar *Pulsar) sendPulseToPulsars(ctx context.Context, pulse core.Pulse) {
+func (currentPulsar *Pulsar) sendPulseToPulsars(ctx context.Context, pulse insolar.Pulse) {
 	logger := inslogger.FromContext(ctx)
 	ctx, span := instracer.StartSpan(ctx, "Pulsar.sendPulseToPulsars")
 	defer span.End()
@@ -202,7 +202,7 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 	}
 
 	payload := PulseSenderConfirmationPayload{
-		core.PulseSenderConfirmation{
+		insolar.PulseSenderConfirmation{
 			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
 			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
 			PulseNumber:     currentPulsar.ProcessingPulseNumber,
@@ -221,7 +221,7 @@ func (currentPulsar *Pulsar) sendPulseSign(ctx context.Context) {
 		return
 	}
 	confirmation := PulseSenderConfirmationPayload{
-		core.PulseSenderConfirmation{
+		insolar.PulseSenderConfirmation{
 			PulseNumber:     currentPulsar.ProcessingPulseNumber,
 			ChosenPublicKey: currentPulsar.CurrentSlotPulseSender,
 			Entropy:         *currentPulsar.GetCurrentSlotEntropy(),
@@ -258,11 +258,11 @@ func (currentPulsar *Pulsar) sendPulseToNodesAndPulsars(ctx context.Context) {
 	}
 
 	currentPulsar.currentSlotSenderConfirmationsLock.RLock()
-	pulseForSending := core.Pulse{
+	pulseForSending := insolar.Pulse{
 		PulseNumber:      currentPulsar.ProcessingPulseNumber,
 		Entropy:          *currentPulsar.GetCurrentSlotEntropy(),
 		Signs:            currentPulsar.CurrentSlotSenderConfirmations,
-		NextPulseNumber:  currentPulsar.ProcessingPulseNumber + core.PulseNumber(currentPulsar.Config.NumberDelta),
+		NextPulseNumber:  currentPulsar.ProcessingPulseNumber + insolar.PulseNumber(currentPulsar.Config.NumberDelta),
 		PrevPulseNumber:  currentPulsar.lastPulse.PulseNumber,
 		EpochPulseNumber: 1,
 		OriginID:         [16]byte{206, 41, 229, 190, 7, 240, 162, 155, 121, 245, 207, 56, 161, 67, 189, 0},

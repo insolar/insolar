@@ -21,7 +21,7 @@ import (
 
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/queue"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
@@ -33,32 +33,32 @@ const (
 )
 
 // RemoveSlotCallback allows to remove slot by pulse number
-type RemoveSlotCallback func(number core.PulseNumber)
+type RemoveSlotCallback func(number insolar.PulseNumber)
 
 // PulseConveyor is realization of Conveyor
 type PulseConveyor struct {
-	slotMap            map[core.PulseNumber]TaskPusher
-	futurePulseData    *core.Pulse
-	futurePulseNumber  *core.PulseNumber
-	presentPulseNumber *core.PulseNumber
+	slotMap            map[insolar.PulseNumber]TaskPusher
+	futurePulseData    *insolar.Pulse
+	futurePulseNumber  *insolar.PulseNumber
+	presentPulseNumber *insolar.PulseNumber
 	lock               sync.RWMutex
-	state              core.ConveyorState
+	state              insolar.ConveyorState
 }
 
 // NewPulseConveyor creates new instance of PulseConveyor
-func NewPulseConveyor() (core.Conveyor, error) {
+func NewPulseConveyor() (insolar.Conveyor, error) {
 	c := &PulseConveyor{
-		slotMap: make(map[core.PulseNumber]TaskPusher),
-		state:   core.ConveyorInactive,
+		slotMap: make(map[insolar.PulseNumber]TaskPusher),
+		state:   insolar.ConveyorInactive,
 	}
 	// antiqueSlot is slot for all pulses from past if conveyor dont have specific PastSlot for such pulse
-	antiqueSlot := NewWorkingSlot(constant.Antique, core.AntiquePulseNumber, c.removeSlot)
+	antiqueSlot := NewWorkingSlot(constant.Antique, insolar.AntiquePulseNumber, c.removeSlot)
 
-	c.slotMap[core.AntiquePulseNumber] = antiqueSlot
+	c.slotMap[insolar.AntiquePulseNumber] = antiqueSlot
 	return c, nil
 }
 
-func (c *PulseConveyor) removeSlot(number core.PulseNumber) {
+func (c *PulseConveyor) removeSlot(number insolar.PulseNumber) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
@@ -70,7 +70,7 @@ func (c *PulseConveyor) removeSlot(number core.PulseNumber) {
 }
 
 // GetState returns current state of conveyor
-func (c *PulseConveyor) GetState() core.ConveyorState {
+func (c *PulseConveyor) GetState() insolar.ConveyorState {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 
@@ -87,20 +87,20 @@ func (c *PulseConveyor) IsOperational() bool {
 
 func (c *PulseConveyor) unsafeIsOperational() bool {
 	currentState := c.unsafeGetState()
-	return currentState == core.ConveyorActive || currentState == core.ConveyorPreparingPulse
+	return currentState == insolar.ConveyorActive || currentState == insolar.ConveyorPreparingPulse
 }
 
-func (c *PulseConveyor) unsafeGetState() core.ConveyorState {
+func (c *PulseConveyor) unsafeGetState() insolar.ConveyorState {
 	return c.state
 }
 
-func (c *PulseConveyor) unsafeGetSlot(pulseNumber core.PulseNumber) TaskPusher {
+func (c *PulseConveyor) unsafeGetSlot(pulseNumber insolar.PulseNumber) TaskPusher {
 	slot, ok := c.slotMap[pulseNumber]
 	if !ok {
 		if c.futurePulseNumber == nil || pulseNumber > *c.futurePulseNumber {
 			return nil
 		}
-		slot = c.slotMap[core.AntiquePulseNumber]
+		slot = c.slotMap[insolar.AntiquePulseNumber]
 	}
 	return slot
 }
@@ -108,7 +108,7 @@ func (c *PulseConveyor) unsafeGetSlot(pulseNumber core.PulseNumber) TaskPusher {
 // InitiateShutdown starts shutdown process
 func (c *PulseConveyor) InitiateShutdown(force bool) {
 	c.lock.Lock()
-	c.state = core.ConveyorShuttingDown
+	c.state = insolar.ConveyorShuttingDown
 	c.lock.Unlock()
 	if force { // nolint
 		// TODO: cancel all tasks in adapters
@@ -116,7 +116,7 @@ func (c *PulseConveyor) InitiateShutdown(force bool) {
 }
 
 // SinkPush adds event to conveyor
-func (c *PulseConveyor) SinkPush(pulseNumber core.PulseNumber, data interface{}) error {
+func (c *PulseConveyor) SinkPush(pulseNumber insolar.PulseNumber, data interface{}) error {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	if !c.unsafeIsOperational() {
@@ -131,7 +131,7 @@ func (c *PulseConveyor) SinkPush(pulseNumber core.PulseNumber, data interface{})
 }
 
 // SinkPushAll adds several events to conveyor
-func (c *PulseConveyor) SinkPushAll(pulseNumber core.PulseNumber, data []interface{}) error {
+func (c *PulseConveyor) SinkPushAll(pulseNumber insolar.PulseNumber, data []interface{}) error {
 	c.lock.RLock()
 	defer c.lock.RUnlock()
 	if !c.unsafeIsOperational() {
@@ -146,11 +146,11 @@ func (c *PulseConveyor) SinkPushAll(pulseNumber core.PulseNumber, data []interfa
 }
 
 // PreparePulse is preparing conveyor for working with provided pulse
-func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) error {
+func (c *PulseConveyor) PreparePulse(pulse insolar.Pulse, callback queue.SyncDone) error {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	if c.state == core.ConveyorShuttingDown {
+	if c.state == insolar.ConveyorShuttingDown {
 		return errors.New("[ PreparePulse ] conveyor is shut down")
 	}
 
@@ -188,23 +188,23 @@ func (c *PulseConveyor) PreparePulse(pulse core.Pulse, callback queue.SyncDone) 
 	}
 
 	c.futurePulseData = &pulse
-	c.state = core.ConveyorPreparingPulse
+	c.state = insolar.ConveyorPreparingPulse
 	return nil
 }
 
 // PulseWithCallback contains info about new pulse and callback func
 type PulseWithCallback interface {
 	queue.SyncDone
-	GetPulse() core.Pulse
+	GetPulse() insolar.Pulse
 }
 
 type pulseWithCallback struct {
 	callback queue.SyncDone
-	pulse    core.Pulse
+	pulse    insolar.Pulse
 }
 
 // PulseWithCallback creates new instance of pulseWithCallback
-func NewPulseWithCallback(callback queue.SyncDone, pulse core.Pulse) PulseWithCallback {
+func NewPulseWithCallback(callback queue.SyncDone, pulse insolar.Pulse) PulseWithCallback {
 	return &pulseWithCallback{
 		callback: callback,
 		pulse:    pulse,
@@ -212,7 +212,7 @@ func NewPulseWithCallback(callback queue.SyncDone, pulse core.Pulse) PulseWithCa
 }
 
 // GetCallback returns callback
-func (p *pulseWithCallback) GetPulse() core.Pulse {
+func (p *pulseWithCallback) GetPulse() insolar.Pulse {
 	return p.pulse
 }
 
@@ -234,7 +234,7 @@ func (sd *waitGroupSyncDone) SetResult(result interface{}) {
 func (c *PulseConveyor) ActivatePulse() error {
 	c.lock.Lock()
 
-	if c.state == core.ConveyorShuttingDown {
+	if c.state == insolar.ConveyorShuttingDown {
 		c.lock.Unlock()
 		return errors.New("[ ActivatePulse ] conveyor is shut down")
 	}
@@ -275,15 +275,11 @@ func (c *PulseConveyor) ActivatePulse() error {
 	c.slotMap[*c.futurePulseNumber] = NewWorkingSlot(constant.Future, *c.futurePulseNumber, c.removeSlot)
 
 	c.futurePulseData = nil
-	c.state = core.ConveyorActive
+	c.state = insolar.ConveyorActive
 	c.lock.Unlock()
 	wg.Wait()
 
 	return nil
-}
-
-func (c *PulseConveyor) getSlotConfiguration(state SlotState) HandlersConfiguration { // nolint: unused
-	return HandlersConfiguration{state: state}
 }
 
 // BarrierCallback wait for required number of SetResult.

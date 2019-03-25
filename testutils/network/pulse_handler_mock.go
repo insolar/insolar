@@ -11,7 +11,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,7 +20,7 @@ import (
 type PulseHandlerMock struct {
 	t minimock.Tester
 
-	HandlePulseFunc       func(p context.Context, p1 core.Pulse)
+	HandlePulseFunc       func(p context.Context, p1 insolar.Pulse)
 	HandlePulseCounter    uint64
 	HandlePulsePreCounter uint64
 	HandlePulseMock       mPulseHandlerMockHandlePulse
@@ -51,11 +51,11 @@ type PulseHandlerMockHandlePulseExpectation struct {
 
 type PulseHandlerMockHandlePulseInput struct {
 	p  context.Context
-	p1 core.Pulse
+	p1 insolar.Pulse
 }
 
 //Expect specifies that invocation of PulseHandler.HandlePulse is expected from 1 to Infinity times
-func (m *mPulseHandlerMockHandlePulse) Expect(p context.Context, p1 core.Pulse) *mPulseHandlerMockHandlePulse {
+func (m *mPulseHandlerMockHandlePulse) Expect(p context.Context, p1 insolar.Pulse) *mPulseHandlerMockHandlePulse {
 	m.mock.HandlePulseFunc = nil
 	m.expectationSeries = nil
 
@@ -79,7 +79,7 @@ func (m *mPulseHandlerMockHandlePulse) Return() *PulseHandlerMock {
 }
 
 //ExpectOnce specifies that invocation of PulseHandler.HandlePulse is expected once
-func (m *mPulseHandlerMockHandlePulse) ExpectOnce(p context.Context, p1 core.Pulse) *PulseHandlerMockHandlePulseExpectation {
+func (m *mPulseHandlerMockHandlePulse) ExpectOnce(p context.Context, p1 insolar.Pulse) *PulseHandlerMockHandlePulseExpectation {
 	m.mock.HandlePulseFunc = nil
 	m.mainExpectation = nil
 
@@ -90,7 +90,7 @@ func (m *mPulseHandlerMockHandlePulse) ExpectOnce(p context.Context, p1 core.Pul
 }
 
 //Set uses given function f as a mock of PulseHandler.HandlePulse method
-func (m *mPulseHandlerMockHandlePulse) Set(f func(p context.Context, p1 core.Pulse)) *PulseHandlerMock {
+func (m *mPulseHandlerMockHandlePulse) Set(f func(p context.Context, p1 insolar.Pulse)) *PulseHandlerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -99,7 +99,7 @@ func (m *mPulseHandlerMockHandlePulse) Set(f func(p context.Context, p1 core.Pul
 }
 
 //HandlePulse implements github.com/insolar/insolar/network.PulseHandler interface
-func (m *PulseHandlerMock) HandlePulse(p context.Context, p1 core.Pulse) {
+func (m *PulseHandlerMock) HandlePulse(p context.Context, p1 insolar.Pulse) {
 	counter := atomic.AddUint64(&m.HandlePulsePreCounter, 1)
 	defer atomic.AddUint64(&m.HandlePulseCounter, 1)
 

@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package preprocessor
 
@@ -38,14 +38,14 @@ import (
 
 	"github.com/insolar/insolar/platformpolicy"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/pkg/errors"
 )
 
 var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation"
 var proxyctxPath = "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
-var corePath = "github.com/insolar/insolar/core"
+var corePath = "github.com/insolar/insolar/insolar"
 
 // ParsedFile struct with prepared info we extract from source code
 type ParsedFile struct {
@@ -273,10 +273,10 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	if classReference == "" {
 		hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
 		codeHash := hasher.Hash([]byte(pf.code))
-		ref := core.NewRecordRef(core.RecordID{}, *core.NewRecordID(0, codeHash))
+		ref := insolar.NewReference(insolar.ID{}, *insolar.NewID(0, codeHash))
 		classReference = ref.String()
 	}
-	_, err = core.NewRefFromBase58(classReference)
+	_, err = insolar.NewReferenceFromBase58(classReference)
 	if err != nil {
 		return errors.Wrap(err, "can't write proxy: ")
 	}

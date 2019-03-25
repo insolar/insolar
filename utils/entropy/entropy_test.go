@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package entropy
 
@@ -25,7 +25,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -96,7 +96,7 @@ func TestSelectByEntropy_SelectsCorrectElement(t *testing.T) {
 	scheme := testutils.NewPlatformCryptographyScheme()
 	entropy := []byte{1, 2, 3, 4, 6}
 
-	var values []core.RecordRef
+	var values []insolar.Reference
 	for i := 0; i < 100; i++ {
 		values = append(values, testutils.RandomRef())
 	}
@@ -108,27 +108,27 @@ func TestSelectByEntropy_SelectsCorrectElement(t *testing.T) {
 	t.Run("selecting 1 value", func(t *testing.T) {
 		out, err := SelectByEntropy(scheme, entropy, in, 1)
 		require.NoError(t, err)
-		var selected []core.RecordRef
+		var selected []insolar.Reference
 		for _, v := range out {
-			selected = append(selected, v.(core.RecordRef))
+			selected = append(selected, v.(insolar.Reference))
 		}
 
 		assert.Equal(t, 1, len(out))
 		// Indexes are hard-coded from previously calculated values.
-		assert.Equal(t, []core.RecordRef{values[37]}, selected)
+		assert.Equal(t, []insolar.Reference{values[37]}, selected)
 	})
 
 	t.Run("selecting 3 values", func(t *testing.T) {
 		out, err := SelectByEntropy(scheme, entropy, in, 3)
 		require.NoError(t, err)
-		var selected []core.RecordRef
+		var selected []insolar.Reference
 		for _, v := range out {
-			selected = append(selected, v.(core.RecordRef))
+			selected = append(selected, v.(insolar.Reference))
 		}
 
 		assert.Equal(t, 3, len(out))
 		// Indexes are hard-coded from previously calculated values.
-		assert.Equal(t, []core.RecordRef{values[37], values[22], values[53]}, selected)
+		assert.Equal(t, []insolar.Reference{values[37], values[22], values[53]}, selected)
 	})
 }
 

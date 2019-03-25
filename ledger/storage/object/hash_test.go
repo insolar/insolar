@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package object
 
@@ -21,27 +21,27 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 )
 
-type recordgen func() Record
+type recordgen func() VirtualRecord
 
 var emptyRecordsGens = []recordgen{
 	// request records
-	func() Record { return &RequestRecord{} },
+	func() VirtualRecord { return &RequestRecord{} },
 	// result records
-	func() Record { return &ObjectActivateRecord{} },
-	func() Record { return &CodeRecord{} },
-	func() Record { return &DeactivationRecord{} },
-	func() Record { return &ObjectAmendRecord{} },
-	func() Record { return &TypeRecord{} },
-	func() Record { return &ChildRecord{} },
-	func() Record { return &GenesisRecord{} },
+	func() VirtualRecord { return &ActivateRecord{} },
+	func() VirtualRecord { return &CodeRecord{} },
+	func() VirtualRecord { return &DeactivationRecord{} },
+	func() VirtualRecord { return &AmendRecord{} },
+	func() VirtualRecord { return &TypeRecord{} },
+	func() VirtualRecord { return &ChildRecord{} },
+	func() VirtualRecord { return &GenesisRecord{} },
 }
 
-func getRecordHashData(rec Record) []byte {
+func getRecordHashData(rec VirtualRecord) []byte {
 	buff := bytes.NewBuffer(nil)
 	rec.WriteHashData(buff)
 	return buff.Bytes()
@@ -82,17 +82,17 @@ func Test_HashesTheSame(t *testing.T) {
 var pcs = platformpolicy.NewPlatformCryptographyScheme()
 var hashtestsRecordsMutate = []struct {
 	typ     string
-	records []Record
+	records []VirtualRecord
 }{
 	{
 		"CodeRecord",
-		[]Record{
+		[]VirtualRecord{
 			&CodeRecord{},
-			&CodeRecord{Code: CalculateIDForBlob(pcs, core.GenesisPulse.PulseNumber, []byte{1, 2, 3})},
+			&CodeRecord{Code: CalculateIDForBlob(pcs, insolar.GenesisPulse.PulseNumber, []byte{1, 2, 3})},
 			&CodeRecord{
-				Code: CalculateIDForBlob(pcs, core.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
+				Code: CalculateIDForBlob(pcs, insolar.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
 				SideEffectRecord: SideEffectRecord{
-					Domain: core.RecordRef{1, 2, 3},
+					Domain: insolar.Reference{1, 2, 3},
 				},
 			},
 		},

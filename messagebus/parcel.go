@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package messagebus
 
@@ -20,17 +20,17 @@ import (
 	"context"
 	"crypto"
 
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 )
 
 type parcelFactory struct {
-	DelegationTokenFactory     core.DelegationTokenFactory     `inject:""`
-	PlatformCryptographyScheme core.PlatformCryptographyScheme `inject:""`
-	Cryptography               core.CryptographyService        `inject:""`
+	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	Cryptography               insolar.CryptographyService        `inject:""`
 }
 
 // NewParcelFactory returns new instance of parcelFactory
@@ -38,7 +38,7 @@ func NewParcelFactory() message.ParcelFactory {
 	return &parcelFactory{}
 }
 
-func (pf *parcelFactory) Create(ctx context.Context, msg core.Message, sender core.RecordRef, token core.DelegationToken, currentPulse core.Pulse) (core.Parcel, error) {
+func (pf *parcelFactory) Create(ctx context.Context, msg insolar.Message, sender insolar.Reference, token insolar.DelegationToken, currentPulse insolar.Pulse) (insolar.Parcel, error) {
 	if msg == nil {
 		return nil, errors.New("failed to signature a nil message")
 	}
@@ -60,8 +60,8 @@ func (pf *parcelFactory) Create(ctx context.Context, msg core.Message, sender co
 	}, nil
 }
 
-func (pf *parcelFactory) Validate(publicKey crypto.PublicKey, parcel core.Parcel) error {
-	ok := pf.Cryptography.Verify(publicKey, core.SignatureFromBytes(parcel.GetSign()), message.ToBytes(parcel.Message()))
+func (pf *parcelFactory) Validate(publicKey crypto.PublicKey, parcel insolar.Parcel) error {
+	ok := pf.Cryptography.Verify(publicKey, insolar.SignatureFromBytes(parcel.GetSign()), message.ToBytes(parcel.Message()))
 	if !ok {
 		return errors.New("parcel isn't valid")
 	}

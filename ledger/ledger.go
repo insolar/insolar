@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package ledger
 
@@ -28,7 +28,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/exporter"
 	"github.com/insolar/insolar/ledger/heavyserver"
@@ -41,28 +41,28 @@ import (
 // Ledger is the global ledger handler. Other system parts communicate with ledger through it.
 type Ledger struct {
 	db              storage.DBContext
-	ArtifactManager core.ArtifactManager `inject:""`
-	PulseManager    core.PulseManager    `inject:""`
-	JetCoordinator  core.JetCoordinator  `inject:""`
+	ArtifactManager insolar.ArtifactManager `inject:""`
+	PulseManager    insolar.PulseManager    `inject:""`
+	JetCoordinator  insolar.JetCoordinator  `inject:""`
 }
 
 // Deprecated: remove after deleting TmpLedger
 // GetPulseManager returns PulseManager.
-func (l *Ledger) GetPulseManager() core.PulseManager {
+func (l *Ledger) GetPulseManager() insolar.PulseManager {
 	log.Warn("GetPulseManager is deprecated. Use component injection.")
 	return l.PulseManager
 }
 
 // Deprecated: remove after deleting TmpLedger
 // GetJetCoordinator returns JetCoordinator.
-func (l *Ledger) GetJetCoordinator() core.JetCoordinator {
+func (l *Ledger) GetJetCoordinator() insolar.JetCoordinator {
 	log.Warn("GetJetCoordinator is deprecated. Use component injection.")
 	return l.JetCoordinator
 }
 
 // Deprecated: remove after deleting TmpLedger
 // GetArtifactManager returns artifact manager to work with.
-func (l *Ledger) GetArtifactManager() core.ArtifactManager {
+func (l *Ledger) GetArtifactManager() insolar.ArtifactManager {
 	log.Warn("GetArtifactManager is deprecated. Use component injection.")
 	return l.ArtifactManager
 }
@@ -73,7 +73,7 @@ func NewTestLedger(
 	db storage.DBContext,
 	am *artifactmanager.LedgerArtifactManager,
 	pm *pulsemanager.PulseManager,
-	jc core.JetCoordinator,
+	jc insolar.JetCoordinator,
 ) *Ledger {
 	return &Ledger{
 		db:              db,
@@ -84,7 +84,7 @@ func NewTestLedger(
 }
 
 // GetLedgerComponents returns ledger components.
-func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate) []interface{} {
+func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certificate) []interface{} {
 	db, err := storage.NewDB(conf, nil)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
@@ -98,9 +98,9 @@ func GetLedgerComponents(conf configuration.Ledger, certificate core.Certificate
 	var pulseTracker storage.PulseTracker
 	var dropModifier drop.Modifier
 	var dropAccessor drop.Accessor
-	// TODO: @imarkin 18.02.18 - Comparision with core.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
+	// TODO: @imarkin 18.02.18 - Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
 	switch certificate.GetRole() {
-	case core.StaticRoleUnknown, core.StaticRoleHeavyMaterial:
+	case insolar.StaticRoleUnknown, insolar.StaticRoleHeavyMaterial:
 		pulseTracker = storage.NewPulseTracker()
 
 		dropDB := drop.NewStorageDB()

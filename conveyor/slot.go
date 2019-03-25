@@ -19,13 +19,20 @@ package conveyor
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/conveyor/queue"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
+
+var HandlerStorage matrix.StateMachineHolder
+
+func init() {
+	HandlerStorage = matrix.NewMatrix()
+}
 
 // SlotState shows slot working mode
 type SlotState uint32
@@ -44,11 +51,12 @@ const slotElementDelta = slotSize // nolint: unused
 // HandlersConfiguration contains configuration of handlers for specific pulse state
 // TODO: logic will be provided after pulse change mechanism
 type HandlersConfiguration struct {
-	state SlotState // nolint: unused
+	pulseStateMachines statemachine.SetAccessor
+	initStateMachine   statemachine.StateMachine
 }
 
 // TODO: logic will be provided after pulse change mechanism
-func (s *HandlersConfiguration) getMachineConfiguration(smType int) statemachine.StateMachine { // nolint: unused
+func (h *HandlersConfiguration) getMachineConfiguration(smType int) statemachine.StateMachine { // nolint: unused
 	return nil
 }
 
@@ -127,8 +135,8 @@ type Slot struct {
 	pulseState            constant.PulseState
 	slotState             SlotState
 	stateMachine          slotElement
-	pulse                 core.Pulse
-	pulseNumber           core.PulseNumber
+	pulse                 insolar.Pulse
+	pulseNumber           insolar.PulseNumber
 	nodeID                uint32
 	nodeData              interface{}
 	elements              []slotElement
@@ -168,7 +176,7 @@ func initElementsBuf() ([]slotElement, *ElementList) {
 }
 
 // NewWorkingSlot creates new instance of Slot
-func NewWorkingSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, removeSlotCallback RemoveSlotCallback) TaskPusher {
+func NewWorkingSlot(pulseState constant.PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) TaskPusher {
 
 	slot := newSlot(pulseState, pulseNumber, removeSlotCallback)
 	slot.runWorker()
@@ -176,7 +184,7 @@ func NewWorkingSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber
 	return slot
 }
 
-func newSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, removeSlotCallback RemoveSlotCallback) *Slot {
+func newSlot(pulseState constant.PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) *Slot {
 	slotState := Initializing
 	if pulseState == constant.Antique {
 		slotState = Working
@@ -200,6 +208,9 @@ func newSlot(pulseState constant.PulseState, pulseNumber core.PulseNumber, remov
 		elements:           elements,
 		elementListMap:     elementListMap,
 		removeSlotCallback: removeSlotCallback,
+		handlersConfiguration: HandlersConfiguration{
+			initStateMachine: HandlerStorage.GetInitialStateMachine(),
+		},
 	}
 }
 
@@ -209,12 +220,12 @@ func (s *Slot) runWorker() {
 }
 
 // GetPulseNumber implements iface SlotDetails
-func (s *Slot) GetPulseNumber() core.PulseNumber { // nolint: unused
+func (s *Slot) GetPulseNumber() insolar.PulseNumber { // nolint: unused
 	return s.pulseNumber
 }
 
 // GetPulseData implements iface SlotDetails
-func (s *Slot) GetPulseData() core.Pulse { // nolint: unused
+func (s *Slot) GetPulseData() insolar.Pulse { // nolint: unused
 	return s.pulse
 }
 

@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package certificate
 
@@ -20,28 +20,28 @@ import (
 	"crypto"
 	"io"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
 
 // CertificateManager is a component for working with current node certificate
 type CertificateManager struct { //nolint: golint
-	CS          core.CryptographyService `inject:""`
-	certificate core.Certificate
+	CS          insolar.CryptographyService `inject:""`
+	certificate insolar.Certificate
 }
 
 // NewCertificateManager returns new CertificateManager instance
-func NewCertificateManager(cert core.Certificate) *CertificateManager {
+func NewCertificateManager(cert insolar.Certificate) *CertificateManager {
 	return &CertificateManager{certificate: cert}
 }
 
 // GetCertificate returns current node certificate
-func (m *CertificateManager) GetCertificate() core.Certificate {
+func (m *CertificateManager) GetCertificate() insolar.Certificate {
 	return m.certificate
 }
 
 // VerifyAuthorizationCertificate verifies certificate from some node
-func (m *CertificateManager) VerifyAuthorizationCertificate(authCert core.AuthorizationCertificate) (bool, error) {
+func (m *CertificateManager) VerifyAuthorizationCertificate(authCert insolar.AuthorizationCertificate) (bool, error) {
 	discoveryNodes := m.certificate.GetDiscoveryNodes()
 	if len(discoveryNodes) != len(authCert.GetDiscoverySigns()) {
 		return false, nil
@@ -49,7 +49,7 @@ func (m *CertificateManager) VerifyAuthorizationCertificate(authCert core.Author
 	data := authCert.SerializeNodePart()
 	for _, node := range discoveryNodes {
 		sign := authCert.GetDiscoverySigns()[*node.GetNodeRef()]
-		ok := m.CS.Verify(node.GetPublicKey(), core.SignatureFromBytes(sign), data)
+		ok := m.CS.Verify(node.GetPublicKey(), insolar.SignatureFromBytes(sign), data)
 		if !ok {
 			return false, nil
 		}
@@ -58,7 +58,7 @@ func (m *CertificateManager) VerifyAuthorizationCertificate(authCert core.Author
 }
 
 // NewUnsignedCertificate returns new certificate
-func (m *CertificateManager) NewUnsignedCertificate(pKey string, role string, ref string) (core.Certificate, error) {
+func (m *CertificateManager) NewUnsignedCertificate(pKey string, role string, ref string) (insolar.Certificate, error) {
 	cert := m.certificate.(*Certificate)
 	newCert := Certificate{
 		MajorityRule: cert.MajorityRule,
@@ -82,7 +82,7 @@ func (m *CertificateManager) NewUnsignedCertificate(pKey string, role string, re
 }
 
 // NewManagerReadCertificate constructor creates new CertificateManager component
-func NewManagerReadCertificate(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, certPath string) (*CertificateManager, error) {
+func NewManagerReadCertificate(publicKey crypto.PublicKey, keyProcessor insolar.KeyProcessor, certPath string) (*CertificateManager, error) {
 	cert, err := ReadCertificate(publicKey, keyProcessor, certPath)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NewManagerReadCertificate ] failed to read certificate:")
@@ -92,7 +92,7 @@ func NewManagerReadCertificate(publicKey crypto.PublicKey, keyProcessor core.Key
 }
 
 // NewManagerReadCertificateFromReader constructor creates new CertificateManager component
-func NewManagerReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor, reader io.Reader) (*CertificateManager, error) {
+func NewManagerReadCertificateFromReader(publicKey crypto.PublicKey, keyProcessor insolar.KeyProcessor, reader io.Reader) (*CertificateManager, error) {
 	cert, err := ReadCertificateFromReader(publicKey, keyProcessor, reader)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NewManagerReadCertificateFromReader ] failed to read certificate data:")
@@ -103,7 +103,7 @@ func NewManagerReadCertificateFromReader(publicKey crypto.PublicKey, keyProcesso
 
 // NewManagerCertificateWithKeys generate manager with certificate from given keys
 // DEPRECATED, this method generates invalid certificate, remove it after pulsar tests refactor
-func NewManagerCertificateWithKeys(publicKey crypto.PublicKey, keyProcessor core.KeyProcessor) (*CertificateManager, error) {
+func NewManagerCertificateWithKeys(publicKey crypto.PublicKey, keyProcessor insolar.KeyProcessor) (*CertificateManager, error) {
 	cert, err := NewCertificatesWithKeys(publicKey, keyProcessor)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NewManagerCertificateWithKeys ] failed to create certificate:")

@@ -1,27 +1,27 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package object
 
 import (
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar"
+	"github.com/google/gofuzz"
 	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/stretchr/testify/assert"
@@ -154,7 +154,7 @@ func TestCloneObjectLifeline(t *testing.T) {
 
 	currentIdx := lifeline()
 
-	clonedIdx := Clone(currentIdx)
+	clonedIdx := CloneIndex(currentIdx)
 
 	assert.Equal(t, currentIdx, clonedIdx)
 	assert.False(t, &currentIdx == &clonedIdx)
@@ -170,7 +170,7 @@ func delegates() (result map[insolar.Reference]insolar.Reference) {
 	return
 }
 
-func state() (state State) {
+func state() (state StateID) {
 	fuzz.New().NilChance(0).Fuzz(&state)
 	return
 }

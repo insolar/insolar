@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package api
 
@@ -25,8 +25,8 @@ import (
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/platformpolicy"
@@ -116,23 +116,23 @@ func TestTimeoutSuite(t *testing.T) {
 	require.NoError(t, err)
 
 	cert := testutils.NewCertificateMock(t)
-	cert.GetRootDomainReferenceFunc = func() (r *core.RecordRef) {
+	cert.GetRootDomainReferenceFunc = func() (r *insolar.Reference) {
 		ref := testutils.RandomRef()
 		return &ref
 	}
 
 	cm := testutils.NewCertificateManagerMock(t)
-	cm.GetCertificateFunc = func() (r core.Certificate) {
+	cm.GetCertificateFunc = func() (r insolar.Certificate) {
 		return cert
 	}
 
 	cr := testutils.NewContractRequesterMock(t)
-	cr.SendRequestFunc = func(p context.Context, p1 *core.RecordRef, method string, p3 []interface{}) (core.Reply, error) {
+	cr.SendRequestFunc = func(p context.Context, p1 *insolar.Reference, method string, p3 []interface{}) (insolar.Reply, error) {
 		switch method {
 		case "GetPublicKey":
 			var result = string(pKeyString)
 			var contractErr *foundation.Error
-			data, _ := core.MarshalArgs(result, contractErr)
+			data, _ := insolar.MarshalArgs(result, contractErr)
 			return &reply.CallMethod{
 				Result: data,
 			}, nil
@@ -142,7 +142,7 @@ func TestTimeoutSuite(t *testing.T) {
 			}
 			var result = "OK"
 			var contractErr *foundation.Error
-			data, _ := core.MarshalArgs(result, contractErr)
+			data, _ := insolar.MarshalArgs(result, contractErr)
 			return &reply.CallMethod{
 				Result: data,
 			}, nil

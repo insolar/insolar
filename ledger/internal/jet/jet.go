@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package jet
 
@@ -21,21 +21,21 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 // Accessor provides an interface for accessing jet IDs.
 type Accessor interface {
-	All(ctx context.Context, pulse core.PulseNumber) []core.JetID
-	ForID(ctx context.Context, pulse core.PulseNumber, recordID core.RecordID) (core.JetID, bool)
+	All(ctx context.Context, pulse insolar.PulseNumber) []insolar.JetID
+	ForID(ctx context.Context, pulse insolar.PulseNumber, recordID insolar.ID) (insolar.JetID, bool)
 }
 
 // Modifier provides an interface for modifying jet IDs.
 type Modifier interface {
-	Update(ctx context.Context, pulse core.PulseNumber, actual bool, ids ...core.JetID)
-	Split(ctx context.Context, pulse core.PulseNumber, id core.JetID) (core.JetID, core.JetID, error)
-	Clone(ctx context.Context, from, to core.PulseNumber)
-	Delete(ctx context.Context, pulse core.PulseNumber)
+	Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID)
+	Split(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) (insolar.JetID, insolar.JetID, error)
+	Clone(ctx context.Context, from, to insolar.PulseNumber)
+	Delete(ctx context.Context, pulse insolar.PulseNumber)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/internal/jet.Storage -o ./ -s _mock.go
@@ -47,13 +47,13 @@ type Storage interface {
 }
 
 // Parent returns a parent of the jet or jet itself if depth of provided JetID is zero.
-func Parent(id core.JetID) core.JetID {
+func Parent(id insolar.JetID) insolar.JetID {
 	depth, prefix := id.Depth(), id.Prefix()
 	if depth == 0 {
 		return id
 	}
 
-	return *core.NewJetID(depth-1, resetBits(prefix, depth-1))
+	return *insolar.NewJetID(depth-1, resetBits(prefix, depth-1))
 }
 
 // resetBits returns a new byte slice with all bits in 'value' reset,
@@ -84,8 +84,8 @@ func resetBits(value []byte, start uint8) []byte {
 // "0"     -> prefix=[0..0], depth=1
 // "1"     -> prefix=[1..0], depth=1
 // "1010"  -> prefix=[1010..0], depth=4
-func NewIDFromString(s string) core.JetID {
-	id := core.NewJetID(uint8(len(s)), parsePrefix(s))
+func NewIDFromString(s string) insolar.JetID {
+	id := insolar.NewJetID(uint8(len(s)), parsePrefix(s))
 	return *id
 }
 

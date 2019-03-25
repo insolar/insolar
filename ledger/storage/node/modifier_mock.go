@@ -10,8 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,12 +19,12 @@ import (
 type ModifierMock struct {
 	t minimock.Tester
 
-	DeleteFunc       func(p core.PulseNumber)
+	DeleteFunc       func(p insolar.PulseNumber)
 	DeleteCounter    uint64
 	DeletePreCounter uint64
 	DeleteMock       mModifierMockDelete
 
-	SetFunc       func(p core.PulseNumber, p1 []insolar.Node) (r error)
+	SetFunc       func(p insolar.PulseNumber, p1 []insolar.Node) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mModifierMockSet
@@ -56,11 +55,11 @@ type ModifierMockDeleteExpectation struct {
 }
 
 type ModifierMockDeleteInput struct {
-	p core.PulseNumber
+	p insolar.PulseNumber
 }
 
 //Expect specifies that invocation of Modifier.Delete is expected from 1 to Infinity times
-func (m *mModifierMockDelete) Expect(p core.PulseNumber) *mModifierMockDelete {
+func (m *mModifierMockDelete) Expect(p insolar.PulseNumber) *mModifierMockDelete {
 	m.mock.DeleteFunc = nil
 	m.expectationSeries = nil
 
@@ -84,7 +83,7 @@ func (m *mModifierMockDelete) Return() *ModifierMock {
 }
 
 //ExpectOnce specifies that invocation of Modifier.Delete is expected once
-func (m *mModifierMockDelete) ExpectOnce(p core.PulseNumber) *ModifierMockDeleteExpectation {
+func (m *mModifierMockDelete) ExpectOnce(p insolar.PulseNumber) *ModifierMockDeleteExpectation {
 	m.mock.DeleteFunc = nil
 	m.mainExpectation = nil
 
@@ -95,7 +94,7 @@ func (m *mModifierMockDelete) ExpectOnce(p core.PulseNumber) *ModifierMockDelete
 }
 
 //Set uses given function f as a mock of Modifier.Delete method
-func (m *mModifierMockDelete) Set(f func(p core.PulseNumber)) *ModifierMock {
+func (m *mModifierMockDelete) Set(f func(p insolar.PulseNumber)) *ModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -104,7 +103,7 @@ func (m *mModifierMockDelete) Set(f func(p core.PulseNumber)) *ModifierMock {
 }
 
 //Delete implements github.com/insolar/insolar/ledger/storage/node.Modifier interface
-func (m *ModifierMock) Delete(p core.PulseNumber) {
+func (m *ModifierMock) Delete(p insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteCounter, 1)
 
@@ -180,7 +179,7 @@ type ModifierMockSetExpectation struct {
 }
 
 type ModifierMockSetInput struct {
-	p  core.PulseNumber
+	p  insolar.PulseNumber
 	p1 []insolar.Node
 }
 
@@ -189,7 +188,7 @@ type ModifierMockSetResult struct {
 }
 
 //Expect specifies that invocation of Modifier.Set is expected from 1 to Infinity times
-func (m *mModifierMockSet) Expect(p core.PulseNumber, p1 []insolar.Node) *mModifierMockSet {
+func (m *mModifierMockSet) Expect(p insolar.PulseNumber, p1 []insolar.Node) *mModifierMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
@@ -213,7 +212,7 @@ func (m *mModifierMockSet) Return(r error) *ModifierMock {
 }
 
 //ExpectOnce specifies that invocation of Modifier.Set is expected once
-func (m *mModifierMockSet) ExpectOnce(p core.PulseNumber, p1 []insolar.Node) *ModifierMockSetExpectation {
+func (m *mModifierMockSet) ExpectOnce(p insolar.PulseNumber, p1 []insolar.Node) *ModifierMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
@@ -228,7 +227,7 @@ func (e *ModifierMockSetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of Modifier.Set method
-func (m *mModifierMockSet) Set(f func(p core.PulseNumber, p1 []insolar.Node) (r error)) *ModifierMock {
+func (m *mModifierMockSet) Set(f func(p insolar.PulseNumber, p1 []insolar.Node) (r error)) *ModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -237,7 +236,7 @@ func (m *mModifierMockSet) Set(f func(p core.PulseNumber, p1 []insolar.Node) (r 
 }
 
 //Set implements github.com/insolar/insolar/ledger/storage/node.Modifier interface
-func (m *ModifierMock) Set(p core.PulseNumber, p1 []insolar.Node) (r error) {
+func (m *ModifierMock) Set(p insolar.PulseNumber, p1 []insolar.Node) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 

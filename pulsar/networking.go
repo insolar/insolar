@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package pulsar
 
@@ -20,7 +20,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -184,7 +184,7 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 			return err
 		}
 
-		isVerified := handler.Pulsar.CryptographyService.Verify(publicKey, core.SignatureFromBytes(btfCell.GetSign()), requestBody.Entropy[:])
+		isVerified := handler.Pulsar.CryptographyService.Verify(publicKey, insolar.SignatureFromBytes(btfCell.GetSign()), requestBody.Entropy[:])
 		if err != nil || !isVerified {
 			handler.Pulsar.AddItemToVector(request.PublicKey, nil)
 			inslog.Errorf("signature and Entropy aren't matched")
@@ -255,7 +255,7 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 	}
 
 	payload := PulseSenderConfirmationPayload{
-		core.PulseSenderConfirmation{
+		insolar.PulseSenderConfirmation{
 			ChosenPublicKey: requestBody.ChosenPublicKey,
 			Entropy:         requestBody.Entropy,
 			PulseNumber:     requestBody.PulseNumber,
@@ -269,7 +269,7 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 		return err
 	}
 
-	isVerified := handler.Pulsar.CryptographyService.Verify(publicKey, core.SignatureFromBytes(requestBody.Signature), hash)
+	isVerified := handler.Pulsar.CryptographyService.Verify(publicKey, insolar.SignatureFromBytes(requestBody.Signature), hash)
 
 	if !isVerified {
 		inslog.Errorf("signature and chosen publicKey aren't matched")
@@ -277,7 +277,7 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 	}
 
 	handler.Pulsar.currentSlotSenderConfirmationsLock.Lock()
-	handler.Pulsar.CurrentSlotSenderConfirmations[request.PublicKey] = core.PulseSenderConfirmation{
+	handler.Pulsar.CurrentSlotSenderConfirmations[request.PublicKey] = insolar.PulseSenderConfirmation{
 		ChosenPublicKey: requestBody.ChosenPublicKey,
 		Signature:       requestBody.Signature,
 		PulseNumber:     requestBody.PulseNumber,

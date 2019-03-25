@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package drop
 
@@ -20,12 +20,12 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 type dropKey struct {
-	pulse core.PulseNumber
-	jetID core.JetID
+	pulse insolar.PulseNumber
+	jetID insolar.JetID
 }
 
 type dropStorageMemory struct {
@@ -41,7 +41,7 @@ func NewStorageMemory() *dropStorageMemory { // nolint: golint
 }
 
 // ForPulse returns a Drop for a provided pulse, that is stored in a memory
-func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID core.JetID, pulse core.PulseNumber) (Drop, error) {
+func (m *dropStorageMemory) ForPulse(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (Drop, error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
@@ -70,7 +70,7 @@ func (m *dropStorageMemory) Set(ctx context.Context, drop Drop) error {
 }
 
 // Delete methods removes a drop from a memory storage.
-func (m *dropStorageMemory) Delete(pulse core.PulseNumber) {
+func (m *dropStorageMemory) Delete(pulse insolar.PulseNumber) {
 	m.lock.Lock()
 	for key := range m.drops {
 		if key.pulse == pulse {

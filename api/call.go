@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package api
 
@@ -25,9 +25,9 @@ import (
 
 	"github.com/insolar/insolar/api/seedmanager"
 	"github.com/insolar/insolar/application/extractor"
-	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/core/reply"
-	"github.com/insolar/insolar/core/utils"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/metrics"
@@ -83,7 +83,7 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+params.Method)
 	defer span.End()
 
-	reference, err := core.NewRefFromBase58(params.Reference)
+	reference, err := insolar.NewReferenceFromBase58(params.Reference)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
@@ -112,7 +112,7 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 	return result, nil
 }
 
-func processError(err error, extraMsg string, resp *answer, insLog core.Logger) {
+func processError(err error, extraMsg string, resp *answer, insLog insolar.Logger) {
 	resp.Error = err.Error()
 	insLog.Error(errors.Wrapf(err, "[ CallHandler ] %s", extraMsg))
 }

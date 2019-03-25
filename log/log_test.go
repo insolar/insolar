@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package log
 
@@ -27,7 +27,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/insolar"
 )
 
 func capture(f func()) string {
@@ -109,18 +109,18 @@ func TestLog_AddFields(t *testing.T) {
 	)
 	tt := []struct {
 		name    string
-		fieldfn func(la logrusAdapter) core.Logger
+		fieldfn func(la logrusAdapter) insolar.Logger
 	}{
 		{
 			name: "WithFields",
-			fieldfn: func(la logrusAdapter) core.Logger {
+			fieldfn: func(la logrusAdapter) insolar.Logger {
 				fields := map[string]interface{}{fieldname: fieldvalue}
 				return la.WithFields(fields)
 			},
 		},
 		{
 			name: "WithField",
-			fieldfn: func(la logrusAdapter) core.Logger {
+			fieldfn: func(la logrusAdapter) insolar.Logger {
 				return la.WithField(fieldname, fieldvalue)
 			},
 		},
@@ -158,7 +158,7 @@ func TestLog_AddFields(t *testing.T) {
 	}
 }
 
-func TestLog_Timestamp (t *testing.T) {
+func TestLog_Timestamp(t *testing.T) {
 	for _, adapter := range []string{"logrus", "zerolog"} {
 		adapter := adapter
 		t.Run(adapter, func(t *testing.T) {

@@ -1,36 +1,52 @@
-/*
- * The Clear BSD License
- *
- * Copyright (c) 2019 Insolar Technologies
- *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted (subject to the limitations in the disclaimer below) provided that
- * the following conditions are met:
- *
- *  * Redistributions of source code must retain the above copyright notice,
- *    this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *  * Neither the name of Insolar Technologies nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
- * BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
- * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
- * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+//
+// Modified BSD 3-Clause Clear License
+//
+// Copyright (c) 2019 Insolar Technologies GmbH
+//
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted (subject to the limitations in the disclaimer below) provided that
+// the following conditions are met:
+//  * Redistributions of source code must retain the above copyright notice, this list
+//    of conditions and the following disclaimer.
+//  * Redistributions in binary form must reproduce the above copyright notice, this list
+//    of conditions and the following disclaimer in the documentation and/or other materials
+//    provided with the distribution.
+//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+// BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
+// AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+// AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+// THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+// OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Notwithstanding any other provisions of this license, it is prohibited to:
+//    (a) use this software,
+//
+//    (b) prepare modifications and derivative works of this software,
+//
+//    (c) distribute this software (including without limitation in source code, binary or
+//        object code form), and
+//
+//    (d) reproduce copies of this software
+//
+//    for any commercial purposes, and/or
+//
+//    for the purposes of making available this software to third parties as a service,
+//    including, without limitation, any software-as-a-service, platform-as-a-service,
+//    infrastructure-as-a-service or other similar online service, irrespective of
+//    whether it competes with the products or services of Insolar Technologies GmbH.
+//
 
 package servicenetwork
 
@@ -52,8 +68,8 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -232,7 +248,7 @@ func (s *testSuite) waitForConsensus(consensusCount int) {
 	}
 }
 
-func (s *testSuite) waitForConsensusExcept(consensusCount int, exception core.RecordRef) {
+func (s *testSuite) waitForConsensusExcept(consensusCount int, exception insolar.Reference) {
 	for i := 0; i < consensusCount; i++ {
 		for _, n := range s.fixture().bootstrapNodes {
 			if n.id.Equal(exception) {
@@ -279,10 +295,10 @@ func (s *testSuite) StopNode(node *networkNode) {
 }
 
 type networkNode struct {
-	id                  core.RecordRef
-	role                core.StaticRole
+	id                  insolar.Reference
+	role                insolar.StaticRole
 	privateKey          crypto.PrivateKey
-	cryptographyService core.CryptographyService
+	cryptographyService insolar.CryptographyService
 	host                string
 	ctx                 context.Context
 
@@ -324,7 +340,7 @@ func (n *networkNode) init() error {
 	return err
 }
 
-func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManager, core.CryptographyService) {
+func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManager, insolar.CryptographyService) {
 	pubKey, err := node.cryptographyService.GetPublicKey()
 	s.Require().NoError(err)
 
@@ -364,13 +380,13 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 	return certificate.NewCertificateManager(cert), node.cryptographyService
 }
 
-func RandomRole() core.StaticRole {
+func RandomRole() insolar.StaticRole {
 	i := rand.Int()%3 + 1
-	return core.StaticRole(i)
+	return insolar.StaticRole(i)
 }
 
 type terminationHandler struct {
-	NodeID core.RecordRef
+	NodeID insolar.Reference
 }
 
 func (t *terminationHandler) Abort() {
@@ -378,23 +394,23 @@ func (t *terminationHandler) Abort() {
 }
 
 type pulseManagerMock struct {
-	pulse core.Pulse
+	pulse insolar.Pulse
 	lock  sync.Mutex
 
 	keeper network.NodeKeeper
 }
 
 func newPulseManagerMock(keeper network.NodeKeeper) *pulseManagerMock {
-	return &pulseManagerMock{pulse: *core.GenesisPulse, keeper: keeper}
+	return &pulseManagerMock{pulse: *insolar.GenesisPulse, keeper: keeper}
 }
 
-func (p *pulseManagerMock) Current(ctx context.Context) (*core.Pulse, error) {
+func (p *pulseManagerMock) Current(ctx context.Context) (*insolar.Pulse, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 	return &p.pulse, nil
 }
 
-func (p *pulseManagerMock) Set(ctx context.Context, pulse core.Pulse, persist bool) error {
+func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse, persist bool) error {
 	p.lock.Lock()
 	p.pulse = pulse
 	p.lock.Unlock()
@@ -415,7 +431,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	s.Require().NoError(err)
 
 	netCoordinator := testutils.NewNetworkCoordinatorMock(s.T())
-	netCoordinator.ValidateCertMock.Set(func(p context.Context, p1 core.AuthorizationCertificate) (bool, error) {
+	netCoordinator.ValidateCertMock.Set(func(p context.Context, p1 insolar.AuthorizationCertificate) (bool, error) {
 		return true, nil
 	})
 
