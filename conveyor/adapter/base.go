@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/conveyor/queue"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 )
 
@@ -70,16 +71,16 @@ func (ci *cancelInfo) IsFlushed() bool {
 
 type taskHolder struct {
 	taskHolderLock sync.Mutex
-	tasks          map[uint32][]*cancelInfo
+	tasks          map[insolar.PulseNumber][]*cancelInfo
 }
 
 func newTaskHolder() taskHolder {
 	return taskHolder{
-		tasks: make(map[uint32][]*cancelInfo),
+		tasks: make(map[insolar.PulseNumber][]*cancelInfo),
 	}
 }
 
-func (th *taskHolder) add(info *cancelInfo, pulseNumber uint32) {
+func (th *taskHolder) add(info *cancelInfo, pulseNumber insolar.PulseNumber) {
 	log.Infof("[ taskHolder.add ] Adding pulseNumber: %d. Id: %d", pulseNumber, info.id)
 	th.taskHolderLock.Lock()
 	defer th.taskHolderLock.Unlock()
@@ -106,7 +107,7 @@ func processStop(cancelList []*cancelInfo, flush bool) {
 	}
 }
 
-func (th *taskHolder) stop(pulseNumber uint32, flush bool) {
+func (th *taskHolder) stop(pulseNumber insolar.PulseNumber, flush bool) {
 	log.Infof("[ taskHolder.stop ] Stopping pulseNumber: %d, flush: %s", pulseNumber, flush)
 	th.taskHolderLock.Lock()
 	defer th.taskHolderLock.Unlock()
@@ -132,7 +133,7 @@ func (th *taskHolder) stopAll(flush bool) {
 		processStop(cancelList, flush)
 	}
 
-	th.tasks = make(map[uint32][]*cancelInfo)
+	th.tasks = make(map[insolar.PulseNumber][]*cancelInfo)
 
 }
 
@@ -251,17 +252,17 @@ func (a *CancellableQueueAdapter) PushTask(respSink AdapterToSlotResponseSink,
 }
 
 // CancelElementTasks: now cancels all pulseNumber's tasks
-func (a *CancellableQueueAdapter) CancelElementTasks(pulseNumber idType, elementID idType) {
+func (a *CancellableQueueAdapter) CancelElementTasks(pulseNumber insolar.PulseNumber, elementID idType) {
 	a.taskHolder.stop(pulseNumber, false)
 }
 
 // CancelPulseTasks: now cancels all pulseNumber's tasks
-func (a *CancellableQueueAdapter) CancelPulseTasks(pulseNumber idType) {
+func (a *CancellableQueueAdapter) CancelPulseTasks(pulseNumber insolar.PulseNumber) {
 	a.taskHolder.stop(pulseNumber, false)
 }
 
 // FlushPulseTasks: now flush all pulseNumber's tasks
-func (a *CancellableQueueAdapter) FlushPulseTasks(pulseNumber uint32) {
+func (a *CancellableQueueAdapter) FlushPulseTasks(pulseNumber insolar.PulseNumber) {
 	a.taskHolder.stop(pulseNumber, true)
 }
 
