@@ -17,9 +17,13 @@
 package conveyor
 
 import (
+	"fmt"
+
+	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/pkg/errors"
 )
 
 // ActivationStatus represents status of work for slot element
@@ -45,11 +49,15 @@ type slotElement struct {
 	nextElement      *slotElement
 	prevElement      *slotElement
 	activationStatus ActivationStatus
+	slot             *Slot
 }
 
 // newSlotElement creates new slot element with provided activation status
-func newSlotElement(activationStatus ActivationStatus) *slotElement {
-	return &slotElement{activationStatus: activationStatus}
+func newSlotElement(activationStatus ActivationStatus, slot *Slot) *slotElement {
+	return &slotElement{
+		activationStatus: activationStatus,
+		slot:             slot,
+	}
 }
 
 // ---- SlotElementRestrictedHelper
@@ -62,6 +70,7 @@ func (se *slotElement) setDeleteState() {
 func (se *slotElement) update(state fsm.StateID, payload interface{}, sm statemachine.StateMachine) {
 	se.state = state
 	se.payload = payload
+	se.stateMachine = sm
 	se.stateMachine = sm
 }
 
@@ -86,7 +95,7 @@ func (se *slotElement) GetPayload() interface{} {
 
 // Reactivate implements SlotElementRestrictedHelper
 func (se *slotElement) Reactivate() {
-	panic("implement me")
+	se.activationStatus = ActiveElement
 }
 
 // LeaveSequence implements SlotElementRestrictedHelper
@@ -125,10 +134,25 @@ func (se *slotElement) InformParent(payload interface{}) bool {
 
 // DeactivateTill implements SlotElementHelper
 func (se *slotElement) DeactivateTill(reactivateOn slot.ReactivateMode) {
-	panic("implement me")
+	switch reactivateOn {
+	case slot.Empty:
+		panic("implement me")
+	case slot.Response:
+		se.activationStatus = NotActiveElement
+	case slot.Tick:
+		panic("implement me")
+	case slot.SeqHead:
+		panic("implement me")
+	}
 }
 
 // SendTask implements SlotElementHelper
 func (se *slotElement) SendTask(adapterID uint32, taskPayload interface{}, respHandlerID uint32) error {
-	panic("implement me")
+	adapter := adapter.Storage.GetAdapterByID(adapterID)
+	if adapter == nil {
+		panic(fmt.Sprintf("[ SendTask ] No such adapter: %d", adapter))
+	}
+
+	err := adapter.PushTask(se.slot, se.id, respHandlerID, taskPayload)
+	return errors.Errorf("[ SendTask ] Can't PushTask: %s", err)
 }
