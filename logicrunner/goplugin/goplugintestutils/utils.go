@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -119,7 +120,7 @@ func (t *TestObjectDescriptor) Memory() []byte {
 }
 
 // Children implementation for tests
-func (t *TestObjectDescriptor) Children(pulse *insolar.PulseNumber) (insolar.RefIterator, error) {
+func (t *TestObjectDescriptor) Children(pulse *insolar.PulseNumber) (artifacts.RefIterator, error) {
 	panic("not implemented")
 }
 
@@ -166,7 +167,7 @@ func (t *TestArtifactManager) State() ([]byte, error) {
 }
 
 // GetChildren implementation for tests
-func (t *TestArtifactManager) GetChildren(ctx context.Context, parent insolar.Reference, pulse *insolar.PulseNumber) (insolar.RefIterator, error) {
+func (t *TestArtifactManager) GetChildren(ctx context.Context, parent insolar.Reference, pulse *insolar.PulseNumber) (artifacts.RefIterator, error) {
 	panic("implement me")
 }
 
@@ -196,7 +197,7 @@ func (t *TestArtifactManager) RegisterResult(
 }
 
 // GetObject implementation for tests
-func (t *TestArtifactManager) GetObject(ctx context.Context, object insolar.Reference, state *insolar.ID, approved bool) (insolar.ObjectDescriptor, error) {
+func (t *TestArtifactManager) GetObject(ctx context.Context, object insolar.Reference, state *insolar.ID, approved bool) (artifacts.ObjectDescriptor, error) {
 	res, ok := t.Objects[object]
 	if !ok {
 		return nil, errors.New("No object")
@@ -238,7 +239,7 @@ func (t *TestArtifactManager) DeployCode(ctx context.Context, domain insolar.Ref
 }
 
 // GetCode implementation for tests
-func (t *TestArtifactManager) GetCode(ctx context.Context, code insolar.Reference) (insolar.CodeDescriptor, error) {
+func (t *TestArtifactManager) GetCode(ctx context.Context, code insolar.Reference) (artifacts.CodeDescriptor, error) {
 	res, ok := t.Codes[code]
 	if !ok {
 		return nil, errors.New("No code")
@@ -251,7 +252,7 @@ func (t *TestArtifactManager) ActivatePrototype(
 	ctx context.Context,
 	domain, request, parent, code insolar.Reference,
 	memory []byte,
-) (insolar.ObjectDescriptor, error) {
+) (artifacts.ObjectDescriptor, error) {
 	id := testutils.RandomID()
 
 	t.Prototypes[request] = &TestObjectDescriptor{
@@ -272,7 +273,7 @@ func (t *TestArtifactManager) ActivateObject(
 	domain, request, parent, prototype insolar.Reference,
 	asDelegate bool,
 	memory []byte,
-) (insolar.ObjectDescriptor, error) {
+) (artifacts.ObjectDescriptor, error) {
 	id := testutils.RandomID()
 
 	t.Objects[request] = &TestObjectDescriptor{
@@ -298,7 +299,7 @@ func (t *TestArtifactManager) ActivateObject(
 // DeactivateObject implementation for tests
 func (t *TestArtifactManager) DeactivateObject(
 	ctx context.Context,
-	domain insolar.Reference, request insolar.Reference, obj insolar.ObjectDescriptor,
+	domain insolar.Reference, request insolar.Reference, obj artifacts.ObjectDescriptor,
 ) (*insolar.ID, error) {
 	panic("not implemented")
 }
@@ -308,10 +309,10 @@ func (t *TestArtifactManager) UpdatePrototype(
 	ctx context.Context,
 	domain insolar.Reference,
 	request insolar.Reference,
-	object insolar.ObjectDescriptor,
+	object artifacts.ObjectDescriptor,
 	memory []byte,
 	code *insolar.Reference,
-) (insolar.ObjectDescriptor, error) {
+) (artifacts.ObjectDescriptor, error) {
 	objDesc, ok := t.Prototypes[*object.HeadRef()]
 	if !ok {
 		return nil, errors.New("No object to update")
@@ -328,9 +329,9 @@ func (t *TestArtifactManager) UpdateObject(
 	ctx context.Context,
 	domain insolar.Reference,
 	request insolar.Reference,
-	object insolar.ObjectDescriptor,
+	object artifacts.ObjectDescriptor,
 	memory []byte,
-) (insolar.ObjectDescriptor, error) {
+) (artifacts.ObjectDescriptor, error) {
 	objDesc, ok := t.Objects[*object.HeadRef()]
 	if !ok {
 		return nil, errors.New("No object to update")
@@ -378,7 +379,7 @@ func CBORUnMarshalToSlice(t testing.TB, in []byte) []interface{} {
 // AMPublishCode publishes code on ledger
 func AMPublishCode(
 	t testing.TB,
-	am insolar.ArtifactManager,
+	am artifacts.Client,
 	domain insolar.Reference,
 	request insolar.Reference,
 	mtype insolar.MachineType,
@@ -412,7 +413,7 @@ func AMPublishCode(
 type ContractsBuilder struct {
 	root string
 
-	ArtifactManager insolar.ArtifactManager
+	ArtifactManager artifacts.Client
 	IccPath         string
 	Prototypes      map[string]*insolar.Reference
 	Codes           map[string]*insolar.Reference
@@ -420,7 +421,7 @@ type ContractsBuilder struct {
 
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
 // artifact manager, ...
-func NewContractBuilder(am insolar.ArtifactManager, icc string) *ContractsBuilder {
+func NewContractBuilder(am artifacts.Client, icc string) *ContractsBuilder {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	if err != nil {
 		return nil

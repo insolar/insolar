@@ -32,7 +32,7 @@ import (
 // DEPRECATED
 type TMPLedger struct {
 	db              storage.DBContext
-	ArtifactManager *Client
+	ArtifactManager Client
 	PulseManager    insolar.PulseManager   `inject:""`
 	JetCoordinator  insolar.JetCoordinator `inject:""`
 }
@@ -53,7 +53,7 @@ func (l *TMPLedger) GetJetCoordinator() insolar.JetCoordinator {
 
 // Deprecated: remove after deleting TmpLedger
 // GetArtifactManager returns artifact manager to work with.
-func (l *TMPLedger) GetArtifactManager() *Client {
+func (l *TMPLedger) GetArtifactManager() Client {
 	log.Warn("GetArtifactManager is deprecated. Use component injection.")
 	return l.ArtifactManager
 }
@@ -62,7 +62,7 @@ func (l *TMPLedger) GetArtifactManager() *Client {
 // private members (suitable for tests).
 func NewTestLedger(
 	db storage.DBContext,
-	am *Client,
+	am Client,
 	pm *pulsemanager.PulseManager,
 	jc insolar.JetCoordinator,
 ) *TMPLedger {

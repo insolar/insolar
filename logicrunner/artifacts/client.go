@@ -39,7 +39,7 @@ const (
 )
 
 // Client provides concrete API to storage for processing module.
-type Client struct {
+type client struct {
 	GenesisState genesis.GenesisState `inject:""`
 	JetStorage   jet.Storage          `inject:""`
 
@@ -53,14 +53,14 @@ type Client struct {
 }
 
 // State returns hash state for artifact manager.
-func (m *Client) State() ([]byte, error) {
+func (m *client) State() ([]byte, error) {
 	// This is a temporary stab to simulate real hash.
 	return m.PlatformCryptographyScheme.IntegrityHasher().Hash([]byte{1, 2, 3}), nil
 }
 
 // NewClient creates new manager instance.
-func NewClient() *Client {
-	return &Client{
+func NewClient() *client {
+	return &client{
 		getChildrenChunkSize: getChildrenChunkSize,
 		senders:              newLedgerArtifactSenders(),
 	}
@@ -69,13 +69,13 @@ func NewClient() *Client {
 // GenesisRef returns the root record reference.
 //
 // Root record is the parent for all top-level records.
-func (m *Client) GenesisRef() *insolar.Reference {
+func (m *client) GenesisRef() *insolar.Reference {
 	return m.GenesisState.GenesisRef()
 }
 
 // RegisterRequest sends message for request registration,
 // returns request record Ref if request successfully created or already exists.
-func (m *Client) RegisterRequest(
+func (m *client) RegisterRequest(
 	ctx context.Context, obj insolar.Reference, parcel insolar.Parcel,
 ) (*insolar.ID, error) {
 	var err error
@@ -116,7 +116,7 @@ func (m *Client) RegisterRequest(
 // GetCode returns code from code record by provided reference according to provided machine preference.
 //
 // This method is used by VM to fetch code for execution.
-func (m *Client) GetCode(
+func (m *client) GetCode(
 	ctx context.Context, code insolar.Reference,
 ) (CodeDescriptor, error) {
 	var err error
@@ -169,7 +169,7 @@ func (m *Client) GetCode(
 //
 // If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 // provide methods for fetching all related data.
-func (m *Client) GetObject(
+func (m *client) GetObject(
 	ctx context.Context,
 	head insolar.Reference,
 	state *insolar.ID,
@@ -239,7 +239,7 @@ func (m *Client) GetObject(
 // GetPendingRequest returns an unclosed pending request
 // It takes an id from current LME
 // Then goes either to a light node or heavy node
-func (m *Client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (insolar.Parcel, error) {
+func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (insolar.Parcel, error) {
 	var err error
 	instrumenter := instrument(ctx, "GetRegisterRequest").err(&err)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetRegisterRequest")
@@ -315,7 +315,7 @@ func (m *Client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 }
 
 // HasPendingRequests returns true if object has unclosed requests.
-func (m *Client) HasPendingRequests(
+func (m *client) HasPendingRequests(
 	ctx context.Context,
 	object insolar.Reference,
 ) (bool, error) {
@@ -351,7 +351,7 @@ func (m *Client) HasPendingRequests(
 //
 // Object delegate should be previously created for this object. If object delegate does not exist, an error will
 // be returned.
-func (m *Client) GetDelegate(
+func (m *client) GetDelegate(
 	ctx context.Context, head, asType insolar.Reference,
 ) (*insolar.Reference, error) {
 	var err error
@@ -393,7 +393,7 @@ func (m *Client) GetDelegate(
 // GetChildren returns children iterator.
 //
 // During iteration children refs will be fetched from remote source (parent object).
-func (m *Client) GetChildren(
+func (m *client) GetChildren(
 	ctx context.Context, parent insolar.Reference, pulse *insolar.PulseNumber,
 ) (RefIterator, error) {
 	var err error
@@ -422,7 +422,7 @@ func (m *Client) GetChildren(
 // DeclareType creates new type record in storage.
 //
 // Type is a contract interface. It contains one method signature.
-func (m *Client) DeclareType(
+func (m *client) DeclareType(
 	ctx context.Context, domain, request insolar.Reference, typeDec []byte,
 ) (*insolar.ID, error) {
 	var err error
@@ -459,7 +459,7 @@ func (m *Client) DeclareType(
 // DeployCode creates new code record in storage.
 //
 // CodeRef records are used to activate prototype or as migration code for an object.
-func (m *Client) DeployCode(
+func (m *client) DeployCode(
 	ctx context.Context,
 	domain insolar.Reference,
 	request insolar.Reference,
@@ -514,7 +514,7 @@ func (m *Client) DeployCode(
 // memory as memory of created object. If memory is not provided, the prototype default memory will be used.
 //
 // Request reference will be this object's identifier and referred as "object head".
-func (m *Client) ActivatePrototype(
+func (m *client) ActivatePrototype(
 	ctx context.Context,
 	domain, object, parent, code insolar.Reference,
 	memory []byte,
@@ -537,7 +537,7 @@ func (m *Client) ActivatePrototype(
 // memory as memory of created object. If memory is not provided, the prototype default memory will be used.
 //
 // Request reference will be this object's identifier and referred as "object head".
-func (m *Client) ActivateObject(
+func (m *client) ActivateObject(
 	ctx context.Context,
 	domain, object, parent, prototype insolar.Reference,
 	asDelegate bool,
@@ -561,7 +561,7 @@ func (m *Client) ActivateObject(
 // of the object. If object is already deactivated, an error should be returned.
 //
 // Deactivated object cannot be changed.
-func (m *Client) DeactivateObject(
+func (m *client) DeactivateObject(
 	ctx context.Context, domain, request insolar.Reference, obj ObjectDescriptor,
 ) (*insolar.ID, error) {
 	var err error
@@ -600,7 +600,7 @@ func (m *Client) DeactivateObject(
 // prototype. Provided memory well be the new object memory.
 //
 // Returned reference will be the latest object state (exact) reference.
-func (m *Client) UpdatePrototype(
+func (m *client) UpdatePrototype(
 	ctx context.Context,
 	domain, request insolar.Reference,
 	object ObjectDescriptor,
@@ -630,7 +630,7 @@ func (m *Client) UpdatePrototype(
 // object. Provided memory well be the new object memory.
 //
 // Returned reference will be the latest object state (exact) reference.
-func (m *Client) UpdateObject(
+func (m *client) UpdateObject(
 	ctx context.Context,
 	domain, request insolar.Reference,
 	object ObjectDescriptor,
@@ -658,7 +658,7 @@ func (m *Client) UpdateObject(
 // RegisterValidation marks provided object state as approved or disapproved.
 //
 // When fetching object, validity can be specified.
-func (m *Client) RegisterValidation(
+func (m *client) RegisterValidation(
 	ctx context.Context,
 	object insolar.Reference,
 	state insolar.ID,
@@ -696,7 +696,7 @@ func (m *Client) RegisterValidation(
 }
 
 // RegisterResult saves VM method call result.
-func (m *Client) RegisterResult(
+func (m *client) RegisterResult(
 	ctx context.Context, obj, request insolar.Reference, payload []byte,
 ) (*insolar.ID, error) {
 	var err error
@@ -729,7 +729,7 @@ func (m *Client) RegisterResult(
 }
 
 // pulse returns current PulseNumber for artifact manager
-func (m *Client) pulse(ctx context.Context) (pn insolar.PulseNumber, err error) {
+func (m *client) pulse(ctx context.Context) (pn insolar.PulseNumber, err error) {
 	pulse, err := m.PulseStorage.Current(ctx)
 	if err != nil {
 		return
@@ -739,7 +739,7 @@ func (m *Client) pulse(ctx context.Context) (pn insolar.PulseNumber, err error) 
 	return
 }
 
-func (m *Client) activateObject(
+func (m *client) activateObject(
 	ctx context.Context,
 	domain insolar.Reference,
 	obj insolar.Reference,
@@ -818,7 +818,7 @@ func (m *Client) activateObject(
 	}, nil
 }
 
-func (m *Client) updateObject(
+func (m *client) updateObject(
 	ctx context.Context,
 	domain, request insolar.Reference,
 	obj ObjectDescriptor,
@@ -883,7 +883,7 @@ func (m *Client) updateObject(
 	}, nil
 }
 
-func (m *Client) setRecord(
+func (m *client) setRecord(
 	ctx context.Context,
 	rec object.VirtualRecord,
 	target insolar.Reference,
@@ -911,7 +911,7 @@ func (m *Client) setRecord(
 	}
 }
 
-func (m *Client) setBlob(
+func (m *client) setBlob(
 	ctx context.Context,
 	blob []byte,
 	target insolar.Reference,
@@ -939,25 +939,13 @@ func (m *Client) setBlob(
 	}
 }
 
-func (m *Client) sendUpdateObject(
+func (m *client) sendUpdateObject(
 	ctx context.Context,
 	rec object.VirtualRecord,
 	obj insolar.Reference,
 	memory []byte,
 	currentPN insolar.PulseNumber,
 ) (*reply.Object, error) {
-	// TODO: @andreyromancev. 14.01.19. Uncomment when message streaming or validation is ready.
-	// genericRep, err := sendAndRetryJet(ctx, m.bus(ctx), m.db, &message.SetBlob{
-	// 	TargetRef: object,
-	// 	Memory:    memory,
-	// }, currentPulse, jetMissRetryCount, nil)
-	// if err != nil {
-	// 	return nil, errors.Wrap(err, "failed to save object's memory blob")
-	// }
-	// if _, ok := genericRep.(*reply.ID); !ok {
-	// 	return nil, fmt.Errorf("unexpected reply: %#v\n", genericRep)
-	// }
-
 	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(bus.Send, retryJetSender(currentPN, m.JetStorage))
 	genericReply, err := sender(
@@ -982,7 +970,7 @@ func (m *Client) sendUpdateObject(
 	}
 }
 
-func (m *Client) registerChild(
+func (m *client) registerChild(
 	ctx context.Context,
 	rec object.VirtualRecord,
 	parent insolar.Reference,

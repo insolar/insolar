@@ -54,7 +54,7 @@ func (d *codeDescriptor) Code() ([]byte, error) {
 // ObjectDescriptor represents meta info required to fetch all object data.
 type objectDescriptor struct {
 	ctx context.Context
-	am  *Client
+	am  Client
 
 	head         insolar.Reference
 	state        insolar.ID

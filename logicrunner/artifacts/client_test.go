@@ -165,7 +165,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 		return &pulse.Pulse, err
 	}
 
-	am := Client{
+	am := client{
 		DefaultBus:                 mb,
 		PulseStorage:               amPulseStorageMock,
 		JetCoordinator:             jc,
@@ -192,7 +192,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 
 func (s *amSuite) TestLedgerArtifactManager_GetObject_FollowsRedirect() {
 	mc := minimock.NewController(s.T())
-	am := NewArtifactManger()
+	am := NewClient()
 	mb := testutils.NewMessageBusMock(mc)
 
 	objRef := genRandomRef(0)
@@ -240,7 +240,7 @@ func makePulseStorage(s *amSuite) insolar.PulseStorage {
 
 func (s *amSuite) TestLedgerArtifactManager_GetChildren_FollowsRedirect() {
 	mc := minimock.NewController(s.T())
-	am := NewArtifactManger()
+	am := NewClient()
 	mb := testutils.NewMessageBusMock(mc)
 
 	am.PulseStorage = makePulseStorage(s)
@@ -273,7 +273,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 	defer mc.Finish()
 
 	cs := platformpolicy.NewPlatformCryptographyScheme()
-	am := NewArtifactManger()
+	am := NewClient()
 	am.PlatformCryptographyScheme = cs
 	pulseStorageMock := testutils.NewPulseStorageMock(s.T())
 	pulseStorageMock.CurrentFunc = func(ctx context.Context) (*insolar.Pulse, error) {
@@ -359,7 +359,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 		}
 	}
 
-	am := NewArtifactManger()
+	am := NewClient()
 	am.JetCoordinator = jc
 	am.DefaultBus = mb
 	am.PulseStorage = pulseStorageMock

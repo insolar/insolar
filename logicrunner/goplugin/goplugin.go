@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"go.opencensus.io/stats"
 
 	"github.com/pkg/errors"
@@ -52,14 +53,14 @@ type RunnerOptions struct {
 type GoPlugin struct {
 	Cfg             *configuration.LogicRunner
 	MessageBus      insolar.MessageBus
-	ArtifactManager insolar.ArtifactManager
+	ArtifactManager artifacts.Client
 
 	clientMutex sync.Mutex
 	client      *rpc.Client
 }
 
 // NewGoPlugin returns a new started GoPlugin
-func NewGoPlugin(conf *configuration.LogicRunner, eb insolar.MessageBus, am insolar.ArtifactManager) (*GoPlugin, error) {
+func NewGoPlugin(conf *configuration.LogicRunner, eb insolar.MessageBus, am artifacts.Client) (*GoPlugin, error) {
 	gp := GoPlugin{
 		Cfg:             conf,
 		MessageBus:      eb,

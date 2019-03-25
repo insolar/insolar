@@ -6,9 +6,10 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// ArtifactManager is a high level storage interface.
-//go:generate minimock -i github.com/insolar/insolar/insolar.ArtifactManager -o ../testutils -s _mock.go
-type ArtifactManager interface {
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.Client -o ./ -s _mock.go
+
+// Client is a high level storage interface.
+type Client interface {
 	// GenesisRef returns the root record reference.
 	//
 	// Root record is the parent for all top-level records.
@@ -117,8 +118,9 @@ type ArtifactManager interface {
 	State() ([]byte, error)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.CodeDescriptor -o ./ -s _mock.go
+
 // CodeDescriptor represents meta info required to fetch all code data.
-//go:generate minimock -i github.com/insolar/insolar/insolar.CodeDescriptor -o ../testutils -s _mock.go
 type CodeDescriptor interface {
 	// Ref returns reference to represented code record.
 	Ref() *insolar.Reference
@@ -130,8 +132,9 @@ type CodeDescriptor interface {
 	Code() ([]byte, error)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.ObjectDescriptor -o ./ -s _mock.go
+
 // ObjectDescriptor represents meta info required to fetch all object data.
-//go:generate minimock -i github.com/insolar/insolar/insolar.ObjectDescriptor -o ../testutils -s _mock.go
 type ObjectDescriptor interface {
 	// HeadRef returns head reference to represented object record.
 	HeadRef() *insolar.Reference

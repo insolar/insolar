@@ -171,13 +171,14 @@ func initComponents(
 	)
 
 	components := ledger.GetLedgerComponents(cfg.Ledger, certManager.GetCertificate())
-	ld := ledger.Ledger{} // TODO: remove me with cmOld
+	// ld := ledger.Ledger{} // TODO: remove me with cmOld
 
 	components = append(components, []interface{}{
 		messageBus,
 		contractRequester,
-		&ld,
+		// &ld,
 		logicRunner,
+		logicRunner.ArtifactManager,
 		delegationTokenFactory,
 		parcelFactory,
 	}...)
