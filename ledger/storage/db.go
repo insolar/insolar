@@ -90,7 +90,6 @@ type DB struct {
 	// so txretiries is our knob to tune up retry logic.
 	txretiries int
 
-	idlocker             IDLocker
 	jetHeavyClientLocker IDLocker
 
 	closeLock sync.RWMutex
@@ -109,7 +108,7 @@ func setOptions(o *badger.Options) *badger.Options {
 
 // NewDB returns storage.DB with BadgerDB instance initialized by opts.
 // Creates database in provided dir or in current directory if dir parameter is empty.
-func NewDB(conf configuration.Ledger, opts *badger.Options, idLocker IDLocker) (DBContext, error) {
+func NewDB(conf configuration.Ledger, opts *badger.Options) (DBContext, error) {
 	opts = setOptions(opts)
 	dir, err := filepath.Abs(conf.Storage.DataDirectory)
 	if err != nil {
@@ -127,7 +126,6 @@ func NewDB(conf configuration.Ledger, opts *badger.Options, idLocker IDLocker) (
 	db := &DB{
 		db:                   bdb,
 		txretiries:           conf.Storage.TxRetriesOnConflict,
-		idlocker:             idLocker,
 		jetHeavyClientLocker: NewIDLocker(),
 	}
 	return db, nil

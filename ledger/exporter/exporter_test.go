@@ -72,7 +72,7 @@ func (s *exporterSuite) BeforeTest(suiteName, testName string) {
 	s.ctx = inslogger.TestContext(s.T())
 	s.jetID = *insolar.NewJetID(0, nil)
 
-	db, cleaner := storagetest.TmpDB(s.ctx, nil, s.T())
+	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()

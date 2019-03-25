@@ -64,7 +64,7 @@ func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	tmpDB, cleaner := storagetest.TmpDB(s.ctx, nil, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
@@ -255,7 +255,7 @@ type indexCase struct {
 }
 
 func (c indexCase) Check(ctx context.Context, t *testing.T) {
-	_, err := c.objectStorage.GetObjectIndex(ctx, c.jetID, c.id, false)
+	_, err := c.objectStorage.GetObjectIndex(ctx, c.jetID, c.id)
 	c.check(t, err)
 }
 

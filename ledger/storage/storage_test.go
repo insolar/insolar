@@ -67,7 +67,7 @@ func (s *storageSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	tmpDB, cleaner := storagetest.TmpDB(s.ctx, nil, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.db = tmpDB
 	s.cleaner = cleaner
 
@@ -127,7 +127,7 @@ func (s *storageSuite) TestDB_SetRecord() {
 }
 
 func (s *storageSuite) TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex() {
-	idx, err := s.objectStorage.GetObjectIndex(s.ctx, s.jetID, insolar.NewID(0, hexhash("5000")), false)
+	idx, err := s.objectStorage.GetObjectIndex(s.ctx, s.jetID, insolar.NewID(0, hexhash("5000")))
 	assert.Equal(s.T(), insolar.ErrNotFound, err)
 	assert.Nil(s.T(), idx)
 }
@@ -140,7 +140,7 @@ func (s *storageSuite) TestDB_SetObjectIndex_StoresCorrectDataInStorage() {
 	err := s.objectStorage.SetObjectIndex(s.ctx, s.jetID, zeroid, &idx)
 	assert.Nil(s.T(), err)
 
-	storedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, s.jetID, zeroid, false)
+	storedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, s.jetID, zeroid)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), *storedIndex, idx)
 }
@@ -160,7 +160,7 @@ func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 	assert.Nil(s.T(), err)
 
 	// Assert
-	storedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, zeroid, false)
+	storedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, zeroid)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), *storedIndex, idx)
 	assert.Equal(s.T(), 1239, int(idx.LatestUpdate))
@@ -214,7 +214,7 @@ func (s *storageSuite) TestDB_AddPulse() {
 
 func TestDB_Close(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	tmpDB, cleaner := storagetest.TmpDB(ctx, nil, t)
+	tmpDB, cleaner := storagetest.TmpDB(ctx, t)
 
 	jetID := testutils.RandomJet()
 

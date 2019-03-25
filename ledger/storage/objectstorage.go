@@ -43,7 +43,6 @@ type ObjectStorage interface {
 		ctx context.Context,
 		jetID insolar.ID,
 		id *insolar.ID,
-		forupdate bool,
 	) (*object.Lifeline, error)
 
 	SetObjectIndex(
@@ -155,7 +154,6 @@ func (os *objectStorage) GetObjectIndex(
 	ctx context.Context,
 	jetID insolar.ID,
 	id *insolar.ID,
-	forupdate bool,
 ) (*object.Lifeline, error) {
 	tx, err := os.DB.BeginTransaction(false)
 	if err != nil {
@@ -163,7 +161,7 @@ func (os *objectStorage) GetObjectIndex(
 	}
 	defer tx.Discard()
 
-	idx, err := tx.GetObjectIndex(ctx, jetID, id, forupdate)
+	idx, err := tx.GetObjectIndex(ctx, jetID, id)
 	if err != nil {
 		return nil, err
 	}

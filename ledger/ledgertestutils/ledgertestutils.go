@@ -57,12 +57,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
-	idLockerMock := storage.NewIDLockerMock(t)
-	idLockerMock.LockMock.Return()
-	idLockerMock.UnlockMock.Return()
-	idLockerMock.RLockMock.Return()
-	idLockerMock.RUnlockMock.Return()
-	tmpDB, dbcancel := storagetest.TmpDB(ctx, idLockerMock, t, storagetest.Dir(dir))
+	tmpDB, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
 
 	cm := &component.Manager{}
 	gi := genesis.NewGenesisInitializer()
@@ -116,6 +111,13 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	handler.DBContext = tmpDB
 	handler.ObjectStorage = os
 	handler.DropModifier = ds
+
+	idLockerMock := storage.NewIDLockerMock(t)
+	idLockerMock.RLockMock.Return()
+	idLockerMock.RUnlockMock.Return()
+	idLockerMock.LockMock.Return()
+	idLockerMock.UnlockMock.Return()
+
 	handler.IDLocker = idLockerMock
 
 	handler.PlatformCryptographyScheme = pcs

@@ -6,13 +6,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "ObjectStorage" can be found in github.com/insolar/insolar/ledger/storage
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
-	object "github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/ledger/storage/object"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -26,7 +26,7 @@ type ObjectStorageMock struct {
 	GetBlobPreCounter uint64
 	GetBlobMock       mObjectStorageMockGetBlob
 
-	GetObjectIndexFunc       func(p context.Context, p1 insolar.ID, p2 *insolar.ID, p3 bool) (r *object.Lifeline, r1 error)
+	GetObjectIndexFunc       func(p context.Context, p1 insolar.ID, p2 *insolar.ID) (r *object.Lifeline, r1 error)
 	GetObjectIndexCounter    uint64
 	GetObjectIndexPreCounter uint64
 	GetObjectIndexMock       mObjectStorageMockGetObjectIndex
@@ -243,7 +243,6 @@ type ObjectStorageMockGetObjectIndexInput struct {
 	p  context.Context
 	p1 insolar.ID
 	p2 *insolar.ID
-	p3 bool
 }
 
 type ObjectStorageMockGetObjectIndexResult struct {
@@ -252,14 +251,14 @@ type ObjectStorageMockGetObjectIndexResult struct {
 }
 
 //Expect specifies that invocation of ObjectStorage.GetObjectIndex is expected from 1 to Infinity times
-func (m *mObjectStorageMockGetObjectIndex) Expect(p context.Context, p1 insolar.ID, p2 *insolar.ID, p3 bool) *mObjectStorageMockGetObjectIndex {
+func (m *mObjectStorageMockGetObjectIndex) Expect(p context.Context, p1 insolar.ID, p2 *insolar.ID) *mObjectStorageMockGetObjectIndex {
 	m.mock.GetObjectIndexFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ObjectStorageMockGetObjectIndexExpectation{}
 	}
-	m.mainExpectation.input = &ObjectStorageMockGetObjectIndexInput{p, p1, p2, p3}
+	m.mainExpectation.input = &ObjectStorageMockGetObjectIndexInput{p, p1, p2}
 	return m
 }
 
@@ -276,12 +275,12 @@ func (m *mObjectStorageMockGetObjectIndex) Return(r *object.Lifeline, r1 error) 
 }
 
 //ExpectOnce specifies that invocation of ObjectStorage.GetObjectIndex is expected once
-func (m *mObjectStorageMockGetObjectIndex) ExpectOnce(p context.Context, p1 insolar.ID, p2 *insolar.ID, p3 bool) *ObjectStorageMockGetObjectIndexExpectation {
+func (m *mObjectStorageMockGetObjectIndex) ExpectOnce(p context.Context, p1 insolar.ID, p2 *insolar.ID) *ObjectStorageMockGetObjectIndexExpectation {
 	m.mock.GetObjectIndexFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &ObjectStorageMockGetObjectIndexExpectation{}
-	expectation.input = &ObjectStorageMockGetObjectIndexInput{p, p1, p2, p3}
+	expectation.input = &ObjectStorageMockGetObjectIndexInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -291,7 +290,7 @@ func (e *ObjectStorageMockGetObjectIndexExpectation) Return(r *object.Lifeline, 
 }
 
 //Set uses given function f as a mock of ObjectStorage.GetObjectIndex method
-func (m *mObjectStorageMockGetObjectIndex) Set(f func(p context.Context, p1 insolar.ID, p2 *insolar.ID, p3 bool) (r *object.Lifeline, r1 error)) *ObjectStorageMock {
+func (m *mObjectStorageMockGetObjectIndex) Set(f func(p context.Context, p1 insolar.ID, p2 *insolar.ID) (r *object.Lifeline, r1 error)) *ObjectStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -300,18 +299,18 @@ func (m *mObjectStorageMockGetObjectIndex) Set(f func(p context.Context, p1 inso
 }
 
 //GetObjectIndex implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
-func (m *ObjectStorageMock) GetObjectIndex(p context.Context, p1 insolar.ID, p2 *insolar.ID, p3 bool) (r *object.Lifeline, r1 error) {
+func (m *ObjectStorageMock) GetObjectIndex(p context.Context, p1 insolar.ID, p2 *insolar.ID) (r *object.Lifeline, r1 error) {
 	counter := atomic.AddUint64(&m.GetObjectIndexPreCounter, 1)
 	defer atomic.AddUint64(&m.GetObjectIndexCounter, 1)
 
 	if len(m.GetObjectIndexMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetObjectIndexMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ObjectStorageMock.GetObjectIndex. %v %v %v %v", p, p1, p2, p3)
+			m.t.Fatalf("Unexpected call to ObjectStorageMock.GetObjectIndex. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.GetObjectIndexMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ObjectStorageMockGetObjectIndexInput{p, p1, p2, p3}, "ObjectStorage.GetObjectIndex got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ObjectStorageMockGetObjectIndexInput{p, p1, p2}, "ObjectStorage.GetObjectIndex got unexpected parameters")
 
 		result := m.GetObjectIndexMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -329,7 +328,7 @@ func (m *ObjectStorageMock) GetObjectIndex(p context.Context, p1 insolar.ID, p2 
 
 		input := m.GetObjectIndexMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ObjectStorageMockGetObjectIndexInput{p, p1, p2, p3}, "ObjectStorage.GetObjectIndex got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ObjectStorageMockGetObjectIndexInput{p, p1, p2}, "ObjectStorage.GetObjectIndex got unexpected parameters")
 		}
 
 		result := m.GetObjectIndexMock.mainExpectation.result
@@ -344,11 +343,11 @@ func (m *ObjectStorageMock) GetObjectIndex(p context.Context, p1 insolar.ID, p2 
 	}
 
 	if m.GetObjectIndexFunc == nil {
-		m.t.Fatalf("Unexpected call to ObjectStorageMock.GetObjectIndex. %v %v %v %v", p, p1, p2, p3)
+		m.t.Fatalf("Unexpected call to ObjectStorageMock.GetObjectIndex. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.GetObjectIndexFunc(p, p1, p2, p3)
+	return m.GetObjectIndexFunc(p, p1, p2)
 }
 
 //GetObjectIndexMinimockCounter returns a count of ObjectStorageMock.GetObjectIndexFunc invocations

@@ -87,7 +87,7 @@ func NewTestLedger(
 func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certificate) []interface{} {
 	idLocker := storage.NewIDLocker()
 
-	db, err := storage.NewDB(conf, nil, idLocker)
+	db, err := storage.NewDB(conf, nil)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}

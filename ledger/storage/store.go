@@ -30,7 +30,7 @@ type Store interface {
 	GetBlob(ctx context.Context, jetID insolar.ID, ref *insolar.ID) ([]byte, error)
 	SetBlob(ctx context.Context, jetID insolar.ID, number insolar.PulseNumber, blob []byte) (*insolar.ID, error)
 
-	GetObjectIndex(ctx context.Context, jetID insolar.ID, ref *insolar.ID, forupdate bool) (*object.Lifeline, error)
+	GetObjectIndex(ctx context.Context, jetID insolar.ID, ref *insolar.ID) (*object.Lifeline, error)
 	SetObjectIndex(ctx context.Context, jetID insolar.ID, ref *insolar.ID, idx *object.Lifeline) error
 
 	// Deprecated: use insolar.PulseStorage.Current() instead

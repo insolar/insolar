@@ -37,17 +37,6 @@ type TransactionManager struct {
 	txupdates map[string]keyval
 }
 
-func (m *TransactionManager) lockOnID(id *insolar.ID) {
-	m.db.idlocker.Lock(id)
-	m.locks = append(m.locks, id)
-}
-
-func (m *TransactionManager) releaseLocks() {
-	for _, id := range m.locks {
-		m.db.idlocker.Unlock(id)
-	}
-}
-
 // Commit tries to write transaction on disk. Returns error on fail.
 func (m *TransactionManager) Commit() error {
 	if len(m.txupdates) == 0 {
@@ -71,7 +60,6 @@ func (m *TransactionManager) Commit() error {
 // Discard terminates transaction without disk writes.
 func (m *TransactionManager) Discard() {
 	m.txupdates = nil
-	m.releaseLocks()
 	if m.update {
 		m.db.dropWG.Done()
 	}
@@ -166,11 +154,7 @@ func (m *TransactionManager) GetObjectIndex(
 	ctx context.Context,
 	jetID insolar.ID,
 	id *insolar.ID,
-	forupdate bool,
 ) (*object.Lifeline, error) {
-	if forupdate {
-		m.lockOnID(id)
-	}
 	prefix := insolar.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDLifeline, prefix, id[:])
 	buf, err := m.get(ctx, k)

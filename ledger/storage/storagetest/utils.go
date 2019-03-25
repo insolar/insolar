@@ -60,7 +60,7 @@ func DisableBootstrap() Option {
 // TmpDB returns BadgerDB's storage implementation and cleanup function.
 //
 // Creates BadgerDB in temporary directory and uses t for errors reporting.
-func TmpDB(ctx context.Context, idLocker storage.IDLocker, t testing.TB, options ...Option) (storage.DBContext, func()) {
+func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBContext, func()) {
 	opts := &tmpDBOptions{}
 	for _, o := range options {
 		o(opts)
@@ -72,7 +72,7 @@ func TmpDB(ctx context.Context, idLocker storage.IDLocker, t testing.TB, options
 		Storage: configuration.Storage{
 			DataDirectory: tmpdir,
 		},
-	}, nil, idLocker)
+	}, nil)
 	require.NoError(t, err)
 
 	cm := &component.Manager{}

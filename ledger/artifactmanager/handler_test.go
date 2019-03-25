@@ -78,7 +78,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	tmpDB, cleaner := storagetest.TmpDB(s.ctx, nil, s.T())
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.db = tmpDB
 	s.scheme = testutils.NewPlatformCryptographyScheme()
@@ -207,7 +207,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 		require.True(t, ok)
 		assert.Equal(t, []byte{42, 16, 2}, obj.Memory)
 
-		idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Head.Record(), false)
+		idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Head.Record())
 		require.NoError(t, err)
 		assert.Equal(t, objIndex.LatestState, idx.LatestState)
 	})
@@ -360,7 +360,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 		assert.Equal(t, heavyRef, redirect.GetReceiver())
 
-		idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Parent.Record(), false)
+		idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Parent.Record())
 		require.NoError(t, err)
 		assert.Equal(t, objIndex.LatestState, idx.LatestState)
 	})
@@ -480,7 +480,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	require.True(s.T(), ok)
 	assert.Equal(s.T(), delegate, delegateRep.Head)
 
-	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Head.Record(), false)
+	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Head.Record())
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), objIndex.Delegates, idx.Delegates)
 }
@@ -563,7 +563,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	objRep, ok := rep.(*reply.Object)
 	require.True(s.T(), ok)
 
-	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Object.Record(), false)
+	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Object.Record())
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), objRep.State, *idx.LatestState)
 }
@@ -634,7 +634,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	require.True(s.T(), ok)
 
 	// Arrange
-	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Object.Record(), false)
+	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Object.Record())
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), insolar.FirstPulseNumber, int(idx.LatestUpdate))
 }
@@ -911,7 +911,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	require.True(s.T(), ok)
 	assert.Equal(s.T(), *childID, objRep.ID)
 
-	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Parent.Record(), false)
+	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Parent.Record())
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), childID, idx.ChildPointer)
 }
@@ -978,7 +978,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	require.NoError(s.T(), err)
 
 	// Assert
-	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Parent.Record(), false)
+	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Parent.Record())
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), int(idx.LatestUpdate), insolar.FirstPulseNumber+100)
 }

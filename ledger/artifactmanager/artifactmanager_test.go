@@ -80,7 +80,7 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	tempDB, cleaner := storagetest.TmpDB(s.ctx, nil, s.T())
+	tempDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.db = tempDB
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
@@ -382,14 +382,14 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 		IsDelegate: false,
 	})
 
-	idx, err := os.GetObjectIndex(ctx, insolar.ID(jetID), parentID, false)
+	idx, err := os.GetObjectIndex(ctx, insolar.ID(jetID), parentID)
 	assert.NoError(s.T(), err)
 
 	childRec, err := os.GetRecord(ctx, insolar.ID(jetID), idx.ChildPointer)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), objRef, childRec.(*object.ChildRecord).Ref)
 
-	idx, err = os.GetObjectIndex(ctx, insolar.ID(jetID), objRef.Record(), false)
+	idx, err = os.GetObjectIndex(ctx, insolar.ID(jetID), objRef.Record())
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), *objDesc.StateID(), *idx.LatestState)
 	assert.Equal(s.T(), *objDesc.Parent(), idx.Parent)

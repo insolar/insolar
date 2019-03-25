@@ -62,7 +62,7 @@ func (s *pulseManagerSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, nil, s.T())
+	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.objectStorage = storage.NewObjectStorage()
 
@@ -214,7 +214,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	require.NoError(s.T(), err)
 	// // TODO: @andreyromancev. 12.01.19. put 1, when dynamic split is working.
 	assert.Equal(s.T(), uint64(2), mbMock.SendMinimockCounter()) // 1 validator drop (no split)
-	savedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, insolar.ID(jetID), firstID, false)
+	savedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, insolar.ID(jetID), firstID)
 	require.NoError(s.T(), err)
 
 	// Assert

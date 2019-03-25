@@ -413,7 +413,7 @@ func (h *MessageHandler) handleGetObject(
 	defer h.IDLocker.RUnlock(msg.Head.Record())
 
 	// Fetch object index. If not found redirect.
-	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
+	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Head.Record())
 	if err == insolar.ErrNotFound {
 		if h.isHeavy {
 			return nil, fmt.Errorf("failed to fetch index for %s", msg.Head.Record().String())
@@ -600,7 +600,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	h.IDLocker.RLock(msg.Head.Record())
 	defer h.IDLocker.RUnlock(msg.Head.Record())
 
-	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Head.Record(), false)
+	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Head.Record())
 	if err == insolar.ErrNotFound {
 		if h.isHeavy {
 			return nil, fmt.Errorf("failed to fetch index for %v", msg.Head.Record())
@@ -643,7 +643,7 @@ func (h *MessageHandler) handleGetChildren(
 	h.IDLocker.RLock(msg.Parent.Record())
 	defer h.IDLocker.RUnlock(msg.Parent.Record())
 
-	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
+	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record())
 	if err == insolar.ErrNotFound {
 		if h.isHeavy {
 			return nil, fmt.Errorf("failed to fetch index for %v", msg.Parent.Record())
@@ -836,7 +836,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 	h.IDLocker.Lock(msg.Object.Record())
 	defer h.IDLocker.Unlock(msg.Object.Record())
 
-	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Object.Record(), false)
+	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Object.Record())
 	// No index on our node.
 	if err == insolar.ErrNotFound {
 		if state.ID() == object.StateActivation {
@@ -923,7 +923,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 	defer h.IDLocker.Unlock(msg.Parent.Record())
 
 	var child *insolar.ID
-	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record(), false)
+	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record())
 	if err == insolar.ErrNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -1005,7 +1005,7 @@ func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel insola
 	h.IDLocker.Lock(msg.Object.Record())
 	defer h.IDLocker.Unlock(msg.Object.Record())
 
-	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Object.Record(), false)
+	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Object.Record())
 	if err == insolar.ErrNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -1064,7 +1064,7 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insola
 	h.IDLocker.RLock(msg.Object.Record())
 	defer h.IDLocker.RUnlock(msg.Object.Record())
 
-	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Object.Record(), false)
+	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Object.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}

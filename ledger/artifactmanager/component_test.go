@@ -70,7 +70,7 @@ func (s *componentSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, nil, s.T())
+	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.db = db
 	s.scheme = testutils.NewPlatformCryptographyScheme()
