@@ -149,6 +149,10 @@ type CancellableQueueAdapter struct {
 	processor  Processor
 }
 
+func (c *CancellableQueueAdapter) GetAdapterID() uint32 {
+	return c.adapterID
+}
+
 // StopProcessing is blocking
 func (a *CancellableQueueAdapter) StopProcessing() {
 	if atomic.LoadUint32(&a.stopProcessing) != 0 {
