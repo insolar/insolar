@@ -82,11 +82,17 @@ type SnapshotStorage struct {
 }
 
 func (s *SnapshotStorage) Append(ctx context.Context, pulse insolar.PulseNumber, snapshot *node.Snapshot) error {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
 	buff := node.EncodeSnapshot(snapshot)
 	return s.DB.Set(pulseKey(pulse), buff)
 }
 
 func (s *SnapshotStorage) ForPulseNumber(ctx context.Context, pulse insolar.PulseNumber) (*node.Snapshot, error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
 	buf, err := s.DB.Get(pulseKey(pulse))
 	if err != nil {
 		return nil, err
