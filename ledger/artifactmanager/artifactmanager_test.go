@@ -200,9 +200,6 @@ func getTestData(s *amSuite) (
 	idLockerMock := storage.NewIDLockerMock(s.T())
 	idLockerMock.LockMock.Return()
 	idLockerMock.UnlockMock.Return()
-	idLockerMock.RLockMock.Return()
-	idLockerMock.RUnlockMock.Return()
-
 	handler.IDLocker = idLockerMock
 
 	jc := testutils.NewJetCoordinatorMock(mc)
@@ -836,8 +833,6 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	handler.RecentStorageProvider = provideMock
 
 	idLockMock := storage.NewIDLockerMock(s.T())
-	idLockMock.RLockMock.Return()
-	idLockMock.RUnlockMock.Return()
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 	handler.IDLocker = idLockMock

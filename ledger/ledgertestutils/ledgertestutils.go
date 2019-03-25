@@ -113,8 +113,6 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	handler.DropModifier = ds
 
 	idLockerMock := storage.NewIDLockerMock(t)
-	idLockerMock.RLockMock.Return()
-	idLockerMock.RUnlockMock.Return()
 	idLockerMock.LockMock.Return()
 	idLockerMock.UnlockMock.Return()
 

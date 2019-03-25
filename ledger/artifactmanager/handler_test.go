@@ -144,8 +144,8 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 	h.ObjectStorage = s.objectStorage
 
 	idLock := storage.NewIDLockerMock(s.T())
-	idLock.RLockMock.Return()
-	idLock.RUnlockMock.Return()
+	idLock.LockMock.Return()
+	idLock.UnlockMock.Return()
 	h.IDLocker = idLock
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
@@ -318,8 +318,8 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	h.ObjectStorage = s.objectStorage
 
 	locker := storage.NewIDLockerMock(s.T())
-	locker.RLockMock.Return()
-	locker.RUnlockMock.Return()
+	locker.LockMock.Return()
+	locker.UnlockMock.Return()
 	h.IDLocker = locker
 
 	err := h.Init(s.ctx)
@@ -443,8 +443,8 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 
 	h.RecentStorageProvider = provideMock
 	idLock := storage.NewIDLockerMock(s.T())
-	idLock.RLockMock.Return()
-	idLock.RUnlockMock.Return()
+	idLock.LockMock.Return()
+	idLock.UnlockMock.Return()
 	h.IDLocker = idLock
 
 	delegateType := *genRandomRef(0)
@@ -678,8 +678,8 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	h.ObjectStorage = s.objectStorage
 
 	idLock := storage.NewIDLockerMock(s.T())
-	idLock.RLockMock.Return()
-	idLock.RUnlockMock.Return()
+	idLock.LockMock.Return()
+	idLock.UnlockMock.Return()
 	h.IDLocker = idLock
 
 	err := h.Init(s.ctx)
