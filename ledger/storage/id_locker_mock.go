@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	core "github.com/insolar/insolar/core"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -19,22 +19,22 @@ import (
 type IDLockerMock struct {
 	t minimock.Tester
 
-	LockFunc       func(p *core.RecordID)
+	LockFunc       func(p *insolar.ID)
 	LockCounter    uint64
 	LockPreCounter uint64
 	LockMock       mIDLockerMockLock
 
-	RLockFunc       func(p *core.RecordID)
+	RLockFunc       func(p *insolar.ID)
 	RLockCounter    uint64
 	RLockPreCounter uint64
 	RLockMock       mIDLockerMockRLock
 
-	RUnlockFunc       func(p *core.RecordID)
+	RUnlockFunc       func(p *insolar.ID)
 	RUnlockCounter    uint64
 	RUnlockPreCounter uint64
 	RUnlockMock       mIDLockerMockRUnlock
 
-	UnlockFunc       func(p *core.RecordID)
+	UnlockFunc       func(p *insolar.ID)
 	UnlockCounter    uint64
 	UnlockPreCounter uint64
 	UnlockMock       mIDLockerMockUnlock
@@ -67,11 +67,11 @@ type IDLockerMockLockExpectation struct {
 }
 
 type IDLockerMockLockInput struct {
-	p *core.RecordID
+	p *insolar.ID
 }
 
 //Expect specifies that invocation of IDLocker.Lock is expected from 1 to Infinity times
-func (m *mIDLockerMockLock) Expect(p *core.RecordID) *mIDLockerMockLock {
+func (m *mIDLockerMockLock) Expect(p *insolar.ID) *mIDLockerMockLock {
 	m.mock.LockFunc = nil
 	m.expectationSeries = nil
 
@@ -95,7 +95,7 @@ func (m *mIDLockerMockLock) Return() *IDLockerMock {
 }
 
 //ExpectOnce specifies that invocation of IDLocker.Lock is expected once
-func (m *mIDLockerMockLock) ExpectOnce(p *core.RecordID) *IDLockerMockLockExpectation {
+func (m *mIDLockerMockLock) ExpectOnce(p *insolar.ID) *IDLockerMockLockExpectation {
 	m.mock.LockFunc = nil
 	m.mainExpectation = nil
 
@@ -106,7 +106,7 @@ func (m *mIDLockerMockLock) ExpectOnce(p *core.RecordID) *IDLockerMockLockExpect
 }
 
 //Set uses given function f as a mock of IDLocker.Lock method
-func (m *mIDLockerMockLock) Set(f func(p *core.RecordID)) *IDLockerMock {
+func (m *mIDLockerMockLock) Set(f func(p *insolar.ID)) *IDLockerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -115,7 +115,7 @@ func (m *mIDLockerMockLock) Set(f func(p *core.RecordID)) *IDLockerMock {
 }
 
 //Lock implements github.com/insolar/insolar/ledger/storage.IDLocker interface
-func (m *IDLockerMock) Lock(p *core.RecordID) {
+func (m *IDLockerMock) Lock(p *insolar.ID) {
 	counter := atomic.AddUint64(&m.LockPreCounter, 1)
 	defer atomic.AddUint64(&m.LockCounter, 1)
 
@@ -190,11 +190,11 @@ type IDLockerMockRLockExpectation struct {
 }
 
 type IDLockerMockRLockInput struct {
-	p *core.RecordID
+	p *insolar.ID
 }
 
 //Expect specifies that invocation of IDLocker.RLock is expected from 1 to Infinity times
-func (m *mIDLockerMockRLock) Expect(p *core.RecordID) *mIDLockerMockRLock {
+func (m *mIDLockerMockRLock) Expect(p *insolar.ID) *mIDLockerMockRLock {
 	m.mock.RLockFunc = nil
 	m.expectationSeries = nil
 
@@ -218,7 +218,7 @@ func (m *mIDLockerMockRLock) Return() *IDLockerMock {
 }
 
 //ExpectOnce specifies that invocation of IDLocker.RLock is expected once
-func (m *mIDLockerMockRLock) ExpectOnce(p *core.RecordID) *IDLockerMockRLockExpectation {
+func (m *mIDLockerMockRLock) ExpectOnce(p *insolar.ID) *IDLockerMockRLockExpectation {
 	m.mock.RLockFunc = nil
 	m.mainExpectation = nil
 
@@ -229,7 +229,7 @@ func (m *mIDLockerMockRLock) ExpectOnce(p *core.RecordID) *IDLockerMockRLockExpe
 }
 
 //Set uses given function f as a mock of IDLocker.RLock method
-func (m *mIDLockerMockRLock) Set(f func(p *core.RecordID)) *IDLockerMock {
+func (m *mIDLockerMockRLock) Set(f func(p *insolar.ID)) *IDLockerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -238,7 +238,7 @@ func (m *mIDLockerMockRLock) Set(f func(p *core.RecordID)) *IDLockerMock {
 }
 
 //RLock implements github.com/insolar/insolar/ledger/storage.IDLocker interface
-func (m *IDLockerMock) RLock(p *core.RecordID) {
+func (m *IDLockerMock) RLock(p *insolar.ID) {
 	counter := atomic.AddUint64(&m.RLockPreCounter, 1)
 	defer atomic.AddUint64(&m.RLockCounter, 1)
 
@@ -313,11 +313,11 @@ type IDLockerMockRUnlockExpectation struct {
 }
 
 type IDLockerMockRUnlockInput struct {
-	p *core.RecordID
+	p *insolar.ID
 }
 
 //Expect specifies that invocation of IDLocker.RUnlock is expected from 1 to Infinity times
-func (m *mIDLockerMockRUnlock) Expect(p *core.RecordID) *mIDLockerMockRUnlock {
+func (m *mIDLockerMockRUnlock) Expect(p *insolar.ID) *mIDLockerMockRUnlock {
 	m.mock.RUnlockFunc = nil
 	m.expectationSeries = nil
 
@@ -341,7 +341,7 @@ func (m *mIDLockerMockRUnlock) Return() *IDLockerMock {
 }
 
 //ExpectOnce specifies that invocation of IDLocker.RUnlock is expected once
-func (m *mIDLockerMockRUnlock) ExpectOnce(p *core.RecordID) *IDLockerMockRUnlockExpectation {
+func (m *mIDLockerMockRUnlock) ExpectOnce(p *insolar.ID) *IDLockerMockRUnlockExpectation {
 	m.mock.RUnlockFunc = nil
 	m.mainExpectation = nil
 
@@ -352,7 +352,7 @@ func (m *mIDLockerMockRUnlock) ExpectOnce(p *core.RecordID) *IDLockerMockRUnlock
 }
 
 //Set uses given function f as a mock of IDLocker.RUnlock method
-func (m *mIDLockerMockRUnlock) Set(f func(p *core.RecordID)) *IDLockerMock {
+func (m *mIDLockerMockRUnlock) Set(f func(p *insolar.ID)) *IDLockerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -361,7 +361,7 @@ func (m *mIDLockerMockRUnlock) Set(f func(p *core.RecordID)) *IDLockerMock {
 }
 
 //RUnlock implements github.com/insolar/insolar/ledger/storage.IDLocker interface
-func (m *IDLockerMock) RUnlock(p *core.RecordID) {
+func (m *IDLockerMock) RUnlock(p *insolar.ID) {
 	counter := atomic.AddUint64(&m.RUnlockPreCounter, 1)
 	defer atomic.AddUint64(&m.RUnlockCounter, 1)
 
@@ -436,11 +436,11 @@ type IDLockerMockUnlockExpectation struct {
 }
 
 type IDLockerMockUnlockInput struct {
-	p *core.RecordID
+	p *insolar.ID
 }
 
 //Expect specifies that invocation of IDLocker.Unlock is expected from 1 to Infinity times
-func (m *mIDLockerMockUnlock) Expect(p *core.RecordID) *mIDLockerMockUnlock {
+func (m *mIDLockerMockUnlock) Expect(p *insolar.ID) *mIDLockerMockUnlock {
 	m.mock.UnlockFunc = nil
 	m.expectationSeries = nil
 
@@ -464,7 +464,7 @@ func (m *mIDLockerMockUnlock) Return() *IDLockerMock {
 }
 
 //ExpectOnce specifies that invocation of IDLocker.Unlock is expected once
-func (m *mIDLockerMockUnlock) ExpectOnce(p *core.RecordID) *IDLockerMockUnlockExpectation {
+func (m *mIDLockerMockUnlock) ExpectOnce(p *insolar.ID) *IDLockerMockUnlockExpectation {
 	m.mock.UnlockFunc = nil
 	m.mainExpectation = nil
 
@@ -475,7 +475,7 @@ func (m *mIDLockerMockUnlock) ExpectOnce(p *core.RecordID) *IDLockerMockUnlockEx
 }
 
 //Set uses given function f as a mock of IDLocker.Unlock method
-func (m *mIDLockerMockUnlock) Set(f func(p *core.RecordID)) *IDLockerMock {
+func (m *mIDLockerMockUnlock) Set(f func(p *insolar.ID)) *IDLockerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -484,7 +484,7 @@ func (m *mIDLockerMockUnlock) Set(f func(p *core.RecordID)) *IDLockerMock {
 }
 
 //Unlock implements github.com/insolar/insolar/ledger/storage.IDLocker interface
-func (m *IDLockerMock) Unlock(p *core.RecordID) {
+func (m *IDLockerMock) Unlock(p *insolar.ID) {
 	counter := atomic.AddUint64(&m.UnlockPreCounter, 1)
 	defer atomic.AddUint64(&m.UnlockCounter, 1)
 

@@ -30,11 +30,11 @@ type mucount struct {
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.IDLocker -o ./ -s _mock.go
 type IDLocker interface {
-	Lock(id *core.RecordID)
-	Unlock(id *core.RecordID)
+	Lock(id *insolar.ID)
+	Unlock(id *insolar.ID)
 
-	RLock(id *core.RecordID)
-	RUnlock(id *core.RecordID)
+	RLock(id *insolar.ID)
+	RUnlock(id *insolar.ID)
 }
 
 // IDLocker provides Lock/Unlock methods per record ID.
@@ -85,7 +85,7 @@ func (l *idLocker) Unlock(id *insolar.ID) {
 
 // Lock locks mutex belonged to record ID.
 // If mutex does not exist, it will be created in concurrent safe fashion.
-func (l *idLocker) RLock(id *core.RecordID) {
+func (l *idLocker) RLock(id *insolar.ID) {
 	l.mu.Lock()
 	mc, ok := l.muxs[*id]
 	if !ok {
@@ -99,7 +99,7 @@ func (l *idLocker) RLock(id *core.RecordID) {
 }
 
 // RUnlock unlocks rwmutex belonged to record ID.
-func (l *idLocker) RUnlock(id *core.RecordID) {
+func (l *idLocker) RUnlock(id *insolar.ID) {
 	l.mu.Lock()
 	defer l.mu.Unlock()
 
