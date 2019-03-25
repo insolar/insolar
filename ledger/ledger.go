@@ -17,8 +17,6 @@
 package ledger
 
 import (
-	"context"
-
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	db2 "github.com/insolar/insolar/ledger/storage/db"
@@ -35,53 +33,7 @@ import (
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/log"
 )
-
-// Ledger is the global ledger handler. Other system parts communicate with ledger through it.
-type Ledger struct {
-	db              storage.DBContext
-	ArtifactManager insolar.ArtifactManager `inject:""`
-	PulseManager    insolar.PulseManager    `inject:""`
-	JetCoordinator  insolar.JetCoordinator  `inject:""`
-}
-
-// Deprecated: remove after deleting TmpLedger
-// GetPulseManager returns PulseManager.
-func (l *Ledger) GetPulseManager() insolar.PulseManager {
-	log.Warn("GetPulseManager is deprecated. Use component injection.")
-	return l.PulseManager
-}
-
-// Deprecated: remove after deleting TmpLedger
-// GetJetCoordinator returns JetCoordinator.
-func (l *Ledger) GetJetCoordinator() insolar.JetCoordinator {
-	log.Warn("GetJetCoordinator is deprecated. Use component injection.")
-	return l.JetCoordinator
-}
-
-// Deprecated: remove after deleting TmpLedger
-// GetArtifactManager returns artifact manager to work with.
-func (l *Ledger) GetArtifactManager() insolar.ArtifactManager {
-	log.Warn("GetArtifactManager is deprecated. Use component injection.")
-	return l.ArtifactManager
-}
-
-// NewTestLedger is the util function for creation of Ledger with provided
-// private members (suitable for tests).
-func NewTestLedger(
-	db storage.DBContext,
-	am *artifactmanager.LedgerArtifactManager,
-	pm *pulsemanager.PulseManager,
-	jc insolar.JetCoordinator,
-) *Ledger {
-	return &Ledger{
-		db:              db,
-		ArtifactManager: am,
-		PulseManager:    pm,
-		JetCoordinator:  jc,
-	}
-}
 
 // GetLedgerComponents returns ledger components.
 func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certificate) []interface{} {
@@ -129,21 +81,10 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		genesis.NewGenesisInitializer(),
 		recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewHotDataWaiterConcrete(),
-		artifactmanager.NewArtifactManger(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),
 		pulsemanager.NewPulseManager(conf),
 		artifactmanager.NewMessageHandler(&conf, certificate),
 		heavyserver.NewSync(db),
 		exporter.NewExporter(conf.Exporter),
 	}
-}
-
-// Start stub.
-func (l *Ledger) Start(ctx context.Context) error {
-	return nil
-}
-
-// Stop stops Ledger gracefully.
-func (l *Ledger) Stop(ctx context.Context) error {
-	return nil
 }

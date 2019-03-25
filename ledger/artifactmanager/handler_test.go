@@ -19,6 +19,7 @@ package artifactmanager
 import (
 	"bytes"
 	"context"
+	"crypto/rand"
 	"testing"
 
 	"github.com/gojuno/minimock"
@@ -61,6 +62,27 @@ type handlerSuite struct {
 	jetStorage    jet.Storage
 	dropModifier  drop.Modifier
 	dropAccessor  drop.Accessor
+}
+
+var (
+	domainID = *genRandomID(0)
+)
+
+func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
+	buff := [insolar.RecordIDSize - insolar.PulseNumberSize]byte{}
+	_, err := rand.Read(buff[:])
+	if err != nil {
+		panic(err)
+	}
+	return insolar.NewID(pulse, buff[:])
+}
+
+func genRefWithID(id *insolar.ID) *insolar.Reference {
+	return insolar.NewReference(domainID, *id)
+}
+
+func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
+	return genRefWithID(genRandomID(pulse))
 }
 
 func NewHandlerSuite() *handlerSuite {

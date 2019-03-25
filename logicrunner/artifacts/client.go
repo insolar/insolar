@@ -58,8 +58,8 @@ func (m *Client) State() ([]byte, error) {
 	return m.PlatformCryptographyScheme.IntegrityHasher().Hash([]byte{1, 2, 3}), nil
 }
 
-// NewArtifactManger creates new manager instance.
-func NewArtifactManger() *Client {
+// NewClient creates new manager instance.
+func NewClient() *Client {
 	return &Client{
 		getChildrenChunkSize: getChildrenChunkSize,
 		senders:              newLedgerArtifactSenders(),
