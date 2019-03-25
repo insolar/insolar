@@ -37,17 +37,6 @@ type TransactionManager struct {
 	txupdates map[string]keyval
 }
 
-func (m *TransactionManager) lockOnID(id *insolar.ID) {
-	m.db.idlocker.Lock(id)
-	m.locks = append(m.locks, id)
-}
-
-func (m *TransactionManager) releaseLocks() {
-	for _, id := range m.locks {
-		m.db.idlocker.Unlock(id)
-	}
-}
-
 // Commit tries to write transaction on disk. Returns error on fail.
 func (m *TransactionManager) Commit() error {
 	if len(m.txupdates) == 0 {
@@ -71,7 +60,6 @@ func (m *TransactionManager) Commit() error {
 // Discard terminates transaction without disk writes.
 func (m *TransactionManager) Discard() {
 	m.txupdates = nil
-	m.releaseLocks()
 	if m.update {
 		m.db.dropWG.Done()
 	}
@@ -104,7 +92,7 @@ func (m *TransactionManager) SetBlob(ctx context.Context, jetID insolar.ID, puls
 	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
 
 	// TODO: @andreyromancev. 16.01.19. Blob override is ok.
-	// geterr := m.db.db.View(func(tx *badger.Txn) error {
+	// geterr := muxs.db.db.View(func(tx *badger.Txn) error {
 	// 	_, err := tx.Get(k)
 	// 	return err
 	// })
@@ -166,11 +154,7 @@ func (m *TransactionManager) GetObjectIndex(
 	ctx context.Context,
 	jetID insolar.ID,
 	id *insolar.ID,
-	forupdate bool,
 ) (*object.Lifeline, error) {
-	if forupdate {
-		m.lockOnID(id)
-	}
 	prefix := insolar.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDLifeline, prefix, id[:])
 	buf, err := m.get(ctx, k)
@@ -195,18 +179,6 @@ func (m *TransactionManager) SetObjectIndex(
 	}
 	encoded := object.EncodeIndex(*idx)
 	return m.set(ctx, k, encoded)
-}
-
-// RemoveObjectIndex removes an index of an object
-func (m *TransactionManager) RemoveObjectIndex(
-	ctx context.Context,
-	jetID insolar.ID,
-	ref *insolar.ID,
-) error {
-	m.lockOnID(ref)
-	prefix := insolar.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDLifeline, prefix, ref[:])
-	return m.remove(ctx, k)
 }
 
 // set stores value by key.

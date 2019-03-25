@@ -43,7 +43,6 @@ type ObjectStorage interface {
 		ctx context.Context,
 		jetID insolar.ID,
 		id *insolar.ID,
-		forupdate bool,
 	) (*object.Lifeline, error)
 
 	SetObjectIndex(
@@ -51,12 +50,6 @@ type ObjectStorage interface {
 		jetID insolar.ID,
 		id *insolar.ID,
 		idx *object.Lifeline,
-	) error
-
-	RemoveObjectIndex(
-		ctx context.Context,
-		jetID insolar.ID,
-		ref *insolar.ID,
 	) error
 }
 
@@ -161,7 +154,6 @@ func (os *objectStorage) GetObjectIndex(
 	ctx context.Context,
 	jetID insolar.ID,
 	id *insolar.ID,
-	forupdate bool,
 ) (*object.Lifeline, error) {
 	tx, err := os.DB.BeginTransaction(false)
 	if err != nil {
@@ -169,7 +161,7 @@ func (os *objectStorage) GetObjectIndex(
 	}
 	defer tx.Discard()
 
-	idx, err := tx.GetObjectIndex(ctx, jetID, id, forupdate)
+	idx, err := tx.GetObjectIndex(ctx, jetID, id)
 	if err != nil {
 		return nil, err
 	}
@@ -185,16 +177,5 @@ func (os *objectStorage) SetObjectIndex(
 ) error {
 	return os.DB.Update(ctx, func(tx *TransactionManager) error {
 		return tx.SetObjectIndex(ctx, jetID, id, idx)
-	})
-}
-
-// RemoveObjectIndex removes an index of an object
-func (os *objectStorage) RemoveObjectIndex(
-	ctx context.Context,
-	jetID insolar.ID,
-	ref *insolar.ID,
-) error {
-	return os.DB.Update(ctx, func(tx *TransactionManager) error {
-		return tx.RemoveObjectIndex(ctx, jetID, ref)
 	})
 }

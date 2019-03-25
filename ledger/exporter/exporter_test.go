@@ -22,7 +22,7 @@ import (
 	"strconv"
 	"testing"
 
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
