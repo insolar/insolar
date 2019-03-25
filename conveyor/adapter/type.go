@@ -20,6 +20,7 @@ import (
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/conveyor/queue"
+	"github.com/insolar/insolar/insolar"
 )
 
 type idType = uint32
@@ -27,9 +28,9 @@ type idType = uint32
 // PulseConveyorAdapterTaskSink is iface which helps to slot to push task to adapter
 type PulseConveyorAdapterTaskSink interface {
 	PushTask(respSink AdapterToSlotResponseSink, elementID idType, handlerID idType, taskPayload interface{}) error
-	CancelElementTasks(pulseNumber idType, elementID idType)
-	CancelPulseTasks(pulseNumber uint32)
-	FlushPulseTasks(pulseNumber uint32)
+	CancelElementTasks(pulseNumber insolar.PulseNumber, elementID idType)
+	CancelPulseTasks(pulseNumber insolar.PulseNumber)
+	FlushPulseTasks(pulseNumber insolar.PulseNumber)
 	FlushNodeTasks(nodeID idType)
 	GetAdapterID() uint32
 }
@@ -38,7 +39,7 @@ type PulseConveyorAdapterTaskSink interface {
 type AdapterToSlotResponseSink interface {
 	PushResponse(adapterID uint32, elementID uint32, handlerID uint32, respPayload interface{})
 	PushNestedEvent(adapterID uint32, parentElementID uint32, handlerID uint32, eventPayload interface{})
-	GetPulseNumber() uint32
+	GetPulseNumber() insolar.PulseNumber
 	GetNodeID() uint32
 	GetSlotDetails() slot.SlotDetails
 }

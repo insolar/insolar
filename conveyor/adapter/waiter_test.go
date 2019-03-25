@@ -22,6 +22,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/stretchr/testify/require"
 )
@@ -52,7 +53,7 @@ func (m *mockResponseSink) PushNestedEvent(adapterID uint32, parentElementID uin
 	m.response = eventPayload.(string)
 }
 
-func (m *mockResponseSink) GetPulseNumber() uint32 {
+func (m *mockResponseSink) GetPulseNumber() insolar.PulseNumber {
 	return 142
 }
 
@@ -107,7 +108,7 @@ func TestFunctionality(t *testing.T) {
 	resp = &mockResponseSink{}
 	err = adapter.PushTask(resp, 34, 22, WaiterTask{waitPeriodMilliseconds: 200000000})
 	require.NoError(t, err)
-	adapter.FlushNodeTasks(resp.GetPulseNumber())
+	adapter.FlushNodeTasks(uint32(resp.GetPulseNumber()))
 
 	adapter.StopProcessing()
 	adapter.StopProcessing()
@@ -182,7 +183,7 @@ func TestParallel(t *testing.T) {
 	for i := 0; i < parallelFlushNode; i++ {
 		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
 			for i := 0; i < numIterations; i++ {
-				adapter.FlushNodeTasks(pulseNumber)
+				adapter.FlushNodeTasks(uint32(pulseNumber))
 			}
 			wg.Done()
 		}(&wg, adapter)
