@@ -68,6 +68,7 @@ type node struct {
 
 	NodeAddress string
 	CAddress    string
+	GlobuleID   core.GlobuleID
 
 	versionMutex sync.RWMutex
 	NodeVersion  string
@@ -118,6 +119,7 @@ func newMutableNode(
 		NodePublicKey: publicKey,
 		NodeAddress:   address,
 		CAddress:      consensusAddress,
+		GlobuleID:     0,
 		NodeVersion:   version,
 		state:         uint32(core.NodeReady),
 	}
@@ -156,7 +158,7 @@ func (n *node) ConsensusAddress() string {
 }
 
 func (n *node) GetGlobuleID() core.GlobuleID {
-	return 0
+	return n.GlobuleID
 }
 
 func (n *node) Version() string {
