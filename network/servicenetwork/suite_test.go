@@ -87,33 +87,35 @@ var (
 )
 
 type fixture struct {
-	ctx            context.Context
-	bootstrapNodes []*networkNode
-	networkNodes   []*networkNode
-	pulsar         TestPulsar
+	ctx                        context.Context
+	smallNetworkBootstrapNodes []*networkNode
+	networkNodes               []*networkNode
+	pulsar                     TestPulsar
 }
 
 func newFixture(t *testing.T) *fixture {
 	return &fixture{
-		ctx:            inslogger.TestContext(t),
-		bootstrapNodes: make([]*networkNode, 0),
-		networkNodes:   make([]*networkNode, 0),
+		ctx:                        inslogger.TestContext(t),
+		smallNetworkBootstrapNodes: make([]*networkNode, 0),
+		networkNodes:               make([]*networkNode, 0),
 	}
 }
 
 type testSuite struct {
 	suite.Suite
-	fixtureMap     map[string]*fixture
-	bootstrapCount int
-	nodesCount     int
+	fixtureMap        map[string]*fixture
+	smallNetworkCount int
+	largeNetworkCount int
+	nodesCount        int
 }
 
 func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
 	return &testSuite{
-		Suite:          suite.Suite{},
-		fixtureMap:     make(map[string]*fixture, 0),
-		bootstrapCount: bootstrapCount,
-		nodesCount:     nodesCount,
+		Suite:             suite.Suite{},
+		fixtureMap:        make(map[string]*fixture, 0),
+		smallNetworkCount: bootstrapCount,
+		largeNetworkCount: bootstrapCount + 1,
+		nodesCount:        nodesCount,
 	}
 }
 
@@ -130,8 +132,8 @@ func (s *testSuite) SetupTest() {
 
 	log.Info("SetupTest")
 
-	for i := 0; i < s.bootstrapCount; i++ {
-		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNode(fmt.Sprintf("bootstrap_%d", i)))
+	for i := 0; i < s.smallNetworkCount; i++ {
+		s.fixture().smallNetworkBootstrapNodes = append(s.fixture().smallNetworkBootstrapNodes, s.newNetworkNode(fmt.Sprintf("small_network_bootstrap_%d", i)))
 	}
 
 	for i := 0; i < s.nodesCount; i++ {
@@ -139,7 +141,7 @@ func (s *testSuite) SetupTest() {
 	}
 
 	pulseReceivers := make([]string, 0)
-	for _, node := range s.fixture().bootstrapNodes {
+	for _, node := range s.fixture().smallNetworkBootstrapNodes {
 		pulseReceivers = append(pulseReceivers, node.host)
 	}
 
@@ -148,11 +150,11 @@ func (s *testSuite) SetupTest() {
 	s.Require().NoError(err)
 
 	log.Info("Setup bootstrap nodes")
-	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
+	s.SetupNodesNetwork(s.fixture().smallNetworkBootstrapNodes)
 
 	<-time.After(time.Second * 2)
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-	s.Require().Equal(len(s.fixture().bootstrapNodes), len(activeNodes))
+	activeNodes := s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	s.Require().Equal(len(s.fixture().smallNetworkBootstrapNodes), len(activeNodes))
 
 	if len(s.fixture().networkNodes) > 0 {
 		log.Info("Setup network nodes")
@@ -226,7 +228,7 @@ func (s *testSuite) TearDownTest() {
 		s.NoError(err)
 	}
 	log.Info("Stop bootstrap nodes")
-	for _, n := range s.fixture().bootstrapNodes {
+	for _, n := range s.fixture().smallNetworkBootstrapNodes {
 		err := n.componentManager.Stop(n.ctx)
 		s.NoError(err)
 	}
@@ -236,7 +238,7 @@ func (s *testSuite) TearDownTest() {
 
 func (s *testSuite) waitForConsensus(consensusCount int) {
 	for i := 0; i < consensusCount; i++ {
-		for _, n := range s.fixture().bootstrapNodes {
+		for _, n := range s.fixture().smallNetworkBootstrapNodes {
 			err := <-n.consensusResult
 			s.NoError(err)
 		}
@@ -250,7 +252,7 @@ func (s *testSuite) waitForConsensus(consensusCount int) {
 
 func (s *testSuite) waitForConsensusExcept(consensusCount int, exception insolar.Reference) {
 	for i := 0; i < consensusCount; i++ {
-		for _, n := range s.fixture().bootstrapNodes {
+		for _, n := range s.fixture().smallNetworkBootstrapNodes {
 			if n.id.Equal(exception) {
 				continue
 			}
@@ -270,7 +272,7 @@ func (s *testSuite) waitForConsensusExcept(consensusCount int, exception insolar
 
 // nodesCount returns count of nodes in network without testNode
 func (s *testSuite) getNodesCount() int {
-	return len(s.fixture().bootstrapNodes) + len(s.fixture().networkNodes)
+	return len(s.fixture().smallNetworkBootstrapNodes) + len(s.fixture().networkNodes)
 }
 
 func (s *testSuite) InitNode(node *networkNode) {
@@ -313,6 +315,7 @@ func (s *testSuite) newNetworkNode(name string) *networkNode {
 	if err != nil {
 		panic(err.Error())
 	}
+
 	address := "127.0.0.1:" + strconv.Itoa(incrementTestPort())
 
 	nodeContext, _ := inslogger.WithField(s.fixture().ctx, "nodeName", name)
@@ -356,7 +359,7 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 	cert.Role = node.role.String()
 	cert.BootstrapNodes = make([]certificate.BootstrapNode, 0)
 
-	for _, b := range s.fixture().bootstrapNodes {
+	for _, b := range s.fixture().smallNetworkBootstrapNodes {
 		pubKey, _ := b.cryptographyService.GetPublicKey()
 		pubKeyBuf, err := proc.ExportPublicKeyPEM(pubKey)
 		s.Require().NoError(err)
