@@ -21,7 +21,6 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/object"
 )
 
 type keyval struct {
@@ -63,122 +62,6 @@ func (m *TransactionManager) Discard() {
 	if m.update {
 		m.db.dropWG.Done()
 	}
-}
-
-// GetRequest returns request record from BadgerDB by *record.Reference.
-//
-// It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRequest(ctx context.Context, jetID insolar.ID, id *insolar.ID) (object.Request, error) {
-	rec, err := m.GetRecord(ctx, jetID, id)
-	if err != nil {
-		return nil, err
-	}
-	// TODO: return error if record is not a request.
-	req := rec.(object.Request)
-	return req, nil
-}
-
-// GetBlob returns binary value stored by record ID.
-func (m *TransactionManager) GetBlob(ctx context.Context, jetID insolar.ID, id *insolar.ID) ([]byte, error) {
-	jetPrefix := insolar.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
-	return m.get(ctx, k)
-}
-
-// SetBlob saves binary value for provided pulse.
-func (m *TransactionManager) SetBlob(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, blob []byte) (*insolar.ID, error) {
-	id := object.CalculateIDForBlob(m.db.PlatformCryptographyScheme, pulseNumber, blob)
-	jetPrefix := insolar.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
-
-	// TODO: @andreyromancev. 16.01.19. Blob override is ok.
-	// geterr := muxs.db.db.View(func(tx *badger.Txn) error {
-	// 	_, err := tx.Get(k)
-	// 	return err
-	// })
-	// if geterr == nil {
-	// 	return id, ErrOverride
-	// }
-	// if geterr != badger.ErrKeyNotFound {
-	// 	return nil, ErrNotFound
-	// }
-
-	err := m.set(ctx, k, blob)
-	if err != nil {
-		return nil, err
-	}
-	return id, nil
-}
-
-// GetRecord returns record from BadgerDB by *record.Reference.
-//
-// It returns ErrNotFound if the DB does not contain the key.
-func (m *TransactionManager) GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (object.VirtualRecord, error) {
-	jetPrefix := insolar.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDRecord, jetPrefix, id[:])
-	buf, err := m.get(ctx, k)
-	if err != nil {
-		return nil, err
-	}
-	return object.DeserializeRecord(buf), nil
-}
-
-// SetRecord stores record in BadgerDB and returns *record.ID of new record.
-//
-// If record exists returns both *record.ID and ErrOverride error.
-// If record not found returns nil and ErrNotFound error
-func (m *TransactionManager) SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec object.VirtualRecord) (*insolar.ID, error) {
-	id := object.NewRecordIDFromRecord(m.db.PlatformCryptographyScheme, pulseNumber, rec)
-	prefix := insolar.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDRecord, prefix, id[:])
-	geterr := m.db.db.View(func(tx *badger.Txn) error {
-		_, err := tx.Get(k)
-		return err
-	})
-	if geterr == nil {
-		return id, ErrOverride
-	}
-	if geterr != badger.ErrKeyNotFound {
-		return nil, geterr
-	}
-
-	err := m.set(ctx, k, object.SerializeRecord(rec))
-	if err != nil {
-		return nil, err
-	}
-	return id, nil
-}
-
-// GetObjectIndex fetches object lifeline index.
-func (m *TransactionManager) GetObjectIndex(
-	ctx context.Context,
-	jetID insolar.ID,
-	id *insolar.ID,
-) (*object.Lifeline, error) {
-	prefix := insolar.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDLifeline, prefix, id[:])
-	buf, err := m.get(ctx, k)
-	if err != nil {
-		return nil, err
-	}
-	res := object.DecodeIndex(buf)
-	return &res, nil
-}
-
-// SetObjectIndex stores object lifeline index.
-func (m *TransactionManager) SetObjectIndex(
-	ctx context.Context,
-	jetID insolar.ID,
-	id *insolar.ID,
-	idx *object.Lifeline,
-) error {
-	prefix := insolar.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDLifeline, prefix, id[:])
-	if idx.Delegates == nil {
-		idx.Delegates = map[insolar.Reference]insolar.Reference{}
-	}
-	encoded := object.EncodeIndex(*idx)
-	return m.set(ctx, k, encoded)
 }
 
 // set stores value by key.
