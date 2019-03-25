@@ -36,54 +36,39 @@ package storage
 
 import (
 	"context"
-	"sync"
-
+	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/core"
+	"github.com/stretchr/testify/assert"
+	"io/ioutil"
+	"os"
+	"testing"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/storage.CloudHashAccessor -o ../../testutils/network -s _mock.go
+func TestCloudHashtStorage(t *testing.T) {
 
-// CloudHashAccessor provides methods for accessing CloudHash.
-type CloudHashAccessor interface {
-	ForPulseNumber(context.Context, core.PulseNumber) ([]byte, error)
-	Latest(ctx context.Context) ([]byte, error)
-}
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
 
-//go:generate minimock -i github.com/insolar/insolar/network/storage.CloudHashAppender -o ../../testutils/network -s _mock.go
+	ctx := context.Background()
+	cm := component.NewManager(nil)
+	badgerDB, err := NewBadgerDB(configuration.ServiceNetwork{CacheDirectory: tmpdir})
+	cs := NewCloudHashStorage()
 
-// CloudHashAppender provides method for appending CloudHash to storage.
-type CloudHashAppender interface {
-	Append(ctx context.Context, pulse core.PulseNumber, cloudHash []byte) error
-}
+	cm.Register(badgerDB, cs)
+	cm.Inject()
 
-// NewCloudHashStorage constructor creates CloudHashStorage
-func NewCloudHashStorage() *CloudHashStorage {
-	return &CloudHashStorage{}
-}
+	pulse := core.Pulse{PulseNumber: 15}
+	cloudHash := []byte{1, 2, 3, 4, 5}
 
-type CloudHashStorage struct {
-	DB   DB `inject:""`
-	lock sync.RWMutex
-}
+	err = cs.Append(ctx, pulse.PulseNumber, cloudHash)
+	assert.NoError(t, err)
 
-func (c *CloudHashStorage) ForPulseNumber(ctx context.Context, pulse core.PulseNumber) ([]byte, error) {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
+	cloudHash2, err := cs.ForPulseNumber(ctx, pulse.PulseNumber)
+	assert.NoError(t, err)
 
-	result, err := c.DB.Get(pulseKey(pulse))
-	if err != nil {
-		return nil, err
-	}
-	return result, err
-}
+	assert.Equal(t, cloudHash, cloudHash2)
 
-func (c *CloudHashStorage) Latest(context.Context) ([]byte, error) {
-	panic("implement me")
-}
-
-func (c *CloudHashStorage) Append(ctx context.Context, pulse core.PulseNumber, cloudHash []byte) error {
-	c.lock.RLock()
-	defer c.lock.RUnlock()
-
-	return c.DB.Set(pulseKey(pulse), cloudHash)
+	err = cm.Stop(ctx)
 }
