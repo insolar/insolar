@@ -95,7 +95,7 @@ func (se *slotElement) GetPayload() interface{} {
 
 // SendTask implements SlotElementHelper
 func (se *slotElement) SendTask(adapterID uint32, taskPayload interface{}, respHandlerID uint32) error {
-	adapter := adapter.Storage.GetAdapterByID(adapterID)
+	adapter := adapter.StorageManager.GetAdapterByID(adapterID)
 	if adapter == nil {
 		panic(fmt.Sprintf("[ SendTask ] No such adapter: %d", adapterID))
 	}

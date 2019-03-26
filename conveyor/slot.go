@@ -216,7 +216,7 @@ func newSlot(pulseState constant.PulseState, pulseNumber insolar.PulseNumber, re
 		},
 	}
 
-	for i, _ := range slot.elements {
+	for i := range slot.elements {
 		slot.elements[i].slot = slot
 	}
 

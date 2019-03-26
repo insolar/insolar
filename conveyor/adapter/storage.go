@@ -20,27 +20,25 @@ import (
 	"fmt"
 )
 
-type storage struct {
+type Storage struct {
 	adapters map[ID]TaskSink
 }
 
-func (s *storage) GetAdapterByID(id uint32) TaskSink {
+func (s *Storage) GetAdapterByID(id uint32) TaskSink {
 	return s.adapters[ID(id)]
 }
 
-func (s *storage) Register(adapter TaskSink) TaskSink {
+func (s *Storage) Register(adapter TaskSink) {
 	id := ID(adapter.GetAdapterID())
 	_, ok := s.adapters[id]
 	if ok {
-		panic(fmt.Sprintf("[ Storage.Register ] adapter ID '%s' already exists", id.String()))
+		panic(fmt.Sprintf("[ StorageManager.Register ] adapter ID '%s' already exists", id.String()))
 	}
 
 	s.adapters[id] = adapter
-
-	return adapter
 }
 
-func (s *storage) GetRegisteredAdapters() []interface{} {
+func (s *Storage) GetRegisteredAdapters() []interface{} {
 	var result []interface{}
 
 	for _, adapter := range s.adapters {
@@ -50,15 +48,15 @@ func (s *storage) GetRegisteredAdapters() []interface{} {
 	return result
 }
 
-var Storage storage
+var StorageManager Storage
 
-func NewStorage() storage {
-	return storage{
+func NewStorage() Storage {
+	return Storage{
 		adapters: make(map[ID]TaskSink),
 	}
 }
 
 func init() {
-	Storage = NewStorage()
-	Storage.Register(NewResponseSendAdapter(idType(SendResponseAdapterID)))
+	StorageManager = NewStorage()
+	StorageManager.Register(NewResponseSendAdapter(idType(SendResponseAdapterID)))
 }

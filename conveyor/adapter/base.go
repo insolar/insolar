@@ -150,8 +150,8 @@ type CancellableQueueAdapter struct {
 	processor  Processor
 }
 
-func (c *CancellableQueueAdapter) GetAdapterID() uint32 {
-	return c.adapterID
+func (a *CancellableQueueAdapter) GetAdapterID() uint32 {
+	return a.adapterID
 }
 
 // StopProcessing is blocking

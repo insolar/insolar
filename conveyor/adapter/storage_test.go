@@ -23,26 +23,20 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func makeEmptyStorage() storage {
-	return storage{
-		adapters: make(map[ID]TaskSink),
-	}
-}
-
 func TestInitializer_NoRegistered(t *testing.T) {
-	storage := makeEmptyStorage()
+	storage := NewStorage()
 
 	require.Empty(t, storage.GetRegisteredAdapters())
 }
 
 func TestInitializer_GetAdapterWhileNoRegistered(t *testing.T) {
-	storage := makeEmptyStorage()
+	storage := NewStorage()
 
 	require.Nil(t, storage.GetAdapterByID(444))
 }
 
 func TestInitializer_RegisterAndGet(t *testing.T) {
-	storage := makeEmptyStorage()
+	storage := NewStorage()
 
 	for i := 0; i < 20; i++ {
 		testAdapterID := uint32(i * i)
@@ -51,13 +45,13 @@ func TestInitializer_RegisterAndGet(t *testing.T) {
 			return testAdapterID
 		}
 
-		require.Equal(t, sinkMock, storage.Register(sinkMock))
+		storage.Register(sinkMock)
 		require.Equal(t, sinkMock, storage.GetAdapterByID(testAdapterID))
 	}
 }
 
 func TestInitializer_RegisterDuplicatingID(t *testing.T) {
-	storage := makeEmptyStorage()
+	storage := NewStorage()
 
 	testAdapterID := uint32(142)
 	sinkMock := NewTaskSinkMock(t)
@@ -65,15 +59,15 @@ func TestInitializer_RegisterDuplicatingID(t *testing.T) {
 		return testAdapterID
 	}
 
-	require.Equal(t, sinkMock, storage.Register(sinkMock))
-	require.PanicsWithValue(t, "[ Storage.Register ] adapter ID 'ID(142)' already exists",
+	storage.Register(sinkMock)
+	require.PanicsWithValue(t, "[ StorageManager.Register ] adapter ID 'ID(142)' already exists",
 		func() {
 			storage.Register(sinkMock)
 		})
 }
 
 func TestInitializer_GetRegisteredAdapters(t *testing.T) {
-	storage := makeEmptyStorage()
+	storage := NewStorage()
 
 	numRegistered := 100
 
@@ -84,7 +78,7 @@ func TestInitializer_GetRegisteredAdapters(t *testing.T) {
 			return testAdapterID
 		}
 
-		require.Equal(t, sinkMock, storage.Register(sinkMock))
+		storage.Register(sinkMock)
 	}
 
 	registered := storage.GetRegisteredAdapters()
