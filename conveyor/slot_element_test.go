@@ -120,7 +120,9 @@ func TestSlotElement_SendTask(t *testing.T) {
 	}
 	adapter.StorageManager.Register(sinkMock)
 
+	require.Equal(t, ActiveElement, el.activationStatus)
 	el.SendTask(testAdapterID, testPayload, testRespHandlerID)
+	require.Equal(t, NotActiveElement, el.activationStatus)
 
 	require.Equal(t, testPayload, gotPayload)
 	require.Equal(t, testRespHandlerID, gotRespHandlerID)

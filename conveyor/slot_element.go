@@ -101,7 +101,13 @@ func (se *slotElement) SendTask(adapterID adapterid.ID, taskPayload interface{},
 	}
 
 	err := adapter.PushTask(se.slot, se.id, respHandlerID, taskPayload)
-	return errors.Errorf("[ SendTask ] Can't PushTask: %s", err)
+	if err != nil {
+		return errors.Errorf("[ SendTask ] Can't PushTask: %s", err)
+	}
+
+	se.DeactivateTill(slot.Response)
+
+	return nil
 }
 
 // Reactivate implements SlotElementRestrictedHelper
