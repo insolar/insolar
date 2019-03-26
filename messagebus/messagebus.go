@@ -470,3 +470,48 @@ func readBarrier(ctx context.Context, mutex *sync.RWMutex) {
 func init() {
 	gob.Register(&serializableError{})
 }
+
+/*
+
+@startuml
+
+class A {
+}
+
+class B {
+}
+
+class C {
+}
+
+class D {
+}
+
+class E {
+}
+
+class F {
+}
+
+A -l- B
+A -d- C
+A -d- D
+A -u- E
+A -d- F
+B -d- C
+B -d- D
+B -d- E
+B -d- F
+C -l- D
+C -d- E
+C -d- F
+D -d- E
+D -d- F
+E -l- F
+
+
+
+@enduml
+
+
+*/
