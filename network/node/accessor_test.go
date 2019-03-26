@@ -48,41 +48,42 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package nodenetwork
+package node
 
 import (
+	"testing"
+
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
 )
 
-type none struct{}
+func TestGetSnapshotActiveNodes(t *testing.T) {
+	m := make(map[insolar.Reference]insolar.NetworkNode)
 
-type recordRefSet struct {
-	data map[insolar.Reference]none
-}
+	node := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	node.SetState(insolar.NodeReady)
+	m[node.ID()] = node
 
-func newRecordRefSet() *recordRefSet {
-	return &recordRefSet{data: make(map[insolar.Reference]none)}
-}
+	node2 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	node2.SetState(insolar.NodePending)
+	m[node2.ID()] = node2
 
-func (s *recordRefSet) Add(ref insolar.Reference) {
-	s.data[ref] = none{}
-}
+	node3 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	node3.SetState(insolar.NodeLeaving)
+	m[node3.ID()] = node3
 
-func (s *recordRefSet) Remove(ref insolar.Reference) {
-	delete(s.data, ref)
-}
+	node4 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	node4.SetState(insolar.NodeUndefined)
+	m[node4.ID()] = node4
 
-func (s *recordRefSet) Contains(ref insolar.Reference) bool {
-	_, ok := s.data[ref]
-	return ok
-}
-
-func (s *recordRefSet) Collect() []insolar.Reference {
-	result := make([]insolar.Reference, len(s.data))
-	i := 0
-	for ref := range s.data {
-		result[i] = ref
-		i++
-	}
-	return result
+	snapshot := NewSnapshot(insolar.FirstPulseNumber, m)
+	accessor := NewAccessor(snapshot)
+	assert.Equal(t, 4, len(accessor.GetActiveNodes()))
+	assert.Equal(t, 1, len(accessor.GetWorkingNodes()))
+	assert.NotNil(t, accessor.GetWorkingNode(node.ID()))
+	assert.Nil(t, accessor.GetWorkingNode(node2.ID()))
+	assert.NotNil(t, accessor.GetActiveNode(node2.ID()))
+	assert.NotNil(t, accessor.GetActiveNode(node3.ID()))
+	assert.NotNil(t, accessor.GetActiveNode(node4.ID()))
 }

@@ -48,71 +48,62 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package nodenetwork
+package storage
 
 import (
+	"context"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/node"
 )
 
-type ListType int
+//go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAccessor -o ../../testutils/network -s _mock.go
 
-const (
-	ListWorking ListType = iota
-	ListIdle
-	ListLeaving
-	ListSuspected
-	ListJoiner
-
-	ListLength
-)
-
-type Snapshot struct {
-	pulse insolar.PulseNumber
-	state insolar.NetworkState
-
-	nodeList [ListLength][]insolar.NetworkNode
+// SnapshotAccessor provides methods for accessing Snapshot.
+type SnapshotAccessor interface {
+	ForPulseNumber(context.Context, insolar.PulseNumber) (*node.Snapshot, error)
+	Latest(ctx context.Context) (node.Snapshot, error)
 }
 
-func (s *Snapshot) GetPulse() insolar.PulseNumber {
-	return s.pulse
+//go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAppender -o ../../testutils/network -s _mock.go
+
+// SnapshotAppender provides method for appending Snapshot to storage.
+type SnapshotAppender interface {
+	Append(ctx context.Context, pulse insolar.PulseNumber, snapshot *node.Snapshot) error
 }
 
-// NewSnapshot create new snapshot for pulse.
-func NewSnapshot(number insolar.PulseNumber, nodes map[insolar.Reference]insolar.NetworkNode) *Snapshot {
-	return &Snapshot{
-		pulse: number,
-		// TODO: pass actual state
-		state:    insolar.NoNetworkState,
-		nodeList: splitNodes(nodes),
-	}
+// NewSnapshotStorage constructor creates PulseStorage
+func NewSnapshotStorage() *SnapshotStorage {
+	return &SnapshotStorage{}
 }
 
-// splitNodes temporary method to create snapshot lists. Will be replaced by special function that will take in count
-// previous snapshot and approved claims.
-func splitNodes(nodes map[insolar.Reference]insolar.NetworkNode) [ListLength][]insolar.NetworkNode {
-	var result [ListLength][]insolar.NetworkNode
-	for i := 0; i < int(ListLength); i++ {
-		result[i] = make([]insolar.NetworkNode, 0)
-	}
-	for _, node := range nodes {
-		listType := nodeStateToListType(node.GetState())
-		if listType == ListLength {
-			continue
-		}
-		result[listType] = append(result[listType], node)
-	}
-	return result
+type SnapshotStorage struct {
+	DB DB `inject:""`
+	//lock sync.RWMutex
 }
 
-func nodeStateToListType(state insolar.NodeState) ListType {
-	switch state {
-	case insolar.NodeReady:
-		return ListWorking
-	case insolar.NodePending:
-		return ListJoiner
-	case insolar.NodeUndefined, insolar.NodeLeaving:
-		return ListLeaving
-	}
-	// special case for no match
-	return ListLength
+func (s *SnapshotStorage) Append(ctx context.Context, pulse insolar.PulseNumber, snapshot *node.Snapshot) error {
+	panic("implement me")
+
+	//s.lock.RLock()
+	//defer s.lock.RUnlock()
+	//
+	//buff := node.EncodeSnapshot(snapshot)
+	//return s.DB.Set(pulseKey(pulse), buff)
+}
+
+func (s *SnapshotStorage) ForPulseNumber(ctx context.Context, pulse insolar.PulseNumber) (*node.Snapshot, error) {
+	panic("implement me")
+	//s.lock.RLock()
+	//defer s.lock.RUnlock()
+	//
+	//buf, err := s.DB.Get(pulseKey(pulse))
+	//if err != nil {
+	//	return nil, err
+	//}
+	//result := node.DecodeSnapshot(buf)
+	//return &result, nil
+}
+
+func (s *SnapshotStorage) Latest(ctx context.Context) (*node.Snapshot, error) {
+	panic("implement me")
 }

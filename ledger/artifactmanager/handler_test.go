@@ -143,6 +143,11 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 
+	idLock := storage.NewIDLockerMock(s.T())
+	idLock.LockMock.Return()
+	idLock.UnlockMock.Return()
+	h.IDLocker = idLock
+
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
 
@@ -202,7 +207,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 		require.True(t, ok)
 		assert.Equal(t, []byte{42, 16, 2}, obj.Memory)
 
-		idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Head.Record(), false)
+		idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Head.Record())
 		require.NoError(t, err)
 		assert.Equal(t, objIndex.LatestState, idx.LatestState)
 	})
@@ -312,6 +317,11 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 
+	locker := storage.NewIDLockerMock(s.T())
+	locker.LockMock.Return()
+	locker.UnlockMock.Return()
+	h.IDLocker = locker
+
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
 
@@ -350,7 +360,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 		assert.Equal(t, heavyRef, redirect.GetReceiver())
 
-		idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Parent.Record(), false)
+		idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Parent.Record())
 		require.NoError(t, err)
 		assert.Equal(t, objIndex.LatestState, idx.LatestState)
 	})
@@ -432,6 +442,10 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	h.ObjectStorage = s.objectStorage
 
 	h.RecentStorageProvider = provideMock
+	idLock := storage.NewIDLockerMock(s.T())
+	idLock.LockMock.Return()
+	idLock.UnlockMock.Return()
+	h.IDLocker = idLock
 
 	delegateType := *genRandomRef(0)
 	delegate := *genRandomRef(0)
@@ -466,7 +480,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	require.True(s.T(), ok)
 	assert.Equal(s.T(), delegate, delegateRep.Head)
 
-	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Head.Record(), false)
+	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Head.Record())
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), objIndex.Delegates, idx.Delegates)
 }
@@ -506,6 +520,11 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
 
+	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock.LockMock.Return()
+	idLockMock.UnlockMock.Return()
+	h.IDLocker = idLockMock
+
 	objIndex := object.Lifeline{LatestState: genRandomID(0), State: object.StateActivation}
 	amendRecord := object.AmendRecord{
 		PrevState: *objIndex.LatestState,
@@ -544,7 +563,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	objRep, ok := rep.(*reply.Object)
 	require.True(s.T(), ok)
 
-	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Object.Record(), false)
+	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Object.Record())
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), objRep.State, *idx.LatestState)
 }
@@ -581,6 +600,11 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 
+	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock.LockMock.Return()
+	idLockMock.UnlockMock.Return()
+	h.IDLocker = idLockMock
+
 	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
 		State:        object.StateActivation,
@@ -610,7 +634,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	require.True(s.T(), ok)
 
 	// Arrange
-	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Object.Record(), false)
+	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Object.Record())
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), insolar.FirstPulseNumber, int(idx.LatestUpdate))
 }
@@ -652,6 +676,11 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
+
+	idLock := storage.NewIDLockerMock(s.T())
+	idLock.LockMock.Return()
+	idLock.UnlockMock.Return()
+	h.IDLocker = idLock
 
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
@@ -837,6 +866,11 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 
+	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock.LockMock.Return()
+	idLockMock.UnlockMock.Return()
+	h.IDLocker = idLockMock
+
 	objIndex := object.Lifeline{LatestState: genRandomID(0), State: object.StateActivation}
 	childRecord := object.ChildRecord{
 		Ref:       *genRandomRef(0),
@@ -877,7 +911,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	require.True(s.T(), ok)
 	assert.Equal(s.T(), *childID, objRep.ID)
 
-	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Parent.Record(), false)
+	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Parent.Record())
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), childID, idx.ChildPointer)
 }
@@ -914,6 +948,11 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 
+	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock.LockMock.Return()
+	idLockMock.UnlockMock.Return()
+	h.IDLocker = idLockMock
+
 	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
 		State:        object.StateActivation,
@@ -939,7 +978,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	require.NoError(s.T(), err)
 
 	// Assert
-	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Parent.Record(), false)
+	idx, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, msg.Parent.Record())
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), int(idx.LatestUpdate), insolar.FirstPulseNumber+100)
 }
@@ -1058,7 +1097,7 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
-	nodeMock := network.NewNodeMock(s.T())
+	nodeMock := network.NewNetworkNodeMock(s.T())
 	nodeMock.RoleMock.Return(insolar.StaticRoleLightMaterial)
 	nodeNetworkMock := network.NewNodeNetworkMock(s.T())
 	nodeNetworkMock.GetOriginMock.Return(nodeMock)
