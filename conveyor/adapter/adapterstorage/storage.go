@@ -14,27 +14,29 @@
  *    limitations under the License.
  */
 
-package adapter
+package storage
 
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
+	"github.com/insolar/insolar/ledger/artifactmanager"
 )
 
 type Storage struct {
-	adapters map[adapterid.ID]TaskSink
+	adapters map[adapterid.ID]adapter.TaskSink
 }
 
-func (s *Storage) GetAdapterByID(id adapterid.ID) TaskSink {
+func (s *Storage) GetAdapterByID(id adapterid.ID) adapter.TaskSink {
 	return s.adapters[id]
 }
 
-func (s *Storage) Register(adapter TaskSink) {
+func (s *Storage) Register(adapter adapter.TaskSink) {
 	id := adapter.GetAdapterID()
 	_, ok := s.adapters[id]
 	if ok {
-		panic(fmt.Sprintf("[ StorageManager.Register ] adapter ID '%s' already exists", id.String()))
+		panic(fmt.Sprintf("[ Manager.Register ] adapter ID '%s' already exists", id.String()))
 	}
 
 	s.adapters[id] = adapter
@@ -50,15 +52,32 @@ func (s *Storage) GetRegisteredAdapters() []interface{} {
 	return result
 }
 
-var StorageManager Storage
+var Manager Storage
 
-func NewStorage() Storage {
+func NewEmptyStorage() Storage {
 	return Storage{
-		adapters: make(map[adapterid.ID]TaskSink),
+		adapters: make(map[adapterid.ID]adapter.TaskSink),
 	}
 }
 
+var processors []interface{}
+
+type createProcessor func() adapter.Processor
+
+func addAdapter(creator createProcessor, id adapterid.ID) {
+	processor := creator()
+	Manager.Register(adapter.NewAdapterWithQueue(processor, id))
+	processors = append(processors, processor)
+}
+
 func init() {
-	StorageManager = NewStorage()
-	StorageManager.Register(NewResponseSendAdapter(adapterid.SendResponseAdapterID))
+	Manager = NewEmptyStorage()
+
+	addAdapter(adapter.NewSendResponseProcessor, adapterid.SendResponse)
+	addAdapter(artifactmanager.NewGetCodeProcessor, adapterid.GetCode)
+}
+
+// GetAllProcessors is used for component manager
+func GetAllProcessors() []interface{} {
+	return processors
 }

@@ -14,34 +14,35 @@
  *    limitations under the License.
  */
 
-package adapter
+package storage
 
 import (
 	"sort"
 	"testing"
 
+	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/stretchr/testify/require"
 )
 
 func TestInitializer_NoRegistered(t *testing.T) {
-	storage := NewStorage()
+	storage := NewEmptyStorage()
 
 	require.Empty(t, storage.GetRegisteredAdapters())
 }
 
 func TestInitializer_GetAdapterWhileNoRegistered(t *testing.T) {
-	storage := NewStorage()
+	storage := NewEmptyStorage()
 
 	require.Nil(t, storage.GetAdapterByID(444))
 }
 
 func TestInitializer_RegisterAndGet(t *testing.T) {
-	storage := NewStorage()
+	storage := NewEmptyStorage()
 
 	for i := 0; i < 20; i++ {
 		testAdapterID := adapterid.ID(i * i)
-		sinkMock := NewTaskSinkMock(t)
+		sinkMock := adapter.NewTaskSinkMock(t)
 		sinkMock.GetAdapterIDFunc = func() (r adapterid.ID) {
 			return testAdapterID
 		}
@@ -52,29 +53,29 @@ func TestInitializer_RegisterAndGet(t *testing.T) {
 }
 
 func TestInitializer_RegisterDuplicatingID(t *testing.T) {
-	storage := NewStorage()
+	storage := NewEmptyStorage()
 
 	testAdapterID := adapterid.ID(142)
-	sinkMock := NewTaskSinkMock(t)
+	sinkMock := adapter.NewTaskSinkMock(t)
 	sinkMock.GetAdapterIDFunc = func() (r adapterid.ID) {
 		return testAdapterID
 	}
 
 	storage.Register(sinkMock)
-	require.PanicsWithValue(t, "[ StorageManager.Register ] adapter ID 'ID(142)' already exists",
+	require.PanicsWithValue(t, "[ Manager.Register ] adapter ID 'ID(142)' already exists",
 		func() {
 			storage.Register(sinkMock)
 		})
 }
 
 func TestInitializer_GetRegisteredAdapters(t *testing.T) {
-	storage := NewStorage()
+	storage := NewEmptyStorage()
 
 	numRegistered := 100
 
 	for i := 0; i < numRegistered; i++ {
 		testAdapterID := adapterid.ID(i)
-		sinkMock := NewTaskSinkMock(t)
+		sinkMock := adapter.NewTaskSinkMock(t)
 		sinkMock.GetAdapterIDFunc = func() (r adapterid.ID) {
 			return testAdapterID
 		}
@@ -87,12 +88,12 @@ func TestInitializer_GetRegisteredAdapters(t *testing.T) {
 
 	// we need sort here, since adapters are stored in storage in map
 	sort.Slice(registered, func(i, j int) bool {
-		left := registered[i].(TaskSink).GetAdapterID()
-		right := registered[j].(TaskSink).GetAdapterID()
+		left := registered[i].(adapter.TaskSink).GetAdapterID()
+		right := registered[j].(adapter.TaskSink).GetAdapterID()
 		return left < right
 	})
 
 	for i := 0; i < numRegistered; i++ {
-		require.Equal(t, adapterid.ID(i), registered[i].(TaskSink).GetAdapterID())
+		require.Equal(t, adapterid.ID(i), registered[i].(adapter.TaskSink).GetAdapterID())
 	}
 }
