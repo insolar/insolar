@@ -93,6 +93,17 @@ func (se *slotElement) GetPayload() interface{} {
 	return se.payload
 }
 
+// SendTask implements SlotElementHelper
+func (se *slotElement) SendTask(adapterID uint32, taskPayload interface{}, respHandlerID uint32) error {
+	adapter := adapter.Storage.GetAdapterByID(adapterID)
+	if adapter == nil {
+		panic(fmt.Sprintf("[ SendTask ] No such adapter: %d", adapterID))
+	}
+
+	err := adapter.PushTask(se.slot, se.id, respHandlerID, taskPayload)
+	return errors.Errorf("[ SendTask ] Can't PushTask: %s", err)
+}
+
 // Reactivate implements SlotElementRestrictedHelper
 func (se *slotElement) Reactivate() {
 	se.activationStatus = ActiveElement
@@ -144,15 +155,4 @@ func (se *slotElement) DeactivateTill(reactivateOn slot.ReactivateMode) {
 	case slot.SeqHead:
 		panic("implement me")
 	}
-}
-
-// SendTask implements SlotElementHelper
-func (se *slotElement) SendTask(adapterID uint32, taskPayload interface{}, respHandlerID uint32) error {
-	adapter := adapter.Storage.GetAdapterByID(adapterID)
-	if adapter == nil {
-		panic(fmt.Sprintf("[ SendTask ] No such adapter: %d", adapter))
-	}
-
-	err := adapter.PushTask(se.slot, se.id, respHandlerID, taskPayload)
-	return errors.Errorf("[ SendTask ] Can't PushTask: %s", err)
 }
