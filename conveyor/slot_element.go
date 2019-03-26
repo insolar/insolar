@@ -19,8 +19,8 @@ package conveyor
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
+	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
@@ -95,7 +95,7 @@ func (se *slotElement) GetPayload() interface{} {
 
 // SendTask implements SlotElementHelper
 func (se *slotElement) SendTask(adapterID adapterid.ID, taskPayload interface{}, respHandlerID uint32) error {
-	adapter := adapter.StorageManager.GetAdapterByID(adapterID)
+	adapter := adapterstorage.Manager.GetAdapterByID(adapterID)
 	if adapter == nil {
 		panic(fmt.Sprintf("[ SendTask ] No such adapter: %d", adapterID))
 	}

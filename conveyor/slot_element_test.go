@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
+	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
@@ -86,7 +87,7 @@ func TestSlotElement_update(t *testing.T) {
 func TestSlotElement_SendTask_NoSuchAdapterID(t *testing.T) {
 	el := newSlotElement(ActiveElement, nil)
 	// make it empty for test
-	adapter.StorageManager = adapter.NewStorage()
+	adapterstorage.Manager = adapterstorage.NewEmptyStorage()
 	require.PanicsWithValue(t, "[ SendTask ] No such adapter: 142", func() {
 		el.SendTask(142, 22, 44)
 	})
@@ -98,7 +99,7 @@ func TestSlotElement_SendTask(t *testing.T) {
 
 	})
 	el := newSlotElement(ActiveElement, slot)
-	adapter.StorageManager = adapter.NewStorage()
+	adapterstorage.Manager = adapterstorage.NewEmptyStorage()
 
 	sinkMock := adapter.NewTaskSinkMock(t)
 	testAdapterID := adapterid.ID(44)
@@ -118,7 +119,7 @@ func TestSlotElement_SendTask(t *testing.T) {
 
 		return nil
 	}
-	adapter.StorageManager.Register(sinkMock)
+	adapterstorage.Manager.Register(sinkMock)
 
 	require.Equal(t, ActiveElement, el.activationStatus)
 	el.SendTask(testAdapterID, testPayload, testRespHandlerID)
