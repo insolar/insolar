@@ -364,7 +364,7 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel insolar.Parce
 	if err == nil {
 		return &reply.ID{ID: *calculatedID}, nil
 	}
-	if err == storage.ErrOverride {
+	if err == blob.ErrOverride {
 		return &reply.ID{ID: *calculatedID}, nil
 	}
 	return nil, err
@@ -828,7 +828,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
 	//  id will not match the one calculated on the server.
 	err := h.BlobModifier.Set(ctx, *calculatedID, blob.Blob{JetID: insolar.JetID(jetID), Value: msg.Memory})
-	if err != nil {
+	if err != nil && err != blob.ErrOverride {
 		return nil, errors.Wrap(err, "failed to set blob")
 	}
 
