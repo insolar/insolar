@@ -64,12 +64,12 @@ func (r *One) Hello() (string, error) {
 	return r.GetPrototype().String(), nil
 }
 `
-	params := &ContractUploaderArgs{
+	params := &UploadArgs{
 		Name: "test",
 		Code: contractCode,
 	}
 
-	reply := &ContractUploaderReply{}
+	reply := &UploadReply{}
 
 	err := service.Upload(request, params, reply)
 	require.NoError(t, err)

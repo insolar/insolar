@@ -28,17 +28,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 )
 
-// ContractUploaderArgs is arguments that ContractUploader service accepts.
-type ContractUploaderArgs struct {
-	Code string
-	Name string
-}
-
-// ContractUploaderReply is reply for ContractUploader service requests.
-type ContractUploaderReply struct {
-	PrototypeRef insolar.Reference `json:"PrototypeRef"`
-}
-
 // ContractService is a service that provides ability to add custom contracts
 type ContractService struct {
 	runner *Runner
@@ -49,8 +38,19 @@ func NewContractService(runner *Runner) *ContractService {
 	return &ContractService{runner: runner}
 }
 
+// UploadArgs is arguments that Contract.Upload accepts.
+type UploadArgs struct {
+	Code string
+	Name string
+}
+
+// UploadReply is reply that Contract.Upload returns
+type UploadReply struct {
+	PrototypeRef insolar.Reference `json:"PrototypeRef"`
+}
+
 // Get returns certificate for node with given reference.
-func (s *ContractService) Upload(r *http.Request, args *ContractUploaderArgs, reply *ContractUploaderReply) error {
+func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *UploadReply) error {
 	_, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
 	inslog.Infof("[ ContractService.Upload ] Incoming request: %s", r.RequestURI)
