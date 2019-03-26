@@ -48,24 +48,86 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package storage
+package node
 
 import (
-	"context"
-
+	"bytes"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
+	"github.com/ugorji/go/codec"
 )
 
-// SnapshotAccessor provides methods for accessing Snapshot.
-//go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAccessor -o ../../testutils/network -s _mock.go
-type SnapshotAccessor interface {
-	ForPulseNumber(context.Context, insolar.PulseNumber) (network.Snapshot, error)
-	Latest(ctx context.Context) (network.Snapshot, error)
+type ListType int
+
+const (
+	ListWorking ListType = iota
+	ListIdle
+	ListLeaving
+	ListSuspected
+	ListJoiner
+
+	ListLength
+)
+
+type Snapshot struct {
+	pulse insolar.PulseNumber
+	state insolar.NetworkState
+
+	nodeList [ListLength][]insolar.NetworkNode
 }
 
-// SnapshotAppender provides method for appending Snapshot to storage.
-//go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAppender -o ../../testutils/network -s _mock.go
-type SnapshotAppender interface {
-	Append(ctx context.Context, pulse insolar.PulseNumber, snapshot network.Snapshot) error
+func (s *Snapshot) GetPulse() insolar.PulseNumber {
+	return s.pulse
+}
+
+// NewSnapshot create new snapshot for pulse.
+func NewSnapshot(number insolar.PulseNumber, nodes map[insolar.Reference]insolar.NetworkNode) *Snapshot {
+	return &Snapshot{
+		pulse: number,
+		// TODO: pass actual state
+		state:    insolar.NoNetworkState,
+		nodeList: splitNodes(nodes),
+	}
+}
+
+// splitNodes temporary method to create snapshot lists. Will be replaced by special function that will take in count
+// previous snapshot and approved claims.
+func splitNodes(nodes map[insolar.Reference]insolar.NetworkNode) [ListLength][]insolar.NetworkNode {
+	var result [ListLength][]insolar.NetworkNode
+	for i := 0; i < int(ListLength); i++ {
+		result[i] = make([]insolar.NetworkNode, 0)
+	}
+	for _, node := range nodes {
+		listType := nodeStateToListType(node.GetState())
+		if listType == ListLength {
+			continue
+		}
+		result[listType] = append(result[listType], node)
+	}
+	return result
+}
+
+func nodeStateToListType(state insolar.NodeState) ListType {
+	switch state {
+	case insolar.NodeReady:
+		return ListWorking
+	case insolar.NodePending:
+		return ListJoiner
+	case insolar.NodeUndefined, insolar.NodeLeaving:
+		return ListLeaving
+	}
+	// special case for no match
+	return ListLength
+}
+
+func EncodeSnapshot(s *Snapshot) []byte {
+	var buff bytes.Buffer
+	enc := codec.NewEncoder(&buff, &codec.JsonHandle{})
+	enc.MustEncode(s)
+	return buff.Bytes()
+}
+
+func DecodeSnapshot(buf []byte) (s Snapshot) {
+	dec := codec.NewDecoderBytes(buf, &codec.JsonHandle{})
+	dec.MustDecode(&s)
+	return s
 }

@@ -134,7 +134,7 @@ func TestJetCoordinator_Me(t *testing.T) {
 	// Arrange
 	expectedID := testutils.RandomRef()
 	nodeNet := network.NewNodeNetworkMock(t)
-	node := network.NewNodeMock(t)
+	node := network.NewNetworkNodeMock(t)
 	nodeNet.GetOriginMock.Return(node)
 	node.IDMock.Return(expectedID)
 	jc := NewJetCoordinator(1)

@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/artifactmanager"
-	"github.com/insolar/insolar/ledger/exporter"
 	"github.com/insolar/insolar/ledger/heavyserver"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/pulsemanager"
@@ -88,6 +87,5 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		pulsemanager.NewPulseManager(conf),
 		artifactmanager.NewMessageHandler(&conf, certificate),
 		heavyserver.NewSync(db),
-		exporter.NewExporter(conf.Exporter),
 	}
 }

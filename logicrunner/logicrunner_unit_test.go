@@ -717,7 +717,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 	mle.CallMethodMock.Return([]byte{1, 2, 3}, []byte{}, nil)
 
-	nodeMock := network.NewNodeMock(suite.T())
+	nodeMock := network.NewNetworkNodeMock(suite.T())
 	nodeMock.IDMock.Return(meRef)
 	suite.nn.GetOriginMock.Return(nodeMock)
 
@@ -943,7 +943,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 					return []byte{1, 2, 3}, []byte{}, nil
 				}
 
-				nodeMock := network.NewNodeMock(suite.T())
+				nodeMock := network.NewNetworkNodeMock(suite.T())
 				nodeMock.IDMock.Return(meRef)
 				suite.nn.GetOriginMock.Return(nodeMock)
 
