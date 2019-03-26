@@ -48,6 +48,7 @@ type Runner struct {
 	NetworkSwitcher     insolar.NetworkSwitcher     `inject:""`
 	NodeNetwork         insolar.NodeNetwork         `inject:""`
 	PulseStorage        insolar.PulseStorage        `inject:""`
+	ArtifactManager     insolar.ArtifactManager     `inject:""`
 	server              *http.Server
 	rpcServer           *rpc.Server
 	cfg                 *configuration.APIRunner
@@ -101,6 +102,11 @@ func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
 	err = rpcServer.RegisterService(NewNodeCertService(ar), "cert")
 	if err != nil {
 		return errors.New("[ registerServices ] Can't RegisterService: cert")
+	}
+
+	err = rpcServer.RegisterService(NewContractUploaderService(ar), "uploader")
+	if err != nil {
+		return errors.New("[ registerServices ] Can't RegisterService: uploader")
 	}
 
 	return nil
