@@ -49,7 +49,7 @@ type UploadReply struct {
 	PrototypeRef insolar.Reference `json:"PrototypeRef"`
 }
 
-// Get returns certificate for node with given reference.
+// Upload builds code and return prototype ref
 func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *UploadReply) error {
 	_, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
