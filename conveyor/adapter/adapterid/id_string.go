@@ -10,11 +10,12 @@ func _() {
 	var x [1]struct{}
 	_ = x[SendResponseAdapterID-1]
 	_ = x[WaiterAdapterID-2]
+	_ = x[GetCodeAdapterID-3]
 }
 
-const _ID_name = "SendResponseAdapterIDWaiterAdapterID"
+const _ID_name = "SendResponseAdapterIDWaiterAdapterIDGetCodeAdapterID"
 
-var _ID_index = [...]uint8{0, 21, 36}
+var _ID_index = [...]uint8{0, 21, 36, 52}
 
 func (i ID) String() string {
 	i -= 1
