@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/messagebus"
@@ -50,7 +51,7 @@ func mockConveyorFuture(t *testing.T, result insolar.Reply) *testutils.ConveyorF
 }
 
 func startResponseSendAdapter() *CancellableQueueAdapter {
-	adapter := NewResponseSendAdapter(uint32(SendResponseAdapterID)).(*CancellableQueueAdapter)
+	adapter := NewResponseSendAdapter(uint32(adapterid.SendResponseAdapterID)).(*CancellableQueueAdapter)
 	started := make(chan bool, 1)
 	adapter.StartProcessing(started)
 	<-started
@@ -157,7 +158,7 @@ func TestSendResponseHelper(t *testing.T) {
 	slotElementHelperMock.GetInputEventFunc = func() (r interface{}) {
 		return event
 	}
-	slotElementHelperMock.SendTaskFunc = func(p uint32, response interface{}, p2 uint32) (r error) {
+	slotElementHelperMock.SendTaskFunc = func(p adapterid.ID, response interface{}, p2 uint32) (r error) {
 		f := response.(SendResponseTask).Future
 		f.SetResult(testReply)
 		return nil

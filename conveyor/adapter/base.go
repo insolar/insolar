@@ -231,8 +231,8 @@ func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
 
 // PushTask implements TaskSink
 func (a *CancellableQueueAdapter) PushTask(respSink AdapterToSlotResponseSink,
-	elementID idType,
-	handlerID idType,
+	elementID uint32,
+	handlerID uint32,
 	taskPayload interface{}) error {
 
 	cancelInfo := newCancelInfo(atomicLoadAndIncrementUint64(&reqID))
@@ -252,7 +252,7 @@ func (a *CancellableQueueAdapter) PushTask(respSink AdapterToSlotResponseSink,
 }
 
 // CancelElementTasks: now cancels all pulseNumber's tasks
-func (a *CancellableQueueAdapter) CancelElementTasks(pulseNumber insolar.PulseNumber, elementID idType) {
+func (a *CancellableQueueAdapter) CancelElementTasks(pulseNumber insolar.PulseNumber, elementID uint32) {
 	a.taskHolder.stop(pulseNumber, false)
 }
 
@@ -267,7 +267,7 @@ func (a *CancellableQueueAdapter) FlushPulseTasks(pulseNumber insolar.PulseNumbe
 }
 
 // FlushNodeTasks: now flush all tasks
-func (a *CancellableQueueAdapter) FlushNodeTasks(nodeID idType) {
+func (a *CancellableQueueAdapter) FlushNodeTasks(nodeID uint32) {
 	a.taskHolder.stopAll(true)
 }
 

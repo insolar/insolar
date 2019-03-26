@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
@@ -71,7 +72,6 @@ func (se *slotElement) update(state fsm.StateID, payload interface{}, sm statema
 	se.state = state
 	se.payload = payload
 	se.stateMachine = sm
-	se.stateMachine = sm
 }
 
 func (se *slotElement) isDeactivated() bool {
@@ -94,7 +94,7 @@ func (se *slotElement) GetPayload() interface{} {
 }
 
 // SendTask implements SlotElementHelper
-func (se *slotElement) SendTask(adapterID uint32, taskPayload interface{}, respHandlerID uint32) error {
+func (se *slotElement) SendTask(adapterID adapterid.ID, taskPayload interface{}, respHandlerID uint32) error {
 	adapter := adapter.StorageManager.GetAdapterByID(adapterID)
 	if adapter == nil {
 		panic(fmt.Sprintf("[ SendTask ] No such adapter: %d", adapterID))

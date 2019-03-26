@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
@@ -100,9 +101,9 @@ func TestSlotElement_SendTask(t *testing.T) {
 	adapter.StorageManager = adapter.NewStorage()
 
 	sinkMock := adapter.NewTaskSinkMock(t)
-	testAdapterID := uint32(44)
+	testAdapterID := adapterid.ID(44)
 	sinkMock.GetAdapterIDFunc = func() (r uint32) {
-		return testAdapterID
+		return uint32(testAdapterID)
 	}
 
 	testPayload := 142

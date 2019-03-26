@@ -23,17 +23,14 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-type idType = uint32
-
 // TaskSink is iface which helps to slot to push task to adapter
-// NestedEvent gives access to nested event of adapter
 //go:generate minimock -i github.com/insolar/insolar/conveyor/adapter.TaskSink -o ./ -s _mock.go
 type TaskSink interface {
-	PushTask(respSink AdapterToSlotResponseSink, elementID idType, handlerID idType, taskPayload interface{}) error
-	CancelElementTasks(pulseNumber insolar.PulseNumber, elementID idType)
+	PushTask(respSink AdapterToSlotResponseSink, elementID uint32, handlerID uint32, taskPayload interface{}) error
+	CancelElementTasks(pulseNumber insolar.PulseNumber, elementID uint32)
 	CancelPulseTasks(pulseNumber insolar.PulseNumber)
 	FlushPulseTasks(pulseNumber insolar.PulseNumber)
-	FlushNodeTasks(nodeID idType)
+	FlushNodeTasks(nodeID uint32)
 	GetAdapterID() uint32
 }
 
@@ -49,21 +46,21 @@ type AdapterToSlotResponseSink interface {
 // AdapterTask contains info for launch adapter task
 type AdapterTask struct {
 	respSink    AdapterToSlotResponseSink
-	elementID   idType
-	handlerID   idType
+	elementID   uint32
+	handlerID   uint32
 	TaskPayload interface{}
 }
 
 // AdapterResponse contains info with adapter response
 type AdapterResponse struct {
-	adapterID   idType
-	elementID   idType
-	handlerID   idType
+	adapterID   uint32
+	elementID   uint32
+	handlerID   uint32
 	respPayload interface{}
 }
 
 // NewAdapterResponse creates new adapter response
-func NewAdapterResponse(adapterID idType, elementID idType, handlerID idType, respPayload interface{}) iadapter.Response {
+func NewAdapterResponse(adapterID uint32, elementID uint32, handlerID uint32, respPayload interface{}) iadapter.Response {
 	return &AdapterResponse{
 		adapterID:   adapterID,
 		elementID:   elementID,
@@ -94,9 +91,9 @@ func (ar *AdapterResponse) GetRespPayload() interface{} {
 
 // AdapterNestedEvent contains info with adapter nested event
 type AdapterNestedEvent struct {
-	adapterID       idType
-	parentElementID idType
-	handlerID       idType
+	adapterID       uint32
+	parentElementID uint32
+	handlerID       uint32
 	eventPayload    interface{}
 }
 
@@ -149,7 +146,7 @@ type Processor interface {
 }
 
 // NewAdapterWithQueue creates new instance of Adapter
-func NewAdapterWithQueue(processor Processor, id idType) TaskSink {
+func NewAdapterWithQueue(processor Processor, id uint32) TaskSink {
 	adapter := &CancellableQueueAdapter{
 		queue:             queue.NewMutexQueue(),
 		processingStarted: 0,

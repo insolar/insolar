@@ -21,6 +21,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
@@ -66,7 +67,7 @@ func (m *mockResponseSink) GetSlotDetails() slot.SlotDetails {
 }
 
 func TestFunctionality(t *testing.T) {
-	adapter := NewWaitAdapter(idType(WaiterAdapterID)).(*CancellableQueueAdapter)
+	adapter := NewWaitAdapter(uint32(adapterid.WaiterAdapterID)).(*CancellableQueueAdapter)
 	started := make(chan bool, 1)
 	adapter.StartProcessing(started)
 	<-started
@@ -119,7 +120,7 @@ func TestFunctionality(t *testing.T) {
 
 func TestParallel(t *testing.T) {
 
-	adapter := NewWaitAdapter(idType(WaiterAdapterID)).(*CancellableQueueAdapter)
+	adapter := NewWaitAdapter(uint32(adapterid.WaiterAdapterID)).(*CancellableQueueAdapter)
 	started := make(chan bool, 1)
 	adapter.StartProcessing(started)
 	<-started

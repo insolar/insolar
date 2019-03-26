@@ -20,6 +20,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/stretchr/testify/require"
 )
 
@@ -39,10 +40,10 @@ func TestInitializer_RegisterAndGet(t *testing.T) {
 	storage := NewStorage()
 
 	for i := 0; i < 20; i++ {
-		testAdapterID := uint32(i * i)
+		testAdapterID := adapterid.ID(i * i)
 		sinkMock := NewTaskSinkMock(t)
 		sinkMock.GetAdapterIDFunc = func() (r uint32) {
-			return testAdapterID
+			return uint32(testAdapterID)
 		}
 
 		storage.Register(sinkMock)

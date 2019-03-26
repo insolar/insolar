@@ -18,18 +18,20 @@ package adapter
 
 import (
 	"fmt"
+
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 )
 
 type Storage struct {
-	adapters map[ID]TaskSink
+	adapters map[adapterid.ID]TaskSink
 }
 
-func (s *Storage) GetAdapterByID(id uint32) TaskSink {
-	return s.adapters[ID(id)]
+func (s *Storage) GetAdapterByID(id adapterid.ID) TaskSink {
+	return s.adapters[id]
 }
 
 func (s *Storage) Register(adapter TaskSink) {
-	id := ID(adapter.GetAdapterID())
+	id := adapterid.ID(adapter.GetAdapterID())
 	_, ok := s.adapters[id]
 	if ok {
 		panic(fmt.Sprintf("[ StorageManager.Register ] adapter ID '%s' already exists", id.String()))
@@ -52,11 +54,11 @@ var StorageManager Storage
 
 func NewStorage() Storage {
 	return Storage{
-		adapters: make(map[ID]TaskSink),
+		adapters: make(map[adapterid.ID]TaskSink),
 	}
 }
 
 func init() {
 	StorageManager = NewStorage()
-	StorageManager.Register(NewResponseSendAdapter(idType(SendResponseAdapterID)))
+	StorageManager.Register(NewResponseSendAdapter(uint32(adapterid.SendResponseAdapterID)))
 }

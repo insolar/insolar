@@ -19,6 +19,7 @@ package adapter
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
@@ -78,6 +79,6 @@ func (r *SendResponseHelper) SendResponse(element slot.SlotElementHelper, result
 		Future: pendingMsg.Future,
 		Result: result,
 	}
-	err := element.SendTask(uint32(SendResponseAdapterID), response, respHandlerID)
+	err := element.SendTask(adapterid.SendResponseAdapterID, response, respHandlerID)
 	return errors.Wrap(err, "[ SendResponseHelper.SendResponse ] Can't SendTask")
 }
