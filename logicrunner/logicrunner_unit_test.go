@@ -716,7 +716,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 	mle.CallMethodMock.Return([]byte{1, 2, 3}, []byte{}, nil)
 
-	nodeMock := network.NewNodeMock(suite.T())
+	nodeMock := network.NewNetworkNodeMock(suite.T())
 	nodeMock.IDMock.Return(meRef)
 	suite.nn.GetOriginMock.Return(nodeMock)
 
@@ -942,7 +942,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 					return []byte{1, 2, 3}, []byte{}, nil
 				}
 
-				nodeMock := network.NewNodeMock(suite.T())
+				nodeMock := network.NewNetworkNodeMock(suite.T())
 				nodeMock.IDMock.Return(meRef)
 				suite.nn.GetOriginMock.Return(nodeMock)
 
@@ -1298,9 +1298,9 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef: s.objectRef,
-				Requests:  make([]message.CaseBindRequest, 0),
-				Queue:     messagesQueue,
+				RecordRef:             s.objectRef,
+				Requests:              make([]message.CaseBindRequest, 0),
+				Queue:                 messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 

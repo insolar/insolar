@@ -52,6 +52,7 @@ package phases
 
 import (
 	"crypto"
+	"github.com/insolar/insolar/network/node"
 	"testing"
 
 	"github.com/insolar/insolar/component"
@@ -67,7 +68,7 @@ import (
 func TestFirstPhase_HandlePulse(t *testing.T) {
 	firstPhase := &FirstPhaseImpl{}
 
-	node := nodenetwork.NewNode(insolar.Reference{}, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
+	node := node.NewNode(insolar.Reference{}, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
 	nodeKeeper := nodenetwork.NewNodeKeeper(node)
 	nodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{node})
 

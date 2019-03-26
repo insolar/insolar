@@ -20,12 +20,12 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/node"
 	"github.com/stretchr/testify/assert"
 )
 
 func newActiveNode(ver string) insolar.NetworkNode {
-	return nodenetwork.NewNode(insolar.Reference{255}, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", ver)
+	return node.NewNode(insolar.Reference{255}, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", ver)
 }
 
 func TestGetMapOfVersions(t *testing.T) {

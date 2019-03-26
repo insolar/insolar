@@ -54,7 +54,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	jc := testutils.NewJetCoordinatorMock(t)
 	nn := network.NewNodeNetworkMock(t)
 	nn.GetOriginFunc = func() (r insolar.NetworkNode) {
-		n := network.NewNodeMock(t)
+		n := network.NewNetworkNodeMock(t)
 		n.IDMock.Return(insolar.Reference{})
 		return n
 	}
