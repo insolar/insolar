@@ -26,6 +26,8 @@ import (
 type idType = uint32
 
 // PulseConveyorAdapterTaskSink is iface which helps to slot to push task to adapter
+// NestedEvent gives access to nested event of adapter
+//go:generate minimock -i github.com/insolar/insolar/conveyor/adapter.PulseConveyorAdapterTaskSink -o ./ -s _mock.go
 type PulseConveyorAdapterTaskSink interface {
 	PushTask(respSink AdapterToSlotResponseSink, elementID idType, handlerID idType, taskPayload interface{}) error
 	CancelElementTasks(pulseNumber insolar.PulseNumber, elementID idType)

@@ -32,7 +32,7 @@ func (s *storage) Register(adapter PulseConveyorAdapterTaskSink) PulseConveyorAd
 	id := ID(adapter.GetAdapterID())
 	_, ok := s.adapters[id]
 	if ok {
-		panic(fmt.Sprintf("[ Storage.Register ] adapter ID '%s'(%d) already exists", id.String(), id))
+		panic(fmt.Sprintf("[ Storage.Register ] adapter ID '%s' already exists", id.String()))
 	}
 
 	s.adapters[id] = adapter
@@ -52,14 +52,13 @@ func (s *storage) GetRegisteredAdapters() []interface{} {
 
 var Storage storage
 
-func init() {
-	Storage = storage{
+func NewStorage() storage {
+	return storage{
 		adapters: make(map[ID]PulseConveyorAdapterTaskSink),
 	}
-
-	Storage.Register(NewResponseSendAdapter(idType(SendResponseAdapterID)))
 }
 
-func GetAdapters() []interface{} {
-	return Storage.GetRegisteredAdapters()
+func init() {
+	Storage = NewStorage()
+	Storage.Register(NewResponseSendAdapter(idType(SendResponseAdapterID)))
 }
