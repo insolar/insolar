@@ -23,9 +23,11 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
+	"github.com/insolar/insolar/testutils"
 )
 
 // ContractService is a service that provides ability to add custom contracts
@@ -78,5 +80,60 @@ func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *Uploa
 	}
 
 	reply.PrototypeRef = *cb.Prototypes[args.Name]
+	return nil
+}
+
+// UploadArgs is arguments that Contract.Upload accepts.
+type CallConstructorArgs struct {
+	PrototypeRefString string
+}
+
+// UploadReply is reply that Contract.Upload returns
+type CallConstructorReply struct {
+	ObjectRef insolar.Reference `json:"ObjectRef"`
+}
+
+// Upload builds code and return prototype ref
+func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructorArgs, reply *CallConstructorReply) error {
+	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
+
+	inslog.Infof("[ ContractService.Upload ] Incoming request: %s", r.RequestURI)
+
+	if len(args.PrototypeRefString) == 0 {
+		return errors.New("params.name is missing")
+	}
+
+	protoRef := insolar.Reference{}.FromSlice([]byte(args.PrototypeRefString))
+
+	domain, err := insolar.NewReferenceFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
+	contractID, err := s.runner.ArtifactManager.RegisterRequest(
+		ctx,
+		*s.runner.ArtifactManager.GenesisRef(),
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: testutils.RandomRef()}},
+	)
+
+	if err != nil {
+		return errors.Wrap(err, "can't register request")
+	}
+
+	objectRef := insolar.Reference{}
+	objectRef.SetRecord(*contractID)
+
+	_, err = s.runner.ArtifactManager.ActivateObject(
+		ctx,
+		*domain,
+		objectRef,
+		*s.runner.ArtifactManager.GenesisRef(),
+		protoRef,
+		false,
+		nil,
+	)
+
+	if err != nil {
+		return errors.Wrap(err, "can't activate object")
+	}
+
+	reply.ObjectRef = objectRef
+
 	return nil
 }
