@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/artifactmanager"
-	"github.com/insolar/insolar/ledger/exporter"
 	"github.com/insolar/insolar/ledger/heavyserver"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/pulsemanager"
@@ -85,6 +84,8 @@ func NewTestLedger(
 
 // GetLedgerComponents returns ledger components.
 func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certificate) []interface{} {
+	idLocker := storage.NewIDLocker()
+
 	db, err := storage.NewDB(conf, nil)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
@@ -117,6 +118,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	return []interface{}{
 		db,
 		newDB,
+		idLocker,
 		dropModifier,
 		dropAccessor,
 		storage.NewCleaner(),
@@ -134,7 +136,6 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		pulsemanager.NewPulseManager(conf),
 		artifactmanager.NewMessageHandler(&conf, certificate),
 		heavyserver.NewSync(db),
-		exporter.NewExporter(conf.Exporter),
 	}
 }
 
