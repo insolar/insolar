@@ -52,10 +52,8 @@ package storage
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/node"
-	"sync"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/node"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAccessor -o ../../testutils/network -s _mock.go
@@ -79,31 +77,31 @@ func NewSnapshotStorage() *SnapshotStorage {
 }
 
 type SnapshotStorage struct {
-	DB   DB `inject:""`
-	lock sync.RWMutex
+	DB DB `inject:""`
+	//lock sync.RWMutex
 }
 
 func (s *SnapshotStorage) Append(ctx context.Context, pulse insolar.PulseNumber, snapshot *node.Snapshot) error {
 	panic("implement me")
 
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	buff := node.EncodeSnapshot(snapshot)
-	return s.DB.Set(pulseKey(pulse), buff)
+	//s.lock.RLock()
+	//defer s.lock.RUnlock()
+	//
+	//buff := node.EncodeSnapshot(snapshot)
+	//return s.DB.Set(pulseKey(pulse), buff)
 }
 
 func (s *SnapshotStorage) ForPulseNumber(ctx context.Context, pulse insolar.PulseNumber) (*node.Snapshot, error) {
 	panic("implement me")
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	buf, err := s.DB.Get(pulseKey(pulse))
-	if err != nil {
-		return nil, err
-	}
-	result := node.DecodeSnapshot(buf)
-	return &result, nil
+	//s.lock.RLock()
+	//defer s.lock.RUnlock()
+	//
+	//buf, err := s.DB.Get(pulseKey(pulse))
+	//if err != nil {
+	//	return nil, err
+	//}
+	//result := node.DecodeSnapshot(buf)
+	//return &result, nil
 }
 
 func (s *SnapshotStorage) Latest(ctx context.Context) (*node.Snapshot, error) {
