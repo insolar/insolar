@@ -83,17 +83,17 @@ func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *Uploa
 	return nil
 }
 
-// UploadArgs is arguments that Contract.Upload accepts.
+// CallConstructorArgs is arguments that Contract.CallConstructor accepts.
 type CallConstructorArgs struct {
 	PrototypeRefString string
 }
 
-// UploadReply is reply that Contract.Upload returns
+// CallConstructorReply is reply that Contract.CallConstructor returns
 type CallConstructorReply struct {
 	ObjectRef insolar.Reference `json:"ObjectRef"`
 }
 
-// Upload builds code and return prototype ref
+// CallConstructor make an object from its prototype
 func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructorArgs, reply *CallConstructorReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
