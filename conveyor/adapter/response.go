@@ -26,11 +26,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NewResponseSendAdapter creates new instance of adapter for sending response
-func NewResponseSendAdapter(id adapterid.ID) TaskSink {
-	return NewAdapterWithQueue(NewSendResponseProcessor(), id)
-}
-
 // SendResponseTask is task for adapter for sending response
 type SendResponseTask struct {
 	Future insolar.ConveyorFuture
@@ -79,6 +74,6 @@ func (r *SendResponseHelper) SendResponse(element slot.SlotElementHelper, result
 		Future: pendingMsg.Future,
 		Result: result,
 	}
-	err := element.SendTask(adapterid.SendResponseAdapterID, response, respHandlerID)
+	err := element.SendTask(adapterid.SendResponse, response, respHandlerID)
 	return errors.Wrap(err, "[ SendResponseHelper.SendResponse ] Can't SendTask")
 }
