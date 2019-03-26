@@ -26,7 +26,7 @@ type ObjectStorageMock struct {
 	GetBlobPreCounter uint64
 	GetBlobMock       mObjectStorageMockGetBlob
 
-	GetObjectIndexFunc       func(p context.Context, p1 insolar.ID, p2 *insolar.ID, p3 bool) (r *object.Lifeline, r1 error)
+	GetObjectIndexFunc       func(p context.Context, p1 insolar.ID, p2 *insolar.ID) (r *object.Lifeline, r1 error)
 	GetObjectIndexCounter    uint64
 	GetObjectIndexPreCounter uint64
 	GetObjectIndexMock       mObjectStorageMockGetObjectIndex
@@ -40,11 +40,6 @@ type ObjectStorageMock struct {
 	IterateIndexIDsCounter    uint64
 	IterateIndexIDsPreCounter uint64
 	IterateIndexIDsMock       mObjectStorageMockIterateIndexIDs
-
-	RemoveObjectIndexFunc       func(p context.Context, p1 insolar.ID, p2 *insolar.ID) (r error)
-	RemoveObjectIndexCounter    uint64
-	RemoveObjectIndexPreCounter uint64
-	RemoveObjectIndexMock       mObjectStorageMockRemoveObjectIndex
 
 	SetBlobFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 []byte) (r *insolar.ID, r1 error)
 	SetBlobCounter    uint64
@@ -74,7 +69,6 @@ func NewObjectStorageMock(t minimock.Tester) *ObjectStorageMock {
 	m.GetObjectIndexMock = mObjectStorageMockGetObjectIndex{mock: m}
 	m.GetRecordMock = mObjectStorageMockGetRecord{mock: m}
 	m.IterateIndexIDsMock = mObjectStorageMockIterateIndexIDs{mock: m}
-	m.RemoveObjectIndexMock = mObjectStorageMockRemoveObjectIndex{mock: m}
 	m.SetBlobMock = mObjectStorageMockSetBlob{mock: m}
 	m.SetObjectIndexMock = mObjectStorageMockSetObjectIndex{mock: m}
 	m.SetRecordMock = mObjectStorageMockSetRecord{mock: m}
@@ -249,7 +243,6 @@ type ObjectStorageMockGetObjectIndexInput struct {
 	p  context.Context
 	p1 insolar.ID
 	p2 *insolar.ID
-	p3 bool
 }
 
 type ObjectStorageMockGetObjectIndexResult struct {
@@ -258,14 +251,14 @@ type ObjectStorageMockGetObjectIndexResult struct {
 }
 
 //Expect specifies that invocation of ObjectStorage.GetObjectIndex is expected from 1 to Infinity times
-func (m *mObjectStorageMockGetObjectIndex) Expect(p context.Context, p1 insolar.ID, p2 *insolar.ID, p3 bool) *mObjectStorageMockGetObjectIndex {
+func (m *mObjectStorageMockGetObjectIndex) Expect(p context.Context, p1 insolar.ID, p2 *insolar.ID) *mObjectStorageMockGetObjectIndex {
 	m.mock.GetObjectIndexFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ObjectStorageMockGetObjectIndexExpectation{}
 	}
-	m.mainExpectation.input = &ObjectStorageMockGetObjectIndexInput{p, p1, p2, p3}
+	m.mainExpectation.input = &ObjectStorageMockGetObjectIndexInput{p, p1, p2}
 	return m
 }
 
@@ -282,12 +275,12 @@ func (m *mObjectStorageMockGetObjectIndex) Return(r *object.Lifeline, r1 error) 
 }
 
 //ExpectOnce specifies that invocation of ObjectStorage.GetObjectIndex is expected once
-func (m *mObjectStorageMockGetObjectIndex) ExpectOnce(p context.Context, p1 insolar.ID, p2 *insolar.ID, p3 bool) *ObjectStorageMockGetObjectIndexExpectation {
+func (m *mObjectStorageMockGetObjectIndex) ExpectOnce(p context.Context, p1 insolar.ID, p2 *insolar.ID) *ObjectStorageMockGetObjectIndexExpectation {
 	m.mock.GetObjectIndexFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &ObjectStorageMockGetObjectIndexExpectation{}
-	expectation.input = &ObjectStorageMockGetObjectIndexInput{p, p1, p2, p3}
+	expectation.input = &ObjectStorageMockGetObjectIndexInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -297,7 +290,7 @@ func (e *ObjectStorageMockGetObjectIndexExpectation) Return(r *object.Lifeline, 
 }
 
 //Set uses given function f as a mock of ObjectStorage.GetObjectIndex method
-func (m *mObjectStorageMockGetObjectIndex) Set(f func(p context.Context, p1 insolar.ID, p2 *insolar.ID, p3 bool) (r *object.Lifeline, r1 error)) *ObjectStorageMock {
+func (m *mObjectStorageMockGetObjectIndex) Set(f func(p context.Context, p1 insolar.ID, p2 *insolar.ID) (r *object.Lifeline, r1 error)) *ObjectStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -306,18 +299,18 @@ func (m *mObjectStorageMockGetObjectIndex) Set(f func(p context.Context, p1 inso
 }
 
 //GetObjectIndex implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
-func (m *ObjectStorageMock) GetObjectIndex(p context.Context, p1 insolar.ID, p2 *insolar.ID, p3 bool) (r *object.Lifeline, r1 error) {
+func (m *ObjectStorageMock) GetObjectIndex(p context.Context, p1 insolar.ID, p2 *insolar.ID) (r *object.Lifeline, r1 error) {
 	counter := atomic.AddUint64(&m.GetObjectIndexPreCounter, 1)
 	defer atomic.AddUint64(&m.GetObjectIndexCounter, 1)
 
 	if len(m.GetObjectIndexMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetObjectIndexMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ObjectStorageMock.GetObjectIndex. %v %v %v %v", p, p1, p2, p3)
+			m.t.Fatalf("Unexpected call to ObjectStorageMock.GetObjectIndex. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.GetObjectIndexMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ObjectStorageMockGetObjectIndexInput{p, p1, p2, p3}, "ObjectStorage.GetObjectIndex got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ObjectStorageMockGetObjectIndexInput{p, p1, p2}, "ObjectStorage.GetObjectIndex got unexpected parameters")
 
 		result := m.GetObjectIndexMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -335,7 +328,7 @@ func (m *ObjectStorageMock) GetObjectIndex(p context.Context, p1 insolar.ID, p2 
 
 		input := m.GetObjectIndexMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ObjectStorageMockGetObjectIndexInput{p, p1, p2, p3}, "ObjectStorage.GetObjectIndex got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ObjectStorageMockGetObjectIndexInput{p, p1, p2}, "ObjectStorage.GetObjectIndex got unexpected parameters")
 		}
 
 		result := m.GetObjectIndexMock.mainExpectation.result
@@ -350,11 +343,11 @@ func (m *ObjectStorageMock) GetObjectIndex(p context.Context, p1 insolar.ID, p2 
 	}
 
 	if m.GetObjectIndexFunc == nil {
-		m.t.Fatalf("Unexpected call to ObjectStorageMock.GetObjectIndex. %v %v %v %v", p, p1, p2, p3)
+		m.t.Fatalf("Unexpected call to ObjectStorageMock.GetObjectIndex. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.GetObjectIndexFunc(p, p1, p2, p3)
+	return m.GetObjectIndexFunc(p, p1, p2)
 }
 
 //GetObjectIndexMinimockCounter returns a count of ObjectStorageMock.GetObjectIndexFunc invocations
@@ -683,155 +676,6 @@ func (m *ObjectStorageMock) IterateIndexIDsFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.IterateIndexIDsFunc != nil {
 		return atomic.LoadUint64(&m.IterateIndexIDsCounter) > 0
-	}
-
-	return true
-}
-
-type mObjectStorageMockRemoveObjectIndex struct {
-	mock              *ObjectStorageMock
-	mainExpectation   *ObjectStorageMockRemoveObjectIndexExpectation
-	expectationSeries []*ObjectStorageMockRemoveObjectIndexExpectation
-}
-
-type ObjectStorageMockRemoveObjectIndexExpectation struct {
-	input  *ObjectStorageMockRemoveObjectIndexInput
-	result *ObjectStorageMockRemoveObjectIndexResult
-}
-
-type ObjectStorageMockRemoveObjectIndexInput struct {
-	p  context.Context
-	p1 insolar.ID
-	p2 *insolar.ID
-}
-
-type ObjectStorageMockRemoveObjectIndexResult struct {
-	r error
-}
-
-//Expect specifies that invocation of ObjectStorage.RemoveObjectIndex is expected from 1 to Infinity times
-func (m *mObjectStorageMockRemoveObjectIndex) Expect(p context.Context, p1 insolar.ID, p2 *insolar.ID) *mObjectStorageMockRemoveObjectIndex {
-	m.mock.RemoveObjectIndexFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ObjectStorageMockRemoveObjectIndexExpectation{}
-	}
-	m.mainExpectation.input = &ObjectStorageMockRemoveObjectIndexInput{p, p1, p2}
-	return m
-}
-
-//Return specifies results of invocation of ObjectStorage.RemoveObjectIndex
-func (m *mObjectStorageMockRemoveObjectIndex) Return(r error) *ObjectStorageMock {
-	m.mock.RemoveObjectIndexFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ObjectStorageMockRemoveObjectIndexExpectation{}
-	}
-	m.mainExpectation.result = &ObjectStorageMockRemoveObjectIndexResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of ObjectStorage.RemoveObjectIndex is expected once
-func (m *mObjectStorageMockRemoveObjectIndex) ExpectOnce(p context.Context, p1 insolar.ID, p2 *insolar.ID) *ObjectStorageMockRemoveObjectIndexExpectation {
-	m.mock.RemoveObjectIndexFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ObjectStorageMockRemoveObjectIndexExpectation{}
-	expectation.input = &ObjectStorageMockRemoveObjectIndexInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ObjectStorageMockRemoveObjectIndexExpectation) Return(r error) {
-	e.result = &ObjectStorageMockRemoveObjectIndexResult{r}
-}
-
-//Set uses given function f as a mock of ObjectStorage.RemoveObjectIndex method
-func (m *mObjectStorageMockRemoveObjectIndex) Set(f func(p context.Context, p1 insolar.ID, p2 *insolar.ID) (r error)) *ObjectStorageMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.RemoveObjectIndexFunc = f
-	return m.mock
-}
-
-//RemoveObjectIndex implements github.com/insolar/insolar/ledger/storage.ObjectStorage interface
-func (m *ObjectStorageMock) RemoveObjectIndex(p context.Context, p1 insolar.ID, p2 *insolar.ID) (r error) {
-	counter := atomic.AddUint64(&m.RemoveObjectIndexPreCounter, 1)
-	defer atomic.AddUint64(&m.RemoveObjectIndexCounter, 1)
-
-	if len(m.RemoveObjectIndexMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.RemoveObjectIndexMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ObjectStorageMock.RemoveObjectIndex. %v %v %v", p, p1, p2)
-			return
-		}
-
-		input := m.RemoveObjectIndexMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ObjectStorageMockRemoveObjectIndexInput{p, p1, p2}, "ObjectStorage.RemoveObjectIndex got unexpected parameters")
-
-		result := m.RemoveObjectIndexMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ObjectStorageMock.RemoveObjectIndex")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.RemoveObjectIndexMock.mainExpectation != nil {
-
-		input := m.RemoveObjectIndexMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, ObjectStorageMockRemoveObjectIndexInput{p, p1, p2}, "ObjectStorage.RemoveObjectIndex got unexpected parameters")
-		}
-
-		result := m.RemoveObjectIndexMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ObjectStorageMock.RemoveObjectIndex")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.RemoveObjectIndexFunc == nil {
-		m.t.Fatalf("Unexpected call to ObjectStorageMock.RemoveObjectIndex. %v %v %v", p, p1, p2)
-		return
-	}
-
-	return m.RemoveObjectIndexFunc(p, p1, p2)
-}
-
-//RemoveObjectIndexMinimockCounter returns a count of ObjectStorageMock.RemoveObjectIndexFunc invocations
-func (m *ObjectStorageMock) RemoveObjectIndexMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.RemoveObjectIndexCounter)
-}
-
-//RemoveObjectIndexMinimockPreCounter returns the value of ObjectStorageMock.RemoveObjectIndex invocations
-func (m *ObjectStorageMock) RemoveObjectIndexMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.RemoveObjectIndexPreCounter)
-}
-
-//RemoveObjectIndexFinished returns true if mock invocations count is ok
-func (m *ObjectStorageMock) RemoveObjectIndexFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.RemoveObjectIndexMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.RemoveObjectIndexCounter) == uint64(len(m.RemoveObjectIndexMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.RemoveObjectIndexMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.RemoveObjectIndexCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.RemoveObjectIndexFunc != nil {
-		return atomic.LoadUint64(&m.RemoveObjectIndexCounter) > 0
 	}
 
 	return true
@@ -1313,10 +1157,6 @@ func (m *ObjectStorageMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ObjectStorageMock.IterateIndexIDs")
 	}
 
-	if !m.RemoveObjectIndexFinished() {
-		m.t.Fatal("Expected call to ObjectStorageMock.RemoveObjectIndex")
-	}
-
 	if !m.SetBlobFinished() {
 		m.t.Fatal("Expected call to ObjectStorageMock.SetBlob")
 	}
@@ -1362,10 +1202,6 @@ func (m *ObjectStorageMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ObjectStorageMock.IterateIndexIDs")
 	}
 
-	if !m.RemoveObjectIndexFinished() {
-		m.t.Fatal("Expected call to ObjectStorageMock.RemoveObjectIndex")
-	}
-
 	if !m.SetBlobFinished() {
 		m.t.Fatal("Expected call to ObjectStorageMock.SetBlob")
 	}
@@ -1396,7 +1232,6 @@ func (m *ObjectStorageMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetObjectIndexFinished()
 		ok = ok && m.GetRecordFinished()
 		ok = ok && m.IterateIndexIDsFinished()
-		ok = ok && m.RemoveObjectIndexFinished()
 		ok = ok && m.SetBlobFinished()
 		ok = ok && m.SetObjectIndexFinished()
 		ok = ok && m.SetRecordFinished()
@@ -1422,10 +1257,6 @@ func (m *ObjectStorageMock) MinimockWait(timeout time.Duration) {
 
 			if !m.IterateIndexIDsFinished() {
 				m.t.Error("Expected call to ObjectStorageMock.IterateIndexIDs")
-			}
-
-			if !m.RemoveObjectIndexFinished() {
-				m.t.Error("Expected call to ObjectStorageMock.RemoveObjectIndex")
 			}
 
 			if !m.SetBlobFinished() {
@@ -1465,10 +1296,6 @@ func (m *ObjectStorageMock) AllMocksCalled() bool {
 	}
 
 	if !m.IterateIndexIDsFinished() {
-		return false
-	}
-
-	if !m.RemoveObjectIndexFinished() {
 		return false
 	}
 

@@ -37,6 +37,8 @@ import (
 
 // GetLedgerComponents returns ledger components.
 func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certificate) []interface{} {
+	idLocker := storage.NewIDLocker()
+
 	db, err := storage.NewDB(conf, nil)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
@@ -69,6 +71,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	return []interface{}{
 		db,
 		newDB,
+		idLocker,
 		dropModifier,
 		dropAccessor,
 		storage.NewCleaner(),
