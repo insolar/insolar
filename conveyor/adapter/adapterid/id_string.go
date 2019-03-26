@@ -13,9 +13,9 @@ func _() {
 	_ = x[GetCode-3]
 }
 
-const _ID_name = "SendResponseAdapterIDWaiterAdapterIDGetCodeAdapterID"
+const _ID_name = "SendResponseWaiterGetCode"
 
-var _ID_index = [...]uint8{0, 21, 36, 52}
+var _ID_index = [...]uint8{0, 12, 18, 25}
 
 func (i ID) String() string {
 	i -= 1
