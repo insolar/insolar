@@ -148,7 +148,7 @@ func (m *hasherMock) BlockSize() int {
 }
 
 func (m *hasherMock) Hash(val []byte) []byte {
-	m.h.Write(val)
+	_, _ = m.h.Write(val)
 	return m.h.Sum(nil)
 }
 
