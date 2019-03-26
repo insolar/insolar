@@ -20,6 +20,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/testutils"
 	base58 "github.com/jbenet/go-base58"
 	"github.com/stretchr/testify/assert"
@@ -97,4 +98,11 @@ func BenchmarkRecordID_DebugString_Depth5(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		jet.DebugString()
 	}
+}
+
+func TestNewReferenceFromBase58(t *testing.T) {
+	origin := gen.Reference()
+	decoded, err := insolar.NewReferenceFromBase58(origin.String())
+	require.NoError(t, err)
+	assert.Equal(t, origin, *decoded)
 }

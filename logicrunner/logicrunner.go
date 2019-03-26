@@ -136,8 +136,8 @@ type LogicRunner struct {
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	ParcelFactory              message.ParcelFactory              `inject:""`
 	PulseStorage               insolar.PulseStorage               `inject:""`
-	ArtifactManager            artifacts.Client
-	JetCoordinator             insolar.JetCoordinator `inject:""`
+	ArtifactManager            artifacts.Client                   `inject:""`
+	JetCoordinator             insolar.JetCoordinator             `inject:""`
 
 	Executors    [insolar.MachineTypesLastID]insolar.MachineLogicExecutor
 	machinePrefs []insolar.MachineType
@@ -155,9 +155,8 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		return nil, errors.New("LogicRunner have nil configuration")
 	}
 	res := LogicRunner{
-		Cfg:             cfg,
-		state:           make(map[Ref]*ObjectState),
-		ArtifactManager: artifacts.NewClient(),
+		Cfg:   cfg,
+		state: make(map[Ref]*ObjectState),
 	}
 	return &res, nil
 }

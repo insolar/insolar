@@ -281,7 +281,6 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 	}
 
 	am.PulseStorage = pulseStorageMock
-	am.GenesisState = s.genesisState
 	am.JetStorage = s.jetStorage
 
 	s.T().Run("returns error on exceeding retry limit", func(t *testing.T) {
