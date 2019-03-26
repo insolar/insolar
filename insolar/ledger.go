@@ -269,12 +269,6 @@ type StorageExportResult struct {
 	Size     int
 }
 
-// StorageExporter provides methods for fetching data view from storage.
-type StorageExporter interface {
-	// Export returns data view from storage.
-	Export(ctx context.Context, fromPulse PulseNumber, size int) (*StorageExportResult, error)
-}
-
 var (
 	// TODOJetID temporary stub for passing jet ID in ledger functions
 	// on period Jet ID full implementation
