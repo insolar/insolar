@@ -461,7 +461,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
-	node.componentManager.Register(netCoordinator, amMock, certManager, cryptographyService)
+	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService)
 	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc)
 	node.serviceNetwork = serviceNetwork
 }
