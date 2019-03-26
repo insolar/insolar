@@ -20,7 +20,7 @@ type ID uint32
 
 //go:generate stringer -type=ID
 const (
-	SendResponseAdapterID ID = iota + 1
-	WaiterAdapterID
-	GetCodeAdapterID
+	SendResponse ID = iota + 1
+	Waiter
+	GetCode
 )
