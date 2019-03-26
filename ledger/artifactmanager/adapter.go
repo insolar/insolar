@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
@@ -27,7 +28,7 @@ import (
 
 // NewGetCodeAdapter creates new instance of adapter for getting code
 func NewGetCodeAdapter(cg GetCodeProcessor) adapter.TaskSink {
-	return adapter.NewAdapterWithQueue(&cg)
+	return adapter.NewAdapterWithQueue(&cg, adapterid.GetCodeAdapterID)
 }
 
 // GetCodeTask is task for adapter for getting code
