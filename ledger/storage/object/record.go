@@ -51,7 +51,6 @@ func init() {
 	// Never change id constants. They are used for serialization.
 	register(100, new(GenesisRecord))
 	register(101, new(ChildRecord))
-	register(102, new(JetRecord))
 
 	register(200, new(RequestRecord))
 
