@@ -234,8 +234,11 @@ func (s *RawGetCodeStateMachine) responsePresentSecond(element slot.SlotElementH
 	if !ok {
 		return nil, 0, errors.New("wrong input event type")
 	}
-	aResponse := ar.GetRespPayload()
-	payload, state, err := s.cleanStateMachine.responsePresentSecond(aInput, aResponse, element)
+	aResponse, ok := ar.GetRespPayload().(artifactmanager.GetCodeResp)
+	if !ok {
+		return nil, 0, errors.New("wrong response type")
+	}
+	payload, state, err := s.cleanStateMachine.responsePresentFirst(aInput, aResponse, element)
 	return payload, state, err
 }
 
