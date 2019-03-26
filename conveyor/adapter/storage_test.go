@@ -42,8 +42,8 @@ func TestInitializer_RegisterAndGet(t *testing.T) {
 	for i := 0; i < 20; i++ {
 		testAdapterID := adapterid.ID(i * i)
 		sinkMock := NewTaskSinkMock(t)
-		sinkMock.GetAdapterIDFunc = func() (r uint32) {
-			return uint32(testAdapterID)
+		sinkMock.GetAdapterIDFunc = func() (r adapterid.ID) {
+			return testAdapterID
 		}
 
 		storage.Register(sinkMock)
@@ -54,9 +54,9 @@ func TestInitializer_RegisterAndGet(t *testing.T) {
 func TestInitializer_RegisterDuplicatingID(t *testing.T) {
 	storage := NewStorage()
 
-	testAdapterID := uint32(142)
+	testAdapterID := adapterid.ID(142)
 	sinkMock := NewTaskSinkMock(t)
-	sinkMock.GetAdapterIDFunc = func() (r uint32) {
+	sinkMock.GetAdapterIDFunc = func() (r adapterid.ID) {
 		return testAdapterID
 	}
 
@@ -73,9 +73,9 @@ func TestInitializer_GetRegisteredAdapters(t *testing.T) {
 	numRegistered := 100
 
 	for i := 0; i < numRegistered; i++ {
-		testAdapterID := uint32(i)
+		testAdapterID := adapterid.ID(i)
 		sinkMock := NewTaskSinkMock(t)
-		sinkMock.GetAdapterIDFunc = func() (r uint32) {
+		sinkMock.GetAdapterIDFunc = func() (r adapterid.ID) {
 			return testAdapterID
 		}
 
@@ -93,6 +93,6 @@ func TestInitializer_GetRegisteredAdapters(t *testing.T) {
 	})
 
 	for i := 0; i < numRegistered; i++ {
-		require.Equal(t, uint32(i), registered[i].(TaskSink).GetAdapterID())
+		require.Equal(t, adapterid.ID(i), registered[i].(TaskSink).GetAdapterID())
 	}
 }

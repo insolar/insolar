@@ -20,12 +20,13 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
 // NewWaitAdapter creates new instance of SimpleWaitAdapter with Waiter as worker
-func NewWaitAdapter(id uint32) TaskSink {
+func NewWaitAdapter(id adapterid.ID) TaskSink {
 	return NewAdapterWithQueue(NewWaiter(id), id)
 }
 
@@ -38,7 +39,7 @@ type WaiterTask struct {
 type Waiter struct{}
 
 // NewWaiter returns new instance of worker which waiting
-func NewWaiter(id uint32) Processor {
+func NewWaiter(id adapterid.ID) Processor {
 	return &Waiter{}
 }
 

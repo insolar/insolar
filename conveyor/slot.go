@@ -20,6 +20,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
@@ -228,7 +229,7 @@ func (s *Slot) runWorker() {
 	go worker.run()
 }
 
-func (s *Slot) PushResponse(adapterID uint32, elementID uint32, handlerID uint32, respPayload interface{}) {
+func (s *Slot) PushResponse(adapterID adapterid.ID, elementID uint32, handlerID uint32, respPayload interface{}) {
 	response := adapter.NewAdapterResponse(adapterID, elementID, handlerID, respPayload)
 	err := s.responseQueue.SinkPush(response)
 	if err != nil {
@@ -236,7 +237,7 @@ func (s *Slot) PushResponse(adapterID uint32, elementID uint32, handlerID uint32
 	}
 }
 
-func (s *Slot) PushNestedEvent(adapterID uint32, parentElementID uint32, handlerID uint32, eventPayload interface{}) {
+func (s *Slot) PushNestedEvent(adapterID adapterid.ID, parentElementID uint32, handlerID uint32, eventPayload interface{}) {
 	event := adapter.NewAdapterNestedEvent(adapterID, parentElementID, handlerID, eventPayload)
 	err := s.responseQueue.SinkPush(event)
 	if err != nil {

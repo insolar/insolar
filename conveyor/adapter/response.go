@@ -27,7 +27,7 @@ import (
 )
 
 // NewResponseSendAdapter creates new instance of adapter for sending response
-func NewResponseSendAdapter(id uint32) TaskSink {
+func NewResponseSendAdapter(id adapterid.ID) TaskSink {
 	return NewAdapterWithQueue(NewSendResponseProcessor(), id)
 }
 

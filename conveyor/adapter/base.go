@@ -22,6 +22,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
@@ -144,13 +145,13 @@ type CancellableQueueAdapter struct {
 	stopProcessing    uint32
 	processingStopped chan bool
 	// adapterID comes from configuration
-	adapterID uint32
+	adapterID adapterid.ID
 
 	taskHolder taskHolder
 	processor  Processor
 }
 
-func (a *CancellableQueueAdapter) GetAdapterID() uint32 {
+func (a *CancellableQueueAdapter) GetAdapterID() adapterid.ID {
 	return a.adapterID
 }
 
@@ -294,10 +295,10 @@ func (a *CancellableQueueAdapter) process(cancellableTask queueTask) {
 
 type nestedEventHelper struct {
 	adapterTask AdapterTask
-	adapterID   uint32
+	adapterID   adapterid.ID
 }
 
-func newNestedEventHelper(adapterTask AdapterTask, adapterID uint32) NestedEventHelper {
+func newNestedEventHelper(adapterTask AdapterTask, adapterID adapterid.ID) NestedEventHelper {
 	return &nestedEventHelper{
 		adapterTask: adapterTask,
 		adapterID:   adapterID,

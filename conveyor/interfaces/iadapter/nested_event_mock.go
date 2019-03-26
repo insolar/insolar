@@ -10,13 +10,14 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	adapterid "github.com/insolar/insolar/conveyor/adapter/adapterid"
 )
 
 //NestedEventMock implements github.com/insolar/insolar/conveyor/interfaces/iadapter.NestedEvent
 type NestedEventMock struct {
 	t minimock.Tester
 
-	GetAdapterIDFunc       func() (r uint32)
+	GetAdapterIDFunc       func() (r adapterid.ID)
 	GetAdapterIDCounter    uint64
 	GetAdapterIDPreCounter uint64
 	GetAdapterIDMock       mNestedEventMockGetAdapterID
@@ -64,7 +65,7 @@ type NestedEventMockGetAdapterIDExpectation struct {
 }
 
 type NestedEventMockGetAdapterIDResult struct {
-	r uint32
+	r adapterid.ID
 }
 
 //Expect specifies that invocation of NestedEvent.GetAdapterID is expected from 1 to Infinity times
@@ -80,7 +81,7 @@ func (m *mNestedEventMockGetAdapterID) Expect() *mNestedEventMockGetAdapterID {
 }
 
 //Return specifies results of invocation of NestedEvent.GetAdapterID
-func (m *mNestedEventMockGetAdapterID) Return(r uint32) *NestedEventMock {
+func (m *mNestedEventMockGetAdapterID) Return(r adapterid.ID) *NestedEventMock {
 	m.mock.GetAdapterIDFunc = nil
 	m.expectationSeries = nil
 
@@ -102,12 +103,12 @@ func (m *mNestedEventMockGetAdapterID) ExpectOnce() *NestedEventMockGetAdapterID
 	return expectation
 }
 
-func (e *NestedEventMockGetAdapterIDExpectation) Return(r uint32) {
+func (e *NestedEventMockGetAdapterIDExpectation) Return(r adapterid.ID) {
 	e.result = &NestedEventMockGetAdapterIDResult{r}
 }
 
 //Set uses given function f as a mock of NestedEvent.GetAdapterID method
-func (m *mNestedEventMockGetAdapterID) Set(f func() (r uint32)) *NestedEventMock {
+func (m *mNestedEventMockGetAdapterID) Set(f func() (r adapterid.ID)) *NestedEventMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -116,7 +117,7 @@ func (m *mNestedEventMockGetAdapterID) Set(f func() (r uint32)) *NestedEventMock
 }
 
 //GetAdapterID implements github.com/insolar/insolar/conveyor/interfaces/iadapter.NestedEvent interface
-func (m *NestedEventMock) GetAdapterID() (r uint32) {
+func (m *NestedEventMock) GetAdapterID() (r adapterid.ID) {
 	counter := atomic.AddUint64(&m.GetAdapterIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetAdapterIDCounter, 1)
 

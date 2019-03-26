@@ -60,5 +60,5 @@ func NewStorage() Storage {
 
 func init() {
 	StorageManager = NewStorage()
-	StorageManager.Register(NewResponseSendAdapter(uint32(adapterid.SendResponseAdapterID)))
+	StorageManager.Register(NewResponseSendAdapter(adapterid.SendResponseAdapterID))
 }

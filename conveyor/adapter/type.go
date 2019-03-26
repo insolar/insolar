@@ -17,6 +17,7 @@
 package adapter
 
 import (
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/conveyor/queue"
@@ -31,13 +32,13 @@ type TaskSink interface {
 	CancelPulseTasks(pulseNumber insolar.PulseNumber)
 	FlushPulseTasks(pulseNumber insolar.PulseNumber)
 	FlushNodeTasks(nodeID uint32)
-	GetAdapterID() uint32
+	GetAdapterID() adapterid.ID
 }
 
 // AdapterToSlotResponseSink is iface which helps to adapter to access to slot
 type AdapterToSlotResponseSink interface {
-	PushResponse(adapterID uint32, elementID uint32, handlerID uint32, respPayload interface{})
-	PushNestedEvent(adapterID uint32, parentElementID uint32, handlerID uint32, eventPayload interface{})
+	PushResponse(adapterID adapterid.ID, elementID uint32, handlerID uint32, respPayload interface{})
+	PushNestedEvent(adapterID adapterid.ID, parentElementID uint32, handlerID uint32, eventPayload interface{})
 	GetPulseNumber() insolar.PulseNumber
 	GetNodeID() uint32
 	GetSlotDetails() slot.SlotDetails
@@ -53,14 +54,14 @@ type AdapterTask struct {
 
 // AdapterResponse contains info with adapter response
 type AdapterResponse struct {
-	adapterID   uint32
+	adapterID   adapterid.ID
 	elementID   uint32
 	handlerID   uint32
 	respPayload interface{}
 }
 
 // NewAdapterResponse creates new adapter response
-func NewAdapterResponse(adapterID uint32, elementID uint32, handlerID uint32, respPayload interface{}) iadapter.Response {
+func NewAdapterResponse(adapterID adapterid.ID, elementID uint32, handlerID uint32, respPayload interface{}) iadapter.Response {
 	return &AdapterResponse{
 		adapterID:   adapterID,
 		elementID:   elementID,
@@ -70,7 +71,7 @@ func NewAdapterResponse(adapterID uint32, elementID uint32, handlerID uint32, re
 }
 
 // GetAdapterID implements Response method
-func (ar *AdapterResponse) GetAdapterID() uint32 {
+func (ar *AdapterResponse) GetAdapterID() adapterid.ID {
 	return ar.adapterID
 }
 
@@ -91,13 +92,13 @@ func (ar *AdapterResponse) GetRespPayload() interface{} {
 
 // AdapterNestedEvent contains info with adapter nested event
 type AdapterNestedEvent struct {
-	adapterID       uint32
+	adapterID       adapterid.ID
 	parentElementID uint32
 	handlerID       uint32
 	eventPayload    interface{}
 }
 
-func NewAdapterNestedEvent(adapterID uint32, parentElementID uint32, handlerID uint32, eventPayload interface{}) iadapter.NestedEvent {
+func NewAdapterNestedEvent(adapterID adapterid.ID, parentElementID uint32, handlerID uint32, eventPayload interface{}) iadapter.NestedEvent {
 	return &AdapterNestedEvent{
 		adapterID:       adapterID,
 		parentElementID: parentElementID,
@@ -107,7 +108,7 @@ func NewAdapterNestedEvent(adapterID uint32, parentElementID uint32, handlerID u
 }
 
 // GetHandlerID implements NestedEvent method
-func (a *AdapterNestedEvent) GetAdapterID() uint32 {
+func (a *AdapterNestedEvent) GetAdapterID() adapterid.ID {
 	return a.adapterID
 }
 
@@ -146,7 +147,7 @@ type Processor interface {
 }
 
 // NewAdapterWithQueue creates new instance of Adapter
-func NewAdapterWithQueue(processor Processor, id uint32) TaskSink {
+func NewAdapterWithQueue(processor Processor, id adapterid.ID) TaskSink {
 	adapter := &CancellableQueueAdapter{
 		queue:             queue.NewMutexQueue(),
 		processingStarted: 0,

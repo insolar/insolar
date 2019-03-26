@@ -51,7 +51,7 @@ func mockConveyorFuture(t *testing.T, result insolar.Reply) *testutils.ConveyorF
 }
 
 func startResponseSendAdapter() *CancellableQueueAdapter {
-	adapter := NewResponseSendAdapter(uint32(adapterid.SendResponseAdapterID)).(*CancellableQueueAdapter)
+	adapter := NewResponseSendAdapter(adapterid.SendResponseAdapterID).(*CancellableQueueAdapter)
 	started := make(chan bool, 1)
 	adapter.StartProcessing(started)
 	<-started

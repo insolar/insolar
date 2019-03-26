@@ -102,8 +102,8 @@ func TestSlotElement_SendTask(t *testing.T) {
 
 	sinkMock := adapter.NewTaskSinkMock(t)
 	testAdapterID := adapterid.ID(44)
-	sinkMock.GetAdapterIDFunc = func() (r uint32) {
-		return uint32(testAdapterID)
+	sinkMock.GetAdapterIDFunc = func() (r adapterid.ID) {
+		return testAdapterID
 	}
 
 	testPayload := 142

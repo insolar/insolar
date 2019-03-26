@@ -33,7 +33,7 @@ type mockResponseSink struct {
 	lock     sync.Mutex
 }
 
-func (m *mockResponseSink) PushResponse(adapterID uint32, elementID uint32, handlerID uint32, respPayload interface{}) {
+func (m *mockResponseSink) PushResponse(adapterID adapterid.ID, elementID uint32, handlerID uint32, respPayload interface{}) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	log.Infof("[ mockResponseSink.PushResponse] PushResponse: %+v", respPayload)
@@ -47,7 +47,7 @@ func (m *mockResponseSink) GetResponse() interface{} {
 	return m.response
 }
 
-func (m *mockResponseSink) PushNestedEvent(adapterID uint32, parentElementID uint32, handlerID uint32, eventPayload interface{}) {
+func (m *mockResponseSink) PushNestedEvent(adapterID adapterid.ID, parentElementID uint32, handlerID uint32, eventPayload interface{}) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	log.Infof("[ mockResponseSink.PushNestedEvent] PushNestedEvent: %+v", eventPayload)
@@ -67,7 +67,7 @@ func (m *mockResponseSink) GetSlotDetails() slot.SlotDetails {
 }
 
 func TestFunctionality(t *testing.T) {
-	adapter := NewWaitAdapter(uint32(adapterid.WaiterAdapterID)).(*CancellableQueueAdapter)
+	adapter := NewWaitAdapter(adapterid.WaiterAdapterID).(*CancellableQueueAdapter)
 	started := make(chan bool, 1)
 	adapter.StartProcessing(started)
 	<-started
@@ -120,7 +120,7 @@ func TestFunctionality(t *testing.T) {
 
 func TestParallel(t *testing.T) {
 
-	adapter := NewWaitAdapter(uint32(adapterid.WaiterAdapterID)).(*CancellableQueueAdapter)
+	adapter := NewWaitAdapter(adapterid.WaiterAdapterID).(*CancellableQueueAdapter)
 	started := make(chan bool, 1)
 	adapter.StartProcessing(started)
 	<-started
