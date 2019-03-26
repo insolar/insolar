@@ -22,6 +22,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
@@ -361,8 +362,17 @@ func (w *worker) working() {
 
 func (w *worker) calculateNodeState() {
 	w.ctxLogger.Debugf("[ calculateNodeState ] starts ...")
-	// TODO: PreparePulse comes, It contains callback, call some adapter it forward callback to it
-	w.preparePulseSync.SetResult(555)
+	task := adapter.NodeStateTask{
+		Callback: w.preparePulseSync,
+		Pulse:    w.slot.pulse,
+	}
+	// TODO: use adapter catalog
+	a := adapter.NewNodeStateAdapter()
+	// TODO: check that slot implements AdapterToSlotResponseSink interface
+	err := a.PushTask(w.slot, 0, 0, task)
+	if err != nil {
+		panic("[ calculateNodeState ] Can't calculate node state in NodeStateAdapter: " + err.Error())
+	}
 	w.preparePulseSync = nil
 }
 
