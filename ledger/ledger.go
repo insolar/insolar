@@ -103,6 +103,8 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	var dropCleaner drop.Cleaner
 
 	var blobCleaner blob.Cleaner
+	var blobModifier blob.Modifier
+	var blobAccessor blob.Accessor
 
 	// TODO: @imarkin 18.02.18 - Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
 	switch certificate.GetRole() {
@@ -112,6 +114,11 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		dropDB := drop.NewStorageDB()
 		dropModifier = dropDB
 		dropAccessor = dropDB
+
+		// should be replaced with db
+		blobDB := blob.NewStorageMemory()
+		blobModifier = blobDB
+		blobAccessor = blobDB
 	default:
 		pulseTracker = storage.NewPulseTrackerMemory()
 
@@ -120,7 +127,10 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		dropAccessor = dropDB
 		dropCleaner = dropDB
 
-		// we need to init blobCleaner here for a light material
+		blobDB := blob.NewStorageMemory()
+		blobModifier = blobDB
+		blobAccessor = blobDB
+		blobCleaner = blobDB
 	}
 
 	return []interface{}{
@@ -129,6 +139,8 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		idLocker,
 		dropModifier,
 		dropAccessor,
+		blobModifier,
+		blobAccessor,
 		storage.NewCleaner(),
 		pulseTracker,
 		storage.NewPulseStorage(),

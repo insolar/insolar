@@ -59,39 +59,6 @@ func NewObjectStorage() ObjectStorage {
 	return new(objectStorage)
 }
 
-// GetBlob returns binary value stored by record ID.
-// TODO: switch from reference to passing blob id for consistency - @nordicdyno 6.Dec.2018
-func (os *objectStorage) GetBlob(ctx context.Context, jetID insolar.ID, id *insolar.ID) ([]byte, error) {
-	jetPrefix := insolar.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
-	return os.DB.Get(ctx, k)
-}
-
-// SetBlob saves binary value for provided pulse.
-func (os *objectStorage) SetBlob(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, blob []byte) (*insolar.ID, error) {
-	id := object.CalculateIDForBlob(os.PlatformCryptographyScheme, pulseNumber, blob)
-	jetPrefix := insolar.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDBlob, jetPrefix, id[:])
-
-	// TODO: @andreyromancev. 16.01.19. Blob override is ok.
-	// geterr := muxs.db.db.View(func(tx *badger.Txn) error {
-	// 	_, err := tx.Get(k)
-	// 	return err
-	// })
-	// if geterr == nil {
-	// 	return id, ErrOverride
-	// }
-	// if geterr != badger.ErrKeyNotFound {
-	// 	return nil, ErrNotFound
-	// }
-
-	err := os.DB.Set(ctx, k, blob)
-	if err != nil {
-		return nil, err
-	}
-	return id, nil
-}
-
 // GetRecord wraps matching transaction manager method.
 func (os *objectStorage) GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (object.VirtualRecord, error) {
 	jetPrefix := insolar.JetID(jetID).Prefix()

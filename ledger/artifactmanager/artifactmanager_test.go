@@ -61,10 +61,14 @@ type amSuite struct {
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    jet.Storage
-	dropModifier  drop.Modifier
-	dropAccessor  drop.Accessor
-	blobModifier  blob.Modifier
-	genesisState  genesis.GenesisState
+
+	dropModifier drop.Modifier
+	dropAccessor drop.Accessor
+
+	blobModifier blob.Modifier
+	blobAccessor blob.Accessor
+
+	genesisState genesis.GenesisState
 }
 
 func NewAmSuite() *amSuite {
@@ -96,7 +100,9 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.dropModifier = dropStorage
 	s.genesisState = genesis.NewGenesisInitializer()
 
-	s.blobModifier = blob.NewStorageMemory()
+	blobStorage := blob.NewStorageMemory()
+	s.blobModifier = blobStorage
+	s.blobAccessor = blobStorage
 
 	s.cm.Inject(
 		s.scheme,
@@ -183,6 +189,8 @@ func getTestData(s *amSuite) (
 	handler.PulseTracker = s.pulseTracker
 	handler.DBContext = s.db
 	handler.JetStorage = s.jetStorage
+	handler.BlobModifier = s.blobModifier
+	handler.BlobAccessor = s.blobAccessor
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())

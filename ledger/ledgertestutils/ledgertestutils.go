@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
@@ -67,6 +68,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	os := storage.NewObjectStorage()
 	ns := node.NewStorage()
 	ds := drop.NewStorageDB()
+	bs := blob.NewStorageMemory()
 	rs := storage.NewReplicaStorage()
 	cl := storage.NewCleaner()
 
@@ -74,7 +76,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	am.PlatformCryptographyScheme = pcs
 
 	conf.PulseManager.HeavySyncEnabled = false
-	pm := pulsemanager.NewPulseManager(conf)
+	pm := pulsemanager.NewPulseManager(conf, drop.NewCleanerMock(t), blob.NewCleanerMock(t))
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)
 	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
@@ -111,6 +113,8 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	handler.DBContext = tmpDB
 	handler.ObjectStorage = os
 	handler.DropModifier = ds
+	handler.BlobModifier = bs
+	handler.BlobAccessor = bs
 
 	idLockerMock := storage.NewIDLockerMock(t)
 	idLockerMock.LockMock.Return()

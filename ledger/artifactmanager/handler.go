@@ -356,7 +356,7 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel insolar.Parce
 	if err == nil {
 		return &reply.ID{ID: *calculatedID}, nil
 	}
-	if err != nil && err != insolar.ErrNotFound {
+	if err != nil && err != blob.ErrNotFound {
 		return nil, err
 	}
 
