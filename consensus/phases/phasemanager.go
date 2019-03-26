@@ -55,12 +55,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
 )
+
+type pulseController interface {
+	// PreparePulse is preparing system for working with provided pulse
+	PreparePulse(pulse insolar.Pulse, callback queue.SyncDone) error
+	// ActivatePulse is activate system with prepared pulse
+	ActivatePulse() error
+}
 
 type PhaseManager interface {
 	OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error
@@ -71,9 +79,10 @@ type Phases struct {
 	SecondPhase SecondPhase `inject:""`
 	ThirdPhase  ThirdPhase  `inject:""`
 
-	PulseManager insolar.PulseManager `inject:""`
-	NodeKeeper   network.NodeKeeper   `inject:""`
-	Calculator   merkle.Calculator    `inject:""`
+	PulseManager    insolar.PulseManager `inject:""`
+	NodeKeeper      network.NodeKeeper   `inject:""`
+	Calculator      merkle.Calculator    `inject:""`
+	PulseController pulseController      `inject:""`
 
 	lastPulse insolar.PulseNumber
 	lock      sync.Mutex
@@ -82,6 +91,29 @@ type Phases struct {
 // NewPhaseManager creates and returns a new phase manager.
 func NewPhaseManager() PhaseManager {
 	return &Phases{}
+}
+
+type callback struct {
+	waiter chan interface{}
+}
+
+func (c *callback) GetResult() []byte {
+	result := <-c.waiter
+	hash, ok := result.([]byte)
+	if !ok {
+		return []byte{}
+	}
+	return hash
+}
+
+func (c *callback) SetResult(result interface{}) {
+	c.waiter <- result
+}
+
+func newCallback() *callback {
+	return &callback{
+		waiter: make(chan interface{}, 3),
+	}
 }
 
 // OnPulse starts calculate args on phases.
@@ -107,6 +139,12 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 
 	var tctx context.Context
 	var cancel context.CancelFunc
+	c := newCallback()
+	err = pm.PulseController.PreparePulse(*pulse, c)
+	if err != nil {
+		return err
+	}
+	stateHash := c.GetResult()
 
 	tctx, cancel, err = contextTimeoutWithDelay(ctx, *pulseDuration, consensusDelay, 0.3)
 	if err != nil {
@@ -114,7 +152,12 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 	}
 	defer cancel()
 
-	firstPhaseState, err := pm.FirstPhase.Execute(tctx, pulse)
+	err = pm.PulseController.ActivatePulse()
+	if err != nil {
+		return err
+	}
+
+	firstPhaseState, err := pm.FirstPhase.Execute(tctx, pulse, stateHash)
 	if err != nil {
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 1")
 	}

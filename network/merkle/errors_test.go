@@ -58,7 +58,6 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
@@ -80,7 +79,7 @@ type calculatorErrorSuite struct {
 }
 
 func (t *calculatorErrorSuite) TestGetNodeProofError() {
-	ph, np, err := t.calculator.GetPulseProof(&PulseEntry{Pulse: t.pulse})
+	ph, np, err := t.calculator.GetPulseProof(&PulseEntry{Pulse: t.pulse}, nil)
 
 	t.Assert().Error(err)
 	t.Assert().Contains(err.Error(), "[ GetPulseProof ] Failed to sign node info hash")
@@ -161,9 +160,6 @@ func (t *calculatorErrorSuite) TestGetCloudProofCalculateError() {
 }
 
 func TestCalculatorError(t *testing.T) {
-	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	l, _, clean := ledgertestutils.TmpLedger(t, "", insolar.StaticRoleLightMaterial, insolar.Components{}, true)
-
 	calculator := &calculator{}
 
 	cm := component.Manager{}
@@ -187,9 +183,8 @@ func TestCalculatorError(t *testing.T) {
 
 	jc := testutils.NewJetCoordinatorMock(t)
 
-	cm.Inject(th, nk, jc, l.ArtifactManager, calculator, service, scheme, pulseManager)
+	cm.Inject(th, nk, jc, calculator, service, scheme, pulseManager)
 
-	require.NotNil(t, calculator.ArtifactManager)
 	require.NotNil(t, calculator.NodeNetwork)
 	require.NotNil(t, calculator.CryptographyService)
 	require.NotNil(t, calculator.PlatformCryptographyScheme)
@@ -211,54 +206,4 @@ func TestCalculatorError(t *testing.T) {
 		service:     service,
 	}
 	suite.Run(t, s)
-
-	clean()
-}
-
-func TestCalculatorLedgerError(t *testing.T) {
-	calculator := &calculator{}
-
-	cm := component.Manager{}
-
-	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
-	require.NotNil(t, key)
-
-	service := testutils.NewCryptographyServiceMock(t)
-	service.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
-		return nil, errors.New("Sign error")
-	}
-	service.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
-		return "key", nil
-	}
-
-	am := testutils.NewArtifactManagerMock(t)
-	am.StateFunc = func() (r []byte, r1 error) {
-		return nil, errors.New("State error")
-	}
-
-	scheme := platformpolicy.NewPlatformCryptographyScheme()
-	nk := nodekeeper.GetTestNodekeeper(service)
-	th := terminationhandler.NewTestHandler()
-	cm.Inject(th, nk, am, calculator, service, scheme)
-
-	require.NotNil(t, calculator.ArtifactManager)
-	require.NotNil(t, calculator.NodeNetwork)
-	require.NotNil(t, calculator.CryptographyService)
-	require.NotNil(t, calculator.PlatformCryptographyScheme)
-
-	err := cm.Init(context.Background())
-	require.NoError(t, err)
-
-	pulse := &insolar.Pulse{
-		PulseNumber:     insolar.PulseNumber(1337),
-		NextPulseNumber: insolar.PulseNumber(1347),
-		Entropy:         pulsartestutils.MockEntropyGenerator{}.GenerateEntropy(),
-	}
-
-	ph, np, err := calculator.GetPulseProof(&PulseEntry{Pulse: pulse})
-
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "[ GetPulseProof ] Failed to get node stateHash")
-	require.Nil(t, np)
-	require.Nil(t, ph)
 }

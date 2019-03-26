@@ -60,7 +60,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
-	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/insolar/insolar/testutils/terminationhandler"
 	"github.com/stretchr/testify/require"
@@ -78,7 +77,7 @@ type calculatorSuite struct {
 }
 
 func (t *calculatorSuite) TestGetNodeProof() {
-	ph, np, err := t.calculator.GetPulseProof(&PulseEntry{Pulse: t.pulse})
+	ph, np, err := t.calculator.GetPulseProof(&PulseEntry{Pulse: t.pulse}, nil)
 
 	t.Assert().NoError(err)
 	t.Assert().NotNil(np)
@@ -91,7 +90,7 @@ func (t *calculatorSuite) TestGetNodeProof() {
 
 func (t *calculatorSuite) TestGetGlobuleProof() {
 	pulseEntry := &PulseEntry{Pulse: t.pulse}
-	ph, pp, err := t.calculator.GetPulseProof(pulseEntry)
+	ph, pp, err := t.calculator.GetPulseProof(pulseEntry, nil)
 	t.Assert().NoError(err)
 
 	prevCloudHash, _ := hex.DecodeString(
@@ -121,7 +120,7 @@ func (t *calculatorSuite) TestGetGlobuleProof() {
 
 func (t *calculatorSuite) TestGetCloudProof() {
 	pulseEntry := &PulseEntry{Pulse: t.pulse}
-	ph, pp, err := t.calculator.GetPulseProof(pulseEntry)
+	ph, pp, err := t.calculator.GetPulseProof(pulseEntry, nil)
 	t.Assert().NoError(err)
 
 	prevCloudHash, _ := hex.DecodeString(
@@ -170,15 +169,9 @@ func TestCalculator(t *testing.T) {
 	nk := nodekeeper.GetTestNodekeeper(service)
 	th := terminationhandler.NewTestHandler()
 
-	am := testutils.NewArtifactManagerMock(t)
-	am.StateFunc = func() (r []byte, r1 error) {
-		return []byte("state"), nil
-	}
-
 	cm := component.Manager{}
-	cm.Inject(th, nk, am, calculator, service, scheme)
+	cm.Inject(th, nk, calculator, service, scheme)
 
-	require.NotNil(t, calculator.ArtifactManager)
 	require.NotNil(t, calculator.NodeNetwork)
 	require.NotNil(t, calculator.CryptographyService)
 	require.NotNil(t, calculator.PlatformCryptographyScheme)

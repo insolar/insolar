@@ -68,9 +68,11 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+var testOriginalHash = []byte("state")
+
 func (t *calculatorHashesSuite) TestGetPulseHash() {
 	pulseEntry := &PulseEntry{Pulse: t.pulse}
-	ph, _, err := t.calculator.GetPulseProof(pulseEntry)
+	ph, _, err := t.calculator.GetPulseProof(pulseEntry, testOriginalHash)
 	t.Assert().NoError(err)
 
 	expectedHash, _ := hex.DecodeString(
@@ -82,7 +84,7 @@ func (t *calculatorHashesSuite) TestGetPulseHash() {
 
 func (t *calculatorHashesSuite) TestGetGlobuleHash() {
 	pulseEntry := &PulseEntry{Pulse: t.pulse}
-	ph, pp, err := t.calculator.GetPulseProof(pulseEntry)
+	ph, pp, err := t.calculator.GetPulseProof(pulseEntry, testOriginalHash)
 	t.Assert().NoError(err)
 
 	prevCloudHash, _ := hex.DecodeString(
@@ -110,7 +112,7 @@ func (t *calculatorHashesSuite) TestGetGlobuleHash() {
 
 func (t *calculatorHashesSuite) TestGetCloudHash() {
 	pulseEntry := &PulseEntry{Pulse: t.pulse}
-	ph, pp, err := t.calculator.GetPulseProof(pulseEntry)
+	ph, pp, err := t.calculator.GetPulseProof(pulseEntry, testOriginalHash)
 	t.Assert().NoError(err)
 
 	prevCloudHash, _ := hex.DecodeString(
@@ -169,19 +171,13 @@ func TestCalculatorHashes(t *testing.T) {
 		return "key", nil
 	}
 
-	am := testutils.NewArtifactManagerMock(t)
-	am.StateFunc = func() (r []byte, r1 error) {
-		return []byte("state"), nil
-	}
-
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	nk := nodekeeper.GetTestNodekeeper(service)
 	th := terminationhandler.NewTestHandler()
 
 	cm := component.Manager{}
-	cm.Inject(th, nk, am, calculator, service, scheme)
+	cm.Inject(th, nk, calculator, service, scheme)
 
-	require.NotNil(t, calculator.ArtifactManager)
 	require.NotNil(t, calculator.NodeNetwork)
 	require.NotNil(t, calculator.CryptographyService)
 	require.NotNil(t, calculator.PlatformCryptographyScheme)
