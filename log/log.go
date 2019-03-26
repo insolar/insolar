@@ -36,8 +36,6 @@ func NewLog(cfg configuration.Log) (insolar.Logger, error) {
 	var err error
 
 	switch strings.ToLower(cfg.Adapter) {
-	case "logrus":
-		logger, err = newLogrusAdapter(cfg)
 	case "zerolog":
 		logger, err = newZerologAdapter(cfg)
 	default:
@@ -144,4 +142,3 @@ func Panicf(format string, args ...interface{}) {
 func SetOutput(w io.Writer) {
 	GlobalLogger.SetOutput(w)
 }
-

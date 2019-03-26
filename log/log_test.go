@@ -70,8 +70,8 @@ func TestLog_GlobalLogger(t *testing.T) {
 func TestLog_NewLog_Config(t *testing.T) {
 	invalidtests := map[string]configuration.Log{
 		"InvalidAdapter":   configuration.Log{Level: "Debug", Adapter: "invalid", Formatter: "text"},
-		"InvalidLevel":     configuration.Log{Level: "Invalid", Adapter: "logrus", Formatter: "text"},
-		"InvalidFormatter": configuration.Log{Level: "Debug", Adapter: "logrus", Formatter: "invalid"},
+		"InvalidLevel":     configuration.Log{Level: "Invalid", Adapter: "zerolog", Formatter: "text"},
+		"InvalidFormatter": configuration.Log{Level: "Debug", Adapter: "zerolog", Formatter: "invalid"},
 	}
 
 	for name, test := range invalidtests {
@@ -83,7 +83,7 @@ func TestLog_NewLog_Config(t *testing.T) {
 	}
 
 	validtests := map[string]configuration.Log{
-		"WithAdapter": configuration.Log{Level: "Debug", Adapter: "logrus", Formatter: "text"},
+		"WithAdapter": configuration.Log{Level: "Debug", Adapter: "zerolog", Formatter: "text"},
 	}
 	for name, test := range validtests {
 		t.Run(name, func(t *testing.T) {
@@ -109,18 +109,18 @@ func TestLog_AddFields(t *testing.T) {
 	)
 	tt := []struct {
 		name    string
-		fieldfn func(la logrusAdapter) insolar.Logger
+		fieldfn func(la insolar.Logger) insolar.Logger
 	}{
 		{
 			name: "WithFields",
-			fieldfn: func(la logrusAdapter) insolar.Logger {
+			fieldfn: func(la insolar.Logger) insolar.Logger {
 				fields := map[string]interface{}{fieldname: fieldvalue}
 				return la.WithFields(fields)
 			},
 		},
 		{
 			name: "WithField",
-			fieldfn: func(la logrusAdapter) insolar.Logger {
+			fieldfn: func(la insolar.Logger) insolar.Logger {
 				return la.WithField(fieldname, fieldvalue)
 			},
 		},
@@ -128,13 +128,13 @@ func TestLog_AddFields(t *testing.T) {
 
 	for _, tItem := range tt {
 		t.Run(tItem.name, func(t *testing.T) {
-			la, err := newLogrusAdapter(configuration.NewLog())
+			la, err := newZerologAdapter(configuration.NewLog())
 			assert.NoError(t, err)
 
 			var b bytes.Buffer
 			la.SetOutput(&b)
 
-			tItem.fieldfn(*la).Error(errtxt1)
+			tItem.fieldfn(la).Error(errtxt1)
 			la.Error(errtxt2)
 
 			var recitems []string
@@ -159,10 +159,10 @@ func TestLog_AddFields(t *testing.T) {
 }
 
 func TestLog_Timestamp(t *testing.T) {
-	for _, adapter := range []string{"logrus", "zerolog"} {
+	for _, adapter := range []string{"zerolog"} {
 		adapter := adapter
 		t.Run(adapter, func(t *testing.T) {
-			log, err := NewLog(configuration.Log{Level: "info", Adapter: "logrus", Formatter: "json"})
+			log, err := NewLog(configuration.Log{Level: "info", Adapter: adapter, Formatter: "json"})
 			require.NoError(t, err)
 			require.NotNil(t, log)
 
@@ -171,7 +171,7 @@ func TestLog_Timestamp(t *testing.T) {
 
 			log.Error("test")
 
-			require.Regexp(t, regexp.MustCompile("[0-9][0-9]:[0-9][0-9]:[0-9][0-9]\\.[0-9]+"), buf.String())
+			require.Regexp(t, regexp.MustCompile("[0-9][0-9]:[0-9][0-9]:[0-9][0-9]"), buf.String())
 		})
 	}
 }

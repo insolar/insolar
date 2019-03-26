@@ -185,6 +185,5 @@ func checkError(ctx context.Context, err error, message string) {
 	if err == nil {
 		return
 	}
-	inslog := inslogger.FromContext(ctx)
-	log.WithSkipDelta(inslog, +1).Fatalf("%v: %v", message, err.Error())
+	inslogger.FromContext(ctx).Fatalf("%v: %v", message, err.Error())
 }
