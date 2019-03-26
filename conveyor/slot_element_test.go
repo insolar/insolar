@@ -92,11 +92,36 @@ func TestSlotElement_SendTask_NoSuchAdapterID(t *testing.T) {
 }
 
 func TestSlotElement_SendTask(t *testing.T) {
-	slot := newSlot(44, 44, func(number insolar.PulseNumber) {
+	testPulseNumber := insolar.PulseNumber(66)
+	slot := newSlot(44, testPulseNumber, func(number insolar.PulseNumber) {
 
 	})
 	el := newSlotElement(ActiveElement, slot)
+	adapter.Storage = adapter.NewStorage()
 
-	el.SendTask(uint32(adapter.SendResponseAdapterID), 42, 42)
-	adapter := adapter.Storage.GetAdapterByID(uint32(adapter.SendResponseAdapterID))
+	sinkMock := adapter.NewPulseConveyorAdapterTaskSinkMock(t)
+	testAdapterID := uint32(44)
+	sinkMock.GetAdapterIDFunc = func() (r uint32) {
+		return testAdapterID
+	}
+
+	testPayload := 142
+	testRespHandlerID := uint32(162)
+	var gotPayload interface{}
+	var gotRespHandlerID uint32
+	var gotPulseNumber insolar.PulseNumber
+	sinkMock.PushTaskFunc = func(p adapter.AdapterToSlotResponseSink, p1 uint32, respHandlerID uint32, payLoad interface{}) (r error) {
+		gotPayload = payLoad
+		gotRespHandlerID = respHandlerID
+		gotPulseNumber = p.GetPulseNumber()
+
+		return nil
+	}
+	adapter.Storage.Register(sinkMock)
+
+	el.SendTask(testAdapterID, testPayload, testRespHandlerID)
+
+	require.Equal(t, testPayload, gotPayload)
+	require.Equal(t, testRespHandlerID, gotRespHandlerID)
+	require.Equal(t, testPulseNumber, gotPulseNumber)
 }
