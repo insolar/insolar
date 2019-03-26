@@ -36,12 +36,12 @@ import (
 
 // Request is a representation of request struct to api
 type Request struct {
-	Reference string      `json:"reference"`
-	Method    string      `json:"method"`
-	Params    []byte      `json:"params"`
-	Seed      []byte      `json:"seed"`
-	Signature []byte      `json:"signature"`
-	LogLevel  interface{} `json:"logLevel"`
+	Reference string  `json:"reference"`
+	Method    string  `json:"method"`
+	Params    []byte  `json:"params"`
+	Seed      []byte  `json:"seed"`
+	Signature []byte  `json:"signature"`
+	LogLevel  *string `json:"logLevel,omitempty"`
 }
 
 type answer struct {
@@ -161,12 +161,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		}
 
 		if params.LogLevel != nil {
-			logLevelStr, ok := params.LogLevel.(string)
-			if !ok {
-				processError(err, "Bad type logLevel", &resp, insLog)
-				return
-			}
-			logLevelNumber, err := insolar.ParseLevel(logLevelStr)
+			logLevelNumber, err := insolar.ParseLevel(*params.LogLevel)
 			if err != nil {
 				processError(err, "Can't parse logLevel", &resp, insLog)
 				return

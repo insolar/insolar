@@ -43,7 +43,7 @@ func NewLog(cfg configuration.Log) (insolar.Logger, error) {
 	}
 
 	if err == nil {
-		err = logger.SetLevel(cfg.Level)
+		logger, err = logger.WithLevel(cfg.Level)
 	}
 
 	if err != nil {
@@ -57,13 +57,14 @@ func NewLog(cfg configuration.Log) (insolar.Logger, error) {
 // TODO: make it private again
 var GlobalLogger = func() insolar.Logger {
 	holder := configuration.NewHolder().MustInit(false)
+
 	logger, err := NewLog(holder.Configuration.Log)
 	if err != nil {
 		stdlog.Println("warning:", err.Error())
 	}
 
-	//logger.skipCallNumber = defaultSkipCallNumber + 1
-	if err := logger.SetLevel(holder.Configuration.Log.Level); err != nil {
+	logger, err = logger.WithLevel(holder.Configuration.Log.Level)
+	if err != nil {
 		stdlog.Println("warning:", err.Error())
 	}
 	return logger
@@ -75,7 +76,12 @@ func SetGlobalLogger(logger insolar.Logger) {
 
 // SetLevel lets log level for global logger
 func SetLevel(level string) error {
-	return GlobalLogger.SetLevel(level)
+	newGlobalLogger, err := GlobalLogger.WithLevel(level)
+	if err != nil {
+		return err
+	}
+	GlobalLogger = newGlobalLogger
+	return nil
 }
 
 // Debug logs a message at level Debug to the global logger.
@@ -140,5 +146,5 @@ func Panicf(format string, args ...interface{}) {
 
 // SetOutput sets the output destination for the logger.
 func SetOutput(w io.Writer) {
-	GlobalLogger.SetOutput(w)
+	GlobalLogger = GlobalLogger.WithOutput(w)
 }

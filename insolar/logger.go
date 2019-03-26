@@ -80,9 +80,9 @@ func ParseLevel(levelStr string) (LogLevel, error) {
 // Logger is the interface for loggers used in the Insolar components.
 type Logger interface {
 	// SetLevel sets log level.
-	SetLevel(string) error
+	WithLevel(string) (Logger, error)
 	// SetLevelNumber set log level with number
-	SetLevelNumber(level LogLevel) error
+	WithLevelNumber(level LogLevel) (Logger, error)
 
 	// Debug logs a message at level Debug.
 	Debug(...interface{})
@@ -115,12 +115,9 @@ type Logger interface {
 	Panicf(string, ...interface{})
 
 	// SetOutput sets the output destination for the logger.
-	SetOutput(w io.Writer)
+	WithOutput(w io.Writer) Logger
 	// WithFields return copy of Logger with predefined fields.
 	WithFields(map[string]interface{}) Logger
 	// WithField return copy of Logger with predefined single field.
 	WithField(string, interface{}) Logger
-
-	// Copy copies logger
-	Copy() Logger
 }

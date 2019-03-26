@@ -132,16 +132,15 @@ func TestLog_AddFields(t *testing.T) {
 			assert.NoError(t, err)
 
 			var b bytes.Buffer
-			la.SetOutput(&b)
+			logger := la.WithOutput(&b)
 
-			tItem.fieldfn(la).Error(errtxt1)
-			la.Error(errtxt2)
+			tItem.fieldfn(logger).Error(errtxt1)
+			logger.Error(errtxt2)
 
 			var recitems []string
 			for {
 				line, err := b.ReadBytes('\n')
 				if err != nil && err != io.EOF {
-
 					require.NoError(t, err)
 				}
 
@@ -167,7 +166,7 @@ func TestLog_Timestamp(t *testing.T) {
 			require.NotNil(t, log)
 
 			var buf bytes.Buffer
-			log.SetOutput(&buf)
+			log = log.WithOutput(&buf)
 
 			log.Error("test")
 

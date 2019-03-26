@@ -46,8 +46,8 @@ func SetLogger(ctx context.Context, l insolar.Logger) context.Context {
 func WithLoggerLevel(ctx context.Context, logLevel insolar.LogLevel) context.Context {
 	if logLevel != insolar.NoLevel {
 		oldLogger := FromContext(ctx)
-		logCopy := oldLogger.Copy()
-		if err := logCopy.SetLevelNumber(logLevel); err != nil {
+		logCopy, err := oldLogger.WithLevelNumber(logLevel)
+		if err != nil {
 			oldLogger.Error("failed to set log level: ", err.Error())
 			return ctx
 		}
