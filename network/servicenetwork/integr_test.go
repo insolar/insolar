@@ -55,15 +55,19 @@ package servicenetwork
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -89,17 +93,17 @@ func (s *testSuite) TestNodeConnect() {
 
 	s.waitForConsensus(1)
 
-	activeNodes := s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 
 	s.waitForConsensus(1)
 
-	activeNodes = s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 
 	s.waitForConsensus(2)
 
-	activeNodes = s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 	activeNodes = testNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
@@ -116,7 +120,7 @@ func (s *testSuite) TestNodeConnectInvalidVersion() {
 }
 
 func (s *testSuite) TestManyNodesConnect() {
-	if len(s.fixture().smallNetworkBootstrapNodes) < consensusMin {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
@@ -149,12 +153,12 @@ func (s *testSuite) TestManyNodesConnect() {
 	s.waitForConsensus(5)
 
 	joined := claimhandler.ApprovedJoinersCount(joinersCount, s.getNodesCount())
-	activeNodes := s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Equal(s.getNodesCount()+joined, len(activeNodes))
 }
 
 func (s *testSuite) TestNodeLeave() {
-	if len(s.fixture().smallNetworkBootstrapNodes) < consensusMin {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
@@ -169,12 +173,12 @@ func (s *testSuite) TestNodeLeave() {
 
 	s.waitForConsensus(2)
 
-	activeNodes := s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 
 	s.waitForConsensus(1)
 
-	activeNodes = s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 
 	testNode.serviceNetwork.Leave(context.Background(), 0)
@@ -182,16 +186,16 @@ func (s *testSuite) TestNodeLeave() {
 	s.waitForConsensus(2)
 
 	// one active node becomes "not working"
-	workingNodes := s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(workingNodes))
 
 	// but all nodes are active
-	activeNodes = s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 }
 
 func (s *testSuite) TestNodeLeaveAtETA() {
-	if len(s.fixture().smallNetworkBootstrapNodes) < consensusMin {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
@@ -206,10 +210,10 @@ func (s *testSuite) TestNodeLeaveAtETA() {
 
 	// wait for node will be added at active list
 	s.waitForConsensus(2)
-	activeNodes := s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 
-	pulse, err := s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.PulseStorage.Current(s.fixture().ctx)
+	pulse, err := s.fixture().bootstrapNodes[0].serviceNetwork.PulseStorage.Current(s.fixture().ctx)
 	s.NoError(err)
 
 	// next pulse will be last for this node
@@ -217,22 +221,22 @@ func (s *testSuite) TestNodeLeaveAtETA() {
 
 	// node still active and working
 	s.waitForConsensus(1)
-	workingNodes := s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	activeNodes = s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 	s.Equal(s.getNodesCount()+1, len(workingNodes))
 
 	// now node leaves, but it's still in active list
 	s.waitForConsensus(1)
-	activeNodes = s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-	workingNodes = s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	workingNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(workingNodes))
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 }
 
 func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 	s.T().Skip("fix testcase in TESTNET 2.0")
-	if len(s.fixture().smallNetworkBootstrapNodes) < consensusMin {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
@@ -247,10 +251,10 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 
 	// wait for node will be added at active list
 	s.waitForConsensus(2)
-	activeNodes := s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 
-	pulse, err := s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.PulseStorage.Current(s.fixture().ctx)
+	pulse, err := s.fixture().bootstrapNodes[0].serviceNetwork.PulseStorage.Current(s.fixture().ctx)
 	s.NoError(err)
 
 	// leaving in 3 pulses
@@ -273,8 +277,8 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 	s.waitForConsensus(2)
 
 	// newNode doesn't have workingNodes
-	activeNodes = s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-	workingNodes := s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	newNodeWorkingNodes := newNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 
 	s.Equal(s.getNodesCount()+2, len(activeNodes))
@@ -283,8 +287,8 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 
 	// newNode have to have same working node list as other nodes, but it doesn't because it miss leaving claim
 	s.waitForConsensus(1)
-	activeNodes = s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-	workingNodes = s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	workingNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	newNodeWorkingNodes = newNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 
 	s.Equal(s.getNodesCount()+2, len(activeNodes))
@@ -294,7 +298,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 
 	// leaveNode leaving, newNode still ok
 	s.waitForConsensus(1)
-	activeNodes = s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	workingNodes = newNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 	newNodeWorkingNodes = newNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
 
@@ -329,194 +333,194 @@ func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *insolar
 }
 
 func (s *testSuite) TestFullTimeOut() {
-	if len(s.fixture().smallNetworkBootstrapNodes) < consensusMin {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
 	// TODO: make this set operation thread-safe somehow (race detector does not like this code)
-	wrapper := s.fixture().smallNetworkBootstrapNodes[1].serviceNetwork.PhaseManager.(*phaseManagerWrapper)
+	wrapper := s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager.(*phaseManagerWrapper)
 	wrapper.original = &FullTimeoutPhaseManager{}
-	s.fixture().smallNetworkBootstrapNodes[1].serviceNetwork.PhaseManager = wrapper
+	s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager = wrapper
 
 	s.waitForConsensus(2)
 
-	activeNodes := s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()-1, len(activeNodes))
 }
 
 // Partial timeout
 
 func (s *testSuite) TestPartialPositive1PhaseTimeOut() {
-	if len(s.fixture().smallNetworkBootstrapNodes) < consensusMin {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	setCommunicatorMock(s.fixture().smallNetworkBootstrapNodes, PartialPositive1Phase)
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive1Phase)
 
-	s.waitForConsensusExcept(2, s.fixture().smallNetworkBootstrapNodes[0].id)
-	activeNodes := s.fixture().smallNetworkBootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
 func (s *testSuite) TestPartialPositive2PhaseTimeOut() {
-	if len(s.fixture().smallNetworkBootstrapNodes) < consensusMin {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	setCommunicatorMock(s.fixture().smallNetworkBootstrapNodes, PartialPositive2Phase)
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive2Phase)
 
-	s.waitForConsensusExcept(2, s.fixture().smallNetworkBootstrapNodes[0].id)
-	activeNodes := s.fixture().smallNetworkBootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
 func (s *testSuite) TestPartialNegative1PhaseTimeOut() {
-	if len(s.fixture().smallNetworkBootstrapNodes) < consensusMin {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	setCommunicatorMock(s.fixture().smallNetworkBootstrapNodes, PartialNegative1Phase)
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative1Phase)
 
-	s.waitForConsensusExcept(2, s.fixture().smallNetworkBootstrapNodes[0].id)
-	activeNodes := s.fixture().smallNetworkBootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()-1, len(activeNodes))
 }
 
 func (s *testSuite) TestPartialNegative2PhaseTimeOut() {
-	if len(s.fixture().smallNetworkBootstrapNodes) < consensusMin {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	setCommunicatorMock(s.fixture().smallNetworkBootstrapNodes, PartialNegative2Phase)
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative2Phase)
 
-	s.waitForConsensusExcept(2, s.fixture().smallNetworkBootstrapNodes[0].id)
-	activeNodes := s.fixture().smallNetworkBootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
 func (s *testSuite) TestPartialNegative3PhaseTimeOut() {
-	if len(s.fixture().smallNetworkBootstrapNodes) < consensusMin {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	setCommunicatorMock(s.fixture().smallNetworkBootstrapNodes, PartialNegative3Phase)
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative3Phase)
 
-	s.waitForConsensusExcept(2, s.fixture().smallNetworkBootstrapNodes[0].id)
-	activeNodes := s.fixture().smallNetworkBootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
 func (s *testSuite) TestPartialPositive3PhaseTimeOut() {
-	if len(s.fixture().smallNetworkBootstrapNodes) < consensusMin {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	setCommunicatorMock(s.fixture().smallNetworkBootstrapNodes, PartialPositive3Phase)
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive3Phase)
 
-	s.waitForConsensusExcept(2, s.fixture().smallNetworkBootstrapNodes[0].id)
-	activeNodes := s.fixture().smallNetworkBootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
 func (s *testSuite) TestPartialNegative23PhaseTimeOut() {
-	if len(s.fixture().smallNetworkBootstrapNodes) < consensusMin {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	setCommunicatorMock(s.fixture().smallNetworkBootstrapNodes, PartialNegative23Phase)
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialNegative23Phase)
 
-	s.waitForConsensusExcept(2, s.fixture().smallNetworkBootstrapNodes[0].id)
-	activeNodes := s.fixture().smallNetworkBootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
 func (s *testSuite) TestPartialPositive23PhaseTimeOut() {
-	if len(s.fixture().smallNetworkBootstrapNodes) < consensusMin {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	setCommunicatorMock(s.fixture().smallNetworkBootstrapNodes, PartialPositive23Phase)
+	setCommunicatorMock(s.fixture().bootstrapNodes, PartialPositive23Phase)
 
-	s.waitForConsensusExcept(2, s.fixture().smallNetworkBootstrapNodes[0].id)
-	activeNodes := s.fixture().smallNetworkBootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
 func (s *testSuite) TestDiscoveryDown() {
-	if len(s.fixture().smallNetworkBootstrapNodes) < consensusMin {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	s.StopNode(s.fixture().smallNetworkBootstrapNodes[0])
+	s.StopNode(s.fixture().bootstrapNodes[0])
 
-	s.waitForConsensusExcept(2, s.fixture().smallNetworkBootstrapNodes[0].id)
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	for i := 1; i < s.getNodesCount(); i++ {
-		activeNodes := s.fixture().smallNetworkBootstrapNodes[i].serviceNetwork.NodeKeeper.GetWorkingNodes()
+		activeNodes := s.fixture().bootstrapNodes[i].serviceNetwork.NodeKeeper.GetWorkingNodes()
 		s.Equal(s.getNodesCount()-1, len(activeNodes))
 	}
 }
 
 func (s *testSuite) TestDiscoveryRestart() {
-	if len(s.fixture().smallNetworkBootstrapNodes) < consensusMin {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
 	s.waitForConsensus(2)
 
 	log.Info("Discovery node stopping...")
-	err := s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.Stop(context.Background())
-	s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.(*nodeKeeperWrapper).Wipe(true)
+	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
+	s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.(*nodeKeeperWrapper).Wipe(true)
 	log.Info("Discovery node stopped...")
 	s.Require().NoError(err)
 
-	s.waitForConsensusExcept(2, s.fixture().smallNetworkBootstrapNodes[0].id)
-	activeNodes := s.fixture().smallNetworkBootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()-1, len(activeNodes))
 
 	log.Info("Discovery node starting...")
-	err = s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.Start(context.Background())
+	err = s.fixture().bootstrapNodes[0].serviceNetwork.Start(context.Background())
 	log.Info("Discovery node started")
 	s.Require().NoError(err)
 
-	s.waitForConsensusExcept(3, s.fixture().smallNetworkBootstrapNodes[0].id)
-	activeNodes = s.fixture().smallNetworkBootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.waitForConsensusExcept(3, s.fixture().bootstrapNodes[0].id)
+	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
-	activeNodes = s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
 func (s *testSuite) TestDiscoveryRestartNoWait() {
-	if len(s.fixture().smallNetworkBootstrapNodes) < consensusMin {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
 	s.waitForConsensus(2)
 
 	log.Info("Discovery node stopping...")
-	err := s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.Stop(context.Background())
-	s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.(*nodeKeeperWrapper).Wipe(true)
+	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
+	s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.(*nodeKeeperWrapper).Wipe(true)
 	log.Info("Discovery node stopped...")
 	s.Require().NoError(err)
 
 	go func(s *testSuite) {
 		log.Info("Discovery node starting...")
-		err = s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.Start(context.Background())
+		err = s.fixture().bootstrapNodes[0].serviceNetwork.Start(context.Background())
 		log.Info("Discovery node started")
 		s.Require().NoError(err)
 	}(s)
 
-	s.waitForConsensusExcept(4, s.fixture().smallNetworkBootstrapNodes[0].id)
-	activeNodes := s.fixture().smallNetworkBootstrapNodes[1].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	s.waitForConsensusExcept(4, s.fixture().bootstrapNodes[0].id)
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
-	s.waitForConsensusExcept(1, s.fixture().smallNetworkBootstrapNodes[0].id)
-	activeNodes = s.fixture().smallNetworkBootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.waitForConsensusExcept(1, s.fixture().bootstrapNodes[0].id)
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
-	activeNodes = s.fixture().smallNetworkBootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
 func (s *testSuite) TestCyclicBootstrap() {
-	if len(s.fixture().smallNetworkBootstrapNodes) < consensusMin {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
@@ -524,7 +528,7 @@ func (s *testSuite) TestCyclicBootstrap() {
 	s.Require().NoError(err)
 
 	largeNetwork := make([]*networkNode, 0)
-	for i := 0; i < s.largeNetworkCount; i++ {
+	for i := 0; i < s.bootstrapCount+1; i++ {
 		largeNetwork = append(largeNetwork, s.newNetworkNode(fmt.Sprintf("large_network_bootstrap_%d", i)))
 	}
 
@@ -537,6 +541,7 @@ func (s *testSuite) TestCyclicBootstrap() {
 	s.Require().NoError(err)
 
 	s.SetupNodesNetwork(largeNetwork)
+	s.startNodesNetwork(largeNetwork)
 	s.waitForConsensus(4)
 
 	activeNodes := largeNetwork[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
@@ -561,4 +566,96 @@ func setCommunicatorMock(nodes []*networkNode, opt CommunicatorTestOpt) {
 		phasemanager.SecondPhase.(*phases.SecondPhaseImpl).Communicator = wrapper
 		phasemanager.ThirdPhase.(*phases.ThirdPhaseImpl).Communicator = wrapper
 	}
+}
+
+func (s *testSuite) initCert(node *networkNode, nodes []*networkNode) (*certificate.CertificateManager, insolar.CryptographyService) {
+	pubKey, err := node.cryptographyService.GetPublicKey()
+	s.Require().NoError(err)
+
+	// init certificate
+
+	proc := platformpolicy.NewKeyProcessor()
+	publicKey, err := proc.ExportPublicKeyPEM(pubKey)
+	s.Require().NoError(err)
+
+	cert := &certificate.Certificate{}
+	cert.PublicKey = string(publicKey[:])
+	cert.Reference = node.id.String()
+	cert.Role = node.role.String()
+	cert.BootstrapNodes = make([]certificate.BootstrapNode, 0)
+
+	for _, b := range nodes {
+		pubKey, _ := b.cryptographyService.GetPublicKey()
+		pubKeyBuf, err := proc.ExportPublicKeyPEM(pubKey)
+		s.Require().NoError(err)
+
+		bootstrapNode := certificate.NewBootstrapNode(
+			pubKey,
+			string(pubKeyBuf[:]),
+			b.host,
+			b.id.String())
+
+		cert.BootstrapNodes = append(cert.BootstrapNodes, *bootstrapNode)
+	}
+
+	// dump cert and read it again from json for correct private files initialization
+	jsonCert, err := cert.Dump()
+	s.Require().NoError(err)
+	log.Infof("cert: %s", jsonCert)
+
+	cert, err = certificate.ReadCertificateFromReader(pubKey, proc, strings.NewReader(jsonCert))
+	s.Require().NoError(err)
+	return certificate.NewCertificateManager(cert), node.cryptographyService
+}
+
+func (s *testSuite) startNodesNetwork(nodes []*networkNode) {
+	for _, node := range nodes {
+		s.preInitNode(node)
+	}
+
+	results := make(chan error, len(nodes))
+	initNode := func(node *networkNode) {
+		err := node.init()
+		results <- err
+	}
+	startNode := func(node *networkNode) {
+		err := node.componentManager.Start(node.ctx)
+		results <- err
+	}
+
+	waitResults := func(results chan error, expected int) error {
+		count := 0
+		for {
+			select {
+			case err := <-results:
+				count++
+				s.Require().NoError(err)
+				if count == expected {
+					return nil
+				}
+			case <-time.After(time.Second * 30):
+				return errors.New("timeout")
+			}
+		}
+	}
+
+	log.Info("Init nodes")
+	for _, node := range nodes {
+		go initNode(node)
+	}
+
+	err := waitResults(results, len(nodes))
+	s.Require().NoError(err)
+
+	for _, node := range nodes {
+		s.initCert(node, nodes)
+	}
+
+	log.Info("Start nodes")
+	for _, node := range nodes {
+		go startNode(node)
+	}
+
+	err = waitResults(results, len(nodes))
+	s.Require().NoError(err)
 }
