@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Cleaner" can be found in github.com/insolar/insolar/ledger/storage/blob
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// CleanerMock implements github.com/insolar/insolar/ledger/storage/blob.Cleaner
+//CleanerMock implements github.com/insolar/insolar/ledger/storage/blob.Cleaner
 type CleanerMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type CleanerMock struct {
 	DeleteMock       mCleanerMockDelete
 }
 
-// NewCleanerMock returns a mock for github.com/insolar/insolar/ledger/storage/blob.Cleaner
+//NewCleanerMock returns a mock for github.com/insolar/insolar/ledger/storage/blob.Cleaner
 func NewCleanerMock(t minimock.Tester) *CleanerMock {
 	m := &CleanerMock{t: t}
 
@@ -54,7 +54,7 @@ type CleanerMockDeleteInput struct {
 	p1 insolar.PulseNumber
 }
 
-// Expect specifies that invocation of Cleaner.Delete is expected from 1 to Infinity times
+//Expect specifies that invocation of Cleaner.Delete is expected from 1 to Infinity times
 func (m *mCleanerMockDelete) Expect(p context.Context, p1 insolar.PulseNumber) *mCleanerMockDelete {
 	m.mock.DeleteFunc = nil
 	m.expectationSeries = nil
@@ -66,7 +66,7 @@ func (m *mCleanerMockDelete) Expect(p context.Context, p1 insolar.PulseNumber) *
 	return m
 }
 
-// Return specifies results of invocation of Cleaner.Delete
+//Return specifies results of invocation of Cleaner.Delete
 func (m *mCleanerMockDelete) Return() *CleanerMock {
 	m.mock.DeleteFunc = nil
 	m.expectationSeries = nil
@@ -78,7 +78,7 @@ func (m *mCleanerMockDelete) Return() *CleanerMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Cleaner.Delete is expected once
+//ExpectOnce specifies that invocation of Cleaner.Delete is expected once
 func (m *mCleanerMockDelete) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *CleanerMockDeleteExpectation {
 	m.mock.DeleteFunc = nil
 	m.mainExpectation = nil
@@ -89,7 +89,7 @@ func (m *mCleanerMockDelete) ExpectOnce(p context.Context, p1 insolar.PulseNumbe
 	return expectation
 }
 
-// Set uses given function f as a mock of Cleaner.Delete method
+//Set uses given function f as a mock of Cleaner.Delete method
 func (m *mCleanerMockDelete) Set(f func(p context.Context, p1 insolar.PulseNumber)) *CleanerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -98,7 +98,7 @@ func (m *mCleanerMockDelete) Set(f func(p context.Context, p1 insolar.PulseNumbe
 	return m.mock
 }
 
-// Delete implements github.com/insolar/insolar/ledger/storage/blob.Cleaner interface
+//Delete implements github.com/insolar/insolar/ledger/storage/blob.Cleaner interface
 func (m *CleanerMock) Delete(p context.Context, p1 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteCounter, 1)
@@ -133,17 +133,17 @@ func (m *CleanerMock) Delete(p context.Context, p1 insolar.PulseNumber) {
 	m.DeleteFunc(p, p1)
 }
 
-// DeleteMinimockCounter returns a count of CleanerMock.DeleteFunc invocations
+//DeleteMinimockCounter returns a count of CleanerMock.DeleteFunc invocations
 func (m *CleanerMock) DeleteMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.DeleteCounter)
 }
 
-// DeleteMinimockPreCounter returns the value of CleanerMock.Delete invocations
+//DeleteMinimockPreCounter returns the value of CleanerMock.Delete invocations
 func (m *CleanerMock) DeleteMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.DeletePreCounter)
 }
 
-// DeleteFinished returns true if mock invocations count is ok
+//DeleteFinished returns true if mock invocations count is ok
 func (m *CleanerMock) DeleteFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.DeleteMock.expectationSeries) > 0 {
@@ -163,8 +163,8 @@ func (m *CleanerMock) DeleteFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CleanerMock) ValidateCallCounters() {
 
 	if !m.DeleteFinished() {
@@ -173,19 +173,19 @@ func (m *CleanerMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CleanerMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *CleanerMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *CleanerMock) MinimockFinish() {
 
 	if !m.DeleteFinished() {
@@ -194,14 +194,14 @@ func (m *CleanerMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *CleanerMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *CleanerMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -227,8 +227,8 @@ func (m *CleanerMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *CleanerMock) AllMocksCalled() bool {
 
 	if !m.DeleteFinished() {

@@ -6,13 +6,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "ObjectStorage" can be found in github.com/insolar/insolar/ledger/storage
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/object"
+	insolar "github.com/insolar/insolar/insolar"
+	object "github.com/insolar/insolar/ledger/storage/object"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
