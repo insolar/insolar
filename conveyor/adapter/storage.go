@@ -31,7 +31,7 @@ func (s *Storage) GetAdapterByID(id adapterid.ID) TaskSink {
 }
 
 func (s *Storage) Register(adapter TaskSink) {
-	id := adapterid.ID(adapter.GetAdapterID())
+	id := adapter.GetAdapterID()
 	_, ok := s.adapters[id]
 	if ok {
 		panic(fmt.Sprintf("[ StorageManager.Register ] adapter ID '%s' already exists", id.String()))

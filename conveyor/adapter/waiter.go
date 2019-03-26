@@ -27,7 +27,7 @@ import (
 
 // NewWaitAdapter creates new instance of SimpleWaitAdapter with Waiter as worker
 func NewWaitAdapter(id adapterid.ID) TaskSink {
-	return NewAdapterWithQueue(NewWaiter(id), id)
+	return NewAdapterWithQueue(NewWaiter(), id)
 }
 
 // WaiterTask is task for adapter for waiting
@@ -39,7 +39,7 @@ type WaiterTask struct {
 type Waiter struct{}
 
 // NewWaiter returns new instance of worker which waiting
-func NewWaiter(id adapterid.ID) Processor {
+func NewWaiter() Processor {
 	return &Waiter{}
 }
 
