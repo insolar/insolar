@@ -12,66 +12,71 @@
 *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 *    See the License for the specific language governing permissions and
 *    limitations under the License.
-*/
+ */
 
 package matrix
 
 import (
-    "github.com/insolar/insolar/conveyor/interfaces/statemachine"
-    "github.com/insolar/insolar/conveyor/generator/state_machines/sample"
-    
+	"github.com/insolar/insolar/conveyor/generator/state_machines/getcode"
+	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
+	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 )
 
 const numPulseStates = 3
 
-type StateMachineSet struct{
-    stateMachines []statemachine.StateMachine
+type StateMachineSet struct {
+	stateMachines []statemachine.StateMachine
 }
 
-func ( s *StateMachineSet ) GetStateMachineByID(id int) statemachine.StateMachine{
-    return s.stateMachines[id]
+func (s *StateMachineSet) GetStateMachineByID(id int) statemachine.StateMachine {
+	return s.stateMachines[id]
 }
 
 type Matrix struct {
-    matrix  [numPulseStates]StateMachineSet
+	matrix [numPulseStates]StateMachineSet
 }
 
 type MachineType int
 
 const (
-    TestStateMachine MachineType = iota + 1
+	GetCodeStateMachine MachineType = iota + 1
+	TestStateMachine
 )
 
 func NewMatrix() *Matrix {
-    m := Matrix{}
+	m := Matrix{}
 
-    // Fill m.matrix[i][0] with empty state machine, since 0 - is state of completion of state machine
-    var emptyObject  statemachine.StateMachine
-    	for i := 0; i < numPulseStates; i++ {
-    		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, emptyObject)
-    	}
+	// Fill m.matrix[i][0] with empty state machine, since 0 - is state of completion of state machine
+	var emptyObject statemachine.StateMachine
+	for i := 0; i < numPulseStates; i++ {
+		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, emptyObject)
+	}
 
-    
-    smsTestStateMachine := sample.RawTestStateMachineFactory()
-    for i := 0; i < numPulseStates; i++ {
-        m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, smsTestStateMachine[i])
-    }
-    
-    return &m
+	smsGetCodeStateMachine := getcode.RawGetCodeStateMachineFactory()
+	for i := 0; i < numPulseStates; i++ {
+		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, smsGetCodeStateMachine[i])
+	}
+
+	smsTestStateMachine := sample.RawTestStateMachineFactory()
+	for i := 0; i < numPulseStates; i++ {
+		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, smsTestStateMachine[i])
+	}
+
+	return &m
 }
 
 func (m *Matrix) GetInitialStateMachine() statemachine.StateMachine {
-    return m.matrix[1].stateMachines[1]
+	return m.matrix[1].stateMachines[1]
 }
 
-func (m *Matrix) GetFutureConfig() statemachine.SetAccessor{
-    return &m.matrix[0]
+func (m *Matrix) GetFutureConfig() statemachine.SetAccessor {
+	return &m.matrix[0]
 }
 
-func (m *Matrix) GetPresentConfig() statemachine.SetAccessor{
-    return &m.matrix[1]
+func (m *Matrix) GetPresentConfig() statemachine.SetAccessor {
+	return &m.matrix[1]
 }
 
-func (m *Matrix) GetPastConfig() statemachine.SetAccessor{
-    return &m.matrix[2]
+func (m *Matrix) GetPastConfig() statemachine.SetAccessor {
+	return &m.matrix[2]
 }
