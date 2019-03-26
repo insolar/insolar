@@ -99,7 +99,7 @@ func TestSlotElement_SendTask(t *testing.T) {
 	el := newSlotElement(ActiveElement, slot)
 	adapter.Storage = adapter.NewStorage()
 
-	sinkMock := adapter.NewPulseConveyorAdapterTaskSinkMock(t)
+	sinkMock := adapter.NewTaskSinkMock(t)
 	testAdapterID := uint32(44)
 	sinkMock.GetAdapterIDFunc = func() (r uint32) {
 		return testAdapterID

@@ -229,7 +229,7 @@ func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
 	}
 }
 
-// PushTask implements PulseConveyorAdapterTaskSink
+// PushTask implements TaskSink
 func (a *CancellableQueueAdapter) PushTask(respSink AdapterToSlotResponseSink,
 	elementID idType,
 	handlerID idType,

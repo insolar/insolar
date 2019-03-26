@@ -21,14 +21,14 @@ import (
 )
 
 type storage struct {
-	adapters map[ID]PulseConveyorAdapterTaskSink
+	adapters map[ID]TaskSink
 }
 
-func (s *storage) GetAdapterByID(id uint32) PulseConveyorAdapterTaskSink {
+func (s *storage) GetAdapterByID(id uint32) TaskSink {
 	return s.adapters[ID(id)]
 }
 
-func (s *storage) Register(adapter PulseConveyorAdapterTaskSink) PulseConveyorAdapterTaskSink {
+func (s *storage) Register(adapter TaskSink) TaskSink {
 	id := ID(adapter.GetAdapterID())
 	_, ok := s.adapters[id]
 	if ok {
@@ -54,7 +54,7 @@ var Storage storage
 
 func NewStorage() storage {
 	return storage{
-		adapters: make(map[ID]PulseConveyorAdapterTaskSink),
+		adapters: make(map[ID]TaskSink),
 	}
 }
 

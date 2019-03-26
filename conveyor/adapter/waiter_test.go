@@ -140,7 +140,7 @@ func TestParallel(t *testing.T) {
 
 	// PushTask
 	for i := 0; i < parallelPushTasks; i++ {
-		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+		go func(wg *sync.WaitGroup, adapter TaskSink) {
 			for i := 0; i < numIterations; i++ {
 				resp := &mockResponseSink{}
 				adapter.PushTask(resp, 34, 22, WaiterTask{waitPeriodMilliseconds: 20})
@@ -151,7 +151,7 @@ func TestParallel(t *testing.T) {
 
 	// CancelElementTasks
 	for i := 0; i < parallelCancelElement; i++ {
-		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+		go func(wg *sync.WaitGroup, adapter TaskSink) {
 			for i := 0; i < numIterations; i++ {
 				adapter.CancelElementTasks(pulseNumber, 22)
 			}
@@ -161,7 +161,7 @@ func TestParallel(t *testing.T) {
 
 	// CancelPulseTasks
 	for i := 0; i < parallelCancelPulse; i++ {
-		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+		go func(wg *sync.WaitGroup, adapter TaskSink) {
 			for i := 0; i < numIterations; i++ {
 				adapter.CancelPulseTasks(pulseNumber)
 			}
@@ -171,7 +171,7 @@ func TestParallel(t *testing.T) {
 
 	// FlushPulseTasks
 	for i := 0; i < parallelFlushPulse; i++ {
-		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+		go func(wg *sync.WaitGroup, adapter TaskSink) {
 			for i := 0; i < numIterations; i++ {
 				adapter.FlushPulseTasks(pulseNumber)
 			}
@@ -181,7 +181,7 @@ func TestParallel(t *testing.T) {
 
 	// FlushNodeTasks
 	for i := 0; i < parallelFlushNode; i++ {
-		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+		go func(wg *sync.WaitGroup, adapter TaskSink) {
 			for i := 0; i < numIterations; i++ {
 				adapter.FlushNodeTasks(uint32(pulseNumber))
 			}

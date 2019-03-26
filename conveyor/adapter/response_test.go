@@ -125,7 +125,7 @@ func TestResponseSendAdapter_Parallel(t *testing.T) {
 
 	// PushTask
 	for i := 0; i < parallelPushTasks; i++ {
-		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+		go func(wg *sync.WaitGroup, adapter TaskSink) {
 			for i := 0; i < numIterations; i++ {
 				resp := &mockResponseSink{}
 				adapter.PushTask(resp, 34, 22, testResponseSenderTask(t))

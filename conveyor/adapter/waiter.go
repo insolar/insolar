@@ -25,7 +25,7 @@ import (
 )
 
 // NewWaitAdapter creates new instance of SimpleWaitAdapter with Waiter as worker
-func NewWaitAdapter(id idType) PulseConveyorAdapterTaskSink {
+func NewWaitAdapter(id idType) TaskSink {
 	return NewAdapterWithQueue(NewWaiter(id), id)
 }
 

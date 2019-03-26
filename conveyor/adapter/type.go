@@ -25,10 +25,10 @@ import (
 
 type idType = uint32
 
-// PulseConveyorAdapterTaskSink is iface which helps to slot to push task to adapter
+// TaskSink is iface which helps to slot to push task to adapter
 // NestedEvent gives access to nested event of adapter
-//go:generate minimock -i github.com/insolar/insolar/conveyor/adapter.PulseConveyorAdapterTaskSink -o ./ -s _mock.go
-type PulseConveyorAdapterTaskSink interface {
+//go:generate minimock -i github.com/insolar/insolar/conveyor/adapter.TaskSink -o ./ -s _mock.go
+type TaskSink interface {
 	PushTask(respSink AdapterToSlotResponseSink, elementID idType, handlerID idType, taskPayload interface{}) error
 	CancelElementTasks(pulseNumber insolar.PulseNumber, elementID idType)
 	CancelPulseTasks(pulseNumber insolar.PulseNumber)
@@ -149,7 +149,7 @@ type Processor interface {
 }
 
 // NewAdapterWithQueue creates new instance of Adapter
-func NewAdapterWithQueue(processor Processor, id idType) PulseConveyorAdapterTaskSink {
+func NewAdapterWithQueue(processor Processor, id idType) TaskSink {
 	adapter := &CancellableQueueAdapter{
 		queue:             queue.NewMutexQueue(),
 		processingStarted: 0,

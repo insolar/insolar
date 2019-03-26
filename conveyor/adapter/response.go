@@ -26,7 +26,7 @@ import (
 )
 
 // NewResponseSendAdapter creates new instance of adapter for sending response
-func NewResponseSendAdapter(id uint32) PulseConveyorAdapterTaskSink {
+func NewResponseSendAdapter(id uint32) TaskSink {
 	return NewAdapterWithQueue(NewSendResponseProcessor(), id)
 }
 

@@ -25,7 +25,7 @@ import (
 
 func makeEmptyStorage() storage {
 	return storage{
-		adapters: make(map[ID]PulseConveyorAdapterTaskSink),
+		adapters: make(map[ID]TaskSink),
 	}
 }
 
@@ -46,7 +46,7 @@ func TestInitializer_RegisterAndGet(t *testing.T) {
 
 	for i := 0; i < 20; i++ {
 		testAdapterID := uint32(i * i)
-		sinkMock := NewPulseConveyorAdapterTaskSinkMock(t)
+		sinkMock := NewTaskSinkMock(t)
 		sinkMock.GetAdapterIDFunc = func() (r uint32) {
 			return testAdapterID
 		}
@@ -60,7 +60,7 @@ func TestInitializer_RegisterDuplicatingID(t *testing.T) {
 	storage := makeEmptyStorage()
 
 	testAdapterID := uint32(142)
-	sinkMock := NewPulseConveyorAdapterTaskSinkMock(t)
+	sinkMock := NewTaskSinkMock(t)
 	sinkMock.GetAdapterIDFunc = func() (r uint32) {
 		return testAdapterID
 	}
@@ -79,7 +79,7 @@ func TestInitializer_GetRegisteredAdapters(t *testing.T) {
 
 	for i := 0; i < numRegistered; i++ {
 		testAdapterID := uint32(i)
-		sinkMock := NewPulseConveyorAdapterTaskSinkMock(t)
+		sinkMock := NewTaskSinkMock(t)
 		sinkMock.GetAdapterIDFunc = func() (r uint32) {
 			return testAdapterID
 		}
@@ -92,12 +92,12 @@ func TestInitializer_GetRegisteredAdapters(t *testing.T) {
 
 	// we need sort here, since adapters are stored in storage in map
 	sort.Slice(registered, func(i, j int) bool {
-		left := registered[i].(PulseConveyorAdapterTaskSink).GetAdapterID()
-		right := registered[j].(PulseConveyorAdapterTaskSink).GetAdapterID()
+		left := registered[i].(TaskSink).GetAdapterID()
+		right := registered[j].(TaskSink).GetAdapterID()
 		return left < right
 	})
 
 	for i := 0; i < numRegistered; i++ {
-		require.Equal(t, uint32(i), registered[i].(PulseConveyorAdapterTaskSink).GetAdapterID())
+		require.Equal(t, uint32(i), registered[i].(TaskSink).GetAdapterID())
 	}
 }

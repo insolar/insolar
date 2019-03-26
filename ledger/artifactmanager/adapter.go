@@ -26,7 +26,7 @@ import (
 )
 
 // NewGetCodeAdapter creates new instance of adapter for getting code
-func NewGetCodeAdapter(cg GetCodeProcessor) adapter.PulseConveyorAdapterTaskSink {
+func NewGetCodeAdapter(cg GetCodeProcessor) adapter.TaskSink {
 	return adapter.NewAdapterWithQueue(&cg)
 }
 
