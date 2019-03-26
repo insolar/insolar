@@ -70,7 +70,6 @@ func TestBlobStorages(t *testing.T) {
 	f.NumElements(5, 10).NilChance(0).Fuzz(&blobs)
 
 	for name, s := range storages {
-
 		t.Run(name+" saves correct blob-value", func(t *testing.T) {
 			for _, bl := range blobs {
 				err := s.Set(ctx, bl.id, bl.b)
@@ -88,8 +87,6 @@ func TestBlobStorages(t *testing.T) {
 		})
 
 		t.Run(name+" returns error when no blob-value for id", func(t *testing.T) {
-			t.Parallel()
-
 			for i := 0; i < 10; i++ {
 				_, err := s.ForID(ctx, newUnseenID())
 				require.Error(t, err)
@@ -98,8 +95,6 @@ func TestBlobStorages(t *testing.T) {
 		})
 
 		t.Run(name+" returns override error when saving with the same id", func(t *testing.T) {
-			t.Parallel()
-
 			for _, bl := range blobs {
 				err := s.Set(ctx, bl.id, bl.b)
 				require.Error(t, err)
@@ -107,6 +102,16 @@ func TestBlobStorages(t *testing.T) {
 			}
 		})
 	}
+
+	t.Run("compare memory and storage implementations", func(t *testing.T) {
+		for _, bl := range blobs {
+			resMem, err := memStorage.ForID(ctx, bl.id)
+			require.NoError(t, err)
+			dbBlob, err := dbStorage.ForID(ctx, bl.id)
+			require.NoError(t, err)
+			assert.Equal(t, resMem, dbBlob, "memory and persistent result should be match")
+		}
+	})
 }
 
 // sizedSlice generates random byte slice fixed size.
