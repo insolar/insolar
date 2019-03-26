@@ -39,6 +39,13 @@ type Accessor interface {
 	ForPulse(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (Drop, error)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/drop.Cleaner -o ./ -s _mock.go
+
+// Cleaner provides an interface for removing jetdrops from a storage.
+type Cleaner interface {
+	Delete(pulse insolar.PulseNumber)
+}
+
 // Drop is a blockchain block.
 // It contains hashes of the current block and the previous one.
 type Drop struct {
@@ -78,13 +85,6 @@ func Decode(buf []byte) (*Drop, error) {
 		return nil, err
 	}
 	return &drop, nil
-}
-
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/drop.Cleaner -o ./ -s _mock.go
-
-// Cleaner provides an interface for removing jetdrops from a storage.
-type Cleaner interface {
-	Delete(pulse insolar.PulseNumber)
 }
 
 // Serialize serializes a drop

@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -55,6 +56,9 @@ type MessageHandler struct {
 	JetStorage                 jet.Storage                        `inject:""`
 
 	DropModifier drop.Modifier `inject:""`
+
+	BlobModifier blob.Modifier `inject:""`
+	BlobAccessor blob.Accessor `inject:""`
 
 	IDLocker storage.IDLocker `inject:""`
 
@@ -348,7 +352,7 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel insolar.Parce
 	jetID := jetFromContext(ctx)
 	calculatedID := object.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
 
-	_, err := h.ObjectStorage.GetBlob(ctx, jetID, calculatedID)
+	_, err := h.BlobAccessor.ForID(ctx, *calculatedID)
 	if err == nil {
 		return &reply.ID{ID: *calculatedID}, nil
 	}
@@ -356,9 +360,9 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel insolar.Parce
 		return nil, err
 	}
 
-	id, err := h.ObjectStorage.SetBlob(ctx, jetID, parcel.Pulse(), msg.Memory)
+	err = h.BlobModifier.Set(ctx, *calculatedID, blob.Blob{Value: msg.Memory, JetID: insolar.JetID(jetID)})
 	if err == nil {
-		return &reply.ID{ID: *id}, nil
+		return &reply.ID{ID: *calculatedID}, nil
 	}
 	if err == storage.ErrOverride {
 		return &reply.ID{ID: *calculatedID}, nil
@@ -382,13 +386,13 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel insolar.Parce
 	if err != nil {
 		return nil, err
 	}
-	code, err := h.ObjectStorage.GetBlob(ctx, insolar.ID(jetID), codeRec.Code)
+	code, err := h.BlobAccessor.ForID(ctx, *codeRec.Code)
 	if err != nil {
 		return nil, err
 	}
 
 	rep := reply.Code{
-		Code:        code,
+		Code:        code.Value,
 		MachineType: codeRec.MachineType,
 	}
 
@@ -559,10 +563,11 @@ func (h *MessageHandler) handleGetObject(
 	}
 
 	if state.GetMemory() != nil {
-		rep.Memory, err = h.ObjectStorage.GetBlob(ctx, *stateJet, state.GetMemory())
+		b, err := h.BlobAccessor.ForID(ctx, *state.GetMemory())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch blob")
 		}
+		rep.Memory = b.Value
 	}
 
 	return &rep, nil
@@ -819,18 +824,19 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 
 	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Object.Record())
 
+	calculatedID := object.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
 	//  id will not match the one calculated on the server.
-	blobID, err := h.ObjectStorage.SetBlob(ctx, jetID, parcel.Pulse(), msg.Memory)
+	err := h.BlobModifier.Set(ctx, *calculatedID, blob.Blob{JetID: insolar.JetID(jetID), Value: msg.Memory})
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to set blob")
 	}
 
 	switch s := state.(type) {
 	case *object.ActivateRecord:
-		s.Memory = blobID
+		s.Memory = calculatedID
 	case *object.AmendRecord:
-		s.Memory = blobID
+		s.Memory = calculatedID
 	}
 
 	h.IDLocker.Lock(msg.Object.Record())

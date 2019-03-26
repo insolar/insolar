@@ -27,9 +27,6 @@ import (
 
 // ObjectStorage returns objects and their meta
 type ObjectStorage interface {
-	GetBlob(ctx context.Context, jetID insolar.ID, id *insolar.ID) ([]byte, error)
-	SetBlob(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, blob []byte) (*insolar.ID, error)
-
 	GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (object.VirtualRecord, error)
 	SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec object.VirtualRecord) (*insolar.ID, error)
 

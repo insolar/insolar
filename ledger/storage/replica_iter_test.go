@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -51,6 +52,7 @@ type replicaIterSuite struct {
 	objectStorage storage.ObjectStorage
 	dropModifier  drop.Modifier
 	dropAccessor  drop.Accessor
+	blobModifier  blob.Modifier
 }
 
 func NewReplicaIterSuite() *replicaIterSuite {
@@ -76,6 +78,9 @@ func (s *replicaIterSuite) BeforeTest(suiteName, testName string) {
 	dropStorage := drop.NewStorageDB()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
+
+	bs := blob.NewStorageMemory()
+	s.blobModifier = bs
 
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
@@ -125,6 +130,7 @@ func Test_StoreKeyValues(t *testing.T) {
 
 		os := storage.NewObjectStorage()
 		ds := drop.NewStorageDB()
+		bs := blob.NewStorageMemory()
 
 		cm := &component.Manager{}
 		cm.Inject(
@@ -146,7 +152,7 @@ func Test_StoreKeyValues(t *testing.T) {
 
 		for n := 0; n < pulsescount; n++ {
 			lastPulse := insolar.PulseNumber(pulseDelta(n))
-			addRecords(ctx, t, os, jetID, lastPulse)
+			addRecords(ctx, t, os, bs, jetID, lastPulse)
 		}
 
 		for n := 0; n < pulsescount; n++ {
@@ -194,7 +200,7 @@ func (s *replicaIterSuite) Test_ReplicaIter_FirstPulse() {
 	// it's easy to test simple case with zero Jet
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
-	addRecords(s.ctx, s.T(), s.objectStorage, jetID, insolar.FirstPulseNumber)
+	addRecords(s.ctx, s.T(), s.objectStorage, s.blobModifier, jetID, insolar.FirstPulseNumber)
 	replicator := storage.NewReplicaIter(s.ctx, s.db, jetID, insolar.FirstPulseNumber, insolar.FirstPulseNumber+1, 100500)
 	var got []key
 	for i := 0; ; i++ {
@@ -230,6 +236,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 
 	os := storage.NewObjectStorage()
 	ds := drop.NewStorageDB()
+	bs := blob.NewStorageMemory()
 
 	cm := &component.Manager{}
 	cm.Inject(
@@ -265,7 +272,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	for i := 0; i < pulsescount; i++ {
 		lastPulse = pulseDelta(i)
 
-		addRecords(ctx, t, os, jetID, lastPulse)
+		addRecords(ctx, t, os, bs, jetID, lastPulse)
 
 		recs, _ := getallkeys(tmpDB.GetBadgerDB())
 		recKeys := getdelta(recsBefore, recs)
@@ -327,7 +334,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	lastPulse = lastPulse + 1
 	// addRecords here is for purpose:
 	// new records on +1 pulse should not affect iterator result on previous pulse range
-	addRecords(ctx, t, os, jetID, lastPulse)
+	addRecords(ctx, t, os, bs, jetID, lastPulse)
 	for n := 0; n < pulsescount; n++ {
 		p := pulseDelta(n)
 
@@ -358,6 +365,7 @@ func addRecords(
 	ctx context.Context,
 	t *testing.T,
 	objectStorage storage.ObjectStorage,
+	blobModifier blob.Modifier,
 	jetID insolar.ID,
 	pulsenum insolar.PulseNumber,
 ) {
@@ -375,7 +383,8 @@ func addRecords(
 	require.NoError(t, err)
 
 	// set blob
-	_, err = objectStorage.SetBlob(ctx, jetID, pulsenum, []byte("100500"))
+	blobID := object.CalculateIDForBlob(testutils.NewPlatformCryptographyScheme(), pulsenum, []byte("100500"))
+	err = blobModifier.Set(ctx, *blobID, blob.Blob{Value: []byte("100500"), JetID: insolar.JetID(jetID)})
 	require.NoError(t, err)
 
 	// set index of record

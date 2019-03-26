@@ -81,3 +81,18 @@ func (s *StorageMemory) Set(ctx context.Context, id insolar.ID, blob Blob) error
 
 	return nil
 }
+
+// Delete cleans blobs for a provided pulse from memory
+func (s *StorageMemory) Delete(ctx context.Context, pulse insolar.PulseNumber) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	for id, blob := range s.memory {
+		if id.Pulse() > pulse {
+			continue
+		}
+
+		s.jetIndex.Delete(id, blob.JetID)
+		delete(s.memory, id)
+	}
+}

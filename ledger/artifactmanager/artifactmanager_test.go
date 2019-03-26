@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -62,6 +63,7 @@ type amSuite struct {
 	jetStorage    jet.Storage
 	dropModifier  drop.Modifier
 	dropAccessor  drop.Accessor
+	blobModifier  blob.Modifier
 	genesisState  genesis.GenesisState
 }
 
@@ -93,6 +95,8 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 	s.genesisState = genesis.NewGenesisInitializer()
+
+	s.blobModifier = blob.NewStorageMemory()
 
 	s.cm.Inject(
 		s.scheme,
@@ -505,7 +509,8 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(
 		},
 	)
 	require.NoError(s.T(), err)
-	_, err = os.SetBlob(ctx, jetID, insolar.GenesisPulse.PulseNumber, []byte{3})
+	blobID := object.CalculateIDForBlob(am.PlatformCryptographyScheme, insolar.GenesisPulse.PulseNumber, []byte{3})
+	err = s.blobModifier.Set(ctx, *blobID, blob.Blob{JetID: insolar.JetID(jetID), Value: []byte{3}})
 	require.NoError(s.T(), err)
 	objectAmendID, _ := os.SetRecord(ctx, jetID, insolar.GenesisPulse.PulseNumber, &object.AmendRecord{
 		SideEffectRecord: object.SideEffectRecord{
@@ -516,7 +521,8 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_ReturnsCorrectDescriptors(
 			Image:  *prototypeRef,
 		},
 	})
-	_, err = os.SetBlob(ctx, jetID, insolar.GenesisPulse.PulseNumber, []byte{4})
+	blobID = object.CalculateIDForBlob(am.PlatformCryptographyScheme, insolar.GenesisPulse.PulseNumber, []byte{4})
+	err = s.blobModifier.Set(ctx, *blobID, blob.Blob{JetID: insolar.JetID(jetID), Value: []byte{4}})
 	require.NoError(s.T(), err)
 
 	objectIndex := object.Lifeline{

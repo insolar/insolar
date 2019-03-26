@@ -126,20 +126,6 @@ func (s *cleanerSuite) Test_RemoveRecords() {
 				shouldLeft = i > until
 			}
 
-			blobID, err := storagetest.AddRandBlob(ctx, s.objectStorage, jetID, pn)
-			require.NoError(t, err)
-			blobCC := cleanCase{
-				rectype:    "blob",
-				id:         blobID,
-				jetID:      jetID,
-				pulseNum:   pn,
-				shouldLeft: shouldLeft,
-			}
-			checks = append(checks, blobCase{
-				cleanCase:     blobCC,
-				objectStorage: s.objectStorage,
-			})
-
 			recID, err := storagetest.AddRandRecord(ctx, s.objectStorage, jetID, pn)
 			require.NoError(t, err)
 			recCC := cleanCase{
@@ -256,16 +242,6 @@ type indexCase struct {
 
 func (c indexCase) Check(ctx context.Context, t *testing.T) {
 	_, err := c.objectStorage.GetObjectIndex(ctx, c.jetID, c.id)
-	c.check(t, err)
-}
-
-type blobCase struct {
-	cleanCase
-	objectStorage storage.ObjectStorage
-}
-
-func (c blobCase) Check(ctx context.Context, t *testing.T) {
-	_, err := c.objectStorage.GetBlob(ctx, c.jetID, c.id)
 	c.check(t, err)
 }
 

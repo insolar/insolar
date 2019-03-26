@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	db2 "github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
@@ -100,6 +101,10 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	var pulseTracker storage.PulseTracker
 	var dropModifier drop.Modifier
 	var dropAccessor drop.Accessor
+	var dropCleaner drop.Cleaner
+
+	var blobCleaner blob.Cleaner
+
 	// TODO: @imarkin 18.02.18 - Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
 	switch certificate.GetRole() {
 	case insolar.StaticRoleUnknown, insolar.StaticRoleHeavyMaterial:
@@ -114,6 +119,9 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		dropDB := drop.NewStorageMemory()
 		dropModifier = dropDB
 		dropAccessor = dropDB
+		dropCleaner = dropDB
+
+		// we need to init blobCleaner here for a light material
 	}
 
 	return []interface{}{
@@ -134,7 +142,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		artifactmanager.NewHotDataWaiterConcrete(),
 		artifactmanager.NewArtifactManger(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),
-		pulsemanager.NewPulseManager(conf),
+		pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner),
 		artifactmanager.NewMessageHandler(&conf, certificate),
 		heavyserver.NewSync(db),
 		exporter.NewExporter(conf.Exporter),

@@ -22,14 +22,13 @@ import (
 	"math"
 	"strconv"
 
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/object"
@@ -175,21 +174,6 @@ func (e *Exporter) exportPulse(ctx context.Context, jetID insolar.JetID, pulse *
 
 func (e *Exporter) getPayload(ctx context.Context, jetID insolar.JetID, rec object.VirtualRecord) payload {
 	switch r := rec.(type) {
-	case object.State:
-		if r.GetMemory() == nil {
-			break
-		}
-		blob, err := e.ObjectStorage.GetBlob(ctx, insolar.ID(jetID), r.GetMemory())
-		if err != nil {
-			inslogger.FromContext(ctx).Errorf("getPayload failed to GetBlob (jet: %s)", jetID.DebugString())
-			return payload{}
-		}
-		memory := payload{}
-		err = codec.NewDecoderBytes(blob, &codec.CborHandle{}).Decode(&memory)
-		if err != nil {
-			return payload{"MemoryBinary": blob}
-		}
-		return payload{"Memory": memory}
 	case object.Request:
 		if r.GetPayload() == nil {
 			break
