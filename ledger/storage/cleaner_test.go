@@ -255,7 +255,7 @@ type indexCase struct {
 }
 
 func (c indexCase) Check(ctx context.Context, t *testing.T) {
-	_, err := c.objectStorage.GetObjectIndex(ctx, c.jetID, c.id, false)
+	_, err := c.objectStorage.GetObjectIndex(ctx, c.jetID, c.id)
 	c.check(t, err)
 }
 
