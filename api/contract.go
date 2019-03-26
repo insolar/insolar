@@ -100,7 +100,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 	inslog.Infof("[ ContractService.Upload ] Incoming request: %s", r.RequestURI)
 
 	if len(args.PrototypeRefString) == 0 {
-		return errors.New("params.name is missing")
+		return errors.New("params.PrototypeRefString is missing")
 	}
 
 	protoRef := insolar.Reference{}.FromSlice([]byte(args.PrototypeRefString))
