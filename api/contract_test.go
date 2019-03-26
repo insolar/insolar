@@ -47,7 +47,7 @@ func TestUpload(t *testing.T) {
 
 	ar.ArtifactManager = amMock
 
-	service := NewContractUploaderService(ar)
+	service := NewContractService(ar)
 
 	request := &http.Request{}
 

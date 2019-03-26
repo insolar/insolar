@@ -39,21 +39,21 @@ type ContractUploaderReply struct {
 	PrototypeRef insolar.Reference `json:"PrototypeRef"`
 }
 
-// ContractUploaderService is a service that provides cert for node.
-type ContractUploaderService struct {
+// ContractService is a service that provides ability to add custom contracts
+type ContractService struct {
 	runner *Runner
 }
 
-// NewContractUploaderService creates new ContractUploader service instance.
-func NewContractUploaderService(runner *Runner) *ContractUploaderService {
-	return &ContractUploaderService{runner: runner}
+// NewContractService creates new Contract service instance.
+func NewContractService(runner *Runner) *ContractService {
+	return &ContractService{runner: runner}
 }
 
 // Get returns certificate for node with given reference.
-func (s *ContractUploaderService) Upload(r *http.Request, args *ContractUploaderArgs, reply *ContractUploaderReply) error {
+func (s *ContractService) Upload(r *http.Request, args *ContractUploaderArgs, reply *ContractUploaderReply) error {
 	_, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
-	inslog.Infof("[ ContractUploaderService.Upload ] Incoming request: %s", r.RequestURI)
+	inslog.Infof("[ ContractService.Upload ] Incoming request: %s", r.RequestURI)
 
 	if len(args.Name) == 0 {
 		return errors.New("params.name is missing")

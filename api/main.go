@@ -104,9 +104,9 @@ func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
 		return errors.New("[ registerServices ] Can't RegisterService: cert")
 	}
 
-	err = rpcServer.RegisterService(NewContractUploaderService(ar), "uploader")
+	err = rpcServer.RegisterService(NewContractService(ar), "contract")
 	if err != nil {
-		return errors.New("[ registerServices ] Can't RegisterService: uploader")
+		return errors.New("[ registerServices ] Can't RegisterService: contract")
 	}
 
 	return nil
