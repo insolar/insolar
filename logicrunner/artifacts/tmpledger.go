@@ -100,7 +100,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	cl := storage.NewCleaner()
 
 	am := NewClient()
-	am.PlatformCryptographyScheme = pcs
+	am.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
 	conf.PulseManager.HeavySyncEnabled = false
 	pm := pulsemanager.NewPulseManager(conf)

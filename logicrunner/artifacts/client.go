@@ -39,9 +39,7 @@ const (
 
 // Client provides concrete API to storage for processing module.
 type client struct {
-	JetStorage jet.Storage `inject:""`
-	genesisRef insolar.Reference
-
+	JetStorage                 jet.Storage                        `inject:""`
 	DefaultBus                 insolar.MessageBus                 `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	PulseStorage               insolar.PulseStorage               `inject:""`
@@ -59,11 +57,9 @@ func (m *client) State() ([]byte, error) {
 
 // NewClient creates new manager instance.
 func NewClient() *client { // nolint
-	ref, _ := insolar.NewReferenceFromBase58("1tJCcrGLZR479PLRhQpqxmm2sjEcgW4VyJhkgnTDnU.1tJCcrGLZR479PLRhQpqxmm2sjEcgW4VyJhkgnTDnU")
 	return &client{
 		getChildrenChunkSize: getChildrenChunkSize,
 		senders:              newLedgerArtifactSenders(),
-		genesisRef:           *ref,
 	}
 }
 
@@ -71,7 +67,9 @@ func NewClient() *client { // nolint
 //
 // Root record is the parent for all top-level records.
 func (m *client) GenesisRef() *insolar.Reference {
-	return &m.genesisRef
+	id := object.NewRecordIDFromRecord(m.PlatformCryptographyScheme, insolar.FirstPulseNumber, &object.GenesisRecord{})
+	ref := insolar.NewReference(*id, *id)
+	return ref
 }
 
 // RegisterRequest sends message for request registration,
