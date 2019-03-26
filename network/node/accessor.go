@@ -110,6 +110,10 @@ func GetSnapshotActiveNodes(snapshot *Snapshot) []insolar.NetworkNode {
 	copy(result[len(joining):len(joining)+len(working)], working[:])
 	copy(result[len(joining)+len(working):], leaving[:])
 
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].ID().Compare(result[j].ID()) < 0
+	})
+
 	return result
 }
 
