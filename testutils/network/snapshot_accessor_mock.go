@@ -21,7 +21,7 @@ import (
 type SnapshotAccessorMock struct {
 	t minimock.Tester
 
-	ForPulseNumberFunc       func(p context.Context, p1 insolar.PulseNumber) (r node.Snapshot, r1 error)
+	ForPulseNumberFunc       func(p context.Context, p1 insolar.PulseNumber) (r *node.Snapshot, r1 error)
 	ForPulseNumberCounter    uint64
 	ForPulseNumberPreCounter uint64
 	ForPulseNumberMock       mSnapshotAccessorMockForPulseNumber
@@ -63,7 +63,7 @@ type SnapshotAccessorMockForPulseNumberInput struct {
 }
 
 type SnapshotAccessorMockForPulseNumberResult struct {
-	r  node.Snapshot
+	r  *node.Snapshot
 	r1 error
 }
 
@@ -80,7 +80,7 @@ func (m *mSnapshotAccessorMockForPulseNumber) Expect(p context.Context, p1 insol
 }
 
 //Return specifies results of invocation of SnapshotAccessor.ForPulseNumber
-func (m *mSnapshotAccessorMockForPulseNumber) Return(r node.Snapshot, r1 error) *SnapshotAccessorMock {
+func (m *mSnapshotAccessorMockForPulseNumber) Return(r *node.Snapshot, r1 error) *SnapshotAccessorMock {
 	m.mock.ForPulseNumberFunc = nil
 	m.expectationSeries = nil
 
@@ -102,12 +102,12 @@ func (m *mSnapshotAccessorMockForPulseNumber) ExpectOnce(p context.Context, p1 i
 	return expectation
 }
 
-func (e *SnapshotAccessorMockForPulseNumberExpectation) Return(r node.Snapshot, r1 error) {
+func (e *SnapshotAccessorMockForPulseNumberExpectation) Return(r *node.Snapshot, r1 error) {
 	e.result = &SnapshotAccessorMockForPulseNumberResult{r, r1}
 }
 
 //Set uses given function f as a mock of SnapshotAccessor.ForPulseNumber method
-func (m *mSnapshotAccessorMockForPulseNumber) Set(f func(p context.Context, p1 insolar.PulseNumber) (r node.Snapshot, r1 error)) *SnapshotAccessorMock {
+func (m *mSnapshotAccessorMockForPulseNumber) Set(f func(p context.Context, p1 insolar.PulseNumber) (r *node.Snapshot, r1 error)) *SnapshotAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -116,7 +116,7 @@ func (m *mSnapshotAccessorMockForPulseNumber) Set(f func(p context.Context, p1 i
 }
 
 //ForPulseNumber implements github.com/insolar/insolar/network/storage.SnapshotAccessor interface
-func (m *SnapshotAccessorMock) ForPulseNumber(p context.Context, p1 insolar.PulseNumber) (r node.Snapshot, r1 error) {
+func (m *SnapshotAccessorMock) ForPulseNumber(p context.Context, p1 insolar.PulseNumber) (r *node.Snapshot, r1 error) {
 	counter := atomic.AddUint64(&m.ForPulseNumberPreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseNumberCounter, 1)
 
