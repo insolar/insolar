@@ -55,7 +55,6 @@ import (
 	"crypto"
 	"fmt"
 	"math/rand"
-	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -87,21 +86,6 @@ var (
 	pulseDelta      int32  = 5
 )
 
-func init() {
-	if tbn, ok := os.LookupEnv("TBN"); ok {
-		log.Infof("Found $TBN=%s\n", tbn)
-		num, err := strconv.Atoi(tbn)
-		if err != nil {
-			log.Fatalf("Test build number must be numeric: %v", err)
-		}
-		testNetworkPort = uint32((4 + num%60) * 1000)
-		log.Infof("Starting on port=%d\n", testNetworkPort)
-
-	} else {
-		log.Infof("TBN environment variable not found\n")
-	}
-}
-
 type fixture struct {
 	ctx            context.Context
 	bootstrapNodes []*networkNode
@@ -122,7 +106,6 @@ type testSuite struct {
 	fixtureMap     map[string]*fixture
 	bootstrapCount int
 	nodesCount     int
-	Address        string
 }
 
 func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
@@ -131,7 +114,6 @@ func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
 		fixtureMap:     make(map[string]*fixture, 0),
 		bootstrapCount: bootstrapCount,
 		nodesCount:     nodesCount,
-		Address:        "127.0.0.1",
 	}
 }
 
@@ -143,7 +125,7 @@ func (s *testSuite) fixture() *fixture {
 func (s *testSuite) SetupTest() {
 	s.fixtureMap[s.T().Name()] = newFixture(s.T())
 	var err error
-	s.fixture().pulsar, err = NewTestPulsar(s, pulseTimeMs, reqTimeoutMs, pulseDelta)
+	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
 	s.Require().NoError(err)
 
 	log.Info("SetupTest")
@@ -331,7 +313,7 @@ func (s *testSuite) newNetworkNode(name string) *networkNode {
 	if err != nil {
 		panic(err.Error())
 	}
-	address := s.Address + ":" + strconv.Itoa(incrementTestPort())
+	address := "127.0.0.1:" + strconv.Itoa(incrementTestPort())
 
 	nodeContext, _ := inslogger.WithField(s.fixture().ctx, "nodeName", name)
 	return &networkNode{
