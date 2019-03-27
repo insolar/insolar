@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/utils/backoff"
 	"github.com/pkg/errors"
@@ -42,13 +43,14 @@ type Options struct {
 
 // JetClient heavy replication client. Replicates records for one jet.
 type JetClient struct {
-	bus            insolar.MessageBus
-	pulseStorage   insolar.PulseStorage
-	replicaStorage storage.ReplicaStorage
-	pulseTracker   storage.PulseTracker
-	cleaner        storage.Cleaner
-	db             storage.DBContext
-	dropAccessor   drop.Accessor
+	bus              insolar.MessageBus
+	pulseStorage     insolar.PulseStorage
+	replicaStorage   storage.ReplicaStorage
+	pulseTracker     storage.PulseTracker
+	cleaner          storage.Cleaner
+	db               storage.DBContext
+	dropAccessor     drop.Accessor
+	blobSyncAccessor blob.SyncAccessor
 
 	opts Options
 

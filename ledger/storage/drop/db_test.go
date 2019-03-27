@@ -20,7 +20,7 @@ import (
 	"math/rand"
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
+	"github.com/google/gofuzz"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -51,7 +51,7 @@ func TestDropStorageDB_Set(t *testing.T) {
 			JetID: gen.JetID(),
 		}
 
-		encoded, _ := Encode(&inp.dr)
+		encoded, _ := MustEncode(&inp.dr)
 		encodedDrops[string(encoded)] = struct{}{}
 	}).NumElements(5, 5000).NilChance(0)
 	f.Fuzz(&inputs)
@@ -100,7 +100,7 @@ func TestDropStorageDB_ForPulse(t *testing.T) {
 		Size:  rand.Uint64(),
 		Pulse: gen.PulseNumber(),
 	}
-	buf, _ := Encode(&dr)
+	buf, _ := MustEncode(&dr)
 
 	dbMock := db.NewDBMock(t)
 	dbMock.GetMock.Return(buf, nil)

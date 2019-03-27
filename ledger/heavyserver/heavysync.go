@@ -22,7 +22,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
@@ -78,9 +80,11 @@ type jetprefix [insolar.JetPrefixSize]byte
 
 // Sync provides methods for syncing records to heavy storage.
 type Sync struct {
-	DropModifier   drop.Modifier          `inject:""`
-	ReplicaStorage storage.ReplicaStorage `inject:""`
-	DBContext      storage.DBContext
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	DropModifier               drop.Modifier                      `inject:""`
+	BlobModifier               blob.Modifier                      `inject:""`
+	ReplicaStorage             storage.ReplicaStorage             `inject:""`
+	DBContext                  storage.DBContext
 
 	sync.Mutex
 	jetSyncStates map[jetprefix]*syncstate
@@ -223,6 +227,24 @@ func (s *Sync) StoreDrop(ctx context.Context, jetID insolar.JetID, rawDrop []byt
 		return errors.Wrapf(err, "heavyserver: drop storing failed")
 	}
 
+	return nil
+}
+
+// StoreBlobs saves a collection of blobs to a heavy's storage
+func (s *Sync) StoreBlobs(ctx context.Context, pn insolar.PulseNumber, rawBlobs [][]byte) error {
+	for _, rwb := range rawBlobs {
+		b, err := blob.Decode(rwb)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err)
+			continue
+		}
+
+		blobID := object.CalculateIDForBlob(s.PlatformCryptographyScheme, pn, rwb)
+		err = s.BlobModifier.Set(ctx, *blobID, *b)
+		if err != nil {
+			return errors.Wrapf(err, "heavyserver: blob storing failed")
+		}
+	}
 	return nil
 }
 

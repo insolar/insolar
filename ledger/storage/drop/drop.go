@@ -65,15 +65,15 @@ type Drop struct {
 	JetID insolar.JetID
 }
 
-// Encode serializes jet drop.
-func Encode(drop *Drop) ([]byte, error) {
+// MustEncode serializes jet drop.
+func MustEncode(drop *Drop) []byte {
 	var buf bytes.Buffer
 	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
 	err := enc.Encode(drop)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-	return buf.Bytes(), nil
+	return buf.Bytes()
 }
 
 // Decode deserializes jet drop.

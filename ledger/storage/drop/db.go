@@ -70,10 +70,7 @@ func (ds *dropStorageDB) Set(ctx context.Context, drop Drop) error {
 		return ErrOverride
 	}
 
-	encoded, err := Encode(&drop)
-	if err != nil {
-		return err
-	}
+	encoded := MustEncode(&drop)
 	return ds.DB.Set(&k, encoded)
 }
 

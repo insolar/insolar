@@ -259,11 +259,7 @@ func (m *PulseManager) createDrop(
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
 
-	dropSerialized, err = drop.Encode(block)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Encode")
-	}
-
+	dropSerialized = drop.MustEncode(block)
 	return
 }
 

@@ -27,7 +27,8 @@ import (
 
 // StorageMemory is an in-memory struct for blob-storage.
 type StorageMemory struct {
-	jetIndex db.JetIndexModifier
+	jetIndex         db.JetIndexModifier
+	jetIndexAccessor db.JetIndexAccessor
 
 	lock   sync.RWMutex
 	memory map[insolar.ID]Blob
@@ -35,9 +36,11 @@ type StorageMemory struct {
 
 // NewStorageMemory creates a new instance of Storage.
 func NewStorageMemory() *StorageMemory {
+	ji := db.NewJetIndex()
 	return &StorageMemory{
-		memory:   map[insolar.ID]Blob{},
-		jetIndex: db.NewJetIndex(),
+		memory:           map[insolar.ID]Blob{},
+		jetIndex:         ji,
+		jetIndexAccessor: ji,
 	}
 }
 
@@ -80,6 +83,21 @@ func (s *StorageMemory) Set(ctx context.Context, id insolar.ID, blob Blob) error
 	)
 
 	return nil
+}
+
+// ForPN returns []Blob for a provided jetID and a pulse number.
+func (s *StorageMemory) ForPN(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []Blob {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	ids := s.jetIndexAccessor.For(jetID, pn)
+	var res []Blob
+	for id := range ids {
+		b := s.memory[id]
+		res = append(res, b)
+	}
+
+	return res
 }
 
 // Delete cleans blobs for a provided pulse from memory

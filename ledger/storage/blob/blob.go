@@ -17,17 +17,27 @@
 package blob
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/ugorji/go/codec"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Accessor -o ./ -s _mock.go
 
 // Accessor provides info about Blob-values from storage.
 type Accessor interface {
-	// ForID returns Blob for provided id.
+	// ForID returns Blob for a provided id.
 	ForID(ctx context.Context, id insolar.ID) (Blob, error)
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.SyncAccessor -o ./ -s _mock.go
+
+// SyncAccessor provides methods for querying blobs with specific search conditions.
+type SyncAccessor interface {
+	// ForPN returns []Blob for a provided jetID and a pulse number.
+	ForPN(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []Blob
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Modifier -o ./ -s _mock.go
@@ -61,4 +71,26 @@ func Clone(blob Blob) Blob {
 	}
 
 	return blob
+}
+
+// MustEncode serializes a blob.
+func MustEncode(blob *Blob) []byte {
+	var buf bytes.Buffer
+	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
+	err := enc.Encode(blob)
+	if err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
+}
+
+// Decode deserializes a blob.
+func Decode(buf []byte) (*Blob, error) {
+	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
+	var blob Blob
+	err := dec.Decode(&blob)
+	if err != nil {
+		return nil, err
+	}
+	return &blob, nil
 }
