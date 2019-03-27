@@ -17,7 +17,7 @@
 package {{.Package}}
 
 import (
-	"github.com/insolar/insolar/conveyor/generator/common"
+	"github.com/insolar/insolar/conveyor/statemachine"
     "github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
@@ -45,13 +45,13 @@ func Raw{{$machine.Name}}Factory() [3]statemachine.StateMachine {
         cleanStateMachine: &Clean{{$machine.Name}}{},
     }
 
-    var x = [3][]common.State{}
+    var x = [3][]statemachine.State{}
     // future state machine
-    x[0] = append(x[0], common.State{
+    x[0] = append(x[0], statemachine.State{
         Transition: m.{{(index .States 0).GetTransitionFutureName}},
         ErrorState: m.{{(index .States 0).GetErrorStateFutureName}},
     },{{range $i, $state := .States}}{{if (gtNull $i)}}
-    common.State{
+    statemachine.State{
         Migration: m.{{$state.GetMigrationFuturePresentName}},
         {{if (handlerExists $state.TransitionFuture)}}Transition: m.{{$state.GetTransitionFutureName}},{{end}}
         {{if (handlerExists $state.AdapterResponseFuture)}}AdapterResponse: m.{{$state.GetAdapterResponseFutureName}},{{end}}
@@ -60,11 +60,11 @@ func Raw{{$machine.Name}}Factory() [3]statemachine.StateMachine {
     },{{end}}{{end}})
 
     // present state machine
-    x[1] = append(x[1], common.State{
+    x[1] = append(x[1], statemachine.State{
         Transition: m.{{(index .States 0).GetTransitionName}},
         ErrorState: m.{{(index .States 0).GetErrorStateName}},
     },{{range $i, $state := .States}}{{if (gtNull $i)}}
-    common.State{
+    statemachine.State{
         Migration: m.{{$state.GetMigrationName}},
         Transition: m.{{$state.GetTransitionName}},
         {{if (handlerExists $state.AdapterResponse)}}AdapterResponse: m.{{$state.GetAdapterResponseName}},{{end}}
@@ -73,11 +73,11 @@ func Raw{{$machine.Name}}Factory() [3]statemachine.StateMachine {
     },{{end}}{{end}})
 
     // past state machine
-    x[2] = append(x[2], common.State{
+    x[2] = append(x[2], statemachine.State{
         Transition: m.{{(index .States 0).GetTransitionPastName}},
         ErrorState: m.{{(index .States 0).GetErrorStatePastName}},
     },{{range $i, $state := .States}}{{if (gtNull $i)}}
-    common.State{
+    statemachine.State{
         Transition: m.{{$state.GetTransitionPastName}},
         {{if (handlerExists $state.AdapterResponsePast)}}AdapterResponse: m.{{$state.GetAdapterResponsePastName}},{{end}}
         ErrorState: m.{{$state.GetErrorStatePastName}},
@@ -85,17 +85,17 @@ func Raw{{$machine.Name}}Factory() [3]statemachine.StateMachine {
     },{{end}}{{end}})
 
 
-    smFuture := common.StateMachine{
+    smFuture := statemachine.StateMachine{
         ID:     m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
         States: x[0],
     }
 
-    smPresent := common.StateMachine{
+    smPresent := statemachine.StateMachine{
         ID:     m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
         States: x[1],
     }
 
-    smPast := common.StateMachine{
+    smPast := statemachine.StateMachine{
         ID:     m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
         States: x[2],
     }

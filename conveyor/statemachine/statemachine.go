@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package common
+package statemachine
 
 import (
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
@@ -22,7 +22,6 @@ import (
 	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 )
 
-// TODO: move this code from common package
 // State struct contains predefined set of handlers
 type State struct {
 	Migration            statemachine.MigrationHandler
@@ -30,7 +29,6 @@ type State struct {
 	AdapterResponse      statemachine.AdapterResponseHandler
 	ErrorState           statemachine.TransitionErrorHandler
 	AdapterResponseError statemachine.ResponseErrorHandler
-	// TODO: Finalization handlers
 }
 
 // StateMachine is a type for conveyor state machines
