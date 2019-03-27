@@ -58,12 +58,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type stater interface {
-	State() ([]byte, error)
-}
-
 type calculator struct {
-	ArtifactManager            stater                             `inject:""`
 	NodeNetwork                insolar.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`

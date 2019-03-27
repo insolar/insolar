@@ -31,7 +31,6 @@ type Storage struct {
 
 // GetAdapterByID returns adapter by id
 func (s *Storage) GetAdapterByID(id adapterid.ID) adapter.TaskSink {
-	fmt.Println("GetAdapterByID", id)
 	return s.adapters[id]
 }
 

@@ -181,14 +181,9 @@ func TestCalculatorError(t *testing.T) {
 	nk := nodekeeper.GetTestNodekeeper(service)
 	th := terminationhandler.NewTestHandler()
 
-	am := staterMock{
-		stateFunc: func() (bytes []byte, e error) {
-			return []byte{1, 2, 3}, nil
-		},
-	}
 	jc := testutils.NewJetCoordinatorMock(t)
 
-	cm.Inject(th, nk, jc, &am, calculator, service, scheme, pulseManager)
+	cm.Inject(th, nk, jc, calculator, service, scheme, pulseManager)
 
 	require.NotNil(t, calculator.NodeNetwork)
 	require.NotNil(t, calculator.CryptographyService)

@@ -94,25 +94,25 @@ func NewPhaseManager() PhaseManager {
 }
 
 type callback struct {
-	waiter chan interface{}
+	waiter chan []byte
 }
 
-func (c *callback) GetResult() []byte {
-	result := <-c.waiter
+func (c *callback) getResult() []byte {
+	return <-c.waiter
+}
+
+// SetResult implements github.com/insolar/insolar/conveyor/queue.SyncDone interface
+func (c *callback) SetResult(result interface{}) {
 	hash, ok := result.([]byte)
 	if !ok {
-		return []byte{}
+		hash = []byte{}
 	}
-	return hash
-}
-
-func (c *callback) SetResult(result interface{}) {
-	c.waiter <- result
+	c.waiter <- hash
 }
 
 func newCallback() *callback {
 	return &callback{
-		waiter: make(chan interface{}, 3),
+		waiter: make(chan []byte, 1),
 	}
 }
 
@@ -144,7 +144,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 	if err != nil {
 		return err
 	}
-	stateHash := c.GetResult()
+	stateHash := c.getResult()
 
 	tctx, cancel, err = contextTimeoutWithDelay(ctx, *pulseDuration, consensusDelay, 0.3)
 	if err != nil {
