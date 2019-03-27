@@ -29,7 +29,10 @@ import (
 
 // custom types
 type Event struct{}
-type Payload struct{}
+type Payload struct {
+	reply insolar.Reply
+	err   error
+}
 type TA1 string
 type TAR string
 
@@ -47,7 +50,7 @@ type GetCodeStateMachine interface {
 	stateFirst() fsm.StateID
 
 	// Migration
-	migrateFromPresentFirst(input Event, payload *Payload) (*Payload, fsm.ElementState, error)
+	migrateFromPresentFirst(input Event, payload *Payload) (*Payload, error)
 
 	// Transition
 	transitPresentFirst(input Event, payload insolar.ConveyorPendingMessage, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error)
@@ -65,13 +68,13 @@ type GetCodeStateMachine interface {
 	stateSecond() fsm.StateID
 
 	// Migration
-	migrateFromPresentSecond(input Event, payload *Payload) (*Payload, fsm.ElementState, error)
+	migrateFromPresentSecond(input Event, payload *Payload) (*Payload, error)
 
 	// Transition
 	transitPresentSecond(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, fsm.ElementState, error)
 
 	// Adapter Response
-	responsePresentSecond(input Event, payload artifactmanager.GetCodeResp, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error)
+	responsePresentSecond(input Event, payload *Payload, respPayload artifactmanager.GetCodeResp) (*Payload, fsm.ElementState, error)
 
 	// State Error
 	errorPresentSecond(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
@@ -83,13 +86,13 @@ type GetCodeStateMachine interface {
 	stateThird() fsm.StateID
 
 	// Migration
-	migrateFromPresentThird(input Event, payload *Payload) (*Payload, fsm.ElementState, error)
+	migrateFromPresentThird(input Event, payload *Payload) (*Payload, error)
 
 	// Transition
-	transitPresentThird(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, fsm.ElementState, error)
+	transitPresentThird(input Event, payload *Payload, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error)
 
 	// Adapter Response
-	responsePresentThird(input Event, payload interface{}, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error)
+	responsePresentThird(input Event, payload artifactmanager.GetCodeResp, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error)
 
 	// State Error
 	errorPresentThird(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
@@ -101,7 +104,7 @@ type GetCodeStateMachine interface {
 	stateFourth() fsm.StateID
 
 	// Migration
-	migrateFromPresentFourth(input Event, payload *Payload) (*Payload, fsm.ElementState, error)
+	migrateFromPresentFourth(input Event, payload *Payload) (*Payload, error)
 
 	// Transition
 	transitPresentFourth(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, fsm.ElementState, error)
@@ -121,11 +124,14 @@ type CleanGetCodeStateMachine struct {
 }
 
 func (sm *CleanGetCodeStateMachine) initPresentHandler(input Event, payload interface{}) (*Payload, fsm.ElementState, error) {
-	return nil, fsm.NewElementState(sm.GetTypeID(), sm.stateFirst()), nil
+	p := &Payload{}
+	return p, fsm.NewElementState(sm.GetTypeID(), sm.stateFirst()), nil
 }
 
 func (sm *CleanGetCodeStateMachine) initFutureHandler(input Event, payload interface{}, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error) {
-	return nil, fsm.NewElementState(sm.GetTypeID(), sm.stateFirst()), nil
+	element.DeactivateTill(slot.Response)
+	p := &Payload{}
+	return p, fsm.NewElementState(sm.GetTypeID(), sm.stateFirst()), nil
 }
 
 func (sm *CleanGetCodeStateMachine) errorPresentInit(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState) {
@@ -136,13 +142,13 @@ func (sm *CleanGetCodeStateMachine) errorFutureInit(input interface{}, payload i
 	panic("implement me")
 }
 
-func (sm *CleanGetCodeStateMachine) migrateFromPresentFirst(input Event, payload *Payload) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
+func (sm *CleanGetCodeStateMachine) migrateFromPresentFirst(input Event, payload *Payload) (*Payload, error) {
+	return payload, nil
 }
 
 func (sm *CleanGetCodeStateMachine) transitPresentFirst(input Event, payload insolar.ConveyorPendingMessage, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error) {
 	parcel := payload.Msg
-	err := adapter.CurrentCatalog.GetCode.GetCode(element, parcel, 1)
+	err := adapter.CurrentCatalog.GetCode.GetCode(element, parcel, 2)
 	if err != nil {
 		return nil, 0, nil
 	}
@@ -161,25 +167,19 @@ func (sm *CleanGetCodeStateMachine) errorResponsePresentFirst(input interface{},
 	panic("implement me")
 }
 
-func (sm *CleanGetCodeStateMachine) migrateFromPresentSecond(input Event, payload *Payload) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
+func (sm *CleanGetCodeStateMachine) migrateFromPresentSecond(input Event, payload *Payload) (*Payload, error) {
+	return payload, nil
 }
 
 func (sm *CleanGetCodeStateMachine) transitPresentSecond(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, fsm.ElementState, error) {
 	panic("implement me")
 }
 
-func (sm *CleanGetCodeStateMachine) responsePresentSecond(input Event, payload artifactmanager.GetCodeResp, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error) {
-	err := payload.Err
-	if err != nil {
-		return nil, 0, nil
-	}
-	result := payload.Reply
-	err = adapter.CurrentCatalog.SendResponse.SendResponse(element, result, 2)
-	if err != nil {
-		return nil, 0, nil
-	}
-	return nil, fsm.NewElementState(sm.GetTypeID(), sm.stateSecond()), nil
+func (sm *CleanGetCodeStateMachine) responsePresentSecond(input Event, payload *Payload, respPayload artifactmanager.GetCodeResp) (*Payload, fsm.ElementState, error) {
+	payload.err = respPayload.Err
+	payload.reply = respPayload.Reply
+
+	return payload, fsm.NewElementState(sm.GetTypeID(), sm.stateThird()), nil
 }
 
 func (sm *CleanGetCodeStateMachine) errorPresentSecond(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState) {
@@ -190,25 +190,26 @@ func (sm *CleanGetCodeStateMachine) errorResponsePresentSecond(input interface{}
 	panic("implement me")
 }
 
-func (sm *CleanGetCodeStateMachine) migrateFromPresentThird(input Event, payload *Payload) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
+func (sm *CleanGetCodeStateMachine) migrateFromPresentThird(input Event, payload *Payload) (*Payload, error) {
+	return payload, nil
 }
 
-func (sm *CleanGetCodeStateMachine) transitPresentThird(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
+func (sm *CleanGetCodeStateMachine) transitPresentThird(input Event, payload *Payload, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error) {
+	var err error
+	if payload.err != nil {
+		// TODO: return error to future
+		err = adapter.CurrentCatalog.SendResponse.SendResponse(element, nil, 4)
+	} else {
+		err = adapter.CurrentCatalog.SendResponse.SendResponse(element, payload.reply, 4)
+	}
+	if err != nil {
+		return nil, 0, nil
+	}
+	return nil, fsm.NewElementState(sm.GetTypeID(), sm.stateFourth()), nil
 }
 
 func (sm *CleanGetCodeStateMachine) responsePresentThird(input Event, payload artifactmanager.GetCodeResp, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error) {
-	err := payload.Err
-	if err != nil {
-		return nil, 0, nil
-	}
-	result := payload.Reply
-	err = adapter.CurrentCatalog.SendResponse.SendResponse(element, result, 2)
-	if err != nil {
-		return nil, 0, nil
-	}
-	return nil, fsm.NewElementState(sm.GetTypeID(), sm.stateSecond()), nil
+	panic("implement me")
 }
 
 func (sm *CleanGetCodeStateMachine) errorPresentThird(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState) {
@@ -218,8 +219,9 @@ func (sm *CleanGetCodeStateMachine) errorPresentThird(input interface{}, payload
 func (sm *CleanGetCodeStateMachine) errorResponsePresentThird(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState) {
 	panic("implement me")
 }
-func (sm *CleanGetCodeStateMachine) migrateFromPresentFourth(input Event, payload *Payload) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
+
+func (sm *CleanGetCodeStateMachine) migrateFromPresentFourth(input Event, payload *Payload) (*Payload, error) {
+	return payload, nil
 }
 
 func (sm *CleanGetCodeStateMachine) transitPresentFourth(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, fsm.ElementState, error) {
