@@ -153,6 +153,10 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 		}
 
 		if *node != m.jetCoordinator.Me() {
+			inslogger.FromContext(ctx).Info(
+				"jet of ", msg.DefaultTarget().String(),
+				" is ", jetID.DebugString(), " and executor is ", node.String(),
+			)
 			return &reply.JetMiss{JetID: jetID}, nil
 		}
 
