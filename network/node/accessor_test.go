@@ -61,19 +61,19 @@ import (
 func TestGetSnapshotActiveNodes(t *testing.T) {
 	m := make(map[insolar.Reference]insolar.NetworkNode)
 
-	node := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	node := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, insolar.NodeReady, "127.0.0.1:0", "")
 	node.SetState(insolar.NodeReady)
 	m[node.ID()] = node
 
-	node2 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	node2 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, insolar.NodeReady, "127.0.0.1:0", "")
 	node2.SetState(insolar.NodePending)
 	m[node2.ID()] = node2
 
-	node3 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	node3 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, insolar.NodeReady, "127.0.0.1:0", "")
 	node3.SetState(insolar.NodeLeaving)
 	m[node3.ID()] = node3
 
-	node4 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	node4 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, insolar.NodeReady, "127.0.0.1:0", "")
 	node4.SetState(insolar.NodeUndefined)
 	m[node4.ID()] = node4
 

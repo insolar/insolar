@@ -196,7 +196,7 @@ func (s *Snapshot) Decode(buff []byte) error {
 			}
 
 			ref := insolar.Reference{}.FromSlice(n.NodeID)
-			nodeList[i] = newMutableNode(ref, insolar.StaticRole(n.NodeRole), pk, n.NodeAddress, n.NodeVersion)
+			nodeList[i] = newMutableNode(ref, insolar.StaticRole(n.NodeRole), pk, insolar.NodeState(n.State), n.NodeAddress, n.NodeVersion)
 		}
 		s.nodeList[t] = nodeList
 	}
