@@ -87,6 +87,21 @@ var (
 	pulseDelta      int32  = 5
 )
 
+func init() {
+	if tbn, ok := os.LookupEnv("TBN"); ok {
+		log.Infof("Found $TBN=%s\n", tbn)
+		num, err := strconv.Atoi(tbn)
+		if err != nil {
+			log.Fatalf("Test build number must be numeric: %v", err)
+		}
+		testNetworkPort = uint32((4 + num%60) * 1000)
+		log.Infof("Starting on port=%d\n", testNetworkPort)
+
+	} else {
+		log.Infof("TBN environment variable not found\n")
+	}
+}
+
 type fixture struct {
 	ctx            context.Context
 	bootstrapNodes []*networkNode
@@ -126,17 +141,6 @@ func (s *testSuite) fixture() *fixture {
 
 // SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
 func (s *testSuite) SetupTest() {
-	if tbn, ok := os.LookupEnv("TBN"); ok {
-		s.T().Logf("Found $TBN=%s\n", tbn)
-		num, err := strconv.Atoi(tbn)
-		s.Require().NoError(err, "Test build number must be numeric")
-		testNetworkPort += uint32((num % 50) * 1000)
-		s.T().Logf("Starting on port=%d\n", testNetworkPort)
-
-	} else {
-		s.T().Log("TBN environment variable not found\n")
-	}
-
 	s.fixtureMap[s.T().Name()] = newFixture(s.T())
 	var err error
 	s.fixture().pulsar, err = NewTestPulsar(s, pulseTimeMs, reqTimeoutMs, pulseDelta)
