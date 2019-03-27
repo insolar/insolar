@@ -52,6 +52,7 @@ var (
 	memberKeys         string
 	apiURLs            []string
 	logLevel           string
+	logLevelServer     string
 	saveMembersToFile  bool
 	useMembersFromFile bool
 	noCheckBalance     bool
@@ -64,6 +65,7 @@ func parseInputParams() {
 	pflag.StringVarP(&memberKeys, "memberkeys", "k", "", "path to file with member keys")
 	pflag.StringArrayVarP(&apiURLs, "apiurl", "u", []string{"http://localhost:19101/api"}, "url to api")
 	pflag.StringVarP(&logLevel, "loglevel", "l", "info", "log level for benchmark")
+	pflag.StringVarP(&logLevelServer, "loglevelserver", "L", "", "server log level")
 	pflag.BoolVarP(&saveMembersToFile, "savemembers", "s", false, "save members to file")
 	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
 	pflag.BoolVarP(&noCheckBalance, "nocheckbalance", "b", false, "don't check balance at the end")
@@ -296,8 +298,12 @@ func main() {
 	insSDK, err := sdk.NewSDK(apiURLs, memberKeys)
 	check("SDK is not initialized: ", err)
 
+	err = insSDK.SetLogLevel(logLevelServer)
+	check("Failed to parse log level: ", err)
+
 	members, crMemPenBefore, err := getMembers(insSDK)
 	check("Error while loading members: ", err)
+
 	var totalBalanceBefore uint64
 	var balancePenRetries int32
 	if !noCheckBalance {
