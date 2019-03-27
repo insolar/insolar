@@ -19,13 +19,13 @@ package conveyor
 import (
 	"testing"
 
+	"github.com/insolar/insolar/conveyor/generator/matrix"
+	"github.com/insolar/insolar/conveyor/handler"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
-
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/stretchr/testify/require"
 )
@@ -459,16 +459,16 @@ func TestSlot_extractSlotElementByID(t *testing.T) {
 	}
 }
 
-func makeMockStateMachine(t *testing.T) statemachine.StateMachine {
-	sm := statemachine.NewStateMachineMock(t)
+func makeMockStateMachine(t *testing.T) matrix.StateMachine {
+	sm := matrix.NewStateMachineMock(t)
 
-	sm.GetTransitionHandlerFunc = func(p fsm.StateID) (r statemachine.TransitHandler) {
+	sm.GetTransitionHandlerFunc = func(p fsm.StateID) (r handler.TransitHandler) {
 		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return nil, 0, nil
 		}
 	}
 
-	sm.GetMigrationHandlerFunc = func(p fsm.StateID) (r statemachine.MigrationHandler) {
+	sm.GetMigrationHandlerFunc = func(p fsm.StateID) (r handler.MigrationHandler) {
 		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return nil, 0, nil
 		}

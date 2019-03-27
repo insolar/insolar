@@ -17,13 +17,12 @@
 package sample
 
 import (
-	"github.com/insolar/insolar/conveyor/generator/common"
-    "github.com/insolar/insolar/conveyor/interfaces/fsm"
+	"errors"
+
+	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
-
-	"errors"
+	"github.com/insolar/insolar/conveyor/statemachine"
 )
 
 type BaseTestStateMachine struct {}
@@ -43,25 +42,25 @@ type RawTestStateMachine struct {
     cleanStateMachine TestStateMachine
 }
 
-func RawTestStateMachineFactory() [3]statemachine.StateMachine {
+func RawTestStateMachineFactory() [3]*statemachine.StateMachine {
     m := RawTestStateMachine{
         cleanStateMachine: &CleanTestStateMachine{},
     }
 
-    var x = [3][]common.State{}
+    var x = [3][]statemachine.State{}
     // future state machine
-    x[0] = append(x[0], common.State{
+    x[0] = append(x[0], statemachine.State{
         Transition: m.initFutureHandler,
         ErrorState: m.errorFutureInit,
     },
-    common.State{
+    statemachine.State{
         Migration: m.migrateFromFutureFirst,
         Transition: m.transitFutureFirst,
         AdapterResponse: m.responseFutureFirst,
         ErrorState: m.errorFutureFirst,
         AdapterResponseError: m.errorResponseFutureFirst,
     },
-    common.State{
+    statemachine.State{
         Migration: m.migrateFromFutureSecond,
         Transition: m.transitFutureSecond,
         AdapterResponse: m.responseFutureSecond,
@@ -70,18 +69,18 @@ func RawTestStateMachineFactory() [3]statemachine.StateMachine {
     },)
 
     // present state machine
-    x[1] = append(x[1], common.State{
+    x[1] = append(x[1], statemachine.State{
         Transition: m.initPresentHandler,
         ErrorState: m.errorPresentInit,
     },
-    common.State{
+    statemachine.State{
         Migration: m.migrateFromPresentFirst,
         Transition: m.transitPresentFirst,
         AdapterResponse: m.responsePresentFirst,
         ErrorState: m.errorPresentFirst,
         AdapterResponseError: m.errorResponsePresentFirst,
     },
-    common.State{
+    statemachine.State{
         Migration: m.migrateFromPresentSecond,
         Transition: m.transitPresentSecond,
         AdapterResponse: m.responsePresentSecond,
@@ -90,17 +89,17 @@ func RawTestStateMachineFactory() [3]statemachine.StateMachine {
     },)
 
     // past state machine
-    x[2] = append(x[2], common.State{
+    x[2] = append(x[2], statemachine.State{
         Transition: m.initPastHandler,
         ErrorState: m.errorPastInit,
     },
-    common.State{
+    statemachine.State{
         Transition: m.transitPastFirst,
         AdapterResponse: m.responsePastFirst,
         ErrorState: m.errorPastFirst,
         AdapterResponseError: m.errorResponsePastFirst,
     },
-    common.State{
+    statemachine.State{
         Transition: m.transitPastSecond,
         AdapterResponse: m.responsePastSecond,
         ErrorState: m.errorPastSecond,
@@ -108,24 +107,23 @@ func RawTestStateMachineFactory() [3]statemachine.StateMachine {
     },)
 
 
-    smFuture := common.StateMachine{
+    smFuture := &statemachine.StateMachine{
         ID:     m.cleanStateMachine.(TestStateMachine).GetTypeID(),
         States: x[0],
     }
 
-    smPresent := common.StateMachine{
+    smPresent := &statemachine.StateMachine{
         ID:     m.cleanStateMachine.(TestStateMachine).GetTypeID(),
         States: x[1],
     }
 
-    smPast := common.StateMachine{
+    smPast := &statemachine.StateMachine{
         ID:     m.cleanStateMachine.(TestStateMachine).GetTypeID(),
         States: x[2],
     }
 
-    return [3]statemachine.StateMachine{
-        &smFuture, &smPresent, &smPast,
-
+    return [3]*statemachine.StateMachine{
+        smFuture, smPresent, smPast,
     }
 }
 

@@ -23,55 +23,54 @@ import (
 
 	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
+	"github.com/insolar/insolar/conveyor/handler"
 	"github.com/insolar/insolar/insolar"
 
-	//"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
 type mockStateMachineSet struct {
-	stateMachine statemachine.StateMachine
+	stateMachine matrix.StateMachine
 }
 
-func (s *mockStateMachineSet) GetStateMachineByID(id int) statemachine.StateMachine {
+func (s *mockStateMachineSet) GetStateMachineByID(id int) matrix.StateMachine {
 	return s.stateMachine
 }
 
 type mockStateMachineHolder struct{}
 
-func (m *mockStateMachineHolder) makeSetAccessor() statemachine.SetAccessor {
+func (m *mockStateMachineHolder) makeSetAccessor() matrix.SetAccessor {
 	return &mockStateMachineSet{
 		stateMachine: m.GetStateMachinesByType(),
 	}
 }
 
-func (m *mockStateMachineHolder) GetFutureConfig() statemachine.SetAccessor {
+func (m *mockStateMachineHolder) GetFutureConfig() matrix.SetAccessor {
 	return m.makeSetAccessor()
 }
 
-func (m *mockStateMachineHolder) GetPresentConfig() statemachine.SetAccessor {
+func (m *mockStateMachineHolder) GetPresentConfig() matrix.SetAccessor {
 	return m.makeSetAccessor()
 }
 
-func (m *mockStateMachineHolder) GetPastConfig() statemachine.SetAccessor {
+func (m *mockStateMachineHolder) GetPastConfig() matrix.SetAccessor {
 	return m.makeSetAccessor()
 }
 
-func (m *mockStateMachineHolder) GetInitialStateMachine() statemachine.StateMachine {
+func (m *mockStateMachineHolder) GetInitialStateMachine() matrix.StateMachine {
 	return m.GetStateMachinesByType()
 }
 
-func (m *mockStateMachineHolder) GetStateMachinesByType() statemachine.StateMachine {
+func (m *mockStateMachineHolder) GetStateMachinesByType() matrix.StateMachine {
 
-	sm := statemachine.NewStateMachineMock(&testing.T{})
-	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r statemachine.MigrationHandler) {
+	sm := matrix.NewStateMachineMock(&testing.T{})
+	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r handler.MigrationHandler) {
 		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			if s > maxState {
 				s /= 2
@@ -80,7 +79,7 @@ func (m *mockStateMachineHolder) GetStateMachinesByType() statemachine.StateMach
 		}
 	}
 
-	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r statemachine.TransitHandler) {
+	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r handler.TransitHandler) {
 		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			if s > maxState {
 				s /= 2
@@ -89,7 +88,7 @@ func (m *mockStateMachineHolder) GetStateMachinesByType() statemachine.StateMach
 		}
 	}
 
-	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r statemachine.AdapterResponseHandler) {
+	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r handler.AdapterResponseHandler) {
 		return func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
 			if s > maxState {
 				s /= 2
@@ -532,8 +531,8 @@ func Test_migrate_EmptyList(t *testing.T) {
 }
 
 func Test_migrate_NoMigrationHandler(t *testing.T) {
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r statemachine.MigrationHandler) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r handler.MigrationHandler) {
 		return nil
 	}
 
@@ -571,8 +570,8 @@ func Test_migrate_MigrationHandlerOk(t *testing.T) {
 	migrationState := fsm.StateID(initState + 1)
 	initPayLoad := 99
 	migrationPayLoad := initPayLoad + 1
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r statemachine.MigrationHandler) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r handler.MigrationHandler) {
 		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return migrationPayLoad, fsm.NewElementState(0, migrationState), nil
 		}
@@ -603,8 +602,8 @@ func Test_migrate_MigrationHandlerOk(t *testing.T) {
 }
 
 func Test_migrate_MigrationHandler_LastStateOfStateMachine(t *testing.T) {
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r statemachine.MigrationHandler) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r handler.MigrationHandler) {
 		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return element.GetPayload(), 0, nil
 		}
@@ -637,8 +636,8 @@ func Test_migrate_MigrationHandler_LastStateOfStateMachine(t *testing.T) {
 }
 
 func Test_migrate_MigrationHandler_Error(t *testing.T) {
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r statemachine.MigrationHandler) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r handler.MigrationHandler) {
 		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return element.GetPayload(), 0, errors.New("Test Error")
 		}
@@ -646,7 +645,7 @@ func Test_migrate_MigrationHandler_Error(t *testing.T) {
 
 	transitionErrorState := fsm.StateID(999)
 	transitionErrorPayLoad := 777
-	sm.GetTransitionErrorHandlerFunc = func(s fsm.StateID) (r statemachine.TransitionErrorHandler) {
+	sm.GetTransitionErrorHandlerFunc = func(s fsm.StateID) (r handler.TransitionErrorHandler) {
 		return func(element slot.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
 			return transitionErrorPayLoad, fsm.NewElementState(0, transitionErrorState)
 		}
@@ -781,8 +780,8 @@ func Test_processingElements_OneEvent(t *testing.T) {
 	transitionState := fsm.StateID(433)
 	transitionPayload := 556
 
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r statemachine.TransitHandler) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r handler.TransitHandler) {
 		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return transitionPayload, fsm.NewElementState(0, transitionState), nil
 		}
@@ -810,8 +809,8 @@ func Test_processingElements_OneEvent(t *testing.T) {
 }
 
 func Test_processingElements_LastStateOfStateMachine(t *testing.T) {
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r statemachine.TransitHandler) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r handler.TransitHandler) {
 		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return element.GetPayload(), 0, nil
 		}
@@ -838,8 +837,8 @@ func Test_processingElements_LastStateOfStateMachine(t *testing.T) {
 }
 
 func Test_processingElements_TransitionHandlerError(t *testing.T) {
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r statemachine.TransitHandler) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r handler.TransitHandler) {
 		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return nil, 0, errors.New("Test Error")
 		}
@@ -848,7 +847,7 @@ func Test_processingElements_TransitionHandlerError(t *testing.T) {
 	transitionErrorState := fsm.StateID(999)
 	transitionErrorPayLoad := 777
 
-	sm.GetTransitionErrorHandlerFunc = func(s fsm.StateID) (r statemachine.TransitionErrorHandler) {
+	sm.GetTransitionErrorHandlerFunc = func(s fsm.StateID) (r handler.TransitionErrorHandler) {
 		return func(element slot.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
 			return transitionErrorPayLoad, fsm.NewElementState(0, transitionErrorState)
 		}
@@ -902,8 +901,8 @@ func Test_readResponseQueue_OneEvent_Future(t *testing.T) {
 
 func Test_readResponseQueue_OneEvent(t *testing.T) {
 	responseState := fsm.StateID(446)
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r statemachine.AdapterResponseHandler) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r handler.AdapterResponseHandler) {
 		return func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
 			return element.GetPayload(), fsm.NewElementState(0, responseState), nil
 		}
@@ -986,8 +985,8 @@ func Test_readResponseQueue_BadElementIdInResponse(t *testing.T) {
 }
 
 func Test_readResponseQueue_ResponseHandlerError(t *testing.T) {
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r statemachine.AdapterResponseHandler) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r handler.AdapterResponseHandler) {
 		return func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
 			return element.GetPayload(), 0, errors.New("Test Error")
 		}
@@ -995,7 +994,7 @@ func Test_readResponseQueue_ResponseHandlerError(t *testing.T) {
 
 	responseState := fsm.StateID(564)
 	responsePayload := uint32(345)
-	sm.GetResponseErrorHandlerFunc = func(s fsm.StateID) (r statemachine.ResponseErrorHandler) {
+	sm.GetResponseErrorHandlerFunc = func(s fsm.StateID) (r handler.ResponseErrorHandler) {
 		return func(element slot.SlotElementHelper, response iadapter.Response, err error) (interface{}, fsm.ElementState) {
 			return responsePayload, fsm.NewElementState(0, responseState)
 		}
@@ -1052,8 +1051,8 @@ func Test_initializing_EmptySlot(t *testing.T) {
 func Test_initializing_NotEmptySlot(t *testing.T) {
 	migrationPayLoad := 555
 	migrationState := fsm.StateID(99)
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r statemachine.MigrationHandler) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r handler.MigrationHandler) {
 		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return migrationPayLoad, fsm.NewElementState(0, migrationState), nil
 		}

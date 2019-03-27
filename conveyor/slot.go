@@ -22,7 +22,6 @@ import (
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
@@ -51,12 +50,12 @@ const slotElementDelta = slotSize // nolint: unused
 // HandlersConfiguration contains configuration of handlers for specific pulse state
 // TODO: logic will be provided after pulse change mechanism
 type HandlersConfiguration struct {
-	pulseStateMachines statemachine.SetAccessor
-	initStateMachine   statemachine.StateMachine
+	pulseStateMachines matrix.SetAccessor
+	initStateMachine   matrix.StateMachine
 }
 
 // TODO: logic will be provided after pulse change mechanism
-func (h *HandlersConfiguration) getMachineConfiguration(smType int) statemachine.StateMachine { // nolint: unused
+func (h *HandlersConfiguration) getMachineConfiguration(smType int) matrix.StateMachine { // nolint: unused
 	return nil
 }
 
@@ -240,7 +239,7 @@ func (s *Slot) GetNodeData() interface{} { // nolint: unused
 }
 
 // createElement creates new active element from empty element
-func (s *Slot) createElement(stateMachine statemachine.StateMachine, state fsm.StateID, event queue.OutputElement) (*slotElement, error) { // nolint: unused
+func (s *Slot) createElement(stateMachine matrix.StateMachine, state fsm.StateID, event queue.OutputElement) (*slotElement, error) { // nolint: unused
 	element := s.popElement(EmptyElement)
 	element.stateMachine = stateMachine
 	element.state = state

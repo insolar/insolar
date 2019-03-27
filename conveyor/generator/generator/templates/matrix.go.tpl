@@ -17,7 +17,6 @@
 package matrix
 
 import (
-    "github.com/insolar/insolar/conveyor/interfaces/statemachine"
     {{range .Imports}}"{{.}}"
     {{end}}
 )
@@ -25,10 +24,10 @@ import (
 const numPulseStates = 3
 
 type StateMachineSet struct{
-    stateMachines []statemachine.StateMachine
+    stateMachines []StateMachine
 }
 
-func ( s *StateMachineSet ) GetStateMachineByID(id int) statemachine.StateMachine{
+func ( s *StateMachineSet ) GetStateMachineByID(id int) StateMachine{
     return s.stateMachines[id]
 }
 
@@ -46,32 +45,32 @@ func NewMatrix() *Matrix {
     m := Matrix{}
 
     // Fill m.matrix[i][0] with empty state machine, since 0 - is state of completion of state machine
-    var emptyObject  statemachine.StateMachine
+    var emptyObject StateMachine
     	for i := 0; i < numPulseStates; i++ {
     		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, emptyObject)
     	}
 
     {{range .Machines}}
-    sms{{.Name}} := {{.Package}}.Raw{{.Name}}Factory()
+    sm{{.Name}} := {{.Package}}.Raw{{.Name}}Factory()
     for i := 0; i < numPulseStates; i++ {
-        m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, sms{{.Name}}[i])
+        m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, sm{{.Name}}[i])
     }
     {{end}}
     return &m
 }
 
-func (m *Matrix) GetInitialStateMachine() statemachine.StateMachine {
+func (m *Matrix) GetInitialStateMachine() StateMachine {
     return m.matrix[1].stateMachines[1]
 }
 
-func (m *Matrix) GetFutureConfig() statemachine.SetAccessor{
+func (m *Matrix) GetFutureConfig() SetAccessor{
     return &m.matrix[0]
 }
 
-func (m *Matrix) GetPresentConfig() statemachine.SetAccessor{
+func (m *Matrix) GetPresentConfig() SetAccessor{
     return &m.matrix[1]
 }
 
-func (m *Matrix) GetPastConfig() statemachine.SetAccessor{
+func (m *Matrix) GetPastConfig() SetAccessor{
     return &m.matrix[2]
 }

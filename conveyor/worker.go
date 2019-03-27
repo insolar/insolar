@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/conveyor/queue"
@@ -74,7 +73,7 @@ func newWorker(slot *Slot) worker {
 	return w
 }
 
-func (w *worker) GetStateMachineByType(mType matrix.MachineType) statemachine.StateMachine {
+func (w *worker) GetStateMachineByType(mType matrix.MachineType) matrix.StateMachine {
 	return w.slot.handlersConfiguration.pulseStateMachines.GetStateMachineByID(int(mType))
 }
 
@@ -373,7 +372,7 @@ func (w *worker) sendRemovalSignalToConveyor() {
 	// catch conveyor lock, check input queue, if It's empty - remove slot from map, if it's not - got to Working state
 }
 
-func (w *worker) getInitialStateMachine() statemachine.StateMachine {
+func (w *worker) getInitialStateMachine() matrix.StateMachine {
 	return w.slot.handlersConfiguration.initStateMachine
 }
 
@@ -501,7 +500,7 @@ func (w *worker) migrate(status ActivationStatus) error {
 
 func (w *worker) setPulseStateMachines() {
 
-	var stateMachines statemachine.SetAccessor
+	var stateMachines matrix.SetAccessor
 
 	switch w.slot.pulseState {
 	case constant.Future:

@@ -17,13 +17,12 @@
 package {{.Package}}
 
 import (
-	"github.com/insolar/insolar/conveyor/statemachine"
-    "github.com/insolar/insolar/conveyor/interfaces/fsm"
+	"errors"
+
+	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
-
-	"errors"
+	"github.com/insolar/insolar/conveyor/statemachine"
 )
 
 {{range $i, $machine := .StateMachines}}type Base{{$machine.Name}} struct {}
@@ -40,7 +39,7 @@ type Raw{{$machine.Name}} struct {
     cleanStateMachine {{$machine.Name}}
 }
 
-func Raw{{$machine.Name}}Factory() [3]statemachine.StateMachine {
+func Raw{{$machine.Name}}Factory() [3]*statemachine.StateMachine {
     m := Raw{{$machine.Name}}{
         cleanStateMachine: &Clean{{$machine.Name}}{},
     }
@@ -85,24 +84,23 @@ func Raw{{$machine.Name}}Factory() [3]statemachine.StateMachine {
     },{{end}}{{end}})
 
 
-    smFuture := statemachine.StateMachine{
+    smFuture := &statemachine.StateMachine{
         ID:     m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
         States: x[0],
     }
 
-    smPresent := statemachine.StateMachine{
+    smPresent := &statemachine.StateMachine{
         ID:     m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
         States: x[1],
     }
 
-    smPast := statemachine.StateMachine{
+    smPast := &statemachine.StateMachine{
         ID:     m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
         States: x[2],
     }
 
-    return [3]statemachine.StateMachine{
-        &smFuture, &smPresent, &smPast,
-
+    return [3]*statemachine.StateMachine{
+        smFuture, smPresent, smPast,
     }
 }
 
