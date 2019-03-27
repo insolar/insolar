@@ -189,3 +189,6 @@ docker-insgorund:
 
 .PHONY: docker
 docker: docker-insolard docker-genesis docker-insgorund
+
+generate-protobuf:
+	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto

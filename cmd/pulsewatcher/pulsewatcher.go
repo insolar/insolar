@@ -157,11 +157,6 @@ func displayResultsJSON(results [][]string, ready bool, buffer *bytes.Buffer) {
 }
 
 func collectNodesStatuses(conf *pulsewatcher.Config) ([][]string, bool) {
-	client = http.Client{
-		Transport: &http.Transport{},
-		Timeout:   conf.Timeout,
-	}
-
 	state := true
 	errored := 0
 	results := make([][]string, len(conf.Nodes))
@@ -248,6 +243,12 @@ func main() {
 
 	buffer := &bytes.Buffer{}
 	fmt.Print("\n\n")
+
+	client = http.Client{
+		Transport: &http.Transport{},
+		Timeout:   conf.Timeout,
+	}
+
 	for {
 		results, ready := collectNodesStatuses(conf)
 		if useJSONFormat {

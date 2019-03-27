@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	adapterid "github.com/insolar/insolar/conveyor/adapter/adapterid"
 	fsm "github.com/insolar/insolar/conveyor/interfaces/fsm"
 
 	testify_assert "github.com/stretchr/testify/assert"
@@ -74,7 +75,7 @@ type SlotElementHelperMock struct {
 	ReactivatePreCounter uint64
 	ReactivateMock       mSlotElementHelperMockReactivate
 
-	SendTaskFunc       func(p uint32, p1 interface{}, p2 uint32) (r error)
+	SendTaskFunc       func(p adapterid.ID, p1 interface{}, p2 uint32) (r error)
 	SendTaskCounter    uint64
 	SendTaskPreCounter uint64
 	SendTaskMock       mSlotElementHelperMockSendTask
@@ -1544,7 +1545,7 @@ type SlotElementHelperMockSendTaskExpectation struct {
 }
 
 type SlotElementHelperMockSendTaskInput struct {
-	p  uint32
+	p  adapterid.ID
 	p1 interface{}
 	p2 uint32
 }
@@ -1554,7 +1555,7 @@ type SlotElementHelperMockSendTaskResult struct {
 }
 
 //Expect specifies that invocation of SlotElementHelper.SendTask is expected from 1 to Infinity times
-func (m *mSlotElementHelperMockSendTask) Expect(p uint32, p1 interface{}, p2 uint32) *mSlotElementHelperMockSendTask {
+func (m *mSlotElementHelperMockSendTask) Expect(p adapterid.ID, p1 interface{}, p2 uint32) *mSlotElementHelperMockSendTask {
 	m.mock.SendTaskFunc = nil
 	m.expectationSeries = nil
 
@@ -1578,7 +1579,7 @@ func (m *mSlotElementHelperMockSendTask) Return(r error) *SlotElementHelperMock 
 }
 
 //ExpectOnce specifies that invocation of SlotElementHelper.SendTask is expected once
-func (m *mSlotElementHelperMockSendTask) ExpectOnce(p uint32, p1 interface{}, p2 uint32) *SlotElementHelperMockSendTaskExpectation {
+func (m *mSlotElementHelperMockSendTask) ExpectOnce(p adapterid.ID, p1 interface{}, p2 uint32) *SlotElementHelperMockSendTaskExpectation {
 	m.mock.SendTaskFunc = nil
 	m.mainExpectation = nil
 
@@ -1593,7 +1594,7 @@ func (e *SlotElementHelperMockSendTaskExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of SlotElementHelper.SendTask method
-func (m *mSlotElementHelperMockSendTask) Set(f func(p uint32, p1 interface{}, p2 uint32) (r error)) *SlotElementHelperMock {
+func (m *mSlotElementHelperMockSendTask) Set(f func(p adapterid.ID, p1 interface{}, p2 uint32) (r error)) *SlotElementHelperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1602,7 +1603,7 @@ func (m *mSlotElementHelperMockSendTask) Set(f func(p uint32, p1 interface{}, p2
 }
 
 //SendTask implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
-func (m *SlotElementHelperMock) SendTask(p uint32, p1 interface{}, p2 uint32) (r error) {
+func (m *SlotElementHelperMock) SendTask(p adapterid.ID, p1 interface{}, p2 uint32) (r error) {
 	counter := atomic.AddUint64(&m.SendTaskPreCounter, 1)
 	defer atomic.AddUint64(&m.SendTaskCounter, 1)
 

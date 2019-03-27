@@ -20,13 +20,14 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
 
 // NewWaitAdapter creates new instance of SimpleWaitAdapter with Waiter as worker
-func NewWaitAdapter() PulseConveyorAdapterTaskSink {
-	return NewAdapterWithQueue(NewWaiter())
+func NewWaitAdapter(id adapterid.ID) TaskSink {
+	return NewAdapterWithQueue(NewWaiter(), id)
 }
 
 // WaiterTask is task for adapter for waiting

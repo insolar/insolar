@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/messagebus"
@@ -50,7 +51,8 @@ func mockConveyorFuture(t *testing.T, result insolar.Reply) *testutils.ConveyorF
 }
 
 func startResponseSendAdapter() *CancellableQueueAdapter {
-	adapter := NewResponseSendAdapter().(*CancellableQueueAdapter)
+	queueAdapter := NewAdapterWithQueue(NewSendResponseProcessor(), adapterid.SendResponse)
+	adapter := queueAdapter.(*CancellableQueueAdapter)
 	started := make(chan bool, 1)
 	adapter.StartProcessing(started)
 	<-started
@@ -125,7 +127,7 @@ func TestResponseSendAdapter_Parallel(t *testing.T) {
 
 	// PushTask
 	for i := 0; i < parallelPushTasks; i++ {
-		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+		go func(wg *sync.WaitGroup, adapter TaskSink) {
 			for i := 0; i < numIterations; i++ {
 				resp := &mockResponseSink{}
 				adapter.PushTask(resp, 34, 22, testResponseSenderTask(t))
@@ -157,13 +159,13 @@ func TestSendResponseHelper(t *testing.T) {
 	slotElementHelperMock.GetInputEventFunc = func() (r interface{}) {
 		return event
 	}
-	slotElementHelperMock.SendTaskFunc = func(p uint32, response interface{}, p2 uint32) (r error) {
+	slotElementHelperMock.SendTaskFunc = func(p adapterid.ID, response interface{}, p2 uint32) (r error) {
 		f := response.(SendResponseTask).Future
 		f.SetResult(testReply)
 		return nil
 	}
 
-	adapterCatalog := newCatalog()
+	adapterCatalog := newHelperCatalog()
 	err := adapterCatalog.sendResponseHelper.SendResponse(slotElementHelperMock, testReply, 42)
 	require.NoError(t, err)
 
@@ -177,7 +179,7 @@ func TestSendResponseHelper_BadInput(t *testing.T) {
 	slotElementHelperMock.GetInputEventFunc = func() (r interface{}) {
 		return 33
 	}
-	adapterCatalog := newCatalog()
+	adapterCatalog := newHelperCatalog()
 	err := adapterCatalog.sendResponseHelper.SendResponse(slotElementHelperMock, &mockReply{}, 44)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "Input event is not insolar.ConveyorPendingMessage")

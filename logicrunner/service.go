@@ -24,6 +24,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
@@ -174,7 +175,7 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	return err
 }
 
-var iteratorMap = make(map[string]*insolar.RefIterator)
+var iteratorMap = make(map[string]artifacts.RefIterator)
 var iteratorMapLock = sync.RWMutex{}
 var iteratorBuffSize = 1000
 
@@ -214,13 +215,13 @@ func (gpr *RPC) GetObjChildrenIterator(
 		iteratorMapLock.Lock()
 		iterator, ok = iteratorMap[iteratorID]
 		if !ok {
-			iteratorMap[iteratorID] = &newIterator
-			iterator = &newIterator
+			iteratorMap[iteratorID] = newIterator
+			iterator = newIterator
 		}
 		iteratorMapLock.Unlock()
 	}
 
-	iter := *iterator
+	iter := iterator
 
 	rep.Iterator.ID = iteratorID
 	rep.Iterator.CanFetch = iter.HasNext()

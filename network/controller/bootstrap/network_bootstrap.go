@@ -52,12 +52,12 @@ package bootstrap
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
@@ -90,7 +90,7 @@ func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.Bootstra
 		// if the network is up and complete, we return discovery nodes via consensus
 		if err == ErrReconnectRequired {
 			log.Debugf("[ Bootstrap ] Connecting discovery node %s as joiner", nb.NodeKeeper.GetOrigin().ID())
-			nb.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetState(insolar.NodePending)
+			nb.NodeKeeper.GetOrigin().(node.MutableNode).SetState(insolar.NodePending)
 			result, err = nb.bootstrapJoiner(ctx)
 		}
 	} else {

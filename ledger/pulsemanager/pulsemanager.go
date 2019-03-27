@@ -30,13 +30,13 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/heavyclient"
-	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
@@ -277,7 +277,7 @@ func (m *PulseManager) getExecutorHotData(
 	pendingRequests := map[insolar.ID]recentstorage.PendingObjectContext{}
 
 	for id, ttl := range recentObjectsIds {
-		lifeline, err := m.ObjectStorage.GetObjectIndex(ctx, jetID, &id, false)
+		lifeline, err := m.ObjectStorage.GetObjectIndex(ctx, jetID, &id)
 		if err != nil {
 			logger.Error(err)
 			continue
@@ -420,7 +420,7 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID in
 		"to_jet":   toJetID.DebugString(),
 	})
 	for id := range indexStorage.GetObjects() {
-		idx, err := m.ObjectStorage.GetObjectIndex(ctx, fromJetID, &id, false)
+		idx, err := m.ObjectStorage.GetObjectIndex(ctx, fromJetID, &id)
 		if err != nil {
 			if err == insolar.ErrNotFound {
 				logger.WithField("id", id.DebugString()).Error("rewrite index not found")

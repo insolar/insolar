@@ -19,4 +19,9 @@ linters:
     - deadcode
     - typecheck
     - golint
-    - staticcheck
+
+issues:
+  exclude-rules:
+    - text: "S1021:"
+      linters:
+        - gosimple

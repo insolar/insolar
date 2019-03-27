@@ -127,7 +127,7 @@ func TestElementList_isEmpty(t *testing.T) {
 	list := ElementList{}
 	require.True(t, list.isEmpty())
 
-	list.pushElement(newSlotElement(ActiveElement))
+	list.pushElement(newSlotElement(ActiveElement, nil))
 	require.False(t, list.isEmpty())
 
 	list.popElement()
@@ -533,7 +533,7 @@ func TestSlot_extractSlotElementByID_pushElement(t *testing.T) {
 }
 
 func TestNewSlotElement(t *testing.T) {
-	s := newSlotElement(ActiveElement)
+	s := newSlotElement(ActiveElement, nil)
 	require.NotNil(t, s)
 	require.Equal(t, ActiveElement, s.activationStatus)
 }
