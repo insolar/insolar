@@ -222,7 +222,7 @@ func (s *Sync) Store(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumb
 
 // StoreDrop saves a jet.Drop to a heavy db
 func (s *Sync) StoreDrop(ctx context.Context, jetID insolar.JetID, rawDrop []byte) error {
-	err := s.DropModifier.Set(ctx, drop.Deserialize(rawDrop))
+	err := s.DropModifier.Set(ctx, drop.MustDecode(rawDrop))
 	if err != nil {
 		return errors.Wrapf(err, "heavyserver: drop storing failed")
 	}

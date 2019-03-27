@@ -207,7 +207,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	pm.JetModifier = js
 	pm.DropModifier = ds
 	pm.DropAccessor = ds
-	pm.DropCleaner = ds
+	pm.DropCleaner = nil
 	pm.ObjectStorage = os
 	pm.Nodes = ns
 	pm.NodeSetter = ns

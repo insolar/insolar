@@ -95,7 +95,7 @@ func (c *JetClient) HeavySync(
 		JetID:    jetID,
 		PulseNum: pn,
 		Records:  recs,
-		Drop:     drop.Serialize(dr),
+		Drop:     drop.MustEncode(&dr),
 		Blobs:    convertBlobs(bls),
 	}
 	if err := messageToHeavy(ctx, c.bus, msg); err != nil {

@@ -87,16 +87,8 @@ func Decode(buf []byte) (*Drop, error) {
 	return &drop, nil
 }
 
-// Serialize serializes a drop
-func Serialize(dr Drop) []byte {
-	buff := bytes.NewBuffer(nil)
-	enc := codec.NewEncoder(buff, &codec.CborHandle{})
-	enc.MustEncode(dr)
-	return buff.Bytes()
-}
-
-// Deserialize deserializes a jet.Drop
-func Deserialize(buf []byte) (dr Drop) {
+// MustDecode deserializes a jet.Drop
+func MustDecode(buf []byte) (dr Drop) {
 	dec := codec.NewDecoderBytes(buf, &codec.CborHandle{})
 	dec.MustDecode(&dr)
 	return dr
