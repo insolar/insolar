@@ -28,7 +28,6 @@ import (
 
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/pkg/errors"
@@ -89,7 +88,7 @@ func (m *mockStateMachineHolder) GetStateMachinesByType() matrix.StateMachine {
 	}
 
 	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r handler.AdapterResponseHandler) {
-		return func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+		return func(element slot.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 			if s > maxState {
 				s /= 2
 			}
@@ -903,7 +902,7 @@ func Test_readResponseQueue_OneEvent(t *testing.T) {
 	responseState := fsm.StateID(446)
 	sm := matrix.NewStateMachineMock(t)
 	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r handler.AdapterResponseHandler) {
-		return func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+		return func(element slot.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 			return element.GetPayload(), fsm.NewElementState(0, responseState), nil
 		}
 	}
@@ -987,7 +986,7 @@ func Test_readResponseQueue_BadElementIdInResponse(t *testing.T) {
 func Test_readResponseQueue_ResponseHandlerError(t *testing.T) {
 	sm := matrix.NewStateMachineMock(t)
 	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r handler.AdapterResponseHandler) {
-		return func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+		return func(element slot.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 			return element.GetPayload(), 0, errors.New("Test Error")
 		}
 	}
@@ -995,7 +994,7 @@ func Test_readResponseQueue_ResponseHandlerError(t *testing.T) {
 	responseState := fsm.StateID(564)
 	responsePayload := uint32(345)
 	sm.GetResponseErrorHandlerFunc = func(s fsm.StateID) (r handler.ResponseErrorHandler) {
-		return func(element slot.SlotElementHelper, response iadapter.Response, err error) (interface{}, fsm.ElementState) {
+		return func(element slot.SlotElementHelper, response interface{}, err error) (interface{}, fsm.ElementState) {
 			return responsePayload, fsm.NewElementState(0, responseState)
 		}
 	}

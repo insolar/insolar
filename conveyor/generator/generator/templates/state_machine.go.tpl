@@ -159,7 +159,7 @@ func Raw{{$machine.Name}}Factory() [3]*statemachine.StateMachine {
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().({{.Machine.PayloadType}})
     if !ok { return nil, 0, errors.New("wrong payload type") }
-    aResponse, ok := ar.GetRespPayload().({{index .Handler.Params 2}})
+    aResponse, ok := ar.({{index .Handler.Params 2}})
     if !ok { return nil, 0, errors.New("wrong response type") }
     payload, state, err := s.cleanStateMachine.{{.Handler.Name}}(aInput, aPayload, aResponse)
     return payload, state, err

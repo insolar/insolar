@@ -14,15 +14,15 @@
  *    limitations under the License.
  */
 
-package iadapter
+package conveyor
 
 import (
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 )
 
-// Response gives access to response of adapter
-//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/iadapter.Response -o ./ -s _mock.go
-type Response interface {
+// AdapterResponse gives access to response of adapter
+//go:generate minimock -i github.com/insolar/insolar/conveyor.AdapterResponse -o ./ -s _mock.go
+type AdapterResponse interface {
 	// GetAdapterID returns adapter id
 	GetAdapterID() adapterid.ID
 	// GetElementID returns element id

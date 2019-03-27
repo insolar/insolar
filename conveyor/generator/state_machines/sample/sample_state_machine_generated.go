@@ -215,7 +215,7 @@ func (s *RawTestStateMachine) responsePresentFirst(element slot.SlotElementHelpe
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().(*Payload)
     if !ok { return nil, 0, errors.New("wrong payload type") }
-    aResponse, ok := ar.GetRespPayload().(TAR)
+    aResponse, ok := ar.(TAR)
     if !ok { return nil, 0, errors.New("wrong response type") }
     payload, state, err := s.cleanStateMachine.responsePresentFirst(aInput, aPayload, aResponse)
     return payload, state, err
@@ -225,7 +225,7 @@ func (s *RawTestStateMachine) responseFutureFirst(element slot.SlotElementHelper
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().(*Payload)
     if !ok { return nil, 0, errors.New("wrong payload type") }
-    aResponse, ok := ar.GetRespPayload().(TAR)
+    aResponse, ok := ar.(TAR)
     if !ok { return nil, 0, errors.New("wrong response type") }
     payload, state, err := s.cleanStateMachine.responseFutureFirst(aInput, aPayload, aResponse)
     return payload, state, err
@@ -235,7 +235,7 @@ func (s *RawTestStateMachine) responsePastFirst(element slot.SlotElementHelper, 
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().(*Payload)
     if !ok { return nil, 0, errors.New("wrong payload type") }
-    aResponse, ok := ar.GetRespPayload().(TAR)
+    aResponse, ok := ar.(TAR)
     if !ok { return nil, 0, errors.New("wrong response type") }
     payload, state, err := s.cleanStateMachine.responsePastFirst(aInput, aPayload, aResponse)
     return payload, state, err
@@ -310,7 +310,7 @@ func (s *RawTestStateMachine) responsePresentSecond(element slot.SlotElementHelp
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().(*Payload)
     if !ok { return nil, 0, errors.New("wrong payload type") }
-    aResponse, ok := ar.GetRespPayload().(TAR)
+    aResponse, ok := ar.(TAR)
     if !ok { return nil, 0, errors.New("wrong response type") }
     payload, state, err := s.cleanStateMachine.responsePresentSecond(aInput, aPayload, aResponse)
     return payload, state, err
@@ -320,7 +320,7 @@ func (s *RawTestStateMachine) responseFutureSecond(element slot.SlotElementHelpe
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().(*Payload)
     if !ok { return nil, 0, errors.New("wrong payload type") }
-    aResponse, ok := ar.GetRespPayload().(TAR)
+    aResponse, ok := ar.(TAR)
     if !ok { return nil, 0, errors.New("wrong response type") }
     payload, state, err := s.cleanStateMachine.responseFutureSecond(aInput, aPayload, aResponse)
     return payload, state, err
@@ -330,7 +330,7 @@ func (s *RawTestStateMachine) responsePastSecond(element slot.SlotElementHelper,
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().(*Payload)
     if !ok { return nil, 0, errors.New("wrong payload type") }
-    aResponse, ok := ar.GetRespPayload().(TAR)
+    aResponse, ok := ar.(TAR)
     if !ok { return nil, 0, errors.New("wrong response type") }
     payload, state, err := s.cleanStateMachine.responsePastSecond(aInput, aPayload, aResponse)
     return payload, state, err
