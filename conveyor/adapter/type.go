@@ -98,7 +98,7 @@ type AdapterNestedEvent struct {
 	eventPayload    interface{}
 }
 
-func NewAdapterNestedEvent(adapterID adapterid.ID, parentElementID uint32, handlerID uint32, eventPayload interface{}) iadapter.NestedEvent {
+func NewAdapterNestedEvent(adapterID adapterid.ID, parentElementID uint32, handlerID uint32, eventPayload interface{}) *AdapterNestedEvent {
 	return &AdapterNestedEvent{
 		adapterID:       adapterID,
 		parentElementID: parentElementID,

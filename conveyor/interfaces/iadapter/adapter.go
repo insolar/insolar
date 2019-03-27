@@ -32,16 +32,3 @@ type Response interface {
 	// GetRespPayload returns payload
 	GetRespPayload() interface{}
 }
-
-// NestedEvent gives access to nested event of adapter
-//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/iadapter.NestedEvent -o ./ -s _mock.go
-type NestedEvent interface {
-	// GetAdapterID returns adapter id
-	GetAdapterID() adapterid.ID
-	// GetParentElementID returns parent element id
-	GetParentElementID() uint32
-	// GetHandlerID returns handler id
-	GetHandlerID() uint32
-	// GetEventPayload returns event payload
-	GetEventPayload() interface{}
-}
