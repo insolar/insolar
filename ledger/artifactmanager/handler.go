@@ -1000,13 +1000,13 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insola
 
 func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.ValidationCheck)
-	jetID := jetFromContext(ctx)
 
-	rec, err := h.ObjectStorage.GetRecord(ctx, jetID, &msg.ValidatedState)
+	rec, err := h.RecordAccessor.ForID(ctx, msg.ValidatedState)
+	virtRec := rec.Record
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch state record")
 	}
-	state, ok := rec.(object.State)
+	state, ok := virtRec.(object.State)
 	if !ok {
 		return nil, errors.New("failed to fetch state record")
 	}
