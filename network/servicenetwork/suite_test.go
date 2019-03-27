@@ -55,6 +55,7 @@ import (
 	"crypto"
 	"fmt"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -106,6 +107,7 @@ type testSuite struct {
 	fixtureMap     map[string]*fixture
 	bootstrapCount int
 	nodesCount     int
+	Address        string
 }
 
 func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
@@ -114,6 +116,7 @@ func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
 		fixtureMap:     make(map[string]*fixture, 0),
 		bootstrapCount: bootstrapCount,
 		nodesCount:     nodesCount,
+		Address:        "127.0.0.1",
 	}
 }
 
@@ -123,6 +126,17 @@ func (s *testSuite) fixture() *fixture {
 
 // SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
 func (s *testSuite) SetupTest() {
+	if tbn, ok := os.LookupEnv("TBN"); ok {
+		s.T().Logf("Found $TBN=%s\n", tbn)
+		num, err := strconv.Atoi(tbn)
+		s.Require().NoError(err, "Test build number must be numeric")
+		s.Address = fmt.Sprintf("127.1.0.%d", 2+num%250)
+		s.T().Logf("Starting on address=%s\n", s.Address)
+
+	} else {
+		s.T().Log("TBN environment variable not found\n")
+	}
+
 	s.fixtureMap[s.T().Name()] = newFixture(s.T())
 	var err error
 	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
@@ -313,7 +327,7 @@ func (s *testSuite) newNetworkNode(name string) *networkNode {
 	if err != nil {
 		panic(err.Error())
 	}
-	address := "127.0.0.1:" + strconv.Itoa(incrementTestPort())
+	address := s.Address + ":" + strconv.Itoa(incrementTestPort())
 
 	nodeContext, _ := inslogger.WithField(s.fixture().ctx, "nodeName", name)
 	return &networkNode{
