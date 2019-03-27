@@ -52,6 +52,7 @@ package bootstrap
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/insolar"

@@ -53,9 +53,10 @@ package phases
 import (
 	"context"
 	"crypto"
-	"github.com/insolar/insolar/network/node"
 	"testing"
 	"time"
+
+	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/consensus/packets"
