@@ -112,7 +112,7 @@
   version = "v1.4.7"
 
 [[projects]]
-  digest = "1:1f7f64ca2895fc98e84c4d33369ee27f2250747de1eacefed3e85def52a737a1"
+  digest = "1:803efb5d2326aca89759ed555705ae47aed33b6f373632b1ef53b2a6fef94bda"
   name = "github.com/gogo/protobuf"
   packages = [
     "gogoproto",
@@ -139,6 +139,7 @@
     "protoc-gen-gogo/grpc",
     "protoc-gen-gogo/plugin",
     "protoc-gen-gogoslick",
+    "sortkeys",
     "vanity",
     "vanity/command",
   ]
@@ -662,8 +663,10 @@
     "github.com/blang/semver",
     "github.com/ccding/go-stun/stun",
     "github.com/dgraph-io/badger",
+    "github.com/gogo/protobuf/gogoproto",
     "github.com/gogo/protobuf/proto",
     "github.com/gogo/protobuf/protoc-gen-gogoslick",
+    "github.com/gogo/protobuf/sortkeys",
     "github.com/gojuno/minimock",
     "github.com/google/gofuzz",
     "github.com/gorilla/rpc/v2",
