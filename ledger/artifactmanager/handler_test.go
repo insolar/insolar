@@ -58,10 +58,13 @@ type handlerSuite struct {
 	scheme        insolar.PlatformCryptographyScheme
 	pulseTracker  storage.PulseTracker
 	nodeStorage   node.Accessor
-	objectStorage storage.ObjectStorage
+	objectStorage storage.ObjectStorage // TODO @imarkin 27.03.19 remove it after all new storages integration
 	jetStorage    jet.Storage
 	dropModifier  drop.Modifier
 	dropAccessor  drop.Accessor
+
+	recordModifier object.RecordModifier
+	recordAccessor object.RecordAccessor
 }
 
 var (
@@ -111,6 +114,9 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	dropStorage := drop.NewStorageDB()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
+	recordStorage := object.NewRecordMemory()
+	s.recordModifier = recordStorage
+	s.recordAccessor = recordStorage
 
 	s.cm.Inject(
 		s.scheme,
@@ -122,6 +128,8 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 		s.objectStorage,
 		s.dropAccessor,
 		s.dropModifier,
+		s.recordAccessor,
+		s.recordModifier,
 	)
 
 	err := s.cm.Init(s.ctx)
@@ -541,6 +549,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.ObjectStorage = s.objectStorage
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
+	h.RecordModifier = s.recordModifier
 
 	idLockMock := storage.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
@@ -621,6 +630,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
+	h.RecordModifier = s.recordModifier
 
 	idLockMock := storage.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
@@ -887,6 +897,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
+	h.RecordModifier = s.recordModifier
 
 	idLockMock := storage.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
@@ -969,6 +980,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
+	h.RecordModifier = s.recordModifier
 
 	idLockMock := storage.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
