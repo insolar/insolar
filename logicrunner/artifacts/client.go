@@ -783,7 +783,7 @@ func (m *client) activateObject(
 		currentPN,
 	)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to activate")
 	}
 
 	var (
@@ -808,7 +808,7 @@ func (m *client) activateObject(
 		currentPN,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to activate")
+		return nil, errors.Wrap(err, "failed to register as child while activating")
 	}
 
 	return &objectDescriptor{
