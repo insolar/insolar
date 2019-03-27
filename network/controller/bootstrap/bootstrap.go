@@ -118,8 +118,7 @@ type bootstrapper struct {
 	genesisRequestsReceived map[insolar.Reference]*GenesisRequest
 	genesisLock             sync.Mutex
 
-	firstPulseTime         time.Time
-	nextBootstrapNodeIndex int
+	firstPulseTime time.Time
 
 	reconnectToNewNetwork func(result network.BootstrapResult)
 }
