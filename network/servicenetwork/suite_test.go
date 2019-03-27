@@ -55,6 +55,7 @@ import (
 	"crypto"
 	"fmt"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -85,6 +86,21 @@ var (
 	reqTimeoutMs    int32  = 2000
 	pulseDelta      int32  = 5
 )
+
+func init() {
+	if tbn, ok := os.LookupEnv("TBN"); ok {
+		log.Infof("Found $TBN=%s\n", tbn)
+		num, err := strconv.Atoi(tbn)
+		if err != nil {
+			log.Fatalf("Test build number must be numeric: %v", err)
+		}
+		testNetworkPort = uint32((4 + num%60) * 1000)
+		log.Infof("Starting on port=%d\n", testNetworkPort)
+
+	} else {
+		log.Infof("TBN environment variable not found\n")
+	}
+}
 
 type fixture struct {
 	ctx            context.Context
