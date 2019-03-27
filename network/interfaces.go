@@ -308,10 +308,9 @@ type Accessor interface {
 	GetActiveNodeByShortID(shortID insolar.ShortNodeID) insolar.NetworkNode
 }
 
-// Accessor is interface that provides read and write access to a snapshot
+// Mutator is interface that provides read and write access to a snapshot
 type Mutator interface {
 	Accessor
-	// AddActiveNode adds active node to index so it is accessible via GetActiveNode(s).
-	// Does not add node to underlying snapshot.
-	AddActiveNode(n insolar.NetworkNode)
+	// AddWorkingNode adds active node to index and underlying snapshot so it is accessible via GetActiveNode(s).
+	AddWorkingNode(n insolar.NetworkNode)
 }

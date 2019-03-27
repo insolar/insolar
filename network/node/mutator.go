@@ -51,8 +51,6 @@
 package node
 
 import (
-	"sort"
-
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -64,17 +62,11 @@ type Mutator struct {
 	*Accessor
 }
 
-func (m *Mutator) AddActiveNode(n insolar.NetworkNode) {
-	m.refIndex[n.ID()] = n
-}
-
-func (m *Mutator) GetActiveNodes() []insolar.NetworkNode {
-	result := make([]insolar.NetworkNode, 0)
-	for _, node := range m.refIndex {
-		result = append(result, node)
+func (m *Mutator) AddWorkingNode(n insolar.NetworkNode) {
+	if _, ok := m.refIndex[n.ID()]; ok {
+		return
 	}
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].ID().Compare(result[j].ID()) < 0
-	})
-	return result
+	m.addToIndex(n)
+	m.snapshot.nodeList[ListWorking] = append(m.snapshot.nodeList[ListWorking], n)
+	m.active = append(m.active, n)
 }

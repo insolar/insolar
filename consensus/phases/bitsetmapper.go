@@ -51,6 +51,8 @@
 package phases
 
 import (
+	"sort"
+
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/node"
@@ -63,9 +65,12 @@ type BitsetMapper struct {
 	indexToRef map[int]insolar.Reference
 }
 
-func NewBitsetMapper(activeNodesSorted []insolar.NetworkNode) *BitsetMapper {
-	bm := NewSparseBitsetMapper(len(activeNodesSorted))
-	for i, node := range activeNodesSorted {
+func NewBitsetMapper(activeNodes []insolar.NetworkNode) *BitsetMapper {
+	bm := NewSparseBitsetMapper(len(activeNodes))
+	sort.Slice(activeNodes, func(i, j int) bool {
+		return activeNodes[i].ID().Compare(activeNodes[j].ID()) < 0
+	})
+	for i, node := range activeNodes {
 		bm.AddNode(node, uint16(i))
 	}
 	return bm
@@ -127,9 +132,9 @@ func ApplyClaims(state *ConsensusState, origin insolar.NetworkNode, claims []pac
 		// TODO: check bitset indexes from every announce claim for fraud
 		NodeJoinerIndex = c.NodeJoinerIndex
 		state.BitsetMapper.AddNode(node, c.NodeAnnouncerIndex)
-		state.NodesMutator.AddActiveNode(node)
+		state.NodesMutator.AddWorkingNode(node)
 	}
 	state.BitsetMapper.AddNode(origin, NodeJoinerIndex)
-	state.NodesMutator.AddActiveNode(origin)
+	state.NodesMutator.AddWorkingNode(origin)
 	return nil
 }
