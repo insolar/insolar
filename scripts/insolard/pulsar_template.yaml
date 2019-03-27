@@ -19,7 +19,7 @@ pulsar:
 keyspath: "scripts/insolard/configs/bootstrap_keys.json"
 log:
   level: Debug
-  adapter: logrus
+  adapter: zerolog
 tracer:
   jaeger:
     collectorendpoint: ""

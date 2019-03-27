@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -135,7 +136,7 @@ type LogicRunner struct {
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	ParcelFactory              message.ParcelFactory              `inject:""`
 	PulseStorage               insolar.PulseStorage               `inject:""`
-	ArtifactManager            insolar.ArtifactManager            `inject:""`
+	ArtifactManager            artifacts.Client                   `inject:""`
 	JetCoordinator             insolar.JetCoordinator             `inject:""`
 
 	Executors    [insolar.MachineTypesLastID]insolar.MachineLogicExecutor
@@ -704,7 +705,7 @@ func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *Ex
 // ObjectBody is an inner representation of object and all it accessory
 // make it private again when we start it serialize before sending
 type ObjectBody struct {
-	objDescriptor   insolar.ObjectDescriptor
+	objDescriptor   artifacts.ObjectDescriptor
 	Object          []byte
 	Prototype       *Ref
 	CodeMachineType insolar.MachineType
@@ -862,7 +863,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 func (lr *LogicRunner) getDescriptorsByPrototypeRef(
 	ctx context.Context, protoRef Ref,
 ) (
-	insolar.ObjectDescriptor, insolar.CodeDescriptor, error,
+	artifacts.ObjectDescriptor, artifacts.CodeDescriptor, error,
 ) {
 	protoDesc, err := lr.ArtifactManager.GetObject(ctx, protoRef, nil, false)
 	if err != nil {
@@ -885,7 +886,7 @@ func (lr *LogicRunner) getDescriptorsByPrototypeRef(
 func (lr *LogicRunner) getDescriptorsByObjectRef(
 	ctx context.Context, objRef Ref,
 ) (
-	insolar.ObjectDescriptor, insolar.ObjectDescriptor, insolar.CodeDescriptor, error,
+	artifacts.ObjectDescriptor, artifacts.ObjectDescriptor, artifacts.CodeDescriptor, error,
 ) {
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getDescriptorsByObjectRef")
 	defer span.End()

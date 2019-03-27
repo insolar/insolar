@@ -25,7 +25,7 @@ local insolar_params = params.insolar;
     },
     "log": {
         "level": "Debug",
-        "adapter": "logrus"
+        "adapter": "zerolog"
     },
     "logicrunner": {
         "rpclisten": "127.0.0.1:18182",

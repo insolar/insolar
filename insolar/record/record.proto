@@ -1,0 +1,92 @@
+syntax = "proto3";
+
+package record;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.populate_all)        = false;
+
+message GenesisRecord {
+}
+
+message ChildRecord {
+    option (gogoproto.face) = true;
+    bytes PrevChild = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];
+    bytes Ref       = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+}
+
+message JetRecord {
+    // TODO
+}
+
+message RequestRecord {
+    option (gogoproto.face) = true;
+    bytes Object      = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",       (gogoproto.nullable) = false];
+    bytes Parcel      = 2;
+    bytes MessageHash = 3;
+}
+
+message ResultRecord {
+    option (gogoproto.face) = true;
+    bytes Object  = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];
+    bytes Request = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Payload = 3;
+}
+
+message TypeRecord {
+    option (gogoproto.face) = true;
+    bytes Domain          = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Request         = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes TypeDeclaration = 3;
+}
+
+message CodeRecord {
+    option (gogoproto.face) = true;
+    bytes Domain      = 1  [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference",   (gogoproto.nullable) = false];
+    bytes Request     = 2  [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference",   (gogoproto.nullable) = false];
+    bytes Code        = 3  [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",          (gogoproto.nullable) = false];
+    uint32 MachineType = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.MachineType", (gogoproto.nullable) = false];
+}
+
+message ObjectActivateRecord {
+    option (gogoproto.face) = true;
+    bytes  Domain      = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes  Request     = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes  Memory      = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];
+    bytes  Image       = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bool   IsPrototype = 5;
+    bytes  Parent      = 6 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bool   IsDelegate  = 7;
+}
+
+message ObjectAmendRecord {
+    option (gogoproto.face) = true;
+    bytes  Domain      = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes  Request     = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes  Memory      = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];
+    bytes  Image       = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bool   IsPrototype = 5;
+    bytes  PrevState   = 6 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];
+}
+
+message ObjectDeactivateRecord {
+    option (gogoproto.face) = true;
+    bytes  Domain    = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes  Request   = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes  PrevState = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];
+}
+
+message Record {
+    oneof union {
+        GenesisRecord            Genesis            = 100;
+        ChildRecord              Child              = 101;
+        JetRecord                Jet                = 102;
+        RequestRecord            Request            = 200;
+        ResultRecord             Result             = 300;
+        TypeRecord               Type               = 301;
+        CodeRecord               Code               = 302;
+        ObjectActivateRecord     ObjectActivate     = 303;
+        ObjectAmendRecord        ObjectAmend        = 304;
+        ObjectDeactivateRecord   ObjectDeactivate   = 305;
+    }
+}

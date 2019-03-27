@@ -9,4 +9,5 @@ grep -v "_mock.go:" | \
     grep -v "_gen.go:" | \
     grep -v 'github.com/insolar/insolar/cmd/' | \
     grep -v "github.com/insolar/insolar/testutils" | \
-    grep -v "storage/storagetest"
+    grep -v "storage/storagetest" | \
+    grep -v ".pb.go:"

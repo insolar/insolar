@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/application/contract/noderecord"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -33,14 +34,14 @@ import (
 
 const testDataPath = "gentestdata"
 
-func mockArtifactManager(t *testing.T) *testutils.ArtifactManagerMock {
-	amMock := testutils.NewArtifactManagerMock(t)
+func mockArtifactManager(t *testing.T) *artifacts.ClientMock {
+	amMock := artifacts.NewClientMock(t)
 	amMock.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
 		id := testutils.RandomID()
 		return &id, nil
 	}
-	amMock.ActivateObjectFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r insolar.ObjectDescriptor, r1 error) {
-		return testutils.NewObjectDescriptorMock(t), nil
+	amMock.ActivateObjectFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r artifacts.ObjectDescriptor, r1 error) {
+		return artifacts.NewObjectDescriptorMock(t), nil
 	}
 	amMock.RegisterResultFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error) {
 		id := testutils.RandomID()
@@ -49,15 +50,15 @@ func mockArtifactManager(t *testing.T) *testutils.ArtifactManagerMock {
 	return amMock
 }
 
-func mockArtifactManagerWithRegisterRequestError(t *testing.T) *testutils.ArtifactManagerMock {
-	amMock := testutils.NewArtifactManagerMock(t)
+func mockArtifactManagerWithRegisterRequestError(t *testing.T) *artifacts.ClientMock {
+	amMock := artifacts.NewClientMock(t)
 	amMock.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
 		return nil, errors.New("test reasons")
 	}
 	return amMock
 }
 
-func mockGenesis(t *testing.T, am *testutils.ArtifactManagerMock) *Genesis {
+func mockGenesis(t *testing.T, am *artifacts.ClientMock) *Genesis {
 	ref := testutils.RandomRef()
 	var discoveryNodes []Node
 	discoveryNodes = append(discoveryNodes,
@@ -209,12 +210,12 @@ func TestActivateNodeRecord_RegisterRequest_Err(t *testing.T) {
 }
 
 func TestActivateNodeRecord_Activate_Err(t *testing.T) {
-	am := testutils.NewArtifactManagerMock(t)
+	am := artifacts.NewClientMock(t)
 	am.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
 		id := testutils.RandomID()
 		return &id, nil
 	}
-	am.ActivateObjectFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r insolar.ObjectDescriptor, r1 error) {
+	am.ActivateObjectFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r artifacts.ObjectDescriptor, r1 error) {
 		return nil, errors.New("test reasons")
 	}
 
@@ -236,13 +237,13 @@ func TestActivateNodeRecord_Activate_Err(t *testing.T) {
 }
 
 func TestActivateNodeRecord_RegisterResult_Err(t *testing.T) {
-	am := testutils.NewArtifactManagerMock(t)
+	am := artifacts.NewClientMock(t)
 	am.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
 		id := testutils.RandomID()
 		return &id, nil
 	}
-	am.ActivateObjectFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r insolar.ObjectDescriptor, r1 error) {
-		return testutils.NewObjectDescriptorMock(t), nil
+	am.ActivateObjectFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r artifacts.ObjectDescriptor, r1 error) {
+		return artifacts.NewObjectDescriptorMock(t), nil
 	}
 	am.RegisterResultFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error) {
 		return nil, errors.New("test reasons")

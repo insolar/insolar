@@ -14,26 +14,14 @@
 // limitations under the License.
 //
 
-package log
+package artifacts
 
 import (
-	"bytes"
-	"testing"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/insolar/insolar/configuration"
+	"errors"
 )
 
-func TestLogrusAdapter_CallerInfo(t *testing.T) {
-	log, err := NewLog(configuration.Log{Level: "info", Adapter: "logrus", Formatter: "json"})
-	require.NoError(t, err)
-	require.NotNil(t, log)
-
-	var buf bytes.Buffer
-	log.SetOutput(&buf)
-
-	log.Error("test")
-
-	require.Contains(t, buf.String(), "logrus_test.go:36")
-}
+// Custom errors possibly useful to check by artifact manager callers.
+var (
+	ErrObjectDeactivated = errors.New("object is deactivated")
+	ErrNotFound          = errors.New("object not found")
+)

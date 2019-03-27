@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -171,13 +172,12 @@ func initComponents(
 	)
 
 	components := ledger.GetLedgerComponents(cfg.Ledger, certManager.GetCertificate())
-	ld := ledger.Ledger{} // TODO: remove me with cmOld
 
 	components = append(components, []interface{}{
 		messageBus,
 		contractRequester,
-		&ld,
 		logicRunner,
+		artifacts.NewClient(),
 		delegationTokenFactory,
 		parcelFactory,
 	}...)

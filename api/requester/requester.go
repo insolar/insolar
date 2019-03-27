@@ -176,13 +176,18 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 	}
 	verboseInfo(ctx, "Signing request completed")
 
-	body, err := GetResponseBody(url, PostParams{
+	postParams := PostParams{
 		"params":    params,
 		"method":    reqCfg.Method,
 		"reference": userCfg.Caller,
 		"seed":      seed,
 		"signature": signature.Bytes(),
-	})
+	}
+	if reqCfg.LogLevel != nil {
+		postParams["logLevel"] = reqCfg.LogLevel
+	}
+
+	body, err := GetResponseBody(url, postParams)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with sending target request")

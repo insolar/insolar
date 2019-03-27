@@ -1,20 +1,4 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-
-package ledgertestutils
+package artifacts
 
 import (
 	"context"
@@ -24,10 +8,9 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/ledger/artifactmanager"
-	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
@@ -46,10 +29,56 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TmpLedger crteates ledger on top of temporary database.
+// TMPLedger
+// DEPRECATED
+type TMPLedger struct {
+	db              storage.DBContext
+	ArtifactManager Client
+	PulseManager    insolar.PulseManager   `inject:""`
+	JetCoordinator  insolar.JetCoordinator `inject:""`
+}
+
+// Deprecated: remove after deleting TmpLedger
+// GetPulseManager returns PulseManager.
+func (l *TMPLedger) GetPulseManager() insolar.PulseManager {
+	log.Warn("GetPulseManager is deprecated. Use component injection.")
+	return l.PulseManager
+}
+
+// Deprecated: remove after deleting TmpLedger
+// GetJetCoordinator returns JetCoordinator.
+func (l *TMPLedger) GetJetCoordinator() insolar.JetCoordinator {
+	log.Warn("GetJetCoordinator is deprecated. Use component injection.")
+	return l.JetCoordinator
+}
+
+// Deprecated: remove after deleting TmpLedger
+// GetArtifactManager returns artifact manager to work with.
+func (l *TMPLedger) GetArtifactManager() Client {
+	log.Warn("GetArtifactManager is deprecated. Use component injection.")
+	return l.ArtifactManager
+}
+
+// NewTestLedger is the util function for creation of Ledger with provided
+// private members (suitable for tests).
+func NewTestLedger(
+	db storage.DBContext,
+	am Client,
+	pm *pulsemanager.PulseManager,
+	jc insolar.JetCoordinator,
+) *TMPLedger {
+	return &TMPLedger{
+		db:              db,
+		ArtifactManager: am,
+		PulseManager:    pm,
+		JetCoordinator:  jc,
+	}
+}
+
+// TmpLedger creates ledger on top of temporary database.
 // Returns *ledger.Ledger and cleanup function.
-// FIXME: THIS METHOD IS DEPRECATED. USE MOCKS.
-func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c insolar.Components, closeJets bool) (*ledger.Ledger, storage.DBContext, func()) {
+// DEPRECATED
+func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c insolar.Components, closeJets bool) (*TMPLedger, storage.DBContext, func()) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
@@ -71,8 +100,8 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	rs := storage.NewReplicaStorage()
 	cl := storage.NewCleaner()
 
-	am := artifactmanager.NewArtifactManger()
-	am.PlatformCryptographyScheme = pcs
+	am := NewClient()
+	am.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
 	conf.PulseManager.HeavySyncEnabled = false
 	pm := pulsemanager.NewPulseManager(conf)
@@ -102,10 +131,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(networknode.NewNode(insolar.Reference{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
-	certificate := testutils.NewCertificateMock(t)
-	certificate.GetRoleMock.Return(handlersRole)
-
-	handler := artifactmanager.NewMessageHandler(&conf, certificate)
+	handler := artifactmanager.NewMessageHandler(&conf)
 	handler.PulseTracker = pt
 	handler.JetStorage = js
 	handler.Nodes = ns
@@ -212,7 +238,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	}
 
 	// Create ledger.
-	l := ledger.NewTestLedger(tmpDB, am, pm, jc)
+	l := NewTestLedger(tmpDB, am, pm, jc)
 
 	return l, tmpDB, dbcancel
 }
