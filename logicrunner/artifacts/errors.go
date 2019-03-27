@@ -14,5 +14,14 @@
 // limitations under the License.
 //
 
-// Package ledgertestutils contains high level API tests and test utils for other modules.
-package ledgertestutils
+package artifacts
+
+import (
+	"errors"
+)
+
+// Custom errors possibly useful to check by artifact manager callers.
+var (
+	ErrObjectDeactivated = errors.New("object is deactivated")
+	ErrNotFound          = errors.New("object not found")
+)

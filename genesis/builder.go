@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
 )
@@ -65,14 +66,14 @@ func OpenFile(dir string, name string) (*os.File, error) {
 type ContractsBuilder struct {
 	root string
 
-	ArtifactManager insolar.ArtifactManager
+	ArtifactManager artifacts.Client
 	Prototypes      map[string]*insolar.Reference
 	Codes           map[string]*insolar.Reference
 }
 
 // NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
 // artifact manager, ...
-func NewContractBuilder(am insolar.ArtifactManager) *ContractsBuilder {
+func NewContractBuilder(am artifacts.Client) *ContractsBuilder {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	if err != nil {
 		return nil
