@@ -450,14 +450,14 @@ func (w *worker) suspending() {
 	case constant.Past:
 		w.sendRemovalSignalToConveyor()
 	case constant.Present:
-		w.calculateNodeState()
-	case constant.Future:
 		if w.preparePulseSync != nil {
 			w.preparePulseSync.SetResult(nil)
 			w.preparePulseSync = nil
 		} else {
 			w.ctxLogger.Warn("[ suspending ] preparePulseSync is empty")
 		}
+	case constant.Future:
+		w.calculateNodeState()
 	}
 
 	for w.slot.isSuspending() {
