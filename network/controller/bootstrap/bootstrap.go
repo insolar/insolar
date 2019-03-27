@@ -557,24 +557,31 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 	}, nil
 }
 
-func (bc *bootstrapper) getNextBootstrapNodeIndex() int {
-	bc.nextBootstrapNodeIndex++
-	if bc.nextBootstrapNodeIndex >= len(bc.Certificate.GetDiscoveryNodes()) {
-		bc.nextBootstrapNodeIndex = 0
-	}
-	return bc.nextBootstrapNodeIndex
-}
-
 func (bc *bootstrapper) startCyclicBootstrap(ctx context.Context) {
 	for atomic.LoadInt32(&bc.cyclicBootstrapStop) == 0 {
-		node := bc.Certificate.GetDiscoveryNodes()[bc.getNextBootstrapNodeIndex()]
-		res, err := bc.startBootstrap(ctx, node.GetHost())
-		if err != nil {
-			logger := inslogger.FromContext(ctx)
-			logger.Errorf("[ StartCyclicBootstrap ] ", err)
+		results := make([]*network.BootstrapResult, 0)
+		nodes := bc.getInactivenodes()
+		for _, node := range nodes {
+			res, err := bc.startBootstrap(ctx, node.GetHost())
+			if err != nil {
+				logger := inslogger.FromContext(ctx)
+				logger.Errorf("[ StartCyclicBootstrap ] ", err)
+				continue
+			}
+			results = append(results, res)
 		}
-		if res.NetworkSize > len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) {
-			bc.reconnectToNewNetwork(*res)
+		if len(results) != 0 {
+			networkSize := results[0].NetworkSize
+			index := 0
+			for i := 1; i < len(results); i++ {
+				if results[i].NetworkSize > networkSize {
+					networkSize = results[i].NetworkSize
+					index = i
+				}
+			}
+			if networkSize > len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) {
+				bc.reconnectToNewNetwork(*results[index])
+			}
 		}
 		time.Sleep(time.Second * bootstrapTimeout)
 	}
@@ -630,6 +637,16 @@ func parseBotstrapResults(results []*network.BootstrapResult) *network.Bootstrap
 		}
 	}
 	return results[minIDIndex]
+}
+
+func (bc *bootstrapper) getInactivenodes() []insolar.DiscoveryNode {
+	res := make([]insolar.DiscoveryNode, 0)
+	for _, node := range bc.Certificate.GetDiscoveryNodes() {
+		if bc.NodeKeeper.GetAccessor().GetActiveNode(*node.GetNodeRef()) != nil {
+			res = append(res, node)
+		}
+	}
+	return res
 }
 
 func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(result network.BootstrapResult)) Bootstrapper {
