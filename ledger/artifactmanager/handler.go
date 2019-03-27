@@ -63,6 +63,7 @@ type MessageHandler struct {
 	ObjectStorage storage.ObjectStorage `inject:""`
 
 	object.RecordModifier `inject:""`
+	object.RecordAccessor `inject:""`
 
 	Nodes         node.Accessor        `inject:""`
 	PulseTracker  storage.PulseTracker `inject:""`
@@ -512,8 +513,10 @@ func (h *MessageHandler) handleGetObject(
 	}
 
 	// Fetch state record.
-	rec, err := h.ObjectStorage.GetRecord(ctx, *stateJet, stateID)
-	if err == insolar.ErrNotFound {
+	rec, err := h.RecordAccessor.ForID(ctx, *stateID)
+	virtRec := rec.Record
+
+	if err == object.ErrNotFound {
 		if h.isHeavy {
 			return nil, fmt.Errorf("failed to fetch state for %v. jet: %v, state: %v", msg.Head.Record(), stateJet.DebugString(), stateID.DebugString())
 		}
@@ -547,9 +550,9 @@ func (h *MessageHandler) handleGetObject(
 		}, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "can't fetch record from storage")
 	}
-	state, ok := rec.(object.State)
+	state, ok := virtRec.(object.State)
 	if !ok {
 		return nil, errors.New("invalid object record")
 	}
