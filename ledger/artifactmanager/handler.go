@@ -634,8 +634,9 @@ func (h *MessageHandler) handleGetChildren(
 	}
 
 	// Try to fetch the first child.
-	_, err = h.ObjectStorage.GetRecord(ctx, *childJet, currentChild)
-	if err == insolar.ErrNotFound {
+	_, err = h.RecordAccessor.ForID(ctx, *currentChild)
+
+	if err == object.ErrNotFound {
 		node, err := h.JetCoordinator.NodeForJet(ctx, *childJet, parcel.Pulse(), currentChild.Pulse())
 		if err != nil {
 			return nil, err
@@ -655,16 +656,17 @@ func (h *MessageHandler) handleGetChildren(
 		}
 		counter++
 
-		rec, err := h.ObjectStorage.GetRecord(ctx, *childJet, currentChild)
+		rec, err := h.RecordAccessor.ForID(ctx, *currentChild)
+		virtRec := rec.Record
 		// We don't have this child reference. Return what was collected.
-		if err == insolar.ErrNotFound {
+		if err == object.ErrNotFound {
 			return &reply.Children{Refs: refs, NextFrom: currentChild}, nil
 		}
 		if err != nil {
 			return nil, errors.New("failed to retrieve children")
 		}
 
-		childRec, ok := rec.(*object.ChildRecord)
+		childRec, ok := virtRec.(*object.ChildRecord)
 		if !ok {
 			return nil, errors.New("failed to retrieve children")
 		}
