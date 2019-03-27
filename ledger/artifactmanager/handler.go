@@ -684,15 +684,15 @@ func (h *MessageHandler) handleGetChildren(
 }
 
 func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	jetID := jetFromContext(ctx)
 	msg := parcel.Message().(*message.GetRequest)
 
-	rec, err := h.ObjectStorage.GetRecord(ctx, jetID, &msg.Request)
+	rec, err := h.RecordAccessor.ForID(ctx, msg.Request)
+	virtRec := rec.Record
 	if err != nil {
-		return nil, errors.New("failed to fetch request")
+		return nil, errors.Wrap(err, "failed to fetch request")
 	}
 
-	req, ok := rec.(*object.RequestRecord)
+	req, ok := virtRec.(*object.RequestRecord)
 	if !ok {
 		return nil, errors.New("failed to decode request")
 	}
