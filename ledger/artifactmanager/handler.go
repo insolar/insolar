@@ -1020,13 +1020,13 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel insol
 }
 
 func (h *MessageHandler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeRecord, error) {
-	jetID := *insolar.NewJetID(0, nil)
+	rec, err := h.RecordAccessor.ForID(ctx, *id)
+	virtRec := rec.Record
 
-	rec, err := h.ObjectStorage.GetRecord(ctx, insolar.ID(jetID), id)
 	if err != nil {
 		return nil, err
 	}
-	codeRec, ok := rec.(*object.CodeRecord)
+	codeRec, ok := virtRec.(*object.CodeRecord)
 	if !ok {
 		return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
 	}
