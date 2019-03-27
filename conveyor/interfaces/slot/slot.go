@@ -17,6 +17,7 @@
 package slot
 
 import (
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/insolar"
 )
@@ -38,7 +39,7 @@ type SlotElementHelper interface {
 	SlotElementRestrictedHelper
 	InformParent(payload interface{}) bool
 	DeactivateTill(reactivateOn ReactivateMode)
-	SendTask(adapterID uint32, taskPayload interface{}, respHandlerID uint32) error
+	SendTask(adapterID adapterid.ID, taskPayload interface{}, respHandlerID uint32) error
 	// JoinSequence( sequenceKey map-key,sequenceOrder uint64 )
 	// IsSequenceHead() bool
 }

@@ -19,11 +19,15 @@ package conveyor
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
+
 	"github.com/pkg/errors"
 )
 
@@ -167,7 +171,8 @@ func initElementsBuf() ([]slotElement, *ElementList) {
 	elements := make([]slotElement, slotSize)
 	emptyList := &ElementList{}
 	for i := 0; i < slotSize; i++ {
-		elements[i] = *newSlotElement(EmptyElement)
+		// we don't have *slot here yet. Set it later
+		elements[i] = *newSlotElement(EmptyElement, nil)
 		elements[i].id = uint32(i)
 		emptyList.pushElement(&elements[i])
 	}
@@ -197,7 +202,7 @@ func newSlot(pulseState constant.PulseState, pulseNumber insolar.PulseNumber, re
 		NotActiveElement: {},
 	}
 
-	return &Slot{
+	slot := &Slot{
 		pulseState:         pulseState,
 		inputQueue:         queue.NewMutexQueue(),
 		responseQueue:      queue.NewMutexQueue(),
@@ -211,11 +216,37 @@ func newSlot(pulseState constant.PulseState, pulseNumber insolar.PulseNumber, re
 			initStateMachine: HandlerStorage.GetInitialStateMachine(),
 		},
 	}
+
+	for i := range slot.elements {
+		slot.elements[i].slot = slot
+	}
+
+	return slot
 }
 
 func (s *Slot) runWorker() {
 	worker := newWorker(s)
 	go worker.run()
+}
+
+func (s *Slot) PushResponse(adapterID adapterid.ID, elementID uint32, handlerID uint32, respPayload interface{}) {
+	response := adapter.NewAdapterResponse(adapterID, elementID, handlerID, respPayload)
+	err := s.responseQueue.SinkPush(response)
+	if err != nil {
+		panic("[ PushResponse ] Can't SinkPush: " + err.Error())
+	}
+}
+
+func (s *Slot) PushNestedEvent(adapterID adapterid.ID, parentElementID uint32, handlerID uint32, eventPayload interface{}) {
+	event := adapter.NewAdapterNestedEvent(adapterID, parentElementID, handlerID, eventPayload)
+	err := s.responseQueue.SinkPush(event)
+	if err != nil {
+		panic("[ PushNestedEvent ] Can't SinkPush: " + err.Error())
+	}
+}
+
+func (s *Slot) GetSlotDetails() slot.SlotDetails {
+	return s
 }
 
 // GetPulseNumber implements iface SlotDetails
@@ -322,7 +353,7 @@ func (s *Slot) pushElement(element *slotElement) error { // nolint: unused
 	}
 	if status == EmptyElement {
 		oldID := element.id
-		*element = *newSlotElement(EmptyElement)
+		*element = *newSlotElement(EmptyElement, s)
 		element.id = oldID + slotElementDelta
 	}
 	list.pushElement(element)

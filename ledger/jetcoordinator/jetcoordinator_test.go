@@ -22,8 +22,8 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -134,7 +134,7 @@ func TestJetCoordinator_Me(t *testing.T) {
 	// Arrange
 	expectedID := testutils.RandomRef()
 	nodeNet := network.NewNodeNetworkMock(t)
-	node := network.NewNodeMock(t)
+	node := network.NewNetworkNodeMock(t)
 	nodeNet.GetOriginMock.Return(node)
 	node.IDMock.Return(expectedID)
 	jc := NewJetCoordinator(1)

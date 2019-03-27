@@ -25,11 +25,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NewGetCodeAdapter creates new instance of adapter for getting code
-func NewGetCodeAdapter(cg GetCodeProcessor) adapter.PulseConveyorAdapterTaskSink {
-	return adapter.NewAdapterWithQueue(&cg)
-}
-
 // GetCodeTask is task for adapter for getting code
 type GetCodeTask struct {
 	// TODO: don't let adapter and component know about Parcel type, get every needed info in

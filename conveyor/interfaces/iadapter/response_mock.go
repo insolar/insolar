@@ -10,13 +10,14 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	adapterid "github.com/insolar/insolar/conveyor/adapter/adapterid"
 )
 
 //ResponseMock implements github.com/insolar/insolar/conveyor/interfaces/iadapter.Response
 type ResponseMock struct {
 	t minimock.Tester
 
-	GetAdapterIDFunc       func() (r uint32)
+	GetAdapterIDFunc       func() (r adapterid.ID)
 	GetAdapterIDCounter    uint64
 	GetAdapterIDPreCounter uint64
 	GetAdapterIDMock       mResponseMockGetAdapterID
@@ -64,7 +65,7 @@ type ResponseMockGetAdapterIDExpectation struct {
 }
 
 type ResponseMockGetAdapterIDResult struct {
-	r uint32
+	r adapterid.ID
 }
 
 //Expect specifies that invocation of Response.GetAdapterID is expected from 1 to Infinity times
@@ -80,7 +81,7 @@ func (m *mResponseMockGetAdapterID) Expect() *mResponseMockGetAdapterID {
 }
 
 //Return specifies results of invocation of Response.GetAdapterID
-func (m *mResponseMockGetAdapterID) Return(r uint32) *ResponseMock {
+func (m *mResponseMockGetAdapterID) Return(r adapterid.ID) *ResponseMock {
 	m.mock.GetAdapterIDFunc = nil
 	m.expectationSeries = nil
 
@@ -102,12 +103,12 @@ func (m *mResponseMockGetAdapterID) ExpectOnce() *ResponseMockGetAdapterIDExpect
 	return expectation
 }
 
-func (e *ResponseMockGetAdapterIDExpectation) Return(r uint32) {
+func (e *ResponseMockGetAdapterIDExpectation) Return(r adapterid.ID) {
 	e.result = &ResponseMockGetAdapterIDResult{r}
 }
 
 //Set uses given function f as a mock of Response.GetAdapterID method
-func (m *mResponseMockGetAdapterID) Set(f func() (r uint32)) *ResponseMock {
+func (m *mResponseMockGetAdapterID) Set(f func() (r adapterid.ID)) *ResponseMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -116,7 +117,7 @@ func (m *mResponseMockGetAdapterID) Set(f func() (r uint32)) *ResponseMock {
 }
 
 //GetAdapterID implements github.com/insolar/insolar/conveyor/interfaces/iadapter.Response interface
-func (m *ResponseMock) GetAdapterID() (r uint32) {
+func (m *ResponseMock) GetAdapterID() (r adapterid.ID) {
 	counter := atomic.AddUint64(&m.GetAdapterIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetAdapterIDCounter, 1)
 

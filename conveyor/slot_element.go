@@ -17,9 +17,15 @@
 package conveyor
 
 import (
+	"fmt"
+
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
+	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
+
+	"github.com/pkg/errors"
 )
 
 // ActivationStatus represents status of work for slot element
@@ -45,11 +51,15 @@ type slotElement struct {
 	nextElement      *slotElement
 	prevElement      *slotElement
 	activationStatus ActivationStatus
+	slot             *Slot
 }
 
 // newSlotElement creates new slot element with provided activation status
-func newSlotElement(activationStatus ActivationStatus) *slotElement {
-	return &slotElement{activationStatus: activationStatus}
+func newSlotElement(activationStatus ActivationStatus, slot *Slot) *slotElement {
+	return &slotElement{
+		activationStatus: activationStatus,
+		slot:             slot,
+	}
 }
 
 // ---- SlotElementRestrictedHelper
@@ -84,9 +94,26 @@ func (se *slotElement) GetPayload() interface{} {
 	return se.payload
 }
 
+// SendTask implements SlotElementHelper
+func (se *slotElement) SendTask(adapterID adapterid.ID, taskPayload interface{}, respHandlerID uint32) error {
+	adapter := adapterstorage.Manager.GetAdapterByID(adapterID)
+	if adapter == nil {
+		panic(fmt.Sprintf("[ SendTask ] No such adapter: %d", adapterID))
+	}
+
+	err := adapter.PushTask(se.slot, se.id, respHandlerID, taskPayload)
+	if err != nil {
+		return errors.Errorf("[ SendTask ] Can't PushTask: %s", err)
+	}
+
+	se.DeactivateTill(slot.Response)
+
+	return nil
+}
+
 // Reactivate implements SlotElementRestrictedHelper
 func (se *slotElement) Reactivate() {
-	panic("implement me")
+	se.activationStatus = ActiveElement
 }
 
 // LeaveSequence implements SlotElementRestrictedHelper
@@ -125,10 +152,14 @@ func (se *slotElement) InformParent(payload interface{}) bool {
 
 // DeactivateTill implements SlotElementHelper
 func (se *slotElement) DeactivateTill(reactivateOn slot.ReactivateMode) {
-	panic("implement me")
-}
-
-// SendTask implements SlotElementHelper
-func (se *slotElement) SendTask(adapterID uint32, taskPayload interface{}, respHandlerID uint32) error {
-	panic("implement me")
+	switch reactivateOn {
+	case slot.Empty:
+		panic("implement me")
+	case slot.Response:
+		se.activationStatus = NotActiveElement
+	case slot.Tick:
+		panic("implement me")
+	case slot.SeqHead:
+		panic("implement me")
+	}
 }

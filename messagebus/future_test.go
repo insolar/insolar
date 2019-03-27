@@ -86,11 +86,13 @@ func TestFuture_GetResult(t *testing.T) {
 func TestFuture_GetResult_AfterSet(t *testing.T) {
 	rep := replyMock(111)
 	f := testFuture()
+	done := make(chan bool)
 	go func() {
-		time.Sleep(time.Millisecond)
 		f.SetResult(rep)
+		done <- true
 	}()
 
+	<-done
 	res, err := f.GetResult(10 * time.Millisecond)
 	require.NoError(t, err)
 	require.EqualValues(t, rep, res)
@@ -99,11 +101,13 @@ func TestFuture_GetResult_AfterSet(t *testing.T) {
 
 func TestFuture_GetResult_AfterCancel(t *testing.T) {
 	f := testFuture()
+	done := make(chan bool)
 	go func() {
-		time.Sleep(time.Millisecond)
 		f.Cancel()
+		done <- true
 	}()
 
+	<-done
 	_, err := f.GetResult(10 * time.Millisecond)
 	require.EqualError(t, err, ErrFutureChannelClosed.Error())
 	require.EqualValues(t, 1, f.finished)
