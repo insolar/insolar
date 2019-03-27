@@ -64,10 +64,6 @@ type Mutator struct {
 	*Accessor
 }
 
-func (m *Mutator) RemoveActiveNode(nodeID insolar.Reference) {
-	delete(m.refIndex, nodeID)
-}
-
 func (m *Mutator) AddActiveNode(n insolar.NetworkNode) {
 	m.refIndex[n.ID()] = n
 }

@@ -314,8 +314,4 @@ type Mutator interface {
 	// AddActiveNode adds active node to index so it is accessible via GetActiveNode(s).
 	// Does not add node to underlying snapshot.
 	AddActiveNode(n insolar.NetworkNode)
-	// RemoveActiveNode removes active node from index so it is no longer accessible via GetActiveNode(s).
-	// Does not remove node from underlying snapshot.
-	// TODO: fix consensus implementation so that this method is no longer needed.
-	RemoveActiveNode(nodeID insolar.Reference)
 }

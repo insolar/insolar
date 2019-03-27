@@ -69,6 +69,8 @@ type FirstPhaseState struct {
 
 	ValidProofs map[insolar.NetworkNode]*merkle.PulseProof
 	FaultProofs map[insolar.Reference]*merkle.PulseProof
+
+	BitSet packets.BitSet
 }
 
 type SecondPhaseState struct {
@@ -79,8 +81,6 @@ type SecondPhaseState struct {
 
 	MatrixState *Phase2MatrixState
 	Matrix      *StateMatrix
-
-	BitSet packets.BitSet
 }
 
 type ThirdPhaseState struct {

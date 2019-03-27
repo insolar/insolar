@@ -220,14 +220,19 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 		}
 	}
 	valid, fault := validateProofs(fp.Calculator, state.NodesMutator, pulseHash, proofSet)
+	valid[fp.NodeKeeper.GetOrigin()] = pulseProof
 	for node := range valid {
 		state.HashStorage.AddProof(node.ID(), rawProofs[node.ID()])
 	}
 	for nodeID := range fault {
 		logger.Warnf("[ NET Consensus phase-1 ] Failed to validate proof from %s", nodeID)
-		state.NodesMutator.RemoveActiveNode(nodeID)
 	}
 	logger.Infof("[ NET Consensus phase-1 ] Valid proofs after phase: %d/%d", len(valid), state.BitsetMapper.Length())
+
+	bitset, err := fp.generatePhase2Bitset(state.BitsetMapper, valid, pulse.PulseNumber)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to generate bitset for phase 2")
+	}
 
 	return &FirstPhaseState{
 		PulseEntry:     entry,
@@ -236,7 +241,40 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 		ValidProofs:    valid,
 		FaultProofs:    fault,
 		ConsensusState: state,
+		BitSet:         bitset,
 	}, nil
+}
+
+func (fp *FirstPhaseImpl) generatePhase2Bitset(list packets.BitSetMapper, proofs map[insolar.NetworkNode]*merkle.PulseProof, pulseNumber insolar.PulseNumber) (packets.BitSet, error) {
+	bitset, err := packets.NewBitSet(list.Length())
+	if err != nil {
+		return nil, err
+	}
+	cells := make([]packets.BitSetCell, 0)
+	for node := range proofs {
+		cells = append(cells, packets.BitSetCell{
+			NodeID: node.ID(),
+			State:  getNodeState(node, pulseNumber),
+		})
+	}
+	cells = append(cells, packets.BitSetCell{
+		NodeID: fp.NodeKeeper.GetOrigin().ID(),
+		State:  getNodeState(fp.NodeKeeper.GetOrigin(), pulseNumber),
+	})
+	err = bitset.ApplyChanges(cells, list)
+	if err != nil {
+		return nil, err
+	}
+	return bitset, nil
+}
+
+func getNodeState(node insolar.NetworkNode, pulseNumber insolar.PulseNumber) packets.BitSetState {
+	state := packets.Legit
+	if node.GetState() == insolar.NodeLeaving && node.LeavingETA() < pulseNumber {
+		state = packets.TimedOut
+	}
+
+	return state
 }
 
 func (fp *FirstPhaseImpl) checkPacketSignature(packet *packets.Phase1Packet, recordRef insolar.Reference) error {
