@@ -19,8 +19,8 @@ package pulse
 import (
 	"testing"
 
-	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

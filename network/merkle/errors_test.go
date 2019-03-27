@@ -58,7 +58,6 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
@@ -161,9 +160,6 @@ func (t *calculatorErrorSuite) TestGetCloudProofCalculateError() {
 }
 
 func TestCalculatorError(t *testing.T) {
-	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	l, _, clean := ledgertestutils.TmpLedger(t, "", insolar.StaticRoleLightMaterial, insolar.Components{}, true)
-
 	calculator := &calculator{}
 
 	cm := component.Manager{}
@@ -185,9 +181,14 @@ func TestCalculatorError(t *testing.T) {
 	nk := nodekeeper.GetTestNodekeeper(service)
 	th := terminationhandler.NewTestHandler()
 
+	am := staterMock{
+		stateFunc: func() (bytes []byte, e error) {
+			return []byte{1, 2, 3}, nil
+		},
+	}
 	jc := testutils.NewJetCoordinatorMock(t)
 
-	cm.Inject(th, nk, jc, l.ArtifactManager, calculator, service, scheme, pulseManager)
+	cm.Inject(th, nk, jc, &am, calculator, service, scheme, pulseManager)
 
 	require.NotNil(t, calculator.ArtifactManager)
 	require.NotNil(t, calculator.NodeNetwork)
@@ -211,8 +212,14 @@ func TestCalculatorError(t *testing.T) {
 		service:     service,
 	}
 	suite.Run(t, s)
+}
 
-	clean()
+type staterMock struct {
+	stateFunc func() ([]byte, error)
+}
+
+func (m staterMock) State() ([]byte, error) {
+	return m.stateFunc()
 }
 
 func TestCalculatorLedgerError(t *testing.T) {
@@ -231,15 +238,16 @@ func TestCalculatorLedgerError(t *testing.T) {
 		return "key", nil
 	}
 
-	am := testutils.NewArtifactManagerMock(t)
-	am.StateFunc = func() (r []byte, r1 error) {
-		return nil, errors.New("State error")
+	am := staterMock{
+		stateFunc: func() (r []byte, r1 error) {
+			return nil, errors.New("State error")
+		},
 	}
 
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	nk := nodekeeper.GetTestNodekeeper(service)
 	th := terminationhandler.NewTestHandler()
-	cm.Inject(th, nk, am, calculator, service, scheme)
+	cm.Inject(th, nk, &am, calculator, service, scheme)
 
 	require.NotNil(t, calculator.ArtifactManager)
 	require.NotNil(t, calculator.NodeNetwork)

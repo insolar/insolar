@@ -3,7 +3,7 @@ package jet
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Storage" can be found in github.com/insolar/insolar/ledger/internal/jet
+The original interface "Storage" can be found in github.com/insolar/insolar/insolar/jet
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//StorageMock implements github.com/insolar/insolar/ledger/internal/jet.Storage
+//StorageMock implements github.com/insolar/insolar/insolar/jet.Storage
 type StorageMock struct {
 	t minimock.Tester
 
@@ -51,7 +51,7 @@ type StorageMock struct {
 	UpdateMock       mStorageMockUpdate
 }
 
-//NewStorageMock returns a mock for github.com/insolar/insolar/ledger/internal/jet.Storage
+//NewStorageMock returns a mock for github.com/insolar/insolar/insolar/jet.Storage
 func NewStorageMock(t minimock.Tester) *StorageMock {
 	m := &StorageMock{t: t}
 
@@ -137,7 +137,7 @@ func (m *mStorageMockAll) Set(f func(p context.Context, p1 insolar.PulseNumber) 
 	return m.mock
 }
 
-//All implements github.com/insolar/insolar/ledger/internal/jet.Storage interface
+//All implements github.com/insolar/insolar/insolar/jet.Storage interface
 func (m *StorageMock) All(p context.Context, p1 insolar.PulseNumber) (r []insolar.JetID) {
 	counter := atomic.AddUint64(&m.AllPreCounter, 1)
 	defer atomic.AddUint64(&m.AllCounter, 1)
@@ -277,7 +277,7 @@ func (m *mStorageMockClone) Set(f func(p context.Context, p1 insolar.PulseNumber
 	return m.mock
 }
 
-//Clone implements github.com/insolar/insolar/ledger/internal/jet.Storage interface
+//Clone implements github.com/insolar/insolar/insolar/jet.Storage interface
 func (m *StorageMock) Clone(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.ClonePreCounter, 1)
 	defer atomic.AddUint64(&m.CloneCounter, 1)
@@ -401,7 +401,7 @@ func (m *mStorageMockDelete) Set(f func(p context.Context, p1 insolar.PulseNumbe
 	return m.mock
 }
 
-//Delete implements github.com/insolar/insolar/ledger/internal/jet.Storage interface
+//Delete implements github.com/insolar/insolar/insolar/jet.Storage interface
 func (m *StorageMock) Delete(p context.Context, p1 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteCounter, 1)
@@ -536,7 +536,7 @@ func (m *mStorageMockForID) Set(f func(p context.Context, p1 insolar.PulseNumber
 	return m.mock
 }
 
-//ForID implements github.com/insolar/insolar/ledger/internal/jet.Storage interface
+//ForID implements github.com/insolar/insolar/insolar/jet.Storage interface
 func (m *StorageMock) ForID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r insolar.JetID, r1 bool) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
@@ -689,7 +689,7 @@ func (m *mStorageMockSplit) Set(f func(p context.Context, p1 insolar.PulseNumber
 	return m.mock
 }
 
-//Split implements github.com/insolar/insolar/ledger/internal/jet.Storage interface
+//Split implements github.com/insolar/insolar/insolar/jet.Storage interface
 func (m *StorageMock) Split(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r insolar.JetID, r1 insolar.JetID, r2 error) {
 	counter := atomic.AddUint64(&m.SplitPreCounter, 1)
 	defer atomic.AddUint64(&m.SplitCounter, 1)
@@ -834,7 +834,7 @@ func (m *mStorageMockUpdate) Set(f func(p context.Context, p1 insolar.PulseNumbe
 	return m.mock
 }
 
-//Update implements github.com/insolar/insolar/ledger/internal/jet.Storage interface
+//Update implements github.com/insolar/insolar/insolar/jet.Storage interface
 func (m *StorageMock) Update(p context.Context, p1 insolar.PulseNumber, p2 bool, p3 ...insolar.JetID) {
 	counter := atomic.AddUint64(&m.UpdatePreCounter, 1)
 	defer atomic.AddUint64(&m.UpdateCounter, 1)
