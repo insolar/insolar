@@ -187,8 +187,8 @@ type NodeKeeper interface {
 	GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error)
 	// GetClaimQueue get the internal queue of claims
 	GetClaimQueue() ClaimQueue
-	// GetSnapshot get current nodekeeper snapshot
-	GetSnapshot() *node.Snapshot
+	// GetSnapshotCopy get copy of the current nodekeeper snapshot
+	GetSnapshotCopy() *node.Snapshot
 	// Sync move unsync -> sync
 	Sync(context.Context, []insolar.NetworkNode, []consensus.ReferendumClaim) error
 	// MoveSyncToActive merge sync list with active nodes

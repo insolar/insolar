@@ -58,10 +58,10 @@ type NodeKeeperMock struct {
 	GetOriginJoinClaimPreCounter uint64
 	GetOriginJoinClaimMock       mNodeKeeperMockGetOriginJoinClaim
 
-	GetSnapshotFunc       func() (r *node.Snapshot)
-	GetSnapshotCounter    uint64
-	GetSnapshotPreCounter uint64
-	GetSnapshotMock       mNodeKeeperMockGetSnapshot
+	GetSnapshotCopyFunc       func() (r *node.Snapshot)
+	GetSnapshotCopyCounter    uint64
+	GetSnapshotCopyPreCounter uint64
+	GetSnapshotCopyMock       mNodeKeeperMockGetSnapshotCopy
 
 	GetWorkingNodeFunc       func(p insolar.Reference) (r insolar.NetworkNode)
 	GetWorkingNodeCounter    uint64
@@ -124,7 +124,7 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 	m.GetOriginMock = mNodeKeeperMockGetOrigin{mock: m}
 	m.GetOriginAnnounceClaimMock = mNodeKeeperMockGetOriginAnnounceClaim{mock: m}
 	m.GetOriginJoinClaimMock = mNodeKeeperMockGetOriginJoinClaim{mock: m}
-	m.GetSnapshotMock = mNodeKeeperMockGetSnapshot{mock: m}
+	m.GetSnapshotCopyMock = mNodeKeeperMockGetSnapshotCopy{mock: m}
 	m.GetWorkingNodeMock = mNodeKeeperMockGetWorkingNode{mock: m}
 	m.GetWorkingNodesMock = mNodeKeeperMockGetWorkingNodes{mock: m}
 	m.GetWorkingNodesByRoleMock = mNodeKeeperMockGetWorkingNodesByRole{mock: m}
@@ -1095,82 +1095,82 @@ func (m *NodeKeeperMock) GetOriginJoinClaimFinished() bool {
 	return true
 }
 
-type mNodeKeeperMockGetSnapshot struct {
+type mNodeKeeperMockGetSnapshotCopy struct {
 	mock              *NodeKeeperMock
-	mainExpectation   *NodeKeeperMockGetSnapshotExpectation
-	expectationSeries []*NodeKeeperMockGetSnapshotExpectation
+	mainExpectation   *NodeKeeperMockGetSnapshotCopyExpectation
+	expectationSeries []*NodeKeeperMockGetSnapshotCopyExpectation
 }
 
-type NodeKeeperMockGetSnapshotExpectation struct {
-	result *NodeKeeperMockGetSnapshotResult
+type NodeKeeperMockGetSnapshotCopyExpectation struct {
+	result *NodeKeeperMockGetSnapshotCopyResult
 }
 
-type NodeKeeperMockGetSnapshotResult struct {
+type NodeKeeperMockGetSnapshotCopyResult struct {
 	r *node.Snapshot
 }
 
-//Expect specifies that invocation of NodeKeeper.GetSnapshot is expected from 1 to Infinity times
-func (m *mNodeKeeperMockGetSnapshot) Expect() *mNodeKeeperMockGetSnapshot {
-	m.mock.GetSnapshotFunc = nil
+//Expect specifies that invocation of NodeKeeper.GetSnapshotCopy is expected from 1 to Infinity times
+func (m *mNodeKeeperMockGetSnapshotCopy) Expect() *mNodeKeeperMockGetSnapshotCopy {
+	m.mock.GetSnapshotCopyFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockGetSnapshotExpectation{}
+		m.mainExpectation = &NodeKeeperMockGetSnapshotCopyExpectation{}
 	}
 
 	return m
 }
 
-//Return specifies results of invocation of NodeKeeper.GetSnapshot
-func (m *mNodeKeeperMockGetSnapshot) Return(r *node.Snapshot) *NodeKeeperMock {
-	m.mock.GetSnapshotFunc = nil
+//Return specifies results of invocation of NodeKeeper.GetSnapshotCopy
+func (m *mNodeKeeperMockGetSnapshotCopy) Return(r *node.Snapshot) *NodeKeeperMock {
+	m.mock.GetSnapshotCopyFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockGetSnapshotExpectation{}
+		m.mainExpectation = &NodeKeeperMockGetSnapshotCopyExpectation{}
 	}
-	m.mainExpectation.result = &NodeKeeperMockGetSnapshotResult{r}
+	m.mainExpectation.result = &NodeKeeperMockGetSnapshotCopyResult{r}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of NodeKeeper.GetSnapshot is expected once
-func (m *mNodeKeeperMockGetSnapshot) ExpectOnce() *NodeKeeperMockGetSnapshotExpectation {
-	m.mock.GetSnapshotFunc = nil
+//ExpectOnce specifies that invocation of NodeKeeper.GetSnapshotCopy is expected once
+func (m *mNodeKeeperMockGetSnapshotCopy) ExpectOnce() *NodeKeeperMockGetSnapshotCopyExpectation {
+	m.mock.GetSnapshotCopyFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &NodeKeeperMockGetSnapshotExpectation{}
+	expectation := &NodeKeeperMockGetSnapshotCopyExpectation{}
 
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *NodeKeeperMockGetSnapshotExpectation) Return(r *node.Snapshot) {
-	e.result = &NodeKeeperMockGetSnapshotResult{r}
+func (e *NodeKeeperMockGetSnapshotCopyExpectation) Return(r *node.Snapshot) {
+	e.result = &NodeKeeperMockGetSnapshotCopyResult{r}
 }
 
-//Set uses given function f as a mock of NodeKeeper.GetSnapshot method
-func (m *mNodeKeeperMockGetSnapshot) Set(f func() (r *node.Snapshot)) *NodeKeeperMock {
+//Set uses given function f as a mock of NodeKeeper.GetSnapshotCopy method
+func (m *mNodeKeeperMockGetSnapshotCopy) Set(f func() (r *node.Snapshot)) *NodeKeeperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.GetSnapshotFunc = f
+	m.mock.GetSnapshotCopyFunc = f
 	return m.mock
 }
 
-//GetSnapshot implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) GetSnapshot() (r *node.Snapshot) {
-	counter := atomic.AddUint64(&m.GetSnapshotPreCounter, 1)
-	defer atomic.AddUint64(&m.GetSnapshotCounter, 1)
+//GetSnapshotCopy implements github.com/insolar/insolar/network.NodeKeeper interface
+func (m *NodeKeeperMock) GetSnapshotCopy() (r *node.Snapshot) {
+	counter := atomic.AddUint64(&m.GetSnapshotCopyPreCounter, 1)
+	defer atomic.AddUint64(&m.GetSnapshotCopyCounter, 1)
 
-	if len(m.GetSnapshotMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetSnapshotMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeKeeperMock.GetSnapshot.")
+	if len(m.GetSnapshotCopyMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetSnapshotCopyMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeKeeperMock.GetSnapshotCopy.")
 			return
 		}
 
-		result := m.GetSnapshotMock.expectationSeries[counter-1].result
+		result := m.GetSnapshotCopyMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the NodeKeeperMock.GetSnapshot")
+			m.t.Fatal("No results are set for the NodeKeeperMock.GetSnapshotCopy")
 			return
 		}
 
@@ -1179,11 +1179,11 @@ func (m *NodeKeeperMock) GetSnapshot() (r *node.Snapshot) {
 		return
 	}
 
-	if m.GetSnapshotMock.mainExpectation != nil {
+	if m.GetSnapshotCopyMock.mainExpectation != nil {
 
-		result := m.GetSnapshotMock.mainExpectation.result
+		result := m.GetSnapshotCopyMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the NodeKeeperMock.GetSnapshot")
+			m.t.Fatal("No results are set for the NodeKeeperMock.GetSnapshotCopy")
 		}
 
 		r = result.r
@@ -1191,39 +1191,39 @@ func (m *NodeKeeperMock) GetSnapshot() (r *node.Snapshot) {
 		return
 	}
 
-	if m.GetSnapshotFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeKeeperMock.GetSnapshot.")
+	if m.GetSnapshotCopyFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeKeeperMock.GetSnapshotCopy.")
 		return
 	}
 
-	return m.GetSnapshotFunc()
+	return m.GetSnapshotCopyFunc()
 }
 
-//GetSnapshotMinimockCounter returns a count of NodeKeeperMock.GetSnapshotFunc invocations
-func (m *NodeKeeperMock) GetSnapshotMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetSnapshotCounter)
+//GetSnapshotCopyMinimockCounter returns a count of NodeKeeperMock.GetSnapshotCopyFunc invocations
+func (m *NodeKeeperMock) GetSnapshotCopyMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetSnapshotCopyCounter)
 }
 
-//GetSnapshotMinimockPreCounter returns the value of NodeKeeperMock.GetSnapshot invocations
-func (m *NodeKeeperMock) GetSnapshotMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetSnapshotPreCounter)
+//GetSnapshotCopyMinimockPreCounter returns the value of NodeKeeperMock.GetSnapshotCopy invocations
+func (m *NodeKeeperMock) GetSnapshotCopyMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetSnapshotCopyPreCounter)
 }
 
-//GetSnapshotFinished returns true if mock invocations count is ok
-func (m *NodeKeeperMock) GetSnapshotFinished() bool {
+//GetSnapshotCopyFinished returns true if mock invocations count is ok
+func (m *NodeKeeperMock) GetSnapshotCopyFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetSnapshotMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetSnapshotCounter) == uint64(len(m.GetSnapshotMock.expectationSeries))
+	if len(m.GetSnapshotCopyMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetSnapshotCopyCounter) == uint64(len(m.GetSnapshotCopyMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.GetSnapshotMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetSnapshotCounter) > 0
+	if m.GetSnapshotCopyMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetSnapshotCopyCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.GetSnapshotFunc != nil {
-		return atomic.LoadUint64(&m.GetSnapshotCounter) > 0
+	if m.GetSnapshotCopyFunc != nil {
+		return atomic.LoadUint64(&m.GetSnapshotCopyCounter) > 0
 	}
 
 	return true
@@ -2488,8 +2488,8 @@ func (m *NodeKeeperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetOriginJoinClaim")
 	}
 
-	if !m.GetSnapshotFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.GetSnapshot")
+	if !m.GetSnapshotCopyFinished() {
+		m.t.Fatal("Expected call to NodeKeeperMock.GetSnapshotCopy")
 	}
 
 	if !m.GetWorkingNodeFinished() {
@@ -2573,8 +2573,8 @@ func (m *NodeKeeperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetOriginJoinClaim")
 	}
 
-	if !m.GetSnapshotFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.GetSnapshot")
+	if !m.GetSnapshotCopyFinished() {
+		m.t.Fatal("Expected call to NodeKeeperMock.GetSnapshotCopy")
 	}
 
 	if !m.GetWorkingNodeFinished() {
@@ -2634,7 +2634,7 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetOriginFinished()
 		ok = ok && m.GetOriginAnnounceClaimFinished()
 		ok = ok && m.GetOriginJoinClaimFinished()
-		ok = ok && m.GetSnapshotFinished()
+		ok = ok && m.GetSnapshotCopyFinished()
 		ok = ok && m.GetWorkingNodeFinished()
 		ok = ok && m.GetWorkingNodesFinished()
 		ok = ok && m.GetWorkingNodesByRoleFinished()
@@ -2680,8 +2680,8 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to NodeKeeperMock.GetOriginJoinClaim")
 			}
 
-			if !m.GetSnapshotFinished() {
-				m.t.Error("Expected call to NodeKeeperMock.GetSnapshot")
+			if !m.GetSnapshotCopyFinished() {
+				m.t.Error("Expected call to NodeKeeperMock.GetSnapshotCopy")
 			}
 
 			if !m.GetWorkingNodeFinished() {
@@ -2760,7 +2760,7 @@ func (m *NodeKeeperMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.GetSnapshotFinished() {
+	if !m.GetSnapshotCopyFinished() {
 		return false
 	}
 

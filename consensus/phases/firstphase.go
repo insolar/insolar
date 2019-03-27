@@ -110,7 +110,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(pulse.PulseNumber)))
 	defer span.End()
 
-	state := NewConsensusState(fp.NodeKeeper.GetSnapshot())
+	state := NewConsensusState(fp.NodeKeeper.GetSnapshotCopy())
 
 	pulseHash, pulseProof, err := fp.Calculator.GetPulseProof(entry)
 	consensusInfo := fp.NodeKeeper.GetConsensusInfo()

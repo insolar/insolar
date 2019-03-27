@@ -152,11 +152,11 @@ type nodekeeper struct {
 	Cryptography insolar.CryptographyService `inject:""`
 }
 
-func (nk *nodekeeper) GetSnapshot() *node.Snapshot {
+func (nk *nodekeeper) GetSnapshotCopy() *node.Snapshot {
 	nk.activeLock.RLock()
 	defer nk.activeLock.RUnlock()
 
-	return nk.snapshot
+	return node.CopySnapshot(nk.snapshot)
 }
 
 func (nk *nodekeeper) SetInitialSnapshot(nodes []insolar.NetworkNode) {

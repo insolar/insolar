@@ -70,8 +70,8 @@ type nodeKeeperWrapper struct {
 	original network.NodeKeeper
 }
 
-func (n *nodeKeeperWrapper) GetSnapshot() *node.Snapshot {
-	return n.original.GetSnapshot()
+func (n *nodeKeeperWrapper) GetSnapshotCopy() *node.Snapshot {
+	return n.original.GetSnapshotCopy()
 }
 
 func (n *nodeKeeperWrapper) GetAccessor() network.Accessor {
