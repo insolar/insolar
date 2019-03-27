@@ -19,7 +19,7 @@ package blob
 import (
 	"testing"
 
-	"github.com/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/stretchr/testify/assert"
 )
 

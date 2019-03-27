@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package artifactmanager
+package artifacts
 
 import (
 	"context"
@@ -28,7 +28,7 @@ import (
 )
 
 // CodeDescriptor represents meta info required to fetch all code data.
-type CodeDescriptor struct {
+type codeDescriptor struct {
 	code        []byte
 	machineType insolar.MachineType
 	ref         insolar.Reference
@@ -37,24 +37,24 @@ type CodeDescriptor struct {
 }
 
 // Ref returns reference to represented code record.
-func (d *CodeDescriptor) Ref() *insolar.Reference {
+func (d *codeDescriptor) Ref() *insolar.Reference {
 	return &d.ref
 }
 
 // MachineType returns code machine type for represented code.
-func (d *CodeDescriptor) MachineType() insolar.MachineType {
+func (d *codeDescriptor) MachineType() insolar.MachineType {
 	return d.machineType
 }
 
 // Code returns code data.
-func (d *CodeDescriptor) Code() ([]byte, error) {
+func (d *codeDescriptor) Code() ([]byte, error) {
 	return d.code, nil
 }
 
 // ObjectDescriptor represents meta info required to fetch all object data.
-type ObjectDescriptor struct {
+type objectDescriptor struct {
 	ctx context.Context
-	am  *LedgerArtifactManager
+	am  Client
 
 	head         insolar.Reference
 	state        insolar.ID
@@ -66,12 +66,12 @@ type ObjectDescriptor struct {
 }
 
 // IsPrototype determines if the object is a prototype.
-func (d *ObjectDescriptor) IsPrototype() bool {
+func (d *objectDescriptor) IsPrototype() bool {
 	return d.isPrototype
 }
 
 // Code returns code reference.
-func (d *ObjectDescriptor) Code() (*insolar.Reference, error) {
+func (d *objectDescriptor) Code() (*insolar.Reference, error) {
 	if !d.IsPrototype() {
 		return nil, errors.New("object is not a prototype")
 	}
@@ -82,7 +82,7 @@ func (d *ObjectDescriptor) Code() (*insolar.Reference, error) {
 }
 
 // Prototype returns prototype reference.
-func (d *ObjectDescriptor) Prototype() (*insolar.Reference, error) {
+func (d *objectDescriptor) Prototype() (*insolar.Reference, error) {
 	if d.IsPrototype() {
 		return nil, errors.New("object is not an instance")
 	}
@@ -93,32 +93,32 @@ func (d *ObjectDescriptor) Prototype() (*insolar.Reference, error) {
 }
 
 // HeadRef returns reference to represented object record.
-func (d *ObjectDescriptor) HeadRef() *insolar.Reference {
+func (d *objectDescriptor) HeadRef() *insolar.Reference {
 	return &d.head
 }
 
 // StateID returns reference to object state record.
-func (d *ObjectDescriptor) StateID() *insolar.ID {
+func (d *objectDescriptor) StateID() *insolar.ID {
 	return &d.state
 }
 
 // ChildPointer returns the latest child for this object.
-func (d *ObjectDescriptor) ChildPointer() *insolar.ID {
+func (d *objectDescriptor) ChildPointer() *insolar.ID {
 	return d.childPointer
 }
 
 // Memory fetches latest memory of the object known to storage.
-func (d *ObjectDescriptor) Memory() []byte {
+func (d *objectDescriptor) Memory() []byte {
 	return d.memory
 }
 
 // Children returns object's children references.
-func (d *ObjectDescriptor) Children(pulse *insolar.PulseNumber) (insolar.RefIterator, error) {
+func (d *objectDescriptor) Children(pulse *insolar.PulseNumber) (RefIterator, error) {
 	return d.am.GetChildren(d.ctx, d.head, pulse)
 }
 
 // Parent returns object's parent.
-func (d *ObjectDescriptor) Parent() *insolar.Reference {
+func (d *objectDescriptor) Parent() *insolar.Reference {
 	return &d.parent
 }
 

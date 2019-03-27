@@ -18,6 +18,7 @@ package storage
 
 import (
 	"context"
+	"github.com/insolar/insolar/insolar/record"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/object"
@@ -27,8 +28,8 @@ import (
 
 // ObjectStorage returns objects and their meta
 type ObjectStorage interface {
-	GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (object.VirtualRecord, error)
-	SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec object.VirtualRecord) (*insolar.ID, error)
+	GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (record.VirtualRecord, error)
+	SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec record.VirtualRecord) (*insolar.ID, error)
 
 	IterateIndexIDs(
 		ctx context.Context,
@@ -60,7 +61,7 @@ func NewObjectStorage() ObjectStorage {
 }
 
 // GetRecord wraps matching transaction manager method.
-func (os *objectStorage) GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (object.VirtualRecord, error) {
+func (os *objectStorage) GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (record.VirtualRecord, error) {
 	jetPrefix := insolar.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDRecord, jetPrefix, id[:])
 	buf, err := os.DB.Get(ctx, k)
@@ -71,7 +72,7 @@ func (os *objectStorage) GetRecord(ctx context.Context, jetID insolar.ID, id *in
 }
 
 // SetRecord wraps matching transaction manager method.
-func (os *objectStorage) SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec object.VirtualRecord) (*insolar.ID, error) {
+func (os *objectStorage) SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec record.VirtualRecord) (*insolar.ID, error) {
 	id := object.NewRecordIDFromRecord(os.PlatformCryptographyScheme, pulseNumber, rec)
 	prefix := insolar.JetID(jetID).Prefix()
 	k := prefixkey(scopeIDRecord, prefix, id[:])

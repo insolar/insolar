@@ -1,9 +1,9 @@
-package testutils
+package artifacts
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "CodeDescriptor" can be found in github.com/insolar/insolar/insolar
+The original interface "CodeDescriptor" can be found in github.com/insolar/insolar/logicrunner/artifacts
 */
 import (
 	"sync/atomic"
@@ -13,7 +13,7 @@ import (
 	insolar "github.com/insolar/insolar/insolar"
 )
 
-//CodeDescriptorMock implements github.com/insolar/insolar/insolar.CodeDescriptor
+//CodeDescriptorMock implements github.com/insolar/insolar/logicrunner/artifacts.CodeDescriptor
 type CodeDescriptorMock struct {
 	t minimock.Tester
 
@@ -33,7 +33,7 @@ type CodeDescriptorMock struct {
 	RefMock       mCodeDescriptorMockRef
 }
 
-//NewCodeDescriptorMock returns a mock for github.com/insolar/insolar/insolar.CodeDescriptor
+//NewCodeDescriptorMock returns a mock for github.com/insolar/insolar/logicrunner/artifacts.CodeDescriptor
 func NewCodeDescriptorMock(t minimock.Tester) *CodeDescriptorMock {
 	m := &CodeDescriptorMock{t: t}
 
@@ -111,7 +111,7 @@ func (m *mCodeDescriptorMockCode) Set(f func() (r []byte, r1 error)) *CodeDescri
 	return m.mock
 }
 
-//Code implements github.com/insolar/insolar/insolar.CodeDescriptor interface
+//Code implements github.com/insolar/insolar/logicrunner/artifacts.CodeDescriptor interface
 func (m *CodeDescriptorMock) Code() (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.CodePreCounter, 1)
 	defer atomic.AddUint64(&m.CodeCounter, 1)
@@ -247,7 +247,7 @@ func (m *mCodeDescriptorMockMachineType) Set(f func() (r insolar.MachineType)) *
 	return m.mock
 }
 
-//MachineType implements github.com/insolar/insolar/insolar.CodeDescriptor interface
+//MachineType implements github.com/insolar/insolar/logicrunner/artifacts.CodeDescriptor interface
 func (m *CodeDescriptorMock) MachineType() (r insolar.MachineType) {
 	counter := atomic.AddUint64(&m.MachineTypePreCounter, 1)
 	defer atomic.AddUint64(&m.MachineTypeCounter, 1)
@@ -381,7 +381,7 @@ func (m *mCodeDescriptorMockRef) Set(f func() (r *insolar.Reference)) *CodeDescr
 	return m.mock
 }
 
-//Ref implements github.com/insolar/insolar/insolar.CodeDescriptor interface
+//Ref implements github.com/insolar/insolar/logicrunner/artifacts.CodeDescriptor interface
 func (m *CodeDescriptorMock) Ref() (r *insolar.Reference) {
 	counter := atomic.AddUint64(&m.RefPreCounter, 1)
 	defer atomic.AddUint64(&m.RefCounter, 1)

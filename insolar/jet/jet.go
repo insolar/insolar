@@ -38,7 +38,7 @@ type Modifier interface {
 	Delete(ctx context.Context, pulse insolar.PulseNumber)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/internal/jet.Storage -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Storage -o ./ -s _mock.go
 
 // Storage composes Accessor and Modifier interfaces.
 type Storage interface {

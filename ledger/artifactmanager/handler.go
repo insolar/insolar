@@ -30,12 +30,12 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
-	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
@@ -872,7 +872,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 
 	// Index exists and latest record id does not match (preserving chain consistency).
 	// For the case when vm can't save or send result to another vm and it tries to update the same record again
-	if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) && idx.LatestState != recID {
+	if idx.LatestState != nil && !state.PrevStateID().Equal(*idx.LatestState) && idx.LatestState != recID {
 		return nil, errors.New("invalid state record")
 	}
 
@@ -947,7 +947,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 
 	// Children exist and pointer does not match (preserving chain consistency).
 	// For the case when vm can't save or send result to another vm and it tries to update the same record again
-	if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) && idx.ChildPointer != recID {
+	if idx.ChildPointer != nil && !childRec.PrevChild.Equal(*idx.ChildPointer) && idx.ChildPointer != recID {
 		return nil, errors.New("invalid child record")
 	}
 
@@ -1094,7 +1094,7 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel insol
 	}
 	approved := msg.LatestStateApproved
 	validated := state.PrevStateID()
-	if !approved.Equal(validated) && approved != nil && validated != nil {
+	if validated != nil && approved != nil && !approved.Equal(*validated) {
 		return &reply.NotOK{}, nil
 	}
 
