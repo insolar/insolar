@@ -310,7 +310,6 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 }
 
 func (n *ServiceNetwork) connectToNewNetwork(result network.BootstrapResult) {
-	panic("Implement it")
 }
 
 func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {

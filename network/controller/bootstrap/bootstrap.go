@@ -54,12 +54,13 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"github.com/insolar/insolar/network/node"
 	"math"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
+
+	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
@@ -112,7 +113,7 @@ type bootstrapper struct {
 	pulsePersisted bool
 
 	bootstrapLock       chan struct{}
-	cyclicBootstrapStop atomic.Value
+	cyclicBootstrapStop int32
 
 	genesisRequestsReceived map[insolar.Reference]*GenesisRequest
 	genesisLock             sync.Mutex
@@ -558,16 +559,16 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 
 func (bc *bootstrapper) getNextBootstrapNodeIndex() int {
 	bc.nextBootstrapNodeIndex++
-	if bc.nextBootstrapNodeIndex >= len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) {
+	if bc.nextBootstrapNodeIndex >= len(bc.Certificate.GetDiscoveryNodes())){
 		bc.nextBootstrapNodeIndex = 0
 	}
 	return bc.nextBootstrapNodeIndex
 }
 
 func (bc *bootstrapper) startCyclicBootstrap(ctx context.Context) {
-	for bc.cyclicBootstrapStop.Load() == 0 {
-		node := bc.NodeKeeper.GetAccessor().GetActiveNodes()[bc.getNextBootstrapNodeIndex()]
-		res, err := bc.startBootstrap(ctx, node.Address())
+	for atomic.LoadInt32(&bc.cyclicBootstrapStop) == 0 {
+		node := bc.Certificate.GetDiscoveryNodes()[bc.getNextBootstrapNodeIndex()]
+		res, err := bc.startBootstrap(ctx, node.GetHost())
 		if err != nil {
 			logger := inslogger.FromContext(ctx)
 			logger.Errorf("[ StartCyclicBootstrap ] ", err)
@@ -580,7 +581,7 @@ func (bc *bootstrapper) startCyclicBootstrap(ctx context.Context) {
 }
 
 func (bc *bootstrapper) StopCyclicBootstrap() {
-	bc.cyclicBootstrapStop.Store(1)
+	atomic.StoreInt32(&bc.cyclicBootstrapStop, 1)
 }
 
 func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Request) (network.Response, error) {
