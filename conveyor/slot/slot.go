@@ -14,13 +14,4 @@
  *    limitations under the License.
  */
 
-package matrix
-
-import "github.com/insolar/insolar/conveyor/interfaces/statemachine"
-
-type StateMachineHolder interface {
-	GetFutureConfig() statemachine.SetAccessor
-	GetPresentConfig() statemachine.SetAccessor
-	GetPastConfig() statemachine.SetAccessor
-	GetInitialStateMachine() statemachine.StateMachine
-}
+package slot

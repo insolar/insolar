@@ -21,9 +21,10 @@ import (
 
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
+	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+
 	"github.com/pkg/errors"
 )
 
@@ -44,7 +45,7 @@ type slotElement struct {
 	inputEvent      interface{}
 	payload         interface{} // nolint: unused
 	postponedError  error       // nolint: structcheck
-	stateMachine    statemachine.StateMachine
+	stateMachine    matrix.StateMachine
 	state           fsm.StateID
 
 	nextElement      *slotElement
@@ -68,7 +69,7 @@ func (se *slotElement) setDeleteState() {
 }
 
 // nolint: unused
-func (se *slotElement) update(state fsm.StateID, payload interface{}, sm statemachine.StateMachine) {
+func (se *slotElement) update(state fsm.StateID, payload interface{}, sm matrix.StateMachine) {
 	se.state = state
 	se.payload = payload
 	se.stateMachine = sm

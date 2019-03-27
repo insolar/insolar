@@ -108,8 +108,8 @@ func (h *handler) checkInterfaceParameter(idx int) {
 }
 
 func (h *handler) checkAdapterResponseParameter(idx int) {
-	if h.Params[idx] != "iadapter.Response" {
-		exitWithError("%d parameter for %s should be an Response", idx, h.Name)
+	if h.Params[idx] != "interface{}" {
+		exitWithError("%d parameter for %s should be an interface{}", idx, h.Name)
 	}
 }
 
