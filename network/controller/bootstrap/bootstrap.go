@@ -559,7 +559,7 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 
 func (bc *bootstrapper) getNextBootstrapNodeIndex() int {
 	bc.nextBootstrapNodeIndex++
-	if bc.nextBootstrapNodeIndex >= len(bc.Certificate.GetDiscoveryNodes())){
+	if bc.nextBootstrapNodeIndex >= len(bc.Certificate.GetDiscoveryNodes()) {
 		bc.nextBootstrapNodeIndex = 0
 	}
 	return bc.nextBootstrapNodeIndex
