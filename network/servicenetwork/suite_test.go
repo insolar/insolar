@@ -130,8 +130,8 @@ func (s *testSuite) SetupTest() {
 		s.T().Logf("Found $TBN=%s\n", tbn)
 		num, err := strconv.Atoi(tbn)
 		s.Require().NoError(err, "Test build number must be numeric")
-		s.Address = fmt.Sprintf("127.1.0.%d", 2+num%250)
-		s.T().Logf("Starting on address=%s\n", s.Address)
+		testNetworkPort += uint32(num * 1000)
+		s.T().Logf("Starting on port=%d\n", testNetworkPort)
 
 	} else {
 		s.T().Log("TBN environment variable not found\n")
@@ -139,7 +139,7 @@ func (s *testSuite) SetupTest() {
 
 	s.fixtureMap[s.T().Name()] = newFixture(s.T())
 	var err error
-	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
+	s.fixture().pulsar, err = NewTestPulsar(s, pulseTimeMs, reqTimeoutMs, pulseDelta)
 	s.Require().NoError(err)
 
 	log.Info("SetupTest")

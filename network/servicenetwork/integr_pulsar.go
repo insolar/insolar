@@ -73,10 +73,10 @@ type TestPulsar interface {
 	component.Stopper
 }
 
-func NewTestPulsar(pulseTimeMs, requestsTimeoutMs, pulseDelta int32) (TestPulsar, error) {
+func NewTestPulsar(s *testSuite, pulseTimeMs, requestsTimeoutMs, pulseDelta int32) (TestPulsar, error) {
 	transportCfg := configuration.Transport{
 		Protocol:  "TCP",
-		Address:   "127.0.0.1:0",
+		Address:   s.Address + ":0",
 		BehindNAT: false,
 	}
 	tp, err := transport.NewTransport(transportCfg, relay.NewProxy())
