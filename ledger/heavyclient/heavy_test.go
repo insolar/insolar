@@ -265,6 +265,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 		},
 		nil,
 		blobStorage,
+		blobStorage,
 	)
 	pm.LR = lrMock
 	pm.NodeNet = nodenetMock

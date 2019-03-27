@@ -78,6 +78,8 @@ type PulseManager struct {
 	DropAccessor drop.Accessor `inject:""`
 	DropCleaner  drop.Cleaner
 
+	BlobSyncAccessor blob.SyncAccessor
+
 	BlobCleaner blob.Cleaner
 
 	syncClientsPool *heavyclient.Pool
@@ -115,6 +117,7 @@ func NewPulseManager(
 	conf configuration.Ledger,
 	dropCleaner drop.Cleaner,
 	blobCleaner blob.Cleaner,
+	blobSyncAccessor blob.SyncAccessor,
 ) *PulseManager {
 	pmconf := conf.PulseManager
 
@@ -127,8 +130,9 @@ func NewPulseManager(
 			heavySyncMessageLimit: pmconf.HeavySyncMessageLimit,
 			lightChainLimit:       conf.LightChainLimit,
 		},
-		DropCleaner: dropCleaner,
-		BlobCleaner: blobCleaner,
+		DropCleaner:      dropCleaner,
+		BlobCleaner:      blobCleaner,
+		BlobSyncAccessor: blobSyncAccessor,
 	}
 	return pm
 }
@@ -728,6 +732,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 			m.PulseTracker,
 			m.ReplicaStorage,
 			m.DropAccessor,
+			m.BlobSyncAccessor,
 			m.StorageCleaner,
 			m.DBContext,
 			heavyclient.Options{

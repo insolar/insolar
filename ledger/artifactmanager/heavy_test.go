@@ -124,6 +124,7 @@ func (s *heavySuite) TestLedgerArtifactManager_handleHeavy() {
 		return s.db.StoreKeyValues(ctx, kvs)
 	})
 	heavysync.StoreDropMock.Return(nil)
+	heavysync.StoreBlobsMock.Return(nil)
 	heavysync.StopMock.Return(nil)
 
 	recentIndexMock := recentstorage.NewRecentIndexStorageMock(s.T())

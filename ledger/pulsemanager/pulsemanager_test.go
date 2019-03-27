@@ -178,7 +178,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	jetCoordinatorMock.LightExecutorForJetMock.Return(executor, nil)
 	jetCoordinatorMock.MeMock.Return(*executor)
 
-	pm := NewPulseManager(configuration.Ledger{}, drop.NewCleanerMock(s.T()), blob.NewCleanerMock(s.T()))
+	pm := NewPulseManager(configuration.Ledger{}, drop.NewCleanerMock(s.T()), blob.NewCleanerMock(s.T()), blob.NewSyncAccessorMock(s.T()))
 
 	gil := testutils.NewGlobalInsolarLockMock(s.T())
 	gil.AcquireMock.Return()

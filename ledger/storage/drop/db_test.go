@@ -51,7 +51,7 @@ func TestDropStorageDB_Set(t *testing.T) {
 			JetID: gen.JetID(),
 		}
 
-		encoded, _ := MustEncode(&inp.dr)
+		encoded := MustEncode(&inp.dr)
 		encodedDrops[string(encoded)] = struct{}{}
 	}).NumElements(5, 5000).NilChance(0)
 	f.Fuzz(&inputs)
@@ -100,7 +100,7 @@ func TestDropStorageDB_ForPulse(t *testing.T) {
 		Size:  rand.Uint64(),
 		Pulse: gen.PulseNumber(),
 	}
-	buf, _ := MustEncode(&dr)
+	buf := MustEncode(&dr)
 
 	dbMock := db.NewDBMock(t)
 	dbMock.GetMock.Return(buf, nil)
