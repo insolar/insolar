@@ -258,13 +258,12 @@ func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parce
 }
 
 func (h *Handler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeRecord, error) {
-	jetID := *insolar.NewJetID(0, nil)
-
-	rec, err := h.ObjectStorage.GetRecord(ctx, insolar.ID(jetID), id)
+	rec, err := h.RecordAccessor.ForID(ctx, *id)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "can't get ")
 	}
-	codeRec, ok := rec.(*object.CodeRecord)
+	virtRec := rec.Record
+	codeRec, ok := virtRec.(*object.CodeRecord)
 	if !ok {
 		return nil, errors.New("failed to retrieve code record")
 	}
