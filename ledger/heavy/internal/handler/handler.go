@@ -95,10 +95,11 @@ func (h *Handler) handleGetObject(
 
 	// Fetch state record.
 	rec, err := h.RecordAccessor.ForID(ctx, *stateID)
-	virtRec := rec.Record
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch state %s for %s", stateID.DebugString(), msg.Head.Record()))
 	}
+
+	virtRec := rec.Record
 	state, ok := virtRec.(object.State)
 	if !ok {
 		return nil, errors.New("invalid object record")
@@ -196,7 +197,7 @@ func (h *Handler) handleGetChildren(
 		counter++
 
 		rec, err := h.RecordAccessor.ForID(ctx, *currentChild)
-		virtRec := rec.Record
+
 		// We don't have this child reference. Return what was collected.
 		if err == object.ErrNotFound {
 			return &reply.Children{Refs: refs, NextFrom: currentChild}, nil
@@ -205,6 +206,7 @@ func (h *Handler) handleGetChildren(
 			return nil, errors.New("failed to retrieve children")
 		}
 
+		virtRec := rec.Record
 		childRec, ok := virtRec.(*object.ChildRecord)
 		if !ok {
 			return nil, errors.New("failed to retrieve children")
@@ -226,11 +228,11 @@ func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (
 	msg := parcel.Message().(*message.GetRequest)
 
 	rec, err := h.RecordAccessor.ForID(ctx, msg.Request)
-	virtRec := rec.Record
 	if err != nil {
 		return nil, errors.New("failed to fetch request")
 	}
 
+	virtRec := rec.Record
 	req, ok := virtRec.(*object.RequestRecord)
 	if !ok {
 		return nil, errors.New("failed to decode request")
@@ -262,6 +264,7 @@ func (h *Handler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeReco
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get ")
 	}
+
 	virtRec := rec.Record
 	codeRec, ok := virtRec.(*object.CodeRecord)
 	if !ok {

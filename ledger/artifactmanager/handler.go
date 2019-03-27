@@ -441,7 +441,6 @@ func (h *MessageHandler) handleGetObject(
 
 	// Fetch state record.
 	rec, err := h.RecordAccessor.ForID(ctx, *stateID)
-	virtRec := rec.Record
 
 	if err == object.ErrNotFound {
 		// The record wasn't found on the current node. Return redirect to the node that contains it.
@@ -476,10 +475,13 @@ func (h *MessageHandler) handleGetObject(
 	if err != nil {
 		return nil, errors.Wrap(err, "can't fetch record from storage")
 	}
+
+	virtRec := rec.Record
 	state, ok := virtRec.(object.State)
 	if !ok {
 		return nil, errors.New("invalid object record")
 	}
+
 	if state.ID() == object.StateDeactivation {
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 	}
@@ -657,7 +659,7 @@ func (h *MessageHandler) handleGetChildren(
 		counter++
 
 		rec, err := h.RecordAccessor.ForID(ctx, *currentChild)
-		virtRec := rec.Record
+
 		// We don't have this child reference. Return what was collected.
 		if err == object.ErrNotFound {
 			return &reply.Children{Refs: refs, NextFrom: currentChild}, nil
@@ -666,6 +668,7 @@ func (h *MessageHandler) handleGetChildren(
 			return nil, errors.New("failed to retrieve children")
 		}
 
+		virtRec := rec.Record
 		childRec, ok := virtRec.(*object.ChildRecord)
 		if !ok {
 			return nil, errors.New("failed to retrieve children")
@@ -687,11 +690,11 @@ func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel insolar.Pa
 	msg := parcel.Message().(*message.GetRequest)
 
 	rec, err := h.RecordAccessor.ForID(ctx, msg.Request)
-	virtRec := rec.Record
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch request")
 	}
 
+	virtRec := rec.Record
 	req, ok := virtRec.(*object.RequestRecord)
 	if !ok {
 		return nil, errors.New("failed to decode request")
@@ -1002,14 +1005,16 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel insol
 	msg := parcel.Message().(*message.ValidationCheck)
 
 	rec, err := h.RecordAccessor.ForID(ctx, msg.ValidatedState)
-	virtRec := rec.Record
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch state record")
 	}
+
+	virtRec := rec.Record
 	state, ok := virtRec.(object.State)
 	if !ok {
 		return nil, errors.New("failed to fetch state record")
 	}
+
 	approved := msg.LatestStateApproved
 	validated := state.PrevStateID()
 	if validated != nil && approved != nil && !approved.Equal(*validated) {
@@ -1021,11 +1026,11 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel insol
 
 func (h *MessageHandler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeRecord, error) {
 	rec, err := h.RecordAccessor.ForID(ctx, *id)
-	virtRec := rec.Record
-
 	if err != nil {
 		return nil, err
 	}
+
+	virtRec := rec.Record
 	codeRec, ok := virtRec.(*object.CodeRecord)
 	if !ok {
 		return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
