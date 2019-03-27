@@ -24,14 +24,17 @@ import (
 	"github.com/insolar/insolar/ledger/artifactmanager"
 )
 
+// Storage contains all adapters
 type Storage struct {
 	adapters map[adapterid.ID]adapter.TaskSink
 }
 
+// GetAdapterByID returns adapter by id
 func (s *Storage) GetAdapterByID(id adapterid.ID) adapter.TaskSink {
 	return s.adapters[id]
 }
 
+// GetAdapterByID registers adapters
 func (s *Storage) Register(adapter adapter.TaskSink) {
 	id := adapter.GetAdapterID()
 	_, ok := s.adapters[id]
@@ -42,18 +45,10 @@ func (s *Storage) Register(adapter adapter.TaskSink) {
 	s.adapters[id] = adapter
 }
 
-func (s *Storage) GetRegisteredAdapters() []interface{} {
-	var result []interface{}
-
-	for _, adapter := range s.adapters {
-		result = append(result, adapter)
-	}
-
-	return result
-}
-
+// Manager is global instance of Storage
 var Manager Storage
 
+// NewEmptyStorage creates new storage without any adapters
 func NewEmptyStorage() Storage {
 	return Storage{
 		adapters: make(map[adapterid.ID]adapter.TaskSink),

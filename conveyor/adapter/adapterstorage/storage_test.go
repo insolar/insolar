@@ -17,7 +17,6 @@
 package adapterstorage
 
 import (
-	"sort"
 	"testing"
 
 	"github.com/insolar/insolar/conveyor/adapter"
@@ -25,19 +24,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInitializer_NoRegistered(t *testing.T) {
-	storage := NewEmptyStorage()
-
-	require.Empty(t, storage.GetRegisteredAdapters())
-}
-
 func TestInitializer_GetAdapterWhileNoRegistered(t *testing.T) {
 	storage := NewEmptyStorage()
 
 	require.Nil(t, storage.GetAdapterByID(444))
 }
 
-func TestInitializer_RegisterAndGet(t *testing.T) {
+func TestStorage_RegisterAndGet(t *testing.T) {
 	storage := NewEmptyStorage()
 
 	for i := 0; i < 20; i++ {
@@ -52,7 +45,7 @@ func TestInitializer_RegisterAndGet(t *testing.T) {
 	}
 }
 
-func TestInitializer_RegisterDuplicatingID(t *testing.T) {
+func TestStorage_RegisterDuplicatingID(t *testing.T) {
 	storage := NewEmptyStorage()
 
 	testAdapterID := adapterid.ID(142)
@@ -68,32 +61,6 @@ func TestInitializer_RegisterDuplicatingID(t *testing.T) {
 		})
 }
 
-func TestInitializer_GetRegisteredAdapters(t *testing.T) {
-	storage := NewEmptyStorage()
-
-	numRegistered := 100
-
-	for i := 0; i < numRegistered; i++ {
-		testAdapterID := adapterid.ID(i)
-		sinkMock := adapter.NewTaskSinkMock(t)
-		sinkMock.GetAdapterIDFunc = func() (r adapterid.ID) {
-			return testAdapterID
-		}
-
-		storage.Register(sinkMock)
-	}
-
-	registered := storage.GetRegisteredAdapters()
-	require.Len(t, registered, numRegistered)
-
-	// we need sort here, since adapters are stored in storage in map
-	sort.Slice(registered, func(i, j int) bool {
-		left := registered[i].(adapter.TaskSink).GetAdapterID()
-		right := registered[j].(adapter.TaskSink).GetAdapterID()
-		return left < right
-	})
-
-	for i := 0; i < numRegistered; i++ {
-		require.Equal(t, adapterid.ID(i), registered[i].(adapter.TaskSink).GetAdapterID())
-	}
+func TestStorage_GetAllProcessors(t *testing.T) {
+	require.Equal(t, len(Manager.adapters), len(GetAllProcessors()))
 }
