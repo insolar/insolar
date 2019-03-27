@@ -131,7 +131,7 @@ func (s *testSuite) SetupTest() {
 	log.Info("SetupTest")
 
 	for i := 0; i < s.bootstrapCount; i++ {
-		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNode(fmt.Sprintf("small_network_bootstrap_%d", i)))
+		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNode(fmt.Sprintf("bootstrap_%d", i)))
 	}
 
 	for i := 0; i < s.nodesCount; i++ {
@@ -313,7 +313,6 @@ func (s *testSuite) newNetworkNode(name string) *networkNode {
 	if err != nil {
 		panic(err.Error())
 	}
-
 	address := "127.0.0.1:" + strconv.Itoa(incrementTestPort())
 
 	nodeContext, _ := inslogger.WithField(s.fixture().ctx, "nodeName", name)
@@ -456,5 +455,4 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.componentManager.Register(netCoordinator, amMock, certManager, cryptographyService)
 	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc)
 	node.serviceNetwork = serviceNetwork
-
 }
