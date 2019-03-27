@@ -60,6 +60,8 @@ import (
 )
 
 type FirstPhaseState struct {
+	*ConsensusState
+
 	PulseEntry *merkle.PulseEntry
 
 	PulseHash  merkle.OriginHash
@@ -67,9 +69,6 @@ type FirstPhaseState struct {
 
 	ValidProofs map[insolar.NetworkNode]*merkle.PulseProof
 	FaultProofs map[insolar.Reference]*merkle.PulseProof
-
-	ConsensusState *ConsensusState
-	ClaimHandler   *claimhandler.ClaimHandler
 }
 
 type SecondPhaseState struct {
