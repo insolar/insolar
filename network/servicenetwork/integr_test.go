@@ -133,14 +133,14 @@ func (s *testSuite) TestManyNodesConnect() {
 
 	for i, node := range nodes {
 		go func(wg *sync.WaitGroup, node *networkNode, nodeNum int) {
-			s.T().Logf("[ TestManyNodesConnect ] PreIniting node %d", i)
+			s.T().Logf("[ TestManyNodesConnect ] PreIniting node %d", nodeNum)
 			s.preInitNode(node)
-			s.T().Logf("[ TestManyNodesConnect ] Initing node %d", i)
+			s.T().Logf("[ TestManyNodesConnect ] Initing node %d", nodeNum)
 			s.InitNode(node)
 			wg.Done()
-			s.T().Logf("[ TestManyNodesConnect ] Starting node %d", i)
+			s.T().Logf("[ TestManyNodesConnect ] Starting node %d", nodeNum)
 			s.StartNode(node)
-			s.T().Logf("[ TestManyNodesConnect ] Done node %d", i)
+			s.T().Logf("[ TestManyNodesConnect ] Done node %d", nodeNum)
 
 		}(&wg, node, i)
 	}
