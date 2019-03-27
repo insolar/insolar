@@ -131,10 +131,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(networknode.NewNode(insolar.Reference{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
-	certificate := testutils.NewCertificateMock(t)
-	certificate.GetRoleMock.Return(handlersRole)
-
-	handler := artifactmanager.NewMessageHandler(&conf, certificate)
+	handler := artifactmanager.NewMessageHandler(&conf)
 	handler.PulseTracker = pt
 	handler.JetStorage = js
 	handler.Nodes = ns

@@ -18,6 +18,7 @@ package ledger
 
 import (
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/ledger/heavy"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	db2 "github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
@@ -67,7 +68,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		dropAccessor = dropDB
 	}
 
-	return []interface{}{
+	components := []interface{}{
 		db,
 		newDB,
 		idLocker,
@@ -85,7 +86,15 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		artifactmanager.NewHotDataWaiterConcrete(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),
 		pulsemanager.NewPulseManager(conf),
-		artifactmanager.NewMessageHandler(&conf, certificate),
 		heavyserver.NewSync(db),
 	}
+
+	switch certificate.GetRole() {
+	case insolar.StaticRoleUnknown, insolar.StaticRoleLightMaterial:
+		components = append(components, artifactmanager.NewMessageHandler(&conf))
+	case insolar.StaticRoleHeavyMaterial:
+		components = append(components, heavy.Components()...)
+	}
+
+	return components
 }

@@ -51,7 +51,6 @@ type MessageHandler struct {
 	JetCoordinator             insolar.JetCoordinator             `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
 	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
-	HeavySync                  insolar.HeavySync                  `inject:""`
 	PulseStorage               insolar.PulseStorage               `inject:""`
 	JetStorage                 jet.Storage                        `inject:""`
 
@@ -70,18 +69,15 @@ type MessageHandler struct {
 	DBContext     storage.DBContext    `inject:""`
 	HotDataWaiter HotDataWaiter        `inject:""`
 
-	certificate    insolar.Certificate
 	replayHandlers map[insolar.MessageType]insolar.MessageHandler
 	conf           *configuration.Ledger
 	middleware     *middleware
 	jetTreeUpdater *jetTreeUpdater
-	isHeavy        bool
 }
 
 // NewMessageHandler creates new handler.
-func NewMessageHandler(conf *configuration.Ledger, certificate insolar.Certificate) *MessageHandler {
+func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 	return &MessageHandler{
-		certificate:    certificate,
 		replayHandlers: map[insolar.MessageType]insolar.MessageHandler{},
 		conf:           conf,
 	}
@@ -124,17 +120,8 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 
 	h.jetTreeUpdater = newJetTreeUpdater(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
 
-	h.isHeavy = h.certificate.GetRole() == insolar.StaticRoleHeavyMaterial
-
-	// insolar.StaticRoleUnknown - genesis
-	if h.certificate.GetRole() == insolar.StaticRoleLightMaterial || h.certificate.GetRole() == insolar.StaticRoleUnknown {
-		h.setHandlersForLight(m)
-		h.setReplayHandlers(m)
-	}
-
-	if h.isHeavy {
-		h.setHandlersForHeavy(m)
-	}
+	h.setHandlersForLight(m)
+	h.setReplayHandlers(m)
 
 	return nil
 }
@@ -249,6 +236,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 			m.addFieldsToLogger,
 			m.checkJet))
 }
+
 func (h *MessageHandler) setReplayHandlers(m *middleware) {
 	// Generic.
 	h.replayHandlers[insolar.TypeGetCode] = BuildMiddleware(h.handleGetCode, m.addFieldsToLogger)
@@ -267,55 +255,8 @@ func (h *MessageHandler) setReplayHandlers(m *middleware) {
 	h.replayHandlers[insolar.TypeValidateRecord] = BuildMiddleware(h.handleValidateRecord, m.addFieldsToLogger, m.checkJet)
 	h.replayHandlers[insolar.TypeValidationCheck] = BuildMiddleware(h.handleValidationCheck, m.addFieldsToLogger, m.checkJet)
 }
-func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
-	// Heavy.
-	h.Bus.MustRegister(insolar.TypeHeavyStartStop,
-		BuildMiddleware(h.handleHeavyStartStop,
-			instrumentHandler("handleHeavyStartStop")))
-
-	h.Bus.MustRegister(insolar.TypeHeavyPayload,
-		BuildMiddleware(h.handleHeavyPayload,
-			instrumentHandler("handleHeavyPayload")))
-
-	// Generic.
-	h.Bus.MustRegister(insolar.TypeGetCode,
-		BuildMiddleware(h.handleGetCode))
-
-	h.Bus.MustRegister(insolar.TypeGetObject,
-		BuildMiddleware(h.handleGetObject,
-			instrumentHandler("handleGetObject"),
-			m.zeroJetForHeavy))
-
-	h.Bus.MustRegister(insolar.TypeGetDelegate,
-		BuildMiddleware(h.handleGetDelegate,
-			instrumentHandler("handleGetDelegate"),
-			m.zeroJetForHeavy))
-
-	h.Bus.MustRegister(insolar.TypeGetChildren,
-		BuildMiddleware(h.handleGetChildren,
-			instrumentHandler("handleGetChildren"),
-			m.zeroJetForHeavy))
-
-	h.Bus.MustRegister(insolar.TypeGetObjectIndex,
-		BuildMiddleware(h.handleGetObjectIndex,
-			instrumentHandler("handleGetObjectIndex"),
-			m.zeroJetForHeavy))
-
-	h.Bus.MustRegister(
-		insolar.TypeGetRequest,
-		BuildMiddleware(
-			h.handleGetRequest,
-			instrumentHandler("handleGetRequest"),
-			m.checkJet,
-		),
-	)
-}
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	if h.isHeavy {
-		return nil, errors.New("heavy updates are forbidden")
-	}
-
 	msg := parcel.Message().(*message.SetRecord)
 	virtRec := object.DeserializeRecord(msg.Record)
 	jetID := jetFromContext(ctx)
@@ -353,10 +294,6 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Par
 }
 
 func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	if h.isHeavy {
-		return nil, errors.New("heavy updates are forbidden")
-	}
-
 	msg := parcel.Message().(*message.SetBlob)
 	jetID := jetFromContext(ctx)
 	calculatedID := object.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
@@ -418,9 +355,7 @@ func (h *MessageHandler) handleGetObject(
 		"pulse":  parcel.Pulse(),
 	})
 
-	if !h.isHeavy {
-		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
-	}
+	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
 
 	h.IDLocker.Lock(msg.Head.Record())
 	defer h.IDLocker.Unlock(msg.Head.Record())
@@ -428,10 +363,6 @@ func (h *MessageHandler) handleGetObject(
 	// Fetch object index. If not found redirect.
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Head.Record())
 	if err == insolar.ErrNotFound {
-		if h.isHeavy {
-			return nil, fmt.Errorf("failed to fetch index for %s", msg.Head.Record().String())
-		}
-
 		logger.Debug("failed to fetch index (fetching from heavy)")
 		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -463,53 +394,49 @@ func (h *MessageHandler) handleGetObject(
 	var (
 		stateJet *insolar.ID
 	)
-	if h.isHeavy {
-		stateJet = &jetID
-	} else {
-		onHeavy, err := h.JetCoordinator.IsBeyondLimit(ctx, parcel.Pulse(), stateID.Pulse())
+	onHeavy, err := h.JetCoordinator.IsBeyondLimit(ctx, parcel.Pulse(), stateID.Pulse())
+	if err != nil {
+		return nil, err
+	}
+	if onHeavy {
+		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
 		}
-		if onHeavy {
-			node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-			if err != nil {
-				return nil, err
-			}
-			logger.WithFields(map[string]interface{}{
-				"state":    stateID.DebugString(),
-				"going_to": node.String(),
-			}).Debug("fetching object (on heavy)")
+		logger.WithFields(map[string]interface{}{
+			"state":    stateID.DebugString(),
+			"going_to": node.String(),
+		}).Debug("fetching object (on heavy)")
 
-			obj, err := h.fetchObject(ctx, msg.Head, *node, stateID, parcel.Pulse())
-			if err != nil {
-				if err == insolar.ErrDeactivated {
-					return &reply.Error{ErrType: reply.ErrDeactivated}, nil
-				}
-				return nil, err
+		obj, err := h.fetchObject(ctx, msg.Head, *node, stateID, parcel.Pulse())
+		if err != nil {
+			if err == insolar.ErrDeactivated {
+				return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 			}
-
-			return &reply.Object{
-				Head:         msg.Head,
-				State:        *stateID,
-				Prototype:    obj.Prototype,
-				IsPrototype:  obj.IsPrototype,
-				ChildPointer: idx.ChildPointer,
-				Parent:       idx.Parent,
-				Memory:       obj.Memory,
-			}, nil
+			return nil, err
 		}
 
-		// FIXME: after migration on JetID in all components. - @nordicdyno 13.03.2019
-		stateJetID, actual := h.JetStorage.ForID(ctx, stateID.Pulse(), *msg.Head.Record())
-		stateJet = (*insolar.ID)(&stateJetID)
+		return &reply.Object{
+			Head:         msg.Head,
+			State:        *stateID,
+			Prototype:    obj.Prototype,
+			IsPrototype:  obj.IsPrototype,
+			ChildPointer: idx.ChildPointer,
+			Parent:       idx.Parent,
+			Memory:       obj.Memory,
+		}, nil
+	}
 
-		if !actual {
-			actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Head.Record(), stateID.Pulse())
-			if err != nil {
-				return nil, err
-			}
-			stateJet = actualJet
+	// FIXME: after migration on JetID in all components. - @nordicdyno 13.03.2019
+	stateJetID, actual := h.JetStorage.ForID(ctx, stateID.Pulse(), *msg.Head.Record())
+	stateJet = (*insolar.ID)(&stateJetID)
+
+	if !actual {
+		actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Head.Record(), stateID.Pulse())
+		if err != nil {
+			return nil, err
 		}
+		stateJet = actualJet
 	}
 
 	// Fetch state record.
@@ -517,9 +444,6 @@ func (h *MessageHandler) handleGetObject(
 	virtRec := rec.Record
 
 	if err == object.ErrNotFound {
-		if h.isHeavy {
-			return nil, fmt.Errorf("failed to fetch state for %v. jet: %v, state: %v", msg.Head.Record(), stateJet.DebugString(), stateID.DebugString())
-		}
 		// The record wasn't found on the current node. Return redirect to the node that contains it.
 		// We get Jet tree for pulse when given state was added.
 		node, err := h.JetCoordinator.NodeForJet(ctx, *stateJet, parcel.Pulse(), stateID.Pulse())
@@ -608,19 +532,13 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	msg := parcel.Message().(*message.GetDelegate)
 	jetID := jetFromContext(ctx)
 
-	if !h.isHeavy {
-		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
-	}
+	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
 
 	h.IDLocker.Lock(msg.Head.Record())
 	defer h.IDLocker.Unlock(msg.Head.Record())
 
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Head.Record())
 	if err == insolar.ErrNotFound {
-		if h.isHeavy {
-			return nil, fmt.Errorf("failed to fetch index for %v", msg.Head.Record())
-		}
-
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
@@ -651,19 +569,13 @@ func (h *MessageHandler) handleGetChildren(
 	msg := parcel.Message().(*message.GetChildren)
 	jetID := jetFromContext(ctx)
 
-	if !h.isHeavy {
-		h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
-	}
+	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
 
 	h.IDLocker.Lock(msg.Parent.Record())
 	defer h.IDLocker.Unlock(msg.Parent.Record())
 
 	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Parent.Record())
 	if err == insolar.ErrNotFound {
-		if h.isHeavy {
-			return nil, fmt.Errorf("failed to fetch index for %v", msg.Parent.Record())
-		}
-
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
@@ -697,40 +609,33 @@ func (h *MessageHandler) handleGetChildren(
 	}
 
 	var childJet *insolar.ID
-	if h.isHeavy {
-		childJet = &jetID
-	} else {
-		onHeavy, err := h.JetCoordinator.IsBeyondLimit(ctx, parcel.Pulse(), currentChild.Pulse())
+	onHeavy, err := h.JetCoordinator.IsBeyondLimit(ctx, parcel.Pulse(), currentChild.Pulse())
+	if err != nil {
+		return nil, err
+	}
+	if onHeavy {
+		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
 		}
-		if onHeavy {
-			node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-			if err != nil {
-				return nil, err
-			}
-			return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *currentChild)
-		}
+		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *currentChild)
+	}
 
-		// FIXME: after migration on JetID in all components. - @nordicdyno 13.03.2019
-		childJetID, actual := h.JetStorage.ForID(ctx, currentChild.Pulse(), *msg.Parent.Record())
-		childJet = (*insolar.ID)(&childJetID)
+	// FIXME: after migration on JetID in all components. - @nordicdyno 13.03.2019
+	childJetID, actual := h.JetStorage.ForID(ctx, currentChild.Pulse(), *msg.Parent.Record())
+	childJet = (*insolar.ID)(&childJetID)
 
-		if !actual {
-			actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Parent.Record(), currentChild.Pulse())
-			if err != nil {
-				return nil, err
-			}
-			childJet = actualJet
+	if !actual {
+		actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Parent.Record(), currentChild.Pulse())
+		if err != nil {
+			return nil, err
 		}
+		childJet = actualJet
 	}
 
 	// Try to fetch the first child.
 	_, err = h.ObjectStorage.GetRecord(ctx, *childJet, currentChild)
 	if err == insolar.ErrNotFound {
-		if h.isHeavy {
-			return nil, fmt.Errorf("failed to fetch child for %v. jet: %v, state: %v", msg.Parent.Record(), childJet.DebugString(), currentChild.DebugString())
-		}
 		node, err := h.JetCoordinator.NodeForJet(ctx, *childJet, parcel.Pulse(), currentChild.Pulse())
 		if err != nil {
 			return nil, err
@@ -815,10 +720,6 @@ func (h *MessageHandler) handleGetPendingRequestID(ctx context.Context, parcel i
 }
 
 func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	if h.isHeavy {
-		return nil, errors.New("heavy updates are forbidden")
-	}
-
 	msg := parcel.Message().(*message.UpdateObject)
 	jetID := jetFromContext(ctx)
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
@@ -925,10 +826,6 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 }
 
 func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	if h.isHeavy {
-		return nil, errors.New("heavy updates are forbidden")
-	}
-
 	logger := inslogger.FromContext(ctx)
 
 	msg := parcel.Message().(*message.RegisterChild)
@@ -1024,10 +921,6 @@ func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel insolar.Parce
 }
 
 func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	if h.isHeavy {
-		return nil, errors.New("heavy updates are forbidden")
-	}
-
 	msg := parcel.Message().(*message.ValidateRecord)
 	jetID := jetFromContext(ctx)
 
@@ -1211,10 +1104,6 @@ func (h *MessageHandler) fetchObject(
 }
 
 func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	if h.isHeavy {
-		return nil, errors.New("heavy updates are forbidden")
-	}
-
 	logger := inslogger.FromContext(ctx)
 
 	msg := parcel.Message().(*message.HotData)
