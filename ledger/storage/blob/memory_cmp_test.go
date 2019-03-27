@@ -14,83 +14,102 @@
 // limitations under the License.
 //
 
-package blob_test
+package blob
 
 import (
 	"math/rand"
 	"testing"
 
 	"github.com/google/gofuzz"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/ledger/storage/db"
 )
 
-func TestInMemoryBlob(t *testing.T) {
+func TestBlobStorages(t *testing.T) {
 	t.Parallel()
 
 	ctx := inslogger.TestContext(t)
 
-	blobStorage := blob.NewStorageMemory()
-
-	type tempBlob struct {
-		id insolar.ID
-		b  blob.Blob
+	memStorage := NewStorageMemory()
+	dbStorage := NewStorageDB(db.NewMemoryMockDB())
+	type storage interface {
+		Accessor
+		Modifier
+	}
+	storages := map[string]storage{
+		"memory": memStorage,
+		"badger": dbStorage,
 	}
 
-	var blobs []tempBlob
+	seen := map[insolar.ID]bool{}
+	newUnseenID := func() (id insolar.ID) {
+		for id = gen.ID(); seen[id]; id = gen.ID() {
+			seen[id] = true
+		}
+		return
+	}
 
-	f := fuzz.New().Funcs(func(t *tempBlob, c fuzz.Continue) {
-		t.id = gen.ID()
-		t.b = blob.Blob{
+	type blobToID struct {
+		id insolar.ID
+		b  Blob
+	}
+	var blobs []blobToID
+	f := fuzz.New().Funcs(func(elem *blobToID, c fuzz.Continue) {
+		// IN REAL client code object.CalculateIDForBlob(os.PlatformCryptographyScheme, gen.PulseNumber(), t.b)
+		elem.b = Blob{
 			Value: slice(),
 			JetID: gen.JetID(),
 		}
+		elem.id = newUnseenID()
 	})
 	f.NumElements(5, 10).NilChance(0).Fuzz(&blobs)
 
-	t.Run("saves correct blob-value", func(t *testing.T) {
+	for name, s := range storages {
+		t.Run(name+" saves correct blob-value", func(t *testing.T) {
+			for _, bl := range blobs {
+				err := s.Set(ctx, bl.id, bl.b)
+				require.NoError(t, err, "set failed")
+			}
+
+			for _, bl := range blobs {
+				resBlob, err := s.ForID(ctx, bl.id)
+				require.NoError(t, err)
+
+				assert.Equal(t, bl.b, resBlob)
+				assert.Equal(t, bl.b.Value, resBlob.Value)
+				assert.Equal(t, bl.b.JetID, resBlob.JetID)
+			}
+		})
+
+		t.Run(name+" returns error when no blob-value for id", func(t *testing.T) {
+			for i := 0; i < 10; i++ {
+				_, err := s.ForID(ctx, newUnseenID())
+				require.Error(t, err)
+				assert.Equal(t, ErrNotFound, err)
+			}
+		})
+
+		t.Run(name+" returns override error when saving with the same id", func(t *testing.T) {
+			for _, bl := range blobs {
+				err := s.Set(ctx, bl.id, bl.b)
+				require.Error(t, err)
+				assert.Equal(t, ErrOverride, err)
+			}
+		})
+	}
+
+	t.Run("compare memory and storage implementations", func(t *testing.T) {
 		for _, bl := range blobs {
-			err := blobStorage.Set(ctx, bl.id, bl.b)
+			resMem, err := memStorage.ForID(ctx, bl.id)
 			require.NoError(t, err)
-		}
-
-		for _, bl := range blobs {
-			resBlob, err := blobStorage.ForID(ctx, bl.id)
+			dbBlob, err := dbStorage.ForID(ctx, bl.id)
 			require.NoError(t, err)
-
-			assert.Equal(t, bl.b, resBlob)
-			assert.Equal(t, bl.b.Value, resBlob.Value)
-			assert.Equal(t, bl.b.JetID, resBlob.JetID)
-		}
-	})
-
-	t.Run("returns error when no blob-value for id", func(t *testing.T) {
-		t.Parallel()
-
-		for i := int32(0); i < rand.Int31n(10); i++ {
-			_, err := blobStorage.ForID(ctx, gen.ID())
-			require.Error(t, err)
-			assert.Equal(t, blob.ErrNotFound, err)
-		}
-	})
-
-	t.Run("returns override error when saving with the same id", func(t *testing.T) {
-		t.Parallel()
-
-		blobStorage := blob.NewStorageMemory()
-		for _, bl := range blobs {
-			err := blobStorage.Set(ctx, bl.id, bl.b)
-			require.NoError(t, err)
-		}
-
-		for _, bl := range blobs {
-			err := blobStorage.Set(ctx, bl.id, bl.b)
-			require.Error(t, err)
-			assert.Equal(t, blob.ErrOverride, err)
+			assert.Equal(t, resMem, dbBlob, "memory and persistent result should be match")
 		}
 	})
 }
