@@ -26,6 +26,7 @@ import (
 )
 
 type loggerKey struct{}
+type loggerLevelKey struct{}
 
 func TraceID(ctx context.Context) string {
 	return utils.TraceID(ctx)
@@ -39,6 +40,20 @@ func FromContext(ctx context.Context) insolar.Logger {
 // SetLogger returns context with provided insolar.Logger,
 func SetLogger(ctx context.Context, l insolar.Logger) context.Context {
 	return context.WithValue(ctx, loggerKey{}, l)
+}
+
+// SetLoggerLevel returns context with provided insolar.LogLevel and set logLevel on logger,
+func WithLoggerLevel(ctx context.Context, logLevel insolar.LogLevel) context.Context {
+	if logLevel != insolar.NoLevel {
+		oldLogger := FromContext(ctx)
+		logCopy, err := oldLogger.WithLevelNumber(logLevel)
+		if err != nil {
+			oldLogger.Error("failed to set log level: ", err.Error())
+			return ctx
+		}
+		ctx = SetLogger(ctx, logCopy)
+	}
+	return context.WithValue(ctx, loggerLevelKey{}, logLevel)
 }
 
 // WithField returns context with logger initialized with provided field's key value and logger itself.
@@ -74,4 +89,18 @@ func getLogger(ctx context.Context) insolar.Logger {
 func TestContext(t *testing.T) context.Context {
 	ctx, _ := WithField(context.Background(), "testname", t.Name())
 	return ctx
+}
+
+func GetLoggerLevel(ctx context.Context) insolar.LogLevel {
+	logLevel := ctx.Value(loggerLevelKey{})
+	if logLevel == nil {
+		return insolar.NoLevel
+	}
+
+	logLevelValue, ok := logLevel.(insolar.LogLevel)
+	if !ok {
+		return insolar.NoLevel
+	}
+
+	return logLevelValue
 }

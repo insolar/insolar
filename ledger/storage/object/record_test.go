@@ -17,6 +17,7 @@
 package object
 
 import (
+	"github.com/insolar/insolar/insolar/record"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -41,7 +42,7 @@ func TestRecordStorage_ForID(t *testing.T) {
 
 	jetID := gen.JetID()
 	id := gen.ID()
-	rec := MaterialRecord{
+	rec := record.MaterialRecord{
 		Record: &ResultRecord{},
 		JetID:  jetID,
 	}
@@ -50,7 +51,7 @@ func TestRecordStorage_ForID(t *testing.T) {
 		t.Parallel()
 
 		recordStorage := &RecordMemory{
-			memory: map[insolar.ID]MaterialRecord{},
+			memory: map[insolar.ID]record.MaterialRecord{},
 		}
 		recordStorage.memory[id] = rec
 
@@ -64,7 +65,7 @@ func TestRecordStorage_ForID(t *testing.T) {
 		t.Parallel()
 
 		recordStorage := &RecordMemory{
-			memory: map[insolar.ID]MaterialRecord{},
+			memory: map[insolar.ID]record.MaterialRecord{},
 		}
 		recordStorage.memory[id] = rec
 
@@ -81,7 +82,7 @@ func TestRecordStorage_Set(t *testing.T) {
 
 	jetID := gen.JetID()
 	id := gen.ID()
-	rec := MaterialRecord{
+	rec := record.MaterialRecord{
 		Record: &ResultRecord{},
 		JetID:  jetID,
 	}
@@ -93,7 +94,7 @@ func TestRecordStorage_Set(t *testing.T) {
 		t.Parallel()
 
 		recordStorage := &RecordMemory{
-			memory:   map[insolar.ID]MaterialRecord{},
+			memory:   map[insolar.ID]record.MaterialRecord{},
 			jetIndex: jetIndex,
 		}
 		err := recordStorage.Set(ctx, id, rec)
@@ -107,7 +108,7 @@ func TestRecordStorage_Set(t *testing.T) {
 		t.Parallel()
 
 		recordStorage := &RecordMemory{
-			memory:   map[insolar.ID]MaterialRecord{},
+			memory:   map[insolar.ID]record.MaterialRecord{},
 			jetIndex: jetIndex,
 		}
 		err := recordStorage.Set(ctx, id, rec)

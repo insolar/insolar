@@ -125,24 +125,28 @@ func (s *Server) Serve() {
 	<-waitChannel
 }
 
-func checkError(ctx context.Context, err error, message string) {
-	if err == nil {
-		return
-	}
-	inslog := inslogger.FromContext(ctx)
-	log.WithSkipDelta(inslog, +1).Fatalf("%v: %v", message, err.Error())
-}
-
 func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (context.Context, insolar.Logger) {
 	inslog, err := log.NewLog(cfg)
 	if err != nil {
 		panic(err)
 	}
-	err = inslog.SetLevel(cfg.Level)
-	if err != nil {
+
+	if newInslog, err := inslog.WithLevel(cfg.Level); err != nil {
 		inslog.Error(err.Error())
+	} else {
+		inslog = newInslog
 	}
-	return inslogger.WithTraceField(inslogger.SetLogger(ctx, inslog), traceid)
+
+	ctx = inslogger.SetLogger(ctx, inslog)
+	ctx, inslog = inslogger.WithTraceField(ctx, traceid)
+	return ctx, inslog
+}
+
+func checkError(ctx context.Context, err error, message string) {
+	if err == nil {
+		return
+	}
+	inslogger.FromContext(ctx).Fatalf("%v: %v", message, err.Error())
 }
 
 func removeLedgerDataDir(ctx context.Context, cfg *configuration.Configuration) {

@@ -767,7 +767,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 
 	// Index exists and latest record id does not match (preserving chain consistency).
 	// For the case when vm can't save or send result to another vm and it tries to update the same record again
-	if idx.LatestState != nil && !state.PrevStateID().Equal(idx.LatestState) && idx.LatestState != recID {
+	if idx.LatestState != nil && !state.PrevStateID().Equal(*idx.LatestState) && idx.LatestState != recID {
 		return nil, errors.New("invalid state record")
 	}
 
@@ -838,7 +838,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 
 	// Children exist and pointer does not match (preserving chain consistency).
 	// For the case when vm can't save or send result to another vm and it tries to update the same record again
-	if idx.ChildPointer != nil && !childRec.PrevChild.Equal(idx.ChildPointer) && idx.ChildPointer != recID {
+	if idx.ChildPointer != nil && !childRec.PrevChild.Equal(*idx.ChildPointer) && idx.ChildPointer != recID {
 		return nil, errors.New("invalid child record")
 	}
 
@@ -981,7 +981,7 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel insol
 	}
 	approved := msg.LatestStateApproved
 	validated := state.PrevStateID()
-	if !approved.Equal(validated) && approved != nil && validated != nil {
+	if validated != nil && approved != nil && !approved.Equal(*validated) {
 		return &reply.NotOK{}, nil
 	}
 
