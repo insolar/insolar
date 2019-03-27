@@ -68,7 +68,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		dropAccessor = dropDB
 
 		// should be replaced with db
-		blobDB := blob.NewStorageMemory()
+		blobDB := blob.NewStorageDB(newDB)
 		blobModifier = blobDB
 		blobAccessor = blobDB
 	default:

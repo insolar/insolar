@@ -89,6 +89,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	tmpDB, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
+	memoryMockDB := db.NewMemoryMockDB()
 
 	cm := &component.Manager{}
 	gi := genesis.NewGenesisInitializer()
@@ -98,7 +99,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	os := storage.NewObjectStorage()
 	ns := node.NewStorage()
 	ds := drop.NewStorageDB()
-	bs := blob.NewStorageMemory()
+	bs := blob.NewStorageDB(memoryMockDB)
 	rs := storage.NewReplicaStorage()
 	cl := storage.NewCleaner()
 
@@ -161,7 +162,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		tmpDB,
-		db.NewMemoryMockDB(),
+		memoryMockDB,
 		js,
 		os,
 		ns,
