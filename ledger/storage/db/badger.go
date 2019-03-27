@@ -52,6 +52,12 @@ func NewBadgerDB(conf configuration.Ledger) (*BadgerDB, error) {
 	return db, nil
 }
 
+func NewDBWithBadger(badger *badger.DB) *BadgerDB {
+	return &BadgerDB{
+		backend: badger,
+	}
+}
+
 // Get returns value for specified key or an error. A copy of a value will be returned (i.e. getting large value can be
 // long).
 func (b *BadgerDB) Get(key Key) (value []byte, err error) {

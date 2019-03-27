@@ -17,34 +17,34 @@
 package ledger
 
 import (
-	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/ledger/heavy"
-	"github.com/insolar/insolar/ledger/recentstorage"
-	db2 "github.com/insolar/insolar/ledger/storage/db"
-	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/genesis"
-	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/ledger/artifactmanager"
+	"github.com/insolar/insolar/ledger/heavy"
 	"github.com/insolar/insolar/ledger/heavyserver"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/pulsemanager"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/genesis"
+	"github.com/insolar/insolar/ledger/storage/node"
 )
 
 // GetLedgerComponents returns ledger components.
 func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certificate) []interface{} {
 	idLocker := storage.NewIDLocker()
 
-	db, err := storage.NewDB(conf, nil)
+	store, err := storage.NewDB(conf, nil)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
 
-	newDB, err := db2.NewBadgerDB(conf)
+	dbBadger, err := db.NewBadgerDB(conf)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
@@ -57,7 +57,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	case insolar.StaticRoleUnknown, insolar.StaticRoleHeavyMaterial:
 		pulseTracker = storage.NewPulseTracker()
 
-		dropDB := drop.NewStorageDB()
+		dropDB := drop.NewStorageDB(dbBadger)
 		dropModifier = dropDB
 		dropAccessor = dropDB
 	default:
@@ -69,8 +69,8 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	}
 
 	components := []interface{}{
-		db,
-		newDB,
+		store,
+		dbBadger,
 		idLocker,
 		dropModifier,
 		dropAccessor,
@@ -86,7 +86,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		artifactmanager.NewHotDataWaiterConcrete(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),
 		pulsemanager.NewPulseManager(conf),
-		heavyserver.NewSync(db),
+		heavyserver.NewSync(store),
 	}
 
 	switch certificate.GetRole() {

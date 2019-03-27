@@ -73,7 +73,9 @@ func (s *replicaIterSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
-	dropStorage := drop.NewStorageDB()
+
+	storageDB := db.NewDBWithBadger(tmpDB.GetBadgerDB())
+	dropStorage := drop.NewStorageDB(storageDB)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 
@@ -124,7 +126,8 @@ func Test_StoreKeyValues(t *testing.T) {
 		defer cleaner()
 
 		os := storage.NewObjectStorage()
-		ds := drop.NewStorageDB()
+		storageDB := db.NewDBWithBadger(tmpDB.GetBadgerDB())
+		ds := drop.NewStorageDB(storageDB)
 
 		cm := &component.Manager{}
 		cm.Inject(
@@ -229,7 +232,9 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	defer cleaner()
 
 	os := storage.NewObjectStorage()
-	ds := drop.NewStorageDB()
+
+	storageDB := db.NewDBWithBadger(tmpDB.GetBadgerDB())
+	ds := drop.NewStorageDB(storageDB)
 
 	cm := &component.Manager{}
 	cm.Inject(

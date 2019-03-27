@@ -68,10 +68,12 @@ func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
-	dropStorage := drop.NewStorageDB()
+	s.storageCleaner = storage.NewCleaner()
+
+	storageDB := db.NewDBWithBadger(tmpDB.GetBadgerDB())
+	dropStorage := drop.NewStorageDB(storageDB)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
-	s.storageCleaner = storage.NewCleaner()
 
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),

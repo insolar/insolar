@@ -86,7 +86,8 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 
-	dropStorage := drop.NewStorageDB()
+	dbStore := db.NewDBWithBadger(tempDB.GetBadgerDB())
+	dropStorage := drop.NewStorageDB(dbStore)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 	s.genesisState = genesis.NewGenesisInitializer()

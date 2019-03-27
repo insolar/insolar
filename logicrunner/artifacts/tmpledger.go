@@ -112,9 +112,10 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	js := jet.NewStore()
 	os := storage.NewObjectStorage()
 	ns := node.NewStorage()
-	ds := drop.NewStorageDB()
 	rs := storage.NewReplicaStorage()
 	cl := storage.NewCleaner()
+	storageDB := db.NewDBWithBadger(tmpDB.GetBadgerDB())
+	ds := drop.NewStorageDB(storageDB)
 
 	am := NewClient()
 	am.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()

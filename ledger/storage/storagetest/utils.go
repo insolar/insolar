@@ -77,13 +77,16 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 
 	cm := &component.Manager{}
 
+	storageDB := db.NewDBWithBadger(tmpDB.GetBadgerDB())
+	ds := drop.NewStorageDB(storageDB)
+
 	cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
 		tmpDB,
 		jet.NewStore(),
 		db.NewMemoryMockDB(),
 		storage.NewObjectStorage(),
-		drop.NewStorageDB(),
+		ds,
 		storage.NewPulseTracker(),
 	)
 
