@@ -22,10 +22,11 @@ import (
 	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
+	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/insolar"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -72,7 +73,7 @@ func TestSlotElement_update(t *testing.T) {
 	el := newSlotElement(ActiveElement, nil)
 	testStateID := fsm.StateID(42)
 	testPayLoad := 142
-	testStateMachine := statemachine.NewStateMachineMock(t)
+	testStateMachine := matrix.NewStateMachineMock(t)
 	require.NotEqual(t, testStateID, el.GetState())
 	require.NotEqual(t, testPayLoad, el.GetPayload())
 	require.NotEqual(t, testStateMachine, el.stateMachine)

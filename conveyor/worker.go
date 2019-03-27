@@ -29,8 +29,6 @@ import (
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/conveyor/queue"
@@ -78,7 +76,7 @@ func newWorker(slot *Slot) worker {
 	return w
 }
 
-func (w *worker) GetStateMachineByType(mType matrix.MachineType) statemachine.StateMachine {
+func (w *worker) GetStateMachineByType(mType matrix.MachineType) matrix.StateMachine {
 	return w.slot.handlersConfiguration.pulseStateMachines.GetStateMachineByID(int(mType))
 }
 
@@ -202,7 +200,7 @@ func (w *worker) updateElement(element *slotElement, payload interface{}, fullSt
 }
 
 func (w *worker) processResponse(resp queue.OutputElement) error {
-	adapterResp, ok := resp.GetData().(iadapter.Response)
+	adapterResp, ok := resp.GetData().(AdapterResponse)
 	if !ok {
 		panic(fmt.Sprintf("[ processResponse ] Bad type in adapter response queue: %T", resp.GetData()))
 	}
@@ -214,16 +212,16 @@ func (w *worker) processResponse(resp queue.OutputElement) error {
 
 	respHandler := element.stateMachine.GetResponseHandler(element.state)
 
-	payload, newState, err := respHandler(element, adapterResp)
+	payload, newState, err := respHandler(element, adapterResp.GetRespPayload())
 	if err != nil {
 
-		w.ctxLogger.Error("[ processResponse ] Response handler errors: ", err)
+		w.ctxLogger.Error("[ processResponse ] AdapterResponse handler errors: ", err)
 		respErrorHandler := element.stateMachine.GetResponseErrorHandler(element.state)
 		if respErrorHandler == nil {
 			panic(fmt.Sprintf("[ processResponse ] No response error handler. State: %d. AdapterResp: %+v", element.state, adapterResp))
 		}
 
-		payload, newState = respErrorHandler(element, adapterResp, err)
+		payload, newState = respErrorHandler(element, adapterResp.GetRespPayload(), err)
 	}
 
 	w.updateElement(element, payload, newState)
@@ -385,7 +383,7 @@ func (w *worker) sendRemovalSignalToConveyor() {
 	// catch conveyor lock, check input queue, if It's empty - remove slot from map, if it's not - got to Working state
 }
 
-func (w *worker) getInitialStateMachine() statemachine.StateMachine {
+func (w *worker) getInitialStateMachine() matrix.StateMachine {
 	return w.slot.handlersConfiguration.initStateMachine
 }
 
@@ -493,7 +491,7 @@ func (w *worker) migrate(status ActivationStatus) error {
 
 		payload, newState, err := migHandler(element)
 		if err != nil {
-			w.ctxLogger.Error("[ migrate ] Response handler errors: ", err)
+			w.ctxLogger.Error("[ migrate ] AdapterResponse handler errors: ", err)
 			respErrorHandler := element.stateMachine.GetTransitionErrorHandler(element.state)
 
 			payload, newState = respErrorHandler(element, err)
@@ -513,7 +511,7 @@ func (w *worker) migrate(status ActivationStatus) error {
 
 func (w *worker) setPulseStateMachines() {
 
-	var stateMachines statemachine.SetAccessor
+	var stateMachines matrix.SetAccessor
 
 	switch w.slot.pulseState {
 	case constant.Future:

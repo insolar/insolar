@@ -14,35 +14,17 @@
  *    limitations under the License.
  */
 
-package statemachine
+package handler
 
 import (
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 )
 
 // Types below describes different types of raw handlers
 type TransitHandler func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error)
 type MigrationHandler func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error)
-type AdapterResponseHandler func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error)
+type AdapterResponseHandler func(element slot.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error)
 type NestedHandler func(element slot.SlotElementHelper, err error) (interface{}, fsm.ElementState)
 type TransitionErrorHandler func(element slot.SlotElementHelper, err error) (interface{}, fsm.ElementState)
-type ResponseErrorHandler func(element slot.SlotElementHelper, response iadapter.Response, err error) (interface{}, fsm.ElementState)
-
-// StateMachine describes access to element's state machine
-//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine -o ./ -s _mock.go
-type StateMachine interface {
-	GetTypeID() fsm.ID
-	GetMigrationHandler(state fsm.StateID) MigrationHandler
-	GetTransitionHandler(state fsm.StateID) TransitHandler
-	GetResponseHandler(state fsm.StateID) AdapterResponseHandler
-	GetNestedHandler(state fsm.StateID) NestedHandler
-	GetTransitionErrorHandler(state fsm.StateID) TransitionErrorHandler
-	GetResponseErrorHandler(state fsm.StateID) ResponseErrorHandler
-}
-
-// SetAccessor gives access to set of state machines
-type SetAccessor interface {
-	GetStateMachineByID(id int) StateMachine
-}
+type ResponseErrorHandler func(element slot.SlotElementHelper, response interface{}, err error) (interface{}, fsm.ElementState)
