@@ -19,10 +19,13 @@ package conveyor
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 
 	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
+	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
@@ -366,10 +369,9 @@ func (w *worker) calculateNodeState() {
 		Callback: w.preparePulseSync,
 		Pulse:    w.slot.pulse,
 	}
-	// TODO: use adapter catalog
-	a := adapter.NewNodeStateAdapter()
-	// TODO: check that slot implements AdapterToSlotResponseSink interface
-	err := a.PushTask(w.slot, 0, 0, task)
+	nodeStateAdapter := adapterstorage.Manager.GetAdapterByID(adapterid.NodeState)
+	// TODO: elementID=MaxUint32 is hack, mb we should create element with specific state machine for it
+	err := nodeStateAdapter.PushTask(w.slot, math.MaxUint32, 0, task)
 	if err != nil {
 		panic("[ calculateNodeState ] Can't calculate node state in NodeStateAdapter: " + err.Error())
 	}

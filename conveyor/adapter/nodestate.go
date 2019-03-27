@@ -25,11 +25,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// NewNodeStateAdapter creates new instance of adapter for getting node state
-func NewNodeStateAdapter() PulseConveyorAdapterTaskSink {
-	return NewAdapterWithQueue(NewNodeStateProcessor())
-}
-
 // NodeStateTask is task for adapter for getting node state
 type NodeStateTask struct {
 	Callback queue.SyncDone
@@ -47,7 +42,7 @@ func NewNodeStateProcessor() Processor {
 }
 
 // Process implements Processor interface
-func (rs *NodeStateProcessor) Process(task AdapterTask, nestedEventHelper NestedEventHelper, cancelInfo CancelInfo) interface{} {
+func (rs *NodeStateProcessor) Process(task AdapterTask, nestedEventHelper NestedEventHelper, ci CancelInfo) interface{} {
 	payload, ok := task.TaskPayload.(NodeStateTask)
 	var msg interface{}
 

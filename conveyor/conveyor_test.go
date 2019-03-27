@@ -17,14 +17,20 @@
 package conveyor
 
 import (
+	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
 	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -82,11 +88,11 @@ type mockSyncDone struct {
 	doneCount int
 }
 
-func (s *mockSyncDone) GetResult() int {
+func (s *mockSyncDone) GetResult() []byte {
 	result := <-s.waiter
-	hash, ok := result.(int)
+	hash, ok := result.([]byte)
 	if !ok {
-		return 0
+		return []byte{}
 	}
 	return hash
 }
@@ -122,6 +128,25 @@ func testPulseConveyor(t *testing.T, isQueueOk bool) *PulseConveyor {
 		slotMap:            slotMap,
 		futurePulseNumber:  &futureSlot.pulseNumber,
 		presentPulseNumber: &presentSlot.pulseNumber,
+	}
+}
+
+func initComponents(t *testing.T) {
+	pc := testutils.NewPlatformCryptographyScheme()
+	ledgerMock := testutils.NewLedgerLogicMock(t)
+	ledgerMock.GetCodeFunc = func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error) {
+		return &reply.Code{}, nil
+	}
+
+	cm := &component.Manager{}
+	ctx := context.TODO()
+
+	components := adapterstorage.GetAllProcessors()
+	components = append(components, pc, ledgerMock)
+	cm.Inject(components...)
+	err := cm.Init(ctx)
+	if err != nil {
+		t.Error("ComponentManager init failed", err)
 	}
 }
 
@@ -437,6 +462,7 @@ func TestConveyor_ChangePulse(t *testing.T) {
 func TestConveyor_ChangePulseMultipleTimes(t *testing.T) {
 	conveyor, err := NewPulseConveyor()
 	require.NoError(t, err)
+	initComponents(t)
 
 	pulseNumber := testRealPulse + testPulseDelta
 	for i := 0; i < 20; i++ {
@@ -456,6 +482,7 @@ func TestConveyor_ChangePulseMultipleTimes(t *testing.T) {
 func TestConveyor_ChangePulseMultipleTimes_WithEvents(t *testing.T) {
 	conveyor, err := NewPulseConveyor()
 	require.NoError(t, err)
+	initComponents(t)
 
 	pulseNumber := testRealPulse + testPulseDelta
 	for i := 0; i < 100; i++ {
@@ -488,9 +515,12 @@ func TestConveyor_ChangePulseMultipleTimes_WithEvents(t *testing.T) {
 		require.NoError(t, err)
 
 		if i == 0 {
-			require.Equal(t, 0, callback.(*mockSyncDone).GetResult())
+			require.Equal(t, []byte{}, callback.(*mockSyncDone).GetResult())
 		} else {
-			require.Equal(t, 555, callback.(*mockSyncDone).GetResult())
+			expectedHash, _ := hex.DecodeString(
+				"0c60ae04fbb17fe36f4e84631a5b8f3cd6d0cd46e80056bdfec97fd305f764daadef8ae1adc89b203043d7e2af1fb341df0ce5f66dfe3204ec3a9831532a8e4c",
+			)
+			require.Equal(t, expectedHash, callback.(*mockSyncDone).GetResult())
 		}
 
 		err = conveyor.ActivatePulse()

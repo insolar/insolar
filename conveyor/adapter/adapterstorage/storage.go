@@ -31,6 +31,7 @@ type Storage struct {
 
 // GetAdapterByID returns adapter by id
 func (s *Storage) GetAdapterByID(id adapterid.ID) adapter.TaskSink {
+	fmt.Println("GetAdapterByID", id)
 	return s.adapters[id]
 }
 
@@ -70,6 +71,7 @@ func init() {
 
 	addAdapter(adapter.NewSendResponseProcessor, adapterid.SendResponse)
 	addAdapter(artifactmanager.NewGetCodeProcessor, adapterid.GetCode)
+	addAdapter(adapter.NewNodeStateProcessor, adapterid.NodeState)
 }
 
 // GetAllProcessors is used for component manager
