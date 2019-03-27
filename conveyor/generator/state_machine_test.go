@@ -21,14 +21,13 @@ package main
 import (
 	"testing"
 
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
 )
 
 func Test_Generated_State_Machine(t *testing.T) {
-	element := slot.NewSlotElementHelperMock(t)
+	element := fsm.NewSlotElementHelperMock(t)
 	element.GetInputEventFunc = func() interface{} {
 		return sample.Event{}
 	}

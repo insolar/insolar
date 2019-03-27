@@ -23,7 +23,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/testutils"
@@ -155,7 +155,7 @@ func TestSendResponseHelper(t *testing.T) {
 	event := insolar.ConveyorPendingMessage{Future: f}
 	testReply := &mockReply{data: "Put-in"}
 
-	slotElementHelperMock := slot.NewSlotElementHelperMock(t)
+	slotElementHelperMock := fsm.NewSlotElementHelperMock(t)
 	slotElementHelperMock.GetInputEventFunc = func() (r interface{}) {
 		return event
 	}
@@ -175,7 +175,7 @@ func TestSendResponseHelper(t *testing.T) {
 }
 
 func TestSendResponseHelper_BadInput(t *testing.T) {
-	slotElementHelperMock := slot.NewSlotElementHelperMock(t)
+	slotElementHelperMock := fsm.NewSlotElementHelperMock(t)
 	slotElementHelperMock.GetInputEventFunc = func() (r interface{}) {
 		return 33
 	}

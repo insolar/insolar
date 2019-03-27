@@ -21,10 +21,8 @@ import (
 
 	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
-	"github.com/insolar/insolar/conveyor/interfaces/constant"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
 
@@ -135,7 +133,7 @@ type Slot struct {
 	handlersConfiguration HandlersConfiguration // nolint
 	inputQueue            queue.IQueue
 	responseQueue         queue.IQueue
-	pulseState            constant.PulseState
+	pulseState            PulseState
 	slotState             SlotState
 	stateMachine          slotElement
 	pulse                 insolar.Pulse
@@ -180,7 +178,7 @@ func initElementsBuf() ([]slotElement, *ElementList) {
 }
 
 // NewWorkingSlot creates new instance of Slot
-func NewWorkingSlot(pulseState constant.PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) TaskPusher {
+func NewWorkingSlot(pulseState PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) TaskPusher {
 
 	slot := newSlot(pulseState, pulseNumber, removeSlotCallback)
 	slot.runWorker()
@@ -188,9 +186,9 @@ func NewWorkingSlot(pulseState constant.PulseState, pulseNumber insolar.PulseNum
 	return slot
 }
 
-func newSlot(pulseState constant.PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) *Slot {
+func newSlot(pulseState PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) *Slot {
 	slotState := Initializing
-	if pulseState == constant.Antique {
+	if pulseState == Antique {
 		slotState = Working
 	}
 
@@ -245,7 +243,7 @@ func (s *Slot) PushNestedEvent(adapterID adapterid.ID, parentElementID uint32, h
 	}
 }
 
-func (s *Slot) GetSlotDetails() slot.SlotDetails {
+func (s *Slot) GetSlotDetails() adapter.SlotDetails {
 	return s
 }
 

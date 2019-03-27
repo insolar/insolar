@@ -1,9 +1,9 @@
-package slot
+package adapter
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "SlotDetails" can be found in github.com/insolar/insolar/conveyor/interfaces/slot
+The original interface "SlotDetails" can be found in github.com/insolar/insolar/conveyor/adapter
 */
 import (
 	"sync/atomic"
@@ -13,7 +13,7 @@ import (
 	insolar "github.com/insolar/insolar/insolar"
 )
 
-//SlotDetailsMock implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotDetails
+//SlotDetailsMock implements github.com/insolar/insolar/conveyor/adapter.SlotDetails
 type SlotDetailsMock struct {
 	t minimock.Tester
 
@@ -38,7 +38,7 @@ type SlotDetailsMock struct {
 	GetPulseNumberMock       mSlotDetailsMockGetPulseNumber
 }
 
-//NewSlotDetailsMock returns a mock for github.com/insolar/insolar/conveyor/interfaces/slot.SlotDetails
+//NewSlotDetailsMock returns a mock for github.com/insolar/insolar/conveyor/adapter.SlotDetails
 func NewSlotDetailsMock(t minimock.Tester) *SlotDetailsMock {
 	m := &SlotDetailsMock{t: t}
 
@@ -116,7 +116,7 @@ func (m *mSlotDetailsMockGetNodeData) Set(f func() (r interface{})) *SlotDetails
 	return m.mock
 }
 
-//GetNodeData implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotDetails interface
+//GetNodeData implements github.com/insolar/insolar/conveyor/adapter.SlotDetails interface
 func (m *SlotDetailsMock) GetNodeData() (r interface{}) {
 	counter := atomic.AddUint64(&m.GetNodeDataPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodeDataCounter, 1)
@@ -250,7 +250,7 @@ func (m *mSlotDetailsMockGetNodeID) Set(f func() (r uint32)) *SlotDetailsMock {
 	return m.mock
 }
 
-//GetNodeID implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotDetails interface
+//GetNodeID implements github.com/insolar/insolar/conveyor/adapter.SlotDetails interface
 func (m *SlotDetailsMock) GetNodeID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetNodeIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodeIDCounter, 1)
@@ -384,7 +384,7 @@ func (m *mSlotDetailsMockGetPulseData) Set(f func() (r insolar.Pulse)) *SlotDeta
 	return m.mock
 }
 
-//GetPulseData implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotDetails interface
+//GetPulseData implements github.com/insolar/insolar/conveyor/adapter.SlotDetails interface
 func (m *SlotDetailsMock) GetPulseData() (r insolar.Pulse) {
 	counter := atomic.AddUint64(&m.GetPulseDataPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPulseDataCounter, 1)
@@ -518,7 +518,7 @@ func (m *mSlotDetailsMockGetPulseNumber) Set(f func() (r insolar.PulseNumber)) *
 	return m.mock
 }
 
-//GetPulseNumber implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotDetails interface
+//GetPulseNumber implements github.com/insolar/insolar/conveyor/adapter.SlotDetails interface
 func (m *SlotDetailsMock) GetPulseNumber() (r insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.GetPulseNumberPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPulseNumberCounter, 1)

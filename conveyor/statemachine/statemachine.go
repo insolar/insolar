@@ -17,9 +17,8 @@
 package statemachine
 
 import (
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/handler"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
 )
 
 // State struct contains predefined set of handlers
@@ -59,7 +58,7 @@ func (sm *StateMachine) GetResponseHandler(state fsm.StateID) handler.AdapterRes
 
 // GetNestedHandler returns nested handler
 func (sm *StateMachine) GetNestedHandler(state fsm.StateID) handler.NestedHandler {
-	return func(element slot.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
+	return func(element fsm.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
 		// TODO: Implement me
 		return nil, 0
 	}
