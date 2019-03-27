@@ -1,19 +1,18 @@
-package slot
+package fsm
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "SlotElementReadOnly" can be found in github.com/insolar/insolar/conveyor/interfaces/slot
+The original interface "SlotElementReadOnly" can be found in github.com/insolar/insolar/conveyor/fsm
 */
 import (
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	fsm "github.com/insolar/insolar/conveyor/interfaces/fsm"
 )
 
-//SlotElementReadOnlyMock implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly
+//SlotElementReadOnlyMock implements github.com/insolar/insolar/conveyor/fsm.SlotElementReadOnly
 type SlotElementReadOnlyMock struct {
 	t minimock.Tester
 
@@ -27,18 +26,18 @@ type SlotElementReadOnlyMock struct {
 	GetNodeIDPreCounter uint64
 	GetNodeIDMock       mSlotElementReadOnlyMockGetNodeID
 
-	GetStateFunc       func() (r fsm.StateID)
+	GetStateFunc       func() (r StateID)
 	GetStateCounter    uint64
 	GetStatePreCounter uint64
 	GetStateMock       mSlotElementReadOnlyMockGetState
 
-	GetTypeFunc       func() (r fsm.ID)
+	GetTypeFunc       func() (r ID)
 	GetTypeCounter    uint64
 	GetTypePreCounter uint64
 	GetTypeMock       mSlotElementReadOnlyMockGetType
 }
 
-//NewSlotElementReadOnlyMock returns a mock for github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly
+//NewSlotElementReadOnlyMock returns a mock for github.com/insolar/insolar/conveyor/fsm.SlotElementReadOnly
 func NewSlotElementReadOnlyMock(t minimock.Tester) *SlotElementReadOnlyMock {
 	m := &SlotElementReadOnlyMock{t: t}
 
@@ -116,7 +115,7 @@ func (m *mSlotElementReadOnlyMockGetElementID) Set(f func() (r uint32)) *SlotEle
 	return m.mock
 }
 
-//GetElementID implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly interface
+//GetElementID implements github.com/insolar/insolar/conveyor/fsm.SlotElementReadOnly interface
 func (m *SlotElementReadOnlyMock) GetElementID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetElementIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetElementIDCounter, 1)
@@ -250,7 +249,7 @@ func (m *mSlotElementReadOnlyMockGetNodeID) Set(f func() (r uint32)) *SlotElemen
 	return m.mock
 }
 
-//GetNodeID implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly interface
+//GetNodeID implements github.com/insolar/insolar/conveyor/fsm.SlotElementReadOnly interface
 func (m *SlotElementReadOnlyMock) GetNodeID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetNodeIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodeIDCounter, 1)
@@ -333,7 +332,7 @@ type SlotElementReadOnlyMockGetStateExpectation struct {
 }
 
 type SlotElementReadOnlyMockGetStateResult struct {
-	r fsm.StateID
+	r StateID
 }
 
 //Expect specifies that invocation of SlotElementReadOnly.GetState is expected from 1 to Infinity times
@@ -349,7 +348,7 @@ func (m *mSlotElementReadOnlyMockGetState) Expect() *mSlotElementReadOnlyMockGet
 }
 
 //Return specifies results of invocation of SlotElementReadOnly.GetState
-func (m *mSlotElementReadOnlyMockGetState) Return(r fsm.StateID) *SlotElementReadOnlyMock {
+func (m *mSlotElementReadOnlyMockGetState) Return(r StateID) *SlotElementReadOnlyMock {
 	m.mock.GetStateFunc = nil
 	m.expectationSeries = nil
 
@@ -371,12 +370,12 @@ func (m *mSlotElementReadOnlyMockGetState) ExpectOnce() *SlotElementReadOnlyMock
 	return expectation
 }
 
-func (e *SlotElementReadOnlyMockGetStateExpectation) Return(r fsm.StateID) {
+func (e *SlotElementReadOnlyMockGetStateExpectation) Return(r StateID) {
 	e.result = &SlotElementReadOnlyMockGetStateResult{r}
 }
 
 //Set uses given function f as a mock of SlotElementReadOnly.GetState method
-func (m *mSlotElementReadOnlyMockGetState) Set(f func() (r fsm.StateID)) *SlotElementReadOnlyMock {
+func (m *mSlotElementReadOnlyMockGetState) Set(f func() (r StateID)) *SlotElementReadOnlyMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -384,8 +383,8 @@ func (m *mSlotElementReadOnlyMockGetState) Set(f func() (r fsm.StateID)) *SlotEl
 	return m.mock
 }
 
-//GetState implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly interface
-func (m *SlotElementReadOnlyMock) GetState() (r fsm.StateID) {
+//GetState implements github.com/insolar/insolar/conveyor/fsm.SlotElementReadOnly interface
+func (m *SlotElementReadOnlyMock) GetState() (r StateID) {
 	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetStateCounter, 1)
 
@@ -467,7 +466,7 @@ type SlotElementReadOnlyMockGetTypeExpectation struct {
 }
 
 type SlotElementReadOnlyMockGetTypeResult struct {
-	r fsm.ID
+	r ID
 }
 
 //Expect specifies that invocation of SlotElementReadOnly.GetType is expected from 1 to Infinity times
@@ -483,7 +482,7 @@ func (m *mSlotElementReadOnlyMockGetType) Expect() *mSlotElementReadOnlyMockGetT
 }
 
 //Return specifies results of invocation of SlotElementReadOnly.GetType
-func (m *mSlotElementReadOnlyMockGetType) Return(r fsm.ID) *SlotElementReadOnlyMock {
+func (m *mSlotElementReadOnlyMockGetType) Return(r ID) *SlotElementReadOnlyMock {
 	m.mock.GetTypeFunc = nil
 	m.expectationSeries = nil
 
@@ -505,12 +504,12 @@ func (m *mSlotElementReadOnlyMockGetType) ExpectOnce() *SlotElementReadOnlyMockG
 	return expectation
 }
 
-func (e *SlotElementReadOnlyMockGetTypeExpectation) Return(r fsm.ID) {
+func (e *SlotElementReadOnlyMockGetTypeExpectation) Return(r ID) {
 	e.result = &SlotElementReadOnlyMockGetTypeResult{r}
 }
 
 //Set uses given function f as a mock of SlotElementReadOnly.GetType method
-func (m *mSlotElementReadOnlyMockGetType) Set(f func() (r fsm.ID)) *SlotElementReadOnlyMock {
+func (m *mSlotElementReadOnlyMockGetType) Set(f func() (r ID)) *SlotElementReadOnlyMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -518,8 +517,8 @@ func (m *mSlotElementReadOnlyMockGetType) Set(f func() (r fsm.ID)) *SlotElementR
 	return m.mock
 }
 
-//GetType implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly interface
-func (m *SlotElementReadOnlyMock) GetType() (r fsm.ID) {
+//GetType implements github.com/insolar/insolar/conveyor/fsm.SlotElementReadOnly interface
+func (m *SlotElementReadOnlyMock) GetType() (r ID) {
 	counter := atomic.AddUint64(&m.GetTypePreCounter, 1)
 	defer atomic.AddUint64(&m.GetTypeCounter, 1)
 

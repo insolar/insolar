@@ -22,9 +22,8 @@ import (
 	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/stretchr/testify/require"
@@ -45,27 +44,27 @@ func TestSlotElement_Reactivate(t *testing.T) {
 func TestSlotElement_DeactivateTill_Empty(t *testing.T) {
 	el := newSlotElement(ActiveElement, nil)
 	require.Panics(t, func() {
-		el.DeactivateTill(slot.Empty)
+		el.DeactivateTill(fsm.Empty)
 	})
 }
 
 func TestSlotElement_DeactivateTill_Tick(t *testing.T) {
 	el := newSlotElement(ActiveElement, nil)
 	require.Panics(t, func() {
-		el.DeactivateTill(slot.Tick)
+		el.DeactivateTill(fsm.Tick)
 	})
 }
 
 func TestSlotElement_DeactivateTill_SeqHead(t *testing.T) {
 	el := newSlotElement(ActiveElement, nil)
 	require.Panics(t, func() {
-		el.DeactivateTill(slot.SeqHead)
+		el.DeactivateTill(fsm.SeqHead)
 	})
 }
 
 func TestSlotElement_DeactivateTill_Response(t *testing.T) {
 	el := newSlotElement(ActiveElement, nil)
-	el.DeactivateTill(slot.Response)
+	el.DeactivateTill(fsm.Response)
 	require.Equal(t, el.activationStatus, NotActiveElement)
 }
 
