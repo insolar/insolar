@@ -55,19 +55,15 @@ package servicenetwork
 import (
 	"context"
 	"fmt"
-	"strings"
 	"sync"
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -519,35 +515,6 @@ func (s *testSuite) TestDiscoveryRestartNoWait() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
-func (s *testSuite) TestCyclicBootstrap() {
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
-
-	pulsar, err := NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
-	s.Require().NoError(err)
-
-	largeNetwork := make([]*networkNode, 0)
-	for i := 0; i < s.bootstrapCount+1; i++ {
-		largeNetwork = append(largeNetwork, s.newNetworkNode(fmt.Sprintf("large_network_bootstrap_%d", i)))
-	}
-
-	pulseReceivers := make([]string, 0)
-	for _, node := range largeNetwork {
-		pulseReceivers = append(pulseReceivers, node.host)
-	}
-
-	err = pulsar.Start(s.fixture().ctx, pulseReceivers)
-	s.Require().NoError(err)
-
-	s.SetupNodesNetwork(largeNetwork)
-	s.startNodesNetwork(largeNetwork)
-	s.waitForConsensus(4)
-
-	activeNodes := largeNetwork[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-	s.Require().Equal(len(largeNetwork), len(activeNodes))
-}
-
 func setCommunicatorMock(nodes []*networkNode, opt CommunicatorTestOpt) {
 	ref := nodes[0].id
 	timedOutNodesCount := 0
@@ -566,96 +533,4 @@ func setCommunicatorMock(nodes []*networkNode, opt CommunicatorTestOpt) {
 		phasemanager.SecondPhase.(*phases.SecondPhaseImpl).Communicator = wrapper
 		phasemanager.ThirdPhase.(*phases.ThirdPhaseImpl).Communicator = wrapper
 	}
-}
-
-func (s *testSuite) initCert(node *networkNode, nodes []*networkNode) (*certificate.CertificateManager, insolar.CryptographyService) {
-	pubKey, err := node.cryptographyService.GetPublicKey()
-	s.Require().NoError(err)
-
-	// init certificate
-
-	proc := platformpolicy.NewKeyProcessor()
-	publicKey, err := proc.ExportPublicKeyPEM(pubKey)
-	s.Require().NoError(err)
-
-	cert := &certificate.Certificate{}
-	cert.PublicKey = string(publicKey[:])
-	cert.Reference = node.id.String()
-	cert.Role = node.role.String()
-	cert.BootstrapNodes = make([]certificate.BootstrapNode, 0)
-
-	for _, b := range nodes {
-		pubKey, _ := b.cryptographyService.GetPublicKey()
-		pubKeyBuf, err := proc.ExportPublicKeyPEM(pubKey)
-		s.Require().NoError(err)
-
-		bootstrapNode := certificate.NewBootstrapNode(
-			pubKey,
-			string(pubKeyBuf[:]),
-			b.host,
-			b.id.String())
-
-		cert.BootstrapNodes = append(cert.BootstrapNodes, *bootstrapNode)
-	}
-
-	// dump cert and read it again from json for correct private files initialization
-	jsonCert, err := cert.Dump()
-	s.Require().NoError(err)
-	log.Infof("cert: %s", jsonCert)
-
-	cert, err = certificate.ReadCertificateFromReader(pubKey, proc, strings.NewReader(jsonCert))
-	s.Require().NoError(err)
-	return certificate.NewCertificateManager(cert), node.cryptographyService
-}
-
-func (s *testSuite) startNodesNetwork(nodes []*networkNode) {
-	for _, node := range nodes {
-		s.preInitNode(node)
-	}
-
-	results := make(chan error, len(nodes))
-	initNode := func(node *networkNode) {
-		err := node.init()
-		results <- err
-	}
-	startNode := func(node *networkNode) {
-		err := node.componentManager.Start(node.ctx)
-		results <- err
-	}
-
-	waitResults := func(results chan error, expected int) error {
-		count := 0
-		for {
-			select {
-			case err := <-results:
-				count++
-				s.Require().NoError(err)
-				if count == expected {
-					return nil
-				}
-			case <-time.After(time.Second * 30):
-				return errors.New("timeout")
-			}
-		}
-	}
-
-	log.Info("Init nodes")
-	for _, node := range nodes {
-		go initNode(node)
-	}
-
-	err := waitResults(results, len(nodes))
-	s.Require().NoError(err)
-
-	for _, node := range nodes {
-		s.initCert(node, nodes)
-	}
-
-	log.Info("Start nodes")
-	for _, node := range nodes {
-		go startNode(node)
-	}
-
-	err = waitResults(results, len(nodes))
-	s.Require().NoError(err)
 }
