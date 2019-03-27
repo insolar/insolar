@@ -1,50 +1,51 @@
-package statemachine
+package matrix
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "StateMachine" can be found in github.com/insolar/insolar/conveyor/interfaces/statemachine
+The original interface "StateMachine" can be found in github.com/insolar/insolar/conveyor/generator/matrix
 */
 import (
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
+	handler "github.com/insolar/insolar/conveyor/handler"
 	fsm "github.com/insolar/insolar/conveyor/interfaces/fsm"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//StateMachineMock implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine
+//StateMachineMock implements github.com/insolar/insolar/conveyor/generator/matrix.StateMachine
 type StateMachineMock struct {
 	t minimock.Tester
 
-	GetMigrationHandlerFunc       func(p fsm.StateID) (r MigrationHandler)
+	GetMigrationHandlerFunc       func(p fsm.StateID) (r handler.MigrationHandler)
 	GetMigrationHandlerCounter    uint64
 	GetMigrationHandlerPreCounter uint64
 	GetMigrationHandlerMock       mStateMachineMockGetMigrationHandler
 
-	GetNestedHandlerFunc       func(p fsm.StateID) (r NestedHandler)
+	GetNestedHandlerFunc       func(p fsm.StateID) (r handler.NestedHandler)
 	GetNestedHandlerCounter    uint64
 	GetNestedHandlerPreCounter uint64
 	GetNestedHandlerMock       mStateMachineMockGetNestedHandler
 
-	GetResponseErrorHandlerFunc       func(p fsm.StateID) (r ResponseErrorHandler)
+	GetResponseErrorHandlerFunc       func(p fsm.StateID) (r handler.ResponseErrorHandler)
 	GetResponseErrorHandlerCounter    uint64
 	GetResponseErrorHandlerPreCounter uint64
 	GetResponseErrorHandlerMock       mStateMachineMockGetResponseErrorHandler
 
-	GetResponseHandlerFunc       func(p fsm.StateID) (r AdapterResponseHandler)
+	GetResponseHandlerFunc       func(p fsm.StateID) (r handler.AdapterResponseHandler)
 	GetResponseHandlerCounter    uint64
 	GetResponseHandlerPreCounter uint64
 	GetResponseHandlerMock       mStateMachineMockGetResponseHandler
 
-	GetTransitionErrorHandlerFunc       func(p fsm.StateID) (r TransitionErrorHandler)
+	GetTransitionErrorHandlerFunc       func(p fsm.StateID) (r handler.TransitionErrorHandler)
 	GetTransitionErrorHandlerCounter    uint64
 	GetTransitionErrorHandlerPreCounter uint64
 	GetTransitionErrorHandlerMock       mStateMachineMockGetTransitionErrorHandler
 
-	GetTransitionHandlerFunc       func(p fsm.StateID) (r TransitHandler)
+	GetTransitionHandlerFunc       func(p fsm.StateID) (r handler.TransitHandler)
 	GetTransitionHandlerCounter    uint64
 	GetTransitionHandlerPreCounter uint64
 	GetTransitionHandlerMock       mStateMachineMockGetTransitionHandler
@@ -55,7 +56,7 @@ type StateMachineMock struct {
 	GetTypeIDMock       mStateMachineMockGetTypeID
 }
 
-//NewStateMachineMock returns a mock for github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine
+//NewStateMachineMock returns a mock for github.com/insolar/insolar/conveyor/generator/matrix.StateMachine
 func NewStateMachineMock(t minimock.Tester) *StateMachineMock {
 	m := &StateMachineMock{t: t}
 
@@ -90,7 +91,7 @@ type StateMachineMockGetMigrationHandlerInput struct {
 }
 
 type StateMachineMockGetMigrationHandlerResult struct {
-	r MigrationHandler
+	r handler.MigrationHandler
 }
 
 //Expect specifies that invocation of StateMachine.GetMigrationHandler is expected from 1 to Infinity times
@@ -106,7 +107,7 @@ func (m *mStateMachineMockGetMigrationHandler) Expect(p fsm.StateID) *mStateMach
 }
 
 //Return specifies results of invocation of StateMachine.GetMigrationHandler
-func (m *mStateMachineMockGetMigrationHandler) Return(r MigrationHandler) *StateMachineMock {
+func (m *mStateMachineMockGetMigrationHandler) Return(r handler.MigrationHandler) *StateMachineMock {
 	m.mock.GetMigrationHandlerFunc = nil
 	m.expectationSeries = nil
 
@@ -128,12 +129,12 @@ func (m *mStateMachineMockGetMigrationHandler) ExpectOnce(p fsm.StateID) *StateM
 	return expectation
 }
 
-func (e *StateMachineMockGetMigrationHandlerExpectation) Return(r MigrationHandler) {
+func (e *StateMachineMockGetMigrationHandlerExpectation) Return(r handler.MigrationHandler) {
 	e.result = &StateMachineMockGetMigrationHandlerResult{r}
 }
 
 //Set uses given function f as a mock of StateMachine.GetMigrationHandler method
-func (m *mStateMachineMockGetMigrationHandler) Set(f func(p fsm.StateID) (r MigrationHandler)) *StateMachineMock {
+func (m *mStateMachineMockGetMigrationHandler) Set(f func(p fsm.StateID) (r handler.MigrationHandler)) *StateMachineMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -141,8 +142,8 @@ func (m *mStateMachineMockGetMigrationHandler) Set(f func(p fsm.StateID) (r Migr
 	return m.mock
 }
 
-//GetMigrationHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine interface
-func (m *StateMachineMock) GetMigrationHandler(p fsm.StateID) (r MigrationHandler) {
+//GetMigrationHandler implements github.com/insolar/insolar/conveyor/generator/matrix.StateMachine interface
+func (m *StateMachineMock) GetMigrationHandler(p fsm.StateID) (r handler.MigrationHandler) {
 	counter := atomic.AddUint64(&m.GetMigrationHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetMigrationHandlerCounter, 1)
 
@@ -237,7 +238,7 @@ type StateMachineMockGetNestedHandlerInput struct {
 }
 
 type StateMachineMockGetNestedHandlerResult struct {
-	r NestedHandler
+	r handler.NestedHandler
 }
 
 //Expect specifies that invocation of StateMachine.GetNestedHandler is expected from 1 to Infinity times
@@ -253,7 +254,7 @@ func (m *mStateMachineMockGetNestedHandler) Expect(p fsm.StateID) *mStateMachine
 }
 
 //Return specifies results of invocation of StateMachine.GetNestedHandler
-func (m *mStateMachineMockGetNestedHandler) Return(r NestedHandler) *StateMachineMock {
+func (m *mStateMachineMockGetNestedHandler) Return(r handler.NestedHandler) *StateMachineMock {
 	m.mock.GetNestedHandlerFunc = nil
 	m.expectationSeries = nil
 
@@ -275,12 +276,12 @@ func (m *mStateMachineMockGetNestedHandler) ExpectOnce(p fsm.StateID) *StateMach
 	return expectation
 }
 
-func (e *StateMachineMockGetNestedHandlerExpectation) Return(r NestedHandler) {
+func (e *StateMachineMockGetNestedHandlerExpectation) Return(r handler.NestedHandler) {
 	e.result = &StateMachineMockGetNestedHandlerResult{r}
 }
 
 //Set uses given function f as a mock of StateMachine.GetNestedHandler method
-func (m *mStateMachineMockGetNestedHandler) Set(f func(p fsm.StateID) (r NestedHandler)) *StateMachineMock {
+func (m *mStateMachineMockGetNestedHandler) Set(f func(p fsm.StateID) (r handler.NestedHandler)) *StateMachineMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -288,8 +289,8 @@ func (m *mStateMachineMockGetNestedHandler) Set(f func(p fsm.StateID) (r NestedH
 	return m.mock
 }
 
-//GetNestedHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine interface
-func (m *StateMachineMock) GetNestedHandler(p fsm.StateID) (r NestedHandler) {
+//GetNestedHandler implements github.com/insolar/insolar/conveyor/generator/matrix.StateMachine interface
+func (m *StateMachineMock) GetNestedHandler(p fsm.StateID) (r handler.NestedHandler) {
 	counter := atomic.AddUint64(&m.GetNestedHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNestedHandlerCounter, 1)
 
@@ -384,7 +385,7 @@ type StateMachineMockGetResponseErrorHandlerInput struct {
 }
 
 type StateMachineMockGetResponseErrorHandlerResult struct {
-	r ResponseErrorHandler
+	r handler.ResponseErrorHandler
 }
 
 //Expect specifies that invocation of StateMachine.GetResponseErrorHandler is expected from 1 to Infinity times
@@ -400,7 +401,7 @@ func (m *mStateMachineMockGetResponseErrorHandler) Expect(p fsm.StateID) *mState
 }
 
 //Return specifies results of invocation of StateMachine.GetResponseErrorHandler
-func (m *mStateMachineMockGetResponseErrorHandler) Return(r ResponseErrorHandler) *StateMachineMock {
+func (m *mStateMachineMockGetResponseErrorHandler) Return(r handler.ResponseErrorHandler) *StateMachineMock {
 	m.mock.GetResponseErrorHandlerFunc = nil
 	m.expectationSeries = nil
 
@@ -422,12 +423,12 @@ func (m *mStateMachineMockGetResponseErrorHandler) ExpectOnce(p fsm.StateID) *St
 	return expectation
 }
 
-func (e *StateMachineMockGetResponseErrorHandlerExpectation) Return(r ResponseErrorHandler) {
+func (e *StateMachineMockGetResponseErrorHandlerExpectation) Return(r handler.ResponseErrorHandler) {
 	e.result = &StateMachineMockGetResponseErrorHandlerResult{r}
 }
 
 //Set uses given function f as a mock of StateMachine.GetResponseErrorHandler method
-func (m *mStateMachineMockGetResponseErrorHandler) Set(f func(p fsm.StateID) (r ResponseErrorHandler)) *StateMachineMock {
+func (m *mStateMachineMockGetResponseErrorHandler) Set(f func(p fsm.StateID) (r handler.ResponseErrorHandler)) *StateMachineMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -435,8 +436,8 @@ func (m *mStateMachineMockGetResponseErrorHandler) Set(f func(p fsm.StateID) (r 
 	return m.mock
 }
 
-//GetResponseErrorHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine interface
-func (m *StateMachineMock) GetResponseErrorHandler(p fsm.StateID) (r ResponseErrorHandler) {
+//GetResponseErrorHandler implements github.com/insolar/insolar/conveyor/generator/matrix.StateMachine interface
+func (m *StateMachineMock) GetResponseErrorHandler(p fsm.StateID) (r handler.ResponseErrorHandler) {
 	counter := atomic.AddUint64(&m.GetResponseErrorHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetResponseErrorHandlerCounter, 1)
 
@@ -531,7 +532,7 @@ type StateMachineMockGetResponseHandlerInput struct {
 }
 
 type StateMachineMockGetResponseHandlerResult struct {
-	r AdapterResponseHandler
+	r handler.AdapterResponseHandler
 }
 
 //Expect specifies that invocation of StateMachine.GetResponseHandler is expected from 1 to Infinity times
@@ -547,7 +548,7 @@ func (m *mStateMachineMockGetResponseHandler) Expect(p fsm.StateID) *mStateMachi
 }
 
 //Return specifies results of invocation of StateMachine.GetResponseHandler
-func (m *mStateMachineMockGetResponseHandler) Return(r AdapterResponseHandler) *StateMachineMock {
+func (m *mStateMachineMockGetResponseHandler) Return(r handler.AdapterResponseHandler) *StateMachineMock {
 	m.mock.GetResponseHandlerFunc = nil
 	m.expectationSeries = nil
 
@@ -569,12 +570,12 @@ func (m *mStateMachineMockGetResponseHandler) ExpectOnce(p fsm.StateID) *StateMa
 	return expectation
 }
 
-func (e *StateMachineMockGetResponseHandlerExpectation) Return(r AdapterResponseHandler) {
+func (e *StateMachineMockGetResponseHandlerExpectation) Return(r handler.AdapterResponseHandler) {
 	e.result = &StateMachineMockGetResponseHandlerResult{r}
 }
 
 //Set uses given function f as a mock of StateMachine.GetResponseHandler method
-func (m *mStateMachineMockGetResponseHandler) Set(f func(p fsm.StateID) (r AdapterResponseHandler)) *StateMachineMock {
+func (m *mStateMachineMockGetResponseHandler) Set(f func(p fsm.StateID) (r handler.AdapterResponseHandler)) *StateMachineMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -582,8 +583,8 @@ func (m *mStateMachineMockGetResponseHandler) Set(f func(p fsm.StateID) (r Adapt
 	return m.mock
 }
 
-//GetResponseHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine interface
-func (m *StateMachineMock) GetResponseHandler(p fsm.StateID) (r AdapterResponseHandler) {
+//GetResponseHandler implements github.com/insolar/insolar/conveyor/generator/matrix.StateMachine interface
+func (m *StateMachineMock) GetResponseHandler(p fsm.StateID) (r handler.AdapterResponseHandler) {
 	counter := atomic.AddUint64(&m.GetResponseHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetResponseHandlerCounter, 1)
 
@@ -678,7 +679,7 @@ type StateMachineMockGetTransitionErrorHandlerInput struct {
 }
 
 type StateMachineMockGetTransitionErrorHandlerResult struct {
-	r TransitionErrorHandler
+	r handler.TransitionErrorHandler
 }
 
 //Expect specifies that invocation of StateMachine.GetTransitionErrorHandler is expected from 1 to Infinity times
@@ -694,7 +695,7 @@ func (m *mStateMachineMockGetTransitionErrorHandler) Expect(p fsm.StateID) *mSta
 }
 
 //Return specifies results of invocation of StateMachine.GetTransitionErrorHandler
-func (m *mStateMachineMockGetTransitionErrorHandler) Return(r TransitionErrorHandler) *StateMachineMock {
+func (m *mStateMachineMockGetTransitionErrorHandler) Return(r handler.TransitionErrorHandler) *StateMachineMock {
 	m.mock.GetTransitionErrorHandlerFunc = nil
 	m.expectationSeries = nil
 
@@ -716,12 +717,12 @@ func (m *mStateMachineMockGetTransitionErrorHandler) ExpectOnce(p fsm.StateID) *
 	return expectation
 }
 
-func (e *StateMachineMockGetTransitionErrorHandlerExpectation) Return(r TransitionErrorHandler) {
+func (e *StateMachineMockGetTransitionErrorHandlerExpectation) Return(r handler.TransitionErrorHandler) {
 	e.result = &StateMachineMockGetTransitionErrorHandlerResult{r}
 }
 
 //Set uses given function f as a mock of StateMachine.GetTransitionErrorHandler method
-func (m *mStateMachineMockGetTransitionErrorHandler) Set(f func(p fsm.StateID) (r TransitionErrorHandler)) *StateMachineMock {
+func (m *mStateMachineMockGetTransitionErrorHandler) Set(f func(p fsm.StateID) (r handler.TransitionErrorHandler)) *StateMachineMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -729,8 +730,8 @@ func (m *mStateMachineMockGetTransitionErrorHandler) Set(f func(p fsm.StateID) (
 	return m.mock
 }
 
-//GetTransitionErrorHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine interface
-func (m *StateMachineMock) GetTransitionErrorHandler(p fsm.StateID) (r TransitionErrorHandler) {
+//GetTransitionErrorHandler implements github.com/insolar/insolar/conveyor/generator/matrix.StateMachine interface
+func (m *StateMachineMock) GetTransitionErrorHandler(p fsm.StateID) (r handler.TransitionErrorHandler) {
 	counter := atomic.AddUint64(&m.GetTransitionErrorHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetTransitionErrorHandlerCounter, 1)
 
@@ -825,7 +826,7 @@ type StateMachineMockGetTransitionHandlerInput struct {
 }
 
 type StateMachineMockGetTransitionHandlerResult struct {
-	r TransitHandler
+	r handler.TransitHandler
 }
 
 //Expect specifies that invocation of StateMachine.GetTransitionHandler is expected from 1 to Infinity times
@@ -841,7 +842,7 @@ func (m *mStateMachineMockGetTransitionHandler) Expect(p fsm.StateID) *mStateMac
 }
 
 //Return specifies results of invocation of StateMachine.GetTransitionHandler
-func (m *mStateMachineMockGetTransitionHandler) Return(r TransitHandler) *StateMachineMock {
+func (m *mStateMachineMockGetTransitionHandler) Return(r handler.TransitHandler) *StateMachineMock {
 	m.mock.GetTransitionHandlerFunc = nil
 	m.expectationSeries = nil
 
@@ -863,12 +864,12 @@ func (m *mStateMachineMockGetTransitionHandler) ExpectOnce(p fsm.StateID) *State
 	return expectation
 }
 
-func (e *StateMachineMockGetTransitionHandlerExpectation) Return(r TransitHandler) {
+func (e *StateMachineMockGetTransitionHandlerExpectation) Return(r handler.TransitHandler) {
 	e.result = &StateMachineMockGetTransitionHandlerResult{r}
 }
 
 //Set uses given function f as a mock of StateMachine.GetTransitionHandler method
-func (m *mStateMachineMockGetTransitionHandler) Set(f func(p fsm.StateID) (r TransitHandler)) *StateMachineMock {
+func (m *mStateMachineMockGetTransitionHandler) Set(f func(p fsm.StateID) (r handler.TransitHandler)) *StateMachineMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -876,8 +877,8 @@ func (m *mStateMachineMockGetTransitionHandler) Set(f func(p fsm.StateID) (r Tra
 	return m.mock
 }
 
-//GetTransitionHandler implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine interface
-func (m *StateMachineMock) GetTransitionHandler(p fsm.StateID) (r TransitHandler) {
+//GetTransitionHandler implements github.com/insolar/insolar/conveyor/generator/matrix.StateMachine interface
+func (m *StateMachineMock) GetTransitionHandler(p fsm.StateID) (r handler.TransitHandler) {
 	counter := atomic.AddUint64(&m.GetTransitionHandlerPreCounter, 1)
 	defer atomic.AddUint64(&m.GetTransitionHandlerCounter, 1)
 
@@ -1018,7 +1019,7 @@ func (m *mStateMachineMockGetTypeID) Set(f func() (r fsm.ID)) *StateMachineMock 
 	return m.mock
 }
 
-//GetTypeID implements github.com/insolar/insolar/conveyor/interfaces/statemachine.StateMachine interface
+//GetTypeID implements github.com/insolar/insolar/conveyor/generator/matrix.StateMachine interface
 func (m *StateMachineMock) GetTypeID() (r fsm.ID) {
 	counter := atomic.AddUint64(&m.GetTypeIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetTypeIDCounter, 1)

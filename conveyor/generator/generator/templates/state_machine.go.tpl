@@ -17,13 +17,11 @@
 package {{.Package}}
 
 import (
-	"github.com/insolar/insolar/conveyor/generator/common"
-    "github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
-
 	"errors"
+
+	"github.com/insolar/insolar/conveyor/interfaces/fsm"
+	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/conveyor/statemachine"
 )
 
 {{range $i, $machine := .StateMachines}}type Base{{$machine.Name}} struct {}
@@ -40,18 +38,18 @@ type Raw{{$machine.Name}} struct {
     cleanStateMachine {{$machine.Name}}
 }
 
-func Raw{{$machine.Name}}Factory() [3]statemachine.StateMachine {
+func Raw{{$machine.Name}}Factory() [3]*statemachine.StateMachine {
     m := Raw{{$machine.Name}}{
         cleanStateMachine: &Clean{{$machine.Name}}{},
     }
 
-    var x = [3][]common.State{}
+    var x = [3][]statemachine.State{}
     // future state machine
-    x[0] = append(x[0], common.State{
+    x[0] = append(x[0], statemachine.State{
         Transition: m.{{(index .States 0).GetTransitionFutureName}},
         ErrorState: m.{{(index .States 0).GetErrorStateFutureName}},
     },{{range $i, $state := .States}}{{if (gtNull $i)}}
-    common.State{
+    statemachine.State{
         Migration: m.{{$state.GetMigrationFuturePresentName}},
         {{if (handlerExists $state.TransitionFuture)}}Transition: m.{{$state.GetTransitionFutureName}},{{end}}
         {{if (handlerExists $state.AdapterResponseFuture)}}AdapterResponse: m.{{$state.GetAdapterResponseFutureName}},{{end}}
@@ -60,11 +58,11 @@ func Raw{{$machine.Name}}Factory() [3]statemachine.StateMachine {
     },{{end}}{{end}})
 
     // present state machine
-    x[1] = append(x[1], common.State{
+    x[1] = append(x[1], statemachine.State{
         Transition: m.{{(index .States 0).GetTransitionName}},
         ErrorState: m.{{(index .States 0).GetErrorStateName}},
     },{{range $i, $state := .States}}{{if (gtNull $i)}}
-    common.State{
+    statemachine.State{
         Migration: m.{{$state.GetMigrationName}},
         Transition: m.{{$state.GetTransitionName}},
         {{if (handlerExists $state.AdapterResponse)}}AdapterResponse: m.{{$state.GetAdapterResponseName}},{{end}}
@@ -73,11 +71,11 @@ func Raw{{$machine.Name}}Factory() [3]statemachine.StateMachine {
     },{{end}}{{end}})
 
     // past state machine
-    x[2] = append(x[2], common.State{
+    x[2] = append(x[2], statemachine.State{
         Transition: m.{{(index .States 0).GetTransitionPastName}},
         ErrorState: m.{{(index .States 0).GetErrorStatePastName}},
     },{{range $i, $state := .States}}{{if (gtNull $i)}}
-    common.State{
+    statemachine.State{
         Transition: m.{{$state.GetTransitionPastName}},
         {{if (handlerExists $state.AdapterResponsePast)}}AdapterResponse: m.{{$state.GetAdapterResponsePastName}},{{end}}
         ErrorState: m.{{$state.GetErrorStatePastName}},
@@ -85,24 +83,23 @@ func Raw{{$machine.Name}}Factory() [3]statemachine.StateMachine {
     },{{end}}{{end}})
 
 
-    smFuture := common.StateMachine{
+    smFuture := &statemachine.StateMachine{
         ID:     m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
         States: x[0],
     }
 
-    smPresent := common.StateMachine{
+    smPresent := &statemachine.StateMachine{
         ID:     m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
         States: x[1],
     }
 
-    smPast := common.StateMachine{
+    smPast := &statemachine.StateMachine{
         ID:     m.cleanStateMachine.({{$machine.Name}}).GetTypeID(),
         States: x[2],
     }
 
-    return [3]statemachine.StateMachine{
-        &smFuture, &smPresent, &smPast,
-
+    return [3]*statemachine.StateMachine{
+        smFuture, smPresent, smPast,
     }
 }
 
@@ -157,17 +154,17 @@ func Raw{{$machine.Name}}Factory() [3]statemachine.StateMachine {
     payload, state, err := s.cleanStateMachine.{{.Handler.Name}}(aInput, aPayload)
     return payload, state, err
 }{{end}}{{end}}
-{{define "adapterResponseHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper, ar iadapter.Response) (interface{}, fsm.ElementState, error) {
+{{define "adapterResponseHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper, ar interface{}) (interface{}, fsm.ElementState, error) {
     aInput, ok := element.GetInputEvent().({{.Machine.InputEventType}})
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().({{.Machine.PayloadType}})
     if !ok { return nil, 0, errors.New("wrong payload type") }
-    aResponse, ok := ar.GetRespPayload().({{index .Handler.Params 2}})
+    aResponse, ok := ar.({{index .Handler.Params 2}})
     if !ok { return nil, 0, errors.New("wrong response type") }
     payload, state, err := s.cleanStateMachine.{{.Handler.Name}}(aInput, aPayload, aResponse)
     return payload, state, err
 }{{end}}{{end}}
-{{define "adapterResponseErrorHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper, ar iadapter.Response, err error) (interface{}, fsm.ElementState) {
+{{define "adapterResponseErrorHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper, ar interface{}, err error) (interface{}, fsm.ElementState) {
     payload, state := s.cleanStateMachine.{{.Handler.Name}}(element.GetInputEvent(), element.GetPayload(), ar, err)
     return payload, state
 }{{end}}{{end}}

@@ -63,7 +63,6 @@ type SlotElementReadOnly interface {
 	GetElementID() uint32
 	GetNodeID() uint32
 	GetType() fsm.ID
-	// TODO: statemachine.StateID
 	GetState() fsm.StateID
 }
 
