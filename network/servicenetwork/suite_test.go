@@ -130,7 +130,7 @@ func (s *testSuite) SetupTest() {
 		s.T().Logf("Found $TBN=%s\n", tbn)
 		num, err := strconv.Atoi(tbn)
 		s.Require().NoError(err, "Test build number must be numeric")
-		testNetworkPort += uint32(num * 1000)
+		testNetworkPort += uint32((num % 50) * 1000)
 		s.T().Logf("Starting on port=%d\n", testNetworkPort)
 
 	} else {
