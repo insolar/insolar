@@ -844,6 +844,10 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	handler.Nodes = s.nodeStorage
 	handler.JetStorage = s.jetStorage
 
+	blobStorage := blob.NewStorageMemory()
+	handler.BlobModifier = blobStorage
+	handler.BlobAccessor = blobStorage
+
 	handler.RecentStorageProvider = provideMock
 
 	idLockMock := storage.NewIDLockerMock(s.T())

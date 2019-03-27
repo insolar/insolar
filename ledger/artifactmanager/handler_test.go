@@ -530,6 +530,10 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
 
+	blobStorage := blob.NewStorageMemory()
+	h.BlobModifier = blobStorage
+	h.BlobAccessor = blobStorage
+
 	idLockMock := storage.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
@@ -609,6 +613,10 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
+
+	blobStorage := blob.NewStorageMemory()
+	h.BlobModifier = blobStorage
+	h.BlobAccessor = blobStorage
 
 	idLockMock := storage.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
