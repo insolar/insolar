@@ -293,16 +293,16 @@ type ClaimQueue interface {
 
 // Accessor is interface that provides read access to nodekeeper internal snapshot
 type Accessor interface {
-	// GetWorkingNode get working node by its reference. Returns nil if node is not found.
+	// GetWorkingNode get working node by its reference. Returns nil if node is not found or is not working.
 	GetWorkingNode(ref insolar.Reference) insolar.NetworkNode
-	// GetWorkingNodes get working nodes.
+	// GetWorkingNodes returns sorted list of all working nodes.
 	GetWorkingNodes() []insolar.NetworkNode
-	// GetWorkingNodesByRole get working nodes by role
+	// GetWorkingNodesByRole get working nodes by role.
 	GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference
 
 	// GetActiveNode returns active node.
 	GetActiveNode(ref insolar.Reference) insolar.NetworkNode
-	// GetActiveNodes returns active nodes.
+	// GetActiveNodes returns unsorted list of all active nodes.
 	GetActiveNodes() []insolar.NetworkNode
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
 	GetActiveNodeByShortID(shortID insolar.ShortNodeID) insolar.NetworkNode
