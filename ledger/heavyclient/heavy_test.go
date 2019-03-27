@@ -152,7 +152,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	lrMock.OnPulseMock.Return(nil)
 
 	// Mock N2: we are light material
-	nodeMock := network.NewNodeMock(s.T())
+	nodeMock := network.NewNetworkNodeMock(s.T())
 	nodeMock.RoleMock.Return(insolar.StaticRoleLightMaterial)
 	nodeMock.IDMock.Return(insolar.Reference{})
 

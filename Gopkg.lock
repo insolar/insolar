@@ -112,6 +112,41 @@
   version = "v1.4.7"
 
 [[projects]]
+  digest = "1:1f7f64ca2895fc98e84c4d33369ee27f2250747de1eacefed3e85def52a737a1"
+  name = "github.com/gogo/protobuf"
+  packages = [
+    "gogoproto",
+    "plugin/compare",
+    "plugin/defaultcheck",
+    "plugin/description",
+    "plugin/embedcheck",
+    "plugin/enumstringer",
+    "plugin/equal",
+    "plugin/face",
+    "plugin/gostring",
+    "plugin/marshalto",
+    "plugin/oneofcheck",
+    "plugin/populate",
+    "plugin/size",
+    "plugin/stringer",
+    "plugin/testgen",
+    "plugin/union",
+    "plugin/unmarshal",
+    "proto",
+    "protoc-gen-gogo/descriptor",
+    "protoc-gen-gogo/generator",
+    "protoc-gen-gogo/generator/internal/remap",
+    "protoc-gen-gogo/grpc",
+    "protoc-gen-gogo/plugin",
+    "protoc-gen-gogoslick",
+    "vanity",
+    "vanity/command",
+  ]
+  pruneopts = "UT"
+  revision = "ba06b47c162d49f2af050fb4c75bcbc86a159d5c"
+  version = "v1.2.1"
+
+[[projects]]
   branch = "master"
   digest = "1:e9c0ca7abaa1fdcf8dab7c5bc100c2ff1ecc1dabf46861d78159c6e8951af970"
   name = "github.com/gojuno/minimock"
@@ -627,6 +662,8 @@
     "github.com/blang/semver",
     "github.com/ccding/go-stun/stun",
     "github.com/dgraph-io/badger",
+    "github.com/gogo/protobuf/proto",
+    "github.com/gogo/protobuf/protoc-gen-gogoslick",
     "github.com/gojuno/minimock",
     "github.com/google/gofuzz",
     "github.com/gorilla/rpc/v2",

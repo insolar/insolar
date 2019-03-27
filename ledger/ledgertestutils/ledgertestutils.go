@@ -38,6 +38,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/messagebus"
+	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -98,7 +99,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 		}
 	}
 	if c.NodeNetwork == nil {
-		c.NodeNetwork = nodenetwork.NewNodeKeeper(nodenetwork.NewNode(insolar.Reference{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
+		c.NodeNetwork = nodenetwork.NewNodeKeeper(networknode.NewNode(insolar.Reference{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
 	certificate := testutils.NewCertificateMock(t)
@@ -111,6 +112,12 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	handler.DBContext = tmpDB
 	handler.ObjectStorage = os
 	handler.DropModifier = ds
+
+	idLockerMock := storage.NewIDLockerMock(t)
+	idLockerMock.LockMock.Return()
+	idLockerMock.UnlockMock.Return()
+
+	handler.IDLocker = idLockerMock
 
 	handler.PlatformCryptographyScheme = pcs
 	handler.JetCoordinator = jc

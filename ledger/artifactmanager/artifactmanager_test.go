@@ -197,6 +197,11 @@ func getTestData(s *amSuite) (
 
 	handler.Bus = mb
 
+	idLockerMock := storage.NewIDLockerMock(s.T())
+	idLockerMock.LockMock.Return()
+	idLockerMock.UnlockMock.Return()
+	handler.IDLocker = idLockerMock
+
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
 	jc.MeMock.Return(insolar.Reference{})
@@ -374,14 +379,14 @@ func (s *amSuite) TestLedgerArtifactManager_ActivateObject_CreatesCorrectRecord(
 		IsDelegate: false,
 	})
 
-	idx, err := os.GetObjectIndex(ctx, insolar.ID(jetID), parentID, false)
+	idx, err := os.GetObjectIndex(ctx, insolar.ID(jetID), parentID)
 	assert.NoError(s.T(), err)
 
 	childRec, err := os.GetRecord(ctx, insolar.ID(jetID), idx.ChildPointer)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), objRef, childRec.(*object.ChildRecord).Ref)
 
-	idx, err = os.GetObjectIndex(ctx, insolar.ID(jetID), objRef.Record(), false)
+	idx, err = os.GetObjectIndex(ctx, insolar.ID(jetID), objRef.Record())
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), *objDesc.StateID(), *idx.LatestState)
 	assert.Equal(s.T(), *objDesc.Parent(), idx.Parent)
@@ -826,6 +831,11 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterValidation() {
 	handler.JetStorage = s.jetStorage
 
 	handler.RecentStorageProvider = provideMock
+
+	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock.LockMock.Return()
+	idLockMock.UnlockMock.Return()
+	handler.IDLocker = idLockMock
 
 	err := handler.Init(s.ctx)
 	require.NoError(s.T(), err)
