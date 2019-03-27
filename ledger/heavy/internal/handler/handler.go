@@ -17,7 +17,11 @@ type Handler struct {
 	Bus            insolar.MessageBus     `inject:""`
 	JetCoordinator insolar.JetCoordinator `inject:""`
 	HeavySync      insolar.HeavySync      `inject:""`
-	ObjectStorage  storage.ObjectStorage  `inject:""`
+
+	// TODO: @imarkin 27.03.2019 - remove it after all new storages integration (INS-2013, etc)
+	ObjectStorage storage.ObjectStorage `inject:""`
+
+	object.RecordAccessor `inject:""`
 
 	jetID insolar.JetID
 }
@@ -90,11 +94,12 @@ func (h *Handler) handleGetObject(
 	}
 
 	// Fetch state record.
-	rec, err := h.ObjectStorage.GetRecord(ctx, insolar.ID(h.jetID), stateID)
+	rec, err := h.RecordAccessor.ForID(ctx, *stateID)
+	virtRec := rec.Record
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch state %s for %s", stateID.DebugString(), msg.Head.Record()))
 	}
-	state, ok := rec.(object.State)
+	state, ok := virtRec.(object.State)
 	if !ok {
 		return nil, errors.New("invalid object record")
 	}
