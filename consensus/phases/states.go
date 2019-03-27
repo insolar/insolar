@@ -69,7 +69,6 @@ type FirstPhaseState struct {
 	FaultProofs map[insolar.Reference]*merkle.PulseProof
 
 	ConsensusState *ConsensusState
-	UnsyncList     network.UnsyncList
 	ClaimHandler   *claimhandler.ClaimHandler
 }
 
@@ -95,6 +94,7 @@ type ConsensusState struct {
 	NodesMutator network.Mutator
 	BitsetMapper *BitsetMapper
 	HashStorage  *HashStorage
+	ClaimHandler *claimhandler.ClaimHandler
 }
 
 func NewConsensusState(snapshot *node.Snapshot) *ConsensusState {

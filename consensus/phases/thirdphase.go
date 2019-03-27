@@ -89,7 +89,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, sta
 	stats.Record(ctx, consensus.Phase3Exec.M(1))
 
 	logger := inslogger.FromContext(ctx)
-	totalCount := state.UnsyncList.Length()
+	totalCount := state.ConsensusState.BitsetMapper.Length()
 
 	var gSign [packets.SignatureLength]byte
 	copy(gSign[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
@@ -97,7 +97,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, sta
 
 	nodes := make([]insolar.NetworkNode, 0)
 	for _, node := range state.MatrixState.Active {
-		nodes = append(nodes, state.UnsyncList.GetActiveNode(node))
+		nodes = append(nodes, state.ConsensusState.NodesMutator.GetActiveNode(node))
 	}
 	responses, err := tp.Communicator.ExchangePhase3(ctx, nodes, packet)
 	if err != nil {
@@ -112,7 +112,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, sta
 	for ref, packet := range responses {
 		err = nil
 		if !ref.Equal(tp.NodeKeeper.GetOrigin().ID()) {
-			err = tp.checkPacketSignature(packet, ref, state.UnsyncList)
+			err = tp.checkPacketSignature(packet, ref, state.ConsensusState.NodesMutator)
 		}
 		if err != nil {
 			logger.Warnf("[ NET Consensus phase-3 ] Failed to check phase3 packet signature from %s: %s", ref, err.Error())
@@ -121,13 +121,13 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, sta
 		// not needed until we implement fraud detection
 		// cells, err := packet.GetBitset().GetCells(state.UnsyncList)
 
-		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
+		state.ConsensusState.HashStorage.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
 	}
 
 	prevCloudHash := tp.NodeKeeper.GetCloudHash()
 	validNodes := 0
 	for _, node := range nodes {
-		ghs, ok := state.UnsyncList.GetGlobuleHashSignature(node.ID())
+		ghs, ok := state.ConsensusState.HashStorage.GetGlobuleHashSignature(node.ID())
 		if !ok {
 			log.Warnf("[ NET Consensus phase-3 ] No globule hash signature for node %s", node.ID())
 			continue
@@ -155,7 +155,7 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, sta
 
 	logger.Infof("[ NET Consensus phase-3 ] BFT consensus passed: %d/%d", validNodes, totalCount)
 
-	claimSplit := state.ClaimHandler.FilterClaims(state.MatrixState.Active, pulse.Entropy)
+	claimSplit := state.ConsensusState.ClaimHandler.FilterClaims(state.MatrixState.Active, pulse.Entropy)
 
 	return &ThirdPhaseState{
 		ActiveNodes:    nodes,
@@ -164,8 +164,8 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, sta
 	}, nil
 }
 
-func (tp *ThirdPhaseImpl) checkPacketSignature(packet *packets.Phase3Packet, recordRef insolar.Reference, unsyncList network.UnsyncList) error {
-	activeNode := unsyncList.GetActiveNode(recordRef)
+func (tp *ThirdPhaseImpl) checkPacketSignature(packet *packets.Phase3Packet, recordRef insolar.Reference, accessor network.Accessor) error {
+	activeNode := accessor.GetActiveNode(recordRef)
 	if activeNode == nil {
 		return errors.New("failed to get active node")
 	}

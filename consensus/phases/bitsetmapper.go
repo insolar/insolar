@@ -37,6 +37,8 @@ package phases
 import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/node"
+	"github.com/pkg/errors"
 )
 
 type BitsetMapper struct {
@@ -45,16 +47,20 @@ type BitsetMapper struct {
 	indexToRef map[int]insolar.Reference
 }
 
-func NewBitsetMapper(activeNodesSorted []insolar.NetworkNode, length int) *BitsetMapper {
-	bm := &BitsetMapper{
-		length:     length,
-		refToIndex: make(map[insolar.Reference]int),
-		indexToRef: make(map[int]insolar.Reference),
-	}
+func NewBitsetMapper(activeNodesSorted []insolar.NetworkNode) *BitsetMapper {
+	bm := NewSparseBitsetMapper(len(activeNodesSorted))
 	for i, node := range activeNodesSorted {
 		bm.AddNode(node, uint16(i))
 	}
 	return bm
+}
+
+func NewSparseBitsetMapper(length int) *BitsetMapper {
+	return &BitsetMapper{
+		length:     length,
+		refToIndex: make(map[insolar.Reference]int),
+		indexToRef: make(map[int]insolar.Reference),
+	}
 }
 
 func (bm *BitsetMapper) AddNode(node insolar.NetworkNode, bitsetIndex uint16) {
@@ -87,4 +93,27 @@ func (bm *BitsetMapper) RefToIndex(nodeID insolar.Reference) (int, error) {
 
 func (bm *BitsetMapper) Length() int {
 	return bm.length
+}
+
+func ApplyClaims(state *ConsensusState, origin insolar.NetworkNode, claims []packets.ReferendumClaim) error {
+	var NodeJoinerIndex uint16
+	for _, claim := range claims {
+		c, ok := claim.(*packets.NodeAnnounceClaim)
+		if !ok {
+			continue
+		}
+
+		// TODO: fix version
+		node, err := node.ClaimToNode("", &c.NodeJoinClaim)
+		if err != nil {
+			return errors.Wrap(err, "[ AddClaims ] failed to convert Claim -> Node")
+		}
+		// TODO: check bitset indexes from every announce claim for fraud
+		NodeJoinerIndex = c.NodeJoinerIndex
+		state.BitsetMapper.AddNode(node, c.NodeAnnouncerIndex)
+		state.NodesMutator.AddActiveNode(node)
+	}
+	state.BitsetMapper.AddNode(origin, NodeJoinerIndex)
+	state.NodesMutator.AddActiveNode(origin)
+	return nil
 }

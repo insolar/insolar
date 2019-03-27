@@ -37,11 +37,9 @@ package servicenetwork
 import (
 	"context"
 
-	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
 )
 
 type CommunicatorTestOpt int
@@ -80,10 +78,10 @@ func (cm *CommunicatorMock) ExchangePhase1(
 	return pckts, nil
 }
 
-func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
+func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, state *phases.ConsensusState,
 	participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.Reference]*packets.Phase2Packet, error) {
 
-	pckts, err := cm.communicator.ExchangePhase2(ctx, list, handler, participants, packet)
+	pckts, err := cm.communicator.ExchangePhase2(ctx, state, participants, packet)
 	if err != nil {
 		return nil, err
 	}
@@ -94,10 +92,10 @@ func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, list network.Uns
 	return pckts, nil
 }
 
-func (cm *CommunicatorMock) ExchangePhase21(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
+func (cm *CommunicatorMock) ExchangePhase21(ctx context.Context, state *phases.ConsensusState,
 	packet *packets.Phase2Packet, additionalRequests []*phases.AdditionalRequest) ([]packets.ReferendumVote, error) {
 
-	return cm.communicator.ExchangePhase21(ctx, list, handler, packet, additionalRequests)
+	return cm.communicator.ExchangePhase21(ctx, state, packet, additionalRequests)
 }
 
 func (cm *CommunicatorMock) ExchangePhase3(ctx context.Context, participants []insolar.NetworkNode, packet *packets.Phase3Packet) (map[insolar.Reference]*packets.Phase3Packet, error) {

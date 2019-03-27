@@ -57,6 +57,7 @@ import (
 	"github.com/insolar/insolar/component"
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
@@ -186,13 +187,8 @@ type NodeKeeper interface {
 	GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error)
 	// GetClaimQueue get the internal queue of claims
 	GetClaimQueue() ClaimQueue
-	// GetUnsyncList get unsync list for current pulse. Has copy of active node list from nodekeeper as internal state.
-	// Should be called when GetConsensusInfo().IsJoiner() == false.
-	GetUnsyncList() UnsyncList
-	// GetSparseUnsyncList get sparse unsync list for current pulse with predefined length of active node list.
-	// Does not contain active list, should collect active list during its lifetime via AddNode.
-	// Should be called when GetConsensusInfo().IsJoiner() == true.
-	GetSparseUnsyncList(length int) UnsyncList
+	// GetSnapshot get current nodekeeper snapshot
+	GetSnapshot() *node.Snapshot
 	// Sync move unsync -> sync
 	Sync(context.Context, []insolar.NetworkNode, []consensus.ReferendumClaim) error
 	// MoveSyncToActive merge sync list with active nodes
@@ -312,6 +308,14 @@ type Accessor interface {
 	GetActiveNodeByShortID(shortID insolar.ShortNodeID) insolar.NetworkNode
 }
 
+// Accessor is interface that provides read and write access to a snapshot
 type Mutator interface {
+	Accessor
+	// AddActiveNode adds active node to index so it is accessible via GetActiveNode(s).
+	// Does not add node to underlying snapshot.
 	AddActiveNode(n insolar.NetworkNode)
+	// RemoveActiveNode removes active node from index so it is no longer accessible via GetActiveNode(s).
+	// Does not remove node from underlying snapshot.
+	// TODO: fix consensus implementation so that this method is no longer needed.
+	RemoveActiveNode(nodeID insolar.Reference)
 }

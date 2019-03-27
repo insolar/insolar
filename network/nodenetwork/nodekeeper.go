@@ -52,8 +52,9 @@ package nodenetwork
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/node"
 	"sync"
+
+	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
@@ -149,6 +150,13 @@ type nodekeeper struct {
 	isBootstrapLock sync.RWMutex
 
 	Cryptography insolar.CryptographyService `inject:""`
+}
+
+func (nk *nodekeeper) GetSnapshot() *node.Snapshot {
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
+
+	return nk.snapshot
 }
 
 func (nk *nodekeeper) SetInitialSnapshot(nodes []insolar.NetworkNode) {
@@ -275,15 +283,6 @@ func (nk *nodekeeper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
 
 func (nk *nodekeeper) GetClaimQueue() network.ClaimQueue {
 	return nk.claimQueue
-}
-
-func (nk *nodekeeper) GetUnsyncList() network.UnsyncList {
-	activeNodes := nk.GetAccessor().GetActiveNodes()
-	return newUnsyncList(nk.origin, activeNodes, len(activeNodes))
-}
-
-func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
-	return newUnsyncList(nk.origin, nil, length)
 }
 
 func (nk *nodekeeper) Sync(ctx context.Context, nodes []insolar.NetworkNode, claims []consensus.ReferendumClaim) error {

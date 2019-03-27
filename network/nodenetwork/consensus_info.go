@@ -51,8 +51,9 @@
 package nodenetwork
 
 import (
-	"github.com/insolar/insolar/network/node"
 	"sync"
+
+	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
