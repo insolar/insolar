@@ -14,10 +14,13 @@
  *    limitations under the License.
  */
 
-package adapter
+package adapterid
 
 type ID uint32
 
+//go:generate stringer -type=ID
 const (
-	SendResponseAdapterID ID = iota + 1
+	SendResponse ID = iota + 1
+	Waiter
+	GetCode
 )

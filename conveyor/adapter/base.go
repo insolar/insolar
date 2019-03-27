@@ -22,7 +22,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/queue"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 )
 
@@ -70,16 +72,16 @@ func (ci *cancelInfo) IsFlushed() bool {
 
 type taskHolder struct {
 	taskHolderLock sync.Mutex
-	tasks          map[uint32][]*cancelInfo
+	tasks          map[insolar.PulseNumber][]*cancelInfo
 }
 
 func newTaskHolder() taskHolder {
 	return taskHolder{
-		tasks: make(map[uint32][]*cancelInfo),
+		tasks: make(map[insolar.PulseNumber][]*cancelInfo),
 	}
 }
 
-func (th *taskHolder) add(info *cancelInfo, pulseNumber uint32) {
+func (th *taskHolder) add(info *cancelInfo, pulseNumber insolar.PulseNumber) {
 	log.Infof("[ taskHolder.add ] Adding pulseNumber: %d. Id: %d", pulseNumber, info.id)
 	th.taskHolderLock.Lock()
 	defer th.taskHolderLock.Unlock()
@@ -106,7 +108,7 @@ func processStop(cancelList []*cancelInfo, flush bool) {
 	}
 }
 
-func (th *taskHolder) stop(pulseNumber uint32, flush bool) {
+func (th *taskHolder) stop(pulseNumber insolar.PulseNumber, flush bool) {
 	log.Infof("[ taskHolder.stop ] Stopping pulseNumber: %d, flush: %s", pulseNumber, flush)
 	th.taskHolderLock.Lock()
 	defer th.taskHolderLock.Unlock()
@@ -132,7 +134,7 @@ func (th *taskHolder) stopAll(flush bool) {
 		processStop(cancelList, flush)
 	}
 
-	th.tasks = make(map[uint32][]*cancelInfo)
+	th.tasks = make(map[insolar.PulseNumber][]*cancelInfo)
 
 }
 
@@ -143,10 +145,14 @@ type CancellableQueueAdapter struct {
 	stopProcessing    uint32
 	processingStopped chan bool
 	// adapterID comes from configuration
-	adapterID uint32
+	adapterID adapterid.ID
 
 	taskHolder taskHolder
 	processor  Processor
+}
+
+func (a *CancellableQueueAdapter) GetAdapterID() adapterid.ID {
+	return a.adapterID
 }
 
 // StopProcessing is blocking
@@ -224,10 +230,10 @@ func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
 	}
 }
 
-// PushTask implements PulseConveyorAdapterTaskSink
+// PushTask implements TaskSink
 func (a *CancellableQueueAdapter) PushTask(respSink AdapterToSlotResponseSink,
-	elementID idType,
-	handlerID idType,
+	elementID uint32,
+	handlerID uint32,
 	taskPayload interface{}) error {
 
 	cancelInfo := newCancelInfo(atomicLoadAndIncrementUint64(&reqID))
@@ -247,22 +253,22 @@ func (a *CancellableQueueAdapter) PushTask(respSink AdapterToSlotResponseSink,
 }
 
 // CancelElementTasks: now cancels all pulseNumber's tasks
-func (a *CancellableQueueAdapter) CancelElementTasks(pulseNumber idType, elementID idType) {
+func (a *CancellableQueueAdapter) CancelElementTasks(pulseNumber insolar.PulseNumber, elementID uint32) {
 	a.taskHolder.stop(pulseNumber, false)
 }
 
 // CancelPulseTasks: now cancels all pulseNumber's tasks
-func (a *CancellableQueueAdapter) CancelPulseTasks(pulseNumber idType) {
+func (a *CancellableQueueAdapter) CancelPulseTasks(pulseNumber insolar.PulseNumber) {
 	a.taskHolder.stop(pulseNumber, false)
 }
 
 // FlushPulseTasks: now flush all pulseNumber's tasks
-func (a *CancellableQueueAdapter) FlushPulseTasks(pulseNumber uint32) {
+func (a *CancellableQueueAdapter) FlushPulseTasks(pulseNumber insolar.PulseNumber) {
 	a.taskHolder.stop(pulseNumber, true)
 }
 
 // FlushNodeTasks: now flush all tasks
-func (a *CancellableQueueAdapter) FlushNodeTasks(nodeID idType) {
+func (a *CancellableQueueAdapter) FlushNodeTasks(nodeID uint32) {
 	a.taskHolder.stopAll(true)
 }
 
@@ -289,10 +295,10 @@ func (a *CancellableQueueAdapter) process(cancellableTask queueTask) {
 
 type nestedEventHelper struct {
 	adapterTask AdapterTask
-	adapterID   uint32
+	adapterID   adapterid.ID
 }
 
-func newNestedEventHelper(adapterTask AdapterTask, adapterID uint32) NestedEventHelper {
+func newNestedEventHelper(adapterTask AdapterTask, adapterID adapterid.ID) NestedEventHelper {
 	return &nestedEventHelper{
 		adapterTask: adapterTask,
 		adapterID:   adapterID,

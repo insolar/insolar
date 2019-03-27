@@ -21,7 +21,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/stretchr/testify/require"
 )
@@ -31,7 +33,7 @@ type mockResponseSink struct {
 	lock     sync.Mutex
 }
 
-func (m *mockResponseSink) PushResponse(adapterID idType, elementID idType, handlerID idType, respPayload interface{}) {
+func (m *mockResponseSink) PushResponse(adapterID adapterid.ID, elementID uint32, handlerID uint32, respPayload interface{}) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	log.Infof("[ mockResponseSink.PushResponse] PushResponse: %+v", respPayload)
@@ -45,14 +47,14 @@ func (m *mockResponseSink) GetResponse() interface{} {
 	return m.response
 }
 
-func (m *mockResponseSink) PushNestedEvent(adapterID idType, parentElementID idType, handlerID idType, eventPayload interface{}) {
+func (m *mockResponseSink) PushNestedEvent(adapterID adapterid.ID, parentElementID uint32, handlerID uint32, eventPayload interface{}) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 	log.Infof("[ mockResponseSink.PushNestedEvent] PushNestedEvent: %+v", eventPayload)
 	m.response = eventPayload.(string)
 }
 
-func (m *mockResponseSink) GetPulseNumber() uint32 {
+func (m *mockResponseSink) GetPulseNumber() insolar.PulseNumber {
 	return 142
 }
 
@@ -65,7 +67,7 @@ func (m *mockResponseSink) GetSlotDetails() slot.SlotDetails {
 }
 
 func TestFunctionality(t *testing.T) {
-	adapter := NewWaitAdapter().(*CancellableQueueAdapter)
+	adapter := NewWaitAdapter(adapterid.Waiter).(*CancellableQueueAdapter)
 	started := make(chan bool, 1)
 	adapter.StartProcessing(started)
 	<-started
@@ -107,7 +109,7 @@ func TestFunctionality(t *testing.T) {
 	resp = &mockResponseSink{}
 	err = adapter.PushTask(resp, 34, 22, WaiterTask{waitPeriodMilliseconds: 200000000})
 	require.NoError(t, err)
-	adapter.FlushNodeTasks(resp.GetPulseNumber())
+	adapter.FlushNodeTasks(uint32(resp.GetPulseNumber()))
 
 	adapter.StopProcessing()
 	adapter.StopProcessing()
@@ -118,7 +120,7 @@ func TestFunctionality(t *testing.T) {
 
 func TestParallel(t *testing.T) {
 
-	adapter := NewWaitAdapter().(*CancellableQueueAdapter)
+	adapter := NewWaitAdapter(adapterid.Waiter).(*CancellableQueueAdapter)
 	started := make(chan bool, 1)
 	adapter.StartProcessing(started)
 	<-started
@@ -139,7 +141,7 @@ func TestParallel(t *testing.T) {
 
 	// PushTask
 	for i := 0; i < parallelPushTasks; i++ {
-		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+		go func(wg *sync.WaitGroup, adapter TaskSink) {
 			for i := 0; i < numIterations; i++ {
 				resp := &mockResponseSink{}
 				adapter.PushTask(resp, 34, 22, WaiterTask{waitPeriodMilliseconds: 20})
@@ -150,7 +152,7 @@ func TestParallel(t *testing.T) {
 
 	// CancelElementTasks
 	for i := 0; i < parallelCancelElement; i++ {
-		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+		go func(wg *sync.WaitGroup, adapter TaskSink) {
 			for i := 0; i < numIterations; i++ {
 				adapter.CancelElementTasks(pulseNumber, 22)
 			}
@@ -160,7 +162,7 @@ func TestParallel(t *testing.T) {
 
 	// CancelPulseTasks
 	for i := 0; i < parallelCancelPulse; i++ {
-		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+		go func(wg *sync.WaitGroup, adapter TaskSink) {
 			for i := 0; i < numIterations; i++ {
 				adapter.CancelPulseTasks(pulseNumber)
 			}
@@ -170,7 +172,7 @@ func TestParallel(t *testing.T) {
 
 	// FlushPulseTasks
 	for i := 0; i < parallelFlushPulse; i++ {
-		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+		go func(wg *sync.WaitGroup, adapter TaskSink) {
 			for i := 0; i < numIterations; i++ {
 				adapter.FlushPulseTasks(pulseNumber)
 			}
@@ -180,9 +182,9 @@ func TestParallel(t *testing.T) {
 
 	// FlushNodeTasks
 	for i := 0; i < parallelFlushNode; i++ {
-		go func(wg *sync.WaitGroup, adapter PulseConveyorAdapterTaskSink) {
+		go func(wg *sync.WaitGroup, adapter TaskSink) {
 			for i := 0; i < numIterations; i++ {
-				adapter.FlushNodeTasks(pulseNumber)
+				adapter.FlushNodeTasks(uint32(pulseNumber))
 			}
 			wg.Done()
 		}(&wg, adapter)

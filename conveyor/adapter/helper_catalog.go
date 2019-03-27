@@ -16,12 +16,12 @@
 
 package adapter
 
-type Catalog struct {
+type HelperCatalog struct {
 	sendResponseHelper SendResponseHelper
 }
 
-func newCatalog() *Catalog {
-	return &Catalog{
+func newHelperCatalog() *HelperCatalog {
+	return &HelperCatalog{
 		sendResponseHelper: SendResponseHelper{},
 	}
 }
