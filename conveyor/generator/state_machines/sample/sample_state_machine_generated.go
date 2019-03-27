@@ -20,7 +20,6 @@ import (
 	"errors"
 
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/conveyor/statemachine"
 )
@@ -211,7 +210,7 @@ func (s *RawTestStateMachine) errorPastFirst(element slot.SlotElementHelper, err
     payload, state := s.cleanStateMachine.errorPastFirst(element.GetInputEvent(), element.GetPayload(), err)
     return payload, state
 }
-func (s *RawTestStateMachine) responsePresentFirst(element slot.SlotElementHelper, ar iadapter.Response) (interface{}, fsm.ElementState, error) {
+func (s *RawTestStateMachine) responsePresentFirst(element slot.SlotElementHelper, ar interface{}) (interface{}, fsm.ElementState, error) {
     aInput, ok := element.GetInputEvent().(Event)
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().(*Payload)
@@ -221,7 +220,7 @@ func (s *RawTestStateMachine) responsePresentFirst(element slot.SlotElementHelpe
     payload, state, err := s.cleanStateMachine.responsePresentFirst(aInput, aPayload, aResponse)
     return payload, state, err
 }
-func (s *RawTestStateMachine) responseFutureFirst(element slot.SlotElementHelper, ar iadapter.Response) (interface{}, fsm.ElementState, error) {
+func (s *RawTestStateMachine) responseFutureFirst(element slot.SlotElementHelper, ar interface{}) (interface{}, fsm.ElementState, error) {
     aInput, ok := element.GetInputEvent().(Event)
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().(*Payload)
@@ -231,7 +230,7 @@ func (s *RawTestStateMachine) responseFutureFirst(element slot.SlotElementHelper
     payload, state, err := s.cleanStateMachine.responseFutureFirst(aInput, aPayload, aResponse)
     return payload, state, err
 }
-func (s *RawTestStateMachine) responsePastFirst(element slot.SlotElementHelper, ar iadapter.Response) (interface{}, fsm.ElementState, error) {
+func (s *RawTestStateMachine) responsePastFirst(element slot.SlotElementHelper, ar interface{}) (interface{}, fsm.ElementState, error) {
     aInput, ok := element.GetInputEvent().(Event)
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().(*Payload)
@@ -241,15 +240,15 @@ func (s *RawTestStateMachine) responsePastFirst(element slot.SlotElementHelper, 
     payload, state, err := s.cleanStateMachine.responsePastFirst(aInput, aPayload, aResponse)
     return payload, state, err
 }
-func (s *RawTestStateMachine) errorResponsePresentFirst(element slot.SlotElementHelper, ar iadapter.Response, err error) (interface{}, fsm.ElementState) {
+func (s *RawTestStateMachine) errorResponsePresentFirst(element slot.SlotElementHelper, ar interface{}, err error) (interface{}, fsm.ElementState) {
     payload, state := s.cleanStateMachine.errorResponsePresentFirst(element.GetInputEvent(), element.GetPayload(), ar, err)
     return payload, state
 }
-func (s *RawTestStateMachine) errorResponseFutureFirst(element slot.SlotElementHelper, ar iadapter.Response, err error) (interface{}, fsm.ElementState) {
+func (s *RawTestStateMachine) errorResponseFutureFirst(element slot.SlotElementHelper, ar interface{}, err error) (interface{}, fsm.ElementState) {
     payload, state := s.cleanStateMachine.errorResponseFutureFirst(element.GetInputEvent(), element.GetPayload(), ar, err)
     return payload, state
 }
-func (s *RawTestStateMachine) errorResponsePastFirst(element slot.SlotElementHelper, ar iadapter.Response, err error) (interface{}, fsm.ElementState) {
+func (s *RawTestStateMachine) errorResponsePastFirst(element slot.SlotElementHelper, ar interface{}, err error) (interface{}, fsm.ElementState) {
     payload, state := s.cleanStateMachine.errorResponsePastFirst(element.GetInputEvent(), element.GetPayload(), ar, err)
     return payload, state
 }
@@ -306,7 +305,7 @@ func (s *RawTestStateMachine) errorPastSecond(element slot.SlotElementHelper, er
     payload, state := s.cleanStateMachine.errorPastSecond(element.GetInputEvent(), element.GetPayload(), err)
     return payload, state
 }
-func (s *RawTestStateMachine) responsePresentSecond(element slot.SlotElementHelper, ar iadapter.Response) (interface{}, fsm.ElementState, error) {
+func (s *RawTestStateMachine) responsePresentSecond(element slot.SlotElementHelper, ar interface{}) (interface{}, fsm.ElementState, error) {
     aInput, ok := element.GetInputEvent().(Event)
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().(*Payload)
@@ -316,7 +315,7 @@ func (s *RawTestStateMachine) responsePresentSecond(element slot.SlotElementHelp
     payload, state, err := s.cleanStateMachine.responsePresentSecond(aInput, aPayload, aResponse)
     return payload, state, err
 }
-func (s *RawTestStateMachine) responseFutureSecond(element slot.SlotElementHelper, ar iadapter.Response) (interface{}, fsm.ElementState, error) {
+func (s *RawTestStateMachine) responseFutureSecond(element slot.SlotElementHelper, ar interface{}) (interface{}, fsm.ElementState, error) {
     aInput, ok := element.GetInputEvent().(Event)
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().(*Payload)
@@ -326,7 +325,7 @@ func (s *RawTestStateMachine) responseFutureSecond(element slot.SlotElementHelpe
     payload, state, err := s.cleanStateMachine.responseFutureSecond(aInput, aPayload, aResponse)
     return payload, state, err
 }
-func (s *RawTestStateMachine) responsePastSecond(element slot.SlotElementHelper, ar iadapter.Response) (interface{}, fsm.ElementState, error) {
+func (s *RawTestStateMachine) responsePastSecond(element slot.SlotElementHelper, ar interface{}) (interface{}, fsm.ElementState, error) {
     aInput, ok := element.GetInputEvent().(Event)
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().(*Payload)
@@ -336,15 +335,15 @@ func (s *RawTestStateMachine) responsePastSecond(element slot.SlotElementHelper,
     payload, state, err := s.cleanStateMachine.responsePastSecond(aInput, aPayload, aResponse)
     return payload, state, err
 }
-func (s *RawTestStateMachine) errorResponsePresentSecond(element slot.SlotElementHelper, ar iadapter.Response, err error) (interface{}, fsm.ElementState) {
+func (s *RawTestStateMachine) errorResponsePresentSecond(element slot.SlotElementHelper, ar interface{}, err error) (interface{}, fsm.ElementState) {
     payload, state := s.cleanStateMachine.errorResponsePresentSecond(element.GetInputEvent(), element.GetPayload(), ar, err)
     return payload, state
 }
-func (s *RawTestStateMachine) errorResponseFutureSecond(element slot.SlotElementHelper, ar iadapter.Response, err error) (interface{}, fsm.ElementState) {
+func (s *RawTestStateMachine) errorResponseFutureSecond(element slot.SlotElementHelper, ar interface{}, err error) (interface{}, fsm.ElementState) {
     payload, state := s.cleanStateMachine.errorResponseFutureSecond(element.GetInputEvent(), element.GetPayload(), ar, err)
     return payload, state
 }
-func (s *RawTestStateMachine) errorResponsePastSecond(element slot.SlotElementHelper, ar iadapter.Response, err error) (interface{}, fsm.ElementState) {
+func (s *RawTestStateMachine) errorResponsePastSecond(element slot.SlotElementHelper, ar interface{}, err error) (interface{}, fsm.ElementState) {
     payload, state := s.cleanStateMachine.errorResponsePastSecond(element.GetInputEvent(), element.GetPayload(), ar, err)
     return payload, state
 }

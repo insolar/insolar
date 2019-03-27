@@ -18,7 +18,6 @@ package adapter
 
 import (
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
-	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
@@ -61,7 +60,7 @@ type AdapterResponse struct {
 }
 
 // NewAdapterResponse creates new adapter response
-func NewAdapterResponse(adapterID adapterid.ID, elementID uint32, handlerID uint32, respPayload interface{}) iadapter.Response {
+func NewAdapterResponse(adapterID adapterid.ID, elementID uint32, handlerID uint32, respPayload interface{}) *AdapterResponse {
 	return &AdapterResponse{
 		adapterID:   adapterID,
 		elementID:   elementID,
