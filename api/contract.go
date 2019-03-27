@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
@@ -97,7 +98,7 @@ type CallConstructorReply struct {
 func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructorArgs, reply *CallConstructorReply) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), utils.RandTraceID())
 
-	inslog.Infof("[ ContractService.Upload ] Incoming request: %s", r.RequestURI)
+	inslog.Infof("[ ContractService.CallConstructor ] Incoming request: %s", r.RequestURI)
 
 	if len(args.PrototypeRefString) == 0 {
 		return errors.New("params.PrototypeRefString is missing")
@@ -113,7 +114,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 	contractID, err := s.runner.ArtifactManager.RegisterRequest(
 		ctx,
 		*s.runner.ArtifactManager.GenesisRef(),
-		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: testutils.RandomRef()}},
+		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: testutils.RandomRef()}}, // TODO protoRef?
 	)
 
 	if err != nil {
@@ -123,6 +124,8 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 	objectRef := insolar.Reference{}
 	objectRef.SetRecord(*contractID)
 
+	memory, _ := insolar.Serialize(nil)
+
 	_, err = s.runner.ArtifactManager.ActivateObject(
 		ctx,
 		*domain,
@@ -130,7 +133,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 		*s.runner.ArtifactManager.GenesisRef(),
 		protoRef,
 		false,
-		nil,
+		memory,
 	)
 
 	if err != nil {
