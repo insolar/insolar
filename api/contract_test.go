@@ -60,8 +60,8 @@ type One struct {
 	foundation.BaseContract
 }
 
-func (r *One) Hello() (string, error) {
-	return r.GetPrototype().String(), nil
+func (r *One) Hello(str string) (string, error) {
+	return r.GetPrototype().String() + str, nil
 }
 `
 	params := &UploadArgs{
