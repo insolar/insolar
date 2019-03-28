@@ -54,35 +54,25 @@ const (
 
 func Register() {
 	gen.AddMachine("GetObjectStateMachine").
-
 		InitFuture(InitState, InitFuture, WaitingPresent).
 		MigrationFuturePresent(WaitingPresent, MigrateToPresent, CheckingJet).
 		Init(InitState, Init, CheckingJet).
-
 		Transition(CheckingJet, GetJet, WaitingCheckingJet).
 		AdapterResponse(CheckingJet, GetJetResponse, FetchingJet, InvokeWaitingHotData).
-
 		Transition(FetchingJet, FetchJet, WaitingFetchingJet).
 		AdapterResponse(FetchingJet, FetchJetResponse, InvokeWaitingHotData).
-
 		Transition(InvokeWaitingHotData, WaitHotData, WaitingHotData).
 		AdapterResponse(InvokeWaitingHotData, WaitHotDataResponse, CheckingIndex).
-
 		Transition(CheckingIndex, CheckIndex, WaitingCheckingIndex).
 		AdapterResponse(CheckingIndex, WaitCheckIndex, CheckingState, FetchingIndex).
-
 		Transition(FetchingIndex, FetchIndex, WaitingFetchingIndex).
 		AdapterResponse(FetchingIndex, WaitFetchIndex, CheckingState).
-
 		Transition(CheckingState, CheckState, WaitingCheckingState).
 		AdapterResponse(CheckingState, WaitCheckState, Result, CheckingJetForState).
-
 		Transition(CheckingJetForState, CheckJetForState, WaitingCheckingJetForState).
 		AdapterResponse(CheckingJetForState, WaitCheckJetForState, FetchingState, FetchingJetForState).
-
 		Transition(FetchingJetForState, FetchJetForState, WaitingFetchingJetForState).
 		AdapterResponse(FetchingJetForState, WaitFetchJetForState, FetchingState).
-
 		Transition(FetchingState, FetchState, WaitingFetchingState).
 		AdapterResponse(FetchingState, WaitFetchState, Result)
 }
