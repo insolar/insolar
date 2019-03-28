@@ -17,21 +17,23 @@
 package init
 
 import (
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"context"
+
+	"github.com/insolar/insolar/conveyor/fsm"
+	"github.com/insolar/insolar/conveyor/generator/generator"
 )
 
 const (
-	InitState gen.ElState = iota
+	InitState fsm.ElementState = iota
 )
 
 func Register() {
-	gen.AddMachine("Init").
+	generator.AddMachine("Init").
 		InitFuture(ParseInputEvent).
-		Init(IncorrectAction, IncorrectAction)
+		Init(IncorrectAction)
 }
 
-func ParseInputEvent(helper slot.SlotElementHelper, input interface{}, payload interface{}) (interface{}, fsm.ElementState) {
+func ParseInputEvent(ctx context.Context, helper fsm.SlotElementHelper, input interface{}, payload interface{}) (interface{}, fsm.ElementState) {
 	return nil, fsm.NewElementState(4, 0)
 }
 
