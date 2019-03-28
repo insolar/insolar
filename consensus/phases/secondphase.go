@@ -52,6 +52,7 @@ package phases
 
 import (
 	"context"
+
 	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/consensus"

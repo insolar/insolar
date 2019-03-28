@@ -52,8 +52,9 @@ package bootstrap
 
 import (
 	"crypto"
-	"github.com/insolar/insolar/network/node"
 	"testing"
+
+	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/nodenetwork"

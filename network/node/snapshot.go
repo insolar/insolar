@@ -52,6 +52,7 @@ package node
 
 import (
 	"bytes"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/ugorji/go/codec"
 )

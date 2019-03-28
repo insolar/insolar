@@ -54,11 +54,12 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"github.com/insolar/insolar/network/node"
 	"math"
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"

@@ -18,9 +18,10 @@ package storage
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar/record"
 	"path/filepath"
 	"sync"
+
+	"github.com/insolar/insolar/insolar/record"
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"

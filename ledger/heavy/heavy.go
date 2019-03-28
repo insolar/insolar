@@ -14,13 +14,12 @@
 // limitations under the License.
 //
 
-package main
+package heavy
 
-import (
-	"testing"
-)
+import "github.com/insolar/insolar/ledger/heavy/internal/handler"
 
-// Just to make Goland happy
-func TestStub(t *testing.T) {
-
+func Components() []interface{} {
+	return []interface{}{
+		handler.New(),
+	}
 }

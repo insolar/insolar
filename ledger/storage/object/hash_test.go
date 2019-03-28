@@ -19,8 +19,9 @@ package object
 import (
 	"bytes"
 	"fmt"
-	"github.com/insolar/insolar/insolar/record"
 	"testing"
+
+	"github.com/insolar/insolar/insolar/record"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"

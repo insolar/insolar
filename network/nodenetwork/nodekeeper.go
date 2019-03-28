@@ -52,8 +52,9 @@ package nodenetwork
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/node"
 	"sync"
+
+	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
