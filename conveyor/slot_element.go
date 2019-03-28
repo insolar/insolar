@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
 	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
 
@@ -40,6 +41,7 @@ type slotElement struct {
 	id              uint32
 	nodeID          uint32
 	parentElementID uint32
+	responseFuture  insolar.ConveyorFuture
 	inputEvent      interface{}
 	payload         interface{} // nolint: unused
 	postponedError  error       // nolint: structcheck
@@ -85,6 +87,11 @@ func (se *slotElement) GetParentElementID() uint32 {
 // GetInputEvent implements SlotElementRestrictedHelper
 func (se *slotElement) GetInputEvent() interface{} {
 	return se.inputEvent
+}
+
+// GetResponseFuture implements SlotElementRestrictedHelper
+func (se *slotElement) GetResponseFuture() insolar.ConveyorFuture {
+	return se.responseFuture
 }
 
 // GetPayload implements SlotElementRestrictedHelper
