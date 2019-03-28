@@ -17,6 +17,7 @@
 package conveyor
 
 import (
+	"encoding/hex"
 	"sync"
 
 	"github.com/insolar/insolar/conveyor/queue"
@@ -36,13 +37,12 @@ type RemoveSlotCallback func(number insolar.PulseNumber)
 
 // PulseConveyor is realization of Conveyor
 type PulseConveyor struct {
-	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
-	slotMap                    map[insolar.PulseNumber]TaskPusher
-	futurePulseData            *insolar.Pulse
-	futurePulseNumber          *insolar.PulseNumber
-	presentPulseNumber         *insolar.PulseNumber
-	lock                       sync.RWMutex
-	state                      insolar.ConveyorState
+	slotMap            map[insolar.PulseNumber]TaskPusher
+	futurePulseData    *insolar.Pulse
+	futurePulseNumber  *insolar.PulseNumber
+	presentPulseNumber *insolar.PulseNumber
+	lock               sync.RWMutex
+	state              insolar.ConveyorState
 }
 
 // NewPulseConveyor creates new instance of PulseConveyor
@@ -170,7 +170,7 @@ func (c *PulseConveyor) PreparePulse(pulse insolar.Pulse, callback queue.SyncDon
 		expectedNumCallbacks++
 	}
 
-	barrierCallback := newBarrierCallback(expectedNumCallbacks, callback, c.PlatformCryptographyScheme)
+	barrierCallback := newBarrierCallback(expectedNumCallbacks, callback)
 
 	futureSlot := c.slotMap[*c.futurePulseNumber]
 	err := futureSlot.PushSignal(PendingPulseSignal, barrierCallback)
@@ -289,7 +289,7 @@ type BarrierCallback struct {
 	result interface{}
 }
 
-func newBarrierCallback(num int, callback queue.SyncDone, cs insolar.PlatformCryptographyScheme) *BarrierCallback {
+func newBarrierCallback(num int, callback queue.SyncDone) *BarrierCallback {
 	var wg sync.WaitGroup
 	wg.Add(num)
 
@@ -300,8 +300,12 @@ func newBarrierCallback(num int, callback queue.SyncDone, cs insolar.PlatformCry
 	go func(bc *BarrierCallback) {
 		wg.Wait()
 		if num == 1 && bc.result == nil {
-			log.Info("Where is no present pulse and future pulse callback returned nil, set []byte{1, 2, 3} as result")
-			bc.result = cs.IntegrityHasher().Hash([]byte{1, 2, 3})
+			// TODO: this situation must be handled in different way
+			log.Info("There is no present pulse and future pulse callback returned nil, set []byte{1, 2, 3} as result")
+			hash, _ := hex.DecodeString(
+				"0c60ae04fbb17fe36f4e84631a5b8f3cd6d0cd46e80056bdfec97fd305f764daadef8ae1adc89b203043d7e2af1fb341df0ce5f66dfe3204ec3a9831532a8e4c",
+			)
+			bc.result = hash
 		}
 		callback.SetResult(bc.result)
 	}(bc)
