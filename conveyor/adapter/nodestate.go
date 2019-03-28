@@ -22,7 +22,6 @@ import (
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
-	"github.com/pkg/errors"
 )
 
 // NodeStateTask is task for adapter for getting node state
@@ -44,11 +43,10 @@ func NewNodeStateProcessor() Processor {
 // Process implements Processor interface
 func (rs *NodeStateProcessor) Process(task AdapterTask, nestedEventHelper NestedEventHelper, ci CancelInfo) interface{} {
 	payload, ok := task.TaskPayload.(NodeStateTask)
-	var msg interface{}
 
 	if !ok {
-		msg = errors.Errorf("[ NodeStateProcessor.Process ] Incorrect payload type: %T", task.TaskPayload)
-		return msg
+		log.Errorf("[ NodeStateProcessor.Process ] Incorrect payload type: %T", task.TaskPayload)
+		return nil
 	}
 
 	// TODO: calculate node state hash with info about pulse, for now - just return 1,2,3
@@ -57,7 +55,6 @@ func (rs *NodeStateProcessor) Process(task AdapterTask, nestedEventHelper Nested
 	c := payload.Callback
 	c.SetResult(res)
 
-	msg = fmt.Sprintf("NodeState was calculated successfully")
 	log.Info("[ NodeStateProcessor.Process ] NodeState is", res)
-	return msg
+	return fmt.Sprintf("NodeState was calculated successfully")
 }
