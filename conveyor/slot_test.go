@@ -22,6 +22,8 @@ import (
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/handler"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/messagebus"
+	"github.com/insolar/insolar/testutils"
 
 	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/queue"
@@ -271,10 +273,20 @@ func TestSlot_getNodeData(t *testing.T) {
 	require.Equal(t, expectedNodeData, nodeData)
 }
 
+func makeConveyorMsg(t *testing.T) insolar.ConveyorPendingMessage {
+	conveyorMsg := insolar.ConveyorPendingMessage{}
+	conveyorMsg.Future = messagebus.NewFuture()
+	conveyorMsg.Msg = testutils.NewParcelMock(t)
+
+	return conveyorMsg
+}
+
 func TestSlot_createElement(t *testing.T) {
 	s := newSlot(Future, testRealPulse, nil)
 	oldEmptyLen := s.elementListMap[EmptyElement].len()
-	event := queue.OutputElement{}
+
+	conveyorMsg := makeConveyorMsg(t)
+	event := *queue.NewOutputElement(conveyorMsg, 0)
 
 	stateMachineMock := makeMockStateMachine(t)
 
@@ -289,11 +301,21 @@ func TestSlot_createElement(t *testing.T) {
 	require.Equal(t, oldEmptyLen-1, s.elementListMap[EmptyElement].len())
 }
 
-func TestSlot_createElement_Err(t *testing.T) {
+func TestSlot_createElement_UnknownType(t *testing.T) {
+	s := newSlot(Future, testRealPulse, nil)
+	event := *queue.NewOutputElement(3, 0)
+	stateMachineMock := makeMockStateMachine(t)
+	_, err := s.createElement(stateMachineMock, 1, event)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Input event must be")
+}
+
+func TestSlot_createElement_PushElementErr(t *testing.T) {
 	s := newSlot(Future, testRealPulse, nil)
 	oldEmptyLen := s.elementListMap[EmptyElement].len()
 	delete(s.elementListMap, ActiveElement)
-	event := queue.OutputElement{}
+	conveyorMsg := makeConveyorMsg(t)
+	event := *queue.NewOutputElement(conveyorMsg, 0)
 
 	stateMachineMock := makeMockStateMachine(t)
 
@@ -317,7 +339,9 @@ func TestSlot_hasElements(t *testing.T) {
 
 	sm := makeMockStateMachine(t)
 
-	_, err := s.createElement(sm, 20, queue.OutputElement{})
+	conveyorMsg := makeConveyorMsg(t)
+	event := *queue.NewOutputElement(conveyorMsg, 0)
+	_, err := s.createElement(sm, 20, event)
 	require.NoError(t, err)
 
 	require.True(t, s.hasElements(ActiveElement))
@@ -429,7 +453,9 @@ func TestSlot_extractSlotElementByID(t *testing.T) {
 	var elements []*slotElement
 
 	for i := 1; i < 100; i++ {
-		el, err := slot.createElement(sm, fsm.StateID(20+i), queue.OutputElement{})
+		conveyorMsg := makeConveyorMsg(t)
+		event := *queue.NewOutputElement(conveyorMsg, 0)
+		el, err := slot.createElement(sm, fsm.StateID(20+i), event)
 		require.NoError(t, err)
 		elements = append(elements, el)
 	}
@@ -443,7 +469,9 @@ func TestSlot_extractSlotElementByID(t *testing.T) {
 	}
 
 	for i := 1; i < 100; i++ {
-		_, err := slot.createElement(sm, fsm.StateID(2000+i), queue.OutputElement{})
+		conveyorMsg := makeConveyorMsg(t)
+		event := *queue.NewOutputElement(conveyorMsg, 0)
+		_, err := slot.createElement(sm, fsm.StateID(2000+i), event)
 		require.NoError(t, err)
 
 		el := slot.popElement(ActiveElement)
@@ -475,13 +503,36 @@ func makeMockStateMachine(t *testing.T) matrix.StateMachine {
 	return sm
 }
 
+func TestSlot_hasExpired(t *testing.T) {
+	slot := newSlot(Present, 10, nil)
+	require.True(t, slot.hasExpired())
+
+	sm := makeMockStateMachine(t)
+	conveyorMsg := makeConveyorMsg(t)
+	event := *queue.NewOutputElement(conveyorMsg, 0)
+	el, err := slot.createElement(sm, 33, event)
+	require.NotNil(t, el)
+	require.NoError(t, err)
+
+	require.False(t, slot.hasExpired())
+
+	el = slot.popElement(ActiveElement)
+	require.NotNil(t, el)
+
+	require.True(t, slot.hasExpired())
+}
+
 func TestSlot_PopPushMultiple(t *testing.T) {
 	sm := makeMockStateMachine(t)
 	slot := newSlot(Present, 10, nil)
 
-	slot.createElement(sm, 33, queue.OutputElement{})
+	conveyorMsg := makeConveyorMsg(t)
+	event := *queue.NewOutputElement(conveyorMsg, 0)
+	el, err := slot.createElement(sm, 33, event)
+	require.NotNil(t, el)
+	require.NoError(t, err)
 
-	el := slot.popElement(ActiveElement)
+	el = slot.popElement(ActiveElement)
 	require.NotNil(t, el)
 	slot.pushElement(el)
 
@@ -491,6 +542,31 @@ func TestSlot_PopPushMultiple(t *testing.T) {
 
 	el = slot.popElement(ActiveElement)
 	require.NotNil(t, el)
+}
+
+func TestSlot_len_UnknownStatus(t *testing.T) {
+	s := newSlot(Future, testRealPulse, nil)
+	require.Zero(t, s.len(ActiveElement))
+	require.Zero(t, s.len(NotActiveElement))
+	require.Zero(t, s.len(999))
+}
+
+func TestSlot_len(t *testing.T) {
+	s := newSlot(Future, testRealPulse, nil)
+	require.Zero(t, s.len(ActiveElement))
+	require.Zero(t, s.len(NotActiveElement))
+
+	conveyorMsg := makeConveyorMsg(t)
+	event := *queue.NewOutputElement(conveyorMsg, 0)
+
+	stateMachineMock := makeMockStateMachine(t)
+
+	element, err := s.createElement(stateMachineMock, 1, event)
+	require.NotNil(t, element)
+	require.NoError(t, err)
+
+	require.Equal(t, 1, s.len(ActiveElement))
+	require.Zero(t, s.len(NotActiveElement))
 }
 
 func TestSlot_pushElementToEmpty_ExtractByID(t *testing.T) {
