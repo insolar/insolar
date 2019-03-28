@@ -150,10 +150,9 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 
 // CallMethodArgs is arguments that Contract.CallMethod accepts.
 type CallMethodArgs struct {
-	PrototypeRefString string
-	ObjectRefString    string
-	Method             string
-	MethodArgs         []interface{}
+	ObjectRefString string
+	Method          string
+	MethodArgs      []interface{}
 }
 
 // CallMethodReply is reply that Contract.CallMethod returns
@@ -167,16 +166,8 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 
 	inslog.Infof("[ ContractService.CallMethod ] Incoming request: %s", r.RequestURI)
 
-	if len(args.PrototypeRefString) == 0 {
-		return errors.New("params.ObjectRefString is missing")
-	}
-
 	if len(args.ObjectRefString) == 0 {
 		return errors.New("params.ObjectRefString is missing")
-	}
-
-	if len(args.Method) == 0 {
-		return errors.New("params.Method is missing")
 	}
 
 	objectRef, err := insolar.NewReferenceFromBase58(args.ObjectRefString)
