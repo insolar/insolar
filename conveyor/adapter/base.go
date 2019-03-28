@@ -140,7 +140,7 @@ func (th *taskHolder) stopAll(flush bool) {
 
 // CancellableQueueAdapter holds all adapter logic
 type CancellableQueueAdapter struct {
-	queue             queue.IQueue
+	queue             queue.Queue
 	processingStarted uint32
 	stopProcessing    uint32
 	processingStopped chan bool

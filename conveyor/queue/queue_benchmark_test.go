@@ -21,7 +21,7 @@ import (
 	"testing"
 )
 
-func makeTestQueue() IQueue {
+func makeTestQueue() Queue {
 	//return NewLockFreeQueue()
 	return NewMutexQueue()
 }
@@ -51,7 +51,7 @@ func benchParallel(i int, b *testing.B) {
 	wg.Add(parallelPut + parallelGet)
 
 	for i := 0; i < parallelGet; i++ {
-		go func(wg *sync.WaitGroup, q IQueue) {
+		go func(wg *sync.WaitGroup, q Queue) {
 			for n := 0; n < b.N; n++ {
 				q.SinkPush(n)
 			}
@@ -60,7 +60,7 @@ func benchParallel(i int, b *testing.B) {
 	}
 
 	for i := 0; i < parallelPut; i++ {
-		go func(wg *sync.WaitGroup, q IQueue) {
+		go func(wg *sync.WaitGroup, q Queue) {
 			for n := 0; n < b.N; n++ {
 				q.RemoveAll()
 			}

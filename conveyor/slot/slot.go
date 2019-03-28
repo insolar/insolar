@@ -129,8 +129,8 @@ func (l *ElementList) len() int { // nolint: unused
 // Slot holds info about specific pulse and events for it
 type Slot struct {
 	handlersConfiguration HandlersConfiguration // nolint
-	inputQueue            queue.IQueue
-	responseQueue         queue.IQueue
+	inputQueue            queue.Queue
+	responseQueue         queue.Queue
 	pulseState            PulseState
 	slotState             SlotState
 	stateMachine          slotElement

@@ -24,14 +24,14 @@ import (
 	"github.com/pkg/errors"
 )
 
-// MutexQueue is mutex-based realization of IQueue
+// MutexQueue is mutex-based realization of Queue
 type MutexQueue struct {
 	locker sync.Mutex
 	head   *queueItem
 }
 
 // NewMutexQueue creates new instance of MutexQueue
-func NewMutexQueue() IQueue {
+func NewMutexQueue() Queue {
 	queue := &MutexQueue{
 		head: &emptyQueueItem,
 	}
@@ -60,7 +60,7 @@ func (q *MutexQueue) sinkPush(newNode *queueItem) error {
 	return nil
 }
 
-// SinkPush is implementation for IQueue
+// SinkPush is implementation for Queue
 func (q *MutexQueue) SinkPush(data interface{}) error {
 
 	newNode := &queueItem{
@@ -70,7 +70,7 @@ func (q *MutexQueue) SinkPush(data interface{}) error {
 	return q.sinkPush(newNode)
 }
 
-// SinkPushAll is implementation for IQueue
+// SinkPushAll is implementation for Queue
 func (q *MutexQueue) SinkPushAll(data []interface{}) error {
 	inputSize := len(data)
 	lastElement := &queueItem{}
@@ -153,7 +153,7 @@ func convertSublistToArray(localHead *queueItem) []OutputElement {
 	return result
 }
 
-// RemoveAll is implementation for IQueue
+// RemoveAll is implementation for Queue
 func (q *MutexQueue) RemoveAll() []OutputElement {
 
 	var localHead *queueItem
@@ -169,7 +169,7 @@ func (q *MutexQueue) RemoveAll() []OutputElement {
 	return convertSublistToArray(localHead)
 }
 
-// BlockAndRemoveAll is implementation for IQueue
+// BlockAndRemoveAll is implementation for Queue
 func (q *MutexQueue) BlockAndRemoveAll() []OutputElement {
 	var localHead *queueItem
 	q.locker.Lock()
@@ -183,7 +183,7 @@ func (q *MutexQueue) BlockAndRemoveAll() []OutputElement {
 	return convertSublistToArray(localHead)
 }
 
-// Unblock is implementation for IQueue
+// Unblock is implementation for Queue
 func (q *MutexQueue) Unblock() bool {
 	q.locker.Lock()
 	defer q.locker.Unlock()
@@ -196,7 +196,7 @@ func (q *MutexQueue) Unblock() bool {
 	return true
 }
 
-// PushSignal is implementation for IQueue
+// PushSignal is implementation for Queue
 func (q *MutexQueue) PushSignal(signalType uint32, callback SyncDone) error {
 	if signalType == 0 {
 		return errors.Errorf("[ PushSignal ] Unsupported signalType: %d", signalType)
@@ -211,7 +211,7 @@ func (q *MutexQueue) PushSignal(signalType uint32, callback SyncDone) error {
 	return q.sinkPush(newNode)
 }
 
-// HasSignal is implementation for IQueue
+// HasSignal is implementation for Queue
 // If queue is locked then it returns false
 // Now it uses unsafe pointer. This function will be called very frequently, that is why we use atomic here
 // But to be sure, this should be benchmarked in comparison with simple lock
