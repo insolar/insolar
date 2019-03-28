@@ -14,22 +14,26 @@
  *    limitations under the License.
  */
 
-package get_object
+package getobject
 
 import (
-	"github.com/insolar/insolar/conveyor/generator/generator/gen"
+	"context"
+
+	"github.com/insolar/insolar/conveyor/generator/generator"
 
 	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/slot"
 )
 
-type CustomEvent struct{}
+type CustomEvent struct{
+	Vasya string
+}
 type CustomPayload struct{}
 type CustomAdapterResponsePayload struct{}
 type CustomAdapterHelper struct{}
 
 const (
-	InitState gen.ElState = iota
+	InitState fsm.ElementState = iota
 	WaitingPresent
 	CheckingJet
 	WaitingCheckingJet
@@ -53,14 +57,15 @@ const (
 )
 
 func Register() {
-	gen.AddMachine("GetObjectStateMachine").
+	generator.AddMachine("GetObjectStateMachine").
 
-		InitFuture(InitState, InitFuture, WaitingPresent).
+		InitFuture(InitFuture, WaitingPresent).
 		MigrationFuturePresent(WaitingPresent, MigrateToPresent, CheckingJet).
-		Init(InitState, Init, CheckingJet).
+		Init(Init, CheckingJet).
 
 		Transition(CheckingJet, GetJet, WaitingCheckingJet).
 		AdapterResponse(CheckingJet, GetJetResponse, FetchingJet, InvokeWaitingHotData).
+		// AdapterResponsePast(CheckingJet, GetJetResponse1, FetchingJet, InvokeWaitingHotData).
 
 		Transition(FetchingJet, FetchJet, WaitingFetchingJet).
 		AdapterResponse(FetchingJet, FetchJetResponse, InvokeWaitingHotData).
@@ -87,120 +92,121 @@ func Register() {
 		AdapterResponse(FetchingState, WaitFetchState, Result)
 }
 
-func InitFuture(helper slot.SlotElementHelper, input CustomEvent, payload interface{}) (*CustomPayload, fsm.ElementState) {
+func InitFuture(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload interface{}) (fsm.ElementState, *CustomPayload) {
 	helper.DeactivateTill(slot.Response)
-	return payload.(*CustomPayload), fsm.ElementState(WaitingPresent)
+	return fsm.ElementState(WaitingPresent), payload.(*CustomPayload)
 }
-func MigrateToPresent(input CustomEvent, payload *CustomPayload) (*CustomPayload, fsm.ElementState) {
-	return payload, fsm.ElementState(CheckingJet)
+func MigrateToPresent(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload) fsm.ElementState {
+	return fsm.ElementState(CheckingJet)
 }
-func Init(helper slot.SlotElementHelper, input CustomEvent, payload interface{}) (*CustomPayload, fsm.ElementState) {
-	return payload.(*CustomPayload), fsm.ElementState(CheckingJet)
+func Init(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload interface{}) (fsm.ElementState, *CustomPayload) {
+	return fsm.ElementState(CheckingJet), payload.(*CustomPayload)
 }
 
-func GetJet(helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) (*CustomPayload, fsm.ElementState) {
+func GetJet(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) fsm.ElementState {
 	// todo invoke adapter
 	helper.DeactivateTill(slot.Response)
-	return payload, fsm.ElementState(WaitingCheckingJet)
+	return fsm.ElementState(WaitingCheckingJet)
 }
 
-func GetJetResponse(input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) (*CustomPayload, fsm.ElementState) {
+func GetJetResponse(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) fsm.ElementState {
 	// todo if found
-	return payload, fsm.ElementState(InvokeWaitingHotData)
+	return fsm.ElementState(InvokeWaitingHotData)
 	// todo else
-	return payload, fsm.ElementState(FetchingJet)
+	return fsm.ElementState(FetchingJet)
 }
 
-func FetchJet(helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) (*CustomPayload, fsm.ElementState) {
+func FetchJet(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) fsm.ElementState {
+	// helper.adapters.X(WaitingFetchingJet)
 	// todo invoke adapter
 	helper.DeactivateTill(slot.Response)
-	return payload, fsm.ElementState(WaitingFetchingJet)
+	return fsm.ElementState(WaitingFetchingJet)
 }
 
-func FetchJetResponse(input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) (*CustomPayload, fsm.ElementState) {
+func FetchJetResponse(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) fsm.ElementState {
 	// todo update payload
-	return payload, fsm.ElementState(InvokeWaitingHotData)
+	return fsm.ElementState(InvokeWaitingHotData)
 }
 
-func WaitHotData(helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) (*CustomPayload, fsm.ElementState) {
+func WaitHotData(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) fsm.ElementState {
 	// todo invoke adapter
 	helper.DeactivateTill(slot.Response)
-	return payload, fsm.ElementState(WaitingHotData)
+	return fsm.ElementState(WaitingHotData)
 }
 
-func WaitHotDataResponse(input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) (*CustomPayload, fsm.ElementState) {
+func WaitHotDataResponse(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) fsm.ElementState {
 	// todo update payload
-	return payload, fsm.ElementState(CheckingIndex)
+	return fsm.ElementState(CheckingIndex)
 }
 
-func CheckIndex(helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) (*CustomPayload, fsm.ElementState) {
+func CheckIndex(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) fsm.ElementState {
 	// todo invoke adapter
 	helper.DeactivateTill(slot.Response)
-	return payload, fsm.ElementState(WaitingCheckingIndex)
+	return fsm.ElementState(WaitingCheckingIndex)
 }
 
-func WaitCheckIndex(input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) (*CustomPayload, fsm.ElementState) {
+func WaitCheckIndex(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) fsm.ElementState {
 	// todo if found
-	return payload, fsm.ElementState(CheckingState)
+	return fsm.ElementState(CheckingState)
 	// todo else
-	return payload, fsm.ElementState(FetchingIndex)
+	return fsm.ElementState(FetchingIndex)
 }
 
-func FetchIndex(helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) (*CustomPayload, fsm.ElementState) {
+func FetchIndex(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) fsm.ElementState {
 	// todo invoke adapter
 	helper.DeactivateTill(slot.Response)
-	return payload, fsm.ElementState(WaitingFetchingIndex)
+	return fsm.ElementState(WaitingFetchingIndex)
 }
 
-func WaitFetchIndex(input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) (*CustomPayload, fsm.ElementState) {
+func WaitFetchIndex(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) fsm.ElementState {
 	// todo update payload
-	return payload, fsm.ElementState(CheckingState)
+	return fsm.ElementState(CheckingState)
 }
 
-func CheckState(helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) (*CustomPayload, fsm.ElementState) {
+func CheckState(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) fsm.ElementState {
 	// todo invoke adapter
 	helper.DeactivateTill(slot.Response)
-	return payload, fsm.ElementState(WaitingCheckingState)
+	return fsm.ElementState(WaitingCheckingState)
 }
 
-func WaitCheckState(input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) (*CustomPayload, fsm.ElementState) {
+func WaitCheckState(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) fsm.ElementState {
 	// todo if found
-	return payload, fsm.ElementState(Result)
+	return fsm.ElementState(Result)
 	// todo else
-	return payload, fsm.ElementState(CheckingJetForState)
+	return fsm.ElementState(CheckingJetForState)
 }
 
-func CheckJetForState(helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) (*CustomPayload, fsm.ElementState) {
+func CheckJetForState(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) fsm.ElementState {
 	// todo invoke adapter
 	helper.DeactivateTill(slot.Response)
-	return payload, fsm.ElementState(WaitingCheckingJetForState)
+	return fsm.ElementState(WaitingCheckingJetForState)
 }
 
-func WaitCheckJetForState(input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) (*CustomPayload, fsm.ElementState) {
+func WaitCheckJetForState(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) fsm.ElementState {
 	// todo if found
-	return payload, fsm.ElementState(FetchingState)
+	return fsm.ElementState(FetchingState)
 	// todo else
-	return payload, fsm.ElementState(FetchingJetForState)
+	return fsm.ElementState(FetchingJetForState)
 }
 
-func FetchJetForState(helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) (*CustomPayload, fsm.ElementState) {
+func FetchJetForState(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) fsm.ElementState {
 	// todo invoke adapter
 	helper.DeactivateTill(slot.Response)
-	return payload, fsm.ElementState(WaitingFetchingJetForState)
+	return fsm.ElementState(WaitingFetchingJetForState)
 }
 
-func WaitFetchJetForState(input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) (*CustomPayload, fsm.ElementState) {
+func WaitFetchJetForState(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) fsm.ElementState {
 	// todo update payload
-	return payload, fsm.ElementState(FetchingState)
+	return fsm.ElementState(FetchingState)
 }
 
-func FetchState(helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) (*CustomPayload, fsm.ElementState) {
+func FetchState(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) fsm.ElementState {
 	// todo invoke adapter
 	helper.DeactivateTill(slot.Response)
-	return payload, fsm.ElementState(WaitingFetchingState)
+	return fsm.ElementState(WaitingFetchingState)
 }
 
-func WaitFetchState(input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) (*CustomPayload, fsm.ElementState) {
+func WaitFetchState(ctx context.Context, helper slot.SlotElementHelper, input CustomEvent, payload *CustomPayload, respPayload CustomAdapterResponsePayload) fsm.ElementState {
 	// todo update payload
-	return payload, fsm.ElementState(Result)
+	return fsm.ElementState(Result)
 }

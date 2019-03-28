@@ -17,37 +17,17 @@
 package main
 
 import (
-	"io/ioutil"
-	"strings"
+	// "io/ioutil"
+	// "strings"
 
 	"github.com/insolar/insolar/conveyor/generator/generator"
-	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/conveyor/generator/state_machines/get_object"
+	// "github.com/insolar/insolar/log"
 )
 
 func main() {
-	g := generator.NewGenerator( "conveyor/generator/state_machines/",
-		"conveyor/generator/matrix/matrix.go")
-	files, err := ioutil.ReadDir("conveyor/generator/state_machines/")
-	if err != nil {
-		log.Fatal(err)
-	}
-	for _, file := range files {
-		if file.IsDir() {
-			dirName := file.Name()
-			files, err := ioutil.ReadDir("conveyor/generator/state_machines/" + dirName)
-			if err != nil {
-				log.Fatal(err)
-			}
-			for _, file := range files {
-				if !strings.HasSuffix(file.Name(), "generated.go") {
-					g.ParseFile(dirName, file.Name())
-				}
-			}
-			continue
-		}
-		if !strings.HasSuffix(file.Name(), "generated.go") {
-			g.ParseFile("", file.Name())
-		}
-	}
-	g.GenMatrix()
+	getobject.Register()
+	generator.CheckAllMachines()
+	generator.GenerateStateMachines()
+	generator.GenerateMatrix()
 }

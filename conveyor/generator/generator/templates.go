@@ -17,43 +17,50 @@
 package generator
 
 import (
-	"io"
-	"io/ioutil"
+	"go/parser"
+	"go/token"
+	"log"
 	"path"
+	"strings"
 	"text/template"
 )
 
-type tplParams struct {
-	Machine stateMachine
-	Handler *handler
+func getDirFromPath(p string) string {
+	dir, _ := path.Split(p)
+	if strings.HasSuffix(dir, "/") {
+		return dir[:len(dir)-1]
+	}
+	return dir
 }
 
 var (
-	funcMap = template.FuncMap{
-		"inc": func(i int) int {
-			return i + 1
+	templateFuncs = template.FuncMap{
+		"fileToImport": func(f string) string {
+			if idx := strings.Index(f, "github.com/insolar/insolar"); idx >= 0 {
+				return getDirFromPath(f[idx:])
+			}
+			return getDirFromPath(f)
+		},
+		"unPackage": func (t string, p string) string {
+			if idx := strings.Index(t, p); idx == 0 || (idx == 1 && t[0] == '*') {
+				return strings.Replace(t, p + ".", "", 1)
+			}
+			return t
+		},
+		"isNull": func(i int) bool {
+			return i == 0
 		},
 		"handlerExists": func(x *handler) bool {
 			return x != nil
 		},
-		"gtNull": func(i int) bool {
-			return i > 0
-		},
-		"params": func(m stateMachine, h *handler) tplParams {
-			return tplParams{
-				Machine: m,
-				Handler: h,
-			}
-		},
 	}
 )
 
-func (p *Parser) Generate(w io.Writer) {
-	file := path.Join(p.generator.fullPathToInsolar, stateMachineTemplate)
-	tplBody, err := ioutil.ReadFile(file)
-	checkErr(err)
-	err = template.Must(template.New("stateMachineTpl").Funcs(funcMap).
-		Parse(string(tplBody))).
-		Execute(w, p)
-	checkErr(err)
+func getPackage(file string) string {
+	set := token.NewFileSet()
+	node, err := parser.ParseFile(set, file, nil, parser.ParseComments)
+	if err != nil {
+		log.Fatal("Can't parse ", file, " ", err)
+	}
+	return node.Name.Name
 }
