@@ -46,9 +46,8 @@ func Raw{{.Name}}PresentFactory() *statemachine.StateMachine {
                     return payload, state, nil
 					{{else}}aPayload, ok := element.GetPayload().({{unPackage $.PayloadType $.Package}})
                     if !ok { return nil, 0, errors.New("wrong payload type") }
-					// todo change to real adapter helper
-					helper := CustomAdapterHelper{}
-					state := {{.GetTransition.GetName}}(ctx, element, aInput, aPayload, helper)
+					// todo here must be real adapter helper
+					state := {{.GetTransition.GetName}}(ctx, element, aInput, aPayload, nil)
                     return aPayload, state, nil
 					{{end}}
 				},{{end}}
@@ -81,9 +80,8 @@ func Raw{{.Name}}PastFactory() *statemachine.StateMachine {
                     return payload, state, nil
 					{{else}}aPayload, ok := element.GetPayload().({{unPackage $.PayloadType $.Package}})
                     if !ok { return nil, 0, errors.New("wrong payload type") }
-					// todo change to real adapter helper
-					helper := CustomAdapterHelper{}
-					state := {{.GetTransitionPast.GetName}}(ctx, element, aInput, aPayload, helper)
+                    // todo here must be real adapter helper
+					state := {{.GetTransitionPast.GetName}}(ctx, element, aInput, aPayload, nil)
                     return aPayload, state, nil
 					{{end}}
 				},{{end}}
@@ -125,9 +123,9 @@ func Raw{{.Name}}FutureFactory() *statemachine.StateMachine {
                     return payload, state, nil
 					{{else}}aPayload, ok := element.GetPayload().({{unPackage $.PayloadType $.Package}})
                     if !ok { return nil, 0, errors.New("wrong payload type") }
-					// todo change to real adapter helper
+                    // todo here must be real adapter helper
 					helper := CustomAdapterHelper{}
-					state := {{.GetTransitionFuture.GetName}}(ctx, element, aInput, aPayload, helper)
+					state := {{.GetTransitionFuture.GetName}}(ctx, element, aInput, aPayload, nil)
                     return aPayload, state, nil
 					{{end}}
 				},{{end}}

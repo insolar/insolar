@@ -32,12 +32,15 @@ const (
 	insolarRep           = "github.com/insolar/insolar"
 	stateMachineTemplate = "conveyor/generator/generator/templates/state_machine.go.tpl"
 	matrixTemplate       = "conveyor/generator/generator/templates/matrix.go.tpl"
-	generatedMatrix		 = "conveyor/generator/matrix/matrix.go"
+	generatedMatrix      = "conveyor/generator/matrix/matrix.go"
 )
 
+// todo remove this type
+type TemporaryCustomAdapterHelper struct{}
+
 type Generator struct {
-	stateMachines       []*StateMachine
-	fullPathToInsolar   string
+	stateMachines     []*StateMachine
+	fullPathToInsolar string
 }
 
 var gen *Generator
@@ -61,7 +64,7 @@ func init() {
 	}
 	idx := strings.LastIndex(string(me), insolarRep)
 	gen = &Generator{
-		fullPathToInsolar:   string(me)[0 : idx+len(insolarRep)],
+		fullPathToInsolar: string(me)[0 : idx+len(insolarRep)],
 	}
 }
 
@@ -82,34 +85,34 @@ func CheckAllMachines() {
 					}
 
 					if len(s.handlers[ps][ht].params) < 3 || s.handlers[ps][ht].params[2] != *machine.InputEventType {
-						log.Fatal("[",s.handlers[ps][ht].funcName,"] Forth parameter should be ", *machine.InputEventType)
+						log.Fatal("[", s.handlers[ps][ht].funcName, "] Forth parameter should be ", *machine.InputEventType)
 					}
 
 					if i == 0 && ht == Transition {
 						if s.handlers[ps][ht].params[3] != "interface {}" {
-							log.Fatal("[",s.handlers[ps][ht].funcName,"] Init handlers should have interface{} as payload parameter")
+							log.Fatal("[", s.handlers[ps][ht].funcName, "] Init handlers should have interface{} as payload parameter")
 						}
 						if s.handlers[ps][ht].results[1] != *machine.PayloadType {
-							log.Fatal("[",s.handlers[ps][ht].funcName,"] Init handlers should return payload as ", *machine.PayloadType)
+							log.Fatal("[", s.handlers[ps][ht].funcName, "] Init handlers should return payload as ", *machine.PayloadType)
 						}
 					} else {
 						if s.handlers[ps][ht].params[3] != *machine.PayloadType {
-							log.Fatal("[",s.handlers[ps][ht].funcName,"] Handlers payload should be ", *machine.PayloadType, " current ", s.handlers[ps][ht].params[3])
+							log.Fatal("[", s.handlers[ps][ht].funcName, "] Handlers payload should be ", *machine.PayloadType, " current ", s.handlers[ps][ht].params[3])
 						}
-						if len(s.handlers[ps][ht].results) != 1  {
-							log.Fatal("[",s.handlers[ps][ht].funcName,"] Handlers should return only fsm.ElementState")
+						if len(s.handlers[ps][ht].results) != 1 {
+							log.Fatal("[", s.handlers[ps][ht].funcName, "] Handlers should return only fsm.ElementState")
 						}
 					}
 
 					if i != 0 && ht == Transition {
 						if len(s.handlers[ps][ht].params) != 4 && len(s.handlers[ps][ht].params) != 5 {
-							log.Fatal("[",s.handlers[ps][ht].funcName,"] Transition handlers should have 4 or 5 (with adapher helper) parameters")
+							log.Fatal("[", s.handlers[ps][ht].funcName, "] Transition handlers should have 4 or 5 (with adapher helper) parameters")
 						}
 					}
 
 					if ht == AdapterResponse {
 						if len(s.handlers[ps][ht].params) != 5 {
-							log.Fatal("[",s.handlers[ps][ht].funcName,"] AdapterResponse handlers should have 5 parameters")
+							log.Fatal("[", s.handlers[ps][ht].funcName, "] AdapterResponse handlers should have 5 parameters")
 						}
 					}
 				}
