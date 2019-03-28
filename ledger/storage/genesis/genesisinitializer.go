@@ -38,7 +38,7 @@ type State interface {
 type genesisInitializer struct {
 	DB storage.DBContext `inject:""`
 
-	insolar.PlatformCryptographyScheme
+	insolar.PlatformCryptographyScheme `inject:""`
 
 	// TODO: @imarkin 28.03.2019 - remove it after all new storages integration (INS-2013, etc)
 	ObjectStorage storage.ObjectStorage `inject:""`

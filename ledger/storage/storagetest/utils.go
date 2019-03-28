@@ -22,6 +22,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -77,6 +78,10 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 
 	cm := &component.Manager{}
 
+	recordStorage := object.NewRecordMemory()
+	recordAccessor := recordStorage
+	recordModifier := recordStorage
+
 	cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
 		tmpDB,
@@ -85,6 +90,8 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 		storage.NewObjectStorage(),
 		drop.NewStorageDB(),
 		storage.NewPulseTracker(),
+		recordAccessor,
+		recordModifier,
 	)
 
 	if !opts.nobootstrap {
