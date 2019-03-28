@@ -125,3 +125,50 @@ func TestNewSparseBitsetMapper(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, 1, index)
 }
+
+func newTestAnnounceClaim(announcerIndex, joinerIndex, count uint16, announcer insolar.Reference) *packets.NodeAnnounceClaim {
+	result := &packets.NodeAnnounceClaim{}
+	result.NodeJoinClaim.NodeRef = announcer
+	result.NodeAnnouncerIndex = announcerIndex
+	result.NodeJoinerIndex = joinerIndex
+	result.NodeCount = count
+	result.NodeAddress = packets.NewNodeAddress("127.0.0.1:0")
+	return result
+}
+
+func TestApplyClaims(t *testing.T) {
+	mutator := node.NewMutator(node.NewSnapshot(insolar.FirstPulseNumber, nil))
+	count := 10
+	bm := NewSparseBitsetMapper(count)
+	announce1 := newTestAnnounceClaim(1, 5, uint16(count), insolar.Reference{11})
+	announce2 := newTestAnnounceClaim(2, 5, uint16(count), insolar.Reference{22})
+	announce3 := newTestAnnounceClaim(9, 5, uint16(count), insolar.Reference{99})
+	cs := ConsensusState{NodesMutator: mutator, BitsetMapper: bm}
+	origin := node.NewNode(insolar.Reference{55}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:0", "")
+	claims := []packets.ReferendumClaim{announce1, announce2, announce3, &packets.NodeBroadcast{}}
+	err := ApplyClaims(&cs, origin, claims)
+	assert.NoError(t, err)
+
+	assert.NotNil(t, mutator.GetActiveNode(insolar.Reference{11}))
+	assert.NotNil(t, mutator.GetActiveNode(insolar.Reference{22}))
+	assert.NotNil(t, mutator.GetActiveNode(insolar.Reference{55}))
+	assert.Nil(t, mutator.GetActiveNode(insolar.Reference{33}))
+
+	ref, err := bm.IndexToRef(2)
+	assert.NoError(t, err)
+	assert.Equal(t, insolar.Reference{22}, ref)
+	ref, err = bm.IndexToRef(9)
+	assert.NoError(t, err)
+	assert.Equal(t, insolar.Reference{99}, ref)
+	_, err = bm.IndexToRef(3)
+	assert.Equal(t, packets.ErrBitSetNodeIsMissing, err)
+
+	_, err = bm.RefToIndex(insolar.Reference{41})
+	assert.Equal(t, packets.ErrBitSetIncorrectNode, err)
+	index, err := bm.RefToIndex(insolar.Reference{11})
+	assert.NoError(t, err)
+	assert.Equal(t, 1, index)
+	index, err = bm.RefToIndex(insolar.Reference{99})
+	assert.NoError(t, err)
+	assert.Equal(t, 9, index)
+}
