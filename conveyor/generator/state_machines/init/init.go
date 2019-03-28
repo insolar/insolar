@@ -30,13 +30,9 @@ const (
 func Register() {
 	generator.AddMachine("Init").
 		InitFuture(ParseInputEvent).
-		Init(IncorrectAction)
+		Init(ParseInputEvent)
 }
 
 func ParseInputEvent(ctx context.Context, helper fsm.SlotElementHelper, input interface{}, payload interface{}) (interface{}, fsm.ElementState) {
 	return nil, fsm.NewElementState(4, 0)
-}
-
-func IncorrectAction() {
-	panic("[ IncorrectAction ] We shouldn't be here")
 }
