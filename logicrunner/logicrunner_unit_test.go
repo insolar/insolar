@@ -1299,9 +1299,9 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef: s.objectRef,
-				Requests:  make([]message.CaseBindRequest, 0),
-				Queue:     messagesQueue,
+				RecordRef:             s.objectRef,
+				Requests:              make([]message.CaseBindRequest, 0),
+				Queue:                 messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 

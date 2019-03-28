@@ -51,11 +51,12 @@
 package node
 
 import (
+	"reflect"
+
 	"github.com/insolar/insolar/insolar"
 	protonode "github.com/insolar/insolar/network/node/internal/node"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
-	"reflect"
 )
 
 type ListType int
@@ -79,6 +80,18 @@ type Snapshot struct {
 
 func (s *Snapshot) GetPulse() insolar.PulseNumber {
 	return s.pulse
+}
+
+func (s *Snapshot) Copy() *Snapshot {
+	result := &Snapshot{
+		pulse: s.pulse,
+		state: s.state,
+	}
+	for i := 0; i < int(ListLength); i++ {
+		result.nodeList[i] = make([]insolar.NetworkNode, len(s.nodeList[i]))
+		copy(result.nodeList[i], s.nodeList[i])
+	}
+	return result
 }
 
 func (s *Snapshot) Equal(s2 *Snapshot) bool {
