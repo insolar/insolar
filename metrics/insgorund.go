@@ -17,8 +17,6 @@
 package metrics
 
 import (
-	"os"
-
 	"github.com/prometheus/client_golang/prometheus"
 )
 
@@ -38,11 +36,15 @@ var InsgorundContractExecutionTime = prometheus.NewSummaryVec(prometheus.Summary
 func GetInsgorundRegistry() *prometheus.Registry {
 	registry := prometheus.NewRegistry()
 
-	registry.MustRegister(InsgorundCallsTotal)
-	registry.MustRegister(InsgorundContractExecutionTime)
+	registerer := prometheus.WrapRegistererWith(prometheus.Labels{"role": "virtual"}, registry)
+
+	registerer.MustRegister(InsgorundCallsTotal)
+	registerer.MustRegister(InsgorundContractExecutionTime)
 	// default system collectors
-	registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), insgorundNamespace))
-	registry.MustRegister(prometheus.NewGoCollector())
+	registerer.MustRegister(prometheus.NewProcessCollector(
+		prometheus.ProcessCollectorOpts{Namespace: insgorundNamespace},
+	))
+	registerer.MustRegister(prometheus.NewGoCollector())
 
 	return registry
 }

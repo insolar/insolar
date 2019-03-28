@@ -23,11 +23,14 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/testutils"
 )
 
 // TestMetrics provides testing helpers for metrics.
@@ -38,7 +41,7 @@ type TestMetrics struct {
 
 // Start configures, creates and starts metrics server,
 // returns initialized TestMetrics object.
-func Start(ctx context.Context) TestMetrics {
+func Start(ctx context.Context, t *testing.T) TestMetrics {
 	inslog := inslogger.FromContext(ctx)
 	cfg := configuration.NewMetrics()
 	host, _ := parseAddr(cfg.ListenAddress)
@@ -48,10 +51,17 @@ func Start(ctx context.Context) TestMetrics {
 	// don't wait too long in tests
 	cfg.ReportingPeriod = time.Millisecond
 
-	m, err := metrics.NewMetrics(ctx, cfg, metrics.GetInsolarRegistry())
+	m, err := metrics.NewMetrics(ctx, cfg, metrics.GetInsolarRegistry("test"))
 	if err != nil {
 		panic(err)
 	}
+
+	cert := testutils.NewCertificateMock(t)
+	cert.GetRoleMock.Return(insolar.StaticRoleVirtual)
+
+	cm := testutils.NewCertificateManagerMock(t)
+	cm.GetCertificateMock.Return(cert)
+	m.CertificateManager = cm
 
 	err = m.Start(ctx)
 	if err != nil {
