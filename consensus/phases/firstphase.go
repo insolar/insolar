@@ -110,11 +110,10 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(pulse.PulseNumber)))
 	defer span.End()
 
-	state := NewConsensusState(fp.NodeKeeper.GetSnapshotCopy())
+	state := NewConsensusState(fp.NodeKeeper.GetConsensusInfo(), fp.NodeKeeper.GetSnapshotCopy())
 
 	pulseHash, pulseProof, err := fp.Calculator.GetPulseProof(entry)
-	consensusInfo := fp.NodeKeeper.GetConsensusInfo()
-	if !consensusInfo.IsJoiner() {
+	if !state.ConsensusInfo.IsJoiner() {
 		state.BitsetMapper = NewBitsetMapper(state.NodesMutator.GetActiveNodes())
 	}
 
@@ -132,7 +131,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 
 	var success bool
 	var originClaim *packets.NodeAnnounceClaim
-	if !consensusInfo.IsJoiner() && consensusInfo.NodesJoinedDuringPreviousPulse() {
+	if !state.ConsensusInfo.IsJoiner() && state.ConsensusInfo.NodesJoinedDuringPreviousPulse() {
 		log.Debugf("[ NET Consensus phase-1 ] Add origin announce claim to consensus phase1 packet")
 		originClaim, err = fp.NodeKeeper.GetOriginAnnounceClaim(state.BitsetMapper)
 		if err != nil {
@@ -164,10 +163,10 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to exchange results")
 	}
-	if len(resultPackets) < 2 && fp.NodeKeeper.GetConsensusInfo().IsJoiner() {
+	if len(resultPackets) < 2 && state.ConsensusInfo.IsJoiner() {
 		return nil, errors.New("[ NET Consensus phase-1 ] Failed to receive enough packets from other nodes")
 	}
-	if fp.NodeKeeper.GetConsensusInfo().IsJoiner() {
+	if state.ConsensusInfo.IsJoiner() {
 		logger.Infof("[ NET Consensus phase-1 ] received packets: %d", len(resultPackets))
 	} else {
 		logger.Infof("[ NET Consensus phase-1 ] received packets: %d/%d", len(resultPackets), len(activeNodes))
@@ -183,7 +182,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 	for ref, packet := range resultPackets {
 		err = nil
 		if !ref.Equal(fp.NodeKeeper.GetOrigin().ID()) {
-			err = fp.checkPacketSignature(packet, ref)
+			err = fp.checkPacketSignature(state, packet, ref)
 		}
 		if err != nil {
 			logger.Warnf("[ NET Consensus phase-1 ] Failed to check phase1 packet signature from %s: %s", ref, err.Error())
@@ -201,7 +200,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 	}
 
 	var length int
-	if fp.NodeKeeper.GetConsensusInfo().IsJoiner() {
+	if state.ConsensusInfo.IsJoiner() {
 		length, err = detectSparseBitsetLength(claimMap, fp.NodeKeeper)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to detect bitset length")
@@ -213,7 +212,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 	}
 
 	state.ClaimHandler = claimhandler.NewClaimHandler(length, claimMap)
-	if fp.NodeKeeper.GetConsensusInfo().IsJoiner() {
+	if state.ConsensusInfo.IsJoiner() {
 		err = ApplyClaims(state, fp.NodeKeeper.GetOrigin(), state.ClaimHandler.GetClaims())
 		if err != nil {
 			return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to apply claims")
@@ -277,8 +276,8 @@ func getNodeState(node insolar.NetworkNode, pulseNumber insolar.PulseNumber) pac
 	return state
 }
 
-func (fp *FirstPhaseImpl) checkPacketSignature(packet *packets.Phase1Packet, recordRef insolar.Reference) error {
-	if fp.NodeKeeper.GetConsensusInfo().IsJoiner() {
+func (fp *FirstPhaseImpl) checkPacketSignature(state *ConsensusState, packet *packets.Phase1Packet, recordRef insolar.Reference) error {
+	if state.ConsensusInfo.IsJoiner() {
 		return fp.checkPacketSignatureFromClaim(packet, recordRef)
 	}
 

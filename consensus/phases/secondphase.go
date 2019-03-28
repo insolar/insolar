@@ -265,7 +265,7 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *insolar.Pulse, 
 
 		state.NodesMutator.AddWorkingNode(node)
 		state.BitsetMapper.AddNode(node, index)
-		err = sp.NodeKeeper.GetConsensusInfo().AddTemporaryMapping(claim.NodeRef, claim.ShortNodeID, claim.NodeAddress.Get())
+		err = state.ConsensusInfo.AddTemporaryMapping(claim.NodeRef, claim.ShortNodeID, claim.NodeAddress.Get())
 		if err != nil {
 			logger.Warn("Error adding temporary mapping: " + err.Error())
 		}

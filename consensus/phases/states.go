@@ -90,15 +90,17 @@ type ThirdPhaseState struct {
 }
 
 type ConsensusState struct {
-	NodesMutator network.Mutator
-	BitsetMapper *BitsetMapper
-	HashStorage  *HashStorage
-	ClaimHandler *claimhandler.ClaimHandler
+	ConsensusInfo network.ConsensusInfo
+	NodesMutator  network.Mutator
+	HashStorage   *HashStorage
+	BitsetMapper  *BitsetMapper
+	ClaimHandler  *claimhandler.ClaimHandler
 }
 
-func NewConsensusState(snapshot *node.Snapshot) *ConsensusState {
+func NewConsensusState(consensusInfo network.ConsensusInfo, snapshot *node.Snapshot) *ConsensusState {
 	return &ConsensusState{
-		HashStorage:  NewHashStorage(),
-		NodesMutator: node.NewMutator(snapshot),
+		ConsensusInfo: consensusInfo,
+		NodesMutator:  node.NewMutator(snapshot),
+		HashStorage:   NewHashStorage(),
 	}
 }
