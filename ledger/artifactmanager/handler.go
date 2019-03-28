@@ -321,7 +321,7 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel insolar.Parce
 	jetID := *insolar.NewJetID(0, nil)
 
 	codeRec, err := h.getCode(ctx, msg.Code.Record())
-	if err == insolar.ErrNotFound {
+	if err == object.ErrNotFound {
 		// We don't have code record. Must be on another node.
 		node, err := h.JetCoordinator.NodeForJet(ctx, insolar.ID(jetID), parcel.Pulse(), msg.Code.Record().Pulse())
 		if err != nil {

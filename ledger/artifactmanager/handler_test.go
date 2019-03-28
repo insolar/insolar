@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -169,6 +170,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
+	h.RecordAccessor = s.recordAccessor
 
 	idLock := storage.NewIDLockerMock(s.T())
 	idLock.LockMock.Return()
@@ -340,6 +342,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
+	h.RecordAccessor = s.recordAccessor
 
 	locker := storage.NewIDLockerMock(s.T())
 	locker.LockMock.Return()
@@ -795,6 +798,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
+	h.RecordAccessor = s.recordAccessor
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
 
@@ -1117,13 +1121,20 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	h.DBContext = s.db
 	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
+	h.RecordAccessor = s.recordAccessor
 	h.RecentStorageProvider = provideMock
 
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
 
 	s.T().Run("returns not ok when not valid", func(t *testing.T) {
-		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &object.AmendRecord{})
+		virtRec := &object.AmendRecord{}
+		validatedStateID := object.NewRecordIDFromRecord(s.scheme, 0, virtRec)
+		rec := record.MaterialRecord{
+			Record: virtRec,
+			JetID:  insolar.JetID(jetID),
+		}
+		err := s.recordModifier.Set(s.ctx, *validatedStateID, rec)
 		require.NoError(t, err)
 
 		msg := message.ValidationCheck{
@@ -1142,9 +1153,13 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 
 	s.T().Run("returns ok when valid", func(t *testing.T) {
 		approvedStateID := *genRandomID(0)
-		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &object.AmendRecord{
-			PrevState: approvedStateID,
-		})
+		virtRec := &object.AmendRecord{PrevState: approvedStateID}
+		validatedStateID := object.NewRecordIDFromRecord(s.scheme, 0, virtRec)
+		rec := record.MaterialRecord{
+			Record: virtRec,
+			JetID:  insolar.JetID(jetID),
+		}
+		err := s.recordModifier.Set(s.ctx, *validatedStateID, rec)
 		require.NoError(t, err)
 
 		msg := message.ValidationCheck{
@@ -1172,14 +1187,21 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 		MessageHash: []byte{1, 2, 3},
 		Object:      *genRandomID(0),
 	}
-	reqID, err := s.objectStorage.SetRecord(s.ctx, jetID, insolar.FirstPulseNumber, &req)
+
+	reqID := object.NewRecordIDFromRecord(s.scheme, insolar.FirstPulseNumber, &req)
+	rec := record.MaterialRecord{
+		Record: &req,
+		JetID:  insolar.JetID(jetID),
+	}
+	err := s.recordModifier.Set(s.ctx, *reqID, rec)
+	require.NoError(s.T(), err)
 
 	msg := message.GetRequest{
 		Request: *reqID,
 	}
 
 	h := NewMessageHandler(&configuration.Ledger{})
-	h.ObjectStorage = s.objectStorage
+	h.RecordAccessor = s.recordAccessor
 
 	rep, err := h.handleGetRequest(contextWithJet(s.ctx, jetID), &message.Parcel{
 		Msg:         &msg,
