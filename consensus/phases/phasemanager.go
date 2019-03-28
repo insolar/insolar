@@ -55,7 +55,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -95,25 +94,26 @@ func NewPhaseManager() PhaseManager {
 }
 
 type callback struct {
-	waiter chan []byte
+	waiter chan interface{}
 }
 
-func (c *callback) getResult() []byte {
-	return <-c.waiter
+func (c *callback) getResult() ([]byte, error) {
+	result := <-c.waiter
+	hash, ok := result.([]byte)
+	if !ok {
+		return nil, errors.Errorf("Wrong type was return in callback: expected []byte, gets %T", result)
+	}
+	return hash, nil
 }
 
 // SetResult implements github.com/insolar/insolar/conveyor/queue.SyncDone interface
 func (c *callback) SetResult(result interface{}) {
-	hash, ok := result.([]byte)
-	if !ok {
-		hash = make([]byte, packets.HashLength)
-	}
-	c.waiter <- hash
+	c.waiter <- result
 }
 
 func newCallback() *callback {
 	return &callback{
-		waiter: make(chan []byte, 1),
+		waiter: make(chan interface{}, 1),
 	}
 }
 
@@ -143,9 +143,12 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 	c := newCallback()
 	err = pm.PulseController.PreparePulse(*pulse, c)
 	if err != nil {
-		return err
+		return errors.Wrap(err, "[ NET Consensus ] Failed to prepare pulse")
 	}
-	stateHash := c.getResult()
+	stateHash, err := c.getResult()
+	if err != nil {
+		return errors.Wrap(err, "[ NET Consensus ] Failed to get state hash")
+	}
 
 	tctx, cancel, err = contextTimeoutWithDelay(ctx, *pulseDuration, consensusDelay, 0.3)
 	if err != nil {
@@ -155,7 +158,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 
 	err = pm.PulseController.ActivatePulse()
 	if err != nil {
-		return err
+		return errors.Wrap(err, "[ NET Consensus ] Failed to activate pulse")
 	}
 
 	firstPhaseState, err := pm.FirstPhase.Execute(tctx, pulse, stateHash)

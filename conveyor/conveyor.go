@@ -36,12 +36,13 @@ type RemoveSlotCallback func(number insolar.PulseNumber)
 
 // PulseConveyor is realization of Conveyor
 type PulseConveyor struct {
-	slotMap            map[insolar.PulseNumber]TaskPusher
-	futurePulseData    *insolar.Pulse
-	futurePulseNumber  *insolar.PulseNumber
-	presentPulseNumber *insolar.PulseNumber
-	lock               sync.RWMutex
-	state              insolar.ConveyorState
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	slotMap                    map[insolar.PulseNumber]TaskPusher
+	futurePulseData            *insolar.Pulse
+	futurePulseNumber          *insolar.PulseNumber
+	presentPulseNumber         *insolar.PulseNumber
+	lock                       sync.RWMutex
+	state                      insolar.ConveyorState
 }
 
 // NewPulseConveyor creates new instance of PulseConveyor
@@ -169,7 +170,7 @@ func (c *PulseConveyor) PreparePulse(pulse insolar.Pulse, callback queue.SyncDon
 		expectedNumCallbacks++
 	}
 
-	barrierCallback := newBarrierCallback(expectedNumCallbacks, callback)
+	barrierCallback := newBarrierCallback(expectedNumCallbacks, callback, c.PlatformCryptographyScheme)
 
 	futureSlot := c.slotMap[*c.futurePulseNumber]
 	err := futureSlot.PushSignal(PendingPulseSignal, barrierCallback)
@@ -288,7 +289,7 @@ type BarrierCallback struct {
 	result interface{}
 }
 
-func newBarrierCallback(num int, callback queue.SyncDone) *BarrierCallback {
+func newBarrierCallback(num int, callback queue.SyncDone, cs insolar.PlatformCryptographyScheme) *BarrierCallback {
 	var wg sync.WaitGroup
 	wg.Add(num)
 
@@ -298,6 +299,10 @@ func newBarrierCallback(num int, callback queue.SyncDone) *BarrierCallback {
 
 	go func(bc *BarrierCallback) {
 		wg.Wait()
+		if num == 1 && bc.result == nil {
+			log.Info("Where is no present pulse and future pulse callback returned nil, set []byte{1, 2, 3} as result")
+			bc.result = cs.IntegrityHasher().Hash([]byte{1, 2, 3})
+		}
 		callback.SetResult(bc.result)
 	}(bc)
 

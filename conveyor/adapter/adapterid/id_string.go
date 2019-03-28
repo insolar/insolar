@@ -4,18 +4,9 @@ package adapterid
 
 import "strconv"
 
-func _() {
-	// An "invalid array index" compiler error signifies that the constant values have changed.
-	// Re-run the stringer command to generate them again.
-	var x [1]struct{}
-	_ = x[SendResponse-1]
-	_ = x[Waiter-2]
-	_ = x[GetCode-3]
-}
+const _ID_name = "SendResponseWaiterGetCodeNodeState"
 
-const _ID_name = "SendResponseWaiterGetCode"
-
-var _ID_index = [...]uint8{0, 12, 18, 25}
+var _ID_index = [...]uint8{0, 12, 18, 25, 34}
 
 func (i ID) String() string {
 	i -= 1
