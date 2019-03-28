@@ -55,6 +55,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -105,7 +106,7 @@ func (c *callback) getResult() []byte {
 func (c *callback) SetResult(result interface{}) {
 	hash, ok := result.([]byte)
 	if !ok {
-		hash = []byte{}
+		hash = make([]byte, packets.HashLength)
 	}
 	c.waiter <- hash
 }
