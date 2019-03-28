@@ -137,10 +137,11 @@ func (s *testSuite) TestManyNodesConnect() {
 			s.preInitNode(node)
 			s.T().Logf("[ TestManyNodesConnect ] Initing node %d", nodeNum)
 			s.InitNode(node)
-			wg.Done()
 			s.T().Logf("[ TestManyNodesConnect ] Starting node %d", nodeNum)
 			s.StartNode(node)
 			s.T().Logf("[ TestManyNodesConnect ] Done node %d", nodeNum)
+
+			wg.Done()
 
 		}(&wg, node, i)
 	}
