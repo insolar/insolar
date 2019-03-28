@@ -461,10 +461,17 @@ func TestConveyor_ChangePulseMultipleTimes_WithEvents(t *testing.T) {
 
 		go func() {
 			for j := 0; j < 1; j++ {
-				conveyor.SinkPush(pulseNumber, "TEST")
-				conveyor.SinkPush(pulseNumber-testPulseDelta, "TEST")
-				conveyor.SinkPush(pulseNumber+testPulseDelta, "TEST")
-				conveyor.SinkPushAll(pulseNumber, []interface{}{"TEST", i * j})
+				conveyorMsg1 := makeConveyorMsg(t)
+				conveyor.SinkPush(pulseNumber, conveyorMsg1)
+				conveyorMsg2 := makeConveyorMsg(t)
+				conveyor.SinkPush(pulseNumber-testPulseDelta, conveyorMsg2)
+				conveyorMsg3 := makeConveyorMsg(t)
+				conveyor.SinkPush(pulseNumber+testPulseDelta, conveyorMsg3)
+
+				conveyorMsg4 := makeConveyorMsg(t)
+				conveyorMsg5 := makeConveyorMsg(t)
+				conveyor.SinkPushAll(pulseNumber, []interface{}{conveyorMsg4, conveyorMsg5})
+
 			}
 		}()
 
@@ -497,14 +504,23 @@ func TestConveyor_ChangePulseMultipleTimes_WithEvents(t *testing.T) {
 
 		go func() {
 			for j := 0; j < 10; j++ {
-				require.NoError(t, conveyor.SinkPushAll(pulseNumber, []interface{}{"TEST", i}))
-				require.NoError(t, conveyor.SinkPush(pulseNumber, "TEST"))
-				require.NoError(t, conveyor.SinkPush(pulseNumber-testPulseDelta, "TEST"))
-				conveyor.SinkPush(pulseNumber+testPulseDelta, "TEST")
+				conveyorMsg1 := makeConveyorMsg(t)
+				conveyorMsg2 := makeConveyorMsg(t)
+				require.NoError(t, conveyor.SinkPushAll(pulseNumber, []interface{}{conveyorMsg1, conveyorMsg2}))
+
+				conveyorMsg3 := makeConveyorMsg(t)
+				require.NoError(t, conveyor.SinkPush(pulseNumber, conveyorMsg3))
+
+				conveyorMsg4 := makeConveyorMsg(t)
+				require.NoError(t, conveyor.SinkPush(pulseNumber-testPulseDelta, conveyorMsg4))
+
+				conveyorMsg5 := makeConveyorMsg(t)
+				conveyor.SinkPush(pulseNumber+testPulseDelta, conveyorMsg5)
 			}
 		}()
 	}
 
+	// TODO: wait for all responses
 	time.Sleep(time.Millisecond * 200)
 }
 
