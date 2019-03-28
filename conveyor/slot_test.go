@@ -285,8 +285,7 @@ func TestSlot_createElement(t *testing.T) {
 	s := newSlot(Future, testRealPulse, nil)
 	oldEmptyLen := s.elementListMap[EmptyElement].len()
 
-	conveyorMsg := makeConveyorMsg(t)
-	event := *queue.NewOutputElement(conveyorMsg, 0)
+	event := makeTestOutputElements(t)
 
 	stateMachineMock := makeMockStateMachine(t)
 
@@ -314,8 +313,7 @@ func TestSlot_createElement_PushElementErr(t *testing.T) {
 	s := newSlot(Future, testRealPulse, nil)
 	oldEmptyLen := s.elementListMap[EmptyElement].len()
 	delete(s.elementListMap, ActiveElement)
-	conveyorMsg := makeConveyorMsg(t)
-	event := *queue.NewOutputElement(conveyorMsg, 0)
+	event := makeTestOutputElements(t)
 
 	stateMachineMock := makeMockStateMachine(t)
 
@@ -339,8 +337,7 @@ func TestSlot_hasElements(t *testing.T) {
 
 	sm := makeMockStateMachine(t)
 
-	conveyorMsg := makeConveyorMsg(t)
-	event := *queue.NewOutputElement(conveyorMsg, 0)
+	event := makeTestOutputElements(t)
 	_, err := s.createElement(sm, 20, event)
 	require.NoError(t, err)
 
@@ -453,8 +450,7 @@ func TestSlot_extractSlotElementByID(t *testing.T) {
 	var elements []*slotElement
 
 	for i := 1; i < 100; i++ {
-		conveyorMsg := makeConveyorMsg(t)
-		event := *queue.NewOutputElement(conveyorMsg, 0)
+		event := makeTestOutputElements(t)
 		el, err := slot.createElement(sm, fsm.StateID(20+i), event)
 		require.NoError(t, err)
 		elements = append(elements, el)
@@ -469,8 +465,7 @@ func TestSlot_extractSlotElementByID(t *testing.T) {
 	}
 
 	for i := 1; i < 100; i++ {
-		conveyorMsg := makeConveyorMsg(t)
-		event := *queue.NewOutputElement(conveyorMsg, 0)
+		event := makeTestOutputElements(t)
 		_, err := slot.createElement(sm, fsm.StateID(2000+i), event)
 		require.NoError(t, err)
 
@@ -508,8 +503,7 @@ func TestSlot_hasExpired(t *testing.T) {
 	require.True(t, slot.hasExpired())
 
 	sm := makeMockStateMachine(t)
-	conveyorMsg := makeConveyorMsg(t)
-	event := *queue.NewOutputElement(conveyorMsg, 0)
+	event := makeTestOutputElements(t)
 	el, err := slot.createElement(sm, 33, event)
 	require.NotNil(t, el)
 	require.NoError(t, err)
@@ -526,8 +520,7 @@ func TestSlot_PopPushMultiple(t *testing.T) {
 	sm := makeMockStateMachine(t)
 	slot := newSlot(Present, 10, nil)
 
-	conveyorMsg := makeConveyorMsg(t)
-	event := *queue.NewOutputElement(conveyorMsg, 0)
+	event := makeTestOutputElements(t)
 	el, err := slot.createElement(sm, 33, event)
 	require.NotNil(t, el)
 	require.NoError(t, err)
@@ -556,8 +549,7 @@ func TestSlot_len(t *testing.T) {
 	require.Zero(t, s.len(ActiveElement))
 	require.Zero(t, s.len(NotActiveElement))
 
-	conveyorMsg := makeConveyorMsg(t)
-	event := *queue.NewOutputElement(conveyorMsg, 0)
+	event := makeTestOutputElements(t)
 
 	stateMachineMock := makeMockStateMachine(t)
 
