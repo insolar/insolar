@@ -1,9 +1,9 @@
-package slot
+package fsm
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "SlotElementHelper" can be found in github.com/insolar/insolar/conveyor/interfaces/slot
+The original interface "SlotElementHelper" can be found in github.com/insolar/insolar/conveyor/fsm
 */
 import (
 	"sync/atomic"
@@ -11,12 +11,11 @@ import (
 
 	"github.com/gojuno/minimock"
 	adapterid "github.com/insolar/insolar/conveyor/adapter/adapterid"
-	fsm "github.com/insolar/insolar/conveyor/interfaces/fsm"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//SlotElementHelperMock implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper
+//SlotElementHelperMock implements github.com/insolar/insolar/conveyor/fsm.SlotElementHelper
 type SlotElementHelperMock struct {
 	t minimock.Tester
 
@@ -50,12 +49,12 @@ type SlotElementHelperMock struct {
 	GetPayloadPreCounter uint64
 	GetPayloadMock       mSlotElementHelperMockGetPayload
 
-	GetStateFunc       func() (r fsm.StateID)
+	GetStateFunc       func() (r StateID)
 	GetStateCounter    uint64
 	GetStatePreCounter uint64
 	GetStateMock       mSlotElementHelperMockGetState
 
-	GetTypeFunc       func() (r fsm.ID)
+	GetTypeFunc       func() (r ID)
 	GetTypeCounter    uint64
 	GetTypePreCounter uint64
 	GetTypeMock       mSlotElementHelperMockGetType
@@ -81,7 +80,7 @@ type SlotElementHelperMock struct {
 	SendTaskMock       mSlotElementHelperMockSendTask
 }
 
-//NewSlotElementHelperMock returns a mock for github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper
+//NewSlotElementHelperMock returns a mock for github.com/insolar/insolar/conveyor/fsm.SlotElementHelper
 func NewSlotElementHelperMock(t minimock.Tester) *SlotElementHelperMock {
 	m := &SlotElementHelperMock{t: t}
 
@@ -163,7 +162,7 @@ func (m *mSlotElementHelperMockDeactivateTill) Set(f func(p ReactivateMode)) *Sl
 	return m.mock
 }
 
-//DeactivateTill implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
+//DeactivateTill implements github.com/insolar/insolar/conveyor/fsm.SlotElementHelper interface
 func (m *SlotElementHelperMock) DeactivateTill(p ReactivateMode) {
 	counter := atomic.AddUint64(&m.DeactivateTillPreCounter, 1)
 	defer atomic.AddUint64(&m.DeactivateTillCounter, 1)
@@ -290,7 +289,7 @@ func (m *mSlotElementHelperMockGetElementID) Set(f func() (r uint32)) *SlotEleme
 	return m.mock
 }
 
-//GetElementID implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
+//GetElementID implements github.com/insolar/insolar/conveyor/fsm.SlotElementHelper interface
 func (m *SlotElementHelperMock) GetElementID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetElementIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetElementIDCounter, 1)
@@ -424,7 +423,7 @@ func (m *mSlotElementHelperMockGetInputEvent) Set(f func() (r interface{})) *Slo
 	return m.mock
 }
 
-//GetInputEvent implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
+//GetInputEvent implements github.com/insolar/insolar/conveyor/fsm.SlotElementHelper interface
 func (m *SlotElementHelperMock) GetInputEvent() (r interface{}) {
 	counter := atomic.AddUint64(&m.GetInputEventPreCounter, 1)
 	defer atomic.AddUint64(&m.GetInputEventCounter, 1)
@@ -558,7 +557,7 @@ func (m *mSlotElementHelperMockGetNodeID) Set(f func() (r uint32)) *SlotElementH
 	return m.mock
 }
 
-//GetNodeID implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
+//GetNodeID implements github.com/insolar/insolar/conveyor/fsm.SlotElementHelper interface
 func (m *SlotElementHelperMock) GetNodeID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetNodeIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodeIDCounter, 1)
@@ -692,7 +691,7 @@ func (m *mSlotElementHelperMockGetParentElementID) Set(f func() (r uint32)) *Slo
 	return m.mock
 }
 
-//GetParentElementID implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
+//GetParentElementID implements github.com/insolar/insolar/conveyor/fsm.SlotElementHelper interface
 func (m *SlotElementHelperMock) GetParentElementID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetParentElementIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetParentElementIDCounter, 1)
@@ -826,7 +825,7 @@ func (m *mSlotElementHelperMockGetPayload) Set(f func() (r interface{})) *SlotEl
 	return m.mock
 }
 
-//GetPayload implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
+//GetPayload implements github.com/insolar/insolar/conveyor/fsm.SlotElementHelper interface
 func (m *SlotElementHelperMock) GetPayload() (r interface{}) {
 	counter := atomic.AddUint64(&m.GetPayloadPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPayloadCounter, 1)
@@ -909,7 +908,7 @@ type SlotElementHelperMockGetStateExpectation struct {
 }
 
 type SlotElementHelperMockGetStateResult struct {
-	r fsm.StateID
+	r StateID
 }
 
 //Expect specifies that invocation of SlotElementHelper.GetState is expected from 1 to Infinity times
@@ -925,7 +924,7 @@ func (m *mSlotElementHelperMockGetState) Expect() *mSlotElementHelperMockGetStat
 }
 
 //Return specifies results of invocation of SlotElementHelper.GetState
-func (m *mSlotElementHelperMockGetState) Return(r fsm.StateID) *SlotElementHelperMock {
+func (m *mSlotElementHelperMockGetState) Return(r StateID) *SlotElementHelperMock {
 	m.mock.GetStateFunc = nil
 	m.expectationSeries = nil
 
@@ -947,12 +946,12 @@ func (m *mSlotElementHelperMockGetState) ExpectOnce() *SlotElementHelperMockGetS
 	return expectation
 }
 
-func (e *SlotElementHelperMockGetStateExpectation) Return(r fsm.StateID) {
+func (e *SlotElementHelperMockGetStateExpectation) Return(r StateID) {
 	e.result = &SlotElementHelperMockGetStateResult{r}
 }
 
 //Set uses given function f as a mock of SlotElementHelper.GetState method
-func (m *mSlotElementHelperMockGetState) Set(f func() (r fsm.StateID)) *SlotElementHelperMock {
+func (m *mSlotElementHelperMockGetState) Set(f func() (r StateID)) *SlotElementHelperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -960,8 +959,8 @@ func (m *mSlotElementHelperMockGetState) Set(f func() (r fsm.StateID)) *SlotElem
 	return m.mock
 }
 
-//GetState implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
-func (m *SlotElementHelperMock) GetState() (r fsm.StateID) {
+//GetState implements github.com/insolar/insolar/conveyor/fsm.SlotElementHelper interface
+func (m *SlotElementHelperMock) GetState() (r StateID) {
 	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetStateCounter, 1)
 
@@ -1043,7 +1042,7 @@ type SlotElementHelperMockGetTypeExpectation struct {
 }
 
 type SlotElementHelperMockGetTypeResult struct {
-	r fsm.ID
+	r ID
 }
 
 //Expect specifies that invocation of SlotElementHelper.GetType is expected from 1 to Infinity times
@@ -1059,7 +1058,7 @@ func (m *mSlotElementHelperMockGetType) Expect() *mSlotElementHelperMockGetType 
 }
 
 //Return specifies results of invocation of SlotElementHelper.GetType
-func (m *mSlotElementHelperMockGetType) Return(r fsm.ID) *SlotElementHelperMock {
+func (m *mSlotElementHelperMockGetType) Return(r ID) *SlotElementHelperMock {
 	m.mock.GetTypeFunc = nil
 	m.expectationSeries = nil
 
@@ -1081,12 +1080,12 @@ func (m *mSlotElementHelperMockGetType) ExpectOnce() *SlotElementHelperMockGetTy
 	return expectation
 }
 
-func (e *SlotElementHelperMockGetTypeExpectation) Return(r fsm.ID) {
+func (e *SlotElementHelperMockGetTypeExpectation) Return(r ID) {
 	e.result = &SlotElementHelperMockGetTypeResult{r}
 }
 
 //Set uses given function f as a mock of SlotElementHelper.GetType method
-func (m *mSlotElementHelperMockGetType) Set(f func() (r fsm.ID)) *SlotElementHelperMock {
+func (m *mSlotElementHelperMockGetType) Set(f func() (r ID)) *SlotElementHelperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1094,8 +1093,8 @@ func (m *mSlotElementHelperMockGetType) Set(f func() (r fsm.ID)) *SlotElementHel
 	return m.mock
 }
 
-//GetType implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
-func (m *SlotElementHelperMock) GetType() (r fsm.ID) {
+//GetType implements github.com/insolar/insolar/conveyor/fsm.SlotElementHelper interface
+func (m *SlotElementHelperMock) GetType() (r ID) {
 	counter := atomic.AddUint64(&m.GetTypePreCounter, 1)
 	defer atomic.AddUint64(&m.GetTypeCounter, 1)
 
@@ -1233,7 +1232,7 @@ func (m *mSlotElementHelperMockInformParent) Set(f func(p interface{}) (r bool))
 	return m.mock
 }
 
-//InformParent implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
+//InformParent implements github.com/insolar/insolar/conveyor/fsm.SlotElementHelper interface
 func (m *SlotElementHelperMock) InformParent(p interface{}) (r bool) {
 	counter := atomic.AddUint64(&m.InformParentPreCounter, 1)
 	defer atomic.AddUint64(&m.InformParentCounter, 1)
@@ -1366,7 +1365,7 @@ func (m *mSlotElementHelperMockLeaveSequence) Set(f func()) *SlotElementHelperMo
 	return m.mock
 }
 
-//LeaveSequence implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
+//LeaveSequence implements github.com/insolar/insolar/conveyor/fsm.SlotElementHelper interface
 func (m *SlotElementHelperMock) LeaveSequence() {
 	counter := atomic.AddUint64(&m.LeaveSequencePreCounter, 1)
 	defer atomic.AddUint64(&m.LeaveSequenceCounter, 1)
@@ -1476,7 +1475,7 @@ func (m *mSlotElementHelperMockReactivate) Set(f func()) *SlotElementHelperMock 
 	return m.mock
 }
 
-//Reactivate implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
+//Reactivate implements github.com/insolar/insolar/conveyor/fsm.SlotElementHelper interface
 func (m *SlotElementHelperMock) Reactivate() {
 	counter := atomic.AddUint64(&m.ReactivatePreCounter, 1)
 	defer atomic.AddUint64(&m.ReactivateCounter, 1)
@@ -1602,7 +1601,7 @@ func (m *mSlotElementHelperMockSendTask) Set(f func(p adapterid.ID, p1 interface
 	return m.mock
 }
 
-//SendTask implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper interface
+//SendTask implements github.com/insolar/insolar/conveyor/fsm.SlotElementHelper interface
 func (m *SlotElementHelperMock) SendTask(p adapterid.ID, p1 interface{}, p2 uint32) (r error) {
 	counter := atomic.AddUint64(&m.SendTaskPreCounter, 1)
 	defer atomic.AddUint64(&m.SendTaskCounter, 1)

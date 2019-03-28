@@ -14,12 +14,10 @@
  *    limitations under the License.
  */
 
-package slot
+package fsm
 
 import (
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/insolar"
 )
 
 // ReactivateMode represents reason of reactivating of slot element
@@ -34,7 +32,7 @@ const (
 )
 
 // SlotElementHelper gives access to slot element
-//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementHelper -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/conveyor/fsm.SlotElementHelper -o ./ -s _mock.go
 type SlotElementHelper interface {
 	SlotElementRestrictedHelper
 	InformParent(payload interface{}) bool
@@ -45,7 +43,7 @@ type SlotElementHelper interface {
 }
 
 // SlotElementRestrictedHelper is restricted part of SlotElementHelper
-//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementRestrictedHelper -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/conveyor/fsm.SlotElementRestrictedHelper -o ./ -s _mock.go
 type SlotElementRestrictedHelper interface {
 	SlotElementReadOnly
 
@@ -58,19 +56,10 @@ type SlotElementRestrictedHelper interface {
 }
 
 // SlotElementReadOnly gives read-only access to slot element
-//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementReadOnly -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/conveyor/fsm.SlotElementReadOnly -o ./ -s _mock.go
 type SlotElementReadOnly interface {
 	GetElementID() uint32
 	GetNodeID() uint32
-	GetType() fsm.ID
-	GetState() fsm.StateID
-}
-
-// SlotDetails provides information about slot
-//go:generate minimock -i github.com/insolar/insolar/conveyor/interfaces/slot.SlotDetails -o ./ -s _mock.go
-type SlotDetails interface {
-	GetPulseNumber() insolar.PulseNumber // nolint: unused
-	GetNodeID() uint32                   // nolint: unused
-	GetPulseData() insolar.Pulse         // nolint: unused
-	GetNodeData() interface{}            // nolint: unused
+	GetType() ID
+	GetState() StateID
 }

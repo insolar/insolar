@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	fsm "github.com/insolar/insolar/conveyor/fsm"
 	handler "github.com/insolar/insolar/conveyor/handler"
-	fsm "github.com/insolar/insolar/conveyor/interfaces/fsm"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )

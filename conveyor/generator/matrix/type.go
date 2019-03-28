@@ -17,8 +17,8 @@
 package matrix
 
 import (
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/handler"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 )
 
 // StateMachine describes access to element's state machine
