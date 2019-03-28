@@ -293,6 +293,9 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 	if err := h.HeavySync.StoreDrop(ctx, msg.JetID, msg.Drop); err != nil {
 		return heavyerrreply(err)
 	}
+	if err := h.HeavySync.StoreBlobs(ctx, msg.PulseNum, msg.Blobs); err != nil {
+		return heavyerrreply(err)
+	}
 
 	return &reply.OK{}, nil
 }
