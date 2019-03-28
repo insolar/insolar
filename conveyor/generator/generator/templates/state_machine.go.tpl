@@ -19,8 +19,7 @@ package {{.Package}}
 import (
 	"errors"
 
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/statemachine"
 )
 
@@ -128,17 +127,17 @@ func Raw{{$machine.Name}}Factory() [3]*statemachine.StateMachine {
 {{end}}{{end}}
 {{end}}
 
-{{define "initHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+{{define "initHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     aInput, ok := element.GetInputEvent().({{.Machine.InputEventType}})
     if !ok { return nil, 0, errors.New("wrong input event type") }
     payload, state, err := s.cleanStateMachine.{{.Handler.Name}}(aInput, element.GetPayload())
     return payload, state, err
 }{{end}}{{end}}
-{{define "errorStateHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
+{{define "errorStateHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element fsm.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
     payload, state := s.cleanStateMachine.{{.Handler.Name}}(element.GetInputEvent(), element.GetPayload(), err)
     return payload, state
 }{{end}}{{end}}
-{{define "transitionHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+{{define "transitionHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     aInput, ok := element.GetInputEvent().({{.Machine.InputEventType}})
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().({{.Machine.PayloadType}})
@@ -146,7 +145,7 @@ func Raw{{$machine.Name}}Factory() [3]*statemachine.StateMachine {
     payload, state, err := s.cleanStateMachine.{{.Handler.Name}}(aInput, aPayload)
     return payload, state, err
 }{{end}}{{end}}
-{{define "migrationHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+{{define "migrationHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     aInput, ok := element.GetInputEvent().({{.Machine.InputEventType}})
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().({{.Machine.PayloadType}})
@@ -154,7 +153,7 @@ func Raw{{$machine.Name}}Factory() [3]*statemachine.StateMachine {
     payload, state, err := s.cleanStateMachine.{{.Handler.Name}}(aInput, aPayload)
     return payload, state, err
 }{{end}}{{end}}
-{{define "adapterResponseHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper, ar interface{}) (interface{}, fsm.ElementState, error) {
+{{define "adapterResponseHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element fsm.SlotElementHelper, ar interface{}) (interface{}, fsm.ElementState, error) {
     aInput, ok := element.GetInputEvent().({{.Machine.InputEventType}})
     if !ok { return nil, 0, errors.New("wrong input event type") }
     aPayload, ok := element.GetPayload().({{.Machine.PayloadType}})
@@ -164,7 +163,7 @@ func Raw{{$machine.Name}}Factory() [3]*statemachine.StateMachine {
     payload, state, err := s.cleanStateMachine.{{.Handler.Name}}(aInput, aPayload, aResponse)
     return payload, state, err
 }{{end}}{{end}}
-{{define "adapterResponseErrorHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element slot.SlotElementHelper, ar interface{}, err error) (interface{}, fsm.ElementState) {
+{{define "adapterResponseErrorHandler"}}{{if (handlerExists .Handler)}}func (s *Raw{{.Machine.Name}}) {{.Handler.Name}}(element fsm.SlotElementHelper, ar interface{}, err error) (interface{}, fsm.ElementState) {
     payload, state := s.cleanStateMachine.{{.Handler.Name}}(element.GetInputEvent(), element.GetPayload(), ar, err)
     return payload, state
 }{{end}}{{end}}

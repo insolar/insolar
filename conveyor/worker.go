@@ -26,9 +26,8 @@ import (
 	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
-	"github.com/insolar/insolar/conveyor/interfaces/constant"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/conveyor/queue"
@@ -89,13 +88,13 @@ func (w *worker) setLoggerFields() {
 func (w *worker) changePulseState() {
 	w.ctxLogger.Debugf("[ changePulseState ] starts ...")
 	switch w.slot.pulseState {
-	case constant.Future:
-		w.slot.pulseState = constant.Present
-	case constant.Present:
-		w.slot.pulseState = constant.Past
-	case constant.Past:
+	case Future:
+		w.slot.pulseState = Present
+	case Present:
+		w.slot.pulseState = Past
+	case Past:
 		w.ctxLogger.Error("[ changePulseState ] Try to change pulse state for 'Past' slot. Skip it")
-	case constant.Antique:
+	case Antique:
 		w.ctxLogger.Error("[ changePulseState ] Try to change pulse state for 'Antique' slot. Skip it")
 	default:
 		panic("[ changePulseState ] Unknown state: " + w.slot.pulseState.String())
@@ -279,7 +278,7 @@ func (w *worker) waitQueuesOrTick() {
 func (w *worker) processingElements() {
 	w.ctxLogger.Debugf("[ processingElements ] starts ...")
 	if !w.slot.hasElements(ActiveElement) {
-		if w.slot.pulseState == constant.Past {
+		if w.slot.pulseState == Past {
 			if w.slot.hasExpired() {
 				w.ctxLogger.Info("[ processingElements ] Set slot state to 'Suspending'")
 				w.changeSlotState(Suspending)
@@ -436,7 +435,7 @@ func (w *worker) readInputQueueSuspending() error {
 		}
 	}
 
-	if len(elements) != 0 && w.slot.pulseState == constant.Past {
+	if len(elements) != 0 && w.slot.pulseState == Past {
 		w.ctxLogger.Info("[ readInputQueueSuspending ] Set slot state to 'Working'")
 		w.changeSlotState(Working)
 	}
@@ -447,16 +446,16 @@ func (w *worker) readInputQueueSuspending() error {
 func (w *worker) suspending() {
 	w.ctxLogger.Debugf("[ suspending ] starts ...")
 	switch w.slot.pulseState {
-	case constant.Past:
+	case Past:
 		w.sendRemovalSignalToConveyor()
-	case constant.Present:
+	case Present:
 		if w.preparePulseSync != nil {
 			w.preparePulseSync.SetResult(nil)
 			w.preparePulseSync = nil
 		} else {
 			w.ctxLogger.Warn("[ suspending ] preparePulseSync is empty")
 		}
-	case constant.Future:
+	case Future:
 		w.calculateNodeState()
 	}
 
@@ -514,13 +513,13 @@ func (w *worker) setPulseStateMachines() {
 	var stateMachines matrix.SetAccessor
 
 	switch w.slot.pulseState {
-	case constant.Future:
+	case Future:
 		stateMachines = HandlerStorage.GetFutureConfig()
-	case constant.Present:
+	case Present:
 		stateMachines = HandlerStorage.GetPresentConfig()
-	case constant.Past:
+	case Past:
 		stateMachines = HandlerStorage.GetPastConfig()
-	case constant.Antique:
+	case Antique:
 		stateMachines = HandlerStorage.GetPastConfig()
 	default:
 		panic(fmt.Sprintf("[ setPulseStateMachines ] unknown pulseState: %s", w.slot.pulseState.String()))
@@ -532,7 +531,7 @@ func (w *worker) setPulseStateMachines() {
 func (w *worker) initializing() {
 	w.ctxLogger.Debugf("[ initializing ] starts ...")
 	w.setPulseStateMachines()
-	if w.slot.pulseState == constant.Future {
+	if w.slot.pulseState == Future {
 		w.ctxLogger.Info("[ initializing ] pulseState is Future. Skip initializing")
 		return
 	}

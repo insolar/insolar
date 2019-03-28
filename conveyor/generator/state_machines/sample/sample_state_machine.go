@@ -17,7 +17,7 @@
 package sample
 
 import (
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
+	"github.com/insolar/insolar/conveyor/fsm"
 )
 
 // custom types

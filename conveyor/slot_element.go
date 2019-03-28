@@ -21,10 +21,8 @@ import (
 
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
-
 	"github.com/pkg/errors"
 )
 
@@ -106,7 +104,7 @@ func (se *slotElement) SendTask(adapterID adapterid.ID, taskPayload interface{},
 		return errors.Errorf("[ SendTask ] Can't PushTask: %s", err)
 	}
 
-	se.DeactivateTill(slot.Response)
+	se.DeactivateTill(fsm.Response)
 
 	return nil
 }
@@ -151,15 +149,15 @@ func (se *slotElement) InformParent(payload interface{}) bool {
 }
 
 // DeactivateTill implements SlotElementHelper
-func (se *slotElement) DeactivateTill(reactivateOn slot.ReactivateMode) {
+func (se *slotElement) DeactivateTill(reactivateOn fsm.ReactivateMode) {
 	switch reactivateOn {
-	case slot.Empty:
+	case fsm.Empty:
 		panic("implement me")
-	case slot.Response:
+	case fsm.Response:
 		se.activationStatus = NotActiveElement
-	case slot.Tick:
+	case fsm.Tick:
 		panic("implement me")
-	case slot.SeqHead:
+	case fsm.SeqHead:
 		panic("implement me")
 	}
 }

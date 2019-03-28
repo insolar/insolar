@@ -26,7 +26,6 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
-	"github.com/insolar/insolar/conveyor/interfaces/constant"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
@@ -74,7 +73,7 @@ func mockQueueReturnFalse(t *testing.T) *queue.IQueueMock {
 	return qMock
 }
 
-func mockSlot(t *testing.T, q *queue.IQueueMock, pulseNumber insolar.PulseNumber, state constant.PulseState) *Slot {
+func mockSlot(t *testing.T, q *queue.IQueueMock, pulseNumber insolar.PulseNumber, state PulseState) *Slot {
 	slot := &Slot{
 		inputQueue:  q,
 		pulseNumber: pulseNumber,
@@ -116,12 +115,12 @@ func testPulseConveyor(t *testing.T, isQueueOk bool) *PulseConveyor {
 	} else {
 		q = mockQueueReturnFalse(t)
 	}
-	presentSlot := mockSlot(t, q, testRealPulse, constant.Present)
-	futureSlot := mockSlot(t, q, testRealPulse+testPulseDelta, constant.Future)
+	presentSlot := mockSlot(t, q, testRealPulse, Present)
+	futureSlot := mockSlot(t, q, testRealPulse+testPulseDelta, Future)
 	slotMap := make(map[insolar.PulseNumber]TaskPusher)
 	slotMap[testRealPulse] = presentSlot
 	slotMap[testRealPulse+testPulseDelta] = futureSlot
-	slotMap[insolar.AntiquePulseNumber] = mockSlot(t, q, insolar.AntiquePulseNumber, constant.Antique)
+	slotMap[insolar.AntiquePulseNumber] = mockSlot(t, q, insolar.AntiquePulseNumber, Antique)
 
 	return &PulseConveyor{
 		state:              insolar.ConveyorActive,
@@ -382,7 +381,7 @@ func TestConveyor_ActivatePulse(t *testing.T) {
 	c := testPulseConveyor(t, true)
 	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	c.futurePulseData = &pulse
-	newFutureSlot := mockSlot(t, mockQueue(t), pulse.NextPulseNumber, constant.Future)
+	newFutureSlot := mockSlot(t, mockQueue(t), pulse.NextPulseNumber, Future)
 	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
 	c.state = insolar.ConveyorPreparingPulse
 
@@ -420,7 +419,7 @@ func TestConveyor_ActivatePulse_PushSignalErr(t *testing.T) {
 	c := testPulseConveyor(t, false)
 	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	c.futurePulseData = &pulse
-	newFutureSlot := NewWorkingSlot(constant.Future, pulse.NextPulseNumber, nil)
+	newFutureSlot := NewWorkingSlot(Future, pulse.NextPulseNumber, nil)
 	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
 	c.state = insolar.ConveyorPreparingPulse
 
