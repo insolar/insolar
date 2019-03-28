@@ -65,7 +65,7 @@ import (
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
-	base58 "github.com/jbenet/go-base58"
+	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -89,7 +89,7 @@ func consensusReachedWithPercent(resultLen, participanstLen int, percent float64
 }
 
 type FirstPhase interface {
-	Execute(ctx context.Context, pulse *insolar.Pulse) (*FirstPhaseState, error)
+	Execute(ctx context.Context, pulse *insolar.Pulse, stateHash []byte) (*FirstPhaseState, error)
 }
 
 func NewFirstPhase() FirstPhase {
@@ -104,7 +104,7 @@ type FirstPhaseImpl struct {
 }
 
 // Execute do first phase
-func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*FirstPhaseState, error) {
+func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, stateHash []byte) (*FirstPhaseState, error) {
 	entry := &merkle.PulseEntry{Pulse: pulse}
 	logger := inslogger.FromContext(ctx)
 	ctx, span := instracer.StartSpan(ctx, "FirstPhase.Execute")
@@ -113,7 +113,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 
 	var unsyncList network.UnsyncList
 
-	pulseHash, pulseProof, err := fp.Calculator.GetPulseProof(entry)
+	pulseHash, pulseProof, err := fp.Calculator.GetPulseProof(entry, stateHash)
 	if !fp.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		unsyncList = fp.NodeKeeper.GetUnsyncList()
 	}
