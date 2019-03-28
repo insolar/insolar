@@ -104,7 +104,10 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 		return errors.New("params.PrototypeRefString is missing")
 	}
 
-	protoRef := insolar.Reference{}.FromSlice([]byte(args.PrototypeRefString))
+	protoRef, err := insolar.NewReferenceFromBase58(args.PrototypeRefString)
+	if err != nil {
+		return errors.Wrap(err, "can't get protoRef")
+	}
 
 	domain, err := insolar.NewReferenceFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
 	if err != nil {
@@ -131,7 +134,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 		*domain,
 		objectRef,
 		*s.runner.ArtifactManager.GenesisRef(),
-		protoRef,
+		*protoRef,
 		false,
 		memory,
 	)
@@ -176,15 +179,10 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 		return errors.New("params.Method is missing")
 	}
 
-	ref := insolar.Reference{}
-	objectRef := ref.FromSlice([]byte(args.ObjectRefString))
-
-	//callMethodReply, err := s.runner.ContractRequester.SendRequest(ctx, &objectRef, args.Method, args.MethodArgs)
-	//if err != nil {
-	//	return errors.Wrap(err, "Send request failed with error")
-	//}
-
-	protoRef := ref.FromSlice([]byte(args.PrototypeRefString))
+	objectRef, err := insolar.NewReferenceFromBase58(args.ObjectRefString)
+	if err != nil {
+		return errors.Wrap(err, "can't get objectRef")
+	}
 
 	bm := message.BaseLogicMessage{
 		Caller: testutils.RandomRef(),
@@ -193,7 +191,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 
 	argsSerialized, _ := insolar.Serialize(args.MethodArgs)
 
-	callMethodReply, err := s.runner.ContractRequester.CallMethod(ctx, &bm, false, &objectRef, args.Method, argsSerialized, &protoRef)
+	callMethodReply, err := s.runner.ContractRequester.CallMethod(ctx, &bm, false, objectRef, args.Method, argsSerialized, nil)
 	if err != nil {
 		return errors.Wrap(err, "CallMethod failed with error")
 	}
