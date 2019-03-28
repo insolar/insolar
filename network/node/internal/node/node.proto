@@ -1,0 +1,31 @@
+syntax = "proto3";
+
+package node;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.populate_all)        = false;
+
+message Node {
+//    option (gogoproto.face) = true;
+
+    bytes NodeID      = 1;
+    uint32 NodeShortID = 2;
+    uint32 NodeRole = 3;
+    bytes NodePublicKey = 4;
+    string NodeAddress = 5;
+    string NodeVersion = 6;
+    uint32 NodeLeavingETA = 7;
+    uint32 state = 8;
+}
+
+message NodeList {
+    repeated Node List = 1;
+}
+
+message Snapshot {
+    uint32 pulseNumber = 1;
+    uint32 state = 2;
+    map<uint32, NodeList> nodes = 3;
+}
