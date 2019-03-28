@@ -59,7 +59,7 @@ type amSuite struct {
 	jetStorage    jet.Storage
 	dropModifier  drop.Modifier
 	dropAccessor  drop.Accessor
-	genesisState  genesis.GenesisState
+	genesisState  genesis.State
 }
 
 func NewAmSuite() *amSuite {

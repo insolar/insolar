@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/object"
 )
 
-type GenesisState interface {
+type State interface {
 	component.Initer
 	GenesisRef() *insolar.Reference
 }
@@ -43,7 +43,7 @@ type genesisInitializer struct {
 	genesisRef *insolar.Reference
 }
 
-func NewGenesisInitializer() GenesisState {
+func NewGenesisInitializer() State {
 	return new(genesisInitializer)
 }
 
