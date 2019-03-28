@@ -18,6 +18,7 @@ package fsm
 
 import (
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
+	"github.com/insolar/insolar/insolar"
 )
 
 // ReactivateMode represents reason of reactivating of slot element
@@ -50,6 +51,7 @@ type SlotElementRestrictedHelper interface {
 	GetParentElementID() uint32
 	GetInputEvent() interface{}
 	GetPayload() interface{}
+	GetResponseFuture() insolar.ConveyorFuture
 
 	Reactivate()
 	LeaveSequence()
