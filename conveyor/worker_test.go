@@ -700,11 +700,13 @@ func Test_suspending_Present(t *testing.T) {
 	require.NoError(t, slot.inputQueue.PushSignal(ActivatePulseSignal, callback))
 
 	worker.preparePulseSync = callback
-	require.Equal(t, 0, callback.(*mockSyncDone).doneCount)
 	slot.slotState = Suspending
 	worker.suspending()
-	require.Equal(t, 1, callback.(*mockSyncDone).doneCount)
 	areSlotStatesEqual(&oldSlot, slot, t, true)
+	expectedHash, _ := hex.DecodeString(
+		"0c60ae04fbb17fe36f4e84631a5b8f3cd6d0cd46e80056bdfec97fd305f764daadef8ae1adc89b203043d7e2af1fb341df0ce5f66dfe3204ec3a9831532a8e4c",
+	)
+	require.Equal(t, expectedHash, callback.(*mockSyncDone).GetResult())
 }
 
 func Test_suspending_Future(t *testing.T) {
@@ -717,13 +719,11 @@ func Test_suspending_Future(t *testing.T) {
 	require.NoError(t, slot.inputQueue.PushSignal(ActivatePulseSignal, callback))
 
 	worker.preparePulseSync = callback
+	require.Equal(t, 0, callback.(*mockSyncDone).doneCount)
 	slot.slotState = Suspending
 	worker.suspending()
+	require.Equal(t, 1, callback.(*mockSyncDone).doneCount)
 	areSlotStatesEqual(&oldSlot, slot, t, true)
-	expectedHash, _ := hex.DecodeString(
-		"0c60ae04fbb17fe36f4e84631a5b8f3cd6d0cd46e80056bdfec97fd305f764daadef8ae1adc89b203043d7e2af1fb341df0ce5f66dfe3204ec3a9831532a8e4c",
-	)
-	require.Equal(t, expectedHash, callback.(*mockSyncDone).GetResult())
 }
 
 func Test_suspending_ReadInputQueue(t *testing.T) {
@@ -734,11 +734,13 @@ func Test_suspending_ReadInputQueue(t *testing.T) {
 	require.NoError(t, slot.inputQueue.PushSignal(ActivatePulseSignal, callback))
 
 	worker.preparePulseSync = callback
-	require.Equal(t, 0, callback.(*mockSyncDone).doneCount)
 	slot.slotState = Suspending
 	worker.suspending()
-	require.Equal(t, 1, callback.(*mockSyncDone).doneCount)
 	require.Equal(t, Past, slot.pulseState)
+	expectedHash, _ := hex.DecodeString(
+		"0c60ae04fbb17fe36f4e84631a5b8f3cd6d0cd46e80056bdfec97fd305f764daadef8ae1adc89b203043d7e2af1fb341df0ce5f66dfe3204ec3a9831532a8e4c",
+	)
+	require.Equal(t, expectedHash, callback.(*mockSyncDone).GetResult())
 }
 
 // ---- working
