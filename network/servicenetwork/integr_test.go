@@ -147,7 +147,7 @@ func (s *testSuite) TestManyNodesConnect() {
 	}
 
 	wg.Wait()
-	s.T().Logf("[ TestManyNodesConnect ] All nodes waited", i)
+	s.T().Logf("[ TestManyNodesConnect ] All nodes waited")
 
 	defer func() {
 		for _, node := range nodes {
@@ -157,7 +157,7 @@ func (s *testSuite) TestManyNodesConnect() {
 
 	s.waitForConsensus(5)
 
-	s.T().Logf("[ TestManyNodesConnect ] Concensus waited", i)
+	s.T().Logf("[ TestManyNodesConnect ] Concensus waited")
 
 	joined := claimhandler.ApprovedJoinersCount(joinersCount, s.getNodesCount())
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
