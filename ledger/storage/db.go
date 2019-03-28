@@ -39,7 +39,6 @@ const (
 	sysLatestPulse            byte = 2
 	sysHeavyClientState       byte = 3
 	sysLastSyncedPulseOnHeavy byte = 4
-	sysJetList                byte = 5
 )
 
 // DBContext provides base db methods
@@ -90,8 +89,7 @@ type DB struct {
 	// so txretiries is our knob to tune up retry logic.
 	txretiries int
 
-	idlocker             *IDLocker
-	jetHeavyClientLocker *IDLocker
+	jetHeavyClientLocker IDLocker
 
 	closeLock sync.RWMutex
 	isClosed  bool
@@ -127,7 +125,6 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (DBContext, error) {
 	db := &DB{
 		db:                   bdb,
 		txretiries:           conf.Storage.TxRetriesOnConflict,
-		idlocker:             NewIDLocker(),
 		jetHeavyClientLocker: NewIDLocker(),
 	}
 	return db, nil

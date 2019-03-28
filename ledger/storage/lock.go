@@ -24,52 +24,60 @@ import (
 )
 
 type mucount struct {
-	*sync.Mutex
+	*sync.RWMutex
 	count int32
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage.IDLocker -o ./ -s _mock.go
+
+// IDLocker provides Lock/Unlock methods per record ID.
+type IDLocker interface {
+	Lock(id *insolar.ID)
+	Unlock(id *insolar.ID)
 }
 
 // IDLocker provides Lock/Unlock methods per record ID.
 //
 // TODO: for further optimization we could use sync.Pool for mutexes.
-type IDLocker struct {
-	m    map[insolar.ID]*mucount
-	rwmu sync.Mutex
+type idLocker struct {
+	mu   sync.Mutex
+	muxs map[insolar.ID]*mucount
 }
 
 // NewIDLocker creates new initialized IDLocker.
-func NewIDLocker() *IDLocker {
-	return &IDLocker{
-		m: make(map[insolar.ID]*mucount),
+func NewIDLocker() IDLocker {
+	return &idLocker{
+		muxs: make(map[insolar.ID]*mucount),
 	}
 }
 
 // Lock locks mutex belonged to record ID.
 // If mutex does not exist, it will be created in concurrent safe fashion.
-func (l *IDLocker) Lock(id *insolar.ID) {
-	l.rwmu.Lock()
-	mc, ok := l.m[*id]
+func (l *idLocker) Lock(id *insolar.ID) {
+	l.mu.Lock()
+	mc, ok := l.muxs[*id]
 	if !ok {
-		mc = &mucount{Mutex: &sync.Mutex{}}
-		l.m[*id] = mc
+		mc = &mucount{RWMutex: &sync.RWMutex{}}
+		l.muxs[*id] = mc
 	}
 	mc.count++
-	l.rwmu.Unlock()
+	l.mu.Unlock()
 
 	mc.Lock()
 }
 
 // Unlock unlocks mutex belonged to record ID.
-func (l *IDLocker) Unlock(id *insolar.ID) {
-	l.rwmu.Lock()
-	defer l.rwmu.Unlock()
+func (l *idLocker) Unlock(id *insolar.ID) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
 
-	mc, ok := l.m[*id]
+	mc, ok := l.muxs[*id]
 	if !ok {
 		panic(fmt.Sprintf("try to unlock not initialized mutex for ID %+v", id))
 	}
 	mc.count--
 	mc.Unlock()
 	if mc.count == 0 {
-		delete(l.m, *id)
+		delete(l.muxs, *id)
 	}
 }

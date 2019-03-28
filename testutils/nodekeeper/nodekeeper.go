@@ -19,6 +19,7 @@ package nodekeeper
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
 )
 
@@ -34,7 +35,7 @@ func GetTestNodekeeper(cs insolar.CryptographyService) network.NodeKeeper {
 	}
 
 	keeper := nodenetwork.NewNodeKeeper(
-		nodenetwork.NewNode(
+		node.NewNode(
 			*ref,
 			insolar.StaticRoleVirtual,
 			pk,
@@ -45,7 +46,7 @@ func GetTestNodekeeper(cs insolar.CryptographyService) network.NodeKeeper {
 
 	// dirty hack - we need 3 nodes as validators, pass one node 3 times
 	getValidator := func() insolar.NetworkNode {
-		return nodenetwork.NewNode(
+		return node.NewNode(
 			*ref,
 			insolar.StaticRoleVirtual,
 			pk,

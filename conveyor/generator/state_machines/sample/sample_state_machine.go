@@ -17,8 +17,7 @@
 package sample
 
 import (
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
+	"github.com/insolar/insolar/conveyor/fsm"
 )
 
 // custom types
@@ -66,9 +65,9 @@ type TestStateMachine interface {
 	errorPastFirst(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
 
 	// Adapter Response Error
-	errorResponsePresentFirst(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState)
-	errorResponseFutureFirst(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState)
-	errorResponsePastFirst(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState)
+	errorResponsePresentFirst(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState)
+	errorResponseFutureFirst(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState)
+	errorResponsePastFirst(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState)
 
 	// State Declaration
 	stateSecond() fsm.StateID
@@ -97,9 +96,9 @@ type TestStateMachine interface {
 	errorPastSecond(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
 
 	// Adapter Response Error
-	errorResponsePresentSecond(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState)
-	errorResponseFutureSecond(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState)
-	errorResponsePastSecond(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState)
+	errorResponsePresentSecond(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState)
+	errorResponseFutureSecond(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState)
+	errorResponsePastSecond(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState)
 }
 
 type CleanTestStateMachine struct {
@@ -174,15 +173,15 @@ func (sm *CleanTestStateMachine) errorPastFirst(input interface{}, payload inter
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorResponsePresentFirst(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState) {
+func (sm *CleanTestStateMachine) errorResponsePresentFirst(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorResponseFutureFirst(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState) {
+func (sm *CleanTestStateMachine) errorResponseFutureFirst(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorResponsePastFirst(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState) {
+func (sm *CleanTestStateMachine) errorResponsePastFirst(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState) {
 	panic("implement me")
 }
 
@@ -230,14 +229,14 @@ func (sm *CleanTestStateMachine) errorPastSecond(input interface{}, payload inte
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorResponsePresentSecond(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState) {
+func (sm *CleanTestStateMachine) errorResponsePresentSecond(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorResponseFutureSecond(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState) {
+func (sm *CleanTestStateMachine) errorResponseFutureSecond(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) errorResponsePastSecond(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState) {
+func (sm *CleanTestStateMachine) errorResponsePastSecond(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState) {
 	panic("implement me")
 }

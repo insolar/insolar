@@ -163,7 +163,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 		return nil, nil
 	}
 
-	nodeMock := network.NewNodeMock(s.T())
+	nodeMock := network.NewNetworkNodeMock(s.T())
 	nodeMock.RoleMock.Return(insolar.StaticRoleLightMaterial)
 	nodeMock.IDMock.Return(insolar.Reference{})
 
@@ -214,7 +214,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	require.NoError(s.T(), err)
 	// // TODO: @andreyromancev. 12.01.19. put 1, when dynamic split is working.
 	assert.Equal(s.T(), uint64(2), mbMock.SendMinimockCounter()) // 1 validator drop (no split)
-	savedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, insolar.ID(jetID), firstID, false)
+	savedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, insolar.ID(jetID), firstID)
 	require.NoError(s.T(), err)
 
 	// Assert

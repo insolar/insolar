@@ -26,20 +26,17 @@ import (
 	"runtime"
 	"strings"
 	"text/template"
-
-	"github.com/insolar/insolar/conveyor/interfaces/constant"
 )
 
 const (
 	insolarRep           = "github.com/insolar/insolar"
-	stateMachineTemplate = "conveyor/generator/generator/templates/new_state_machine.go.tpl"
-	matrixTemplate       = "conveyor/generator/generator/templates/new_matrix.go.tpl"
+	stateMachineTemplate = "conveyor/generator/generator/templates/state_machine.go.tpl"
+	matrixTemplate       = "conveyor/generator/generator/templates/matrix.go.tpl"
 	generatedMatrix		 = "conveyor/generator/matrix/matrix.go"
 )
 
 type Generator struct {
 	stateMachines       []*StateMachine
-	// imports             map[string]interface{}
 	fullPathToInsolar   string
 }
 
@@ -64,22 +61,21 @@ func init() {
 	}
 	idx := strings.LastIndex(string(me), insolarRep)
 	gen = &Generator{
-		//imports:             make(map[string]interface{}),
 		fullPathToInsolar:   string(me)[0 : idx+len(insolarRep)],
 	}
 }
 
 func CheckAllMachines() {
 	for _, machine := range gen.stateMachines {
-		if machine.States[0].handlers[constant.Present][Transition] == nil {
+		if machine.States[0].handlers[Present][Transition] == nil {
 			log.Fatal("Present Init handler should be defined")
 		}
-		if machine.States[0].handlers[constant.Future][Transition] == nil {
+		if machine.States[0].handlers[Future][Transition] == nil {
 			log.Fatal("Future Init handler should be defined")
 		}
 
 		for i, s := range machine.States {
-			for _, ps := range []constant.PulseState{constant.Future, constant.Present, constant.Past} {
+			for _, ps := range []PulseState{Future, Present, Past} {
 				for _, ht := range []handlerType{Transition, Migration, AdapterResponse} {
 					if s.handlers[ps][ht] == nil {
 						continue

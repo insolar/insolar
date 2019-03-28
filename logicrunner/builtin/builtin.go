@@ -22,6 +22,7 @@ import (
 	"reflect"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
@@ -36,13 +37,13 @@ type Contract interface {
 
 // BuiltIn is a contract runner engine
 type BuiltIn struct {
-	AM       insolar.ArtifactManager
+	AM       artifacts.Client
 	EB       insolar.MessageBus
 	Registry map[string]Contract
 }
 
 // NewBuiltIn is an constructor
-func NewBuiltIn(eb insolar.MessageBus, am insolar.ArtifactManager) *BuiltIn {
+func NewBuiltIn(eb insolar.MessageBus, am artifacts.Client) *BuiltIn {
 	bi := BuiltIn{
 		AM:       am,
 		EB:       eb,

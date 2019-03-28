@@ -19,12 +19,13 @@ package conveyor
 import (
 	"fmt"
 
+	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
-	"github.com/insolar/insolar/conveyor/interfaces/constant"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
+
 	"github.com/pkg/errors"
 )
 
@@ -51,12 +52,12 @@ const slotElementDelta = slotSize // nolint: unused
 // HandlersConfiguration contains configuration of handlers for specific pulse state
 // TODO: logic will be provided after pulse change mechanism
 type HandlersConfiguration struct {
-	pulseStateMachines statemachine.SetAccessor
-	initStateMachine   statemachine.StateMachine
+	pulseStateMachines matrix.SetAccessor
+	initStateMachine   matrix.StateMachine
 }
 
 // TODO: logic will be provided after pulse change mechanism
-func (h *HandlersConfiguration) getMachineConfiguration(smType int) statemachine.StateMachine { // nolint: unused
+func (h *HandlersConfiguration) getMachineConfiguration(smType int) matrix.StateMachine { // nolint: unused
 	return nil
 }
 
@@ -132,7 +133,7 @@ type Slot struct {
 	handlersConfiguration HandlersConfiguration // nolint
 	inputQueue            queue.IQueue
 	responseQueue         queue.IQueue
-	pulseState            constant.PulseState
+	pulseState            PulseState
 	slotState             SlotState
 	stateMachine          slotElement
 	pulse                 insolar.Pulse
@@ -168,7 +169,8 @@ func initElementsBuf() ([]slotElement, *ElementList) {
 	elements := make([]slotElement, slotSize)
 	emptyList := &ElementList{}
 	for i := 0; i < slotSize; i++ {
-		elements[i] = *newSlotElement(EmptyElement)
+		// we don't have *slot here yet. Set it later
+		elements[i] = *newSlotElement(EmptyElement, nil)
 		elements[i].id = uint32(i)
 		emptyList.pushElement(&elements[i])
 	}
@@ -176,7 +178,7 @@ func initElementsBuf() ([]slotElement, *ElementList) {
 }
 
 // NewWorkingSlot creates new instance of Slot
-func NewWorkingSlot(pulseState constant.PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) TaskPusher {
+func NewWorkingSlot(pulseState PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) TaskPusher {
 
 	slot := newSlot(pulseState, pulseNumber, removeSlotCallback)
 	slot.runWorker()
@@ -184,9 +186,9 @@ func NewWorkingSlot(pulseState constant.PulseState, pulseNumber insolar.PulseNum
 	return slot
 }
 
-func newSlot(pulseState constant.PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) *Slot {
+func newSlot(pulseState PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) *Slot {
 	slotState := Initializing
-	if pulseState == constant.Antique {
+	if pulseState == Antique {
 		slotState = Working
 	}
 
@@ -198,7 +200,7 @@ func newSlot(pulseState constant.PulseState, pulseNumber insolar.PulseNumber, re
 		NotActiveElement: {},
 	}
 
-	return &Slot{
+	slot := &Slot{
 		pulseState:         pulseState,
 		inputQueue:         queue.NewMutexQueue(),
 		responseQueue:      queue.NewMutexQueue(),
@@ -212,11 +214,37 @@ func newSlot(pulseState constant.PulseState, pulseNumber insolar.PulseNumber, re
 			initStateMachine: HandlerStorage.GetInitialStateMachine(),
 		},
 	}
+
+	for i := range slot.elements {
+		slot.elements[i].slot = slot
+	}
+
+	return slot
 }
 
 func (s *Slot) runWorker() {
 	worker := newWorker(s)
 	go worker.run()
+}
+
+func (s *Slot) PushResponse(adapterID adapterid.ID, elementID uint32, handlerID uint32, respPayload interface{}) {
+	response := adapter.NewAdapterResponse(adapterID, elementID, handlerID, respPayload)
+	err := s.responseQueue.SinkPush(response)
+	if err != nil {
+		panic("[ PushResponse ] Can't SinkPush: " + err.Error())
+	}
+}
+
+func (s *Slot) PushNestedEvent(adapterID adapterid.ID, parentElementID uint32, handlerID uint32, eventPayload interface{}) {
+	event := adapter.NewAdapterNestedEvent(adapterID, parentElementID, handlerID, eventPayload)
+	err := s.responseQueue.SinkPush(event)
+	if err != nil {
+		panic("[ PushNestedEvent ] Can't SinkPush: " + err.Error())
+	}
+}
+
+func (s *Slot) GetSlotDetails() adapter.SlotDetails {
+	return s
 }
 
 // GetPulseNumber implements iface SlotDetails
@@ -240,7 +268,7 @@ func (s *Slot) GetNodeData() interface{} { // nolint: unused
 }
 
 // createElement creates new active element from empty element
-func (s *Slot) createElement(stateMachine statemachine.StateMachine, state fsm.StateID, event queue.OutputElement) (*slotElement, error) { // nolint: unused
+func (s *Slot) createElement(stateMachine matrix.StateMachine, state fsm.StateID, event queue.OutputElement) (*slotElement, error) { // nolint: unused
 	element := s.popElement(EmptyElement)
 	element.stateMachine = stateMachine
 	element.state = state
@@ -323,7 +351,7 @@ func (s *Slot) pushElement(element *slotElement) error { // nolint: unused
 	}
 	if status == EmptyElement {
 		oldID := element.id
-		*element = *newSlotElement(EmptyElement)
+		*element = *newSlotElement(EmptyElement, s)
 		element.id = oldID + slotElementDelta
 	}
 	list.pushElement(element)

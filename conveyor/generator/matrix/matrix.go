@@ -17,26 +17,25 @@
 package matrix
 
 import (
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/get_object"
 	
 )
 
 type StateMachineSet struct{
-	stateMachines []statemachine.StateMachine
+	stateMachines []StateMachine
 }
 
 func newStateMachineSet() *StateMachineSet {
 	return &StateMachineSet{
-		stateMachines: make([]statemachine.StateMachine, 1),
+		stateMachines: make([]StateMachine, 1),
 	}
 }
 
-func (s *StateMachineSet) addMachine(machine statemachine.StateMachine) {
+func (s *StateMachineSet) addMachine(machine StateMachine) {
 	s.stateMachines = append(s.stateMachines, machine)
 }
 
-func ( s *StateMachineSet ) GetStateMachineByID(id int) statemachine.StateMachine{
+func ( s *StateMachineSet ) GetStateMachineByID(id int) StateMachine{
 	return s.stateMachines[id]
 }
 
@@ -67,18 +66,18 @@ func NewMatrix() *Matrix {
 	return &m
 }
 
-func (m *Matrix) GetInitialStateMachine() statemachine.StateMachine {
+func (m *Matrix) GetInitialStateMachine() StateMachine {
 	return m.present.stateMachines[1]
 }
 
-func (m *Matrix) GetFutureConfig() statemachine.SetAccessor{
+func (m *Matrix) GetFutureConfig() SetAccessor{
 	return m.future
 }
 
-func (m *Matrix) GetPresentConfig() statemachine.SetAccessor{
+func (m *Matrix) GetPresentConfig() SetAccessor{
 	return m.present
 }
 
-func (m *Matrix) GetPastConfig() statemachine.SetAccessor{
+func (m *Matrix) GetPastConfig() SetAccessor{
 	return m.past
 }

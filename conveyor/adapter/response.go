@@ -19,16 +19,12 @@ package adapter
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
-
-// NewResponseSendAdapter creates new instance of adapter for sending response
-func NewResponseSendAdapter() PulseConveyorAdapterTaskSink {
-	return NewAdapterWithQueue(NewSendResponseProcessor())
-}
 
 // SendResponseTask is task for adapter for sending response
 type SendResponseTask struct {
@@ -67,7 +63,7 @@ func (rs *SendResponseProcessor) Process(task AdapterTask, nestedEventHelper Nes
 type SendResponseHelper struct{}
 
 // SendResponse makes correct message and send it to adapter
-func (r *SendResponseHelper) SendResponse(element slot.SlotElementHelper, result insolar.Reply, respHandlerID uint32) error {
+func (r *SendResponseHelper) SendResponse(element fsm.SlotElementHelper, result insolar.Reply, respHandlerID uint32) error {
 
 	pendingMsg, ok := element.GetInputEvent().(insolar.ConveyorPendingMessage)
 	if !ok {
@@ -78,6 +74,6 @@ func (r *SendResponseHelper) SendResponse(element slot.SlotElementHelper, result
 		Future: pendingMsg.Future,
 		Result: result,
 	}
-	err := element.SendTask(uint32(SendResponseAdapterID), response, respHandlerID)
+	err := element.SendTask(adapterid.SendResponse, response, respHandlerID)
 	return errors.Wrap(err, "[ SendResponseHelper.SendResponse ] Can't SendTask")
 }

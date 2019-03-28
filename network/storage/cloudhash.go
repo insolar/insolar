@@ -52,6 +52,7 @@ package storage
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/insolar"
 )
@@ -75,10 +76,19 @@ func NewCloudHashStorage() *CloudHashStorage {
 }
 
 type CloudHashStorage struct {
+	DB   DB `inject:""`
+	lock sync.RWMutex
 }
 
-func (c *CloudHashStorage) ForPulseNumber(context.Context, insolar.PulseNumber) ([]byte, error) {
-	panic("implement me")
+func (c *CloudHashStorage) ForPulseNumber(ctx context.Context, pulse insolar.PulseNumber) ([]byte, error) {
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	result, err := c.DB.Get(pulseKey(pulse))
+	if err != nil {
+		return nil, err
+	}
+	return result, err
 }
 
 func (c *CloudHashStorage) Latest(context.Context) ([]byte, error) {
@@ -86,5 +96,8 @@ func (c *CloudHashStorage) Latest(context.Context) ([]byte, error) {
 }
 
 func (c *CloudHashStorage) Append(ctx context.Context, pulse insolar.PulseNumber, cloudHash []byte) error {
-	panic("implement me")
+	c.lock.RLock()
+	defer c.lock.RUnlock()
+
+	return c.DB.Set(pulseKey(pulse), cloudHash)
 }

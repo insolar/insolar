@@ -51,6 +51,7 @@
 package nodenetwork
 
 import (
+	"github.com/insolar/insolar/network/node"
 	"sort"
 
 	consensus "github.com/insolar/insolar/consensus/packets"
@@ -61,9 +62,9 @@ import (
 
 func copyActiveNodes(nodes []insolar.NetworkNode) map[insolar.Reference]insolar.NetworkNode {
 	result := make(map[insolar.Reference]insolar.NetworkNode, len(nodes))
-	for _, node := range nodes {
-		node.(MutableNode).ChangeState()
-		result[node.ID()] = node
+	for _, n := range nodes {
+		n.(node.MutableNode).ChangeState()
+		result[n.ID()] = n
 	}
 	return result
 }
@@ -117,8 +118,8 @@ func newUnsyncList(origin insolar.NetworkNode, activeNodesSorted []insolar.Netwo
 		refToIndex:  make(map[insolar.Reference]int, len(activeNodesSorted)),
 		activeNodes: make(map[insolar.Reference]insolar.NetworkNode, len(activeNodesSorted)),
 	}
-	for i, node := range activeNodesSorted {
-		result.addNode(node, i)
+	for i, n := range activeNodesSorted {
+		result.addNode(n, i)
 	}
 	result.proofs = make(map[insolar.Reference]*consensus.NodePulseProof)
 	result.ghs = make(map[insolar.Reference]consensus.GlobuleHashSignature)
@@ -143,8 +144,8 @@ func (ul *unsyncList) GetActiveNodes() []insolar.NetworkNode {
 func sortedNodeList(nodes map[insolar.Reference]insolar.NetworkNode) []insolar.NetworkNode {
 	result := make([]insolar.NetworkNode, len(nodes))
 	i := 0
-	for _, node := range nodes {
-		result[i] = node
+	for _, n := range nodes {
+		result[i] = n
 		i++
 	}
 	sort.Slice(result, func(i, j int) bool {
@@ -184,12 +185,12 @@ func ApplyClaims(ul network.UnsyncList, claims []consensus.ReferendumClaim) erro
 		}
 
 		// TODO: fix version
-		node, err := ClaimToNode("", &c.NodeJoinClaim)
+		n, err := node.ClaimToNode("", &c.NodeJoinClaim)
 		if err != nil {
 			return errors.Wrap(err, "[ AddClaims ] failed to convert Claim -> NetworkNode")
 		}
 		// TODO: check these two
-		ul.AddNode(node, c.NodeAnnouncerIndex)
+		ul.AddNode(n, c.NodeAnnouncerIndex)
 		ul.AddNode(ul.GetOrigin(), c.NodeJoinerIndex)
 	}
 	return nil

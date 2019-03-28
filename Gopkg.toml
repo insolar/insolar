@@ -24,6 +24,11 @@
 #   go-tests = true
 #   unused-packages = true
 
+required = [
+    "github.com/gogo/protobuf/protoc-gen-gogoslick",
+    "github.com/gogo/protobuf/proto",
+]
+
 [[constraint]]
   version = "1.1.0"
   name = "github.com/spf13/viper"
@@ -75,3 +80,7 @@
 [[constraint]]
   name = "github.com/rs/zerolog"
   version = "1.12.0"
+
+[[constraint]]
+  name = "github.com/gogo/protobuf"
+  version = "1.2.1"

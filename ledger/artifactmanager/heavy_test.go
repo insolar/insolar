@@ -22,8 +22,8 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/db"

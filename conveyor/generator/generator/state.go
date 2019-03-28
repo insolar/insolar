@@ -16,49 +16,53 @@
 
 package generator
 
-import (
-	"github.com/insolar/insolar/conveyor/interfaces/constant"
+type PulseState uint
+
+const (
+	Future = PulseState(iota)
+	Present
+	Past
 )
 
 type state struct {
-	handlers				   map[constant.PulseState]map[handlerType]*handler
+	handlers [3]map[handlerType]*handler
 }
 
 func (s *state) GetTransition() *handler {
-	return s.handlers[constant.Present][Transition]
+	return s.handlers[Present][Transition]
 }
 
 func (s *state) GetTransitionFuture() *handler {
-	return s.handlers[constant.Future][Transition]
+	return s.handlers[Future][Transition]
 }
 
 func (s *state) GetTransitionPast() *handler {
-	if s.handlers[constant.Past][Transition] != nil {
-		return s.handlers[constant.Past][Transition]
+	if s.handlers[Past][Transition] != nil {
+		return s.handlers[Past][Transition]
 	}
-	return s.handlers[constant.Present][Transition]
+	return s.handlers[Present][Transition]
 }
 
 func (s *state) GetMigration() *handler {
-	return s.handlers[constant.Present][Migration]
+	return s.handlers[Present][Migration]
 }
 
 func (s *state) GetMigrationFuturePresent() *handler {
-	return s.handlers[constant.Future][Migration]
+	return s.handlers[Future][Migration]
 }
 
 
 func (s *state) GetAdapterResponse() *handler {
-	return s.handlers[constant.Present][AdapterResponse]
+	return s.handlers[Present][AdapterResponse]
 }
 
 func (s *state) GetAdapterResponseFuture() *handler {
-	return s.handlers[constant.Future][AdapterResponse]
+	return s.handlers[Future][AdapterResponse]
 }
 
 func (s *state) GetAdapterResponsePast() *handler {
-	if s.handlers[constant.Past][AdapterResponse] != nil {
-		return s.handlers[constant.Past][AdapterResponse]
+	if s.handlers[Past][AdapterResponse] != nil {
+		return s.handlers[Past][AdapterResponse]
 	}
-	return s.handlers[constant.Present][AdapterResponse]
+	return s.handlers[Present][AdapterResponse]
 }

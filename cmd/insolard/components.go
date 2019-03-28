@@ -24,9 +24,8 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
-
 	"github.com/insolar/insolar/conveyor"
-
+	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/genesis"
 	"github.com/insolar/insolar/genesisdataprovider"
@@ -35,6 +34,7 @@ import (
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/logicrunner"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -177,13 +177,12 @@ func initComponents(
 	)
 
 	components := ledger.GetLedgerComponents(cfg.Ledger, certManager.GetCertificate())
-	ld := ledger.Ledger{} // TODO: remove me with cmOld
 
 	components = append(components, []interface{}{
 		messageBus,
 		contractRequester,
-		&ld,
 		logicRunner,
+		artifacts.NewClient(),
 		delegationTokenFactory,
 		parcelFactory,
 	}...)
@@ -201,6 +200,7 @@ func initComponents(
 		keyProcessor,
 	}...)
 
+	components = append(components, adapterstorage.GetAllProcessors()...)
 	cm.Inject(components...)
 
 	return &cm, nil

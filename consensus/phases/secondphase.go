@@ -52,6 +52,7 @@ package phases
 
 import (
 	"context"
+	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
@@ -60,7 +61,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -250,7 +250,7 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *insolar.Pulse, 
 	bitsetChanges := make([]packets.BitSetCell, 0)
 	for index, result := range results {
 		claim := result.NodeClaimUnsigned
-		node, err := nodenetwork.ClaimToNode("", &claim)
+		node, err := node.ClaimToNode("", &claim)
 		if err != nil {
 			return nil, errors.Wrapf(err, "[ NET Consensus phase-2.1 ] Failed to convert claim to node, "+
 				"ref: %s", claim.NodeRef)

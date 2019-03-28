@@ -17,12 +17,8 @@
 package main
 
 import (
-	// "io/ioutil"
-	// "strings"
-
 	"github.com/insolar/insolar/conveyor/generator/generator"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/get_object"
-	// "github.com/insolar/insolar/log"
 )
 
 func main() {

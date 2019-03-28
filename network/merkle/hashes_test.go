@@ -169,17 +169,17 @@ func TestCalculatorHashes(t *testing.T) {
 		return "key", nil
 	}
 
-	am := testutils.NewArtifactManagerMock(t)
-	am.StateFunc = func() (r []byte, r1 error) {
-		return []byte("state"), nil
+	am := staterMock{
+		stateFunc: func() (r []byte, r1 error) {
+			return []byte("state"), nil
+		},
 	}
-
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	nk := nodekeeper.GetTestNodekeeper(service)
 	th := terminationhandler.NewTestHandler()
 
 	cm := component.Manager{}
-	cm.Inject(th, nk, am, calculator, service, scheme)
+	cm.Inject(th, nk, &am, calculator, service, scheme)
 
 	require.NotNil(t, calculator.ArtifactManager)
 	require.NotNil(t, calculator.NodeNetwork)

@@ -20,8 +20,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/insolar/insolar/conveyor/interfaces/constant"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/log"
 )
 
@@ -75,10 +74,10 @@ func (m *StateMachine) createStateUnlessExists(current fsm.ElementState, returne
 	}
 }
 
-func (m *StateMachine) AddHandler(s fsm.ElementState, ht handlerType, ps constant.PulseState, h *handler) {
-	if m.States[s].handlers == nil {
-		m.States[s].handlers = make(map[constant.PulseState]map[handlerType]*handler)
-	}
+func (m *StateMachine) AddHandler(s fsm.ElementState, ht handlerType, ps PulseState, h *handler) {
+	// if m.States[s].handlers == nil {
+	// 	m.States[s].handlers = make([3]map[handlerType]*handler)
+	// }
 	if m.States[s].handlers[ps] == nil {
 		m.States[s].handlers[ps] = make(map[handlerType]*handler)
 	}
@@ -90,66 +89,66 @@ func (m *StateMachine) AddHandler(s fsm.ElementState, ht handlerType, ps constan
 
 func (m *StateMachine) Init(f interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(0, states)
-	m.AddHandler(0, Transition, constant.Present, NewInitHandler(m, f, states))
+	m.AddHandler(0, Transition, Present, NewInitHandler(m, f, states))
 	return m
 }
 
 func (m *StateMachine) InitFuture(f interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(0, states)
-	m.AddHandler(0, Transition, constant.Future, NewInitHandler(m, f, states))
+	m.AddHandler(0, Transition, Future, NewInitHandler(m, f, states))
 	return m
 }
 
 func (m *StateMachine) InitPast(f interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(0, states)
-	m.AddHandler(0, Transition, constant.Past, NewInitHandler(m, f, states))
+	m.AddHandler(0, Transition, Past, NewInitHandler(m, f, states))
 	return m
 }
 
 func (m *StateMachine) Transition(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	m.AddHandler(state, Transition, constant.Present, NewHandler(m, f, states))
+	m.AddHandler(state, Transition, Present, NewHandler(m, f, states))
 	return m
 }
 
 func (m *StateMachine) TransitionFuture(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	m.AddHandler(state, Transition, constant.Future, NewHandler(m, f, states))
+	m.AddHandler(state, Transition, Future, NewHandler(m, f, states))
 	return m
 }
 
 func (m *StateMachine) TransitionPast(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	m.AddHandler(state, Transition, constant.Past, NewHandler(m, f, states))
+	m.AddHandler(state, Transition, Past, NewHandler(m, f, states))
 	return m
 }
 
 func (m *StateMachine) Migration(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	m.AddHandler(state, Migration, constant.Past, NewHandler(m, f, states))
+	m.AddHandler(state, Migration, Past, NewHandler(m, f, states))
 	return m
 }
 
 func (m *StateMachine) MigrationFuturePresent(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	m.AddHandler(state, Migration, constant.Present, NewHandler(m, f, states))
+	m.AddHandler(state, Migration, Present, NewHandler(m, f, states))
 	return m
 }
 
 func (m *StateMachine) AdapterResponse(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	m.AddHandler(state, AdapterResponse, constant.Present, NewHandler(m, f, states))
+	m.AddHandler(state, AdapterResponse, Present, NewHandler(m, f, states))
 	return m
 }
 
 func (m *StateMachine) AdapterResponseFuture(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	m.AddHandler(state, AdapterResponse, constant.Future, NewHandler(m, f, states))
+	m.AddHandler(state, AdapterResponse, Future, NewHandler(m, f, states))
 	return m
 }
 
 func (m *StateMachine) AdapterResponsePast(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	m.AddHandler(state, AdapterResponse, constant.Past, NewHandler(m, f, states))
+	m.AddHandler(state, AdapterResponse, Past, NewHandler(m, f, states))
 	return m
 }

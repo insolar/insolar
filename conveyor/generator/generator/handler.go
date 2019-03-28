@@ -22,7 +22,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
+	"github.com/insolar/insolar/conveyor/fsm"
 )
 
 type handlerType uint
@@ -63,8 +63,8 @@ func NewHandler(machine *StateMachine, f interface{}, states []fsm.ElementState)
 	if tp.NumIn() < 1 || tp.In(0).String() != "context.Context" {
 		log.Fatal("["+handler.funcName+"] first parameter should be context.Context")
 	}
-	if tp.NumIn() < 2 || tp.In(1).String() != "slot.SlotElementHelper" {
-		log.Fatal("["+handler.funcName+"] second parameter should be slot.SlotElementHelper")
+	if tp.NumIn() < 2 || tp.In(1).String() != "fsm.SlotElementHelper" {
+		log.Fatal("["+handler.funcName+"] second parameter should be fsm.SlotElementHelper")
 	}
 	// check common return types
 	if tp.NumOut() < 1 || tp.Out(0).String() != "fsm.ElementState" {

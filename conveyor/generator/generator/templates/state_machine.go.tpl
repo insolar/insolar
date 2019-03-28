@@ -20,19 +20,16 @@ import (
 	"context"
 	"errors"
 
-	"github.com/insolar/insolar/conveyor/generator/common"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/conveyor/statemachine"
+	"github.com/insolar/insolar/conveyor/fsm"
 )
 
-func Raw{{.Name}}PresentFactory() statemachine.StateMachine {
-	return &common.StateMachine{
+func Raw{{.Name}}PresentFactory() *statemachine.StateMachine {
+	return &statemachine.StateMachine{
 		ID: {{.ID}},
-		States: []common.State{
+		States: []statemachine.State{
 			{{range $i, $state := .States}}{
-				{{if (handlerExists $state.GetMigration)}}Migration: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				{{if (handlerExists $state.GetMigration)}}Migration: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
             		aInput, ok := element.GetInputEvent().({{unPackage $.InputEventType $.Package}})
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		aPayload, ok := element.GetPayload().({{unPackage $.PayloadType $.Package}})
@@ -41,7 +38,7 @@ func Raw{{.Name}}PresentFactory() statemachine.StateMachine {
             		state := {{.GetMigration.GetName}}(ctx, element, aInput, aPayload)
             		return aPayload, state, nil
             	},{{end}}
-				{{if (handlerExists $state.GetTransition)}}Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				{{if (handlerExists $state.GetTransition)}}Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().({{unPackage $.InputEventType $.Package}})
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -55,12 +52,12 @@ func Raw{{.Name}}PresentFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					{{end}}
 				},{{end}}
-				{{if (handlerExists $state.GetAdapterResponse)}}AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				{{if (handlerExists $state.GetAdapterResponse)}}AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().({{unPackage $.InputEventType $.Package}})
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().({{unPackage $.PayloadType $.Package}})
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().({{unPackage .GetAdapterResponse.GetResponseAdapterType $.Package}})
+					aResponse, ok := response.({{unPackage .GetAdapterResponse.GetResponseAdapterType $.Package}})
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := {{.GetAdapterResponse.GetName}}(ctx, element, aInput, aPayload, aResponse)
@@ -71,12 +68,12 @@ func Raw{{.Name}}PresentFactory() statemachine.StateMachine {
 	}
 }
 
-func Raw{{.Name}}PastFactory() statemachine.StateMachine {
-	return &common.StateMachine{
+func Raw{{.Name}}PastFactory() *statemachine.StateMachine {
+	return &statemachine.StateMachine{
 		ID: {{.ID}},
-		States: []common.State{
+		States: []statemachine.State{
 			{{range $i, $state := .States}}{
-				{{if (handlerExists $state.GetTransitionPast)}}Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				{{if (handlerExists $state.GetTransitionPast)}}Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().({{unPackage $.InputEventType $.Package}})
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -90,12 +87,12 @@ func Raw{{.Name}}PastFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					{{end}}
 				},{{end}}
-				{{if (handlerExists $state.GetAdapterResponsePast)}}AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				{{if (handlerExists $state.GetAdapterResponsePast)}}AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().({{unPackage $.InputEventType $.Package}})
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().({{unPackage $.PayloadType $.Package}})
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().({{unPackage .GetAdapterResponsePast.GetResponseAdapterType $.Package}})
+					aResponse, ok := response.({{unPackage .GetAdapterResponsePast.GetResponseAdapterType $.Package}})
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := {{.GetAdapterResponsePast.GetName}}(ctx, element, aInput, aPayload, aResponse)
@@ -106,12 +103,12 @@ func Raw{{.Name}}PastFactory() statemachine.StateMachine {
 	}
 }
 
-func Raw{{.Name}}FutureFactory() statemachine.StateMachine {
-	return &common.StateMachine{
+func Raw{{.Name}}FutureFactory() *statemachine.StateMachine {
+	return &statemachine.StateMachine{
 		ID: {{.ID}},
-		States: []common.State{
+		States: []statemachine.State{
 			{{range $i, $state := .States}}{
-				{{if (handlerExists $state.GetMigrationFuturePresent)}}Migration: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				{{if (handlerExists $state.GetMigrationFuturePresent)}}Migration: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
             		aInput, ok := element.GetInputEvent().({{unPackage $.InputEventType $.Package}})
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		aPayload, ok := element.GetPayload().({{unPackage $.PayloadType $.Package}})
@@ -120,7 +117,7 @@ func Raw{{.Name}}FutureFactory() statemachine.StateMachine {
             		state := {{.GetMigrationFuturePresent.GetName}}(ctx, element, aInput, aPayload)
             		return aPayload, state, nil
             	},{{end}}
-				{{if (handlerExists $state.GetTransitionFuture)}}Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				{{if (handlerExists $state.GetTransitionFuture)}}Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().({{unPackage $.InputEventType $.Package}})
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -134,12 +131,12 @@ func Raw{{.Name}}FutureFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					{{end}}
 				},{{end}}
-				{{if (handlerExists $state.GetAdapterResponseFuture)}}AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				{{if (handlerExists $state.GetAdapterResponseFuture)}}AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().({{unPackage $.InputEventType $.Package}})
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().({{unPackage $.PayloadType $.Package}})
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().({{unPackage .GetAdapterResponseFuture.GetResponseAdapterType $.Package}})
+					aResponse, ok := response.({{unPackage .GetAdapterResponseFuture.GetResponseAdapterType $.Package}})
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := {{.GetAdapterResponseFuture.GetName}}(ctx, element, aInput, aPayload, aResponse)

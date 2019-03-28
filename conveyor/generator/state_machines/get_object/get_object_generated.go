@@ -20,20 +20,17 @@ import (
 	"context"
 	"errors"
 
-	"github.com/insolar/insolar/conveyor/generator/common"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/conveyor/statemachine"
+	"github.com/insolar/insolar/conveyor/fsm"
 )
 
-func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
-	return &common.StateMachine{
+func RawGetObjectStateMachinePresentFactory() *statemachine.StateMachine {
+	return &statemachine.StateMachine{
 		ID: 1,
-		States: []common.State{
+		States: []statemachine.State{
 			{
 				
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -43,7 +40,7 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
 				},
 				
 			},{
-				Migration: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Migration: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
             		aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		aPayload, ok := element.GetPayload().(*CustomPayload)
@@ -56,7 +53,7 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
 				
 			},{
 				
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -68,12 +65,12 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := GetJetResponse(ctx, element, aInput, aPayload, aResponse)
@@ -85,7 +82,7 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
 				
 			},{
 				
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -97,12 +94,12 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := FetchJetResponse(ctx, element, aInput, aPayload, aResponse)
@@ -114,7 +111,7 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
 				
 			},{
 				
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -126,12 +123,12 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := WaitHotDataResponse(ctx, element, aInput, aPayload, aResponse)
@@ -143,7 +140,7 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
 				
 			},{
 				
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -155,12 +152,12 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := WaitCheckIndex(ctx, element, aInput, aPayload, aResponse)
@@ -172,7 +169,7 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
 				
 			},{
 				
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -184,12 +181,12 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := WaitFetchIndex(ctx, element, aInput, aPayload, aResponse)
@@ -201,7 +198,7 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
 				
 			},{
 				
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -213,12 +210,12 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := WaitCheckState(ctx, element, aInput, aPayload, aResponse)
@@ -230,7 +227,7 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
 				
 			},{
 				
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -242,12 +239,12 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := WaitCheckJetForState(ctx, element, aInput, aPayload, aResponse)
@@ -259,7 +256,7 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
 				
 			},{
 				
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -271,12 +268,12 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := WaitFetchJetForState(ctx, element, aInput, aPayload, aResponse)
@@ -288,7 +285,7 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
 				
 			},{
 				
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -300,12 +297,12 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := WaitFetchState(ctx, element, aInput, aPayload, aResponse)
@@ -328,12 +325,12 @@ func RawGetObjectStateMachinePresentFactory() statemachine.StateMachine {
 	}
 }
 
-func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
-	return &common.StateMachine{
+func RawGetObjectStateMachinePastFactory() *statemachine.StateMachine {
+	return &statemachine.StateMachine{
 		ID: 1,
-		States: []common.State{
+		States: []statemachine.State{
 			{
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -346,7 +343,7 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
 				
 				
 			},{
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -358,12 +355,12 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := GetJetResponse(ctx, element, aInput, aPayload, aResponse)
@@ -373,7 +370,7 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
 				
 				
 			},{
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -385,12 +382,12 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := FetchJetResponse(ctx, element, aInput, aPayload, aResponse)
@@ -400,7 +397,7 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
 				
 				
 			},{
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -412,12 +409,12 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := WaitHotDataResponse(ctx, element, aInput, aPayload, aResponse)
@@ -427,7 +424,7 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
 				
 				
 			},{
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -439,12 +436,12 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := WaitCheckIndex(ctx, element, aInput, aPayload, aResponse)
@@ -454,7 +451,7 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
 				
 				
 			},{
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -466,12 +463,12 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := WaitFetchIndex(ctx, element, aInput, aPayload, aResponse)
@@ -481,7 +478,7 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
 				
 				
 			},{
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -493,12 +490,12 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := WaitCheckState(ctx, element, aInput, aPayload, aResponse)
@@ -508,7 +505,7 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
 				
 				
 			},{
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -520,12 +517,12 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := WaitCheckJetForState(ctx, element, aInput, aPayload, aResponse)
@@ -535,7 +532,7 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
 				
 				
 			},{
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -547,12 +544,12 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := WaitFetchJetForState(ctx, element, aInput, aPayload, aResponse)
@@ -562,7 +559,7 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
 				
 				
 			},{
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
@@ -574,12 +571,12 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
                     return aPayload, state, nil
 					
 				},
-				AdapterResponse: func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
 					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
 					if !ok { return nil, 0, errors.New("wrong payload type") }
-					aResponse, ok := response.GetRespPayload().(CustomAdapterResponsePayload)
+					aResponse, ok := response.(CustomAdapterResponsePayload)
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := WaitFetchState(ctx, element, aInput, aPayload, aResponse)
@@ -599,13 +596,13 @@ func RawGetObjectStateMachinePastFactory() statemachine.StateMachine {
 	}
 }
 
-func RawGetObjectStateMachineFutureFactory() statemachine.StateMachine {
-	return &common.StateMachine{
+func RawGetObjectStateMachineFutureFactory() *statemachine.StateMachine {
+	return &statemachine.StateMachine{
 		ID: 1,
-		States: []common.State{
+		States: []statemachine.State{
 			{
 				
-				Transition: func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().(CustomEvent)
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
