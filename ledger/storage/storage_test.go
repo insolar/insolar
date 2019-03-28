@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -32,7 +33,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -44,10 +44,12 @@ type storageSuite struct {
 	cleaner func()
 	db      storage.DBContext
 
+	// TODO: @imarkin 28.03.2019 - remove it after all new storages integration (INS-2013, etc)
 	objectStorage storage.ObjectStorage
-	dropModifier  drop.Modifier
-	dropAccessor  drop.Accessor
-	pulseTracker  storage.PulseTracker
+
+	dropModifier drop.Modifier
+	dropAccessor drop.Accessor
+	pulseTracker storage.PulseTracker
 
 	jetID insolar.ID
 }
@@ -105,25 +107,6 @@ func (s *storageSuite) AfterTest(suiteName, testName string) {
 		s.T().Error("ComponentManager stop failed", err)
 	}
 	s.cleaner()
-}
-
-func (s *storageSuite) TestDB_GetRecordNotFound() {
-	rec, err := s.objectStorage.GetRecord(s.ctx, s.jetID, &insolar.ID{})
-	assert.Equal(s.T(), err, insolar.ErrNotFound)
-	assert.Nil(s.T(), rec)
-}
-
-func (s *storageSuite) TestDB_SetRecord() {
-	rec := &object.RequestRecord{}
-	gotRef, err := s.objectStorage.SetRecord(s.ctx, s.jetID, insolar.GenesisPulse.PulseNumber, rec)
-	assert.Nil(s.T(), err)
-
-	gotRec, err := s.objectStorage.GetRecord(s.ctx, s.jetID, gotRef)
-	assert.Nil(s.T(), err)
-	assert.Equal(s.T(), rec, gotRec)
-
-	_, err = s.objectStorage.SetRecord(s.ctx, s.jetID, insolar.GenesisPulse.PulseNumber, rec)
-	assert.Equalf(s.T(), err, storage.ErrOverride, "records override should be forbidden")
 }
 
 func (s *storageSuite) TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex() {
@@ -210,47 +193,4 @@ func (s *storageSuite) TestDB_AddPulse() {
 		SerialNumber: prevPulse.SerialNumber + 1,
 	}
 	assert.Equal(s.T(), expectPulse, *pulse)
-}
-
-func TestDB_Close(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	tmpDB, cleaner := storagetest.TmpDB(ctx, t)
-
-	jetID := testutils.RandomJet()
-
-	os := storage.NewObjectStorage()
-	ds := drop.NewStorageDB()
-
-	cm := &component.Manager{}
-	cm.Inject(
-		platformpolicy.NewPlatformCryptographyScheme(),
-		tmpDB,
-		db.NewMemoryMockDB(),
-		os,
-		ds,
-	)
-	err := cm.Init(ctx)
-	if err != nil {
-		t.Error("ComponentManager init failed", err)
-	}
-	err = cm.Start(ctx)
-	if err != nil {
-		t.Error("ComponentManager start failed", err)
-	}
-
-	err = cm.Stop(ctx)
-	if err != nil {
-		t.Error("ComponentManager stop failed", err)
-	}
-
-	cleaner()
-
-	rec, err := os.GetRecord(ctx, jetID, &insolar.ID{})
-	assert.Nil(t, rec)
-	assert.Equal(t, err, storage.ErrClosed)
-
-	rec = &object.RequestRecord{}
-	gotRef, err := os.SetRecord(ctx, jetID, insolar.GenesisPulse.PulseNumber, rec)
-	assert.Nil(t, gotRef)
-	assert.Equal(t, err, storage.ErrClosed)
 }
