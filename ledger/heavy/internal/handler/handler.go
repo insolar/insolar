@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -30,10 +31,12 @@ import (
 )
 
 type Handler struct {
-	Bus            insolar.MessageBus     `inject:""`
-	JetCoordinator insolar.JetCoordinator `inject:""`
-	HeavySync      insolar.HeavySync      `inject:""`
-	ObjectStorage  storage.ObjectStorage  `inject:""`
+	Bus            insolar.MessageBus                 `inject:""`
+	JetCoordinator insolar.JetCoordinator             `inject:""`
+	HeavySync      insolar.HeavySync                  `inject:""`
+	ObjectStorage  storage.ObjectStorage              `inject:""`
+	BlobAccessor   blob.Accessor                      `inject:""`
+	PCS            insolar.PlatformCryptographyScheme `inject:""`
 
 	jetID insolar.JetID
 }
@@ -60,19 +63,19 @@ func (h *Handler) Init(ctx context.Context) error {
 
 func (h *Handler) handleGetCode(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetCode)
-	jetID := *insolar.NewJetID(0, nil)
 
 	codeRec, err := h.getCode(ctx, msg.Code.Record())
 	if err != nil {
 		return nil, err
 	}
-	code, err := h.ObjectStorage.GetBlob(ctx, insolar.ID(jetID), codeRec.Code)
+
+	code, err := h.BlobAccessor.ForID(ctx, *codeRec.Code)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch code blob")
 	}
 
 	rep := reply.Code{
-		Code:        code,
+		Code:        code.Value,
 		MachineType: codeRec.MachineType,
 	}
 
@@ -132,10 +135,11 @@ func (h *Handler) handleGetObject(
 	}
 
 	if state.GetMemory() != nil {
-		rep.Memory, err = h.ObjectStorage.GetBlob(ctx, insolar.ID(h.jetID), state.GetMemory())
+		b, err := h.BlobAccessor.ForID(ctx, *state.GetMemory())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch blob")
 		}
+		rep.Memory = b.Value
 	}
 
 	return &rep, nil
