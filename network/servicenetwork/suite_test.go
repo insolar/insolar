@@ -62,6 +62,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/certificate"
@@ -460,6 +461,17 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	terminationHandler := &terminationHandler{NodeID: node.id}
 
 	keyProc := platformpolicy.NewKeyProcessor()
+
+	c := testutils.NewConveyorMock(s.T())
+	c.PreparePulseFunc = func(p insolar.Pulse, p1 queue.SyncDone) (r error) {
+		p1.SetResult([]byte{1, 2, 3})
+		return nil
+	}
+	c.ActivatePulseFunc = func() (r error) {
+		return nil
+	}
+
+	node.componentManager.Register(c)
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
 	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService)
 	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc)
