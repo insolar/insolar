@@ -95,7 +95,6 @@ func TestSlotElement_SendTask_NoSuchAdapterID(t *testing.T) {
 	require.PanicsWithValue(t, "[ SendTask ] No such adapter: 142", func() {
 		el.SendTask(142, 22, 44)
 	})
-	adapterstorage.Manager = oldManager
 }
 
 func TestSlotElement_SendTask(t *testing.T) {
