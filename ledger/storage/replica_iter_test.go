@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -36,7 +37,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -48,9 +48,14 @@ type replicaIterSuite struct {
 	cleaner func()
 	db      storage.DBContext
 
+	scheme insolar.PlatformCryptographyScheme
+
+	// TODO: @imarkin 28.03.2019 - remove it after all new storages integration (INS-2013, etc)
 	objectStorage storage.ObjectStorage
-	dropModifier  drop.Modifier
-	dropAccessor  drop.Accessor
+
+	dropModifier   drop.Modifier
+	dropAccessor   drop.Accessor
+	recordModifier object.RecordModifier
 }
 
 func NewReplicaIterSuite() *replicaIterSuite {
@@ -72,18 +77,23 @@ func (s *replicaIterSuite) BeforeTest(suiteName, testName string) {
 	s.db = tmpDB
 	s.cleaner = cleaner
 
+	s.scheme = testutils.NewPlatformCryptographyScheme()
+
 	s.objectStorage = storage.NewObjectStorage()
 	dropStorage := drop.NewStorageDB()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
+	recordStorage := object.NewRecordMemory()
+	s.recordModifier = recordStorage
 
 	s.cm.Inject(
-		platformpolicy.NewPlatformCryptographyScheme(),
+		s.scheme,
 		s.db,
 		db.NewMemoryMockDB(),
 		s.objectStorage,
 		s.dropAccessor,
 		s.dropModifier,
+		s.recordModifier,
 	)
 
 	err := s.cm.Init(s.ctx)
@@ -126,13 +136,18 @@ func Test_StoreKeyValues(t *testing.T) {
 		os := storage.NewObjectStorage()
 		ds := drop.NewStorageDB()
 
+		scheme := testutils.NewPlatformCryptographyScheme()
+
+		recordStorage := object.NewRecordMemory()
+
 		cm := &component.Manager{}
 		cm.Inject(
-			platformpolicy.NewPlatformCryptographyScheme(),
+			scheme,
 			tmpDB,
 			db.NewMemoryMockDB(),
 			os,
 			ds,
+			recordStorage,
 		)
 		err := cm.Init(ctx)
 		if err != nil {
@@ -146,7 +161,21 @@ func Test_StoreKeyValues(t *testing.T) {
 
 		for n := 0; n < pulsescount; n++ {
 			lastPulse := insolar.PulseNumber(pulseDelta(n))
-			addRecords(ctx, t, os, jetID, lastPulse)
+
+			virtRec := &object.ActivateRecord{
+				SideEffectRecord: object.SideEffectRecord{
+					Domain: testutils.RandomRef(),
+				},
+			}
+			id := object.NewRecordIDFromRecord(scheme, lastPulse, virtRec)
+			rec := record.MaterialRecord{
+				Record: virtRec,
+				JetID:  insolar.JetID(jetID),
+			}
+			err := recordStorage.Set(ctx, *id, rec)
+			require.NoError(t, err)
+
+			addRecords(ctx, t, os, jetID, lastPulse, id)
 		}
 
 		for n := 0; n < pulsescount; n++ {
@@ -194,7 +223,20 @@ func (s *replicaIterSuite) Test_ReplicaIter_FirstPulse() {
 	// it's easy to test simple case with zero Jet
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
-	addRecords(s.ctx, s.T(), s.objectStorage, jetID, insolar.FirstPulseNumber)
+	virtRec := &object.ActivateRecord{
+		SideEffectRecord: object.SideEffectRecord{
+			Domain: testutils.RandomRef(),
+		},
+	}
+	id := object.NewRecordIDFromRecord(s.scheme, insolar.FirstPulseNumber, virtRec)
+	rec := record.MaterialRecord{
+		Record: virtRec,
+		JetID:  insolar.JetID(jetID),
+	}
+	err := s.recordModifier.Set(s.ctx, *id, rec)
+	require.NoError(s.T(), err)
+
+	addRecords(s.ctx, s.T(), s.objectStorage, jetID, insolar.FirstPulseNumber, id)
 	replicator := storage.NewReplicaIter(s.ctx, s.db, jetID, insolar.FirstPulseNumber, insolar.FirstPulseNumber+1, 100500)
 	var got []key
 	for i := 0; ; i++ {
@@ -231,13 +273,18 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	os := storage.NewObjectStorage()
 	ds := drop.NewStorageDB()
 
+	scheme := testutils.NewPlatformCryptographyScheme()
+
+	recordStorage := object.NewRecordMemory()
+
 	cm := &component.Manager{}
 	cm.Inject(
-		platformpolicy.NewPlatformCryptographyScheme(),
+		scheme,
 		tmpDB,
 		db.NewMemoryMockDB(),
 		os,
 		ds,
+		recordStorage,
 	)
 	err := cm.Init(ctx)
 	if err != nil {
@@ -265,7 +312,20 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	for i := 0; i < pulsescount; i++ {
 		lastPulse = pulseDelta(i)
 
-		addRecords(ctx, t, os, jetID, lastPulse)
+		virtRec := &object.ActivateRecord{
+			SideEffectRecord: object.SideEffectRecord{
+				Domain: testutils.RandomRef(),
+			},
+		}
+		id := object.NewRecordIDFromRecord(scheme, lastPulse, virtRec)
+		rec := record.MaterialRecord{
+			Record: virtRec,
+			JetID:  insolar.JetID(jetID),
+		}
+		err = recordStorage.Set(ctx, *id, rec)
+		require.NoError(t, err)
+
+		addRecords(ctx, t, os, jetID, lastPulse, id)
 
 		recs, _ := getallkeys(tmpDB.GetBadgerDB())
 		recKeys := getdelta(recsBefore, recs)
@@ -325,9 +385,23 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	}
 
 	lastPulse = lastPulse + 1
+
+	virtRec := &object.ActivateRecord{
+		SideEffectRecord: object.SideEffectRecord{
+			Domain: testutils.RandomRef(),
+		},
+	}
+	id := object.NewRecordIDFromRecord(scheme, lastPulse, virtRec)
+	rec := record.MaterialRecord{
+		Record: virtRec,
+		JetID:  insolar.JetID(jetID),
+	}
+	err = recordStorage.Set(ctx, *id, rec)
+	require.NoError(t, err)
+
 	// addRecords here is for purpose:
 	// new records on +1 pulse should not affect iterator result on previous pulse range
-	addRecords(ctx, t, os, jetID, lastPulse)
+	addRecords(ctx, t, os, jetID, lastPulse, id)
 	for n := 0; n < pulsescount; n++ {
 		p := pulseDelta(n)
 
@@ -360,22 +434,10 @@ func addRecords(
 	objectStorage storage.ObjectStorage,
 	jetID insolar.ID,
 	pulsenum insolar.PulseNumber,
+	parentID *insolar.ID,
 ) {
-	// set record
-	parentID, err := objectStorage.SetRecord(
-		ctx,
-		jetID,
-		pulsenum,
-		&object.ActivateRecord{
-			SideEffectRecord: object.SideEffectRecord{
-				Domain: testutils.RandomRef(),
-			},
-		},
-	)
-	require.NoError(t, err)
-
 	// set blob
-	_, err = objectStorage.SetBlob(ctx, jetID, pulsenum, []byte("100500"))
+	_, err := objectStorage.SetBlob(ctx, jetID, pulsenum, []byte("100500"))
 	require.NoError(t, err)
 
 	// set index of record

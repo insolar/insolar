@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -47,7 +48,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
 )
@@ -60,14 +60,19 @@ type heavySuite struct {
 	cleaner func()
 	db      storage.DBContext
 
+	scheme insolar.PlatformCryptographyScheme
+
+	// TODO: @imarkin 28.03.2019 - remove it after all new storages integration (INS-2013, etc)
+	objectStorage storage.ObjectStorage
+
 	jetStore       *jet.Store
 	nodeAccessor   *node.AccessorMock
 	nodeSetter     *node.ModifierMock
 	pulseTracker   storage.PulseTracker
 	replicaStorage storage.ReplicaStorage
-	objectStorage  storage.ObjectStorage
 	dropModifier   drop.Modifier
 	dropAccessor   drop.Accessor
+	recordModifier object.RecordModifier
 	storageCleaner storage.Cleaner
 }
 
@@ -89,6 +94,7 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.db = tmpDB
+	s.scheme = testutils.NewPlatformCryptographyScheme()
 	s.jetStore = jet.NewStore()
 	s.nodeAccessor = node.NewAccessorMock(s.T())
 	s.nodeSetter = node.NewModifierMock(s.T())
@@ -98,11 +104,13 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	dropStorage := drop.NewStorageDB()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
+	recordStorage := object.NewRecordMemory()
+	s.recordModifier = recordStorage
 
 	s.storageCleaner = storage.NewCleaner()
 
 	s.cm.Inject(
-		platformpolicy.NewPlatformCryptographyScheme(),
+		s.scheme,
 		s.db,
 		s.jetStore,
 		db.NewMemoryMockDB(),
@@ -112,6 +120,7 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 		s.replicaStorage,
 		s.objectStorage,
 		dropStorage,
+		s.recordModifier,
 		s.storageCleaner,
 	)
 
@@ -309,7 +318,21 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 
 	for i := 0; i < 2; i++ {
 		// fmt.Printf("%v: call addRecords for pulse %v\n", t.Name(), lastpulse)
-		addRecords(s.ctx, s.T(), s.objectStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse+i))
+
+		virtRec := &object.ActivateRecord{
+			SideEffectRecord: object.SideEffectRecord{
+				Domain: testutils.RandomRef(),
+			},
+		}
+		id := object.NewRecordIDFromRecord(s.scheme, insolar.PulseNumber(lastpulse+i), virtRec)
+		rec := record.MaterialRecord{
+			Record: virtRec,
+			JetID:  jetID,
+		}
+		err := s.recordModifier.Set(s.ctx, *id, rec)
+		require.NoError(s.T(), err)
+
+		addRecords(s.ctx, s.T(), s.objectStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse+i), id)
 	}
 
 	fmt.Println("Case1: sync after db fill and with new received pulses")
@@ -322,7 +345,21 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	fmt.Println("Case2: sync during db fill")
 	for i := 0; i < 2; i++ {
 		// fill DB with records, indexes (TODO: add blobs)
-		addRecords(s.ctx, s.T(), s.objectStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse))
+
+		virtRec := &object.ActivateRecord{
+			SideEffectRecord: object.SideEffectRecord{
+				Domain: testutils.RandomRef(),
+			},
+		}
+		id := object.NewRecordIDFromRecord(s.scheme, insolar.PulseNumber(lastpulse), virtRec)
+		rec := record.MaterialRecord{
+			Record: virtRec,
+			JetID:  jetID,
+		}
+		err := s.recordModifier.Set(s.ctx, *id, rec)
+		require.NoError(s.T(), err)
+
+		addRecords(s.ctx, s.T(), s.objectStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse+i), id)
 
 		lastpulse++
 		err = setpulse(s.ctx, pm, lastpulse)
@@ -360,21 +397,9 @@ func addRecords(
 	objectStorage storage.ObjectStorage,
 	jetID insolar.ID,
 	pn insolar.PulseNumber,
+	parentID *insolar.ID,
 ) {
-	// set record
-	parentID, err := objectStorage.SetRecord(
-		ctx,
-		jetID,
-		pn,
-		&object.ActivateRecord{
-			SideEffectRecord: object.SideEffectRecord{
-				Domain: testutils.RandomRef(),
-			},
-		},
-	)
-	require.NoError(t, err)
-
-	_, err = objectStorage.SetBlob(ctx, jetID, pn, []byte("100500"))
+	_, err := objectStorage.SetBlob(ctx, jetID, pn, []byte("100500"))
 	require.NoError(t, err)
 
 	// set index of record
