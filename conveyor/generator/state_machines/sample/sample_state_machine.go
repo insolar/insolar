@@ -34,8 +34,8 @@ const (
 	StateSecond
 )
 
-func Register() {
-	generator.AddMachine("SampleStateMachine").
+func Register(g *generator.Generator) {
+	g.AddMachine("SampleStateMachine").
 		InitFuture(initFutureHandler).
 		Init(initPresentHandler, StateFirst).
 		Transition(StateFirst, transitPresentFirst, StateSecond).

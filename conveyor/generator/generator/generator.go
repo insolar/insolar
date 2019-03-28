@@ -43,8 +43,6 @@ type Generator struct {
 	fullPathToInsolar string
 }
 
-var gen *Generator
-
 func checkErr(err error) {
 	if err != nil {
 		log.Fatal(err)
@@ -55,19 +53,19 @@ func exitWithError(errMsg string, a ...interface{}) {
 	log.Fatal(fmt.Sprintf(errMsg, a...))
 }
 
-func init() {
+func NewGenerator() *Generator {
 	_, me, _, ok := runtime.Caller(0)
 	if !ok {
 		exitWithError("couldn't get self full path")
 	}
 	idx := strings.LastIndex(string(me), insolarRep)
-	gen = &Generator{
+	return &Generator{
 		fullPathToInsolar: string(me)[0 : idx+len(insolarRep)],
 	}
 }
 
-func CheckAllMachines() {
-	for _, machine := range gen.stateMachines {
+func (g *Generator) CheckAllMachines() {
+	for _, machine := range g.stateMachines {
 		if machine.States[0].handlers[Present][Transition] == nil {
 			log.Fatal("Present Init handler should be defined")
 		}
@@ -83,34 +81,34 @@ func CheckAllMachines() {
 					}
 
 					if len(s.handlers[ps][ht].params) < 3 || s.handlers[ps][ht].params[2] != *machine.InputEventType {
-						log.Fatal("[", s.handlers[ps][ht].funcName, "] Forth parameter should be ", *machine.InputEventType)
+						log.Fatalf("[%s] Forth parameter should be %s\n", s.handlers[ps][ht].Name, *machine.InputEventType)
 					}
 
 					if i == 0 && ht == Transition {
 						if s.handlers[ps][ht].params[3] != "interface {}" {
-							log.Fatal("[", s.handlers[ps][ht].funcName, "] Init handlers should have interface{} as payload parameter")
+							log.Fatalf("[%s] Init handlers should have interface{} as payload parameter\n", s.handlers[ps][ht].Name)
 						}
 						if s.handlers[ps][ht].results[1] != *machine.PayloadType {
-							log.Fatal("[", s.handlers[ps][ht].funcName, "] Init handlers should return payload as ", *machine.PayloadType)
+							log.Fatalf("[%s] Init handlers should return payload as %s\n", s.handlers[ps][ht].Name, *machine.PayloadType)
 						}
 					} else {
 						if s.handlers[ps][ht].params[3] != *machine.PayloadType {
-							log.Fatal("[", s.handlers[ps][ht].funcName, "] Handlers payload should be ", *machine.PayloadType, " current ", s.handlers[ps][ht].params[3])
+							log.Fatalf("[%s] Handlers payload should be %s not %s\n", s.handlers[ps][ht].Name, *machine.PayloadType, s.handlers[ps][ht].params[3])
 						}
 						if len(s.handlers[ps][ht].results) != 1 {
-							log.Fatal("[", s.handlers[ps][ht].funcName, "] Handlers should return only fsm.ElementState")
+							log.Fatalf("[%s] Handlers should return only fsm.ElementState\n", s.handlers[ps][ht].Name)
 						}
 					}
 
 					if i != 0 && ht == Transition {
 						if len(s.handlers[ps][ht].params) != 4 && len(s.handlers[ps][ht].params) != 5 {
-							log.Fatal("[", s.handlers[ps][ht].funcName, "] Transition handlers should have 4 or 5 (with adapher helper) parameters")
+							log.Fatalf("[%s] Transition handlers should have 4 or 5 (with adapher helper) parameters\n", s.handlers[ps][ht].Name)
 						}
 					}
 
 					if ht == AdapterResponse {
 						if len(s.handlers[ps][ht].params) != 5 {
-							log.Fatal("[", s.handlers[ps][ht].funcName, "] AdapterResponse handlers should have 5 parameters")
+							log.Fatalf("[%s] AdapterResponse handlers should have 5 parameters\n", s.handlers[ps][ht].Name)
 						}
 					}
 				}
@@ -119,14 +117,14 @@ func CheckAllMachines() {
 	}
 }
 
-type stateMachineWithId struct {
+type stateMachineWithID struct {
 	StateMachine
 	ID int
 }
 
-func GenerateStateMachines() {
-	for i, machine := range gen.stateMachines {
-		tplBody, err := ioutil.ReadFile(path.Join(gen.fullPathToInsolar, stateMachineTemplate))
+func (g *Generator) GenerateStateMachines() {
+	for i, machine := range g.stateMachines {
+		tplBody, err := ioutil.ReadFile(path.Join(g.fullPathToInsolar, stateMachineTemplate))
 		checkErr(err)
 
 		file, err := os.Create(machine.File[:len(machine.File)-3] + "_generated.go")
@@ -135,9 +133,9 @@ func GenerateStateMachines() {
 		defer file.Close()
 		out := bufio.NewWriter(file)
 
-		err = template.Must(template.New("newSmTmpl").Funcs(templateFuncs).
+		err = template.Must(template.New("smTmpl").Funcs(templateFuncs).
 			Parse(string(tplBody))).
-			Execute(out, stateMachineWithId{StateMachine: *machine, ID: i + 1})
+			Execute(out, stateMachineWithID{StateMachine: *machine, ID: i + 1})
 		checkErr(err)
 
 		err = out.Flush()
@@ -145,19 +143,19 @@ func GenerateStateMachines() {
 	}
 
 }
-func GenerateMatrix() {
-	tplBody, err := ioutil.ReadFile(path.Join(gen.fullPathToInsolar, matrixTemplate))
+func (g *Generator) GenerateMatrix() {
+	tplBody, err := ioutil.ReadFile(path.Join(g.fullPathToInsolar, matrixTemplate))
 	checkErr(err)
 
-	file, err := os.Create(path.Join(gen.fullPathToInsolar, generatedMatrix))
+	file, err := os.Create(path.Join(g.fullPathToInsolar, generatedMatrix))
 	checkErr(err)
 
 	defer file.Close()
 	out := bufio.NewWriter(file)
 
-	err = template.Must(template.New("newMtrxTmpl").Funcs(templateFuncs).
+	err = template.Must(template.New("MtTmpl").Funcs(templateFuncs).
 		Parse(string(tplBody))).
-		Execute(out, gen.stateMachines)
+		Execute(out, g.stateMachines)
 	checkErr(err)
 
 	err = out.Flush()

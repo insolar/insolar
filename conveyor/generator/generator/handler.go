@@ -26,6 +26,7 @@ import (
 )
 
 type handlerType uint
+
 const (
 	Transition = handlerType(iota)
 	Migration
@@ -33,15 +34,15 @@ const (
 )
 
 type handler struct {
-	machine 	*StateMachine
-	importPath	string
-	funcName	string
-	params		[]string
-	results		[]string
-	states		[]fsm.ElementState
+	machine    *StateMachine
+	importPath string
+	Name       string
+	params     []string
+	results    []string
+	states     []fsm.ElementState
 }
 
-func NewHandler(machine *StateMachine, f interface{}, states []fsm.ElementState) *handler {
+func newHandler(machine *StateMachine, f interface{}, states []fsm.ElementState) *handler {
 	tp := reflect.TypeOf(f)
 	if tp.Kind().String() != "func" {
 		log.Fatal("handler must be function")
@@ -51,24 +52,24 @@ func NewHandler(machine *StateMachine, f interface{}, states []fsm.ElementState)
 	lastDotIndex := strings.LastIndex(fullName, ".")
 
 	handler := &handler{
-		machine: machine,
+		machine:    machine,
 		importPath: fullName[:lastDotIndex],
-		funcName: fullName[lastDotIndex + 1:],
-		params: make([]string, tp.NumIn()),
-		results: make([]string, tp.NumOut()),
-		states: states,
+		Name:       fullName[lastDotIndex+1:],
+		params:     make([]string, tp.NumIn()),
+		results:    make([]string, tp.NumOut()),
+		states:     states,
 	}
 
 	// check common input types
 	if tp.NumIn() < 1 || tp.In(0).String() != "context.Context" {
-		log.Fatal("["+handler.funcName+"] first parameter should be context.Context")
+		log.Fatalf("[%s] first parameter should be context.Context\n", handler.Name)
 	}
 	if tp.NumIn() < 2 || tp.In(1).String() != "fsm.SlotElementHelper" {
-		log.Fatal("["+handler.funcName+"] second parameter should be fsm.SlotElementHelper")
+		log.Fatalf("[%s] second parameter should be fsm.SlotElementHelper\n", handler.Name)
 	}
 	// check common return types
 	if tp.NumOut() < 1 || tp.Out(0).String() != "fsm.ElementState" {
-		log.Fatal("["+handler.funcName+"] first returned value should be fsm.ElementState")
+		log.Fatalf("[%s] first returned value should be fsm.ElementState\n", handler.Name)
 	}
 
 	for i := 0; i < tp.NumIn(); i++ {
@@ -81,8 +82,8 @@ func NewHandler(machine *StateMachine, f interface{}, states []fsm.ElementState)
 	return handler
 }
 
-func NewInitHandler(machine *StateMachine, f interface{}, states []fsm.ElementState) *handler {
-	h := NewHandler(machine, f, states)
+func newInitHandler(machine *StateMachine, f interface{}, states []fsm.ElementState) *handler {
+	h := newHandler(machine, f, states)
 	// todo check input and results len
 	if h.machine.InputEventType == nil {
 		h.machine.InputEventType = &h.params[2]
@@ -93,11 +94,6 @@ func NewInitHandler(machine *StateMachine, f interface{}, states []fsm.ElementSt
 	return h
 }
 
-func (h *handler) GetName() string {
-	return h.funcName
-}
-
 func (h *handler) GetResponseAdapterType() string {
 	return h.params[4]
 }
-

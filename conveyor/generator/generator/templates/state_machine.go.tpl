@@ -35,19 +35,19 @@ func Raw{{.Name}}PresentFactory() *statemachine.StateMachine {
             		aPayload, ok := element.GetPayload().({{unPackage $.PayloadType $.Package}})
             		if !ok { return nil, 0, errors.New("wrong payload type") }
             		ctx := context.TODO()
-            		state := {{.GetMigration.GetName}}(ctx, element, aInput, aPayload)
+            		state := {{.GetMigration.Name}}(ctx, element, aInput, aPayload)
             		return aPayload, state, nil
             	},{{end}}
 				{{if (handlerExists $state.GetTransition)}}Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().({{unPackage $.InputEventType $.Package}})
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
-				    {{if (isNull $i)}}state, payload := {{.GetTransition.GetName}}(ctx, element, aInput, element.GetPayload())
+				    {{if (isNull $i)}}state, payload := {{.GetTransition.Name}}(ctx, element, aInput, element.GetPayload())
                     return payload, state, nil
 					{{else}}aPayload, ok := element.GetPayload().({{unPackage $.PayloadType $.Package}})
                     if !ok { return nil, 0, errors.New("wrong payload type") }
 					// todo here must be real adapter helper
-					state := {{.GetTransition.GetName}}(ctx, element, aInput, aPayload, nil)
+					state := {{.GetTransition.Name}}(ctx, element, aInput, aPayload, nil)
                     return aPayload, state, nil
 					{{end}}
 				},{{end}}
@@ -59,7 +59,7 @@ func Raw{{.Name}}PresentFactory() *statemachine.StateMachine {
 					aResponse, ok := response.({{unPackage .GetAdapterResponse.GetResponseAdapterType $.Package}})
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
-					state := {{.GetAdapterResponse.GetName}}(ctx, element, aInput, aPayload, aResponse)
+					state := {{.GetAdapterResponse.Name}}(ctx, element, aInput, aPayload, aResponse)
 					return aPayload, state, nil
                 },{{end}}
 			},{{end}}
@@ -76,12 +76,12 @@ func Raw{{.Name}}PastFactory() *statemachine.StateMachine {
     		        aInput, ok := element.GetInputEvent().({{unPackage $.InputEventType $.Package}})
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
-				    {{if (isNull $i)}}state, payload := {{.GetTransitionPast.GetName}}(ctx, element, aInput, element.GetPayload())
+				    {{if (isNull $i)}}state, payload := {{.GetTransitionPast.Name}}(ctx, element, aInput, element.GetPayload())
                     return payload, state, nil
 					{{else}}aPayload, ok := element.GetPayload().({{unPackage $.PayloadType $.Package}})
                     if !ok { return nil, 0, errors.New("wrong payload type") }
                     // todo here must be real adapter helper
-					state := {{.GetTransitionPast.GetName}}(ctx, element, aInput, aPayload, nil)
+					state := {{.GetTransitionPast.Name}}(ctx, element, aInput, aPayload, nil)
                     return aPayload, state, nil
 					{{end}}
 				},{{end}}
@@ -93,7 +93,7 @@ func Raw{{.Name}}PastFactory() *statemachine.StateMachine {
 					aResponse, ok := response.({{unPackage .GetAdapterResponsePast.GetResponseAdapterType $.Package}})
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
-					state := {{.GetAdapterResponsePast.GetName}}(ctx, element, aInput, aPayload, aResponse)
+					state := {{.GetAdapterResponsePast.Name}}(ctx, element, aInput, aPayload, aResponse)
 					return aPayload, state, nil
                 },{{end}}
 			},{{end}}
@@ -112,20 +112,20 @@ func Raw{{.Name}}FutureFactory() *statemachine.StateMachine {
             		aPayload, ok := element.GetPayload().({{unPackage $.PayloadType $.Package}})
             		if !ok { return nil, 0, errors.New("wrong payload type") }
             		ctx := context.TODO()
-            		state := {{.GetMigrationFuturePresent.GetName}}(ctx, element, aInput, aPayload)
+            		state := {{.GetMigrationFuturePresent.Name}}(ctx, element, aInput, aPayload)
             		return aPayload, state, nil
             	},{{end}}
 				{{if (handlerExists $state.GetTransitionFuture)}}Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
     		        aInput, ok := element.GetInputEvent().({{unPackage $.InputEventType $.Package}})
             		if !ok { return nil, 0, errors.New("wrong input event type") }
             		ctx := context.TODO()
-				    {{if (isNull $i)}}state, payload := {{.GetTransitionFuture.GetName}}(ctx, element, aInput, element.GetPayload())
+				    {{if (isNull $i)}}state, payload := {{.GetTransitionFuture.Name}}(ctx, element, aInput, element.GetPayload())
                     return payload, state, nil
 					{{else}}aPayload, ok := element.GetPayload().({{unPackage $.PayloadType $.Package}})
                     if !ok { return nil, 0, errors.New("wrong payload type") }
                     // todo here must be real adapter helper
 					helper := CustomAdapterHelper{}
-					state := {{.GetTransitionFuture.GetName}}(ctx, element, aInput, aPayload, nil)
+					state := {{.GetTransitionFuture.Name}}(ctx, element, aInput, aPayload, nil)
                     return aPayload, state, nil
 					{{end}}
 				},{{end}}
@@ -137,7 +137,7 @@ func Raw{{.Name}}FutureFactory() *statemachine.StateMachine {
 					aResponse, ok := response.({{unPackage .GetAdapterResponseFuture.GetResponseAdapterType $.Package}})
 					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
-					state := {{.GetAdapterResponseFuture.GetName}}(ctx, element, aInput, aPayload, aResponse)
+					state := {{.GetAdapterResponseFuture.Name}}(ctx, element, aInput, aPayload, aResponse)
 					return aPayload, state, nil
                 },{{end}}
 			},{{end}}
