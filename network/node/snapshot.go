@@ -80,6 +80,18 @@ func (s *Snapshot) GetPulse() insolar.PulseNumber {
 	return s.pulse
 }
 
+func (s *Snapshot) Copy() *Snapshot {
+	result := &Snapshot{
+		pulse: s.pulse,
+		state: s.state,
+	}
+	for i := 0; i < int(ListLength); i++ {
+		result.nodeList[i] = make([]insolar.NetworkNode, len(s.nodeList[i]))
+		copy(result.nodeList[i], s.nodeList[i])
+	}
+	return result
+}
+
 // NewSnapshot create new snapshot for pulse.
 func NewSnapshot(number insolar.PulseNumber, nodes map[insolar.Reference]insolar.NetworkNode) *Snapshot {
 	return &Snapshot{
@@ -88,18 +100,6 @@ func NewSnapshot(number insolar.PulseNumber, nodes map[insolar.Reference]insolar
 		state:    insolar.NoNetworkState,
 		nodeList: splitNodes(nodes),
 	}
-}
-
-func CopySnapshot(snapshot *Snapshot) *Snapshot {
-	result := &Snapshot{
-		pulse: snapshot.pulse,
-		state: snapshot.state,
-	}
-	for i := 0; i < int(ListLength); i++ {
-		result.nodeList[i] = make([]insolar.NetworkNode, len(snapshot.nodeList[i]))
-		copy(result.nodeList[i], snapshot.nodeList[i])
-	}
-	return result
 }
 
 // splitNodes temporary method to create snapshot lists. Will be replaced by special function that will take in count

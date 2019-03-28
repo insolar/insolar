@@ -235,12 +235,12 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 	}
 
 	return &FirstPhaseState{
+		ConsensusState: state,
 		PulseEntry:     entry,
 		PulseHash:      pulseHash,
 		PulseProof:     pulseProof,
 		ValidProofs:    valid,
 		FaultProofs:    fault,
-		ConsensusState: state,
 		BitSet:         bitset,
 	}, nil
 }

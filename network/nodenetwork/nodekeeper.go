@@ -156,7 +156,7 @@ func (nk *nodekeeper) GetSnapshotCopy() *node.Snapshot {
 	nk.activeLock.RLock()
 	defer nk.activeLock.RUnlock()
 
-	return node.CopySnapshot(nk.snapshot)
+	return nk.snapshot.Copy()
 }
 
 func (nk *nodekeeper) SetInitialSnapshot(nodes []insolar.NetworkNode) {

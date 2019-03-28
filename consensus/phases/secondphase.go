@@ -110,7 +110,7 @@ func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, st
 		return nil, errors.Wrap(err, "[ NET Consensus phase-2.0 ] Failed to set globule proof in Phase2Packet")
 	}
 	packet.SetBitSet(state.BitSet)
-	participants := getPhase2Receivers(state)
+	participants := getPhase2Receivers(state.ValidProofs)
 
 	packets, err := sp.Communicator.ExchangePhase2(ctx, state.ConsensusState, participants, packet)
 	if err != nil {
@@ -191,9 +191,9 @@ func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, st
 	}, nil
 }
 
-func getPhase2Receivers(state *FirstPhaseState) []insolar.NetworkNode {
+func getPhase2Receivers(validProofs map[insolar.NetworkNode]*merkle.PulseProof) []insolar.NetworkNode {
 	result := make([]insolar.NetworkNode, 0)
-	for node := range state.ValidProofs {
+	for node := range validProofs {
 		result = append(result, node)
 	}
 	return result
