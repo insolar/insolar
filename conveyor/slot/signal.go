@@ -15,3 +15,9 @@
  */
 
 package slot
+
+const (
+	PendingPulseSignal  = 1
+	ActivatePulseSignal = 2
+	CancelSignal        = 3
+)

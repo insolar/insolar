@@ -14,19 +14,83 @@
  *    limitations under the License.
  */
 
-package conveyor
+package slot
 
 import (
+	"errors"
 	"testing"
 
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/handler"
+	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
 
-	"github.com/insolar/insolar/conveyor/fsm"
-	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/stretchr/testify/require"
 )
+
+const testRealPulse = insolar.PulseNumber(1000)
+
+func mockQueue(t *testing.T) *queue.IQueueMock {
+	qMock := queue.NewIQueueMock(t)
+	qMock.SinkPushFunc = func(p interface{}) (r error) {
+		return nil
+	}
+	qMock.SinkPushAllFunc = func(p []interface{}) (r error) {
+		return nil
+	}
+	qMock.PushSignalFunc = func(p uint32, p1 queue.SyncDone) (r error) {
+		p1.SetResult(333)
+		return nil
+	}
+	qMock.RemoveAllFunc = func() (r []queue.OutputElement) {
+		return []queue.OutputElement{}
+	}
+	qMock.HasSignalFunc = func() (r bool) {
+		return false
+	}
+	return qMock
+}
+
+func mockQueueReturnFalse(t *testing.T) *queue.IQueueMock {
+	qMock := queue.NewIQueueMock(t)
+	qMock.SinkPushFunc = func(p interface{}) (r error) {
+		return errors.New("test error")
+	}
+	qMock.SinkPushAllFunc = func(p []interface{}) (r error) {
+		return errors.New("test error")
+	}
+	qMock.PushSignalFunc = func(p uint32, p1 queue.SyncDone) (r error) {
+		return errors.New("test error")
+	}
+	return qMock
+}
+
+type mockSyncDone struct {
+	waiter    chan interface{}
+	doneCount int
+}
+
+func (s *mockSyncDone) GetResult() int {
+	result := <-s.waiter
+	hash, ok := result.(int)
+	if !ok {
+		return 0
+	}
+	return hash
+}
+
+func (s *mockSyncDone) SetResult(result interface{}) {
+	s.waiter <- result
+	s.doneCount += 1
+}
+
+func mockCallback() queue.SyncDone {
+	return &mockSyncDone{
+		waiter:    make(chan interface{}, 3),
+		doneCount: 0,
+	}
+}
 
 func testSlot(t *testing.T, isQueueOk bool, pulseNumber insolar.PulseNumber) *Slot {
 	var q *queue.IQueueMock

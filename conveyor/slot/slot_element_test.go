@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package conveyor
+package slot
 
 import (
 	"testing"

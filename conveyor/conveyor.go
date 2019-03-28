@@ -20,19 +20,11 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/conveyor/queue"
+	"github.com/insolar/insolar/conveyor/slot"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
-
-const (
-	PendingPulseSignal  = 1
-	ActivatePulseSignal = 2
-	CancelSignal        = 3
-)
-
-// RemoveSlotCallback allows to remove slot by pulse number
-type RemoveSlotCallback func(number insolar.PulseNumber)
 
 // PulseConveyor is realization of Conveyor
 type PulseConveyor struct {
@@ -51,7 +43,7 @@ func NewPulseConveyor() (insolar.Conveyor, error) {
 		state:   insolar.ConveyorInactive,
 	}
 	// antiqueSlot is slot for all pulses from past if conveyor dont have specific PastSlot for such pulse
-	antiqueSlot := NewWorkingSlot(Antique, insolar.AntiquePulseNumber, c.removeSlot)
+	antiqueSlot := slot.NewWorkingSlot(slot.Antique, insolar.AntiquePulseNumber, c.removeSlot)
 
 	c.slotMap[insolar.AntiquePulseNumber] = antiqueSlot
 	return c, nil
@@ -61,7 +53,7 @@ func (c *PulseConveyor) removeSlot(number insolar.PulseNumber) {
 	c.lock.Lock()
 	defer c.lock.Unlock()
 
-	err := c.slotMap[number].PushSignal(CancelSignal, nil)
+	err := c.slotMap[number].PushSignal(slot.CancelSignal, nil)
 	if err != nil {
 		panic("[ removeSlot ] Can't PushSignal CancelSignal: " + err.Error())
 	}
@@ -157,7 +149,7 @@ func (c *PulseConveyor) PreparePulse(pulse insolar.Pulse, callback queue.SyncDon
 		return errors.New("[ PreparePulse ] preparation was already done")
 	}
 	if c.futurePulseNumber == nil {
-		c.slotMap[pulse.PulseNumber] = NewWorkingSlot(Future, pulse.PulseNumber, c.removeSlot)
+		c.slotMap[pulse.PulseNumber] = slot.NewWorkingSlot(slot.Future, pulse.PulseNumber, c.removeSlot)
 		c.futurePulseNumber = &pulse.PulseNumber
 	}
 	if *c.futurePulseNumber != pulse.PulseNumber {
@@ -172,7 +164,7 @@ func (c *PulseConveyor) PreparePulse(pulse insolar.Pulse, callback queue.SyncDon
 	barrierCallback := newBarrierCallback(expectedNumCallbacks, callback)
 
 	futureSlot := c.slotMap[*c.futurePulseNumber]
-	err := futureSlot.PushSignal(PendingPulseSignal, barrierCallback)
+	err := futureSlot.PushSignal(slot.PendingPulseSignal, barrierCallback)
 	if err != nil {
 		log.Panicf("[ PreparePulse ] can't send signal to future slot (for pulse %d), error - %s", c.futurePulseNumber, err)
 	}
@@ -180,7 +172,7 @@ func (c *PulseConveyor) PreparePulse(pulse insolar.Pulse, callback queue.SyncDon
 	if c.presentPulseNumber != nil {
 		presentSlot := c.slotMap[*c.presentPulseNumber]
 
-		err := presentSlot.PushSignal(PendingPulseSignal, barrierCallback)
+		err := presentSlot.PushSignal(slot.PendingPulseSignal, barrierCallback)
 		if err != nil {
 			log.Panicf("[ PreparePulse ] can't send signal to present slot (for pulse %d), error - %s", c.presentPulseNumber, err)
 		}
@@ -253,7 +245,7 @@ func (c *PulseConveyor) ActivatePulse() error {
 	futureSlot := c.slotMap[*c.futurePulseNumber]
 	callback := NewPulseWithCallback(&wg, *c.futurePulseData)
 
-	err := futureSlot.PushSignal(ActivatePulseSignal, callback)
+	err := futureSlot.PushSignal(slot.ActivatePulseSignal, callback)
 	if err != nil {
 		c.lock.Unlock()
 		log.Panicf("[ ActivatePulse ] can't send signal to future slot (for pulse %d), error - %s", c.futurePulseNumber, err)
@@ -261,7 +253,7 @@ func (c *PulseConveyor) ActivatePulse() error {
 
 	if c.presentPulseNumber != nil {
 		presentSlot := c.slotMap[*c.presentPulseNumber]
-		err = presentSlot.PushSignal(ActivatePulseSignal, &wg)
+		err = presentSlot.PushSignal(slot.ActivatePulseSignal, &wg)
 		if err != nil {
 			c.lock.Unlock()
 			log.Panicf("[ ActivatePulse ] can't send signal to present slot (for pulse %d), error - %s", c.presentPulseNumber, err)
@@ -271,7 +263,7 @@ func (c *PulseConveyor) ActivatePulse() error {
 	c.presentPulseNumber = c.futurePulseNumber
 	c.futurePulseNumber = &c.futurePulseData.NextPulseNumber
 
-	c.slotMap[*c.futurePulseNumber] = NewWorkingSlot(Future, *c.futurePulseNumber, c.removeSlot)
+	c.slotMap[*c.futurePulseNumber] = slot.NewWorkingSlot(slot.Future, *c.futurePulseNumber, c.removeSlot)
 
 	c.futurePulseData = nil
 	c.state = insolar.ConveyorActive
