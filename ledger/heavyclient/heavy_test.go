@@ -96,8 +96,7 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.replicaStorage = storage.NewReplicaStorage()
 	s.objectStorage = storage.NewObjectStorage()
 
-	storageDB := db.NewDBWithBadger(tmpDB.GetBadgerDB())
-	dropStorage := drop.NewStorageDB(storageDB)
+	dropStorage := drop.NewStorageMemory()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 
