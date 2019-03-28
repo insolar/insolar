@@ -19,9 +19,8 @@ package getcode
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
 	"github.com/insolar/insolar/conveyor/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 )
@@ -147,7 +146,7 @@ func (sm *CleanGetCodeStateMachine) migrateFromPresentFirst(input Event, payload
 
 func (sm *CleanGetCodeStateMachine) transitPresentFirst(input Event, payload insolar.ConveyorPendingMessage, element fsm.SlotElementHelper) (*Payload, fsm.ElementState, error) {
 	parcel := payload.Msg
-	err := adapter.CurrentCatalog.GetCode.GetCode(element, parcel, 2)
+	err := adapterstorage.CurrentCatalog.GetCode.GetCode(element, parcel, 2)
 	if err != nil {
 		return nil, 0, nil
 	}
@@ -162,7 +161,7 @@ func (sm *CleanGetCodeStateMachine) errorPresentFirst(input interface{}, payload
 	panic("implement me")
 }
 
-func (sm *CleanGetCodeStateMachine) errorResponsePresentFirst(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState) {
+func (sm *CleanGetCodeStateMachine) errorResponsePresentFirst(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState) {
 	panic("implement me")
 }
 
@@ -185,7 +184,7 @@ func (sm *CleanGetCodeStateMachine) errorPresentSecond(input interface{}, payloa
 	panic("implement me")
 }
 
-func (sm *CleanGetCodeStateMachine) errorResponsePresentSecond(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState) {
+func (sm *CleanGetCodeStateMachine) errorResponsePresentSecond(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState) {
 	panic("implement me")
 }
 
@@ -197,9 +196,9 @@ func (sm *CleanGetCodeStateMachine) transitPresentThird(input Event, payload *Pa
 	var err error
 	if payload.err != nil {
 		// TODO: return error to future
-		err = adapter.CurrentCatalog.SendResponse.SendResponse(element, nil, 4)
+		err = adapterstorage.CurrentCatalog.SendResponse.SendResponse(element, nil, 4)
 	} else {
-		err = adapter.CurrentCatalog.SendResponse.SendResponse(element, payload.reply, 4)
+		err = adapterstorage.CurrentCatalog.SendResponse.SendResponse(element, payload.reply, 4)
 	}
 	if err != nil {
 		return nil, 0, nil
@@ -215,7 +214,7 @@ func (sm *CleanGetCodeStateMachine) errorPresentThird(input interface{}, payload
 	panic("implement me")
 }
 
-func (sm *CleanGetCodeStateMachine) errorResponsePresentThird(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState) {
+func (sm *CleanGetCodeStateMachine) errorResponsePresentThird(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState) {
 	panic("implement me")
 }
 
@@ -240,6 +239,6 @@ func (sm *CleanGetCodeStateMachine) errorPresentFourth(input interface{}, payloa
 	panic("implement me")
 }
 
-func (sm *CleanGetCodeStateMachine) errorResponsePresentFourth(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState) {
+func (sm *CleanGetCodeStateMachine) errorResponsePresentFourth(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState) {
 	panic("implement me")
 }

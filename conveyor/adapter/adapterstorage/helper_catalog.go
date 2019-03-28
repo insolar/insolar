@@ -14,4 +14,23 @@
  *    limitations under the License.
  */
 
-package slot
+package adapterstorage
+
+import (
+	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/ledger/artifactmanager"
+)
+
+type HelperCatalog struct {
+	SendResponse adapter.SendResponseHelper
+	GetCode      artifactmanager.GetCodeHelper
+}
+
+func newHelperCatalog() *HelperCatalog {
+	return &HelperCatalog{
+		SendResponse: adapter.SendResponseHelper{},
+		GetCode:      artifactmanager.GetCodeHelper{},
+	}
+}
+
+var CurrentCatalog = newHelperCatalog()
