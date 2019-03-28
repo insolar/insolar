@@ -18,9 +18,10 @@
 package record
 
 import (
-	"github.com/insolar/insolar/insolar"
 	"io"
 	"reflect"
+
+	"github.com/insolar/insolar/insolar"
 
 	"github.com/pkg/errors"
 )
@@ -93,7 +94,6 @@ func (m *RequestRecord) WriteHashData(w io.Writer) (int, error) {
 	}
 	return w.Write(bytes)
 }
-
 
 func (m *ResultRecord) MarshalRecord() ([]byte, error) {
 	base := Record{}

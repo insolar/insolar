@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+
 	"github.com/insolar/insolar/insolar/record"
 
 	"github.com/pkg/errors"

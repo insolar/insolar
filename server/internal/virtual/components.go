@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package main
+package virtual
 
 import (
 	"context"
@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/cryptography"
-	"github.com/insolar/insolar/genesis"
 	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/delegationtoken"
@@ -107,8 +106,6 @@ func initComponents(
 	keyProcessor insolar.KeyProcessor,
 	certManager insolar.CertificateManager,
 	isGenesis bool,
-	genesisConfigPath string,
-	genesisKeyOut string,
 
 ) (*component.Manager, error) {
 	cm := component.Manager{}
@@ -128,12 +125,6 @@ func initComponents(
 
 	messageBus, err := messagebus.NewMessageBus(cfg)
 	checkError(ctx, err, "failed to start MessageBus")
-
-	var gen insolar.Genesis
-	if isGenesis {
-		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath, genesisKeyOut)
-		checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")
-	}
 
 	contractRequester, err := contractrequester.New()
 	checkError(ctx, err, "failed to start ContractRequester")
@@ -181,9 +172,6 @@ func initComponents(
 		delegationTokenFactory,
 		parcelFactory,
 	}...)
-	if gen != nil {
-		components = append(components, gen)
-	}
 	components = append(components, []interface{}{
 		genesisDataProvider,
 		apiRunner,
