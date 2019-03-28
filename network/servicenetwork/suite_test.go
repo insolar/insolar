@@ -463,8 +463,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	keyProc := platformpolicy.NewKeyProcessor()
 
 	c := testutils.NewConveyorMock(s.T())
+	pc := testutils.NewPlatformCryptographyScheme()
 	c.PreparePulseFunc = func(p insolar.Pulse, p1 queue.SyncDone) (r error) {
-		p1.SetResult([]byte{1, 2, 3})
+		p1.SetResult(pc.IntegrityHasher().Hash([]byte{1, 2, 3}))
 		return nil
 	}
 	c.ActivatePulseFunc = func() (r error) {
