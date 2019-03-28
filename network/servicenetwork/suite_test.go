@@ -88,8 +88,8 @@ var (
 )
 
 func init() {
-	if tbn, ok := os.LookupEnv("TBN"); ok {
-		log.Infof("Found $TBN=%s\n", tbn)
+	if tbn, ok := os.LookupEnv("TEST_BUILD_NUMBER"); ok {
+		log.Infof("Found TEST_BUILD_NUMBER=%s\n", tbn)
 		num, err := strconv.Atoi(tbn)
 		if err != nil {
 			log.Fatalf("Test build number must be numeric: %v", err)
@@ -98,7 +98,7 @@ func init() {
 		log.Infof("Starting on port=%d\n", testNetworkPort)
 
 	} else {
-		log.Infof("TBN environment variable not found\n")
+		log.Infof("TEST_BUILD_NUMBER environment variable not found\n")
 	}
 }
 
