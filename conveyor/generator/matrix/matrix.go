@@ -18,6 +18,7 @@ package matrix
 
 import (
 	"github.com/insolar/insolar/conveyor/generator/state_machines/get_object"
+	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
 	
 )
 
@@ -49,6 +50,7 @@ type MachineType int
 
 const (
 	GetObjectStateMachine MachineType = iota + 1
+	SampleStateMachine
 	
 )
 
@@ -62,6 +64,9 @@ func NewMatrix() *Matrix {
 	m.future.addMachine(getobject.RawGetObjectStateMachineFutureFactory())
 	m.present.addMachine(getobject.RawGetObjectStateMachinePresentFactory())
 	m.past.addMachine(getobject.RawGetObjectStateMachinePastFactory())
+	m.future.addMachine(sample.RawSampleStateMachineFutureFactory())
+	m.present.addMachine(sample.RawSampleStateMachinePresentFactory())
+	m.past.addMachine(sample.RawSampleStateMachinePastFactory())
 	
 	return &m
 }

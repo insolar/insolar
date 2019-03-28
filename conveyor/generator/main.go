@@ -19,10 +19,12 @@ package main
 import (
 	"github.com/insolar/insolar/conveyor/generator/generator"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/get_object"
+	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
 )
 
 func main() {
 	getobject.Register()
+	sample.Register()
 	generator.CheckAllMachines()
 	generator.GenerateStateMachines()
 	generator.GenerateMatrix()

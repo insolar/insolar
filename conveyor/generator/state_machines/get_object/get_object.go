@@ -26,7 +26,7 @@ import (
 type CustomEvent struct{}
 type CustomPayload struct{}
 type CustomAdapterResponsePayload struct{}
-type CustomAdapterHelper struct{}
+type CustomAdapterHelper interface{}
 
 const (
 	InitState fsm.ElementState = iota
