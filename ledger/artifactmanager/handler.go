@@ -495,12 +495,10 @@ func (h *MessageHandler) handleGetObject(
 		if err == blob.ErrNotFound {
 			hNode, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 			if err != nil {
-				panic("где хэви?")
 				return nil, err
 			}
 			obj, err := h.fetchObject(ctx, msg.Head, *hNode, stateID, parcel.Pulse())
 			if err != nil {
-				panic("тут нет?")
 				return nil, err
 			}
 			err = h.BlobModifier.Set(ctx, *state.GetMemory(), blob.Blob{JetID: insolar.JetID(jetID), Value: obj.Memory})
