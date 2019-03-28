@@ -20,6 +20,9 @@ import (
 	"context"
 	"net/http"
 
+	"github.com/insolar/insolar/application/extractor"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -157,7 +160,8 @@ type CallMethodArgs struct {
 
 // CallMethodReply is reply that Contract.CallMethod returns
 type CallMethodReply struct {
-	Reply reply.CallMethod
+	Reply          reply.CallMethod
+	ExtractedReply interface{}
 }
 
 // CallConstructor make an object from its prototype
@@ -188,5 +192,17 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 	}
 
 	re.Reply = *callMethodReply.(*reply.CallMethod)
+
+	var contractErr *foundation.Error
+	re.ExtractedReply, contractErr, err = extractor.CallResponse(re.Reply.Result)
+
+	if err != nil {
+		return errors.Wrap(err, "Can't extract response")
+	}
+
+	if contractErr != nil {
+		return errors.Wrap(errors.New(contractErr.S), "Error in called method")
+	}
+
 	return nil
 }
