@@ -17,60 +17,67 @@
 package matrix
 
 import (
-    "github.com/insolar/insolar/conveyor/generator/state_machines/sample"
-    
+	"github.com/insolar/insolar/conveyor/generator/state_machines/get_object"
+	
 )
 
-const numPulseStates = 3
-
 type StateMachineSet struct{
-    stateMachines []StateMachine
+	stateMachines []StateMachine
+}
+
+func newStateMachineSet() *StateMachineSet {
+	return &StateMachineSet{
+		stateMachines: make([]StateMachine, 1),
+	}
+}
+
+func (s *StateMachineSet) addMachine(machine StateMachine) {
+	s.stateMachines = append(s.stateMachines, machine)
 }
 
 func ( s *StateMachineSet ) GetStateMachineByID(id int) StateMachine{
-    return s.stateMachines[id]
+	return s.stateMachines[id]
 }
 
 type Matrix struct {
-    matrix  [numPulseStates]StateMachineSet
+	future *StateMachineSet
+	present *StateMachineSet
+	past *StateMachineSet
 }
 
 type MachineType int
 
 const (
-    TestStateMachine MachineType = iota + 1
+	GetObjectStateMachine MachineType = iota + 1
+	
 )
 
 func NewMatrix() *Matrix {
-    m := Matrix{}
+	m := Matrix{
+		future: newStateMachineSet(),
+		present: newStateMachineSet(),
+		past: newStateMachineSet(),
+	}
 
-    // Fill m.matrix[i][0] with empty state machine, since 0 - is state of completion of state machine
-    var emptyObject StateMachine
-    	for i := 0; i < numPulseStates; i++ {
-    		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, emptyObject)
-    	}
-
-    
-    smTestStateMachine := sample.RawTestStateMachineFactory()
-    for i := 0; i < numPulseStates; i++ {
-        m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, smTestStateMachine[i])
-    }
-    
-    return &m
+	m.future.addMachine(getobject.RawGetObjectStateMachineFutureFactory())
+	m.present.addMachine(getobject.RawGetObjectStateMachinePresentFactory())
+	m.past.addMachine(getobject.RawGetObjectStateMachinePastFactory())
+	
+	return &m
 }
 
 func (m *Matrix) GetInitialStateMachine() StateMachine {
-    return m.matrix[1].stateMachines[1]
+	return m.present.stateMachines[1]
 }
 
 func (m *Matrix) GetFutureConfig() SetAccessor{
-    return &m.matrix[0]
+	return m.future
 }
 
 func (m *Matrix) GetPresentConfig() SetAccessor{
-    return &m.matrix[1]
+	return m.present
 }
 
 func (m *Matrix) GetPastConfig() SetAccessor{
-    return &m.matrix[2]
+	return m.past
 }
