@@ -690,7 +690,7 @@ func Test_suspending_Past(t *testing.T) {
 }
 
 func Test_suspending_Present(t *testing.T) {
-	initComponents(t, nil)
+	initComponents(t)
 	slot, worker := makeSlotAndWorker(Present, 22)
 	oldSlot := *slot
 

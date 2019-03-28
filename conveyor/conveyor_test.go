@@ -130,7 +130,7 @@ func testPulseConveyor(t *testing.T, isQueueOk bool) *PulseConveyor {
 	}
 }
 
-func initComponents(t *testing.T, conveyor insolar.Conveyor) {
+func initComponents(t *testing.T) {
 	pc := testutils.NewPlatformCryptographyScheme()
 	ledgerMock := testutils.NewLedgerLogicMock(t)
 	ledgerMock.GetCodeFunc = func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error) {
@@ -142,10 +142,6 @@ func initComponents(t *testing.T, conveyor insolar.Conveyor) {
 
 	components := adapterstorage.GetAllProcessors()
 	components = append(components, pc, ledgerMock)
-	if conveyor != nil {
-		components = append(components, conveyor.(*PulseConveyor))
-	}
-
 	cm.Inject(components...)
 	err := cm.Init(ctx)
 	if err != nil {
@@ -451,7 +447,7 @@ func TestConveyor_ActivatePreparePulse(t *testing.T) {
 func TestConveyor_ChangePulse(t *testing.T) {
 	conveyor, err := NewPulseConveyor()
 	require.NoError(t, err)
-	initComponents(t, conveyor)
+	initComponents(t)
 	callback := mockCallback()
 	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	err = conveyor.PreparePulse(pulse, callback)
@@ -466,7 +462,7 @@ func TestConveyor_ChangePulse(t *testing.T) {
 func TestConveyor_ChangePulseMultipleTimes(t *testing.T) {
 	conveyor, err := NewPulseConveyor()
 	require.NoError(t, err)
-	initComponents(t, conveyor)
+	initComponents(t)
 
 	pulseNumber := testRealPulse + testPulseDelta
 	for i := 0; i < 20; i++ {
@@ -486,7 +482,7 @@ func TestConveyor_ChangePulseMultipleTimes(t *testing.T) {
 func TestConveyor_ChangePulseMultipleTimes_WithEvents(t *testing.T) {
 	conveyor, err := NewPulseConveyor()
 	require.NoError(t, err)
-	initComponents(t, conveyor)
+	initComponents(t)
 
 	pulseNumber := testRealPulse + testPulseDelta
 	for i := 0; i < 100; i++ {
