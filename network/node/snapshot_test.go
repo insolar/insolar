@@ -48,69 +48,38 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package storage
+package node
 
 import (
-	"context"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/node"
-	"github.com/pkg/errors"
-	"sync"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAccessor -o ../../testutils/network -s _mock.go
+func TestSnapshotEncodeDecode(t *testing.T) {
 
-// SnapshotAccessor provides methods for accessing Snapshot.
-type SnapshotAccessor interface {
-	ForPulseNumber(context.Context, insolar.PulseNumber) (*node.Snapshot, error)
-	Latest(ctx context.Context) (node.Snapshot, error)
-}
+	ks := platformpolicy.NewKeyProcessor()
+	p1, err := ks.GeneratePrivateKey()
+	p2, err := ks.GeneratePrivateKey()
+	assert.NoError(t, err)
 
-//go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAppender -o ../../testutils/network -s _mock.go
+	n1 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), insolar.NodeReady, "127.0.0.1:22", "ver2")
+	n2 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleHeavyMaterial, ks.ExtractPublicKey(p2), insolar.NodeLeaving, "127.0.0.1:33", "ver5")
 
-// SnapshotAppender provides method for appending Snapshot to storage.
-type SnapshotAppender interface {
-	Append(ctx context.Context, pulse insolar.PulseNumber, snapshot *node.Snapshot) error
-}
+	s := Snapshot{}
+	s.pulse = 22
+	s.state = insolar.CompleteNetworkState
+	s.nodeList[ListLeaving] = []insolar.NetworkNode{n1, n2}
+	s.nodeList[ListJoiner] = []insolar.NetworkNode{n2}
 
-// NewSnapshotStorage constructor creates PulseStorage
-func NewSnapshotStorage() *SnapshotStorage {
-	return &SnapshotStorage{}
-}
+	buff, err := s.Encode()
+	assert.NoError(t, err)
+	assert.NotEmptyf(t, buff, "should not be empty")
 
-type SnapshotStorage struct {
-	DB   DB `inject:""`
-	lock sync.RWMutex
-}
-
-func (s *SnapshotStorage) Append(ctx context.Context, pulse insolar.PulseNumber, snapshot *node.Snapshot) error {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	buff, err := snapshot.Encode()
-	if err != nil {
-		return errors.Wrap(err, "[SnapshotStorage] Failed to append snapshot")
-	}
-	return s.DB.Set(pulseKey(pulse), buff)
-}
-
-func (s *SnapshotStorage) ForPulseNumber(ctx context.Context, pulse insolar.PulseNumber) (*node.Snapshot, error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	buf, err := s.DB.Get(pulseKey(pulse))
-	if err != nil {
-		return nil, errors.Wrap(err, "[SnapshotStorage] Failed to get snapshot from DB")
-	}
-	result := &node.Snapshot{}
-	err = result.Decode(buf)
-	if err != nil {
-		return nil, errors.Wrap(err, "[SnapshotStorage] Failed to decode snapshot")
-	}
-	return result, nil
-}
-
-func (s *SnapshotStorage) Latest(ctx context.Context) (*node.Snapshot, error) {
-	panic("implement me")
+	s2 := Snapshot{}
+	err = s2.Decode(buff)
+	assert.NoError(t, err)
+	assert.True(t, s.Equal(&s2))
 }
