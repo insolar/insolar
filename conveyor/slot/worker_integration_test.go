@@ -14,23 +14,24 @@
  *    limitations under the License.
  */
 
-package conveyor
+package slot
 
 import (
 	"os"
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/handler"
-	"github.com/insolar/insolar/conveyor/slot"
-	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/stretchr/testify/require"
 )
 
 const maxState = fsm.StateID(1000)
 
+// TODO: make mock stateMachine for integration tests using conveyor/generator package
 type mockStateMachineSet struct {
 	stateMachine matrix.StateMachine
 }
@@ -101,7 +102,7 @@ func mockHandlerStorage() matrix.StateMachineHolder {
 }
 
 func setup() {
-	slot.HandlerStorage = mockHandlerStorage()
+	HandlerStorage = mockHandlerStorage()
 }
 
 func testMainWrapper(m *testing.M) int {
@@ -114,95 +115,46 @@ func TestMain(m *testing.M) {
 	os.Exit(testMainWrapper(m))
 }
 
-func TestConveyor_ChangePulse(t *testing.T) {
-	conveyor, err := NewPulseConveyor()
-	require.NoError(t, err)
-	callback := mockCallback()
-	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
-	err = conveyor.PreparePulse(pulse, callback)
-	require.NoError(t, err)
+func Test_run(t *testing.T) {
 
-	callback.(*mockSyncDone).GetResult()
+	for _, tt := range testPulseStates {
+		t.Run(tt.String(), func(t *testing.T) {
+			slot, worker := makeSlotAndWorker(tt, 22)
+			for i := 1; i < 8000; i++ {
+				state := fsm.StateID(i)
+				if state > maxState {
+					state /= maxState
+				}
+				element, err := slot.createElement(HandlerStorage.GetInitialStateMachine(), fsm.StateID(state), queue.OutputElement{})
+				require.NoError(t, err)
+				require.NotNil(t, element)
+			}
 
-	err = conveyor.ActivatePulse()
-	require.NoError(t, err)
-}
+			go func() {
+				for i := 1; i < 10; i++ {
+					resp := adapter.NewAdapterResponse(0, uint32(i), 0, 0)
+					_ = slot.responseQueue.SinkPush(resp)
+					time.Sleep(time.Millisecond * 50)
+				}
+			}()
 
-func TestConveyor_ChangePulseMultipleTimes(t *testing.T) {
-	conveyor, err := NewPulseConveyor()
-	require.NoError(t, err)
+			go func() {
+				time.Sleep(time.Millisecond * 400)
+				_ = slot.inputQueue.PushSignal(PendingPulseSignal, mockCallback())
+			}()
 
-	pulseNumber := testRealPulse + testPulseDelta
-	for i := 0; i < 20; i++ {
-		callback := mockCallback()
-		pulseNumber += testPulseDelta
-		pulse := insolar.Pulse{PulseNumber: pulseNumber, NextPulseNumber: pulseNumber + testPulseDelta}
-		err = conveyor.PreparePulse(pulse, callback)
-		require.NoError(t, err)
+			go func() {
+				time.Sleep(time.Millisecond * 600)
+				_ = slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback())
+			}()
 
-		callback.(*mockSyncDone).GetResult()
+			go func() {
+				time.Sleep(time.Millisecond * 800)
+				_ = slot.inputQueue.PushSignal(CancelSignal, mockCallback())
+			}()
 
-		err = conveyor.ActivatePulse()
-		require.NoError(t, err)
+			worker.run()
+
+		})
 	}
 }
-
-func TestConveyor_ChangePulseMultipleTimes_WithEvents(t *testing.T) {
-	conveyor, err := NewPulseConveyor()
-	require.NoError(t, err)
-
-	pulseNumber := testRealPulse + testPulseDelta
-	for i := 0; i < 100; i++ {
-
-		go func() {
-			for j := 0; j < 1; j++ {
-				// TODO: handle error checking.
-				_ = conveyor.SinkPush(pulseNumber, "TEST")
-				_ = conveyor.SinkPush(pulseNumber-testPulseDelta, "TEST")
-				_ = conveyor.SinkPush(pulseNumber+testPulseDelta, "TEST")
-				_ = conveyor.SinkPushAll(pulseNumber, []interface{}{"TEST", i * j})
-			}
-		}()
-
-		go func() {
-			for j := 0; j < 100; j++ {
-				conveyor.GetState()
-			}
-		}()
-
-		go func() {
-			for j := 0; j < 100; j++ {
-				conveyor.IsOperational()
-			}
-		}()
-
-		callback := mockCallback()
-		pulseNumber += testPulseDelta
-		pulse := insolar.Pulse{PulseNumber: pulseNumber, NextPulseNumber: pulseNumber + testPulseDelta}
-		err = conveyor.PreparePulse(pulse, callback)
-		require.NoError(t, err)
-
-		if i == 0 {
-			require.Equal(t, 0, callback.(*mockSyncDone).GetResult())
-		} else {
-			require.Equal(t, 555, callback.(*mockSyncDone).GetResult())
-		}
-
-		err = conveyor.ActivatePulse()
-		require.NoError(t, err)
-
-		go func() {
-			for j := 0; j < 10; j++ {
-				require.NoError(t, conveyor.SinkPushAll(pulseNumber, []interface{}{"TEST", i}))
-				require.NoError(t, conveyor.SinkPush(pulseNumber, "TEST"))
-				require.NoError(t, conveyor.SinkPush(pulseNumber-testPulseDelta, "TEST"))
-				// TODO: handle error check
-				_ = conveyor.SinkPush(pulseNumber+testPulseDelta, "TEST")
-			}
-		}()
-	}
-
-	time.Sleep(time.Millisecond * 200)
-}
-
-// TODO: Add test on InitiateShutdown

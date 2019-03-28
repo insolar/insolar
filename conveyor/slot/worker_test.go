@@ -17,103 +17,18 @@
 package slot
 
 import (
-	"os"
 	"testing"
-	"time"
 
 	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/handler"
+	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
 
-	"github.com/insolar/insolar/conveyor/fsm"
-	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
-
-type mockStateMachineSet struct {
-	stateMachine matrix.StateMachine
-}
-
-func (s *mockStateMachineSet) GetStateMachineByID(id int) matrix.StateMachine {
-	return s.stateMachine
-}
-
-type mockStateMachineHolder struct{}
-
-func (m *mockStateMachineHolder) makeSetAccessor() matrix.SetAccessor {
-	return &mockStateMachineSet{
-		stateMachine: m.GetStateMachinesByType(),
-	}
-}
-
-func (m *mockStateMachineHolder) GetFutureConfig() matrix.SetAccessor {
-	return m.makeSetAccessor()
-}
-
-func (m *mockStateMachineHolder) GetPresentConfig() matrix.SetAccessor {
-	return m.makeSetAccessor()
-}
-
-func (m *mockStateMachineHolder) GetPastConfig() matrix.SetAccessor {
-	return m.makeSetAccessor()
-}
-
-func (m *mockStateMachineHolder) GetInitialStateMachine() matrix.StateMachine {
-	return m.GetStateMachinesByType()
-}
-
-func (m *mockStateMachineHolder) GetStateMachinesByType() matrix.StateMachine {
-
-	sm := matrix.NewStateMachineMock(&testing.T{})
-	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r handler.MigrationHandler) {
-		return func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
-			if s > maxState {
-				s /= 2
-			}
-			return element.GetElementID(), fsm.NewElementState(fsm.ID(s%3), s+1), nil
-		}
-	}
-
-	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r handler.TransitHandler) {
-		return func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
-			if s > maxState {
-				s /= 2
-			}
-			return element.GetElementID(), fsm.NewElementState(fsm.ID(s%3), s+1), nil
-		}
-	}
-
-	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r handler.AdapterResponseHandler) {
-		return func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
-			if s > maxState {
-				s /= 2
-			}
-			return element.GetPayload(), fsm.NewElementState(fsm.ID(s%3), s+1), nil
-		}
-	}
-
-	return sm
-}
-
-func mockHandlerStorage() matrix.StateMachineHolder {
-	return &mockStateMachineHolder{}
-}
-
-func setup() {
-	HandlerStorage = mockHandlerStorage()
-}
-
-func testMainWrapper(m *testing.M) int {
-	setup()
-	code := m.Run()
-	return code
-}
-
-func TestMain(m *testing.M) {
-	os.Exit(testMainWrapper(m))
-}
 
 var testPulseStates = []PulseState{Future, Present, Past, Antique}
 var testPulseStatesWithoutFuture = []PulseState{Present, Past, Antique}
@@ -1086,53 +1001,4 @@ func Test_CallCallbackOfSignal(t *testing.T) {
 			callback.(*mockSyncDone).GetResult()
 		})
 	}
-}
-
-const maxState = fsm.StateID(1000)
-
-// ---- run
-
-func Test_run(t *testing.T) {
-
-	for _, tt := range testPulseStates {
-		t.Run(tt.String(), func(t *testing.T) {
-			slot, worker := makeSlotAndWorker(tt, 22)
-			for i := 1; i < 8000; i++ {
-				state := fsm.StateID(i)
-				if state > maxState {
-					state /= maxState
-				}
-				element, err := slot.createElement(HandlerStorage.GetInitialStateMachine(), fsm.StateID(state), queue.OutputElement{})
-				require.NoError(t, err)
-				require.NotNil(t, element)
-			}
-
-			go func() {
-				for i := 1; i < 10; i++ {
-					resp := adapter.NewAdapterResponse(0, uint32(i), 0, 0)
-					slot.responseQueue.SinkPush(resp)
-					time.Sleep(time.Millisecond * 50)
-				}
-			}()
-
-			go func() {
-				time.Sleep(time.Millisecond * 400)
-				slot.inputQueue.PushSignal(PendingPulseSignal, mockCallback())
-			}()
-
-			go func() {
-				time.Sleep(time.Millisecond * 600)
-				slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback())
-			}()
-
-			go func() {
-				time.Sleep(time.Millisecond * 800)
-				slot.inputQueue.PushSignal(CancelSignal, mockCallback())
-			}()
-
-			worker.run()
-
-		})
-	}
-
 }

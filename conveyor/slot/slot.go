@@ -29,6 +29,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+// TODO: make HandlerStorage not available for export. For now we use it in conveyor_integration_test only
+// Never use HandlerStorage outside this pkg
 var HandlerStorage matrix.StateMachineHolder
 
 func init() {
