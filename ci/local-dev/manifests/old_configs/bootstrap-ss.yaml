@@ -117,7 +117,7 @@ data:
             5: 1
       log:
         level: Debug
-        adapter: logrus
+        adapter: zerolog
       stats:
         listenaddress: 0.0.0.0:8080
       logicrunner:

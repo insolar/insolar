@@ -51,14 +51,15 @@
 package storage
 
 import (
+	"io/ioutil"
+	"os"
+	"testing"
+
 	"github.com/dgraph-io/badger"
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/configuration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"io/ioutil"
-	"os"
-	"testing"
 )
 
 type testBadgerKey struct {

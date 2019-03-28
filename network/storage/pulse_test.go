@@ -52,13 +52,14 @@ package storage
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
+	"testing"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"os"
-	"testing"
 )
 
 func TestNewPulseStorage(t *testing.T) {

@@ -21,6 +21,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/insolar/insolar/insolar/record"
+
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -52,7 +54,7 @@ type DBContext interface {
 		ctx context.Context,
 		jetID insolar.ID,
 		pulse insolar.PulseNumber,
-		handler func(id insolar.ID, rec object.VirtualRecord) error,
+		handler func(id insolar.ID, rec record.VirtualRecord) error,
 	) error
 
 	StoreKeyValues(ctx context.Context, kvs []insolar.KV) error
@@ -231,7 +233,7 @@ func (db *DB) IterateRecordsOnPulse(
 	ctx context.Context,
 	jetID insolar.ID,
 	pulse insolar.PulseNumber,
-	handler func(id insolar.ID, rec object.VirtualRecord) error,
+	handler func(id insolar.ID, rec record.VirtualRecord) error,
 ) error {
 	jetPrefix := insolar.JetID(jetID).Prefix()
 	prefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())

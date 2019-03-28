@@ -52,11 +52,12 @@ package storage
 
 import (
 	"context"
+	"path/filepath"
+
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
-	"path/filepath"
 )
 
 var (

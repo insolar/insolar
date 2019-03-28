@@ -53,10 +53,12 @@ package storage
 import (
 	"bytes"
 	"context"
+
 	"github.com/insolar/insolar/insolar"
 
-	"github.com/ugorji/go/codec"
 	"sync"
+
+	"github.com/ugorji/go/codec"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/network/storage.PulseAccessor -o ../../testutils/network -s _mock.go

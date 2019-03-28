@@ -51,8 +51,9 @@
 package nodenetwork
 
 import (
-	"github.com/insolar/insolar/network/node"
 	"sort"
+
+	"github.com/insolar/insolar/network/node"
 
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"

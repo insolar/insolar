@@ -30,10 +30,10 @@ var (
 )
 
 var (
-	statCalls   = stats.Int64("artifactmanager/calls", "The number of AM method calls", stats.UnitDimensionless)
-	statLatency = stats.Int64("artifactmanager/latency", "The latency in milliseconds per AM call", stats.UnitMilliseconds)
+	statCalls   = stats.Int64("ledger/calls", "The number of AM method calls", stats.UnitDimensionless)
+	statLatency = stats.Int64("ledger/latency", "The latency in milliseconds per AM call", stats.UnitMilliseconds)
 
-	statRedirects = stats.Int64("artifactmanager/redirects", "The number redirects happens on AM", stats.UnitDimensionless)
+	statRedirects = stats.Int64("ledger/redirects", "The number redirects happens on AM", stats.UnitDimensionless)
 )
 
 func init() {
@@ -47,7 +47,7 @@ func init() {
 			TagKeys:     commontags,
 		},
 		&view.View{
-			Name:        "artifactmanager_latency",
+			Name:        "ledger_latency",
 			Description: statLatency.Description(),
 			Measure:     statLatency,
 			Aggregation: view.Distribution(25, 50, 75, 100, 200, 400, 600, 800, 1000, 2000, 4000, 6000),

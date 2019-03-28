@@ -18,8 +18,9 @@ package object
 
 import (
 	"context"
-	"io"
 	"sync"
+
+	"github.com/insolar/insolar/insolar/record"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/db"
@@ -33,18 +34,6 @@ type TypeID uint32
 
 // TypeIDSize is a size of TypeID type.
 const TypeIDSize = 4
-
-// VirtualRecord is base interface for all records.
-type VirtualRecord interface {
-	// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-	WriteHashData(w io.Writer) (int, error)
-}
-
-type MaterialRecord struct {
-	Record VirtualRecord
-
-	JetID insolar.JetID
-}
 
 func init() {
 	// ID can be any unique int value.
@@ -67,7 +56,7 @@ func init() {
 // RecordAccessor provides info about record-values from storage.
 type RecordAccessor interface {
 	// ForID returns record for provided id.
-	ForID(ctx context.Context, id insolar.ID) (MaterialRecord, error)
+	ForID(ctx context.Context, id insolar.ID) (record.MaterialRecord, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.RecordModifier -o ./ -s _mock.go
@@ -75,7 +64,7 @@ type RecordAccessor interface {
 // RecordModifier provides methods for setting record-values to storage.
 type RecordModifier interface {
 	// Set saves new record-value in storage.
-	Set(ctx context.Context, id insolar.ID, rec MaterialRecord) error
+	Set(ctx context.Context, id insolar.ID, rec record.MaterialRecord) error
 }
 
 // RecordMemory is an in-memory struct for record-storage.
@@ -83,19 +72,19 @@ type RecordMemory struct {
 	jetIndex db.JetIndexModifier
 
 	lock   sync.RWMutex
-	memory map[insolar.ID]MaterialRecord
+	memory map[insolar.ID]record.MaterialRecord
 }
 
 // NewRecordMemory creates a new instance of RecordMemory storage.
 func NewRecordMemory() *RecordMemory {
 	return &RecordMemory{
-		memory:   map[insolar.ID]MaterialRecord{},
+		memory:   map[insolar.ID]record.MaterialRecord{},
 		jetIndex: db.NewJetIndex(),
 	}
 }
 
 // Set saves new record-value in storage.
-func (m *RecordMemory) Set(ctx context.Context, id insolar.ID, rec MaterialRecord) error {
+func (m *RecordMemory) Set(ctx context.Context, id insolar.ID, rec record.MaterialRecord) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -115,7 +104,7 @@ func (m *RecordMemory) Set(ctx context.Context, id insolar.ID, rec MaterialRecor
 }
 
 // ForID returns record for provided id.
-func (m *RecordMemory) ForID(ctx context.Context, id insolar.ID) (rec MaterialRecord, err error) {
+func (m *RecordMemory) ForID(ctx context.Context, id insolar.ID) (rec record.MaterialRecord, err error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
@@ -151,7 +140,7 @@ func NewRecordDB() *RecordDB {
 }
 
 // Set saves new record-value in storage.
-func (r *RecordDB) Set(ctx context.Context, id insolar.ID, rec MaterialRecord) error {
+func (r *RecordDB) Set(ctx context.Context, id insolar.ID, rec record.MaterialRecord) error {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
@@ -159,14 +148,14 @@ func (r *RecordDB) Set(ctx context.Context, id insolar.ID, rec MaterialRecord) e
 }
 
 // ForID returns record for provided id.
-func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (MaterialRecord, error) {
+func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (record.MaterialRecord, error) {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
 	return r.get(id)
 }
 
-func (r *RecordDB) set(id insolar.ID, rec MaterialRecord) error {
+func (r *RecordDB) set(id insolar.ID, rec record.MaterialRecord) error {
 	key := recordKey(id)
 
 	_, err := r.DB.Get(key)
@@ -177,7 +166,7 @@ func (r *RecordDB) set(id insolar.ID, rec MaterialRecord) error {
 	return r.DB.Set(key, EncodeRecord(rec))
 }
 
-func (r *RecordDB) get(id insolar.ID) (rec MaterialRecord, err error) {
+func (r *RecordDB) get(id insolar.ID) (rec record.MaterialRecord, err error) {
 	buff, err := r.DB.Get(recordKey(id))
 	if err == db.ErrNotFound {
 		err = ErrNotFound
@@ -190,14 +179,14 @@ func (r *RecordDB) get(id insolar.ID) (rec MaterialRecord, err error) {
 	return
 }
 
-func EncodeRecord(rec MaterialRecord) []byte {
+func EncodeRecord(rec record.MaterialRecord) []byte {
 	buff := SerializeRecord(rec.Record)
 	result := append(buff[:], rec.JetID[:]...)
 
 	return result
 }
 
-func DecodeRecord(buff []byte) MaterialRecord {
+func DecodeRecord(buff []byte) record.MaterialRecord {
 	recBuff := buff[:len(buff)-insolar.RecordIDSize]
 	jetIDBuff := buff[len(buff)-insolar.RecordIDSize:]
 
@@ -206,5 +195,5 @@ func DecodeRecord(buff []byte) MaterialRecord {
 	var jetID insolar.JetID
 	copy(jetID[:], jetIDBuff)
 
-	return MaterialRecord{Record: rec, JetID: jetID}
+	return record.MaterialRecord{Record: rec, JetID: jetID}
 }

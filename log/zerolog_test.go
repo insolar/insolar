@@ -31,7 +31,7 @@ func TestZeroLogAdapter_CallerInfo(t *testing.T) {
 	require.NotNil(t, log)
 
 	var buf bytes.Buffer
-	log.SetOutput(&buf)
+	log = log.WithOutput(&buf)
 
 	log.Error("test")
 

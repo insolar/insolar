@@ -193,3 +193,4 @@ docker: docker-insolard docker-genesis docker-insgorund
 
 generate-protobuf:
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto

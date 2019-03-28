@@ -22,7 +22,6 @@ import (
 	"crypto"
 	"net"
 	"net/rpc"
-	"os"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -45,9 +44,9 @@ func capture(
 ) string {
 	logger := inslogger.FromContext(ctx)
 	var buf bytes.Buffer
-	logger.SetOutput(&buf)
+	logger = logger.WithOutput(&buf)
+	ctx = inslogger.SetLogger(ctx, logger)
 	f(ctx)
-	logger.SetOutput(os.Stderr)
 	return buf.String()
 }
 
