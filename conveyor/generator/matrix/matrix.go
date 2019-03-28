@@ -17,18 +17,16 @@
 package matrix
 
 import (
-	"github.com/insolar/insolar/conveyor/generator/state_machines/getcode"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 )
 
 const numPulseStates = 3
 
 type StateMachineSet struct {
-	stateMachines []statemachine.StateMachine
+	stateMachines []StateMachine
 }
 
-func (s *StateMachineSet) GetStateMachineByID(id int) statemachine.StateMachine {
+func (s *StateMachineSet) GetStateMachineByID(id int) StateMachine {
 	return s.stateMachines[id]
 }
 
@@ -47,36 +45,31 @@ func NewMatrix() *Matrix {
 	m := Matrix{}
 
 	// Fill m.matrix[i][0] with empty state machine, since 0 - is state of completion of state machine
-	var emptyObject statemachine.StateMachine
+	var emptyObject StateMachine
 	for i := 0; i < numPulseStates; i++ {
 		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, emptyObject)
 	}
 
-	smsGetCodeStateMachine := getcode.RawGetCodeStateMachineFactory()
+	smTestStateMachine := sample.RawTestStateMachineFactory()
 	for i := 0; i < numPulseStates; i++ {
-		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, smsGetCodeStateMachine[i])
-	}
-
-	smsTestStateMachine := sample.RawTestStateMachineFactory()
-	for i := 0; i < numPulseStates; i++ {
-		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, smsTestStateMachine[i])
+		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, smTestStateMachine[i])
 	}
 
 	return &m
 }
 
-func (m *Matrix) GetInitialStateMachine() statemachine.StateMachine {
+func (m *Matrix) GetInitialStateMachine() StateMachine {
 	return m.matrix[1].stateMachines[1]
 }
 
-func (m *Matrix) GetFutureConfig() statemachine.SetAccessor {
+func (m *Matrix) GetFutureConfig() SetAccessor {
 	return &m.matrix[0]
 }
 
-func (m *Matrix) GetPresentConfig() statemachine.SetAccessor {
+func (m *Matrix) GetPresentConfig() SetAccessor {
 	return &m.matrix[1]
 }
 
-func (m *Matrix) GetPastConfig() statemachine.SetAccessor {
+func (m *Matrix) GetPastConfig() SetAccessor {
 	return &m.matrix[2]
 }

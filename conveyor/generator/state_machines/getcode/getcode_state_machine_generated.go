@@ -17,11 +17,8 @@
 package getcode
 
 import (
-	"github.com/insolar/insolar/conveyor/generator/common"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/conveyor/fsm"
+	"github.com/insolar/insolar/conveyor/statemachine"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 
@@ -51,41 +48,41 @@ type RawGetCodeStateMachine struct {
 	cleanStateMachine GetCodeStateMachine
 }
 
-func RawGetCodeStateMachineFactory() [3]statemachine.StateMachine {
+func RawGetCodeStateMachineFactory() [3]*statemachine.StateMachine {
 	m := RawGetCodeStateMachine{
 		cleanStateMachine: &CleanGetCodeStateMachine{},
 	}
 
-	var x = [3][]common.State{}
+	var x = [3][]statemachine.State{}
 	// future state machine
-	x[0] = append(x[0], common.State{
+	x[0] = append(x[0], statemachine.State{
 		Transition: m.initFutureHandler,
 		ErrorState: m.errorFutureInit,
 	},
-		common.State{
+		statemachine.State{
 			Migration: m.migrateFromPresentFirst,
 
 			ErrorState: m.errorPresentFirst,
 		},
-		common.State{
+		statemachine.State{
 			Migration: m.migrateFromPresentSecond,
 
 			ErrorState: m.errorPresentSecond,
 		})
 
 	// present state machine
-	x[1] = append(x[1], common.State{
+	x[1] = append(x[1], statemachine.State{
 		Transition: m.initPresentHandler,
 		ErrorState: m.errorPresentInit,
 	},
-		common.State{
+		statemachine.State{
 			Migration:            m.migrateFromPresentFirst,
 			Transition:           m.transitPresentFirst,
 			AdapterResponse:      m.responsePresentFirst,
 			ErrorState:           m.errorPresentFirst,
 			AdapterResponseError: m.errorResponsePresentFirst,
 		},
-		common.State{
+		statemachine.State{
 			Migration:            m.migrateFromPresentSecond,
 			Transition:           m.transitPresentSecond,
 			AdapterResponse:      m.responsePresentSecond,
@@ -94,42 +91,42 @@ func RawGetCodeStateMachineFactory() [3]statemachine.StateMachine {
 		})
 
 	// past state machine
-	x[2] = append(x[2], common.State{
+	x[2] = append(x[2], statemachine.State{
 		Transition: m.initPresentHandler,
 		ErrorState: m.errorPresentInit,
 	},
-		common.State{
+		statemachine.State{
 			Transition: m.transitPresentFirst,
 
 			ErrorState: m.errorPresentFirst,
 		},
-		common.State{
+		statemachine.State{
 			Transition: m.transitPresentSecond,
 
 			ErrorState: m.errorPresentSecond,
 		})
 
-	smFuture := common.StateMachine{
+	smFuture := statemachine.StateMachine{
 		ID:     m.cleanStateMachine.(GetCodeStateMachine).GetTypeID(),
 		States: x[0],
 	}
 
-	smPresent := common.StateMachine{
+	smPresent := statemachine.StateMachine{
 		ID:     m.cleanStateMachine.(GetCodeStateMachine).GetTypeID(),
 		States: x[1],
 	}
 
-	smPast := common.StateMachine{
+	smPast := statemachine.StateMachine{
 		ID:     m.cleanStateMachine.(GetCodeStateMachine).GetTypeID(),
 		States: x[2],
 	}
 
-	return [3]statemachine.StateMachine{
+	return [3]*statemachine.StateMachine{
 		&smFuture, &smPresent, &smPast,
 	}
 }
 
-func (s *RawGetCodeStateMachine) initPresentHandler(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+func (s *RawGetCodeStateMachine) initPresentHandler(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 	aInput, ok := element.GetInputEvent().(Event)
 	if !ok {
 		return nil, 0, errors.New("wrong input event type")
@@ -137,7 +134,7 @@ func (s *RawGetCodeStateMachine) initPresentHandler(element slot.SlotElementHelp
 	payload, state, err := s.cleanStateMachine.initPresentHandler(aInput, element.GetPayload())
 	return payload, state, err
 }
-func (s *RawGetCodeStateMachine) initFutureHandler(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+func (s *RawGetCodeStateMachine) initFutureHandler(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 	aInput, ok := element.GetInputEvent().(Event)
 	if !ok {
 		return nil, 0, errors.New("wrong input event type")
@@ -146,16 +143,16 @@ func (s *RawGetCodeStateMachine) initFutureHandler(element slot.SlotElementHelpe
 	return payload, state, err
 }
 
-func (s *RawGetCodeStateMachine) errorPresentInit(element slot.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
+func (s *RawGetCodeStateMachine) errorPresentInit(element fsm.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
 	payload, state := s.cleanStateMachine.errorPresentInit(element.GetInputEvent(), element.GetPayload(), err)
 	return payload, state
 }
-func (s *RawGetCodeStateMachine) errorFutureInit(element slot.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
+func (s *RawGetCodeStateMachine) errorFutureInit(element fsm.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
 	payload, state := s.cleanStateMachine.errorFutureInit(element.GetInputEvent(), element.GetPayload(), err)
 	return payload, state
 }
 
-func (s *RawGetCodeStateMachine) transitPresentFirst(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+func (s *RawGetCodeStateMachine) transitPresentFirst(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 	aInput, ok := element.GetInputEvent().(Event)
 	if !ok {
 		return nil, 0, errors.New("wrong input event type")
@@ -168,7 +165,7 @@ func (s *RawGetCodeStateMachine) transitPresentFirst(element slot.SlotElementHel
 	return payload, state, err
 }
 
-func (s *RawGetCodeStateMachine) migrateFromPresentFirst(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+func (s *RawGetCodeStateMachine) migrateFromPresentFirst(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 	aInput, ok := element.GetInputEvent().(Event)
 	if !ok {
 		return nil, 0, errors.New("wrong input event type")
@@ -181,17 +178,17 @@ func (s *RawGetCodeStateMachine) migrateFromPresentFirst(element slot.SlotElemen
 	return payload, fsm.NewElementState(element.GetType(), element.GetState()), err
 }
 
-func (s *RawGetCodeStateMachine) errorPresentFirst(element slot.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
+func (s *RawGetCodeStateMachine) errorPresentFirst(element fsm.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
 	payload, state := s.cleanStateMachine.errorPresentFirst(element.GetInputEvent(), element.GetPayload(), err)
 	return payload, state
 }
 
-func (s *RawGetCodeStateMachine) responsePresentFirst(element slot.SlotElementHelper, ar iadapter.Response) (interface{}, fsm.ElementState, error) {
+func (s *RawGetCodeStateMachine) responsePresentFirst(element fsm.SlotElementHelper, ar interface{}) (interface{}, fsm.ElementState, error) {
 	aInput, ok := element.GetInputEvent().(Event)
 	if !ok {
 		return nil, 0, errors.New("wrong input event type")
 	}
-	aResponse, ok := ar.GetRespPayload().(artifactmanager.GetCodeResp)
+	aResponse, ok := ar.(artifactmanager.GetCodeResp)
 	if !ok {
 		return nil, 0, errors.New("wrong response type")
 	}
@@ -199,12 +196,12 @@ func (s *RawGetCodeStateMachine) responsePresentFirst(element slot.SlotElementHe
 	return payload, state, err
 }
 
-func (s *RawGetCodeStateMachine) errorResponsePresentFirst(element slot.SlotElementHelper, ar iadapter.Response, err error) (interface{}, fsm.ElementState) {
+func (s *RawGetCodeStateMachine) errorResponsePresentFirst(element fsm.SlotElementHelper, ar interface{}, err error) (interface{}, fsm.ElementState) {
 	payload, state := s.cleanStateMachine.errorResponsePresentFirst(element.GetInputEvent(), element.GetPayload(), ar, err)
 	return payload, state
 }
 
-func (s *RawGetCodeStateMachine) transitPresentSecond(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+func (s *RawGetCodeStateMachine) transitPresentSecond(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 	aInput, ok := element.GetInputEvent().(Event)
 	if !ok {
 		return nil, 0, errors.New("wrong input event type")
@@ -217,7 +214,7 @@ func (s *RawGetCodeStateMachine) transitPresentSecond(element slot.SlotElementHe
 	return payload, state, err
 }
 
-func (s *RawGetCodeStateMachine) migrateFromPresentSecond(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+func (s *RawGetCodeStateMachine) migrateFromPresentSecond(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 	aInput, ok := element.GetInputEvent().(Event)
 	if !ok {
 		return nil, 0, errors.New("wrong input event type")
@@ -230,12 +227,12 @@ func (s *RawGetCodeStateMachine) migrateFromPresentSecond(element slot.SlotEleme
 	return payload, fsm.NewElementState(element.GetType(), element.GetState()), err
 }
 
-func (s *RawGetCodeStateMachine) errorPresentSecond(element slot.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
+func (s *RawGetCodeStateMachine) errorPresentSecond(element fsm.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
 	payload, state := s.cleanStateMachine.errorPresentSecond(element.GetInputEvent(), element.GetPayload(), err)
 	return payload, state
 }
 
-func (s *RawGetCodeStateMachine) responsePresentSecond(element slot.SlotElementHelper, ar iadapter.Response) (interface{}, fsm.ElementState, error) {
+func (s *RawGetCodeStateMachine) responsePresentSecond(element fsm.SlotElementHelper, ar interface{}) (interface{}, fsm.ElementState, error) {
 	aInput, ok := element.GetInputEvent().(Event)
 	if !ok {
 		return nil, 0, errors.New("wrong input event type")
@@ -244,7 +241,7 @@ func (s *RawGetCodeStateMachine) responsePresentSecond(element slot.SlotElementH
 	if !ok {
 		return nil, 0, errors.New("wrong payload type")
 	}
-	aResponse, ok := ar.GetRespPayload().(artifactmanager.GetCodeResp)
+	aResponse, ok := ar.(artifactmanager.GetCodeResp)
 	if !ok {
 		return nil, 0, errors.New("wrong response type")
 	}
@@ -252,12 +249,12 @@ func (s *RawGetCodeStateMachine) responsePresentSecond(element slot.SlotElementH
 	return payload, state, err
 }
 
-func (s *RawGetCodeStateMachine) errorResponsePresentSecond(element slot.SlotElementHelper, ar iadapter.Response, err error) (interface{}, fsm.ElementState) {
+func (s *RawGetCodeStateMachine) errorResponsePresentSecond(element fsm.SlotElementHelper, ar interface{}, err error) (interface{}, fsm.ElementState) {
 	payload, state := s.cleanStateMachine.errorResponsePresentSecond(element.GetInputEvent(), element.GetPayload(), ar, err)
 	return payload, state
 }
 
-func (s *RawGetCodeStateMachine) transitPresentThird(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+func (s *RawGetCodeStateMachine) transitPresentThird(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 	aInput, ok := element.GetInputEvent().(Event)
 	if !ok {
 		return nil, 0, errors.New("wrong input event type")
@@ -270,7 +267,7 @@ func (s *RawGetCodeStateMachine) transitPresentThird(element slot.SlotElementHel
 	return payload, state, err
 }
 
-func (s *RawGetCodeStateMachine) migrateFromPresentThird(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+func (s *RawGetCodeStateMachine) migrateFromPresentThird(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 	aInput, ok := element.GetInputEvent().(Event)
 	if !ok {
 		return nil, 0, errors.New("wrong input event type")
@@ -283,34 +280,26 @@ func (s *RawGetCodeStateMachine) migrateFromPresentThird(element slot.SlotElemen
 	return payload, fsm.NewElementState(element.GetType(), element.GetState()), err
 }
 
-func (s *RawGetCodeStateMachine) errorPresentThird(element slot.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
+func (s *RawGetCodeStateMachine) errorPresentThird(element fsm.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
 	payload, state := s.cleanStateMachine.errorPresentThird(element.GetInputEvent(), element.GetPayload(), err)
 	return payload, state
 }
 
-func (s *RawGetCodeStateMachine) responsePresentThird(element slot.SlotElementHelper, ar iadapter.Response) (interface{}, fsm.ElementState, error) {
+func (s *RawGetCodeStateMachine) responsePresentThird(element fsm.SlotElementHelper, ar interface{}) (interface{}, fsm.ElementState, error) {
 	aInput, ok := element.GetInputEvent().(Event)
 	if !ok {
 		return nil, 0, errors.New("wrong input event type")
 	}
-	aPayload, ok := element.GetPayload().(*Payload)
-	if !ok {
-		return nil, 0, errors.New("wrong payload type")
-	}
-	aResponse, ok := ar.GetRespPayload().(artifactmanager.GetCodeResp)
-	if !ok {
-		return nil, 0, errors.New("wrong response type")
-	}
-	payload, state, err := s.cleanStateMachine.responsePresentThird(aInput, aPayload, aResponse)
+	payload, state, err := s.cleanStateMachine.responsePresentThird(aInput, ar)
 	return payload, state, err
 }
 
-func (s *RawGetCodeStateMachine) errorResponsePresentThird(element slot.SlotElementHelper, ar iadapter.Response, err error) (interface{}, fsm.ElementState) {
+func (s *RawGetCodeStateMachine) errorResponsePresentThird(element fsm.SlotElementHelper, ar interface{}, err error) (interface{}, fsm.ElementState) {
 	payload, state := s.cleanStateMachine.errorResponsePresentThird(element.GetInputEvent(), element.GetPayload(), ar, err)
 	return payload, state
 }
 
-func (s *RawGetCodeStateMachine) transitPresentFourth(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+func (s *RawGetCodeStateMachine) transitPresentFourth(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 	aInput, ok := element.GetInputEvent().(Event)
 	if !ok {
 		return nil, 0, errors.New("wrong input event type")
@@ -323,7 +312,7 @@ func (s *RawGetCodeStateMachine) transitPresentFourth(element slot.SlotElementHe
 	return payload, state, err
 }
 
-func (s *RawGetCodeStateMachine) migrateFromPresentFourth(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+func (s *RawGetCodeStateMachine) migrateFromPresentFourth(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 	aInput, ok := element.GetInputEvent().(Event)
 	if !ok {
 		return nil, 0, errors.New("wrong input event type")
@@ -336,17 +325,17 @@ func (s *RawGetCodeStateMachine) migrateFromPresentFourth(element slot.SlotEleme
 	return payload, fsm.NewElementState(element.GetType(), element.GetState()), err
 }
 
-func (s *RawGetCodeStateMachine) errorPresentFourth(element slot.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
+func (s *RawGetCodeStateMachine) errorPresentFourth(element fsm.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
 	payload, state := s.cleanStateMachine.errorPresentFourth(element.GetInputEvent(), element.GetPayload(), err)
 	return payload, state
 }
 
-func (s *RawGetCodeStateMachine) responsePresentFourth(element slot.SlotElementHelper, ar iadapter.Response) (interface{}, fsm.ElementState, error) {
+func (s *RawGetCodeStateMachine) responsePresentFourth(element fsm.SlotElementHelper, ar interface{}) (interface{}, fsm.ElementState, error) {
 	aInput, ok := element.GetInputEvent().(Event)
 	if !ok {
 		return nil, 0, errors.New("wrong input event type")
 	}
-	aResponse, ok := ar.GetRespPayload().(artifactmanager.GetCodeResp)
+	aResponse, ok := ar.(artifactmanager.GetCodeResp)
 	if !ok {
 		return nil, 0, errors.New("wrong response type")
 	}
@@ -354,7 +343,7 @@ func (s *RawGetCodeStateMachine) responsePresentFourth(element slot.SlotElementH
 	return payload, state, err
 }
 
-func (s *RawGetCodeStateMachine) errorResponsePresentFourth(element slot.SlotElementHelper, ar iadapter.Response, err error) (interface{}, fsm.ElementState) {
+func (s *RawGetCodeStateMachine) errorResponsePresentFourth(element fsm.SlotElementHelper, ar interface{}, err error) (interface{}, fsm.ElementState) {
 	payload, state := s.cleanStateMachine.errorResponsePresentFourth(element.GetInputEvent(), element.GetPayload(), ar, err)
 	return payload, state
 }

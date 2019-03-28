@@ -22,11 +22,8 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
-	"github.com/insolar/insolar/conveyor/interfaces/constant"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/conveyor/queue"
@@ -74,7 +71,7 @@ func newWorker(slot *Slot) worker {
 	return w
 }
 
-func (w *worker) GetStateMachineByType(mType matrix.MachineType) statemachine.StateMachine {
+func (w *worker) GetStateMachineByType(mType matrix.MachineType) matrix.StateMachine {
 	return w.slot.handlersConfiguration.pulseStateMachines.GetStateMachineByID(int(mType))
 }
 
@@ -87,13 +84,13 @@ func (w *worker) setLoggerFields() {
 func (w *worker) changePulseState() {
 	w.ctxLogger.Debugf("[ changePulseState ] starts ...")
 	switch w.slot.pulseState {
-	case constant.Future:
-		w.slot.pulseState = constant.Present
-	case constant.Present:
-		w.slot.pulseState = constant.Past
-	case constant.Past:
+	case Future:
+		w.slot.pulseState = Present
+	case Present:
+		w.slot.pulseState = Past
+	case Past:
 		w.ctxLogger.Error("[ changePulseState ] Try to change pulse state for 'Past' slot. Skip it")
-	case constant.Antique:
+	case Antique:
 		w.ctxLogger.Error("[ changePulseState ] Try to change pulse state for 'Antique' slot. Skip it")
 	default:
 		panic("[ changePulseState ] Unknown state: " + w.slot.pulseState.String())
@@ -198,7 +195,7 @@ func (w *worker) updateElement(element *slotElement, payload interface{}, fullSt
 }
 
 func (w *worker) processResponse(resp queue.OutputElement) error {
-	adapterResp, ok := resp.GetData().(iadapter.Response)
+	adapterResp, ok := resp.GetData().(AdapterResponse)
 	if !ok {
 		panic(fmt.Sprintf("[ processResponse ] Bad type in adapter response queue: %T", resp.GetData()))
 	}
@@ -210,16 +207,16 @@ func (w *worker) processResponse(resp queue.OutputElement) error {
 
 	respHandler := element.stateMachine.GetResponseHandler(element.state)
 
-	payload, newState, err := respHandler(element, adapterResp)
+	payload, newState, err := respHandler(element, adapterResp.GetRespPayload())
 	if err != nil {
 
-		w.ctxLogger.Error("[ processResponse ] Response handler errors: ", err)
+		w.ctxLogger.Error("[ processResponse ] AdapterResponse handler errors: ", err)
 		respErrorHandler := element.stateMachine.GetResponseErrorHandler(element.state)
 		if respErrorHandler == nil {
 			panic(fmt.Sprintf("[ processResponse ] No response error handler. State: %d. AdapterResp: %+v", element.state, adapterResp))
 		}
 
-		payload, newState = respErrorHandler(element, adapterResp, err)
+		payload, newState = respErrorHandler(element, adapterResp.GetRespPayload(), err)
 	}
 
 	w.updateElement(element, payload, newState)
@@ -277,7 +274,7 @@ func (w *worker) waitQueuesOrTick() {
 func (w *worker) processingElements() {
 	w.ctxLogger.Debugf("[ processingElements ] starts ...")
 	if !w.slot.hasElements(ActiveElement) {
-		if w.slot.pulseState == constant.Past {
+		if w.slot.pulseState == Past {
 			if w.slot.hasExpired() {
 				w.ctxLogger.Info("[ processingElements ] Set slot state to 'Suspending'")
 				w.changeSlotState(Suspending)
@@ -373,7 +370,7 @@ func (w *worker) sendRemovalSignalToConveyor() {
 	// catch conveyor lock, check input queue, if It's empty - remove slot from map, if it's not - got to Working state
 }
 
-func (w *worker) getInitialStateMachine() statemachine.StateMachine {
+func (w *worker) getInitialStateMachine() matrix.StateMachine {
 	return w.slot.handlersConfiguration.initStateMachine
 }
 
@@ -426,7 +423,7 @@ func (w *worker) readInputQueueSuspending() error {
 		}
 	}
 
-	if len(elements) != 0 && w.slot.pulseState == constant.Past {
+	if len(elements) != 0 && w.slot.pulseState == Past {
 		w.ctxLogger.Info("[ readInputQueueSuspending ] Set slot state to 'Working'")
 		w.changeSlotState(Working)
 	}
@@ -437,11 +434,11 @@ func (w *worker) readInputQueueSuspending() error {
 func (w *worker) suspending() {
 	w.ctxLogger.Debugf("[ suspending ] starts ...")
 	switch w.slot.pulseState {
-	case constant.Past:
+	case Past:
 		w.sendRemovalSignalToConveyor()
-	case constant.Present:
+	case Present:
 		w.calculateNodeState()
-	case constant.Future:
+	case Future:
 		if w.preparePulseSync != nil {
 			w.preparePulseSync.SetResult(nil)
 			w.preparePulseSync = nil
@@ -481,7 +478,7 @@ func (w *worker) migrate(status ActivationStatus) error {
 
 		payload, newState, err := migHandler(element)
 		if err != nil {
-			w.ctxLogger.Error("[ migrate ] Response handler errors: ", err)
+			w.ctxLogger.Error("[ migrate ] AdapterResponse handler errors: ", err)
 			respErrorHandler := element.stateMachine.GetTransitionErrorHandler(element.state)
 
 			payload, newState = respErrorHandler(element, err)
@@ -501,16 +498,16 @@ func (w *worker) migrate(status ActivationStatus) error {
 
 func (w *worker) setPulseStateMachines() {
 
-	var stateMachines statemachine.SetAccessor
+	var stateMachines matrix.SetAccessor
 
 	switch w.slot.pulseState {
-	case constant.Future:
+	case Future:
 		stateMachines = HandlerStorage.GetFutureConfig()
-	case constant.Present:
+	case Present:
 		stateMachines = HandlerStorage.GetPresentConfig()
-	case constant.Past:
+	case Past:
 		stateMachines = HandlerStorage.GetPastConfig()
-	case constant.Antique:
+	case Antique:
 		stateMachines = HandlerStorage.GetPastConfig()
 	default:
 		panic(fmt.Sprintf("[ setPulseStateMachines ] unknown pulseState: %s", w.slot.pulseState.String()))
@@ -522,7 +519,7 @@ func (w *worker) setPulseStateMachines() {
 func (w *worker) initializing() {
 	w.ctxLogger.Debugf("[ initializing ] starts ...")
 	w.setPulseStateMachines()
-	if w.slot.pulseState == constant.Future {
+	if w.slot.pulseState == Future {
 		w.ctxLogger.Info("[ initializing ] pulseState is Future. Skip initializing")
 		return
 	}

@@ -20,16 +20,12 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/conveyor/adapter"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 )
-
-// NewGetCodeAdapter creates new instance of adapter for getting code
-func NewGetCodeAdapter(cg GetCodeProcessor) adapter.PulseConveyorAdapterTaskSink {
-	return adapter.NewAdapterWithQueue(&cg)
-}
 
 // GetCodeTask is task for adapter for getting code
 type GetCodeTask struct {
@@ -74,10 +70,10 @@ func (p *GetCodeProcessor) Process(task adapter.AdapterTask, nestedEventHelper a
 type GetCodeHelper struct{}
 
 // SendResponse makes correct message and send it to adapter
-func (r *GetCodeHelper) GetCode(element slot.SlotElementHelper, parcel insolar.Parcel, respHandlerID uint32) error {
+func (r *GetCodeHelper) GetCode(element fsm.SlotElementHelper, parcel insolar.Parcel, respHandlerID uint32) error {
 	task := GetCodeTask{
 		Parcel: parcel,
 	}
-	err := element.SendTask(uint32(adapter.GetCodeAdapterID), task, respHandlerID)
+	err := element.SendTask(adapterid.GetCode, task, respHandlerID)
 	return errors.Wrap(err, "[ GetCodeHelper.SendResponse ] Can't SendTask")
 }

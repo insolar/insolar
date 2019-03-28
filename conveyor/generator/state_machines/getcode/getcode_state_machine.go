@@ -20,9 +20,8 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/conveyor/adapter"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 )
@@ -41,7 +40,7 @@ type GetCodeStateMachine interface {
 	GetTypeID() fsm.ID
 
 	initPresentHandler(input Event, payload interface{}) (*Payload, fsm.ElementState, error)
-	initFutureHandler(input Event, payload interface{}, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error)
+	initFutureHandler(input Event, payload interface{}, element fsm.SlotElementHelper) (*Payload, fsm.ElementState, error)
 
 	errorPresentInit(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
 	errorFutureInit(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
@@ -53,16 +52,16 @@ type GetCodeStateMachine interface {
 	migrateFromPresentFirst(input Event, payload *Payload) (*Payload, error)
 
 	// Transition
-	transitPresentFirst(input Event, payload insolar.ConveyorPendingMessage, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error)
+	transitPresentFirst(input Event, payload insolar.ConveyorPendingMessage, element fsm.SlotElementHelper) (*Payload, fsm.ElementState, error)
 
 	// Adapter Response
-	responsePresentFirst(input Event, payload artifactmanager.GetCodeResp, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error)
+	responsePresentFirst(input Event, payload artifactmanager.GetCodeResp, element fsm.SlotElementHelper) (*Payload, fsm.ElementState, error)
 
 	// State Error
 	errorPresentFirst(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
 
 	// Adapter Response Error
-	errorResponsePresentFirst(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState)
+	errorResponsePresentFirst(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState)
 
 	// State Declaration
 	stateSecond() fsm.StateID
@@ -80,7 +79,7 @@ type GetCodeStateMachine interface {
 	errorPresentSecond(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
 
 	// Adapter Response Error
-	errorResponsePresentSecond(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState)
+	errorResponsePresentSecond(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState)
 
 	// State Declaration
 	stateThird() fsm.StateID
@@ -89,16 +88,16 @@ type GetCodeStateMachine interface {
 	migrateFromPresentThird(input Event, payload *Payload) (*Payload, error)
 
 	// Transition
-	transitPresentThird(input Event, payload *Payload, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error)
+	transitPresentThird(input Event, payload *Payload, element fsm.SlotElementHelper) (*Payload, fsm.ElementState, error)
 
 	// Adapter Response
-	responsePresentThird(input Event, payload artifactmanager.GetCodeResp, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error)
+	responsePresentThird(input Event, payload interface{}) (*Payload, fsm.ElementState, error)
 
 	// State Error
 	errorPresentThird(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
 
 	// Adapter Response Error
-	errorResponsePresentThird(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState)
+	errorResponsePresentThird(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState)
 
 	// State Declaration
 	stateFourth() fsm.StateID
@@ -110,13 +109,13 @@ type GetCodeStateMachine interface {
 	transitPresentFourth(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, fsm.ElementState, error)
 
 	// Adapter Response
-	responsePresentFourth(input Event, payload interface{}, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error)
+	responsePresentFourth(input Event, payload interface{}, element fsm.SlotElementHelper) (*Payload, fsm.ElementState, error)
 
 	// State Error
 	errorPresentFourth(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
 
 	// Adapter Response Error
-	errorResponsePresentFourth(input interface{}, payload interface{}, ar iadapter.Response, err error) (*Payload, fsm.ElementState)
+	errorResponsePresentFourth(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState)
 }
 
 type CleanGetCodeStateMachine struct {
@@ -128,8 +127,8 @@ func (sm *CleanGetCodeStateMachine) initPresentHandler(input Event, payload inte
 	return p, fsm.NewElementState(sm.GetTypeID(), sm.stateFirst()), nil
 }
 
-func (sm *CleanGetCodeStateMachine) initFutureHandler(input Event, payload interface{}, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error) {
-	element.DeactivateTill(slot.Response)
+func (sm *CleanGetCodeStateMachine) initFutureHandler(input Event, payload interface{}, element fsm.SlotElementHelper) (*Payload, fsm.ElementState, error) {
+	element.DeactivateTill(fsm.Response)
 	p := &Payload{}
 	return p, fsm.NewElementState(sm.GetTypeID(), sm.stateFirst()), nil
 }
@@ -146,7 +145,7 @@ func (sm *CleanGetCodeStateMachine) migrateFromPresentFirst(input Event, payload
 	return payload, nil
 }
 
-func (sm *CleanGetCodeStateMachine) transitPresentFirst(input Event, payload insolar.ConveyorPendingMessage, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error) {
+func (sm *CleanGetCodeStateMachine) transitPresentFirst(input Event, payload insolar.ConveyorPendingMessage, element fsm.SlotElementHelper) (*Payload, fsm.ElementState, error) {
 	parcel := payload.Msg
 	err := adapter.CurrentCatalog.GetCode.GetCode(element, parcel, 2)
 	if err != nil {
@@ -155,7 +154,7 @@ func (sm *CleanGetCodeStateMachine) transitPresentFirst(input Event, payload ins
 	return nil, fsm.NewElementState(sm.GetTypeID(), sm.stateSecond()), nil
 }
 
-func (sm *CleanGetCodeStateMachine) responsePresentFirst(input Event, payload artifactmanager.GetCodeResp, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error) {
+func (sm *CleanGetCodeStateMachine) responsePresentFirst(input Event, payload artifactmanager.GetCodeResp, element fsm.SlotElementHelper) (*Payload, fsm.ElementState, error) {
 	panic("implement me")
 }
 
@@ -194,7 +193,7 @@ func (sm *CleanGetCodeStateMachine) migrateFromPresentThird(input Event, payload
 	return payload, nil
 }
 
-func (sm *CleanGetCodeStateMachine) transitPresentThird(input Event, payload *Payload, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error) {
+func (sm *CleanGetCodeStateMachine) transitPresentThird(input Event, payload *Payload, element fsm.SlotElementHelper) (*Payload, fsm.ElementState, error) {
 	var err error
 	if payload.err != nil {
 		// TODO: return error to future
@@ -208,7 +207,7 @@ func (sm *CleanGetCodeStateMachine) transitPresentThird(input Event, payload *Pa
 	return nil, fsm.NewElementState(sm.GetTypeID(), sm.stateFourth()), nil
 }
 
-func (sm *CleanGetCodeStateMachine) responsePresentThird(input Event, payload artifactmanager.GetCodeResp, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error) {
+func (sm *CleanGetCodeStateMachine) responsePresentThird(input Event, payload interface{}) (*Payload, fsm.ElementState, error) {
 	panic("implement me")
 }
 
@@ -228,7 +227,7 @@ func (sm *CleanGetCodeStateMachine) transitPresentFourth(input Event, payload *P
 	panic("implement me")
 }
 
-func (sm *CleanGetCodeStateMachine) responsePresentFourth(input Event, payload interface{}, element slot.SlotElementHelper) (*Payload, fsm.ElementState, error) {
+func (sm *CleanGetCodeStateMachine) responsePresentFourth(input Event, payload interface{}, element fsm.SlotElementHelper) (*Payload, fsm.ElementState, error) {
 	switch res := payload.(type) {
 	case string, error:
 		return nil, 0, nil

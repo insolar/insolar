@@ -59,11 +59,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/network/node"
+
 	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -108,7 +109,7 @@ func (s *testSuite) TestNodeConnect() {
 func (s *testSuite) TestNodeConnectInvalidVersion() {
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
-	testNode.serviceNetwork.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetVersion("ololo")
+	testNode.serviceNetwork.NodeKeeper.GetOrigin().(node.MutableNode).SetVersion("ololo")
 	s.InitNode(testNode)
 	err := testNode.componentManager.Start(s.fixture().ctx)
 	assert.Error(s.T(), err)
@@ -123,9 +124,8 @@ func (s *testSuite) TestManyNodesConnect() {
 	joinersCount := 10
 	nodes := make([]*networkNode, 0)
 	for i := 0; i < joinersCount; i++ {
-		nodes = append(nodes, s.newNetworkNode(fmt.Sprintf("testNode_%d", i)))
-		s.preInitNode(nodes[i])
-		s.InitNode(nodes[i])
+		node := s.newNetworkNode(fmt.Sprintf("testNode_%d", i))
+		nodes = append(nodes, node)
 	}
 
 	wg := sync.WaitGroup{}
@@ -133,6 +133,8 @@ func (s *testSuite) TestManyNodesConnect() {
 
 	for _, node := range nodes {
 		go func(wg *sync.WaitGroup, node *networkNode) {
+			s.preInitNode(node)
+			s.InitNode(node)
 			s.StartNode(node)
 			wg.Done()
 		}(&wg, node)
@@ -140,11 +142,11 @@ func (s *testSuite) TestManyNodesConnect() {
 
 	wg.Wait()
 
-	defer func(s *testSuite) {
+	defer func() {
 		for _, node := range nodes {
 			s.StopNode(node)
 		}
-	}(s)
+	}()
 
 	s.waitForConsensus(5)
 
