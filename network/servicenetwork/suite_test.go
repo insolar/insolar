@@ -419,14 +419,6 @@ func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse, persist
 	return p.keeper.MoveSyncToActive(ctx)
 }
 
-type staterMock struct {
-	stateFunc func() ([]byte, error)
-}
-
-func (m staterMock) State() ([]byte, error) {
-	return m.stateFunc()
-}
-
 // preInitNode inits previously created node with mocks and external dependencies
 func (s *testSuite) preInitNode(node *networkNode) {
 	cfg := configuration.NewConfiguration()
@@ -448,12 +440,6 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		return true
 	})
 
-	amMock := staterMock{
-		stateFunc: func() ([]byte, error) {
-			return make([]byte, packets.HashLength), nil
-		},
-	}
-
 	certManager, cryptographyService := s.initCrypto(node)
 
 	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
@@ -463,9 +449,8 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	keyProc := platformpolicy.NewKeyProcessor()
 
 	c := testutils.NewConveyorMock(s.T())
-	pc := testutils.NewPlatformCryptographyScheme()
 	c.PreparePulseFunc = func(p insolar.Pulse, p1 queue.SyncDone) (r error) {
-		p1.SetResult(pc.IntegrityHasher().Hash([]byte{1, 2, 3}))
+		p1.SetResult(make([]byte, packets.HashLength))
 		return nil
 	}
 	c.ActivatePulseFunc = func() (r error) {
@@ -474,7 +459,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	node.componentManager.Register(c)
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
-	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService)
+	node.componentManager.Register(netCoordinator, certManager, cryptographyService)
 	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc)
 	node.serviceNetwork = serviceNetwork
 }

@@ -207,11 +207,3 @@ func TestCalculatorError(t *testing.T) {
 	}
 	suite.Run(t, s)
 }
-
-type staterMock struct {
-	stateFunc func() ([]byte, error)
-}
-
-func (m staterMock) State() ([]byte, error) {
-	return m.stateFunc()
-}
