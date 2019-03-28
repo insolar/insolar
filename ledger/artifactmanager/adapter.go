@@ -69,7 +69,7 @@ func (p *GetCodeProcessor) Process(task adapter.AdapterTask, nestedEventHelper a
 // GetCodeHelper is helper for GetCodeProcessor
 type GetCodeHelper struct{}
 
-// SendResponse makes correct message and send it to adapter
+// GetCode makes correct message and send it to adapter
 func (r *GetCodeHelper) GetCode(element fsm.SlotElementHelper, parcel insolar.Parcel, respHandlerID uint32) error {
 	task := GetCodeTask{
 		Parcel: parcel,
