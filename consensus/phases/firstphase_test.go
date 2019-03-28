@@ -52,8 +52,9 @@ package phases
 
 import (
 	"crypto"
-	"github.com/insolar/insolar/network/node"
 	"testing"
+
+	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"

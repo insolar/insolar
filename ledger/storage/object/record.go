@@ -18,8 +18,9 @@ package object
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar/record"
 	"sync"
+
+	"github.com/insolar/insolar/insolar/record"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/db"
