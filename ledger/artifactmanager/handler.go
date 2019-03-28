@@ -324,8 +324,12 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel insolar.Parce
 		return nil, err
 	}
 	code, err := h.BlobAccessor.ForID(ctx, *codeRec.Code)
-	if err != nil {
-		return nil, err
+	if err == blob.ErrNotFound {
+		hNode, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+		if err != nil {
+			return nil, err
+		}
+		return h.saveCodeFromHeavy(ctx, jetID, msg.Code, *codeRec.Code, hNode)
 	}
 
 	rep := reply.Code{
@@ -390,16 +394,16 @@ func (h *MessageHandler) handleGetObject(
 		return nil, err
 	}
 	if onHeavy {
-		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+		hNode, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
 		}
 		logger.WithFields(map[string]interface{}{
 			"state":    stateID.DebugString(),
-			"going_to": node.String(),
+			"going_to": hNode.String(),
 		}).Debug("fetching object (on heavy)")
 
-		obj, err := h.fetchObject(ctx, msg.Head, *node, stateID, parcel.Pulse())
+		obj, err := h.fetchObject(ctx, msg.Head, *hNode, stateID, parcel.Pulse())
 		if err != nil {
 			if err == insolar.ErrDeactivated {
 				return &reply.Error{ErrType: reply.ErrDeactivated}, nil
@@ -433,18 +437,18 @@ func (h *MessageHandler) handleGetObject(
 	// Fetch state record.
 	rec, err := h.ObjectStorage.GetRecord(ctx, *stateJet, stateID)
 	if err == insolar.ErrNotFound {
-		// The record wasn't found on the current node. Return redirect to the node that contains it.
+		// The record wasn't found on the current suitNode. Return redirect to the suitNode that contains it.
 		// We get Jet tree for pulse when given state was added.
-		node, err := h.JetCoordinator.NodeForJet(ctx, *stateJet, parcel.Pulse(), stateID.Pulse())
+		suitNode, err := h.JetCoordinator.NodeForJet(ctx, *stateJet, parcel.Pulse(), stateID.Pulse())
 		if err != nil {
 			return nil, err
 		}
 		logger.WithFields(map[string]interface{}{
 			"state":    stateID.DebugString(),
-			"going_to": node.String(),
+			"going_to": suitNode.String(),
 		}).Debug("fetching object (record not found)")
 
-		obj, err := h.fetchObject(ctx, msg.Head, *node, stateID, parcel.Pulse())
+		obj, err := h.fetchObject(ctx, msg.Head, *suitNode, stateID, parcel.Pulse())
 		if err != nil {
 			if err == insolar.ErrDeactivated {
 				return &reply.Error{ErrType: reply.ErrDeactivated}, nil
@@ -488,8 +492,22 @@ func (h *MessageHandler) handleGetObject(
 
 	if state.GetMemory() != nil {
 		b, err := h.BlobAccessor.ForID(ctx, *state.GetMemory())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch blob")
+		if err == blob.ErrNotFound {
+			hNode, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+			if err != nil {
+				panic("где хэви?")
+				return nil, err
+			}
+			obj, err := h.fetchObject(ctx, msg.Head, *hNode, stateID, parcel.Pulse())
+			if err != nil {
+				panic("тут нет?")
+				return nil, err
+			}
+			err = h.BlobModifier.Set(ctx, *state.GetMemory(), blob.Blob{JetID: insolar.JetID(jetID), Value: obj.Memory})
+			if err != nil {
+				return nil, err
+			}
+			b.Value = obj.Memory
 		}
 		rep.Memory = b.Value
 	}
@@ -1044,6 +1062,29 @@ func (h *MessageHandler) saveIndexFromHeavy(
 		return nil, errors.Wrap(err, "failed to save")
 	}
 	return &idx, nil
+}
+
+func (h *MessageHandler) saveCodeFromHeavy(
+	ctx context.Context, jetID insolar.JetID, code insolar.Reference, blobID insolar.ID, heavy *insolar.Reference,
+) (*reply.Code, error) {
+	genericReply, err := h.Bus.Send(ctx, &message.GetCode{
+		Code: code,
+	}, &insolar.MessageSendOptions{
+		Receiver: heavy,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to send")
+	}
+	rep, ok := genericReply.(*reply.Code)
+	if !ok {
+		return nil, fmt.Errorf("failed to fetch code: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
+	}
+
+	err = h.BlobModifier.Set(ctx, blobID, blob.Blob{JetID: jetID, Value: rep.Code})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to save")
+	}
+	return rep, nil
 }
 
 func (h *MessageHandler) fetchObject(
