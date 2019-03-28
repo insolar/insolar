@@ -47,14 +47,12 @@ var gen *Generator
 
 func checkErr(err error) {
 	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 }
 
-func exitWithError(err string, a ...interface{}) {
-	fmt.Println(fmt.Sprintf(err, a...))
-	os.Exit(1)
+func exitWithError(errMsg string, a ...interface{}) {
+	log.Fatal(fmt.Sprintf(errMsg, a...))
 }
 
 func init() {
@@ -129,14 +127,10 @@ type stateMachineWithId struct {
 func GenerateStateMachines() {
 	for i, machine := range gen.stateMachines {
 		tplBody, err := ioutil.ReadFile(path.Join(gen.fullPathToInsolar, stateMachineTemplate))
-		if err != nil {
-			log.Fatal(err)
-		}
+		checkErr(err)
 
 		file, err := os.Create(machine.File[:len(machine.File)-3] + "_generated.go")
-		if err != nil {
-			log.Fatal(err)
-		}
+		checkErr(err)
 
 		defer file.Close()
 		out := bufio.NewWriter(file)
@@ -144,26 +138,19 @@ func GenerateStateMachines() {
 		err = template.Must(template.New("newSmTmpl").Funcs(templateFuncs).
 			Parse(string(tplBody))).
 			Execute(out, stateMachineWithId{StateMachine: *machine, ID: i + 1})
-		if err != nil {
-			log.Fatal(err)
-		}
+		checkErr(err)
+
 		err = out.Flush()
-		if err != nil {
-			log.Fatal(err)
-		}
+		checkErr(err)
 	}
 
 }
 func GenerateMatrix() {
 	tplBody, err := ioutil.ReadFile(path.Join(gen.fullPathToInsolar, matrixTemplate))
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkErr(err)
 
 	file, err := os.Create(path.Join(gen.fullPathToInsolar, generatedMatrix))
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkErr(err)
 
 	defer file.Close()
 	out := bufio.NewWriter(file)
@@ -171,12 +158,8 @@ func GenerateMatrix() {
 	err = template.Must(template.New("newMtrxTmpl").Funcs(templateFuncs).
 		Parse(string(tplBody))).
 		Execute(out, gen.stateMachines)
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkErr(err)
 
 	err = out.Flush()
-	if err != nil {
-		log.Fatal(err)
-	}
+	checkErr(err)
 }
