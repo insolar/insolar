@@ -48,59 +48,25 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package phases
+package node
 
 import (
-	"github.com/insolar/insolar/consensus/claimhandler"
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/merkle"
-	"github.com/insolar/insolar/network/node"
 )
 
-type FirstPhaseState struct {
-	*ConsensusState
-
-	PulseEntry *merkle.PulseEntry
-
-	PulseHash  merkle.OriginHash
-	PulseProof *merkle.PulseProof
-
-	ValidProofs map[insolar.NetworkNode]*merkle.PulseProof
-	FaultProofs map[insolar.Reference]*merkle.PulseProof
-
-	BitSet packets.BitSet
+func NewMutator(snapshot *Snapshot) *Mutator {
+	return &Mutator{Accessor: NewAccessor(snapshot)}
 }
 
-type SecondPhaseState struct {
-	*FirstPhaseState
-
-	GlobuleHash  merkle.OriginHash
-	GlobuleProof *merkle.GlobuleProof
-
-	MatrixState *Phase2MatrixState
-	Matrix      *StateMatrix
+type Mutator struct {
+	*Accessor
 }
 
-type ThirdPhaseState struct {
-	ActiveNodes    []insolar.NetworkNode
-	GlobuleProof   *merkle.GlobuleProof
-	ApprovedClaims []packets.ReferendumClaim
-}
-
-type ConsensusState struct {
-	ConsensusInfo network.ConsensusInfo
-	NodesMutator  network.Mutator
-	HashStorage   *HashStorage
-	BitsetMapper  *BitsetMapper
-	ClaimHandler  *claimhandler.ClaimHandler
-}
-
-func NewConsensusState(consensusInfo network.ConsensusInfo, snapshot *node.Snapshot) *ConsensusState {
-	return &ConsensusState{
-		ConsensusInfo: consensusInfo,
-		NodesMutator:  node.NewMutator(snapshot),
-		HashStorage:   NewHashStorage(),
+func (m *Mutator) AddWorkingNode(n insolar.NetworkNode) {
+	if _, ok := m.refIndex[n.ID()]; ok {
+		return
 	}
+	m.addToIndex(n)
+	m.snapshot.nodeList[ListWorking] = append(m.snapshot.nodeList[ListWorking], n)
+	m.active = append(m.active, n)
 }

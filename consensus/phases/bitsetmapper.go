@@ -51,56 +51,87 @@
 package phases
 
 import (
-	"github.com/insolar/insolar/consensus/claimhandler"
+	"sort"
+
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/node"
+	"github.com/pkg/errors"
 )
 
-type FirstPhaseState struct {
-	*ConsensusState
-
-	PulseEntry *merkle.PulseEntry
-
-	PulseHash  merkle.OriginHash
-	PulseProof *merkle.PulseProof
-
-	ValidProofs map[insolar.NetworkNode]*merkle.PulseProof
-	FaultProofs map[insolar.Reference]*merkle.PulseProof
-
-	BitSet packets.BitSet
+type BitsetMapper struct {
+	length     int
+	refToIndex map[insolar.Reference]int
+	indexToRef map[int]insolar.Reference
 }
 
-type SecondPhaseState struct {
-	*FirstPhaseState
-
-	GlobuleHash  merkle.OriginHash
-	GlobuleProof *merkle.GlobuleProof
-
-	MatrixState *Phase2MatrixState
-	Matrix      *StateMatrix
-}
-
-type ThirdPhaseState struct {
-	ActiveNodes    []insolar.NetworkNode
-	GlobuleProof   *merkle.GlobuleProof
-	ApprovedClaims []packets.ReferendumClaim
-}
-
-type ConsensusState struct {
-	ConsensusInfo network.ConsensusInfo
-	NodesMutator  network.Mutator
-	HashStorage   *HashStorage
-	BitsetMapper  *BitsetMapper
-	ClaimHandler  *claimhandler.ClaimHandler
-}
-
-func NewConsensusState(consensusInfo network.ConsensusInfo, snapshot *node.Snapshot) *ConsensusState {
-	return &ConsensusState{
-		ConsensusInfo: consensusInfo,
-		NodesMutator:  node.NewMutator(snapshot),
-		HashStorage:   NewHashStorage(),
+func NewBitsetMapper(activeNodes []insolar.NetworkNode) *BitsetMapper {
+	bm := NewSparseBitsetMapper(len(activeNodes))
+	sort.Slice(activeNodes, func(i, j int) bool {
+		return activeNodes[i].ID().Compare(activeNodes[j].ID()) < 0
+	})
+	for i, node := range activeNodes {
+		bm.AddNode(node, uint16(i))
 	}
+	return bm
+}
+
+func NewSparseBitsetMapper(length int) *BitsetMapper {
+	return &BitsetMapper{
+		length:     length,
+		refToIndex: make(map[insolar.Reference]int),
+		indexToRef: make(map[int]insolar.Reference),
+	}
+}
+
+func (bm *BitsetMapper) AddNode(node insolar.NetworkNode, bitsetIndex uint16) {
+	index := int(bitsetIndex)
+	bm.indexToRef[index] = node.ID()
+	bm.refToIndex[node.ID()] = index
+}
+
+func (bm *BitsetMapper) IndexToRef(index int) (insolar.Reference, error) {
+	if index < 0 || index >= bm.length {
+		return insolar.Reference{}, packets.ErrBitSetOutOfRange
+	}
+	result, ok := bm.indexToRef[index]
+	if !ok {
+		return insolar.Reference{}, packets.ErrBitSetNodeIsMissing
+	}
+	return result, nil
+}
+
+func (bm *BitsetMapper) RefToIndex(nodeID insolar.Reference) (int, error) {
+	index, ok := bm.refToIndex[nodeID]
+	if !ok {
+		return 0, packets.ErrBitSetIncorrectNode
+	}
+	return index, nil
+}
+
+func (bm *BitsetMapper) Length() int {
+	return bm.length
+}
+
+func ApplyClaims(state *ConsensusState, origin insolar.NetworkNode, claims []packets.ReferendumClaim) error {
+	var NodeJoinerIndex uint16
+	for _, claim := range claims {
+		c, ok := claim.(*packets.NodeAnnounceClaim)
+		if !ok {
+			continue
+		}
+
+		// TODO: fix version
+		node, err := node.ClaimToNode("", &c.NodeJoinClaim)
+		if err != nil {
+			return errors.Wrap(err, "[ AddClaims ] failed to convert Claim -> Node")
+		}
+		// TODO: check bitset indexes from every announce claim for fraud
+		NodeJoinerIndex = c.NodeJoinerIndex
+		state.BitsetMapper.AddNode(node, c.NodeAnnouncerIndex)
+		state.NodesMutator.AddWorkingNode(node)
+	}
+	state.BitsetMapper.AddNode(origin, NodeJoinerIndex)
+	state.NodesMutator.AddWorkingNode(origin)
+	return nil
 }

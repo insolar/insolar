@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -55,6 +56,9 @@ type MessageHandler struct {
 
 	DropModifier drop.Modifier `inject:""`
 
+	BlobModifier blob.Modifier `inject:""`
+	BlobAccessor blob.Accessor `inject:""`
+
 	IDLocker storage.IDLocker `inject:""`
 
 	ObjectStorage storage.ObjectStorage `inject:""`
@@ -80,7 +84,6 @@ func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 func instrumentHandler(name string) Handler {
 	return func(handler insolar.MessageHandler) insolar.MessageHandler {
 		return func(ctx context.Context, p insolar.Parcel) (insolar.Reply, error) {
-			// TODO: add tags to log
 			inslog := inslogger.FromContext(ctx)
 			start := time.Now()
 			code := "2xx"
@@ -122,7 +125,11 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 
 func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	// Generic.
-	h.Bus.MustRegister(insolar.TypeGetCode, BuildMiddleware(h.handleGetCode))
+	h.Bus.MustRegister(insolar.TypeGetCode, BuildMiddleware(h.handleGetCode,
+		instrumentHandler("handleGetCode"),
+		m.addFieldsToLogger,
+		m.checkJet,
+	))
 
 	h.Bus.MustRegister(insolar.TypeGetObject,
 		BuildMiddleware(h.handleGetObject,
@@ -285,19 +292,19 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel insolar.Parce
 	jetID := jetFromContext(ctx)
 	calculatedID := object.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
 
-	_, err := h.ObjectStorage.GetBlob(ctx, jetID, calculatedID)
+	_, err := h.BlobAccessor.ForID(ctx, *calculatedID)
 	if err == nil {
 		return &reply.ID{ID: *calculatedID}, nil
 	}
-	if err != nil && err != insolar.ErrNotFound {
+	if err != nil && err != blob.ErrNotFound {
 		return nil, err
 	}
 
-	id, err := h.ObjectStorage.SetBlob(ctx, jetID, parcel.Pulse(), msg.Memory)
+	err = h.BlobModifier.Set(ctx, *calculatedID, blob.Blob{Value: msg.Memory, JetID: insolar.JetID(jetID)})
 	if err == nil {
-		return &reply.ID{ID: *id}, nil
+		return &reply.ID{ID: *calculatedID}, nil
 	}
-	if err == storage.ErrOverride {
+	if err == blob.ErrOverride {
 		return &reply.ID{ID: *calculatedID}, nil
 	}
 	return nil, err
@@ -305,12 +312,12 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel insolar.Parce
 
 func (h *MessageHandler) handleGetCode(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetCode)
-	jetID := *insolar.NewJetID(0, nil)
+	jetID := jetFromContext(ctx)
 
 	codeRec, err := h.getCode(ctx, msg.Code.Record())
 	if err == insolar.ErrNotFound {
 		// We don't have code record. Must be on another node.
-		node, err := h.JetCoordinator.NodeForJet(ctx, insolar.ID(jetID), parcel.Pulse(), msg.Code.Record().Pulse())
+		node, err := h.JetCoordinator.NodeForJet(ctx, jetID, parcel.Pulse(), msg.Code.Record().Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -319,13 +326,17 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel insolar.Parce
 	if err != nil {
 		return nil, err
 	}
-	code, err := h.ObjectStorage.GetBlob(ctx, insolar.ID(jetID), codeRec.Code)
-	if err != nil {
-		return nil, err
+	code, err := h.BlobAccessor.ForID(ctx, *codeRec.Code)
+	if err == blob.ErrNotFound {
+		hNode, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+		if err != nil {
+			return nil, err
+		}
+		return h.saveCodeFromHeavy(ctx, insolar.JetID(jetID), msg.Code, *codeRec.Code, hNode)
 	}
 
 	rep := reply.Code{
-		Code:        code,
+		Code:        code.Value,
 		MachineType: codeRec.MachineType,
 	}
 
@@ -386,16 +397,16 @@ func (h *MessageHandler) handleGetObject(
 		return nil, err
 	}
 	if onHeavy {
-		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+		hNode, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
 		}
 		logger.WithFields(map[string]interface{}{
 			"state":    stateID.DebugString(),
-			"going_to": node.String(),
+			"going_to": hNode.String(),
 		}).Debug("fetching object (on heavy)")
 
-		obj, err := h.fetchObject(ctx, msg.Head, *node, stateID, parcel.Pulse())
+		obj, err := h.fetchObject(ctx, msg.Head, *hNode, stateID, parcel.Pulse())
 		if err != nil {
 			if err == insolar.ErrDeactivated {
 				return &reply.Error{ErrType: reply.ErrDeactivated}, nil
@@ -414,7 +425,6 @@ func (h *MessageHandler) handleGetObject(
 		}, nil
 	}
 
-	// FIXME: after migration on JetID in all components. - @nordicdyno 13.03.2019
 	stateJetID, actual := h.JetStorage.ForID(ctx, stateID.Pulse(), *msg.Head.Record())
 	stateJet = (*insolar.ID)(&stateJetID)
 
@@ -429,18 +439,18 @@ func (h *MessageHandler) handleGetObject(
 	// Fetch state record.
 	rec, err := h.ObjectStorage.GetRecord(ctx, *stateJet, stateID)
 	if err == insolar.ErrNotFound {
-		// The record wasn't found on the current node. Return redirect to the node that contains it.
+		// The record wasn't found on the current suitNode. Return redirect to the suitNode that contains it.
 		// We get Jet tree for pulse when given state was added.
-		node, err := h.JetCoordinator.NodeForJet(ctx, *stateJet, parcel.Pulse(), stateID.Pulse())
+		suitNode, err := h.JetCoordinator.NodeForJet(ctx, *stateJet, parcel.Pulse(), stateID.Pulse())
 		if err != nil {
 			return nil, err
 		}
 		logger.WithFields(map[string]interface{}{
 			"state":    stateID.DebugString(),
-			"going_to": node.String(),
+			"going_to": suitNode.String(),
 		}).Debug("fetching object (record not found)")
 
-		obj, err := h.fetchObject(ctx, msg.Head, *node, stateID, parcel.Pulse())
+		obj, err := h.fetchObject(ctx, msg.Head, *suitNode, stateID, parcel.Pulse())
 		if err != nil {
 			if err == insolar.ErrDeactivated {
 				return &reply.Error{ErrType: reply.ErrDeactivated}, nil
@@ -483,10 +493,23 @@ func (h *MessageHandler) handleGetObject(
 	}
 
 	if state.GetMemory() != nil {
-		rep.Memory, err = h.ObjectStorage.GetBlob(ctx, *stateJet, state.GetMemory())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch blob")
+		b, err := h.BlobAccessor.ForID(ctx, *state.GetMemory())
+		if err == blob.ErrNotFound {
+			hNode, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
+			if err != nil {
+				return nil, err
+			}
+			obj, err := h.fetchObject(ctx, msg.Head, *hNode, stateID, parcel.Pulse())
+			if err != nil {
+				return nil, err
+			}
+			err = h.BlobModifier.Set(ctx, *state.GetMemory(), blob.Blob{JetID: insolar.JetID(jetID), Value: obj.Memory})
+			if err != nil {
+				return nil, err
+			}
+			b.Value = obj.Memory
 		}
+		rep.Memory = b.Value
 	}
 
 	return &rep, nil
@@ -606,7 +629,6 @@ func (h *MessageHandler) handleGetChildren(
 		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *currentChild)
 	}
 
-	// FIXME: after migration on JetID in all components. - @nordicdyno 13.03.2019
 	childJetID, actual := h.JetStorage.ForID(ctx, currentChild.Pulse(), *msg.Parent.Record())
 	childJet = (*insolar.ID)(&childJetID)
 
@@ -720,18 +742,19 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 
 	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Object.Record())
 
+	calculatedID := object.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
 	//  id will not match the one calculated on the server.
-	blobID, err := h.ObjectStorage.SetBlob(ctx, jetID, parcel.Pulse(), msg.Memory)
-	if err != nil {
+	err := h.BlobModifier.Set(ctx, *calculatedID, blob.Blob{JetID: insolar.JetID(jetID), Value: msg.Memory})
+	if err != nil && err != blob.ErrOverride {
 		return nil, errors.Wrap(err, "failed to set blob")
 	}
 
 	switch s := state.(type) {
 	case *object.ActivateRecord:
-		s.Memory = blobID
+		s.Memory = calculatedID
 	case *object.AmendRecord:
-		s.Memory = blobID
+		s.Memory = calculatedID
 	}
 
 	h.IDLocker.Lock(msg.Object.Record())
@@ -989,7 +1012,7 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel insol
 }
 
 func (h *MessageHandler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeRecord, error) {
-	jetID := *insolar.NewJetID(0, nil)
+	jetID := jetFromContext(ctx)
 
 	rec, err := h.ObjectStorage.GetRecord(ctx, insolar.ID(jetID), id)
 	if err != nil {
@@ -1040,6 +1063,29 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	return &idx, nil
 }
 
+func (h *MessageHandler) saveCodeFromHeavy(
+	ctx context.Context, jetID insolar.JetID, code insolar.Reference, blobID insolar.ID, heavy *insolar.Reference,
+) (*reply.Code, error) {
+	genericReply, err := h.Bus.Send(ctx, &message.GetCode{
+		Code: code,
+	}, &insolar.MessageSendOptions{
+		Receiver: heavy,
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to send")
+	}
+	rep, ok := genericReply.(*reply.Code)
+	if !ok {
+		return nil, fmt.Errorf("failed to fetch code: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
+	}
+
+	err = h.BlobModifier.Set(ctx, blobID, blob.Blob{JetID: jetID, Value: rep.Code})
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to save")
+	}
+	return rep, nil
+}
+
 func (h *MessageHandler) fetchObject(
 	ctx context.Context, obj insolar.Reference, node insolar.Reference, stateID *insolar.ID, pulse insolar.PulseNumber,
 ) (*reply.Object, error) {
@@ -1078,7 +1124,6 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 	logger := inslogger.FromContext(ctx)
 
 	msg := parcel.Message().(*message.HotData)
-	// FIXME: check split signatures.
 	jetID := *msg.Jet.Record()
 
 	logger.WithFields(map[string]interface{}{

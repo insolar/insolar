@@ -1,9 +1,9 @@
-package db
+package store
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "DB" can be found in github.com/insolar/insolar/ledger/storage/db
+The original interface "DB" can be found in github.com/insolar/insolar/internal/ledger/store
 */
 import (
 	"sync/atomic"
@@ -13,7 +13,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//DBMock implements github.com/insolar/insolar/ledger/storage/db.DB
+//DBMock implements github.com/insolar/insolar/internal/ledger/store.DB
 type DBMock struct {
 	t minimock.Tester
 
@@ -28,7 +28,7 @@ type DBMock struct {
 	SetMock       mDBMockSet
 }
 
-//NewDBMock returns a mock for github.com/insolar/insolar/ledger/storage/db.DB
+//NewDBMock returns a mock for github.com/insolar/insolar/internal/ledger/store.DB
 func NewDBMock(t minimock.Tester) *DBMock {
 	m := &DBMock{t: t}
 
@@ -110,7 +110,7 @@ func (m *mDBMockGet) Set(f func(p Key) (r []byte, r1 error)) *DBMock {
 	return m.mock
 }
 
-//Get implements github.com/insolar/insolar/ledger/storage/db.DB interface
+//Get implements github.com/insolar/insolar/internal/ledger/store.DB interface
 func (m *DBMock) Get(p Key) (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.GetPreCounter, 1)
 	defer atomic.AddUint64(&m.GetCounter, 1)
@@ -260,7 +260,7 @@ func (m *mDBMockSet) Set(f func(p Key, p1 []byte) (r error)) *DBMock {
 	return m.mock
 }
 
-//Set implements github.com/insolar/insolar/ledger/storage/db.DB interface
+//Set implements github.com/insolar/insolar/internal/ledger/store.DB interface
 func (m *DBMock) Set(p Key, p1 []byte) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)

@@ -20,23 +20,22 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/insolar/insolar/insolar/record"
-
 	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/db"
-	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/ledger/storage/object"
 )
 
 func TestRecord_Components(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	memStorage := object.NewRecordMemory()
-	dbStorage := object.NewRecordDB()
-	dbStorage.DB = db.NewMemoryMockDB()
+	dbStorage := object.NewRecordDB(store.NewMemoryMockDB())
 
 	type tempRecord struct {
 		id  insolar.ID
@@ -94,8 +93,7 @@ func TestRecord_Components(t *testing.T) {
 		t.Parallel()
 
 		memStorage := object.NewRecordMemory()
-		dbStorage := object.NewRecordDB()
-		dbStorage.DB = db.NewMemoryMockDB()
+		dbStorage := object.NewRecordDB(store.NewMemoryMockDB())
 
 		for _, r := range records {
 			memErr := memStorage.Set(ctx, r.id, r.rec)

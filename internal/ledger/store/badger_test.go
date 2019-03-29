@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package db
+package store
 
 import (
 	"io/ioutil"
@@ -23,7 +23,6 @@ import (
 
 	"github.com/dgraph-io/badger"
 	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar/configuration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -48,7 +47,7 @@ func TestBadgerDB_Get(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	db, err := NewBadgerDB(configuration.Ledger{Storage: configuration.Storage{DataDirectoryNewDB: tmpdir}})
+	db, err := NewBadgerDB(tmpdir)
 	require.NoError(t, err)
 
 	var (
@@ -74,7 +73,7 @@ func TestBadgerDB_Set(t *testing.T) {
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
-	db, err := NewBadgerDB(configuration.Ledger{Storage: configuration.Storage{DataDirectoryNewDB: tmpdir}})
+	db, err := NewBadgerDB(tmpdir)
 	require.NoError(t, err)
 
 	var (

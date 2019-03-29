@@ -17,34 +17,35 @@
 package ledger
 
 import (
-	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/ledger/heavy"
-	"github.com/insolar/insolar/ledger/recentstorage"
-	db2 "github.com/insolar/insolar/ledger/storage/db"
-	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/genesis"
-	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/artifactmanager"
+	"github.com/insolar/insolar/ledger/heavy"
 	"github.com/insolar/insolar/ledger/heavyserver"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/pulsemanager"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/blob"
+	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/genesis"
+	"github.com/insolar/insolar/ledger/storage/node"
 )
 
 // GetLedgerComponents returns ledger components.
 func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certificate) []interface{} {
 	idLocker := storage.NewIDLocker()
 
-	db, err := storage.NewDB(conf, nil)
+	legacyDB, err := storage.NewDB(conf, nil)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
 
-	newDB, err := db2.NewBadgerDB(conf)
+	db, err := store.NewBadgerDB(conf.Storage.DataDirectoryNewDB)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
@@ -52,28 +53,49 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	var pulseTracker storage.PulseTracker
 	var dropModifier drop.Modifier
 	var dropAccessor drop.Accessor
-	// TODO: @imarkin 18.02.18 - Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
+	var dropCleaner drop.Cleaner
+
+	var blobCleaner blob.Cleaner
+	var blobModifier blob.Modifier
+	var blobAccessor blob.Accessor
+	var blobSyncAccessor blob.CollectionAccessor
+
+	// Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
 	switch certificate.GetRole() {
 	case insolar.StaticRoleUnknown, insolar.StaticRoleHeavyMaterial:
 		pulseTracker = storage.NewPulseTracker()
 
-		dropDB := drop.NewStorageDB()
+		dropDB := drop.NewStorageDB(db)
 		dropModifier = dropDB
 		dropAccessor = dropDB
+
+		// should be replaced with db
+		blobDB := blob.NewStorageDB(db)
+		blobModifier = blobDB
+		blobAccessor = blobDB
 	default:
 		pulseTracker = storage.NewPulseTrackerMemory()
 
 		dropDB := drop.NewStorageMemory()
 		dropModifier = dropDB
 		dropAccessor = dropDB
+		dropCleaner = dropDB
+
+		blobDB := blob.NewStorageMemory()
+		blobModifier = blobDB
+		blobAccessor = blobDB
+		blobCleaner = blobDB
+		blobSyncAccessor = blobDB
 	}
 
 	components := []interface{}{
+		legacyDB,
 		db,
-		newDB,
 		idLocker,
 		dropModifier,
 		dropAccessor,
+		blobModifier,
+		blobAccessor,
 		storage.NewCleaner(),
 		pulseTracker,
 		storage.NewPulseStorage(),
@@ -85,8 +107,8 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewHotDataWaiterConcrete(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),
-		pulsemanager.NewPulseManager(conf),
-		heavyserver.NewSync(db),
+		pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobSyncAccessor),
+		heavyserver.NewSync(legacyDB),
 	}
 
 	switch certificate.GetRole() {
