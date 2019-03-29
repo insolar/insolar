@@ -126,7 +126,11 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 
 func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	// Generic.
-	h.Bus.MustRegister(insolar.TypeGetCode, BuildMiddleware(h.handleGetCode))
+	h.Bus.MustRegister(insolar.TypeGetCode, BuildMiddleware(h.handleGetCode,
+		instrumentHandler("handleGetCode"),
+		m.addFieldsToLogger,
+		m.checkJet,
+	))
 
 	h.Bus.MustRegister(insolar.TypeGetObject,
 		BuildMiddleware(h.handleGetObject,
@@ -309,12 +313,12 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel insolar.Parce
 
 func (h *MessageHandler) handleGetCode(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetCode)
-	jetID := *insolar.NewJetID(0, nil)
+	jetID := jetFromContext(ctx)
 
 	codeRec, err := h.getCode(ctx, msg.Code.Record())
 	if err == insolar.ErrNotFound {
 		// We don't have code record. Must be on another node.
-		node, err := h.JetCoordinator.NodeForJet(ctx, insolar.ID(jetID), parcel.Pulse(), msg.Code.Record().Pulse())
+		node, err := h.JetCoordinator.NodeForJet(ctx, jetID, parcel.Pulse(), msg.Code.Record().Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -329,7 +333,7 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel insolar.Parce
 		if err != nil {
 			return nil, err
 		}
-		return h.saveCodeFromHeavy(ctx, jetID, msg.Code, *codeRec.Code, hNode)
+		return h.saveCodeFromHeavy(ctx, insolar.JetID(jetID), msg.Code, *codeRec.Code, hNode)
 	}
 
 	rep := reply.Code{
@@ -1011,7 +1015,7 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel insol
 }
 
 func (h *MessageHandler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeRecord, error) {
-	jetID := *insolar.NewJetID(0, nil)
+	jetID := jetFromContext(ctx)
 
 	rec, err := h.ObjectStorage.GetRecord(ctx, insolar.ID(jetID), id)
 	if err != nil {

@@ -818,7 +818,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 		require.NoError(t, err)
 		lightRef := genRandomRef(0)
 		jc.NodeForJetMock.Return(lightRef, nil)
-		rep, err := h.handleGetCode(s.ctx, &message.Parcel{
+		rep, err := h.handleGetCode(contextWithJet(s.ctx, jetID), &message.Parcel{
 			Msg:         &msg,
 			PulseNumber: insolar.FirstPulseNumber + 1,
 		})
