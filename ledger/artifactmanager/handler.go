@@ -84,7 +84,6 @@ func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 func instrumentHandler(name string) Handler {
 	return func(handler insolar.MessageHandler) insolar.MessageHandler {
 		return func(ctx context.Context, p insolar.Parcel) (insolar.Reply, error) {
-			// TODO: add tags to log
 			inslog := inslogger.FromContext(ctx)
 			start := time.Now()
 			code := "2xx"
