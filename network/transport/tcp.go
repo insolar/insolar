@@ -70,6 +70,7 @@ type tcpTransport struct {
 
 	pool     pool.ConnectionPool
 	listener net.Listener
+	address  string
 }
 
 func newTCPTransport(listener net.Listener, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
@@ -125,6 +126,16 @@ func (t *tcpTransport) prepareListen() error {
 	t.disconnectStarted = make(chan bool, 1)
 	t.disconnectFinished = make(chan bool, 1)
 
+	if t.listener != nil {
+		t.address = t.listener.Addr().String()
+	} else {
+		var err error
+		t.listener, err = net.Listen("tcp", t.address)
+		if err != nil {
+			return errors.Wrap(err, "failed to listen TCP")
+		}
+	}
+
 	return nil
 }
 
@@ -161,7 +172,10 @@ func (t *tcpTransport) Stop() {
 	log.Info("[ Stop ] Stop TCP transport")
 	t.prepareDisconnect()
 
-	utils.CloseVerbose(t.listener)
+	if t.listener != nil {
+		utils.CloseVerbose(t.listener)
+		t.listener = nil
+	}
 	t.pool.Reset()
 }
 

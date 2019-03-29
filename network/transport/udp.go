@@ -72,7 +72,8 @@ const udpMaxPacketSize = 1400
 
 type udpTransport struct {
 	baseTransport
-	conn net.PacketConn
+	conn    net.PacketConn
+	address string
 }
 
 type udpSerializer struct{}
@@ -136,6 +137,16 @@ func (t *udpTransport) prepareListen() error {
 	t.disconnectStarted = make(chan bool, 1)
 	t.disconnectFinished = make(chan bool, 1)
 
+	if t.conn != nil {
+		t.address = t.conn.LocalAddr().String()
+	} else {
+		var err error
+		t.conn, err = net.ListenPacket("udp", t.address)
+		if err != nil {
+			return errors.Wrap(err, "failed to listen UDP")
+		}
+	}
+
 	return nil
 }
 
@@ -171,7 +182,10 @@ func (t *udpTransport) Stop() {
 	log.Info("Stop UDP transport")
 	t.prepareDisconnect()
 
-	utils.CloseVerbose(t.conn)
+	if t.conn != nil {
+		utils.CloseVerbose(t.conn)
+		t.conn = nil
+	}
 }
 
 func (t *udpTransport) handleAcceptedConnection(data []byte, addr net.Addr) {
