@@ -45,7 +45,7 @@ type handler struct {
 func newHandler(machine *StateMachine, f interface{}, states []fsm.ElementState) *handler {
 	tp := reflect.TypeOf(f)
 	if tp.Kind().String() != "func" {
-		log.Fatal("handler must be function")
+		log.Fatalf("[%s %s] handler must be function", machine.Name, tp.Name())
 	}
 
 	fullName := runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()
@@ -62,14 +62,14 @@ func newHandler(machine *StateMachine, f interface{}, states []fsm.ElementState)
 
 	// check common input types
 	if tp.NumIn() < 1 || tp.In(0).String() != "context.Context" {
-		log.Fatalf("[%s] first parameter should be context.Context\n", handler.Name)
+		log.Fatalf("[%s %s] first parameter should be context.Context\n", machine.Name, handler.Name)
 	}
 	if tp.NumIn() < 2 || tp.In(1).String() != "fsm.SlotElementHelper" {
-		log.Fatalf("[%s] second parameter should be fsm.SlotElementHelper\n", handler.Name)
+		log.Fatalf("[%s %s] second parameter should be fsm.SlotElementHelper\n", machine.Name, handler.Name)
 	}
 	// check common return types
 	if tp.NumOut() < 1 || tp.Out(0).String() != "fsm.ElementState" {
-		log.Fatalf("[%s] first returned value should be fsm.ElementState\n", handler.Name)
+		log.Fatalf("[%s %s] first returned value should be fsm.ElementState\n", machine.Name, handler.Name)
 	}
 
 	for i := 0; i < tp.NumIn(); i++ {
