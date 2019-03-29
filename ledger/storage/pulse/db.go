@@ -28,7 +28,7 @@ import (
 
 // StorageDB is a DB storage implementation. It saves pulses to disk and does not allow removal.
 type StorageDB struct {
-	DB   db.DB `inject:""`
+	db   db.DB
 	lock sync.RWMutex
 }
 
@@ -67,8 +67,8 @@ var (
 )
 
 // NewStorageDB creates new DB storage instance.
-func NewStorageDB() *StorageDB {
-	return &StorageDB{}
+func NewStorageDB(d db.DB) *StorageDB {
+	return &StorageDB{db: d}
 }
 
 // ForPulseNumber returns pulse for provided pulse number. If not found, ErrNotFound will be returned.
@@ -201,7 +201,7 @@ func (s *StorageDB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps
 }
 
 func (s *StorageDB) get(pn insolar.PulseNumber) (nd dbNode, err error) {
-	buf, err := s.DB.Get(pulseKey(pn))
+	buf, err := s.db.Get(pulseKey(pn))
 	if err == db.ErrNotFound {
 		err = ErrNotFound
 		return
@@ -214,11 +214,11 @@ func (s *StorageDB) get(pn insolar.PulseNumber) (nd dbNode, err error) {
 }
 
 func (s *StorageDB) set(pn insolar.PulseNumber, nd dbNode) error {
-	return s.DB.Set(pulseKey(pn), serialize(nd))
+	return s.db.Set(pulseKey(pn), serialize(nd))
 }
 
 func (s *StorageDB) head() (pn insolar.PulseNumber, err error) {
-	buf, err := s.DB.Get(keyHead)
+	buf, err := s.db.Get(keyHead)
 	if err == db.ErrNotFound {
 		err = ErrNotFound
 		return
@@ -231,7 +231,7 @@ func (s *StorageDB) head() (pn insolar.PulseNumber, err error) {
 }
 
 func (s *StorageDB) setHead(pn insolar.PulseNumber) error {
-	return s.DB.Set(keyHead, pn.Bytes())
+	return s.db.Set(keyHead, pn.Bytes())
 }
 
 func serialize(nd dbNode) []byte {

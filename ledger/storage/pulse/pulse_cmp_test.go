@@ -34,8 +34,7 @@ import (
 func TestPulse_Components(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	memStorage := pulse.NewStorageMem()
-	dbStorage := pulse.NewStorageDB()
-	dbStorage.DB = db.NewMemoryMockDB()
+	dbStorage := pulse.NewStorageDB(db.NewMemoryMockDB())
 
 	var pulses []insolar.Pulse
 	f := fuzz.New().Funcs(func(p *insolar.Pulse, c fuzz.Continue) {
