@@ -29,24 +29,26 @@ const (
 	InitState fsm.ElementState = iota
 )
 
+// Register adds init state machine to generator
 func Register(g *generator.Generator) {
 	g.AddMachine("Initial").
 		InitFuture(ParseInputEvent).
 		Init(ParseInputEvent)
 }
 
+// ParseInputEvent parse input ivent
 func ParseInputEvent(ctx context.Context, helper fsm.SlotElementHelper, input interface{}, payload interface{}) (fsm.ElementState, interface{}) {
 	parcel, ok := helper.GetInputEvent().(insolar.Parcel)
 	if !ok {
 		inslogger.FromContext(ctx).Warnf("[ ParseInputEvent ] InputEvent must be insolar.Parcel. Actual: %+v", helper.GetInputEvent())
-		return 0, nil
+		return 0, payload
 	}
 	switch parcel.Type() {
 	case insolar.TypeGetCode:
-		return fsm.NewElementState(0, 0), nil
+		// TODO: return real state machine, when it will be ready
+		return fsm.NewElementState(0, 0), payload
 	default:
 		inslogger.FromContext(ctx).Warnf("[ ParseInputEvent ] Unknown parcel type: %s", parcel.Type().String())
-		return 0, nil
+		return 0, payload
 	}
-	return 0, nil
 }
