@@ -51,7 +51,6 @@
 package resolver
 
 import (
-	"net"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -65,12 +64,9 @@ func (s *FixedAddressResolverSuite) TestSuccess() {
 	localAddress := "127.0.0.1:12345"
 	externalAddress := "192.168.0.1"
 
-	conn := &MocktConn{}
-	conn.On("LocalAddr").Return(net.ResolveTCPAddr("tcp", localAddress))
-
 	r := NewFixedAddressResolver(externalAddress)
 	s.Require().IsType(&fixedAddressResolver{}, r)
-	realAddress, err := r.Resolve(conn)
+	realAddress, err := r.Resolve(localAddress)
 	s.NoError(err)
 	s.Equal("192.168.0.1:12345", realAddress)
 }
@@ -79,12 +75,9 @@ func (s *FixedAddressResolverSuite) TestFailure_EmptyPort() {
 	localAddress := "empty_port"
 	externalAddress := "192.168.0.1"
 
-	conn := &MocktConn{}
-	conn.On("LocalAddr").Return(net.ResolveTCPAddr("tcp", localAddress))
-
 	r := NewFixedAddressResolver(externalAddress)
 	s.Require().IsType(&fixedAddressResolver{}, r)
-	_, err := r.Resolve(conn)
+	_, err := r.Resolve(localAddress)
 	s.Error(err)
 }
 

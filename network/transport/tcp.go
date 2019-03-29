@@ -70,13 +70,12 @@ type tcpTransport struct {
 
 	pool     pool.ConnectionPool
 	listener net.Listener
-	addr     string
 }
 
-func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
+func newTCPTransport(listener net.Listener, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
 	transport := &tcpTransport{
 		baseTransport: newBaseTransport(proxy, publicAddress),
-		addr:          addr,
+		listener:      listener,
 		pool:          pool.NewConnectionPool(&tcpConnectionFactory{}),
 	}
 
@@ -104,20 +103,12 @@ func (t *tcpTransport) send(address string, data []byte) error {
 	n, err := conn.Write(data)
 
 	if err != nil {
-		// All this to check is error EPIPE
-		// if netErr, ok := err.(*net.OpError); ok {
-		// 	switch realNetErr := netErr.Err.(type) {
-		// 	case *os.SyscallError:
-		// 		if realNetErr.Err == syscall.EPIPE {
 		t.pool.CloseConnection(ctx, addr)
 		conn, err = t.pool.GetConnection(ctx, addr)
 		if err != nil {
 			return errors.Wrap(err, "[ send ] Failed to get connection")
 		}
 		n, err = conn.Write(data)
-		// 		}
-		// 	}
-		// }
 	}
 
 	if err == nil {
@@ -133,12 +124,6 @@ func (t *tcpTransport) prepareListen() error {
 
 	t.disconnectStarted = make(chan bool, 1)
 	t.disconnectFinished = make(chan bool, 1)
-	listener, err := net.Listen("tcp", t.addr)
-	if err != nil {
-		return err
-	}
-
-	t.listener = listener
 
 	return nil
 }
@@ -149,7 +134,7 @@ func (t *tcpTransport) Listen(ctx context.Context, started chan struct{}) error 
 	logger.Info("[ Listen ] Start TCP transport")
 
 	if err := t.prepareListen(); err != nil {
-		logger.Info("[ Listen ] Failed to prepare TCP transport")
+		logger.Info("[ Listen ] Failed to prepare TCP transport: ", err.Error())
 		return err
 	}
 

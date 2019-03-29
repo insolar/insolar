@@ -72,8 +72,7 @@ const udpMaxPacketSize = 1400
 
 type udpTransport struct {
 	baseTransport
-	serverConn net.PacketConn
-	address    string
+	conn net.PacketConn
 }
 
 type udpSerializer struct{}
@@ -96,8 +95,8 @@ func (b *udpSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error
 	return p, nil
 }
 
-func newUDPTransport(addr string, proxy relay.Proxy, publicAddress string) (*udpTransport, error) {
-	transport := &udpTransport{baseTransport: newBaseTransport(proxy, publicAddress), address: addr}
+func newUDPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*udpTransport, error) {
+	transport := &udpTransport{baseTransport: newBaseTransport(proxy, publicAddress), conn: conn}
 	transport.sendFunc = transport.send
 	transport.serializer = &udpSerializer{}
 
@@ -137,9 +136,7 @@ func (t *udpTransport) prepareListen() error {
 	t.disconnectStarted = make(chan bool, 1)
 	t.disconnectFinished = make(chan bool, 1)
 
-	var err error
-	t.serverConn, err = net.ListenPacket("udp", t.address)
-	return err
+	return nil
 }
 
 // Start starts networking.
@@ -155,7 +152,7 @@ func (t *udpTransport) Listen(ctx context.Context, started chan struct{}) error 
 	started <- struct{}{}
 	for {
 		buf := make([]byte, udpMaxPacketSize)
-		n, addr, err := t.serverConn.ReadFrom(buf)
+		n, addr, err := t.conn.ReadFrom(buf)
 		if err != nil {
 			<-t.disconnectFinished
 			return err
@@ -174,7 +171,7 @@ func (t *udpTransport) Stop() {
 	log.Info("Stop UDP transport")
 	t.prepareDisconnect()
 
-	utils.CloseVerbose(t.serverConn)
+	utils.CloseVerbose(t.conn)
 }
 
 func (t *udpTransport) handleAcceptedConnection(data []byte, addr net.Addr) {
