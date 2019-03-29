@@ -68,7 +68,7 @@ func NewMatrix() *Matrix {
 }
 
 func (m *Matrix) GetInitialStateMachine() StateMachine {
-	return m.present.stateMachines[1]
+	return m.present.stateMachines[Initial]
 }
 
 func (m *Matrix) GetFutureConfig() SetAccessor{
