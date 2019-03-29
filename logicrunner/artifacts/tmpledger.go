@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
@@ -104,6 +105,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	tmpDB, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
+	memoryMockDB := db.NewMemoryMockDB()
 
 	cm := &component.Manager{}
 	gi := genesis.NewGenesisInitializer()
@@ -112,16 +114,16 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	js := jet.NewStore()
 	os := storage.NewObjectStorage()
 	ns := node.NewStorage()
+	ds := drop.NewStorageDB(memoryMockDB)
+	bs := blob.NewStorageDB(memoryMockDB)
 	rs := storage.NewReplicaStorage()
 	cl := storage.NewCleaner()
-	storageDB := db.NewMemoryMockDB()
-	ds := drop.NewStorageDB(storageDB)
 
 	am := NewClient()
 	am.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
 	conf.PulseManager.HeavySyncEnabled = false
-	pm := pulsemanager.NewPulseManager(conf)
+	pm := pulsemanager.NewPulseManager(conf, drop.NewCleanerMock(t), blob.NewCleanerMock(t), blob.NewCollectionAccessorMock(t))
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)
 	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
@@ -155,6 +157,8 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	handler.DBContext = tmpDB
 	handler.ObjectStorage = os
 	handler.DropModifier = ds
+	handler.BlobModifier = bs
+	handler.BlobAccessor = bs
 
 	idLockerMock := storage.NewIDLockerMock(t)
 	idLockerMock.LockMock.Return()
@@ -171,7 +175,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		tmpDB,
-		db.NewMemoryMockDB(),
+		memoryMockDB,
 		js,
 		os,
 		ns,
@@ -216,7 +220,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	pm.JetModifier = js
 	pm.DropModifier = ds
 	pm.DropAccessor = ds
-	pm.DropCleaner = ds
+	pm.DropCleaner = nil
 	pm.ObjectStorage = os
 	pm.Nodes = ns
 	pm.NodeSetter = ns

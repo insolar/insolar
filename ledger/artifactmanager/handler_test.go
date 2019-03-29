@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -60,8 +61,12 @@ type handlerSuite struct {
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    jet.Storage
-	dropModifier  drop.Modifier
-	dropAccessor  drop.Accessor
+
+	dropModifier drop.Modifier
+	dropAccessor drop.Accessor
+
+	blobModifier blob.Modifier
+	blobAccessor blob.Accessor
 }
 
 var (
@@ -113,6 +118,10 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	dropStorage := drop.NewStorageDB(storageDB)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
+
+	blobStorage := blob.NewStorageMemory()
+	s.blobAccessor = blobStorage
+	s.blobModifier = blobStorage
 
 	s.cm.Inject(
 		s.scheme,
@@ -532,6 +541,10 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
 
+	blobStorage := blob.NewStorageMemory()
+	h.BlobModifier = blobStorage
+	h.BlobAccessor = blobStorage
+
 	idLockMock := storage.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
@@ -608,6 +621,10 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
+
+	blobStorage := blob.NewStorageMemory()
+	h.BlobModifier = blobStorage
+	h.BlobAccessor = blobStorage
 
 	idLockMock := storage.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
@@ -802,7 +819,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 		require.NoError(t, err)
 		lightRef := genRandomRef(0)
 		jc.NodeForJetMock.Return(lightRef, nil)
-		rep, err := h.handleGetCode(s.ctx, &message.Parcel{
+		rep, err := h.handleGetCode(contextWithJet(s.ctx, jetID), &message.Parcel{
 			Msg:         &msg,
 			PulseNumber: insolar.FirstPulseNumber + 1,
 		})
