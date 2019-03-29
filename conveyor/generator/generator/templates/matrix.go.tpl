@@ -59,8 +59,8 @@ func NewMatrix() *Matrix {
 		present: newStateMachineSet(),
 		past: newStateMachineSet(),
 	}
-
-	{{range .}}m.future.addMachine({{.Package}}.Raw{{.Name}}FutureFactory())
+	{{range .}}
+	m.future.addMachine({{.Package}}.Raw{{.Name}}FutureFactory())
 	m.present.addMachine({{.Package}}.Raw{{.Name}}PresentFactory())
 	m.past.addMachine({{.Package}}.Raw{{.Name}}PastFactory())
 	{{end}}

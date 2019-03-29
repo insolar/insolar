@@ -21,7 +21,6 @@ import (
 	"strings"
 
 	"github.com/insolar/insolar/conveyor/fsm"
-	"github.com/insolar/insolar/log"
 )
 
 type StateMachine struct {
@@ -63,7 +62,7 @@ func (m *StateMachine) createStateUnlessExists(current fsm.ElementState, returne
 	// todo check is state not contains stateMachine
 	for _, s := range append(returned, current) {
 		if len(m.States) <= int(s) {
-			for i := len(m.States); i <= int(s)+1; i++ {
+			for i := len(m.States); i <= int(s); i++ {
 				m.States = append(m.States, &state{})
 			}
 		}
@@ -78,7 +77,7 @@ func (m *StateMachine) addHandler(s fsm.ElementState, ht handlerType, ps PulseSt
 		m.States[s].handlers[ps] = make(map[handlerType]*handler)
 	}
 	if m.States[s].handlers[ps][ht] != nil {
-		log.Fatal("handler already exists", h.Name)
+		exitWithError("handler already exists %s", h.Name)
 	}
 	m.States[s].handlers[ps][ht] = h
 }

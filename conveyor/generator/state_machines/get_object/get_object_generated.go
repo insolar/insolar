@@ -307,10 +307,6 @@ func RawGetObjectStateMachinePresentFactory() *statemachine.StateMachine {
 				
 				
 				
-			},{
-				
-				
-				
 			},
 		},
 	}
@@ -570,9 +566,6 @@ func RawGetObjectStateMachinePastFactory() *statemachine.StateMachine {
 			},{
 				
 				
-			},{
-				
-				
 			},
 		},
 	}
@@ -592,10 +585,6 @@ func RawGetObjectStateMachineFutureFactory() *statemachine.StateMachine {
                     return payload, state, nil
 					
 				},
-				
-			},{
-				
-				
 				
 			},{
 				
