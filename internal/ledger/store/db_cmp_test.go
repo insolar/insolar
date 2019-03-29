@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package db_test
+package store
 
 import (
 	"io/ioutil"
@@ -23,17 +23,17 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar/ledger/storage/db"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
 type testKey struct {
 	id    []byte
-	scope db.Scope
+	scope Scope
 }
 
-func (k testKey) Scope() db.Scope {
+func (k testKey) Scope() Scope {
 	return k.scope
 }
 
@@ -47,10 +47,10 @@ func TestDB_Components(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
-	badger, err := db.NewBadgerDB(tmpdir)
+	badger, err := NewBadgerDB(tmpdir)
 	require.NoError(t, err)
 
-	mock := db.NewMemoryMockDB()
+	mock := NewMemoryMockDB()
 
 	type data struct {
 		key   testKey
@@ -63,7 +63,7 @@ func TestDB_Components(t *testing.T) {
 		id := make([]byte, 10)
 		rand.Read(id)
 		d.key = testKey{
-			scope: db.Scope(rand.Int31()),
+			scope: Scope(rand.Int31()),
 			id:    id,
 		}
 		d.value = make([]byte, 10)

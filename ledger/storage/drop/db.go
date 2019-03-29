@@ -21,16 +21,16 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/internal/ledger/store"
 )
 
 type dropStorageDB struct {
-	db db.DB
+	db store.DB
 }
 
 // NewStorageDB creates a new storage, that holds data in a db.
-func NewStorageDB(d db.DB) *dropStorageDB { // nolint: golint
-	return &dropStorageDB{db: d}
+func NewStorageDB(db store.DB) *dropStorageDB { // nolint: golint
+	return &dropStorageDB{db: db}
 }
 
 type dropDbKey struct {
@@ -38,8 +38,8 @@ type dropDbKey struct {
 	pn        insolar.PulseNumber
 }
 
-func (dk *dropDbKey) Scope() db.Scope {
-	return db.ScopeJetDrop
+func (dk *dropDbKey) Scope() store.Scope {
+	return store.ScopeJetDrop
 }
 
 func (dk *dropDbKey) ID() []byte {

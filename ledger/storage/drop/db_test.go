@@ -26,11 +26,11 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/internal/ledger/store"
 )
 
 func TestNewStorageDB(t *testing.T) {
-	dbStore := NewStorageDB(db.NewMemoryMockDB())
+	dbStore := NewStorageDB(store.NewMemoryMockDB())
 	require.NotNil(t, dbStore)
 }
 
@@ -55,8 +55,8 @@ func TestDropStorageDB_Set(t *testing.T) {
 	}).NumElements(5, 5000).NilChance(0)
 	f.Fuzz(&inputs)
 
-	dbMock := db.NewDBMock(t)
-	dbMock.SetFunc = func(p db.Key, p1 []byte) (r error) {
+	dbMock := store.NewDBMock(t)
+	dbMock.SetFunc = func(p store.Key, p1 []byte) (r error) {
 		_, ok := encodedDrops[string(p1)]
 		require.Equal(t, true, ok)
 		return nil
@@ -79,7 +79,7 @@ func TestDropStorageDB_Set_ErrOverride(t *testing.T) {
 		JetID: gen.JetID(),
 	}
 
-	dbMock := db.NewDBMock(t)
+	dbMock := store.NewDBMock(t)
 	dbMock.GetMock.Return(nil, nil)
 
 	dropStore := NewStorageDB(dbMock)
@@ -99,7 +99,7 @@ func TestDropStorageDB_ForPulse(t *testing.T) {
 	}
 	buf := MustEncode(&dr)
 
-	dbMock := db.NewDBMock(t)
+	dbMock := store.NewDBMock(t)
 	dbMock.GetMock.Return(buf, nil)
 
 	dropStore := NewStorageDB(dbMock)
@@ -115,7 +115,7 @@ func TestDropStorageDB_ForPulse_NotExist(t *testing.T) {
 	jetID := gen.JetID()
 	pn := gen.PulseNumber()
 
-	dbMock := db.NewDBMock(t)
+	dbMock := store.NewDBMock(t)
 	dbMock.GetMock.Return(nil, ErrNotFound)
 
 	dropStore := NewStorageDB(dbMock)
@@ -130,7 +130,7 @@ func TestDropStorageDB_ForPulse_ProblemsWithDecoding(t *testing.T) {
 	jetID := gen.JetID()
 	pn := gen.PulseNumber()
 
-	dbMock := db.NewDBMock(t)
+	dbMock := store.NewDBMock(t)
 	dbMock.GetMock.Return([]byte{1, 2, 3}, nil)
 
 	dropStore := NewStorageDB(dbMock)

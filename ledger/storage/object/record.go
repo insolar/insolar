@@ -24,7 +24,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/internal/ledger/store"
 )
 
 //go:generate go run gen/type.go
@@ -69,7 +69,7 @@ type RecordModifier interface {
 
 // RecordMemory is an in-memory struct for record-storage.
 type RecordMemory struct {
-	jetIndex db.JetIndexModifier
+	jetIndex store.JetIndexModifier
 
 	lock   sync.RWMutex
 	memory map[insolar.ID]record.MaterialRecord
@@ -79,7 +79,7 @@ type RecordMemory struct {
 func NewRecordMemory() *RecordMemory {
 	return &RecordMemory{
 		memory:   map[insolar.ID]record.MaterialRecord{},
-		jetIndex: db.NewJetIndex(),
+		jetIndex: store.NewJetIndex(),
 	}
 }
 
@@ -120,13 +120,13 @@ func (m *RecordMemory) ForID(ctx context.Context, id insolar.ID) (rec record.Mat
 // RecordDB is a DB storage implementation. It saves records to disk and does not allow removal.
 type RecordDB struct {
 	lock sync.RWMutex
-	db   db.DB
+	db   store.DB
 }
 
 type recordKey insolar.ID
 
-func (k recordKey) Scope() db.Scope {
-	return db.ScopeRecord
+func (k recordKey) Scope() store.Scope {
+	return store.ScopeRecord
 }
 
 func (k recordKey) ID() []byte {
@@ -135,8 +135,8 @@ func (k recordKey) ID() []byte {
 }
 
 // NewRecordDB creates new DB storage instance.
-func NewRecordDB(d db.DB) *RecordDB {
-	return &RecordDB{db: d}
+func NewRecordDB(db store.DB) *RecordDB {
+	return &RecordDB{db: db}
 }
 
 // Set saves new record-value in storage.
@@ -168,7 +168,7 @@ func (r *RecordDB) set(id insolar.ID, rec record.MaterialRecord) error {
 
 func (r *RecordDB) get(id insolar.ID) (rec record.MaterialRecord, err error) {
 	buff, err := r.db.Get(recordKey(id))
-	if err == db.ErrNotFound {
+	if err == store.ErrNotFound {
 		err = ErrNotFound
 		return
 	}

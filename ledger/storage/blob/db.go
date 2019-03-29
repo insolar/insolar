@@ -25,18 +25,18 @@ import (
 	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/internal/ledger/store"
 )
 
 // StorageDB implements persistent blob-storage.
 type StorageDB struct {
-	db db.DB
+	db store.DB
 }
 
 // NewStorageDB creates a new storage, that holds persistent data.
-func NewStorageDB(d db.DB) *StorageDB {
+func NewStorageDB(db store.DB) *StorageDB {
 	return &StorageDB{
-		db: d,
+		db: db,
 	}
 }
 
@@ -44,8 +44,8 @@ type dbKey struct {
 	id insolar.ID
 }
 
-func (k *dbKey) Scope() db.Scope {
-	return db.ScopeBlob
+func (k *dbKey) Scope() store.Scope {
+	return store.ScopeBlob
 }
 
 func (k *dbKey) ID() []byte {
@@ -56,7 +56,7 @@ func (k *dbKey) ID() []byte {
 func (s *StorageDB) ForID(ctx context.Context, id insolar.ID) (Blob, error) {
 	b, err := s.db.Get(&dbKey{id: id})
 	if err != nil {
-		if err == db.ErrNotFound {
+		if err == store.ErrNotFound {
 			err = ErrNotFound
 		}
 		return Blob{}, err
@@ -71,7 +71,7 @@ func (s *StorageDB) Set(ctx context.Context, id insolar.ID, blob Blob) error {
 	k := &dbKey{id: id}
 
 	_, getErr := s.db.Get(k)
-	if getErr != nil && getErr != db.ErrNotFound {
+	if getErr != nil && getErr != store.ErrNotFound {
 		return errors.Wrapf(getErr, "got db error on key %v get", k)
 	} else if getErr == nil {
 		return ErrOverride

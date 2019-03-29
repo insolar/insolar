@@ -1,9 +1,9 @@
-package db
+package store
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "JetIndexModifier" can be found in github.com/insolar/insolar/ledger/storage/db
+The original interface "JetIndexModifier" can be found in github.com/insolar/insolar/internal/ledger/store
 */
 import (
 	"sync/atomic"
@@ -15,7 +15,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//JetIndexModifierMock implements github.com/insolar/insolar/ledger/storage/db.JetIndexModifier
+//JetIndexModifierMock implements github.com/insolar/insolar/internal/ledger/store.JetIndexModifier
 type JetIndexModifierMock struct {
 	t minimock.Tester
 
@@ -30,7 +30,7 @@ type JetIndexModifierMock struct {
 	DeleteMock       mJetIndexModifierMockDelete
 }
 
-//NewJetIndexModifierMock returns a mock for github.com/insolar/insolar/ledger/storage/db.JetIndexModifier
+//NewJetIndexModifierMock returns a mock for github.com/insolar/insolar/internal/ledger/store.JetIndexModifier
 func NewJetIndexModifierMock(t minimock.Tester) *JetIndexModifierMock {
 	m := &JetIndexModifierMock{t: t}
 
@@ -103,7 +103,7 @@ func (m *mJetIndexModifierMockAdd) Set(f func(p insolar.ID, p1 insolar.JetID)) *
 	return m.mock
 }
 
-//Add implements github.com/insolar/insolar/ledger/storage/db.JetIndexModifier interface
+//Add implements github.com/insolar/insolar/internal/ledger/store.JetIndexModifier interface
 func (m *JetIndexModifierMock) Add(p insolar.ID, p1 insolar.JetID) {
 	counter := atomic.AddUint64(&m.AddPreCounter, 1)
 	defer atomic.AddUint64(&m.AddCounter, 1)
@@ -227,7 +227,7 @@ func (m *mJetIndexModifierMockDelete) Set(f func(p insolar.ID, p1 insolar.JetID)
 	return m.mock
 }
 
-//Delete implements github.com/insolar/insolar/ledger/storage/db.JetIndexModifier interface
+//Delete implements github.com/insolar/insolar/internal/ledger/store.JetIndexModifier interface
 func (m *JetIndexModifierMock) Delete(p insolar.ID, p1 insolar.JetID) {
 	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteCounter, 1)
