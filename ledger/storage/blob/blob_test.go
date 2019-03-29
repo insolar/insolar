@@ -72,7 +72,7 @@ func TestStorageMemory_ForPN(t *testing.T) {
 		_ = ms.Set(ctx, *bID, b)
 	}
 
-	res := ms.ForPN(ctx, searchJetID, searchPN)
+	res := ms.ForPulse(ctx, searchJetID, searchPN)
 
 	require.Equal(t, len(searchBlobs), len(res))
 	for _, b := range res {
