@@ -100,21 +100,21 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 	case "TCP":
 		listener, err := net.Listen("tcp", cfg.Address)
 		if err != nil {
-			return nil, errors.Wrap(err, "")
+			return nil, errors.Wrap(err, "failed to listen UDP")
 		}
 		publicAddress, err := Resolve(cfg, listener.Addr().String())
 		if err != nil {
-			return nil, errors.Wrap(err, "")
+			return nil, errors.Wrap(err, "failed to resolve public address")
 		}
 		return newTCPTransport(listener, proxy, publicAddress)
 	case "PURE_UDP":
 		conn, err := net.ListenPacket("udp", cfg.Address)
 		if err != nil {
-			return nil, errors.Wrap(err, "")
+			return nil, errors.Wrap(err, "failed to listen TCP")
 		}
 		publicAddress, err := Resolve(cfg, conn.LocalAddr().String())
 		if err != nil {
-			return nil, errors.Wrap(err, "")
+			return nil, errors.Wrap(err, "failed to resolve public address")
 		}
 		return newUDPTransport(conn, proxy, publicAddress)
 	default:
