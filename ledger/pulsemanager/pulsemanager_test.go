@@ -124,9 +124,6 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
-	// TODO: @andreyromancev. 12.01.19. Uncomment to check if this doesn't delete indexes it should not.
-	// recentMock.ClearZeroTTLObjectsMock.Return()
-	// recentMock.ClearObjectsMock.Return()
 	indexMock.GetObjectsMock.Return(map[insolar.ID]int{
 		*firstID: 1,
 	})
@@ -214,7 +211,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	// Act
 	err := pm.Set(s.ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1}, true)
 	require.NoError(s.T(), err)
-	// // TODO: @andreyromancev. 12.01.19. put 1, when dynamic split is working.
+
 	assert.Equal(s.T(), uint64(2), mbMock.SendMinimockCounter()) // 1 validator drop (no split)
 	savedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, insolar.ID(jetID), firstID)
 	require.NoError(s.T(), err)
