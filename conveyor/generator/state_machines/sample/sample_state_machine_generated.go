@@ -67,10 +67,6 @@ func RawSampleStateMachinePresentFactory() *statemachine.StateMachine {
 					
 				},
 				
-			},{
-				
-				
-				
 			},
 		},
 	}
@@ -116,9 +112,6 @@ func RawSampleStateMachinePastFactory() *statemachine.StateMachine {
 					
 				},
 				
-			},{
-				
-				
 			},
 		},
 	}
@@ -138,10 +131,6 @@ func RawSampleStateMachineFutureFactory() *statemachine.StateMachine {
                     return payload, state, nil
 					
 				},
-				
-			},{
-				
-				
 				
 			},{
 				

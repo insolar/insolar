@@ -60,10 +60,11 @@ func NewMatrix() *Matrix {
 		present: newStateMachineSet(),
 		past: newStateMachineSet(),
 	}
-
+	
 	m.future.addMachine(getobject.RawGetObjectStateMachineFutureFactory())
 	m.present.addMachine(getobject.RawGetObjectStateMachinePresentFactory())
 	m.past.addMachine(getobject.RawGetObjectStateMachinePastFactory())
+	
 	m.future.addMachine(sample.RawSampleStateMachineFutureFactory())
 	m.present.addMachine(sample.RawSampleStateMachinePresentFactory())
 	m.past.addMachine(sample.RawSampleStateMachinePastFactory())
