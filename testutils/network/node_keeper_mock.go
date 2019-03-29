@@ -14,6 +14,7 @@ import (
 	packets "github.com/insolar/insolar/consensus/packets"
 	insolar "github.com/insolar/insolar/insolar"
 	network "github.com/insolar/insolar/network"
+	node "github.com/insolar/insolar/network/node"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -57,15 +58,10 @@ type NodeKeeperMock struct {
 	GetOriginJoinClaimPreCounter uint64
 	GetOriginJoinClaimMock       mNodeKeeperMockGetOriginJoinClaim
 
-	GetSparseUnsyncListFunc       func(p int) (r network.UnsyncList)
-	GetSparseUnsyncListCounter    uint64
-	GetSparseUnsyncListPreCounter uint64
-	GetSparseUnsyncListMock       mNodeKeeperMockGetSparseUnsyncList
-
-	GetUnsyncListFunc       func() (r network.UnsyncList)
-	GetUnsyncListCounter    uint64
-	GetUnsyncListPreCounter uint64
-	GetUnsyncListMock       mNodeKeeperMockGetUnsyncList
+	GetSnapshotCopyFunc       func() (r *node.Snapshot)
+	GetSnapshotCopyCounter    uint64
+	GetSnapshotCopyPreCounter uint64
+	GetSnapshotCopyMock       mNodeKeeperMockGetSnapshotCopy
 
 	GetWorkingNodeFunc       func(p insolar.Reference) (r insolar.NetworkNode)
 	GetWorkingNodeCounter    uint64
@@ -128,8 +124,7 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 	m.GetOriginMock = mNodeKeeperMockGetOrigin{mock: m}
 	m.GetOriginAnnounceClaimMock = mNodeKeeperMockGetOriginAnnounceClaim{mock: m}
 	m.GetOriginJoinClaimMock = mNodeKeeperMockGetOriginJoinClaim{mock: m}
-	m.GetSparseUnsyncListMock = mNodeKeeperMockGetSparseUnsyncList{mock: m}
-	m.GetUnsyncListMock = mNodeKeeperMockGetUnsyncList{mock: m}
+	m.GetSnapshotCopyMock = mNodeKeeperMockGetSnapshotCopy{mock: m}
 	m.GetWorkingNodeMock = mNodeKeeperMockGetWorkingNode{mock: m}
 	m.GetWorkingNodesMock = mNodeKeeperMockGetWorkingNodes{mock: m}
 	m.GetWorkingNodesByRoleMock = mNodeKeeperMockGetWorkingNodesByRole{mock: m}
@@ -1100,229 +1095,82 @@ func (m *NodeKeeperMock) GetOriginJoinClaimFinished() bool {
 	return true
 }
 
-type mNodeKeeperMockGetSparseUnsyncList struct {
+type mNodeKeeperMockGetSnapshotCopy struct {
 	mock              *NodeKeeperMock
-	mainExpectation   *NodeKeeperMockGetSparseUnsyncListExpectation
-	expectationSeries []*NodeKeeperMockGetSparseUnsyncListExpectation
+	mainExpectation   *NodeKeeperMockGetSnapshotCopyExpectation
+	expectationSeries []*NodeKeeperMockGetSnapshotCopyExpectation
 }
 
-type NodeKeeperMockGetSparseUnsyncListExpectation struct {
-	input  *NodeKeeperMockGetSparseUnsyncListInput
-	result *NodeKeeperMockGetSparseUnsyncListResult
+type NodeKeeperMockGetSnapshotCopyExpectation struct {
+	result *NodeKeeperMockGetSnapshotCopyResult
 }
 
-type NodeKeeperMockGetSparseUnsyncListInput struct {
-	p int
+type NodeKeeperMockGetSnapshotCopyResult struct {
+	r *node.Snapshot
 }
 
-type NodeKeeperMockGetSparseUnsyncListResult struct {
-	r network.UnsyncList
-}
-
-//Expect specifies that invocation of NodeKeeper.GetSparseUnsyncList is expected from 1 to Infinity times
-func (m *mNodeKeeperMockGetSparseUnsyncList) Expect(p int) *mNodeKeeperMockGetSparseUnsyncList {
-	m.mock.GetSparseUnsyncListFunc = nil
+//Expect specifies that invocation of NodeKeeper.GetSnapshotCopy is expected from 1 to Infinity times
+func (m *mNodeKeeperMockGetSnapshotCopy) Expect() *mNodeKeeperMockGetSnapshotCopy {
+	m.mock.GetSnapshotCopyFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockGetSparseUnsyncListExpectation{}
-	}
-	m.mainExpectation.input = &NodeKeeperMockGetSparseUnsyncListInput{p}
-	return m
-}
-
-//Return specifies results of invocation of NodeKeeper.GetSparseUnsyncList
-func (m *mNodeKeeperMockGetSparseUnsyncList) Return(r network.UnsyncList) *NodeKeeperMock {
-	m.mock.GetSparseUnsyncListFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockGetSparseUnsyncListExpectation{}
-	}
-	m.mainExpectation.result = &NodeKeeperMockGetSparseUnsyncListResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NodeKeeper.GetSparseUnsyncList is expected once
-func (m *mNodeKeeperMockGetSparseUnsyncList) ExpectOnce(p int) *NodeKeeperMockGetSparseUnsyncListExpectation {
-	m.mock.GetSparseUnsyncListFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NodeKeeperMockGetSparseUnsyncListExpectation{}
-	expectation.input = &NodeKeeperMockGetSparseUnsyncListInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NodeKeeperMockGetSparseUnsyncListExpectation) Return(r network.UnsyncList) {
-	e.result = &NodeKeeperMockGetSparseUnsyncListResult{r}
-}
-
-//Set uses given function f as a mock of NodeKeeper.GetSparseUnsyncList method
-func (m *mNodeKeeperMockGetSparseUnsyncList) Set(f func(p int) (r network.UnsyncList)) *NodeKeeperMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetSparseUnsyncListFunc = f
-	return m.mock
-}
-
-//GetSparseUnsyncList implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) GetSparseUnsyncList(p int) (r network.UnsyncList) {
-	counter := atomic.AddUint64(&m.GetSparseUnsyncListPreCounter, 1)
-	defer atomic.AddUint64(&m.GetSparseUnsyncListCounter, 1)
-
-	if len(m.GetSparseUnsyncListMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetSparseUnsyncListMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeKeeperMock.GetSparseUnsyncList. %v", p)
-			return
-		}
-
-		input := m.GetSparseUnsyncListMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, NodeKeeperMockGetSparseUnsyncListInput{p}, "NodeKeeper.GetSparseUnsyncList got unexpected parameters")
-
-		result := m.GetSparseUnsyncListMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeKeeperMock.GetSparseUnsyncList")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetSparseUnsyncListMock.mainExpectation != nil {
-
-		input := m.GetSparseUnsyncListMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, NodeKeeperMockGetSparseUnsyncListInput{p}, "NodeKeeper.GetSparseUnsyncList got unexpected parameters")
-		}
-
-		result := m.GetSparseUnsyncListMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NodeKeeperMock.GetSparseUnsyncList")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetSparseUnsyncListFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeKeeperMock.GetSparseUnsyncList. %v", p)
-		return
-	}
-
-	return m.GetSparseUnsyncListFunc(p)
-}
-
-//GetSparseUnsyncListMinimockCounter returns a count of NodeKeeperMock.GetSparseUnsyncListFunc invocations
-func (m *NodeKeeperMock) GetSparseUnsyncListMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetSparseUnsyncListCounter)
-}
-
-//GetSparseUnsyncListMinimockPreCounter returns the value of NodeKeeperMock.GetSparseUnsyncList invocations
-func (m *NodeKeeperMock) GetSparseUnsyncListMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetSparseUnsyncListPreCounter)
-}
-
-//GetSparseUnsyncListFinished returns true if mock invocations count is ok
-func (m *NodeKeeperMock) GetSparseUnsyncListFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetSparseUnsyncListMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetSparseUnsyncListCounter) == uint64(len(m.GetSparseUnsyncListMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetSparseUnsyncListMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetSparseUnsyncListCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetSparseUnsyncListFunc != nil {
-		return atomic.LoadUint64(&m.GetSparseUnsyncListCounter) > 0
-	}
-
-	return true
-}
-
-type mNodeKeeperMockGetUnsyncList struct {
-	mock              *NodeKeeperMock
-	mainExpectation   *NodeKeeperMockGetUnsyncListExpectation
-	expectationSeries []*NodeKeeperMockGetUnsyncListExpectation
-}
-
-type NodeKeeperMockGetUnsyncListExpectation struct {
-	result *NodeKeeperMockGetUnsyncListResult
-}
-
-type NodeKeeperMockGetUnsyncListResult struct {
-	r network.UnsyncList
-}
-
-//Expect specifies that invocation of NodeKeeper.GetUnsyncList is expected from 1 to Infinity times
-func (m *mNodeKeeperMockGetUnsyncList) Expect() *mNodeKeeperMockGetUnsyncList {
-	m.mock.GetUnsyncListFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockGetUnsyncListExpectation{}
+		m.mainExpectation = &NodeKeeperMockGetSnapshotCopyExpectation{}
 	}
 
 	return m
 }
 
-//Return specifies results of invocation of NodeKeeper.GetUnsyncList
-func (m *mNodeKeeperMockGetUnsyncList) Return(r network.UnsyncList) *NodeKeeperMock {
-	m.mock.GetUnsyncListFunc = nil
+//Return specifies results of invocation of NodeKeeper.GetSnapshotCopy
+func (m *mNodeKeeperMockGetSnapshotCopy) Return(r *node.Snapshot) *NodeKeeperMock {
+	m.mock.GetSnapshotCopyFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &NodeKeeperMockGetUnsyncListExpectation{}
+		m.mainExpectation = &NodeKeeperMockGetSnapshotCopyExpectation{}
 	}
-	m.mainExpectation.result = &NodeKeeperMockGetUnsyncListResult{r}
+	m.mainExpectation.result = &NodeKeeperMockGetSnapshotCopyResult{r}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of NodeKeeper.GetUnsyncList is expected once
-func (m *mNodeKeeperMockGetUnsyncList) ExpectOnce() *NodeKeeperMockGetUnsyncListExpectation {
-	m.mock.GetUnsyncListFunc = nil
+//ExpectOnce specifies that invocation of NodeKeeper.GetSnapshotCopy is expected once
+func (m *mNodeKeeperMockGetSnapshotCopy) ExpectOnce() *NodeKeeperMockGetSnapshotCopyExpectation {
+	m.mock.GetSnapshotCopyFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &NodeKeeperMockGetUnsyncListExpectation{}
+	expectation := &NodeKeeperMockGetSnapshotCopyExpectation{}
 
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *NodeKeeperMockGetUnsyncListExpectation) Return(r network.UnsyncList) {
-	e.result = &NodeKeeperMockGetUnsyncListResult{r}
+func (e *NodeKeeperMockGetSnapshotCopyExpectation) Return(r *node.Snapshot) {
+	e.result = &NodeKeeperMockGetSnapshotCopyResult{r}
 }
 
-//Set uses given function f as a mock of NodeKeeper.GetUnsyncList method
-func (m *mNodeKeeperMockGetUnsyncList) Set(f func() (r network.UnsyncList)) *NodeKeeperMock {
+//Set uses given function f as a mock of NodeKeeper.GetSnapshotCopy method
+func (m *mNodeKeeperMockGetSnapshotCopy) Set(f func() (r *node.Snapshot)) *NodeKeeperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.GetUnsyncListFunc = f
+	m.mock.GetSnapshotCopyFunc = f
 	return m.mock
 }
 
-//GetUnsyncList implements github.com/insolar/insolar/network.NodeKeeper interface
-func (m *NodeKeeperMock) GetUnsyncList() (r network.UnsyncList) {
-	counter := atomic.AddUint64(&m.GetUnsyncListPreCounter, 1)
-	defer atomic.AddUint64(&m.GetUnsyncListCounter, 1)
+//GetSnapshotCopy implements github.com/insolar/insolar/network.NodeKeeper interface
+func (m *NodeKeeperMock) GetSnapshotCopy() (r *node.Snapshot) {
+	counter := atomic.AddUint64(&m.GetSnapshotCopyPreCounter, 1)
+	defer atomic.AddUint64(&m.GetSnapshotCopyCounter, 1)
 
-	if len(m.GetUnsyncListMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetUnsyncListMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NodeKeeperMock.GetUnsyncList.")
+	if len(m.GetSnapshotCopyMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetSnapshotCopyMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeKeeperMock.GetSnapshotCopy.")
 			return
 		}
 
-		result := m.GetUnsyncListMock.expectationSeries[counter-1].result
+		result := m.GetSnapshotCopyMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the NodeKeeperMock.GetUnsyncList")
+			m.t.Fatal("No results are set for the NodeKeeperMock.GetSnapshotCopy")
 			return
 		}
 
@@ -1331,11 +1179,11 @@ func (m *NodeKeeperMock) GetUnsyncList() (r network.UnsyncList) {
 		return
 	}
 
-	if m.GetUnsyncListMock.mainExpectation != nil {
+	if m.GetSnapshotCopyMock.mainExpectation != nil {
 
-		result := m.GetUnsyncListMock.mainExpectation.result
+		result := m.GetSnapshotCopyMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the NodeKeeperMock.GetUnsyncList")
+			m.t.Fatal("No results are set for the NodeKeeperMock.GetSnapshotCopy")
 		}
 
 		r = result.r
@@ -1343,39 +1191,39 @@ func (m *NodeKeeperMock) GetUnsyncList() (r network.UnsyncList) {
 		return
 	}
 
-	if m.GetUnsyncListFunc == nil {
-		m.t.Fatalf("Unexpected call to NodeKeeperMock.GetUnsyncList.")
+	if m.GetSnapshotCopyFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeKeeperMock.GetSnapshotCopy.")
 		return
 	}
 
-	return m.GetUnsyncListFunc()
+	return m.GetSnapshotCopyFunc()
 }
 
-//GetUnsyncListMinimockCounter returns a count of NodeKeeperMock.GetUnsyncListFunc invocations
-func (m *NodeKeeperMock) GetUnsyncListMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetUnsyncListCounter)
+//GetSnapshotCopyMinimockCounter returns a count of NodeKeeperMock.GetSnapshotCopyFunc invocations
+func (m *NodeKeeperMock) GetSnapshotCopyMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetSnapshotCopyCounter)
 }
 
-//GetUnsyncListMinimockPreCounter returns the value of NodeKeeperMock.GetUnsyncList invocations
-func (m *NodeKeeperMock) GetUnsyncListMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetUnsyncListPreCounter)
+//GetSnapshotCopyMinimockPreCounter returns the value of NodeKeeperMock.GetSnapshotCopy invocations
+func (m *NodeKeeperMock) GetSnapshotCopyMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetSnapshotCopyPreCounter)
 }
 
-//GetUnsyncListFinished returns true if mock invocations count is ok
-func (m *NodeKeeperMock) GetUnsyncListFinished() bool {
+//GetSnapshotCopyFinished returns true if mock invocations count is ok
+func (m *NodeKeeperMock) GetSnapshotCopyFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetUnsyncListMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetUnsyncListCounter) == uint64(len(m.GetUnsyncListMock.expectationSeries))
+	if len(m.GetSnapshotCopyMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetSnapshotCopyCounter) == uint64(len(m.GetSnapshotCopyMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.GetUnsyncListMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetUnsyncListCounter) > 0
+	if m.GetSnapshotCopyMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetSnapshotCopyCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.GetUnsyncListFunc != nil {
-		return atomic.LoadUint64(&m.GetUnsyncListCounter) > 0
+	if m.GetSnapshotCopyFunc != nil {
+		return atomic.LoadUint64(&m.GetSnapshotCopyCounter) > 0
 	}
 
 	return true
@@ -2640,12 +2488,8 @@ func (m *NodeKeeperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetOriginJoinClaim")
 	}
 
-	if !m.GetSparseUnsyncListFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.GetSparseUnsyncList")
-	}
-
-	if !m.GetUnsyncListFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.GetUnsyncList")
+	if !m.GetSnapshotCopyFinished() {
+		m.t.Fatal("Expected call to NodeKeeperMock.GetSnapshotCopy")
 	}
 
 	if !m.GetWorkingNodeFinished() {
@@ -2729,12 +2573,8 @@ func (m *NodeKeeperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeKeeperMock.GetOriginJoinClaim")
 	}
 
-	if !m.GetSparseUnsyncListFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.GetSparseUnsyncList")
-	}
-
-	if !m.GetUnsyncListFinished() {
-		m.t.Fatal("Expected call to NodeKeeperMock.GetUnsyncList")
+	if !m.GetSnapshotCopyFinished() {
+		m.t.Fatal("Expected call to NodeKeeperMock.GetSnapshotCopy")
 	}
 
 	if !m.GetWorkingNodeFinished() {
@@ -2794,8 +2634,7 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetOriginFinished()
 		ok = ok && m.GetOriginAnnounceClaimFinished()
 		ok = ok && m.GetOriginJoinClaimFinished()
-		ok = ok && m.GetSparseUnsyncListFinished()
-		ok = ok && m.GetUnsyncListFinished()
+		ok = ok && m.GetSnapshotCopyFinished()
 		ok = ok && m.GetWorkingNodeFinished()
 		ok = ok && m.GetWorkingNodesFinished()
 		ok = ok && m.GetWorkingNodesByRoleFinished()
@@ -2841,12 +2680,8 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to NodeKeeperMock.GetOriginJoinClaim")
 			}
 
-			if !m.GetSparseUnsyncListFinished() {
-				m.t.Error("Expected call to NodeKeeperMock.GetSparseUnsyncList")
-			}
-
-			if !m.GetUnsyncListFinished() {
-				m.t.Error("Expected call to NodeKeeperMock.GetUnsyncList")
+			if !m.GetSnapshotCopyFinished() {
+				m.t.Error("Expected call to NodeKeeperMock.GetSnapshotCopy")
 			}
 
 			if !m.GetWorkingNodeFinished() {
@@ -2925,11 +2760,7 @@ func (m *NodeKeeperMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.GetSparseUnsyncListFinished() {
-		return false
-	}
-
-	if !m.GetUnsyncListFinished() {
+	if !m.GetSnapshotCopyFinished() {
 		return false
 	}
 

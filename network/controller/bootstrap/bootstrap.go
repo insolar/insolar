@@ -59,6 +59,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/network/node"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -67,7 +69,6 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/controller/pinger"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/platformpolicy"
@@ -174,8 +175,8 @@ func newNode(n *NodeStruct) (insolar.NetworkNode, error) {
 		return nil, errors.Wrap(err, "error deserializing node public key")
 	}
 
-	result := nodenetwork.NewNode(n.ID, n.Role, pk, n.Address, n.Version)
-	mNode := result.(nodenetwork.MutableNode)
+	result := node.NewNode(n.ID, n.Role, pk, n.Address, n.Version)
+	mNode := result.(node.MutableNode)
 	mNode.SetShortID(n.SID)
 	return mNode, nil
 }
@@ -345,10 +346,10 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 		if err != nil {
 			return nil, errors.Wrapf(err, "Discovery check of node %s failed", activeNode.ID())
 		}
-		activeNode.(nodenetwork.MutableNode).SetState(insolar.NodeUndefined)
+		activeNode.(node.MutableNode).SetState(insolar.NodeUndefined)
 		activeNodesStr = append(activeNodesStr, activeNode.ID().String())
 	}
-	bc.NodeKeeper.GetOrigin().(nodenetwork.MutableNode).SetState(insolar.NodeUndefined)
+	bc.NodeKeeper.GetOrigin().(node.MutableNode).SetState(insolar.NodeUndefined)
 	activeNodes = append(activeNodes, bc.NodeKeeper.GetOrigin())
 	bc.NodeKeeper.SetInitialSnapshot(activeNodes)
 	logger.Infof("[ BootstrapDiscovery ] Added active nodes: %s", strings.Join(activeNodesStr, ", "))

@@ -31,15 +31,21 @@ type ParcelFactory interface {
 	Validate(crypto.PublicKey, insolar.Parcel) error
 }
 
+// ServiceData is a structure with utility fields like log level and trace id.
+type ServiceData struct {
+	LogTraceID    string
+	LogLevel      insolar.LogLevel
+	TraceSpanData []byte
+}
+
 // Parcel is a message signed by senders private key.
 type Parcel struct {
-	Sender        insolar.Reference
-	Msg           insolar.Message
-	Signature     []byte
-	LogTraceID    string
-	TraceSpanData []byte
-	Token         insolar.DelegationToken
-	PulseNumber   insolar.PulseNumber
+	Sender      insolar.Reference
+	Msg         insolar.Message
+	Signature   []byte
+	Token       insolar.DelegationToken
+	PulseNumber insolar.PulseNumber
+	ServiceData ServiceData
 }
 
 // AllowedSenderObjectAndRole implements interface method
@@ -69,8 +75,9 @@ func (p *Parcel) Message() insolar.Message {
 
 // Context returns initialized context with propagated data with ctx as parent.
 func (p *Parcel) Context(ctx context.Context) context.Context {
-	ctx = inslogger.ContextWithTrace(ctx, p.LogTraceID)
-	parentspan := instracer.MustDeserialize(p.TraceSpanData)
+	ctx = inslogger.ContextWithTrace(ctx, p.ServiceData.LogTraceID)
+	ctx = inslogger.WithLoggerLevel(ctx, p.ServiceData.LogLevel)
+	parentspan := instracer.MustDeserialize(p.ServiceData.TraceSpanData)
 	return instracer.WithParentSpan(ctx, parentspan)
 }
 

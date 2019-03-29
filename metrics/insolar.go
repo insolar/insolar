@@ -17,30 +17,31 @@
 package metrics
 
 import (
-	"os"
-
 	"github.com/prometheus/client_golang/prometheus"
 )
 
 // GetInsolarRegistry creates and registers Insolar global metrics
-func GetInsolarRegistry() *prometheus.Registry {
+func GetInsolarRegistry(nodeRole string) *prometheus.Registry {
 	registry := prometheus.NewRegistry()
+	registerer := prometheus.WrapRegistererWith(prometheus.Labels{"role": nodeRole}, registry)
 
 	// badger metrics
-	registry.MustRegister(badgerCollector(insolarNamespace))
+	registerer.MustRegister(badgerCollector(insolarNamespace))
 	// default system collectors
-	registry.MustRegister(prometheus.NewProcessCollector(os.Getpid(), insolarNamespace))
-	registry.MustRegister(prometheus.NewGoCollector())
+	registerer.MustRegister(prometheus.NewProcessCollector(
+		prometheus.ProcessCollectorOpts{Namespace: insolarNamespace},
+	))
+	registerer.MustRegister(prometheus.NewGoCollector())
 	// insolar collectors
-	registry.MustRegister(NetworkFutures)
-	registry.MustRegister(NetworkConnections)
-	registry.MustRegister(NetworkPacketTimeoutTotal)
-	registry.MustRegister(NetworkPacketReceivedTotal)
-	registry.MustRegister(NetworkComplete)
-	registry.MustRegister(NetworkSentSize)
-	registry.MustRegister(NetworkRecvSize)
+	registerer.MustRegister(NetworkFutures)
+	registerer.MustRegister(NetworkConnections)
+	registerer.MustRegister(NetworkPacketTimeoutTotal)
+	registerer.MustRegister(NetworkPacketReceivedTotal)
+	registerer.MustRegister(NetworkComplete)
+	registerer.MustRegister(NetworkSentSize)
+	registerer.MustRegister(NetworkRecvSize)
 
-	registry.MustRegister(APIContractExecutionTime)
+	registerer.MustRegister(APIContractExecutionTime)
 
 	return registry
 }

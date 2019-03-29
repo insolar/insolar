@@ -27,7 +27,7 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/ledger/internal/jet"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
@@ -77,13 +77,16 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 
 	cm := &component.Manager{}
 
+	storageDB := db.NewMemoryMockDB()
+	ds := drop.NewStorageDB(storageDB)
+
 	cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
 		tmpDB,
 		jet.NewStore(),
 		db.NewMemoryMockDB(),
 		storage.NewObjectStorage(),
-		drop.NewStorageDB(),
+		ds,
 		storage.NewPulseTracker(),
 	)
 

@@ -1,47 +1,61 @@
-/*
- * The Clear BSD License
- *
- * Copyright (c) 2019 Insolar Technologies
- *
- * All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without modification,
- * are permitted (subject to the limitations in the disclaimer below) provided that
- * the following conditions are met:
- *
- *  * Redistributions of source code must retain the above copyright notice,
- *    this list of conditions and the following disclaimer.
- *  * Redistributions in binary form must reproduce the above copyright notice,
- *    this list of conditions and the following disclaimer in the documentation
- *    and/or other materials provided with the distribution.
- *  * Neither the name of Insolar Technologies nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
- *
- * NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
- * BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
- * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING,
- * BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
- * FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT
- * HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
- * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
- * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
- * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY
- * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
- * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
- * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
- */
+//
+// Modified BSD 3-Clause Clear License
+//
+// Copyright (c) 2019 Insolar Technologies GmbH
+//
+// All rights reserved.
+//
+// Redistribution and use in source and binary forms, with or without modification,
+// are permitted (subject to the limitations in the disclaimer below) provided that
+// the following conditions are met:
+//  * Redistributions of source code must retain the above copyright notice, this list
+//    of conditions and the following disclaimer.
+//  * Redistributions in binary form must reproduce the above copyright notice, this list
+//    of conditions and the following disclaimer in the documentation and/or other materials
+//    provided with the distribution.
+//  * Neither the name of Insolar Technologies GmbH nor the names of its contributors
+//    may be used to endorse or promote products derived from this software without
+//    specific prior written permission.
+//
+// NO EXPRESS OR IMPLIED LICENSES TO ANY PARTY'S PATENT RIGHTS ARE GRANTED
+// BY THIS LICENSE. THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS
+// AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES,
+// INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY
+// AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL
+// THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
+// INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+// BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS
+// OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+// ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+// (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+// OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+//
+// Notwithstanding any other provisions of this license, it is prohibited to:
+//    (a) use this software,
+//
+//    (b) prepare modifications and derivative works of this software,
+//
+//    (c) distribute this software (including without limitation in source code, binary or
+//        object code form), and
+//
+//    (d) reproduce copies of this software
+//
+//    for any commercial purposes, and/or
+//
+//    for the purposes of making available this software to third parties as a service,
+//    including, without limitation, any software-as-a-service, platform-as-a-service,
+//    infrastructure-as-a-service or other similar online service, irrespective of
+//    whether it competes with the products or services of Insolar Technologies GmbH.
+//
 
 package servicenetwork
 
 import (
 	"context"
 
-	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
 )
 
 type CommunicatorTestOpt int
@@ -80,10 +94,10 @@ func (cm *CommunicatorMock) ExchangePhase1(
 	return pckts, nil
 }
 
-func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
+func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, state *phases.ConsensusState,
 	participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.Reference]*packets.Phase2Packet, error) {
 
-	pckts, err := cm.communicator.ExchangePhase2(ctx, list, handler, participants, packet)
+	pckts, err := cm.communicator.ExchangePhase2(ctx, state, participants, packet)
 	if err != nil {
 		return nil, err
 	}
@@ -94,10 +108,10 @@ func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, list network.Uns
 	return pckts, nil
 }
 
-func (cm *CommunicatorMock) ExchangePhase21(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
+func (cm *CommunicatorMock) ExchangePhase21(ctx context.Context, state *phases.ConsensusState,
 	packet *packets.Phase2Packet, additionalRequests []*phases.AdditionalRequest) ([]packets.ReferendumVote, error) {
 
-	return cm.communicator.ExchangePhase21(ctx, list, handler, packet, additionalRequests)
+	return cm.communicator.ExchangePhase21(ctx, state, packet, additionalRequests)
 }
 
 func (cm *CommunicatorMock) ExchangePhase3(ctx context.Context, participants []insolar.NetworkNode, packet *packets.Phase3Packet) (map[insolar.Reference]*packets.Phase3Packet, error) {

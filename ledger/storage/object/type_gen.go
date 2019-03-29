@@ -3,14 +3,16 @@
 
 package object
 
-func TypeFromRecord(generic VirtualRecord) TypeID {
+import (
+	record "github.com/insolar/insolar/insolar/record"
+)
+
+func TypeFromRecord(generic record.VirtualRecord) TypeID {
 	switch generic.(type) {
 	case *GenesisRecord:
 		return 100
 	case *ChildRecord:
 		return 101
-	case *JetRecord:
-		return 102
 	case *RequestRecord:
 		return 200
 	case *ResultRecord:
@@ -30,14 +32,12 @@ func TypeFromRecord(generic VirtualRecord) TypeID {
 	}
 }
 
-func RecordFromType(i TypeID) VirtualRecord {
+func RecordFromType(i TypeID) record.VirtualRecord {
 	switch i {
 	case 100:
 		return new(GenesisRecord)
 	case 101:
 		return new(ChildRecord)
-	case 102:
-		return new(JetRecord)
 	case 200:
 		return new(RequestRecord)
 	case 300:
@@ -63,8 +63,6 @@ func (i TypeID) String() string {
 		return "GenesisRecord"
 	case 101:
 		return "ChildRecord"
-	case 102:
-		return "JetRecord"
 	case 200:
 		return "RequestRecord"
 	case 300:

@@ -20,7 +20,7 @@ import (
 	"context"
 
 	"github.com/dgraph-io/badger"
-	multierror "github.com/hashicorp/go-multierror"
+	"github.com/hashicorp/go-multierror"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/recentstorage"
@@ -86,12 +86,6 @@ func (c *cleaner) CleanJetRecordsUntilPulse(
 
 	var err error
 	var stat RmStat
-	if stat, err = c.RemoveJetBlobsUntil(ctx, jetID, pn); err != nil {
-		result = multierror.Append(result, errors.Wrap(err, "RemoveJetBlobsUntil"))
-		stat.Errors = stat.Scanned
-		stat.Removed = 0
-	}
-	allstat["blobs"] = stat
 
 	if stat, err = c.RemoveJetRecordsUntil(ctx, jetID, pn); err != nil {
 		result = multierror.Append(result, errors.Wrap(err, "RemoveJetRecordsUntil"))
@@ -103,11 +97,6 @@ func (c *cleaner) CleanJetRecordsUntilPulse(
 	recordCleanupMetrics(ctx, allstat)
 
 	return allstat, result
-}
-
-// RemoveJetBlobsUntil removes for provided JetID all blobs older than provided pulse number.
-func (c *cleaner) RemoveJetBlobsUntil(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber) (RmStat, error) {
-	return c.removeJetRecordsUntil(ctx, scopeIDBlob, jetID, pn)
 }
 
 // RemoveJetRecordsUntil removes for provided JetID all records older than provided pulse number.

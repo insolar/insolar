@@ -27,6 +27,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/blob"
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -163,7 +165,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 		return nil, nil
 	}
 
-	nodeMock := network.NewNodeMock(s.T())
+	nodeMock := network.NewNetworkNodeMock(s.T())
 	nodeMock.RoleMock.Return(insolar.StaticRoleLightMaterial)
 	nodeMock.IDMock.Return(insolar.Reference{})
 
@@ -176,7 +178,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	jetCoordinatorMock.LightExecutorForJetMock.Return(executor, nil)
 	jetCoordinatorMock.MeMock.Return(*executor)
 
-	pm := NewPulseManager(configuration.Ledger{})
+	pm := NewPulseManager(configuration.Ledger{}, drop.NewCleanerMock(s.T()), blob.NewCleanerMock(s.T()), blob.NewCollectionAccessorMock(s.T()))
 
 	gil := testutils.NewGlobalInsolarLockMock(s.T())
 	gil.AcquireMock.Return()

@@ -41,7 +41,6 @@ import (
 // Runner implements Component for API
 type Runner struct {
 	CertificateManager  insolar.CertificateManager  `inject:""`
-	StorageExporter     insolar.StorageExporter     `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
 	NetworkCoordinator  insolar.NetworkCoordinator  `inject:""`
 	GenesisDataProvider insolar.GenesisDataProvider `inject:""`
@@ -79,12 +78,7 @@ func checkConfig(cfg *configuration.APIRunner) error {
 }
 
 func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
-	err := rpcServer.RegisterService(NewStorageExporterService(ar), "exporter")
-	if err != nil {
-		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: exporter")
-	}
-
-	err = rpcServer.RegisterService(NewSeedService(ar), "seed")
+	err := rpcServer.RegisterService(NewSeedService(ar), "seed")
 	if err != nil {
 		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: seed")
 	}

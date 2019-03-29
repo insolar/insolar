@@ -20,19 +20,18 @@ import (
 	"math/rand"
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
+	"github.com/google/gofuzz"
 	"github.com/stretchr/testify/require"
 
-	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/db"
 )
 
 func TestNewStorageDB(t *testing.T) {
-	dbStor := NewStorageDB()
-
-	require.NotNil(t, dbStor)
+	dbStore := NewStorageDB(db.NewMemoryMockDB())
+	require.NotNil(t, dbStore)
 }
 
 type setInput struct {
@@ -51,7 +50,7 @@ func TestDropStorageDB_Set(t *testing.T) {
 			JetID: gen.JetID(),
 		}
 
-		encoded, _ := Encode(&inp.dr)
+		encoded := MustEncode(&inp.dr)
 		encodedDrops[string(encoded)] = struct{}{}
 	}).NumElements(5, 5000).NilChance(0)
 	f.Fuzz(&inputs)
@@ -64,11 +63,10 @@ func TestDropStorageDB_Set(t *testing.T) {
 	}
 	dbMock.GetMock.Return(nil, ErrNotFound)
 
-	dropStor := NewStorageDB()
-	dropStor.DB = dbMock
+	dropStore := NewStorageDB(dbMock)
 
 	for _, inp := range inputs {
-		err := dropStor.Set(ctx, inp.dr)
+		err := dropStore.Set(ctx, inp.dr)
 		require.NoError(t, err)
 	}
 }
@@ -84,10 +82,9 @@ func TestDropStorageDB_Set_ErrOverride(t *testing.T) {
 	dbMock := db.NewDBMock(t)
 	dbMock.GetMock.Return(nil, nil)
 
-	dropStor := NewStorageDB()
-	dropStor.DB = dbMock
+	dropStore := NewStorageDB(dbMock)
 
-	err := dropStor.Set(ctx, dr)
+	err := dropStore.Set(ctx, dr)
 
 	require.Error(t, err, ErrNotFound)
 }
@@ -100,15 +97,14 @@ func TestDropStorageDB_ForPulse(t *testing.T) {
 		Size:  rand.Uint64(),
 		Pulse: gen.PulseNumber(),
 	}
-	buf, _ := Encode(&dr)
+	buf := MustEncode(&dr)
 
 	dbMock := db.NewDBMock(t)
 	dbMock.GetMock.Return(buf, nil)
 
-	dropStor := NewStorageDB()
-	dropStor.DB = dbMock
+	dropStore := NewStorageDB(dbMock)
 
-	resDr, err := dropStor.ForPulse(ctx, jetID, pn)
+	resDr, err := dropStore.ForPulse(ctx, jetID, pn)
 
 	require.NoError(t, err)
 	require.Equal(t, dr, resDr)
@@ -122,10 +118,9 @@ func TestDropStorageDB_ForPulse_NotExist(t *testing.T) {
 	dbMock := db.NewDBMock(t)
 	dbMock.GetMock.Return(nil, ErrNotFound)
 
-	dropStor := NewStorageDB()
-	dropStor.DB = dbMock
+	dropStore := NewStorageDB(dbMock)
 
-	_, err := dropStor.ForPulse(ctx, jetID, pn)
+	_, err := dropStore.ForPulse(ctx, jetID, pn)
 
 	require.Error(t, err, ErrNotFound)
 }
@@ -138,10 +133,9 @@ func TestDropStorageDB_ForPulse_ProblemsWithDecoding(t *testing.T) {
 	dbMock := db.NewDBMock(t)
 	dbMock.GetMock.Return([]byte{1, 2, 3}, nil)
 
-	dropStor := NewStorageDB()
-	dropStor.DB = dbMock
+	dropStore := NewStorageDB(dbMock)
 
-	_, err := dropStor.ForPulse(ctx, jetID, pn)
+	_, err := dropStore.ForPulse(ctx, jetID, pn)
 
 	require.Error(t, err)
 }

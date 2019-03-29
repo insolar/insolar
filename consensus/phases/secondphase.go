@@ -53,6 +53,8 @@ package phases
 import (
 	"context"
 
+	"github.com/insolar/insolar/network/node"
+
 	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
@@ -60,7 +62,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -90,8 +91,6 @@ func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, st
 	defer span.End()
 	prevCloudHash := sp.NodeKeeper.GetCloudHash()
 
-	state.ValidProofs[sp.NodeKeeper.GetOrigin()] = state.PulseProof
-
 	entry := &merkle.GlobuleEntry{
 		PulseEntry:    state.PulseEntry,
 		ProofSet:      state.ValidProofs,
@@ -110,35 +109,33 @@ func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, st
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-2.0 ] Failed to set globule proof in Phase2Packet")
 	}
-	bitset, err := sp.generatePhase2Bitset(state.UnsyncList, state.ValidProofs, pulse.PulseNumber)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NET Consensus phase-2.0 ] Failed to generate bitset for Phase2Packet")
-	}
-	packet.SetBitSet(bitset)
-	activeNodes := state.UnsyncList.GetActiveNodes()
-	packets, err := sp.Communicator.ExchangePhase2(ctx, state.UnsyncList, state.ClaimHandler, activeNodes, packet)
+	packet.SetBitSet(state.BitSet)
+	participants := getPhase2Receivers(state.ValidProofs)
+
+	packets, err := sp.Communicator.ExchangePhase2(ctx, state.ConsensusState, participants, packet)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-2.0 ] Failed to exchange packets")
 	}
-	logger.Infof("[ NET Consensus phase-2.0 ] Received responses: %d/%d", len(packets), state.UnsyncList.Length())
+	logger.Infof("[ NET Consensus phase-2.0 ] Received responses: %d/%d",
+		len(packets), state.BitsetMapper.Length())
 	err = stats.RecordWithTags(ctx, []tag.Mutator{tag.Upsert(consensus.TagPhase, "phase 2")}, consensus.PacketsRecv.M(int64(len(packets))))
 	if err != nil {
 		logger.Warn("[ NET Consensus phase-2.0 ] Failed to record received packets metric: " + err.Error())
 	}
 
 	origin := sp.NodeKeeper.GetOrigin().ID()
-	stateMatrix := NewStateMatrix(state.UnsyncList)
+	stateMatrix := NewStateMatrix(state.BitsetMapper)
 
 	for ref, packet := range packets {
 		err = nil
 		if !ref.Equal(origin) {
-			err = sp.checkPacketSignature(packet, ref, state.UnsyncList)
+			err = sp.checkPacketSignature(packet, ref, state.NodesMutator)
 		}
 		if err != nil {
 			logger.Warnf("[ NET Consensus phase-2.0 ] Failed to check phase2 packet signature from %s: %s", ref, err.Error())
 			continue
 		}
-		state.UnsyncList.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
+		state.HashStorage.SetGlobuleHashSignature(ref, packet.GetGlobuleHashSignature())
 		err = stateMatrix.ApplyBitSet(ref, packet.GetBitSet())
 		if err != nil {
 			logger.Warnf("[ NET Consensus phase-2.0 ] Could not apply bitset from node %s: %s", ref, err.Error())
@@ -152,10 +149,6 @@ func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, st
 	}
 
 	if len(matrixCalculation.TimedOut) > 0 {
-		for _, nodeID := range matrixCalculation.TimedOut {
-			state.UnsyncList.RemoveNode(nodeID)
-		}
-
 		type none struct{}
 		newActive := make(map[insolar.Reference]none)
 		for _, active := range matrixCalculation.Active {
@@ -192,11 +185,18 @@ func (sp *SecondPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, st
 		FirstPhaseState: state,
 		Matrix:          stateMatrix,
 		MatrixState:     matrixCalculation,
-		BitSet:          bitset,
 
 		GlobuleHash:  globuleHash,
 		GlobuleProof: globuleProof,
 	}, nil
+}
+
+func getPhase2Receivers(validProofs map[insolar.NetworkNode]*merkle.PulseProof) []insolar.NetworkNode {
+	result := make([]insolar.NetworkNode, 0)
+	for node := range validProofs {
+		result = append(result, node)
+	}
+	return result
 }
 
 func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *insolar.Pulse, state *SecondPhaseState) (*SecondPhaseState, error) {
@@ -219,7 +219,7 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *insolar.Pulse, 
 	}
 	packet.SetBitSet(state.BitSet)
 
-	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, state.UnsyncList, state.ClaimHandler, packet, additionalRequests)
+	voteAnswers, err := sp.Communicator.ExchangePhase21(ctx, state.ConsensusState, packet, additionalRequests)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-2.1 ] Failed to send additional requests")
 	}
@@ -250,7 +250,7 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *insolar.Pulse, 
 	bitsetChanges := make([]packets.BitSetCell, 0)
 	for index, result := range results {
 		claim := result.NodeClaimUnsigned
-		node, err := nodenetwork.ClaimToNode("", &claim)
+		node, err := node.ClaimToNode("", &claim)
 		if err != nil {
 			return nil, errors.Wrapf(err, "[ NET Consensus phase-2.1 ] Failed to convert claim to node, "+
 				"ref: %s", claim.NodeRef)
@@ -263,15 +263,15 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *insolar.Pulse, 
 			StateHash: result.NodePulseProof.StateHash(),
 		}
 
-		state.UnsyncList.AddNode(node, index)
-		err = sp.NodeKeeper.GetConsensusInfo().AddTemporaryMapping(claim.NodeRef, claim.ShortNodeID, claim.NodeAddress.Get())
+		state.NodesMutator.AddWorkingNode(node)
+		state.BitsetMapper.AddNode(node, index)
+		err = state.ConsensusInfo.AddTemporaryMapping(claim.NodeRef, claim.ShortNodeID, claim.NodeAddress.Get())
 		if err != nil {
 			logger.Warn("Error adding temporary mapping: " + err.Error())
 		}
-		valid := validateProof(sp.Calculator, state.UnsyncList, state.PulseHash, node.ID(), merkleProof)
+		valid := validateProof(sp.Calculator, state.NodesMutator, state.PulseHash, node.ID(), merkleProof)
 		if !valid {
 			logger.Warnf("[ NET Consensus phase-2.1 ] Failed to validate proof from %s", node.ID())
-			state.UnsyncList.RemoveNode(node.ID())
 			continue
 		}
 
@@ -280,18 +280,18 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *insolar.Pulse, 
 			return nil, errors.Wrapf(err, "[ NET Consensus phase-2.1 ] Failed to assign proof from node %s "+
 				"to state matrix", claim.NodeRef)
 		}
-		state.UnsyncList.AddProof(node.ID(), &result.NodePulseProof)
+		state.HashStorage.AddProof(node.ID(), &result.NodePulseProof)
 		state.ValidProofs[node] = merkleProof
 		bitsetChanges = append(bitsetChanges, packets.BitSetCell{NodeID: node.ID(), State: packets.Legit})
 	}
 
-	err = state.BitSet.ApplyChanges(bitsetChanges, state.UnsyncList)
+	err = state.BitSet.ApplyChanges(bitsetChanges, state.BitsetMapper)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-2.1 ] Failed to apply changes to current bitset")
 	}
 	claimMap := make(map[insolar.Reference][]packets.ReferendumClaim)
 	for index, claim := range claims {
-		ref, err := state.UnsyncList.IndexToRef(int(index))
+		ref, err := state.BitsetMapper.IndexToRef(int(index))
 		if err != nil {
 			return nil, errors.Wrapf(err, "[ NET Consensus phase-2.1 ] Failed to map index %d to ref", index)
 		}
@@ -329,45 +329,13 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *insolar.Pulse, 
 	}
 	var ghs packets.GlobuleHashSignature
 	copy(ghs[:], state.GlobuleProof.Signature.Bytes()[:packets.SignatureLength])
-	state.UnsyncList.SetGlobuleHashSignature(origin, ghs)
+	state.HashStorage.SetGlobuleHashSignature(origin, ghs)
 
 	return state, nil
 }
 
-func (sp *SecondPhaseImpl) generatePhase2Bitset(list network.UnsyncList, proofs map[insolar.NetworkNode]*merkle.PulseProof, pulseNumber insolar.PulseNumber) (packets.BitSet, error) {
-	bitset, err := packets.NewBitSet(list.Length())
-	if err != nil {
-		return nil, err
-	}
-	cells := make([]packets.BitSetCell, 0)
-	for node := range proofs {
-		cells = append(cells, packets.BitSetCell{
-			NodeID: node.ID(),
-			State:  getNodeState(node, pulseNumber),
-		})
-	}
-	cells = append(cells, packets.BitSetCell{
-		NodeID: sp.NodeKeeper.GetOrigin().ID(),
-		State:  getNodeState(sp.NodeKeeper.GetOrigin(), pulseNumber),
-	})
-	err = bitset.ApplyChanges(cells, list)
-	if err != nil {
-		return nil, err
-	}
-	return bitset, nil
-}
-
-func getNodeState(node insolar.NetworkNode, pulseNumber insolar.PulseNumber) packets.BitSetState {
-	state := packets.Legit
-	if node.GetState() == insolar.NodeLeaving && node.LeavingETA() < pulseNumber {
-		state = packets.TimedOut
-	}
-
-	return state
-}
-
-func (sp *SecondPhaseImpl) checkPacketSignature(packet *packets.Phase2Packet, recordRef insolar.Reference, unsyncList network.UnsyncList) error {
-	activeNode := unsyncList.GetActiveNode(recordRef)
+func (sp *SecondPhaseImpl) checkPacketSignature(packet *packets.Phase2Packet, recordRef insolar.Reference, accessor network.Accessor) error {
+	activeNode := accessor.GetActiveNode(recordRef)
 	if activeNode == nil {
 		return errors.New("failed to get active node")
 	}

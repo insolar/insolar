@@ -21,8 +21,8 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/object"
@@ -36,8 +36,7 @@ func TestIndex_Components(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	indexMemory := object.NewIndexMemory()
-	indexDB := object.NewIndexDB()
-	indexDB.DB = db.NewMemoryMockDB()
+	indexDB := object.NewIndexDB(db.NewMemoryMockDB())
 
 	type tempIndex struct {
 		id  insolar.ID
@@ -101,8 +100,7 @@ func TestIndex_Components(t *testing.T) {
 		t.Parallel()
 
 		indexMemory := object.NewIndexMemory()
-		indexDB := object.NewIndexDB()
-		indexDB.DB = db.NewMemoryMockDB()
+		indexDB := object.NewIndexDB(db.NewMemoryMockDB())
 
 		for _, i := range indices {
 			memErr := indexMemory.Set(ctx, i.id, i.idx)
