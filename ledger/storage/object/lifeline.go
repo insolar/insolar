@@ -150,8 +150,8 @@ func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (index Lifeline,
 }
 
 type IndexDB struct {
-	DB   db.DB `inject:""`
 	lock sync.RWMutex
+	db   db.DB
 }
 
 type indexKey insolar.ID
@@ -166,8 +166,8 @@ func (k indexKey) ID() []byte {
 }
 
 // NewIndexDB creates new DB storage instance.
-func NewIndexDB() *IndexDB {
-	return &IndexDB{}
+func NewIndexDB(d db.DB) *IndexDB {
+	return &IndexDB{db: d}
 }
 
 // Set saves new index-value in storage.
@@ -189,11 +189,11 @@ func (i *IndexDB) ForID(ctx context.Context, id insolar.ID) (index Lifeline, err
 func (i *IndexDB) set(id insolar.ID, index Lifeline) error {
 	key := indexKey(id)
 
-	return i.DB.Set(key, EncodeIndex(index))
+	return i.db.Set(key, EncodeIndex(index))
 }
 
 func (i *IndexDB) get(id insolar.ID) (index Lifeline, err error) {
-	buff, err := i.DB.Get(indexKey(id))
+	buff, err := i.db.Get(indexKey(id))
 	if err == db.ErrNotFound {
 		err = ErrNotFound
 		return

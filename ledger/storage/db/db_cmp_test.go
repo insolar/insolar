@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -48,7 +47,7 @@ func TestDB_Components(t *testing.T) {
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
-	badger, err := db.NewBadgerDB(configuration.Ledger{Storage: configuration.Storage{DataDirectoryNewDB: tmpdir}})
+	badger, err := db.NewBadgerDB(tmpdir)
 	require.NoError(t, err)
 
 	mock := db.NewMemoryMockDB()

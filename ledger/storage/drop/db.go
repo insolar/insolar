@@ -25,12 +25,12 @@ import (
 )
 
 type dropStorageDB struct {
-	DB db.DB `inject:""`
+	db db.DB
 }
 
 // NewStorageDB creates a new storage, that holds data in a db.
-func NewStorageDB() *dropStorageDB { // nolint: golint
-	return &dropStorageDB{}
+func NewStorageDB(d db.DB) *dropStorageDB { // nolint: golint
+	return &dropStorageDB{db: d}
 }
 
 type dropDbKey struct {
@@ -50,7 +50,7 @@ func (dk *dropDbKey) ID() []byte {
 func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (Drop, error) {
 	k := dropDbKey{jetID.Prefix(), pulse}
 
-	buf, err := ds.DB.Get(&k)
+	buf, err := ds.db.Get(&k)
 	if err != nil {
 		return Drop{}, err
 	}
@@ -65,11 +65,11 @@ func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID insolar.JetID, puls
 func (ds *dropStorageDB) Set(ctx context.Context, drop Drop) error {
 	k := dropDbKey{drop.JetID.Prefix(), drop.Pulse}
 
-	_, err := ds.DB.Get(&k)
+	_, err := ds.db.Get(&k)
 	if err == nil {
 		return ErrOverride
 	}
 
 	encoded := MustEncode(&drop)
-	return ds.DB.Set(&k, encoded)
+	return ds.db.Set(&k, encoded)
 }
