@@ -111,6 +111,8 @@ func (se *slotElement) SendTask(adapterID adapterid.ID, taskPayload interface{},
 		return errors.Errorf("[ SendTask ] Can't PushTask: %s", err)
 	}
 
+	// TODO: I'm not really sure if we need it. Since handler might invoke more then one adapter
+	// and after call first one element become inactive
 	se.DeactivateTill(fsm.Response)
 
 	return nil
