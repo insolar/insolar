@@ -17,6 +17,7 @@
 package matrix
 
 import (
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/get_object"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/initial"
@@ -37,7 +38,7 @@ func (s *StateMachineSet) addMachine(machine StateMachine) {
 	s.stateMachines = append(s.stateMachines, machine)
 }
 
-func ( s *StateMachineSet ) GetStateMachineByID(id int) StateMachine{
+func ( s *StateMachineSet ) GetStateMachineByID(id fsm.ID) StateMachine{
 	return s.stateMachines[id]
 }
 
@@ -47,10 +48,8 @@ type Matrix struct {
 	past *StateMachineSet
 }
 
-type MachineType int
-
 const (
-	GetObjectStateMachine MachineType = iota + 1
+	GetObjectStateMachine  fsm.ID = iota + 1
 	SampleStateMachine
 	Initial
 	

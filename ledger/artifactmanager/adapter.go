@@ -39,7 +39,7 @@ type GetCodeResp struct {
 
 // GetCodeProcessor is worker for adapter for getting code
 type GetCodeProcessor struct {
-	Handlers HandlerStorage `inject:""`
+	Ledger LedgerLogic `inject:""`
 }
 
 // NewGetCodeProcessor returns new instance of processor which get code
@@ -57,7 +57,7 @@ func (p *GetCodeProcessor) Process(task adapter.AdapterTask, nestedEventHelper a
 	}
 
 	ctx := context.Background()
-	parcel, err := p.Handlers.handleGetCode(ctx, payload.Parcel)
+	parcel, err := p.Ledger.GetCode(ctx, payload.Parcel)
 	msg = GetCodeResp{parcel, err}
 	log.Info("[ GetCodeProcessor.Process ] Process was dome successfully")
 

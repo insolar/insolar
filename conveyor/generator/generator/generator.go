@@ -66,12 +66,8 @@ func NewGenerator() *Generator {
 
 func (g *Generator) CheckAllMachines() {
 	for _, machine := range g.stateMachines {
-		if machine.States[0].handlers[Present][Transition] == nil {
-			exitWithError("[%s] Present Init handler should be defined", machine.Name)
-		}
-		if machine.States[0].handlers[Future][Transition] == nil {
-			exitWithError("[%s] Future Init handler should be defined", machine.Name)
-		}
+
+		checkHasInitHandlers(machine)
 
 		for stateIndex, state := range machine.States {
 			for _, pulseState := range []PulseState{Future, Present, Past} {
@@ -83,40 +79,63 @@ func (g *Generator) CheckAllMachines() {
 					}
 
 					if len(currentHandler.params) < 3 || currentHandler.params[2] != *machine.InputEventType {
-						exitWithError("[%s %s] Forth parameter should be %s\n", machine.Name, currentHandler.Name, *machine.InputEventType)
+						exitWithError("[%s %s] Third parameter should be %s\n", machine.Name, currentHandler.Name, *machine.InputEventType)
 					}
 
 					// check Init handlers
 					if stateIndex == 0 && handlerType == Transition {
-						if currentHandler.params[3] != "interface {}" {
-							exitWithError("[%s %s] Init handlers should have interface{} as payload parameter\n", machine.Name, currentHandler.Name)
-						}
-						if currentHandler.results[1] != *machine.PayloadType {
-							exitWithError("[%s %s] Init handlers should return payload as %s\n", machine.Name, currentHandler.Name, *machine.PayloadType)
-						}
+
+						checkInitHandlersSignature(currentHandler, machine)
+
 					} else {
 						if currentHandler.params[3] != *machine.PayloadType {
-							exitWithError("[%s %s] Handlers payload should be %s not %s\n", machine.Name, currentHandler.Name, *machine.PayloadType, currentHandler.params[3])
+							exitWithError("[%s %s] Fourth parameter should be %s not %s\n", machine.Name, currentHandler.Name, *machine.PayloadType, currentHandler.params[3])
 						}
 						if len(currentHandler.results) != 1 {
 							exitWithError("[%s %s] Handlers should return only fsm.ElementState\n", machine.Name, currentHandler.Name)
 						}
 					}
 
-					if stateIndex != 0 && handlerType == Transition {
-						if len(currentHandler.params) != 4 && len(currentHandler.params) != 5 {
-							exitWithError("[%s %s] Transition handlers should have 4 or 5 (with adapher helper) parameters\n", machine.Name, currentHandler.Name)
-						}
-					}
+					checkTransitionHandlerParams(stateIndex, handlerType, currentHandler, machine)
 
-					if handlerType == AdapterResponse {
-						if len(currentHandler.params) != 5 {
-							exitWithError("[%s %s] AdapterResponse handlers should have 5 parameters\n", machine.Name, currentHandler.Name)
-						}
-					}
+					checkAdapterRespHandler(handlerType, currentHandler, machine)
 				}
 			}
 		}
+	}
+}
+
+func checkTransitionHandlerParams(stateIndex int, handlerType handlerType, currentHandler *handler, machine *StateMachine) {
+	if stateIndex != 0 && handlerType == Transition {
+		if len(currentHandler.params) != 4 && len(currentHandler.params) != 5 {
+			exitWithError("[%s %s] Transition handlers should have 4 or 5 (with adapter helper) parameters\n", machine.Name, currentHandler.Name)
+		}
+	}
+}
+
+func checkAdapterRespHandler(handlerType handlerType, currentHandler *handler, machine *StateMachine) {
+	if handlerType == AdapterResponse {
+		if len(currentHandler.params) != 5 {
+			exitWithError("[%s %s] AdapterResponse handlers should have 5 parameters\n", machine.Name, currentHandler.Name)
+		}
+	}
+}
+
+func checkInitHandlersSignature(currentHandler *handler, machine *StateMachine) {
+	if currentHandler.params[3] != "interface {}" {
+		exitWithError("[%s %s] Init handlers should have interface{} as payload parameter\n", machine.Name, currentHandler.Name)
+	}
+	if currentHandler.results[1] != *machine.PayloadType {
+		exitWithError("[%s %s] Init handlers should return payload as %s\n", machine.Name, currentHandler.Name, *machine.PayloadType)
+	}
+}
+
+func checkHasInitHandlers(machine *StateMachine) {
+	if machine.States[0].handlers[Present][Transition] == nil {
+		exitWithError("[%s] Present Init handler should be defined", machine.Name)
+	}
+	if machine.States[0].handlers[Future][Transition] == nil {
+		exitWithError("[%s] Future Init handler should be defined", machine.Name)
 	}
 }
 

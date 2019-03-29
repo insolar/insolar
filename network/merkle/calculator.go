@@ -58,12 +58,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type stater interface {
-	State() ([]byte, error)
-}
-
 type calculator struct {
-	ArtifactManager            stater                             `inject:""`
 	NodeNetwork                insolar.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
@@ -80,17 +75,7 @@ func (c *calculator) Init(ctx context.Context) error {
 	return nil
 }
 
-func (c *calculator) getStateHash(role insolar.StaticRole) (OriginHash, error) {
-	// TODO: do something with role
-	return c.ArtifactManager.State()
-}
-
-func (c *calculator) GetPulseProof(entry *PulseEntry) (OriginHash, *PulseProof, error) {
-	role := c.NodeNetwork.GetOrigin().Role()
-	stateHash, err := c.getStateHash(role)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, "[ GetPulseProof ] Failed to get node stateHash")
-	}
+func (c *calculator) GetPulseProof(entry *PulseEntry, stateHash OriginHash) (OriginHash, *PulseProof, error) {
 
 	pulseHash := entry.hash(c.merkleHelper)
 	nodeInfoHash := c.merkleHelper.nodeInfoHash(pulseHash, stateHash)

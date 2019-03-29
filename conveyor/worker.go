@@ -19,9 +19,13 @@ package conveyor
 import (
 	"context"
 	"fmt"
+	"math"
 	"strconv"
 	"time"
 
+	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
+	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
 	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/insolar"
@@ -71,8 +75,8 @@ func newWorker(slot *Slot) worker {
 	return w
 }
 
-func (w *worker) GetStateMachineByType(mType matrix.MachineType) matrix.StateMachine {
-	return w.slot.handlersConfiguration.pulseStateMachines.GetStateMachineByID(int(mType))
+func (w *worker) GetStateMachineByType(mType fsm.ID) matrix.StateMachine {
+	return w.slot.handlersConfiguration.pulseStateMachines.GetStateMachineByID(mType)
 }
 
 func (w *worker) setLoggerFields() {
@@ -186,7 +190,7 @@ func (w *worker) updateElement(element *slotElement, payload interface{}, fullSt
 		sm, state := fullState.Parse()
 		machineType := element.stateMachine
 		if sm != 0 {
-			machineType = w.GetStateMachineByType(matrix.MachineType(sm))
+			machineType = w.GetStateMachineByType(sm)
 		}
 		element.update(state, payload, machineType)
 		return
@@ -358,8 +362,16 @@ func (w *worker) working() {
 
 func (w *worker) calculateNodeState() {
 	w.ctxLogger.Debugf("[ calculateNodeState ] starts ...")
-	// TODO: PreparePulse comes, It contains callback, call some adapter it forward callback to it
-	w.preparePulseSync.SetResult(555)
+	task := adapter.NodeStateTask{
+		Callback: w.preparePulseSync,
+		Pulse:    w.slot.pulse,
+	}
+	nodeStateAdapter := adapterstorage.Manager.GetAdapterByID(adapterid.NodeState)
+	// TODO: elementID=MaxUint32 is hack, mb we should create element with specific state machine for it
+	err := nodeStateAdapter.PushTask(w.slot, math.MaxUint32, 0, task)
+	if err != nil {
+		panic("[ calculateNodeState ] Can't calculate node state in NodeStateAdapter: " + err.Error())
+	}
 	w.preparePulseSync = nil
 }
 
