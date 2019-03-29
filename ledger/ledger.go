@@ -44,7 +44,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
 
-	dbBadger, err := db.NewBadgerDB(conf)
+	dbBadger, err := db.NewBadgerDB(conf.Storage.DataDirectoryNewDB)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
