@@ -18,6 +18,11 @@
 
 package api
 
+import (
+	"errors"
+	"net/http"
+)
+
 // ContractService is a service that provides ability to add custom contracts
 type ContractService struct {
 	runner *Runner
@@ -26,4 +31,19 @@ type ContractService struct {
 // NewContractService is dummy for NewContractService in contract.go that hidden under build tag
 func NewContractService(runner *Runner) *ContractService {
 	return &ContractService{runner: runner}
+}
+
+type DummyArgs struct{}
+type DummyReply struct{}
+
+func (s *ContractService) Upload(r *http.Request, args *DummyArgs, reply *DummyReply) error {
+	return errors.New("method allowed only in build with functest tag")
+}
+
+func (s *ContractService) CallConstructor(r *http.Request, args *DummyArgs, reply *DummyReply) error {
+	return errors.New("method allowed only in build with functest tag")
+}
+
+func (s *ContractService) CallMethod(r *http.Request, args *DummyArgs, reply *DummyReply) error {
+	return errors.New("method allowed only in build with functest tag")
 }
