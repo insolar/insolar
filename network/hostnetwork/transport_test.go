@@ -306,8 +306,7 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 	require.NoError(t, err)
 	_, err = t1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
-	success := utils.WaitTimeout(&wg, time.Second)
-	require.True(t, success)
+	wg.Wait()
 }
 
 func TestHostTransport_SendRequestPacket3(t *testing.T) {
@@ -423,7 +422,7 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	// should timeout because there is no handler set for Ping packet
-	result := utils.WaitTimeout(&wg, time.Millisecond*10)
+	result := utils.WaitTimeout(&wg, time.Millisecond*100)
 	require.False(t, result)
 }
 
