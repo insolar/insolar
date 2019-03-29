@@ -36,7 +36,7 @@ func (s *StateMachineSet) addMachine(machine StateMachine) {
 	s.stateMachines = append(s.stateMachines, machine)
 }
 
-func ( s *StateMachineSet ) GetStateMachineByID(id int) StateMachine{
+func ( s *StateMachineSet ) GetStateMachineByID(id fsm.ID) StateMachine{
 	return s.stateMachines[id]
 }
 
@@ -67,7 +67,7 @@ func NewMatrix() *Matrix {
 }
 
 func (m *Matrix) GetInitialStateMachine() StateMachine {
-	return m.present.stateMachines[1]
+	return m.present.stateMachines[Initial]
 }
 
 func (m *Matrix) GetFutureConfig() SetAccessor{
