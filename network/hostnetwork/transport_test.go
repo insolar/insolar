@@ -221,13 +221,12 @@ func TestNewHostTransport(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Transport.Start(ctx2)
-	t1.Transport.Start(ctx)
-
-	defer func() {
-		t1.Transport.Stop(ctx)
-		t2.Transport.Stop(ctx2)
-	}()
+	err = t2.Transport.Start(ctx2)
+	assert.NoError(t, err)
+	defer t2.Transport.Stop(ctx2)
+	err = t1.Transport.Start(ctx)
+	assert.NoError(t, err)
+	defer t1.Transport.Stop(ctx)
 
 	for i := 0; i < count; i++ {
 		request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
@@ -236,8 +235,7 @@ func TestNewHostTransport(t *testing.T) {
 		_, err = t1.SendRequest(ctx, request, *ref)
 		require.NoError(t, err)
 	}
-	success := utils.WaitTimeout(&wg, time.Second)
-	require.True(t, success)
+	wg.Wait()
 }
 
 func TestHostTransport_SendRequestPacket(t *testing.T) {
