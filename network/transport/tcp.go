@@ -21,6 +21,7 @@ import (
 	"context"
 	"io"
 	"net"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -122,6 +123,11 @@ func (t *tcpTransport) Listen(ctx context.Context) error {
 			conn, err := listener.Accept()
 			if err != nil {
 				<-t.disconnectFinished
+				if strings.Contains(strings.ToLower(err.Error()), "use of closed network connection") {
+					logger.Info("Connection closed, quiting accept loop")
+					return
+				}
+
 				logger.Error("[ Listen ] Failed to accept connection: ", err.Error())
 				return
 			}

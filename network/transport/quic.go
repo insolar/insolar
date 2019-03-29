@@ -27,11 +27,12 @@ import (
 	"math/big"
 	"net"
 
+	"github.com/lucas-clemente/quic-go"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/utils"
-	quic "github.com/lucas-clemente/quic-go"
-	"github.com/pkg/errors"
 )
 
 type quicConnection struct {
