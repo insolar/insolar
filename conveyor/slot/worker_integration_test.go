@@ -42,7 +42,7 @@ type mockStateMachineSet struct {
 	stateMachine matrix.StateMachine
 }
 
-func (s *mockStateMachineSet) GetStateMachineByID(id int) matrix.StateMachine {
+func (s *mockStateMachineSet) GetStateMachineByID(id fsm.ID) matrix.StateMachine {
 	return s.stateMachine
 }
 
