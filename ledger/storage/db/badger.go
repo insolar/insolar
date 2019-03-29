@@ -45,14 +45,7 @@ func NewBadgerDB(dir string) (*BadgerDB, error) {
 		return nil, errors.Wrap(err, "failed to open badger")
 	}
 
-	return NewDBWithBadger(bdb), nil
-}
-
-// NewDBWithBadger creates new BadgerDB with provided badger backend.
-func NewDBWithBadger(backend *badger.DB) *BadgerDB {
-	return &BadgerDB{
-		backend: backend,
-	}
+	return &BadgerDB{backend: bdb}, nil
 }
 
 // Get returns value for specified key or an error. A copy of a value will be returned (i.e. getting large value can be

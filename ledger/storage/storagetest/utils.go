@@ -77,7 +77,7 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 
 	cm := &component.Manager{}
 
-	storageDB := db.NewDBWithBadger(tmpDB.GetBadgerDB())
+	storageDB := db.NewMemoryMockDB()
 	ds := drop.NewStorageDB(storageDB)
 
 	cm.Inject(

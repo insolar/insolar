@@ -73,7 +73,7 @@ func (s *storageSuite) BeforeTest(suiteName, testName string) {
 
 	s.objectStorage = storage.NewObjectStorage()
 
-	storageDB := db.NewDBWithBadger(tmpDB.GetBadgerDB())
+	storageDB := db.NewMemoryMockDB()
 	dropStorage := drop.NewStorageDB(storageDB)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
@@ -221,7 +221,7 @@ func TestDB_Close(t *testing.T) {
 	jetID := testutils.RandomJet()
 
 	os := storage.NewObjectStorage()
-	storageDB := db.NewDBWithBadger(tmpDB.GetBadgerDB())
+	storageDB := db.NewMemoryMockDB()
 	ds := drop.NewStorageDB(storageDB)
 
 	cm := &component.Manager{}

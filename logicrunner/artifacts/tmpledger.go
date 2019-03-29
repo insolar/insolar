@@ -114,7 +114,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	ns := node.NewStorage()
 	rs := storage.NewReplicaStorage()
 	cl := storage.NewCleaner()
-	storageDB := db.NewDBWithBadger(tmpDB.GetBadgerDB())
+	storageDB := db.NewMemoryMockDB()
 	ds := drop.NewStorageDB(storageDB)
 
 	am := NewClient()

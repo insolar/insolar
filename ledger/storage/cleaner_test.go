@@ -70,7 +70,7 @@ func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 	s.objectStorage = storage.NewObjectStorage()
 	s.storageCleaner = storage.NewCleaner()
 
-	storageDB := db.NewDBWithBadger(tmpDB.GetBadgerDB())
+	storageDB := db.NewMemoryMockDB()
 	dropStorage := drop.NewStorageDB(storageDB)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
