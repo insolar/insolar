@@ -199,6 +199,8 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	pulseStorageMock.UnlockMock.Return()
 	pulseStorageMock.SetMock.Return()
 
+	pm.LR = lr
+
 	pm.RecentStorageProvider = providerMock
 	pm.Bus = mbMock
 	pm.NodeNet = nodeNetworkMock

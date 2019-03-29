@@ -40,9 +40,9 @@ import (
 	"github.com/insolar/insolar/testutils/terminationhandler"
 
 	"github.com/insolar/insolar/contractrequester"
-	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/logicrunner/goplugin"
+	"github.com/insolar/insolar/logicrunner/pulsemanager"
 
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 

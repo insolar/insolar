@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
 package pulsemanager
 
@@ -25,7 +25,6 @@ import (
 
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
 	"golang.org/x/sync/errgroup"
 
@@ -45,13 +44,13 @@ import (
 	"github.com/insolar/insolar/ledger/storage/object"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
 type ActiveListSwapper interface {
 	MoveSyncToActive(ctx context.Context) error
 }
 
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
+	LR                         insolar.LogicRunner                `inject:""`
 	Bus                        insolar.MessageBus                 `inject:""`
 	NodeNet                    insolar.NodeNetwork                `inject:""`
 	JetCoordinator             insolar.JetCoordinator             `inject:""`
@@ -114,9 +113,6 @@ type pmOptions struct {
 // NewPulseManager creates PulseManager instance.
 func NewPulseManager(
 	conf configuration.Ledger,
-	dropCleaner drop.Cleaner,
-	blobCleaner blob.Cleaner,
-	blobSyncAccessor blob.CollectionAccessor,
 ) *PulseManager {
 	pmconf := conf.PulseManager
 
@@ -129,9 +125,6 @@ func NewPulseManager(
 			heavySyncMessageLimit: pmconf.HeavySyncMessageLimit,
 			lightChainLimit:       conf.LightChainLimit,
 		},
-		DropCleaner:      dropCleaner,
-		BlobCleaner:      blobCleaner,
-		BlobSyncAccessor: blobSyncAccessor,
 	}
 	return pm
 }
@@ -304,12 +297,6 @@ func (m *PulseManager) getExecutorHotData(
 			requestCount += len(objContext.Requests)
 		}
 	}
-
-	stats.Record(
-		ctx,
-		statHotObjectsSent.M(int64(len(recentObjects))),
-		statPendingSent.M(int64(requestCount)),
-	)
 
 	msg := &message.HotData{
 		Drop:            *drop,
@@ -491,13 +478,12 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
 	}
 
-	// if m.NodeNet.GetOrigin().Role() == insolar.StaticRoleVirtual {
-	// 	err = m.LR.OnPulse(ctx, newPulse)
-	// }
-	//
-	// if err != nil {
-	// 	return err
-	// }
+	if m.NodeNet.GetOrigin().Role() == insolar.StaticRoleVirtual {
+		err = m.LR.OnPulse(ctx, newPulse)
+	}
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
@@ -643,7 +629,6 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse insolar.Puls
 	ctx, span := instracer.StartSpan(ctx, "pulse.clean")
 	defer func() {
 		latency := time.Since(startSync)
-		stats.Record(ctx, statCleanLatencyTotal.M(latency.Nanoseconds()/1e6))
 		span.End()
 		inslog.Infof("cleanLightData all time spend=%v", latency)
 	}()
