@@ -35,13 +35,13 @@ func TestNodeStorage_ForPulseNumber(t *testing.T) {
 	storage := NewStorageMem()
 	storage.storage[pn] = &memNode{pulse: pulse}
 
-	t.Run("returns error when no pulse", func(t *testing.T) {
+	t.Run("returns error when no Pulse", func(t *testing.T) {
 		res, err := storage.ForPulseNumber(ctx, gen.PulseNumber())
 		assert.Equal(t, ErrNotFound, err)
 		assert.Equal(t, insolar.Pulse{}, res)
 	})
 
-	t.Run("returns correct pulse", func(t *testing.T) {
+	t.Run("returns correct Pulse", func(t *testing.T) {
 		res, err := storage.ForPulseNumber(ctx, pn)
 		assert.NoError(t, err)
 		assert.Equal(t, pulse, res)
@@ -53,14 +53,14 @@ func TestNodeStorage_Latest(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 
-	t.Run("returns error when no pulse", func(t *testing.T) {
+	t.Run("returns error when no Pulse", func(t *testing.T) {
 		storage := NewStorageMem()
 		res, err := storage.Latest(ctx)
 		assert.Equal(t, ErrNotFound, err)
 		assert.Equal(t, insolar.Pulse{}, res)
 	})
 
-	t.Run("returns correct pulse", func(t *testing.T) {
+	t.Run("returns correct Pulse", func(t *testing.T) {
 		storage := NewStorageMem()
 		pulse := insolar.Pulse{PulseNumber: gen.PulseNumber()}
 		storage.head = &memNode{pulse: pulse}
@@ -89,7 +89,7 @@ func TestNodeStorage_Append(t *testing.T) {
 		assert.Equal(t, memNode{pulse: pulse}, *storage.head)
 	})
 
-	t.Run("returns error if pulse number is equal or less", func(t *testing.T) {
+	t.Run("returns error if Pulse number is equal or less", func(t *testing.T) {
 		storage := NewStorageMem()
 		head := &memNode{pulse: pulse}
 		storage.storage[pn] = head
@@ -198,7 +198,7 @@ func TestMemoryStorage_ForwardsBackwards(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, pulse, tailPulse)
 	})
-	t.Run("forwards returns next if one step", func(t *testing.T) {
+	t.Run("forwards returns Next if one step", func(t *testing.T) {
 		pulse, err := storage.Forwards(ctx, tailPulse.PulseNumber, 1)
 		assert.NoError(t, err)
 		assert.Equal(t, pulse, headPulse)
@@ -219,7 +219,7 @@ func TestMemoryStorage_ForwardsBackwards(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Equal(t, pulse, headPulse)
 	})
-	t.Run("backwards returns next if one step", func(t *testing.T) {
+	t.Run("backwards returns Next if one step", func(t *testing.T) {
 		pulse, err := storage.Backwards(ctx, headPulse.PulseNumber, 1)
 		assert.NoError(t, err)
 		assert.Equal(t, pulse, tailPulse)

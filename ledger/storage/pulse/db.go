@@ -53,8 +53,8 @@ func (k metaKey) ID() []byte {
 }
 
 type dbNode struct {
-	pulse      insolar.Pulse
-	prev, next *insolar.PulseNumber
+	Pulse      insolar.Pulse
+	Prev, Next *insolar.PulseNumber
 }
 
 var (
@@ -71,16 +71,16 @@ func NewStorageDB() *StorageDB {
 	return &StorageDB{}
 }
 
-// ForPulseNumber returns pulse for provided pulse number. If not found, ErrNotFound will be returned.
+// ForPulseNumber returns Pulse for provided Pulse number. If not found, ErrNotFound will be returned.
 func (s *StorageDB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (pulse insolar.Pulse, err error) {
 	nd, err := s.get(pn)
 	if err != nil {
 		return
 	}
-	return nd.pulse, nil
+	return nd.Pulse, nil
 }
 
-// Latest returns latest pulse saved in DB. If not found, ErrNotFound will be returned.
+// Latest returns latest Pulse saved in DB. If not found, ErrNotFound will be returned.
 func (s *StorageDB) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
@@ -93,11 +93,11 @@ func (s *StorageDB) Latest(ctx context.Context) (pulse insolar.Pulse, err error)
 	if err != nil {
 		return
 	}
-	return nd.pulse, nil
+	return nd.Pulse, nil
 }
 
-// Append appends provided pulse to current storage. Pulse number should be greater than currently saved for preserving
-// pulse consistency. If provided pulse does not meet the requirements, ErrBadPulse will be returned.
+// Append appends provided Pulse to current storage. Pulse number should be greater than currently saved for preserving
+// Pulse consistency. If provided Pulse does not meet the requirements, ErrBadPulse will be returned.
 func (s *StorageDB) Append(ctx context.Context, pulse insolar.Pulse) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -107,18 +107,18 @@ func (s *StorageDB) Append(ctx context.Context, pulse insolar.Pulse) error {
 		if err != nil {
 			return err
 		}
-		oldHead.next = &pulse.PulseNumber
+		oldHead.Next = &pulse.PulseNumber
 
-		// Set new pulse.
+		// Set new Pulse.
 		err = s.set(pulse.PulseNumber, dbNode{
-			prev:  &oldHead.pulse.PulseNumber,
-			pulse: pulse,
+			Prev:  &oldHead.Pulse.PulseNumber,
+			Pulse: pulse,
 		})
 		if err != nil {
 			return err
 		}
 		// Set old updated head.
-		err = s.set(oldHead.pulse.PulseNumber, oldHead)
+		err = s.set(oldHead.Pulse.PulseNumber, oldHead)
 		if err != nil {
 			return err
 		}
@@ -128,7 +128,7 @@ func (s *StorageDB) Append(ctx context.Context, pulse insolar.Pulse) error {
 	var insertWithoutHead = func() error {
 		// Set new Pulse.
 		err := s.set(pulse.PulseNumber, dbNode{
-			pulse: pulse,
+			Pulse: pulse,
 		})
 		if err != nil {
 			return err
@@ -148,7 +148,7 @@ func (s *StorageDB) Append(ctx context.Context, pulse insolar.Pulse) error {
 	return insertWithHead(head)
 }
 
-// Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
+// Forwards calculates steps pulses forwards from provided Pulse. If calculated Pulse does not exist, ErrNotFound will
 // be returned.
 func (s *StorageDB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (pulse insolar.Pulse, err error) {
 	s.lock.RLock()
@@ -161,20 +161,20 @@ func (s *StorageDB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps 
 
 	iterator := node
 	for i := 0; i < steps; i++ {
-		if iterator.next == nil {
+		if iterator.Next == nil {
 			err = insolar.ErrNotFound
 			return
 		}
-		iterator, err = s.get(*iterator.next)
+		iterator, err = s.get(*iterator.Next)
 		if err != nil {
 			return
 		}
 	}
 
-	return iterator.pulse, nil
+	return iterator.Pulse, nil
 }
 
-// Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
+// Backwards calculates steps pulses backwards from provided Pulse. If calculated Pulse does not exist, ErrNotFound will
 // be returned.
 func (s *StorageDB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (pulse insolar.Pulse, err error) {
 	s.lock.RLock()
@@ -187,17 +187,17 @@ func (s *StorageDB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps
 
 	iterator := node
 	for i := 0; i < steps; i++ {
-		if iterator.prev == nil {
+		if iterator.Prev == nil {
 			err = insolar.ErrNotFound
 			return
 		}
-		iterator, err = s.get(*iterator.prev)
+		iterator, err = s.get(*iterator.Prev)
 		if err != nil {
 			return
 		}
 	}
 
-	return iterator.pulse, nil
+	return iterator.Pulse, nil
 }
 
 func (s *StorageDB) get(pn insolar.PulseNumber) (nd dbNode, err error) {
