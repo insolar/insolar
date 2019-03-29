@@ -21,21 +21,22 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/ugorji/go/codec"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/internal/ledger/store"
 )
 
 // StorageDB is a DB storage implementation. It saves pulses to disk and does not allow removal.
 type StorageDB struct {
-	db   db.DB
+	db   store.DB
 	lock sync.RWMutex
 }
 
 type pulseKey insolar.PulseNumber
 
-func (k pulseKey) Scope() db.Scope {
-	return db.ScopePulse
+func (k pulseKey) Scope() store.Scope {
+	return store.ScopePulse
 }
 
 func (k pulseKey) ID() []byte {
@@ -44,8 +45,8 @@ func (k pulseKey) ID() []byte {
 
 type metaKey byte
 
-func (k metaKey) Scope() db.Scope {
-	return db.ScopePulse
+func (k metaKey) Scope() store.Scope {
+	return store.ScopePulse
 }
 
 func (k metaKey) ID() []byte {
@@ -67,8 +68,8 @@ var (
 )
 
 // NewStorageDB creates new DB storage instance.
-func NewStorageDB(d db.DB) *StorageDB {
-	return &StorageDB{db: d}
+func NewStorageDB(db store.DB) *StorageDB {
+	return &StorageDB{db: db}
 }
 
 // ForPulseNumber returns pulse for provided pulse number. If not found, ErrNotFound will be returned.
@@ -202,7 +203,7 @@ func (s *StorageDB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps
 
 func (s *StorageDB) get(pn insolar.PulseNumber) (nd dbNode, err error) {
 	buf, err := s.db.Get(pulseKey(pn))
-	if err == db.ErrNotFound {
+	if err == store.ErrNotFound {
 		err = ErrNotFound
 		return
 	}
@@ -219,7 +220,7 @@ func (s *StorageDB) set(pn insolar.PulseNumber, nd dbNode) error {
 
 func (s *StorageDB) head() (pn insolar.PulseNumber, err error) {
 	buf, err := s.db.Get(keyHead)
-	if err == db.ErrNotFound {
+	if err == store.ErrNotFound {
 		err = ErrNotFound
 		return
 	}

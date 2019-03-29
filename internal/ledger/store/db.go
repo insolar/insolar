@@ -14,9 +14,9 @@
 // limitations under the License.
 //
 
-package db
+package store
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/db.DB -o ./ -s _gen_mock.go
+//go:generate minimock -i github.com/insolar/insolar/internal/ledger/store.DB -o ./ -s _gen_mock.go
 
 // DB provides a simple key-value store interface for persisting data.
 type DB interface {

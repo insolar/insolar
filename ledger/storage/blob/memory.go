@@ -20,15 +20,16 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/db"
 	"go.opencensus.io/stats"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/internal/ledger/store"
 )
 
 // StorageMemory is an in-memory struct for blob-storage.
 type StorageMemory struct {
-	jetIndex         db.JetIndexModifier
-	jetIndexAccessor db.JetIndexAccessor
+	jetIndex         store.JetIndexModifier
+	jetIndexAccessor store.JetIndexAccessor
 
 	lock   sync.RWMutex
 	memory map[insolar.ID]Blob
@@ -36,7 +37,7 @@ type StorageMemory struct {
 
 // NewStorageMemory creates a new instance of Storage.
 func NewStorageMemory() *StorageMemory {
-	ji := db.NewJetIndex()
+	ji := store.NewJetIndex()
 	return &StorageMemory{
 		memory:           map[insolar.ID]Blob{},
 		jetIndex:         ji,

@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/heavy"
 	"github.com/insolar/insolar/ledger/heavyserver"
@@ -30,7 +31,6 @@ import (
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
@@ -40,12 +40,12 @@ import (
 func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certificate) []interface{} {
 	idLocker := storage.NewIDLocker()
 
-	store, err := storage.NewDB(conf, nil)
+	legacyDB, err := storage.NewDB(conf, nil)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
 
-	dbBadger, err := db.NewBadgerDB(conf.Storage.DataDirectoryNewDB)
+	db, err := store.NewBadgerDB(conf.Storage.DataDirectoryNewDB)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
@@ -65,12 +65,12 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	case insolar.StaticRoleUnknown, insolar.StaticRoleHeavyMaterial:
 		pulseTracker = storage.NewPulseTracker()
 
-		dropDB := drop.NewStorageDB(dbBadger)
+		dropDB := drop.NewStorageDB(db)
 		dropModifier = dropDB
 		dropAccessor = dropDB
 
 		// should be replaced with db
-		blobDB := blob.NewStorageDB(dbBadger)
+		blobDB := blob.NewStorageDB(db)
 		blobModifier = blobDB
 		blobAccessor = blobDB
 	default:
@@ -89,8 +89,8 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	}
 
 	components := []interface{}{
-		store,
-		dbBadger,
+		legacyDB,
+		db,
 		idLocker,
 		dropModifier,
 		dropAccessor,
@@ -108,7 +108,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		artifactmanager.NewHotDataWaiterConcrete(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),
 		pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobSyncAccessor),
-		heavyserver.NewSync(store),
+		heavyserver.NewSync(legacyDB),
 	}
 
 	switch certificate.GetRole() {
