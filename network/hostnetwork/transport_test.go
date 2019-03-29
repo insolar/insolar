@@ -202,8 +202,7 @@ func TestNewHostTransport(t *testing.T) {
 		_, err = t1.SendRequest(ctx, request, *ref)
 		require.NoError(t, err)
 	}
-	success := utils.WaitTimeout(&wg, time.Second)
-	require.True(t, success)
+	wg.Wait()
 }
 
 func TestHostTransport_SendRequestPacket(t *testing.T) {
