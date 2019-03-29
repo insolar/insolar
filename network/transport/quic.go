@@ -79,7 +79,7 @@ type quicTransport struct {
 	connections map[string]quicConnection
 }
 
-func newQuicTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*quicTransport, error) {
+func NewQuicTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (Transport, error) {
 	listener, err := quic.Listen(conn, generateTLSConfig(), nil)
 	if err != nil {
 		return nil, err
