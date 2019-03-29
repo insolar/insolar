@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/handler"
-	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/testutils"
@@ -151,7 +150,7 @@ func Test_run(t *testing.T) {
 				if state > maxState {
 					state /= maxState
 				}
-				element, err := slot.createElement(HandlerStorage.GetInitialStateMachine(), fsm.StateID(state), queue.OutputElement{})
+				element, err := slot.createElement(HandlerStorage.GetInitialStateMachine(), fsm.StateID(state), makeTestOutputElement(t))
 				require.NoError(t, err)
 				require.NotNil(t, element)
 			}

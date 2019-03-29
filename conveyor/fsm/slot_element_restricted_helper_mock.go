@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	insolar "github.com/insolar/insolar/insolar"
 )
 
 //SlotElementRestrictedHelperMock implements github.com/insolar/insolar/conveyor/fsm.SlotElementRestrictedHelper
@@ -40,6 +41,11 @@ type SlotElementRestrictedHelperMock struct {
 	GetPayloadCounter    uint64
 	GetPayloadPreCounter uint64
 	GetPayloadMock       mSlotElementRestrictedHelperMockGetPayload
+
+	GetResponseFutureFunc       func() (r insolar.ConveyorFuture)
+	GetResponseFutureCounter    uint64
+	GetResponseFuturePreCounter uint64
+	GetResponseFutureMock       mSlotElementRestrictedHelperMockGetResponseFuture
 
 	GetStateFunc       func() (r StateID)
 	GetStateCounter    uint64
@@ -75,6 +81,7 @@ func NewSlotElementRestrictedHelperMock(t minimock.Tester) *SlotElementRestricte
 	m.GetNodeIDMock = mSlotElementRestrictedHelperMockGetNodeID{mock: m}
 	m.GetParentElementIDMock = mSlotElementRestrictedHelperMockGetParentElementID{mock: m}
 	m.GetPayloadMock = mSlotElementRestrictedHelperMockGetPayload{mock: m}
+	m.GetResponseFutureMock = mSlotElementRestrictedHelperMockGetResponseFuture{mock: m}
 	m.GetStateMock = mSlotElementRestrictedHelperMockGetState{mock: m}
 	m.GetTypeMock = mSlotElementRestrictedHelperMockGetType{mock: m}
 	m.LeaveSequenceMock = mSlotElementRestrictedHelperMockLeaveSequence{mock: m}
@@ -753,6 +760,140 @@ func (m *SlotElementRestrictedHelperMock) GetPayloadFinished() bool {
 	return true
 }
 
+type mSlotElementRestrictedHelperMockGetResponseFuture struct {
+	mock              *SlotElementRestrictedHelperMock
+	mainExpectation   *SlotElementRestrictedHelperMockGetResponseFutureExpectation
+	expectationSeries []*SlotElementRestrictedHelperMockGetResponseFutureExpectation
+}
+
+type SlotElementRestrictedHelperMockGetResponseFutureExpectation struct {
+	result *SlotElementRestrictedHelperMockGetResponseFutureResult
+}
+
+type SlotElementRestrictedHelperMockGetResponseFutureResult struct {
+	r insolar.ConveyorFuture
+}
+
+//Expect specifies that invocation of SlotElementRestrictedHelper.GetResponseFuture is expected from 1 to Infinity times
+func (m *mSlotElementRestrictedHelperMockGetResponseFuture) Expect() *mSlotElementRestrictedHelperMockGetResponseFuture {
+	m.mock.GetResponseFutureFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SlotElementRestrictedHelperMockGetResponseFutureExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of SlotElementRestrictedHelper.GetResponseFuture
+func (m *mSlotElementRestrictedHelperMockGetResponseFuture) Return(r insolar.ConveyorFuture) *SlotElementRestrictedHelperMock {
+	m.mock.GetResponseFutureFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SlotElementRestrictedHelperMockGetResponseFutureExpectation{}
+	}
+	m.mainExpectation.result = &SlotElementRestrictedHelperMockGetResponseFutureResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of SlotElementRestrictedHelper.GetResponseFuture is expected once
+func (m *mSlotElementRestrictedHelperMockGetResponseFuture) ExpectOnce() *SlotElementRestrictedHelperMockGetResponseFutureExpectation {
+	m.mock.GetResponseFutureFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &SlotElementRestrictedHelperMockGetResponseFutureExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *SlotElementRestrictedHelperMockGetResponseFutureExpectation) Return(r insolar.ConveyorFuture) {
+	e.result = &SlotElementRestrictedHelperMockGetResponseFutureResult{r}
+}
+
+//Set uses given function f as a mock of SlotElementRestrictedHelper.GetResponseFuture method
+func (m *mSlotElementRestrictedHelperMockGetResponseFuture) Set(f func() (r insolar.ConveyorFuture)) *SlotElementRestrictedHelperMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetResponseFutureFunc = f
+	return m.mock
+}
+
+//GetResponseFuture implements github.com/insolar/insolar/conveyor/fsm.SlotElementRestrictedHelper interface
+func (m *SlotElementRestrictedHelperMock) GetResponseFuture() (r insolar.ConveyorFuture) {
+	counter := atomic.AddUint64(&m.GetResponseFuturePreCounter, 1)
+	defer atomic.AddUint64(&m.GetResponseFutureCounter, 1)
+
+	if len(m.GetResponseFutureMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetResponseFutureMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to SlotElementRestrictedHelperMock.GetResponseFuture.")
+			return
+		}
+
+		result := m.GetResponseFutureMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the SlotElementRestrictedHelperMock.GetResponseFuture")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetResponseFutureMock.mainExpectation != nil {
+
+		result := m.GetResponseFutureMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the SlotElementRestrictedHelperMock.GetResponseFuture")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetResponseFutureFunc == nil {
+		m.t.Fatalf("Unexpected call to SlotElementRestrictedHelperMock.GetResponseFuture.")
+		return
+	}
+
+	return m.GetResponseFutureFunc()
+}
+
+//GetResponseFutureMinimockCounter returns a count of SlotElementRestrictedHelperMock.GetResponseFutureFunc invocations
+func (m *SlotElementRestrictedHelperMock) GetResponseFutureMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetResponseFutureCounter)
+}
+
+//GetResponseFutureMinimockPreCounter returns the value of SlotElementRestrictedHelperMock.GetResponseFuture invocations
+func (m *SlotElementRestrictedHelperMock) GetResponseFutureMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetResponseFuturePreCounter)
+}
+
+//GetResponseFutureFinished returns true if mock invocations count is ok
+func (m *SlotElementRestrictedHelperMock) GetResponseFutureFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetResponseFutureMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetResponseFutureCounter) == uint64(len(m.GetResponseFutureMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetResponseFutureMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetResponseFutureCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetResponseFutureFunc != nil {
+		return atomic.LoadUint64(&m.GetResponseFutureCounter) > 0
+	}
+
+	return true
+}
+
 type mSlotElementRestrictedHelperMockGetState struct {
 	mock              *SlotElementRestrictedHelperMock
 	mainExpectation   *SlotElementRestrictedHelperMockGetStateExpectation
@@ -1265,6 +1406,10 @@ func (m *SlotElementRestrictedHelperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to SlotElementRestrictedHelperMock.GetPayload")
 	}
 
+	if !m.GetResponseFutureFinished() {
+		m.t.Fatal("Expected call to SlotElementRestrictedHelperMock.GetResponseFuture")
+	}
+
 	if !m.GetStateFinished() {
 		m.t.Fatal("Expected call to SlotElementRestrictedHelperMock.GetState")
 	}
@@ -1318,6 +1463,10 @@ func (m *SlotElementRestrictedHelperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to SlotElementRestrictedHelperMock.GetPayload")
 	}
 
+	if !m.GetResponseFutureFinished() {
+		m.t.Fatal("Expected call to SlotElementRestrictedHelperMock.GetResponseFuture")
+	}
+
 	if !m.GetStateFinished() {
 		m.t.Fatal("Expected call to SlotElementRestrictedHelperMock.GetState")
 	}
@@ -1353,6 +1502,7 @@ func (m *SlotElementRestrictedHelperMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetNodeIDFinished()
 		ok = ok && m.GetParentElementIDFinished()
 		ok = ok && m.GetPayloadFinished()
+		ok = ok && m.GetResponseFutureFinished()
 		ok = ok && m.GetStateFinished()
 		ok = ok && m.GetTypeFinished()
 		ok = ok && m.LeaveSequenceFinished()
@@ -1383,6 +1533,10 @@ func (m *SlotElementRestrictedHelperMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetPayloadFinished() {
 				m.t.Error("Expected call to SlotElementRestrictedHelperMock.GetPayload")
+			}
+
+			if !m.GetResponseFutureFinished() {
+				m.t.Error("Expected call to SlotElementRestrictedHelperMock.GetResponseFuture")
 			}
 
 			if !m.GetStateFinished() {
@@ -1430,6 +1584,10 @@ func (m *SlotElementRestrictedHelperMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetPayloadFinished() {
+		return false
+	}
+
+	if !m.GetResponseFutureFinished() {
 		return false
 	}
 

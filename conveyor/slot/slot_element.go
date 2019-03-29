@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
 	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
 
@@ -40,6 +41,7 @@ type slotElement struct {
 	id              uint32
 	nodeID          uint32
 	parentElementID uint32
+	responseFuture  insolar.ConveyorFuture
 	inputEvent      interface{}
 	payload         interface{} // nolint: unused
 	postponedError  error       // nolint: structcheck
@@ -87,6 +89,11 @@ func (se *slotElement) GetInputEvent() interface{} {
 	return se.inputEvent
 }
 
+// GetResponseFuture implements SlotElementRestrictedHelper
+func (se *slotElement) GetResponseFuture() insolar.ConveyorFuture {
+	return se.responseFuture
+}
+
 // GetPayload implements SlotElementRestrictedHelper
 func (se *slotElement) GetPayload() interface{} {
 	return se.payload
@@ -103,7 +110,8 @@ func (se *slotElement) SendTask(adapterID adapterid.ID, taskPayload interface{},
 	if err != nil {
 		return errors.Errorf("[ SendTask ] Can't PushTask: %s", err)
 	}
-
+	// TODO: I'm not really sure if we need it. Since handler might invoke more then one adapter
+	// and after call first one element become inactive
 	se.DeactivateTill(fsm.Response)
 
 	return nil
