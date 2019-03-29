@@ -173,8 +173,8 @@ func (c *JetClient) nextPulseNumber() (insolar.PulseNumber, bool) {
 func (c *JetClient) runOnce(ctx context.Context) {
 	// retrydelay = m.syncbackoff.ForAttempt(attempt)
 	c.startOnce.Do(func() {
-		// TODO: reset TraceID from context, or just don't use context?
-		// (TraceID not meaningful in async sync loop)
+		// resets TraceID from and other fields in context
+		// (TraceID is mostly meaningless in async sync loop)
 		ctx, cancel := context.WithCancel(context.Background())
 		c.cancel = cancel
 		go c.syncloop(ctx)
@@ -256,7 +256,6 @@ func (c *JetClient) syncloop(ctx context.Context) {
 				stats.Record(ctx, statSyncedRetries.M(1))
 				continue
 			}
-			// TODO: write some info to dust - 14.Dec.2018 @nordicdyno
 		} else {
 			ctx = insmetrics.InsertTag(ctx, tagJet, c.jetID.DebugString())
 			stats.Record(ctx,

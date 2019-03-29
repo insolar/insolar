@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -147,8 +148,7 @@ func (s *heavySuite) TestPulseManager_SendToHeavyWithRetry() {
 }
 
 func sendToHeavy(s *heavySuite, withretry bool) {
-	// TODO: test should work with any JetID (add new test?) - 14.Dec.2018 @nordicdyno
-	jetID := insolar.ZeroJetID
+	jetID := gen.JetID()
 	// Mock N1: LR mock do nothing
 	lrMock := testutils.NewLogicRunnerMock(s.T())
 	lrMock.OnPulseMock.Return(nil)
@@ -328,7 +328,6 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 
 	fmt.Println("Case2: sync during db fill")
 	for i := 0; i < 2; i++ {
-		// fill DB with records, indexes (TODO: add blobs)
 		addRecords(s.ctx, s.T(), s.objectStorage, blobStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse))
 
 		lastpulse++

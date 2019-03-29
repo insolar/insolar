@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -175,14 +176,12 @@ func (s *storageSuite) TestDB_GetDrop_ReturnsNotFoundIfNoDrop() {
 }
 
 func (s *storageSuite) TestDB_SetDrop() {
-	jetID := *insolar.NewJetID(0, nil)
+	jetID := gen.JetID()
 	drop42 := drop.Drop{
 		Pulse: 42,
 		Hash:  []byte{0xFF},
 		JetID: jetID,
 	}
-	// FIXME: should work with random jet
-	// jetID := testutils.RandomJet()
 	err := s.dropModifier.Set(s.ctx, drop42)
 	assert.NoError(s.T(), err)
 

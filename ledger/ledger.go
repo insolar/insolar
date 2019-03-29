@@ -60,7 +60,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	var blobAccessor blob.Accessor
 	var blobSyncAccessor blob.CollectionAccessor
 
-	// TODO: @imarkin 18.02.18 - Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
+	// Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
 	switch certificate.GetRole() {
 	case insolar.StaticRoleUnknown, insolar.StaticRoleHeavyMaterial:
 		pulseTracker = storage.NewPulseTracker()
