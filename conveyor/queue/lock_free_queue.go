@@ -24,20 +24,20 @@ import (
 )
 
 // TODO: not completely implemented
-type LockFreeQueue struct {
+type lockFreeQueue struct {
 	head *queueItem
 }
 
 // NewLockFreeQueue creates lf-queue
 func NewLockFreeQueue() Queue {
-	queue := &LockFreeQueue{
+	queue := &lockFreeQueue{
 		head: &emptyQueueItem,
 	}
 	return queue
 }
 
 // SinkPush is mutex-based realization of Queue
-func (q *LockFreeQueue) SinkPush(data interface{}) error {
+func (q *lockFreeQueue) SinkPush(data interface{}) error {
 
 	newNode := &queueItem{
 		payload: data,
@@ -66,7 +66,7 @@ func (q *LockFreeQueue) SinkPush(data interface{}) error {
 }
 
 // SinkPushAll is mutex-based realization of Queue
-func (q *LockFreeQueue) SinkPushAll(data []interface{}) error {
+func (q *lockFreeQueue) SinkPushAll(data []interface{}) error {
 	inputSize := len(data)
 	lastElement := &queueItem{}
 	newHead := lastElement
@@ -105,7 +105,7 @@ func (q *LockFreeQueue) SinkPushAll(data []interface{}) error {
 }
 
 // // RemoveAll is mutex-based realization of Queue
-func (q *LockFreeQueue) RemoveAll() []OutputElement {
+func (q *lockFreeQueue) RemoveAll() []OutputElement {
 	removed := false
 	var head *queueItem
 	for !removed {
@@ -133,21 +133,21 @@ func (q *LockFreeQueue) RemoveAll() []OutputElement {
 }
 
 // BlockAndRemoveAll is mutex-based realization of Queue
-func (q *LockFreeQueue) BlockAndRemoveAll() []OutputElement {
+func (q *lockFreeQueue) BlockAndRemoveAll() []OutputElement {
 	return nil
 }
 
 // Unblock is mutex-based realization of Queue
-func (q *LockFreeQueue) Unblock() bool {
+func (q *lockFreeQueue) Unblock() bool {
 	return true
 }
 
 // PushSignal is mutex-based realization of Queue
-func (q *LockFreeQueue) PushSignal(signalType uint32, callback SyncDone) error {
+func (q *lockFreeQueue) PushSignal(signalType uint32, callback SyncDone) error {
 	return q.SinkPush(signalType)
 }
 
 // HasSignal is mutex-based realization of Queue
-func (q *LockFreeQueue) HasSignal() bool {
+func (q *lockFreeQueue) HasSignal() bool {
 	return atomic.LoadUint32(&q.head.biggestQueueSignal) != 0
 }

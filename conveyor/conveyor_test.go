@@ -43,6 +43,7 @@ func mockSlot(t *testing.T, isQueueOk bool) TaskPusher {
 		}
 
 		slot.PushSignalFunc = func(signalType uint32, callback queue.SyncDone) error {
+			callback.SetResult(333)
 			return nil
 		}
 	} else {

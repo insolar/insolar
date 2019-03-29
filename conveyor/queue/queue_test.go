@@ -47,7 +47,7 @@ func TestSequentialAccess(t *testing.T) {
 		buf = append(buf, el)
 		expectedResult = append(expectedResult, OutputElement{data: el})
 	}
-	queue.SinkPushAll(buf)
+	_ = queue.SinkPushAll(buf)
 
 	total := queue.RemoveAll()
 	require.Equal(t, numElements*2, len(total))
@@ -60,9 +60,9 @@ func TestSinkPushAllToEmptyQueue(t *testing.T) {
 	expected := []interface{}{3, 5, 55}
 	queue.SinkPushAll(expected)
 	require.EqualValues(t, []OutputElement{
-		OutputElement{data: expected[0]},
-		OutputElement{data: expected[1]},
-		OutputElement{data: expected[2]},
+		{data: expected[0]},
+		{data: expected[1]},
+		{data: expected[2]},
 	}, queue.RemoveAll())
 }
 

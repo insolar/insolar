@@ -49,11 +49,11 @@ type slotElement struct {
 	nextElement      *slotElement
 	prevElement      *slotElement
 	activationStatus ActivationStatus
-	slot             *Slot
+	slot             *slot
 }
 
 // newSlotElement creates new slot element with provided activation status
-func newSlotElement(activationStatus ActivationStatus, slot *Slot) *slotElement {
+func newSlotElement(activationStatus ActivationStatus, slot *slot) *slotElement {
 	return &slotElement{
 		activationStatus: activationStatus,
 		slot:             slot,

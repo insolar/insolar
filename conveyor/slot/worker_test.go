@@ -33,7 +33,7 @@ import (
 var testPulseStates = []PulseState{Future, Present, Past, Antique}
 var testPulseStatesWithoutFuture = []PulseState{Present, Past, Antique}
 
-func makeSlotAndWorker(pulseState PulseState, pulseNumber insolar.PulseNumber) (*Slot, worker) {
+func makeSlotAndWorker(pulseState PulseState, pulseNumber insolar.PulseNumber) (*slot, worker) {
 	slot := newSlot(pulseState, pulseNumber, nil)
 	worker := newWorker(slot)
 	slot.removeSlotCallback = func(number insolar.PulseNumber) {}
@@ -54,10 +54,10 @@ func Test_changePulseState(t *testing.T) {
 	require.Equal(t, Past, slot.pulseState)
 
 	slot.pulseState = 99999
-	require.PanicsWithValue(t, "[ changePulseState ] Unknown state: PulseState(99999)", worker.changePulseState)
+	require.PanicsWithValue(t, "[ changePulseState ] unknown state: PulseState(99999)", worker.changePulseState)
 }
 
-func areSlotStatesEqual(s1 *Slot, s2 *Slot, t *testing.T, excludePulseStateCheck bool) {
+func areSlotStatesEqual(s1 *slot, s2 *slot, t *testing.T, excludePulseStateCheck bool) {
 	if !excludePulseStateCheck {
 		require.Equal(t, s1.pulseState, s2.pulseState)
 	}
@@ -108,7 +108,7 @@ func Test_processSignalsWorking_BadSignal(t *testing.T) {
 			oldSlot := *slot
 
 			badSignal := []queue.OutputElement{*queue.NewOutputElement(emptySyncDone{}, 9999999)}
-			require.PanicsWithValue(t, "[ processSignalsWorking ] Unknown signal: 9999999", func() {
+			require.PanicsWithValue(t, "[ processSignalsWorking ] unknown signal: 9999999", func() {
 				worker.processSignalsWorking(badSignal)
 			})
 			areSlotStatesEqual(&oldSlot, slot, t, false)
@@ -281,7 +281,7 @@ func Test_processSignalsSuspending_BadSignal(t *testing.T) {
 			oldSlot := *slot
 
 			badSignal := []queue.OutputElement{*queue.NewOutputElement(1, 9999999)}
-			require.PanicsWithValue(t, "[ processSignalsSuspending ] Unknown signal: 9999999", func() {
+			require.PanicsWithValue(t, "[ processSignalsSuspending ] unknown signal: 9999999", func() {
 				worker.processSignalsSuspending(badSignal)
 			})
 			areSlotStatesEqual(&oldSlot, slot, t, false)
@@ -469,7 +469,7 @@ func Test_migrate_NoMigrationHandler(t *testing.T) {
 }
 
 // pop element and move it to targetStatus list
-func moveLastElementToState(slot *Slot, targetStatus ActivationStatus, t *testing.T) {
+func moveLastElementToState(slot *slot, targetStatus ActivationStatus, t *testing.T) {
 	element := slot.popElement(ActiveElement)
 	require.NotNil(t, element)
 	element.activationStatus = targetStatus

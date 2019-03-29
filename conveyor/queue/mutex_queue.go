@@ -24,21 +24,21 @@ import (
 	"github.com/pkg/errors"
 )
 
-// MutexQueue is mutex-based realization of Queue
-type MutexQueue struct {
+// mutexQueue is mutex-based realization of Queue
+type mutexQueue struct {
 	locker sync.Mutex
 	head   *queueItem
 }
 
-// NewMutexQueue creates new instance of MutexQueue
+// NewMutexQueue creates new instance of mutexQueue
 func NewMutexQueue() Queue {
-	queue := &MutexQueue{
+	queue := &mutexQueue{
 		head: &emptyQueueItem,
 	}
 	return queue
 }
 
-func (q *MutexQueue) sinkPush(newNode *queueItem) error {
+func (q *mutexQueue) sinkPush(newNode *queueItem) error {
 	q.locker.Lock()
 	defer q.locker.Unlock()
 
@@ -61,7 +61,7 @@ func (q *MutexQueue) sinkPush(newNode *queueItem) error {
 }
 
 // SinkPush is implementation for Queue
-func (q *MutexQueue) SinkPush(data interface{}) error {
+func (q *mutexQueue) SinkPush(data interface{}) error {
 
 	newNode := &queueItem{
 		payload: data,
@@ -71,7 +71,7 @@ func (q *MutexQueue) SinkPush(data interface{}) error {
 }
 
 // SinkPushAll is implementation for Queue
-func (q *MutexQueue) SinkPushAll(data []interface{}) error {
+func (q *mutexQueue) SinkPushAll(data []interface{}) error {
 	inputSize := len(data)
 	lastElement := &queueItem{}
 
@@ -111,7 +111,7 @@ func (q *MutexQueue) SinkPushAll(data []interface{}) error {
 	return nil
 }
 
-func (q *MutexQueue) checkAndGetHeadUnsafe() *queueItem {
+func (q *mutexQueue) checkAndGetHeadUnsafe() *queueItem {
 	if q.isQueueBlockedUnsafe() || q.isQueueEmptyUnsafe() {
 		return nil
 	}
@@ -119,11 +119,11 @@ func (q *MutexQueue) checkAndGetHeadUnsafe() *queueItem {
 	return q.head
 }
 
-func (q *MutexQueue) isQueueBlockedUnsafe() bool {
+func (q *mutexQueue) isQueueBlockedUnsafe() bool {
 	return q.head == nil
 }
 
-func (q *MutexQueue) isQueueEmptyUnsafe() bool {
+func (q *mutexQueue) isQueueEmptyUnsafe() bool {
 	return q.head == &emptyQueueItem
 }
 
@@ -154,7 +154,7 @@ func convertSublistToArray(localHead *queueItem) []OutputElement {
 }
 
 // RemoveAll is implementation for Queue
-func (q *MutexQueue) RemoveAll() []OutputElement {
+func (q *mutexQueue) RemoveAll() []OutputElement {
 
 	var localHead *queueItem
 	q.locker.Lock()
@@ -170,7 +170,7 @@ func (q *MutexQueue) RemoveAll() []OutputElement {
 }
 
 // BlockAndRemoveAll is implementation for Queue
-func (q *MutexQueue) BlockAndRemoveAll() []OutputElement {
+func (q *mutexQueue) BlockAndRemoveAll() []OutputElement {
 	var localHead *queueItem
 	q.locker.Lock()
 	localHead = q.checkAndGetHeadUnsafe()
@@ -184,7 +184,7 @@ func (q *MutexQueue) BlockAndRemoveAll() []OutputElement {
 }
 
 // Unblock is implementation for Queue
-func (q *MutexQueue) Unblock() bool {
+func (q *mutexQueue) Unblock() bool {
 	q.locker.Lock()
 	defer q.locker.Unlock()
 
@@ -197,7 +197,7 @@ func (q *MutexQueue) Unblock() bool {
 }
 
 // PushSignal is implementation for Queue
-func (q *MutexQueue) PushSignal(signalType uint32, callback SyncDone) error {
+func (q *mutexQueue) PushSignal(signalType uint32, callback SyncDone) error {
 	if signalType == 0 {
 		return errors.Errorf("[ PushSignal ] Unsupported signalType: %d", signalType)
 	}
@@ -215,7 +215,7 @@ func (q *MutexQueue) PushSignal(signalType uint32, callback SyncDone) error {
 // If queue is locked then it returns false
 // Now it uses unsafe pointer. This function will be called very frequently, that is why we use atomic here
 // But to be sure, this should be benchmarked in comparison with simple lock
-func (q *MutexQueue) HasSignal() bool {
+func (q *mutexQueue) HasSignal() bool {
 	head := (*queueItem)(atomic.LoadPointer((*unsafe.Pointer)(unsafe.Pointer(&q.head))))
 	return !q.isQueueBlockedUnsafe() && !q.isQueueEmptyUnsafe() && head.hasSignal()
 

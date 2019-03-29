@@ -37,12 +37,12 @@ func init() {
 	HandlerStorage = matrix.NewMatrix()
 }
 
-// SlotState shows slot working mode
-type SlotState uint32
+// State shows slot working mode
+type State uint32
 
-//go:generate stringer -type=SlotState
+//go:generate stringer -type=State
 const (
-	Initializing = SlotState(iota)
+	Initializing = State(iota)
 	Working
 	Suspending
 	Canceling
@@ -66,19 +66,19 @@ func (h *HandlersConfiguration) getMachineConfiguration(smType int) matrix.State
 	return nil
 }
 
-// ElementList is a list of slotElements with pointers to head and tail
-type ElementList struct {
+// elementList is a list of slotElements with pointers to head and tail
+type elementList struct {
 	head   *slotElement
 	tail   *slotElement
 	length int
 }
 
-func (l *ElementList) isEmpty() bool {
+func (l *elementList) isEmpty() bool {
 	return l.head == nil
 }
 
 // popElement gets element from linked list (and remove it from list)
-func (l *ElementList) popElement() *slotElement {
+func (l *elementList) popElement() *slotElement {
 	result := l.head
 	if result == nil {
 		return nil
@@ -88,7 +88,7 @@ func (l *ElementList) popElement() *slotElement {
 }
 
 // removeElement removes element from linked list
-func (l *ElementList) removeElement(element *slotElement) { // nolint: unused
+func (l *elementList) removeElement(element *slotElement) { // nolint: unused
 	if element == nil {
 		return
 	}
@@ -110,7 +110,7 @@ func (l *ElementList) removeElement(element *slotElement) { // nolint: unused
 }
 
 // pushElement adds element to linked list
-func (l *ElementList) pushElement(element *slotElement) { // nolint: unused
+func (l *elementList) pushElement(element *slotElement) { // nolint: unused
 	if l.head == nil {
 		l.head = element
 	} else {
@@ -122,50 +122,50 @@ func (l *ElementList) pushElement(element *slotElement) { // nolint: unused
 	l.length++
 }
 
-func (l *ElementList) len() int { // nolint: unused
+func (l *elementList) len() int { // nolint: unused
 	return l.length
 }
 
-// Slot holds info about specific pulse and events for it
-type Slot struct {
+// slot holds info about specific pulse and events for it
+type slot struct {
 	handlersConfiguration HandlersConfiguration // nolint
 	inputQueue            queue.Queue
 	responseQueue         queue.Queue
 	pulseState            PulseState
-	slotState             SlotState
+	slotState             State
 	stateMachine          slotElement
 	pulse                 insolar.Pulse
 	pulseNumber           insolar.PulseNumber
 	nodeID                uint32
 	nodeData              interface{}
 	elements              []slotElement
-	// we can use slice or just several fields of ElementList, it will be faster but not pretty
-	elementListMap     map[ActivationStatus]*ElementList
+	// we can use slice or just several fields of elementList, it will be faster but not pretty
+	elementListMap     map[ActivationStatus]*elementList
 	removeSlotCallback RemoveSlotCallback
 }
 
-func (s *Slot) SinkPush(data interface{}) error {
+func (s *slot) SinkPush(data interface{}) error {
 	return s.inputQueue.SinkPush(data)
 }
 
-func (s *Slot) SinkPushAll(data []interface{}) error {
+func (s *slot) SinkPushAll(data []interface{}) error {
 	return s.inputQueue.SinkPushAll(data)
 }
 
-func (s *Slot) PushSignal(signalType uint32, callback queue.SyncDone) error {
+func (s *slot) PushSignal(signalType uint32, callback queue.SyncDone) error {
 	return s.inputQueue.PushSignal(signalType, callback)
 }
 
-// SlotStateMachine represents state machine of slot itself
-var SlotStateMachine = slotElement{
+// slotStateMachine represents state machine of slot itself
+var slotStateMachine = slotElement{
 	id:           0,
 	state:        0,
 	stateMachine: nil, // TODO: add smth correct
 }
 
-func initElementsBuf() ([]slotElement, *ElementList) {
+func initElementsBuf() ([]slotElement, *elementList) {
 	elements := make([]slotElement, slotSize)
-	emptyList := &ElementList{}
+	emptyList := &elementList{}
 	for i := 0; i < slotSize; i++ {
 		// we don't have *slot here yet. Set it later
 		elements[i] = *newSlotElement(EmptyElement, nil)
@@ -175,8 +175,8 @@ func initElementsBuf() ([]slotElement, *ElementList) {
 	return elements, emptyList
 }
 
-// NewWorkingSlot creates new instance of Slot
-func NewWorkingSlot(pulseState PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) *Slot {
+// NewWorkingSlot creates new instance of slot
+func NewWorkingSlot(pulseState PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) *slot {
 
 	slot := newSlot(pulseState, pulseNumber, removeSlotCallback)
 	slot.runWorker()
@@ -184,7 +184,7 @@ func NewWorkingSlot(pulseState PulseState, pulseNumber insolar.PulseNumber, remo
 	return slot
 }
 
-func newSlot(pulseState PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) *Slot {
+func newSlot(pulseState PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) *slot {
 	slotState := Initializing
 	if pulseState == Antique {
 		slotState = Working
@@ -192,19 +192,19 @@ func newSlot(pulseState PulseState, pulseNumber insolar.PulseNumber, removeSlotC
 
 	elements, emptyList := initElementsBuf()
 
-	elementListMap := map[ActivationStatus]*ElementList{
+	elementListMap := map[ActivationStatus]*elementList{
 		EmptyElement:     emptyList,
 		ActiveElement:    {},
 		NotActiveElement: {},
 	}
 
-	slot := &Slot{
+	slot := &slot{
 		pulseState:         pulseState,
 		inputQueue:         queue.NewMutexQueue(),
 		responseQueue:      queue.NewMutexQueue(),
 		pulseNumber:        pulseNumber,
 		slotState:          slotState,
-		stateMachine:       SlotStateMachine,
+		stateMachine:       slotStateMachine,
 		elements:           elements,
 		elementListMap:     elementListMap,
 		removeSlotCallback: removeSlotCallback,
@@ -220,12 +220,12 @@ func newSlot(pulseState PulseState, pulseNumber insolar.PulseNumber, removeSlotC
 	return slot
 }
 
-func (s *Slot) runWorker() {
+func (s *slot) runWorker() {
 	worker := newWorker(s)
 	go worker.run()
 }
 
-func (s *Slot) PushResponse(adapterID adapterid.ID, elementID uint32, handlerID uint32, respPayload interface{}) {
+func (s *slot) PushResponse(adapterID adapterid.ID, elementID uint32, handlerID uint32, respPayload interface{}) {
 	response := adapter.NewAdapterResponse(adapterID, elementID, handlerID, respPayload)
 	err := s.responseQueue.SinkPush(response)
 	if err != nil {
@@ -233,7 +233,7 @@ func (s *Slot) PushResponse(adapterID adapterid.ID, elementID uint32, handlerID 
 	}
 }
 
-func (s *Slot) PushNestedEvent(adapterID adapterid.ID, parentElementID uint32, handlerID uint32, eventPayload interface{}) {
+func (s *slot) PushNestedEvent(adapterID adapterid.ID, parentElementID uint32, handlerID uint32, eventPayload interface{}) {
 	event := adapter.NewAdapterNestedEvent(adapterID, parentElementID, handlerID, eventPayload)
 	err := s.responseQueue.SinkPush(event)
 	if err != nil {
@@ -241,32 +241,32 @@ func (s *Slot) PushNestedEvent(adapterID adapterid.ID, parentElementID uint32, h
 	}
 }
 
-func (s *Slot) GetSlotDetails() adapter.SlotDetails {
+func (s *slot) GetSlotDetails() adapter.SlotDetails {
 	return s
 }
 
 // GetPulseNumber implements iface SlotDetails
-func (s *Slot) GetPulseNumber() insolar.PulseNumber { // nolint: unused
+func (s *slot) GetPulseNumber() insolar.PulseNumber { // nolint: unused
 	return s.pulseNumber
 }
 
 // GetPulseData implements iface SlotDetails
-func (s *Slot) GetPulseData() insolar.Pulse { // nolint: unused
+func (s *slot) GetPulseData() insolar.Pulse { // nolint: unused
 	return s.pulse
 }
 
 // GetNodeID implements iface SlotDetails
-func (s *Slot) GetNodeID() uint32 { // nolint: unused
+func (s *slot) GetNodeID() uint32 { // nolint: unused
 	return s.nodeID
 }
 
 // GetNodeData implements iface SlotDetails
-func (s *Slot) GetNodeData() interface{} { // nolint: unused
+func (s *slot) GetNodeData() interface{} { // nolint: unused
 	return s.nodeData
 }
 
 // createElement creates new active element from empty element
-func (s *Slot) createElement(stateMachine matrix.StateMachine, state fsm.StateID, event queue.OutputElement) (*slotElement, error) { // nolint: unused
+func (s *slot) createElement(stateMachine matrix.StateMachine, state fsm.StateID, event queue.OutputElement) (*slotElement, error) { // nolint: unused
 	element := s.popElement(EmptyElement)
 	element.stateMachine = stateMachine
 	element.state = state
@@ -285,12 +285,12 @@ func (s *Slot) createElement(stateMachine matrix.StateMachine, state fsm.StateID
 	return element, nil
 }
 
-func (s *Slot) hasExpired() bool {
+func (s *slot) hasExpired() bool {
 	// TODO: This is used to delete past slot, which doesn't have elements and not active for some configure time
 	return s.len(ActiveElement) == 0 && s.len(NotActiveElement) == 0
 }
 
-func (s *Slot) hasElements(status ActivationStatus) bool {
+func (s *slot) hasElements(status ActivationStatus) bool {
 	list, ok := s.elementListMap[status]
 	if !ok {
 		return false
@@ -298,20 +298,20 @@ func (s *Slot) hasElements(status ActivationStatus) bool {
 	return !list.isEmpty()
 }
 
-func (s *Slot) isSuspending() bool {
+func (s *slot) isSuspending() bool {
 	return s.slotState == Suspending
 }
 
-func (s *Slot) isWorking() bool {
+func (s *slot) isWorking() bool {
 	return s.slotState == Working
 }
 
-func (s *Slot) isInitializing() bool {
+func (s *slot) isInitializing() bool {
 	return s.slotState == Initializing
 }
 
 // popElement gets element of provided status from correspondent linked list (and remove it from that list)
-func (s *Slot) popElement(status ActivationStatus) *slotElement { // nolint: unused
+func (s *slot) popElement(status ActivationStatus) *slotElement { // nolint: unused
 	list, ok := s.elementListMap[status]
 	if !ok {
 		return nil
@@ -319,7 +319,7 @@ func (s *Slot) popElement(status ActivationStatus) *slotElement { // nolint: unu
 	return list.popElement()
 }
 
-func (s *Slot) len(status ActivationStatus) int { // nolint: unused
+func (s *slot) len(status ActivationStatus) int { // nolint: unused
 	list, ok := s.elementListMap[status]
 	if !ok {
 		return 0
@@ -327,7 +327,7 @@ func (s *Slot) len(status ActivationStatus) int { // nolint: unused
 	return list.len()
 }
 
-func (s *Slot) extractSlotElementByID(id uint32) *slotElement { // nolint: unused
+func (s *slot) extractSlotElementByID(id uint32) *slotElement { // nolint: unused
 	element := &s.elements[id%slotSize]
 	if element.id != id {
 		return nil
@@ -341,7 +341,7 @@ func (s *Slot) extractSlotElementByID(id uint32) *slotElement { // nolint: unuse
 }
 
 // pushElement adds element of provided status to correspondent linked list
-func (s *Slot) pushElement(element *slotElement) error { // nolint: unused
+func (s *slot) pushElement(element *slotElement) error { // nolint: unused
 	status := element.activationStatus
 	list, ok := s.elementListMap[status]
 	if !ok {
