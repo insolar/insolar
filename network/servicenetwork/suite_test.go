@@ -39,7 +39,6 @@ import (
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -149,19 +148,12 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 		results <- err
 	}
 
-	waitResults := func(results chan error, expected int) error {
+	waitResults := func(results chan error, expected int) {
 		count := 0
-		for {
-			select {
-			case err := <-results:
-				count++
-				s.NoError(err)
-				if count == expected {
-					return nil
-				}
-			case <-time.After(time.Second * 20):
-				return errors.New("timeout")
-			}
+		for count < expected {
+			err := <-results
+			s.Require().NoError(err)
+			count++
 		}
 	}
 
@@ -169,17 +161,13 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 	for _, node := range nodes {
 		go initNode(node)
 	}
-
-	err := waitResults(results, len(nodes))
-	s.NoError(err)
+	waitResults(results, len(nodes))
 
 	log.Info("Start nodes")
 	for _, node := range nodes {
 		go startNode(node)
 	}
-
-	err = waitResults(results, len(nodes))
-	s.NoError(err)
+	waitResults(results, len(nodes))
 }
 
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
