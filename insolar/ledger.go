@@ -109,11 +109,7 @@ type StorageExportResult struct {
 }
 
 var (
-	// TODOJetID temporary stub for passing jet ID in ledger functions
-	// on period Jet ID full implementation
-	// TODO: remove it after jets support readyness - @nordicdyno 5.Dec.2018
-	TODOJetID = *NewID(PulseNumberJet, nil)
-	DomainID  = *NewID(0, nil)
+	DomainID = *NewID(0, nil)
 )
 
 // PulseStorage provides the interface for fetching current pulse of the system
