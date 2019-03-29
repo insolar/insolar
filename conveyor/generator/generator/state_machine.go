@@ -60,6 +60,7 @@ func (m *StateMachine) GetPayloadType() string {
 }
 
 func (m *StateMachine) createStateUnlessExists(current fsm.ElementState, returned []fsm.ElementState) {
+	// todo check is state not contains stateMachine
 	for _, s := range append(returned, current) {
 		if len(m.States) <= int(s) {
 			for i := len(m.States); i <= int(s)+1; i++ {

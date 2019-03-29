@@ -33,6 +33,7 @@ const (
 	stateMachineTemplate = "conveyor/generator/generator/templates/state_machine.go.tpl"
 	matrixTemplate       = "conveyor/generator/generator/templates/matrix.go.tpl"
 	generatedMatrix      = "conveyor/generator/matrix/matrix.go"
+	generatedSuffix      = "_generated.go"
 )
 
 // todo remove this type
@@ -130,10 +131,9 @@ func (g *Generator) GenerateStateMachines() {
 		tplBody, err := ioutil.ReadFile(path.Join(g.fullPathToInsolar, stateMachineTemplate))
 		checkErr(err)
 
-		file, err := os.Create(machine.File[:len(machine.File)-3] + "_generated.go")
+		file, err := os.Create(machine.File[:len(machine.File)-3] + generatedSuffix)
 		checkErr(err)
 
-		defer file.Close()
 		out := bufio.NewWriter(file)
 
 		err = template.Must(template.New("smTmpl").Funcs(templateFuncs).
@@ -142,6 +142,8 @@ func (g *Generator) GenerateStateMachines() {
 		checkErr(err)
 
 		err = out.Flush()
+		checkErr(err)
+		err = file.Close()
 		checkErr(err)
 	}
 
