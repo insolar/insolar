@@ -149,7 +149,7 @@ func (t *tcpTransport) Listen(ctx context.Context, started chan struct{}) error 
 	logger.Info("[ Listen ] Start TCP transport")
 
 	if err := t.prepareListen(); err != nil {
-		logger.Info("[ Listen ] Failed to prepare TCP transport")
+		logger.Info("[ Listen ] Failed to prepare TCP transport: ", err.Error())
 		return err
 	}
 
