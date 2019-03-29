@@ -39,10 +39,6 @@ func RawInitialPresentFactory() *statemachine.StateMachine {
 					
 				},
 				
-			},{
-				
-				
-				
 			},
 		},
 	}
@@ -61,9 +57,6 @@ func RawInitialPastFactory() *statemachine.StateMachine {
                     return payload, state, nil
 					
 				},
-				
-			},{
-				
 				
 			},
 		},
@@ -84,10 +77,6 @@ func RawInitialFutureFactory() *statemachine.StateMachine {
                     return payload, state, nil
 					
 				},
-				
-			},{
-				
-				
 				
 			},
 		},
