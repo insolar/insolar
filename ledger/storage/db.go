@@ -35,7 +35,6 @@ const (
 	scopeIDRecord   byte = 2
 	scopeIDPulse    byte = 4
 	scopeIDSystem   byte = 5
-	scopeIDBlob     byte = 7
 
 	sysGenesis                byte = 1
 	sysLatestPulse            byte = 2

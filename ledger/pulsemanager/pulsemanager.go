@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
@@ -74,8 +75,12 @@ type PulseManager struct {
 	StorageCleaner storage.Cleaner        `inject:""`
 
 	DropModifier drop.Modifier `inject:""`
-	DropCleaner  drop.Cleaner  `inject:""`
 	DropAccessor drop.Accessor `inject:""`
+	DropCleaner  drop.Cleaner
+
+	BlobSyncAccessor blob.CollectionAccessor
+
+	BlobCleaner blob.Cleaner
 
 	syncClientsPool *heavyclient.Pool
 
@@ -108,7 +113,12 @@ type pmOptions struct {
 }
 
 // NewPulseManager creates PulseManager instance.
-func NewPulseManager(conf configuration.Ledger) *PulseManager {
+func NewPulseManager(
+	conf configuration.Ledger,
+	dropCleaner drop.Cleaner,
+	blobCleaner blob.Cleaner,
+	blobSyncAccessor blob.CollectionAccessor,
+) *PulseManager {
 	pmconf := conf.PulseManager
 
 	pm := &PulseManager{
@@ -120,6 +130,9 @@ func NewPulseManager(conf configuration.Ledger) *PulseManager {
 			heavySyncMessageLimit: pmconf.HeavySyncMessageLimit,
 			lightChainLimit:       conf.LightChainLimit,
 		},
+		DropCleaner:      dropCleaner,
+		BlobCleaner:      blobCleaner,
+		BlobSyncAccessor: blobSyncAccessor,
 	}
 	return pm
 }
@@ -250,11 +263,7 @@ func (m *PulseManager) createDrop(
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
 
-	dropSerialized, err = drop.Encode(block)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Encode")
-	}
-
+	dropSerialized = drop.MustEncode(block)
 	return
 }
 
@@ -662,6 +671,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse insolar.Puls
 	m.JetModifier.Delete(ctx, p.Pulse.PulseNumber)
 	m.NodeSetter.Delete(p.Pulse.PulseNumber)
 	m.DropCleaner.Delete(p.Pulse.PulseNumber)
+	m.BlobCleaner.Delete(ctx, p.Pulse.PulseNumber)
 	err = m.PulseTracker.DeletePulse(ctx, p.Pulse.PulseNumber)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
@@ -722,6 +732,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 			m.PulseTracker,
 			m.ReplicaStorage,
 			m.DropAccessor,
+			m.BlobSyncAccessor,
 			m.StorageCleaner,
 			m.DBContext,
 			heavyclient.Options{

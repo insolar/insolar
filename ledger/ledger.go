@@ -20,6 +20,7 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/ledger/heavy"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	db2 "github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
@@ -52,6 +53,13 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	var pulseTracker storage.PulseTracker
 	var dropModifier drop.Modifier
 	var dropAccessor drop.Accessor
+	var dropCleaner drop.Cleaner
+
+	var blobCleaner blob.Cleaner
+	var blobModifier blob.Modifier
+	var blobAccessor blob.Accessor
+	var blobSyncAccessor blob.CollectionAccessor
+
 	// TODO: @imarkin 18.02.18 - Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
 	switch certificate.GetRole() {
 	case insolar.StaticRoleUnknown, insolar.StaticRoleHeavyMaterial:
@@ -60,12 +68,24 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		dropDB := drop.NewStorageDB()
 		dropModifier = dropDB
 		dropAccessor = dropDB
+
+		// should be replaced with db
+		blobDB := blob.NewStorageDB(newDB)
+		blobModifier = blobDB
+		blobAccessor = blobDB
 	default:
 		pulseTracker = storage.NewPulseTrackerMemory()
 
 		dropDB := drop.NewStorageMemory()
 		dropModifier = dropDB
 		dropAccessor = dropDB
+		dropCleaner = dropDB
+
+		blobDB := blob.NewStorageMemory()
+		blobModifier = blobDB
+		blobAccessor = blobDB
+		blobCleaner = blobDB
+		blobSyncAccessor = blobDB
 	}
 
 	components := []interface{}{
@@ -74,6 +94,8 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		idLocker,
 		dropModifier,
 		dropAccessor,
+		blobModifier,
+		blobAccessor,
 		storage.NewCleaner(),
 		pulseTracker,
 		storage.NewPulseStorage(),
@@ -85,7 +107,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewHotDataWaiterConcrete(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),
-		pulsemanager.NewPulseManager(conf),
+		pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobSyncAccessor),
 		heavyserver.NewSync(db),
 	}
 
