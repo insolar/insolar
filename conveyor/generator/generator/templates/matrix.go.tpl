@@ -45,10 +45,8 @@ type Matrix struct {
 	past *StateMachineSet
 }
 
-type MachineType int
-
 const (
-	{{range $i, $m := .}}{{if (isNull $i)}}{{$m.Name}} MachineType = iota + 1
+	{{range $i, $m := .}}{{if (isNull $i)}}{{$m.Name}}  fsm.ID = iota + 1
 	{{else}}{{$m.Name}}
 	{{end}}{{end}}
 )
