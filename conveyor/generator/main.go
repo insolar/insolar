@@ -23,9 +23,10 @@ import (
 )
 
 func main() {
-	getobject.Register()
-	sample.Register()
-	generator.CheckAllMachines()
-	generator.GenerateStateMachines()
-	generator.GenerateMatrix()
+	gen := generator.NewGenerator()
+	getobject.Register(gen)
+	sample.Register(gen)
+	gen.CheckAllMachines()
+	gen.GenerateStateMachines()
+	gen.GenerateMatrix()
 }

@@ -19,7 +19,6 @@ package generator
 import (
 	"go/parser"
 	"go/token"
-	"log"
 	"path"
 	"strings"
 	"text/template"
@@ -41,9 +40,9 @@ var (
 			}
 			return getDirFromPath(f)
 		},
-		"unPackage": func (t string, p string) string {
+		"unPackage": func(t string, p string) string {
 			if idx := strings.Index(t, p); idx == 0 || (idx == 1 && t[0] == '*') {
-				return strings.Replace(t, p + ".", "", 1)
+				return strings.Replace(t, p+".", "", 1)
 			}
 			return t
 		},
@@ -59,8 +58,6 @@ var (
 func getPackage(file string) string {
 	set := token.NewFileSet()
 	node, err := parser.ParseFile(set, file, nil, parser.ParseComments)
-	if err != nil {
-		log.Fatal("Can't parse ", file, " ", err)
-	}
+	checkErr(err)
 	return node.Name.Name
 }

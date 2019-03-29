@@ -52,9 +52,8 @@ const (
 	Result
 )
 
-func Register() {
-
-	generator.AddMachine("GetObjectStateMachine").
+func Register(g *generator.Generator) {
+	g.AddMachine("GetObjectStateMachine").
 		InitFuture(InitFuture, WaitingPresent).
 		MigrationFuturePresent(WaitingPresent, MigrateToPresent, CheckingJet).
 		Init(Init, CheckingJet).
