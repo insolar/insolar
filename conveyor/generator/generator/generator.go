@@ -73,42 +73,45 @@ func (g *Generator) CheckAllMachines() {
 			log.Fatal("Future Init handler should be defined")
 		}
 
-		for i, s := range machine.States {
-			for _, ps := range []PulseState{Future, Present, Past} {
-				for _, ht := range []handlerType{Transition, Migration, AdapterResponse} {
-					if s.handlers[ps][ht] == nil {
+		for stateIndex, state := range machine.States {
+			for _, pulseState := range []PulseState{Future, Present, Past} {
+				for _, handlerType := range []handlerType{Transition, Migration, AdapterResponse} {
+					currentHandler := state.handlers[pulseState][handlerType]
+
+					if currentHandler == nil {
 						continue
 					}
 
-					if len(s.handlers[ps][ht].params) < 3 || s.handlers[ps][ht].params[2] != *machine.InputEventType {
-						log.Fatalf("[%s] Forth parameter should be %s\n", s.handlers[ps][ht].Name, *machine.InputEventType)
+					if len(currentHandler.params) < 3 || currentHandler.params[2] != *machine.InputEventType {
+						log.Fatalf("[%s] Forth parameter should be %s\n", currentHandler.Name, *machine.InputEventType)
 					}
 
-					if i == 0 && ht == Transition {
-						if s.handlers[ps][ht].params[3] != "interface {}" {
-							log.Fatalf("[%s] Init handlers should have interface{} as payload parameter\n", s.handlers[ps][ht].Name)
+					// check Init handlers
+					if stateIndex == 0 && handlerType == Transition {
+						if currentHandler.params[3] != "interface {}" {
+							log.Fatalf("[%s] Init handlers should have interface{} as payload parameter\n", currentHandler.Name)
 						}
-						if s.handlers[ps][ht].results[1] != *machine.PayloadType {
-							log.Fatalf("[%s] Init handlers should return payload as %s\n", s.handlers[ps][ht].Name, *machine.PayloadType)
+						if currentHandler.results[1] != *machine.PayloadType {
+							log.Fatalf("[%s] Init handlers should return payload as %s\n", currentHandler.Name, *machine.PayloadType)
 						}
 					} else {
-						if s.handlers[ps][ht].params[3] != *machine.PayloadType {
-							log.Fatalf("[%s] Handlers payload should be %s not %s\n", s.handlers[ps][ht].Name, *machine.PayloadType, s.handlers[ps][ht].params[3])
+						if currentHandler.params[3] != *machine.PayloadType {
+							log.Fatalf("[%s] Handlers payload should be %s not %s\n", currentHandler.Name, *machine.PayloadType, currentHandler.params[3])
 						}
-						if len(s.handlers[ps][ht].results) != 1 {
-							log.Fatalf("[%s] Handlers should return only fsm.ElementState\n", s.handlers[ps][ht].Name)
-						}
-					}
-
-					if i != 0 && ht == Transition {
-						if len(s.handlers[ps][ht].params) != 4 && len(s.handlers[ps][ht].params) != 5 {
-							log.Fatalf("[%s] Transition handlers should have 4 or 5 (with adapher helper) parameters\n", s.handlers[ps][ht].Name)
+						if len(currentHandler.results) != 1 {
+							log.Fatalf("[%s] Handlers should return only fsm.ElementState\n", currentHandler.Name)
 						}
 					}
 
-					if ht == AdapterResponse {
-						if len(s.handlers[ps][ht].params) != 5 {
-							log.Fatalf("[%s] AdapterResponse handlers should have 5 parameters\n", s.handlers[ps][ht].Name)
+					if stateIndex != 0 && handlerType == Transition {
+						if len(currentHandler.params) != 4 && len(currentHandler.params) != 5 {
+							log.Fatalf("[%s] Transition handlers should have 4 or 5 (with adapher helper) parameters\n", currentHandler.Name)
+						}
+					}
+
+					if handlerType == AdapterResponse {
+						if len(currentHandler.params) != 5 {
+							log.Fatalf("[%s] AdapterResponse handlers should have 5 parameters\n", currentHandler.Name)
 						}
 					}
 				}
