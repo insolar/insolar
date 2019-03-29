@@ -27,10 +27,10 @@ import (
 
 	"github.com/gorilla/rpc/v2"
 	jsonrpc "github.com/gorilla/rpc/v2/json2"
-	"github.com/insolar/insolar/application/extractor"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/seedmanager"
+	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
@@ -81,32 +81,32 @@ func checkConfig(cfg *configuration.APIRunner) error {
 func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
 	err := rpcServer.RegisterService(NewStorageExporterService(ar), "exporter")
 	if err != nil {
-		return errors.New("[ registerServices ] Can't RegisterService: exporter")
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: exporter")
 	}
 
 	err = rpcServer.RegisterService(NewSeedService(ar), "seed")
 	if err != nil {
-		return errors.New("[ registerServices ] Can't RegisterService: seed")
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: seed")
 	}
 
 	err = rpcServer.RegisterService(NewInfoService(ar), "info")
 	if err != nil {
-		return errors.New("[ registerServices ] Can't RegisterService: info")
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: info")
 	}
 
 	err = rpcServer.RegisterService(NewStatusService(ar), "status")
 	if err != nil {
-		return errors.New("[ registerServices ] Can't RegisterService: status")
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: status")
 	}
 
 	err = rpcServer.RegisterService(NewNodeCertService(ar), "cert")
 	if err != nil {
-		return errors.New("[ registerServices ] Can't RegisterService: cert")
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: cert")
 	}
 
 	err = rpcServer.RegisterService(NewContractService(ar), "contract")
 	if err != nil {
-		return errors.New("[ registerServices ] Can't RegisterService: contract")
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: contract")
 	}
 
 	return nil
