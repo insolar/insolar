@@ -236,6 +236,20 @@ func (t *consensusTransportSuite) sendPacketAndVerify(packet consensus.Consensus
 	}
 }
 
+func (t *consensusTransportSuite) TestStartStop() {
+	cn, err := NewConsensusNetwork("127.0.0.1:0", ID1+DOMAIN, 0)
+	t.Require().NoError(err)
+	ctx := context.Background()
+	err = cn.Start(ctx)
+	t.Require().NoError(err)
+	defer cn.Stop(ctx)
+
+	err = cn.Stop(ctx)
+	t.Require().NoError(err)
+	err = cn.Start(ctx)
+	t.Require().NoError(err)
+}
+
 func (t *consensusTransportSuite) TestVerifySignPhase1() {
 	packet := newPhase1Packet()
 	success, err := t.sendPacketAndVerify(packet)

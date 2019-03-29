@@ -441,3 +441,62 @@ func TestDoubleStart(t *testing.T) {
 
 	tp.Stop(ctx)
 }
+
+func TestStartStop(t *testing.T) {
+	ctx := context.Background()
+	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
+	require.NoError(t, err)
+
+	err = tp.Start(ctx)
+	assert.NoError(t, err)
+	defer tp.Stop(ctx)
+
+	err = tp.Stop(ctx)
+	assert.NoError(t, err)
+	err = tp.Start(ctx)
+	assert.NoError(t, err)
+}
+
+func TestStartStopSend(t *testing.T) {
+	t1, t2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
+	require.NoError(t, err)
+	ctx := context.Background()
+	ctx2 := context.Background()
+
+	err = t2.Transport.Start(ctx2)
+	require.NoError(t, err)
+	defer t2.Transport.Stop(ctx2)
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+		log.Info("handler triggered")
+		wg.Done()
+		return t2.BuildResponse(ctx, r, nil), nil
+	}
+	t2.RegisterRequestHandler(types.Ping, handler)
+
+	err = t1.Transport.Start(ctx)
+	require.NoError(t, err)
+
+	send := func() {
+		request := t1.NewRequestBuilder().Type(types.Ping).Build()
+		ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
+		require.NoError(t, err)
+		f, err := t1.SendRequest(ctx, request, *ref)
+		require.NoError(t, err)
+		<-f.Response()
+	}
+
+	send()
+
+	err = t1.Transport.Stop(ctx)
+	require.NoError(t, err)
+	err = t1.Transport.Start(ctx)
+	require.NoError(t, err)
+
+	send()
+	wg.Wait()
+	t1.Transport.Stop(ctx)
+}
