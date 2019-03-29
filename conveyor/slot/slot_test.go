@@ -71,11 +71,11 @@ type mockSyncDone struct {
 	doneCount int
 }
 
-func (s *mockSyncDone) GetResult() int {
+func (s *mockSyncDone) GetResult() []byte {
 	result := <-s.waiter
-	hash, ok := result.(int)
+	hash, ok := result.([]byte)
 	if !ok {
-		return 0
+		return []byte{}
 	}
 	return hash
 }

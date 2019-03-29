@@ -17,6 +17,7 @@
 package conveyor
 
 import (
+	"encoding/hex"
 	"sync"
 
 	"github.com/insolar/insolar/conveyor/queue"
@@ -280,6 +281,8 @@ type BarrierCallback struct {
 	result interface{}
 }
 
+const defaultHash = "0c60ae04fbb17fe36f4e84631a5b8f3cd6d0cd46e80056bdfec97fd305f764daadef8ae1adc89b203043d7e2af1fb341df0ce5f66dfe3204ec3a9831532a8e4c"
+
 func newBarrierCallback(num int, callback queue.SyncDone) *BarrierCallback {
 	var wg sync.WaitGroup
 	wg.Add(num)
@@ -290,6 +293,12 @@ func newBarrierCallback(num int, callback queue.SyncDone) *BarrierCallback {
 
 	go func(bc *BarrierCallback) {
 		wg.Wait()
+		// TODO: this situation (no present pulse) must be handled in different way
+		if num == 1 && bc.result == nil {
+			log.Info("There is no present pulse and future pulse callback returned nil, set []byte{1, 2, 3} as result")
+			hash, _ := hex.DecodeString(defaultHash)
+			bc.result = hash
+		}
 		callback.SetResult(bc.result)
 	}(bc)
 

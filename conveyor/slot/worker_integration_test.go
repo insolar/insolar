@@ -17,15 +17,21 @@
 package slot
 
 import (
+	"context"
 	"os"
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
 	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/handler"
 	"github.com/insolar/insolar/conveyor/queue"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -101,6 +107,25 @@ func mockHandlerStorage() matrix.StateMachineHolder {
 	return &mockStateMachineHolder{}
 }
 
+func initComponents(t *testing.T) {
+	pc := testutils.NewPlatformCryptographyScheme()
+	ledgerMock := testutils.NewLedgerLogicMock(t)
+	ledgerMock.GetCodeFunc = func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error) {
+		return &reply.Code{}, nil
+	}
+
+	cm := &component.Manager{}
+	ctx := context.TODO()
+
+	components := adapterstorage.GetAllProcessors()
+	components = append(components, pc, ledgerMock)
+	cm.Inject(components...)
+	err := cm.Init(ctx)
+	if err != nil {
+		t.Error("ComponentManager init failed", err)
+	}
+}
+
 func setup() {
 	HandlerStorage = mockHandlerStorage()
 }
@@ -116,6 +141,7 @@ func TestMain(m *testing.M) {
 }
 
 func Test_run(t *testing.T) {
+	initComponents(t)
 
 	for _, tt := range testPulseStates {
 		t.Run(tt.String(), func(t *testing.T) {

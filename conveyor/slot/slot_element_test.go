@@ -86,7 +86,11 @@ func TestSlotElement_update(t *testing.T) {
 
 func TestSlotElement_SendTask_NoSuchAdapterID(t *testing.T) {
 	el := newSlotElement(ActiveElement, nil)
-	// make it empty for test
+	// make Manager empty for test
+	oldManager := adapterstorage.Manager
+	defer func(oldManager adapterstorage.Storage) {
+		adapterstorage.Manager = oldManager
+	}(oldManager)
 	adapterstorage.Manager = adapterstorage.NewEmptyStorage()
 	require.PanicsWithValue(t, "[ SendTask ] No such adapter: 142", func() {
 		el.SendTask(142, 22, 44)
@@ -99,6 +103,11 @@ func TestSlotElement_SendTask(t *testing.T) {
 
 	})
 	el := newSlotElement(ActiveElement, slot)
+	// make Manager empty for test
+	oldManager := adapterstorage.Manager
+	defer func(oldManager adapterstorage.Storage) {
+		adapterstorage.Manager = oldManager
+	}(oldManager)
 	adapterstorage.Manager = adapterstorage.NewEmptyStorage()
 
 	sinkMock := adapter.NewTaskSinkMock(t)

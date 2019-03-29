@@ -70,6 +70,7 @@ func init() {
 
 	addAdapter(adapter.NewSendResponseProcessor, adapterid.SendResponse)
 	addAdapter(artifactmanager.NewGetCodeProcessor, adapterid.GetCode)
+	addAdapter(adapter.NewNodeStateProcessor, adapterid.NodeState)
 }
 
 // GetAllProcessors is used for component manager

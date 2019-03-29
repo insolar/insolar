@@ -23,4 +23,5 @@ const (
 	SendResponse ID = iota + 1
 	Waiter
 	GetCode
+	NodeState
 )
