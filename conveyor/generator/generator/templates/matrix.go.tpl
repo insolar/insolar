@@ -17,6 +17,7 @@
 package matrix
 
 import (
+	"github.com/insolar/insolar/conveyor/fsm"
 	{{range .}}"{{fileToImport .File}}"
 	{{end}}
 )
