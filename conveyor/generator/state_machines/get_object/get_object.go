@@ -59,8 +59,6 @@ func Register(g *generator.Generator) {
 		Init(Init, CheckingJet).
 		Transition(CheckingJet, GetJet, WaitingCheckingJet).
 		AdapterResponse(CheckingJet, GetJetResponse, FetchingJet, InvokeWaitingHotData).
-		// AdapterResponsePast(CheckingJet, GetJetResponse1, FetchingJet, InvokeWaitingHotData).
-
 		Transition(FetchingJet, FetchJet, WaitingFetchingJet).
 		AdapterResponse(FetchingJet, FetchJetResponse, InvokeWaitingHotData).
 		Transition(InvokeWaitingHotData, WaitHotData, WaitingHotData).
@@ -100,7 +98,7 @@ func GetJetResponse(ctx context.Context, helper fsm.SlotElementHelper, input Cus
 	// todo if found
 	return fsm.ElementState(InvokeWaitingHotData)
 	// todo else
-	return fsm.ElementState(FetchingJet)
+	// return fsm.ElementState(FetchingJet)
 }
 
 func FetchJet(ctx context.Context, helper fsm.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) fsm.ElementState {
@@ -136,7 +134,7 @@ func WaitCheckIndex(ctx context.Context, helper fsm.SlotElementHelper, input Cus
 	// todo if found
 	return fsm.ElementState(CheckingState)
 	// todo else
-	return fsm.ElementState(FetchingIndex)
+	// return fsm.ElementState(FetchingIndex)
 }
 
 func FetchIndex(ctx context.Context, helper fsm.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) fsm.ElementState {
@@ -160,7 +158,7 @@ func WaitCheckState(ctx context.Context, helper fsm.SlotElementHelper, input Cus
 	// todo if found
 	return fsm.ElementState(Result)
 	// todo else
-	return fsm.ElementState(CheckingJetForState)
+	// return fsm.ElementState(CheckingJetForState)
 }
 
 func CheckJetForState(ctx context.Context, helper fsm.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) fsm.ElementState {
@@ -173,7 +171,7 @@ func WaitCheckJetForState(ctx context.Context, helper fsm.SlotElementHelper, inp
 	// todo if found
 	return fsm.ElementState(FetchingState)
 	// todo else
-	return fsm.ElementState(FetchingJetForState)
+	// return fsm.ElementState(FetchingJetForState)
 }
 
 func FetchJetForState(ctx context.Context, helper fsm.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) fsm.ElementState {
