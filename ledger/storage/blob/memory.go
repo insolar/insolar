@@ -106,7 +106,7 @@ func (s *StorageMemory) Delete(ctx context.Context, pulse insolar.PulseNumber) {
 	defer s.lock.Unlock()
 
 	for id, blob := range s.memory {
-		if id.Pulse() > pulse {
+		if id.Pulse() != pulse {
 			continue
 		}
 
