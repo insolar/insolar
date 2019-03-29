@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
@@ -47,7 +48,7 @@ type Runner struct {
 	NetworkSwitcher     insolar.NetworkSwitcher     `inject:""`
 	NodeNetwork         insolar.NodeNetwork         `inject:""`
 	PulseStorage        insolar.PulseStorage        `inject:""`
-	ArtifactManager     insolar.ArtifactManager     `inject:""`
+	ArtifactManager     artifacts.Client            `inject:""`
 	server              *http.Server
 	rpcServer           *rpc.Server
 	cfg                 *configuration.APIRunner
