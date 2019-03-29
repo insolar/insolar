@@ -46,7 +46,9 @@ func (h *transportBase) Start(ctx context.Context) {
 		inslogger.FromContext(ctx).Warn("double listen initiated")
 		return
 	}
-	transport.ListenAndWaitUntilReady(ctx, h.transport)
+	if err := h.transport.Listen(ctx); err != nil {
+		inslogger.FromContext(ctx).Error("Failed to start transport: listen syscall failed:", err)
+	}
 
 	go h.listen(ctx)
 }

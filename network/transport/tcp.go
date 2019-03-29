@@ -107,7 +107,7 @@ func (t *tcpTransport) prepareListen() (net.Listener, error) {
 }
 
 // Start starts networking.
-func (t *tcpTransport) Listen(ctx context.Context, started chan struct{}) error {
+func (t *tcpTransport) Listen(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Listen ] Start TCP transport")
 
@@ -117,19 +117,23 @@ func (t *tcpTransport) Listen(ctx context.Context, started chan struct{}) error 
 		return err
 	}
 
-	started <- struct{}{}
-	for {
-		conn, err := listener.Accept()
-		if err != nil {
-			<-t.disconnectFinished
-			logger.Error("[ Listen ] Failed to accept connection: ", err.Error())
-			return errors.Wrap(err, "[ Listen ] Failed to accept connection")
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				<-t.disconnectFinished
+				logger.Error("[ Listen ] Failed to accept connection: ", err.Error())
+				return
+			}
+
+			logger.Debugf("[ Listen ] Accepted new connection from %s", conn.RemoteAddr())
+
+			go t.handleAcceptedConnection(conn)
 		}
 
-		logger.Debugf("[ Listen ] Accepted new connection from %s", conn.RemoteAddr())
+	}()
 
-		go t.handleAcceptedConnection(conn)
-	}
+	return nil
 }
 
 // Stop stops networking.

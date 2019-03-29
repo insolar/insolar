@@ -118,7 +118,7 @@ func (t *udpTransport) prepareListen() (net.PacketConn, error) {
 }
 
 // Start starts networking.
-func (t *udpTransport) Listen(ctx context.Context, started chan struct{}) error {
+func (t *udpTransport) Listen(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Listen ] Start UDP transport")
 
@@ -128,18 +128,22 @@ func (t *udpTransport) Listen(ctx context.Context, started chan struct{}) error 
 		return err
 	}
 
-	started <- struct{}{}
-	for {
-		buf := make([]byte, udpMaxPacketSize)
-		n, addr, err := conn.ReadFrom(buf)
-		if err != nil {
-			<-t.disconnectFinished
-			return err
-		}
-		stats.Record(ctx, consensus.RecvSize.M(int64(n)))
+	go func() {
+		for {
+			buf := make([]byte, udpMaxPacketSize)
+			n, addr, err := conn.ReadFrom(buf)
+			if err != nil {
+				<-t.disconnectFinished
+				logger.Error("failed to read UDP: ", err.Error())
+				return // TODO: we probably shouldn't return here
+			}
 
-		go t.handleAcceptedConnection(buf[:n], addr)
-	}
+			stats.Record(ctx, consensus.RecvSize.M(int64(n)))
+			go t.handleAcceptedConnection(buf[:n], addr)
+		}
+	}()
+
+	return nil
 }
 
 // Stop stops networking.

@@ -197,5 +197,7 @@ func (d *distributor) resume(ctx context.Context) {
 	inslogger.FromContext(ctx).Info("[ Resume ] Resume distribution, starting transport")
 	ctx, span := instracer.StartSpan(ctx, "distributor.resume")
 	defer span.End()
-	transport.ListenAndWaitUntilReady(ctx, d.Transport)
+	if err := d.Transport.Listen(ctx); err != nil {
+		inslogger.FromContext(ctx).Error("[ Resume ] Error executing listen:", err)
+	}
 }

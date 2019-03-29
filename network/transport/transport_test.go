@@ -73,14 +73,8 @@ func (t *transportSuite) SetupTest() {
 
 func (t *transportSuite) BeforeTest(suiteName, testName string) {
 	ctx := context.Background()
-	started1 := make(chan struct{}, 1)
-	started2 := make(chan struct{}, 1)
-
-	go t.node1.transport.Listen(ctx, started1)
-	go t.node2.transport.Listen(ctx, started2)
-
-	<-started1
-	<-started2
+	t.node1.transport.Listen(ctx)
+	t.node2.transport.Listen(ctx)
 }
 
 func (t *transportSuite) AfterTest(suiteName, testName string) {
