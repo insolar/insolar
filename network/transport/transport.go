@@ -122,15 +122,15 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 	}
 }
 
-// Resolve resolves address
+// Resolve resolves public address
 func Resolve(cfg configuration.Transport, address string) (string, error) {
 	resolver, err := createResolver(cfg)
 	if err != nil {
-		return "", errors.Wrap(err, "[ NewConnection ] Failed to create resolver")
+		return "", errors.Wrap(err, "[ Resolve ] Failed to create resolver")
 	}
 	publicAddress, err := resolver.Resolve(address)
 	if err != nil {
-		return "", errors.Wrap(err, "[ NewConnection ] Failed to resolve public address")
+		return "", errors.Wrap(err, "[ Resolve ] Failed to resolve public address")
 	}
 	return publicAddress, nil
 }
