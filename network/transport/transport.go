@@ -55,7 +55,6 @@ import (
 	"net"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/insolar/insolar/network/transport/relay"
@@ -76,7 +75,7 @@ type Transport interface {
 	SendPacket(ctx context.Context, p *packet.Packet) error
 
 	// Listen starts thread to listen incoming packets.
-	Listen(ctx context.Context, started chan struct{}) error
+	Listen(ctx context.Context) error
 
 	// Stop gracefully stops listening.
 	Stop()
@@ -140,23 +139,4 @@ func createResolver(cfg configuration.Transport) (resolver.PublicAddressResolver
 		return resolver.NewFixedAddressResolver(cfg.FixedPublicAddress), nil
 	}
 	return resolver.NewExactResolver(), nil
-}
-
-func ListenAndWaitUntilReady(ctx context.Context, transport Transport) error {
-	started := make(chan struct{}, 1)
-	errored := make(chan error, 1)
-	go func(ctx context.Context, t Transport, started chan struct{}) {
-		err := t.Listen(ctx, started)
-		if err != nil {
-			inslogger.FromContext(ctx).Error(err)
-			errored <- err
-		}
-	}(ctx, transport, started)
-
-	select {
-	case <-started:
-		return nil
-	case err := <-errored:
-		return err
-	}
 }

@@ -124,19 +124,24 @@ func (t *quicTransport) send(recvAddress string, data []byte) error {
 }
 
 // Start starts networking.
-func (t *quicTransport) Listen(ctx context.Context, started chan struct{}) error {
+func (t *quicTransport) Listen(ctx context.Context) error {
 	log.Debug("Start QUIC transport")
-	started <- struct{}{}
-	for {
-		session, err := t.l.Accept()
-		if err != nil {
-			<-t.disconnectFinished
-			return err
-		}
 
-		log.Debugf("accept from: %s", session.RemoteAddr().String())
-		go t.handleAcceptedConnection(session)
-	}
+	go func() {
+		for {
+			session, err := t.l.Accept()
+			if err != nil {
+				<-t.disconnectFinished
+				log.Error("failed to accept connection: ", err.Error())
+				return
+			}
+
+			log.Debug("accepted connection from ", session.RemoteAddr().String())
+			go t.handleAcceptedConnection(session)
+		}
+	}()
+
+	return nil
 }
 
 // Stop stops networking.
