@@ -61,8 +61,9 @@ func TestJetIndex_For(t *testing.T) {
 
 	for i := 0; i < 100; i++ {
 		id := gen.ID()
-		if id.Pulse() != insolar.PulseNumber(4) {
-			idx.Add(gen.ID(), gen.JetID())
+		rJetID := gen.JetID()
+		if id.Pulse() != insolar.PulseNumber(4) && rJetID != jetID {
+			idx.Add(id, rJetID)
 		}
 	}
 
