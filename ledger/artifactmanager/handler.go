@@ -43,9 +43,10 @@ import (
 )
 
 // TODO: remove this interface and write new functions for getting code and other logic in new interface/struct LedgerComponent or whatever
-// HandlerStorage contains handlers for different message bus messages.
-type HandlerStorage interface {
-	handleGetCode(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error)
+// LedgerLogic contains handlers for different message bus messages.
+//go:generate minimock -i github.com/insolar/insolar/ledger/artifactmanager.LedgerLogic -o ../../testutils -s _mock.go
+type LedgerLogic interface {
+	GetCode(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error)
 }
 
 // MessageHandler processes messages for local storage interaction.
@@ -370,6 +371,10 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel insolar.Parce
 		return &reply.ID{ID: *calculatedID}, nil
 	}
 	return nil, err
+}
+
+func (h *MessageHandler) GetCode(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
+	return h.handleGetCode(ctx, parcel)
 }
 
 func (h *MessageHandler) handleGetCode(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
