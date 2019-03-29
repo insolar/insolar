@@ -3,7 +3,7 @@ package blob
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "SyncAccessor" can be found in github.com/insolar/insolar/ledger/storage/blob
+The original interface "CollectionAccessor" can be found in github.com/insolar/insolar/ledger/storage/blob
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//SyncAccessorMock implements github.com/insolar/insolar/ledger/storage/blob.SyncAccessor
+//SyncAccessorMock implements github.com/insolar/insolar/ledger/storage/blob.CollectionAccessor
 type SyncAccessorMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type SyncAccessorMock struct {
 	ForPNMock       mSyncAccessorMockForPN
 }
 
-//NewSyncAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/blob.SyncAccessor
+//NewSyncAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/blob.CollectionAccessor
 func NewSyncAccessorMock(t minimock.Tester) *SyncAccessorMock {
 	m := &SyncAccessorMock{t: t}
 
@@ -60,7 +60,7 @@ type SyncAccessorMockForPNResult struct {
 	r []Blob
 }
 
-//Expect specifies that invocation of SyncAccessor.ForPN is expected from 1 to Infinity times
+//Expect specifies that invocation of CollectionAccessor.ForPulse is expected from 1 to Infinity times
 func (m *mSyncAccessorMockForPN) Expect(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) *mSyncAccessorMockForPN {
 	m.mock.ForPNFunc = nil
 	m.expectationSeries = nil
@@ -72,7 +72,7 @@ func (m *mSyncAccessorMockForPN) Expect(p context.Context, p1 insolar.JetID, p2 
 	return m
 }
 
-//Return specifies results of invocation of SyncAccessor.ForPN
+//Return specifies results of invocation of CollectionAccessor.ForPulse
 func (m *mSyncAccessorMockForPN) Return(r []Blob) *SyncAccessorMock {
 	m.mock.ForPNFunc = nil
 	m.expectationSeries = nil
@@ -84,7 +84,7 @@ func (m *mSyncAccessorMockForPN) Return(r []Blob) *SyncAccessorMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of SyncAccessor.ForPN is expected once
+//ExpectOnce specifies that invocation of CollectionAccessor.ForPulse is expected once
 func (m *mSyncAccessorMockForPN) ExpectOnce(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) *SyncAccessorMockForPNExpectation {
 	m.mock.ForPNFunc = nil
 	m.mainExpectation = nil
@@ -99,7 +99,7 @@ func (e *SyncAccessorMockForPNExpectation) Return(r []Blob) {
 	e.result = &SyncAccessorMockForPNResult{r}
 }
 
-//Set uses given function f as a mock of SyncAccessor.ForPN method
+//Set uses given function f as a mock of CollectionAccessor.ForPulse method
 func (m *mSyncAccessorMockForPN) Set(f func(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) (r []Blob)) *SyncAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -108,23 +108,23 @@ func (m *mSyncAccessorMockForPN) Set(f func(p context.Context, p1 insolar.JetID,
 	return m.mock
 }
 
-//ForPN implements github.com/insolar/insolar/ledger/storage/blob.SyncAccessor interface
+//ForPulse implements github.com/insolar/insolar/ledger/storage/blob.CollectionAccessor interface
 func (m *SyncAccessorMock) ForPN(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) (r []Blob) {
 	counter := atomic.AddUint64(&m.ForPNPreCounter, 1)
 	defer atomic.AddUint64(&m.ForPNCounter, 1)
 
 	if len(m.ForPNMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.ForPNMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to SyncAccessorMock.ForPN. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to SyncAccessorMock.ForPulse. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.ForPNMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, SyncAccessorMockForPNInput{p, p1, p2}, "SyncAccessor.ForPN got unexpected parameters")
+		testify_assert.Equal(m.t, *input, SyncAccessorMockForPNInput{p, p1, p2}, "CollectionAccessor.ForPulse got unexpected parameters")
 
 		result := m.ForPNMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the SyncAccessorMock.ForPN")
+			m.t.Fatal("No results are set for the SyncAccessorMock.ForPulse")
 			return
 		}
 
@@ -137,12 +137,12 @@ func (m *SyncAccessorMock) ForPN(p context.Context, p1 insolar.JetID, p2 insolar
 
 		input := m.ForPNMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, SyncAccessorMockForPNInput{p, p1, p2}, "SyncAccessor.ForPN got unexpected parameters")
+			testify_assert.Equal(m.t, *input, SyncAccessorMockForPNInput{p, p1, p2}, "CollectionAccessor.ForPulse got unexpected parameters")
 		}
 
 		result := m.ForPNMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the SyncAccessorMock.ForPN")
+			m.t.Fatal("No results are set for the SyncAccessorMock.ForPulse")
 		}
 
 		r = result.r
@@ -151,7 +151,7 @@ func (m *SyncAccessorMock) ForPN(p context.Context, p1 insolar.JetID, p2 insolar
 	}
 
 	if m.ForPNFunc == nil {
-		m.t.Fatalf("Unexpected call to SyncAccessorMock.ForPN. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to SyncAccessorMock.ForPulse. %v %v %v", p, p1, p2)
 		return
 	}
 
@@ -163,7 +163,7 @@ func (m *SyncAccessorMock) ForPNMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ForPNCounter)
 }
 
-//ForPNMinimockPreCounter returns the value of SyncAccessorMock.ForPN invocations
+//ForPNMinimockPreCounter returns the value of SyncAccessorMock.ForPulse invocations
 func (m *SyncAccessorMock) ForPNMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ForPNPreCounter)
 }
@@ -193,7 +193,7 @@ func (m *SyncAccessorMock) ForPNFinished() bool {
 func (m *SyncAccessorMock) ValidateCallCounters() {
 
 	if !m.ForPNFinished() {
-		m.t.Fatal("Expected call to SyncAccessorMock.ForPN")
+		m.t.Fatal("Expected call to SyncAccessorMock.ForPulse")
 	}
 
 }
@@ -214,7 +214,7 @@ func (m *SyncAccessorMock) Finish() {
 func (m *SyncAccessorMock) MinimockFinish() {
 
 	if !m.ForPNFinished() {
-		m.t.Fatal("Expected call to SyncAccessorMock.ForPN")
+		m.t.Fatal("Expected call to SyncAccessorMock.ForPulse")
 	}
 
 }
@@ -241,7 +241,7 @@ func (m *SyncAccessorMock) MinimockWait(timeout time.Duration) {
 		case <-timeoutCh:
 
 			if !m.ForPNFinished() {
-				m.t.Error("Expected call to SyncAccessorMock.ForPN")
+				m.t.Error("Expected call to SyncAccessorMock.ForPulse")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)

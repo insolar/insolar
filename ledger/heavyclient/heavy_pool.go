@@ -37,7 +37,7 @@ type Pool struct {
 	pulseStorage     insolar.PulseStorage
 	pulseTracker     storage.PulseTracker
 	dropAccessor     drop.Accessor
-	blobSyncAccessor blob.SyncAccessor
+	blobSyncAccessor blob.CollectionAccessor
 	replicaStorage   storage.ReplicaStorage
 	cleaner          storage.Cleaner
 	db               storage.DBContext
@@ -57,7 +57,7 @@ func NewPool(
 	tracker storage.PulseTracker,
 	replicaStorage storage.ReplicaStorage,
 	dropAccessor drop.Accessor,
-	blobSyncAccessor blob.SyncAccessor,
+	blobSyncAccessor blob.CollectionAccessor,
 	cleaner storage.Cleaner,
 	db storage.DBContext,
 	clientDefaults Options,

@@ -78,7 +78,7 @@ type PulseManager struct {
 	DropAccessor drop.Accessor `inject:""`
 	DropCleaner  drop.Cleaner
 
-	BlobSyncAccessor blob.SyncAccessor
+	BlobSyncAccessor blob.CollectionAccessor
 
 	BlobCleaner blob.Cleaner
 
@@ -117,7 +117,7 @@ func NewPulseManager(
 	conf configuration.Ledger,
 	dropCleaner drop.Cleaner,
 	blobCleaner blob.Cleaner,
-	blobSyncAccessor blob.SyncAccessor,
+	blobSyncAccessor blob.CollectionAccessor,
 ) *PulseManager {
 	pmconf := conf.PulseManager
 

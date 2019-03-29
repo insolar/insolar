@@ -32,12 +32,12 @@ type Accessor interface {
 	ForID(ctx context.Context, id insolar.ID) (Blob, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.SyncAccessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.CollectionAccessor -o ./ -s _mock.go
 
-// SyncAccessor provides methods for querying blobs with specific search conditions.
-type SyncAccessor interface {
-	// ForPN returns []Blob for a provided jetID and a pulse number.
-	ForPN(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []Blob
+// CollectionAccessor provides methods for querying blobs with specific search conditions.
+type CollectionAccessor interface {
+	// ForPulse returns []Blob for a provided jetID and a pulse number.
+	ForPulse(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []Blob
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Modifier -o ./ -s _mock.go

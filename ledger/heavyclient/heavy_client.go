@@ -50,7 +50,7 @@ type JetClient struct {
 	cleaner          storage.Cleaner
 	db               storage.DBContext
 	dropAccessor     drop.Accessor
-	blobSyncAccessor blob.SyncAccessor
+	blobSyncAccessor blob.CollectionAccessor
 
 	opts Options
 
@@ -78,7 +78,7 @@ func NewJetClient(
 	pulseStorage insolar.PulseStorage,
 	pulseTracker storage.PulseTracker,
 	dropAccessor drop.Accessor,
-	blobSyncAccessor blob.SyncAccessor,
+	blobSyncAccessor blob.CollectionAccessor,
 	cleaner storage.Cleaner,
 	db storage.DBContext,
 	jetID insolar.ID,

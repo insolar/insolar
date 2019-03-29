@@ -85,7 +85,7 @@ func (s *StorageMemory) Set(ctx context.Context, id insolar.ID, blob Blob) error
 	return nil
 }
 
-// ForPN returns []Blob for a provided jetID and a pulse number.
+// ForPulse returns []Blob for a provided jetID and a pulse number.
 func (s *StorageMemory) ForPN(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []Blob {
 	s.lock.RLock()
 	defer s.lock.RUnlock()

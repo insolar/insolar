@@ -58,7 +58,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	var blobCleaner blob.Cleaner
 	var blobModifier blob.Modifier
 	var blobAccessor blob.Accessor
-	var blobSyncAccessor blob.SyncAccessor
+	var blobSyncAccessor blob.CollectionAccessor
 
 	// TODO: @imarkin 18.02.18 - Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
 	switch certificate.GetRole() {

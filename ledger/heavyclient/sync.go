@@ -85,7 +85,7 @@ func (c *JetClient) HeavySync(
 		return err
 	}
 
-	bls := c.blobSyncAccessor.ForPN(ctx, jetID, pn)
+	bls := c.blobSyncAccessor.ForPulse(ctx, jetID, pn)
 	if err != nil {
 		inslog.Error("synchronize: can't fetch a drop")
 		return err
