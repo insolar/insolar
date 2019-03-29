@@ -75,8 +75,8 @@ func newWorker(slot *Slot) worker {
 	return w
 }
 
-func (w *worker) GetStateMachineByType(mType matrix.MachineType) matrix.StateMachine {
-	return w.slot.handlersConfiguration.pulseStateMachines.GetStateMachineByID(int(mType))
+func (w *worker) GetStateMachineByType(mType fsm.ID) matrix.StateMachine {
+	return w.slot.handlersConfiguration.pulseStateMachines.GetStateMachineByID(mType)
 }
 
 func (w *worker) setLoggerFields() {
@@ -190,7 +190,7 @@ func (w *worker) updateElement(element *slotElement, payload interface{}, fullSt
 		sm, state := fullState.Parse()
 		machineType := element.stateMachine
 		if sm != 0 {
-			machineType = w.GetStateMachineByType(matrix.MachineType(sm))
+			machineType = w.GetStateMachineByType(sm)
 		}
 		element.update(state, payload, machineType)
 		return
