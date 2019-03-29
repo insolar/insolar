@@ -35,8 +35,7 @@ import (
 func TestRecord_Components(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	memStorage := object.NewRecordMemory()
-	dbStorage := object.NewRecordDB()
-	dbStorage.DB = db.NewMemoryMockDB()
+	dbStorage := object.NewRecordDB(db.NewMemoryMockDB())
 
 	type tempRecord struct {
 		id  insolar.ID
@@ -94,8 +93,7 @@ func TestRecord_Components(t *testing.T) {
 		t.Parallel()
 
 		memStorage := object.NewRecordMemory()
-		dbStorage := object.NewRecordDB()
-		dbStorage.DB = db.NewMemoryMockDB()
+		dbStorage := object.NewRecordDB(db.NewMemoryMockDB())
 
 		for _, r := range records {
 			memErr := memStorage.Set(ctx, r.id, r.rec)
