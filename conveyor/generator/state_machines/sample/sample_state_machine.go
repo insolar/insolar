@@ -61,7 +61,10 @@ func initFutureHandler(ctx context.Context, helper fsm.SlotElementHelper, input 
 
 func transitPresentFirst(ctx context.Context, helper fsm.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper adapter.SendResponseHelper) fsm.ElementState {
 	helper.DeactivateTill(fsm.Response)
-	adapterHelper.SendResponse(helper, &TestResult{}, uint32(StateFirst))
+	err := adapterHelper.SendResponse(helper, &TestResult{}, uint32(StateFirst))
+	if err != nil {
+		panic(err)
+	}
 	return StateSecond
 }
 
