@@ -77,9 +77,8 @@ func NewPulsar() Pulsar {
 
 		NumberDelta: 10,
 		DistributionTransport: Transport{
-			Protocol:  "TCP",
-			Address:   "0.0.0.0:18091",
-			BehindNAT: false,
+			Protocol: "TCP",
+			Address:  "0.0.0.0:18091",
 		},
 		PulseDistributor: PulseDistributor{
 			BootstrapHosts:            []string{"localhost:53837"},

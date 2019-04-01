@@ -135,7 +135,7 @@ func newMockResolver() *MockResolver {
 
 func mockConfiguration(address string) configuration.Configuration {
 	result := configuration.Configuration{}
-	result.Host.Transport = configuration.Transport{Protocol: "TCP", Address: address, BehindNAT: false}
+	result.Host.Transport = configuration.Transport{Protocol: "TCP", Address: address}
 	return result
 }
 

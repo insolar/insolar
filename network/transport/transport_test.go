@@ -191,15 +191,15 @@ func (t *transportSuite) TestSendBigPacket() {
 // }
 
 // func TestUDPTransport(t *testing.T) {
-// 	cfg1 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17014", BehindNAT: false}
-// 	cfg2 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17015", BehindNAT: false}
+// 	cfg1 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17014"}
+// 	cfg2 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17015"}
 //
 // 	suite.Run(t, NewConsensusSuite(cfg1, cfg2))
 // }
 
 func TestTCPTransport(t *testing.T) {
-	cfg1 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17016", BehindNAT: false}
-	cfg2 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17017", BehindNAT: false}
+	cfg1 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17016"}
+	cfg2 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17017"}
 
 	suite.Run(t, NewSuite(cfg1, cfg2))
 }
@@ -207,8 +207,8 @@ func TestTCPTransport(t *testing.T) {
 func TestQuicTransport(t *testing.T) {
 	t.Skip("QUIC internals racing atm. Skip until we want to use it in production")
 
-	cfg1 := configuration.Transport{Protocol: "QUIC", Address: "127.0.0.1:17018", BehindNAT: false}
-	cfg2 := configuration.Transport{Protocol: "QUIC", Address: "127.0.0.1:17019", BehindNAT: false}
+	cfg1 := configuration.Transport{Protocol: "QUIC", Address: "127.0.0.1:17018"}
+	cfg2 := configuration.Transport{Protocol: "QUIC", Address: "127.0.0.1:17019"}
 
 	suite.Run(t, NewSuite(cfg1, cfg2))
 }
@@ -216,12 +216,12 @@ func TestQuicTransport(t *testing.T) {
 func Test_createResolver(t *testing.T) {
 	a := assert.New(t)
 
-	cfg1 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17018", BehindNAT: false, FixedPublicAddress: "192.168.0.1"}
+	cfg1 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17018", FixedPublicAddress: "192.168.0.1"}
 	r, err := createResolver(cfg1)
 	a.NoError(err)
 	a.IsType(resolver.NewFixedAddressResolver(""), r)
 
-	cfg3 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17018", BehindNAT: false, FixedPublicAddress: ""}
+	cfg3 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17018", FixedPublicAddress: ""}
 	r, err = createResolver(cfg3)
 	a.NoError(err)
 	a.IsType(resolver.NewExactResolver(), r)
