@@ -75,9 +75,8 @@ type TestPulsar interface {
 
 func NewTestPulsar(pulseTimeMs, requestsTimeoutMs, pulseDelta int32) (TestPulsar, error) {
 	transportCfg := configuration.Transport{
-		Protocol:  "TCP",
-		Address:   "127.0.0.1:0",
-		BehindNAT: false,
+		Protocol: "TCP",
+		Address:  "127.0.0.1:0",
 	}
 	tp, err := transport.NewTransport(transportCfg, relay.NewProxy())
 	if err != nil {

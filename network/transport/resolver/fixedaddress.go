@@ -72,19 +72,18 @@ func newFixedAddressResolver(publicAddress string) *fixedAddressResolver {
 	}
 }
 
-func (r *fixedAddressResolver) Resolve(conn net.PacketConn) (string, error) {
-	urlString := conn.LocalAddr().String()
-	url, err := url.Parse(urlString)
+func (r *fixedAddressResolver) Resolve(address string) (string, error) {
+	url, err := url.Parse(address)
 
 	var port string
 	if err != nil {
-		_, port, _ = net.SplitHostPort(urlString)
+		_, port, _ = net.SplitHostPort(address)
 	} else {
 		port = url.Port()
 	}
 
 	if port == "" {
-		return "", errors.New("Failed to extract port from uri: " + urlString)
+		return "", errors.New("Failed to extract port from uri: " + address)
 	}
 	return fmt.Sprintf("%s:%s", r.publicAddress, port), nil
 }

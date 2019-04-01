@@ -57,6 +57,10 @@ import (
 	"testing"
 	"time"
 
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
@@ -64,9 +68,6 @@ import (
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -135,7 +136,7 @@ func newMockResolver() *MockResolver {
 
 func mockConfiguration(address string) configuration.Configuration {
 	result := configuration.Configuration{}
-	result.Host.Transport = configuration.Transport{Protocol: "TCP", Address: address, BehindNAT: false}
+	result.Host.Transport = configuration.Transport{Protocol: "TCP", Address: address}
 	return result
 }
 
@@ -221,13 +222,12 @@ func TestNewHostTransport(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Transport.Start(ctx2)
-	t1.Transport.Start(ctx)
-
-	defer func() {
-		t1.Transport.Stop(ctx)
-		t2.Transport.Stop(ctx2)
-	}()
+	err = t2.Transport.Start(ctx2)
+	assert.NoError(t, err)
+	defer t2.Transport.Stop(ctx2)
+	err = t1.Transport.Start(ctx)
+	assert.NoError(t, err)
+	defer t1.Transport.Stop(ctx)
 
 	for i := 0; i < count; i++ {
 		request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
@@ -236,8 +236,7 @@ func TestNewHostTransport(t *testing.T) {
 		_, err = t1.SendRequest(ctx, request, *ref)
 		require.NoError(t, err)
 	}
-	success := utils.WaitTimeout(&wg, time.Second)
-	require.True(t, success)
+	wg.Wait()
 }
 
 func TestHostTransport_SendRequestPacket(t *testing.T) {
@@ -308,8 +307,7 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 	require.NoError(t, err)
 	_, err = t1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
-	success := utils.WaitTimeout(&wg, time.Second)
-	require.True(t, success)
+	wg.Wait()
 }
 
 func TestHostTransport_SendRequestPacket3(t *testing.T) {
@@ -425,7 +423,7 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 	require.NoError(t, err)
 
 	// should timeout because there is no handler set for Ping packet
-	result := utils.WaitTimeout(&wg, time.Millisecond*10)
+	result := utils.WaitTimeout(&wg, time.Millisecond*100)
 	require.False(t, result)
 }
 
@@ -440,4 +438,63 @@ func TestDoubleStart(t *testing.T) {
 	assert.Error(t, err)
 
 	tp.Stop(ctx)
+}
+
+func TestStartStop(t *testing.T) {
+	ctx := context.Background()
+	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
+	require.NoError(t, err)
+
+	err = tp.Start(ctx)
+	assert.NoError(t, err)
+	defer tp.Stop(ctx)
+
+	err = tp.Stop(ctx)
+	assert.NoError(t, err)
+	err = tp.Start(ctx)
+	assert.NoError(t, err)
+}
+
+func TestStartStopSend(t *testing.T) {
+	t1, t2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
+	require.NoError(t, err)
+	ctx := context.Background()
+	ctx2 := context.Background()
+
+	err = t2.Transport.Start(ctx2)
+	require.NoError(t, err)
+	defer t2.Transport.Stop(ctx2)
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+
+	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+		log.Info("handler triggered")
+		wg.Done()
+		return t2.BuildResponse(ctx, r, nil), nil
+	}
+	t2.RegisterRequestHandler(types.Ping, handler)
+
+	err = t1.Transport.Start(ctx)
+	require.NoError(t, err)
+
+	send := func() {
+		request := t1.NewRequestBuilder().Type(types.Ping).Build()
+		ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
+		require.NoError(t, err)
+		f, err := t1.SendRequest(ctx, request, *ref)
+		require.NoError(t, err)
+		<-f.Response()
+	}
+
+	send()
+
+	err = t1.Transport.Stop(ctx)
+	require.NoError(t, err)
+	err = t1.Transport.Start(ctx)
+	require.NoError(t, err)
+
+	send()
+	wg.Wait()
+	t1.Transport.Stop(ctx)
 }
