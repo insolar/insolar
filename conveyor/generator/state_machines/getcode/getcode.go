@@ -14,23 +14,34 @@
  *    limitations under the License.
  */
 
-package main
+package getcode
 
 import (
+	"context"
+
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/generator"
-	"github.com/insolar/insolar/conveyor/generator/state_machines/get_object"
-	"github.com/insolar/insolar/conveyor/generator/state_machines/getcode"
-	"github.com/insolar/insolar/conveyor/generator/state_machines/initial"
-	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
+	"github.com/insolar/insolar/insolar"
 )
 
-func main() {
-	gen := generator.NewGenerator()
-	getobject.Register(gen)
-	sample.Register(gen)
-	initial.Register(gen)
-	getcode.Register(gen)
-	gen.CheckAllMachines()
-	gen.GenerateStateMachines()
-	gen.GenerateMatrix()
+const (
+	InitState fsm.ElementState = iota
+	GetingCode
+)
+
+type GetCodePayload struct {
+	reply insolar.Reply
+	err   error
+}
+
+// Register adds init state machine to generator
+func Register(g *generator.Generator) {
+	g.AddMachine("GetCode").
+		InitFuture(ParseInputEvent).
+		Init(ParseInputEvent)
+}
+
+// ParseInputEvent parse input ivent
+func ParseInputEvent(ctx context.Context, helper fsm.SlotElementHelper, input interface{}, payload interface{}) (fsm.ElementState, interface{}) {
+	return GetingCode, payload
 }
