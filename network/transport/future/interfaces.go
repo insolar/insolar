@@ -48,49 +48,28 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package transport
+package future
 
 import (
-	"sync"
+	"context"
 
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
-type futureManagerImpl struct {
-	mutex   sync.RWMutex
-	futures map[network.RequestID]Future
+type FutureManager interface {
+	Get(msg *packet.Packet) Future
+	Create(msg *packet.Packet) Future
 }
 
-func newFutureManagerImpl() *futureManagerImpl {
-	return &futureManagerImpl{
-		futures: make(map[network.RequestID]Future),
-	}
+func NewFutureManager() FutureManager {
+	return newFutureManagerImpl()
 }
 
-func (fm *futureManagerImpl) Create(msg *packet.Packet) Future {
-	future := NewFuture(msg.RequestID, msg.Receiver, msg, func(f Future) {
-		fm.delete(f.ID())
-	})
-
-	fm.mutex.Lock()
-	defer fm.mutex.Unlock()
-
-	fm.futures[msg.RequestID] = future
-
-	return future
+type PacketHandler interface {
+	Handle(ctx context.Context, msg *packet.Packet)
+	Received() <-chan *packet.Packet
 }
 
-func (fm *futureManagerImpl) Get(msg *packet.Packet) Future {
-	fm.mutex.RLock()
-	defer fm.mutex.RUnlock()
-
-	return fm.futures[msg.RequestID]
-}
-
-func (fm *futureManagerImpl) delete(id network.RequestID) {
-	fm.mutex.Lock()
-	defer fm.mutex.Unlock()
-
-	delete(fm.futures, id)
+func NewPacketHandler(futureManager FutureManager) PacketHandler {
+	return newPacketHandlerImpl(futureManager)
 }

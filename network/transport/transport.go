@@ -59,6 +59,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
+	"github.com/insolar/insolar/network/transport/future"
 
 	"github.com/pkg/errors"
 )
@@ -66,7 +67,7 @@ import (
 // Transport is an interface for network transport.
 type Transport interface {
 	// SendRequest sends packet to destination. Sequence number is generated automatically.
-	SendRequest(context.Context, *packet.Packet) (Future, error)
+	SendRequest(context.Context, *packet.Packet) (future.Future, error)
 
 	// SendResponse sends response packet for request with passed request id.
 	SendResponse(context.Context, network.RequestID, *packet.Packet) error

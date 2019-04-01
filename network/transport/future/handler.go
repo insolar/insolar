@@ -48,28 +48,71 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package transport
+package future
 
 import (
 	"context"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
-type futureManager interface {
-	Get(msg *packet.Packet) Future
-	Create(msg *packet.Packet) Future
+type packetHandlerImpl struct {
+	futureManager FutureManager
+
+	received chan *packet.Packet
 }
 
-func newFutureManager() futureManager {
-	return newFutureManagerImpl()
+func newPacketHandlerImpl(futureManager FutureManager) *packetHandlerImpl {
+	return &packetHandlerImpl{
+		futureManager: futureManager,
+		received:      make(chan *packet.Packet),
+	}
 }
 
-type packetHandler interface {
-	Handle(ctx context.Context, msg *packet.Packet)
-	Received() <-chan *packet.Packet
+func (ph *packetHandlerImpl) Handle(ctx context.Context, msg *packet.Packet) {
+	metrics.NetworkPacketReceivedTotal.WithLabelValues(msg.Type.String()).Inc()
+	if msg.IsResponse {
+		ph.processResponse(ctx, msg)
+		return
+	}
+
+	ph.processRequest(ctx, msg)
 }
 
-func newPacketHandler(futureManager futureManager) packetHandler {
-	return newPacketHandlerImpl(futureManager)
+func (ph *packetHandlerImpl) Received() <-chan *packet.Packet {
+	return ph.received
+}
+
+func (ph *packetHandlerImpl) processResponse(ctx context.Context, msg *packet.Packet) {
+	logger := inslogger.FromContext(ctx)
+
+	logger.Debugf("[ processResponse ] Process response %s from %s with RequestID = %d", msg.Type, msg.RemoteAddress, msg.RequestID)
+
+	future := ph.futureManager.Get(msg)
+	if future != nil {
+		if shouldProcessPacket(future, msg) {
+			logger.Debugf("[ processResponse ] Processing future with RequestID = %v", msg.RequestID)
+			future.SetResult(msg)
+		} else {
+			logger.Debugf("[ processResponse ] Canceling future with RequestID = %v", msg.RequestID)
+		}
+		future.Cancel()
+	}
+}
+
+func (ph *packetHandlerImpl) processRequest(ctx context.Context, msg *packet.Packet) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("[ processRequest ] Process request %s from %s with RequestID = %d", msg.Type, msg.RemoteAddress, msg.RequestID)
+
+	ph.received <- msg
+}
+
+func shouldProcessPacket(future Future, msg *packet.Packet) bool {
+	typesShouldBeEqual := msg.Type == future.Request().Type
+	responseIsForRightSender := future.Actor().Equal(*msg.Sender)
+
+	return typesShouldBeEqual && (responseIsForRightSender || msg.Type == types.Ping)
 }

@@ -69,6 +69,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
+	future2 "github.com/insolar/insolar/network/transport/future"
 )
 
 type hostTransport struct {
@@ -99,12 +100,12 @@ func (p *packetWrapper) GetRequestID() network.RequestID {
 }
 
 type future struct {
-	transport.Future
+	future2.Future
 }
 
 // Response get channel that receives response to sent request
 func (f future) Response() <-chan network.Response {
-	in := transport.Future(f).Result()
+	in := future2.Future(f).Result()
 	out := make(chan network.Response, cap(in))
 	go func(in <-chan *packet.Packet, out chan<- network.Response) {
 		for packet := range in {
@@ -126,7 +127,7 @@ func (f future) GetResponse(duration time.Duration) (network.Response, error) {
 
 // GetRequest get initiating request.
 func (f future) GetRequest() network.Request {
-	request := transport.Future(f).Request()
+	request := future2.Future(f).Request()
 	return (*packetWrapper)(request)
 }
 
