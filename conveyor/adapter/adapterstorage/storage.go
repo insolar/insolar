@@ -21,7 +21,6 @@ import (
 
 	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
-	"github.com/insolar/insolar/ledger/artifactmanager"
 )
 
 // Storage contains all adapters
@@ -69,7 +68,8 @@ func init() {
 	Manager = NewEmptyStorage()
 
 	addAdapter(adapter.NewSendResponseProcessor, adapterid.SendResponse)
-	addAdapter(artifactmanager.NewGetCodeProcessor, adapterid.GetCode)
+	// TODO: we need to divide all adapter into groups for different node Roles
+	//addAdapter(artifactmanager.NewGetCodeProcessor, adapterid.GetCode)
 	addAdapter(adapter.NewNodeStateProcessor, adapterid.NodeState)
 }
 
