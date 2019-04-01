@@ -49,6 +49,9 @@ func (rs *NodeStateProcessor) Process(task AdapterTask, nestedEventHelper Nested
 		return nil
 	}
 
+	log.Errorf(">>>>>>>>>>>>>: %+v", rs.PlatformCryptographyScheme)
+	log.Errorf(">>>>>>>>>>>>>++++: %+v", rs.PlatformCryptographyScheme.IntegrityHasher())
+
 	// TODO: calculate node state hash with info about pulse, for now - just return 1,2,3
 	res := rs.PlatformCryptographyScheme.IntegrityHasher().Hash([]byte{1, 2, 3})
 
