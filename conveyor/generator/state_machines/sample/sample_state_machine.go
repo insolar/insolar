@@ -19,7 +19,7 @@ package sample
 import (
 	"context"
 
-	"github.com/insolar/insolar/conveyor/adapter"
+	a "github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/generator"
 	"github.com/insolar/insolar/insolar"
@@ -59,7 +59,7 @@ func initFutureHandler(ctx context.Context, helper fsm.SlotElementHelper, input 
 	panic("implement me")
 }
 
-func transitPresentFirst(ctx context.Context, helper fsm.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper adapter.SendResponseHelper) fsm.ElementState {
+func transitPresentFirst(ctx context.Context, helper fsm.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper a.SendResponseHelper) fsm.ElementState {
 	helper.DeactivateTill(fsm.Response)
 	err := adapterHelper.SendResponse(helper, &TestResult{}, uint32(StateFirst))
 	if err != nil {

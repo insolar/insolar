@@ -95,7 +95,9 @@ func newInitHandler(machine *StateMachine, f interface{}, states []fsm.ElementSt
 
 func (h *handler) GetResponseAdapterType() string {
 	const ResponseAdapterParamIndex = 4
-	return h.params[ResponseAdapterParamIndex]
+	responseAdapterParam := h.params[ResponseAdapterParamIndex]
+	h.machine.setImportFor(h.params[ResponseAdapterParamIndex])
+	return responseAdapterParam
 }
 
 func (h *handler) GetAdapterHelperType() *string {
