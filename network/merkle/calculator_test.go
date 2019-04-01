@@ -55,13 +55,14 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/insolar/insolar/testutils"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils/nodekeeper"
-	"github.com/insolar/insolar/testutils/terminationhandler"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -167,7 +168,7 @@ func TestCalculator(t *testing.T) {
 	service := cryptography.NewKeyBoundCryptographyService(key)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	nk := nodekeeper.GetTestNodekeeper(service)
-	th := terminationhandler.NewTestHandler()
+	th := testutils.NewTerminationHandlerMock(t)
 
 	am := staterMock{
 		stateFunc: func() (r []byte, r1 error) {

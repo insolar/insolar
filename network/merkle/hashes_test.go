@@ -63,7 +63,6 @@ import (
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/nodekeeper"
-	"github.com/insolar/insolar/testutils/terminationhandler"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -176,7 +175,7 @@ func TestCalculatorHashes(t *testing.T) {
 	}
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	nk := nodekeeper.GetTestNodekeeper(service)
-	th := terminationhandler.NewTestHandler()
+	th := testutils.NewTerminationHandlerMock(t)
 
 	cm := component.Manager{}
 	cm.Inject(th, nk, &am, calculator, service, scheme)
