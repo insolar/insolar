@@ -21,6 +21,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/insolar/record"
+
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -884,7 +886,7 @@ func (m *client) updateObject(
 
 func (m *client) setRecord(
 	ctx context.Context,
-	rec object.VirtualRecord,
+	rec record.VirtualRecord,
 	target insolar.Reference,
 	currentPN insolar.PulseNumber,
 ) (*insolar.ID, error) {
@@ -940,7 +942,7 @@ func (m *client) setBlob(
 
 func (m *client) sendUpdateObject(
 	ctx context.Context,
-	rec object.VirtualRecord,
+	rec record.VirtualRecord,
 	obj insolar.Reference,
 	memory []byte,
 	currentPN insolar.PulseNumber,
@@ -971,7 +973,7 @@ func (m *client) sendUpdateObject(
 
 func (m *client) registerChild(
 	ctx context.Context,
-	rec object.VirtualRecord,
+	rec record.VirtualRecord,
 	parent insolar.Reference,
 	child insolar.Reference,
 	asType *insolar.Reference,

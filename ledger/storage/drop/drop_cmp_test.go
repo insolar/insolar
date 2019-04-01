@@ -20,12 +20,12 @@ import (
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/db"
 )
 
 type jetPulse struct {
@@ -76,8 +76,7 @@ func TestDropStorageMemory(t *testing.T) {
 
 func TestDropStorageDB(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	ds := NewStorageDB()
-	ds.DB = db.NewMemoryMockDB()
+	ds := NewStorageDB(store.NewMemoryMockDB())
 
 	var drops []Drop
 	genInputs := map[jetPulse]struct{}{}
@@ -108,8 +107,7 @@ func TestDropStorageDB(t *testing.T) {
 func TestDropStorageCompare(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	ds := NewStorageDB()
-	ds.DB = db.NewMemoryMockDB()
+	ds := NewStorageDB(store.NewMemoryMockDB())
 	ms := NewStorageMemory()
 
 	var drops []Drop

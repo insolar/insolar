@@ -34,6 +34,6 @@ local utils = params.utils;
 	"keyspath": "/opt/insolar/config/bootstrap_keys.json",
 	"log": {
 		"level": "Debug",
-		"adapter": "logrus"
+		"adapter": "zerolog"
 	}
 }

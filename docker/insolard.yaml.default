@@ -14,7 +14,7 @@ service:
   skip: 10
 log:
   level: Debug
-  adapter: logrus
+  adapter: zerolog
   formatter: text
 metrics:
   listenaddress: ""

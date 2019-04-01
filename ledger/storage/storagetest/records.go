@@ -41,17 +41,6 @@ func AddRandIndex(
 	return &parentID, err
 }
 
-// AddRandBlob adds random blob.
-func AddRandBlob(
-	ctx context.Context,
-	objectStorage storage.ObjectStorage,
-	jetID insolar.ID,
-	pulsenum insolar.PulseNumber,
-) (*insolar.ID, error) {
-	randID := testutils.RandomID()
-	return objectStorage.SetBlob(ctx, jetID, pulsenum, randID[:])
-}
-
 // AddRandRecord adds random record.
 func AddRandRecord(
 	ctx context.Context,

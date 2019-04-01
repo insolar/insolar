@@ -70,7 +70,9 @@ func (a *Accessor) GetActiveNodeByShortID(shortID insolar.ShortNodeID) insolar.N
 }
 
 func (a *Accessor) GetActiveNodes() []insolar.NetworkNode {
-	return a.active
+	result := make([]insolar.NetworkNode, len(a.active))
+	copy(result, a.active)
+	return result
 }
 
 func (a *Accessor) GetActiveNode(ref insolar.Reference) insolar.NetworkNode {
@@ -110,14 +112,13 @@ func GetSnapshotActiveNodes(snapshot *Snapshot) []insolar.NetworkNode {
 	copy(result[len(joining):len(joining)+len(working)], working[:])
 	copy(result[len(joining)+len(working):], leaving[:])
 
-	sort.Slice(result, func(i, j int) bool {
-		return result[i].ID().Compare(result[j].ID()) < 0
-	})
-
 	return result
 }
 
-func (a *Accessor) addToRoleIndex(node insolar.NetworkNode) {
+func (a *Accessor) addToIndex(node insolar.NetworkNode) {
+	a.refIndex[node.ID()] = node
+	a.sidIndex[node.ShortID()] = node
+
 	if node.GetState() != insolar.NodeReady {
 		return
 	}
@@ -140,11 +141,7 @@ func NewAccessor(snapshot *Snapshot) *Accessor {
 	}
 	result.active = GetSnapshotActiveNodes(snapshot)
 	for _, node := range result.active {
-		result.refIndex[node.ID()] = node
-		result.sidIndex[node.ShortID()] = node
-		if node.GetState() == insolar.NodeReady {
-			result.addToRoleIndex(node)
-		}
+		result.addToIndex(node)
 	}
 	return result
 }

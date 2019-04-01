@@ -37,8 +37,6 @@ type IDLocker interface {
 }
 
 // IDLocker provides Lock/Unlock methods per record ID.
-//
-// TODO: for further optimization we could use sync.Pool for mutexes.
 type idLocker struct {
 	mu   sync.Mutex
 	muxs map[insolar.ID]*mucount
