@@ -18,10 +18,12 @@ package storagetest
 
 import (
 	"context"
+	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -32,7 +34,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -78,26 +79,28 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 
 	cm := &component.Manager{}
 
+	objectStorage := storage.NewObjectStorage()
+	pulseTracker := storage.NewPulseTracker()
+	dropModifier := drop.NewStorageDB()
+
 	recordStorage := object.NewRecordMemory()
 	recordAccessor := recordStorage
 	recordModifier := recordStorage
+
+	ptr := fmt.Sprintf("%p", recordStorage)
+	_ = ptr
 
 	cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
 		tmpDB,
 		jet.NewStore(),
 		db.NewMemoryMockDB(),
-		storage.NewObjectStorage(),
-		drop.NewStorageDB(),
-		storage.NewPulseTracker(),
+		objectStorage,
+		dropModifier,
+		pulseTracker,
 		recordAccessor,
 		recordModifier,
 	)
-
-	if !opts.nobootstrap {
-		gi := genesis.NewGenesisInitializer()
-		cm.Inject(gi)
-	}
 
 	err = cm.Init(ctx)
 	if err != nil {
@@ -106,6 +109,17 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 	err = cm.Start(ctx)
 	if err != nil {
 		t.Error("ComponentManager start failed", err)
+	}
+
+	if !opts.nobootstrap {
+		gi := genesis.NewGenesisInitializer()
+		gi.(*genesis.GenesisInitializer).DB = tmpDB
+		gi.(*genesis.GenesisInitializer).ObjectStorage = objectStorage
+		gi.(*genesis.GenesisInitializer).PulseTracker = pulseTracker
+		gi.(*genesis.GenesisInitializer).DropModifier = dropModifier
+		gi.(*genesis.GenesisInitializer).RecordModifier = recordModifier
+		gi.(*genesis.GenesisInitializer).PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
+		// gi.Init(ctx)
 	}
 
 	return tmpDB, func() {

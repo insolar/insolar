@@ -89,7 +89,20 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	dropStorage := drop.NewStorageDB()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
-	s.genesisState = genesis.NewGenesisInitializer()
+
+	recordStorage := object.NewRecordMemory()
+
+	recordModifier := recordStorage
+
+	gi := genesis.NewGenesisInitializer()
+	gi.(*genesis.GenesisInitializer).DB = tempDB
+	gi.(*genesis.GenesisInitializer).ObjectStorage = s.objectStorage
+	gi.(*genesis.GenesisInitializer).PulseTracker = s.pulseTracker
+	gi.(*genesis.GenesisInitializer).DropModifier = s.dropModifier
+	gi.(*genesis.GenesisInitializer).RecordModifier = recordModifier
+	gi.(*genesis.GenesisInitializer).PlatformCryptographyScheme = s.scheme
+
+	s.genesisState = gi
 
 	s.cm.Inject(
 		s.scheme,
@@ -101,7 +114,7 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 		s.objectStorage,
 		s.dropAccessor,
 		s.dropModifier,
-		s.genesisState,
+		// s.genesisState,
 	)
 
 	err := s.cm.Init(s.ctx)
@@ -112,6 +125,8 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	if err != nil {
 		s.T().Error("ComponentManager start failed", err)
 	}
+
+	s.genesisState.Init(s.ctx)
 }
 
 func (s *amSuite) AfterTest(suiteName, testName string) {

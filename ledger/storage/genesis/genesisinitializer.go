@@ -18,6 +18,7 @@ package genesis
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/pkg/errors"
@@ -35,7 +36,7 @@ type State interface {
 	GenesisRef() *insolar.Reference
 }
 
-type genesisInitializer struct {
+type GenesisInitializer struct {
 	DB storage.DBContext `inject:""`
 
 	insolar.PlatformCryptographyScheme `inject:""`
@@ -52,17 +53,17 @@ type genesisInitializer struct {
 }
 
 func NewGenesisInitializer() State {
-	return new(genesisInitializer)
+	return new(GenesisInitializer)
 }
 
 // GenesisRef returns the genesis record reference.
 //
 // Genesis record is the parent for all top-level records.
-func (gi *genesisInitializer) GenesisRef() *insolar.Reference {
+func (gi *GenesisInitializer) GenesisRef() *insolar.Reference {
 	return gi.genesisRef
 }
 
-func (gi *genesisInitializer) Init(ctx context.Context) error {
+func (gi *GenesisInitializer) Init(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("start storage bootstrap")
 	jetID := *insolar.NewJetID(0, nil)
@@ -109,6 +110,12 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
+
+		idStr := genesisID.DebugString()
+
+		ptr := fmt.Sprintf("%p", gi.RecordModifier)
+		_ = idStr
+		_ = ptr
 
 		err = gi.ObjectStorage.SetObjectIndex(
 			ctx,

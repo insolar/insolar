@@ -439,6 +439,11 @@ func (h *MessageHandler) handleGetObject(
 		stateJet = actualJet
 	}
 
+	idStr := stateID.DebugString()
+	ptr := fmt.Sprintf("%p", h.RecordModifier)
+	_ = idStr
+	_ = ptr
+
 	// Fetch state record.
 	rec, err := h.RecordAccessor.ForID(ctx, *stateID)
 

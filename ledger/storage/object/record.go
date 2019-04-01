@@ -18,8 +18,9 @@ package object
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar/record"
 	"sync"
+
+	"github.com/insolar/insolar/insolar/record"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/db"
@@ -118,7 +119,7 @@ func (m *RecordMemory) ForID(ctx context.Context, id insolar.ID) (rec record.Mat
 
 // RecordDB is a DB storage implementation. It saves records to disk and does not allow removal.
 type RecordDB struct {
-	DB   db.DB `inject:""`
+	DB   db.DB
 	lock sync.RWMutex
 }
 
@@ -134,8 +135,10 @@ func (k recordKey) ID() []byte {
 }
 
 // NewRecordDB creates new DB storage instance.
-func NewRecordDB() *RecordDB {
-	return &RecordDB{}
+func NewRecordDB(db db.DB) *RecordDB {
+	return &RecordDB{
+		DB: db,
+	}
 }
 
 // Set saves new record-value in storage.

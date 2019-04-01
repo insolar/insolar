@@ -89,9 +89,9 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	tmpDB, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
+	// memoryMockDB := db.NewMemoryMockDB()
 
 	cm := &component.Manager{}
-	gi := genesis.NewGenesisInitializer()
 	pt := storage.NewPulseTracker()
 	ps := storage.NewPulseStorage()
 	js := jet.NewStore()
@@ -100,8 +100,8 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	ds := drop.NewStorageDB()
 	rs := storage.NewReplicaStorage()
 	cl := storage.NewCleaner()
-
 	recordStorage := object.NewRecordMemory()
+
 	recordAccessor := recordStorage
 	recordModifier := recordStorage
 
@@ -136,6 +136,14 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(networknode.NewNode(insolar.Reference{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
+	gi := genesis.NewGenesisInitializer()
+	gi.(*genesis.GenesisInitializer).DB = tmpDB
+	gi.(*genesis.GenesisInitializer).ObjectStorage = os
+	gi.(*genesis.GenesisInitializer).PulseTracker = pt
+	gi.(*genesis.GenesisInitializer).DropModifier = ds
+	gi.(*genesis.GenesisInitializer).RecordModifier = recordModifier
+	gi.(*genesis.GenesisInitializer).PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
+
 	handler := artifactmanager.NewMessageHandler(&conf)
 	handler.PulseTracker = pt
 	handler.JetStorage = js
@@ -168,10 +176,12 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 		pt,
 		ps,
 		ds,
-		gi,
+		// gi,
 		am,
 		rs,
 		cl,
+		recordAccessor,
+		recordModifier,
 	)
 
 	err := cm.Init(ctx)
@@ -182,6 +192,8 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	if err != nil {
 		t.Error("ComponentManager start failed", err)
 	}
+
+	gi.Init(ctx)
 
 	pulse, err := pt.GetLatestPulse(ctx)
 	require.NoError(t, err)
