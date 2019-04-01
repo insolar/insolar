@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
+	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
 )
 
@@ -62,5 +63,7 @@ func TestStorage_RegisterDuplicatingID(t *testing.T) {
 }
 
 func TestStorage_GetAllProcessors(t *testing.T) {
-	require.Equal(t, len(Manager.adapters), len(GetAllProcessors()))
+	processors := len(GetAllProcessors(insolar.StaticRoleUnknown))
+	adapters := len(Manager.adapters)
+	require.Equal(t, adapters, processors)
 }

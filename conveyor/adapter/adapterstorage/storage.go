@@ -92,8 +92,14 @@ func registerAdaptersForLight() {
 func registerAdaptersForVirtual() {
 }
 
+var isAllRegistered = false
+
 // GetAllProcessors is used for component manager
 func GetAllProcessors(role insolar.StaticRole) []interface{} {
+	if isAllRegistered {
+		return processors
+	}
+
 	switch role {
 	case insolar.StaticRoleUnknown:
 		// register all
@@ -111,6 +117,8 @@ func GetAllProcessors(role insolar.StaticRole) []interface{} {
 	}
 
 	registerCommonAdapters()
+
+	isAllRegistered = true
 
 	return processors
 }
