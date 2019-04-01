@@ -117,12 +117,12 @@ func (s *StorageDB) Append(ctx context.Context, pulse insolar.Pulse) error {
 		if err != nil {
 			return err
 		}
-		// Set old updated head.
+		// Set old updated tail.
 		err = s.set(oldHead.Pulse.PulseNumber, oldHead)
 		if err != nil {
 			return err
 		}
-		// Set head meta record.
+		// Set tail meta record.
 		return s.setHead(pulse.PulseNumber)
 	}
 	var insertWithoutHead = func() error {
@@ -133,7 +133,7 @@ func (s *StorageDB) Append(ctx context.Context, pulse insolar.Pulse) error {
 		if err != nil {
 			return err
 		}
-		// Set head meta record.
+		// Set tail meta record.
 		return s.setHead(pulse.PulseNumber)
 	}
 

@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"go.opencensus.io/stats"
 	"golang.org/x/sync/singleflight"
 )
@@ -34,8 +35,8 @@ import (
 // Pool manages state of heavy sync clients (one client per jet id).
 type Pool struct {
 	bus              insolar.MessageBus
-	pulseStorage     insolar.PulseStorage
-	pulseTracker     storage.PulseTracker
+	pulseAccessor    pulse.Accessor
+	pulseCalculator  pulse.Calculator
 	dropAccessor     drop.Accessor
 	blobSyncAccessor blob.CollectionAccessor
 	replicaStorage   storage.ReplicaStorage
@@ -53,8 +54,8 @@ type Pool struct {
 // NewPool constructor of new pool.
 func NewPool(
 	bus insolar.MessageBus,
-	pulseStorage insolar.PulseStorage,
-	tracker storage.PulseTracker,
+	pulseAccessor pulse.Accessor,
+	pulseCalculator pulse.Calculator,
 	replicaStorage storage.ReplicaStorage,
 	dropAccessor drop.Accessor,
 	blobSyncAccessor blob.CollectionAccessor,
@@ -66,8 +67,8 @@ func NewPool(
 		bus:              bus,
 		dropAccessor:     dropAccessor,
 		blobSyncAccessor: blobSyncAccessor,
-		pulseStorage:     pulseStorage,
-		pulseTracker:     tracker,
+		pulseAccessor:    pulseAccessor,
+		pulseCalculator:  pulseCalculator,
 		replicaStorage:   replicaStorage,
 		clientDefaults:   clientDefaults,
 		cleaner:          cleaner,
@@ -108,8 +109,8 @@ func (scp *Pool) AddPulsesToSyncClient(
 		client = NewJetClient(
 			scp.replicaStorage,
 			scp.bus,
-			scp.pulseStorage,
-			scp.pulseTracker,
+			scp.pulseAccessor,
+			scp.pulseCalculator,
 			scp.dropAccessor,
 			scp.blobSyncAccessor,
 			scp.cleaner,

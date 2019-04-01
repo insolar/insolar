@@ -35,11 +35,10 @@ import (
 
 // ContractRequester helps to call contracts
 type ContractRequester struct {
-	MessageBus   insolar.MessageBus   `inject:""`
-	PulseStorage insolar.PulseStorage `inject:""`
-	ResultMutex  sync.Mutex
-	ResultMap    map[uint64]chan *message.ReturnResults
-	Sequence     uint64
+	MessageBus  insolar.MessageBus `inject:""`
+	ResultMutex sync.Mutex
+	ResultMap   map[uint64]chan *message.ReturnResults
+	Sequence    uint64
 }
 
 // New creates new ContractRequester

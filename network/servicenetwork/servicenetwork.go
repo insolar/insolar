@@ -64,6 +64,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
@@ -84,7 +85,7 @@ type ServiceNetwork struct {
 	// dependencies
 	CertificateManager  insolar.CertificateManager  `inject:""`
 	PulseManager        insolar.PulseManager        `inject:""`
-	PulseStorage        insolar.PulseStorage        `inject:""`
+	PulseAccessor       pulse.Accessor              `inject:""`
 	CryptographyService insolar.CryptographyService `inject:""`
 	NetworkCoordinator  insolar.NetworkCoordinator  `inject:""`
 	NodeKeeper          network.NodeKeeper          `inject:""`
@@ -274,12 +275,12 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	// Ignore insolar.ErrNotFound because
 	// sometimes we can't fetch current pulse in new nodes
 	// (for fresh bootstrapped light-material with in-memory pulse-tracker)
-	if currentPulse, err := n.PulseStorage.Current(ctx); err != nil {
+	if currentPulse, err := n.PulseAccessor.Latest(ctx); err != nil {
 		if err != insolar.ErrNotFound {
 			logger.Fatalf("Could not get current pulse: %s", err.Error())
 		}
 	} else {
-		if !isNextPulse(currentPulse, &newPulse) {
+		if !isNextPulse(&currentPulse, &newPulse) {
 			logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", currentPulse, newPulse)
 			return
 		}

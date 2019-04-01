@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -50,7 +51,6 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
 
-	var pulseTracker storage.PulseTracker
 	var dropModifier drop.Modifier
 	var dropAccessor drop.Accessor
 	var dropCleaner drop.Cleaner
@@ -58,12 +58,20 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	var blobCleaner blob.Cleaner
 	var blobModifier blob.Modifier
 	var blobAccessor blob.Accessor
-	var blobSyncAccessor blob.CollectionAccessor
+	var blobCollectionAccessor blob.CollectionAccessor
+
+	var pulseAccessor pulse.Accessor
+	var pulseAppender pulse.Appender
+	var pulseCalculator pulse.Calculator
+	var pulseShifter pulse.Shifter
 
 	// TODO: @imarkin 18.02.18 - Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
 	switch certificate.GetRole() {
 	case insolar.StaticRoleUnknown, insolar.StaticRoleHeavyMaterial:
-		pulseTracker = storage.NewPulseTracker()
+		ps := pulse.NewStorageDB()
+		pulseAccessor = ps
+		pulseAppender = ps
+		pulseCalculator = ps
 
 		dropDB := drop.NewStorageDB()
 		dropModifier = dropDB
@@ -74,7 +82,11 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		blobModifier = blobDB
 		blobAccessor = blobDB
 	default:
-		pulseTracker = storage.NewPulseTrackerMemory()
+		ps := pulse.NewStorageMem()
+		pulseAccessor = ps
+		pulseAppender = ps
+		pulseCalculator = ps
+		pulseShifter = ps
 
 		dropDB := drop.NewStorageMemory()
 		dropModifier = dropDB
@@ -85,7 +97,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		blobModifier = blobDB
 		blobAccessor = blobDB
 		blobCleaner = blobDB
-		blobSyncAccessor = blobDB
+		blobCollectionAccessor = blobDB
 	}
 
 	components := []interface{}{
@@ -97,8 +109,9 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		blobModifier,
 		blobAccessor,
 		storage.NewCleaner(),
-		pulseTracker,
-		storage.NewPulseStorage(),
+		pulseAccessor,
+		pulseAppender,
+		pulseCalculator,
 		jet.NewStore(),
 		node.NewStorage(),
 		storage.NewObjectStorage(),
@@ -107,7 +120,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewHotDataWaiterConcrete(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),
-		pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobSyncAccessor),
+		pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, pulseShifter),
 		heavyserver.NewSync(db),
 	}
 

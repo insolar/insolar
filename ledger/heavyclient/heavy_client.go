@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/utils/backoff"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -44,13 +45,13 @@ type Options struct {
 // JetClient heavy replication client. Replicates records for one jet.
 type JetClient struct {
 	bus              insolar.MessageBus
-	pulseStorage     insolar.PulseStorage
 	replicaStorage   storage.ReplicaStorage
-	pulseTracker     storage.PulseTracker
 	cleaner          storage.Cleaner
 	db               storage.DBContext
 	dropAccessor     drop.Accessor
 	blobSyncAccessor blob.CollectionAccessor
+	pulseAccessor    pulse.Accessor
+	pulseCalculator  pulse.Calculator
 
 	opts Options
 
@@ -75,8 +76,8 @@ type JetClient struct {
 func NewJetClient(
 	replicaStorage storage.ReplicaStorage,
 	mb insolar.MessageBus,
-	pulseStorage insolar.PulseStorage,
-	pulseTracker storage.PulseTracker,
+	pulseAccessor pulse.Accessor,
+	pulseCalculator pulse.Calculator,
 	dropAccessor drop.Accessor,
 	blobSyncAccessor blob.CollectionAccessor,
 	cleaner storage.Cleaner,
@@ -86,11 +87,11 @@ func NewJetClient(
 ) *JetClient {
 	jsc := &JetClient{
 		bus:              mb,
-		pulseStorage:     pulseStorage,
 		replicaStorage:   replicaStorage,
-		pulseTracker:     pulseTracker,
 		dropAccessor:     dropAccessor,
 		blobSyncAccessor: blobSyncAccessor,
+		pulseCalculator:  pulseCalculator,
+		pulseAccessor:    pulseAccessor,
 		cleaner:          cleaner,
 		db:               db,
 		jetID:            insolar.JetID(jetID),
@@ -225,7 +226,7 @@ func (c *JetClient) syncloop(ctx context.Context) {
 			}
 		}
 
-		if isPulseNumberOutdated(ctx, c.pulseTracker, c.pulseStorage, syncPN, c.opts.PulsesDeltaLimit) {
+		if isPulseNumberOutdated(ctx, c.pulseAccessor, c.pulseCalculator, syncPN, c.opts.PulsesDeltaLimit) {
 			inslog.Infof("pulse %v on jet %v is outdated, skip it", syncPN, c.jetID)
 			finishpulse()
 			continue
@@ -291,22 +292,33 @@ func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
 	}
 }
 
-func isPulseNumberOutdated(ctx context.Context, pulseTracker storage.PulseTracker, pstore insolar.PulseStorage, pn insolar.PulseNumber, delta int) bool {
-	current, err := pstore.Current(ctx)
+func isPulseNumberOutdated(
+	ctx context.Context,
+	pulseAccessor pulse.Accessor,
+	pulseCalculator pulse.Calculator,
+	pn insolar.PulseNumber,
+	delta int,
+) bool {
+	current, err := pulseAccessor.Latest(ctx)
 	if err != nil {
 		panic(err)
 	}
 
-	currentPulse, err := pulseTracker.GetPulse(ctx, current.PulseNumber)
+	currentPulse, err := pulseAccessor.ForPulseNumber(ctx, current.PulseNumber)
 	if err != nil {
 		panic(err)
 	}
 
-	pnPulse, err := pulseTracker.GetPulse(ctx, pn)
+	pnPulse, err := pulseAccessor.ForPulseNumber(ctx, pn)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't get pulse by pulse number: %v", pn)
 		return true
 	}
 
-	return currentPulse.SerialNumber-delta > pnPulse.SerialNumber
+	backPN, err := pulseCalculator.Backwards(ctx, currentPulse.PulseNumber, delta)
+	if err != nil {
+		return false
+	}
+
+	return backPN.PulseNumber >= pnPulse.PulseNumber
 }

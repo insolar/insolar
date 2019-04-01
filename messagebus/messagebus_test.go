@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/component"
@@ -46,7 +47,7 @@ func testHandler(_ context.Context, _ insolar.Parcel) (insolar.Reply, error) {
 	return testReply, nil
 }
 
-func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) (*MessageBus, *testutils.PulseStorageMock, insolar.Parcel) {
+func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) (*MessageBus, *pulse.AccessorMock, insolar.Parcel) {
 	mb, err := NewMessageBus(configuration.Configuration{})
 	require.NoError(t, err)
 
@@ -63,12 +64,12 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	cs := testutils.NewCryptographyServiceMock(t)
 	dtf := testutils.NewDelegationTokenFactoryMock(t)
 	pf := NewParcelFactory()
-	ps := testutils.NewPulseStorageMock(t)
+	ps := pulse.NewAccessorMock(t)
 
 	(&component.Manager{}).Inject(net, jc, nn, pcs, cs, dtf, pf, ps, mb)
 
-	ps.CurrentFunc = func(ctx context.Context) (*insolar.Pulse, error) {
-		return &insolar.Pulse{
+	ps.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
+		return insolar.Pulse{
 			PulseNumber:     insolar.PulseNumber(currentPulse),
 			NextPulseNumber: insolar.PulseNumber(currentPulse + 1),
 		}, nil
@@ -120,12 +121,12 @@ func TestMessageBus_doDeliver_NextPulse(t *testing.T) {
 	pulseUpdated := false
 
 	var triggerUnlock int32
-	newPulse := &insolar.Pulse{
+	newPulse := insolar.Pulse{
 		PulseNumber:     101,
 		NextPulseNumber: 102,
 	}
-	fn := ps.CurrentFunc
-	ps.CurrentFunc = func(ctx context.Context) (*insolar.Pulse, error) {
+	fn := ps.LatestFunc
+	ps.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
 		if atomic.LoadInt32(&triggerUnlock) > 0 {
 			return newPulse, nil
 		}
@@ -137,7 +138,7 @@ func TestMessageBus_doDeliver_NextPulse(t *testing.T) {
 		atomic.AddInt32(&triggerUnlock, 1)
 
 		pulseUpdated = true
-		err := mb.OnPulse(ctx, *newPulse)
+		err := mb.OnPulse(ctx, newPulse)
 		require.NoError(t, err)
 	}()
 	// blocks until newPulse returns
@@ -155,8 +156,8 @@ func TestMessageBus_doDeliver_TwoAheadPulses(t *testing.T) {
 		PulseNumber:     100,
 		NextPulseNumber: 101,
 	}
-	ps.CurrentFunc = func(ctx context.Context) (*insolar.Pulse, error) {
-		return pulse, nil
+	ps.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
+		return *pulse, nil
 	}
 	go func() {
 		for i := 1; i <= 2; i++ {

@@ -208,7 +208,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	pm.ActiveListSwapper = alsMock
 	pm.CryptographyService = cryptoServiceMock
 	pm.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
-	pm.PulseStorage = pulseStorageMock
+
 	pm.JetCoordinator = jetCoordinatorMock
 
 	// Act

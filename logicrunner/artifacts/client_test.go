@@ -166,8 +166,8 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 	}
 
 	am := client{
-		DefaultBus:                 mb,
-		PulseStorage:               amPulseStorageMock,
+		DefaultBus: mb,
+		// PulseStorage:               amPulseStorageMock,
 		JetCoordinator:             jc,
 		PlatformCryptographyScheme: s.scheme,
 		senders:                    newLedgerArtifactSenders(),
@@ -221,29 +221,29 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_FollowsRedirect() {
 		}
 	}
 	am.DefaultBus = mb
-	am.PulseStorage = makePulseStorage(s)
+	// am.PulseStorage = makePulseStorage(s)
 
 	_, err := am.GetObject(s.ctx, *objRef, nil, false)
 
 	require.NoError(s.T(), err)
 }
 
-func makePulseStorage(s *amSuite) insolar.PulseStorage {
-	pulseStorage := storage.NewPulseStorage()
-	pulseStorage.PulseTracker = s.pulseTracker
-	pulse, err := s.pulseTracker.GetLatestPulse(s.ctx)
-	require.NoError(s.T(), err)
-	pulseStorage.Set(&pulse.Pulse)
-
-	return pulseStorage
-}
+// func makePulseStorage(s *amSuite) (pulse.Accessor, {
+// 	pulseStorage := storage.NewPulseStorage()
+// 	pulseStorage.PulseTracker = s.pulseTracker
+// 	pulse, err := s.pulseTracker.GetLatestPulse(s.ctx)
+// 	require.NoError(s.T(), err)
+// 	pulseStorage.Set(&pulse.Pulse)
+//
+// 	return pulseStorage
+// }
 
 func (s *amSuite) TestLedgerArtifactManager_GetChildren_FollowsRedirect() {
 	mc := minimock.NewController(s.T())
 	am := NewClient()
 	mb := testutils.NewMessageBusMock(mc)
 
-	am.PulseStorage = makePulseStorage(s)
+	// am.PulseStorage = makePulseStorage(s)
 
 	objRef := genRandomRef(0)
 	nodeRef := genRandomRef(0)
@@ -280,7 +280,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 		return &insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, nil
 	}
 
-	am.PulseStorage = pulseStorageMock
+	// am.PulseStorage = pulseStorageMock
 	am.JetStorage = s.jetStorage
 
 	s.T().Run("returns error on exceeding retry limit", func(t *testing.T) {
@@ -361,7 +361,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	am := NewClient()
 	am.JetCoordinator = jc
 	am.DefaultBus = mb
-	am.PulseStorage = pulseStorageMock
+	// am.PulseStorage = pulseStorageMock
 
 	// Act
 	res, err := am.GetPendingRequest(inslogger.TestContext(s.T()), objectID)

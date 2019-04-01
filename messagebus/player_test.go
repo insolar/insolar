@@ -21,8 +21,8 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -46,8 +46,8 @@ func TestPlayer_Send(t *testing.T) {
 		return &parcel, nil
 	}
 	tape := NewtapeMock(mc)
-	pulseStorageMock := testutils.NewPulseStorageMock(t)
-	pulseStorageMock.CurrentMock.Return(insolar.GenesisPulse, nil)
+	pulseStorageMock := pulse.NewAccessorMock(t)
+	pulseStorageMock.LatestMock.Return(*insolar.GenesisPulse, nil)
 	player := newPlayer(s, tape, pcs, pulseStorageMock)
 
 	t.Run("with no reply on the Tape doesn't send the message and returns an error", func(t *testing.T) {

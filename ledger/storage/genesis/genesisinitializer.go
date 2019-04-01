@@ -19,6 +19,7 @@ package genesis
 import (
 	"context"
 
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/component"
@@ -37,8 +38,9 @@ type GenesisState interface {
 type genesisInitializer struct {
 	DB            storage.DBContext     `inject:""`
 	ObjectStorage storage.ObjectStorage `inject:""`
-	PulseTracker  storage.PulseTracker  `inject:""`
 	DropModifier  drop.Modifier         `inject:""`
+	PulseAppender pulse.Appender        `inject:""`
+	PulseAccessor pulse.Accessor        `inject:""`
 
 	genesisRef *insolar.Reference
 }
@@ -70,7 +72,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 	}
 
 	createGenesisRecord := func() (*insolar.Reference, error) {
-		err := gi.PulseTracker.AddPulse(
+		err := gi.PulseAppender.Append(
 			ctx,
 			insolar.Pulse{
 				PulseNumber: insolar.GenesisPulse.PulseNumber,
@@ -86,11 +88,11 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 			return nil, err
 		}
 
-		lastPulse, err := gi.PulseTracker.GetLatestPulse(ctx)
+		lastPulse, err := gi.PulseAccessor.Latest(ctx)
 		if err != nil {
 			return nil, err
 		}
-		genesisID, err := gi.ObjectStorage.SetRecord(ctx, insolar.ID(jetID), lastPulse.Pulse.PulseNumber, &object.GenesisRecord{})
+		genesisID, err := gi.ObjectStorage.SetRecord(ctx, insolar.ID(jetID), lastPulse.PulseNumber, &object.GenesisRecord{})
 		if err != nil {
 			return nil, err
 		}

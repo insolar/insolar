@@ -51,7 +51,6 @@ type MessageHandler struct {
 	JetCoordinator             insolar.JetCoordinator             `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
 	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
-	PulseStorage               insolar.PulseStorage               `inject:""`
 	JetStorage                 jet.Storage                        `inject:""`
 
 	DropModifier drop.Modifier `inject:""`
@@ -63,9 +62,9 @@ type MessageHandler struct {
 
 	ObjectStorage storage.ObjectStorage `inject:""`
 	Nodes         node.Accessor         `inject:""`
-	PulseTracker  storage.PulseTracker  `inject:""`
-	DBContext     storage.DBContext     `inject:""`
-	HotDataWaiter HotDataWaiter         `inject:""`
+
+	DBContext     storage.DBContext `inject:""`
+	HotDataWaiter HotDataWaiter     `inject:""`
 
 	replayHandlers map[insolar.MessageType]insolar.MessageHandler
 	conf           *configuration.Ledger

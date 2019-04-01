@@ -74,11 +74,11 @@ func (lr *LogicRunner) MustObjectState(ref Ref) *ObjectState {
 }
 
 func (lr *LogicRunner) pulse(ctx context.Context) *insolar.Pulse {
-	pulse, err := lr.PulseStorage.Current(ctx)
+	pulse, err := lr.PulseAccessor.Latest(ctx)
 	if err != nil {
 		panic(err)
 	}
-	return pulse
+	return &pulse
 }
 
 func (lr *LogicRunner) GetConsensus(ctx context.Context, ref Ref) *Consensus {

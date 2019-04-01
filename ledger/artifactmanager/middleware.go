@@ -35,7 +35,6 @@ type middleware struct {
 	jetAccessor    jet.Accessor
 	jetCoordinator insolar.JetCoordinator
 	messageBus     insolar.MessageBus
-	pulseStorage   insolar.PulseStorage
 	hotDataWaiter  HotDataWaiter
 	conf           *configuration.Ledger
 	handler        *MessageHandler
@@ -49,7 +48,6 @@ func newMiddleware(
 		jetAccessor:    h.JetStorage,
 		jetCoordinator: h.JetCoordinator,
 		messageBus:     h.Bus,
-		pulseStorage:   h.PulseStorage,
 		hotDataWaiter:  h.HotDataWaiter,
 		handler:        h,
 		conf:           h.conf,

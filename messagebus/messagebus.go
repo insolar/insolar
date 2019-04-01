@@ -25,6 +25,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
@@ -50,7 +51,7 @@ type MessageBus struct {
 	CryptographyService        insolar.CryptographyService        `inject:""`
 	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
 	ParcelFactory              message.ParcelFactory              `inject:""`
-	PulseStorage               insolar.PulseStorage               `inject:""`
+	PulseAccessor              pulse.Accessor                     `inject:""`
 
 	handlers     map[insolar.MessageType]insolar.MessageHandler
 	signmessages bool
@@ -82,7 +83,7 @@ func (mb *MessageBus) NewPlayer(ctx context.Context, reader io.Reader) (insolar.
 	if err != nil {
 		return nil, err
 	}
-	pl := newPlayer(mb, tape, mb.PlatformCryptographyScheme, mb.PulseStorage)
+	pl := newPlayer(mb, tape, mb.PlatformCryptographyScheme, mb.PulseAccessor)
 	return pl, nil
 }
 
@@ -91,7 +92,7 @@ func (mb *MessageBus) NewPlayer(ctx context.Context, reader io.Reader) (insolar.
 // Recorder can be created from MessageBus and passed as MessageBus instance.
 func (mb *MessageBus) NewRecorder(ctx context.Context, currentPulse insolar.Pulse) (insolar.MessageBus, error) {
 	tape := newMemoryTape(currentPulse.PulseNumber)
-	rec := newRecorder(mb, tape, mb.PlatformCryptographyScheme, mb.PulseStorage)
+	rec := newRecorder(mb, tape, mb.PlatformCryptographyScheme, mb.PulseAccessor)
 	return rec, nil
 }
 
@@ -140,17 +141,17 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.Send "+msg.Type().String())
 	defer span.End()
 
-	currentPulse, err := mb.PulseStorage.Current(ctx)
+	currentPulse, err := mb.PulseAccessor.Latest(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token, *currentPulse)
+	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token, currentPulse)
 	if err != nil {
 		return nil, err
 	}
 
-	rep, err := mb.SendParcel(ctx, parcel, *currentPulse, ops)
+	rep, err := mb.SendParcel(ctx, parcel, currentPulse, ops)
 	return rep, err
 }
 
@@ -284,7 +285,7 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel insolar.Parcel, loc
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.checkPulse")
 	defer span.End()
 
-	pulse, err := mb.PulseStorage.Current(ctx)
+	pulse, err := mb.PulseAccessor.Latest(ctx)
 	if err != nil {
 		return errors.Wrap(err, "[ checkPulse ] Couldn't get current pulse number")
 	}
@@ -340,7 +341,7 @@ func (mb *MessageBus) handleParcelFromTheFuture(ctx context.Context, parcel inso
 	for {
 		mb.NextPulseMessagePoolLock.RLock()
 
-		pulse, err := mb.PulseStorage.Current(ctx)
+		pulse, err := mb.PulseAccessor.Latest(ctx)
 		if err != nil {
 			mb.NextPulseMessagePoolLock.RUnlock()
 			return errors.Wrap(err, "couldn't get current pulse number")
@@ -354,7 +355,7 @@ func (mb *MessageBus) handleParcelFromTheFuture(ctx context.Context, parcel inso
 			<-mb.NextPulseMessagePoolChan
 			span.End()
 
-			pulse, err = mb.PulseStorage.Current(ctx)
+			pulse, err = mb.PulseAccessor.Latest(ctx)
 			if err != nil {
 				mb.NextPulseMessagePoolLock.RUnlock()
 				return errors.Wrap(err, "couldn't get current pulse number")

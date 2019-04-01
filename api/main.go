@@ -28,6 +28,7 @@ import (
 	"github.com/gorilla/rpc/v2"
 	jsonrpc "github.com/gorilla/rpc/v2/json2"
 	"github.com/insolar/insolar/application/extractor"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/seedmanager"
@@ -46,7 +47,7 @@ type Runner struct {
 	GenesisDataProvider insolar.GenesisDataProvider `inject:""`
 	NetworkSwitcher     insolar.NetworkSwitcher     `inject:""`
 	NodeNetwork         insolar.NodeNetwork         `inject:""`
-	PulseStorage        insolar.PulseStorage        `inject:""`
+	PulseAccessor       pulse.Accessor              `inject:""`
 	server              *http.Server
 	rpcServer           *rpc.Server
 	cfg                 *configuration.APIRunner

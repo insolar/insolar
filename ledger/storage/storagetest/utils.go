@@ -22,6 +22,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -84,7 +85,7 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 		db.NewMemoryMockDB(),
 		storage.NewObjectStorage(),
 		drop.NewStorageDB(),
-		storage.NewPulseTracker(),
+		pulse.NewStorageMem(),
 	)
 
 	if !opts.nobootstrap {
