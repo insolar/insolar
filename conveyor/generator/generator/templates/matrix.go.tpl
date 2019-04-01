@@ -17,7 +17,7 @@
 package matrix
 
 import (
-	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/adapter/adapterhelper"
 	"github.com/insolar/insolar/conveyor/fsm"
 	{{range .Imports}}"{{.}}"
 	{{end}}
@@ -54,7 +54,7 @@ const (
 )
 
 func NewMatrix() *Matrix {
-	helpers := adapter.NewHelperCatalog()
+	helpers := adapterhelper.NewCatalog()
 
 	m := Matrix{
 		future: newStateMachineSet(),

@@ -12,7 +12,7 @@
 *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 *    See the License for the specific language governing permissions and
 *    limitations under the License.
- */
+*/
 
 package sample
 
@@ -20,169 +20,159 @@ import (
 	"context"
 	"errors"
 
-	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/adapter/adapterhelper"
 	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/statemachine"
 )
 
-func RawSampleStateMachinePresentFactory(helpers *adapter.HelperCatalog) *statemachine.StateMachine {
+func RawSampleStateMachinePresentFactory(helpers *adapterhelper.Catalog) *statemachine.StateMachine {
 	return &statemachine.StateMachine{
 		ID: 2,
 		States: []statemachine.State{
 			{
-
+				
 				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
-					aInput, ok := element.GetInputEvent().(CustomEvent)
-					if !ok {
-						return nil, 0, errors.New("wrong input event type")
-					}
-					ctx := context.TODO()
-					state, payload := initPresentHandler(ctx, element, aInput, element.GetPayload())
-					return payload, state, nil
-
+    		        aInput, ok := element.GetInputEvent().(CustomEvent)
+            		if !ok { return nil, 0, errors.New("wrong input event type") }
+            		ctx := context.TODO()
+				    state, payload := initPresentHandler(ctx, element, aInput, element.GetPayload())
+                    return payload, state, nil
+					
 				},
-			}, {
-
+				
+			},{
+				
 				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
-					aInput, ok := element.GetInputEvent().(CustomEvent)
-					if !ok {
-						return nil, 0, errors.New("wrong input event type")
-					}
-					ctx := context.TODO()
-					aPayload, ok := element.GetPayload().(*CustomPayload)
-					if !ok {
-						return nil, 0, errors.New("wrong payload type")
-					}
+    		        aInput, ok := element.GetInputEvent().(CustomEvent)
+            		if !ok { return nil, 0, errors.New("wrong input event type") }
+            		ctx := context.TODO()
+				    aPayload, ok := element.GetPayload().(*CustomPayload)
+                    if !ok { return nil, 0, errors.New("wrong payload type") }
 					// todo here must be real adapter helper
 					state := transitPresentFirst(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
-					return aPayload, state, nil
-
+                    return aPayload, state, nil
+					
 				},
 				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
-					if !ok {
-						return nil, 0, errors.New("wrong input event type")
-					}
+					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
-					if !ok {
-						return nil, 0, errors.New("wrong payload type")
-					}
+					if !ok { return nil, 0, errors.New("wrong payload type") }
 					aResponse, ok := response.(*TestResult)
-					if !ok {
-						return nil, 0, errors.New("wrong response type")
-					}
+					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := responseAdapterHelper(ctx, element, aInput, aPayload, aResponse)
 					return aPayload, state, nil
-				},
-			}, {}, {
-
+                },
+			},{
+				
+				
+				
+			},{
+				
 				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
-					aInput, ok := element.GetInputEvent().(CustomEvent)
-					if !ok {
-						return nil, 0, errors.New("wrong input event type")
-					}
-					ctx := context.TODO()
-					aPayload, ok := element.GetPayload().(*CustomPayload)
-					if !ok {
-						return nil, 0, errors.New("wrong payload type")
-					}
+    		        aInput, ok := element.GetInputEvent().(CustomEvent)
+            		if !ok { return nil, 0, errors.New("wrong input event type") }
+            		ctx := context.TODO()
+				    aPayload, ok := element.GetPayload().(*CustomPayload)
+                    if !ok { return nil, 0, errors.New("wrong payload type") }
 					// todo here must be real adapter helper
 					state := transitPresentThird(ctx, element, aInput, aPayload)
-					return aPayload, state, nil
-
+                    return aPayload, state, nil
+					
 				},
+				
 			},
 		},
 	}
 }
 
-func RawSampleStateMachinePastFactory(helpers *adapter.HelperCatalog) *statemachine.StateMachine {
+func RawSampleStateMachinePastFactory(helpers *adapterhelper.Catalog) *statemachine.StateMachine {
 	return &statemachine.StateMachine{
 		ID: 2,
 		States: []statemachine.State{
 			{
 				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
-					aInput, ok := element.GetInputEvent().(CustomEvent)
-					if !ok {
-						return nil, 0, errors.New("wrong input event type")
-					}
-					ctx := context.TODO()
-					state, payload := initPresentHandler(ctx, element, aInput, element.GetPayload())
-					return payload, state, nil
-
+    		        aInput, ok := element.GetInputEvent().(CustomEvent)
+            		if !ok { return nil, 0, errors.New("wrong input event type") }
+            		ctx := context.TODO()
+				    state, payload := initPresentHandler(ctx, element, aInput, element.GetPayload())
+                    return payload, state, nil
+					
 				},
-			}, {
+				
+			},{
 				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
-					aInput, ok := element.GetInputEvent().(CustomEvent)
-					if !ok {
-						return nil, 0, errors.New("wrong input event type")
-					}
-					ctx := context.TODO()
-					aPayload, ok := element.GetPayload().(*CustomPayload)
-					if !ok {
-						return nil, 0, errors.New("wrong payload type")
-					}
-					// todo here must be real adapter helper
+    		        aInput, ok := element.GetInputEvent().(CustomEvent)
+            		if !ok { return nil, 0, errors.New("wrong input event type") }
+            		ctx := context.TODO()
+				    aPayload, ok := element.GetPayload().(*CustomPayload)
+                    if !ok { return nil, 0, errors.New("wrong payload type") }
+                    // todo here must be real adapter helper
 					state := transitPresentFirst(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
-					return aPayload, state, nil
-
+                    return aPayload, state, nil
+					
 				},
 				AdapterResponse: func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 					aInput, ok := element.GetInputEvent().(CustomEvent)
-					if !ok {
-						return nil, 0, errors.New("wrong input event type")
-					}
+					if !ok { return nil, 0, errors.New("wrong input event type") }
 					aPayload, ok := element.GetPayload().(*CustomPayload)
-					if !ok {
-						return nil, 0, errors.New("wrong payload type")
-					}
+					if !ok { return nil, 0, errors.New("wrong payload type") }
 					aResponse, ok := response.(*TestResult)
-					if !ok {
-						return nil, 0, errors.New("wrong response type")
-					}
+					if !ok { return nil, 0, errors.New("wrong response type") }
 					ctx := context.TODO()
 					state := responseAdapterHelper(ctx, element, aInput, aPayload, aResponse)
 					return aPayload, state, nil
-				},
-			}, {}, {
+                },
+			},{
+				
+				
+			},{
 				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
-					aInput, ok := element.GetInputEvent().(CustomEvent)
-					if !ok {
-						return nil, 0, errors.New("wrong input event type")
-					}
-					ctx := context.TODO()
-					aPayload, ok := element.GetPayload().(*CustomPayload)
-					if !ok {
-						return nil, 0, errors.New("wrong payload type")
-					}
-					// todo here must be real adapter helper
+    		        aInput, ok := element.GetInputEvent().(CustomEvent)
+            		if !ok { return nil, 0, errors.New("wrong input event type") }
+            		ctx := context.TODO()
+				    aPayload, ok := element.GetPayload().(*CustomPayload)
+                    if !ok { return nil, 0, errors.New("wrong payload type") }
+                    // todo here must be real adapter helper
 					state := transitPresentThird(ctx, element, aInput, aPayload)
-					return aPayload, state, nil
-
+                    return aPayload, state, nil
+					
 				},
+				
 			},
 		},
 	}
 }
 
-func RawSampleStateMachineFutureFactory(helpers *adapter.HelperCatalog) *statemachine.StateMachine {
+func RawSampleStateMachineFutureFactory(helpers *adapterhelper.Catalog) *statemachine.StateMachine {
 	return &statemachine.StateMachine{
 		ID: 2,
 		States: []statemachine.State{
 			{
-
+				
 				Transition: func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
-					aInput, ok := element.GetInputEvent().(CustomEvent)
-					if !ok {
-						return nil, 0, errors.New("wrong input event type")
-					}
-					ctx := context.TODO()
-					state, payload := initFutureHandler(ctx, element, aInput, element.GetPayload())
-					return payload, state, nil
-
+    		        aInput, ok := element.GetInputEvent().(CustomEvent)
+            		if !ok { return nil, 0, errors.New("wrong input event type") }
+            		ctx := context.TODO()
+				    state, payload := initFutureHandler(ctx, element, aInput, element.GetPayload())
+                    return payload, state, nil
+					
 				},
-			}, {}, {}, {},
+				
+			},{
+				
+				
+				
+			},{
+				
+				
+				
+			},{
+				
+				
+				
+			},
 		},
 	}
 }

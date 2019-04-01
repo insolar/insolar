@@ -20,12 +20,12 @@ import (
 	"context"
 	"errors"
 
-	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/adapter/adapterhelper"
 	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/statemachine"
 )
 
-func RawInitialPresentFactory(helpers *adapter.HelperCatalog) *statemachine.StateMachine {
+func RawInitialPresentFactory(helpers *adapterhelper.Catalog) *statemachine.StateMachine {
 	return &statemachine.StateMachine{
 		ID: 3,
 		States: []statemachine.State{
@@ -45,7 +45,7 @@ func RawInitialPresentFactory(helpers *adapter.HelperCatalog) *statemachine.Stat
 	}
 }
 
-func RawInitialPastFactory(helpers *adapter.HelperCatalog) *statemachine.StateMachine {
+func RawInitialPastFactory(helpers *adapterhelper.Catalog) *statemachine.StateMachine {
 	return &statemachine.StateMachine{
 		ID: 3,
 		States: []statemachine.State{
@@ -64,7 +64,7 @@ func RawInitialPastFactory(helpers *adapter.HelperCatalog) *statemachine.StateMa
 	}
 }
 
-func RawInitialFutureFactory(helpers *adapter.HelperCatalog) *statemachine.StateMachine {
+func RawInitialFutureFactory(helpers *adapterhelper.Catalog) *statemachine.StateMachine {
 	return &statemachine.StateMachine{
 		ID: 3,
 		States: []statemachine.State{

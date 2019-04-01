@@ -28,7 +28,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/adapter/adapterhelper"
 )
 
 const (
@@ -146,7 +146,7 @@ func checkHasInitHandlers(machine *StateMachine) {
 }
 
 func (g *Generator) ParseAdapterHelpers() {
-	t := reflect.TypeOf(adapter.HelperCatalog{})
+	t := reflect.TypeOf(adapterhelper.Catalog{})
 	for i := 0; i < t.NumField(); i++ {
 		g.adapterHelperCatalog[t.Field(i).Type.Name()] = t.Field(i).Name
 	}
