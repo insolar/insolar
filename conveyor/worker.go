@@ -215,25 +215,22 @@ func (w *worker) processResponse(resp queue.OutputElement) error {
 
 	payload, newState, err := respHandler(element, adapterResp.GetRespPayload())
 	if err != nil {
-		// TODO: fix me sweetie
-		w.updateElement(element, payload, newState)
-		element.activationStatus = EmptyElement
-		err = w.slot.pushElement(element)
-		return nil
+		w.ctxLogger.Error("[ processResponse ] AdapterResponse handler errors: ", err)
+		respErrorHandler := element.stateMachine.GetResponseErrorHandler(element.state)
+		if respErrorHandler == nil {
+			panic(fmt.Sprintf("[ processResponse ] No response error handler. State: %d. AdapterResp: %+v", element.state, adapterResp))
+		}
 
-		// w.ctxLogger.Error("[ processResponse ] AdapterResponse handler errors: ", err)
-		// respErrorHandler := element.stateMachine.GetResponseErrorHandler(element.state)
-		// if respErrorHandler == nil {
-		// 	panic(fmt.Sprintf("[ processResponse ] No response error handler. State: %d. AdapterResp: %+v", element.state, adapterResp))
-		// }
-
-		// payload, newState = respErrorHandler(element, adapterResp.GetRespPayload(), err)
+		payload, newState = respErrorHandler(element, adapterResp.GetRespPayload(), err)
 	}
 
 	w.updateElement(element, payload, newState)
 	// TODO: fix me sweetie
 	element.Reactivate()
-
+	// TODO: fix me sweetie
+	if newState == 0 {
+		element.activationStatus = EmptyElement
+	}
 	err = w.slot.pushElement(element)
 	if err != nil {
 		return errors.Wrapf(err, "[ processResponse ] Can't pushElement: %+v", element)
