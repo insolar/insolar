@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -50,8 +51,12 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	}
 
 	var pulseTracker storage.PulseTracker
+
 	var dropModifier drop.Modifier
 	var dropAccessor drop.Accessor
+
+	var recordModifier object.RecordModifier
+	var recordAccessor object.RecordAccessor
 	// TODO: @imarkin 18.02.18 - Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
 	switch certificate.GetRole() {
 	case insolar.StaticRoleUnknown, insolar.StaticRoleHeavyMaterial:
@@ -60,12 +65,20 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		dropDB := drop.NewStorageDB()
 		dropModifier = dropDB
 		dropAccessor = dropDB
+
+		records := object.NewRecordDB(newDB)
+		recordModifier = records
+		recordAccessor = records
 	default:
 		pulseTracker = storage.NewPulseTrackerMemory()
 
 		dropDB := drop.NewStorageMemory()
 		dropModifier = dropDB
 		dropAccessor = dropDB
+
+		records := object.NewRecordMemory()
+		recordModifier = records
+		recordAccessor = records
 	}
 
 	components := []interface{}{
@@ -74,6 +87,8 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		idLocker,
 		dropModifier,
 		dropAccessor,
+		recordModifier,
+		recordAccessor,
 		storage.NewCleaner(),
 		pulseTracker,
 		storage.NewPulseStorage(),
