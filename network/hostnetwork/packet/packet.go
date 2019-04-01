@@ -56,11 +56,12 @@ import (
 	"encoding/gob"
 	"io"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/packet/types"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
 // Packet is DHT packet object.

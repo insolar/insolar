@@ -52,7 +52,7 @@ package relay
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 
 	"errors"
 )

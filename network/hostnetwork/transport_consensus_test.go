@@ -55,15 +55,16 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 type consensusTransportSuite struct {

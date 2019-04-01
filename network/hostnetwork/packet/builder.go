@@ -52,8 +52,8 @@ package packet
 
 import (
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
 // Builder allows lazy building of packets.

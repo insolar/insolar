@@ -53,7 +53,7 @@ package transport
 import (
 	"context"
 
-	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
 type futureManager interface {

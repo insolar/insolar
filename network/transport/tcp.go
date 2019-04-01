@@ -61,8 +61,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/transport/pool"
-	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/network/utils"
 )
 

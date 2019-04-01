@@ -55,12 +55,13 @@ import (
 	"io"
 	"sync"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/packet"
-	"github.com/insolar/insolar/network/transport/relay"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/relay"
 )
 
 type transportSerializer interface {

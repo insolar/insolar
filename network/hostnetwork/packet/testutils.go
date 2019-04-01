@@ -51,7 +51,7 @@
 package packet
 
 import (
-	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
 const (

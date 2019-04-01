@@ -51,7 +51,7 @@
 package packet
 
 import (
-	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 )
 
 // ResponsePulse is the response for a new pulse from a pulsar.

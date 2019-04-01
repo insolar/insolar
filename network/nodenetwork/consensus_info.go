@@ -55,10 +55,11 @@ import (
 
 	"github.com/insolar/insolar/network/node"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/transport/host"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 )
 
 type consensusInfo struct {

@@ -70,7 +70,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/cascade"
 	"github.com/insolar/insolar/network/controller/common"
-	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
 type RPCController interface {

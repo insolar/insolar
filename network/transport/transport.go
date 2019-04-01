@@ -56,9 +56,9 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/packet"
-	"github.com/insolar/insolar/network/transport/relay"
-	"github.com/insolar/insolar/network/transport/resolver"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/relay"
+	"github.com/insolar/insolar/network/hostnetwork/resolver"
 
 	"github.com/pkg/errors"
 )

@@ -56,7 +56,7 @@ import (
 	"encoding/gob"
 	"testing"
 
-	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )

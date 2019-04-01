@@ -59,7 +59,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/controller/common"
-	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
 // Controller contains network logic.
