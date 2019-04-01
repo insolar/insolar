@@ -62,8 +62,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/network/termination"
-
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/certificate"
@@ -451,7 +449,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	s.Require().NoError(err)
-	terminationHandler := termination.NewHandler(serviceNetwork)
+	terminationHandler := testutils.NewTerminationHandlerMock(s.T())
 
 	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
