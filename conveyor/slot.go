@@ -283,9 +283,13 @@ func (s *Slot) createElement(stateMachine matrix.StateMachine, state fsm.StateID
 	element.activationStatus = ActiveElement
 	element.nextElement = nil
 	// TODO:  Set other fields to element, like:
-	element.payload = event.GetData()
-	// TODO: fix me sweetie, find better way to set input event
-	element.inputEvent = event.GetData()
+	conveyorMsg, ok := event.GetData().(insolar.ConveyorPendingMessage)
+	if !ok {
+		return nil, errors.Errorf("[ createElement ]Input event must be 'insolar.ConveyorPendingMessage'. Actual: %+v", event.GetData())
+	}
+	element.payload = nil
+	element.inputEvent = conveyorMsg.Msg
+	element.responseFuture = conveyorMsg.Future
 
 	err := s.pushElement(element)
 	if err != nil {

@@ -11,6 +11,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	adapterid "github.com/insolar/insolar/conveyor/adapter/adapterid"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -48,6 +49,11 @@ type SlotElementHelperMock struct {
 	GetPayloadCounter    uint64
 	GetPayloadPreCounter uint64
 	GetPayloadMock       mSlotElementHelperMockGetPayload
+
+	GetResponseFutureFunc       func() (r insolar.ConveyorFuture)
+	GetResponseFutureCounter    uint64
+	GetResponseFuturePreCounter uint64
+	GetResponseFutureMock       mSlotElementHelperMockGetResponseFuture
 
 	GetStateFunc       func() (r StateID)
 	GetStateCounter    uint64
@@ -94,6 +100,7 @@ func NewSlotElementHelperMock(t minimock.Tester) *SlotElementHelperMock {
 	m.GetNodeIDMock = mSlotElementHelperMockGetNodeID{mock: m}
 	m.GetParentElementIDMock = mSlotElementHelperMockGetParentElementID{mock: m}
 	m.GetPayloadMock = mSlotElementHelperMockGetPayload{mock: m}
+	m.GetResponseFutureMock = mSlotElementHelperMockGetResponseFuture{mock: m}
 	m.GetStateMock = mSlotElementHelperMockGetState{mock: m}
 	m.GetTypeMock = mSlotElementHelperMockGetType{mock: m}
 	m.InformParentMock = mSlotElementHelperMockInformParent{mock: m}
@@ -892,6 +899,140 @@ func (m *SlotElementHelperMock) GetPayloadFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetPayloadFunc != nil {
 		return atomic.LoadUint64(&m.GetPayloadCounter) > 0
+	}
+
+	return true
+}
+
+type mSlotElementHelperMockGetResponseFuture struct {
+	mock              *SlotElementHelperMock
+	mainExpectation   *SlotElementHelperMockGetResponseFutureExpectation
+	expectationSeries []*SlotElementHelperMockGetResponseFutureExpectation
+}
+
+type SlotElementHelperMockGetResponseFutureExpectation struct {
+	result *SlotElementHelperMockGetResponseFutureResult
+}
+
+type SlotElementHelperMockGetResponseFutureResult struct {
+	r insolar.ConveyorFuture
+}
+
+//Expect specifies that invocation of SlotElementHelper.GetResponseFuture is expected from 1 to Infinity times
+func (m *mSlotElementHelperMockGetResponseFuture) Expect() *mSlotElementHelperMockGetResponseFuture {
+	m.mock.GetResponseFutureFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SlotElementHelperMockGetResponseFutureExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of SlotElementHelper.GetResponseFuture
+func (m *mSlotElementHelperMockGetResponseFuture) Return(r insolar.ConveyorFuture) *SlotElementHelperMock {
+	m.mock.GetResponseFutureFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SlotElementHelperMockGetResponseFutureExpectation{}
+	}
+	m.mainExpectation.result = &SlotElementHelperMockGetResponseFutureResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of SlotElementHelper.GetResponseFuture is expected once
+func (m *mSlotElementHelperMockGetResponseFuture) ExpectOnce() *SlotElementHelperMockGetResponseFutureExpectation {
+	m.mock.GetResponseFutureFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &SlotElementHelperMockGetResponseFutureExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *SlotElementHelperMockGetResponseFutureExpectation) Return(r insolar.ConveyorFuture) {
+	e.result = &SlotElementHelperMockGetResponseFutureResult{r}
+}
+
+//Set uses given function f as a mock of SlotElementHelper.GetResponseFuture method
+func (m *mSlotElementHelperMockGetResponseFuture) Set(f func() (r insolar.ConveyorFuture)) *SlotElementHelperMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetResponseFutureFunc = f
+	return m.mock
+}
+
+//GetResponseFuture implements github.com/insolar/insolar/conveyor/fsm.SlotElementHelper interface
+func (m *SlotElementHelperMock) GetResponseFuture() (r insolar.ConveyorFuture) {
+	counter := atomic.AddUint64(&m.GetResponseFuturePreCounter, 1)
+	defer atomic.AddUint64(&m.GetResponseFutureCounter, 1)
+
+	if len(m.GetResponseFutureMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetResponseFutureMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to SlotElementHelperMock.GetResponseFuture.")
+			return
+		}
+
+		result := m.GetResponseFutureMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the SlotElementHelperMock.GetResponseFuture")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetResponseFutureMock.mainExpectation != nil {
+
+		result := m.GetResponseFutureMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the SlotElementHelperMock.GetResponseFuture")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetResponseFutureFunc == nil {
+		m.t.Fatalf("Unexpected call to SlotElementHelperMock.GetResponseFuture.")
+		return
+	}
+
+	return m.GetResponseFutureFunc()
+}
+
+//GetResponseFutureMinimockCounter returns a count of SlotElementHelperMock.GetResponseFutureFunc invocations
+func (m *SlotElementHelperMock) GetResponseFutureMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetResponseFutureCounter)
+}
+
+//GetResponseFutureMinimockPreCounter returns the value of SlotElementHelperMock.GetResponseFuture invocations
+func (m *SlotElementHelperMock) GetResponseFutureMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetResponseFuturePreCounter)
+}
+
+//GetResponseFutureFinished returns true if mock invocations count is ok
+func (m *SlotElementHelperMock) GetResponseFutureFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetResponseFutureMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetResponseFutureCounter) == uint64(len(m.GetResponseFutureMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetResponseFutureMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetResponseFutureCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetResponseFutureFunc != nil {
+		return atomic.LoadUint64(&m.GetResponseFutureCounter) > 0
 	}
 
 	return true
@@ -1709,6 +1850,10 @@ func (m *SlotElementHelperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to SlotElementHelperMock.GetPayload")
 	}
 
+	if !m.GetResponseFutureFinished() {
+		m.t.Fatal("Expected call to SlotElementHelperMock.GetResponseFuture")
+	}
+
 	if !m.GetStateFinished() {
 		m.t.Fatal("Expected call to SlotElementHelperMock.GetState")
 	}
@@ -1774,6 +1919,10 @@ func (m *SlotElementHelperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to SlotElementHelperMock.GetPayload")
 	}
 
+	if !m.GetResponseFutureFinished() {
+		m.t.Fatal("Expected call to SlotElementHelperMock.GetResponseFuture")
+	}
+
 	if !m.GetStateFinished() {
 		m.t.Fatal("Expected call to SlotElementHelperMock.GetState")
 	}
@@ -1818,6 +1967,7 @@ func (m *SlotElementHelperMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetNodeIDFinished()
 		ok = ok && m.GetParentElementIDFinished()
 		ok = ok && m.GetPayloadFinished()
+		ok = ok && m.GetResponseFutureFinished()
 		ok = ok && m.GetStateFinished()
 		ok = ok && m.GetTypeFinished()
 		ok = ok && m.InformParentFinished()
@@ -1854,6 +2004,10 @@ func (m *SlotElementHelperMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetPayloadFinished() {
 				m.t.Error("Expected call to SlotElementHelperMock.GetPayload")
+			}
+
+			if !m.GetResponseFutureFinished() {
+				m.t.Error("Expected call to SlotElementHelperMock.GetResponseFuture")
 			}
 
 			if !m.GetStateFinished() {
@@ -1913,6 +2067,10 @@ func (m *SlotElementHelperMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetPayloadFinished() {
+		return false
+	}
+
+	if !m.GetResponseFutureFinished() {
 		return false
 	}
 

@@ -17,65 +17,76 @@
 package matrix
 
 import (
-	"github.com/insolar/insolar/conveyor/generator/state_machines/getcode"
+	"github.com/insolar/insolar/conveyor/fsm"
+	"github.com/insolar/insolar/conveyor/generator/state_machines/get_object"
+	"github.com/insolar/insolar/conveyor/generator/state_machines/initial"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
 )
-
-const numPulseStates = 3
 
 type StateMachineSet struct {
 	stateMachines []StateMachine
 }
 
-func (s *StateMachineSet) GetStateMachineByID(id int) StateMachine {
+func newStateMachineSet() *StateMachineSet {
+	return &StateMachineSet{
+		stateMachines: make([]StateMachine, 1),
+	}
+}
+
+func (s *StateMachineSet) addMachine(machine StateMachine) {
+	s.stateMachines = append(s.stateMachines, machine)
+}
+
+func (s *StateMachineSet) GetStateMachineByID(id fsm.ID) StateMachine {
 	return s.stateMachines[id]
 }
 
 type Matrix struct {
-	matrix [numPulseStates]StateMachineSet
+	future  *StateMachineSet
+	present *StateMachineSet
+	past    *StateMachineSet
 }
 
-type MachineType int
-
 const (
-	GetCodeStateMachine MachineType = iota + 1
-	TestStateMachine
+	GetObjectStateMachine fsm.ID = iota + 1
+	SampleStateMachine
+	Initial
 )
 
 func NewMatrix() *Matrix {
-	m := Matrix{}
-
-	// Fill m.matrix[i][0] with empty state machine, since 0 - is state of completion of state machine
-	var emptyObject StateMachine
-	for i := 0; i < numPulseStates; i++ {
-		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, emptyObject)
+	m := Matrix{
+		future:  newStateMachineSet(),
+		present: newStateMachineSet(),
+		past:    newStateMachineSet(),
 	}
 
-	getCodeStateMachine := getcode.RawGetCodeStateMachineFactory()
-	for i := 0; i < numPulseStates; i++ {
-		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, getCodeStateMachine[i])
-	}
+	m.future.addMachine(getobject.RawGetObjectStateMachineFutureFactory())
+	m.present.addMachine(getobject.RawGetObjectStateMachinePresentFactory())
+	m.past.addMachine(getobject.RawGetObjectStateMachinePastFactory())
 
-	smTestStateMachine := sample.RawTestStateMachineFactory()
-	for i := 0; i < numPulseStates; i++ {
-		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, smTestStateMachine[i])
-	}
+	m.future.addMachine(sample.RawSampleStateMachineFutureFactory())
+	m.present.addMachine(sample.RawSampleStateMachinePresentFactory())
+	m.past.addMachine(sample.RawSampleStateMachinePastFactory())
+
+	m.future.addMachine(initial.RawInitialFutureFactory())
+	m.present.addMachine(initial.RawInitialPresentFactory())
+	m.past.addMachine(initial.RawInitialPastFactory())
 
 	return &m
 }
 
 func (m *Matrix) GetInitialStateMachine() StateMachine {
-	return m.matrix[1].stateMachines[1]
+	return m.present.stateMachines[Initial]
 }
 
 func (m *Matrix) GetFutureConfig() SetAccessor {
-	return &m.matrix[0]
+	return m.future
 }
 
 func (m *Matrix) GetPresentConfig() SetAccessor {
-	return &m.matrix[1]
+	return m.present
 }
 
 func (m *Matrix) GetPastConfig() SetAccessor {
-	return &m.matrix[2]
+	return m.past
 }

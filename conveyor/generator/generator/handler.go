@@ -16,115 +16,83 @@
 
 package generator
 
-// handler struct for code generation of raw handlers
+import (
+	"reflect"
+	"runtime"
+	"strings"
+
+	"github.com/insolar/insolar/conveyor/fsm"
+)
+
+type handlerType uint
+
+const (
+	Transition = handlerType(iota)
+	Migration
+	AdapterResponse
+)
+
 type handler struct {
-	machine *stateMachine
-	state   int
-	Name    string
-	Params  []string
-	Results []string
+	machine    *StateMachine
+	importPath string
+	Name       string
+	params     []string
+	results    []string
+	states     []fsm.ElementState
 }
 
-func (h *handler) setAsState() {
-	if len(h.Params) != 0 {
-		exitWithError("%s state must don't have any parameters", h.Name)
+func newHandler(machine *StateMachine, f interface{}, states []fsm.ElementState) *handler {
+	tp := reflect.TypeOf(f)
+	if tp.Kind().String() != "func" {
+		exitWithError("[%s %s] handler must be function", machine.Name, tp.Name())
 	}
-	if len(h.Results) != 1 || h.Results[0] != "fsm.StateID" {
-		exitWithError("%s state should returns only fsm.StateID", h.Name)
+
+	fullName := runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()
+	lastDotIndex := strings.LastIndex(fullName, ".")
+
+	handler := &handler{
+		machine:    machine,
+		importPath: fullName[:lastDotIndex],
+		Name:       fullName[lastDotIndex+1:],
+		params:     make([]string, tp.NumIn()),
+		results:    make([]string, tp.NumOut()),
+		states:     states,
 	}
-	h.machine.States = append(h.machine.States, state{Name: h.Name})
-}
 
-func (h *handler) setAsInit() {
-	h.checkInitHandler()
-	if h.machine.States[0].Transition != nil {
-		exitWithError("%s init handler already exists", h.machine.Name)
+	// check common input types
+	if tp.NumIn() < 1 || tp.In(0).String() != "context.Context" {
+		exitWithError("[%s %s] first parameter should be context.Context\n", machine.Name, handler.Name)
 	}
-	h.machine.States[0].Transition = h
-}
-
-func (h *handler) setAsInitFuture() {
-	h.checkInitHandler()
-	if h.machine.States[0].TransitionFuture != nil {
-		exitWithError("%s init (future) handler already exists", h.machine.Name)
+	if tp.NumIn() < 2 || tp.In(1).String() != "fsm.SlotElementHelper" {
+		exitWithError("[%s %s] second parameter should be fsm.SlotElementHelper\n", machine.Name, handler.Name)
 	}
-	h.machine.States[0].TransitionFuture = h
-}
-
-func (h *handler) setAsInitPast() {
-	h.checkInitHandler()
-	if h.machine.States[0].TransitionPast != nil {
-		exitWithError("%s init (past) handler already exists", h.machine.Name)
+	// check common return types
+	if tp.NumOut() < 1 || tp.Out(0).String() != "fsm.ElementState" {
+		exitWithError("[%s %s] first returned value should be fsm.ElementState\n", machine.Name, handler.Name)
 	}
-	h.machine.States[0].TransitionPast = h
+
+	for i := 0; i < tp.NumIn(); i++ {
+		handler.params[i] = tp.In(i).String()
+	}
+
+	for i := 0; i < tp.NumOut(); i++ {
+		handler.results[i] = tp.Out(i).String()
+	}
+	return handler
 }
 
-func (h *handler) setAsErrorState() {
-	h.checkErrorStateHandler()
-	h.machine.States[h.state].ErrorState = h
+func newInitHandler(machine *StateMachine, f interface{}, states []fsm.ElementState) *handler {
+	h := newHandler(machine, f, states)
+	// todo check input and results len
+	if h.machine.InputEventType == nil {
+		h.machine.InputEventType = &h.params[2]
+	}
+	if h.machine.PayloadType == nil {
+		h.machine.PayloadType = &h.results[1]
+	}
+	return h
 }
 
-func (h *handler) setAsErrorStateFuture() {
-	h.checkErrorStateHandler()
-	h.machine.States[h.state].ErrorStateFuture = h
-}
-
-func (h *handler) setAsErrorStatePast() {
-	h.checkErrorStateHandler()
-	h.machine.States[h.state].ErrorStatePast = h
-}
-
-func (h *handler) setAsMigration() {
-	h.checkMigrationHandler()
-	h.machine.States[h.state].Migration = h
-}
-
-func (h *handler) setAsMigrationFuturePresent() {
-	h.checkMigrationHandler()
-	h.machine.States[h.state].MigrationFuturePresent = h
-}
-
-func (h *handler) setAsTransition() {
-	h.checkTransitionHandler()
-	h.machine.States[h.state].Transition = h
-}
-
-func (h *handler) setAsTransitionFuture() {
-	h.checkTransitionHandler()
-	h.machine.States[h.state].TransitionFuture = h
-}
-
-func (h *handler) setAsTransitionPast() {
-	h.checkTransitionHandler()
-	h.machine.States[h.state].TransitionPast = h
-}
-
-func (h *handler) setAsAdapterResponse() {
-	h.checkAdapterResponseHandler()
-	h.machine.States[h.state].AdapterResponse = h
-}
-
-func (h *handler) setAsAdapterResponseFuture() {
-	h.checkAdapterResponseHandler()
-	h.machine.States[h.state].AdapterResponseFuture = h
-}
-
-func (h *handler) setAsAdapterResponsePast() {
-	h.checkAdapterResponseHandler()
-	h.machine.States[h.state].AdapterResponsePast = h
-}
-
-func (h *handler) setAsAdapterResponseError() {
-	h.checkAdapterResponseErrorHandler()
-	h.machine.States[h.state].AdapterResponseError = h
-}
-
-func (h *handler) setAsAdapterResponseErrorFuture() {
-	h.checkAdapterResponseErrorHandler()
-	h.machine.States[h.state].AdapterResponseErrorFuture = h
-}
-
-func (h *handler) setAsAdapterResponseErrorPast() {
-	h.checkAdapterResponseErrorHandler()
-	h.machine.States[h.state].AdapterResponseErrorPast = h
+func (h *handler) GetResponseAdapterType() string {
+	return h.params[4]
 }

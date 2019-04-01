@@ -17,226 +17,43 @@
 package sample
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/conveyor/fsm"
+	"github.com/insolar/insolar/conveyor/generator/generator"
 )
 
 // custom types
-type Event struct{}
-type Payload struct{}
-type TA1 string
-type TAR string
+type CustomEvent struct{}
+type CustomPayload struct{}
+type CustomAdapterHelper interface{}
 
-// conveyor: state_machine
-type TestStateMachine interface {
-	GetTypeID() fsm.ID
+const (
+	InitState fsm.ElementState = iota
+	StateFirst
+	StateSecond
+)
 
-	initPresentHandler(input Event, payload interface{}) (*Payload, fsm.ElementState, error)
-	initFutureHandler(input Event, payload interface{}) (*Payload, fsm.ElementState, error)
-	initPastHandler(input Event, payload interface{}) (*Payload, fsm.ElementState, error)
-
-	errorPresentInit(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
-	errorFutureInit(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
-	errorPastInit(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
-
-	// State Declaration
-	stateFirst() fsm.StateID
-
-	// Migration
-	migrateFromPresentFirst(input Event, payload *Payload) (*Payload, fsm.ElementState, error)
-	migrateFromFutureFirst(input Event, payload *Payload) (*Payload, fsm.ElementState, error)
-
-	// Transition
-	transitPresentFirst(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, fsm.ElementState, error)
-	transitFutureFirst(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, fsm.ElementState, error)
-	transitPastFirst(input Event, payload *Payload) (*Payload, fsm.ElementState, error)
-
-	// TODO: Finalization
-	// finalizePresentFirst(input Event, payload *Payload)
-	// ...
-
-	// Adapter Response
-	responsePresentFirst(input Event, payload *Payload, respPayload TAR) (*Payload, fsm.ElementState, error)
-	responseFutureFirst(input Event, payload *Payload, respPayload TAR) (*Payload, fsm.ElementState, error)
-	responsePastFirst(input Event, payload *Payload, respPayload TAR) (*Payload, fsm.ElementState, error)
-
-	// State Error
-	errorPresentFirst(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
-	errorFutureFirst(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
-	errorPastFirst(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
-
-	// Adapter Response Error
-	errorResponsePresentFirst(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState)
-	errorResponseFutureFirst(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState)
-	errorResponsePastFirst(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState)
-
-	// State Declaration
-	stateSecond() fsm.StateID
-
-	// Migration
-	migrateFromPresentSecond(input Event, payload *Payload) (*Payload, fsm.ElementState, error)
-	migrateFromFutureSecond(input Event, payload *Payload) (*Payload, fsm.ElementState, error)
-
-	// Transition
-	transitPresentSecond(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, fsm.ElementState, error)
-	transitFutureSecond(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, fsm.ElementState, error)
-	transitPastSecond(input Event, payload *Payload) (*Payload, fsm.ElementState, error)
-
-	// TODO: Finalization
-	// finalizePresentSecond(input Event, payload *Payload)
-	// ...
-
-	// Adapter Response
-	responsePresentSecond(input Event, payload *Payload, respPayload TAR) (*Payload, fsm.ElementState, error)
-	responseFutureSecond(input Event, payload *Payload, respPayload TAR) (*Payload, fsm.ElementState, error)
-	responsePastSecond(input Event, payload *Payload, respPayload TAR) (*Payload, fsm.ElementState, error)
-
-	// State Error
-	errorPresentSecond(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
-	errorFutureSecond(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
-	errorPastSecond(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState)
-
-	// Adapter Response Error
-	errorResponsePresentSecond(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState)
-	errorResponseFutureSecond(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState)
-	errorResponsePastSecond(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState)
+func Register(g *generator.Generator) {
+	g.AddMachine("SampleStateMachine").
+		InitFuture(initFutureHandler).
+		Init(initPresentHandler, StateFirst).
+		Transition(StateFirst, transitPresentFirst, StateSecond).
+		Transition(StateSecond, transitPresentSecond, 0)
 }
 
-type CleanTestStateMachine struct {
-	BaseTestStateMachine
+func initPresentHandler(ctx context.Context, helper fsm.SlotElementHelper, input CustomEvent, payload interface{}) (fsm.ElementState, *CustomPayload) {
+	return StateFirst, nil
 }
 
-func (sm *CleanTestStateMachine) initPresentHandler(input Event, payload interface{}) (*Payload, fsm.ElementState, error) {
-	return nil, fsm.NewElementState(sm.GetTypeID(), sm.stateFirst()), nil
-}
-
-func (sm *CleanTestStateMachine) initFutureHandler(input Event, payload interface{}) (*Payload, fsm.ElementState, error) {
+func initFutureHandler(ctx context.Context, helper fsm.SlotElementHelper, input CustomEvent, payload interface{}) (fsm.ElementState, *CustomPayload) {
 	panic("implement me")
 }
 
-func (sm *CleanTestStateMachine) initPastHandler(input Event, payload interface{}) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
+func transitPresentFirst(ctx context.Context, helper fsm.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) fsm.ElementState {
+	return StateSecond
 }
 
-func (sm *CleanTestStateMachine) errorPresentInit(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) errorFutureInit(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) errorPastInit(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) migrateFromPresentFirst(input Event, payload *Payload) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) migrateFromFutureFirst(input Event, payload *Payload) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) transitPresentFirst(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, fsm.ElementState, error) {
-	return nil, fsm.NewElementState(sm.GetTypeID(), sm.stateSecond()), nil
-}
-
-func (sm *CleanTestStateMachine) transitFutureFirst(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) transitPastFirst(input Event, payload *Payload) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) responsePresentFirst(input Event, payload *Payload, respPayload TAR) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) responseFutureFirst(input Event, payload *Payload, respPayload TAR) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) responsePastFirst(input Event, payload *Payload, respPayload TAR) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) errorPresentFirst(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) errorFutureFirst(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) errorPastFirst(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) errorResponsePresentFirst(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) errorResponseFutureFirst(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) errorResponsePastFirst(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) migrateFromPresentSecond(input Event, payload *Payload) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) migrateFromFutureSecond(input Event, payload *Payload) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) transitPresentSecond(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, fsm.ElementState, error) {
-	return nil, fsm.NewElementState(0, 0), nil
-}
-
-func (sm *CleanTestStateMachine) transitFutureSecond(input Event, payload *Payload /* todo: , adapterHelper TA1*/) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) transitPastSecond(input Event, payload *Payload) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) responsePresentSecond(input Event, payload *Payload, respPayload TAR) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) responseFutureSecond(input Event, payload *Payload, respPayload TAR) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) responsePastSecond(input Event, payload *Payload, respPayload TAR) (*Payload, fsm.ElementState, error) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) errorPresentSecond(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) errorFutureSecond(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) errorPastSecond(input interface{}, payload interface{}, err error) (*Payload, fsm.ElementState) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) errorResponsePresentSecond(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) errorResponseFutureSecond(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState) {
-	panic("implement me")
-}
-
-func (sm *CleanTestStateMachine) errorResponsePastSecond(input interface{}, payload interface{}, ar interface{}, err error) (*Payload, fsm.ElementState) {
-	panic("implement me")
+func transitPresentSecond(ctx context.Context, helper fsm.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) fsm.ElementState {
+	return 0
 }

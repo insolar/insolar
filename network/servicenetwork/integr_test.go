@@ -117,6 +117,7 @@ func (s *testSuite) TestNodeConnectInvalidVersion() {
 }
 
 func (s *testSuite) TestManyNodesConnect() {
+	s.T().Skip("test hangs in some situations, needs fix: INS-2200")
 	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}

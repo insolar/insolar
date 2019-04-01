@@ -24,9 +24,9 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -68,15 +68,17 @@ func (s *cleanerSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
-	dropStorage := drop.NewStorageDB()
+	s.storageCleaner = storage.NewCleaner()
+
+	storageDB := store.NewMemoryMockDB()
+	dropStorage := drop.NewStorageDB(storageDB)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
-	s.storageCleaner = storage.NewCleaner()
 
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		tmpDB,
-		db.NewMemoryMockDB(),
+		store.NewMemoryMockDB(),
 		s.objectStorage,
 		s.storageCleaner,
 		s.dropAccessor,
@@ -125,20 +127,6 @@ func (s *cleanerSuite) Test_RemoveRecords() {
 			if jetID == rmJetID {
 				shouldLeft = i > until
 			}
-
-			blobID, err := storagetest.AddRandBlob(ctx, s.objectStorage, jetID, pn)
-			require.NoError(t, err)
-			blobCC := cleanCase{
-				rectype:    "blob",
-				id:         blobID,
-				jetID:      jetID,
-				pulseNum:   pn,
-				shouldLeft: shouldLeft,
-			}
-			checks = append(checks, blobCase{
-				cleanCase:     blobCC,
-				objectStorage: s.objectStorage,
-			})
 
 			recID, err := storagetest.AddRandRecord(ctx, s.objectStorage, jetID, pn)
 			require.NoError(t, err)
@@ -256,16 +244,6 @@ type indexCase struct {
 
 func (c indexCase) Check(ctx context.Context, t *testing.T) {
 	_, err := c.objectStorage.GetObjectIndex(ctx, c.jetID, c.id)
-	c.check(t, err)
-}
-
-type blobCase struct {
-	cleanCase
-	objectStorage storage.ObjectStorage
-}
-
-func (c blobCase) Check(ctx context.Context, t *testing.T) {
-	_, err := c.objectStorage.GetBlob(ctx, c.jetID, c.id)
 	c.check(t, err)
 }
 

@@ -18,62 +18,169 @@ package generator
 
 import (
 	"bufio"
+	"fmt"
+	"io/ioutil"
 	"os"
 	"path"
 	"runtime"
 	"strings"
+	"text/template"
 )
 
 const (
 	insolarRep           = "github.com/insolar/insolar"
 	stateMachineTemplate = "conveyor/generator/generator/templates/state_machine.go.tpl"
 	matrixTemplate       = "conveyor/generator/generator/templates/matrix.go.tpl"
+	generatedMatrix      = "conveyor/generator/matrix/matrix.go"
+	generatedSuffix      = "_generated.go"
 )
 
-type stateMachine struct {
-	Package        string
-	Name           string
-	InputEventType *string
-	PayloadType    *string
-	States         []state
-}
+// todo remove this type
+type TemporaryCustomAdapterHelper struct{}
 
 type Generator struct {
-	stateMachines       []*stateMachine
-	imports             map[string]interface{}
-	fullPathToInsolar   string
-	pathToStateMachines string
-	pathToMatrixFile    string
+	stateMachines     []*StateMachine
+	fullPathToInsolar string
 }
 
-func NewGenerator(pathToStateMachines string, pathToMatrixFile string) *Generator {
+func checkErr(err error) {
+	if err != nil {
+		panic(err)
+	}
+}
+
+func exitWithError(errMsg string, a ...interface{}) {
+	panic(fmt.Sprintf(errMsg, a...))
+}
+
+func NewGenerator() *Generator {
 	_, me, _, ok := runtime.Caller(0)
 	if !ok {
 		exitWithError("couldn't get self full path")
 	}
 	idx := strings.LastIndex(string(me), insolarRep)
 	return &Generator{
-		imports:             make(map[string]interface{}),
-		fullPathToInsolar:   string(me)[0 : idx+len(insolarRep)],
-		pathToStateMachines: pathToStateMachines,
-		pathToMatrixFile:    pathToMatrixFile,
+		fullPathToInsolar: string(me)[0 : idx+len(insolarRep)],
 	}
 }
 
-func (g *Generator) ParseFile(dir string, filename string) {
-	g.imports[path.Join(insolarRep, g.pathToStateMachines, dir)] = nil
+func (g *Generator) CheckAllMachines() {
+	for _, machine := range g.stateMachines {
 
-	file := path.Join(g.fullPathToInsolar, g.pathToStateMachines, dir, filename)
-	p := Parser{generator: g, sourceFilename: file}
-	p.readStateMachinesInterfaceFile()
-	p.findEachStateMachine()
-	outFileName := file[0:len(file)-3] + "_generated.go"
-	outFile, err := os.Create(outFileName)
+		checkHasInitHandlers(machine)
+
+		for stateIndex, state := range machine.States {
+			for _, pulseState := range []PulseState{Future, Present, Past} {
+				for _, handlerType := range []handlerType{Transition, Migration, AdapterResponse} {
+					currentHandler := state.handlers[pulseState][handlerType]
+
+					if currentHandler == nil {
+						continue
+					}
+
+					if len(currentHandler.params) < 3 || currentHandler.params[2] != *machine.InputEventType {
+						exitWithError("[%s %s] Third parameter should be %s\n", machine.Name, currentHandler.Name, *machine.InputEventType)
+					}
+
+					// check Init handlers
+					if stateIndex == 0 && handlerType == Transition {
+
+						checkInitHandlersSignature(currentHandler, machine)
+
+					} else {
+						if currentHandler.params[3] != *machine.PayloadType {
+							exitWithError("[%s %s] Fourth parameter should be %s not %s\n", machine.Name, currentHandler.Name, *machine.PayloadType, currentHandler.params[3])
+						}
+						if len(currentHandler.results) != 1 {
+							exitWithError("[%s %s] Handlers should return only fsm.ElementState\n", machine.Name, currentHandler.Name)
+						}
+					}
+
+					checkTransitionHandlerParams(stateIndex, handlerType, currentHandler, machine)
+
+					checkAdapterRespHandler(handlerType, currentHandler, machine)
+				}
+			}
+		}
+	}
+}
+
+func checkTransitionHandlerParams(stateIndex int, handlerType handlerType, currentHandler *handler, machine *StateMachine) {
+	if stateIndex != 0 && handlerType == Transition {
+		if len(currentHandler.params) != 4 && len(currentHandler.params) != 5 {
+			exitWithError("[%s %s] Transition handlers should have 4 or 5 (with adapter helper) parameters\n", machine.Name, currentHandler.Name)
+		}
+	}
+}
+
+func checkAdapterRespHandler(handlerType handlerType, currentHandler *handler, machine *StateMachine) {
+	if handlerType == AdapterResponse {
+		if len(currentHandler.params) != 5 {
+			exitWithError("[%s %s] AdapterResponse handlers should have 5 parameters\n", machine.Name, currentHandler.Name)
+		}
+	}
+}
+
+func checkInitHandlersSignature(currentHandler *handler, machine *StateMachine) {
+	if currentHandler.params[3] != "interface {}" {
+		exitWithError("[%s %s] Init handlers should have interface{} as payload parameter\n", machine.Name, currentHandler.Name)
+	}
+	if currentHandler.results[1] != *machine.PayloadType {
+		exitWithError("[%s %s] Init handlers should return payload as %s\n", machine.Name, currentHandler.Name, *machine.PayloadType)
+	}
+}
+
+func checkHasInitHandlers(machine *StateMachine) {
+	if machine.States[0].handlers[Present][Transition] == nil {
+		exitWithError("[%s] Present Init handler should be defined", machine.Name)
+	}
+	if machine.States[0].handlers[Future][Transition] == nil {
+		exitWithError("[%s] Future Init handler should be defined", machine.Name)
+	}
+}
+
+type stateMachineWithID struct {
+	StateMachine
+	ID int
+}
+
+func (g *Generator) GenerateStateMachines() {
+	for i, machine := range g.stateMachines {
+		tplBody, err := ioutil.ReadFile(path.Join(g.fullPathToInsolar, stateMachineTemplate))
+		checkErr(err)
+
+		file, err := os.Create(machine.File[:len(machine.File)-3] + generatedSuffix)
+		checkErr(err)
+
+		out := bufio.NewWriter(file)
+
+		err = template.Must(template.New("smTmpl").Funcs(templateFuncs).
+			Parse(string(tplBody))).
+			Execute(out, stateMachineWithID{StateMachine: *machine, ID: i + 1})
+		checkErr(err)
+
+		err = out.Flush()
+		checkErr(err)
+		err = file.Close()
+		checkErr(err)
+	}
+
+}
+func (g *Generator) GenerateMatrix() {
+	tplBody, err := ioutil.ReadFile(path.Join(g.fullPathToInsolar, matrixTemplate))
 	checkErr(err)
-	defer outFile.Close()
 
-	w := bufio.NewWriter(outFile)
-	p.Generate(w)
-	err = w.Flush()
+	file, err := os.Create(path.Join(g.fullPathToInsolar, generatedMatrix))
+	checkErr(err)
+
+	defer file.Close()
+	out := bufio.NewWriter(file)
+
+	err = template.Must(template.New("MtTmpl").Funcs(templateFuncs).
+		Parse(string(tplBody))).
+		Execute(out, g.stateMachines)
+	checkErr(err)
+
+	err = out.Flush()
 	checkErr(err)
 }
