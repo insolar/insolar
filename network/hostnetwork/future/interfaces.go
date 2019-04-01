@@ -56,12 +56,12 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
-type FutureManager interface {
+type Manager interface {
 	Get(msg *packet.Packet) Future
 	Create(msg *packet.Packet) Future
 }
 
-func NewFutureManager() FutureManager {
+func NewManager() Manager {
 	return newFutureManagerImpl()
 }
 
@@ -70,6 +70,6 @@ type PacketHandler interface {
 	Received() <-chan *packet.Packet
 }
 
-func NewPacketHandler(futureManager FutureManager) PacketHandler {
+func NewPacketHandler(futureManager Manager) PacketHandler {
 	return newPacketHandlerImpl(futureManager)
 }

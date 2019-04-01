@@ -60,12 +60,12 @@ import (
 )
 
 type packetHandlerImpl struct {
-	futureManager FutureManager
+	futureManager Manager
 
 	received chan *packet.Packet
 }
 
-func newPacketHandlerImpl(futureManager FutureManager) *packetHandlerImpl {
+func newPacketHandlerImpl(futureManager Manager) *packetHandlerImpl {
 	return &packetHandlerImpl{
 		futureManager: futureManager,
 		received:      make(chan *packet.Packet),

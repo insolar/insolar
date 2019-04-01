@@ -81,7 +81,7 @@ func (b *baseSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, erro
 }
 
 type baseTransport struct {
-	futureManager future.FutureManager
+	futureManager future.Manager
 	serializer    transportSerializer
 	proxy         relay.Proxy
 	packetHandler future.PacketHandler
@@ -96,7 +96,7 @@ type baseTransport struct {
 }
 
 func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
-	futureManager := future.NewFutureManager()
+	futureManager := future.NewManager()
 	return baseTransport{
 		futureManager: futureManager,
 		packetHandler: future.NewPacketHandler(futureManager),
