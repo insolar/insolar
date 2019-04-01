@@ -56,10 +56,10 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/future"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
-	"github.com/insolar/insolar/network/transport/future"
 
 	"github.com/pkg/errors"
 )

@@ -60,9 +60,9 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/future"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/relay"
-	"github.com/insolar/insolar/network/transport/future"
 )
 
 type transportSerializer interface {
