@@ -73,7 +73,7 @@ func (s *replicaIterSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, _, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.db = tmpDB
 	s.cleaner = cleaner
 
@@ -130,7 +130,7 @@ func Test_StoreKeyValues(t *testing.T) {
 	pulsescount := 3
 
 	func() {
-		tmpDB, cleaner := storagetest.TmpDB(ctx, t)
+		tmpDB, _, cleaner := storagetest.TmpDB(ctx, t)
 		defer cleaner()
 
 		os := storage.NewObjectStorage()
@@ -205,7 +205,7 @@ func Test_StoreKeyValues(t *testing.T) {
 		gotidxs []key
 	)
 	func() {
-		db, cleaner := storagetest.TmpDB(ctx, t)
+		db, _, cleaner := storagetest.TmpDB(ctx, t)
 		defer cleaner()
 		err := db.StoreKeyValues(ctx, allKVs)
 		require.NoError(t, err)
@@ -267,7 +267,7 @@ func (s *replicaIterSuite) Test_ReplicaIter_FirstPulse() {
 
 func Test_ReplicaIter_Base(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	tmpDB, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
+	tmpDB, _, cleaner := storagetest.TmpDB(ctx, t, storagetest.DisableBootstrap())
 	defer cleaner()
 
 	os := storage.NewObjectStorage()

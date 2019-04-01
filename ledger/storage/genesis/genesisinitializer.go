@@ -47,7 +47,7 @@ type GenesisInitializer struct {
 	PulseTracker storage.PulseTracker `inject:""`
 	DropModifier drop.Modifier        `inject:""`
 
-	object.RecordModifier `inject:""`
+	Records object.RecordModifier `inject:""`
 
 	genesisRef *insolar.Reference
 }
@@ -106,14 +106,14 @@ func (gi *GenesisInitializer) Init(ctx context.Context) error {
 			Record: virtRec,
 			JetID:  jetID,
 		}
-		err = gi.RecordModifier.Set(ctx, *genesisID, rec)
+		err = gi.Records.Set(ctx, *genesisID, rec)
 		if err != nil {
 			return nil, err
 		}
 
 		idStr := genesisID.DebugString()
 
-		ptr := fmt.Sprintf("%p", gi.RecordModifier)
+		ptr := fmt.Sprintf("%p", gi.Records)
 		_ = idStr
 		_ = ptr
 

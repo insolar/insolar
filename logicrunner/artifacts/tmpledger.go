@@ -18,7 +18,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
-	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/messagebus"
@@ -88,7 +87,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
-	tmpDB, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
+	tmpDB, recMem, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
 	// memoryMockDB := db.NewMemoryMockDB()
 
 	cm := &component.Manager{}
@@ -100,10 +99,9 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	ds := drop.NewStorageDB()
 	rs := storage.NewReplicaStorage()
 	cl := storage.NewCleaner()
-	recordStorage := object.NewRecordMemory()
 
-	recordAccessor := recordStorage
-	recordModifier := recordStorage
+	recordAccessor := recMem
+	recordModifier := recMem
 
 	am := NewClient()
 	am.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
@@ -141,7 +139,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	gi.(*genesis.GenesisInitializer).ObjectStorage = os
 	gi.(*genesis.GenesisInitializer).PulseTracker = pt
 	gi.(*genesis.GenesisInitializer).DropModifier = ds
-	gi.(*genesis.GenesisInitializer).RecordModifier = recordModifier
+	gi.(*genesis.GenesisInitializer).Records = recordModifier
 	gi.(*genesis.GenesisInitializer).PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
 	handler := artifactmanager.NewMessageHandler(&conf)
@@ -151,8 +149,8 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	handler.DBContext = tmpDB
 	handler.ObjectStorage = os
 	handler.DropModifier = ds
-	handler.RecordModifier = recordModifier
-	handler.RecordAccessor = recordAccessor
+	handler.RecordMod = recordModifier
+	handler.RecordAcc = recordAccessor
 
 	idLockerMock := storage.NewIDLockerMock(t)
 	idLockerMock.LockMock.Return()
@@ -176,7 +174,6 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 		pt,
 		ps,
 		ds,
-		// gi,
 		am,
 		rs,
 		cl,

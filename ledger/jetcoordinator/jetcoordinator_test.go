@@ -65,7 +65,7 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	db, _, cleaner := storagetest.TmpDB(s.ctx, s.T())
 
 	s.cleaner = cleaner
 	s.pulseTracker = storage.NewPulseTracker()

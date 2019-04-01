@@ -61,8 +61,8 @@ type MessageHandler struct {
 	// TODO: @imarkin 27.03.2019 - remove it after all new storages integration (INS-2013, etc)
 	ObjectStorage storage.ObjectStorage `inject:""`
 
-	object.RecordModifier `inject:""`
-	object.RecordAccessor `inject:""`
+	RecordMod object.RecordModifier `inject:""`
+	RecordAcc object.RecordAccessor `inject:""`
 
 	Nodes         node.Accessor        `inject:""`
 	PulseTracker  storage.PulseTracker `inject:""`
@@ -281,7 +281,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Par
 		JetID:  insolar.JetID(jetID),
 	}
 
-	err := h.RecordModifier.Set(ctx, *id, rec)
+	err := h.RecordMod.Set(ctx, *id, rec)
 
 	if err == object.ErrOverride {
 		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", virtRec)).Warn("set record override")
@@ -440,12 +440,12 @@ func (h *MessageHandler) handleGetObject(
 	}
 
 	idStr := stateID.DebugString()
-	ptr := fmt.Sprintf("%p", h.RecordModifier)
+	ptr := fmt.Sprintf("%p", h.RecordMod)
 	_ = idStr
 	_ = ptr
 
 	// Fetch state record.
-	rec, err := h.RecordAccessor.ForID(ctx, *stateID)
+	rec, err := h.RecordAcc.ForID(ctx, *stateID)
 
 	if err == object.ErrNotFound {
 		// The record wasn't found on the current node. Return redirect to the node that contains it.
@@ -641,7 +641,7 @@ func (h *MessageHandler) handleGetChildren(
 	}
 
 	// Try to fetch the first child.
-	_, err = h.RecordAccessor.ForID(ctx, *currentChild)
+	_, err = h.RecordAcc.ForID(ctx, *currentChild)
 
 	if err == object.ErrNotFound {
 		node, err := h.JetCoordinator.NodeForJet(ctx, *childJet, parcel.Pulse(), currentChild.Pulse())
@@ -663,7 +663,7 @@ func (h *MessageHandler) handleGetChildren(
 		}
 		counter++
 
-		rec, err := h.RecordAccessor.ForID(ctx, *currentChild)
+		rec, err := h.RecordAcc.ForID(ctx, *currentChild)
 
 		// We don't have this child reference. Return what was collected.
 		if err == object.ErrNotFound {
@@ -694,7 +694,7 @@ func (h *MessageHandler) handleGetChildren(
 func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetRequest)
 
-	rec, err := h.RecordAccessor.ForID(ctx, msg.Request)
+	rec, err := h.RecordAcc.ForID(ctx, msg.Request)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch request")
 	}
@@ -802,7 +802,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 		JetID:  insolar.JetID(jetID),
 	}
 
-	err = h.RecordModifier.Set(ctx, *id, rec)
+	err = h.RecordMod.Set(ctx, *id, rec)
 
 	if err == object.ErrOverride {
 		logger.WithField("type", fmt.Sprintf("%T", virtRec)).Warn("set record override (#1)")
@@ -880,7 +880,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 		JetID:  insolar.JetID(jetID),
 	}
 
-	err = h.RecordModifier.Set(ctx, *child, rec)
+	err = h.RecordMod.Set(ctx, *child, rec)
 
 	if err == object.ErrOverride {
 		logger.WithField("type", fmt.Sprintf("%T", r)).Warn("set record override (#2)")
@@ -1009,7 +1009,7 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insola
 func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.ValidationCheck)
 
-	rec, err := h.RecordAccessor.ForID(ctx, msg.ValidatedState)
+	rec, err := h.RecordAcc.ForID(ctx, msg.ValidatedState)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch state record")
 	}
@@ -1030,7 +1030,7 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel insol
 }
 
 func (h *MessageHandler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeRecord, error) {
-	rec, err := h.RecordAccessor.ForID(ctx, *id)
+	rec, err := h.RecordAcc.ForID(ctx, *id)
 	if err != nil {
 		return nil, err
 	}

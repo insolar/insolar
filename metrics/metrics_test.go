@@ -93,7 +93,7 @@ func TestMetrics_Badger(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
 
-	_, cleaner := storagetest.TmpDB(ctx, nil)
+	_, _, cleaner := storagetest.TmpDB(ctx, nil)
 	defer cleaner()
 
 	testm := testmetrics.Start(ctx)

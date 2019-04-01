@@ -62,7 +62,7 @@ func DisableBootstrap() Option {
 // TmpDB returns BadgerDB's storage implementation and cleanup function.
 //
 // Creates BadgerDB in temporary directory and uses t for errors reporting.
-func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBContext, func()) {
+func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBContext, *object.RecordMemory, func()) {
 	opts := &tmpDBOptions{}
 	for _, o := range options {
 		o(opts)
@@ -117,12 +117,12 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 		gi.(*genesis.GenesisInitializer).ObjectStorage = objectStorage
 		gi.(*genesis.GenesisInitializer).PulseTracker = pulseTracker
 		gi.(*genesis.GenesisInitializer).DropModifier = dropModifier
-		gi.(*genesis.GenesisInitializer).RecordModifier = recordModifier
+		gi.(*genesis.GenesisInitializer).Records = recordModifier
 		gi.(*genesis.GenesisInitializer).PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
-		// gi.Init(ctx)
+		gi.Init(ctx)
 	}
 
-	return tmpDB, func() {
+	return tmpDB, recordModifier, func() {
 		rmErr := os.RemoveAll(tmpdir)
 		if rmErr != nil {
 			t.Fatal("temporary tmpDB dir cleanup failed", rmErr)
