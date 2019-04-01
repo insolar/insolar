@@ -56,9 +56,12 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
+	"github.com/insolar/insolar/network/node"
 )
 
 type FirstPhaseState struct {
+	*ConsensusState
+
 	PulseEntry *merkle.PulseEntry
 
 	PulseHash  merkle.OriginHash
@@ -67,8 +70,7 @@ type FirstPhaseState struct {
 	ValidProofs map[insolar.NetworkNode]*merkle.PulseProof
 	FaultProofs map[insolar.Reference]*merkle.PulseProof
 
-	UnsyncList   network.UnsyncList
-	ClaimHandler *claimhandler.ClaimHandler
+	BitSet packets.BitSet
 }
 
 type SecondPhaseState struct {
@@ -79,13 +81,26 @@ type SecondPhaseState struct {
 
 	MatrixState *Phase2MatrixState
 	Matrix      *StateMatrix
-
-	BitSet packets.BitSet
 }
 
 type ThirdPhaseState struct {
 	ActiveNodes    []insolar.NetworkNode
-	UnsyncList     network.UnsyncList
 	GlobuleProof   *merkle.GlobuleProof
 	ApprovedClaims []packets.ReferendumClaim
+}
+
+type ConsensusState struct {
+	ConsensusInfo network.ConsensusInfo
+	NodesMutator  network.Mutator
+	HashStorage   *HashStorage
+	BitsetMapper  *BitsetMapper
+	ClaimHandler  *claimhandler.ClaimHandler
+}
+
+func NewConsensusState(consensusInfo network.ConsensusInfo, snapshot *node.Snapshot) *ConsensusState {
+	return &ConsensusState{
+		ConsensusInfo: consensusInfo,
+		NodesMutator:  node.NewMutator(snapshot),
+		HashStorage:   NewHashStorage(),
+	}
 }

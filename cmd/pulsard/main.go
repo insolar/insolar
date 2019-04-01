@@ -225,9 +225,14 @@ func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (con
 	if err != nil {
 		panic(err)
 	}
-	err = inslog.SetLevel(cfg.Level)
-	if err != nil {
+
+	if newInslog, err := inslog.WithLevel(cfg.Level); err != nil {
 		inslog.Error(err.Error())
+	} else {
+		inslog = newInslog
 	}
-	return inslogger.WithTraceField(inslogger.SetLogger(ctx, inslog), traceid)
+
+	ctx = inslogger.SetLogger(ctx, inslog)
+	ctx, inslog = inslogger.WithTraceField(ctx, traceid)
+	return ctx, inslog
 }

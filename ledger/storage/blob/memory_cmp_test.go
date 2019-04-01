@@ -27,7 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/internal/ledger/store"
 )
 
 func TestBlobStorages(t *testing.T) {
@@ -36,7 +36,7 @@ func TestBlobStorages(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	memStorage := NewStorageMemory()
-	dbStorage := NewStorageDB(db.NewMemoryMockDB())
+	dbStorage := NewStorageDB(store.NewMemoryMockDB())
 	type storage interface {
 		Accessor
 		Modifier

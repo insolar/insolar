@@ -21,6 +21,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/insolar/insolar/insolar/record"
+
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -33,7 +35,6 @@ const (
 	scopeIDRecord   byte = 2
 	scopeIDPulse    byte = 4
 	scopeIDSystem   byte = 5
-	scopeIDBlob     byte = 7
 
 	sysGenesis                byte = 1
 	sysLatestPulse            byte = 2
@@ -52,7 +53,7 @@ type DBContext interface {
 		ctx context.Context,
 		jetID insolar.ID,
 		pulse insolar.PulseNumber,
-		handler func(id insolar.ID, rec object.VirtualRecord) error,
+		handler func(id insolar.ID, rec record.VirtualRecord) error,
 	) error
 
 	StoreKeyValues(ctx context.Context, kvs []insolar.KV) error
@@ -64,7 +65,6 @@ type DBContext interface {
 	Set(ctx context.Context, key, value []byte) error
 	Get(ctx context.Context, key []byte) ([]byte, error)
 
-	// TODO i.markin 28.01.19: Delete after switching to conveyor architecture.
 	WaitingFlight()
 
 	iterate(ctx context.Context,
@@ -231,7 +231,7 @@ func (db *DB) IterateRecordsOnPulse(
 	ctx context.Context,
 	jetID insolar.ID,
 	pulse insolar.PulseNumber,
-	handler func(id insolar.ID, rec object.VirtualRecord) error,
+	handler func(id insolar.ID, rec record.VirtualRecord) error,
 ) error {
 	jetPrefix := insolar.JetID(jetID).Prefix()
 	prefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())

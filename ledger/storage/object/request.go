@@ -19,12 +19,14 @@ package object
 import (
 	"io"
 
+	"github.com/insolar/insolar/insolar/record"
+
 	"github.com/insolar/insolar/insolar"
 )
 
 // Request extends VirtualRecord interface with GetPayload method.
 type Request interface {
-	VirtualRecord
+	record.VirtualRecord
 	GetPayload() []byte
 	GetObject() insolar.ID
 }

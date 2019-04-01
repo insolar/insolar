@@ -121,6 +121,7 @@ func newMutableNode(
 	id insolar.Reference,
 	role insolar.StaticRole,
 	publicKey crypto.PublicKey,
+	state insolar.NodeState,
 	address, version string) MutableNode {
 
 	consensusAddress, err := IncrementPort(address)
@@ -135,7 +136,7 @@ func newMutableNode(
 		NodeAddress:   address,
 		CAddress:      consensusAddress,
 		NodeVersion:   version,
-		state:         uint32(insolar.NodeReady),
+		state:         uint32(state),
 	}
 }
 
@@ -144,7 +145,7 @@ func NewNode(
 	role insolar.StaticRole,
 	publicKey crypto.PublicKey,
 	address, version string) insolar.NetworkNode {
-	return newMutableNode(id, role, publicKey, address, version)
+	return newMutableNode(id, role, publicKey, insolar.NodeReady, address, version)
 }
 
 func (n *node) ID() insolar.Reference {
@@ -209,6 +210,7 @@ func ClaimToNode(version string, claim *packets.NodeJoinClaim) (insolar.NetworkN
 		claim.NodeRef,
 		claim.NodeRoleRecID,
 		key,
+		insolar.NodeReady,
 		claim.NodeAddress.Get(),
 		version)
 	node.SetShortID(claim.ShortNodeID)

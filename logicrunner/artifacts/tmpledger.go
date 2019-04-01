@@ -1,3 +1,19 @@
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 package artifacts
 
 import (
@@ -5,16 +21,19 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
@@ -26,7 +45,6 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
-	"github.com/stretchr/testify/require"
 )
 
 // TMPLedger
@@ -88,6 +106,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	tmpDB, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
+	memoryMockDB := store.NewMemoryMockDB()
 
 	cm := &component.Manager{}
 	gi := genesis.NewGenesisInitializer()
@@ -96,7 +115,8 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	js := jet.NewStore()
 	os := storage.NewObjectStorage()
 	ns := node.NewStorage()
-	ds := drop.NewStorageDB()
+	ds := drop.NewStorageDB(memoryMockDB)
+	bs := blob.NewStorageDB(memoryMockDB)
 	rs := storage.NewReplicaStorage()
 	cl := storage.NewCleaner()
 
@@ -104,7 +124,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	am.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
 	conf.PulseManager.HeavySyncEnabled = false
-	pm := pulsemanager.NewPulseManager(conf)
+	pm := pulsemanager.NewPulseManager(conf, drop.NewCleanerMock(t), blob.NewCleanerMock(t), blob.NewCollectionAccessorMock(t))
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)
 	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
@@ -131,16 +151,15 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(networknode.NewNode(insolar.Reference{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
-	certificate := testutils.NewCertificateMock(t)
-	certificate.GetRoleMock.Return(handlersRole)
-
-	handler := artifactmanager.NewMessageHandler(&conf, certificate)
+	handler := artifactmanager.NewMessageHandler(&conf)
 	handler.PulseTracker = pt
 	handler.JetStorage = js
 	handler.Nodes = ns
 	handler.DBContext = tmpDB
 	handler.ObjectStorage = os
 	handler.DropModifier = ds
+	handler.BlobModifier = bs
+	handler.BlobAccessor = bs
 
 	idLockerMock := storage.NewIDLockerMock(t)
 	idLockerMock.LockMock.Return()
@@ -157,7 +176,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		tmpDB,
-		db.NewMemoryMockDB(),
+		memoryMockDB,
 		js,
 		os,
 		ns,
@@ -202,7 +221,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	pm.JetModifier = js
 	pm.DropModifier = ds
 	pm.DropAccessor = ds
-	pm.DropCleaner = ds
+	pm.DropCleaner = nil
 	pm.ObjectStorage = os
 	pm.Nodes = ns
 	pm.NodeSetter = ns

@@ -20,6 +20,8 @@ import (
 	"bytes"
 	"encoding/binary"
 
+	"github.com/insolar/insolar/insolar/record"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/ugorji/go/codec"
 )
@@ -37,7 +39,7 @@ func DeserializeType(buf []byte) TypeID {
 }
 
 // SerializeRecord returns binary representation of provided record.
-func SerializeRecord(rec VirtualRecord) []byte {
+func SerializeRecord(rec record.VirtualRecord) []byte {
 	typeBytes := SerializeType(TypeFromRecord(rec))
 	buff := bytes.NewBuffer(typeBytes)
 	enc := codec.NewEncoder(buff, &codec.CborHandle{})
@@ -46,7 +48,7 @@ func SerializeRecord(rec VirtualRecord) []byte {
 }
 
 // DeserializeRecord returns record decoded from bytes.
-func DeserializeRecord(buf []byte) VirtualRecord {
+func DeserializeRecord(buf []byte) record.VirtualRecord {
 	t := DeserializeType(buf[:TypeIDSize])
 	dec := codec.NewDecoderBytes(buf[TypeIDSize:], &codec.CborHandle{})
 	rec := RecordFromType(t)

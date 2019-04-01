@@ -36,9 +36,10 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
@@ -60,8 +61,12 @@ type handlerSuite struct {
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    jet.Storage
-	dropModifier  drop.Modifier
-	dropAccessor  drop.Accessor
+
+	dropModifier drop.Modifier
+	dropAccessor drop.Accessor
+
+	blobModifier blob.Modifier
+	blobAccessor blob.Accessor
 }
 
 var (
@@ -108,14 +113,20 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.nodeStorage = node.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
-	dropStorage := drop.NewStorageDB()
+
+	storageDB := store.NewMemoryMockDB()
+	dropStorage := drop.NewStorageDB(storageDB)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
+
+	blobStorage := blob.NewStorageMemory()
+	s.blobAccessor = blobStorage
+	s.blobModifier = blobStorage
 
 	s.cm.Inject(
 		s.scheme,
 		s.db,
-		db.NewMemoryMockDB(),
+		store.NewMemoryMockDB(),
 		s.jetStorage,
 		s.nodeStorage,
 		s.pulseTracker,
@@ -153,12 +164,9 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 		Head: *genRandomRef(insolar.FirstPulseNumber),
 	}
 
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
-
 	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 2,
-	}, certificate)
+	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
@@ -321,15 +329,12 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
-
 	msg := message.GetChildren{
 		Parent: *genRandomRef(0),
 	}
 	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 2,
-	}, certificate)
+	})
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
@@ -447,16 +452,13 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
-
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 	jc := testutils.NewJetCoordinatorMock(mc)
 
 	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 3,
-	}, certificate)
+	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
@@ -524,16 +526,13 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
-
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 	jc := testutils.NewJetCoordinatorMock(mc)
 
 	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 3,
-	}, certificate)
+	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
@@ -541,6 +540,10 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.ObjectStorage = s.objectStorage
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
+
+	blobStorage := blob.NewStorageMemory()
+	h.BlobModifier = blobStorage
+	h.BlobAccessor = blobStorage
 
 	idLockMock := storage.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
@@ -608,12 +611,9 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
-
 	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 3,
-	}, certificate)
+	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
@@ -621,6 +621,10 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
+
+	blobStorage := blob.NewStorageMemory()
+	h.BlobModifier = blobStorage
+	h.BlobAccessor = blobStorage
 
 	idLockMock := storage.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
@@ -680,9 +684,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
-
 	jc := testutils.NewJetCoordinatorMock(mc)
 
 	mb := testutils.NewMessageBusMock(mc)
@@ -690,7 +691,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 
 	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 3,
-	}, certificate)
+	})
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
@@ -737,15 +738,12 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	recentStorageMock := recentstorage.NewPendingStorageMock(s.T())
 	recentStorageMock.GetRequestsForObjectMock.Return(pendingRequests)
 
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
-
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 	jc := testutils.NewJetCoordinatorMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 
-	h := NewMessageHandler(&configuration.Ledger{}, certificate)
+	h := NewMessageHandler(&configuration.Ledger{})
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
@@ -793,14 +791,11 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
-
 	tf.IssueGetCodeRedirectMock.Return(&delegationtoken.GetCodeRedirectToken{Signature: []byte{1, 2, 3}}, nil)
 
 	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 2,
-	}, certificate)
+	})
 	h.JetCoordinator = jc
 	h.DelegationTokenFactory = tf
 	h.Bus = mb
@@ -824,7 +819,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 		require.NoError(t, err)
 		lightRef := genRandomRef(0)
 		jc.NodeForJetMock.Return(lightRef, nil)
-		rep, err := h.handleGetCode(s.ctx, &message.Parcel{
+		rep, err := h.handleGetCode(contextWithJet(s.ctx, jetID), &message.Parcel{
 			Msg:         &msg,
 			PulseNumber: insolar.FirstPulseNumber + 1,
 		})
@@ -871,15 +866,12 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
-
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 	jc := testutils.NewJetCoordinatorMock(mc)
 	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 2,
-	}, certificate)
+	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
@@ -956,12 +948,9 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
-
 	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 2,
-	}, certificate)
+	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
@@ -1073,10 +1062,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 	provideMock.GetIndexStorageMock.Return(indexMock)
 
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
-
-	h := NewMessageHandler(&configuration.Ledger{}, certificate)
+	h := NewMessageHandler(&configuration.Ledger{})
 	h.JetCoordinator = jc
 	h.RecentStorageProvider = provideMock
 	h.Bus = mb
@@ -1126,14 +1112,11 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
-
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 3,
-	}, certificate)
+	})
 	h.JetCoordinator = jc
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
@@ -1201,10 +1184,8 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	msg := message.GetRequest{
 		Request: *reqID,
 	}
-	certificate := testutils.NewCertificateMock(s.T())
-	certificate.GetRoleMock.Return(insolar.StaticRoleLightMaterial)
 
-	h := NewMessageHandler(&configuration.Ledger{}, certificate)
+	h := NewMessageHandler(&configuration.Ledger{})
 	h.ObjectStorage = s.objectStorage
 
 	rep, err := h.handleGetRequest(contextWithJet(s.ctx, jetID), &message.Parcel{

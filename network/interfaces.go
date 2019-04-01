@@ -57,6 +57,7 @@ import (
 	"github.com/insolar/insolar/component"
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/transport/host"
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
@@ -186,13 +187,8 @@ type NodeKeeper interface {
 	GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error)
 	// GetClaimQueue get the internal queue of claims
 	GetClaimQueue() ClaimQueue
-	// GetUnsyncList get unsync list for current pulse. Has copy of active node list from nodekeeper as internal state.
-	// Should be called when GetConsensusInfo().IsJoiner() == false.
-	GetUnsyncList() UnsyncList
-	// GetSparseUnsyncList get sparse unsync list for current pulse with predefined length of active node list.
-	// Does not contain active list, should collect active list during its lifetime via AddNode.
-	// Should be called when GetConsensusInfo().IsJoiner() == true.
-	GetSparseUnsyncList(length int) UnsyncList
+	// GetSnapshotCopy get copy of the current nodekeeper snapshot
+	GetSnapshotCopy() *node.Snapshot
 	// Sync move unsync -> sync
 	Sync(context.Context, []insolar.NetworkNode, []consensus.ReferendumClaim) error
 	// MoveSyncToActive merge sync list with active nodes
@@ -297,17 +293,24 @@ type ClaimQueue interface {
 
 // Accessor is interface that provides read access to nodekeeper internal snapshot
 type Accessor interface {
-	// GetWorkingNode get working node by its reference. Returns nil if node is not found.
+	// GetWorkingNode get working node by its reference. Returns nil if node is not found or is not working.
 	GetWorkingNode(ref insolar.Reference) insolar.NetworkNode
-	// GetWorkingNodes get working nodes.
+	// GetWorkingNodes returns sorted list of all working nodes.
 	GetWorkingNodes() []insolar.NetworkNode
-	// GetWorkingNodesByRole get working nodes by role
+	// GetWorkingNodesByRole get working nodes by role.
 	GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference
 
 	// GetActiveNode returns active node.
 	GetActiveNode(ref insolar.Reference) insolar.NetworkNode
-	// GetActiveNodes returns active nodes.
+	// GetActiveNodes returns unsorted list of all active nodes.
 	GetActiveNodes() []insolar.NetworkNode
 	// GetActiveNodeByShortID get active node by short ID. Returns nil if node is not found.
 	GetActiveNodeByShortID(shortID insolar.ShortNodeID) insolar.NetworkNode
+}
+
+// Mutator is interface that provides read and write access to a snapshot
+type Mutator interface {
+	Accessor
+	// AddWorkingNode adds active node to index and underlying snapshot so it is accessible via GetActiveNode(s).
+	AddWorkingNode(n insolar.NetworkNode)
 }

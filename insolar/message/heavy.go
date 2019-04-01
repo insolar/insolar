@@ -27,6 +27,7 @@ type HeavyPayload struct {
 	PulseNum insolar.PulseNumber
 	Records  []insolar.KV
 	Drop     []byte
+	Blobs    [][]byte
 }
 
 // AllowedSenderObjectAndRole implements interface method

@@ -33,6 +33,24 @@ type zerologAdapter struct {
 	logger zerolog.Logger
 }
 
+func InternalLevelToZerologLevel(level insolar.LogLevel) (zerolog.Level, error) {
+	switch level {
+	case insolar.DebugLevel:
+		return zerolog.DebugLevel, nil
+	case insolar.InfoLevel:
+		return zerolog.InfoLevel, nil
+	case insolar.WarnLevel:
+		return zerolog.WarnLevel, nil
+	case insolar.ErrorLevel:
+		return zerolog.ErrorLevel, nil
+	case insolar.FatalLevel:
+		return zerolog.FatalLevel, nil
+	case insolar.PanicLevel:
+		return zerolog.PanicLevel, nil
+	}
+	return zerolog.NoLevel, errors.New("Unknown internal level")
+}
+
 func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 	var output io.Writer
 	switch strings.ToLower(cfg.Formatter) {
@@ -45,7 +63,8 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 	}
 
 	zerolog.CallerSkipFrameCount = 3
-	return &zerologAdapter{logger: zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Caller().Logger()}, nil
+	logger := zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Caller().Logger()
+	return &zerologAdapter{logger}, nil
 }
 
 // WithFields return copy of adapter with predefined fields.
@@ -123,17 +142,30 @@ func (z zerologAdapter) Panicf(format string, args ...interface{}) {
 }
 
 // SetLevel sets log level
-func (z *zerologAdapter) SetLevel(level string) error {
-	l, err := zerolog.ParseLevel(strings.ToLower(level))
+func (z *zerologAdapter) WithLevel(level string) (insolar.Logger, error) {
+	levelNumber, err := insolar.ParseLevel(level)
 	if err != nil {
-		return errors.Wrap(err, "Failed to parse log level")
+		return nil, err
 	}
+	return z.WithLevelNumber(levelNumber)
+}
 
-	z.logger = z.logger.Level(l)
-	return nil
+func (z *zerologAdapter) WithLevelNumber(level insolar.LogLevel) (insolar.Logger, error) {
+	if level == insolar.NoLevel {
+		return z, nil
+	}
+	zerologLevel, err := InternalLevelToZerologLevel(level)
+	if err != nil {
+		return nil, err
+	}
+	zCopy := *z
+	zCopy.logger = z.logger.Level(zerologLevel)
+	return &zCopy, nil
 }
 
 // SetOutput sets the output destination for the logger.
-func (z *zerologAdapter) SetOutput(w io.Writer) {
-	z.logger = z.logger.Output(w)
+func (z *zerologAdapter) WithOutput(w io.Writer) insolar.Logger {
+	zCopy := *z
+	zCopy.logger = z.logger.Output(w)
+	return &zCopy
 }
