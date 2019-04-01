@@ -69,11 +69,11 @@ type NetworkNode interface {
 type NodeNetwork interface {
 	// GetOrigin get origin node for the current insolard. Returns nil if the current insolard is not a working node.
 	GetOrigin() NetworkNode
-	// GetWorkingNode get working node by its reference. Returns nil if node is not found.
+	// GetWorkingNode get working node by its reference. Returns nil if node is not found or is not working.
 	GetWorkingNode(ref Reference) NetworkNode
-	// GetWorkingNodes get working nodes.
+	// GetWorkingNodes returns sorted list of all working nodes.
 	GetWorkingNodes() []NetworkNode
-	// GetWorkingNodesByRole get working nodes by role
+	// GetWorkingNodesByRole get working nodes by role.
 	GetWorkingNodesByRole(role DynamicRole) []Reference
 }
 

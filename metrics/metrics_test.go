@@ -19,6 +19,7 @@ package metrics_test
 import (
 	"math/rand"
 	"net/http"
+	"regexp"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -36,7 +37,7 @@ import (
 func TestMetrics_NewMetrics(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	testm := testmetrics.Start(ctx)
+	testm := testmetrics.Start(ctx, t)
 
 	var (
 		// https://godoc.org/go.opencensus.io/stats
@@ -67,8 +68,8 @@ func TestMetrics_NewMetrics(t *testing.T) {
 	require.NoError(t, err)
 	// fmt.Println("/metrics => ", content)
 
-	assert.Contains(t, content, `insolar_video_size_count{osx="11.12.13"} 1`)
-	assert.Contains(t, content, `insolar_example_com_measures_video_count{osx="11.12.13"} 1`)
+	assert.Regexp(t, regexp.MustCompile(`insolar_video_size_count{[^}]*osx="11\.12\.13"[^}]*} 1`), content)
+	assert.Regexp(t, regexp.MustCompile(`insolar_example_com_measures_video_count{[^}]*osx="11\.12\.13"[^}]*} 1`), content)
 
 	assert.NoError(t, testm.Stop())
 }
@@ -76,7 +77,7 @@ func TestMetrics_NewMetrics(t *testing.T) {
 func TestMetrics_ZPages(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	testm := testmetrics.Start(ctx)
+	testm := testmetrics.Start(ctx, t)
 
 	// One more thing... from https://github.com/rakyll/opencensus-grpc-demo
 	// also check /debug/rpcz
@@ -96,7 +97,7 @@ func TestMetrics_Badger(t *testing.T) {
 	_, _, cleaner := storagetest.TmpDB(ctx, nil)
 	defer cleaner()
 
-	testm := testmetrics.Start(ctx)
+	testm := testmetrics.Start(ctx, t)
 
 	code, content, err := testm.FetchURL("/metrics")
 	_ = content
@@ -111,7 +112,7 @@ func TestMetrics_Badger(t *testing.T) {
 func TestMetrics_Status(t *testing.T) {
 	t.Parallel()
 	ctx := inslogger.TestContext(t)
-	testm := testmetrics.Start(ctx)
+	testm := testmetrics.Start(ctx, t)
 
 	code, _, err := testm.FetchURL("/_status")
 	require.NoError(t, err)

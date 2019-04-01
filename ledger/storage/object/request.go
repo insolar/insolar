@@ -17,8 +17,9 @@
 package object
 
 import (
-	"github.com/insolar/insolar/insolar/record"
 	"io"
+
+	"github.com/insolar/insolar/insolar/record"
 
 	"github.com/insolar/insolar/insolar"
 )

@@ -58,6 +58,7 @@ import (
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/node"
 )
 
 type nodeKeeperTestInterface interface {
@@ -67,6 +68,10 @@ type nodeKeeperTestInterface interface {
 
 type nodeKeeperWrapper struct {
 	original network.NodeKeeper
+}
+
+func (n *nodeKeeperWrapper) GetSnapshotCopy() *node.Snapshot {
+	return n.original.GetSnapshotCopy()
 }
 
 func (n *nodeKeeperWrapper) GetAccessor() network.Accessor {
@@ -138,14 +143,6 @@ func (n *nodeKeeperWrapper) GetOriginAnnounceClaim(mapper consensus.BitSetMapper
 
 func (n *nodeKeeperWrapper) GetClaimQueue() network.ClaimQueue {
 	return n.original.GetClaimQueue()
-}
-
-func (n *nodeKeeperWrapper) GetUnsyncList() network.UnsyncList {
-	return n.original.GetUnsyncList()
-}
-
-func (n *nodeKeeperWrapper) GetSparseUnsyncList(length int) network.UnsyncList {
-	return n.original.GetSparseUnsyncList(length)
 }
 
 func (n *nodeKeeperWrapper) Sync(ctx context.Context, nodes []insolar.NetworkNode, claims []consensus.ReferendumClaim) error {

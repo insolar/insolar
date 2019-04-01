@@ -24,7 +24,9 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -33,7 +35,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -53,8 +54,9 @@ type replicaIterSuite struct {
 	// TODO: @imarkin 28.03.2019 - remove it after all new storages integration (INS-2013, etc)
 	objectStorage storage.ObjectStorage
 
-	dropModifier   drop.Modifier
-	dropAccessor   drop.Accessor
+	dropModifier  drop.Modifier
+	dropAccessor  drop.Accessor
+	blobModifier  blob.Modifier
 	recordModifier object.RecordModifier
 }
 
@@ -80,16 +82,20 @@ func (s *replicaIterSuite) BeforeTest(suiteName, testName string) {
 	s.scheme = testutils.NewPlatformCryptographyScheme()
 
 	s.objectStorage = storage.NewObjectStorage()
-	dropStorage := drop.NewStorageDB()
+
+	dropStorage := drop.NewStorageDB(store.NewMemoryMockDB())
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 	recordStorage := object.NewRecordMemory()
 	s.recordModifier = recordStorage
 
+	bs := blob.NewStorageMemory()
+	s.blobModifier = bs
+
 	s.cm.Inject(
 		s.scheme,
 		s.db,
-		db.NewMemoryMockDB(),
+		store.NewMemoryMockDB(),
 		s.objectStorage,
 		s.dropAccessor,
 		s.dropModifier,
@@ -134,7 +140,8 @@ func Test_StoreKeyValues(t *testing.T) {
 		defer cleaner()
 
 		os := storage.NewObjectStorage()
-		ds := drop.NewStorageDB()
+		ds := drop.NewStorageDB(store.NewMemoryMockDB())
+		bs := blob.NewStorageMemory()
 
 		scheme := testutils.NewPlatformCryptographyScheme()
 
@@ -144,7 +151,7 @@ func Test_StoreKeyValues(t *testing.T) {
 		cm.Inject(
 			scheme,
 			tmpDB,
-			db.NewMemoryMockDB(),
+			store.NewMemoryMockDB(),
 			os,
 			ds,
 			recordStorage,
@@ -174,8 +181,6 @@ func Test_StoreKeyValues(t *testing.T) {
 			}
 			err := recordStorage.Set(ctx, *id, rec)
 			require.NoError(t, err)
-
-			addRecords(ctx, t, os, jetID, lastPulse, id)
 		}
 
 		for n := 0; n < pulsescount; n++ {
@@ -236,7 +241,7 @@ func (s *replicaIterSuite) Test_ReplicaIter_FirstPulse() {
 	err := s.recordModifier.Set(s.ctx, *id, rec)
 	require.NoError(s.T(), err)
 
-	addRecords(s.ctx, s.T(), s.objectStorage, jetID, insolar.FirstPulseNumber, id)
+	addRecords(s.ctx, s.T(), s.objectStorage, s.blobModifier, jetID, insolar.FirstPulseNumber, id)
 	replicator := storage.NewReplicaIter(s.ctx, s.db, jetID, insolar.FirstPulseNumber, insolar.FirstPulseNumber+1, 100500)
 	var got []key
 	for i := 0; ; i++ {
@@ -271,7 +276,8 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	defer cleaner()
 
 	os := storage.NewObjectStorage()
-	ds := drop.NewStorageDB()
+	ds := drop.NewStorageDB(store.NewMemoryMockDB())
+	bs := blob.NewStorageMemory()
 
 	scheme := testutils.NewPlatformCryptographyScheme()
 
@@ -281,7 +287,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	cm.Inject(
 		scheme,
 		tmpDB,
-		db.NewMemoryMockDB(),
+		store.NewMemoryMockDB(),
 		os,
 		ds,
 		recordStorage,
@@ -325,7 +331,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 		err = recordStorage.Set(ctx, *id, rec)
 		require.NoError(t, err)
 
-		addRecords(ctx, t, os, jetID, lastPulse, id)
+		addRecords(ctx, t, os, bs, jetID, lastPulse, id)
 
 		recs, _ := getallkeys(tmpDB.GetBadgerDB())
 		recKeys := getdelta(recsBefore, recs)
@@ -401,7 +407,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 
 	// addRecords here is for purpose:
 	// new records on +1 pulse should not affect iterator result on previous pulse range
-	addRecords(ctx, t, os, jetID, lastPulse, id)
+	addRecords(ctx, t, os, bs, jetID, lastPulse, id)
 	for n := 0; n < pulsescount; n++ {
 		p := pulseDelta(n)
 
@@ -432,12 +438,14 @@ func addRecords(
 	ctx context.Context,
 	t *testing.T,
 	objectStorage storage.ObjectStorage,
+	blobModifier blob.Modifier,
 	jetID insolar.ID,
 	pulsenum insolar.PulseNumber,
 	parentID *insolar.ID,
 ) {
 	// set blob
-	_, err := objectStorage.SetBlob(ctx, jetID, pulsenum, []byte("100500"))
+	blobID := object.CalculateIDForBlob(testutils.NewPlatformCryptographyScheme(), pulsenum, []byte("100500"))
+	err = blobModifier.Set(ctx, *blobID, blob.Blob{Value: []byte("100500"), JetID: insolar.JetID(jetID)})
 	require.NoError(t, err)
 
 	// set index of record

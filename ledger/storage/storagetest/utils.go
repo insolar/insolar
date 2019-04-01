@@ -22,17 +22,17 @@ import (
 	"os"
 	"testing"
 
-	"github.com/insolar/insolar/ledger/storage/genesis"
-	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/genesis"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -78,6 +78,9 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 
 	cm := &component.Manager{}
 
+	storageDB := store.NewMemoryMockDB()
+	ds := drop.NewStorageDB(storageDB)
+
 	objectStorage := storage.NewObjectStorage()
 	pulseTracker := storage.NewPulseTracker()
 	dropModifier := drop.NewStorageDB()
@@ -90,9 +93,9 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 		testutils.NewPlatformCryptographyScheme(),
 		tmpDB,
 		jet.NewStore(),
-		db.NewMemoryMockDB(),
+		store.NewMemoryMockDB(),
 		objectStorage,
-		dropModifier,
+		ds,
 		pulseTracker,
 		recordAccessor,
 		recordModifier,

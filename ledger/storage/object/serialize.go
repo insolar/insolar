@@ -19,6 +19,7 @@ package object
 import (
 	"bytes"
 	"encoding/binary"
+
 	"github.com/insolar/insolar/insolar/record"
 
 	"github.com/insolar/insolar/insolar"

@@ -1,9 +1,26 @@
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
+
 package handler
 
 import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -17,11 +34,13 @@ type Handler struct {
 	Bus            insolar.MessageBus     `inject:""`
 	JetCoordinator insolar.JetCoordinator `inject:""`
 	HeavySync      insolar.HeavySync      `inject:""`
+	PCS            insolar.PlatformCryptographyScheme `inject:""`
 
 	// TODO: @imarkin 27.03.2019 - remove it after all new storages integration (INS-2013, etc)
-	ObjectStorage storage.ObjectStorage `inject:""`
+	ObjectStorage storage.ObjectStorage `inject:""`BlobAccessor   blob.Accessor                      `inject:""`
 
-	object.RecordAccessor `inject:""`
+	BlobAccessor   blob.Accessor                      `inject:""`
+	Records object.RecordAccessor `inject:""`
 
 	jetID insolar.JetID
 }
@@ -48,19 +67,19 @@ func (h *Handler) Init(ctx context.Context) error {
 
 func (h *Handler) handleGetCode(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetCode)
-	jetID := *insolar.NewJetID(0, nil)
 
 	codeRec, err := h.getCode(ctx, msg.Code.Record())
 	if err != nil {
 		return nil, err
 	}
-	code, err := h.ObjectStorage.GetBlob(ctx, insolar.ID(jetID), codeRec.Code)
+
+	code, err := h.BlobAccessor.ForID(ctx, *codeRec.Code)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch code blob")
 	}
 
 	rep := reply.Code{
-		Code:        code,
+		Code:        code.Value,
 		MachineType: codeRec.MachineType,
 	}
 
@@ -94,7 +113,7 @@ func (h *Handler) handleGetObject(
 	}
 
 	// Fetch state record.
-	rec, err := h.RecordAccessor.ForID(ctx, *stateID)
+	rec, err := h.Records.ForID(ctx, *stateID)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch state %s for %s", stateID.DebugString(), msg.Head.Record()))
 	}
@@ -122,10 +141,11 @@ func (h *Handler) handleGetObject(
 	}
 
 	if state.GetMemory() != nil {
-		rep.Memory, err = h.ObjectStorage.GetBlob(ctx, insolar.ID(h.jetID), state.GetMemory())
+		b, err := h.BlobAccessor.ForID(ctx, *state.GetMemory())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch blob")
 		}
+		rep.Memory = b.Value
 	}
 
 	return &rep, nil
@@ -178,7 +198,7 @@ func (h *Handler) handleGetChildren(
 	}
 
 	// Try to fetch the first child.
-	_, err = h.RecordAccessor.ForID(ctx, *currentChild)
+	_, err = h.Records.ForID(ctx, *currentChild)
 	if err == object.ErrNotFound {
 		text := fmt.Sprintf(
 			"failed to fetch child %s for %s",
@@ -196,7 +216,7 @@ func (h *Handler) handleGetChildren(
 		}
 		counter++
 
-		rec, err := h.RecordAccessor.ForID(ctx, *currentChild)
+		rec, err := h.Records.ForID(ctx, *currentChild)
 
 		// We don't have this child reference. Return what was collected.
 		if err == object.ErrNotFound {
@@ -227,7 +247,7 @@ func (h *Handler) handleGetChildren(
 func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetRequest)
 
-	rec, err := h.RecordAccessor.ForID(ctx, msg.Request)
+	rec, err := h.Records.ForID(ctx, msg.Request)
 	if err != nil {
 		return nil, errors.New("failed to fetch request")
 	}
@@ -260,7 +280,7 @@ func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parce
 }
 
 func (h *Handler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeRecord, error) {
-	rec, err := h.RecordAccessor.ForID(ctx, *id)
+	rec, err := h.Records.ForID(ctx, *id)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get ")
 	}
@@ -274,9 +294,6 @@ func (h *Handler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeReco
 	return codeRec, nil
 }
 
-// TODO: check sender if it was light material in synced pulses:
-// sender := genericMsg.GetSender()
-// sender.isItWasLMInPulse(pulsenum)
 func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
 	msg := genericMsg.Message().(*message.HeavyPayload)
 
@@ -284,6 +301,9 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 		return heavyerrreply(err)
 	}
 	if err := h.HeavySync.StoreDrop(ctx, msg.JetID, msg.Drop); err != nil {
+		return heavyerrreply(err)
+	}
+	if err := h.HeavySync.StoreBlobs(ctx, msg.PulseNum, msg.Blobs); err != nil {
 		return heavyerrreply(err)
 	}
 

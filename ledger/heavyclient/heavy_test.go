@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -39,11 +40,12 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
@@ -101,7 +103,8 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.pulseTracker = storage.NewPulseTracker()
 	s.replicaStorage = storage.NewReplicaStorage()
 	s.objectStorage = storage.NewObjectStorage()
-	dropStorage := drop.NewStorageDB()
+
+	dropStorage := drop.NewStorageMemory()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 	recordStorage := object.NewRecordMemory()
@@ -113,7 +116,7 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 		s.scheme,
 		s.db,
 		s.jetStore,
-		db.NewMemoryMockDB(),
+		store.NewMemoryMockDB(),
 		s.nodeAccessor,
 		s.nodeSetter,
 		s.pulseTracker,
@@ -154,8 +157,7 @@ func (s *heavySuite) TestPulseManager_SendToHeavyWithRetry() {
 }
 
 func sendToHeavy(s *heavySuite, withretry bool) {
-	// TODO: test should work with any JetID (add new test?) - 14.Dec.2018 @nordicdyno
-	jetID := insolar.ZeroJetID
+	jetID := gen.JetID()
 	// Mock N1: LR mock do nothing
 	lrMock := testutils.NewLogicRunnerMock(s.T())
 	lrMock.OnPulseMock.Return(nil)
@@ -250,6 +252,8 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 		return nil, nil
 	}
 
+	blobStorage := blob.NewStorageMemory()
+
 	// build PulseManager
 	minretry := 20 * time.Millisecond
 	kb := 1 << 10
@@ -269,6 +273,9 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 			PulseManager:    pmconf,
 			LightChainLimit: 10,
 		},
+		nil,
+		blobStorage,
+		blobStorage,
 	)
 	pm.LR = lrMock
 	pm.NodeNet = nodenetMock
@@ -332,7 +339,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 		err := s.recordModifier.Set(s.ctx, *id, rec)
 		require.NoError(s.T(), err)
 
-		addRecords(s.ctx, s.T(), s.objectStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse+i), id)
+		addRecords(s.ctx, s.T(), s.objectStorage, blobStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse+i), id)
 	}
 
 	fmt.Println("Case1: sync after db fill and with new received pulses")
@@ -344,8 +351,6 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 
 	fmt.Println("Case2: sync during db fill")
 	for i := 0; i < 2; i++ {
-		// fill DB with records, indexes (TODO: add blobs)
-
 		virtRec := &object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: testutils.RandomRef(),
@@ -359,7 +364,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 		err := s.recordModifier.Set(s.ctx, *id, rec)
 		require.NoError(s.T(), err)
 
-		addRecords(s.ctx, s.T(), s.objectStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse+i), id)
+		addRecords(s.ctx, s.T(), s.objectStorage, blobStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse), id)
 
 		lastpulse++
 		err = setpulse(s.ctx, pm, lastpulse)
@@ -395,11 +400,26 @@ func addRecords(
 	ctx context.Context,
 	t *testing.T,
 	objectStorage storage.ObjectStorage,
+	blobModifier blob.Modifier,
 	jetID insolar.ID,
 	pn insolar.PulseNumber,
 	parentID *insolar.ID,
 ) {
-	_, err := objectStorage.SetBlob(ctx, jetID, pn, []byte("100500"))
+	// set record
+	parentID, err := objectStorage.SetRecord(
+		ctx,
+		jetID,
+		pn,
+		&object.ActivateRecord{
+			SideEffectRecord: object.SideEffectRecord{
+				Domain: testutils.RandomRef(),
+			},
+		},
+	)
+	require.NoError(t, err)
+
+	blobID := object.CalculateIDForBlob(testutils.NewPlatformCryptographyScheme(), pn, []byte("100500"))
+	err = blobModifier.Set(ctx, *blobID, blob.Blob{Value: []byte("100500"), JetID: insolar.JetID(jetID)})
 	require.NoError(t, err)
 
 	// set index of record

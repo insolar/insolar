@@ -45,7 +45,7 @@ func buildInciderCLI() (string, error) {
 	return buildCLI("insgorund")
 }
 
-func buildPreprocessor() (string, error) {
+func BuildPreprocessor() (string, error) {
 	return buildCLI("insgocc")
 }
 
@@ -64,7 +64,7 @@ func Build() (string, string, error) {
 		return "", "", err
 	}
 
-	insgocc, err := buildPreprocessor()
+	insgocc, err := BuildPreprocessor()
 	if err != nil {
 		return "", "", err
 	}

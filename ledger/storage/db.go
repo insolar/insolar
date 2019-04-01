@@ -18,9 +18,10 @@ package storage
 
 import (
 	"context"
-	"github.com/insolar/insolar/insolar/record"
 	"path/filepath"
 	"sync"
+
+	"github.com/insolar/insolar/insolar/record"
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
@@ -34,7 +35,6 @@ const (
 	scopeIDRecord   byte = 2
 	scopeIDPulse    byte = 4
 	scopeIDSystem   byte = 5
-	scopeIDBlob     byte = 7
 
 	sysGenesis                byte = 1
 	sysLatestPulse            byte = 2
@@ -65,7 +65,6 @@ type DBContext interface {
 	Set(ctx context.Context, key, value []byte) error
 	Get(ctx context.Context, key []byte) ([]byte, error)
 
-	// TODO i.markin 28.01.19: Delete after switching to conveyor architecture.
 	WaitingFlight()
 
 	iterate(ctx context.Context,

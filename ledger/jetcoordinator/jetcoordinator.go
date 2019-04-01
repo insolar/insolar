@@ -357,7 +357,6 @@ func getRefs(
 	values []insolar.Node,
 	count int,
 ) ([]insolar.Reference, error) {
-	// TODO: remove sort when network provides sorted result from GetActiveNodesByRole (INS-890) - @nordicdyno 5.Dec.2018
 	sort.SliceStable(values, func(i, j int) bool {
 		v1 := values[i].ID
 		v2 := values[j].ID

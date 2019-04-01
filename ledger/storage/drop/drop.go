@@ -39,6 +39,13 @@ type Accessor interface {
 	ForPulse(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (Drop, error)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/drop.Cleaner -o ./ -s _mock.go
+
+// Cleaner provides an interface for removing jetdrops from a storage.
+type Cleaner interface {
+	Delete(pulse insolar.PulseNumber)
+}
+
 // Drop is a blockchain block.
 // It contains hashes of the current block and the previous one.
 type Drop struct {
@@ -58,15 +65,15 @@ type Drop struct {
 	JetID insolar.JetID
 }
 
-// Encode serializes jet drop.
-func Encode(drop *Drop) ([]byte, error) {
+// MustEncode serializes jet drop.
+func MustEncode(drop *Drop) []byte {
 	var buf bytes.Buffer
 	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
 	err := enc.Encode(drop)
 	if err != nil {
-		return nil, err
+		panic(err)
 	}
-	return buf.Bytes(), nil
+	return buf.Bytes()
 }
 
 // Decode deserializes jet drop.
@@ -80,23 +87,8 @@ func Decode(buf []byte) (*Drop, error) {
 	return &drop, nil
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/drop.Cleaner -o ./ -s _mock.go
-
-// Cleaner provides an interface for removing jetdrops from a storage.
-type Cleaner interface {
-	Delete(pulse insolar.PulseNumber)
-}
-
-// Serialize serializes a drop
-func Serialize(dr Drop) []byte {
-	buff := bytes.NewBuffer(nil)
-	enc := codec.NewEncoder(buff, &codec.CborHandle{})
-	enc.MustEncode(dr)
-	return buff.Bytes()
-}
-
-// Deserialize deserializes a jet.Drop
-func Deserialize(buf []byte) (dr Drop) {
+// MustDecode deserializes a jet.Drop
+func MustDecode(buf []byte) (dr Drop) {
 	dec := codec.NewDecoderBytes(buf, &codec.CborHandle{})
 	dec.MustDecode(&dr)
 	return dr

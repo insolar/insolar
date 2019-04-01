@@ -51,9 +51,12 @@
 package node
 
 import (
-	"bytes"
+	"reflect"
+
 	"github.com/insolar/insolar/insolar"
-	"github.com/ugorji/go/codec"
+	protonode "github.com/insolar/insolar/network/node/internal/node"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/pkg/errors"
 )
 
 type ListType int
@@ -77,6 +80,34 @@ type Snapshot struct {
 
 func (s *Snapshot) GetPulse() insolar.PulseNumber {
 	return s.pulse
+}
+
+func (s *Snapshot) Copy() *Snapshot {
+	result := &Snapshot{
+		pulse: s.pulse,
+		state: s.state,
+	}
+	for i := 0; i < int(ListLength); i++ {
+		result.nodeList[i] = make([]insolar.NetworkNode, len(s.nodeList[i]))
+		copy(result.nodeList[i], s.nodeList[i])
+	}
+	return result
+}
+
+func (s *Snapshot) Equal(s2 *Snapshot) bool {
+	if s.pulse != s2.pulse || s.state != s2.state {
+		return false
+	}
+
+	for t, list := range s.nodeList {
+		for i, n := range list {
+			n2 := s2.nodeList[t][i]
+			if !reflect.DeepEqual(n, n2) {
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // NewSnapshot create new snapshot for pulse.
@@ -119,15 +150,69 @@ func nodeStateToListType(state insolar.NodeState) ListType {
 	return ListLength
 }
 
-func EncodeSnapshot(s *Snapshot) []byte {
-	var buff bytes.Buffer
-	enc := codec.NewEncoder(&buff, &codec.JsonHandle{})
-	enc.MustEncode(s)
-	return buff.Bytes()
+func (s *Snapshot) Encode() ([]byte, error) {
+	ss := protonode.Snapshot{}
+	ss.PulseNumber = uint32(s.pulse)
+	ss.State = uint32(s.state)
+	keyProc := platformpolicy.NewKeyProcessor()
+
+	ss.Nodes = make(map[uint32]*protonode.NodeList)
+	for t, list := range s.nodeList {
+		protoNodeList := make([]*protonode.Node, len(list))
+		for i, n := range list {
+
+			exportedKey, err := keyProc.ExportPublicKeyBinary(n.PublicKey())
+			if err != nil {
+				return nil, errors.Wrap(err, "Failed to export a public key")
+			}
+
+			protoNode := &protonode.Node{
+				NodeID:         n.ID().Bytes(),
+				NodeShortID:    uint32(n.ShortID()),
+				NodeRole:       uint32(n.Role()),
+				NodePublicKey:  exportedKey,
+				NodeAddress:    n.Address(),
+				NodeVersion:    n.Version(),
+				NodeLeavingETA: uint32(n.LeavingETA()),
+				State:          uint32(n.GetState()),
+			}
+
+			protoNodeList[i] = protoNode
+		}
+
+		l := &protonode.NodeList{}
+		l.List = protoNodeList
+		ss.Nodes[uint32(t)] = l
+	}
+
+	return ss.Marshal()
 }
 
-func DecodeSnapshot(buf []byte) (s Snapshot) {
-	dec := codec.NewDecoderBytes(buf, &codec.JsonHandle{})
-	dec.MustDecode(&s)
-	return s
+func (s *Snapshot) Decode(buff []byte) error {
+	ss := protonode.Snapshot{}
+	err := ss.Unmarshal(buff)
+	if err != nil {
+		return errors.Wrap(err, "Failed to unmarshal node")
+	}
+
+	keyProc := platformpolicy.NewKeyProcessor()
+	s.pulse = insolar.PulseNumber(ss.PulseNumber)
+	s.state = insolar.NetworkState(ss.State)
+
+	for t, nodes := range ss.Nodes {
+		nodeList := make([]insolar.NetworkNode, len(nodes.List))
+		for i, n := range nodes.List {
+
+			pk, err := keyProc.ImportPublicKeyBinary(n.NodePublicKey)
+			if err != nil {
+				return errors.Wrap(err, "Failed to ImportPublicKeyBinary")
+			}
+
+			ref := insolar.Reference{}.FromSlice(n.NodeID)
+			nodeList[i] = newMutableNode(ref, insolar.StaticRole(n.NodeRole), pk, insolar.NodeState(n.State), n.NodeAddress, n.NodeVersion)
+		}
+		s.nodeList[t] = nodeList
+	}
+
+	return nil
 }

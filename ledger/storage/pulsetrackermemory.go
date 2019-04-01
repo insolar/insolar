@@ -148,7 +148,7 @@ func (p *pulseTrackerMemory) DeletePulse(ctx context.Context, num insolar.PulseN
 }
 
 func (p *pulseTrackerMemory) getPulse(ctx context.Context, num insolar.PulseNumber) (*Pulse, error) {
-	// TODO: @imarkin 14.02.18 - it's a hack for fill genesis pulse in memory realization
+	// it's a hack for fill genesis pulse in memory realization
 	if num == insolar.FirstPulseNumber {
 		pulse := &Pulse{
 			Pulse: insolar.Pulse{
