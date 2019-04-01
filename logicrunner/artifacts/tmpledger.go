@@ -149,8 +149,8 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	handler.DBContext = tmpDB
 	handler.ObjectStorage = os
 	handler.DropModifier = ds
-	handler.RecordMod = recordModifier
-	handler.RecordAcc = recordAccessor
+	handler.RecordModifier = recordModifier
+	handler.RecordAccessor = recordAccessor
 
 	idLockerMock := storage.NewIDLockerMock(t)
 	idLockerMock.LockMock.Return()

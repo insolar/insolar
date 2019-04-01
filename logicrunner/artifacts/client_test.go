@@ -36,7 +36,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -52,14 +51,16 @@ type amSuite struct {
 	cleaner func()
 	db      storage.DBContext
 
-	scheme        insolar.PlatformCryptographyScheme
-	pulseTracker  storage.PulseTracker
-	nodeStorage   node.Accessor
+	scheme       insolar.PlatformCryptographyScheme
+	pulseTracker storage.PulseTracker
+	nodeStorage  node.Accessor
+
+	// TODO: @imarkin 01.04.2019 - remove it after all new storages integration (INS-2013, etc)
 	objectStorage storage.ObjectStorage
-	jetStorage    jet.Storage
-	dropModifier  drop.Modifier
-	dropAccessor  drop.Accessor
-	genesisState  genesis.State
+
+	jetStorage   jet.Storage
+	dropModifier drop.Modifier
+	dropAccessor drop.Accessor
 }
 
 func NewAmSuite() *amSuite {
@@ -90,20 +91,6 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 
-	recordStorage := object.NewRecordMemory()
-
-	recordModifier := recordStorage
-
-	gi := genesis.NewGenesisInitializer()
-	gi.(*genesis.GenesisInitializer).DB = tempDB
-	gi.(*genesis.GenesisInitializer).ObjectStorage = s.objectStorage
-	gi.(*genesis.GenesisInitializer).PulseTracker = s.pulseTracker
-	gi.(*genesis.GenesisInitializer).DropModifier = s.dropModifier
-	gi.(*genesis.GenesisInitializer).RecordModifier = recordModifier
-	gi.(*genesis.GenesisInitializer).PlatformCryptographyScheme = s.scheme
-
-	s.genesisState = gi
-
 	s.cm.Inject(
 		s.scheme,
 		s.db,
@@ -114,7 +101,6 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 		s.objectStorage,
 		s.dropAccessor,
 		s.dropModifier,
-		// s.genesisState,
 	)
 
 	err := s.cm.Init(s.ctx)
@@ -125,8 +111,6 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	if err != nil {
 		s.T().Error("ComponentManager start failed", err)
 	}
-
-	s.genesisState.Init(s.ctx)
 }
 
 func (s *amSuite) AfterTest(suiteName, testName string) {

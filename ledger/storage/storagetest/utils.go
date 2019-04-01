@@ -18,7 +18,6 @@ package storagetest
 
 import (
 	"context"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -87,9 +86,6 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 	recordAccessor := recordStorage
 	recordModifier := recordStorage
 
-	ptr := fmt.Sprintf("%p", recordStorage)
-	_ = ptr
-
 	cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
 		tmpDB,
@@ -102,6 +98,11 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 		recordModifier,
 	)
 
+	if !opts.nobootstrap {
+		gi := genesis.NewGenesisInitializer()
+		cm.Inject(gi)
+	}
+
 	err = cm.Init(ctx)
 	if err != nil {
 		t.Error("ComponentManager init failed", err)
@@ -109,17 +110,6 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 	err = cm.Start(ctx)
 	if err != nil {
 		t.Error("ComponentManager start failed", err)
-	}
-
-	if !opts.nobootstrap {
-		gi := genesis.NewGenesisInitializer()
-		gi.(*genesis.GenesisInitializer).DB = tmpDB
-		gi.(*genesis.GenesisInitializer).ObjectStorage = objectStorage
-		gi.(*genesis.GenesisInitializer).PulseTracker = pulseTracker
-		gi.(*genesis.GenesisInitializer).DropModifier = dropModifier
-		gi.(*genesis.GenesisInitializer).Records = recordModifier
-		gi.(*genesis.GenesisInitializer).PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
-		gi.Init(ctx)
 	}
 
 	return tmpDB, recordModifier, func() {
