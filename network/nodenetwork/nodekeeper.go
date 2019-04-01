@@ -52,8 +52,10 @@ package nodenetwork
 
 import (
 	"context"
-	"github.com/insolar/insolar/network/node"
+	"net"
 	"sync"
+
+	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
@@ -105,13 +107,13 @@ func createOrigin(configuration configuration.HostNetwork, certificate insolar.C
 }
 
 func resolveAddress(configuration configuration.HostNetwork) (string, error) {
-	conn, address, err := transport.NewConnection(configuration.Transport)
+	addr, err := net.ResolveTCPAddr("tcp", configuration.Transport.Address)
 	if err != nil {
 		return "", err
 	}
-	err = conn.Close()
+	address, err := transport.Resolve(configuration.Transport, addr.String())
 	if err != nil {
-		log.Warn(err)
+		return "", err
 	}
 	return address, nil
 }
@@ -149,6 +151,13 @@ type nodekeeper struct {
 	isBootstrapLock sync.RWMutex
 
 	Cryptography insolar.CryptographyService `inject:""`
+}
+
+func (nk *nodekeeper) GetSnapshotCopy() *node.Snapshot {
+	nk.activeLock.RLock()
+	defer nk.activeLock.RUnlock()
+
+	return nk.snapshot.Copy()
 }
 
 func (nk *nodekeeper) SetInitialSnapshot(nodes []insolar.NetworkNode) {
@@ -275,15 +284,6 @@ func (nk *nodekeeper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
 
 func (nk *nodekeeper) GetClaimQueue() network.ClaimQueue {
 	return nk.claimQueue
-}
-
-func (nk *nodekeeper) GetUnsyncList() network.UnsyncList {
-	activeNodes := nk.GetAccessor().GetActiveNodes()
-	return newUnsyncList(nk.origin, activeNodes, len(activeNodes))
-}
-
-func (nk *nodekeeper) GetSparseUnsyncList(length int) network.UnsyncList {
-	return newUnsyncList(nk.origin, nil, length)
 }
 
 func (nk *nodekeeper) Sync(ctx context.Context, nodes []insolar.NetworkNode, claims []consensus.ReferendumClaim) error {

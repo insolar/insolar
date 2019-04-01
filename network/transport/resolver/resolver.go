@@ -50,13 +50,9 @@
 
 package resolver
 
-import (
-	"net"
-)
-
 // PublicAddressResolver is network address resolver interface.
 type PublicAddressResolver interface {
 
-	// Resolve returns public network address from given connection.
-	Resolve(conn net.PacketConn) (string, error)
+	// Resolve returns public network address from given internal address.
+	Resolve(address string) (string, error)
 }

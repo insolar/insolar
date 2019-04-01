@@ -22,8 +22,8 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -102,8 +102,7 @@ func (s *heavysyncSuite) TestHeavy_SyncBasic() {
 		{K: []byte("100"), V: []byte("500")},
 	}
 
-	// TODO: call every case in subtest
-	jetID := testutils.RandomJet()
+	jetID := insolar.ID(gen.JetID())
 
 	sync := NewSync(s.db)
 	sync.ReplicaStorage = s.replicaStorage
@@ -194,7 +193,6 @@ func (s *heavysyncSuite) TestHeavy_SyncByJet() {
 		{K: []byte("2_21"), V: []byte("2_22")},
 	}
 
-	// TODO: call every case in subtest
 	jetID1 := testutils.RandomJet()
 	jetID2 := jetID1
 	// flip first bit of last byte jetID2 for different prefixes

@@ -19,8 +19,14 @@ package blob
 import (
 	"testing"
 
-	"github.com/insolar/insolar/gen"
+	"github.com/google/gofuzz"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestClone(t *testing.T) {
@@ -37,4 +43,41 @@ func TestClone(t *testing.T) {
 
 	assert.Equal(t, blob, clonedBlob)
 	assert.False(t, &blob == &clonedBlob)
+}
+
+func TestStorageMemory_ForPN(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+	ms := NewStorageMemory()
+	pcs := testutils.NewPlatformCryptographyScheme()
+
+	searchJetID := gen.JetID()
+	searchPN := gen.PulseNumber()
+
+	searchBlobs := map[insolar.ID]struct{}{}
+	for i := 0; i < 5; i++ {
+		b := Blob{}
+		fuzz.New().NilChance(0).Fuzz(&b)
+		b.JetID = searchJetID
+
+		bID := object.CalculateIDForBlob(pcs, searchPN, MustEncode(&b))
+		searchBlobs[*bID] = struct{}{}
+		_ = ms.Set(ctx, *bID, b)
+	}
+
+	for i := 0; i < 500; i++ {
+		b := Blob{}
+		fuzz.New().NilChance(0).Fuzz(&b)
+		bID := object.CalculateIDForBlob(pcs, gen.PulseNumber(), MustEncode(&b))
+		_ = ms.Set(ctx, *bID, b)
+	}
+
+	res := ms.ForPulse(ctx, searchJetID, searchPN)
+
+	require.Equal(t, len(searchBlobs), len(res))
+	for _, b := range res {
+		bID := object.CalculateIDForBlob(pcs, searchPN, MustEncode(&b))
+		_, ok := searchBlobs[*bID]
+		require.Equal(t, true, ok)
+	}
 }

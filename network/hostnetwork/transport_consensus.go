@@ -160,7 +160,6 @@ func NewConsensusNetwork(address, nodeID string, shortID insolar.ShortNodeID) (n
 	conf := configuration.Transport{}
 	conf.Address = address
 	conf.Protocol = "PURE_UDP"
-	conf.BehindNAT = false
 
 	tp, err := transport.NewTransport(conf, relay.NewProxy())
 	if err != nil {

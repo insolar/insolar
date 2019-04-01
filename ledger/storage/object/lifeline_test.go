@@ -20,10 +20,10 @@ import (
 	"testing"
 
 	"github.com/google/gofuzz"
-	"github.com/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -87,7 +87,7 @@ func TestIndexStorage_Set(t *testing.T) {
 		JetID:       jetID,
 	}
 
-	jetIndex := db.NewJetIndexModifierMock(t)
+	jetIndex := store.NewJetIndexModifierMock(t)
 	jetIndex.AddMock.Expect(id, jetID)
 
 	t.Run("saves correct index-value", func(t *testing.T) {
@@ -133,7 +133,7 @@ func TestIndexStorage_Set_SaveLastUpdate(t *testing.T) {
 		JetID:        jetID,
 	}
 
-	jetIndex := db.NewJetIndexModifierMock(t)
+	jetIndex := store.NewJetIndexModifierMock(t)
 	jetIndex.AddMock.Expect(id, jetID)
 
 	t.Run("saves correct LastUpdate field in index", func(t *testing.T) {

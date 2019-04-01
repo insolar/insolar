@@ -1,0 +1,7 @@
+{
+    "majority_rule": 0,
+    "public_key": "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAE/kltJAtODHfdxAtn/H/TPbdPsx+G\n6DhdDIFrridWSphE8ejBZXGPwR6Rou57n4FdHVavUgm4jBrBu9fdOMXLjA==\n-----END PUBLIC KEY-----\n",
+    "reference": "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa",
+    "roles": [],
+    "bootstrap_nodes": []
+}

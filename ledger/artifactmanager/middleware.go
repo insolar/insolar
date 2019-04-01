@@ -23,10 +23,10 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
@@ -99,7 +99,7 @@ func (m *middleware) checkJet(handler insolar.MessageHandler) insolar.MessageHan
 			return nil, errors.New("unexpected message")
 		}
 
-		// FIXME: @andreyromancev. 17.01.19. Temporary allow any genesis request. Remove it.
+		// Hack to temporary allow any genesis request.
 		if parcel.Pulse() == insolar.FirstPulseNumber {
 			return handler(contextWithJet(ctx, insolar.ID(*insolar.NewJetID(0, nil))), parcel)
 		}
@@ -164,8 +164,8 @@ func (m *middleware) checkJet(handler insolar.MessageHandler) insolar.MessageHan
 
 func (m *middleware) waitForHotData(handler insolar.MessageHandler) insolar.MessageHandler {
 	return func(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-		// TODO: 15.01.2019 @egorikas
-		// Hack is needed for genesis
+		// Hack is needed for genesis:
+		// because we don't have hot data on first pulse and without this we would stale.
 		if parcel.Pulse() == insolar.FirstPulseNumber {
 			return handler(ctx, parcel)
 		}

@@ -12,6 +12,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,7 +21,7 @@ import (
 type RecordAccessorMock struct {
 	t minimock.Tester
 
-	ForIDFunc       func(p context.Context, p1 insolar.ID) (r MaterialRecord, r1 error)
+	ForIDFunc       func(p context.Context, p1 insolar.ID) (r record.MaterialRecord, r1 error)
 	ForIDCounter    uint64
 	ForIDPreCounter uint64
 	ForIDMock       mRecordAccessorMockForID
@@ -56,7 +57,7 @@ type RecordAccessorMockForIDInput struct {
 }
 
 type RecordAccessorMockForIDResult struct {
-	r  MaterialRecord
+	r  record.MaterialRecord
 	r1 error
 }
 
@@ -73,7 +74,7 @@ func (m *mRecordAccessorMockForID) Expect(p context.Context, p1 insolar.ID) *mRe
 }
 
 //Return specifies results of invocation of RecordAccessor.ForID
-func (m *mRecordAccessorMockForID) Return(r MaterialRecord, r1 error) *RecordAccessorMock {
+func (m *mRecordAccessorMockForID) Return(r record.MaterialRecord, r1 error) *RecordAccessorMock {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
 
@@ -95,12 +96,12 @@ func (m *mRecordAccessorMockForID) ExpectOnce(p context.Context, p1 insolar.ID) 
 	return expectation
 }
 
-func (e *RecordAccessorMockForIDExpectation) Return(r MaterialRecord, r1 error) {
+func (e *RecordAccessorMockForIDExpectation) Return(r record.MaterialRecord, r1 error) {
 	e.result = &RecordAccessorMockForIDResult{r, r1}
 }
 
 //Set uses given function f as a mock of RecordAccessor.ForID method
-func (m *mRecordAccessorMockForID) Set(f func(p context.Context, p1 insolar.ID) (r MaterialRecord, r1 error)) *RecordAccessorMock {
+func (m *mRecordAccessorMockForID) Set(f func(p context.Context, p1 insolar.ID) (r record.MaterialRecord, r1 error)) *RecordAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -109,7 +110,7 @@ func (m *mRecordAccessorMockForID) Set(f func(p context.Context, p1 insolar.ID) 
 }
 
 //ForID implements github.com/insolar/insolar/ledger/storage/object.RecordAccessor interface
-func (m *RecordAccessorMock) ForID(p context.Context, p1 insolar.ID) (r MaterialRecord, r1 error) {
+func (m *RecordAccessorMock) ForID(p context.Context, p1 insolar.ID) (r record.MaterialRecord, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
 

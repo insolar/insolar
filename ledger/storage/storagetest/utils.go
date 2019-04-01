@@ -22,14 +22,14 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/ledger/internal/jet"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/testutils"
@@ -77,13 +77,16 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 
 	cm := &component.Manager{}
 
+	storageDB := store.NewMemoryMockDB()
+	ds := drop.NewStorageDB(storageDB)
+
 	cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
 		tmpDB,
 		jet.NewStore(),
-		db.NewMemoryMockDB(),
+		store.NewMemoryMockDB(),
 		storage.NewObjectStorage(),
-		drop.NewStorageDB(),
+		ds,
 		storage.NewPulseTracker(),
 	)
 

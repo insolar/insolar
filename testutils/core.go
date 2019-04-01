@@ -78,6 +78,7 @@ func RandomID() insolar.ID {
 }
 
 // RandomJet generates random jet with random depth.
+// DEPRECATED: use gem.JetID
 func RandomJet() insolar.ID {
 	// don't be too huge (i.e. 255)
 	n, err := rand.Int(rand.Reader, big.NewInt(128))
@@ -148,7 +149,8 @@ func (m *hasherMock) BlockSize() int {
 }
 
 func (m *hasherMock) Hash(val []byte) []byte {
-	panic("not implemented")
+	_, _ = m.h.Write(val)
+	return m.h.Sum(nil)
 }
 
 func (m *cryptographySchemeMock) ReferenceHasher() insolar.Hasher {

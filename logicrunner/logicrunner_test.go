@@ -30,6 +30,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/stretchr/testify/assert"
 
 	"github.com/stretchr/testify/suite"
@@ -63,7 +64,6 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
-	"github.com/insolar/insolar/ledger/ledgertestutils"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
@@ -113,7 +113,7 @@ func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr insolar.Log
 	mb.ReRegister(insolar.TypeExecutorResults, lr.HandleExecutorResultsMessage)
 }
 
-func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, insolar.ArtifactManager, *goplugintestutils.ContractsBuilder, insolar.PulseManager, func()) {
+func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts.Client, *goplugintestutils.ContractsBuilder, insolar.PulseManager, func()) {
 	ctx := context.TODO()
 	lrSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 	rundSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
@@ -147,7 +147,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, insolar.A
 
 	nw := network.GetTestNetwork()
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	l, db, cleaner := ledgertestutils.TmpLedger(
+	l, db, cleaner := artifacts.TmpLedger(
 		s.T(), "", insolar.StaticRoleLightMaterial,
 		insolar.Components{
 			LogicRunner: lr,
@@ -2041,10 +2041,10 @@ func (c *First) GetName() (string, error) {
 	ch := new(codec.CborHandle)
 	res := []interface{}{&foundation.Error{}}
 	err = codec.NewDecoderBytes(resp.(*reply.CallMethod).Result, ch).Decode(&res)
-	s.Equal(map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: proxy call error: try to call method of prototype as method of another prototype"}), res[1])
+	s.Equal(map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: CallMethod returns error: proxy call error: try to call method of prototype as method of another prototype"}), res[1])
 }
 
-func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am insolar.ArtifactManager, cb *goplugintestutils.ContractsBuilder, contractName string) (*insolar.Reference, *insolar.Reference) {
+func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am artifacts.Client, cb *goplugintestutils.ContractsBuilder, contractName string) (*insolar.Reference, *insolar.Reference) {
 	domain, err := insolar.NewReferenceFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
 	s.Require().NoError(err)
 	contractID, err := am.RegisterRequest(

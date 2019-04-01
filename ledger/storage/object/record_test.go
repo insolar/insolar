@@ -1,30 +1,32 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package object
 
 import (
 	"testing"
 
-	"github.com/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/store"
 )
 
 func TestRecordStorage_NewStorageMemory(t *testing.T) {
@@ -41,7 +43,7 @@ func TestRecordStorage_ForID(t *testing.T) {
 
 	jetID := gen.JetID()
 	id := gen.ID()
-	rec := MaterialRecord{
+	rec := record.MaterialRecord{
 		Record: &ResultRecord{},
 		JetID:  jetID,
 	}
@@ -50,7 +52,7 @@ func TestRecordStorage_ForID(t *testing.T) {
 		t.Parallel()
 
 		recordStorage := &RecordMemory{
-			memory: map[insolar.ID]MaterialRecord{},
+			memory: map[insolar.ID]record.MaterialRecord{},
 		}
 		recordStorage.memory[id] = rec
 
@@ -64,7 +66,7 @@ func TestRecordStorage_ForID(t *testing.T) {
 		t.Parallel()
 
 		recordStorage := &RecordMemory{
-			memory: map[insolar.ID]MaterialRecord{},
+			memory: map[insolar.ID]record.MaterialRecord{},
 		}
 		recordStorage.memory[id] = rec
 
@@ -81,19 +83,19 @@ func TestRecordStorage_Set(t *testing.T) {
 
 	jetID := gen.JetID()
 	id := gen.ID()
-	rec := MaterialRecord{
+	rec := record.MaterialRecord{
 		Record: &ResultRecord{},
 		JetID:  jetID,
 	}
 
-	jetIndex := db.NewJetIndexModifierMock(t)
+	jetIndex := store.NewJetIndexModifierMock(t)
 	jetIndex.AddMock.Expect(id, jetID)
 
 	t.Run("saves correct record-value", func(t *testing.T) {
 		t.Parallel()
 
 		recordStorage := &RecordMemory{
-			memory:   map[insolar.ID]MaterialRecord{},
+			memory:   map[insolar.ID]record.MaterialRecord{},
 			jetIndex: jetIndex,
 		}
 		err := recordStorage.Set(ctx, id, rec)
@@ -107,7 +109,7 @@ func TestRecordStorage_Set(t *testing.T) {
 		t.Parallel()
 
 		recordStorage := &RecordMemory{
-			memory:   map[insolar.ID]MaterialRecord{},
+			memory:   map[insolar.ID]record.MaterialRecord{},
 			jetIndex: jetIndex,
 		}
 		err := recordStorage.Set(ctx, id, rec)

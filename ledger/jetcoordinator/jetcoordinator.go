@@ -23,8 +23,8 @@ import (
 	"sort"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/utils"
-	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/utils/entropy"
@@ -353,7 +353,6 @@ func getRefs(
 	values []insolar.Node,
 	count int,
 ) ([]insolar.Reference, error) {
-	// TODO: remove sort when network provides sorted result from GetActiveNodesByRole (INS-890) - @nordicdyno 5.Dec.2018
 	sort.SliceStable(values, func(i, j int) bool {
 		v1 := values[i].ID
 		v2 := values[j].ID

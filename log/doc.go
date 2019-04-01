@@ -32,7 +32,7 @@ package main
 		log.Debugln("debug log message")
 
 		// local logger
-		logger, _ := log.NewLog(configuration.Log{Level: "Warning", Adapter: "logrus"})
+		logger, _ := log.NewLog(configuration.Log{Level: "Warning", Adapter: "zerolog"})
 		logger.Warnln("warning log message")
 	}
 

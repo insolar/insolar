@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -44,7 +45,7 @@ type LogicRunnerCommonTestSuite struct {
 
 	mc  *minimock.Controller
 	ctx context.Context
-	am  *testutils.ArtifactManagerMock
+	am  *artifacts.ClientMock
 	mb  *testutils.MessageBusMock
 	jc  *testutils.JetCoordinatorMock
 	lr  *LogicRunner
@@ -60,7 +61,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 
 	// initialize minimock and mocks
 	suite.mc = minimock.NewController(suite.T())
-	suite.am = testutils.NewArtifactManagerMock(suite.mc)
+	suite.am = artifacts.NewClientMock(suite.mc)
 	suite.mb = testutils.NewMessageBusMock(suite.mc)
 	suite.jc = testutils.NewJetCoordinatorMock(suite.mc)
 	suite.ps = testutils.NewPulseStorageMock(suite.mc)
@@ -720,24 +721,24 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	nodeMock.IDMock.Return(meRef)
 	suite.nn.GetOriginMock.Return(nodeMock)
 
-	od := testutils.NewObjectDescriptorMock(suite.T())
+	od := artifacts.NewObjectDescriptorMock(suite.T())
 	od.PrototypeMock.Return(&protoRef, nil)
 	od.MemoryMock.Return([]byte{1, 2, 3})
 	od.ParentMock.Return(&parentRef)
 	od.HeadRefMock.Return(&objectRef)
 
-	pd := testutils.NewObjectDescriptorMock(suite.T())
+	pd := artifacts.NewObjectDescriptorMock(suite.T())
 	pd.CodeMock.Return(&codeRef, nil)
 	pd.HeadRefMock.Return(&protoRef)
 
-	cd := testutils.NewCodeDescriptorMock(suite.T())
+	cd := artifacts.NewCodeDescriptorMock(suite.T())
 	cd.MachineTypeMock.Return(insolar.MachineTypeBuiltin)
 	cd.RefMock.Return(&codeRef)
 	suite.am.GetCodeMock.Return(cd, nil)
 
 	suite.am.GetObjectFunc = func(
 		ctx context.Context, obj insolar.Reference, st *insolar.ID, approved bool,
-	) (insolar.ObjectDescriptor, error) {
+	) (artifacts.ObjectDescriptor, error) {
 		switch obj {
 		case objectRef:
 			return od, nil
@@ -946,23 +947,23 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				nodeMock.IDMock.Return(meRef)
 				suite.nn.GetOriginMock.Return(nodeMock)
 
-				od := testutils.NewObjectDescriptorMock(suite.T())
+				od := artifacts.NewObjectDescriptorMock(suite.T())
 				od.PrototypeMock.Return(&protoRef, nil)
 				od.MemoryMock.Return([]byte{1, 2, 3})
 				od.ParentMock.Return(&parentRef)
 				od.HeadRefMock.Return(&objectRef)
 
-				pd := testutils.NewObjectDescriptorMock(suite.T())
+				pd := artifacts.NewObjectDescriptorMock(suite.T())
 				pd.CodeMock.Return(&codeRef, nil)
 				pd.HeadRefMock.Return(&protoRef)
 
-				cd := testutils.NewCodeDescriptorMock(suite.T())
+				cd := artifacts.NewCodeDescriptorMock(suite.T())
 				cd.MachineTypeMock.Return(insolar.MachineTypeBuiltin)
 				cd.RefMock.Return(&codeRef)
 
 				suite.am.GetObjectFunc = func(
 					ctx context.Context, obj insolar.Reference, st *insolar.ID, approved bool,
-				) (insolar.ObjectDescriptor, error) {
+				) (artifacts.ObjectDescriptor, error) {
 					switch obj {
 					case objectRef:
 						return od, nil
@@ -1386,7 +1387,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecution
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInLedger() {
 	es := &ExecutionState{Ref: s.ref, Behaviour: &ValidationSaver{}, LedgerHasMoreRequests: true}
 
-	am := testutils.NewArtifactManagerMock(s.mc)
+	am := artifacts.NewClientMock(s.mc)
 	am.GetPendingRequestMock.Return(nil, insolar.ErrNoPendingRequest)
 	s.lr.ArtifactManager = am
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)

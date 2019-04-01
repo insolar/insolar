@@ -21,27 +21,29 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/record"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
 )
 
-type recordgen func() VirtualRecord
+type recordgen func() record.VirtualRecord
 
 var emptyRecordsGens = []recordgen{
 	// request records
-	func() VirtualRecord { return &RequestRecord{} },
+	func() record.VirtualRecord { return &RequestRecord{} },
 	// result records
-	func() VirtualRecord { return &ActivateRecord{} },
-	func() VirtualRecord { return &CodeRecord{} },
-	func() VirtualRecord { return &DeactivationRecord{} },
-	func() VirtualRecord { return &AmendRecord{} },
-	func() VirtualRecord { return &TypeRecord{} },
-	func() VirtualRecord { return &ChildRecord{} },
-	func() VirtualRecord { return &GenesisRecord{} },
+	func() record.VirtualRecord { return &ActivateRecord{} },
+	func() record.VirtualRecord { return &CodeRecord{} },
+	func() record.VirtualRecord { return &DeactivationRecord{} },
+	func() record.VirtualRecord { return &AmendRecord{} },
+	func() record.VirtualRecord { return &TypeRecord{} },
+	func() record.VirtualRecord { return &ChildRecord{} },
+	func() record.VirtualRecord { return &GenesisRecord{} },
 }
 
-func getRecordHashData(rec VirtualRecord) []byte {
+func getRecordHashData(rec record.VirtualRecord) []byte {
 	buff := bytes.NewBuffer(nil)
 	rec.WriteHashData(buff)
 	return buff.Bytes()
@@ -82,11 +84,11 @@ func Test_HashesTheSame(t *testing.T) {
 var pcs = platformpolicy.NewPlatformCryptographyScheme()
 var hashtestsRecordsMutate = []struct {
 	typ     string
-	records []VirtualRecord
+	records []record.VirtualRecord
 }{
 	{
 		"CodeRecord",
-		[]VirtualRecord{
+		[]record.VirtualRecord{
 			&CodeRecord{},
 			&CodeRecord{Code: CalculateIDForBlob(pcs, insolar.GenesisPulse.PulseNumber, []byte{1, 2, 3})},
 			&CodeRecord{

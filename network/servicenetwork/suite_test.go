@@ -75,7 +75,6 @@ import (
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -184,19 +183,12 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 		results <- err
 	}
 
-	waitResults := func(results chan error, expected int) error {
+	waitResults := func(results chan error, expected int) {
 		count := 0
-		for {
-			select {
-			case err := <-results:
-				count++
-				s.Require().NoError(err)
-				if count == expected {
-					return nil
-				}
-			case <-time.After(time.Second * 30):
-				return errors.New("timeout")
-			}
+		for count < expected {
+			err := <-results
+			s.Require().NoError(err)
+			count++
 		}
 	}
 
@@ -204,17 +196,13 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 	for _, node := range nodes {
 		go initNode(node)
 	}
-
-	err := waitResults(results, len(nodes))
-	s.Require().NoError(err)
+	waitResults(results, len(nodes))
 
 	log.Info("Start nodes")
 	for _, node := range nodes {
 		go startNode(node)
 	}
-
-	err = waitResults(results, len(nodes))
-	s.Require().NoError(err)
+	waitResults(results, len(nodes))
 }
 
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
@@ -310,9 +298,7 @@ type networkNode struct {
 // newNetworkNode returns networkNode initialized only with id, host address and key pair
 func (s *testSuite) newNetworkNode(name string) *networkNode {
 	key, err := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
-	if err != nil {
-		panic(err.Error())
-	}
+	s.Require().NoError(err)
 	address := "127.0.0.1:" + strconv.Itoa(incrementTestPort())
 
 	nodeContext, _ := inslogger.WithField(s.fixture().ctx, "nodeName", name)
@@ -418,6 +404,14 @@ func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse, persist
 	return p.keeper.MoveSyncToActive(ctx)
 }
 
+type staterMock struct {
+	stateFunc func() ([]byte, error)
+}
+
+func (m staterMock) State() ([]byte, error) {
+	return m.stateFunc()
+}
+
 // preInitNode inits previously created node with mocks and external dependencies
 func (s *testSuite) preInitNode(node *networkNode) {
 	cfg := configuration.NewConfiguration()
@@ -439,10 +433,11 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		return true
 	})
 
-	amMock := testutils.NewArtifactManagerMock(s.T())
-	amMock.StateMock.Set(func() (r []byte, r1 error) {
-		return make([]byte, packets.HashLength), nil
-	})
+	amMock := staterMock{
+		stateFunc: func() ([]byte, error) {
+			return make([]byte, packets.HashLength), nil
+		},
+	}
 
 	certManager, cryptographyService := s.initCrypto(node)
 
@@ -452,7 +447,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
-	node.componentManager.Register(netCoordinator, amMock, certManager, cryptographyService)
+	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService)
 	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc)
 	node.serviceNetwork = serviceNetwork
 }
