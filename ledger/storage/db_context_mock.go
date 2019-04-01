@@ -13,7 +13,7 @@ import (
 	badger "github.com/dgraph-io/badger"
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
-	object "github.com/insolar/insolar/ledger/storage/object"
+	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -42,7 +42,7 @@ type DBContextMock struct {
 	GetBadgerDBPreCounter uint64
 	GetBadgerDBMock       mDBContextMockGetBadgerDB
 
-	IterateRecordsOnPulseFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 func(p insolar.ID, p1 object.Record) (r error)) (r error)
+	IterateRecordsOnPulseFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 func(p insolar.ID, p1 record.VirtualRecord) (r error)) (r error)
 	IterateRecordsOnPulseCounter    uint64
 	IterateRecordsOnPulsePreCounter uint64
 	IterateRecordsOnPulseMock       mDBContextMockIterateRecordsOnPulse
@@ -685,7 +685,7 @@ type DBContextMockIterateRecordsOnPulseInput struct {
 	p  context.Context
 	p1 insolar.ID
 	p2 insolar.PulseNumber
-	p3 func(p insolar.ID, p1 object.Record) (r error)
+	p3 func(p insolar.ID, p1 record.VirtualRecord) (r error)
 }
 
 type DBContextMockIterateRecordsOnPulseResult struct {
@@ -693,7 +693,7 @@ type DBContextMockIterateRecordsOnPulseResult struct {
 }
 
 //Expect specifies that invocation of DBContext.IterateRecordsOnPulse is expected from 1 to Infinity times
-func (m *mDBContextMockIterateRecordsOnPulse) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 func(p insolar.ID, p1 object.Record) (r error)) *mDBContextMockIterateRecordsOnPulse {
+func (m *mDBContextMockIterateRecordsOnPulse) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 func(p insolar.ID, p1 record.VirtualRecord) (r error)) *mDBContextMockIterateRecordsOnPulse {
 	m.mock.IterateRecordsOnPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -717,7 +717,7 @@ func (m *mDBContextMockIterateRecordsOnPulse) Return(r error) *DBContextMock {
 }
 
 //ExpectOnce specifies that invocation of DBContext.IterateRecordsOnPulse is expected once
-func (m *mDBContextMockIterateRecordsOnPulse) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 func(p insolar.ID, p1 object.Record) (r error)) *DBContextMockIterateRecordsOnPulseExpectation {
+func (m *mDBContextMockIterateRecordsOnPulse) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 func(p insolar.ID, p1 record.VirtualRecord) (r error)) *DBContextMockIterateRecordsOnPulseExpectation {
 	m.mock.IterateRecordsOnPulseFunc = nil
 	m.mainExpectation = nil
 
@@ -732,7 +732,7 @@ func (e *DBContextMockIterateRecordsOnPulseExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of DBContext.IterateRecordsOnPulse method
-func (m *mDBContextMockIterateRecordsOnPulse) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 func(p insolar.ID, p1 object.Record) (r error)) (r error)) *DBContextMock {
+func (m *mDBContextMockIterateRecordsOnPulse) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 func(p insolar.ID, p1 record.VirtualRecord) (r error)) (r error)) *DBContextMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -741,7 +741,7 @@ func (m *mDBContextMockIterateRecordsOnPulse) Set(f func(p context.Context, p1 i
 }
 
 //IterateRecordsOnPulse implements github.com/insolar/insolar/ledger/storage.DBContext interface
-func (m *DBContextMock) IterateRecordsOnPulse(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 func(p insolar.ID, p1 object.Record) (r error)) (r error) {
+func (m *DBContextMock) IterateRecordsOnPulse(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 func(p insolar.ID, p1 record.VirtualRecord) (r error)) (r error) {
 	counter := atomic.AddUint64(&m.IterateRecordsOnPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.IterateRecordsOnPulseCounter, 1)
 

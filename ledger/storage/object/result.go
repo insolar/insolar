@@ -22,12 +22,12 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// State is a state of lifeline records.
-type State int
+// StateID is a state of lifeline records.
+type StateID int
 
 const (
 	// StateUndefined is used for special cases.
-	StateUndefined = State(iota)
+	StateUndefined = StateID(iota)
 	// StateActivation means it's an activation record.
 	StateActivation
 	// StateAmend means it's an amend record.
@@ -36,10 +36,10 @@ const (
 	StateDeactivation
 )
 
-// ObjectState is common object state record.
-type ObjectState interface {
-	// State returns state id.
-	State() State
+// State is common object state record.
+type State interface {
+	// StateID returns state id.
+	ID() StateID
 	// GetImage returns state code.
 	GetImage() *insolar.Reference
 	// GetIsPrototype returns state code.
@@ -93,72 +93,72 @@ func (r *CodeRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
 }
 
-// ObjectStateRecord is a record containing data for an object state.
-type ObjectStateRecord struct {
+// StateRecord is a record containing data for an object state.
+type StateRecord struct {
 	Memory      *insolar.ID
 	Image       insolar.Reference // If code or prototype object reference.
 	IsPrototype bool              // If true, Image should point to a prototype object. Otherwise to a code.
 }
 
 // GetMemory returns state memory.
-func (r *ObjectStateRecord) GetMemory() *insolar.ID {
+func (r *StateRecord) GetMemory() *insolar.ID {
 	return r.Memory
 }
 
 // GetImage returns state code.
-func (r *ObjectStateRecord) GetImage() *insolar.Reference {
+func (r *StateRecord) GetImage() *insolar.Reference {
 	return &r.Image
 }
 
 // GetIsPrototype returns state code.
-func (r *ObjectStateRecord) GetIsPrototype() bool {
+func (r *StateRecord) GetIsPrototype() bool {
 	return r.IsPrototype
 }
 
-// ObjectActivateRecord is produced when we instantiate new object from an available prototype.
-type ObjectActivateRecord struct {
+// ActivateRecord is produced when we instantiate new object from an available prototype.
+type ActivateRecord struct {
 	SideEffectRecord
-	ObjectStateRecord
+	StateRecord
 
 	Parent     insolar.Reference
 	IsDelegate bool
 }
 
 // PrevStateID returns previous state id.
-func (r *ObjectActivateRecord) PrevStateID() *insolar.ID {
+func (r *ActivateRecord) PrevStateID() *insolar.ID {
 	return nil
 }
 
-// State returns state id.
-func (r *ObjectActivateRecord) State() State {
+// StateID returns state id.
+func (r *ActivateRecord) ID() StateID {
 	return StateActivation
 }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-func (r *ObjectActivateRecord) WriteHashData(w io.Writer) (int, error) {
+func (r *ActivateRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
 }
 
-// ObjectAmendRecord is an amendment record for objects.
-type ObjectAmendRecord struct {
+// AmendRecord is an amendment record for objects.
+type AmendRecord struct {
 	SideEffectRecord
-	ObjectStateRecord
+	StateRecord
 
 	PrevState insolar.ID
 }
 
 // PrevStateID returns previous state id.
-func (r *ObjectAmendRecord) PrevStateID() *insolar.ID {
+func (r *AmendRecord) PrevStateID() *insolar.ID {
 	return &r.PrevState
 }
 
-// State returns state id.
-func (r *ObjectAmendRecord) State() State {
+// StateID returns state id.
+func (r *AmendRecord) ID() StateID {
 	return StateAmend
 }
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-func (r *ObjectAmendRecord) WriteHashData(w io.Writer) (int, error) {
+func (r *AmendRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
 }
 
@@ -173,8 +173,8 @@ func (r *DeactivationRecord) PrevStateID() *insolar.ID {
 	return &r.PrevState
 }
 
-// State returns state id.
-func (r *DeactivationRecord) State() State {
+// StateID returns state id.
+func (r *DeactivationRecord) ID() StateID {
 	return StateDeactivation
 }
 

@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -34,11 +35,11 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/artifactmanager"
-	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
@@ -95,7 +96,8 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.pulseTracker = storage.NewPulseTracker()
 	s.replicaStorage = storage.NewReplicaStorage()
 	s.objectStorage = storage.NewObjectStorage()
-	dropStorage := drop.NewStorageDB()
+
+	dropStorage := drop.NewStorageMemory()
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 
@@ -152,7 +154,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	lrMock.OnPulseMock.Return(nil)
 
 	// Mock N2: we are light material
-	nodeMock := network.NewNodeMock(s.T())
+	nodeMock := network.NewNetworkNodeMock(s.T())
 	nodeMock.RoleMock.Return(insolar.StaticRoleLightMaterial)
 	nodeMock.IDMock.Return(insolar.Reference{})
 
@@ -241,6 +243,8 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 		return nil, nil
 	}
 
+	blobStorage := blob.NewStorageMemory()
+
 	// build PulseManager
 	minretry := 20 * time.Millisecond
 	kb := 1 << 10
@@ -260,6 +264,9 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 			PulseManager:    pmconf,
 			LightChainLimit: 10,
 		},
+		nil,
+		blobStorage,
+		blobStorage,
 	)
 	pm.LR = lrMock
 	pm.NodeNet = nodenetMock
@@ -309,7 +316,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 
 	for i := 0; i < 2; i++ {
 		// fmt.Printf("%v: call addRecords for pulse %v\n", t.Name(), lastpulse)
-		addRecords(s.ctx, s.T(), s.objectStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse+i))
+		addRecords(s.ctx, s.T(), s.objectStorage, blobStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse+i))
 	}
 
 	fmt.Println("Case1: sync after db fill and with new received pulses")
@@ -322,7 +329,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	fmt.Println("Case2: sync during db fill")
 	for i := 0; i < 2; i++ {
 		// fill DB with records, indexes (TODO: add blobs)
-		addRecords(s.ctx, s.T(), s.objectStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse))
+		addRecords(s.ctx, s.T(), s.objectStorage, blobStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse))
 
 		lastpulse++
 		err = setpulse(s.ctx, pm, lastpulse)
@@ -358,6 +365,7 @@ func addRecords(
 	ctx context.Context,
 	t *testing.T,
 	objectStorage storage.ObjectStorage,
+	blobModifier blob.Modifier,
 	jetID insolar.ID,
 	pn insolar.PulseNumber,
 ) {
@@ -366,7 +374,7 @@ func addRecords(
 		ctx,
 		jetID,
 		pn,
-		&object.ObjectActivateRecord{
+		&object.ActivateRecord{
 			SideEffectRecord: object.SideEffectRecord{
 				Domain: testutils.RandomRef(),
 			},
@@ -374,7 +382,8 @@ func addRecords(
 	)
 	require.NoError(t, err)
 
-	_, err = objectStorage.SetBlob(ctx, jetID, pn, []byte("100500"))
+	blobID := object.CalculateIDForBlob(testutils.NewPlatformCryptographyScheme(), pn, []byte("100500"))
+	err = blobModifier.Set(ctx, *blobID, blob.Blob{Value: []byte("100500"), JetID: insolar.JetID(jetID)})
 	require.NoError(t, err)
 
 	// set index of record

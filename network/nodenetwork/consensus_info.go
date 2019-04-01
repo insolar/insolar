@@ -53,6 +53,8 @@ package nodenetwork
 import (
 	"sync"
 
+	"github.com/insolar/insolar/network/node"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/transport/host"
@@ -89,7 +91,7 @@ func (ci *consensusInfo) NodesJoinedDuringPreviousPulse() bool {
 }
 
 func (ci *consensusInfo) AddTemporaryMapping(nodeID insolar.Reference, shortID insolar.ShortNodeID, address string) error {
-	consensusAddress, err := incrementPort(address)
+	consensusAddress, err := node.IncrementPort(address)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to increment port for address %s", address)
 	}

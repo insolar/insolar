@@ -33,6 +33,10 @@ const (
 	MachineTypesLastID
 )
 
+func (m MachineType) Equal(other MachineType) bool {
+	return m == other
+}
+
 // MachineLogicExecutor is an interface for implementers of one particular machine type
 //go:generate minimock -i github.com/insolar/insolar/insolar.MachineLogicExecutor -o ../testutils -s _mock.go
 type MachineLogicExecutor interface {

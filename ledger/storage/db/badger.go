@@ -21,7 +21,6 @@ import (
 	"path/filepath"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/configuration"
 	"github.com/pkg/errors"
 )
 
@@ -30,10 +29,10 @@ type BadgerDB struct {
 	backend *badger.DB
 }
 
-// NewBadgerDB creates new badger DB instance. Configuration should contain DataDirectory option. Badger will create
-// files there.
-func NewBadgerDB(conf configuration.Ledger) (*BadgerDB, error) {
-	dir, err := filepath.Abs(conf.Storage.DataDirectoryNewDB)
+// NewBadgerDB creates new BadgerDB instance.
+// Creates new badger.DB instance with provided working dir and use it as backend for BadgerDB.
+func NewBadgerDB(dir string) (*BadgerDB, error) {
+	dir, err := filepath.Abs(dir)
 	if err != nil {
 		return nil, err
 	}
@@ -46,10 +45,7 @@ func NewBadgerDB(conf configuration.Ledger) (*BadgerDB, error) {
 		return nil, errors.Wrap(err, "failed to open badger")
 	}
 
-	db := &BadgerDB{
-		backend: bdb,
-	}
-	return db, nil
+	return &BadgerDB{backend: bdb}, nil
 }
 
 // Get returns value for specified key or an error. A copy of a value will be returned (i.e. getting large value can be

@@ -22,7 +22,6 @@ import (
 	"crypto"
 	"net"
 	"net/rpc"
-	"os"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -45,9 +44,9 @@ func capture(
 ) string {
 	logger := inslogger.FromContext(ctx)
 	var buf bytes.Buffer
-	logger.SetOutput(&buf)
+	logger = logger.WithOutput(&buf)
+	ctx = inslogger.SetLogger(ctx, logger)
 	f(ctx)
-	logger.SetOutput(os.Stderr)
 	return buf.String()
 }
 
@@ -868,13 +867,13 @@ func TestPulsar_verify_Success(t *testing.T) {
 	thirdCryptoService := cryptography.NewKeyBoundCryptographyService(thirdPrivate)
 
 	pulsar := &Pulsar{
-		KeyProcessor:               platformpolicy.NewKeyProcessor(),
-		StateSwitcher:              mockSwitcher,
-		CryptographyService:        pulsarCryptoService,
-		PlatformCryptographyScheme: platformpolicy.NewPlatformCryptographyScheme(),
-		PublicKeyRaw:               currentPulsarPublicKey,
-		ownedBftRow:                map[string]*BftCell{},
-		bftGrid:                    map[string]map[string]*BftCell{},
+		KeyProcessor:                   platformpolicy.NewKeyProcessor(),
+		StateSwitcher:                  mockSwitcher,
+		CryptographyService:            pulsarCryptoService,
+		PlatformCryptographyScheme:     platformpolicy.NewPlatformCryptographyScheme(),
+		PublicKeyRaw:                   currentPulsarPublicKey,
+		ownedBftRow:                    map[string]*BftCell{},
+		bftGrid:                        map[string]map[string]*BftCell{},
 		CurrentSlotSenderConfirmations: map[string]insolar.PulseSenderConfirmation{},
 		Neighbours: map[string]*Neighbour{
 			publicKeySecond: {PublicKey: pub2, OutgoingClient: &clientMock},

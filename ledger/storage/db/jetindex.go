@@ -30,6 +30,13 @@ type JetIndexModifier interface {
 	Delete(id insolar.ID, jetID insolar.JetID)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/db.JetIndexAccesssor -o ./ -s _mock.go
+
+// JetIndexAccessor is an interface for modifying index records.
+type JetIndexAccessor interface {
+	For(jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]struct{}
+}
+
 // JetIndex contains methods to implement quick access to data by jet. Indexes are stored in memory. Consider disk
 // implementation for large collections.
 type JetIndex struct {
@@ -71,4 +78,22 @@ func (i *JetIndex) Delete(id insolar.ID, jetID insolar.JetID) {
 	if len(jet) == 0 {
 		delete(i.storage, jetID)
 	}
+}
+
+// For returns a collection of ids, that are stored for a specific jetID and a pulse number
+func (i *JetIndex) For(jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]struct{} {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	ids, ok := i.storage[jetID]
+	if !ok {
+		return nil
+	}
+
+	res := map[insolar.ID]struct{}{}
+	for id := range ids {
+		res[id] = struct{}{}
+	}
+
+	return res
 }

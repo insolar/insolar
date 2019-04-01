@@ -27,6 +27,8 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/blob"
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
@@ -107,7 +109,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 		s.ctx,
 		insolar.ID(jetID),
 		insolar.GenesisPulse.PulseNumber,
-		&object.ObjectActivateRecord{})
+		&object.ActivateRecord{})
 	firstIndex := object.Lifeline{
 		LatestState: firstID,
 	}
@@ -156,14 +158,14 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 		require.Equal(s.T(), 1, len(objContext.Requests))
 
 		require.Equal(s.T(), 1, len(val.RecentObjects))
-		decodedIndex := object.Decode(val.RecentObjects[*firstID].Index)
+		decodedIndex := object.DecodeIndex(val.RecentObjects[*firstID].Index)
 		require.Equal(s.T(), firstIndex, decodedIndex)
 		require.Equal(s.T(), 1, val.RecentObjects[*firstID].TTL)
 
 		return nil, nil
 	}
 
-	nodeMock := network.NewNodeMock(s.T())
+	nodeMock := network.NewNetworkNodeMock(s.T())
 	nodeMock.RoleMock.Return(insolar.StaticRoleLightMaterial)
 	nodeMock.IDMock.Return(insolar.Reference{})
 
@@ -176,7 +178,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	jetCoordinatorMock.LightExecutorForJetMock.Return(executor, nil)
 	jetCoordinatorMock.MeMock.Return(*executor)
 
-	pm := NewPulseManager(configuration.Ledger{})
+	pm := NewPulseManager(configuration.Ledger{}, drop.NewCleanerMock(s.T()), blob.NewCleanerMock(s.T()), blob.NewCollectionAccessorMock(s.T()))
 
 	gil := testutils.NewGlobalInsolarLockMock(s.T())
 	gil.AcquireMock.Return()
@@ -214,7 +216,7 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	require.NoError(s.T(), err)
 	// // TODO: @andreyromancev. 12.01.19. put 1, when dynamic split is working.
 	assert.Equal(s.T(), uint64(2), mbMock.SendMinimockCounter()) // 1 validator drop (no split)
-	savedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, insolar.ID(jetID), firstID, false)
+	savedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, insolar.ID(jetID), firstID)
 	require.NoError(s.T(), err)
 
 	// Assert

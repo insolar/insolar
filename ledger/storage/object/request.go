@@ -19,12 +19,14 @@ package object
 import (
 	"io"
 
+	"github.com/insolar/insolar/insolar/record"
+
 	"github.com/insolar/insolar/insolar"
 )
 
-// Request extends Record interface with GetPayload method.
+// Request extends VirtualRecord interface with GetPayload method.
 type Request interface {
-	Record
+	record.VirtualRecord
 	GetPayload() []byte
 	GetObject() insolar.ID
 }
@@ -41,7 +43,7 @@ func (r *RequestRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(r.MessageHash)
 }
 
-// GetPayload returns payload. Required for Record interface implementation.
+// GetPayload returns payload. Required for VirtualRecord interface implementation.
 func (r *RequestRecord) GetPayload() []byte {
 	return r.Parcel
 }

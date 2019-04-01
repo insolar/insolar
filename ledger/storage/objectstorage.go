@@ -19,6 +19,8 @@ package storage
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar/record"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/object"
 )
@@ -27,11 +29,8 @@ import (
 
 // ObjectStorage returns objects and their meta
 type ObjectStorage interface {
-	GetBlob(ctx context.Context, jetID insolar.ID, id *insolar.ID) ([]byte, error)
-	SetBlob(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, blob []byte) (*insolar.ID, error)
-
-	GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (object.Record, error)
-	SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec object.Record) (*insolar.ID, error)
+	GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (record.VirtualRecord, error)
+	SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec record.VirtualRecord) (*insolar.ID, error)
 
 	IterateIndexIDs(
 		ctx context.Context,
@@ -43,7 +42,6 @@ type ObjectStorage interface {
 		ctx context.Context,
 		jetID insolar.ID,
 		id *insolar.ID,
-		forupdate bool,
 	) (*object.Lifeline, error)
 
 	SetObjectIndex(
@@ -51,12 +49,6 @@ type ObjectStorage interface {
 		jetID insolar.ID,
 		id *insolar.ID,
 		idx *object.Lifeline,
-	) error
-
-	RemoveObjectIndex(
-		ctx context.Context,
-		jetID insolar.ID,
-		ref *insolar.ID,
 	) error
 }
 
@@ -69,67 +61,31 @@ func NewObjectStorage() ObjectStorage {
 	return new(objectStorage)
 }
 
-// GetBlob returns binary value stored by record ID.
-// TODO: switch from reference to passing blob id for consistency - @nordicdyno 6.Dec.2018
-func (os *objectStorage) GetBlob(ctx context.Context, jetID insolar.ID, id *insolar.ID) ([]byte, error) {
-	var (
-		blob []byte
-		err  error
-	)
-
-	err = os.DB.View(ctx, func(tx *TransactionManager) error {
-		blob, err = tx.GetBlob(ctx, jetID, id)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	return blob, nil
-}
-
-// SetBlob saves binary value for provided pulse.
-func (os *objectStorage) SetBlob(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, blob []byte) (*insolar.ID, error) {
-	var (
-		id  *insolar.ID
-		err error
-	)
-	err = os.DB.Update(ctx, func(tx *TransactionManager) error {
-		id, err = tx.SetBlob(ctx, jetID, pulseNumber, blob)
-		return err
-	})
-	if err != nil {
-		return nil, err
-	}
-	return id, nil
-}
-
 // GetRecord wraps matching transaction manager method.
-func (os *objectStorage) GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (object.Record, error) {
-	var (
-		fetchedRecord object.Record
-		err           error
-	)
-
-	err = os.DB.View(ctx, func(tx *TransactionManager) error {
-		fetchedRecord, err = tx.GetRecord(ctx, jetID, id)
-		return err
-	})
+func (os *objectStorage) GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (record.VirtualRecord, error) {
+	jetPrefix := insolar.JetID(jetID).Prefix()
+	k := prefixkey(scopeIDRecord, jetPrefix, id[:])
+	buf, err := os.DB.Get(ctx, k)
 	if err != nil {
 		return nil, err
 	}
-	return fetchedRecord, nil
+	return object.DeserializeRecord(buf), nil
 }
 
 // SetRecord wraps matching transaction manager method.
-func (os *objectStorage) SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec object.Record) (*insolar.ID, error) {
-	var (
-		id  *insolar.ID
-		err error
-	)
-	err = os.DB.Update(ctx, func(tx *TransactionManager) error {
-		id, err = tx.SetRecord(ctx, jetID, pulseNumber, rec)
-		return err
-	})
+func (os *objectStorage) SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec record.VirtualRecord) (*insolar.ID, error) {
+	id := object.NewRecordIDFromRecord(os.PlatformCryptographyScheme, pulseNumber, rec)
+	prefix := insolar.JetID(jetID).Prefix()
+	k := prefixkey(scopeIDRecord, prefix, id[:])
+	_, geterr := os.DB.Get(ctx, k)
+	if geterr == nil {
+		return id, ErrOverride
+	}
+	if geterr != insolar.ErrNotFound {
+		return nil, geterr
+	}
+
+	err := os.DB.Set(ctx, k, object.SerializeRecord(rec))
 	if err != nil {
 		return nil, err
 	}
@@ -161,19 +117,15 @@ func (os *objectStorage) GetObjectIndex(
 	ctx context.Context,
 	jetID insolar.ID,
 	id *insolar.ID,
-	forupdate bool,
 ) (*object.Lifeline, error) {
-	tx, err := os.DB.BeginTransaction(false)
+	prefix := insolar.JetID(jetID).Prefix()
+	k := prefixkey(scopeIDLifeline, prefix, id[:])
+	buf, err := os.DB.Get(ctx, k)
 	if err != nil {
 		return nil, err
 	}
-	defer tx.Discard()
-
-	idx, err := tx.GetObjectIndex(ctx, jetID, id, forupdate)
-	if err != nil {
-		return nil, err
-	}
-	return idx, nil
+	res := object.DecodeIndex(buf)
+	return &res, nil
 }
 
 // SetObjectIndex wraps matching transaction manager method.
@@ -183,18 +135,11 @@ func (os *objectStorage) SetObjectIndex(
 	id *insolar.ID,
 	idx *object.Lifeline,
 ) error {
-	return os.DB.Update(ctx, func(tx *TransactionManager) error {
-		return tx.SetObjectIndex(ctx, jetID, id, idx)
-	})
-}
-
-// RemoveObjectIndex removes an index of an object
-func (os *objectStorage) RemoveObjectIndex(
-	ctx context.Context,
-	jetID insolar.ID,
-	ref *insolar.ID,
-) error {
-	return os.DB.Update(ctx, func(tx *TransactionManager) error {
-		return tx.RemoveObjectIndex(ctx, jetID, ref)
-	})
+	prefix := insolar.JetID(jetID).Prefix()
+	k := prefixkey(scopeIDLifeline, prefix, id[:])
+	if idx.Delegates == nil {
+		idx.Delegates = map[insolar.Reference]insolar.Reference{}
+	}
+	encoded := object.EncodeIndex(*idx)
+	return os.DB.Set(ctx, k, encoded)
 }

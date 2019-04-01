@@ -21,6 +21,8 @@ import (
 	"path/filepath"
 	"sync"
 
+	"github.com/insolar/insolar/insolar/record"
+
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -33,13 +35,11 @@ const (
 	scopeIDRecord   byte = 2
 	scopeIDPulse    byte = 4
 	scopeIDSystem   byte = 5
-	scopeIDBlob     byte = 7
 
 	sysGenesis                byte = 1
 	sysLatestPulse            byte = 2
 	sysHeavyClientState       byte = 3
 	sysLastSyncedPulseOnHeavy byte = 4
-	sysJetList                byte = 5
 )
 
 // DBContext provides base db methods
@@ -53,7 +53,7 @@ type DBContext interface {
 		ctx context.Context,
 		jetID insolar.ID,
 		pulse insolar.PulseNumber,
-		handler func(id insolar.ID, rec object.Record) error,
+		handler func(id insolar.ID, rec record.VirtualRecord) error,
 	) error
 
 	StoreKeyValues(ctx context.Context, kvs []insolar.KV) error
@@ -90,8 +90,7 @@ type DB struct {
 	// so txretiries is our knob to tune up retry logic.
 	txretiries int
 
-	idlocker             *IDLocker
-	jetHeavyClientLocker *IDLocker
+	jetHeavyClientLocker IDLocker
 
 	closeLock sync.RWMutex
 	isClosed  bool
@@ -127,7 +126,6 @@ func NewDB(conf configuration.Ledger, opts *badger.Options) (DBContext, error) {
 	db := &DB{
 		db:                   bdb,
 		txretiries:           conf.Storage.TxRetriesOnConflict,
-		idlocker:             NewIDLocker(),
 		jetHeavyClientLocker: NewIDLocker(),
 	}
 	return db, nil
@@ -234,7 +232,7 @@ func (db *DB) IterateRecordsOnPulse(
 	ctx context.Context,
 	jetID insolar.ID,
 	pulse insolar.PulseNumber,
-	handler func(id insolar.ID, rec object.Record) error,
+	handler func(id insolar.ID, rec record.VirtualRecord) error,
 ) error {
 	jetPrefix := insolar.JetID(jetID).Prefix()
 	prefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())

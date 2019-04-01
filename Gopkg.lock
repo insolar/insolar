@@ -112,6 +112,42 @@
   version = "v1.4.7"
 
 [[projects]]
+  digest = "1:803efb5d2326aca89759ed555705ae47aed33b6f373632b1ef53b2a6fef94bda"
+  name = "github.com/gogo/protobuf"
+  packages = [
+    "gogoproto",
+    "plugin/compare",
+    "plugin/defaultcheck",
+    "plugin/description",
+    "plugin/embedcheck",
+    "plugin/enumstringer",
+    "plugin/equal",
+    "plugin/face",
+    "plugin/gostring",
+    "plugin/marshalto",
+    "plugin/oneofcheck",
+    "plugin/populate",
+    "plugin/size",
+    "plugin/stringer",
+    "plugin/testgen",
+    "plugin/union",
+    "plugin/unmarshal",
+    "proto",
+    "protoc-gen-gogo/descriptor",
+    "protoc-gen-gogo/generator",
+    "protoc-gen-gogo/generator/internal/remap",
+    "protoc-gen-gogo/grpc",
+    "protoc-gen-gogo/plugin",
+    "protoc-gen-gogoslick",
+    "sortkeys",
+    "vanity",
+    "vanity/command",
+  ]
+  pruneopts = "UT"
+  revision = "ba06b47c162d49f2af050fb4c75bcbc86a159d5c"
+  version = "v1.2.1"
+
+[[projects]]
   branch = "master"
   digest = "1:e9c0ca7abaa1fdcf8dab7c5bc100c2ff1ecc1dabf46861d78159c6e8951af970"
   name = "github.com/gojuno/minimock"
@@ -333,15 +369,16 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:d14a5f4bfecf017cb780bdde1b6483e5deb87e12c332544d2c430eda58734bcb"
+  digest = "1:93a746f1060a8acbcf69344862b2ceced80f854170e1caae089b2834c5fbf7f4"
   name = "github.com/prometheus/client_golang"
   packages = [
     "prometheus",
+    "prometheus/internal",
     "prometheus/promhttp",
   ]
   pruneopts = "UT"
-  revision = "c5b7fccd204277076155f10851dad72b76a49317"
-  version = "v0.8.0"
+  revision = "505eaef017263e299324067d40ca2c48f6a2cf50"
+  version = "v0.9.2"
 
 [[projects]]
   branch = "master"
@@ -395,14 +432,6 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "b2ce2384e17bbe0c6d34077efa39dbab3e09123b"
-
-[[projects]]
-  digest = "1:69b1cc331fca23d702bd72f860c6a647afd0aa9fcbc1d0659b1365e26546dd70"
-  name = "github.com/sirupsen/logrus"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "bcd833dfe83d3cebad139e4a29ed79cb2318bf95"
-  version = "v1.2.0"
 
 [[projects]]
   digest = "1:6a4a11ba764a56d2758899ec6f3848d24698d48442ebce85ee7a3f63284526cd"
@@ -627,6 +656,10 @@
     "github.com/blang/semver",
     "github.com/ccding/go-stun/stun",
     "github.com/dgraph-io/badger",
+    "github.com/gogo/protobuf/gogoproto",
+    "github.com/gogo/protobuf/proto",
+    "github.com/gogo/protobuf/protoc-gen-gogoslick",
+    "github.com/gogo/protobuf/sortkeys",
     "github.com/gojuno/minimock",
     "github.com/google/gofuzz",
     "github.com/gorilla/rpc/v2",
@@ -642,7 +675,6 @@
     "github.com/prometheus/client_golang/prometheus/promhttp",
     "github.com/rs/zerolog",
     "github.com/satori/go.uuid",
-    "github.com/sirupsen/logrus",
     "github.com/spf13/cobra",
     "github.com/spf13/jwalterweatherman",
     "github.com/spf13/pflag",

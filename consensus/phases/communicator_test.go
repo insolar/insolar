@@ -56,11 +56,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/network/node"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/testutils"
 	networkUtils "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/suite"
@@ -121,7 +122,7 @@ func (s *communicatorSuite) SetupTest() {
 }
 
 func makeRandomNode() insolar.NetworkNode {
-	return nodenetwork.NewNode(testutils.RandomRef(), insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
+	return node.NewNode(testutils.RandomRef(), insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
 }
 
 func (s *communicatorSuite) TestExchangeData() {

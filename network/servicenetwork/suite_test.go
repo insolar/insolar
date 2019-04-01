@@ -412,6 +412,14 @@ func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse, persist
 	return p.keeper.MoveSyncToActive(ctx)
 }
 
+type staterMock struct {
+	stateFunc func() ([]byte, error)
+}
+
+func (m staterMock) State() ([]byte, error) {
+	return m.stateFunc()
+}
+
 // preInitNode inits previously created node with mocks and external dependencies
 func (s *testSuite) preInitNode(node *networkNode) {
 	cfg := configuration.NewConfiguration()
@@ -433,10 +441,11 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		return true
 	})
 
-	amMock := testutils.NewArtifactManagerMock(s.T())
-	amMock.StateMock.Set(func() (r []byte, r1 error) {
-		return make([]byte, packets.HashLength), nil
-	})
+	amMock := staterMock{
+		stateFunc: func() ([]byte, error) {
+			return make([]byte, packets.HashLength), nil
+		},
+	}
 
 	certManager, cryptographyService := s.initCrypto(node)
 
@@ -446,7 +455,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
-	node.componentManager.Register(netCoordinator, amMock, certManager, cryptographyService)
+
+	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService)
 	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler)
+
 	node.serviceNetwork = serviceNetwork
 }

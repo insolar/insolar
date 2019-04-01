@@ -31,8 +31,8 @@ func (r *GenesisRecord) PrevStateID() *insolar.ID {
 	return nil
 }
 
-// State returns state id.
-func (r *GenesisRecord) State() State {
+// StateID returns state id.
+func (r *GenesisRecord) ID() StateID {
 	return StateActivation
 }
 
@@ -65,15 +65,5 @@ type ChildRecord struct {
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *ChildRecord) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(SerializeRecord(r))
-}
-
-// JetRecord represents Jet.
-type JetRecord struct {
-	// TODO: should contain prefix.
-}
-
-// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-func (r *JetRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(SerializeRecord(r))
 }

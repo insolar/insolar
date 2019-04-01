@@ -54,6 +54,9 @@ import (
 	"crypto"
 	"testing"
 
+	"github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/network/node"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -67,7 +70,7 @@ import (
 func TestFirstPhase_HandlePulse(t *testing.T) {
 	firstPhase := &FirstPhaseImpl{}
 
-	node := nodenetwork.NewNode(insolar.Reference{}, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
+	node := node.NewNode(insolar.Reference{}, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
 	nodeKeeper := nodenetwork.NewNodeKeeper(node)
 	nodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{node})
 
@@ -106,4 +109,14 @@ func Test_consensusReached(t *testing.T) {
 
 	assert.True(t, consensusReachedMajority(151, 300))
 	assert.False(t, consensusReachedMajority(150, 300))
+}
+
+func Test_getNodeState(t *testing.T) {
+	n := node.NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	assert.Equal(t, packets.Legit, getNodeState(n, insolar.FirstPulseNumber))
+	n.(node.MutableNode).SetState(insolar.NodeLeaving)
+	n.(node.MutableNode).SetLeavingETA(insolar.FirstPulseNumber + 10)
+	assert.Equal(t, packets.Legit, getNodeState(n, insolar.FirstPulseNumber))
+	n.(node.MutableNode).SetLeavingETA(insolar.FirstPulseNumber - 10)
+	assert.Equal(t, packets.TimedOut, getNodeState(n, insolar.FirstPulseNumber))
 }
