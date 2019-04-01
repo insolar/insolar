@@ -22,10 +22,10 @@ import (
 	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/conveyor/fsm"
+	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/insolar"
+
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,27 +44,27 @@ func TestSlotElement_Reactivate(t *testing.T) {
 func TestSlotElement_DeactivateTill_Empty(t *testing.T) {
 	el := newSlotElement(ActiveElement, nil)
 	require.Panics(t, func() {
-		el.DeactivateTill(slot.Empty)
+		el.DeactivateTill(fsm.Empty)
 	})
 }
 
 func TestSlotElement_DeactivateTill_Tick(t *testing.T) {
 	el := newSlotElement(ActiveElement, nil)
 	require.Panics(t, func() {
-		el.DeactivateTill(slot.Tick)
+		el.DeactivateTill(fsm.Tick)
 	})
 }
 
 func TestSlotElement_DeactivateTill_SeqHead(t *testing.T) {
 	el := newSlotElement(ActiveElement, nil)
 	require.Panics(t, func() {
-		el.DeactivateTill(slot.SeqHead)
+		el.DeactivateTill(fsm.SeqHead)
 	})
 }
 
 func TestSlotElement_DeactivateTill_Response(t *testing.T) {
 	el := newSlotElement(ActiveElement, nil)
-	el.DeactivateTill(slot.Response)
+	el.DeactivateTill(fsm.Response)
 	require.Equal(t, el.activationStatus, NotActiveElement)
 }
 
@@ -72,7 +72,7 @@ func TestSlotElement_update(t *testing.T) {
 	el := newSlotElement(ActiveElement, nil)
 	testStateID := fsm.StateID(42)
 	testPayLoad := 142
-	testStateMachine := statemachine.NewStateMachineMock(t)
+	testStateMachine := matrix.NewStateMachineMock(t)
 	require.NotEqual(t, testStateID, el.GetState())
 	require.NotEqual(t, testPayLoad, el.GetPayload())
 	require.NotEqual(t, testStateMachine, el.stateMachine)
@@ -86,7 +86,11 @@ func TestSlotElement_update(t *testing.T) {
 
 func TestSlotElement_SendTask_NoSuchAdapterID(t *testing.T) {
 	el := newSlotElement(ActiveElement, nil)
-	// make it empty for test
+	// make Manager empty for test
+	oldManager := adapterstorage.Manager
+	defer func(oldManager adapterstorage.Storage) {
+		adapterstorage.Manager = oldManager
+	}(oldManager)
 	adapterstorage.Manager = adapterstorage.NewEmptyStorage()
 	require.PanicsWithValue(t, "[ SendTask ] No such adapter: 142", func() {
 		el.SendTask(142, 22, 44)
@@ -99,6 +103,11 @@ func TestSlotElement_SendTask(t *testing.T) {
 
 	})
 	el := newSlotElement(ActiveElement, slot)
+	// make Manager empty for test
+	oldManager := adapterstorage.Manager
+	defer func(oldManager adapterstorage.Storage) {
+		adapterstorage.Manager = oldManager
+	}(oldManager)
 	adapterstorage.Manager = adapterstorage.NewEmptyStorage()
 
 	sinkMock := adapter.NewTaskSinkMock(t)

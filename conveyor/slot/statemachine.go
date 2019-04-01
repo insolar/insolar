@@ -14,21 +14,4 @@
  *    limitations under the License.
  */
 
-package main
-
-import (
-	"github.com/insolar/insolar/conveyor/generator/generator"
-	"github.com/insolar/insolar/conveyor/generator/state_machines/get_object"
-	"github.com/insolar/insolar/conveyor/generator/state_machines/initial"
-	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
-)
-
-func main() {
-	gen := generator.NewGenerator()
-	getobject.Register(gen)
-	sample.Register(gen)
-	initial.Register(gen)
-	gen.CheckAllMachines()
-	gen.GenerateStateMachines()
-	gen.GenerateMatrix()
-}
+package slot

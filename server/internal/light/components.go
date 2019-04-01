@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
+	"github.com/insolar/insolar/conveyor"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
@@ -135,6 +136,9 @@ func initComponents(
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
 
+	conveyor, err := conveyor.NewPulseConveyor()
+	checkError(ctx, err, "failed to start PulseConveyor")
+
 	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry(
 		certManager.GetCertificate().GetRole().String(),
 	))
@@ -181,6 +185,7 @@ func initComponents(
 		networkSwitcher,
 		networkCoordinator,
 		cryptographyService,
+		conveyor,
 		keyProcessor,
 	}...)
 

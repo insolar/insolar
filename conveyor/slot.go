@@ -21,13 +21,11 @@ import (
 
 	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
-	"github.com/insolar/insolar/conveyor/interfaces/constant"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
+
 	"github.com/pkg/errors"
 )
 
@@ -54,12 +52,12 @@ const slotElementDelta = slotSize // nolint: unused
 // HandlersConfiguration contains configuration of handlers for specific pulse state
 // TODO: logic will be provided after pulse change mechanism
 type HandlersConfiguration struct {
-	pulseStateMachines statemachine.SetAccessor
-	initStateMachine   statemachine.StateMachine
+	pulseStateMachines matrix.SetAccessor
+	initStateMachine   matrix.StateMachine
 }
 
 // TODO: logic will be provided after pulse change mechanism
-func (h *HandlersConfiguration) getMachineConfiguration(smType int) statemachine.StateMachine { // nolint: unused
+func (h *HandlersConfiguration) getMachineConfiguration(smType int) matrix.StateMachine { // nolint: unused
 	return nil
 }
 
@@ -135,7 +133,7 @@ type Slot struct {
 	handlersConfiguration HandlersConfiguration // nolint
 	inputQueue            queue.IQueue
 	responseQueue         queue.IQueue
-	pulseState            constant.PulseState
+	pulseState            PulseState
 	slotState             SlotState
 	stateMachine          slotElement
 	pulse                 insolar.Pulse
@@ -180,7 +178,7 @@ func initElementsBuf() ([]slotElement, *ElementList) {
 }
 
 // NewWorkingSlot creates new instance of Slot
-func NewWorkingSlot(pulseState constant.PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) TaskPusher {
+func NewWorkingSlot(pulseState PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) TaskPusher {
 
 	slot := newSlot(pulseState, pulseNumber, removeSlotCallback)
 	slot.runWorker()
@@ -188,9 +186,9 @@ func NewWorkingSlot(pulseState constant.PulseState, pulseNumber insolar.PulseNum
 	return slot
 }
 
-func newSlot(pulseState constant.PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) *Slot {
+func newSlot(pulseState PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) *Slot {
 	slotState := Initializing
-	if pulseState == constant.Antique {
+	if pulseState == Antique {
 		slotState = Working
 	}
 
@@ -245,7 +243,7 @@ func (s *Slot) PushNestedEvent(adapterID adapterid.ID, parentElementID uint32, h
 	}
 }
 
-func (s *Slot) GetSlotDetails() slot.SlotDetails {
+func (s *Slot) GetSlotDetails() adapter.SlotDetails {
 	return s
 }
 
@@ -270,15 +268,20 @@ func (s *Slot) GetNodeData() interface{} { // nolint: unused
 }
 
 // createElement creates new active element from empty element
-func (s *Slot) createElement(stateMachine statemachine.StateMachine, state fsm.StateID, event queue.OutputElement) (*slotElement, error) { // nolint: unused
+func (s *Slot) createElement(stateMachine matrix.StateMachine, state fsm.StateID, event queue.OutputElement) (*slotElement, error) { // nolint: unused
 	element := s.popElement(EmptyElement)
 	element.stateMachine = stateMachine
 	element.state = state
 	element.activationStatus = ActiveElement
 	element.nextElement = nil
 	// TODO:  Set other fields to element, like:
-	element.payload = event.GetData()
-	element.inputEvent = event
+	conveyorMsg, ok := event.GetData().(insolar.ConveyorPendingMessage)
+	if !ok {
+		return nil, errors.Errorf("[ createElement ]Input event must be 'insolar.ConveyorPendingMessage'. Actual: %+v", event.GetData())
+	}
+	element.payload = nil
+	element.inputEvent = conveyorMsg.Msg
+	element.responseFuture = conveyorMsg.Future
 
 	err := s.pushElement(element)
 	if err != nil {

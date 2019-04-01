@@ -17,61 +17,67 @@
 package matrix
 
 import (
-    "github.com/insolar/insolar/conveyor/interfaces/statemachine"
-    {{range .Imports}}"{{.}}"
-    {{end}}
+	"github.com/insolar/insolar/conveyor/fsm"
+	{{range .}}"{{fileToImport .File}}"
+	{{end}}
 )
 
-const numPulseStates = 3
-
 type StateMachineSet struct{
-    stateMachines []statemachine.StateMachine
+	stateMachines []StateMachine
 }
 
-func ( s *StateMachineSet ) GetStateMachineByID(id int) statemachine.StateMachine{
-    return s.stateMachines[id]
+func newStateMachineSet() *StateMachineSet {
+	return &StateMachineSet{
+		stateMachines: make([]StateMachine, 1),
+	}
+}
+
+func (s *StateMachineSet) addMachine(machine StateMachine) {
+	s.stateMachines = append(s.stateMachines, machine)
+}
+
+func ( s *StateMachineSet ) GetStateMachineByID(id fsm.ID) StateMachine{
+	return s.stateMachines[id]
 }
 
 type Matrix struct {
-    matrix  [numPulseStates]StateMachineSet
+	future *StateMachineSet
+	present *StateMachineSet
+	past *StateMachineSet
 }
 
-type MachineType int
-
 const (
-    {{range $i, $m := .Machines}}{{$m.Name}}{{if (isNull $i)}} MachineType = iota + 1{{end}}{{end}}
+	{{range $i, $m := .}}{{if (isNull $i)}}{{$m.Name}}  fsm.ID = iota + 1
+	{{else}}{{$m.Name}}
+	{{end}}{{end}}
 )
 
 func NewMatrix() *Matrix {
-    m := Matrix{}
-
-    // Fill m.matrix[i][0] with empty state machine, since 0 - is state of completion of state machine
-    var emptyObject  statemachine.StateMachine
-    	for i := 0; i < numPulseStates; i++ {
-    		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, emptyObject)
-    	}
-
-    {{range .Machines}}
-    sms{{.Name}} := {{.Package}}.Raw{{.Name}}Factory()
-    for i := 0; i < numPulseStates; i++ {
-        m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, sms{{.Name}}[i])
-    }
-    {{end}}
-    return &m
+	m := Matrix{
+		future: newStateMachineSet(),
+		present: newStateMachineSet(),
+		past: newStateMachineSet(),
+	}
+	{{range .}}
+	m.future.addMachine({{.Package}}.Raw{{.Name}}FutureFactory())
+	m.present.addMachine({{.Package}}.Raw{{.Name}}PresentFactory())
+	m.past.addMachine({{.Package}}.Raw{{.Name}}PastFactory())
+	{{end}}
+	return &m
 }
 
-func (m *Matrix) GetInitialStateMachine() statemachine.StateMachine {
-    return m.matrix[1].stateMachines[1]
+func (m *Matrix) GetInitialStateMachine() StateMachine {
+	return m.present.stateMachines[Initial]
 }
 
-func (m *Matrix) GetFutureConfig() statemachine.SetAccessor{
-    return &m.matrix[0]
+func (m *Matrix) GetFutureConfig() SetAccessor{
+	return m.future
 }
 
-func (m *Matrix) GetPresentConfig() statemachine.SetAccessor{
-    return &m.matrix[1]
+func (m *Matrix) GetPresentConfig() SetAccessor{
+	return m.present
 }
 
-func (m *Matrix) GetPastConfig() statemachine.SetAccessor{
-    return &m.matrix[2]
+func (m *Matrix) GetPastConfig() SetAccessor{
+	return m.past
 }

@@ -30,7 +30,7 @@ type CalculatorMock struct {
 	GetGlobuleProofPreCounter uint64
 	GetGlobuleProofMock       mCalculatorMockGetGlobuleProof
 
-	GetPulseProofFunc       func(p *merkle.PulseEntry) (r merkle.OriginHash, r1 *merkle.PulseProof, r2 error)
+	GetPulseProofFunc       func(p *merkle.PulseEntry, p1 merkle.OriginHash) (r merkle.OriginHash, r1 *merkle.PulseProof, r2 error)
 	GetPulseProofCounter    uint64
 	GetPulseProofPreCounter uint64
 	GetPulseProofMock       mCalculatorMockGetPulseProof
@@ -375,7 +375,8 @@ type CalculatorMockGetPulseProofExpectation struct {
 }
 
 type CalculatorMockGetPulseProofInput struct {
-	p *merkle.PulseEntry
+	p  *merkle.PulseEntry
+	p1 merkle.OriginHash
 }
 
 type CalculatorMockGetPulseProofResult struct {
@@ -385,14 +386,14 @@ type CalculatorMockGetPulseProofResult struct {
 }
 
 //Expect specifies that invocation of Calculator.GetPulseProof is expected from 1 to Infinity times
-func (m *mCalculatorMockGetPulseProof) Expect(p *merkle.PulseEntry) *mCalculatorMockGetPulseProof {
+func (m *mCalculatorMockGetPulseProof) Expect(p *merkle.PulseEntry, p1 merkle.OriginHash) *mCalculatorMockGetPulseProof {
 	m.mock.GetPulseProofFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &CalculatorMockGetPulseProofExpectation{}
 	}
-	m.mainExpectation.input = &CalculatorMockGetPulseProofInput{p}
+	m.mainExpectation.input = &CalculatorMockGetPulseProofInput{p, p1}
 	return m
 }
 
@@ -409,12 +410,12 @@ func (m *mCalculatorMockGetPulseProof) Return(r merkle.OriginHash, r1 *merkle.Pu
 }
 
 //ExpectOnce specifies that invocation of Calculator.GetPulseProof is expected once
-func (m *mCalculatorMockGetPulseProof) ExpectOnce(p *merkle.PulseEntry) *CalculatorMockGetPulseProofExpectation {
+func (m *mCalculatorMockGetPulseProof) ExpectOnce(p *merkle.PulseEntry, p1 merkle.OriginHash) *CalculatorMockGetPulseProofExpectation {
 	m.mock.GetPulseProofFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &CalculatorMockGetPulseProofExpectation{}
-	expectation.input = &CalculatorMockGetPulseProofInput{p}
+	expectation.input = &CalculatorMockGetPulseProofInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -424,7 +425,7 @@ func (e *CalculatorMockGetPulseProofExpectation) Return(r merkle.OriginHash, r1 
 }
 
 //Set uses given function f as a mock of Calculator.GetPulseProof method
-func (m *mCalculatorMockGetPulseProof) Set(f func(p *merkle.PulseEntry) (r merkle.OriginHash, r1 *merkle.PulseProof, r2 error)) *CalculatorMock {
+func (m *mCalculatorMockGetPulseProof) Set(f func(p *merkle.PulseEntry, p1 merkle.OriginHash) (r merkle.OriginHash, r1 *merkle.PulseProof, r2 error)) *CalculatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -433,18 +434,18 @@ func (m *mCalculatorMockGetPulseProof) Set(f func(p *merkle.PulseEntry) (r merkl
 }
 
 //GetPulseProof implements github.com/insolar/insolar/network/merkle.Calculator interface
-func (m *CalculatorMock) GetPulseProof(p *merkle.PulseEntry) (r merkle.OriginHash, r1 *merkle.PulseProof, r2 error) {
+func (m *CalculatorMock) GetPulseProof(p *merkle.PulseEntry, p1 merkle.OriginHash) (r merkle.OriginHash, r1 *merkle.PulseProof, r2 error) {
 	counter := atomic.AddUint64(&m.GetPulseProofPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPulseProofCounter, 1)
 
 	if len(m.GetPulseProofMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetPulseProofMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CalculatorMock.GetPulseProof. %v", p)
+			m.t.Fatalf("Unexpected call to CalculatorMock.GetPulseProof. %v %v", p, p1)
 			return
 		}
 
 		input := m.GetPulseProofMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, CalculatorMockGetPulseProofInput{p}, "Calculator.GetPulseProof got unexpected parameters")
+		testify_assert.Equal(m.t, *input, CalculatorMockGetPulseProofInput{p, p1}, "Calculator.GetPulseProof got unexpected parameters")
 
 		result := m.GetPulseProofMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -463,7 +464,7 @@ func (m *CalculatorMock) GetPulseProof(p *merkle.PulseEntry) (r merkle.OriginHas
 
 		input := m.GetPulseProofMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, CalculatorMockGetPulseProofInput{p}, "Calculator.GetPulseProof got unexpected parameters")
+			testify_assert.Equal(m.t, *input, CalculatorMockGetPulseProofInput{p, p1}, "Calculator.GetPulseProof got unexpected parameters")
 		}
 
 		result := m.GetPulseProofMock.mainExpectation.result
@@ -479,11 +480,11 @@ func (m *CalculatorMock) GetPulseProof(p *merkle.PulseEntry) (r merkle.OriginHas
 	}
 
 	if m.GetPulseProofFunc == nil {
-		m.t.Fatalf("Unexpected call to CalculatorMock.GetPulseProof. %v", p)
+		m.t.Fatalf("Unexpected call to CalculatorMock.GetPulseProof. %v %v", p, p1)
 		return
 	}
 
-	return m.GetPulseProofFunc(p)
+	return m.GetPulseProofFunc(p, p1)
 }
 
 //GetPulseProofMinimockCounter returns a count of CalculatorMock.GetPulseProofFunc invocations

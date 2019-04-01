@@ -21,9 +21,9 @@ import (
 
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/conveyor/fsm"
+	"github.com/insolar/insolar/conveyor/generator/matrix"
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 )
 
@@ -41,10 +41,11 @@ type slotElement struct {
 	id              uint32
 	nodeID          uint32
 	parentElementID uint32
+	responseFuture  insolar.ConveyorFuture
 	inputEvent      interface{}
 	payload         interface{} // nolint: unused
 	postponedError  error       // nolint: structcheck
-	stateMachine    statemachine.StateMachine
+	stateMachine    matrix.StateMachine
 	state           fsm.StateID
 
 	nextElement      *slotElement
@@ -68,7 +69,7 @@ func (se *slotElement) setDeleteState() {
 }
 
 // nolint: unused
-func (se *slotElement) update(state fsm.StateID, payload interface{}, sm statemachine.StateMachine) {
+func (se *slotElement) update(state fsm.StateID, payload interface{}, sm matrix.StateMachine) {
 	se.state = state
 	se.payload = payload
 	se.stateMachine = sm
@@ -88,6 +89,11 @@ func (se *slotElement) GetInputEvent() interface{} {
 	return se.inputEvent
 }
 
+// GetResponseFuture implements SlotElementRestrictedHelper
+func (se *slotElement) GetResponseFuture() insolar.ConveyorFuture {
+	return se.responseFuture
+}
+
 // GetPayload implements SlotElementRestrictedHelper
 func (se *slotElement) GetPayload() interface{} {
 	return se.payload
@@ -105,7 +111,9 @@ func (se *slotElement) SendTask(adapterID adapterid.ID, taskPayload interface{},
 		return errors.Errorf("[ SendTask ] Can't PushTask: %s", err)
 	}
 
-	se.DeactivateTill(slot.Response)
+	// TODO: I'm not really sure if we need it. Since handler might invoke more then one adapter
+	// and after call first one element become inactive
+	se.DeactivateTill(fsm.Response)
 
 	return nil
 }
@@ -150,15 +158,15 @@ func (se *slotElement) InformParent(payload interface{}) bool {
 }
 
 // DeactivateTill implements SlotElementHelper
-func (se *slotElement) DeactivateTill(reactivateOn slot.ReactivateMode) {
+func (se *slotElement) DeactivateTill(reactivateOn fsm.ReactivateMode) {
 	switch reactivateOn {
-	case slot.Empty:
+	case fsm.Empty:
 		panic("implement me")
-	case slot.Response:
+	case fsm.Response:
 		se.activationStatus = NotActiveElement
-	case slot.Tick:
+	case fsm.Tick:
 		panic("implement me")
-	case slot.SeqHead:
+	case fsm.SeqHead:
 		panic("implement me")
 	}
 }

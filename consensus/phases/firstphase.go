@@ -88,7 +88,7 @@ func consensusReachedWithPercent(resultLen, participanstLen int, percent float64
 }
 
 type FirstPhase interface {
-	Execute(ctx context.Context, pulse *insolar.Pulse) (*FirstPhaseState, error)
+	Execute(ctx context.Context, pulse *insolar.Pulse, stateHash []byte) (*FirstPhaseState, error)
 }
 
 func NewFirstPhase() FirstPhase {
@@ -103,7 +103,7 @@ type FirstPhaseImpl struct {
 }
 
 // Execute do first phase
-func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*FirstPhaseState, error) {
+func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, stateHash []byte) (*FirstPhaseState, error) {
 	entry := &merkle.PulseEntry{Pulse: pulse}
 	logger := inslogger.FromContext(ctx)
 	ctx, span := instracer.StartSpan(ctx, "FirstPhase.Execute")
@@ -112,7 +112,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 
 	state := NewConsensusState(fp.NodeKeeper.GetConsensusInfo(), fp.NodeKeeper.GetSnapshotCopy())
 
-	pulseHash, pulseProof, err := fp.Calculator.GetPulseProof(entry)
+	pulseHash, pulseProof, err := fp.Calculator.GetPulseProof(entry, stateHash)
 	if !state.ConsensusInfo.IsJoiner() {
 		state.BitsetMapper = NewBitsetMapper(state.NodesMutator.GetActiveNodes())
 	}

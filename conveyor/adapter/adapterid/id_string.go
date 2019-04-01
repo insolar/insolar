@@ -11,11 +11,12 @@ func _() {
 	_ = x[SendResponse-1]
 	_ = x[Waiter-2]
 	_ = x[GetCode-3]
+	_ = x[NodeState-4]
 }
 
-const _ID_name = "SendResponseWaiterGetCode"
+const _ID_name = "SendResponseWaiterGetCodeNodeState"
 
-var _ID_index = [...]uint8{0, 12, 18, 25}
+var _ID_index = [...]uint8{0, 12, 18, 25, 34}
 
 func (i ID) String() string {
 	i -= 1

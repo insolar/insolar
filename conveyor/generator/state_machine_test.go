@@ -21,19 +21,18 @@ package main
 import (
 	"testing"
 
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
 )
 
 func Test_Generated_State_Machine(t *testing.T) {
-	element := slot.NewSlotElementHelperMock(t)
+	element := fsm.NewSlotElementHelperMock(t)
 	element.GetInputEventFunc = func() interface{} {
-		return sample.Event{}
+		return sample.CustomEvent{}
 	}
 	element.GetPayloadFunc = func() interface{} {
-		return &sample.Payload{}
+		return &sample.CustomPayload{}
 	}
 
 	machines := matrix.NewMatrix().GetPresentConfig()
@@ -41,7 +40,7 @@ func Test_Generated_State_Machine(t *testing.T) {
 	var stateID fsm.StateID = 0
 	var elementState fsm.ElementState = 0
 	for {
-		_, elementState, _ = machines.GetStateMachineByID(int(matrix.TestStateMachine)).GetTransitionHandler(stateID)(element)
+		_, elementState, _ = machines.GetStateMachineByID(matrix.SampleStateMachine).GetTransitionHandler(stateID)(element)
 		_, stateID = elementState.Parse()
 		if stateID == 0 {
 			break

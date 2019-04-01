@@ -14,16 +14,4 @@
  *    limitations under the License.
  */
 
-package constant
-
-// PulseState is the states of pulse inside slot
-type PulseState int
-
-//go:generate stringer -type=PulseState
-const (
-	Unallocated = PulseState(iota)
-	Future
-	Present
-	Past
-	Antique
-)
+package slot

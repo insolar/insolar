@@ -17,14 +17,19 @@
 package conveyor
 
 import (
+	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/conveyor/interfaces/constant"
+	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -68,7 +73,7 @@ func mockQueueReturnFalse(t *testing.T) *queue.IQueueMock {
 	return qMock
 }
 
-func mockSlot(t *testing.T, q *queue.IQueueMock, pulseNumber insolar.PulseNumber, state constant.PulseState) *Slot {
+func mockSlot(t *testing.T, q *queue.IQueueMock, pulseNumber insolar.PulseNumber, state PulseState) *Slot {
 	slot := &Slot{
 		inputQueue:  q,
 		pulseNumber: pulseNumber,
@@ -82,11 +87,11 @@ type mockSyncDone struct {
 	doneCount int
 }
 
-func (s *mockSyncDone) GetResult() int {
+func (s *mockSyncDone) GetResult() []byte {
 	result := <-s.waiter
-	hash, ok := result.(int)
+	hash, ok := result.([]byte)
 	if !ok {
-		return 0
+		return []byte{}
 	}
 	return hash
 }
@@ -110,18 +115,37 @@ func testPulseConveyor(t *testing.T, isQueueOk bool) *PulseConveyor {
 	} else {
 		q = mockQueueReturnFalse(t)
 	}
-	presentSlot := mockSlot(t, q, testRealPulse, constant.Present)
-	futureSlot := mockSlot(t, q, testRealPulse+testPulseDelta, constant.Future)
+	presentSlot := mockSlot(t, q, testRealPulse, Present)
+	futureSlot := mockSlot(t, q, testRealPulse+testPulseDelta, Future)
 	slotMap := make(map[insolar.PulseNumber]TaskPusher)
 	slotMap[testRealPulse] = presentSlot
 	slotMap[testRealPulse+testPulseDelta] = futureSlot
-	slotMap[insolar.AntiquePulseNumber] = mockSlot(t, q, insolar.AntiquePulseNumber, constant.Antique)
+	slotMap[insolar.AntiquePulseNumber] = mockSlot(t, q, insolar.AntiquePulseNumber, Antique)
 
 	return &PulseConveyor{
 		state:              insolar.ConveyorActive,
 		slotMap:            slotMap,
 		futurePulseNumber:  &futureSlot.pulseNumber,
 		presentPulseNumber: &presentSlot.pulseNumber,
+	}
+}
+
+func initComponents(t *testing.T) {
+	pc := testutils.NewPlatformCryptographyScheme()
+	ledgerMock := testutils.NewLedgerLogicMock(t)
+	ledgerMock.GetCodeFunc = func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error) {
+		return &reply.Code{}, nil
+	}
+
+	cm := &component.Manager{}
+	ctx := context.TODO()
+
+	components := adapterstorage.GetAllProcessors()
+	components = append(components, pc, ledgerMock)
+	cm.Inject(components...)
+	err := cm.Init(ctx)
+	if err != nil {
+		t.Error("ComponentManager init failed", err)
 	}
 }
 
@@ -357,7 +381,7 @@ func TestConveyor_ActivatePulse(t *testing.T) {
 	c := testPulseConveyor(t, true)
 	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	c.futurePulseData = &pulse
-	newFutureSlot := mockSlot(t, mockQueue(t), pulse.NextPulseNumber, constant.Future)
+	newFutureSlot := mockSlot(t, mockQueue(t), pulse.NextPulseNumber, Future)
 	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
 	c.state = insolar.ConveyorPreparingPulse
 
@@ -395,7 +419,7 @@ func TestConveyor_ActivatePulse_PushSignalErr(t *testing.T) {
 	c := testPulseConveyor(t, false)
 	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	c.futurePulseData = &pulse
-	newFutureSlot := NewWorkingSlot(constant.Future, pulse.NextPulseNumber, nil)
+	newFutureSlot := NewWorkingSlot(Future, pulse.NextPulseNumber, nil)
 	c.slotMap[pulse.NextPulseNumber] = newFutureSlot
 	c.state = insolar.ConveyorPreparingPulse
 
@@ -423,6 +447,7 @@ func TestConveyor_ActivatePreparePulse(t *testing.T) {
 func TestConveyor_ChangePulse(t *testing.T) {
 	conveyor, err := NewPulseConveyor()
 	require.NoError(t, err)
+	initComponents(t)
 	callback := mockCallback()
 	pulse := insolar.Pulse{PulseNumber: testRealPulse + testPulseDelta}
 	err = conveyor.PreparePulse(pulse, callback)
@@ -437,6 +462,7 @@ func TestConveyor_ChangePulse(t *testing.T) {
 func TestConveyor_ChangePulseMultipleTimes(t *testing.T) {
 	conveyor, err := NewPulseConveyor()
 	require.NoError(t, err)
+	initComponents(t)
 
 	pulseNumber := testRealPulse + testPulseDelta
 	for i := 0; i < 20; i++ {
@@ -456,16 +482,24 @@ func TestConveyor_ChangePulseMultipleTimes(t *testing.T) {
 func TestConveyor_ChangePulseMultipleTimes_WithEvents(t *testing.T) {
 	conveyor, err := NewPulseConveyor()
 	require.NoError(t, err)
+	initComponents(t)
 
 	pulseNumber := testRealPulse + testPulseDelta
 	for i := 0; i < 100; i++ {
 
 		go func() {
 			for j := 0; j < 1; j++ {
-				conveyor.SinkPush(pulseNumber, "TEST")
-				conveyor.SinkPush(pulseNumber-testPulseDelta, "TEST")
-				conveyor.SinkPush(pulseNumber+testPulseDelta, "TEST")
-				conveyor.SinkPushAll(pulseNumber, []interface{}{"TEST", i * j})
+				conveyorMsg1 := makeConveyorMsg(t)
+				conveyor.SinkPush(pulseNumber, conveyorMsg1)
+				conveyorMsg2 := makeConveyorMsg(t)
+				conveyor.SinkPush(pulseNumber-testPulseDelta, conveyorMsg2)
+				conveyorMsg3 := makeConveyorMsg(t)
+				conveyor.SinkPush(pulseNumber+testPulseDelta, conveyorMsg3)
+
+				conveyorMsg4 := makeConveyorMsg(t)
+				conveyorMsg5 := makeConveyorMsg(t)
+				conveyor.SinkPushAll(pulseNumber, []interface{}{conveyorMsg4, conveyorMsg5})
+
 			}
 		}()
 
@@ -487,25 +521,33 @@ func TestConveyor_ChangePulseMultipleTimes_WithEvents(t *testing.T) {
 		err = conveyor.PreparePulse(pulse, callback)
 		require.NoError(t, err)
 
-		if i == 0 {
-			require.Equal(t, 0, callback.(*mockSyncDone).GetResult())
-		} else {
-			require.Equal(t, 555, callback.(*mockSyncDone).GetResult())
-		}
+		expectedHash, _ := hex.DecodeString(
+			"0c60ae04fbb17fe36f4e84631a5b8f3cd6d0cd46e80056bdfec97fd305f764daadef8ae1adc89b203043d7e2af1fb341df0ce5f66dfe3204ec3a9831532a8e4c",
+		)
+		require.Equal(t, expectedHash, callback.(*mockSyncDone).GetResult())
 
 		err = conveyor.ActivatePulse()
 		require.NoError(t, err)
 
 		go func() {
 			for j := 0; j < 10; j++ {
-				require.NoError(t, conveyor.SinkPushAll(pulseNumber, []interface{}{"TEST", i}))
-				require.NoError(t, conveyor.SinkPush(pulseNumber, "TEST"))
-				require.NoError(t, conveyor.SinkPush(pulseNumber-testPulseDelta, "TEST"))
-				conveyor.SinkPush(pulseNumber+testPulseDelta, "TEST")
+				conveyorMsg1 := makeConveyorMsg(t)
+				conveyorMsg2 := makeConveyorMsg(t)
+				require.NoError(t, conveyor.SinkPushAll(pulseNumber, []interface{}{conveyorMsg1, conveyorMsg2}))
+
+				conveyorMsg3 := makeConveyorMsg(t)
+				require.NoError(t, conveyor.SinkPush(pulseNumber, conveyorMsg3))
+
+				conveyorMsg4 := makeConveyorMsg(t)
+				require.NoError(t, conveyor.SinkPush(pulseNumber-testPulseDelta, conveyorMsg4))
+
+				conveyorMsg5 := makeConveyorMsg(t)
+				conveyor.SinkPush(pulseNumber+testPulseDelta, conveyorMsg5)
 			}
 		}()
 	}
 
+	// TODO: wait for all responses
 	time.Sleep(time.Millisecond * 200)
 }
 

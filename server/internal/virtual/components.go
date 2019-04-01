@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
+	"github.com/insolar/insolar/conveyor"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
@@ -141,6 +142,9 @@ func initComponents(
 	networkSwitcher, err := state.NewNetworkSwitcher()
 	checkError(ctx, err, "failed to start NetworkSwitcher")
 
+	conveyor, err := conveyor.NewPulseConveyor()
+	checkError(ctx, err, "failed to start PulseConveyor")
+
 	networkCoordinator, err := networkcoordinator.New()
 	checkError(ctx, err, "failed to start NetworkCoordinator")
 
@@ -179,6 +183,7 @@ func initComponents(
 		networkSwitcher,
 		networkCoordinator,
 		cryptographyService,
+		conveyor,
 		keyProcessor,
 	}...)
 

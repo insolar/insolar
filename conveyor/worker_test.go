@@ -17,62 +17,59 @@
 package conveyor
 
 import (
+	"encoding/hex"
 	"os"
 	"testing"
 	"time"
 
 	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
+	"github.com/insolar/insolar/conveyor/handler"
 	"github.com/insolar/insolar/insolar"
 
-	//"github.com/insolar/insolar/conveyor/generator/matrix"
-	"github.com/insolar/insolar/conveyor/interfaces/constant"
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
 type mockStateMachineSet struct {
-	stateMachine statemachine.StateMachine
+	stateMachine matrix.StateMachine
 }
 
-func (s *mockStateMachineSet) GetStateMachineByID(id int) statemachine.StateMachine {
+func (s *mockStateMachineSet) GetStateMachineByID(id fsm.ID) matrix.StateMachine {
 	return s.stateMachine
 }
 
 type mockStateMachineHolder struct{}
 
-func (m *mockStateMachineHolder) makeSetAccessor() statemachine.SetAccessor {
+func (m *mockStateMachineHolder) makeSetAccessor() matrix.SetAccessor {
 	return &mockStateMachineSet{
 		stateMachine: m.GetStateMachinesByType(),
 	}
 }
 
-func (m *mockStateMachineHolder) GetFutureConfig() statemachine.SetAccessor {
+func (m *mockStateMachineHolder) GetFutureConfig() matrix.SetAccessor {
 	return m.makeSetAccessor()
 }
 
-func (m *mockStateMachineHolder) GetPresentConfig() statemachine.SetAccessor {
+func (m *mockStateMachineHolder) GetPresentConfig() matrix.SetAccessor {
 	return m.makeSetAccessor()
 }
 
-func (m *mockStateMachineHolder) GetPastConfig() statemachine.SetAccessor {
+func (m *mockStateMachineHolder) GetPastConfig() matrix.SetAccessor {
 	return m.makeSetAccessor()
 }
 
-func (m *mockStateMachineHolder) GetInitialStateMachine() statemachine.StateMachine {
+func (m *mockStateMachineHolder) GetInitialStateMachine() matrix.StateMachine {
 	return m.GetStateMachinesByType()
 }
 
-func (m *mockStateMachineHolder) GetStateMachinesByType() statemachine.StateMachine {
+func (m *mockStateMachineHolder) GetStateMachinesByType() matrix.StateMachine {
 
-	sm := statemachine.NewStateMachineMock(&testing.T{})
-	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r statemachine.MigrationHandler) {
-		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+	sm := matrix.NewStateMachineMock(&testing.T{})
+	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r handler.MigrationHandler) {
+		return func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			if s > maxState {
 				s /= 2
 			}
@@ -80,8 +77,8 @@ func (m *mockStateMachineHolder) GetStateMachinesByType() statemachine.StateMach
 		}
 	}
 
-	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r statemachine.TransitHandler) {
-		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r handler.TransitHandler) {
+		return func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			if s > maxState {
 				s /= 2
 			}
@@ -89,8 +86,8 @@ func (m *mockStateMachineHolder) GetStateMachinesByType() statemachine.StateMach
 		}
 	}
 
-	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r statemachine.AdapterResponseHandler) {
-		return func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r handler.AdapterResponseHandler) {
+		return func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 			if s > maxState {
 				s /= 2
 			}
@@ -119,10 +116,10 @@ func TestMain(m *testing.M) {
 	os.Exit(testMainWrapper(m))
 }
 
-var testPulseStates = []constant.PulseState{constant.Future, constant.Present, constant.Past, constant.Antique}
-var testPulseStatesWithoutFuture = []constant.PulseState{constant.Present, constant.Past, constant.Antique}
+var testPulseStates = []PulseState{Future, Present, Past, Antique}
+var testPulseStatesWithoutFuture = []PulseState{Present, Past, Antique}
 
-func makeSlotAndWorker(pulseState constant.PulseState, pulseNumber insolar.PulseNumber) (*Slot, worker) {
+func makeSlotAndWorker(pulseState PulseState, pulseNumber insolar.PulseNumber) (*Slot, worker) {
 	slot := newSlot(pulseState, pulseNumber, nil)
 	worker := newWorker(slot)
 	slot.removeSlotCallback = func(number insolar.PulseNumber) {}
@@ -131,16 +128,16 @@ func makeSlotAndWorker(pulseState constant.PulseState, pulseNumber insolar.Pulse
 }
 
 func Test_changePulseState(t *testing.T) {
-	slot, worker := makeSlotAndWorker(constant.Future, 22)
+	slot, worker := makeSlotAndWorker(Future, 22)
 
 	worker.changePulseState()
-	require.Equal(t, constant.Present, slot.pulseState)
+	require.Equal(t, Present, slot.pulseState)
 
 	worker.changePulseState()
-	require.Equal(t, constant.Past, slot.pulseState)
+	require.Equal(t, Past, slot.pulseState)
 
 	worker.changePulseState()
-	require.Equal(t, constant.Past, slot.pulseState)
+	require.Equal(t, Past, slot.pulseState)
 
 	slot.pulseState = 99999
 	require.PanicsWithValue(t, "[ changePulseState ] Unknown state: PulseState(99999)", worker.changePulseState)
@@ -291,16 +288,29 @@ func Test_readInputQueueWorking_EventOnly(t *testing.T) {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
-			var payload interface{}
-			payload = 99
-			require.NoError(t, slot.inputQueue.SinkPush(payload))
+			event := makeConveyorMsg(t)
+
+			require.NoError(t, slot.inputQueue.SinkPush(event))
 			require.NoError(t, worker.readInputQueueWorking())
 
 			areSlotStatesEqual(&oldSlot, slot, t, false)
 			el := slot.popElement(ActiveElement)
-			require.Equal(t, payload, el.payload)
+
+			require.Equal(t, event.Msg, el.inputEvent)
+			require.Equal(t, event.Future, el.responseFuture)
 		})
 	}
+}
+
+func pushRequiredElements(t *testing.T, slot *Slot, num int) []insolar.ConveyorPendingMessage {
+	addedEvents := make([]insolar.ConveyorPendingMessage, num)
+	for i := 0; i < num; i++ {
+		event := makeConveyorMsg(t)
+		addedEvents[i] = event
+		require.NoError(t, slot.inputQueue.SinkPush(event))
+	}
+
+	return addedEvents
 }
 
 func Test_readInputQueueWorking_SignalsAndEvents(t *testing.T) {
@@ -313,16 +323,15 @@ func Test_readInputQueueWorking_SignalsAndEvents(t *testing.T) {
 			slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback())
 
 			numElements := 20
-			for i := 0; i < numElements; i++ {
-				require.NoError(t, slot.inputQueue.SinkPush(i))
-			}
+			addedEvents := pushRequiredElements(t, slot, numElements)
 
 			require.NoError(t, worker.readInputQueueWorking())
 			areSlotStatesEqual(&oldSlot, slot, t, false)
 
 			for i := 0; i < numElements; i++ {
 				el := slot.popElement(ActiveElement)
-				require.Equal(t, i, el.payload)
+				require.Equal(t, addedEvents[i].Msg, el.inputEvent)
+				require.Equal(t, addedEvents[i].Future, el.responseFuture)
 			}
 		})
 	}
@@ -435,39 +444,39 @@ func Test_readInputQueueSuspending_SignalOnly(t *testing.T) {
 
 func Test_readInputQueueSuspending_EventOnly(t *testing.T) {
 
-	tests := []constant.PulseState{constant.Future, constant.Present}
+	tests := []PulseState{Future, Present}
 
 	for _, tt := range tests {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
-			var payload interface{}
-			payload = 99
-			require.NoError(t, slot.inputQueue.SinkPush(payload))
+			event := makeConveyorMsg(t)
+			require.NoError(t, slot.inputQueue.SinkPush(event))
 			require.NoError(t, worker.readInputQueueSuspending())
 
 			areSlotStatesEqual(&oldSlot, slot, t, false)
 			el := slot.popElement(ActiveElement)
-			require.Equal(t, payload, el.payload)
+			require.Equal(t, event.Future, el.responseFuture)
+			require.Equal(t, event.Msg, el.inputEvent)
 		})
 	}
 }
 
 func Test_readInputQueueSuspending_EventOnly_Past(t *testing.T) {
-	slot, worker := makeSlotAndWorker(constant.Past, 4444)
-	var payload interface{}
-	payload = 99
-	require.NoError(t, slot.inputQueue.SinkPush(payload))
+	slot, worker := makeSlotAndWorker(Past, 4444)
+	event := makeConveyorMsg(t)
+	require.NoError(t, slot.inputQueue.SinkPush(event))
 	require.NoError(t, worker.readInputQueueSuspending())
 
 	require.Equal(t, Working, slot.slotState)
 
 	el := slot.popElement(ActiveElement)
-	require.Equal(t, payload, el.payload)
+	require.Equal(t, event.Future, el.responseFuture)
+	require.Equal(t, event.Msg, el.inputEvent)
 }
 
 func Test_readInputQueueSuspending_SignalsAndEvents(t *testing.T) {
-	tests := []constant.PulseState{constant.Future, constant.Present}
+	tests := []PulseState{Future, Present}
 
 	for _, tt := range tests {
 		t.Run(tt.String(), func(t *testing.T) {
@@ -477,35 +486,33 @@ func Test_readInputQueueSuspending_SignalsAndEvents(t *testing.T) {
 			slot.inputQueue.PushSignal(PendingPulseSignal, mockCallback())
 
 			numElements := 20
-			for i := 0; i < numElements; i++ {
-				require.NoError(t, slot.inputQueue.SinkPush(i))
-			}
+			addedEvents := pushRequiredElements(t, slot, numElements)
 
 			require.NoError(t, worker.readInputQueueSuspending())
 			areSlotStatesEqual(&oldSlot, slot, t, false)
 
 			for i := 0; i < numElements; i++ {
 				el := slot.popElement(ActiveElement)
-				require.Equal(t, i, el.payload)
+				require.Equal(t, addedEvents[i].Msg, el.inputEvent)
+				require.Equal(t, addedEvents[i].Future, el.responseFuture)
 			}
 		})
 	}
 }
 
 func Test_readInputQueueSuspending_SignalsAndEvents_Past(t *testing.T) {
-	slot, worker := makeSlotAndWorker(constant.Past, 44444)
+	slot, worker := makeSlotAndWorker(Past, 44444)
 	slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback())
 
 	numElements := 20
-	for i := 0; i < numElements; i++ {
-		require.NoError(t, slot.inputQueue.SinkPush(i))
-	}
+	addedEvents := pushRequiredElements(t, slot, numElements)
 
 	require.NoError(t, worker.readInputQueueSuspending())
 
 	for i := 0; i < numElements; i++ {
 		el := slot.popElement(ActiveElement)
-		require.Equal(t, i, el.payload)
+		require.Equal(t, addedEvents[i].Msg, el.inputEvent)
+		require.Equal(t, addedEvents[i].Future, el.responseFuture)
 	}
 
 	require.Equal(t, Working, slot.slotState)
@@ -532,8 +539,8 @@ func Test_migrate_EmptyList(t *testing.T) {
 }
 
 func Test_migrate_NoMigrationHandler(t *testing.T) {
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r statemachine.MigrationHandler) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r handler.MigrationHandler) {
 		return nil
 	}
 
@@ -545,7 +552,7 @@ func Test_migrate_NoMigrationHandler(t *testing.T) {
 					slot, worker := makeSlotAndWorker(tps, 44444)
 					oldSlot := *slot
 
-					_, err := slot.createElement(sm, 0, queue.OutputElement{})
+					_, err := slot.createElement(sm, 0, makeTestOutputElements(t))
 					require.NoError(t, err)
 					numActiveElements := slot.len(tas)
 					require.NoError(t, worker.migrate(tas))
@@ -571,9 +578,9 @@ func Test_migrate_MigrationHandlerOk(t *testing.T) {
 	migrationState := fsm.StateID(initState + 1)
 	initPayLoad := 99
 	migrationPayLoad := initPayLoad + 1
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r statemachine.MigrationHandler) {
-		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r handler.MigrationHandler) {
+		return func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return migrationPayLoad, fsm.NewElementState(0, migrationState), nil
 		}
 	}
@@ -584,9 +591,8 @@ func Test_migrate_MigrationHandlerOk(t *testing.T) {
 				t.Run(tas.String(), func(t *testing.T) {
 
 					slot, worker := makeSlotAndWorker(tps, 4444)
-					event := queue.NewOutputElement(initPayLoad, 0)
 
-					_, err := slot.createElement(sm, initState, *event)
+					_, err := slot.createElement(sm, initState, makeTestOutputElements(t))
 					require.NoError(t, err)
 
 					moveLastElementToState(slot, tas, t)
@@ -603,9 +609,9 @@ func Test_migrate_MigrationHandlerOk(t *testing.T) {
 }
 
 func Test_migrate_MigrationHandler_LastStateOfStateMachine(t *testing.T) {
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r statemachine.MigrationHandler) {
-		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r handler.MigrationHandler) {
+		return func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return element.GetPayload(), 0, nil
 		}
 	}
@@ -616,7 +622,7 @@ func Test_migrate_MigrationHandler_LastStateOfStateMachine(t *testing.T) {
 				t.Run(tas.String(), func(t *testing.T) {
 
 					slot, worker := makeSlotAndWorker(tps, 444)
-					_, err := slot.createElement(sm, 0, queue.OutputElement{})
+					_, err := slot.createElement(sm, 0, makeTestOutputElements(t))
 					require.NoError(t, err)
 					oldSlot := *slot
 
@@ -636,18 +642,22 @@ func Test_migrate_MigrationHandler_LastStateOfStateMachine(t *testing.T) {
 	}
 }
 
+func makeTestOutputElements(t *testing.T) queue.OutputElement {
+	return *queue.NewOutputElement(makeConveyorMsg(t), 0)
+}
+
 func Test_migrate_MigrationHandler_Error(t *testing.T) {
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r statemachine.MigrationHandler) {
-		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r handler.MigrationHandler) {
+		return func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return element.GetPayload(), 0, errors.New("Test Error")
 		}
 	}
 
 	transitionErrorState := fsm.StateID(999)
 	transitionErrorPayLoad := 777
-	sm.GetTransitionErrorHandlerFunc = func(s fsm.StateID) (r statemachine.TransitionErrorHandler) {
-		return func(element slot.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
+	sm.GetTransitionErrorHandlerFunc = func(s fsm.StateID) (r handler.TransitionErrorHandler) {
+		return func(element fsm.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
 			return transitionErrorPayLoad, fsm.NewElementState(0, transitionErrorState)
 		}
 	}
@@ -658,7 +668,7 @@ func Test_migrate_MigrationHandler_Error(t *testing.T) {
 				t.Run(tas.String(), func(t *testing.T) {
 
 					slot, worker := makeSlotAndWorker(tps, 22)
-					_, err := slot.createElement(sm, 0, queue.OutputElement{})
+					_, err := slot.createElement(sm, 0, makeTestOutputElements(t))
 					require.NoError(t, err)
 					moveLastElementToState(slot, tas, t)
 
@@ -676,7 +686,7 @@ func Test_migrate_MigrationHandler_Error(t *testing.T) {
 // ---- suspending
 
 func Test_suspending_Past(t *testing.T) {
-	slot, worker := makeSlotAndWorker(constant.Past, 22)
+	slot, worker := makeSlotAndWorker(Past, 22)
 	removeSlot := false
 	slot.removeSlotCallback = func(number insolar.PulseNumber) {
 		removeSlot = true
@@ -693,7 +703,8 @@ func Test_suspending_Past(t *testing.T) {
 }
 
 func Test_suspending_Present(t *testing.T) {
-	slot, worker := makeSlotAndWorker(constant.Present, 22)
+	initComponents(t)
+	slot, worker := makeSlotAndWorker(Present, 22)
 	oldSlot := *slot
 
 	callback := mockCallback()
@@ -705,11 +716,14 @@ func Test_suspending_Present(t *testing.T) {
 	slot.slotState = Suspending
 	worker.suspending()
 	areSlotStatesEqual(&oldSlot, slot, t, true)
-	require.Equal(t, 555, callback.(*mockSyncDone).GetResult())
+	expectedHash, _ := hex.DecodeString(
+		"0c60ae04fbb17fe36f4e84631a5b8f3cd6d0cd46e80056bdfec97fd305f764daadef8ae1adc89b203043d7e2af1fb341df0ce5f66dfe3204ec3a9831532a8e4c",
+	)
+	require.Equal(t, expectedHash, callback.(*mockSyncDone).GetResult())
 }
 
 func Test_suspending_Future(t *testing.T) {
-	slot, worker := makeSlotAndWorker(constant.Future, 22)
+	slot, worker := makeSlotAndWorker(Future, 22)
 	oldSlot := *slot
 
 	callback := mockCallback()
@@ -726,7 +740,7 @@ func Test_suspending_Future(t *testing.T) {
 }
 
 func Test_suspending_ReadInputQueue(t *testing.T) {
-	slot, worker := makeSlotAndWorker(constant.Present, 22)
+	slot, worker := makeSlotAndWorker(Present, 22)
 
 	callback := mockCallback()
 	// to predict infinite loop
@@ -735,8 +749,11 @@ func Test_suspending_ReadInputQueue(t *testing.T) {
 	worker.preparePulseSync = callback
 	slot.slotState = Suspending
 	worker.suspending()
-	require.Equal(t, constant.Past, slot.pulseState)
-	require.Equal(t, 555, callback.(*mockSyncDone).GetResult())
+	require.Equal(t, Past, slot.pulseState)
+	expectedHash, _ := hex.DecodeString(
+		"0c60ae04fbb17fe36f4e84631a5b8f3cd6d0cd46e80056bdfec97fd305f764daadef8ae1adc89b203043d7e2af1fb341df0ce5f66dfe3204ec3a9831532a8e4c",
+	)
+	require.Equal(t, expectedHash, callback.(*mockSyncDone).GetResult())
 }
 
 // ---- working
@@ -760,14 +777,14 @@ func Test_working_ChangeStateToSuspending(t *testing.T) {
 // ---- processingElements
 
 func Test_processingElements_NoElementsInPast(t *testing.T) {
-	slot, worker := makeSlotAndWorker(constant.Past, 22)
+	slot, worker := makeSlotAndWorker(Past, 22)
 
 	worker.processingElements()
 	require.Equal(t, Suspending, slot.slotState)
 }
 
 func Test_processingElements_AlreadyHasSignal(t *testing.T) {
-	slot, worker := makeSlotAndWorker(constant.Present, 22)
+	slot, worker := makeSlotAndWorker(Present, 22)
 	oldSlot := *slot
 
 	require.NoError(t, slot.inputQueue.PushSignal(ActivatePulseSignal, mockCallback()))
@@ -781,9 +798,9 @@ func Test_processingElements_OneEvent(t *testing.T) {
 	transitionState := fsm.StateID(433)
 	transitionPayload := 556
 
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r statemachine.TransitHandler) {
-		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r handler.TransitHandler) {
+		return func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return transitionPayload, fsm.NewElementState(0, transitionState), nil
 		}
 	}
@@ -793,7 +810,7 @@ func Test_processingElements_OneEvent(t *testing.T) {
 
 			slot, worker := makeSlotAndWorker(tps, 22)
 			oldSlot := *slot
-			_, err := slot.createElement(sm, 0, queue.OutputElement{})
+			_, err := slot.createElement(sm, 0, makeTestOutputElements(t))
 			require.NoError(t, err)
 
 			worker.processingElements()
@@ -810,9 +827,9 @@ func Test_processingElements_OneEvent(t *testing.T) {
 }
 
 func Test_processingElements_LastStateOfStateMachine(t *testing.T) {
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r statemachine.TransitHandler) {
-		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r handler.TransitHandler) {
+		return func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return element.GetPayload(), 0, nil
 		}
 	}
@@ -823,7 +840,7 @@ func Test_processingElements_LastStateOfStateMachine(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tps, 22)
 			oldSlot := *slot
 
-			_, err := slot.createElement(sm, 0, queue.OutputElement{})
+			_, err := slot.createElement(sm, 0, makeTestOutputElements(t))
 			require.NoError(t, err)
 
 			numEmptyElements := slot.len(EmptyElement)
@@ -838,9 +855,9 @@ func Test_processingElements_LastStateOfStateMachine(t *testing.T) {
 }
 
 func Test_processingElements_TransitionHandlerError(t *testing.T) {
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r statemachine.TransitHandler) {
-		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetTransitionHandlerFunc = func(s fsm.StateID) (r handler.TransitHandler) {
+		return func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return nil, 0, errors.New("Test Error")
 		}
 	}
@@ -848,8 +865,8 @@ func Test_processingElements_TransitionHandlerError(t *testing.T) {
 	transitionErrorState := fsm.StateID(999)
 	transitionErrorPayLoad := 777
 
-	sm.GetTransitionErrorHandlerFunc = func(s fsm.StateID) (r statemachine.TransitionErrorHandler) {
-		return func(element slot.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
+	sm.GetTransitionErrorHandlerFunc = func(s fsm.StateID) (r handler.TransitionErrorHandler) {
+		return func(element fsm.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
 			return transitionErrorPayLoad, fsm.NewElementState(0, transitionErrorState)
 		}
 	}
@@ -861,7 +878,7 @@ func Test_processingElements_TransitionHandlerError(t *testing.T) {
 
 			oldSlot := *slot
 
-			_, err := slot.createElement(sm, 0, queue.OutputElement{})
+			_, err := slot.createElement(sm, 0, makeTestOutputElements(t))
 			require.NoError(t, err)
 
 			worker.processingElements()
@@ -893,7 +910,7 @@ func Test_readResponseQueue_EmptyResponseQueue(t *testing.T) {
 }
 
 func Test_readResponseQueue_OneEvent_Future(t *testing.T) {
-	slot, worker := makeSlotAndWorker(constant.Future, 22)
+	slot, worker := makeSlotAndWorker(Future, 22)
 	oldSlot := *slot
 	require.NoError(t, worker.readResponseQueue())
 
@@ -902,14 +919,14 @@ func Test_readResponseQueue_OneEvent_Future(t *testing.T) {
 
 func Test_readResponseQueue_OneEvent(t *testing.T) {
 	responseState := fsm.StateID(446)
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r statemachine.AdapterResponseHandler) {
-		return func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r handler.AdapterResponseHandler) {
+		return func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 			return element.GetPayload(), fsm.NewElementState(0, responseState), nil
 		}
 	}
 
-	for _, tt := range []constant.PulseState{constant.Past, constant.Present} {
+	for _, tt := range []PulseState{Past, Present} {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
@@ -917,7 +934,7 @@ func Test_readResponseQueue_OneEvent(t *testing.T) {
 			resp := &adapter.AdapterResponse{}
 			slot.responseQueue.SinkPush(resp)
 
-			_, err := slot.createElement(sm, 0, queue.OutputElement{})
+			_, err := slot.createElement(sm, 0, makeTestOutputElements(t))
 			require.NoError(t, err)
 
 			require.Empty(t, worker.postponedResponses)
@@ -947,7 +964,7 @@ func Test_readResponseQueue_BadTypeInResponseQueue(t *testing.T) {
 }
 
 func Test_readResponseQueue_BadTypeInResponseQueue_Future(t *testing.T) {
-	slot, worker := makeSlotAndWorker(constant.Future, 22)
+	slot, worker := makeSlotAndWorker(Future, 22)
 	oldSlot := *slot
 
 	require.Empty(t, worker.postponedResponses)
@@ -964,7 +981,7 @@ func Test_readResponseQueue_BadElementIdInResponse(t *testing.T) {
 			resp := &adapter.AdapterResponse{}
 			slot.responseQueue.SinkPush(resp)
 
-			_, err := slot.createElement(nil, 0, queue.OutputElement{})
+			_, err := slot.createElement(nil, 0, makeTestOutputElements(t))
 			require.NoError(t, err)
 
 			// it changes element id
@@ -986,17 +1003,17 @@ func Test_readResponseQueue_BadElementIdInResponse(t *testing.T) {
 }
 
 func Test_readResponseQueue_ResponseHandlerError(t *testing.T) {
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r statemachine.AdapterResponseHandler) {
-		return func(element slot.SlotElementHelper, response iadapter.Response) (interface{}, fsm.ElementState, error) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetResponseHandlerFunc = func(s fsm.StateID) (r handler.AdapterResponseHandler) {
+		return func(element fsm.SlotElementHelper, response interface{}) (interface{}, fsm.ElementState, error) {
 			return element.GetPayload(), 0, errors.New("Test Error")
 		}
 	}
 
 	responseState := fsm.StateID(564)
 	responsePayload := uint32(345)
-	sm.GetResponseErrorHandlerFunc = func(s fsm.StateID) (r statemachine.ResponseErrorHandler) {
-		return func(element slot.SlotElementHelper, response iadapter.Response, err error) (interface{}, fsm.ElementState) {
+	sm.GetResponseErrorHandlerFunc = func(s fsm.StateID) (r handler.ResponseErrorHandler) {
+		return func(element fsm.SlotElementHelper, response interface{}, err error) (interface{}, fsm.ElementState) {
 			return responsePayload, fsm.NewElementState(0, responseState)
 		}
 	}
@@ -1008,7 +1025,7 @@ func Test_readResponseQueue_ResponseHandlerError(t *testing.T) {
 			resp := &adapter.AdapterResponse{}
 			slot.responseQueue.SinkPush(resp)
 
-			_, err := slot.createElement(sm, 0, queue.OutputElement{})
+			_, err := slot.createElement(sm, 0, makeTestOutputElements(t))
 			require.NoError(t, err)
 
 			require.NoError(t, worker.readResponseQueue())
@@ -1052,9 +1069,9 @@ func Test_initializing_EmptySlot(t *testing.T) {
 func Test_initializing_NotEmptySlot(t *testing.T) {
 	migrationPayLoad := 555
 	migrationState := fsm.StateID(99)
-	sm := statemachine.NewStateMachineMock(t)
-	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r statemachine.MigrationHandler) {
-		return func(element slot.SlotElementHelper) (interface{}, fsm.ElementState, error) {
+	sm := matrix.NewStateMachineMock(t)
+	sm.GetMigrationHandlerFunc = func(s fsm.StateID) (r handler.MigrationHandler) {
+		return func(element fsm.SlotElementHelper) (interface{}, fsm.ElementState, error) {
 			return migrationPayLoad, fsm.NewElementState(0, migrationState), nil
 		}
 	}
@@ -1064,7 +1081,7 @@ func Test_initializing_NotEmptySlot(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
 
-			element, err := slot.createElement(sm, 0, queue.OutputElement{})
+			element, err := slot.createElement(sm, 0, makeTestOutputElements(t))
 			require.NoError(t, err)
 			require.NotNil(t, element)
 
@@ -1075,7 +1092,7 @@ func Test_initializing_NotEmptySlot(t *testing.T) {
 }
 
 func Test_CallCallbackOfSignal(t *testing.T) {
-	for _, tt := range []constant.PulseState{constant.Present, constant.Future} {
+	for _, tt := range []PulseState{Present, Future} {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			callback := mockCallback()
@@ -1106,7 +1123,7 @@ func Test_run(t *testing.T) {
 				if state > maxState {
 					state /= maxState
 				}
-				element, err := slot.createElement(HandlerStorage.GetInitialStateMachine(), fsm.StateID(state), queue.OutputElement{})
+				element, err := slot.createElement(HandlerStorage.GetInitialStateMachine(), fsm.StateID(state), makeTestOutputElements(t))
 				require.NoError(t, err)
 				require.NotNil(t, element)
 			}

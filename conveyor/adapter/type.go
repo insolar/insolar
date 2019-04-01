@@ -18,8 +18,6 @@ package adapter
 
 import (
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
-	"github.com/insolar/insolar/conveyor/interfaces/iadapter"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
 	"github.com/insolar/insolar/conveyor/queue"
 	"github.com/insolar/insolar/insolar"
 )
@@ -41,7 +39,7 @@ type AdapterToSlotResponseSink interface {
 	PushNestedEvent(adapterID adapterid.ID, parentElementID uint32, handlerID uint32, eventPayload interface{})
 	GetPulseNumber() insolar.PulseNumber
 	GetNodeID() uint32
-	GetSlotDetails() slot.SlotDetails
+	GetSlotDetails() SlotDetails
 }
 
 // AdapterTask contains info for launch adapter task
@@ -61,7 +59,7 @@ type AdapterResponse struct {
 }
 
 // NewAdapterResponse creates new adapter response
-func NewAdapterResponse(adapterID adapterid.ID, elementID uint32, handlerID uint32, respPayload interface{}) iadapter.Response {
+func NewAdapterResponse(adapterID adapterid.ID, elementID uint32, handlerID uint32, respPayload interface{}) *AdapterResponse {
 	return &AdapterResponse{
 		adapterID:   adapterID,
 		elementID:   elementID,
@@ -98,7 +96,7 @@ type AdapterNestedEvent struct {
 	eventPayload    interface{}
 }
 
-func NewAdapterNestedEvent(adapterID adapterid.ID, parentElementID uint32, handlerID uint32, eventPayload interface{}) iadapter.NestedEvent {
+func NewAdapterNestedEvent(adapterID adapterid.ID, parentElementID uint32, handlerID uint32, eventPayload interface{}) *AdapterNestedEvent {
 	return &AdapterNestedEvent{
 		adapterID:       adapterID,
 		parentElementID: parentElementID,
@@ -162,4 +160,13 @@ func NewAdapterWithQueue(processor Processor, id adapterid.ID) TaskSink {
 	<-started
 
 	return adapter
+}
+
+// SlotDetails provides information about slot
+//go:generate minimock -i github.com/insolar/insolar/conveyor/adapter.SlotDetails -o ./ -s _mock.go
+type SlotDetails interface {
+	GetPulseNumber() insolar.PulseNumber // nolint: unused
+	GetNodeID() uint32                   // nolint: unused
+	GetPulseData() insolar.Pulse         // nolint: unused
+	GetNodeData() interface{}            // nolint: unused
 }

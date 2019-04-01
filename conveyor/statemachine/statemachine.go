@@ -14,23 +14,20 @@
  *    limitations under the License.
  */
 
-package common
+package statemachine
 
 import (
-	"github.com/insolar/insolar/conveyor/interfaces/fsm"
-	"github.com/insolar/insolar/conveyor/interfaces/slot"
-	"github.com/insolar/insolar/conveyor/interfaces/statemachine"
+	"github.com/insolar/insolar/conveyor/fsm"
+	"github.com/insolar/insolar/conveyor/handler"
 )
 
-// TODO: move this code from common package
 // State struct contains predefined set of handlers
 type State struct {
-	Migration            statemachine.MigrationHandler
-	Transition           statemachine.TransitHandler
-	AdapterResponse      statemachine.AdapterResponseHandler
-	ErrorState           statemachine.TransitionErrorHandler
-	AdapterResponseError statemachine.ResponseErrorHandler
-	// TODO: Finalization handlers
+	Migration            handler.MigrationHandler
+	Transition           handler.TransitHandler
+	AdapterResponse      handler.AdapterResponseHandler
+	ErrorState           handler.TransitionErrorHandler
+	AdapterResponseError handler.ResponseErrorHandler
 }
 
 // StateMachine is a type for conveyor state machines
@@ -45,34 +42,34 @@ func (sm *StateMachine) GetTypeID() fsm.ID {
 }
 
 // GetMigrationHandler method returns migration handler
-func (sm *StateMachine) GetMigrationHandler(state fsm.StateID) statemachine.MigrationHandler {
+func (sm *StateMachine) GetMigrationHandler(state fsm.StateID) handler.MigrationHandler {
 	return sm.States[state].Migration
 }
 
 // GetTransitionHandler method returns transition handler
-func (sm *StateMachine) GetTransitionHandler(state fsm.StateID) statemachine.TransitHandler {
+func (sm *StateMachine) GetTransitionHandler(state fsm.StateID) handler.TransitHandler {
 	return sm.States[state].Transition
 }
 
 // GetResponseHandler returns response handler
-func (sm *StateMachine) GetResponseHandler(state fsm.StateID) statemachine.AdapterResponseHandler {
+func (sm *StateMachine) GetResponseHandler(state fsm.StateID) handler.AdapterResponseHandler {
 	return sm.States[state].AdapterResponse
 }
 
 // GetNestedHandler returns nested handler
-func (sm *StateMachine) GetNestedHandler(state fsm.StateID) statemachine.NestedHandler {
-	return func(element slot.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
+func (sm *StateMachine) GetNestedHandler(state fsm.StateID) handler.NestedHandler {
+	return func(element fsm.SlotElementHelper, err error) (interface{}, fsm.ElementState) {
 		// TODO: Implement me
 		return nil, 0
 	}
 }
 
 // GetTransitionErrorHandler returns transition error handler
-func (sm *StateMachine) GetTransitionErrorHandler(state fsm.StateID) statemachine.TransitionErrorHandler {
+func (sm *StateMachine) GetTransitionErrorHandler(state fsm.StateID) handler.TransitionErrorHandler {
 	return sm.States[state].ErrorState
 }
 
 // GetResponseErrorHandler returns response error handler
-func (sm *StateMachine) GetResponseErrorHandler(state fsm.StateID) statemachine.ResponseErrorHandler {
+func (sm *StateMachine) GetResponseErrorHandler(state fsm.StateID) handler.ResponseErrorHandler {
 	return sm.States[state].AdapterResponseError
 }

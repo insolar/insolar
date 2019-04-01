@@ -1,19 +1,19 @@
-package slot
+package fsm
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "SlotElementRestrictedHelper" can be found in github.com/insolar/insolar/conveyor/interfaces/slot
+The original interface "SlotElementRestrictedHelper" can be found in github.com/insolar/insolar/conveyor/fsm
 */
 import (
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	fsm "github.com/insolar/insolar/conveyor/interfaces/fsm"
+	insolar "github.com/insolar/insolar/insolar"
 )
 
-//SlotElementRestrictedHelperMock implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementRestrictedHelper
+//SlotElementRestrictedHelperMock implements github.com/insolar/insolar/conveyor/fsm.SlotElementRestrictedHelper
 type SlotElementRestrictedHelperMock struct {
 	t minimock.Tester
 
@@ -42,12 +42,17 @@ type SlotElementRestrictedHelperMock struct {
 	GetPayloadPreCounter uint64
 	GetPayloadMock       mSlotElementRestrictedHelperMockGetPayload
 
-	GetStateFunc       func() (r fsm.StateID)
+	GetResponseFutureFunc       func() (r insolar.ConveyorFuture)
+	GetResponseFutureCounter    uint64
+	GetResponseFuturePreCounter uint64
+	GetResponseFutureMock       mSlotElementRestrictedHelperMockGetResponseFuture
+
+	GetStateFunc       func() (r StateID)
 	GetStateCounter    uint64
 	GetStatePreCounter uint64
 	GetStateMock       mSlotElementRestrictedHelperMockGetState
 
-	GetTypeFunc       func() (r fsm.ID)
+	GetTypeFunc       func() (r ID)
 	GetTypeCounter    uint64
 	GetTypePreCounter uint64
 	GetTypeMock       mSlotElementRestrictedHelperMockGetType
@@ -63,7 +68,7 @@ type SlotElementRestrictedHelperMock struct {
 	ReactivateMock       mSlotElementRestrictedHelperMockReactivate
 }
 
-//NewSlotElementRestrictedHelperMock returns a mock for github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementRestrictedHelper
+//NewSlotElementRestrictedHelperMock returns a mock for github.com/insolar/insolar/conveyor/fsm.SlotElementRestrictedHelper
 func NewSlotElementRestrictedHelperMock(t minimock.Tester) *SlotElementRestrictedHelperMock {
 	m := &SlotElementRestrictedHelperMock{t: t}
 
@@ -76,6 +81,7 @@ func NewSlotElementRestrictedHelperMock(t minimock.Tester) *SlotElementRestricte
 	m.GetNodeIDMock = mSlotElementRestrictedHelperMockGetNodeID{mock: m}
 	m.GetParentElementIDMock = mSlotElementRestrictedHelperMockGetParentElementID{mock: m}
 	m.GetPayloadMock = mSlotElementRestrictedHelperMockGetPayload{mock: m}
+	m.GetResponseFutureMock = mSlotElementRestrictedHelperMockGetResponseFuture{mock: m}
 	m.GetStateMock = mSlotElementRestrictedHelperMockGetState{mock: m}
 	m.GetTypeMock = mSlotElementRestrictedHelperMockGetType{mock: m}
 	m.LeaveSequenceMock = mSlotElementRestrictedHelperMockLeaveSequence{mock: m}
@@ -146,7 +152,7 @@ func (m *mSlotElementRestrictedHelperMockGetElementID) Set(f func() (r uint32)) 
 	return m.mock
 }
 
-//GetElementID implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementRestrictedHelper interface
+//GetElementID implements github.com/insolar/insolar/conveyor/fsm.SlotElementRestrictedHelper interface
 func (m *SlotElementRestrictedHelperMock) GetElementID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetElementIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetElementIDCounter, 1)
@@ -280,7 +286,7 @@ func (m *mSlotElementRestrictedHelperMockGetInputEvent) Set(f func() (r interfac
 	return m.mock
 }
 
-//GetInputEvent implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementRestrictedHelper interface
+//GetInputEvent implements github.com/insolar/insolar/conveyor/fsm.SlotElementRestrictedHelper interface
 func (m *SlotElementRestrictedHelperMock) GetInputEvent() (r interface{}) {
 	counter := atomic.AddUint64(&m.GetInputEventPreCounter, 1)
 	defer atomic.AddUint64(&m.GetInputEventCounter, 1)
@@ -414,7 +420,7 @@ func (m *mSlotElementRestrictedHelperMockGetNodeID) Set(f func() (r uint32)) *Sl
 	return m.mock
 }
 
-//GetNodeID implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementRestrictedHelper interface
+//GetNodeID implements github.com/insolar/insolar/conveyor/fsm.SlotElementRestrictedHelper interface
 func (m *SlotElementRestrictedHelperMock) GetNodeID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetNodeIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetNodeIDCounter, 1)
@@ -548,7 +554,7 @@ func (m *mSlotElementRestrictedHelperMockGetParentElementID) Set(f func() (r uin
 	return m.mock
 }
 
-//GetParentElementID implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementRestrictedHelper interface
+//GetParentElementID implements github.com/insolar/insolar/conveyor/fsm.SlotElementRestrictedHelper interface
 func (m *SlotElementRestrictedHelperMock) GetParentElementID() (r uint32) {
 	counter := atomic.AddUint64(&m.GetParentElementIDPreCounter, 1)
 	defer atomic.AddUint64(&m.GetParentElementIDCounter, 1)
@@ -682,7 +688,7 @@ func (m *mSlotElementRestrictedHelperMockGetPayload) Set(f func() (r interface{}
 	return m.mock
 }
 
-//GetPayload implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementRestrictedHelper interface
+//GetPayload implements github.com/insolar/insolar/conveyor/fsm.SlotElementRestrictedHelper interface
 func (m *SlotElementRestrictedHelperMock) GetPayload() (r interface{}) {
 	counter := atomic.AddUint64(&m.GetPayloadPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPayloadCounter, 1)
@@ -754,6 +760,140 @@ func (m *SlotElementRestrictedHelperMock) GetPayloadFinished() bool {
 	return true
 }
 
+type mSlotElementRestrictedHelperMockGetResponseFuture struct {
+	mock              *SlotElementRestrictedHelperMock
+	mainExpectation   *SlotElementRestrictedHelperMockGetResponseFutureExpectation
+	expectationSeries []*SlotElementRestrictedHelperMockGetResponseFutureExpectation
+}
+
+type SlotElementRestrictedHelperMockGetResponseFutureExpectation struct {
+	result *SlotElementRestrictedHelperMockGetResponseFutureResult
+}
+
+type SlotElementRestrictedHelperMockGetResponseFutureResult struct {
+	r insolar.ConveyorFuture
+}
+
+//Expect specifies that invocation of SlotElementRestrictedHelper.GetResponseFuture is expected from 1 to Infinity times
+func (m *mSlotElementRestrictedHelperMockGetResponseFuture) Expect() *mSlotElementRestrictedHelperMockGetResponseFuture {
+	m.mock.GetResponseFutureFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SlotElementRestrictedHelperMockGetResponseFutureExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of SlotElementRestrictedHelper.GetResponseFuture
+func (m *mSlotElementRestrictedHelperMockGetResponseFuture) Return(r insolar.ConveyorFuture) *SlotElementRestrictedHelperMock {
+	m.mock.GetResponseFutureFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SlotElementRestrictedHelperMockGetResponseFutureExpectation{}
+	}
+	m.mainExpectation.result = &SlotElementRestrictedHelperMockGetResponseFutureResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of SlotElementRestrictedHelper.GetResponseFuture is expected once
+func (m *mSlotElementRestrictedHelperMockGetResponseFuture) ExpectOnce() *SlotElementRestrictedHelperMockGetResponseFutureExpectation {
+	m.mock.GetResponseFutureFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &SlotElementRestrictedHelperMockGetResponseFutureExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *SlotElementRestrictedHelperMockGetResponseFutureExpectation) Return(r insolar.ConveyorFuture) {
+	e.result = &SlotElementRestrictedHelperMockGetResponseFutureResult{r}
+}
+
+//Set uses given function f as a mock of SlotElementRestrictedHelper.GetResponseFuture method
+func (m *mSlotElementRestrictedHelperMockGetResponseFuture) Set(f func() (r insolar.ConveyorFuture)) *SlotElementRestrictedHelperMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetResponseFutureFunc = f
+	return m.mock
+}
+
+//GetResponseFuture implements github.com/insolar/insolar/conveyor/fsm.SlotElementRestrictedHelper interface
+func (m *SlotElementRestrictedHelperMock) GetResponseFuture() (r insolar.ConveyorFuture) {
+	counter := atomic.AddUint64(&m.GetResponseFuturePreCounter, 1)
+	defer atomic.AddUint64(&m.GetResponseFutureCounter, 1)
+
+	if len(m.GetResponseFutureMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetResponseFutureMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to SlotElementRestrictedHelperMock.GetResponseFuture.")
+			return
+		}
+
+		result := m.GetResponseFutureMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the SlotElementRestrictedHelperMock.GetResponseFuture")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetResponseFutureMock.mainExpectation != nil {
+
+		result := m.GetResponseFutureMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the SlotElementRestrictedHelperMock.GetResponseFuture")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetResponseFutureFunc == nil {
+		m.t.Fatalf("Unexpected call to SlotElementRestrictedHelperMock.GetResponseFuture.")
+		return
+	}
+
+	return m.GetResponseFutureFunc()
+}
+
+//GetResponseFutureMinimockCounter returns a count of SlotElementRestrictedHelperMock.GetResponseFutureFunc invocations
+func (m *SlotElementRestrictedHelperMock) GetResponseFutureMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetResponseFutureCounter)
+}
+
+//GetResponseFutureMinimockPreCounter returns the value of SlotElementRestrictedHelperMock.GetResponseFuture invocations
+func (m *SlotElementRestrictedHelperMock) GetResponseFutureMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetResponseFuturePreCounter)
+}
+
+//GetResponseFutureFinished returns true if mock invocations count is ok
+func (m *SlotElementRestrictedHelperMock) GetResponseFutureFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetResponseFutureMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetResponseFutureCounter) == uint64(len(m.GetResponseFutureMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetResponseFutureMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetResponseFutureCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetResponseFutureFunc != nil {
+		return atomic.LoadUint64(&m.GetResponseFutureCounter) > 0
+	}
+
+	return true
+}
+
 type mSlotElementRestrictedHelperMockGetState struct {
 	mock              *SlotElementRestrictedHelperMock
 	mainExpectation   *SlotElementRestrictedHelperMockGetStateExpectation
@@ -765,7 +905,7 @@ type SlotElementRestrictedHelperMockGetStateExpectation struct {
 }
 
 type SlotElementRestrictedHelperMockGetStateResult struct {
-	r fsm.StateID
+	r StateID
 }
 
 //Expect specifies that invocation of SlotElementRestrictedHelper.GetState is expected from 1 to Infinity times
@@ -781,7 +921,7 @@ func (m *mSlotElementRestrictedHelperMockGetState) Expect() *mSlotElementRestric
 }
 
 //Return specifies results of invocation of SlotElementRestrictedHelper.GetState
-func (m *mSlotElementRestrictedHelperMockGetState) Return(r fsm.StateID) *SlotElementRestrictedHelperMock {
+func (m *mSlotElementRestrictedHelperMockGetState) Return(r StateID) *SlotElementRestrictedHelperMock {
 	m.mock.GetStateFunc = nil
 	m.expectationSeries = nil
 
@@ -803,12 +943,12 @@ func (m *mSlotElementRestrictedHelperMockGetState) ExpectOnce() *SlotElementRest
 	return expectation
 }
 
-func (e *SlotElementRestrictedHelperMockGetStateExpectation) Return(r fsm.StateID) {
+func (e *SlotElementRestrictedHelperMockGetStateExpectation) Return(r StateID) {
 	e.result = &SlotElementRestrictedHelperMockGetStateResult{r}
 }
 
 //Set uses given function f as a mock of SlotElementRestrictedHelper.GetState method
-func (m *mSlotElementRestrictedHelperMockGetState) Set(f func() (r fsm.StateID)) *SlotElementRestrictedHelperMock {
+func (m *mSlotElementRestrictedHelperMockGetState) Set(f func() (r StateID)) *SlotElementRestrictedHelperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -816,8 +956,8 @@ func (m *mSlotElementRestrictedHelperMockGetState) Set(f func() (r fsm.StateID))
 	return m.mock
 }
 
-//GetState implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementRestrictedHelper interface
-func (m *SlotElementRestrictedHelperMock) GetState() (r fsm.StateID) {
+//GetState implements github.com/insolar/insolar/conveyor/fsm.SlotElementRestrictedHelper interface
+func (m *SlotElementRestrictedHelperMock) GetState() (r StateID) {
 	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
 	defer atomic.AddUint64(&m.GetStateCounter, 1)
 
@@ -899,7 +1039,7 @@ type SlotElementRestrictedHelperMockGetTypeExpectation struct {
 }
 
 type SlotElementRestrictedHelperMockGetTypeResult struct {
-	r fsm.ID
+	r ID
 }
 
 //Expect specifies that invocation of SlotElementRestrictedHelper.GetType is expected from 1 to Infinity times
@@ -915,7 +1055,7 @@ func (m *mSlotElementRestrictedHelperMockGetType) Expect() *mSlotElementRestrict
 }
 
 //Return specifies results of invocation of SlotElementRestrictedHelper.GetType
-func (m *mSlotElementRestrictedHelperMockGetType) Return(r fsm.ID) *SlotElementRestrictedHelperMock {
+func (m *mSlotElementRestrictedHelperMockGetType) Return(r ID) *SlotElementRestrictedHelperMock {
 	m.mock.GetTypeFunc = nil
 	m.expectationSeries = nil
 
@@ -937,12 +1077,12 @@ func (m *mSlotElementRestrictedHelperMockGetType) ExpectOnce() *SlotElementRestr
 	return expectation
 }
 
-func (e *SlotElementRestrictedHelperMockGetTypeExpectation) Return(r fsm.ID) {
+func (e *SlotElementRestrictedHelperMockGetTypeExpectation) Return(r ID) {
 	e.result = &SlotElementRestrictedHelperMockGetTypeResult{r}
 }
 
 //Set uses given function f as a mock of SlotElementRestrictedHelper.GetType method
-func (m *mSlotElementRestrictedHelperMockGetType) Set(f func() (r fsm.ID)) *SlotElementRestrictedHelperMock {
+func (m *mSlotElementRestrictedHelperMockGetType) Set(f func() (r ID)) *SlotElementRestrictedHelperMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -950,8 +1090,8 @@ func (m *mSlotElementRestrictedHelperMockGetType) Set(f func() (r fsm.ID)) *Slot
 	return m.mock
 }
 
-//GetType implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementRestrictedHelper interface
-func (m *SlotElementRestrictedHelperMock) GetType() (r fsm.ID) {
+//GetType implements github.com/insolar/insolar/conveyor/fsm.SlotElementRestrictedHelper interface
+func (m *SlotElementRestrictedHelperMock) GetType() (r ID) {
 	counter := atomic.AddUint64(&m.GetTypePreCounter, 1)
 	defer atomic.AddUint64(&m.GetTypeCounter, 1)
 
@@ -1075,7 +1215,7 @@ func (m *mSlotElementRestrictedHelperMockLeaveSequence) Set(f func()) *SlotEleme
 	return m.mock
 }
 
-//LeaveSequence implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementRestrictedHelper interface
+//LeaveSequence implements github.com/insolar/insolar/conveyor/fsm.SlotElementRestrictedHelper interface
 func (m *SlotElementRestrictedHelperMock) LeaveSequence() {
 	counter := atomic.AddUint64(&m.LeaveSequencePreCounter, 1)
 	defer atomic.AddUint64(&m.LeaveSequenceCounter, 1)
@@ -1185,7 +1325,7 @@ func (m *mSlotElementRestrictedHelperMockReactivate) Set(f func()) *SlotElementR
 	return m.mock
 }
 
-//Reactivate implements github.com/insolar/insolar/conveyor/interfaces/slot.SlotElementRestrictedHelper interface
+//Reactivate implements github.com/insolar/insolar/conveyor/fsm.SlotElementRestrictedHelper interface
 func (m *SlotElementRestrictedHelperMock) Reactivate() {
 	counter := atomic.AddUint64(&m.ReactivatePreCounter, 1)
 	defer atomic.AddUint64(&m.ReactivateCounter, 1)
@@ -1266,6 +1406,10 @@ func (m *SlotElementRestrictedHelperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to SlotElementRestrictedHelperMock.GetPayload")
 	}
 
+	if !m.GetResponseFutureFinished() {
+		m.t.Fatal("Expected call to SlotElementRestrictedHelperMock.GetResponseFuture")
+	}
+
 	if !m.GetStateFinished() {
 		m.t.Fatal("Expected call to SlotElementRestrictedHelperMock.GetState")
 	}
@@ -1319,6 +1463,10 @@ func (m *SlotElementRestrictedHelperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to SlotElementRestrictedHelperMock.GetPayload")
 	}
 
+	if !m.GetResponseFutureFinished() {
+		m.t.Fatal("Expected call to SlotElementRestrictedHelperMock.GetResponseFuture")
+	}
+
 	if !m.GetStateFinished() {
 		m.t.Fatal("Expected call to SlotElementRestrictedHelperMock.GetState")
 	}
@@ -1354,6 +1502,7 @@ func (m *SlotElementRestrictedHelperMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetNodeIDFinished()
 		ok = ok && m.GetParentElementIDFinished()
 		ok = ok && m.GetPayloadFinished()
+		ok = ok && m.GetResponseFutureFinished()
 		ok = ok && m.GetStateFinished()
 		ok = ok && m.GetTypeFinished()
 		ok = ok && m.LeaveSequenceFinished()
@@ -1384,6 +1533,10 @@ func (m *SlotElementRestrictedHelperMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetPayloadFinished() {
 				m.t.Error("Expected call to SlotElementRestrictedHelperMock.GetPayload")
+			}
+
+			if !m.GetResponseFutureFinished() {
+				m.t.Error("Expected call to SlotElementRestrictedHelperMock.GetResponseFuture")
 			}
 
 			if !m.GetStateFinished() {
@@ -1431,6 +1584,10 @@ func (m *SlotElementRestrictedHelperMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetPayloadFinished() {
+		return false
+	}
+
+	if !m.GetResponseFutureFinished() {
 		return false
 	}
 
