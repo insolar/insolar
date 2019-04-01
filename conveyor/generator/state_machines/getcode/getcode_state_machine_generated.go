@@ -68,6 +68,16 @@ func RawGetCodeStateMachineFactory() [3]*statemachine.StateMachine {
 			Migration: m.migrateFromPresentSecond,
 
 			ErrorState: m.errorPresentSecond,
+		},
+		statemachine.State{
+			Migration: m.migrateFromPresentThird,
+
+			ErrorState: m.errorPresentThird,
+		},
+		statemachine.State{
+			Migration: m.migrateFromPresentFourth,
+
+			ErrorState: m.errorPresentFourth,
 		})
 
 	// present state machine
@@ -88,6 +98,20 @@ func RawGetCodeStateMachineFactory() [3]*statemachine.StateMachine {
 			AdapterResponse:      m.responsePresentSecond,
 			ErrorState:           m.errorPresentSecond,
 			AdapterResponseError: m.errorResponsePresentSecond,
+		},
+		statemachine.State{
+			Migration:            m.migrateFromPresentThird,
+			Transition:           m.transitPresentThird,
+			AdapterResponse:      m.responsePresentThird,
+			ErrorState:           m.errorPresentThird,
+			AdapterResponseError: m.errorResponsePresentThird,
+		},
+		statemachine.State{
+			Migration:            m.migrateFromPresentFourth,
+			Transition:           m.transitPresentFourth,
+			AdapterResponse:      m.responsePresentFourth,
+			ErrorState:           m.errorPresentFourth,
+			AdapterResponseError: m.errorResponsePresentFourth,
 		})
 
 	// past state machine
@@ -96,14 +120,28 @@ func RawGetCodeStateMachineFactory() [3]*statemachine.StateMachine {
 		ErrorState: m.errorPresentInit,
 	},
 		statemachine.State{
-			Transition: m.transitPresentFirst,
+			Transition:      m.transitPresentFirst,
+			AdapterResponse: m.responsePresentFirst,
 
 			ErrorState: m.errorPresentFirst,
 		},
 		statemachine.State{
-			Transition: m.transitPresentSecond,
+			Transition:      m.transitPresentSecond,
+			AdapterResponse: m.responsePresentSecond,
 
 			ErrorState: m.errorPresentSecond,
+		},
+		statemachine.State{
+			Transition:      m.transitPresentThird,
+			AdapterResponse: m.responsePresentThird,
+
+			ErrorState: m.errorPresentThird,
+		},
+		statemachine.State{
+			Transition:      m.transitPresentFourth,
+			AdapterResponse: m.responsePresentFourth,
+
+			ErrorState: m.errorPresentFourth,
 		})
 
 	smFuture := statemachine.StateMachine{

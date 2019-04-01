@@ -40,7 +40,9 @@ import (
 
 const deliverRPCMethodName = "MessageBus.Deliver"
 
-var conveyorReadyTypes = map[insolar.MessageType]bool{}
+var conveyorReadyTypes = map[insolar.MessageType]bool{
+	insolar.TypeGetCode: true,
+}
 
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner

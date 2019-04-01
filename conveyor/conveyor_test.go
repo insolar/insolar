@@ -232,7 +232,7 @@ func TestConveyor_SinkPush_NotOperational(t *testing.T) {
 	data := "fancy_data"
 
 	err := c.SinkPush(testUnknownFuturePulse, data)
-	fmt.Println(err.Error())
+	require.Error(t, err)
 	require.EqualError(t, err, "[ SinkPush ] conveyor is not operational now")
 }
 

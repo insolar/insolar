@@ -26,7 +26,7 @@ import (
 )
 
 // custom types
-type Event struct{}
+type Event interface{}
 type Payload struct {
 	reply insolar.Reply
 	err   error
@@ -174,6 +174,9 @@ func (sm *CleanGetCodeStateMachine) transitPresentSecond(input Event, payload *P
 }
 
 func (sm *CleanGetCodeStateMachine) responsePresentSecond(input Event, payload *Payload, respPayload artifactmanager.GetCodeResp) (*Payload, fsm.ElementState, error) {
+	if payload == nil {
+		payload = &Payload{}
+	}
 	payload.err = respPayload.Err
 	payload.reply = respPayload.Reply
 

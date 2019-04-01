@@ -126,6 +126,9 @@ type TaskPusher interface {
 	SinkPush(data interface{}) error
 	SinkPushAll(data []interface{}) error
 	PushSignal(signalType uint32, callback queue.SyncDone) error
+	// TODO: fix me sweetie
+
+	SetPulse(pulse insolar.Pulse)
 }
 
 // Slot holds info about specific pulse and events for it
@@ -148,6 +151,11 @@ type Slot struct {
 
 func (s *Slot) SinkPush(data interface{}) error {
 	return s.inputQueue.SinkPush(data)
+}
+
+// TODO: fix me sweetie, this must not exist
+func (s *Slot) SetPulse(pulse insolar.Pulse) {
+	s.pulse = pulse
 }
 
 func (s *Slot) SinkPushAll(data []interface{}) error {
@@ -276,7 +284,8 @@ func (s *Slot) createElement(stateMachine matrix.StateMachine, state fsm.StateID
 	element.nextElement = nil
 	// TODO:  Set other fields to element, like:
 	element.payload = event.GetData()
-	element.inputEvent = event
+	// TODO: fix me sweetie, find better way to set input event
+	element.inputEvent = event.GetData()
 
 	err := s.pushElement(element)
 	if err != nil {

@@ -174,7 +174,9 @@ func (w *worker) readInputQueueWorking() error {
 	for i := 0; i < len(elements); i++ {
 		el := elements[i]
 
-		_, err := w.slot.createElement(w.getInitialStateMachine(), 0, el)
+		// TODO: fix me sweetie
+		// use state 0, and let InitialSM take care of the rest
+		_, err := w.slot.createElement(w.getInitialStateMachine(), 1, el)
 		if err != nil {
 			return errors.Wrapf(err, "[ readInputQueueWorking ] Can't createElement: %+v", el)
 		}
@@ -213,17 +215,25 @@ func (w *worker) processResponse(resp queue.OutputElement) error {
 
 	payload, newState, err := respHandler(element, adapterResp.GetRespPayload())
 	if err != nil {
+		// TODO: fix me sweetie
+		w.updateElement(element, payload, newState)
+		element.activationStatus = EmptyElement
+		err = w.slot.pushElement(element)
+		return nil
 
-		w.ctxLogger.Error("[ processResponse ] AdapterResponse handler errors: ", err)
-		respErrorHandler := element.stateMachine.GetResponseErrorHandler(element.state)
-		if respErrorHandler == nil {
-			panic(fmt.Sprintf("[ processResponse ] No response error handler. State: %d. AdapterResp: %+v", element.state, adapterResp))
-		}
+		// w.ctxLogger.Error("[ processResponse ] AdapterResponse handler errors: ", err)
+		// respErrorHandler := element.stateMachine.GetResponseErrorHandler(element.state)
+		// if respErrorHandler == nil {
+		// 	panic(fmt.Sprintf("[ processResponse ] No response error handler. State: %d. AdapterResp: %+v", element.state, adapterResp))
+		// }
 
-		payload, newState = respErrorHandler(element, adapterResp.GetRespPayload(), err)
+		// payload, newState = respErrorHandler(element, adapterResp.GetRespPayload(), err)
 	}
 
 	w.updateElement(element, payload, newState)
+	// TODO: fix me sweetie
+	element.Reactivate()
+
 	err = w.slot.pushElement(element)
 	if err != nil {
 		return errors.Wrapf(err, "[ processResponse ] Can't pushElement: %+v", element)
@@ -285,7 +295,11 @@ func (w *worker) processingElements() {
 				return
 			}
 		}
-		w.waitQueuesOrTick()
+		// TODO: fix me sweetie
+		// should we set ReadInputQueue ore return? or just go is ok?
+		w.nextWorkerState = ReadInputQueue
+		return
+		// w.waitQueuesOrTick()
 	}
 
 	if w.slot.inputQueue.HasSignal() {
@@ -429,7 +443,9 @@ func (w *worker) readInputQueueSuspending() error {
 	for i := 0; i < len(elements); i++ {
 		el := elements[i]
 
-		_, err := w.slot.createElement(w.getInitialStateMachine(), 0, el)
+		// TODO: fix me sweetie
+		// use state 0, and let InitialSM take care of the rest
+		_, err := w.slot.createElement(w.getInitialStateMachine(), 1, el)
 		if err != nil {
 			return errors.Wrap(err, "[ readInputQueueSuspending ] Can't createElement")
 		}

@@ -17,6 +17,7 @@
 package matrix
 
 import (
+	"github.com/insolar/insolar/conveyor/generator/state_machines/getcode"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
 )
 
@@ -48,6 +49,11 @@ func NewMatrix() *Matrix {
 	var emptyObject StateMachine
 	for i := 0; i < numPulseStates; i++ {
 		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, emptyObject)
+	}
+
+	getCodeStateMachine := getcode.RawGetCodeStateMachineFactory()
+	for i := 0; i < numPulseStates; i++ {
+		m.matrix[i].stateMachines = append(m.matrix[i].stateMachines, getCodeStateMachine[i])
 	}
 
 	smTestStateMachine := sample.RawTestStateMachineFactory()

@@ -55,7 +55,7 @@ func (rs *SendResponseProcessor) Process(task AdapterTask, nestedEventHelper Nes
 	f.SetResult(res)
 
 	msg = fmt.Sprintf("Response was send successfully")
-	log.Info("[ SendResponseProcessor.Process ] response message is", msg)
+	log.Info("[ SendResponseProcessor.Process ] response message is: ", msg)
 	return msg
 }
 
