@@ -4,6 +4,16 @@ package insolar
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[DTTypePendingExecution-1]
+	_ = x[DTTypeGetObjectRedirect-2]
+	_ = x[DTTypeGetChildrenRedirect-3]
+	_ = x[DTTypeGetCodeRedirect-4]
+}
+
 const _DelegationTokenType_name = "DTTypePendingExecutionDTTypeGetObjectRedirectDTTypeGetChildrenRedirectDTTypeGetCodeRedirect"
 
 var _DelegationTokenType_index = [...]uint8{0, 22, 45, 70, 91}
