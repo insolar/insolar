@@ -97,7 +97,7 @@ func (t *udpTransport) send(recvAddress string, data []byte) error {
 	return errors.Wrap(err, "Failed to write data")
 }
 
-func (t *udpTransport) prepareListen() error {
+func (t *udpTransport) prepareListen() (net.PacketConn, error) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
@@ -110,11 +110,11 @@ func (t *udpTransport) prepareListen() error {
 		var err error
 		t.conn, err = net.ListenPacket("udp", t.address)
 		if err != nil {
-			return errors.Wrap(err, "failed to listen UDP")
+			return nil, errors.Wrap(err, "failed to listen UDP")
 		}
 	}
 
-	return nil
+	return t.conn, nil
 }
 
 // Start starts networking.
@@ -122,7 +122,8 @@ func (t *udpTransport) Listen(ctx context.Context, started chan struct{}) error 
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Listen ] Start UDP transport")
 
-	if err := t.prepareListen(); err != nil {
+	conn, err := t.prepareListen()
+	if err != nil {
 		logger.Infof("[ Listen ] Failed to prepare UDP transport: " + err.Error())
 		return err
 	}
@@ -130,7 +131,7 @@ func (t *udpTransport) Listen(ctx context.Context, started chan struct{}) error 
 	started <- struct{}{}
 	for {
 		buf := make([]byte, udpMaxPacketSize)
-		n, addr, err := t.conn.ReadFrom(buf)
+		n, addr, err := conn.ReadFrom(buf)
 		if err != nil {
 			<-t.disconnectFinished
 			return err

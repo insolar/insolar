@@ -86,7 +86,7 @@ func (t *tcpTransport) send(address string, data []byte) error {
 	return errors.Wrap(err, "[ send ] Failed to write data")
 }
 
-func (t *tcpTransport) prepareListen() error {
+func (t *tcpTransport) prepareListen() (net.Listener, error) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
@@ -99,11 +99,11 @@ func (t *tcpTransport) prepareListen() error {
 		var err error
 		t.listener, err = net.Listen("tcp", t.address)
 		if err != nil {
-			return errors.Wrap(err, "failed to listen TCP")
+			return nil, errors.Wrap(err, "failed to listen TCP")
 		}
 	}
 
-	return nil
+	return t.listener, nil
 }
 
 // Start starts networking.
@@ -111,14 +111,15 @@ func (t *tcpTransport) Listen(ctx context.Context, started chan struct{}) error 
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Listen ] Start TCP transport")
 
-	if err := t.prepareListen(); err != nil {
+	listener, err := t.prepareListen()
+	if err != nil {
 		logger.Info("[ Listen ] Failed to prepare TCP transport: ", err.Error())
 		return err
 	}
 
 	started <- struct{}{}
 	for {
-		conn, err := t.listener.Accept()
+		conn, err := listener.Accept()
 		if err != nil {
 			<-t.disconnectFinished
 			logger.Error("[ Listen ] Failed to accept connection: ", err.Error())
