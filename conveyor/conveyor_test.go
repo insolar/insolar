@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/conveyor/queue"
+	"github.com/insolar/insolar/conveyor/slot"
 	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
 )
@@ -31,8 +32,8 @@ const testPulseDelta = 10
 const testUnknownPastPulse = insolar.PulseNumber(500)
 const testUnknownFuturePulse = insolar.PulseNumber(2000)
 
-func mockSlot(t *testing.T, isQueueOk bool) TaskPusher {
-	slot := NewTaskPusherMock(t)
+func mockSlot(t *testing.T, isQueueOk bool) slot.TaskPusher {
+	slot := slot.NewTaskPusherMock(t)
 	if isQueueOk {
 		slot.SinkPushFunc = func(p interface{}) error {
 			return nil
@@ -95,7 +96,7 @@ func testPulseConveyor(t *testing.T, isQueueOk bool) *PulseConveyor {
 	presentPulse := testRealPulse
 	futurePulse := testRealPulse + testPulseDelta
 
-	slotMap := make(map[insolar.PulseNumber]TaskPusher)
+	slotMap := make(map[insolar.PulseNumber]slot.TaskPusher)
 	slotMap[presentPulse] = presentSlot
 	slotMap[futurePulse] = futureSlot
 	slotMap[insolar.AntiquePulseNumber] = mockSlot(t, isQueueOk)

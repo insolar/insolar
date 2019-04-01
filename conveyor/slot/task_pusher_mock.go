@@ -1,9 +1,9 @@
-package conveyor
+package slot
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "TaskPusher" can be found in github.com/insolar/insolar/conveyor
+The original interface "TaskPusher" can be found in github.com/insolar/insolar/conveyor/slot
 */
 import (
 	"sync/atomic"
@@ -15,7 +15,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//TaskPusherMock implements github.com/insolar/insolar/conveyor.TaskPusher
+//TaskPusherMock implements github.com/insolar/insolar/conveyor/slot.TaskPusher
 type TaskPusherMock struct {
 	t minimock.Tester
 
@@ -35,7 +35,7 @@ type TaskPusherMock struct {
 	SinkPushAllMock       mTaskPusherMockSinkPushAll
 }
 
-//NewTaskPusherMock returns a mock for github.com/insolar/insolar/conveyor.TaskPusher
+//NewTaskPusherMock returns a mock for github.com/insolar/insolar/conveyor/slot.TaskPusher
 func NewTaskPusherMock(t minimock.Tester) *TaskPusherMock {
 	m := &TaskPusherMock{t: t}
 
@@ -118,7 +118,7 @@ func (m *mTaskPusherMockPushSignal) Set(f func(p uint32, p1 queue.SyncDone) (r e
 	return m.mock
 }
 
-//PushSignal implements github.com/insolar/insolar/conveyor.TaskPusher interface
+//PushSignal implements github.com/insolar/insolar/conveyor/slot.TaskPusher interface
 func (m *TaskPusherMock) PushSignal(p uint32, p1 queue.SyncDone) (r error) {
 	counter := atomic.AddUint64(&m.PushSignalPreCounter, 1)
 	defer atomic.AddUint64(&m.PushSignalCounter, 1)
@@ -265,7 +265,7 @@ func (m *mTaskPusherMockSinkPush) Set(f func(p interface{}) (r error)) *TaskPush
 	return m.mock
 }
 
-//SinkPush implements github.com/insolar/insolar/conveyor.TaskPusher interface
+//SinkPush implements github.com/insolar/insolar/conveyor/slot.TaskPusher interface
 func (m *TaskPusherMock) SinkPush(p interface{}) (r error) {
 	counter := atomic.AddUint64(&m.SinkPushPreCounter, 1)
 	defer atomic.AddUint64(&m.SinkPushCounter, 1)
@@ -412,7 +412,7 @@ func (m *mTaskPusherMockSinkPushAll) Set(f func(p []interface{}) (r error)) *Tas
 	return m.mock
 }
 
-//SinkPushAll implements github.com/insolar/insolar/conveyor.TaskPusher interface
+//SinkPushAll implements github.com/insolar/insolar/conveyor/slot.TaskPusher interface
 func (m *TaskPusherMock) SinkPushAll(p []interface{}) (r error) {
 	counter := atomic.AddUint64(&m.SinkPushAllPreCounter, 1)
 	defer atomic.AddUint64(&m.SinkPushAllCounter, 1)

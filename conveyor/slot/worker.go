@@ -214,7 +214,7 @@ func (w *worker) processResponse(resp queue.OutputElement) error {
 	payload, newState, err := respHandler(element, adapterResp.GetRespPayload())
 	if err != nil {
 
-		w.ctxLogger.Error("[ processResponse ] AdapterResponse handler errors: ", err)
+		w.ctxLogger.Error("[ processResponse ] Response handler errors: ", err)
 		respErrorHandler := element.stateMachine.GetResponseErrorHandler(element.state)
 		if respErrorHandler == nil {
 			panic(fmt.Sprintf("[ processResponse ] No response error handler. State: %d. AdapterResp: %+v", element.state, adapterResp))
@@ -490,7 +490,7 @@ func (w *worker) migrate(status ActivationStatus) error {
 
 		payload, newState, err := migHandler(element)
 		if err != nil {
-			w.ctxLogger.Error("[ migrate ] AdapterResponse handler errors: ", err)
+			w.ctxLogger.Error("[ migrate ] Response handler errors: ", err)
 			respErrorHandler := element.stateMachine.GetTransitionErrorHandler(element.state)
 
 			payload, newState = respErrorHandler(element, err)

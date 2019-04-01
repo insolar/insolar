@@ -175,8 +175,8 @@ func initElementsBuf() ([]slotElement, *elementList) {
 	return elements, emptyList
 }
 
-// NewWorkingSlot creates new instance of slot
-func NewWorkingSlot(pulseState PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) *slot {
+// NewWorkingSlot creates new instance of slot by TaskPusher interface
+func NewWorkingSlot(pulseState PulseState, pulseNumber insolar.PulseNumber, removeSlotCallback RemoveSlotCallback) TaskPusher {
 
 	slot := newSlot(pulseState, pulseNumber, removeSlotCallback)
 	slot.runWorker()

@@ -29,7 +29,7 @@ import (
 
 // PulseConveyor is realization of Conveyor
 type PulseConveyor struct {
-	slotMap            map[insolar.PulseNumber]TaskPusher
+	slotMap            map[insolar.PulseNumber]slot.TaskPusher
 	futurePulseData    *insolar.Pulse
 	futurePulseNumber  *insolar.PulseNumber
 	presentPulseNumber *insolar.PulseNumber
@@ -40,7 +40,7 @@ type PulseConveyor struct {
 // NewPulseConveyor creates new instance of PulseConveyor
 func NewPulseConveyor() (insolar.Conveyor, error) {
 	c := &PulseConveyor{
-		slotMap: make(map[insolar.PulseNumber]TaskPusher),
+		slotMap: make(map[insolar.PulseNumber]slot.TaskPusher),
 		state:   insolar.ConveyorInactive,
 	}
 	// antiqueSlot is slot for all pulses from past if conveyor dont have specific PastSlot for such pulse
@@ -86,7 +86,7 @@ func (c *PulseConveyor) unsafeGetState() insolar.ConveyorState {
 	return c.state
 }
 
-func (c *PulseConveyor) unsafeGetSlot(pulseNumber insolar.PulseNumber) TaskPusher {
+func (c *PulseConveyor) unsafeGetSlot(pulseNumber insolar.PulseNumber) slot.TaskPusher {
 	slot, ok := c.slotMap[pulseNumber]
 	if !ok {
 		if c.futurePulseNumber == nil || pulseNumber > *c.futurePulseNumber {

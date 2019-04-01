@@ -856,7 +856,7 @@ func Test_readResponseQueue_OneEvent(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
 
-			resp := &adapter.AdapterResponse{}
+			resp := &adapter.Response{}
 			slot.responseQueue.SinkPush(resp)
 
 			_, err := slot.createElement(sm, 0, makeTestOutputElement(t))
@@ -903,7 +903,7 @@ func Test_readResponseQueue_BadElementIdInResponse(t *testing.T) {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
-			resp := &adapter.AdapterResponse{}
+			resp := &adapter.Response{}
 			slot.responseQueue.SinkPush(resp)
 
 			_, err := slot.createElement(nil, 0, makeTestOutputElement(t))
@@ -947,7 +947,7 @@ func Test_readResponseQueue_ResponseHandlerError(t *testing.T) {
 		t.Run(tt.String(), func(t *testing.T) {
 			slot, worker := makeSlotAndWorker(tt, 22)
 			oldSlot := *slot
-			resp := &adapter.AdapterResponse{}
+			resp := &adapter.Response{}
 			slot.responseQueue.SinkPush(resp)
 
 			_, err := slot.createElement(sm, 0, makeTestOutputElement(t))

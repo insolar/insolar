@@ -41,7 +41,7 @@ func NewNodeStateProcessor() Processor {
 }
 
 // Process implements Processor interface
-func (rs *NodeStateProcessor) Process(task AdapterTask, nestedEventHelper NestedEventHelper, ci CancelInfo) interface{} {
+func (rs *NodeStateProcessor) Process(task Task, nestedEventHelper NestedEventHelper, ci CancelInfo) interface{} {
 	payload, ok := task.TaskPayload.(NodeStateTask)
 
 	if !ok {

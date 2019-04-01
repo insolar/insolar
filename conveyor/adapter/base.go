@@ -31,7 +31,7 @@ import (
 // queueTask is task for adapter with queue
 type queueTask struct {
 	cancelInfo *cancelInfo
-	task       AdapterTask
+	task       Task
 }
 
 type cancelInfo struct {
@@ -179,33 +179,33 @@ func (a *CancellableQueueAdapter) StartProcessing(started chan bool) {
 	lastLoop := false
 	for {
 
-		var itasks []queue.OutputElement
+		var tasks []queue.OutputElement
 
 		if atomic.LoadUint32(&a.stopProcessing) != 0 {
 			if lastLoop {
 				log.Infof("[ StartProcessing ] Stop processing. EXIT")
 				break
 			}
-			itasks = a.queue.BlockAndRemoveAll()
+			tasks = a.queue.BlockAndRemoveAll()
 			log.Info("[ StartProcessing ] Stop processing: one more loop")
 			lastLoop = true
 		} else {
-			itasks = a.queue.RemoveAll()
+			tasks = a.queue.RemoveAll()
 		}
 
-		log.Infof("[ StartProcessing ] Got %d new tasks", len(itasks))
+		log.Infof("[ StartProcessing ] Got %d new tasks", len(tasks))
 
-		if len(itasks) == 0 {
+		if len(tasks) == 0 {
 			log.Info("[ StartProcessing ] No tasks. Sleep a little bit")
 			// TODO: do pretty wait
 			time.Sleep(50 * time.Millisecond)
 			continue
 		}
 
-		for _, itask := range itasks {
-			task, ok := itask.GetData().(queueTask)
+		for _, adapterTask := range tasks {
+			task, ok := adapterTask.GetData().(queueTask)
 			if !ok {
-				panic(fmt.Sprintf("[ StartProcessing ] How does it happen? Wrong Type: %T", itask.GetData()))
+				panic(fmt.Sprintf("[ StartProcessing ] How does it happen? Wrong Type: %T", adapterTask.GetData()))
 			}
 
 			if a.processor == nil {
@@ -231,7 +231,7 @@ func atomicLoadAndIncrementUint64(addr *uint64) uint64 {
 }
 
 // PushTask implements TaskSink
-func (a *CancellableQueueAdapter) PushTask(respSink AdapterToSlotResponseSink,
+func (a *CancellableQueueAdapter) PushTask(respSink ResponseSink,
 	elementID uint32,
 	handlerID uint32,
 	taskPayload interface{}) error {
@@ -242,7 +242,7 @@ func (a *CancellableQueueAdapter) PushTask(respSink AdapterToSlotResponseSink,
 	return a.queue.SinkPush(
 		queueTask{
 			cancelInfo: cancelInfo,
-			task: AdapterTask{
+			task: Task{
 				respSink:    respSink,
 				elementID:   elementID,
 				handlerID:   handlerID,
@@ -294,11 +294,11 @@ func (a *CancellableQueueAdapter) process(cancellableTask queueTask) {
 }
 
 type nestedEventHelper struct {
-	adapterTask AdapterTask
+	adapterTask Task
 	adapterID   adapterid.ID
 }
 
-func newNestedEventHelper(adapterTask AdapterTask, adapterID adapterid.ID) NestedEventHelper {
+func newNestedEventHelper(adapterTask Task, adapterID adapterid.ID) NestedEventHelper {
 	return &nestedEventHelper{
 		adapterTask: adapterTask,
 		adapterID:   adapterID,
