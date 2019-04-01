@@ -18,6 +18,7 @@ package storage
 
 import (
 	"context"
+	"encoding/hex"
 	"path/filepath"
 	"sync"
 
@@ -316,4 +317,28 @@ func (db *DB) iterate(
 		}
 		return nil
 	})
+}
+
+// Key type for wrapping storage binary key.
+type Key []byte
+
+// PulseNumber returns pulse number for provided storage binary key.
+func (b Key) PulseNumber() insolar.PulseNumber {
+	// by default expect jetID after:
+	// offset in this case: is 1 + RecordHashSize (jet length) - 1 minus jet prefix
+	from := insolar.RecordHashSize
+	switch b[0] {
+	case scopeIDPulse:
+		from = 1
+	case scopeIDSystem:
+		// for specific system records is different rules
+		// pulse number could exist or not
+		return 0
+	}
+	return pulseNumFromKey(from, b)
+}
+
+// String string hex representation
+func (b Key) String() string {
+	return hex.EncodeToString(b)
 }

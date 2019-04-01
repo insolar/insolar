@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -178,7 +179,12 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 	jetCoordinatorMock.LightExecutorForJetMock.Return(executor, nil)
 	jetCoordinatorMock.MeMock.Return(*executor)
 
-	pm := NewPulseManager(configuration.Ledger{}, drop.NewCleanerMock(s.T()), blob.NewCleanerMock(s.T()), blob.NewCollectionAccessorMock(s.T()))
+	pm := NewPulseManager(
+		configuration.Ledger{},
+		drop.NewCleanerMock(s.T()),
+		blob.NewCleanerMock(s.T()),
+		blob.NewCollectionAccessorMock(s.T()),
+		pulse.NewShifterMock(s.T()))
 
 	gil := testutils.NewGlobalInsolarLockMock(s.T())
 	gil.AcquireMock.Return()
@@ -192,12 +198,6 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
 	}
-
-	pulseStorageMock := NewpulseStoragePmMock(s.T())
-	pulseStorageMock.CurrentMock.Return(insolar.GenesisPulse, nil)
-	pulseStorageMock.LockMock.Return()
-	pulseStorageMock.UnlockMock.Return()
-	pulseStorageMock.SetMock.Return()
 
 	pm.LR = lr
 

@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -44,11 +45,12 @@ type jetCoordinatorSuite struct {
 	ctx     context.Context
 	cleaner func()
 
-	pulseStorage *storage.PulseStorage
-	pulseTracker storage.PulseTracker
-	jetStorage   jet.Storage
-	nodeStorage  *node.AccessorMock
-	coordinator  *JetCoordinator
+	pulseAccessor pulse.Accessor
+	pulseAppender pulse.Appender
+
+	jetStorage  jet.Storage
+	nodeStorage *node.AccessorMock
+	coordinator *JetCoordinator
 }
 
 func NewJetCoordinatorSuite() *jetCoordinatorSuite {
@@ -68,8 +70,9 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
 
 	s.cleaner = cleaner
-	s.pulseTracker = storage.NewPulseTracker()
-	s.pulseStorage = storage.NewPulseStorage()
+	ps := pulse.NewStorageMem()
+	s.pulseAppender = ps
+	s.pulseAccessor = ps
 	storage := jet.NewStore()
 	s.jetStorage = storage
 	s.nodeStorage = node.NewAccessorMock(s.T())
@@ -79,8 +82,7 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
 		db,
-		s.pulseTracker,
-		s.pulseStorage,
+		ps,
 		storage,
 		s.nodeStorage,
 		s.coordinator,
@@ -105,7 +107,7 @@ func (s *jetCoordinatorSuite) AfterTest(suiteName, testName string) {
 }
 
 func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {
-	err := s.pulseTracker.AddPulse(s.ctx, insolar.Pulse{PulseNumber: 0, Entropy: insolar.Entropy{1, 2, 3}})
+	err := s.pulseAppender.Append(s.ctx, insolar.Pulse{PulseNumber: 0, Entropy: insolar.Entropy{1, 2, 3}})
 	require.NoError(s.T(), err)
 	var nds []insolar.Node
 	var nodeRefs []insolar.Reference
@@ -161,10 +163,10 @@ func TestJetCoordinator_IsBeyondLimit_ProblemsWithTracker(t *testing.T) {
 	t.Parallel()
 	// Arrange
 	ctx := inslogger.TestContext(t)
-	pulseTrackerMock := storage.NewPulseTrackerMock(t)
-	pulseTrackerMock.GetPulseMock.Return(nil, errors.New("it's expected"))
+	pulseCalculator := network.NewPulseCalculatorMock(t)
+	pulseCalculator.BackwardsMock.Return(insolar.Pulse{}, errors.New("it's expected"))
 	calc := NewJetCoordinator(12)
-	calc.PulseTracker = pulseTrackerMock
+	calc.PulseCalculator = pulseCalculator
 
 	// Act
 	res, err := calc.IsBeyondLimit(ctx, insolar.FirstPulseNumber, 0)

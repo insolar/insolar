@@ -28,6 +28,7 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/ledger/storage/blob"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -64,7 +65,6 @@ type heavySuite struct {
 	jetStore       *jet.Store
 	nodeAccessor   *node.AccessorMock
 	nodeSetter     *node.ModifierMock
-	pulseTracker   storage.PulseTracker
 	replicaStorage storage.ReplicaStorage
 	objectStorage  storage.ObjectStorage
 	dropModifier   drop.Modifier
@@ -93,7 +93,6 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.jetStore = jet.NewStore()
 	s.nodeAccessor = node.NewAccessorMock(s.T())
 	s.nodeSetter = node.NewModifierMock(s.T())
-	s.pulseTracker = storage.NewPulseTracker()
 	s.replicaStorage = storage.NewReplicaStorage()
 	s.objectStorage = storage.NewObjectStorage()
 	dropStorage := drop.NewStorageDB()
@@ -109,7 +108,6 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 		db.NewMemoryMockDB(),
 		s.nodeAccessor,
 		s.nodeSetter,
-		s.pulseTracker,
 		s.replicaStorage,
 		s.objectStorage,
 		dropStorage,
@@ -243,6 +241,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	}
 
 	blobStorage := blob.NewStorageMemory()
+	pulseStorage := pulse.NewStorageMem()
 
 	// build PulseManager
 	minretry := 20 * time.Millisecond
@@ -266,6 +265,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 		nil,
 		blobStorage,
 		blobStorage,
+		pulseStorage,
 	)
 	pm.LR = lrMock
 	pm.NodeNet = nodenetMock
@@ -277,16 +277,14 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	pm.Nodes = s.nodeAccessor
 	pm.NodeSetter = s.nodeSetter
 	pm.DBContext = s.db
-	pm.PulseTracker = s.pulseTracker
 	pm.ReplicaStorage = s.replicaStorage
 	pm.StorageCleaner = s.storageCleaner
 	pm.ObjectStorage = s.objectStorage
 	pm.DropAccessor = s.dropAccessor
 	pm.DropModifier = s.dropModifier
-
-	ps := storage.NewPulseStorage()
-	ps.PulseTracker = s.pulseTracker
-	pm.PulseStorage = ps
+	pm.PulseAppender = pulseStorage
+	pm.PulseAccessor = pulseStorage
+	pm.PulseCalculator = pulseStorage
 
 	pm.HotDataWaiter = artifactmanager.NewHotDataWaiterConcrete()
 
