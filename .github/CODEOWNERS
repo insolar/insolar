@@ -5,6 +5,7 @@
 
 application/**                          @LinnikD
 ledger/**                               @andreyromancev
+internal/ledger/**                      @andreyromancev
 network/**                              @dmitry-panchenko
 pulsar/**                               @egorikas
 vm/**                                   @Vany

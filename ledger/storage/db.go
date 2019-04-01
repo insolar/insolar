@@ -65,7 +65,6 @@ type DBContext interface {
 	Set(ctx context.Context, key, value []byte) error
 	Get(ctx context.Context, key []byte) ([]byte, error)
 
-	// TODO i.markin 28.01.19: Delete after switching to conveyor architecture.
 	WaitingFlight()
 
 	iterate(ctx context.Context,

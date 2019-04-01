@@ -167,8 +167,6 @@ func (s *Sync) Start(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumb
 }
 
 // Store stores recieved key/value pairs at heavy storage.
-//
-// TODO: check actual jet and pulse in keys
 func (s *Sync) Store(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber, kvs []insolar.KV) error {
 	inslog := inslogger.FromContext(ctx)
 	jetState := s.getJetSyncState(ctx, jetID)
@@ -199,7 +197,6 @@ func (s *Sync) Store(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumb
 		jetState.insync = false
 		jetState.Unlock()
 	}()
-	// TODO: check jet in keys?
 	err = s.DBContext.StoreKeyValues(ctx, kvs)
 	if err != nil {
 		return errors.Wrapf(err, "heavyserver: store failed")
@@ -254,8 +251,6 @@ func (s *Sync) StoreBlobs(ctx context.Context, pn insolar.PulseNumber, rawBlobs 
 }
 
 // Stop successfully stops replication for specified pulse.
-//
-// TODO: call Stop if range sync too long
 func (s *Sync) Stop(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber) error {
 	jetState := s.getJetSyncState(ctx, jetID)
 	jetState.Lock()

@@ -68,7 +68,6 @@ func TestCurrent_OneThread(t *testing.T) {
 
 func TestCurrent_ThreeThreads(t *testing.T) {
 	t.Parallel()
-	// TODO: @egorikas promised he fixes it - @Alexander Orlovsky 20.01.2019
 	t.Skip()
 
 	// Arrange

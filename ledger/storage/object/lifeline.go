@@ -22,7 +22,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/ugorji/go/codec"
 	"go.opencensus.io/stats"
 )
@@ -102,7 +102,7 @@ func CloneIndex(idx Lifeline) Lifeline {
 
 // IndexMemory is an in-memory struct for index-storage.
 type IndexMemory struct {
-	jetIndex db.JetIndexModifier
+	jetIndex store.JetIndexModifier
 
 	lock   sync.RWMutex
 	memory map[insolar.ID]Lifeline
@@ -112,7 +112,7 @@ type IndexMemory struct {
 func NewIndexMemory() *IndexMemory {
 	return &IndexMemory{
 		memory:   map[insolar.ID]Lifeline{},
-		jetIndex: db.NewJetIndex(),
+		jetIndex: store.NewJetIndex(),
 	}
 }
 
@@ -151,13 +151,13 @@ func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (index Lifeline,
 
 type IndexDB struct {
 	lock sync.RWMutex
-	db   db.DB
+	db   store.DB
 }
 
 type indexKey insolar.ID
 
-func (k indexKey) Scope() db.Scope {
-	return db.ScopeIndex
+func (k indexKey) Scope() store.Scope {
+	return store.ScopeIndex
 }
 
 func (k indexKey) ID() []byte {
@@ -166,8 +166,8 @@ func (k indexKey) ID() []byte {
 }
 
 // NewIndexDB creates new DB storage instance.
-func NewIndexDB(d db.DB) *IndexDB {
-	return &IndexDB{db: d}
+func NewIndexDB(db store.DB) *IndexDB {
+	return &IndexDB{db: db}
 }
 
 // Set saves new index-value in storage.
@@ -194,7 +194,7 @@ func (i *IndexDB) set(id insolar.ID, index Lifeline) error {
 
 func (i *IndexDB) get(id insolar.ID) (index Lifeline, err error) {
 	buff, err := i.db.Get(indexKey(id))
-	if err == db.ErrNotFound {
+	if err == store.ErrNotFound {
 		err = ErrNotFound
 		return
 	}

@@ -3,7 +3,6 @@ invalid:
     transport:
       protocol: TCP
       address: 0.0.0.0:0
-      behindnat: true
     bootstraphosts: []
     isrelay: false
   code:

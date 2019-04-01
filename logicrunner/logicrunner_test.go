@@ -2034,7 +2034,7 @@ func (c *First) GetName() (string, error) {
 	ch := new(codec.CborHandle)
 	res := []interface{}{&foundation.Error{}}
 	err = codec.NewDecoderBytes(resp.(*reply.CallMethod).Result, ch).Decode(&res)
-	s.Equal(map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: proxy call error: try to call method of prototype as method of another prototype"}), res[1])
+	s.Equal(map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: CallMethod returns error: proxy call error: try to call method of prototype as method of another prototype"}), res[1])
 }
 
 func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am artifacts.Client, cb *goplugintestutils.ContractsBuilder, contractName string) (*insolar.Reference, *insolar.Reference) {

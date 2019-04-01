@@ -90,6 +90,7 @@ func mockInfinityBootstrap(context.Context, string) (*network.BootstrapResult, e
 }
 
 func TestBootstrap(t *testing.T) {
+	t.Skip("flaky test")
 	ctx := context.Background()
 	_, err := bootstrap(ctx, "192.180.0.1:1234", getOptions(false), mockBootstrap)
 	assert.Error(t, err, BootstrapError)

@@ -27,7 +27,7 @@ import (
 	"time"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/ledger/storage/blob"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -39,11 +39,12 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
@@ -107,7 +108,7 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 		platformpolicy.NewPlatformCryptographyScheme(),
 		s.db,
 		s.jetStore,
-		db.NewMemoryMockDB(),
+		store.NewMemoryMockDB(),
 		s.nodeAccessor,
 		s.nodeSetter,
 		s.pulseTracker,
@@ -147,8 +148,7 @@ func (s *heavySuite) TestPulseManager_SendToHeavyWithRetry() {
 }
 
 func sendToHeavy(s *heavySuite, withretry bool) {
-	// TODO: test should work with any JetID (add new test?) - 14.Dec.2018 @nordicdyno
-	jetID := insolar.ZeroJetID
+	jetID := gen.JetID()
 	// Mock N1: LR mock do nothing
 	lrMock := testutils.NewLogicRunnerMock(s.T())
 	lrMock.OnPulseMock.Return(nil)
@@ -328,7 +328,6 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 
 	fmt.Println("Case2: sync during db fill")
 	for i := 0; i < 2; i++ {
-		// fill DB with records, indexes (TODO: add blobs)
 		addRecords(s.ctx, s.T(), s.objectStorage, blobStorage, insolar.ID(jetID), insolar.PulseNumber(lastpulse))
 
 		lastpulse++
