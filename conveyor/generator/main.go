@@ -29,6 +29,7 @@ func main() {
 	sample.Register(gen)
 	initial.Register(gen)
 	gen.CheckAllMachines()
+	gen.ParseAdapterHelpers()
 	gen.GenerateStateMachines()
 	gen.GenerateMatrix()
 }

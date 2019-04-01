@@ -17,10 +17,11 @@
 package matrix
 
 import (
+	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/get_object"
-	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/initial"
+	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
 	
 )
 
@@ -56,23 +57,25 @@ const (
 )
 
 func NewMatrix() *Matrix {
+	helpers := adapter.NewHelperCatalog()
+
 	m := Matrix{
 		future: newStateMachineSet(),
 		present: newStateMachineSet(),
 		past: newStateMachineSet(),
 	}
 	
-	m.future.addMachine(getobject.RawGetObjectStateMachineFutureFactory())
-	m.present.addMachine(getobject.RawGetObjectStateMachinePresentFactory())
-	m.past.addMachine(getobject.RawGetObjectStateMachinePastFactory())
+	m.future.addMachine(getobject.RawGetObjectStateMachineFutureFactory(helpers))
+	m.present.addMachine(getobject.RawGetObjectStateMachinePresentFactory(helpers))
+	m.past.addMachine(getobject.RawGetObjectStateMachinePastFactory(helpers))
 	
-	m.future.addMachine(sample.RawSampleStateMachineFutureFactory())
-	m.present.addMachine(sample.RawSampleStateMachinePresentFactory())
-	m.past.addMachine(sample.RawSampleStateMachinePastFactory())
+	m.future.addMachine(sample.RawSampleStateMachineFutureFactory(helpers))
+	m.present.addMachine(sample.RawSampleStateMachinePresentFactory(helpers))
+	m.past.addMachine(sample.RawSampleStateMachinePastFactory(helpers))
 	
-	m.future.addMachine(initial.RawInitialFutureFactory())
-	m.present.addMachine(initial.RawInitialPresentFactory())
-	m.past.addMachine(initial.RawInitialPastFactory())
+	m.future.addMachine(initial.RawInitialFutureFactory(helpers))
+	m.present.addMachine(initial.RawInitialPresentFactory(helpers))
+	m.past.addMachine(initial.RawInitialPastFactory(helpers))
 	
 	return &m
 }

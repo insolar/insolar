@@ -165,8 +165,8 @@ func TestSendResponseHelper(t *testing.T) {
 		return nil
 	}
 
-	adapterCatalog := newHelperCatalog()
-	err := adapterCatalog.sendResponseHelper.SendResponse(slotElementHelperMock, testReply, 42)
+	adapterCatalog := NewHelperCatalog()
+	err := adapterCatalog.SendResponseHelper.SendResponse(slotElementHelperMock, testReply, 42)
 	require.NoError(t, err)
 
 	gotReply, err := f.GetResult(time.Second)
@@ -179,8 +179,8 @@ func TestSendResponseHelper_BadInput(t *testing.T) {
 	slotElementHelperMock.GetInputEventFunc = func() (r interface{}) {
 		return 33
 	}
-	adapterCatalog := newHelperCatalog()
-	err := adapterCatalog.sendResponseHelper.SendResponse(slotElementHelperMock, &mockReply{}, 44)
+	adapterCatalog := NewHelperCatalog()
+	err := adapterCatalog.SendResponseHelper.SendResponse(slotElementHelperMock, &mockReply{}, 44)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "Input event is not insolar.ConveyorPendingMessage")
 }
