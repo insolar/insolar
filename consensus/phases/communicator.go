@@ -54,7 +54,6 @@ import (
 	"context"
 	"sync/atomic"
 
-	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -81,13 +80,14 @@ type Communicator interface {
 		packet *packets.Phase1Packet,
 	) (map[insolar.Reference]*packets.Phase1Packet, error)
 	// ExchangePhase2 used in second consensus step to exchange data between participants
-	ExchangePhase2(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
+	ExchangePhase2(ctx context.Context, state *ConsensusState,
 		participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.Reference]*packets.Phase2Packet, error)
 	// ExchangePhase21 is used between phases 2 and 3 of consensus to send additional MissingNode requests
-	ExchangePhase21(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
+	ExchangePhase21(ctx context.Context, state *ConsensusState,
 		packet *packets.Phase2Packet, additionalRequests []*AdditionalRequest) ([]packets.ReferendumVote, error)
 	// ExchangePhase3 used in third consensus step to exchange data between participants
-	ExchangePhase3(ctx context.Context, participants []insolar.NetworkNode, packet *packets.Phase3Packet) (map[insolar.Reference]*packets.Phase3Packet, error)
+	ExchangePhase3(ctx context.Context,
+		participants []insolar.NetworkNode, packet *packets.Phase3Packet) (map[insolar.Reference]*packets.Phase3Packet, error)
 
 	component.Initer
 }
@@ -204,7 +204,7 @@ func (nc *ConsensusCommunicator) sendRequestToNodesWithOrigin(ctx context.Contex
 }
 
 func (nc *ConsensusCommunicator) generatePhase2Response(ctx context.Context, origReq, req *packets.Phase2Packet,
-	list network.UnsyncList, handler *claimhandler.ClaimHandler) (*packets.Phase2Packet, error) {
+	state *ConsensusState) (*packets.Phase2Packet, error) {
 
 	logger := inslogger.FromContext(ctx)
 	answers := make([]packets.ReferendumVote, 0)
@@ -217,12 +217,12 @@ func (nc *ConsensusCommunicator) generatePhase2Response(ctx context.Context, ori
 			logger.Warnf("Phase 2 MissingNode request type mismatch")
 			continue
 		}
-		ref, err := list.IndexToRef(int(v.NodeIndex))
+		ref, err := state.BitsetMapper.IndexToRef(int(v.NodeIndex))
 		if err != nil {
 			logger.Warnf("Phase 2 MissingNode requested index: %d, error: %s", v.NodeIndex, err.Error())
 			continue
 		}
-		node := list.GetActiveNode(ref)
+		node := state.NodesMutator.GetActiveNode(ref)
 		if node == nil {
 			logger.Warnf("Phase 2 MissingNode requested index: %d; mapped ref %s not found", v.NodeIndex, ref)
 			continue
@@ -233,7 +233,7 @@ func (nc *ConsensusCommunicator) generatePhase2Response(ctx context.Context, ori
 				v.NodeIndex, ref, err.Error())
 			continue
 		}
-		proof := list.GetProof(ref)
+		proof := state.HashStorage.GetProof(ref)
 		if proof == nil {
 			logger.Warnf("Phase 2 MissingNode requested index: %d, mapped ref: %s, proof not found", v.NodeIndex, ref)
 			continue
@@ -244,7 +244,7 @@ func (nc *ConsensusCommunicator) generatePhase2Response(ctx context.Context, ori
 			NodeClaimUnsigned: *claim,
 		}
 		answers = append(answers, &answer)
-		claims := handler.GetClaimsFromNode(ref)
+		claims := state.ClaimHandler.GetClaimsFromNode(ref)
 		for _, claim := range claims {
 			claimAnswer := packets.MissingNodeClaim{NodeIndex: v.NodeIndex, Claim: claim}
 			answers = append(answers, &claimAnswer)
@@ -360,7 +360,7 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 }
 
 // ExchangePhase2 used in second consensus phase to exchange data between participants
-func (nc *ConsensusCommunicator) ExchangePhase2(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
+func (nc *ConsensusCommunicator) ExchangePhase2(ctx context.Context, state *ConsensusState,
 	participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.Reference]*packets.Phase2Packet, error) {
 	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase2")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
@@ -398,7 +398,7 @@ func (nc *ConsensusCommunicator) ExchangePhase2(ctx context.Context, list networ
 				// send response
 				response := packet
 				if res.packet.ContainsRequests() {
-					response, err = nc.generatePhase2Response(ctx, packet, res.packet, list, handler)
+					response, err = nc.generatePhase2Response(ctx, packet, res.packet, state)
 					if err != nil {
 						logger.Warnf("Failed to generate phase 2 response packet: %s", err.Error())
 						continue
@@ -452,7 +452,7 @@ func (nc *ConsensusCommunicator) sendAdditionalRequests(ctx context.Context, ori
 }
 
 // ExchangePhase21 used in second consensus phase to exchange data between participants
-func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, list network.UnsyncList, handler *claimhandler.ClaimHandler,
+func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, state *ConsensusState,
 	packet *packets.Phase2Packet, additionalRequests []*AdditionalRequest) ([]packets.ReferendumVote, error) {
 	_, span := instracer.StartSpan(ctx, "Communicator.ExchangePhase21")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(packet.GetPulseNumber())))
@@ -502,7 +502,7 @@ func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, list netwo
 				// send response
 				response := packet
 				if res.packet.ContainsRequests() {
-					response, err = nc.generatePhase2Response(ctx, packet, res.packet, list, handler)
+					response, err = nc.generatePhase2Response(ctx, packet, res.packet, state)
 					if err != nil {
 						logger.Warnf("Failed to generate phase 2 response packet: %s", err.Error())
 						continue

@@ -21,16 +21,16 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/internal/ledger/store"
 )
 
 type dropStorageDB struct {
-	DB db.DB `inject:""`
+	db store.DB
 }
 
 // NewStorageDB creates a new storage, that holds data in a db.
-func NewStorageDB() *dropStorageDB { // nolint: golint
-	return &dropStorageDB{}
+func NewStorageDB(db store.DB) *dropStorageDB { // nolint: golint
+	return &dropStorageDB{db: db}
 }
 
 type dropDbKey struct {
@@ -38,8 +38,8 @@ type dropDbKey struct {
 	pn        insolar.PulseNumber
 }
 
-func (dk *dropDbKey) Scope() db.Scope {
-	return db.ScopeJetDrop
+func (dk *dropDbKey) Scope() store.Scope {
+	return store.ScopeJetDrop
 }
 
 func (dk *dropDbKey) ID() []byte {
@@ -50,7 +50,7 @@ func (dk *dropDbKey) ID() []byte {
 func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (Drop, error) {
 	k := dropDbKey{jetID.Prefix(), pulse}
 
-	buf, err := ds.DB.Get(&k)
+	buf, err := ds.db.Get(&k)
 	if err != nil {
 		return Drop{}, err
 	}
@@ -65,20 +65,11 @@ func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID insolar.JetID, puls
 func (ds *dropStorageDB) Set(ctx context.Context, drop Drop) error {
 	k := dropDbKey{drop.JetID.Prefix(), drop.Pulse}
 
-	_, err := ds.DB.Get(&k)
+	_, err := ds.db.Get(&k)
 	if err == nil {
 		return ErrOverride
 	}
 
-	encoded, err := Encode(&drop)
-	if err != nil {
-		return err
-	}
-	return ds.DB.Set(&k, encoded)
-}
-
-// Delete methods removes a drop from a storage. But the method mustn't be called for a db storage.
-// Because db storage must be used only on a heavy-node.
-func (ds *dropStorageDB) Delete(pulse insolar.PulseNumber) {
-	panic("mustn't be called. because db storage must work only on a heavy node. heavy mustn't remove any data")
+	encoded := MustEncode(&drop)
+	return ds.db.Set(&k, encoded)
 }

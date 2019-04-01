@@ -20,14 +20,16 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/db"
 	"go.opencensus.io/stats"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/internal/ledger/store"
 )
 
 // StorageMemory is an in-memory struct for blob-storage.
 type StorageMemory struct {
-	jetIndex db.JetIndexModifier
+	jetIndex         store.JetIndexModifier
+	jetIndexAccessor store.JetIndexAccessor
 
 	lock   sync.RWMutex
 	memory map[insolar.ID]Blob
@@ -35,9 +37,11 @@ type StorageMemory struct {
 
 // NewStorageMemory creates a new instance of Storage.
 func NewStorageMemory() *StorageMemory {
+	ji := store.NewJetIndex()
 	return &StorageMemory{
-		memory:   map[insolar.ID]Blob{},
-		jetIndex: db.NewJetIndex(),
+		memory:           map[insolar.ID]Blob{},
+		jetIndex:         ji,
+		jetIndexAccessor: ji,
 	}
 }
 
@@ -80,4 +84,34 @@ func (s *StorageMemory) Set(ctx context.Context, id insolar.ID, blob Blob) error
 	)
 
 	return nil
+}
+
+// ForPulse returns []Blob for a provided jetID and a pulse number.
+func (s *StorageMemory) ForPulse(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []Blob {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	ids := s.jetIndexAccessor.For(jetID, pn)
+	var res []Blob
+	for id := range ids {
+		b := s.memory[id]
+		res = append(res, b)
+	}
+
+	return res
+}
+
+// Delete cleans blobs for a provided pulse from memory
+func (s *StorageMemory) Delete(ctx context.Context, pulse insolar.PulseNumber) {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	for id, blob := range s.memory {
+		if id.Pulse() != pulse {
+			continue
+		}
+
+		s.jetIndex.Delete(id, blob.JetID)
+		delete(s.memory, id)
+	}
 }
