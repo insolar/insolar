@@ -30,7 +30,7 @@ import (
 )
 
 // TODO: make HandlerStorage not available for export. For now we use it in conveyor_integration_test only
-// Never use HandlerStorage outside this pkg
+// HandlerStorage gives access to handlers
 var HandlerStorage matrix.StateMachineHolder
 
 func init() {
@@ -311,6 +311,7 @@ func (s *slot) isWorking() bool {
 	return s.slotState == Working
 }
 
+// nolint: unused
 func (s *slot) isInitializing() bool {
 	return s.slotState == Initializing
 }
