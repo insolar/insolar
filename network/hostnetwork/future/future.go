@@ -91,6 +91,10 @@ type Future interface {
 
 	// Cancel closes all channels and cleans up underlying structures.
 	Cancel()
+
+	GetRequest() network.Request
+	Response() <-chan network.Response
+	GetResponse(duration time.Duration) (network.Response, error)
 }
 
 // CancelCallback is a callback function executed when cancelling Future.
@@ -171,4 +175,32 @@ func (future *future) Cancel() {
 func (future *future) finish() {
 	close(future.result)
 	future.cancelCallback(future)
+}
+
+// Response get channel that receives response to sent request
+func (f future) Response() <-chan network.Response {
+	in := f.Result()
+	out := make(chan network.Response, cap(in))
+	go func(in <-chan *packet.Packet, out chan<- network.Response) {
+		for packet := range in {
+			out <- packet
+		}
+		close(out)
+	}(in, out)
+	return out
+}
+
+// GetResponse get response to sent request with `duration` timeout
+func (f future) GetResponse(duration time.Duration) (network.Response, error) {
+	result, err := f.GetResult(duration)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// GetRequest get initiating request.
+func (f future) GetRequest() network.Request {
+	request := f.Request()
+	return request
 }

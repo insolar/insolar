@@ -58,6 +58,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -76,6 +77,26 @@ type Packet struct {
 	Data       interface{}
 	Error      error
 	IsResponse bool
+}
+
+func (p *Packet) GetSender() insolar.Reference {
+	return p.Sender.NodeID
+}
+
+func (p *Packet) GetSenderHost() *host.Host {
+	return p.Sender
+}
+
+func (p *Packet) GetType() types.PacketType {
+	return p.Type
+}
+
+func (p *Packet) GetData() interface{} {
+	return p.Data
+}
+
+func (p *Packet) GetRequestID() network.RequestID {
+	return p.RequestID
 }
 
 // SerializePacket converts packet to byte slice.

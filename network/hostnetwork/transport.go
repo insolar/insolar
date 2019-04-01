@@ -52,18 +52,15 @@ package hostnetwork
 
 import (
 	"context"
-	"time"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	future2 "github.com/insolar/insolar/network/hostnetwork/future"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
@@ -75,60 +72,6 @@ import (
 type hostTransport struct {
 	transportBase
 	handlers map[types.PacketType]network.RequestHandler
-}
-
-type packetWrapper packet.Packet
-
-func (p *packetWrapper) GetSender() insolar.Reference {
-	return p.Sender.NodeID
-}
-
-func (p *packetWrapper) GetSenderHost() *host.Host {
-	return p.Sender
-}
-
-func (p *packetWrapper) GetType() types.PacketType {
-	return p.Type
-}
-
-func (p *packetWrapper) GetData() interface{} {
-	return p.Data
-}
-
-func (p *packetWrapper) GetRequestID() network.RequestID {
-	return p.RequestID
-}
-
-type future struct {
-	future2.Future
-}
-
-// Response get channel that receives response to sent request
-func (f future) Response() <-chan network.Response {
-	in := future2.Future(f).Result()
-	out := make(chan network.Response, cap(in))
-	go func(in <-chan *packet.Packet, out chan<- network.Response) {
-		for packet := range in {
-			out <- (*packetWrapper)(packet)
-		}
-		close(out)
-	}(in, out)
-	return out
-}
-
-// GetResponse get response to sent request with `duration` timeout
-func (f future) GetResponse(duration time.Duration) (network.Response, error) {
-	result, err := f.GetResult(duration)
-	if err != nil {
-		return nil, err
-	}
-	return (*packetWrapper)(result), nil
-}
-
-// GetRequest get initiating request.
-func (f future) GetRequest() network.Request {
-	request := future2.Future(f).Request()
-	return (*packetWrapper)(request)
 }
 
 func (h *hostTransport) processMessage(msg *packet.Packet) {
@@ -147,14 +90,13 @@ func (h *hostTransport) processMessage(msg *packet.Packet) {
 		trace.StringAttribute("msg type", msg.Type.String()),
 	)
 	defer span.End()
-	response, err := handler(ctx, (*packetWrapper)(msg))
+	response, err := handler(ctx, msg)
 	if err != nil {
 		logger.Errorf("Error handling request %s from node %s: %s",
 			msg.Type.String(), msg.Sender.NodeID.String(), err)
 		return
 	}
-	r := response.(*packetWrapper)
-	err = h.transport.SendResponse(ctx, msg.RequestID, (*packet.Packet)(r))
+	err = h.transport.SendResponse(ctx, msg.RequestID, response.(*packet.Packet))
 	if err != nil {
 		logger.Error(err)
 	}
@@ -167,7 +109,7 @@ func (h *hostTransport) SendRequestPacket(ctx context.Context, request network.R
 	if err != nil {
 		return nil, err
 	}
-	return future{Future: f}, nil
+	return f, nil
 }
 
 // RegisterPacketHandler register a handler function to process incoming request packets of a specific type.
@@ -181,10 +123,10 @@ func (h *hostTransport) RegisterPacketHandler(t types.PacketType, handler networ
 
 // BuildResponse create response to an incoming request with Data set to responseData.
 func (h *hostTransport) BuildResponse(ctx context.Context, request network.Request, responseData interface{}) network.Response {
-	sender := request.(*packetWrapper).Sender
+	sender := request.GetSenderHost()
 	p := packet.NewBuilder(h.origin).Type(request.GetType()).Receiver(sender).RequestID(request.GetRequestID()).
 		Response(responseData).TraceID(inslogger.TraceID(ctx)).Build()
-	return (*packetWrapper)(p)
+	return p
 }
 
 func NewInternalTransport(conf configuration.Configuration, nodeRef string) (network.InternalTransport, error) {
