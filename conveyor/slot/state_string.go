@@ -14,13 +14,13 @@ func _() {
 	_ = x[Canceling-3]
 }
 
-const _SlotState_name = "InitializingWorkingSuspendingCanceling"
+const _State_name = "InitializingWorkingSuspendingCanceling"
 
-var _SlotState_index = [...]uint8{0, 12, 19, 29, 38}
+var _State_index = [...]uint8{0, 12, 19, 29, 38}
 
 func (i State) String() string {
-	if i >= State(len(_SlotState_index)-1) {
+	if i >= State(len(_State_index)-1) {
 		return "State(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _SlotState_name[_SlotState_index[i]:_SlotState_index[i+1]]
+	return _State_name[_State_index[i]:_State_index[i+1]]
 }
