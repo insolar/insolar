@@ -56,7 +56,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/pkg/errors"
 )
 

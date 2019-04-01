@@ -56,6 +56,12 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/jbenet/go-base58"
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
+	"go.opencensus.io/trace"
+
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/consensus/packets"
@@ -65,13 +71,8 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
-	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/platformpolicy"
-	base58 "github.com/jbenet/go-base58"
-	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
-	"go.opencensus.io/tag"
-	"go.opencensus.io/trace"
 )
 
 const (

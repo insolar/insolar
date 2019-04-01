@@ -57,15 +57,16 @@ import (
 	"io"
 	"net"
 
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+
 	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/transport/packet"
-	"github.com/insolar/insolar/network/transport/relay"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 )
 
 const udpMaxPacketSize = 1400

@@ -51,17 +51,17 @@
 package packet
 
 import (
-	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 )
 
-const (
-	TestPacket = types.PacketType(1337)
-)
-
-type RequestTest struct {
-	Data []byte
+// ResponsePulse is the response for a new pulse from a pulsar.
+type ResponsePulse struct {
+	Success bool
+	Error   string
 }
 
-type ResponseTest struct {
-	Number int
+// ResponseGetRandomHosts is the response containing random hosts of the Insolar network.
+type ResponseGetRandomHosts struct {
+	Hosts []host.Host
+	Error string
 }

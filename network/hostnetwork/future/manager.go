@@ -48,90 +48,49 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package packet
+package future
 
 import (
+	"sync"
+
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
-// Builder allows lazy building of packets.
-// Each operation returns new copy of a builder.
-type Builder struct {
-	actions []func(packet *Packet)
+type futureManagerImpl struct {
+	mutex   sync.RWMutex
+	futures map[network.RequestID]Future
 }
 
-// NewBuilder returns empty packet builder.
-func NewBuilder(sender *host.Host) Builder {
-	cb := Builder{}
-	cb.actions = append(cb.actions, func(packet *Packet) {
-		packet.Sender = sender
-		packet.RemoteAddress = sender.Address.String()
-	})
-	return cb
-}
-
-// Build returns configured packet.
-func (cb Builder) Build() (packet *Packet) {
-	packet = &Packet{}
-	for _, action := range cb.actions {
-		action(packet)
+func newFutureManagerImpl() *futureManagerImpl {
+	return &futureManagerImpl{
+		futures: make(map[network.RequestID]Future),
 	}
-	return
 }
 
-// Receiver sets packet receiver.
-func (cb Builder) Receiver(host *host.Host) Builder {
-	cb.actions = append(cb.actions, func(packet *Packet) {
-		packet.Receiver = host
+func (fm *futureManagerImpl) Create(msg *packet.Packet) Future {
+	future := NewFuture(msg.RequestID, msg.Receiver, msg, func(f Future) {
+		fm.delete(f.ID())
 	})
-	return cb
+
+	fm.mutex.Lock()
+	defer fm.mutex.Unlock()
+
+	fm.futures[msg.RequestID] = future
+
+	return future
 }
 
-// Type sets packet type.
-func (cb Builder) Type(packetType types.PacketType) Builder {
-	cb.actions = append(cb.actions, func(packet *Packet) {
-		packet.Type = packetType
-	})
-	return cb
+func (fm *futureManagerImpl) Get(msg *packet.Packet) Future {
+	fm.mutex.RLock()
+	defer fm.mutex.RUnlock()
+
+	return fm.futures[msg.RequestID]
 }
 
-// Request adds request data to packet.
-func (cb Builder) Request(request interface{}) Builder {
-	cb.actions = append(cb.actions, func(packet *Packet) {
-		packet.Data = request
-	})
-	return cb
-}
+func (fm *futureManagerImpl) delete(id network.RequestID) {
+	fm.mutex.Lock()
+	defer fm.mutex.Unlock()
 
-func (cb Builder) RequestID(id network.RequestID) Builder {
-	cb.actions = append(cb.actions, func(packet *Packet) {
-		packet.RequestID = id
-	})
-	return cb
-}
-
-func (cb Builder) TraceID(traceID string) Builder {
-	cb.actions = append(cb.actions, func(packet *Packet) {
-		packet.TraceID = traceID
-	})
-	return cb
-}
-
-// Response adds response data to packet
-func (cb Builder) Response(response interface{}) Builder {
-	cb.actions = append(cb.actions, func(packet *Packet) {
-		packet.Data = response
-		packet.IsResponse = true
-	})
-	return cb
-}
-
-// Error adds error description to packet.
-func (cb Builder) Error(err error) Builder {
-	cb.actions = append(cb.actions, func(packet *Packet) {
-		packet.Error = err
-	})
-	return cb
+	delete(fm.futures, id)
 }

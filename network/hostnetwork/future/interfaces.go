@@ -48,20 +48,28 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package packet
+package future
 
 import (
-	"github.com/insolar/insolar/network/transport/host"
+	"context"
+
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
-// ResponsePulse is the response for a new pulse from a pulsar.
-type ResponsePulse struct {
-	Success bool
-	Error   string
+type Manager interface {
+	Get(msg *packet.Packet) Future
+	Create(msg *packet.Packet) Future
 }
 
-// ResponseGetRandomHosts is the response containing random hosts of the Insolar network.
-type ResponseGetRandomHosts struct {
-	Hosts []host.Host
-	Error string
+func NewManager() Manager {
+	return newFutureManagerImpl()
+}
+
+type PacketHandler interface {
+	Handle(ctx context.Context, msg *packet.Packet)
+	Received() <-chan *packet.Packet
+}
+
+func NewPacketHandler(futureManager Manager) PacketHandler {
+	return newPacketHandlerImpl(futureManager)
 }

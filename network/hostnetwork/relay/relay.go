@@ -48,95 +48,93 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package packet
+package relay
 
 import (
-	"bytes"
-	"encoding/binary"
-	"encoding/gob"
-	"io"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 
-	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/packet/types"
-	"github.com/pkg/errors"
+	"errors"
 )
 
-// Packet is DHT packet object.
-type Packet struct {
-	Sender        *host.Host
-	Receiver      *host.Host
-	Type          types.PacketType
-	RequestID     network.RequestID
-	RemoteAddress string
+// State is alias for relaying state
+type State int
 
-	TraceID    string
-	Data       interface{}
-	Error      error
-	IsResponse bool
+const (
+	// Unknown unknown relay state.
+	Unknown = State(iota + 1)
+	// Started is relay type means relaying started.
+	Started
+	// Stopped is relay type means relaying stopped.
+	Stopped
+	// Error is relay type means error state change.
+	Error
+	// NoAuth - this error returns if host tries to send relay request but not authenticated.
+	NoAuth
+)
+
+// Relay Interface for relaying
+type Relay interface {
+	// AddClient add client to relay list.
+	AddClient(host *host.Host) error
+	// RemoveClient removes client from relay list.
+	RemoveClient(host *host.Host) error
+	// ClientsCount - clients count.
+	ClientsCount() int
+	// NeedToRelay returns true if origin host is proxy for target host.
+	NeedToRelay(targetAddress string) bool
 }
 
-// SerializePacket converts packet to byte slice.
-func SerializePacket(q *Packet) ([]byte, error) {
-	var msgBuffer bytes.Buffer
-	enc := gob.NewEncoder(&msgBuffer)
-	err := enc.Encode(q)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to serialize packet")
-	}
-
-	length := msgBuffer.Len()
-
-	var lengthBytes [8]byte
-	binary.PutUvarint(lengthBytes[:], uint64(length))
-
-	var result []byte
-	result = append(result, lengthBytes[:]...)
-	result = append(result, msgBuffer.Bytes()...)
-
-	return result, nil
+type relay struct {
+	clients []*host.Host
 }
 
-// DeserializePacket reads packet from io.Reader.
-func DeserializePacket(conn io.Reader) (*Packet, error) {
-
-	lengthBytes := make([]byte, 8)
-	if _, err := io.ReadFull(conn, lengthBytes); err != nil {
-		return nil, err
+// NewRelay constructs relay list.
+func NewRelay() Relay {
+	return &relay{
+		clients: make([]*host.Host, 0),
 	}
-	lengthReader := bytes.NewBuffer(lengthBytes)
-	length, err := binary.ReadUvarint(lengthReader)
-	if err != nil {
-		return nil, io.ErrUnexpectedEOF
-	}
-
-	log.Debugf("[ DeserializePacket ] packet length %d", length)
-	buf := make([]byte, length)
-	if _, err := io.ReadFull(conn, buf); err != nil {
-		log.Error("[ DeserializePacket ] couldn't read packet: ", err)
-		return nil, err
-	}
-	log.Debugf("[ DeserializePacket ] read packet")
-
-	msg := &Packet{}
-	dec := gob.NewDecoder(bytes.NewReader(buf))
-
-	err = dec.Decode(msg)
-	if err != nil {
-		log.Error("[ DeserializePacket ] couldn't decode packet: ", err)
-		return nil, err
-	}
-
-	log.Debugf("[ DeserializePacket ] decoded packet to %#v", msg)
-
-	return msg, nil
 }
 
-func init() {
-	gob.Register(&RequestPulse{})
-	gob.Register(&RequestGetRandomHosts{})
+// AddClient add client to relay list.
+func (r *relay) AddClient(host *host.Host) error {
+	if _, n := r.findClient(host.NodeID); n != nil {
+		return errors.New("client exists already")
+	}
+	r.clients = append(r.clients, host)
+	return nil
+}
 
-	gob.Register(&ResponsePulse{})
-	gob.Register(&ResponseGetRandomHosts{})
+// RemoveClient removes client from relay list.
+func (r *relay) RemoveClient(host *host.Host) error {
+	idx, n := r.findClient(host.NodeID)
+	if n == nil {
+		return errors.New("client not found")
+	}
+	r.clients = append(r.clients[:idx], r.clients[idx+1:]...)
+	return nil
+}
+
+// ClientsCount - returns clients count.
+func (r *relay) ClientsCount() int {
+	return len(r.clients)
+}
+
+// NeedToRelay returns true if origin host is proxy for target host.
+func (r *relay) NeedToRelay(targetAddress string) bool {
+	for i := 0; i < r.ClientsCount(); i++ {
+		if r.clients[i].Address.String() == targetAddress {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *relay) findClient(id insolar.Reference) (int, *host.Host) {
+	for idx, hostIterator := range r.clients {
+		if hostIterator.NodeID.Equal(id) {
+			return idx, hostIterator
+		}
+	}
+	return -1, nil
 }
