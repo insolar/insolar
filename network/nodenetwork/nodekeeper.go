@@ -304,7 +304,6 @@ func (nk *nodekeeper) Sync(ctx context.Context, nodes []insolar.NetworkNode, cla
 	}
 
 	if nk.shouldExit(foundOrigin) {
-		nk.Abort()
 		return errors.New("node leave acknowledged by network")
 	}
 
@@ -349,10 +348,6 @@ func (nk *nodekeeper) gracefulStopIfNeeded(ctx context.Context) {
 	if nk.origin.GetState() == insolar.NodeLeaving {
 		nk.TerminationHandler.OnLeaveApproved(ctx)
 	}
-}
-
-func (nk *nodekeeper) Abort() {
-	nk.TerminationHandler.Abort()
 }
 
 func (nk *nodekeeper) shouldExit(foundOrigin bool) bool {
