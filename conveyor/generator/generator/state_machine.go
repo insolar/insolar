@@ -112,73 +112,73 @@ func (m *StateMachine) addHandler(s fsm.ElementState, ht handlerType, ps PulseSt
 	m.States[s].handlers[ps][ht] = h
 }
 
-func (m *StateMachine) Init(f interface{}, states ...fsm.ElementState) *StateMachine {
+func (m *StateMachine) Init(handlerFunc interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(0, states)
-	m.addHandler(0, Transition, Present, newInitHandler(m, f, states))
+	m.addHandler(0, Transition, Present, newInitHandler(m, handlerFunc, states))
 	return m
 }
 
-func (m *StateMachine) InitFuture(f interface{}, states ...fsm.ElementState) *StateMachine {
+func (m *StateMachine) InitFuture(handlerFunc interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(0, states)
-	m.addHandler(0, Transition, Future, newInitHandler(m, f, states))
+	m.addHandler(0, Transition, Future, newInitHandler(m, handlerFunc, states))
 	return m
 }
 
-func (m *StateMachine) InitPast(f interface{}, states ...fsm.ElementState) *StateMachine {
+func (m *StateMachine) InitPast(handlerFunc interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(0, states)
-	m.addHandler(0, Transition, Past, newInitHandler(m, f, states))
+	m.addHandler(0, Transition, Past, newInitHandler(m, handlerFunc, states))
 	return m
 }
 
-func (m *StateMachine) Transition(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
+func (m *StateMachine) Transition(state fsm.ElementState, handlerFunc interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	m.addHandler(state, Transition, Present, newHandler(m, f, states))
+	m.addHandler(state, Transition, Present, newHandler(m, handlerFunc, states))
 	return m
 }
 
-func (m *StateMachine) TransitionFuture(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
+func (m *StateMachine) TransitionFuture(state fsm.ElementState, handlerFunc interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	m.addHandler(state, Transition, Future, newHandler(m, f, states))
+	m.addHandler(state, Transition, Future, newHandler(m, handlerFunc, states))
 	return m
 }
 
-func (m *StateMachine) TransitionPast(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
+func (m *StateMachine) TransitionPast(state fsm.ElementState, handlerFunc interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	m.addHandler(state, Transition, Past, newHandler(m, f, states))
+	m.addHandler(state, Transition, Past, newHandler(m, handlerFunc, states))
 	return m
 }
 
-func (m *StateMachine) Migration(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
+func (m *StateMachine) Migration(state fsm.ElementState, handlerFunc interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	m.addHandler(state, Migration, Past, newHandler(m, f, states))
+	m.addHandler(state, Migration, Past, newHandler(m, handlerFunc, states))
 	return m
 }
 
-func (m *StateMachine) MigrationFuturePresent(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
+func (m *StateMachine) MigrationFuturePresent(state fsm.ElementState, handlerFunc interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	m.addHandler(state, Migration, Present, newHandler(m, f, states))
+	m.addHandler(state, Migration, Present, newHandler(m, handlerFunc, states))
 	return m
 }
 
-func (m *StateMachine) AdapterResponse(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
+func (m *StateMachine) AdapterResponse(state fsm.ElementState, handlerFunc interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	handler := newHandler(m, f, states)
+	handler := newHandler(m, handlerFunc, states)
 	m.addHandler(state, AdapterResponse, Present, handler)
 	m.setImportFor(handler.params[responseAdapterParamIndex])
 	return m
 }
 
-func (m *StateMachine) AdapterResponseFuture(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
+func (m *StateMachine) AdapterResponseFuture(state fsm.ElementState, handlerFunc interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	handler := newHandler(m, f, states)
+	handler := newHandler(m, handlerFunc, states)
 	m.addHandler(state, AdapterResponse, Future, handler)
 	m.setImportFor(handler.params[responseAdapterParamIndex])
 	return m
 }
 
-func (m *StateMachine) AdapterResponsePast(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
+func (m *StateMachine) AdapterResponsePast(state fsm.ElementState, handlerFunc interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	handler := newHandler(m, f, states)
+	handler := newHandler(m, handlerFunc, states)
 	m.addHandler(state, AdapterResponse, Past, handler)
 	m.setImportFor(handler.params[responseAdapterParamIndex])
 	return m
