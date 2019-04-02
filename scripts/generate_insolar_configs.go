@@ -146,7 +146,7 @@ func main() {
 	pwConfig := pulsewatcher.Config{}
 	discoveryNodesConfigs := make([]configuration.Configuration, 0, len(genesisConf.DiscoveryNodes))
 
-	gorundPorts := [][]string{}
+	var gorundPorts [][]string
 
 	pctx := newPromContext()
 

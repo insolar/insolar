@@ -75,7 +75,7 @@ type ContractsBuilder struct {
 }
 
 // NewContractBuilder returns a new `ContractsBuilder`,
-// requires initialized artifacts client.
+// requires initialized artifacts client (legacy), and artifact manager.
 func NewContractBuilder(ac artifacts.Client, am artifact.Manager) *ContractsBuilder {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	if err != nil {
