@@ -18,14 +18,17 @@ package adapterhelper
 
 import (
 	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/ledger/artifactmanager"
 )
 
 type Catalog struct {
 	SendResponseHelper adapter.SendResponseHelper
+	GetCodeHelper      artifactmanager.GetCodeHelper
 }
 
 func NewCatalog() *Catalog {
 	return &Catalog{
 		SendResponseHelper: adapter.SendResponseHelper{},
+		GetCodeHelper:      artifactmanager.GetCodeHelper{},
 	}
 }

@@ -45,8 +45,7 @@ func ParseInputEvent(ctx context.Context, helper fsm.SlotElementHelper, input in
 	}
 	switch parcel.Type() {
 	case insolar.TypeGetCode:
-		// TODO: return real state machine, when it will be ready
-		return fsm.NewElementState(0, 0), payload
+		return fsm.NewElementState(4, 0), payload
 	default:
 		inslogger.FromContext(ctx).Warnf("[ ParseInputEvent ] Unknown parcel type: %s", parcel.Type().String())
 		return 0, payload

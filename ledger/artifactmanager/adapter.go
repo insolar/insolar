@@ -18,6 +18,7 @@ package artifactmanager
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
@@ -51,6 +52,7 @@ func NewGetCodeProcessor() adapter.Processor {
 
 // Process implements Processor interface
 func (p *GetCodeProcessor) Process(task adapter.AdapterTask, nestedEventHelper adapter.NestedEventHelper, cancelInfo adapter.CancelInfo) interface{} {
+	fmt.Println("we are in GetCodeProcessor")
 	payload, ok := task.TaskPayload.(GetCodeTask)
 	var msg GetCodeResp
 	if !ok {

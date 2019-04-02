@@ -176,7 +176,7 @@ func (w *worker) readInputQueueWorking() error {
 
 		// TODO: fix me sweetie
 		// use state 0, and let InitialSM take care of the rest
-		_, err := w.slot.createElement(w.getInitialStateMachine(), 1, el)
+		_, err := w.slot.createElement(w.getInitialStateMachine(), 0, el)
 		if err != nil {
 			return errors.Wrapf(err, "[ readInputQueueWorking ] Can't createElement: %+v", el)
 		}
@@ -442,7 +442,7 @@ func (w *worker) readInputQueueSuspending() error {
 
 		// TODO: fix me sweetie
 		// use state 0, and let InitialSM take care of the rest
-		_, err := w.slot.createElement(w.getInitialStateMachine(), 1, el)
+		_, err := w.slot.createElement(w.getInitialStateMachine(), 0, el)
 		if err != nil {
 			return errors.Wrap(err, "[ readInputQueueSuspending ] Can't createElement")
 		}
