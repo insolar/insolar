@@ -22,7 +22,6 @@ import (
 
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/core"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/pkg/errors"
 )
@@ -266,7 +265,6 @@ func (ul *sparseUnsyncList) AddClaims(claims map[core.RecordRef][]consensus.Refe
 		for _, claim := range claimList {
 			c, ok := claim.(*consensus.NodeAnnounceClaim)
 			if !ok {
-				log.Error("[ AddClaims ] Could not convert claim with type TypeNodeAnnounceClaim to NodeAnnounceClaim")
 				continue
 			}
 
