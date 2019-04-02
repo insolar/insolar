@@ -27,6 +27,11 @@ import (
 type handlerType uint
 
 const (
+	adapterHelperParamIndex   = 4
+	responseAdapterParamIndex = 4
+)
+
+const (
 	Transition = handlerType(iota)
 	Migration
 	AdapterResponse
@@ -83,33 +88,34 @@ func newHandler(machine *StateMachine, f interface{}, states []fsm.ElementState)
 
 func newInitHandler(machine *StateMachine, f interface{}, states []fsm.ElementState) *handler {
 	h := newHandler(machine, f, states)
+	const inputEventTypeParamIndex = 2
+	const payloadTypeResultIndex = 1
 	// todo check input and results len
 	if h.machine.InputEventType == nil {
-		h.machine.InputEventType = &h.params[2]
+		h.machine.setImportFor(h.params[inputEventTypeParamIndex])
+		h.machine.InputEventType = &h.params[inputEventTypeParamIndex]
 	}
 	if h.machine.PayloadType == nil {
-		h.machine.PayloadType = &h.results[1]
+		h.machine.setImportFor(h.results[payloadTypeResultIndex])
+		h.machine.PayloadType = &h.results[payloadTypeResultIndex]
 	}
 	return h
 }
 
 func (h *handler) GetResponseAdapterType() string {
-	const ResponseAdapterParamIndex = 4
-	responseAdapterParam := h.params[ResponseAdapterParamIndex]
-	h.machine.setImportFor(h.params[ResponseAdapterParamIndex])
+	responseAdapterParam := h.params[responseAdapterParamIndex]
 	return responseAdapterParam
 }
 
 func (h *handler) GetAdapterHelperType() *string {
-	const AdapterHelperParamIndex = 4
-	if len(h.params) <= AdapterHelperParamIndex {
+	if len(h.params) <= adapterHelperParamIndex {
 		return nil
 	}
 
 	const adapterPrefix = "adapter."
-	if strings.HasPrefix(h.params[AdapterHelperParamIndex], adapterPrefix) {
-		result := h.params[AdapterHelperParamIndex][len(adapterPrefix):]
+	if strings.HasPrefix(h.params[adapterHelperParamIndex], adapterPrefix) {
+		result := h.params[adapterHelperParamIndex][len(adapterPrefix):]
 		return &result
 	}
-	return &h.params[AdapterHelperParamIndex]
+	return &h.params[adapterHelperParamIndex]
 }

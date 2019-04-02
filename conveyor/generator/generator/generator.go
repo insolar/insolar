@@ -154,7 +154,8 @@ func (g *Generator) ParseAdapterHelpers() {
 
 type stateMachineWithID struct {
 	StateMachine
-	ID int
+	Imports []string
+	ID      int
 }
 
 func (g *Generator) GenerateStateMachines() {
@@ -169,7 +170,7 @@ func (g *Generator) GenerateStateMachines() {
 
 		err = template.Must(template.New("smTmpl").Funcs(templateFuncs).
 			Parse(string(tplBody))).
-			Execute(out, stateMachineWithID{StateMachine: *machine, ID: i + 1})
+			Execute(out, stateMachineWithID{StateMachine: *machine, ID: i + 1, Imports: machine.GetImports()})
 		checkErr(err)
 
 		err = out.Flush()

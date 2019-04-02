@@ -48,7 +48,7 @@ var (
 	}
 )
 
-func getPackage(file string) (string, map[string]string) {
+func parseSource(file string) (string, map[string]string) {
 	imports := make(map[string]string)
 	set := token.NewFileSet()
 	node, err := parser.ParseFile(set, file, nil, parser.ParseComments)
@@ -59,12 +59,14 @@ func getPackage(file string) (string, map[string]string) {
 			}
 			for _, z := range decl.Specs {
 				importPath := z.(*ast.ImportSpec).Path.Value
-				if name := z.(*ast.ImportSpec).Name; name != nil {
-					imports[name.String()] = importPath
-				} else {
-					_, name := path.Split(importPath)
-					imports[name] = importPath
+				if importPath[0] != '"' || importPath[len(importPath)-1] != '"' {
+					exitWithError("Incorrect import %s\n", importPath)
 				}
+				if name := z.(*ast.ImportSpec).Name; name != nil {
+					exitWithError("Import aliases not allowed <%s %s>", name, importPath)
+				}
+				_, name := path.Split(importPath[1 : len(importPath)-1])
+				imports[name] = importPath
 			}
 		}
 	}

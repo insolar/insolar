@@ -31,21 +31,47 @@ type StateMachine struct {
 	PayloadType          *string
 	States               []*state
 	AdapterHelperCatalog map[string]string
-	Imports              map[string]string
+	parsedImports        map[string]string
+	usedImports          map[string]string
 }
 
 func (g *Generator) AddMachine(name string) *StateMachine {
 	_, file, _, _ := runtime.Caller(1)
-	pkg, imports := getPackage(file)
+	pkg, imports := parseSource(file)
 	machine := &StateMachine{
 		File:                 file,
 		Package:              pkg,
 		Name:                 name,
 		AdapterHelperCatalog: g.adapterHelperCatalog,
-		Imports:              imports,
+		parsedImports:        imports,
+		usedImports:          make(map[string]string),
 	}
 	g.stateMachines = append(g.stateMachines, machine)
 	return machine
+}
+
+func (m *StateMachine) setImportFor(param string) {
+	if param[0] == '*' {
+		param = param[1:]
+	}
+	if dotIndex := strings.Index(param, "."); dotIndex > 0 {
+		pkgName := param[:dotIndex]
+		if pkgName == m.Package {
+			return
+		}
+		if _, exists := m.parsedImports[pkgName]; !exists {
+			exitWithError("Couldn't find import for package %s\n", pkgName)
+		}
+		m.usedImports[pkgName] = m.parsedImports[pkgName]
+	}
+}
+
+func (m *StateMachine) GetImports() []string {
+	var result []string
+	for _, v := range m.usedImports {
+		result = append(result, v)
+	}
+	return result
 }
 
 func (m *StateMachine) GetInputEventType() string {
@@ -136,18 +162,24 @@ func (m *StateMachine) MigrationFuturePresent(state fsm.ElementState, f interfac
 
 func (m *StateMachine) AdapterResponse(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	m.addHandler(state, AdapterResponse, Present, newHandler(m, f, states))
+	handler := newHandler(m, f, states)
+	m.addHandler(state, AdapterResponse, Present, handler)
+	m.setImportFor(handler.params[responseAdapterParamIndex])
 	return m
 }
 
 func (m *StateMachine) AdapterResponseFuture(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	m.addHandler(state, AdapterResponse, Future, newHandler(m, f, states))
+	handler := newHandler(m, f, states)
+	m.addHandler(state, AdapterResponse, Future, handler)
+	m.setImportFor(handler.params[responseAdapterParamIndex])
 	return m
 }
 
 func (m *StateMachine) AdapterResponsePast(state fsm.ElementState, f interface{}, states ...fsm.ElementState) *StateMachine {
 	m.createStateUnlessExists(state, states)
-	m.addHandler(state, AdapterResponse, Past, newHandler(m, f, states))
+	handler := newHandler(m, f, states)
+	m.addHandler(state, AdapterResponse, Past, handler)
+	m.setImportFor(handler.params[responseAdapterParamIndex])
 	return m
 }

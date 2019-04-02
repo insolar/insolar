@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/statemachine"
+    
 )
 
 func RawGetObjectStateMachinePresentFactory(helpers *adapter.HelperCatalog) *statemachine.StateMachine {
