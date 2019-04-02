@@ -54,10 +54,8 @@ func (m *Scope) RegisterPrototype(ctx context.Context, name string, domain insol
 	}
 	// RegisterRequest
 	rec := &object.RequestRecord{
-		Parcel: message.ParcelToBytes(parcel),
-		MessageHash: m.PlatformCryptographyScheme.IntegrityHasher().Hash(
-			message.MustSerializeBytes(parcel.Message()),
-		),
+		Parcel:      message.ParcelToBytes(parcel),
+		MessageHash: m.hashParcel(parcel),
 		// TODO: figure out is it required or not?
 		// Object:      *obj.Record(),
 	}
@@ -70,4 +68,8 @@ func (m *Scope) RegisterPrototype(ctx context.Context, name string, domain insol
 
 	proto := insolar.NewReference(*domain.Domain(), *protoID)
 	return proto, nil
+}
+
+func (m *Scope) hashParcel(parcel insolar.Parcel) []byte {
+	return m.PlatformCryptographyScheme.IntegrityHasher().Hash(message.MustSerializeBytes(parcel.Message()))
 }
