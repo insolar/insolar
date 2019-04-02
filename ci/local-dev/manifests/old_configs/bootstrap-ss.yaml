@@ -97,7 +97,6 @@ data:
         transport:
           protocol: TCP
           address: 0.0.0.0:7900
-          behindnat: false
         bootstraphosts: []
         isrelay: false
         infinitybootstrap: false

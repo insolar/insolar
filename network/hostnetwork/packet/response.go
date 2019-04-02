@@ -48,46 +48,20 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package resolver
+package packet
 
 import (
-	"net"
-	"testing"
-
-	"github.com/stretchr/testify/suite"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 )
 
-type FixedAddressResolverSuite struct {
-	suite.Suite
+// ResponsePulse is the response for a new pulse from a pulsar.
+type ResponsePulse struct {
+	Success bool
+	Error   string
 }
 
-func (s *FixedAddressResolverSuite) TestSuccess() {
-	localAddress := "127.0.0.1:12345"
-	externalAddress := "192.168.0.1"
-
-	conn := &MocktConn{}
-	conn.On("LocalAddr").Return(net.ResolveTCPAddr("tcp", localAddress))
-
-	r := NewFixedAddressResolver(externalAddress)
-	s.Require().IsType(&fixedAddressResolver{}, r)
-	realAddress, err := r.Resolve(conn)
-	s.NoError(err)
-	s.Equal("192.168.0.1:12345", realAddress)
-}
-
-func (s *FixedAddressResolverSuite) TestFailure_EmptyPort() {
-	localAddress := "empty_port"
-	externalAddress := "192.168.0.1"
-
-	conn := &MocktConn{}
-	conn.On("LocalAddr").Return(net.ResolveTCPAddr("tcp", localAddress))
-
-	r := NewFixedAddressResolver(externalAddress)
-	s.Require().IsType(&fixedAddressResolver{}, r)
-	_, err := r.Resolve(conn)
-	s.Error(err)
-}
-
-func TestFixedAddressResolver(t *testing.T) {
-	suite.Run(t, new(FixedAddressResolverSuite))
+// ResponseGetRandomHosts is the response containing random hosts of the Insolar network.
+type ResponseGetRandomHosts struct {
+	Hosts []host.Host
+	Error string
 }

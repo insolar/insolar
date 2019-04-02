@@ -48,7 +48,7 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package transport
+package future
 
 import (
 	"errors"
@@ -57,8 +57,8 @@ import (
 
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
 var (
@@ -91,6 +91,10 @@ type Future interface {
 
 	// Cancel closes all channels and cleans up underlying structures.
 	Cancel()
+
+	GetRequest() network.Request
+	Response() <-chan network.Response
+	GetResponse(duration time.Duration) (network.Response, error)
 }
 
 // CancelCallback is a callback function executed when cancelling Future.
@@ -118,57 +122,85 @@ func NewFuture(requestID network.RequestID, actor *host.Host, msg *packet.Packet
 }
 
 // ID returns RequestID of packet.
-func (future *future) ID() network.RequestID {
-	return future.requestID
+func (f *future) ID() network.RequestID {
+	return f.requestID
 }
 
 // Actor returns Host address that was used to create packet.
-func (future *future) Actor() *host.Host {
-	return future.actor
+func (f *future) Actor() *host.Host {
+	return f.actor
 }
 
 // Request returns original request packet.
-func (future *future) Request() *packet.Packet {
-	return future.request
+func (f *future) Request() *packet.Packet {
+	return f.request
 }
 
 // Result returns result packet channel.
-func (future *future) Result() <-chan *packet.Packet {
-	return future.result
+func (f *future) Result() <-chan *packet.Packet {
+	return f.result
 }
 
 // SetResult write packet to the result channel.
-func (future *future) SetResult(msg *packet.Packet) {
-	if atomic.CompareAndSwapUint32(&future.finished, 0, 1) {
-		future.result <- msg
-		future.finish()
+func (f *future) SetResult(msg *packet.Packet) {
+	if atomic.CompareAndSwapUint32(&f.finished, 0, 1) {
+		f.result <- msg
+		f.finish()
 	}
 }
 
 // GetResult gets the future result from Result() channel with a timeout set to `duration`.
-func (future *future) GetResult(duration time.Duration) (*packet.Packet, error) {
+func (f *future) GetResult(duration time.Duration) (*packet.Packet, error) {
 	select {
-	case result, ok := <-future.Result():
+	case result, ok := <-f.Result():
 		if !ok {
 			return nil, ErrChannelClosed
 		}
 		return result, nil
 	case <-time.After(duration):
-		future.Cancel()
-		metrics.NetworkPacketTimeoutTotal.WithLabelValues(future.request.Type.String()).Inc()
+		f.Cancel()
+		metrics.NetworkPacketTimeoutTotal.WithLabelValues(f.request.Type.String()).Inc()
 		return nil, ErrTimeout
 	}
 }
 
 // Cancel allows to cancel Future processing.
-func (future *future) Cancel() {
-	if atomic.CompareAndSwapUint32(&future.finished, 0, 1) {
-		future.finish()
-		metrics.NetworkFutures.WithLabelValues(future.request.Type.String()).Dec()
+func (f *future) Cancel() {
+	if atomic.CompareAndSwapUint32(&f.finished, 0, 1) {
+		f.finish()
+		metrics.NetworkFutures.WithLabelValues(f.request.Type.String()).Dec()
 	}
 }
 
-func (future *future) finish() {
-	close(future.result)
-	future.cancelCallback(future)
+func (f *future) finish() {
+	close(f.result)
+	f.cancelCallback(f)
+}
+
+// Response get channel that receives response to sent request
+func (f *future) Response() <-chan network.Response {
+	in := f.Result()
+	out := make(chan network.Response, cap(in))
+	go func(in <-chan *packet.Packet, out chan<- network.Response) {
+		for packet := range in {
+			out <- packet
+		}
+		close(out)
+	}(in, out)
+	return out
+}
+
+// GetResponse get response to sent request with `duration` timeout
+func (f *future) GetResponse(duration time.Duration) (network.Response, error) {
+	result, err := f.GetResult(duration)
+	if err != nil {
+		return nil, err
+	}
+	return result, nil
+}
+
+// GetRequest get initiating request.
+func (f *future) GetRequest() network.Request {
+	request := f.Request()
+	return request
 }

@@ -48,25 +48,49 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package resolver
+package future
 
 import (
-	"net"
+	"sync"
+
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
-type exactResolver struct {
+type futureManagerImpl struct {
+	mutex   sync.RWMutex
+	futures map[network.RequestID]Future
 }
 
-// NewExactResolver returns new no-op resolver.
-func NewExactResolver() PublicAddressResolver {
-	return newExactResolver()
+func newFutureManagerImpl() *futureManagerImpl {
+	return &futureManagerImpl{
+		futures: make(map[network.RequestID]Future),
+	}
 }
 
-func newExactResolver() *exactResolver {
-	return &exactResolver{}
+func (fm *futureManagerImpl) Create(msg *packet.Packet) Future {
+	future := NewFuture(msg.RequestID, msg.Receiver, msg, func(f Future) {
+		fm.delete(f.ID())
+	})
+
+	fm.mutex.Lock()
+	defer fm.mutex.Unlock()
+
+	fm.futures[msg.RequestID] = future
+
+	return future
 }
 
-// Resolve returns host's current network address.
-func (er *exactResolver) Resolve(conn net.PacketConn) (string, error) {
-	return conn.LocalAddr().String(), nil
+func (fm *futureManagerImpl) Get(msg *packet.Packet) Future {
+	fm.mutex.RLock()
+	defer fm.mutex.RUnlock()
+
+	return fm.futures[msg.RequestID]
+}
+
+func (fm *futureManagerImpl) delete(id network.RequestID) {
+	fm.mutex.Lock()
+	defer fm.mutex.Unlock()
+
+	delete(fm.futures, id)
 }

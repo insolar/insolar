@@ -48,95 +48,21 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package packet
+package resolver
 
-import (
-	"bytes"
-	"encoding/binary"
-	"encoding/gob"
-	"io"
-
-	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/packet/types"
-	"github.com/pkg/errors"
-)
-
-// Packet is DHT packet object.
-type Packet struct {
-	Sender        *host.Host
-	Receiver      *host.Host
-	Type          types.PacketType
-	RequestID     network.RequestID
-	RemoteAddress string
-
-	TraceID    string
-	Data       interface{}
-	Error      error
-	IsResponse bool
+type exactResolver struct {
 }
 
-// SerializePacket converts packet to byte slice.
-func SerializePacket(q *Packet) ([]byte, error) {
-	var msgBuffer bytes.Buffer
-	enc := gob.NewEncoder(&msgBuffer)
-	err := enc.Encode(q)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to serialize packet")
-	}
-
-	length := msgBuffer.Len()
-
-	var lengthBytes [8]byte
-	binary.PutUvarint(lengthBytes[:], uint64(length))
-
-	var result []byte
-	result = append(result, lengthBytes[:]...)
-	result = append(result, msgBuffer.Bytes()...)
-
-	return result, nil
+// NewExactResolver returns new no-op resolver.
+func NewExactResolver() PublicAddressResolver {
+	return newExactResolver()
 }
 
-// DeserializePacket reads packet from io.Reader.
-func DeserializePacket(conn io.Reader) (*Packet, error) {
-
-	lengthBytes := make([]byte, 8)
-	if _, err := io.ReadFull(conn, lengthBytes); err != nil {
-		return nil, err
-	}
-	lengthReader := bytes.NewBuffer(lengthBytes)
-	length, err := binary.ReadUvarint(lengthReader)
-	if err != nil {
-		return nil, io.ErrUnexpectedEOF
-	}
-
-	log.Debugf("[ DeserializePacket ] packet length %d", length)
-	buf := make([]byte, length)
-	if _, err := io.ReadFull(conn, buf); err != nil {
-		log.Error("[ DeserializePacket ] couldn't read packet: ", err)
-		return nil, err
-	}
-	log.Debugf("[ DeserializePacket ] read packet")
-
-	msg := &Packet{}
-	dec := gob.NewDecoder(bytes.NewReader(buf))
-
-	err = dec.Decode(msg)
-	if err != nil {
-		log.Error("[ DeserializePacket ] couldn't decode packet: ", err)
-		return nil, err
-	}
-
-	log.Debugf("[ DeserializePacket ] decoded packet to %#v", msg)
-
-	return msg, nil
+func newExactResolver() *exactResolver {
+	return &exactResolver{}
 }
 
-func init() {
-	gob.Register(&RequestPulse{})
-	gob.Register(&RequestGetRandomHosts{})
-
-	gob.Register(&ResponsePulse{})
-	gob.Register(&ResponseGetRandomHosts{})
+// Resolve returns host's current network address.
+func (er *exactResolver) Resolve(address string) (string, error) {
+	return address, nil
 }

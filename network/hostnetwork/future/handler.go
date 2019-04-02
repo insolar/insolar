@@ -48,24 +48,24 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package transport
+package future
 
 import (
 	"context"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network/transport/packet"
-	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
 type packetHandlerImpl struct {
-	futureManager futureManager
+	futureManager Manager
 
 	received chan *packet.Packet
 }
 
-func newPacketHandlerImpl(futureManager futureManager) *packetHandlerImpl {
+func newPacketHandlerImpl(futureManager Manager) *packetHandlerImpl {
 	return &packetHandlerImpl{
 		futureManager: futureManager,
 		received:      make(chan *packet.Packet),

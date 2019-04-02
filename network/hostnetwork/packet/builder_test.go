@@ -48,43 +48,68 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package resolver
+package packet
 
 import (
-	"fmt"
-	"net"
-	"net/url"
+	"errors"
+	"testing"
 
-	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/testutils"
 )
 
-type fixedAddressResolver struct {
-	publicAddress string
+func TestBuilder_Build_RequestPacket(t *testing.T) {
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
+	builder := NewBuilder(sender)
+	m := builder.Receiver(receiver).Type(TestPacket).Request(&RequestTest{[]byte{0, 1, 2, 3}}).Build()
+
+	expectedPacket := &Packet{
+		Sender:        sender,
+		RemoteAddress: sender.Address.String(),
+		Receiver:      receiver,
+		Type:          TestPacket,
+		Data:          &RequestTest{[]byte{0, 1, 2, 3}},
+		IsResponse:    false,
+		Error:         nil,
+	}
+	require.Equal(t, expectedPacket, m)
 }
 
-func NewFixedAddressResolver(publicAddress string) PublicAddressResolver {
-	return newFixedAddressResolver(publicAddress)
+func TestBuilder_Build_ResponsePacket(t *testing.T) {
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
+	builder := NewBuilder(sender)
+	m := builder.Receiver(receiver).Type(TestPacket).Response(&ResponseTest{42}).Build()
+
+	expectedPacket := &Packet{
+		Sender:        sender,
+		RemoteAddress: sender.Address.String(),
+		Receiver:      receiver,
+		Type:          TestPacket,
+		Data:          &ResponseTest{42},
+		IsResponse:    true,
+		Error:         nil,
+	}
+	require.Equal(t, expectedPacket, m)
 }
 
-func newFixedAddressResolver(publicAddress string) *fixedAddressResolver {
-	return &fixedAddressResolver{
-		publicAddress: publicAddress,
-	}
-}
+func TestBuilder_Build_ErrorPacket(t *testing.T) {
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
+	builder := NewBuilder(sender)
+	m := builder.Receiver(receiver).Type(TestPacket).Response(&ResponseTest{}).Error(errors.New("test error")).Build()
 
-func (r *fixedAddressResolver) Resolve(conn net.PacketConn) (string, error) {
-	urlString := conn.LocalAddr().String()
-	url, err := url.Parse(urlString)
-
-	var port string
-	if err != nil {
-		_, port, _ = net.SplitHostPort(urlString)
-	} else {
-		port = url.Port()
+	expectedPacket := &Packet{
+		Sender:        sender,
+		RemoteAddress: sender.Address.String(),
+		Receiver:      receiver,
+		Type:          TestPacket,
+		Data:          &ResponseTest{},
+		IsResponse:    true,
+		Error:         errors.New("test error"),
 	}
-
-	if port == "" {
-		return "", errors.New("Failed to extract port from uri: " + urlString)
-	}
-	return fmt.Sprintf("%s:%s", r.publicAddress, port), nil
+	require.Equal(t, expectedPacket, m)
 }

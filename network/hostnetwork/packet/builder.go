@@ -48,14 +48,90 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package connection
+package packet
 
 import (
-	"net"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
-type udpConnectionFactory struct{}
+// Builder allows lazy building of packets.
+// Each operation returns new copy of a builder.
+type Builder struct {
+	actions []func(packet *Packet)
+}
 
-func (udpConnectionFactory *udpConnectionFactory) Create(address string) (net.PacketConn, error) {
-	return net.ListenPacket("udp", address)
+// NewBuilder returns empty packet builder.
+func NewBuilder(sender *host.Host) Builder {
+	cb := Builder{}
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Sender = sender
+		packet.RemoteAddress = sender.Address.String()
+	})
+	return cb
+}
+
+// Build returns configured packet.
+func (cb Builder) Build() (packet *Packet) {
+	packet = &Packet{}
+	for _, action := range cb.actions {
+		action(packet)
+	}
+	return
+}
+
+// Receiver sets packet receiver.
+func (cb Builder) Receiver(host *host.Host) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Receiver = host
+	})
+	return cb
+}
+
+// Type sets packet type.
+func (cb Builder) Type(packetType types.PacketType) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Type = packetType
+	})
+	return cb
+}
+
+// Request adds request data to packet.
+func (cb Builder) Request(request interface{}) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Data = request
+	})
+	return cb
+}
+
+func (cb Builder) RequestID(id network.RequestID) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.RequestID = id
+	})
+	return cb
+}
+
+func (cb Builder) TraceID(traceID string) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.TraceID = traceID
+	})
+	return cb
+}
+
+// Response adds response data to packet
+func (cb Builder) Response(response interface{}) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Data = response
+		packet.IsResponse = true
+	})
+	return cb
+}
+
+// Error adds error description to packet.
+func (cb Builder) Error(err error) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Error = err
+	})
+	return cb
 }
