@@ -179,6 +179,8 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		&routing.Table{},
 		cert,
 		internalTransport,
+		// use flaky network instead of internalTransport to imitate network delays
+		// NewFlakyNetwork(internalTransport),
 		hostNetwork,
 		merkle.NewCalculator(),
 		consensusNetwork,
