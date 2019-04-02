@@ -33,15 +33,15 @@ func GW(n *Network) Gateway {
 }
 
 func (n *Network) Init(ctx context.Context) error {
-
+	return nil
 }
 
 func (n *Network) Start(ctx context.Context) error {
-
+	return nil
 }
 
 func (n *Network) Stop(ctx context.Context) error {
-
+	return nil
 }
 
 func (n *Network) switchGateway(g Gateway) {
