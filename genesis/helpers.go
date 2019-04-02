@@ -24,24 +24,12 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
 var pathToContracts = "application/contract/"
-
-func serializeInstance(contractInstance interface{}) ([]byte, error) {
-	var instanceData []byte
-
-	instanceData, err := insolar.Serialize(contractInstance)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ serializeInstance ] Problem with CBORing")
-	}
-
-	return instanceData, nil
-}
 
 func getAbsolutePath(relativePath string) (string, error) {
 	_, currentFile, _, ok := runtime.Caller(0)

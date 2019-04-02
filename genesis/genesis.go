@@ -120,7 +120,7 @@ func (g *Genesis) activateRootDomain(
 		return nil, errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
 
-	instanceData, err := serializeInstance(rd)
+	instanceData, err := insolar.Serialize(rd)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ActivateRootDomain ]")
 	}
@@ -155,7 +155,7 @@ func (g *Genesis) activateNodeDomain(
 		return nil, errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
 
-	instanceData, err := serializeInstance(nd)
+	instanceData, err := insolar.Serialize(nd)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ActivateNodeDomain ]")
 	}
@@ -197,7 +197,7 @@ func (g *Genesis) activateRootMember(
 		return errors.Wrap(err, "[ ActivateRootMember ]")
 	}
 
-	instanceData, err := serializeInstance(m)
+	instanceData, err := insolar.Serialize(m)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ]")
 	}
@@ -232,7 +232,7 @@ func (g *Genesis) activateRootMember(
 func (g *Genesis) updateRootDomain(
 	ctx context.Context, domainDesc artifacts.ObjectDescriptor,
 ) error {
-	updateData, err := serializeInstance(&rootdomain.RootDomain{RootMember: *g.rootMemberRef, NodeDomainRef: *g.nodeDomainRef})
+	updateData, err := insolar.Serialize(&rootdomain.RootDomain{RootMember: *g.rootMemberRef, NodeDomainRef: *g.nodeDomainRef})
 	if err != nil {
 		return errors.Wrap(err, "[ updateRootDomain ]")
 	}
@@ -259,7 +259,7 @@ func (g *Genesis) activateRootMemberWallet(
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}
 
-	instanceData, err := serializeInstance(w)
+	instanceData, err := insolar.Serialize(w)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}
@@ -405,7 +405,7 @@ func (g *Genesis) activateNodes(ctx context.Context, cb *ContractsBuilder, nodes
 }
 
 func (g *Genesis) activateNodeRecord(ctx context.Context, cb *ContractsBuilder, record *noderecord.NodeRecord, name string) (*insolar.Reference, error) {
-	nodeData, err := serializeInstance(record)
+	nodeData, err := insolar.Serialize(record)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't serialize node instance")
 	}
@@ -648,7 +648,7 @@ func (g *Genesis) makeCertificates(nodes []genesisNode) error {
 }
 
 func (g *Genesis) updateNodeDomainIndex(ctx context.Context, nodeDomainDesc artifacts.ObjectDescriptor, indexMap map[string]string) error {
-	updateData, err := serializeInstance(&nodedomain.NodeDomain{NodeIndexPK: indexMap})
+	updateData, err := insolar.Serialize(&nodedomain.NodeDomain{NodeIndexPK: indexMap})
 	if err != nil {
 		return errors.Wrap(err, "[ updateNodeDomainIndex ]  Couldn't serialize NodeDomain")
 	}
