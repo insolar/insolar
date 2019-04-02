@@ -18,6 +18,7 @@ package genesis
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/pkg/errors"
@@ -85,17 +86,24 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 			},
 		)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "fail to set genesis pulse")
 		}
 		// Add initial drop
 		err = gi.DropModifier.Set(ctx, drop.Drop{JetID: insolar.ZeroJetID})
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "fail to set initial drop")
 		}
 
 		lastPulse, err := gi.PulseTracker.GetLatestPulse(ctx)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "fail to get last pulse")
+		}
+		if lastPulse.Pulse.PulseNumber != insolar.GenesisPulse.PulseNumber {
+			return nil, fmt.Errorf(
+				"last pulse number %v is not equal to genesis special value %v",
+				lastPulse.Pulse.PulseNumber,
+				insolar.GenesisPulse.PulseNumber,
+			)
 		}
 
 		virtRec := &object.GenesisRecord{}
@@ -106,7 +114,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 		}
 		err = gi.Records.Set(ctx, *genesisID, rec)
 		if err != nil {
-			return nil, errors.Wrap(err, "can't save record into storage")
+			return nil, errors.Wrap(err, "can't save genesis record into storage")
 		}
 
 		err = gi.ObjectStorage.SetObjectIndex(
@@ -119,7 +127,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 			},
 		)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "fail to set genesis index")
 		}
 
 		genesisRef := insolar.NewReference(*genesisID, *genesisID)
@@ -132,7 +140,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 		gi.genesisRef, err = createGenesisRecord()
 	}
 	if err != nil {
-		return errors.Wrap(err, "bootstrap failed")
+		return errors.Wrap(err, "genesis bootstrap failed")
 	}
 
 	return nil
