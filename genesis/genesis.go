@@ -37,6 +37,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
@@ -75,6 +76,7 @@ type Genesis struct {
 	config          *Config
 	keyOut          string
 	ArtifactsClient artifacts.Client `inject:""`
+	ArtifactManager artifact.Manager `inject:""`
 	MBLock          messageBusLocker `inject:""`
 }
 
@@ -565,7 +567,7 @@ func (g *Genesis) Start(ctx context.Context) error {
 		return errors.Wrap(err, "[ Genesis ] Couldn't create rootdomain instance")
 	}
 
-	cb := NewContractBuilder(g.ArtifactsClient)
+	cb := NewContractBuilder(g.ArtifactsClient, g.ArtifactManager)
 	g.prototypeRefs = cb.Prototypes
 	defer cb.Clean()
 

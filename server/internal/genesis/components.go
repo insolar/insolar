@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/logicrunner"
@@ -201,6 +202,8 @@ func initComponents(
 		cryptographyService,
 		keyProcessor,
 	}...)
+
+	components = append(components, artifact.NewScope(insolar.FirstPulseNumber))
 
 	cm.Inject(components...)
 
