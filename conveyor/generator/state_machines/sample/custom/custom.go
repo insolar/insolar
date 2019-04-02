@@ -16,5 +16,5 @@
 
 package custom
 
-type CustomEvent struct{}
-type CustomPayload struct{}
+type Event struct{}
+type Payload struct{}

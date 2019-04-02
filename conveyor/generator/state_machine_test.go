@@ -38,10 +38,10 @@ func Test_Generated_State_Machine(t *testing.T) {
 		if cnt == 3 {
 			return insolar.ConveyorPendingMessage{}
 		}
-		return custom.CustomEvent{}
+		return custom.Event{}
 	}
 	element.GetPayloadFunc = func() interface{} {
-		return &custom.CustomPayload{}
+		return &custom.Payload{}
 	}
 
 	active := true

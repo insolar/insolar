@@ -50,15 +50,15 @@ func Register(g *generator.Generator) {
 		Transition(StateThird, transitPresentThird, 0)
 }
 
-func initPresentHandler(ctx context.Context, helper fsm.SlotElementHelper, input custom.CustomEvent, payload interface{}) (fsm.ElementState, *custom.CustomPayload) {
+func initPresentHandler(ctx context.Context, helper fsm.SlotElementHelper, input custom.Event, payload interface{}) (fsm.ElementState, *custom.Payload) {
 	return StateFirst, nil
 }
 
-func initFutureHandler(ctx context.Context, helper fsm.SlotElementHelper, input custom.CustomEvent, payload interface{}) (fsm.ElementState, *custom.CustomPayload) {
+func initFutureHandler(ctx context.Context, helper fsm.SlotElementHelper, input custom.Event, payload interface{}) (fsm.ElementState, *custom.Payload) {
 	panic("implement me")
 }
 
-func transitPresentFirst(ctx context.Context, helper fsm.SlotElementHelper, input custom.CustomEvent, payload *custom.CustomPayload, adapterHelper adapter.SendResponseHelper) fsm.ElementState {
+func transitPresentFirst(ctx context.Context, helper fsm.SlotElementHelper, input custom.Event, payload *custom.Payload, adapterHelper adapter.SendResponseHelper) fsm.ElementState {
 	helper.DeactivateTill(fsm.Response)
 	err := adapterHelper.SendResponse(helper, &TestResult{}, uint32(StateFirst))
 	if err != nil {
@@ -67,10 +67,10 @@ func transitPresentFirst(ctx context.Context, helper fsm.SlotElementHelper, inpu
 	return StateSecond
 }
 
-func responseAdapterHelper(ctx context.Context, helper fsm.SlotElementHelper, input custom.CustomEvent, payload *custom.CustomPayload, respPayload *TestResult) fsm.ElementState {
+func responseAdapterHelper(ctx context.Context, helper fsm.SlotElementHelper, input custom.Event, payload *custom.Payload, respPayload *TestResult) fsm.ElementState {
 	return StateThird
 }
 
-func transitPresentThird(ctx context.Context, helper fsm.SlotElementHelper, input custom.CustomEvent, payload *custom.CustomPayload) fsm.ElementState {
+func transitPresentThird(ctx context.Context, helper fsm.SlotElementHelper, input custom.Event, payload *custom.Payload) fsm.ElementState {
 	return 0
 }
