@@ -22,6 +22,7 @@ import (
 )
 
 func makeTestQueue() Queue {
+	// you can use NewLockFreeQueue instead to test it
 	// return NewLockFreeQueue()
 	return NewMutexQueue()
 }

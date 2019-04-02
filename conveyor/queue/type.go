@@ -80,7 +80,7 @@ func maxSignal(signal1 uint32, signal2 uint32) uint32 {
 	return signal2
 }
 
-// Queue is interface for conveyor input and response queue
+// Queue is interface for slot input and response queue
 //go:generate minimock -i github.com/insolar/insolar/conveyor/queue.Queue -o ./ -s _mock.go
 type Queue interface {
 	// SinkPush adds one item to queue
