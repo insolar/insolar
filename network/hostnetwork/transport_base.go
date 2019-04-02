@@ -54,14 +54,15 @@ import (
 	"context"
 	"sync/atomic"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
-	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/packet"
-	"github.com/pkg/errors"
 )
 
 type transportBase struct {
@@ -77,7 +78,7 @@ func (h *transportBase) Start(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&h.started, 0, 1) {
 		return errors.New("Failed to start transport: double listen initiated")
 	}
-	if err := transport.ListenAndWaitUntilReady(ctx, h.transport); err != nil {
+	if err := h.transport.Listen(ctx); err != nil {
 		return errors.Wrap(err, "Failed to start transport: listen syscall failed")
 	}
 

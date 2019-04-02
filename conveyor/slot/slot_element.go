@@ -15,3 +15,157 @@
  */
 
 package slot
+
+import (
+	"fmt"
+
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
+	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
+	"github.com/insolar/insolar/conveyor/fsm"
+	"github.com/insolar/insolar/conveyor/generator/matrix"
+	"github.com/insolar/insolar/insolar"
+	"github.com/pkg/errors"
+)
+
+// ActivationStatus represents status of work for slot element
+type ActivationStatus int
+
+//go:generate stringer -type=ActivationStatus
+const (
+	EmptyElement = ActivationStatus(iota)
+	ActiveElement
+	NotActiveElement
+)
+
+type slotElement struct {
+	id              uint32
+	nodeID          uint32
+	parentElementID uint32
+	responseFuture  insolar.ConveyorFuture
+	inputEvent      interface{}
+	payload         interface{} // nolint: unused
+	postponedError  error       // nolint: structcheck
+	stateMachine    matrix.StateMachine
+	state           fsm.StateID
+
+	nextElement      *slotElement
+	prevElement      *slotElement
+	activationStatus ActivationStatus
+	slot             *slot
+}
+
+// newSlotElement creates new slot element with provided activation status
+func newSlotElement(activationStatus ActivationStatus, slot *slot) *slotElement {
+	return &slotElement{
+		activationStatus: activationStatus,
+		slot:             slot,
+	}
+}
+
+// ---- SlotElementRestrictedHelper
+
+func (se *slotElement) setDeleteState() {
+	se.activationStatus = EmptyElement
+}
+
+// nolint: unused
+func (se *slotElement) update(state fsm.StateID, payload interface{}, sm matrix.StateMachine) {
+	se.state = state
+	se.payload = payload
+	se.stateMachine = sm
+}
+
+func (se *slotElement) isDeactivated() bool {
+	return se.activationStatus == NotActiveElement
+}
+
+// GetParentElementID implements SlotElementRestrictedHelper
+func (se *slotElement) GetParentElementID() uint32 {
+	return se.parentElementID
+}
+
+// GetInputEvent implements SlotElementRestrictedHelper
+func (se *slotElement) GetInputEvent() interface{} {
+	return se.inputEvent
+}
+
+// GetResponseFuture implements SlotElementRestrictedHelper
+func (se *slotElement) GetResponseFuture() insolar.ConveyorFuture {
+	return se.responseFuture
+}
+
+// GetPayload implements SlotElementRestrictedHelper
+func (se *slotElement) GetPayload() interface{} {
+	return se.payload
+}
+
+// SendTask implements SlotElementHelper
+func (se *slotElement) SendTask(adapterID adapterid.ID, taskPayload interface{}, respHandlerID uint32) error {
+	adapter := adapterstorage.Manager.GetAdapterByID(adapterID)
+	if adapter == nil {
+		panic(fmt.Sprintf("[ SendTask ] No such adapter: %d", adapterID))
+	}
+
+	err := adapter.PushTask(se.slot, se.id, respHandlerID, taskPayload)
+	if err != nil {
+		return errors.Errorf("[ SendTask ] Can't PushTask: %s", err)
+	}
+	// TODO: I'm not really sure if we need it. Since handler might invoke more then one adapter
+	// and after call first one element become inactive
+	se.DeactivateTill(fsm.Response)
+
+	return nil
+}
+
+// Reactivate implements SlotElementRestrictedHelper
+func (se *slotElement) Reactivate() {
+	se.activationStatus = ActiveElement
+}
+
+// LeaveSequence implements SlotElementRestrictedHelper
+func (se *slotElement) LeaveSequence() {
+	panic("implement me")
+}
+
+// ---- SlotElementReadOnly
+
+// LeaveSequence implements SlotElementReadOnly
+func (se *slotElement) GetElementID() uint32 {
+	return se.id
+}
+
+// GetNodeID implements SlotElementReadOnly
+func (se *slotElement) GetNodeID() uint32 {
+	return se.nodeID
+}
+
+// GetType implements SlotElementReadOnly
+func (se *slotElement) GetType() fsm.ID {
+	return se.stateMachine.GetTypeID()
+}
+
+// GetState implements SlotElementReadOnly
+func (se *slotElement) GetState() fsm.StateID {
+	return se.state
+}
+
+// ---- SlotElementHelper
+
+// InformParent implements SlotElementHelper
+func (se *slotElement) InformParent(payload interface{}) bool {
+	panic("implement me")
+}
+
+// DeactivateTill implements SlotElementHelper
+func (se *slotElement) DeactivateTill(reactivateOn fsm.ReactivateMode) {
+	switch reactivateOn {
+	case fsm.Empty:
+		panic("implement me")
+	case fsm.Response:
+		se.activationStatus = NotActiveElement
+	case fsm.Tick:
+		panic("implement me")
+	case fsm.SeqHead:
+		panic("implement me")
+	}
+}

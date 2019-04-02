@@ -45,7 +45,7 @@ type TaskSinkMock struct {
 	GetAdapterIDPreCounter uint64
 	GetAdapterIDMock       mTaskSinkMockGetAdapterID
 
-	PushTaskFunc       func(p AdapterToSlotResponseSink, p1 uint32, p2 uint32, p3 interface{}) (r error)
+	PushTaskFunc       func(p ResponseSink, p1 uint32, p2 uint32, p3 interface{}) (r error)
 	PushTaskCounter    uint64
 	PushTaskPreCounter uint64
 	PushTaskMock       mTaskSinkMockPushTask
@@ -708,7 +708,7 @@ type TaskSinkMockPushTaskExpectation struct {
 }
 
 type TaskSinkMockPushTaskInput struct {
-	p  AdapterToSlotResponseSink
+	p  ResponseSink
 	p1 uint32
 	p2 uint32
 	p3 interface{}
@@ -719,7 +719,7 @@ type TaskSinkMockPushTaskResult struct {
 }
 
 //Expect specifies that invocation of TaskSink.PushTask is expected from 1 to Infinity times
-func (m *mTaskSinkMockPushTask) Expect(p AdapterToSlotResponseSink, p1 uint32, p2 uint32, p3 interface{}) *mTaskSinkMockPushTask {
+func (m *mTaskSinkMockPushTask) Expect(p ResponseSink, p1 uint32, p2 uint32, p3 interface{}) *mTaskSinkMockPushTask {
 	m.mock.PushTaskFunc = nil
 	m.expectationSeries = nil
 
@@ -743,7 +743,7 @@ func (m *mTaskSinkMockPushTask) Return(r error) *TaskSinkMock {
 }
 
 //ExpectOnce specifies that invocation of TaskSink.PushTask is expected once
-func (m *mTaskSinkMockPushTask) ExpectOnce(p AdapterToSlotResponseSink, p1 uint32, p2 uint32, p3 interface{}) *TaskSinkMockPushTaskExpectation {
+func (m *mTaskSinkMockPushTask) ExpectOnce(p ResponseSink, p1 uint32, p2 uint32, p3 interface{}) *TaskSinkMockPushTaskExpectation {
 	m.mock.PushTaskFunc = nil
 	m.mainExpectation = nil
 
@@ -758,7 +758,7 @@ func (e *TaskSinkMockPushTaskExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of TaskSink.PushTask method
-func (m *mTaskSinkMockPushTask) Set(f func(p AdapterToSlotResponseSink, p1 uint32, p2 uint32, p3 interface{}) (r error)) *TaskSinkMock {
+func (m *mTaskSinkMockPushTask) Set(f func(p ResponseSink, p1 uint32, p2 uint32, p3 interface{}) (r error)) *TaskSinkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -767,7 +767,7 @@ func (m *mTaskSinkMockPushTask) Set(f func(p AdapterToSlotResponseSink, p1 uint3
 }
 
 //PushTask implements github.com/insolar/insolar/conveyor/adapter.TaskSink interface
-func (m *TaskSinkMock) PushTask(p AdapterToSlotResponseSink, p1 uint32, p2 uint32, p3 interface{}) (r error) {
+func (m *TaskSinkMock) PushTask(p ResponseSink, p1 uint32, p2 uint32, p3 interface{}) (r error) {
 	counter := atomic.AddUint64(&m.PushTaskPreCounter, 1)
 	defer atomic.AddUint64(&m.PushTaskCounter, 1)
 

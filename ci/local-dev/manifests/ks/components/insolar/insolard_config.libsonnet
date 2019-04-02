@@ -10,7 +10,6 @@ local insolar_params = params.insolar;
         "transport": {
             "protocol": "TCP",
             "address": "0.0.0.0:" + insolar_params.tcp_transport_port,
-            "behindnat": false
         },
         "bootstraphosts": [],
         "isrelay": false,

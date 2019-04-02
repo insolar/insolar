@@ -15,3 +15,32 @@
  */
 
 package slot
+
+import (
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
+)
+
+// AdapterResponse gives access to response of adapter
+//go:generate minimock -i github.com/insolar/insolar/conveyor.AdapterResponse -o ./ -s _mock.go
+type AdapterResponse interface {
+	// GetAdapterID returns adapter id
+	GetAdapterID() adapterid.ID
+	// GetElementID returns element id
+	GetElementID() uint32
+	// GetHandlerID returns handler id
+	GetHandlerID() uint32
+	// GetRespPayload returns payload
+	GetRespPayload() interface{}
+}
+
+// PulseState is the states of pulse inside slot
+type PulseState int
+
+//go:generate stringer -type=PulseState
+const (
+	Unallocated = PulseState(iota)
+	Future
+	Present
+	Past
+	Antique
+)

@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/conveyor"
+	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
@@ -38,6 +39,7 @@ import (
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/state"
+	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
@@ -108,9 +110,8 @@ func initComponents(
 	certManager insolar.CertificateManager,
 	isGenesis bool,
 
-) (*component.Manager, error) {
+) (*component.Manager, insolar.TerminationHandler, error) {
 	cm := component.Manager{}
-	terminationHandler := insolar.NewTerminationHandler()
 
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
@@ -120,6 +121,8 @@ func initComponents(
 
 	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, isGenesis)
 	checkError(ctx, err, "failed to start Network")
+
+	terminationHandler := termination.NewHandler(nw)
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	parcelFactory := messagebus.NewParcelFactory()
@@ -136,7 +139,7 @@ func initComponents(
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
 
-	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"))
+	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
 	checkError(ctx, err, "failed to start Metrics")
 
 	networkSwitcher, err := state.NewNetworkSwitcher()
@@ -187,7 +190,8 @@ func initComponents(
 		keyProcessor,
 	}...)
 
+	components = append(components, adapterstorage.GetAllProcessors(certManager.GetCertificate().GetRole())...)
 	cm.Inject(components...)
 
-	return &cm, nil
+	return &cm, terminationHandler, nil
 }

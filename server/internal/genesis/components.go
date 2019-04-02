@@ -19,6 +19,8 @@ package genesis
 import (
 	"context"
 
+	"github.com/insolar/insolar/network/termination"
+
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -114,8 +116,6 @@ func initComponents(
 
 ) (*component.Manager, error) {
 	cm := component.Manager{}
-	terminationHandler := insolar.NewTerminationHandler()
-
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
 
@@ -124,6 +124,8 @@ func initComponents(
 
 	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, isGenesis)
 	checkError(ctx, err, "failed to start Network")
+
+	terminationHandler := termination.NewHandler(nw)
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	parcelFactory := messagebus.NewParcelFactory()
@@ -146,10 +148,12 @@ func initComponents(
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
 
+	nodeRole := certManager.GetCertificate().GetRole().String()
 	metricsHandler, err := metrics.NewMetrics(
 		ctx,
 		cfg.Metrics,
-		metrics.GetInsolarRegistry(certManager.GetCertificate().GetRole().String()),
+		metrics.GetInsolarRegistry(nodeRole),
+		nodeRole,
 	)
 	checkError(ctx, err, "failed to start Metrics")
 
@@ -204,7 +208,7 @@ func initComponents(
 		keyProcessor,
 	}...)
 
-	components = append(components, adapterstorage.GetAllProcessors()...)
+	components = append(components, adapterstorage.GetAllProcessors(certManager.GetCertificate().GetRole())...)
 	cm.Inject(components...)
 
 	return &cm, nil
