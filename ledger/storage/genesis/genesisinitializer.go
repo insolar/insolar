@@ -65,7 +65,6 @@ func (gi *genesisInitializer) GenesisRef() *insolar.Reference {
 func (gi *genesisInitializer) Init(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("start storage bootstrap")
-	jetID := *insolar.NewJetID(0, nil)
 
 	getGenesisRef := func() (*insolar.Reference, error) {
 		buff, err := gi.DB.Get(ctx, storage.GenesisPrefixKey())
@@ -88,8 +87,8 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		// It should be 0. Because pulse after 65537 will try to use a hash of drop between 0 - 65537
-		err = gi.DropModifier.Set(ctx, drop.Drop{JetID: jetID})
+		// Add initial drop
+		err = gi.DropModifier.Set(ctx, drop.Drop{JetID: insolar.ZeroJetID})
 		if err != nil {
 			return nil, err
 		}
@@ -103,7 +102,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 		genesisID := object.NewRecordIDFromRecord(gi.PlatformCryptographyScheme, lastPulse.Pulse.PulseNumber, virtRec)
 		rec := record.MaterialRecord{
 			Record: virtRec,
-			JetID:  jetID,
+			JetID:  insolar.ID(insolar.ZeroJetID),
 		}
 		err = gi.Records.Set(ctx, *genesisID, rec)
 		if err != nil {
@@ -112,9 +111,12 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 
 		err = gi.ObjectStorage.SetObjectIndex(
 			ctx,
-			insolar.ID(jetID),
+			insolar.ID(insolar.ZeroJetID),
 			genesisID,
-			&object.Lifeline{LatestState: genesisID, LatestStateApproved: genesisID},
+			&object.Lifeline{
+				LatestState:         genesisID,
+				LatestStateApproved: genesisID,
+			},
 		)
 		if err != nil {
 			return nil, err
