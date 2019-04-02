@@ -22,13 +22,15 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar"
 	"github.com/insolar/insolar/core"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/jet"
 	"github.com/insolar/insolar/ledger/storage/nodes"
 	"github.com/insolar/insolar/utils/entropy"
-	"github.com/pkg/errors"
 )
 
 // JetCoordinator is responsible for all jet interactions
@@ -160,6 +162,11 @@ func (jc *JetCoordinator) LightExecutorForJet(
 	if err != nil {
 		return nil, err
 	}
+	inslogger.FromContext(ctx).Debug(
+		"jet miss: node ", nodes[0].String(),
+		" is LME for ", jetID.DebugString(),
+		" in pulse ", pulse,
+	)
 	return &nodes[0], nil
 }
 
