@@ -37,6 +37,7 @@ import (
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/state"
+	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
@@ -107,9 +108,8 @@ func initComponents(
 	certManager insolar.CertificateManager,
 	isGenesis bool,
 
-) (*component.Manager, error) {
+) (*component.Manager, insolar.TerminationHandler, error) {
 	cm := component.Manager{}
-	terminationHandler := insolar.NewTerminationHandler()
 
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
@@ -119,6 +119,8 @@ func initComponents(
 
 	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, isGenesis)
 	checkError(ctx, err, "failed to start Network")
+
+	terminationHandler := termination.NewHandler(nw)
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	parcelFactory := messagebus.NewParcelFactory()
@@ -184,5 +186,5 @@ func initComponents(
 
 	cm.Inject(components...)
 
-	return &cm, nil
+	return &cm, terminationHandler, nil
 }

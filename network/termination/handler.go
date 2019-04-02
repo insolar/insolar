@@ -48,75 +48,69 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package phases
+package termination
 
 import (
-	"crypto"
-	"testing"
+	"context"
+	"sync"
 
-	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/merkle"
-	"github.com/insolar/insolar/testutils/network"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func TestFirstPhase_HandlePulse(t *testing.T) {
-	firstPhase := &FirstPhaseImpl{}
+type terminationHandler struct {
+	sync.Mutex
+	done        chan insolar.LeaveApproved
+	terminating bool
 
-	node := node.NewNode(insolar.Reference{}, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
-	nodeKeeper := nodenetwork.NewNodeKeeper(node)
-	nodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{node})
-
-	pulseCalculatorMock := merkle.NewCalculatorMock(t)
-	communicatorMock := NewCommunicatorMock(t)
-	consensusNetworkMock := network.NewConsensusNetworkMock(t)
-	terminationHandler := testutils.NewTerminationHandlerMock(t)
-
-	cryptoServ := testutils.NewCryptographyServiceMock(t)
-	cryptoServ.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
-		signature := insolar.SignatureFromBytes(nil)
-		return &signature, nil
-	}
-	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
-		return true
-	}
-
-	cm := component.Manager{}
-	cm.Inject(cryptoServ, nodeKeeper, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock, terminationHandler)
-
-	require.NotNil(t, firstPhase.Calculator)
-	require.NotNil(t, firstPhase.NodeKeeper)
-	activeNodes := firstPhase.NodeKeeper.GetAccessor().GetActiveNodes()
-	assert.Equal(t, 1, len(activeNodes))
+	Network      insolar.Network      `inject:""`
+	PulseStorage insolar.PulseStorage `inject:""`
 }
 
-func Test_consensusReached(t *testing.T) {
-	assert.True(t, consensusReachedBFT(5, 6))
-	assert.False(t, consensusReachedBFT(4, 6))
-
-	assert.True(t, consensusReachedBFT(201, 300))
-	assert.False(t, consensusReachedBFT(200, 300))
-
-	assert.True(t, consensusReachedMajority(4, 6))
-	assert.False(t, consensusReachedMajority(3, 6))
-
-	assert.True(t, consensusReachedMajority(151, 300))
-	assert.False(t, consensusReachedMajority(150, 300))
+func NewHandler(nw insolar.Network) insolar.TerminationHandler {
+	return &terminationHandler{Network: nw}
 }
 
-func Test_getNodeState(t *testing.T) {
-	n := node.NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1:0", "")
-	assert.Equal(t, packets.Legit, getNodeState(n, insolar.FirstPulseNumber))
-	n.(node.MutableNode).SetState(insolar.NodeLeaving)
-	n.(node.MutableNode).SetLeavingETA(insolar.FirstPulseNumber + 10)
-	assert.Equal(t, packets.Legit, getNodeState(n, insolar.FirstPulseNumber))
-	n.(node.MutableNode).SetLeavingETA(insolar.FirstPulseNumber - 10)
-	assert.Equal(t, packets.TimedOut, getNodeState(n, insolar.FirstPulseNumber))
+// TODO take ETA by role of node
+func (t *terminationHandler) Leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) {
+	doneChan := t.leave(ctx, leaveAfterPulses)
+	<-doneChan
+}
+
+func (t *terminationHandler) leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) chan insolar.LeaveApproved {
+	t.Lock()
+	defer t.Unlock()
+
+	if !t.terminating {
+		t.terminating = true
+		t.done = make(chan insolar.LeaveApproved, 1)
+
+		if leaveAfterPulses == 0 {
+			inslogger.FromContext(ctx).Debug("terminationHandler.Leave() with 0")
+			t.Network.Leave(ctx, 0)
+		} else {
+			pulse, _ := t.PulseStorage.Current(ctx)
+			pulseDelta := pulse.NextPulseNumber - pulse.PulseNumber
+
+			inslogger.FromContext(ctx).Debugf("terminationHandler.Leave() with leaveAfterPulses: %+v, in pulse %+v", leaveAfterPulses, pulse.PulseNumber+leaveAfterPulses*pulseDelta)
+			t.Network.Leave(ctx, pulse.PulseNumber+leaveAfterPulses*pulseDelta)
+		}
+	}
+
+	return t.done
+}
+
+func (t *terminationHandler) OnLeaveApproved(ctx context.Context) {
+	t.Lock()
+	defer t.Unlock()
+	if t.terminating {
+		inslogger.FromContext(ctx).Debug("terminationHandler.OnLeaveApproved() received")
+		t.terminating = false
+		close(t.done)
+	}
+}
+
+func (t *terminationHandler) Abort() {
+	panic("Node leave acknowledged by network. Goodbye!")
 }

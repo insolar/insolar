@@ -56,16 +56,16 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/nodekeeper"
-	"github.com/insolar/insolar/testutils/terminationhandler"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 type calculatorErrorSuite struct {
@@ -179,7 +179,7 @@ func TestCalculatorError(t *testing.T) {
 	pulseManager := testutils.NewPulseStorageMock(t)
 
 	nk := nodekeeper.GetTestNodekeeper(service)
-	th := terminationhandler.NewTestHandler()
+	th := testutils.NewTerminationHandlerMock(t)
 
 	am := staterMock{
 		stateFunc: func() (bytes []byte, e error) {
@@ -246,7 +246,7 @@ func TestCalculatorLedgerError(t *testing.T) {
 
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	nk := nodekeeper.GetTestNodekeeper(service)
-	th := terminationhandler.NewTestHandler()
+	th := testutils.NewTerminationHandlerMock(t)
 	cm.Inject(th, nk, &am, calculator, service, scheme)
 
 	require.NotNil(t, calculator.ArtifactManager)

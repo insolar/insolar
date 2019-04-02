@@ -30,44 +30,37 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/stretchr/testify/assert"
-
 	"github.com/stretchr/testify/suite"
 	"github.com/ugorji/go/codec"
-
-	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/testutils/terminationhandler"
-
-	"github.com/insolar/insolar/contractrequester"
-	"github.com/insolar/insolar/ledger/pulsemanager"
-	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/logicrunner/goplugin"
-
-	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
-
-	"github.com/insolar/insolar/cryptography"
-
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/messagebus"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils/network"
-	"github.com/insolar/insolar/testutils/nodekeeper"
 
 	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/contract/rootdomain"
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/contractrequester"
+	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/pulsemanager"
+	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
+	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
+	"github.com/insolar/insolar/messagebus"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/network"
+	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 )
 
@@ -172,7 +165,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
 	cr, err := contractrequester.New()
 	pulseStorage := l.PulseManager.(*pulsemanager.PulseManager).PulseStorage
-	nth := terminationhandler.NewTestHandler()
+	nth := testutils.NewTerminationHandlerMock(s.T())
 
 	cm.Inject(db, pulseStorage, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, nth, mock)
 	err = cm.Init(ctx)

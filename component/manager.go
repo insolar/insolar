@@ -160,6 +160,27 @@ func (m *Manager) Init(ctx context.Context) error {
 }
 
 // Stop invokes Stop method of all components which implements Starter interface
+func (m *Manager) GracefulStop(ctx context.Context) error {
+	for i := len(m.components) - 1; i >= 0; i-- {
+		if !m.isManaged(m.components[i]) {
+			continue
+		}
+		name := reflect.TypeOf(m.components[i]).Elem().String()
+		if s, ok := m.components[i].(GracefulStopper); ok {
+			log.Debug("ComponentManager: GracefulStop component: ", name)
+
+			err := s.GracefulStop(ctx)
+			if err != nil {
+				return errors.Wrap(err, "Failed to gracefully stop components.")
+			}
+		} else {
+			log.Debugf("ComponentManager: Component %s has no GracefulStop method", name)
+		}
+	}
+	return nil
+}
+
+// Stop invokes Stop method of all components which implements Starter interface
 func (m *Manager) Stop(ctx context.Context) error {
 
 	for i := len(m.components) - 1; i >= 0; i-- {

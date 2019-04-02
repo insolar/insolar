@@ -231,6 +231,19 @@ func (n *ServiceNetwork) Leave(ctx context.Context, ETA insolar.PulseNumber) {
 	n.NodeKeeper.GetClaimQueue().Push(&packets.NodeLeaveClaim{ETA: ETA})
 }
 
+func (n *ServiceNetwork) GracefulStop(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx)
+	// node leaving from network
+	// all components need to do what they want over net in gracefulStop
+	if !n.isGenesis {
+		logger.Info("ServiceNetwork.GracefulStop wait for accepting leaving claim")
+		n.TerminationHandler.Leave(ctx, 0)
+		logger.Info("ServiceNetwork.GracefulStop - leaving claim accepted")
+	}
+
+	return nil
+}
+
 // Stop implements insolar.Component
 func (n *ServiceNetwork) Stop(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("Stopping network component manager...")
