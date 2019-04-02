@@ -72,13 +72,13 @@ func TestBareHelloworld(t *testing.T) {
 
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, db, cleaner := artifacts.TmpLedger(
-		t, "", insolar.StaticRoleLightMaterial,
+		t,
+		"",
 		insolar.Components{
 			LogicRunner: lr,
 			NodeNetwork: nk,
 			MessageBus:  mb,
 		},
-		true,
 	)
 	defer cleaner()
 

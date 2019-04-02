@@ -461,14 +461,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
 	}
 
-	// if m.NodeNet.GetOrigin().Role() == insolar.StaticRoleVirtual {
-	// 	err = m.LR.OnPulse(ctx, newPulse)
-	// }
-	//
-	// if err != nil {
-	// 	return err
-	// }
-
 	return nil
 }
 

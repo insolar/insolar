@@ -141,14 +141,14 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	nw := network.GetTestNetwork()
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, db, cleaner := artifacts.TmpLedger(
-		s.T(), "", insolar.StaticRoleLightMaterial,
+		s.T(),
+		"",
 		insolar.Components{
 			LogicRunner: lr,
 			NodeNetwork: nk,
 			MessageBus:  mb,
 			Network:     nw,
 		},
-		false,
 	)
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())

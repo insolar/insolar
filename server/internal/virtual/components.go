@@ -163,7 +163,7 @@ func initComponents(
 		certManager,
 		nodeNetwork,
 		nw,
-		pulsemanager.NewPulseManager(cfg.Ledger),
+		pulsemanager.NewPulseManager(),
 	)
 
 	components := ledger.GetLedgerComponents(cfg.Ledger, certManager.GetCertificate())

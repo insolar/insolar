@@ -96,7 +96,7 @@ func NewTestLedger(
 // TmpLedger creates ledger on top of temporary database.
 // Returns *ledger.Ledger and cleanup function.
 // DEPRECATED
-func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c insolar.Components, closeJets bool) (*TMPLedger, storage.DBContext, func()) {
+func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, storage.DBContext, func()) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
@@ -124,7 +124,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	am.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
 	conf.PulseManager.HeavySyncEnabled = false
-	pm := pulsemanager.NewPulseManager(conf)
+	pm := pulsemanager.NewPulseManager()
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)
 	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
@@ -217,21 +217,12 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	pm.LR = c.LogicRunner
 	pm.ActiveListSwapper = alsMock
 	pm.PulseStorage = ps
-	pm.JetAccessor = js
-	pm.JetModifier = js
-	pm.DropModifier = ds
-	pm.DropAccessor = ds
-	pm.DropCleaner = nil
-	pm.ObjectStorage = os
 	pm.Nodes = ns
 	pm.NodeSetter = ns
 	pm.PulseTracker = pt
-	pm.ReplicaStorage = rs
-	pm.StorageCleaner = cl
 
 	hdw := artifactmanager.NewHotDataWaiterConcrete()
 
-	pm.HotDataWaiter = hdw
 	handler.HotDataWaiter = hdw
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(t)
@@ -252,11 +243,6 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	err = handler.Init(ctx)
 	if err != nil {
 		panic(err)
-	}
-
-	if closeJets {
-		err := pm.HotDataWaiter.Unlock(ctx, insolar.ID(*insolar.NewJetID(0, nil)))
-		require.NoError(t, err)
 	}
 
 	// Create ledger.
