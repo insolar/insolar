@@ -24,8 +24,8 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger"
-	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -54,9 +54,9 @@ type replicaIterSuite struct {
 	// TODO: @imarkin 28.03.2019 - remove it after all new storages integration (INS-2013, etc)
 	objectStorage storage.ObjectStorage
 
-	dropModifier  drop.Modifier
-	dropAccessor  drop.Accessor
-	blobModifier  blob.Modifier
+	dropModifier   drop.Modifier
+	dropAccessor   drop.Accessor
+	blobModifier   blob.Modifier
 	recordModifier object.RecordModifier
 }
 
@@ -152,6 +152,7 @@ func Test_StoreKeyValues(t *testing.T) {
 			scheme,
 			tmpDB,
 			store.NewMemoryMockDB(),
+			bs,
 			os,
 			ds,
 			recordStorage,
@@ -445,7 +446,7 @@ func addRecords(
 ) {
 	// set blob
 	blobID := object.CalculateIDForBlob(testutils.NewPlatformCryptographyScheme(), pulsenum, []byte("100500"))
-	err = blobModifier.Set(ctx, *blobID, blob.Blob{Value: []byte("100500"), JetID: insolar.JetID(jetID)})
+	err := blobModifier.Set(ctx, *blobID, blob.Blob{Value: []byte("100500"), JetID: insolar.JetID(jetID)})
 	require.NoError(t, err)
 
 	// set index of record

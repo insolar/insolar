@@ -31,16 +31,16 @@ import (
 )
 
 type Handler struct {
-	Bus            insolar.MessageBus     `inject:""`
-	JetCoordinator insolar.JetCoordinator `inject:""`
-	HeavySync      insolar.HeavySync      `inject:""`
+	Bus            insolar.MessageBus                 `inject:""`
+	JetCoordinator insolar.JetCoordinator             `inject:""`
+	HeavySync      insolar.HeavySync                  `inject:""`
 	PCS            insolar.PlatformCryptographyScheme `inject:""`
 
 	// TODO: @imarkin 27.03.2019 - remove it after all new storages integration (INS-2013, etc)
-	ObjectStorage storage.ObjectStorage `inject:""`BlobAccessor   blob.Accessor                      `inject:""`
+	ObjectStorage storage.ObjectStorage `inject:""`
 
-	BlobAccessor   blob.Accessor                      `inject:""`
-	Records object.RecordAccessor `inject:""`
+	BlobAccessor blob.Accessor         `inject:""`
+	Records      object.RecordAccessor `inject:""`
 
 	jetID insolar.JetID
 }

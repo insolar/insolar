@@ -19,8 +19,6 @@ package storage
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar/record"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/object"
 )

@@ -83,7 +83,6 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 
 	objectStorage := storage.NewObjectStorage()
 	pulseTracker := storage.NewPulseTracker()
-	dropModifier := drop.NewStorageDB()
 
 	recordStorage := object.NewRecordMemory()
 	recordAccessor := recordStorage

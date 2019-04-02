@@ -405,21 +405,8 @@ func addRecords(
 	pn insolar.PulseNumber,
 	parentID *insolar.ID,
 ) {
-	// set record
-	parentID, err := objectStorage.SetRecord(
-		ctx,
-		jetID,
-		pn,
-		&object.ActivateRecord{
-			SideEffectRecord: object.SideEffectRecord{
-				Domain: testutils.RandomRef(),
-			},
-		},
-	)
-	require.NoError(t, err)
-
 	blobID := object.CalculateIDForBlob(testutils.NewPlatformCryptographyScheme(), pn, []byte("100500"))
-	err = blobModifier.Set(ctx, *blobID, blob.Blob{Value: []byte("100500"), JetID: insolar.JetID(jetID)})
+	err := blobModifier.Set(ctx, *blobID, blob.Blob{Value: []byte("100500"), JetID: insolar.JetID(jetID)})
 	require.NoError(t, err)
 
 	// set index of record

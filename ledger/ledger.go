@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/ledger/heavy"
 	"github.com/insolar/insolar/ledger/heavyserver"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
-	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
@@ -35,6 +34,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/ledger/storage/object"
 )
 
 // GetLedgerComponents returns ledger components.
@@ -78,7 +78,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		blobModifier = blobDB
 		blobAccessor = blobDB
 
-		records := object.NewRecordDB(newDB)
+		records := object.NewRecordDB(db)
 		recordModifier = records
 		recordAccessor = records
 	default:
@@ -103,7 +103,6 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	components := []interface{}{
 		legacyDB,
 		db,
-		newDB,
 		idLocker,
 		dropModifier,
 		dropAccessor,
