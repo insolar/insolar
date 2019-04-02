@@ -93,26 +93,22 @@ func TestRemoveOrigin(t *testing.T) {
 	second := &testNode{testutils.RandomRef()}
 
 	discoveryNodes := []core.DiscoveryNode{first, originNode, second}
-	result, err := RemoveOrigin(discoveryNodes, origin)
-	require.NoError(t, err)
+	result := RemoveOrigin(discoveryNodes, origin)
 	assert.Equal(t, []core.DiscoveryNode{first, second}, result)
 
 	discoveryNodes = []core.DiscoveryNode{first, second}
-	_, err = RemoveOrigin(discoveryNodes, origin)
-	assert.Error(t, err)
+	result = RemoveOrigin(discoveryNodes, origin)
+	assert.Equal(t, discoveryNodes, result)
 
 	discoveryNodes = []core.DiscoveryNode{first, originNode}
-	result, err = RemoveOrigin(discoveryNodes, origin)
-	require.NoError(t, err)
+	result = RemoveOrigin(discoveryNodes, origin)
 	assert.Equal(t, []core.DiscoveryNode{first}, result)
 
 	discoveryNodes = []core.DiscoveryNode{originNode, first}
-	result, err = RemoveOrigin(discoveryNodes, origin)
-	require.NoError(t, err)
+	result = RemoveOrigin(discoveryNodes, origin)
 	assert.Equal(t, []core.DiscoveryNode{first}, result)
 
 	discoveryNodes = []core.DiscoveryNode{originNode}
-	result, err = RemoveOrigin(discoveryNodes, origin)
-	require.NoError(t, err)
+	result = RemoveOrigin(discoveryNodes, origin)
 	assert.Empty(t, result)
 }
