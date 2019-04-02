@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/application/contract/noderecord"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
@@ -106,7 +107,7 @@ func mockGenesis(t *testing.T, ac artifacts.Client, am artifact.Manager) *Genesi
 
 func mockContractBuilder(t *testing.T, g *Genesis) *ContractsBuilder {
 	ref := testutils.RandomRef()
-	cb := NewContractBuilder(g.ArtifactsClient, g.ArtifactManager)
+	cb := NewContractBuilder(gen.Reference(), g.ArtifactsClient, g.ArtifactManager)
 	cb.Prototypes[nodeRecord] = &ref
 	return cb
 }

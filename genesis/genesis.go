@@ -574,7 +574,7 @@ func (g *Genesis) Start(ctx context.Context) error {
 		return errors.Wrap(err, "[ Genesis ] Couldn't create rootdomain instance")
 	}
 
-	cb := NewContractBuilder(g.ArtifactsClient, g.ArtifactManager)
+	cb := NewContractBuilder(*g.GenesisState.GenesisRef(), g.ArtifactsClient, g.ArtifactManager)
 	g.prototypeRefs = cb.Prototypes
 	defer cb.Clean()
 

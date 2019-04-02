@@ -71,12 +71,13 @@ type ContractsBuilder struct {
 	Codes      map[string]*insolar.Reference
 
 	artifactsClient artifacts.Client
+	genesisRef      insolar.Reference
 	artifactManager artifact.Manager
 }
 
 // NewContractBuilder returns a new `ContractsBuilder`,
 // requires initialized artifacts client (legacy), and artifact manager.
-func NewContractBuilder(ac artifacts.Client, am artifact.Manager) *ContractsBuilder {
+func NewContractBuilder(genesisRef insolar.Reference, ac artifacts.Client, am artifact.Manager) *ContractsBuilder {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	if err != nil {
 		return nil
@@ -88,6 +89,7 @@ func NewContractBuilder(ac artifacts.Client, am artifact.Manager) *ContractsBuil
 		Codes:      make(map[string]*insolar.Reference),
 
 		artifactsClient: ac,
+		genesisRef:      genesisRef,
 		artifactManager: am,
 	}
 	return cb
@@ -197,7 +199,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 			ctx,
 			*domainRef,
 			*cb.Prototypes[name],
-			*cb.artifactsClient.GenesisRef(), // FIXME: Only bootstrap can do this!
+			cb.genesisRef,
 			*codeRef,
 			nil,
 		)
