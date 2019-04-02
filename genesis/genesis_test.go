@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -42,14 +41,14 @@ const testDataPath = "gentestdata"
 func mockArtifactClient(t *testing.T) *artifacts.ClientMock {
 	amMock := artifacts.NewClientMock(t)
 	amMock.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
-		id := testutils.RandomID()
+		id := gen.ID()
 		return &id, nil
 	}
 	amMock.ActivateObjectFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r artifacts.ObjectDescriptor, r1 error) {
 		return artifacts.NewObjectDescriptorMock(t), nil
 	}
 	amMock.RegisterResultFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error) {
-		id := testutils.RandomID()
+		id := gen.ID()
 		return &id, nil
 	}
 	return amMock
@@ -59,7 +58,7 @@ func mockArtifactManager(t *testing.T) artifact.Manager {
 	osMock := storage.NewObjectStorageMock(t)
 
 	osMock.SetRecordFunc = func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 record.VirtualRecord) (r *insolar.ID, r1 error) {
-		id := testutils.RandomID()
+		id := gen.ID()
 		return &id, nil
 	}
 
@@ -79,7 +78,7 @@ func mockArtifactClientWithRegisterRequestError(t *testing.T) *artifacts.ClientM
 }
 
 func mockGenesis(t *testing.T, ac artifacts.Client, am artifact.Manager) *Genesis {
-	ref := testutils.RandomRef()
+	ref := gen.Reference()
 	var discoveryNodes []Node
 	discoveryNodes = append(discoveryNodes,
 		Node{
@@ -106,7 +105,7 @@ func mockGenesis(t *testing.T, ac artifacts.Client, am artifact.Manager) *Genesi
 }
 
 func mockContractBuilder(t *testing.T, g *Genesis) *ContractsBuilder {
-	ref := testutils.RandomRef()
+	ref := gen.Reference()
 	cb := NewContractBuilder(gen.Reference(), g.ArtifactsClient, g.ArtifactManager)
 	cb.Prototypes[nodeRecord] = &ref
 	return cb
@@ -237,7 +236,7 @@ func TestActivateNodeRecord_Activate_Err(t *testing.T) {
 
 	ac := artifacts.NewClientMock(t)
 	ac.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
-		id := testutils.RandomID()
+		id := gen.ID()
 		return &id, nil
 	}
 	ac.ActivateObjectFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r artifacts.ObjectDescriptor, r1 error) {
@@ -266,7 +265,7 @@ func TestActivateNodeRecord_RegisterResult_Err(t *testing.T) {
 
 	ac := artifacts.NewClientMock(t)
 	ac.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
-		id := testutils.RandomID()
+		id := gen.ID()
 		return &id, nil
 	}
 	ac.ActivateObjectFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r artifacts.ObjectDescriptor, r1 error) {
