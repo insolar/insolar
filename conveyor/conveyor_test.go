@@ -140,7 +140,7 @@ func initComponents(t *testing.T) {
 	cm := &component.Manager{}
 	ctx := context.TODO()
 
-	components := adapterstorage.GetAllProcessors()
+	components := adapterstorage.GetAllProcessors(insolar.StaticRoleUnknown)
 	components = append(components, pc, ledgerMock)
 	cm.Inject(components...)
 	err := cm.Init(ctx)

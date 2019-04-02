@@ -204,7 +204,7 @@ func initComponents(
 		keyProcessor,
 	}...)
 
-	components = append(components, adapterstorage.GetAllProcessors()...)
+	components = append(components, adapterstorage.GetAllProcessors(certManager.GetCertificate().GetRole())...)
 	cm.Inject(components...)
 
 	return &cm, nil
