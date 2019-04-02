@@ -76,7 +76,6 @@ func NewHandler(nw insolar.Network) insolar.TerminationHandler {
 func (t *terminationHandler) Leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) {
 	doneChan := t.leave(ctx, leaveAfterPulses)
 	<-doneChan
-	return
 }
 
 func (t *terminationHandler) leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) chan insolar.LeaveApproved {
