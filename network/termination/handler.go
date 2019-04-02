@@ -73,7 +73,13 @@ func NewHandler(nw insolar.Network) insolar.TerminationHandler {
 }
 
 // TODO take ETA by role of node
-func (t *terminationHandler) Leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) chan insolar.LeaveApproved {
+func (t *terminationHandler) Leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) {
+	doneChan := t.leave(ctx, leaveAfterPulses)
+	<-doneChan
+	return
+}
+
+func (t *terminationHandler) leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) chan insolar.LeaveApproved {
 	t.Lock()
 	defer t.Unlock()
 

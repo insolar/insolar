@@ -25,7 +25,8 @@ type LeaveApproved struct{}
 // TerminationHandler handles such node events as graceful stop, abort, etc.
 //go:generate minimock -i github.com/insolar/insolar/insolar.TerminationHandler -o ../testutils -s _mock.go
 type TerminationHandler interface {
-	Leave(context.Context, PulseNumber) chan LeaveApproved
+	// Leave locks until network accept leaving claim
+	Leave(context.Context, PulseNumber)
 	OnLeaveApproved(context.Context)
 	// Abort forces to stop all node components
 	Abort()

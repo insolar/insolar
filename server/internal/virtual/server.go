@@ -119,7 +119,7 @@ func (s *Server) Serve() {
 		inslog.Debug("caught sig: ", sig)
 
 		inslog.Warn("GRACEFULL STOP APP")
-		<-th.Leave(ctx, 10)
+		th.Leave(ctx, 10)
 		inslog.Info("main leave ends ")
 		err = cm.GracefulStop(ctx)
 		checkError(ctx, err, "failed to graceful stop components")

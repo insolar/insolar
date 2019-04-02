@@ -112,7 +112,7 @@ type LeaveTestSuite struct {
 
 func (s *LeaveTestSuite) TestLeaveNow() {
 	s.network.LeaveMock.Expect(s.ctx, 0)
-	s.handler.Leave(s.ctx, 0)
+	s.handler.leave(s.ctx, 0)
 
 	s.HandlerIsTerminating()
 }
@@ -128,7 +128,7 @@ func (s *LeaveTestSuite) TestLeaveEta() {
 		return testPulse, nil
 	}
 	s.network.LeaveMock.Expect(s.ctx, mockPulseNumber+leaveAfter*pulseDelta)
-	s.handler.Leave(s.ctx, leaveAfter)
+	s.handler.leave(s.ctx, leaveAfter)
 
 	s.HandlerIsTerminating()
 }

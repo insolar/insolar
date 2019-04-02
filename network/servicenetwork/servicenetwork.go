@@ -237,7 +237,7 @@ func (n *ServiceNetwork) GracefulStop(ctx context.Context) error {
 	// all components need to do what they want over net in gracefulStop
 	if !n.isGenesis {
 		logger.Info("ServiceNetwork.GracefulStop wait for accepting leaving claim")
-		<-n.TerminationHandler.Leave(ctx, 0)
+		n.TerminationHandler.Leave(ctx, 0)
 		logger.Info("ServiceNetwork.GracefulStop - leaving claim accepted")
 	}
 

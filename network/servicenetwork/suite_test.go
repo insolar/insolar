@@ -436,14 +436,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	s.Require().NoError(err)
 	terminationHandler := testutils.NewTerminationHandlerMock(s.T())
-	terminationHandler.LeaveFunc = func(p context.Context, p1 insolar.PulseNumber) (r chan insolar.LeaveApproved) {
-		chanel := make(chan insolar.LeaveApproved, 1)
-		go func() {
-			time.Sleep(2 * time.Second)
-			close(chanel)
-		}()
-		return chanel
-	}
+	terminationHandler.LeaveFunc = func(p context.Context, p1 insolar.PulseNumber) {}
 	terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {}
 	terminationHandler.AbortFunc = func() {}
 

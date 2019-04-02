@@ -25,7 +25,7 @@ type TerminationHandlerMock struct {
 	AbortPreCounter uint64
 	AbortMock       mTerminationHandlerMockAbort
 
-	LeaveFunc       func(p context.Context, p1 insolar.PulseNumber) (r chan insolar.LeaveApproved)
+	LeaveFunc       func(p context.Context, p1 insolar.PulseNumber)
 	LeaveCounter    uint64
 	LeavePreCounter uint64
 	LeaveMock       mTerminationHandlerMockLeave
@@ -168,17 +168,12 @@ type mTerminationHandlerMockLeave struct {
 }
 
 type TerminationHandlerMockLeaveExpectation struct {
-	input  *TerminationHandlerMockLeaveInput
-	result *TerminationHandlerMockLeaveResult
+	input *TerminationHandlerMockLeaveInput
 }
 
 type TerminationHandlerMockLeaveInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
-}
-
-type TerminationHandlerMockLeaveResult struct {
-	r chan insolar.LeaveApproved
 }
 
 //Expect specifies that invocation of TerminationHandler.Leave is expected from 1 to Infinity times
@@ -194,14 +189,14 @@ func (m *mTerminationHandlerMockLeave) Expect(p context.Context, p1 insolar.Puls
 }
 
 //Return specifies results of invocation of TerminationHandler.Leave
-func (m *mTerminationHandlerMockLeave) Return(r chan insolar.LeaveApproved) *TerminationHandlerMock {
+func (m *mTerminationHandlerMockLeave) Return() *TerminationHandlerMock {
 	m.mock.LeaveFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &TerminationHandlerMockLeaveExpectation{}
 	}
-	m.mainExpectation.result = &TerminationHandlerMockLeaveResult{r}
+
 	return m.mock
 }
 
@@ -216,12 +211,8 @@ func (m *mTerminationHandlerMockLeave) ExpectOnce(p context.Context, p1 insolar.
 	return expectation
 }
 
-func (e *TerminationHandlerMockLeaveExpectation) Return(r chan insolar.LeaveApproved) {
-	e.result = &TerminationHandlerMockLeaveResult{r}
-}
-
 //Set uses given function f as a mock of TerminationHandler.Leave method
-func (m *mTerminationHandlerMockLeave) Set(f func(p context.Context, p1 insolar.PulseNumber) (r chan insolar.LeaveApproved)) *TerminationHandlerMock {
+func (m *mTerminationHandlerMockLeave) Set(f func(p context.Context, p1 insolar.PulseNumber)) *TerminationHandlerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -230,7 +221,7 @@ func (m *mTerminationHandlerMockLeave) Set(f func(p context.Context, p1 insolar.
 }
 
 //Leave implements github.com/insolar/insolar/insolar.TerminationHandler interface
-func (m *TerminationHandlerMock) Leave(p context.Context, p1 insolar.PulseNumber) (r chan insolar.LeaveApproved) {
+func (m *TerminationHandlerMock) Leave(p context.Context, p1 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.LeavePreCounter, 1)
 	defer atomic.AddUint64(&m.LeaveCounter, 1)
 
@@ -243,14 +234,6 @@ func (m *TerminationHandlerMock) Leave(p context.Context, p1 insolar.PulseNumber
 		input := m.LeaveMock.expectationSeries[counter-1].input
 		testify_assert.Equal(m.t, *input, TerminationHandlerMockLeaveInput{p, p1}, "TerminationHandler.Leave got unexpected parameters")
 
-		result := m.LeaveMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the TerminationHandlerMock.Leave")
-			return
-		}
-
-		r = result.r
-
 		return
 	}
 
@@ -261,13 +244,6 @@ func (m *TerminationHandlerMock) Leave(p context.Context, p1 insolar.PulseNumber
 			testify_assert.Equal(m.t, *input, TerminationHandlerMockLeaveInput{p, p1}, "TerminationHandler.Leave got unexpected parameters")
 		}
 
-		result := m.LeaveMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the TerminationHandlerMock.Leave")
-		}
-
-		r = result.r
-
 		return
 	}
 
@@ -276,7 +252,7 @@ func (m *TerminationHandlerMock) Leave(p context.Context, p1 insolar.PulseNumber
 		return
 	}
 
-	return m.LeaveFunc(p, p1)
+	m.LeaveFunc(p, p1)
 }
 
 //LeaveMinimockCounter returns a count of TerminationHandlerMock.LeaveFunc invocations
