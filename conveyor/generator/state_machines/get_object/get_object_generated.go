@@ -20,11 +20,12 @@ import (
 	"context"
 	"errors"
 
-	"github.com/insolar/insolar/conveyor/statemachine"
+	"github.com/insolar/insolar/conveyor/adapter/adapterhelper"
 	"github.com/insolar/insolar/conveyor/fsm"
+	"github.com/insolar/insolar/conveyor/statemachine"
 )
 
-func RawGetObjectStateMachinePresentFactory() *statemachine.StateMachine {
+func RawGetObjectStateMachinePresentFactory(helpers *adapterhelper.Catalog) *statemachine.StateMachine {
 	return &statemachine.StateMachine{
 		ID: 1,
 		States: []statemachine.State{
@@ -60,7 +61,7 @@ func RawGetObjectStateMachinePresentFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
 					// todo here must be real adapter helper
-					state := GetJet(ctx, element, aInput, aPayload, nil)
+					state := GetJet(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -88,7 +89,7 @@ func RawGetObjectStateMachinePresentFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
 					// todo here must be real adapter helper
-					state := FetchJet(ctx, element, aInput, aPayload, nil)
+					state := FetchJet(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -116,7 +117,7 @@ func RawGetObjectStateMachinePresentFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
 					// todo here must be real adapter helper
-					state := WaitHotData(ctx, element, aInput, aPayload, nil)
+					state := WaitHotData(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -144,7 +145,7 @@ func RawGetObjectStateMachinePresentFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
 					// todo here must be real adapter helper
-					state := CheckIndex(ctx, element, aInput, aPayload, nil)
+					state := CheckIndex(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -172,7 +173,7 @@ func RawGetObjectStateMachinePresentFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
 					// todo here must be real adapter helper
-					state := FetchIndex(ctx, element, aInput, aPayload, nil)
+					state := FetchIndex(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -200,7 +201,7 @@ func RawGetObjectStateMachinePresentFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
 					// todo here must be real adapter helper
-					state := CheckState(ctx, element, aInput, aPayload, nil)
+					state := CheckState(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -228,7 +229,7 @@ func RawGetObjectStateMachinePresentFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
 					// todo here must be real adapter helper
-					state := CheckJetForState(ctx, element, aInput, aPayload, nil)
+					state := CheckJetForState(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -256,7 +257,7 @@ func RawGetObjectStateMachinePresentFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
 					// todo here must be real adapter helper
-					state := FetchJetForState(ctx, element, aInput, aPayload, nil)
+					state := FetchJetForState(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -284,7 +285,7 @@ func RawGetObjectStateMachinePresentFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
 					// todo here must be real adapter helper
-					state := FetchState(ctx, element, aInput, aPayload, nil)
+					state := FetchState(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -312,7 +313,7 @@ func RawGetObjectStateMachinePresentFactory() *statemachine.StateMachine {
 	}
 }
 
-func RawGetObjectStateMachinePastFactory() *statemachine.StateMachine {
+func RawGetObjectStateMachinePastFactory(helpers *adapterhelper.Catalog) *statemachine.StateMachine {
 	return &statemachine.StateMachine{
 		ID: 1,
 		States: []statemachine.State{
@@ -337,7 +338,7 @@ func RawGetObjectStateMachinePastFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
                     // todo here must be real adapter helper
-					state := GetJet(ctx, element, aInput, aPayload, nil)
+					state := GetJet(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -363,7 +364,7 @@ func RawGetObjectStateMachinePastFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
                     // todo here must be real adapter helper
-					state := FetchJet(ctx, element, aInput, aPayload, nil)
+					state := FetchJet(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -389,7 +390,7 @@ func RawGetObjectStateMachinePastFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
                     // todo here must be real adapter helper
-					state := WaitHotData(ctx, element, aInput, aPayload, nil)
+					state := WaitHotData(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -415,7 +416,7 @@ func RawGetObjectStateMachinePastFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
                     // todo here must be real adapter helper
-					state := CheckIndex(ctx, element, aInput, aPayload, nil)
+					state := CheckIndex(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -441,7 +442,7 @@ func RawGetObjectStateMachinePastFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
                     // todo here must be real adapter helper
-					state := FetchIndex(ctx, element, aInput, aPayload, nil)
+					state := FetchIndex(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -467,7 +468,7 @@ func RawGetObjectStateMachinePastFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
                     // todo here must be real adapter helper
-					state := CheckState(ctx, element, aInput, aPayload, nil)
+					state := CheckState(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -493,7 +494,7 @@ func RawGetObjectStateMachinePastFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
                     // todo here must be real adapter helper
-					state := CheckJetForState(ctx, element, aInput, aPayload, nil)
+					state := CheckJetForState(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -519,7 +520,7 @@ func RawGetObjectStateMachinePastFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
                     // todo here must be real adapter helper
-					state := FetchJetForState(ctx, element, aInput, aPayload, nil)
+					state := FetchJetForState(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -545,7 +546,7 @@ func RawGetObjectStateMachinePastFactory() *statemachine.StateMachine {
 				    aPayload, ok := element.GetPayload().(*CustomPayload)
                     if !ok { return nil, 0, errors.New("wrong payload type") }
                     // todo here must be real adapter helper
-					state := FetchState(ctx, element, aInput, aPayload, nil)
+					state := FetchState(ctx, element, aInput, aPayload, helpers.SendResponseHelper)
                     return aPayload, state, nil
 					
 				},
@@ -571,7 +572,7 @@ func RawGetObjectStateMachinePastFactory() *statemachine.StateMachine {
 	}
 }
 
-func RawGetObjectStateMachineFutureFactory() *statemachine.StateMachine {
+func RawGetObjectStateMachineFutureFactory(helpers *adapterhelper.Catalog) *statemachine.StateMachine {
 	return &statemachine.StateMachine{
 		ID: 1,
 		States: []statemachine.State{

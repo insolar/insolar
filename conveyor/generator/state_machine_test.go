@@ -20,30 +20,68 @@ package main
 
 import (
 	"testing"
+	"time"
 
+	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
+	"github.com/insolar/insolar/insolar"
 )
 
 func Test_Generated_State_Machine(t *testing.T) {
+	cnt := 0
 	element := fsm.NewSlotElementHelperMock(t)
 	element.GetInputEventFunc = func() interface{} {
+		cnt++
+		if cnt == 3 {
+			return insolar.ConveyorPendingMessage{}
+		}
 		return sample.CustomEvent{}
 	}
 	element.GetPayloadFunc = func() interface{} {
 		return &sample.CustomPayload{}
 	}
 
-	machines := matrix.NewMatrix().GetPresentConfig()
+	active := true
 
+	element.DeactivateTillFunc = func(p fsm.ReactivateMode) {
+		active = false
+	}
+
+	machines := matrix.NewMatrix().GetPresentConfig()
 	var stateID fsm.StateID = 0
 	var elementState fsm.ElementState = 0
+	var err error
+
+	element.SendTaskFunc = func(adapterID adapterid.ID, taskPayload interface{}, respHandlerID uint32) error {
+		go func() {
+			time.Sleep(time.Second)
+			p := taskPayload.(adapter.SendResponseTask)
+			_, elementState, err = machines.GetStateMachineByID(matrix.SampleStateMachine).GetResponseHandler(fsm.StateID(respHandlerID))(element, p.Result)
+			if err != nil {
+				panic(err)
+			}
+			_, stateID = elementState.Parse()
+			active = true
+		}()
+		return nil
+	}
+
 	for {
-		_, elementState, _ = machines.GetStateMachineByID(matrix.SampleStateMachine).GetTransitionHandler(stateID)(element)
-		_, stateID = elementState.Parse()
-		if stateID == 0 {
-			break
+		if active {
+			handler := machines.GetStateMachineByID(matrix.SampleStateMachine).GetTransitionHandler(stateID)
+			if handler != nil {
+				_, elementState, err = handler(element)
+				if err != nil {
+					panic(err)
+				}
+				_, stateID = elementState.Parse()
+				if stateID == 0 {
+					break
+				}
+			}
 		}
 	}
 }

@@ -94,5 +94,20 @@ func newInitHandler(machine *StateMachine, f interface{}, states []fsm.ElementSt
 }
 
 func (h *handler) GetResponseAdapterType() string {
-	return h.params[4]
+	const ResponseAdapterParamIndex = 4
+	return h.params[ResponseAdapterParamIndex]
+}
+
+func (h *handler) GetAdapterHelperType() *string {
+	const AdapterHelperParamIndex = 4
+	if len(h.params) <= AdapterHelperParamIndex {
+		return nil
+	}
+
+	const adapterPrefix = "adapter."
+	if strings.HasPrefix(h.params[AdapterHelperParamIndex], adapterPrefix) {
+		result := h.params[AdapterHelperParamIndex][len(adapterPrefix):]
+		return &result
+	}
+	return &h.params[AdapterHelperParamIndex]
 }

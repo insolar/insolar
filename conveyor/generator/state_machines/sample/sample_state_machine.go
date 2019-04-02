@@ -19,19 +19,27 @@ package sample
 import (
 	"context"
 
+	"github.com/insolar/insolar/conveyor/adapter"
 	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/generator"
+	"github.com/insolar/insolar/insolar"
 )
 
 // custom types
 type CustomEvent struct{}
 type CustomPayload struct{}
-type CustomAdapterHelper interface{}
+
+type TestResult struct{}
+
+func (e *TestResult) Type() insolar.ReplyType {
+	return insolar.ReplyType(42)
+}
 
 const (
 	InitState fsm.ElementState = iota
 	StateFirst
 	StateSecond
+	StateThird
 )
 
 func Register(g *generator.Generator) {
@@ -39,7 +47,8 @@ func Register(g *generator.Generator) {
 		InitFuture(initFutureHandler).
 		Init(initPresentHandler, StateFirst).
 		Transition(StateFirst, transitPresentFirst, StateSecond).
-		Transition(StateSecond, transitPresentSecond, 0)
+		AdapterResponse(StateFirst, responseAdapterHelper, StateThird).
+		Transition(StateThird, transitPresentThird, 0)
 }
 
 func initPresentHandler(ctx context.Context, helper fsm.SlotElementHelper, input CustomEvent, payload interface{}) (fsm.ElementState, *CustomPayload) {
@@ -50,10 +59,19 @@ func initFutureHandler(ctx context.Context, helper fsm.SlotElementHelper, input 
 	panic("implement me")
 }
 
-func transitPresentFirst(ctx context.Context, helper fsm.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) fsm.ElementState {
+func transitPresentFirst(ctx context.Context, helper fsm.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper adapter.SendResponseHelper) fsm.ElementState {
+	helper.DeactivateTill(fsm.Response)
+	err := adapterHelper.SendResponse(helper, &TestResult{}, uint32(StateFirst))
+	if err != nil {
+		panic(err)
+	}
 	return StateSecond
 }
 
-func transitPresentSecond(ctx context.Context, helper fsm.SlotElementHelper, input CustomEvent, payload *CustomPayload, adapterHelper CustomAdapterHelper) fsm.ElementState {
+func responseAdapterHelper(ctx context.Context, helper fsm.SlotElementHelper, input CustomEvent, payload *CustomPayload, respPayload *TestResult) fsm.ElementState {
+	return StateThird
+}
+
+func transitPresentThird(ctx context.Context, helper fsm.SlotElementHelper, input CustomEvent, payload *CustomPayload) fsm.ElementState {
 	return 0
 }
