@@ -60,6 +60,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/utils"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -296,12 +297,7 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 	logger.Info("[ BootstrapDiscovery ] Network bootstrap between discovery nodes")
 	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.BootstrapDiscovery")
 	defer span.End()
-	discoveryNodes := bc.Certificate.GetDiscoveryNodes()
-	var err error
-	discoveryNodes, err = RemoveOrigin(discoveryNodes, *bc.Certificate.GetNodeRef())
-	if err != nil {
-		return nil, errors.Wrapf(err, "Discovery bootstrap failed")
-	}
+	discoveryNodes := RemoveOrigin(bc.Certificate.GetDiscoveryNodes(), *bc.Certificate.GetNodeRef())
 	discoveryCount := len(discoveryNodes)
 	if discoveryCount == 0 {
 		return bc.ZeroBootstrap(ctx)
