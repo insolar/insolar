@@ -551,7 +551,7 @@ func (g *Genesis) uploadKeys(ctx context.Context, path string, amount int) ([]no
 }
 
 func (g *Genesis) registerGenesisRequest(ctx context.Context, name string) (*insolar.ID, error) {
-	return g.ArtifactsClient.RegisterRequest(ctx, *g.ArtifactsClient.GenesisRef(), &message.Parcel{Msg: &message.GenesisRequest{Name: name}})
+	return g.ArtifactManager.RegisterRequest(ctx, *g.ArtifactsClient.GenesisRef(), &message.Parcel{Msg: &message.GenesisRequest{Name: name}})
 }
 
 // Start creates types and RootDomain instance

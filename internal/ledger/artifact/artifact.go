@@ -32,7 +32,7 @@ type Contract struct {
 }
 
 type Manager interface {
-	RegisterPrototype(ctx context.Context, name string, domain insolar.Reference) (*insolar.Reference, error)
+	RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error)
 }
 
 type Scope struct {
@@ -48,26 +48,18 @@ func NewScope(pn insolar.PulseNumber) *Scope { // nolint
 	}
 }
 
-func (m *Scope) RegisterPrototype(ctx context.Context, name string, domain insolar.Reference) (*insolar.Reference, error) {
-	parcel := &message.Parcel{
-		Msg: &message.GenesisRequest{Name: name + "_proto"},
-	}
-	// RegisterRequest
+func (m *Scope) RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error) {
 	rec := &object.RequestRecord{
 		Parcel:      message.ParcelToBytes(parcel),
 		MessageHash: m.hashParcel(parcel),
-		// TODO: figure out is it required or not?
-		// Object:      *obj.Record(),
+		Object:      *objectRef.Record(),
 	}
-	jetID := insolar.ZeroJetID
-	protoID, err := m.ObjectStorage.SetRecord(
-		ctx, insolar.ID(jetID), m.PulseNumber, rec)
-	if err != nil {
-		return nil, err
-	}
-
-	proto := insolar.NewReference(*domain.Domain(), *protoID)
-	return proto, nil
+	return m.ObjectStorage.SetRecord(
+		ctx,
+		insolar.ID(insolar.ZeroJetID),
+		m.PulseNumber,
+		rec,
+	)
 }
 
 func (m *Scope) hashParcel(parcel insolar.Parcel) []byte {
