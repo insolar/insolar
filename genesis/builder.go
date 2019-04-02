@@ -108,15 +108,10 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 	domainRef := insolar.NewReference(*domain, *domain)
 
 	for name := range contracts {
-		protoID, err := cb.artifactsClient.RegisterRequest(
-			ctx, *domainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_proto"}},
-		)
+		protoRef, err := cb.artifactManager.RegisterPrototype(ctx, name, *domainRef)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
 		}
-
-		protoRef := insolar.NewReference(*domain, *protoID)
-		log.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
 		cb.Prototypes[name] = protoRef
 	}
 
