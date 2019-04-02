@@ -29,6 +29,7 @@ import (
 	"go.opencensus.io/trace"
 )
 
+// ActiveListSwapper is required by network to swap active list.
 type ActiveListSwapper interface {
 	MoveSyncToActive(ctx context.Context) error
 }
@@ -61,7 +62,7 @@ func NewPulseManager() *PulseManager {
 	return pm
 }
 
-// Set set's new pulse and closes current jet drop.
+// Set set's new pulse.
 func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist bool) error {
 	m.setLock.Lock()
 	defer m.setLock.Unlock()
@@ -141,7 +142,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	return nil
 }
 
-// Start starts pulse manager, spawns replication goroutine under a hood.
+// Start starts pulse manager.
 func (m *PulseManager) Start(ctx context.Context) error {
 	origin := m.NodeNet.GetOrigin()
 	err := m.NodeSetter.Set(insolar.FirstPulseNumber, []insolar.Node{{ID: origin.ID(), Role: origin.Role()}})
@@ -152,7 +153,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 	return nil
 }
 
-// Stop stops PulseManager. Waits replication goroutine is done.
+// Stop stops PulseManager.
 func (m *PulseManager) Stop(ctx context.Context) error {
 	// There should not to be any Set call after Stop call
 	m.setLock.Lock()
