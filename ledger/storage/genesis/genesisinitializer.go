@@ -107,7 +107,7 @@ func (gi *GenesisInitializer) Init(ctx context.Context) error {
 		}
 		err = gi.Records.Set(ctx, *genesisID, rec)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "can't save record into storage")
 		}
 
 		err = gi.ObjectStorage.SetObjectIndex(

@@ -59,6 +59,14 @@ type RecordAccessor interface {
 	ForID(ctx context.Context, id insolar.ID) (record.MaterialRecord, error)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.RecordCollectionAccessor -o ./ -s _mock.go
+
+// RecordCollectionAccessor provides methods for querying records with specific search conditions.
+type RecordCollectionAccessor interface {
+	// ForPulse returns []MaterialRecord for a provided jetID and a pulse number.
+	ForPulse(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []record.MaterialRecord
+}
+
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.RecordModifier -o ./ -s _mock.go
 
 // RecordModifier provides methods for setting record-values to storage.
@@ -67,9 +75,18 @@ type RecordModifier interface {
 	Set(ctx context.Context, id insolar.ID, rec record.MaterialRecord) error
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.RecordCleaner -o ./ -s _mock.go
+
+// RecordCleaner provides an interface for removing records from a storage.
+type RecordCleaner interface {
+	// RemoveUntil method removes records from a storage for all pulses until pulse (pulse included)
+	RemoveUntil(pulse insolar.PulseNumber)
+}
+
 // RecordMemory is an in-memory struct for record-storage.
 type RecordMemory struct {
-	jetIndex store.JetIndexModifier
+	jetIndex         store.JetIndexModifier
+	jetIndexAccessor store.JetIndexAccessor
 
 	lock   sync.RWMutex
 	memory map[insolar.ID]record.MaterialRecord
@@ -77,9 +94,11 @@ type RecordMemory struct {
 
 // NewRecordMemory creates a new instance of RecordMemory storage.
 func NewRecordMemory() *RecordMemory {
+	ji := store.NewJetIndex()
 	return &RecordMemory{
-		memory:   map[insolar.ID]record.MaterialRecord{},
-		jetIndex: store.NewJetIndex(),
+		memory:           map[insolar.ID]record.MaterialRecord{},
+		jetIndex:         ji,
+		jetIndexAccessor: ji,
 	}
 }
 
@@ -115,6 +134,38 @@ func (m *RecordMemory) ForID(ctx context.Context, id insolar.ID) (rec record.Mat
 	}
 
 	return
+}
+
+// ForPulse returns []MaterialRecord for a provided jetID and a pulse number.
+func (m *RecordMemory) ForPulse(
+	ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber,
+) []record.MaterialRecord {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	ids := m.jetIndexAccessor.For(jetID, pn)
+	var res []record.MaterialRecord
+	for id := range ids {
+		rec := m.memory[id]
+		res = append(res, rec)
+	}
+
+	return res
+}
+
+// RemoveUntil method removes records from a storage for all pulses until pulse (pulse included)
+func (m *RecordMemory) RemoveUntil(pulse insolar.PulseNumber) {
+	m.lock.Lock()
+	m.lock.Unlock()
+
+	for id, rec := range m.memory {
+		if id.Pulse() > pulse {
+			continue
+		}
+
+		m.jetIndex.Delete(id, rec.JetID)
+		delete(m.memory, id)
+	}
 }
 
 // RecordDB is a DB storage implementation. It saves records to disk and does not allow removal.

@@ -17,16 +17,16 @@
 package object
 
 import (
+	"math/rand"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
+	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestRecordStorage_NewStorageMemory(t *testing.T) {
@@ -51,9 +51,7 @@ func TestRecordStorage_ForID(t *testing.T) {
 	t.Run("returns correct record-value", func(t *testing.T) {
 		t.Parallel()
 
-		recordStorage := &RecordMemory{
-			memory: map[insolar.ID]record.MaterialRecord{},
-		}
+		recordStorage := NewRecordMemory()
 		recordStorage.memory[id] = rec
 
 		resultRec, err := recordStorage.ForID(ctx, id)
@@ -65,9 +63,7 @@ func TestRecordStorage_ForID(t *testing.T) {
 	t.Run("returns error when no record-value for id", func(t *testing.T) {
 		t.Parallel()
 
-		recordStorage := &RecordMemory{
-			memory: map[insolar.ID]record.MaterialRecord{},
-		}
+		recordStorage := NewRecordMemory()
 		recordStorage.memory[id] = rec
 
 		_, err := recordStorage.ForID(ctx, gen.ID())
@@ -88,16 +84,11 @@ func TestRecordStorage_Set(t *testing.T) {
 		JetID:  jetID,
 	}
 
-	jetIndex := store.NewJetIndexModifierMock(t)
-	jetIndex.AddMock.Expect(id, jetID)
-
 	t.Run("saves correct record-value", func(t *testing.T) {
 		t.Parallel()
 
-		recordStorage := &RecordMemory{
-			memory:   map[insolar.ID]record.MaterialRecord{},
-			jetIndex: jetIndex,
-		}
+		recordStorage := NewRecordMemory()
+
 		err := recordStorage.Set(ctx, id, rec)
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(recordStorage.memory))
@@ -108,10 +99,8 @@ func TestRecordStorage_Set(t *testing.T) {
 	t.Run("returns override error when saving with the same id", func(t *testing.T) {
 		t.Parallel()
 
-		recordStorage := &RecordMemory{
-			memory:   map[insolar.ID]record.MaterialRecord{},
-			jetIndex: jetIndex,
-		}
+		recordStorage := NewRecordMemory()
+
 		err := recordStorage.Set(ctx, id, rec)
 		require.NoError(t, err)
 
@@ -119,4 +108,87 @@ func TestRecordStorage_Set(t *testing.T) {
 		require.Error(t, err)
 		assert.Equal(t, ErrOverride, err)
 	})
+}
+
+func TestRecordStorage_Delete(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+
+	firstPulse := gen.PulseNumber()
+	secondPulse := firstPulse + 1
+
+	t.Run("delete all records for selected pulse", func(t *testing.T) {
+		t.Parallel()
+
+		recordStorage := NewRecordMemory()
+
+		countFirstPulse := rand.Int31n(256)
+		countSecondPulse := rand.Int31n(256)
+
+		for i := int32(0); i < countFirstPulse; i++ {
+			randID := gen.ID()
+			id := insolar.NewID(firstPulse, randID.Hash())
+			err := recordStorage.Set(ctx, *id, record.MaterialRecord{})
+			require.NoError(t, err)
+		}
+
+		for i := int32(0); i < countSecondPulse; i++ {
+			randID := gen.ID()
+			id := insolar.NewID(secondPulse, randID.Hash())
+			err := recordStorage.Set(ctx, *id, record.MaterialRecord{})
+			require.NoError(t, err)
+		}
+		assert.Equal(t, countFirstPulse+countSecondPulse, int32(len(recordStorage.memory)))
+
+		recordStorage.RemoveUntil(firstPulse)
+		assert.Equal(t, countSecondPulse, int32(len(recordStorage.memory)))
+	})
+}
+
+func TestRecordStorage_ForPulse(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+	recordMemory := NewRecordMemory()
+
+	searchJetID := gen.JetID()
+	searchPN := gen.PulseNumber()
+
+	searchRecs := map[insolar.ID]struct{}{}
+	for i := int32(0); i < rand.Int31n(256); i++ {
+		virtRec := ResultRecord{}
+		fuzz.New().NilChance(0).Fuzz(&virtRec)
+
+		rec := record.MaterialRecord{
+			Record: &virtRec,
+			JetID:  searchJetID,
+		}
+
+		id := insolar.NewID(searchPN, SerializeRecord(rec.Record))
+
+		searchRecs[*id] = struct{}{}
+		err := recordMemory.Set(ctx, *id, rec)
+		require.NoError(t, err)
+	}
+
+	for i := int32(0); i < rand.Int31n(512); i++ {
+		rec := record.MaterialRecord{
+			Record: &ResultRecord{},
+		}
+
+		randID := gen.ID()
+		rID := insolar.NewID(gen.PulseNumber(), randID.Hash())
+		err := recordMemory.Set(ctx, *rID, rec)
+		require.NoError(t, err)
+	}
+
+	res := recordMemory.ForPulse(ctx, searchJetID, searchPN)
+	require.Equal(t, len(searchRecs), len(res))
+
+	for _, r := range res {
+		rID := insolar.NewID(searchPN, SerializeRecord(r.Record))
+		_, ok := searchRecs[*rID]
+		require.Equal(t, true, ok)
+	}
 }
