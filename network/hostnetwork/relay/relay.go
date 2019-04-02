@@ -48,20 +48,93 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package packet
+package relay
 
 import (
-	"github.com/insolar/insolar/network/transport/host"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+
+	"errors"
 )
 
-// ResponsePulse is the response for a new pulse from a pulsar.
-type ResponsePulse struct {
-	Success bool
-	Error   string
+// State is alias for relaying state
+type State int
+
+const (
+	// Unknown unknown relay state.
+	Unknown = State(iota + 1)
+	// Started is relay type means relaying started.
+	Started
+	// Stopped is relay type means relaying stopped.
+	Stopped
+	// Error is relay type means error state change.
+	Error
+	// NoAuth - this error returns if host tries to send relay request but not authenticated.
+	NoAuth
+)
+
+// Relay Interface for relaying
+type Relay interface {
+	// AddClient add client to relay list.
+	AddClient(host *host.Host) error
+	// RemoveClient removes client from relay list.
+	RemoveClient(host *host.Host) error
+	// ClientsCount - clients count.
+	ClientsCount() int
+	// NeedToRelay returns true if origin host is proxy for target host.
+	NeedToRelay(targetAddress string) bool
 }
 
-// ResponseGetRandomHosts is the response containing random hosts of the Insolar network.
-type ResponseGetRandomHosts struct {
-	Hosts []host.Host
-	Error string
+type relay struct {
+	clients []*host.Host
+}
+
+// NewRelay constructs relay list.
+func NewRelay() Relay {
+	return &relay{
+		clients: make([]*host.Host, 0),
+	}
+}
+
+// AddClient add client to relay list.
+func (r *relay) AddClient(host *host.Host) error {
+	if _, n := r.findClient(host.NodeID); n != nil {
+		return errors.New("client exists already")
+	}
+	r.clients = append(r.clients, host)
+	return nil
+}
+
+// RemoveClient removes client from relay list.
+func (r *relay) RemoveClient(host *host.Host) error {
+	idx, n := r.findClient(host.NodeID)
+	if n == nil {
+		return errors.New("client not found")
+	}
+	r.clients = append(r.clients[:idx], r.clients[idx+1:]...)
+	return nil
+}
+
+// ClientsCount - returns clients count.
+func (r *relay) ClientsCount() int {
+	return len(r.clients)
+}
+
+// NeedToRelay returns true if origin host is proxy for target host.
+func (r *relay) NeedToRelay(targetAddress string) bool {
+	for i := 0; i < r.ClientsCount(); i++ {
+		if r.clients[i].Address.String() == targetAddress {
+			return true
+		}
+	}
+	return false
+}
+
+func (r *relay) findClient(id insolar.Reference) (int, *host.Host) {
+	for idx, hostIterator := range r.clients {
+		if hostIterator.NodeID.Equal(id) {
+			return idx, hostIterator
+		}
+	}
+	return -1, nil
 }

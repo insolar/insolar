@@ -60,11 +60,12 @@ import (
 	"math/big"
 	"net"
 
-	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/transport/relay"
-	"github.com/insolar/insolar/network/utils"
-	quic "github.com/lucas-clemente/quic-go"
+	"github.com/lucas-clemente/quic-go"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/hostnetwork/relay"
+	"github.com/insolar/insolar/network/utils"
 )
 
 type quicConnection struct {
@@ -79,7 +80,7 @@ type quicTransport struct {
 	connections map[string]quicConnection
 }
 
-func newQuicTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*quicTransport, error) {
+func NewQuicTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (Transport, error) {
 	listener, err := quic.Listen(conn, generateTLSConfig(), nil)
 	if err != nil {
 		return nil, err
@@ -124,19 +125,24 @@ func (t *quicTransport) send(recvAddress string, data []byte) error {
 }
 
 // Start starts networking.
-func (t *quicTransport) Listen(ctx context.Context, started chan struct{}) error {
+func (t *quicTransport) Listen(ctx context.Context) error {
 	log.Debug("Start QUIC transport")
-	started <- struct{}{}
-	for {
-		session, err := t.l.Accept()
-		if err != nil {
-			<-t.disconnectFinished
-			return err
-		}
 
-		log.Debugf("accept from: %s", session.RemoteAddr().String())
-		go t.handleAcceptedConnection(session)
-	}
+	go func() {
+		for {
+			session, err := t.l.Accept()
+			if err != nil {
+				<-t.disconnectFinished
+				log.Error("failed to accept connection: ", err.Error())
+				return
+			}
+
+			log.Debug("accepted connection from ", session.RemoteAddr().String())
+			go t.handleAcceptedConnection(session)
+		}
+	}()
+
+	return nil
 }
 
 // Stop stops networking.

@@ -48,43 +48,49 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package resolver
+package future
 
 import (
-	"fmt"
-	"net"
-	"net/url"
+	"sync"
 
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
-type fixedAddressResolver struct {
-	publicAddress string
+type futureManagerImpl struct {
+	mutex   sync.RWMutex
+	futures map[network.RequestID]Future
 }
 
-func NewFixedAddressResolver(publicAddress string) PublicAddressResolver {
-	return newFixedAddressResolver(publicAddress)
-}
-
-func newFixedAddressResolver(publicAddress string) *fixedAddressResolver {
-	return &fixedAddressResolver{
-		publicAddress: publicAddress,
+func newFutureManagerImpl() *futureManagerImpl {
+	return &futureManagerImpl{
+		futures: make(map[network.RequestID]Future),
 	}
 }
 
-func (r *fixedAddressResolver) Resolve(conn net.PacketConn) (string, error) {
-	urlString := conn.LocalAddr().String()
-	url, err := url.Parse(urlString)
+func (fm *futureManagerImpl) Create(msg *packet.Packet) Future {
+	future := NewFuture(msg.RequestID, msg.Receiver, msg, func(f Future) {
+		fm.delete(f.ID())
+	})
 
-	var port string
-	if err != nil {
-		_, port, _ = net.SplitHostPort(urlString)
-	} else {
-		port = url.Port()
-	}
+	fm.mutex.Lock()
+	defer fm.mutex.Unlock()
 
-	if port == "" {
-		return "", errors.New("Failed to extract port from uri: " + urlString)
-	}
-	return fmt.Sprintf("%s:%s", r.publicAddress, port), nil
+	fm.futures[msg.RequestID] = future
+
+	return future
+}
+
+func (fm *futureManagerImpl) Get(msg *packet.Packet) Future {
+	fm.mutex.RLock()
+	defer fm.mutex.RUnlock()
+
+	return fm.futures[msg.RequestID]
+}
+
+func (fm *futureManagerImpl) delete(id network.RequestID) {
+	fm.mutex.Lock()
+	defer fm.mutex.Unlock()
+
+	delete(fm.futures, id)
 }

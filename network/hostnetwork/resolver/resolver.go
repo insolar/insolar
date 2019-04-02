@@ -48,14 +48,11 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package connection
+package resolver
 
-import (
-	"net"
-)
+// PublicAddressResolver is network address resolver interface.
+type PublicAddressResolver interface {
 
-type udpConnectionFactory struct{}
-
-func (udpConnectionFactory *udpConnectionFactory) Create(address string) (net.PacketConn, error) {
-	return net.ListenPacket("udp", address)
+	// Resolve returns public network address from given internal address.
+	Resolve(address string) (string, error)
 }

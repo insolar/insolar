@@ -57,14 +57,6 @@
   version = "v3.5.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:183d68d69d8681294f0b128de41c0defd54777f620cc4d1e88013136306a44d5"
-  name = "github.com/ccding/go-stun"
-  packages = ["stun"]
-  pruneopts = "UT"
-  revision = "be486d185f3dfcb2dbf8429332da50a0da7f95a6"
-
-[[projects]]
   digest = "1:f438d91be142877c3ad83157992c91de787ddfbddcc2a7da1ef6ef61606cadc4"
   name = "github.com/cheekybits/genny"
   packages = ["generic"]
@@ -249,14 +241,6 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
-
-[[projects]]
-  digest = "1:0a69a1c0db3591fcefb47f115b224592c8dfa4368b7ba9fae509d5e16cdc95c8"
-  name = "github.com/konsorten/go-windows-terminal-sequences"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "5c8c8bd35d3832f5d134ae1e1e375b69a4d25242"
-  version = "v1.0.1"
 
 [[projects]]
   branch = "master"
@@ -549,13 +533,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:10f320bfc014e9e6ac51f810271aa955ad3307cb3c0776d91e5595b4503af78b"
+  digest = "1:caef035da871d195e883f8d0258532cb8b9e5c87d089e326a6f98f02444564f1"
   name = "golang.org/x/crypto"
   packages = [
     "curve25519",
     "hkdf",
     "sha3",
-    "ssh/terminal",
   ]
   pruneopts = "UT"
   revision = "eb0de9b17e854e9b1ccd9963efafc79862359959"
@@ -586,12 +569,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:401fc17cbc8a7c6ac25639d63c110385b2a04fab2911d9bad13366771b6e4df6"
+  digest = "1:b5822e8b1920b7225e6282614078af440c70f0a2243676063a571f715cd77d58"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
     "unix",
-    "windows",
   ]
   pruneopts = "UT"
   revision = "4ed8d59d0b35e1e29334a206d1b3f38b1e5dfb31"
@@ -654,7 +636,6 @@
   analyzer-version = 1
   input-imports = [
     "github.com/blang/semver",
-    "github.com/ccding/go-stun/stun",
     "github.com/dgraph-io/badger",
     "github.com/gogo/protobuf/gogoproto",
     "github.com/gogo/protobuf/proto",

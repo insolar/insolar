@@ -48,28 +48,42 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package transport
+package resolver
 
 import (
-	"context"
+	"fmt"
+	"net"
+	"net/url"
 
-	"github.com/insolar/insolar/network/transport/packet"
+	"github.com/pkg/errors"
 )
 
-type futureManager interface {
-	Get(msg *packet.Packet) Future
-	Create(msg *packet.Packet) Future
+type fixedAddressResolver struct {
+	publicAddress string
 }
 
-func newFutureManager() futureManager {
-	return newFutureManagerImpl()
+func NewFixedAddressResolver(publicAddress string) PublicAddressResolver {
+	return newFixedAddressResolver(publicAddress)
 }
 
-type packetHandler interface {
-	Handle(ctx context.Context, msg *packet.Packet)
-	Received() <-chan *packet.Packet
+func newFixedAddressResolver(publicAddress string) *fixedAddressResolver {
+	return &fixedAddressResolver{
+		publicAddress: publicAddress,
+	}
 }
 
-func newPacketHandler(futureManager futureManager) packetHandler {
-	return newPacketHandlerImpl(futureManager)
+func (r *fixedAddressResolver) Resolve(address string) (string, error) {
+	url, err := url.Parse(address)
+
+	var port string
+	if err != nil {
+		_, port, _ = net.SplitHostPort(address)
+	} else {
+		port = url.Port()
+	}
+
+	if port == "" {
+		return "", errors.New("Failed to extract port from uri: " + address)
+	}
+	return fmt.Sprintf("%s:%s", r.publicAddress, port), nil
 }

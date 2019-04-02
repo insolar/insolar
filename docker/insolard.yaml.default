@@ -2,7 +2,6 @@ host:
   transport:
     protocol: TCP
     address: ""
-    behindnat: false
   isrelay: false
   infinitybootstrap: false
   mintimeout: 1

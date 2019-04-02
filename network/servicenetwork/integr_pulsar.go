@@ -54,18 +54,19 @@ import (
 	"context"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/pulsenetwork"
 	"github.com/insolar/insolar/network/transport"
-	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
-	"github.com/pkg/errors"
 )
 
 type TestPulsar interface {
@@ -75,9 +76,8 @@ type TestPulsar interface {
 
 func NewTestPulsar(pulseTimeMs, requestsTimeoutMs, pulseDelta int32) (TestPulsar, error) {
 	transportCfg := configuration.Transport{
-		Protocol:  "TCP",
-		Address:   "127.0.0.1:0",
-		BehindNAT: false,
+		Protocol: "TCP",
+		Address:  "127.0.0.1:0",
 	}
 	tp, err := transport.NewTransport(transportCfg, relay.NewProxy())
 	if err != nil {

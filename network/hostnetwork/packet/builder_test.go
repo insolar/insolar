@@ -48,71 +48,68 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package resolver
+package packet
 
 import (
-	"net"
+	"errors"
 	"testing"
-	"time"
 
-	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/testutils"
 )
 
-type MocktConn struct {
-	mock.Mock
+func TestBuilder_Build_RequestPacket(t *testing.T) {
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
+	builder := NewBuilder(sender)
+	m := builder.Receiver(receiver).Type(TestPacket).Request(&RequestTest{[]byte{0, 1, 2, 3}}).Build()
+
+	expectedPacket := &Packet{
+		Sender:        sender,
+		RemoteAddress: sender.Address.String(),
+		Receiver:      receiver,
+		Type:          TestPacket,
+		Data:          &RequestTest{[]byte{0, 1, 2, 3}},
+		IsResponse:    false,
+		Error:         nil,
+	}
+	require.Equal(t, expectedPacket, m)
 }
 
-func (m *MocktConn) ReadFrom(b []byte) (n int, addr net.Addr, err error) {
-	args := m.Called(b)
-	return args.Int(0), args.Get(1).(net.Addr), args.Error(2)
+func TestBuilder_Build_ResponsePacket(t *testing.T) {
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
+	builder := NewBuilder(sender)
+	m := builder.Receiver(receiver).Type(TestPacket).Response(&ResponseTest{42}).Build()
+
+	expectedPacket := &Packet{
+		Sender:        sender,
+		RemoteAddress: sender.Address.String(),
+		Receiver:      receiver,
+		Type:          TestPacket,
+		Data:          &ResponseTest{42},
+		IsResponse:    true,
+		Error:         nil,
+	}
+	require.Equal(t, expectedPacket, m)
 }
 
-func (m *MocktConn) WriteTo(b []byte, addr net.Addr) (n int, err error) {
-	//args := m.Called(b, addr)
-	//return args.Int(0), args.Error(1)
-	return 0, nil
-}
+func TestBuilder_Build_ErrorPacket(t *testing.T) {
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
+	builder := NewBuilder(sender)
+	m := builder.Receiver(receiver).Type(TestPacket).Response(&ResponseTest{}).Error(errors.New("test error")).Build()
 
-func (m *MocktConn) Close() error {
-	args := m.Called()
-	return args.Error(0)
-}
-
-func (m *MocktConn) LocalAddr() net.Addr {
-	args := m.Called()
-	return args.Get(0).(net.Addr)
-}
-
-func (m *MocktConn) SetDeadline(t time.Time) error {
-	args := m.Called(t)
-	return args.Error(0)
-}
-
-func (m *MocktConn) SetReadDeadline(t time.Time) error {
-	args := m.Called(t)
-	return args.Error(0)
-}
-
-func (m *MocktConn) SetWriteDeadline(t time.Time) error {
-	args := m.Called(t)
-	return args.Error(0)
-}
-
-func TestNewStunResolver(t *testing.T) {
-	stunAddr := "127.0.0.1:31337"
-	resolver := NewStunResolver(stunAddr)
-
-	require.IsType(t, &stunResolver{}, resolver)
-}
-
-func TestStunResolver_Resolve(t *testing.T) {
-	stunAddr := "127.0.0.1:31337"
-	resolver := NewStunResolver(stunAddr)
-	require.IsType(t, &stunResolver{}, resolver)
-
-	conn := &MocktConn{}
-	conn.On("LocalAddr").Return(net.ResolveUDPAddr("udp", stunAddr))
-
-	resolver.Resolve(conn)
+	expectedPacket := &Packet{
+		Sender:        sender,
+		RemoteAddress: sender.Address.String(),
+		Receiver:      receiver,
+		Type:          TestPacket,
+		Data:          &ResponseTest{},
+		IsResponse:    true,
+		Error:         errors.New("test error"),
+	}
+	require.Equal(t, expectedPacket, m)
 }

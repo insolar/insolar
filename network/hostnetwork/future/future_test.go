@@ -48,7 +48,7 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package transport
+package future
 
 import (
 	"sync"
@@ -56,10 +56,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/packet"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
 func TestNewFuture(t *testing.T) {

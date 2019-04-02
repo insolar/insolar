@@ -48,14 +48,28 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-/*
-Package connection encapsulates connection creation process and provides connection factories.
+package future
 
-Usage
+import (
+	"context"
 
-	factory := connection.NewConnectionFactory()
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+)
 
-	connection := factory.create("127.0.0.1:8080")
-	defer connection.close()  // You have to manually close connection
-*/
-package connection
+type Manager interface {
+	Get(msg *packet.Packet) Future
+	Create(msg *packet.Packet) Future
+}
+
+func NewManager() Manager {
+	return newFutureManagerImpl()
+}
+
+type PacketHandler interface {
+	Handle(ctx context.Context, msg *packet.Packet)
+	Received() <-chan *packet.Packet
+}
+
+func NewPacketHandler(futureManager Manager) PacketHandler {
+	return newPacketHandlerImpl(futureManager)
+}

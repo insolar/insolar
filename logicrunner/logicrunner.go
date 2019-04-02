@@ -147,6 +147,10 @@ type LogicRunner struct {
 	stateMutex sync.RWMutex
 
 	sock net.Listener
+
+	stopLock   sync.Mutex
+	isStopping bool
+	stopChan   chan struct{}
 }
 
 // NewLogicRunner is constructor for LogicRunner
@@ -222,6 +226,22 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 	}
 
 	return reterr
+}
+
+func (lr *LogicRunner) GracefulStop(ctx context.Context) error {
+	inslogger.FromContext(ctx).Debug("LogicRunner.GracefulStop starts ...")
+
+	lr.stopLock.Lock()
+	if !lr.isStopping {
+		lr.isStopping = true
+		lr.stopChan = make(chan struct{}, 1)
+	}
+	lr.stopLock.Unlock()
+
+	inslogger.FromContext(ctx).Debug("LogicRunner.GracefulStop wait ...")
+	<-lr.stopChan
+	inslogger.FromContext(ctx).Debug("LogicRunner.GracefulStop ends ...")
+	return nil
 }
 
 func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg insolar.Message, role insolar.DynamicRole) error {
@@ -1068,7 +1088,20 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 		go lr.sendOnPulseMessagesAsync(ctx, messages)
 	}
 
+	lr.stopIfNeeded(ctx)
+
 	return nil
+}
+
+func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
+	if len(lr.state) == 0 {
+		lr.stopLock.Lock()
+		if lr.isStopping {
+			inslogger.FromContext(ctx).Debug("LogicRunner ready to stop")
+			lr.stopChan <- struct{}{}
+		}
+		lr.stopLock.Unlock()
+	}
 }
 
 func (lr *LogicRunner) HandleStillExecutingMessage(

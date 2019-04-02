@@ -48,25 +48,69 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package resolver
+package termination
 
 import (
-	"net"
+	"context"
+	"sync"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
+
+	"github.com/insolar/insolar/insolar"
 )
 
-type exactResolver struct {
+type terminationHandler struct {
+	sync.Mutex
+	done        chan insolar.LeaveApproved
+	terminating bool
+
+	Network      insolar.Network      `inject:""`
+	PulseStorage insolar.PulseStorage `inject:""`
 }
 
-// NewExactResolver returns new no-op resolver.
-func NewExactResolver() PublicAddressResolver {
-	return newExactResolver()
+func NewHandler(nw insolar.Network) insolar.TerminationHandler {
+	return &terminationHandler{Network: nw}
 }
 
-func newExactResolver() *exactResolver {
-	return &exactResolver{}
+// TODO take ETA by role of node
+func (t *terminationHandler) Leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) {
+	doneChan := t.leave(ctx, leaveAfterPulses)
+	<-doneChan
 }
 
-// Resolve returns host's current network address.
-func (er *exactResolver) Resolve(conn net.PacketConn) (string, error) {
-	return conn.LocalAddr().String(), nil
+func (t *terminationHandler) leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) chan insolar.LeaveApproved {
+	t.Lock()
+	defer t.Unlock()
+
+	if !t.terminating {
+		t.terminating = true
+		t.done = make(chan insolar.LeaveApproved, 1)
+
+		if leaveAfterPulses == 0 {
+			inslogger.FromContext(ctx).Debug("terminationHandler.Leave() with 0")
+			t.Network.Leave(ctx, 0)
+		} else {
+			pulse, _ := t.PulseStorage.Current(ctx)
+			pulseDelta := pulse.NextPulseNumber - pulse.PulseNumber
+
+			inslogger.FromContext(ctx).Debugf("terminationHandler.Leave() with leaveAfterPulses: %+v, in pulse %+v", leaveAfterPulses, pulse.PulseNumber+leaveAfterPulses*pulseDelta)
+			t.Network.Leave(ctx, pulse.PulseNumber+leaveAfterPulses*pulseDelta)
+		}
+	}
+
+	return t.done
+}
+
+func (t *terminationHandler) OnLeaveApproved(ctx context.Context) {
+	t.Lock()
+	defer t.Unlock()
+	if t.terminating {
+		inslogger.FromContext(ctx).Debug("terminationHandler.OnLeaveApproved() received")
+		t.terminating = false
+		close(t.done)
+	}
+}
+
+func (t *terminationHandler) Abort() {
+	panic("Node leave acknowledged by network. Goodbye!")
 }

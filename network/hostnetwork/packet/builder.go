@@ -51,92 +51,87 @@
 package packet
 
 import (
-	"bytes"
-	"encoding/binary"
-	"encoding/gob"
-	"io"
-
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/packet/types"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
-// Packet is DHT packet object.
-type Packet struct {
-	Sender        *host.Host
-	Receiver      *host.Host
-	Type          types.PacketType
-	RequestID     network.RequestID
-	RemoteAddress string
-
-	TraceID    string
-	Data       interface{}
-	Error      error
-	IsResponse bool
+// Builder allows lazy building of packets.
+// Each operation returns new copy of a builder.
+type Builder struct {
+	actions []func(packet *Packet)
 }
 
-// SerializePacket converts packet to byte slice.
-func SerializePacket(q *Packet) ([]byte, error) {
-	var msgBuffer bytes.Buffer
-	enc := gob.NewEncoder(&msgBuffer)
-	err := enc.Encode(q)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to serialize packet")
-	}
-
-	length := msgBuffer.Len()
-
-	var lengthBytes [8]byte
-	binary.PutUvarint(lengthBytes[:], uint64(length))
-
-	var result []byte
-	result = append(result, lengthBytes[:]...)
-	result = append(result, msgBuffer.Bytes()...)
-
-	return result, nil
+// NewBuilder returns empty packet builder.
+func NewBuilder(sender *host.Host) Builder {
+	cb := Builder{}
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Sender = sender
+		packet.RemoteAddress = sender.Address.String()
+	})
+	return cb
 }
 
-// DeserializePacket reads packet from io.Reader.
-func DeserializePacket(conn io.Reader) (*Packet, error) {
-
-	lengthBytes := make([]byte, 8)
-	if _, err := io.ReadFull(conn, lengthBytes); err != nil {
-		return nil, err
+// Build returns configured packet.
+func (cb Builder) Build() (packet *Packet) {
+	packet = &Packet{}
+	for _, action := range cb.actions {
+		action(packet)
 	}
-	lengthReader := bytes.NewBuffer(lengthBytes)
-	length, err := binary.ReadUvarint(lengthReader)
-	if err != nil {
-		return nil, io.ErrUnexpectedEOF
-	}
-
-	log.Debugf("[ DeserializePacket ] packet length %d", length)
-	buf := make([]byte, length)
-	if _, err := io.ReadFull(conn, buf); err != nil {
-		log.Error("[ DeserializePacket ] couldn't read packet: ", err)
-		return nil, err
-	}
-	log.Debugf("[ DeserializePacket ] read packet")
-
-	msg := &Packet{}
-	dec := gob.NewDecoder(bytes.NewReader(buf))
-
-	err = dec.Decode(msg)
-	if err != nil {
-		log.Error("[ DeserializePacket ] couldn't decode packet: ", err)
-		return nil, err
-	}
-
-	log.Debugf("[ DeserializePacket ] decoded packet to %#v", msg)
-
-	return msg, nil
+	return
 }
 
-func init() {
-	gob.Register(&RequestPulse{})
-	gob.Register(&RequestGetRandomHosts{})
+// Receiver sets packet receiver.
+func (cb Builder) Receiver(host *host.Host) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Receiver = host
+	})
+	return cb
+}
 
-	gob.Register(&ResponsePulse{})
-	gob.Register(&ResponseGetRandomHosts{})
+// Type sets packet type.
+func (cb Builder) Type(packetType types.PacketType) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Type = packetType
+	})
+	return cb
+}
+
+// Request adds request data to packet.
+func (cb Builder) Request(request interface{}) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Data = request
+	})
+	return cb
+}
+
+func (cb Builder) RequestID(id network.RequestID) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.RequestID = id
+	})
+	return cb
+}
+
+func (cb Builder) TraceID(traceID string) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.TraceID = traceID
+	})
+	return cb
+}
+
+// Response adds response data to packet
+func (cb Builder) Response(response interface{}) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Data = response
+		packet.IsResponse = true
+	})
+	return cb
+}
+
+// Error adds error description to packet.
+func (cb Builder) Error(err error) Builder {
+	cb.actions = append(cb.actions, func(packet *Packet) {
+		packet.Error = err
+	})
+	return cb
 }

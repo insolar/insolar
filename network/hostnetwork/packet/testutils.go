@@ -48,30 +48,20 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package connection
+package packet
 
 import (
-	"net"
-	"testing"
-
-	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
-func TestNewConnectionFactory(t *testing.T) {
-	pool := NewConnectionFactory()
+const (
+	TestPacket = types.PacketType(1337)
+)
 
-	require.IsType(t, &udpConnectionFactory{}, pool)
+type RequestTest struct {
+	Data []byte
 }
 
-func TestUdpConnectionFactory_Create(t *testing.T) {
-	addrStr := "127.0.0.1:31337"
-	pool := NewConnectionFactory()
-
-	conn, err := pool.Create(addrStr)
-
-	require.NoError(t, err)
-
-	require.IsType(t, &net.UDPConn{}, conn)
-	require.Equal(t, addrStr, conn.LocalAddr().String())
-
+type ResponseTest struct {
+	Number int
 }

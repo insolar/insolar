@@ -61,6 +61,9 @@ import (
 
 	"github.com/insolar/insolar/network/node"
 
+	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -69,11 +72,9 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/controller/pinger"
-	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 )
 
 var (
