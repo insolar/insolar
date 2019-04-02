@@ -104,7 +104,7 @@ func (q *lockFreeQueue) SinkPushAll(data []interface{}) error {
 	return nil
 }
 
-// // RemoveAll is mutex-based realization of Queue
+// RemoveAll is mutex-based realization of Queue
 func (q *lockFreeQueue) RemoveAll() []OutputElement {
 	removed := false
 	var head *queueItem

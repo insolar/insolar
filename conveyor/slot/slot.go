@@ -226,7 +226,7 @@ func (s *slot) runWorker() {
 }
 
 func (s *slot) PushResponse(adapterID adapterid.ID, elementID uint32, handlerID uint32, respPayload interface{}) {
-	response := adapter.NewAdapterResponse(adapterID, elementID, handlerID, respPayload)
+	response := adapter.NewResponse(adapterID, elementID, handlerID, respPayload)
 	err := s.responseQueue.SinkPush(response)
 	if err != nil {
 		panic("[ PushResponse ] Can't SinkPush: " + err.Error())
@@ -234,7 +234,7 @@ func (s *slot) PushResponse(adapterID adapterid.ID, elementID uint32, handlerID 
 }
 
 func (s *slot) PushNestedEvent(adapterID adapterid.ID, parentElementID uint32, handlerID uint32, eventPayload interface{}) {
-	event := adapter.NewAdapterNestedEvent(adapterID, parentElementID, handlerID, eventPayload)
+	event := adapter.NewNestedEvent(adapterID, parentElementID, handlerID, eventPayload)
 	err := s.responseQueue.SinkPush(event)
 	if err != nil {
 		panic("[ PushNestedEvent ] Can't SinkPush: " + err.Error())

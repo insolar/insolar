@@ -58,8 +58,8 @@ type Response struct {
 	respPayload interface{}
 }
 
-// NewAdapterResponse creates new adapter response
-func NewAdapterResponse(adapterID adapterid.ID, elementID uint32, handlerID uint32, respPayload interface{}) *Response {
+// NewResponse creates new adapter response
+func NewResponse(adapterID adapterid.ID, elementID uint32, handlerID uint32, respPayload interface{}) *Response {
 	return &Response{
 		adapterID:   adapterID,
 		elementID:   elementID,
@@ -88,7 +88,7 @@ func (ar *Response) GetRespPayload() interface{} {
 	return ar.respPayload
 }
 
-// AdapterNestedEvent contains info with adapter nested event
+// NestedEvent contains info with adapter nested event
 type NestedEvent struct {
 	adapterID       adapterid.ID
 	parentElementID uint32
@@ -96,7 +96,7 @@ type NestedEvent struct {
 	eventPayload    interface{}
 }
 
-func NewAdapterNestedEvent(adapterID adapterid.ID, parentElementID uint32, handlerID uint32, eventPayload interface{}) *NestedEvent {
+func NewNestedEvent(adapterID adapterid.ID, parentElementID uint32, handlerID uint32, eventPayload interface{}) *NestedEvent {
 	return &NestedEvent{
 		adapterID:       adapterID,
 		parentElementID: parentElementID,
