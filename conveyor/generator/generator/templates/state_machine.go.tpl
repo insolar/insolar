@@ -20,11 +20,12 @@ import (
 	"context"
 	"errors"
 
-	"github.com/insolar/insolar/conveyor/statemachine"
+	"github.com/insolar/insolar/conveyor/adapter/adapterhelper"
 	"github.com/insolar/insolar/conveyor/fsm"
+	"github.com/insolar/insolar/conveyor/statemachine"
 )
 
-func Raw{{.Name}}PresentFactory() *statemachine.StateMachine {
+func Raw{{.Name}}PresentFactory(helpers *adapterhelper.Catalog) *statemachine.StateMachine {
 	return &statemachine.StateMachine{
 		ID: {{.ID}},
 		States: []statemachine.State{
@@ -47,7 +48,7 @@ func Raw{{.Name}}PresentFactory() *statemachine.StateMachine {
 					{{else}}aPayload, ok := element.GetPayload().({{unPackage $.PayloadType $.Package}})
                     if !ok { return nil, 0, errors.New("wrong payload type") }
 					// todo here must be real adapter helper
-					state := {{.GetTransition.Name}}(ctx, element, aInput, aPayload, nil)
+					state := {{.GetTransition.Name}}(ctx, element, aInput, aPayload{{getAdapterHelper $ .GetTransition.GetAdapterHelperType}})
                     return aPayload, state, nil
 					{{end}}
 				},{{end}}
@@ -67,7 +68,7 @@ func Raw{{.Name}}PresentFactory() *statemachine.StateMachine {
 	}
 }
 
-func Raw{{.Name}}PastFactory() *statemachine.StateMachine {
+func Raw{{.Name}}PastFactory(helpers *adapterhelper.Catalog) *statemachine.StateMachine {
 	return &statemachine.StateMachine{
 		ID: {{.ID}},
 		States: []statemachine.State{
@@ -81,7 +82,7 @@ func Raw{{.Name}}PastFactory() *statemachine.StateMachine {
 					{{else}}aPayload, ok := element.GetPayload().({{unPackage $.PayloadType $.Package}})
                     if !ok { return nil, 0, errors.New("wrong payload type") }
                     // todo here must be real adapter helper
-					state := {{.GetTransitionPast.Name}}(ctx, element, aInput, aPayload, nil)
+					state := {{.GetTransitionPast.Name}}(ctx, element, aInput, aPayload{{getAdapterHelper $ .GetTransitionPast.GetAdapterHelperType}})
                     return aPayload, state, nil
 					{{end}}
 				},{{end}}
@@ -101,7 +102,7 @@ func Raw{{.Name}}PastFactory() *statemachine.StateMachine {
 	}
 }
 
-func Raw{{.Name}}FutureFactory() *statemachine.StateMachine {
+func Raw{{.Name}}FutureFactory(helpers *adapterhelper.Catalog) *statemachine.StateMachine {
 	return &statemachine.StateMachine{
 		ID: {{.ID}},
 		States: []statemachine.State{
@@ -125,7 +126,7 @@ func Raw{{.Name}}FutureFactory() *statemachine.StateMachine {
                     if !ok { return nil, 0, errors.New("wrong payload type") }
                     // todo here must be real adapter helper
 					helper := CustomAdapterHelper{}
-					state := {{.GetTransitionFuture.Name}}(ctx, element, aInput, aPayload, nil)
+					state := {{.GetTransitionFuture.Name}}(ctx, element, aInput, aPayload{{getAdapterHelper $ .GetTransitionFuture.GetAdapterHelperType}})
                     return aPayload, state, nil
 					{{end}}
 				},{{end}}

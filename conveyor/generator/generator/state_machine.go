@@ -24,21 +24,23 @@ import (
 )
 
 type StateMachine struct {
-	Package        string
-	File           string
-	Name           string
-	InputEventType *string
-	PayloadType    *string
-	States         []*state
+	Package              string
+	File                 string
+	Name                 string
+	InputEventType       *string
+	PayloadType          *string
+	States               []*state
+	AdapterHelperCatalog map[string]string
 }
 
 func (g *Generator) AddMachine(name string) *StateMachine {
 	_, file, _, _ := runtime.Caller(1)
 	pkg := getPackage(file)
 	machine := &StateMachine{
-		File:    file,
-		Package: pkg,
-		Name:    name,
+		File:                 file,
+		Package:              pkg,
+		Name:                 name,
+		AdapterHelperCatalog: g.adapterHelperCatalog,
 	}
 	g.stateMachines = append(g.stateMachines, machine)
 	return machine

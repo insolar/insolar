@@ -31,6 +31,7 @@ func main() {
 	initial.Register(gen)
 	getcode.Register(gen)
 	gen.CheckAllMachines()
+	gen.ParseAdapterHelpers()
 	gen.GenerateStateMachines()
 	gen.GenerateMatrix()
 }
