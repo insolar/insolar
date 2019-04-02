@@ -20,6 +20,7 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -27,8 +28,8 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -73,16 +74,18 @@ func (s *storageSuite) BeforeTest(suiteName, testName string) {
 
 	s.objectStorage = storage.NewObjectStorage()
 
-	dropStorage := drop.NewStorageDB()
+	storageDB := store.NewMemoryMockDB()
+	dropStorage := drop.NewStorageDB(storageDB)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
+
 	s.pulseTracker = storage.NewPulseTracker()
 	s.jetID = testutils.RandomJet()
 
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		s.db,
-		db.NewMemoryMockDB(),
+		store.NewMemoryMockDB(),
 		s.objectStorage,
 		s.dropModifier,
 		s.dropAccessor,
@@ -168,19 +171,17 @@ func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 
 func (s *storageSuite) TestDB_GetDrop_ReturnsNotFoundIfNoDrop() {
 	d, err := s.dropAccessor.ForPulse(s.ctx, insolar.JetID(testutils.RandomJet()), 1)
-	assert.Equal(s.T(), err, db.ErrNotFound)
+	assert.Equal(s.T(), err, store.ErrNotFound)
 	assert.Equal(s.T(), drop.Drop{}, d)
 }
 
 func (s *storageSuite) TestDB_SetDrop() {
-	jetID := *insolar.NewJetID(0, nil)
+	jetID := gen.JetID()
 	drop42 := drop.Drop{
 		Pulse: 42,
 		Hash:  []byte{0xFF},
 		JetID: jetID,
 	}
-	// FIXME: should work with random jet
-	// jetID := testutils.RandomJet()
 	err := s.dropModifier.Set(s.ctx, drop42)
 	assert.NoError(s.T(), err)
 
@@ -219,13 +220,14 @@ func TestDB_Close(t *testing.T) {
 	jetID := testutils.RandomJet()
 
 	os := storage.NewObjectStorage()
-	ds := drop.NewStorageDB()
+	storageDB := store.NewMemoryMockDB()
+	ds := drop.NewStorageDB(storageDB)
 
 	cm := &component.Manager{}
 	cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		tmpDB,
-		db.NewMemoryMockDB(),
+		store.NewMemoryMockDB(),
 		os,
 		ds,
 	)

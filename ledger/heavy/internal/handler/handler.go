@@ -285,9 +285,6 @@ func (h *Handler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeReco
 	return codeRec, nil
 }
 
-// TODO: check sender if it was light material in synced pulses:
-// sender := genericMsg.GetSender()
-// sender.isItWasLMInPulse(pulsenum)
 func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
 	msg := genericMsg.Message().(*message.HeavyPayload)
 

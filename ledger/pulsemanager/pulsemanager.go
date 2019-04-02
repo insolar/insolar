@@ -101,7 +101,7 @@ type jetInfo struct {
 	right    *jetInfo
 }
 
-// TODO: @andreyromancev. 15.01.19. Just store ledger configuration in PM. This is not required.
+// Just store ledger configuration in PM. This is not required.
 type pmOptions struct {
 	enableSync            bool
 	splitThreshold        uint64
@@ -203,12 +203,6 @@ func (m *PulseManager) processEndPulse(
 
 			m.RecentStorageProvider.RemovePendingStorage(ctx, insolar.ID(info.id))
 
-			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
-			// dropErr := m.processDrop(ctx, jetID, currentPulse, dropSerialized, messages)
-			// if dropErr != nil {
-			// 	return errors.Wrap(dropErr, "processDrop failed")
-			// }
-
 			return nil
 		})
 	}
@@ -230,28 +224,6 @@ func (m *PulseManager) createDrop(
 	messages [][]byte,
 	err error,
 ) {
-	// TODO: 1.03.19 need to be replaced with smth. @egorikas
-	// var prevDrop jet.Drop
-	// prevDrop, err = m.DropAccessor.ForPulse(ctx, insolar.JetID(jetID), prevPulse)
-	// if err == insolar.ErrNotFound {
-	// 	prevDrop, err = m.DropAccessor.ForPulse(ctx, jet.JetParent(insolar.JetID(jetID)), prevPulse)
-	// 	if err == insolar.ErrNotFound {
-	// 		inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-	// 			"pulse": prevPulse,
-	// 			"jet":   jetID.DebugString(),
-	// 		}).Error("failed to find drop")
-	// 		prevDrop = jet.Drop{Pulse: prevPulse}
-	// 		err = m.DropModifier.Set(ctx, insolar.JetID(jetID), prevDrop)
-	// 		if err != nil {
-	// 			return nil, nil, nil, errors.Wrap(err, "failed to create empty drop")
-	// 		}
-	// 	} else if err != nil {
-	// 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] failed to find parent")
-	// 	}
-	// } else if err != nil {
-	// 	return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
-	// }
-
 	block = &drop.Drop{
 		Pulse: currentPulse,
 		JetID: insolar.JetID(jetID),
@@ -320,7 +292,6 @@ func (m *PulseManager) getExecutorHotData(
 	return msg, nil
 }
 
-// TODO: @andreyromancev. 12.01.19. Remove when dynamic split is working.
 var splitCount = 5
 
 func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse insolar.PulseNumber) ([]jetInfo, error) {
@@ -475,7 +446,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 
 	// Run only on material executor.
 	// execute only on material executor
-	// TODO: do as much as possible async.
 	if m.NodeNet.GetOrigin().Role() == insolar.StaticRoleLightMaterial && oldPulse != nil && prevPN != nil {
 		err = m.processEndPulse(ctx, jets, *prevPN, *oldPulse, newPulse)
 		if err != nil {
@@ -518,7 +488,6 @@ func (m *PulseManager) setUnderGilSection(
 	defer m.GIL.Release(ctx)
 
 	m.PulseStorage.Lock()
-	// FIXME: @andreyromancev. 17.12.18. return insolar.Pulse here.
 	storagePulse, err := m.PulseTracker.GetLatestPulse(ctx)
 	if err != nil && err != insolar.ErrNotFound {
 		m.PulseStorage.Unlock()

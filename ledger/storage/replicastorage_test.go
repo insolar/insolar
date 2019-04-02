@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
@@ -59,7 +60,7 @@ func TestReplicaStorage(t *testing.T) {
 func (s *replicaSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
-	s.jetID = insolar.TODOJetID
+	s.jetID = insolar.ID(gen.JetID())
 
 	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner

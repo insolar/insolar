@@ -55,13 +55,11 @@ import (
 	"net"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/connection"
-	"github.com/insolar/insolar/network/transport/packet"
-	"github.com/insolar/insolar/network/transport/relay"
-	"github.com/insolar/insolar/network/transport/resolver"
-	"github.com/insolar/insolar/network/utils"
+	"github.com/insolar/insolar/network/hostnetwork/future"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/relay"
+	"github.com/insolar/insolar/network/hostnetwork/resolver"
 
 	"github.com/pkg/errors"
 )
@@ -69,7 +67,7 @@ import (
 // Transport is an interface for network transport.
 type Transport interface {
 	// SendRequest sends packet to destination. Sequence number is generated automatically.
-	SendRequest(context.Context, *packet.Packet) (Future, error)
+	SendRequest(context.Context, *packet.Packet) (future.Future, error)
 
 	// SendResponse sends response packet for request with passed request id.
 	SendResponse(context.Context, network.RequestID, *packet.Packet) error
@@ -78,7 +76,7 @@ type Transport interface {
 	SendPacket(ctx context.Context, p *packet.Packet) error
 
 	// Listen starts thread to listen incoming packets.
-	Listen(ctx context.Context, started chan struct{}) error
+	Listen(ctx context.Context) error
 
 	// Stop gracefully stops listening.
 	Stop()
@@ -98,79 +96,48 @@ type Transport interface {
 
 // NewTransport creates new Transport with particular configuration
 func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, error) {
-	// TODO: let each transport creates connection in their constructor
-	conn, publicAddress, err := NewConnection(cfg)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NewTransport ] Failed to create connection.")
-	}
-
 	switch cfg.Protocol {
 	case "TCP":
-		// TODO: little hack: It's better to change interface for NewConnection
-		utils.CloseVerbose(conn)
-
-		return newTCPTransport(conn.LocalAddr().String(), proxy, publicAddress)
+		listener, err := net.Listen("tcp", cfg.Address)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to listen UDP")
+		}
+		publicAddress, err := Resolve(cfg, listener.Addr().String())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to resolve public address")
+		}
+		return newTCPTransport(listener, proxy, publicAddress)
 	case "PURE_UDP":
-		// TODO: not little hack: @AndreyBronin rewrite all this mess, please!
-		localAddress := conn.LocalAddr().String()
-		utils.CloseVerbose(conn)
-
-		return newUDPTransport(localAddress, proxy, publicAddress)
-	case "QUIC":
-		return newQuicTransport(conn, proxy, publicAddress)
+		conn, err := net.ListenPacket("udp", cfg.Address)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to listen TCP")
+		}
+		publicAddress, err := Resolve(cfg, conn.LocalAddr().String())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to resolve public address")
+		}
+		return newUDPTransport(conn, proxy, publicAddress)
 	default:
-		utils.CloseVerbose(conn)
 		return nil, errors.New("invalid transport configuration")
 	}
 }
 
-// NewConnection creates new Connection from configuration and returns connection and public address
-func NewConnection(cfg configuration.Transport) (net.PacketConn, string, error) {
-	conn, err := connection.NewConnectionFactory().Create(cfg.Address)
-	if err != nil {
-		return nil, "", errors.Wrap(err, "[ NewConnection ] Failed to create connection")
-	}
+// Resolve resolves public address
+func Resolve(cfg configuration.Transport, address string) (string, error) {
 	resolver, err := createResolver(cfg)
 	if err != nil {
-		utils.CloseVerbose(conn)
-		return nil, "", errors.Wrap(err, "[ NewConnection ] Failed to create resolver")
+		return "", errors.Wrap(err, "[ Resolve ] Failed to create resolver")
 	}
-	publicAddress, err := resolver.Resolve(conn)
+	publicAddress, err := resolver.Resolve(address)
 	if err != nil {
-		utils.CloseVerbose(conn)
-		return nil, "", errors.Wrap(err, "[ NewConnection ] Failed to resolve public address")
+		return "", errors.Wrap(err, "[ Resolve ] Failed to resolve public address")
 	}
-	return conn, publicAddress, nil
+	return publicAddress, nil
 }
 
 func createResolver(cfg configuration.Transport) (resolver.PublicAddressResolver, error) {
-	if cfg.BehindNAT && cfg.FixedPublicAddress != "" {
-		return nil, errors.New("BehindNAT and fixedPublicAddress cannot be set both")
-	}
-
-	if cfg.BehindNAT {
-		return resolver.NewStunResolver(""), nil
-	} else if cfg.FixedPublicAddress != "" {
+	if cfg.FixedPublicAddress != "" {
 		return resolver.NewFixedAddressResolver(cfg.FixedPublicAddress), nil
 	}
 	return resolver.NewExactResolver(), nil
-}
-
-func ListenAndWaitUntilReady(ctx context.Context, transport Transport) error {
-	started := make(chan struct{}, 1)
-	errored := make(chan error, 1)
-	go func(ctx context.Context, t Transport, started chan struct{}) {
-		err := t.Listen(ctx, started)
-		if err != nil {
-			inslogger.FromContext(ctx).Error(err)
-			errored <- err
-		}
-	}(ctx, transport, started)
-
-	select {
-	case <-started:
-		return nil
-	case err := <-errored:
-		return err
-	}
 }

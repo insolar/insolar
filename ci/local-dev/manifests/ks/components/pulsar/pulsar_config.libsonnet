@@ -23,7 +23,6 @@ local utils = params.utils;
 		"distributiontransport": {
 			"protocol": "TCP",
 			"address": "0.0.0.0:58091",
-			"behindnat": false
 		},
 		"pulsedistributor": {
 			"bootstraphosts": [

@@ -19,14 +19,14 @@ package object
 import (
 	"testing"
 
-	"github.com/insolar/insolar/insolar/record"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/db"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/internal/ledger/store"
 )
 
 func TestRecordStorage_NewStorageMemory(t *testing.T) {
@@ -88,7 +88,7 @@ func TestRecordStorage_Set(t *testing.T) {
 		JetID:  jetID,
 	}
 
-	jetIndex := db.NewJetIndexModifierMock(t)
+	jetIndex := store.NewJetIndexModifierMock(t)
 	jetIndex.AddMock.Expect(id, jetID)
 
 	t.Run("saves correct record-value", func(t *testing.T) {

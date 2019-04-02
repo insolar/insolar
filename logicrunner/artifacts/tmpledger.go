@@ -21,16 +21,18 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
@@ -43,7 +45,6 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
-	"github.com/stretchr/testify/require"
 )
 
 // TMPLedger
@@ -105,7 +106,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	tmpDB, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
-	memoryMockDB := db.NewMemoryMockDB()
+	memoryMockDB := store.NewMemoryMockDB()
 
 	cm := &component.Manager{}
 	gi := genesis.NewGenesisInitializer()
@@ -114,7 +115,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	js := jet.NewStore()
 	os := storage.NewObjectStorage()
 	ns := node.NewStorage()
-	ds := drop.NewStorageDB()
+	ds := drop.NewStorageDB(memoryMockDB)
 	bs := blob.NewStorageDB(memoryMockDB)
 	rs := storage.NewReplicaStorage()
 	cl := storage.NewCleaner()
