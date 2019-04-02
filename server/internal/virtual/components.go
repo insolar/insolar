@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/pulsemanager"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -162,6 +163,7 @@ func initComponents(
 		certManager,
 		nodeNetwork,
 		nw,
+		pulsemanager.NewPulseManager(),
 	)
 
 	components := ledger.GetLedgerComponents(cfg.Ledger, certManager.GetCertificate())

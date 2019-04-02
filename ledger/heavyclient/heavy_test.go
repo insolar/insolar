@@ -268,7 +268,6 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 		blobStorage,
 		blobStorage,
 	)
-	pm.LR = lrMock
 	pm.NodeNet = nodenetMock
 	pm.Bus = busMock
 	pm.JetCoordinator = jcMock
