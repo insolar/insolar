@@ -24,20 +24,20 @@ import (
 )
 
 // TODO: not completely implemented
-type LockFreeQueue struct {
+type lockFreeQueue struct {
 	head *queueItem
 }
 
 // NewLockFreeQueue creates lf-queue
-func NewLockFreeQueue() IQueue {
-	queue := &LockFreeQueue{
+func NewLockFreeQueue() Queue {
+	queue := &lockFreeQueue{
 		head: &emptyQueueItem,
 	}
 	return queue
 }
 
-// SinkPush is mutex-based realization of IQueue
-func (q *LockFreeQueue) SinkPush(data interface{}) error {
+// SinkPush is mutex-based realization of Queue
+func (q *lockFreeQueue) SinkPush(data interface{}) error {
 
 	newNode := &queueItem{
 		payload: data,
@@ -65,8 +65,8 @@ func (q *LockFreeQueue) SinkPush(data interface{}) error {
 	return nil
 }
 
-// SinkPushAll is mutex-based realization of IQueue
-func (q *LockFreeQueue) SinkPushAll(data []interface{}) error {
+// SinkPushAll is mutex-based realization of Queue
+func (q *lockFreeQueue) SinkPushAll(data []interface{}) error {
 	inputSize := len(data)
 	lastElement := &queueItem{}
 	newHead := lastElement
@@ -104,8 +104,8 @@ func (q *LockFreeQueue) SinkPushAll(data []interface{}) error {
 	return nil
 }
 
-// // RemoveAll is mutex-based realization of IQueue
-func (q *LockFreeQueue) RemoveAll() []OutputElement {
+// RemoveAll is mutex-based realization of Queue
+func (q *lockFreeQueue) RemoveAll() []OutputElement {
 	removed := false
 	var head *queueItem
 	for !removed {
@@ -132,22 +132,22 @@ func (q *LockFreeQueue) RemoveAll() []OutputElement {
 	return result
 }
 
-// BlockAndRemoveAll is mutex-based realization of IQueue
-func (q *LockFreeQueue) BlockAndRemoveAll() []OutputElement {
+// BlockAndRemoveAll is mutex-based realization of Queue
+func (q *lockFreeQueue) BlockAndRemoveAll() []OutputElement {
 	return nil
 }
 
-// Unblock is mutex-based realization of IQueue
-func (q *LockFreeQueue) Unblock() bool {
+// Unblock is mutex-based realization of Queue
+func (q *lockFreeQueue) Unblock() bool {
 	return true
 }
 
-// PushSignal is mutex-based realization of IQueue
-func (q *LockFreeQueue) PushSignal(signalType uint32, callback SyncDone) error {
+// PushSignal is mutex-based realization of Queue
+func (q *lockFreeQueue) PushSignal(signalType uint32, callback SyncDone) error {
 	return q.SinkPush(signalType)
 }
 
-// HasSignal is mutex-based realization of IQueue
-func (q *LockFreeQueue) HasSignal() bool {
+// HasSignal is mutex-based realization of Queue
+func (q *lockFreeQueue) HasSignal() bool {
 	return atomic.LoadUint32(&q.head.biggestQueueSignal) != 0
 }

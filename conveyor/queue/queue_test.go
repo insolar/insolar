@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func getFilledQueue(t *testing.T, numElements int, expectedResult *[]OutputElement) IQueue {
+func getFilledQueue(t *testing.T, numElements int, expectedResult *[]OutputElement) Queue {
 	queue := makeTestQueue()
 	for i := 0; i < numElements; i++ {
 		require.NoError(t, queue.SinkPush(i))
@@ -47,7 +47,7 @@ func TestSequentialAccess(t *testing.T) {
 		buf = append(buf, el)
 		expectedResult = append(expectedResult, OutputElement{data: el})
 	}
-	queue.SinkPushAll(buf)
+	_ = queue.SinkPushAll(buf)
 
 	total := queue.RemoveAll()
 	require.Equal(t, numElements*2, len(total))
@@ -60,9 +60,9 @@ func TestSinkPushAllToEmptyQueue(t *testing.T) {
 	expected := []interface{}{3, 5, 55}
 	queue.SinkPushAll(expected)
 	require.EqualValues(t, []OutputElement{
-		OutputElement{data: expected[0]},
-		OutputElement{data: expected[1]},
-		OutputElement{data: expected[2]},
+		{data: expected[0]},
+		{data: expected[1]},
+		{data: expected[2]},
 	}, queue.RemoveAll())
 }
 
@@ -283,7 +283,7 @@ func TestParallelAccess(t *testing.T) {
 
 	// SinkPush
 	for i := 0; i < parallelPut; i++ {
-		go func(wg *sync.WaitGroup, q IQueue, added chan OutputElement, blocked chan OutputElement) {
+		go func(wg *sync.WaitGroup, q Queue, added chan OutputElement, blocked chan OutputElement) {
 			for i := 0; i < numIterations; i++ {
 				if q.SinkPush(i) == nil {
 					added <- OutputElement{data: i}
@@ -297,7 +297,7 @@ func TestParallelAccess(t *testing.T) {
 
 	// RemoveAll
 	for i := 0; i < parallelGet; i++ {
-		go func(wg *sync.WaitGroup, q IQueue, got chan OutputElement) {
+		go func(wg *sync.WaitGroup, q Queue, got chan OutputElement) {
 			for i := 0; i < numIterations; i++ {
 				results := q.RemoveAll()
 				for _, el := range results {
@@ -310,7 +310,7 @@ func TestParallelAccess(t *testing.T) {
 
 	// SinkPushAll
 	for i := 0; i < parallelPut; i++ {
-		go func(wg *sync.WaitGroup, q IQueue, added chan OutputElement, blocked chan OutputElement) {
+		go func(wg *sync.WaitGroup, q Queue, added chan OutputElement, blocked chan OutputElement) {
 			input := []interface{}{}
 			for i := 0; i < numIterations; i++ {
 				input = append(input, i)
@@ -330,7 +330,7 @@ func TestParallelAccess(t *testing.T) {
 
 	// BlockAndRemoveAll - Unblock
 	for i := 0; i < parallelGet; i++ {
-		go func(wg *sync.WaitGroup, q IQueue, got chan OutputElement) {
+		go func(wg *sync.WaitGroup, q Queue, got chan OutputElement) {
 			for i := 0; i < numIterations; i++ {
 				results := q.BlockAndRemoveAll()
 				q.Unblock()
@@ -344,7 +344,7 @@ func TestParallelAccess(t *testing.T) {
 
 	// PushSignal
 	for i := 0; i < parallelPushSignal; i++ {
-		go func(wg *sync.WaitGroup, q IQueue, added chan OutputElement, blocked chan OutputElement) {
+		go func(wg *sync.WaitGroup, q Queue, added chan OutputElement, blocked chan OutputElement) {
 			for i := 0; i < numIterations; i++ {
 				element := OutputElement{data: mockSyncDone{}, itemType: uint32(i)}
 				if q.PushSignal(uint32(i), mockSyncDone{}) == nil {
@@ -359,7 +359,7 @@ func TestParallelAccess(t *testing.T) {
 
 	// HasSignal
 	for i := 0; i < parallelHasSignal; i++ {
-		go func(wg *sync.WaitGroup, q IQueue) {
+		go func(wg *sync.WaitGroup, q Queue) {
 			for i := 0; i < numIterations; i++ {
 				q.HasSignal()
 			}

@@ -15,3 +15,15 @@
  */
 
 package slot
+
+import (
+	"github.com/insolar/insolar/conveyor/queue"
+)
+
+// TaskPusher is interface which permits only safe access to slot
+//go:generate minimock -i github.com/insolar/insolar/conveyor/slot.TaskPusher -o ./ -s _mock.go
+type TaskPusher interface {
+	SinkPush(data interface{}) error
+	SinkPushAll(data []interface{}) error
+	PushSignal(signalType uint32, callback queue.SyncDone) error
+}

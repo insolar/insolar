@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package conveyor
+package slot
 
 import (
 	"testing"
@@ -121,7 +121,7 @@ func TestSlotElement_SendTask(t *testing.T) {
 	var gotPayload interface{}
 	var gotRespHandlerID uint32
 	var gotPulseNumber insolar.PulseNumber
-	sinkMock.PushTaskFunc = func(p adapter.AdapterToSlotResponseSink, p1 uint32, respHandlerID uint32, payLoad interface{}) (r error) {
+	sinkMock.PushTaskFunc = func(p adapter.ResponseSink, p1 uint32, respHandlerID uint32, payLoad interface{}) (r error) {
 		gotPayload = payLoad
 		gotRespHandlerID = respHandlerID
 		gotPulseNumber = p.GetPulseNumber()
