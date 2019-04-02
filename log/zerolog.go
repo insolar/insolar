@@ -29,6 +29,10 @@ import (
 	"github.com/insolar/insolar/core"
 )
 
+func init() {
+	zerolog.TimeFieldFormat = timestampFormat
+}
+
 type zerologAdapter struct {
 	logger   zerolog.Logger
 }
