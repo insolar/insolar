@@ -190,6 +190,9 @@ func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult
 	if utils.OriginIsDiscovery(bc.Certificate) {
 		discoveryNodes = RemoveOrigin(discoveryNodes, bc.NodeKeeper.GetOrigin().ID())
 	}
+	if len(discoveryNodes) == 0 {
+		return nil, nil, errors.New("There are 0 discovery nodes to connect to")
+	}
 	ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, 1)
 	result := bc.waitResultFromChannel(ctx, ch)
 	if result == nil {
