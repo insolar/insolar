@@ -18,7 +18,6 @@ package genesis
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/pkg/errors"
@@ -110,12 +109,6 @@ func (gi *GenesisInitializer) Init(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
-
-		idStr := genesisID.DebugString()
-
-		ptr := fmt.Sprintf("%p", gi.Records)
-		_ = idStr
-		_ = ptr
 
 		err = gi.ObjectStorage.SetObjectIndex(
 			ctx,
