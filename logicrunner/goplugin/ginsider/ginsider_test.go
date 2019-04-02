@@ -56,7 +56,7 @@ func (s *HealthCheckSuite) TestHealthCheck() {
 	healthcheckPath := binaryPath + "/healthcheck"
 	contractPath := currentPath + "/healthcheck/healthcheck.go"
 	if _, err = os.Stat(healthcheckPath); err != nil {
-		s.Failf("Binary file %s is not found, please run make build %s", healthcheckPath)
+		s.Failf("Binary file %s is not found, please run make build", healthcheckPath)
 	}
 
 	pathToTmp, err := filepath.Rel(currentPath, tmpDir)
