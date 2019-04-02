@@ -19,26 +19,17 @@ package generator
 import (
 	"go/parser"
 	"go/token"
-	"path"
 	"strings"
 	"text/template"
 )
 
-func getDirFromPath(p string) string {
-	dir, _ := path.Split(p)
-	if strings.HasSuffix(dir, "/") {
-		return dir[:len(dir)-1]
-	}
-	return dir
-}
-
 var (
 	templateFuncs = template.FuncMap{
-		"fileToImport": func(f string) string {
-			if idx := strings.Index(f, "github.com/insolar/insolar"); idx >= 0 {
-				return getDirFromPath(f[idx:])
+		"getAdapterHelper": func(m stateMachineWithID, helperType *string) string {
+			if helperType == nil {
+				return ""
 			}
-			return getDirFromPath(f)
+			return ", helpers." + m.AdapterHelperCatalog[*helperType]
 		},
 		"unPackage": func(t string, p string) string {
 			if idx := strings.Index(t, p); idx == 0 || (idx == 1 && t[0] == '*') {

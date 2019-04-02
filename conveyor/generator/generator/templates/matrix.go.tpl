@@ -17,8 +17,9 @@
 package matrix
 
 import (
+	"github.com/insolar/insolar/conveyor/adapter/adapterhelper"
 	"github.com/insolar/insolar/conveyor/fsm"
-	{{range .}}"{{fileToImport .File}}"
+	{{range .Imports}}"{{.}}"
 	{{end}}
 )
 
@@ -47,21 +48,23 @@ type Matrix struct {
 }
 
 const (
-	{{range $i, $m := .}}{{if (isNull $i)}}{{$m.Name}}  fsm.ID = iota + 1
+	{{range $i, $m := .Machines}}{{if (isNull $i)}}{{$m.Name}}  fsm.ID = iota + 1
 	{{else}}{{$m.Name}}
 	{{end}}{{end}}
 )
 
 func NewMatrix() *Matrix {
+	helpers := adapterhelper.NewCatalog()
+
 	m := Matrix{
 		future: newStateMachineSet(),
 		present: newStateMachineSet(),
 		past: newStateMachineSet(),
 	}
-	{{range .}}
-	m.future.addMachine({{.Package}}.Raw{{.Name}}FutureFactory())
-	m.present.addMachine({{.Package}}.Raw{{.Name}}PresentFactory())
-	m.past.addMachine({{.Package}}.Raw{{.Name}}PastFactory())
+	{{range .Machines}}
+	m.future.addMachine({{.Package}}.Raw{{.Name}}FutureFactory(helpers))
+	m.present.addMachine({{.Package}}.Raw{{.Name}}PresentFactory(helpers))
+	m.past.addMachine({{.Package}}.Raw{{.Name}}PastFactory(helpers))
 	{{end}}
 	return &m
 }

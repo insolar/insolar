@@ -22,9 +22,13 @@ import (
 	"io/ioutil"
 	"os"
 	"path"
+	"reflect"
 	"runtime"
+	"sort"
 	"strings"
 	"text/template"
+
+	"github.com/insolar/insolar/conveyor/adapter/adapterhelper"
 )
 
 const (
@@ -39,8 +43,9 @@ const (
 type TemporaryCustomAdapterHelper struct{}
 
 type Generator struct {
-	stateMachines     []*StateMachine
-	fullPathToInsolar string
+	stateMachines        []*StateMachine
+	fullPathToInsolar    string
+	adapterHelperCatalog map[string]string
 }
 
 func checkErr(err error) {
@@ -60,7 +65,8 @@ func NewGenerator() *Generator {
 	}
 	idx := strings.LastIndex(string(me), insolarRep)
 	return &Generator{
-		fullPathToInsolar: string(me)[0 : idx+len(insolarRep)],
+		fullPathToInsolar:    string(me)[0 : idx+len(insolarRep)],
+		adapterHelperCatalog: make(map[string]string),
 	}
 }
 
@@ -139,6 +145,13 @@ func checkHasInitHandlers(machine *StateMachine) {
 	}
 }
 
+func (g *Generator) ParseAdapterHelpers() {
+	t := reflect.TypeOf(adapterhelper.Catalog{})
+	for i := 0; i < t.NumField(); i++ {
+		g.adapterHelperCatalog[t.Field(i).Type.Name()] = t.Field(i).Name
+	}
+}
+
 type stateMachineWithID struct {
 	StateMachine
 	ID int
@@ -166,7 +179,47 @@ func (g *Generator) GenerateStateMachines() {
 	}
 
 }
+
+type matrixParams struct {
+	Imports  []string
+	Machines []*StateMachine
+}
+
+func getDirFromPath(p string) string {
+	dir, _ := path.Split(p)
+	if strings.HasSuffix(dir, "/") {
+		return dir[:len(dir)-1]
+	}
+	return dir
+}
+
+func fileToImport(f string) string {
+	if idx := strings.Index(f, "github.com/insolar/insolar"); idx >= 0 {
+		return getDirFromPath(f[idx:])
+	}
+	return getDirFromPath(f)
+}
+
+func (g *Generator) sortedImports() []string {
+	importsMap := make(map[string]struct{})
+	for _, machine := range g.stateMachines {
+		importsMap[fileToImport(machine.File)] = struct{}{}
+	}
+
+	var imports []string
+	for key := range importsMap {
+		imports = append(imports, key)
+	}
+	sort.Strings(imports)
+	return imports
+}
+
 func (g *Generator) GenerateMatrix() {
+	params := matrixParams{
+		Machines: g.stateMachines,
+		Imports:  g.sortedImports(),
+	}
+
 	tplBody, err := ioutil.ReadFile(path.Join(g.fullPathToInsolar, matrixTemplate))
 	checkErr(err)
 
@@ -178,7 +231,7 @@ func (g *Generator) GenerateMatrix() {
 
 	err = template.Must(template.New("MtTmpl").Funcs(templateFuncs).
 		Parse(string(tplBody))).
-		Execute(out, g.stateMachines)
+		Execute(out, params)
 	checkErr(err)
 
 	err = out.Flush()
