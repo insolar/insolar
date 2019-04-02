@@ -42,7 +42,8 @@ type Phases struct {
 	NodeKeeper   network.NodeKeeper `inject:""`
 	Calculator   merkle.Calculator  `inject:""`
 
-	lock sync.Mutex
+	lastPulse core.PulseNumber
+	lock      sync.Mutex
 }
 
 // NewPhaseManager creates and returns a new phase manager.
@@ -56,6 +57,12 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *core.Pulse, pulseStartTime
 	defer pm.lock.Unlock()
 
 	var err error
+
+	// workaround for occasional race condition when multiple consensus processes are spawned for one pulse
+	if pulse.PulseNumber <= pm.lastPulse {
+		return nil
+	}
+	pm.lastPulse = pulse.PulseNumber
 
 	consensusDelay := time.Since(pulseStartTime)
 	inslogger.FromContext(ctx).Infof("[ NET Consensus ] Starting consensus process, delay: %v", consensusDelay)
