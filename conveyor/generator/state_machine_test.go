@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/conveyor/adapter/adapterid"
 	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/matrix"
-	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
+	"github.com/insolar/insolar/conveyor/generator/state_machines/sample/custom"
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -38,10 +38,10 @@ func Test_Generated_State_Machine(t *testing.T) {
 		if cnt == 3 {
 			return insolar.ConveyorPendingMessage{}
 		}
-		return sample.CustomEvent{}
+		return custom.Event{}
 	}
 	element.GetPayloadFunc = func() interface{} {
-		return &sample.CustomPayload{}
+		return &custom.Payload{}
 	}
 
 	active := true

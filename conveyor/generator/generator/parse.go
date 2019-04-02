@@ -17,8 +17,10 @@
 package generator
 
 import (
+	"go/ast"
 	"go/parser"
 	"go/token"
+	"path"
 	"strings"
 	"text/template"
 )
@@ -46,9 +48,25 @@ var (
 	}
 )
 
-func getPackage(file string) string {
+func parseSource(file string) (string, map[string]string) {
+	imports := make(map[string]string)
 	set := token.NewFileSet()
 	node, err := parser.ParseFile(set, file, nil, parser.ParseComments)
 	checkErr(err)
-	return node.Name.Name
+	for _, decls := range node.Decls {
+		if decl, ok := decls.(*ast.GenDecl); ok {
+			if decl.Tok != token.IMPORT {
+				continue
+			}
+			for _, spec := range decl.Specs {
+				importPath := spec.(*ast.ImportSpec).Path.Value
+				if name := spec.(*ast.ImportSpec).Name; name != nil {
+					exitWithError("Import aliases not allowed <%s %s>", name, importPath)
+				}
+				_, name := path.Split(importPath[1 : len(importPath)-1])
+				imports[name] = importPath
+			}
+		}
+	}
+	return node.Name.Name, imports
 }
