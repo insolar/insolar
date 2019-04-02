@@ -38,6 +38,7 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
+	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
@@ -68,15 +69,21 @@ type nodeInfo struct {
 
 // Genesis is a component for precreation insolar contracts types and RootDomain instance
 type Genesis struct {
-	rootDomainRef   *insolar.Reference
-	nodeDomainRef   *insolar.Reference
-	rootMemberRef   *insolar.Reference
-	prototypeRefs   map[string]*insolar.Reference
-	isGenesis       bool
-	config          *Config
-	keyOut          string
-	ArtifactsClient artifacts.Client `inject:""`
+	rootDomainRef *insolar.Reference
+	nodeDomainRef *insolar.Reference
+	rootMemberRef *insolar.Reference
+	prototypeRefs map[string]*insolar.Reference
+	isGenesis     bool
+	config        *Config
+	keyOut        string
+
 	ArtifactManager artifact.Manager `inject:""`
+
+	// FIXME: GenesisState here is the temporary, until merge this code with genesis initializer
+	GenesisState genesis.GenesisState `inject:""`
+
+	// FIXME: should ber removed after complete migration on ArtifactManager
+	ArtifactsClient artifacts.Client `inject:""`
 	MBLock          messageBusLocker `inject:""`
 }
 
@@ -130,7 +137,7 @@ func (g *Genesis) activateRootDomain(
 		ctx,
 		insolar.Reference{},
 		*contract,
-		*g.ArtifactsClient.GenesisRef(),
+		*g.GenesisState.GenesisRef(),
 		*cb.Prototypes[rootDomain],
 		false,
 		instanceData,
@@ -138,7 +145,7 @@ func (g *Genesis) activateRootDomain(
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
-	_, err = g.ArtifactsClient.RegisterResult(ctx, *g.ArtifactsClient.GenesisRef(), *contract, nil)
+	_, err = g.ArtifactsClient.RegisterResult(ctx, *g.GenesisState.GenesisRef(), *contract, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
@@ -551,7 +558,7 @@ func (g *Genesis) uploadKeys(ctx context.Context, path string, amount int) ([]no
 }
 
 func (g *Genesis) registerGenesisRequest(ctx context.Context, name string) (*insolar.ID, error) {
-	return g.ArtifactManager.RegisterRequest(ctx, *g.ArtifactsClient.GenesisRef(), &message.Parcel{Msg: &message.GenesisRequest{Name: name}})
+	return g.ArtifactManager.RegisterRequest(ctx, *g.GenesisState.GenesisRef(), &message.Parcel{Msg: &message.GenesisRequest{Name: name}})
 }
 
 // Start creates types and RootDomain instance
