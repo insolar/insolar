@@ -222,7 +222,11 @@ func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult
 	log.Info("Bootstrapping to discovery node")
 	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.Bootstrap")
 	defer span.End()
-	ch := bc.getDiscoveryNodesChannel(ctx, bc.Certificate.GetDiscoveryNodes(), 1)
+	discoveryNodes := bc.Certificate.GetDiscoveryNodes()
+	if utils.OriginIsDiscovery(bc.Certificate) {
+		discoveryNodes = RemoveOrigin(discoveryNodes, bc.NodeKeeper.GetOrigin().ID())
+	}
+	ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, 1)
 	result := bc.waitResultFromChannel(ctx, ch)
 	if result == nil {
 		return nil, nil, errors.New("Failed to bootstrap to any of discovery nodes")
