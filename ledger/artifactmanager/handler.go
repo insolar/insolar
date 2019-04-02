@@ -298,12 +298,9 @@ func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 
 	h.Bus.MustRegister(
 		core.TypeGetRequest,
-		BuildMiddleware(
-			h.handleGetRequest,
+		BuildMiddleware(h.handleGetRequest,
 			instrumentHandler("handleGetRequest"),
-			m.checkJet,
-		),
-	)
+			m.zeroJetForHeavy))
 }
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
