@@ -49,3 +49,30 @@
 //
 
 package servicenetwork
+
+import (
+	"context"
+	"math/rand"
+	"time"
+
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+)
+
+const (
+	flakyLimit = 150
+)
+
+func NewFlakyNetwork(origin network.InternalTransport) network.InternalTransport {
+	return &flakyNetwork{InternalTransport: origin}
+}
+
+type flakyNetwork struct {
+	network.InternalTransport
+}
+
+func (fn *flakyNetwork) SendRequestPacket(ctx context.Context, request network.Request, receiver *host.Host) (network.Future, error) {
+	multiplier := time.Duration(rand.Int() % flakyLimit) //nolint
+	time.Sleep(time.Millisecond * multiplier)
+	return fn.InternalTransport.SendRequestPacket(ctx, request, receiver)
+}
