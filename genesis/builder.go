@@ -66,14 +66,14 @@ func OpenFile(dir string, name string) (*os.File, error) {
 type ContractsBuilder struct {
 	root string
 
-	ArtifactManager artifacts.Client
+	artifactsClient artifacts.Client
 	Prototypes      map[string]*insolar.Reference
 	Codes           map[string]*insolar.Reference
 }
 
-// NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
-// artifact manager, ...
-func NewContractBuilder(am artifacts.Client) *ContractsBuilder {
+// NewContractBuilder returns a new `ContractsBuilder`,
+// requires initialized artifacts client.
+func NewContractBuilder(ac artifacts.Client) *ContractsBuilder {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	if err != nil {
 		return nil
@@ -83,7 +83,8 @@ func NewContractBuilder(am artifacts.Client) *ContractsBuilder {
 		root:            tmpDir,
 		Prototypes:      make(map[string]*insolar.Reference),
 		Codes:           make(map[string]*insolar.Reference),
-		ArtifactManager: am}
+		artifactsClient: ac,
+	}
 	return cb
 }
 
@@ -102,7 +103,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 	domainRef := insolar.NewReference(*domain, *domain)
 
 	for name := range contracts {
-		protoID, err := cb.ArtifactManager.RegisterRequest(
+		protoID, err := cb.artifactsClient.RegisterRequest(
 			ctx, *domainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_proto"}},
 		)
 		if err != nil {
@@ -160,7 +161,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't ReadFile")
 		}
-		codeReq, err := cb.ArtifactManager.RegisterRequest(
+		codeReq, err := cb.artifactsClient.RegisterRequest(
 			ctx, *domainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_code"}},
 		)
 		if err != nil {
@@ -168,7 +169,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 		}
 
 		log.Debugf("Deploying code for contract %q", name)
-		codeID, err := cb.ArtifactManager.DeployCode(
+		codeID, err := cb.artifactsClient.DeployCode(
 			ctx,
 			*domainRef, *insolar.NewReference(*domain, *codeReq),
 			pluginBinary, insolar.MachineTypeGoPlugin,
@@ -177,7 +178,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't SetRecord")
 		}
-		_, err = cb.ArtifactManager.RegisterResult(ctx, *domainRef, *codeRef, nil)
+		_, err = cb.artifactsClient.RegisterResult(ctx, *domainRef, *codeRef, nil)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't SetRecord")
 		}
@@ -185,18 +186,18 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 		cb.Codes[name] = codeRef
 
 		// FIXME: It's a temporary fix and should not be here. Ii will NOT work properly on production. Remove it ASAP!
-		_, err = cb.ArtifactManager.ActivatePrototype(
+		_, err = cb.artifactsClient.ActivatePrototype(
 			ctx,
 			*domainRef,
 			*cb.Prototypes[name],
-			*cb.ArtifactManager.GenesisRef(), // FIXME: Only bootstrap can do this!
+			*cb.artifactsClient.GenesisRef(), // FIXME: Only bootstrap can do this!
 			*codeRef,
 			nil,
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't ActivatePrototype")
 		}
-		_, err = cb.ArtifactManager.RegisterResult(ctx, *domainRef, *cb.Prototypes[name], nil)
+		_, err = cb.artifactsClient.RegisterResult(ctx, *domainRef, *cb.Prototypes[name], nil)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterResult of prototype")
 		}
