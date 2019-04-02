@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/conveyor"
+	"github.com/insolar/insolar/conveyor/adapter/adapterstorage"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
@@ -187,6 +188,7 @@ func initComponents(
 		keyProcessor,
 	}...)
 
+	components = append(components, adapterstorage.GetAllProcessors(certManager.GetCertificate().GetRole())...)
 	cm.Inject(components...)
 
 	return &cm, nil
