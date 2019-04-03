@@ -124,7 +124,7 @@ func (t *quicTransport) send(recvAddress string, data []byte) error {
 }
 
 // Start starts networking.
-func (t *quicTransport) Listen(ctx context.Context) error {
+func (t *quicTransport) Start(ctx context.Context) error {
 	log.Debug("Start QUIC transport")
 
 	go func() {

@@ -150,13 +150,13 @@ func (t *tcpTransport) prepareListen() (net.Listener, error) {
 }
 
 // Start starts networking.
-func (t *tcpTransport) Listen(ctx context.Context) error {
+func (t *tcpTransport) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
-	logger.Info("[ Listen ] Start TCP transport")
+	logger.Info("[ Start ] Start TCP transport")
 
 	listener, err := t.prepareListen()
 	if err != nil {
-		logger.Info("[ Listen ] Failed to prepare TCP transport: ", err.Error())
+		logger.Info("[ Start ] Failed to prepare TCP transport: ", err.Error())
 		return err
 	}
 
@@ -170,11 +170,11 @@ func (t *tcpTransport) Listen(ctx context.Context) error {
 					return
 				}
 
-				logger.Error("[ Listen ] Failed to accept connection: ", err.Error())
+				logger.Error("[ Start ] Failed to accept connection: ", err.Error())
 				return
 			}
 
-			logger.Debugf("[ Listen ] Accepted new connection from %s", conn.RemoteAddr())
+			logger.Debugf("[ Start ] Accepted new connection from %s", conn.RemoteAddr())
 
 			go t.handleAcceptedConnection(conn)
 		}

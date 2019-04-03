@@ -138,12 +138,12 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*componen
 	cryptographyService := cryptography.NewCryptographyService()
 	keyProcessor := platformpolicy.NewKeyProcessor()
 
-	tp, _, err := transport.NewTransport(cfg.Pulsar.DistributionTransport)
+	tp, publicAddress, err := transport.NewTransport(cfg.Pulsar.DistributionTransport)
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
 	}
 
-	pulseDistributor, err := pulsenetwork.NewDistributor(cfg.Pulsar.PulseDistributor)
+	pulseDistributor, err := pulsenetwork.NewDistributor(cfg.Pulsar.PulseDistributor, publicAddress)
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
 	}

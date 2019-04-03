@@ -73,12 +73,12 @@ type transportBase struct {
 	sequenceGenerator sequence.Generator
 }
 
-// Listen start listening to network requests, should be started in goroutine.
+// Start start listening to network requests, should be started in goroutine.
 func (h *transportBase) Start(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&h.started, 0, 1) {
 		return errors.New("Failed to start transport: double listen initiated")
 	}
-	if err := h.transport.Listen(ctx); err != nil {
+	if err := h.transport.Start(ctx); err != nil {
 		return errors.Wrap(err, "Failed to start transport: listen syscall failed")
 	}
 

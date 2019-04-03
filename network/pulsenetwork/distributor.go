@@ -78,12 +78,13 @@ type distributor struct {
 	pulseRequestTimeout       time.Duration
 	randomNodesCount          int
 
+	publicAddress  string
 	pulsarHost     *host.Host
 	bootstrapHosts []string
 }
 
 // NewDistributor creates a new distributor object of pulses
-func NewDistributor(conf configuration.PulseDistributor) (insolar.PulseDistributor, error) {
+func NewDistributor(conf configuration.PulseDistributor, publicAddress string) (insolar.PulseDistributor, error) {
 	return &distributor{
 		idGenerator: sequence.NewGeneratorImpl(),
 
@@ -91,13 +92,14 @@ func NewDistributor(conf configuration.PulseDistributor) (insolar.PulseDistribut
 		randomHostsRequestTimeout: time.Duration(conf.RandomHostsRequestTimeout) * time.Millisecond,
 		pulseRequestTimeout:       time.Duration(conf.PulseRequestTimeout) * time.Millisecond,
 		randomNodesCount:          conf.RandomNodesCount,
+		publicAddress:             publicAddress,
 
 		bootstrapHosts: conf.BootstrapHosts,
 	}, nil
 }
 
 func (d *distributor) Start(ctx context.Context) error {
-	pulsarHost, err := host.NewHost(d.Transport.PublicAddress())
+	pulsarHost, err := host.NewHost(d.publicAddress)
 	if err != nil {
 		return errors.Wrap(err, "[ NewDistributor ] failed to create pulsar host")
 	}
@@ -242,5 +244,5 @@ func (d *distributor) resume(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("[ Resume ] Resume distribution, starting transport")
 	ctx, span := instracer.StartSpan(ctx, "distributor.resume")
 	defer span.End()
-	return d.Transport.Listen(ctx)
+	return d.Transport.Start(ctx)
 }

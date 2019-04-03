@@ -73,8 +73,8 @@ type Transport interface {
 	// SendPacket low-level send packet without requestId and without spawning a waiting future
 	SendPacket(ctx context.Context, p *packet.Packet) error
 
-	// Listen starts thread to listen incoming packets.
-	Listen(ctx context.Context) error
+	// Start starts thread to listen incoming packets.
+	Start(ctx context.Context) error
 
 	// Stop gracefully stops listening.
 	Stop()
@@ -87,9 +87,6 @@ type Transport interface {
 
 	// Stopped returns signal channel to support graceful shutdown.
 	Stopped() <-chan bool
-
-	// PublicAddress returns PublicAddress
-	PublicAddress() string
 }
 
 // NewTransport creates new Transport with particular configuration

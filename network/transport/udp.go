@@ -160,13 +160,13 @@ func (t *udpTransport) prepareListen() (net.PacketConn, error) {
 }
 
 // Start starts networking.
-func (t *udpTransport) Listen(ctx context.Context) error {
+func (t *udpTransport) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
-	logger.Info("[ Listen ] Start UDP transport")
+	logger.Info("[ Start ] Start UDP transport")
 
 	conn, err := t.prepareListen()
 	if err != nil {
-		logger.Infof("[ Listen ] Failed to prepare UDP transport: " + err.Error())
+		logger.Infof("[ Start ] Failed to prepare UDP transport: " + err.Error())
 		return err
 	}
 

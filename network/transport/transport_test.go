@@ -105,8 +105,8 @@ func (t *transportSuite) SetupTest() {
 
 func (t *transportSuite) BeforeTest(suiteName, testName string) {
 	ctx := context.Background()
-	t.node1.transport.Listen(ctx)
-	t.node2.transport.Listen(ctx)
+	t.node1.transport.Start(ctx)
+	t.node2.transport.Start(ctx)
 }
 
 func (t *transportSuite) AfterTest(suiteName, testName string) {

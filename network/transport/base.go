@@ -154,11 +154,6 @@ func (t *baseTransport) prepareDisconnect() {
 	close(t.disconnectStarted)
 }
 
-// PublicAddress returns transport public ip address
-func (t *baseTransport) PublicAddress() string {
-	return t.publicAddress
-}
-
 func (t *baseTransport) SendPacket(ctx context.Context, p *packet.Packet) error {
 	recvAddress := p.Receiver.Address.String()
 	data, err := t.serializer.SerializePacket(p)
