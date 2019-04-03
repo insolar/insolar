@@ -105,7 +105,7 @@ func buildSmartContracts(ctx context.Context, cb *ContractsBuilder, rootDomainID
 	inslog.Info("[ buildSmartContracts ] building contracts:", contractNames)
 	contracts, err := getContractsMap()
 	if err != nil {
-		return errors.Wrap(err, "[ buildSmartContracts ] couldn't build contracts")
+		return errors.Wrap(err, "[ buildSmartContracts ] failed to get contracts map")
 	}
 
 	inslog.Info("[ buildSmartContracts ] Start building contracts ...")

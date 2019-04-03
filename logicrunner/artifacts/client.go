@@ -850,9 +850,6 @@ func (m *client) updateObject(
 	if err != nil {
 		return nil, err
 	}
-	if err != nil {
-		return nil, err
-	}
 
 	o, err := m.sendUpdateObject(
 		ctx,

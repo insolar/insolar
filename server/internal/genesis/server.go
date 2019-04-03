@@ -128,7 +128,7 @@ func (s *Server) Serve() {
 		sig := <-gracefulStop
 		inslog.Debug("caught sig: ", sig)
 
-		inslog.Warn("GRACEFULL STOP APP")
+		inslog.Warn("GRACEFUL STOP APP")
 		err = cm.Stop(ctx)
 		checkError(ctx, err, "failed to graceful stop components")
 		close(waitChannel)
