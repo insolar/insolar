@@ -348,7 +348,6 @@ func (lr *LogicRunner) executeActual(ctx context.Context, parcel insolar.Parcel,
 		)
 		if !meCurrent {
 			es.Unlock()
-			// сюда должны попасть
 			return &reply.RegisterRequest{
 				Request: *request,
 			}, nil
