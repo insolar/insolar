@@ -21,7 +21,7 @@ type Handler struct {
 	}
 }
 
-func NewHandler(pulse insolar.Pulse) *Handler {
+func NewHandler(pulse insolar.Pulse, past, present, future belt.Handle) *Handler {
 	h := &Handler{
 		cancel: make(chan struct{}),
 	}

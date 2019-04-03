@@ -75,27 +75,21 @@ func (f *FlowController) YieldAll(migrate belt.Handle, first belt.Adapter, rest 
 	}
 }
 
-func worker(cancel <-chan struct{}) {
-	init := &State{}
-	c := &controller{cancel: cancel, adapters: map[Adapter]chan struct{}{}}
-	// Switch by pulse.
-	handle(init.Present, c)
+func (f *FlowController) Run(ctx context.Context, h belt.Handle) error {
+	f.handle(ctx, h)
+	return nil
 }
 
-func (f *FlowController) Run(context.Context, belt.Handle) error {
-
-}
-
-func (f *FlowController) handle(h belt.Handle) {
+func (f *FlowController) handle(ctx context.Context, h belt.Handle) {
 	defer func() {
 		if r := recover(); r != nil {
 			if cancel, ok := r.(cancelPanic); ok {
-				f.handle(cancel.migrateTo)
+				f.handle(ctx, cancel.migrateTo)
 			} else {
 				// TODO: should probably log panic and move on (don't re-panic).
 				panic(r)
 			}
 		}
 	}()
-	h(context.TODO(), f)
+	h(ctx, f)
 }
