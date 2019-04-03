@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
-	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -218,7 +217,6 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	// pm.PulseStorage = ps
 	pm.Nodes = ns
 	pm.NodeSetter = ns
-	pm.PulseTracker = pt
 	pm.JetModifier = js
 
 	hdw := artifactmanager.NewHotDataWaiterConcrete()

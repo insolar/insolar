@@ -81,6 +81,13 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		blobDB := blob.NewStorageDB(db)
 		blobModifier = blobDB
 		blobAccessor = blobDB
+
+	case insolar.StaticRoleVirtual:
+		ps := pulse.NewStorageMem()
+		pulseAccessor = ps
+		pulseAppender = ps
+		pulseCalculator = ps
+
 	default:
 		ps := pulse.NewStorageMem()
 		pulseAccessor = ps
@@ -108,6 +115,9 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		dropAccessor,
 		blobModifier,
 		blobAccessor,
+		pulseAccessor,
+		pulseAppender,
+		pulseCalculator,
 		storage.NewCleaner(),
 		pulseAccessor,
 		pulseAppender,
@@ -127,9 +137,9 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	switch certificate.GetRole() {
 	case insolar.StaticRoleUnknown, insolar.StaticRoleLightMaterial:
 		components = append(components, artifactmanager.NewMessageHandler(&conf))
-		components = append(components, pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobSyncAccessor))
+		components = append(components, pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, pulseShifter))
 	case insolar.StaticRoleHeavyMaterial:
-		components = append(components, pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobSyncAccessor))
+		components = append(components, pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, pulseShifter))
 		components = append(components, heavy.Components()...)
 	}
 
