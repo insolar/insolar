@@ -447,7 +447,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	// h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 
 	h.RecentStorageProvider = provideMock
@@ -521,7 +520,6 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	// h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
@@ -602,7 +600,6 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	// h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
@@ -682,7 +679,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	// h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 
 	idLock := storage.NewIDLockerMock(s.T())
@@ -734,7 +730,6 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	// h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 
 	err := h.Init(s.ctx)
@@ -787,7 +782,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	// h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
@@ -800,7 +794,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 	}
 
 	s.T().Run("redirects to light before limit threshold", func(t *testing.T) {
-		// err := s.pulseTracker.AddPulse(s.ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1})
 		require.NoError(t, err)
 		lightRef := genRandomRef(0)
 		jc.NodeForJetMock.Return(lightRef, nil)
@@ -817,7 +810,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 	})
 
 	s.T().Run("redirects to heavy after limit threshold", func(t *testing.T) {
-		// err = s.pulseTracker.AddPulse(s.ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 2})
 		require.NoError(t, err)
 		heavyRef := genRandomRef(0)
 		jc.NodeForJetMock.Return(heavyRef, nil)
@@ -860,7 +852,6 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	// h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
@@ -939,7 +930,6 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	// h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
@@ -982,9 +972,6 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	mc := minimock.NewController(s.T())
 	jetID := gen.JetID()
-
-	// err := s.pulseTracker.AddPulse(s.ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1})
-	// require.NoError(s.T(), err)
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 
