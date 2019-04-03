@@ -47,10 +47,12 @@ type Metrics struct {
 
 	server   *http.Server
 	listener net.Listener
+
+	nodeRole string
 }
 
 // NewMetrics creates new Metrics component.
-func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *prometheus.Registry) (*Metrics, error) {
+func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *prometheus.Registry, nodeRole string) (*Metrics, error) {
 	errlogger := &errorLogger{inslogger.FromContext(ctx)}
 	promhandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorLog: errlogger})
 
@@ -70,6 +72,7 @@ func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *promet
 			Addr:    cfg.ListenAddress,
 			Handler: mux,
 		},
+		nodeRole: nodeRole,
 	}
 
 	return m, nil
@@ -83,9 +86,12 @@ var ErrBind = errors.New("Failed to bind")
 func (m *Metrics) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 
+	if m.nodeRole == "" {
+		m.nodeRole = m.CertificateManager.GetCertificate().GetRole().String()
+	}
 	_, err := insmetrics.RegisterPrometheus(
 		ctx, m.config.Namespace, m.registry, m.config.ReportingPeriod,
-		m.CertificateManager.GetCertificate().GetRole().String(),
+		m.nodeRole,
 	)
 	if err != nil {
 		inslog.Error(err.Error())

@@ -19,6 +19,7 @@ package nodenetwork
 
 import (
 	"context"
+	"net"
 	"sort"
 	"strings"
 	"sync"
@@ -76,13 +77,13 @@ func createOrigin(configuration configuration.HostNetwork, certificate core.Cert
 }
 
 func resolveAddress(configuration configuration.HostNetwork) (string, error) {
-	conn, address, err := transport.NewConnection(configuration.Transport)
+	addr, err := net.ResolveTCPAddr("tcp", configuration.Transport.Address)
 	if err != nil {
 		return "", err
 	}
-	err = conn.Close()
+	address, err := transport.Resolve(configuration.Transport, addr.String())
 	if err != nil {
-		log.Warn(err)
+		return "", err
 	}
 	return address, nil
 }

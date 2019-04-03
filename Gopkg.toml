@@ -30,10 +30,6 @@
 
 [[constraint]]
   branch = "master"
-  name = "github.com/ccding/go-stun"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/jbenet/go-base58"
 
 [[constraint]]
@@ -71,3 +67,7 @@
 [[constraint]]
   branch = "master"
   name = "github.com/google/gofuzz"
+
+[[constraint]]
+  name = "github.com/sirupsen/logrus"
+  version = "1.2.0"

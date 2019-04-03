@@ -73,14 +73,8 @@ func (t *transportSuite) SetupTest() {
 
 func (t *transportSuite) BeforeTest(suiteName, testName string) {
 	ctx := context.Background()
-	started1 := make(chan struct{}, 1)
-	started2 := make(chan struct{}, 1)
-
-	go t.node1.transport.Listen(ctx, started1)
-	go t.node2.transport.Listen(ctx, started2)
-
-	<-started1
-	<-started2
+	t.node1.transport.Listen(ctx)
+	t.node2.transport.Listen(ctx)
 }
 
 func (t *transportSuite) AfterTest(suiteName, testName string) {
@@ -188,18 +182,8 @@ func Test_createResolver(t *testing.T) {
 	a.NoError(err)
 	a.IsType(resolver.NewFixedAddressResolver(""), r)
 
-	cfg2 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17018", BehindNAT: true, FixedPublicAddress: ""}
-	r, err = createResolver(cfg2)
-	a.NoError(err)
-	a.IsType(resolver.NewStunResolver(""), r)
-
 	cfg3 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17018", BehindNAT: false, FixedPublicAddress: ""}
 	r, err = createResolver(cfg3)
 	a.NoError(err)
 	a.IsType(resolver.NewExactResolver(), r)
-
-	cfg4 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17018", BehindNAT: true, FixedPublicAddress: "192.168.0.1"}
-	r, err = createResolver(cfg4)
-	a.Error(err)
-	a.Nil(r)
 }

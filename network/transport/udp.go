@@ -39,8 +39,8 @@ const udpMaxPacketSize = 1400
 
 type udpTransport struct {
 	baseTransport
-	serverConn net.PacketConn
-	address    string
+	conn    net.PacketConn
+	address string
 }
 
 type udpSerializer struct{}
@@ -63,8 +63,8 @@ func (b *udpSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error
 	return p, nil
 }
 
-func newUDPTransport(addr string, proxy relay.Proxy, publicAddress string) (*udpTransport, error) {
-	transport := &udpTransport{baseTransport: newBaseTransport(proxy, publicAddress), address: addr}
+func newUDPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*udpTransport, error) {
+	transport := &udpTransport{baseTransport: newBaseTransport(proxy, publicAddress), conn: conn}
 	transport.sendFunc = transport.send
 	transport.serializer = &udpSerializer{}
 
@@ -97,40 +97,53 @@ func (t *udpTransport) send(recvAddress string, data []byte) error {
 	return errors.Wrap(err, "Failed to write data")
 }
 
-func (t *udpTransport) prepareListen() error {
+func (t *udpTransport) prepareListen() (net.PacketConn, error) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
 	t.disconnectStarted = make(chan bool, 1)
 	t.disconnectFinished = make(chan bool, 1)
 
-	var err error
-	t.serverConn, err = net.ListenPacket("udp", t.address)
-	return err
+	if t.conn != nil {
+		t.address = t.conn.LocalAddr().String()
+	} else {
+		var err error
+		t.conn, err = net.ListenPacket("udp", t.address)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to listen UDP")
+		}
+	}
+
+	return t.conn, nil
 }
 
 // Start starts networking.
-func (t *udpTransport) Listen(ctx context.Context, started chan struct{}) error {
+func (t *udpTransport) Listen(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Listen ] Start UDP transport")
 
-	if err := t.prepareListen(); err != nil {
+	conn, err := t.prepareListen()
+	if err != nil {
 		logger.Infof("[ Listen ] Failed to prepare UDP transport: " + err.Error())
 		return err
 	}
 
-	started <- struct{}{}
-	for {
-		buf := make([]byte, udpMaxPacketSize)
-		n, addr, err := t.serverConn.ReadFrom(buf)
-		if err != nil {
-			<-t.disconnectFinished
-			return err
-		}
-		stats.Record(ctx, consensus.RecvSize.M(int64(n)))
+	go func() {
+		for {
+			buf := make([]byte, udpMaxPacketSize)
+			n, addr, err := conn.ReadFrom(buf)
+			if err != nil {
+				<-t.disconnectFinished
+				logger.Error("failed to read UDP: ", err.Error())
+				return // TODO: we probably shouldn't return here
+			}
 
-		go t.handleAcceptedConnection(buf[:n], addr)
-	}
+			stats.Record(ctx, consensus.RecvSize.M(int64(n)))
+			go t.handleAcceptedConnection(buf[:n], addr)
+		}
+	}()
+
+	return nil
 }
 
 // Stop stops networking.
@@ -141,7 +154,10 @@ func (t *udpTransport) Stop() {
 	log.Info("Stop UDP transport")
 	t.prepareDisconnect()
 
-	utils.CloseVerbose(t.serverConn)
+	if t.conn != nil {
+		utils.CloseVerbose(t.conn)
+		t.conn = nil
+	}
 }
 
 func (t *udpTransport) handleAcceptedConnection(data []byte, addr net.Addr) {

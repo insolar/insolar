@@ -21,6 +21,7 @@ import (
 	"context"
 	"io"
 	"net"
+	"strings"
 
 	"github.com/pkg/errors"
 
@@ -37,13 +38,13 @@ type tcpTransport struct {
 
 	pool     pool.ConnectionPool
 	listener net.Listener
-	addr     string
+	address  string
 }
 
-func newTCPTransport(addr string, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
+func newTCPTransport(listener net.Listener, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
 	transport := &tcpTransport{
 		baseTransport: newBaseTransport(proxy, publicAddress),
-		addr:          addr,
+		listener:      listener,
 		pool:          pool.NewConnectionPool(&tcpConnectionFactory{}),
 	}
 
@@ -71,20 +72,12 @@ func (t *tcpTransport) send(address string, data []byte) error {
 	n, err := conn.Write(data)
 
 	if err != nil {
-		// All this to check is error EPIPE
-		// if netErr, ok := err.(*net.OpError); ok {
-		// 	switch realNetErr := netErr.Err.(type) {
-		// 	case *os.SyscallError:
-		// 		if realNetErr.Err == syscall.EPIPE {
 		t.pool.CloseConnection(ctx, addr)
 		conn, err = t.pool.GetConnection(ctx, addr)
 		if err != nil {
 			return errors.Wrap(err, "[ send ] Failed to get connection")
 		}
 		n, err = conn.Write(data)
-		// 		}
-		// 	}
-		// }
 	}
 
 	if err == nil {
@@ -94,45 +87,59 @@ func (t *tcpTransport) send(address string, data []byte) error {
 	return errors.Wrap(err, "[ send ] Failed to write data")
 }
 
-func (t *tcpTransport) prepareListen() error {
+func (t *tcpTransport) prepareListen() (net.Listener, error) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
 	t.disconnectStarted = make(chan bool, 1)
 	t.disconnectFinished = make(chan bool, 1)
-	listener, err := net.Listen("tcp", t.addr)
-	if err != nil {
-		return err
+
+	if t.listener != nil {
+		t.address = t.listener.Addr().String()
+	} else {
+		var err error
+		t.listener, err = net.Listen("tcp", t.address)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to listen TCP")
+		}
 	}
 
-	t.listener = listener
-
-	return nil
+	return t.listener, nil
 }
 
 // Start starts networking.
-func (t *tcpTransport) Listen(ctx context.Context, started chan struct{}) error {
+func (t *tcpTransport) Listen(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Listen ] Start TCP transport")
 
-	if err := t.prepareListen(); err != nil {
-		logger.Info("[ Listen ] Failed to prepare TCP transport")
+	listener, err := t.prepareListen()
+	if err != nil {
+		logger.Info("[ Listen ] Failed to prepare TCP transport: ", err.Error())
 		return err
 	}
 
-	started <- struct{}{}
-	for {
-		conn, err := t.listener.Accept()
-		if err != nil {
-			<-t.disconnectFinished
-			logger.Error("[ Listen ] Failed to accept connection: ", err.Error())
-			return errors.Wrap(err, "[ Listen ] Failed to accept connection")
+	go func() {
+		for {
+			conn, err := listener.Accept()
+			if err != nil {
+				<-t.disconnectFinished
+				if strings.Contains(strings.ToLower(err.Error()), "use of closed network connection") {
+					logger.Info("Connection closed, quiting accept loop")
+					return
+				}
+
+				logger.Error("[ Listen ] Failed to accept connection: ", err.Error())
+				return
+			}
+
+			logger.Debugf("[ Listen ] Accepted new connection from %s", conn.RemoteAddr())
+
+			go t.handleAcceptedConnection(conn)
 		}
 
-		logger.Debugf("[ Listen ] Accepted new connection from %s", conn.RemoteAddr())
+	}()
 
-		go t.handleAcceptedConnection(conn)
-	}
+	return nil
 }
 
 // Stop stops networking.
@@ -143,7 +150,10 @@ func (t *tcpTransport) Stop() {
 	log.Info("[ Stop ] Stop TCP transport")
 	t.prepareDisconnect()
 
-	utils.CloseVerbose(t.listener)
+	if t.listener != nil {
+		utils.CloseVerbose(t.listener)
+		t.listener = nil
+	}
 	t.pool.Reset()
 }
 

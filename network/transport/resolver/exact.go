@@ -17,10 +17,6 @@
 
 package resolver
 
-import (
-	"net"
-)
-
 type exactResolver struct {
 }
 
@@ -34,6 +30,6 @@ func newExactResolver() *exactResolver {
 }
 
 // Resolve returns host's current network address.
-func (er *exactResolver) Resolve(conn net.PacketConn) (string, error) {
-	return conn.LocalAddr().String(), nil
+func (er *exactResolver) Resolve(address string) (string, error) {
+	return address, nil
 }

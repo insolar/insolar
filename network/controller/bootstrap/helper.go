@@ -81,13 +81,13 @@ func generateNonConflictingID(sortedSlice []core.ShortNodeID, conflictingID core
 	}
 }
 
-func RemoveOrigin(discoveryNodes []core.DiscoveryNode, origin core.RecordRef) ([]core.DiscoveryNode, error) {
+func RemoveOrigin(discoveryNodes []core.DiscoveryNode, origin core.RecordRef) []core.DiscoveryNode {
 	for i, discoveryNode := range discoveryNodes {
 		if origin.Equal(*discoveryNode.GetNodeRef()) {
-			return append(discoveryNodes[:i], discoveryNodes[i+1:]...), nil
+			return append(discoveryNodes[:i], discoveryNodes[i+1:]...)
 		}
 	}
-	return nil, errors.New("Origin not found in discovery nodes list")
+	return discoveryNodes
 }
 
 func FindDiscovery(cert core.Certificate, ref core.RecordRef) core.DiscoveryNode {

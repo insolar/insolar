@@ -57,14 +57,6 @@
   version = "v3.5.1"
 
 [[projects]]
-  branch = "master"
-  digest = "1:183d68d69d8681294f0b128de41c0defd54777f620cc4d1e88013136306a44d5"
-  name = "github.com/ccding/go-stun"
-  packages = ["stun"]
-  pruneopts = "UT"
-  revision = "be486d185f3dfcb2dbf8429332da50a0da7f95a6"
-
-[[projects]]
   digest = "1:f438d91be142877c3ad83157992c91de787ddfbddcc2a7da1ef6ef61606cadc4"
   name = "github.com/cheekybits/genny"
   packages = ["generic"]
@@ -215,12 +207,12 @@
   revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
 
 [[projects]]
-  digest = "1:0a69a1c0db3591fcefb47f115b224592c8dfa4368b7ba9fae509d5e16cdc95c8"
+  digest = "1:31e761d97c76151dde79e9d28964a812c46efc5baee4085b86f68f0c654450de"
   name = "github.com/konsorten/go-windows-terminal-sequences"
   packages = ["."]
   pruneopts = "UT"
-  revision = "5c8c8bd35d3832f5d134ae1e1e375b69a4d25242"
-  version = "v1.0.1"
+  revision = "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e"
+  version = "v1.0.2"
 
 [[projects]]
   branch = "master"
@@ -623,7 +615,6 @@
   analyzer-version = 1
   input-imports = [
     "github.com/blang/semver",
-    "github.com/ccding/go-stun/stun",
     "github.com/dgraph-io/badger",
     "github.com/gojuno/minimock",
     "github.com/google/gofuzz",
