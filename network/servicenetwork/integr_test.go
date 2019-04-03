@@ -59,12 +59,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/network/node"
-
 	"github.com/insolar/insolar/consensus/claimhandler"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/node"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -117,6 +116,7 @@ func (s *testSuite) TestNodeConnectInvalidVersion() {
 }
 
 func (s *testSuite) TestManyNodesConnect() {
+	s.T().Skip("test hangs in some situations, needs fix: INS-2200")
 	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}

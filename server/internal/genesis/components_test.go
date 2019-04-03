@@ -38,6 +38,7 @@ func TestInitComponents(t *testing.T) {
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)
+
 	cm, err := initComponents(
 		ctx,
 		cfg,

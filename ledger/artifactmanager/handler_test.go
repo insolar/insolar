@@ -36,9 +36,10 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
@@ -60,8 +61,12 @@ type handlerSuite struct {
 	nodeStorage   node.Accessor
 	objectStorage storage.ObjectStorage
 	jetStorage    jet.Storage
-	dropModifier  drop.Modifier
-	dropAccessor  drop.Accessor
+
+	dropModifier drop.Modifier
+	dropAccessor drop.Accessor
+
+	blobModifier blob.Modifier
+	blobAccessor blob.Accessor
 }
 
 var (
@@ -108,14 +113,20 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.nodeStorage = node.NewStorage()
 	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
-	dropStorage := drop.NewStorageDB()
+
+	storageDB := store.NewMemoryMockDB()
+	dropStorage := drop.NewStorageDB(storageDB)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
+
+	blobStorage := blob.NewStorageMemory()
+	s.blobAccessor = blobStorage
+	s.blobModifier = blobStorage
 
 	s.cm.Inject(
 		s.scheme,
 		s.db,
-		db.NewMemoryMockDB(),
+		store.NewMemoryMockDB(),
 		s.jetStorage,
 		s.nodeStorage,
 		s.pulseTracker,
@@ -530,6 +541,10 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
 
+	blobStorage := blob.NewStorageMemory()
+	h.BlobModifier = blobStorage
+	h.BlobAccessor = blobStorage
+
 	idLockMock := storage.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
@@ -606,6 +621,10 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
+
+	blobStorage := blob.NewStorageMemory()
+	h.BlobModifier = blobStorage
+	h.BlobAccessor = blobStorage
 
 	idLockMock := storage.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
@@ -800,7 +819,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 		require.NoError(t, err)
 		lightRef := genRandomRef(0)
 		jc.NodeForJetMock.Return(lightRef, nil)
-		rep, err := h.handleGetCode(s.ctx, &message.Parcel{
+		rep, err := h.handleGetCode(contextWithJet(s.ctx, jetID), &message.Parcel{
 			Msg:         &msg,
 			PulseNumber: insolar.FirstPulseNumber + 1,
 		})

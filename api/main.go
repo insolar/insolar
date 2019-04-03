@@ -27,14 +27,15 @@ import (
 
 	"github.com/gorilla/rpc/v2"
 	jsonrpc "github.com/gorilla/rpc/v2/json2"
-	"github.com/insolar/insolar/application/extractor"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/seedmanager"
+	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
@@ -47,6 +48,7 @@ type Runner struct {
 	NetworkSwitcher     insolar.NetworkSwitcher     `inject:""`
 	NodeNetwork         insolar.NodeNetwork         `inject:""`
 	PulseStorage        insolar.PulseStorage        `inject:""`
+	ArtifactManager     artifacts.Client            `inject:""`
 	server              *http.Server
 	rpcServer           *rpc.Server
 	cfg                 *configuration.APIRunner
@@ -77,26 +79,29 @@ func checkConfig(cfg *configuration.APIRunner) error {
 }
 
 func (ar *Runner) registerServices(rpcServer *rpc.Server) error {
-	var err error
-
-	err = rpcServer.RegisterService(NewSeedService(ar), "seed")
+	err := rpcServer.RegisterService(NewSeedService(ar), "seed")
 	if err != nil {
-		return errors.New("[ registerServices ] Can't RegisterService: seed")
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: seed")
 	}
 
 	err = rpcServer.RegisterService(NewInfoService(ar), "info")
 	if err != nil {
-		return errors.New("[ registerServices ] Can't RegisterService: info")
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: info")
 	}
 
 	err = rpcServer.RegisterService(NewStatusService(ar), "status")
 	if err != nil {
-		return errors.New("[ registerServices ] Can't RegisterService: status")
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: status")
 	}
 
 	err = rpcServer.RegisterService(NewNodeCertService(ar), "cert")
 	if err != nil {
-		return errors.New("[ registerServices ] Can't RegisterService: cert")
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: cert")
+	}
+
+	err = rpcServer.RegisterService(NewContractService(ar), "contract")
+	if err != nil {
+		return errors.Wrap(err, "[ registerServices ] Can't RegisterService: contract")
 	}
 
 	return nil

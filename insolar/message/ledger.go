@@ -365,7 +365,6 @@ func (m *ValidationCheck) DefaultRole() insolar.DynamicRole {
 
 // AllowedSenderObjectAndRole implements interface method
 func (m *ValidationCheck) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
-	// TODO: return smth real
 	return nil, 0
 }
 

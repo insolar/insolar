@@ -25,7 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,8 +34,7 @@ import (
 func TestPulse_Components(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	memStorage := pulse.NewStorageMem()
-	dbStorage := pulse.NewStorageDB()
-	dbStorage.DB = db.NewMemoryMockDB()
+	dbStorage := pulse.NewStorageDB(store.NewMemoryMockDB())
 
 	var pulses []insolar.Pulse
 	f := fuzz.New().Funcs(func(p *insolar.Pulse, c fuzz.Continue) {

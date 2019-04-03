@@ -17,17 +17,27 @@
 package blob
 
 import (
+	"bytes"
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/ugorji/go/codec"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Accessor -o ./ -s _mock.go
 
 // Accessor provides info about Blob-values from storage.
 type Accessor interface {
-	// ForID returns Blob for provided id.
+	// ForID returns Blob for a provided id.
 	ForID(ctx context.Context, id insolar.ID) (Blob, error)
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.CollectionAccessor -o ./ -s _mock.go
+
+// CollectionAccessor provides methods for querying blobs with specific search conditions.
+type CollectionAccessor interface {
+	// ForPulse returns []Blob for a provided jetID and a pulse number.
+	ForPulse(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []Blob
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Modifier -o ./ -s _mock.go
@@ -38,6 +48,13 @@ type Modifier interface {
 	Set(ctx context.Context, id insolar.ID, blob Blob) error
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Cleaner -o ./ -s _mock.go
+
+// Cleaner provides an interface for removing blobs from a storage.
+type Cleaner interface {
+	Delete(ctx context.Context, pulse insolar.PulseNumber)
+}
+
 // Blob represents blob-value with jetID.
 type Blob struct {
 	Value []byte
@@ -45,13 +62,34 @@ type Blob struct {
 }
 
 // Clone returns copy of argument blob.
-func Clone(blob Blob) Blob {
-	if len(blob.Value) == 0 {
-		blob.Value = nil
-	} else {
-		b := blob.Value
-		blob.Value = append([]byte(nil), b...)
+func Clone(in Blob) (out Blob) {
+	out.JetID = in.JetID
+	if in.Value != nil {
+		v := make([]byte, len(in.Value))
+		copy(v, in.Value)
+		out.Value = v
 	}
+	return
+}
 
-	return blob
+// MustEncode serializes a blob.
+func MustEncode(blob *Blob) []byte {
+	var buf bytes.Buffer
+	enc := codec.NewEncoder(&buf, &codec.CborHandle{})
+	err := enc.Encode(blob)
+	if err != nil {
+		panic(err)
+	}
+	return buf.Bytes()
+}
+
+// Decode deserializes a blob.
+func Decode(buf []byte) (*Blob, error) {
+	dec := codec.NewDecoder(bytes.NewReader(buf), &codec.CborHandle{})
+	var blob Blob
+	err := dec.Decode(&blob)
+	if err != nil {
+		return nil, err
+	}
+	return &blob, nil
 }

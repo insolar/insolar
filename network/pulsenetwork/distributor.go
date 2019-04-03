@@ -55,17 +55,18 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
-	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/packet"
-	"github.com/insolar/insolar/network/transport/packet/types"
-	"github.com/pkg/errors"
 )
 
 type distributor struct {
@@ -241,5 +242,5 @@ func (d *distributor) resume(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("[ Resume ] Resume distribution, starting transport")
 	ctx, span := instracer.StartSpan(ctx, "distributor.resume")
 	defer span.End()
-	return transport.ListenAndWaitUntilReady(ctx, d.Transport)
+	return d.Transport.Listen(ctx)
 }

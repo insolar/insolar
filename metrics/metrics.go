@@ -40,12 +40,19 @@ const insgorundNamespace = "insgorund"
 
 // Metrics is a component which serve metrics data to Prometheus.
 type Metrics struct {
+	CertificateManager insolar.CertificateManager `inject:""`
+
+	config   configuration.Metrics
+	registry *prometheus.Registry
+
 	server   *http.Server
 	listener net.Listener
+
+	nodeRole string
 }
 
 // NewMetrics creates new Metrics component.
-func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *prometheus.Registry) (*Metrics, error) {
+func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *prometheus.Registry, nodeRole string) (*Metrics, error) {
 	errlogger := &errorLogger{inslogger.FromContext(ctx)}
 	promhandler := promhttp.HandlerFor(registry, promhttp.HandlerOpts{ErrorLog: errlogger})
 
@@ -59,15 +66,13 @@ func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *promet
 	}
 
 	m := &Metrics{
+		config:   cfg,
+		registry: registry,
 		server: &http.Server{
 			Addr:    cfg.ListenAddress,
 			Handler: mux,
 		},
-	}
-
-	_, err := insmetrics.RegisterPrometheus(ctx, cfg.Namespace, registry, cfg.ReportingPeriod)
-	if err != nil {
-		errlogger.Println(err.Error())
+		nodeRole: nodeRole,
 	}
 
 	return m, nil
@@ -80,6 +85,17 @@ var ErrBind = errors.New("Failed to bind")
 // Start is implementation of insolar.Component interface.
 func (m *Metrics) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
+
+	if m.nodeRole == "" {
+		m.nodeRole = m.CertificateManager.GetCertificate().GetRole().String()
+	}
+	_, err := insmetrics.RegisterPrometheus(
+		ctx, m.config.Namespace, m.registry, m.config.ReportingPeriod,
+		m.nodeRole,
+	)
+	if err != nil {
+		inslog.Error(err.Error())
+	}
 
 	listener, err := net.Listen("tcp", m.server.Addr)
 	if err != nil {
