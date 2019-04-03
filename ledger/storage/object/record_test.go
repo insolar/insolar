@@ -141,7 +141,7 @@ func TestRecordStorage_Delete(t *testing.T) {
 		}
 		assert.Equal(t, countFirstPulse+countSecondPulse, int32(len(recordStorage.memory)))
 
-		recordStorage.RemoveUntil(ctx, firstPulse)
+		recordStorage.Remove(ctx, firstPulse)
 		assert.Equal(t, countSecondPulse, int32(len(recordStorage.memory)))
 	})
 }
@@ -165,7 +165,7 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 			JetID:  searchJetID,
 		}
 
-		id := insolar.NewID(searchPN, SerializeRecord(rec.Record))
+		id := insolar.NewID(searchPN, EncodeVirtual(rec.Record))
 
 		searchRecs[*id] = struct{}{}
 		err := recordMemory.Set(ctx, *id, rec)
@@ -187,7 +187,7 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 	require.Equal(t, len(searchRecs), len(res))
 
 	for _, r := range res {
-		rID := insolar.NewID(searchPN, SerializeRecord(r.Record))
+		rID := insolar.NewID(searchPN, EncodeVirtual(r.Record))
 		_, ok := searchRecs[*rID]
 		require.Equal(t, true, ok)
 	}

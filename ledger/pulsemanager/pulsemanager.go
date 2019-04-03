@@ -639,7 +639,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse insolar.Puls
 	m.NodeSetter.Delete(p.Pulse.PulseNumber)
 	m.DropCleaner.Delete(p.Pulse.PulseNumber)
 	m.BlobCleaner.Delete(ctx, p.Pulse.PulseNumber)
-	m.RecCleaner.RemoveUntil(ctx, p.Pulse.PulseNumber)
+	m.RecCleaner.Remove(ctx, p.Pulse.PulseNumber)
 	err = m.PulseTracker.DeletePulse(ctx, p.Pulse.PulseNumber)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)

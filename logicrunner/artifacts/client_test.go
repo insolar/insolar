@@ -337,7 +337,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	resRecord := object.RequestRecord{
 		Parcel: message.ParcelToBytes(parcel),
 	}
-	finalResponse := &reply.Request{Record: object.SerializeRecord(&resRecord)}
+	finalResponse := &reply.Request{Record: object.EncodeVirtual(&resRecord)}
 
 	mb := testutils.NewMessageBusMock(s.T())
 	mb.SendFunc = func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {

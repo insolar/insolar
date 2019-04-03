@@ -301,7 +301,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 
 	switch r := genericReply.(type) {
 	case *reply.Request:
-		rec, err := object.DeserializeRecord(r.Record)
+		rec, err := object.DecodeVirtual(r.Record)
 		if err != nil {
 			return nil, errors.Wrap(err, "GetPendingRequest: can't deserialize record")
 		}
@@ -897,7 +897,7 @@ func (m *client) setRecord(
 
 	sender := BuildSender(bus.Send, retryJetSender(currentPN, m.JetStorage))
 	genericReply, err := sender(ctx, &message.SetRecord{
-		Record:    object.SerializeRecord(rec),
+		Record:    object.EncodeVirtual(rec),
 		TargetRef: target,
 	}, nil)
 
@@ -955,7 +955,7 @@ func (m *client) sendUpdateObject(
 	genericReply, err := sender(
 		ctx,
 		&message.UpdateObject{
-			Record: object.SerializeRecord(rec),
+			Record: object.EncodeVirtual(rec),
 			Object: obj,
 			Memory: memory,
 		}, nil)
@@ -985,7 +985,7 @@ func (m *client) registerChild(
 	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(bus.Send, retryJetSender(currentPN, m.JetStorage))
 	genericReact, err := sender(ctx, &message.RegisterChild{
-		Record: object.SerializeRecord(rec),
+		Record: object.EncodeVirtual(rec),
 		Parent: parent,
 		Child:  child,
 		AsType: asType,

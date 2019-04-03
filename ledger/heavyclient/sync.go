@@ -123,7 +123,7 @@ func convertBlobs(blobs []blob.Blob) [][]byte {
 
 func convertRecords(records []record.MaterialRecord) (result [][]byte) {
 	for _, r := range records {
-		result = append(result, object.EncodeRecord(r))
+		result = append(result, object.EncodeMaterial(r))
 	}
 	return
 }

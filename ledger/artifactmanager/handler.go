@@ -265,7 +265,7 @@ func (h *MessageHandler) setReplayHandlers(m *middleware) {
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.SetRecord)
-	virtRec, err := object.DeserializeRecord(msg.Record)
+	virtRec, err := object.DecodeVirtual(msg.Record)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't deserialize record")
 	}
@@ -727,7 +727,7 @@ func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel insolar.Pa
 
 	rep := reply.Request{
 		ID:     msg.Request,
-		Record: object.SerializeRecord(req),
+		Record: object.EncodeVirtual(req),
 	}
 
 	return &rep, nil
@@ -757,7 +757,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 		"pulse":  parcel.Pulse(),
 	})
 
-	virtRec, err := object.DeserializeRecord(msg.Record)
+	virtRec, err := object.DecodeVirtual(msg.Record)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't deserialize record")
 	}
@@ -864,7 +864,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 
 	msg := parcel.Message().(*message.RegisterChild)
 	jetID := jetFromContext(ctx)
-	r, err := object.DeserializeRecord(msg.Record)
+	r, err := object.DecodeVirtual(msg.Record)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't deserialize record")
 	}

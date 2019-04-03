@@ -258,7 +258,7 @@ func (s *Sync) StoreRecords(ctx context.Context, jetID insolar.ID, pn insolar.Pu
 	inslog := inslogger.FromContext(ctx)
 
 	for _, rawRec := range rawRecords {
-		rec, err := object.DecodeRecord(rawRec)
+		rec, err := object.DecodeMaterial(rawRec)
 		if err != nil {
 			inslog.Error(err, "heavyserver: deserialize record failed")
 			continue

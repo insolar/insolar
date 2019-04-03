@@ -37,8 +37,8 @@ func TestSerializeDeserializeRecord(t *testing.T) {
 			Memory: CalculateIDForBlob(cs, insolar.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
 		},
 	}
-	serialized := SerializeRecord(&rec)
-	deserialized, err := DeserializeRecord(serialized)
+	serialized := EncodeVirtual(&rec)
+	deserialized, err := DecodeVirtual(serialized)
 	require.NoError(t, err)
 	assert.Equal(t, rec, *deserialized.(*ActivateRecord))
 }

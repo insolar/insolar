@@ -79,8 +79,8 @@ type RecordModifier interface {
 
 // RecordCleaner provides an interface for removing records from a storage.
 type RecordCleaner interface {
-	// RemoveUntil method removes records from a storage for all pulses until pulse (pulse included)
-	RemoveUntil(ctx context.Context, pulse insolar.PulseNumber)
+	// Remove method removes records from a storage for all pulses until pulse (pulse included)
+	Remove(ctx context.Context, pulse insolar.PulseNumber)
 }
 
 // RecordMemory is an in-memory struct for record-storage.
@@ -153,8 +153,8 @@ func (m *RecordMemory) ForPulse(
 	return res
 }
 
-// RemoveUntil method removes records from a storage for all pulses until pulse (pulse included)
-func (m *RecordMemory) RemoveUntil(ctx context.Context, pulse insolar.PulseNumber) {
+// Remove method removes records from a storage for all pulses until pulse (pulse included)
+func (m *RecordMemory) Remove(ctx context.Context, pulse insolar.PulseNumber) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -214,7 +214,7 @@ func (r *RecordDB) set(id insolar.ID, rec record.MaterialRecord) error {
 		return ErrOverride
 	}
 
-	return r.db.Set(key, EncodeRecord(rec))
+	return r.db.Set(key, EncodeMaterial(rec))
 }
 
 func (r *RecordDB) get(id insolar.ID) (rec record.MaterialRecord, err error) {
@@ -226,22 +226,22 @@ func (r *RecordDB) get(id insolar.ID) (rec record.MaterialRecord, err error) {
 	if err != nil {
 		return
 	}
-	rec, err = DecodeRecord(buff)
+	rec, err = DecodeMaterial(buff)
 	return
 }
 
-func EncodeRecord(rec record.MaterialRecord) []byte {
-	buff := SerializeRecord(rec.Record)
+func EncodeMaterial(rec record.MaterialRecord) []byte {
+	buff := EncodeVirtual(rec.Record)
 	result := append(buff[:], rec.JetID[:]...)
 
 	return result
 }
 
-func DecodeRecord(buff []byte) (rec record.MaterialRecord, err error) {
+func DecodeMaterial(buff []byte) (rec record.MaterialRecord, err error) {
 	recBuff := buff[:len(buff)-insolar.RecordIDSize]
 	jetIDBuff := buff[len(buff)-insolar.RecordIDSize:]
 
-	r, err := DeserializeRecord(recBuff)
+	r, err := DecodeVirtual(recBuff)
 	if err != nil {
 		return rec, err
 	}

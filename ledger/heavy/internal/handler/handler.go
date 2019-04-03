@@ -260,7 +260,7 @@ func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (
 
 	rep := reply.Request{
 		ID:     msg.Request,
-		Record: object.SerializeRecord(req),
+		Record: object.EncodeVirtual(req),
 	}
 
 	return &rep, nil

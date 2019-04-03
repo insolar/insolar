@@ -117,9 +117,9 @@ func (s *heavysyncSuite) TestHeavy_SyncBasic() {
 		JetID:  jID,
 	}
 
-	rawRec := object.EncodeRecord(rec)
+	rawRec := object.EncodeMaterial(rec)
 
-	// id := insolar.NewID(pnum, object.SerializeRecord(rec.Record))
+	// id := insolar.NewID(pnum, object.EncodeVirtual(rec.Record))
 
 	var recs [][]byte
 	recs = append(recs, rawRec)

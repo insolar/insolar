@@ -572,7 +572,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	require.NoError(s.T(), err)
 
 	msg := message.UpdateObject{
-		Record: object.SerializeRecord(&amendRecord),
+		Record: object.EncodeVirtual(&amendRecord),
 		Object: *genRandomRef(0),
 	}
 
@@ -658,7 +658,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	require.NoError(s.T(), err)
 
 	msg := message.UpdateObject{
-		Record: object.SerializeRecord(&amendRecord),
+		Record: object.EncodeVirtual(&amendRecord),
 		Object: *genRandomRef(0),
 	}
 	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Object.Record(), &objIndex)
@@ -912,7 +912,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	childID := insolar.NewID(0, amendHash.Sum(nil))
 
 	msg := message.RegisterChild{
-		Record: object.SerializeRecord(&childRecord),
+		Record: object.EncodeVirtual(&childRecord),
 		Parent: *genRandomRef(0),
 	}
 
@@ -991,7 +991,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 		PrevChild: nil,
 	}
 	msg := message.RegisterChild{
-		Record: object.SerializeRecord(&childRecord),
+		Record: object.EncodeVirtual(&childRecord),
 		Parent: *genRandomRef(0),
 	}
 
@@ -1230,6 +1230,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	require.NoError(s.T(), err)
 	reqReply, ok := rep.(*reply.Request)
 	require.True(s.T(), ok)
-	vrec, _ := object.DeserializeRecord(reqReply.Record)
+	vrec, _ := object.DecodeVirtual(reqReply.Record)
 	assert.Equal(s.T(), req, *vrec.(*object.RequestRecord))
 }

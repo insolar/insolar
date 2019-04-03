@@ -20,10 +20,10 @@ import (
 type RecordCleanerMock struct {
 	t minimock.Tester
 
-	RemoveUntilFunc       func(p context.Context, p1 insolar.PulseNumber)
-	RemoveUntilCounter    uint64
-	RemoveUntilPreCounter uint64
-	RemoveUntilMock       mRecordCleanerMockRemoveUntil
+	RemoveFunc       func(p context.Context, p1 insolar.PulseNumber)
+	RemoveCounter    uint64
+	RemovePreCounter uint64
+	RemoveMock       mRecordCleanerMockRemove
 }
 
 //NewRecordCleanerMock returns a mock for github.com/insolar/insolar/ledger/storage/object.RecordCleaner
@@ -34,130 +34,130 @@ func NewRecordCleanerMock(t minimock.Tester) *RecordCleanerMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.RemoveUntilMock = mRecordCleanerMockRemoveUntil{mock: m}
+	m.RemoveMock = mRecordCleanerMockRemove{mock: m}
 
 	return m
 }
 
-type mRecordCleanerMockRemoveUntil struct {
+type mRecordCleanerMockRemove struct {
 	mock              *RecordCleanerMock
-	mainExpectation   *RecordCleanerMockRemoveUntilExpectation
-	expectationSeries []*RecordCleanerMockRemoveUntilExpectation
+	mainExpectation   *RecordCleanerMockRemoveExpectation
+	expectationSeries []*RecordCleanerMockRemoveExpectation
 }
 
-type RecordCleanerMockRemoveUntilExpectation struct {
-	input *RecordCleanerMockRemoveUntilInput
+type RecordCleanerMockRemoveExpectation struct {
+	input *RecordCleanerMockRemoveInput
 }
 
-type RecordCleanerMockRemoveUntilInput struct {
+type RecordCleanerMockRemoveInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
 }
 
-//Expect specifies that invocation of RecordCleaner.RemoveUntil is expected from 1 to Infinity times
-func (m *mRecordCleanerMockRemoveUntil) Expect(p context.Context, p1 insolar.PulseNumber) *mRecordCleanerMockRemoveUntil {
-	m.mock.RemoveUntilFunc = nil
+//Expect specifies that invocation of RecordCleaner.Remove is expected from 1 to Infinity times
+func (m *mRecordCleanerMockRemove) Expect(p context.Context, p1 insolar.PulseNumber) *mRecordCleanerMockRemove {
+	m.mock.RemoveFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &RecordCleanerMockRemoveUntilExpectation{}
+		m.mainExpectation = &RecordCleanerMockRemoveExpectation{}
 	}
-	m.mainExpectation.input = &RecordCleanerMockRemoveUntilInput{p, p1}
+	m.mainExpectation.input = &RecordCleanerMockRemoveInput{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of RecordCleaner.RemoveUntil
-func (m *mRecordCleanerMockRemoveUntil) Return() *RecordCleanerMock {
-	m.mock.RemoveUntilFunc = nil
+//Return specifies results of invocation of RecordCleaner.Remove
+func (m *mRecordCleanerMockRemove) Return() *RecordCleanerMock {
+	m.mock.RemoveFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &RecordCleanerMockRemoveUntilExpectation{}
+		m.mainExpectation = &RecordCleanerMockRemoveExpectation{}
 	}
 
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of RecordCleaner.RemoveUntil is expected once
-func (m *mRecordCleanerMockRemoveUntil) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *RecordCleanerMockRemoveUntilExpectation {
-	m.mock.RemoveUntilFunc = nil
+//ExpectOnce specifies that invocation of RecordCleaner.Remove is expected once
+func (m *mRecordCleanerMockRemove) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *RecordCleanerMockRemoveExpectation {
+	m.mock.RemoveFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &RecordCleanerMockRemoveUntilExpectation{}
-	expectation.input = &RecordCleanerMockRemoveUntilInput{p, p1}
+	expectation := &RecordCleanerMockRemoveExpectation{}
+	expectation.input = &RecordCleanerMockRemoveInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-//Set uses given function f as a mock of RecordCleaner.RemoveUntil method
-func (m *mRecordCleanerMockRemoveUntil) Set(f func(p context.Context, p1 insolar.PulseNumber)) *RecordCleanerMock {
+//Set uses given function f as a mock of RecordCleaner.Remove method
+func (m *mRecordCleanerMockRemove) Set(f func(p context.Context, p1 insolar.PulseNumber)) *RecordCleanerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.RemoveUntilFunc = f
+	m.mock.RemoveFunc = f
 	return m.mock
 }
 
-//RemoveUntil implements github.com/insolar/insolar/ledger/storage/object.RecordCleaner interface
-func (m *RecordCleanerMock) RemoveUntil(p context.Context, p1 insolar.PulseNumber) {
-	counter := atomic.AddUint64(&m.RemoveUntilPreCounter, 1)
-	defer atomic.AddUint64(&m.RemoveUntilCounter, 1)
+//Remove implements github.com/insolar/insolar/ledger/storage/object.RecordCleaner interface
+func (m *RecordCleanerMock) Remove(p context.Context, p1 insolar.PulseNumber) {
+	counter := atomic.AddUint64(&m.RemovePreCounter, 1)
+	defer atomic.AddUint64(&m.RemoveCounter, 1)
 
-	if len(m.RemoveUntilMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.RemoveUntilMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to RecordCleanerMock.RemoveUntil. %v %v", p, p1)
+	if len(m.RemoveMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.RemoveMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to RecordCleanerMock.Remove. %v %v", p, p1)
 			return
 		}
 
-		input := m.RemoveUntilMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, RecordCleanerMockRemoveUntilInput{p, p1}, "RecordCleaner.RemoveUntil got unexpected parameters")
+		input := m.RemoveMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, RecordCleanerMockRemoveInput{p, p1}, "RecordCleaner.Remove got unexpected parameters")
 
 		return
 	}
 
-	if m.RemoveUntilMock.mainExpectation != nil {
+	if m.RemoveMock.mainExpectation != nil {
 
-		input := m.RemoveUntilMock.mainExpectation.input
+		input := m.RemoveMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, RecordCleanerMockRemoveUntilInput{p, p1}, "RecordCleaner.RemoveUntil got unexpected parameters")
+			testify_assert.Equal(m.t, *input, RecordCleanerMockRemoveInput{p, p1}, "RecordCleaner.Remove got unexpected parameters")
 		}
 
 		return
 	}
 
-	if m.RemoveUntilFunc == nil {
-		m.t.Fatalf("Unexpected call to RecordCleanerMock.RemoveUntil. %v %v", p, p1)
+	if m.RemoveFunc == nil {
+		m.t.Fatalf("Unexpected call to RecordCleanerMock.Remove. %v %v", p, p1)
 		return
 	}
 
-	m.RemoveUntilFunc(p, p1)
+	m.RemoveFunc(p, p1)
 }
 
-//RemoveUntilMinimockCounter returns a count of RecordCleanerMock.RemoveUntilFunc invocations
-func (m *RecordCleanerMock) RemoveUntilMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.RemoveUntilCounter)
+//RemoveMinimockCounter returns a count of RecordCleanerMock.RemoveFunc invocations
+func (m *RecordCleanerMock) RemoveMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.RemoveCounter)
 }
 
-//RemoveUntilMinimockPreCounter returns the value of RecordCleanerMock.RemoveUntil invocations
-func (m *RecordCleanerMock) RemoveUntilMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.RemoveUntilPreCounter)
+//RemoveMinimockPreCounter returns the value of RecordCleanerMock.Remove invocations
+func (m *RecordCleanerMock) RemoveMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.RemovePreCounter)
 }
 
-//RemoveUntilFinished returns true if mock invocations count is ok
-func (m *RecordCleanerMock) RemoveUntilFinished() bool {
+//RemoveFinished returns true if mock invocations count is ok
+func (m *RecordCleanerMock) RemoveFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.RemoveUntilMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.RemoveUntilCounter) == uint64(len(m.RemoveUntilMock.expectationSeries))
+	if len(m.RemoveMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.RemoveCounter) == uint64(len(m.RemoveMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.RemoveUntilMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.RemoveUntilCounter) > 0
+	if m.RemoveMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.RemoveCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.RemoveUntilFunc != nil {
-		return atomic.LoadUint64(&m.RemoveUntilCounter) > 0
+	if m.RemoveFunc != nil {
+		return atomic.LoadUint64(&m.RemoveCounter) > 0
 	}
 
 	return true
@@ -167,8 +167,8 @@ func (m *RecordCleanerMock) RemoveUntilFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *RecordCleanerMock) ValidateCallCounters() {
 
-	if !m.RemoveUntilFinished() {
-		m.t.Fatal("Expected call to RecordCleanerMock.RemoveUntil")
+	if !m.RemoveFinished() {
+		m.t.Fatal("Expected call to RecordCleanerMock.Remove")
 	}
 
 }
@@ -188,8 +188,8 @@ func (m *RecordCleanerMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *RecordCleanerMock) MinimockFinish() {
 
-	if !m.RemoveUntilFinished() {
-		m.t.Fatal("Expected call to RecordCleanerMock.RemoveUntil")
+	if !m.RemoveFinished() {
+		m.t.Fatal("Expected call to RecordCleanerMock.Remove")
 	}
 
 }
@@ -206,7 +206,7 @@ func (m *RecordCleanerMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.RemoveUntilFinished()
+		ok = ok && m.RemoveFinished()
 
 		if ok {
 			return
@@ -215,8 +215,8 @@ func (m *RecordCleanerMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.RemoveUntilFinished() {
-				m.t.Error("Expected call to RecordCleanerMock.RemoveUntil")
+			if !m.RemoveFinished() {
+				m.t.Error("Expected call to RecordCleanerMock.Remove")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -231,7 +231,7 @@ func (m *RecordCleanerMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *RecordCleanerMock) AllMocksCalled() bool {
 
-	if !m.RemoveUntilFinished() {
+	if !m.RemoveFinished() {
 		return false
 	}
 
