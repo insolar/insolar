@@ -170,8 +170,12 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't ReadFile")
 		}
-		codeReq, err := cb.artifactsClient.RegisterRequest(
-			ctx, *domainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_code"}},
+		codeReq, err := cb.artifactManager.RegisterRequest(
+			ctx,
+			*domainRef,
+			&message.Parcel{
+				Msg: &message.GenesisRequest{Name: name + "_code"},
+			},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")

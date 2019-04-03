@@ -25,12 +25,9 @@ import (
 	"github.com/insolar/insolar/application/contract/noderecord"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -39,42 +36,32 @@ import (
 const testDataPath = "gentestdata"
 
 func mockArtifactClient(t *testing.T) *artifacts.ClientMock {
-	amMock := artifacts.NewClientMock(t)
-	amMock.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
-		id := gen.ID()
-		return &id, nil
-	}
-	amMock.ActivateObjectFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r artifacts.ObjectDescriptor, r1 error) {
+	acMock := artifacts.NewClientMock(t)
+	acMock.ActivateObjectFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r artifacts.ObjectDescriptor, r1 error) {
 		return artifacts.NewObjectDescriptorMock(t), nil
 	}
-	amMock.RegisterResultFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error) {
+	acMock.RegisterResultFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error) {
 		id := gen.ID()
 		return &id, nil
 	}
+	return acMock
+}
+
+func mockArtifactManager(t *testing.T) *artifact.ManagerMock {
+	amMock := artifact.NewManagerMock(t)
+	amMock.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
+		id := gen.ID()
+		return &id, nil
+	}
+
 	return amMock
 }
 
-func mockArtifactManager(t *testing.T) artifact.Manager {
-	osMock := storage.NewObjectStorageMock(t)
-
-	osMock.SetRecordFunc = func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 record.VirtualRecord) (r *insolar.ID, r1 error) {
-		id := gen.ID()
-		return &id, nil
-	}
-
-	return &artifact.Scope{
-		PulseNumber:                insolar.FirstPulseNumber,
-		ObjectStorage:              osMock,
-		PlatformCryptographyScheme: platformpolicy.NewPlatformCryptographyScheme(),
-	}
-}
-
-func mockArtifactClientWithRegisterRequestError(t *testing.T) *artifacts.ClientMock {
-	amMock := artifacts.NewClientMock(t)
-	amMock.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
+func requestWithError(am *artifact.ManagerMock) artifact.Manager {
+	am.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
 		return nil, errors.New("test reasons")
 	}
-	return amMock
+	return am
 }
 
 func mockGenesis(t *testing.T, ac artifacts.Client, am artifact.Manager) *Genesis {
@@ -212,8 +199,9 @@ func TestUploadKeys_Reuse_DirNotExist(t *testing.T) {
 }
 
 func TestActivateNodeRecord_RegisterRequest_Err(t *testing.T) {
-	am := mockArtifactManager(t)
-	ac := mockArtifactClientWithRegisterRequestError(t)
+	am := requestWithError(mockArtifactManager(t))
+	ac := mockArtifactClient(t)
+
 	g := mockGenesis(t, ac, am)
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
@@ -314,8 +302,9 @@ func TestActivateNodeRecord(t *testing.T) {
 }
 
 func TestActivateNodes_Err(t *testing.T) {
-	ac := mockArtifactClientWithRegisterRequestError(t)
-	am := mockArtifactManager(t)
+	ac := mockArtifactClient(t)
+	am := requestWithError(mockArtifactManager(t))
+
 	g := mockGenesis(t, ac, am)
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
@@ -381,8 +370,8 @@ func TestActivateDiscoveryNodes_DiffLen(t *testing.T) {
 }
 
 func TestActivateDiscoveryNodes_Err(t *testing.T) {
-	ac := mockArtifactClientWithRegisterRequestError(t)
-	am := mockArtifactManager(t)
+	ac := mockArtifactClient(t)
+	am := requestWithError(mockArtifactManager(t))
 	g := mockGenesis(t, ac, am)
 
 	cb := mockContractBuilder(t, g)
@@ -434,8 +423,10 @@ func TestActivateDiscoveryNodes(t *testing.T) {
 }
 
 func (s *genesisWithDataSuite) TestAddDiscoveryIndex_ActivateErr() {
-	ac := mockArtifactClientWithRegisterRequestError(s.T())
-	am := mockArtifactManager(s.T())
+	t := s.T()
+	ac := mockArtifactClient(t)
+	am := requestWithError(mockArtifactManager(t))
+
 	g := mockGenesis(s.T(), ac, am)
 	cb := mockContractBuilder(s.T(), g)
 	ctx := inslogger.TestContext(s.T())
@@ -452,8 +443,9 @@ func (s *genesisWithDataSuite) TestAddDiscoveryIndex_ActivateErr() {
 }
 
 func TestAddDiscoveryIndex_UploadErr(t *testing.T) {
-	ac := mockArtifactClientWithRegisterRequestError(t)
-	am := mockArtifactManager(t)
+	ac := mockArtifactClient(t)
+	am := requestWithError(mockArtifactManager(t))
+
 	g := mockGenesis(t, ac, am)
 	g.config.DiscoveryKeysDir = "not_existed_testDataPath"
 	cb := mockContractBuilder(t, g)
@@ -486,8 +478,10 @@ func (s *genesisWithDataSuite) TestAddDiscoveryIndex() {
 }
 
 func (s *genesisWithDataSuite) TestAddIndex_ActivateErr() {
-	ac := mockArtifactClientWithRegisterRequestError(s.T())
-	am := mockArtifactManager(s.T())
+	t := s.T()
+	ac := mockArtifactClient(t)
+	am := requestWithError(mockArtifactManager(t))
+
 	g := mockGenesis(s.T(), ac, am)
 	cb := mockContractBuilder(s.T(), g)
 	ctx := inslogger.TestContext(s.T())
@@ -503,8 +497,9 @@ func (s *genesisWithDataSuite) TestAddIndex_ActivateErr() {
 }
 
 func TestAddIndex_UploadErr(t *testing.T) {
-	ac := mockArtifactClientWithRegisterRequestError(t)
-	am := mockArtifactManager(t)
+	ac := mockArtifactClient(t)
+	am := requestWithError(mockArtifactManager(t))
+
 	g := mockGenesis(t, ac, am)
 	g.config.NodeKeysDir = "not_existed_testDataPath"
 	cb := mockContractBuilder(t, g)
