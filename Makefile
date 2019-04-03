@@ -16,7 +16,7 @@ MOCKS_PACKAGE = github.com/insolar/insolar/testutils
 TESTED_PACKAGES ?= $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
 COVERPROFILE ?= coverage.txt
 TEST_ARGS ?=
-LEDGER_ENTITY ?=
+BUILD_TAGS ?=
 
 BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
 BUILD_DATE = $(shell date "+%Y-%m-%d")
@@ -91,11 +91,11 @@ $(BIN_DIR):
 
 .PHONY: $(INSOLARD)
 $(INSOLARD):
-	go build -o $(BIN_DIR)/$(INSOLARD) ${LEDGER_ENTITY} -ldflags "${LDFLAGS}" cmd/insolard/*.go
+	go build -o $(BIN_DIR)/$(INSOLARD) ${BUILD_TAGS} -ldflags "${LDFLAGS}" cmd/insolard/*.go
 
 .PHONY: $(INSOLAR)
 $(INSOLAR):
-	go build -o $(BIN_DIR)/$(INSOLAR) ${LEDGER_ENTITY} -ldflags "${LDFLAGS}" cmd/insolar/*.go
+	go build -o $(BIN_DIR)/$(INSOLAR) ${BUILD_TAGS} -ldflags "${LDFLAGS}" cmd/insolar/*.go
 
 .PHONY: $(INSGOCC)
 $(INSGOCC): cmd/insgocc/insgocc.go logicrunner/goplugin/preprocessor
