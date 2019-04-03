@@ -20,8 +20,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
