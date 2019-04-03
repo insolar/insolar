@@ -35,7 +35,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
-	pulse2 "github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
@@ -101,7 +101,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 	mc := minimock.NewController(t)
-	ps := pulse2.NewStorageMem()
+	ps := pulse.NewStorageMem()
 
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
@@ -195,10 +195,6 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	if err != nil {
 		t.Error("ComponentManager start failed", err)
 	}
-
-	// pulse, err := ps.Latest(ctx)
-	// require.NoError(t, err)
-	// ps.Set(&pulse.Pulse)
 
 	gilMock := testutils.NewGlobalInsolarLockMock(t)
 	gilMock.AcquireFunc = func(context.Context) {}
