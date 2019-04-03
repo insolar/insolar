@@ -119,7 +119,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 				},
 			})
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
+			return errors.Wrap(err, "[ Build ] Can't RegisterRequest for contract")
 		}
 		cb.Prototypes[name] = insolar.NewReference(*domain, *protoID)
 	}
@@ -178,7 +178,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 			},
 		)
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
+			return errors.Wrapf(err, "[ Build ] Can't RegisterRequest for code '%v'", name)
 		}
 
 		log.Debugf("Deploying code for contract %q", name)

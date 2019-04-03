@@ -164,7 +164,7 @@ func (g *Genesis) activateNodeDomain(
 
 	instanceData, err := insolar.Serialize(nd)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ActivateNodeDomain ]")
+		return nil, errors.Wrap(err, "[ ActivateNodeDomain ] node domain serialization")
 	}
 
 	contractID, err := g.ArtifactManager.RegisterRequest(
