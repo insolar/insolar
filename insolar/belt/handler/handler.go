@@ -17,11 +17,11 @@ type Handler struct {
 		past, present, future belt.Slot
 	}
 	handles struct {
-		past, present, future belt.Handle
+		past, present, future belt.Inithandle
 	}
 }
 
-func NewHandler(pulse insolar.Pulse, past, present, future belt.Handle) *Handler {
+func NewHandler(pulse insolar.Pulse, past, present, future belt.Inithandle) *Handler {
 	h := &Handler{
 		cancel: make(chan struct{}),
 	}
@@ -48,7 +48,7 @@ func (h *Handler) HandleMessage(msg *message.Message) ([]message.Message, error)
 	id, _ := h.slots.present.Add(f)
 	// TODO: log error.
 	go func() {
-		_ = f.Run(msg.Context(), h.handles.present)
+		_ = f.Run(msg.Context(), h.handles.present(msg))
 		// TODO: log error.
 		_ = h.slots.present.Remove(id)
 		// TODO: log error.

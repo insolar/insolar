@@ -2,11 +2,14 @@ package belt
 
 import (
 	"context"
+
+	"github.com/ThreeDotsLabs/watermill/message"
 )
 
 type ID uint64
 
 type Handle func(context.Context, Flow)
+type Inithandle func(message *message.Message) Handle
 
 // Flow will be pasted to all handlers to control execution.
 // This is very important not to blow this interface. Keep it minimal.
