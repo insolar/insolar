@@ -52,6 +52,7 @@ package termination
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -93,7 +94,7 @@ func (t *terminationHandler) leave(ctx context.Context, leaveAfterPulses insolar
 		} else {
 			pulse, err := t.PulseAccessor.Latest(ctx)
 			if err != nil {
-				panic("smth goes wrong. There is no pulse the storage")
+				panic(fmt.Sprintf("smth goes wrong. There is no pulse in the storage. err - %v", err))
 			}
 			pulseDelta := pulse.NextPulseNumber - pulse.PulseNumber
 
