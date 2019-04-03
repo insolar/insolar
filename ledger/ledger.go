@@ -125,7 +125,6 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewHotDataWaiterConcrete(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),
-		pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobSyncAccessor),
 		heavyserver.NewSync(legacyDB, recordModifier),
 	}
 
