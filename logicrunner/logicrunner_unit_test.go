@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -50,7 +51,7 @@ type LogicRunnerCommonTestSuite struct {
 	jc  *testutils.JetCoordinatorMock
 	lr  *LogicRunner
 	es  ExecutionState
-	ps  *testutils.PulseStorageMock
+	ps  *pulse.AccessorMock
 	mle *testutils.MachineLogicExecutorMock
 	nn  *network.NodeNetworkMock
 }
@@ -64,7 +65,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	suite.am = artifacts.NewClientMock(suite.mc)
 	suite.mb = testutils.NewMessageBusMock(suite.mc)
 	suite.jc = testutils.NewJetCoordinatorMock(suite.mc)
-	suite.ps = testutils.NewPulseStorageMock(suite.mc)
+	suite.ps = pulse.NewAccessorMock(suite.mc)
 	suite.nn = network.NewNodeNetworkMock(suite.mc)
 
 	suite.SetupLogicRunner()
@@ -75,7 +76,7 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr.ArtifactManager = suite.am
 	suite.lr.MessageBus = suite.mb
 	suite.lr.JetCoordinator = suite.jc
-	suite.lr.PulseStorage = suite.ps
+	suite.lr.PulseAccessor = suite.ps
 	suite.lr.NodeNetwork = suite.nn
 }
 
@@ -106,7 +107,9 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 	meRef := testutils.RandomRef()
 
 	suite.jc.MeMock.Return(meRef)
-	suite.ps.CurrentMock.Return(&pulse, nil)
+	suite.ps.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
+		return pulse, nil
+	}
 
 	es := &ExecutionState{
 		Ref:       objectRef,
@@ -703,7 +706,9 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	suite.jc.MeMock.Return(meRef)
 
 	pulse := insolar.Pulse{PulseNumber: 100}
-	suite.ps.CurrentMock.Return(&pulse, nil)
+	suite.ps.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
+		return pulse, nil
+	}
 
 	suite.jc.IsAuthorizedFunc = func(
 		ctx context.Context, role insolar.DynamicRole, id insolar.ID, pn insolar.PulseNumber, obj insolar.Reference,
@@ -811,8 +816,8 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	suite.jc.MeMock.Return(meRef)
 
 	pn := 100
-	suite.ps.CurrentFunc = func(ctx context.Context) (*insolar.Pulse, error) {
-		return &insolar.Pulse{PulseNumber: insolar.PulseNumber(pn)}, nil
+	suite.ps.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
+		return insolar.Pulse{PulseNumber: insolar.PulseNumber(pn)}, nil
 	}
 
 	mle := testutils.NewMachineLogicExecutorMock(suite.mc)
@@ -1404,7 +1409,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestDoesNotAuthorized() {
 	s.am.GetPendingRequestMock.Return(parcel, nil)
 
 	// we doesn't authorized (pulse change in time we process function)
-	s.ps.CurrentMock.Return(&insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
+	s.ps.LatestMock.Return(insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
 	s.jc.IsAuthorizedMock.Return(false, nil)
 	s.jc.MeMock.Return(insolar.Reference{})
 
@@ -1421,7 +1426,7 @@ func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequ
 	}
 	s.am.GetPendingRequestMock.Return(parcel, nil)
 
-	s.ps.CurrentMock.Return(&insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
+	s.ps.LatestMock.Return(insolar.Pulse{PulseNumber: s.currentPulseNumber}, nil)
 	s.jc.IsAuthorizedMock.Return(true, nil)
 	s.jc.MeMock.Return(insolar.Reference{})
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)

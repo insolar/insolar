@@ -70,6 +70,7 @@ type heavySuite struct {
 	dropModifier   drop.Modifier
 	dropAccessor   drop.Accessor
 	storageCleaner storage.Cleaner
+	pulseStorage   *pulse.StorageMem
 }
 
 func NewHeavySuite() *heavySuite {
@@ -87,7 +88,10 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	pulseStorage := pulse.NewStorageMem()
+	s.pulseStorage = pulseStorage
+
+	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T(), storagetest.PulseStorage(pulseStorage))
 	s.cleaner = cleaner
 	s.db = tmpDB
 	s.jetStore = jet.NewStore()
@@ -241,7 +245,6 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	}
 
 	blobStorage := blob.NewStorageMemory()
-	pulseStorage := pulse.NewStorageMem()
 
 	// build PulseManager
 	minretry := 20 * time.Millisecond
@@ -265,7 +268,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 		nil,
 		blobStorage,
 		blobStorage,
-		pulseStorage,
+		s.pulseStorage,
 	)
 	pm.LR = lrMock
 	pm.NodeNet = nodenetMock
@@ -282,9 +285,9 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	pm.ObjectStorage = s.objectStorage
 	pm.DropAccessor = s.dropAccessor
 	pm.DropModifier = s.dropModifier
-	pm.PulseAppender = pulseStorage
-	pm.PulseAccessor = pulseStorage
-	pm.PulseCalculator = pulseStorage
+	pm.PulseAppender = s.pulseStorage
+	pm.PulseAccessor = s.pulseStorage
+	pm.PulseCalculator = s.pulseStorage
 
 	pm.HotDataWaiter = artifactmanager.NewHotDataWaiterConcrete()
 
@@ -394,8 +397,6 @@ func addRecords(
 var (
 	scopeIDLifeline = byte(1)
 	scopeIDRecord   = byte(2)
-	scopeIDJetDrop  = byte(3)
-	scopeIDBlob     = byte(7)
 )
 
 type key []byte
@@ -419,9 +420,7 @@ func getallkeys(db *badger.DB) (records []key) {
 		switch k[0] {
 		case
 			scopeIDRecord,
-			scopeIDJetDrop,
-			scopeIDLifeline,
-			scopeIDBlob:
+			scopeIDLifeline:
 			records = append(records, k)
 		}
 	}

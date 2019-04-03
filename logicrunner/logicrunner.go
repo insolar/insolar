@@ -174,7 +174,6 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 
 	if lr.Cfg.GoPlugin != nil {
 		if lr.Cfg.RPCListen != "" {
-			panic("broken")
 			StartRPC(ctx, lr)
 		}
 
@@ -323,12 +322,14 @@ func (lr *LogicRunner) executeActual(ctx context.Context, parcel insolar.Parcel,
 
 	es.Lock()
 	pulse := lr.pulse(ctx)
+	println(parcel.Pulse())
 	if pulse.PulseNumber != parcel.Pulse() {
 		meCurrent, _ := lr.JetCoordinator.IsAuthorized(
 			ctx, insolar.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
 		)
 		if !meCurrent {
 			es.Unlock()
+			// сюда должны попасть
 			return &reply.RegisterRequest{
 				Request: *request,
 			}, nil

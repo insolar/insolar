@@ -158,6 +158,7 @@ func (s *heavysyncSuite) TestHeavy_SyncBasic() {
 	}
 	pnum = pnumNextPlus + 1
 	pnumNext = pnum + 1
+	pnumNextPlus = pnumNext + 1
 	preparepulse(pnum)
 	preparepulse(pnumNext) // should set correct next for previous pulse
 

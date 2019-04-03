@@ -37,8 +37,9 @@ import (
 )
 
 type tmpDBOptions struct {
-	dir         string
-	nobootstrap bool
+	dir          string
+	nobootstrap  bool
+	pulseStorage *pulse.StorageMem
 }
 
 // Option provides functional option for TmpDB.
@@ -48,6 +49,13 @@ type Option func(*tmpDBOptions)
 func Dir(dir string) Option {
 	return func(opts *tmpDBOptions) {
 		opts.dir = dir
+	}
+}
+
+// PulseStorage provides an external pulse storage for TmpDB
+func PulseStorage(ps *pulse.StorageMem) Option {
+	return func(opts *tmpDBOptions) {
+		opts.pulseStorage = ps
 	}
 }
 
@@ -78,14 +86,21 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 
 	cm := &component.Manager{}
 
+	var ps *pulse.StorageMem
+	if opts.pulseStorage != nil {
+		ps = opts.pulseStorage
+	} else {
+		ps = pulse.NewStorageMem()
+	}
+
 	cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
+		ps,
 		tmpDB,
 		jet.NewStore(),
 		db.NewMemoryMockDB(),
 		storage.NewObjectStorage(),
 		drop.NewStorageDB(),
-		pulse.NewStorageMem(),
 	)
 
 	if !opts.nobootstrap {

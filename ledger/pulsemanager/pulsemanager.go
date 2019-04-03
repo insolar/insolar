@@ -518,8 +518,8 @@ func (m *PulseManager) setUnderGilSection(
 	[]jetInfo, map[insolar.ID][]insolar.ID, *insolar.Pulse, *insolar.PulseNumber, error,
 ) {
 	var (
-		oldPulse  *insolar.Pulse
-		prevPulse *insolar.Pulse
+		oldPulse *insolar.Pulse
+		prevPN   *insolar.PulseNumber
 	)
 
 	m.GIL.Acquire(ctx)
@@ -533,13 +533,13 @@ func (m *PulseManager) setUnderGilSection(
 		return nil, nil, nil, nil, errors.Wrap(err, "call of Latest failed")
 	}
 
-	if err != insolar.ErrNotFound {
+	if err != pulse.ErrNotFound {
 		oldPulse = &storagePulse
 		pp, err := m.PulseCalculator.Backwards(ctx, oldPulse.PulseNumber, 1)
-		if err != pulse.ErrNotFound {
-			prevPulse = insolar.GenesisPulse
+		if err == nil {
+			prevPN = &pp.PulseNumber
 		} else {
-			prevPulse = &pp
+			prevPN = &insolar.GenesisPulse.PulseNumber
 		}
 		ctx, _ = inslogger.WithField(ctx, "current_pulse", fmt.Sprintf("%d", oldPulse.PulseNumber))
 	}
@@ -582,7 +582,7 @@ func (m *PulseManager) setUnderGilSection(
 		jets, err = m.processJets(ctx, oldPulse.PulseNumber, newPulse.PulseNumber)
 		// We just joined to network
 		if err == node.ErrNoNodes {
-			return jets, map[insolar.ID][]insolar.ID{}, oldPulse, &prevPulse.PulseNumber, nil
+			return jets, map[insolar.ID][]insolar.ID{}, oldPulse, prevPN, nil
 		}
 		if err != nil {
 			return nil, nil, nil, nil, errors.Wrap(err, "failed to process jets")
@@ -590,7 +590,7 @@ func (m *PulseManager) setUnderGilSection(
 	}
 
 	removed := map[insolar.ID][]insolar.ID{}
-	if oldPulse != nil && prevPulse != nil {
+	if oldPulse != nil && prevPN != nil {
 		removed = m.RecentStorageProvider.DecreaseIndexesTTL(ctx)
 		if m.NodeNet.GetOrigin().Role() == insolar.StaticRoleLightMaterial {
 			m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
@@ -618,7 +618,7 @@ func (m *PulseManager) setUnderGilSection(
 		}
 	}
 
-	return jets, removed, oldPulse, &prevPulse.PulseNumber, nil
+	return jets, removed, oldPulse, prevPN, nil
 }
 
 func (m *PulseManager) addSync(ctx context.Context, jets []jetInfo, pulse insolar.PulseNumber) {

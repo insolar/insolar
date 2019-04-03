@@ -101,11 +101,12 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 	mc := minimock.NewController(t)
+	ps := pulse2.NewStorageMem()
 
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
-	tmpDB, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
+	tmpDB, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir), storagetest.PulseStorage(ps))
 	memoryMockDB := db.NewMemoryMockDB()
 
 	cm := &component.Manager{}
@@ -117,7 +118,6 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	bs := blob.NewStorageDB(memoryMockDB)
 	rs := storage.NewReplicaStorage()
 	cl := storage.NewCleaner()
-	ps := pulse2.NewStorageMem()
 
 	am := NewClient()
 	am.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()

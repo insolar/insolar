@@ -139,6 +139,7 @@ func (mb *TestMessageBus) Send(ctx context.Context, m insolar.Message, _ *insola
 	}
 
 	currentPulse, err := mb.PulseAccessor.Latest(ctx)
+	println(currentPulse.PulseNumber)
 	if err != nil {
 		return nil, err
 	}

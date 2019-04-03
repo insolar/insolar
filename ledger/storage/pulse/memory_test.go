@@ -123,6 +123,46 @@ func TestNodeStorage_Append(t *testing.T) {
 		assert.NotEqual(t, storage.head, storage.tail)
 		assert.Equal(t, memNode{pulse: pulse, prev: head}, *storage.tail)
 	})
+
+	t.Run("appends 5 pulses", func(t *testing.T) {
+		storage := NewStorageMem()
+
+		err := storage.Append(ctx, insolar.Pulse{PulseNumber: 1})
+		require.NoError(t, err)
+		err = storage.Append(ctx, insolar.Pulse{PulseNumber: 2})
+		require.NoError(t, err)
+		err = storage.Append(ctx, insolar.Pulse{PulseNumber: 3})
+		require.NoError(t, err)
+		err = storage.Append(ctx, insolar.Pulse{PulseNumber: 4})
+		require.NoError(t, err)
+		err = storage.Append(ctx, insolar.Pulse{PulseNumber: 5})
+		require.NoError(t, err)
+
+		require.Equal(t, 5, len(storage.storage))
+		_, ok := storage.storage[insolar.PulseNumber(1)]
+		require.Equal(t, true, ok)
+		_, ok = storage.storage[insolar.PulseNumber(2)]
+		require.Equal(t, true, ok)
+		_, ok = storage.storage[insolar.PulseNumber(3)]
+		require.Equal(t, true, ok)
+		_, ok = storage.storage[insolar.PulseNumber(4)]
+		require.Equal(t, true, ok)
+		_, ok = storage.storage[insolar.PulseNumber(5)]
+		require.Equal(t, true, ok)
+
+		require.Equal(t, insolar.PulseNumber(1), storage.head.pulse.PulseNumber)
+		require.Equal(t, insolar.PulseNumber(5), storage.tail.pulse.PulseNumber)
+
+		pn := 1
+		cur := storage.head
+
+		for cur != nil {
+			require.Equal(t, insolar.PulseNumber(pn), cur.pulse.PulseNumber)
+			cur = cur.next
+			pn++
+		}
+
+	})
 }
 
 func TestMemoryStorage_Shift(t *testing.T) {

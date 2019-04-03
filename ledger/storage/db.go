@@ -38,7 +38,6 @@ const (
 	scopeIDSystem   byte = 5
 
 	sysGenesis                byte = 1
-	sysLatestPulse            byte = 2
 	sysHeavyClientState       byte = 3
 	sysLastSyncedPulseOnHeavy byte = 4
 )

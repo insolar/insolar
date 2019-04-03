@@ -93,7 +93,7 @@ func TestBareHelloworld(t *testing.T) {
 
 	l.PulseManager.(*pulsemanager.PulseManager).GIL = gil
 
-	currentPulse, err := mb.PulseStorage.Current(ctx)
+	currentPulse, err := mb.PulseAccessor.Latest(ctx)
 	require.NoError(t, err)
 
 	_ = l.GetPulseManager().Set(

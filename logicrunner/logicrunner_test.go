@@ -171,10 +171,10 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	am := l.GetArtifactManager()
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
 	cr, err := contractrequester.New()
-	pulseStorage := l.PulseManager.(*pulsemanager.PulseManager).PulseStorage
+	pulseAccessor := l.PulseManager.(*pulsemanager.PulseManager).PulseAccessor
 	nth := terminationhandler.NewTestHandler()
 
-	cm.Inject(db, pulseStorage, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, nth, mock)
+	cm.Inject(db, pulseAccessor, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, nth, mock)
 	err = cm.Init(ctx)
 	s.NoError(err)
 	err = cm.Start(ctx)
@@ -196,8 +196,8 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 }
 
 func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr insolar.LogicRunner, pm insolar.PulseManager) {
-	pulseStorage := pm.(*pulsemanager.PulseManager).PulseStorage
-	currentPulse, _ := pulseStorage.Current(ctx)
+	pulseStorage := pm.(*pulsemanager.PulseManager).PulseAccessor
+	currentPulse, _ := pulseStorage.Latest(ctx)
 
 	newPulseNumber := currentPulse.PulseNumber + 1
 	err := pm.Set(
@@ -1336,7 +1336,8 @@ func New(n int) (*Child, error) {
 	})
 
 	newPulse := insolar.Pulse{PulseNumber: 1231234, Entropy: insolar.Entropy{}}
-	err = lr.(*LogicRunner).PulseStorage.(insolar.PulseManager).Set(
+
+	err = lr.(*LogicRunner).MessageBus.(insolar.PulseManager).Set(
 		ctx, newPulse, true,
 	)
 	s.NoError(err)
