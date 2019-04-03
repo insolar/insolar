@@ -65,6 +65,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -445,8 +446,10 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
 
+	ps := pulse.NewStorageMem()
+
 	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService)
-	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler)
+	node.componentManager.Inject(ps, serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler)
 
 	node.serviceNetwork = serviceNetwork
 }
