@@ -37,7 +37,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/pulsenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
@@ -139,7 +138,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*componen
 	cryptographyService := cryptography.NewCryptographyService()
 	keyProcessor := platformpolicy.NewKeyProcessor()
 
-	tp, err := transport.NewTransport(cfg.Pulsar.DistributionTransport, relay.NewProxy())
+	tp, err := transport.NewTransport(cfg.Pulsar.DistributionTransport)
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
 	}

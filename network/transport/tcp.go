@@ -61,7 +61,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/transport/pool"
 	"github.com/insolar/insolar/network/utils"
 )
@@ -74,9 +73,9 @@ type tcpTransport struct {
 	address  string
 }
 
-func newTCPTransport(listener net.Listener, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
+func newTCPTransport(listener net.Listener, publicAddress string) (*tcpTransport, error) {
 	transport := &tcpTransport{
-		baseTransport: newBaseTransport(proxy, publicAddress),
+		baseTransport: newBaseTransport(publicAddress),
 		listener:      listener,
 		pool:          pool.NewConnectionPool(&tcpConnectionFactory{}),
 	}

@@ -60,7 +60,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
 
 	"github.com/stretchr/testify/assert"
@@ -92,7 +91,7 @@ func setupNode(t *transportSuite, n *node) {
 	n.host, err = host.NewHost(n.config.Address)
 	t.Assert().NoError(err)
 
-	n.transport, err = NewTransport(n.config, relay.NewProxy())
+	n.transport, err = NewTransport(n.config)
 	t.Require().NoError(err)
 	t.Require().NotNil(n.transport)
 	t.Require().Implements((*Transport)(nil), n.transport)

@@ -64,7 +64,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
 )
@@ -130,7 +129,7 @@ func (h *hostTransport) BuildResponse(ctx context.Context, request network.Reque
 }
 
 func NewInternalTransport(conf configuration.Configuration, nodeRef string) (network.InternalTransport, error) {
-	tp, err := transport.NewTransport(conf.Host.Transport, relay.NewProxy())
+	tp, err := transport.NewTransport(conf.Host.Transport)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating transport")
 	}

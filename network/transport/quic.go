@@ -64,7 +64,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/utils"
 )
 
@@ -80,14 +79,14 @@ type quicTransport struct {
 	connections map[string]quicConnection
 }
 
-func NewQuicTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (Transport, error) {
+func NewQuicTransport(conn net.PacketConn, publicAddress string) (Transport, error) {
 	listener, err := quic.Listen(conn, generateTLSConfig(), nil)
 	if err != nil {
 		return nil, err
 	}
 
 	transport := &quicTransport{
-		baseTransport: newBaseTransport(proxy, publicAddress),
+		baseTransport: newBaseTransport(publicAddress),
 		l:             listener,
 		conn:          conn,
 		connections:   make(map[string]quicConnection),

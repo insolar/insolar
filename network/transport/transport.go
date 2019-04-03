@@ -58,7 +58,6 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/future"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
 
 	"github.com/pkg/errors"
@@ -95,7 +94,7 @@ type Transport interface {
 }
 
 // NewTransport creates new Transport with particular configuration
-func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, error) {
+func NewTransport(cfg configuration.Transport) (Transport, error) {
 	switch cfg.Protocol {
 	case "TCP":
 		listener, err := net.Listen("tcp", cfg.Address)
@@ -106,7 +105,7 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to resolve public address")
 		}
-		return newTCPTransport(listener, proxy, publicAddress)
+		return newTCPTransport(listener, publicAddress)
 	case "PURE_UDP":
 		conn, err := net.ListenPacket("udp", cfg.Address)
 		if err != nil {
@@ -116,7 +115,7 @@ func NewTransport(cfg configuration.Transport, proxy relay.Proxy) (Transport, er
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to resolve public address")
 		}
-		return newUDPTransport(conn, proxy, publicAddress)
+		return newUDPTransport(conn, publicAddress)
 	default:
 		return nil, errors.New("invalid transport configuration")
 	}

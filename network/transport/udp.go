@@ -65,7 +65,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/utils"
 )
 
@@ -97,8 +96,8 @@ func (b *udpSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error
 	return p, nil
 }
 
-func newUDPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*udpTransport, error) {
-	transport := &udpTransport{baseTransport: newBaseTransport(proxy, publicAddress), conn: conn}
+func newUDPTransport(conn net.PacketConn, publicAddress string) (*udpTransport, error) {
+	transport := &udpTransport{baseTransport: newBaseTransport(publicAddress), conn: conn}
 	transport.sendFunc = transport.send
 	transport.serializer = &udpSerializer{}
 

@@ -65,7 +65,6 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
 )
@@ -162,7 +161,7 @@ func NewConsensusNetwork(address, nodeID string, shortID insolar.ShortNodeID) (n
 	conf.Address = address
 	conf.Protocol = "PURE_UDP"
 
-	tp, err := transport.NewTransport(conf, relay.NewProxy())
+	tp, err := transport.NewTransport(conf)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating transport")
 	}

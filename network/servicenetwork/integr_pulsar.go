@@ -63,7 +63,6 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/pulsenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
@@ -81,7 +80,7 @@ func NewTestPulsar(pulseTimeMs, requestsTimeoutMs, pulseDelta int32) (TestPulsar
 		Protocol: "TCP",
 		Address:  "127.0.0.1:0",
 	}
-	tp, err := transport.NewTransport(transportCfg, relay.NewProxy())
+	tp, err := transport.NewTransport(transportCfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create distributor transport")
 	}
