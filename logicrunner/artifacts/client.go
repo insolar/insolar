@@ -301,7 +301,10 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 
 	switch r := genericReply.(type) {
 	case *reply.Request:
-		rec := object.DeserializeRecord(r.Record)
+		rec, err := object.DeserializeRecord(r.Record)
+		if err != nil {
+			return nil, errors.Wrap(err, "GetPendingRequest: can't deserialize record")
+		}
 		castedRecord, ok := rec.(*object.RequestRecord)
 		if !ok {
 			return nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", r)

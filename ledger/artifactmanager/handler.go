@@ -265,7 +265,10 @@ func (h *MessageHandler) setReplayHandlers(m *middleware) {
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.SetRecord)
-	virtRec := object.DeserializeRecord(msg.Record)
+	virtRec, err := object.DeserializeRecord(msg.Record)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't deserialize record")
+	}
 	jetID := jetFromContext(ctx)
 
 	calculatedID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), virtRec)
@@ -288,7 +291,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Par
 		JetID:  insolar.JetID(jetID),
 	}
 
-	err := h.RecordModifier.Set(ctx, *id, rec)
+	err = h.RecordModifier.Set(ctx, *id, rec)
 
 	if err == object.ErrOverride {
 		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", virtRec)).Warn("set record override")
@@ -754,7 +757,10 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 		"pulse":  parcel.Pulse(),
 	})
 
-	virtRec := object.DeserializeRecord(msg.Record)
+	virtRec, err := object.DeserializeRecord(msg.Record)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't deserialize record")
+	}
 	state, ok := virtRec.(object.State)
 	if !ok {
 		return nil, errors.New("wrong object state record")
@@ -765,7 +771,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 	calculatedID := object.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
 	//  id will not match the one calculated on the server.
-	err := h.BlobModifier.Set(ctx, *calculatedID, blob.Blob{JetID: insolar.JetID(jetID), Value: msg.Memory})
+	err = h.BlobModifier.Set(ctx, *calculatedID, blob.Blob{JetID: insolar.JetID(jetID), Value: msg.Memory})
 	if err != nil && err != blob.ErrOverride {
 		return nil, errors.Wrap(err, "failed to set blob")
 	}
@@ -858,7 +864,10 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 
 	msg := parcel.Message().(*message.RegisterChild)
 	jetID := jetFromContext(ctx)
-	r := object.DeserializeRecord(msg.Record)
+	r, err := object.DeserializeRecord(msg.Record)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't deserialize record")
+	}
 	childRec, ok := r.(*object.ChildRecord)
 	if !ok {
 		return nil, errors.New("wrong child record")

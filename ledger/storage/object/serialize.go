@@ -48,12 +48,15 @@ func SerializeRecord(rec record.VirtualRecord) []byte {
 }
 
 // DeserializeRecord returns record decoded from bytes.
-func DeserializeRecord(buf []byte) record.VirtualRecord {
+func DeserializeRecord(buf []byte) (record.VirtualRecord, error) {
 	t := DeserializeType(buf[:TypeIDSize])
 	dec := codec.NewDecoderBytes(buf[TypeIDSize:], &codec.CborHandle{})
 	rec := RecordFromType(t)
-	dec.MustDecode(&rec)
-	return rec
+	err := dec.Decode(&rec)
+	if err != nil {
+		return nil, err
+	}
+	return rec, nil
 }
 
 // CalculateIDForBlob calculate id for blob with using current pulse number

@@ -226,7 +226,7 @@ func (r *RecordDB) get(id insolar.ID) (rec record.MaterialRecord, err error) {
 	if err != nil {
 		return
 	}
-	rec = DecodeRecord(buff)
+	rec, err = DecodeRecord(buff)
 	return
 }
 
@@ -237,14 +237,17 @@ func EncodeRecord(rec record.MaterialRecord) []byte {
 	return result
 }
 
-func DecodeRecord(buff []byte) record.MaterialRecord {
+func DecodeRecord(buff []byte) (rec record.MaterialRecord, err error) {
 	recBuff := buff[:len(buff)-insolar.RecordIDSize]
 	jetIDBuff := buff[len(buff)-insolar.RecordIDSize:]
 
-	rec := DeserializeRecord(recBuff)
+	r, err := DeserializeRecord(recBuff)
+	if err != nil {
+		return rec, err
+	}
 
 	var jetID insolar.JetID
 	copy(jetID[:], jetIDBuff)
 
-	return record.MaterialRecord{Record: rec, JetID: jetID}
+	return record.MaterialRecord{Record: r, JetID: jetID}, nil
 }

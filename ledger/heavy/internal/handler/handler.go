@@ -297,9 +297,12 @@ func (h *Handler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeReco
 func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
 	msg := genericMsg.Message().(*message.HeavyPayload)
 
-	if err := h.HeavySync.StoreRecords(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Records); err != nil {
+	h.HeavySync.StoreRecords(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Records)
+
+	if err := h.HeavySync.StoreIndices(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Indices); err != nil {
 		return heavyerrreply(err)
 	}
+
 	if err := h.HeavySync.StoreDrop(ctx, msg.JetID, msg.Drop); err != nil {
 		return heavyerrreply(err)
 	}

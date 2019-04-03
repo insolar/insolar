@@ -1230,5 +1230,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	require.NoError(s.T(), err)
 	reqReply, ok := rep.(*reply.Request)
 	require.True(s.T(), ok)
-	assert.Equal(s.T(), req, *object.DeserializeRecord(reqReply.Record).(*object.RequestRecord))
+	vrec, _ := object.DeserializeRecord(reqReply.Record)
+	assert.Equal(s.T(), req, *vrec.(*object.RequestRecord))
 }

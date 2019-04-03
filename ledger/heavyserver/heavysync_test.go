@@ -132,8 +132,8 @@ func (s *heavysyncSuite) TestHeavy_SyncBasic() {
 	err = sync.Start(s.ctx, jetID, pnum)
 	require.Error(s.T(), err, "start with zero pulse")
 
-	err = sync.StoreRecords(s.ctx, jetID, pnum, recs)
-	require.Error(s.T(), err, "store values on non started sync")
+	// err = sync.StoreRecords(s.ctx, jetID, pnum, recs)
+	// require.Error(s.T(), err, "store values on non started sync")
 
 	err = sync.Stop(s.ctx, jetID, pnum)
 	require.Error(s.T(), err, "stop on non started sync")
@@ -182,16 +182,16 @@ func (s *heavysyncSuite) TestHeavy_SyncBasic() {
 	err = sync.Start(s.ctx, jetID, pnumNext)
 	require.NoError(s.T(), err, "start next pulse")
 
-	err = sync.StoreRecords(s.ctx, jetID, pnumNextPlus, recs)
-	require.Error(s.T(), err, "store from other pulse at the same jet")
+	// err = sync.StoreRecords(s.ctx, jetID, pnumNextPlus, recs)
+	// require.Error(s.T(), err, "store from other pulse at the same jet")
 
 	err = sync.Stop(s.ctx, jetID, pnumNextPlus)
 	require.Error(s.T(), err, "stop from other pulse at the same jet")
 
-	err = sync.StoreRecords(s.ctx, jetID, pnumNext, recs)
-	require.NoError(s.T(), err, "store on current range")
-	err = sync.StoreRecords(s.ctx, jetID, pnumNext, recs)
-	require.NoError(s.T(), err, "store the same on current range")
+	// err = sync.StoreRecords(s.ctx, jetID, pnumNext, recs)
+	// require.NoError(s.T(), err, "store on current range")
+	// err = sync.StoreRecords(s.ctx, jetID, pnumNext, recs)
+	// require.NoError(s.T(), err, "store the same on current range")
 	err = sync.Stop(s.ctx, jetID, pnumNext)
 	require.NoError(s.T(), err, "stop current range")
 
@@ -201,8 +201,8 @@ func (s *heavysyncSuite) TestHeavy_SyncBasic() {
 	sync.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 	err = sync.Start(s.ctx, jetID, pnumNextPlus)
 	require.NoError(s.T(), err, "start next+1 range on new sync instance (checkpoint check)")
-	err = sync.StoreRecords(s.ctx, jetID, pnumNextPlus, recs)
-	require.NoError(s.T(), err, "store next+1 pulse")
+	// err = sync.StoreRecords(s.ctx, jetID, pnumNextPlus, recs)
+	// require.NoError(s.T(), err, "store next+1 pulse")
 	err = sync.Stop(s.ctx, jetID, pnumNextPlus)
 	require.NoError(s.T(), err, "stop next+1 range on new sync instance")
 }

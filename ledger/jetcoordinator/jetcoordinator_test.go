@@ -316,7 +316,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	expectedID := insolar.NewReference(testutils.RandomID(), testutils.RandomID())
 	activeNodesStorageMock := node.NewAccessorMock(t)
 	activeNodesStorageMock.InRoleFunc = func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
-		require.Equal(t, 0, int(p))
+		require.Equal(t, insolar.FirstPulseNumber+1, int(p))
 		require.Equal(t, insolar.StaticRoleLightMaterial, p1)
 
 		return []insolar.Node{{ID: *expectedID}}, nil
@@ -335,7 +335,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	calc.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
 	// Act
-	resNode, err := calc.NodeForJet(ctx, testutils.RandomJet(), insolar.FirstPulseNumber, 0)
+	resNode, err := calc.NodeForJet(ctx, testutils.RandomJet(), insolar.FirstPulseNumber, insolar.FirstPulseNumber+1)
 
 	// Assert
 	require.Nil(t, err)

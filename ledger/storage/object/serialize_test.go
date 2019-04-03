@@ -22,6 +22,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func Test_RecordByTypeIDPanic(t *testing.T) {
@@ -37,6 +38,7 @@ func TestSerializeDeserializeRecord(t *testing.T) {
 		},
 	}
 	serialized := SerializeRecord(&rec)
-	deserialized := DeserializeRecord(serialized)
+	deserialized, err := DeserializeRecord(serialized)
+	require.NoError(t, err)
 	assert.Equal(t, rec, *deserialized.(*ActivateRecord))
 }

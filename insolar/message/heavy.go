@@ -25,6 +25,7 @@ import (
 type HeavyPayload struct {
 	JetID    insolar.JetID
 	PulseNum insolar.PulseNumber
+	Indices  []insolar.KV
 	Drop     []byte
 	Blobs    [][]byte
 	Records  [][]byte

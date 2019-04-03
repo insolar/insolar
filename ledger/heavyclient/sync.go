@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
@@ -70,6 +71,22 @@ func (c *JetClient) HeavySync(
 		return err
 	}
 
+	idxs := []insolar.KV{}
+	replicator := storage.NewReplicaIter(
+		ctx, c.db, insolar.ID(jetID), pn, pn+1, c.opts.SyncMessageLimit)
+	for {
+		r, err := replicator.NextRecords()
+		if len(r) > 0 {
+			idxs = append(idxs, r...)
+		}
+		if err == storage.ErrReplicatorDone {
+			break
+		}
+		if err != nil {
+			panic(err)
+		}
+	}
+
 	bls := c.blobSyncAccessor.ForPulse(ctx, jetID, pn)
 
 	records := c.recSyncAccessor.ForPulse(ctx, jetID, pn)
@@ -77,6 +94,7 @@ func (c *JetClient) HeavySync(
 	msg := &message.HeavyPayload{
 		JetID:    jetID,
 		PulseNum: pn,
+		Indices:  idxs,
 		Drop:     drop.MustEncode(&dr),
 		Blobs:    convertBlobs(bls),
 		Records:  convertRecords(records),
