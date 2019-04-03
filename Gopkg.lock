@@ -207,6 +207,14 @@
   revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
 
 [[projects]]
+  digest = "1:31e761d97c76151dde79e9d28964a812c46efc5baee4085b86f68f0c654450de"
+  name = "github.com/konsorten/go-windows-terminal-sequences"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "f55edac94c9bbba5d6182a4be46d86a2c9b5b50e"
+  version = "v1.0.2"
+
+[[projects]]
   branch = "master"
   digest = "1:6fe6fc7707d8c37fb305362a324462d898bc1c01eaa2bfe15383ec21f6540c71"
   name = "github.com/lucas-clemente/aes12"
@@ -502,12 +510,13 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:caef035da871d195e883f8d0258532cb8b9e5c87d089e326a6f98f02444564f1"
+  digest = "1:10f320bfc014e9e6ac51f810271aa955ad3307cb3c0776d91e5595b4503af78b"
   name = "golang.org/x/crypto"
   packages = [
     "curve25519",
     "hkdf",
     "sha3",
+    "ssh/terminal",
   ]
   pruneopts = "UT"
   revision = "eb0de9b17e854e9b1ccd9963efafc79862359959"
@@ -538,11 +547,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b5822e8b1920b7225e6282614078af440c70f0a2243676063a571f715cd77d58"
+  digest = "1:401fc17cbc8a7c6ac25639d63c110385b2a04fab2911d9bad13366771b6e4df6"
   name = "golang.org/x/sys"
   packages = [
     "cpu",
     "unix",
+    "windows",
   ]
   pruneopts = "UT"
   revision = "4ed8d59d0b35e1e29334a206d1b3f38b1e5dfb31"
