@@ -31,6 +31,8 @@ type Contract struct {
 	Binary      []byte
 }
 
+//go:generate minimock -i github.com/insolar/insolar/internal/ledger/artifact.Manager -o ./ -s _gen_mock.go
+
 type Manager interface {
 	RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error)
 }
