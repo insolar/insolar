@@ -96,12 +96,21 @@ func (b *udpSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error
 	return p, nil
 }
 
-func newUDPTransport(conn net.PacketConn, publicAddress string) (*udpTransport, error) {
+func newUDPTransport(listenAddress, fixedPublicAddress string) (*udpTransport, string, error) {
+	conn, err := net.ListenPacket("udp", listenAddress)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "failed to listen UDP")
+	}
+	publicAddress, err := Resolve(fixedPublicAddress, conn.LocalAddr().String())
+	if err != nil {
+		return nil, "", errors.Wrap(err, "failed to resolve public address")
+	}
+
 	transport := &udpTransport{baseTransport: newBaseTransport(publicAddress), conn: conn}
 	transport.sendFunc = transport.send
 	transport.serializer = &udpSerializer{}
 
-	return transport, nil
+	return transport, publicAddress, nil
 }
 
 func (t *udpTransport) send(recvAddress string, data []byte) error {

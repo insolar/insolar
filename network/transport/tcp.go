@@ -73,7 +73,17 @@ type tcpTransport struct {
 	address  string
 }
 
-func newTCPTransport(listener net.Listener, publicAddress string) (*tcpTransport, error) {
+func newTCPTransport(listenAddress, fixedPublicAddress string) (*tcpTransport, string, error) {
+
+	listener, err := net.Listen("tcp", listenAddress)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "failed to listen UDP")
+	}
+	publicAddress, err := Resolve(fixedPublicAddress, listener.Addr().String())
+	if err != nil {
+		return nil, "", errors.Wrap(err, "failed to resolve public address")
+	}
+
 	transport := &tcpTransport{
 		baseTransport: newBaseTransport(publicAddress),
 		listener:      listener,
@@ -82,7 +92,7 @@ func newTCPTransport(listener net.Listener, publicAddress string) (*tcpTransport
 
 	transport.sendFunc = transport.send
 
-	return transport, nil
+	return transport, publicAddress, nil
 }
 
 func (t *tcpTransport) send(address string, data []byte) error {

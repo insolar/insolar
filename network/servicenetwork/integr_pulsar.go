@@ -80,7 +80,7 @@ func NewTestPulsar(pulseTimeMs, requestsTimeoutMs, pulseDelta int32) (TestPulsar
 		Protocol: "TCP",
 		Address:  "127.0.0.1:0",
 	}
-	tp, err := transport.NewTransport(transportCfg)
+	tp, _, err := transport.NewTransport(transportCfg)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create distributor transport")
 	}

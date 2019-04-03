@@ -138,7 +138,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*componen
 	cryptographyService := cryptography.NewCryptographyService()
 	keyProcessor := platformpolicy.NewKeyProcessor()
 
-	tp, err := transport.NewTransport(cfg.Pulsar.DistributionTransport)
+	tp, _, err := transport.NewTransport(cfg.Pulsar.DistributionTransport)
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
 	}

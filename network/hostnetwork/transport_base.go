@@ -135,8 +135,8 @@ func (h *transportBase) NewRequestBuilder() network.RequestBuilder {
 	return &Builder{sender: h.origin, id: network.RequestID(h.sequenceGenerator.Generate())}
 }
 
-func getOrigin(tp transport.Transport, id string) (*host.Host, error) {
-	address, err := host.NewAddress(tp.PublicAddress())
+func getOrigin(publicAddress, id string) (*host.Host, error) {
+	address, err := host.NewAddress(publicAddress)
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving address")
 	}

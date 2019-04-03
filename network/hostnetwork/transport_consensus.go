@@ -161,11 +161,11 @@ func NewConsensusNetwork(address, nodeID string, shortID insolar.ShortNodeID) (n
 	conf.Address = address
 	conf.Protocol = "PURE_UDP"
 
-	tp, err := transport.NewTransport(conf)
+	tp, publicAddress, err := transport.NewTransport(conf)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating transport")
 	}
-	origin, err := getOrigin(tp, nodeID)
+	origin, err := getOrigin(publicAddress, nodeID)
 	if err != nil {
 		go tp.Stop()
 		<-tp.Stopped()

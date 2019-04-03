@@ -91,7 +91,7 @@ func setupNode(t *transportSuite, n *node) {
 	n.host, err = host.NewHost(n.config.Address)
 	t.Assert().NoError(err)
 
-	n.transport, err = NewTransport(n.config)
+	n.transport, _, err = NewTransport(n.config)
 	t.Require().NoError(err)
 	t.Require().NotNil(n.transport)
 	t.Require().Implements((*Transport)(nil), n.transport)
@@ -210,12 +210,12 @@ func Test_createResolver(t *testing.T) {
 	a := assert.New(t)
 
 	cfg1 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17018", FixedPublicAddress: "192.168.0.1"}
-	r, err := createResolver(cfg1)
+	r, err := createResolver(cfg1.FixedPublicAddress)
 	a.NoError(err)
 	a.IsType(resolver.NewFixedAddressResolver(""), r)
 
 	cfg3 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17018", FixedPublicAddress: ""}
-	r, err = createResolver(cfg3)
+	r, err = createResolver(cfg3.FixedPublicAddress)
 	a.NoError(err)
 	a.IsType(resolver.NewExactResolver(), r)
 }

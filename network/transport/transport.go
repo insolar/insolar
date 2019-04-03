@@ -52,7 +52,6 @@ package transport
 
 import (
 	"context"
-	"net"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network"
@@ -94,36 +93,20 @@ type Transport interface {
 }
 
 // NewTransport creates new Transport with particular configuration
-func NewTransport(cfg configuration.Transport) (Transport, error) {
+func NewTransport(cfg configuration.Transport) (Transport, string, error) {
 	switch cfg.Protocol {
 	case "TCP":
-		listener, err := net.Listen("tcp", cfg.Address)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to listen UDP")
-		}
-		publicAddress, err := Resolve(cfg, listener.Addr().String())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to resolve public address")
-		}
-		return newTCPTransport(listener, publicAddress)
+		return newTCPTransport(cfg.Address, cfg.FixedPublicAddress)
 	case "PURE_UDP":
-		conn, err := net.ListenPacket("udp", cfg.Address)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to listen TCP")
-		}
-		publicAddress, err := Resolve(cfg, conn.LocalAddr().String())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to resolve public address")
-		}
-		return newUDPTransport(conn, publicAddress)
+		return newUDPTransport(cfg.Address, cfg.FixedPublicAddress)
 	default:
-		return nil, errors.New("invalid transport configuration")
+		return nil, "", errors.New("invalid transport configuration")
 	}
 }
 
 // Resolve resolves public address
-func Resolve(cfg configuration.Transport, address string) (string, error) {
-	resolver, err := createResolver(cfg)
+func Resolve(fixedPublicAddress, address string) (string, error) {
+	resolver, err := createResolver(fixedPublicAddress)
 	if err != nil {
 		return "", errors.Wrap(err, "[ Resolve ] Failed to create resolver")
 	}
@@ -134,9 +117,9 @@ func Resolve(cfg configuration.Transport, address string) (string, error) {
 	return publicAddress, nil
 }
 
-func createResolver(cfg configuration.Transport) (resolver.PublicAddressResolver, error) {
-	if cfg.FixedPublicAddress != "" {
-		return resolver.NewFixedAddressResolver(cfg.FixedPublicAddress), nil
+func createResolver(fixedPublicAddress string) (resolver.PublicAddressResolver, error) {
+	if fixedPublicAddress != "" {
+		return resolver.NewFixedAddressResolver(fixedPublicAddress), nil
 	}
 	return resolver.NewExactResolver(), nil
 }
