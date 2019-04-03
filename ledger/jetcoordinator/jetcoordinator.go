@@ -226,7 +226,6 @@ func (jc *JetCoordinator) Heavy(ctx context.Context, pulse insolar.PulseNumber) 
 // IsBeyondLimit calculates if target pulse is behind clean-up limit
 // or if currentPN|targetPN didn't found in in-memory pulse-storage.
 func (jc *JetCoordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN insolar.PulseNumber) (bool, error) {
-
 	backPN, err := jc.PulseCalculator.Backwards(ctx, currentPN, jc.lightChainLimit)
 	if err != nil {
 		return false, err

@@ -722,13 +722,8 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 
 // Start starts pulse manager, spawns replication goroutine under a hood.
 func (m *PulseManager) Start(ctx context.Context) error {
-	err := m.restoreLatestPulse(ctx)
-	if err != nil {
-		return err
-	}
-
 	origin := m.NodeNet.GetOrigin()
-	err = m.NodeSetter.Set(insolar.FirstPulseNumber, []insolar.Node{{ID: origin.ID(), Role: origin.Role()}})
+	err := m.NodeSetter.Set(insolar.FirstPulseNumber, []insolar.Node{{ID: origin.ID(), Role: origin.Role()}})
 	if err != nil && err != storage.ErrOverride {
 		return err
 	}
@@ -757,19 +752,6 @@ func (m *PulseManager) Start(ctx context.Context) error {
 	}
 
 	return m.restoreGenesisRecentObjects(ctx)
-}
-
-func (m *PulseManager) restoreLatestPulse(ctx context.Context) error {
-	if m.NodeNet.GetOrigin().Role() != insolar.StaticRoleHeavyMaterial {
-		return nil
-	}
-
-	err := m.PulseAppender.Append(ctx, *insolar.GenesisPulse)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
 
 func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {

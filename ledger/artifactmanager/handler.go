@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/ledger/storage/blob"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -393,7 +394,7 @@ func (h *MessageHandler) handleGetObject(
 		stateJet *insolar.ID
 	)
 	onHeavy, err := h.JetCoordinator.IsBeyondLimit(ctx, parcel.Pulse(), stateID.Pulse())
-	if err != nil {
+	if err != nil && err != pulse.ErrNotFound {
 		return nil, err
 	}
 	if onHeavy {
@@ -619,12 +620,13 @@ func (h *MessageHandler) handleGetChildren(
 
 	var childJet *insolar.ID
 	onHeavy, err := h.JetCoordinator.IsBeyondLimit(ctx, parcel.Pulse(), currentChild.Pulse())
-	if err != nil {
+	if err != nil && err != pulse.ErrNotFound {
 		return nil, err
 	}
 	if onHeavy {
 		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
+
 			return nil, err
 		}
 		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *currentChild)
@@ -647,12 +649,14 @@ func (h *MessageHandler) handleGetChildren(
 	if err == insolar.ErrNotFound {
 		node, err := h.JetCoordinator.NodeForJet(ctx, *childJet, parcel.Pulse(), currentChild.Pulse())
 		if err != nil {
+
 			return nil, err
 		}
 		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *currentChild)
 	}
 
 	if err != nil {
+
 		return nil, errors.Wrap(err, "failed to fetch child")
 	}
 
@@ -670,6 +674,7 @@ func (h *MessageHandler) handleGetChildren(
 			return &reply.Children{Refs: refs, NextFrom: currentChild}, nil
 		}
 		if err != nil {
+
 			return nil, errors.New("failed to retrieve children")
 		}
 

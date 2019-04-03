@@ -162,7 +162,7 @@ func (s *StorageDB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps 
 	iterator := node
 	for i := 0; i < steps; i++ {
 		if iterator.Next == nil {
-			err = insolar.ErrNotFound
+			err = ErrNotFound
 			return
 		}
 		iterator, err = s.get(*iterator.Next)
@@ -188,7 +188,7 @@ func (s *StorageDB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps
 	iterator := node
 	for i := 0; i < steps; i++ {
 		if iterator.Prev == nil {
-			err = insolar.ErrNotFound
+			err = ErrNotFound
 			return
 		}
 		iterator, err = s.get(*iterator.Prev)
