@@ -342,7 +342,6 @@ func (lr *LogicRunner) executeActual(ctx context.Context, parcel insolar.Parcel,
 
 	es.Lock()
 	pulse := lr.pulse(ctx)
-	println(parcel.Pulse())
 	if pulse.PulseNumber != parcel.Pulse() {
 		meCurrent, _ := lr.JetCoordinator.IsAuthorized(
 			ctx, insolar.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
