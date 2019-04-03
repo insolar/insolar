@@ -282,7 +282,7 @@ func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parce
 func (h *Handler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeRecord, error) {
 	rec, err := h.Records.ForID(ctx, *id)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't get ")
+		return nil, errors.Wrap(err, "can't get record from storage")
 	}
 
 	virtRec := rec.Record

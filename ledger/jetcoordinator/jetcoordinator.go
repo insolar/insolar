@@ -254,7 +254,7 @@ func (jc *JetCoordinator) NodeForJet(ctx context.Context, jetID insolar.ID, root
 		return nil, err
 	}
 
-	if targetPN == insolar.GenesisPulse.PulseNumber {
+	if targetPN <= insolar.GenesisPulse.PulseNumber {
 		toHeavy = true
 	}
 

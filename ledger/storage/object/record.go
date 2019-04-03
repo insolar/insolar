@@ -156,10 +156,10 @@ func (m *RecordMemory) ForPulse(
 // RemoveUntil method removes records from a storage for all pulses until pulse (pulse included)
 func (m *RecordMemory) RemoveUntil(ctx context.Context, pulse insolar.PulseNumber) {
 	m.lock.Lock()
-	m.lock.Unlock()
+	defer m.lock.Unlock()
 
 	for id, rec := range m.memory {
-		if id.Pulse() > pulse {
+		if id.Pulse() != pulse {
 			continue
 		}
 

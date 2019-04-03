@@ -210,8 +210,9 @@ func (s *Sync) StoreRecords(ctx context.Context, jetID insolar.ID, pn insolar.Pu
 
 		err := s.RecordModifier.Set(ctx, *id, rec)
 
-		if err != object.ErrOverride {
-			return errors.Wrap(err, "heavyserver: store records failed")
+		if err != nil {
+			inslog.Error(err, "heavyserver: store records failed")
+			continue
 		}
 
 		recordsSize += int64(len(rawRec))
