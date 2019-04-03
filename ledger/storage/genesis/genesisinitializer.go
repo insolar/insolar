@@ -35,7 +35,7 @@ type State interface {
 	GenesisRef() *insolar.Reference
 }
 
-type GenesisInitializer struct {
+type genesisInitializer struct {
 	DB storage.DBContext `inject:""`
 
 	insolar.PlatformCryptographyScheme `inject:""`
@@ -52,17 +52,17 @@ type GenesisInitializer struct {
 }
 
 func NewGenesisInitializer() State {
-	return new(GenesisInitializer)
+	return new(genesisInitializer)
 }
 
 // GenesisRef returns the genesis record reference.
 //
 // Genesis record is the parent for all top-level records.
-func (gi *GenesisInitializer) GenesisRef() *insolar.Reference {
+func (gi *genesisInitializer) GenesisRef() *insolar.Reference {
 	return gi.genesisRef
 }
 
-func (gi *GenesisInitializer) Init(ctx context.Context) error {
+func (gi *genesisInitializer) Init(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("start storage bootstrap")
 	jetID := *insolar.NewJetID(0, nil)
