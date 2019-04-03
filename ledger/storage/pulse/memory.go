@@ -44,7 +44,7 @@ func NewStorageMem() *StorageMem {
 	}
 }
 
-// ForPulseNumber returns Pulse for provided Pulse number. If not found, ErrNotFound will be returned.
+// ForPulseNumber returns pulse for provided Pulse number. If not found, ErrNotFound will be returned.
 func (s *StorageMem) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (pulse insolar.Pulse, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
@@ -58,7 +58,7 @@ func (s *StorageMem) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber)
 	return node.pulse, nil
 }
 
-// Latest returns latest Pulse saved in memory. If not found, ErrNotFound will be returned.
+// Latest returns a latest pulse saved in memory. If not found, ErrNotFound will be returned.
 func (s *StorageMem) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
@@ -71,8 +71,8 @@ func (s *StorageMem) Latest(ctx context.Context) (pulse insolar.Pulse, err error
 	return s.tail.pulse, nil
 }
 
-// Append appends provided Pulse to current storage. Pulse number should be greater than currently saved for preserving
-// Pulse consistency. If provided Pulse does not meet the requirements, ErrBadPulse will be returned.
+// Append appends provided a pulse to current storage. Pulse number should be greater than currently saved for preserving
+// pulse consistency. If provided Pulse does not meet the requirements, ErrBadPulse will be returned.
 func (s *StorageMem) Append(ctx context.Context, pulse insolar.Pulse) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -109,7 +109,7 @@ func (s *StorageMem) Append(ctx context.Context, pulse insolar.Pulse) error {
 	return nil
 }
 
-// Shift removes youngest Pulse from storage. If the storage is empty, an error will be returned.
+// Shift removes youngest pulse from storage. If the storage is empty, an error will be returned.
 func (s *StorageMem) Shift(ctx context.Context, pn insolar.PulseNumber) (err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
@@ -135,7 +135,7 @@ func (s *StorageMem) Shift(ctx context.Context, pn insolar.PulseNumber) (err err
 	return nil
 }
 
-// Forwards calculates steps pulses forwards from provided Pulse. If calculated Pulse does not exist, ErrNotFound will
+// Forwards calculates steps pulses forwards from provided Pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
 func (s *StorageMem) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (pulse insolar.Pulse, err error) {
 	s.lock.RLock()
@@ -159,7 +159,7 @@ func (s *StorageMem) Forwards(ctx context.Context, pn insolar.PulseNumber, steps
 	return iterator.pulse, nil
 }
 
-// Backwards calculates steps pulses backwards from provided Pulse. If calculated Pulse does not exist, ErrNotFound will
+// Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
 func (s *StorageMem) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (pulse insolar.Pulse, err error) {
 	s.lock.RLock()
