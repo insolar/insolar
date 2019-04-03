@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Accessor" can be found in github.com/insolar/insolar/ledger/storage/pulse
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// AccessorMock implements github.com/insolar/insolar/ledger/storage/pulse.Accessor
+//AccessorMock implements github.com/insolar/insolar/ledger/storage/pulse.Accessor
 type AccessorMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type AccessorMock struct {
 	LatestMock       mAccessorMockLatest
 }
 
-// NewAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/pulse.Accessor
+//NewAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/pulse.Accessor
 func NewAccessorMock(t minimock.Tester) *AccessorMock {
 	m := &AccessorMock{t: t}
 
@@ -66,7 +66,7 @@ type AccessorMockForPulseNumberResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of Accessor.ForPulseNumber is expected from 1 to Infinity times
+//Expect specifies that invocation of Accessor.ForPulseNumber is expected from 1 to Infinity times
 func (m *mAccessorMockForPulseNumber) Expect(p context.Context, p1 insolar.PulseNumber) *mAccessorMockForPulseNumber {
 	m.mock.ForPulseNumberFunc = nil
 	m.expectationSeries = nil
@@ -78,7 +78,7 @@ func (m *mAccessorMockForPulseNumber) Expect(p context.Context, p1 insolar.Pulse
 	return m
 }
 
-// Return specifies results of invocation of Accessor.ForPulseNumber
+//Return specifies results of invocation of Accessor.ForPulseNumber
 func (m *mAccessorMockForPulseNumber) Return(r insolar.Pulse, r1 error) *AccessorMock {
 	m.mock.ForPulseNumberFunc = nil
 	m.expectationSeries = nil
@@ -90,7 +90,7 @@ func (m *mAccessorMockForPulseNumber) Return(r insolar.Pulse, r1 error) *Accesso
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Accessor.ForPulseNumber is expected once
+//ExpectOnce specifies that invocation of Accessor.ForPulseNumber is expected once
 func (m *mAccessorMockForPulseNumber) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *AccessorMockForPulseNumberExpectation {
 	m.mock.ForPulseNumberFunc = nil
 	m.mainExpectation = nil
@@ -105,7 +105,7 @@ func (e *AccessorMockForPulseNumberExpectation) Return(r insolar.Pulse, r1 error
 	e.result = &AccessorMockForPulseNumberResult{r, r1}
 }
 
-// Set uses given function f as a mock of Accessor.ForPulseNumber method
+//Set uses given function f as a mock of Accessor.ForPulseNumber method
 func (m *mAccessorMockForPulseNumber) Set(f func(p context.Context, p1 insolar.PulseNumber) (r insolar.Pulse, r1 error)) *AccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -114,7 +114,7 @@ func (m *mAccessorMockForPulseNumber) Set(f func(p context.Context, p1 insolar.P
 	return m.mock
 }
 
-// ForPulseNumber implements github.com/insolar/insolar/ledger/storage/pulse.Accessor interface
+//ForPulseNumber implements github.com/insolar/insolar/ledger/storage/pulse.Accessor interface
 func (m *AccessorMock) ForPulseNumber(p context.Context, p1 insolar.PulseNumber) (r insolar.Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.ForPulseNumberPreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseNumberCounter, 1)
@@ -166,17 +166,17 @@ func (m *AccessorMock) ForPulseNumber(p context.Context, p1 insolar.PulseNumber)
 	return m.ForPulseNumberFunc(p, p1)
 }
 
-// ForPulseNumberMinimockCounter returns a count of AccessorMock.ForPulseNumberFunc invocations
+//ForPulseNumberMinimockCounter returns a count of AccessorMock.ForPulseNumberFunc invocations
 func (m *AccessorMock) ForPulseNumberMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ForPulseNumberCounter)
 }
 
-// ForPulseNumberMinimockPreCounter returns the value of AccessorMock.ForPulseNumber invocations
+//ForPulseNumberMinimockPreCounter returns the value of AccessorMock.ForPulseNumber invocations
 func (m *AccessorMock) ForPulseNumberMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ForPulseNumberPreCounter)
 }
 
-// ForPulseNumberFinished returns true if mock invocations count is ok
+//ForPulseNumberFinished returns true if mock invocations count is ok
 func (m *AccessorMock) ForPulseNumberFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.ForPulseNumberMock.expectationSeries) > 0 {
@@ -216,7 +216,7 @@ type AccessorMockLatestResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of Accessor.Latest is expected from 1 to Infinity times
+//Expect specifies that invocation of Accessor.Latest is expected from 1 to Infinity times
 func (m *mAccessorMockLatest) Expect(p context.Context) *mAccessorMockLatest {
 	m.mock.LatestFunc = nil
 	m.expectationSeries = nil
@@ -228,7 +228,7 @@ func (m *mAccessorMockLatest) Expect(p context.Context) *mAccessorMockLatest {
 	return m
 }
 
-// Return specifies results of invocation of Accessor.Latest
+//Return specifies results of invocation of Accessor.Latest
 func (m *mAccessorMockLatest) Return(r insolar.Pulse, r1 error) *AccessorMock {
 	m.mock.LatestFunc = nil
 	m.expectationSeries = nil
@@ -240,7 +240,7 @@ func (m *mAccessorMockLatest) Return(r insolar.Pulse, r1 error) *AccessorMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Accessor.Latest is expected once
+//ExpectOnce specifies that invocation of Accessor.Latest is expected once
 func (m *mAccessorMockLatest) ExpectOnce(p context.Context) *AccessorMockLatestExpectation {
 	m.mock.LatestFunc = nil
 	m.mainExpectation = nil
@@ -255,7 +255,7 @@ func (e *AccessorMockLatestExpectation) Return(r insolar.Pulse, r1 error) {
 	e.result = &AccessorMockLatestResult{r, r1}
 }
 
-// Set uses given function f as a mock of Accessor.Latest method
+//Set uses given function f as a mock of Accessor.Latest method
 func (m *mAccessorMockLatest) Set(f func(p context.Context) (r insolar.Pulse, r1 error)) *AccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -264,7 +264,7 @@ func (m *mAccessorMockLatest) Set(f func(p context.Context) (r insolar.Pulse, r1
 	return m.mock
 }
 
-// Latest implements github.com/insolar/insolar/ledger/storage/pulse.Accessor interface
+//Latest implements github.com/insolar/insolar/ledger/storage/pulse.Accessor interface
 func (m *AccessorMock) Latest(p context.Context) (r insolar.Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.LatestPreCounter, 1)
 	defer atomic.AddUint64(&m.LatestCounter, 1)
@@ -316,17 +316,17 @@ func (m *AccessorMock) Latest(p context.Context) (r insolar.Pulse, r1 error) {
 	return m.LatestFunc(p)
 }
 
-// LatestMinimockCounter returns a count of AccessorMock.LatestFunc invocations
+//LatestMinimockCounter returns a count of AccessorMock.LatestFunc invocations
 func (m *AccessorMock) LatestMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.LatestCounter)
 }
 
-// LatestMinimockPreCounter returns the value of AccessorMock.Latest invocations
+//LatestMinimockPreCounter returns the value of AccessorMock.Latest invocations
 func (m *AccessorMock) LatestMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.LatestPreCounter)
 }
 
-// LatestFinished returns true if mock invocations count is ok
+//LatestFinished returns true if mock invocations count is ok
 func (m *AccessorMock) LatestFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.LatestMock.expectationSeries) > 0 {
@@ -346,8 +346,8 @@ func (m *AccessorMock) LatestFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *AccessorMock) ValidateCallCounters() {
 
 	if !m.ForPulseNumberFinished() {
@@ -360,19 +360,19 @@ func (m *AccessorMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *AccessorMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *AccessorMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *AccessorMock) MinimockFinish() {
 
 	if !m.ForPulseNumberFinished() {
@@ -385,14 +385,14 @@ func (m *AccessorMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *AccessorMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *AccessorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -423,8 +423,8 @@ func (m *AccessorMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *AccessorMock) AllMocksCalled() bool {
 
 	if !m.ForPulseNumberFinished() {

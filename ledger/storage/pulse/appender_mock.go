@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Appender" can be found in github.com/insolar/insolar/ledger/storage/pulse
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// AppenderMock implements github.com/insolar/insolar/ledger/storage/pulse.Appender
+//AppenderMock implements github.com/insolar/insolar/ledger/storage/pulse.Appender
 type AppenderMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type AppenderMock struct {
 	AppendMock       mAppenderMockAppend
 }
 
-// NewAppenderMock returns a mock for github.com/insolar/insolar/ledger/storage/pulse.Appender
+//NewAppenderMock returns a mock for github.com/insolar/insolar/ledger/storage/pulse.Appender
 func NewAppenderMock(t minimock.Tester) *AppenderMock {
 	m := &AppenderMock{t: t}
 
@@ -59,7 +59,7 @@ type AppenderMockAppendResult struct {
 	r error
 }
 
-// Expect specifies that invocation of Appender.Append is expected from 1 to Infinity times
+//Expect specifies that invocation of Appender.Append is expected from 1 to Infinity times
 func (m *mAppenderMockAppend) Expect(p context.Context, p1 insolar.Pulse) *mAppenderMockAppend {
 	m.mock.AppendFunc = nil
 	m.expectationSeries = nil
@@ -71,7 +71,7 @@ func (m *mAppenderMockAppend) Expect(p context.Context, p1 insolar.Pulse) *mAppe
 	return m
 }
 
-// Return specifies results of invocation of Appender.Append
+//Return specifies results of invocation of Appender.Append
 func (m *mAppenderMockAppend) Return(r error) *AppenderMock {
 	m.mock.AppendFunc = nil
 	m.expectationSeries = nil
@@ -83,7 +83,7 @@ func (m *mAppenderMockAppend) Return(r error) *AppenderMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Appender.Append is expected once
+//ExpectOnce specifies that invocation of Appender.Append is expected once
 func (m *mAppenderMockAppend) ExpectOnce(p context.Context, p1 insolar.Pulse) *AppenderMockAppendExpectation {
 	m.mock.AppendFunc = nil
 	m.mainExpectation = nil
@@ -98,7 +98,7 @@ func (e *AppenderMockAppendExpectation) Return(r error) {
 	e.result = &AppenderMockAppendResult{r}
 }
 
-// Set uses given function f as a mock of Appender.Append method
+//Set uses given function f as a mock of Appender.Append method
 func (m *mAppenderMockAppend) Set(f func(p context.Context, p1 insolar.Pulse) (r error)) *AppenderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -107,7 +107,7 @@ func (m *mAppenderMockAppend) Set(f func(p context.Context, p1 insolar.Pulse) (r
 	return m.mock
 }
 
-// Append implements github.com/insolar/insolar/ledger/storage/pulse.Appender interface
+//Append implements github.com/insolar/insolar/ledger/storage/pulse.Appender interface
 func (m *AppenderMock) Append(p context.Context, p1 insolar.Pulse) (r error) {
 	counter := atomic.AddUint64(&m.AppendPreCounter, 1)
 	defer atomic.AddUint64(&m.AppendCounter, 1)
@@ -157,17 +157,17 @@ func (m *AppenderMock) Append(p context.Context, p1 insolar.Pulse) (r error) {
 	return m.AppendFunc(p, p1)
 }
 
-// AppendMinimockCounter returns a count of AppenderMock.AppendFunc invocations
+//AppendMinimockCounter returns a count of AppenderMock.AppendFunc invocations
 func (m *AppenderMock) AppendMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.AppendCounter)
 }
 
-// AppendMinimockPreCounter returns the value of AppenderMock.Append invocations
+//AppendMinimockPreCounter returns the value of AppenderMock.Append invocations
 func (m *AppenderMock) AppendMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.AppendPreCounter)
 }
 
-// AppendFinished returns true if mock invocations count is ok
+//AppendFinished returns true if mock invocations count is ok
 func (m *AppenderMock) AppendFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.AppendMock.expectationSeries) > 0 {
@@ -187,8 +187,8 @@ func (m *AppenderMock) AppendFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *AppenderMock) ValidateCallCounters() {
 
 	if !m.AppendFinished() {
@@ -197,19 +197,19 @@ func (m *AppenderMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *AppenderMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *AppenderMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *AppenderMock) MinimockFinish() {
 
 	if !m.AppendFinished() {
@@ -218,14 +218,14 @@ func (m *AppenderMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *AppenderMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *AppenderMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -251,8 +251,8 @@ func (m *AppenderMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *AppenderMock) AllMocksCalled() bool {
 
 	if !m.AppendFinished() {

@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Shifter" can be found in github.com/insolar/insolar/ledger/storage/pulse
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// ShifterMock implements github.com/insolar/insolar/ledger/storage/pulse.Shifter
+//ShifterMock implements github.com/insolar/insolar/ledger/storage/pulse.Shifter
 type ShifterMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type ShifterMock struct {
 	ShiftMock       mShifterMockShift
 }
 
-// NewShifterMock returns a mock for github.com/insolar/insolar/ledger/storage/pulse.Shifter
+//NewShifterMock returns a mock for github.com/insolar/insolar/ledger/storage/pulse.Shifter
 func NewShifterMock(t minimock.Tester) *ShifterMock {
 	m := &ShifterMock{t: t}
 
@@ -59,7 +59,7 @@ type ShifterMockShiftResult struct {
 	r error
 }
 
-// Expect specifies that invocation of Shifter.Shift is expected from 1 to Infinity times
+//Expect specifies that invocation of Shifter.Shift is expected from 1 to Infinity times
 func (m *mShifterMockShift) Expect(p context.Context, p1 insolar.PulseNumber) *mShifterMockShift {
 	m.mock.ShiftFunc = nil
 	m.expectationSeries = nil
@@ -71,7 +71,7 @@ func (m *mShifterMockShift) Expect(p context.Context, p1 insolar.PulseNumber) *m
 	return m
 }
 
-// Return specifies results of invocation of Shifter.Shift
+//Return specifies results of invocation of Shifter.Shift
 func (m *mShifterMockShift) Return(r error) *ShifterMock {
 	m.mock.ShiftFunc = nil
 	m.expectationSeries = nil
@@ -83,7 +83,7 @@ func (m *mShifterMockShift) Return(r error) *ShifterMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Shifter.Shift is expected once
+//ExpectOnce specifies that invocation of Shifter.Shift is expected once
 func (m *mShifterMockShift) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *ShifterMockShiftExpectation {
 	m.mock.ShiftFunc = nil
 	m.mainExpectation = nil
@@ -98,7 +98,7 @@ func (e *ShifterMockShiftExpectation) Return(r error) {
 	e.result = &ShifterMockShiftResult{r}
 }
 
-// Set uses given function f as a mock of Shifter.Shift method
+//Set uses given function f as a mock of Shifter.Shift method
 func (m *mShifterMockShift) Set(f func(p context.Context, p1 insolar.PulseNumber) (r error)) *ShifterMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -107,7 +107,7 @@ func (m *mShifterMockShift) Set(f func(p context.Context, p1 insolar.PulseNumber
 	return m.mock
 }
 
-// Shift implements github.com/insolar/insolar/ledger/storage/pulse.Shifter interface
+//Shift implements github.com/insolar/insolar/ledger/storage/pulse.Shifter interface
 func (m *ShifterMock) Shift(p context.Context, p1 insolar.PulseNumber) (r error) {
 	counter := atomic.AddUint64(&m.ShiftPreCounter, 1)
 	defer atomic.AddUint64(&m.ShiftCounter, 1)
@@ -157,17 +157,17 @@ func (m *ShifterMock) Shift(p context.Context, p1 insolar.PulseNumber) (r error)
 	return m.ShiftFunc(p, p1)
 }
 
-// ShiftMinimockCounter returns a count of ShifterMock.ShiftFunc invocations
+//ShiftMinimockCounter returns a count of ShifterMock.ShiftFunc invocations
 func (m *ShifterMock) ShiftMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ShiftCounter)
 }
 
-// ShiftMinimockPreCounter returns the value of ShifterMock.Shift invocations
+//ShiftMinimockPreCounter returns the value of ShifterMock.Shift invocations
 func (m *ShifterMock) ShiftMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ShiftPreCounter)
 }
 
-// ShiftFinished returns true if mock invocations count is ok
+//ShiftFinished returns true if mock invocations count is ok
 func (m *ShifterMock) ShiftFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.ShiftMock.expectationSeries) > 0 {
@@ -187,8 +187,8 @@ func (m *ShifterMock) ShiftFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ShifterMock) ValidateCallCounters() {
 
 	if !m.ShiftFinished() {
@@ -197,19 +197,19 @@ func (m *ShifterMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ShifterMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *ShifterMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *ShifterMock) MinimockFinish() {
 
 	if !m.ShiftFinished() {
@@ -218,14 +218,14 @@ func (m *ShifterMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *ShifterMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *ShifterMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -251,8 +251,8 @@ func (m *ShifterMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *ShifterMock) AllMocksCalled() bool {
 
 	if !m.ShiftFinished() {

@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Calculator" can be found in github.com/insolar/insolar/ledger/storage/pulse
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// CalculatorMock implements github.com/insolar/insolar/ledger/storage/pulse.Calculator
+//CalculatorMock implements github.com/insolar/insolar/ledger/storage/pulse.Calculator
 type CalculatorMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type CalculatorMock struct {
 	ForwardsMock       mCalculatorMockForwards
 }
 
-// NewCalculatorMock returns a mock for github.com/insolar/insolar/ledger/storage/pulse.Calculator
+//NewCalculatorMock returns a mock for github.com/insolar/insolar/ledger/storage/pulse.Calculator
 func NewCalculatorMock(t minimock.Tester) *CalculatorMock {
 	m := &CalculatorMock{t: t}
 
@@ -67,7 +67,7 @@ type CalculatorMockBackwardsResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of Calculator.Backwards is expected from 1 to Infinity times
+//Expect specifies that invocation of Calculator.Backwards is expected from 1 to Infinity times
 func (m *mCalculatorMockBackwards) Expect(p context.Context, p1 insolar.PulseNumber, p2 int) *mCalculatorMockBackwards {
 	m.mock.BackwardsFunc = nil
 	m.expectationSeries = nil
@@ -79,7 +79,7 @@ func (m *mCalculatorMockBackwards) Expect(p context.Context, p1 insolar.PulseNum
 	return m
 }
 
-// Return specifies results of invocation of Calculator.Backwards
+//Return specifies results of invocation of Calculator.Backwards
 func (m *mCalculatorMockBackwards) Return(r insolar.Pulse, r1 error) *CalculatorMock {
 	m.mock.BackwardsFunc = nil
 	m.expectationSeries = nil
@@ -91,7 +91,7 @@ func (m *mCalculatorMockBackwards) Return(r insolar.Pulse, r1 error) *Calculator
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Calculator.Backwards is expected once
+//ExpectOnce specifies that invocation of Calculator.Backwards is expected once
 func (m *mCalculatorMockBackwards) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 int) *CalculatorMockBackwardsExpectation {
 	m.mock.BackwardsFunc = nil
 	m.mainExpectation = nil
@@ -106,7 +106,7 @@ func (e *CalculatorMockBackwardsExpectation) Return(r insolar.Pulse, r1 error) {
 	e.result = &CalculatorMockBackwardsResult{r, r1}
 }
 
-// Set uses given function f as a mock of Calculator.Backwards method
+//Set uses given function f as a mock of Calculator.Backwards method
 func (m *mCalculatorMockBackwards) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error)) *CalculatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -115,7 +115,7 @@ func (m *mCalculatorMockBackwards) Set(f func(p context.Context, p1 insolar.Puls
 	return m.mock
 }
 
-// Backwards implements github.com/insolar/insolar/ledger/storage/pulse.Calculator interface
+//Backwards implements github.com/insolar/insolar/ledger/storage/pulse.Calculator interface
 func (m *CalculatorMock) Backwards(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.BackwardsPreCounter, 1)
 	defer atomic.AddUint64(&m.BackwardsCounter, 1)
@@ -167,17 +167,17 @@ func (m *CalculatorMock) Backwards(p context.Context, p1 insolar.PulseNumber, p2
 	return m.BackwardsFunc(p, p1, p2)
 }
 
-// BackwardsMinimockCounter returns a count of CalculatorMock.BackwardsFunc invocations
+//BackwardsMinimockCounter returns a count of CalculatorMock.BackwardsFunc invocations
 func (m *CalculatorMock) BackwardsMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.BackwardsCounter)
 }
 
-// BackwardsMinimockPreCounter returns the value of CalculatorMock.Backwards invocations
+//BackwardsMinimockPreCounter returns the value of CalculatorMock.Backwards invocations
 func (m *CalculatorMock) BackwardsMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.BackwardsPreCounter)
 }
 
-// BackwardsFinished returns true if mock invocations count is ok
+//BackwardsFinished returns true if mock invocations count is ok
 func (m *CalculatorMock) BackwardsFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.BackwardsMock.expectationSeries) > 0 {
@@ -219,7 +219,7 @@ type CalculatorMockForwardsResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of Calculator.Forwards is expected from 1 to Infinity times
+//Expect specifies that invocation of Calculator.Forwards is expected from 1 to Infinity times
 func (m *mCalculatorMockForwards) Expect(p context.Context, p1 insolar.PulseNumber, p2 int) *mCalculatorMockForwards {
 	m.mock.ForwardsFunc = nil
 	m.expectationSeries = nil
@@ -231,7 +231,7 @@ func (m *mCalculatorMockForwards) Expect(p context.Context, p1 insolar.PulseNumb
 	return m
 }
 
-// Return specifies results of invocation of Calculator.Forwards
+//Return specifies results of invocation of Calculator.Forwards
 func (m *mCalculatorMockForwards) Return(r insolar.Pulse, r1 error) *CalculatorMock {
 	m.mock.ForwardsFunc = nil
 	m.expectationSeries = nil
@@ -243,7 +243,7 @@ func (m *mCalculatorMockForwards) Return(r insolar.Pulse, r1 error) *CalculatorM
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Calculator.Forwards is expected once
+//ExpectOnce specifies that invocation of Calculator.Forwards is expected once
 func (m *mCalculatorMockForwards) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 int) *CalculatorMockForwardsExpectation {
 	m.mock.ForwardsFunc = nil
 	m.mainExpectation = nil
@@ -258,7 +258,7 @@ func (e *CalculatorMockForwardsExpectation) Return(r insolar.Pulse, r1 error) {
 	e.result = &CalculatorMockForwardsResult{r, r1}
 }
 
-// Set uses given function f as a mock of Calculator.Forwards method
+//Set uses given function f as a mock of Calculator.Forwards method
 func (m *mCalculatorMockForwards) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error)) *CalculatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -267,7 +267,7 @@ func (m *mCalculatorMockForwards) Set(f func(p context.Context, p1 insolar.Pulse
 	return m.mock
 }
 
-// Forwards implements github.com/insolar/insolar/ledger/storage/pulse.Calculator interface
+//Forwards implements github.com/insolar/insolar/ledger/storage/pulse.Calculator interface
 func (m *CalculatorMock) Forwards(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.ForwardsPreCounter, 1)
 	defer atomic.AddUint64(&m.ForwardsCounter, 1)
@@ -319,17 +319,17 @@ func (m *CalculatorMock) Forwards(p context.Context, p1 insolar.PulseNumber, p2 
 	return m.ForwardsFunc(p, p1, p2)
 }
 
-// ForwardsMinimockCounter returns a count of CalculatorMock.ForwardsFunc invocations
+//ForwardsMinimockCounter returns a count of CalculatorMock.ForwardsFunc invocations
 func (m *CalculatorMock) ForwardsMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ForwardsCounter)
 }
 
-// ForwardsMinimockPreCounter returns the value of CalculatorMock.Forwards invocations
+//ForwardsMinimockPreCounter returns the value of CalculatorMock.Forwards invocations
 func (m *CalculatorMock) ForwardsMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ForwardsPreCounter)
 }
 
-// ForwardsFinished returns true if mock invocations count is ok
+//ForwardsFinished returns true if mock invocations count is ok
 func (m *CalculatorMock) ForwardsFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.ForwardsMock.expectationSeries) > 0 {
@@ -349,8 +349,8 @@ func (m *CalculatorMock) ForwardsFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CalculatorMock) ValidateCallCounters() {
 
 	if !m.BackwardsFinished() {
@@ -363,19 +363,19 @@ func (m *CalculatorMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CalculatorMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *CalculatorMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *CalculatorMock) MinimockFinish() {
 
 	if !m.BackwardsFinished() {
@@ -388,14 +388,14 @@ func (m *CalculatorMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *CalculatorMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *CalculatorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -426,8 +426,8 @@ func (m *CalculatorMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *CalculatorMock) AllMocksCalled() bool {
 
 	if !m.BackwardsFinished() {
