@@ -3,44 +3,44 @@ syntax = "proto3";
 package record;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-option (gogoproto.goproto_getters_all) = false;
-option (gogoproto.populate_all)        = false;
 
-message GenesisRecord {
+message __GenesisRecord {
+    option (gogoproto.face) = true;
 }
 
-message ChildRecord {
+message __ChildRecord {
     option (gogoproto.face) = true;
     bytes PrevChild = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];
     bytes Ref       = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
 }
 
-message JetRecord {
+message __JetRecord {
+    option (gogoproto.face) = true;
     // TODO
 }
 
-message RequestRecord {
+message __RequestRecord {
     option (gogoproto.face) = true;
     bytes Object      = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",       (gogoproto.nullable) = false];
     bytes Parcel      = 2;
     bytes MessageHash = 3;
 }
 
-message ResultRecord {
+message __ResultRecord {
     option (gogoproto.face) = true;
     bytes Object  = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];
     bytes Request = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes Payload = 3;
 }
 
-message TypeRecord {
+message __TypeRecord {
     option (gogoproto.face) = true;
     bytes Domain          = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes Request         = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes TypeDeclaration = 3;
 }
 
-message CodeRecord {
+message __CodeRecord {
     option (gogoproto.face) = true;
     bytes Domain      = 1  [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference",   (gogoproto.nullable) = false];
     bytes Request     = 2  [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference",   (gogoproto.nullable) = false];
@@ -48,7 +48,7 @@ message CodeRecord {
     uint32 MachineType = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.MachineType", (gogoproto.nullable) = false];
 }
 
-message ObjectActivateRecord {
+message __ObjectActivateRecord {
     option (gogoproto.face) = true;
     bytes  Domain      = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes  Request     = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
@@ -59,7 +59,7 @@ message ObjectActivateRecord {
     bool   IsDelegate  = 7;
 }
 
-message ObjectAmendRecord {
+message __ObjectAmendRecord {
     option (gogoproto.face) = true;
     bytes  Domain      = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes  Request     = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
@@ -69,24 +69,24 @@ message ObjectAmendRecord {
     bytes  PrevState   = 6 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];
 }
 
-message ObjectDeactivateRecord {
+message __ObjectDeactivateRecord {
     option (gogoproto.face) = true;
     bytes  Domain    = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes  Request   = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes  PrevState = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];
 }
 
-message Record {
+message __Record {
     oneof union {
-        GenesisRecord            Genesis            = 100;
-        ChildRecord              Child              = 101;
-        JetRecord                Jet                = 102;
-        RequestRecord            Request            = 200;
-        ResultRecord             Result             = 300;
-        TypeRecord               Type               = 301;
-        CodeRecord               Code               = 302;
-        ObjectActivateRecord     ObjectActivate     = 303;
-        ObjectAmendRecord        ObjectAmend        = 304;
-        ObjectDeactivateRecord   ObjectDeactivate   = 305;
+        __GenesisRecord            Genesis            = 100;
+        __ChildRecord              Child              = 101;
+        __JetRecord                Jet                = 102;
+        __RequestRecord            Request            = 200;
+        __ResultRecord             Result             = 300;
+        __TypeRecord               Type               = 301;
+        __CodeRecord               Code               = 302;
+        __ObjectActivateRecord     ObjectActivate     = 303;
+        __ObjectAmendRecord        ObjectAmend        = 304;
+        __ObjectDeactivateRecord   ObjectDeactivate   = 305;
     }
 }

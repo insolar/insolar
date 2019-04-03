@@ -10,6 +10,7 @@ PULSEWATCHER = pulsewatcher
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
 CERTGEN = certgen
+RECORDBUILDER = protoc-gen-gorecord
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
@@ -191,6 +192,10 @@ docker-insgorund:
 .PHONY: docker
 docker: docker-insolard docker-genesis docker-insgorund
 
+$(RECORDBUILDER):
+	go build -o $(BIN_DIR)/$(RECORDBUILDER) -ldflags "${LDFLAGS}" cmd/protobuf-record-gen/*.go
+
 generate-protobuf:
-	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
-	protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
+	# protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
+	# protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
+	PATH="$(BIN_DIR):$(PATH)" protoc -I./vendor -I./ --gorecord_out=./ insolar/record/record.proto
