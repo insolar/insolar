@@ -52,7 +52,6 @@ type ActiveListSwapper interface {
 
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
-	LR                         insolar.LogicRunner                `inject:""`
 	Bus                        insolar.MessageBus                 `inject:""`
 	NodeNet                    insolar.NodeNetwork                `inject:""`
 	JetCoordinator             insolar.JetCoordinator             `inject:""`
@@ -466,13 +465,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 	err = m.Bus.OnPulse(ctx, newPulse)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
-	}
-
-	if m.NodeNet.GetOrigin().Role() == insolar.StaticRoleVirtual {
-		err = m.LR.OnPulse(ctx, newPulse)
-	}
-	if err != nil {
-		return err
 	}
 
 	return nil

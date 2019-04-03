@@ -48,86 +48,69 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-// +build networktest
-
-package servicenetwork
+package termination
 
 import (
 	"context"
+	"sync"
 
-	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/consensus/phases"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+
 	"github.com/insolar/insolar/insolar"
 )
 
-type CommunicatorTestOpt int
+type terminationHandler struct {
+	sync.Mutex
+	done        chan insolar.LeaveApproved
+	terminating bool
 
-const (
-	PartialPositive1Phase = CommunicatorTestOpt(iota + 1)
-	PartialNegative1Phase
-	PartialPositive2Phase
-	PartialNegative2Phase
-	PartialPositive3Phase
-	PartialNegative3Phase
-	PartialPositive23Phase
-	PartialNegative23Phase
-)
-
-type CommunicatorMock struct {
-	communicator phases.Communicator
-	ignoreFrom   insolar.Reference
-	testOpt      CommunicatorTestOpt
+	Network      insolar.Network      `inject:""`
+	PulseStorage insolar.PulseStorage `inject:""`
 }
 
-func (cm *CommunicatorMock) ExchangePhase1(
-	ctx context.Context,
-	originClaim *packets.NodeAnnounceClaim,
-	participants []insolar.NetworkNode,
-	packet *packets.Phase1Packet,
-) (map[insolar.Reference]*packets.Phase1Packet, error) {
-	pckts, err := cm.communicator.ExchangePhase1(ctx, originClaim, participants, packet)
-	if err != nil {
-		return nil, err
-	}
-	switch cm.testOpt {
-	case PartialNegative1Phase, PartialPositive1Phase:
-		delete(pckts, cm.ignoreFrom)
-	}
-	return pckts, nil
+func NewHandler(nw insolar.Network) insolar.TerminationHandler {
+	return &terminationHandler{Network: nw}
 }
 
-func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, state *phases.ConsensusState,
-	participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.Reference]*packets.Phase2Packet, error) {
-
-	pckts, err := cm.communicator.ExchangePhase2(ctx, state, participants, packet)
-	if err != nil {
-		return nil, err
-	}
-	switch cm.testOpt {
-	case PartialPositive2Phase, PartialNegative2Phase, PartialPositive23Phase, PartialNegative23Phase:
-		delete(pckts, cm.ignoreFrom)
-	}
-	return pckts, nil
+// TODO take ETA by role of node
+func (t *terminationHandler) Leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) {
+	doneChan := t.leave(ctx, leaveAfterPulses)
+	<-doneChan
 }
 
-func (cm *CommunicatorMock) ExchangePhase21(ctx context.Context, state *phases.ConsensusState,
-	packet *packets.Phase2Packet, additionalRequests []*phases.AdditionalRequest) ([]packets.ReferendumVote, error) {
+func (t *terminationHandler) leave(ctx context.Context, leaveAfterPulses insolar.PulseNumber) chan insolar.LeaveApproved {
+	t.Lock()
+	defer t.Unlock()
 
-	return cm.communicator.ExchangePhase21(ctx, state, packet, additionalRequests)
+	if !t.terminating {
+		t.terminating = true
+		t.done = make(chan insolar.LeaveApproved, 1)
+
+		if leaveAfterPulses == 0 {
+			inslogger.FromContext(ctx).Debug("terminationHandler.Leave() with 0")
+			t.Network.Leave(ctx, 0)
+		} else {
+			pulse, _ := t.PulseStorage.Current(ctx)
+			pulseDelta := pulse.NextPulseNumber - pulse.PulseNumber
+
+			inslogger.FromContext(ctx).Debugf("terminationHandler.Leave() with leaveAfterPulses: %+v, in pulse %+v", leaveAfterPulses, pulse.PulseNumber+leaveAfterPulses*pulseDelta)
+			t.Network.Leave(ctx, pulse.PulseNumber+leaveAfterPulses*pulseDelta)
+		}
+	}
+
+	return t.done
 }
 
-func (cm *CommunicatorMock) ExchangePhase3(ctx context.Context, participants []insolar.NetworkNode, packet *packets.Phase3Packet) (map[insolar.Reference]*packets.Phase3Packet, error) {
-	pckts, err := cm.communicator.ExchangePhase3(ctx, participants, packet)
-	if err != nil {
-		return nil, err
+func (t *terminationHandler) OnLeaveApproved(ctx context.Context) {
+	t.Lock()
+	defer t.Unlock()
+	if t.terminating {
+		inslogger.FromContext(ctx).Debug("terminationHandler.OnLeaveApproved() received")
+		t.terminating = false
+		close(t.done)
 	}
-	switch cm.testOpt {
-	case PartialPositive3Phase, PartialNegative3Phase, PartialPositive23Phase, PartialNegative23Phase:
-		delete(pckts, cm.ignoreFrom)
-	}
-	return pckts, nil
 }
 
-func (cm *CommunicatorMock) Init(ctx context.Context) error {
-	return cm.communicator.Init(ctx)
+func (t *terminationHandler) Abort() {
+	panic("Node leave acknowledged by network. Goodbye!")
 }

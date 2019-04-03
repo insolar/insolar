@@ -179,6 +179,8 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		&routing.Table{},
 		cert,
 		internalTransport,
+		// use flaky network instead of internalTransport to imitate network delays
+		// NewFlakyNetwork(internalTransport),
 		hostNetwork,
 		merkle.NewCalculator(),
 		consensusNetwork,
@@ -229,6 +231,19 @@ func (n *ServiceNetwork) Leave(ctx context.Context, ETA insolar.PulseNumber) {
 	logger.Info("Gracefully stopping service network")
 
 	n.NodeKeeper.GetClaimQueue().Push(&packets.NodeLeaveClaim{ETA: ETA})
+}
+
+func (n *ServiceNetwork) GracefulStop(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx)
+	// node leaving from network
+	// all components need to do what they want over net in gracefulStop
+	if !n.isGenesis {
+		logger.Info("ServiceNetwork.GracefulStop wait for accepting leaving claim")
+		n.TerminationHandler.Leave(ctx, 0)
+		logger.Info("ServiceNetwork.GracefulStop - leaving claim accepted")
+	}
+
+	return nil
 }
 
 // Stop implements insolar.Component

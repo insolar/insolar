@@ -150,7 +150,8 @@ type nodekeeper struct {
 	isBootstrap     bool
 	isBootstrapLock sync.RWMutex
 
-	Cryptography insolar.CryptographyService `inject:""`
+	Cryptography       insolar.CryptographyService `inject:""`
+	TerminationHandler insolar.TerminationHandler  `inject:""`
 }
 
 func (nk *nodekeeper) GetSnapshotCopy() *node.Snapshot {
@@ -340,7 +341,14 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 	nk.accessor = node.NewAccessor(nk.snapshot)
 	stats.Record(ctx, consensusMetrics.ActiveNodes.M(int64(len(nk.accessor.GetActiveNodes()))))
 	nk.consensusInfo.flush(mergeResult.NodesJoinedDuringPrevPulse)
+	nk.gracefulStopIfNeeded(ctx)
 	return nil
+}
+
+func (nk *nodekeeper) gracefulStopIfNeeded(ctx context.Context) {
+	if nk.origin.GetState() == insolar.NodeLeaving {
+		nk.TerminationHandler.OnLeaveApproved(ctx)
+	}
 }
 
 func (nk *nodekeeper) shouldExit(foundOrigin bool) bool {

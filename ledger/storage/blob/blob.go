@@ -62,15 +62,14 @@ type Blob struct {
 }
 
 // Clone returns copy of argument blob.
-func Clone(blob Blob) Blob {
-	if len(blob.Value) == 0 {
-		blob.Value = nil
-	} else {
-		b := blob.Value
-		blob.Value = append([]byte(nil), b...)
+func Clone(in Blob) (out Blob) {
+	out.JetID = in.JetID
+	if in.Value != nil {
+		v := make([]byte, len(in.Value))
+		copy(v, in.Value)
+		out.Value = v
 	}
-
-	return blob
+	return
 }
 
 // MustEncode serializes a blob.

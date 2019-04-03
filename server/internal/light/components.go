@@ -19,6 +19,8 @@ package light
 import (
 	"context"
 
+	"github.com/insolar/insolar/network/termination"
+
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -30,7 +32,6 @@ import (
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger"
-	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
@@ -39,8 +40,6 @@ import (
 	"github.com/insolar/insolar/network/state"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/pulsar"
-	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/version/manager"
 )
 
@@ -109,16 +108,14 @@ func initComponents(
 
 ) (*component.Manager, error) {
 	cm := component.Manager{}
-	terminationHandler := insolar.NewTerminationHandler()
 
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
 
-	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
-	checkError(ctx, err, "failed to start LogicRunner")
-
 	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, isGenesis)
 	checkError(ctx, err, "failed to start Network")
+
+	terminationHandler := termination.NewHandler(nw)
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	parcelFactory := messagebus.NewParcelFactory()
@@ -153,10 +150,6 @@ func initComponents(
 	_, err = manager.NewVersionManager(cfg.VersionManager)
 	checkError(ctx, err, "failed to load VersionManager: ")
 
-	// move to logic runner ??
-	err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
-	checkError(ctx, err, "failed init pulse for LogicRunner")
-
 	cm.Register(
 		terminationHandler,
 		platformCryptographyScheme,
@@ -173,7 +166,6 @@ func initComponents(
 	components = append(components, []interface{}{
 		messageBus,
 		contractRequester,
-		logicRunner,
 		artifacts.NewClient(),
 		delegationTokenFactory,
 		parcelFactory,

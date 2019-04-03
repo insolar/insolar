@@ -14,20 +14,19 @@
 // limitations under the License.
 //
 
-package insolar
+package pulsemanager
 
 import (
-	"context"
+	"github.com/insolar/insolar/insolar"
 )
 
-type LeaveApproved struct{}
+// It's a internal interface of pulse manager, you shouldn't use outside of pm
+//go:generate minimock -i github.com/insolar/insolar/logicrunner/pulsemanager.pulseStoragePm -o ./ -s _mock.go
+type pulseStoragePm interface {
+	insolar.PulseStorage
 
-// TerminationHandler handles such node events as graceful stop, abort, etc.
-//go:generate minimock -i github.com/insolar/insolar/insolar.TerminationHandler -o ../testutils -s _mock.go
-type TerminationHandler interface {
-	// Leave locks until network accept leaving claim
-	Leave(context.Context, PulseNumber)
-	OnLeaveApproved(context.Context)
-	// Abort forces to stop all node components
-	Abort()
+	Set(pulse *insolar.Pulse)
+
+	Lock()
+	Unlock()
 }

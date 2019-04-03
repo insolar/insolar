@@ -279,7 +279,6 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 		s.recordCleaner,
 		s.recSyncAccessor,
 	)
-	pm.LR = lrMock
 	pm.NodeNet = nodenetMock
 	pm.Bus = busMock
 	pm.JetCoordinator = jcMock

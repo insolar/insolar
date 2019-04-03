@@ -48,6 +48,8 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
+// +build networktest
+
 package servicenetwork
 
 import (
@@ -371,14 +373,6 @@ func RandomRole() insolar.StaticRole {
 	return insolar.StaticRole(i)
 }
 
-type terminationHandler struct {
-	NodeID insolar.Reference
-}
-
-func (t *terminationHandler) Abort() {
-	log.Errorf("Abort node: %s", t.NodeID)
-}
-
 type pulseManagerMock struct {
 	pulse insolar.Pulse
 	lock  sync.Mutex
@@ -443,11 +437,16 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	s.Require().NoError(err)
-	terminationHandler := &terminationHandler{NodeID: node.id}
+	terminationHandler := testutils.NewTerminationHandlerMock(s.T())
+	terminationHandler.LeaveFunc = func(p context.Context, p1 insolar.PulseNumber) {}
+	terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {}
+	terminationHandler.AbortFunc = func() {}
 
 	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
+
 	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService)
-	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc)
+	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler)
+
 	node.serviceNetwork = serviceNetwork
 }

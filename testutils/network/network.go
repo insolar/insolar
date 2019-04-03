@@ -17,6 +17,8 @@
 package network
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/insolar"
 )
 
@@ -30,6 +32,10 @@ func (n *testNetwork) SendCascadeMessage(data insolar.Cascade, method string, ms
 	return nil
 }
 func (n *testNetwork) RemoteProcedureRegister(name string, method insolar.RemoteProcedure) {
+
+}
+
+func (n *testNetwork) Leave(ctx context.Context, ETA insolar.PulseNumber) {
 
 }
 

@@ -14,19 +14,5 @@
 // limitations under the License.
 //
 
-package terminationhandler
-
-import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log"
-)
-
-type testTerminationHandler struct{}
-
-func NewTestHandler() insolar.TerminationHandler {
-	return &testTerminationHandler{}
-}
-
-func (t *testTerminationHandler) Abort() {
-	log.Error("NetworkNode leave acknowledged by network. Goodbye!")
-}
+// Package pulsemanager is responsible for all pulse operations.
+package pulsemanager

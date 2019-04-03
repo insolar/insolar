@@ -27,20 +27,20 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
-type GenesisRecord struct {
+type X_GenesisRecord struct {
 }
 
-func (m *GenesisRecord) Reset()      { *m = GenesisRecord{} }
-func (*GenesisRecord) ProtoMessage() {}
-func (*GenesisRecord) Descriptor() ([]byte, []int) {
+func (m *X_GenesisRecord) Reset()      { *m = X_GenesisRecord{} }
+func (*X_GenesisRecord) ProtoMessage() {}
+func (*X_GenesisRecord) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0c86cc3f6f53fe45, []int{0}
 }
-func (m *GenesisRecord) XXX_Unmarshal(b []byte) error {
+func (m *X_GenesisRecord) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *GenesisRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *X_GenesisRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_GenesisRecord.Marshal(b, m, deterministic)
+		return xxx_messageInfo_X_GenesisRecord.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -50,34 +50,34 @@ func (m *GenesisRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return b[:n], nil
 	}
 }
-func (m *GenesisRecord) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_GenesisRecord.Merge(m, src)
+func (m *X_GenesisRecord) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_X_GenesisRecord.Merge(m, src)
 }
-func (m *GenesisRecord) XXX_Size() int {
+func (m *X_GenesisRecord) XXX_Size() int {
 	return m.Size()
 }
-func (m *GenesisRecord) XXX_DiscardUnknown() {
-	xxx_messageInfo_GenesisRecord.DiscardUnknown(m)
+func (m *X_GenesisRecord) XXX_DiscardUnknown() {
+	xxx_messageInfo_X_GenesisRecord.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_GenesisRecord proto.InternalMessageInfo
+var xxx_messageInfo_X_GenesisRecord proto.InternalMessageInfo
 
-type ChildRecord struct {
+type X_ChildRecord struct {
 	PrevChild github_com_insolar_insolar_insolar.ID        `protobuf:"bytes,1,opt,name=PrevChild,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"PrevChild"`
 	Ref       github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,2,opt,name=Ref,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Ref"`
 }
 
-func (m *ChildRecord) Reset()      { *m = ChildRecord{} }
-func (*ChildRecord) ProtoMessage() {}
-func (*ChildRecord) Descriptor() ([]byte, []int) {
+func (m *X_ChildRecord) Reset()      { *m = X_ChildRecord{} }
+func (*X_ChildRecord) ProtoMessage() {}
+func (*X_ChildRecord) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0c86cc3f6f53fe45, []int{1}
 }
-func (m *ChildRecord) XXX_Unmarshal(b []byte) error {
+func (m *X_ChildRecord) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ChildRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *X_ChildRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ChildRecord.Marshal(b, m, deterministic)
+		return xxx_messageInfo_X_ChildRecord.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -87,32 +87,32 @@ func (m *ChildRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) 
 		return b[:n], nil
 	}
 }
-func (m *ChildRecord) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ChildRecord.Merge(m, src)
+func (m *X_ChildRecord) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_X_ChildRecord.Merge(m, src)
 }
-func (m *ChildRecord) XXX_Size() int {
+func (m *X_ChildRecord) XXX_Size() int {
 	return m.Size()
 }
-func (m *ChildRecord) XXX_DiscardUnknown() {
-	xxx_messageInfo_ChildRecord.DiscardUnknown(m)
+func (m *X_ChildRecord) XXX_DiscardUnknown() {
+	xxx_messageInfo_X_ChildRecord.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ChildRecord proto.InternalMessageInfo
+var xxx_messageInfo_X_ChildRecord proto.InternalMessageInfo
 
-type JetRecord struct {
+type X_JetRecord struct {
 }
 
-func (m *JetRecord) Reset()      { *m = JetRecord{} }
-func (*JetRecord) ProtoMessage() {}
-func (*JetRecord) Descriptor() ([]byte, []int) {
+func (m *X_JetRecord) Reset()      { *m = X_JetRecord{} }
+func (*X_JetRecord) ProtoMessage() {}
+func (*X_JetRecord) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0c86cc3f6f53fe45, []int{2}
 }
-func (m *JetRecord) XXX_Unmarshal(b []byte) error {
+func (m *X_JetRecord) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *JetRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *X_JetRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_JetRecord.Marshal(b, m, deterministic)
+		return xxx_messageInfo_X_JetRecord.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -122,35 +122,35 @@ func (m *JetRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *JetRecord) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_JetRecord.Merge(m, src)
+func (m *X_JetRecord) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_X_JetRecord.Merge(m, src)
 }
-func (m *JetRecord) XXX_Size() int {
+func (m *X_JetRecord) XXX_Size() int {
 	return m.Size()
 }
-func (m *JetRecord) XXX_DiscardUnknown() {
-	xxx_messageInfo_JetRecord.DiscardUnknown(m)
+func (m *X_JetRecord) XXX_DiscardUnknown() {
+	xxx_messageInfo_X_JetRecord.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_JetRecord proto.InternalMessageInfo
+var xxx_messageInfo_X_JetRecord proto.InternalMessageInfo
 
-type RequestRecord struct {
+type X_RequestRecord struct {
 	Object      github_com_insolar_insolar_insolar.ID `protobuf:"bytes,1,opt,name=Object,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"Object"`
 	Parcel      []byte                                `protobuf:"bytes,2,opt,name=Parcel,proto3" json:"Parcel,omitempty"`
 	MessageHash []byte                                `protobuf:"bytes,3,opt,name=MessageHash,proto3" json:"MessageHash,omitempty"`
 }
 
-func (m *RequestRecord) Reset()      { *m = RequestRecord{} }
-func (*RequestRecord) ProtoMessage() {}
-func (*RequestRecord) Descriptor() ([]byte, []int) {
+func (m *X_RequestRecord) Reset()      { *m = X_RequestRecord{} }
+func (*X_RequestRecord) ProtoMessage() {}
+func (*X_RequestRecord) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0c86cc3f6f53fe45, []int{3}
 }
-func (m *RequestRecord) XXX_Unmarshal(b []byte) error {
+func (m *X_RequestRecord) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *RequestRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *X_RequestRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_RequestRecord.Marshal(b, m, deterministic)
+		return xxx_messageInfo_X_RequestRecord.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -160,35 +160,35 @@ func (m *RequestRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error
 		return b[:n], nil
 	}
 }
-func (m *RequestRecord) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_RequestRecord.Merge(m, src)
+func (m *X_RequestRecord) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_X_RequestRecord.Merge(m, src)
 }
-func (m *RequestRecord) XXX_Size() int {
+func (m *X_RequestRecord) XXX_Size() int {
 	return m.Size()
 }
-func (m *RequestRecord) XXX_DiscardUnknown() {
-	xxx_messageInfo_RequestRecord.DiscardUnknown(m)
+func (m *X_RequestRecord) XXX_DiscardUnknown() {
+	xxx_messageInfo_X_RequestRecord.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_RequestRecord proto.InternalMessageInfo
+var xxx_messageInfo_X_RequestRecord proto.InternalMessageInfo
 
-type ResultRecord struct {
+type X_ResultRecord struct {
 	Object  github_com_insolar_insolar_insolar.ID        `protobuf:"bytes,1,opt,name=Object,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"Object"`
 	Request github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,2,opt,name=Request,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Request"`
 	Payload []byte                                       `protobuf:"bytes,3,opt,name=Payload,proto3" json:"Payload,omitempty"`
 }
 
-func (m *ResultRecord) Reset()      { *m = ResultRecord{} }
-func (*ResultRecord) ProtoMessage() {}
-func (*ResultRecord) Descriptor() ([]byte, []int) {
+func (m *X_ResultRecord) Reset()      { *m = X_ResultRecord{} }
+func (*X_ResultRecord) ProtoMessage() {}
+func (*X_ResultRecord) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0c86cc3f6f53fe45, []int{4}
 }
-func (m *ResultRecord) XXX_Unmarshal(b []byte) error {
+func (m *X_ResultRecord) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ResultRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *X_ResultRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ResultRecord.Marshal(b, m, deterministic)
+		return xxx_messageInfo_X_ResultRecord.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -198,35 +198,35 @@ func (m *ResultRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error)
 		return b[:n], nil
 	}
 }
-func (m *ResultRecord) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ResultRecord.Merge(m, src)
+func (m *X_ResultRecord) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_X_ResultRecord.Merge(m, src)
 }
-func (m *ResultRecord) XXX_Size() int {
+func (m *X_ResultRecord) XXX_Size() int {
 	return m.Size()
 }
-func (m *ResultRecord) XXX_DiscardUnknown() {
-	xxx_messageInfo_ResultRecord.DiscardUnknown(m)
+func (m *X_ResultRecord) XXX_DiscardUnknown() {
+	xxx_messageInfo_X_ResultRecord.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ResultRecord proto.InternalMessageInfo
+var xxx_messageInfo_X_ResultRecord proto.InternalMessageInfo
 
-type TypeRecord struct {
+type X_TypeRecord struct {
 	Domain          github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,1,opt,name=Domain,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Domain"`
 	Request         github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,2,opt,name=Request,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Request"`
 	TypeDeclaration []byte                                       `protobuf:"bytes,3,opt,name=TypeDeclaration,proto3" json:"TypeDeclaration,omitempty"`
 }
 
-func (m *TypeRecord) Reset()      { *m = TypeRecord{} }
-func (*TypeRecord) ProtoMessage() {}
-func (*TypeRecord) Descriptor() ([]byte, []int) {
+func (m *X_TypeRecord) Reset()      { *m = X_TypeRecord{} }
+func (*X_TypeRecord) ProtoMessage() {}
+func (*X_TypeRecord) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0c86cc3f6f53fe45, []int{5}
 }
-func (m *TypeRecord) XXX_Unmarshal(b []byte) error {
+func (m *X_TypeRecord) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *TypeRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *X_TypeRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_TypeRecord.Marshal(b, m, deterministic)
+		return xxx_messageInfo_X_TypeRecord.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -236,36 +236,36 @@ func (m *TypeRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *TypeRecord) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_TypeRecord.Merge(m, src)
+func (m *X_TypeRecord) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_X_TypeRecord.Merge(m, src)
 }
-func (m *TypeRecord) XXX_Size() int {
+func (m *X_TypeRecord) XXX_Size() int {
 	return m.Size()
 }
-func (m *TypeRecord) XXX_DiscardUnknown() {
-	xxx_messageInfo_TypeRecord.DiscardUnknown(m)
+func (m *X_TypeRecord) XXX_DiscardUnknown() {
+	xxx_messageInfo_X_TypeRecord.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_TypeRecord proto.InternalMessageInfo
+var xxx_messageInfo_X_TypeRecord proto.InternalMessageInfo
 
-type CodeRecord struct {
+type X_CodeRecord struct {
 	Domain      github_com_insolar_insolar_insolar.Reference   `protobuf:"bytes,1,opt,name=Domain,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Domain"`
 	Request     github_com_insolar_insolar_insolar.Reference   `protobuf:"bytes,2,opt,name=Request,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Request"`
 	Code        github_com_insolar_insolar_insolar.ID          `protobuf:"bytes,3,opt,name=Code,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"Code"`
 	MachineType github_com_insolar_insolar_insolar.MachineType `protobuf:"varint,4,opt,name=MachineType,proto3,customtype=github.com/insolar/insolar/insolar.MachineType" json:"MachineType"`
 }
 
-func (m *CodeRecord) Reset()      { *m = CodeRecord{} }
-func (*CodeRecord) ProtoMessage() {}
-func (*CodeRecord) Descriptor() ([]byte, []int) {
+func (m *X_CodeRecord) Reset()      { *m = X_CodeRecord{} }
+func (*X_CodeRecord) ProtoMessage() {}
+func (*X_CodeRecord) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0c86cc3f6f53fe45, []int{6}
 }
-func (m *CodeRecord) XXX_Unmarshal(b []byte) error {
+func (m *X_CodeRecord) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *CodeRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *X_CodeRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_CodeRecord.Marshal(b, m, deterministic)
+		return xxx_messageInfo_X_CodeRecord.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -275,19 +275,19 @@ func (m *CodeRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *CodeRecord) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CodeRecord.Merge(m, src)
+func (m *X_CodeRecord) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_X_CodeRecord.Merge(m, src)
 }
-func (m *CodeRecord) XXX_Size() int {
+func (m *X_CodeRecord) XXX_Size() int {
 	return m.Size()
 }
-func (m *CodeRecord) XXX_DiscardUnknown() {
-	xxx_messageInfo_CodeRecord.DiscardUnknown(m)
+func (m *X_CodeRecord) XXX_DiscardUnknown() {
+	xxx_messageInfo_X_CodeRecord.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_CodeRecord proto.InternalMessageInfo
+var xxx_messageInfo_X_CodeRecord proto.InternalMessageInfo
 
-type ObjectActivateRecord struct {
+type X_ObjectActivateRecord struct {
 	Domain      github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,1,opt,name=Domain,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Domain"`
 	Request     github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,2,opt,name=Request,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Request"`
 	Memory      github_com_insolar_insolar_insolar.ID        `protobuf:"bytes,3,opt,name=Memory,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"Memory"`
@@ -297,17 +297,17 @@ type ObjectActivateRecord struct {
 	IsDelegate  bool                                         `protobuf:"varint,7,opt,name=IsDelegate,proto3" json:"IsDelegate,omitempty"`
 }
 
-func (m *ObjectActivateRecord) Reset()      { *m = ObjectActivateRecord{} }
-func (*ObjectActivateRecord) ProtoMessage() {}
-func (*ObjectActivateRecord) Descriptor() ([]byte, []int) {
+func (m *X_ObjectActivateRecord) Reset()      { *m = X_ObjectActivateRecord{} }
+func (*X_ObjectActivateRecord) ProtoMessage() {}
+func (*X_ObjectActivateRecord) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0c86cc3f6f53fe45, []int{7}
 }
-func (m *ObjectActivateRecord) XXX_Unmarshal(b []byte) error {
+func (m *X_ObjectActivateRecord) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ObjectActivateRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *X_ObjectActivateRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ObjectActivateRecord.Marshal(b, m, deterministic)
+		return xxx_messageInfo_X_ObjectActivateRecord.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -317,19 +317,19 @@ func (m *ObjectActivateRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte
 		return b[:n], nil
 	}
 }
-func (m *ObjectActivateRecord) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ObjectActivateRecord.Merge(m, src)
+func (m *X_ObjectActivateRecord) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_X_ObjectActivateRecord.Merge(m, src)
 }
-func (m *ObjectActivateRecord) XXX_Size() int {
+func (m *X_ObjectActivateRecord) XXX_Size() int {
 	return m.Size()
 }
-func (m *ObjectActivateRecord) XXX_DiscardUnknown() {
-	xxx_messageInfo_ObjectActivateRecord.DiscardUnknown(m)
+func (m *X_ObjectActivateRecord) XXX_DiscardUnknown() {
+	xxx_messageInfo_X_ObjectActivateRecord.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ObjectActivateRecord proto.InternalMessageInfo
+var xxx_messageInfo_X_ObjectActivateRecord proto.InternalMessageInfo
 
-type ObjectAmendRecord struct {
+type X_ObjectAmendRecord struct {
 	Domain      github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,1,opt,name=Domain,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Domain"`
 	Request     github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,2,opt,name=Request,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Request"`
 	Memory      github_com_insolar_insolar_insolar.ID        `protobuf:"bytes,3,opt,name=Memory,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"Memory"`
@@ -338,17 +338,17 @@ type ObjectAmendRecord struct {
 	PrevState   github_com_insolar_insolar_insolar.ID        `protobuf:"bytes,6,opt,name=PrevState,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"PrevState"`
 }
 
-func (m *ObjectAmendRecord) Reset()      { *m = ObjectAmendRecord{} }
-func (*ObjectAmendRecord) ProtoMessage() {}
-func (*ObjectAmendRecord) Descriptor() ([]byte, []int) {
+func (m *X_ObjectAmendRecord) Reset()      { *m = X_ObjectAmendRecord{} }
+func (*X_ObjectAmendRecord) ProtoMessage() {}
+func (*X_ObjectAmendRecord) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0c86cc3f6f53fe45, []int{8}
 }
-func (m *ObjectAmendRecord) XXX_Unmarshal(b []byte) error {
+func (m *X_ObjectAmendRecord) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ObjectAmendRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *X_ObjectAmendRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ObjectAmendRecord.Marshal(b, m, deterministic)
+		return xxx_messageInfo_X_ObjectAmendRecord.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -358,35 +358,35 @@ func (m *ObjectAmendRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, e
 		return b[:n], nil
 	}
 }
-func (m *ObjectAmendRecord) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ObjectAmendRecord.Merge(m, src)
+func (m *X_ObjectAmendRecord) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_X_ObjectAmendRecord.Merge(m, src)
 }
-func (m *ObjectAmendRecord) XXX_Size() int {
+func (m *X_ObjectAmendRecord) XXX_Size() int {
 	return m.Size()
 }
-func (m *ObjectAmendRecord) XXX_DiscardUnknown() {
-	xxx_messageInfo_ObjectAmendRecord.DiscardUnknown(m)
+func (m *X_ObjectAmendRecord) XXX_DiscardUnknown() {
+	xxx_messageInfo_X_ObjectAmendRecord.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ObjectAmendRecord proto.InternalMessageInfo
+var xxx_messageInfo_X_ObjectAmendRecord proto.InternalMessageInfo
 
-type ObjectDeactivateRecord struct {
+type X_ObjectDeactivateRecord struct {
 	Domain    github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,1,opt,name=Domain,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Domain"`
 	Request   github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,2,opt,name=Request,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Request"`
 	PrevState github_com_insolar_insolar_insolar.ID        `protobuf:"bytes,3,opt,name=PrevState,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"PrevState"`
 }
 
-func (m *ObjectDeactivateRecord) Reset()      { *m = ObjectDeactivateRecord{} }
-func (*ObjectDeactivateRecord) ProtoMessage() {}
-func (*ObjectDeactivateRecord) Descriptor() ([]byte, []int) {
+func (m *X_ObjectDeactivateRecord) Reset()      { *m = X_ObjectDeactivateRecord{} }
+func (*X_ObjectDeactivateRecord) ProtoMessage() {}
+func (*X_ObjectDeactivateRecord) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0c86cc3f6f53fe45, []int{9}
 }
-func (m *ObjectDeactivateRecord) XXX_Unmarshal(b []byte) error {
+func (m *X_ObjectDeactivateRecord) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *ObjectDeactivateRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *X_ObjectDeactivateRecord) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_ObjectDeactivateRecord.Marshal(b, m, deterministic)
+		return xxx_messageInfo_X_ObjectDeactivateRecord.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -396,44 +396,44 @@ func (m *ObjectDeactivateRecord) XXX_Marshal(b []byte, deterministic bool) ([]by
 		return b[:n], nil
 	}
 }
-func (m *ObjectDeactivateRecord) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_ObjectDeactivateRecord.Merge(m, src)
+func (m *X_ObjectDeactivateRecord) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_X_ObjectDeactivateRecord.Merge(m, src)
 }
-func (m *ObjectDeactivateRecord) XXX_Size() int {
+func (m *X_ObjectDeactivateRecord) XXX_Size() int {
 	return m.Size()
 }
-func (m *ObjectDeactivateRecord) XXX_DiscardUnknown() {
-	xxx_messageInfo_ObjectDeactivateRecord.DiscardUnknown(m)
+func (m *X_ObjectDeactivateRecord) XXX_DiscardUnknown() {
+	xxx_messageInfo_X_ObjectDeactivateRecord.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_ObjectDeactivateRecord proto.InternalMessageInfo
+var xxx_messageInfo_X_ObjectDeactivateRecord proto.InternalMessageInfo
 
-type Record struct {
+type X_Record struct {
 	// Types that are valid to be assigned to Union:
-	//	*Record_Genesis
-	//	*Record_Child
-	//	*Record_Jet
-	//	*Record_Request
-	//	*Record_Result
-	//	*Record_Type
-	//	*Record_Code
-	//	*Record_ObjectActivate
-	//	*Record_ObjectAmend
-	//	*Record_ObjectDeactivate
-	Union isRecord_Union `protobuf_oneof:"union"`
+	//	*X_Record_Genesis
+	//	*X_Record_Child
+	//	*X_Record_Jet
+	//	*X_Record_Request
+	//	*X_Record_Result
+	//	*X_Record_Type
+	//	*X_Record_Code
+	//	*X_Record_ObjectActivate
+	//	*X_Record_ObjectAmend
+	//	*X_Record_ObjectDeactivate
+	Union isX_Record_Union `protobuf_oneof:"union"`
 }
 
-func (m *Record) Reset()      { *m = Record{} }
-func (*Record) ProtoMessage() {}
-func (*Record) Descriptor() ([]byte, []int) {
+func (m *X_Record) Reset()      { *m = X_Record{} }
+func (*X_Record) ProtoMessage() {}
+func (*X_Record) Descriptor() ([]byte, []int) {
 	return fileDescriptor_0c86cc3f6f53fe45, []int{10}
 }
-func (m *Record) XXX_Unmarshal(b []byte) error {
+func (m *X_Record) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *Record) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *X_Record) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_Record.Marshal(b, m, deterministic)
+		return xxx_messageInfo_X_Record.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -443,359 +443,359 @@ func (m *Record) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 		return b[:n], nil
 	}
 }
-func (m *Record) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Record.Merge(m, src)
+func (m *X_Record) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_X_Record.Merge(m, src)
 }
-func (m *Record) XXX_Size() int {
+func (m *X_Record) XXX_Size() int {
 	return m.Size()
 }
-func (m *Record) XXX_DiscardUnknown() {
-	xxx_messageInfo_Record.DiscardUnknown(m)
+func (m *X_Record) XXX_DiscardUnknown() {
+	xxx_messageInfo_X_Record.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_Record proto.InternalMessageInfo
+var xxx_messageInfo_X_Record proto.InternalMessageInfo
 
-type isRecord_Union interface {
-	isRecord_Union()
+type isX_Record_Union interface {
+	isX_Record_Union()
 	Equal(interface{}) bool
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
 
-type Record_Genesis struct {
-	Genesis *GenesisRecord `protobuf:"bytes,100,opt,name=Genesis,proto3,oneof"`
+type X_Record_Genesis struct {
+	Genesis *X_GenesisRecord `protobuf:"bytes,100,opt,name=Genesis,proto3,oneof"`
 }
-type Record_Child struct {
-	Child *ChildRecord `protobuf:"bytes,101,opt,name=Child,proto3,oneof"`
+type X_Record_Child struct {
+	Child *X_ChildRecord `protobuf:"bytes,101,opt,name=Child,proto3,oneof"`
 }
-type Record_Jet struct {
-	Jet *JetRecord `protobuf:"bytes,102,opt,name=Jet,proto3,oneof"`
+type X_Record_Jet struct {
+	Jet *X_JetRecord `protobuf:"bytes,102,opt,name=Jet,proto3,oneof"`
 }
-type Record_Request struct {
-	Request *RequestRecord `protobuf:"bytes,200,opt,name=Request,proto3,oneof"`
+type X_Record_Request struct {
+	Request *X_RequestRecord `protobuf:"bytes,200,opt,name=Request,proto3,oneof"`
 }
-type Record_Result struct {
-	Result *ResultRecord `protobuf:"bytes,300,opt,name=Result,proto3,oneof"`
+type X_Record_Result struct {
+	Result *X_ResultRecord `protobuf:"bytes,300,opt,name=Result,proto3,oneof"`
 }
-type Record_Type struct {
-	Type *TypeRecord `protobuf:"bytes,301,opt,name=Type,proto3,oneof"`
+type X_Record_Type struct {
+	Type *X_TypeRecord `protobuf:"bytes,301,opt,name=Type,proto3,oneof"`
 }
-type Record_Code struct {
-	Code *CodeRecord `protobuf:"bytes,302,opt,name=Code,proto3,oneof"`
+type X_Record_Code struct {
+	Code *X_CodeRecord `protobuf:"bytes,302,opt,name=Code,proto3,oneof"`
 }
-type Record_ObjectActivate struct {
-	ObjectActivate *ObjectActivateRecord `protobuf:"bytes,303,opt,name=ObjectActivate,proto3,oneof"`
+type X_Record_ObjectActivate struct {
+	ObjectActivate *X_ObjectActivateRecord `protobuf:"bytes,303,opt,name=ObjectActivate,proto3,oneof"`
 }
-type Record_ObjectAmend struct {
-	ObjectAmend *ObjectAmendRecord `protobuf:"bytes,304,opt,name=ObjectAmend,proto3,oneof"`
+type X_Record_ObjectAmend struct {
+	ObjectAmend *X_ObjectAmendRecord `protobuf:"bytes,304,opt,name=ObjectAmend,proto3,oneof"`
 }
-type Record_ObjectDeactivate struct {
-	ObjectDeactivate *ObjectDeactivateRecord `protobuf:"bytes,305,opt,name=ObjectDeactivate,proto3,oneof"`
+type X_Record_ObjectDeactivate struct {
+	ObjectDeactivate *X_ObjectDeactivateRecord `protobuf:"bytes,305,opt,name=ObjectDeactivate,proto3,oneof"`
 }
 
-func (*Record_Genesis) isRecord_Union()          {}
-func (*Record_Child) isRecord_Union()            {}
-func (*Record_Jet) isRecord_Union()              {}
-func (*Record_Request) isRecord_Union()          {}
-func (*Record_Result) isRecord_Union()           {}
-func (*Record_Type) isRecord_Union()             {}
-func (*Record_Code) isRecord_Union()             {}
-func (*Record_ObjectActivate) isRecord_Union()   {}
-func (*Record_ObjectAmend) isRecord_Union()      {}
-func (*Record_ObjectDeactivate) isRecord_Union() {}
+func (*X_Record_Genesis) isX_Record_Union()          {}
+func (*X_Record_Child) isX_Record_Union()            {}
+func (*X_Record_Jet) isX_Record_Union()              {}
+func (*X_Record_Request) isX_Record_Union()          {}
+func (*X_Record_Result) isX_Record_Union()           {}
+func (*X_Record_Type) isX_Record_Union()             {}
+func (*X_Record_Code) isX_Record_Union()             {}
+func (*X_Record_ObjectActivate) isX_Record_Union()   {}
+func (*X_Record_ObjectAmend) isX_Record_Union()      {}
+func (*X_Record_ObjectDeactivate) isX_Record_Union() {}
 
-func (m *Record) GetUnion() isRecord_Union {
+func (m *X_Record) GetUnion() isX_Record_Union {
 	if m != nil {
 		return m.Union
 	}
 	return nil
 }
 
-func (m *Record) GetGenesis() *GenesisRecord {
-	if x, ok := m.GetUnion().(*Record_Genesis); ok {
+func (m *X_Record) GetGenesis() *X_GenesisRecord {
+	if x, ok := m.GetUnion().(*X_Record_Genesis); ok {
 		return x.Genesis
 	}
 	return nil
 }
 
-func (m *Record) GetChild() *ChildRecord {
-	if x, ok := m.GetUnion().(*Record_Child); ok {
+func (m *X_Record) GetChild() *X_ChildRecord {
+	if x, ok := m.GetUnion().(*X_Record_Child); ok {
 		return x.Child
 	}
 	return nil
 }
 
-func (m *Record) GetJet() *JetRecord {
-	if x, ok := m.GetUnion().(*Record_Jet); ok {
+func (m *X_Record) GetJet() *X_JetRecord {
+	if x, ok := m.GetUnion().(*X_Record_Jet); ok {
 		return x.Jet
 	}
 	return nil
 }
 
-func (m *Record) GetRequest() *RequestRecord {
-	if x, ok := m.GetUnion().(*Record_Request); ok {
+func (m *X_Record) GetRequest() *X_RequestRecord {
+	if x, ok := m.GetUnion().(*X_Record_Request); ok {
 		return x.Request
 	}
 	return nil
 }
 
-func (m *Record) GetResult() *ResultRecord {
-	if x, ok := m.GetUnion().(*Record_Result); ok {
+func (m *X_Record) GetResult() *X_ResultRecord {
+	if x, ok := m.GetUnion().(*X_Record_Result); ok {
 		return x.Result
 	}
 	return nil
 }
 
-func (m *Record) GetType() *TypeRecord {
-	if x, ok := m.GetUnion().(*Record_Type); ok {
+func (m *X_Record) GetType() *X_TypeRecord {
+	if x, ok := m.GetUnion().(*X_Record_Type); ok {
 		return x.Type
 	}
 	return nil
 }
 
-func (m *Record) GetCode() *CodeRecord {
-	if x, ok := m.GetUnion().(*Record_Code); ok {
+func (m *X_Record) GetCode() *X_CodeRecord {
+	if x, ok := m.GetUnion().(*X_Record_Code); ok {
 		return x.Code
 	}
 	return nil
 }
 
-func (m *Record) GetObjectActivate() *ObjectActivateRecord {
-	if x, ok := m.GetUnion().(*Record_ObjectActivate); ok {
+func (m *X_Record) GetObjectActivate() *X_ObjectActivateRecord {
+	if x, ok := m.GetUnion().(*X_Record_ObjectActivate); ok {
 		return x.ObjectActivate
 	}
 	return nil
 }
 
-func (m *Record) GetObjectAmend() *ObjectAmendRecord {
-	if x, ok := m.GetUnion().(*Record_ObjectAmend); ok {
+func (m *X_Record) GetObjectAmend() *X_ObjectAmendRecord {
+	if x, ok := m.GetUnion().(*X_Record_ObjectAmend); ok {
 		return x.ObjectAmend
 	}
 	return nil
 }
 
-func (m *Record) GetObjectDeactivate() *ObjectDeactivateRecord {
-	if x, ok := m.GetUnion().(*Record_ObjectDeactivate); ok {
+func (m *X_Record) GetObjectDeactivate() *X_ObjectDeactivateRecord {
+	if x, ok := m.GetUnion().(*X_Record_ObjectDeactivate); ok {
 		return x.ObjectDeactivate
 	}
 	return nil
 }
 
 // XXX_OneofFuncs is for the internal use of the proto package.
-func (*Record) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _Record_OneofMarshaler, _Record_OneofUnmarshaler, _Record_OneofSizer, []interface{}{
-		(*Record_Genesis)(nil),
-		(*Record_Child)(nil),
-		(*Record_Jet)(nil),
-		(*Record_Request)(nil),
-		(*Record_Result)(nil),
-		(*Record_Type)(nil),
-		(*Record_Code)(nil),
-		(*Record_ObjectActivate)(nil),
-		(*Record_ObjectAmend)(nil),
-		(*Record_ObjectDeactivate)(nil),
+func (*X_Record) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
+	return _X_Record_OneofMarshaler, _X_Record_OneofUnmarshaler, _X_Record_OneofSizer, []interface{}{
+		(*X_Record_Genesis)(nil),
+		(*X_Record_Child)(nil),
+		(*X_Record_Jet)(nil),
+		(*X_Record_Request)(nil),
+		(*X_Record_Result)(nil),
+		(*X_Record_Type)(nil),
+		(*X_Record_Code)(nil),
+		(*X_Record_ObjectActivate)(nil),
+		(*X_Record_ObjectAmend)(nil),
+		(*X_Record_ObjectDeactivate)(nil),
 	}
 }
 
-func _Record_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*Record)
+func _X_Record_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
+	m := msg.(*X_Record)
 	// union
 	switch x := m.Union.(type) {
-	case *Record_Genesis:
+	case *X_Record_Genesis:
 		_ = b.EncodeVarint(100<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Genesis); err != nil {
 			return err
 		}
-	case *Record_Child:
+	case *X_Record_Child:
 		_ = b.EncodeVarint(101<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Child); err != nil {
 			return err
 		}
-	case *Record_Jet:
+	case *X_Record_Jet:
 		_ = b.EncodeVarint(102<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Jet); err != nil {
 			return err
 		}
-	case *Record_Request:
+	case *X_Record_Request:
 		_ = b.EncodeVarint(200<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Request); err != nil {
 			return err
 		}
-	case *Record_Result:
+	case *X_Record_Result:
 		_ = b.EncodeVarint(300<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Result); err != nil {
 			return err
 		}
-	case *Record_Type:
+	case *X_Record_Type:
 		_ = b.EncodeVarint(301<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Type); err != nil {
 			return err
 		}
-	case *Record_Code:
+	case *X_Record_Code:
 		_ = b.EncodeVarint(302<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Code); err != nil {
 			return err
 		}
-	case *Record_ObjectActivate:
+	case *X_Record_ObjectActivate:
 		_ = b.EncodeVarint(303<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.ObjectActivate); err != nil {
 			return err
 		}
-	case *Record_ObjectAmend:
+	case *X_Record_ObjectAmend:
 		_ = b.EncodeVarint(304<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.ObjectAmend); err != nil {
 			return err
 		}
-	case *Record_ObjectDeactivate:
+	case *X_Record_ObjectDeactivate:
 		_ = b.EncodeVarint(305<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.ObjectDeactivate); err != nil {
 			return err
 		}
 	case nil:
 	default:
-		return fmt.Errorf("Record.Union has unexpected type %T", x)
+		return fmt.Errorf("X_Record.Union has unexpected type %T", x)
 	}
 	return nil
 }
 
-func _Record_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*Record)
+func _X_Record_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
+	m := msg.(*X_Record)
 	switch tag {
 	case 100: // union.Genesis
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(GenesisRecord)
+		msg := new(X_GenesisRecord)
 		err := b.DecodeMessage(msg)
-		m.Union = &Record_Genesis{msg}
+		m.Union = &X_Record_Genesis{msg}
 		return true, err
 	case 101: // union.Child
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(ChildRecord)
+		msg := new(X_ChildRecord)
 		err := b.DecodeMessage(msg)
-		m.Union = &Record_Child{msg}
+		m.Union = &X_Record_Child{msg}
 		return true, err
 	case 102: // union.Jet
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(JetRecord)
+		msg := new(X_JetRecord)
 		err := b.DecodeMessage(msg)
-		m.Union = &Record_Jet{msg}
+		m.Union = &X_Record_Jet{msg}
 		return true, err
 	case 200: // union.Request
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(RequestRecord)
+		msg := new(X_RequestRecord)
 		err := b.DecodeMessage(msg)
-		m.Union = &Record_Request{msg}
+		m.Union = &X_Record_Request{msg}
 		return true, err
 	case 300: // union.Result
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(ResultRecord)
+		msg := new(X_ResultRecord)
 		err := b.DecodeMessage(msg)
-		m.Union = &Record_Result{msg}
+		m.Union = &X_Record_Result{msg}
 		return true, err
 	case 301: // union.Type
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(TypeRecord)
+		msg := new(X_TypeRecord)
 		err := b.DecodeMessage(msg)
-		m.Union = &Record_Type{msg}
+		m.Union = &X_Record_Type{msg}
 		return true, err
 	case 302: // union.Code
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(CodeRecord)
+		msg := new(X_CodeRecord)
 		err := b.DecodeMessage(msg)
-		m.Union = &Record_Code{msg}
+		m.Union = &X_Record_Code{msg}
 		return true, err
 	case 303: // union.ObjectActivate
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(ObjectActivateRecord)
+		msg := new(X_ObjectActivateRecord)
 		err := b.DecodeMessage(msg)
-		m.Union = &Record_ObjectActivate{msg}
+		m.Union = &X_Record_ObjectActivate{msg}
 		return true, err
 	case 304: // union.ObjectAmend
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(ObjectAmendRecord)
+		msg := new(X_ObjectAmendRecord)
 		err := b.DecodeMessage(msg)
-		m.Union = &Record_ObjectAmend{msg}
+		m.Union = &X_Record_ObjectAmend{msg}
 		return true, err
 	case 305: // union.ObjectDeactivate
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(ObjectDeactivateRecord)
+		msg := new(X_ObjectDeactivateRecord)
 		err := b.DecodeMessage(msg)
-		m.Union = &Record_ObjectDeactivate{msg}
+		m.Union = &X_Record_ObjectDeactivate{msg}
 		return true, err
 	default:
 		return false, nil
 	}
 }
 
-func _Record_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*Record)
+func _X_Record_OneofSizer(msg proto.Message) (n int) {
+	m := msg.(*X_Record)
 	// union
 	switch x := m.Union.(type) {
-	case *Record_Genesis:
+	case *X_Record_Genesis:
 		s := proto.Size(x.Genesis)
 		n += 2 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *Record_Child:
+	case *X_Record_Child:
 		s := proto.Size(x.Child)
 		n += 2 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *Record_Jet:
+	case *X_Record_Jet:
 		s := proto.Size(x.Jet)
 		n += 2 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *Record_Request:
+	case *X_Record_Request:
 		s := proto.Size(x.Request)
 		n += 2 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *Record_Result:
+	case *X_Record_Result:
 		s := proto.Size(x.Result)
 		n += 2 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *Record_Type:
+	case *X_Record_Type:
 		s := proto.Size(x.Type)
 		n += 2 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *Record_Code:
+	case *X_Record_Code:
 		s := proto.Size(x.Code)
 		n += 2 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *Record_ObjectActivate:
+	case *X_Record_ObjectActivate:
 		s := proto.Size(x.ObjectActivate)
 		n += 2 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *Record_ObjectAmend:
+	case *X_Record_ObjectAmend:
 		s := proto.Size(x.ObjectAmend)
 		n += 2 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *Record_ObjectDeactivate:
+	case *X_Record_ObjectDeactivate:
 		s := proto.Size(x.ObjectDeactivate)
 		n += 2 // tag and wire
 		n += proto.SizeVarint(uint64(s))
@@ -808,84 +808,84 @@ func _Record_OneofSizer(msg proto.Message) (n int) {
 }
 
 func init() {
-	proto.RegisterType((*GenesisRecord)(nil), "record.GenesisRecord")
-	proto.RegisterType((*ChildRecord)(nil), "record.ChildRecord")
-	proto.RegisterType((*JetRecord)(nil), "record.JetRecord")
-	proto.RegisterType((*RequestRecord)(nil), "record.RequestRecord")
-	proto.RegisterType((*ResultRecord)(nil), "record.ResultRecord")
-	proto.RegisterType((*TypeRecord)(nil), "record.TypeRecord")
-	proto.RegisterType((*CodeRecord)(nil), "record.CodeRecord")
-	proto.RegisterType((*ObjectActivateRecord)(nil), "record.ObjectActivateRecord")
-	proto.RegisterType((*ObjectAmendRecord)(nil), "record.ObjectAmendRecord")
-	proto.RegisterType((*ObjectDeactivateRecord)(nil), "record.ObjectDeactivateRecord")
-	proto.RegisterType((*Record)(nil), "record.Record")
+	proto.RegisterType((*X_GenesisRecord)(nil), "record.__GenesisRecord")
+	proto.RegisterType((*X_ChildRecord)(nil), "record.__ChildRecord")
+	proto.RegisterType((*X_JetRecord)(nil), "record.__JetRecord")
+	proto.RegisterType((*X_RequestRecord)(nil), "record.__RequestRecord")
+	proto.RegisterType((*X_ResultRecord)(nil), "record.__ResultRecord")
+	proto.RegisterType((*X_TypeRecord)(nil), "record.__TypeRecord")
+	proto.RegisterType((*X_CodeRecord)(nil), "record.__CodeRecord")
+	proto.RegisterType((*X_ObjectActivateRecord)(nil), "record.__ObjectActivateRecord")
+	proto.RegisterType((*X_ObjectAmendRecord)(nil), "record.__ObjectAmendRecord")
+	proto.RegisterType((*X_ObjectDeactivateRecord)(nil), "record.__ObjectDeactivateRecord")
+	proto.RegisterType((*X_Record)(nil), "record.__Record")
 }
 
 func init() { proto.RegisterFile("insolar/record/record.proto", fileDescriptor_0c86cc3f6f53fe45) }
 
 var fileDescriptor_0c86cc3f6f53fe45 = []byte{
-	// 808 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x56, 0xbf, 0x6f, 0xdb, 0x46,
-	0x14, 0xbe, 0xd3, 0x0f, 0xaa, 0x7e, 0xb2, 0xeb, 0xfa, 0xea, 0x1a, 0xec, 0x0f, 0x9c, 0x05, 0x03,
-	0x06, 0x54, 0xb4, 0x96, 0x50, 0xb7, 0xe8, 0x50, 0x14, 0x05, 0x2c, 0xcb, 0x35, 0xe5, 0x56, 0xad,
-	0x70, 0xed, 0x90, 0x95, 0xa2, 0x4e, 0x12, 0x03, 0x89, 0x74, 0x48, 0xca, 0x80, 0xb7, 0xac, 0xd9,
-	0x32, 0x65, 0xce, 0x68, 0x20, 0xbf, 0xc7, 0xfc, 0x01, 0x01, 0xb4, 0x04, 0xf0, 0x68, 0x18, 0x88,
-	0x11, 0xc9, 0x4b, 0x46, 0x8f, 0x19, 0x03, 0xde, 0x1d, 0x23, 0x4a, 0xc9, 0xe0, 0xc8, 0xce, 0x60,
-	0x20, 0x93, 0x74, 0xc7, 0xf7, 0x7d, 0x7c, 0xdf, 0xf7, 0x8e, 0xf7, 0x1e, 0x7c, 0x6b, 0x3b, 0xbe,
-	0xdb, 0x31, 0xbd, 0xa2, 0xc7, 0x2d, 0xd7, 0x6b, 0xa8, 0x9f, 0xc2, 0xae, 0xe7, 0x06, 0x2e, 0xd1,
-	0xe4, 0xea, 0x9b, 0xb5, 0x96, 0x1d, 0xb4, 0x7b, 0xf5, 0x82, 0xe5, 0x76, 0x8b, 0x2d, 0xb7, 0xe5,
-	0x16, 0xc5, 0xe3, 0x7a, 0xaf, 0x29, 0x56, 0x62, 0x21, 0xfe, 0x49, 0xd8, 0xca, 0x3c, 0xcc, 0x6d,
-	0x73, 0x87, 0xfb, 0xb6, 0xcf, 0x04, 0x7e, 0xe5, 0x00, 0x43, 0x76, 0xb3, 0x6d, 0x77, 0x1a, 0x72,
-	0x4d, 0xfe, 0x82, 0x99, 0x9a, 0xc7, 0xf7, 0xc4, 0x96, 0x8e, 0x73, 0x38, 0x3f, 0x5b, 0x5a, 0xeb,
-	0x9f, 0x2c, 0xa3, 0xe3, 0x93, 0xe5, 0xd5, 0xd8, 0xab, 0xa2, 0xd4, 0x26, 0x7e, 0x0b, 0x95, 0x32,
-	0x1b, 0xe1, 0xc9, 0x9f, 0x90, 0x64, 0xbc, 0xa9, 0x27, 0x04, 0xcd, 0x2f, 0x8a, 0xe6, 0xc7, 0x73,
-	0xd0, 0x30, 0xde, 0xe4, 0x1e, 0x77, 0x2c, 0xce, 0x42, 0x82, 0xdf, 0x52, 0x07, 0x77, 0x97, 0xf1,
-	0x4a, 0x16, 0x66, 0x76, 0x78, 0xa0, 0xf2, 0xbe, 0x83, 0x61, 0x8e, 0xf1, 0x1b, 0x3d, 0xee, 0xab,
-	0x1d, 0xb2, 0x05, 0xda, 0xbf, 0xf5, 0xeb, 0xdc, 0x0a, 0xa6, 0x4b, 0x5b, 0x81, 0xc9, 0x12, 0x68,
-	0x35, 0xd3, 0xb3, 0x78, 0x47, 0xa6, 0xcd, 0xd4, 0x8a, 0xe4, 0x20, 0x5b, 0xe5, 0xbe, 0x6f, 0xb6,
-	0xb8, 0x61, 0xfa, 0x6d, 0x3d, 0x29, 0x1e, 0xc6, 0xb7, 0x54, 0x96, 0xcf, 0x30, 0xcc, 0x32, 0xee,
-	0xf7, 0x3a, 0x97, 0x9c, 0xd7, 0x3f, 0x90, 0x51, 0x7a, 0x2f, 0xe4, 0x67, 0x44, 0x42, 0x74, 0xc8,
-	0xd4, 0xcc, 0xfd, 0x8e, 0x6b, 0x36, 0x94, 0x96, 0x68, 0xa9, 0x74, 0x1c, 0x63, 0x80, 0xff, 0xf7,
-	0x77, 0xb9, 0x52, 0xf1, 0x37, 0x68, 0x65, 0xb7, 0x6b, 0xda, 0x8e, 0x52, 0x31, 0xdd, 0xdb, 0x15,
-	0xc7, 0xa5, 0x8b, 0xc9, 0xc3, 0x7c, 0x98, 0x6b, 0x99, 0x5b, 0x1d, 0xd3, 0x33, 0x03, 0xdb, 0x75,
-	0x94, 0xa8, 0xc9, 0x6d, 0x25, 0xee, 0x79, 0x02, 0x60, 0xd3, 0x6d, 0x5c, 0x0d, 0x71, 0x1b, 0x90,
-	0x0a, 0x73, 0x95, 0x8a, 0x3e, 0xf4, 0xf8, 0x08, 0x28, 0xb9, 0x06, 0xd9, 0xaa, 0x69, 0xb5, 0x6d,
-	0x87, 0x87, 0x7e, 0xe8, 0xa9, 0x1c, 0xce, 0xcf, 0x95, 0x7e, 0x55, 0x4c, 0x85, 0x73, 0x30, 0xc5,
-	0xd0, 0x2c, 0x4e, 0xa5, 0xfc, 0x7c, 0x91, 0x84, 0x45, 0x79, 0x4e, 0x37, 0xac, 0xc0, 0xde, 0x33,
-	0x83, 0xab, 0xe1, 0xec, 0x16, 0x68, 0x55, 0xde, 0x75, 0xbd, 0xfd, 0xe9, 0xbc, 0x55, 0x60, 0xb2,
-	0x03, 0xe9, 0x4a, 0xd7, 0x6c, 0x49, 0x5f, 0xa7, 0x4d, 0x4a, 0x52, 0x84, 0xd7, 0x4c, 0xc5, 0xaf,
-	0x85, 0x77, 0x75, 0x10, 0x56, 0x2a, 0x9d, 0xc3, 0xf9, 0xcf, 0x58, 0x7c, 0x2b, 0xb4, 0xb4, 0x66,
-	0x7a, 0xdc, 0x09, 0x74, 0xed, 0x22, 0x96, 0x4a, 0x0e, 0x42, 0x01, 0x2a, 0x7e, 0x99, 0x77, 0x78,
-	0xcb, 0x0c, 0xb8, 0x9e, 0x11, 0xaf, 0x8b, 0xed, 0xa8, 0xfa, 0x3e, 0x4d, 0xc2, 0x82, 0xaa, 0x6f,
-	0x97, 0x3b, 0x8d, 0x4f, 0xc5, 0xfd, 0x58, 0xc5, 0x55, 0xed, 0xf7, 0xbf, 0x20, 0xac, 0x86, 0x36,
-	0x75, 0xfb, 0x15, 0x78, 0x55, 0xbb, 0x5b, 0x09, 0x58, 0x92, 0xb5, 0x2b, 0x73, 0xf3, 0x2a, 0x7d,
-	0x9d, 0x63, 0x5e, 0x24, 0x2f, 0xc5, 0x8b, 0x7b, 0x29, 0xd0, 0x94, 0xf6, 0x9f, 0x20, 0xa3, 0x26,
-	0x21, 0xbd, 0x91, 0xc3, 0xf9, 0xec, 0xfa, 0x57, 0x05, 0x35, 0x60, 0x8d, 0x0d, 0x48, 0x06, 0x62,
-	0x51, 0x1c, 0xf9, 0x01, 0xd2, 0x72, 0x2e, 0xe2, 0x02, 0xf0, 0x65, 0x04, 0x88, 0xcd, 0x4f, 0x06,
-	0x62, 0x32, 0x86, 0xac, 0x42, 0x72, 0x87, 0x07, 0x7a, 0x53, 0x84, 0x2e, 0x44, 0xa1, 0x6f, 0x07,
-	0x18, 0x03, 0xb1, 0xf0, 0x39, 0x59, 0x1f, 0x99, 0xd6, 0xc7, 0xe3, 0x79, 0x8c, 0x8d, 0x37, 0x61,
-	0x1e, 0x91, 0x31, 0xc5, 0x50, 0x44, 0x38, 0x61, 0xe8, 0xf7, 0x13, 0x02, 0xb2, 0x38, 0x82, 0x8c,
-	0x06, 0x0f, 0x03, 0x31, 0x15, 0x46, 0xbe, 0x87, 0x94, 0xb8, 0xf7, 0x1f, 0xc8, 0x70, 0x12, 0x85,
-	0x8f, 0xfa, 0xbb, 0x81, 0x98, 0x08, 0x09, 0x43, 0x45, 0xb3, 0x79, 0x38, 0x11, 0x3a, 0xea, 0x96,
-	0x61, 0xa8, 0x68, 0x2a, 0xdb, 0xf0, 0xf9, 0xf8, 0x9d, 0xaf, 0x3f, 0x92, 0xa0, 0xef, 0x22, 0xd0,
-	0xfb, 0x5a, 0x82, 0x81, 0xd8, 0x04, 0x8c, 0xfc, 0x01, 0xd9, 0xd8, 0xe5, 0xa2, 0x3f, 0x96, 0x2c,
-	0x5f, 0x4f, 0xb0, 0x8c, 0x2e, 0x1e, 0x03, 0xb1, 0x38, 0x80, 0x54, 0xe1, 0x8b, 0xc9, 0x03, 0xae,
-	0x3f, 0x91, 0x24, 0x74, 0x9c, 0x64, 0xf2, 0x0b, 0x30, 0x10, 0x7b, 0x07, 0x5a, 0xca, 0x40, 0xba,
-	0xe7, 0xd8, 0xae, 0x53, 0xfa, 0xbd, 0x3f, 0xa0, 0xe8, 0x70, 0x40, 0xd1, 0xd1, 0x80, 0xa2, 0xb3,
-	0x01, 0xc5, 0xaf, 0x07, 0x14, 0xdd, 0x1c, 0x52, 0x7c, 0x30, 0xa4, 0xb8, 0x3f, 0xa4, 0xf8, 0x70,
-	0x48, 0xf1, 0xcb, 0x21, 0xc5, 0xaf, 0x86, 0x14, 0x9d, 0x0d, 0x29, 0xbe, 0x7d, 0x4a, 0xd1, 0xe1,
-	0x29, 0x45, 0x47, 0xa7, 0x14, 0xd5, 0x35, 0x31, 0x71, 0xff, 0xfc, 0x26, 0x00, 0x00, 0xff, 0xff,
-	0xa8, 0x69, 0xe1, 0xac, 0xc7, 0x0b, 0x00, 0x00,
+	// 816 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x56, 0x3b, 0x6f, 0x2b, 0x45,
+	0x14, 0x9e, 0xf1, 0x63, 0x7d, 0x39, 0xbe, 0x0f, 0x34, 0x81, 0xdc, 0x15, 0x91, 0x26, 0x56, 0x24,
+	0x84, 0x25, 0x88, 0x23, 0x48, 0x84, 0x10, 0x15, 0x71, 0x1c, 0x58, 0x07, 0x42, 0xac, 0x81, 0x82,
+	0x6e, 0xb5, 0x5e, 0x8f, 0xed, 0x45, 0xf6, 0x6e, 0xd8, 0x5d, 0x47, 0x4a, 0x47, 0x4f, 0x43, 0x49,
+	0x49, 0x19, 0x21, 0x9e, 0x35, 0x15, 0x15, 0xee, 0x48, 0x19, 0x21, 0x14, 0xb0, 0xd3, 0x50, 0xe6,
+	0x27, 0xa0, 0x79, 0x38, 0xbb, 0xde, 0x50, 0x04, 0x27, 0x14, 0x91, 0x6e, 0x65, 0xcf, 0xec, 0xf9,
+	0xbe, 0x3d, 0xdf, 0x77, 0x66, 0xe7, 0x1c, 0x58, 0xf1, 0xfc, 0x28, 0x18, 0x38, 0xe1, 0x46, 0xc8,
+	0xdd, 0x20, 0xec, 0xe8, 0x9f, 0xda, 0x61, 0x18, 0xc4, 0x01, 0x31, 0xd4, 0xea, 0xa5, 0xf5, 0x9e,
+	0x17, 0xf7, 0x47, 0xed, 0x9a, 0x1b, 0x0c, 0x37, 0x7a, 0x41, 0x2f, 0xd8, 0x90, 0x8f, 0xdb, 0xa3,
+	0xae, 0x5c, 0xc9, 0x85, 0xfc, 0xa7, 0x60, 0x6b, 0x4f, 0xe1, 0x89, 0x6d, 0xbf, 0xc7, 0x7d, 0x1e,
+	0x79, 0x11, 0x93, 0x0c, 0x6f, 0x17, 0x4e, 0xbe, 0x5e, 0xc5, 0x6b, 0xdf, 0x60, 0x78, 0x64, 0xdb,
+	0x3b, 0x7d, 0x6f, 0xd0, 0x51, 0xfb, 0xe4, 0x7d, 0x78, 0xae, 0x15, 0xf2, 0x23, 0xb9, 0x65, 0xe2,
+	0x0a, 0xae, 0x3e, 0xac, 0xaf, 0x8f, 0xcf, 0x57, 0xd1, 0xef, 0xe7, 0xab, 0x2f, 0xa7, 0x5e, 0x3a,
+	0x4b, 0x32, 0xf3, 0x5b, 0x6b, 0x36, 0x58, 0x82, 0x27, 0xef, 0x42, 0x9e, 0xf1, 0xae, 0x99, 0x93,
+	0x34, 0x5b, 0x9a, 0xe6, 0xb5, 0x1b, 0xd0, 0x30, 0xde, 0xe5, 0x21, 0xf7, 0x5d, 0xce, 0x04, 0x81,
+	0x4e, 0x76, 0x09, 0xca, 0xb6, 0xbd, 0xc7, 0xe3, 0x39, 0x05, 0x5f, 0x61, 0xa1, 0x8d, 0xf1, 0xcf,
+	0x46, 0x3c, 0xd2, 0x4f, 0xc8, 0x2e, 0x18, 0x07, 0xed, 0x4f, 0xb9, 0x1b, 0x2f, 0x26, 0x40, 0x83,
+	0xc9, 0x32, 0x18, 0x2d, 0x27, 0x74, 0xf9, 0x40, 0x09, 0x60, 0x7a, 0x45, 0x2a, 0x50, 0xde, 0xe7,
+	0x51, 0xe4, 0xf4, 0xb8, 0xe5, 0x44, 0x7d, 0x33, 0x2f, 0x1f, 0xa6, 0xb7, 0x74, 0x6a, 0xbf, 0x62,
+	0x78, 0x2c, 0x52, 0x8b, 0x46, 0x83, 0x3b, 0xce, 0xec, 0x43, 0x28, 0x69, 0xc5, 0xb7, 0xf2, 0x76,
+	0x46, 0x42, 0x4c, 0x28, 0xb5, 0x9c, 0xe3, 0x41, 0xe0, 0x74, 0xb4, 0x9a, 0xd9, 0x52, 0x2b, 0xf9,
+	0x03, 0xc3, 0x43, 0xdb, 0xfe, 0xf8, 0xf8, 0x90, 0x6b, 0x1d, 0x1f, 0x80, 0xd1, 0x08, 0x86, 0x8e,
+	0xe7, 0x6b, 0x1d, 0x8b, 0xbd, 0x5f, 0x73, 0xdc, 0xb9, 0x9c, 0x2a, 0x3c, 0x11, 0xb9, 0x36, 0xb8,
+	0x3b, 0x70, 0x42, 0x27, 0xf6, 0x02, 0x5f, 0xcb, 0xca, 0x6e, 0x6b, 0x79, 0xbf, 0xe5, 0x84, 0xbc,
+	0x9d, 0xa0, 0x73, 0x3f, 0xe4, 0x6d, 0x43, 0x41, 0xe4, 0xaa, 0x34, 0xfd, 0xd7, 0x23, 0x24, 0xa1,
+	0xe4, 0x13, 0x28, 0xef, 0x3b, 0x6e, 0xdf, 0xf3, 0xb9, 0x70, 0xc4, 0x2c, 0x54, 0x70, 0xf5, 0x51,
+	0xfd, 0x4d, 0xcd, 0x54, 0xbb, 0x01, 0x53, 0x0a, 0xcd, 0xd2, 0x54, 0xda, 0xd1, 0x3f, 0xf3, 0xb0,
+	0x6c, 0xdb, 0xea, 0xb4, 0x6e, 0xbb, 0xb1, 0x77, 0xe4, 0xc4, 0xf7, 0xc3, 0xdb, 0x5d, 0x30, 0xf6,
+	0xf9, 0x30, 0x08, 0x8f, 0x17, 0x73, 0x57, 0x83, 0xc9, 0x1e, 0x14, 0x9b, 0x43, 0xa7, 0xa7, 0x9c,
+	0x5d, 0x34, 0x29, 0x45, 0x21, 0xae, 0x9b, 0x66, 0xd4, 0x12, 0xf7, 0x78, 0x2c, 0x6a, 0x55, 0xac,
+	0xe0, 0xea, 0x03, 0x96, 0xde, 0x12, 0x96, 0xb6, 0x9c, 0x90, 0xfb, 0xb1, 0x69, 0xdc, 0xc6, 0x52,
+	0xc5, 0x41, 0x28, 0x40, 0x33, 0x6a, 0xf0, 0x01, 0xef, 0x39, 0x31, 0x37, 0x4b, 0xf2, 0x75, 0xa9,
+	0x1d, 0x5d, 0xe1, 0x9f, 0xf3, 0xb0, 0x74, 0x55, 0xe1, 0x21, 0xf7, 0x3b, 0xcf, 0xca, 0xfb, 0x7f,
+	0x95, 0x57, 0xb7, 0xe4, 0x8f, 0x62, 0x51, 0x0f, 0x63, 0xe1, 0x96, 0x2c, 0xf1, 0xba, 0x7a, 0x5f,
+	0xe4, 0xc0, 0x9c, 0x55, 0xaf, 0xc1, 0x9d, 0xfb, 0xf4, 0x85, 0xce, 0xb9, 0x91, 0xbf, 0x13, 0x37,
+	0x7e, 0x29, 0xc0, 0x03, 0xd1, 0xa8, 0xa5, 0xfa, 0x4d, 0x28, 0xe9, 0x49, 0xc9, 0xec, 0x54, 0x70,
+	0xb5, 0xfc, 0xc6, 0xd3, 0x9a, 0x1e, 0xc1, 0x32, 0x23, 0x94, 0x85, 0xd8, 0x2c, 0x92, 0xac, 0x43,
+	0x51, 0x4d, 0x4c, 0x5c, 0x42, 0x5e, 0x4c, 0x20, 0xa9, 0xd9, 0xca, 0x42, 0x4c, 0x45, 0x91, 0x57,
+	0x20, 0xbf, 0xc7, 0x63, 0xb3, 0x2b, 0x83, 0x97, 0x92, 0xe0, 0xab, 0xe1, 0xc6, 0x42, 0x4c, 0x44,
+	0x90, 0xad, 0xc4, 0xbc, 0x31, 0xce, 0x66, 0x33, 0x37, 0xf4, 0x88, 0x6c, 0x66, 0x16, 0xbd, 0x0e,
+	0x86, 0x9a, 0x3a, 0xcc, 0x6f, 0x73, 0x12, 0xb4, 0x9c, 0x06, 0x25, 0xe3, 0x88, 0x85, 0x98, 0x0e,
+	0x24, 0xaf, 0x42, 0x41, 0x76, 0x82, 0xef, 0x14, 0xe0, 0x85, 0x04, 0x90, 0x74, 0x7d, 0x0b, 0x31,
+	0x19, 0x24, 0x82, 0x65, 0x03, 0xfa, 0xfe, 0x5a, 0x70, 0xd2, 0x43, 0x45, 0xb0, 0x6c, 0x35, 0x4d,
+	0x78, 0x3c, 0xdf, 0x07, 0xcc, 0x1f, 0x14, 0x8c, 0x26, 0xb0, 0x7f, 0x6b, 0x14, 0x16, 0x62, 0x19,
+	0x20, 0x79, 0x07, 0xca, 0xa9, 0x0b, 0xc7, 0xfc, 0x51, 0xf1, 0xac, 0x5c, 0xe3, 0x49, 0xae, 0x23,
+	0x0b, 0xb1, 0x34, 0x84, 0x1c, 0xc0, 0xf3, 0xd9, 0x43, 0x6f, 0xfe, 0xa4, 0x68, 0x2a, 0x59, 0x9a,
+	0xec, 0x77, 0x61, 0x21, 0x76, 0x0d, 0x5c, 0x2f, 0x41, 0x71, 0xe4, 0x7b, 0x81, 0x5f, 0x7f, 0x6b,
+	0x3c, 0xa1, 0xe8, 0x74, 0x42, 0xd1, 0xd9, 0x84, 0xa2, 0xcb, 0x09, 0xc5, 0x9f, 0x4f, 0x29, 0x3e,
+	0x99, 0x52, 0x3c, 0x9e, 0x52, 0x7c, 0x3a, 0xa5, 0xf8, 0xaf, 0x29, 0xc5, 0x7f, 0x4f, 0x29, 0xba,
+	0x9c, 0x52, 0xfc, 0xe5, 0x05, 0x45, 0xa7, 0x17, 0x14, 0x9d, 0x5d, 0x50, 0xd4, 0x36, 0xe4, 0x8c,
+	0xbe, 0xf9, 0x4f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x2a, 0xb3, 0x50, 0x5f, 0xf9, 0x0b, 0x00, 0x00,
 }
 
-func (this *GenesisRecord) Equal(that interface{}) bool {
+func (this *X_GenesisRecord) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*GenesisRecord)
+	that1, ok := that.(*X_GenesisRecord)
 	if !ok {
-		that2, ok := that.(GenesisRecord)
+		that2, ok := that.(X_GenesisRecord)
 		if ok {
 			that1 = &that2
 		} else {
@@ -899,14 +899,14 @@ func (this *GenesisRecord) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *ChildRecord) Equal(that interface{}) bool {
+func (this *X_ChildRecord) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*ChildRecord)
+	that1, ok := that.(*X_ChildRecord)
 	if !ok {
-		that2, ok := that.(ChildRecord)
+		that2, ok := that.(X_ChildRecord)
 		if ok {
 			that1 = &that2
 		} else {
@@ -926,14 +926,14 @@ func (this *ChildRecord) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *JetRecord) Equal(that interface{}) bool {
+func (this *X_JetRecord) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*JetRecord)
+	that1, ok := that.(*X_JetRecord)
 	if !ok {
-		that2, ok := that.(JetRecord)
+		that2, ok := that.(X_JetRecord)
 		if ok {
 			that1 = &that2
 		} else {
@@ -947,14 +947,14 @@ func (this *JetRecord) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *RequestRecord) Equal(that interface{}) bool {
+func (this *X_RequestRecord) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*RequestRecord)
+	that1, ok := that.(*X_RequestRecord)
 	if !ok {
-		that2, ok := that.(RequestRecord)
+		that2, ok := that.(X_RequestRecord)
 		if ok {
 			that1 = &that2
 		} else {
@@ -977,14 +977,14 @@ func (this *RequestRecord) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *ResultRecord) Equal(that interface{}) bool {
+func (this *X_ResultRecord) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*ResultRecord)
+	that1, ok := that.(*X_ResultRecord)
 	if !ok {
-		that2, ok := that.(ResultRecord)
+		that2, ok := that.(X_ResultRecord)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1007,14 +1007,14 @@ func (this *ResultRecord) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *TypeRecord) Equal(that interface{}) bool {
+func (this *X_TypeRecord) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*TypeRecord)
+	that1, ok := that.(*X_TypeRecord)
 	if !ok {
-		that2, ok := that.(TypeRecord)
+		that2, ok := that.(X_TypeRecord)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1037,14 +1037,14 @@ func (this *TypeRecord) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *CodeRecord) Equal(that interface{}) bool {
+func (this *X_CodeRecord) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*CodeRecord)
+	that1, ok := that.(*X_CodeRecord)
 	if !ok {
-		that2, ok := that.(CodeRecord)
+		that2, ok := that.(X_CodeRecord)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1070,14 +1070,14 @@ func (this *CodeRecord) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *ObjectActivateRecord) Equal(that interface{}) bool {
+func (this *X_ObjectActivateRecord) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*ObjectActivateRecord)
+	that1, ok := that.(*X_ObjectActivateRecord)
 	if !ok {
-		that2, ok := that.(ObjectActivateRecord)
+		that2, ok := that.(X_ObjectActivateRecord)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1112,14 +1112,14 @@ func (this *ObjectActivateRecord) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *ObjectAmendRecord) Equal(that interface{}) bool {
+func (this *X_ObjectAmendRecord) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*ObjectAmendRecord)
+	that1, ok := that.(*X_ObjectAmendRecord)
 	if !ok {
-		that2, ok := that.(ObjectAmendRecord)
+		that2, ok := that.(X_ObjectAmendRecord)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1151,14 +1151,14 @@ func (this *ObjectAmendRecord) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *ObjectDeactivateRecord) Equal(that interface{}) bool {
+func (this *X_ObjectDeactivateRecord) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*ObjectDeactivateRecord)
+	that1, ok := that.(*X_ObjectDeactivateRecord)
 	if !ok {
-		that2, ok := that.(ObjectDeactivateRecord)
+		that2, ok := that.(X_ObjectDeactivateRecord)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1181,14 +1181,14 @@ func (this *ObjectDeactivateRecord) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Record) Equal(that interface{}) bool {
+func (this *X_Record) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Record)
+	that1, ok := that.(*X_Record)
 	if !ok {
-		that2, ok := that.(Record)
+		that2, ok := that.(X_Record)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1211,14 +1211,14 @@ func (this *Record) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Record_Genesis) Equal(that interface{}) bool {
+func (this *X_Record_Genesis) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Record_Genesis)
+	that1, ok := that.(*X_Record_Genesis)
 	if !ok {
-		that2, ok := that.(Record_Genesis)
+		that2, ok := that.(X_Record_Genesis)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1235,14 +1235,14 @@ func (this *Record_Genesis) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Record_Child) Equal(that interface{}) bool {
+func (this *X_Record_Child) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Record_Child)
+	that1, ok := that.(*X_Record_Child)
 	if !ok {
-		that2, ok := that.(Record_Child)
+		that2, ok := that.(X_Record_Child)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1259,14 +1259,14 @@ func (this *Record_Child) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Record_Jet) Equal(that interface{}) bool {
+func (this *X_Record_Jet) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Record_Jet)
+	that1, ok := that.(*X_Record_Jet)
 	if !ok {
-		that2, ok := that.(Record_Jet)
+		that2, ok := that.(X_Record_Jet)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1283,14 +1283,14 @@ func (this *Record_Jet) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Record_Request) Equal(that interface{}) bool {
+func (this *X_Record_Request) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Record_Request)
+	that1, ok := that.(*X_Record_Request)
 	if !ok {
-		that2, ok := that.(Record_Request)
+		that2, ok := that.(X_Record_Request)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1307,14 +1307,14 @@ func (this *Record_Request) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Record_Result) Equal(that interface{}) bool {
+func (this *X_Record_Result) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Record_Result)
+	that1, ok := that.(*X_Record_Result)
 	if !ok {
-		that2, ok := that.(Record_Result)
+		that2, ok := that.(X_Record_Result)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1331,14 +1331,14 @@ func (this *Record_Result) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Record_Type) Equal(that interface{}) bool {
+func (this *X_Record_Type) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Record_Type)
+	that1, ok := that.(*X_Record_Type)
 	if !ok {
-		that2, ok := that.(Record_Type)
+		that2, ok := that.(X_Record_Type)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1355,14 +1355,14 @@ func (this *Record_Type) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Record_Code) Equal(that interface{}) bool {
+func (this *X_Record_Code) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Record_Code)
+	that1, ok := that.(*X_Record_Code)
 	if !ok {
-		that2, ok := that.(Record_Code)
+		that2, ok := that.(X_Record_Code)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1379,14 +1379,14 @@ func (this *Record_Code) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Record_ObjectActivate) Equal(that interface{}) bool {
+func (this *X_Record_ObjectActivate) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Record_ObjectActivate)
+	that1, ok := that.(*X_Record_ObjectActivate)
 	if !ok {
-		that2, ok := that.(Record_ObjectActivate)
+		that2, ok := that.(X_Record_ObjectActivate)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1403,14 +1403,14 @@ func (this *Record_ObjectActivate) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Record_ObjectAmend) Equal(that interface{}) bool {
+func (this *X_Record_ObjectAmend) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Record_ObjectAmend)
+	that1, ok := that.(*X_Record_ObjectAmend)
 	if !ok {
-		that2, ok := that.(Record_ObjectAmend)
+		that2, ok := that.(X_Record_ObjectAmend)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1427,14 +1427,14 @@ func (this *Record_ObjectAmend) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Record_ObjectDeactivate) Equal(that interface{}) bool {
+func (this *X_Record_ObjectDeactivate) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Record_ObjectDeactivate)
+	that1, ok := that.(*X_Record_ObjectDeactivate)
 	if !ok {
-		that2, ok := that.(Record_ObjectDeactivate)
+		that2, ok := that.(X_Record_ObjectDeactivate)
 		if ok {
 			that1 = &that2
 		} else {
@@ -1452,141 +1452,175 @@ func (this *Record_ObjectDeactivate) Equal(that interface{}) bool {
 	return true
 }
 
-type ChildRecordFace interface {
+type X_GenesisRecordFace interface {
+	Proto() github_com_gogo_protobuf_proto.Message
+}
+
+func (this *X_GenesisRecord) Proto() github_com_gogo_protobuf_proto.Message {
+	return this
+}
+
+func (this *X_GenesisRecord) TestProto() github_com_gogo_protobuf_proto.Message {
+	return NewX_GenesisRecordFromFace(this)
+}
+
+func NewX_GenesisRecordFromFace(that X_GenesisRecordFace) *X_GenesisRecord {
+	this := &X_GenesisRecord{}
+	return this
+}
+
+type X_ChildRecordFace interface {
 	Proto() github_com_gogo_protobuf_proto.Message
 	GetPrevChild() github_com_insolar_insolar_insolar.ID
 	GetRef() github_com_insolar_insolar_insolar.Reference
 }
 
-func (this *ChildRecord) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *X_ChildRecord) Proto() github_com_gogo_protobuf_proto.Message {
 	return this
 }
 
-func (this *ChildRecord) TestProto() github_com_gogo_protobuf_proto.Message {
-	return NewChildRecordFromFace(this)
+func (this *X_ChildRecord) TestProto() github_com_gogo_protobuf_proto.Message {
+	return NewX_ChildRecordFromFace(this)
 }
 
-func (this *ChildRecord) GetPrevChild() github_com_insolar_insolar_insolar.ID {
+func (this *X_ChildRecord) GetPrevChild() github_com_insolar_insolar_insolar.ID {
 	return this.PrevChild
 }
 
-func (this *ChildRecord) GetRef() github_com_insolar_insolar_insolar.Reference {
+func (this *X_ChildRecord) GetRef() github_com_insolar_insolar_insolar.Reference {
 	return this.Ref
 }
 
-func NewChildRecordFromFace(that ChildRecordFace) *ChildRecord {
-	this := &ChildRecord{}
+func NewX_ChildRecordFromFace(that X_ChildRecordFace) *X_ChildRecord {
+	this := &X_ChildRecord{}
 	this.PrevChild = that.GetPrevChild()
 	this.Ref = that.GetRef()
 	return this
 }
 
-type RequestRecordFace interface {
+type X_JetRecordFace interface {
+	Proto() github_com_gogo_protobuf_proto.Message
+}
+
+func (this *X_JetRecord) Proto() github_com_gogo_protobuf_proto.Message {
+	return this
+}
+
+func (this *X_JetRecord) TestProto() github_com_gogo_protobuf_proto.Message {
+	return NewX_JetRecordFromFace(this)
+}
+
+func NewX_JetRecordFromFace(that X_JetRecordFace) *X_JetRecord {
+	this := &X_JetRecord{}
+	return this
+}
+
+type X_RequestRecordFace interface {
 	Proto() github_com_gogo_protobuf_proto.Message
 	GetObject() github_com_insolar_insolar_insolar.ID
 	GetParcel() []byte
 	GetMessageHash() []byte
 }
 
-func (this *RequestRecord) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *X_RequestRecord) Proto() github_com_gogo_protobuf_proto.Message {
 	return this
 }
 
-func (this *RequestRecord) TestProto() github_com_gogo_protobuf_proto.Message {
-	return NewRequestRecordFromFace(this)
+func (this *X_RequestRecord) TestProto() github_com_gogo_protobuf_proto.Message {
+	return NewX_RequestRecordFromFace(this)
 }
 
-func (this *RequestRecord) GetObject() github_com_insolar_insolar_insolar.ID {
+func (this *X_RequestRecord) GetObject() github_com_insolar_insolar_insolar.ID {
 	return this.Object
 }
 
-func (this *RequestRecord) GetParcel() []byte {
+func (this *X_RequestRecord) GetParcel() []byte {
 	return this.Parcel
 }
 
-func (this *RequestRecord) GetMessageHash() []byte {
+func (this *X_RequestRecord) GetMessageHash() []byte {
 	return this.MessageHash
 }
 
-func NewRequestRecordFromFace(that RequestRecordFace) *RequestRecord {
-	this := &RequestRecord{}
+func NewX_RequestRecordFromFace(that X_RequestRecordFace) *X_RequestRecord {
+	this := &X_RequestRecord{}
 	this.Object = that.GetObject()
 	this.Parcel = that.GetParcel()
 	this.MessageHash = that.GetMessageHash()
 	return this
 }
 
-type ResultRecordFace interface {
+type X_ResultRecordFace interface {
 	Proto() github_com_gogo_protobuf_proto.Message
 	GetObject() github_com_insolar_insolar_insolar.ID
 	GetRequest() github_com_insolar_insolar_insolar.Reference
 	GetPayload() []byte
 }
 
-func (this *ResultRecord) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *X_ResultRecord) Proto() github_com_gogo_protobuf_proto.Message {
 	return this
 }
 
-func (this *ResultRecord) TestProto() github_com_gogo_protobuf_proto.Message {
-	return NewResultRecordFromFace(this)
+func (this *X_ResultRecord) TestProto() github_com_gogo_protobuf_proto.Message {
+	return NewX_ResultRecordFromFace(this)
 }
 
-func (this *ResultRecord) GetObject() github_com_insolar_insolar_insolar.ID {
+func (this *X_ResultRecord) GetObject() github_com_insolar_insolar_insolar.ID {
 	return this.Object
 }
 
-func (this *ResultRecord) GetRequest() github_com_insolar_insolar_insolar.Reference {
+func (this *X_ResultRecord) GetRequest() github_com_insolar_insolar_insolar.Reference {
 	return this.Request
 }
 
-func (this *ResultRecord) GetPayload() []byte {
+func (this *X_ResultRecord) GetPayload() []byte {
 	return this.Payload
 }
 
-func NewResultRecordFromFace(that ResultRecordFace) *ResultRecord {
-	this := &ResultRecord{}
+func NewX_ResultRecordFromFace(that X_ResultRecordFace) *X_ResultRecord {
+	this := &X_ResultRecord{}
 	this.Object = that.GetObject()
 	this.Request = that.GetRequest()
 	this.Payload = that.GetPayload()
 	return this
 }
 
-type TypeRecordFace interface {
+type X_TypeRecordFace interface {
 	Proto() github_com_gogo_protobuf_proto.Message
 	GetDomain() github_com_insolar_insolar_insolar.Reference
 	GetRequest() github_com_insolar_insolar_insolar.Reference
 	GetTypeDeclaration() []byte
 }
 
-func (this *TypeRecord) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *X_TypeRecord) Proto() github_com_gogo_protobuf_proto.Message {
 	return this
 }
 
-func (this *TypeRecord) TestProto() github_com_gogo_protobuf_proto.Message {
-	return NewTypeRecordFromFace(this)
+func (this *X_TypeRecord) TestProto() github_com_gogo_protobuf_proto.Message {
+	return NewX_TypeRecordFromFace(this)
 }
 
-func (this *TypeRecord) GetDomain() github_com_insolar_insolar_insolar.Reference {
+func (this *X_TypeRecord) GetDomain() github_com_insolar_insolar_insolar.Reference {
 	return this.Domain
 }
 
-func (this *TypeRecord) GetRequest() github_com_insolar_insolar_insolar.Reference {
+func (this *X_TypeRecord) GetRequest() github_com_insolar_insolar_insolar.Reference {
 	return this.Request
 }
 
-func (this *TypeRecord) GetTypeDeclaration() []byte {
+func (this *X_TypeRecord) GetTypeDeclaration() []byte {
 	return this.TypeDeclaration
 }
 
-func NewTypeRecordFromFace(that TypeRecordFace) *TypeRecord {
-	this := &TypeRecord{}
+func NewX_TypeRecordFromFace(that X_TypeRecordFace) *X_TypeRecord {
+	this := &X_TypeRecord{}
 	this.Domain = that.GetDomain()
 	this.Request = that.GetRequest()
 	this.TypeDeclaration = that.GetTypeDeclaration()
 	return this
 }
 
-type CodeRecordFace interface {
+type X_CodeRecordFace interface {
 	Proto() github_com_gogo_protobuf_proto.Message
 	GetDomain() github_com_insolar_insolar_insolar.Reference
 	GetRequest() github_com_insolar_insolar_insolar.Reference
@@ -1594,32 +1628,32 @@ type CodeRecordFace interface {
 	GetMachineType() github_com_insolar_insolar_insolar.MachineType
 }
 
-func (this *CodeRecord) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *X_CodeRecord) Proto() github_com_gogo_protobuf_proto.Message {
 	return this
 }
 
-func (this *CodeRecord) TestProto() github_com_gogo_protobuf_proto.Message {
-	return NewCodeRecordFromFace(this)
+func (this *X_CodeRecord) TestProto() github_com_gogo_protobuf_proto.Message {
+	return NewX_CodeRecordFromFace(this)
 }
 
-func (this *CodeRecord) GetDomain() github_com_insolar_insolar_insolar.Reference {
+func (this *X_CodeRecord) GetDomain() github_com_insolar_insolar_insolar.Reference {
 	return this.Domain
 }
 
-func (this *CodeRecord) GetRequest() github_com_insolar_insolar_insolar.Reference {
+func (this *X_CodeRecord) GetRequest() github_com_insolar_insolar_insolar.Reference {
 	return this.Request
 }
 
-func (this *CodeRecord) GetCode() github_com_insolar_insolar_insolar.ID {
+func (this *X_CodeRecord) GetCode() github_com_insolar_insolar_insolar.ID {
 	return this.Code
 }
 
-func (this *CodeRecord) GetMachineType() github_com_insolar_insolar_insolar.MachineType {
+func (this *X_CodeRecord) GetMachineType() github_com_insolar_insolar_insolar.MachineType {
 	return this.MachineType
 }
 
-func NewCodeRecordFromFace(that CodeRecordFace) *CodeRecord {
-	this := &CodeRecord{}
+func NewX_CodeRecordFromFace(that X_CodeRecordFace) *X_CodeRecord {
+	this := &X_CodeRecord{}
 	this.Domain = that.GetDomain()
 	this.Request = that.GetRequest()
 	this.Code = that.GetCode()
@@ -1627,7 +1661,7 @@ func NewCodeRecordFromFace(that CodeRecordFace) *CodeRecord {
 	return this
 }
 
-type ObjectActivateRecordFace interface {
+type X_ObjectActivateRecordFace interface {
 	Proto() github_com_gogo_protobuf_proto.Message
 	GetDomain() github_com_insolar_insolar_insolar.Reference
 	GetRequest() github_com_insolar_insolar_insolar.Reference
@@ -1638,44 +1672,44 @@ type ObjectActivateRecordFace interface {
 	GetIsDelegate() bool
 }
 
-func (this *ObjectActivateRecord) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *X_ObjectActivateRecord) Proto() github_com_gogo_protobuf_proto.Message {
 	return this
 }
 
-func (this *ObjectActivateRecord) TestProto() github_com_gogo_protobuf_proto.Message {
-	return NewObjectActivateRecordFromFace(this)
+func (this *X_ObjectActivateRecord) TestProto() github_com_gogo_protobuf_proto.Message {
+	return NewX_ObjectActivateRecordFromFace(this)
 }
 
-func (this *ObjectActivateRecord) GetDomain() github_com_insolar_insolar_insolar.Reference {
+func (this *X_ObjectActivateRecord) GetDomain() github_com_insolar_insolar_insolar.Reference {
 	return this.Domain
 }
 
-func (this *ObjectActivateRecord) GetRequest() github_com_insolar_insolar_insolar.Reference {
+func (this *X_ObjectActivateRecord) GetRequest() github_com_insolar_insolar_insolar.Reference {
 	return this.Request
 }
 
-func (this *ObjectActivateRecord) GetMemory() github_com_insolar_insolar_insolar.ID {
+func (this *X_ObjectActivateRecord) GetMemory() github_com_insolar_insolar_insolar.ID {
 	return this.Memory
 }
 
-func (this *ObjectActivateRecord) GetImage() github_com_insolar_insolar_insolar.Reference {
+func (this *X_ObjectActivateRecord) GetImage() github_com_insolar_insolar_insolar.Reference {
 	return this.Image
 }
 
-func (this *ObjectActivateRecord) GetIsPrototype() bool {
+func (this *X_ObjectActivateRecord) GetIsPrototype() bool {
 	return this.IsPrototype
 }
 
-func (this *ObjectActivateRecord) GetParent() github_com_insolar_insolar_insolar.Reference {
+func (this *X_ObjectActivateRecord) GetParent() github_com_insolar_insolar_insolar.Reference {
 	return this.Parent
 }
 
-func (this *ObjectActivateRecord) GetIsDelegate() bool {
+func (this *X_ObjectActivateRecord) GetIsDelegate() bool {
 	return this.IsDelegate
 }
 
-func NewObjectActivateRecordFromFace(that ObjectActivateRecordFace) *ObjectActivateRecord {
-	this := &ObjectActivateRecord{}
+func NewX_ObjectActivateRecordFromFace(that X_ObjectActivateRecordFace) *X_ObjectActivateRecord {
+	this := &X_ObjectActivateRecord{}
 	this.Domain = that.GetDomain()
 	this.Request = that.GetRequest()
 	this.Memory = that.GetMemory()
@@ -1686,7 +1720,7 @@ func NewObjectActivateRecordFromFace(that ObjectActivateRecordFace) *ObjectActiv
 	return this
 }
 
-type ObjectAmendRecordFace interface {
+type X_ObjectAmendRecordFace interface {
 	Proto() github_com_gogo_protobuf_proto.Message
 	GetDomain() github_com_insolar_insolar_insolar.Reference
 	GetRequest() github_com_insolar_insolar_insolar.Reference
@@ -1696,40 +1730,40 @@ type ObjectAmendRecordFace interface {
 	GetPrevState() github_com_insolar_insolar_insolar.ID
 }
 
-func (this *ObjectAmendRecord) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *X_ObjectAmendRecord) Proto() github_com_gogo_protobuf_proto.Message {
 	return this
 }
 
-func (this *ObjectAmendRecord) TestProto() github_com_gogo_protobuf_proto.Message {
-	return NewObjectAmendRecordFromFace(this)
+func (this *X_ObjectAmendRecord) TestProto() github_com_gogo_protobuf_proto.Message {
+	return NewX_ObjectAmendRecordFromFace(this)
 }
 
-func (this *ObjectAmendRecord) GetDomain() github_com_insolar_insolar_insolar.Reference {
+func (this *X_ObjectAmendRecord) GetDomain() github_com_insolar_insolar_insolar.Reference {
 	return this.Domain
 }
 
-func (this *ObjectAmendRecord) GetRequest() github_com_insolar_insolar_insolar.Reference {
+func (this *X_ObjectAmendRecord) GetRequest() github_com_insolar_insolar_insolar.Reference {
 	return this.Request
 }
 
-func (this *ObjectAmendRecord) GetMemory() github_com_insolar_insolar_insolar.ID {
+func (this *X_ObjectAmendRecord) GetMemory() github_com_insolar_insolar_insolar.ID {
 	return this.Memory
 }
 
-func (this *ObjectAmendRecord) GetImage() github_com_insolar_insolar_insolar.Reference {
+func (this *X_ObjectAmendRecord) GetImage() github_com_insolar_insolar_insolar.Reference {
 	return this.Image
 }
 
-func (this *ObjectAmendRecord) GetIsPrototype() bool {
+func (this *X_ObjectAmendRecord) GetIsPrototype() bool {
 	return this.IsPrototype
 }
 
-func (this *ObjectAmendRecord) GetPrevState() github_com_insolar_insolar_insolar.ID {
+func (this *X_ObjectAmendRecord) GetPrevState() github_com_insolar_insolar_insolar.ID {
 	return this.PrevState
 }
 
-func NewObjectAmendRecordFromFace(that ObjectAmendRecordFace) *ObjectAmendRecord {
-	this := &ObjectAmendRecord{}
+func NewX_ObjectAmendRecordFromFace(that X_ObjectAmendRecordFace) *X_ObjectAmendRecord {
+	this := &X_ObjectAmendRecord{}
 	this.Domain = that.GetDomain()
 	this.Request = that.GetRequest()
 	this.Memory = that.GetMemory()
@@ -1739,112 +1773,112 @@ func NewObjectAmendRecordFromFace(that ObjectAmendRecordFace) *ObjectAmendRecord
 	return this
 }
 
-type ObjectDeactivateRecordFace interface {
+type X_ObjectDeactivateRecordFace interface {
 	Proto() github_com_gogo_protobuf_proto.Message
 	GetDomain() github_com_insolar_insolar_insolar.Reference
 	GetRequest() github_com_insolar_insolar_insolar.Reference
 	GetPrevState() github_com_insolar_insolar_insolar.ID
 }
 
-func (this *ObjectDeactivateRecord) Proto() github_com_gogo_protobuf_proto.Message {
+func (this *X_ObjectDeactivateRecord) Proto() github_com_gogo_protobuf_proto.Message {
 	return this
 }
 
-func (this *ObjectDeactivateRecord) TestProto() github_com_gogo_protobuf_proto.Message {
-	return NewObjectDeactivateRecordFromFace(this)
+func (this *X_ObjectDeactivateRecord) TestProto() github_com_gogo_protobuf_proto.Message {
+	return NewX_ObjectDeactivateRecordFromFace(this)
 }
 
-func (this *ObjectDeactivateRecord) GetDomain() github_com_insolar_insolar_insolar.Reference {
+func (this *X_ObjectDeactivateRecord) GetDomain() github_com_insolar_insolar_insolar.Reference {
 	return this.Domain
 }
 
-func (this *ObjectDeactivateRecord) GetRequest() github_com_insolar_insolar_insolar.Reference {
+func (this *X_ObjectDeactivateRecord) GetRequest() github_com_insolar_insolar_insolar.Reference {
 	return this.Request
 }
 
-func (this *ObjectDeactivateRecord) GetPrevState() github_com_insolar_insolar_insolar.ID {
+func (this *X_ObjectDeactivateRecord) GetPrevState() github_com_insolar_insolar_insolar.ID {
 	return this.PrevState
 }
 
-func NewObjectDeactivateRecordFromFace(that ObjectDeactivateRecordFace) *ObjectDeactivateRecord {
-	this := &ObjectDeactivateRecord{}
+func NewX_ObjectDeactivateRecordFromFace(that X_ObjectDeactivateRecordFace) *X_ObjectDeactivateRecord {
+	this := &X_ObjectDeactivateRecord{}
 	this.Domain = that.GetDomain()
 	this.Request = that.GetRequest()
 	this.PrevState = that.GetPrevState()
 	return this
 }
 
-func (this *GenesisRecord) GoString() string {
+func (this *X_GenesisRecord) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 4)
-	s = append(s, "&record.GenesisRecord{")
+	s = append(s, "&record.X_GenesisRecord{")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *ChildRecord) GoString() string {
+func (this *X_ChildRecord) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 6)
-	s = append(s, "&record.ChildRecord{")
+	s = append(s, "&record.X_ChildRecord{")
 	s = append(s, "PrevChild: "+fmt.Sprintf("%#v", this.PrevChild)+",\n")
 	s = append(s, "Ref: "+fmt.Sprintf("%#v", this.Ref)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *JetRecord) GoString() string {
+func (this *X_JetRecord) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 4)
-	s = append(s, "&record.JetRecord{")
+	s = append(s, "&record.X_JetRecord{")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *RequestRecord) GoString() string {
+func (this *X_RequestRecord) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 7)
-	s = append(s, "&record.RequestRecord{")
+	s = append(s, "&record.X_RequestRecord{")
 	s = append(s, "Object: "+fmt.Sprintf("%#v", this.Object)+",\n")
 	s = append(s, "Parcel: "+fmt.Sprintf("%#v", this.Parcel)+",\n")
 	s = append(s, "MessageHash: "+fmt.Sprintf("%#v", this.MessageHash)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *ResultRecord) GoString() string {
+func (this *X_ResultRecord) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 7)
-	s = append(s, "&record.ResultRecord{")
+	s = append(s, "&record.X_ResultRecord{")
 	s = append(s, "Object: "+fmt.Sprintf("%#v", this.Object)+",\n")
 	s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
 	s = append(s, "Payload: "+fmt.Sprintf("%#v", this.Payload)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *TypeRecord) GoString() string {
+func (this *X_TypeRecord) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 7)
-	s = append(s, "&record.TypeRecord{")
+	s = append(s, "&record.X_TypeRecord{")
 	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
 	s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
 	s = append(s, "TypeDeclaration: "+fmt.Sprintf("%#v", this.TypeDeclaration)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *CodeRecord) GoString() string {
+func (this *X_CodeRecord) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 8)
-	s = append(s, "&record.CodeRecord{")
+	s = append(s, "&record.X_CodeRecord{")
 	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
 	s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
 	s = append(s, "Code: "+fmt.Sprintf("%#v", this.Code)+",\n")
@@ -1852,12 +1886,12 @@ func (this *CodeRecord) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *ObjectActivateRecord) GoString() string {
+func (this *X_ObjectActivateRecord) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 11)
-	s = append(s, "&record.ObjectActivateRecord{")
+	s = append(s, "&record.X_ObjectActivateRecord{")
 	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
 	s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
 	s = append(s, "Memory: "+fmt.Sprintf("%#v", this.Memory)+",\n")
@@ -1868,12 +1902,12 @@ func (this *ObjectActivateRecord) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *ObjectAmendRecord) GoString() string {
+func (this *X_ObjectAmendRecord) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 10)
-	s = append(s, "&record.ObjectAmendRecord{")
+	s = append(s, "&record.X_ObjectAmendRecord{")
 	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
 	s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
 	s = append(s, "Memory: "+fmt.Sprintf("%#v", this.Memory)+",\n")
@@ -1883,107 +1917,107 @@ func (this *ObjectAmendRecord) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *ObjectDeactivateRecord) GoString() string {
+func (this *X_ObjectDeactivateRecord) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 7)
-	s = append(s, "&record.ObjectDeactivateRecord{")
+	s = append(s, "&record.X_ObjectDeactivateRecord{")
 	s = append(s, "Domain: "+fmt.Sprintf("%#v", this.Domain)+",\n")
 	s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
 	s = append(s, "PrevState: "+fmt.Sprintf("%#v", this.PrevState)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *Record) GoString() string {
+func (this *X_Record) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 14)
-	s = append(s, "&record.Record{")
+	s = append(s, "&record.X_Record{")
 	if this.Union != nil {
 		s = append(s, "Union: "+fmt.Sprintf("%#v", this.Union)+",\n")
 	}
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *Record_Genesis) GoString() string {
+func (this *X_Record_Genesis) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&record.Record_Genesis{` +
+	s := strings.Join([]string{`&record.X_Record_Genesis{` +
 		`Genesis:` + fmt.Sprintf("%#v", this.Genesis) + `}`}, ", ")
 	return s
 }
-func (this *Record_Child) GoString() string {
+func (this *X_Record_Child) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&record.Record_Child{` +
+	s := strings.Join([]string{`&record.X_Record_Child{` +
 		`Child:` + fmt.Sprintf("%#v", this.Child) + `}`}, ", ")
 	return s
 }
-func (this *Record_Jet) GoString() string {
+func (this *X_Record_Jet) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&record.Record_Jet{` +
+	s := strings.Join([]string{`&record.X_Record_Jet{` +
 		`Jet:` + fmt.Sprintf("%#v", this.Jet) + `}`}, ", ")
 	return s
 }
-func (this *Record_Request) GoString() string {
+func (this *X_Record_Request) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&record.Record_Request{` +
+	s := strings.Join([]string{`&record.X_Record_Request{` +
 		`Request:` + fmt.Sprintf("%#v", this.Request) + `}`}, ", ")
 	return s
 }
-func (this *Record_Result) GoString() string {
+func (this *X_Record_Result) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&record.Record_Result{` +
+	s := strings.Join([]string{`&record.X_Record_Result{` +
 		`Result:` + fmt.Sprintf("%#v", this.Result) + `}`}, ", ")
 	return s
 }
-func (this *Record_Type) GoString() string {
+func (this *X_Record_Type) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&record.Record_Type{` +
+	s := strings.Join([]string{`&record.X_Record_Type{` +
 		`Type:` + fmt.Sprintf("%#v", this.Type) + `}`}, ", ")
 	return s
 }
-func (this *Record_Code) GoString() string {
+func (this *X_Record_Code) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&record.Record_Code{` +
+	s := strings.Join([]string{`&record.X_Record_Code{` +
 		`Code:` + fmt.Sprintf("%#v", this.Code) + `}`}, ", ")
 	return s
 }
-func (this *Record_ObjectActivate) GoString() string {
+func (this *X_Record_ObjectActivate) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&record.Record_ObjectActivate{` +
+	s := strings.Join([]string{`&record.X_Record_ObjectActivate{` +
 		`ObjectActivate:` + fmt.Sprintf("%#v", this.ObjectActivate) + `}`}, ", ")
 	return s
 }
-func (this *Record_ObjectAmend) GoString() string {
+func (this *X_Record_ObjectAmend) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&record.Record_ObjectAmend{` +
+	s := strings.Join([]string{`&record.X_Record_ObjectAmend{` +
 		`ObjectAmend:` + fmt.Sprintf("%#v", this.ObjectAmend) + `}`}, ", ")
 	return s
 }
-func (this *Record_ObjectDeactivate) GoString() string {
+func (this *X_Record_ObjectDeactivate) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&record.Record_ObjectDeactivate{` +
+	s := strings.Join([]string{`&record.X_Record_ObjectDeactivate{` +
 		`ObjectDeactivate:` + fmt.Sprintf("%#v", this.ObjectDeactivate) + `}`}, ", ")
 	return s
 }
@@ -1995,7 +2029,7 @@ func valueToGoStringRecord(v interface{}, typ string) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
 }
-func (m *GenesisRecord) Marshal() (dAtA []byte, err error) {
+func (m *X_GenesisRecord) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -2005,7 +2039,7 @@ func (m *GenesisRecord) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *GenesisRecord) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_GenesisRecord) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -2013,7 +2047,7 @@ func (m *GenesisRecord) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *ChildRecord) Marshal() (dAtA []byte, err error) {
+func (m *X_ChildRecord) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -2023,7 +2057,7 @@ func (m *ChildRecord) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ChildRecord) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_ChildRecord) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -2047,7 +2081,7 @@ func (m *ChildRecord) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *JetRecord) Marshal() (dAtA []byte, err error) {
+func (m *X_JetRecord) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -2057,7 +2091,7 @@ func (m *JetRecord) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *JetRecord) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_JetRecord) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -2065,7 +2099,7 @@ func (m *JetRecord) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *RequestRecord) Marshal() (dAtA []byte, err error) {
+func (m *X_RequestRecord) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -2075,7 +2109,7 @@ func (m *RequestRecord) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *RequestRecord) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_RequestRecord) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -2103,7 +2137,7 @@ func (m *RequestRecord) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *ResultRecord) Marshal() (dAtA []byte, err error) {
+func (m *X_ResultRecord) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -2113,7 +2147,7 @@ func (m *ResultRecord) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ResultRecord) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_ResultRecord) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -2143,7 +2177,7 @@ func (m *ResultRecord) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *TypeRecord) Marshal() (dAtA []byte, err error) {
+func (m *X_TypeRecord) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -2153,7 +2187,7 @@ func (m *TypeRecord) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *TypeRecord) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_TypeRecord) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -2183,7 +2217,7 @@ func (m *TypeRecord) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *CodeRecord) Marshal() (dAtA []byte, err error) {
+func (m *X_CodeRecord) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -2193,7 +2227,7 @@ func (m *CodeRecord) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *CodeRecord) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_CodeRecord) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -2230,7 +2264,7 @@ func (m *CodeRecord) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *ObjectActivateRecord) Marshal() (dAtA []byte, err error) {
+func (m *X_ObjectActivateRecord) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -2240,7 +2274,7 @@ func (m *ObjectActivateRecord) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ObjectActivateRecord) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_ObjectActivateRecord) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -2308,7 +2342,7 @@ func (m *ObjectActivateRecord) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *ObjectAmendRecord) Marshal() (dAtA []byte, err error) {
+func (m *X_ObjectAmendRecord) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -2318,7 +2352,7 @@ func (m *ObjectAmendRecord) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ObjectAmendRecord) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_ObjectAmendRecord) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -2376,7 +2410,7 @@ func (m *ObjectAmendRecord) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *ObjectDeactivateRecord) Marshal() (dAtA []byte, err error) {
+func (m *X_ObjectDeactivateRecord) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -2386,7 +2420,7 @@ func (m *ObjectDeactivateRecord) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *ObjectDeactivateRecord) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_ObjectDeactivateRecord) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -2418,7 +2452,7 @@ func (m *ObjectDeactivateRecord) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *Record) Marshal() (dAtA []byte, err error) {
+func (m *X_Record) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -2428,7 +2462,7 @@ func (m *Record) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *Record) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_Record) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -2443,7 +2477,7 @@ func (m *Record) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *Record_Genesis) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_Record_Genesis) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.Genesis != nil {
 		dAtA[i] = 0xa2
@@ -2459,7 +2493,7 @@ func (m *Record_Genesis) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Record_Child) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_Record_Child) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.Child != nil {
 		dAtA[i] = 0xaa
@@ -2475,7 +2509,7 @@ func (m *Record_Child) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Record_Jet) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_Record_Jet) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.Jet != nil {
 		dAtA[i] = 0xb2
@@ -2491,7 +2525,7 @@ func (m *Record_Jet) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Record_Request) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_Record_Request) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.Request != nil {
 		dAtA[i] = 0xc2
@@ -2507,7 +2541,7 @@ func (m *Record_Request) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Record_Result) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_Record_Result) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.Result != nil {
 		dAtA[i] = 0xe2
@@ -2523,7 +2557,7 @@ func (m *Record_Result) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Record_Type) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_Record_Type) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.Type != nil {
 		dAtA[i] = 0xea
@@ -2539,7 +2573,7 @@ func (m *Record_Type) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Record_Code) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_Record_Code) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.Code != nil {
 		dAtA[i] = 0xf2
@@ -2555,7 +2589,7 @@ func (m *Record_Code) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Record_ObjectActivate) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_Record_ObjectActivate) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.ObjectActivate != nil {
 		dAtA[i] = 0xfa
@@ -2571,7 +2605,7 @@ func (m *Record_ObjectActivate) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Record_ObjectAmend) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_Record_ObjectAmend) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.ObjectAmend != nil {
 		dAtA[i] = 0x82
@@ -2587,7 +2621,7 @@ func (m *Record_ObjectAmend) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Record_ObjectDeactivate) MarshalTo(dAtA []byte) (int, error) {
+func (m *X_Record_ObjectDeactivate) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.ObjectDeactivate != nil {
 		dAtA[i] = 0x8a
@@ -2612,7 +2646,7 @@ func encodeVarintRecord(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return offset + 1
 }
-func (m *GenesisRecord) Size() (n int) {
+func (m *X_GenesisRecord) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2621,7 +2655,7 @@ func (m *GenesisRecord) Size() (n int) {
 	return n
 }
 
-func (m *ChildRecord) Size() (n int) {
+func (m *X_ChildRecord) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2634,7 +2668,7 @@ func (m *ChildRecord) Size() (n int) {
 	return n
 }
 
-func (m *JetRecord) Size() (n int) {
+func (m *X_JetRecord) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2643,7 +2677,7 @@ func (m *JetRecord) Size() (n int) {
 	return n
 }
 
-func (m *RequestRecord) Size() (n int) {
+func (m *X_RequestRecord) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2662,7 +2696,7 @@ func (m *RequestRecord) Size() (n int) {
 	return n
 }
 
-func (m *ResultRecord) Size() (n int) {
+func (m *X_ResultRecord) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2679,7 +2713,7 @@ func (m *ResultRecord) Size() (n int) {
 	return n
 }
 
-func (m *TypeRecord) Size() (n int) {
+func (m *X_TypeRecord) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2696,7 +2730,7 @@ func (m *TypeRecord) Size() (n int) {
 	return n
 }
 
-func (m *CodeRecord) Size() (n int) {
+func (m *X_CodeRecord) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2714,7 +2748,7 @@ func (m *CodeRecord) Size() (n int) {
 	return n
 }
 
-func (m *ObjectActivateRecord) Size() (n int) {
+func (m *X_ObjectActivateRecord) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2739,7 +2773,7 @@ func (m *ObjectActivateRecord) Size() (n int) {
 	return n
 }
 
-func (m *ObjectAmendRecord) Size() (n int) {
+func (m *X_ObjectAmendRecord) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2761,7 +2795,7 @@ func (m *ObjectAmendRecord) Size() (n int) {
 	return n
 }
 
-func (m *ObjectDeactivateRecord) Size() (n int) {
+func (m *X_ObjectDeactivateRecord) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2776,7 +2810,7 @@ func (m *ObjectDeactivateRecord) Size() (n int) {
 	return n
 }
 
-func (m *Record) Size() (n int) {
+func (m *X_Record) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2788,7 +2822,7 @@ func (m *Record) Size() (n int) {
 	return n
 }
 
-func (m *Record_Genesis) Size() (n int) {
+func (m *X_Record_Genesis) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2800,7 +2834,7 @@ func (m *Record_Genesis) Size() (n int) {
 	}
 	return n
 }
-func (m *Record_Child) Size() (n int) {
+func (m *X_Record_Child) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2812,7 +2846,7 @@ func (m *Record_Child) Size() (n int) {
 	}
 	return n
 }
-func (m *Record_Jet) Size() (n int) {
+func (m *X_Record_Jet) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2824,7 +2858,7 @@ func (m *Record_Jet) Size() (n int) {
 	}
 	return n
 }
-func (m *Record_Request) Size() (n int) {
+func (m *X_Record_Request) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2836,7 +2870,7 @@ func (m *Record_Request) Size() (n int) {
 	}
 	return n
 }
-func (m *Record_Result) Size() (n int) {
+func (m *X_Record_Result) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2848,7 +2882,7 @@ func (m *Record_Result) Size() (n int) {
 	}
 	return n
 }
-func (m *Record_Type) Size() (n int) {
+func (m *X_Record_Type) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2860,7 +2894,7 @@ func (m *Record_Type) Size() (n int) {
 	}
 	return n
 }
-func (m *Record_Code) Size() (n int) {
+func (m *X_Record_Code) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2872,7 +2906,7 @@ func (m *Record_Code) Size() (n int) {
 	}
 	return n
 }
-func (m *Record_ObjectActivate) Size() (n int) {
+func (m *X_Record_ObjectActivate) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2884,7 +2918,7 @@ func (m *Record_ObjectActivate) Size() (n int) {
 	}
 	return n
 }
-func (m *Record_ObjectAmend) Size() (n int) {
+func (m *X_Record_ObjectAmend) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2896,7 +2930,7 @@ func (m *Record_ObjectAmend) Size() (n int) {
 	}
 	return n
 }
-func (m *Record_ObjectDeactivate) Size() (n int) {
+func (m *X_Record_ObjectDeactivate) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -2922,40 +2956,40 @@ func sovRecord(x uint64) (n int) {
 func sozRecord(x uint64) (n int) {
 	return sovRecord(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (this *GenesisRecord) String() string {
+func (this *X_GenesisRecord) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&GenesisRecord{`,
+	s := strings.Join([]string{`&X_GenesisRecord{`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *ChildRecord) String() string {
+func (this *X_ChildRecord) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&ChildRecord{`,
+	s := strings.Join([]string{`&X_ChildRecord{`,
 		`PrevChild:` + fmt.Sprintf("%v", this.PrevChild) + `,`,
 		`Ref:` + fmt.Sprintf("%v", this.Ref) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *JetRecord) String() string {
+func (this *X_JetRecord) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&JetRecord{`,
+	s := strings.Join([]string{`&X_JetRecord{`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *RequestRecord) String() string {
+func (this *X_RequestRecord) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&RequestRecord{`,
+	s := strings.Join([]string{`&X_RequestRecord{`,
 		`Object:` + fmt.Sprintf("%v", this.Object) + `,`,
 		`Parcel:` + fmt.Sprintf("%v", this.Parcel) + `,`,
 		`MessageHash:` + fmt.Sprintf("%v", this.MessageHash) + `,`,
@@ -2963,11 +2997,11 @@ func (this *RequestRecord) String() string {
 	}, "")
 	return s
 }
-func (this *ResultRecord) String() string {
+func (this *X_ResultRecord) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&ResultRecord{`,
+	s := strings.Join([]string{`&X_ResultRecord{`,
 		`Object:` + fmt.Sprintf("%v", this.Object) + `,`,
 		`Request:` + fmt.Sprintf("%v", this.Request) + `,`,
 		`Payload:` + fmt.Sprintf("%v", this.Payload) + `,`,
@@ -2975,11 +3009,11 @@ func (this *ResultRecord) String() string {
 	}, "")
 	return s
 }
-func (this *TypeRecord) String() string {
+func (this *X_TypeRecord) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&TypeRecord{`,
+	s := strings.Join([]string{`&X_TypeRecord{`,
 		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
 		`Request:` + fmt.Sprintf("%v", this.Request) + `,`,
 		`TypeDeclaration:` + fmt.Sprintf("%v", this.TypeDeclaration) + `,`,
@@ -2987,11 +3021,11 @@ func (this *TypeRecord) String() string {
 	}, "")
 	return s
 }
-func (this *CodeRecord) String() string {
+func (this *X_CodeRecord) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&CodeRecord{`,
+	s := strings.Join([]string{`&X_CodeRecord{`,
 		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
 		`Request:` + fmt.Sprintf("%v", this.Request) + `,`,
 		`Code:` + fmt.Sprintf("%v", this.Code) + `,`,
@@ -3000,11 +3034,11 @@ func (this *CodeRecord) String() string {
 	}, "")
 	return s
 }
-func (this *ObjectActivateRecord) String() string {
+func (this *X_ObjectActivateRecord) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&ObjectActivateRecord{`,
+	s := strings.Join([]string{`&X_ObjectActivateRecord{`,
 		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
 		`Request:` + fmt.Sprintf("%v", this.Request) + `,`,
 		`Memory:` + fmt.Sprintf("%v", this.Memory) + `,`,
@@ -3016,11 +3050,11 @@ func (this *ObjectActivateRecord) String() string {
 	}, "")
 	return s
 }
-func (this *ObjectAmendRecord) String() string {
+func (this *X_ObjectAmendRecord) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&ObjectAmendRecord{`,
+	s := strings.Join([]string{`&X_ObjectAmendRecord{`,
 		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
 		`Request:` + fmt.Sprintf("%v", this.Request) + `,`,
 		`Memory:` + fmt.Sprintf("%v", this.Memory) + `,`,
@@ -3031,11 +3065,11 @@ func (this *ObjectAmendRecord) String() string {
 	}, "")
 	return s
 }
-func (this *ObjectDeactivateRecord) String() string {
+func (this *X_ObjectDeactivateRecord) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&ObjectDeactivateRecord{`,
+	s := strings.Join([]string{`&X_ObjectDeactivateRecord{`,
 		`Domain:` + fmt.Sprintf("%v", this.Domain) + `,`,
 		`Request:` + fmt.Sprintf("%v", this.Request) + `,`,
 		`PrevState:` + fmt.Sprintf("%v", this.PrevState) + `,`,
@@ -3043,112 +3077,112 @@ func (this *ObjectDeactivateRecord) String() string {
 	}, "")
 	return s
 }
-func (this *Record) String() string {
+func (this *X_Record) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Record{`,
+	s := strings.Join([]string{`&X_Record{`,
 		`Union:` + fmt.Sprintf("%v", this.Union) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *Record_Genesis) String() string {
+func (this *X_Record_Genesis) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Record_Genesis{`,
-		`Genesis:` + strings.Replace(fmt.Sprintf("%v", this.Genesis), "GenesisRecord", "GenesisRecord", 1) + `,`,
+	s := strings.Join([]string{`&X_Record_Genesis{`,
+		`Genesis:` + strings.Replace(fmt.Sprintf("%v", this.Genesis), "X_GenesisRecord", "X_GenesisRecord", 1) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *Record_Child) String() string {
+func (this *X_Record_Child) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Record_Child{`,
-		`Child:` + strings.Replace(fmt.Sprintf("%v", this.Child), "ChildRecord", "ChildRecord", 1) + `,`,
+	s := strings.Join([]string{`&X_Record_Child{`,
+		`Child:` + strings.Replace(fmt.Sprintf("%v", this.Child), "X_ChildRecord", "X_ChildRecord", 1) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *Record_Jet) String() string {
+func (this *X_Record_Jet) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Record_Jet{`,
-		`Jet:` + strings.Replace(fmt.Sprintf("%v", this.Jet), "JetRecord", "JetRecord", 1) + `,`,
+	s := strings.Join([]string{`&X_Record_Jet{`,
+		`Jet:` + strings.Replace(fmt.Sprintf("%v", this.Jet), "X_JetRecord", "X_JetRecord", 1) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *Record_Request) String() string {
+func (this *X_Record_Request) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Record_Request{`,
-		`Request:` + strings.Replace(fmt.Sprintf("%v", this.Request), "RequestRecord", "RequestRecord", 1) + `,`,
+	s := strings.Join([]string{`&X_Record_Request{`,
+		`Request:` + strings.Replace(fmt.Sprintf("%v", this.Request), "X_RequestRecord", "X_RequestRecord", 1) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *Record_Result) String() string {
+func (this *X_Record_Result) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Record_Result{`,
-		`Result:` + strings.Replace(fmt.Sprintf("%v", this.Result), "ResultRecord", "ResultRecord", 1) + `,`,
+	s := strings.Join([]string{`&X_Record_Result{`,
+		`Result:` + strings.Replace(fmt.Sprintf("%v", this.Result), "X_ResultRecord", "X_ResultRecord", 1) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *Record_Type) String() string {
+func (this *X_Record_Type) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Record_Type{`,
-		`Type:` + strings.Replace(fmt.Sprintf("%v", this.Type), "TypeRecord", "TypeRecord", 1) + `,`,
+	s := strings.Join([]string{`&X_Record_Type{`,
+		`Type:` + strings.Replace(fmt.Sprintf("%v", this.Type), "X_TypeRecord", "X_TypeRecord", 1) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *Record_Code) String() string {
+func (this *X_Record_Code) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Record_Code{`,
-		`Code:` + strings.Replace(fmt.Sprintf("%v", this.Code), "CodeRecord", "CodeRecord", 1) + `,`,
+	s := strings.Join([]string{`&X_Record_Code{`,
+		`Code:` + strings.Replace(fmt.Sprintf("%v", this.Code), "X_CodeRecord", "X_CodeRecord", 1) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *Record_ObjectActivate) String() string {
+func (this *X_Record_ObjectActivate) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Record_ObjectActivate{`,
-		`ObjectActivate:` + strings.Replace(fmt.Sprintf("%v", this.ObjectActivate), "ObjectActivateRecord", "ObjectActivateRecord", 1) + `,`,
+	s := strings.Join([]string{`&X_Record_ObjectActivate{`,
+		`ObjectActivate:` + strings.Replace(fmt.Sprintf("%v", this.ObjectActivate), "X_ObjectActivateRecord", "X_ObjectActivateRecord", 1) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *Record_ObjectAmend) String() string {
+func (this *X_Record_ObjectAmend) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Record_ObjectAmend{`,
-		`ObjectAmend:` + strings.Replace(fmt.Sprintf("%v", this.ObjectAmend), "ObjectAmendRecord", "ObjectAmendRecord", 1) + `,`,
+	s := strings.Join([]string{`&X_Record_ObjectAmend{`,
+		`ObjectAmend:` + strings.Replace(fmt.Sprintf("%v", this.ObjectAmend), "X_ObjectAmendRecord", "X_ObjectAmendRecord", 1) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *Record_ObjectDeactivate) String() string {
+func (this *X_Record_ObjectDeactivate) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Record_ObjectDeactivate{`,
-		`ObjectDeactivate:` + strings.Replace(fmt.Sprintf("%v", this.ObjectDeactivate), "ObjectDeactivateRecord", "ObjectDeactivateRecord", 1) + `,`,
+	s := strings.Join([]string{`&X_Record_ObjectDeactivate{`,
+		`ObjectDeactivate:` + strings.Replace(fmt.Sprintf("%v", this.ObjectDeactivate), "X_ObjectDeactivateRecord", "X_ObjectDeactivateRecord", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -3161,7 +3195,7 @@ func valueToStringRecord(v interface{}) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("*%v", pv)
 }
-func (m *GenesisRecord) Unmarshal(dAtA []byte) error {
+func (m *X_GenesisRecord) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3184,10 +3218,10 @@ func (m *GenesisRecord) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: GenesisRecord: wiretype end group for non-group")
+			return fmt.Errorf("proto: __GenesisRecord: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: GenesisRecord: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: __GenesisRecord: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		default:
@@ -3214,7 +3248,7 @@ func (m *GenesisRecord) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ChildRecord) Unmarshal(dAtA []byte) error {
+func (m *X_ChildRecord) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3237,10 +3271,10 @@ func (m *ChildRecord) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ChildRecord: wiretype end group for non-group")
+			return fmt.Errorf("proto: __ChildRecord: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ChildRecord: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: __ChildRecord: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3333,7 +3367,7 @@ func (m *ChildRecord) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *JetRecord) Unmarshal(dAtA []byte) error {
+func (m *X_JetRecord) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3356,10 +3390,10 @@ func (m *JetRecord) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: JetRecord: wiretype end group for non-group")
+			return fmt.Errorf("proto: __JetRecord: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: JetRecord: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: __JetRecord: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		default:
@@ -3386,7 +3420,7 @@ func (m *JetRecord) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *RequestRecord) Unmarshal(dAtA []byte) error {
+func (m *X_RequestRecord) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3409,10 +3443,10 @@ func (m *RequestRecord) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: RequestRecord: wiretype end group for non-group")
+			return fmt.Errorf("proto: __RequestRecord: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: RequestRecord: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: __RequestRecord: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3540,7 +3574,7 @@ func (m *RequestRecord) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ResultRecord) Unmarshal(dAtA []byte) error {
+func (m *X_ResultRecord) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3563,10 +3597,10 @@ func (m *ResultRecord) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ResultRecord: wiretype end group for non-group")
+			return fmt.Errorf("proto: __ResultRecord: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ResultRecord: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: __ResultRecord: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3693,7 +3727,7 @@ func (m *ResultRecord) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *TypeRecord) Unmarshal(dAtA []byte) error {
+func (m *X_TypeRecord) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3716,10 +3750,10 @@ func (m *TypeRecord) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: TypeRecord: wiretype end group for non-group")
+			return fmt.Errorf("proto: __TypeRecord: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: TypeRecord: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: __TypeRecord: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -3846,7 +3880,7 @@ func (m *TypeRecord) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *CodeRecord) Unmarshal(dAtA []byte) error {
+func (m *X_CodeRecord) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -3869,10 +3903,10 @@ func (m *CodeRecord) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: CodeRecord: wiretype end group for non-group")
+			return fmt.Errorf("proto: __CodeRecord: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: CodeRecord: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: __CodeRecord: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -4017,7 +4051,7 @@ func (m *CodeRecord) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ObjectActivateRecord) Unmarshal(dAtA []byte) error {
+func (m *X_ObjectActivateRecord) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4040,10 +4074,10 @@ func (m *ObjectActivateRecord) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ObjectActivateRecord: wiretype end group for non-group")
+			return fmt.Errorf("proto: __ObjectActivateRecord: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ObjectActivateRecord: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: __ObjectActivateRecord: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -4275,7 +4309,7 @@ func (m *ObjectActivateRecord) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ObjectAmendRecord) Unmarshal(dAtA []byte) error {
+func (m *X_ObjectAmendRecord) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4298,10 +4332,10 @@ func (m *ObjectAmendRecord) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ObjectAmendRecord: wiretype end group for non-group")
+			return fmt.Errorf("proto: __ObjectAmendRecord: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ObjectAmendRecord: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: __ObjectAmendRecord: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -4513,7 +4547,7 @@ func (m *ObjectAmendRecord) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *ObjectDeactivateRecord) Unmarshal(dAtA []byte) error {
+func (m *X_ObjectDeactivateRecord) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4536,10 +4570,10 @@ func (m *ObjectDeactivateRecord) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: ObjectDeactivateRecord: wiretype end group for non-group")
+			return fmt.Errorf("proto: __ObjectDeactivateRecord: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: ObjectDeactivateRecord: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: __ObjectDeactivateRecord: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -4665,7 +4699,7 @@ func (m *ObjectDeactivateRecord) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Record) Unmarshal(dAtA []byte) error {
+func (m *X_Record) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -4688,10 +4722,10 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: Record: wiretype end group for non-group")
+			return fmt.Errorf("proto: __Record: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Record: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: __Record: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 100:
@@ -4723,11 +4757,11 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &GenesisRecord{}
+			v := &X_GenesisRecord{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Union = &Record_Genesis{v}
+			m.Union = &X_Record_Genesis{v}
 			iNdEx = postIndex
 		case 101:
 			if wireType != 2 {
@@ -4758,11 +4792,11 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &ChildRecord{}
+			v := &X_ChildRecord{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Union = &Record_Child{v}
+			m.Union = &X_Record_Child{v}
 			iNdEx = postIndex
 		case 102:
 			if wireType != 2 {
@@ -4793,11 +4827,11 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &JetRecord{}
+			v := &X_JetRecord{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Union = &Record_Jet{v}
+			m.Union = &X_Record_Jet{v}
 			iNdEx = postIndex
 		case 200:
 			if wireType != 2 {
@@ -4828,11 +4862,11 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &RequestRecord{}
+			v := &X_RequestRecord{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Union = &Record_Request{v}
+			m.Union = &X_Record_Request{v}
 			iNdEx = postIndex
 		case 300:
 			if wireType != 2 {
@@ -4863,11 +4897,11 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &ResultRecord{}
+			v := &X_ResultRecord{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Union = &Record_Result{v}
+			m.Union = &X_Record_Result{v}
 			iNdEx = postIndex
 		case 301:
 			if wireType != 2 {
@@ -4898,11 +4932,11 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &TypeRecord{}
+			v := &X_TypeRecord{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Union = &Record_Type{v}
+			m.Union = &X_Record_Type{v}
 			iNdEx = postIndex
 		case 302:
 			if wireType != 2 {
@@ -4933,11 +4967,11 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &CodeRecord{}
+			v := &X_CodeRecord{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Union = &Record_Code{v}
+			m.Union = &X_Record_Code{v}
 			iNdEx = postIndex
 		case 303:
 			if wireType != 2 {
@@ -4968,11 +5002,11 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &ObjectActivateRecord{}
+			v := &X_ObjectActivateRecord{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Union = &Record_ObjectActivate{v}
+			m.Union = &X_Record_ObjectActivate{v}
 			iNdEx = postIndex
 		case 304:
 			if wireType != 2 {
@@ -5003,11 +5037,11 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &ObjectAmendRecord{}
+			v := &X_ObjectAmendRecord{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Union = &Record_ObjectAmend{v}
+			m.Union = &X_Record_ObjectAmend{v}
 			iNdEx = postIndex
 		case 305:
 			if wireType != 2 {
@@ -5038,11 +5072,11 @@ func (m *Record) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &ObjectDeactivateRecord{}
+			v := &X_ObjectDeactivateRecord{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Union = &Record_ObjectDeactivate{v}
+			m.Union = &X_Record_ObjectDeactivate{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex

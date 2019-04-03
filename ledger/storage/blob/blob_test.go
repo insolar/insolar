@@ -33,16 +33,39 @@ func TestClone(t *testing.T) {
 	t.Parallel()
 
 	jetID := gen.JetID()
-	rawBlob := slice()
-	blob := Blob{
-		JetID: jetID,
-		Value: rawBlob,
+
+	cases := []struct {
+		name  string
+		value []byte
+	}{
+		{
+			name:  "rand value",
+			value: slice(),
+		},
+		{
+			name:  "nil value",
+			value: nil,
+		},
+		{
+			name:  "empty value",
+			value: []byte{},
+		},
 	}
 
-	clonedBlob := Clone(blob)
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			blob := Blob{
+				JetID: jetID,
+				Value: c.value,
+			}
 
-	assert.Equal(t, blob, clonedBlob)
-	assert.False(t, &blob == &clonedBlob)
+			clonedBlob := Clone(blob)
+
+			assert.Equal(t, blob, clonedBlob)
+			assert.False(t, &blob == &clonedBlob)
+		})
+	}
+
 }
 
 func TestStorageMemory_ForPN(t *testing.T) {
