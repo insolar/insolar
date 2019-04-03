@@ -196,12 +196,6 @@ func (s *pulseManagerSuite) TestPulseManager_Set_CheckHotIndexesSending() {
 		return &signature, nil
 	}
 
-	pulseStorageMock := NewpulseStoragePmMock(s.T())
-	pulseStorageMock.CurrentMock.Return(insolar.GenesisPulse, nil)
-	pulseStorageMock.LockMock.Return()
-	pulseStorageMock.UnlockMock.Return()
-	pulseStorageMock.SetMock.Return()
-
 	pm.RecentStorageProvider = providerMock
 	pm.Bus = mbMock
 	pm.NodeNet = nodeNetworkMock

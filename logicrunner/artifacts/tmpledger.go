@@ -219,6 +219,9 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	pm.NodeSetter = ns
 	pm.JetModifier = js
 
+	pm.PulseAccessor = ps
+	pm.PulseAppender = ps
+
 	hdw := artifactmanager.NewHotDataWaiterConcrete()
 
 	handler.HotDataWaiter = hdw

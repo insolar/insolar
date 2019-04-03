@@ -81,13 +81,6 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		blobDB := blob.NewStorageDB(db)
 		blobModifier = blobDB
 		blobAccessor = blobDB
-
-	case insolar.StaticRoleVirtual:
-		ps := pulse.NewStorageMem()
-		pulseAccessor = ps
-		pulseAppender = ps
-		pulseCalculator = ps
-
 	default:
 		ps := pulse.NewStorageMem()
 		pulseAccessor = ps
@@ -107,6 +100,8 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		blobCollectionAccessor = blobDB
 	}
 
+	pm := pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, pulseShifter)
+
 	components := []interface{}{
 		legacyDB,
 		db,
@@ -119,9 +114,6 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		pulseAppender,
 		pulseCalculator,
 		storage.NewCleaner(),
-		pulseAccessor,
-		pulseAppender,
-		pulseCalculator,
 		jet.NewStore(),
 		node.NewStorage(),
 		storage.NewObjectStorage(),
@@ -130,16 +122,15 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewHotDataWaiterConcrete(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),
-		pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, pulseShifter),
 		heavyserver.NewSync(legacyDB),
 	}
 
 	switch certificate.GetRole() {
 	case insolar.StaticRoleUnknown, insolar.StaticRoleLightMaterial:
 		components = append(components, artifactmanager.NewMessageHandler(&conf))
-		components = append(components, pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, pulseShifter))
+		components = append(components, pm)
 	case insolar.StaticRoleHeavyMaterial:
-		components = append(components, pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, pulseShifter))
+		components = append(components, pm)
 		components = append(components, heavy.Components()...)
 	}
 
