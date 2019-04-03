@@ -134,16 +134,3 @@ func (h *transportBase) GetNodeID() insolar.Reference {
 func (h *transportBase) NewRequestBuilder() network.RequestBuilder {
 	return &Builder{sender: h.origin, id: network.RequestID(h.sequenceGenerator.Generate())}
 }
-
-func getOrigin(publicAddress, id string) (*host.Host, error) {
-	address, err := host.NewAddress(publicAddress)
-	if err != nil {
-		return nil, errors.Wrap(err, "error resolving address")
-	}
-	nodeID, err := insolar.NewReferenceFromBase58(id)
-	if err != nil {
-		return nil, errors.Wrap(err, "error parsing NodeID from string")
-	}
-	origin := &host.Host{NodeID: *nodeID, Address: address}
-	return origin, nil
-}

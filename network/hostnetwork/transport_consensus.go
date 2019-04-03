@@ -165,14 +165,18 @@ func NewConsensusNetwork(address, nodeID string, shortID insolar.ShortNodeID) (n
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating transport")
 	}
-	origin, err := getOrigin(publicAddress, nodeID)
+	id, err := insolar.NewReferenceFromBase58(nodeID)
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid nodeID")
+	}
+
+	origin, err := host.NewHostNS(publicAddress, *id, shortID)
 	if err != nil {
 		go tp.Stop()
 		<-tp.Stopped()
 		tp.Close()
 		return nil, errors.Wrap(err, "error getting origin")
 	}
-	origin.ShortID = shortID
 	result := &transportConsensus{handlers: make(map[packets.PacketType]network.ConsensusPacketHandler)}
 
 	result.transport = tp

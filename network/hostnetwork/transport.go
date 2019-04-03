@@ -57,6 +57,7 @@ import (
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -133,7 +134,12 @@ func NewInternalTransport(conf configuration.Configuration, nodeRef string) (net
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating transport")
 	}
-	origin, err := getOrigin(publicAddress, nodeRef)
+	id, err := insolar.NewReferenceFromBase58(nodeRef)
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid nodeRef")
+	}
+
+	origin, err := host.NewHostN(publicAddress, *id)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting origin")
 	}

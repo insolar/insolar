@@ -107,7 +107,7 @@ func NewPulsar(
 
 	log.Debug("[NewPulsar]")
 
-	// Start for incoming connections.
+	// Listen for incoming connections.
 	listenerImpl, err := listener(configuration.ConnectionType.String(), configuration.MainListenerAddress)
 	if err != nil {
 		return nil, err

@@ -37,13 +37,13 @@ import (
 
 // Options of the GoPlugin
 type Options struct {
-	// Start  is address `GoPlugin` listens on and provides RPC interface for runner(s)
+	// Listen  is address `GoPlugin` listens on and provides RPC interface for runner(s)
 	Listen string
 }
 
 // RunnerOptions - set of options to control internal isolated code runner(s)
 type RunnerOptions struct {
-	// Start is address the runner listens on and provides RPC interface for the `GoPlugin`
+	// Listen is address the runner listens on and provides RPC interface for the `GoPlugin`
 	Listen string
 	// CodeStoragePath is path to directory where the runner caches code
 	CodeStoragePath string
