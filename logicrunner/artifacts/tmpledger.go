@@ -34,7 +34,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
@@ -105,11 +104,10 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
-	tmpDB, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
+	tmpDB, recMem, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
 	memoryMockDB := store.NewMemoryMockDB()
 
 	cm := &component.Manager{}
-	gi := genesis.NewGenesisInitializer()
 	pt := storage.NewPulseTracker()
 	ps := storage.NewPulseStorage()
 	js := jet.NewStore()
@@ -119,6 +117,9 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	bs := blob.NewStorageDB(memoryMockDB)
 	rs := storage.NewReplicaStorage()
 	cl := storage.NewCleaner()
+
+	recordAccessor := recMem
+	recordModifier := recMem
 
 	am := NewClient()
 	am.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
@@ -160,6 +161,8 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	handler.DropModifier = ds
 	handler.BlobModifier = bs
 	handler.BlobAccessor = bs
+	handler.RecordModifier = recordModifier
+	handler.RecordAccessor = recordAccessor
 
 	idLockerMock := storage.NewIDLockerMock(t)
 	idLockerMock.LockMock.Return()
@@ -183,10 +186,11 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 		pt,
 		ps,
 		ds,
-		gi,
 		am,
 		rs,
 		cl,
+		recordAccessor,
+		recordModifier,
 	)
 
 	err := cm.Init(ctx)

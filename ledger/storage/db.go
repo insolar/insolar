@@ -238,8 +238,11 @@ func (db *DB) IterateRecordsOnPulse(
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
 		id := insolar.NewID(pulse, k)
-		rec := object.DeserializeRecord(v)
-		err := handler(*id, rec)
+		rec, err := object.DecodeVirtual(v)
+		if err != nil {
+			return errors.Wrap(err, "can't deserialize record")
+		}
+		err = handler(*id, rec)
 		if err != nil {
 			return err
 		}
