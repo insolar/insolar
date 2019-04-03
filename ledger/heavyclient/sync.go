@@ -21,11 +21,12 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/object"
 )
 
 func messageToHeavy(ctx context.Context, bus insolar.MessageBus, msg insolar.Message) error {
@@ -63,22 +64,6 @@ func (c *JetClient) HeavySync(
 		return err
 	}
 
-	recs := []insolar.KV{}
-	replicator := storage.NewReplicaIter(
-		ctx, c.db, insolar.ID(jetID), pn, pn+1, c.opts.SyncMessageLimit)
-	for {
-		r, err := replicator.NextRecords()
-		if len(r) > 0 {
-			recs = append(recs, r...)
-		}
-		if err == storage.ErrReplicatorDone {
-			break
-		}
-		if err != nil {
-			panic(err)
-		}
-	}
-
 	dr, err := c.dropAccessor.ForPulse(ctx, jetID, pn)
 	if err != nil {
 		inslog.Error("synchronize: can't fetch a drop")
@@ -86,17 +71,15 @@ func (c *JetClient) HeavySync(
 	}
 
 	bls := c.blobSyncAccessor.ForPulse(ctx, jetID, pn)
-	if err != nil {
-		inslog.Error("synchronize: can't fetch a drop")
-		return err
-	}
+
+	records := c.recSyncAccessor.ForPulse(ctx, jetID, pn)
 
 	msg := &message.HeavyPayload{
 		JetID:    jetID,
 		PulseNum: pn,
-		Records:  recs,
 		Drop:     drop.MustEncode(&dr),
 		Blobs:    convertBlobs(bls),
+		Records:  convertRecords(records),
 	}
 	if err := messageToHeavy(ctx, c.bus, msg); err != nil {
 		inslog.Error("synchronize: payload failed")
@@ -118,4 +101,11 @@ func convertBlobs(blobs []blob.Blob) [][]byte {
 		res = append(res, blob.MustEncode(&b))
 	}
 	return res
+}
+
+func convertRecords(records []record.MaterialRecord) (result [][]byte) {
+	for _, r := range records {
+		result = append(result, object.EncodeRecord(r))
+	}
+	return
 }

@@ -86,15 +86,18 @@ type Sync struct {
 	ReplicaStorage             storage.ReplicaStorage             `inject:""`
 	DBContext                  storage.DBContext
 
+	RecordModifier object.RecordModifier
+
 	sync.Mutex
 	jetSyncStates map[jetprefix]*syncstate
 }
 
 // NewSync creates new Sync instance.
-func NewSync(db storage.DBContext) *Sync {
+func NewSync(db storage.DBContext, records object.RecordModifier) *Sync {
 	return &Sync{
-		DBContext:     db,
-		jetSyncStates: map[jetprefix]*syncstate{},
+		DBContext:      db,
+		RecordModifier: records,
+		jetSyncStates:  map[jetprefix]*syncstate{},
 	}
 }
 
@@ -166,8 +169,8 @@ func (s *Sync) Start(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumb
 	return nil
 }
 
-// Store stores recieved key/value pairs at heavy storage.
-func (s *Sync) Store(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber, kvs []insolar.KV) error {
+// StoreRecords stores recieved key/value pairs at heavy storage.
+func (s *Sync) StoreRecords(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber, rawRecords [][]byte) error {
 	inslog := inslogger.FromContext(ctx)
 	jetState := s.getJetSyncState(ctx, jetID)
 
@@ -197,14 +200,26 @@ func (s *Sync) Store(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumb
 		jetState.insync = false
 		jetState.Unlock()
 	}()
-	err = s.DBContext.StoreKeyValues(ctx, kvs)
-	if err != nil {
-		return errors.Wrapf(err, "heavyserver: store failed")
+
+	var recordsSize int64
+	for _, rawRec := range rawRecords {
+		rec := object.DecodeRecord(rawRec)
+		virtRec := rec.Record
+
+		id := object.NewRecordIDFromRecord(s.PlatformCryptographyScheme, pn, virtRec)
+
+		err := s.RecordModifier.Set(ctx, *id, rec)
+
+		if err != object.ErrOverride {
+			return errors.Wrap(err, "heavyserver: store records failed")
+		}
+
+		recordsSize += int64(len(rawRec))
 	}
 
 	// heavy stats
-	recordsCount := int64(len(kvs))
-	recordsSize := insolar.KVSize(kvs)
+	recordsCount := int64(len(rawRecords))
+
 	inslog.Debugf("heavy store stat: JetID=%v, recordsCount+=%v, recordsSize+=%v\n", jetID.DebugString(), recordsCount, recordsSize)
 
 	ctx = insmetrics.InsertTag(ctx, tagJet, jetID.DebugString())

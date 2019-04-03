@@ -64,6 +64,8 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 
 	var recordModifier object.RecordModifier
 	var recordAccessor object.RecordAccessor
+	var recSyncAccessor object.RecordCollectionAccessor
+	var recordCleaner object.RecordCleaner
 	// Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
 	switch certificate.GetRole() {
 	case insolar.StaticRoleUnknown, insolar.StaticRoleHeavyMaterial:
@@ -98,6 +100,8 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		records := object.NewRecordMemory()
 		recordModifier = records
 		recordAccessor = records
+		recSyncAccessor = records
+		recordCleaner = records
 	}
 
 	components := []interface{}{
@@ -121,8 +125,8 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewHotDataWaiterConcrete(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),
-		pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobSyncAccessor),
-		heavyserver.NewSync(legacyDB),
+		pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobSyncAccessor, recordCleaner, recSyncAccessor),
+		heavyserver.NewSync(legacyDB, recordModifier),
 	}
 
 	switch certificate.GetRole() {

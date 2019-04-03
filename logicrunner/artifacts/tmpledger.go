@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/component"
@@ -125,7 +126,14 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	am.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
 	conf.PulseManager.HeavySyncEnabled = false
-	pm := pulsemanager.NewPulseManager(conf, drop.NewCleanerMock(t), blob.NewCleanerMock(t), blob.NewCollectionAccessorMock(t))
+	pm := pulsemanager.NewPulseManager(
+		conf,
+		drop.NewCleanerMock(t),
+		blob.NewCleanerMock(t),
+		blob.NewCollectionAccessorMock(t),
+		object.NewRecordCleanerMock(t),
+		object.NewRecordCollectionAccessorMock(t),
+	)
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)
 	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)

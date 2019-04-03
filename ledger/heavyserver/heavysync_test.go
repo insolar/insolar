@@ -24,10 +24,11 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -41,6 +42,8 @@ type heavysyncSuite struct {
 	ctx     context.Context
 	cleaner func()
 	db      storage.DBContext
+
+	records object.RecordModifier
 
 	pulseTracker   storage.PulseTracker
 	replicaStorage storage.ReplicaStorage
@@ -70,11 +73,14 @@ func (s *heavysyncSuite) BeforeTest(suiteName, testName string) {
 	s.pulseTracker = storage.NewPulseTracker()
 	s.replicaStorage = storage.NewReplicaStorage()
 
+	s.records = object.NewRecordMemory()
+
 	s.cm.Inject(
-		platformpolicy.NewPlatformCryptographyScheme(),
+		testutils.NewPlatformCryptographyScheme(),
 		s.db,
 		s.pulseTracker,
 		s.replicaStorage,
+		s.records,
 	)
 
 	err := s.cm.Init(s.ctx)
@@ -98,18 +104,35 @@ func (s *heavysyncSuite) AfterTest(suiteName, testName string) {
 func (s *heavysyncSuite) TestHeavy_SyncBasic() {
 	var err error
 	var pnum insolar.PulseNumber
-	kvalues := []insolar.KV{
-		{K: []byte("100"), V: []byte("500")},
+	// kvalues := []insolar.KV{
+	// 	{K: []byte("100"), V: []byte("500")},
+	// }
+
+	jID := gen.JetID()
+	virtRec := &object.ResultRecord{}
+	// fuzz.New().NilChance(0).Fuzz(&virtRec)
+
+	rec := record.MaterialRecord{
+		Record: virtRec,
+		JetID:  jID,
 	}
 
-	jetID := insolar.ID(gen.JetID())
+	rawRec := object.EncodeRecord(rec)
 
-	sync := NewSync(s.db)
+	// id := insolar.NewID(pnum, object.SerializeRecord(rec.Record))
+
+	var recs [][]byte
+	recs = append(recs, rawRec)
+
+	jetID := insolar.ID(jID)
+
+	sync := NewSync(s.db, s.records)
 	sync.ReplicaStorage = s.replicaStorage
+	sync.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 	err = sync.Start(s.ctx, jetID, pnum)
 	require.Error(s.T(), err, "start with zero pulse")
 
-	err = sync.Store(s.ctx, jetID, pnum, kvalues)
+	err = sync.StoreRecords(s.ctx, jetID, pnum, recs)
 	require.Error(s.T(), err, "store values on non started sync")
 
 	err = sync.Stop(s.ctx, jetID, pnum)
@@ -159,74 +182,75 @@ func (s *heavysyncSuite) TestHeavy_SyncBasic() {
 	err = sync.Start(s.ctx, jetID, pnumNext)
 	require.NoError(s.T(), err, "start next pulse")
 
-	err = sync.Store(s.ctx, jetID, pnumNextPlus, kvalues)
+	err = sync.StoreRecords(s.ctx, jetID, pnumNextPlus, recs)
 	require.Error(s.T(), err, "store from other pulse at the same jet")
 
 	err = sync.Stop(s.ctx, jetID, pnumNextPlus)
 	require.Error(s.T(), err, "stop from other pulse at the same jet")
 
-	err = sync.Store(s.ctx, jetID, pnumNext, kvalues)
+	err = sync.StoreRecords(s.ctx, jetID, pnumNext, recs)
 	require.NoError(s.T(), err, "store on current range")
-	err = sync.Store(s.ctx, jetID, pnumNext, kvalues)
+	err = sync.StoreRecords(s.ctx, jetID, pnumNext, recs)
 	require.NoError(s.T(), err, "store the same on current range")
 	err = sync.Stop(s.ctx, jetID, pnumNext)
 	require.NoError(s.T(), err, "stop current range")
 
 	preparepulse(pnumNextPlus) // should set corret next for previous pulse
-	sync = NewSync(s.db)
+	sync = NewSync(s.db, s.records)
 	sync.ReplicaStorage = s.replicaStorage
+	sync.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 	err = sync.Start(s.ctx, jetID, pnumNextPlus)
 	require.NoError(s.T(), err, "start next+1 range on new sync instance (checkpoint check)")
-	err = sync.Store(s.ctx, jetID, pnumNextPlus, kvalues)
+	err = sync.StoreRecords(s.ctx, jetID, pnumNextPlus, recs)
 	require.NoError(s.T(), err, "store next+1 pulse")
 	err = sync.Stop(s.ctx, jetID, pnumNextPlus)
 	require.NoError(s.T(), err, "stop next+1 range on new sync instance")
 }
 
-func (s *heavysyncSuite) TestHeavy_SyncByJet() {
-	var err error
-	var pnum insolar.PulseNumber
-	kvalues1 := []insolar.KV{
-		{K: []byte("1_11"), V: []byte("1_12")},
-	}
-	kvalues2 := []insolar.KV{
-		{K: []byte("2_21"), V: []byte("2_22")},
-	}
-
-	jetID1 := testutils.RandomJet()
-	jetID2 := jetID1
-	// flip first bit of last byte jetID2 for different prefixes
-	lastidx := len(jetID1) - 1
-	jetID2[lastidx] ^= 0xFF
-
-	sync := NewSync(s.db)
-	sync.ReplicaStorage = s.replicaStorage
-
-	pnum = insolar.FirstPulseNumber + 1
-	pnumNext := pnum + 1
-	preparepulse(s, pnum)
-	preparepulse(s, pnumNext) // should set correct next for previous pulse
-
-	err = sync.Start(s.ctx, jetID1, insolar.FirstPulseNumber)
-	require.Error(s.T(), err)
-
-	err = sync.Start(s.ctx, jetID1, pnum)
-	require.NoError(s.T(), err, "start from first+1 pulse on empty storage, jet1")
-
-	err = sync.Start(s.ctx, jetID2, pnum)
-	require.NoError(s.T(), err, "start from first+1 pulse on empty storage, jet2")
-
-	err = sync.Store(s.ctx, jetID2, pnum, kvalues2)
-	require.NoError(s.T(), err, "store jet2 pulse")
-
-	err = sync.Store(s.ctx, jetID1, pnum, kvalues1)
-	require.NoError(s.T(), err, "store jet1 pulse")
-
-	// stop previous
-	err = sync.Stop(s.ctx, jetID1, pnum)
-	err = sync.Stop(s.ctx, jetID2, pnum)
-	require.NoError(s.T(), err)
-}
+// func (s *heavysyncSuite) TestHeavy_SyncByJet() {
+// 	var err error
+// 	var pnum insolar.PulseNumber
+// 	kvalues1 := []insolar.KV{
+// 		{K: []byte("1_11"), V: []byte("1_12")},
+// 	}
+// 	kvalues2 := []insolar.KV{
+// 		{K: []byte("2_21"), V: []byte("2_22")},
+// 	}
+//
+// 	jetID1 := testutils.RandomJet()
+// 	jetID2 := jetID1
+// 	// flip first bit of last byte jetID2 for different prefixes
+// 	lastidx := len(jetID1) - 1
+// 	jetID2[lastidx] ^= 0xFF
+//
+// 	sync := NewSync(s.db, s.records)
+// 	sync.ReplicaStorage = s.replicaStorage
+//
+// 	pnum = insolar.FirstPulseNumber + 1
+// 	pnumNext := pnum + 1
+// 	preparepulse(s, pnum)
+// 	preparepulse(s, pnumNext) // should set correct next for previous pulse
+//
+// 	err = sync.Start(s.ctx, jetID1, insolar.FirstPulseNumber)
+// 	require.Error(s.T(), err)
+//
+// 	err = sync.Start(s.ctx, jetID1, pnum)
+// 	require.NoError(s.T(), err, "start from first+1 pulse on empty storage, jet1")
+//
+// 	err = sync.Start(s.ctx, jetID2, pnum)
+// 	require.NoError(s.T(), err, "start from first+1 pulse on empty storage, jet2")
+//
+// 	err = sync.StoreRecords(s.ctx, jetID2, pnum, kvalues2)
+// 	require.NoError(s.T(), err, "store jet2 pulse")
+//
+// 	err = sync.StoreRecords(s.ctx, jetID1, pnum, kvalues1)
+// 	require.NoError(s.T(), err, "store jet1 pulse")
+//
+// 	// stop previous
+// 	err = sync.Stop(s.ctx, jetID1, pnum)
+// 	err = sync.Stop(s.ctx, jetID2, pnum)
+// 	require.NoError(s.T(), err)
+// }
 
 func (s *heavysyncSuite) TestHeavy_SyncLockOnPrefix() {
 	var err error
@@ -236,7 +260,7 @@ func (s *heavysyncSuite) TestHeavy_SyncLockOnPrefix() {
 	jetID1 := insolar.ID(*insolar.NewJetID(1, []byte{}))
 	jetID2 := insolar.ID(*insolar.NewJetID(2, []byte{}))
 
-	sync := NewSync(s.db)
+	sync := NewSync(s.db, s.records)
 	sync.ReplicaStorage = s.replicaStorage
 
 	pnum = insolar.FirstPulseNumber + 2
@@ -262,7 +286,7 @@ func (s *heavysyncSuite) TestHeavy_Timeout() {
 	pn := gen.PulseNumber()
 	jetID := testutils.RandomJet()
 
-	sync := NewSync(s.db)
+	sync := NewSync(s.db, s.records)
 	sync.ReplicaStorage = s.replicaStorage
 	err := sync.Start(s.ctx, jetID, pn)
 	require.NoError(s.T(), err)

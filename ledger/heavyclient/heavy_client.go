@@ -29,6 +29,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/utils/backoff"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -51,6 +52,7 @@ type JetClient struct {
 	db               storage.DBContext
 	dropAccessor     drop.Accessor
 	blobSyncAccessor blob.CollectionAccessor
+	recSyncAccessor  object.RecordCollectionAccessor
 
 	opts Options
 
@@ -79,6 +81,7 @@ func NewJetClient(
 	pulseTracker storage.PulseTracker,
 	dropAccessor drop.Accessor,
 	blobSyncAccessor blob.CollectionAccessor,
+	recSyncAccessor object.RecordCollectionAccessor,
 	cleaner storage.Cleaner,
 	db storage.DBContext,
 	jetID insolar.ID,
@@ -91,6 +94,7 @@ func NewJetClient(
 		pulseTracker:     pulseTracker,
 		dropAccessor:     dropAccessor,
 		blobSyncAccessor: blobSyncAccessor,
+		recSyncAccessor:  recSyncAccessor,
 		cleaner:          cleaner,
 		db:               db,
 		jetID:            insolar.JetID(jetID),

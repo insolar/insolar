@@ -80,7 +80,7 @@ type RecordModifier interface {
 // RecordCleaner provides an interface for removing records from a storage.
 type RecordCleaner interface {
 	// RemoveUntil method removes records from a storage for all pulses until pulse (pulse included)
-	RemoveUntil(pulse insolar.PulseNumber)
+	RemoveUntil(ctx context.Context, pulse insolar.PulseNumber)
 }
 
 // RecordMemory is an in-memory struct for record-storage.
@@ -154,7 +154,7 @@ func (m *RecordMemory) ForPulse(
 }
 
 // RemoveUntil method removes records from a storage for all pulses until pulse (pulse included)
-func (m *RecordMemory) RemoveUntil(pulse insolar.PulseNumber) {
+func (m *RecordMemory) RemoveUntil(ctx context.Context, pulse insolar.PulseNumber) {
 	m.lock.Lock()
 	m.lock.Unlock()
 

@@ -25,9 +25,9 @@ import (
 type HeavyPayload struct {
 	JetID    insolar.JetID
 	PulseNum insolar.PulseNumber
-	Records  []insolar.KV
 	Drop     []byte
 	Blobs    [][]byte
+	Records  [][]byte
 }
 
 // AllowedSenderObjectAndRole implements interface method

@@ -21,8 +21,6 @@ import (
 	"context"
 	"fmt"
 	"sort"
-	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -37,8 +35,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/artifactmanager"
@@ -67,15 +63,17 @@ type heavySuite struct {
 	// TODO: @imarkin 28.03.2019 - remove it after all new storages integration (INS-2013, etc)
 	objectStorage storage.ObjectStorage
 
-	jetStore       *jet.Store
-	nodeAccessor   *node.AccessorMock
-	nodeSetter     *node.ModifierMock
-	pulseTracker   storage.PulseTracker
-	replicaStorage storage.ReplicaStorage
-	dropModifier   drop.Modifier
-	dropAccessor   drop.Accessor
-	recordModifier object.RecordModifier
-	storageCleaner storage.Cleaner
+	jetStore        *jet.Store
+	nodeAccessor    *node.AccessorMock
+	nodeSetter      *node.ModifierMock
+	pulseTracker    storage.PulseTracker
+	replicaStorage  storage.ReplicaStorage
+	dropModifier    drop.Modifier
+	dropAccessor    drop.Accessor
+	recordModifier  object.RecordModifier
+	recordCleaner   object.RecordCleaner
+	recSyncAccessor object.RecordCollectionAccessor
+	storageCleaner  storage.Cleaner
 }
 
 func NewHeavySuite() *heavySuite {
@@ -109,6 +107,8 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.dropModifier = dropStorage
 	recordStorage := object.NewRecordMemory()
 	s.recordModifier = recordStorage
+	s.recordCleaner = recordStorage
+	s.recSyncAccessor = recordStorage
 
 	s.storageCleaner = storage.NewCleaner()
 
@@ -212,43 +212,43 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	cryptoScheme := testutils.NewPlatformCryptographyScheme()
 
 	// mock bus.Mock method, store synced records, and calls count with HeavyRecord
-	var statMutex sync.Mutex
+	// var statMutex sync.Mutex
 	var synckeys []key
-	var syncsended int32
-	type messageStat struct {
-		size int
-		keys []key
-	}
-	syncmessagesPerMessage := map[int32]*messageStat{}
-	var bussendfailed int32
+	// var syncsended int32
+	// type messageStat struct {
+	// 	size int
+	// 	keys []key
+	// }
+	// syncmessagesPerMessage := map[int32]*messageStat{}
+	// var bussendfailed int32
 	busMock.SendFunc = func(ctx context.Context, msg insolar.Message, ops *insolar.MessageSendOptions) (insolar.Reply, error) {
 		// fmt.Printf("got msg: %T (%s)\n", msg, msg.Type())
-		heavymsg, ok := msg.(*message.HeavyPayload)
-		if ok {
-			if withretry && atomic.AddInt32(&bussendfailed, 1) < 2 {
-				return &reply.HeavyError{
-					SubType: reply.ErrHeavySyncInProgress,
-					Message: "retryable error",
-				}, nil
-			}
-
-			syncsendedNewVal := atomic.AddInt32(&syncsended, 1)
-			var size int
-			var keys []key
-
-			for _, rec := range heavymsg.Records {
-				keys = append(keys, rec.K)
-				size += len(rec.K) + len(rec.V)
-			}
-
-			statMutex.Lock()
-			synckeys = append(synckeys, keys...)
-			syncmessagesPerMessage[syncsendedNewVal] = &messageStat{
-				size: size,
-				keys: keys,
-			}
-			statMutex.Unlock()
-		}
+		// heavymsg, ok := msg.(*message.HeavyPayload)
+		// if ok {
+		// 	if withretry && atomic.AddInt32(&bussendfailed, 1) < 2 {
+		// 		return &reply.HeavyError{
+		// 			SubType: reply.ErrHeavySyncInProgress,
+		// 			Message: "retryable error",
+		// 		}, nil
+		// 	}
+		//
+		// 	// syncsendedNewVal := atomic.AddInt32(&syncsended, 1)
+		// 	var size int
+		// 	var keys []key
+		//
+		// 	// for _, rec := range heavymsg.Records {
+		// 	// 	keys = append(keys, rec.K)
+		// 	// 	size += len(rec.K) + len(rec.V)
+		// 	// }
+		//
+		// 	statMutex.Lock()
+		// 	synckeys = append(synckeys, keys...)
+		// 	// syncmessagesPerMessage[syncsendedNewVal] = &messageStat{
+		// 	// 	size: size,
+		// 	// 	keys: keys,
+		// 	// }
+		// 	statMutex.Unlock()
+		// }
 		return nil, nil
 	}
 
@@ -276,6 +276,8 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 		nil,
 		blobStorage,
 		blobStorage,
+		s.recordCleaner,
+		s.recSyncAccessor,
 	)
 	pm.LR = lrMock
 	pm.NodeNet = nodenetMock
