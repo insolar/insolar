@@ -53,14 +53,15 @@ package controller
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/packet"
-	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/pulsar"
-	"github.com/pkg/errors"
 )
 
 type PulseController interface {

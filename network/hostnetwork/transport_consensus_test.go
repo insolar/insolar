@@ -54,19 +54,17 @@ import (
 	"context"
 	"sync"
 	"testing"
-	"time"
+
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/utils"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 type consensusTransportSuite struct {
@@ -110,11 +108,9 @@ func createTwoConsensusNetworks(id1, id2 insolar.ShortNodeID) (t1, t2 network.Co
 	return cn1, cn2, nil
 }
 
-func (t *consensusTransportSuite) sendPacket(packet consensus.ConsensusPacket) (bool, error) {
+func (t *consensusTransportSuite) sendPacket(packet consensus.ConsensusPacket) {
 	cn1, cn2, err := createTwoConsensusNetworks(0, 1)
-	if err != nil {
-		return false, err
-	}
+	t.Require().NoError(err)
 	ctx := context.Background()
 	ctx2 := context.Background()
 
@@ -127,18 +123,18 @@ func (t *consensusTransportSuite) sendPacket(packet consensus.ConsensusPacket) (
 	}
 	cn2.RegisterPacketHandler(packet.GetType(), handler)
 
-	cn2.Start(ctx2)
-	cn1.Start(ctx)
+	err = cn2.Start(ctx2)
+	t.Require().NoError(err)
+	err = cn1.Start(ctx)
+	t.Require().NoError(err)
 	defer func() {
 		cn1.Stop(ctx)
 		cn2.Stop(ctx2)
 	}()
 
 	err = cn1.SignAndSendPacket(packet, cn2.GetNodeID(), t.crypto)
-	if err != nil {
-		return false, err
-	}
-	return utils.WaitTimeout(&wg, time.Second), nil
+	t.Require().NoError(err)
+	wg.Wait()
 }
 
 func newPhase1Packet() *consensus.Phase1Packet {
@@ -166,32 +162,24 @@ func newPhase3Packet() (*consensus.Phase3Packet, error) {
 
 func (t *consensusTransportSuite) TestSendPacketPhase1() {
 	packet := newPhase1Packet()
-	success, err := t.sendPacket(packet)
-	require.NoError(t.T(), err)
-	assert.True(t.T(), success)
+	t.sendPacket(packet)
 }
 
 func (t *consensusTransportSuite) TestSendPacketPhase2() {
 	packet, err := newPhase2Packet()
 	require.NoError(t.T(), err)
-	success, err := t.sendPacket(packet)
-	require.NoError(t.T(), err)
-	assert.True(t.T(), success)
+	t.sendPacket(packet)
 }
 
 func (t *consensusTransportSuite) TestSendPacketPhase3() {
 	packet, err := newPhase3Packet()
 	require.NoError(t.T(), err)
-	success, err := t.sendPacket(packet)
-	require.NoError(t.T(), err)
-	assert.True(t.T(), success)
+	t.sendPacket(packet)
 }
 
-func (t *consensusTransportSuite) sendPacketAndVerify(packet consensus.ConsensusPacket) (bool, error) {
+func (t *consensusTransportSuite) sendPacketAndVerify(packet consensus.ConsensusPacket) {
 	cn1, cn2, err := createTwoConsensusNetworks(0, 1)
-	if err != nil {
-		return false, err
-	}
+	t.Require().NoError(err)
 	ctx := context.Background()
 	ctx2 := context.Background()
 
@@ -215,48 +203,49 @@ func (t *consensusTransportSuite) sendPacketAndVerify(packet consensus.Consensus
 	}
 	cn2.RegisterPacketHandler(packet.GetType(), handler)
 
-	cn2.Start(ctx2)
-	cn1.Start(ctx)
+	err = cn2.Start(ctx2)
+	t.Require().NoError(err)
+	err = cn1.Start(ctx)
+	t.Require().NoError(err)
 	defer func() {
 		cn1.Stop(ctx)
 		cn2.Stop(ctx2)
 	}()
 
 	err = cn1.SignAndSendPacket(packet, cn2.GetNodeID(), t.crypto)
-	if err != nil {
-		return false, err
-	}
+	t.Require().NoError(err)
+	t.True(<-result)
+}
 
-	r := false
-	select {
-	case r = <-result:
-		return r, nil
-	case <-time.After(time.Second):
-		return r, nil
-	}
+func (t *consensusTransportSuite) TestStartStop() {
+	cn, err := NewConsensusNetwork("127.0.0.1:0", ID1+DOMAIN, 0)
+	t.Require().NoError(err)
+	ctx := context.Background()
+	err = cn.Start(ctx)
+	t.Require().NoError(err)
+	defer cn.Stop(ctx)
+
+	err = cn.Stop(ctx)
+	t.Require().NoError(err)
+	err = cn.Start(ctx)
+	t.Require().NoError(err)
 }
 
 func (t *consensusTransportSuite) TestVerifySignPhase1() {
 	packet := newPhase1Packet()
-	success, err := t.sendPacketAndVerify(packet)
-	require.NoError(t.T(), err)
-	assert.True(t.T(), success)
+	t.sendPacketAndVerify(packet)
 }
 
 func (t *consensusTransportSuite) TestVerifySignPhase2() {
 	packet, err := newPhase2Packet()
 	require.NoError(t.T(), err)
-	success, err := t.sendPacketAndVerify(packet)
-	require.NoError(t.T(), err)
-	assert.True(t.T(), success)
+	t.sendPacketAndVerify(packet)
 }
 
 func (t *consensusTransportSuite) TestVerifySignPhase3() {
 	packet, err := newPhase3Packet()
 	require.NoError(t.T(), err)
-	success, err := t.sendPacketAndVerify(packet)
-	require.NoError(t.T(), err)
-	assert.True(t.T(), success)
+	t.sendPacketAndVerify(packet)
 }
 
 func NewSuite() (*consensusTransportSuite, error) {

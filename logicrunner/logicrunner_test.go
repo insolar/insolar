@@ -30,44 +30,37 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/stretchr/testify/assert"
-
 	"github.com/stretchr/testify/suite"
 	"github.com/ugorji/go/codec"
-
-	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/testutils/terminationhandler"
-
-	"github.com/insolar/insolar/contractrequester"
-	"github.com/insolar/insolar/ledger/pulsemanager"
-	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/logicrunner/goplugin"
-
-	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
-
-	"github.com/insolar/insolar/cryptography"
-
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/messagebus"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils/network"
-	"github.com/insolar/insolar/testutils/nodekeeper"
 
 	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/member/signer"
 	"github.com/insolar/insolar/application/contract/rootdomain"
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/contractrequester"
+	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/goplugin"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
+	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
+	"github.com/insolar/insolar/logicrunner/pulsemanager"
+	"github.com/insolar/insolar/messagebus"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/network"
+	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 )
 
@@ -148,14 +141,14 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	nw := network.GetTestNetwork()
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, db, cleaner := artifacts.TmpLedger(
-		s.T(), "", insolar.StaticRoleLightMaterial,
+		s.T(),
+		"",
 		insolar.Components{
 			LogicRunner: lr,
 			NodeNetwork: nk,
 			MessageBus:  mb,
 			Network:     nw,
 		},
-		false,
 	)
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
@@ -172,7 +165,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
 	cr, err := contractrequester.New()
 	pulseAccessor := l.PulseManager.(*pulsemanager.PulseManager).PulseAccessor
-	nth := terminationhandler.NewTestHandler()
+	nth := testutils.NewTerminationHandlerMock(s.T())
 
 	cm.Inject(db, pulseAccessor, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, nth, mock)
 	err = cm.Init(ctx)
@@ -2042,7 +2035,7 @@ func (c *First) GetName() (string, error) {
 	ch := new(codec.CborHandle)
 	res := []interface{}{&foundation.Error{}}
 	err = codec.NewDecoderBytes(resp.(*reply.CallMethod).Result, ch).Decode(&res)
-	s.Equal(map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: proxy call error: try to call method of prototype as method of another prototype"}), res[1])
+	s.Equal(map[interface{}]interface{}(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: CallMethod returns error: proxy call error: try to call method of prototype as method of another prototype"}), res[1])
 }
 
 func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am artifacts.Client, cb *goplugintestutils.ContractsBuilder, contractName string) (*insolar.Reference, *insolar.Reference) {

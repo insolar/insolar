@@ -84,7 +84,6 @@ func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 func instrumentHandler(name string) Handler {
 	return func(handler insolar.MessageHandler) insolar.MessageHandler {
 		return func(ctx context.Context, p insolar.Parcel) (insolar.Reply, error) {
-			// TODO: add tags to log
 			inslog := inslogger.FromContext(ctx)
 			start := time.Now()
 			code := "2xx"
@@ -426,7 +425,6 @@ func (h *MessageHandler) handleGetObject(
 		}, nil
 	}
 
-	// FIXME: after migration on JetID in all components. - @nordicdyno 13.03.2019
 	stateJetID, actual := h.JetStorage.ForID(ctx, stateID.Pulse(), *msg.Head.Record())
 	stateJet = (*insolar.ID)(&stateJetID)
 
@@ -632,7 +630,6 @@ func (h *MessageHandler) handleGetChildren(
 		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *currentChild)
 	}
 
-	// FIXME: after migration on JetID in all components. - @nordicdyno 13.03.2019
 	childJetID, actual := h.JetStorage.ForID(ctx, currentChild.Pulse(), *msg.Parent.Record())
 	childJet = (*insolar.ID)(&childJetID)
 
@@ -1131,7 +1128,6 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 	logger := inslogger.FromContext(ctx)
 
 	msg := parcel.Message().(*message.HotData)
-	// FIXME: check split signatures.
 	jetID := *msg.Jet.Record()
 
 	logger.WithFields(map[string]interface{}{

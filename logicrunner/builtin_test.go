@@ -22,28 +22,25 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/pulsemanager"
-	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/messagebus"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils/network"
-	"github.com/insolar/insolar/testutils/nodekeeper"
-	"github.com/stretchr/testify/require"
-
-	"github.com/insolar/insolar/insolar/delegationtoken"
-	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
-
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
+	"github.com/insolar/insolar/logicrunner/pulsemanager"
+	"github.com/insolar/insolar/messagebus"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/network"
+	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/insolar/insolar/testutils/testmessagebus"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func byteRecorRef(b byte) insolar.Reference {
@@ -75,13 +72,13 @@ func TestBareHelloworld(t *testing.T) {
 
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, db, cleaner := artifacts.TmpLedger(
-		t, "", insolar.StaticRoleLightMaterial,
+		t,
+		"",
 		insolar.Components{
 			LogicRunner: lr,
 			NodeNetwork: nk,
 			MessageBus:  mb,
 		},
-		true,
 	)
 	defer cleaner()
 

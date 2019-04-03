@@ -157,7 +157,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base insolar.Messag
 	case ret := <-ch:
 		inslogger.FromContext(ctx).Debug("Got Method results")
 		if ret.Error != "" {
-			return nil, errors.New(ret.Error)
+			return nil, errors.Wrap(errors.New(ret.Error), "CallMethod returns error")
 		}
 		retReply, ok := ret.Reply.(*reply.CallMethod)
 		if !ok {

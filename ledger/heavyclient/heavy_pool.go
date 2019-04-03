@@ -191,7 +191,6 @@ func (scp *Pool) LightCleanup(
 			_, skipRecordsCleanup := jetPrefixSeen[prefixKey]
 			jetPrefixSeen[prefixKey] = struct{}{}
 
-			// TODO: fill candidates here
 			candidates := jetIndexesRemoved[insolar.ID(jetID)]
 
 			if (len(candidates) == 0) && skipRecordsCleanup {

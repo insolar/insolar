@@ -21,30 +21,31 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/artifactmanager"
-	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
 	pulse2 "github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner/pulsemanager"
 	"github.com/insolar/insolar/messagebus"
 	networknode "github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/testmessagebus"
-	"github.com/stretchr/testify/require"
 )
 
 // TMPLedger
@@ -96,7 +97,7 @@ func NewTestLedger(
 // TmpLedger creates ledger on top of temporary database.
 // Returns *ledger.Ledger and cleanup function.
 // DEPRECATED
-func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c insolar.Components, closeJets bool) (*TMPLedger, storage.DBContext, func()) {
+func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, storage.DBContext, func()) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
@@ -107,14 +108,14 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
 	tmpDB, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir), storagetest.PulseStorage(ps))
-	memoryMockDB := db.NewMemoryMockDB()
+	memoryMockDB := store.NewMemoryMockDB()
 
 	cm := &component.Manager{}
 	gi := genesis.NewGenesisInitializer()
 	js := jet.NewStore()
 	os := storage.NewObjectStorage()
 	ns := node.NewStorage()
-	ds := drop.NewStorageDB()
+	ds := drop.NewStorageDB(memoryMockDB)
 	bs := blob.NewStorageDB(memoryMockDB)
 	rs := storage.NewReplicaStorage()
 	cl := storage.NewCleaner()
@@ -123,7 +124,7 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	am.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
 	conf.PulseManager.HeavySyncEnabled = false
-	pm := pulsemanager.NewPulseManager(conf, drop.NewCleanerMock(t), blob.NewCleanerMock(t), blob.NewCollectionAccessorMock(t), pulse2.NewShifterMock(t))
+	pm := pulsemanager.NewPulseManager()
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)
 	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
@@ -215,25 +216,13 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	pm.LR = c.LogicRunner
 	pm.ActiveListSwapper = alsMock
 	// pm.PulseStorage = ps
-	pm.JetAccessor = js
-	pm.JetModifier = js
-	pm.DropModifier = ds
-	pm.DropAccessor = ds
-	pm.DropCleaner = nil
-	pm.ObjectStorage = os
 	pm.Nodes = ns
 	pm.NodeSetter = ns
-	// pm.PulseTracker = pt
-	pm.ReplicaStorage = rs
-	pm.StorageCleaner = cl
-	pm.PulseAccessor = ps
-	pm.PulseAppender = ps
-	pm.PulseCalculator = ps
-	pm.PulseShifter = ps
+	pm.PulseTracker = pt
+	pm.JetModifier = js
 
 	hdw := artifactmanager.NewHotDataWaiterConcrete()
 
-	pm.HotDataWaiter = hdw
 	handler.HotDataWaiter = hdw
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(t)
@@ -254,11 +243,6 @@ func TmpLedger(t *testing.T, dir string, handlersRole insolar.StaticRole, c inso
 	err = handler.Init(ctx)
 	if err != nil {
 		panic(err)
-	}
-
-	if closeJets {
-		err := pm.HotDataWaiter.Unlock(ctx, insolar.ID(*insolar.NewJetID(0, nil)))
-		require.NoError(t, err)
 	}
 
 	// Create ledger.

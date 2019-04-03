@@ -23,7 +23,6 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -37,9 +36,10 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/db"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
@@ -112,7 +112,8 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.nodeStorage = node.NewStorage()
 	s.objectStorage = storage.NewObjectStorage()
 
-	dropStorage := drop.NewStorageDB()
+	storageDB := store.NewMemoryMockDB()
+	dropStorage := drop.NewStorageDB(storageDB)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 
@@ -123,7 +124,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		s.scheme,
 		s.db,
-		db.NewMemoryMockDB(),
+		store.NewMemoryMockDB(),
 		s.jetStorage,
 		s.nodeStorage,
 		s.objectStorage,

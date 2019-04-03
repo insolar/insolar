@@ -55,12 +55,14 @@ import (
 	"io"
 	"sync"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/packet"
-	"github.com/insolar/insolar/network/transport/relay"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/network/hostnetwork/future"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/relay"
 )
 
 type transportSerializer interface {
@@ -79,10 +81,10 @@ func (b *baseSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, erro
 }
 
 type baseTransport struct {
-	futureManager futureManager
+	futureManager future.Manager
 	serializer    transportSerializer
 	proxy         relay.Proxy
-	packetHandler packetHandler
+	packetHandler future.PacketHandler
 
 	disconnectStarted  chan bool
 	disconnectFinished chan bool
@@ -94,10 +96,10 @@ type baseTransport struct {
 }
 
 func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
-	futureManager := newFutureManager()
+	futureManager := future.NewManager()
 	return baseTransport{
 		futureManager: futureManager,
-		packetHandler: newPacketHandler(futureManager),
+		packetHandler: future.NewPacketHandler(futureManager),
 		proxy:         proxy,
 		serializer:    &baseSerializer{},
 
@@ -111,7 +113,7 @@ func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
 }
 
 // SendRequest sends request packet and returns future.
-func (t *baseTransport) SendRequest(ctx context.Context, msg *packet.Packet) (Future, error) {
+func (t *baseTransport) SendRequest(ctx context.Context, msg *packet.Packet) (future.Future, error) {
 	future := t.futureManager.Create(msg)
 	err := t.SendPacket(ctx, msg)
 	if err != nil {

@@ -1042,6 +1042,35 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	}
 }
 
+func (suite *LogicRunnerTestSuite) TestGracefulStop() {
+	suite.lr.isStopping = false
+	suite.lr.stopChan = make(chan struct{}, 0)
+
+	stopFinished := make(chan struct{}, 1)
+
+	var err error
+	go func() {
+		err = suite.lr.GracefulStop(suite.ctx)
+		stopFinished <- struct{}{}
+	}()
+
+	for cap(suite.lr.stopChan) < 1 {
+		time.Sleep(100 * time.Millisecond)
+		suite.Require().Equal(true, suite.lr.isStopping)
+		suite.Require().Equal(1, cap(suite.lr.stopChan))
+	}
+
+	suite.lr.stopChan <- struct{}{}
+	select {
+	case <-stopFinished:
+		break
+	case <-time.After(2 * time.Second):
+		suite.Fail("GracefulStop not finished")
+	}
+
+	suite.Require().NoError(err)
+}
+
 func TestLogicRunner(t *testing.T) {
 	t.Parallel()
 	suite.Run(t, new(LogicRunnerTestSuite))

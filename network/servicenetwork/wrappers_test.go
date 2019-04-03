@@ -48,6 +48,8 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
+// +build networktest
+
 package servicenetwork
 
 import (

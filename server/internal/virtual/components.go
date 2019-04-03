@@ -32,11 +32,13 @@ import (
 	"github.com/insolar/insolar/ledger"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/insolar/insolar/logicrunner/pulsemanager"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/state"
+	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
@@ -107,9 +109,8 @@ func initComponents(
 	certManager insolar.CertificateManager,
 	isGenesis bool,
 
-) (*component.Manager, error) {
+) (*component.Manager, insolar.TerminationHandler, error) {
 	cm := component.Manager{}
-	terminationHandler := insolar.NewTerminationHandler()
 
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
@@ -119,6 +120,8 @@ func initComponents(
 
 	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, isGenesis)
 	checkError(ctx, err, "failed to start Network")
+
+	terminationHandler := termination.NewHandler(nw)
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	parcelFactory := messagebus.NewParcelFactory()
@@ -135,7 +138,7 @@ func initComponents(
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
 
-	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"))
+	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
 	checkError(ctx, err, "failed to start Metrics")
 
 	networkSwitcher, err := state.NewNetworkSwitcher()
@@ -160,6 +163,7 @@ func initComponents(
 		certManager,
 		nodeNetwork,
 		nw,
+		pulsemanager.NewPulseManager(),
 	)
 
 	components := ledger.GetLedgerComponents(cfg.Ledger, certManager.GetCertificate())
@@ -184,5 +188,5 @@ func initComponents(
 
 	cm.Inject(components...)
 
-	return &cm, nil
+	return &cm, terminationHandler, nil
 }

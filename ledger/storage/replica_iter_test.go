@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/dgraph-io/badger"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -33,7 +34,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -75,7 +75,8 @@ func (s *replicaIterSuite) BeforeTest(suiteName, testName string) {
 	s.cleaner = cleaner
 
 	s.objectStorage = storage.NewObjectStorage()
-	dropStorage := drop.NewStorageDB()
+
+	dropStorage := drop.NewStorageDB(store.NewMemoryMockDB())
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 
@@ -85,7 +86,7 @@ func (s *replicaIterSuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		s.db,
-		db.NewMemoryMockDB(),
+		store.NewMemoryMockDB(),
 		s.objectStorage,
 		s.dropAccessor,
 		s.dropModifier,
@@ -129,14 +130,14 @@ func Test_StoreKeyValues(t *testing.T) {
 		defer cleaner()
 
 		os := storage.NewObjectStorage()
-		ds := drop.NewStorageDB()
+		ds := drop.NewStorageDB(store.NewMemoryMockDB())
 		bs := blob.NewStorageMemory()
 
 		cm := &component.Manager{}
 		cm.Inject(
 			platformpolicy.NewPlatformCryptographyScheme(),
 			tmpDB,
-			db.NewMemoryMockDB(),
+			store.NewMemoryMockDB(),
 			os,
 			ds,
 		)
@@ -235,14 +236,14 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	defer cleaner()
 
 	os := storage.NewObjectStorage()
-	ds := drop.NewStorageDB()
+	ds := drop.NewStorageDB(store.NewMemoryMockDB())
 	bs := blob.NewStorageMemory()
 
 	cm := &component.Manager{}
 	cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
 		tmpDB,
-		db.NewMemoryMockDB(),
+		store.NewMemoryMockDB(),
 		os,
 		ds,
 	)

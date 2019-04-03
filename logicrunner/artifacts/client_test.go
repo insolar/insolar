@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -35,7 +36,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/db"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
@@ -85,7 +85,8 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.nodeStorage = node.NewStorage()
 	s.objectStorage = storage.NewObjectStorage()
 
-	dropStorage := drop.NewStorageDB()
+	dbStore := store.NewMemoryMockDB()
+	dropStorage := drop.NewStorageDB(dbStore)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 	s.genesisState = genesis.NewGenesisInitializer()
@@ -93,7 +94,7 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		s.scheme,
 		s.db,
-		db.NewMemoryMockDB(),
+		store.NewMemoryMockDB(),
 		s.jetStorage,
 		s.nodeStorage,
 		pulse.NewStorageMem(),
