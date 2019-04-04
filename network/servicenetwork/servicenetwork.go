@@ -132,7 +132,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 
 	consensusAddress := n.cfg.Host.Transport.Address
 	if n.cfg.Host.Transport.FixedPublicAddress == "" {
-		consensusAddress = n.NodeKeeper.GetOrigin().ConsensusAddress()
+		consensusAddress = n.NodeKeeper.GetOrigin().Address()
 	}
 
 	consensusNetwork, err := hostnetwork.NewConsensusNetwork(
