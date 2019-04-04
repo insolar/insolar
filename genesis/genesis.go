@@ -27,6 +27,8 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/nodedomain"
 	"github.com/insolar/insolar/application/contract/noderecord"
@@ -39,9 +41,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/ledger/storage/genesis"
-	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -81,9 +81,7 @@ type Genesis struct {
 	// FIXME: genesis state here is the temporary, until merge this code with genesis initializer
 	GenesisState genesis.State `inject:""`
 
-	// FIXME: should ber removed after complete migration on ArtifactManager
-	ArtifactsClient artifacts.Client `inject:""`
-	MBLock          messageBusLocker `inject:""`
+	MBLock messageBusLocker `inject:""`
 }
 
 // NewGenesis creates new Genesis
@@ -597,7 +595,7 @@ func (g *Genesis) Start(ctx context.Context) error {
 		panic(errors.Wrap(err, "[ Genesis ] Couldn't create rootdomain instance"))
 	}
 
-	cb := NewContractBuilder(*g.GenesisState.GenesisRef(), g.ArtifactsClient, g.ArtifactManager)
+	cb := NewContractBuilder(*g.GenesisState.GenesisRef(), g.ArtifactManager)
 	g.prototypeRefs = cb.Prototypes
 	defer cb.Clean()
 

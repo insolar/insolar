@@ -27,18 +27,12 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
-	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
 const testDataPath = "gentestdata"
-
-func mockArtifactClient(t *testing.T) *artifacts.ClientMock {
-	acMock := artifacts.NewClientMock(t)
-	return acMock
-}
 
 func mockArtifactManager(t *testing.T) *artifact.ManagerMock {
 	amMock := artifact.NewManagerMock(t)
@@ -64,7 +58,7 @@ func requestWithError(am *artifact.ManagerMock) artifact.Manager {
 	return am
 }
 
-func mockGenesis(t *testing.T, ac artifacts.Client, am artifact.Manager) *Genesis {
+func mockGenesis(t *testing.T, am artifact.Manager) *Genesis {
 	ref := gen.Reference()
 	var discoveryNodes []Node
 	discoveryNodes = append(discoveryNodes,
@@ -85,7 +79,6 @@ func mockGenesis(t *testing.T, ac artifacts.Client, am artifact.Manager) *Genesi
 		rootDomainRef: &ref,
 		nodeDomainRef: &ref,
 
-		ArtifactsClient: ac,
 		ArtifactManager: am,
 	}
 	return g
@@ -93,7 +86,7 @@ func mockGenesis(t *testing.T, ac artifacts.Client, am artifact.Manager) *Genesi
 
 func mockContractBuilder(t *testing.T, g *Genesis) *ContractsBuilder {
 	ref := gen.Reference()
-	cb := NewContractBuilder(gen.Reference(), g.ArtifactsClient, g.ArtifactManager)
+	cb := NewContractBuilder(gen.Reference(), g.ArtifactManager)
 	cb.Prototypes[nodeRecord] = &ref
 	return cb
 }
@@ -200,9 +193,8 @@ func TestUploadKeys_Reuse_DirNotExist(t *testing.T) {
 
 func TestActivateNodeRecord_RegisterRequest_Err(t *testing.T) {
 	am := requestWithError(mockArtifactManager(t))
-	ac := mockArtifactClient(t)
 
-	g := mockGenesis(t, ac, am)
+	g := mockGenesis(t, am)
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 	publicKey := "fancy_public_key"
@@ -222,8 +214,7 @@ func TestActivateNodeRecord_RegisterRequest_Err(t *testing.T) {
 func TestActivateNodeRecord_Activate_Err(t *testing.T) {
 	am := mockArtifactManager(t)
 
-	ac := artifacts.NewClientMock(t)
-	ac.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
+	am.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
 		id := gen.ID()
 		return &id, nil
 	}
@@ -231,7 +222,7 @@ func TestActivateNodeRecord_Activate_Err(t *testing.T) {
 		return nil, errors.New("test reasons")
 	}
 
-	g := mockGenesis(t, ac, am)
+	g := mockGenesis(t, am)
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 	publicKey := "fancy_public_key"
@@ -251,8 +242,7 @@ func TestActivateNodeRecord_Activate_Err(t *testing.T) {
 func TestActivateNodeRecord_RegisterResult_Err(t *testing.T) {
 	am := mockArtifactManager(t)
 
-	ac := artifacts.NewClientMock(t)
-	ac.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
+	am.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
 		id := gen.ID()
 		return &id, nil
 	}
@@ -263,7 +253,7 @@ func TestActivateNodeRecord_RegisterResult_Err(t *testing.T) {
 		return nil, errors.New("test reasons")
 	}
 
-	g := mockGenesis(t, ac, am)
+	g := mockGenesis(t, am)
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 	publicKey := "fancy_public_key"
@@ -281,9 +271,8 @@ func TestActivateNodeRecord_RegisterResult_Err(t *testing.T) {
 }
 
 func TestActivateNodeRecord(t *testing.T) {
-	ac := mockArtifactClient(t)
 	am := mockArtifactManager(t)
-	g := mockGenesis(t, ac, am)
+	g := mockGenesis(t, am)
 
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
@@ -302,10 +291,9 @@ func TestActivateNodeRecord(t *testing.T) {
 }
 
 func TestActivateNodes_Err(t *testing.T) {
-	ac := mockArtifactClient(t)
 	am := requestWithError(mockArtifactManager(t))
 
-	g := mockGenesis(t, ac, am)
+	g := mockGenesis(t, am)
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 
@@ -325,9 +313,8 @@ func TestActivateNodes_Err(t *testing.T) {
 }
 
 func TestActivateNodes(t *testing.T) {
-	ac := mockArtifactClient(t)
 	am := mockArtifactManager(t)
-	g := mockGenesis(t, ac, am)
+	g := mockGenesis(t, am)
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 
@@ -351,9 +338,8 @@ func TestActivateNodes(t *testing.T) {
 }
 
 func TestActivateDiscoveryNodes_DiffLen(t *testing.T) {
-	ac := mockArtifactClient(t)
 	am := mockArtifactManager(t)
-	g := mockGenesis(t, ac, am)
+	g := mockGenesis(t, am)
 
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
@@ -370,9 +356,8 @@ func TestActivateDiscoveryNodes_DiffLen(t *testing.T) {
 }
 
 func TestActivateDiscoveryNodes_Err(t *testing.T) {
-	ac := mockArtifactClient(t)
 	am := requestWithError(mockArtifactManager(t))
-	g := mockGenesis(t, ac, am)
+	g := mockGenesis(t, am)
 
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
@@ -394,9 +379,8 @@ func TestActivateDiscoveryNodes_Err(t *testing.T) {
 }
 
 func TestActivateDiscoveryNodes(t *testing.T) {
-	ac := mockArtifactClient(t)
 	am := mockArtifactManager(t)
-	g := mockGenesis(t, ac, am)
+	g := mockGenesis(t, am)
 
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
@@ -424,10 +408,9 @@ func TestActivateDiscoveryNodes(t *testing.T) {
 
 func (s *genesisWithDataSuite) TestAddDiscoveryIndex_ActivateErr() {
 	t := s.T()
-	ac := mockArtifactClient(t)
-	am := requestWithError(mockArtifactManager(t))
 
-	g := mockGenesis(s.T(), ac, am)
+	am := requestWithError(mockArtifactManager(t))
+	g := mockGenesis(t, am)
 	cb := mockContractBuilder(s.T(), g)
 	ctx := inslogger.TestContext(s.T())
 	err := g.createKeys(ctx, testDataPath, len(g.config.DiscoveryNodes))
@@ -443,10 +426,9 @@ func (s *genesisWithDataSuite) TestAddDiscoveryIndex_ActivateErr() {
 }
 
 func TestAddDiscoveryIndex_UploadErr(t *testing.T) {
-	ac := mockArtifactClient(t)
 	am := requestWithError(mockArtifactManager(t))
 
-	g := mockGenesis(t, ac, am)
+	g := mockGenesis(t, am)
 	g.config.DiscoveryKeysDir = "not_existed_testDataPath"
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
@@ -461,9 +443,8 @@ func TestAddDiscoveryIndex_UploadErr(t *testing.T) {
 }
 
 func (s *genesisWithDataSuite) TestAddDiscoveryIndex() {
-	ac := mockArtifactClient(s.T())
 	am := mockArtifactManager(s.T())
-	g := mockGenesis(s.T(), ac, am)
+	g := mockGenesis(s.T(), am)
 	cb := mockContractBuilder(s.T(), g)
 	ctx := inslogger.TestContext(s.T())
 	err := g.createKeys(ctx, testDataPath, len(g.config.DiscoveryNodes))
@@ -479,10 +460,8 @@ func (s *genesisWithDataSuite) TestAddDiscoveryIndex() {
 
 func (s *genesisWithDataSuite) TestAddIndex_ActivateErr() {
 	t := s.T()
-	ac := mockArtifactClient(t)
 	am := requestWithError(mockArtifactManager(t))
-
-	g := mockGenesis(s.T(), ac, am)
+	g := mockGenesis(s.T(), am)
 	cb := mockContractBuilder(s.T(), g)
 	ctx := inslogger.TestContext(s.T())
 	err := g.createKeys(ctx, testDataPath, nodeAmount)
@@ -497,10 +476,8 @@ func (s *genesisWithDataSuite) TestAddIndex_ActivateErr() {
 }
 
 func TestAddIndex_UploadErr(t *testing.T) {
-	ac := mockArtifactClient(t)
 	am := requestWithError(mockArtifactManager(t))
-
-	g := mockGenesis(t, ac, am)
+	g := mockGenesis(t, am)
 	g.config.NodeKeysDir = "not_existed_testDataPath"
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
@@ -514,9 +491,8 @@ func TestAddIndex_UploadErr(t *testing.T) {
 }
 
 func (s *genesisWithDataSuite) TestAddIndex() {
-	ac := mockArtifactClient(s.T())
 	am := mockArtifactManager(s.T())
-	g := mockGenesis(s.T(), ac, am)
+	g := mockGenesis(s.T(), am)
 	cb := mockContractBuilder(s.T(), g)
 	ctx := inslogger.TestContext(s.T())
 	err := g.createKeys(ctx, testDataPath, nodeAmount)

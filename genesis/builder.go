@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
 )
@@ -70,14 +69,13 @@ type ContractsBuilder struct {
 	Prototypes map[string]*insolar.Reference
 	Codes      map[string]*insolar.Reference
 
-	artifactsClient artifacts.Client
 	genesisRef      insolar.Reference
 	artifactManager artifact.Manager
 }
 
 // NewContractBuilder returns a new `ContractsBuilder`,
-// requires initialized artifacts client (legacy), and artifact manager.
-func NewContractBuilder(genesisRef insolar.Reference, ac artifacts.Client, am artifact.Manager) *ContractsBuilder {
+// requires initialized artifact manager.
+func NewContractBuilder(genesisRef insolar.Reference, am artifact.Manager) *ContractsBuilder {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	if err != nil {
 		return nil
@@ -88,7 +86,6 @@ func NewContractBuilder(genesisRef insolar.Reference, ac artifacts.Client, am ar
 		Prototypes: make(map[string]*insolar.Reference),
 		Codes:      make(map[string]*insolar.Reference),
 
-		artifactsClient: ac,
 		genesisRef:      genesisRef,
 		artifactManager: am,
 	}
