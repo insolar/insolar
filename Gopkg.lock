@@ -44,14 +44,6 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:2d0a45fe564d947fc56aab739f6804c511b7ec1eac4a50b585e74bd50efe8d2b"
-  name = "github.com/andreyromancev/belt"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "783b1bf55a0172bf09bab5e71e9d00219e1321b2"
-
-[[projects]]
-  branch = "master"
   digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
@@ -681,7 +673,6 @@
   analyzer-version = 1
   input-imports = [
     "github.com/ThreeDotsLabs/watermill/message",
-    "github.com/andreyromancev/belt",
     "github.com/blang/semver",
     "github.com/dgraph-io/badger",
     "github.com/gogo/protobuf/gogoproto",

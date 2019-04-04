@@ -6,30 +6,28 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/belt"
-	"github.com/insolar/insolar/insolar/belt/flow"
-	"github.com/insolar/insolar/insolar/belt/slot"
+	"github.com/insolar/insolar/insolar/belt/internal/flow"
 )
 
 type Handler struct {
-	cancel chan struct{}
-	pulse  insolar.Pulse
-	slots  struct {
-		past, present, future belt.Slot
-	}
+	cancel  chan struct{}
+	pulse   insolar.Pulse
 	handles struct {
-		past, present, future belt.Inithandle
+		past, present, future belt.MakeHandle
 	}
 }
 
-func NewHandler(pulse insolar.Pulse, past, present, future belt.Inithandle) *Handler {
+func NewHandler(past, present, future belt.MakeHandle) *Handler {
 	h := &Handler{
 		cancel: make(chan struct{}),
 	}
-	h.slots.present = slot.NewSlot()
+	h.handles.past = past
+	h.handles.present = present
+	h.handles.future = future
 	return h
 }
 
-// TODO: subscribe this to watermill "pulse" topic.
+// ChangePulse is a handle for pulse change vent.
 func (h *Handler) ChangePulse(ctx context.Context, msg *message.Message) ([]message.Message, error) {
 	// TODO: decode pulse from message.
 	h.pulse = *insolar.GenesisPulse
@@ -39,18 +37,14 @@ func (h *Handler) ChangePulse(ctx context.Context, msg *message.Message) ([]mess
 	return nil, nil
 }
 
-// TODO: subscribe this to watermill "message_in" topic.
+// HandleMessage is a message handler.
 func (h *Handler) HandleMessage(msg *message.Message) ([]message.Message, error) {
 	// pn := message.Metadata["pulse"]
-	// TODO: Select slot based on pulse.
+	// TODO: Select handler based on pulse.
 
-	f := flow.NewFlowController(msg, h.cancel)
-	id, _ := h.slots.present.Add(f)
-	// TODO: log error.
+	f := flow.NewFlow(msg, h.cancel)
 	go func() {
 		_ = f.Run(msg.Context(), h.handles.present(msg))
-		// TODO: log error.
-		_ = h.slots.present.Remove(id)
 		// TODO: log error.
 	}()
 
