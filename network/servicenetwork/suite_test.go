@@ -384,10 +384,14 @@ func newPulseManagerMock(keeper network.NodeKeeper) *pulseManagerMock {
 	return &pulseManagerMock{pulse: *insolar.GenesisPulse, keeper: keeper}
 }
 
-func (p *pulseManagerMock) Current(ctx context.Context) (*insolar.Pulse, error) {
+func (p *pulseManagerMock) ForPulseNumber(context.Context, insolar.PulseNumber) (insolar.Pulse, error) {
+	panic("not implemented")
+}
+
+func (p *pulseManagerMock) Latest(ctx context.Context) (insolar.Pulse, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	return &p.pulse, nil
+	return p.pulse, nil
 }
 
 func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse, persist bool) error {

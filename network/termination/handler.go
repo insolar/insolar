@@ -52,9 +52,11 @@ package termination
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 
 	"github.com/insolar/insolar/insolar"
 )
@@ -64,8 +66,8 @@ type terminationHandler struct {
 	done        chan insolar.LeaveApproved
 	terminating bool
 
-	Network      insolar.Network      `inject:""`
-	PulseStorage insolar.PulseStorage `inject:""`
+	Network       insolar.Network `inject:""`
+	PulseAccessor pulse.Accessor  `inject:""`
 }
 
 func NewHandler(nw insolar.Network) insolar.TerminationHandler {
@@ -90,7 +92,10 @@ func (t *terminationHandler) leave(ctx context.Context, leaveAfterPulses insolar
 			inslogger.FromContext(ctx).Debug("terminationHandler.Leave() with 0")
 			t.Network.Leave(ctx, 0)
 		} else {
-			pulse, _ := t.PulseStorage.Current(ctx)
+			pulse, err := t.PulseAccessor.Latest(ctx)
+			if err != nil {
+				panic(fmt.Sprintf("smth goes wrong. There is no pulse in the storage. err - %v", err))
+			}
 			pulseDelta := pulse.NextPulseNumber - pulse.PulseNumber
 
 			inslogger.FromContext(ctx).Debugf("terminationHandler.Leave() with leaveAfterPulses: %+v, in pulse %+v", leaveAfterPulses, pulse.PulseNumber+leaveAfterPulses*pulseDelta)

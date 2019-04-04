@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/component"
@@ -42,9 +43,9 @@ type genesisInitializer struct {
 
 	// TODO: @imarkin 28.03.2019 - remove it after all new storages integration (INS-2013, etc)
 	ObjectStorage storage.ObjectStorage `inject:""`
-
-	PulseTracker storage.PulseTracker `inject:""`
-	DropModifier drop.Modifier        `inject:""`
+	DropModifier  drop.Modifier         `inject:""`
+	PulseAppender pulse.Appender        `inject:""`
+	PulseAccessor pulse.Accessor        `inject:""`
 
 	Records object.RecordModifier `inject:""`
 
@@ -78,7 +79,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 	}
 
 	createGenesisRecord := func() (*insolar.Reference, error) {
-		err := gi.PulseTracker.AddPulse(
+		err := gi.PulseAppender.Append(
 			ctx,
 			insolar.Pulse{
 				PulseNumber: insolar.GenesisPulse.PulseNumber,
@@ -94,13 +95,13 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 			return nil, err
 		}
 
-		lastPulse, err := gi.PulseTracker.GetLatestPulse(ctx)
+		lastPulse, err := gi.PulseAccessor.Latest(ctx)
 		if err != nil {
 			return nil, err
 		}
 
 		virtRec := &object.GenesisRecord{}
-		genesisID := object.NewRecordIDFromRecord(gi.PlatformCryptographyScheme, lastPulse.Pulse.PulseNumber, virtRec)
+		genesisID := object.NewRecordIDFromRecord(gi.PlatformCryptographyScheme, lastPulse.PulseNumber, virtRec)
 		rec := record.MaterialRecord{
 			Record: virtRec,
 			JetID:  jetID,

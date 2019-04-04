@@ -25,8 +25,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/utils"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/utils/entropy"
 	"github.com/pkg/errors"
 )
@@ -35,10 +35,12 @@ import (
 type JetCoordinator struct {
 	NodeNet                    insolar.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
-	PulseStorage               insolar.PulseStorage               `inject:""`
-	JetAccessor                jet.Accessor                       `inject:""`
-	PulseTracker               storage.PulseTracker               `inject:""`
-	Nodes                      node.Accessor                      `inject:""`
+
+	PulseAccessor   pulse.Accessor   `inject:""`
+	PulseCalculator pulse.Calculator `inject:""`
+
+	JetAccessor jet.Accessor  `inject:""`
+	Nodes       node.Accessor `inject:""`
 
 	lightChainLimit int
 }
@@ -224,23 +226,12 @@ func (jc *JetCoordinator) Heavy(ctx context.Context, pulse insolar.PulseNumber) 
 // IsBeyondLimit calculates if target pulse is behind clean-up limit
 // or if currentPN|targetPN didn't found in in-memory pulse-storage.
 func (jc *JetCoordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN insolar.PulseNumber) (bool, error) {
-	currentPulse, err := jc.PulseTracker.GetPulse(ctx, currentPN)
-	if err == insolar.ErrNotFound {
-		return true, nil
-	}
+	backPN, err := jc.PulseCalculator.Backwards(ctx, currentPN, jc.lightChainLimit)
 	if err != nil {
-		return false, errors.Wrapf(err, "failed to fetch pulse %v", currentPN)
+		return false, err
 	}
 
-	targetPulse, err := jc.PulseTracker.GetPulse(ctx, targetPN)
-	if err == insolar.ErrNotFound {
-		return true, nil
-	}
-	if err != nil {
-		return false, errors.Wrapf(err, "failed to fetch pulse %v", targetPN)
-	}
-
-	if currentPulse.SerialNumber-targetPulse.SerialNumber < jc.lightChainLimit {
+	if backPN.PulseNumber < targetPN {
 		return false, nil
 	}
 
@@ -249,13 +240,14 @@ func (jc *JetCoordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN
 
 // NodeForJet calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
 func (jc *JetCoordinator) NodeForJet(ctx context.Context, jetID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
+	// Genesis case. When there is no any data on a lme
+	if targetPN <= insolar.GenesisPulse.PulseNumber {
+		return jc.Heavy(ctx, rootPN)
+	}
+
 	toHeavy, err := jc.IsBeyondLimit(ctx, rootPN, targetPN)
 	if err != nil {
 		return nil, err
-	}
-
-	if targetPN <= insolar.GenesisPulse.PulseNumber {
-		toHeavy = true
 	}
 
 	if toHeavy {
@@ -266,6 +258,11 @@ func (jc *JetCoordinator) NodeForJet(ctx context.Context, jetID insolar.ID, root
 
 // NodeForObject calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
 func (jc *JetCoordinator) NodeForObject(ctx context.Context, objectID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
+	// Genesis case. When there is no any data on a lme
+	if targetPN <= insolar.GenesisPulse.PulseNumber {
+		return jc.Heavy(ctx, rootPN)
+	}
+
 	toHeavy, err := jc.IsBeyondLimit(ctx, rootPN, targetPN)
 	if err != nil {
 		return nil, err
@@ -334,7 +331,7 @@ func (jc *JetCoordinator) lightMaterialsForJet(
 }
 
 func (jc *JetCoordinator) entropy(ctx context.Context, pulse insolar.PulseNumber) (insolar.Entropy, error) {
-	current, err := jc.PulseStorage.Current(ctx)
+	current, err := jc.PulseAccessor.Latest(ctx)
 	if err != nil {
 		return insolar.Entropy{}, errors.Wrap(err, "failed to get current pulse")
 	}
@@ -343,12 +340,12 @@ func (jc *JetCoordinator) entropy(ctx context.Context, pulse insolar.PulseNumber
 		return current.Entropy, nil
 	}
 
-	older, err := jc.PulseTracker.GetPulse(ctx, pulse)
+	older, err := jc.PulseAccessor.ForPulseNumber(ctx, pulse)
 	if err != nil {
 		return insolar.Entropy{}, errors.Wrapf(err, "failed to fetch pulse data for pulse %v", pulse)
 	}
 
-	return older.Pulse.Entropy, nil
+	return older.Entropy, nil
 }
 
 func getRefs(
