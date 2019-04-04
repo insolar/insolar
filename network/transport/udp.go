@@ -65,7 +65,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/utils"
 )
 
@@ -97,12 +96,21 @@ func (b *udpSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error
 	return p, nil
 }
 
-func newUDPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress string) (*udpTransport, error) {
-	transport := &udpTransport{baseTransport: newBaseTransport(proxy, publicAddress), conn: conn}
+func newUDPTransport(listenAddress, fixedPublicAddress string) (*udpTransport, string, error) {
+	conn, err := net.ListenPacket("udp", listenAddress)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "failed to listen UDP")
+	}
+	publicAddress, err := Resolve(fixedPublicAddress, conn.LocalAddr().String())
+	if err != nil {
+		return nil, "", errors.Wrap(err, "failed to resolve public address")
+	}
+
+	transport := &udpTransport{baseTransport: newBaseTransport(publicAddress), conn: conn}
 	transport.sendFunc = transport.send
 	transport.serializer = &udpSerializer{}
 
-	return transport, nil
+	return transport, publicAddress, nil
 }
 
 func (t *udpTransport) send(recvAddress string, data []byte) error {
@@ -152,13 +160,13 @@ func (t *udpTransport) prepareListen() (net.PacketConn, error) {
 }
 
 // Start starts networking.
-func (t *udpTransport) Listen(ctx context.Context) error {
+func (t *udpTransport) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
-	logger.Info("[ Listen ] Start UDP transport")
+	logger.Info("[ Start ] Start UDP transport")
 
 	conn, err := t.prepareListen()
 	if err != nil {
-		logger.Infof("[ Listen ] Failed to prepare UDP transport: " + err.Error())
+		logger.Infof("[ Start ] Failed to prepare UDP transport: " + err.Error())
 		return err
 	}
 

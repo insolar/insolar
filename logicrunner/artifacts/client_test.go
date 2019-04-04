@@ -37,7 +37,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -53,13 +52,13 @@ type amSuite struct {
 	cleaner func()
 	db      storage.DBContext
 
-	scheme        insolar.PlatformCryptographyScheme
-	nodeStorage   node.Accessor
+	scheme       insolar.PlatformCryptographyScheme
+	nodeStorage   node.Accessor// TODO: @imarkin 01.04.2019 - remove it after all new storages integration (INS-2013, etc)
 	objectStorage storage.ObjectStorage
-	jetStorage    jet.Storage
-	dropModifier  drop.Modifier
-	dropAccessor  drop.Accessor
-	genesisState  genesis.GenesisState
+
+	jetStorage   jet.Storage
+	dropModifier drop.Modifier
+	dropAccessor drop.Accessor
 }
 
 func NewAmSuite() *amSuite {
@@ -77,7 +76,7 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	tempDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tempDB, _, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.db = tempDB
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
@@ -89,7 +88,6 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	dropStorage := drop.NewStorageDB(dbStore)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
-	s.genesisState = genesis.NewGenesisInitializer()
 
 	s.cm.Inject(
 		s.scheme,
@@ -101,7 +99,6 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 		s.objectStorage,
 		s.dropAccessor,
 		s.dropModifier,
-		s.genesisState,
 	)
 
 	err := s.cm.Init(s.ctx)
@@ -326,7 +323,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	resRecord := object.RequestRecord{
 		Parcel: message.ParcelToBytes(parcel),
 	}
-	finalResponse := &reply.Request{Record: object.SerializeRecord(&resRecord)}
+	finalResponse := &reply.Request{Record: object.EncodeVirtual(&resRecord)}
 
 	mb := testutils.NewMessageBusMock(s.T())
 	mb.SendFunc = func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {

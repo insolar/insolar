@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
@@ -61,8 +62,11 @@ type MessageHandler struct {
 
 	IDLocker storage.IDLocker `inject:""`
 
+	// TODO: @imarkin 27.03.2019 - remove it after all new storages integration (INS-2013, etc)
 	ObjectStorage storage.ObjectStorage `inject:""`
-	Nodes         node.Accessor         `inject:""`
+
+	RecordModifier object.RecordModifier `inject:""`
+	RecordAccessor object.RecordAccessor `inject:""`	Nodes         node.Accessor         `inject:""`
 
 	DBContext     storage.DBContext `inject:""`
 	HotDataWaiter HotDataWaiter     `inject:""`
@@ -259,12 +263,15 @@ func (h *MessageHandler) setReplayHandlers(m *middleware) {
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.SetRecord)
-	rec := object.DeserializeRecord(msg.Record)
+	virtRec, err := object.DecodeVirtual(msg.Record)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't deserialize record")
+	}
 	jetID := jetFromContext(ctx)
 
-	calculatedID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
+	calculatedID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), virtRec)
 
-	switch r := rec.(type) {
+	switch r := virtRec.(type) {
 	case object.Request:
 		if h.RecentStorageProvider.Count() > h.conf.PendingRequestsLimit {
 			return &reply.Error{ErrType: reply.ErrTooManyPendingRequests}, nil
@@ -276,12 +283,19 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Par
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 	}
 
-	id, err := h.ObjectStorage.SetRecord(ctx, jetID, parcel.Pulse(), rec)
-	if err == storage.ErrOverride {
-		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override")
+	id := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), virtRec)
+	rec := record.MaterialRecord{
+		Record: virtRec,
+		JetID:  insolar.JetID(jetID),
+	}
+
+	err = h.RecordModifier.Set(ctx, *id, rec)
+
+	if err == object.ErrOverride {
+		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", virtRec)).Warn("set record override")
 		id = calculatedID
 	} else if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "can't save record into storage")
 	}
 
 	return &reply.ID{ID: *id}, nil
@@ -315,7 +329,7 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel insolar.Parce
 	jetID := jetFromContext(ctx)
 
 	codeRec, err := h.getCode(ctx, msg.Code.Record())
-	if err == insolar.ErrNotFound {
+	if err == object.ErrNotFound {
 		// We don't have code record. Must be on another node.
 		node, err := h.JetCoordinator.NodeForJet(ctx, jetID, parcel.Pulse(), msg.Code.Record().Pulse())
 		if err != nil {
@@ -437,9 +451,10 @@ func (h *MessageHandler) handleGetObject(
 	}
 
 	// Fetch state record.
-	rec, err := h.ObjectStorage.GetRecord(ctx, *stateJet, stateID)
-	if err == insolar.ErrNotFound {
-		// The record wasn't found on the current suitNode. Return redirect to the suitNode that contains it.
+	rec, err := h.RecordAccessor.ForID(ctx, *stateID)
+
+	if err == object.ErrNotFound {
+		// The record wasn't found on the current suitNode. Return redirect to the node that contains it.
 		// We get Jet tree for pulse when given state was added.
 		suitNode, err := h.JetCoordinator.NodeForJet(ctx, *stateJet, parcel.Pulse(), stateID.Pulse())
 		if err != nil {
@@ -469,12 +484,15 @@ func (h *MessageHandler) handleGetObject(
 		}, nil
 	}
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "can't fetch record from storage")
 	}
-	state, ok := rec.(object.State)
+
+	virtRec := rec.Record
+	state, ok := virtRec.(object.State)
 	if !ok {
 		return nil, errors.New("invalid object record")
 	}
+
 	if state.ID() == object.StateDeactivation {
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 	}
@@ -641,8 +659,9 @@ func (h *MessageHandler) handleGetChildren(
 	}
 
 	// Try to fetch the first child.
-	_, err = h.ObjectStorage.GetRecord(ctx, *childJet, currentChild)
-	if err == insolar.ErrNotFound {
+	_, err = h.RecordAccessor.ForID(ctx, *currentChild)
+
+	if err == object.ErrNotFound {
 		node, err := h.JetCoordinator.NodeForJet(ctx, *childJet, parcel.Pulse(), currentChild.Pulse())
 		if err != nil {
 			return nil, err
@@ -662,16 +681,18 @@ func (h *MessageHandler) handleGetChildren(
 		}
 		counter++
 
-		rec, err := h.ObjectStorage.GetRecord(ctx, *childJet, currentChild)
+		rec, err := h.RecordAccessor.ForID(ctx, *currentChild)
+
 		// We don't have this child reference. Return what was collected.
-		if err == insolar.ErrNotFound {
+		if err == object.ErrNotFound {
 			return &reply.Children{Refs: refs, NextFrom: currentChild}, nil
 		}
 		if err != nil {
 			return nil, errors.New("failed to retrieve children")
 		}
 
-		childRec, ok := rec.(*object.ChildRecord)
+		virtRec := rec.Record
+		childRec, ok := virtRec.(*object.ChildRecord)
 		if !ok {
 			return nil, errors.New("failed to retrieve children")
 		}
@@ -689,22 +710,22 @@ func (h *MessageHandler) handleGetChildren(
 }
 
 func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	jetID := jetFromContext(ctx)
 	msg := parcel.Message().(*message.GetRequest)
 
-	rec, err := h.ObjectStorage.GetRecord(ctx, jetID, &msg.Request)
+	rec, err := h.RecordAccessor.ForID(ctx, msg.Request)
 	if err != nil {
-		return nil, errors.New("failed to fetch request")
+		return nil, errors.Wrap(err, "failed to fetch request")
 	}
 
-	req, ok := rec.(*object.RequestRecord)
+	virtRec := rec.Record
+	req, ok := virtRec.(*object.RequestRecord)
 	if !ok {
 		return nil, errors.New("failed to decode request")
 	}
 
 	rep := reply.Request{
 		ID:     msg.Request,
-		Record: object.SerializeRecord(req),
+		Record: object.EncodeVirtual(req),
 	}
 
 	return &rep, nil
@@ -734,8 +755,11 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 		"pulse":  parcel.Pulse(),
 	})
 
-	rec := object.DeserializeRecord(msg.Record)
-	state, ok := rec.(object.State)
+	virtRec, err := object.DecodeVirtual(msg.Record)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't deserialize record")
+	}
+	state, ok := virtRec.(object.State)
 	if !ok {
 		return nil, errors.New("wrong object state record")
 	}
@@ -745,7 +769,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 	calculatedID := object.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
 	//  id will not match the one calculated on the server.
-	err := h.BlobModifier.Set(ctx, *calculatedID, blob.Blob{JetID: insolar.JetID(jetID), Value: msg.Memory})
+	err = h.BlobModifier.Set(ctx, *calculatedID, blob.Blob{JetID: insolar.JetID(jetID), Value: msg.Memory})
 	if err != nil && err != blob.ErrOverride {
 		return nil, errors.Wrap(err, "failed to set blob")
 	}
@@ -786,7 +810,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 	}
 
-	recID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), rec)
+	recID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), virtRec)
 
 	// Index exists and latest record id does not match (preserving chain consistency).
 	// For the case when vm can't save or send result to another vm and it tries to update the same record again
@@ -794,12 +818,19 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 		return nil, errors.New("invalid state record")
 	}
 
-	id, err := h.ObjectStorage.SetRecord(ctx, jetID, parcel.Pulse(), rec)
-	if err == storage.ErrOverride {
-		logger.WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#1)")
+	id := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), virtRec)
+	rec := record.MaterialRecord{
+		Record: virtRec,
+		JetID:  insolar.JetID(jetID),
+	}
+
+	err = h.RecordModifier.Set(ctx, *id, rec)
+
+	if err == object.ErrOverride {
+		logger.WithField("type", fmt.Sprintf("%T", virtRec)).Warn("set record override (#1)")
 		id = recID
 	} else if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "can't save record into storage")
 	}
 	idx.LatestState = id
 	idx.State = state.ID()
@@ -831,8 +862,11 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 
 	msg := parcel.Message().(*message.RegisterChild)
 	jetID := jetFromContext(ctx)
-	rec := object.DeserializeRecord(msg.Record)
-	childRec, ok := rec.(*object.ChildRecord)
+	r, err := object.DecodeVirtual(msg.Record)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't deserialize record")
+	}
+	childRec, ok := r.(*object.ChildRecord)
 	if !ok {
 		return nil, errors.New("wrong child record")
 	}
@@ -865,12 +899,19 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 		return nil, errors.New("invalid child record")
 	}
 
-	child, err = h.ObjectStorage.SetRecord(ctx, jetID, parcel.Pulse(), childRec)
-	if err == storage.ErrOverride {
-		logger.WithField("type", fmt.Sprintf("%T", rec)).Warn("set record override (#2)")
+	child = object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), childRec)
+	rec := record.MaterialRecord{
+		Record: childRec,
+		JetID:  insolar.JetID(jetID),
+	}
+
+	err = h.RecordModifier.Set(ctx, *child, rec)
+
+	if err == object.ErrOverride {
+		logger.WithField("type", fmt.Sprintf("%T", r)).Warn("set record override (#2)")
 		child = recID
 	} else if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "can't save record into storage")
 	}
 
 	idx.ChildPointer = child
@@ -992,16 +1033,18 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insola
 
 func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.ValidationCheck)
-	jetID := jetFromContext(ctx)
 
-	rec, err := h.ObjectStorage.GetRecord(ctx, jetID, &msg.ValidatedState)
+	rec, err := h.RecordAccessor.ForID(ctx, msg.ValidatedState)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch state record")
 	}
-	state, ok := rec.(object.State)
+
+	virtRec := rec.Record
+	state, ok := virtRec.(object.State)
 	if !ok {
 		return nil, errors.New("failed to fetch state record")
 	}
+
 	approved := msg.LatestStateApproved
 	validated := state.PrevStateID()
 	if validated != nil && approved != nil && !approved.Equal(*validated) {
@@ -1012,13 +1055,13 @@ func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel insol
 }
 
 func (h *MessageHandler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeRecord, error) {
-	jetID := jetFromContext(ctx)
-
-	rec, err := h.ObjectStorage.GetRecord(ctx, insolar.ID(jetID), id)
+	rec, err := h.RecordAccessor.ForID(ctx, *id)
 	if err != nil {
 		return nil, err
 	}
-	codeRec, ok := rec.(*object.CodeRecord)
+
+	virtRec := rec.Record
+	codeRec, ok := virtRec.(*object.CodeRecord)
 	if !ok {
 		return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
 	}

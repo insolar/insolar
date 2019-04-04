@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -58,7 +59,7 @@ type handlerSuite struct {
 
 	scheme        insolar.PlatformCryptographyScheme
 	nodeStorage   node.Accessor
-	objectStorage storage.ObjectStorage
+	objectStorage storage.ObjectStorage // TODO @imarkin 27.03.19 remove it after all new storages integration
 	jetStorage    jet.Storage
 
 	dropModifier drop.Modifier
@@ -66,6 +67,9 @@ type handlerSuite struct {
 
 	blobModifier blob.Modifier
 	blobAccessor blob.Accessor
+
+	recordModifier object.RecordModifier
+	recordAccessor object.RecordAccessor
 }
 
 var (
@@ -104,7 +108,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, _, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.db = tmpDB
 	s.scheme = testutils.NewPlatformCryptographyScheme()
@@ -121,6 +125,10 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.blobAccessor = blobStorage
 	s.blobModifier = blobStorage
 
+	recordStorage := object.NewRecordMemory()
+	s.recordModifier = recordStorage
+	s.recordAccessor = recordStorage
+
 	s.cm.Inject(
 		s.scheme,
 		s.db,
@@ -130,6 +138,8 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 		s.objectStorage,
 		s.dropAccessor,
 		s.dropModifier,
+		s.recordAccessor,
+		s.recordModifier,
 	)
 
 	err := s.cm.Init(s.ctx)
@@ -168,6 +178,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.ObjectStorage = s.objectStorage
+	h.RecordAccessor = s.recordAccessor
 
 	idLock := storage.NewIDLockerMock(s.T())
 	idLock.LockMock.Return()
@@ -333,6 +344,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.ObjectStorage = s.objectStorage
+	h.RecordAccessor = s.recordAccessor
 
 	locker := storage.NewIDLockerMock(s.T())
 	locker.LockMock.Return()
@@ -523,6 +535,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.ObjectStorage = s.objectStorage
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
+	h.RecordModifier = s.recordModifier
 
 	blobStorage := blob.NewStorageMemory()
 	h.BlobModifier = blobStorage
@@ -542,7 +555,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	require.NoError(s.T(), err)
 
 	msg := message.UpdateObject{
-		Record: object.SerializeRecord(&amendRecord),
+		Record: object.EncodeVirtual(&amendRecord),
 		Object: *genRandomRef(0),
 	}
 
@@ -603,6 +616,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
+	h.RecordModifier = s.recordModifier
 
 	blobStorage := blob.NewStorageMemory()
 	h.BlobModifier = blobStorage
@@ -626,7 +640,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	require.NoError(s.T(), err)
 
 	msg := message.UpdateObject{
-		Record: object.SerializeRecord(&amendRecord),
+		Record: object.EncodeVirtual(&amendRecord),
 		Object: *genRandomRef(0),
 	}
 	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Object.Record(), &objIndex)
@@ -783,6 +797,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.ObjectStorage = s.objectStorage
+	h.RecordAccessor = s.recordAccessor
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
 
@@ -855,6 +870,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
+	h.RecordModifier = s.recordModifier
 
 	idLockMock := storage.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
@@ -872,7 +888,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	childID := insolar.NewID(0, amendHash.Sum(nil))
 
 	msg := message.RegisterChild{
-		Record: object.SerializeRecord(&childRecord),
+		Record: object.EncodeVirtual(&childRecord),
 		Parent: *genRandomRef(0),
 	}
 
@@ -933,6 +949,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
+	h.RecordModifier = s.recordModifier
 
 	idLockMock := storage.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
@@ -949,7 +966,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 		PrevChild: nil,
 	}
 	msg := message.RegisterChild{
-		Record: object.SerializeRecord(&childRecord),
+		Record: object.EncodeVirtual(&childRecord),
 		Parent: *genRandomRef(0),
 	}
 
@@ -1094,13 +1111,20 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.ObjectStorage = s.objectStorage
+	h.RecordAccessor = s.recordAccessor
 	h.RecentStorageProvider = provideMock
 
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
 
 	s.T().Run("returns not ok when not valid", func(t *testing.T) {
-		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &object.AmendRecord{})
+		virtRec := &object.AmendRecord{}
+		validatedStateID := object.NewRecordIDFromRecord(s.scheme, 0, virtRec)
+		rec := record.MaterialRecord{
+			Record: virtRec,
+			JetID:  insolar.JetID(jetID),
+		}
+		err := s.recordModifier.Set(s.ctx, *validatedStateID, rec)
 		require.NoError(t, err)
 
 		msg := message.ValidationCheck{
@@ -1119,9 +1143,13 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 
 	s.T().Run("returns ok when valid", func(t *testing.T) {
 		approvedStateID := *genRandomID(0)
-		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &object.AmendRecord{
-			PrevState: approvedStateID,
-		})
+		virtRec := &object.AmendRecord{PrevState: approvedStateID}
+		validatedStateID := object.NewRecordIDFromRecord(s.scheme, 0, virtRec)
+		rec := record.MaterialRecord{
+			Record: virtRec,
+			JetID:  insolar.JetID(jetID),
+		}
+		err := s.recordModifier.Set(s.ctx, *validatedStateID, rec)
 		require.NoError(t, err)
 
 		msg := message.ValidationCheck{
@@ -1149,14 +1177,21 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 		MessageHash: []byte{1, 2, 3},
 		Object:      *genRandomID(0),
 	}
-	reqID, err := s.objectStorage.SetRecord(s.ctx, jetID, insolar.FirstPulseNumber, &req)
+
+	reqID := object.NewRecordIDFromRecord(s.scheme, insolar.FirstPulseNumber, &req)
+	rec := record.MaterialRecord{
+		Record: &req,
+		JetID:  insolar.JetID(jetID),
+	}
+	err := s.recordModifier.Set(s.ctx, *reqID, rec)
+	require.NoError(s.T(), err)
 
 	msg := message.GetRequest{
 		Request: *reqID,
 	}
 
 	h := NewMessageHandler(&configuration.Ledger{})
-	h.ObjectStorage = s.objectStorage
+	h.RecordAccessor = s.recordAccessor
 
 	rep, err := h.handleGetRequest(contextWithJet(s.ctx, jetID), &message.Parcel{
 		Msg:         &msg,
@@ -1165,5 +1200,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	require.NoError(s.T(), err)
 	reqReply, ok := rep.(*reply.Request)
 	require.True(s.T(), ok)
-	assert.Equal(s.T(), req, *object.DeserializeRecord(reqReply.Record).(*object.RequestRecord))
+	vrec, _ := object.DecodeVirtual(reqReply.Record)
+	assert.Equal(s.T(), req, *vrec.(*object.RequestRecord))
 }

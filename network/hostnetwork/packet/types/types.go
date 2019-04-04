@@ -62,8 +62,6 @@ const (
 	Cascade
 	// Pulse is packet type to receive Pulse from pulsard and resend it on remote nodes.
 	Pulse
-	// GetRandomHosts is packet type for pulsar daemon to get random hosts from insolar daemon.
-	GetRandomHosts
 	// Bootstrap is packet type for the node bootstrap process.
 	Bootstrap
 	// Authorize is packet type to authorize bootstrapping node on discovery node.

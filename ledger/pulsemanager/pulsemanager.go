@@ -86,8 +86,10 @@ type PulseManager struct {
 	PulseShifter    pulse.Shifter
 
 	BlobSyncAccessor blob.CollectionAccessor
+	BlobCleaner      blob.Cleaner
 
-	BlobCleaner blob.Cleaner
+	RecSyncAccessor object.RecordCollectionAccessor
+	RecCleaner      object.RecordCleaner
 
 	syncClientsPool *heavyclient.Pool
 
@@ -126,6 +128,8 @@ func NewPulseManager(
 	blobCleaner blob.Cleaner,
 	blobSyncAccessor blob.CollectionAccessor,
 	pulseShifter pulse.Shifter,
+	recCleaner object.RecordCleaner,
+	recSyncAccessor object.RecordCollectionAccessor,
 ) *PulseManager {
 	pmconf := conf.PulseManager
 
@@ -142,6 +146,8 @@ func NewPulseManager(
 		BlobCleaner:      blobCleaner,
 		BlobSyncAccessor: blobSyncAccessor,
 		PulseShifter:     pulseShifter,
+		RecCleaner:       recCleaner,
+		RecSyncAccessor:  recSyncAccessor,
 	}
 	return pm
 }
@@ -642,6 +648,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse insolar.Puls
 	m.NodeSetter.Delete(p.PulseNumber)
 	m.DropCleaner.Delete(p.PulseNumber)
 	m.BlobCleaner.Delete(ctx, p.PulseNumber)
+	m.RecCleaner.Remove(ctx, p.PulseNumber)
 	err = m.PulseShifter.Shift(ctx, p.PulseNumber)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
@@ -698,6 +705,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 			m.ReplicaStorage,
 			m.DropAccessor,
 			m.BlobSyncAccessor,
+			m.RecSyncAccessor,
 			m.StorageCleaner,
 			m.DBContext,
 			heavyclient.Options{

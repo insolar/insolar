@@ -111,7 +111,7 @@ func resolveAddress(configuration configuration.HostNetwork) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	address, err := transport.Resolve(configuration.Transport, addr.String())
+	address, err := transport.Resolve(configuration.Transport.FixedPublicAddress, addr.String())
 	if err != nil {
 		return "", err
 	}

@@ -66,7 +66,7 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	db, _, cleaner := storagetest.TmpDB(s.ctx, s.T())
 
 	s.cleaner = cleaner
 	ps := pulse.NewStorageMem()
@@ -275,7 +275,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	expectedID := insolar.NewReference(testutils.RandomID(), testutils.RandomID())
 	activeNodesStorageMock := node.NewAccessorMock(t)
 	activeNodesStorageMock.InRoleFunc = func(p insolar.PulseNumber, p1 insolar.StaticRole) (r []insolar.Node, r1 error) {
-		require.Equal(t, 12, int(p))
+		require.Equal(t, insolar.FirstPulseNumber+1, int(p))
 		require.Equal(t, insolar.StaticRoleLightMaterial, p1)
 
 		return []insolar.Node{{ID: *expectedID}}, nil
@@ -289,6 +289,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 
 	// Act
 	resNode, err := coord.NodeForJet(ctx, testutils.RandomJet(), insolar.FirstPulseNumber, 12)
+	resNode, err := calc.NodeForJet(ctx, testutils.RandomJet(), insolar.FirstPulseNumber, insolar.FirstPulseNumber+1)
 
 	// Assert
 	require.Nil(t, err)

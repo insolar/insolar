@@ -34,9 +34,13 @@ type Handler struct {
 	Bus            insolar.MessageBus                 `inject:""`
 	JetCoordinator insolar.JetCoordinator             `inject:""`
 	HeavySync      insolar.HeavySync                  `inject:""`
-	ObjectStorage  storage.ObjectStorage              `inject:""`
-	BlobAccessor   blob.Accessor                      `inject:""`
 	PCS            insolar.PlatformCryptographyScheme `inject:""`
+
+	// TODO: @imarkin 27.03.2019 - remove it after all new storages integration (INS-2013, etc)
+	ObjectStorage storage.ObjectStorage `inject:""`
+
+	BlobAccessor blob.Accessor         `inject:""`
+	Records      object.RecordAccessor `inject:""`
 
 	jetID insolar.JetID
 }
@@ -109,11 +113,13 @@ func (h *Handler) handleGetObject(
 	}
 
 	// Fetch state record.
-	rec, err := h.ObjectStorage.GetRecord(ctx, insolar.ID(h.jetID), stateID)
+	rec, err := h.Records.ForID(ctx, *stateID)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch state %s for %s", stateID.DebugString(), msg.Head.Record()))
 	}
-	state, ok := rec.(object.State)
+
+	virtRec := rec.Record
+	state, ok := virtRec.(object.State)
 	if !ok {
 		return nil, errors.New("invalid object record")
 	}
@@ -192,8 +198,8 @@ func (h *Handler) handleGetChildren(
 	}
 
 	// Try to fetch the first child.
-	_, err = h.ObjectStorage.GetRecord(ctx, insolar.ID(h.jetID), currentChild)
-	if err == insolar.ErrNotFound {
+	_, err = h.Records.ForID(ctx, *currentChild)
+	if err == object.ErrNotFound {
 		text := fmt.Sprintf(
 			"failed to fetch child %s for %s",
 			currentChild.DebugString(),
@@ -210,16 +216,18 @@ func (h *Handler) handleGetChildren(
 		}
 		counter++
 
-		rec, err := h.ObjectStorage.GetRecord(ctx, insolar.ID(h.jetID), currentChild)
+		rec, err := h.Records.ForID(ctx, *currentChild)
+
 		// We don't have this child reference. Return what was collected.
-		if err == insolar.ErrNotFound {
+		if err == object.ErrNotFound {
 			return &reply.Children{Refs: refs, NextFrom: currentChild}, nil
 		}
 		if err != nil {
 			return nil, errors.New("failed to retrieve children")
 		}
 
-		childRec, ok := rec.(*object.ChildRecord)
+		virtRec := rec.Record
+		childRec, ok := virtRec.(*object.ChildRecord)
 		if !ok {
 			return nil, errors.New("failed to retrieve children")
 		}
@@ -239,19 +247,20 @@ func (h *Handler) handleGetChildren(
 func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetRequest)
 
-	rec, err := h.ObjectStorage.GetRecord(ctx, insolar.ID(h.jetID), &msg.Request)
+	rec, err := h.Records.ForID(ctx, msg.Request)
 	if err != nil {
 		return nil, errors.New("failed to fetch request")
 	}
 
-	req, ok := rec.(*object.RequestRecord)
+	virtRec := rec.Record
+	req, ok := virtRec.(*object.RequestRecord)
 	if !ok {
 		return nil, errors.New("failed to decode request")
 	}
 
 	rep := reply.Request{
 		ID:     msg.Request,
-		Record: object.SerializeRecord(req),
+		Record: object.EncodeVirtual(req),
 	}
 
 	return &rep, nil
@@ -271,13 +280,13 @@ func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parce
 }
 
 func (h *Handler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeRecord, error) {
-	jetID := *insolar.NewJetID(0, nil)
-
-	rec, err := h.ObjectStorage.GetRecord(ctx, insolar.ID(jetID), id)
+	rec, err := h.Records.ForID(ctx, *id)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "can't get record from storage")
 	}
-	codeRec, ok := rec.(*object.CodeRecord)
+
+	virtRec := rec.Record
+	codeRec, ok := virtRec.(*object.CodeRecord)
 	if !ok {
 		return nil, errors.New("failed to retrieve code record")
 	}
@@ -288,9 +297,12 @@ func (h *Handler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeReco
 func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
 	msg := genericMsg.Message().(*message.HeavyPayload)
 
-	if err := h.HeavySync.Store(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Records); err != nil {
+	h.HeavySync.StoreRecords(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Records)
+
+	if err := h.HeavySync.StoreIndices(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Indices); err != nil {
 		return heavyerrreply(err)
 	}
+
 	if err := h.HeavySync.StoreDrop(ctx, msg.JetID, msg.Drop); err != nil {
 		return heavyerrreply(err)
 	}

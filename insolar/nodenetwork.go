@@ -53,8 +53,6 @@ type NetworkNode interface {
 	PublicKey() crypto.PublicKey
 	// Address is the network address of the node
 	Address() string
-	// ConsensusAddress is the network address of the node for consensus packets exchange
-	ConsensusAddress() string
 	// GetGlobuleID returns node current globule id
 	GetGlobuleID() GlobuleID
 	// Version of node software

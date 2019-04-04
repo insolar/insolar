@@ -86,15 +86,18 @@ type Sync struct {
 	ReplicaStorage             storage.ReplicaStorage             `inject:""`
 	DBContext                  storage.DBContext
 
+	RecordModifier object.RecordModifier
+
 	sync.Mutex
 	jetSyncStates map[jetprefix]*syncstate
 }
 
 // NewSync creates new Sync instance.
-func NewSync(db storage.DBContext) *Sync {
+func NewSync(db storage.DBContext, records object.RecordModifier) *Sync {
 	return &Sync{
-		DBContext:     db,
-		jetSyncStates: map[jetprefix]*syncstate{},
+		DBContext:      db,
+		RecordModifier: records,
+		jetSyncStates:  map[jetprefix]*syncstate{},
 	}
 }
 
@@ -166,23 +169,23 @@ func (s *Sync) Start(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumb
 	return nil
 }
 
-// Store stores recieved key/value pairs at heavy storage.
-func (s *Sync) Store(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber, kvs []insolar.KV) error {
+// StoreIndices stores recieved key/value pairs for indices at heavy storage.
+func (s *Sync) StoreIndices(ctx context.Context, jet insolar.ID, pn insolar.PulseNumber, kvs []insolar.KV) error {
 	inslog := inslogger.FromContext(ctx)
-	jetState := s.getJetSyncState(ctx, jetID)
+	jetState := s.getJetSyncState(ctx, jet)
 
 	err := func() error {
 		jetState.Lock()
 		defer jetState.Unlock()
 
 		if jetState.syncpulse == nil {
-			return fmt.Errorf("heavyserver: jet %v not in sync mode", jetID)
+			return fmt.Errorf("heavyserver: jet %v not in sync mode", jet)
 		}
 		if *jetState.syncpulse != pn {
 			return fmt.Errorf("heavyserver: passed pulse %v doesn't match in-sync pulse %v", pn, *jetState.syncpulse)
 		}
 		if jetState.insync {
-			return errSyncInProgress(jetID, pn)
+			return errSyncInProgress(jet, pn)
 		}
 		jetState.insync = true
 		jetState.resetTimeout(ctx, defaultTimeout)
@@ -205,9 +208,9 @@ func (s *Sync) Store(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumb
 	// heavy stats
 	recordsCount := int64(len(kvs))
 	recordsSize := insolar.KVSize(kvs)
-	inslog.Debugf("heavy store stat: JetID=%v, recordsCount+=%v, recordsSize+=%v\n", jetID.DebugString(), recordsCount, recordsSize)
+	inslog.Debugf("heavy store stat: JetID=%v, recordsCount+=%v, recordsSize+=%v\n", jet.DebugString(), recordsCount, recordsSize)
 
-	ctx = insmetrics.InsertTag(ctx, tagJet, jetID.DebugString())
+	ctx = insmetrics.InsertTag(ctx, tagJet, jet.DebugString())
 	stats.Record(ctx,
 		statSyncedCount.M(1),
 		statSyncedRecords.M(recordsCount),
@@ -248,6 +251,28 @@ func (s *Sync) StoreBlobs(ctx context.Context, pn insolar.PulseNumber, rawBlobs 
 		}
 	}
 	return nil
+}
+
+// StoreRecords stores recieved records at heavy storage.
+func (s *Sync) StoreRecords(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber, rawRecords [][]byte) {
+	inslog := inslogger.FromContext(ctx)
+
+	for _, rawRec := range rawRecords {
+		rec, err := object.DecodeMaterial(rawRec)
+		if err != nil {
+			inslog.Error(err, "heavyserver: deserialize record failed")
+			continue
+		}
+
+		virtRec := rec.Record
+
+		id := object.NewRecordIDFromRecord(s.PlatformCryptographyScheme, pn, virtRec)
+		err = s.RecordModifier.Set(ctx, *id, rec)
+		if err != nil {
+			inslog.Error(err, "heavyserver: store record failed")
+			continue
+		}
+	}
 }
 
 // Stop successfully stops replication for specified pulse.

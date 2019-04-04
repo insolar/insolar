@@ -316,7 +316,7 @@ func (s *testSuite) newNetworkNode(name string) *networkNode {
 }
 
 func incrementTestPort() int {
-	result := atomic.AddUint32(&testNetworkPort, 2) // coz consensus transport port+=1
+	result := atomic.AddUint32(&testNetworkPort, 1)
 	return int(result)
 }
 

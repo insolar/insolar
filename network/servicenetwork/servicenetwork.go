@@ -53,9 +53,11 @@ package servicenetwork
 import (
 	"context"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -73,8 +75,6 @@ import (
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 )
 
 // ServiceNetwork is facade for network.
@@ -124,25 +124,6 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method insolar.Rem
 	n.Controller.RemoteProcedureRegister(name, method)
 }
 
-// incrementPort increments port number if it not equals 0
-func incrementPort(address string) (string, error) {
-	parts := strings.Split(address, ":")
-	if len(parts) < 2 {
-		return address, errors.New("failed to get port from address " + address)
-	}
-	port, err := strconv.Atoi(parts[len(parts)-1])
-	if err != nil {
-		return address, err
-	}
-
-	if port != 0 {
-		port++
-	}
-
-	parts = append(parts[:len(parts)-1], strconv.Itoa(port))
-	return strings.Join(parts, ":"), nil
-}
-
 // Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
 	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.CertificateManager.GetCertificate().GetNodeRef().String())
@@ -150,15 +131,9 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to create internal transport")
 	}
 
-	var consensusAddress string
-	if n.cfg.Host.Transport.FixedPublicAddress != "" {
-		// workaround for Consensus transport, port+=1 of default transport
-		consensusAddress, err = incrementPort(n.cfg.Host.Transport.Address)
-		if err != nil {
-			return errors.Wrap(err, "failed to increment port.")
-		}
-	} else {
-		consensusAddress = n.NodeKeeper.GetOrigin().ConsensusAddress()
+	consensusAddress := n.cfg.Host.Transport.Address
+	if n.cfg.Host.Transport.FixedPublicAddress == "" {
+		consensusAddress = n.NodeKeeper.GetOrigin().Address()
 	}
 
 	consensusNetwork, err := hostnetwork.NewConsensusNetwork(

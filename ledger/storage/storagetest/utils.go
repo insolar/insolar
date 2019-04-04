@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -69,7 +70,7 @@ func DisableBootstrap() Option {
 // TmpDB returns BadgerDB's storage implementation and cleanup function.
 //
 // Creates BadgerDB in temporary directory and uses t for errors reporting.
-func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBContext, func()) {
+func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBContext, *object.RecordMemory, func()) {
 	opts := &tmpDBOptions{}
 	for _, o := range options {
 		o(opts)
@@ -96,14 +97,24 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 		ps = pulse.NewStorageMem()
 	}
 
+	objectStorage := storage.NewObjectStorage()
+	pulseTracker := storage.NewPulseTracker()
+
+	recordStorage := object.NewRecordMemory()
+	recordAccessor := recordStorage
+	recordModifier := recordStorage
+
 	cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
 		ps,
 		tmpDB,
 		jet.NewStore(),
 		store.NewMemoryMockDB(),
-		storage.NewObjectStorage(),
+		objectStorage,
 		ds,
+		pulseTracker,
+		recordAccessor,
+		recordModifier,
 	)
 
 	if !opts.nobootstrap {
@@ -120,7 +131,7 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 		t.Error("ComponentManager start failed", err)
 	}
 
-	return tmpDB, func() {
+	return tmpDB, recordModifier, func() {
 		rmErr := os.RemoveAll(tmpdir)
 		if rmErr != nil {
 			t.Fatal("temporary tmpDB dir cleanup failed", rmErr)

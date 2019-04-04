@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/ledger/storage/object"
 )
 
 // GetLedgerComponents returns ledger components.
@@ -65,6 +66,10 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	var pulseCalculator pulse.Calculator
 	var pulseShifter pulse.Shifter
 
+	var recordModifier object.RecordModifier
+	var recordAccessor object.RecordAccessor
+	var recSyncAccessor object.RecordCollectionAccessor
+	var recordCleaner object.RecordCleaner
 	// Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
 	switch certificate.GetRole() {
 	case insolar.StaticRoleUnknown, insolar.StaticRoleHeavyMaterial:
@@ -81,6 +86,10 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		blobDB := blob.NewStorageDB(db)
 		blobModifier = blobDB
 		blobAccessor = blobDB
+
+		records := object.NewRecordDB(db)
+		recordModifier = records
+		recordAccessor = records
 	default:
 		ps := pulse.NewStorageMem()
 		pulseAccessor = ps
@@ -98,6 +107,12 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		blobAccessor = blobDB
 		blobCleaner = blobDB
 		blobCollectionAccessor = blobDB
+
+		records := object.NewRecordMemory()
+		recordModifier = records
+		recordAccessor = records
+		recSyncAccessor = records
+		recordCleaner = records
 	}
 
 	pm := pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, pulseShifter)
@@ -113,6 +128,8 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		pulseAccessor,
 		pulseAppender,
 		pulseCalculator,
+		recordModifier,
+		recordAccessor,
 		storage.NewCleaner(),
 		jet.NewStore(),
 		node.NewStorage(),
@@ -122,15 +139,15 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewHotDataWaiterConcrete(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),
-		heavyserver.NewSync(legacyDB),
+		heavyserver.NewSync(legacyDB, recordModifier),
 	}
 
 	switch certificate.GetRole() {
 	case insolar.StaticRoleUnknown, insolar.StaticRoleLightMaterial:
 		components = append(components, artifactmanager.NewMessageHandler(&conf))
-		components = append(components, pm)
+		components = append(components, pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, recordCleaner, recSyncAccessor))
 	case insolar.StaticRoleHeavyMaterial:
-		components = append(components, pm)
+		components = append(components, pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, recordCleaner, recSyncAccessor))
 		components = append(components, heavy.Components()...)
 	}
 
