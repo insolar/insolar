@@ -29,7 +29,6 @@ type Transport struct {
 // HostNetwork holds configuration for HostNetwork
 type HostNetwork struct {
 	Transport           Transport
-	IsRelay             bool  // set if node must be relay explicit
 	InfinityBootstrap   bool  // set true for infinity tries to bootstrap
 	MinTimeout          int   // bootstrap timeout min
 	MaxTimeout          int   // bootstrap timeout max
@@ -45,7 +44,6 @@ func NewHostNetwork() HostNetwork {
 
 	return HostNetwork{
 		Transport:           transport,
-		IsRelay:             false,
 		MinTimeout:          1,
 		MaxTimeout:          60,
 		TimeoutMult:         2,

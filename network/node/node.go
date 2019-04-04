@@ -53,9 +53,6 @@ package node
 import (
 	"crypto"
 	"encoding/gob"
-	"fmt"
-	"strconv"
-	"strings"
 	"sync"
 	"sync/atomic"
 
@@ -83,7 +80,6 @@ type node struct {
 	NodePublicKey crypto.PublicKey
 
 	NodeAddress string
-	CAddress    string
 
 	versionMutex sync.RWMutex
 	NodeVersion  string
@@ -124,17 +120,12 @@ func newMutableNode(
 	state insolar.NodeState,
 	address, version string) MutableNode {
 
-	consensusAddress, err := IncrementPort(address)
-	if err != nil {
-		panic(err)
-	}
 	return &node{
 		NodeID:        id,
 		NodeShortID:   utils.GenerateUintShortID(id),
 		NodeRole:      role,
 		NodePublicKey: publicKey,
 		NodeAddress:   address,
-		CAddress:      consensusAddress,
 		NodeVersion:   version,
 		state:         uint32(state),
 	}
@@ -166,10 +157,6 @@ func (n *node) PublicKey() crypto.PublicKey {
 
 func (n *node) Address() string {
 	return n.NodeAddress
-}
-
-func (n *node) ConsensusAddress() string {
-	return n.CAddress
 }
 
 func (n *node) GetGlobuleID() insolar.GlobuleID {
@@ -215,21 +202,4 @@ func ClaimToNode(version string, claim *packets.NodeJoinClaim) (insolar.NetworkN
 		version)
 	node.SetShortID(claim.ShortNodeID)
 	return node, nil
-}
-
-// IncrementPort increments port number if it not equals 0
-func IncrementPort(address string) (string, error) {
-	parts := strings.Split(address, ":")
-	if len(parts) != 2 {
-		return address, errors.New("failed to get port from address " + address)
-	}
-	port, err := strconv.Atoi(parts[1])
-	if err != nil {
-		return address, err
-	}
-
-	if port != 0 {
-		port++
-	}
-	return fmt.Sprintf("%s:%d", parts[0], port), nil
 }
