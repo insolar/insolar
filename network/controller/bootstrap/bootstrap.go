@@ -365,7 +365,9 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 	bc.NodeKeeper.SetInitialSnapshot(activeNodes)
 	logger.Infof("[ BootstrapDiscovery ] Added active nodes: %s", strings.Join(activeNodesStr, ", "))
 
-	// go bc.startCyclicBootstrap(ctx)
+	if bc.options.CyclicBootstrapEnabled {
+		go bc.startCyclicBootstrap(ctx)
+	}
 
 	return parseBotstrapResults(bootstrapResults), nil
 }
