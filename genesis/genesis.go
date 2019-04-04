@@ -73,7 +73,6 @@ type Genesis struct {
 	nodeDomainRef *insolar.Reference
 	rootMemberRef *insolar.Reference
 	prototypeRefs map[string]*insolar.Reference
-	isGenesis     bool
 	config        *Config
 	keyOut        string
 
@@ -88,14 +87,12 @@ type Genesis struct {
 }
 
 // NewGenesis creates new Genesis
-func NewGenesis(isGenesis bool, genesisConfigPath string, genesisKeyOut string) (*Genesis, error) {
-	var err error
-	genesis := &Genesis{}
-	genesis.rootDomainRef = &insolar.Reference{}
-	genesis.isGenesis = isGenesis
-	if isGenesis {
-		genesis.config, err = ParseGenesisConfig(genesisConfigPath)
-		genesis.keyOut = genesisKeyOut
+func NewGenesis(genesisConfigPath string, genesisKeyOut string) (*Genesis, error) {
+	config, err := ParseGenesisConfig(genesisConfigPath)
+	genesis := &Genesis{
+		rootDomainRef: &insolar.Reference{},
+		config:        config,
+		keyOut:        genesisKeyOut,
 	}
 	return genesis, err
 }

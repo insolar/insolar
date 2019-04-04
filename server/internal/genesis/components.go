@@ -134,7 +134,7 @@ func initComponents(
 
 	var gen insolar.Genesis
 	if isGenesis {
-		gen, err = genesis.NewGenesis(isGenesis, genesisConfigPath, genesisKeyOut)
+		gen, err = genesis.NewGenesis(genesisConfigPath, genesisKeyOut)
 		checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")
 	}
 
