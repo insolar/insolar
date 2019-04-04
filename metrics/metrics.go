@@ -18,6 +18,7 @@ package metrics
 
 import (
 	"context"
+	"fmt"
 	"net"
 	"net/http"
 	"strings"
@@ -59,6 +60,22 @@ func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *promet
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhandler)
 	mux.Handle("/_status", newProcStatus())
+	mux.HandleFunc("/debug/loglevel", func(w http.ResponseWriter, r *http.Request) {
+		values := r.URL.Query()
+		levelStr := "(nil)"
+		if values["level"] != nil {
+			levelStr = values["level"][0]
+		}
+		_, err := insolar.ParseLevel(levelStr)
+		if err != nil {
+			w.WriteHeader(500)
+			fmt.Fprintf(w, "Invalid level '%v'\n", levelStr)
+			return
+		}
+
+		w.WriteHeader(200)
+		fmt.Fprintf(w, "OK, new log level: '%v'\n", levelStr)
+	})
 	pprof.Handle(mux)
 	if cfg.ZpagesEnabled {
 		// https://opencensus.io/zpages/
