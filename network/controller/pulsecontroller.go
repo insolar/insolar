@@ -80,7 +80,6 @@ type pulseController struct {
 
 func (pc *pulseController) Init(ctx context.Context) error {
 	pc.Network.RegisterRequestHandler(types.Pulse, pc.processPulse)
-	pc.Network.RegisterRequestHandler(types.GetRandomHosts, pc.processGetRandomHosts)
 	return nil
 }
 
@@ -100,12 +99,6 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Req
 		log.Debugf("Ignore pulse %v from pulsar, waiting for consensus phase1 packet", data.Pulse)
 	}
 	return pc.Network.BuildResponse(ctx, request, &packet.ResponsePulse{Success: true, Error: ""}), nil
-}
-
-func (pc *pulseController) processGetRandomHosts(ctx context.Context, request network.Request) (network.Response, error) {
-	data := request.GetData().(*packet.RequestGetRandomHosts)
-	randomHosts := pc.Resolver.GetRandomNodes(data.HostsNumber)
-	return pc.Network.BuildResponse(ctx, request, &packet.ResponseGetRandomHosts{Hosts: randomHosts}), nil
 }
 
 func (pc *pulseController) verifyPulseSign(pulse insolar.Pulse) (bool, error) {

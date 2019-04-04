@@ -121,43 +121,6 @@ func (t *Table) AddToKnownHosts(h *host.Host) {
 	t.addRemoteHost(h)
 }
 
-// GetRandomNodes get a specified number of random nodes. Returns less if there are not enough nodes in network.
-func (t *Table) GetRandomNodes(count int) []host.Host {
-	// TODO: this workaround returns all nodes
-	nodes := t.NodeKeeper.GetAccessor().GetActiveNodes()
-	result := make([]host.Host, 0)
-	for _, n := range nodes {
-		address, err := host.NewAddress(n.Address())
-		if err != nil {
-			log.Error(err)
-			continue
-		}
-		result = append(result, host.Host{NodeID: n.ID(), Address: address})
-	}
-
-	// TODO: original implementation
-	/*
-		// not so random for now
-		nodes := t.NodeKeeper.GetActiveNodes()
-		//return nodes
-		resultCount := count
-		if count > len(nodes) {
-			resultCount = len(nodes)
-		}
-		result := make([]host.Host, 0)
-		for i := 0; i < resultCount; i++ {
-			address, err := host.NewAddress(nodes[i].Address())
-			if err != nil {
-				log.Error(err)
-				continue
-			}
-			h := host.Host{NodeID: nodes[i].ID(), Address: address}
-			result = append(result, h)
-		}
-	*/
-	return result
-}
-
 // Rebalance recreate shards of routing table with known hosts according to new partition policy.
 func (t *Table) Rebalance(network.PartitionPolicy) {
 	log.Warn("not implemented")
