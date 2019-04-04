@@ -24,6 +24,7 @@ import (
 
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/storage/blob"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -52,7 +53,6 @@ type MessageHandler struct {
 	JetCoordinator             insolar.JetCoordinator             `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
 	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
-	PulseStorage               insolar.PulseStorage               `inject:""`
 	JetStorage                 jet.Storage                        `inject:""`
 
 	DropModifier drop.Modifier `inject:""`
@@ -67,11 +67,10 @@ type MessageHandler struct {
 
 	RecordModifier object.RecordModifier `inject:""`
 	RecordAccessor object.RecordAccessor `inject:""`
+	Nodes          node.Accessor         `inject:""`
 
-	Nodes         node.Accessor        `inject:""`
-	PulseTracker  storage.PulseTracker `inject:""`
-	DBContext     storage.DBContext    `inject:""`
-	HotDataWaiter HotDataWaiter        `inject:""`
+	DBContext     storage.DBContext `inject:""`
+	HotDataWaiter HotDataWaiter     `inject:""`
 
 	replayHandlers map[insolar.MessageType]insolar.MessageHandler
 	conf           *configuration.Ledger
@@ -409,7 +408,7 @@ func (h *MessageHandler) handleGetObject(
 		stateJet *insolar.ID
 	)
 	onHeavy, err := h.JetCoordinator.IsBeyondLimit(ctx, parcel.Pulse(), stateID.Pulse())
-	if err != nil {
+	if err != nil && err != pulse.ErrNotFound {
 		return nil, err
 	}
 	if onHeavy {
@@ -638,7 +637,7 @@ func (h *MessageHandler) handleGetChildren(
 
 	var childJet *insolar.ID
 	onHeavy, err := h.JetCoordinator.IsBeyondLimit(ctx, parcel.Pulse(), currentChild.Pulse())
-	if err != nil {
+	if err != nil && err != pulse.ErrNotFound {
 		return nil, err
 	}
 	if onHeavy {

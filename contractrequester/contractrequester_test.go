@@ -43,31 +43,25 @@ func mockMessageBus(t *testing.T, result insolar.Reply) *testutils.MessageBusMoc
 }
 
 func TestNew(t *testing.T) {
-	ps := testutils.NewPulseStorageMock(t)
 	messageBus := mockMessageBus(t, nil)
 
 	contractRequester, err := New()
 
 	cm := &component.Manager{}
-	cm.Inject(ps, messageBus, contractRequester)
+	cm.Inject(messageBus, contractRequester)
 
 	require.NoError(t, err)
 	require.Equal(t, messageBus, contractRequester.MessageBus)
-	require.Equal(t, ps, contractRequester.PulseStorage)
 }
 
 func TestContractRequester_SendRequest(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	ref := testutils.RandomRef()
 
-	pm := testutils.NewPulseStorageMock(t)
-	pm.CurrentMock.Return(insolar.GenesisPulse, nil)
-
 	mbm := mockMessageBus(t, &reply.RegisterRequest{})
 	cReq, err := New()
 	assert.NoError(t, err)
 	cReq.MessageBus = mbm
-	cReq.PulseStorage = pm
 
 	mbm.MustRegisterMock.Return()
 	cReq.Start(ctx)
@@ -100,14 +94,10 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	ref := testutils.RandomRef()
 
-	pm := testutils.NewPulseStorageMock(t)
-	pm.CurrentMock.Return(insolar.GenesisPulse, nil)
-
 	mbm := mockMessageBus(t, &reply.CallMethod{})
 	cReq, err := New()
 	assert.NoError(t, err)
 	cReq.MessageBus = mbm
-	cReq.PulseStorage = pm
 
 	mbm.MustRegisterMock.Return()
 	err = cReq.Start(ctx)

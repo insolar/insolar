@@ -14,5 +14,5 @@
 // limitations under the License.
 //
 
-// Package pulse contains pulse storage.
+// Package Pulse contains Pulse storage.
 package pulse
