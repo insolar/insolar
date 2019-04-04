@@ -240,13 +240,14 @@ func (jc *JetCoordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN
 
 // NodeForJet calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
 func (jc *JetCoordinator) NodeForJet(ctx context.Context, jetID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
+	// Genesis case. When there is no any data on a lme
+	if targetPN <= insolar.GenesisPulse.PulseNumber {
+		return jc.Heavy(ctx, rootPN)
+	}
+
 	toHeavy, err := jc.IsBeyondLimit(ctx, rootPN, targetPN)
 	if err != nil {
 		return nil, err
-	}
-
-	if targetPN <= insolar.GenesisPulse.PulseNumber {
-		toHeavy = true
 	}
 
 	if toHeavy {
@@ -257,6 +258,11 @@ func (jc *JetCoordinator) NodeForJet(ctx context.Context, jetID insolar.ID, root
 
 // NodeForObject calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
 func (jc *JetCoordinator) NodeForObject(ctx context.Context, objectID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
+	// Genesis case. When there is no any data on a lme
+	if targetPN <= insolar.GenesisPulse.PulseNumber {
+		return jc.Heavy(ctx, rootPN)
+	}
+
 	toHeavy, err := jc.IsBeyondLimit(ctx, rootPN, targetPN)
 	if err != nil {
 		return nil, err
