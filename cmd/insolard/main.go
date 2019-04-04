@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/server"
 )
@@ -64,13 +65,11 @@ func main() {
 	jww.SetStdoutThreshold(jww.LevelDebug)
 
 	if params.isGenesis {
-		s := server.NewGenesisServer(
+		genesis.NewInitializer(
 			params.configPath,
-			params.traceEnabled,
 			params.genesisConfigPath,
 			params.genesisKeyOut,
-		)
-		s.Serve()
+		).Init()
 		return
 	}
 

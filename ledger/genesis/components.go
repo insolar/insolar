@@ -79,23 +79,15 @@ func initBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 func initCertificateManager(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	isBootstrap bool,
 	cryptographyService insolar.CryptographyService,
 	keyProcessor insolar.KeyProcessor,
 ) *certificate.CertificateManager {
-	var certManager *certificate.CertificateManager
-	var err error
 
 	publicKey, err := cryptographyService.GetPublicKey()
 	checkError(ctx, err, "failed to retrieve node public key")
 
-	if isBootstrap {
-		certManager, err = certificate.NewManagerCertificateWithKeys(publicKey, keyProcessor)
-		checkError(ctx, err, "failed to start Certificate (bootstrap mode)")
-	} else {
-		certManager, err = certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
-		checkError(ctx, err, "failed to start Certificate")
-	}
+	certManager, err := certificate.NewManagerCertificateWithKeys(publicKey, keyProcessor)
+	checkError(ctx, err, "failed to start Certificate (bootstrap mode)")
 
 	return certManager
 }
@@ -109,7 +101,6 @@ func initComponents(
 	keyStore insolar.KeyStore,
 	keyProcessor insolar.KeyProcessor,
 	certManager insolar.CertificateManager,
-	isGenesis bool,
 	genesisConfigPath string,
 	genesisKeyOut string,
 
@@ -121,7 +112,7 @@ func initComponents(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, isGenesis)
+	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, true)
 	checkError(ctx, err, "failed to start Network")
 
 	terminationHandler := termination.NewHandler(nw)
@@ -132,11 +123,8 @@ func initComponents(
 	messageBus, err := messagebus.NewMessageBus(cfg)
 	checkError(ctx, err, "failed to start MessageBus")
 
-	var gen insolar.Genesis
-	if isGenesis {
-		gen, err = genesis.NewGenesis(genesisConfigPath, genesisKeyOut)
-		checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")
-	}
+	gen, err := genesis.NewGenesis(genesisConfigPath, genesisKeyOut)
+	checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")
 
 	contractRequester, err := contractrequester.New()
 	checkError(ctx, err, "failed to start ContractRequester")

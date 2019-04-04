@@ -37,7 +37,6 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/ledger/storage/genesis"
@@ -578,6 +577,7 @@ func (g *Genesis) uploadKeys(ctx context.Context, path string, amount int) ([]no
 func (g *Genesis) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting Genesis ...")
+	defer inslog.Info("[ Genesis ] Finished Genesis ...")
 
 	g.MBLock.Unlock(ctx)
 	defer g.MBLock.Lock(ctx)
@@ -595,34 +595,35 @@ func (g *Genesis) Start(ctx context.Context) error {
 		panic(errors.Wrap(err, "[ Genesis ] Couldn't create rootdomain instance"))
 	}
 
+	inslog.Info("[ Genesis ] NewContractBuilder ...")
 	cb := NewContractBuilder(*g.GenesisState.GenesisRef(), g.ArtifactManager)
 	g.prototypeRefs = cb.Prototypes
 	defer cb.Clean()
 
+	inslog.Info("[ Genesis ] buildSmartContracts ...")
 	err = buildSmartContracts(ctx, cb, rootDomainID)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] couldn't build contracts"))
 	}
 
+	inslog.Info("[ Genesis ] getKeysFromFile ...")
 	_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
 	}
 
+	inslog.Info("[ Genesis ] activateSmartContracts ...")
 	nodes, err := g.activateSmartContracts(ctx, cb, rootPubKey, rootDomainID)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
 	}
 
+	inslog.Info("[ Genesis ] makeCertificates ...")
 	err = g.makeCertificates(nodes)
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] Couldn't generate discovery certificates")
 	}
 
-	err = utils.SendGracefulStopSignal()
-	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] Couldn't stop genesis graceful")
-	}
 	return nil
 }
 
