@@ -152,6 +152,21 @@ type nodekeeper struct {
 
 	Cryptography       insolar.CryptographyService `inject:""`
 	TerminationHandler insolar.TerminationHandler  `inject:""`
+
+	gateway   network.Gateway
+	gatewayMu sync.RWMutex
+}
+
+func (nk *nodekeeper) Gateway() network.Gateway {
+	nk.gatewayMu.RLock()
+	defer nk.gatewayMu.RUnlock()
+	return nk.gateway
+}
+
+func (nk *nodekeeper) SetGateway(g network.Gateway) {
+	nk.gatewayMu.Lock()
+	defer nk.gatewayMu.Unlock()
+	nk.gateway = g
 }
 
 func (nk *nodekeeper) GetSnapshotCopy() *node.Snapshot {

@@ -309,3 +309,8 @@ type Mutator interface {
 	// AddWorkingNode adds active node to index and underlying snapshot so it is accessible via GetActiveNode(s).
 	AddWorkingNode(n insolar.NetworkNode)
 }
+
+// Gateway responds for whole network state
+type Gateway interface {
+	GetState() insolar.NetworkState
+}

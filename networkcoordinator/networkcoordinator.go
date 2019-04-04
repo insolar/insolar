@@ -56,6 +56,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
+// TODO @vany put this to Gateway
 // NetworkCoordinator encapsulates logic of network configuration
 type NetworkCoordinator struct {
 	CertificateManager insolar.CertificateManager  `inject:""`
