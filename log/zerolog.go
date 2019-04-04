@@ -141,7 +141,7 @@ func (z zerologAdapter) Panicf(format string, args ...interface{}) {
 	z.logger.Panic().Msgf(format, args...)
 }
 
-// SetLevel sets log level
+// WithLevel sets log level
 func (z *zerologAdapter) WithLevel(level string) (insolar.Logger, error) {
 	levelNumber, err := insolar.ParseLevel(level)
 	if err != nil {
