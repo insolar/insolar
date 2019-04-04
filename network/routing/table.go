@@ -67,7 +67,7 @@ type Table struct {
 func (t *Table) ResolveConsensus(id insolar.ShortNodeID) (*host.Host, error) {
 	node := t.NodeKeeper.GetAccessor().GetActiveNodeByShortID(id)
 	if node != nil {
-		return host.NewHostNS(node.ConsensusAddress(), node.ID(), node.ShortID())
+		return host.NewHostNS(node.Address(), node.ID(), node.ShortID())
 	}
 	h := t.NodeKeeper.GetConsensusInfo().ResolveConsensus(id)
 	if h == nil {
@@ -79,7 +79,7 @@ func (t *Table) ResolveConsensus(id insolar.ShortNodeID) (*host.Host, error) {
 func (t *Table) ResolveConsensusRef(ref insolar.Reference) (*host.Host, error) {
 	node := t.NodeKeeper.GetAccessor().GetActiveNode(ref)
 	if node != nil {
-		return host.NewHostNS(node.ConsensusAddress(), node.ID(), node.ShortID())
+		return host.NewHostNS(node.Address(), node.ID(), node.ShortID())
 	}
 	h := t.NodeKeeper.GetConsensusInfo().ResolveConsensusRef(ref)
 	if h == nil {

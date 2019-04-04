@@ -23,11 +23,6 @@ type NetworkNodeMock struct {
 	AddressPreCounter uint64
 	AddressMock       mNetworkNodeMockAddress
 
-	ConsensusAddressFunc       func() (r string)
-	ConsensusAddressCounter    uint64
-	ConsensusAddressPreCounter uint64
-	ConsensusAddressMock       mNetworkNodeMockConsensusAddress
-
 	GetGlobuleIDFunc       func() (r insolar.GlobuleID)
 	GetGlobuleIDCounter    uint64
 	GetGlobuleIDPreCounter uint64
@@ -78,7 +73,6 @@ func NewNetworkNodeMock(t minimock.Tester) *NetworkNodeMock {
 	}
 
 	m.AddressMock = mNetworkNodeMockAddress{mock: m}
-	m.ConsensusAddressMock = mNetworkNodeMockConsensusAddress{mock: m}
 	m.GetGlobuleIDMock = mNetworkNodeMockGetGlobuleID{mock: m}
 	m.GetStateMock = mNetworkNodeMockGetState{mock: m}
 	m.IDMock = mNetworkNodeMockID{mock: m}
@@ -220,140 +214,6 @@ func (m *NetworkNodeMock) AddressFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.AddressFunc != nil {
 		return atomic.LoadUint64(&m.AddressCounter) > 0
-	}
-
-	return true
-}
-
-type mNetworkNodeMockConsensusAddress struct {
-	mock              *NetworkNodeMock
-	mainExpectation   *NetworkNodeMockConsensusAddressExpectation
-	expectationSeries []*NetworkNodeMockConsensusAddressExpectation
-}
-
-type NetworkNodeMockConsensusAddressExpectation struct {
-	result *NetworkNodeMockConsensusAddressResult
-}
-
-type NetworkNodeMockConsensusAddressResult struct {
-	r string
-}
-
-//Expect specifies that invocation of NetworkNode.ConsensusAddress is expected from 1 to Infinity times
-func (m *mNetworkNodeMockConsensusAddress) Expect() *mNetworkNodeMockConsensusAddress {
-	m.mock.ConsensusAddressFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NetworkNodeMockConsensusAddressExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of NetworkNode.ConsensusAddress
-func (m *mNetworkNodeMockConsensusAddress) Return(r string) *NetworkNodeMock {
-	m.mock.ConsensusAddressFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &NetworkNodeMockConsensusAddressExpectation{}
-	}
-	m.mainExpectation.result = &NetworkNodeMockConsensusAddressResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of NetworkNode.ConsensusAddress is expected once
-func (m *mNetworkNodeMockConsensusAddress) ExpectOnce() *NetworkNodeMockConsensusAddressExpectation {
-	m.mock.ConsensusAddressFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &NetworkNodeMockConsensusAddressExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *NetworkNodeMockConsensusAddressExpectation) Return(r string) {
-	e.result = &NetworkNodeMockConsensusAddressResult{r}
-}
-
-//Set uses given function f as a mock of NetworkNode.ConsensusAddress method
-func (m *mNetworkNodeMockConsensusAddress) Set(f func() (r string)) *NetworkNodeMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.ConsensusAddressFunc = f
-	return m.mock
-}
-
-//ConsensusAddress implements github.com/insolar/insolar/insolar.NetworkNode interface
-func (m *NetworkNodeMock) ConsensusAddress() (r string) {
-	counter := atomic.AddUint64(&m.ConsensusAddressPreCounter, 1)
-	defer atomic.AddUint64(&m.ConsensusAddressCounter, 1)
-
-	if len(m.ConsensusAddressMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ConsensusAddressMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NetworkNodeMock.ConsensusAddress.")
-			return
-		}
-
-		result := m.ConsensusAddressMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the NetworkNodeMock.ConsensusAddress")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.ConsensusAddressMock.mainExpectation != nil {
-
-		result := m.ConsensusAddressMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the NetworkNodeMock.ConsensusAddress")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.ConsensusAddressFunc == nil {
-		m.t.Fatalf("Unexpected call to NetworkNodeMock.ConsensusAddress.")
-		return
-	}
-
-	return m.ConsensusAddressFunc()
-}
-
-//ConsensusAddressMinimockCounter returns a count of NetworkNodeMock.ConsensusAddressFunc invocations
-func (m *NetworkNodeMock) ConsensusAddressMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.ConsensusAddressCounter)
-}
-
-//ConsensusAddressMinimockPreCounter returns the value of NetworkNodeMock.ConsensusAddress invocations
-func (m *NetworkNodeMock) ConsensusAddressMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.ConsensusAddressPreCounter)
-}
-
-//ConsensusAddressFinished returns true if mock invocations count is ok
-func (m *NetworkNodeMock) ConsensusAddressFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ConsensusAddressMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ConsensusAddressCounter) == uint64(len(m.ConsensusAddressMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.ConsensusAddressMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ConsensusAddressCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.ConsensusAddressFunc != nil {
-		return atomic.LoadUint64(&m.ConsensusAddressCounter) > 0
 	}
 
 	return true
@@ -1439,10 +1299,6 @@ func (m *NetworkNodeMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NetworkNodeMock.Address")
 	}
 
-	if !m.ConsensusAddressFinished() {
-		m.t.Fatal("Expected call to NetworkNodeMock.ConsensusAddress")
-	}
-
 	if !m.GetGlobuleIDFinished() {
 		m.t.Fatal("Expected call to NetworkNodeMock.GetGlobuleID")
 	}
@@ -1496,10 +1352,6 @@ func (m *NetworkNodeMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NetworkNodeMock.Address")
 	}
 
-	if !m.ConsensusAddressFinished() {
-		m.t.Fatal("Expected call to NetworkNodeMock.ConsensusAddress")
-	}
-
 	if !m.GetGlobuleIDFinished() {
 		m.t.Fatal("Expected call to NetworkNodeMock.GetGlobuleID")
 	}
@@ -1547,7 +1399,6 @@ func (m *NetworkNodeMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.AddressFinished()
-		ok = ok && m.ConsensusAddressFinished()
 		ok = ok && m.GetGlobuleIDFinished()
 		ok = ok && m.GetStateFinished()
 		ok = ok && m.IDFinished()
@@ -1566,10 +1417,6 @@ func (m *NetworkNodeMock) MinimockWait(timeout time.Duration) {
 
 			if !m.AddressFinished() {
 				m.t.Error("Expected call to NetworkNodeMock.Address")
-			}
-
-			if !m.ConsensusAddressFinished() {
-				m.t.Error("Expected call to NetworkNodeMock.ConsensusAddress")
 			}
 
 			if !m.GetGlobuleIDFinished() {
@@ -1617,10 +1464,6 @@ func (m *NetworkNodeMock) MinimockWait(timeout time.Duration) {
 func (m *NetworkNodeMock) AllMocksCalled() bool {
 
 	if !m.AddressFinished() {
-		return false
-	}
-
-	if !m.ConsensusAddressFinished() {
 		return false
 	}
 
