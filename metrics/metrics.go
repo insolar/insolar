@@ -23,8 +23,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/insolar/insolar/log"
-
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
@@ -35,6 +33,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/pprof"
+	"github.com/insolar/insolar/log"
 )
 
 const insolarNamespace = "insolar"
