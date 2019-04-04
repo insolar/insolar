@@ -252,8 +252,6 @@ type RoutingTable interface {
 	AddToKnownHosts(*host.Host)
 	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
 	Rebalance(PartitionPolicy)
-	// GetRandomNodes get a specified number of random nodes. Returns less if there are not enough nodes in network.
-	GetRandomNodes(count int) []host.Host
 }
 
 // InternalTransport simple interface to send network requests and process network responses.
