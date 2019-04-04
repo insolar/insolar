@@ -446,10 +446,11 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
 
-	ps := pulse.NewStorageMem()
+	pa := pulse.NewAccessorMock(s.T())
+	pa.LatestMock.Return(*insolar.GenesisPulse, nil)
 
 	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService)
-	node.componentManager.Inject(ps, serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler)
+	node.componentManager.Inject(pa, serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler)
 
 	node.serviceNetwork = serviceNetwork
 }
