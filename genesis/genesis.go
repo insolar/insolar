@@ -79,8 +79,8 @@ type Genesis struct {
 
 	ArtifactManager artifact.Manager `inject:""`
 
-	// FIXME: GenesisState here is the temporary, until merge this code with genesis initializer
-	GenesisState genesis.GenesisState `inject:""`
+	// FIXME: genesis state here is the temporary, until merge this code with genesis initializer
+	GenesisState genesis.State `inject:""`
 
 	// FIXME: should ber removed after complete migration on ArtifactManager
 	ArtifactsClient artifacts.Client `inject:""`

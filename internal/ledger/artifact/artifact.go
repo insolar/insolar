@@ -46,8 +46,12 @@ type Scope struct {
 	PulseNumber                insolar.PulseNumber
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 
+	BlobModifier    blob.Modifier         `inject:""`
+	RecordsModifier object.RecordModifier `inject:""`
+
+	// ObjectStorage
+	// Depricated, should be removed after indices storage would be done.
 	ObjectStorage storage.ObjectStorage `inject:""`
-	BlobModifier  blob.Modifier         `inject:""`
 }
 
 // NewScope creates new scope instance.
@@ -63,12 +67,7 @@ func (m *Scope) RegisterRequest(ctx context.Context, objectRef insolar.Reference
 		MessageHash: m.hashParcel(parcel),
 		Object:      *objectRef.Record(),
 	}
-	return m.ObjectStorage.SetRecord(
-		ctx,
-		insolar.ID(insolar.ZeroJetID),
-		m.PulseNumber,
-		rec,
-	)
+	return m.setRecord(ctx, rec)
 }
 
 func (m *Scope) ActivateObject(
@@ -155,6 +154,15 @@ func (m *Scope) UpdateObject(
 	return m.updateStateObject(ctx, *objDesc.HeadRef(), amendRecord, memory)
 }
 
+func (m *Scope) setRecord(ctx context.Context, rec record.VirtualRecord) (*insolar.ID, error) {
+	id := object.NewRecordIDFromRecord(m.PlatformCryptographyScheme, m.PulseNumber, rec)
+	matRec := record.MaterialRecord{
+		Record: rec,
+		JetID:  insolar.ZeroJetID,
+	}
+	return id, m.RecordsModifier.Set(ctx, *id, matRec)
+}
+
 func (m *Scope) updateBlob(ctx context.Context, memory []byte) (*insolar.ID, error) {
 	blobID := object.CalculateIDForBlob(m.PlatformCryptographyScheme, m.PulseNumber, memory)
 	err := m.BlobModifier.Set(
@@ -197,7 +205,7 @@ func (m *Scope) registerChild(
 		return errors.New("invalid child record")
 	}
 
-	child, err := m.ObjectStorage.SetRecord(ctx, jetID, m.PulseNumber, childRec)
+	child, err := m.setRecord(ctx, childRec)
 	if err != nil {
 		return err
 	}
@@ -249,7 +257,7 @@ func (m *Scope) updateStateObject(
 	// TODO: validateState
 
 	// TODO: validate index consistency
-	id, err := m.ObjectStorage.SetRecord(ctx, jetID, m.PulseNumber, virtRecord)
+	id, err := m.setRecord(ctx, virtRecord)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail set record for state object")
 	}

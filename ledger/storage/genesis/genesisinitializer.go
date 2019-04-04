@@ -110,7 +110,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 		genesisID := object.NewRecordIDFromRecord(gi.PlatformCryptographyScheme, lastPulse.Pulse.PulseNumber, virtRec)
 		rec := record.MaterialRecord{
 			Record: virtRec,
-			JetID:  insolar.ID(insolar.ZeroJetID),
+			JetID:  insolar.ZeroJetID,
 		}
 		err = gi.Records.Set(ctx, *genesisID, rec)
 		if err != nil {
