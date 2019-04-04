@@ -66,6 +66,7 @@ type BootstrapResult struct {
 	Host *host.Host
 	// FirstPulseTime    time.Time
 	ReconnectRequired bool
+	NetworkSize       int
 }
 
 // Controller contains network logic.
