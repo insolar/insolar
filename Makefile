@@ -10,12 +10,14 @@ PULSEWATCHER = pulsewatcher
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
 CERTGEN = certgen
+RECORDBUILDER = protoc-gen-gorecord
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
 TESTED_PACKAGES ?= $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
 COVERPROFILE ?= coverage.txt
 TEST_ARGS ?=
+BUILD_TAGS ?=
 
 BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
 BUILD_DATE = $(shell date "+%Y-%m-%d")
@@ -62,6 +64,7 @@ install-godep:
 install-build-tools:
 	./scripts/build/fetchdeps golang.org/x/tools/cmd/stringer 63e6ed9258fa6cbc90aab9b1eef3e0866e89b874
 	./scripts/build/fetchdeps github.com/gojuno/minimock/cmd/minimock 890c67cef23dd06d694294d4f7b1026ed7bac8e6
+	./scripts/build/fetchdeps github.com/gogo/protobuf/protoc-gen-gogoslick v1.2.1
 
 .PHONY: install-deps
 install-deps: install-godep install-build-tools
@@ -89,11 +92,11 @@ $(BIN_DIR):
 
 .PHONY: $(INSOLARD)
 $(INSOLARD):
-	go build -o $(BIN_DIR)/$(INSOLARD) -ldflags "${LDFLAGS}" cmd/insolard/*.go
+	go build -o $(BIN_DIR)/$(INSOLARD) ${BUILD_TAGS} -ldflags "${LDFLAGS}" cmd/insolard/*.go
 
 .PHONY: $(INSOLAR)
 $(INSOLAR):
-	go build -o $(BIN_DIR)/$(INSOLAR) -ldflags "${LDFLAGS}" cmd/insolar/*.go
+	go build -o $(BIN_DIR)/$(INSOLAR) ${BUILD_TAGS} -ldflags "${LDFLAGS}" cmd/insolar/*.go
 
 .PHONY: $(INSGOCC)
 $(INSGOCC): cmd/insgocc/insgocc.go logicrunner/goplugin/preprocessor
@@ -190,5 +193,10 @@ docker-insgorund:
 .PHONY: docker
 docker: docker-insolard docker-genesis docker-insgorund
 
+$(RECORDBUILDER):
+	go build -o $(BIN_DIR)/$(RECORDBUILDER) -ldflags "${LDFLAGS}" cmd/protobuf-record-gen/*.go
+
 generate-protobuf:
-	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
+	# protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
+	# protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
+	PATH="$(BIN_DIR):$(PATH)" protoc -I./vendor -I./ --gorecord_out=./ insolar/record/record.proto

@@ -35,7 +35,7 @@ type iterstate struct {
 // ReplicaIter provides partial iterator over BadgerDB key/value pairs
 // required for replication to Heavy Material node in provided pulses range.
 //
-// "Required KV pairs" are all keys with namespace 'scopeIDRecord' (TODO: 'add scopeIDBlob')
+// "Required KV pairs" are all keys with record's namespaces
 // in provided pulses range and all indexes from zero pulse to the end of provided range.
 //
 // "Partial" means it fetches data in chunks of the specified size.
@@ -83,8 +83,6 @@ func NewReplicaIter(
 		limitBytes: limit,
 		// record iterators (order matters for heavy node consistency)
 		istates: []*iterstate{
-			newit(scopeIDRecord, jetID, start, end),
-			newit(scopeIDBlob, jetID, start, end),
 			newit(scopeIDLifeline, jetID, insolar.FirstPulseNumber, end),
 		},
 	}

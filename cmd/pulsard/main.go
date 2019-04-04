@@ -37,9 +37,9 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/pulsenetwork"
 	"github.com/insolar/insolar/network/transport"
-	"github.com/insolar/insolar/network/transport/relay"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -225,9 +225,14 @@ func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (con
 	if err != nil {
 		panic(err)
 	}
-	err = inslog.SetLevel(cfg.Level)
-	if err != nil {
+
+	if newInslog, err := inslog.WithLevel(cfg.Level); err != nil {
 		inslog.Error(err.Error())
+	} else {
+		inslog = newInslog
 	}
-	return inslogger.WithTraceField(inslogger.SetLogger(ctx, inslog), traceid)
+
+	ctx = inslogger.SetLogger(ctx, inslog)
+	ctx, inslog = inslogger.WithTraceField(ctx, traceid)
+	return ctx, inslog
 }

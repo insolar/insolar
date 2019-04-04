@@ -35,10 +35,6 @@ required = [
 
 [[constraint]]
   branch = "master"
-  name = "github.com/ccding/go-stun"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/jbenet/go-base58"
 
 [[constraint]]
@@ -63,7 +59,7 @@ required = [
 
 [[constraint]]
   name = "github.com/prometheus/client_golang"
-  version = "0.8.0"
+  version = "0.9.0"
 
 [[constraint]]
   name = "go.opencensus.io"

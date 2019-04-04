@@ -18,12 +18,13 @@ package object
 
 import (
 	"context"
-	"io"
 	"sync"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/db"
 	"go.opencensus.io/stats"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/internal/ledger/store"
 )
 
 //go:generate go run gen/type.go
@@ -33,18 +34,6 @@ type TypeID uint32
 
 // TypeIDSize is a size of TypeID type.
 const TypeIDSize = 4
-
-// VirtualRecord is base interface for all records.
-type VirtualRecord interface {
-	// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-	WriteHashData(w io.Writer) (int, error)
-}
-
-type MaterialRecord struct {
-	Record VirtualRecord
-
-	JetID insolar.JetID
-}
 
 func init() {
 	// ID can be any unique int value.
@@ -67,7 +56,15 @@ func init() {
 // RecordAccessor provides info about record-values from storage.
 type RecordAccessor interface {
 	// ForID returns record for provided id.
-	ForID(ctx context.Context, id insolar.ID) (MaterialRecord, error)
+	ForID(ctx context.Context, id insolar.ID) (record.MaterialRecord, error)
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.RecordCollectionAccessor -o ./ -s _mock.go
+
+// RecordCollectionAccessor provides methods for querying records with specific search conditions.
+type RecordCollectionAccessor interface {
+	// ForPulse returns []MaterialRecord for a provided jetID and a pulse number.
+	ForPulse(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []record.MaterialRecord
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.RecordModifier -o ./ -s _mock.go
@@ -75,27 +72,38 @@ type RecordAccessor interface {
 // RecordModifier provides methods for setting record-values to storage.
 type RecordModifier interface {
 	// Set saves new record-value in storage.
-	Set(ctx context.Context, id insolar.ID, rec MaterialRecord) error
+	Set(ctx context.Context, id insolar.ID, rec record.MaterialRecord) error
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.RecordCleaner -o ./ -s _mock.go
+
+// RecordCleaner provides an interface for removing records from a storage.
+type RecordCleaner interface {
+	// Remove method removes records from a storage for all pulses until pulse (pulse included)
+	Remove(ctx context.Context, pulse insolar.PulseNumber)
 }
 
 // RecordMemory is an in-memory struct for record-storage.
 type RecordMemory struct {
-	jetIndex db.JetIndexModifier
+	jetIndex         store.JetIndexModifier
+	jetIndexAccessor store.JetIndexAccessor
 
 	lock   sync.RWMutex
-	memory map[insolar.ID]MaterialRecord
+	memory map[insolar.ID]record.MaterialRecord
 }
 
 // NewRecordMemory creates a new instance of RecordMemory storage.
 func NewRecordMemory() *RecordMemory {
+	ji := store.NewJetIndex()
 	return &RecordMemory{
-		memory:   map[insolar.ID]MaterialRecord{},
-		jetIndex: db.NewJetIndex(),
+		memory:           map[insolar.ID]record.MaterialRecord{},
+		jetIndex:         ji,
+		jetIndexAccessor: ji,
 	}
 }
 
 // Set saves new record-value in storage.
-func (m *RecordMemory) Set(ctx context.Context, id insolar.ID, rec MaterialRecord) error {
+func (m *RecordMemory) Set(ctx context.Context, id insolar.ID, rec record.MaterialRecord) error {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -115,7 +123,7 @@ func (m *RecordMemory) Set(ctx context.Context, id insolar.ID, rec MaterialRecor
 }
 
 // ForID returns record for provided id.
-func (m *RecordMemory) ForID(ctx context.Context, id insolar.ID) (rec MaterialRecord, err error) {
+func (m *RecordMemory) ForID(ctx context.Context, id insolar.ID) (rec record.MaterialRecord, err error) {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
@@ -128,16 +136,48 @@ func (m *RecordMemory) ForID(ctx context.Context, id insolar.ID) (rec MaterialRe
 	return
 }
 
+// ForPulse returns []MaterialRecord for a provided jetID and a pulse number.
+func (m *RecordMemory) ForPulse(
+	ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber,
+) []record.MaterialRecord {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	ids := m.jetIndexAccessor.For(jetID, pn)
+	var res []record.MaterialRecord
+	for id := range ids {
+		rec := m.memory[id]
+		res = append(res, rec)
+	}
+
+	return res
+}
+
+// Remove method removes records from a storage for all pulses until pulse (pulse included)
+func (m *RecordMemory) Remove(ctx context.Context, pulse insolar.PulseNumber) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	for id, rec := range m.memory {
+		if id.Pulse() != pulse {
+			continue
+		}
+
+		m.jetIndex.Delete(id, rec.JetID)
+		delete(m.memory, id)
+	}
+}
+
 // RecordDB is a DB storage implementation. It saves records to disk and does not allow removal.
 type RecordDB struct {
-	DB   db.DB `inject:""`
 	lock sync.RWMutex
+	db   store.DB
 }
 
 type recordKey insolar.ID
 
-func (k recordKey) Scope() db.Scope {
-	return db.ScopeRecord
+func (k recordKey) Scope() store.Scope {
+	return store.ScopeRecord
 }
 
 func (k recordKey) ID() []byte {
@@ -146,12 +186,12 @@ func (k recordKey) ID() []byte {
 }
 
 // NewRecordDB creates new DB storage instance.
-func NewRecordDB() *RecordDB {
-	return &RecordDB{}
+func NewRecordDB(db store.DB) *RecordDB {
+	return &RecordDB{db: db}
 }
 
 // Set saves new record-value in storage.
-func (r *RecordDB) Set(ctx context.Context, id insolar.ID, rec MaterialRecord) error {
+func (r *RecordDB) Set(ctx context.Context, id insolar.ID, rec record.MaterialRecord) error {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
@@ -159,52 +199,55 @@ func (r *RecordDB) Set(ctx context.Context, id insolar.ID, rec MaterialRecord) e
 }
 
 // ForID returns record for provided id.
-func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (MaterialRecord, error) {
+func (r *RecordDB) ForID(ctx context.Context, id insolar.ID) (record.MaterialRecord, error) {
 	r.lock.RLock()
 	defer r.lock.RUnlock()
 
 	return r.get(id)
 }
 
-func (r *RecordDB) set(id insolar.ID, rec MaterialRecord) error {
+func (r *RecordDB) set(id insolar.ID, rec record.MaterialRecord) error {
 	key := recordKey(id)
 
-	_, err := r.DB.Get(key)
+	_, err := r.db.Get(key)
 	if err == nil {
 		return ErrOverride
 	}
 
-	return r.DB.Set(key, EncodeRecord(rec))
+	return r.db.Set(key, EncodeMaterial(rec))
 }
 
-func (r *RecordDB) get(id insolar.ID) (rec MaterialRecord, err error) {
-	buff, err := r.DB.Get(recordKey(id))
-	if err == db.ErrNotFound {
+func (r *RecordDB) get(id insolar.ID) (rec record.MaterialRecord, err error) {
+	buff, err := r.db.Get(recordKey(id))
+	if err == store.ErrNotFound {
 		err = ErrNotFound
 		return
 	}
 	if err != nil {
 		return
 	}
-	rec = DecodeRecord(buff)
+	rec, err = DecodeMaterial(buff)
 	return
 }
 
-func EncodeRecord(rec MaterialRecord) []byte {
-	buff := SerializeRecord(rec.Record)
+func EncodeMaterial(rec record.MaterialRecord) []byte {
+	buff := EncodeVirtual(rec.Record)
 	result := append(buff[:], rec.JetID[:]...)
 
 	return result
 }
 
-func DecodeRecord(buff []byte) MaterialRecord {
+func DecodeMaterial(buff []byte) (rec record.MaterialRecord, err error) {
 	recBuff := buff[:len(buff)-insolar.RecordIDSize]
 	jetIDBuff := buff[len(buff)-insolar.RecordIDSize:]
 
-	rec := DeserializeRecord(recBuff)
+	r, err := DecodeVirtual(recBuff)
+	if err != nil {
+		return rec, err
+	}
 
 	var jetID insolar.JetID
 	copy(jetID[:], jetIDBuff)
 
-	return MaterialRecord{Record: rec, JetID: jetID}
+	return record.MaterialRecord{Record: r, JetID: jetID}, nil
 }

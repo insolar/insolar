@@ -21,6 +21,8 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/insolar"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -68,17 +70,22 @@ func TestSerializeSignedWithContext(t *testing.T) {
 	ctxIn = instracer.SetBaggage(ctxIn, instracer.Entry{Key: "traceid", Value: traceid})
 
 	signMsgIn := &Parcel{
-		Msg:           msg,
-		Signature:     nil,
-		TraceSpanData: instracer.MustSerialize(ctxIn),
-		LogTraceID:    inslogger.TraceID(ctxIn),
+		Msg:       msg,
+		Signature: nil,
+		ServiceData: ServiceData{
+			TraceSpanData: instracer.MustSerialize(ctxIn),
+			LogTraceID:    inslogger.TraceID(ctxIn),
+			LogLevel:      insolar.DebugLevel,
+		},
 	}
 
 	signMsgOut, err := DeserializeParcel(bytes.NewBuffer(ParcelToBytes(signMsgIn)))
 	require.NoError(t, err)
 
 	ctxOut := signMsgOut.Context(context.Background())
-	require.Equal(t, traceid, inslogger.TraceID(ctxIn))
+	require.Equal(t, inslogger.TraceID(ctxIn), traceid)
 	require.Equal(t, inslogger.TraceID(ctxIn), inslogger.TraceID(ctxOut))
-	require.Equal(t, instracer.GetBaggage(ctxIn), instracer.GetBaggage(ctxOut))
+	require.Equal(t, instracer.GetBaggage(ctxOut), instracer.GetBaggage(ctxIn))
+	require.Equal(t, insolar.NoLevel, inslogger.GetLoggerLevel(ctxIn))
+	require.Equal(t, insolar.DebugLevel, inslogger.GetLoggerLevel(ctxOut))
 }

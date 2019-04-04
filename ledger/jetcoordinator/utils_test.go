@@ -39,7 +39,6 @@ import (
 // measure overhead:
 // benchcmp orig.txt wrapped.txt
 //
-// TODO: add benchmarks result after INS-890 completion - @nordicdyno 5.Dec.2018
 func BenchmarkSelectByEntropy(b *testing.B) {
 	benchtype := strings.ToLower(os.Getenv("SelectByEntropyBench"))
 	switch benchtype {

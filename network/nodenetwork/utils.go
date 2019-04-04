@@ -62,6 +62,15 @@ type MergedListCopy struct {
 	NodesJoinedDuringPrevPulse bool
 }
 
+func copyActiveNodes(nodes []insolar.NetworkNode) map[insolar.Reference]insolar.NetworkNode {
+	result := make(map[insolar.Reference]insolar.NetworkNode, len(nodes))
+	for _, n := range nodes {
+		n.(node.MutableNode).ChangeState()
+		result[n.ID()] = n
+	}
+	return result
+}
+
 func GetMergedCopy(nodes []insolar.NetworkNode, claims []consensus.ReferendumClaim) (*MergedListCopy, error) {
 	nodesMap := copyActiveNodes(nodes)
 

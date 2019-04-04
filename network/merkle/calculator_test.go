@@ -55,6 +55,9 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
@@ -62,9 +65,6 @@ import (
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/nodekeeper"
-	"github.com/insolar/insolar/testutils/terminationhandler"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 type calculatorSuite struct {
@@ -168,15 +168,16 @@ func TestCalculator(t *testing.T) {
 	service := cryptography.NewKeyBoundCryptographyService(key)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	nk := nodekeeper.GetTestNodekeeper(service)
-	th := terminationhandler.NewTestHandler()
+	th := testutils.NewTerminationHandlerMock(t)
 
-	am := testutils.NewArtifactManagerMock(t)
-	am.StateFunc = func() (r []byte, r1 error) {
-		return []byte("state"), nil
+	am := staterMock{
+		stateFunc: func() (r []byte, r1 error) {
+			return []byte("state"), nil
+		},
 	}
 
 	cm := component.Manager{}
-	cm.Inject(th, nk, am, calculator, service, scheme)
+	cm.Inject(th, nk, &am, calculator, service, scheme)
 
 	require.NotNil(t, calculator.ArtifactManager)
 	require.NotNil(t, calculator.NodeNetwork)

@@ -23,6 +23,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
@@ -30,13 +31,13 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/heavyclient"
-	"github.com/insolar/insolar/ledger/internal/jet"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
@@ -51,7 +52,6 @@ type ActiveListSwapper interface {
 
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
-	LR                         insolar.LogicRunner                `inject:""`
 	Bus                        insolar.MessageBus                 `inject:""`
 	NodeNet                    insolar.NodeNetwork                `inject:""`
 	JetCoordinator             insolar.JetCoordinator             `inject:""`
@@ -74,8 +74,14 @@ type PulseManager struct {
 	StorageCleaner storage.Cleaner        `inject:""`
 
 	DropModifier drop.Modifier `inject:""`
-	DropCleaner  drop.Cleaner  `inject:""`
 	DropAccessor drop.Accessor `inject:""`
+	DropCleaner  drop.Cleaner
+
+	BlobSyncAccessor blob.CollectionAccessor
+	BlobCleaner      blob.Cleaner
+
+	RecSyncAccessor object.RecordCollectionAccessor
+	RecCleaner      object.RecordCleaner
 
 	syncClientsPool *heavyclient.Pool
 
@@ -97,7 +103,7 @@ type jetInfo struct {
 	right    *jetInfo
 }
 
-// TODO: @andreyromancev. 15.01.19. Just store ledger configuration in PM. This is not required.
+// Just store ledger configuration in PM. This is not required.
 type pmOptions struct {
 	enableSync            bool
 	splitThreshold        uint64
@@ -108,7 +114,14 @@ type pmOptions struct {
 }
 
 // NewPulseManager creates PulseManager instance.
-func NewPulseManager(conf configuration.Ledger) *PulseManager {
+func NewPulseManager(
+	conf configuration.Ledger,
+	dropCleaner drop.Cleaner,
+	blobCleaner blob.Cleaner,
+	blobSyncAccessor blob.CollectionAccessor,
+	recCleaner object.RecordCleaner,
+	recSyncAccessor object.RecordCollectionAccessor,
+) *PulseManager {
 	pmconf := conf.PulseManager
 
 	pm := &PulseManager{
@@ -120,6 +133,11 @@ func NewPulseManager(conf configuration.Ledger) *PulseManager {
 			heavySyncMessageLimit: pmconf.HeavySyncMessageLimit,
 			lightChainLimit:       conf.LightChainLimit,
 		},
+		DropCleaner:      dropCleaner,
+		BlobCleaner:      blobCleaner,
+		BlobSyncAccessor: blobSyncAccessor,
+		RecCleaner:       recCleaner,
+		RecSyncAccessor:  recSyncAccessor,
 	}
 	return pm
 }
@@ -191,12 +209,6 @@ func (m *PulseManager) processEndPulse(
 
 			m.RecentStorageProvider.RemovePendingStorage(ctx, insolar.ID(info.id))
 
-			// FIXME: @andreyromancev. 09.01.2019. Temporary disabled validation. Uncomment when jet split works properly.
-			// dropErr := m.processDrop(ctx, jetID, currentPulse, dropSerialized, messages)
-			// if dropErr != nil {
-			// 	return errors.Wrap(dropErr, "processDrop failed")
-			// }
-
 			return nil
 		})
 	}
@@ -218,28 +230,6 @@ func (m *PulseManager) createDrop(
 	messages [][]byte,
 	err error,
 ) {
-	// TODO: 1.03.19 need to be replaced with smth. @egorikas
-	// var prevDrop jet.Drop
-	// prevDrop, err = m.DropAccessor.ForPulse(ctx, insolar.JetID(jetID), prevPulse)
-	// if err == insolar.ErrNotFound {
-	// 	prevDrop, err = m.DropAccessor.ForPulse(ctx, jet.JetParent(insolar.JetID(jetID)), prevPulse)
-	// 	if err == insolar.ErrNotFound {
-	// 		inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-	// 			"pulse": prevPulse,
-	// 			"jet":   jetID.DebugString(),
-	// 		}).Error("failed to find drop")
-	// 		prevDrop = jet.Drop{Pulse: prevPulse}
-	// 		err = m.DropModifier.Set(ctx, insolar.JetID(jetID), prevDrop)
-	// 		if err != nil {
-	// 			return nil, nil, nil, errors.Wrap(err, "failed to create empty drop")
-	// 		}
-	// 	} else if err != nil {
-	// 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] failed to find parent")
-	// 	}
-	// } else if err != nil {
-	// 	return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't GetDrop")
-	// }
-
 	block = &drop.Drop{
 		Pulse: currentPulse,
 		JetID: insolar.JetID(jetID),
@@ -250,11 +240,7 @@ func (m *PulseManager) createDrop(
 		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
 
-	dropSerialized, err = drop.Encode(block)
-	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't Encode")
-	}
-
+	dropSerialized = drop.MustEncode(block)
 	return
 }
 
@@ -312,7 +298,6 @@ func (m *PulseManager) getExecutorHotData(
 	return msg, nil
 }
 
-// TODO: @andreyromancev. 12.01.19. Remove when dynamic split is working.
 var splitCount = 5
 
 func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse insolar.PulseNumber) ([]jetInfo, error) {
@@ -467,7 +452,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 
 	// Run only on material executor.
 	// execute only on material executor
-	// TODO: do as much as possible async.
 	if m.NodeNet.GetOrigin().Role() == insolar.StaticRoleLightMaterial && oldPulse != nil && prevPN != nil {
 		err = m.processEndPulse(ctx, jets, *prevPN, *oldPulse, newPulse)
 		if err != nil {
@@ -481,13 +465,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 	err = m.Bus.OnPulse(ctx, newPulse)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
-	}
-
-	if m.NodeNet.GetOrigin().Role() == insolar.StaticRoleVirtual {
-		err = m.LR.OnPulse(ctx, newPulse)
-	}
-	if err != nil {
-		return err
 	}
 
 	return nil
@@ -509,7 +486,6 @@ func (m *PulseManager) setUnderGilSection(
 	defer m.GIL.Release(ctx)
 
 	m.PulseStorage.Lock()
-	// FIXME: @andreyromancev. 17.12.18. return insolar.Pulse here.
 	storagePulse, err := m.PulseTracker.GetLatestPulse(ctx)
 	if err != nil && err != insolar.ErrNotFound {
 		m.PulseStorage.Unlock()
@@ -662,6 +638,8 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse insolar.Puls
 	m.JetModifier.Delete(ctx, p.Pulse.PulseNumber)
 	m.NodeSetter.Delete(p.Pulse.PulseNumber)
 	m.DropCleaner.Delete(p.Pulse.PulseNumber)
+	m.BlobCleaner.Delete(ctx, p.Pulse.PulseNumber)
+	m.RecCleaner.Remove(ctx, p.Pulse.PulseNumber)
 	err = m.PulseTracker.DeletePulse(ctx, p.Pulse.PulseNumber)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
@@ -722,6 +700,8 @@ func (m *PulseManager) Start(ctx context.Context) error {
 			m.PulseTracker,
 			m.ReplicaStorage,
 			m.DropAccessor,
+			m.BlobSyncAccessor,
+			m.RecSyncAccessor,
 			m.StorageCleaner,
 			m.DBContext,
 			heavyclient.Options{

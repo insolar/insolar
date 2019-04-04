@@ -61,6 +61,12 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/utils"
+
+	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+
+	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
@@ -70,11 +76,9 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/controller/pinger"
-	"github.com/insolar/insolar/network/transport/host"
-	"github.com/insolar/insolar/network/transport/packet/types"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 )
 
 const bootstrapTimeout time.Duration = 2 // seconds
@@ -227,7 +231,14 @@ func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult
 	log.Info("Bootstrapping to discovery node")
 	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.Bootstrap")
 	defer span.End()
-	ch := bc.getDiscoveryNodesChannel(ctx, bc.Certificate.GetDiscoveryNodes(), 1)
+	discoveryNodes := bc.Certificate.GetDiscoveryNodes()
+	if utils.OriginIsDiscovery(bc.Certificate) {
+		discoveryNodes = RemoveOrigin(discoveryNodes, bc.NodeKeeper.GetOrigin().ID())
+	}
+	if len(discoveryNodes) == 0 {
+		return nil, nil, errors.New("There are 0 discovery nodes to connect to")
+	}
+	ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, 1)
 	result := bc.waitResultFromChannel(ctx, ch)
 	if result == nil {
 		return nil, nil, errors.New("Failed to bootstrap to any of discovery nodes")
@@ -302,12 +313,7 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 	logger.Info("[ BootstrapDiscovery ] Network bootstrap between discovery nodes")
 	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.BootstrapDiscovery")
 	defer span.End()
-	discoveryNodes := bc.Certificate.GetDiscoveryNodes()
-	var err error
-	discoveryNodes, err = RemoveOrigin(discoveryNodes, *bc.Certificate.GetNodeRef())
-	if err != nil {
-		return nil, errors.Wrapf(err, "Discovery bootstrap failed")
-	}
+	discoveryNodes := RemoveOrigin(bc.Certificate.GetDiscoveryNodes(), *bc.Certificate.GetNodeRef())
 	discoveryCount := len(discoveryNodes)
 	if discoveryCount == 0 {
 		return bc.ZeroBootstrap(ctx)

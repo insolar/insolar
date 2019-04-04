@@ -25,20 +25,24 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"go.opencensus.io/stats"
 	"golang.org/x/sync/singleflight"
 )
 
 // Pool manages state of heavy sync clients (one client per jet id).
 type Pool struct {
-	bus            insolar.MessageBus
-	pulseStorage   insolar.PulseStorage
-	pulseTracker   storage.PulseTracker
-	dropAccessor   drop.Accessor
-	replicaStorage storage.ReplicaStorage
-	cleaner        storage.Cleaner
-	db             storage.DBContext
+	bus              insolar.MessageBus
+	pulseStorage     insolar.PulseStorage
+	pulseTracker     storage.PulseTracker
+	dropAccessor     drop.Accessor
+	blobSyncAccessor blob.CollectionAccessor
+	recSyncAccessor  object.RecordCollectionAccessor
+	replicaStorage   storage.ReplicaStorage
+	cleaner          storage.Cleaner
+	db               storage.DBContext
 
 	clientDefaults Options
 
@@ -55,20 +59,24 @@ func NewPool(
 	tracker storage.PulseTracker,
 	replicaStorage storage.ReplicaStorage,
 	dropAccessor drop.Accessor,
+	blobSyncAccessor blob.CollectionAccessor,
+	recSyncAccessor object.RecordCollectionAccessor,
 	cleaner storage.Cleaner,
 	db storage.DBContext,
 	clientDefaults Options,
 ) *Pool {
 	return &Pool{
-		bus:            bus,
-		dropAccessor:   dropAccessor,
-		pulseStorage:   pulseStorage,
-		pulseTracker:   tracker,
-		replicaStorage: replicaStorage,
-		clientDefaults: clientDefaults,
-		cleaner:        cleaner,
-		db:             db,
-		clients:        map[insolar.ID]*JetClient{},
+		bus:              bus,
+		dropAccessor:     dropAccessor,
+		blobSyncAccessor: blobSyncAccessor,
+		recSyncAccessor:  recSyncAccessor,
+		pulseStorage:     pulseStorage,
+		pulseTracker:     tracker,
+		replicaStorage:   replicaStorage,
+		clientDefaults:   clientDefaults,
+		cleaner:          cleaner,
+		db:               db,
+		clients:          map[insolar.ID]*JetClient{},
 	}
 }
 
@@ -107,6 +115,8 @@ func (scp *Pool) AddPulsesToSyncClient(
 			scp.pulseStorage,
 			scp.pulseTracker,
 			scp.dropAccessor,
+			scp.blobSyncAccessor,
+			scp.recSyncAccessor,
 			scp.cleaner,
 			scp.db,
 			jetID,
@@ -185,7 +195,6 @@ func (scp *Pool) LightCleanup(
 			_, skipRecordsCleanup := jetPrefixSeen[prefixKey]
 			jetPrefixSeen[prefixKey] = struct{}{}
 
-			// TODO: fill candidates here
 			candidates := jetIndexesRemoved[insolar.ID(jetID)]
 
 			if (len(candidates) == 0) && skipRecordsCleanup {

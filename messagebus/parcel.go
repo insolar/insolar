@@ -28,9 +28,7 @@ import (
 )
 
 type parcelFactory struct {
-	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
-	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
-	Cryptography               insolar.CryptographyService        `inject:""`
+	Cryptography insolar.CryptographyService `inject:""`
 }
 
 // NewParcelFactory returns new instance of parcelFactory
@@ -49,14 +47,19 @@ func (pf *parcelFactory) Create(ctx context.Context, msg insolar.Message, sender
 		return nil, err
 	}
 
-	return &message.Parcel{
-		Msg:           msg,
-		Signature:     signature.Bytes(),
+	serviceData := message.ServiceData{
 		LogTraceID:    inslogger.TraceID(ctx),
+		LogLevel:      inslogger.GetLoggerLevel(ctx),
 		TraceSpanData: instracer.MustSerialize(ctx),
-		Sender:        sender,
-		Token:         token,
-		PulseNumber:   currentPulse.PulseNumber,
+	}
+
+	return &message.Parcel{
+		Msg:         msg,
+		Signature:   signature.Bytes(),
+		Sender:      sender,
+		Token:       token,
+		PulseNumber: currentPulse.PulseNumber,
+		ServiceData: serviceData,
 	}, nil
 }
 

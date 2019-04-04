@@ -22,7 +22,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
@@ -78,19 +80,24 @@ type jetprefix [insolar.JetPrefixSize]byte
 
 // Sync provides methods for syncing records to heavy storage.
 type Sync struct {
-	DropModifier   drop.Modifier          `inject:""`
-	ReplicaStorage storage.ReplicaStorage `inject:""`
-	DBContext      storage.DBContext
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	DropModifier               drop.Modifier                      `inject:""`
+	BlobModifier               blob.Modifier                      `inject:""`
+	ReplicaStorage             storage.ReplicaStorage             `inject:""`
+	DBContext                  storage.DBContext
+
+	RecordModifier object.RecordModifier
 
 	sync.Mutex
 	jetSyncStates map[jetprefix]*syncstate
 }
 
 // NewSync creates new Sync instance.
-func NewSync(db storage.DBContext) *Sync {
+func NewSync(db storage.DBContext, records object.RecordModifier) *Sync {
 	return &Sync{
-		DBContext:     db,
-		jetSyncStates: map[jetprefix]*syncstate{},
+		DBContext:      db,
+		RecordModifier: records,
+		jetSyncStates:  map[jetprefix]*syncstate{},
 	}
 }
 
@@ -162,25 +169,23 @@ func (s *Sync) Start(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumb
 	return nil
 }
 
-// Store stores recieved key/value pairs at heavy storage.
-//
-// TODO: check actual jet and pulse in keys
-func (s *Sync) Store(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber, kvs []insolar.KV) error {
+// StoreIndices stores recieved key/value pairs for indices at heavy storage.
+func (s *Sync) StoreIndices(ctx context.Context, jet insolar.ID, pn insolar.PulseNumber, kvs []insolar.KV) error {
 	inslog := inslogger.FromContext(ctx)
-	jetState := s.getJetSyncState(ctx, jetID)
+	jetState := s.getJetSyncState(ctx, jet)
 
 	err := func() error {
 		jetState.Lock()
 		defer jetState.Unlock()
 
 		if jetState.syncpulse == nil {
-			return fmt.Errorf("heavyserver: jet %v not in sync mode", jetID)
+			return fmt.Errorf("heavyserver: jet %v not in sync mode", jet)
 		}
 		if *jetState.syncpulse != pn {
 			return fmt.Errorf("heavyserver: passed pulse %v doesn't match in-sync pulse %v", pn, *jetState.syncpulse)
 		}
 		if jetState.insync {
-			return errSyncInProgress(jetID, pn)
+			return errSyncInProgress(jet, pn)
 		}
 		jetState.insync = true
 		jetState.resetTimeout(ctx, defaultTimeout)
@@ -195,7 +200,6 @@ func (s *Sync) Store(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumb
 		jetState.insync = false
 		jetState.Unlock()
 	}()
-	// TODO: check jet in keys?
 	err = s.DBContext.StoreKeyValues(ctx, kvs)
 	if err != nil {
 		return errors.Wrapf(err, "heavyserver: store failed")
@@ -204,9 +208,9 @@ func (s *Sync) Store(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumb
 	// heavy stats
 	recordsCount := int64(len(kvs))
 	recordsSize := insolar.KVSize(kvs)
-	inslog.Debugf("heavy store stat: JetID=%v, recordsCount+=%v, recordsSize+=%v\n", jetID.DebugString(), recordsCount, recordsSize)
+	inslog.Debugf("heavy store stat: JetID=%v, recordsCount+=%v, recordsSize+=%v\n", jet.DebugString(), recordsCount, recordsSize)
 
-	ctx = insmetrics.InsertTag(ctx, tagJet, jetID.DebugString())
+	ctx = insmetrics.InsertTag(ctx, tagJet, jet.DebugString())
 	stats.Record(ctx,
 		statSyncedCount.M(1),
 		statSyncedRecords.M(recordsCount),
@@ -218,7 +222,12 @@ func (s *Sync) Store(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumb
 
 // StoreDrop saves a jet.Drop to a heavy db
 func (s *Sync) StoreDrop(ctx context.Context, jetID insolar.JetID, rawDrop []byte) error {
-	err := s.DropModifier.Set(ctx, drop.Deserialize(rawDrop))
+	d, err := drop.Decode(rawDrop)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+		return err
+	}
+	err = s.DropModifier.Set(ctx, *d)
 	if err != nil {
 		return errors.Wrapf(err, "heavyserver: drop storing failed")
 	}
@@ -226,9 +235,47 @@ func (s *Sync) StoreDrop(ctx context.Context, jetID insolar.JetID, rawDrop []byt
 	return nil
 }
 
+// StoreBlobs saves a collection of blobs to a heavy's storage
+func (s *Sync) StoreBlobs(ctx context.Context, pn insolar.PulseNumber, rawBlobs [][]byte) error {
+	for _, rwb := range rawBlobs {
+		b, err := blob.Decode(rwb)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err)
+			continue
+		}
+
+		blobID := object.CalculateIDForBlob(s.PlatformCryptographyScheme, pn, rwb)
+		err = s.BlobModifier.Set(ctx, *blobID, *b)
+		if err != nil {
+			return errors.Wrapf(err, "heavyserver: blob storing failed")
+		}
+	}
+	return nil
+}
+
+// StoreRecords stores recieved records at heavy storage.
+func (s *Sync) StoreRecords(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber, rawRecords [][]byte) {
+	inslog := inslogger.FromContext(ctx)
+
+	for _, rawRec := range rawRecords {
+		rec, err := object.DecodeMaterial(rawRec)
+		if err != nil {
+			inslog.Error(err, "heavyserver: deserialize record failed")
+			continue
+		}
+
+		virtRec := rec.Record
+
+		id := object.NewRecordIDFromRecord(s.PlatformCryptographyScheme, pn, virtRec)
+		err = s.RecordModifier.Set(ctx, *id, rec)
+		if err != nil {
+			inslog.Error(err, "heavyserver: store record failed")
+			continue
+		}
+	}
+}
+
 // Stop successfully stops replication for specified pulse.
-//
-// TODO: call Stop if range sync too long
 func (s *Sync) Stop(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber) error {
 	jetState := s.getJetSyncState(ctx, jetID)
 	jetState.Lock()

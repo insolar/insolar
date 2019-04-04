@@ -17,25 +17,29 @@
 package blob
 
 import (
-	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
-)
-
-var (
-	inmemoryStorage = insmetrics.MustTagKey("inmemorystorage")
 )
 
 var (
 	statBlobInMemorySize = stats.Int64(
 		"blobstorage/inmemory/size",
-		"Size of the blob-records in in-memory blob storage",
+		"Size of the blob-records saved in memory",
 		stats.UnitBytes,
 	)
 	statBlobInMemoryCount = stats.Int64(
 		"blobstorage/inmemory/count",
-		"How many blob-records have been saved in in-memory blob storage",
+		"How many blob-records saved in memory",
+		stats.UnitDimensionless,
+	)
+	statBlobInStorageSize = stats.Int64(
+		"blobstorage/persistent/size",
+		"Size of the blob-records persisted in blob storage",
+		stats.UnitBytes,
+	)
+	statBlobInStorageCount = stats.Int64(
+		"blobstorage/persistent/count",
+		"How many blob-records persisted in blob storage",
 		stats.UnitDimensionless,
 	)
 )
@@ -47,14 +51,24 @@ func init() {
 			Description: statBlobInMemorySize.Description(),
 			Measure:     statBlobInMemorySize,
 			Aggregation: view.Sum(),
-			TagKeys:     []tag.Key{inmemoryStorage},
 		},
 		&view.View{
 			Name:        statBlobInMemoryCount.Name(),
 			Description: statBlobInMemoryCount.Description(),
 			Measure:     statBlobInMemoryCount,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{inmemoryStorage},
+		},
+		&view.View{
+			Name:        statBlobInStorageSize.Name(),
+			Description: statBlobInStorageSize.Description(),
+			Measure:     statBlobInStorageSize,
+			Aggregation: view.Sum(),
+		},
+		&view.View{
+			Name:        statBlobInStorageCount.Name(),
+			Description: statBlobInStorageCount.Description(),
+			Measure:     statBlobInStorageCount,
+			Aggregation: view.Count(),
 		},
 	)
 	if err != nil {

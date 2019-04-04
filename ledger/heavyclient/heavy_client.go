@@ -27,7 +27,9 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/utils/backoff"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -42,13 +44,15 @@ type Options struct {
 
 // JetClient heavy replication client. Replicates records for one jet.
 type JetClient struct {
-	bus            insolar.MessageBus
-	pulseStorage   insolar.PulseStorage
-	replicaStorage storage.ReplicaStorage
-	pulseTracker   storage.PulseTracker
-	cleaner        storage.Cleaner
-	db             storage.DBContext
-	dropAccessor   drop.Accessor
+	bus              insolar.MessageBus
+	pulseStorage     insolar.PulseStorage
+	replicaStorage   storage.ReplicaStorage
+	pulseTracker     storage.PulseTracker
+	cleaner          storage.Cleaner
+	db               storage.DBContext
+	dropAccessor     drop.Accessor
+	blobSyncAccessor blob.CollectionAccessor
+	recSyncAccessor  object.RecordCollectionAccessor
 
 	opts Options
 
@@ -76,24 +80,28 @@ func NewJetClient(
 	pulseStorage insolar.PulseStorage,
 	pulseTracker storage.PulseTracker,
 	dropAccessor drop.Accessor,
+	blobSyncAccessor blob.CollectionAccessor,
+	recSyncAccessor object.RecordCollectionAccessor,
 	cleaner storage.Cleaner,
 	db storage.DBContext,
 	jetID insolar.ID,
 	opts Options,
 ) *JetClient {
 	jsc := &JetClient{
-		bus:            mb,
-		pulseStorage:   pulseStorage,
-		replicaStorage: replicaStorage,
-		pulseTracker:   pulseTracker,
-		dropAccessor:   dropAccessor,
-		cleaner:        cleaner,
-		db:             db,
-		jetID:          insolar.JetID(jetID),
-		syncbackoff:    backoffFromConfig(opts.BackoffConf),
-		signal:         make(chan struct{}, 1),
-		syncdone:       make(chan struct{}),
-		opts:           opts,
+		bus:              mb,
+		pulseStorage:     pulseStorage,
+		replicaStorage:   replicaStorage,
+		pulseTracker:     pulseTracker,
+		dropAccessor:     dropAccessor,
+		blobSyncAccessor: blobSyncAccessor,
+		recSyncAccessor:  recSyncAccessor,
+		cleaner:          cleaner,
+		db:               db,
+		jetID:            insolar.JetID(jetID),
+		syncbackoff:      backoffFromConfig(opts.BackoffConf),
+		signal:           make(chan struct{}, 1),
+		syncdone:         make(chan struct{}),
+		opts:             opts,
 	}
 	return jsc
 }
@@ -169,8 +177,8 @@ func (c *JetClient) nextPulseNumber() (insolar.PulseNumber, bool) {
 func (c *JetClient) runOnce(ctx context.Context) {
 	// retrydelay = m.syncbackoff.ForAttempt(attempt)
 	c.startOnce.Do(func() {
-		// TODO: reset TraceID from context, or just don't use context?
-		// (TraceID not meaningful in async sync loop)
+		// resets TraceID from and other fields in context
+		// (TraceID is mostly meaningless in async sync loop)
 		ctx, cancel := context.WithCancel(context.Background())
 		c.cancel = cancel
 		go c.syncloop(ctx)
@@ -252,7 +260,6 @@ func (c *JetClient) syncloop(ctx context.Context) {
 				stats.Record(ctx, statSyncedRetries.M(1))
 				continue
 			}
-			// TODO: write some info to dust - 14.Dec.2018 @nordicdyno
 		} else {
 			ctx = insmetrics.InsertTag(ctx, tagJet, c.jetID.DebugString())
 			stats.Record(ctx,

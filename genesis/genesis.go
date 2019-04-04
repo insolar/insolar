@@ -37,6 +37,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
@@ -73,8 +74,8 @@ type Genesis struct {
 	isGenesis       bool
 	config          *Config
 	keyOut          string
-	ArtifactManager insolar.ArtifactManager `inject:""`
-	MBLock          messageBusLocker        `inject:""`
+	ArtifactManager artifacts.Client `inject:""`
+	MBLock          messageBusLocker `inject:""`
 }
 
 // NewGenesis creates new Genesis
@@ -111,7 +112,7 @@ func buildSmartContracts(ctx context.Context, cb *ContractsBuilder, rootDomainID
 func (g *Genesis) activateRootDomain(
 	ctx context.Context, cb *ContractsBuilder,
 	contractID *insolar.ID,
-) (insolar.ObjectDescriptor, error) {
+) (artifacts.ObjectDescriptor, error) {
 	rd, err := rootdomain.NewRootDomain()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ActivateRootDomain ]")
@@ -146,7 +147,7 @@ func (g *Genesis) activateRootDomain(
 
 func (g *Genesis) activateNodeDomain(
 	ctx context.Context, domain *insolar.ID, cb *ContractsBuilder,
-) (insolar.ObjectDescriptor, error) {
+) (artifacts.ObjectDescriptor, error) {
 	nd, err := nodedomain.NewNodeDomain()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ActivateNodeDomain ]")
@@ -227,7 +228,7 @@ func (g *Genesis) activateRootMember(
 
 // TODO: this is not required since we refer by request id.
 func (g *Genesis) updateRootDomain(
-	ctx context.Context, domainDesc insolar.ObjectDescriptor,
+	ctx context.Context, domainDesc artifacts.ObjectDescriptor,
 ) error {
 	updateData, err := serializeInstance(&rootdomain.RootDomain{RootMember: *g.rootMemberRef, NodeDomainRef: *g.nodeDomainRef})
 	if err != nil {
@@ -644,7 +645,7 @@ func (g *Genesis) makeCertificates(nodes []genesisNode) error {
 	return nil
 }
 
-func (g *Genesis) updateNodeDomainIndex(ctx context.Context, nodeDomainDesc insolar.ObjectDescriptor, indexMap map[string]string) error {
+func (g *Genesis) updateNodeDomainIndex(ctx context.Context, nodeDomainDesc artifacts.ObjectDescriptor, indexMap map[string]string) error {
 	updateData, err := serializeInstance(&nodedomain.NodeDomain{NodeIndexPK: indexMap})
 	if err != nil {
 		return errors.Wrap(err, "[ updateNodeDomainIndex ]  Couldn't serialize NodeDomain")

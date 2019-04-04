@@ -19,6 +19,7 @@ package genesis
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/component"
@@ -29,21 +30,28 @@ import (
 	"github.com/insolar/insolar/ledger/storage/object"
 )
 
-type GenesisState interface {
+type State interface {
 	component.Initer
 	GenesisRef() *insolar.Reference
 }
 
 type genesisInitializer struct {
-	DB            storage.DBContext     `inject:""`
+	DB storage.DBContext `inject:""`
+
+	insolar.PlatformCryptographyScheme `inject:""`
+
+	// TODO: @imarkin 28.03.2019 - remove it after all new storages integration (INS-2013, etc)
 	ObjectStorage storage.ObjectStorage `inject:""`
-	PulseTracker  storage.PulseTracker  `inject:""`
-	DropModifier  drop.Modifier         `inject:""`
+
+	PulseTracker storage.PulseTracker `inject:""`
+	DropModifier drop.Modifier        `inject:""`
+
+	Records object.RecordModifier `inject:""`
 
 	genesisRef *insolar.Reference
 }
 
-func NewGenesisInitializer() GenesisState {
+func NewGenesisInitializer() State {
 	return new(genesisInitializer)
 }
 
@@ -90,10 +98,18 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 		if err != nil {
 			return nil, err
 		}
-		genesisID, err := gi.ObjectStorage.SetRecord(ctx, insolar.ID(jetID), lastPulse.Pulse.PulseNumber, &object.GenesisRecord{})
-		if err != nil {
-			return nil, err
+
+		virtRec := &object.GenesisRecord{}
+		genesisID := object.NewRecordIDFromRecord(gi.PlatformCryptographyScheme, lastPulse.Pulse.PulseNumber, virtRec)
+		rec := record.MaterialRecord{
+			Record: virtRec,
+			JetID:  jetID,
 		}
+		err = gi.Records.Set(ctx, *genesisID, rec)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't save record into storage")
+		}
+
 		err = gi.ObjectStorage.SetObjectIndex(
 			ctx,
 			insolar.ID(jetID),
