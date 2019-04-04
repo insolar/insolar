@@ -13,10 +13,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+
 package artifact
 
 import (
 	"context"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
@@ -24,7 +27,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/object"
-	"github.com/pkg/errors"
 )
 
 type Contract struct {
@@ -38,7 +40,17 @@ type Contract struct {
 
 type Manager interface {
 	RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error)
-	ActivateObject(ctx context.Context, domain, obj, parent, prototype insolar.Reference, asDelegate bool, memory []byte) (ObjectDescriptor, error)
+	ActivateObject(
+		ctx context.Context,
+		domain, obj, parent, prototype insolar.Reference,
+		asDelegate bool,
+		memory []byte,
+	) (ObjectDescriptor, error)
+	ActivatePrototype(
+		ctx context.Context,
+		domain, obj, parent, code insolar.Reference,
+		memory []byte,
+	) (ObjectDescriptor, error)
 	UpdateObject(ctx context.Context, domain, request insolar.Reference, obj ObjectDescriptor, memory []byte) (ObjectDescriptor, error)
 	RegisterResult(ctx context.Context, obj, request insolar.Reference, payload []byte) (*insolar.ID, error)
 }
@@ -50,8 +62,7 @@ type Scope struct {
 	BlobModifier    blob.Modifier         `inject:""`
 	RecordsModifier object.RecordModifier `inject:""`
 
-	// ObjectStorage
-	// Depricated, should be removed after indices storage would be done.
+	// TODO: should be removed after indices storage would be done.
 	ObjectStorage storage.ObjectStorage `inject:""`
 }
 
@@ -88,6 +99,27 @@ func (m *Scope) ActivateObject(
 	asDelegate bool,
 	memory []byte,
 ) (ObjectDescriptor, error) {
+	return m.activateObject(ctx, domain, obj, prototype, false, parent, asDelegate, memory)
+}
+
+func (m *Scope) ActivatePrototype(
+	ctx context.Context,
+	domain, obj, parent, code insolar.Reference,
+	memory []byte,
+) (ObjectDescriptor, error) {
+	return m.activateObject(ctx, domain, obj, code, true, parent, false, memory)
+}
+
+func (m *Scope) activateObject(
+	ctx context.Context,
+	domain insolar.Reference,
+	obj insolar.Reference,
+	prototype insolar.Reference,
+	isPrototype bool,
+	parent insolar.Reference,
+	asDelegate bool,
+	memory []byte,
+) (ObjectDescriptor, error) {
 	var jetID = insolar.ID(insolar.ZeroJetID)
 	parentIdx, err := m.ObjectStorage.GetObjectIndex(ctx, jetID, parent.Record())
 	if err != nil {
@@ -101,7 +133,7 @@ func (m *Scope) ActivateObject(
 		},
 		StateRecord: object.StateRecord{
 			Image:       prototype,
-			IsPrototype: false,
+			IsPrototype: isPrototype,
 		},
 		Parent:     parent,
 		IsDelegate: asDelegate,

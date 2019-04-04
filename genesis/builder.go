@@ -199,7 +199,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 		cb.Codes[name] = codeRef
 
 		// FIXME: It's a temporary fix and should not be here. Ii will NOT work properly on production. Remove it ASAP!
-		_, err = cb.artifactsClient.ActivatePrototype(
+		_, err = cb.artifactManager.ActivatePrototype(
 			ctx,
 			*domainRef,
 			*cb.Prototypes[name],
