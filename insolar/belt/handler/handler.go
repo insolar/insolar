@@ -11,7 +11,6 @@ import (
 )
 
 type Handler struct {
-	belt   *belt.Belt
 	cancel chan struct{}
 	pulse  insolar.Pulse
 	slots  struct {
@@ -22,10 +21,9 @@ type Handler struct {
 	}
 }
 
-func NewHandler() *Handler {
+func NewHandler(pulse insolar.Pulse, past, present, future belt.Inithandle) *Handler {
 	h := &Handler{
 		cancel: make(chan struct{}),
-		belt:   belt.NewBelt(),
 	}
 	h.slots.present = slot.NewSlot()
 	return h
@@ -46,7 +44,7 @@ func (h *Handler) HandleMessage(msg *message.Message) ([]message.Message, error)
 	// pn := message.Metadata["pulse"]
 	// TODO: Select slot based on pulse.
 
-	f := flow.NewController(msg, h.belt)
+	f := flow.NewFlowController(msg, h.cancel)
 	id, _ := h.slots.present.Add(f)
 	// TODO: log error.
 	go func() {

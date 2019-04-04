@@ -2,7 +2,6 @@ package belt
 
 import (
 	"context"
-	"sync"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 )
@@ -27,33 +26,12 @@ type Adapter interface {
 	Adapt(context.Context) bool
 }
 
+type IterAdapter interface {
+	Adapter
+	Iter(context.Context) bool
+}
+
 type Slot interface {
 	Add(FlowController) (ID, error)
 	Remove(ID) error
-}
-
-type Belt struct {
-	cancel chan struct{}
-	lock   sync.RWMutex
-}
-
-func NewBelt() *Belt {
-	return &Belt{cancel: make(chan struct{})}
-}
-
-func (c *Belt) Lock() {
-	c.lock.Lock()
-}
-
-func (c *Belt) Unlock() {
-	c.lock.Unlock()
-}
-
-func (c *Belt) Continue() {
-	c.lock.RLock()
-	c.lock.RUnlock()
-}
-
-func (c *Belt) Cancel() <-chan struct{} {
-	return c.cancel
 }
