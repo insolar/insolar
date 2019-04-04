@@ -77,10 +77,7 @@ type Generator struct {
 
 	ArtifactManager artifact.Manager `inject:""`
 
-	// FIXME: genesis state here is the temporary, until merge this code with genesis initializer
 	GenesisState genesis.State `inject:""`
-
-	MBLock messageBusLocker `inject:""`
 }
 
 // NewGenerator creates new Generator.
@@ -578,9 +575,6 @@ func (g *Generator) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting  ...")
 	defer inslog.Info("[ Genesis ] Finished.")
-
-	g.MBLock.Unlock(ctx)
-	defer g.MBLock.Lock(ctx)
 
 	rootDomainID, err := g.ArtifactManager.RegisterRequest(
 		ctx,
