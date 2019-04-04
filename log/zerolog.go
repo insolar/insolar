@@ -37,7 +37,7 @@ type zerologAdapter struct {
 type loglevelChangeHandler struct {
 }
 
-func NewLoglevelChangeHandler() *loglevelChangeHandler {
+func NewLoglevelChangeHandler() http.Handler {
 	handler := &loglevelChangeHandler{}
 	return handler
 }

@@ -106,7 +106,7 @@ type procStatus struct {
 	StartTime time.Time
 }
 
-func newProcStatus() http.Handler {
+func newProcStatus() *procStatus {
 	info := &procStatus{
 		StartTime: time.Now(),
 	}
