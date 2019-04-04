@@ -18,14 +18,12 @@ package metrics
 
 import (
 	"context"
-	"fmt"
 	"net"
 	"net/http"
 	"strings"
 	"time"
 
 	"github.com/insolar/insolar/log"
-	"github.com/rs/zerolog"
 
 	"github.com/pkg/errors"
 	"github.com/prometheus/client_golang/prometheus"
@@ -63,32 +61,7 @@ func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *promet
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhandler)
 	mux.Handle("/_status", newProcStatus())
-	mux.HandleFunc("/debug/loglevel", func(w http.ResponseWriter, r *http.Request) {
-		values := r.URL.Query()
-		levelStr := "(nil)"
-		if values["level"] != nil {
-			levelStr = values["level"][0]
-		}
-		level, err := insolar.ParseLevel(levelStr)
-		if err != nil {
-			w.WriteHeader(500)
-			fmt.Fprintf(w, "Invalid level '%v': %v\n", levelStr, err)
-			return
-		}
-
-		zlevel, err := log.InternalLevelToZerologLevel(level)
-		if err != nil {
-			w.WriteHeader(500)
-			fmt.Fprintf(w, "Invalid level '%v': %v\n", levelStr, err)
-			return
-		}
-
-		zerolog.SetGlobalLevel(zlevel)
-
-		w.WriteHeader(200)
-		fmt.Fprintf(w, "OK, new log level: '%v'\n", levelStr)
-	})
-
+	mux.Handle("/debug/loglevel", log.NewLoglevelChangeHandler())
 	pprof.Handle(mux)
 	if cfg.ZpagesEnabled {
 		// https://opencensus.io/zpages/
