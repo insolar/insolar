@@ -40,6 +40,7 @@ type Manager interface {
 	RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error)
 	ActivateObject(ctx context.Context, domain, obj, parent, prototype insolar.Reference, asDelegate bool, memory []byte) (ObjectDescriptor, error)
 	UpdateObject(ctx context.Context, domain, request insolar.Reference, obj ObjectDescriptor, memory []byte) (ObjectDescriptor, error)
+	RegisterResult(ctx context.Context, obj, request insolar.Reference, payload []byte) (*insolar.ID, error)
 }
 
 type Scope struct {
@@ -66,6 +67,17 @@ func (m *Scope) RegisterRequest(ctx context.Context, objectRef insolar.Reference
 		Parcel:      message.ParcelToBytes(parcel),
 		MessageHash: m.hashParcel(parcel),
 		Object:      *objectRef.Record(),
+	}
+	return m.setRecord(ctx, rec)
+}
+
+func (m *Scope) RegisterResult(
+	ctx context.Context, obj, request insolar.Reference, payload []byte,
+) (*insolar.ID, error) {
+	rec := &object.ResultRecord{
+		Object:  *obj.Record(),
+		Request: request,
+		Payload: payload,
 	}
 	return m.setRecord(ctx, rec)
 }

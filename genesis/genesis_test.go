@@ -37,10 +37,6 @@ const testDataPath = "gentestdata"
 
 func mockArtifactClient(t *testing.T) *artifacts.ClientMock {
 	acMock := artifacts.NewClientMock(t)
-	acMock.RegisterResultFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error) {
-		id := gen.ID()
-		return &id, nil
-	}
 	return acMock
 }
 
@@ -52,6 +48,10 @@ func mockArtifactManager(t *testing.T) *artifact.ManagerMock {
 	}
 	amMock.ActivateObjectFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r artifact.ObjectDescriptor, r1 error) {
 		return artifact.NewObjectDescriptorMock(t), nil
+	}
+	amMock.RegisterResultFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error) {
+		id := gen.ID()
+		return &id, nil
 	}
 
 	return amMock
@@ -256,10 +256,10 @@ func TestActivateNodeRecord_RegisterResult_Err(t *testing.T) {
 		id := gen.ID()
 		return &id, nil
 	}
-	ac.ActivateObjectFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r artifacts.ObjectDescriptor, r1 error) {
-		return artifacts.NewObjectDescriptorMock(t), nil
+	am.ActivateObjectFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 insolar.Reference, p4 insolar.Reference, p5 bool, p6 []byte) (r artifact.ObjectDescriptor, r1 error) {
+		return artifact.NewObjectDescriptorMock(t), nil
 	}
-	ac.RegisterResultFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error) {
+	am.RegisterResultFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error) {
 		return nil, errors.New("test reasons")
 	}
 

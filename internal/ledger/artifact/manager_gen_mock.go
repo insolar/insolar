@@ -30,6 +30,11 @@ type ManagerMock struct {
 	RegisterRequestPreCounter uint64
 	RegisterRequestMock       mManagerMockRegisterRequest
 
+	RegisterResultFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error)
+	RegisterResultCounter    uint64
+	RegisterResultPreCounter uint64
+	RegisterResultMock       mManagerMockRegisterResult
+
 	UpdateObjectFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 ObjectDescriptor, p4 []byte) (r ObjectDescriptor, r1 error)
 	UpdateObjectCounter    uint64
 	UpdateObjectPreCounter uint64
@@ -46,6 +51,7 @@ func NewManagerMock(t minimock.Tester) *ManagerMock {
 
 	m.ActivateObjectMock = mManagerMockActivateObject{mock: m}
 	m.RegisterRequestMock = mManagerMockRegisterRequest{mock: m}
+	m.RegisterResultMock = mManagerMockRegisterResult{mock: m}
 	m.UpdateObjectMock = mManagerMockUpdateObject{mock: m}
 
 	return m
@@ -359,6 +365,159 @@ func (m *ManagerMock) RegisterRequestFinished() bool {
 	return true
 }
 
+type mManagerMockRegisterResult struct {
+	mock              *ManagerMock
+	mainExpectation   *ManagerMockRegisterResultExpectation
+	expectationSeries []*ManagerMockRegisterResultExpectation
+}
+
+type ManagerMockRegisterResultExpectation struct {
+	input  *ManagerMockRegisterResultInput
+	result *ManagerMockRegisterResultResult
+}
+
+type ManagerMockRegisterResultInput struct {
+	p  context.Context
+	p1 insolar.Reference
+	p2 insolar.Reference
+	p3 []byte
+}
+
+type ManagerMockRegisterResultResult struct {
+	r  *insolar.ID
+	r1 error
+}
+
+//Expect specifies that invocation of Manager.RegisterResult is expected from 1 to Infinity times
+func (m *mManagerMockRegisterResult) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) *mManagerMockRegisterResult {
+	m.mock.RegisterResultFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ManagerMockRegisterResultExpectation{}
+	}
+	m.mainExpectation.input = &ManagerMockRegisterResultInput{p, p1, p2, p3}
+	return m
+}
+
+//Return specifies results of invocation of Manager.RegisterResult
+func (m *mManagerMockRegisterResult) Return(r *insolar.ID, r1 error) *ManagerMock {
+	m.mock.RegisterResultFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ManagerMockRegisterResultExpectation{}
+	}
+	m.mainExpectation.result = &ManagerMockRegisterResultResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Manager.RegisterResult is expected once
+func (m *mManagerMockRegisterResult) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) *ManagerMockRegisterResultExpectation {
+	m.mock.RegisterResultFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ManagerMockRegisterResultExpectation{}
+	expectation.input = &ManagerMockRegisterResultInput{p, p1, p2, p3}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ManagerMockRegisterResultExpectation) Return(r *insolar.ID, r1 error) {
+	e.result = &ManagerMockRegisterResultResult{r, r1}
+}
+
+//Set uses given function f as a mock of Manager.RegisterResult method
+func (m *mManagerMockRegisterResult) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error)) *ManagerMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.RegisterResultFunc = f
+	return m.mock
+}
+
+//RegisterResult implements github.com/insolar/insolar/internal/ledger/artifact.Manager interface
+func (m *ManagerMock) RegisterResult(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte) (r *insolar.ID, r1 error) {
+	counter := atomic.AddUint64(&m.RegisterResultPreCounter, 1)
+	defer atomic.AddUint64(&m.RegisterResultCounter, 1)
+
+	if len(m.RegisterResultMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.RegisterResultMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ManagerMock.RegisterResult. %v %v %v %v", p, p1, p2, p3)
+			return
+		}
+
+		input := m.RegisterResultMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ManagerMockRegisterResultInput{p, p1, p2, p3}, "Manager.RegisterResult got unexpected parameters")
+
+		result := m.RegisterResultMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ManagerMock.RegisterResult")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.RegisterResultMock.mainExpectation != nil {
+
+		input := m.RegisterResultMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ManagerMockRegisterResultInput{p, p1, p2, p3}, "Manager.RegisterResult got unexpected parameters")
+		}
+
+		result := m.RegisterResultMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ManagerMock.RegisterResult")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.RegisterResultFunc == nil {
+		m.t.Fatalf("Unexpected call to ManagerMock.RegisterResult. %v %v %v %v", p, p1, p2, p3)
+		return
+	}
+
+	return m.RegisterResultFunc(p, p1, p2, p3)
+}
+
+//RegisterResultMinimockCounter returns a count of ManagerMock.RegisterResultFunc invocations
+func (m *ManagerMock) RegisterResultMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.RegisterResultCounter)
+}
+
+//RegisterResultMinimockPreCounter returns the value of ManagerMock.RegisterResult invocations
+func (m *ManagerMock) RegisterResultMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.RegisterResultPreCounter)
+}
+
+//RegisterResultFinished returns true if mock invocations count is ok
+func (m *ManagerMock) RegisterResultFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.RegisterResultMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.RegisterResultCounter) == uint64(len(m.RegisterResultMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.RegisterResultMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.RegisterResultCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.RegisterResultFunc != nil {
+		return atomic.LoadUint64(&m.RegisterResultCounter) > 0
+	}
+
+	return true
+}
+
 type mManagerMockUpdateObject struct {
 	mock              *ManagerMock
 	mainExpectation   *ManagerMockUpdateObjectExpectation
@@ -525,6 +684,10 @@ func (m *ManagerMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ManagerMock.RegisterRequest")
 	}
 
+	if !m.RegisterResultFinished() {
+		m.t.Fatal("Expected call to ManagerMock.RegisterResult")
+	}
+
 	if !m.UpdateObjectFinished() {
 		m.t.Fatal("Expected call to ManagerMock.UpdateObject")
 	}
@@ -554,6 +717,10 @@ func (m *ManagerMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ManagerMock.RegisterRequest")
 	}
 
+	if !m.RegisterResultFinished() {
+		m.t.Fatal("Expected call to ManagerMock.RegisterResult")
+	}
+
 	if !m.UpdateObjectFinished() {
 		m.t.Fatal("Expected call to ManagerMock.UpdateObject")
 	}
@@ -574,6 +741,7 @@ func (m *ManagerMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.ActivateObjectFinished()
 		ok = ok && m.RegisterRequestFinished()
+		ok = ok && m.RegisterResultFinished()
 		ok = ok && m.UpdateObjectFinished()
 
 		if ok {
@@ -589,6 +757,10 @@ func (m *ManagerMock) MinimockWait(timeout time.Duration) {
 
 			if !m.RegisterRequestFinished() {
 				m.t.Error("Expected call to ManagerMock.RegisterRequest")
+			}
+
+			if !m.RegisterResultFinished() {
+				m.t.Error("Expected call to ManagerMock.RegisterResult")
 			}
 
 			if !m.UpdateObjectFinished() {
@@ -612,6 +784,10 @@ func (m *ManagerMock) AllMocksCalled() bool {
 	}
 
 	if !m.RegisterRequestFinished() {
+		return false
+	}
+
+	if !m.RegisterResultFinished() {
 		return false
 	}
 

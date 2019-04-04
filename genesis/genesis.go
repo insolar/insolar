@@ -143,7 +143,7 @@ func (g *Genesis) activateRootDomain(
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
-	_, err = g.ArtifactsClient.RegisterResult(ctx, *g.GenesisState.GenesisRef(), *contract, nil)
+	_, err = g.ArtifactManager.RegisterResult(ctx, *g.GenesisState.GenesisRef(), *contract, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
@@ -186,7 +186,7 @@ func (g *Genesis) activateNodeDomain(
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
-	_, err = g.ArtifactsClient.RegisterResult(ctx, *g.rootDomainRef, *contract, nil)
+	_, err = g.ArtifactManager.RegisterResult(ctx, *g.rootDomainRef, *contract, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
@@ -234,7 +234,7 @@ func (g *Genesis) activateRootMember(
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
-	_, err = g.ArtifactsClient.RegisterResult(ctx, *g.rootDomainRef, *contract, nil)
+	_, err = g.ArtifactManager.RegisterResult(ctx, *g.rootDomainRef, *contract, nil)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
 	}
@@ -302,7 +302,7 @@ func (g *Genesis) activateRootMemberWallet(
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}
-	_, err = g.ArtifactsClient.RegisterResult(ctx, *g.rootDomainRef, *contract, nil)
+	_, err = g.ArtifactManager.RegisterResult(ctx, *g.rootDomainRef, *contract, nil)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}
@@ -453,7 +453,7 @@ func (g *Genesis) activateNodeRecord(ctx context.Context, cb *ContractsBuilder, 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ activateNodeRecord ] Could'n activateNodeRecord node object")
 	}
-	_, err = g.ArtifactsClient.RegisterResult(ctx, *g.rootDomainRef, *contract, nil)
+	_, err = g.ArtifactManager.RegisterResult(ctx, *g.rootDomainRef, *contract, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't register result")
 	}

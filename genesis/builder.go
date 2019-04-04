@@ -191,7 +191,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't SetRecord")
 		}
-		_, err = cb.artifactsClient.RegisterResult(ctx, *domainRef, *codeRef, nil)
+		_, err = cb.artifactManager.RegisterResult(ctx, *domainRef, *codeRef, nil)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't SetRecord")
 		}
@@ -210,7 +210,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't ActivatePrototype")
 		}
-		_, err = cb.artifactsClient.RegisterResult(ctx, *domainRef, *cb.Prototypes[name], nil)
+		_, err = cb.artifactManager.RegisterResult(ctx, *domainRef, *cb.Prototypes[name], nil)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterResult of prototype")
 		}
