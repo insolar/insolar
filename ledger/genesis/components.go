@@ -123,7 +123,7 @@ func initComponents(
 	messageBus, err := messagebus.NewMessageBus(cfg)
 	checkError(ctx, err, "failed to start MessageBus")
 
-	gen, err := genesis.NewGenesis(genesisConfigPath, genesisKeyOut)
+	gen, err := genesis.NewGenerator(genesisConfigPath, genesisKeyOut)
 	checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")
 
 	contractRequester, err := contractrequester.New()

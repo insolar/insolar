@@ -58,7 +58,7 @@ func requestWithError(am *artifact.ManagerMock) artifact.Manager {
 	return am
 }
 
-func mockGenesis(t *testing.T, am artifact.Manager) *Genesis {
+func mockGenerator(t *testing.T, am artifact.Manager) *Generator {
 	ref := gen.Reference()
 	var discoveryNodes []Node
 	discoveryNodes = append(discoveryNodes,
@@ -69,7 +69,7 @@ func mockGenesis(t *testing.T, am artifact.Manager) *Genesis {
 			Role: "virtual",
 		},
 	)
-	g := &Genesis{
+	g := &Generator{
 		config: &Config{
 			ReuseKeys:        true,
 			DiscoveryNodes:   discoveryNodes,
@@ -84,7 +84,7 @@ func mockGenesis(t *testing.T, am artifact.Manager) *Genesis {
 	return g
 }
 
-func mockContractBuilder(t *testing.T, g *Genesis) *ContractsBuilder {
+func mockContractBuilder(t *testing.T, g *Generator) *ContractsBuilder {
 	ref := gen.Reference()
 	cb := NewContractBuilder(gen.Reference(), g.ArtifactManager)
 	cb.Prototypes[nodeRecord] = &ref
@@ -114,7 +114,7 @@ func (s *genesisWithDataSuite) AfterTest(suiteName, testName string) {
 }
 
 func (s *genesisWithDataSuite) TestCreateKeys() {
-	g := &Genesis{
+	g := &Generator{
 		config: &Config{
 			KeysNameFormat: "/node_%d.json",
 		},
@@ -130,7 +130,7 @@ func (s *genesisWithDataSuite) TestCreateKeys() {
 }
 
 func (s *genesisWithDataSuite) TestUploadKeys_DontReuse() {
-	g := Genesis{
+	g := Generator{
 		config: &Config{
 			ReuseKeys: false,
 		},
@@ -145,7 +145,7 @@ func (s *genesisWithDataSuite) TestUploadKeys_DontReuse() {
 }
 
 func (s *genesisWithDataSuite) TestUploadKeys_Reuse() {
-	g := Genesis{
+	g := Generator{
 		config: &Config{
 			ReuseKeys: true,
 		},
@@ -162,7 +162,7 @@ func (s *genesisWithDataSuite) TestUploadKeys_Reuse() {
 }
 
 func (s *genesisWithDataSuite) TestUploadKeys_Reuse_WrongAmount() {
-	g := Genesis{
+	g := Generator{
 		config: &Config{
 			ReuseKeys: true,
 		},
@@ -178,7 +178,7 @@ func (s *genesisWithDataSuite) TestUploadKeys_Reuse_WrongAmount() {
 }
 
 func TestUploadKeys_Reuse_DirNotExist(t *testing.T) {
-	g := Genesis{
+	g := Generator{
 		config: &Config{
 			ReuseKeys: true,
 		},
@@ -194,7 +194,7 @@ func TestUploadKeys_Reuse_DirNotExist(t *testing.T) {
 func TestActivateNodeRecord_RegisterRequest_Err(t *testing.T) {
 	am := requestWithError(mockArtifactManager(t))
 
-	g := mockGenesis(t, am)
+	g := mockGenerator(t, am)
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 	publicKey := "fancy_public_key"
@@ -222,7 +222,7 @@ func TestActivateNodeRecord_Activate_Err(t *testing.T) {
 		return nil, errors.New("test reasons")
 	}
 
-	g := mockGenesis(t, am)
+	g := mockGenerator(t, am)
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 	publicKey := "fancy_public_key"
@@ -253,7 +253,7 @@ func TestActivateNodeRecord_RegisterResult_Err(t *testing.T) {
 		return nil, errors.New("test reasons")
 	}
 
-	g := mockGenesis(t, am)
+	g := mockGenerator(t, am)
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 	publicKey := "fancy_public_key"
@@ -272,7 +272,7 @@ func TestActivateNodeRecord_RegisterResult_Err(t *testing.T) {
 
 func TestActivateNodeRecord(t *testing.T) {
 	am := mockArtifactManager(t)
-	g := mockGenesis(t, am)
+	g := mockGenerator(t, am)
 
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
@@ -293,7 +293,7 @@ func TestActivateNodeRecord(t *testing.T) {
 func TestActivateNodes_Err(t *testing.T) {
 	am := requestWithError(mockArtifactManager(t))
 
-	g := mockGenesis(t, am)
+	g := mockGenerator(t, am)
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 
@@ -314,7 +314,7 @@ func TestActivateNodes_Err(t *testing.T) {
 
 func TestActivateNodes(t *testing.T) {
 	am := mockArtifactManager(t)
-	g := mockGenesis(t, am)
+	g := mockGenerator(t, am)
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
 
@@ -339,7 +339,7 @@ func TestActivateNodes(t *testing.T) {
 
 func TestActivateDiscoveryNodes_DiffLen(t *testing.T) {
 	am := mockArtifactManager(t)
-	g := mockGenesis(t, am)
+	g := mockGenerator(t, am)
 
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
@@ -357,7 +357,7 @@ func TestActivateDiscoveryNodes_DiffLen(t *testing.T) {
 
 func TestActivateDiscoveryNodes_Err(t *testing.T) {
 	am := requestWithError(mockArtifactManager(t))
-	g := mockGenesis(t, am)
+	g := mockGenerator(t, am)
 
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
@@ -380,7 +380,7 @@ func TestActivateDiscoveryNodes_Err(t *testing.T) {
 
 func TestActivateDiscoveryNodes(t *testing.T) {
 	am := mockArtifactManager(t)
-	g := mockGenesis(t, am)
+	g := mockGenerator(t, am)
 
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
@@ -410,7 +410,7 @@ func (s *genesisWithDataSuite) TestAddDiscoveryIndex_ActivateErr() {
 	t := s.T()
 
 	am := requestWithError(mockArtifactManager(t))
-	g := mockGenesis(t, am)
+	g := mockGenerator(t, am)
 	cb := mockContractBuilder(s.T(), g)
 	ctx := inslogger.TestContext(s.T())
 	err := g.createKeys(ctx, testDataPath, len(g.config.DiscoveryNodes))
@@ -428,7 +428,7 @@ func (s *genesisWithDataSuite) TestAddDiscoveryIndex_ActivateErr() {
 func TestAddDiscoveryIndex_UploadErr(t *testing.T) {
 	am := requestWithError(mockArtifactManager(t))
 
-	g := mockGenesis(t, am)
+	g := mockGenerator(t, am)
 	g.config.DiscoveryKeysDir = "not_existed_testDataPath"
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
@@ -444,7 +444,7 @@ func TestAddDiscoveryIndex_UploadErr(t *testing.T) {
 
 func (s *genesisWithDataSuite) TestAddDiscoveryIndex() {
 	am := mockArtifactManager(s.T())
-	g := mockGenesis(s.T(), am)
+	g := mockGenerator(s.T(), am)
 	cb := mockContractBuilder(s.T(), g)
 	ctx := inslogger.TestContext(s.T())
 	err := g.createKeys(ctx, testDataPath, len(g.config.DiscoveryNodes))
@@ -461,7 +461,7 @@ func (s *genesisWithDataSuite) TestAddDiscoveryIndex() {
 func (s *genesisWithDataSuite) TestAddIndex_ActivateErr() {
 	t := s.T()
 	am := requestWithError(mockArtifactManager(t))
-	g := mockGenesis(s.T(), am)
+	g := mockGenerator(s.T(), am)
 	cb := mockContractBuilder(s.T(), g)
 	ctx := inslogger.TestContext(s.T())
 	err := g.createKeys(ctx, testDataPath, nodeAmount)
@@ -477,7 +477,7 @@ func (s *genesisWithDataSuite) TestAddIndex_ActivateErr() {
 
 func TestAddIndex_UploadErr(t *testing.T) {
 	am := requestWithError(mockArtifactManager(t))
-	g := mockGenesis(t, am)
+	g := mockGenerator(t, am)
 	g.config.NodeKeysDir = "not_existed_testDataPath"
 	cb := mockContractBuilder(t, g)
 	ctx := inslogger.TestContext(t)
@@ -492,7 +492,7 @@ func TestAddIndex_UploadErr(t *testing.T) {
 
 func (s *genesisWithDataSuite) TestAddIndex() {
 	am := mockArtifactManager(s.T())
-	g := mockGenesis(s.T(), am)
+	g := mockGenerator(s.T(), am)
 	cb := mockContractBuilder(s.T(), g)
 	ctx := inslogger.TestContext(s.T())
 	err := g.createKeys(ctx, testDataPath, nodeAmount)

@@ -66,8 +66,8 @@ type nodeInfo struct {
 	ref        *insolar.Reference
 }
 
-// Genesis is a component for precreation insolar contracts types and RootDomain instance
-type Genesis struct {
+// Generator is a component for generating RootDomain instance and genesis contracts.
+type Generator struct {
 	rootDomainRef *insolar.Reference
 	nodeDomainRef *insolar.Reference
 	rootMemberRef *insolar.Reference
@@ -83,10 +83,10 @@ type Genesis struct {
 	MBLock messageBusLocker `inject:""`
 }
 
-// NewGenesis creates new Genesis
-func NewGenesis(genesisConfigPath string, genesisKeyOut string) (*Genesis, error) {
+// NewGenerator creates new Generator.
+func NewGenerator(genesisConfigPath string, genesisKeyOut string) (*Generator, error) {
 	config, err := ParseGenesisConfig(genesisConfigPath)
-	genesis := &Genesis{
+	genesis := &Generator{
 		rootDomainRef: &insolar.Reference{},
 		config:        config,
 		keyOut:        genesisKeyOut,
@@ -112,7 +112,7 @@ func buildSmartContracts(ctx context.Context, cb *ContractsBuilder, rootDomainID
 	return nil
 }
 
-func (g *Genesis) activateRootDomain(
+func (g *Generator) activateRootDomain(
 	ctx context.Context,
 	cb *ContractsBuilder,
 	contractID *insolar.ID,
@@ -149,7 +149,7 @@ func (g *Genesis) activateRootDomain(
 	return desc, nil
 }
 
-func (g *Genesis) activateNodeDomain(
+func (g *Generator) activateNodeDomain(
 	ctx context.Context, domain *insolar.ID, cb *ContractsBuilder,
 ) (artifact.ObjectDescriptor, error) {
 	nd, _ := nodedomain.NewNodeDomain()
@@ -193,7 +193,7 @@ func (g *Genesis) activateNodeDomain(
 	return desc, nil
 }
 
-func (g *Genesis) activateRootMember(
+func (g *Generator) activateRootMember(
 	ctx context.Context, domain *insolar.ID, cb *ContractsBuilder, rootPubKey string,
 ) error {
 
@@ -240,7 +240,7 @@ func (g *Genesis) activateRootMember(
 }
 
 // TODO: this is not required since we refer by request id.
-func (g *Genesis) updateRootDomain(
+func (g *Generator) updateRootDomain(
 	ctx context.Context, domainDesc artifact.ObjectDescriptor,
 ) error {
 	updateData, err := insolar.Serialize(&rootdomain.RootDomain{RootMember: *g.rootMemberRef, NodeDomainRef: *g.nodeDomainRef})
@@ -261,7 +261,7 @@ func (g *Genesis) updateRootDomain(
 	return nil
 }
 
-func (g *Genesis) activateRootMemberWallet(
+func (g *Generator) activateRootMemberWallet(
 	ctx context.Context, domain *insolar.ID, cb *ContractsBuilder,
 ) error {
 
@@ -307,7 +307,7 @@ func (g *Genesis) activateRootMemberWallet(
 	return nil
 }
 
-func (g *Genesis) activateSmartContracts(
+func (g *Generator) activateSmartContracts(
 	ctx context.Context, cb *ContractsBuilder, rootPubKey string, rootDomainID *insolar.ID,
 ) ([]genesisNode, error) {
 
@@ -361,7 +361,7 @@ type genesisNode struct {
 	role    string
 }
 
-func (g *Genesis) activateDiscoveryNodes(ctx context.Context, cb *ContractsBuilder, nodesInfo []nodeInfo) ([]genesisNode, error) {
+func (g *Generator) activateDiscoveryNodes(ctx context.Context, cb *ContractsBuilder, nodesInfo []nodeInfo) ([]genesisNode, error) {
 	if len(nodesInfo) != len(g.config.DiscoveryNodes) {
 		return nil, errors.New("[ activateDiscoveryNodes ] len of nodesInfo param must be equal to len of DiscoveryNodes in genesis config")
 	}
@@ -397,7 +397,7 @@ func (g *Genesis) activateDiscoveryNodes(ctx context.Context, cb *ContractsBuild
 	return nodes, nil
 }
 
-func (g *Genesis) activateNodes(ctx context.Context, cb *ContractsBuilder, nodes []nodeInfo) ([]nodeInfo, error) {
+func (g *Generator) activateNodes(ctx context.Context, cb *ContractsBuilder, nodes []nodeInfo) ([]nodeInfo, error) {
 	var updatedNodes []nodeInfo
 
 	for i, node := range nodes {
@@ -421,7 +421,7 @@ func (g *Genesis) activateNodes(ctx context.Context, cb *ContractsBuilder, nodes
 	return updatedNodes, nil
 }
 
-func (g *Genesis) activateNodeRecord(ctx context.Context, cb *ContractsBuilder, record *noderecord.NodeRecord, name string) (*insolar.Reference, error) {
+func (g *Generator) activateNodeRecord(ctx context.Context, cb *ContractsBuilder, record *noderecord.NodeRecord, name string) (*insolar.Reference, error) {
 	nodeData, err := insolar.Serialize(record)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't serialize node instance")
@@ -457,7 +457,7 @@ func (g *Genesis) activateNodeRecord(ctx context.Context, cb *ContractsBuilder, 
 	return contract, nil
 }
 
-func (g *Genesis) addDiscoveryIndex(ctx context.Context, cb *ContractsBuilder, indexMap map[string]string) ([]genesisNode, map[string]string, error) {
+func (g *Generator) addDiscoveryIndex(ctx context.Context, cb *ContractsBuilder, indexMap map[string]string) ([]genesisNode, map[string]string, error) {
 	errMsg := "[ addDiscoveryIndex ]"
 	discoveryKeysPath, err := absPath(g.config.DiscoveryKeysDir)
 	if err != nil {
@@ -477,7 +477,7 @@ func (g *Genesis) addDiscoveryIndex(ctx context.Context, cb *ContractsBuilder, i
 	return discoveryNodes, indexMap, nil
 }
 
-func (g *Genesis) addIndex(ctx context.Context, cb *ContractsBuilder, indexMap map[string]string) (map[string]string, error) {
+func (g *Generator) addIndex(ctx context.Context, cb *ContractsBuilder, indexMap map[string]string) (map[string]string, error) {
 	errMsg := "[ addIndex ]"
 	nodeKeysPath, err := absPath(g.config.NodeKeysDir)
 	if err != nil {
@@ -497,7 +497,7 @@ func (g *Genesis) addIndex(ctx context.Context, cb *ContractsBuilder, indexMap m
 	return indexMap, nil
 }
 
-func (g *Genesis) createKeys(ctx context.Context, path string, amount int) error {
+func (g *Generator) createKeys(ctx context.Context, path string, amount int) error {
 	err := os.RemoveAll(path)
 	if err != nil {
 		return errors.Wrap(err, "[ createKeys ] couldn't remove old dir")
@@ -539,7 +539,7 @@ func (g *Genesis) createKeys(ctx context.Context, path string, amount int) error
 	return nil
 }
 
-func (g *Genesis) uploadKeys(ctx context.Context, path string, amount int) ([]nodeInfo, error) {
+func (g *Generator) uploadKeys(ctx context.Context, path string, amount int) ([]nodeInfo, error) {
 	var err error
 	if !g.config.ReuseKeys {
 		err = g.createKeys(ctx, path, amount)
@@ -574,10 +574,10 @@ func (g *Genesis) uploadKeys(ctx context.Context, path string, amount int) ([]no
 }
 
 // Start creates types and RootDomain instance
-func (g *Genesis) Start(ctx context.Context) error {
+func (g *Generator) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
-	inslog.Info("[ Genesis ] Starting Genesis ...")
-	defer inslog.Info("[ Genesis ] Finished Genesis ...")
+	inslog.Info("[ Genesis ] Starting  ...")
+	defer inslog.Info("[ Genesis ] Finished.")
 
 	g.MBLock.Unlock(ctx)
 	defer g.MBLock.Lock(ctx)
@@ -627,7 +627,7 @@ func (g *Genesis) Start(ctx context.Context) error {
 	return nil
 }
 
-func (g *Genesis) makeCertificates(nodes []genesisNode) error {
+func (g *Generator) makeCertificates(nodes []genesisNode) error {
 	certs := make([]certificate.Certificate, len(nodes))
 	for i, node := range nodes {
 		certs[i].Role = node.role
@@ -676,7 +676,7 @@ func (g *Genesis) makeCertificates(nodes []genesisNode) error {
 	return nil
 }
 
-func (g *Genesis) updateNodeDomainIndex(ctx context.Context, nodeDomainDesc artifact.ObjectDescriptor, indexMap map[string]string) error {
+func (g *Generator) updateNodeDomainIndex(ctx context.Context, nodeDomainDesc artifact.ObjectDescriptor, indexMap map[string]string) error {
 	updateData, err := insolar.Serialize(
 		&nodedomain.NodeDomain{
 			NodeIndexPK: indexMap,
