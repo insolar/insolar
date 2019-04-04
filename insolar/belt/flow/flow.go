@@ -2,7 +2,6 @@ package flow
 
 import (
 	"context"
-	"sync"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/belt"
@@ -10,14 +9,14 @@ import (
 
 type Controller struct {
 	cancel   <-chan struct{}
-	adapters map[belt.Adapter]chan struct{}
+	adapters map[belt.Adapter]chan bool
 	message  *message.Message
 }
 
 func NewFlowController(msg *message.Message, cancel <-chan struct{}) *Controller {
 	return &Controller{
 		cancel:   cancel,
-		adapters: map[belt.Adapter]chan struct{}{},
+		adapters: map[belt.Adapter]chan bool{},
 		message:  msg,
 	}
 }
@@ -31,47 +30,13 @@ func (f *Controller) Wait(migrate belt.Handle) {
 	panic(cancelPanic{migrateTo: migrate})
 }
 
-func (f *Controller) YieldFirst(migrate belt.Handle, first belt.Adapter, rest ...belt.Adapter) {
-	panic("implement me")
-}
-
-func (f *Controller) YieldNone(migrate belt.Handle, first belt.Adapter, rest ...belt.Adapter) {
-	panic("implement me")
-}
-
-func (f *Controller) YieldAll(migrate belt.Handle, first belt.Adapter, rest ...belt.Adapter) {
-	all := append(rest, first)
-	var wg sync.WaitGroup
-	wg.Add(len(all))
-	for _, a := range all {
-		a := a
-		if d, ok := f.adapters[a]; ok {
-			go func() {
-				<-d
-				wg.Done()
-			}()
-			continue
-		}
-
-		done := make(chan struct{})
-		f.adapters[a] = done
-		go func() {
-			a.Adapt(context.TODO())
-			close(done)
-			wg.Done()
-		}()
-	}
-
-	done := make(chan struct{})
-	go func() {
-		wg.Wait()
-		close(done)
-	}()
-
+func (f *Controller) Yield(migrate belt.Handle, a belt.Adapter) bool {
+	var done bool
 	select {
 	case <-f.cancel:
 		panic(cancelPanic{migrateTo: migrate})
-	case <-done:
+	case done = <-f.adapt(a):
+		return done
 	}
 }
 
@@ -92,4 +57,15 @@ func (f *Controller) handle(ctx context.Context, h belt.Handle) {
 		}
 	}()
 	h(ctx, f)
+}
+
+func (f *Controller) adapt(a belt.Adapter) <-chan bool {
+	if d, ok := f.adapters[a]; ok {
+		return d
+	}
+
+	done := make(chan bool)
+	f.adapters[a] = done
+	done <- a.Adapt(context.TODO())
+	return done
 }

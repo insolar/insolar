@@ -15,9 +15,7 @@ type Inithandle func(message *message.Message) Handle
 // This is very important not to blow this interface. Keep it minimal.
 type Flow interface {
 	Wait(migrate Handle)
-	YieldFirst(migrate Handle, first Adapter, rest ...Adapter)
-	YieldAll(migrate Handle, first Adapter, rest ...Adapter)
-	YieldNone(migrate Handle, first Adapter, rest ...Adapter)
+	Yield(migrate Handle, a Adapter) bool
 }
 
 type FlowController interface {
@@ -25,7 +23,12 @@ type FlowController interface {
 }
 
 type Adapter interface {
-	Adapt(context.Context)
+	Adapt(context.Context) bool
+}
+
+type IterAdapter interface {
+	Adapter
+	Iter(context.Context) bool
 }
 
 type Slot interface {
