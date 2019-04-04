@@ -182,7 +182,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 		}
 
 		log.Debugf("Deploying code for contract %q", name)
-		codeID, err := cb.artifactsClient.DeployCode(
+		codeID, err := cb.artifactManager.DeployCode(
 			ctx,
 			*domainRef, *insolar.NewReference(*domain, *codeReq),
 			pluginBinary, insolar.MachineTypeGoPlugin,

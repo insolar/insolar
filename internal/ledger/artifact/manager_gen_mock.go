@@ -30,6 +30,11 @@ type ManagerMock struct {
 	ActivatePrototypePreCounter uint64
 	ActivatePrototypeMock       mManagerMockActivatePrototype
 
+	DeployCodeFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte, p4 insolar.MachineType) (r *insolar.ID, r1 error)
+	DeployCodeCounter    uint64
+	DeployCodePreCounter uint64
+	DeployCodeMock       mManagerMockDeployCode
+
 	RegisterRequestFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error)
 	RegisterRequestCounter    uint64
 	RegisterRequestPreCounter uint64
@@ -56,6 +61,7 @@ func NewManagerMock(t minimock.Tester) *ManagerMock {
 
 	m.ActivateObjectMock = mManagerMockActivateObject{mock: m}
 	m.ActivatePrototypeMock = mManagerMockActivatePrototype{mock: m}
+	m.DeployCodeMock = mManagerMockDeployCode{mock: m}
 	m.RegisterRequestMock = mManagerMockRegisterRequest{mock: m}
 	m.RegisterResultMock = mManagerMockRegisterResult{mock: m}
 	m.UpdateObjectMock = mManagerMockUpdateObject{mock: m}
@@ -369,6 +375,160 @@ func (m *ManagerMock) ActivatePrototypeFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.ActivatePrototypeFunc != nil {
 		return atomic.LoadUint64(&m.ActivatePrototypeCounter) > 0
+	}
+
+	return true
+}
+
+type mManagerMockDeployCode struct {
+	mock              *ManagerMock
+	mainExpectation   *ManagerMockDeployCodeExpectation
+	expectationSeries []*ManagerMockDeployCodeExpectation
+}
+
+type ManagerMockDeployCodeExpectation struct {
+	input  *ManagerMockDeployCodeInput
+	result *ManagerMockDeployCodeResult
+}
+
+type ManagerMockDeployCodeInput struct {
+	p  context.Context
+	p1 insolar.Reference
+	p2 insolar.Reference
+	p3 []byte
+	p4 insolar.MachineType
+}
+
+type ManagerMockDeployCodeResult struct {
+	r  *insolar.ID
+	r1 error
+}
+
+//Expect specifies that invocation of Manager.DeployCode is expected from 1 to Infinity times
+func (m *mManagerMockDeployCode) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte, p4 insolar.MachineType) *mManagerMockDeployCode {
+	m.mock.DeployCodeFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ManagerMockDeployCodeExpectation{}
+	}
+	m.mainExpectation.input = &ManagerMockDeployCodeInput{p, p1, p2, p3, p4}
+	return m
+}
+
+//Return specifies results of invocation of Manager.DeployCode
+func (m *mManagerMockDeployCode) Return(r *insolar.ID, r1 error) *ManagerMock {
+	m.mock.DeployCodeFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ManagerMockDeployCodeExpectation{}
+	}
+	m.mainExpectation.result = &ManagerMockDeployCodeResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Manager.DeployCode is expected once
+func (m *mManagerMockDeployCode) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte, p4 insolar.MachineType) *ManagerMockDeployCodeExpectation {
+	m.mock.DeployCodeFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ManagerMockDeployCodeExpectation{}
+	expectation.input = &ManagerMockDeployCodeInput{p, p1, p2, p3, p4}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ManagerMockDeployCodeExpectation) Return(r *insolar.ID, r1 error) {
+	e.result = &ManagerMockDeployCodeResult{r, r1}
+}
+
+//Set uses given function f as a mock of Manager.DeployCode method
+func (m *mManagerMockDeployCode) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte, p4 insolar.MachineType) (r *insolar.ID, r1 error)) *ManagerMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.DeployCodeFunc = f
+	return m.mock
+}
+
+//DeployCode implements github.com/insolar/insolar/internal/ledger/artifact.Manager interface
+func (m *ManagerMock) DeployCode(p context.Context, p1 insolar.Reference, p2 insolar.Reference, p3 []byte, p4 insolar.MachineType) (r *insolar.ID, r1 error) {
+	counter := atomic.AddUint64(&m.DeployCodePreCounter, 1)
+	defer atomic.AddUint64(&m.DeployCodeCounter, 1)
+
+	if len(m.DeployCodeMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.DeployCodeMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ManagerMock.DeployCode. %v %v %v %v %v", p, p1, p2, p3, p4)
+			return
+		}
+
+		input := m.DeployCodeMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ManagerMockDeployCodeInput{p, p1, p2, p3, p4}, "Manager.DeployCode got unexpected parameters")
+
+		result := m.DeployCodeMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ManagerMock.DeployCode")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.DeployCodeMock.mainExpectation != nil {
+
+		input := m.DeployCodeMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ManagerMockDeployCodeInput{p, p1, p2, p3, p4}, "Manager.DeployCode got unexpected parameters")
+		}
+
+		result := m.DeployCodeMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ManagerMock.DeployCode")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.DeployCodeFunc == nil {
+		m.t.Fatalf("Unexpected call to ManagerMock.DeployCode. %v %v %v %v %v", p, p1, p2, p3, p4)
+		return
+	}
+
+	return m.DeployCodeFunc(p, p1, p2, p3, p4)
+}
+
+//DeployCodeMinimockCounter returns a count of ManagerMock.DeployCodeFunc invocations
+func (m *ManagerMock) DeployCodeMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.DeployCodeCounter)
+}
+
+//DeployCodeMinimockPreCounter returns the value of ManagerMock.DeployCode invocations
+func (m *ManagerMock) DeployCodeMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.DeployCodePreCounter)
+}
+
+//DeployCodeFinished returns true if mock invocations count is ok
+func (m *ManagerMock) DeployCodeFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.DeployCodeMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.DeployCodeCounter) == uint64(len(m.DeployCodeMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.DeployCodeMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.DeployCodeCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.DeployCodeFunc != nil {
+		return atomic.LoadUint64(&m.DeployCodeCounter) > 0
 	}
 
 	return true
@@ -845,6 +1005,10 @@ func (m *ManagerMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ManagerMock.ActivatePrototype")
 	}
 
+	if !m.DeployCodeFinished() {
+		m.t.Fatal("Expected call to ManagerMock.DeployCode")
+	}
+
 	if !m.RegisterRequestFinished() {
 		m.t.Fatal("Expected call to ManagerMock.RegisterRequest")
 	}
@@ -882,6 +1046,10 @@ func (m *ManagerMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ManagerMock.ActivatePrototype")
 	}
 
+	if !m.DeployCodeFinished() {
+		m.t.Fatal("Expected call to ManagerMock.DeployCode")
+	}
+
 	if !m.RegisterRequestFinished() {
 		m.t.Fatal("Expected call to ManagerMock.RegisterRequest")
 	}
@@ -910,6 +1078,7 @@ func (m *ManagerMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.ActivateObjectFinished()
 		ok = ok && m.ActivatePrototypeFinished()
+		ok = ok && m.DeployCodeFinished()
 		ok = ok && m.RegisterRequestFinished()
 		ok = ok && m.RegisterResultFinished()
 		ok = ok && m.UpdateObjectFinished()
@@ -927,6 +1096,10 @@ func (m *ManagerMock) MinimockWait(timeout time.Duration) {
 
 			if !m.ActivatePrototypeFinished() {
 				m.t.Error("Expected call to ManagerMock.ActivatePrototype")
+			}
+
+			if !m.DeployCodeFinished() {
+				m.t.Error("Expected call to ManagerMock.DeployCode")
 			}
 
 			if !m.RegisterRequestFinished() {
@@ -958,6 +1131,10 @@ func (m *ManagerMock) AllMocksCalled() bool {
 	}
 
 	if !m.ActivatePrototypeFinished() {
+		return false
+	}
+
+	if !m.DeployCodeFinished() {
 		return false
 	}
 

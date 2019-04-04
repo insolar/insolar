@@ -40,6 +40,7 @@ type Contract struct {
 
 type Manager interface {
 	RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error)
+	RegisterResult(ctx context.Context, obj, request insolar.Reference, payload []byte) (*insolar.ID, error)
 	ActivateObject(
 		ctx context.Context,
 		domain, obj, parent, prototype insolar.Reference,
@@ -52,7 +53,13 @@ type Manager interface {
 		memory []byte,
 	) (ObjectDescriptor, error)
 	UpdateObject(ctx context.Context, domain, request insolar.Reference, obj ObjectDescriptor, memory []byte) (ObjectDescriptor, error)
-	RegisterResult(ctx context.Context, obj, request insolar.Reference, payload []byte) (*insolar.ID, error)
+	DeployCode(
+		ctx context.Context,
+		domain insolar.Reference,
+		request insolar.Reference,
+		code []byte,
+		machineType insolar.MachineType,
+	) (*insolar.ID, error)
 }
 
 type Scope struct {
@@ -198,6 +205,32 @@ func (m *Scope) UpdateObject(
 	return m.updateStateObject(ctx, *objDesc.HeadRef(), amendRecord, memory)
 }
 
+func (m *Scope) DeployCode(
+	ctx context.Context,
+	domain insolar.Reference,
+	request insolar.Reference,
+	code []byte,
+	machineType insolar.MachineType,
+) (*insolar.ID, error) {
+	blobID, err := m.setBlob(ctx, code)
+	if err != nil {
+		return nil, err
+	}
+
+	codeRec := &object.CodeRecord{
+		SideEffectRecord: object.SideEffectRecord{
+			Domain:  domain,
+			Request: request,
+		},
+		Code:        blobID,
+		MachineType: machineType,
+	}
+	return m.setRecord(
+		ctx,
+		codeRec,
+	)
+}
+
 func (m *Scope) setRecord(ctx context.Context, rec record.VirtualRecord) (*insolar.ID, error) {
 	id := object.NewRecordIDFromRecord(m.PlatformCryptographyScheme, m.PulseNumber, rec)
 	matRec := record.MaterialRecord{
@@ -207,7 +240,7 @@ func (m *Scope) setRecord(ctx context.Context, rec record.VirtualRecord) (*insol
 	return id, m.RecordsModifier.Set(ctx, *id, matRec)
 }
 
-func (m *Scope) updateBlob(ctx context.Context, memory []byte) (*insolar.ID, error) {
+func (m *Scope) setBlob(ctx context.Context, memory []byte) (*insolar.ID, error) {
 	blobID := object.CalculateIDForBlob(m.PlatformCryptographyScheme, m.PulseNumber, memory)
 	err := m.BlobModifier.Set(
 		ctx,
@@ -269,7 +302,7 @@ func (m *Scope) updateStateObject(
 	memory []byte,
 ) (ObjectDescriptor, error) {
 	var jetID = insolar.ID(insolar.ZeroJetID)
-	blobID, err := m.updateBlob(ctx, memory)
+	blobID, err := m.setBlob(ctx, memory)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update blob")
 	}
