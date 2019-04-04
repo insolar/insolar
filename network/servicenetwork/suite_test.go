@@ -65,7 +65,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/pulse"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -385,10 +384,14 @@ func newPulseManagerMock(keeper network.NodeKeeper) *pulseManagerMock {
 	return &pulseManagerMock{pulse: *insolar.GenesisPulse, keeper: keeper}
 }
 
-func (p *pulseManagerMock) Current(ctx context.Context) (*insolar.Pulse, error) {
+func (p *pulseManagerMock) ForPulseNumber(context.Context, insolar.PulseNumber) (insolar.Pulse, error) {
+	panic("not implemented")
+}
+
+func (p *pulseManagerMock) Latest(ctx context.Context) (insolar.Pulse, error) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
-	return &p.pulse, nil
+	return p.pulse, nil
 }
 
 func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse, persist bool) error {
@@ -446,11 +449,8 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
 
-	pa := pulse.NewAccessorMock(s.T())
-	pa.LatestMock.Return(*insolar.GenesisPulse, nil)
-
 	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService)
-	node.componentManager.Inject(pa, serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler)
+	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler)
 
 	node.serviceNetwork = serviceNetwork
 }
