@@ -115,7 +115,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		recordCleaner = records
 	}
 
-	pm := pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, pulseShifter)
+	pm := pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, pulseShifter, recordCleaner, recSyncAccessor)
 
 	components := []interface{}{
 		legacyDB,
@@ -145,9 +145,9 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	switch certificate.GetRole() {
 	case insolar.StaticRoleUnknown, insolar.StaticRoleLightMaterial:
 		components = append(components, artifactmanager.NewMessageHandler(&conf))
-		components = append(components, pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, recordCleaner, recSyncAccessor))
+		components = append(components, pm)
 	case insolar.StaticRoleHeavyMaterial:
-		components = append(components, pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, recordCleaner, recSyncAccessor))
+		components = append(components, pm)
 		components = append(components, heavy.Components()...)
 	}
 

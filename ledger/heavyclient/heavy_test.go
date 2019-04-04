@@ -26,9 +26,9 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/pulse"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -67,14 +67,14 @@ type heavySuite struct {
 	jetStore        *jet.Store
 	nodeAccessor    *node.AccessorMock
 	nodeSetter      *node.ModifierMock
-	replicaStorage storage.ReplicaStorage
+	replicaStorage  storage.ReplicaStorage
 	dropModifier    drop.Modifier
 	dropAccessor    drop.Accessor
 	recordModifier  object.RecordModifier
 	recordCleaner   object.RecordCleaner
 	recSyncAccessor object.RecordCollectionAccessor
-	storageCleaner storage.Cleaner
-	pulseStorage   *pulse.StorageMem
+	storageCleaner  storage.Cleaner
+	pulseStorage    *pulse.StorageMem
 }
 
 func NewHeavySuite() *heavySuite {

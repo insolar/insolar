@@ -52,8 +52,8 @@ type amSuite struct {
 	cleaner func()
 	db      storage.DBContext
 
-	scheme       insolar.PlatformCryptographyScheme
-	nodeStorage   node.Accessor// TODO: @imarkin 01.04.2019 - remove it after all new storages integration (INS-2013, etc)
+	scheme        insolar.PlatformCryptographyScheme
+	nodeStorage   node.Accessor // TODO: @imarkin 01.04.2019 - remove it after all new storages integration (INS-2013, etc)
 	objectStorage storage.ObjectStorage
 
 	jetStorage   jet.Storage

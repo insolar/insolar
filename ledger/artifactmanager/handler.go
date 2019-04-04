@@ -66,7 +66,8 @@ type MessageHandler struct {
 	ObjectStorage storage.ObjectStorage `inject:""`
 
 	RecordModifier object.RecordModifier `inject:""`
-	RecordAccessor object.RecordAccessor `inject:""`	Nodes         node.Accessor         `inject:""`
+	RecordAccessor object.RecordAccessor `inject:""`
+	Nodes          node.Accessor         `inject:""`
 
 	DBContext     storage.DBContext `inject:""`
 	HotDataWaiter HotDataWaiter     `inject:""`
