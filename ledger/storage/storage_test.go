@@ -168,26 +168,3 @@ func (s *storageSuite) TestDB_SetDrop() {
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), got, drop42)
 }
-
-func (s *storageSuite) TestDB_AddPulse() {
-	pulse42 := insolar.Pulse{PulseNumber: 42, Entropy: insolar.Entropy{1, 2, 3}}
-	err := s.pulseTracker.AddPulse(s.ctx, pulse42)
-	require.NoError(s.T(), err)
-
-	latestPulse, err := s.pulseTracker.GetLatestPulse(s.ctx)
-	assert.Equal(s.T(), insolar.PulseNumber(42), latestPulse.Pulse.PulseNumber)
-
-	pulse, err := s.pulseTracker.GetPulse(s.ctx, latestPulse.Pulse.PulseNumber)
-	require.NoError(s.T(), err)
-
-	prevPulse, err := s.pulseTracker.GetPulse(s.ctx, *latestPulse.Prev)
-	require.NoError(s.T(), err)
-
-	prevPN := insolar.PulseNumber(insolar.FirstPulseNumber)
-	expectPulse := storage.Pulse{
-		Prev:         &prevPN,
-		Pulse:        pulse42,
-		SerialNumber: prevPulse.SerialNumber + 1,
-	}
-	assert.Equal(s.T(), expectPulse, *pulse)
-}

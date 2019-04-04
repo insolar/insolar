@@ -267,10 +267,10 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	pulseCalculator := pulse.NewCalculatorMock(t)
-	pulseCalculator.BackwardsMock.Return(insolar.Pulse{PulseNumber: 11}, nil)
+	pulseCalculator.BackwardsMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber - 100}, nil)
 	pulseAccessor := pulse.NewAccessorMock(t)
 	generator := entropygenerator.StandardEntropyGenerator{}
-	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.PulseNumber(12), Entropy: generator.GenerateEntropy()}, nil)
+	pulseAccessor.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.PulseNumber(insolar.FirstPulseNumber + 1), Entropy: generator.GenerateEntropy()}, nil)
 
 	expectedID := insolar.NewReference(testutils.RandomID(), testutils.RandomID())
 	activeNodesStorageMock := node.NewAccessorMock(t)
@@ -288,8 +288,7 @@ func TestJetCoordinator_NodeForJet_GoToLight(t *testing.T) {
 	coord.PlatformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
 
 	// Act
-	resNode, err := coord.NodeForJet(ctx, testutils.RandomJet(), insolar.FirstPulseNumber, 12)
-	resNode, err := calc.NodeForJet(ctx, testutils.RandomJet(), insolar.FirstPulseNumber, insolar.FirstPulseNumber+1)
+	resNode, err := coord.NodeForJet(ctx, testutils.RandomJet(), insolar.FirstPulseNumber, insolar.FirstPulseNumber+1)
 
 	// Assert
 	require.Nil(t, err)
