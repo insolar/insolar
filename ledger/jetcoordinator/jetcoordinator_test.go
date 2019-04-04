@@ -221,7 +221,7 @@ func TestJetCoordinator_NodeForJet_CheckLimitFailed(t *testing.T) {
 	calc.PulseCalculator = pulseCalculator
 
 	// Act
-	res, err := calc.NodeForJet(ctx, testutils.RandomJet(), insolar.FirstPulseNumber, 0)
+	res, err := calc.NodeForJet(ctx, testutils.RandomJet(), insolar.FirstPulseNumber+2, insolar.FirstPulseNumber+1)
 
 	// Assert
 	require.NotNil(t, err)
