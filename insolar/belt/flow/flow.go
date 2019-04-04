@@ -8,14 +8,14 @@ import (
 	"github.com/insolar/insolar/insolar/belt"
 )
 
-type FlowController struct {
+type Controller struct {
 	cancel   <-chan struct{}
 	adapters map[belt.Adapter]chan struct{}
 	message  *message.Message
 }
 
-func NewFlowController(msg *message.Message, cancel <-chan struct{}) *FlowController {
-	return &FlowController{
+func NewFlowController(msg *message.Message, cancel <-chan struct{}) *Controller {
+	return &Controller{
 		cancel:   cancel,
 		adapters: map[belt.Adapter]chan struct{}{},
 		message:  msg,
@@ -26,20 +26,20 @@ type cancelPanic struct {
 	migrateTo belt.Handle
 }
 
-func (f *FlowController) Wait(migrate belt.Handle) {
+func (f *Controller) Wait(migrate belt.Handle) {
 	<-f.cancel
 	panic(cancelPanic{migrateTo: migrate})
 }
 
-func (f *FlowController) YieldFirst(migrate belt.Handle, first belt.Adapter, rest ...belt.Adapter) {
+func (f *Controller) YieldFirst(migrate belt.Handle, first belt.Adapter, rest ...belt.Adapter) {
 	panic("implement me")
 }
 
-func (f *FlowController) YieldNone(migrate belt.Handle, first belt.Adapter, rest ...belt.Adapter) {
+func (f *Controller) YieldNone(migrate belt.Handle, first belt.Adapter, rest ...belt.Adapter) {
 	panic("implement me")
 }
 
-func (f *FlowController) YieldAll(migrate belt.Handle, first belt.Adapter, rest ...belt.Adapter) {
+func (f *Controller) YieldAll(migrate belt.Handle, first belt.Adapter, rest ...belt.Adapter) {
 	all := append(rest, first)
 	var wg sync.WaitGroup
 	wg.Add(len(all))
@@ -75,12 +75,12 @@ func (f *FlowController) YieldAll(migrate belt.Handle, first belt.Adapter, rest 
 	}
 }
 
-func (f *FlowController) Run(ctx context.Context, h belt.Handle) error {
+func (f *Controller) Run(ctx context.Context, h belt.Handle) error {
 	f.handle(ctx, h)
 	return nil
 }
 
-func (f *FlowController) handle(ctx context.Context, h belt.Handle) {
+func (f *Controller) handle(ctx context.Context, h belt.Handle) {
 	defer func() {
 		if r := recover(); r != nil {
 			if cancel, ok := r.(cancelPanic); ok {
