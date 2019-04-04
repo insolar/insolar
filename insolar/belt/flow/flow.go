@@ -8,14 +8,14 @@ import (
 )
 
 type Controller struct {
-	cancel   <-chan struct{}
+	belt     *belt.Belt
 	adapters map[belt.Adapter]chan bool
 	message  *message.Message
 }
 
-func NewFlowController(msg *message.Message, cancel <-chan struct{}) *Controller {
+func NewController(msg *message.Message, b *belt.Belt) *Controller {
 	return &Controller{
-		cancel:   cancel,
+		belt:     b,
 		adapters: map[belt.Adapter]chan bool{},
 		message:  msg,
 	}
@@ -26,14 +26,15 @@ type cancelPanic struct {
 }
 
 func (f *Controller) Wait(migrate belt.Handle) {
-	<-f.cancel
+	<-f.belt.Cancel()
 	panic(cancelPanic{migrateTo: migrate})
 }
 
 func (f *Controller) Yield(migrate belt.Handle, a belt.Adapter) bool {
+	f.belt.Continue()
 	var done bool
 	select {
-	case <-f.cancel:
+	case <-f.belt.Cancel():
 		panic(cancelPanic{migrateTo: migrate})
 	case done = <-f.adapt(a):
 		return done
