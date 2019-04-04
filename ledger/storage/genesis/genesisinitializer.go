@@ -20,12 +20,13 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
@@ -37,17 +38,14 @@ type State interface {
 }
 
 type genesisInitializer struct {
-	DB storage.DBContext `inject:""`
+	PCS insolar.PlatformCryptographyScheme `inject:""`
 
-	insolar.PlatformCryptographyScheme `inject:""`
-
-	// TODO: @imarkin 28.03.2019 - remove it after all new storages integration (INS-2013, etc)
+	DB             store.DB              `inject:""`
+	DropModifier   drop.Modifier         `inject:""`
+	RecordModifier object.RecordModifier `inject:""`
+	// TODO: @imarkin 28.03.2019 - remove ObjectStorage and  PulseTracker after all new storages integration (INS-2013, etc)
 	ObjectStorage storage.ObjectStorage `inject:""`
-
-	PulseTracker storage.PulseTracker `inject:""`
-	DropModifier drop.Modifier        `inject:""`
-
-	Records object.RecordModifier `inject:""`
+	PulseTracker  storage.PulseTracker  `inject:""`
 
 	genesisRef *insolar.Reference
 }
@@ -63,12 +61,22 @@ func (gi *genesisInitializer) GenesisRef() *insolar.Reference {
 	return gi.genesisRef
 }
 
+type Key struct{}
+
+func (gk Key) ID() []byte {
+	return []byte{0x01}
+}
+
+func (gk Key) Scope() store.Scope {
+	return store.ScopeSystem
+}
+
 func (gi *genesisInitializer) Init(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("start storage bootstrap")
 
 	getGenesisRef := func() (*insolar.Reference, error) {
-		buff, err := gi.DB.Get(ctx, storage.GenesisPrefixKey())
+		buff, err := gi.DB.Get(Key{})
 		if err != nil {
 			return nil, err
 		}
@@ -107,12 +115,12 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 		}
 
 		virtRec := &object.GenesisRecord{}
-		genesisID := object.NewRecordIDFromRecord(gi.PlatformCryptographyScheme, lastPulse.Pulse.PulseNumber, virtRec)
+		genesisID := object.NewRecordIDFromRecord(gi.PCS, lastPulse.Pulse.PulseNumber, virtRec)
 		rec := record.MaterialRecord{
 			Record: virtRec,
 			JetID:  insolar.ZeroJetID,
 		}
-		err = gi.Records.Set(ctx, *genesisID, rec)
+		err = gi.RecordModifier.Set(ctx, *genesisID, rec)
 		if err != nil {
 			return nil, errors.Wrap(err, "can't save genesis record into storage")
 		}
@@ -131,12 +139,12 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 		}
 
 		genesisRef := insolar.NewReference(*genesisID, *genesisID)
-		return genesisRef, gi.DB.Set(ctx, storage.GenesisPrefixKey(), genesisRef[:])
+		return genesisRef, gi.DB.Set(Key{}, genesisRef[:])
 	}
 
 	var err error
 	gi.genesisRef, err = getGenesisRef()
-	if err == insolar.ErrNotFound {
+	if err == store.ErrNotFound {
 		gi.genesisRef, err = createGenesisRecord()
 	}
 	if err != nil {

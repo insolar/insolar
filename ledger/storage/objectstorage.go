@@ -26,6 +26,8 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.ObjectStorage -o ./ -s _mock.go
 
 // ObjectStorage returns objects and their meta
+//
+// DEPRECATED
 type ObjectStorage interface {
 	IterateIndexIDs(
 		ctx context.Context,
