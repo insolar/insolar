@@ -310,7 +310,15 @@ type Mutator interface {
 	AddWorkingNode(n insolar.NetworkNode)
 }
 
+// Gatewayer is a network which can change it's Gateway
+type Gatewayer interface {
+	Gateway() Gateway
+	SetGateway(Gateway)
+}
+
 // Gateway responds for whole network state
 type Gateway interface {
+	Run()
 	GetState() insolar.NetworkState
+	OnPulse(context.Context, insolar.Pulse) error
 }
