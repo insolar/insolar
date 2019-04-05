@@ -62,17 +62,11 @@ import (
 	"go.opencensus.io/trace"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/state.messageBusLocker -o ./ -s _mock.go
-type messageBusLocker interface {
-	Lock(ctx context.Context)
-	Unlock(ctx context.Context)
-}
-
 // NetworkSwitcher is a network FSM using for bootstrapping
 type NetworkSwitcher struct {
 	NodeNetwork        insolar.NodeNetwork        `inject:""`
 	SwitcherWorkAround insolar.SwitcherWorkAround `inject:""`
-	MBLocker           messageBusLocker           `inject:""`
+	MBLocker           insolar.MessageBusLocker   `inject:""`
 
 	counter uint64
 

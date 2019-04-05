@@ -60,7 +60,7 @@ import (
 )
 
 // NewNoNetwork this initial constructor have special signature to be called outside
-func NewNoNetwork(n network.Gatewayer, mb messageBusLocker) *NoNetwork {
+func NewNoNetwork(n network.Gatewayer, mb insolar.MessageBusLocker) *NoNetwork {
 	return &NoNetwork{c: &commons{Network: n, MBLocker: mb}}
 }
 

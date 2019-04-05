@@ -54,11 +54,6 @@ const (
 
 var contractNames = []string{walletContract, memberContract, allowanceContract, rootDomain, nodeDomain, nodeRecord}
 
-type messageBusLocker interface {
-	Lock(ctx context.Context)
-	Unlock(ctx context.Context)
-}
-
 type nodeInfo struct {
 	privateKey crypto.PrivateKey
 	publicKey  string
@@ -74,8 +69,8 @@ type Genesis struct {
 	isGenesis       bool
 	config          *Config
 	keyOut          string
-	ArtifactManager artifacts.Client `inject:""`
-	MBLock          messageBusLocker `inject:""`
+	ArtifactManager artifacts.Client         `inject:""`
+	MBLock          insolar.MessageBusLocker `inject:""`
 }
 
 // NewGenesis creates new Genesis

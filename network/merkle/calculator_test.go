@@ -169,7 +169,7 @@ func TestCalculator(t *testing.T) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	nk := nodekeeper.GetTestNodekeeper(service)
 	th := testutils.NewTerminationHandlerMock(t)
-
+	mblock := testutils.NewMessageBusLockerMock(t)
 	am := staterMock{
 		stateFunc: func() (r []byte, r1 error) {
 			return []byte("state"), nil
@@ -177,7 +177,7 @@ func TestCalculator(t *testing.T) {
 	}
 
 	cm := component.Manager{}
-	cm.Inject(th, nk, &am, calculator, service, scheme)
+	cm.Inject(th, nk, &am, calculator, service, scheme, mblock)
 
 	require.NotNil(t, calculator.ArtifactManager)
 	require.NotNil(t, calculator.NodeNetwork)

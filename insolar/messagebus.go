@@ -172,6 +172,12 @@ type MessageBus interface {
 	OnPulse(context.Context, Pulse) error
 }
 
+//go:generate minimock -i github.com/insolar/insolar/insolar.MessageBusLocker -o ../testutils -s _mock.go
+type MessageBusLocker interface {
+	Lock(ctx context.Context)
+	Unlock(ctx context.Context)
+}
+
 type TapeWriter interface {
 	// WriteTape writes recorder's tape to the provided writer.
 	WriteTape(ctx context.Context, writer io.Writer) error

@@ -62,12 +62,6 @@ import (
 	"go.opencensus.io/trace"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/network/state.messageBusLocker -o ./ -s _mock.go
-type messageBusLocker interface {
-	Lock(ctx context.Context)
-	Unlock(ctx context.Context)
-}
-
 type commons struct {
 	counter   uint64
 	state     insolar.NetworkState
@@ -75,7 +69,7 @@ type commons struct {
 	span      *trace.Span
 
 	Network  network.Gatewayer
-	MBLocker messageBusLocker
+	MBLocker insolar.MessageBusLocker
 }
 
 // Acquire increases lock counter and locks message bus if it wasn't lock before

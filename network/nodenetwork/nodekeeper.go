@@ -55,6 +55,8 @@ import (
 	"net"
 	"sync"
 
+	"github.com/insolar/insolar/network/gateway"
+
 	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -152,9 +154,16 @@ type nodekeeper struct {
 
 	Cryptography       insolar.CryptographyService `inject:""`
 	TerminationHandler insolar.TerminationHandler  `inject:""`
+	MBLocker           insolar.MessageBusLocker    `inject:""`
 
 	gateway   network.Gateway
 	gatewayMu sync.RWMutex
+}
+
+func (nk *nodekeeper) Start(ctx context.Context) error {
+	nk.gateway = gateway.NewNoNetwork(nk, nk.MBLocker)
+	nk.gateway.Run()
+	return nil
 }
 
 func (nk *nodekeeper) Gateway() network.Gateway {

@@ -180,6 +180,7 @@ func TestCalculatorError(t *testing.T) {
 
 	nk := nodekeeper.GetTestNodekeeper(service)
 	th := testutils.NewTerminationHandlerMock(t)
+	mblock := testutils.NewMessageBusLockerMock(t)
 
 	am := staterMock{
 		stateFunc: func() (bytes []byte, e error) {
@@ -188,7 +189,7 @@ func TestCalculatorError(t *testing.T) {
 	}
 	jc := testutils.NewJetCoordinatorMock(t)
 
-	cm.Inject(th, nk, jc, &am, calculator, service, scheme, pulseManager)
+	cm.Inject(th, nk, jc, &am, calculator, service, scheme, pulseManager, mblock)
 
 	require.NotNil(t, calculator.ArtifactManager)
 	require.NotNil(t, calculator.NodeNetwork)
@@ -247,7 +248,8 @@ func TestCalculatorLedgerError(t *testing.T) {
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 	nk := nodekeeper.GetTestNodekeeper(service)
 	th := testutils.NewTerminationHandlerMock(t)
-	cm.Inject(th, nk, &am, calculator, service, scheme)
+	mblock := testutils.NewMessageBusLockerMock(t)
+	cm.Inject(th, nk, &am, calculator, service, scheme, mblock)
 
 	require.NotNil(t, calculator.ArtifactManager)
 	require.NotNil(t, calculator.NodeNetwork)
