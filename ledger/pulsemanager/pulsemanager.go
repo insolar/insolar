@@ -67,9 +67,10 @@ type PulseManager struct {
 	JetAccessor jet.Accessor `inject:""`
 	JetModifier jet.Modifier `inject:""`
 
-	IndexAccessor object.IndexAccessor `inject:""`
-	IndexModifier object.IndexModifier `inject:""`
-	IndexCleaner  object.IndexCleaner
+	IndexAccessor           object.IndexAccessor           `inject:""`
+	IndexModifier           object.IndexModifier           `inject:""`
+	CollectionIndexAccessor object.CollectionIndexAccessor `inject:""`
+	IndexCleaner            object.IndexCleaner
 
 	NodeSetter node.Modifier `inject:""`
 	Nodes      node.Accessor `inject:""`
@@ -654,6 +655,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse insolar.Puls
 	m.DropCleaner.Delete(p.PulseNumber)
 	m.BlobCleaner.Delete(ctx, p.PulseNumber)
 	m.RecCleaner.Remove(ctx, p.PulseNumber)
+	// HERE INDEXES SHOULD BE REMOVED
 	err = m.PulseShifter.Shift(ctx, p.PulseNumber)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)

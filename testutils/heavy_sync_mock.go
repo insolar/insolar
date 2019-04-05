@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "HeavySync" can be found in github.com/insolar/insolar/insolar
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -842,7 +842,7 @@ type HeavySyncMockStoreIndicesResult struct {
 	r error
 }
 
-//Expect specifies that invocation of HeavySync.StoreIndices is expected from 1 to Infinity times
+// Expect specifies that invocation of HeavySync.StoreIndexes is expected from 1 to Infinity times
 func (m *mHeavySyncMockStoreIndices) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 []insolar.KV) *mHeavySyncMockStoreIndices {
 	m.mock.StoreIndicesFunc = nil
 	m.expectationSeries = nil
@@ -854,7 +854,7 @@ func (m *mHeavySyncMockStoreIndices) Expect(p context.Context, p1 insolar.ID, p2
 	return m
 }
 
-//Return specifies results of invocation of HeavySync.StoreIndices
+// Return specifies results of invocation of HeavySync.StoreIndexes
 func (m *mHeavySyncMockStoreIndices) Return(r error) *HeavySyncMock {
 	m.mock.StoreIndicesFunc = nil
 	m.expectationSeries = nil
@@ -866,7 +866,7 @@ func (m *mHeavySyncMockStoreIndices) Return(r error) *HeavySyncMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of HeavySync.StoreIndices is expected once
+// ExpectOnce specifies that invocation of HeavySync.StoreIndexes is expected once
 func (m *mHeavySyncMockStoreIndices) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 []insolar.KV) *HeavySyncMockStoreIndicesExpectation {
 	m.mock.StoreIndicesFunc = nil
 	m.mainExpectation = nil
@@ -881,7 +881,7 @@ func (e *HeavySyncMockStoreIndicesExpectation) Return(r error) {
 	e.result = &HeavySyncMockStoreIndicesResult{r}
 }
 
-//Set uses given function f as a mock of HeavySync.StoreIndices method
+// Set uses given function f as a mock of HeavySync.StoreIndexes method
 func (m *mHeavySyncMockStoreIndices) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 []insolar.KV) (r error)) *HeavySyncMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -890,23 +890,23 @@ func (m *mHeavySyncMockStoreIndices) Set(f func(p context.Context, p1 insolar.ID
 	return m.mock
 }
 
-//StoreIndices implements github.com/insolar/insolar/insolar.HeavySync interface
-func (m *HeavySyncMock) StoreIndices(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 []insolar.KV) (r error) {
+// StoreIndexes implements github.com/insolar/insolar/insolar.HeavySync interface
+func (m *HeavySyncMock) StoreIndexes(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 []insolar.KV) (r error) {
 	counter := atomic.AddUint64(&m.StoreIndicesPreCounter, 1)
 	defer atomic.AddUint64(&m.StoreIndicesCounter, 1)
 
 	if len(m.StoreIndicesMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.StoreIndicesMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to HeavySyncMock.StoreIndices. %v %v %v %v", p, p1, p2, p3)
+			m.t.Fatalf("Unexpected call to HeavySyncMock.StoreIndexes. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
 		input := m.StoreIndicesMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, HeavySyncMockStoreIndicesInput{p, p1, p2, p3}, "HeavySync.StoreIndices got unexpected parameters")
+		testify_assert.Equal(m.t, *input, HeavySyncMockStoreIndicesInput{p, p1, p2, p3}, "HeavySync.StoreIndexes got unexpected parameters")
 
 		result := m.StoreIndicesMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the HeavySyncMock.StoreIndices")
+			m.t.Fatal("No results are set for the HeavySyncMock.StoreIndexes")
 			return
 		}
 
@@ -919,12 +919,12 @@ func (m *HeavySyncMock) StoreIndices(p context.Context, p1 insolar.ID, p2 insola
 
 		input := m.StoreIndicesMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, HeavySyncMockStoreIndicesInput{p, p1, p2, p3}, "HeavySync.StoreIndices got unexpected parameters")
+			testify_assert.Equal(m.t, *input, HeavySyncMockStoreIndicesInput{p, p1, p2, p3}, "HeavySync.StoreIndexes got unexpected parameters")
 		}
 
 		result := m.StoreIndicesMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the HeavySyncMock.StoreIndices")
+			m.t.Fatal("No results are set for the HeavySyncMock.StoreIndexes")
 		}
 
 		r = result.r
@@ -933,7 +933,7 @@ func (m *HeavySyncMock) StoreIndices(p context.Context, p1 insolar.ID, p2 insola
 	}
 
 	if m.StoreIndicesFunc == nil {
-		m.t.Fatalf("Unexpected call to HeavySyncMock.StoreIndices. %v %v %v %v", p, p1, p2, p3)
+		m.t.Fatalf("Unexpected call to HeavySyncMock.StoreIndexes. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
@@ -945,7 +945,7 @@ func (m *HeavySyncMock) StoreIndicesMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.StoreIndicesCounter)
 }
 
-//StoreIndicesMinimockPreCounter returns the value of HeavySyncMock.StoreIndices invocations
+// StoreIndicesMinimockPreCounter returns the value of HeavySyncMock.StoreIndexes invocations
 func (m *HeavySyncMock) StoreIndicesMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.StoreIndicesPreCounter)
 }
@@ -1121,7 +1121,7 @@ func (m *HeavySyncMock) ValidateCallCounters() {
 	}
 
 	if !m.StoreIndicesFinished() {
-		m.t.Fatal("Expected call to HeavySyncMock.StoreIndices")
+		m.t.Fatal("Expected call to HeavySyncMock.StoreIndexes")
 	}
 
 	if !m.StoreRecordsFinished() {
@@ -1166,7 +1166,7 @@ func (m *HeavySyncMock) MinimockFinish() {
 	}
 
 	if !m.StoreIndicesFinished() {
-		m.t.Fatal("Expected call to HeavySyncMock.StoreIndices")
+		m.t.Fatal("Expected call to HeavySyncMock.StoreIndexes")
 	}
 
 	if !m.StoreRecordsFinished() {
@@ -1223,7 +1223,7 @@ func (m *HeavySyncMock) MinimockWait(timeout time.Duration) {
 			}
 
 			if !m.StoreIndicesFinished() {
-				m.t.Error("Expected call to HeavySyncMock.StoreIndices")
+				m.t.Error("Expected call to HeavySyncMock.StoreIndexes")
 			}
 
 			if !m.StoreRecordsFinished() {

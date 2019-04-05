@@ -45,15 +45,16 @@ type Options struct {
 
 // JetClient heavy replication client. Replicates records for one jet.
 type JetClient struct {
-	bus              insolar.MessageBus
-	replicaStorage   storage.ReplicaStorage
-	cleaner          storage.Cleaner
-	db               storage.DBContext
-	dropAccessor     drop.Accessor
-	blobSyncAccessor blob.CollectionAccessor
-	pulseAccessor    pulse.Accessor
-	pulseCalculator  pulse.Calculator
-	recSyncAccessor  object.RecordCollectionAccessor
+	bus                    insolar.MessageBus
+	replicaStorage         storage.ReplicaStorage
+	cleaner                storage.Cleaner
+	db                     storage.DBContext
+	dropAccessor           drop.Accessor
+	blobCollectionAccessor blob.CollectionAccessor
+	pulseAccessor          pulse.Accessor
+	pulseCalculator        pulse.Calculator
+	recSyncAccessor        object.RecordCollectionAccessor
+	idxCollectionAccessor  object.CollectionIndexAccessor
 
 	opts Options
 
@@ -89,20 +90,20 @@ func NewJetClient(
 	opts Options,
 ) *JetClient {
 	jsc := &JetClient{
-		bus:              mb,
-		replicaStorage:   replicaStorage,
-		dropAccessor:     dropAccessor,
-		blobSyncAccessor: blobSyncAccessor,
-		pulseCalculator:  pulseCalculator,
-		pulseAccessor:    pulseAccessor,
-		recSyncAccessor:  recSyncAccessor,
-		cleaner:          cleaner,
-		db:               db,
-		jetID:            insolar.JetID(jetID),
-		syncbackoff:      backoffFromConfig(opts.BackoffConf),
-		signal:           make(chan struct{}, 1),
-		syncdone:         make(chan struct{}),
-		opts:             opts,
+		bus:                    mb,
+		replicaStorage:         replicaStorage,
+		dropAccessor:           dropAccessor,
+		blobCollectionAccessor: blobSyncAccessor,
+		pulseCalculator:        pulseCalculator,
+		pulseAccessor:          pulseAccessor,
+		recSyncAccessor:        recSyncAccessor,
+		cleaner:                cleaner,
+		db:                     db,
+		jetID:                  insolar.JetID(jetID),
+		syncbackoff:            backoffFromConfig(opts.BackoffConf),
+		signal:                 make(chan struct{}, 1),
+		syncdone:               make(chan struct{}),
+		opts:                   opts,
 	}
 	return jsc
 }

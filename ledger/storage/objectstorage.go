@@ -88,7 +88,7 @@ func (os *objectStorage) GetObjectIndex(
 	if err != nil {
 		return nil, err
 	}
-	res := object.DecodeIndex(buf)
+	res := object.MustDecodeIndex(buf)
 	return &res, nil
 }
 

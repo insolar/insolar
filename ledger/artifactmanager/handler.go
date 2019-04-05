@@ -1100,7 +1100,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	if !ok {
 		return object.Lifeline{}, fmt.Errorf("failed to fetch object index: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
 	}
-	idx := object.DecodeIndex(rep.Index)
+	idx := object.MustDecodeIndex(rep.Index)
 	idx.JetID = insolar.JetID(jetID)
 	err = h.IndexModifier.Set(ctx, *obj.Record(), idx)
 	if err != nil {
@@ -1217,7 +1217,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 
 	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, jetID)
 	for id, meta := range msg.RecentObjects {
-		decodedIndex := object.DecodeIndex(meta.Index)
+		decodedIndex := object.MustDecodeIndex(meta.Index)
 		decodedIndex.JetID = insolar.JetID(jetID)
 		err = h.IndexModifier.Set(ctx, id, decodedIndex)
 		if err != nil {

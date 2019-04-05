@@ -162,6 +162,16 @@ func TestCloneObjectLifeline(t *testing.T) {
 	assert.False(t, &currentIdx == &clonedIdx)
 }
 
+func TestCloneObjectLifeline_InsureDelegatesMapNotNil(t *testing.T) {
+	t.Parallel()
+
+	idx := Lifeline{}
+
+	cloneIdx := CloneIndex(idx)
+
+	require.NotNil(t, cloneIdx.Delegates)
+}
+
 func id() (id *insolar.ID) {
 	fuzz.New().NilChance(0.5).Fuzz(&id)
 	return

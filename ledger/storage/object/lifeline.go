@@ -35,6 +35,12 @@ type IndexAccessor interface {
 	ForID(ctx context.Context, id insolar.ID) (Lifeline, error)
 }
 
+// CollectionIndexAccessor provides methods for querying a collection of blobs with specific search conditions.
+type CollectionIndexAccessor interface {
+	// ForPulse returns []Blob for a provided jetID and a pulse number.
+	ForPulse(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]Lifeline
+}
+
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexModifier -o ./ -s _mock.go
 
 // IndexModifier provides methods for setting Index-values to storage.
@@ -47,8 +53,9 @@ type IndexModifier interface {
 
 // IndexCleaner provides an interface for removing interfaces from a storage.
 type IndexCleaner interface {
-	// Remove method removes interfaces from a storage for a pulse
-	Remove(ctx context.Context, pulse insolar.PulseNumber)
+	// RemoveUntilPN method removes interfaces from a storage for a pulse
+	RemoveUntilPN(ctx context.Context, pulse insolar.PulseNumber, excluded map[insolar.ID]struct{})
+	RemoveIDs(ctx context.Context, ids map[insolar.ID]struct{})
 }
 
 // Lifeline represents meta information for record object.
@@ -72,10 +79,18 @@ func EncodeIndex(index Lifeline) []byte {
 	return buff.Bytes()
 }
 
-// DecodeIndex converts byte array into lifeline index struct.
-func DecodeIndex(buff []byte) (index Lifeline) {
+// MustDecodeIndex converts byte array into lifeline index struct.
+func MustDecodeIndex(buff []byte) (index Lifeline) {
 	dec := codec.NewDecoderBytes(buff, &codec.CborHandle{})
 	dec.MustDecode(&index)
+
+	return
+}
+
+// DecodeIndex converts byte array into lifeline index struct.
+func DecodeIndex(buff []byte) (index Lifeline, err error) {
+	dec := codec.NewDecoderBytes(buff, &codec.CborHandle{})
+	err = dec.Decode(&index)
 
 	return
 }
@@ -159,17 +174,53 @@ func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (index Lifeline,
 	return
 }
 
-// Remove method removes interfaces from a storage for a pulse
-func (m *IndexMemory) Remove(ctx context.Context, pulse insolar.PulseNumber) {
+// ForPulse returns Index for provided id.
+func (m *IndexMemory) ForPulse(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]Lifeline {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	res := map[insolar.ID]Lifeline{}
+	for id, idx := range m.memory {
+		if id.Pulse() != pn || idx.JetID != jetID {
+			continue
+		}
+
+		res[id] = CloneIndex(idx)
+	}
+
+	return res
+}
+
+// RemoveUntilPN method removes indexes from a storage for pulses untils a provided pulse
+// excluded - list of indexes' ids that won't be removed. It supposed that they will be taken from RecentStorage
+func (m *IndexMemory) RemoveUntilPN(ctx context.Context, pulse insolar.PulseNumber, excluded map[insolar.ID]struct{}) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	for id, idx := range m.memory {
-		if id.Pulse() != pulse {
+		if id.Pulse() > pulse {
 			continue
 		}
+		_, ok := excluded[id]
+		if ok {
+			continue
+		}
+
 		delete(m.memory, id)
 		m.jetIndex.Delete(id, idx.JetID)
+	}
+}
+
+func (m *IndexMemory) RemoveIDs(ctx context.Context, ids map[insolar.ID]struct{}) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	for id, idx := range m.memory {
+		_, ok := ids[id]
+		if ok {
+			delete(m.memory, id)
+			m.jetIndex.Delete(id, idx.JetID)
+		}
 	}
 }
 
@@ -225,6 +276,6 @@ func (i *IndexDB) get(id insolar.ID) (index Lifeline, err error) {
 	if err != nil {
 		return
 	}
-	index = DecodeIndex(buff)
+	index = MustDecodeIndex(buff)
 	return
 }

@@ -731,7 +731,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	require.NoError(s.T(), err)
 	indexRep, ok := rep.(*reply.ObjectIndex)
 	require.True(s.T(), ok)
-	decodedIndex := object.DecodeIndex(indexRep.Index)
+	decodedIndex := object.MustDecodeIndex(indexRep.Index)
 	assert.Equal(s.T(), objectIndex, decodedIndex)
 }
 

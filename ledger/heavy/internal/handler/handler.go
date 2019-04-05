@@ -297,7 +297,7 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 
 	h.HeavySync.StoreRecords(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Records)
 
-	if err := h.HeavySync.StoreIndices(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Indices); err != nil {
+	if err := h.HeavySync.StoreIndexes(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Indexes); err != nil {
 		return heavyerrreply(err)
 	}
 

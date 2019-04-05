@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/storage"
 )
 
@@ -83,6 +82,7 @@ type Sync struct {
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	DropModifier               drop.Modifier                      `inject:""`
 	BlobModifier               blob.Modifier                      `inject:""`
+	IndexModifier              object.IndexModifier               `inject:""`
 	ReplicaStorage             storage.ReplicaStorage             `inject:""`
 	DBContext                  storage.DBContext
 
@@ -169,54 +169,21 @@ func (s *Sync) Start(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumb
 	return nil
 }
 
-// StoreIndices stores recieved key/value pairs for indices at heavy storage.
-func (s *Sync) StoreIndices(ctx context.Context, jet insolar.ID, pn insolar.PulseNumber, kvs []insolar.KV) error {
-	inslog := inslogger.FromContext(ctx)
-	jetState := s.getJetSyncState(ctx, jet)
+// StoreIndexes stores recieved key/value pairs for indices at heavy storage.
+func (s *Sync) StoreIndexes(ctx context.Context, jet insolar.ID, pn insolar.PulseNumber, rawIndexes map[insolar.ID][]byte) error {
+	for id, rwi := range rawIndexes {
+		idx, err := object.DecodeIndex(rwi)
+		if err != nil {
+			inslogger.FromContext(ctx).Error(err)
+			continue
+		}
 
-	err := func() error {
-		jetState.Lock()
-		defer jetState.Unlock()
-
-		if jetState.syncpulse == nil {
-			return fmt.Errorf("heavyserver: jet %v not in sync mode", jet)
+		err = s.IndexModifier.Set(ctx, id, idx)
+		if err != nil {
+			return errors.Wrapf(err, "heavyserver: index storing failed")
 		}
-		if *jetState.syncpulse != pn {
-			return fmt.Errorf("heavyserver: passed pulse %v doesn't match in-sync pulse %v", pn, *jetState.syncpulse)
-		}
-		if jetState.insync {
-			return errSyncInProgress(jet, pn)
-		}
-		jetState.insync = true
-		jetState.resetTimeout(ctx, defaultTimeout)
-		return nil
-	}()
-	if err != nil {
-		return err
 	}
 
-	defer func() {
-		jetState.Lock()
-		jetState.insync = false
-		jetState.Unlock()
-	}()
-	err = s.DBContext.StoreKeyValues(ctx, kvs)
-	if err != nil {
-		return errors.Wrapf(err, "heavyserver: store failed")
-	}
-
-	// heavy stats
-	recordsCount := int64(len(kvs))
-	recordsSize := insolar.KVSize(kvs)
-	inslog.Debugf("heavy store stat: JetID=%v, recordsCount+=%v, recordsSize+=%v\n", jet.DebugString(), recordsCount, recordsSize)
-
-	ctx = insmetrics.InsertTag(ctx, tagJet, jet.DebugString())
-	stats.Record(ctx,
-		statSyncedCount.M(1),
-		statSyncedRecords.M(recordsCount),
-		statSyncedPulse.M(int64(pn)),
-		statSyncedBytes.M(recordsSize),
-	)
 	return nil
 }
 
