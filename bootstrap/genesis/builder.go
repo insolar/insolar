@@ -18,30 +18,30 @@ package genesis
 
 import (
 	"context"
-	"go/build"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
-	"github.com/pkg/errors"
+)
+
+var (
+	contractSources = insolar.RootModule + "/application/contract"
+	proxySources    = insolar.RootModule + "/application/proxy"
 )
 
 // PrependGoPath prepends `path` to GOPATH environment variable
 // accounting for possibly for default value. Returns new value.
 // NOTE: that environment is not changed
 func PrependGoPath(path string) string {
-	gopath := os.Getenv("GOPATH")
-	if gopath == "" {
-		gopath = build.Default.GOPATH
-	}
-
-	return path + string(os.PathListSeparator) + gopath
+	return path + string(os.PathListSeparator) + goPATH()
 }
 
 // WriteFile dumps `text` into file named `name` into directory `dir`.
