@@ -6,6 +6,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/belt"
 	"github.com/insolar/insolar/insolar/belt/bus"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 )
 
@@ -28,7 +29,7 @@ func (s *Sorter) Present(ctx context.Context, FLOW belt.Flow) {
 }
 
 func (s *Sorter) Past(ctx context.Context, FLOW belt.Flow) {
-	FLOW.Yield(nil, &ReturnError{Message: s.Message, Err: errors.New("no past handler")})
+	FLOW.Yield(nil, &ReturnReply{Message: s.Message, Err: errors.New("no past handler")})
 }
 
 // =====================================================================================================================
@@ -40,7 +41,39 @@ type GetObject struct {
 }
 
 func (s *GetObject) Present(ctx context.Context, FLOW belt.Flow) {
-	FLOW.Yield(nil, &bus.WrapperProcedure{
-		Message: s.Message, Handler: s.handler.handlers[insolar.TypeGetObject],
+	jet := &FetchJet{Message: s.Message, handler: s.handler}
+	FLOW.Yield(nil, jet)
+	if jet.Res.Err != nil {
+		FLOW.Yield(nil, &ReturnReply{
+			Message: s.Message,
+			Err:     jet.Res.Err,
+		})
+		return
+	} else if jet.Res.Miss {
+		FLOW.Yield(nil, &ReturnReply{
+			Message: s.Message,
+			Reply:   &reply.JetMiss{JetID: insolar.ID(jet.Res.JetID)},
+		})
+		return
+	}
+
+	hot := &WaitHot{
+		Message: s.Message,
+		JetID:   jet.Res.JetID,
+		handler: s.handler,
+	}
+	FLOW.Yield(nil, hot)
+	if hot.Res.timeout {
+		FLOW.Yield(nil, &ReturnReply{
+			Message: s.Message,
+			Reply:   &reply.Error{ErrType: reply.ErrHotDataTimeout},
+		})
+		return
+	}
+
+	FLOW.Yield(nil, &ProcGetObject{
+		JetID:   jet.Res.JetID,
+		Message: s.Message,
+		Handler: s.handler,
 	})
 }

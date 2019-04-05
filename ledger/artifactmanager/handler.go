@@ -147,13 +147,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 		m.checkJet,
 	))
 
-	h.handlers[insolar.TypeGetObject] = BuildMiddleware(h.handleGetObject,
-		instrumentHandler("handleGetObject"),
-		m.addFieldsToLogger,
-		m.checkJet,
-		m.waitForHotData)
 	h.Bus.MustRegister(insolar.TypeGetObject, h.BeltHandler.WrapBusHandle)
-	// h.Bus.MustRegister(insolar.TypeGetObject, h.handlers[insolar.TypeGetObject])
 
 	h.Bus.MustRegister(insolar.TypeGetDelegate,
 		BuildMiddleware(h.handleGetDelegate,
@@ -258,7 +252,6 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 func (h *MessageHandler) setReplayHandlers(m *middleware) {
 	// Generic.
 	h.replayHandlers[insolar.TypeGetCode] = BuildMiddleware(h.handleGetCode, m.addFieldsToLogger)
-	h.replayHandlers[insolar.TypeGetObject] = BuildMiddleware(h.handleGetObject, m.addFieldsToLogger, m.checkJet)
 	h.replayHandlers[insolar.TypeGetDelegate] = BuildMiddleware(h.handleGetDelegate, m.addFieldsToLogger, m.checkJet)
 	h.replayHandlers[insolar.TypeGetChildren] = BuildMiddleware(h.handleGetChildren, m.addFieldsToLogger, m.checkJet)
 	h.replayHandlers[insolar.TypeSetRecord] = BuildMiddleware(h.handleSetRecord, m.addFieldsToLogger, m.checkJet)
@@ -365,182 +358,6 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel insolar.Parce
 	rep := reply.Code{
 		Code:        code.Value,
 		MachineType: codeRec.MachineType,
-	}
-
-	return &rep, nil
-}
-
-func (h *MessageHandler) handleGetObject(
-	ctx context.Context, parcel insolar.Parcel,
-) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetObject)
-	jetID := jetFromContext(ctx)
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"object": msg.Head.Record().DebugString(),
-		"pulse":  parcel.Pulse(),
-	})
-
-	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
-
-	h.IDLocker.Lock(msg.Head.Record())
-	defer h.IDLocker.Unlock(msg.Head.Record())
-
-	// Fetch object index. If not found redirect.
-	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Head.Record())
-	if err == insolar.ErrNotFound {
-		logger.Debug("failed to fetch index (fetching from heavy)")
-		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Head, node)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch index from heavy")
-		}
-	} else if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch object index %s", msg.Head.Record().String())
-	}
-
-	// Determine object state id.
-	var stateID *insolar.ID
-	if msg.State != nil {
-		stateID = msg.State
-	} else {
-		if msg.Approved {
-			stateID = idx.LatestStateApproved
-		} else {
-			stateID = idx.LatestState
-		}
-	}
-	if stateID == nil {
-		return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
-	}
-
-	var (
-		stateJet *insolar.ID
-	)
-	onHeavy, err := h.JetCoordinator.IsBeyondLimit(ctx, parcel.Pulse(), stateID.Pulse())
-	if err != nil && err != pulse.ErrNotFound {
-		return nil, err
-	}
-	if onHeavy {
-		hNode, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		logger.WithFields(map[string]interface{}{
-			"state":    stateID.DebugString(),
-			"going_to": hNode.String(),
-		}).Debug("fetching object (on heavy)")
-
-		obj, err := h.fetchObject(ctx, msg.Head, *hNode, stateID, parcel.Pulse())
-		if err != nil {
-			if err == insolar.ErrDeactivated {
-				return &reply.Error{ErrType: reply.ErrDeactivated}, nil
-			}
-			return nil, err
-		}
-
-		return &reply.Object{
-			Head:         msg.Head,
-			State:        *stateID,
-			Prototype:    obj.Prototype,
-			IsPrototype:  obj.IsPrototype,
-			ChildPointer: idx.ChildPointer,
-			Parent:       idx.Parent,
-			Memory:       obj.Memory,
-		}, nil
-	}
-
-	stateJetID, actual := h.JetStorage.ForID(ctx, stateID.Pulse(), *msg.Head.Record())
-	stateJet = (*insolar.ID)(&stateJetID)
-
-	if !actual {
-		actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Head.Record(), stateID.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		stateJet = actualJet
-	}
-
-	// Fetch state record.
-	rec, err := h.RecordAccessor.ForID(ctx, *stateID)
-
-	if err == object.ErrNotFound {
-		// The record wasn't found on the current suitNode. Return redirect to the node that contains it.
-		// We get Jet tree for pulse when given state was added.
-		suitNode, err := h.JetCoordinator.NodeForJet(ctx, *stateJet, parcel.Pulse(), stateID.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		logger.WithFields(map[string]interface{}{
-			"state":    stateID.DebugString(),
-			"going_to": suitNode.String(),
-		}).Debug("fetching object (record not found)")
-
-		obj, err := h.fetchObject(ctx, msg.Head, *suitNode, stateID, parcel.Pulse())
-		if err != nil {
-			if err == insolar.ErrDeactivated {
-				return &reply.Error{ErrType: reply.ErrDeactivated}, nil
-			}
-			return nil, err
-		}
-
-		return &reply.Object{
-			Head:         msg.Head,
-			State:        *stateID,
-			Prototype:    obj.Prototype,
-			IsPrototype:  obj.IsPrototype,
-			ChildPointer: idx.ChildPointer,
-			Parent:       idx.Parent,
-			Memory:       obj.Memory,
-		}, nil
-	}
-	if err != nil {
-		return nil, errors.Wrap(err, "can't fetch record from storage")
-	}
-
-	virtRec := rec.Record
-	state, ok := virtRec.(object.State)
-	if !ok {
-		return nil, errors.New("invalid object record")
-	}
-
-	if state.ID() == object.StateDeactivation {
-		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
-	}
-
-	var childPointer *insolar.ID
-	if idx.ChildPointer != nil {
-		childPointer = idx.ChildPointer
-	}
-	rep := reply.Object{
-		Head:         msg.Head,
-		State:        *stateID,
-		Prototype:    state.GetImage(),
-		IsPrototype:  state.GetIsPrototype(),
-		ChildPointer: childPointer,
-		Parent:       idx.Parent,
-	}
-
-	if state.GetMemory() != nil {
-		b, err := h.BlobAccessor.ForID(ctx, *state.GetMemory())
-		if err == blob.ErrNotFound {
-			hNode, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-			if err != nil {
-				return nil, err
-			}
-			obj, err := h.fetchObject(ctx, msg.Head, *hNode, stateID, parcel.Pulse())
-			if err != nil {
-				return nil, err
-			}
-			err = h.BlobModifier.Set(ctx, *state.GetMemory(), blob.Blob{JetID: insolar.JetID(jetID), Value: obj.Memory})
-			if err != nil {
-				return nil, err
-			}
-			b.Value = obj.Memory
-		}
-		rep.Memory = b.Value
 	}
 
 	return &rep, nil
