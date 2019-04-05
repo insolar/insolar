@@ -41,17 +41,21 @@ func (c *Flow) Jump(to belt.Handle) {
 	panic(cancelPanic{migrateTo: to})
 }
 
-func (c *Flow) Wait(migrate belt.Handle) {
-	<-c.cancel
-	panic(cancelPanic{migrateTo: migrate})
-}
+func (c *Flow) Yield(migrate belt.Handle, p belt.Procedure) bool {
+	if p == nil && migrate == nil {
+		panic(cancelPanic{})
+	}
 
-func (c *Flow) Yield(migrate belt.Handle, a belt.Procedure) bool {
+	if p == nil {
+		<-c.cancel
+		panic(cancelPanic{migrateTo: migrate})
+	}
+
 	var done bool
 	select {
 	case <-c.cancel:
 		panic(cancelPanic{migrateTo: migrate})
-	case done = <-c.proceed(a):
+	case done = <-c.proceed(p):
 		return done
 	}
 }
@@ -73,7 +77,9 @@ func (c *Flow) handle(ctx context.Context, h belt.Handle) {
 	defer func() {
 		if r := recover(); r != nil {
 			if cancel, ok := r.(cancelPanic); ok {
-				c.handle(ctx, cancel.migrateTo)
+				if cancel.migrateTo != nil {
+					c.handle(ctx, cancel.migrateTo)
+				}
 			} else {
 				// TODO: should probably log panic and move on (don't re-panic).
 				panic(r)

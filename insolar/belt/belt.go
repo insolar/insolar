@@ -32,12 +32,13 @@ type Flow interface {
 	// Jump instantly changes Handle. It MUST be used instead of calling other Handles directly.
 	Jump(to Handle)
 
-	// Wait blocks execution until cancellation and migrates Handle.
-	Wait(migrate Handle)
-
 	// Yield starts routine and blocks Handle execution until cancellation happens or routine returns.
+	//
 	// If cancellation happens first, Handle will be migrated.
 	// If Routine returns first, Handle execution will continue.
+	//
+	// If Routine is nil, execution blocks until cancellation and migrates Handle. If Handle is nil, execution
+	// interrupts immediately.
 	//
 	// Returns true if there is still work to do. Handle can decide to call Yield again to receive more results.
 	Yield(migrate Handle, routine Procedure) bool

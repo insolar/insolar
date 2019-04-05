@@ -101,7 +101,7 @@ type SaveObject struct {
 // These functions represent message handling in different slots.
 
 func (s *SaveObject) Future(ctx context.Context, FLOW belt.Flow) {
-	FLOW.Wait(s.Present)
+	FLOW.Yield(s.Present, nil)
 }
 
 func (s *SaveObject) Present(ctx context.Context, FLOW belt.Flow) {
