@@ -69,7 +69,7 @@ func main() {
 			params.configPath,
 			params.genesisConfigPath,
 			params.genesisKeyOut,
-		).Init()
+		).Run()
 		return
 	}
 

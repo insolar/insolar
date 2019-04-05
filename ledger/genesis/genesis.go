@@ -20,9 +20,13 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/bootstrap/genesis"
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/artifact"
+	storagegenesis "github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/log"
 )
 
@@ -40,7 +44,7 @@ func NewInitializer(cfgPath string, genesisConfigPath, genesisKeyOut string) *In
 	}
 }
 
-func (s *Initializer) Init() {
+func (s *Initializer) Run() {
 	cfgHolder := configuration.NewHolder()
 	var err error
 	if len(s.cfgPath) != 0 {
@@ -49,40 +53,55 @@ func (s *Initializer) Init() {
 		err = cfgHolder.Load()
 	}
 	if err != nil {
+		// TODO: should be fatal error
 		log.Warn("failed to load configuration from file: ", err.Error())
 	}
 
 	cfg := &cfgHolder.Configuration
-
 	ctx, inslog := initLogger(context.Background(), cfg.Log)
 	log.SetGlobalLogger(inslog)
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
-	bootstrapComponents := initBootstrapComponents(ctx, *cfg)
+	geneisConfig, err := genesis.ParseGenesisConfig(s.genesisConfigPath)
+	checkError(ctx, err, "failed to create genesis Generator")
+
+	bc := initBootstrapComponents(ctx, *cfg)
 	certManager := createCertificateManager(
 		ctx,
-		bootstrapComponents.CryptographyService,
-		bootstrapComponents.KeyProcessor,
+		bc.CryptographyService,
+		bc.KeyProcessor,
 	)
 
-	cm, err := createComponents(
-		ctx,
-		*cfg,
-		bootstrapComponents.CryptographyService,
-		bootstrapComponents.PlatformCryptographyScheme,
-		bootstrapComponents.KeyStore,
-		bootstrapComponents.KeyProcessor,
+	genesisInitializer := storagegenesis.NewGenesisInitializer()
+	genesisGenerator := genesis.NewGenerator(geneisConfig, s.genesisKeyOut)
+
+	components := prepareComponents(cfg.Ledger)
+	components = append(components,
+		bc.PlatformCryptographyScheme,
+		bc.KeyStore,
+		bc.CryptographyService,
+		bc.KeyProcessor,
 		certManager,
-		s.genesisConfigPath,
-		s.genesisKeyOut,
+
+		genesisInitializer,
+		genesisGenerator,
+		artifact.NewScope(insolar.FirstPulseNumber),
 	)
-	checkError(ctx, err, "failed to create components")
+
+	cm := component.Manager{}
+	cm.Inject(components...)
 
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
 	err = cm.Start(ctx)
 	checkError(ctx, err, "failed to start components")
+
+	// TODO: only if genesisInitializer has run
+	if genesisInitializer.Happened() {
+		err = genesisGenerator.Run(ctx)
+		checkError(ctx, err, "failed to generate genesis")
+	}
 
 	err = cm.Stop(ctx)
 	checkError(ctx, err, "failed to stop components")

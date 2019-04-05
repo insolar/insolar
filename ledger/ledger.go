@@ -32,7 +32,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
 )
@@ -121,7 +120,6 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		node.NewStorage(),
 		storage.NewObjectStorage(),
 		storage.NewReplicaStorage(),
-		genesis.NewGenesisInitializer(),
 		recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewHotDataWaiterConcrete(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),

@@ -76,14 +76,12 @@ type Generator struct {
 }
 
 // NewGenerator creates new Generator.
-func NewGenerator(genesisConfigPath string, genesisKeyOut string) (*Generator, error) {
-	config, err := ParseGenesisConfig(genesisConfigPath)
-	genesis := &Generator{
+func NewGenerator(config *Config, genesisKeyOut string) *Generator {
+	return &Generator{
 		rootDomainRef: &insolar.Reference{},
 		config:        config,
 		keyOut:        genesisKeyOut,
 	}
-	return genesis, err
 }
 
 func buildSmartContracts(ctx context.Context, cb *ContractsBuilder, rootDomainID *insolar.ID) error {
@@ -565,8 +563,8 @@ func (g *Generator) uploadKeys(ctx context.Context, path string, amount int) ([]
 	return keys, nil
 }
 
-// Start creates types and RootDomain instance
-func (g *Generator) Start(ctx context.Context) error {
+// Run generates genesis data. Accidentally it also generates certificates (it should be fixed).
+func (g *Generator) Run(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting  ...")
 	defer inslog.Info("[ Genesis ] Finished.")

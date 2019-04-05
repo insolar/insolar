@@ -19,32 +19,20 @@ package genesis
 import (
 	"context"
 
-	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/bootstrap/genesis"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/contractrequester"
 	"github.com/insolar/insolar/cryptography"
-	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/delegationtoken"
-	"github.com/insolar/insolar/internal/ledger/artifact"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/ledger"
-	"github.com/insolar/insolar/logicrunner"
-	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/messagebus"
-	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/network/servicenetwork"
-	"github.com/insolar/insolar/network/state"
-	"github.com/insolar/insolar/network/termination"
-	"github.com/insolar/insolar/networkcoordinator"
+	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/blob"
+	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/pulsar"
-	"github.com/insolar/insolar/pulsar/entropygenerator"
-	"github.com/insolar/insolar/version/manager"
 )
 
 type bootstrapComponents struct {
@@ -90,108 +78,28 @@ func createCertificateManager(
 	return certManager
 }
 
-// createComponents creates and links all insolard components
-func createComponents(
-	ctx context.Context,
-	cfg configuration.Configuration,
-	cryptographyService insolar.CryptographyService,
-	platformCryptographyScheme insolar.PlatformCryptographyScheme,
-	keyStore insolar.KeyStore,
-	keyProcessor insolar.KeyProcessor,
-	certManager insolar.CertificateManager,
-	genesisConfigPath string,
-	genesisKeyOut string,
-
-) (*component.Manager, error) {
-	cm := component.Manager{}
-	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
-	checkError(ctx, err, "failed to start NodeNetwork")
-
-	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
-	checkError(ctx, err, "failed to start LogicRunner")
-
-	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, true)
-	checkError(ctx, err, "failed to start Network")
-
-	terminationHandler := termination.NewHandler(nw)
-
-	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
-	parcelFactory := messagebus.NewParcelFactory()
-
-	messageBus, err := messagebus.NewMessageBus(cfg)
-	checkError(ctx, err, "failed to start MessageBus")
-
-	gen, err := genesis.NewGenerator(genesisConfigPath, genesisKeyOut)
-	checkError(ctx, err, "failed to start Bootstrapper (bootstraper mode)")
-
-	contractRequester, err := contractrequester.New()
-	checkError(ctx, err, "failed to start ContractRequester")
-
-	genesisDataProvider, err := genesisdataprovider.New()
-	checkError(ctx, err, "failed to start GenesisDataProvider")
-
-	apiRunner, err := api.NewRunner(&cfg.APIRunner)
-	checkError(ctx, err, "failed to start ApiRunner")
-
-	nodeRole := certManager.GetCertificate().GetRole().String()
-	metricsHandler, err := metrics.NewMetrics(
-		ctx,
-		cfg.Metrics,
-		metrics.GetInsolarRegistry(nodeRole),
-		nodeRole,
-	)
-	checkError(ctx, err, "failed to start Metrics")
-
-	networkSwitcher, err := state.NewNetworkSwitcher()
-	checkError(ctx, err, "failed to start NetworkSwitcher")
-
-	networkCoordinator, err := networkcoordinator.New()
-	checkError(ctx, err, "failed to start NetworkCoordinator")
-
-	_, err = manager.NewVersionManager(cfg.VersionManager)
-	checkError(ctx, err, "failed to load VersionManager: ")
-
-	// move to logic runner ??
-	err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
-	checkError(ctx, err, "failed init pulse for LogicRunner")
-
-	cm.Register(
-		terminationHandler,
-		platformCryptographyScheme,
-		keyStore,
-		cryptographyService,
-		keyProcessor,
-		certManager,
-		nodeNetwork,
-		nw,
-	)
-
-	components := ledger.GetLedgerComponents(cfg.Ledger, certManager.GetCertificate())
-
-	components = append(components, []interface{}{
-		messageBus,
-		contractRequester,
-		logicRunner,
-		artifacts.NewClient(),
-		delegationTokenFactory,
-		parcelFactory,
-	}...)
-	if gen != nil {
-		components = append(components, gen)
+func prepareComponents(conf configuration.Ledger) []interface{} {
+	legacyDB, err := storage.NewDB(conf, nil)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
-	components = append(components, []interface{}{
-		genesisDataProvider,
-		apiRunner,
-		metricsHandler,
-		networkSwitcher,
-		networkCoordinator,
-		cryptographyService,
-		keyProcessor,
-	}...)
 
-	components = append(components, artifact.NewScope(insolar.FirstPulseNumber))
+	db, err := store.NewBadgerDB(conf.Storage.DataDirectoryNewDB)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to initialize DB"))
+	}
 
-	cm.Inject(components...)
+	dropDB := drop.NewStorageDB(db)
+	blobDB := blob.NewStorageDB(db)
+	recordDB := object.NewRecordDB(db)
 
-	return &cm, nil
+	return []interface{}{
+		legacyDB,
+		db,
+		dropDB,
+		blobDB,
+		recordDB,
+		storage.NewPulseTracker(),
+		storage.NewObjectStorage(),
+	}
 }

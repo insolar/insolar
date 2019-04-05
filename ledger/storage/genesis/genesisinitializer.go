@@ -35,6 +35,7 @@ import (
 type State interface {
 	component.Initer
 	GenesisRef() *insolar.Reference
+	Happened() bool
 }
 
 type genesisInitializer struct {
@@ -43,11 +44,13 @@ type genesisInitializer struct {
 	DB             store.DB              `inject:""`
 	DropModifier   drop.Modifier         `inject:""`
 	RecordModifier object.RecordModifier `inject:""`
+
 	// TODO: @imarkin 28.03.2019 - remove ObjectStorage and  PulseTracker after all new storages integration (INS-2013, etc)
 	ObjectStorage storage.ObjectStorage `inject:""`
 	PulseTracker  storage.PulseTracker  `inject:""`
 
 	genesisRef *insolar.Reference
+	happened   bool
 }
 
 func NewGenesisInitializer() State {
@@ -69,6 +72,10 @@ func (gk Key) ID() []byte {
 
 func (gk Key) Scope() store.Scope {
 	return store.ScopeSystem
+}
+
+func (gi *genesisInitializer) Happened() bool {
+	return gi.happened
 }
 
 func (gi *genesisInitializer) Init(ctx context.Context) error {
@@ -144,12 +151,18 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 
 	var err error
 	gi.genesisRef, err = getGenesisRef()
-	if err == store.ErrNotFound {
-		gi.genesisRef, err = createGenesisRecord()
+	if err == nil {
+		return nil
 	}
-	if err != nil {
+	if err != store.ErrNotFound {
 		return errors.Wrap(err, "genesis bootstrap failed")
 	}
 
+	gi.genesisRef, err = createGenesisRecord()
+	if err != nil {
+		return err
+	}
+
+	gi.happened = true
 	return nil
 }
