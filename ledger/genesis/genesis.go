@@ -59,14 +59,13 @@ func (s *Initializer) Init() {
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	bootstrapComponents := initBootstrapComponents(ctx, *cfg)
-	certManager := initCertificateManager(
+	certManager := createCertificateManager(
 		ctx,
-		*cfg,
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)
 
-	cm, err := initComponents(
+	cm, err := createComponents(
 		ctx,
 		*cfg,
 		bootstrapComponents.CryptographyService,
@@ -77,7 +76,7 @@ func (s *Initializer) Init() {
 		s.genesisConfigPath,
 		s.genesisKeyOut,
 	)
-	checkError(ctx, err, "failed to init components")
+	checkError(ctx, err, "failed to create components")
 
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")

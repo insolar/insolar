@@ -38,6 +38,9 @@ type Contract struct {
 
 //go:generate minimock -i github.com/insolar/insolar/internal/ledger/artifact.Manager -o ./ -s _gen_mock.go
 
+// Manager implements subset of methods from artifacts client required for genesis.
+// works
+// TODO: move common interface to insolar package
 type Manager interface {
 	RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error)
 	RegisterResult(ctx context.Context, obj, request insolar.Reference, payload []byte) (*insolar.ID, error)

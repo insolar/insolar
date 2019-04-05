@@ -75,9 +75,8 @@ func initBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 	}
 }
 
-func initCertificateManager(
+func createCertificateManager(
 	ctx context.Context,
-	cfg configuration.Configuration,
 	cryptographyService insolar.CryptographyService,
 	keyProcessor insolar.KeyProcessor,
 ) *certificate.CertificateManager {
@@ -91,8 +90,8 @@ func initCertificateManager(
 	return certManager
 }
 
-// initComponents creates and links all insolard components
-func initComponents(
+// createComponents creates and links all insolard components
+func createComponents(
 	ctx context.Context,
 	cfg configuration.Configuration,
 	cryptographyService insolar.CryptographyService,
