@@ -27,6 +27,8 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/ledger/storage/blob"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -41,7 +43,6 @@ import (
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
@@ -66,7 +67,6 @@ type heavySuite struct {
 	jetStore        *jet.Store
 	nodeAccessor    *node.AccessorMock
 	nodeSetter      *node.ModifierMock
-	pulseTracker    storage.PulseTracker
 	replicaStorage  storage.ReplicaStorage
 	dropModifier    drop.Modifier
 	dropAccessor    drop.Accessor
@@ -74,6 +74,7 @@ type heavySuite struct {
 	recordCleaner   object.RecordCleaner
 	recSyncAccessor object.RecordCollectionAccessor
 	storageCleaner  storage.Cleaner
+	pulseStorage    *pulse.StorageMem
 }
 
 func NewHeavySuite() *heavySuite {
@@ -91,14 +92,16 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	tmpDB, _, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	pulseStorage := pulse.NewStorageMem()
+	s.pulseStorage = pulseStorage
+
+	tmpDB, _, cleaner := storagetest.TmpDB(s.ctx, s.T(), storagetest.PulseStorage(pulseStorage))
 	s.cleaner = cleaner
 	s.db = tmpDB
 	s.scheme = testutils.NewPlatformCryptographyScheme()
 	s.jetStore = jet.NewStore()
 	s.nodeAccessor = node.NewAccessorMock(s.T())
 	s.nodeSetter = node.NewModifierMock(s.T())
-	s.pulseTracker = storage.NewPulseTracker()
 	s.replicaStorage = storage.NewReplicaStorage()
 	s.objectStorage = storage.NewObjectStorage()
 
@@ -119,7 +122,6 @@ func (s *heavySuite) BeforeTest(suiteName, testName string) {
 		store.NewMemoryMockDB(),
 		s.nodeAccessor,
 		s.nodeSetter,
-		s.pulseTracker,
 		s.replicaStorage,
 		s.objectStorage,
 		dropStorage,
@@ -276,6 +278,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 		nil,
 		blobStorage,
 		blobStorage,
+		s.pulseStorage,
 		s.recordCleaner,
 		s.recSyncAccessor,
 	)
@@ -288,16 +291,14 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	pm.Nodes = s.nodeAccessor
 	pm.NodeSetter = s.nodeSetter
 	pm.DBContext = s.db
-	pm.PulseTracker = s.pulseTracker
 	pm.ReplicaStorage = s.replicaStorage
 	pm.StorageCleaner = s.storageCleaner
 	pm.ObjectStorage = s.objectStorage
 	pm.DropAccessor = s.dropAccessor
 	pm.DropModifier = s.dropModifier
-
-	ps := storage.NewPulseStorage()
-	ps.PulseTracker = s.pulseTracker
-	pm.PulseStorage = ps
+	pm.PulseAppender = s.pulseStorage
+	pm.PulseAccessor = s.pulseStorage
+	pm.PulseCalculator = s.pulseStorage
 
 	pm.HotDataWaiter = artifactmanager.NewHotDataWaiterConcrete()
 
@@ -421,8 +422,6 @@ func addRecords(
 var (
 	scopeIDLifeline = byte(1)
 	scopeIDRecord   = byte(2)
-	scopeIDJetDrop  = byte(3)
-	scopeIDBlob     = byte(7)
 )
 
 type key []byte
@@ -446,9 +445,7 @@ func getallkeys(db *badger.DB) (records []key) {
 		switch k[0] {
 		case
 			scopeIDRecord,
-			scopeIDJetDrop,
-			scopeIDLifeline,
-			scopeIDBlob:
+			scopeIDLifeline:
 			records = append(records, k)
 		}
 	}

@@ -60,7 +60,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
 
 	"github.com/stretchr/testify/assert"
@@ -92,7 +91,7 @@ func setupNode(t *transportSuite, n *node) {
 	n.host, err = host.NewHost(n.config.Address)
 	t.Assert().NoError(err)
 
-	n.transport, err = NewTransport(n.config, relay.NewProxy())
+	n.transport, _, err = NewTransport(n.config)
 	t.Require().NoError(err)
 	t.Require().NotNil(n.transport)
 	t.Require().Implements((*Transport)(nil), n.transport)
@@ -106,8 +105,8 @@ func (t *transportSuite) SetupTest() {
 
 func (t *transportSuite) BeforeTest(suiteName, testName string) {
 	ctx := context.Background()
-	t.node1.transport.Listen(ctx)
-	t.node2.transport.Listen(ctx)
+	t.node1.transport.Start(ctx)
+	t.node2.transport.Start(ctx)
 }
 
 func (t *transportSuite) AfterTest(suiteName, testName string) {
@@ -211,12 +210,12 @@ func Test_createResolver(t *testing.T) {
 	a := assert.New(t)
 
 	cfg1 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17018", FixedPublicAddress: "192.168.0.1"}
-	r, err := createResolver(cfg1)
+	r, err := createResolver(cfg1.FixedPublicAddress)
 	a.NoError(err)
 	a.IsType(resolver.NewFixedAddressResolver(""), r)
 
 	cfg3 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17018", FixedPublicAddress: ""}
-	r, err = createResolver(cfg3)
+	r, err = createResolver(cfg3.FixedPublicAddress)
 	a.NoError(err)
 	a.IsType(resolver.NewExactResolver(), r)
 }

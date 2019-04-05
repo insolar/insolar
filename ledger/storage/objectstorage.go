@@ -109,3 +109,7 @@ func (os *objectStorage) SetObjectIndex(
 	encoded := object.EncodeIndex(*idx)
 	return os.DB.Set(ctx, k, encoded)
 }
+
+func pulseNumFromKey(from int, key []byte) insolar.PulseNumber {
+	return insolar.NewPulseNumber(key[from : from+insolar.PulseNumberSize])
+}

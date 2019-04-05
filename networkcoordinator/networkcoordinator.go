@@ -63,7 +63,6 @@ type NetworkCoordinator struct {
 	ContractRequester  insolar.ContractRequester   `inject:""`
 	MessageBus         insolar.MessageBus          `inject:""`
 	CS                 insolar.CryptographyService `inject:""`
-	PS                 insolar.PulseStorage        `inject:""`
 
 	realCoordinator Coordinator
 	zeroCoordinator Coordinator

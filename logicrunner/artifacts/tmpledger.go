@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
-	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -35,6 +34,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
@@ -100,16 +100,15 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 	mc := minimock.NewController(t)
+	ps := pulse.NewStorageMem()
 
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
-	tmpDB, recMem, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir))
+	tmpDB, recMem, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir), storagetest.PulseStorage(ps))
 	memoryMockDB := store.NewMemoryMockDB()
 
 	cm := &component.Manager{}
-	pt := storage.NewPulseTracker()
-	ps := storage.NewPulseStorage()
 	js := jet.NewStore()
 	os := storage.NewObjectStorage()
 	ns := node.NewStorage()
@@ -136,14 +135,14 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	// Init components.
 	if c.MessageBus == nil {
 		mb := testmessagebus.NewTestMessageBus(t)
-		mb.PulseStorage = ps
+		mb.PulseAccessor = ps
 		c.MessageBus = mb
 	} else {
 		switch mb := c.MessageBus.(type) {
 		case *messagebus.MessageBus:
-			mb.PulseStorage = ps
+			mb.PulseAccessor = ps
 		case *testmessagebus.TestMessageBus:
-			mb.PulseStorage = ps
+			mb.PulseAccessor = ps
 		default:
 			panic("unknown message bus")
 		}
@@ -153,7 +152,6 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	}
 
 	handler := artifactmanager.NewMessageHandler(&conf)
-	handler.PulseTracker = pt
 	handler.JetStorage = js
 	handler.Nodes = ns
 	handler.DBContext = tmpDB
@@ -183,7 +181,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 		js,
 		os,
 		ns,
-		pt,
+		ps,
 		ps,
 		ds,
 		am,
@@ -202,10 +200,6 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 		t.Error("ComponentManager start failed", err)
 	}
 
-	pulse, err := pt.GetLatestPulse(ctx)
-	require.NoError(t, err)
-	ps.Set(&pulse.Pulse)
-
 	gilMock := testutils.NewGlobalInsolarLockMock(t)
 	gilMock.AcquireFunc = func(context.Context) {}
 	gilMock.ReleaseFunc = func(context.Context) {}
@@ -220,11 +214,13 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	pm.Bus = c.MessageBus
 	pm.LR = c.LogicRunner
 	pm.ActiveListSwapper = alsMock
-	pm.PulseStorage = ps
+	// pm.PulseStorage = ps
 	pm.Nodes = ns
 	pm.NodeSetter = ns
-	pm.PulseTracker = pt
 	pm.JetModifier = js
+
+	pm.PulseAccessor = ps
+	pm.PulseAppender = ps
 
 	hdw := artifactmanager.NewHotDataWaiterConcrete()
 

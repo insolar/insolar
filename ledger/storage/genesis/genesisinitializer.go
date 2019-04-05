@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 )
 
 type State interface {
@@ -43,14 +44,15 @@ type genesisInitializer struct {
 
 	DB             store.DB              `inject:""`
 	DropModifier   drop.Modifier         `inject:""`
+	PulseAppender  pulse.Appender        `inject:""`
+	PulseAccessor  pulse.Accessor        `inject:""`
 	RecordModifier object.RecordModifier `inject:""`
-
-	// TODO: @imarkin 28.03.2019 - remove ObjectStorage and  PulseTracker after all new storages integration (INS-2013, etc)
-	ObjectStorage storage.ObjectStorage `inject:""`
-	PulseTracker  storage.PulseTracker  `inject:""`
 
 	genesisRef *insolar.Reference
 	happened   bool
+
+	// TODO: @imarkin 28.03.2019 - remove ObjectStorage and  PulseTracker after all new storages integration (INS-2013, etc)
+	ObjectStorage storage.ObjectStorage `inject:""`
 }
 
 func NewGenesisInitializer() State {
@@ -64,6 +66,7 @@ func (gi *genesisInitializer) GenesisRef() *insolar.Reference {
 	return gi.genesisRef
 }
 
+// Key is genesis key.
 type Key struct{}
 
 func (gk Key) ID() []byte {
@@ -93,7 +96,7 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 	}
 
 	createGenesisRecord := func() (*insolar.Reference, error) {
-		err := gi.PulseTracker.AddPulse(
+		err := gi.PulseAppender.Append(
 			ctx,
 			insolar.Pulse{
 				PulseNumber: insolar.GenesisPulse.PulseNumber,
@@ -109,20 +112,20 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 			return nil, errors.Wrap(err, "fail to set initial drop")
 		}
 
-		lastPulse, err := gi.PulseTracker.GetLatestPulse(ctx)
+		lastPulse, err := gi.PulseAccessor.Latest(ctx)
 		if err != nil {
 			return nil, errors.Wrap(err, "fail to get last pulse")
 		}
-		if lastPulse.Pulse.PulseNumber != insolar.GenesisPulse.PulseNumber {
+		if lastPulse.PulseNumber != insolar.GenesisPulse.PulseNumber {
 			return nil, fmt.Errorf(
 				"last pulse number %v is not equal to genesis special value %v",
-				lastPulse.Pulse.PulseNumber,
+				lastPulse.PulseNumber,
 				insolar.GenesisPulse.PulseNumber,
 			)
 		}
 
 		virtRec := &object.GenesisRecord{}
-		genesisID := object.NewRecordIDFromRecord(gi.PCS, lastPulse.Pulse.PulseNumber, virtRec)
+		genesisID := object.NewRecordIDFromRecord(gi.PCS, lastPulse.PulseNumber, virtRec)
 		rec := record.MaterialRecord{
 			Record: virtRec,
 			JetID:  insolar.ZeroJetID,

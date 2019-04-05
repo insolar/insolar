@@ -22,13 +22,14 @@ import (
 	"os"
 	"testing"
 
+	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/genesis"
@@ -37,8 +38,9 @@ import (
 )
 
 type tmpDBOptions struct {
-	dir         string
-	nobootstrap bool
+	dir          string
+	nobootstrap  bool
+	pulseStorage *pulse.StorageMem
 }
 
 // Option provides functional option for TmpDB.
@@ -48,6 +50,13 @@ type Option func(*tmpDBOptions)
 func Dir(dir string) Option {
 	return func(opts *tmpDBOptions) {
 		opts.dir = dir
+	}
+}
+
+// PulseStorage provides an external pulse storage for TmpDB
+func PulseStorage(ps *pulse.StorageMem) Option {
+	return func(opts *tmpDBOptions) {
+		opts.pulseStorage = ps
 	}
 }
 
@@ -81,8 +90,14 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 	storageDB := store.NewMemoryMockDB()
 	ds := drop.NewDB(storageDB)
 
+	var ps *pulse.StorageMem
+	if opts.pulseStorage != nil {
+		ps = opts.pulseStorage
+	} else {
+		ps = pulse.NewStorageMem()
+	}
+
 	objectStorage := storage.NewObjectStorage()
-	pulseTracker := storage.NewPulseTracker()
 
 	recordStorage := object.NewRecordMemory()
 	recordAccessor := recordStorage
@@ -90,12 +105,12 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 
 	cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
+		ps,
 		tmpDB,
 		jet.NewStore(),
 		store.NewMemoryMockDB(),
 		objectStorage,
 		ds,
-		pulseTracker,
 		recordAccessor,
 		recordModifier,
 	)

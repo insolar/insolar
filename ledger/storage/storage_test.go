@@ -20,13 +20,13 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/storage"
@@ -47,10 +47,8 @@ type storageSuite struct {
 
 	// TODO: @imarkin 28.03.2019 - remove it after all new storages integration (INS-2013, etc)
 	objectStorage storage.ObjectStorage
-
-	dropModifier drop.Modifier
-	dropAccessor drop.Accessor
-	pulseTracker storage.PulseTracker
+	dropModifier  drop.Modifier
+	dropAccessor  drop.Accessor
 
 	jetID insolar.ID
 }
@@ -80,8 +78,6 @@ func (s *storageSuite) BeforeTest(suiteName, testName string) {
 	dropStorage := drop.NewDB(storageDB)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
-
-	s.pulseTracker = storage.NewPulseTracker()
 	s.jetID = testutils.RandomJet()
 
 	s.cm.Inject(
@@ -91,7 +87,7 @@ func (s *storageSuite) BeforeTest(suiteName, testName string) {
 		s.objectStorage,
 		s.dropModifier,
 		s.dropAccessor,
-		s.pulseTracker,
+		pulse.NewStorageMem(),
 	)
 
 	err := s.cm.Init(s.ctx)
@@ -171,27 +167,4 @@ func (s *storageSuite) TestDB_SetDrop() {
 	got, err := s.dropAccessor.ForPulse(s.ctx, jetID, 42)
 	assert.NoError(s.T(), err)
 	assert.Equal(s.T(), got, drop42)
-}
-
-func (s *storageSuite) TestDB_AddPulse() {
-	pulse42 := insolar.Pulse{PulseNumber: 42, Entropy: insolar.Entropy{1, 2, 3}}
-	err := s.pulseTracker.AddPulse(s.ctx, pulse42)
-	require.NoError(s.T(), err)
-
-	latestPulse, err := s.pulseTracker.GetLatestPulse(s.ctx)
-	assert.Equal(s.T(), insolar.PulseNumber(42), latestPulse.Pulse.PulseNumber)
-
-	pulse, err := s.pulseTracker.GetPulse(s.ctx, latestPulse.Pulse.PulseNumber)
-	require.NoError(s.T(), err)
-
-	prevPulse, err := s.pulseTracker.GetPulse(s.ctx, *latestPulse.Prev)
-	require.NoError(s.T(), err)
-
-	prevPN := insolar.PulseNumber(insolar.FirstPulseNumber)
-	expectPulse := storage.Pulse{
-		Prev:         &prevPN,
-		Pulse:        pulse42,
-		SerialNumber: prevPulse.SerialNumber + 1,
-	}
-	assert.Equal(s.T(), expectPulse, *pulse)
 }

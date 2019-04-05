@@ -57,6 +57,7 @@ import (
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
@@ -64,7 +65,6 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
 )
@@ -130,11 +130,16 @@ func (h *hostTransport) BuildResponse(ctx context.Context, request network.Reque
 }
 
 func NewInternalTransport(conf configuration.Configuration, nodeRef string) (network.InternalTransport, error) {
-	tp, err := transport.NewTransport(conf.Host.Transport, relay.NewProxy())
+	tp, publicAddress, err := transport.NewTransport(conf.Host.Transport)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating transport")
 	}
-	origin, err := getOrigin(tp, nodeRef)
+	id, err := insolar.NewReferenceFromBase58(nodeRef)
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid nodeRef")
+	}
+
+	origin, err := host.NewHostN(publicAddress, *id)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting origin")
 	}

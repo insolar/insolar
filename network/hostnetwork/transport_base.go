@@ -73,12 +73,12 @@ type transportBase struct {
 	sequenceGenerator sequence.Generator
 }
 
-// Listen start listening to network requests, should be started in goroutine.
+// Start start listening to network requests, should be started in goroutine.
 func (h *transportBase) Start(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&h.started, 0, 1) {
 		return errors.New("Failed to start transport: double listen initiated")
 	}
-	if err := h.transport.Listen(ctx); err != nil {
+	if err := h.transport.Start(ctx); err != nil {
 		return errors.Wrap(err, "Failed to start transport: listen syscall failed")
 	}
 
@@ -133,17 +133,4 @@ func (h *transportBase) GetNodeID() insolar.Reference {
 // NewRequestBuilder create packet Builder for an outgoing request with sender set to current node.
 func (h *transportBase) NewRequestBuilder() network.RequestBuilder {
 	return &Builder{sender: h.origin, id: network.RequestID(h.sequenceGenerator.Generate())}
-}
-
-func getOrigin(tp transport.Transport, id string) (*host.Host, error) {
-	address, err := host.NewAddress(tp.PublicAddress())
-	if err != nil {
-		return nil, errors.Wrap(err, "error resolving address")
-	}
-	nodeID, err := insolar.NewReferenceFromBase58(id)
-	if err != nil {
-		return nil, errors.Wrap(err, "error parsing NodeID from string")
-	}
-	origin := &host.Host{NodeID: *nodeID, Address: address}
-	return origin, nil
 }
