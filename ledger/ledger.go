@@ -70,12 +70,12 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	case insolar.StaticRoleUnknown, insolar.StaticRoleHeavyMaterial:
 		pulseTracker = storage.NewPulseTracker()
 
-		dropDB := drop.NewStorageDB(db)
+		dropDB := drop.NewDB(db)
 		dropModifier = dropDB
 		dropAccessor = dropDB
 
 		// should be replaced with db
-		blobDB := blob.NewStorageDB(db)
+		blobDB := blob.NewDB(db)
 		blobModifier = blobDB
 		blobAccessor = blobDB
 

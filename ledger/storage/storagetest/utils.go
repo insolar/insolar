@@ -79,7 +79,7 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 	cm := &component.Manager{}
 
 	storageDB := store.NewMemoryMockDB()
-	ds := drop.NewStorageDB(storageDB)
+	ds := drop.NewDB(storageDB)
 
 	objectStorage := storage.NewObjectStorage()
 	pulseTracker := storage.NewPulseTracker()

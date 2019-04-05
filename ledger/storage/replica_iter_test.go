@@ -83,7 +83,7 @@ func (s *replicaIterSuite) BeforeTest(suiteName, testName string) {
 
 	s.objectStorage = storage.NewObjectStorage()
 
-	dropStorage := drop.NewStorageDB(store.NewMemoryMockDB())
+	dropStorage := drop.NewDB(store.NewMemoryMockDB())
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 	recordStorage := object.NewRecordMemory()
@@ -140,7 +140,7 @@ func Test_StoreKeyValues(t *testing.T) {
 		defer cleaner()
 
 		os := storage.NewObjectStorage()
-		ds := drop.NewStorageDB(store.NewMemoryMockDB())
+		ds := drop.NewDB(store.NewMemoryMockDB())
 		bs := blob.NewStorageMemory()
 
 		scheme := testutils.NewPlatformCryptographyScheme()
@@ -277,7 +277,7 @@ func Test_ReplicaIter_Base(t *testing.T) {
 	defer cleaner()
 
 	os := storage.NewObjectStorage()
-	ds := drop.NewStorageDB(store.NewMemoryMockDB())
+	ds := drop.NewDB(store.NewMemoryMockDB())
 	bs := blob.NewStorageMemory()
 
 	scheme := testutils.NewPlatformCryptographyScheme()
