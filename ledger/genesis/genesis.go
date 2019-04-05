@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
-	"github.com/insolar/insolar/ledger/storage"
 	storagegenesis "github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/log"
 )
@@ -92,7 +91,7 @@ func (s *Initializer) Run() {
 		sc.storageDBContext,
 		sc.storeBadgerDB,
 		sc.objectStorage,
-		storage.NewPulseTracker(),
+		sc.pulseDB,
 
 		genesisInitializer,
 	)

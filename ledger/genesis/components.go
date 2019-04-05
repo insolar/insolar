@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
@@ -86,6 +87,7 @@ type storageComponents struct {
 	dropDB   *drop.DB
 	blobDB   *blob.DB
 	recordDB *object.RecordDB
+	pulseDB  *pulse.DB
 
 	objectStorage storage.ObjectStorage
 }
@@ -110,5 +112,6 @@ func initStorageComponents(conf configuration.Ledger) storageComponents {
 		recordDB: object.NewRecordDB(db),
 
 		objectStorage: storage.NewObjectStorage(),
+		pulseDB:       pulse.NewDB(db),
 	}
 }
