@@ -3,7 +3,7 @@ package belt
 import (
 	"context"
 
-	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/belt/bus"
 )
 
 // Handle is a one-function synchronous process that can call routines to do long processing.
@@ -13,7 +13,7 @@ import (
 type Handle func(ctx context.Context, FLOW Flow)
 
 // MakeHandle is a function that constructs new Handle.
-type MakeHandle func(message *message.Message) Handle
+type MakeHandle func(msg bus.Message) Handle
 
 // Procedure is a task that can execute itself.
 // It's a good idea to keep Procedures in a separate package to hide internal state from Handle.
@@ -22,7 +22,7 @@ type Procedure interface {
 	// If Procedure requires Handle to make decision and give control back, it should return true.
 	// Handle will make modifications in Procedure state and Proceed will be called again to continue procedure.
 	// If false is returned, Procedure is considered complete.
-	Proceed(context.Context) bool
+	Proceed(context.Context)
 }
 
 // Flow will be pasted to all Handles to control execution.
@@ -41,5 +41,5 @@ type Flow interface {
 	// interrupts immediately.
 	//
 	// Returns true if there is still work to do. Handle can decide to call Yield again to receive more results.
-	Yield(migrate Handle, routine Procedure) bool
+	Yield(migrate Handle, routine Procedure)
 }

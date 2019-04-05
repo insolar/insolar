@@ -2,51 +2,53 @@ package handler
 
 import (
 	"context"
+	"time"
 
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/belt"
+	"github.com/insolar/insolar/insolar/belt/bus"
 	"github.com/insolar/insolar/insolar/belt/internal/flow"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
 )
 
+const handleTimeout = 10 * time.Second
+
 type Handler struct {
-	cancel  chan struct{}
-	pulse   insolar.Pulse
 	handles struct {
 		past, present, future belt.MakeHandle
 	}
+	controller *flow.Controller
 }
 
-func NewHandler(past, present, future belt.MakeHandle) *Handler {
+func NewHandler(present belt.MakeHandle) *Handler {
 	h := &Handler{
-		cancel: make(chan struct{}),
+		controller: flow.NewController(),
 	}
-	h.handles.past = past
 	h.handles.present = present
-	h.handles.future = future
 	return h
 }
 
 // ChangePulse is a handle for pulse change vent.
-func (h *Handler) ChangePulse(ctx context.Context, msg *message.Message) ([]message.Message, error) {
-	// TODO: decode pulse from message.
-	h.pulse = *insolar.GenesisPulse
-	close(h.cancel)
-	h.cancel = make(chan struct{})
-
-	return nil, nil
+func (h *Handler) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
+	h.controller.Pulse()
 }
 
-// HandleMessage is a message handler.
-func (h *Handler) HandleMessage(msg *message.Message) ([]message.Message, error) {
-	// pn := message.Metadata["pulse"]
-	// TODO: Select handler based on pulse.
-
-	f := flow.NewFlow(msg, h.cancel)
+func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
+	msg := bus.Message{
+		ReplyTo: make(chan bus.Reply),
+		Parcel:  parcel,
+	}
 	go func() {
-		_ = f.Run(msg.Context(), h.handles.present(msg))
-		// TODO: log error.
+		f := flow.NewFlow(ctx, msg, h.controller)
+		err := f.Run(ctx, h.handles.present(msg))
+		inslogger.FromContext(ctx).Error("Handling failed", err)
 	}()
-
-	return nil, nil
+	var rep bus.Reply
+	select {
+	case rep = <-msg.ReplyTo:
+		return rep.Reply, rep.Err
+	case <-time.After(handleTimeout):
+		return nil, errors.New("handler timeout")
+	}
 }

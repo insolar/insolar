@@ -18,10 +18,9 @@ type CheckPermissions struct {
 	}
 }
 
-func (a *CheckPermissions) Proceed(context.Context) bool {
+func (a *CheckPermissions) Proceed(context.Context) {
 	// Check for node permissions.
 	a.Result.AllowedToSave = true
-	return false
 }
 
 type GetObjectFromDB struct {
@@ -35,16 +34,14 @@ type GetObjectFromDB struct {
 	}
 }
 
-func (a *GetObjectFromDB) Proceed(context.Context) bool {
+func (a *GetObjectFromDB) Proceed(context.Context) {
 	b := make([]byte, 10)
 	id, err := a.DBConnection.Read(b)
 	if err != nil {
-		return false
+		return
 	}
 	a.Result.Exists = true
 	a.Result.ID = id
-
-	return false
 }
 
 type SaveObjectToDB struct {
@@ -58,32 +55,29 @@ type SaveObjectToDB struct {
 	}
 }
 
-func (a *SaveObjectToDB) Proceed(context.Context) bool {
+func (a *SaveObjectToDB) Proceed(context.Context) {
 	id, err := a.DBConnection.Write([]byte(a.Hash))
 	if err != nil {
 		a.Result.Err = err
-		return false
+		return
 	}
 	a.Result.ID = id
-	return false
 }
 
 type SendReply struct {
 	Message string
 }
 
-func (a *SendReply) Proceed(context.Context) bool {
+func (a *SendReply) Proceed(context.Context) {
 	// Send reply over network.
-	return false
 }
 
 type Redirect struct {
 	ToNode string
 }
 
-func (a *Redirect) Proceed(context.Context) bool {
+func (a *Redirect) Proceed(context.Context) {
 	// Redirect to other node.
-	return false
 }
 
 // =====================================================================================================================

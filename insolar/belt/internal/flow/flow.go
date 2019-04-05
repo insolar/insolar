@@ -19,21 +19,24 @@ package flow
 import (
 	"context"
 
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/belt"
+	"github.com/insolar/insolar/insolar/belt/bus"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type Flow struct {
-	cancel     <-chan struct{}
-	procedures map[belt.Procedure]chan bool
-	message    *message.Message
+	controller *Controller
+	procedures map[belt.Procedure]chan struct{}
+	message    bus.Message
+	context    context.Context
 }
 
-func NewFlow(msg *message.Message, cancel <-chan struct{}) *Flow {
+func NewFlow(ctx context.Context, msg bus.Message, controller *Controller) *Flow {
 	return &Flow{
-		cancel:     cancel,
-		procedures: map[belt.Procedure]chan bool{},
+		controller: controller,
+		procedures: map[belt.Procedure]chan struct{}{},
 		message:    msg,
+		context:    ctx,
 	}
 }
 
@@ -41,22 +44,20 @@ func (c *Flow) Jump(to belt.Handle) {
 	panic(cancelPanic{migrateTo: to})
 }
 
-func (c *Flow) Yield(migrate belt.Handle, p belt.Procedure) bool {
+func (c *Flow) Yield(migrate belt.Handle, p belt.Procedure) {
 	if p == nil && migrate == nil {
 		panic(cancelPanic{})
 	}
 
 	if p == nil {
-		<-c.cancel
+		<-c.controller.Cancel()
 		panic(cancelPanic{migrateTo: migrate})
 	}
 
-	var done bool
 	select {
-	case <-c.cancel:
+	case <-c.controller.Cancel():
 		panic(cancelPanic{migrateTo: migrate})
-	case done = <-c.proceed(p):
-		return done
+	case <-c.proceed(p):
 	}
 }
 
@@ -81,21 +82,21 @@ func (c *Flow) handle(ctx context.Context, h belt.Handle) {
 					c.handle(ctx, cancel.migrateTo)
 				}
 			} else {
-				// TODO: should probably log panic and move on (don't re-panic).
-				panic(r)
+				inslogger.FromContext(ctx).Panic(r)
 			}
 		}
 	}()
 	h(ctx, c)
 }
 
-func (c *Flow) proceed(a belt.Procedure) <-chan bool {
+func (c *Flow) proceed(a belt.Procedure) <-chan struct{} {
 	if d, ok := c.procedures[a]; ok {
 		return d
 	}
 
-	done := make(chan bool)
+	done := make(chan struct{})
 	c.procedures[a] = done
-	done <- a.Proceed(context.TODO())
+	a.Proceed(c.context)
+	close(done)
 	return done
 }
