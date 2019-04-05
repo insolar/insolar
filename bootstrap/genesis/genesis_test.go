@@ -79,14 +79,14 @@ func mockGenerator(t *testing.T, am artifact.Manager) *Generator {
 		rootDomainRef: &ref,
 		nodeDomainRef: &ref,
 
-		ArtifactManager: am,
+		artifactManager: am,
 	}
 	return g
 }
 
 func mockContractBuilder(t *testing.T, g *Generator) *ContractsBuilder {
 	ref := gen.Reference()
-	cb := NewContractBuilder(gen.Reference(), g.ArtifactManager)
+	cb := NewContractBuilder(gen.Reference(), g.artifactManager)
 	cb.Prototypes[nodeRecord] = &ref
 	return cb
 }

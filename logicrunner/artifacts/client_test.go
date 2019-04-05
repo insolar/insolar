@@ -88,7 +88,7 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.objectStorage = storage.NewObjectStorage()
 
 	dbStore := store.NewMemoryMockDB()
-	dropStorage := drop.NewStorageDB(dbStore)
+	dropStorage := drop.NewDB(dbStore)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 

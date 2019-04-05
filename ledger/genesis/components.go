@@ -43,7 +43,6 @@ type bootstrapComponents struct {
 }
 
 func initBootstrapComponents(ctx context.Context, cfg configuration.Configuration) bootstrapComponents {
-	earlyComponents := component.Manager{}
 
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
 	checkError(ctx, err, "failed to load KeyStore: ")
@@ -52,6 +51,8 @@ func initBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 	keyProcessor := platformpolicy.NewKeyProcessor()
 
 	cryptographyService := cryptography.NewCryptographyService()
+
+	earlyComponents := component.Manager{}
 	earlyComponents.Register(platformCryptographyScheme, keyStore)
 	earlyComponents.Inject(cryptographyService, keyProcessor)
 
@@ -78,7 +79,18 @@ func createCertificateManager(
 	return certManager
 }
 
-func prepareComponents(conf configuration.Ledger) []interface{} {
+type storageComponents struct {
+	storeBadgerDB    *store.BadgerDB
+	storageDBContext storage.DBContext
+
+	dropDB   *drop.DB
+	blobDB   *blob.DB
+	recordDB *object.RecordDB
+
+	objectStorage storage.ObjectStorage
+}
+
+func initStorageComponents(conf configuration.Ledger) storageComponents {
 	legacyDB, err := storage.NewDB(conf, nil)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
@@ -89,17 +101,14 @@ func prepareComponents(conf configuration.Ledger) []interface{} {
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
 
-	dropDB := drop.NewStorageDB(db)
-	blobDB := blob.NewStorageDB(db)
-	recordDB := object.NewRecordDB(db)
+	return storageComponents{
+		storeBadgerDB:    db,
+		storageDBContext: legacyDB,
 
-	return []interface{}{
-		legacyDB,
-		db,
-		dropDB,
-		blobDB,
-		recordDB,
-		storage.NewPulseTracker(),
-		storage.NewObjectStorage(),
+		dropDB:   drop.NewDB(db),
+		blobDB:   blob.NewDB(db),
+		recordDB: object.NewRecordDB(db),
+
+		objectStorage: storage.NewObjectStorage(),
 	}
 }

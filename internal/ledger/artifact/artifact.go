@@ -66,21 +66,14 @@ type Manager interface {
 }
 
 type Scope struct {
-	PulseNumber                insolar.PulseNumber
-	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	PulseNumber insolar.PulseNumber
 
-	BlobModifier    blob.Modifier         `inject:""`
-	RecordsModifier object.RecordModifier `inject:""`
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme
+	BlobModifier               blob.Modifier
+	RecordsModifier            object.RecordModifier
 
 	// TODO: should be removed after indices storage would be done.
-	ObjectStorage storage.ObjectStorage `inject:""`
-}
-
-// NewScope creates new scope instance.
-func NewScope(pn insolar.PulseNumber) *Scope {
-	return &Scope{
-		PulseNumber: pn,
-	}
+	ObjectStorage storage.ObjectStorage
 }
 
 func (m *Scope) RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error) {

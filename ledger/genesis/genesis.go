@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
+	"github.com/insolar/insolar/ledger/storage"
 	storagegenesis "github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/log"
 )
@@ -73,23 +74,28 @@ func (s *Initializer) Run() {
 	)
 
 	genesisInitializer := storagegenesis.NewGenesisInitializer()
-	genesisGenerator := genesis.NewGenerator(geneisConfig, s.genesisKeyOut)
 
-	components := prepareComponents(cfg.Ledger)
-	components = append(components,
+	sc := initStorageComponents(cfg.Ledger)
+
+	fmt.Println("Initializer: Inject")
+	cm := component.Manager{}
+	cm.Inject(
 		bc.PlatformCryptographyScheme,
 		bc.KeyStore,
 		bc.CryptographyService,
 		bc.KeyProcessor,
 		certManager,
 
-		genesisInitializer,
-		genesisGenerator,
-		artifact.NewScope(insolar.FirstPulseNumber),
-	)
+		sc.blobDB,
+		sc.dropDB,
+		sc.recordDB,
+		sc.storageDBContext,
+		sc.storeBadgerDB,
+		sc.objectStorage,
+		storage.NewPulseTracker(),
 
-	cm := component.Manager{}
-	cm.Inject(components...)
+		genesisInitializer,
+	)
 
 	err = cm.Init(ctx)
 	checkError(ctx, err, "failed to init components")
@@ -97,8 +103,24 @@ func (s *Initializer) Run() {
 	err = cm.Start(ctx)
 	checkError(ctx, err, "failed to start components")
 
-	// TODO: only if genesisInitializer has run
+	// run generator if genesisInitializer happened
 	if genesisInitializer.Happened() {
+		artifactManager := &artifact.Scope{
+			PulseNumber: insolar.FirstPulseNumber,
+
+			PlatformCryptographyScheme: bc.PlatformCryptographyScheme,
+			BlobModifier:               sc.blobDB,
+			RecordsModifier:            sc.recordDB,
+
+			ObjectStorage: sc.objectStorage,
+		}
+
+		genesisGenerator := genesis.NewGenerator(
+			geneisConfig,
+			artifactManager,
+			*genesisInitializer.GenesisRef(),
+			s.genesisKeyOut,
+		)
 		err = genesisGenerator.Run(ctx)
 		checkError(ctx, err, "failed to generate genesis")
 	}
