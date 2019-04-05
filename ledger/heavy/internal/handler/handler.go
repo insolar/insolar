@@ -61,16 +61,23 @@ func (h *Handler) Init(ctx context.Context) error {
 	return nil
 }
 
+func (h *Handler) GetCode(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
+	return h.handleGetCode(ctx, parcel)
+}
+
 func (h *Handler) handleGetCode(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
+	fmt.Println("handleGetCode love")
 	msg := parcel.Message().(*message.GetCode)
 
 	codeRec, err := h.getCode(ctx, msg.Code.Record())
 	if err != nil {
+		fmt.Println("handleGetCode love err", err)
 		return nil, err
 	}
 
 	code, err := h.BlobAccessor.ForID(ctx, *codeRec.Code)
 	if err != nil {
+		fmt.Println("handleGetCode love BlobAccessor err", err)
 		return nil, errors.Wrap(err, "failed to fetch code blob")
 	}
 
@@ -78,7 +85,7 @@ func (h *Handler) handleGetCode(ctx context.Context, parcel insolar.Parcel) (ins
 		Code:        code.Value,
 		MachineType: codeRec.MachineType,
 	}
-
+	fmt.Println("handleGetCode love all was well")
 	return &rep, nil
 }
 

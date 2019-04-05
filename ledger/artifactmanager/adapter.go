@@ -57,11 +57,16 @@ func (p *GetCodeProcessor) Process(task adapter.AdapterTask, nestedEventHelper a
 	var msg GetCodeResp
 	if !ok {
 		msg.Err = errors.Errorf("[ GetCodeProcessor.Process ] Incorrect payload type: %T", task.TaskPayload)
+		fmt.Println("GetCodeProcessor love")
+		fmt.Println(msg.Err)
 		return msg
 	}
 
 	ctx := context.Background()
 	reply, err := p.Ledger.GetCode(ctx, payload.Parcel)
+	if err != nil {
+		fmt.Println("GetCodeProcessor err is not nil,", err)
+	}
 	msg = GetCodeResp{reply, err}
 	log.Info("[ GetCodeProcessor.Process ] Process was dome successfully")
 

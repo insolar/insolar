@@ -52,6 +52,7 @@ func (rs *SendResponseProcessor) Process(task AdapterTask, nestedEventHelper Nes
 
 	res := payload.Result
 	f := payload.Future
+	fmt.Println("SendResponseProcessor.Process set res", res)
 	f.SetResult(res)
 
 	msg = fmt.Sprintf("Response was send successfully")
@@ -63,15 +64,9 @@ func (rs *SendResponseProcessor) Process(task AdapterTask, nestedEventHelper Nes
 type SendResponseHelper struct{}
 
 // SendResponse makes correct message and send it to adapter
-func (r *SendResponseHelper) SendResponse(element fsm.SlotElementHelper, result insolar.Reply, respHandlerID uint32) error {
-
-	pendingMsg, ok := element.GetInputEvent().(insolar.ConveyorPendingMessage)
-	if !ok {
-		return errors.Errorf("[ SendResponseHelper.SendResponse ] Input event is not insolar.ConveyorPendingMessage: %T", element.GetInputEvent())
-	}
-
+func (r *SendResponseHelper) SendResponse(element fsm.SlotElementHelper, result insolar.Reply, future insolar.ConveyorFuture, respHandlerID uint32) error {
 	response := SendResponseTask{
-		Future: pendingMsg.Future,
+		Future: future,
 		Result: result,
 	}
 	err := element.SendTask(adapterid.SendResponse, response, respHandlerID)

@@ -211,8 +211,11 @@ func (w *worker) processResponse(resp queue.OutputElement) error {
 		return nil
 	}
 
-	respHandler := element.stateMachine.GetResponseHandler(element.state)
+	respHandler := element.stateMachine.GetResponseHandler(fsm.StateID(adapterResp.GetHandlerID()))
 
+	fmt.Println("adapterResp love", adapterResp)
+	fmt.Println("respHandler love", respHandler)
+	fmt.Println("respHandler element.stateMachine", element.stateMachine)
 	payload, newState, err := respHandler(element, adapterResp.GetRespPayload())
 	if err != nil {
 		w.ctxLogger.Error("[ processResponse ] AdapterResponse handler errors: ", err)

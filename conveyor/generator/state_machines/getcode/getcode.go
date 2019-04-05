@@ -39,6 +39,7 @@ const (
 
 type GetCodePayload struct {
 	parcel insolar.Parcel
+	future insolar.ConveyorFuture
 	reply  insolar.Reply
 	err    error
 }
@@ -106,9 +107,9 @@ func ReturnResult(ctx context.Context, helper fsm.SlotElementHelper, input inter
 	fmt.Println("hi love, ReturnResult")
 	if payload.err != nil {
 		// TODO: return error to future
-		err = adapterHelper.SendResponse(helper, nil, uint32(ReturningResult))
+		err = adapterHelper.SendResponse(helper, nil, helper.GetResponseFuture(), uint32(ReturningResult))
 	} else {
-		err = adapterHelper.SendResponse(helper, payload.reply, uint32(ReturningResult))
+		err = adapterHelper.SendResponse(helper, payload.reply, helper.GetResponseFuture(), uint32(ReturningResult))
 	}
 	if err != nil {
 		fmt.Println("hi love, ReturnResult err", err)
@@ -120,10 +121,13 @@ func ReturnResult(ctx context.Context, helper fsm.SlotElementHelper, input inter
 }
 
 func ReturnResultResponse(ctx context.Context, helper fsm.SlotElementHelper, input interface{}, payload *GetCodePayload, respPayload interface{}) fsm.ElementState {
+	fmt.Println("hi love, ReturnResultResponse")
 	switch res := respPayload.(type) {
 	case string, error:
 	default:
+		fmt.Println("hi love, ReturnResultResponse err")
 		inslogger.FromContext(ctx).Errorf("GetCode: unexpected reply: %T", res)
 	}
+	fmt.Println("hi love, ReturnResultResponse all well")
 	return 0
 }

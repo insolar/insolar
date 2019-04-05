@@ -345,7 +345,7 @@ func setup() error {
 	}
 	fmt.Println("[ setup ] root keys successfully loaded")
 
-	numAttempts := 60
+	numAttempts := 15
 	for i := 0; i < numAttempts; i++ {
 		err = setInfo()
 		if err != nil {

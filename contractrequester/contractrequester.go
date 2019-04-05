@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
+	"fmt"
 	"sync"
 	"time"
 
@@ -77,7 +78,10 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 	bm := &message.BaseLogicMessage{
 		Nonce: randomUint64(),
 	}
+	fmt.Println("SendRequest start timer")
+	start := time.Now()
 	routResult, err := cr.CallMethod(ctx, bm, false, ref, method, args, nil)
+	fmt.Println("SendRequest start timer stops", time.Since(start))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't route call")
 	}

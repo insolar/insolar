@@ -276,7 +276,9 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg insolar.Parcel) (insola
 			return nil, err
 		}
 		resp, err := f.GetResult(mb.conveyorPendingTimeout)
+		fmt.Println("mb here love", resp)
 		if err != nil {
+			fmt.Println("mb here err")
 			return nil, &serializableError{
 				S: err.Error(),
 			}
