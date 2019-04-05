@@ -37,8 +37,8 @@ type IndexAccessor interface {
 
 // CollectionIndexAccessor provides methods for querying a collection of blobs with specific search conditions.
 type CollectionIndexAccessor interface {
-	// ForPulse returns []Blob for a provided jetID and a pulse number.
-	ForPulse(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]Lifeline
+	// ForPulseAndJet returns []Blob for a provided jetID and a pulse number.
+	ForPulseAndJet(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]Lifeline
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexModifier -o ./ -s _mock.go
@@ -53,8 +53,7 @@ type IndexModifier interface {
 
 // IndexCleaner provides an interface for removing interfaces from a storage.
 type IndexCleaner interface {
-	// RemoveUntilPN method removes interfaces from a storage for a pulse
-	RemoveUntilPN(ctx context.Context, pulse insolar.PulseNumber, excluded map[insolar.ID]struct{})
+	// RemoveIDs method removes interfaces from a storage for a provided map of pulses
 	RemoveIDs(ctx context.Context, ids map[insolar.ID]struct{})
 }
 
@@ -175,7 +174,7 @@ func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (index Lifeline,
 }
 
 // ForPulse returns Index for provided id.
-func (m *IndexMemory) ForPulse(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]Lifeline {
+func (m *IndexMemory) ForPulseAndJet(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]Lifeline {
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
@@ -189,26 +188,6 @@ func (m *IndexMemory) ForPulse(ctx context.Context, jetID insolar.JetID, pn inso
 	}
 
 	return res
-}
-
-// RemoveUntilPN method removes indexes from a storage for pulses untils a provided pulse
-// excluded - list of indexes' ids that won't be removed. It supposed that they will be taken from RecentStorage
-func (m *IndexMemory) RemoveUntilPN(ctx context.Context, pulse insolar.PulseNumber, excluded map[insolar.ID]struct{}) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	for id, idx := range m.memory {
-		if id.Pulse() > pulse {
-			continue
-		}
-		_, ok := excluded[id]
-		if ok {
-			continue
-		}
-
-		delete(m.memory, id)
-		m.jetIndex.Delete(id, idx.JetID)
-	}
 }
 
 func (m *IndexMemory) RemoveIDs(ctx context.Context, ids map[insolar.ID]struct{}) {

@@ -32,10 +32,9 @@ import (
 )
 
 const (
-	scopeIDLifeline byte = 1
-	scopeIDRecord   byte = 2
-	scopeIDPulse    byte = 4
-	scopeIDSystem   byte = 5
+	scopeIDRecord byte = 2
+	scopeIDPulse  byte = 4
+	scopeIDSystem byte = 5
 
 	sysGenesis                byte = 1
 	sysHeavyClientState       byte = 3

@@ -112,8 +112,6 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 		im = object.NewIndexMemory()
 	}
 
-	objectStorage := storage.NewObjectStorage()
-
 	recordStorage := object.NewRecordMemory()
 	recordAccessor := recordStorage
 	recordModifier := recordStorage
@@ -125,7 +123,6 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 		tmpDB,
 		jet.NewStore(),
 		store.NewMemoryMockDB(),
-		objectStorage,
 		ds,
 		recordAccessor,
 		recordModifier,

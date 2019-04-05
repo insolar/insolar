@@ -47,7 +47,6 @@ type Options struct {
 type JetClient struct {
 	bus                    insolar.MessageBus
 	replicaStorage         storage.ReplicaStorage
-	cleaner                storage.Cleaner
 	db                     storage.DBContext
 	dropAccessor           drop.Accessor
 	blobCollectionAccessor blob.CollectionAccessor
@@ -55,6 +54,7 @@ type JetClient struct {
 	pulseCalculator        pulse.Calculator
 	recSyncAccessor        object.RecordCollectionAccessor
 	idxCollectionAccessor  object.CollectionIndexAccessor
+	idxCleaner             object.IndexCleaner
 
 	opts Options
 
@@ -84,7 +84,7 @@ func NewJetClient(
 	dropAccessor drop.Accessor,
 	blobSyncAccessor blob.CollectionAccessor,
 	recSyncAccessor object.RecordCollectionAccessor,
-	cleaner storage.Cleaner,
+	idxCleaner object.IndexCleaner,
 	db storage.DBContext,
 	jetID insolar.ID,
 	opts Options,
@@ -97,7 +97,7 @@ func NewJetClient(
 		pulseCalculator:        pulseCalculator,
 		pulseAccessor:          pulseAccessor,
 		recSyncAccessor:        recSyncAccessor,
-		cleaner:                cleaner,
+		idxCleaner:             idxCleaner,
 		db:                     db,
 		jetID:                  insolar.JetID(jetID),
 		syncbackoff:            backoffFromConfig(opts.BackoffConf),

@@ -77,7 +77,6 @@ type PulseManager struct {
 
 	ReplicaStorage storage.ReplicaStorage `inject:""`
 	DBContext      storage.DBContext      `inject:""`
-	StorageCleaner storage.Cleaner        `inject:""`
 
 	DropModifier drop.Modifier `inject:""`
 	DropAccessor drop.Accessor `inject:""`
@@ -655,7 +654,15 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse insolar.Puls
 	m.DropCleaner.Delete(p.PulseNumber)
 	m.BlobCleaner.Delete(ctx, p.PulseNumber)
 	m.RecCleaner.Remove(ctx, p.PulseNumber)
-	// HERE INDEXES SHOULD BE REMOVED
+
+	idxs := map[insolar.ID]struct{}{}
+	for _, idxIDs := range jetIndexesRemoved {
+		for _, idxID := range idxIDs {
+			idxs[idxID] = struct{}{}
+		}
+	}
+	m.IndexCleaner.RemoveIDs(ctx, idxs)
+
 	err = m.PulseShifter.Shift(ctx, p.PulseNumber)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
@@ -713,7 +720,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 			m.DropAccessor,
 			m.BlobSyncAccessor,
 			m.RecSyncAccessor,
-			m.StorageCleaner,
+			m.IndexCleaner,
 			m.DBContext,
 			heavyclient.Options{
 				SyncMessageLimit: m.options.heavySyncMessageLimit,

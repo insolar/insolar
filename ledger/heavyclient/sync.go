@@ -74,7 +74,7 @@ func (c *JetClient) HeavySync(
 
 	records := c.recSyncAccessor.ForPulse(ctx, jetID, pn)
 
-	indexes := c.idxCollectionAccessor.ForPulse(ctx, jetID, pn)
+	indexes := c.idxCollectionAccessor.ForPulseAndJet(ctx, jetID, pn)
 	resIdx := map[insolar.ID][]byte{}
 	for id, idx := range indexes {
 		resIdx[id] = object.EncodeIndex(idx)
