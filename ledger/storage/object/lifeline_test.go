@@ -45,6 +45,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 	idx := Lifeline{
 		LatestState: &id,
 		JetID:       jetID,
+		Delegates:   map[insolar.Reference]insolar.Reference{},
 	}
 
 	t.Run("returns correct index-value", func(t *testing.T) {
@@ -85,6 +86,7 @@ func TestIndexStorage_Set(t *testing.T) {
 	idx := Lifeline{
 		LatestState: &id,
 		JetID:       jetID,
+		Delegates:   map[insolar.Reference]insolar.Reference{},
 	}
 
 	jetIndex := store.NewJetIndexModifierMock(t)
@@ -166,7 +168,7 @@ func id() (id *insolar.ID) {
 }
 
 func delegates() (result map[insolar.Reference]insolar.Reference) {
-	fuzz.New().NilChance(0.5).NumElements(1, 10).Fuzz(&result)
+	fuzz.New().NumElements(1, 10).Fuzz(&result)
 	return
 }
 

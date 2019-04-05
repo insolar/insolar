@@ -721,7 +721,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 
 	h.RecentStorageProvider = provideMock
 
-	objectIndex := object.Lifeline{LatestState: genRandomID(0), JetID: insolar.JetID(jetID)}
+	objectIndex := object.Lifeline{LatestState: genRandomID(0), JetID: insolar.JetID(jetID), Delegates: map[insolar.Reference]insolar.Reference{}}
 	err = s.indexModifier.Set(s.ctx, *msg.Object.Record(), objectIndex)
 	require.NoError(s.T(), err)
 

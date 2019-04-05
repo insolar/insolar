@@ -53,6 +53,7 @@ func TestIndex_Components(t *testing.T) {
 			LatestState:  &ls,
 			LatestUpdate: pn,
 			JetID:        gen.JetID(),
+			Delegates:    map[insolar.Reference]insolar.Reference{},
 		}
 	})
 	f.NumElements(5, 10).NilChance(0).Fuzz(&indices)

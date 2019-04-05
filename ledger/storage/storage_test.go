@@ -121,6 +121,7 @@ func (s *storageSuite) TestDB_SetObjectIndex_StoresCorrectDataInStorage() {
 	idx := object.Lifeline{
 		LatestState: insolar.NewID(0, hexhash("20")),
 		JetID:       insolar.JetID(s.jetID),
+		Delegates:   map[insolar.Reference]insolar.Reference{},
 	}
 	zeroid := insolar.NewID(0, hexhash(""))
 	err := s.indexModifier.Set(s.ctx, *zeroid, idx)
@@ -139,6 +140,7 @@ func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 		LatestState:  insolar.NewID(0, hexhash("20")),
 		LatestUpdate: 1239,
 		JetID:        insolar.JetID(jetID),
+		Delegates:    map[insolar.Reference]insolar.Reference{},
 	}
 	zeroid := insolar.NewID(0, hexhash(""))
 
