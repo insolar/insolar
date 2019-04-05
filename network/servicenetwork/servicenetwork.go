@@ -300,7 +300,8 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 	}
 }
 
-func (n *ServiceNetwork) connectToNewNetwork(result network.BootstrapResult) {
+func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, result network.BootstrapResult) {
+	err := n.Controller.AuthenticateToDiscoveryNode(ctx, &insolar.DiscoveryNode{})
 }
 
 func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
