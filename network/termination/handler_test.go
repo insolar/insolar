@@ -56,6 +56,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/suite"
@@ -67,11 +68,11 @@ import (
 type CommonTestSuite struct {
 	suite.Suite
 
-	mc           *minimock.Controller
-	ctx          context.Context
-	handler      *terminationHandler
-	network      *testutils.NetworkMock
-	pulseStorage *testutils.PulseStorageMock
+	mc            *minimock.Controller
+	ctx           context.Context
+	handler       *terminationHandler
+	network       *testutils.NetworkMock
+	pulseAccessor *pulse.AccessorMock
 }
 
 func TestBasics(t *testing.T) {
@@ -82,8 +83,8 @@ func (s *CommonTestSuite) BeforeTest(suiteName, testName string) {
 	s.mc = minimock.NewController(s.T())
 	s.ctx = inslogger.TestContext(s.T())
 	s.network = testutils.NewNetworkMock(s.T())
-	s.pulseStorage = testutils.NewPulseStorageMock(s.T())
-	s.handler = &terminationHandler{Network: s.network, PulseStorage: s.pulseStorage}
+	s.pulseAccessor = pulse.NewAccessorMock(s.T())
+	s.handler = &terminationHandler{Network: s.network, PulseAccessor: s.pulseAccessor}
 
 }
 
@@ -123,10 +124,7 @@ func (s *LeaveTestSuite) TestLeaveEta() {
 	pulseDelta := testPulse.NextPulseNumber - testPulse.PulseNumber
 	leaveAfter := insolar.PulseNumber(5)
 
-	//s.pulseStorage.CurrentMock.Return(testPulse, nil)
-	s.pulseStorage.CurrentFunc = func(p context.Context) (r *insolar.Pulse, r1 error) {
-		return testPulse, nil
-	}
+	s.pulseAccessor.LatestMock.Return(*testPulse, nil)
 	s.network.LeaveMock.Expect(s.ctx, mockPulseNumber+leaveAfter*pulseDelta)
 	s.handler.leave(s.ctx, leaveAfter)
 

@@ -23,6 +23,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -36,7 +37,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
@@ -53,13 +53,12 @@ type amSuite struct {
 	db      storage.DBContext
 
 	scheme        insolar.PlatformCryptographyScheme
-	pulseTracker  storage.PulseTracker
-	nodeStorage   node.Accessor
+	nodeStorage   node.Accessor // TODO: @imarkin 01.04.2019 - remove it after all new storages integration (INS-2013, etc)
 	objectStorage storage.ObjectStorage
-	jetStorage    jet.Storage
-	dropModifier  drop.Modifier
-	dropAccessor  drop.Accessor
-	genesisState  genesis.GenesisState
+
+	jetStorage   jet.Storage
+	dropModifier drop.Modifier
+	dropAccessor drop.Accessor
 }
 
 func NewAmSuite() *amSuite {
@@ -77,20 +76,18 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	tempDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tempDB, _, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.db = tempDB
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
 	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
-	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 
 	dbStore := store.NewMemoryMockDB()
 	dropStorage := drop.NewStorageDB(dbStore)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
-	s.genesisState = genesis.NewGenesisInitializer()
 
 	s.cm.Inject(
 		s.scheme,
@@ -98,11 +95,10 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 		store.NewMemoryMockDB(),
 		s.jetStorage,
 		s.nodeStorage,
-		s.pulseTracker,
+		pulse.NewStorageMem(),
 		s.objectStorage,
 		s.dropAccessor,
 		s.dropModifier,
-		s.genesisState,
 	)
 
 	err := s.cm.Init(s.ctx)
@@ -159,16 +155,12 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
 	jc.MeMock.Return(insolar.Reference{})
 
-	amPulseStorageMock := testutils.NewPulseStorageMock(s.T())
-	amPulseStorageMock.CurrentFunc = func(p context.Context) (r *insolar.Pulse, r1 error) {
-		pulse, err := s.pulseTracker.GetLatestPulse(p)
-		require.NoError(s.T(), err)
-		return &pulse.Pulse, err
-	}
+	pa := pulse.NewAccessorMock(s.T())
+	pa.LatestMock.Return(*insolar.GenesisPulse, nil)
 
 	am := client{
 		DefaultBus:                 mb,
-		PulseStorage:               amPulseStorageMock,
+		PulseAccessor:              pa,
 		JetCoordinator:             jc,
 		PlatformCryptographyScheme: s.scheme,
 		senders:                    newLedgerArtifactSenders(),
@@ -196,6 +188,10 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_FollowsRedirect() {
 	am := NewClient()
 	mb := testutils.NewMessageBusMock(mc)
 
+	pa := pulse.NewAccessorMock(s.T())
+	pa.LatestMock.Return(*insolar.GenesisPulse, nil)
+	am.PulseAccessor = pa
+
 	objRef := genRandomRef(0)
 	nodeRef := genRandomRef(0)
 	mb.SendFunc = func(c context.Context, m insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
@@ -222,29 +218,16 @@ func (s *amSuite) TestLedgerArtifactManager_GetObject_FollowsRedirect() {
 		}
 	}
 	am.DefaultBus = mb
-	am.PulseStorage = makePulseStorage(s)
 
 	_, err := am.GetObject(s.ctx, *objRef, nil, false)
 
 	require.NoError(s.T(), err)
 }
 
-func makePulseStorage(s *amSuite) insolar.PulseStorage {
-	pulseStorage := storage.NewPulseStorage()
-	pulseStorage.PulseTracker = s.pulseTracker
-	pulse, err := s.pulseTracker.GetLatestPulse(s.ctx)
-	require.NoError(s.T(), err)
-	pulseStorage.Set(&pulse.Pulse)
-
-	return pulseStorage
-}
-
 func (s *amSuite) TestLedgerArtifactManager_GetChildren_FollowsRedirect() {
 	mc := minimock.NewController(s.T())
 	am := NewClient()
 	mb := testutils.NewMessageBusMock(mc)
-
-	am.PulseStorage = makePulseStorage(s)
 
 	objRef := genRandomRef(0)
 	nodeRef := genRandomRef(0)
@@ -265,6 +248,10 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren_FollowsRedirect() {
 	}
 	am.DefaultBus = mb
 
+	pa := pulse.NewAccessorMock(s.T())
+	pa.LatestMock.Return(*insolar.GenesisPulse, nil)
+	am.PulseAccessor = pa
+
 	_, err := am.GetChildren(s.ctx, *objRef, nil)
 	require.NoError(s.T(), err)
 }
@@ -276,12 +263,10 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 	cs := platformpolicy.NewPlatformCryptographyScheme()
 	am := NewClient()
 	am.PlatformCryptographyScheme = cs
-	pulseStorageMock := testutils.NewPulseStorageMock(s.T())
-	pulseStorageMock.CurrentFunc = func(ctx context.Context) (*insolar.Pulse, error) {
-		return &insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, nil
-	}
+	pa := pulse.NewAccessorMock(s.T())
+	pa.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, nil)
 
-	am.PulseStorage = pulseStorageMock
+	am.PulseAccessor = pa
 	am.JetStorage = s.jetStorage
 
 	s.T().Run("returns error on exceeding retry limit", func(t *testing.T) {
@@ -331,14 +316,14 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.NodeForObjectMock.Return(&node, nil)
 
-	pulseStorageMock := testutils.NewPulseStorageMock(mc)
-	pulseStorageMock.CurrentMock.Return(insolar.GenesisPulse, nil)
+	pulseAccessor := pulse.NewAccessorMock(s.T())
+	pulseAccessor.LatestMock.Return(*insolar.GenesisPulse, nil)
 
 	var parcel insolar.Parcel = &message.Parcel{PulseNumber: 123987}
 	resRecord := object.RequestRecord{
 		Parcel: message.ParcelToBytes(parcel),
 	}
-	finalResponse := &reply.Request{Record: object.SerializeRecord(&resRecord)}
+	finalResponse := &reply.Request{Record: object.EncodeVirtual(&resRecord)}
 
 	mb := testutils.NewMessageBusMock(s.T())
 	mb.SendFunc = func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
@@ -362,7 +347,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	am := NewClient()
 	am.JetCoordinator = jc
 	am.DefaultBus = mb
-	am.PulseStorage = pulseStorageMock
+	am.PulseAccessor = pulseAccessor
 
 	// Act
 	res, err := am.GetPendingRequest(inslogger.TestContext(s.T()), objectID)

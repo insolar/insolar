@@ -37,8 +37,8 @@ import (
 )
 
 // StartRPC starts RPC server for isolated executors to use
-func StartRPC(ctx context.Context, lr *LogicRunner, ps insolar.PulseStorage) *RPC {
-	rpcService := &RPC{lr: lr, ps: ps}
+func StartRPC(ctx context.Context, lr *LogicRunner) *RPC {
+	rpcService := &RPC{lr: lr}
 
 	rpcServer := rpc.NewServer()
 	err := rpcServer.Register(rpcService)
@@ -64,7 +64,6 @@ func StartRPC(ctx context.Context, lr *LogicRunner, ps insolar.PulseStorage) *RP
 // RPC is a RPC interface for runner to use for various tasks, e.g. code fetching
 type RPC struct {
 	lr *LogicRunner
-	ps insolar.PulseStorage
 }
 
 func recoverRPC(err *error) {

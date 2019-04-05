@@ -23,6 +23,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -57,9 +58,8 @@ type handlerSuite struct {
 	db      storage.DBContext
 
 	scheme        insolar.PlatformCryptographyScheme
-	pulseTracker  storage.PulseTracker
 	nodeStorage   node.Accessor
-	objectStorage storage.ObjectStorage
+	objectStorage storage.ObjectStorage // TODO @imarkin 27.03.19 remove it after all new storages integration
 	jetStorage    jet.Storage
 
 	dropModifier drop.Modifier
@@ -67,6 +67,9 @@ type handlerSuite struct {
 
 	blobModifier blob.Modifier
 	blobAccessor blob.Accessor
+
+	recordModifier object.RecordModifier
+	recordAccessor object.RecordAccessor
 }
 
 var (
@@ -105,13 +108,12 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	tmpDB, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	tmpDB, _, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.db = tmpDB
 	s.scheme = testutils.NewPlatformCryptographyScheme()
 	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
-	s.pulseTracker = storage.NewPulseTracker()
 	s.objectStorage = storage.NewObjectStorage()
 
 	storageDB := store.NewMemoryMockDB()
@@ -123,16 +125,21 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.blobAccessor = blobStorage
 	s.blobModifier = blobStorage
 
+	recordStorage := object.NewRecordMemory()
+	s.recordModifier = recordStorage
+	s.recordAccessor = recordStorage
+
 	s.cm.Inject(
 		s.scheme,
 		s.db,
 		store.NewMemoryMockDB(),
 		s.jetStorage,
 		s.nodeStorage,
-		s.pulseTracker,
 		s.objectStorage,
 		s.dropAccessor,
 		s.dropModifier,
+		s.recordAccessor,
+		s.recordModifier,
 	)
 
 	err := s.cm.Init(s.ctx)
@@ -170,8 +177,8 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
+	h.RecordAccessor = s.recordAccessor
 
 	idLock := storage.NewIDLockerMock(s.T())
 	idLock.LockMock.Return()
@@ -242,8 +249,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 		assert.Equal(t, objIndex.LatestState, idx.LatestState)
 	})
 
-	err = s.pulseTracker.AddPulse(s.ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1})
-	require.NoError(s.T(), err)
 	s.T().Run("fetches state from light when has index and state later than limit", func(t *testing.T) {
 		lightRef := genRandomRef(0)
 		jc.IsBeyondLimitMock.Return(false, nil)
@@ -272,9 +277,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObject_FetchesObject() {
 		assert.Equal(t, []byte{42, 16, 2}, obj.Memory)
 	})
 
-	err = s.pulseTracker.AddPulse(s.ctx, insolar.Pulse{
-		PulseNumber: insolar.FirstPulseNumber + 2,
-	})
 	require.NoError(s.T(), err)
 	s.T().Run("fetches state from heavy when has index and state earlier than limit", func(t *testing.T) {
 		heavyRef := genRandomRef(0)
@@ -341,8 +343,8 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
+	h.RecordAccessor = s.recordAccessor
 
 	locker := storage.NewIDLockerMock(s.T())
 	locker.LockMock.Return()
@@ -353,9 +355,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	require.NoError(s.T(), err)
 
 	h.RecentStorageProvider = provideMock
-
-	err = s.pulseTracker.AddPulse(s.ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1})
-	require.NoError(s.T(), err)
 
 	s.T().Run("redirects to heavy when no index", func(t *testing.T) {
 		objIndex := object.Lifeline{
@@ -413,8 +412,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	})
 
 	s.T().Run("redirect to heavy when has index and child earlier than limit", func(t *testing.T) {
-		err = s.pulseTracker.AddPulse(s.ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 2})
-		require.NoError(t, err)
 		heavyRef := genRandomRef(0)
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(heavyRef, nil)
@@ -462,7 +459,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 
 	h.RecentStorageProvider = provideMock
@@ -536,10 +532,10 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
+	h.RecordModifier = s.recordModifier
 
 	blobStorage := blob.NewStorageMemory()
 	h.BlobModifier = blobStorage
@@ -559,7 +555,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	require.NoError(s.T(), err)
 
 	msg := message.UpdateObject{
-		Record: object.SerializeRecord(&amendRecord),
+		Record: object.EncodeVirtual(&amendRecord),
 		Object: *genRandomRef(0),
 	}
 
@@ -617,10 +613,10 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
+	h.RecordModifier = s.recordModifier
 
 	blobStorage := blob.NewStorageMemory()
 	h.BlobModifier = blobStorage
@@ -644,7 +640,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	require.NoError(s.T(), err)
 
 	msg := message.UpdateObject{
-		Record: object.SerializeRecord(&amendRecord),
+		Record: object.EncodeVirtual(&amendRecord),
 		Object: *genRandomRef(0),
 	}
 	err = s.objectStorage.SetObjectIndex(s.ctx, jetID, msg.Object.Record(), &objIndex)
@@ -697,7 +693,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 
 	idLock := storage.NewIDLockerMock(s.T())
@@ -749,7 +744,6 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 
 	err := h.Init(s.ctx)
@@ -802,8 +796,8 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
+	h.RecordAccessor = s.recordAccessor
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
 
@@ -815,7 +809,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 	}
 
 	s.T().Run("redirects to light before limit threshold", func(t *testing.T) {
-		err := s.pulseTracker.AddPulse(s.ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1})
 		require.NoError(t, err)
 		lightRef := genRandomRef(0)
 		jc.NodeForJetMock.Return(lightRef, nil)
@@ -832,7 +825,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 	})
 
 	s.T().Run("redirects to heavy after limit threshold", func(t *testing.T) {
-		err = s.pulseTracker.AddPulse(s.ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 2})
 		require.NoError(t, err)
 		heavyRef := genRandomRef(0)
 		jc.NodeForJetMock.Return(heavyRef, nil)
@@ -875,10 +867,10 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
+	h.RecordModifier = s.recordModifier
 
 	idLockMock := storage.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
@@ -896,7 +888,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	childID := insolar.NewID(0, amendHash.Sum(nil))
 
 	msg := message.RegisterChild{
-		Record: object.SerializeRecord(&childRecord),
+		Record: object.EncodeVirtual(&childRecord),
 		Parent: *genRandomRef(0),
 	}
 
@@ -954,10 +946,10 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
+	h.RecordModifier = s.recordModifier
 
 	idLockMock := storage.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
@@ -974,7 +966,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 		PrevChild: nil,
 	}
 	msg := message.RegisterChild{
-		Record: object.SerializeRecord(&childRecord),
+		Record: object.EncodeVirtual(&childRecord),
 		Parent: *genRandomRef(0),
 	}
 
@@ -998,9 +990,6 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	mc := minimock.NewController(s.T())
 	jetID := gen.JetID()
 
-	err := s.pulseTracker.AddPulse(s.ctx, insolar.Pulse{PulseNumber: insolar.FirstPulseNumber + 1})
-	require.NoError(s.T(), err)
-
 	jc := testutils.NewJetCoordinatorMock(mc)
 
 	firstID := insolar.NewID(insolar.FirstPulseNumber, []byte{1, 2, 3})
@@ -1019,7 +1008,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	firstIndex := object.EncodeIndex(object.Lifeline{
 		LatestState: firstID,
 	})
-	err = s.objectStorage.SetObjectIndex(s.ctx, insolar.ID(jetID), firstID, &object.Lifeline{
+	err := s.objectStorage.SetObjectIndex(s.ctx, insolar.ID(jetID), firstID, &object.Lifeline{
 		LatestState: firstID,
 	})
 
@@ -1069,7 +1058,6 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
 	h.DropModifier = s.dropModifier
 
@@ -1122,15 +1110,21 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
-	h.PulseTracker = s.pulseTracker
 	h.ObjectStorage = s.objectStorage
+	h.RecordAccessor = s.recordAccessor
 	h.RecentStorageProvider = provideMock
 
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
 
 	s.T().Run("returns not ok when not valid", func(t *testing.T) {
-		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &object.AmendRecord{})
+		virtRec := &object.AmendRecord{}
+		validatedStateID := object.NewRecordIDFromRecord(s.scheme, 0, virtRec)
+		rec := record.MaterialRecord{
+			Record: virtRec,
+			JetID:  insolar.JetID(jetID),
+		}
+		err := s.recordModifier.Set(s.ctx, *validatedStateID, rec)
 		require.NoError(t, err)
 
 		msg := message.ValidationCheck{
@@ -1149,9 +1143,13 @@ func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
 
 	s.T().Run("returns ok when valid", func(t *testing.T) {
 		approvedStateID := *genRandomID(0)
-		validatedStateID, err := s.objectStorage.SetRecord(s.ctx, jetID, 0, &object.AmendRecord{
-			PrevState: approvedStateID,
-		})
+		virtRec := &object.AmendRecord{PrevState: approvedStateID}
+		validatedStateID := object.NewRecordIDFromRecord(s.scheme, 0, virtRec)
+		rec := record.MaterialRecord{
+			Record: virtRec,
+			JetID:  insolar.JetID(jetID),
+		}
+		err := s.recordModifier.Set(s.ctx, *validatedStateID, rec)
 		require.NoError(t, err)
 
 		msg := message.ValidationCheck{
@@ -1179,14 +1177,21 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 		MessageHash: []byte{1, 2, 3},
 		Object:      *genRandomID(0),
 	}
-	reqID, err := s.objectStorage.SetRecord(s.ctx, jetID, insolar.FirstPulseNumber, &req)
+
+	reqID := object.NewRecordIDFromRecord(s.scheme, insolar.FirstPulseNumber, &req)
+	rec := record.MaterialRecord{
+		Record: &req,
+		JetID:  insolar.JetID(jetID),
+	}
+	err := s.recordModifier.Set(s.ctx, *reqID, rec)
+	require.NoError(s.T(), err)
 
 	msg := message.GetRequest{
 		Request: *reqID,
 	}
 
 	h := NewMessageHandler(&configuration.Ledger{})
-	h.ObjectStorage = s.objectStorage
+	h.RecordAccessor = s.recordAccessor
 
 	rep, err := h.handleGetRequest(contextWithJet(s.ctx, jetID), &message.Parcel{
 		Msg:         &msg,
@@ -1195,5 +1200,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	require.NoError(s.T(), err)
 	reqReply, ok := rep.(*reply.Request)
 	require.True(s.T(), ok)
-	assert.Equal(s.T(), req, *object.DeserializeRecord(reqReply.Record).(*object.RequestRecord))
+	vrec, _ := object.DecodeVirtual(reqReply.Record)
+	assert.Equal(s.T(), req, *vrec.(*object.RequestRecord))
 }

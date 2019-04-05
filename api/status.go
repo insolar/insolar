@@ -89,7 +89,7 @@ func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusRep
 		IsWorking: origin.GetState() == insolar.NodeReady,
 	}
 
-	pulse, err := s.runner.PulseStorage.Current(ctx)
+	pulse, err := s.runner.PulseAccessor.Latest(ctx)
 	if err != nil {
 		return err
 	}

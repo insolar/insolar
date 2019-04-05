@@ -70,20 +70,18 @@ func TestNewNetworkCoordinator(t *testing.T) {
 	contractRequester := testutils.NewContractRequesterMock(t)
 	messageBus := testutils.NewMessageBusMock(t)
 	cs := testutils.NewCryptographyServiceMock(t)
-	ps := testutils.NewPulseStorageMock(t)
 
 	nc, err := New()
 	require.NoError(t, err)
 	require.Equal(t, &NetworkCoordinator{}, nc)
 
 	cm := &component.Manager{}
-	cm.Inject(certificateManager, networkSwitcher, contractRequester, messageBus, cs, ps, nc)
+	cm.Inject(certificateManager, networkSwitcher, contractRequester, messageBus, cs, nc)
 	require.Equal(t, certificateManager, nc.CertificateManager)
 	require.Equal(t, networkSwitcher, nc.NetworkSwitcher)
 	require.Equal(t, contractRequester, nc.ContractRequester)
 	require.Equal(t, messageBus, nc.MessageBus)
 	require.Equal(t, cs, nc.CS)
-	require.Equal(t, ps, nc.PS)
 }
 
 func TestNetworkCoordinator_Start(t *testing.T) {
@@ -168,7 +166,7 @@ func mockCertificateManager(t *testing.T, certNodeRef *insolar.Reference, discov
 			},
 			MajorityRule: 0,
 			BootstrapNodes: []certificate.BootstrapNode{
-				certificate.BootstrapNode{
+				{
 					NodeRef:     discoveryNodeRef.String(),
 					PublicKey:   "test_discovery_public_key",
 					Host:        "test_discovery_host",
@@ -192,7 +190,7 @@ func mockCertificateManager(t *testing.T, certNodeRef *insolar.Reference, discov
 				MajorityRule:        0,
 				PulsarPublicKeys:    []string{},
 				BootstrapNodes: []certificate.BootstrapNode{
-					certificate.BootstrapNode{
+					{
 						PublicKey:   "test_discovery_public_key",
 						Host:        "test_discovery_host",
 						NetworkSign: []byte("test_network_sign"),

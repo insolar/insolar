@@ -19,8 +19,6 @@ package storage
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar/record"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/ledger/storage/object"
 )
@@ -29,9 +27,6 @@ import (
 
 // ObjectStorage returns objects and their meta
 type ObjectStorage interface {
-	GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (record.VirtualRecord, error)
-	SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec record.VirtualRecord) (*insolar.ID, error)
-
 	IterateIndexIDs(
 		ctx context.Context,
 		jetID insolar.ID,
@@ -59,37 +54,6 @@ type objectStorage struct {
 
 func NewObjectStorage() ObjectStorage {
 	return new(objectStorage)
-}
-
-// GetRecord wraps matching transaction manager method.
-func (os *objectStorage) GetRecord(ctx context.Context, jetID insolar.ID, id *insolar.ID) (record.VirtualRecord, error) {
-	jetPrefix := insolar.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDRecord, jetPrefix, id[:])
-	buf, err := os.DB.Get(ctx, k)
-	if err != nil {
-		return nil, err
-	}
-	return object.DeserializeRecord(buf), nil
-}
-
-// SetRecord wraps matching transaction manager method.
-func (os *objectStorage) SetRecord(ctx context.Context, jetID insolar.ID, pulseNumber insolar.PulseNumber, rec record.VirtualRecord) (*insolar.ID, error) {
-	id := object.NewRecordIDFromRecord(os.PlatformCryptographyScheme, pulseNumber, rec)
-	prefix := insolar.JetID(jetID).Prefix()
-	k := prefixkey(scopeIDRecord, prefix, id[:])
-	_, geterr := os.DB.Get(ctx, k)
-	if geterr == nil {
-		return id, ErrOverride
-	}
-	if geterr != insolar.ErrNotFound {
-		return nil, geterr
-	}
-
-	err := os.DB.Set(ctx, k, object.SerializeRecord(rec))
-	if err != nil {
-		return nil, err
-	}
-	return id, nil
 }
 
 // IterateIndexIDs iterates over index IDs on provided Jet ID.
@@ -142,4 +106,8 @@ func (os *objectStorage) SetObjectIndex(
 	}
 	encoded := object.EncodeIndex(*idx)
 	return os.DB.Set(ctx, k, encoded)
+}
+
+func pulseNumFromKey(from int, key []byte) insolar.PulseNumber {
+	return insolar.NewPulseNumber(key[from : from+insolar.PulseNumberSize])
 }

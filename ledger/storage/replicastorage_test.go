@@ -62,7 +62,7 @@ func (s *replicaSuite) BeforeTest(suiteName, testName string) {
 	s.ctx = inslogger.TestContext(s.T())
 	s.jetID = insolar.ID(gen.JetID())
 
-	db, cleaner := storagetest.TmpDB(s.ctx, s.T())
+	db, _, cleaner := storagetest.TmpDB(s.ctx, s.T())
 	s.cleaner = cleaner
 	s.replicaStorage = storage.NewReplicaStorage()
 

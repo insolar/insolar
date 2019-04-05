@@ -53,8 +53,6 @@ package nodenetwork
 import (
 	"sync"
 
-	"github.com/insolar/insolar/network/node"
-
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -92,19 +90,15 @@ func (ci *consensusInfo) NodesJoinedDuringPreviousPulse() bool {
 }
 
 func (ci *consensusInfo) AddTemporaryMapping(nodeID insolar.Reference, shortID insolar.ShortNodeID, address string) error {
-	consensusAddress, err := node.IncrementPort(address)
+	h, err := host.NewHostNS(address, nodeID, shortID)
 	if err != nil {
-		return errors.Wrapf(err, "Failed to increment port for address %s", address)
-	}
-	h, err := host.NewHostNS(consensusAddress, nodeID, shortID)
-	if err != nil {
-		return errors.Wrapf(err, "Failed to generate address (%s, %s, %d)", consensusAddress, nodeID, shortID)
+		return errors.Wrapf(err, "Failed to generate address (%s, %s, %d)", address, nodeID, shortID)
 	}
 	ci.lock.Lock()
 	ci.tempMapR[nodeID] = h
 	ci.tempMapS[shortID] = h
 	ci.lock.Unlock()
-	log.Infof("Added temporary mapping: %s -> (%s, %d)", consensusAddress, nodeID, shortID)
+	log.Infof("Added temporary mapping: %s -> (%s, %d)", address, nodeID, shortID)
 	return nil
 }
 
