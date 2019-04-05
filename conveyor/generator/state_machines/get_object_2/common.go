@@ -29,3 +29,7 @@ func (se *slotElement) AdapterResponse(state fsm.ElementState, f adapterResponse
 	se.adapterResponses[int(state)] = f
 	return se
 }
+
+func (se *slotElement) GetTransition(state fsm.ElementState) transitionFunc {
+	return se.transitions[int(state)]
+}
