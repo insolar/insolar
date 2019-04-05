@@ -72,7 +72,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	// Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
 	switch certificate.GetRole() {
 	case insolar.StaticRoleUnknown, insolar.StaticRoleHeavyMaterial:
-		ps := pulse.NewStorageDB(db)
+		ps := pulse.NewDB(db)
 		pulseAccessor = ps
 		pulseAppender = ps
 		pulseCalculator = ps
