@@ -42,10 +42,10 @@ type genesisInitializer struct {
 	insolar.PlatformCryptographyScheme `inject:""`
 
 	// TODO: @imarkin 28.03.2019 - remove it after all new storages integration (INS-2013, etc)
-	ObjectStorage storage.ObjectStorage `inject:""`
-	DropModifier  drop.Modifier         `inject:""`
-	PulseAppender pulse.Appender        `inject:""`
-	PulseAccessor pulse.Accessor        `inject:""`
+	IndexModifier object.IndexModifier `inject:""`
+	DropModifier  drop.Modifier        `inject:""`
+	PulseAppender pulse.Appender       `inject:""`
+	PulseAccessor pulse.Accessor       `inject:""`
 
 	Records object.RecordModifier `inject:""`
 
@@ -111,11 +111,10 @@ func (gi *genesisInitializer) Init(ctx context.Context) error {
 			return nil, errors.Wrap(err, "can't save record into storage")
 		}
 
-		err = gi.ObjectStorage.SetObjectIndex(
+		err = gi.IndexModifier.Set(
 			ctx,
-			insolar.ID(jetID),
-			genesisID,
-			&object.Lifeline{LatestState: genesisID, LatestStateApproved: genesisID},
+			*genesisID,
+			object.Lifeline{LatestState: genesisID, LatestStateApproved: genesisID, JetID: jetID},
 		)
 		if err != nil {
 			return nil, err

@@ -43,6 +43,14 @@ type IndexModifier interface {
 	Set(ctx context.Context, id insolar.ID, index Lifeline) error
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexCleaner -o ./ -s _mock.go
+
+// IndexCleaner provides an interface for removing interfaces from a storage.
+type IndexCleaner interface {
+	// Remove method removes interfaces from a storage for a pulse
+	Remove(ctx context.Context, pulse insolar.PulseNumber)
+}
+
 // Lifeline represents meta information for record object.
 type Lifeline struct {
 	LatestState         *insolar.ID // Amend or activate record.
@@ -140,13 +148,27 @@ func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (index Lifeline,
 
 	idx, ok := m.memory[id]
 	if !ok {
-		err = ErrNotFound
+		err = ErrIndexNotFound
 		return
 	}
 
 	index = CloneIndex(idx)
 
 	return
+}
+
+// Remove method removes interfaces from a storage for a pulse
+func (m *IndexMemory) Remove(ctx context.Context, pulse insolar.PulseNumber) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	for id, idx := range m.memory {
+		if id.Pulse() != pulse {
+			continue
+		}
+		delete(m.memory, id)
+		m.jetIndex.Delete(id, idx.JetID)
+	}
 }
 
 type IndexDB struct {
@@ -195,7 +217,7 @@ func (i *IndexDB) set(id insolar.ID, index Lifeline) error {
 func (i *IndexDB) get(id insolar.ID) (index Lifeline, err error) {
 	buff, err := i.db.Get(indexKey(id))
 	if err == store.ErrNotFound {
-		err = ErrNotFound
+		err = ErrIndexNotFound
 		return
 	}
 	if err != nil {

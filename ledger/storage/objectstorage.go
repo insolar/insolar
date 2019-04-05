@@ -33,18 +33,18 @@ type ObjectStorage interface {
 		handler func(id insolar.ID) error,
 	) error
 
-	GetObjectIndex(
-		ctx context.Context,
-		jetID insolar.ID,
-		id *insolar.ID,
-	) (*object.Lifeline, error)
-
-	SetObjectIndex(
-		ctx context.Context,
-		jetID insolar.ID,
-		id *insolar.ID,
-		idx *object.Lifeline,
-	) error
+	// GetObjectIndex(
+	// 	ctx context.Context,
+	// 	jetID insolar.ID,
+	// 	id *insolar.ID,
+	// ) (*object.Lifeline, error)
+	//
+	// SetObjectIndex(
+	// 	ctx context.Context,
+	// 	jetID insolar.ID,
+	// 	id *insolar.ID,
+	// 	idx *object.Lifeline,
+	// ) error
 }
 
 type objectStorage struct {

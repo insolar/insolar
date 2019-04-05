@@ -79,7 +79,7 @@ type RecordModifier interface {
 
 // RecordCleaner provides an interface for removing records from a storage.
 type RecordCleaner interface {
-	// Remove method removes records from a storage for all pulses until pulse (pulse included)
+	// Remove method removes records from a storage for a pulse
 	Remove(ctx context.Context, pulse insolar.PulseNumber)
 }
 

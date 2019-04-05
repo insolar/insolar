@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/ledger/storage/object"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -101,11 +102,17 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 	mc := minimock.NewController(t)
 	ps := pulse.NewStorageMem()
+	is := object.NewIndexMemory()
 
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
-	tmpDB, recMem, dbcancel := storagetest.TmpDB(ctx, t, storagetest.Dir(dir), storagetest.PulseStorage(ps))
+	tmpDB, recMem, dbcancel := storagetest.TmpDB(ctx,
+		t,
+		storagetest.Dir(dir),
+		storagetest.PulseStorage(ps),
+		storagetest.IndexStorage(is),
+	)
 	memoryMockDB := store.NewMemoryMockDB()
 
 	cm := &component.Manager{}
@@ -155,7 +162,8 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	handler.JetStorage = js
 	handler.Nodes = ns
 	handler.DBContext = tmpDB
-	handler.ObjectStorage = os
+	handler.IndexModifier = is
+	handler.IndexAccessor = is
 	handler.DropModifier = ds
 	handler.BlobModifier = bs
 	handler.BlobAccessor = bs
@@ -181,6 +189,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 		js,
 		os,
 		ns,
+		is,
 		ps,
 		ps,
 		ds,

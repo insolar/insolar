@@ -41,6 +41,7 @@ type tmpDBOptions struct {
 	dir          string
 	nobootstrap  bool
 	pulseStorage *pulse.StorageMem
+	indexStorage *object.IndexMemory
 }
 
 // Option provides functional option for TmpDB.
@@ -57,6 +58,13 @@ func Dir(dir string) Option {
 func PulseStorage(ps *pulse.StorageMem) Option {
 	return func(opts *tmpDBOptions) {
 		opts.pulseStorage = ps
+	}
+}
+
+// IndexStorage provides an external index storage for TmpDB
+func IndexStorage(is *object.IndexMemory) Option {
+	return func(opts *tmpDBOptions) {
+		opts.indexStorage = is
 	}
 }
 
@@ -97,6 +105,13 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 		ps = pulse.NewStorageMem()
 	}
 
+	var im *object.IndexMemory
+	if opts.indexStorage != nil {
+		im = opts.indexStorage
+	} else {
+		im = object.NewIndexMemory()
+	}
+
 	objectStorage := storage.NewObjectStorage()
 
 	recordStorage := object.NewRecordMemory()
@@ -105,6 +120,7 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 
 	cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
+		im,
 		ps,
 		tmpDB,
 		jet.NewStore(),
