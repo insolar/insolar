@@ -103,6 +103,8 @@ func CloneIndex(idx Lifeline) Lifeline {
 			cp[k] = v
 		}
 		idx.Delegates = cp
+	} else {
+		idx.Delegates = map[insolar.Reference]insolar.Reference{}
 	}
 
 	return idx
