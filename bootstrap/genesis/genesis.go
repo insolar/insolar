@@ -55,11 +55,6 @@ const (
 
 var contractNames = []string{walletContract, memberContract, allowanceContract, rootDomain, nodeDomain, nodeRecord}
 
-type messageBusLocker interface {
-	Lock(ctx context.Context)
-	Unlock(ctx context.Context)
-}
-
 type nodeInfo struct {
 	privateKey crypto.PrivateKey
 	publicKey  string
@@ -68,16 +63,16 @@ type nodeInfo struct {
 
 // Generator is a component for generating RootDomain instance and genesis contracts.
 type Generator struct {
+	ArtifactManager artifact.Manager `inject:""`
+	GenesisState    genesis.State    `inject:""`
+
+	config *Config
+
 	rootDomainRef *insolar.Reference
 	nodeDomainRef *insolar.Reference
 	rootMemberRef *insolar.Reference
-	prototypeRefs map[string]*insolar.Reference
-	config        *Config
-	keyOut        string
 
-	ArtifactManager artifact.Manager `inject:""`
-
-	GenesisState genesis.State `inject:""`
+	keyOut string
 }
 
 // NewGenerator creates new Generator.
@@ -591,7 +586,6 @@ func (g *Generator) Start(ctx context.Context) error {
 
 	inslog.Info("[ Genesis ] NewContractBuilder ...")
 	cb := NewContractBuilder(*g.GenesisState.GenesisRef(), g.ArtifactManager)
-	g.prototypeRefs = cb.Prototypes
 	defer cb.Clean()
 
 	inslog.Info("[ Genesis ] buildSmartContracts ...")

@@ -95,7 +95,7 @@ func NewContractBuilder(genesisRef insolar.Reference, am artifact.Manager) *Cont
 // Clean deletes tmp directory used for contracts building
 func (cb *ContractsBuilder) Clean() {
 	log.Debugf("Cleaning build directory %q", cb.root)
-	err := os.RemoveAll(cb.root) // nolint: errcheck
+	err := os.RemoveAll(cb.root)
 	if err != nil {
 		panic(err)
 	}
@@ -161,7 +161,6 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't call plugin")
 		}
-		log.Debugf("Built plugin for contract %q", name)
 
 		pluginBinary, err := ioutil.ReadFile(filepath.Join(cb.root, "plugins", name+".so"))
 		if err != nil {
@@ -184,18 +183,19 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 			*domainRef, *insolar.NewReference(*domain, *codeReq),
 			pluginBinary, insolar.MachineTypeGoPlugin,
 		)
-		codeRef := insolar.NewReference(*domain, *codeID)
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't SetRecord")
+			return errors.Wrapf(err, "[ Build ] Can't DeployCode for code '%v", name)
 		}
+
+		codeRef := insolar.NewReference(*domain, *codeID)
 		_, err = cb.artifactManager.RegisterResult(ctx, *domainRef, *codeRef, nil)
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't SetRecord")
+			return errors.Wrapf(err, "[ Build ] Can't SetRecord for code '%v'", name)
 		}
+
 		log.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
 		cb.Codes[name] = codeRef
 
-		// FIXME: It's a temporary fix and should not be here. Ii will NOT work properly on production. Remove it ASAP!
 		_, err = cb.artifactManager.ActivatePrototype(
 			ctx,
 			*domainRef,
@@ -205,18 +205,19 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 			nil,
 		)
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't ActivatePrototype")
+			return errors.Wrapf(err, "[ Build ] Can't ActivatePrototypef for code '%v'", name)
 		}
+
 		_, err = cb.artifactManager.RegisterResult(ctx, *domainRef, *cb.Prototypes[name], nil)
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't RegisterResult of prototype")
+			return errors.Wrapf(err, "[ Build ] Can't RegisterResult of prototype for code '%v'", name)
 		}
 	}
 
 	return nil
 }
 
-// Plugin ...
+// compile plugin
 func (cb *ContractsBuilder) plugin(name string) error {
 	dstDir := filepath.Join(cb.root, "plugins")
 
@@ -226,7 +227,8 @@ func (cb *ContractsBuilder) plugin(name string) error {
 	}
 
 	cmd := exec.Command(
-		"go", "build",
+		"go",
+		"build",
 		"-buildmode=plugin",
 		"-o", filepath.Join(dstDir, name+".so"),
 		filepath.Join(cb.root, "src/contract", name),
@@ -234,7 +236,7 @@ func (cb *ContractsBuilder) plugin(name string) error {
 	cmd.Env = append(os.Environ(), "GOPATH="+PrependGoPath(cb.root))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return errors.Wrap(err, "can't build contract: "+string(out))
+		return errors.Wrapf(err, "can't build contract: %v", string(out))
 	}
 	return nil
 }

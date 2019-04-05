@@ -54,7 +54,7 @@ func getContractsMap() (map[string]*preprocessor.ParsedFile, error) {
 		}
 		parsed, err := preprocessor.ParseFile(contractPath)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ contractsMap ] couldn't read contract: ")
+			return nil, errors.Wrapf(err, "[ contractsMap ] couldn't read contract: %v", contractPath)
 		}
 		contracts[name] = parsed
 	}
