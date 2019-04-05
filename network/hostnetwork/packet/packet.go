@@ -157,8 +157,5 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 
 func init() {
 	gob.Register(&RequestPulse{})
-	gob.Register(&RequestGetRandomHosts{})
-
 	gob.Register(&ResponsePulse{})
-	gob.Register(&ResponseGetRandomHosts{})
 }

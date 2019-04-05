@@ -20,36 +20,37 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 )
 
 // Player is a MessageBus wrapper that replays replies from provided tape. The tape can be created and by Recorder
 // and transferred to player.
 type player struct {
 	sender
-	tape         tape
-	scheme       insolar.PlatformCryptographyScheme
-	pulseStorage insolar.PulseStorage
+	tape          tape
+	scheme        insolar.PlatformCryptographyScheme
+	pulseAccessor pulse.Accessor
 }
 
 // newPlayer creates player instance. It will replay replies from provided tape.
-func newPlayer(s sender, tape tape, scheme insolar.PlatformCryptographyScheme, pulseStorage insolar.PulseStorage) *player {
+func newPlayer(s sender, tape tape, scheme insolar.PlatformCryptographyScheme, pulseAccessor pulse.Accessor) *player {
 	return &player{
-		sender:       s,
-		tape:         tape,
-		scheme:       scheme,
-		pulseStorage: pulseStorage,
+		sender:        s,
+		tape:          tape,
+		scheme:        scheme,
+		pulseAccessor: pulseAccessor,
 	}
 }
 
 // Send wraps MessageBus Send to reply replies from the tape. If reply for this message is not on the tape, an error
 // will be returned.
 func (p *player) Send(ctx context.Context, msg insolar.Message, ops *insolar.MessageSendOptions) (insolar.Reply, error) {
-	currentPulse, err := p.pulseStorage.Current(ctx)
+	currentPulse, err := p.pulseAccessor.Latest(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	parcel, err := p.CreateParcel(ctx, msg, ops.Safe().Token, *currentPulse)
+	parcel, err := p.CreateParcel(ctx, msg, ops.Safe().Token, currentPulse)
 	if err != nil {
 		return nil, err
 	}

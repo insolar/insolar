@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
@@ -42,10 +43,10 @@ type PulseManager struct {
 	NodeNet           insolar.NodeNetwork       `inject:""`
 	GIL               insolar.GlobalInsolarLock `inject:""`
 	ActiveListSwapper ActiveListSwapper         `inject:""`
-	PulseStorage      pulseStoragePm            `inject:""`
 	NodeSetter        node.Modifier             `inject:""`
 	Nodes             node.Accessor             `inject:""`
-	PulseTracker      storage.PulseTracker      `inject:""`
+	PulseAccessor     pulse.Accessor            `inject:""`
+	PulseAppender     pulse.Appender            `inject:""`
 	JetModifier       jet.Modifier              `inject:""`
 
 	currentPulse insolar.Pulse
@@ -106,15 +107,15 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	m.GIL.Acquire(ctx)
 	ctx, span := instracer.StartSpan(ctx, "pulse.gil_locked")
 
-	m.PulseStorage.Lock()
-	storagePulse, err := m.PulseTracker.GetLatestPulse(ctx)
-	if err != nil && err != insolar.ErrNotFound {
+	storagePulse, err := m.PulseAccessor.Latest(ctx)
+	if err == pulse.ErrNotFound {
+		storagePulse = *insolar.GenesisPulse
+	} else if err != nil {
 		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 
 	defer span.End()
 	defer m.GIL.Release(ctx)
-	defer m.PulseStorage.Unlock()
 
 	logger := inslogger.FromContext(ctx)
 	logger.WithFields(map[string]interface{}{
@@ -131,7 +132,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		return errors.Wrap(err, "failed to apply new active node list")
 	}
 	if persist {
-		if err := m.PulseTracker.AddPulse(ctx, newPulse); err != nil {
+		if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
 			return errors.Wrap(err, "call of AddPulse failed")
 		}
 		fromNetwork := m.NodeNet.GetWorkingNodes()
@@ -145,11 +146,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 	}
 
-	m.PulseStorage.Set(&newPulse)
-	if storagePulse != nil {
-		m.JetModifier.Clone(ctx, storagePulse.Pulse.PulseNumber, newPulse.PulseNumber)
-	}
-
+	m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber)
 	return nil
 }
 

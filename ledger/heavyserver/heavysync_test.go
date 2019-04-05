@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -45,7 +46,8 @@ type heavysyncSuite struct {
 
 	records object.RecordModifier
 
-	pulseTracker   storage.PulseTracker
+	pulseAccessor  pulse.Accessor
+	pulseAppender  pulse.Appender
 	replicaStorage storage.ReplicaStorage
 
 	sync *Sync
@@ -70,7 +72,9 @@ func (s *heavysyncSuite) BeforeTest(suiteName, testName string) {
 
 	s.db = db
 	s.cleaner = cleaner
-	s.pulseTracker = storage.NewPulseTracker()
+	ps := pulse.NewStorageMem()
+	s.pulseAccessor = ps
+	s.pulseAppender = ps
 	s.replicaStorage = storage.NewReplicaStorage()
 
 	s.records = object.NewRecordMemory()
@@ -78,7 +82,7 @@ func (s *heavysyncSuite) BeforeTest(suiteName, testName string) {
 	s.cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
 		s.db,
-		s.pulseTracker,
+		ps,
 		s.replicaStorage,
 		s.records,
 	)
@@ -171,11 +175,12 @@ func (s *heavysyncSuite) TestHeavy_SyncBasic() {
 	// prepare pulse helper
 	preparepulse := func(pn insolar.PulseNumber) {
 		pulse := insolar.Pulse{PulseNumber: pn}
-		err = s.pulseTracker.AddPulse(s.ctx, pulse)
+		err = s.pulseAppender.Append(s.ctx, pulse)
 		require.NoError(s.T(), err)
 	}
 	pnum = pnumNextPlus + 1
 	pnumNext = pnum + 1
+	pnumNextPlus = pnumNext + 1
 	preparepulse(pnum)
 	preparepulse(pnumNext) // should set correct next for previous pulse
 
@@ -305,6 +310,6 @@ func (s *heavysyncSuite) TestHeavy_Timeout() {
 
 func preparepulse(s *heavysyncSuite, pn insolar.PulseNumber) {
 	pulse := insolar.Pulse{PulseNumber: pn}
-	err := s.pulseTracker.AddPulse(s.ctx, pulse)
+	err := s.pulseAppender.Append(s.ctx, pulse)
 	require.NoError(s.T(), err)
 }

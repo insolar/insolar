@@ -107,7 +107,6 @@ func (m *MockResolver) Resolve(nodeID insolar.Reference) (*host.Host, error) {
 
 func (m *MockResolver) AddToKnownHosts(h *host.Host)      {}
 func (m *MockResolver) Rebalance(network.PartitionPolicy) {}
-func (m *MockResolver) GetRandomNodes(int) []host.Host    { return nil }
 
 func (m *MockResolver) addMapping(key, value string) error {
 	k, err := insolar.NewReferenceFromBase58(key)

@@ -58,8 +58,3 @@ import (
 type RequestPulse struct {
 	Pulse insolar.Pulse
 }
-
-// RequestGetRandomHosts is data for the call that returns random hosts of the Insolar network.
-type RequestGetRandomHosts struct {
-	HostsNumber int
-}

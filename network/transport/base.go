@@ -62,7 +62,6 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/future"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
 )
 
 type transportSerializer interface {
@@ -83,7 +82,6 @@ func (b *baseSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, erro
 type baseTransport struct {
 	futureManager future.Manager
 	serializer    transportSerializer
-	proxy         relay.Proxy
 	packetHandler future.PacketHandler
 
 	disconnectStarted  chan bool
@@ -95,12 +93,11 @@ type baseTransport struct {
 	sendFunc      func(recvAddress string, data []byte) error
 }
 
-func newBaseTransport(proxy relay.Proxy, publicAddress string) baseTransport {
+func newBaseTransport(publicAddress string) baseTransport {
 	futureManager := future.NewManager()
 	return baseTransport{
 		futureManager: futureManager,
 		packetHandler: future.NewPacketHandler(futureManager),
-		proxy:         proxy,
 		serializer:    &baseSerializer{},
 
 		mutex: &sync.RWMutex{},
@@ -157,20 +154,8 @@ func (t *baseTransport) prepareDisconnect() {
 	close(t.disconnectStarted)
 }
 
-// PublicAddress returns transport public ip address
-func (t *baseTransport) PublicAddress() string {
-	return t.publicAddress
-}
-
 func (t *baseTransport) SendPacket(ctx context.Context, p *packet.Packet) error {
-	var recvAddress string
-	if t.proxy.ProxyHostsCount() > 0 {
-		recvAddress = t.proxy.GetNextProxyAddress()
-	}
-	if len(recvAddress) == 0 {
-		recvAddress = p.Receiver.Address.String()
-	}
-
+	recvAddress := p.Receiver.Address.String()
 	data, err := t.serializer.SerializePacket(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize packet")

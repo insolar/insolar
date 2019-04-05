@@ -57,6 +57,7 @@ import (
 	"math"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/insolar/insolar/network/node"
@@ -77,6 +78,8 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/platformpolicy"
 )
+
+const bootstrapTimeout time.Duration = 2 // seconds
 
 var (
 	ErrReconnectRequired = errors.New("NetworkNode should connect via consensus bootstrap")
@@ -111,12 +114,15 @@ type bootstrapper struct {
 	lastPulseLock  sync.RWMutex
 	pulsePersisted bool
 
-	bootstrapLock chan struct{}
+	bootstrapLock       chan struct{}
+	cyclicBootstrapStop int32
 
 	genesisRequestsReceived map[insolar.Reference]*GenesisRequest
 	genesisLock             sync.Mutex
 
 	firstPulseTime time.Time
+
+	reconnectToNewNetwork func(result network.BootstrapResult)
 }
 
 func (bc *bootstrapper) GetFirstFakePulseTime() time.Time {
@@ -143,6 +149,7 @@ type NodeBootstrapResponse struct {
 	Code         Code
 	RedirectHost string
 	RejectReason string
+	NetworkSize  int
 	// FirstPulseTimeUnix int64
 }
 
@@ -357,6 +364,11 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 	activeNodes = append(activeNodes, bc.NodeKeeper.GetOrigin())
 	bc.NodeKeeper.SetInitialSnapshot(activeNodes)
 	logger.Infof("[ BootstrapDiscovery ] Added active nodes: %s", strings.Join(activeNodesStr, ", "))
+
+	if bc.options.CyclicBootstrapEnabled {
+		go bc.startCyclicBootstrap(ctx)
+	}
+
 	return parseBotstrapResults(bootstrapResults), nil
 }
 
@@ -546,11 +558,46 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 		// FirstPulseTime:    time.Unix(data.FirstPulseTimeUnix, 0),
 		Host:              response.GetSenderHost(),
 		ReconnectRequired: data.Code == ReconnectRequired,
+		NetworkSize:       data.NetworkSize,
 	}, nil
 }
 
+func (bc *bootstrapper) startCyclicBootstrap(ctx context.Context) {
+	for atomic.LoadInt32(&bc.cyclicBootstrapStop) == 0 {
+		results := make([]*network.BootstrapResult, 0)
+		nodes := bc.getInactivenodes()
+		for _, node := range nodes {
+			res, err := bc.startBootstrap(ctx, node.GetHost())
+			if err != nil {
+				logger := inslogger.FromContext(ctx)
+				logger.Errorf("[ StartCyclicBootstrap ] ", err)
+				continue
+			}
+			results = append(results, res)
+		}
+		if len(results) != 0 {
+			networkSize := results[0].NetworkSize
+			index := 0
+			for i := 1; i < len(results); i++ {
+				if results[i].NetworkSize > networkSize {
+					networkSize = results[i].NetworkSize
+					index = i
+				}
+			}
+			if networkSize > len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) {
+				bc.reconnectToNewNetwork(*results[index])
+			}
+		}
+		time.Sleep(time.Second * bootstrapTimeout)
+	}
+}
+
+func (bc *bootstrapper) StopCyclicBootstrap() {
+	atomic.StoreInt32(&bc.cyclicBootstrapStop, 1)
+}
+
 func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Request) (network.Response, error) {
-	// TODO: redirect logic
+	// TODO: redirect logic to another node if needed
 	var code Code
 	if bc.NetworkSwitcher.GetState() == insolar.CompleteNetworkState {
 		code = ReconnectRequired
@@ -559,7 +606,8 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Re
 	}
 	return bc.Transport.BuildResponse(ctx, request,
 		&NodeBootstrapResponse{
-			Code: code,
+			Code:        code,
+			NetworkSize: len(bc.NodeKeeper.GetAccessor().GetActiveNodes()),
 			// FirstPulseTimeUnix: bc.firstPulseTime.Unix(),
 		}), nil
 }
@@ -596,11 +644,23 @@ func parseBotstrapResults(results []*network.BootstrapResult) *network.Bootstrap
 	return results[minIDIndex]
 }
 
-func NewBootstrapper(options *common.Options) Bootstrapper {
+func (bc *bootstrapper) getInactivenodes() []insolar.DiscoveryNode {
+	res := make([]insolar.DiscoveryNode, 0)
+	for _, node := range bc.Certificate.GetDiscoveryNodes() {
+		if bc.NodeKeeper.GetAccessor().GetActiveNode(*node.GetNodeRef()) != nil {
+			res = append(res, node)
+		}
+	}
+	return res
+}
+
+func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(result network.BootstrapResult)) Bootstrapper {
 	return &bootstrapper{
 		options:       options,
 		bootstrapLock: make(chan struct{}),
 
 		genesisRequestsReceived: make(map[insolar.Reference]*GenesisRequest),
+
+		reconnectToNewNetwork: reconnectToNewNetwork,
 	}
 }

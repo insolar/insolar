@@ -25,8 +25,8 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
 
@@ -47,8 +47,8 @@ func TestRecorder_Send(t *testing.T) {
 	}
 
 	tape := NewtapeMock(mc)
-	pulseStorageMock := testutils.NewPulseStorageMock(t)
-	pulseStorageMock.CurrentMock.Return(insolar.GenesisPulse, nil)
+	pulseStorageMock := pulse.NewAccessorMock(t)
+	pulseStorageMock.LatestMock.Return(*insolar.GenesisPulse, nil)
 	recorder := newRecorder(s, tape, pcs, pulseStorageMock)
 
 	t.Run("with no reply on the tape sends the message and returns reply", func(t *testing.T) {

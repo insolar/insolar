@@ -53,9 +53,11 @@ package servicenetwork
 import (
 	"context"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
+
+	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -64,6 +66,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
@@ -72,8 +75,6 @@ import (
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
 )
 
 // ServiceNetwork is facade for network.
@@ -84,7 +85,7 @@ type ServiceNetwork struct {
 	// dependencies
 	CertificateManager  insolar.CertificateManager  `inject:""`
 	PulseManager        insolar.PulseManager        `inject:""`
-	PulseStorage        insolar.PulseStorage        `inject:""`
+	PulseAccessor       pulse.Accessor              `inject:""`
 	CryptographyService insolar.CryptographyService `inject:""`
 	NetworkCoordinator  insolar.NetworkCoordinator  `inject:""`
 	NodeKeeper          network.NodeKeeper          `inject:""`
@@ -123,25 +124,6 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method insolar.Rem
 	n.Controller.RemoteProcedureRegister(name, method)
 }
 
-// incrementPort increments port number if it not equals 0
-func incrementPort(address string) (string, error) {
-	parts := strings.Split(address, ":")
-	if len(parts) < 2 {
-		return address, errors.New("failed to get port from address " + address)
-	}
-	port, err := strconv.Atoi(parts[len(parts)-1])
-	if err != nil {
-		return address, err
-	}
-
-	if port != 0 {
-		port++
-	}
-
-	parts = append(parts[:len(parts)-1], strconv.Itoa(port))
-	return strings.Join(parts, ":"), nil
-}
-
 // Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
 	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.CertificateManager.GetCertificate().GetNodeRef().String())
@@ -149,15 +131,9 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to create internal transport")
 	}
 
-	var consensusAddress string
-	if n.cfg.Host.Transport.FixedPublicAddress != "" {
-		// workaround for Consensus transport, port+=1 of default transport
-		consensusAddress, err = incrementPort(n.cfg.Host.Transport.Address)
-		if err != nil {
-			return errors.Wrap(err, "failed to increment port.")
-		}
-	} else {
-		consensusAddress = n.NodeKeeper.GetOrigin().ConsensusAddress()
+	consensusAddress := n.cfg.Host.Transport.Address
+	if n.cfg.Host.Transport.FixedPublicAddress == "" {
+		consensusAddress = n.NodeKeeper.GetOrigin().Address()
 	}
 
 	consensusNetwork, err := hostnetwork.NewConsensusNetwork(
@@ -193,7 +169,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		controller.NewNetworkController(),
 		controller.NewRPCController(options),
 		controller.NewPulseController(),
-		bootstrap.NewBootstrapper(options),
+		bootstrap.NewBootstrapper(options, n.connectToNewNetwork),
 		bootstrap.NewAuthorizationController(options),
 		bootstrap.NewChallengeResponseController(options),
 		bootstrap.NewNetworkBootstrapper(),
@@ -213,7 +189,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	log.Info("Starting network component manager...")
 	err := n.cm.Start(ctx)
 	if err != nil {
-		return errors.Wrap(err, "Failed to bootstrap network")
+		return errors.Wrap(err, "Failed to start component manager")
 	}
 
 	log.Info("Bootstrapping network...")
@@ -289,12 +265,12 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	// Ignore insolar.ErrNotFound because
 	// sometimes we can't fetch current pulse in new nodes
 	// (for fresh bootstrapped light-material with in-memory pulse-tracker)
-	if currentPulse, err := n.PulseStorage.Current(ctx); err != nil {
-		if err != insolar.ErrNotFound {
+	if currentPulse, err := n.PulseAccessor.Latest(ctx); err != nil {
+		if err != pulse.ErrNotFound {
 			logger.Fatalf("Could not get current pulse: %s", err.Error())
 		}
 	} else {
-		if !isNextPulse(currentPulse, &newPulse) {
+		if !isNextPulse(&currentPulse, &newPulse) {
 			logger.Infof("Incorrect pulse number. Current: %+v. New: %+v", currentPulse, newPulse)
 			return
 		}
@@ -322,6 +298,9 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 		logger.Error("Failed to pass consensus: " + err.Error())
 		n.TerminationHandler.Abort()
 	}
+}
+
+func (n *ServiceNetwork) connectToNewNetwork(result network.BootstrapResult) {
 }
 
 func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {

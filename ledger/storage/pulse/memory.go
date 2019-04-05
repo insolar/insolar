@@ -44,7 +44,7 @@ func NewStorageMem() *StorageMem {
 	}
 }
 
-// ForPulseNumber returns pulse for provided pulse number. If not found, ErrNotFound will be returned.
+// ForPulseNumber returns pulse for provided Pulse number. If not found, ErrNotFound will be returned.
 func (s *StorageMem) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (pulse insolar.Pulse, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
@@ -58,81 +58,84 @@ func (s *StorageMem) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber)
 	return node.pulse, nil
 }
 
-// Latest returns latest pulse saved in memory. If not found, ErrNotFound will be returned.
+// Latest returns a latest pulse saved in memory. If not found, ErrNotFound will be returned.
 func (s *StorageMem) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	if s.head == nil {
+	if s.tail == nil {
 		err = ErrNotFound
 		return
 	}
 
-	return s.head.pulse, nil
+	return s.tail.pulse, nil
 }
 
-// Append appends provided pulse to current storage. Pulse number should be greater than currently saved for preserving
-// pulse consistency. If provided pulse does not meet the requirements, ErrBadPulse will be returned.
+// Append appends provided a pulse to current storage. Pulse number should be greater than currently saved for preserving
+// pulse consistency. If provided Pulse does not meet the requirements, ErrBadPulse will be returned.
 func (s *StorageMem) Append(ctx context.Context, pulse insolar.Pulse) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	var insertWithHead = func() {
-		oldHead := s.head
-		newHead := &memNode{
-			prev:  oldHead,
+	var appendTail = func() {
+		oldTail := s.tail
+		newTail := &memNode{
+			prev:  oldTail,
 			pulse: pulse,
 		}
-		oldHead.next = newHead
-		newHead.prev = oldHead
-		s.storage[newHead.pulse.PulseNumber] = newHead
-		s.head = newHead
+		oldTail.next = newTail
+		newTail.prev = oldTail
+		s.storage[newTail.pulse.PulseNumber] = newTail
+		s.tail = newTail
 	}
-	var insertWithoutHead = func() {
-		s.head = &memNode{
+	var appendHead = func() {
+		s.tail = &memNode{
 			pulse: pulse,
 		}
-		s.storage[pulse.PulseNumber] = s.head
-		s.tail = s.head
+		s.storage[pulse.PulseNumber] = s.tail
+		s.head = s.tail
 	}
 
 	if s.head == nil {
-		insertWithoutHead()
+		appendHead()
 		return nil
 	}
 
-	if pulse.PulseNumber <= s.head.pulse.PulseNumber {
+	if pulse.PulseNumber <= s.tail.pulse.PulseNumber {
 		return ErrBadPulse
 	}
-	insertWithHead()
+	appendTail()
 
 	return nil
 }
 
 // Shift removes youngest pulse from storage. If the storage is empty, an error will be returned.
-func (s *StorageMem) Shift(ctx context.Context) (pulse insolar.Pulse, err error) {
+func (s *StorageMem) Shift(ctx context.Context, pn insolar.PulseNumber) (err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	if s.tail == nil {
+	if s.head == nil {
 		err = errors.New("nothing to shift")
 		return
 	}
 
-	delete(s.storage, s.tail.pulse.PulseNumber)
-	if s.tail == s.head {
-		tail := s.tail
-		s.tail, s.head = nil, nil
-		return tail.pulse, nil
+	h := s.head
+	for h != nil && h.pulse.PulseNumber <= pn {
+		delete(s.storage, h.pulse.PulseNumber)
+		h = h.next
 	}
 
-	tail := s.tail
-	tail.next.prev = nil
-	s.tail = tail.next
-	return tail.pulse, nil
+	s.head = h
+	if s.head == nil {
+		s.tail = nil
+	} else {
+		s.head.prev = nil
+	}
+
+	return nil
 }
 
-// Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
+// Forwards calculates steps pulses forwards from provided Pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
 func (s *StorageMem) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (pulse insolar.Pulse, err error) {
 	s.lock.RLock()

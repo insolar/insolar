@@ -61,7 +61,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network/hostnetwork/relay"
 	"github.com/insolar/insolar/network/transport/pool"
 	"github.com/insolar/insolar/network/utils"
 )
@@ -74,16 +73,26 @@ type tcpTransport struct {
 	address  string
 }
 
-func newTCPTransport(listener net.Listener, proxy relay.Proxy, publicAddress string) (*tcpTransport, error) {
+func newTCPTransport(listenAddress, fixedPublicAddress string) (*tcpTransport, string, error) {
+
+	listener, err := net.Listen("tcp", listenAddress)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "failed to listen UDP")
+	}
+	publicAddress, err := Resolve(fixedPublicAddress, listener.Addr().String())
+	if err != nil {
+		return nil, "", errors.Wrap(err, "failed to resolve public address")
+	}
+
 	transport := &tcpTransport{
-		baseTransport: newBaseTransport(proxy, publicAddress),
+		baseTransport: newBaseTransport(publicAddress),
 		listener:      listener,
 		pool:          pool.NewConnectionPool(&tcpConnectionFactory{}),
 	}
 
 	transport.sendFunc = transport.send
 
-	return transport, nil
+	return transport, publicAddress, nil
 }
 
 func (t *tcpTransport) send(address string, data []byte) error {
@@ -141,13 +150,13 @@ func (t *tcpTransport) prepareListen() (net.Listener, error) {
 }
 
 // Start starts networking.
-func (t *tcpTransport) Listen(ctx context.Context) error {
+func (t *tcpTransport) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
-	logger.Info("[ Listen ] Start TCP transport")
+	logger.Info("[ Start ] Start TCP transport")
 
 	listener, err := t.prepareListen()
 	if err != nil {
-		logger.Info("[ Listen ] Failed to prepare TCP transport: ", err.Error())
+		logger.Info("[ Start ] Failed to prepare TCP transport: ", err.Error())
 		return err
 	}
 
@@ -161,11 +170,11 @@ func (t *tcpTransport) Listen(ctx context.Context) error {
 					return
 				}
 
-				logger.Error("[ Listen ] Failed to accept connection: ", err.Error())
+				logger.Error("[ Start ] Failed to accept connection: ", err.Error())
 				return
 			}
 
-			logger.Debugf("[ Listen ] Accepted new connection from %s", conn.RemoteAddr())
+			logger.Debugf("[ Start ] Accepted new connection from %s", conn.RemoteAddr())
 
 			go t.handleAcceptedConnection(conn)
 		}
