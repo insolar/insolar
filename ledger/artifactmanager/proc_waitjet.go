@@ -11,15 +11,17 @@ import (
 )
 
 type FetchJet struct {
-	JetAccessor jet.Accessor
-	Coordinator insolar.JetCoordinator
-	JetUpdater  *jetTreeUpdater
-
 	Parcel insolar.Parcel
 
 	Res struct {
-		JetID insolar.JetID
-		Miss  bool
+		Jet  insolar.JetID
+		Miss bool
+	}
+
+	Dep struct {
+		JetAccessor jet.Accessor
+		Coordinator insolar.JetCoordinator
+		JetUpdater  *jetTreeUpdater
 	}
 }
 
@@ -31,7 +33,7 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 
 	// Hack to temporary allow any genesis request.
 	if p.Parcel.Pulse() <= insolar.FirstPulseNumber {
-		p.Res.JetID = *insolar.NewJetID(0, nil)
+		p.Res.Jet = *insolar.NewJetID(0, nil)
 		return nil
 	}
 
@@ -52,7 +54,7 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 		case *message.GetRequest:
 			pulse = tm.Request.Pulse()
 		}
-		jetID, actual := p.JetAccessor.ForID(ctx, pulse, target)
+		jetID, actual := p.Dep.JetAccessor.ForID(ctx, pulse, target)
 		if !actual {
 			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 				"msg":   msg.Type().String(),
@@ -61,7 +63,7 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 			}).Error("jet is not actual")
 		}
 
-		p.Res.JetID = jetID
+		p.Res.Jet = jetID
 		return nil
 	}
 
@@ -70,7 +72,7 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 	if msg.DefaultTarget().Record().Pulse() == insolar.PulseNumberJet {
 		jetID = *msg.DefaultTarget().Record()
 	} else {
-		j, err := p.JetUpdater.fetchJet(ctx, *msg.DefaultTarget().Record(), p.Parcel.Pulse())
+		j, err := p.Dep.JetUpdater.fetchJet(ctx, *msg.DefaultTarget().Record(), p.Parcel.Pulse())
 		if err != nil {
 			return errors.Wrap(err, "failed to fetch jet tree")
 		}
@@ -79,31 +81,33 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 	}
 
 	// Check if jet is ours.
-	node, err := p.Coordinator.LightExecutorForJet(ctx, jetID, p.Parcel.Pulse())
+	node, err := p.Dep.Coordinator.LightExecutorForJet(ctx, jetID, p.Parcel.Pulse())
 	if err != nil {
 		return errors.Wrap(err, "failed to calculate executor for jet")
 	}
 
-	if *node != p.Coordinator.Me() {
+	if *node != p.Dep.Coordinator.Me() {
 		p.Res.Miss = true
-		p.Res.JetID = insolar.JetID(jetID)
+		p.Res.Jet = insolar.JetID(jetID)
 		return nil
 	}
 
 	ctx = addJetIDToLogger(ctx, jetID)
 
-	p.Res.JetID = insolar.JetID(jetID)
+	p.Res.Jet = insolar.JetID(jetID)
 	return nil
 }
 
 type WaitHot struct {
-	Waiter HotDataWaiter
-
 	Parcel insolar.Parcel
 	JetID  insolar.JetID
 
 	Res struct {
 		Timeout bool
+	}
+
+	Dep struct {
+		Waiter HotDataWaiter
 	}
 }
 
@@ -121,7 +125,7 @@ func (p *WaitHot) Proceed(ctx context.Context) error {
 		return nil
 	}
 
-	err := p.Waiter.Wait(ctx, insolar.ID(p.JetID))
+	err := p.Dep.Waiter.Wait(ctx, insolar.ID(p.JetID))
 	if err != nil {
 		p.Res.Timeout = true
 	}

@@ -87,29 +87,36 @@ func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 		handlers: map[insolar.MessageType]insolar.MessageHandler{},
 		conf:     conf,
 	}
-	proc := &ProcedureMaker{
-		FetchJet: func() *FetchJet {
-			return &FetchJet{
-				JetAccessor: h.JetStorage,
-				Coordinator: h.JetCoordinator,
-				JetUpdater:  h.jetTreeUpdater,
-			}
+
+	dep := &DepInjector{
+		FetchJet: func(p *FetchJet) *FetchJet {
+			p.Dep.JetAccessor = h.JetStorage
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.JetUpdater = h.jetTreeUpdater
+			return p
 		},
-		WaitHot: func() *WaitHot {
-			return &WaitHot{
-				Waiter: h.HotDataWaiter,
-			}
+		WaitHot: func(p *WaitHot) *WaitHot {
+			p.Dep.Waiter = h.HotDataWaiter
+			return p
 		},
-		GetObject: func() *ProcGetObject {
-			return &ProcGetObject{
-				Handler: h,
-			}
+		GetIndex: func(p *GetIndex) *GetIndex {
+			p.Dep.Recent = h.RecentStorageProvider
+			p.Dep.Locker = h.IDLocker
+			p.Dep.Storage = h.ObjectStorage
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.Bus = h.Bus
+			return p
+		},
+
+		GetObject: func(p *ProcGetObject) *ProcGetObject {
+			p.Handler = h
+			return p
 		},
 	}
 
 	h.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
 		return (&Init{
-			proc: proc,
+			dep: dep,
 
 			Message: msg,
 		}).Present

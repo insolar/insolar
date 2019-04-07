@@ -18,11 +18,12 @@ type ProcGetObject struct {
 	Handler *MessageHandler
 
 	Message bus.Message
-	JetID   insolar.JetID
+	Jet     insolar.JetID
+	Index   object.Lifeline
 }
 
 func (p *ProcGetObject) Proceed(ctx context.Context) error {
-	ctx = contextWithJet(ctx, insolar.ID(p.JetID))
+	ctx = contextWithJet(ctx, insolar.ID(p.Jet))
 	r := bus.Reply{}
 	r.Reply, r.Err = p.handle(ctx, p.Message.Parcel)
 	p.Message.ReplyTo <- r
@@ -33,42 +34,16 @@ func (p *ProcGetObject) handle(
 	ctx context.Context, parcel insolar.Parcel,
 ) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetObject)
-	jetID := jetFromContext(ctx)
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"object": msg.Head.Record().DebugString(),
-		"pulse":  parcel.Pulse(),
-	})
+	logger := inslogger.FromContext(ctx)
 
-	p.Handler.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
-
-	p.Handler.IDLocker.Lock(msg.Head.Record())
-	defer p.Handler.IDLocker.Unlock(msg.Head.Record())
-
-	// Fetch object index. If not found redirect.
-	idx, err := p.Handler.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Head.Record())
-	if err == insolar.ErrNotFound {
-		logger.Debug("failed to fetch index (fetching from heavy)")
-		node, err := p.Handler.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		idx, err = p.Handler.saveIndexFromHeavy(ctx, jetID, msg.Head, node)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch index from heavy")
-		}
-	} else if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch object index %s", msg.Head.Record().String())
-	}
-
-	// Determine object state id.
 	var stateID *insolar.ID
 	if msg.State != nil {
 		stateID = msg.State
 	} else {
 		if msg.Approved {
-			stateID = idx.LatestStateApproved
+			stateID = p.Index.LatestStateApproved
 		} else {
-			stateID = idx.LatestState
+			stateID = p.Index.LatestState
 		}
 	}
 	if stateID == nil {
@@ -105,8 +80,8 @@ func (p *ProcGetObject) handle(
 			State:        *stateID,
 			Prototype:    obj.Prototype,
 			IsPrototype:  obj.IsPrototype,
-			ChildPointer: idx.ChildPointer,
-			Parent:       idx.Parent,
+			ChildPointer: p.Index.ChildPointer,
+			Parent:       p.Index.Parent,
 			Memory:       obj.Memory,
 		}, nil
 	}
@@ -150,8 +125,8 @@ func (p *ProcGetObject) handle(
 			State:        *stateID,
 			Prototype:    obj.Prototype,
 			IsPrototype:  obj.IsPrototype,
-			ChildPointer: idx.ChildPointer,
-			Parent:       idx.Parent,
+			ChildPointer: p.Index.ChildPointer,
+			Parent:       p.Index.Parent,
 			Memory:       obj.Memory,
 		}, nil
 	}
@@ -170,8 +145,8 @@ func (p *ProcGetObject) handle(
 	}
 
 	var childPointer *insolar.ID
-	if idx.ChildPointer != nil {
-		childPointer = idx.ChildPointer
+	if p.Index.ChildPointer != nil {
+		childPointer = p.Index.ChildPointer
 	}
 	rep := reply.Object{
 		Head:         msg.Head,
@@ -179,7 +154,7 @@ func (p *ProcGetObject) handle(
 		Prototype:    state.GetImage(),
 		IsPrototype:  state.GetIsPrototype(),
 		ChildPointer: childPointer,
-		Parent:       idx.Parent,
+		Parent:       p.Index.Parent,
 	}
 
 	if state.GetMemory() != nil {
@@ -194,7 +169,7 @@ func (p *ProcGetObject) handle(
 				return nil, err
 			}
 			err = p.Handler.BlobModifier.Set(ctx, *state.GetMemory(), blob.Blob{
-				JetID: insolar.JetID(jetID),
+				JetID: insolar.JetID(p.Jet),
 				Value: obj.Memory},
 			)
 			if err != nil {

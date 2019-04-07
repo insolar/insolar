@@ -7,11 +7,12 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 )
 
-type ProcedureMaker struct {
-	FetchJet func() *FetchJet
-	WaitHot  func() *WaitHot
+type DepInjector struct {
+	FetchJet func(*FetchJet) *FetchJet
+	WaitHot  func(*WaitHot) *WaitHot
+	GetIndex func(*GetIndex) *GetIndex
 
-	GetObject func() *ProcGetObject
+	GetObject func(p *ProcGetObject) *ProcGetObject
 }
 
 type ReturnReply struct {

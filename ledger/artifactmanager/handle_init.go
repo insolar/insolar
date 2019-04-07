@@ -11,7 +11,7 @@ import (
 )
 
 type Init struct {
-	proc *ProcedureMaker
+	dep *DepInjector
 
 	Message bus.Message
 }
@@ -24,7 +24,7 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	switch s.Message.Parcel.Message().Type() {
 	case insolar.TypeGetObject:
 		h := &GetObject{
-			proc:    s.proc,
+			dep:     s.dep,
 			Message: s.Message,
 		}
 		return f.Handle(ctx, h.Present)
