@@ -227,38 +227,6 @@ func (*GetChildren) Type() insolar.MessageType {
 	return insolar.TypeGetChildren
 }
 
-// Drop spreads jet drop
-type JetDrop struct {
-	ledgerMessage
-
-	JetID insolar.ID
-
-	Drop        []byte
-	Messages    [][]byte
-	PulseNumber insolar.PulseNumber
-}
-
-// AllowedSenderObjectAndRole implements interface method
-func (m *JetDrop) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
-	// This check is not needed, because Drop sender is explicitly checked in handler.
-	return nil, insolar.DynamicRoleUndefined
-}
-
-// DefaultRole returns role for this event
-func (*JetDrop) DefaultRole() insolar.DynamicRole {
-	return insolar.DynamicRoleLightExecutor
-}
-
-// DefaultTarget returns of target of this event.
-func (m *JetDrop) DefaultTarget() *insolar.Reference {
-	return insolar.NewReference(insolar.ID{}, m.JetID)
-}
-
-// Type implementation of Message interface.
-func (*JetDrop) Type() insolar.MessageType {
-	return insolar.TypeJetDrop
-}
-
 // ValidateRecord creates VM validation for specific object record.
 type ValidateRecord struct {
 	ledgerMessage
@@ -342,35 +310,6 @@ func (m *GetObjectIndex) DefaultTarget() *insolar.Reference {
 // Type implementation of Message interface.
 func (*GetObjectIndex) Type() insolar.MessageType {
 	return insolar.TypeGetObjectIndex
-}
-
-// ValidationCheck checks if validation of a particular record can be performed.
-type ValidationCheck struct {
-	ledgerMessage
-
-	Object              insolar.Reference
-	ValidatedState      insolar.ID
-	LatestStateApproved *insolar.ID
-}
-
-// DefaultTarget returns of target of this event.
-func (m *ValidationCheck) DefaultTarget() *insolar.Reference {
-	return &m.Object
-}
-
-// DefaultRole returns role for this event
-func (m *ValidationCheck) DefaultRole() insolar.DynamicRole {
-	return insolar.DynamicRoleLightExecutor
-}
-
-// AllowedSenderObjectAndRole implements interface method
-func (m *ValidationCheck) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
-	return nil, 0
-}
-
-// Type implementation of Message interface.
-func (*ValidationCheck) Type() insolar.MessageType {
-	return insolar.TypeValidationCheck
 }
 
 // HotData contains hot-data

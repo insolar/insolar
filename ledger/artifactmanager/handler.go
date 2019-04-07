@@ -17,7 +17,6 @@
 package artifactmanager
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"time"
@@ -36,7 +35,6 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/ledger/recentstorage"
@@ -75,7 +73,6 @@ type MessageHandler struct {
 	DBContext     storage.DBContext `inject:""`
 	HotDataWaiter HotDataWaiter     `inject:""`
 
-	replayHandlers map[insolar.MessageType]insolar.MessageHandler
 	conf           *configuration.Ledger
 	middleware     *middleware
 	jetTreeUpdater *jetTreeUpdater
@@ -87,9 +84,8 @@ type MessageHandler struct {
 // NewMessageHandler creates new handler.
 func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 	h := &MessageHandler{
-		replayHandlers: map[insolar.MessageType]insolar.MessageHandler{},
-		handlers:       map[insolar.MessageType]insolar.MessageHandler{},
-		conf:           conf,
+		handlers: map[insolar.MessageType]insolar.MessageHandler{},
+		conf:     conf,
 	}
 	proc := &ProcedureMaker{
 		FetchJet: func() *FetchJet {
@@ -158,7 +154,6 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	h.jetTreeUpdater = newJetTreeUpdater(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
 
 	h.setHandlersForLight(m)
-	h.setReplayHandlers(m)
 
 	return nil
 }
@@ -256,39 +251,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 		),
 	)
 
-	// Validation.
-	h.Bus.MustRegister(insolar.TypeValidateRecord,
-		BuildMiddleware(h.handleValidateRecord,
-			m.addFieldsToLogger,
-			m.checkJet))
-
-	h.Bus.MustRegister(insolar.TypeValidationCheck,
-		BuildMiddleware(h.handleValidationCheck,
-			m.addFieldsToLogger,
-			m.checkJet))
-
-	h.Bus.MustRegister(insolar.TypeJetDrop,
-		BuildMiddleware(h.handleJetDrop,
-			m.addFieldsToLogger,
-			m.checkJet))
-}
-
-func (h *MessageHandler) setReplayHandlers(m *middleware) {
-	// Generic.
-	h.replayHandlers[insolar.TypeGetCode] = BuildMiddleware(h.handleGetCode, m.addFieldsToLogger)
-	h.replayHandlers[insolar.TypeGetDelegate] = BuildMiddleware(h.handleGetDelegate, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeGetChildren] = BuildMiddleware(h.handleGetChildren, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeSetRecord] = BuildMiddleware(h.handleSetRecord, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeUpdateObject] = BuildMiddleware(h.handleUpdateObject, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeRegisterChild] = BuildMiddleware(h.handleRegisterChild, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeSetBlob] = BuildMiddleware(h.handleSetBlob, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeGetObjectIndex] = BuildMiddleware(h.handleGetObjectIndex, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeGetPendingRequests] = BuildMiddleware(h.handleHasPendingRequests, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeGetJet] = BuildMiddleware(h.handleGetJet)
-
-	// Validation.
-	h.replayHandlers[insolar.TypeValidateRecord] = BuildMiddleware(h.handleValidateRecord, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeValidationCheck] = BuildMiddleware(h.handleValidationCheck, m.addFieldsToLogger, m.checkJet)
+	h.Bus.MustRegister(insolar.TypeValidateRecord, h.handleValidateRecord)
 }
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
@@ -781,90 +744,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 	return &reply.ID{ID: *child}, nil
 }
 
-func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.JetDrop)
-
-	if !hack.SkipValidation(ctx) {
-		for _, parcelBuff := range msg.Messages {
-			jetDropMsg, err := message.Deserialize(bytes.NewBuffer(parcelBuff))
-			if err != nil {
-				return nil, err
-			}
-			handler, ok := h.replayHandlers[jetDropMsg.Type()]
-			if !ok {
-				return nil, errors.New("unknown message type")
-			}
-
-			_, err = handler(ctx, &message.Parcel{Msg: jetDropMsg})
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	h.JetStorage.Update(
-		ctx, parcel.Pulse(), true, insolar.JetID(msg.JetID),
-	)
-
-	return &reply.OK{}, nil
-}
-
 func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.ValidateRecord)
-	jetID := jetFromContext(ctx)
-
-	h.IDLocker.Lock(msg.Object.Record())
-	defer h.IDLocker.Unlock(msg.Object.Record())
-
-	idx, err := h.ObjectStorage.GetObjectIndex(ctx, jetID, msg.Object.Record())
-	if err == insolar.ErrNotFound {
-		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Object, heavy)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch index from heavy")
-		}
-	} else if err != nil {
-		return nil, err
-	}
-
-	// Find node that has this state.
-	node, err := h.JetCoordinator.NodeForJet(ctx, jetID, parcel.Pulse(), msg.Object.Record().Pulse())
-	if err != nil {
-		return nil, err
-	}
-
-	// Send checking message.
-	genericReply, err := h.Bus.Send(ctx, &message.ValidationCheck{
-		Object:              msg.Object,
-		ValidatedState:      msg.State,
-		LatestStateApproved: idx.LatestStateApproved,
-	}, &insolar.MessageSendOptions{
-		Receiver: node,
-	})
-	if err != nil {
-		return nil, err
-	}
-	switch genericReply.(type) {
-	case *reply.OK:
-		if msg.IsValid {
-			idx.LatestStateApproved = &msg.State
-		} else {
-			idx.LatestState = idx.LatestStateApproved
-		}
-		idx.LatestUpdate = parcel.Pulse()
-		err = h.ObjectStorage.SetObjectIndex(ctx, jetID, msg.Object.Record(), idx)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to save object index")
-		}
-	case *reply.NotOK:
-		return nil, errors.New("validation sequence integrity failure")
-	default:
-		return nil, errors.New("handleValidateRecord: unexpected reply")
-	}
-
 	return &reply.OK{}, nil
 }
 
@@ -883,29 +763,6 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insola
 	buf := object.EncodeIndex(*idx)
 
 	return &reply.ObjectIndex{Index: buf}, nil
-}
-
-func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.ValidationCheck)
-
-	rec, err := h.RecordAccessor.ForID(ctx, msg.ValidatedState)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch state record")
-	}
-
-	virtRec := rec.Record
-	state, ok := virtRec.(object.State)
-	if !ok {
-		return nil, errors.New("failed to fetch state record")
-	}
-
-	approved := msg.LatestStateApproved
-	validated := state.PrevStateID()
-	if validated != nil && approved != nil && !approved.Equal(*validated) {
-		return &reply.NotOK{}, nil
-	}
-
-	return &reply.OK{}, nil
 }
 
 func (h *MessageHandler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeRecord, error) {

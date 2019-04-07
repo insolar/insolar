@@ -46,7 +46,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/network"
 )
 
 type handlerSuite struct {
@@ -1075,96 +1074,6 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 
 	indexMock.MinimockFinish()
 	pendingMock.MinimockFinish()
-}
-
-func (s *handlerSuite) TestMessageHandler_HandleValidationCheck() {
-	mc := minimock.NewController(s.T())
-	defer mc.Finish()
-	jetID := insolar.ID(*insolar.NewJetID(0, nil))
-
-	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
-	pendingMock := recentstorage.NewPendingStorageMock(s.T())
-
-	indexMock.AddObjectMock.Return()
-	pendingMock.AddPendingRequestMock.Return()
-	pendingMock.RemovePendingRequestMock.Return()
-
-	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetIndexStorageMock.Return(indexMock)
-	provideMock.GetPendingStorageMock.Return(pendingMock)
-
-	nodeMock := network.NewNetworkNodeMock(s.T())
-	nodeMock.RoleMock.Return(insolar.StaticRoleLightMaterial)
-	nodeNetworkMock := network.NewNodeNetworkMock(s.T())
-	nodeNetworkMock.GetOriginMock.Return(nodeMock)
-
-	jc := testutils.NewJetCoordinatorMock(mc)
-
-	mb := testutils.NewMessageBusMock(mc)
-	mb.MustRegisterMock.Return()
-	h := NewMessageHandler(&configuration.Ledger{
-		LightChainLimit: 3,
-	})
-	h.JetCoordinator = jc
-	h.Bus = mb
-	h.JetStorage = s.jetStorage
-	h.Nodes = s.nodeStorage
-	h.DBContext = s.db
-	h.ObjectStorage = s.objectStorage
-	h.RecordAccessor = s.recordAccessor
-	h.RecentStorageProvider = provideMock
-
-	err := h.Init(s.ctx)
-	require.NoError(s.T(), err)
-
-	s.T().Run("returns not ok when not valid", func(t *testing.T) {
-		virtRec := &object.AmendRecord{}
-		validatedStateID := object.NewRecordIDFromRecord(s.scheme, 0, virtRec)
-		rec := record.MaterialRecord{
-			Record: virtRec,
-			JetID:  insolar.JetID(jetID),
-		}
-		err := s.recordModifier.Set(s.ctx, *validatedStateID, rec)
-		require.NoError(t, err)
-
-		msg := message.ValidationCheck{
-			Object:              *genRandomRef(0),
-			ValidatedState:      *validatedStateID,
-			LatestStateApproved: genRandomID(0),
-		}
-
-		rep, err := h.handleValidationCheck(contextWithJet(s.ctx, jetID), &message.Parcel{
-			Msg: &msg,
-		})
-		require.NoError(t, err)
-		_, ok := rep.(*reply.NotOK)
-		assert.True(t, ok)
-	})
-
-	s.T().Run("returns ok when valid", func(t *testing.T) {
-		approvedStateID := *genRandomID(0)
-		virtRec := &object.AmendRecord{PrevState: approvedStateID}
-		validatedStateID := object.NewRecordIDFromRecord(s.scheme, 0, virtRec)
-		rec := record.MaterialRecord{
-			Record: virtRec,
-			JetID:  insolar.JetID(jetID),
-		}
-		err := s.recordModifier.Set(s.ctx, *validatedStateID, rec)
-		require.NoError(t, err)
-
-		msg := message.ValidationCheck{
-			Object:              *genRandomRef(0),
-			ValidatedState:      *validatedStateID,
-			LatestStateApproved: &approvedStateID,
-		}
-
-		rep, err := h.handleValidationCheck(contextWithJet(s.ctx, jetID), &message.Parcel{
-			Msg: &msg,
-		})
-		require.NoError(t, err)
-		_, ok := rep.(*reply.OK)
-		assert.True(t, ok)
-	})
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
