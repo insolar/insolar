@@ -5,9 +5,9 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/belt"
-	"github.com/insolar/insolar/insolar/belt/bus"
-	"github.com/insolar/insolar/insolar/belt/internal/flow"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/flow/internal/thread"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
@@ -16,14 +16,14 @@ const handleTimeout = 10 * time.Second
 
 type Handler struct {
 	handles struct {
-		past, present, future belt.MakeHandle
+		past, present, future flow.MakeHandle
 	}
-	controller *flow.Controller
+	controller *thread.Controller
 }
 
-func NewHandler(present belt.MakeHandle) *Handler {
+func NewHandler(present flow.MakeHandle) *Handler {
 	h := &Handler{
-		controller: flow.NewController(),
+		controller: thread.NewController(),
 	}
 	h.handles.present = present
 	return h
@@ -40,7 +40,7 @@ func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (ins
 		Parcel:  parcel,
 	}
 	go func() {
-		f := flow.NewFlow(msg, h.controller)
+		f := thread.NewThread(msg, h.controller)
 		err := f.Run(ctx, h.handles.present(msg))
 		inslogger.FromContext(ctx).Error("Handling failed", err)
 	}()

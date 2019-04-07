@@ -3,8 +3,8 @@ package artifactmanager
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar/belt"
-	"github.com/insolar/insolar/insolar/belt/bus"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
@@ -16,7 +16,7 @@ type GetObject struct {
 	Message bus.Message
 }
 
-func (s *GetObject) Present(ctx context.Context, f belt.Flow) error {
+func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 	waitJet := &WaitJet{
 		proc:    s.proc,
 		Message: s.Message,

@@ -1,9 +1,9 @@
-package belt
+package flow
 
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar/belt/bus"
+	"github.com/insolar/insolar/insolar/flow/bus"
 )
 
 // Handle is a one-function synchronous process that can call routines to do long processing.

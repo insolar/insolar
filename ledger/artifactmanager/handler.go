@@ -27,10 +27,10 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/belt"
-	"github.com/insolar/insolar/insolar/belt/bus"
-	"github.com/insolar/insolar/insolar/belt/handler"
 	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/flow/handler"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
@@ -77,7 +77,7 @@ type MessageHandler struct {
 	middleware     *middleware
 	jetTreeUpdater *jetTreeUpdater
 
-	BeltHandler *handler.Handler
+	FlowHandler *handler.Handler
 	handlers    map[insolar.MessageType]insolar.MessageHandler
 }
 
@@ -107,7 +107,7 @@ func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 		},
 	}
 
-	h.BeltHandler = handler.NewHandler(func(msg bus.Message) belt.Handle {
+	h.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
 		return (&Init{
 			proc: proc,
 
@@ -166,7 +166,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 		m.checkJet,
 	))
 
-	h.Bus.MustRegister(insolar.TypeGetObject, h.BeltHandler.WrapBusHandle)
+	h.Bus.MustRegister(insolar.TypeGetObject, h.FlowHandler.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeGetDelegate,
 		BuildMiddleware(h.handleGetDelegate,

@@ -14,7 +14,7 @@
 // limitations under the License.
 ///
 
-package belt
+package flow
 
 import (
 	"github.com/pkg/errors"

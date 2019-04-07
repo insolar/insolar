@@ -4,7 +4,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/belt/bus"
+	"github.com/insolar/insolar/insolar/flow/bus"
 )
 
 type ProcedureMaker struct {

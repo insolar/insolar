@@ -4,8 +4,8 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/belt"
-	"github.com/insolar/insolar/insolar/belt/bus"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
@@ -22,11 +22,11 @@ type WaitJet struct {
 	}
 }
 
-func (s *WaitJet) Present(ctx context.Context, f belt.Flow) error {
+func (s *WaitJet) Present(ctx context.Context, f flow.Flow) error {
 	pJet := s.proc.FetchJet()
 	pJet.Parcel = s.Message.Parcel
 	if err := f.Procedure(ctx, pJet); err != nil {
-		if err != belt.ErrCancelled {
+		if err != flow.ErrCancelled {
 			return f.Procedure(ctx, &ReturnReply{
 				ReplyTo: s.Message.ReplyTo,
 				Err:     err,

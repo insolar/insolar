@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/belt"
-	"github.com/insolar/insolar/insolar/belt/bus"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/pkg/errors"
 )
 
@@ -16,11 +16,11 @@ type Init struct {
 	Message bus.Message
 }
 
-func (s *Init) Future(ctx context.Context, f belt.Flow) error {
+func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 	return f.Migrate(ctx, s.Present)
 }
 
-func (s *Init) Present(ctx context.Context, f belt.Flow) error {
+func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	switch s.Message.Parcel.Message().Type() {
 	case insolar.TypeGetObject:
 		h := &GetObject{
@@ -33,6 +33,6 @@ func (s *Init) Present(ctx context.Context, f belt.Flow) error {
 	}
 }
 
-func (s *Init) Past(ctx context.Context, f belt.Flow) error {
+func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 	return f.Procedure(ctx, &ReturnReply{ReplyTo: s.Message.ReplyTo, Err: errors.New("no past handler")})
 }

@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar/belt"
+	"github.com/insolar/insolar/insolar/flow"
 )
 
 type CheckPermissions struct {
@@ -94,11 +94,11 @@ type SaveObject struct {
 
 // These functions represent message handling in different slots.
 
-func (s *SaveObject) Future(ctx context.Context, FLOW belt.Flow) {
+func (s *SaveObject) Future(ctx context.Context, FLOW flow.Flow) {
 	FLOW.Procedure(s.Present, nil)
 }
 
-func (s *SaveObject) Present(ctx context.Context, FLOW belt.Flow) {
+func (s *SaveObject) Present(ctx context.Context, FLOW flow.Flow) {
 	s.perms = &CheckPermissions{Node: s.Message.Metadata["node"]}
 	s.object = &GetObjectFromDB{Hash: string(s.Message.Payload)}
 	FLOW.Procedure(s.migrateToPast, s.perms)
@@ -124,11 +124,11 @@ func (s *SaveObject) Present(ctx context.Context, FLOW belt.Flow) {
 	}
 }
 
-func (s *SaveObject) Past(ctx context.Context, FLOW belt.Flow) {
+func (s *SaveObject) Past(ctx context.Context, FLOW flow.Flow) {
 	FLOW.Procedure(nil, &SendReply{Message: "Too late to save object"})
 }
 
-func (s *SaveObject) migrateToPast(ctx context.Context, FLOW belt.Flow) {
+func (s *SaveObject) migrateToPast(ctx context.Context, FLOW flow.Flow) {
 	if s.perms.Result.AllowedToSave {
 		FLOW.Procedure(nil, &SendReply{Message: "You shall not pass!"})
 	} else {

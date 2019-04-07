@@ -1,4 +1,4 @@
-package flow
+package thread
 
 type Controller struct {
 	cancel chan struct{}

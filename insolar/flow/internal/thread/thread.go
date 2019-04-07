@@ -14,36 +14,36 @@
 // limitations under the License.
 ///
 
-package flow
+package thread
 
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar/belt"
-	"github.com/insolar/insolar/insolar/belt/bus"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/pkg/errors"
 )
 
-type Flow struct {
+type Thread struct {
 	controller *Controller
 	cancel     <-chan struct{}
-	procedures map[belt.Procedure]chan error
+	procedures map[flow.Procedure]chan error
 	message    bus.Message
 	migrated   bool
 }
 
-func NewFlow(msg bus.Message, controller *Controller) *Flow {
-	return &Flow{
+func NewThread(msg bus.Message, controller *Controller) *Thread {
+	return &Thread{
 		controller: controller,
 		cancel:     controller.Cancel(),
-		procedures: map[belt.Procedure]chan error{},
+		procedures: map[flow.Procedure]chan error{},
 		message:    msg,
 	}
 }
 
-func (f *Flow) Handle(ctx context.Context, handle belt.Handle) error {
+func (f *Thread) Handle(ctx context.Context, handle flow.Handle) error {
 	if f.cancelled() {
-		return belt.ErrCancelled
+		return flow.ErrCancelled
 	}
 
 	err := handle(ctx, f)
@@ -52,15 +52,15 @@ func (f *Flow) Handle(ctx context.Context, handle belt.Handle) error {
 	}
 
 	if f.cancelled() {
-		return belt.ErrCancelled
+		return flow.ErrCancelled
 	}
 
 	return nil
 }
 
-func (f *Flow) Procedure(ctx context.Context, p belt.Procedure) error {
+func (f *Thread) Procedure(ctx context.Context, p flow.Procedure) error {
 	if f.cancelled() {
-		return belt.ErrCancelled
+		return flow.ErrCancelled
 	}
 
 	if p == nil {
@@ -72,33 +72,33 @@ func (f *Flow) Procedure(ctx context.Context, p belt.Procedure) error {
 	select {
 	case <-f.cancel:
 		cancel()
-		return belt.ErrCancelled
+		return flow.ErrCancelled
 	case err = <-f.procedure(ctx, p):
 	}
 
 	return err
 }
 
-func (f *Flow) Migrate(ctx context.Context, to belt.Handle) error {
+func (f *Thread) Migrate(ctx context.Context, to flow.Handle) error {
 	if f.migrated {
 		return errors.New("migrate called on migrated flow")
 	}
 
 	<-f.cancel
 	f.migrated = true
-	subFlow := NewFlow(f.message, f.controller)
+	subFlow := NewThread(f.message, f.controller)
 	return to(ctx, subFlow)
 }
 
 // =====================================================================================================================
 
-func (f *Flow) Run(ctx context.Context, h belt.Handle) error {
+func (f *Thread) Run(ctx context.Context, h flow.Handle) error {
 	return h(ctx, f)
 }
 
 // =====================================================================================================================
 
-func (f *Flow) procedure(ctx context.Context, a belt.Procedure) <-chan error {
+func (f *Thread) procedure(ctx context.Context, a flow.Procedure) <-chan error {
 	if d, ok := f.procedures[a]; ok {
 		return d
 	}
@@ -111,7 +111,7 @@ func (f *Flow) procedure(ctx context.Context, a belt.Procedure) <-chan error {
 	return done
 }
 
-func (f *Flow) cancelled() bool {
+func (f *Thread) cancelled() bool {
 	select {
 	case <-f.cancel:
 		return true
