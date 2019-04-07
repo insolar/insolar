@@ -91,8 +91,32 @@ func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 		handlers:       map[insolar.MessageType]insolar.MessageHandler{},
 		conf:           conf,
 	}
+	proc := &ProcedureMaker{
+		FetchJet: func() *FetchJet {
+			return &FetchJet{
+				JetAccessor: h.JetStorage,
+				Coordinator: h.JetCoordinator,
+				JetUpdater:  h.jetTreeUpdater,
+			}
+		},
+		WaitHot: func() *WaitHot {
+			return &WaitHot{
+				Waiter: h.HotDataWaiter,
+			}
+		},
+		GetObject: func() *ProcGetObject {
+			return &ProcGetObject{
+				Handler: h,
+			}
+		},
+	}
+
 	h.BeltHandler = handler.NewHandler(func(msg bus.Message) belt.Handle {
-		return (&Sorter{Message: msg, handler: h}).Present
+		return (&Init{
+			proc: proc,
+
+			Message: msg,
+		}).Present
 	})
 	return h
 }

@@ -32,6 +32,11 @@ type Flow interface {
 	// Jump instantly changes Handle. It MUST be used instead of calling other Handles directly.
 	Jump(to Handle)
 
+	// Handle gives control to another handle and waits for its return. Consider it "calling" another handler.
+	// If cancellation happens during execution of that handle, the callie will be migrated and the caller will be
+	// interrupted.
+	Handle(ctx context.Context, handle Handle)
+
 	// Yield starts routine and blocks Handle execution until cancellation happens or routine returns.
 	//
 	// If cancellation happens first, Handle will be migrated.

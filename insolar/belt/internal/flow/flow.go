@@ -44,6 +44,10 @@ func (c *Flow) Jump(to belt.Handle) {
 	panic(cancelPanic{migrateTo: to})
 }
 
+func (c *Flow) Handle(ctx context.Context, handle belt.Handle) {
+	c.handle(ctx, handle)
+}
+
 func (c *Flow) Yield(migrate belt.Handle, p belt.Procedure) {
 	if p == nil && migrate == nil {
 		panic(cancelPanic{})

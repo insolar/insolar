@@ -21,57 +21,6 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 )
 
-// GetObjectRedirectReply is a redirect-reply for get object
-type GetObjectRedirectReply struct {
-	Receiver *insolar.Reference
-	Token    insolar.DelegationToken
-
-	StateID *insolar.ID
-}
-
-// NewGetObjectRedirectReply return new GetObjectRedirectReply
-func NewGetObjectRedirectReply(
-	factory insolar.DelegationTokenFactory, parcel insolar.Parcel, receiver *insolar.Reference, state *insolar.ID,
-) (*GetObjectRedirectReply, error) {
-	var err error
-	rep := GetObjectRedirectReply{
-		Receiver: receiver,
-		StateID:  state,
-	}
-	redirectedMessage := rep.Redirected(parcel.Message())
-	sender := parcel.GetSender()
-	rep.Token, err = factory.IssueGetObjectRedirect(&sender, redirectedMessage)
-	if err != nil {
-		return nil, err
-	}
-	return &rep, nil
-}
-
-// GetReceiver returns node reference to send message to.
-func (r *GetObjectRedirectReply) GetReceiver() *insolar.Reference {
-	return r.Receiver
-}
-
-// GetToken returns delegation token.
-func (r *GetObjectRedirectReply) GetToken() insolar.DelegationToken {
-	return r.Token
-}
-
-// Type returns type of the reply
-func (r *GetObjectRedirectReply) Type() insolar.ReplyType {
-	return TypeGetObjectRedirect
-}
-
-// Redirected creates redirected message from redirect data.
-func (r *GetObjectRedirectReply) Redirected(genericMsg insolar.Message) insolar.Message {
-	msg := genericMsg.(*message.GetObject)
-	return &message.GetObject{
-		State:    r.StateID,
-		Head:     msg.Head,
-		Approved: msg.Approved,
-	}
-}
-
 // GetChildrenRedirectReply is a redirect reply for get children.
 type GetChildrenRedirectReply struct {
 	Receiver *insolar.Reference
