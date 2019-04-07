@@ -14,7 +14,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type ProcGetObject struct {
+type SendObject struct {
 	Handler *MessageHandler
 
 	Message bus.Message
@@ -22,7 +22,7 @@ type ProcGetObject struct {
 	Index   object.Lifeline
 }
 
-func (p *ProcGetObject) Proceed(ctx context.Context) error {
+func (p *SendObject) Proceed(ctx context.Context) error {
 	ctx = contextWithJet(ctx, insolar.ID(p.Jet))
 	r := bus.Reply{}
 	r.Reply, r.Err = p.handle(ctx, p.Message.Parcel)
@@ -30,7 +30,7 @@ func (p *ProcGetObject) Proceed(ctx context.Context) error {
 	return nil
 }
 
-func (p *ProcGetObject) handle(
+func (p *SendObject) handle(
 	ctx context.Context, parcel insolar.Parcel,
 ) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetObject)

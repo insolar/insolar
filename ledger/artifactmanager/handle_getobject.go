@@ -43,7 +43,7 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 		})
 	}
 
-	p := s.dep.GetObject(&ProcGetObject{
+	p := s.dep.SendObject(&SendObject{
 		Jet:     jet.Res.Jet,
 		Index:   idx.Res.Index,
 		Message: s.Message,

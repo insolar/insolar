@@ -12,7 +12,7 @@ type DepInjector struct {
 	WaitHot  func(*WaitHot) *WaitHot
 	GetIndex func(*GetIndex) *GetIndex
 
-	GetObject func(p *ProcGetObject) *ProcGetObject
+	SendObject func(p *SendObject) *SendObject
 }
 
 type ReturnReply struct {

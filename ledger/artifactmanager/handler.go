@@ -108,7 +108,7 @@ func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 			return p
 		},
 
-		GetObject: func(p *ProcGetObject) *ProcGetObject {
+		SendObject: func(p *SendObject) *SendObject {
 			p.Handler = h
 			return p
 		},
