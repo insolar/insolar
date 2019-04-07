@@ -20,6 +20,7 @@ type ReturnReply struct {
 	Reply   insolar.Reply
 }
 
-func (p *ReturnReply) Proceed(context.Context) {
+func (p *ReturnReply) Proceed(context.Context) error {
 	p.ReplyTo <- bus.Reply{Reply: p.Reply, Err: p.Err}
+	return nil
 }

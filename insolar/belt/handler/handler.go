@@ -40,7 +40,7 @@ func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (ins
 		Parcel:  parcel,
 	}
 	go func() {
-		f := flow.NewFlow(ctx, msg, h.controller)
+		f := flow.NewFlow(msg, h.controller)
 		err := f.Run(ctx, h.handles.present(msg))
 		inslogger.FromContext(ctx).Error("Handling failed", err)
 	}()

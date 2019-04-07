@@ -95,43 +95,43 @@ type SaveObject struct {
 // These functions represent message handling in different slots.
 
 func (s *SaveObject) Future(ctx context.Context, FLOW belt.Flow) {
-	FLOW.Yield(s.Present, nil)
+	FLOW.Procedure(s.Present, nil)
 }
 
 func (s *SaveObject) Present(ctx context.Context, FLOW belt.Flow) {
 	s.perms = &CheckPermissions{Node: s.Message.Metadata["node"]}
 	s.object = &GetObjectFromDB{Hash: string(s.Message.Payload)}
-	FLOW.Yield(s.migrateToPast, s.perms)
-	FLOW.Yield(s.migrateToPast, s.object)
+	FLOW.Procedure(s.migrateToPast, s.perms)
+	FLOW.Procedure(s.migrateToPast, s.object)
 
 	if !s.perms.Result.AllowedToSave {
-		FLOW.Yield(nil, &SendReply{Message: "You shall not pass!"})
+		FLOW.Procedure(nil, &SendReply{Message: "You shall not pass!"})
 		return
 	}
 
 	if s.object.Result.Exists {
-		FLOW.Yield(nil, &SendReply{Message: "Object already exists"})
+		FLOW.Procedure(nil, &SendReply{Message: "Object already exists"})
 		return
 	}
 
 	saved := &SaveObjectToDB{Hash: string(s.Message.Payload)}
-	FLOW.Yield(s.migrateToPast, saved)
+	FLOW.Procedure(s.migrateToPast, saved)
 
 	if saved.Result.Err != nil {
-		FLOW.Yield(nil, &SendReply{Message: "Failed to save object"})
+		FLOW.Procedure(nil, &SendReply{Message: "Failed to save object"})
 	} else {
-		FLOW.Yield(nil, &SendReply{Message: fmt.Sprintf("Object saved. ID: %d", saved.Result.ID)})
+		FLOW.Procedure(nil, &SendReply{Message: fmt.Sprintf("Object saved. ID: %d", saved.Result.ID)})
 	}
 }
 
 func (s *SaveObject) Past(ctx context.Context, FLOW belt.Flow) {
-	FLOW.Yield(nil, &SendReply{Message: "Too late to save object"})
+	FLOW.Procedure(nil, &SendReply{Message: "Too late to save object"})
 }
 
 func (s *SaveObject) migrateToPast(ctx context.Context, FLOW belt.Flow) {
 	if s.perms.Result.AllowedToSave {
-		FLOW.Yield(nil, &SendReply{Message: "You shall not pass!"})
+		FLOW.Procedure(nil, &SendReply{Message: "You shall not pass!"})
 	} else {
-		FLOW.Yield(nil, &Redirect{ToNode: "node that saves objects now"})
+		FLOW.Procedure(nil, &Redirect{ToNode: "node that saves objects now"})
 	}
 }

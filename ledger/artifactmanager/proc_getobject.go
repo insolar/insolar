@@ -21,11 +21,12 @@ type ProcGetObject struct {
 	JetID   insolar.JetID
 }
 
-func (p *ProcGetObject) Proceed(ctx context.Context) {
+func (p *ProcGetObject) Proceed(ctx context.Context) error {
 	ctx = contextWithJet(ctx, insolar.ID(p.JetID))
 	r := bus.Reply{}
 	r.Reply, r.Err = p.handle(ctx, p.Message.Parcel)
 	p.Message.ReplyTo <- r
+	return nil
 }
 
 func (p *ProcGetObject) handle(

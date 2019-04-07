@@ -21,86 +21,101 @@ import (
 
 	"github.com/insolar/insolar/insolar/belt"
 	"github.com/insolar/insolar/insolar/belt/bus"
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
 )
 
 type Flow struct {
 	controller *Controller
-	procedures map[belt.Procedure]chan struct{}
+	cancel     <-chan struct{}
+	procedures map[belt.Procedure]chan error
 	message    bus.Message
-	context    context.Context
+	migrated   bool
 }
 
-func NewFlow(ctx context.Context, msg bus.Message, controller *Controller) *Flow {
+func NewFlow(msg bus.Message, controller *Controller) *Flow {
 	return &Flow{
 		controller: controller,
-		procedures: map[belt.Procedure]chan struct{}{},
+		cancel:     controller.Cancel(),
+		procedures: map[belt.Procedure]chan error{},
 		message:    msg,
-		context:    ctx,
 	}
 }
 
-func (c *Flow) Jump(to belt.Handle) {
-	panic(cancelPanic{migrateTo: to})
-}
-
-func (c *Flow) Handle(ctx context.Context, handle belt.Handle) {
-	c.handle(ctx, handle)
-}
-
-func (c *Flow) Yield(migrate belt.Handle, p belt.Procedure) {
-	if p == nil && migrate == nil {
-		panic(cancelPanic{})
+func (f *Flow) Handle(ctx context.Context, handle belt.Handle) error {
+	if f.cancelled() {
+		return belt.ErrCancelled
 	}
 
-	if p == nil {
-		<-c.controller.Cancel()
-		panic(cancelPanic{migrateTo: migrate})
+	err := handle(ctx, f)
+	if err != nil {
+		return err
 	}
 
-	select {
-	case <-c.controller.Cancel():
-		panic(cancelPanic{migrateTo: migrate})
-	case <-c.proceed(p):
+	if f.cancelled() {
+		return belt.ErrCancelled
 	}
-}
 
-// =====================================================================================================================
-
-func (c *Flow) Run(ctx context.Context, h belt.Handle) error {
-	c.handle(ctx, h)
 	return nil
 }
 
+func (f *Flow) Procedure(ctx context.Context, p belt.Procedure) error {
+	if f.cancelled() {
+		return belt.ErrCancelled
+	}
+
+	if p == nil {
+		return errors.New("procedure called with nil procedure")
+	}
+
+	ctx, cancel := context.WithCancel(ctx)
+	var err error
+	select {
+	case <-f.cancel:
+		cancel()
+		return belt.ErrCancelled
+	case err = <-f.procedure(ctx, p):
+	}
+
+	return err
+}
+
+func (f *Flow) Migrate(ctx context.Context, to belt.Handle) error {
+	if f.migrated {
+		return errors.New("migrate called on migrated flow")
+	}
+
+	<-f.cancel
+	f.migrated = true
+	subFlow := NewFlow(f.message, f.controller)
+	return to(ctx, subFlow)
+}
+
 // =====================================================================================================================
 
-type cancelPanic struct {
-	migrateTo belt.Handle
+func (f *Flow) Run(ctx context.Context, h belt.Handle) error {
+	return h(ctx, f)
 }
 
-func (c *Flow) handle(ctx context.Context, h belt.Handle) {
-	defer func() {
-		if r := recover(); r != nil {
-			if cancel, ok := r.(cancelPanic); ok {
-				if cancel.migrateTo != nil {
-					c.handle(ctx, cancel.migrateTo)
-				}
-			} else {
-				inslogger.FromContext(ctx).Panic(r)
-			}
-		}
-	}()
-	h(ctx, c)
-}
+// =====================================================================================================================
 
-func (c *Flow) proceed(a belt.Procedure) <-chan struct{} {
-	if d, ok := c.procedures[a]; ok {
+func (f *Flow) procedure(ctx context.Context, a belt.Procedure) <-chan error {
+	if d, ok := f.procedures[a]; ok {
 		return d
 	}
 
-	done := make(chan struct{})
-	c.procedures[a] = done
-	a.Proceed(c.context)
-	close(done)
+	done := make(chan error, 1)
+	f.procedures[a] = done
+	go func() {
+		done <- a.Proceed(ctx)
+	}()
 	return done
+}
+
+func (f *Flow) cancelled() bool {
+	select {
+	case <-f.cancel:
+		return true
+	default:
+		return false
+	}
 }

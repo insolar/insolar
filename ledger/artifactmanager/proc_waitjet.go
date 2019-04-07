@@ -20,21 +20,19 @@ type FetchJet struct {
 	Res struct {
 		JetID insolar.JetID
 		Miss  bool
-		Err   error
 	}
 }
 
-func (p *FetchJet) Proceed(ctx context.Context) {
+func (p *FetchJet) Proceed(ctx context.Context) error {
 	msg := p.Parcel.Message()
 	if msg.DefaultTarget() == nil {
-		p.Res.Err = errors.New("unexpected message")
-		return
+		return errors.New("unexpected message")
 	}
 
 	// Hack to temporary allow any genesis request.
 	if p.Parcel.Pulse() <= insolar.FirstPulseNumber {
 		p.Res.JetID = *insolar.NewJetID(0, nil)
-		return
+		return nil
 	}
 
 	// Check token jet.
@@ -48,8 +46,7 @@ func (p *FetchJet) Proceed(ctx context.Context) {
 			pulse = tm.State.Pulse()
 		case *message.GetChildren:
 			if tm.FromChild == nil {
-				p.Res.Err = errors.New("fetching children without child pointer is forbidden")
-				return
+				return errors.New("fetching children without child pointer is forbidden")
 			}
 			pulse = tm.FromChild.Pulse()
 		case *message.GetRequest:
@@ -65,7 +62,7 @@ func (p *FetchJet) Proceed(ctx context.Context) {
 		}
 
 		p.Res.JetID = jetID
-		return
+		return nil
 	}
 
 	// Calculate jet for current pulse.
@@ -75,8 +72,7 @@ func (p *FetchJet) Proceed(ctx context.Context) {
 	} else {
 		j, err := p.JetUpdater.fetchJet(ctx, *msg.DefaultTarget().Record(), p.Parcel.Pulse())
 		if err != nil {
-			p.Res.Err = errors.Wrap(err, "failed to fetch jet tree")
-			return
+			return errors.Wrap(err, "failed to fetch jet tree")
 		}
 
 		jetID = *j
@@ -85,19 +81,19 @@ func (p *FetchJet) Proceed(ctx context.Context) {
 	// Check if jet is ours.
 	node, err := p.Coordinator.LightExecutorForJet(ctx, jetID, p.Parcel.Pulse())
 	if err != nil {
-		p.Res.Err = errors.Wrap(err, "failed to calculate executor for jet")
-		return
+		return errors.Wrap(err, "failed to calculate executor for jet")
 	}
 
 	if *node != p.Coordinator.Me() {
 		p.Res.Miss = true
 		p.Res.JetID = insolar.JetID(jetID)
-		return
+		return nil
 	}
 
 	ctx = addJetIDToLogger(ctx, jetID)
 
 	p.Res.JetID = insolar.JetID(jetID)
+	return nil
 }
 
 type WaitHot struct {
@@ -111,23 +107,24 @@ type WaitHot struct {
 	}
 }
 
-func (p *WaitHot) Proceed(ctx context.Context) {
+func (p *WaitHot) Proceed(ctx context.Context) error {
 	parcel := p.Parcel
 	// Hack is needed for genesis:
 	// because we don't have hot data on first pulse and without this we would stale.
 	if parcel.Pulse() <= insolar.FirstPulseNumber {
-		return
+		return nil
 	}
 
 	// If the call is a call in redirect-chain
 	// skip waiting for the hot records
 	if parcel.DelegationToken() != nil {
-		return
+		return nil
 	}
 
 	err := p.Waiter.Wait(ctx, insolar.ID(p.JetID))
 	if err != nil {
 		p.Res.Timeout = true
-		return
 	}
+
+	return nil
 }

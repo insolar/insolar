@@ -22,27 +22,25 @@ func _() {
 	_ = x[TypeGetChildren-11]
 	_ = x[TypeUpdateObject-12]
 	_ = x[TypeRegisterChild-13]
-	_ = x[TypeJetDrop-14]
-	_ = x[TypeSetRecord-15]
-	_ = x[TypeValidateRecord-16]
-	_ = x[TypeSetBlob-17]
-	_ = x[TypeGetObjectIndex-18]
-	_ = x[TypeGetPendingRequests-19]
-	_ = x[TypeHotRecords-20]
-	_ = x[TypeGetJet-21]
-	_ = x[TypeAbandonedRequestsNotification-22]
-	_ = x[TypeGetRequest-23]
-	_ = x[TypeGetPendingRequestID-24]
-	_ = x[TypeValidationCheck-25]
-	_ = x[TypeHeavyStartStop-26]
-	_ = x[TypeHeavyPayload-27]
-	_ = x[TypeBootstrapRequest-28]
-	_ = x[TypeNodeSignRequest-29]
+	_ = x[TypeSetRecord-14]
+	_ = x[TypeValidateRecord-15]
+	_ = x[TypeSetBlob-16]
+	_ = x[TypeGetObjectIndex-17]
+	_ = x[TypeGetPendingRequests-18]
+	_ = x[TypeHotRecords-19]
+	_ = x[TypeGetJet-20]
+	_ = x[TypeAbandonedRequestsNotification-21]
+	_ = x[TypeGetRequest-22]
+	_ = x[TypeGetPendingRequestID-23]
+	_ = x[TypeHeavyStartStop-24]
+	_ = x[TypeHeavyPayload-25]
+	_ = x[TypeBootstrapRequest-26]
+	_ = x[TypeNodeSignRequest-27]
 }
 
-const _MessageType_name = "TypeCallMethodTypeCallConstructorTypeReturnResultsTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypePendingFinishedTypeStillExecutingTypeGetCodeTypeGetObjectTypeGetDelegateTypeGetChildrenTypeUpdateObjectTypeRegisterChildTypeJetDropTypeSetRecordTypeValidateRecordTypeSetBlobTypeGetObjectIndexTypeGetPendingRequestsTypeHotRecordsTypeGetJetTypeAbandonedRequestsNotificationTypeGetRequestTypeGetPendingRequestIDTypeValidationCheckTypeHeavyStartStopTypeHeavyPayloadTypeBootstrapRequestTypeNodeSignRequest"
+const _MessageType_name = "TypeCallMethodTypeCallConstructorTypeReturnResultsTypeExecutorResultsTypeValidateCaseBindTypeValidationResultsTypePendingFinishedTypeStillExecutingTypeGetCodeTypeGetObjectTypeGetDelegateTypeGetChildrenTypeUpdateObjectTypeRegisterChildTypeSetRecordTypeValidateRecordTypeSetBlobTypeGetObjectIndexTypeGetPendingRequestsTypeHotRecordsTypeGetJetTypeAbandonedRequestsNotificationTypeGetRequestTypeGetPendingRequestIDTypeHeavyStartStopTypeHeavyPayloadTypeBootstrapRequestTypeNodeSignRequest"
 
-var _MessageType_index = [...]uint16{0, 14, 33, 50, 69, 89, 110, 129, 147, 158, 171, 186, 201, 217, 234, 245, 258, 276, 287, 305, 327, 341, 351, 384, 398, 421, 440, 458, 474, 494, 513}
+var _MessageType_index = [...]uint16{0, 14, 33, 50, 69, 89, 110, 129, 147, 158, 171, 186, 201, 217, 234, 247, 265, 276, 294, 316, 330, 340, 373, 387, 410, 428, 444, 464, 483}
 
 func (i MessageType) String() string {
 	if i >= MessageType(len(_MessageType_index)-1) {
