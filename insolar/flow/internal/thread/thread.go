@@ -74,6 +74,7 @@ func (f *Thread) Procedure(ctx context.Context, p flow.Procedure) error {
 		cancel()
 		return flow.ErrCancelled
 	case err = <-f.procedure(ctx, p):
+		cancel()
 	}
 
 	return err

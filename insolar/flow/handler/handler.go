@@ -18,7 +18,7 @@ const handleTimeout = 10 * time.Second
 
 type Handler struct {
 	handles struct {
-		past, present, future flow.MakeHandle
+		present flow.MakeHandle
 	}
 	controller *thread.Controller
 }

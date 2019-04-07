@@ -92,8 +92,6 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 		return nil
 	}
 
-	ctx = addJetIDToLogger(ctx, jetID)
-
 	p.Res.Jet = insolar.JetID(jetID)
 	return nil
 }
