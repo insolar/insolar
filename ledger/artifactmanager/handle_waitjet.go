@@ -27,10 +27,7 @@ func (s *WaitJet) Present(ctx context.Context, f flow.Flow) error {
 		if err == flow.ErrCancelled {
 			return err
 		}
-		return f.Procedure(ctx, &ReturnReply{
-			ReplyTo: s.Message.ReplyTo,
-			Err:     err,
-		})
+		return err
 	}
 
 	if jet.Res.Miss {
@@ -52,10 +49,14 @@ func (s *WaitJet) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 	if hot.Res.Timeout {
-		return f.Procedure(ctx, &ReturnReply{
+		rep := &ReturnReply{
 			ReplyTo: s.Message.ReplyTo,
 			Reply:   &reply.Error{ErrType: reply.ErrHotDataTimeout},
-		})
+		}
+		if err := f.Procedure(ctx, rep); err != nil {
+			return err
+		}
+		return errors.New("hot waiter timeout")
 	}
 
 	s.Res.Jet = jet.Res.Jet

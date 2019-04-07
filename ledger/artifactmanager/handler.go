@@ -27,7 +27,6 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/handler"
@@ -60,6 +59,7 @@ type MessageHandler struct {
 
 	BlobModifier blob.Modifier `inject:""`
 	BlobAccessor blob.Accessor `inject:""`
+	Blobs        blob.Storage  `inject:""`
 
 	IDLocker storage.IDLocker `inject:""`
 
@@ -107,9 +107,13 @@ func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 			p.Dep.Bus = h.Bus
 			return p
 		},
-
 		SendObject: func(p *SendObject) *SendObject {
-			p.Handler = h
+			p.Dep.Jets = h.JetStorage
+			p.Dep.Blobs = h.Blobs
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.JetUpdater = h.jetTreeUpdater
+			p.Dep.Bus = h.Bus
+			p.Dep.RecordAccessor = h.RecordAccessor
 			return p
 		},
 	}
@@ -847,39 +851,40 @@ func (h *MessageHandler) saveCodeFromHeavy(
 	return rep, nil
 }
 
-func (h *MessageHandler) fetchObject(
-	ctx context.Context, obj insolar.Reference, node insolar.Reference, stateID *insolar.ID, pulse insolar.PulseNumber,
-) (*reply.Object, error) {
-	sender := BuildSender(
-		h.Bus.Send,
-		followRedirectSender(h.Bus),
-		retryJetSender(pulse, h.JetStorage),
-	)
-	genericReply, err := sender(
-		ctx,
-		&message.GetObject{
-			Head:     obj,
-			Approved: false,
-			State:    stateID,
-		},
-		&insolar.MessageSendOptions{
-			Receiver: &node,
-			Token:    &delegationtoken.GetObjectRedirectToken{},
-		},
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch object state")
-	}
-	if rep, ok := genericReply.(*reply.Error); ok {
-		return nil, rep.Error()
-	}
-
-	rep, ok := genericReply.(*reply.Object)
-	if !ok {
-		return nil, fmt.Errorf("failed to fetch object state: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
-	}
-	return rep, nil
-}
+//
+// func (h *MessageHandler) fetchObject(
+// 	ctx context.Context, obj insolar.Reference, node insolar.Reference, stateID *insolar.ID, pulse insolar.PulseNumber,
+// ) (*reply.Object, error) {
+// 	sender := BuildSender(
+// 		h.Bus.Send,
+// 		followRedirectSender(h.Bus),
+// 		retryJetSender(pulse, h.JetStorage),
+// 	)
+// 	genericReply, err := sender(
+// 		ctx,
+// 		&message.GetObject{
+// 			Head:     obj,
+// 			Approved: false,
+// 			State:    stateID,
+// 		},
+// 		&insolar.MessageSendOptions{
+// 			Receiver: &node,
+// 			Token:    &delegationtoken.GetObjectRedirectToken{},
+// 		},
+// 	)
+// 	if err != nil {
+// 		return nil, errors.Wrap(err, "failed to fetch object state")
+// 	}
+// 	if rep, ok := genericReply.(*reply.Error); ok {
+// 		return nil, rep.Error()
+// 	}
+//
+// 	rep, ok := genericReply.(*reply.Object)
+// 	if !ok {
+// 		return nil, fmt.Errorf("failed to fetch object state: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
+// 	}
+// 	return rep, nil
+// }
 
 func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	logger := inslogger.FromContext(ctx)
