@@ -13,125 +13,141 @@ type CheckPermissions struct {
 	Node string
 
 	// We can group return parameters in build-in struct for clarity.
-	Result struct {
+	Res struct {
 		AllowedToSave bool
 	}
 }
 
-func (a *CheckPermissions) Proceed(context.Context) {
+func (a *CheckPermissions) Proceed(context.Context) error {
 	// Check for node permissions.
-	a.Result.AllowedToSave = true
+	a.Res.AllowedToSave = true
+	return nil
 }
 
 type GetObjectFromDB struct {
-	DBConnection *bytes.Buffer
-
 	Hash string
 
-	Result struct {
+	Res struct {
 		ID     int
 		Exists bool
 	}
+	// We can group dependencies in build-in struct for clarity.
+	Dep struct {
+		DBConnection *bytes.Buffer
+	}
 }
 
-func (a *GetObjectFromDB) Proceed(context.Context) {
+func (a *GetObjectFromDB) Proceed(context.Context) error {
 	b := make([]byte, 10)
-	id, err := a.DBConnection.Read(b)
+	id, err := a.Dep.DBConnection.Read(b)
 	if err != nil {
-		return
+		return err
 	}
-	a.Result.Exists = true
-	a.Result.ID = id
+	a.Res.Exists = true
+	a.Res.ID = id
+	return nil
 }
 
 type SaveObjectToDB struct {
-	DBConnection *bytes.Buffer
-
 	Hash string
 
-	Result struct {
-		ID  int
-		Err error
+	Res struct {
+		ID int
+	}
+	Dep struct {
+		DBConnection *bytes.Buffer
 	}
 }
 
-func (a *SaveObjectToDB) Proceed(context.Context) {
-	id, err := a.DBConnection.Write([]byte(a.Hash))
+func (a *SaveObjectToDB) Proceed(context.Context) error {
+	id, err := a.Dep.DBConnection.Write([]byte(a.Hash))
 	if err != nil {
-		a.Result.Err = err
-		return
+		return err
 	}
-	a.Result.ID = id
+	a.Res.ID = id
+	return nil
 }
 
 type SendReply struct {
 	Message string
 }
 
-func (a *SendReply) Proceed(context.Context) {
+func (a *SendReply) Proceed(context.Context) error {
 	// Send reply over network.
+	return nil
 }
 
 type Redirect struct {
 	ToNode string
 }
 
-func (a *Redirect) Proceed(context.Context) {
+func (a *Redirect) Proceed(context.Context) error {
 	// Redirect to other node.
+	return nil
 }
 
 // =====================================================================================================================
 
 // SaveObject describes handling "save object" message flow.
 type SaveObject struct {
-	DBConnection *bytes.Buffer
-	Message      *message.Message
+	Message *message.Message
 
 	// Keep internal state unexported.
 	perms  *CheckPermissions
 	object *GetObjectFromDB
+
+	Dep struct {
+		DBConnection *bytes.Buffer
+	}
 }
 
-// These functions represent message handling in different slots.
+// These functions represent message handling in different time slots.
 
-func (s *SaveObject) Future(ctx context.Context, FLOW flow.Flow) {
-	FLOW.Procedure(s.Present, nil)
+func (s *SaveObject) Future(ctx context.Context, f flow.Flow) error {
+	return f.Migrate(ctx, s.Present)
 }
 
-func (s *SaveObject) Present(ctx context.Context, FLOW flow.Flow) {
+func (s *SaveObject) Present(ctx context.Context, f flow.Flow) error {
 	s.perms = &CheckPermissions{Node: s.Message.Metadata["node"]}
-	s.object = &GetObjectFromDB{Hash: string(s.Message.Payload)}
-	FLOW.Procedure(s.migrateToPast, s.perms)
-	FLOW.Procedure(s.migrateToPast, s.object)
-
-	if !s.perms.Result.AllowedToSave {
-		FLOW.Procedure(nil, &SendReply{Message: "You shall not pass!"})
-		return
+	if err := f.Procedure(ctx, s.perms); err != nil {
+		return err
 	}
 
-	if s.object.Result.Exists {
-		FLOW.Procedure(nil, &SendReply{Message: "Object already exists"})
-		return
+	s.object = &GetObjectFromDB{Hash: string(s.Message.Payload)}
+	if err := f.Procedure(ctx, s.object); err != nil {
+		if err != flow.ErrCancelled {
+			return err
+		}
+		return f.Migrate(ctx, s.migrate)
+	}
+
+	if !s.perms.Res.AllowedToSave {
+		return f.Procedure(nil, &SendReply{Message: "You shall not pass!"})
+	}
+
+	if s.object.Res.Exists {
+		return f.Procedure(nil, &SendReply{Message: "Object already exists"})
 	}
 
 	saved := &SaveObjectToDB{Hash: string(s.Message.Payload)}
-	FLOW.Procedure(s.migrateToPast, saved)
-
-	if saved.Result.Err != nil {
-		FLOW.Procedure(nil, &SendReply{Message: "Failed to save object"})
-	} else {
-		FLOW.Procedure(nil, &SendReply{Message: fmt.Sprintf("Object saved. ID: %d", saved.Result.ID)})
+	if err := f.Procedure(ctx, saved); err != nil {
+		if err != flow.ErrCancelled {
+			return f.Procedure(ctx, &SendReply{Message: "Failed to save object"})
+		}
+		return f.Migrate(ctx, s.migrate)
 	}
+
+	return f.Procedure(nil, &SendReply{Message: fmt.Sprintf("Object saved. ID: %d", saved.Res.ID)})
 }
 
-func (s *SaveObject) Past(ctx context.Context, FLOW flow.Flow) {
-	FLOW.Procedure(nil, &SendReply{Message: "Too late to save object"})
+func (s *SaveObject) Past(ctx context.Context, f flow.Flow) error {
+	return f.Procedure(nil, &SendReply{Message: "Too late to save object"})
 }
 
-func (s *SaveObject) migrateToPast(ctx context.Context, FLOW flow.Flow) {
-	if s.perms.Result.AllowedToSave {
-		FLOW.Procedure(nil, &SendReply{Message: "You shall not pass!"})
-	} else {
-		FLOW.Procedure(nil, &Redirect{ToNode: "node that saves objects now"})
+func (s *SaveObject) migrate(ctx context.Context, f flow.Flow) error {
+	if !s.perms.Res.AllowedToSave {
+		return f.Procedure(nil, &SendReply{Message: "You shall not pass!"})
 	}
+
+	return f.Procedure(nil, &Redirect{ToNode: "node that saves objects now"})
 }
