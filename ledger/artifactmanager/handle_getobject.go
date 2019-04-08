@@ -28,7 +28,7 @@ import (
 // =====================================================================================================================
 
 type GetObject struct {
-	dep *DepInjector
+	dep *ProcedureMaker
 
 	Message bus.Message
 }

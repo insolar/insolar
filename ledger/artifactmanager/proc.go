@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 )
 
-type DepInjector struct {
+type ProcedureMaker struct {
 	FetchJet func(*FetchJet) *FetchJet
 	WaitHot  func(*WaitHot) *WaitHot
 	GetIndex func(*GetIndex) *GetIndex

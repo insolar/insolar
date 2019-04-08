@@ -27,7 +27,7 @@ import (
 )
 
 type WaitJet struct {
-	dep *DepInjector
+	dep *ProcedureMaker
 
 	Message bus.Message
 

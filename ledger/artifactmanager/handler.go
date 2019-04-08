@@ -88,7 +88,7 @@ func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 		conf:     conf,
 	}
 
-	dep := &DepInjector{
+	dep := &ProcedureMaker{
 		FetchJet: func(p *FetchJet) *FetchJet {
 			p.Dep.JetAccessor = h.JetStorage
 			p.Dep.Coordinator = h.JetCoordinator
