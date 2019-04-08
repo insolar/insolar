@@ -32,7 +32,6 @@ import (
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger"
-	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -166,7 +165,6 @@ func initComponents(
 	components = append(components, []interface{}{
 		messageBus,
 		contractRequester,
-		artifacts.NewClient(),
 		delegationTokenFactory,
 		parcelFactory,
 	}...)
