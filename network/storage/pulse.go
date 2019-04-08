@@ -214,12 +214,12 @@ func (p *PulseStorage) Append(ctx context.Context, pulse insolar.Pulse) error {
 	return insertWithHead(head)
 }
 
-func (p *PulseStorage) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (pulse insolar.Pulse, err error) {
+func (p *PulseStorage) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (pulse insolar.PulseNumber, err error) {
 	nd, err := p.get(pn)
 	if err != nil {
 		return
 	}
-	return nd.Pulse, nil
+	return nd.Pulse.PulseNumber, nil
 }
 
 func (p *PulseStorage) Latest(ctx context.Context) (insolar.Pulse, error) {

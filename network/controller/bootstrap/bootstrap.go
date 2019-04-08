@@ -108,7 +108,7 @@ type bootstrapper struct {
 	NodeKeeper      network.NodeKeeper        `inject:""`
 	NetworkSwitcher insolar.NetworkSwitcher   `inject:""`
 	Transport       network.InternalTransport `inject:""`
-	PulseStorage    storage.PulseStorage      `inject:""`
+	PulseStorage    storage.PulseAccessor     `inject:""`
 
 	options *common.Options
 	pinger  *pinger.Pinger

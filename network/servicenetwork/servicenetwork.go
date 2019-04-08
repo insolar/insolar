@@ -56,6 +56,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/network/storage"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -151,7 +152,15 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	cert := n.CertificateManager.GetCertificate()
 	n.isDiscovery = utils.OriginIsDiscovery(cert)
 
+	db, err := storage.NewBadgerDB(n.cfg.Service)
+	if err != nil {
+		return errors.Wrap(err, "Failed to create a BadgerDB")
+	}
+	pulseStorage := storage.NewPulseStorage()
+
 	n.cm.Inject(n,
+		db,
+		pulseStorage,
 		&routing.Table{},
 		cert,
 		internalTransport,
