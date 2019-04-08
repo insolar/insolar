@@ -21,7 +21,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/flow"
 )
 
@@ -106,7 +105,7 @@ func (a *Redirect) Proceed(context.Context) error {
 
 // SaveObject describes handling "save object" message flow.
 type SaveObject struct {
-	Message *message.Message
+	Message map[string]string
 
 	// Keep internal state unexported.
 	perms  *CheckPermissions
@@ -124,12 +123,12 @@ func (s *SaveObject) Future(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *SaveObject) Present(ctx context.Context, f flow.Flow) error {
-	s.perms = &CheckPermissions{Node: s.Message.Metadata["node"]}
+	s.perms = &CheckPermissions{Node: s.Message["node"]}
 	if err := f.Procedure(ctx, s.perms); err != nil {
 		return err
 	}
 
-	s.object = &GetObjectFromDB{Hash: string(s.Message.Payload)}
+	s.object = &GetObjectFromDB{Hash: string(s.Message["payload"])}
 	if err := f.Procedure(ctx, s.object); err != nil {
 		if err != flow.ErrCancelled {
 			return err
@@ -145,7 +144,7 @@ func (s *SaveObject) Present(ctx context.Context, f flow.Flow) error {
 		return f.Procedure(nil, &SendReply{Message: "Object already exists"})
 	}
 
-	saved := &SaveObjectToDB{Hash: string(s.Message.Payload)}
+	saved := &SaveObjectToDB{Hash: string(s.Message["payload"])}
 	if err := f.Procedure(ctx, saved); err != nil {
 		if err != flow.ErrCancelled {
 			return f.Procedure(ctx, &SendReply{Message: "Failed to save object"})
