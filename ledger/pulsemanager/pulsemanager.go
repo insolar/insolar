@@ -61,6 +61,7 @@ type PulseManager struct {
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	RecentStorageProvider      recentstorage.Provider             `inject:""`
 	ActiveListSwapper          ActiveListSwapper                  `inject:""`
+	MessageHandler             *artifactmanager.MessageHandler
 
 	HotDataWaiter artifactmanager.HotDataWaiter `inject:""`
 
@@ -475,6 +476,10 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 	err = m.Bus.OnPulse(ctx, newPulse)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
+	}
+
+	if m.MessageHandler != nil {
+		m.MessageHandler.OnPulse(ctx, newPulse)
 	}
 
 	return nil

@@ -46,7 +46,13 @@ func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (ins
 	go func() {
 		f := thread.NewThread(msg, h.controller)
 		err := f.Run(ctx, h.handles.present(msg))
-		logger.Error("Handling failed", err)
+		if err != nil {
+			select {
+			case msg.ReplyTo <- bus.Reply{Err: err}:
+			default:
+			}
+			logger.Error("Handling failed", err)
+		}
 	}()
 	var rep bus.Reply
 	select {

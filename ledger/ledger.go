@@ -144,7 +144,9 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 
 	switch certificate.GetRole() {
 	case insolar.StaticRoleUnknown, insolar.StaticRoleLightMaterial:
-		components = append(components, artifactmanager.NewMessageHandler(&conf))
+		h := artifactmanager.NewMessageHandler(&conf)
+		pm.MessageHandler = h
+		components = append(components, h)
 		components = append(components, pm)
 	case insolar.StaticRoleHeavyMaterial:
 		components = append(components, pm)

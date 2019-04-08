@@ -169,6 +169,10 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	return nil
 }
 
+func (h *MessageHandler) OnPulse(ctx context.Context, pn insolar.Pulse) {
+	h.FlowHandler.ChangePulse(ctx, pn)
+}
+
 func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	// Generic.
 	h.Bus.MustRegister(insolar.TypeGetCode, BuildMiddleware(h.handleGetCode,
