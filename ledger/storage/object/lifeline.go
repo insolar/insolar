@@ -173,7 +173,7 @@ func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (index Lifeline,
 	return
 }
 
-// ForPulse returns Index for provided id.
+// ForPulseAndJet returns an object's lifeline for a provided id.
 func (m *IndexMemory) ForPulseAndJet(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]Lifeline {
 	m.lock.RLock()
 	defer m.lock.RUnlock()

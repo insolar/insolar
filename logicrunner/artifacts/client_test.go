@@ -52,9 +52,8 @@ type amSuite struct {
 	cleaner func()
 	db      storage.DBContext
 
-	scheme        insolar.PlatformCryptographyScheme
-	nodeStorage   node.Accessor // TODO: @imarkin 01.04.2019 - remove it after all new storages integration (INS-2013, etc)
-	objectStorage storage.ObjectStorage
+	scheme      insolar.PlatformCryptographyScheme
+	nodeStorage node.Accessor
 
 	jetStorage   jet.Storage
 	dropModifier drop.Modifier
@@ -82,7 +81,6 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
 	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
-	s.objectStorage = storage.NewObjectStorage()
 
 	dbStore := store.NewMemoryMockDB()
 	dropStorage := drop.NewStorageDB(dbStore)
@@ -96,7 +94,6 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 		s.jetStorage,
 		s.nodeStorage,
 		pulse.NewStorageMem(),
-		s.objectStorage,
 		s.dropAccessor,
 		s.dropModifier,
 	)

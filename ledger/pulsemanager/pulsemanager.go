@@ -67,9 +67,9 @@ type PulseManager struct {
 	JetAccessor jet.Accessor `inject:""`
 	JetModifier jet.Modifier `inject:""`
 
-	IndexAccessor           object.IndexAccessor           `inject:""`
-	IndexModifier           object.IndexModifier           `inject:""`
-	CollectionIndexAccessor object.CollectionIndexAccessor `inject:""`
+	IndexAccessor           object.IndexAccessor `inject:""`
+	IndexModifier           object.IndexModifier `inject:""`
+	CollectionIndexAccessor object.CollectionIndexAccessor
 	IndexCleaner            object.IndexCleaner
 
 	NodeSetter node.Modifier `inject:""`
@@ -132,6 +132,7 @@ func NewPulseManager(
 	pulseShifter pulse.Shifter,
 	recCleaner object.RecordCleaner,
 	recSyncAccessor object.RecordCollectionAccessor,
+	idxCollectionAccessor object.CollectionIndexAccessor,
 	indexCleaner object.IndexCleaner,
 ) *PulseManager {
 	pmconf := conf.PulseManager
@@ -145,13 +146,14 @@ func NewPulseManager(
 			heavySyncMessageLimit: pmconf.HeavySyncMessageLimit,
 			lightChainLimit:       conf.LightChainLimit,
 		},
-		DropCleaner:      dropCleaner,
-		BlobCleaner:      blobCleaner,
-		BlobSyncAccessor: blobSyncAccessor,
-		PulseShifter:     pulseShifter,
-		RecCleaner:       recCleaner,
-		RecSyncAccessor:  recSyncAccessor,
-		IndexCleaner:     indexCleaner,
+		DropCleaner:             dropCleaner,
+		BlobCleaner:             blobCleaner,
+		BlobSyncAccessor:        blobSyncAccessor,
+		PulseShifter:            pulseShifter,
+		RecCleaner:              recCleaner,
+		RecSyncAccessor:         recSyncAccessor,
+		CollectionIndexAccessor: idxCollectionAccessor,
+		IndexCleaner:            indexCleaner,
 	}
 	return pm
 }
