@@ -148,7 +148,7 @@ func (m *middleware) checkJet(handler insolar.MessageHandler) insolar.MessageHan
 		}
 
 		if *node != m.jetCoordinator.Me() {
-			return &reply.JetMiss{JetID: jetID}, nil
+			return &reply.JetMiss{JetID: jetID, Pulse: parcel.Pulse()}, nil
 		}
 
 		ctx = addJetIDToLogger(ctx, jetID)

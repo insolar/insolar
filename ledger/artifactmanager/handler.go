@@ -862,12 +862,12 @@ func (h *MessageHandler) saveCodeFromHeavy(
 
 //
 // func (h *MessageHandler) fetchObject(
-// 	ctx context.Context, obj insolar.Reference, node insolar.Reference, stateID *insolar.ID, pulse insolar.PulseNumber,
+// 	ctx context.Context, obj insolar.Reference, node insolar.Reference, stateID *insolar.ID,
 // ) (*reply.Object, error) {
 // 	sender := BuildSender(
 // 		h.Bus.Send,
 // 		followRedirectSender(h.Bus),
-// 		retryJetSender(pulse, h.JetStorage),
+// 		retryJetSender(h.JetStorage),
 // 	)
 // 	genericReply, err := sender(
 // 		ctx,
