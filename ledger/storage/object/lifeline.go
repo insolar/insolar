@@ -230,6 +230,10 @@ func (i *IndexDB) Set(ctx context.Context, id insolar.ID, index Lifeline) error 
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
+	if index.Delegates == nil {
+		index.Delegates = map[insolar.Reference]insolar.Reference{}
+	}
+
 	return i.set(id, index)
 }
 
