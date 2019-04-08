@@ -109,6 +109,7 @@ func initStorageComponents(conf configuration.Ledger) storageComponents {
 		dropDB:   drop.NewDB(db),
 		blobDB:   blob.NewDB(db),
 		recordDB: object.NewRecordDB(db),
+		pulseDB:  pulse.NewDB(db),
 		indexDB:  object.NewIndexDB(db),
 	}
 }

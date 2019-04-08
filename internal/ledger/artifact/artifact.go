@@ -317,7 +317,7 @@ func (m *Scope) updateStateObject(
 	idx, err := m.IndexAccessor.ForID(ctx, *objRef.Record())
 	// No index on our node.
 	if err != nil {
-		if err != insolar.ErrNotFound {
+		if err != object.ErrIndexNotFound {
 			return nil, errors.Wrap(err, "failed get index for updating state object")
 		}
 		if stateObject.ID() != object.StateActivation {
