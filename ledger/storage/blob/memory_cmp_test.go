@@ -36,7 +36,7 @@ func TestBlobStorages(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	memStorage := NewStorageMemory()
-	dbStorage := NewStorageDB(store.NewMemoryMockDB())
+	dbStorage := NewDB(store.NewMemoryMockDB())
 	type storage interface {
 		Accessor
 		Modifier

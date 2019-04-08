@@ -33,7 +33,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
 )
@@ -70,20 +69,20 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	var recordAccessor object.RecordAccessor
 	var recSyncAccessor object.RecordCollectionAccessor
 	var recordCleaner object.RecordCleaner
-	// Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
+
 	switch certificate.GetRole() {
-	case insolar.StaticRoleUnknown, insolar.StaticRoleHeavyMaterial:
-		ps := pulse.NewStorageDB(db)
+	case insolar.StaticRoleHeavyMaterial:
+		ps := pulse.NewDB(db)
 		pulseAccessor = ps
 		pulseAppender = ps
 		pulseCalculator = ps
 
-		dropDB := drop.NewStorageDB(db)
+		dropDB := drop.NewDB(db)
 		dropModifier = dropDB
 		dropAccessor = dropDB
 
 		// should be replaced with db
-		blobDB := blob.NewStorageDB(db)
+		blobDB := blob.NewDB(db)
 		blobModifier = blobDB
 		blobAccessor = blobDB
 
@@ -135,7 +134,6 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		node.NewStorage(),
 		storage.NewObjectStorage(),
 		storage.NewReplicaStorage(),
-		genesis.NewGenesisInitializer(),
 		recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewHotDataWaiterConcrete(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),

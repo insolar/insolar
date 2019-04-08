@@ -21,7 +21,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Discovery contains info about discovery nodes
+// Node contains info about discovery nodes
 type Node struct {
 	Host     string `mapstructure:"host"`
 	Role     string `mapstructure:"role"`

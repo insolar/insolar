@@ -279,7 +279,7 @@ genesis()
     generate_insolard_configs
 
     printf "start genesis ... \n"
-    $INSOLARD --config $BASE_DIR/insolar.yaml --genesis $GENESIS_CONFIG --keyout $DISCOVERY_NODES_DATA/certs &> $DISCOVERY_NODES_DATA/genesis_output.log
+    $INSOLARD --config $BASE_DIR/insolar.yaml --genesis $GENESIS_CONFIG --keyout $DISCOVERY_NODES_DATA/certs > $DISCOVERY_NODES_DATA/genesis_output.log
     printf "genesis is done\n"
 
     copy_data
