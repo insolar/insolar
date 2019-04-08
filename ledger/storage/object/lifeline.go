@@ -53,8 +53,8 @@ type IndexModifier interface {
 
 // IndexCleaner provides an interface for removing interfaces from a storage.
 type IndexCleaner interface {
-	// RemoveIDs method removes interfaces from a storage for a provided map of pulses
-	RemoveIDs(ctx context.Context, ids map[insolar.ID]struct{})
+	// RemoveWithIDs method removes interfaces from a storage for a provided map of ids
+	RemoveWithIDs(ctx context.Context, ids map[insolar.ID]struct{})
 }
 
 // Lifeline represents meta information for record object.
@@ -190,7 +190,8 @@ func (m *IndexMemory) ForPulseAndJet(ctx context.Context, jetID insolar.JetID, p
 	return res
 }
 
-func (m *IndexMemory) RemoveIDs(ctx context.Context, ids map[insolar.ID]struct{}) {
+// RemoveWithIDs method removes interfaces from a storage for a provided map of ids
+func (m *IndexMemory) RemoveWithIDs(ctx context.Context, ids map[insolar.ID]struct{}) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 

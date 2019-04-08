@@ -45,10 +45,10 @@ type HeavySyncMock struct {
 	StoreDropPreCounter uint64
 	StoreDropMock       mHeavySyncMockStoreDrop
 
-	StoreIndicesFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 []insolar.KV) (r error)
-	StoreIndicesCounter    uint64
-	StoreIndicesPreCounter uint64
-	StoreIndicesMock       mHeavySyncMockStoreIndices
+	StoreIndexesFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 map[insolar.ID][]byte) (r error)
+	StoreIndexesCounter    uint64
+	StoreIndexesPreCounter uint64
+	StoreIndexesMock       mHeavySyncMockStoreIndexes
 
 	StoreRecordsFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 [][]byte)
 	StoreRecordsCounter    uint64
@@ -69,7 +69,7 @@ func NewHeavySyncMock(t minimock.Tester) *HeavySyncMock {
 	m.StopMock = mHeavySyncMockStop{mock: m}
 	m.StoreBlobsMock = mHeavySyncMockStoreBlobs{mock: m}
 	m.StoreDropMock = mHeavySyncMockStoreDrop{mock: m}
-	m.StoreIndicesMock = mHeavySyncMockStoreIndices{mock: m}
+	m.StoreIndexesMock = mHeavySyncMockStoreIndexes{mock: m}
 	m.StoreRecordsMock = mHeavySyncMockStoreRecords{mock: m}
 
 	return m
@@ -820,91 +820,91 @@ func (m *HeavySyncMock) StoreDropFinished() bool {
 	return true
 }
 
-type mHeavySyncMockStoreIndices struct {
+type mHeavySyncMockStoreIndexes struct {
 	mock              *HeavySyncMock
-	mainExpectation   *HeavySyncMockStoreIndicesExpectation
-	expectationSeries []*HeavySyncMockStoreIndicesExpectation
+	mainExpectation   *HeavySyncMockStoreIndexesExpectation
+	expectationSeries []*HeavySyncMockStoreIndexesExpectation
 }
 
-type HeavySyncMockStoreIndicesExpectation struct {
-	input  *HeavySyncMockStoreIndicesInput
-	result *HeavySyncMockStoreIndicesResult
+type HeavySyncMockStoreIndexesExpectation struct {
+	input  *HeavySyncMockStoreIndexesInput
+	result *HeavySyncMockStoreIndexesResult
 }
 
-type HeavySyncMockStoreIndicesInput struct {
+type HeavySyncMockStoreIndexesInput struct {
 	p  context.Context
 	p1 insolar.ID
 	p2 insolar.PulseNumber
-	p3 []insolar.KV
+	p3 map[insolar.ID][]byte
 }
 
-type HeavySyncMockStoreIndicesResult struct {
+type HeavySyncMockStoreIndexesResult struct {
 	r error
 }
 
 // Expect specifies that invocation of HeavySync.StoreIndexes is expected from 1 to Infinity times
-func (m *mHeavySyncMockStoreIndices) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 []insolar.KV) *mHeavySyncMockStoreIndices {
-	m.mock.StoreIndicesFunc = nil
+func (m *mHeavySyncMockStoreIndexes) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 map[insolar.ID][]byte) *mHeavySyncMockStoreIndexes {
+	m.mock.StoreIndexesFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &HeavySyncMockStoreIndicesExpectation{}
+		m.mainExpectation = &HeavySyncMockStoreIndexesExpectation{}
 	}
-	m.mainExpectation.input = &HeavySyncMockStoreIndicesInput{p, p1, p2, p3}
+	m.mainExpectation.input = &HeavySyncMockStoreIndexesInput{p, p1, p2, p3}
 	return m
 }
 
 // Return specifies results of invocation of HeavySync.StoreIndexes
-func (m *mHeavySyncMockStoreIndices) Return(r error) *HeavySyncMock {
-	m.mock.StoreIndicesFunc = nil
+func (m *mHeavySyncMockStoreIndexes) Return(r error) *HeavySyncMock {
+	m.mock.StoreIndexesFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &HeavySyncMockStoreIndicesExpectation{}
+		m.mainExpectation = &HeavySyncMockStoreIndexesExpectation{}
 	}
-	m.mainExpectation.result = &HeavySyncMockStoreIndicesResult{r}
+	m.mainExpectation.result = &HeavySyncMockStoreIndexesResult{r}
 	return m.mock
 }
 
 // ExpectOnce specifies that invocation of HeavySync.StoreIndexes is expected once
-func (m *mHeavySyncMockStoreIndices) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 []insolar.KV) *HeavySyncMockStoreIndicesExpectation {
-	m.mock.StoreIndicesFunc = nil
+func (m *mHeavySyncMockStoreIndexes) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 map[insolar.ID][]byte) *HeavySyncMockStoreIndexesExpectation {
+	m.mock.StoreIndexesFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &HeavySyncMockStoreIndicesExpectation{}
-	expectation.input = &HeavySyncMockStoreIndicesInput{p, p1, p2, p3}
+	expectation := &HeavySyncMockStoreIndexesExpectation{}
+	expectation.input = &HeavySyncMockStoreIndexesInput{p, p1, p2, p3}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *HeavySyncMockStoreIndicesExpectation) Return(r error) {
-	e.result = &HeavySyncMockStoreIndicesResult{r}
+func (e *HeavySyncMockStoreIndexesExpectation) Return(r error) {
+	e.result = &HeavySyncMockStoreIndexesResult{r}
 }
 
 // Set uses given function f as a mock of HeavySync.StoreIndexes method
-func (m *mHeavySyncMockStoreIndices) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 []insolar.KV) (r error)) *HeavySyncMock {
+func (m *mHeavySyncMockStoreIndexes) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 map[insolar.ID][]byte) (r error)) *HeavySyncMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.StoreIndicesFunc = f
+	m.mock.StoreIndexesFunc = f
 	return m.mock
 }
 
 // StoreIndexes implements github.com/insolar/insolar/insolar.HeavySync interface
-func (m *HeavySyncMock) StoreIndexes(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 []insolar.KV) (r error) {
-	counter := atomic.AddUint64(&m.StoreIndicesPreCounter, 1)
-	defer atomic.AddUint64(&m.StoreIndicesCounter, 1)
+func (m *HeavySyncMock) StoreIndexes(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 map[insolar.ID][]byte) (r error) {
+	counter := atomic.AddUint64(&m.StoreIndexesPreCounter, 1)
+	defer atomic.AddUint64(&m.StoreIndexesCounter, 1)
 
-	if len(m.StoreIndicesMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.StoreIndicesMock.expectationSeries)) {
+	if len(m.StoreIndexesMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.StoreIndexesMock.expectationSeries)) {
 			m.t.Fatalf("Unexpected call to HeavySyncMock.StoreIndexes. %v %v %v %v", p, p1, p2, p3)
 			return
 		}
 
-		input := m.StoreIndicesMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, HeavySyncMockStoreIndicesInput{p, p1, p2, p3}, "HeavySync.StoreIndexes got unexpected parameters")
+		input := m.StoreIndexesMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, HeavySyncMockStoreIndexesInput{p, p1, p2, p3}, "HeavySync.StoreIndexes got unexpected parameters")
 
-		result := m.StoreIndicesMock.expectationSeries[counter-1].result
+		result := m.StoreIndexesMock.expectationSeries[counter-1].result
 		if result == nil {
 			m.t.Fatal("No results are set for the HeavySyncMock.StoreIndexes")
 			return
@@ -915,14 +915,14 @@ func (m *HeavySyncMock) StoreIndexes(p context.Context, p1 insolar.ID, p2 insola
 		return
 	}
 
-	if m.StoreIndicesMock.mainExpectation != nil {
+	if m.StoreIndexesMock.mainExpectation != nil {
 
-		input := m.StoreIndicesMock.mainExpectation.input
+		input := m.StoreIndexesMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, HeavySyncMockStoreIndicesInput{p, p1, p2, p3}, "HeavySync.StoreIndexes got unexpected parameters")
+			testify_assert.Equal(m.t, *input, HeavySyncMockStoreIndexesInput{p, p1, p2, p3}, "HeavySync.StoreIndexes got unexpected parameters")
 		}
 
-		result := m.StoreIndicesMock.mainExpectation.result
+		result := m.StoreIndexesMock.mainExpectation.result
 		if result == nil {
 			m.t.Fatal("No results are set for the HeavySyncMock.StoreIndexes")
 		}
@@ -932,39 +932,39 @@ func (m *HeavySyncMock) StoreIndexes(p context.Context, p1 insolar.ID, p2 insola
 		return
 	}
 
-	if m.StoreIndicesFunc == nil {
+	if m.StoreIndexesFunc == nil {
 		m.t.Fatalf("Unexpected call to HeavySyncMock.StoreIndexes. %v %v %v %v", p, p1, p2, p3)
 		return
 	}
 
-	return m.StoreIndicesFunc(p, p1, p2, p3)
+	return m.StoreIndexesFunc(p, p1, p2, p3)
 }
 
-//StoreIndicesMinimockCounter returns a count of HeavySyncMock.StoreIndicesFunc invocations
-func (m *HeavySyncMock) StoreIndicesMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.StoreIndicesCounter)
+// StoreIndexesMinimockCounter returns a count of HeavySyncMock.StoreIndexesFunc invocations
+func (m *HeavySyncMock) StoreIndexesMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.StoreIndexesCounter)
 }
 
-// StoreIndicesMinimockPreCounter returns the value of HeavySyncMock.StoreIndexes invocations
-func (m *HeavySyncMock) StoreIndicesMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.StoreIndicesPreCounter)
+// StoreIndexesMinimockPreCounter returns the value of HeavySyncMock.StoreIndexes invocations
+func (m *HeavySyncMock) StoreIndexesMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.StoreIndexesPreCounter)
 }
 
-//StoreIndicesFinished returns true if mock invocations count is ok
-func (m *HeavySyncMock) StoreIndicesFinished() bool {
+// StoreIndexesFinished returns true if mock invocations count is ok
+func (m *HeavySyncMock) StoreIndexesFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.StoreIndicesMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.StoreIndicesCounter) == uint64(len(m.StoreIndicesMock.expectationSeries))
+	if len(m.StoreIndexesMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.StoreIndexesCounter) == uint64(len(m.StoreIndexesMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.StoreIndicesMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.StoreIndicesCounter) > 0
+	if m.StoreIndexesMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.StoreIndexesCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.StoreIndicesFunc != nil {
-		return atomic.LoadUint64(&m.StoreIndicesCounter) > 0
+	if m.StoreIndexesFunc != nil {
+		return atomic.LoadUint64(&m.StoreIndexesCounter) > 0
 	}
 
 	return true
@@ -1120,7 +1120,7 @@ func (m *HeavySyncMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to HeavySyncMock.StoreDrop")
 	}
 
-	if !m.StoreIndicesFinished() {
+	if !m.StoreIndexesFinished() {
 		m.t.Fatal("Expected call to HeavySyncMock.StoreIndexes")
 	}
 
@@ -1165,7 +1165,7 @@ func (m *HeavySyncMock) MinimockFinish() {
 		m.t.Fatal("Expected call to HeavySyncMock.StoreDrop")
 	}
 
-	if !m.StoreIndicesFinished() {
+	if !m.StoreIndexesFinished() {
 		m.t.Fatal("Expected call to HeavySyncMock.StoreIndexes")
 	}
 
@@ -1192,7 +1192,7 @@ func (m *HeavySyncMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.StopFinished()
 		ok = ok && m.StoreBlobsFinished()
 		ok = ok && m.StoreDropFinished()
-		ok = ok && m.StoreIndicesFinished()
+		ok = ok && m.StoreIndexesFinished()
 		ok = ok && m.StoreRecordsFinished()
 
 		if ok {
@@ -1222,7 +1222,7 @@ func (m *HeavySyncMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to HeavySyncMock.StoreDrop")
 			}
 
-			if !m.StoreIndicesFinished() {
+			if !m.StoreIndexesFinished() {
 				m.t.Error("Expected call to HeavySyncMock.StoreIndexes")
 			}
 
@@ -1262,7 +1262,7 @@ func (m *HeavySyncMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.StoreIndicesFinished() {
+	if !m.StoreIndexesFinished() {
 		return false
 	}
 
