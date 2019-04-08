@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "IndexCleaner" can be found in github.com/insolar/insolar/ledger/storage/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// IndexCleanerMock implements github.com/insolar/insolar/ledger/storage/object.IndexCleaner
+//IndexCleanerMock implements github.com/insolar/insolar/ledger/storage/object.IndexCleaner
 type IndexCleanerMock struct {
 	t minimock.Tester
 
@@ -27,7 +27,7 @@ type IndexCleanerMock struct {
 	RemoveWithIDsMock       mIndexCleanerMockRemoveWithIDs
 }
 
-// NewIndexCleanerMock returns a mock for github.com/insolar/insolar/ledger/storage/object.IndexCleaner
+//NewIndexCleanerMock returns a mock for github.com/insolar/insolar/ledger/storage/object.IndexCleaner
 func NewIndexCleanerMock(t minimock.Tester) *IndexCleanerMock {
 	m := &IndexCleanerMock{t: t}
 
@@ -56,7 +56,7 @@ type IndexCleanerMockRemoveWithIDsInput struct {
 	}
 }
 
-// Expect specifies that invocation of IndexCleaner.RemoveWithIDs is expected from 1 to Infinity times
+//Expect specifies that invocation of IndexCleaner.RemoveWithIDs is expected from 1 to Infinity times
 func (m *mIndexCleanerMockRemoveWithIDs) Expect(p context.Context, p1 map[insolar.ID]struct {
 }) *mIndexCleanerMockRemoveWithIDs {
 	m.mock.RemoveWithIDsFunc = nil
@@ -69,7 +69,7 @@ func (m *mIndexCleanerMockRemoveWithIDs) Expect(p context.Context, p1 map[insola
 	return m
 }
 
-// Return specifies results of invocation of IndexCleaner.RemoveWithIDs
+//Return specifies results of invocation of IndexCleaner.RemoveWithIDs
 func (m *mIndexCleanerMockRemoveWithIDs) Return() *IndexCleanerMock {
 	m.mock.RemoveWithIDsFunc = nil
 	m.expectationSeries = nil
@@ -81,7 +81,7 @@ func (m *mIndexCleanerMockRemoveWithIDs) Return() *IndexCleanerMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of IndexCleaner.RemoveWithIDs is expected once
+//ExpectOnce specifies that invocation of IndexCleaner.RemoveWithIDs is expected once
 func (m *mIndexCleanerMockRemoveWithIDs) ExpectOnce(p context.Context, p1 map[insolar.ID]struct {
 }) *IndexCleanerMockRemoveWithIDsExpectation {
 	m.mock.RemoveWithIDsFunc = nil
@@ -93,7 +93,7 @@ func (m *mIndexCleanerMockRemoveWithIDs) ExpectOnce(p context.Context, p1 map[in
 	return expectation
 }
 
-// Set uses given function f as a mock of IndexCleaner.RemoveWithIDs method
+//Set uses given function f as a mock of IndexCleaner.RemoveWithIDs method
 func (m *mIndexCleanerMockRemoveWithIDs) Set(f func(p context.Context, p1 map[insolar.ID]struct {
 })) *IndexCleanerMock {
 	m.mainExpectation = nil
@@ -103,7 +103,7 @@ func (m *mIndexCleanerMockRemoveWithIDs) Set(f func(p context.Context, p1 map[in
 	return m.mock
 }
 
-// RemoveWithIDs implements github.com/insolar/insolar/ledger/storage/object.IndexCleaner interface
+//RemoveWithIDs implements github.com/insolar/insolar/ledger/storage/object.IndexCleaner interface
 func (m *IndexCleanerMock) RemoveWithIDs(p context.Context, p1 map[insolar.ID]struct {
 }) {
 	counter := atomic.AddUint64(&m.RemoveWithIDsPreCounter, 1)
@@ -139,17 +139,17 @@ func (m *IndexCleanerMock) RemoveWithIDs(p context.Context, p1 map[insolar.ID]st
 	m.RemoveWithIDsFunc(p, p1)
 }
 
-// RemoveWithIDsMinimockCounter returns a count of IndexCleanerMock.RemoveWithIDsFunc invocations
+//RemoveWithIDsMinimockCounter returns a count of IndexCleanerMock.RemoveWithIDsFunc invocations
 func (m *IndexCleanerMock) RemoveWithIDsMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.RemoveWithIDsCounter)
 }
 
-// RemoveWithIDsMinimockPreCounter returns the value of IndexCleanerMock.RemoveWithIDs invocations
+//RemoveWithIDsMinimockPreCounter returns the value of IndexCleanerMock.RemoveWithIDs invocations
 func (m *IndexCleanerMock) RemoveWithIDsMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.RemoveWithIDsPreCounter)
 }
 
-// RemoveWithIDsFinished returns true if mock invocations count is ok
+//RemoveWithIDsFinished returns true if mock invocations count is ok
 func (m *IndexCleanerMock) RemoveWithIDsFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.RemoveWithIDsMock.expectationSeries) > 0 {
@@ -169,8 +169,8 @@ func (m *IndexCleanerMock) RemoveWithIDsFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexCleanerMock) ValidateCallCounters() {
 
 	if !m.RemoveWithIDsFinished() {
@@ -179,19 +179,19 @@ func (m *IndexCleanerMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexCleanerMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *IndexCleanerMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *IndexCleanerMock) MinimockFinish() {
 
 	if !m.RemoveWithIDsFinished() {
@@ -200,14 +200,14 @@ func (m *IndexCleanerMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *IndexCleanerMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *IndexCleanerMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -233,8 +233,8 @@ func (m *IndexCleanerMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *IndexCleanerMock) AllMocksCalled() bool {
 
 	if !m.RemoveWithIDsFinished() {
