@@ -157,7 +157,7 @@ func (m *middleware) checkJet(handler core.MessageHandler) core.MessageHandler {
 				"jet of ", msg.DefaultTarget().String(),
 				" is ", jetID.DebugString(), " and executor is ", node.String(),
 			)
-			return &reply.JetMiss{JetID: jetID}, nil
+			return &reply.JetMiss{JetID: jetID, Pulse: parcel.Pulse()}, nil
 		}
 
 		ctx = addJetIDToLogger(ctx, jetID)

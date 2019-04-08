@@ -134,7 +134,14 @@ func retryJetSender(pulseNumber core.PulseNumber, jetStorage storage.JetStorage)
 						", suggested jet ", r.JetID.DebugString(),
 						", updating jet tree and retrying",
 					)
-					jetStorage.UpdateJetTree(ctx, pulseNumber, true, r.JetID)
+
+					if r.Pulse != pulseNumber {
+						inslogger.FromContext(ctx).Error(
+							"pulse mismatch during in jet miss reply, in argument: ",
+							pulseNumber, ", in reply: ", r.Pulse,
+						)
+					}
+					jetStorage.UpdateJetTree(ctx, r.Pulse, true, r.JetID)
 				} else {
 					if retries != jetMissRetryCount {
 						inslogger.FromContext(ctx).Debug(
