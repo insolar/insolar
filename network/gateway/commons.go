@@ -73,7 +73,7 @@ type commons struct {
 }
 
 // Acquire increases lock counter and locks message bus if it wasn't lock before
-func Acquire(ctx context.Context, c commons) {
+func Acquire(ctx context.Context, c *commons) {
 	ctx, span := instracer.StartSpan(ctx, "NetworkSwitcher.Acquire")
 	defer span.End()
 	inslogger.FromContext(ctx).Info("Call Acquire in NetworkSwitcher: ", c.counter)
@@ -86,7 +86,7 @@ func Acquire(ctx context.Context, c commons) {
 }
 
 // Release decreases lock counter and unlocks message bus if it wasn't lock by someone else
-func Release(ctx context.Context, c commons) {
+func Release(ctx context.Context, c *commons) {
 	ctx, span := instracer.StartSpan(ctx, "NetworkSwitcher.Release")
 	defer span.End()
 	inslogger.FromContext(ctx).Info("Call Release in NetworkSwitcher: ", c.counter)
