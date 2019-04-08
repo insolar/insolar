@@ -52,7 +52,6 @@ package gateway
 
 import (
 	"context"
-	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -63,10 +62,8 @@ import (
 )
 
 type commons struct {
-	counter   uint64
-	state     insolar.NetworkState
-	stateLock sync.RWMutex
-	span      *trace.Span
+	counter uint64
+	span    *trace.Span
 
 	Network  network.Gatewayer
 	MBLocker insolar.MessageBusLocker
