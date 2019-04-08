@@ -71,7 +71,7 @@ import (
 	"github.com/insolar/insolar/network/transport"
 )
 
-type transportConsensus struct {
+type networkConsensus struct {
 	Resolver network.RoutingTable `inject:""`
 
 	transport         transport.Transport
@@ -82,7 +82,7 @@ type transportConsensus struct {
 	handlers          map[packets.PacketType]network.ConsensusPacketHandler
 }
 
-func (tc *transportConsensus) Start(ctx context.Context) error {
+func (tc *networkConsensus) Start(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&tc.started, 0, 1) {
 		return errors.New("Failed to start transport: double listen initiated")
 	}
@@ -94,7 +94,7 @@ func (tc *transportConsensus) Start(ctx context.Context) error {
 	return nil
 }
 
-func (tc *transportConsensus) listen(ctx context.Context) {
+func (tc *networkConsensus) listen(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 	for {
 		select {
@@ -113,7 +113,7 @@ func (tc *transportConsensus) listen(ctx context.Context) {
 	}
 }
 
-func (tc *transportConsensus) Stop(ctx context.Context) error {
+func (tc *networkConsensus) Stop(ctx context.Context) error {
 	if atomic.CompareAndSwapUint32(&tc.started, 1, 0) {
 		go tc.transport.Stop()
 		<-tc.transport.Stopped()
@@ -123,17 +123,17 @@ func (tc *transportConsensus) Stop(ctx context.Context) error {
 }
 
 // PublicAddress returns public address that can be published for all nodes.
-func (h *transportConsensus) PublicAddress() string {
+func (h *networkConsensus) PublicAddress() string {
 	return h.origin.Address.String()
 }
 
 // GetNodeID get current node ID.
-func (h *transportConsensus) GetNodeID() insolar.Reference {
+func (h *networkConsensus) GetNodeID() insolar.Reference {
 	return h.origin.NodeID
 }
 
 // RegisterPacketHandler register a handler function to process incoming requests of a specific type.
-func (tc *transportConsensus) RegisterPacketHandler(t packets.PacketType, handler network.ConsensusPacketHandler) {
+func (tc *networkConsensus) RegisterPacketHandler(t packets.PacketType, handler network.ConsensusPacketHandler) {
 	_, exists := tc.handlers[t]
 	if exists {
 		log.Warnf("Multiple handlers for packet type %s are not supported! New handler will replace the old one!", t)
@@ -141,7 +141,7 @@ func (tc *transportConsensus) RegisterPacketHandler(t packets.PacketType, handle
 	tc.handlers[t] = handler
 }
 
-func (tc *transportConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
+func (tc *networkConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
 	receiver insolar.Reference, service insolar.CryptographyService) error {
 
 	receiverHost, err := tc.Resolver.ResolveConsensusRef(receiver)
@@ -162,17 +162,17 @@ func (tc *transportConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
 			tag.Upsert(consensus.TagPhase, packet.GetType().String()),
 		}, consensus.PacketsSent.M(1))
 		if statsErr != nil {
-			log.Warn(" [ transportConsensus ] Failed to record sent packets metric: " + statsErr.Error())
+			log.Warn(" [ networkConsensus ] Failed to record sent packets metric: " + statsErr.Error())
 		}
 	}
 	return err
 }
 
-func (tc *transportConsensus) buildPacket(p packets.ConsensusPacket, receiver *host.Host) *packet.Packet {
+func (tc *networkConsensus) buildPacket(p packets.ConsensusPacket, receiver *host.Host) *packet.Packet {
 	return packet.NewBuilder(tc.origin).Receiver(receiver).Request(p).Build()
 }
 
-func (tc *transportConsensus) processMessage(msg *packet.Packet) {
+func (tc *networkConsensus) processMessage(msg *packet.Packet) {
 	p, ok := msg.Data.(packets.ConsensusPacket)
 	if !ok {
 		log.Error("Error processing incoming message: failed to convert to ConsensusPacket")
@@ -226,7 +226,7 @@ func NewConsensusNetwork(address, nodeID string, shortID insolar.ShortNodeID) (n
 		tp.Close()
 		return nil, errors.Wrap(err, "error getting origin")
 	}
-	result := &transportConsensus{handlers: make(map[packets.PacketType]network.ConsensusPacketHandler)}
+	result := &networkConsensus{handlers: make(map[packets.PacketType]network.ConsensusPacketHandler)}
 
 	result.transport = tp
 	result.sequenceGenerator = sequence.NewGeneratorImpl()
