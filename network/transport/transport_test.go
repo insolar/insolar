@@ -184,8 +184,8 @@ func (t *transportSuite) TestSendBigPacket() {
 // }
 
 // func TestUDPTransport(t *testing.T) {
-// 	cfg1 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17014"}
-// 	cfg2 := configuration.Transport{Protocol: "PURE_UDP", Address: "127.0.0.1:17015"}
+// 	cfg1 := configuration.Network{Protocol: "PURE_UDP", Address: "127.0.0.1:17014"}
+// 	cfg2 := configuration.Network{Protocol: "PURE_UDP", Address: "127.0.0.1:17015"}
 //
 // 	suite.Run(t, NewConsensusSuite(cfg1, cfg2))
 // }

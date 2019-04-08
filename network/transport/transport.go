@@ -62,7 +62,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Transport is an interface for network transport.
+// Network is an interface for network transport.
 type Transport interface {
 	// SendRequest sends packet to destination. Sequence number is generated automatically.
 	SendRequest(context.Context, *packet.Packet) (future.Future, error)
@@ -89,7 +89,7 @@ type Transport interface {
 	Stopped() <-chan bool
 }
 
-// NewTransport creates new Transport with particular configuration
+// NewTransport creates new Network with particular configuration
 func NewTransport(cfg configuration.Transport) (Transport, string, error) {
 	switch cfg.Protocol {
 	case "TCP":
