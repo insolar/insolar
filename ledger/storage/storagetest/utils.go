@@ -119,6 +119,7 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 	cm := &component.Manager{}
 	cm.Inject(
 		PCS,
+		im,
 		pulseDB,
 		tmpDB,
 		jet.NewStore(),
@@ -136,6 +137,7 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 			PulseAppender:  pulseDB,
 			PulseAccessor:  pulseDB,
 			RecordModifier: recordModifier,
+			IndexModifier:  im,
 		}
 		_, _, err := genesisBaseRecord.CreateIfNeeded(ctx)
 		if err != nil {

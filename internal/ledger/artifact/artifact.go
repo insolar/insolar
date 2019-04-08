@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/object"
 )
@@ -72,8 +71,8 @@ type Scope struct {
 	BlobModifier               blob.Modifier
 	RecordsModifier            object.RecordModifier
 
-	// TODO: should be removed after indices storage would be done.
-	ObjectStorage storage.ObjectStorage
+	IndexModifier object.IndexModifier
+	IndexAccessor object.IndexAccessor
 }
 
 func (m *Scope) RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error) {
@@ -123,8 +122,7 @@ func (m *Scope) activateObject(
 	asDelegate bool,
 	memory []byte,
 ) (ObjectDescriptor, error) {
-	var jetID = insolar.ID(insolar.ZeroJetID)
-	parentIdx, err := m.ObjectStorage.GetObjectIndex(ctx, jetID, parent.Record())
+	parentIdx, err := m.IndexAccessor.ForID(ctx, *parent.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, "not found parent index for activated object")
 	}
@@ -260,7 +258,7 @@ func (m *Scope) registerChild(
 	asType *insolar.Reference,
 ) error {
 	var jetID = insolar.ID(insolar.ZeroJetID)
-	idx, err := m.ObjectStorage.GetObjectIndex(ctx, jetID, parent.Record())
+	idx, err := m.IndexAccessor.ForID(ctx, *parent.Record())
 	if err != nil {
 		return err
 	}
@@ -288,7 +286,8 @@ func (m *Scope) registerChild(
 		idx.Delegates[*asType] = obj
 	}
 	idx.LatestUpdate = m.PulseNumber
-	return m.ObjectStorage.SetObjectIndex(ctx, jetID, parent.Record(), idx)
+	idx.JetID = insolar.JetID(jetID)
+	return m.IndexModifier.Set(ctx, *parent.Record(), idx)
 }
 
 func (m *Scope) updateStateObject(
@@ -315,7 +314,7 @@ func (m *Scope) updateStateObject(
 		panic("unknown state object type")
 	}
 
-	idx, err := m.ObjectStorage.GetObjectIndex(ctx, jetID, objRef.Record())
+	idx, err := m.IndexAccessor.ForID(ctx, *objRef.Record())
 	// No index on our node.
 	if err != nil {
 		if err != insolar.ErrNotFound {
@@ -325,7 +324,7 @@ func (m *Scope) updateStateObject(
 			return nil, errors.Wrap(err, "index not found for updating non Activation state object")
 		}
 		// We are activating the object. There is no index for it yet.
-		idx = &object.Lifeline{State: object.StateUndefined}
+		idx = object.Lifeline{State: object.StateUndefined}
 	}
 	// TODO: validateState
 
@@ -342,8 +341,8 @@ func (m *Scope) updateStateObject(
 	if stateObject.ID() == object.StateActivation {
 		idx.Parent = stateObject.(*object.ActivateRecord).Parent
 	}
-
-	err = m.ObjectStorage.SetObjectIndex(ctx, jetID, objRef.Record(), idx)
+	idx.JetID = insolar.JetID(jetID)
+	err = m.IndexModifier.Set(ctx, *objRef.Record(), idx)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail set index for state object")
 	}
