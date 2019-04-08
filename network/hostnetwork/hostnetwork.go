@@ -104,23 +104,23 @@ type hostNetwork struct {
 }
 
 // Start start listening to network requests, should be started in goroutine.
-func (h *hostNetwork) Start(ctx context.Context) error {
-	if !atomic.CompareAndSwapUint32(&h.started, 0, 1) {
+func (hn *hostNetwork) Start(ctx context.Context) error {
+	if !atomic.CompareAndSwapUint32(&hn.started, 0, 1) {
 		return errors.New("Failed to start transport: double listen initiated")
 	}
-	if err := h.transport.Start(ctx); err != nil {
+	if err := hn.transport.Start(ctx); err != nil {
 		return errors.Wrap(err, "Failed to start transport: listen syscall failed")
 	}
 
-	go h.listen(ctx)
+	go hn.listen(ctx)
 	return nil
 }
 
-func (h *hostNetwork) listen(ctx context.Context) {
+func (hn *hostNetwork) listen(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 	for {
 		select {
-		case msg := <-h.transport.Packets():
+		case msg := <-hn.transport.Packets():
 			if msg == nil {
 				logger.Error("HostNetwork receiving channel is closed")
 				break
@@ -128,47 +128,47 @@ func (h *hostNetwork) listen(ctx context.Context) {
 			if msg.Error != nil {
 				logger.Warnf("Received error response: %s", msg.Error.Error())
 			}
-			go h.messageProcessor(msg)
-		case <-h.transport.Stopped():
+			go hn.messageProcessor(msg)
+		case <-hn.transport.Stopped():
 			return
 		}
 	}
 }
 
 // Disconnect stop listening to network requests.
-func (h *hostNetwork) Stop(ctx context.Context) error {
-	if atomic.CompareAndSwapUint32(&h.started, 1, 0) {
-		go h.transport.Stop()
-		<-h.transport.Stopped()
-		h.transport.Close()
+func (hn *hostNetwork) Stop(ctx context.Context) error {
+	if atomic.CompareAndSwapUint32(&hn.started, 1, 0) {
+		go hn.transport.Stop()
+		<-hn.transport.Stopped()
+		hn.transport.Close()
 	}
 	return nil
 }
 
-func (h *hostNetwork) buildRequest(ctx context.Context, request network.Request, receiver *host.Host) *packet.Packet {
-	return packet.NewBuilder(h.origin).Receiver(receiver).Type(request.GetType()).RequestID(request.GetRequestID()).
+func (hn *hostNetwork) buildRequest(ctx context.Context, request network.Request, receiver *host.Host) *packet.Packet {
+	return packet.NewBuilder(hn.origin).Receiver(receiver).Type(request.GetType()).RequestID(request.GetRequestID()).
 		Request(request.GetData()).TraceID(inslogger.TraceID(ctx)).Build()
 }
 
 // PublicAddress returns public address that can be published for all nodes.
-func (h *hostNetwork) PublicAddress() string {
-	return h.origin.Address.String()
+func (hn *hostNetwork) PublicAddress() string {
+	return hn.origin.Address.String()
 }
 
 // GetNodeID get current node ID.
-func (h *hostNetwork) GetNodeID() insolar.Reference {
-	return h.origin.NodeID
+func (hn *hostNetwork) GetNodeID() insolar.Reference {
+	return hn.origin.NodeID
 }
 
 // NewRequestBuilder create packet Builder for an outgoing request with sender set to current node.
-func (h *hostNetwork) NewRequestBuilder() network.RequestBuilder {
-	return &Builder{sender: h.origin, id: network.RequestID(h.sequenceGenerator.Generate())}
+func (hn *hostNetwork) NewRequestBuilder() network.RequestBuilder {
+	return &Builder{sender: hn.origin, id: network.RequestID(hn.sequenceGenerator.Generate())}
 }
 
-func (h *hostNetwork) processMessage(msg *packet.Packet) {
+func (hn *hostNetwork) processMessage(msg *packet.Packet) {
 	ctx, logger := inslogger.WithTraceField(context.Background(), msg.TraceID)
 	logger.Debugf("Got %s request from host %s; RequestID: %d", msg.Type.String(), msg.Sender.String(), msg.RequestID)
-	handler, exist := h.handlers[msg.Type]
+	handler, exist := hn.handlers[msg.Type]
 	if !exist {
 		logger.Errorf("No handler set for packet type %s from node %s",
 			msg.Type.String(), msg.Sender.NodeID.String())
@@ -187,16 +187,16 @@ func (h *hostNetwork) processMessage(msg *packet.Packet) {
 			msg.Type.String(), msg.Sender.NodeID.String(), err)
 		return
 	}
-	err = h.transport.SendResponse(ctx, msg.RequestID, response.(*packet.Packet))
+	err = hn.transport.SendResponse(ctx, msg.RequestID, response.(*packet.Packet))
 	if err != nil {
 		logger.Error(err)
 	}
 }
 
 // SendRequestPacket send request packet to a remote node.
-func (h *hostNetwork) SendRequestPacket(ctx context.Context, request network.Request, receiver *host.Host) (network.Future, error) {
+func (hn *hostNetwork) SendRequestPacket(ctx context.Context, request network.Request, receiver *host.Host) (network.Future, error) {
 	inslogger.FromContext(ctx).Debugf("Send %s request to host %s", request.GetType().String(), receiver.String())
-	f, err := h.transport.SendRequest(ctx, h.buildRequest(ctx, request, receiver))
+	f, err := hn.transport.SendRequest(ctx, hn.buildRequest(ctx, request, receiver))
 	if err != nil {
 		return nil, err
 	}
@@ -204,18 +204,18 @@ func (h *hostNetwork) SendRequestPacket(ctx context.Context, request network.Req
 }
 
 // RegisterPacketHandler register a handler function to process incoming request packets of a specific type.
-func (h *hostNetwork) RegisterPacketHandler(t types.PacketType, handler network.RequestHandler) {
-	_, exists := h.handlers[t]
+func (hn *hostNetwork) RegisterPacketHandler(t types.PacketType, handler network.RequestHandler) {
+	_, exists := hn.handlers[t]
 	if exists {
 		log.Warnf("Multiple handlers for packet type %s are not supported! New handler will replace the old one!", t)
 	}
-	h.handlers[t] = handler
+	hn.handlers[t] = handler
 }
 
 // BuildResponse create response to an incoming request with Data set to responseData.
-func (h *hostNetwork) BuildResponse(ctx context.Context, request network.Request, responseData interface{}) network.Response {
+func (hn *hostNetwork) BuildResponse(ctx context.Context, request network.Request, responseData interface{}) network.Response {
 	sender := request.GetSenderHost()
-	p := packet.NewBuilder(h.origin).Type(request.GetType()).Receiver(sender).RequestID(request.GetRequestID()).
+	p := packet.NewBuilder(hn.origin).Type(request.GetType()).Receiver(sender).RequestID(request.GetRequestID()).
 		Response(responseData).TraceID(inslogger.TraceID(ctx)).Build()
 	return p
 }
@@ -230,10 +230,10 @@ func (hn *hostNetwork) SendRequest(ctx context.Context, request network.Request,
 }
 
 // RegisterPacketHandler register a handler function to process incoming requests of a specific type.
-func (tr *hostNetwork) RegisterRequestHandler(t types.PacketType, handler network.RequestHandler) {
+func (hn *hostNetwork) RegisterRequestHandler(t types.PacketType, handler network.RequestHandler) {
 	f := func(ctx context.Context, request network.Request) (network.Response, error) {
-		tr.Resolver.AddToKnownHosts(request.GetSenderHost())
+		hn.Resolver.AddToKnownHosts(request.GetSenderHost())
 		return handler(ctx, request)
 	}
-	tr.RegisterPacketHandler(t, f)
+	hn.RegisterPacketHandler(t, f)
 }
