@@ -56,6 +56,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/network/gateway"
+
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -91,6 +93,7 @@ type ServiceNetwork struct {
 	NodeKeeper          network.NodeKeeper          `inject:""`
 	NetworkSwitcher     insolar.NetworkSwitcher     `inject:""`
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
+	MBLocker            insolar.MessageBusLocker    `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
@@ -101,12 +104,27 @@ type ServiceNetwork struct {
 	skip        int
 
 	lock sync.Mutex
+
+	gateway   network.Gateway
+	gatewayMu sync.RWMutex
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager, isGenesis bool) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, isGenesis: isGenesis, skip: conf.Service.Skip}
 	return serviceNetwork, nil
+}
+
+func (nk *ServiceNetwork) Gateway() network.Gateway {
+	nk.gatewayMu.RLock()
+	defer nk.gatewayMu.RUnlock()
+	return nk.gateway
+}
+
+func (nk *ServiceNetwork) SetGateway(g network.Gateway) {
+	nk.gatewayMu.Lock()
+	defer nk.gatewayMu.Unlock()
+	nk.gateway = g
 }
 
 // SendMessage sends a message from MessageBus.
@@ -178,6 +196,9 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
+
+	n.gateway = gateway.NewNoNetwork(n, n.MBLocker)
+	n.gateway.Run()
 
 	return nil
 }
