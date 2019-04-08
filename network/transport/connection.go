@@ -11,10 +11,10 @@ import (
 
 type tcpConnectionFactory struct{}
 
-func (*tcpConnectionFactory) CreateConnection(ctx context.Context, address net.Addr) (net.Conn, error) {
+func (*tcpConnectionFactory) CreateConnection(ctx context.Context, address string) (net.Conn, error) {
 	logger := inslogger.FromContext(ctx)
-	tcpAddress, ok := address.(*net.TCPAddr)
-	if !ok {
+	tcpAddress, err := net.ResolveTCPAddr("tcp", address)
+	if err != nil {
 		return nil, errors.New("[ createConnection ] Failed to get tcp address")
 	}
 

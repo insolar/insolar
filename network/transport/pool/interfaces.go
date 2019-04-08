@@ -56,13 +56,13 @@ import (
 )
 
 type ConnectionPool interface {
-	GetConnection(ctx context.Context, address net.Addr) (net.Conn, error)
-	CloseConnection(ctx context.Context, address net.Addr)
+	GetConnection(ctx context.Context, address string) (net.Conn, error)
+	CloseConnection(ctx context.Context, address string)
 	Reset()
 }
 
 type connectionFactory interface {
-	CreateConnection(ctx context.Context, address net.Addr) (net.Conn, error)
+	CreateConnection(ctx context.Context, address string) (net.Conn, error)
 }
 
 type entry interface {
@@ -70,18 +70,18 @@ type entry interface {
 	Close()
 }
 
-type onClose func(ctx context.Context, addr net.Addr)
+type onClose func(ctx context.Context, addr string)
 
-func newEntry(connectionFactory connectionFactory, address net.Addr, onClose onClose) entry {
+func newEntry(connectionFactory connectionFactory, address string, onClose onClose) entry {
 	return newEntryImpl(connectionFactory, address, onClose)
 }
 
 type iterateFunc func(entry entry)
 
 type entryHolder interface {
-	Get(address net.Addr) (entry, bool)
-	Delete(address net.Addr)
-	Add(address net.Addr, entry entry)
+	Get(address string) (entry, bool)
+	Delete(address string)
+	Add(address string, entry entry)
 	Size() int
 	Clear()
 	Iterate(iterateFunc iterateFunc)

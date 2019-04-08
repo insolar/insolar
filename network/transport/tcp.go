@@ -99,12 +99,7 @@ func (t *tcpTransport) send(address string, data []byte) error {
 	ctx := context.Background()
 	logger := inslogger.FromContext(ctx)
 
-	addr, err := net.ResolveTCPAddr("tcp", address)
-	if err != nil {
-		return errors.Wrap(err, "[ send ] Failed to resolve net address")
-	}
-
-	conn, err := t.pool.GetConnection(ctx, addr)
+	conn, err := t.pool.GetConnection(ctx, address)
 	if err != nil {
 		return errors.Wrap(err, "[ send ] Failed to get connection")
 	}
@@ -114,8 +109,8 @@ func (t *tcpTransport) send(address string, data []byte) error {
 	n, err := conn.Write(data)
 
 	if err != nil {
-		t.pool.CloseConnection(ctx, addr)
-		conn, err = t.pool.GetConnection(ctx, addr)
+		t.pool.CloseConnection(ctx, address)
+		conn, err = t.pool.GetConnection(ctx, address)
 		if err != nil {
 			return errors.Wrap(err, "[ send ] Failed to get connection")
 		}

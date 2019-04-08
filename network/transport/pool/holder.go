@@ -50,10 +50,6 @@
 
 package pool
 
-import (
-	"net"
-)
-
 type entryHolderImpl struct {
 	entries map[string]entry
 }
@@ -64,21 +60,21 @@ func newEntryHolderImpl() entryHolder {
 	}
 }
 
-func (eh *entryHolderImpl) key(address net.Addr) string {
-	return address.String()
+func (eh *entryHolderImpl) key(address string) string {
+	return address
 }
 
-func (eh *entryHolderImpl) Get(address net.Addr) (entry, bool) {
+func (eh *entryHolderImpl) Get(address string) (entry, bool) {
 	entry, ok := eh.entries[eh.key(address)]
 
 	return entry, ok
 }
 
-func (eh *entryHolderImpl) Delete(address net.Addr) {
+func (eh *entryHolderImpl) Delete(address string) {
 	delete(eh.entries, eh.key(address))
 }
 
-func (eh *entryHolderImpl) Add(address net.Addr, entry entry) {
+func (eh *entryHolderImpl) Add(address string, entry entry) {
 	eh.entries[eh.key(address)] = entry
 }
 

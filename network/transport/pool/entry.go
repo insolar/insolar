@@ -64,7 +64,7 @@ import (
 
 type entryImpl struct {
 	connectionFactory connectionFactory
-	address           net.Addr
+	address           string
 	onClose           onClose
 
 	mutex *sync.Mutex
@@ -72,7 +72,7 @@ type entryImpl struct {
 	conn net.Conn
 }
 
-func newEntryImpl(connectionFactory connectionFactory, address net.Addr, onClose onClose) *entryImpl {
+func newEntryImpl(connectionFactory connectionFactory, address string, onClose onClose) *entryImpl {
 	return &entryImpl{
 		connectionFactory: connectionFactory,
 		address:           address,
@@ -102,7 +102,7 @@ func (e *entryImpl) open(ctx context.Context) (net.Conn, error) {
 	logger := inslogger.FromContext(ctx)
 	ctx, span := instracer.StartSpan(ctx, "connectionPool.open")
 	span.AddAttributes(
-		trace.StringAttribute("create connect to", e.address.String()),
+		trace.StringAttribute("create connect to", e.address),
 	)
 	defer span.End()
 

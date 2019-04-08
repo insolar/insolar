@@ -74,7 +74,7 @@ func newConnectionPool(connectionFactory connectionFactory) *connectionPool {
 	}
 }
 
-func (cp *connectionPool) GetConnection(ctx context.Context, address net.Addr) (net.Conn, error) {
+func (cp *connectionPool) GetConnection(ctx context.Context, address string) (net.Conn, error) {
 	logger := inslogger.FromContext(ctx)
 
 	entry, ok := cp.getEntry(address)
@@ -91,7 +91,7 @@ func (cp *connectionPool) GetConnection(ctx context.Context, address net.Addr) (
 	return entry.Open(ctx)
 }
 
-func (cp *connectionPool) CloseConnection(ctx context.Context, address net.Addr) {
+func (cp *connectionPool) CloseConnection(ctx context.Context, address string) {
 	cp.mutex.Lock()
 	defer cp.mutex.Unlock()
 
@@ -109,14 +109,14 @@ func (cp *connectionPool) CloseConnection(ctx context.Context, address net.Addr)
 	}
 }
 
-func (cp *connectionPool) getEntry(address net.Addr) (entry, bool) {
+func (cp *connectionPool) getEntry(address string) (entry, bool) {
 	cp.mutex.RLock()
 	defer cp.mutex.RUnlock()
 
 	return cp.entryHolder.Get(address)
 }
 
-func (cp *connectionPool) getOrCreateEntry(ctx context.Context, address net.Addr) entry {
+func (cp *connectionPool) getOrCreateEntry(ctx context.Context, address string) entry {
 	logger := inslogger.FromContext(ctx)
 
 	cp.mutex.Lock()
@@ -137,7 +137,7 @@ func (cp *connectionPool) getOrCreateEntry(ctx context.Context, address net.Addr
 	size := cp.entryHolder.Size()
 	logger.Debugf(
 		"[ getOrCreateEntry ] Added entry for connection to %s. Current pool size: %d",
-		address.String(),
+		address,
 		size,
 	)
 	metrics.NetworkConnections.Inc()
