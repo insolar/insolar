@@ -28,14 +28,14 @@ import (
 	"github.com/insolar/insolar/internal/ledger/store"
 )
 
-// StorageDB implements persistent blob-storage.
-type StorageDB struct {
+// DB implements persistent blob-storage.
+type DB struct {
 	db store.DB
 }
 
-// NewStorageDB creates a new storage, that holds persistent data.
-func NewStorageDB(db store.DB) *StorageDB {
-	return &StorageDB{
+// NewDB creates a new storage, that holds persistent data.
+func NewDB(db store.DB) *DB {
+	return &DB{
 		db: db,
 	}
 }
@@ -53,7 +53,7 @@ func (k *dbKey) ID() []byte {
 }
 
 // ForID returns Blob for provided id.
-func (s *StorageDB) ForID(ctx context.Context, id insolar.ID) (Blob, error) {
+func (s *DB) ForID(ctx context.Context, id insolar.ID) (Blob, error) {
 	b, err := s.db.Get(&dbKey{id: id})
 	if err != nil {
 		if err == store.ErrNotFound {
@@ -66,7 +66,7 @@ func (s *StorageDB) ForID(ctx context.Context, id insolar.ID) (Blob, error) {
 }
 
 // Set saves new Blob-value in storage.
-func (s *StorageDB) Set(ctx context.Context, id insolar.ID, blob Blob) error {
+func (s *DB) Set(ctx context.Context, id insolar.ID, blob Blob) error {
 	// Blob override is ok.
 	k := &dbKey{id: id}
 

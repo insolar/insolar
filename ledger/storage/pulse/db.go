@@ -27,8 +27,8 @@ import (
 	"github.com/insolar/insolar/internal/ledger/store"
 )
 
-// StorageDB is a DB storage implementation. It saves pulses to disk and does not allow removal.
-type StorageDB struct {
+// DB is a DB storage implementation. It saves pulses to disk and does not allow removal.
+type DB struct {
 	db   store.DB
 	lock sync.RWMutex
 }
@@ -67,13 +67,13 @@ var (
 	keyHead metaKey = 1
 )
 
-// NewStorageDB creates new DB storage instance.
-func NewStorageDB(db store.DB) *StorageDB {
-	return &StorageDB{db: db}
+// NewDB creates new DB storage instance.
+func NewDB(db store.DB) *DB {
+	return &DB{db: db}
 }
 
 // ForPulseNumber returns pulse for provided a pulse number. If not found, ErrNotFound will be returned.
-func (s *StorageDB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (pulse insolar.Pulse, err error) {
+func (s *DB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) (pulse insolar.Pulse, err error) {
 	nd, err := s.get(pn)
 	if err != nil {
 		return
@@ -82,7 +82,7 @@ func (s *StorageDB) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber) 
 }
 
 // Latest returns a latest pulse saved in DB. If not found, ErrNotFound will be returned.
-func (s *StorageDB) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
+func (s *DB) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -99,7 +99,7 @@ func (s *StorageDB) Latest(ctx context.Context) (pulse insolar.Pulse, err error)
 
 // Append appends provided pulse to current storage. Pulse number should be greater than currently saved for preserving
 // pulse consistency. If a provided pulse does not meet the requirements, ErrBadPulse will be returned.
-func (s *StorageDB) Append(ctx context.Context, pulse insolar.Pulse) error {
+func (s *DB) Append(ctx context.Context, pulse insolar.Pulse) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -151,7 +151,7 @@ func (s *StorageDB) Append(ctx context.Context, pulse insolar.Pulse) error {
 
 // Forwards calculates steps pulses forwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
-func (s *StorageDB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (pulse insolar.Pulse, err error) {
+func (s *DB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps int) (pulse insolar.Pulse, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -177,7 +177,7 @@ func (s *StorageDB) Forwards(ctx context.Context, pn insolar.PulseNumber, steps 
 
 // Backwards calculates steps pulses backwards from provided pulse. If calculated pulse does not exist, ErrNotFound will
 // be returned.
-func (s *StorageDB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (pulse insolar.Pulse, err error) {
+func (s *DB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps int) (pulse insolar.Pulse, err error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -201,7 +201,7 @@ func (s *StorageDB) Backwards(ctx context.Context, pn insolar.PulseNumber, steps
 	return iterator.Pulse, nil
 }
 
-func (s *StorageDB) get(pn insolar.PulseNumber) (nd dbNode, err error) {
+func (s *DB) get(pn insolar.PulseNumber) (nd dbNode, err error) {
 	buf, err := s.db.Get(pulseKey(pn))
 	if err == store.ErrNotFound {
 		err = ErrNotFound
@@ -214,11 +214,11 @@ func (s *StorageDB) get(pn insolar.PulseNumber) (nd dbNode, err error) {
 	return
 }
 
-func (s *StorageDB) set(pn insolar.PulseNumber, nd dbNode) error {
+func (s *DB) set(pn insolar.PulseNumber, nd dbNode) error {
 	return s.db.Set(pulseKey(pn), serialize(nd))
 }
 
-func (s *StorageDB) head() (pn insolar.PulseNumber, err error) {
+func (s *DB) head() (pn insolar.PulseNumber, err error) {
 	buf, err := s.db.Get(keyHead)
 	if err == store.ErrNotFound {
 		err = ErrNotFound
@@ -231,7 +231,7 @@ func (s *StorageDB) head() (pn insolar.PulseNumber, err error) {
 	return
 }
 
-func (s *StorageDB) setHead(pn insolar.PulseNumber) error {
+func (s *DB) setHead(pn insolar.PulseNumber) error {
 	return s.db.Set(keyHead, pn.Bytes())
 }
 

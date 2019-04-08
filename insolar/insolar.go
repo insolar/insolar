@@ -14,21 +14,6 @@
 // limitations under the License.
 //
 
-package server
+package insolar
 
-import (
-	"github.com/insolar/insolar/server/internal/light"
-	"github.com/insolar/insolar/server/internal/virtual"
-)
-
-type Server interface {
-	Serve()
-}
-
-func NewLightServer(cfgPath string, trace bool) Server {
-	return light.New(cfgPath, trace)
-}
-
-func NewVirtualServer(cfgPath string, trace bool) Server {
-	return virtual.New(cfgPath, trace)
-}
+var RootModule = "github.com/insolar/insolar"

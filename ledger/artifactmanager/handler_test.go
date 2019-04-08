@@ -117,7 +117,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.objectStorage = storage.NewObjectStorage()
 
 	storageDB := store.NewMemoryMockDB()
-	dropStorage := drop.NewStorageDB(storageDB)
+	dropStorage := drop.NewDB(storageDB)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 
