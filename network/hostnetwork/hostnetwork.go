@@ -221,12 +221,12 @@ func (h *hostNetwork) BuildResponse(ctx context.Context, request network.Request
 }
 
 // SendRequest send request to a remote node.
-func (tr *hostNetwork) SendRequest(ctx context.Context, request network.Request, receiver insolar.Reference) (network.Future, error) {
-	h, err := tr.Resolver.Resolve(receiver)
+func (hn *hostNetwork) SendRequest(ctx context.Context, request network.Request, receiver insolar.Reference) (network.Future, error) {
+	h, err := hn.Resolver.Resolve(receiver)
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving NodeID -> Address")
 	}
-	return tr.SendRequestPacket(ctx, request, h)
+	return hn.SendRequestPacket(ctx, request, h)
 }
 
 // RegisterPacketHandler register a handler function to process incoming requests of a specific type.
