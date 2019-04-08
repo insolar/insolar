@@ -197,15 +197,6 @@ func TestTCPTransport(t *testing.T) {
 	suite.Run(t, NewSuite(cfg1, cfg2))
 }
 
-func TestQuicTransport(t *testing.T) {
-	t.Skip("QUIC internals racing atm. Skip until we want to use it in production")
-
-	cfg1 := configuration.Transport{Protocol: "QUIC", Address: "127.0.0.1:17018"}
-	cfg2 := configuration.Transport{Protocol: "QUIC", Address: "127.0.0.1:17019"}
-
-	suite.Run(t, NewSuite(cfg1, cfg2))
-}
-
 func Test_createResolver(t *testing.T) {
 	a := assert.New(t)
 
