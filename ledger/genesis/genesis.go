@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/pulse"
@@ -41,8 +40,7 @@ type BaseRecord struct {
 	PulseAppender  pulse.Appender
 	PulseAccessor  pulse.Accessor
 	RecordModifier object.RecordModifier
-	// TODO: @imarkin 28.03.2019 - remove ObjectStorage after all new storages integration (INS-2013, etc)
-	ObjectStorage storage.ObjectStorage
+	IndexModifier  object.IndexModifier
 }
 
 // Key is genesis key.
@@ -112,13 +110,13 @@ func (gi *BaseRecord) CreateIfNeeded(ctx context.Context) (*insolar.Reference, b
 			return nil, errors.Wrap(err, "can't save genesis record into storage")
 		}
 
-		err = gi.ObjectStorage.SetObjectIndex(
+		err = gi.IndexModifier.Set(
 			ctx,
-			insolar.ID(insolar.ZeroJetID),
-			genesisID,
-			&object.Lifeline{
+			*genesisID,
+			object.Lifeline{
 				LatestState:         genesisID,
 				LatestStateApproved: genesisID,
+				JetID:               insolar.ZeroJetID,
 			},
 		)
 		if err != nil {

@@ -24,7 +24,7 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/insolar.HeavySync -o ../testutils -s _mock.go
 type HeavySync interface {
 	Start(ctx context.Context, jet ID, pn PulseNumber) error
-	StoreIndices(ctx context.Context, jet ID, pn PulseNumber, kvs []KV) error
+	StoreIndexes(ctx context.Context, jet ID, pn PulseNumber, rawIndexes map[ID][]byte) error
 	StoreDrop(ctx context.Context, jetID JetID, rawDrop []byte) error
 	StoreBlobs(ctx context.Context, pn PulseNumber, rawBlobs [][]byte) error
 	StoreRecords(ctx context.Context, jet ID, pn PulseNumber, rawRecords [][]byte)
