@@ -594,6 +594,7 @@ func (lr *LogicRunner) executeOrValidate(
 	var err error
 	switch m := msg.(type) {
 	case *message.CallMethod:
+		es.Current.LogicContext.Immutable = m.Immutable
 		re, err = lr.executeMethodCall(ctx, es, m)
 
 	case *message.CallConstructor:
