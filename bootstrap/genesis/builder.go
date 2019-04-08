@@ -134,7 +134,8 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 			return errors.Wrap(err, "[ Build ] Can't WriteFile")
 		}
 
-		proxy, err := OpenFile(filepath.Join(cb.root, "src/github.com/insolar/insolar/application/proxy", name), "main.go")
+		proxyPath := filepath.Join(cb.root, "src", proxySources, name)
+		proxy, err := OpenFile(proxyPath, "main.go")
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't open proxy file")
 		}

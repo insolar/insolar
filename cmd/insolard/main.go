@@ -25,10 +25,10 @@ import (
 	"github.com/spf13/cobra"
 	jww "github.com/spf13/jwalterweatherman"
 
+	"github.com/insolar/insolar/bootstrap/genesis"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/server"
 )
