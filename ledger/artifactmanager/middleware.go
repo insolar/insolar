@@ -35,7 +35,6 @@ type middleware struct {
 	jetAccessor    jet.Accessor
 	jetCoordinator insolar.JetCoordinator
 	messageBus     insolar.MessageBus
-	pulseStorage   insolar.PulseStorage
 	hotDataWaiter  HotDataWaiter
 	conf           *configuration.Ledger
 	handler        *MessageHandler
@@ -49,7 +48,6 @@ func newMiddleware(
 		jetAccessor:    h.JetStorage,
 		jetCoordinator: h.JetCoordinator,
 		messageBus:     h.Bus,
-		pulseStorage:   h.PulseStorage,
 		hotDataWaiter:  h.HotDataWaiter,
 		handler:        h,
 		conf:           h.conf,
@@ -100,7 +98,7 @@ func (m *middleware) checkJet(handler insolar.MessageHandler) insolar.MessageHan
 		}
 
 		// Hack to temporary allow any genesis request.
-		if parcel.Pulse() == insolar.FirstPulseNumber {
+		if parcel.Pulse() <= insolar.FirstPulseNumber {
 			return handler(contextWithJet(ctx, insolar.ID(*insolar.NewJetID(0, nil))), parcel)
 		}
 
@@ -166,7 +164,7 @@ func (m *middleware) waitForHotData(handler insolar.MessageHandler) insolar.Mess
 	return func(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 		// Hack is needed for genesis:
 		// because we don't have hot data on first pulse and without this we would stale.
-		if parcel.Pulse() == insolar.FirstPulseNumber {
+		if parcel.Pulse() <= insolar.FirstPulseNumber {
 			return handler(ctx, parcel)
 		}
 

@@ -226,10 +226,6 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode(t *testing.T) 
 	mb := mockMessageBus(t, true, &nodeRef, &discoveryNodeRef)
 
 	cm := mockCertificateManager(t, &certNodeRef, &discoveryNodeRef, true)
-	ps := testutils.NewPulseStorageMock(t)
-	ps.CurrentFunc = func(ctx context.Context) (*insolar.Pulse, error) {
-		return &insolar.Pulse{}, nil
-	}
 
 	coord := newRealNetworkCoordinator(cm, cr, mb, nil)
 	ctx := context.Background()
@@ -310,11 +306,6 @@ func TestRealNetworkCoordinator_requestCertSignOtherDiscoveryNode_SendError(t *t
 	mb := mockMessageBus(t, false, &nodeRef, &discoveryNodeRef)
 
 	cm := mockCertificateManager(t, &certNodeRef, &discoveryNodeRef, true)
-
-	ps := testutils.NewPulseStorageMock(t)
-	ps.CurrentFunc = func(ctx context.Context) (*insolar.Pulse, error) {
-		return &insolar.Pulse{}, nil
-	}
 
 	coord := newRealNetworkCoordinator(cm, cr, mb, nil)
 	ctx := context.Background()

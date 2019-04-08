@@ -62,6 +62,7 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
+	pulse2 "github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
@@ -176,7 +177,7 @@ func TestCalculatorError(t *testing.T) {
 	}
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
-	pulseManager := testutils.NewPulseStorageMock(t)
+	ps := pulse2.NewStorageMem()
 
 	nk := nodekeeper.GetTestNodekeeper(service)
 	th := testutils.NewTerminationHandlerMock(t)
@@ -189,7 +190,7 @@ func TestCalculatorError(t *testing.T) {
 	}
 	jc := testutils.NewJetCoordinatorMock(t)
 
-	cm.Inject(th, nk, jc, &am, calculator, service, scheme, pulseManager, mblock)
+	cm.Inject(th, nk, jc, &am, calculator, service, scheme, ps, mblock)
 
 	require.NotNil(t, calculator.ArtifactManager)
 	require.NotNil(t, calculator.NodeNetwork)

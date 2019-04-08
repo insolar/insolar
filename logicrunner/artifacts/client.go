@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -44,7 +45,7 @@ type client struct {
 	JetStorage                 jet.Storage                        `inject:""`
 	DefaultBus                 insolar.MessageBus                 `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
-	PulseStorage               insolar.PulseStorage               `inject:""`
+	PulseAccessor              pulse.Accessor                     `inject:""`
 	JetCoordinator             insolar.JetCoordinator             `inject:""`
 
 	getChildrenChunkSize int
@@ -57,7 +58,7 @@ func (m *client) State() ([]byte, error) {
 	return m.PlatformCryptographyScheme.IntegrityHasher().Hash([]byte{1, 2, 3}), nil
 }
 
-// NewClient creates new manager instance.
+// NewClient creates new client instance.
 func NewClient() *client { // nolint
 	return &client{
 		getChildrenChunkSize: getChildrenChunkSize,
@@ -734,7 +735,7 @@ func (m *client) RegisterResult(
 
 // pulse returns current PulseNumber for artifact manager
 func (m *client) pulse(ctx context.Context) (pn insolar.PulseNumber, err error) {
-	pulse, err := m.PulseStorage.Current(ctx)
+	pulse, err := m.PulseAccessor.Latest(ctx)
 	if err != nil {
 		return
 	}
@@ -847,9 +848,6 @@ func (m *client) updateObject(
 	}
 
 	currentPN, err := m.pulse(ctx)
-	if err != nil {
-		return nil, err
-	}
 	if err != nil {
 		return nil, err
 	}

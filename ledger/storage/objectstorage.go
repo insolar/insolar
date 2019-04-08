@@ -26,6 +26,8 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.ObjectStorage -o ./ -s _mock.go
 
 // ObjectStorage returns objects and their meta
+//
+// DEPRECATED
 type ObjectStorage interface {
 	IterateIndexIDs(
 		ctx context.Context,
@@ -106,4 +108,8 @@ func (os *objectStorage) SetObjectIndex(
 	}
 	encoded := object.EncodeIndex(*idx)
 	return os.DB.Set(ctx, k, encoded)
+}
+
+func pulseNumFromKey(from int, key []byte) insolar.PulseNumber {
+	return insolar.NewPulseNumber(key[from : from+insolar.PulseNumberSize])
 }

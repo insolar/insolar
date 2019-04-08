@@ -33,6 +33,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/pprof"
+	"github.com/insolar/insolar/log"
 )
 
 const insolarNamespace = "insolar"
@@ -59,6 +60,7 @@ func NewMetrics(ctx context.Context, cfg configuration.Metrics, registry *promet
 	mux := http.NewServeMux()
 	mux.Handle("/metrics", promhandler)
 	mux.Handle("/_status", newProcStatus())
+	mux.Handle("/debug/loglevel", log.NewLoglevelChangeHandler())
 	pprof.Handle(mux)
 	if cfg.ZpagesEnabled {
 		// https://opencensus.io/zpages/

@@ -30,7 +30,7 @@ import (
 )
 
 func TestNewStorageDB(t *testing.T) {
-	dbStore := NewStorageDB(store.NewMemoryMockDB())
+	dbStore := NewDB(store.NewMemoryMockDB())
 	require.NotNil(t, dbStore)
 }
 
@@ -63,7 +63,7 @@ func TestDropStorageDB_Set(t *testing.T) {
 	}
 	dbMock.GetMock.Return(nil, ErrNotFound)
 
-	dropStore := NewStorageDB(dbMock)
+	dropStore := NewDB(dbMock)
 
 	for _, inp := range inputs {
 		err := dropStore.Set(ctx, inp.dr)
@@ -82,7 +82,7 @@ func TestDropStorageDB_Set_ErrOverride(t *testing.T) {
 	dbMock := store.NewDBMock(t)
 	dbMock.GetMock.Return(nil, nil)
 
-	dropStore := NewStorageDB(dbMock)
+	dropStore := NewDB(dbMock)
 
 	err := dropStore.Set(ctx, dr)
 
@@ -102,7 +102,7 @@ func TestDropStorageDB_ForPulse(t *testing.T) {
 	dbMock := store.NewDBMock(t)
 	dbMock.GetMock.Return(buf, nil)
 
-	dropStore := NewStorageDB(dbMock)
+	dropStore := NewDB(dbMock)
 
 	resDr, err := dropStore.ForPulse(ctx, jetID, pn)
 
@@ -118,7 +118,7 @@ func TestDropStorageDB_ForPulse_NotExist(t *testing.T) {
 	dbMock := store.NewDBMock(t)
 	dbMock.GetMock.Return(nil, ErrNotFound)
 
-	dropStore := NewStorageDB(dbMock)
+	dropStore := NewDB(dbMock)
 
 	_, err := dropStore.ForPulse(ctx, jetID, pn)
 
@@ -133,7 +133,7 @@ func TestDropStorageDB_ForPulse_ProblemsWithDecoding(t *testing.T) {
 	dbMock := store.NewDBMock(t)
 	dbMock.GetMock.Return([]byte{1, 2, 3}, nil)
 
-	dropStore := NewStorageDB(dbMock)
+	dropStore := NewDB(dbMock)
 
 	_, err := dropStore.ForPulse(ctx, jetID, pn)
 
