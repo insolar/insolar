@@ -16,11 +16,13 @@
 
 package insolar
 
-import "github.com/insolar/insolar/platformpolicy"
+import (
+	"github.com/insolar/insolar/platformpolicy/keys"
+)
 
 type NodeMeta interface {
 	GetNodeRef() *Reference
-	GetPublicKey() platformpolicy.PublicKey
+	GetPublicKey() keys.PublicKey
 }
 
 // Certificate interface provides methods to manage keys

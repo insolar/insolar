@@ -6,7 +6,7 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "KeyProcessor" can be found in github.com/insolar/insolar/insolar
 */
 import (
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"sync/atomic"
 	"time"
 
@@ -19,42 +19,42 @@ import (
 type KeyProcessorMock struct {
 	t minimock.Tester
 
-	ExportPrivateKeyPEMFunc       func(p platformpolicy.PrivateKey) (r []byte, r1 error)
+	ExportPrivateKeyPEMFunc       func(p keys.PrivateKey) (r []byte, r1 error)
 	ExportPrivateKeyPEMCounter    uint64
 	ExportPrivateKeyPEMPreCounter uint64
 	ExportPrivateKeyPEMMock       mKeyProcessorMockExportPrivateKeyPEM
 
-	ExportPublicKeyBinaryFunc       func(p platformpolicy.PublicKey) (r []byte, r1 error)
+	ExportPublicKeyBinaryFunc       func(p keys.PublicKey) (r []byte, r1 error)
 	ExportPublicKeyBinaryCounter    uint64
 	ExportPublicKeyBinaryPreCounter uint64
 	ExportPublicKeyBinaryMock       mKeyProcessorMockExportPublicKeyBinary
 
-	ExportPublicKeyPEMFunc       func(p platformpolicy.PublicKey) (r []byte, r1 error)
+	ExportPublicKeyPEMFunc       func(p keys.PublicKey) (r []byte, r1 error)
 	ExportPublicKeyPEMCounter    uint64
 	ExportPublicKeyPEMPreCounter uint64
 	ExportPublicKeyPEMMock       mKeyProcessorMockExportPublicKeyPEM
 
-	ExtractPublicKeyFunc       func(p platformpolicy.PrivateKey) (r platformpolicy.PublicKey)
+	ExtractPublicKeyFunc       func(p keys.PrivateKey) (r keys.PublicKey)
 	ExtractPublicKeyCounter    uint64
 	ExtractPublicKeyPreCounter uint64
 	ExtractPublicKeyMock       mKeyProcessorMockExtractPublicKey
 
-	GeneratePrivateKeyFunc       func() (r platformpolicy.PrivateKey, r1 error)
+	GeneratePrivateKeyFunc       func() (r keys.PrivateKey, r1 error)
 	GeneratePrivateKeyCounter    uint64
 	GeneratePrivateKeyPreCounter uint64
 	GeneratePrivateKeyMock       mKeyProcessorMockGeneratePrivateKey
 
-	ImportPrivateKeyPEMFunc       func(p []byte) (r platformpolicy.PrivateKey, r1 error)
+	ImportPrivateKeyPEMFunc       func(p []byte) (r keys.PrivateKey, r1 error)
 	ImportPrivateKeyPEMCounter    uint64
 	ImportPrivateKeyPEMPreCounter uint64
 	ImportPrivateKeyPEMMock       mKeyProcessorMockImportPrivateKeyPEM
 
-	ImportPublicKeyBinaryFunc       func(p []byte) (r platformpolicy.PublicKey, r1 error)
+	ImportPublicKeyBinaryFunc       func(p []byte) (r keys.PublicKey, r1 error)
 	ImportPublicKeyBinaryCounter    uint64
 	ImportPublicKeyBinaryPreCounter uint64
 	ImportPublicKeyBinaryMock       mKeyProcessorMockImportPublicKeyBinary
 
-	ImportPublicKeyPEMFunc       func(p []byte) (r platformpolicy.PublicKey, r1 error)
+	ImportPublicKeyPEMFunc       func(p []byte) (r keys.PublicKey, r1 error)
 	ImportPublicKeyPEMCounter    uint64
 	ImportPublicKeyPEMPreCounter uint64
 	ImportPublicKeyPEMMock       mKeyProcessorMockImportPublicKeyPEM
@@ -92,7 +92,7 @@ type KeyProcessorMockExportPrivateKeyPEMExpectation struct {
 }
 
 type KeyProcessorMockExportPrivateKeyPEMInput struct {
-	p platformpolicy.PrivateKey
+	p keys.PrivateKey
 }
 
 type KeyProcessorMockExportPrivateKeyPEMResult struct {
@@ -101,7 +101,7 @@ type KeyProcessorMockExportPrivateKeyPEMResult struct {
 }
 
 //Expect specifies that invocation of KeyProcessor.ExportPrivateKeyPEM is expected from 1 to Infinity times
-func (m *mKeyProcessorMockExportPrivateKeyPEM) Expect(p platformpolicy.PrivateKey) *mKeyProcessorMockExportPrivateKeyPEM {
+func (m *mKeyProcessorMockExportPrivateKeyPEM) Expect(p keys.PrivateKey) *mKeyProcessorMockExportPrivateKeyPEM {
 	m.mock.ExportPrivateKeyPEMFunc = nil
 	m.expectationSeries = nil
 
@@ -125,7 +125,7 @@ func (m *mKeyProcessorMockExportPrivateKeyPEM) Return(r []byte, r1 error) *KeyPr
 }
 
 //ExpectOnce specifies that invocation of KeyProcessor.ExportPrivateKeyPEM is expected once
-func (m *mKeyProcessorMockExportPrivateKeyPEM) ExpectOnce(p platformpolicy.PrivateKey) *KeyProcessorMockExportPrivateKeyPEMExpectation {
+func (m *mKeyProcessorMockExportPrivateKeyPEM) ExpectOnce(p keys.PrivateKey) *KeyProcessorMockExportPrivateKeyPEMExpectation {
 	m.mock.ExportPrivateKeyPEMFunc = nil
 	m.mainExpectation = nil
 
@@ -140,7 +140,7 @@ func (e *KeyProcessorMockExportPrivateKeyPEMExpectation) Return(r []byte, r1 err
 }
 
 //Set uses given function f as a mock of KeyProcessor.ExportPrivateKeyPEM method
-func (m *mKeyProcessorMockExportPrivateKeyPEM) Set(f func(p platformpolicy.PrivateKey) (r []byte, r1 error)) *KeyProcessorMock {
+func (m *mKeyProcessorMockExportPrivateKeyPEM) Set(f func(p keys.PrivateKey) (r []byte, r1 error)) *KeyProcessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -149,7 +149,7 @@ func (m *mKeyProcessorMockExportPrivateKeyPEM) Set(f func(p platformpolicy.Priva
 }
 
 //ExportPrivateKeyPEM implements github.com/insolar/insolar/insolar.KeyProcessor interface
-func (m *KeyProcessorMock) ExportPrivateKeyPEM(p platformpolicy.PrivateKey) (r []byte, r1 error) {
+func (m *KeyProcessorMock) ExportPrivateKeyPEM(p keys.PrivateKey) (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.ExportPrivateKeyPEMPreCounter, 1)
 	defer atomic.AddUint64(&m.ExportPrivateKeyPEMCounter, 1)
 
@@ -242,7 +242,7 @@ type KeyProcessorMockExportPublicKeyBinaryExpectation struct {
 }
 
 type KeyProcessorMockExportPublicKeyBinaryInput struct {
-	p platformpolicy.PublicKey
+	p keys.PublicKey
 }
 
 type KeyProcessorMockExportPublicKeyBinaryResult struct {
@@ -251,7 +251,7 @@ type KeyProcessorMockExportPublicKeyBinaryResult struct {
 }
 
 //Expect specifies that invocation of KeyProcessor.ExportPublicKeyBinary is expected from 1 to Infinity times
-func (m *mKeyProcessorMockExportPublicKeyBinary) Expect(p platformpolicy.PublicKey) *mKeyProcessorMockExportPublicKeyBinary {
+func (m *mKeyProcessorMockExportPublicKeyBinary) Expect(p keys.PublicKey) *mKeyProcessorMockExportPublicKeyBinary {
 	m.mock.ExportPublicKeyBinaryFunc = nil
 	m.expectationSeries = nil
 
@@ -275,7 +275,7 @@ func (m *mKeyProcessorMockExportPublicKeyBinary) Return(r []byte, r1 error) *Key
 }
 
 //ExpectOnce specifies that invocation of KeyProcessor.ExportPublicKeyBinary is expected once
-func (m *mKeyProcessorMockExportPublicKeyBinary) ExpectOnce(p platformpolicy.PublicKey) *KeyProcessorMockExportPublicKeyBinaryExpectation {
+func (m *mKeyProcessorMockExportPublicKeyBinary) ExpectOnce(p keys.PublicKey) *KeyProcessorMockExportPublicKeyBinaryExpectation {
 	m.mock.ExportPublicKeyBinaryFunc = nil
 	m.mainExpectation = nil
 
@@ -290,7 +290,7 @@ func (e *KeyProcessorMockExportPublicKeyBinaryExpectation) Return(r []byte, r1 e
 }
 
 //Set uses given function f as a mock of KeyProcessor.ExportPublicKeyBinary method
-func (m *mKeyProcessorMockExportPublicKeyBinary) Set(f func(p platformpolicy.PublicKey) (r []byte, r1 error)) *KeyProcessorMock {
+func (m *mKeyProcessorMockExportPublicKeyBinary) Set(f func(p keys.PublicKey) (r []byte, r1 error)) *KeyProcessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -299,7 +299,7 @@ func (m *mKeyProcessorMockExportPublicKeyBinary) Set(f func(p platformpolicy.Pub
 }
 
 //ExportPublicKeyBinary implements github.com/insolar/insolar/insolar.KeyProcessor interface
-func (m *KeyProcessorMock) ExportPublicKeyBinary(p platformpolicy.PublicKey) (r []byte, r1 error) {
+func (m *KeyProcessorMock) ExportPublicKeyBinary(p keys.PublicKey) (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.ExportPublicKeyBinaryPreCounter, 1)
 	defer atomic.AddUint64(&m.ExportPublicKeyBinaryCounter, 1)
 
@@ -392,7 +392,7 @@ type KeyProcessorMockExportPublicKeyPEMExpectation struct {
 }
 
 type KeyProcessorMockExportPublicKeyPEMInput struct {
-	p platformpolicy.PublicKey
+	p keys.PublicKey
 }
 
 type KeyProcessorMockExportPublicKeyPEMResult struct {
@@ -401,7 +401,7 @@ type KeyProcessorMockExportPublicKeyPEMResult struct {
 }
 
 //Expect specifies that invocation of KeyProcessor.ExportPublicKeyPEM is expected from 1 to Infinity times
-func (m *mKeyProcessorMockExportPublicKeyPEM) Expect(p platformpolicy.PublicKey) *mKeyProcessorMockExportPublicKeyPEM {
+func (m *mKeyProcessorMockExportPublicKeyPEM) Expect(p keys.PublicKey) *mKeyProcessorMockExportPublicKeyPEM {
 	m.mock.ExportPublicKeyPEMFunc = nil
 	m.expectationSeries = nil
 
@@ -425,7 +425,7 @@ func (m *mKeyProcessorMockExportPublicKeyPEM) Return(r []byte, r1 error) *KeyPro
 }
 
 //ExpectOnce specifies that invocation of KeyProcessor.ExportPublicKeyPEM is expected once
-func (m *mKeyProcessorMockExportPublicKeyPEM) ExpectOnce(p platformpolicy.PublicKey) *KeyProcessorMockExportPublicKeyPEMExpectation {
+func (m *mKeyProcessorMockExportPublicKeyPEM) ExpectOnce(p keys.PublicKey) *KeyProcessorMockExportPublicKeyPEMExpectation {
 	m.mock.ExportPublicKeyPEMFunc = nil
 	m.mainExpectation = nil
 
@@ -440,7 +440,7 @@ func (e *KeyProcessorMockExportPublicKeyPEMExpectation) Return(r []byte, r1 erro
 }
 
 //Set uses given function f as a mock of KeyProcessor.ExportPublicKeyPEM method
-func (m *mKeyProcessorMockExportPublicKeyPEM) Set(f func(p platformpolicy.PublicKey) (r []byte, r1 error)) *KeyProcessorMock {
+func (m *mKeyProcessorMockExportPublicKeyPEM) Set(f func(p keys.PublicKey) (r []byte, r1 error)) *KeyProcessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -449,7 +449,7 @@ func (m *mKeyProcessorMockExportPublicKeyPEM) Set(f func(p platformpolicy.Public
 }
 
 //ExportPublicKeyPEM implements github.com/insolar/insolar/insolar.KeyProcessor interface
-func (m *KeyProcessorMock) ExportPublicKeyPEM(p platformpolicy.PublicKey) (r []byte, r1 error) {
+func (m *KeyProcessorMock) ExportPublicKeyPEM(p keys.PublicKey) (r []byte, r1 error) {
 	counter := atomic.AddUint64(&m.ExportPublicKeyPEMPreCounter, 1)
 	defer atomic.AddUint64(&m.ExportPublicKeyPEMCounter, 1)
 
@@ -542,15 +542,15 @@ type KeyProcessorMockExtractPublicKeyExpectation struct {
 }
 
 type KeyProcessorMockExtractPublicKeyInput struct {
-	p platformpolicy.PrivateKey
+	p keys.PrivateKey
 }
 
 type KeyProcessorMockExtractPublicKeyResult struct {
-	r platformpolicy.PublicKey
+	r keys.PublicKey
 }
 
 //Expect specifies that invocation of KeyProcessor.ExtractPublicKey is expected from 1 to Infinity times
-func (m *mKeyProcessorMockExtractPublicKey) Expect(p platformpolicy.PrivateKey) *mKeyProcessorMockExtractPublicKey {
+func (m *mKeyProcessorMockExtractPublicKey) Expect(p keys.PrivateKey) *mKeyProcessorMockExtractPublicKey {
 	m.mock.ExtractPublicKeyFunc = nil
 	m.expectationSeries = nil
 
@@ -562,7 +562,7 @@ func (m *mKeyProcessorMockExtractPublicKey) Expect(p platformpolicy.PrivateKey) 
 }
 
 //Return specifies results of invocation of KeyProcessor.ExtractPublicKey
-func (m *mKeyProcessorMockExtractPublicKey) Return(r platformpolicy.PublicKey) *KeyProcessorMock {
+func (m *mKeyProcessorMockExtractPublicKey) Return(r keys.PublicKey) *KeyProcessorMock {
 	m.mock.ExtractPublicKeyFunc = nil
 	m.expectationSeries = nil
 
@@ -574,7 +574,7 @@ func (m *mKeyProcessorMockExtractPublicKey) Return(r platformpolicy.PublicKey) *
 }
 
 //ExpectOnce specifies that invocation of KeyProcessor.ExtractPublicKey is expected once
-func (m *mKeyProcessorMockExtractPublicKey) ExpectOnce(p platformpolicy.PrivateKey) *KeyProcessorMockExtractPublicKeyExpectation {
+func (m *mKeyProcessorMockExtractPublicKey) ExpectOnce(p keys.PrivateKey) *KeyProcessorMockExtractPublicKeyExpectation {
 	m.mock.ExtractPublicKeyFunc = nil
 	m.mainExpectation = nil
 
@@ -584,12 +584,12 @@ func (m *mKeyProcessorMockExtractPublicKey) ExpectOnce(p platformpolicy.PrivateK
 	return expectation
 }
 
-func (e *KeyProcessorMockExtractPublicKeyExpectation) Return(r platformpolicy.PublicKey) {
+func (e *KeyProcessorMockExtractPublicKeyExpectation) Return(r keys.PublicKey) {
 	e.result = &KeyProcessorMockExtractPublicKeyResult{r}
 }
 
 //Set uses given function f as a mock of KeyProcessor.ExtractPublicKey method
-func (m *mKeyProcessorMockExtractPublicKey) Set(f func(p platformpolicy.PrivateKey) (r platformpolicy.PublicKey)) *KeyProcessorMock {
+func (m *mKeyProcessorMockExtractPublicKey) Set(f func(p keys.PrivateKey) (r keys.PublicKey)) *KeyProcessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -598,7 +598,7 @@ func (m *mKeyProcessorMockExtractPublicKey) Set(f func(p platformpolicy.PrivateK
 }
 
 //ExtractPublicKey implements github.com/insolar/insolar/insolar.KeyProcessor interface
-func (m *KeyProcessorMock) ExtractPublicKey(p platformpolicy.PrivateKey) (r platformpolicy.PublicKey) {
+func (m *KeyProcessorMock) ExtractPublicKey(p keys.PrivateKey) (r keys.PublicKey) {
 	counter := atomic.AddUint64(&m.ExtractPublicKeyPreCounter, 1)
 	defer atomic.AddUint64(&m.ExtractPublicKeyCounter, 1)
 
@@ -688,7 +688,7 @@ type KeyProcessorMockGeneratePrivateKeyExpectation struct {
 }
 
 type KeyProcessorMockGeneratePrivateKeyResult struct {
-	r  platformpolicy.PrivateKey
+	r  keys.PrivateKey
 	r1 error
 }
 
@@ -705,7 +705,7 @@ func (m *mKeyProcessorMockGeneratePrivateKey) Expect() *mKeyProcessorMockGenerat
 }
 
 //Return specifies results of invocation of KeyProcessor.GeneratePrivateKey
-func (m *mKeyProcessorMockGeneratePrivateKey) Return(r platformpolicy.PrivateKey, r1 error) *KeyProcessorMock {
+func (m *mKeyProcessorMockGeneratePrivateKey) Return(r keys.PrivateKey, r1 error) *KeyProcessorMock {
 	m.mock.GeneratePrivateKeyFunc = nil
 	m.expectationSeries = nil
 
@@ -727,12 +727,12 @@ func (m *mKeyProcessorMockGeneratePrivateKey) ExpectOnce() *KeyProcessorMockGene
 	return expectation
 }
 
-func (e *KeyProcessorMockGeneratePrivateKeyExpectation) Return(r platformpolicy.PrivateKey, r1 error) {
+func (e *KeyProcessorMockGeneratePrivateKeyExpectation) Return(r keys.PrivateKey, r1 error) {
 	e.result = &KeyProcessorMockGeneratePrivateKeyResult{r, r1}
 }
 
 //Set uses given function f as a mock of KeyProcessor.GeneratePrivateKey method
-func (m *mKeyProcessorMockGeneratePrivateKey) Set(f func() (r platformpolicy.PrivateKey, r1 error)) *KeyProcessorMock {
+func (m *mKeyProcessorMockGeneratePrivateKey) Set(f func() (r keys.PrivateKey, r1 error)) *KeyProcessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -741,7 +741,7 @@ func (m *mKeyProcessorMockGeneratePrivateKey) Set(f func() (r platformpolicy.Pri
 }
 
 //GeneratePrivateKey implements github.com/insolar/insolar/insolar.KeyProcessor interface
-func (m *KeyProcessorMock) GeneratePrivateKey() (r platformpolicy.PrivateKey, r1 error) {
+func (m *KeyProcessorMock) GeneratePrivateKey() (r keys.PrivateKey, r1 error) {
 	counter := atomic.AddUint64(&m.GeneratePrivateKeyPreCounter, 1)
 	defer atomic.AddUint64(&m.GeneratePrivateKeyCounter, 1)
 
@@ -830,7 +830,7 @@ type KeyProcessorMockImportPrivateKeyPEMInput struct {
 }
 
 type KeyProcessorMockImportPrivateKeyPEMResult struct {
-	r  platformpolicy.PrivateKey
+	r  keys.PrivateKey
 	r1 error
 }
 
@@ -847,7 +847,7 @@ func (m *mKeyProcessorMockImportPrivateKeyPEM) Expect(p []byte) *mKeyProcessorMo
 }
 
 //Return specifies results of invocation of KeyProcessor.ImportPrivateKeyPEM
-func (m *mKeyProcessorMockImportPrivateKeyPEM) Return(r platformpolicy.PrivateKey, r1 error) *KeyProcessorMock {
+func (m *mKeyProcessorMockImportPrivateKeyPEM) Return(r keys.PrivateKey, r1 error) *KeyProcessorMock {
 	m.mock.ImportPrivateKeyPEMFunc = nil
 	m.expectationSeries = nil
 
@@ -869,12 +869,12 @@ func (m *mKeyProcessorMockImportPrivateKeyPEM) ExpectOnce(p []byte) *KeyProcesso
 	return expectation
 }
 
-func (e *KeyProcessorMockImportPrivateKeyPEMExpectation) Return(r platformpolicy.PrivateKey, r1 error) {
+func (e *KeyProcessorMockImportPrivateKeyPEMExpectation) Return(r keys.PrivateKey, r1 error) {
 	e.result = &KeyProcessorMockImportPrivateKeyPEMResult{r, r1}
 }
 
 //Set uses given function f as a mock of KeyProcessor.ImportPrivateKeyPEM method
-func (m *mKeyProcessorMockImportPrivateKeyPEM) Set(f func(p []byte) (r platformpolicy.PrivateKey, r1 error)) *KeyProcessorMock {
+func (m *mKeyProcessorMockImportPrivateKeyPEM) Set(f func(p []byte) (r keys.PrivateKey, r1 error)) *KeyProcessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -883,7 +883,7 @@ func (m *mKeyProcessorMockImportPrivateKeyPEM) Set(f func(p []byte) (r platformp
 }
 
 //ImportPrivateKeyPEM implements github.com/insolar/insolar/insolar.KeyProcessor interface
-func (m *KeyProcessorMock) ImportPrivateKeyPEM(p []byte) (r platformpolicy.PrivateKey, r1 error) {
+func (m *KeyProcessorMock) ImportPrivateKeyPEM(p []byte) (r keys.PrivateKey, r1 error) {
 	counter := atomic.AddUint64(&m.ImportPrivateKeyPEMPreCounter, 1)
 	defer atomic.AddUint64(&m.ImportPrivateKeyPEMCounter, 1)
 
@@ -980,7 +980,7 @@ type KeyProcessorMockImportPublicKeyBinaryInput struct {
 }
 
 type KeyProcessorMockImportPublicKeyBinaryResult struct {
-	r  platformpolicy.PublicKey
+	r  keys.PublicKey
 	r1 error
 }
 
@@ -997,7 +997,7 @@ func (m *mKeyProcessorMockImportPublicKeyBinary) Expect(p []byte) *mKeyProcessor
 }
 
 //Return specifies results of invocation of KeyProcessor.ImportPublicKeyBinary
-func (m *mKeyProcessorMockImportPublicKeyBinary) Return(r platformpolicy.PublicKey, r1 error) *KeyProcessorMock {
+func (m *mKeyProcessorMockImportPublicKeyBinary) Return(r keys.PublicKey, r1 error) *KeyProcessorMock {
 	m.mock.ImportPublicKeyBinaryFunc = nil
 	m.expectationSeries = nil
 
@@ -1019,12 +1019,12 @@ func (m *mKeyProcessorMockImportPublicKeyBinary) ExpectOnce(p []byte) *KeyProces
 	return expectation
 }
 
-func (e *KeyProcessorMockImportPublicKeyBinaryExpectation) Return(r platformpolicy.PublicKey, r1 error) {
+func (e *KeyProcessorMockImportPublicKeyBinaryExpectation) Return(r keys.PublicKey, r1 error) {
 	e.result = &KeyProcessorMockImportPublicKeyBinaryResult{r, r1}
 }
 
 //Set uses given function f as a mock of KeyProcessor.ImportPublicKeyBinary method
-func (m *mKeyProcessorMockImportPublicKeyBinary) Set(f func(p []byte) (r platformpolicy.PublicKey, r1 error)) *KeyProcessorMock {
+func (m *mKeyProcessorMockImportPublicKeyBinary) Set(f func(p []byte) (r keys.PublicKey, r1 error)) *KeyProcessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1033,7 +1033,7 @@ func (m *mKeyProcessorMockImportPublicKeyBinary) Set(f func(p []byte) (r platfor
 }
 
 //ImportPublicKeyBinary implements github.com/insolar/insolar/insolar.KeyProcessor interface
-func (m *KeyProcessorMock) ImportPublicKeyBinary(p []byte) (r platformpolicy.PublicKey, r1 error) {
+func (m *KeyProcessorMock) ImportPublicKeyBinary(p []byte) (r keys.PublicKey, r1 error) {
 	counter := atomic.AddUint64(&m.ImportPublicKeyBinaryPreCounter, 1)
 	defer atomic.AddUint64(&m.ImportPublicKeyBinaryCounter, 1)
 
@@ -1130,7 +1130,7 @@ type KeyProcessorMockImportPublicKeyPEMInput struct {
 }
 
 type KeyProcessorMockImportPublicKeyPEMResult struct {
-	r  platformpolicy.PublicKey
+	r  keys.PublicKey
 	r1 error
 }
 
@@ -1147,7 +1147,7 @@ func (m *mKeyProcessorMockImportPublicKeyPEM) Expect(p []byte) *mKeyProcessorMoc
 }
 
 //Return specifies results of invocation of KeyProcessor.ImportPublicKeyPEM
-func (m *mKeyProcessorMockImportPublicKeyPEM) Return(r platformpolicy.PublicKey, r1 error) *KeyProcessorMock {
+func (m *mKeyProcessorMockImportPublicKeyPEM) Return(r keys.PublicKey, r1 error) *KeyProcessorMock {
 	m.mock.ImportPublicKeyPEMFunc = nil
 	m.expectationSeries = nil
 
@@ -1169,12 +1169,12 @@ func (m *mKeyProcessorMockImportPublicKeyPEM) ExpectOnce(p []byte) *KeyProcessor
 	return expectation
 }
 
-func (e *KeyProcessorMockImportPublicKeyPEMExpectation) Return(r platformpolicy.PublicKey, r1 error) {
+func (e *KeyProcessorMockImportPublicKeyPEMExpectation) Return(r keys.PublicKey, r1 error) {
 	e.result = &KeyProcessorMockImportPublicKeyPEMResult{r, r1}
 }
 
 //Set uses given function f as a mock of KeyProcessor.ImportPublicKeyPEM method
-func (m *mKeyProcessorMockImportPublicKeyPEM) Set(f func(p []byte) (r platformpolicy.PublicKey, r1 error)) *KeyProcessorMock {
+func (m *mKeyProcessorMockImportPublicKeyPEM) Set(f func(p []byte) (r keys.PublicKey, r1 error)) *KeyProcessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1183,7 +1183,7 @@ func (m *mKeyProcessorMockImportPublicKeyPEM) Set(f func(p []byte) (r platformpo
 }
 
 //ImportPublicKeyPEM implements github.com/insolar/insolar/insolar.KeyProcessor interface
-func (m *KeyProcessorMock) ImportPublicKeyPEM(p []byte) (r platformpolicy.PublicKey, r1 error) {
+func (m *KeyProcessorMock) ImportPublicKeyPEM(p []byte) (r keys.PublicKey, r1 error) {
 	counter := atomic.AddUint64(&m.ImportPublicKeyPEMPreCounter, 1)
 	defer atomic.AddUint64(&m.ImportPublicKeyPEMCounter, 1)
 

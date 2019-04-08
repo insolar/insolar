@@ -19,11 +19,11 @@ package testutils
 import (
 	"crypto/rand"
 	"fmt"
-	"github.com/insolar/insolar/platformpolicy"
 	"hash"
 	"math/big"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/sha3"
 )
@@ -161,11 +161,11 @@ func (m *cryptographySchemeMock) IntegrityHasher() insolar.Hasher {
 	return &hasherMock{h: sha3.New512()}
 }
 
-func (m *cryptographySchemeMock) Signer(privateKey platformpolicy.PrivateKey) insolar.Signer {
+func (m *cryptographySchemeMock) Signer(privateKey keys.PrivateKey) insolar.Signer {
 	panic("not implemented")
 }
 
-func (m *cryptographySchemeMock) Verifier(publicKey platformpolicy.PublicKey) insolar.Verifier {
+func (m *cryptographySchemeMock) Verifier(publicKey keys.PublicKey) insolar.Verifier {
 	panic("not implemented")
 }
 

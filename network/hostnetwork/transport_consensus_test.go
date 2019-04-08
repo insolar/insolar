@@ -249,7 +249,7 @@ func (t *consensusTransportSuite) TestVerifySignPhase3() {
 }
 
 func NewSuite() (*consensusTransportSuite, error) {
-	kp := commoncrypto.NewKeyProcessor()
+	kp := platformpolicy.NewKeyProcessor()
 	sk, err := kp.GeneratePrivateKey()
 	if err != nil {
 		return nil, err

@@ -6,7 +6,7 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Certificate" can be found in github.com/insolar/insolar/insolar
 */
 import (
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"sync/atomic"
 	"time"
 
@@ -33,7 +33,7 @@ type CertificateMock struct {
 	GetNodeRefPreCounter uint64
 	GetNodeRefMock       mCertificateMockGetNodeRef
 
-	GetPublicKeyFunc       func() (r platformpolicy.PublicKey)
+	GetPublicKeyFunc       func() (r keys.PublicKey)
 	GetPublicKeyCounter    uint64
 	GetPublicKeyPreCounter uint64
 	GetPublicKeyMock       mCertificateMockGetPublicKey
@@ -486,7 +486,7 @@ type CertificateMockGetPublicKeyExpectation struct {
 }
 
 type CertificateMockGetPublicKeyResult struct {
-	r platformpolicy.PublicKey
+	r keys.PublicKey
 }
 
 //Expect specifies that invocation of Certificate.GetPublicKey is expected from 1 to Infinity times
@@ -502,7 +502,7 @@ func (m *mCertificateMockGetPublicKey) Expect() *mCertificateMockGetPublicKey {
 }
 
 //Return specifies results of invocation of Certificate.GetPublicKey
-func (m *mCertificateMockGetPublicKey) Return(r platformpolicy.PublicKey) *CertificateMock {
+func (m *mCertificateMockGetPublicKey) Return(r keys.PublicKey) *CertificateMock {
 	m.mock.GetPublicKeyFunc = nil
 	m.expectationSeries = nil
 
@@ -524,12 +524,12 @@ func (m *mCertificateMockGetPublicKey) ExpectOnce() *CertificateMockGetPublicKey
 	return expectation
 }
 
-func (e *CertificateMockGetPublicKeyExpectation) Return(r platformpolicy.PublicKey) {
+func (e *CertificateMockGetPublicKeyExpectation) Return(r keys.PublicKey) {
 	e.result = &CertificateMockGetPublicKeyResult{r}
 }
 
 //Set uses given function f as a mock of Certificate.GetPublicKey method
-func (m *mCertificateMockGetPublicKey) Set(f func() (r platformpolicy.PublicKey)) *CertificateMock {
+func (m *mCertificateMockGetPublicKey) Set(f func() (r keys.PublicKey)) *CertificateMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -538,7 +538,7 @@ func (m *mCertificateMockGetPublicKey) Set(f func() (r platformpolicy.PublicKey)
 }
 
 //GetPublicKey implements github.com/insolar/insolar/insolar.Certificate interface
-func (m *CertificateMock) GetPublicKey() (r platformpolicy.PublicKey) {
+func (m *CertificateMock) GetPublicKey() (r keys.PublicKey) {
 	counter := atomic.AddUint64(&m.GetPublicKeyPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPublicKeyCounter, 1)
 

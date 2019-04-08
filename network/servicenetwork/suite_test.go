@@ -298,7 +298,7 @@ type networkNode struct {
 
 // newNetworkNode returns networkNode initialized only with id, host address and key pair
 func (s *testSuite) newNetworkNode(name string) *networkNode {
-	key, err := commoncrypto.NewKeyProcessor().GeneratePrivateKey()
+	key, err := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	s.Require().NoError(err)
 	address := "127.0.0.1:" + strconv.Itoa(incrementTestPort())
 
@@ -333,7 +333,7 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 
 	// init certificate
 
-	proc := commoncrypto.NewKeyProcessor()
+	proc := platformpolicy.NewKeyProcessor()
 	publicKey, err := proc.ExportPublicKeyPEM(pubKey)
 	s.Require().NoError(err)
 
@@ -445,7 +445,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {}
 	terminationHandler.AbortFunc = func() {}
 
-	keyProc := commoncrypto.NewKeyProcessor()
+	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
 
 	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService)

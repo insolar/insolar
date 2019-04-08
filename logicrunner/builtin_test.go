@@ -18,6 +18,7 @@ package logicrunner
 
 import (
 	"context"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"testing"
 
 	"github.com/insolar/insolar/component"
@@ -60,7 +61,7 @@ func TestBareHelloworld(t *testing.T) {
 		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
 	}
-	mock.GetPublicKeyFunc = func() (r platformpolicy.PublicKey, r1 error) {
+	mock.GetPublicKeyFunc = func() (r keys.PublicKey, r1 error) {
 		return nil, nil
 	}
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()

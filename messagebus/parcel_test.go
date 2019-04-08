@@ -17,7 +17,7 @@
 package messagebus
 
 import (
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"testing"
 
 	"github.com/insolar/insolar/insolar/message"
@@ -39,7 +39,7 @@ func Test_parcelFactory_Create_CheckLogLevel(t *testing.T) {
 		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
 	}
-	mock.GetPublicKeyFunc = func() (r platformpolicy.PublicKey, r1 error) {
+	mock.GetPublicKeyFunc = func() (r keys.PublicKey, r1 error) {
 		return nil, nil
 	}
 

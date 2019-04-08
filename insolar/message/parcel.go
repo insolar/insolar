@@ -21,13 +21,13 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
 // ParcelFactory is used for creating parcels
 type ParcelFactory interface {
 	Create(context.Context, insolar.Message, insolar.Reference, insolar.DelegationToken, insolar.Pulse) (insolar.Parcel, error)
-	Validate(platformpolicy.PublicKey, insolar.Parcel) error
+	Validate(keys.PublicKey, insolar.Parcel) error
 }
 
 // ServiceData is a structure with utility fields like log level and trace id.

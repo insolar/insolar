@@ -16,8 +16,8 @@
 
 package privatekey
 
-import "github.com/insolar/insolar/platformpolicy"
+import "github.com/insolar/insolar/platformpolicy/keys"
 
 type Loader interface {
-	Load(string) (platformpolicy.PrivateKey, error)
+	Load(string) (keys.PrivateKey, error)
 }

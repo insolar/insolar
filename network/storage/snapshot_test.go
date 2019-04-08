@@ -78,7 +78,7 @@ func TestNewSnapshotStorage(t *testing.T) {
 	cm.Register(badgerDB, ss)
 	cm.Inject()
 
-	ks := commoncrypto.NewKeyProcessor()
+	ks := platformpolicy.NewKeyProcessor()
 	p1, err := ks.GeneratePrivateKey()
 	n := node.NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), "127.0.0.1:22", "ver2")
 

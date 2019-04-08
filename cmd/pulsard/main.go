@@ -19,7 +19,6 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"net"
 	"os"
 	"os/signal"
@@ -137,7 +136,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*componen
 	}
 	cryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
 	cryptographyService := cryptography.NewCryptographyService()
-	keyProcessor := commoncrypto.NewKeyProcessor()
+	keyProcessor := platformpolicy.NewKeyProcessor()
 
 	tp, publicAddress, err := transport.NewTransport(cfg.Pulsar.DistributionTransport)
 	if err != nil {

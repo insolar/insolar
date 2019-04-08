@@ -20,8 +20,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"io"
 	"os"
 
@@ -29,12 +27,14 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"github.com/spf13/pflag"
 )
 
 const defaultURL = "http://localhost:19101/api"
 
-var ks = commoncrypto.NewKeyProcessor()
+var ks = platformpolicy.NewKeyProcessor()
 
 var (
 	role        string
@@ -57,7 +57,7 @@ func parseInputParams() {
 	pflag.Parse()
 }
 
-func generateKeys() (platformpolicy.PublicKey, platformpolicy.PrivateKey) {
+func generateKeys() (keys.PublicKey, keys.PrivateKey) {
 	privKey, err := ks.GeneratePrivateKey()
 	checkError("Failed to generate private key:", err)
 	pubKey := ks.ExtractPublicKey(privKey)
@@ -65,7 +65,7 @@ func generateKeys() (platformpolicy.PublicKey, platformpolicy.PrivateKey) {
 	return pubKey, privKey
 }
 
-func loadKeys() (platformpolicy.PublicKey, platformpolicy.PrivateKey) {
+func loadKeys() (keys.PublicKey, keys.PrivateKey) {
 	keyStore, err := keystore.NewKeyStore(keysFile)
 	checkError("Failed to laod keys", err)
 
@@ -76,7 +76,7 @@ func loadKeys() (platformpolicy.PublicKey, platformpolicy.PrivateKey) {
 	return ks.ExtractPublicKey(privKey), privKey
 }
 
-func getKeys() (platformpolicy.PublicKey, platformpolicy.PrivateKey) {
+func getKeys() (keys.PublicKey, keys.PrivateKey) {
 	if reuseKeys {
 		return loadKeys()
 	}
@@ -102,7 +102,7 @@ func extractReference(response []byte, requestTypeMsg string) insolar.Reference 
 	return *ref
 }
 
-func registerNode(key platformpolicy.PublicKey, staticRole insolar.StaticRole) insolar.Reference {
+func registerNode(key keys.PublicKey, staticRole insolar.StaticRole) insolar.Reference {
 	userCfg := getUserConfig()
 
 	keySerialized, err := ks.ExportPublicKeyPEM(key)
@@ -151,7 +151,7 @@ func fetchCertificate(ref insolar.Reference) []byte {
 	return cert
 }
 
-func writeKeys(pubKey platformpolicy.PublicKey, privKey platformpolicy.PrivateKey) {
+func writeKeys(pubKey keys.PublicKey, privKey keys.PrivateKey) {
 	privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
 	checkError("Failed to deserialize private key:", err)
 
@@ -198,7 +198,7 @@ func getUserConfig() *requester.UserConfigJSON {
 	return userCfg
 }
 
-func getNodeRefByPk(key platformpolicy.PublicKey) insolar.Reference {
+func getNodeRefByPk(key keys.PublicKey) insolar.Reference {
 	userCfg := getUserConfig()
 
 	keySerialized, err := ks.ExportPublicKeyPEM(key)
@@ -216,7 +216,7 @@ func getNodeRefByPk(key platformpolicy.PublicKey) insolar.Reference {
 	return extractReference(response, "getNodeRefByPk")
 }
 
-func getNodeRef(pubKey platformpolicy.PublicKey, staticRole insolar.StaticRole) insolar.Reference {
+func getNodeRef(pubKey keys.PublicKey, staticRole insolar.StaticRole) insolar.Reference {
 	if reuseKeys {
 		return getNodeRefByPk(pubKey)
 	}

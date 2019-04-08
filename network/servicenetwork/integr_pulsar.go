@@ -189,7 +189,7 @@ func (tp *testPulsar) incrementPulse(pulse insolar.Pulse) insolar.Pulse {
 }
 
 func getPSC(pulse insolar.Pulse) (map[string]insolar.PulseSenderConfirmation, error) {
-	proc := commoncrypto.NewKeyProcessor()
+	proc := platformpolicy.NewKeyProcessor()
 	key, err := proc.GeneratePrivateKey()
 	if err != nil {
 		return nil, err

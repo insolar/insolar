@@ -30,7 +30,7 @@ import (
 )
 
 var scheme = platformpolicy.NewPlatformCryptographyScheme()
-var keyProcessor = commoncrypto.NewKeyProcessor()
+var keyProcessor = platformpolicy.NewKeyProcessor()
 
 const TESTPUBLICKEY = "some_fancy_public_key"
 

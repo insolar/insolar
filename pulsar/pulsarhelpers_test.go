@@ -30,7 +30,7 @@ import (
 func TestPreparePayloadAndCheckIt(t *testing.T) {
 	t.Parallel()
 
-	keyProcessor := commoncrypto.NewKeyProcessor()
+	keyProcessor := platformpolicy.NewKeyProcessor()
 	privateKey, err := keyProcessor.GeneratePrivateKey()
 	require.NoError(t, err)
 	cryptoService := cryptography.NewKeyBoundCryptographyService(privateKey)

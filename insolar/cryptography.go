@@ -17,7 +17,7 @@
 package insolar
 
 import (
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
 type Signature struct {
@@ -34,7 +34,7 @@ func (s *Signature) Bytes() []byte {
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.CryptographyService -o ../testutils -s _mock.go
 type CryptographyService interface {
-	GetPublicKey() (platformpolicy.PublicKey, error)
+	GetPublicKey() (keys.PublicKey, error)
 	Sign([]byte) (*Signature, error)
-	Verify(platformpolicy.PublicKey, Signature, []byte) bool
+	Verify(keys.PublicKey, Signature, []byte) bool
 }

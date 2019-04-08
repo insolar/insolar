@@ -19,16 +19,16 @@ package sdk
 import (
 	"context"
 	"encoding/json"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"io/ioutil"
 	"sync"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-
-	"github.com/pkg/errors"
 )
 
 type response struct {
@@ -136,7 +136,7 @@ func (sdk *SDK) getResponse(body []byte) (*response, error) {
 func (sdk *SDK) CreateMember() (*Member, string, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "CreateMember")
 	memberName := testutils.RandomString()
-	ks := commoncrypto.NewKeyProcessor()
+	ks := platformpolicy.NewKeyProcessor()
 
 	privateKey, err := ks.GeneratePrivateKey()
 	if err != nil {

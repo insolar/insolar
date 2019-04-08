@@ -16,7 +16,9 @@
 
 package insolar
 
-import "github.com/insolar/insolar/platformpolicy"
+import (
+	"github.com/insolar/insolar/platformpolicy/keys"
+)
 
 // ShortNodeID is the shortened ID of node that is unique inside the globe
 type ShortNodeID uint32
@@ -48,7 +50,7 @@ type NetworkNode interface {
 	// Role is the candidate Role for the node
 	Role() StaticRole
 	// PublicKey is the public key of the node
-	PublicKey() platformpolicy.PublicKey
+	PublicKey() keys.PublicKey
 	// Address is the network address of the node
 	Address() string
 	// GetGlobuleID returns node current globule id

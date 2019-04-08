@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package platformpolicy
+package keys
 
 import (
 	"hash"

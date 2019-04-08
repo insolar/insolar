@@ -14,13 +14,16 @@
 // limitations under the License.
 //
 
-package platformpolicy
+package algorithmprovider
 
-import "github.com/insolar/insolar/insolar"
+import (
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/platformpolicy/keys"
+)
 
 type SignAlgorithmProvider interface {
-	Sign(PrivateKey) insolar.Signer
-	Verify(PublicKey) insolar.Verifier
+	Sign(keys.PrivateKey) insolar.Signer
+	Verify(keys.PublicKey) insolar.Verifier
 }
 
 type HashAlgorithmProvider interface {

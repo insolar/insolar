@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"github.com/insolar/insolar/platformpolicy/commoncrypto"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"net"
 	"net/rpc"
 	"testing"
@@ -62,7 +63,7 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 	storage := pulsartestutils.NewPulsarStorageMock(t)
 	storage.GetLastPulseMock.Return(&insolar.Pulse{PulseNumber: 123}, nil)
 
-	keyProcessor := commoncrypto.NewKeyProcessor()
+	keyProcessor := platformpolicy.NewKeyProcessor()
 	privateKey, err := keyProcessor.GeneratePrivateKey()
 	require.NoError(t, err)
 	cryptoService := cryptography.NewKeyBoundCryptographyService(privateKey)
@@ -98,7 +99,7 @@ func TestNewPulsar_WithoutNeighbours(t *testing.T) {
 func TestNewPulsar_WithNeighbours(t *testing.T) {
 	requireObj := require.New(t)
 
-	keyProcessor := commoncrypto.NewKeyProcessor()
+	keyProcessor := platformpolicy.NewKeyProcessor()
 
 	firstPrivateKey, _ := keyProcessor.GeneratePrivateKey()
 	firstExpectedKey, _ := keyProcessor.ExportPublicKeyPEM(keyProcessor.ExtractPublicKey(firstPrivateKey))
@@ -155,7 +156,7 @@ func TestPulsar_EstablishConnection_IsInitialised(t *testing.T) {
 	mockClientWrapper.On("Unlock")
 	mockClientWrapper.On("CreateConnection")
 
-	keyProcessor := commoncrypto.NewKeyProcessor()
+	keyProcessor := platformpolicy.NewKeyProcessor()
 	firstPrivateKey, _ := keyProcessor.GeneratePrivateKey()
 	expectedNeighbourKey, _ := keyProcessor.ExportPublicKeyPEM(keyProcessor.ExtractPublicKey(firstPrivateKey))
 	expectedNeighbour := &Neighbour{OutgoingClient: mockClientWrapper}
@@ -181,7 +182,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsCreateConnection(t 
 		return errors.New("test reasons")
 	})
 
-	keyProcessor := commoncrypto.NewKeyProcessor()
+	keyProcessor := platformpolicy.NewKeyProcessor()
 	firstPrivateKey, _ := keyProcessor.GeneratePrivateKey()
 	expectedNeighbourKey, _ := keyProcessor.ExportPublicKeyPEM(keyProcessor.ExtractPublicKey(firstPrivateKey))
 	expectedNeighbour := &Neighbour{OutgoingClient: clientMock}
@@ -197,7 +198,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsCreateConnection(t 
 func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsWithRequest(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	keyProcessor := commoncrypto.NewKeyProcessor()
+	keyProcessor := platformpolicy.NewKeyProcessor()
 	privateKey, _ := keyProcessor.GeneratePrivateKey()
 	cryptoService := cryptography.NewKeyBoundCryptographyService(privateKey)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
@@ -217,7 +218,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsWithRequest(t *test
 	replyChan := &rpc.Call{Done: done}
 	mockClientWrapper.Done = replyChan
 
-	secondKeyProcessor := commoncrypto.NewKeyProcessor()
+	secondKeyProcessor := platformpolicy.NewKeyProcessor()
 	secondPrivateKey, _ := secondKeyProcessor.GeneratePrivateKey()
 	expectedNeighbourKey, _ := secondKeyProcessor.ExportPublicKeyPEM(secondKeyProcessor.ExtractPublicKey(secondPrivateKey))
 	expectedNeighbour := &Neighbour{OutgoingClient: mockClientWrapper}
@@ -231,7 +232,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_ProblemsWithRequest(t *test
 func TestPulsar_EstablishConnection_IsNotInitialised_SignatureFailed(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	keyProcessor := commoncrypto.NewKeyProcessor()
+	keyProcessor := platformpolicy.NewKeyProcessor()
 	privateKey, _ := keyProcessor.GeneratePrivateKey()
 	cryptoService := cryptography.NewKeyBoundCryptographyService(privateKey)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
@@ -251,7 +252,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_SignatureFailed(t *testing.
 	replyChan := &rpc.Call{Done: done}
 	mockClientWrapper.Done = replyChan
 
-	secondKeyProcessor := commoncrypto.NewKeyProcessor()
+	secondKeyProcessor := platformpolicy.NewKeyProcessor()
 	secondPrivateKey, _ := secondKeyProcessor.GeneratePrivateKey()
 	expectedNeighbourKey, err := secondKeyProcessor.ExportPublicKeyPEM(secondKeyProcessor.ExtractPublicKey(secondPrivateKey))
 	require.NoError(t, err)
@@ -265,7 +266,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_SignatureFailed(t *testing.
 func TestPulsar_EstablishConnection_IsNotInitialised_Success(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	keyProcessor := commoncrypto.NewKeyProcessor()
+	keyProcessor := platformpolicy.NewKeyProcessor()
 	privateKey, _ := keyProcessor.GeneratePrivateKey()
 	cryptoService := cryptography.NewKeyBoundCryptographyService(privateKey)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
@@ -278,7 +279,7 @@ func TestPulsar_EstablishConnection_IsNotInitialised_Success(t *testing.T) {
 		EntropyGenerator:           pulsartestutils.MockEntropyGenerator{},
 	}
 
-	secondKeyProcessor := commoncrypto.NewKeyProcessor()
+	secondKeyProcessor := platformpolicy.NewKeyProcessor()
 	secondPrivateKey, err := secondKeyProcessor.GeneratePrivateKey()
 	require.NoError(t, err)
 	secondCryptoService := cryptography.NewKeyBoundCryptographyService(secondPrivateKey)
@@ -326,7 +327,7 @@ func TestPulsar_CheckConnectionsToPulsars_NoProblems(t *testing.T) {
 	})
 
 	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}}
-	keyProcessor := commoncrypto.NewKeyProcessor()
+	keyProcessor := platformpolicy.NewKeyProcessor()
 	firstNeighbourPrivateKey, _ := keyProcessor.GeneratePrivateKey()
 	firstNeighbourPublicKey := keyProcessor.ExtractPublicKey(firstNeighbourPrivateKey)
 	firstNeighbourExpectedKey, _ := keyProcessor.ExportPublicKeyPEM(firstNeighbourPublicKey)
@@ -354,7 +355,7 @@ func TestPulsar_CheckConnectionsToPulsars_NilClient_FirstConnectionFailed(t *tes
 
 	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}}
 
-	keyProcessor := commoncrypto.NewKeyProcessor()
+	keyProcessor := platformpolicy.NewKeyProcessor()
 
 	firstNeighbourPrivateKey, _ := keyProcessor.GeneratePrivateKey()
 	pulsar.Neighbours["thisShouldFailEstablishConnection"] = &Neighbour{
@@ -393,7 +394,7 @@ func TestPulsar_CheckConnectionsToPulsars_NilClient_SecondConnectionFailed(t *te
 
 	pulsar := Pulsar{Neighbours: map[string]*Neighbour{}}
 
-	keyProcessor := commoncrypto.NewKeyProcessor()
+	keyProcessor := platformpolicy.NewKeyProcessor()
 	firstNeighbourPrivateKey, _ := keyProcessor.GeneratePrivateKey()
 	pulsar.Neighbours["this should fail second connection"] = &Neighbour{
 		PublicKey:         keyProcessor.ExtractPublicKey(firstNeighbourPrivateKey),
@@ -437,7 +438,7 @@ func TestPulsar_StartConsensusProcess_Success(t *testing.T) {
 		}
 	}
 
-	privateKey, _ := commoncrypto.NewKeyProcessor().GeneratePrivateKey()
+	privateKey, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	cryptoService := cryptography.NewKeyBoundCryptographyService(privateKey)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
@@ -487,7 +488,7 @@ func TestPulsar_broadcastSignatureOfEntropy_SendToNeighbours(t *testing.T) {
 	switcher := NewStateSwitcherMock(t)
 	switcher.GetStateMock.Return(WaitingForStart)
 
-	privateKey, _ := commoncrypto.NewKeyProcessor().GeneratePrivateKey()
+	privateKey, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	cryptoService := cryptography.NewKeyBoundCryptographyService(privateKey)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
@@ -547,7 +548,7 @@ func TestPulsar_broadcastVector_SendToNeighbours(t *testing.T) {
 	mockSwitcher := NewStateSwitcherMock(t)
 	mockSwitcher.GetStateMock.Return(WaitingForStart)
 
-	privateKey, _ := commoncrypto.NewKeyProcessor().GeneratePrivateKey()
+	privateKey, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	cryptoService := cryptography.NewKeyBoundCryptographyService(privateKey)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
@@ -607,7 +608,7 @@ func TestPulsar_broadcastEntropy_SendToNeighbours(t *testing.T) {
 	switcherMock := NewStateSwitcherMock(t)
 	switcherMock.GetStateMock.Return(WaitingForStart)
 
-	privateKey, _ := commoncrypto.NewKeyProcessor().GeneratePrivateKey()
+	privateKey, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	cryptoService := cryptography.NewKeyBoundCryptographyService(privateKey)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
@@ -671,7 +672,7 @@ func TestPulsar_sendVector_TwoPulsars(t *testing.T) {
 	replyChan := &rpc.Call{Done: done}
 
 	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
-	privateKey, _ := commoncrypto.NewKeyProcessor().GeneratePrivateKey()
+	privateKey, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	cryptoService := cryptography.NewKeyBoundCryptographyService(privateKey)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
@@ -726,7 +727,7 @@ func TestPulsar_sendEntropy_TwoPulsars(t *testing.T) {
 	replyChan := &rpc.Call{Done: done}
 
 	mockClientWrapper := &pulsartestutils.MockRPCClientWrapper{}
-	privateKey, _ := commoncrypto.NewKeyProcessor().GeneratePrivateKey()
+	privateKey, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	cryptoService := cryptography.NewKeyBoundCryptographyService(privateKey)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
@@ -774,7 +775,7 @@ func TestPulsar_verify_Standalone_Success(t *testing.T) {
 	mockSwitcher.SwitchToStateFunc = func(p context.Context, p1 State, p2 interface{}) {
 		require.Equal(t, SendingPulse, p1)
 	}
-	proc := commoncrypto.NewKeyProcessor()
+	proc := platformpolicy.NewKeyProcessor()
 	key, err := proc.GeneratePrivateKey()
 	assert.NoError(t, err)
 	pulsar := &Pulsar{
@@ -805,7 +806,7 @@ func TestPulsar_verify_NotEnoughForConsensus_Success(t *testing.T) {
 		require.Equal(t, Failed, p)
 	})
 	mockSwitcher.GetStateMock.Return(Verifying)
-	privateKey, _ := commoncrypto.NewKeyProcessor().GeneratePrivateKey()
+	privateKey, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	cryptoService := cryptography.NewKeyBoundCryptographyService(privateKey)
 
 	pulsar := &Pulsar{
@@ -845,8 +846,8 @@ func TestPulsar_verify_Success(t *testing.T) {
 		return Verifying
 	}
 
-	keyGenerator := func() (platformpolicy.PrivateKey, platformpolicy.PublicKey, string) {
-		kp := commoncrypto.NewKeyProcessor()
+	keyGenerator := func() (platformpolicy.PrivateKey, keys.PublicKey, string) {
+		kp := platformpolicy.NewKeyProcessor()
 		key, _ := kp.GeneratePrivateKey()
 		publicKey := kp.ExtractPublicKey(key)
 		pubKeyString, _ := kp.ExportPublicKeyPEM(publicKey)
@@ -867,7 +868,7 @@ func TestPulsar_verify_Success(t *testing.T) {
 	thirdCryptoService := cryptography.NewKeyBoundCryptographyService(thirdPrivate)
 
 	pulsar := &Pulsar{
-		KeyProcessor:                   commoncrypto.NewKeyProcessor(),
+		KeyProcessor:                   platformpolicy.NewKeyProcessor(),
 		StateSwitcher:                  mockSwitcher,
 		CryptographyService:            pulsarCryptoService,
 		PlatformCryptographyScheme:     platformpolicy.NewPlatformCryptographyScheme(),

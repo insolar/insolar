@@ -17,7 +17,7 @@
 package insolar
 
 import (
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"hash"
 )
 
@@ -42,21 +42,21 @@ type PlatformCryptographyScheme interface {
 	ReferenceHasher() Hasher
 	IntegrityHasher() Hasher
 
-	Signer(platformpolicy.PrivateKey) Signer
-	Verifier(platformpolicy.PublicKey) Verifier
+	Signer(keys.PrivateKey) Signer
+	Verifier(keys.PublicKey) Verifier
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.KeyProcessor -o ../testutils -s _mock.go
 type KeyProcessor interface {
-	GeneratePrivateKey() (platformpolicy.PrivateKey, error)
-	ExtractPublicKey(platformpolicy.PrivateKey) platformpolicy.PublicKey
+	GeneratePrivateKey() (keys.PrivateKey, error)
+	ExtractPublicKey(keys.PrivateKey) keys.PublicKey
 
-	ExportPublicKeyPEM(platformpolicy.PublicKey) ([]byte, error)
-	ImportPublicKeyPEM([]byte) (platformpolicy.PublicKey, error)
+	ExportPublicKeyPEM(keys.PublicKey) ([]byte, error)
+	ImportPublicKeyPEM([]byte) (keys.PublicKey, error)
 
-	ExportPrivateKeyPEM(platformpolicy.PrivateKey) ([]byte, error)
-	ImportPrivateKeyPEM([]byte) (platformpolicy.PrivateKey, error)
+	ExportPrivateKeyPEM(keys.PrivateKey) ([]byte, error)
+	ImportPrivateKeyPEM([]byte) (keys.PrivateKey, error)
 
-	ExportPublicKeyBinary(platformpolicy.PublicKey) ([]byte, error)
-	ImportPublicKeyBinary([]byte) (platformpolicy.PublicKey, error)
+	ExportPublicKeyBinary(keys.PublicKey) ([]byte, error)
+	ImportPublicKeyBinary([]byte) (keys.PublicKey, error)
 }

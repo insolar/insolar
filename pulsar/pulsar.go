@@ -19,7 +19,7 @@ package pulsar
 import (
 	"context"
 	"encoding/gob"
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"net"
 	"net/rpc"
 	"sync"
@@ -48,7 +48,7 @@ type Pulsar struct {
 
 	Neighbours map[string]*Neighbour
 
-	PublicKey    platformpolicy.PublicKey
+	PublicKey    keys.PublicKey
 	PublicKeyRaw string
 
 	Config configuration.Pulsar

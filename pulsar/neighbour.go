@@ -17,12 +17,12 @@
 package pulsar
 
 import (
-	"github.com/insolar/insolar/platformpolicy"
 	"net"
 	"net/rpc"
 	"sync"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
 // RPCClientWrapperFactory describes interface for the wrappers factory
@@ -113,5 +113,5 @@ type Neighbour struct {
 	ConnectionType    configuration.ConnectionType
 	ConnectionAddress string
 	OutgoingClient    RPCClientWrapper
-	PublicKey         platformpolicy.PublicKey
+	PublicKey         keys.PublicKey
 }

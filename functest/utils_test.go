@@ -236,7 +236,7 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 }
 
 func newUserWithKeys() (*user, error) {
-	ks := commoncrypto.NewKeyProcessor()
+	ks := platformpolicy.NewKeyProcessor()
 
 	privateKey, err := ks.GeneratePrivateKey()
 	if err != nil {

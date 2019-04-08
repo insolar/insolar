@@ -18,10 +18,10 @@ package sign
 
 import (
 	"crypto/ecdsa"
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
-func MustConvertPublicKeyToEcdsa(publicKey platformpolicy.PublicKey) *ecdsa.PublicKey {
+func MustConvertPublicKeyToEcdsa(publicKey keys.PublicKey) *ecdsa.PublicKey {
 	ecdsaPublicKey, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
 		panic("[ Sign ] Failed to convert public key to ecdsa public key")
@@ -29,7 +29,7 @@ func MustConvertPublicKeyToEcdsa(publicKey platformpolicy.PublicKey) *ecdsa.Publ
 	return ecdsaPublicKey
 }
 
-func MustConvertPrivateKeyToEcdsa(privateKey platformpolicy.PrivateKey) *ecdsa.PrivateKey {
+func MustConvertPrivateKeyToEcdsa(privateKey keys.PrivateKey) *ecdsa.PrivateKey {
 	ecdsaPrivateKey, ok := privateKey.(*ecdsa.PrivateKey)
 	if !ok {
 		panic("[ Sign ] Failed to convert private key to ecdsa private key")

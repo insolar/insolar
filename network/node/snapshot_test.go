@@ -60,7 +60,7 @@ import (
 
 func TestSnapshotEncodeDecode(t *testing.T) {
 
-	ks := commoncrypto.NewKeyProcessor()
+	ks := platformpolicy.NewKeyProcessor()
 	p1, err := ks.GeneratePrivateKey()
 	p2, err := ks.GeneratePrivateKey()
 	assert.NoError(t, err)

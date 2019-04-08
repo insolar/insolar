@@ -54,15 +54,11 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"math"
 	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
-
-	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/network/utils"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -77,6 +73,8 @@ import (
 	"github.com/insolar/insolar/network/controller/pinger"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
@@ -180,7 +178,7 @@ type NodeStruct struct {
 }
 
 func newNode(n *NodeStruct) (insolar.NetworkNode, error) {
-	pk, err := commoncrypto.NewKeyProcessor().ImportPublicKeyBinary(n.PK)
+	pk, err := platformpolicy.NewKeyProcessor().ImportPublicKeyBinary(n.PK)
 	if err != nil {
 		return nil, errors.Wrap(err, "error deserializing node public key")
 	}
@@ -192,7 +190,7 @@ func newNode(n *NodeStruct) (insolar.NetworkNode, error) {
 }
 
 func newNodeStruct(node insolar.NetworkNode) (*NodeStruct, error) {
-	pk, err := commoncrypto.NewKeyProcessor().ExportPublicKeyBinary(node.PublicKey())
+	pk, err := platformpolicy.NewKeyProcessor().ExportPublicKeyBinary(node.PublicKey())
 	if err != nil {
 		return nil, errors.Wrap(err, "error serializing node public key")
 	}

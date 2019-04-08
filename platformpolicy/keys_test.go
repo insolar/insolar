@@ -25,7 +25,7 @@ import (
 )
 
 func TestExportImportPrivateKey(t *testing.T) {
-	ks := commoncrypto.NewKeyProcessor()
+	ks := platformpolicy.NewKeyProcessor()
 
 	privateKey, _ := ks.GeneratePrivateKey()
 
@@ -38,7 +38,7 @@ func TestExportImportPrivateKey(t *testing.T) {
 }
 
 func TestExportImportPublicKey(t *testing.T) {
-	ks := commoncrypto.NewKeyProcessor()
+	ks := platformpolicy.NewKeyProcessor()
 
 	privateKey, _ := ks.GeneratePrivateKey()
 	publicKey := ks.ExtractPublicKey(privateKey)
@@ -52,7 +52,7 @@ func TestExportImportPublicKey(t *testing.T) {
 }
 
 func TestExportImportPublicKeyBinary(t *testing.T) {
-	ks := commoncrypto.NewKeyProcessor()
+	ks := platformpolicy.NewKeyProcessor()
 
 	privateKey, _ := ks.GeneratePrivateKey()
 	publicKey := ks.ExtractPublicKey(privateKey)

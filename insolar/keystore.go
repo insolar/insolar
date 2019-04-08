@@ -16,8 +16,8 @@
 
 package insolar
 
-import "github.com/insolar/insolar/platformpolicy"
+import "github.com/insolar/insolar/platformpolicy/keys"
 
 type KeyStore interface {
-	GetPrivateKey(string) (platformpolicy.PrivateKey, error)
+	GetPrivateKey(string) (keys.PrivateKey, error)
 }

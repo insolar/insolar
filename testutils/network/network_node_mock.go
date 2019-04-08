@@ -7,6 +7,7 @@ The original interface "NetworkNode" can be found in github.com/insolar/insolar/
 */
 import (
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"sync/atomic"
 	"time"
 
@@ -43,7 +44,7 @@ type NetworkNodeMock struct {
 	LeavingETAPreCounter uint64
 	LeavingETAMock       mNetworkNodeMockLeavingETA
 
-	PublicKeyFunc       func() (r platformpolicy.PublicKey)
+	PublicKeyFunc       func() (r keys.PublicKey)
 	PublicKeyCounter    uint64
 	PublicKeyPreCounter uint64
 	PublicKeyMock       mNetworkNodeMockPublicKey
@@ -766,7 +767,7 @@ type NetworkNodeMockPublicKeyExpectation struct {
 }
 
 type NetworkNodeMockPublicKeyResult struct {
-	r platformpolicy.PublicKey
+	r keys.PublicKey
 }
 
 //Expect specifies that invocation of NetworkNode.PublicKey is expected from 1 to Infinity times
@@ -782,7 +783,7 @@ func (m *mNetworkNodeMockPublicKey) Expect() *mNetworkNodeMockPublicKey {
 }
 
 //Return specifies results of invocation of NetworkNode.PublicKey
-func (m *mNetworkNodeMockPublicKey) Return(r platformpolicy.PublicKey) *NetworkNodeMock {
+func (m *mNetworkNodeMockPublicKey) Return(r keys.PublicKey) *NetworkNodeMock {
 	m.mock.PublicKeyFunc = nil
 	m.expectationSeries = nil
 
@@ -804,12 +805,12 @@ func (m *mNetworkNodeMockPublicKey) ExpectOnce() *NetworkNodeMockPublicKeyExpect
 	return expectation
 }
 
-func (e *NetworkNodeMockPublicKeyExpectation) Return(r platformpolicy.PublicKey) {
+func (e *NetworkNodeMockPublicKeyExpectation) Return(r keys.PublicKey) {
 	e.result = &NetworkNodeMockPublicKeyResult{r}
 }
 
 //Set uses given function f as a mock of NetworkNode.PublicKey method
-func (m *mNetworkNodeMockPublicKey) Set(f func() (r platformpolicy.PublicKey)) *NetworkNodeMock {
+func (m *mNetworkNodeMockPublicKey) Set(f func() (r keys.PublicKey)) *NetworkNodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -818,7 +819,7 @@ func (m *mNetworkNodeMockPublicKey) Set(f func() (r platformpolicy.PublicKey)) *
 }
 
 //PublicKey implements github.com/insolar/insolar/insolar.NetworkNode interface
-func (m *NetworkNodeMock) PublicKey() (r platformpolicy.PublicKey) {
+func (m *NetworkNodeMock) PublicKey() (r keys.PublicKey) {
 	counter := atomic.AddUint64(&m.PublicKeyPreCounter, 1)
 	defer atomic.AddUint64(&m.PublicKeyCounter, 1)
 

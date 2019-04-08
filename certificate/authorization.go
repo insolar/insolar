@@ -17,10 +17,9 @@
 package certificate
 
 import (
-	"github.com/insolar/insolar/platformpolicy"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"github.com/pkg/errors"
 )
 
@@ -31,11 +30,11 @@ type AuthorizationCertificate struct {
 	Role           string                       `json:"role"`
 	DiscoverySigns map[insolar.Reference][]byte `json:"-" codec:"discoverysigns"`
 
-	nodePublicKey platformpolicy.PublicKey
+	nodePublicKey keys.PublicKey
 }
 
 // GetPublicKey returns public key reference from node certificate
-func (authCert *AuthorizationCertificate) GetPublicKey() platformpolicy.PublicKey {
+func (authCert *AuthorizationCertificate) GetPublicKey() keys.PublicKey {
 	return authCert.nodePublicKey
 }
 
@@ -65,7 +64,7 @@ func (authCert *AuthorizationCertificate) SerializeNodePart() []byte {
 }
 
 // SignNodePart signs node part in certificate
-func (authCert *AuthorizationCertificate) SignNodePart(key platformpolicy.PrivateKey) ([]byte, error) {
+func (authCert *AuthorizationCertificate) SignNodePart(key keys.PrivateKey) ([]byte, error) {
 	signer := scheme.Signer(key)
 	sign, err := signer.Sign(authCert.SerializeNodePart())
 	if err != nil {

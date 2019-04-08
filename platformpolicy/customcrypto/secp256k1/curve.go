@@ -206,8 +206,8 @@ func (curve *CurveParams) ScalarBaseMult(k []byte) (x, y *big.Int) {
 	return curve.ScalarMult(curve.Gx, curve.Gy, k)
 }
 
-func init() {
-	secp256k1 = &CurveParams{
+func Secp256k1() elliptic.Curve {
+	return &CurveParams{
 		P:       p,
 		N:       n,
 		B:       b,
@@ -216,8 +216,4 @@ func init() {
 		BitSize: bitSize,
 		Name:    name,
 	}
-}
-
-func Secp256k1() elliptic.Curve {
-	return secp256k1
 }

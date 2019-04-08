@@ -163,7 +163,7 @@ func TestNewCalculator(t *testing.T) {
 func TestCalculator(t *testing.T) {
 	calculator := &calculator{}
 
-	key, _ := commoncrypto.NewKeyProcessor().GeneratePrivateKey()
+	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	require.NotNil(t, key)
 
 	service := cryptography.NewKeyBoundCryptographyService(key)

@@ -64,7 +64,7 @@ import (
 )
 
 func getController(t *testing.T) pulseController {
-	proc := commoncrypto.NewKeyProcessor()
+	proc := platformpolicy.NewKeyProcessor()
 	key, err := proc.GeneratePrivateKey()
 	assert.NoError(t, err)
 	return pulseController{
@@ -75,7 +75,7 @@ func getController(t *testing.T) pulseController {
 }
 
 func getKeys(t *testing.T) (public string, private platformpolicy.PrivateKey) {
-	proc := commoncrypto.NewKeyProcessor()
+	proc := platformpolicy.NewKeyProcessor()
 	privKey, err := proc.GeneratePrivateKey()
 	assert.NoError(t, err)
 	key := proc.ExtractPublicKey(privKey)

@@ -6,7 +6,7 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "DiscoveryNode" can be found in github.com/insolar/insolar/insolar
 */
 import (
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"sync/atomic"
 	"time"
 
@@ -28,7 +28,7 @@ type DiscoveryNodeMock struct {
 	GetNodeRefPreCounter uint64
 	GetNodeRefMock       mDiscoveryNodeMockGetNodeRef
 
-	GetPublicKeyFunc       func() (r platformpolicy.PublicKey)
+	GetPublicKeyFunc       func() (r keys.PublicKey)
 	GetPublicKeyCounter    uint64
 	GetPublicKeyPreCounter uint64
 	GetPublicKeyMock       mDiscoveryNodeMockGetPublicKey
@@ -328,7 +328,7 @@ type DiscoveryNodeMockGetPublicKeyExpectation struct {
 }
 
 type DiscoveryNodeMockGetPublicKeyResult struct {
-	r platformpolicy.PublicKey
+	r keys.PublicKey
 }
 
 //Expect specifies that invocation of DiscoveryNode.GetPublicKey is expected from 1 to Infinity times
@@ -344,7 +344,7 @@ func (m *mDiscoveryNodeMockGetPublicKey) Expect() *mDiscoveryNodeMockGetPublicKe
 }
 
 //Return specifies results of invocation of DiscoveryNode.GetPublicKey
-func (m *mDiscoveryNodeMockGetPublicKey) Return(r platformpolicy.PublicKey) *DiscoveryNodeMock {
+func (m *mDiscoveryNodeMockGetPublicKey) Return(r keys.PublicKey) *DiscoveryNodeMock {
 	m.mock.GetPublicKeyFunc = nil
 	m.expectationSeries = nil
 
@@ -366,12 +366,12 @@ func (m *mDiscoveryNodeMockGetPublicKey) ExpectOnce() *DiscoveryNodeMockGetPubli
 	return expectation
 }
 
-func (e *DiscoveryNodeMockGetPublicKeyExpectation) Return(r platformpolicy.PublicKey) {
+func (e *DiscoveryNodeMockGetPublicKeyExpectation) Return(r keys.PublicKey) {
 	e.result = &DiscoveryNodeMockGetPublicKeyResult{r}
 }
 
 //Set uses given function f as a mock of DiscoveryNode.GetPublicKey method
-func (m *mDiscoveryNodeMockGetPublicKey) Set(f func() (r platformpolicy.PublicKey)) *DiscoveryNodeMock {
+func (m *mDiscoveryNodeMockGetPublicKey) Set(f func() (r keys.PublicKey)) *DiscoveryNodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -380,7 +380,7 @@ func (m *mDiscoveryNodeMockGetPublicKey) Set(f func() (r platformpolicy.PublicKe
 }
 
 //GetPublicKey implements github.com/insolar/insolar/insolar.DiscoveryNode interface
-func (m *DiscoveryNodeMock) GetPublicKey() (r platformpolicy.PublicKey) {
+func (m *DiscoveryNodeMock) GetPublicKey() (r keys.PublicKey) {
 	counter := atomic.AddUint64(&m.GetPublicKeyPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPublicKeyCounter, 1)
 

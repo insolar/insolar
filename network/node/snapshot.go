@@ -51,13 +51,13 @@
 package node
 
 import (
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"reflect"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	protonode "github.com/insolar/insolar/network/node/internal/node"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
 type ListType int
@@ -155,7 +155,7 @@ func (s *Snapshot) Encode() ([]byte, error) {
 	ss := protonode.Snapshot{}
 	ss.PulseNumber = uint32(s.pulse)
 	ss.State = uint32(s.state)
-	keyProc := commoncrypto.NewKeyProcessor()
+	keyProc := platformpolicy.NewKeyProcessor()
 
 	ss.Nodes = make(map[uint32]*protonode.NodeList)
 	for t, list := range s.nodeList {
@@ -196,7 +196,7 @@ func (s *Snapshot) Decode(buff []byte) error {
 		return errors.Wrap(err, "Failed to unmarshal node")
 	}
 
-	keyProc := commoncrypto.NewKeyProcessor()
+	keyProc := platformpolicy.NewKeyProcessor()
 	s.pulse = insolar.PulseNumber(ss.PulseNumber)
 	s.state = insolar.NetworkState(ss.State)
 

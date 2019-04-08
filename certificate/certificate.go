@@ -18,6 +18,7 @@ package certificate
 
 import (
 	"encoding/json"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"io"
 	"io/ioutil"
 	"path/filepath"
@@ -41,10 +42,10 @@ type BootstrapNode struct {
 	NodeRef     string `json:"node_ref"`
 
 	// preprocessed fields
-	nodePublicKey platformpolicy.PublicKey
+	nodePublicKey keys.PublicKey
 }
 
-func NewBootstrapNode(pubKey platformpolicy.PublicKey, publicKey, host, noderef string) *BootstrapNode {
+func NewBootstrapNode(pubKey keys.PublicKey, publicKey, host, noderef string) *BootstrapNode {
 	return &BootstrapNode{
 		PublicKey:     publicKey,
 		Host:          host,
@@ -64,7 +65,7 @@ func (bn *BootstrapNode) GetNodeRef() *insolar.Reference {
 }
 
 // GetPublicKey returns public key reference of bootstrap node
-func (bn *BootstrapNode) GetPublicKey() platformpolicy.PublicKey {
+func (bn *BootstrapNode) GetPublicKey() keys.PublicKey {
 	return bn.nodePublicKey
 }
 
@@ -94,10 +95,10 @@ type Certificate struct {
 	BootstrapNodes      []BootstrapNode `json:"bootstrap_nodes"`
 
 	// preprocessed fields
-	pulsarPublicKey []platformpolicy.PublicKey
+	pulsarPublicKey []keys.PublicKey
 }
 
-func newCertificate(publicKey platformpolicy.PublicKey, keyProcessor insolar.KeyProcessor, data []byte) (*Certificate, error) {
+func newCertificate(publicKey keys.PublicKey, keyProcessor insolar.KeyProcessor, data []byte) (*Certificate, error) {
 	cert := Certificate{}
 	err := json.Unmarshal(data, &cert)
 	if err != nil {
@@ -144,7 +145,7 @@ func (cert *Certificate) SerializeNetworkPart() []byte {
 }
 
 // SignNetworkPart signs network part in certificate
-func (cert *Certificate) SignNetworkPart(key platformpolicy.PrivateKey) ([]byte, error) {
+func (cert *Certificate) SignNetworkPart(key keys.PrivateKey) ([]byte, error) {
 	signer := scheme.Signer(key)
 	sign, err := signer.Sign(cert.SerializeNetworkPart())
 	if err != nil {
@@ -211,7 +212,7 @@ func (cert *Certificate) Dump() (string, error) {
 }
 
 // ReadCertificate constructor creates new Certificate component
-func ReadCertificate(publicKey platformpolicy.PublicKey, keyProcessor insolar.KeyProcessor, certPath string) (*Certificate, error) {
+func ReadCertificate(publicKey keys.PublicKey, keyProcessor insolar.KeyProcessor, certPath string) (*Certificate, error) {
 	data, err := ioutil.ReadFile(filepath.Clean(certPath))
 	if err != nil {
 		return nil, errors.Wrapf(err, "[ ReadCertificate ] failed to read certificate from: %s", certPath)
@@ -224,7 +225,7 @@ func ReadCertificate(publicKey platformpolicy.PublicKey, keyProcessor insolar.Ke
 }
 
 // ReadCertificateFromReader constructor creates new Certificate component
-func ReadCertificateFromReader(publicKey platformpolicy.PublicKey, keyProcessor insolar.KeyProcessor, reader io.Reader) (*Certificate, error) {
+func ReadCertificateFromReader(publicKey keys.PublicKey, keyProcessor insolar.KeyProcessor, reader io.Reader) (*Certificate, error) {
 	data, err := ioutil.ReadAll(reader)
 	if err != nil {
 		return nil, errors.Wrapf(err, "[ ReadCertificateFromReader ] failed to read certificate data")
@@ -238,7 +239,7 @@ func ReadCertificateFromReader(publicKey platformpolicy.PublicKey, keyProcessor 
 
 // NewCertificatesWithKeys generate certificate from given keys
 // DEPRECATED, this method generates invalid certificate
-func NewCertificatesWithKeys(publicKey platformpolicy.PublicKey, keyProcessor insolar.KeyProcessor) (*Certificate, error) {
+func NewCertificatesWithKeys(publicKey keys.PublicKey, keyProcessor insolar.KeyProcessor) (*Certificate, error) {
 	cert := Certificate{}
 
 	cert.Reference = testutils.RandomRef().String()

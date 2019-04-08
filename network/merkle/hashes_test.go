@@ -56,6 +56,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/insolar/insolar/platformpolicy/commoncrypto"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -158,7 +159,7 @@ type calculatorHashesSuite struct {
 func TestCalculatorHashes(t *testing.T) {
 	calculator := &calculator{}
 
-	key, _ := commoncrypto.NewKeyProcessor().GeneratePrivateKey()
+	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
 	require.NotNil(t, key)
 
 	service := testutils.NewCryptographyServiceMock(t)
@@ -166,7 +167,7 @@ func TestCalculatorHashes(t *testing.T) {
 		signature := insolar.SignatureFromBytes([]byte("signature"))
 		return &signature, nil
 	}
-	service.GetPublicKeyFunc = func() (r platformpolicy.PublicKey, r1 error) {
+	service.GetPublicKeyFunc = func() (r keys.PublicKey, r1 error) {
 		return "key", nil
 	}
 

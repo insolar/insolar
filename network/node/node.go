@@ -52,15 +52,16 @@ package node
 
 import (
 	"encoding/gob"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"sync"
 	"sync/atomic"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
 type MutableNode interface {
@@ -77,7 +78,7 @@ type node struct {
 	NodeID        insolar.Reference
 	NodeShortID   uint32
 	NodeRole      insolar.StaticRole
-	NodePublicKey platformpolicy.PublicKey
+	NodePublicKey keys.PublicKey
 
 	NodeAddress string
 
@@ -116,7 +117,7 @@ func (n *node) ChangeState() {
 func newMutableNode(
 	id insolar.Reference,
 	role insolar.StaticRole,
-	publicKey platformpolicy.PublicKey,
+	publicKey keys.PublicKey,
 	state insolar.NodeState,
 	address, version string) MutableNode {
 
@@ -134,7 +135,7 @@ func newMutableNode(
 func NewNode(
 	id insolar.Reference,
 	role insolar.StaticRole,
-	publicKey platformpolicy.PublicKey,
+	publicKey keys.PublicKey,
 	address, version string) insolar.NetworkNode {
 	return newMutableNode(id, role, publicKey, insolar.NodeReady, address, version)
 }
@@ -151,7 +152,7 @@ func (n *node) Role() insolar.StaticRole {
 	return n.NodeRole
 }
 
-func (n *node) PublicKey() platformpolicy.PublicKey {
+func (n *node) PublicKey() keys.PublicKey {
 	return n.NodePublicKey
 }
 
@@ -188,7 +189,7 @@ func init() {
 }
 
 func ClaimToNode(version string, claim *packets.NodeJoinClaim) (insolar.NetworkNode, error) {
-	keyProc := commoncrypto.NewKeyProcessor()
+	keyProc := platformpolicy.NewKeyProcessor()
 	key, err := keyProc.ImportPublicKeyBinary(claim.NodePK[:])
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ClaimToNode ] failed to import a public key")

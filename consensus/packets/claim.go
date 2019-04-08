@@ -51,11 +51,11 @@
 package packets
 
 import (
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
 //go:generate stringer -type=ClaimType
@@ -93,7 +93,7 @@ type ClaimSupplementary interface {
 
 type SignedClaim interface {
 	GetNodeID() insolar.Reference
-	GetPublicKey() (platformpolicy.PublicKey, error)
+	GetPublicKey() (keys.PublicKey, error)
 	SerializeRaw() ([]byte, error)
 	GetSignature() []byte
 }
@@ -191,8 +191,8 @@ func (njc *NodeJoinClaim) GetNodeID() insolar.Reference {
 	return njc.NodeRef
 }
 
-func (njc *NodeJoinClaim) GetPublicKey() (platformpolicy.PublicKey, error) {
-	keyProc := commoncrypto.NewKeyProcessor()
+func (njc *NodeJoinClaim) GetPublicKey() (keys.PublicKey, error) {
+	keyProc := platformpolicy.NewKeyProcessor()
 	return keyProc.ImportPublicKeyBinary(njc.NodePK[:])
 }
 
@@ -260,7 +260,7 @@ func getClaimWithHeaderSize(claim ReferendumClaim) uint16 {
 }
 
 func NodeToClaim(node insolar.NetworkNode) (*NodeJoinClaim, error) {
-	keyProc := commoncrypto.NewKeyProcessor()
+	keyProc := platformpolicy.NewKeyProcessor()
 	exportedKey, err := keyProc.ExportPublicKeyBinary(node.PublicKey())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeToClaim ] failed to export a public key")

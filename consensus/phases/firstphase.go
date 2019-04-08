@@ -52,8 +52,10 @@ package phases
 
 import (
 	"context"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"math"
+
+	"github.com/jbenet/go-base58"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/claimhandler"
@@ -64,8 +66,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
-	"github.com/jbenet/go-base58"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/platformpolicy"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 	"go.opencensus.io/trace"
@@ -294,7 +295,7 @@ func (fp *FirstPhaseImpl) checkPacketSignatureFromClaim(packet *packets.Phase1Pa
 	if announceClaim == nil {
 		return errors.New("could not find announce claim")
 	}
-	pk, err := commoncrypto.NewKeyProcessor().ImportPublicKeyBinary(announceClaim.NodePK[:])
+	pk, err := platformpolicy.NewKeyProcessor().ImportPublicKeyBinary(announceClaim.NodePK[:])
 	if err != nil {
 		return errors.Wrap(err, "could not import public key from announce claim")
 	}

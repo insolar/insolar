@@ -21,12 +21,17 @@ import (
 	"crypto/elliptic"
 	"crypto/rand"
 	"crypto/x509"
+	"crypto/x509/pkix"
+	"encoding/asn1"
 	"encoding/pem"
 	"fmt"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto/sign"
+	"math/big"
+
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto/sign"
+	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
 type keyProcessor struct {
@@ -39,17 +44,17 @@ func NewKeyProcessor() insolar.KeyProcessor {
 	}
 }
 
-func (kp *keyProcessor) GeneratePrivateKey() (platformpolicy.PrivateKey, error) {
+func (kp *keyProcessor) GeneratePrivateKey() (keys.PrivateKey, error) {
 	return ecdsa.GenerateKey(kp.curve, rand.Reader)
 }
 
-func (*keyProcessor) ExtractPublicKey(privateKey platformpolicy.PrivateKey) platformpolicy.PublicKey {
+func (*keyProcessor) ExtractPublicKey(privateKey keys.PrivateKey) keys.PublicKey {
 	ecdsaPrivateKey := sign.MustConvertPrivateKeyToEcdsa(privateKey)
 	publicKey := ecdsaPrivateKey.PublicKey
 	return &publicKey
 }
 
-func (*keyProcessor) ImportPublicKeyPEM(pemEncoded []byte) (platformpolicy.PublicKey, error) {
+func (*keyProcessor) ImportPublicKeyPEM(pemEncoded []byte) (keys.PublicKey, error) {
 	blockPub, _ := pem.Decode(pemEncoded)
 	if blockPub == nil {
 		return nil, fmt.Errorf("[ ImportPublicKey ] Problems with decoding. Key - %v", pemEncoded)
@@ -62,7 +67,7 @@ func (*keyProcessor) ImportPublicKeyPEM(pemEncoded []byte) (platformpolicy.Publi
 	return publicKey, nil
 }
 
-func (*keyProcessor) ImportPrivateKeyPEM(pemEncoded []byte) (platformpolicy.PrivateKey, error) {
+func (*keyProcessor) ImportPrivateKeyPEM(pemEncoded []byte) (keys.PrivateKey, error) {
 	block, _ := pem.Decode(pemEncoded)
 	if block == nil {
 		return nil, fmt.Errorf("[ ImportPrivateKey ] Problems with decoding. Key - %v", pemEncoded)
@@ -75,9 +80,65 @@ func (*keyProcessor) ImportPrivateKeyPEM(pemEncoded []byte) (platformpolicy.Priv
 	return privateKey, nil
 }
 
-func (*keyProcessor) ExportPublicKeyPEM(publicKey platformpolicy.PublicKey) ([]byte, error) {
+////////////////////////////////////////////////////////////////////////////////
+// pkcs1PublicKey reflects the ASN.1 structure of a PKCS#1 public key.
+type pkcs1PublicKey struct {
+	N *big.Int
+	E int
+}
+type pkixPublicKey struct {
+	Algo      pkix.AlgorithmIdentifier
+	BitString asn1.BitString
+}
+
+func MarshalPKIXPublicKey(pub interface{}) ([]byte, error) {
+	var publicKeyBytes []byte
+	var publicKeyAlgorithm pkix.AlgorithmIdentifier
+	var err error
+
+	if publicKeyBytes, publicKeyAlgorithm, err = marshalPublicKey(pub); err != nil {
+		return nil, err
+	}
+
+	pkix := pkixPublicKey{
+		Algo: publicKeyAlgorithm,
+		BitString: asn1.BitString{
+			Bytes:     publicKeyBytes,
+			BitLength: 8 * len(publicKeyBytes),
+		},
+	}
+
+	ret, _ := asn1.Marshal(pkix)
+	return ret, nil
+}
+
+func marshalPublicKey(pub interface{}) (publicKeyBytes []byte, publicKeyAlgorithm pkix.AlgorithmIdentifier, err error) {
+	switch pub := pub.(type) {
+	case *ecdsa.PublicKey:
+		publicKeyBytes = elliptic.Marshal(pub.Curve, pub.X, pub.Y)
+		oid, ok := oidFromNamedCurve(pub.Curve)
+		if !ok {
+			return nil, pkix.AlgorithmIdentifier{}, errors.New("0x509: unsupported elliptic curve")
+		}
+		publicKeyAlgorithm.Algorithm = asn1.ObjectIdentifier{1, 2, 840, 113549, 1, 1, 1}
+		var paramBytes []byte
+		paramBytes, err = asn1.Marshal(oid)
+		if err != nil {
+			return
+		}
+		publicKeyAlgorithm.Parameters.FullBytes = paramBytes
+	default:
+		return nil, pkix.AlgorithmIdentifier{}, errors.New("x509: only RSA and ECDSA public keys supported")
+	}
+
+	return publicKeyBytes, publicKeyAlgorithm, nil
+}
+
+////////////////////////////////////////////////////////////////////////////////
+
+func (*keyProcessor) ExportPublicKeyPEM(publicKey keys.PublicKey) ([]byte, error) {
 	ecdsaPublicKey := sign.MustConvertPublicKeyToEcdsa(publicKey)
-	x509EncodedPub, err := x509.MarshalPKIXPublicKey(ecdsaPublicKey)
+	x509EncodedPub, err := MarshalPKIXPublicKey(ecdsaPublicKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ExportPublicKey ]")
 	}
@@ -85,9 +146,50 @@ func (*keyProcessor) ExportPublicKeyPEM(publicKey platformpolicy.PublicKey) ([]b
 	return pemEncoded, nil
 }
 
-func (*keyProcessor) ExportPrivateKeyPEM(privateKey platformpolicy.PrivateKey) ([]byte, error) {
+////////////////////////////////////////////////////////////////////////////////
+func oidFromNamedCurve(curve elliptic.Curve) (asn1.ObjectIdentifier, bool) {
+	switch curve {
+	case Secp256k1():
+		return asn1.ObjectIdentifier{1, 2, 840, 10045, 3, 1, 7}, true
+	}
+
+	return nil, false
+}
+
+type ecPrivateKey struct {
+	Version       int
+	PrivateKey    []byte
+	NamedCurveOID asn1.ObjectIdentifier `asn1:"optional,explicit,tag:0"`
+	PublicKey     asn1.BitString        `asn1:"optional,explicit,tag:1"`
+}
+
+func marshalECPrivateKeyWithOID(key *ecdsa.PrivateKey, oid asn1.ObjectIdentifier) ([]byte, error) {
+	privateKeyBytes := key.D.Bytes()
+	paddedPrivateKey := make([]byte, (key.Curve.Params().N.BitLen()+7)/8)
+	copy(paddedPrivateKey[len(paddedPrivateKey)-len(privateKeyBytes):], privateKeyBytes)
+
+	return asn1.Marshal(ecPrivateKey{
+		Version:       1,
+		PrivateKey:    paddedPrivateKey,
+		NamedCurveOID: oid,
+		PublicKey:     asn1.BitString{Bytes: elliptic.Marshal(key.Curve, key.X, key.Y)},
+	})
+}
+
+func MarshalECPrivateKey(key *ecdsa.PrivateKey) ([]byte, error) {
+	oid, ok := oidFromNamedCurve(key.Curve)
+	if !ok {
+		return nil, errors.New("2x509: unknown elliptic curve")
+	}
+
+	return marshalECPrivateKeyWithOID(key, oid)
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+
+func (*keyProcessor) ExportPrivateKeyPEM(privateKey keys.PrivateKey) ([]byte, error) {
 	ecdsaPrivateKey := sign.MustConvertPrivateKeyToEcdsa(privateKey)
-	x509Encoded, err := x509.MarshalECPrivateKey(ecdsaPrivateKey)
+	x509Encoded, err := MarshalECPrivateKey(ecdsaPrivateKey)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ExportPrivateKey ]")
 	}
@@ -95,12 +197,12 @@ func (*keyProcessor) ExportPrivateKeyPEM(privateKey platformpolicy.PrivateKey) (
 	return pemEncoded, nil
 }
 
-func (kp *keyProcessor) ExportPublicKeyBinary(publicKey platformpolicy.PublicKey) ([]byte, error) {
+func (kp *keyProcessor) ExportPublicKeyBinary(publicKey keys.PublicKey) ([]byte, error) {
 	ecdsaPublicKey := sign.MustConvertPublicKeyToEcdsa(publicKey)
 	return sign.SerializeTwoBigInt(ecdsaPublicKey.X, ecdsaPublicKey.Y), nil
 }
 
-func (kp *keyProcessor) ImportPublicKeyBinary(data []byte) (platformpolicy.PublicKey, error) {
+func (kp *keyProcessor) ImportPublicKeyBinary(data []byte) (keys.PublicKey, error) {
 	x, y, err := sign.DeserializeTwoBigInt(data)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ImportPublicKeyBinary ]")

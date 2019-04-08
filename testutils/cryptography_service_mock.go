@@ -6,7 +6,7 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "CryptographyService" can be found in github.com/insolar/insolar/insolar
 */
 import (
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"sync/atomic"
 	"time"
 
@@ -20,7 +20,7 @@ import (
 type CryptographyServiceMock struct {
 	t minimock.Tester
 
-	GetPublicKeyFunc       func() (r platformpolicy.PublicKey, r1 error)
+	GetPublicKeyFunc       func() (r keys.PublicKey, r1 error)
 	GetPublicKeyCounter    uint64
 	GetPublicKeyPreCounter uint64
 	GetPublicKeyMock       mCryptographyServiceMockGetPublicKey
@@ -30,7 +30,7 @@ type CryptographyServiceMock struct {
 	SignPreCounter uint64
 	SignMock       mCryptographyServiceMockSign
 
-	VerifyFunc       func(p platformpolicy.PublicKey, p1 insolar.Signature, p2 []byte) (r bool)
+	VerifyFunc       func(p keys.PublicKey, p1 insolar.Signature, p2 []byte) (r bool)
 	VerifyCounter    uint64
 	VerifyPreCounter uint64
 	VerifyMock       mCryptographyServiceMockVerify
@@ -62,7 +62,7 @@ type CryptographyServiceMockGetPublicKeyExpectation struct {
 }
 
 type CryptographyServiceMockGetPublicKeyResult struct {
-	r  platformpolicy.PublicKey
+	r  keys.PublicKey
 	r1 error
 }
 
@@ -79,7 +79,7 @@ func (m *mCryptographyServiceMockGetPublicKey) Expect() *mCryptographyServiceMoc
 }
 
 //Return specifies results of invocation of CryptographyService.GetPublicKey
-func (m *mCryptographyServiceMockGetPublicKey) Return(r platformpolicy.PublicKey, r1 error) *CryptographyServiceMock {
+func (m *mCryptographyServiceMockGetPublicKey) Return(r keys.PublicKey, r1 error) *CryptographyServiceMock {
 	m.mock.GetPublicKeyFunc = nil
 	m.expectationSeries = nil
 
@@ -101,12 +101,12 @@ func (m *mCryptographyServiceMockGetPublicKey) ExpectOnce() *CryptographyService
 	return expectation
 }
 
-func (e *CryptographyServiceMockGetPublicKeyExpectation) Return(r platformpolicy.PublicKey, r1 error) {
+func (e *CryptographyServiceMockGetPublicKeyExpectation) Return(r keys.PublicKey, r1 error) {
 	e.result = &CryptographyServiceMockGetPublicKeyResult{r, r1}
 }
 
 //Set uses given function f as a mock of CryptographyService.GetPublicKey method
-func (m *mCryptographyServiceMockGetPublicKey) Set(f func() (r platformpolicy.PublicKey, r1 error)) *CryptographyServiceMock {
+func (m *mCryptographyServiceMockGetPublicKey) Set(f func() (r keys.PublicKey, r1 error)) *CryptographyServiceMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -115,7 +115,7 @@ func (m *mCryptographyServiceMockGetPublicKey) Set(f func() (r platformpolicy.Pu
 }
 
 //GetPublicKey implements github.com/insolar/insolar/insolar.CryptographyService interface
-func (m *CryptographyServiceMock) GetPublicKey() (r platformpolicy.PublicKey, r1 error) {
+func (m *CryptographyServiceMock) GetPublicKey() (r keys.PublicKey, r1 error) {
 	counter := atomic.AddUint64(&m.GetPublicKeyPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPublicKeyCounter, 1)
 
@@ -350,7 +350,7 @@ type CryptographyServiceMockVerifyExpectation struct {
 }
 
 type CryptographyServiceMockVerifyInput struct {
-	p  platformpolicy.PublicKey
+	p  keys.PublicKey
 	p1 insolar.Signature
 	p2 []byte
 }
@@ -360,7 +360,7 @@ type CryptographyServiceMockVerifyResult struct {
 }
 
 //Expect specifies that invocation of CryptographyService.Verify is expected from 1 to Infinity times
-func (m *mCryptographyServiceMockVerify) Expect(p platformpolicy.PublicKey, p1 insolar.Signature, p2 []byte) *mCryptographyServiceMockVerify {
+func (m *mCryptographyServiceMockVerify) Expect(p keys.PublicKey, p1 insolar.Signature, p2 []byte) *mCryptographyServiceMockVerify {
 	m.mock.VerifyFunc = nil
 	m.expectationSeries = nil
 
@@ -384,7 +384,7 @@ func (m *mCryptographyServiceMockVerify) Return(r bool) *CryptographyServiceMock
 }
 
 //ExpectOnce specifies that invocation of CryptographyService.Verify is expected once
-func (m *mCryptographyServiceMockVerify) ExpectOnce(p platformpolicy.PublicKey, p1 insolar.Signature, p2 []byte) *CryptographyServiceMockVerifyExpectation {
+func (m *mCryptographyServiceMockVerify) ExpectOnce(p keys.PublicKey, p1 insolar.Signature, p2 []byte) *CryptographyServiceMockVerifyExpectation {
 	m.mock.VerifyFunc = nil
 	m.mainExpectation = nil
 
@@ -399,7 +399,7 @@ func (e *CryptographyServiceMockVerifyExpectation) Return(r bool) {
 }
 
 //Set uses given function f as a mock of CryptographyService.Verify method
-func (m *mCryptographyServiceMockVerify) Set(f func(p platformpolicy.PublicKey, p1 insolar.Signature, p2 []byte) (r bool)) *CryptographyServiceMock {
+func (m *mCryptographyServiceMockVerify) Set(f func(p keys.PublicKey, p1 insolar.Signature, p2 []byte) (r bool)) *CryptographyServiceMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -408,7 +408,7 @@ func (m *mCryptographyServiceMockVerify) Set(f func(p platformpolicy.PublicKey, 
 }
 
 //Verify implements github.com/insolar/insolar/insolar.CryptographyService interface
-func (m *CryptographyServiceMock) Verify(p platformpolicy.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
+func (m *CryptographyServiceMock) Verify(p keys.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
 	counter := atomic.AddUint64(&m.VerifyPreCounter, 1)
 	defer atomic.AddUint64(&m.VerifyCounter, 1)
 

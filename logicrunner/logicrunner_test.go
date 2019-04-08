@@ -22,6 +22,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/insolar/insolar/platformpolicy/commoncrypto"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"io/ioutil"
 	"net/rpc"
 	"os"
@@ -129,7 +130,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
 	}
-	mock.GetPublicKeyFunc = func() (platformpolicy.PublicKey, error) {
+	mock.GetPublicKeyFunc = func() (keys.PublicKey, error) {
 		return nil, nil
 	}
 
@@ -220,7 +221,7 @@ func mockCryptographyService(t *testing.T) insolar.CryptographyService {
 		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
 	}
-	mock.VerifyFunc = func(p platformpolicy.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
+	mock.VerifyFunc = func(p keys.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
 		return true
 	}
 	return mock
@@ -1149,7 +1150,7 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	s.NoError(err, "create contract")
 	s.NotEqual(rootDomainRef, nil, "contract created")
 
-	kp := commoncrypto.NewKeyProcessor()
+	kp := platformpolicy.NewKeyProcessor()
 
 	// Creating Root member
 	rootKey, err := kp.GeneratePrivateKey()
@@ -1503,7 +1504,7 @@ func (r *One) CreateAllowance(member string) (error) {
 	err := cb.Build(contractCode)
 	s.NoError(err)
 
-	kp := commoncrypto.NewKeyProcessor()
+	kp := platformpolicy.NewKeyProcessor()
 
 	// Initializing Root Domain
 	rootDomainID, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"}})
