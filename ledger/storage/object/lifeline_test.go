@@ -76,6 +76,60 @@ func TestIndexStorage_ForID(t *testing.T) {
 	})
 }
 
+func TestIndexDB_Set(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+
+	jetID := gen.JetID()
+	id := gen.ID()
+	idx := Lifeline{
+		LatestState: &id,
+		JetID:       jetID,
+		Delegates:   map[insolar.Reference]insolar.Reference{},
+	}
+
+	jetIndex := store.NewJetIndexModifierMock(t)
+	jetIndex.AddMock.Expect(id, jetID)
+
+	t.Run("saves correct index-value", func(t *testing.T) {
+		t.Parallel()
+
+		indexStorage := NewIndexDB(store.NewMemoryMockDB())
+		err := indexStorage.Set(ctx, id, idx)
+		require.NoError(t, err)
+		savedIdx, err := indexStorage.ForID(ctx, id)
+		require.NoError(t, err)
+		assert.Equal(t, idx, savedIdx)
+		assert.Equal(t, jetID, savedIdx.JetID)
+	})
+
+	t.Run("override indices is ok", func(t *testing.T) {
+		t.Parallel()
+
+		indexStorage := &IndexMemory{
+			memory:   map[insolar.ID]Lifeline{},
+			jetIndex: jetIndex,
+		}
+		err := indexStorage.Set(ctx, id, idx)
+		require.NoError(t, err)
+
+		err = indexStorage.Set(ctx, id, idx)
+		assert.NoError(t, err)
+	})
+
+	t.Run("init delegates, when nil", func(t *testing.T) {
+		t.Parallel()
+
+		indexStorage := NewIndexDB(store.NewMemoryMockDB())
+		err := indexStorage.Set(ctx, id, Lifeline{Delegates: nil})
+		require.NoError(t, err)
+		savedIdx, err := indexStorage.ForID(ctx, id)
+		require.NoError(t, err)
+		assert.NotNil(t, idx, savedIdx.Delegates)
+	})
+
+}
 func TestIndexStorage_Set(t *testing.T) {
 	t.Parallel()
 
@@ -162,6 +216,16 @@ func TestCloneObjectLifeline(t *testing.T) {
 	assert.False(t, &currentIdx == &clonedIdx)
 }
 
+func TestCloneObjectLifeline_AlwaysFillInDelegates(t *testing.T) {
+	t.Parallel()
+
+	idx := Lifeline{}
+
+	clonedIdx := CloneIndex(idx)
+
+	assert.NotNil(t, clonedIdx.Delegates)
+}
+
 func TestCloneObjectLifeline_InsureDelegatesMapNotNil(t *testing.T) {
 	t.Parallel()
 
@@ -178,7 +242,7 @@ func id() (id *insolar.ID) {
 }
 
 func delegates() (result map[insolar.Reference]insolar.Reference) {
-	fuzz.New().NumElements(1, 10).Fuzz(&result)
+	fuzz.New().NilChance(0).NumElements(1, 10).Fuzz(&result)
 	return
 }
 
