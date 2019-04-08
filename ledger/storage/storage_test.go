@@ -45,10 +45,11 @@ type storageSuite struct {
 	cleaner func()
 	db      storage.DBContext
 
-	// TODO: @imarkin 28.03.2019 - remove it after all new storages integration (INS-2013, etc)
-	objectStorage storage.ObjectStorage
-	dropModifier  drop.Modifier
-	dropAccessor  drop.Accessor
+	indexAccessor object.IndexAccessor
+	indexModifier object.IndexModifier
+
+	dropModifier drop.Modifier
+	dropAccessor drop.Accessor
 
 	jetID insolar.ID
 }
@@ -72,10 +73,12 @@ func (s *storageSuite) BeforeTest(suiteName, testName string) {
 	s.db = tmpDB
 	s.cleaner = cleaner
 
-	s.objectStorage = storage.NewObjectStorage()
+	idxStor := object.NewIndexMemory()
+	s.indexModifier = idxStor
+	s.indexAccessor = idxStor
 
 	storageDB := store.NewMemoryMockDB()
-	dropStorage := drop.NewStorageDB(storageDB)
+	dropStorage := drop.NewDB(storageDB)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 	s.jetID = testutils.RandomJet()
@@ -84,7 +87,7 @@ func (s *storageSuite) BeforeTest(suiteName, testName string) {
 		platformpolicy.NewPlatformCryptographyScheme(),
 		s.db,
 		store.NewMemoryMockDB(),
-		s.objectStorage,
+		idxStor,
 		s.dropModifier,
 		s.dropAccessor,
 		pulse.NewStorageMem(),
@@ -109,22 +112,24 @@ func (s *storageSuite) AfterTest(suiteName, testName string) {
 }
 
 func (s *storageSuite) TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex() {
-	idx, err := s.objectStorage.GetObjectIndex(s.ctx, s.jetID, insolar.NewID(0, hexhash("5000")))
-	assert.Equal(s.T(), insolar.ErrNotFound, err)
-	assert.Nil(s.T(), idx)
+	idx, err := s.indexAccessor.ForID(s.ctx, *insolar.NewID(0, hexhash("5000")))
+	assert.Equal(s.T(), object.ErrIndexNotFound, err)
+	assert.Equal(s.T(), idx, object.Lifeline{})
 }
 
 func (s *storageSuite) TestDB_SetObjectIndex_StoresCorrectDataInStorage() {
 	idx := object.Lifeline{
 		LatestState: insolar.NewID(0, hexhash("20")),
+		JetID:       insolar.JetID(s.jetID),
+		Delegates:   map[insolar.Reference]insolar.Reference{},
 	}
 	zeroid := insolar.NewID(0, hexhash(""))
-	err := s.objectStorage.SetObjectIndex(s.ctx, s.jetID, zeroid, &idx)
+	err := s.indexModifier.Set(s.ctx, *zeroid, idx)
 	assert.Nil(s.T(), err)
 
-	storedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, s.jetID, zeroid)
+	storedIndex, err := s.indexAccessor.ForID(s.ctx, *zeroid)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), *storedIndex, idx)
+	assert.Equal(s.T(), storedIndex, idx)
 }
 
 func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
@@ -134,17 +139,19 @@ func (s *storageSuite) TestDB_SetObjectIndex_SaveLastUpdate() {
 	idx := object.Lifeline{
 		LatestState:  insolar.NewID(0, hexhash("20")),
 		LatestUpdate: 1239,
+		JetID:        insolar.JetID(jetID),
+		Delegates:    map[insolar.Reference]insolar.Reference{},
 	}
 	zeroid := insolar.NewID(0, hexhash(""))
 
 	// Act
-	err := s.objectStorage.SetObjectIndex(s.ctx, jetID, zeroid, &idx)
+	err := s.indexModifier.Set(s.ctx, *zeroid, idx)
 	assert.Nil(s.T(), err)
 
 	// Assert
-	storedIndex, err := s.objectStorage.GetObjectIndex(s.ctx, jetID, zeroid)
+	storedIndex, err := s.indexAccessor.ForID(s.ctx, *zeroid)
 	assert.NoError(s.T(), err)
-	assert.Equal(s.T(), *storedIndex, idx)
+	assert.Equal(s.T(), storedIndex, idx)
 	assert.Equal(s.T(), 1239, int(idx.LatestUpdate))
 }
 

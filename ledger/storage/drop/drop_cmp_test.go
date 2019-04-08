@@ -76,7 +76,7 @@ func TestDropStorageMemory(t *testing.T) {
 
 func TestDropStorageDB(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	ds := NewStorageDB(store.NewMemoryMockDB())
+	ds := NewDB(store.NewMemoryMockDB())
 
 	var drops []Drop
 	genInputs := map[jetPulse]struct{}{}
@@ -107,7 +107,7 @@ func TestDropStorageDB(t *testing.T) {
 func TestDropStorageCompare(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
-	ds := NewStorageDB(store.NewMemoryMockDB())
+	ds := NewDB(store.NewMemoryMockDB())
 	ms := NewStorageMemory()
 
 	var drops []Drop

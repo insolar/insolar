@@ -50,6 +50,9 @@ const (
 	ScopeJetDrop Scope = 3
 	// ScopeIndex is the scope for an index records.
 	ScopeIndex Scope = 4
+	// ScopeSystem is the scope for a system records.
+	ScopeSystem Scope = 5
+
 	// ScopeBlob is the scope for a blobs records.
 	ScopeBlob Scope = 7
 )

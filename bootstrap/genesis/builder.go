@@ -18,30 +18,30 @@ package genesis
 
 import (
 	"context"
-	"go/build"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path/filepath"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
-	"github.com/pkg/errors"
+)
+
+var (
+	contractSources = insolar.RootModule + "/application/contract"
+	proxySources    = insolar.RootModule + "/application/proxy"
 )
 
 // PrependGoPath prepends `path` to GOPATH environment variable
 // accounting for possibly for default value. Returns new value.
 // NOTE: that environment is not changed
 func PrependGoPath(path string) string {
-	gopath := os.Getenv("GOPATH")
-	if gopath == "" {
-		gopath = build.Default.GOPATH
-	}
-
-	return path + string(os.PathListSeparator) + gopath
+	return path + string(os.PathListSeparator) + goPATH()
 }
 
 // WriteFile dumps `text` into file named `name` into directory `dir`.
@@ -66,31 +66,36 @@ func OpenFile(dir string, name string) (*os.File, error) {
 type ContractsBuilder struct {
 	root string
 
-	ArtifactManager artifacts.Client
-	Prototypes      map[string]*insolar.Reference
-	Codes           map[string]*insolar.Reference
+	Prototypes map[string]*insolar.Reference
+	Codes      map[string]*insolar.Reference
+
+	genesisRef      insolar.Reference
+	artifactManager artifact.Manager
 }
 
-// NewContractBuilder returns a new `ContractsBuilder`, takes in: path to tmp directory,
-// artifact manager, ...
-func NewContractBuilder(am artifacts.Client) *ContractsBuilder {
+// NewContractBuilder returns a new `ContractsBuilder`,
+// requires initialized artifact manager.
+func NewContractBuilder(genesisRef insolar.Reference, am artifact.Manager) *ContractsBuilder {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	if err != nil {
 		return nil
 	}
 
 	cb := &ContractsBuilder{
-		root:            tmpDir,
-		Prototypes:      make(map[string]*insolar.Reference),
-		Codes:           make(map[string]*insolar.Reference),
-		ArtifactManager: am}
+		root:       tmpDir,
+		Prototypes: make(map[string]*insolar.Reference),
+		Codes:      make(map[string]*insolar.Reference),
+
+		genesisRef:      genesisRef,
+		artifactManager: am,
+	}
 	return cb
 }
 
 // Clean deletes tmp directory used for contracts building
 func (cb *ContractsBuilder) Clean() {
 	log.Debugf("Cleaning build directory %q", cb.root)
-	err := os.RemoveAll(cb.root) // nolint: errcheck
+	err := os.RemoveAll(cb.root)
 	if err != nil {
 		panic(err)
 	}
@@ -102,16 +107,18 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 	domainRef := insolar.NewReference(*domain, *domain)
 
 	for name := range contracts {
-		protoID, err := cb.ArtifactManager.RegisterRequest(
-			ctx, *domainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_proto"}},
-		)
+		protoID, err := cb.artifactManager.RegisterRequest(
+			ctx,
+			*domainRef,
+			&message.Parcel{
+				Msg: &message.GenesisRequest{
+					Name: name + "_proto",
+				},
+			})
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
+			return errors.Wrap(err, "[ Build ] Can't RegisterRequest for contract")
 		}
-
-		protoRef := insolar.NewReference(*domain, *protoID)
-		log.Debugf("Registered prototype %q for contract %q in %q", protoRef.String(), name, cb.root)
-		cb.Prototypes[name] = protoRef
+		cb.Prototypes[name] = insolar.NewReference(*domain, *protoID)
 	}
 
 	for name, code := range contracts {
@@ -127,7 +134,8 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 			return errors.Wrap(err, "[ Build ] Can't WriteFile")
 		}
 
-		proxy, err := OpenFile(filepath.Join(cb.root, "src/github.com/insolar/insolar/application/proxy", name), "main.go")
+		proxyPath := filepath.Join(cb.root, "src", proxySources, name)
+		proxy, err := OpenFile(proxyPath, "main.go")
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't open proxy file")
 		}
@@ -154,58 +162,63 @@ func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*pre
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't call plugin")
 		}
-		log.Debugf("Built plugin for contract %q", name)
 
 		pluginBinary, err := ioutil.ReadFile(filepath.Join(cb.root, "plugins", name+".so"))
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't ReadFile")
 		}
-		codeReq, err := cb.ArtifactManager.RegisterRequest(
-			ctx, *domainRef, &message.Parcel{Msg: &message.GenesisRequest{Name: name + "_code"}},
+		codeReq, err := cb.artifactManager.RegisterRequest(
+			ctx,
+			*domainRef,
+			&message.Parcel{
+				Msg: &message.GenesisRequest{Name: name + "_code"},
+			},
 		)
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
+			return errors.Wrapf(err, "[ Build ] Can't RegisterRequest for code '%v'", name)
 		}
 
 		log.Debugf("Deploying code for contract %q", name)
-		codeID, err := cb.ArtifactManager.DeployCode(
+		codeID, err := cb.artifactManager.DeployCode(
 			ctx,
 			*domainRef, *insolar.NewReference(*domain, *codeReq),
 			pluginBinary, insolar.MachineTypeGoPlugin,
 		)
+		if err != nil {
+			return errors.Wrapf(err, "[ Build ] Can't DeployCode for code '%v", name)
+		}
+
 		codeRef := insolar.NewReference(*domain, *codeID)
+		_, err = cb.artifactManager.RegisterResult(ctx, *domainRef, *codeRef, nil)
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't SetRecord")
+			return errors.Wrapf(err, "[ Build ] Can't SetRecord for code '%v'", name)
 		}
-		_, err = cb.ArtifactManager.RegisterResult(ctx, *domainRef, *codeRef, nil)
-		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't SetRecord")
-		}
+
 		log.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
 		cb.Codes[name] = codeRef
 
-		// FIXME: It's a temporary fix and should not be here. Ii will NOT work properly on production. Remove it ASAP!
-		_, err = cb.ArtifactManager.ActivatePrototype(
+		_, err = cb.artifactManager.ActivatePrototype(
 			ctx,
 			*domainRef,
 			*cb.Prototypes[name],
-			*cb.ArtifactManager.GenesisRef(), // FIXME: Only bootstrap can do this!
+			cb.genesisRef,
 			*codeRef,
 			nil,
 		)
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't ActivatePrototype")
+			return errors.Wrapf(err, "[ Build ] Can't ActivatePrototypef for code '%v'", name)
 		}
-		_, err = cb.ArtifactManager.RegisterResult(ctx, *domainRef, *cb.Prototypes[name], nil)
+
+		_, err = cb.artifactManager.RegisterResult(ctx, *domainRef, *cb.Prototypes[name], nil)
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't RegisterResult of prototype")
+			return errors.Wrapf(err, "[ Build ] Can't RegisterResult of prototype for code '%v'", name)
 		}
 	}
 
 	return nil
 }
 
-// Plugin ...
+// compile plugin
 func (cb *ContractsBuilder) plugin(name string) error {
 	dstDir := filepath.Join(cb.root, "plugins")
 
@@ -215,7 +228,8 @@ func (cb *ContractsBuilder) plugin(name string) error {
 	}
 
 	cmd := exec.Command(
-		"go", "build",
+		"go",
+		"build",
 		"-buildmode=plugin",
 		"-o", filepath.Join(dstDir, name+".so"),
 		filepath.Join(cb.root, "src/contract", name),
@@ -223,7 +237,7 @@ func (cb *ContractsBuilder) plugin(name string) error {
 	cmd.Env = append(os.Environ(), "GOPATH="+PrependGoPath(cb.root))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return errors.Wrap(err, "can't build contract: "+string(out))
+		return errors.Wrapf(err, "can't build contract: %v", string(out))
 	}
 	return nil
 }

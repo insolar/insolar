@@ -68,14 +68,16 @@ type PulseManager struct {
 	JetAccessor jet.Accessor `inject:""`
 	JetModifier jet.Modifier `inject:""`
 
-	ObjectStorage storage.ObjectStorage `inject:""`
+	IndexAccessor           object.IndexAccessor `inject:""`
+	IndexModifier           object.IndexModifier `inject:""`
+	CollectionIndexAccessor object.IndexCollectionAccessor
+	IndexCleaner            object.IndexCleaner
 
 	NodeSetter node.Modifier `inject:""`
 	Nodes      node.Accessor `inject:""`
 
 	ReplicaStorage storage.ReplicaStorage `inject:""`
 	DBContext      storage.DBContext      `inject:""`
-	StorageCleaner storage.Cleaner        `inject:""`
 
 	DropModifier drop.Modifier `inject:""`
 	DropAccessor drop.Accessor `inject:""`
@@ -131,6 +133,8 @@ func NewPulseManager(
 	pulseShifter pulse.Shifter,
 	recCleaner object.RecordCleaner,
 	recSyncAccessor object.RecordCollectionAccessor,
+	idxCollectionAccessor object.IndexCollectionAccessor,
+	indexCleaner object.IndexCleaner,
 ) *PulseManager {
 	pmconf := conf.PulseManager
 
@@ -143,12 +147,14 @@ func NewPulseManager(
 			heavySyncMessageLimit: pmconf.HeavySyncMessageLimit,
 			lightChainLimit:       conf.LightChainLimit,
 		},
-		DropCleaner:      dropCleaner,
-		BlobCleaner:      blobCleaner,
-		BlobSyncAccessor: blobSyncAccessor,
-		PulseShifter:     pulseShifter,
-		RecCleaner:       recCleaner,
-		RecSyncAccessor:  recSyncAccessor,
+		DropCleaner:             dropCleaner,
+		BlobCleaner:             blobCleaner,
+		BlobSyncAccessor:        blobSyncAccessor,
+		PulseShifter:            pulseShifter,
+		RecCleaner:              recCleaner,
+		RecSyncAccessor:         recSyncAccessor,
+		CollectionIndexAccessor: idxCollectionAccessor,
+		IndexCleaner:            indexCleaner,
 	}
 	return pm
 }
@@ -274,12 +280,12 @@ func (m *PulseManager) getExecutorHotData(
 	pendingRequests := map[insolar.ID]recentstorage.PendingObjectContext{}
 
 	for id, ttl := range recentObjectsIds {
-		lifeline, err := m.ObjectStorage.GetObjectIndex(ctx, jetID, &id)
+		lifeline, err := m.IndexAccessor.ForID(ctx, id)
 		if err != nil {
 			logger.Error(err)
 			continue
 		}
-		encoded := object.EncodeIndex(*lifeline)
+		encoded := object.EncodeIndex(lifeline)
 		recentObjects[id] = message.HotIndex{
 			TTL:   ttl,
 			Index: encoded,
@@ -416,7 +422,7 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID in
 		"to_jet":   toJetID.DebugString(),
 	})
 	for id := range indexStorage.GetObjects() {
-		idx, err := m.ObjectStorage.GetObjectIndex(ctx, fromJetID, &id)
+		idx, err := m.IndexAccessor.ForID(ctx, id)
 		if err != nil {
 			if err == insolar.ErrNotFound {
 				logger.WithField("id", id.DebugString()).Error("rewrite index not found")
@@ -424,7 +430,8 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID in
 			}
 			return errors.Wrap(err, "failed to rewrite index")
 		}
-		err = m.ObjectStorage.SetObjectIndex(ctx, toJetID, &id, idx)
+		idx.JetID = insolar.JetID(toJetID)
+		err = m.IndexModifier.Set(ctx, id, idx)
 		if err != nil {
 			return errors.Wrap(err, "failed to rewrite index")
 		}
@@ -654,6 +661,15 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse insolar.Puls
 	m.DropCleaner.Delete(p.PulseNumber)
 	m.BlobCleaner.Delete(ctx, p.PulseNumber)
 	m.RecCleaner.Remove(ctx, p.PulseNumber)
+
+	idxs := map[insolar.ID]struct{}{}
+	for _, idxIDs := range jetIndexesRemoved {
+		for _, idxID := range idxIDs {
+			idxs[idxID] = struct{}{}
+		}
+	}
+	m.IndexCleaner.RemoveWithIDs(ctx, idxs)
+
 	err = m.PulseShifter.Shift(ctx, p.PulseNumber)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
@@ -711,7 +727,8 @@ func (m *PulseManager) Start(ctx context.Context) error {
 			m.DropAccessor,
 			m.BlobSyncAccessor,
 			m.RecSyncAccessor,
-			m.StorageCleaner,
+			m.CollectionIndexAccessor,
+			m.IndexCleaner,
 			m.DBContext,
 			heavyclient.Options{
 				SyncMessageLimit: m.options.heavySyncMessageLimit,
@@ -726,23 +743,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 		}
 	}
 
-	return m.restoreGenesisRecentObjects(ctx)
-}
-
-func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {
-	if m.NodeNet.GetOrigin().Role() == insolar.StaticRoleHeavyMaterial {
-		return nil
-	}
-
-	jetID := insolar.ID(*insolar.NewJetID(0, nil))
-	recent := m.RecentStorageProvider.GetIndexStorage(ctx, insolar.ID(jetID))
-
-	return m.ObjectStorage.IterateIndexIDs(ctx, insolar.ID(jetID), func(id insolar.ID) error {
-		if id.Pulse() == insolar.FirstPulseNumber {
-			recent.AddObject(ctx, id)
-		}
-		return nil
-	})
+	return nil
 }
 
 // Stop stops PulseManager. Waits replication goroutine is done.

@@ -22,20 +22,14 @@ import (
 	"path/filepath"
 	"sync"
 
-	"github.com/insolar/insolar/insolar/record"
-
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
 )
 
 const (
-	scopeIDLifeline byte = 1
-	scopeIDRecord   byte = 2
-	scopeIDPulse    byte = 4
-	scopeIDSystem   byte = 5
+	scopeIDSystem byte = 5
 
 	sysGenesis                byte = 1
 	sysHeavyClientState       byte = 3
@@ -48,13 +42,6 @@ type DBContext interface {
 	BeginTransaction(update bool) (*TransactionManager, error)
 	View(ctx context.Context, fn func(*TransactionManager) error) error
 	Update(ctx context.Context, fn func(*TransactionManager) error) error
-
-	IterateRecordsOnPulse(
-		ctx context.Context,
-		jetID insolar.ID,
-		pulse insolar.PulseNumber,
-		handler func(id insolar.ID, rec record.VirtualRecord) error,
-	) error
 
 	StoreKeyValues(ctx context.Context, kvs []insolar.KV) error
 
@@ -226,30 +213,6 @@ func (db *DB) GetBadgerDB() *badger.DB {
 	return db.db
 }
 
-// IterateRecordsOnPulse iterates over records on provided Jet ID and Pulse.
-func (db *DB) IterateRecordsOnPulse(
-	ctx context.Context,
-	jetID insolar.ID,
-	pulse insolar.PulseNumber,
-	handler func(id insolar.ID, rec record.VirtualRecord) error,
-) error {
-	jetPrefix := insolar.JetID(jetID).Prefix()
-	prefix := prefixkey(scopeIDRecord, jetPrefix, pulse.Bytes())
-
-	return db.iterate(ctx, prefix, func(k, v []byte) error {
-		id := insolar.NewID(pulse, k)
-		rec, err := object.DecodeVirtual(v)
-		if err != nil {
-			return errors.Wrap(err, "can't deserialize record")
-		}
-		err = handler(*id, rec)
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-}
-
 // StoreKeyValues stores provided key/value pairs.
 func (db *DB) StoreKeyValues(ctx context.Context, kvs []insolar.KV) error {
 	return db.Update(ctx, func(tx *TransactionManager) error {
@@ -329,8 +292,6 @@ func (b Key) PulseNumber() insolar.PulseNumber {
 	// offset in this case: is 1 + RecordHashSize (jet length) - 1 minus jet prefix
 	from := insolar.RecordHashSize
 	switch b[0] {
-	case scopeIDPulse:
-		from = 1
 	case scopeIDSystem:
 		// for specific system records is different rules
 		// pulse number could exist or not
