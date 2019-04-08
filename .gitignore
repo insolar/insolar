@@ -59,3 +59,6 @@ coverage.txt
 /scripts/insolard/reusekeys
 cmd/insolard/new-data
 new-data
+network/servicenetwork/network_cache/000000.vlog
+network/servicenetwork/network_cache/LOCK
+network/servicenetwork/network_cache/MANIFEST
