@@ -17,6 +17,7 @@
 package pulsar
 
 import (
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"testing"
 
 	"github.com/insolar/insolar/cryptography"
@@ -29,7 +30,7 @@ import (
 func TestPreparePayloadAndCheckIt(t *testing.T) {
 	t.Parallel()
 
-	keyProcessor := platformpolicy.NewKeyProcessor()
+	keyProcessor := commoncrypto.NewKeyProcessor()
 	privateKey, err := keyProcessor.GeneratePrivateKey()
 	require.NoError(t, err)
 	cryptoService := cryptography.NewKeyBoundCryptographyService(privateKey)

@@ -17,7 +17,6 @@
 package insolar
 
 import (
-	"crypto"
 	"github.com/insolar/insolar/platformpolicy"
 	"hash"
 )
@@ -43,8 +42,8 @@ type PlatformCryptographyScheme interface {
 	ReferenceHasher() Hasher
 	IntegrityHasher() Hasher
 
-	Signer(crypto.PrivateKey) Signer
-	Verifier(crypto.PublicKey) Verifier
+	Signer(platformpolicy.PrivateKey) Signer
+	Verifier(platformpolicy.PublicKey) Verifier
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.KeyProcessor -o ../testutils -s _mock.go

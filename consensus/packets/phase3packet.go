@@ -51,7 +51,7 @@
 package packets
 
 import (
-	"crypto"
+	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
@@ -90,7 +90,7 @@ func (p3p *Phase3Packet) SetRouting(origin, target insolar.ShortNodeID) {
 	p3p.packetHeader.HasRouting = true
 }
 
-func (p3p *Phase3Packet) Verify(crypto insolar.CryptographyService, key crypto.PublicKey) error {
+func (p3p *Phase3Packet) Verify(crypto insolar.CryptographyService, key platformpolicy.PublicKey) error {
 	raw, err := p3p.rawBytes()
 	if err != nil {
 		return errors.Wrap(err, "Failed to get raw part of phase 3 packet")

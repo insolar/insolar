@@ -53,10 +53,10 @@ package nodenetwork
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"hash"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy"
 )
 
 func hashWriteChecked(hash hash.Hash, data []byte) {
@@ -99,7 +99,7 @@ func CalculateHash(scheme insolar.PlatformCryptographyScheme, list []insolar.Net
 	}()
 
 	h := scheme.IntegrityHasher()
-	processor := platformpolicy.NewKeyProcessor()
+	processor := commoncrypto.NewKeyProcessor()
 	for _, node := range list {
 		nodeHash := calculateNodeHash(scheme, processor, node)
 		hashWriteChecked(h, nodeHash)

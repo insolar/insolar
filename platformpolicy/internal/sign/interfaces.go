@@ -17,12 +17,12 @@
 package sign
 
 import (
-	"crypto"
+	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/insolar"
 )
 
 type AlgorithmProvider interface {
-	Sign(crypto.PrivateKey) insolar.Signer
-	Verify(crypto.PublicKey) insolar.Verifier
+	Sign(platformpolicy.PrivateKey) insolar.Signer
+	Verify(platformpolicy.PublicKey) insolar.Verifier
 }

@@ -17,7 +17,7 @@
 package foundation
 
 import (
-	"crypto"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
@@ -26,10 +26,10 @@ import (
 // TODO: this file should be removed
 
 var platformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
-var keyProcessor = platformpolicy.NewKeyProcessor()
+var keyProcessor = commoncrypto.NewKeyProcessor()
 
 // Sign signs given seed.
-func Sign(data []byte, key crypto.PrivateKey) ([]byte, error) {
+func Sign(data []byte, key platformpolicy.PrivateKey) ([]byte, error) {
 	signature, err := platformCryptographyScheme.Signer(key).Sign(data)
 	if err != nil {
 		return nil, err
@@ -38,23 +38,23 @@ func Sign(data []byte, key crypto.PrivateKey) ([]byte, error) {
 }
 
 // Verify verifies signature.
-func Verify(data []byte, signatureRaw []byte, publicKey crypto.PublicKey) bool {
+func Verify(data []byte, signatureRaw []byte, publicKey platformpolicy.PublicKey) bool {
 	return platformCryptographyScheme.Verifier(publicKey).Verify(insolar.SignatureFromBytes(signatureRaw), data)
 }
 
-func GeneratePrivateKey() (crypto.PrivateKey, error) {
+func GeneratePrivateKey() (platformpolicy.PrivateKey, error) {
 	return keyProcessor.GeneratePrivateKey()
 }
 
-func ImportPublicKey(publicKey string) (crypto.PublicKey, error) {
+func ImportPublicKey(publicKey string) (platformpolicy.PublicKey, error) {
 	return keyProcessor.ImportPublicKeyPEM([]byte(publicKey))
 }
 
-func ExportPublicKey(publicKey crypto.PublicKey) (string, error) {
+func ExportPublicKey(publicKey platformpolicy.PublicKey) (string, error) {
 	key, err := keyProcessor.ExportPublicKeyPEM(publicKey)
 	return string(key), err
 }
 
-func ExtractPublicKey(privateKey crypto.PrivateKey) crypto.PublicKey {
+func ExtractPublicKey(privateKey platformpolicy.PrivateKey) platformpolicy.PublicKey {
 	return keyProcessor.ExtractPublicKey(privateKey)
 }

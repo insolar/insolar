@@ -54,6 +54,7 @@ import (
 	"context"
 	"crypto"
 	"encoding/hex"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -165,14 +166,14 @@ func TestCalculatorError(t *testing.T) {
 
 	cm := component.Manager{}
 
-	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
+	key, _ := commoncrypto.NewKeyProcessor().GeneratePrivateKey()
 	require.NotNil(t, key)
 
 	service := testutils.NewCryptographyServiceMock(t)
 	service.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
 		return nil, errors.New("Sign error")
 	}
-	service.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
+	service.GetPublicKeyFunc = func() (r platformpolicy.PublicKey, r1 error) {
 		return "key", nil
 	}
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
@@ -228,14 +229,14 @@ func TestCalculatorLedgerError(t *testing.T) {
 
 	cm := component.Manager{}
 
-	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
+	key, _ := commoncrypto.NewKeyProcessor().GeneratePrivateKey()
 	require.NotNil(t, key)
 
 	service := testutils.NewCryptographyServiceMock(t)
 	service.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
 		return nil, errors.New("Sign error")
 	}
-	service.GetPublicKeyFunc = func() (r crypto.PublicKey, r1 error) {
+	service.GetPublicKeyFunc = func() (r platformpolicy.PublicKey, r1 error) {
 		return "key", nil
 	}
 

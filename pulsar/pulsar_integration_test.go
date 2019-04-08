@@ -18,7 +18,7 @@ package pulsar
 
 import (
 	"context"
-	"crypto"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"net"
 	"testing"
 	"time"
@@ -44,7 +44,7 @@ func TestTwoPulsars_Handshake(t *testing.T) {
 	pulseDistributor := testutils.NewPulseDistributorMock(t)
 	pulseDistributor.DistributeMock.Return()
 
-	keyProcessor := platformpolicy.NewKeyProcessor()
+	keyProcessor := commoncrypto.NewKeyProcessor()
 
 	firstPrivateKey, err := keyProcessor.GeneratePrivateKey()
 	require.NoError(t, err)
@@ -133,7 +133,7 @@ func TestPulsar_SendPulseToNode(t *testing.T) {
 		require.Equal(t, insolar.FirstPulseNumber+1, int(p1.PulseNumber))
 	}
 
-	keyProcessor := platformpolicy.NewKeyProcessor()
+	keyProcessor := commoncrypto.NewKeyProcessor()
 
 	firstPrivateKey, err := keyProcessor.GeneratePrivateKey()
 	require.NoError(t, err)
@@ -194,7 +194,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 		require.Equal(t, insolar.FirstPulseNumber+1, int(p1.PulseNumber))
 	}
 
-	keyProcessorFirst := platformpolicy.NewKeyProcessor()
+	keyProcessorFirst := commoncrypto.NewKeyProcessor()
 
 	firstPrivateKey, err := keyProcessorFirst.GeneratePrivateKey()
 	require.NoError(t, err)
@@ -205,7 +205,7 @@ func TestTwoPulsars_Full_Consensus(t *testing.T) {
 	require.NoError(t, err)
 	inslogger.FromContext(ctx).Infof("first outside - %v", string(exporteFirstKey))
 
-	keyProcessorSecond := platformpolicy.NewKeyProcessor()
+	keyProcessorSecond := commoncrypto.NewKeyProcessor()
 
 	secondPrivateKey, err := keyProcessorSecond.GeneratePrivateKey()
 	require.NoError(t, err)
@@ -327,9 +327,9 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 		"127.0.0.1:1647",
 	}
 
-	keyProcessor := platformpolicy.NewKeyProcessor()
+	keyProcessor := commoncrypto.NewKeyProcessor()
 
-	pulsarsPrivateKeys := [7]crypto.PrivateKey{}
+	pulsarsPrivateKeys := [7]platformpolicy.PrivateKey{}
 	for pkIndex := 0; pkIndex < 7; pkIndex++ {
 		privateKey, err := keyProcessor.GeneratePrivateKey()
 		require.NoError(t, err)

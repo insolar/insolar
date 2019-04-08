@@ -18,9 +18,10 @@ package genesis
 
 import (
 	"context"
-	"crypto"
 	"encoding/json"
 	"fmt"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"io/ioutil"
 	"os"
 	"path"
@@ -38,7 +39,6 @@ import (
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -60,7 +60,7 @@ type messageBusLocker interface {
 }
 
 type nodeInfo struct {
-	privateKey crypto.PrivateKey
+	privateKey platformpolicy.PrivateKey
 	publicKey  string
 	ref        *insolar.Reference
 }
@@ -337,7 +337,7 @@ func (g *Genesis) activateSmartContracts(
 
 type genesisNode struct {
 	node    certificate.BootstrapNode
-	privKey crypto.PrivateKey
+	privKey platformpolicy.PrivateKey
 	ref     *insolar.Reference
 	role    string
 }
@@ -479,7 +479,7 @@ func (g *Genesis) createKeys(ctx context.Context, path string, amount int) error
 	}
 
 	for i := 0; i < amount; i++ {
-		ks := platformpolicy.NewKeyProcessor()
+		ks := commoncrypto.NewKeyProcessor()
 
 		privKey, err := ks.GeneratePrivateKey()
 		if err != nil {

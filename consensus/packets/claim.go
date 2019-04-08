@@ -51,10 +51,10 @@
 package packets
 
 import (
-	"crypto"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -93,7 +93,7 @@ type ClaimSupplementary interface {
 
 type SignedClaim interface {
 	GetNodeID() insolar.Reference
-	GetPublicKey() (crypto.PublicKey, error)
+	GetPublicKey() (platformpolicy.PublicKey, error)
 	SerializeRaw() ([]byte, error)
 	GetSignature() []byte
 }
@@ -191,8 +191,8 @@ func (njc *NodeJoinClaim) GetNodeID() insolar.Reference {
 	return njc.NodeRef
 }
 
-func (njc *NodeJoinClaim) GetPublicKey() (crypto.PublicKey, error) {
-	keyProc := platformpolicy.NewKeyProcessor()
+func (njc *NodeJoinClaim) GetPublicKey() (platformpolicy.PublicKey, error) {
+	keyProc := commoncrypto.NewKeyProcessor()
 	return keyProc.ImportPublicKeyBinary(njc.NodePK[:])
 }
 
@@ -260,7 +260,7 @@ func getClaimWithHeaderSize(claim ReferendumClaim) uint16 {
 }
 
 func NodeToClaim(node insolar.NetworkNode) (*NodeJoinClaim, error) {
-	keyProc := platformpolicy.NewKeyProcessor()
+	keyProc := commoncrypto.NewKeyProcessor()
 	exportedKey, err := keyProc.ExportPublicKeyBinary(node.PublicKey())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeToClaim ] failed to export a public key")

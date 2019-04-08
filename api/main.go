@@ -18,8 +18,9 @@ package api
 
 import (
 	"context"
-	"crypto"
 	"fmt"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"net"
 	"net/http"
 	"sync"
@@ -38,7 +39,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/platformpolicy"
 )
 
 // Runner implements Component for API
@@ -54,7 +54,7 @@ type Runner struct {
 	server              *http.Server
 	rpcServer           *rpc.Server
 	cfg                 *configuration.APIRunner
-	keyCache            map[string]crypto.PublicKey
+	keyCache            map[string]platformpolicy.PublicKey
 	cacheLock           *sync.RWMutex
 	SeedManager         *seedmanager.SeedManager
 	SeedGenerator       seedmanager.SeedGenerator
@@ -122,7 +122,7 @@ func NewRunner(cfg *configuration.APIRunner) (*Runner, error) {
 		server:    &http.Server{Addr: addrStr},
 		rpcServer: rpcServer,
 		cfg:       cfg,
-		keyCache:  make(map[string]crypto.PublicKey),
+		keyCache:  make(map[string]platformpolicy.PublicKey),
 		cacheLock: &sync.RWMutex{},
 	}
 
@@ -175,7 +175,7 @@ func (ar *Runner) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.PublicKey, error) { //nolint
+func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (platformpolicy.PublicKey, error) { //nolint
 	ar.cacheLock.RLock()
 	publicKey, ok := ar.keyCache[ref]
 	ar.cacheLock.RUnlock()
@@ -197,7 +197,7 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.Publi
 		return nil, errors.Wrap(err, "[ getMemberPubKey ] Can't extract response")
 	}
 
-	kp := platformpolicy.NewKeyProcessor()
+	kp := commoncrypto.NewKeyProcessor()
 	publicKey, err = kp.ImportPublicKeyPEM([]byte(publicKeyString))
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to convert public key")

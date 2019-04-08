@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Calculator" can be found in github.com/insolar/insolar/network/merkle
 */
 import (
-	crypto "crypto"
+	"github.com/insolar/insolar/platformpolicy"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	merkle "github.com/insolar/insolar/network/merkle"
+	"github.com/insolar/insolar/network/merkle"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -35,7 +35,7 @@ type CalculatorMock struct {
 	GetPulseProofPreCounter uint64
 	GetPulseProofMock       mCalculatorMockGetPulseProof
 
-	IsValidFunc       func(p merkle.Proof, p1 merkle.OriginHash, p2 crypto.PublicKey) (r bool)
+	IsValidFunc       func(p merkle.Proof, p1 merkle.OriginHash, p2 platformpolicy.PublicKey) (r bool)
 	IsValidCounter    uint64
 	IsValidPreCounter uint64
 	IsValidMock       mCalculatorMockIsValid
@@ -530,7 +530,7 @@ type CalculatorMockIsValidExpectation struct {
 type CalculatorMockIsValidInput struct {
 	p  merkle.Proof
 	p1 merkle.OriginHash
-	p2 crypto.PublicKey
+	p2 platformpolicy.PublicKey
 }
 
 type CalculatorMockIsValidResult struct {
@@ -538,7 +538,7 @@ type CalculatorMockIsValidResult struct {
 }
 
 //Expect specifies that invocation of Calculator.IsValid is expected from 1 to Infinity times
-func (m *mCalculatorMockIsValid) Expect(p merkle.Proof, p1 merkle.OriginHash, p2 crypto.PublicKey) *mCalculatorMockIsValid {
+func (m *mCalculatorMockIsValid) Expect(p merkle.Proof, p1 merkle.OriginHash, p2 platformpolicy.PublicKey) *mCalculatorMockIsValid {
 	m.mock.IsValidFunc = nil
 	m.expectationSeries = nil
 
@@ -562,7 +562,7 @@ func (m *mCalculatorMockIsValid) Return(r bool) *CalculatorMock {
 }
 
 //ExpectOnce specifies that invocation of Calculator.IsValid is expected once
-func (m *mCalculatorMockIsValid) ExpectOnce(p merkle.Proof, p1 merkle.OriginHash, p2 crypto.PublicKey) *CalculatorMockIsValidExpectation {
+func (m *mCalculatorMockIsValid) ExpectOnce(p merkle.Proof, p1 merkle.OriginHash, p2 platformpolicy.PublicKey) *CalculatorMockIsValidExpectation {
 	m.mock.IsValidFunc = nil
 	m.mainExpectation = nil
 
@@ -577,7 +577,7 @@ func (e *CalculatorMockIsValidExpectation) Return(r bool) {
 }
 
 //Set uses given function f as a mock of Calculator.IsValid method
-func (m *mCalculatorMockIsValid) Set(f func(p merkle.Proof, p1 merkle.OriginHash, p2 crypto.PublicKey) (r bool)) *CalculatorMock {
+func (m *mCalculatorMockIsValid) Set(f func(p merkle.Proof, p1 merkle.OriginHash, p2 platformpolicy.PublicKey) (r bool)) *CalculatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -586,7 +586,7 @@ func (m *mCalculatorMockIsValid) Set(f func(p merkle.Proof, p1 merkle.OriginHash
 }
 
 //IsValid implements github.com/insolar/insolar/network/merkle.Calculator interface
-func (m *CalculatorMock) IsValid(p merkle.Proof, p1 merkle.OriginHash, p2 crypto.PublicKey) (r bool) {
+func (m *CalculatorMock) IsValid(p merkle.Proof, p1 merkle.OriginHash, p2 platformpolicy.PublicKey) (r bool) {
 	counter := atomic.AddUint64(&m.IsValidPreCounter, 1)
 	defer atomic.AddUint64(&m.IsValidCounter, 1)
 

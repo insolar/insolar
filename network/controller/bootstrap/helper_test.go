@@ -51,7 +51,7 @@
 package bootstrap
 
 import (
-	"crypto"
+	"github.com/insolar/insolar/platformpolicy"
 	"testing"
 
 	"github.com/insolar/insolar/network/node"
@@ -113,7 +113,7 @@ func (t *testNode) GetNodeRef() *insolar.Reference {
 	return &t.ref
 }
 
-func (t *testNode) GetPublicKey() crypto.PublicKey {
+func (t *testNode) GetPublicKey() platformpolicy.PublicKey {
 	return nil
 }
 

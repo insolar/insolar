@@ -20,6 +20,7 @@ package functest
 
 import (
 	"encoding/json"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"testing"
 
 	"github.com/insolar/insolar/certificate"
@@ -29,7 +30,7 @@ import (
 )
 
 var scheme = platformpolicy.NewPlatformCryptographyScheme()
-var keyProcessor = platformpolicy.NewKeyProcessor()
+var keyProcessor = commoncrypto.NewKeyProcessor()
 
 const TESTPUBLICKEY = "some_fancy_public_key"
 

@@ -51,7 +51,6 @@
 package packets
 
 import (
-	"crypto"
 	"io"
 	"strconv"
 
@@ -76,7 +75,7 @@ type HeaderSkipDeserializer interface {
 }
 
 type SignedPacket interface {
-	Verify(cryptographyService insolar.CryptographyService, key crypto.PublicKey) error
+	Verify(cryptographyService insolar.CryptographyService, key platformpolicy.PublicKey) error
 	Sign(insolar.CryptographyService) error
 }
 

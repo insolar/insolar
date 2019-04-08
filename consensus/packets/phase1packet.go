@@ -52,6 +52,7 @@ package packets
 
 import (
 	"crypto"
+	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
@@ -101,7 +102,7 @@ func (p1p *Phase1Packet) GetType() PacketType {
 	return p1p.packetHeader.PacketT
 }
 
-func (p1p *Phase1Packet) Verify(crypto insolar.CryptographyService, key crypto.PublicKey) error {
+func (p1p *Phase1Packet) Verify(crypto insolar.CryptographyService, key platformpolicy.PublicKey) error {
 	raw, err := p1p.rawBytes()
 	if err != nil {
 		return errors.Wrap(err, "Failed to get raw part of phase 1 packet")

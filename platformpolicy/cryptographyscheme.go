@@ -17,10 +17,9 @@
 package platformpolicy
 
 import (
-	"crypto"
-
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
+
 	"github.com/insolar/insolar/platformpolicy/internal/hash"
 	"github.com/insolar/insolar/platformpolicy/internal/sign"
 )
@@ -46,11 +45,11 @@ func (pcs *platformCryptographyScheme) IntegrityHasher() insolar.Hasher {
 	return pcs.HashProvider.Hash512bits()
 }
 
-func (pcs *platformCryptographyScheme) Signer(privateKey crypto.PrivateKey) insolar.Signer {
+func (pcs *platformCryptographyScheme) Signer(privateKey PrivateKey) insolar.Signer {
 	return pcs.SignProvider.Sign(privateKey)
 }
 
-func (pcs *platformCryptographyScheme) Verifier(publicKey crypto.PublicKey) insolar.Verifier {
+func (pcs *platformCryptographyScheme) Verifier(publicKey PublicKey) insolar.Verifier {
 	return pcs.SignProvider.Verify(publicKey)
 }
 
