@@ -17,6 +17,7 @@
 package platformpolicy
 
 import (
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -24,7 +25,7 @@ import (
 )
 
 func TestExportImportPrivateKey(t *testing.T) {
-	ks := NewKeyProcessor()
+	ks := commoncrypto.NewKeyProcessor()
 
 	privateKey, _ := ks.GeneratePrivateKey()
 
@@ -37,7 +38,7 @@ func TestExportImportPrivateKey(t *testing.T) {
 }
 
 func TestExportImportPublicKey(t *testing.T) {
-	ks := NewKeyProcessor()
+	ks := commoncrypto.NewKeyProcessor()
 
 	privateKey, _ := ks.GeneratePrivateKey()
 	publicKey := ks.ExtractPublicKey(privateKey)
@@ -51,7 +52,7 @@ func TestExportImportPublicKey(t *testing.T) {
 }
 
 func TestExportImportPublicKeyBinary(t *testing.T) {
-	ks := NewKeyProcessor()
+	ks := commoncrypto.NewKeyProcessor()
 
 	privateKey, _ := ks.GeneratePrivateKey()
 	publicKey := ks.ExtractPublicKey(privateKey)

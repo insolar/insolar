@@ -19,14 +19,13 @@ package platformpolicy
 import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
-
-	"github.com/insolar/insolar/platformpolicy/internal/hash"
-	"github.com/insolar/insolar/platformpolicy/internal/sign"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto/hash"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto/sign"
 )
 
 type platformCryptographyScheme struct {
-	HashProvider hash.AlgorithmProvider `inject:""`
-	SignProvider sign.AlgorithmProvider `inject:""`
+	HashProvider HashAlgorithmProvider `inject:""`
+	SignProvider SignAlgorithmProvider `inject:""`
 }
 
 func (pcs *platformCryptographyScheme) PublicKeySize() int {

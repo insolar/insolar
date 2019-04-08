@@ -17,12 +17,28 @@
 package sign
 
 import (
-	"github.com/insolar/insolar/platformpolicy"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
-type AlgorithmProvider interface {
-	Sign(platformpolicy.PrivateKey) insolar.Signer
-	Verify(platformpolicy.PublicKey) insolar.Verifier
+type ecdsaProvider struct {
+	HashProvider platformpolicy.HashAlgorithmProvider `inject:""`
+}
+
+func NewECDSAProvider() platformpolicy.SignAlgorithmProvider {
+	return &ecdsaProvider{}
+}
+
+func (p *ecdsaProvider) Sign(privateKey platformpolicy.PrivateKey) insolar.Signer {
+	return &ecdsaSignerWrapper{
+		privateKey: MustConvertPrivateKeyToEcdsa(privateKey),
+		hasher:     p.HashProvider.Hash512bits(),
+	}
+}
+
+func (p *ecdsaProvider) Verify(publicKey platformpolicy.PublicKey) insolar.Verifier {
+	return &ecdsaVerifyWrapper{
+		publicKey: MustConvertPublicKeyToEcdsa(publicKey),
+		hasher:    p.HashProvider.Hash512bits(),
+	}
 }

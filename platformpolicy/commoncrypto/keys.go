@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 
-	"github.com/insolar/insolar/platformpolicy/internal/sign"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto/sign"
 	"github.com/pkg/errors"
 )
 
