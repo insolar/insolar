@@ -35,8 +35,10 @@ type IndexAccessor interface {
 	ForID(ctx context.Context, id insolar.ID) (Lifeline, error)
 }
 
-// CollectionIndexAccessor provides methods for querying a collection of blobs with specific search conditions.
-type CollectionIndexAccessor interface {
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexCollectionAccessor -o ./ -s _mock.go
+
+// IndexCollectionAccessor provides methods for querying a collection of blobs with specific search conditions.
+type IndexCollectionAccessor interface {
 	// ForPulseAndJet returns []Blob for a provided jetID and a pulse number.
 	ForPulseAndJet(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]Lifeline
 }

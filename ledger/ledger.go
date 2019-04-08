@@ -73,7 +73,7 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 
 	var indexAccessor object.IndexAccessor
 	var indexModifier object.IndexModifier
-	var collectionIndexAccessor object.CollectionIndexAccessor
+	var collectionIndexAccessor object.IndexCollectionAccessor
 	var indexCleaner object.IndexCleaner
 
 	// Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)

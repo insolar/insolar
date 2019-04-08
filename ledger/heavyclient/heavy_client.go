@@ -53,7 +53,7 @@ type JetClient struct {
 	pulseAccessor          pulse.Accessor
 	pulseCalculator        pulse.Calculator
 	recSyncAccessor        object.RecordCollectionAccessor
-	idxCollectionAccessor  object.CollectionIndexAccessor
+	idxCollectionAccessor  object.IndexCollectionAccessor
 	idxCleaner             object.IndexCleaner
 
 	opts Options
@@ -84,6 +84,7 @@ func NewJetClient(
 	dropAccessor drop.Accessor,
 	blobSyncAccessor blob.CollectionAccessor,
 	recSyncAccessor object.RecordCollectionAccessor,
+	idxCollectionAccessor object.IndexCollectionAccessor,
 	idxCleaner object.IndexCleaner,
 	db storage.DBContext,
 	jetID insolar.ID,
@@ -97,6 +98,7 @@ func NewJetClient(
 		pulseCalculator:        pulseCalculator,
 		pulseAccessor:          pulseAccessor,
 		recSyncAccessor:        recSyncAccessor,
+		idxCollectionAccessor:  idxCollectionAccessor,
 		idxCleaner:             idxCleaner,
 		db:                     db,
 		jetID:                  insolar.JetID(jetID),

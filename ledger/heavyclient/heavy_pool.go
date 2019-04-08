@@ -32,15 +32,16 @@ import (
 
 // Pool manages state of heavy sync clients (one client per jet id).
 type Pool struct {
-	bus              insolar.MessageBus
-	pulseAccessor    pulse.Accessor
-	pulseCalculator  pulse.Calculator
-	dropAccessor     drop.Accessor
-	blobSyncAccessor blob.CollectionAccessor
-	recSyncAccessor  object.RecordCollectionAccessor
-	replicaStorage   storage.ReplicaStorage
-	idxCleaner       object.IndexCleaner
-	db               storage.DBContext
+	bus                   insolar.MessageBus
+	pulseAccessor         pulse.Accessor
+	pulseCalculator       pulse.Calculator
+	dropAccessor          drop.Accessor
+	blobSyncAccessor      blob.CollectionAccessor
+	recSyncAccessor       object.RecordCollectionAccessor
+	replicaStorage        storage.ReplicaStorage
+	idxCollectionAccessor object.IndexCollectionAccessor
+	idxCleaner            object.IndexCleaner
+	db                    storage.DBContext
 
 	clientDefaults Options
 
@@ -59,22 +60,24 @@ func NewPool(
 	dropAccessor drop.Accessor,
 	blobSyncAccessor blob.CollectionAccessor,
 	recSyncAccessor object.RecordCollectionAccessor,
+	idxCollectionAccessor object.IndexCollectionAccessor,
 	idxCleaner object.IndexCleaner,
 	db storage.DBContext,
 	clientDefaults Options,
 ) *Pool {
 	return &Pool{
-		bus:              bus,
-		dropAccessor:     dropAccessor,
-		blobSyncAccessor: blobSyncAccessor,
-		recSyncAccessor:  recSyncAccessor,
-		pulseAccessor:    pulseAccessor,
-		pulseCalculator:  pulseCalculator,
-		replicaStorage:   replicaStorage,
-		clientDefaults:   clientDefaults,
-		idxCleaner:       idxCleaner,
-		db:               db,
-		clients:          map[insolar.ID]*JetClient{},
+		bus:                   bus,
+		dropAccessor:          dropAccessor,
+		blobSyncAccessor:      blobSyncAccessor,
+		recSyncAccessor:       recSyncAccessor,
+		pulseAccessor:         pulseAccessor,
+		pulseCalculator:       pulseCalculator,
+		replicaStorage:        replicaStorage,
+		clientDefaults:        clientDefaults,
+		idxCollectionAccessor: idxCollectionAccessor,
+		idxCleaner:            idxCleaner,
+		db:                    db,
+		clients:               map[insolar.ID]*JetClient{},
 	}
 }
 
@@ -115,6 +118,7 @@ func (scp *Pool) AddPulsesToSyncClient(
 			scp.dropAccessor,
 			scp.blobSyncAccessor,
 			scp.recSyncAccessor,
+			scp.idxCollectionAccessor,
 			scp.idxCleaner,
 			scp.db,
 			jetID,

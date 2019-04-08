@@ -69,7 +69,7 @@ type PulseManager struct {
 
 	IndexAccessor           object.IndexAccessor `inject:""`
 	IndexModifier           object.IndexModifier `inject:""`
-	CollectionIndexAccessor object.CollectionIndexAccessor
+	CollectionIndexAccessor object.IndexCollectionAccessor
 	IndexCleaner            object.IndexCleaner
 
 	NodeSetter node.Modifier `inject:""`
@@ -132,7 +132,7 @@ func NewPulseManager(
 	pulseShifter pulse.Shifter,
 	recCleaner object.RecordCleaner,
 	recSyncAccessor object.RecordCollectionAccessor,
-	idxCollectionAccessor object.CollectionIndexAccessor,
+	idxCollectionAccessor object.IndexCollectionAccessor,
 	indexCleaner object.IndexCleaner,
 ) *PulseManager {
 	pmconf := conf.PulseManager
@@ -722,6 +722,7 @@ func (m *PulseManager) Start(ctx context.Context) error {
 			m.DropAccessor,
 			m.BlobSyncAccessor,
 			m.RecSyncAccessor,
+			m.CollectionIndexAccessor,
 			m.IndexCleaner,
 			m.DBContext,
 			heavyclient.Options{
