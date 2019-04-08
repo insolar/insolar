@@ -76,7 +76,7 @@ func (p *Pinger) Ping(ctx context.Context, address string, timeout time.Duration
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to resolve address %s", address)
 	}
-	future, err := p.transport.SendRequestPacket(ctx, request, h)
+	future, err := p.transport.SendRequestToHost(ctx, request, h)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to ping address %s", address)
 	}

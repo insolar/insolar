@@ -239,7 +239,7 @@ func (cr *challengeResponseController) sendRequest1(ctx context.Context, discove
 	defer span.End()
 	request := cr.Network.NewRequestBuilder().Type(types.Challenge1).Data(&ChallengeRequest{
 		SessionID: sessionID, Nonce: nonce}).Build()
-	future, err := cr.Network.SendRequestPacket(ctx, request, discoveryHost)
+	future, err := cr.Network.SendRequestToHost(ctx, request, discoveryHost)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error sending challenge request")
 	}
@@ -261,7 +261,7 @@ func (cr *challengeResponseController) sendRequest2(ctx context.Context, discove
 	defer span.End()
 	request := cr.Network.NewRequestBuilder().Type(types.Challenge2).Data(&SignedChallengeRequest{
 		SessionID: sessionID, XorNonce: xorNonce, SignedDiscoveryNonce: signedDiscoveryNonce}).Build()
-	future, err := cr.Network.SendRequestPacket(ctx, request, discoveryHost)
+	future, err := cr.Network.SendRequestToHost(ctx, request, discoveryHost)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error sending challenge request")
 	}

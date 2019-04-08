@@ -101,8 +101,8 @@ type HostNetwork interface {
 
 	// SendRequest send request to a remote node.
 	SendRequest(ctx context.Context, request Request, receiver insolar.Reference) (Future, error)
-	// SendRequestPacket send request packet to a remote node.
-	SendRequestPacket(ctx context.Context, request Request, receiver *host.Host) (Future, error)
+	// SendRequestToHost send request packet to a remote node.
+	SendRequestToHost(ctx context.Context, request Request, receiver *host.Host) (Future, error)
 	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 	RegisterRequestHandler(t types.PacketType, handler RequestHandler)
 	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.

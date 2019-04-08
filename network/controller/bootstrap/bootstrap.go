@@ -394,7 +394,7 @@ func (bc *bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (*
 		LastPulse: bc.GetLastPulse(),
 		Discovery: discovery,
 	}).Build()
-	future, err := bc.Network.SendRequestPacket(ctx, request, h)
+	future, err := bc.Network.SendRequestToHost(ctx, request, h)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to send genesis request to address %s", h)
 	}
@@ -539,7 +539,7 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 		return nil, errors.Wrapf(err, "Failed to ping address %s", address)
 	}
 	request := bc.Network.NewRequestBuilder().Type(types.Bootstrap).Data(&NodeBootstrapRequest{}).Build()
-	future, err := bc.Network.SendRequestPacket(ctx, request, bootstrapHost)
+	future, err := bc.Network.SendRequestToHost(ctx, request, bootstrapHost)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to send bootstrap request to address %s", address)
 	}

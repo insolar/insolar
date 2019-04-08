@@ -154,7 +154,7 @@ func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode 
 	request := ac.Network.NewRequestBuilder().Type(types.Authorize).Data(&AuthorizationRequest{
 		Certificate: serializedCert,
 	}).Build()
-	future, err := ac.Network.SendRequestPacket(ctx, request, discoveryNode.Host)
+	future, err := ac.Network.SendRequestToHost(ctx, request, discoveryNode.Host)
 	if err != nil {
 		return 0, errors.Wrapf(err, "Error sending authorize request")
 	}
@@ -197,7 +197,7 @@ func (ac *authorizationController) register(ctx context.Context, discoveryNode *
 		SessionID: sessionID,
 		JoinClaim: originClaim,
 	}).Build()
-	future, err := ac.Network.SendRequestPacket(ctx, request, discoveryNode.Host)
+	future, err := ac.Network.SendRequestToHost(ctx, request, discoveryNode.Host)
 	if err != nil {
 		return errors.Wrapf(err, "Error sending register request")
 	}

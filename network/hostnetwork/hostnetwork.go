@@ -193,8 +193,8 @@ func (hn *hostNetwork) processMessage(msg *packet.Packet) {
 	}
 }
 
-// SendRequestPacket send request packet to a remote node.
-func (hn *hostNetwork) SendRequestPacket(ctx context.Context, request network.Request, receiver *host.Host) (network.Future, error) {
+// SendRequestToHost send request packet to a remote node.
+func (hn *hostNetwork) SendRequestToHost(ctx context.Context, request network.Request, receiver *host.Host) (network.Future, error) {
 	inslogger.FromContext(ctx).Debugf("Send %s request to host %s", request.GetType().String(), receiver.String())
 	f, err := hn.transport.SendRequest(ctx, hn.buildRequest(ctx, request, receiver))
 	if err != nil {
@@ -226,7 +226,7 @@ func (hn *hostNetwork) SendRequest(ctx context.Context, request network.Request,
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving NodeID -> Address")
 	}
-	return hn.SendRequestPacket(ctx, request, h)
+	return hn.SendRequestToHost(ctx, request, h)
 }
 
 // RegisterPacketHandler register a handler function to process incoming requests of a specific type.
