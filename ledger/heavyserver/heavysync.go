@@ -204,17 +204,21 @@ func (s *Sync) StoreDrop(ctx context.Context, jetID insolar.JetID, rawDrop []byt
 
 // StoreBlobs saves a collection of blobs to a heavy's storage
 func (s *Sync) StoreBlobs(ctx context.Context, pn insolar.PulseNumber, rawBlobs [][]byte) error {
+	inslog := inslogger.FromContext(ctx)
+
 	for _, rwb := range rawBlobs {
 		b, err := blob.Decode(rwb)
 		if err != nil {
-			inslogger.FromContext(ctx).Error(err)
+			inslog.Error(err, "heavyserver: deserialize blob failed")
 			continue
 		}
 
-		blobID := object.CalculateIDForBlob(s.PlatformCryptographyScheme, pn, rwb)
+		blobID := object.CalculateIDForBlob(s.PlatformCryptographyScheme, pn, b.Value)
+
 		err = s.BlobModifier.Set(ctx, *blobID, *b)
 		if err != nil {
-			return errors.Wrapf(err, "heavyserver: blob storing failed")
+			inslog.Error(err, "heavyserver: blob storing failed")
+			continue
 		}
 	}
 	return nil
