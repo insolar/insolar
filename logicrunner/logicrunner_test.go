@@ -276,7 +276,7 @@ func executeMethod(
 		Nonce:  nonce,
 	}
 
-	rep, err := rlr.ContractRequester.CallMethod(ctx, &bm, false, &objRef, method, argsSerialized, &proxyPrototype)
+	rep, err := rlr.ContractRequester.CallMethod(ctx, &bm, false, false, &objRef, method, argsSerialized, &proxyPrototype)
 	return rep, err
 }
 
