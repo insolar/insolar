@@ -18,6 +18,7 @@ package storage
 
 import (
 	"context"
+	"encoding/hex"
 	"path/filepath"
 	"sync"
 
@@ -37,7 +38,6 @@ const (
 	scopeIDSystem   byte = 5
 
 	sysGenesis                byte = 1
-	sysLatestPulse            byte = 2
 	sysHeavyClientState       byte = 3
 	sysLastSyncedPulseOnHeavy byte = 4
 )
@@ -238,8 +238,11 @@ func (db *DB) IterateRecordsOnPulse(
 
 	return db.iterate(ctx, prefix, func(k, v []byte) error {
 		id := insolar.NewID(pulse, k)
-		rec := object.DeserializeRecord(v)
-		err := handler(*id, rec)
+		rec, err := object.DecodeVirtual(v)
+		if err != nil {
+			return errors.Wrap(err, "can't deserialize record")
+		}
+		err = handler(*id, rec)
 		if err != nil {
 			return err
 		}
@@ -315,4 +318,28 @@ func (db *DB) iterate(
 		}
 		return nil
 	})
+}
+
+// Key type for wrapping storage binary key.
+type Key []byte
+
+// PulseNumber returns pulse number for provided storage binary key.
+func (b Key) PulseNumber() insolar.PulseNumber {
+	// by default expect jetID after:
+	// offset in this case: is 1 + RecordHashSize (jet length) - 1 minus jet prefix
+	from := insolar.RecordHashSize
+	switch b[0] {
+	case scopeIDPulse:
+		from = 1
+	case scopeIDSystem:
+		// for specific system records is different rules
+		// pulse number could exist or not
+		return 0
+	}
+	return pulseNumFromKey(from, b)
+}
+
+// String string hex representation
+func (b Key) String() string {
+	return hex.EncodeToString(b)
 }

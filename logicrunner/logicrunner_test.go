@@ -47,7 +47,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/log"
@@ -56,6 +55,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
+	"github.com/insolar/insolar/logicrunner/pulsemanager"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
@@ -141,14 +141,14 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	nw := network.GetTestNetwork()
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, db, cleaner := artifacts.TmpLedger(
-		s.T(), "", insolar.StaticRoleLightMaterial,
+		s.T(),
+		"",
 		insolar.Components{
 			LogicRunner: lr,
 			NodeNetwork: nk,
 			MessageBus:  mb,
 			Network:     nw,
 		},
-		false,
 	)
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
@@ -164,10 +164,10 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	am := l.GetArtifactManager()
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
 	cr, err := contractrequester.New()
-	pulseStorage := l.PulseManager.(*pulsemanager.PulseManager).PulseStorage
+	pulseAccessor := l.PulseManager.(*pulsemanager.PulseManager).PulseAccessor
 	nth := testutils.NewTerminationHandlerMock(s.T())
 
-	cm.Inject(db, pulseStorage, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, nth, mock)
+	cm.Inject(db, pulseAccessor, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, nth, mock)
 	err = cm.Init(ctx)
 	s.NoError(err)
 	err = cm.Start(ctx)
@@ -189,8 +189,8 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 }
 
 func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr insolar.LogicRunner, pm insolar.PulseManager) {
-	pulseStorage := pm.(*pulsemanager.PulseManager).PulseStorage
-	currentPulse, _ := pulseStorage.Current(ctx)
+	pulseStorage := pm.(*pulsemanager.PulseManager).PulseAccessor
+	currentPulse, _ := pulseStorage.Latest(ctx)
 
 	newPulseNumber := currentPulse.PulseNumber + 1
 	err := pm.Set(
@@ -1329,7 +1329,8 @@ func New(n int) (*Child, error) {
 	})
 
 	newPulse := insolar.Pulse{PulseNumber: 1231234, Entropy: insolar.Entropy{}}
-	err = lr.(*LogicRunner).PulseStorage.(insolar.PulseManager).Set(
+
+	err = lr.(*LogicRunner).MessageBus.(insolar.PulseManager).Set(
 		ctx, newPulse, true,
 	)
 	s.NoError(err)

@@ -24,6 +24,7 @@ import (
 	"reflect"
 	"testing"
 
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/component"
@@ -43,11 +44,11 @@ type TapeRecord struct {
 }
 
 type TestMessageBus struct {
-	handlers     map[insolar.MessageType]insolar.MessageHandler
-	pf           message.ParcelFactory
-	PulseStorage insolar.PulseStorage
-	ReadingTape  []TapeRecord
-	WritingTape  []TapeRecord
+	handlers      map[insolar.MessageType]insolar.MessageHandler
+	pf            message.ParcelFactory
+	PulseAccessor pulse.Accessor
+	ReadingTape   []TapeRecord
+	WritingTape   []TapeRecord
 }
 
 func (mb *TestMessageBus) NewPlayer(ctx context.Context, reader io.Reader) (insolar.MessageBus, error) {
@@ -137,7 +138,7 @@ func (mb *TestMessageBus) Send(ctx context.Context, m insolar.Message, _ *insola
 		return head.Reply, head.Error
 	}
 
-	currentPulse, err := mb.PulseStorage.Current(ctx)
+	currentPulse, err := mb.PulseAccessor.Latest(ctx)
 	if err != nil {
 		return nil, err
 	}

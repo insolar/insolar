@@ -21,7 +21,7 @@ import (
 	rand2 "math/rand"
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
+	"github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -34,7 +34,7 @@ import (
 func TestPulse_Components(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	memStorage := pulse.NewStorageMem()
-	dbStorage := pulse.NewStorageDB(store.NewMemoryMockDB())
+	dbStorage := pulse.NewDB(store.NewMemoryMockDB())
 
 	var pulses []insolar.Pulse
 	f := fuzz.New().Funcs(func(p *insolar.Pulse, c fuzz.Continue) {
@@ -48,7 +48,7 @@ func TestPulse_Components(t *testing.T) {
 	var appended []insolar.Pulse
 	latest := pulses[0]
 	for i, p := range pulses {
-		// Append appends if pulse is greater.
+		// Append appends if Pulse is greater.
 		memErr := memStorage.Append(ctx, p)
 		dbErr := dbStorage.Append(ctx, p)
 		if p.PulseNumber <= latest.PulseNumber && i > 0 {
@@ -59,9 +59,9 @@ func TestPulse_Components(t *testing.T) {
 		latest = p
 		appended = append(appended, p)
 
-		// Latest returns correct pulse.
+		// Latest returns correct Pulse.
 		memLatest, memErr := memStorage.Latest(ctx)
-		dbLatest, dbErr := memStorage.Latest(ctx)
+		dbLatest, dbErr := dbStorage.Latest(ctx)
 		assert.NoError(t, memErr)
 		assert.NoError(t, dbErr)
 		assert.Equal(t, p, memLatest)
@@ -69,7 +69,7 @@ func TestPulse_Components(t *testing.T) {
 
 		// ForPulse returns correct value
 		memForPulse, memErr := memStorage.ForPulseNumber(ctx, p.PulseNumber)
-		dbForPulse, dbErr := memStorage.ForPulseNumber(ctx, p.PulseNumber)
+		dbForPulse, dbErr := dbStorage.ForPulseNumber(ctx, p.PulseNumber)
 		assert.NoError(t, memErr)
 		assert.NoError(t, dbErr)
 		assert.Equal(t, p, memForPulse)
@@ -80,7 +80,7 @@ func TestPulse_Components(t *testing.T) {
 	{
 		steps := rand2.Intn(len(appended))
 		memPulse, memErr := memStorage.Forwards(ctx, appended[0].PulseNumber, steps)
-		dbPulse, dbErr := memStorage.Forwards(ctx, appended[0].PulseNumber, steps)
+		dbPulse, dbErr := dbStorage.Forwards(ctx, appended[0].PulseNumber, steps)
 		assert.NoError(t, memErr)
 		assert.NoError(t, dbErr)
 		assert.Equal(t, appended[steps], memPulse)
@@ -90,7 +90,7 @@ func TestPulse_Components(t *testing.T) {
 	{
 		steps := rand2.Intn(len(appended))
 		memPulse, memErr := memStorage.Backwards(ctx, appended[len(appended)-1].PulseNumber, steps)
-		dbPulse, dbErr := memStorage.Backwards(ctx, appended[len(appended)-1].PulseNumber, steps)
+		dbPulse, dbErr := dbStorage.Backwards(ctx, appended[len(appended)-1].PulseNumber, steps)
 		assert.NoError(t, memErr)
 		assert.NoError(t, dbErr)
 		assert.Equal(t, appended[len(appended)-steps-1], memPulse)

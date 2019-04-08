@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/ledger/storage/blob"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
@@ -52,7 +53,6 @@ type ActiveListSwapper interface {
 
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
-	LR                         insolar.LogicRunner                `inject:""`
 	Bus                        insolar.MessageBus                 `inject:""`
 	NodeNet                    insolar.NodeNetwork                `inject:""`
 	JetCoordinator             insolar.JetCoordinator             `inject:""`
@@ -61,15 +61,17 @@ type PulseManager struct {
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	RecentStorageProvider      recentstorage.Provider             `inject:""`
 	ActiveListSwapper          ActiveListSwapper                  `inject:""`
-	PulseStorage               pulseStoragePm                     `inject:""`
-	HotDataWaiter              artifactmanager.HotDataWaiter      `inject:""`
-	JetAccessor                jet.Accessor                       `inject:""`
-	JetModifier                jet.Modifier                       `inject:""`
 
-	ObjectStorage  storage.ObjectStorage  `inject:""`
-	NodeSetter     node.Modifier          `inject:""`
-	Nodes          node.Accessor          `inject:""`
-	PulseTracker   storage.PulseTracker   `inject:""`
+	HotDataWaiter artifactmanager.HotDataWaiter `inject:""`
+
+	JetAccessor jet.Accessor `inject:""`
+	JetModifier jet.Modifier `inject:""`
+
+	ObjectStorage storage.ObjectStorage `inject:""`
+
+	NodeSetter node.Modifier `inject:""`
+	Nodes      node.Accessor `inject:""`
+
 	ReplicaStorage storage.ReplicaStorage `inject:""`
 	DBContext      storage.DBContext      `inject:""`
 	StorageCleaner storage.Cleaner        `inject:""`
@@ -78,9 +80,16 @@ type PulseManager struct {
 	DropAccessor drop.Accessor `inject:""`
 	DropCleaner  drop.Cleaner
 
-	BlobSyncAccessor blob.CollectionAccessor
+	PulseAccessor   pulse.Accessor   `inject:""`
+	PulseCalculator pulse.Calculator `inject:""`
+	PulseAppender   pulse.Appender   `inject:""`
+	PulseShifter    pulse.Shifter
 
-	BlobCleaner blob.Cleaner
+	BlobSyncAccessor blob.CollectionAccessor
+	BlobCleaner      blob.Cleaner
+
+	RecSyncAccessor object.RecordCollectionAccessor
+	RecCleaner      object.RecordCleaner
 
 	syncClientsPool *heavyclient.Pool
 
@@ -118,6 +127,9 @@ func NewPulseManager(
 	dropCleaner drop.Cleaner,
 	blobCleaner blob.Cleaner,
 	blobSyncAccessor blob.CollectionAccessor,
+	pulseShifter pulse.Shifter,
+	recCleaner object.RecordCleaner,
+	recSyncAccessor object.RecordCollectionAccessor,
 ) *PulseManager {
 	pmconf := conf.PulseManager
 
@@ -133,6 +145,9 @@ func NewPulseManager(
 		DropCleaner:      dropCleaner,
 		BlobCleaner:      blobCleaner,
 		BlobSyncAccessor: blobSyncAccessor,
+		PulseShifter:     pulseShifter,
+		RecCleaner:       recCleaner,
+		RecSyncAccessor:  recSyncAccessor,
 	}
 	return pm
 }
@@ -462,13 +477,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
 	}
 
-	if m.NodeNet.GetOrigin().Role() == insolar.StaticRoleVirtual {
-		err = m.LR.OnPulse(ctx, newPulse)
-	}
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
@@ -487,16 +495,20 @@ func (m *PulseManager) setUnderGilSection(
 	defer span.End()
 	defer m.GIL.Release(ctx)
 
-	m.PulseStorage.Lock()
-	storagePulse, err := m.PulseTracker.GetLatestPulse(ctx)
-	if err != nil && err != insolar.ErrNotFound {
-		m.PulseStorage.Unlock()
+	// FIXME: @andreyromancev. 17.12.18. return insolar.Pulse here.
+	storagePulse, err := m.PulseAccessor.Latest(ctx)
+	if err != nil && err != pulse.ErrNotFound {
 		return nil, nil, nil, nil, errors.Wrap(err, "call of GetLatestPulseNumber failed")
 	}
 
-	if err != insolar.ErrNotFound {
-		oldPulse = &storagePulse.Pulse
-		prevPN = storagePulse.Prev
+	if err != pulse.ErrNotFound {
+		oldPulse = &storagePulse
+		pp, err := m.PulseCalculator.Backwards(ctx, oldPulse.PulseNumber, 1)
+		if err == nil {
+			prevPN = &pp.PulseNumber
+		} else {
+			prevPN = &insolar.GenesisPulse.PulseNumber
+		}
 		ctx, _ = inslogger.WithField(ctx, "current_pulse", fmt.Sprintf("%d", oldPulse.PulseNumber))
 	}
 
@@ -515,8 +527,7 @@ func (m *PulseManager) setUnderGilSection(
 		return nil, nil, nil, nil, errors.Wrap(err, "failed to apply new active node list")
 	}
 	if persist {
-		if err := m.PulseTracker.AddPulse(ctx, newPulse); err != nil {
-			m.PulseStorage.Unlock()
+		if err := m.PulseAppender.Append(ctx, newPulse); err != nil {
 			return nil, nil, nil, nil, errors.Wrap(err, "call of AddPulse failed")
 		}
 		fromNetwork := m.NodeNet.GetWorkingNodes()
@@ -526,13 +537,9 @@ func (m *PulseManager) setUnderGilSection(
 		}
 		err = m.NodeSetter.Set(newPulse.PulseNumber, toSet)
 		if err != nil {
-			m.PulseStorage.Unlock()
 			return nil, nil, nil, nil, errors.Wrap(err, "call of SetActiveNodes failed")
 		}
 	}
-
-	m.PulseStorage.Set(&newPulse)
-	m.PulseStorage.Unlock()
 
 	if m.NodeNet.GetOrigin().Role() == insolar.StaticRoleHeavyMaterial {
 		return nil, nil, nil, nil, nil
@@ -619,29 +626,30 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse insolar.Puls
 
 	delta := m.options.storeLightPulses
 
-	p, err := m.PulseTracker.GetNthPrevPulse(ctx, uint(delta), newPulse.PulseNumber)
+	p, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, delta)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't get %dth previous pulse: %s", delta, err)
 		return
 	}
 
-	pn := p.Pulse.PulseNumber
+	pn := p.PulseNumber
 	err = m.syncClientsPool.LightCleanup(ctx, pn, m.RecentStorageProvider, jetIndexesRemoved)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf(
 			"Error on light cleanup, until pulse = %v, singlefligt err = %v", pn, err)
 	}
 
-	p, err = m.PulseTracker.GetPreviousPulse(ctx, pn)
+	p, err = m.PulseCalculator.Backwards(ctx, pn, delta)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't get previous pulse: %s", err)
 		return
 	}
-	m.JetModifier.Delete(ctx, p.Pulse.PulseNumber)
-	m.NodeSetter.Delete(p.Pulse.PulseNumber)
-	m.DropCleaner.Delete(p.Pulse.PulseNumber)
-	m.BlobCleaner.Delete(ctx, p.Pulse.PulseNumber)
-	err = m.PulseTracker.DeletePulse(ctx, p.Pulse.PulseNumber)
+	m.JetModifier.Delete(ctx, p.PulseNumber)
+	m.NodeSetter.Delete(p.PulseNumber)
+	m.DropCleaner.Delete(p.PulseNumber)
+	m.BlobCleaner.Delete(ctx, p.PulseNumber)
+	m.RecCleaner.Remove(ctx, p.PulseNumber)
+	err = m.PulseShifter.Shift(ctx, p.PulseNumber)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
 	}
@@ -683,13 +691,8 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 
 // Start starts pulse manager, spawns replication goroutine under a hood.
 func (m *PulseManager) Start(ctx context.Context) error {
-	err := m.restoreLatestPulse(ctx)
-	if err != nil {
-		return err
-	}
-
 	origin := m.NodeNet.GetOrigin()
-	err = m.NodeSetter.Set(insolar.FirstPulseNumber, []insolar.Node{{ID: origin.ID(), Role: origin.Role()}})
+	err := m.NodeSetter.Set(insolar.FirstPulseNumber, []insolar.Node{{ID: origin.ID(), Role: origin.Role()}})
 	if err != nil && err != storage.ErrOverride {
 		return err
 	}
@@ -697,11 +700,12 @@ func (m *PulseManager) Start(ctx context.Context) error {
 	if m.options.enableSync && m.NodeNet.GetOrigin().Role() == insolar.StaticRoleLightMaterial {
 		heavySyncPool := heavyclient.NewPool(
 			m.Bus,
-			m.PulseStorage,
-			m.PulseTracker,
+			m.PulseAccessor,
+			m.PulseCalculator,
 			m.ReplicaStorage,
 			m.DropAccessor,
 			m.BlobSyncAccessor,
+			m.RecSyncAccessor,
 			m.StorageCleaner,
 			m.DBContext,
 			heavyclient.Options{
@@ -718,21 +722,6 @@ func (m *PulseManager) Start(ctx context.Context) error {
 	}
 
 	return m.restoreGenesisRecentObjects(ctx)
-}
-
-func (m *PulseManager) restoreLatestPulse(ctx context.Context) error {
-	if m.NodeNet.GetOrigin().Role() != insolar.StaticRoleHeavyMaterial {
-		return nil
-	}
-	pulse, err := m.PulseTracker.GetLatestPulse(ctx)
-	if err != nil {
-		return err
-	}
-	m.PulseStorage.Lock()
-	m.PulseStorage.Set(&pulse.Pulse)
-	m.PulseStorage.Unlock()
-
-	return nil
 }
 
 func (m *PulseManager) restoreGenesisRecentObjects(ctx context.Context) error {

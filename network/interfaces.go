@@ -66,6 +66,7 @@ type BootstrapResult struct {
 	Host *host.Host
 	// FirstPulseTime    time.Time
 	ReconnectRequired bool
+	NetworkSize       int
 }
 
 // Controller contains network logic.
@@ -79,9 +80,6 @@ type Controller interface {
 	SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error
 	// Bootstrap init complex bootstrap process. Blocks until bootstrap is complete.
 	Bootstrap(ctx context.Context) (*BootstrapResult, error)
-
-	// TODO: workaround methods, should be deleted once network consensus is alive
-
 	// SetLastIgnoredPulse set pulse number after which we will begin setting new pulses to PulseManager
 	SetLastIgnoredPulse(number insolar.PulseNumber)
 	// GetLastIgnoredPulse get last pulse that will be ignored
@@ -255,8 +253,6 @@ type RoutingTable interface {
 	AddToKnownHosts(*host.Host)
 	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
 	Rebalance(PartitionPolicy)
-	// GetRandomNodes get a specified number of random nodes. Returns less if there are not enough nodes in network.
-	GetRandomNodes(count int) []host.Host
 }
 
 // InternalTransport simple interface to send network requests and process network responses.

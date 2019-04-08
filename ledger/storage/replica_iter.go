@@ -83,7 +83,6 @@ func NewReplicaIter(
 		limitBytes: limit,
 		// record iterators (order matters for heavy node consistency)
 		istates: []*iterstate{
-			newit(scopeIDRecord, jetID, start, end),
 			newit(scopeIDLifeline, jetID, insolar.FirstPulseNumber, end),
 		},
 	}

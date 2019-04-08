@@ -22,6 +22,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -44,7 +45,7 @@ type client struct {
 	JetStorage                 jet.Storage                        `inject:""`
 	DefaultBus                 insolar.MessageBus                 `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
-	PulseStorage               insolar.PulseStorage               `inject:""`
+	PulseAccessor              pulse.Accessor                     `inject:""`
 	JetCoordinator             insolar.JetCoordinator             `inject:""`
 
 	getChildrenChunkSize int
@@ -57,7 +58,7 @@ func (m *client) State() ([]byte, error) {
 	return m.PlatformCryptographyScheme.IntegrityHasher().Hash([]byte{1, 2, 3}), nil
 }
 
-// NewClient creates new manager instance.
+// NewClient creates new client instance.
 func NewClient() *client { // nolint
 	return &client{
 		getChildrenChunkSize: getChildrenChunkSize,
@@ -301,7 +302,10 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 
 	switch r := genericReply.(type) {
 	case *reply.Request:
-		rec := object.DeserializeRecord(r.Record)
+		rec, err := object.DecodeVirtual(r.Record)
+		if err != nil {
+			return nil, errors.Wrap(err, "GetPendingRequest: can't deserialize record")
+		}
 		castedRecord, ok := rec.(*object.RequestRecord)
 		if !ok {
 			return nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", r)
@@ -731,7 +735,7 @@ func (m *client) RegisterResult(
 
 // pulse returns current PulseNumber for artifact manager
 func (m *client) pulse(ctx context.Context) (pn insolar.PulseNumber, err error) {
-	pulse, err := m.PulseStorage.Current(ctx)
+	pulse, err := m.PulseAccessor.Latest(ctx)
 	if err != nil {
 		return
 	}
@@ -847,9 +851,6 @@ func (m *client) updateObject(
 	if err != nil {
 		return nil, err
 	}
-	if err != nil {
-		return nil, err
-	}
 
 	o, err := m.sendUpdateObject(
 		ctx,
@@ -894,7 +895,7 @@ func (m *client) setRecord(
 
 	sender := BuildSender(bus.Send, retryJetSender(currentPN, m.JetStorage))
 	genericReply, err := sender(ctx, &message.SetRecord{
-		Record:    object.SerializeRecord(rec),
+		Record:    object.EncodeVirtual(rec),
 		TargetRef: target,
 	}, nil)
 
@@ -952,7 +953,7 @@ func (m *client) sendUpdateObject(
 	genericReply, err := sender(
 		ctx,
 		&message.UpdateObject{
-			Record: object.SerializeRecord(rec),
+			Record: object.EncodeVirtual(rec),
 			Object: obj,
 			Memory: memory,
 		}, nil)
@@ -982,7 +983,7 @@ func (m *client) registerChild(
 	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(bus.Send, retryJetSender(currentPN, m.JetStorage))
 	genericReact, err := sender(ctx, &message.RegisterChild{
-		Record: object.SerializeRecord(rec),
+		Record: object.EncodeVirtual(rec),
 		Parent: parent,
 		Child:  child,
 		AsType: asType,

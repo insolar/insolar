@@ -39,6 +39,7 @@ const (
 // State is common object state record.
 type State interface {
 	// StateID returns state id.
+	// TODO: rename to StateID()
 	ID() StateID
 	// GetImage returns state code.
 	GetImage() *insolar.Reference
@@ -59,7 +60,7 @@ type ResultRecord struct {
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *ResultRecord) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(SerializeRecord(r))
+	return w.Write(EncodeVirtual(r))
 }
 
 // SideEffectRecord is a record which is created in response to a request.
@@ -77,7 +78,7 @@ type TypeRecord struct {
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *TypeRecord) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(SerializeRecord(r))
+	return w.Write(EncodeVirtual(r))
 }
 
 // CodeRecord is a code storage record.
@@ -90,7 +91,7 @@ type CodeRecord struct {
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *CodeRecord) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(SerializeRecord(r))
+	return w.Write(EncodeVirtual(r))
 }
 
 // StateRecord is a record containing data for an object state.
@@ -136,7 +137,7 @@ func (r *ActivateRecord) ID() StateID {
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *ActivateRecord) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(SerializeRecord(r))
+	return w.Write(EncodeVirtual(r))
 }
 
 // AmendRecord is an amendment record for objects.
@@ -159,7 +160,7 @@ func (r *AmendRecord) ID() StateID {
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *AmendRecord) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(SerializeRecord(r))
+	return w.Write(EncodeVirtual(r))
 }
 
 // DeactivationRecord marks targeted object as disabled.
@@ -180,7 +181,7 @@ func (r *DeactivationRecord) ID() StateID {
 
 // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
 func (r *DeactivationRecord) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(SerializeRecord(r))
+	return w.Write(EncodeVirtual(r))
 }
 
 // GetMachineType returns state code machine type.

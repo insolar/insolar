@@ -27,6 +27,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"go.opencensus.io/trace"
 
@@ -135,7 +136,7 @@ type LogicRunner struct {
 	NodeNetwork                insolar.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	ParcelFactory              message.ParcelFactory              `inject:""`
-	PulseStorage               insolar.PulseStorage               `inject:""`
+	PulseAccessor              pulse.Accessor                     `inject:""`
 	ArtifactManager            artifacts.Client                   `inject:""`
 	JetCoordinator             insolar.JetCoordinator             `inject:""`
 
@@ -177,7 +178,7 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 
 	if lr.Cfg.GoPlugin != nil {
 		if lr.Cfg.RPCListen != "" {
-			StartRPC(ctx, lr, lr.PulseStorage)
+			StartRPC(ctx, lr)
 		}
 
 		gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.MessageBus, lr.ArtifactManager)

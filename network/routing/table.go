@@ -67,7 +67,7 @@ type Table struct {
 func (t *Table) ResolveConsensus(id insolar.ShortNodeID) (*host.Host, error) {
 	node := t.NodeKeeper.GetAccessor().GetActiveNodeByShortID(id)
 	if node != nil {
-		return host.NewHostNS(node.ConsensusAddress(), node.ID(), node.ShortID())
+		return host.NewHostNS(node.Address(), node.ID(), node.ShortID())
 	}
 	h := t.NodeKeeper.GetConsensusInfo().ResolveConsensus(id)
 	if h == nil {
@@ -79,7 +79,7 @@ func (t *Table) ResolveConsensus(id insolar.ShortNodeID) (*host.Host, error) {
 func (t *Table) ResolveConsensusRef(ref insolar.Reference) (*host.Host, error) {
 	node := t.NodeKeeper.GetAccessor().GetActiveNode(ref)
 	if node != nil {
-		return host.NewHostNS(node.ConsensusAddress(), node.ID(), node.ShortID())
+		return host.NewHostNS(node.Address(), node.ID(), node.ShortID())
 	}
 	h := t.NodeKeeper.GetConsensusInfo().ResolveConsensusRef(ref)
 	if h == nil {
@@ -119,43 +119,6 @@ func (t *Table) AddToKnownHosts(h *host.Host) {
 		return
 	}
 	t.addRemoteHost(h)
-}
-
-// GetRandomNodes get a specified number of random nodes. Returns less if there are not enough nodes in network.
-func (t *Table) GetRandomNodes(count int) []host.Host {
-	// TODO: this workaround returns all nodes
-	nodes := t.NodeKeeper.GetAccessor().GetActiveNodes()
-	result := make([]host.Host, 0)
-	for _, n := range nodes {
-		address, err := host.NewAddress(n.Address())
-		if err != nil {
-			log.Error(err)
-			continue
-		}
-		result = append(result, host.Host{NodeID: n.ID(), Address: address})
-	}
-
-	// TODO: original implementation
-	/*
-		// not so random for now
-		nodes := t.NodeKeeper.GetActiveNodes()
-		//return nodes
-		resultCount := count
-		if count > len(nodes) {
-			resultCount = len(nodes)
-		}
-		result := make([]host.Host, 0)
-		for i := 0; i < resultCount; i++ {
-			address, err := host.NewAddress(nodes[i].Address())
-			if err != nil {
-				log.Error(err)
-				continue
-			}
-			h := host.Host{NodeID: nodes[i].ID(), Address: address}
-			result = append(result, h)
-		}
-	*/
-	return result
 }
 
 // Rebalance recreate shards of routing table with known hosts according to new partition policy.

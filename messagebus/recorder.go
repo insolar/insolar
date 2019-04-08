@@ -21,24 +21,25 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 )
 
 // Recorder is a MessageBus wrapper that stores received replies to the tape. The tape then can be transferred and
 // used by Player to replay those replies.
 type recorder struct {
 	sender
-	tape         tape
-	scheme       insolar.PlatformCryptographyScheme
-	pulseStorage insolar.PulseStorage
+	tape          tape
+	scheme        insolar.PlatformCryptographyScheme
+	pulseAccessor pulse.Accessor
 }
 
 // newRecorder create new recorder instance.
-func newRecorder(s sender, tape tape, scheme insolar.PlatformCryptographyScheme, pulseStorage insolar.PulseStorage) *recorder {
+func newRecorder(s sender, tape tape, scheme insolar.PlatformCryptographyScheme, pulseAccessor pulse.Accessor) *recorder {
 	return &recorder{
-		sender:       s,
-		tape:         tape,
-		scheme:       scheme,
-		pulseStorage: pulseStorage,
+		sender:        s,
+		tape:          tape,
+		scheme:        scheme,
+		pulseAccessor: pulseAccessor,
 	}
 }
 
@@ -50,18 +51,18 @@ func (r *recorder) WriteTape(ctx context.Context, w io.Writer) error {
 // Send wraps MessageBus Send to save received replies to the tape. This reply is also used to return directly from the
 // tape is the message is sent again, thus providing a cash for message replies.
 func (r *recorder) Send(ctx context.Context, msg insolar.Message, ops *insolar.MessageSendOptions) (insolar.Reply, error) {
-	currentPulse, err := r.pulseStorage.Current(ctx)
+	currentPulse, err := r.pulseAccessor.Latest(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	parcel, err := r.CreateParcel(ctx, msg, ops.Safe().Token, *currentPulse)
+	parcel, err := r.CreateParcel(ctx, msg, ops.Safe().Token, currentPulse)
 	if err != nil {
 		return nil, err
 	}
 
 	// Actually send message.
-	rep, sendErr := r.SendParcel(ctx, parcel, *currentPulse, ops)
+	rep, sendErr := r.SendParcel(ctx, parcel, currentPulse, ops)
 
 	// Save the received Value on the tape.
 	id := GetMessageHash(r.scheme, parcel)

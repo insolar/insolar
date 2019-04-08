@@ -17,6 +17,7 @@
 package ledger
 
 import (
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -32,8 +33,8 @@ import (
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/ledger/storage/object"
 )
 
 // GetLedgerComponents returns ledger components.
@@ -50,7 +51,6 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
 
-	var pulseTracker storage.PulseTracker
 	var dropModifier drop.Modifier
 	var dropAccessor drop.Accessor
 	var dropCleaner drop.Cleaner
@@ -58,23 +58,43 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	var blobCleaner blob.Cleaner
 	var blobModifier blob.Modifier
 	var blobAccessor blob.Accessor
-	var blobSyncAccessor blob.CollectionAccessor
+	var blobCollectionAccessor blob.CollectionAccessor
 
-	// Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
+	var pulseAccessor pulse.Accessor
+	var pulseAppender pulse.Appender
+	var pulseCalculator pulse.Calculator
+	var pulseShifter pulse.Shifter
+
+	var recordModifier object.RecordModifier
+	var recordAccessor object.RecordAccessor
+	var recSyncAccessor object.RecordCollectionAccessor
+	var recordCleaner object.RecordCleaner
+
 	switch certificate.GetRole() {
-	case insolar.StaticRoleUnknown, insolar.StaticRoleHeavyMaterial:
-		pulseTracker = storage.NewPulseTracker()
+	case insolar.StaticRoleHeavyMaterial:
+		ps := pulse.NewDB(db)
+		pulseAccessor = ps
+		pulseAppender = ps
+		pulseCalculator = ps
 
-		dropDB := drop.NewStorageDB(db)
+		dropDB := drop.NewDB(db)
 		dropModifier = dropDB
 		dropAccessor = dropDB
 
 		// should be replaced with db
-		blobDB := blob.NewStorageDB(db)
+		blobDB := blob.NewDB(db)
 		blobModifier = blobDB
 		blobAccessor = blobDB
+
+		records := object.NewRecordDB(db)
+		recordModifier = records
+		recordAccessor = records
 	default:
-		pulseTracker = storage.NewPulseTrackerMemory()
+		ps := pulse.NewStorageMem()
+		pulseAccessor = ps
+		pulseAppender = ps
+		pulseCalculator = ps
+		pulseShifter = ps
 
 		dropDB := drop.NewStorageMemory()
 		dropModifier = dropDB
@@ -85,8 +105,16 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		blobModifier = blobDB
 		blobAccessor = blobDB
 		blobCleaner = blobDB
-		blobSyncAccessor = blobDB
+		blobCollectionAccessor = blobDB
+
+		records := object.NewRecordMemory()
+		recordModifier = records
+		recordAccessor = records
+		recSyncAccessor = records
+		recordCleaner = records
 	}
+
+	pm := pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, pulseShifter, recordCleaner, recSyncAccessor)
 
 	components := []interface{}{
 		legacyDB,
@@ -96,25 +124,28 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		dropAccessor,
 		blobModifier,
 		blobAccessor,
+		pulseAccessor,
+		pulseAppender,
+		pulseCalculator,
+		recordModifier,
+		recordAccessor,
 		storage.NewCleaner(),
-		pulseTracker,
-		storage.NewPulseStorage(),
 		jet.NewStore(),
 		node.NewStorage(),
 		storage.NewObjectStorage(),
 		storage.NewReplicaStorage(),
-		genesis.NewGenesisInitializer(),
 		recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
 		artifactmanager.NewHotDataWaiterConcrete(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),
-		pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobSyncAccessor),
-		heavyserver.NewSync(legacyDB),
+		heavyserver.NewSync(legacyDB, recordModifier),
 	}
 
 	switch certificate.GetRole() {
 	case insolar.StaticRoleUnknown, insolar.StaticRoleLightMaterial:
 		components = append(components, artifactmanager.NewMessageHandler(&conf))
+		components = append(components, pm)
 	case insolar.StaticRoleHeavyMaterial:
+		components = append(components, pm)
 		components = append(components, heavy.Components()...)
 	}
 
