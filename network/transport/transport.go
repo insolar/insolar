@@ -62,7 +62,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// Network is an interface for network transport.
+// Transport is an interface for network transport.
 type Transport interface {
 	// SendRequest sends packet to destination. Sequence number is generated automatically.
 	SendRequest(context.Context, *packet.Packet) (future.Future, error)

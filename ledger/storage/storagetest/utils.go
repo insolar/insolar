@@ -22,18 +22,18 @@ import (
 	"os"
 	"testing"
 
-	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/genesis"
 	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -41,6 +41,7 @@ type tmpDBOptions struct {
 	dir          string
 	nobootstrap  bool
 	pulseStorage *pulse.StorageMem
+	indexStorage *object.IndexMemory
 }
 
 // Option provides functional option for TmpDB.
@@ -57,6 +58,13 @@ func Dir(dir string) Option {
 func PulseStorage(ps *pulse.StorageMem) Option {
 	return func(opts *tmpDBOptions) {
 		opts.pulseStorage = ps
+	}
+}
+
+// IndexStorage provides an external index storage for TmpDB
+func IndexStorage(is *object.IndexMemory) Option {
+	return func(opts *tmpDBOptions) {
+		opts.indexStorage = is
 	}
 }
 
@@ -85,45 +93,63 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 	}, nil)
 	require.NoError(t, err)
 
-	cm := &component.Manager{}
-
 	storageDB := store.NewMemoryMockDB()
-	ds := drop.NewStorageDB(storageDB)
+	dropDB := drop.NewDB(storageDB)
 
-	var ps *pulse.StorageMem
+	var pulseDB *pulse.StorageMem
 	if opts.pulseStorage != nil {
-		ps = opts.pulseStorage
+		pulseDB = opts.pulseStorage
 	} else {
-		ps = pulse.NewStorageMem()
+		pulseDB = pulse.NewStorageMem()
 	}
 
-	objectStorage := storage.NewObjectStorage()
+	var im *object.IndexMemory
+	if opts.indexStorage != nil {
+		im = opts.indexStorage
+	} else {
+		im = object.NewIndexMemory()
+	}
 
 	recordStorage := object.NewRecordMemory()
 	recordAccessor := recordStorage
 	recordModifier := recordStorage
 
+	PCS := testutils.NewPlatformCryptographyScheme()
+
+	cm := &component.Manager{}
 	cm.Inject(
-		testutils.NewPlatformCryptographyScheme(),
-		ps,
+		PCS,
+		im,
+		pulseDB,
 		tmpDB,
 		jet.NewStore(),
-		store.NewMemoryMockDB(),
-		objectStorage,
-		ds,
+		storageDB,
+		dropDB,
 		recordAccessor,
 		recordModifier,
 	)
 
 	if !opts.nobootstrap {
-		gi := genesis.NewGenesisInitializer()
-		cm.Inject(gi)
+		genesisBaseRecord := &genesis.BaseRecord{
+			PCS:            PCS,
+			DB:             storageDB,
+			DropModifier:   dropDB,
+			PulseAppender:  pulseDB,
+			PulseAccessor:  pulseDB,
+			RecordModifier: recordModifier,
+			IndexModifier:  im,
+		}
+		_, _, err := genesisBaseRecord.CreateIfNeeded(ctx)
+		if err != nil {
+			t.Error(err, "failed to create base genesis record")
+		}
 	}
 
 	err = cm.Init(ctx)
 	if err != nil {
 		t.Error("ComponentManager init failed", err)
 	}
+
 	err = cm.Start(ctx)
 	if err != nil {
 		t.Error("ComponentManager start failed", err)

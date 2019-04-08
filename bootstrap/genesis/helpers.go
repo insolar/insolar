@@ -20,43 +20,27 @@ import (
 	"context"
 	"crypto"
 	"encoding/json"
+	"go/build"
 	"io/ioutil"
+	"os"
 	"path/filepath"
-	"runtime"
 
-	"github.com/insolar/insolar/insolar"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
 )
 
-var pathToContracts = "application/contract/"
-
-func serializeInstance(contractInstance interface{}) ([]byte, error) {
-	var instanceData []byte
-
-	instanceData, err := insolar.Serialize(contractInstance)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ serializeInstance ] Problem with CBORing")
+func goPATH() string {
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		gopath = build.Default.GOPATH
 	}
-
-	return instanceData, nil
-}
-
-func getAbsolutePath(relativePath string) (string, error) {
-	_, currentFile, _, ok := runtime.Caller(0)
-	if !ok {
-		return "", errors.Wrap(nil, "[ getFullPath ] couldn't find info about current file")
-	}
-	rootDir := filepath.Dir(filepath.Dir(currentFile))
-	return filepath.Join(rootDir, relativePath), nil
+	return gopath
 }
 
 func getContractPath(name string) (string, error) {
-	contractDir, err := getAbsolutePath(pathToContracts)
-	if err != nil {
-		return "", errors.Wrap(nil, "[ getContractPath ] couldn't get absolute path to contracts")
-	}
+	contractDir := filepath.Join(goPATH(), "src", contractSources)
 	contractFile := name + ".go"
 	return filepath.Join(contractDir, name, contractFile), nil
 }
@@ -70,7 +54,7 @@ func getContractsMap() (map[string]*preprocessor.ParsedFile, error) {
 		}
 		parsed, err := preprocessor.ParseFile(contractPath)
 		if err != nil {
-			return nil, errors.Wrap(err, "[ contractsMap ] couldn't read contract: ")
+			return nil, errors.Wrapf(err, "[ contractsMap ] couldn't read contract: %v", contractPath)
 		}
 		contracts[name] = parsed
 	}

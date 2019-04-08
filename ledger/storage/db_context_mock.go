@@ -13,7 +13,6 @@ import (
 	badger "github.com/dgraph-io/badger"
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
-	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -41,11 +40,6 @@ type DBContextMock struct {
 	GetBadgerDBCounter    uint64
 	GetBadgerDBPreCounter uint64
 	GetBadgerDBMock       mDBContextMockGetBadgerDB
-
-	IterateRecordsOnPulseFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 func(p insolar.ID, p1 record.VirtualRecord) (r error)) (r error)
-	IterateRecordsOnPulseCounter    uint64
-	IterateRecordsOnPulsePreCounter uint64
-	IterateRecordsOnPulseMock       mDBContextMockIterateRecordsOnPulse
 
 	SetFunc       func(p context.Context, p1 []byte, p2 []byte) (r error)
 	SetCounter    uint64
@@ -90,7 +84,6 @@ func NewDBContextMock(t minimock.Tester) *DBContextMock {
 	m.CloseMock = mDBContextMockClose{mock: m}
 	m.GetMock = mDBContextMockGet{mock: m}
 	m.GetBadgerDBMock = mDBContextMockGetBadgerDB{mock: m}
-	m.IterateRecordsOnPulseMock = mDBContextMockIterateRecordsOnPulse{mock: m}
 	m.SetMock = mDBContextMockSet{mock: m}
 	m.StoreKeyValuesMock = mDBContextMockStoreKeyValues{mock: m}
 	m.UpdateMock = mDBContextMockUpdate{mock: m}
@@ -665,156 +658,6 @@ func (m *DBContextMock) GetBadgerDBFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.GetBadgerDBFunc != nil {
 		return atomic.LoadUint64(&m.GetBadgerDBCounter) > 0
-	}
-
-	return true
-}
-
-type mDBContextMockIterateRecordsOnPulse struct {
-	mock              *DBContextMock
-	mainExpectation   *DBContextMockIterateRecordsOnPulseExpectation
-	expectationSeries []*DBContextMockIterateRecordsOnPulseExpectation
-}
-
-type DBContextMockIterateRecordsOnPulseExpectation struct {
-	input  *DBContextMockIterateRecordsOnPulseInput
-	result *DBContextMockIterateRecordsOnPulseResult
-}
-
-type DBContextMockIterateRecordsOnPulseInput struct {
-	p  context.Context
-	p1 insolar.ID
-	p2 insolar.PulseNumber
-	p3 func(p insolar.ID, p1 record.VirtualRecord) (r error)
-}
-
-type DBContextMockIterateRecordsOnPulseResult struct {
-	r error
-}
-
-//Expect specifies that invocation of DBContext.IterateRecordsOnPulse is expected from 1 to Infinity times
-func (m *mDBContextMockIterateRecordsOnPulse) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 func(p insolar.ID, p1 record.VirtualRecord) (r error)) *mDBContextMockIterateRecordsOnPulse {
-	m.mock.IterateRecordsOnPulseFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DBContextMockIterateRecordsOnPulseExpectation{}
-	}
-	m.mainExpectation.input = &DBContextMockIterateRecordsOnPulseInput{p, p1, p2, p3}
-	return m
-}
-
-//Return specifies results of invocation of DBContext.IterateRecordsOnPulse
-func (m *mDBContextMockIterateRecordsOnPulse) Return(r error) *DBContextMock {
-	m.mock.IterateRecordsOnPulseFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &DBContextMockIterateRecordsOnPulseExpectation{}
-	}
-	m.mainExpectation.result = &DBContextMockIterateRecordsOnPulseResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of DBContext.IterateRecordsOnPulse is expected once
-func (m *mDBContextMockIterateRecordsOnPulse) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 func(p insolar.ID, p1 record.VirtualRecord) (r error)) *DBContextMockIterateRecordsOnPulseExpectation {
-	m.mock.IterateRecordsOnPulseFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &DBContextMockIterateRecordsOnPulseExpectation{}
-	expectation.input = &DBContextMockIterateRecordsOnPulseInput{p, p1, p2, p3}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *DBContextMockIterateRecordsOnPulseExpectation) Return(r error) {
-	e.result = &DBContextMockIterateRecordsOnPulseResult{r}
-}
-
-//Set uses given function f as a mock of DBContext.IterateRecordsOnPulse method
-func (m *mDBContextMockIterateRecordsOnPulse) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 func(p insolar.ID, p1 record.VirtualRecord) (r error)) (r error)) *DBContextMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.IterateRecordsOnPulseFunc = f
-	return m.mock
-}
-
-//IterateRecordsOnPulse implements github.com/insolar/insolar/ledger/storage.DBContext interface
-func (m *DBContextMock) IterateRecordsOnPulse(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 func(p insolar.ID, p1 record.VirtualRecord) (r error)) (r error) {
-	counter := atomic.AddUint64(&m.IterateRecordsOnPulsePreCounter, 1)
-	defer atomic.AddUint64(&m.IterateRecordsOnPulseCounter, 1)
-
-	if len(m.IterateRecordsOnPulseMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.IterateRecordsOnPulseMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to DBContextMock.IterateRecordsOnPulse. %v %v %v %v", p, p1, p2, p3)
-			return
-		}
-
-		input := m.IterateRecordsOnPulseMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, DBContextMockIterateRecordsOnPulseInput{p, p1, p2, p3}, "DBContext.IterateRecordsOnPulse got unexpected parameters")
-
-		result := m.IterateRecordsOnPulseMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the DBContextMock.IterateRecordsOnPulse")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.IterateRecordsOnPulseMock.mainExpectation != nil {
-
-		input := m.IterateRecordsOnPulseMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, DBContextMockIterateRecordsOnPulseInput{p, p1, p2, p3}, "DBContext.IterateRecordsOnPulse got unexpected parameters")
-		}
-
-		result := m.IterateRecordsOnPulseMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the DBContextMock.IterateRecordsOnPulse")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.IterateRecordsOnPulseFunc == nil {
-		m.t.Fatalf("Unexpected call to DBContextMock.IterateRecordsOnPulse. %v %v %v %v", p, p1, p2, p3)
-		return
-	}
-
-	return m.IterateRecordsOnPulseFunc(p, p1, p2, p3)
-}
-
-//IterateRecordsOnPulseMinimockCounter returns a count of DBContextMock.IterateRecordsOnPulseFunc invocations
-func (m *DBContextMock) IterateRecordsOnPulseMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.IterateRecordsOnPulseCounter)
-}
-
-//IterateRecordsOnPulseMinimockPreCounter returns the value of DBContextMock.IterateRecordsOnPulse invocations
-func (m *DBContextMock) IterateRecordsOnPulseMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.IterateRecordsOnPulsePreCounter)
-}
-
-//IterateRecordsOnPulseFinished returns true if mock invocations count is ok
-func (m *DBContextMock) IterateRecordsOnPulseFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.IterateRecordsOnPulseMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.IterateRecordsOnPulseCounter) == uint64(len(m.IterateRecordsOnPulseMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.IterateRecordsOnPulseMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.IterateRecordsOnPulseCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.IterateRecordsOnPulseFunc != nil {
-		return atomic.LoadUint64(&m.IterateRecordsOnPulseCounter) > 0
 	}
 
 	return true
@@ -1692,10 +1535,6 @@ func (m *DBContextMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to DBContextMock.GetBadgerDB")
 	}
 
-	if !m.IterateRecordsOnPulseFinished() {
-		m.t.Fatal("Expected call to DBContextMock.IterateRecordsOnPulse")
-	}
-
 	if !m.SetFinished() {
 		m.t.Fatal("Expected call to DBContextMock.Set")
 	}
@@ -1753,10 +1592,6 @@ func (m *DBContextMock) MinimockFinish() {
 		m.t.Fatal("Expected call to DBContextMock.GetBadgerDB")
 	}
 
-	if !m.IterateRecordsOnPulseFinished() {
-		m.t.Fatal("Expected call to DBContextMock.IterateRecordsOnPulse")
-	}
-
 	if !m.SetFinished() {
 		m.t.Fatal("Expected call to DBContextMock.Set")
 	}
@@ -1799,7 +1634,6 @@ func (m *DBContextMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.CloseFinished()
 		ok = ok && m.GetFinished()
 		ok = ok && m.GetBadgerDBFinished()
-		ok = ok && m.IterateRecordsOnPulseFinished()
 		ok = ok && m.SetFinished()
 		ok = ok && m.StoreKeyValuesFinished()
 		ok = ok && m.UpdateFinished()
@@ -1828,10 +1662,6 @@ func (m *DBContextMock) MinimockWait(timeout time.Duration) {
 
 			if !m.GetBadgerDBFinished() {
 				m.t.Error("Expected call to DBContextMock.GetBadgerDB")
-			}
-
-			if !m.IterateRecordsOnPulseFinished() {
-				m.t.Error("Expected call to DBContextMock.IterateRecordsOnPulse")
 			}
 
 			if !m.SetFinished() {
@@ -1883,10 +1713,6 @@ func (m *DBContextMock) AllMocksCalled() bool {
 	}
 
 	if !m.GetBadgerDBFinished() {
-		return false
-	}
-
-	if !m.IterateRecordsOnPulseFinished() {
 		return false
 	}
 

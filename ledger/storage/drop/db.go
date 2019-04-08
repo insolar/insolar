@@ -24,13 +24,13 @@ import (
 	"github.com/insolar/insolar/internal/ledger/store"
 )
 
-type dropStorageDB struct {
+type DB struct {
 	db store.DB
 }
 
-// NewStorageDB creates a new storage, that holds data in a db.
-func NewStorageDB(db store.DB) *dropStorageDB { // nolint: golint
-	return &dropStorageDB{db: db}
+// NewDB creates a new storage, that holds data in a db.
+func NewDB(db store.DB) *DB {
+	return &DB{db: db}
 }
 
 type dropDbKey struct {
@@ -47,7 +47,7 @@ func (dk *dropDbKey) ID() []byte {
 }
 
 // ForPulse returns a Drop for a provided pulse, that is stored in a db.
-func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (Drop, error) {
+func (ds *DB) ForPulse(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) (Drop, error) {
 	k := dropDbKey{jetID.Prefix(), pulse}
 
 	buf, err := ds.db.Get(&k)
@@ -62,7 +62,7 @@ func (ds *dropStorageDB) ForPulse(ctx context.Context, jetID insolar.JetID, puls
 }
 
 // Set saves a provided Drop to a db.
-func (ds *dropStorageDB) Set(ctx context.Context, drop Drop) error {
+func (ds *DB) Set(ctx context.Context, drop Drop) error {
 	k := dropDbKey{drop.JetID.Prefix(), drop.Pulse}
 
 	_, err := ds.db.Get(&k)
