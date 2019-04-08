@@ -27,11 +27,9 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage"
 )
 
 type middleware struct {
-	objectStorage  storage.ObjectStorage
 	jetAccessor    jet.Accessor
 	jetCoordinator insolar.JetCoordinator
 	messageBus     insolar.MessageBus
@@ -44,7 +42,6 @@ func newMiddleware(
 	h *MessageHandler,
 ) *middleware {
 	return &middleware{
-		objectStorage:  h.ObjectStorage,
 		jetAccessor:    h.JetStorage,
 		jetCoordinator: h.JetCoordinator,
 		messageBus:     h.Bus,
