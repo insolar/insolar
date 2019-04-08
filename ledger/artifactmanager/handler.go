@@ -947,6 +947,10 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, jetID)
 	for id, meta := range msg.RecentObjects {
 		decodedIndex, err := object.DecodeIndex(meta.Index)
+		if err != nil {
+			logger.Error(err)
+			continue
+		}
 
 		err = h.IndexModifier.Set(ctx, id, decodedIndex)
 		if err != nil {
