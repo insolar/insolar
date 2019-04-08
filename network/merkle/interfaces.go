@@ -51,9 +51,8 @@
 package merkle
 
 import (
-	"crypto"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 type OriginHash []byte
@@ -64,7 +63,7 @@ type Calculator interface {
 	GetGlobuleProof(*GlobuleEntry) (OriginHash, *GlobuleProof, error)
 	GetCloudProof(*CloudEntry) (OriginHash, *CloudProof, error)
 
-	IsValid(Proof, OriginHash, crypto.PublicKey) bool
+	IsValid(Proof, OriginHash, platformpolicy.PublicKey) bool
 }
 
 type Proof interface {

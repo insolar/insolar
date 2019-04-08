@@ -17,13 +17,12 @@
 package requester
 
 import (
-	"crypto"
 	"encoding/json"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"io/ioutil"
 	"os"
 	"path/filepath"
-
-	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/pkg/errors"
 )
@@ -32,7 +31,7 @@ import (
 type UserConfigJSON struct {
 	PrivateKey       string `json:"private_key"`
 	Caller           string `json:"caller"`
-	privateKeyObject crypto.PrivateKey
+	privateKeyObject platformpolicy.PrivateKey
 }
 
 // RequestConfigJSON holds info about request
@@ -70,7 +69,7 @@ func ReadUserConfigFromFile(path string) (*UserConfigJSON, error) {
 		return nil, errors.Wrap(err, "[ readUserConfigFromFile ] ")
 	}
 
-	ks := platformpolicy.NewKeyProcessor()
+	ks := commoncrypto.NewKeyProcessor()
 
 	if cfgJSON.PrivateKey == "" {
 		privKey, err := ks.GeneratePrivateKey()
@@ -108,7 +107,7 @@ func CreateUserConfig(caller string, privKey string) (*UserConfigJSON, error) {
 	userConfig := UserConfigJSON{PrivateKey: privKey, Caller: caller}
 	var err error
 
-	ks := platformpolicy.NewKeyProcessor()
+	ks := commoncrypto.NewKeyProcessor()
 	userConfig.privateKeyObject, err = ks.ImportPrivateKeyPEM([]byte(privKey))
 	return &userConfig, err
 }

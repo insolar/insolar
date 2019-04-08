@@ -18,6 +18,7 @@ package virtual
 
 import (
 	"context"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
@@ -60,7 +61,7 @@ func initBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 	checkError(ctx, err, "failed to load KeyStore: ")
 
 	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
-	keyProcessor := platformpolicy.NewKeyProcessor()
+	keyProcessor := commoncrypto.NewKeyProcessor()
 
 	cryptographyService := cryptography.NewCryptographyService()
 	earlyComponents.Register(platformCryptographyScheme, keyStore)

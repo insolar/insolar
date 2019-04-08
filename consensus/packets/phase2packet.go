@@ -51,7 +51,7 @@
 package packets
 
 import (
-	"crypto"
+	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
@@ -103,7 +103,7 @@ func (p2p *Phase2Packet) SetRouting(origin, target insolar.ShortNodeID) {
 	p2p.packetHeader.HasRouting = true
 }
 
-func (p2p *Phase2Packet) Verify(crypto insolar.CryptographyService, key crypto.PublicKey) error {
+func (p2p *Phase2Packet) Verify(crypto insolar.CryptographyService, key platformpolicy.PublicKey) error {
 	raw, err := p2p.rawFirstPart()
 	if err != nil {
 		return errors.Wrap(err, "Failed to get raw first part of phase 2 packet")

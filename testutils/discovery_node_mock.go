@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "DiscoveryNode" can be found in github.com/insolar/insolar/insolar
 */
 import (
-	crypto "crypto"
+	"github.com/insolar/insolar/platformpolicy"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 )
 
 //DiscoveryNodeMock implements github.com/insolar/insolar/insolar.DiscoveryNode
@@ -28,7 +28,7 @@ type DiscoveryNodeMock struct {
 	GetNodeRefPreCounter uint64
 	GetNodeRefMock       mDiscoveryNodeMockGetNodeRef
 
-	GetPublicKeyFunc       func() (r crypto.PublicKey)
+	GetPublicKeyFunc       func() (r platformpolicy.PublicKey)
 	GetPublicKeyCounter    uint64
 	GetPublicKeyPreCounter uint64
 	GetPublicKeyMock       mDiscoveryNodeMockGetPublicKey
@@ -328,7 +328,7 @@ type DiscoveryNodeMockGetPublicKeyExpectation struct {
 }
 
 type DiscoveryNodeMockGetPublicKeyResult struct {
-	r crypto.PublicKey
+	r platformpolicy.PublicKey
 }
 
 //Expect specifies that invocation of DiscoveryNode.GetPublicKey is expected from 1 to Infinity times
@@ -344,7 +344,7 @@ func (m *mDiscoveryNodeMockGetPublicKey) Expect() *mDiscoveryNodeMockGetPublicKe
 }
 
 //Return specifies results of invocation of DiscoveryNode.GetPublicKey
-func (m *mDiscoveryNodeMockGetPublicKey) Return(r crypto.PublicKey) *DiscoveryNodeMock {
+func (m *mDiscoveryNodeMockGetPublicKey) Return(r platformpolicy.PublicKey) *DiscoveryNodeMock {
 	m.mock.GetPublicKeyFunc = nil
 	m.expectationSeries = nil
 
@@ -366,12 +366,12 @@ func (m *mDiscoveryNodeMockGetPublicKey) ExpectOnce() *DiscoveryNodeMockGetPubli
 	return expectation
 }
 
-func (e *DiscoveryNodeMockGetPublicKeyExpectation) Return(r crypto.PublicKey) {
+func (e *DiscoveryNodeMockGetPublicKeyExpectation) Return(r platformpolicy.PublicKey) {
 	e.result = &DiscoveryNodeMockGetPublicKeyResult{r}
 }
 
 //Set uses given function f as a mock of DiscoveryNode.GetPublicKey method
-func (m *mDiscoveryNodeMockGetPublicKey) Set(f func() (r crypto.PublicKey)) *DiscoveryNodeMock {
+func (m *mDiscoveryNodeMockGetPublicKey) Set(f func() (r platformpolicy.PublicKey)) *DiscoveryNodeMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -380,7 +380,7 @@ func (m *mDiscoveryNodeMockGetPublicKey) Set(f func() (r crypto.PublicKey)) *Dis
 }
 
 //GetPublicKey implements github.com/insolar/insolar/insolar.DiscoveryNode interface
-func (m *DiscoveryNodeMock) GetPublicKey() (r crypto.PublicKey) {
+func (m *DiscoveryNodeMock) GetPublicKey() (r platformpolicy.PublicKey) {
 	counter := atomic.AddUint64(&m.GetPublicKeyPreCounter, 1)
 	defer atomic.AddUint64(&m.GetPublicKeyCounter, 1)
 

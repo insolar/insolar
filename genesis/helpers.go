@@ -18,15 +18,15 @@ package genesis
 
 import (
 	"context"
-	"crypto"
 	"encoding/json"
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"io/ioutil"
 	"path/filepath"
 	"runtime"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -77,7 +77,7 @@ func getContractsMap() (map[string]*preprocessor.ParsedFile, error) {
 	return contracts, nil
 }
 
-func getKeysFromFile(ctx context.Context, file string) (crypto.PrivateKey, string, error) {
+func getKeysFromFile(ctx context.Context, file string) (platformpolicy.PrivateKey, string, error) {
 	absPath, err := filepath.Abs(file)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't get abs path")
@@ -97,7 +97,7 @@ func getKeysFromFile(ctx context.Context, file string) (crypto.PrivateKey, strin
 	if keys["public_key"] == "" {
 		return nil, "", errors.New("[ getKeyFromFile ] empty public key")
 	}
-	kp := platformpolicy.NewKeyProcessor()
+	kp := commoncrypto.NewKeyProcessor()
 	key, err := kp.ImportPrivateKeyPEM([]byte(keys["private_key"]))
 	if err != nil {
 		return nil, "", errors.Wrapf(err, "[ getKeyFromFile ] couldn't import private key")

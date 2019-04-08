@@ -23,6 +23,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -33,7 +34,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 )
 
@@ -236,7 +236,7 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 }
 
 func newUserWithKeys() (*user, error) {
-	ks := platformpolicy.NewKeyProcessor()
+	ks := commoncrypto.NewKeyProcessor()
 
 	privateKey, err := ks.GeneratePrivateKey()
 	if err != nil {

@@ -16,9 +16,7 @@
 
 package insolar
 
-import (
-	"crypto"
-)
+import "github.com/insolar/insolar/platformpolicy"
 
 // ShortNodeID is the shortened ID of node that is unique inside the globe
 type ShortNodeID uint32
@@ -50,7 +48,7 @@ type NetworkNode interface {
 	// Role is the candidate Role for the node
 	Role() StaticRole
 	// PublicKey is the public key of the node
-	PublicKey() crypto.PublicKey
+	PublicKey() platformpolicy.PublicKey
 	// Address is the network address of the node
 	Address() string
 	// GetGlobuleID returns node current globule id

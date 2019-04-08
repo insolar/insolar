@@ -54,7 +54,6 @@ package servicenetwork
 
 import (
 	"context"
-	"crypto"
 	"fmt"
 	"math/rand"
 	"strconv"
@@ -287,7 +286,7 @@ func (s *testSuite) StopNode(node *networkNode) {
 type networkNode struct {
 	id                  insolar.Reference
 	role                insolar.StaticRole
-	privateKey          crypto.PrivateKey
+	privateKey          platformpolicy.PrivateKey
 	cryptographyService insolar.CryptographyService
 	host                string
 	ctx                 context.Context
@@ -299,7 +298,7 @@ type networkNode struct {
 
 // newNetworkNode returns networkNode initialized only with id, host address and key pair
 func (s *testSuite) newNetworkNode(name string) *networkNode {
-	key, err := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
+	key, err := commoncrypto.NewKeyProcessor().GeneratePrivateKey()
 	s.Require().NoError(err)
 	address := "127.0.0.1:" + strconv.Itoa(incrementTestPort())
 
@@ -334,7 +333,7 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 
 	// init certificate
 
-	proc := platformpolicy.NewKeyProcessor()
+	proc := commoncrypto.NewKeyProcessor()
 	publicKey, err := proc.ExportPublicKeyPEM(pubKey)
 	s.Require().NoError(err)
 
@@ -446,7 +445,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {}
 	terminationHandler.AbortFunc = func() {}
 
-	keyProc := platformpolicy.NewKeyProcessor()
+	keyProc := commoncrypto.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
 
 	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService)

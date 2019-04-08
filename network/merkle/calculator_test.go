@@ -53,6 +53,7 @@ package merkle
 import (
 	"context"
 	"encoding/hex"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -162,7 +163,7 @@ func TestNewCalculator(t *testing.T) {
 func TestCalculator(t *testing.T) {
 	calculator := &calculator{}
 
-	key, _ := platformpolicy.NewKeyProcessor().GeneratePrivateKey()
+	key, _ := commoncrypto.NewKeyProcessor().GeneratePrivateKey()
 	require.NotNil(t, key)
 
 	service := cryptography.NewKeyBoundCryptographyService(key)

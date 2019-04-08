@@ -19,11 +19,11 @@ package certificate
 import (
 	"bytes"
 	"encoding/json"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"testing"
 
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 )
 
@@ -46,7 +46,7 @@ func TestNewCertificate_BadCert(t *testing.T) {
 }
 
 func checkKeys(cert *Certificate, cs insolar.CryptographyService, t *testing.T) {
-	kp := platformpolicy.NewKeyProcessor()
+	kp := commoncrypto.NewKeyProcessor()
 
 	pubKey, err := cs.GetPublicKey()
 	require.NoError(t, err)
@@ -59,7 +59,7 @@ func checkKeys(cert *Certificate, cs insolar.CryptographyService, t *testing.T) 
 
 func TestReadCertificate(t *testing.T) {
 	cs, _ := cryptography.NewStorageBoundCryptographyService(TestKeys)
-	kp := platformpolicy.NewKeyProcessor()
+	kp := commoncrypto.NewKeyProcessor()
 	pk, _ := cs.GetPublicKey()
 
 	cert, err := ReadCertificate(pk, kp, TestCert)
@@ -112,7 +112,7 @@ func TestReadCertificate(t *testing.T) {
 
 func TestReadCertificate_BadBootstrapPublicKey(t *testing.T) {
 	cs, _ := cryptography.NewStorageBoundCryptographyService(TestKeys)
-	kp := platformpolicy.NewKeyProcessor()
+	kp := commoncrypto.NewKeyProcessor()
 	pk, _ := cs.GetPublicKey()
 
 	_, err := ReadCertificate(pk, kp, "testdata/cert_bad_bootstrap_key.json")
@@ -121,14 +121,14 @@ func TestReadCertificate_BadBootstrapPublicKey(t *testing.T) {
 }
 
 func TestReadPrivateKey_BadJson(t *testing.T) {
-	keyProcessor := platformpolicy.NewKeyProcessor()
+	keyProcessor := commoncrypto.NewKeyProcessor()
 	_, err := ReadCertificate(nil, keyProcessor, TestBadCert)
 	require.Contains(t, err.Error(), "failed to parse certificate json")
 }
 
 func TestReadPrivateKey_BadKeyPair(t *testing.T) {
 	cs, _ := cryptography.NewStorageBoundCryptographyService(TestDifferentKeys)
-	kp := platformpolicy.NewKeyProcessor()
+	kp := commoncrypto.NewKeyProcessor()
 	pk, _ := cs.GetPublicKey()
 
 	_, err := ReadCertificate(pk, kp, TestCert)
@@ -136,7 +136,7 @@ func TestReadPrivateKey_BadKeyPair(t *testing.T) {
 }
 
 func TestReadCertificateFromReader(t *testing.T) {
-	kp := platformpolicy.NewKeyProcessor()
+	kp := commoncrypto.NewKeyProcessor()
 	privateKey, _ := kp.GeneratePrivateKey()
 	nodePublicKey := kp.ExtractPublicKey(privateKey)
 	publicKey, _ := kp.ExportPublicKeyPEM(nodePublicKey)
@@ -233,7 +233,7 @@ func TestSerializeDeserialize(t *testing.T) {
 		Role:      "test_role",
 	}
 
-	keyProc := platformpolicy.NewKeyProcessor()
+	keyProc := commoncrypto.NewKeyProcessor()
 	key, err := keyProc.ImportPublicKeyPEM([]byte(cert.PublicKey))
 	require.NoError(t, err)
 

@@ -52,7 +52,7 @@ package node
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"testing"
@@ -60,7 +60,7 @@ import (
 
 func TestSnapshotEncodeDecode(t *testing.T) {
 
-	ks := platformpolicy.NewKeyProcessor()
+	ks := commoncrypto.NewKeyProcessor()
 	p1, err := ks.GeneratePrivateKey()
 	p2, err := ks.GeneratePrivateKey()
 	assert.NoError(t, err)

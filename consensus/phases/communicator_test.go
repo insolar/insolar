@@ -53,6 +53,7 @@ package phases
 import (
 	"context"
 	"crypto"
+	"github.com/insolar/insolar/platformpolicy"
 	"testing"
 	"time"
 
@@ -98,7 +99,7 @@ func (s *communicatorSuite) SetupTest() {
 		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
 	}
-	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
+	cryptoServ.VerifyFunc = func(p platformpolicy.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
 		return true
 	}
 

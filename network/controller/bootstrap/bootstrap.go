@@ -54,6 +54,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"math"
 	"strings"
 	"sync"
@@ -179,7 +180,7 @@ type NodeStruct struct {
 }
 
 func newNode(n *NodeStruct) (insolar.NetworkNode, error) {
-	pk, err := platformpolicy.NewKeyProcessor().ImportPublicKeyBinary(n.PK)
+	pk, err := commoncrypto.NewKeyProcessor().ImportPublicKeyBinary(n.PK)
 	if err != nil {
 		return nil, errors.Wrap(err, "error deserializing node public key")
 	}
@@ -191,7 +192,7 @@ func newNode(n *NodeStruct) (insolar.NetworkNode, error) {
 }
 
 func newNodeStruct(node insolar.NetworkNode) (*NodeStruct, error) {
-	pk, err := platformpolicy.NewKeyProcessor().ExportPublicKeyBinary(node.PublicKey())
+	pk, err := commoncrypto.NewKeyProcessor().ExportPublicKeyBinary(node.PublicKey())
 	if err != nil {
 		return nil, errors.Wrap(err, "error serializing node public key")
 	}

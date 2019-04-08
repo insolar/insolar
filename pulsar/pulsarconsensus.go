@@ -19,6 +19,7 @@ package pulsar
 import (
 	"context"
 	"crypto"
+	"github.com/insolar/insolar/platformpolicy"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -141,7 +142,7 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 
 	type bftMember struct {
 		PubPem string
-		PubKey crypto.PublicKey
+		PubKey platformpolicy.PublicKey
 	}
 
 	var finalEntropySet []insolar.Entropy

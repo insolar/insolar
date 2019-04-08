@@ -18,7 +18,7 @@ package messagebus
 
 import (
 	"context"
-	"crypto"
+	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
@@ -63,7 +63,7 @@ func (pf *parcelFactory) Create(ctx context.Context, msg insolar.Message, sender
 	}, nil
 }
 
-func (pf *parcelFactory) Validate(publicKey crypto.PublicKey, parcel insolar.Parcel) error {
+func (pf *parcelFactory) Validate(publicKey platformpolicy.PublicKey, parcel insolar.Parcel) error {
 	ok := pf.Cryptography.Verify(publicKey, insolar.SignatureFromBytes(parcel.GetSign()), message.ToBytes(parcel.Message()))
 	if !ok {
 		return errors.New("parcel isn't valid")

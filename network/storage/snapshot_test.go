@@ -57,6 +57,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
@@ -77,7 +78,7 @@ func TestNewSnapshotStorage(t *testing.T) {
 	cm.Register(badgerDB, ss)
 	cm.Inject()
 
-	ks := platformpolicy.NewKeyProcessor()
+	ks := commoncrypto.NewKeyProcessor()
 	p1, err := ks.GeneratePrivateKey()
 	n := node.NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, ks.ExtractPublicKey(p1), "127.0.0.1:22", "ver2")
 

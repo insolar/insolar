@@ -51,8 +51,8 @@
 package controller
 
 import (
-	"crypto"
 	"crypto/rand"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"testing"
 
 	"github.com/insolar/insolar/cryptography"
@@ -64,7 +64,7 @@ import (
 )
 
 func getController(t *testing.T) pulseController {
-	proc := platformpolicy.NewKeyProcessor()
+	proc := commoncrypto.NewKeyProcessor()
 	key, err := proc.GeneratePrivateKey()
 	assert.NoError(t, err)
 	return pulseController{
@@ -74,8 +74,8 @@ func getController(t *testing.T) pulseController {
 	}
 }
 
-func getKeys(t *testing.T) (public string, private crypto.PrivateKey) {
-	proc := platformpolicy.NewKeyProcessor()
+func getKeys(t *testing.T) (public string, private platformpolicy.PrivateKey) {
+	proc := commoncrypto.NewKeyProcessor()
 	privKey, err := proc.GeneratePrivateKey()
 	assert.NoError(t, err)
 	key := proc.ExtractPublicKey(privKey)

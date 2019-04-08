@@ -17,7 +17,7 @@
 package pulsar
 
 import (
-	"crypto"
+	"github.com/insolar/insolar/platformpolicy"
 	"net"
 	"net/rpc"
 	"sync"
@@ -113,5 +113,5 @@ type Neighbour struct {
 	ConnectionType    configuration.ConnectionType
 	ConnectionAddress string
 	OutgoingClient    RPCClientWrapper
-	PublicKey         crypto.PublicKey
+	PublicKey         platformpolicy.PublicKey
 }

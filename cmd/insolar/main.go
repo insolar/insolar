@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"io"
 	"os"
 	"reflect"
@@ -31,7 +32,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/version"
 
@@ -166,7 +166,7 @@ type mixedConfig struct {
 func createMember(out io.Writer) {
 	userName := os.Args[len(os.Args)-1]
 
-	ks := platformpolicy.NewKeyProcessor()
+	ks := commoncrypto.NewKeyProcessor()
 	privKey, err := ks.GeneratePrivateKey()
 	check("Problems with generating of private key:", err)
 	privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
@@ -234,7 +234,7 @@ func randomRef(out io.Writer) {
 }
 
 func generateKeysPair(out io.Writer) {
-	ks := platformpolicy.NewKeyProcessor()
+	ks := commoncrypto.NewKeyProcessor()
 
 	privKey, err := ks.GeneratePrivateKey()
 	check("Problems with generating of private key:", err)
@@ -258,7 +258,7 @@ func generateCertificate(out io.Writer) {
 	boundCryptographyService, err := cryptography.NewStorageBoundCryptographyService(configPath)
 	check("[ generateCertificate ] failed to create cryptography service", err)
 
-	keyProcessor := platformpolicy.NewKeyProcessor()
+	keyProcessor := commoncrypto.NewKeyProcessor()
 
 	publicKey, err := boundCryptographyService.GetPublicKey()
 	check("[ generateCertificate ] failed to retrieve public key", err)

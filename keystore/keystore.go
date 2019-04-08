@@ -18,7 +18,7 @@ package keystore
 
 import (
 	"context"
-	"crypto"
+	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
@@ -31,7 +31,7 @@ type keyStore struct {
 	path   string
 }
 
-func (ks *keyStore) GetPrivateKey(identifier string) (crypto.PrivateKey, error) {
+func (ks *keyStore) GetPrivateKey(identifier string) (platformpolicy.PrivateKey, error) {
 	return ks.Loader.Load(ks.path)
 }
 
@@ -47,17 +47,17 @@ func (ks *keyStore) Start(ctx context.Context) error {
 type cachedKeyStore struct {
 	keyStore insolar.KeyStore
 
-	privateKey crypto.PrivateKey
+	privateKey platformpolicy.PrivateKey
 }
 
-func (ks *cachedKeyStore) getCachedPrivateKey(identifier string) crypto.PublicKey {
+func (ks *cachedKeyStore) getCachedPrivateKey(identifier string) platformpolicy.PublicKey {
 	if ks.privateKey != nil {
 		return ks.privateKey
 	}
 	return nil
 }
 
-func (ks *cachedKeyStore) loadPrivateKey(identifier string) (crypto.PrivateKey, error) {
+func (ks *cachedKeyStore) loadPrivateKey(identifier string) (platformpolicy.PrivateKey, error) {
 	privateKey, err := ks.keyStore.GetPrivateKey(identifier)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ loadPrivateKey ] Can't GetPrivateKey")
@@ -67,7 +67,7 @@ func (ks *cachedKeyStore) loadPrivateKey(identifier string) (crypto.PrivateKey, 
 	return privateKey, nil
 }
 
-func (ks *cachedKeyStore) GetPrivateKey(identifier string) (crypto.PrivateKey, error) {
+func (ks *cachedKeyStore) GetPrivateKey(identifier string) (platformpolicy.PrivateKey, error) {
 	privateKey := ks.getCachedPrivateKey(identifier)
 
 	return privateKey, nil

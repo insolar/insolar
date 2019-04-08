@@ -52,7 +52,7 @@ package merkle
 
 import (
 	"context"
-	"crypto"
+	"github.com/insolar/insolar/platformpolicy"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
@@ -152,6 +152,6 @@ func (c *calculator) GetCloudProof(entry *CloudEntry) (OriginHash, *CloudProof, 
 	}, nil
 }
 
-func (c *calculator) IsValid(proof Proof, hash OriginHash, publicKey crypto.PublicKey) bool {
+func (c *calculator) IsValid(proof Proof, hash OriginHash, publicKey platformpolicy.PublicKey) bool {
 	return c.CryptographyService.Verify(publicKey, proof.signature(), proof.hash(hash, c.merkleHelper))
 }

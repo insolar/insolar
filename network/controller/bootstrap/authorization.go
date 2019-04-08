@@ -54,6 +54,7 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"time"
 
 	"github.com/jbenet/go-base58"
@@ -72,7 +73,6 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/platformpolicy"
 )
 
 const (
@@ -229,7 +229,7 @@ func (ac *authorizationController) buildRegistrationResponse(sessionID SessionID
 	if node := ac.NodeKeeper.GetAccessor().GetActiveNode(claim.NodeRef); node != nil {
 		retryIn := session.TTL / 2
 
-		keyProc := platformpolicy.NewKeyProcessor()
+		keyProc := commoncrypto.NewKeyProcessor()
 		// little hack: ignoring error, because it never fails in current implementation
 		nodeKey, _ := keyProc.ExportPublicKeyBinary(node.PublicKey())
 
@@ -288,7 +288,7 @@ func (ac *authorizationController) processRegisterRequest(ctx context.Context, r
 
 func (ac *authorizationController) processAuthorizeRequest(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*AuthorizationRequest)
-	cert, err := certificate.Deserialize(data.Certificate, platformpolicy.NewKeyProcessor())
+	cert, err := certificate.Deserialize(data.Certificate, commoncrypto.NewKeyProcessor())
 	if err != nil {
 		return ac.Transport.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
