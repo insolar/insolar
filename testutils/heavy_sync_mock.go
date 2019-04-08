@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "HeavySync" can be found in github.com/insolar/insolar/insolar
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -842,7 +842,7 @@ type HeavySyncMockStoreIndexesResult struct {
 	r error
 }
 
-// Expect specifies that invocation of HeavySync.StoreIndexes is expected from 1 to Infinity times
+//Expect specifies that invocation of HeavySync.StoreIndexes is expected from 1 to Infinity times
 func (m *mHeavySyncMockStoreIndexes) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 map[insolar.ID][]byte) *mHeavySyncMockStoreIndexes {
 	m.mock.StoreIndexesFunc = nil
 	m.expectationSeries = nil
@@ -854,7 +854,7 @@ func (m *mHeavySyncMockStoreIndexes) Expect(p context.Context, p1 insolar.ID, p2
 	return m
 }
 
-// Return specifies results of invocation of HeavySync.StoreIndexes
+//Return specifies results of invocation of HeavySync.StoreIndexes
 func (m *mHeavySyncMockStoreIndexes) Return(r error) *HeavySyncMock {
 	m.mock.StoreIndexesFunc = nil
 	m.expectationSeries = nil
@@ -866,7 +866,7 @@ func (m *mHeavySyncMockStoreIndexes) Return(r error) *HeavySyncMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of HeavySync.StoreIndexes is expected once
+//ExpectOnce specifies that invocation of HeavySync.StoreIndexes is expected once
 func (m *mHeavySyncMockStoreIndexes) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 map[insolar.ID][]byte) *HeavySyncMockStoreIndexesExpectation {
 	m.mock.StoreIndexesFunc = nil
 	m.mainExpectation = nil
@@ -881,7 +881,7 @@ func (e *HeavySyncMockStoreIndexesExpectation) Return(r error) {
 	e.result = &HeavySyncMockStoreIndexesResult{r}
 }
 
-// Set uses given function f as a mock of HeavySync.StoreIndexes method
+//Set uses given function f as a mock of HeavySync.StoreIndexes method
 func (m *mHeavySyncMockStoreIndexes) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 map[insolar.ID][]byte) (r error)) *HeavySyncMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -890,7 +890,7 @@ func (m *mHeavySyncMockStoreIndexes) Set(f func(p context.Context, p1 insolar.ID
 	return m.mock
 }
 
-// StoreIndexes implements github.com/insolar/insolar/insolar.HeavySync interface
+//StoreIndexes implements github.com/insolar/insolar/insolar.HeavySync interface
 func (m *HeavySyncMock) StoreIndexes(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 map[insolar.ID][]byte) (r error) {
 	counter := atomic.AddUint64(&m.StoreIndexesPreCounter, 1)
 	defer atomic.AddUint64(&m.StoreIndexesCounter, 1)
@@ -940,17 +940,17 @@ func (m *HeavySyncMock) StoreIndexes(p context.Context, p1 insolar.ID, p2 insola
 	return m.StoreIndexesFunc(p, p1, p2, p3)
 }
 
-// StoreIndexesMinimockCounter returns a count of HeavySyncMock.StoreIndexesFunc invocations
+//StoreIndexesMinimockCounter returns a count of HeavySyncMock.StoreIndexesFunc invocations
 func (m *HeavySyncMock) StoreIndexesMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.StoreIndexesCounter)
 }
 
-// StoreIndexesMinimockPreCounter returns the value of HeavySyncMock.StoreIndexes invocations
+//StoreIndexesMinimockPreCounter returns the value of HeavySyncMock.StoreIndexes invocations
 func (m *HeavySyncMock) StoreIndexesMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.StoreIndexesPreCounter)
 }
 
-// StoreIndexesFinished returns true if mock invocations count is ok
+//StoreIndexesFinished returns true if mock invocations count is ok
 func (m *HeavySyncMock) StoreIndexesFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.StoreIndexesMock.expectationSeries) > 0 {
