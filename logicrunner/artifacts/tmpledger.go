@@ -118,8 +118,8 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	cm := &component.Manager{}
 	js := jet.NewStore()
 	ns := node.NewStorage()
-	ds := drop.NewStorageDB(memoryMockDB)
-	bs := blob.NewStorageDB(memoryMockDB)
+	ds := drop.NewDB(memoryMockDB)
+	bs := blob.NewDB(memoryMockDB)
 	rs := storage.NewReplicaStorage()
 
 	recordAccessor := recMem

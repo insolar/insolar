@@ -58,7 +58,7 @@ func (m *client) State() ([]byte, error) {
 	return m.PlatformCryptographyScheme.IntegrityHasher().Hash([]byte{1, 2, 3}), nil
 }
 
-// NewClient creates new manager instance.
+// NewClient creates new client instance.
 func NewClient() *client { // nolint
 	return &client{
 		getChildrenChunkSize: getChildrenChunkSize,
@@ -848,9 +848,6 @@ func (m *client) updateObject(
 	}
 
 	currentPN, err := m.pulse(ctx)
-	if err != nil {
-		return nil, err
-	}
 	if err != nil {
 		return nil, err
 	}

@@ -78,7 +78,7 @@ func (s *storageSuite) BeforeTest(suiteName, testName string) {
 	s.indexAccessor = idxStor
 
 	storageDB := store.NewMemoryMockDB()
-	dropStorage := drop.NewStorageDB(storageDB)
+	dropStorage := drop.NewDB(storageDB)
 	s.dropAccessor = dropStorage
 	s.dropModifier = dropStorage
 	s.jetID = testutils.RandomJet()

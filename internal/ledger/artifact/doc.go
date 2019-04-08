@@ -14,21 +14,6 @@
 // limitations under the License.
 //
 
-package server
-
-import (
-	"github.com/insolar/insolar/server/internal/light"
-	"github.com/insolar/insolar/server/internal/virtual"
-)
-
-type Server interface {
-	Serve()
-}
-
-func NewLightServer(cfgPath string, trace bool) Server {
-	return light.New(cfgPath, trace)
-}
-
-func NewVirtualServer(cfgPath string, trace bool) Server {
-	return virtual.New(cfgPath, trace)
-}
+// artifact contains tools for managing ledger artifacts without network,
+// that required by genesis and other bootstrap stuff
+package artifact
