@@ -55,26 +55,56 @@ import (
 	"sync/atomic"
 
 	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
 )
 
-type transportBase struct {
+func NewHostNetwork(conf configuration.Configuration, nodeRef string) (network.HostNetwork, error) {
+	tp, publicAddress, err := transport.NewTransport(conf.Host.Transport)
+	if err != nil {
+		return nil, errors.Wrap(err, "error creating transport")
+	}
+	id, err := insolar.NewReferenceFromBase58(nodeRef)
+	if err != nil {
+		return nil, errors.Wrap(err, "invalid nodeRef")
+	}
+
+	origin, err := host.NewHostN(publicAddress, *id)
+	if err != nil {
+		return nil, errors.Wrap(err, "error getting origin")
+	}
+	result := &hostNetwork{handlers: make(map[types.PacketType]network.RequestHandler)}
+	result.sequenceGenerator = sequence.NewGeneratorImpl()
+	result.transport = tp
+	result.origin = origin
+	result.messageProcessor = result.processMessage
+	return result, nil
+}
+
+type hostNetwork struct {
+	Resolver network.RoutingTable `inject:""`
+
 	started           uint32
 	transport         transport.Transport
 	origin            *host.Host
 	messageProcessor  func(msg *packet.Packet)
 	sequenceGenerator sequence.Generator
+	handlers          map[types.PacketType]network.RequestHandler
 }
 
 // Start start listening to network requests, should be started in goroutine.
-func (h *transportBase) Start(ctx context.Context) error {
+func (h *hostNetwork) Start(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&h.started, 0, 1) {
 		return errors.New("Failed to start transport: double listen initiated")
 	}
@@ -86,7 +116,7 @@ func (h *transportBase) Start(ctx context.Context) error {
 	return nil
 }
 
-func (h *transportBase) listen(ctx context.Context) {
+func (h *hostNetwork) listen(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 	for {
 		select {
@@ -106,7 +136,7 @@ func (h *transportBase) listen(ctx context.Context) {
 }
 
 // Disconnect stop listening to network requests.
-func (h *transportBase) Stop(ctx context.Context) error {
+func (h *hostNetwork) Stop(ctx context.Context) error {
 	if atomic.CompareAndSwapUint32(&h.started, 1, 0) {
 		go h.transport.Stop()
 		<-h.transport.Stopped()
@@ -115,22 +145,95 @@ func (h *transportBase) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (h *transportBase) buildRequest(ctx context.Context, request network.Request, receiver *host.Host) *packet.Packet {
+func (h *hostNetwork) buildRequest(ctx context.Context, request network.Request, receiver *host.Host) *packet.Packet {
 	return packet.NewBuilder(h.origin).Receiver(receiver).Type(request.GetType()).RequestID(request.GetRequestID()).
 		Request(request.GetData()).TraceID(inslogger.TraceID(ctx)).Build()
 }
 
 // PublicAddress returns public address that can be published for all nodes.
-func (h *transportBase) PublicAddress() string {
+func (h *hostNetwork) PublicAddress() string {
 	return h.origin.Address.String()
 }
 
 // GetNodeID get current node ID.
-func (h *transportBase) GetNodeID() insolar.Reference {
+func (h *hostNetwork) GetNodeID() insolar.Reference {
 	return h.origin.NodeID
 }
 
 // NewRequestBuilder create packet Builder for an outgoing request with sender set to current node.
-func (h *transportBase) NewRequestBuilder() network.RequestBuilder {
+func (h *hostNetwork) NewRequestBuilder() network.RequestBuilder {
 	return &Builder{sender: h.origin, id: network.RequestID(h.sequenceGenerator.Generate())}
+}
+
+func (h *hostNetwork) processMessage(msg *packet.Packet) {
+	ctx, logger := inslogger.WithTraceField(context.Background(), msg.TraceID)
+	logger.Debugf("Got %s request from host %s; RequestID: %d", msg.Type.String(), msg.Sender.String(), msg.RequestID)
+	handler, exist := h.handlers[msg.Type]
+	if !exist {
+		logger.Errorf("No handler set for packet type %s from node %s",
+			msg.Type.String(), msg.Sender.NodeID.String())
+		return
+	}
+	ctx, span := instracer.StartSpan(ctx, "hostTransport.processMessage")
+	span.AddAttributes(
+		trace.StringAttribute("msg receiver", msg.Receiver.Address.String()),
+		trace.StringAttribute("msg trace", msg.TraceID),
+		trace.StringAttribute("msg type", msg.Type.String()),
+	)
+	defer span.End()
+	response, err := handler(ctx, msg)
+	if err != nil {
+		logger.Errorf("Error handling request %s from node %s: %s",
+			msg.Type.String(), msg.Sender.NodeID.String(), err)
+		return
+	}
+	err = h.transport.SendResponse(ctx, msg.RequestID, response.(*packet.Packet))
+	if err != nil {
+		logger.Error(err)
+	}
+}
+
+// SendRequestPacket send request packet to a remote node.
+func (h *hostNetwork) SendRequestPacket(ctx context.Context, request network.Request, receiver *host.Host) (network.Future, error) {
+	inslogger.FromContext(ctx).Debugf("Send %s request to host %s", request.GetType().String(), receiver.String())
+	f, err := h.transport.SendRequest(ctx, h.buildRequest(ctx, request, receiver))
+	if err != nil {
+		return nil, err
+	}
+	return f, nil
+}
+
+// RegisterPacketHandler register a handler function to process incoming request packets of a specific type.
+func (h *hostNetwork) RegisterPacketHandler(t types.PacketType, handler network.RequestHandler) {
+	_, exists := h.handlers[t]
+	if exists {
+		log.Warnf("Multiple handlers for packet type %s are not supported! New handler will replace the old one!", t)
+	}
+	h.handlers[t] = handler
+}
+
+// BuildResponse create response to an incoming request with Data set to responseData.
+func (h *hostNetwork) BuildResponse(ctx context.Context, request network.Request, responseData interface{}) network.Response {
+	sender := request.GetSenderHost()
+	p := packet.NewBuilder(h.origin).Type(request.GetType()).Receiver(sender).RequestID(request.GetRequestID()).
+		Response(responseData).TraceID(inslogger.TraceID(ctx)).Build()
+	return p
+}
+
+// SendRequest send request to a remote node.
+func (tr *hostNetwork) SendRequest(ctx context.Context, request network.Request, receiver insolar.Reference) (network.Future, error) {
+	h, err := tr.Resolver.Resolve(receiver)
+	if err != nil {
+		return nil, errors.Wrap(err, "error resolving NodeID -> Address")
+	}
+	return tr.SendRequestPacket(ctx, request, h)
+}
+
+// RegisterPacketHandler register a handler function to process incoming requests of a specific type.
+func (tr *hostNetwork) RegisterRequestHandler(t types.PacketType, handler network.RequestHandler) {
+	f := func(ctx context.Context, request network.Request) (network.Response, error) {
+		tr.Resolver.AddToKnownHosts(request.GetSenderHost())
+		return handler(ctx, request)
+	}
+	tr.RegisterPacketHandler(t, f)
 }

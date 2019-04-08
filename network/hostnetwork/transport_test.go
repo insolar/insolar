@@ -61,6 +61,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
@@ -142,10 +143,10 @@ func mockConfiguration(address string) configuration.Configuration {
 func TestNewInternalTransport(t *testing.T) {
 	// broken address
 	ctx := context.Background()
-	_, err := NewInternalTransport(mockConfiguration("abirvalg"), ID1+DOMAIN)
+	_, err := NewHostNetwork(mockConfiguration("abirvalg"), ID1+DOMAIN)
 	require.Error(t, err)
 	address := "127.0.0.1:0"
-	tp, err := NewInternalTransport(mockConfiguration(address), ID1+DOMAIN)
+	tp, err := NewHostNetwork(mockConfiguration(address), ID1+DOMAIN)
 	require.NoError(t, err)
 	defer tp.Stop(ctx)
 	// require that new address with correct port has been assigned
@@ -157,7 +158,7 @@ func TestNewInternalTransport(t *testing.T) {
 
 func TestNewInternalTransport2(t *testing.T) {
 	ctx := context.Background()
-	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
+	tp, err := NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
 	go tp.Start(ctx)
 	time.Sleep(time.Millisecond)
@@ -168,34 +169,35 @@ func TestNewInternalTransport2(t *testing.T) {
 	}()
 }
 
-func createTwoHostNetworks(id1, id2 string) (t1, t2 *TransportResolvable, err error) {
+func createTwoHostNetworks(id1, id2 string) (n1, n2 network.HostNetwork, err error) {
 	m := newMockResolver()
 
-	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
+	n1, err = NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	if err != nil {
 		return nil, nil, err
 	}
-	tr1 := &TransportResolvable{Transport: i1, Resolver: m}
-	i2, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID2+DOMAIN)
+	n1.(*hostNetwork).Resolver = m
+
+	n2, err = NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID2+DOMAIN)
 	if err != nil {
 		return nil, nil, err
 	}
-	tr2 := &TransportResolvable{Transport: i2, Resolver: m}
+	n2.(*hostNetwork).Resolver = m
 
-	err = m.addMapping(id1, tr1.PublicAddress())
+	err = m.addMapping(id1, n1.PublicAddress())
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to add mapping %s -> %s", id1, tr1.PublicAddress())
+		return nil, nil, errors.Wrapf(err, "failed to add mapping %s -> %s", id1, n1.PublicAddress())
 	}
-	err = m.addMapping(id2, tr2.PublicAddress())
+	err = m.addMapping(id2, n2.PublicAddress())
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to add mapping %s -> %s", id2, tr2.PublicAddress())
+		return nil, nil, errors.Wrapf(err, "failed to add mapping %s -> %s", id2, n2.PublicAddress())
 	}
 
-	return tr1, tr2, nil
+	return n1, n2, nil
 }
 
 func TestNewInternalTransport3(t *testing.T) {
-	_, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), "")
+	_, err := NewHostNetwork(mockConfiguration("127.0.0.1:0"), "")
 	require.Error(t, err)
 }
 
@@ -221,12 +223,12 @@ func TestNewHostTransport(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	err = t2.Transport.Start(ctx2)
+	err = t2.Start(ctx2)
 	assert.NoError(t, err)
-	defer t2.Transport.Stop(ctx2)
-	err = t1.Transport.Start(ctx)
+	defer t2.Stop(ctx2)
+	err = t1.Start(ctx)
 	assert.NoError(t, err)
-	defer t1.Transport.Stop(ctx)
+	defer t1.Stop(ctx)
 
 	for i := 0; i < count; i++ {
 		request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
@@ -242,18 +244,23 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	m := newMockResolver()
 	ctx := context.Background()
 
-	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
+	n1, err := NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
-	t1 := &TransportResolvable{Transport: i1, Resolver: m}
-	t1.Transport.Start(ctx)
-	defer t1.Transport.Stop(ctx)
+
+	cm := component.NewManager(nil)
+	cm.Register(m, n1)
+	cm.Inject()
+	err = cm.Start(ctx)
+	require.NoError(t, err)
+
+	defer cm.Stop(ctx)
 
 	unknownID, err := insolar.NewReferenceFromBase58(IDUNKNOWN + DOMAIN)
 	require.NoError(t, err)
 
 	// should return error because cannot resolve NodeID -> Address
-	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
-	_, err = t1.SendRequest(ctx, request, *unknownID)
+	request := n1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
+	_, err = n1.SendRequest(ctx, request, *unknownID)
 	require.Error(t, err)
 
 	err = m.addMapping(ID2+DOMAIN, "abirvalg")
@@ -264,7 +271,7 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
 	// should return error because resolved address is invalid
-	_, err = t1.SendRequest(ctx, request, *ref)
+	_, err = n1.SendRequest(ctx, request, *ref)
 	require.Error(t, err)
 }
 
@@ -289,11 +296,11 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Transport.Start(ctx2)
-	t1.Transport.Start(ctx)
+	t2.Start(ctx2)
+	t1.Start(ctx)
 	defer func() {
-		t1.Transport.Stop(ctx)
-		t2.Transport.Stop(ctx2)
+		t1.Stop(ctx)
+		t2.Stop(ctx2)
 	}()
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
@@ -327,11 +334,11 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Transport.Start(ctx2)
-	t1.Transport.Start(ctx)
+	t2.Start(ctx2)
+	t1.Start(ctx)
 	defer func() {
-		t1.Transport.Stop(ctx)
-		t2.Transport.Stop(ctx2)
+		t1.Stop(ctx)
+		t2.Stop(ctx2)
 	}()
 
 	magicNumber := 42
@@ -371,9 +378,9 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Transport.Start(ctx2)
-	defer t2.Transport.Stop(ctx2)
-	t1.Transport.Start(ctx)
+	t2.Start(ctx2)
+	defer t2.Stop(ctx2)
+	t1.Start(ctx)
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
@@ -386,7 +393,7 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 
 	f, err = t1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
-	t1.Transport.Stop(ctx)
+	t1.Stop(ctx)
 
 	_, err = f.GetResponse(time.Second)
 	require.Error(t, err)
@@ -408,11 +415,11 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(InvalidPacket, handler)
 
-	t2.Transport.Start(ctx2)
-	t1.Transport.Start(ctx)
+	t2.Start(ctx2)
+	t1.Start(ctx)
 	defer func() {
-		t1.Transport.Stop(ctx)
-		t2.Transport.Stop(ctx2)
+		t1.Stop(ctx)
+		t2.Stop(ctx2)
 	}()
 
 	request := t1.NewRequestBuilder().Type(types.Ping).Build()
@@ -428,7 +435,7 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 
 func TestDoubleStart(t *testing.T) {
 	ctx := context.Background()
-	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
+	tp, err := NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
 
 	err = tp.Start(ctx)
@@ -441,7 +448,7 @@ func TestDoubleStart(t *testing.T) {
 
 func TestStartStop(t *testing.T) {
 	ctx := context.Background()
-	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
+	tp, err := NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
 
 	err = tp.Start(ctx)
@@ -460,9 +467,9 @@ func TestStartStopSend(t *testing.T) {
 	ctx := context.Background()
 	ctx2 := context.Background()
 
-	err = t2.Transport.Start(ctx2)
+	err = t2.Start(ctx2)
 	require.NoError(t, err)
-	defer t2.Transport.Stop(ctx2)
+	defer t2.Stop(ctx2)
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -474,7 +481,7 @@ func TestStartStopSend(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	err = t1.Transport.Start(ctx)
+	err = t1.Start(ctx)
 	require.NoError(t, err)
 
 	send := func() {
@@ -488,12 +495,12 @@ func TestStartStopSend(t *testing.T) {
 
 	send()
 
-	err = t1.Transport.Stop(ctx)
+	err = t1.Stop(ctx)
 	require.NoError(t, err)
-	err = t1.Transport.Start(ctx)
+	err = t1.Start(ctx)
 	require.NoError(t, err)
 
 	send()
 	wg.Wait()
-	t1.Transport.Stop(ctx)
+	t1.Stop(ctx)
 }

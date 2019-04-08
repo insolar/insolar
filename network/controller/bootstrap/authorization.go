@@ -90,7 +90,7 @@ type authorizationController struct {
 	NodeKeeper         network.NodeKeeper         `inject:""`
 	NetworkCoordinator insolar.NetworkCoordinator `inject:""`
 	SessionManager     SessionManager             `inject:""`
-	Transport          network.InternalTransport  `inject:""`
+	Transport          network.HostNetwork        `inject:""`
 
 	options *common.Options
 }
@@ -304,8 +304,8 @@ func (ac *authorizationController) processAuthorizeRequest(ctx context.Context, 
 }
 
 func (ac *authorizationController) Init(ctx context.Context) error {
-	ac.Transport.RegisterPacketHandler(types.Register, ac.processRegisterRequest)
-	ac.Transport.RegisterPacketHandler(types.Authorize, ac.processAuthorizeRequest)
+	ac.Transport.RegisterRequestHandler(types.Register, ac.processRegisterRequest)
+	ac.Transport.RegisterRequestHandler(types.Authorize, ac.processAuthorizeRequest)
 	return nil
 }
 

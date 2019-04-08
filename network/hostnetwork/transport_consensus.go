@@ -52,6 +52,7 @@ package hostnetwork
 
 import (
 	"context"
+	"sync/atomic"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -61,6 +62,7 @@ import (
 	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -70,17 +72,64 @@ import (
 )
 
 type transportConsensus struct {
-	transportBase
 	Resolver network.RoutingTable `inject:""`
-	handlers map[packets.PacketType]network.ConsensusPacketHandler
+
+	transport         transport.Transport
+	origin            *host.Host
+	started           uint32
+	sequenceGenerator sequence.Generator
+	messageProcessor  func(msg *packet.Packet)
+	handlers          map[packets.PacketType]network.ConsensusPacketHandler
 }
 
 func (tc *transportConsensus) Start(ctx context.Context) error {
-	return tc.transportBase.Start(ctx)
+	if !atomic.CompareAndSwapUint32(&tc.started, 0, 1) {
+		return errors.New("Failed to start transport: double listen initiated")
+	}
+	if err := tc.transport.Start(ctx); err != nil {
+		return errors.Wrap(err, "Failed to start transport: listen syscall failed")
+	}
+
+	go tc.listen(ctx)
+	return nil
+}
+
+func (tc *transportConsensus) listen(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	for {
+		select {
+		case msg := <-tc.transport.Packets():
+			if msg == nil {
+				logger.Error("HostNetwork receiving channel is closed")
+				break
+			}
+			if msg.Error != nil {
+				logger.Warnf("Received error response: %s", msg.Error.Error())
+			}
+			go tc.messageProcessor(msg)
+		case <-tc.transport.Stopped():
+			return
+		}
+	}
 }
 
 func (tc *transportConsensus) Stop(ctx context.Context) error {
-	return tc.transportBase.Stop(ctx)
+	if atomic.CompareAndSwapUint32(&tc.started, 1, 0) {
+		go tc.transport.Stop()
+		<-tc.transport.Stopped()
+		tc.transport.Close()
+	}
+	return nil
+}
+
+// PublicAddress returns public address that can be published for all nodes.
+func (h *transportConsensus) PublicAddress() string {
+	return h.origin.Address.String()
+}
+
+// GetNodeID get current node ID.
+func (h *transportConsensus) GetNodeID() insolar.Reference {
+	return h.origin.NodeID
 }
 
 // RegisterPacketHandler register a handler function to process incoming requests of a specific type.

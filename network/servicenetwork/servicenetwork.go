@@ -126,7 +126,7 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method insolar.Rem
 
 // Start implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
-	internalTransport, err := hostnetwork.NewInternalTransport(n.cfg, n.CertificateManager.GetCertificate().GetNodeRef().String())
+	hostNetwork, err := hostnetwork.NewHostNetwork(n.cfg, n.CertificateManager.GetCertificate().GetNodeRef().String())
 	if err != nil {
 		return errors.Wrap(err, "Failed to create internal transport")
 	}
@@ -145,7 +145,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to create consensus network.")
 	}
 
-	hostNetwork := hostnetwork.NewHostTransport(internalTransport)
 	options := controller.ConfigureOptions(n.cfg)
 
 	cert := n.CertificateManager.GetCertificate()
@@ -154,7 +153,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.cm.Inject(n,
 		&routing.Table{},
 		cert,
-		internalTransport,
 		// use flaky network instead of internalTransport to imitate network delays
 		// NewFlakyNetwork(internalTransport),
 		hostNetwork,

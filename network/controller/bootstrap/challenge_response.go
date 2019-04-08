@@ -78,7 +78,7 @@ type challengeResponseController struct {
 	SessionManager SessionManager              `inject:""`
 	Cryptography   insolar.CryptographyService `inject:""`
 	NodeKeeper     network.NodeKeeper          `inject:""`
-	Transport      network.InternalTransport   `inject:""`
+	Transport      network.HostNetwork         `inject:""`
 
 	options *common.Options
 }
@@ -227,8 +227,8 @@ func (cr *challengeResponseController) buildChallenge2ErrorResponse(ctx context.
 }
 
 func (cr *challengeResponseController) Init(ctx context.Context) error {
-	cr.Transport.RegisterPacketHandler(types.Challenge1, cr.processChallenge1)
-	cr.Transport.RegisterPacketHandler(types.Challenge2, cr.processChallenge2)
+	cr.Transport.RegisterRequestHandler(types.Challenge1, cr.processChallenge1)
+	cr.Transport.RegisterRequestHandler(types.Challenge2, cr.processChallenge2)
 	return nil
 }
 

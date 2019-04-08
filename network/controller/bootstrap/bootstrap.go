@@ -102,10 +102,10 @@ type Bootstrapper interface {
 }
 
 type bootstrapper struct {
-	Certificate     insolar.Certificate       `inject:""`
-	NodeKeeper      network.NodeKeeper        `inject:""`
-	NetworkSwitcher insolar.NetworkSwitcher   `inject:""`
-	Transport       network.InternalTransport `inject:""`
+	Certificate     insolar.Certificate     `inject:""`
+	NodeKeeper      network.NodeKeeper      `inject:""`
+	NetworkSwitcher insolar.NetworkSwitcher `inject:""`
+	Transport       network.HostNetwork     `inject:""`
 
 	options *common.Options
 	pinger  *pinger.Pinger
@@ -628,8 +628,8 @@ func (bc *bootstrapper) processGenesis(ctx context.Context, request network.Requ
 func (bc *bootstrapper) Init(ctx context.Context) error {
 	bc.firstPulseTime = time.Now()
 	bc.pinger = pinger.NewPinger(bc.Transport)
-	bc.Transport.RegisterPacketHandler(types.Bootstrap, bc.processBootstrap)
-	bc.Transport.RegisterPacketHandler(types.Genesis, bc.processGenesis)
+	bc.Transport.RegisterRequestHandler(types.Bootstrap, bc.processBootstrap)
+	bc.Transport.RegisterRequestHandler(types.Genesis, bc.processGenesis)
 	return nil
 }
 
