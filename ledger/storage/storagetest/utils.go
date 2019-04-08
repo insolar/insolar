@@ -41,6 +41,7 @@ type tmpDBOptions struct {
 	dir          string
 	nobootstrap  bool
 	pulseStorage *pulse.StorageMem
+	indexStorage *object.IndexMemory
 }
 
 // Option provides functional option for TmpDB.
@@ -57,6 +58,13 @@ func Dir(dir string) Option {
 func PulseStorage(ps *pulse.StorageMem) Option {
 	return func(opts *tmpDBOptions) {
 		opts.pulseStorage = ps
+	}
+}
+
+// IndexStorage provides an external index storage for TmpDB
+func IndexStorage(is *object.IndexMemory) Option {
+	return func(opts *tmpDBOptions) {
+		opts.indexStorage = is
 	}
 }
 
@@ -95,7 +103,12 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 		pulseDB = pulse.NewStorageMem()
 	}
 
-	objectStorage := storage.NewObjectStorage()
+	var im *object.IndexMemory
+	if opts.indexStorage != nil {
+		im = opts.indexStorage
+	} else {
+		im = object.NewIndexMemory()
+	}
 
 	recordStorage := object.NewRecordMemory()
 	recordAccessor := recordStorage
@@ -106,11 +119,11 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 	cm := &component.Manager{}
 	cm.Inject(
 		PCS,
+		im,
 		pulseDB,
 		tmpDB,
 		jet.NewStore(),
 		storageDB,
-		objectStorage,
 		dropDB,
 		recordAccessor,
 		recordModifier,
@@ -124,7 +137,7 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 			PulseAppender:  pulseDB,
 			PulseAccessor:  pulseDB,
 			RecordModifier: recordModifier,
-			ObjectStorage:  objectStorage,
+			IndexModifier:  im,
 		}
 		_, _, err := genesisBaseRecord.CreateIfNeeded(ctx)
 		if err != nil {
