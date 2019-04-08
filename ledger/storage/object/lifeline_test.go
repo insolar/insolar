@@ -236,6 +236,30 @@ func TestCloneObjectLifeline_InsureDelegatesMapNotNil(t *testing.T) {
 	require.NotNil(t, cloneIdx.Delegates)
 }
 
+func TestIndexMemory_ForPulseAndJet(t *testing.T) {
+	t.Parallel()
+	memStor := NewIndexMemory()
+	ctx := inslogger.TestContext(t)
+
+	jetID := gen.JetID()
+	fPulse := gen.PulseNumber()
+	sPulse := gen.PulseNumber()
+	tPulse := gen.PulseNumber()
+
+	_ = memStor.Set(ctx, *insolar.NewID(fPulse, []byte{1}), Lifeline{JetID: jetID, LatestUpdate: gen.PulseNumber()})
+	_ = memStor.Set(ctx, *insolar.NewID(fPulse, []byte{2}), Lifeline{JetID: jetID, LatestUpdate: gen.PulseNumber()})
+	_ = memStor.Set(ctx, *insolar.NewID(sPulse, nil), Lifeline{JetID: jetID})
+	_ = memStor.Set(ctx, *insolar.NewID(tPulse, nil), Lifeline{JetID: jetID})
+
+	res := memStor.ForPulseAndJet(ctx, jetID, fPulse)
+
+	require.Equal(t, 2, len(res))
+	_, ok := memStor.memory[*insolar.NewID(fPulse, []byte{1})]
+	require.Equal(t, true, ok)
+	_, ok = memStor.memory[*insolar.NewID(fPulse, []byte{2})]
+	require.Equal(t, true, ok)
+}
+
 func id() (id *insolar.ID) {
 	fuzz.New().NilChance(0.5).Fuzz(&id)
 	return
