@@ -19,6 +19,7 @@ package controller
 
 import (
 	"context"
+	"sync/atomic"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/core"
@@ -27,16 +28,23 @@ import (
 	"github.com/insolar/insolar/network/transport/packet/types"
 )
 
+const (
+	skippedPulsesLimit = 15
+)
+
 type PulseController interface {
 	component.Initer
 }
 
 type pulseController struct {
-	PulseHandler network.PulseHandler `inject:""`
-	NodeKeeper   network.NodeKeeper   `inject:""`
+	PulseHandler       network.PulseHandler    `inject:""`
+	NodeKeeper         network.NodeKeeper      `inject:""`
+	TerminationHandler core.TerminationHandler `inject:""`
 
 	hostNetwork  network.HostNetwork
 	routingTable network.RoutingTable
+
+	skippedPulses uint32
 }
 
 func (pc *pulseController) Init(ctx context.Context) error {
@@ -51,6 +59,12 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Req
 	// so we should wait for pulse from consensus phase1 packet
 	if pc.NodeKeeper.GetState() != core.WaitingNodeNetworkState {
 		go pc.PulseHandler.HandlePulse(context.Background(), data.Pulse)
+	} else {
+		skipped := atomic.AddUint32(&pc.skippedPulses, 1)
+		if skipped >= skippedPulsesLimit {
+			// we definitely failed to receive pulse via phase1 packet and should exit
+			pc.TerminationHandler.Abort()
+		}
 	}
 	return pc.hostNetwork.BuildResponse(ctx, request, &packet.ResponsePulse{Success: true, Error: ""}), nil
 }
