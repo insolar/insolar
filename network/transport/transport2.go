@@ -1,31 +1,18 @@
 package transport
 
 import (
-	"bufio"
 	"context"
-	"fmt"
 	"net"
 	"strings"
 
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/transport/pool"
-	"github.com/insolar/insolar/network/utils"
 )
-
-type Transport2 interface {
-	component.Starter
-	component.Stopper
-
-	SendBuffer(ctx context.Context, address string, buff []byte) error
-	SendDgram(ctx context.Context, address string, buff []byte) error
-
-	RegisterDecoder(name string, decoder func([]byte) error)
-}
 
 type TcpTransport struct {
 	listenAddress string
+	processor     StreamProcessor
 	pool          pool.ConnectionPool
 }
 
@@ -61,6 +48,7 @@ func (t *TcpTransport) Start(ctx context.Context) error {
 
 	go func() {
 		for {
+			// TODO handle Stop
 			conn, err := listener.Accept()
 			if err != nil {
 				//<-t.disconnectFinished
@@ -88,42 +76,46 @@ func (t *TcpTransport) Stop(ctx context.Context) error {
 }
 
 func (t *TcpTransport) handleAcceptedConnection(conn net.Conn) {
-	defer utils.CloseVerbose(conn)
+	//defer utils.CloseVerbose(conn)
 
-	for {
-		//lengthBytes := make([]byte, 8)
-
-		r := bufio.NewReader(conn)
-
-		lengthBytes, err := r.Peek(16)
-		if err != nil {
-			fmt.Println(err.Error())
-		} else {
-			fmt.Println(lengthBytes)
-		}
-		bn := r.Buffered()
-		fmt.Println(bn)
-		r.Discard(16)
-
-		lengthBytes, err = r.Peek(10)
-		if err != nil {
-			fmt.Println(err.Error())
-		} else {
-			fmt.Println(lengthBytes)
-		}
-		//msg, err := t.serializer.DeserializePacket(conn)
-		// if err != nil {
-		// 	if err == io.EOF || err == io.ErrUnexpectedEOF {
-		// 		log.Warn("[ handleAcceptedConnection ] Connection closed by peer")
-		// 		return
-		// 	}
-		//
-		// 	log.Error("[ handleAcceptedConnection ] Failed to deserialize packet: ", err.Error())
-		// } else {
-		// 	ctx, logger := inslogger.WithTraceField(context.Background(), msg.TraceID)
-		// 	logger.Debug("[ handleAcceptedConnection ] Handling packet: ", msg.RequestID)
-		//
-		// 	go t.packetHandler.Handle(ctx, msg)
+	err := t.processor.ProcessStream(conn.RemoteAddr().String(), conn)
+	if err != nil {
+		inslogger.FromContext(context.Background()).Errorf("Failed to process stream from %s: %s", conn.RemoteAddr().String(), err.Error())
 	}
+	// for {
+	// //lengthBytes := make([]byte, 8)
+	//
+	// r := bufio.NewReader(conn)
+	//
+	// lengthBytes, err := r.Peek(16)
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// } else {
+	// 	fmt.Println(lengthBytes)
+	// }
+	// bn := r.Buffered()
+	// fmt.Println(bn)
+	// r.Discard(16)
+	//
+	// lengthBytes, err = r.Peek(10)
+	// if err != nil {
+	// 	fmt.Println(err.Error())
+	// } else {
+	// 	fmt.Println(lengthBytes)
+	// }
+	//msg, err := t.serializer.DeserializePacket(conn)
+	// if err != nil {
+	// 	if err == io.EOF || err == io.ErrUnexpectedEOF {
+	// 		log.Warn("[ handleAcceptedConnection ] Connection closed by peer")
+	// 		return
+	// 	}
+	//
+	// 	log.Error("[ handleAcceptedConnection ] Failed to deserialize packet: ", err.Error())
+	// } else {
+	// 	ctx, logger := inslogger.WithTraceField(context.Background(), msg.TraceID)
+	// 	logger.Debug("[ handleAcceptedConnection ] Handling packet: ", msg.RequestID)
+	//
+	// 	go t.packetHandler.Handle(ctx, msg)
+	//}
 
 }

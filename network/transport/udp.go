@@ -51,49 +51,24 @@
 package transport
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"net"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/consensus"
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/utils"
 )
 
 const udpMaxPacketSize = 1400
 
 type udpTransport struct {
-	baseTransport
-	conn    net.PacketConn
-	address string
-}
-
-type udpSerializer struct{}
-
-func (b *udpSerializer) SerializePacket(q *packet.Packet) ([]byte, error) {
-	data, ok := q.Data.(packets.ConsensusPacket)
-	if !ok {
-		return nil, errors.New("could not convert packet to ConsensusPacket type")
-	}
-	return data.Serialize()
-}
-
-func (b *udpSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error) {
-	data, err := packets.ExtractPacket(conn)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert network datagram to ConsensusPacket")
-	}
-	p := &packet.Packet{}
-	p.Data = data
-	return p, nil
+	conn      net.PacketConn
+	address   string
+	processor DgramProcessor
 }
 
 func newUDPTransport(listenAddress, fixedPublicAddress string) (*udpTransport, string, error) {
@@ -106,14 +81,25 @@ func newUDPTransport(listenAddress, fixedPublicAddress string) (*udpTransport, s
 		return nil, "", errors.Wrap(err, "failed to resolve public address")
 	}
 
-	transport := &udpTransport{baseTransport: newBaseTransport(publicAddress), conn: conn}
-	transport.sendFunc = transport.send
-	transport.serializer = &udpSerializer{}
-
+	transport := &udpTransport{conn: conn}
 	return transport, publicAddress, nil
 }
 
-func (t *udpTransport) send(recvAddress string, data []byte) error {
+func (t *udpTransport) SendBuffer(ctx context.Context, address string, buff []byte) error {
+	return t.send(ctx, address, buff)
+}
+
+func (t *udpTransport) SendDgram(ctx context.Context, address string, buff []byte) error {
+	return t.send(ctx, address, buff)
+}
+
+func (t *udpTransport) SetDgramProcessor(processor DgramProcessor) {
+	t.processor = processor
+}
+
+func (t *udpTransport) SetStreamProcessor(processor StreamProcessor) {}
+
+func (t *udpTransport) send(ctx context.Context, recvAddress string, data []byte) error {
 	log.Debug("Sending PURE_UDP request")
 	if len(data) > udpMaxPacketSize {
 		return errors.New(fmt.Sprintf("udpTransport.send: too big input data. Maximum: %d. Current: %d",
@@ -127,24 +113,13 @@ func (t *udpTransport) send(recvAddress string, data []byte) error {
 		return errors.Wrap(err, "udpTransport.send")
 	}
 
-	udpConn, err := net.DialUDP("udp", nil, udpAddr)
-	if err != nil {
-		return errors.Wrap(err, "udpTransport.send")
-	}
-	defer utils.CloseVerbose(udpConn)
-
 	log.Debug("udpTransport.send: len = ", len(data))
-	n, err := udpConn.Write(data)
-	stats.Record(context.Background(), consensus.SentSize.M(int64(n)))
+	n, err := t.conn.WriteTo(data, udpAddr)
+	stats.Record(ctx, consensus.SentSize.M(int64(n)))
 	return errors.Wrap(err, "Failed to write data")
 }
 
 func (t *udpTransport) prepareListen() (net.PacketConn, error) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
-	t.disconnectStarted = make(chan bool, 1)
-	t.disconnectFinished = make(chan bool, 1)
 
 	if t.conn != nil {
 		t.address = t.conn.LocalAddr().String()
@@ -172,16 +147,22 @@ func (t *udpTransport) Start(ctx context.Context) error {
 
 	go func() {
 		for {
+			//todo handle stop
 			buf := make([]byte, udpMaxPacketSize)
 			n, addr, err := conn.ReadFrom(buf)
 			if err != nil {
-				<-t.disconnectFinished
+				//<-t.disconnectFinished
 				logger.Error("failed to read UDP: ", err.Error())
 				return // TODO: we probably shouldn't return here
 			}
 
 			stats.Record(ctx, consensus.RecvSize.M(int64(n)))
-			go t.handleAcceptedConnection(buf[:n], addr)
+			go func() {
+				err := t.processor.ProcessDgram(addr.String(), buf[:n])
+				if err != nil {
+					logger.Error("failed to process UDP packet: ", err.Error())
+				}
+			}()
 		}
 	}()
 
@@ -189,27 +170,7 @@ func (t *udpTransport) Start(ctx context.Context) error {
 }
 
 // Stop stops networking.
-func (t *udpTransport) Stop() {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
+func (t *udpTransport) Stop(ctx context.Context) error {
 	log.Info("Stop UDP transport")
-	t.prepareDisconnect()
-
-	if t.conn != nil {
-		utils.CloseVerbose(t.conn)
-		t.conn = nil
-	}
-}
-
-func (t *udpTransport) handleAcceptedConnection(data []byte, addr net.Addr) {
-	r := bytes.NewReader(data)
-	msg, err := t.serializer.DeserializePacket(r)
-	if err != nil {
-		log.Error("[ handleAcceptedConnection ] ", err)
-		return
-	}
-	log.Debug("[ handleAcceptedConnection ] Packet processed. size: ", len(data), ". Address: ", addr)
-
-	go t.packetHandler.Handle(context.TODO(), msg)
+	return t.conn.Close()
 }

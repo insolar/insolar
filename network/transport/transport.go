@@ -52,7 +52,9 @@ package transport
 
 import (
 	"context"
+	"io"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/future"
@@ -61,6 +63,25 @@ import (
 
 	"github.com/pkg/errors"
 )
+
+type StreamProcessor interface {
+	ProcessStream(address string, reader io.Reader) error
+}
+
+type DgramProcessor interface {
+	ProcessDgram(address string, buf []byte) error
+}
+
+type Transport2 interface {
+	component.Starter
+	component.Stopper
+
+	SendBuffer(ctx context.Context, address string, buff []byte) error
+	SendDgram(ctx context.Context, address string, buff []byte) error
+
+	SetDgramProcessor(processor DgramProcessor)
+	SetStreamProcessor(processor StreamProcessor)
+}
 
 // Transport is an interface for network transport.
 type Transport interface {
@@ -71,7 +92,7 @@ type Transport interface {
 	SendResponse(context.Context, network.RequestID, *packet.Packet) error
 
 	// SendPacket low-level send packet without requestId and without spawning a waiting future
-	SendPacket(ctx context.Context, p *packet.Packet) error
+	SendPacket(ctx context.Context, p *packet.Packet) error // for
 
 	// Start starts thread to listen incoming packets.
 	Start(ctx context.Context) error
@@ -89,13 +110,15 @@ type Transport interface {
 	Stopped() <-chan bool
 }
 
+func NewTransport2(cfg configuration.Transport) (Transport2, string, error) {
+	return newUDPTransport(cfg.Address, cfg.FixedPublicAddress)
+}
+
 // NewTransport creates new Network with particular configuration
 func NewTransport(cfg configuration.Transport) (Transport, string, error) {
 	switch cfg.Protocol {
 	case "TCP":
 		return newTCPTransport(cfg.Address, cfg.FixedPublicAddress)
-	case "PURE_UDP":
-		return newUDPTransport(cfg.Address, cfg.FixedPublicAddress)
 	default:
 		return nil, "", errors.New("invalid transport configuration")
 	}
