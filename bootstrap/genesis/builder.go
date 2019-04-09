@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
+	"github.com/insolar/insolar/logicrunner/preprocessor"
 	"github.com/pkg/errors"
 )
 
@@ -252,7 +252,7 @@ func parseContracts() (map[string]*preprocessor.ParsedFile, error) {
 		if err != nil {
 			return nil, errors.Wrap(err, "[ contractsMap ] couldn't get path to contracts: ")
 		}
-		parsed, err := preprocessor.ParseFile(contractPath)
+		parsed, err := preprocessor.ParseFile(contractPath, insolar.MachineTypeGoPlugin)
 		if err != nil {
 			return nil, errors.Wrapf(err, "[ contractsMap ] couldn't read contract: %v", contractPath)
 		}

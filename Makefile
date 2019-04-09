@@ -99,7 +99,7 @@ $(INSOLAR):
 	go build -o $(BIN_DIR)/$(INSOLAR) ${BUILD_TAGS} -ldflags "${LDFLAGS}" cmd/insolar/*.go
 
 .PHONY: $(INSGOCC)
-$(INSGOCC): cmd/insgocc/insgocc.go logicrunner/goplugin/preprocessor
+$(INSGOCC): cmd/insgocc/insgocc.go logicrunner/preprocessor
 	go build -o $(BININSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
 
 $(BININSGOCC): $(INSGOCC)

@@ -25,11 +25,11 @@ import (
 	"path"
 	"path/filepath"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/preprocessor"
 )
 
 type outputFlag struct {
