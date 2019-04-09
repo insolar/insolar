@@ -85,7 +85,6 @@ func (s *Initializer) Run() {
 		sc.recordDB,
 		sc.storageDBContext,
 		sc.storeBadgerDB,
-		sc.objectStorage,
 		sc.pulseDB,
 	)
 
@@ -102,7 +101,7 @@ func (s *Initializer) Run() {
 		PulseAppender:  sc.pulseDB,
 		PulseAccessor:  sc.pulseDB,
 		RecordModifier: sc.recordDB,
-		ObjectStorage:  sc.objectStorage,
+		IndexModifier:  sc.indexDB,
 	}
 	genesisRef, isInit, err := genesisBaseRecord.CreateIfNeeded(ctx)
 	checkError(ctx, err, "failed to start genesis init")
@@ -114,7 +113,8 @@ func (s *Initializer) Run() {
 			BlobModifier:               sc.blobDB,
 			RecordsModifier:            sc.recordDB,
 
-			ObjectStorage: sc.objectStorage,
+			IndexModifier: sc.indexDB,
+			IndexAccessor: sc.indexDB,
 		}
 
 		genesisGenerator := NewGenerator(

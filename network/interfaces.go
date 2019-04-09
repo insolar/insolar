@@ -92,6 +92,8 @@ type RequestHandler func(context.Context, Request) (Response, error)
 // HostNetwork simple interface to send network requests and process network responses.
 //go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock.go
 type HostNetwork interface {
+	component.Starter
+	component.Stopper
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 	// GetNodeID get current node ID.
@@ -99,6 +101,8 @@ type HostNetwork interface {
 
 	// SendRequest send request to a remote node.
 	SendRequest(ctx context.Context, request Request, receiver insolar.Reference) (Future, error)
+	// SendRequestToHost send request packet to a remote node.
+	SendRequestToHost(ctx context.Context, request Request, receiver *host.Host) (Future, error)
 	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 	RegisterRequestHandler(t types.PacketType, handler RequestHandler)
 	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
@@ -253,25 +257,6 @@ type RoutingTable interface {
 	AddToKnownHosts(*host.Host)
 	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
 	Rebalance(PartitionPolicy)
-}
-
-// InternalTransport simple interface to send network requests and process network responses.
-type InternalTransport interface {
-	component.Starter
-	component.Stopper
-	// PublicAddress returns public address that can be published for all nodes.
-	PublicAddress() string
-	// GetNodeID get current node ID.
-	GetNodeID() insolar.Reference
-
-	// SendRequestPacket send request packet to a remote node.
-	SendRequestPacket(ctx context.Context, request Request, receiver *host.Host) (Future, error)
-	// RegisterPacketHandler register a handler function to process incoming requests of a specific type.
-	RegisterPacketHandler(t types.PacketType, handler RequestHandler)
-	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
-	NewRequestBuilder() RequestBuilder
-	// BuildResponse create response to an incoming request with Data set to responseData.
-	BuildResponse(ctx context.Context, request Request, responseData interface{}) Response
 }
 
 // ClaimQueue is the queue that contains consensus claims.
