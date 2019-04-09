@@ -60,3 +60,5 @@ coverage.txt
 cmd/insolard/new-data
 new-data
 network/servicenetwork/network_cache
+network_cache
+
