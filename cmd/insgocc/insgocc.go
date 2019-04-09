@@ -25,7 +25,9 @@ import (
 	"path"
 	"path/filepath"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
+
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 )
@@ -79,7 +81,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			parsed, err := preprocessor.ParseFile(args[0])
+			parsed, err := preprocessor.ParseFile(args[0], insolar.MachineTypeGoPlugin)
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "couldn't parse"))
 				os.Exit(1)
@@ -132,7 +134,7 @@ func main() {
 				fmt.Println("wrapper command should be followed by exactly one file name to process")
 				os.Exit(1)
 			}
-			parsed, err := preprocessor.ParseFile(args[0])
+			parsed, err := preprocessor.ParseFile(args[0], insolar.MachineTypeGoPlugin)
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "couldn't parse"))
 				os.Exit(1)
@@ -155,7 +157,7 @@ func main() {
 				fmt.Println("imports command should be followed by exactly one file name to process")
 				os.Exit(1)
 			}
-			parsed, err := preprocessor.ParseFile(args[0])
+			parsed, err := preprocessor.ParseFile(args[0], insolar.MachineTypeGoPlugin)
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "couldn't parse"))
 				os.Exit(1)
@@ -186,7 +188,7 @@ func main() {
 				fmt.Println("compile command should be followed by exactly one file name to compile")
 				os.Exit(1)
 			}
-			parsed, err := preprocessor.ParseFile(args[0])
+			parsed, err := preprocessor.ParseFile(args[0], insolar.MachineTypeGoPlugin)
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)

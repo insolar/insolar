@@ -49,12 +49,21 @@ var corePath = "github.com/insolar/insolar/insolar"
 
 var immutableFlag = "//ins:immutable"
 
+const (
+	TemplateDirectory       = "templates"
+	GopluginWrapperTemplate = "wrapper_goplugin.go.tpl"
+	GopluginProxyTemplate   = "proxy_goplugin.go.tpl"
+	BuiltinWrapperTemplate  = "wrapper_builtin.go.tpl"
+	BuiltinProxyTemplate    = "proxy_builting.go.tpl"
+)
+
 // ParsedFile struct with prepared info we extract from source code
 type ParsedFile struct {
-	name    string
-	code    []byte
-	fileSet *token.FileSet
-	node    *ast.File
+	name        string
+	code        []byte
+	fileSet     *token.FileSet
+	node        *ast.File
+	machineType insolar.MachineType
 
 	types        map[string]*ast.TypeSpec
 	methods      map[string][]*ast.FuncDecl
@@ -64,9 +73,10 @@ type ParsedFile struct {
 
 // ParseFile parses a file as Go source code of a smart contract
 // and returns it as `ParsedFile`
-func ParseFile(fileName string) (*ParsedFile, error) {
+func ParseFile(fileName string, machineType insolar.MachineType) (*ParsedFile, error) {
 	res := &ParsedFile{
-		name: fileName,
+		name:        fileName,
+		machineType: machineType,
 	}
 	sourceCode, err := slurpFile(fileName)
 	if err != nil {
@@ -228,7 +238,12 @@ func (pf *ParsedFile) ContractName() string {
 func (pf *ParsedFile) WriteWrapper(out io.Writer) error {
 	packageName := pf.node.Name.Name
 
-	tmpl, err := openTemplate("templates/wrapper.go.tpl")
+	templatePath := GopluginWrapperTemplate
+	if pf.machineType == insolar.MachineTypeBuiltin {
+		templatePath = BuiltinWrapperTemplate
+	}
+	templatePath = path.Join(TemplateDirectory, templatePath)
+	tmpl, err := openTemplate(templatePath)
 	if err != nil {
 		return errors.Wrap(err, "couldn't open template file for wrapper")
 	}
@@ -284,7 +299,12 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		return errors.Wrap(err, "can't write proxy: ")
 	}
 
-	tmpl, err := openTemplate("templates/proxy.go.tpl")
+	templatePath := GopluginProxyTemplate
+	if pf.machineType == insolar.MachineTypeBuiltin {
+		templatePath = BuiltinProxyTemplate
+	}
+	templatePath = path.Join(TemplateDirectory, templatePath)
+	tmpl, err := openTemplate(templatePath)
 	if err != nil {
 		return errors.Wrap(err, "couldn't open template file for proxy")
 	}
