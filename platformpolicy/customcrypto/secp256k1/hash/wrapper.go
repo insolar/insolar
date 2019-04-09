@@ -14,10 +14,37 @@
 // limitations under the License.
 //
 
-package keys
+package hash
 
-// PublicKey represents a public key using an unspecified algorithm.
-type PublicKey interface{}
+import (
+	"hash"
+)
 
-// PrivateKey represents a private key using an unspecified algorithm.
-type PrivateKey interface{}
+type hashWrapper struct {
+	hash    hash.Hash
+	sumFunc func([]byte) []byte
+}
+
+func (h *hashWrapper) Write(p []byte) (n int, err error) {
+	return h.hash.Write(p)
+}
+
+func (h *hashWrapper) Sum(b []byte) []byte {
+	return h.hash.Sum(b)
+}
+
+func (h *hashWrapper) Reset() {
+	h.hash.Reset()
+}
+
+func (h *hashWrapper) Size() int {
+	return h.hash.Size()
+}
+
+func (h *hashWrapper) BlockSize() int {
+	return h.hash.BlockSize()
+}
+
+func (h *hashWrapper) Hash(b []byte) []byte {
+	return h.sumFunc(b)[:]
+}

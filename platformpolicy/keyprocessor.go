@@ -14,10 +14,10 @@ const (
 type AlgorithmType string
 
 func NewKeyProcessor() insolar.KeyProcessor {
-	return NewKeyProcessor1(SECP256K1)
+	return newKeyProcessor(SECP256K1)
 }
 
-func NewKeyProcessor1(algorithmType AlgorithmType) insolar.KeyProcessor {
+func newKeyProcessor(algorithmType AlgorithmType) insolar.KeyProcessor {
 	switch algorithmType {
 	case SECP256K1:
 		return secp256k1.NewKeyProcessor()

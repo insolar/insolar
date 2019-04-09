@@ -43,6 +43,18 @@ var (
 	name      = "secp256k1"
 )
 
+func Secp256k1() elliptic.Curve {
+	return &CurveParams{
+		P:       p,
+		N:       n,
+		B:       b,
+		Gx:      gx,
+		Gy:      gy,
+		BitSize: bitSize,
+		Name:    name,
+	}
+}
+
 func (curve *CurveParams) Params() *elliptic.CurveParams {
 	return &elliptic.CurveParams{
 		P:       p,
@@ -204,16 +216,4 @@ func (curve *CurveParams) ScalarMult(Bx, By *big.Int, k []byte) (x, y *big.Int) 
 
 func (curve *CurveParams) ScalarBaseMult(k []byte) (x, y *big.Int) {
 	return curve.ScalarMult(curve.Gx, curve.Gy, k)
-}
-
-func Secp256k1() elliptic.Curve {
-	return &CurveParams{
-		P:       p,
-		N:       n,
-		B:       b,
-		Gx:      gx,
-		Gy:      gy,
-		BitSize: bitSize,
-		Name:    name,
-	}
 }

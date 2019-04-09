@@ -14,10 +14,26 @@
 // limitations under the License.
 //
 
-package keys
+package sign
 
-// PublicKey represents a public key using an unspecified algorithm.
-type PublicKey interface{}
+import (
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/platformpolicy/algorithmprovider"
+	"github.com/insolar/insolar/platformpolicy/keys"
+)
 
-// PrivateKey represents a private key using an unspecified algorithm.
-type PrivateKey interface{}
+type myProvider struct {
+	HashProvider algorithmprovider.HashAlgorithmProvider `inject:""`
+}
+
+func NewMyProvider() algorithmprovider.SignAlgorithmProvider {
+	return nil
+}
+
+func (p *myProvider) Sign(privateKey keys.PrivateKey) insolar.Signer {
+	return nil
+}
+
+func (p *myProvider) Verify(publicKey keys.PublicKey) insolar.Verifier {
+	return nil
+}

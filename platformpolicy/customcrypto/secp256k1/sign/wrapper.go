@@ -14,10 +14,28 @@
 // limitations under the License.
 //
 
-package keys
+package sign
 
-// PublicKey represents a public key using an unspecified algorithm.
-type PublicKey interface{}
+import (
+	"github.com/insolar/insolar/platformpolicy/customcrypto/secp256k1"
 
-// PrivateKey represents a private key using an unspecified algorithm.
-type PrivateKey interface{}
+	"github.com/insolar/insolar/insolar"
+)
+
+type mySignerWrapper struct {
+	privateKey *secp256k1.PrivateKey
+	hasher     insolar.Hasher
+}
+
+func (sw *mySignerWrapper) Sign(data []byte) (*insolar.Signature, error) {
+	return &insolar.Signature{}, nil
+}
+
+type myVerifyWrapper struct {
+	publicKey *secp256k1.PublicKey
+	hasher    insolar.Hasher
+}
+
+func (sw *myVerifyWrapper) Verify(signature insolar.Signature, data []byte) bool {
+	return false
+}
