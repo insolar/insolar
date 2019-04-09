@@ -89,7 +89,7 @@ type Transport interface {
 	Stopped() <-chan bool
 }
 
-// NewTransport creates new Transport with particular configuration
+// NewTransport creates new Network with particular configuration
 func NewTransport(cfg configuration.Transport) (Transport, string, error) {
 	switch cfg.Protocol {
 	case "TCP":
