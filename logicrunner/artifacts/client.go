@@ -268,17 +268,17 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 		return nil, err
 	}
 
-	var requestIDReply *reply.ID
+	var requestID insolar.ID
 	switch r := genericReply.(type) {
 	case *reply.ID:
-		requestIDReply = r
+		requestID = r.ID
 	case *reply.Error:
 		return nil, r.Error()
 	default:
 		return nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", requestIDReply)
 	}
 
-	node, err := m.JetCoordinator.NodeForObject(ctx, objectID, currentPN, requestIDReply.ID.Pulse())
+	node, err := m.JetCoordinator.NodeForObject(ctx, objectID, currentPN, requestID.Pulse())
 
 	if err != nil {
 		return nil, err
@@ -291,7 +291,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 	genericReply, err = sender(
 		ctx,
 		&message.GetRequest{
-			Request: requestIDReply.ID,
+			Request: requestID,
 		}, &insolar.MessageSendOptions{
 			Receiver: node,
 		},
