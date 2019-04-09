@@ -33,13 +33,13 @@ func NewECDSAProvider() algorithmprovider.SignAlgorithmProvider {
 func (p *ecdsaProvider) Sign(privateKey keys.PrivateKey) insolar.Signer {
 	return &ecdsaSignerWrapper{
 		privateKey: MustConvertPrivateKeyToEcdsa(privateKey),
-		hasher:     p.HashProvider.Hash512bits(),
+		hasher:     p.HashProvider.Hash256bits(),
 	}
 }
 
 func (p *ecdsaProvider) Verify(publicKey keys.PublicKey) insolar.Verifier {
 	return &ecdsaVerifyWrapper{
 		publicKey: MustConvertPublicKeyToEcdsa(publicKey),
-		hasher:    p.HashProvider.Hash512bits(),
+		hasher:    p.HashProvider.Hash256bits(),
 	}
 }
