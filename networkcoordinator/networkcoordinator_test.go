@@ -54,6 +54,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/gateway"
+	testnetwork "github.com/insolar/insolar/testutils/network"
+
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
@@ -66,19 +70,16 @@ import (
 
 func TestNewNetworkCoordinator(t *testing.T) {
 	certificateManager := testutils.NewCertificateManagerMock(t)
-	networkSwitcher := testutils.NewNetworkSwitcherMock(t)
 	contractRequester := testutils.NewContractRequesterMock(t)
 	messageBus := testutils.NewMessageBusMock(t)
 	cs := testutils.NewCryptographyServiceMock(t)
-
 	nc, err := New()
 	require.NoError(t, err)
 	require.Equal(t, &NetworkCoordinator{}, nc)
 
 	cm := &component.Manager{}
-	cm.Inject(certificateManager, networkSwitcher, contractRequester, messageBus, cs, nc)
+	cm.Inject(certificateManager, contractRequester, messageBus, cs, nc, testnetwork.NewGatewayerMock(t))
 	require.Equal(t, certificateManager, nc.CertificateManager)
-	require.Equal(t, networkSwitcher, nc.NetworkSwitcher)
 	require.Equal(t, contractRequester, nc.ContractRequester)
 	require.Equal(t, messageBus, nc.MessageBus)
 	require.Equal(t, cs, nc.CS)
@@ -98,11 +99,11 @@ func TestNetworkCoordinator_Start(t *testing.T) {
 func TestNetworkCoordinator_GetCoordinator_Zero(t *testing.T) {
 	nc, err := New()
 	require.NoError(t, err)
-	ns := testutils.NewNetworkSwitcherMock(t)
-	ns.GetStateFunc = func() insolar.NetworkState {
-		return insolar.NoNetworkState
+	gw := testnetwork.NewGatewayerMock(t)
+	gw.GatewayFunc = func() (r network.Gateway) {
+		return &gateway.NoNetwork{}
 	}
-	nc.NetworkSwitcher = ns
+	nc.Gatewayer = gw
 	nc.MessageBus = mockMessageBus(t, true, nil, nil)
 	ctx := context.Background()
 	nc.Start(ctx)
@@ -113,11 +114,11 @@ func TestNetworkCoordinator_GetCoordinator_Zero(t *testing.T) {
 func TestNetworkCoordinator_GetCoordinator_Real(t *testing.T) {
 	nc, err := New()
 	require.NoError(t, err)
-	ns := testutils.NewNetworkSwitcherMock(t)
-	ns.GetStateFunc = func() insolar.NetworkState {
-		return insolar.CompleteNetworkState
+	gw := testnetwork.NewGatewayerMock(t)
+	gw.GatewayFunc = func() (r network.Gateway) {
+		return &gateway.Complete{}
 	}
-	nc.NetworkSwitcher = ns
+	nc.Gatewayer = gw
 	nc.MessageBus = mockMessageBus(t, true, nil, nil)
 	ctx := context.Background()
 	nc.Start(ctx)

@@ -76,6 +76,7 @@ type networkBootstrapper struct {
 	SessionManager      SessionManager              `inject:""`
 	AuthController      AuthorizationController     `inject:""`
 	ChallengeController ChallengeResponseController `inject:""`
+	Gatewayer           network.Gatewayer           `inject:""`
 }
 
 func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult, error) {
@@ -101,6 +102,8 @@ func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.Bootstra
 		return nil, errors.Wrap(err, "failed to bootstrap")
 	}
 	nb.NodeKeeper.SetIsBootstrapped(true)
+	nb.Gatewayer.SetGateway(nb.Gatewayer.Gateway().NewGateway(insolar.CompleteNetworkState))
+	nb.Gatewayer.Gateway().Run(ctx)
 	return result, nil
 }
 

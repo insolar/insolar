@@ -297,6 +297,7 @@ type Mutator interface {
 }
 
 // Gatewayer is a network which can change it's Gateway
+//go:generate minimock -i github.com/insolar/insolar/network.Gatewayer -o ../testutils/network -s _mock.go
 type Gatewayer interface {
 	Gateway() Gateway
 	SetGateway(Gateway)
@@ -304,7 +305,8 @@ type Gatewayer interface {
 
 // Gateway responds for whole network state
 type Gateway interface {
-	Run()
+	Run(context.Context)
 	GetState() insolar.NetworkState
 	OnPulse(context.Context, insolar.Pulse) error
+	NewGateway(insolar.NetworkState) Gateway
 }

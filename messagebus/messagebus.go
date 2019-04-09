@@ -25,6 +25,8 @@ import (
 	"sync"
 	"time"
 
+	"go.opencensus.io/trace"
+
 	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -56,10 +58,40 @@ type MessageBus struct {
 	handlers     map[insolar.MessageType]insolar.MessageHandler
 	signmessages bool
 
+	counter uint64
+	span    *trace.Span
+
 	globalLock                  sync.RWMutex
 	NextPulseMessagePoolChan    chan interface{}
 	NextPulseMessagePoolCounter uint32
 	NextPulseMessagePoolLock    sync.RWMutex
+}
+
+func (mb *MessageBus) Acquire(ctx context.Context) {
+	ctx, span := instracer.StartSpan(ctx, "NetworkSwitcher.Acquire")
+	defer span.End()
+	inslogger.FromContext(ctx).Info("Call Acquire in NetworkSwitcher: ", mb.counter)
+	mb.counter = mb.counter + 1
+	if mb.counter-1 == 0 {
+		inslogger.FromContext(ctx).Info("Lock MB")
+		ctx, mb.span = instracer.StartSpan(context.Background(), "GIL Lock (Lock MB)")
+		mb.Lock(ctx)
+	}
+}
+
+func (mb *MessageBus) Release(ctx context.Context) {
+	ctx, span := instracer.StartSpan(ctx, "NetworkSwitcher.Release")
+	defer span.End()
+	inslogger.FromContext(ctx).Info("Call Release in NetworkSwitcher: ", mb.counter)
+	if mb.counter == 0 {
+		panic("Trying to unlock without locking")
+	}
+	mb.counter = mb.counter - 1
+	if mb.counter == 0 {
+		inslogger.FromContext(ctx).Info("Unlock MB")
+		mb.Unlock(ctx)
+		mb.span.End()
+	}
 }
 
 // NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that

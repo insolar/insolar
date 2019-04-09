@@ -56,15 +56,15 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-func NewJetless(c *commons) *Jetless {
-	return &Jetless{c: c}
+func NewJetless(b *Base) *Jetless {
+	return &Jetless{Base: b}
 }
 
 type Jetless struct {
-	c *commons
+	*Base
 }
 
-func (g *Jetless) Run() {
+func (g *Jetless) Run(ctx context.Context) {
 	panic("implement me")
 }
 

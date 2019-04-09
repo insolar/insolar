@@ -46,54 +46,34 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
 
 package gateway
 
 import (
-	"context"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
-
-	"go.opencensus.io/trace"
 )
 
-type commons struct {
-	counter uint64
-	span    *trace.Span
+// Base is abstract class for gateways
 
-	Network  network.Gatewayer
-	MBLocker insolar.MessageBusLocker
+type Base struct {
+	Network network.Gatewayer
+	GIL     insolar.GlobalInsolarLock
 }
 
-// Acquire increases lock counter and locks message bus if it wasn't lock before
-func Acquire(ctx context.Context, c *commons) {
-	ctx, span := instracer.StartSpan(ctx, "NetworkSwitcher.Acquire")
-	defer span.End()
-	inslogger.FromContext(ctx).Info("Call Acquire in NetworkSwitcher: ", c.counter)
-	c.counter = c.counter + 1
-	if c.counter-1 == 0 {
-		inslogger.FromContext(ctx).Info("Lock MB")
-		ctx, c.span = instracer.StartSpan(context.Background(), "GIL Lock (Lock MB)")
-		c.MBLocker.Lock(ctx)
+// NewGateway creates new gateway on top of existing
+func (b *Base) NewGateway(state insolar.NetworkState) network.Gateway {
+	switch state {
+	case insolar.NoNetworkState:
+		panic("Do not reinit network with alive gateway")
+	case insolar.VoidNetworkState:
+		return NewVoid(b)
+	case insolar.JetlessNetworkState:
+		return NewJetless(b)
+	case insolar.AuthorizationNetworkState:
+		return NewAuthorisation(b)
+	case insolar.CompleteNetworkState:
+		return NewComple(b)
 	}
-}
-
-// Release decreases lock counter and unlocks message bus if it wasn't lock by someone else
-func Release(ctx context.Context, c *commons) {
-	ctx, span := instracer.StartSpan(ctx, "NetworkSwitcher.Release")
-	defer span.End()
-	inslogger.FromContext(ctx).Info("Call Release in NetworkSwitcher: ", c.counter)
-	if c.counter == 0 {
-		panic("Trying to unlock without locking")
-	}
-	c.counter = c.counter - 1
-	if c.counter == 0 {
-		inslogger.FromContext(ctx).Info("Unlock MB")
-		c.MBLocker.Unlock(ctx)
-		c.span.End()
-	}
+	panic("Try to switch network to unknown state. Memory of process is inconsistent.")
 }

@@ -56,16 +56,16 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-func NewVoid(c *commons) *Void {
-	return &Void{c: c}
+func NewVoid(b *Base) *Void {
+	return &Void{b}
 }
 
 // VoidNetwork void network state
 type Void struct {
-	c *commons
+	*Base
 }
 
-func (g *Void) Run() {
+func (g *Void) Run(ctx context.Context) {
 	panic("implement me")
 }
 

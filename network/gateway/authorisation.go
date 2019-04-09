@@ -56,15 +56,15 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-func NewAuthorisation(c *commons) *Authorisation {
-	return &Authorisation{c: c}
+func NewAuthorisation(b *Base) *Authorisation {
+	return &Authorisation{Base: b}
 }
 
 type Authorisation struct {
-	c *commons
+	*Base
 }
 
-func (g *Authorisation) Run() {
+func (g *Authorisation) Run(ctx context.Context) {
 	panic("implement me")
 }
 

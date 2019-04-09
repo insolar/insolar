@@ -52,24 +52,30 @@ package gateway
 
 import (
 	"context"
+	"time"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/metrics"
 
 	"github.com/insolar/insolar/insolar"
 )
 
-func NewComple(c *commons) *Complete {
-	return &Complete{c: c}
+func NewComple(b *Base) *Complete {
+	return &Complete{Base: b}
 }
 
 type Complete struct {
-	c *commons
+	*Base
 }
 
-func (g *Complete) Run() {
-	panic("implement me")
+func (g *Complete) Run(ctx context.Context) {
+	g.GIL.Release(ctx)
+	metrics.NetworkComplete.Set(float64(time.Now().Unix()))
+	inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state switched to: CompleteNetworkState")
 }
 
 func (g *Complete) GetState() insolar.NetworkState {
-	panic("implement me")
+	return insolar.CompleteNetworkState
 }
 
 func (g *Complete) OnPulse(context.Context, insolar.Pulse) error {

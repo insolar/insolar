@@ -60,17 +60,16 @@ import (
 )
 
 // NewNoNetwork this initial constructor have special signature to be called outside
-func NewNoNetwork(n network.Gatewayer, mb insolar.MessageBusLocker) *NoNetwork {
-	return &NoNetwork{c: &commons{Network: n, MBLocker: mb}}
+func NewNoNetwork(n network.Gatewayer, gil insolar.GlobalInsolarLock) *NoNetwork {
+	return &NoNetwork{&Base{Network: n, GIL: gil}}
 }
 
 // NoNetwork initial state
 type NoNetwork struct {
-	c *commons
+	*Base
 }
 
-func (g *NoNetwork) Run() {
-
+func (g *NoNetwork) Run(ctx context.Context) {
 }
 
 func (g *NoNetwork) GetState() insolar.NetworkState {

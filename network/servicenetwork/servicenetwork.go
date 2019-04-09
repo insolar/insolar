@@ -91,9 +91,8 @@ type ServiceNetwork struct {
 	CryptographyService insolar.CryptographyService `inject:""`
 	NetworkCoordinator  insolar.NetworkCoordinator  `inject:""`
 	NodeKeeper          network.NodeKeeper          `inject:""`
-	NetworkSwitcher     insolar.NetworkSwitcher     `inject:""`
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
-	MBLocker            insolar.MessageBusLocker    `inject:""`
+	GIL                 insolar.GlobalInsolarLock   `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
@@ -195,8 +194,8 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
 
-	n.gateway = gateway.NewNoNetwork(n, n.MBLocker)
-	n.gateway.Run()
+	n.gateway = gateway.NewNoNetwork(n, n.GIL)
+	n.gateway.Run(ctx)
 
 	return nil
 }
@@ -295,13 +294,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 		}
 	}
 
-	err := n.NetworkSwitcher.OnPulse(ctx, newPulse)
-	if err != nil {
-		logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
-	}
-
-	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
-	err = n.PulseManager.Set(ctx, newPulse, n.NetworkSwitcher.GetState() == insolar.CompleteNetworkState)
+	err := n.PulseManager.Set(ctx, newPulse, n.Gateway().GetState() == insolar.CompleteNetworkState)
 	if err != nil {
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
