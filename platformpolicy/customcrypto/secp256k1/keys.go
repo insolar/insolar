@@ -20,7 +20,6 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/x509"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"encoding/pem"
@@ -60,12 +59,144 @@ func (*keyProcessor) ImportPublicKeyPEM(pemEncoded []byte) (keys.PublicKey, erro
 		return nil, fmt.Errorf("[ ImportPublicKey ] Problems with decoding. Key - %v", pemEncoded)
 	}
 	x509EncodedPub := blockPub.Bytes
-	publicKey, err := x509.ParsePKIXPublicKey(x509EncodedPub)
+	publicKey, err := ParsePKIXPublicKey(x509EncodedPub)
 	if err != nil {
 		return nil, fmt.Errorf("[ ImportPublicKey ] Problems with parsing. Key - %v", pemEncoded)
 	}
 	return publicKey, nil
 }
+
+/////
+type PublicKeyAlgorithm int
+
+type publicKeyInfo struct {
+	Raw       asn1.RawContent
+	Algorithm pkix.AlgorithmIdentifier
+	PublicKey asn1.BitString
+}
+
+const (
+	UnknownPublicKeyAlgorithm PublicKeyAlgorithm = iota
+	ECDSA
+)
+
+func namedCurveFromOID(oid asn1.ObjectIdentifier) elliptic.Curve {
+	return elliptic.P256()
+}
+
+func parsePublicKey(algo PublicKeyAlgorithm, keyData *publicKeyInfo) (interface{}, error) {
+	asn1Data := keyData.PublicKey.RightAlign()
+	switch algo {
+	case ECDSA:
+		paramsData := keyData.Algorithm.Parameters.FullBytes
+		namedCurveOID := new(asn1.ObjectIdentifier)
+		rest, err := asn1.Unmarshal(paramsData, namedCurveOID)
+		if err != nil {
+			return nil, errors.New("x509: failed to parse ECDSA parameters as named curve")
+		}
+		if len(rest) != 0 {
+			return nil, errors.New("x509: trailing data after ECDSA parameters")
+		}
+		namedCurve := namedCurveFromOID(*namedCurveOID)
+		if namedCurve == nil {
+			return nil, errors.New("x509: unsupported elliptic curve")
+		}
+		x, y := elliptic.Unmarshal(namedCurve, asn1Data)
+		if x == nil {
+			return nil, errors.New("x509: failed to unmarshal elliptic curve point")
+		}
+		pub := &ecdsa.PublicKey{
+			Curve: namedCurve,
+			X:     x,
+			Y:     y,
+		}
+		return pub, nil
+	default:
+		return nil, nil
+	}
+}
+
+func ParsePKIXPublicKey(derBytes []byte) (pub interface{}, err error) {
+	var pki publicKeyInfo
+	if rest, err := asn1.Unmarshal(derBytes, &pki); err != nil {
+		return nil, err
+	} else if len(rest) != 0 {
+		return nil, errors.New("x509: trailing data after ASN.1 of public-key")
+	}
+	algo := getPublicKeyAlgorithmFromOID(pki.Algorithm.Algorithm)
+	if algo == UnknownPublicKeyAlgorithm {
+		return nil, errors.New("x509: unknown public key algorithm")
+	}
+	return parsePublicKey(algo, &pki)
+}
+
+var (
+	oidPublicKeyECDSA = asn1.ObjectIdentifier{1, 2, 840, 10045, 2, 1}
+)
+
+func getPublicKeyAlgorithmFromOID(oid asn1.ObjectIdentifier) PublicKeyAlgorithm {
+	switch {
+	case oid.Equal(oidPublicKeyECDSA):
+		return ECDSA
+	}
+	return UnknownPublicKeyAlgorithm
+}
+
+func ParseECPrivateKey(der []byte) (*ecdsa.PrivateKey, error) {
+	return parseECPrivateKey(nil, der)
+}
+
+const ecPrivKeyVersion = 1
+
+func parseECPrivateKey(namedCurveOID *asn1.ObjectIdentifier, der []byte) (key *ecdsa.PrivateKey, err error) {
+	var privKey ecPrivateKey
+	if _, err := asn1.Unmarshal(der, &privKey); err != nil {
+		return nil, errors.New("x509: failed to parse EC private key: " + err.Error())
+	}
+	if privKey.Version != ecPrivKeyVersion {
+		return nil, fmt.Errorf("x509: unknown EC private key version %d", privKey.Version)
+	}
+
+	var curve elliptic.Curve
+	if namedCurveOID != nil {
+		curve = namedCurveFromOID(*namedCurveOID)
+	} else {
+		curve = namedCurveFromOID(privKey.NamedCurveOID)
+	}
+	if curve == nil {
+		return nil, errors.New("x509: unknown elliptic curve")
+	}
+
+	k := new(big.Int).SetBytes(privKey.PrivateKey)
+	curveOrder := curve.Params().N
+	if k.Cmp(curveOrder) >= 0 {
+		return nil, errors.New("x509: invalid elliptic curve private key value")
+	}
+	priv := new(ecdsa.PrivateKey)
+	priv.Curve = curve
+	priv.D = k
+
+	privateKey := make([]byte, (curveOrder.BitLen()+7)/8)
+
+	// Some private keys have leading zero padding. This is invalid
+	// according to [SEC1], but this code will ignore it.
+	for len(privKey.PrivateKey) > len(privateKey) {
+		if privKey.PrivateKey[0] != 0 {
+			return nil, errors.New("x509: invalid private key length")
+		}
+		privKey.PrivateKey = privKey.PrivateKey[1:]
+	}
+
+	// Some private keys remove all leading zeros, this is also invalid
+	// according to [SEC1] but since OpenSSL used to do this, we ignore
+	// this too.
+	copy(privateKey[len(privateKey)-len(privKey.PrivateKey):], privKey.PrivateKey)
+	priv.X, priv.Y = curve.ScalarBaseMult(privateKey)
+
+	return priv, nil
+}
+
+////
 
 func (*keyProcessor) ImportPrivateKeyPEM(pemEncoded []byte) (keys.PrivateKey, error) {
 	block, _ := pem.Decode(pemEncoded)
@@ -73,7 +204,7 @@ func (*keyProcessor) ImportPrivateKeyPEM(pemEncoded []byte) (keys.PrivateKey, er
 		return nil, fmt.Errorf("[ ImportPrivateKey ] Problems with decoding. Key - %v", pemEncoded)
 	}
 	x509Encoded := block.Bytes
-	privateKey, err := x509.ParseECPrivateKey(x509Encoded)
+	privateKey, err := ParseECPrivateKey(x509Encoded)
 	if err != nil {
 		return nil, fmt.Errorf("[ ImportPrivateKey ] Problems with parsing. Key - %v", pemEncoded)
 	}
@@ -153,7 +284,8 @@ func oidFromNamedCurve(curve elliptic.Curve) (asn1.ObjectIdentifier, bool) {
 		return asn1.ObjectIdentifier{1, 2, 840, 10045, 3, 1, 7}, true
 	}
 
-	return nil, false
+	//return nil, false
+	return asn1.ObjectIdentifier{1, 2, 840, 10045, 3, 1, 7}, true
 }
 
 type ecPrivateKey struct {
