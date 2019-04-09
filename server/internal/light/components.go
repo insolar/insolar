@@ -46,7 +46,6 @@ import (
 type bootstrapComponents struct {
 	CryptographyService        insolar.CryptographyService
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme
-	KeyStore                   insolar.KeyStore
 	KeyProcessor               insolar.KeyProcessor
 }
 
@@ -66,7 +65,6 @@ func initBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 	return bootstrapComponents{
 		CryptographyService:        cryptographyService,
 		PlatformCryptographyScheme: platformCryptographyScheme,
-		KeyStore:                   keyStore,
 		KeyProcessor:               keyProcessor,
 	}
 }
@@ -95,7 +93,6 @@ func initComponents(
 	cfg configuration.Configuration,
 	cryptographyService insolar.CryptographyService,
 	platformCryptographyScheme insolar.PlatformCryptographyScheme,
-	keyStore insolar.KeyStore,
 	keyProcessor insolar.KeyProcessor,
 	certManager insolar.CertificateManager,
 
@@ -146,7 +143,6 @@ func initComponents(
 	cm.Register(
 		terminationHandler,
 		platformCryptographyScheme,
-		keyStore,
 		cryptographyService,
 		keyProcessor,
 		certManager,

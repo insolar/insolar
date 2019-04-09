@@ -71,6 +71,15 @@ func (s *Server) Serve() {
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)
+	cm, err := initComponents(
+		ctx,
+		*cfg,
+		bootstrapComponents.CryptographyService,
+		bootstrapComponents.PlatformCryptographyScheme,
+		bootstrapComponents.KeyProcessor,
+		certManager,
+	)
+	checkError(ctx, err, "failed to init components")
 
 	jaegerflush := func() {}
 	if s.trace {
@@ -86,17 +95,6 @@ func (s *Server) Serve() {
 		ctx = instracer.SetBaggage(ctx, instracer.Entry{Key: "traceid", Value: traceID})
 	}
 	defer jaegerflush()
-
-	cm, err := initComponents(
-		ctx,
-		*cfg,
-		bootstrapComponents.CryptographyService,
-		bootstrapComponents.PlatformCryptographyScheme,
-		bootstrapComponents.KeyStore,
-		bootstrapComponents.KeyProcessor,
-		certManager,
-	)
-	checkError(ctx, err, "failed to init components")
 
 	ctx, inslog = inslogger.WithField(ctx, "nodeid", certManager.GetCertificate().GetNodeRef().String())
 	ctx, inslog = inslogger.WithField(ctx, "role", certManager.GetCertificate().GetRole().String())

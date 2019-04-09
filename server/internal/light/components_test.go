@@ -42,7 +42,6 @@ func TestInitComponents(t *testing.T) {
 		cfg,
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.PlatformCryptographyScheme,
-		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
 		cert,
 	)
