@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/object"
 )
 
@@ -36,11 +35,10 @@ type Handler struct {
 	HeavySync      insolar.HeavySync                  `inject:""`
 	PCS            insolar.PlatformCryptographyScheme `inject:""`
 
-	// TODO: @imarkin 27.03.2019 - remove it after all new storages integration (INS-2013, etc)
-	ObjectStorage storage.ObjectStorage `inject:""`
-
 	BlobAccessor blob.Accessor         `inject:""`
 	Records      object.RecordAccessor `inject:""`
+
+	IndexAccessor object.IndexAccessor `inject:""`
 
 	jetID insolar.JetID
 }
@@ -92,7 +90,7 @@ func (h *Handler) handleGetObject(
 	msg := parcel.Message().(*message.GetObject)
 
 	// Fetch object index. If not found redirect.
-	idx, err := h.ObjectStorage.GetObjectIndex(ctx, insolar.ID(h.jetID), msg.Head.Record())
+	idx, err := h.IndexAccessor.ForID(ctx, *msg.Head.Record())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch object index for %s", msg.Head.Record().DebugString())
 	}
@@ -154,7 +152,7 @@ func (h *Handler) handleGetObject(
 func (h *Handler) handleGetDelegate(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetDelegate)
 
-	idx, err := h.ObjectStorage.GetObjectIndex(ctx, insolar.ID(h.jetID), msg.Head.Record())
+	idx, err := h.IndexAccessor.ForID(ctx, *msg.Head.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch index for %v", msg.Head.Record()))
 	}
@@ -175,7 +173,7 @@ func (h *Handler) handleGetChildren(
 ) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetChildren)
 
-	idx, err := h.ObjectStorage.GetObjectIndex(ctx, insolar.ID(h.jetID), msg.Parent.Record())
+	idx, err := h.IndexAccessor.ForID(ctx, *msg.Parent.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch index for %v", msg.Parent.Record()))
 	}
@@ -269,12 +267,12 @@ func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (
 func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetObjectIndex)
 
-	idx, err := h.ObjectStorage.GetObjectIndex(ctx, insolar.ID(h.jetID), msg.Object.Record())
+	idx, err := h.IndexAccessor.ForID(ctx, *msg.Object.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 
-	buf := object.EncodeIndex(*idx)
+	buf := object.EncodeIndex(idx)
 
 	return &reply.ObjectIndex{Index: buf}, nil
 }
@@ -299,7 +297,7 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 
 	h.HeavySync.StoreRecords(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Records)
 
-	if err := h.HeavySync.StoreIndices(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Indices); err != nil {
+	if err := h.HeavySync.StoreIndexes(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Indexes); err != nil {
 		return heavyerrreply(err)
 	}
 

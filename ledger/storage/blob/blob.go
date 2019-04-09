@@ -48,6 +48,13 @@ type Modifier interface {
 	Set(ctx context.Context, id insolar.ID, blob Blob) error
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Storage -o ./ -s _mock.go
+
+type Storage interface {
+	Accessor
+	Modifier
+}
+
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Cleaner -o ./ -s _mock.go
 
 // Cleaner provides an interface for removing blobs from a storage.

@@ -45,6 +45,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 	idx := Lifeline{
 		LatestState: &id,
 		JetID:       jetID,
+		Delegates:   map[insolar.Reference]insolar.Reference{},
 	}
 
 	t.Run("returns correct index-value", func(t *testing.T) {
@@ -71,10 +72,64 @@ func TestIndexStorage_ForID(t *testing.T) {
 
 		_, err := indexStorage.ForID(ctx, gen.ID())
 		require.Error(t, err)
-		assert.Equal(t, ErrNotFound, err)
+		assert.Equal(t, ErrIndexNotFound, err)
 	})
 }
 
+func TestIndexDB_Set(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+
+	jetID := gen.JetID()
+	id := gen.ID()
+	idx := Lifeline{
+		LatestState: &id,
+		JetID:       jetID,
+		Delegates:   map[insolar.Reference]insolar.Reference{},
+	}
+
+	jetIndex := store.NewJetIndexModifierMock(t)
+	jetIndex.AddMock.Expect(id, jetID)
+
+	t.Run("saves correct index-value", func(t *testing.T) {
+		t.Parallel()
+
+		indexStorage := NewIndexDB(store.NewMemoryMockDB())
+		err := indexStorage.Set(ctx, id, idx)
+		require.NoError(t, err)
+		savedIdx, err := indexStorage.ForID(ctx, id)
+		require.NoError(t, err)
+		assert.Equal(t, idx, savedIdx)
+		assert.Equal(t, jetID, savedIdx.JetID)
+	})
+
+	t.Run("override indices is ok", func(t *testing.T) {
+		t.Parallel()
+
+		indexStorage := &IndexMemory{
+			memory:   map[insolar.ID]Lifeline{},
+			jetIndex: jetIndex,
+		}
+		err := indexStorage.Set(ctx, id, idx)
+		require.NoError(t, err)
+
+		err = indexStorage.Set(ctx, id, idx)
+		assert.NoError(t, err)
+	})
+
+	t.Run("init delegates, when nil", func(t *testing.T) {
+		t.Parallel()
+
+		indexStorage := NewIndexDB(store.NewMemoryMockDB())
+		err := indexStorage.Set(ctx, id, Lifeline{Delegates: nil})
+		require.NoError(t, err)
+		savedIdx, err := indexStorage.ForID(ctx, id)
+		require.NoError(t, err)
+		assert.NotNil(t, idx, savedIdx.Delegates)
+	})
+
+}
 func TestIndexStorage_Set(t *testing.T) {
 	t.Parallel()
 
@@ -85,6 +140,7 @@ func TestIndexStorage_Set(t *testing.T) {
 	idx := Lifeline{
 		LatestState: &id,
 		JetID:       jetID,
+		Delegates:   map[insolar.Reference]insolar.Reference{},
 	}
 
 	jetIndex := store.NewJetIndexModifierMock(t)
@@ -160,13 +216,57 @@ func TestCloneObjectLifeline(t *testing.T) {
 	assert.False(t, &currentIdx == &clonedIdx)
 }
 
+func TestCloneObjectLifeline_AlwaysFillInDelegates(t *testing.T) {
+	t.Parallel()
+
+	idx := Lifeline{}
+
+	clonedIdx := CloneIndex(idx)
+
+	assert.NotNil(t, clonedIdx.Delegates)
+}
+
+func TestCloneObjectLifeline_InsureDelegatesMapNotNil(t *testing.T) {
+	t.Parallel()
+
+	idx := Lifeline{}
+
+	cloneIdx := CloneIndex(idx)
+
+	require.NotNil(t, cloneIdx.Delegates)
+}
+
+func TestIndexMemory_ForPulseAndJet(t *testing.T) {
+	t.Parallel()
+	memStor := NewIndexMemory()
+	ctx := inslogger.TestContext(t)
+
+	jetID := gen.JetID()
+	fPulse := gen.PulseNumber()
+	sPulse := gen.PulseNumber()
+	tPulse := gen.PulseNumber()
+
+	_ = memStor.Set(ctx, *insolar.NewID(fPulse, []byte{1}), Lifeline{JetID: jetID, LatestUpdate: gen.PulseNumber()})
+	_ = memStor.Set(ctx, *insolar.NewID(fPulse, []byte{2}), Lifeline{JetID: jetID, LatestUpdate: gen.PulseNumber()})
+	_ = memStor.Set(ctx, *insolar.NewID(sPulse, nil), Lifeline{JetID: jetID})
+	_ = memStor.Set(ctx, *insolar.NewID(tPulse, nil), Lifeline{JetID: jetID})
+
+	res := memStor.ForPulseAndJet(ctx, jetID, fPulse)
+
+	require.Equal(t, 2, len(res))
+	_, ok := memStor.memory[*insolar.NewID(fPulse, []byte{1})]
+	require.Equal(t, true, ok)
+	_, ok = memStor.memory[*insolar.NewID(fPulse, []byte{2})]
+	require.Equal(t, true, ok)
+}
+
 func id() (id *insolar.ID) {
 	fuzz.New().NilChance(0.5).Fuzz(&id)
 	return
 }
 
 func delegates() (result map[insolar.Reference]insolar.Reference) {
-	fuzz.New().NilChance(0.5).NumElements(1, 10).Fuzz(&result)
+	fuzz.New().NilChance(0).NumElements(1, 10).Fuzz(&result)
 	return
 }
 
