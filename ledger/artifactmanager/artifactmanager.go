@@ -266,17 +266,17 @@ func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID 
 		return nil, err
 	}
 
-	var requestIDReply *reply.ID
+	var requestID core.RecordID
 	switch r := genericReply.(type) {
 	case *reply.ID:
-		requestIDReply = r
+		requestID = r.ID
 	case *reply.Error:
 		return nil, r.Error()
 	default:
 		return nil, fmt.Errorf("GetPendingRequest: unexpected reply: %#v", requestIDReply)
 	}
 
-	node, err := m.JetCoordinator.NodeForObject(ctx, objectID, currentPN, requestIDReply.ID.Pulse())
+	node, err := m.JetCoordinator.NodeForObject(ctx, objectID, currentPN, requestID.Pulse())
 
 	if err != nil {
 		return nil, err
@@ -289,7 +289,7 @@ func (m *LedgerArtifactManager) GetPendingRequest(ctx context.Context, objectID 
 	genericReply, err = sender(
 		ctx,
 		&message.GetRequest{
-			Request: requestIDReply.ID,
+			Request: requestID,
 		}, &core.MessageSendOptions{
 			Receiver: node,
 		},
