@@ -27,7 +27,7 @@ import (
 )
 
 type Init struct {
-	dep *ProcedureMaker
+	dep *Dependencies
 
 	Message bus.Message
 }

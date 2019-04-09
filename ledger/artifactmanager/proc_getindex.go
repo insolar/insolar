@@ -35,7 +35,7 @@ type GetIndex struct {
 	Object insolar.Reference
 	Jet    insolar.JetID
 
-	Res struct {
+	Result struct {
 		Index object.Lifeline
 	}
 
@@ -58,7 +58,7 @@ func (p *GetIndex) Proceed(ctx context.Context) error {
 
 	idx, err := p.Dep.Storage.ForID(ctx, objectID)
 	if err == nil {
-		p.Res.Index = idx
+		p.Result.Index = idx
 		return nil
 	}
 	if err != object.ErrIndexNotFound {
@@ -83,13 +83,13 @@ func (p *GetIndex) Proceed(ctx context.Context) error {
 		return fmt.Errorf("failed to fetch index from heavy: unexpected reply type %T", genericReply)
 	}
 
-	p.Res.Index, err = object.DecodeIndex(rep.Index)
+	p.Result.Index, err = object.DecodeIndex(rep.Index)
 	if err != nil {
 		return errors.Wrap(err, "failed to decode index")
 	}
 
-	p.Res.Index.JetID = p.Jet
-	err = p.Dep.Storage.Set(ctx, objectID, p.Res.Index)
+	p.Result.Index.JetID = p.Jet
+	err = p.Dep.Storage.Set(ctx, objectID, p.Result.Index)
 	if err != nil {
 		return errors.Wrap(err, "failed to save index")
 	}

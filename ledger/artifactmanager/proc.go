@@ -23,11 +23,10 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 )
 
-type ProcedureMaker struct {
-	FetchJet func(*FetchJet) *FetchJet
-	WaitHot  func(*WaitHot) *WaitHot
-	GetIndex func(*GetIndex) *GetIndex
-
+type Dependencies struct {
+	FetchJet   func(*FetchJet) *FetchJet
+	WaitHot    func(*WaitHot) *WaitHot
+	GetIndex   func(*GetIndex) *GetIndex
 	SendObject func(p *SendObject) *SendObject
 }
 

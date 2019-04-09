@@ -28,21 +28,21 @@ type CheckPermissions struct {
 	Node string
 
 	// We can group return parameters in build-in struct for clarity.
-	Res struct {
+	Result struct {
 		AllowedToSave bool
 	}
 }
 
 func (a *CheckPermissions) Proceed(context.Context) error {
 	// Check for node permissions.
-	a.Res.AllowedToSave = true
+	a.Result.AllowedToSave = true
 	return nil
 }
 
 type GetObjectFromDB struct {
 	Hash string
 
-	Res struct {
+	Result struct {
 		ID     int
 		Exists bool
 	}
@@ -58,15 +58,15 @@ func (a *GetObjectFromDB) Proceed(context.Context) error {
 	if err != nil {
 		return err
 	}
-	a.Res.Exists = true
-	a.Res.ID = id
+	a.Result.Exists = true
+	a.Result.ID = id
 	return nil
 }
 
 type SaveObjectToDB struct {
 	Hash string
 
-	Res struct {
+	Result struct {
 		ID int
 	}
 	Dep struct {
@@ -79,7 +79,7 @@ func (a *SaveObjectToDB) Proceed(context.Context) error {
 	if err != nil {
 		return err
 	}
-	a.Res.ID = id
+	a.Result.ID = id
 	return nil
 }
 
@@ -136,11 +136,11 @@ func (s *SaveObject) Present(ctx context.Context, f flow.Flow) error {
 		return f.Migrate(ctx, s.migrate)
 	}
 
-	if !s.perms.Res.AllowedToSave {
+	if !s.perms.Result.AllowedToSave {
 		return f.Procedure(nil, &SendReply{Message: "You shall not pass!"})
 	}
 
-	if s.object.Res.Exists {
+	if s.object.Result.Exists {
 		return f.Procedure(nil, &SendReply{Message: "Object already exists"})
 	}
 
@@ -152,7 +152,7 @@ func (s *SaveObject) Present(ctx context.Context, f flow.Flow) error {
 		return f.Migrate(ctx, s.migrate)
 	}
 
-	return f.Procedure(nil, &SendReply{Message: fmt.Sprintf("Object saved. ID: %d", saved.Res.ID)})
+	return f.Procedure(nil, &SendReply{Message: fmt.Sprintf("Object saved. ID: %d", saved.Result.ID)})
 }
 
 func (s *SaveObject) Past(ctx context.Context, f flow.Flow) error {
@@ -160,7 +160,7 @@ func (s *SaveObject) Past(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *SaveObject) migrate(ctx context.Context, f flow.Flow) error {
-	if !s.perms.Res.AllowedToSave {
+	if !s.perms.Result.AllowedToSave {
 		return f.Procedure(nil, &SendReply{Message: "You shall not pass!"})
 	}
 
