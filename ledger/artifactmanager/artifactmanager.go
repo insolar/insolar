@@ -846,9 +846,6 @@ func (m *LedgerArtifactManager) updateObject(
 	if err != nil {
 		return nil, err
 	}
-	if err != nil {
-		return nil, err
-	}
 
 	obj, err := m.sendUpdateObject(
 		ctx,
