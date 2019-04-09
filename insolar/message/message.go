@@ -65,14 +65,10 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 		return &UpdateObject{}, nil
 	case insolar.TypeRegisterChild:
 		return &RegisterChild{}, nil
-	case insolar.TypeJetDrop:
-		return &JetDrop{}, nil
 	case insolar.TypeSetRecord:
 		return &SetRecord{}, nil
 	case insolar.TypeGetObjectIndex:
 		return &GetObjectIndex{}, nil
-	case insolar.TypeValidationCheck:
-		return &ValidationCheck{}, nil
 	case insolar.TypeGetPendingRequests:
 		return &GetPendingRequests{}, nil
 	case insolar.TypeGetJet:
@@ -208,12 +204,10 @@ func init() {
 	gob.Register(&GetDelegate{})
 	gob.Register(&UpdateObject{})
 	gob.Register(&RegisterChild{})
-	gob.Register(&JetDrop{})
 	gob.Register(&SetRecord{})
 	gob.Register(&GetObjectIndex{})
 	gob.Register(&SetBlob{})
 	gob.Register(&ValidateRecord{})
-	gob.Register(&ValidationCheck{})
 	gob.Register(&GetPendingRequests{})
 	gob.Register(&GetJet{})
 	gob.Register(&AbandonedRequestsNotification{})
