@@ -34,7 +34,7 @@ func TestChangeLogLevelOk(t *testing.T) {
 	require.Equal(t, http.StatusOK, resp.StatusCode)
 	resBody, err := ioutil.ReadAll(resp.Body)
 	require.Nil(t, err)
-	require.Equal(t, string(resBody), "New log level: 'debug'")
+	require.Equal(t, "New log level: 'debug'\n", string(resBody))
 }
 
 func TestChangeLogLevelFail(t *testing.T) {
