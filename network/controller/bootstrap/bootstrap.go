@@ -61,8 +61,8 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/network/storage"
 	"github.com/insolar/insolar/network/utils"
 
 	"github.com/pkg/errors"
@@ -108,7 +108,7 @@ type bootstrapper struct {
 	NodeKeeper      network.NodeKeeper        `inject:""`
 	NetworkSwitcher insolar.NetworkSwitcher   `inject:""`
 	Transport       network.InternalTransport `inject:""`
-	PulseStorage    storage.PulseAccessor     `inject:""`
+	PulseAccessor   pulse.Accessor            `inject:""`
 
 	options *common.Options
 	pinger  *pinger.Pinger
@@ -558,7 +558,7 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get a join claim")
 	}
-	lastPulse, err := bc.PulseStorage.Latest(ctx)
+	lastPulse, err := bc.PulseAccessor.Latest(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get a last pulse")
 	}
@@ -642,7 +642,7 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Re
 	} else {
 		shortID = bootstrapRequest.JoinClaim.ShortNodeID
 	}
-	lastPulse, err := bc.PulseStorage.Latest(ctx)
+	lastPulse, err := bc.PulseAccessor.Latest(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get a last pulse")
 	}
