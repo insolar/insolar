@@ -23,6 +23,7 @@ import (
 	"net/http"
 	"testing"
 
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
@@ -34,7 +35,7 @@ func TestUpload(t *testing.T) {
 	cfg := configuration.NewAPIRunner()
 	ar, _ := NewRunner(&cfg)
 
-	amMock := testutils.NewArtifactManagerMock(t)
+	amMock := artifacts.NewClientMock(t)
 	genesisRef := testutils.RandomRef()
 	amMock.GenesisRefMock.Return(&genesisRef)
 	amMock.RegisterRequestFunc = func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
