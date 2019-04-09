@@ -241,7 +241,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 		n.Controller.SetLastIgnoredPulse(newPulse.NextPulseNumber)
 		return
 	}
-	if n.isDiscovery && newPulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+core.PulseNumber(n.skip) {
+	if n.shoudIgnorePulse(newPulse) {
 		log.Infof("Ignore pulse %d: network is not yet initialized", newPulse.PulseNumber)
 		return
 	}
@@ -280,6 +280,11 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse core.Pulse) {
 	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
 
 	go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
+}
+
+func (n *ServiceNetwork) shoudIgnorePulse(newPulse core.Pulse) bool {
+	return n.isDiscovery && n.NodeKeeper.GetState() != core.WaitingNodeNetworkState &&
+		newPulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+core.PulseNumber(n.skip)
 }
 
 func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse core.Pulse, pulseStartTime time.Time) {
