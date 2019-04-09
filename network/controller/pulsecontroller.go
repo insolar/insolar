@@ -63,7 +63,7 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Req
 		skipped := atomic.AddUint32(&pc.skippedPulses, 1)
 		if skipped >= skippedPulsesLimit {
 			// we definitely failed to receive pulse via phase1 packet and should exit
-			pc.TerminationHandler.Abort()
+			pc.TerminationHandler.Abort("Failed to receive phase1 packet with pulse during bootstrap")
 		}
 	}
 	return pc.hostNetwork.BuildResponse(ctx, request, &packet.ResponsePulse{Success: true, Error: ""}), nil
