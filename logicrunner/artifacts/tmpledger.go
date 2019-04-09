@@ -162,9 +162,11 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	handler.DBContext = tmpDB
 	handler.IndexModifier = is
 	handler.IndexAccessor = is
+	handler.IndexStorage = is
 	handler.DropModifier = ds
 	handler.BlobModifier = bs
 	handler.BlobAccessor = bs
+	handler.Blobs = bs
 	handler.RecordModifier = recordModifier
 	handler.RecordAccessor = recordAccessor
 

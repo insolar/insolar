@@ -20,33 +20,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e05c7b72aeba7570b1d2f9c6dc9f0373d224b16b70fa886c504de867bffe1c2e"
-  name = "github.com/aead/chacha20"
-  packages = [
-    ".",
-    "chacha",
-  ]
-  pruneopts = "UT"
-  revision = "8b13a72661dae6e9e5dea04f344f0dc95ea29547"
-
-[[projects]]
-  branch = "master"
   digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
   name = "github.com/beorn7/perks"
   packages = ["quantile"]
   pruneopts = "UT"
   revision = "3a771d992973f24aa725d07868b467d1ddfceafb"
-
-[[projects]]
-  branch = "master"
-  digest = "1:1779bbb6256073e58fa31c8989a96775062336b7c37e55b27cc9c8f0890995bb"
-  name = "github.com/bifurcation/mint"
-  packages = [
-    ".",
-    "syntax",
-  ]
-  pruneopts = "UT"
-  revision = "a14404e9a861605b3bc889790cbc303435876d6b"
 
 [[projects]]
   digest = "1:705c40022f5c03bf96ffeb6477858d88565064485a513abcd0f11a0911546cb6"
@@ -55,14 +33,6 @@
   pruneopts = "UT"
   revision = "2ee87856327ba09384cabd113bc6b5d174e9ec0f"
   version = "v3.5.1"
-
-[[projects]]
-  digest = "1:f438d91be142877c3ad83157992c91de787ddfbddcc2a7da1ef6ef61606cadc4"
-  name = "github.com/cheekybits/genny"
-  packages = ["generic"]
-  pruneopts = "UT"
-  revision = "d2cf3cdd35ce0d789056c4bc02a4d6349c947caf"
-  version = "v1.0.0"
 
 [[projects]]
   digest = "1:ffe9824d294da03b391f44e1ae8281281b4afc1bdaa9588c9097785e3af10cec"
@@ -181,17 +151,6 @@
   version = "v1.1.0"
 
 [[projects]]
-  digest = "1:8ec8d88c248041a6df5f6574b87bc00e7e0b493881dad2e7ef47b11dc69093b5"
-  name = "github.com/hashicorp/golang-lru"
-  packages = [
-    ".",
-    "simplelru",
-  ]
-  pruneopts = "UT"
-  revision = "20f1fb78b0740ba8c3cb143a61e86ba5c8669768"
-  version = "v0.5.0"
-
-[[projects]]
   digest = "1:c0d19ab64b32ce9fe5cf4ddceba78d5bc9807f0016db6b1183599da3dcc24d10"
   name = "github.com/hashicorp/hcl"
   packages = [
@@ -225,41 +184,6 @@
   packages = ["."]
   pruneopts = "UT"
   revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
-
-[[projects]]
-  branch = "master"
-  digest = "1:6fe6fc7707d8c37fb305362a324462d898bc1c01eaa2bfe15383ec21f6540c71"
-  name = "github.com/lucas-clemente/aes12"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "cd47fb39b79f867c6e4e5cd39cf7abd799f71670"
-
-[[projects]]
-  digest = "1:c9861e85e283dcac307405812c044c40538bb6c9eb34760d9220f2fd3c53ad4a"
-  name = "github.com/lucas-clemente/quic-go"
-  packages = [
-    ".",
-    "internal/ackhandler",
-    "internal/congestion",
-    "internal/crypto",
-    "internal/flowcontrol",
-    "internal/handshake",
-    "internal/protocol",
-    "internal/utils",
-    "internal/wire",
-    "qerr",
-  ]
-  pruneopts = "UT"
-  revision = "fb4009857e8cb00c245910a5ffd1a4cd276bd051"
-  version = "v0.10.0"
-
-[[projects]]
-  branch = "master"
-  digest = "1:08b3484b0665f09be0f1f699a38e877708453795df07a3d6e4cd41fa7a2cabf0"
-  name = "github.com/lucas-clemente/quic-go-certificates"
-  packages = ["."]
-  pruneopts = "UT"
-  revision = "d2f86524cced5186554df90d92529757d22c1cb6"
 
 [[projects]]
   digest = "1:53e8c5c79716437e601696140e8b1801aae4204f4ec54a504333702a49572c4f"
@@ -517,13 +441,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:caef035da871d195e883f8d0258532cb8b9e5c87d089e326a6f98f02444564f1"
+  digest = "1:07bed7db52308c8338e0848cde9b26ec6fdab68c6c79ab1098dc728b6a899e45"
   name = "golang.org/x/crypto"
-  packages = [
-    "curve25519",
-    "hkdf",
-    "sha3",
-  ]
+  packages = ["sha3"]
   pruneopts = "UT"
   revision = "eb0de9b17e854e9b1ccd9963efafc79862359959"
 
@@ -553,12 +473,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:b5822e8b1920b7225e6282614078af440c70f0a2243676063a571f715cd77d58"
+  digest = "1:8775d8a768d9e65e8b659172804aac5db1fc8d563ba766470a6c2698c57c61a7"
   name = "golang.org/x/sys"
-  packages = [
-    "cpu",
-    "unix",
-  ]
+  packages = ["unix"]
   pruneopts = "UT"
   revision = "4ed8d59d0b35e1e29334a206d1b3f38b1e5dfb31"
 
@@ -634,7 +551,6 @@
     "github.com/gorilla/rpc/v2",
     "github.com/gorilla/rpc/v2/json2",
     "github.com/jbenet/go-base58",
-    "github.com/lucas-clemente/quic-go",
     "github.com/magiconair/properties/assert",
     "github.com/olekukonko/tablewriter",
     "github.com/onrik/gomerkle",

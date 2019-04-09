@@ -104,11 +104,11 @@ type Bootstrapper interface {
 }
 
 type bootstrapper struct {
-	Certificate     insolar.Certificate       `inject:""`
-	NodeKeeper      network.NodeKeeper        `inject:""`
-	NetworkSwitcher insolar.NetworkSwitcher   `inject:""`
-	Transport       network.InternalTransport `inject:""`
-	PulseAccessor   pulse.Accessor            `inject:""`
+	Certificate     insolar.Certificate     `inject:""`
+	NodeKeeper      network.NodeKeeper      `inject:""`
+	NetworkSwitcher insolar.NetworkSwitcher `inject:""`
+	Network         network.HostNetwork     `inject:""`
+	PulseAccessor   pulse.Accessor          `inject:""`
 
 	options *common.Options
 	pinger  *pinger.Pinger
@@ -406,11 +406,11 @@ func (bc *bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (*
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to prepare genesis request to address %s", h)
 	}
-	request := bc.Transport.NewRequestBuilder().Type(types.Genesis).Data(&GenesisRequest{
+	request := bc.Network.NewRequestBuilder().Type(types.Genesis).Data(&GenesisRequest{
 		LastPulse: bc.GetLastPulse(),
 		Discovery: discovery,
 	}).Build()
-	future, err := bc.Transport.SendRequestPacket(ctx, request, h)
+	future, err := bc.Network.SendRequestToHost(ctx, request, h)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to send genesis request to address %s", h)
 	}
@@ -567,8 +567,8 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 		JoinClaim:     *claim,
 		LastNodePulse: lastPulse.PulseNumber,
 	}
-	request := bc.Transport.NewRequestBuilder().Type(types.Bootstrap).Data(bootstrapReq).Build()
-	future, err := bc.Transport.SendRequestPacket(ctx, request, bootstrapHost)
+	request := bc.Network.NewRequestBuilder().Type(types.Bootstrap).Data(bootstrapReq).Build()
+	future, err := bc.Network.SendRequestToHost(ctx, request, bootstrapHost)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to send bootstrap request to address %s", address)
 	}
@@ -646,7 +646,7 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Re
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get a last pulse")
 	}
-	return bc.Transport.BuildResponse(ctx, request,
+	return bc.Network.BuildResponse(ctx, request,
 		&NodeBootstrapResponse{
 			Code:         code,
 			RejectReason: "",
@@ -662,20 +662,20 @@ func (bc *bootstrapper) processGenesis(ctx context.Context, request network.Requ
 	data := request.GetData().(*GenesisRequest)
 	discovery, err := newNodeStruct(bc.NodeKeeper.GetOrigin())
 	if err != nil {
-		return bc.Transport.BuildResponse(ctx, request, &GenesisResponse{Error: err.Error()}), nil
+		return bc.Network.BuildResponse(ctx, request, &GenesisResponse{Error: err.Error()}), nil
 	}
 	bc.SetLastPulse(data.LastPulse)
 	bc.setRequest(request.GetSender(), data)
-	return bc.Transport.BuildResponse(ctx, request, &GenesisResponse{
+	return bc.Network.BuildResponse(ctx, request, &GenesisResponse{
 		Response: GenesisRequest{Discovery: discovery, LastPulse: bc.GetLastPulse()},
 	}), nil
 }
 
 func (bc *bootstrapper) Init(ctx context.Context) error {
 	bc.firstPulseTime = time.Now()
-	bc.pinger = pinger.NewPinger(bc.Transport)
-	bc.Transport.RegisterPacketHandler(types.Bootstrap, bc.processBootstrap)
-	bc.Transport.RegisterPacketHandler(types.Genesis, bc.processGenesis)
+	bc.pinger = pinger.NewPinger(bc.Network)
+	bc.Network.RegisterRequestHandler(types.Bootstrap, bc.processBootstrap)
+	bc.Network.RegisterRequestHandler(types.Genesis, bc.processGenesis)
 	return nil
 }
 
