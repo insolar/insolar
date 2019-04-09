@@ -34,7 +34,6 @@ func TestInitComponents(t *testing.T) {
 	cert := initCertificateManager(
 		ctx,
 		cfg,
-		false,
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)
@@ -46,7 +45,6 @@ func TestInitComponents(t *testing.T) {
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
 		cert,
-		false,
 	)
 	require.NoError(t, err)
 	require.NotNil(t, cm)

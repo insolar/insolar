@@ -75,7 +75,6 @@ func (s *Initializer) Run() {
 	cm := component.Manager{}
 	cm.Inject(
 		bc.PlatformCryptographyScheme,
-		bc.KeyStore,
 		bc.CryptographyService,
 		bc.KeyProcessor,
 		certManager,

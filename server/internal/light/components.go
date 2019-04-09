@@ -19,6 +19,7 @@ package light
 import (
 	"context"
 
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/network/termination"
 
 	"github.com/insolar/insolar/api"
@@ -73,7 +74,6 @@ func initBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 func initCertificateManager(
 	ctx context.Context,
 	cfg configuration.Configuration,
-	isBootstrap bool,
 	cryptographyService insolar.CryptographyService,
 	keyProcessor insolar.KeyProcessor,
 ) *certificate.CertificateManager {
@@ -83,13 +83,8 @@ func initCertificateManager(
 	publicKey, err := cryptographyService.GetPublicKey()
 	checkError(ctx, err, "failed to retrieve node public key")
 
-	if isBootstrap {
-		certManager, err = certificate.NewManagerCertificateWithKeys(publicKey, keyProcessor)
-		checkError(ctx, err, "failed to start Certificate (bootstrap mode)")
-	} else {
-		certManager, err = certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
-		checkError(ctx, err, "failed to start Certificate")
-	}
+	certManager, err = certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
+	checkError(ctx, err, "failed to start Certificate")
 
 	return certManager
 }
@@ -103,7 +98,6 @@ func initComponents(
 	keyStore insolar.KeyStore,
 	keyProcessor insolar.KeyProcessor,
 	certManager insolar.CertificateManager,
-	isGenesis bool,
 
 ) (*component.Manager, error) {
 	cm := component.Manager{}
@@ -111,7 +105,7 @@ func initComponents(
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
 
-	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, isGenesis)
+	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, false)
 	checkError(ctx, err, "failed to start Network")
 
 	terminationHandler := termination.NewHandler(nw)
@@ -167,8 +161,7 @@ func initComponents(
 		contractRequester,
 		delegationTokenFactory,
 		parcelFactory,
-	}...)
-	components = append(components, []interface{}{
+		artifacts.NewClient(),
 		genesisDataProvider,
 		apiRunner,
 		metricsHandler,

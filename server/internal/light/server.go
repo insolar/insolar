@@ -68,7 +68,6 @@ func (s *Server) Serve() {
 	certManager := initCertificateManager(
 		ctx,
 		*cfg,
-		false,
 		bootstrapComponents.CryptographyService,
 		bootstrapComponents.KeyProcessor,
 	)
@@ -96,7 +95,6 @@ func (s *Server) Serve() {
 		bootstrapComponents.KeyStore,
 		bootstrapComponents.KeyProcessor,
 		certManager,
-		false,
 	)
 	checkError(ctx, err, "failed to init components")
 

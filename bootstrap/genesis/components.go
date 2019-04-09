@@ -39,12 +39,10 @@ import (
 type bootstrapComponents struct {
 	CryptographyService        insolar.CryptographyService
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme
-	KeyStore                   insolar.KeyStore
 	KeyProcessor               insolar.KeyProcessor
 }
 
 func initBootstrapComponents(ctx context.Context, cfg configuration.Configuration) bootstrapComponents {
-
 	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
 	checkError(ctx, err, "failed to load KeyStore: ")
 
@@ -60,7 +58,6 @@ func initBootstrapComponents(ctx context.Context, cfg configuration.Configuratio
 	return bootstrapComponents{
 		CryptographyService:        cryptographyService,
 		PlatformCryptographyScheme: platformCryptographyScheme,
-		KeyStore:                   keyStore,
 		KeyProcessor:               keyProcessor,
 	}
 }
