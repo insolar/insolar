@@ -151,6 +151,6 @@ func (n *nodeKeeperWrapper) Sync(ctx context.Context, nodes []insolar.NetworkNod
 	return n.original.Sync(ctx, nodes, claims)
 }
 
-func (n *nodeKeeperWrapper) MoveSyncToActive(ctx context.Context) error {
-	return n.original.MoveSyncToActive(ctx)
+func (n *nodeKeeperWrapper) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error {
+	return n.original.MoveSyncToActive(ctx, number)
 }

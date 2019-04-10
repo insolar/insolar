@@ -197,7 +197,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 
 	// Mock N8: Active List Swapper mock
 	alsMock := testutils.NewActiveListSwapperMock(s.T())
-	alsMock.MoveSyncToActiveFunc = func(context.Context) error { return nil }
+	alsMock.MoveSyncToActiveFunc = func(context.Context, insolar.PulseNumber) error { return nil }
 
 	// Mock N9: Crypto things mock
 	cryptoServiceMock := testutils.NewCryptographyServiceMock(s.T())

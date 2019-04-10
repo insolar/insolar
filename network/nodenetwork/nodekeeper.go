@@ -322,7 +322,7 @@ func (nk *nodekeeper) syncOrigin(n insolar.NetworkNode) {
 	mutableOrigin.SetShortID(n.ShortID())
 }
 
-func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
+func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error {
 	nk.activeLock.Lock()
 	nk.syncLock.Lock()
 	defer func() {
@@ -337,7 +337,7 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 	inslogger.FromContext(ctx).Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
 		len(nk.accessor.GetActiveNodes()), len(mergeResult.ActiveList))
 
-	nk.snapshot = node.NewSnapshot(insolar.PulseNumber(0), mergeResult.ActiveList)
+	nk.snapshot = node.NewSnapshot(number, mergeResult.ActiveList)
 	nk.accessor = node.NewAccessor(nk.snapshot)
 	stats.Record(ctx, consensusMetrics.ActiveNodes.M(int64(len(nk.accessor.GetActiveNodes()))))
 	nk.consensusInfo.flush(mergeResult.NodesJoinedDuringPrevPulse)

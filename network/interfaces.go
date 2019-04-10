@@ -194,7 +194,7 @@ type NodeKeeper interface {
 	// Sync move unsync -> sync
 	Sync(context.Context, []insolar.NetworkNode, []consensus.ReferendumClaim) error
 	// MoveSyncToActive merge sync list with active nodes
-	MoveSyncToActive(ctx context.Context) error
+	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
 	// GetConsensusInfo get additional info for the current consensus process
 	GetConsensusInfo() ConsensusInfo
 }
