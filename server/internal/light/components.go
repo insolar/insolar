@@ -49,9 +49,6 @@ type components struct {
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration) *components {
-	c := &components{}
-	c.cmp = component.Manager{}
-
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -77,19 +74,35 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) *compon
 		checkError(ctx, err, "failed to start Certificate")
 	}
 
-	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, CertManager.GetCertificate())
-	checkError(ctx, err, "failed to start NodeNetwork")
+	c := &components{}
+	c.cmp = component.Manager{}
+	c.NodeRef = CertManager.GetCertificate().GetNodeRef().String()
+	c.NodeRole = CertManager.GetCertificate().GetRole().String()
 
-	nw, err := servicenetwork.NewServiceNetwork(cfg, &c.cmp, false)
-	checkError(ctx, err, "failed to start Network")
+	// Network.
+	var (
+		NetworkService     insolar.Network
+		Termination        insolar.TerminationHandler
+		NetworkCoordinator insolar.NetworkCoordinator
+		NodeNetwork        insolar.NodeNetwork
+		NetworkSwitcher    insolar.NetworkSwitcher
+	)
+	{
+		var err error
+		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, &c.cmp, false)
+		checkError(ctx, err, "failed to start Network")
 
-	terminationHandler := termination.NewHandler(nw)
+		Termination = termination.NewHandler(NetworkService)
 
-	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
-	parcelFactory := messagebus.NewParcelFactory()
+		NodeNetwork, err = nodenetwork.NewNodeNetwork(cfg.Host, CertManager.GetCertificate())
+		checkError(ctx, err, "failed to start NodeNetwork")
 
-	messageBus, err := messagebus.NewMessageBus(cfg)
-	checkError(ctx, err, "failed to start MessageBus")
+		NetworkSwitcher, err = state.NewNetworkSwitcher()
+		checkError(ctx, err, "failed to start NetworkSwitcher")
+
+		NetworkCoordinator, err = networkcoordinator.New()
+		checkError(ctx, err, "failed to start NetworkCoordinator")
+	}
 
 	contractRequester, err := contractrequester.New()
 	checkError(ctx, err, "failed to start ContractRequester")
@@ -100,32 +113,31 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) *compon
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
 
-	nodeRole := CertManager.GetCertificate().GetRole().String()
+	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
+	parcelFactory := messagebus.NewParcelFactory()
+
+	messageBus, err := messagebus.NewMessageBus(cfg)
+	checkError(ctx, err, "failed to start MessageBus")
+
 	metricsHandler, err := metrics.NewMetrics(
 		ctx,
 		cfg.Metrics,
-		metrics.GetInsolarRegistry(nodeRole),
-		nodeRole,
+		metrics.GetInsolarRegistry(c.NodeRole),
+		c.NodeRole,
 	)
 	checkError(ctx, err, "failed to start Metrics")
-
-	networkSwitcher, err := state.NewNetworkSwitcher()
-	checkError(ctx, err, "failed to start NetworkSwitcher")
-
-	networkCoordinator, err := networkcoordinator.New()
-	checkError(ctx, err, "failed to start NetworkCoordinator")
 
 	_, err = manager.NewVersionManager(cfg.VersionManager)
 	checkError(ctx, err, "failed to load VersionManager: ")
 
 	c.cmp.Register(
-		terminationHandler,
+		Termination,
 		CryptoScheme,
 		CryptoService,
 		KeyProcessor,
 		CertManager,
-		nodeNetwork,
-		nw,
+		NodeNetwork,
+		NetworkService,
 	)
 
 	components := ledger.GetLedgerComponents(cfg.Ledger, CertManager.GetCertificate())
@@ -139,8 +151,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) *compon
 		genesisDataProvider,
 		apiRunner,
 		metricsHandler,
-		networkSwitcher,
-		networkCoordinator,
+		NetworkSwitcher,
+		NetworkCoordinator,
 		CryptoService,
 		KeyProcessor,
 	}...)
@@ -149,8 +161,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) *compon
 	err = c.cmp.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
-	c.NodeRef = CertManager.GetCertificate().GetNodeRef().String()
-	c.NodeRole = CertManager.GetCertificate().GetRole().String()
 	return c
 }
 
