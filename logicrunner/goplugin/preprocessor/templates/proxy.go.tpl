@@ -110,7 +110,7 @@ func (r *{{ $.ContractType }}) GetPrototype() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0), *PrototypeReference)
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -140,7 +140,7 @@ func (r *{{ $.ContractType }}) GetCode() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0), *PrototypeReference)
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -162,7 +162,7 @@ func (r *{{ $.ContractType }}) GetCode() (insolar.Reference, error) {
 
 {{ range $method := .MethodsProxies }}
 // {{ $method.Name }} is proxy generated method
-func (r *{{ $.ContractType }}) {{ $method.Name }}( {{ $method.Arguments }} ) ( {{ $method.ResultsTypes }} ) {
+func (r *{{ $.ContractType }}) {{ $method.Name }}{{if $method.Immutable}}AsMutable{{end}}( {{ $method.Arguments }} ) ( {{ $method.ResultsTypes }} ) {
 	{{ $method.InitArgs }}
 	var argsSerialized []byte
 
@@ -173,7 +173,7 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}( {{ $method.Arguments }} ) ( {
 		return {{ $method.ResultsWithErr }}
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return {{ $method.ResultsWithErr }}
 	}
@@ -199,11 +199,39 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}NoWait( {{ $method.Arguments }}
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// {{ $method.Name }}AsImmutable is proxy generated method
+func (r *{{ $.ContractType }}) {{ $method.Name }}{{if not $method.Immutable}}AsImmutable{{end}}( {{ $method.Arguments }} ) ( {{ $method.ResultsTypes }} ) {
+	{{ $method.InitArgs }}
+	var argsSerialized []byte
+
+	{{ $method.ResultZeroList }}
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return {{ $method.ResultsWithErr }}
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return {{ $method.ResultsWithErr }}
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return {{ $method.ResultsWithErr }}
+	}
+
+	if {{ $method.ErrorVar }} != nil {
+		return {{ $method.Results }}
+	}
+	return {{ $method.ResultsNilError }}
 }
 {{ end }}
