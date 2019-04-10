@@ -209,6 +209,21 @@ func TestThread_Migrate(t *testing.T) {
 	require.True(t, thread.migrated)
 }
 
+func TestThread_Continue(t *testing.T) {
+	controllerCancel := make(chan struct{})
+	threadCancel := make(chan struct{})
+	thread := Thread{
+		controller: &Controller{
+			cancel: controllerCancel,
+		},
+		cancel: threadCancel,
+	}
+	close(threadCancel)
+	thread.Continue(context.Background())
+	var expected <-chan struct{} = controllerCancel
+	require.Equal(t, expected, thread.cancel)
+}
+
 func TestThread_Run_Error(t *testing.T) {
 	t.Parallel()
 	thread := Thread{}
