@@ -170,8 +170,6 @@ func (pf *ParsedFile) parseConstructor(fd *ast.FuncDecl) error {
 		return errors.Errorf("Constructor %q should return 'error'", name)
 	}
 
-	// GO FUCK YOURSELF IF USE IMMUTABLE FLAG
-
 	typename := pf.typeName(res.List[0].Type)
 	pf.constructors[typename] = append(pf.constructors[typename], fd)
 
