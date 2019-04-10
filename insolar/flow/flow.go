@@ -57,4 +57,9 @@ type Flow interface {
 	//
 	// IMPORTANT: Migrate can be called only once per flow. Calling it the second time will result in error.
 	Migrate(context.Context, Handle) error
+
+	// Continue blocks caller execution until cancellation happens then updates 'cancel' and returns control to caller.
+	// It might be called multiple times, but each time it will wait for cancellation.
+	// Might be used to continue processing in Handle after Procedure returns ErrCancelled
+	Continue(context.Context)
 }

@@ -27,7 +27,7 @@ import (
 )
 
 type Init struct {
-	dep *DepInjector
+	dep *Dependencies
 
 	Message bus.Message
 }

@@ -35,12 +35,36 @@ type IndexAccessor interface {
 	ForID(ctx context.Context, id insolar.ID) (Lifeline, error)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexCollectionAccessor -o ./ -s _mock.go
+
+// IndexCollectionAccessor provides methods for querying a collection of blobs with specific search conditions.
+type IndexCollectionAccessor interface {
+	// ForPulseAndJet returns []Blob for a provided jetID and a pulse number.
+	ForPulseAndJet(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]Lifeline
+}
+
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexModifier -o ./ -s _mock.go
 
 // IndexModifier provides methods for setting Index-values to storage.
 type IndexModifier interface {
 	// Set saves new Index-value in storage.
 	Set(ctx context.Context, id insolar.ID, index Lifeline) error
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexStorage -o ./ -s _mock.go
+
+// IndexStorage combines IndexAccessor and IndexModifier.
+type IndexStorage interface {
+	IndexAccessor
+	IndexModifier
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexCleaner -o ./ -s _mock.go
+
+// IndexCleaner provides an interface for removing interfaces from a storage.
+type IndexCleaner interface {
+	// RemoveWithIDs method removes interfaces from a storage for a provided map of ids
+	RemoveWithIDs(ctx context.Context, ids map[insolar.ID]struct{})
 }
 
 // Lifeline represents meta information for record object.
@@ -64,10 +88,18 @@ func EncodeIndex(index Lifeline) []byte {
 	return buff.Bytes()
 }
 
-// DecodeIndex converts byte array into lifeline index struct.
-func DecodeIndex(buff []byte) (index Lifeline) {
+// MustDecodeIndex converts byte array into lifeline index struct.
+func MustDecodeIndex(buff []byte) (index Lifeline) {
 	dec := codec.NewDecoderBytes(buff, &codec.CborHandle{})
 	dec.MustDecode(&index)
+
+	return
+}
+
+// DecodeIndex converts byte array into lifeline index struct.
+func DecodeIndex(buff []byte) (index Lifeline, err error) {
+	dec := codec.NewDecoderBytes(buff, &codec.CborHandle{})
+	err = dec.Decode(&index)
 
 	return
 }
@@ -95,6 +127,8 @@ func CloneIndex(idx Lifeline) Lifeline {
 			cp[k] = v
 		}
 		idx.Delegates = cp
+	} else {
+		idx.Delegates = map[insolar.Reference]insolar.Reference{}
 	}
 
 	return idx
@@ -140,13 +174,44 @@ func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (index Lifeline,
 
 	idx, ok := m.memory[id]
 	if !ok {
-		err = ErrNotFound
+		err = ErrIndexNotFound
 		return
 	}
 
 	index = CloneIndex(idx)
 
 	return
+}
+
+// ForPulseAndJet returns an object's lifeline for a provided id.
+func (m *IndexMemory) ForPulseAndJet(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]Lifeline {
+	m.lock.RLock()
+	defer m.lock.RUnlock()
+
+	res := map[insolar.ID]Lifeline{}
+	for id, idx := range m.memory {
+		if id.Pulse() != pn || idx.JetID != jetID {
+			continue
+		}
+
+		res[id] = CloneIndex(idx)
+	}
+
+	return res
+}
+
+// RemoveWithIDs method removes interfaces from a storage for a provided map of ids
+func (m *IndexMemory) RemoveWithIDs(ctx context.Context, ids map[insolar.ID]struct{}) {
+	m.lock.Lock()
+	defer m.lock.Unlock()
+
+	for id, idx := range m.memory {
+		_, ok := ids[id]
+		if ok {
+			delete(m.memory, id)
+			m.jetIndex.Delete(id, idx.JetID)
+		}
+	}
 }
 
 type IndexDB struct {
@@ -175,6 +240,10 @@ func (i *IndexDB) Set(ctx context.Context, id insolar.ID, index Lifeline) error 
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
+	if index.Delegates == nil {
+		index.Delegates = map[insolar.Reference]insolar.Reference{}
+	}
+
 	return i.set(id, index)
 }
 
@@ -195,12 +264,12 @@ func (i *IndexDB) set(id insolar.ID, index Lifeline) error {
 func (i *IndexDB) get(id insolar.ID) (index Lifeline, err error) {
 	buff, err := i.db.Get(indexKey(id))
 	if err == store.ErrNotFound {
-		err = ErrNotFound
+		err = ErrIndexNotFound
 		return
 	}
 	if err != nil {
 		return
 	}
-	index = DecodeIndex(buff)
+	index = MustDecodeIndex(buff)
 	return
 }

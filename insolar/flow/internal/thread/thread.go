@@ -91,6 +91,11 @@ func (f *Thread) Migrate(ctx context.Context, to flow.Handle) error {
 	return to(ctx, subFlow)
 }
 
+func (f *Thread) Continue(context.Context) {
+	<-f.cancel
+	f.cancel = f.controller.Cancel()
+}
+
 // =====================================================================================================================
 
 func (f *Thread) Run(ctx context.Context, h flow.Handle) error {

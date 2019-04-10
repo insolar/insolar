@@ -26,11 +26,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/insolar/insolar/bootstrap/genesis"
 	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/genesis"
 	"github.com/spf13/cobra"
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 func check(msg string, err error) {
@@ -146,7 +146,7 @@ func main() {
 	pwConfig := pulsewatcher.Config{}
 	discoveryNodesConfigs := make([]configuration.Configuration, 0, len(genesisConf.DiscoveryNodes))
 
-	gorundPorts := [][]string{}
+	var gorundPorts [][]string
 
 	pctx := newPromContext()
 

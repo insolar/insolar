@@ -61,6 +61,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
@@ -139,75 +140,49 @@ func mockConfiguration(address string) configuration.Configuration {
 	return result
 }
 
-func TestNewInternalTransport(t *testing.T) {
+func TestNewHostNetwork_InvalidConfiguration(t *testing.T) {
 	// broken address
-	ctx := context.Background()
-	_, err := NewInternalTransport(mockConfiguration("abirvalg"), ID1+DOMAIN)
+	n, err := NewHostNetwork(mockConfiguration("abirvalg"), ID1+DOMAIN)
 	require.Error(t, err)
-	address := "127.0.0.1:0"
-	tp, err := NewInternalTransport(mockConfiguration(address), ID1+DOMAIN)
-	require.NoError(t, err)
-	defer tp.Stop(ctx)
-	// require that new address with correct port has been assigned
-	require.NotEqual(t, address, tp.PublicAddress())
-	ref, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
-	require.NoError(t, err)
-	require.Equal(t, *ref, tp.GetNodeID())
+	require.Nil(t, n)
 }
 
-func TestNewInternalTransport2(t *testing.T) {
-	ctx := context.Background()
-	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
-	require.NoError(t, err)
-	go tp.Start(ctx)
-	time.Sleep(time.Millisecond)
-	// no assertion, check that Stop does not block
-	defer func() {
-		tp.Stop(ctx)
-		require.True(t, true)
-	}()
-}
-
-func createTwoHostNetworks(id1, id2 string) (t1, t2 *TransportResolvable, err error) {
+func createTwoHostNetworks(id1, id2 string) (n1, n2 network.HostNetwork, err error) {
 	m := newMockResolver()
 
-	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
+	n1, err = NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	if err != nil {
 		return nil, nil, err
 	}
-	tr1 := &TransportResolvable{Transport: i1, Resolver: m}
-	i2, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID2+DOMAIN)
+	n1.(*hostNetwork).Resolver = m
+
+	n2, err = NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID2+DOMAIN)
 	if err != nil {
 		return nil, nil, err
 	}
-	tr2 := &TransportResolvable{Transport: i2, Resolver: m}
+	n2.(*hostNetwork).Resolver = m
 
-	err = m.addMapping(id1, tr1.PublicAddress())
+	err = m.addMapping(id1, n1.PublicAddress())
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to add mapping %s -> %s", id1, tr1.PublicAddress())
+		return nil, nil, errors.Wrapf(err, "failed to add mapping %s -> %s", id1, n1.PublicAddress())
 	}
-	err = m.addMapping(id2, tr2.PublicAddress())
+	err = m.addMapping(id2, n2.PublicAddress())
 	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to add mapping %s -> %s", id2, tr2.PublicAddress())
+		return nil, nil, errors.Wrapf(err, "failed to add mapping %s -> %s", id2, n2.PublicAddress())
 	}
 
-	return tr1, tr2, nil
+	return n1, n2, nil
 }
 
-func TestNewInternalTransport3(t *testing.T) {
-	_, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), "")
-	require.Error(t, err)
-}
-
-func TestNewHostTransport(t *testing.T) {
+func TestNewHostNetwork(t *testing.T) {
 	ctx := context.Background()
 	ctx2 := context.Background()
-	t1, t2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
+	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
 	ref1, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
 	require.NoError(t, err)
-	require.Equal(t, *ref1, t1.GetNodeID())
+	require.Equal(t, *ref1, n1.GetNodeID())
 	ref2, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
-	require.Equal(t, *ref2, t2.GetNodeID())
+	require.Equal(t, *ref2, n2.GetNodeID())
 	require.NoError(t, err)
 
 	count := 10
@@ -217,43 +192,48 @@ func TestNewHostTransport(t *testing.T) {
 	handler := func(ctx context.Context, request network.Request) (network.Response, error) {
 		log.Info("handler triggered")
 		wg.Done()
-		return t2.BuildResponse(ctx, request, nil), nil
+		return n2.BuildResponse(ctx, request, nil), nil
 	}
-	t2.RegisterRequestHandler(types.Ping, handler)
+	n2.RegisterRequestHandler(types.Ping, handler)
 
-	err = t2.Transport.Start(ctx2)
+	err = n2.Start(ctx2)
 	assert.NoError(t, err)
-	defer t2.Transport.Stop(ctx2)
-	err = t1.Transport.Start(ctx)
+	defer n2.Stop(ctx2)
+	err = n1.Start(ctx)
 	assert.NoError(t, err)
-	defer t1.Transport.Stop(ctx)
+	defer n1.Stop(ctx)
 
 	for i := 0; i < count; i++ {
-		request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
+		request := n1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 		ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 		require.NoError(t, err)
-		_, err = t1.SendRequest(ctx, request, *ref)
+		_, err = n1.SendRequest(ctx, request, *ref)
 		require.NoError(t, err)
 	}
 	wg.Wait()
 }
 
-func TestHostTransport_SendRequestPacket(t *testing.T) {
+func TestHostNetwork_SendRequestPacket(t *testing.T) {
 	m := newMockResolver()
 	ctx := context.Background()
 
-	i1, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
+	n1, err := NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
-	t1 := &TransportResolvable{Transport: i1, Resolver: m}
-	t1.Transport.Start(ctx)
-	defer t1.Transport.Stop(ctx)
+
+	cm := component.NewManager(nil)
+	cm.Register(m, n1)
+	cm.Inject()
+	err = cm.Start(ctx)
+	require.NoError(t, err)
+
+	defer cm.Stop(ctx)
 
 	unknownID, err := insolar.NewReferenceFromBase58(IDUNKNOWN + DOMAIN)
 	require.NoError(t, err)
 
 	// should return error because cannot resolve NodeID -> Address
-	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
-	_, err = t1.SendRequest(ctx, request, *unknownID)
+	request := n1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
+	_, err = n1.SendRequest(ctx, request, *unknownID)
 	require.Error(t, err)
 
 	err = m.addMapping(ID2+DOMAIN, "abirvalg")
@@ -264,12 +244,12 @@ func TestHostTransport_SendRequestPacket(t *testing.T) {
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
 	// should return error because resolved address is invalid
-	_, err = t1.SendRequest(ctx, request, *ref)
+	_, err = n1.SendRequest(ctx, request, *ref)
 	require.Error(t, err)
 }
 
-func TestHostTransport_SendRequestPacket2(t *testing.T) {
-	t1, t2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
+func TestHostNetwork_SendRequestPacket2(t *testing.T) {
+	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
 	require.NoError(t, err)
 	ctx := context.Background()
 	ctx2 := context.Background()
@@ -282,35 +262,35 @@ func TestHostTransport_SendRequestPacket2(t *testing.T) {
 		ref, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
 		require.NoError(t, err)
 		require.Equal(t, *ref, r.GetSender())
-		require.Equal(t, t1.PublicAddress(), r.GetSenderHost().Address.String())
+		require.Equal(t, n1.PublicAddress(), r.GetSenderHost().Address.String())
 		wg.Done()
-		return t2.BuildResponse(ctx, r, nil), nil
+		return n2.BuildResponse(ctx, r, nil), nil
 	}
 
-	t2.RegisterRequestHandler(types.Ping, handler)
+	n2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Transport.Start(ctx2)
-	t1.Transport.Start(ctx)
+	n2.Start(ctx2)
+	n1.Start(ctx)
 	defer func() {
-		t1.Transport.Stop(ctx)
-		t2.Transport.Stop(ctx2)
+		n1.Stop(ctx)
+		n2.Stop(ctx2)
 	}()
 
-	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
+	request := n1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	ref, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
 	require.NoError(t, err)
 	require.Equal(t, *ref, request.GetSender())
-	require.Equal(t, t1.PublicAddress(), request.GetSenderHost().Address.String())
+	require.Equal(t, n1.PublicAddress(), request.GetSenderHost().Address.String())
 
 	ref, err = insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
-	_, err = t1.SendRequest(ctx, request, *ref)
+	_, err = n1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
 	wg.Wait()
 }
 
-func TestHostTransport_SendRequestPacket3(t *testing.T) {
-	t1, t2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
+func TestHostNetwork_SendRequestPacket3(t *testing.T) {
+	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
 	require.NoError(t, err)
 	ctx := context.Background()
 	ctx2 := context.Background()
@@ -323,22 +303,22 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
 		d := r.GetData().(*Data)
-		return t2.BuildResponse(ctx, r, &Data{Number: d.Number + 1}), nil
+		return n2.BuildResponse(ctx, r, &Data{Number: d.Number + 1}), nil
 	}
-	t2.RegisterRequestHandler(types.Ping, handler)
+	n2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Transport.Start(ctx2)
-	t1.Transport.Start(ctx)
+	n2.Start(ctx2)
+	n1.Start(ctx)
 	defer func() {
-		t1.Transport.Stop(ctx)
-		t2.Transport.Stop(ctx2)
+		n1.Stop(ctx)
+		n2.Stop(ctx2)
 	}()
 
 	magicNumber := 42
-	request := t1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
+	request := n1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
-	f, err := t1.SendRequest(ctx, request, *ref)
+	f, err := n1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
 	require.Equal(t, f.GetRequest().GetSender(), request.GetSender())
 
@@ -349,8 +329,8 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 	require.Equal(t, magicNumber+1, d.Number)
 
 	magicNumber = 666
-	request = t1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
-	f, err = t1.SendRequest(ctx, request, *ref)
+	request = n1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
+	f, err = n1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
 
 	r = <-f.Response()
@@ -358,8 +338,8 @@ func TestHostTransport_SendRequestPacket3(t *testing.T) {
 	require.Equal(t, magicNumber+1, d.Number)
 }
 
-func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
-	t1, t2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
+func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
+	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
 	require.NoError(t, err)
 	ctx := context.Background()
 	ctx2 := context.Background()
@@ -367,33 +347,33 @@ func TestHostTransport_SendRequestPacket_errors(t *testing.T) {
 	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
 		time.Sleep(time.Second)
-		return t2.BuildResponse(ctx, r, nil), nil
+		return n2.BuildResponse(ctx, r, nil), nil
 	}
-	t2.RegisterRequestHandler(types.Ping, handler)
+	n2.RegisterRequestHandler(types.Ping, handler)
 
-	t2.Transport.Start(ctx2)
-	defer t2.Transport.Stop(ctx2)
-	t1.Transport.Start(ctx)
+	n2.Start(ctx2)
+	defer n2.Stop(ctx2)
+	n1.Start(ctx)
 
-	request := t1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
+	request := n1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
-	f, err := t1.SendRequest(ctx, request, *ref)
+	f, err := n1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
 
 	_, err = f.GetResponse(time.Millisecond)
 	require.Error(t, err)
 
-	f, err = t1.SendRequest(ctx, request, *ref)
+	f, err = n1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
-	t1.Transport.Stop(ctx)
+	n1.Stop(ctx)
 
 	_, err = f.GetResponse(time.Second)
 	require.Error(t, err)
 }
 
-func TestHostTransport_WrongHandler(t *testing.T) {
-	t1, t2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
+func TestHostNetwork_WrongHandler(t *testing.T) {
+	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
 	require.NoError(t, err)
 	ctx := context.Background()
 	ctx2 := context.Background()
@@ -404,21 +384,21 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
 		log.Info("handler triggered")
 		wg.Done()
-		return t2.BuildResponse(ctx, r, nil), nil
+		return n2.BuildResponse(ctx, r, nil), nil
 	}
-	t2.RegisterRequestHandler(InvalidPacket, handler)
+	n2.RegisterRequestHandler(InvalidPacket, handler)
 
-	t2.Transport.Start(ctx2)
-	t1.Transport.Start(ctx)
+	n2.Start(ctx2)
+	n1.Start(ctx)
 	defer func() {
-		t1.Transport.Stop(ctx)
-		t2.Transport.Stop(ctx2)
+		n1.Stop(ctx)
+		n2.Stop(ctx2)
 	}()
 
-	request := t1.NewRequestBuilder().Type(types.Ping).Build()
+	request := n1.NewRequestBuilder().Type(types.Ping).Build()
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
-	_, err = t1.SendRequest(ctx, request, *ref)
+	_, err = n1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
 
 	// should timeout because there is no handler set for Ping packet
@@ -428,7 +408,7 @@ func TestHostTransport_WrongHandler(t *testing.T) {
 
 func TestDoubleStart(t *testing.T) {
 	ctx := context.Background()
-	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
+	tp, err := NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
 
 	err = tp.Start(ctx)
@@ -441,7 +421,7 @@ func TestDoubleStart(t *testing.T) {
 
 func TestStartStop(t *testing.T) {
 	ctx := context.Background()
-	tp, err := NewInternalTransport(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
+	tp, err := NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
 	require.NoError(t, err)
 
 	err = tp.Start(ctx)
@@ -460,9 +440,9 @@ func TestStartStopSend(t *testing.T) {
 	ctx := context.Background()
 	ctx2 := context.Background()
 
-	err = t2.Transport.Start(ctx2)
+	err = t2.Start(ctx2)
 	require.NoError(t, err)
-	defer t2.Transport.Stop(ctx2)
+	defer t2.Stop(ctx2)
 
 	wg := sync.WaitGroup{}
 	wg.Add(2)
@@ -474,7 +454,7 @@ func TestStartStopSend(t *testing.T) {
 	}
 	t2.RegisterRequestHandler(types.Ping, handler)
 
-	err = t1.Transport.Start(ctx)
+	err = t1.Start(ctx)
 	require.NoError(t, err)
 
 	send := func() {
@@ -488,12 +468,12 @@ func TestStartStopSend(t *testing.T) {
 
 	send()
 
-	err = t1.Transport.Stop(ctx)
+	err = t1.Stop(ctx)
 	require.NoError(t, err)
-	err = t1.Transport.Start(ctx)
+	err = t1.Start(ctx)
 	require.NoError(t, err)
 
 	send()
 	wg.Wait()
-	t1.Transport.Stop(ctx)
+	t1.Stop(ctx)
 }

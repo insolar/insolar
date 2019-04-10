@@ -29,7 +29,7 @@ import (
 type FetchJet struct {
 	Parcel insolar.Parcel
 
-	Res struct {
+	Result struct {
 		Jet  insolar.JetID
 		Miss bool
 	}
@@ -49,7 +49,7 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 
 	// Hack to temporary allow any genesis request.
 	if p.Parcel.Pulse() <= insolar.FirstPulseNumber {
-		p.Res.Jet = *insolar.NewJetID(0, nil)
+		p.Result.Jet = *insolar.NewJetID(0, nil)
 		return nil
 	}
 
@@ -79,7 +79,7 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 			}).Error("jet is not actual")
 		}
 
-		p.Res.Jet = jetID
+		p.Result.Jet = jetID
 		return nil
 	}
 
@@ -103,12 +103,12 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 	}
 
 	if *node != p.Dep.Coordinator.Me() {
-		p.Res.Miss = true
-		p.Res.Jet = insolar.JetID(jetID)
+		p.Result.Miss = true
+		p.Result.Jet = insolar.JetID(jetID)
 		return nil
 	}
 
-	p.Res.Jet = insolar.JetID(jetID)
+	p.Result.Jet = insolar.JetID(jetID)
 	return nil
 }
 

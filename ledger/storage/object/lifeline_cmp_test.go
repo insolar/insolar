@@ -53,6 +53,7 @@ func TestIndex_Components(t *testing.T) {
 			LatestState:  &ls,
 			LatestUpdate: pn,
 			JetID:        gen.JetID(),
+			Delegates:    map[insolar.Reference]insolar.Reference{},
 		}
 	})
 	f.NumElements(5, 10).NilChance(0).Fuzz(&indices)
@@ -91,8 +92,8 @@ func TestIndex_Components(t *testing.T) {
 			_, dbErr := indexDB.ForID(ctx, gen.ID())
 			require.Error(t, memErr)
 			require.Error(t, dbErr)
-			assert.Equal(t, object.ErrNotFound, memErr)
-			assert.Equal(t, object.ErrNotFound, dbErr)
+			assert.Equal(t, object.ErrIndexNotFound, memErr)
+			assert.Equal(t, object.ErrIndexNotFound, dbErr)
 		}
 	})
 

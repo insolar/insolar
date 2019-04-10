@@ -67,7 +67,7 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 )
 
-type consensusTransportSuite struct {
+type consensusNetworkSuite struct {
 	suite.Suite
 	crypto insolar.CryptographyService
 }
@@ -76,12 +76,12 @@ func createTwoConsensusNetworks(id1, id2 insolar.ShortNodeID) (t1, t2 network.Co
 	m := newMockResolver()
 
 	cn1, err := NewConsensusNetwork("127.0.0.1:0", ID1+DOMAIN, id1)
-	cn1.(*transportConsensus).Resolver = m
+	cn1.(*networkConsensus).Resolver = m
 	if err != nil {
 		return nil, nil, err
 	}
 	cn2, err := NewConsensusNetwork("127.0.0.1:0", ID2+DOMAIN, id2)
-	cn2.(*transportConsensus).Resolver = m
+	cn2.(*networkConsensus).Resolver = m
 	if err != nil {
 		return nil, nil, err
 	}
@@ -108,7 +108,7 @@ func createTwoConsensusNetworks(id1, id2 insolar.ShortNodeID) (t1, t2 network.Co
 	return cn1, cn2, nil
 }
 
-func (t *consensusTransportSuite) sendPacket(packet consensus.ConsensusPacket) {
+func (t *consensusNetworkSuite) sendPacket(packet consensus.ConsensusPacket) {
 	cn1, cn2, err := createTwoConsensusNetworks(0, 1)
 	t.Require().NoError(err)
 	ctx := context.Background()
@@ -160,24 +160,24 @@ func newPhase3Packet() (*consensus.Phase3Packet, error) {
 	return consensus.NewPhase3Packet(insolar.PulseNumber(0), ghs, bitset), nil
 }
 
-func (t *consensusTransportSuite) TestSendPacketPhase1() {
+func (t *consensusNetworkSuite) TestSendPacketPhase1() {
 	packet := newPhase1Packet()
 	t.sendPacket(packet)
 }
 
-func (t *consensusTransportSuite) TestSendPacketPhase2() {
+func (t *consensusNetworkSuite) TestSendPacketPhase2() {
 	packet, err := newPhase2Packet()
 	require.NoError(t.T(), err)
 	t.sendPacket(packet)
 }
 
-func (t *consensusTransportSuite) TestSendPacketPhase3() {
+func (t *consensusNetworkSuite) TestSendPacketPhase3() {
 	packet, err := newPhase3Packet()
 	require.NoError(t.T(), err)
 	t.sendPacket(packet)
 }
 
-func (t *consensusTransportSuite) sendPacketAndVerify(packet consensus.ConsensusPacket) {
+func (t *consensusNetworkSuite) sendPacketAndVerify(packet consensus.ConsensusPacket) {
 	cn1, cn2, err := createTwoConsensusNetworks(0, 1)
 	t.Require().NoError(err)
 	ctx := context.Background()
@@ -217,7 +217,7 @@ func (t *consensusTransportSuite) sendPacketAndVerify(packet consensus.Consensus
 	t.True(<-result)
 }
 
-func (t *consensusTransportSuite) TestStartStop() {
+func (t *consensusNetworkSuite) TestStartStop() {
 	cn, err := NewConsensusNetwork("127.0.0.1:0", ID1+DOMAIN, 0)
 	t.Require().NoError(err)
 	ctx := context.Background()
@@ -231,24 +231,24 @@ func (t *consensusTransportSuite) TestStartStop() {
 	t.Require().NoError(err)
 }
 
-func (t *consensusTransportSuite) TestVerifySignPhase1() {
+func (t *consensusNetworkSuite) TestVerifySignPhase1() {
 	packet := newPhase1Packet()
 	t.sendPacketAndVerify(packet)
 }
 
-func (t *consensusTransportSuite) TestVerifySignPhase2() {
+func (t *consensusNetworkSuite) TestVerifySignPhase2() {
 	packet, err := newPhase2Packet()
 	require.NoError(t.T(), err)
 	t.sendPacketAndVerify(packet)
 }
 
-func (t *consensusTransportSuite) TestVerifySignPhase3() {
+func (t *consensusNetworkSuite) TestVerifySignPhase3() {
 	packet, err := newPhase3Packet()
 	require.NoError(t.T(), err)
 	t.sendPacketAndVerify(packet)
 }
 
-func NewSuite() (*consensusTransportSuite, error) {
+func NewSuite() (*consensusNetworkSuite, error) {
 	kp := platformpolicy.NewKeyProcessor()
 	sk, err := kp.GeneratePrivateKey()
 	if err != nil {
@@ -256,13 +256,13 @@ func NewSuite() (*consensusTransportSuite, error) {
 	}
 	cryptoService := cryptography.NewKeyBoundCryptographyService(sk)
 
-	return &consensusTransportSuite{
+	return &consensusNetworkSuite{
 		Suite:  suite.Suite{},
 		crypto: cryptoService,
 	}, nil
 }
 
-func TestConsensusTransport(t *testing.T) {
+func TestConsensusNetwork(t *testing.T) {
 	s, err := NewSuite()
 	require.NoError(t, err)
 	suite.Run(t, s)

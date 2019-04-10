@@ -28,7 +28,7 @@ import (
 // =====================================================================================================================
 
 type GetObject struct {
-	dep *DepInjector
+	dep *Dependencies
 
 	Message bus.Message
 }
@@ -61,7 +61,7 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 
 	p := s.dep.SendObject(&SendObject{
 		Jet:     jet.Res.Jet,
-		Index:   idx.Res.Index,
+		Index:   idx.Result.Index,
 		Message: s.Message,
 	})
 	return f.Procedure(ctx, p)

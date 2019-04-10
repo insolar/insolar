@@ -116,6 +116,6 @@ func (t *terminationHandler) OnLeaveApproved(ctx context.Context) {
 	}
 }
 
-func (t *terminationHandler) Abort() {
-	panic("Node leave acknowledged by network. Goodbye!")
+func (t *terminationHandler) Abort(reason string) {
+	panic(reason)
 }

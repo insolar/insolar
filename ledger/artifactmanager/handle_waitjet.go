@@ -27,7 +27,7 @@ import (
 )
 
 type WaitJet struct {
-	dep *DepInjector
+	dep *Dependencies
 
 	Message bus.Message
 
@@ -46,10 +46,10 @@ func (s *WaitJet) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	if jet.Res.Miss {
+	if jet.Result.Miss {
 		rep := &ReturnReply{
 			ReplyTo: s.Message.ReplyTo,
-			Reply:   &reply.JetMiss{JetID: insolar.ID(jet.Res.Jet)},
+			Reply:   &reply.JetMiss{JetID: insolar.ID(jet.Result.Jet)},
 		}
 		if err := f.Procedure(ctx, rep); err != nil {
 			return err
@@ -59,7 +59,7 @@ func (s *WaitJet) Present(ctx context.Context, f flow.Flow) error {
 
 	hot := s.dep.WaitHot(&WaitHot{
 		Parcel: s.Message.Parcel,
-		JetID:  jet.Res.Jet,
+		JetID:  jet.Result.Jet,
 	})
 	if err := f.Procedure(ctx, hot); err != nil {
 		return err
@@ -75,7 +75,7 @@ func (s *WaitJet) Present(ctx context.Context, f flow.Flow) error {
 		return errors.New("hot waiter timeout")
 	}
 
-	s.Res.Jet = jet.Res.Jet
+	s.Res.Jet = jet.Result.Jet
 
 	return nil
 }

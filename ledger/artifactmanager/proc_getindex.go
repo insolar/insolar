@@ -35,14 +35,14 @@ type GetIndex struct {
 	Object insolar.Reference
 	Jet    insolar.JetID
 
-	Res struct {
+	Result struct {
 		Index object.Lifeline
 	}
 
 	Dep struct {
 		Recent      recentstorage.Provider
 		Locker      storage.IDLocker
-		Storage     storage.ObjectStorage
+		Storage     object.IndexStorage
 		Coordinator insolar.JetCoordinator
 		Bus         insolar.MessageBus
 	}
@@ -56,12 +56,12 @@ func (p *GetIndex) Proceed(ctx context.Context) error {
 	p.Dep.Locker.Lock(&objectID)
 	defer p.Dep.Locker.Unlock(&objectID)
 
-	idx, err := p.Dep.Storage.GetObjectIndex(ctx, insolar.ID(p.Jet), &objectID)
+	idx, err := p.Dep.Storage.ForID(ctx, objectID)
 	if err == nil {
-		p.Res.Index = *idx
+		p.Result.Index = idx
 		return nil
 	}
-	if err != insolar.ErrNotFound {
+	if err != object.ErrIndexNotFound {
 		return errors.Wrap(err, "failed to fetch index")
 	}
 
@@ -83,9 +83,13 @@ func (p *GetIndex) Proceed(ctx context.Context) error {
 		return fmt.Errorf("failed to fetch index from heavy: unexpected reply type %T", genericReply)
 	}
 
-	p.Res.Index = object.DecodeIndex(rep.Index)
+	p.Result.Index, err = object.DecodeIndex(rep.Index)
+	if err != nil {
+		return errors.Wrap(err, "failed to decode index")
+	}
 
-	err = p.Dep.Storage.SetObjectIndex(ctx, insolar.ID(p.Jet), &objectID, &p.Res.Index)
+	p.Result.Index.JetID = p.Jet
+	err = p.Dep.Storage.Set(ctx, objectID, p.Result.Index)
 	if err != nil {
 		return errors.Wrap(err, "failed to save index")
 	}
