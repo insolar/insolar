@@ -28,9 +28,19 @@ import (
 	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/ledger"
+	"github.com/insolar/insolar/ledger/artifactmanager"
+	"github.com/insolar/insolar/ledger/jetcoordinator"
+	"github.com/insolar/insolar/ledger/pulsemanager"
+	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/blob"
+	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
@@ -40,6 +50,7 @@ import (
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/pkg/errors"
 )
 
 type components struct {
@@ -47,7 +58,7 @@ type components struct {
 	NodeRef, NodeRole string
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration) *components {
+func newComponents(ctx context.Context, cfg configuration.Configuration) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -150,34 +161,131 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) *compon
 	)
 	checkError(ctx, err, "failed to start Metrics")
 
-	components := ledger.GetLedgerComponents(cfg.Ledger, CertManager.GetCertificate())
+	// Light components.
+	var (
+		PulseManager insolar.PulseManager
+		Coordinator  insolar.JetCoordinator
+		Pulses       pulse.Accessor
+		Jets         jet.Accessor
+		Handler      *artifactmanager.MessageHandler
+	)
+	{
+		conf := cfg.Ledger
+
+		legacyDB, err := storage.NewDB(conf, nil)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to initialize DB")
+		}
+
+		idLocker := storage.NewIDLocker()
+		pulses := pulse.NewStorageMem()
+		drops := drop.NewStorageMemory()
+		blobs := blob.NewStorageMemory()
+		records := object.NewRecordMemory()
+		indices := object.NewIndexMemory()
+		jets := jet.NewStore()
+		nodes := node.NewStorage()
+
+		replica := storage.NewReplicaStorage()
+		c := component.Manager{}
+		c.Inject(replica, legacyDB, CryptoScheme)
+
+		hots := recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL)
+		waiter := artifactmanager.NewHotDataWaiterConcrete()
+		cord := jetcoordinator.NewJetCoordinator(conf.LightChainLimit)
+		cord.PulseCalculator = pulses
+		cord.PulseAccessor = pulses
+		cord.JetAccessor = jets
+		cord.NodeNet = NodeNetwork
+		cord.PlatformCryptographyScheme = CryptoScheme
+		cord.Nodes = nodes
+
+		handler := artifactmanager.NewMessageHandler(&conf)
+		handler.RecentStorageProvider = hots
+		handler.Bus = Bus
+		handler.PlatformCryptographyScheme = CryptoScheme
+		handler.JetCoordinator = Coordinator
+		handler.CryptographyService = CryptoService
+		handler.DelegationTokenFactory = Tokens
+		handler.JetStorage = jets
+		handler.DropModifier = drops
+		handler.BlobModifier = blobs
+		handler.BlobAccessor = blobs
+		handler.Blobs = blobs
+		handler.IDLocker = idLocker
+		handler.RecordModifier = records
+		handler.RecordAccessor = records
+		handler.Nodes = nodes
+		handler.DBContext = legacyDB
+		handler.HotDataWaiter = waiter
+		handler.IndexAccessor = indices
+		handler.IndexModifier = indices
+		handler.IndexStorage = indices
+
+		pm := pulsemanager.NewPulseManager(
+			conf, drops, blobs, blobs, pulses, records, records, indices, indices,
+		)
+		pm.MessageHandler = handler
+		pm.Bus = Bus
+		pm.NodeNet = NodeNetwork
+		pm.JetCoordinator = Coordinator
+		pm.CryptographyService = CryptoService
+		pm.PlatformCryptographyScheme = CryptoScheme
+		pm.RecentStorageProvider = hots
+		pm.HotDataWaiter = waiter
+		pm.JetAccessor = jets
+		pm.JetModifier = jets
+		pm.IndexAccessor = indices
+		pm.IndexModifier = indices
+		pm.CollectionIndexAccessor = indices
+		pm.IndexCleaner = indices
+		pm.NodeSetter = nodes
+		pm.Nodes = nodes
+		pm.ReplicaStorage = replica
+		pm.DBContext = legacyDB
+		pm.DropModifier = drops
+		pm.DropAccessor = drops
+		pm.DropCleaner = drops
+		pm.PulseAccessor = pulses
+		pm.PulseCalculator = pulses
+		pm.PulseAppender = pulses
+
+		PulseManager = pm
+		Coordinator = cord
+		Pulses = pulses
+		Jets = jets
+		Handler = handler
+	}
 
 	c.cmp.Inject(
-		append(components, []interface{}{
-			Bus,
-			Requester,
-			Tokens,
-			Parcels,
-			artifacts.NewClient(),
-			Genesis,
-			API,
-			metricsHandler,
-			NetworkSwitcher,
-			NetworkCoordinator,
-			KeyProcessor,
-			Termination,
-			CryptoScheme,
-			CryptoService,
-			CertManager,
-			NodeNetwork,
-			NetworkService,
-		}...)...,
+		Handler,
+		Jets,
+		Pulses,
+		Coordinator,
+		PulseManager,
+		metricsHandler,
+		Bus,
+		Requester,
+		Tokens,
+		Parcels,
+		artifacts.NewClient(),
+		Genesis,
+		API,
+		NetworkSwitcher,
+		NetworkCoordinator,
+		KeyProcessor,
+		Termination,
+		CryptoScheme,
+		CryptoService,
+		CertManager,
+		NodeNetwork,
+		NetworkService,
 	)
 
 	err = c.cmp.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
-	return c
+	return c, nil
 }
 
 func (c *components) Start(ctx context.Context) error {

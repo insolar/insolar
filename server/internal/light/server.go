@@ -64,7 +64,8 @@ func (s *Server) Serve() {
 	log.SetGlobalLogger(inslog)
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
-	cmp := newComponents(ctx, *cfg)
+	cmp, err := newComponents(ctx, *cfg)
+	checkError(ctx, err, "failed to create components")
 
 	jaegerflush := func() {}
 	if s.trace {

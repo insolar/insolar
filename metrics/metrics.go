@@ -41,8 +41,6 @@ const insgorundNamespace = "insgorund"
 
 // Metrics is a component which serve metrics data to Prometheus.
 type Metrics struct {
-	CertificateManager insolar.CertificateManager `inject:""`
-
 	config   configuration.Metrics
 	registry *prometheus.Registry
 
@@ -88,9 +86,6 @@ var ErrBind = errors.New("Failed to bind")
 func (m *Metrics) Start(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 
-	if m.nodeRole == "" {
-		m.nodeRole = m.CertificateManager.GetCertificate().GetRole().String()
-	}
 	_, err := insmetrics.RegisterPrometheus(
 		ctx, m.config.Namespace, m.registry, m.config.ReportingPeriod,
 		m.nodeRole,
