@@ -2073,7 +2073,7 @@ func TestLogicRunnerFunc(t *testing.T) {
 	suite.Run(t, new(LogicRunnerFuncSuite))
 }
 
-func (s *LogicRunnerFuncSuite) TestImmutableMethodCall() {
+func (s *LogicRunnerFuncSuite) TestImmutableAnnotation() {
 	if parallel {
 		s.T().Parallel()
 	}
@@ -2102,7 +2102,7 @@ func (r *One) ExternalImmutableCallMakesExternalCall() (error) {
 	if err != nil {
 		return err
 	}
-	return objTwo.TestAsImmutable()
+	return objTwo.Immutable()
 }
 `
 
@@ -2124,7 +2124,8 @@ func (r *Two) ReturnNumber() (int, error) {
 	return 42, nil
 }
 
-func (r *Two) Test() (error) {
+//ins:immutable
+func (r *Two) Immutable() (error) {
 	holder := three.New()
 	objThree, err := holder.AsChild(r.GetReference())
 	if err != nil {
