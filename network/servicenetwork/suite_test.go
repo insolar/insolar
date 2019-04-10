@@ -335,8 +335,8 @@ type terminationHandler struct {
 	NodeID core.RecordRef
 }
 
-func (t *terminationHandler) Abort() {
-	log.Errorf("Abort node: %s", t.NodeID)
+func (t *terminationHandler) Abort(reason string) {
+	log.Errorf("Abort node %s: %s", t.NodeID, reason)
 }
 
 type pulseManagerMock struct {
