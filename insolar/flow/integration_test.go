@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package intergrationtest
+package flow_test
 
 import (
 	"context"
