@@ -55,7 +55,6 @@ var contractNames = []string{walletContract, memberContract, allowanceContract, 
 type nodeInfo struct {
 	privateKey crypto.PrivateKey
 	publicKey  string
-	ref        *insolar.Reference
 }
 
 // Generator is a component for generating RootDomain instance and genesis contracts.
