@@ -62,12 +62,14 @@ func OpenFile(dir string, name string) (*os.File, error) {
 	return os.OpenFile(filepath.Join(dir, name), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 }
 
+// Prototypes holds name -> code reference pair
+type Prototypes map[string]*insolar.Reference
+
 // ContractsBuilder for tests
 type ContractsBuilder struct {
 	root string
 
-	Prototypes map[string]*insolar.Reference
-	Codes      map[string]*insolar.Reference
+	Prototypes Prototypes
 
 	genesisRef      insolar.Reference
 	artifactManager artifact.Manager
@@ -84,7 +86,6 @@ func NewContractBuilder(genesisRef insolar.Reference, am artifact.Manager) *Cont
 	cb := &ContractsBuilder{
 		root:       tmpDir,
 		Prototypes: make(map[string]*insolar.Reference),
-		Codes:      make(map[string]*insolar.Reference),
 
 		genesisRef:      genesisRef,
 		artifactManager: am,
@@ -101,22 +102,22 @@ func (cb *ContractsBuilder) Clean() {
 	}
 }
 
-func (cb *ContractsBuilder) Build(ctx context.Context, rootDomainID *insolar.ID) error {
+func (cb *ContractsBuilder) Build(ctx context.Context, rootDomainID *insolar.ID) (Prototypes, error) {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ buildSmartContracts ] building contracts:", contractNames)
 	contracts, err := parseContracts()
 	if err != nil {
-		return errors.Wrap(err, "[ buildSmartContracts ] failed to get contracts map")
+		return nil, errors.Wrap(err, "[ buildSmartContracts ] failed to get contracts map")
 	}
 
 	inslog.Info("[ buildSmartContracts ] Start building contracts ...")
 	err = cb.build(ctx, contracts, rootDomainID)
 	if err != nil {
-		return errors.Wrap(err, "[ buildSmartContracts ] couldn't build contracts")
+		return nil, errors.Wrap(err, "[ buildSmartContracts ] couldn't build contracts")
 	}
 	inslog.Info("[ buildSmartContracts ] Stop building contracts ...")
 
-	return nil
+	return cb.Prototypes, nil
 }
 
 // Build ...
@@ -213,7 +214,6 @@ func (cb *ContractsBuilder) build(ctx context.Context, contracts map[string]*pre
 		}
 
 		log.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
-		cb.Codes[name] = codeRef
 
 		_, err = cb.artifactManager.ActivatePrototype(
 			ctx,

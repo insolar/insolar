@@ -519,7 +519,7 @@ func (g *Generator) Run(ctx context.Context) error {
 	defer cb.Clean()
 
 	inslog.Info("[ Genesis ] buildSmartContracts ...")
-	err = cb.Build(ctx, rootDomainID)
+	_, err = cb.Build(ctx, rootDomainID)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] couldn't build contracts"))
 	}

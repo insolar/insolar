@@ -290,7 +290,6 @@ func TestActivateNodeRecord(t *testing.T) {
 	require.NotNil(t, contract)
 }
 
-
 func TestActivateDiscoveryNodes_DiffLen(t *testing.T) {
 	am := mockArtifactManager(t)
 	g := mockGenerator(t, am)
