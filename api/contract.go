@@ -188,7 +188,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 
 	argsSerialized, _ := insolar.Serialize(args.MethodArgs)
 
-	callMethodReply, err := s.runner.ContractRequester.CallMethod(ctx, &bm, false, objectRef, args.Method, argsSerialized, nil)
+	callMethodReply, err := s.runner.ContractRequester.CallMethod(ctx, &bm, false, false, objectRef, args.Method, argsSerialized, nil)
 	if err != nil {
 		return errors.Wrap(err, "CallMethod failed with error")
 	}
