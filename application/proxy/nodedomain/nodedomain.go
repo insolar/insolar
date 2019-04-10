@@ -103,7 +103,7 @@ func (r *NodeDomain) GetPrototype() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetPrototype", make([]byte, 0), *PrototypeReference)
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "GetPrototype", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -133,7 +133,7 @@ func (r *NodeDomain) GetCode() (insolar.Reference, error) {
 		var ret1 *foundation.Error
 		ret[1] = &ret1
 
-		res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetCode", make([]byte, 0), *PrototypeReference)
+		res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "GetCode", make([]byte, 0), *PrototypeReference)
 		if err != nil {
 			return ret0, err
 		}
@@ -172,7 +172,7 @@ func (r *NodeDomain) RegisterNode(publicKey string, role string) (string, error)
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RegisterNode", argsSerialized, *PrototypeReference)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "RegisterNode", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -201,12 +201,47 @@ func (r *NodeDomain) RegisterNodeNoWait(publicKey string, role string) error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RegisterNode", argsSerialized, *PrototypeReference)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "RegisterNode", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// RegisterNodeAsImmutable is proxy generated method
+func (r *NodeDomain) RegisterNodeAsImmutable(publicKey string, role string) (string, error) {
+	var args [2]interface{}
+	args[0] = publicKey
+	args[1] = role
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "RegisterNode", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // GetNodeRefByPK is proxy generated method
@@ -227,7 +262,7 @@ func (r *NodeDomain) GetNodeRefByPK(publicKey string) (string, error) {
 		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "GetNodeRefByPK", argsSerialized, *PrototypeReference)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "GetNodeRefByPK", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}
@@ -255,12 +290,46 @@ func (r *NodeDomain) GetNodeRefByPKNoWait(publicKey string) error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "GetNodeRefByPK", argsSerialized, *PrototypeReference)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "GetNodeRefByPK", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// GetNodeRefByPKAsImmutable is proxy generated method
+func (r *NodeDomain) GetNodeRefByPKAsImmutable(publicKey string) (string, error) {
+	var args [1]interface{}
+	args[0] = publicKey
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 string
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "GetNodeRefByPK", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
 
 // RemoveNode is proxy generated method
@@ -279,7 +348,7 @@ func (r *NodeDomain) RemoveNode(nodeRef insolar.Reference) error {
 		return err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, "RemoveNode", argsSerialized, *PrototypeReference)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "RemoveNode", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -307,10 +376,42 @@ func (r *NodeDomain) RemoveNodeNoWait(nodeRef insolar.Reference) error {
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, "RemoveNode", argsSerialized, *PrototypeReference)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "RemoveNode", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
 
+	return nil
+}
+
+// RemoveNodeAsImmutable is proxy generated method
+func (r *NodeDomain) RemoveNodeAsImmutable(nodeRef insolar.Reference) error {
+	var args [1]interface{}
+	args[0] = nodeRef
+
+	var argsSerialized []byte
+
+	ret := [1]interface{}{}
+	var ret0 *foundation.Error
+	ret[0] = &ret0
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "RemoveNode", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return err
+	}
+
+	if ret0 != nil {
+		return ret0
+	}
 	return nil
 }
