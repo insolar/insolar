@@ -162,7 +162,7 @@ func (r *{{ $.ContractType }}) GetCode() (insolar.Reference, error) {
 
 {{ range $method := .MethodsProxies }}
 // {{ $method.Name }} is proxy generated method
-func (r *{{ $.ContractType }}) {{ $method.Name }}( {{ $method.Arguments }} ) ( {{ $method.ResultsTypes }} ) {
+func (r *{{ $.ContractType }}) {{ $method.Name }}{{if $method.Immutable}}AsMutable{{end}}( {{ $method.Arguments }} ) ( {{ $method.ResultsTypes }} ) {
 	{{ $method.InitArgs }}
 	var argsSerialized []byte
 
@@ -208,7 +208,7 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}NoWait( {{ $method.Arguments }}
 }
 
 // {{ $method.Name }}AsImmutable is proxy generated method
-func (r *{{ $.ContractType }}) {{ $method.Name }}AsImmutable( {{ $method.Arguments }} ) ( {{ $method.ResultsTypes }} ) {
+func (r *{{ $.ContractType }}) {{ $method.Name }}{{if not $method.Immutable}}AsImmutable{{end}}( {{ $method.Arguments }} ) ( {{ $method.ResultsTypes }} ) {
 	{{ $method.InitArgs }}
 	var argsSerialized []byte
 
