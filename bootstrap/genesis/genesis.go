@@ -49,7 +49,6 @@ const (
 	walletContract    = "wallet"
 	memberContract    = "member"
 	allowanceContract = "allowance"
-	nodeAmount        = 32
 )
 
 var contractNames = []string{walletContract, memberContract, allowanceContract, rootDomain, nodeDomain, nodeRecord}
@@ -330,12 +329,6 @@ func (g *Generator) activateSmartContracts(
 	discoveryNodes, indexMap, err := g.addDiscoveryIndex(ctx, cb, indexMap)
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
-
-	}
-	indexMap, err = g.addIndex(ctx, cb, indexMap)
-	if err != nil {
-		return nil, errors.Wrap(err, errMsg)
-
 	}
 
 	err = g.updateNodeDomainIndex(ctx, nodeDomainDesc, indexMap)
@@ -389,29 +382,6 @@ func (g *Generator) activateDiscoveryNodes(ctx context.Context, cb *ContractsBui
 	return nodes, nil
 }
 
-func (g *Generator) activateNodes(ctx context.Context, cb *ContractsBuilder, nodes []nodeInfo) ([]nodeInfo, error) {
-	var updatedNodes []nodeInfo
-
-	for i, node := range nodes {
-		nodeState := &noderecord.NodeRecord{
-			Record: noderecord.RecordInfo{
-				PublicKey: node.publicKey,
-				Role:      insolar.StaticRoleVirtual,
-			},
-		}
-		contract, err := g.activateNodeRecord(ctx, cb, nodeState, "noderecord_"+strconv.Itoa(i))
-		if err != nil {
-			return nil, errors.Wrap(err, "[ activateNodes ] Couldn't activateNodeRecord node instance")
-		}
-		updatedNode := nodeInfo{
-			ref:       contract,
-			publicKey: node.publicKey,
-		}
-		updatedNodes = append(updatedNodes, updatedNode)
-	}
-
-	return updatedNodes, nil
-}
 
 func (g *Generator) activateNodeRecord(ctx context.Context, cb *ContractsBuilder, record *noderecord.NodeRecord, name string) (*insolar.Reference, error) {
 	nodeData, err := insolar.Serialize(record)
@@ -467,26 +437,6 @@ func (g *Generator) addDiscoveryIndex(ctx context.Context, cb *ContractsBuilder,
 		indexMap[node.node.PublicKey] = node.ref.String()
 	}
 	return discoveryNodes, indexMap, nil
-}
-
-func (g *Generator) addIndex(ctx context.Context, cb *ContractsBuilder, indexMap map[string]string) (map[string]string, error) {
-	errMsg := "[ addIndex ]"
-	nodeKeysPath, err := absPath(g.config.NodeKeysDir)
-	if err != nil {
-		return nil, errors.Wrap(err, errMsg)
-	}
-	userKeys, err := g.uploadKeys(ctx, nodeKeysPath, nodeAmount)
-	if err != nil {
-		return nil, errors.Wrap(err, errMsg)
-	}
-	nodes, err := g.activateNodes(ctx, cb, userKeys)
-	if err != nil {
-		return nil, errors.Wrap(err, errMsg)
-	}
-	for _, node := range nodes {
-		indexMap[node.publicKey] = node.ref.String()
-	}
-	return indexMap, nil
 }
 
 func (g *Generator) createKeys(ctx context.Context, path string, amount int) error {
@@ -565,7 +515,7 @@ func (g *Generator) uploadKeys(ctx context.Context, path string, amount int) ([]
 	return keys, nil
 }
 
-// Run generates genesis data. Accidentally it also generates certificates (it should be fixed).
+// Run generates genesis data.
 func (g *Generator) Run(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting  ...")
