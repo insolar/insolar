@@ -6,14 +6,13 @@ import (
 )
 
 const (
-	COMMON    AlgorithmType = "COMMON"
-	SECP256K1 AlgorithmType = "SECP256K1"
+	COMMON AlgorithmType = "COMMON"
 )
 
 type AlgorithmType string
 
 func NewKeyProcessor() insolar.KeyProcessor {
-	return newKeyProcessor(SECP256K1)
+	return newKeyProcessor(COMMON)
 }
 
 func newKeyProcessor(algorithmType AlgorithmType) insolar.KeyProcessor {
