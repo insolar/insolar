@@ -65,11 +65,54 @@ func (r *outputFlag) Type() string {
 	return "file"
 }
 
+type machineTypeFlag struct {
+	name string
+	num  insolar.MachineType
+}
+
+func newMachineTypeFlag(name string) *machineTypeFlag {
+	flag := machineTypeFlag{}
+	if err := flag.Set(name); err != nil {
+		panic(fmt.Sprintf("unknown error: %s", err))
+	}
+	return &flag
+}
+
+func (r *machineTypeFlag) Set(arg string) error {
+	switch arg {
+	case "":
+		fallthrough
+	case "go":
+		fallthrough
+	case "golang":
+		r.num = insolar.MachineTypeGoPlugin
+	case "builtin":
+		r.num = insolar.MachineTypeBuiltin
+	default:
+		return fmt.Errorf("unknown machine type: %s", arg)
+	}
+	r.name = arg
+	return nil
+}
+
+func (r *machineTypeFlag) String() string {
+	return r.name
+}
+
+func (r *machineTypeFlag) Type() string {
+	return "machineType"
+}
+
+func (r *machineTypeFlag) Value() insolar.MachineType {
+	return r.num
+}
+
 func main() {
 
 	var reference, outdir string
 	output := newOutputFlag("-")
 	proxyOut := newOutputFlag("")
+	machineType := newMachineTypeFlag("go")
 
 	var cmdProxy = &cobra.Command{
 		Use:   "proxy [flags] <file name to process>",
@@ -81,7 +124,7 @@ func main() {
 				os.Exit(1)
 			}
 
-			parsed, err := preprocessor.ParseFile(args[0], insolar.MachineTypeGoPlugin)
+			parsed, err := preprocessor.ParseFile(args[0], machineType.Value())
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "couldn't parse"))
 				os.Exit(1)
@@ -125,6 +168,7 @@ func main() {
 	}
 	cmdProxy.Flags().StringVarP(&reference, "code-reference", "r", "", "reference to code of")
 	cmdProxy.Flags().VarP(proxyOut, "output", "o", "output file (use - for STDOUT)")
+	cmdProxy.Flags().VarP(machineType, "machine-type", "m", "machine type (one of builtin/go)")
 
 	var cmdWrapper = &cobra.Command{
 		Use:   "wrapper [flags] <file name to process>",
@@ -134,7 +178,7 @@ func main() {
 				fmt.Println("wrapper command should be followed by exactly one file name to process")
 				os.Exit(1)
 			}
-			parsed, err := preprocessor.ParseFile(args[0], insolar.MachineTypeGoPlugin)
+			parsed, err := preprocessor.ParseFile(args[0], machineType.Value())
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "couldn't parse"))
 				os.Exit(1)
@@ -148,6 +192,7 @@ func main() {
 		},
 	}
 	cmdWrapper.Flags().VarP(output, "output", "o", "output file (use - for STDOUT)")
+	cmdWrapper.Flags().VarP(machineType, "machine-type", "m", "machine type (one of builtin/go)")
 
 	var cmdImports = &cobra.Command{
 		Use:   "imports [flags] <file name to process>",
@@ -157,7 +202,7 @@ func main() {
 				fmt.Println("imports command should be followed by exactly one file name to process")
 				os.Exit(1)
 			}
-			parsed, err := preprocessor.ParseFile(args[0], insolar.MachineTypeGoPlugin)
+			parsed, err := preprocessor.ParseFile(args[0], machineType.Value())
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "couldn't parse"))
 				os.Exit(1)
@@ -171,6 +216,7 @@ func main() {
 		},
 	}
 	cmdImports.Flags().VarP(output, "output", "o", "output file (use - for STDOUT)")
+	cmdImports.Flags().VarP(machineType, "machine-type", "m", "machine type (one of builtin/go)")
 
 	// PLEASE NOTE that `insgocc compile` is in fact not used for compiling contracts by insolard.
 	// Instead contracts are compiled when `insolard genesis` is executed without using `insgocc`.
@@ -188,7 +234,7 @@ func main() {
 				fmt.Println("compile command should be followed by exactly one file name to compile")
 				os.Exit(1)
 			}
-			parsed, err := preprocessor.ParseFile(args[0], insolar.MachineTypeGoPlugin)
+			parsed, err := preprocessor.ParseFile(args[0], machineType.Value())
 			if err != nil {
 				fmt.Println(err)
 				os.Exit(1)
@@ -255,6 +301,7 @@ func main() {
 	cmdCompile.Flags().StringVarP(&outdir, "output-dir", "o", ".", "output dir")
 	// default value for bool flags is not displayed automatically, thus it's done manually here
 	cmdCompile.Flags().BoolVarP(&keepTemp, "keep-temp", "k", false, "keep temp directory (default \"false\")")
+	cmdCompile.Flags().VarP(machineType, "machine-type", "m", "machine type (one of builtin/go)")
 
 	var rootCmd = &cobra.Command{Use: "insgocc"}
 	rootCmd.AddCommand(cmdProxy, cmdWrapper, cmdImports, cmdCompile)

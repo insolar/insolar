@@ -50,11 +50,7 @@ var corePath = "github.com/insolar/insolar/insolar"
 var immutableFlag = "//ins:immutable"
 
 const (
-	TemplateDirectory       = "templates"
-	GopluginWrapperTemplate = "wrapper_goplugin.go.tpl"
-	GopluginProxyTemplate   = "proxy_goplugin.go.tpl"
-	BuiltinWrapperTemplate  = "wrapper_builtin.go.tpl"
-	BuiltinProxyTemplate    = "proxy_builting.go.tpl"
+	TemplateDirectory = "templates"
 )
 
 // ParsedFile struct with prepared info we extract from source code
@@ -233,16 +229,27 @@ func (pf *ParsedFile) ContractName() string {
 	return pf.node.Name.Name
 }
 
+func checkMachineType(machineType insolar.MachineType) error {
+	if machineType != insolar.MachineTypeGoPlugin &&
+		machineType != insolar.MachineTypeBuiltin {
+		return errors.New("Unsupported machine type")
+	}
+	return nil
+}
+
+func templatePathConstruct(tplType string) string {
+	return path.Join(TemplateDirectory, tplType+".go.tpl")
+}
+
 // WriteWrapper generates and writes into `out` source code
 // of wrapper for the contract
 func (pf *ParsedFile) WriteWrapper(out io.Writer) error {
 	packageName := pf.node.Name.Name
 
-	templatePath := GopluginWrapperTemplate
-	if pf.machineType == insolar.MachineTypeBuiltin {
-		templatePath = BuiltinWrapperTemplate
+	if err := checkMachineType(pf.machineType); err != nil {
+		return err
 	}
-	templatePath = path.Join(TemplateDirectory, templatePath)
+	templatePath := templatePathConstruct("wrapper")
 	tmpl, err := openTemplate(templatePath)
 	if err != nil {
 		return errors.Wrap(err, "couldn't open template file for wrapper")
@@ -257,9 +264,22 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer) error {
 		"FoundationPath": foundationPath,
 		"Imports":        pf.generateImports(true),
 	}
-	err = tmpl.Execute(out, data)
+
+	var buff bytes.Buffer
+
+	err = tmpl.Execute(&buff, data)
 	if err != nil {
 		return errors.Wrap(err, "couldn't write code output handle")
+	}
+
+	fmtOut, err := format.Source(buff.Bytes())
+	if err != nil {
+		return errors.Wrap(err, "couldn't format code")
+	}
+
+	_, err = out.Write(fmtOut)
+	if err != nil {
+		return errors.Wrap(err, "couldn't write code to output")
 	}
 
 	return nil
@@ -299,11 +319,10 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		return errors.Wrap(err, "can't write proxy: ")
 	}
 
-	templatePath := GopluginProxyTemplate
-	if pf.machineType == insolar.MachineTypeBuiltin {
-		templatePath = BuiltinProxyTemplate
+	if err := checkMachineType(pf.machineType); err != nil {
+		return err
 	}
-	templatePath = path.Join(TemplateDirectory, templatePath)
+	templatePath := templatePathConstruct("wrapper")
 	tmpl, err := openTemplate(templatePath)
 	if err != nil {
 		return errors.Wrap(err, "couldn't open template file for proxy")
