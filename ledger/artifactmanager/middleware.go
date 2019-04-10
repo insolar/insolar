@@ -128,32 +128,37 @@ func (m *middleware) checkJet(handler insolar.MessageHandler) insolar.MessageHan
 			return handler(contextWithJet(ctx, insolar.ID(jetID)), parcel)
 		}
 
-		// Calculate jet for current pulse.
-		var jetID insolar.ID
+		// Calculate jet and pulse.
+		var jetID *insolar.ID
+		var pulse insolar.PulseNumber
 		if msg.DefaultTarget().Record().Pulse() == insolar.PulseNumberJet {
-			jetID = *msg.DefaultTarget().Record()
+			jetID = msg.DefaultTarget().Record()
 		} else {
-			j, err := m.handler.jetTreeUpdater.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse())
+			if gr, ok := msg.(*message.GetRequest); ok {
+				pulse = gr.Request.Pulse()
+			} else {
+				pulse = parcel.Pulse()
+			}
+
+			var err error
+			jetID, err = m.handler.jetTreeUpdater.fetchJet(ctx, *msg.DefaultTarget().Record(), pulse)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to fetch jet tree")
 			}
-
-			jetID = *j
 		}
 
 		// Check if jet is ours.
-		node, err := m.jetCoordinator.LightExecutorForJet(ctx, jetID, parcel.Pulse())
+		node, err := m.jetCoordinator.LightExecutorForJet(ctx, *jetID, pulse)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to calculate executor for jet")
 		}
-
 		if *node != m.jetCoordinator.Me() {
-			return &reply.JetMiss{JetID: jetID, Pulse: parcel.Pulse()}, nil
+			return &reply.JetMiss{JetID: *jetID, Pulse: pulse}, nil
 		}
 
-		ctx = addJetIDToLogger(ctx, jetID)
+		ctx = addJetIDToLogger(ctx, *jetID)
 
-		return handler(contextWithJet(ctx, jetID), parcel)
+		return handler(contextWithJet(ctx, *jetID), parcel)
 	}
 }
 
