@@ -23,12 +23,14 @@ import (
 )
 
 func TestNewController(t *testing.T) {
+	t.Parallel()
 	c := NewController()
 	require.NotNil(t, c)
 	require.NotNil(t, c.cancel)
 }
 
 func TestController_Cancel(t *testing.T) {
+	t.Parallel()
 	ch := make(chan struct{})
 	controller := Controller{
 		cancel: ch,
@@ -38,6 +40,7 @@ func TestController_Cancel(t *testing.T) {
 }
 
 func TestController_Pulse(t *testing.T) {
+	t.Parallel()
 	ch := make(chan struct{})
 	controller := Controller{
 		cancel: ch,

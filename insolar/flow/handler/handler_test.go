@@ -30,6 +30,7 @@ import (
 )
 
 func TestNewHandler(t *testing.T) {
+	t.Parallel()
 	ok := false
 	var f flow.MakeHandle = func(bus.Message) flow.Handle {
 		ok = true
@@ -50,12 +51,12 @@ func (replyMock) Type() insolar.ReplyType {
 }
 
 func TestHandler_WrapBusHandle(t *testing.T) {
+	t.Parallel()
 	h := &Handler{
 		controller: thread.NewController(),
 	}
 	reply := bus.Reply{
 		Reply: replyMock(42),
-		Err:   errors.New("test error"),
 	}
 	h.handles.present = func(msg bus.Message) flow.Handle {
 		msg.ReplyTo <- reply
@@ -73,6 +74,7 @@ func TestHandler_WrapBusHandle(t *testing.T) {
 }
 
 func TestHandler_WrapBusHandle_Error(t *testing.T) {
+	t.Parallel()
 	h := &Handler{
 		controller: thread.NewController(),
 	}
@@ -91,6 +93,7 @@ func TestHandler_WrapBusHandle_Error(t *testing.T) {
 }
 
 func TestHandler_WrapBusHandle_Timeout(t *testing.T) {
+	t.Parallel()
 	h := &Handler{
 		controller: thread.NewController(),
 	}

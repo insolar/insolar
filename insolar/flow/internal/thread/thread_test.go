@@ -29,6 +29,7 @@ import (
 )
 
 func TestNewThread(t *testing.T) {
+	t.Parallel()
 	msg := bus.Message{}
 	ch := make(chan struct{})
 	controller := &Controller{
@@ -43,6 +44,7 @@ func TestNewThread(t *testing.T) {
 }
 
 func TestThread_Handle_CancelledBefore(t *testing.T) {
+	t.Parallel()
 	cancel := make(chan struct{})
 	thread := Thread{
 		cancel: cancel,
@@ -57,6 +59,7 @@ func TestThread_Handle_CancelledBefore(t *testing.T) {
 }
 
 func TestThread_Handle_Error(t *testing.T) {
+	t.Parallel()
 	thread := Thread{}
 
 	handleError := errors.New("test error")
@@ -69,6 +72,7 @@ func TestThread_Handle_Error(t *testing.T) {
 }
 
 func TestThread_Handle_CanceledAfter(t *testing.T) {
+	t.Parallel()
 	cancel := make(chan struct{})
 	thread := Thread{
 		cancel: cancel,
@@ -83,6 +87,7 @@ func TestThread_Handle_CanceledAfter(t *testing.T) {
 }
 
 func TestThread_Handle(t *testing.T) {
+	t.Parallel()
 	thread := Thread{}
 	handle := func(ctx context.Context, f flow.Flow) error {
 		return nil
@@ -92,6 +97,7 @@ func TestThread_Handle(t *testing.T) {
 }
 
 func TestThread_Procedure_CancelledBefore(t *testing.T) {
+	t.Parallel()
 	cancel := make(chan struct{})
 	thread := Thread{
 		cancel: cancel,
@@ -103,12 +109,14 @@ func TestThread_Procedure_CancelledBefore(t *testing.T) {
 }
 
 func TestThread_Procedure_NilProcedureError(t *testing.T) {
+	t.Parallel()
 	thread := Thread{}
 	err := thread.Procedure(context.Background(), nil)
 	require.EqualError(t, err, "procedure called with nil procedure")
 }
 
 func TestThread_Procedure_CancelledWhenProcedureWorks(t *testing.T) {
+	t.Parallel()
 	cancel := make(chan struct{})
 	thread := Thread{
 		cancel:     cancel,
@@ -127,6 +135,7 @@ func TestThread_Procedure_CancelledWhenProcedureWorks(t *testing.T) {
 }
 
 func TestThread_Procedure_ProceedReturnsError(t *testing.T) {
+	t.Parallel()
 	thread := Thread{
 		procedures: map[flow.Procedure]chan error{},
 	}
@@ -140,6 +149,7 @@ func TestThread_Procedure_ProceedReturnsError(t *testing.T) {
 }
 
 func TestThread_Procedure(t *testing.T) {
+	t.Parallel()
 	thread := Thread{
 		procedures: map[flow.Procedure]chan error{},
 	}
@@ -152,6 +162,7 @@ func TestThread_Procedure(t *testing.T) {
 }
 
 func TestThread_Migrate_MigratedError(t *testing.T) {
+	t.Parallel()
 	thread := Thread{
 		migrated: true,
 	}
@@ -160,6 +171,7 @@ func TestThread_Migrate_MigratedError(t *testing.T) {
 }
 
 func TestThread_Migrate_HandleReturnsError(t *testing.T) {
+	t.Parallel()
 	controller := &Controller{
 		cancel: make(chan struct{}),
 	}
@@ -178,6 +190,7 @@ func TestThread_Migrate_HandleReturnsError(t *testing.T) {
 }
 
 func TestThread_Migrate(t *testing.T) {
+	t.Parallel()
 	controller := &Controller{
 		cancel: make(chan struct{}),
 	}
@@ -193,9 +206,11 @@ func TestThread_Migrate(t *testing.T) {
 	}
 	err := thread.Migrate(context.Background(), handle)
 	require.NoError(t, err)
+	require.True(t, thread.migrated)
 }
 
 func TestThread_Run_Error(t *testing.T) {
+	t.Parallel()
 	thread := Thread{}
 	handle := func(ctx context.Context, f flow.Flow) error {
 		require.Equal(t, &thread, f)
@@ -206,6 +221,7 @@ func TestThread_Run_Error(t *testing.T) {
 }
 
 func TestThread_Run(t *testing.T) {
+	t.Parallel()
 	thread := Thread{}
 	handle := func(ctx context.Context, f flow.Flow) error {
 		require.Equal(t, &thread, f)
@@ -216,6 +232,7 @@ func TestThread_Run(t *testing.T) {
 }
 
 func TestThread_procedure_AlreadyExists(t *testing.T) {
+	t.Parallel()
 	thread := Thread{
 		procedures: map[flow.Procedure]chan error{},
 	}
@@ -229,6 +246,7 @@ func TestThread_procedure_AlreadyExists(t *testing.T) {
 }
 
 func TestThread_procedure(t *testing.T) {
+	t.Parallel()
 	thread := Thread{
 		procedures: map[flow.Procedure]chan error{},
 	}
@@ -249,6 +267,7 @@ func TestThread_procedure(t *testing.T) {
 }
 
 func TestThread_canceled_Canceled(t *testing.T) {
+	t.Parallel()
 	cancel := make(chan struct{})
 	thread := Thread{
 		cancel: cancel,
@@ -259,6 +278,7 @@ func TestThread_canceled_Canceled(t *testing.T) {
 }
 
 func TestThread_canceled(t *testing.T) {
+	t.Parallel()
 	cancel := make(chan struct{})
 	thread := Thread{
 		cancel: cancel,
