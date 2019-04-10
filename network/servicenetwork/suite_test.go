@@ -446,7 +446,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	terminationHandler := testutils.NewTerminationHandlerMock(s.T())
 	terminationHandler.LeaveFunc = func(p context.Context, p1 insolar.PulseNumber) {}
 	terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {}
-	terminationHandler.AbortFunc = func() {}
+	terminationHandler.AbortFunc = func(reason string) { log.Error(reason) }
 
 	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
