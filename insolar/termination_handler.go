@@ -29,5 +29,5 @@ type TerminationHandler interface {
 	Leave(context.Context, PulseNumber)
 	OnLeaveApproved(context.Context)
 	// Abort forces to stop all node components
-	Abort()
+	Abort(reason string)
 }

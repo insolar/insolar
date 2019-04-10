@@ -20,7 +20,7 @@ import (
 type TerminationHandlerMock struct {
 	t minimock.Tester
 
-	AbortFunc       func()
+	AbortFunc       func(p string)
 	AbortCounter    uint64
 	AbortPreCounter uint64
 	AbortMock       mTerminationHandlerMockAbort
@@ -58,17 +58,22 @@ type mTerminationHandlerMockAbort struct {
 }
 
 type TerminationHandlerMockAbortExpectation struct {
+	input *TerminationHandlerMockAbortInput
+}
+
+type TerminationHandlerMockAbortInput struct {
+	p string
 }
 
 //Expect specifies that invocation of TerminationHandler.Abort is expected from 1 to Infinity times
-func (m *mTerminationHandlerMockAbort) Expect() *mTerminationHandlerMockAbort {
+func (m *mTerminationHandlerMockAbort) Expect(p string) *mTerminationHandlerMockAbort {
 	m.mock.AbortFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &TerminationHandlerMockAbortExpectation{}
 	}
-
+	m.mainExpectation.input = &TerminationHandlerMockAbortInput{p}
 	return m
 }
 
@@ -85,18 +90,18 @@ func (m *mTerminationHandlerMockAbort) Return() *TerminationHandlerMock {
 }
 
 //ExpectOnce specifies that invocation of TerminationHandler.Abort is expected once
-func (m *mTerminationHandlerMockAbort) ExpectOnce() *TerminationHandlerMockAbortExpectation {
+func (m *mTerminationHandlerMockAbort) ExpectOnce(p string) *TerminationHandlerMockAbortExpectation {
 	m.mock.AbortFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &TerminationHandlerMockAbortExpectation{}
-
+	expectation.input = &TerminationHandlerMockAbortInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
 //Set uses given function f as a mock of TerminationHandler.Abort method
-func (m *mTerminationHandlerMockAbort) Set(f func()) *TerminationHandlerMock {
+func (m *mTerminationHandlerMockAbort) Set(f func(p string)) *TerminationHandlerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -105,30 +110,38 @@ func (m *mTerminationHandlerMockAbort) Set(f func()) *TerminationHandlerMock {
 }
 
 //Abort implements github.com/insolar/insolar/insolar.TerminationHandler interface
-func (m *TerminationHandlerMock) Abort() {
+func (m *TerminationHandlerMock) Abort(p string) {
 	counter := atomic.AddUint64(&m.AbortPreCounter, 1)
 	defer atomic.AddUint64(&m.AbortCounter, 1)
 
 	if len(m.AbortMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.AbortMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to TerminationHandlerMock.Abort.")
+			m.t.Fatalf("Unexpected call to TerminationHandlerMock.Abort. %v", p)
 			return
 		}
+
+		input := m.AbortMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, TerminationHandlerMockAbortInput{p}, "TerminationHandler.Abort got unexpected parameters")
 
 		return
 	}
 
 	if m.AbortMock.mainExpectation != nil {
 
+		input := m.AbortMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, TerminationHandlerMockAbortInput{p}, "TerminationHandler.Abort got unexpected parameters")
+		}
+
 		return
 	}
 
 	if m.AbortFunc == nil {
-		m.t.Fatalf("Unexpected call to TerminationHandlerMock.Abort.")
+		m.t.Fatalf("Unexpected call to TerminationHandlerMock.Abort. %v", p)
 		return
 	}
 
-	m.AbortFunc()
+	m.AbortFunc(p)
 }
 
 //AbortMinimockCounter returns a count of TerminationHandlerMock.AbortFunc invocations
