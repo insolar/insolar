@@ -152,7 +152,7 @@ func TestCallMethodCanceled(t *testing.T) {
 		return &reply.RegisterRequest{}, nil
 	}
 
-	_, err = cr.CallMethod(ctx, msg, false, &ref, method, insolar.Arguments{}, &prototypeRef)
+	_, err = cr.CallMethod(ctx, msg, false, false, &ref, method, insolar.Arguments{}, &prototypeRef)
 	require.Error(t, err)
 	assert.Contains(t, "canceled", err.Error())
 
