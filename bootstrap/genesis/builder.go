@@ -23,13 +23,13 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
+	"github.com/pkg/errors"
 )
 
 var (
@@ -101,8 +101,26 @@ func (cb *ContractsBuilder) Clean() {
 	}
 }
 
+func (cb *ContractsBuilder) Build(ctx context.Context, rootDomainID *insolar.ID) error {
+	inslog := inslogger.FromContext(ctx)
+	inslog.Info("[ buildSmartContracts ] building contracts:", contractNames)
+	contracts, err := parseContracts()
+	if err != nil {
+		return errors.Wrap(err, "[ buildSmartContracts ] failed to get contracts map")
+	}
+
+	inslog.Info("[ buildSmartContracts ] Start building contracts ...")
+	err = cb.build(ctx, contracts, rootDomainID)
+	if err != nil {
+		return errors.Wrap(err, "[ buildSmartContracts ] couldn't build contracts")
+	}
+	inslog.Info("[ buildSmartContracts ] Stop building contracts ...")
+
+	return nil
+}
+
 // Build ...
-func (cb *ContractsBuilder) Build(ctx context.Context, contracts map[string]*preprocessor.ParsedFile, domain *insolar.ID) error {
+func (cb *ContractsBuilder) build(ctx context.Context, contracts map[string]*preprocessor.ParsedFile, domain *insolar.ID) error {
 
 	domainRef := insolar.NewReference(*domain, *domain)
 

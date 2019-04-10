@@ -45,7 +45,7 @@ func getContractPath(name string) (string, error) {
 	return filepath.Join(contractDir, name, contractFile), nil
 }
 
-func getContractsMap() (map[string]*preprocessor.ParsedFile, error) {
+func parseContracts() (map[string]*preprocessor.ParsedFile, error) {
 	contracts := make(map[string]*preprocessor.ParsedFile)
 	for _, name := range contractNames {
 		contractPath, err := getContractPath(name)

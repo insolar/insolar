@@ -27,8 +27,6 @@ import (
 	"path/filepath"
 	"strconv"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/nodedomain"
 	"github.com/insolar/insolar/application/contract/noderecord"
@@ -40,6 +38,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -83,24 +82,6 @@ func NewGenerator(config *Config, am artifact.Manager, genesisRef insolar.Refere
 
 		keyOut: genesisKeyOut,
 	}
-}
-
-func buildSmartContracts(ctx context.Context, cb *ContractsBuilder, rootDomainID *insolar.ID) error {
-	inslog := inslogger.FromContext(ctx)
-	inslog.Info("[ buildSmartContracts ] building contracts:", contractNames)
-	contracts, err := getContractsMap()
-	if err != nil {
-		return errors.Wrap(err, "[ buildSmartContracts ] failed to get contracts map")
-	}
-
-	inslog.Info("[ buildSmartContracts ] Start building contracts ...")
-	err = cb.Build(ctx, contracts, rootDomainID)
-	if err != nil {
-		return errors.Wrap(err, "[ buildSmartContracts ] couldn't build contracts")
-	}
-	inslog.Info("[ buildSmartContracts ] Stop building contracts ...")
-
-	return nil
 }
 
 func (g *Generator) activateRootDomain(
@@ -382,7 +363,6 @@ func (g *Generator) activateDiscoveryNodes(ctx context.Context, cb *ContractsBui
 	return nodes, nil
 }
 
-
 func (g *Generator) activateNodeRecord(ctx context.Context, cb *ContractsBuilder, record *noderecord.NodeRecord, name string) (*insolar.Reference, error) {
 	nodeData, err := insolar.Serialize(record)
 	if err != nil {
@@ -539,7 +519,7 @@ func (g *Generator) Run(ctx context.Context) error {
 	defer cb.Clean()
 
 	inslog.Info("[ Genesis ] buildSmartContracts ...")
-	err = buildSmartContracts(ctx, cb, rootDomainID)
+	err = cb.Build(ctx, rootDomainID)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] couldn't build contracts"))
 	}
