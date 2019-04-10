@@ -560,10 +560,9 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 	}
 	lastPulse, err := bc.PulseAccessor.Latest(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get a last pulse")
+		lastPulse = *insolar.GenesisPulse
 	}
 	bootstrapReq := &NodeBootstrapRequest{
-		// Certificate:   bc.Certificate,
 		JoinClaim:     *claim,
 		LastNodePulse: lastPulse.PulseNumber,
 	}
@@ -584,7 +583,6 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 		return bootstrap(ctx, data.RedirectHost, bc.options, bc.startBootstrap)
 	}
 	return &network.BootstrapResult{
-		// FirstPulseTime:    time.Unix(data.FirstPulseTimeUnix, 0),
 		Host:              response.GetSenderHost(),
 		ReconnectRequired: data.Code == ReconnectRequired,
 		NetworkSize:       data.NetworkSize,
@@ -644,7 +642,7 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Re
 	}
 	lastPulse, err := bc.PulseAccessor.Latest(ctx)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get a last pulse")
+		lastPulse = *insolar.GenesisPulse
 	}
 	return bc.Network.BuildResponse(ctx, request,
 		&NodeBootstrapResponse{

@@ -265,7 +265,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	// (for fresh bootstrapped light-material with in-memory pulse-tracker)
 	if currentPulse, err := n.PulseAccessor.Latest(ctx); err != nil {
 		if err != pulse.ErrNotFound {
-			logger.Fatalf("Could not get current pulse: %s", err.Error())
+			currentPulse = *insolar.GenesisPulse
 		}
 	} else {
 		if !isNextPulse(&currentPulse, &newPulse) {
