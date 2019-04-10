@@ -150,16 +150,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) *compon
 	)
 	checkError(ctx, err, "failed to start Metrics")
 
-	c.cmp.Register(
-		Termination,
-		CryptoScheme,
-		CryptoService,
-		KeyProcessor,
-		CertManager,
-		NodeNetwork,
-		NetworkService,
-	)
-
 	components := ledger.GetLedgerComponents(cfg.Ledger, CertManager.GetCertificate())
 
 	c.cmp.Inject(
@@ -174,8 +164,13 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) *compon
 			metricsHandler,
 			NetworkSwitcher,
 			NetworkCoordinator,
-			CryptoService,
 			KeyProcessor,
+			Termination,
+			CryptoScheme,
+			CryptoService,
+			CertManager,
+			NodeNetwork,
+			NetworkService,
 		}...)...,
 	)
 
