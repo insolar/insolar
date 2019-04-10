@@ -1,5 +1,7 @@
 #! /usr/bin/env bash
 set -e
+# activates log_symlinks_by_node_refs function
+LOG_SYMLINKS_BY_NODE_REF=
 
 BIN_DIR=bin
 TEST_DATA=testdata
@@ -285,6 +287,12 @@ genesis()
     copy_data
     copy_discovery_certs
 
+    if [[ "$LOG_SYMLINKS_BY_NODE_REF" != "" ]]; then
+        log_symlinks_by_node_refs
+    fi
+}
+
+log_symlinks_by_node_refs() {
     if which jq ; then
         NL=$BASE_DIR/loglinks
         mkdir  $NL || \
