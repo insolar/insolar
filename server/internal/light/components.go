@@ -43,66 +43,44 @@ import (
 	"github.com/insolar/insolar/version/manager"
 )
 
-type bootstrapComponents struct {
-	CryptographyService        insolar.CryptographyService
-	PlatformCryptographyScheme insolar.PlatformCryptographyScheme
-	KeyProcessor               insolar.KeyProcessor
+type components struct {
+	cmp               component.Manager
+	NodeRef, NodeRole string
 }
 
-func initBootstrapComponents(ctx context.Context, cfg configuration.Configuration) bootstrapComponents {
-	earlyComponents := component.Manager{}
+func newComponents(ctx context.Context, cfg configuration.Configuration) *components {
+	c := &components{}
+	c.cmp = component.Manager{}
 
-	keyStore, err := keystore.NewKeyStore(cfg.KeysPath)
-	checkError(ctx, err, "failed to load KeyStore: ")
+	// Cryptography.
+	var (
+		KeyProcessor  insolar.KeyProcessor
+		CryptoScheme  insolar.PlatformCryptographyScheme
+		CryptoService insolar.CryptographyService
+		CertManager   insolar.CertificateManager
+	)
+	{
+		ks, err := keystore.NewKeyStore(cfg.KeysPath)
+		checkError(ctx, err, "failed to load KeyStore")
 
-	platformCryptographyScheme := platformpolicy.NewPlatformCryptographyScheme()
-	keyProcessor := platformpolicy.NewKeyProcessor()
+		KeyProcessor = platformpolicy.NewKeyProcessor()
+		CryptoScheme = platformpolicy.NewPlatformCryptographyScheme()
+		CryptoService = cryptography.NewCryptographyService()
 
-	cryptographyService := cryptography.NewCryptographyService()
-	earlyComponents.Register(platformCryptographyScheme, keyStore)
-	earlyComponents.Inject(cryptographyService, keyProcessor)
+		c := component.Manager{}
+		c.Inject(CryptoService, CryptoScheme, KeyProcessor, ks)
 
-	return bootstrapComponents{
-		CryptographyService:        cryptographyService,
-		PlatformCryptographyScheme: platformCryptographyScheme,
-		KeyProcessor:               keyProcessor,
+		publicKey, err := CryptoService.GetPublicKey()
+		checkError(ctx, err, "failed to retrieve node public key")
+
+		CertManager, err = certificate.NewManagerReadCertificate(publicKey, KeyProcessor, cfg.CertificatePath)
+		checkError(ctx, err, "failed to start Certificate")
 	}
-}
 
-func initCertificateManager(
-	ctx context.Context,
-	cfg configuration.Configuration,
-	cryptographyService insolar.CryptographyService,
-	keyProcessor insolar.KeyProcessor,
-) *certificate.CertificateManager {
-	var certManager *certificate.CertificateManager
-	var err error
-
-	publicKey, err := cryptographyService.GetPublicKey()
-	checkError(ctx, err, "failed to retrieve node public key")
-
-	certManager, err = certificate.NewManagerReadCertificate(publicKey, keyProcessor, cfg.CertificatePath)
-	checkError(ctx, err, "failed to start Certificate")
-
-	return certManager
-}
-
-// initComponents creates and links all insolard components
-func initComponents(
-	ctx context.Context,
-	cfg configuration.Configuration,
-	cryptographyService insolar.CryptographyService,
-	platformCryptographyScheme insolar.PlatformCryptographyScheme,
-	keyProcessor insolar.KeyProcessor,
-	certManager insolar.CertificateManager,
-
-) (*component.Manager, error) {
-	cm := component.Manager{}
-
-	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
+	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, CertManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
 
-	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, false)
+	nw, err := servicenetwork.NewServiceNetwork(cfg, &c.cmp, false)
 	checkError(ctx, err, "failed to start Network")
 
 	terminationHandler := termination.NewHandler(nw)
@@ -122,7 +100,7 @@ func initComponents(
 	apiRunner, err := api.NewRunner(&cfg.APIRunner)
 	checkError(ctx, err, "failed to start ApiRunner")
 
-	nodeRole := certManager.GetCertificate().GetRole().String()
+	nodeRole := CertManager.GetCertificate().GetRole().String()
 	metricsHandler, err := metrics.NewMetrics(
 		ctx,
 		cfg.Metrics,
@@ -140,17 +118,17 @@ func initComponents(
 	_, err = manager.NewVersionManager(cfg.VersionManager)
 	checkError(ctx, err, "failed to load VersionManager: ")
 
-	cm.Register(
+	c.cmp.Register(
 		terminationHandler,
-		platformCryptographyScheme,
-		cryptographyService,
-		keyProcessor,
-		certManager,
+		CryptoScheme,
+		CryptoService,
+		KeyProcessor,
+		CertManager,
 		nodeNetwork,
 		nw,
 	)
 
-	components := ledger.GetLedgerComponents(cfg.Ledger, certManager.GetCertificate())
+	components := ledger.GetLedgerComponents(cfg.Ledger, CertManager.GetCertificate())
 
 	components = append(components, []interface{}{
 		messageBus,
@@ -163,11 +141,23 @@ func initComponents(
 		metricsHandler,
 		networkSwitcher,
 		networkCoordinator,
-		cryptographyService,
-		keyProcessor,
+		CryptoService,
+		KeyProcessor,
 	}...)
 
-	cm.Inject(components...)
+	c.cmp.Inject(components...)
+	err = c.cmp.Init(ctx)
+	checkError(ctx, err, "failed to init components")
 
-	return &cm, nil
+	c.NodeRef = CertManager.GetCertificate().GetNodeRef().String()
+	c.NodeRole = CertManager.GetCertificate().GetRole().String()
+	return c
+}
+
+func (c *components) Start(ctx context.Context) error {
+	return c.cmp.Start(ctx)
+}
+
+func (c *components) Stop(ctx context.Context) error {
+	return c.cmp.Stop(ctx)
 }

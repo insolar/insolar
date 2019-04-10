@@ -64,22 +64,7 @@ func (s *Server) Serve() {
 	log.SetGlobalLogger(inslog)
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
-	bootstrapComponents := initBootstrapComponents(ctx, *cfg)
-	certManager := initCertificateManager(
-		ctx,
-		*cfg,
-		bootstrapComponents.CryptographyService,
-		bootstrapComponents.KeyProcessor,
-	)
-	cm, err := initComponents(
-		ctx,
-		*cfg,
-		bootstrapComponents.CryptographyService,
-		bootstrapComponents.PlatformCryptographyScheme,
-		bootstrapComponents.KeyProcessor,
-		certManager,
-	)
-	checkError(ctx, err, "failed to init components")
+	cmp := newComponents(ctx, *cfg)
 
 	jaegerflush := func() {}
 	if s.trace {
@@ -87,8 +72,8 @@ func (s *Server) Serve() {
 		log.Infof("Tracing enabled. Agent endpoint: '%s', collector endpoint: '%s'\n", jconf.AgentEndpoint, jconf.CollectorEndpoint)
 		jaegerflush = instracer.ShouldRegisterJaeger(
 			ctx,
-			certManager.GetCertificate().GetRole().String(),
-			certManager.GetCertificate().GetNodeRef().String(),
+			cmp.NodeRole,
+			cmp.NodeRef,
 			jconf.AgentEndpoint,
 			jconf.CollectorEndpoint,
 			jconf.ProbabilityRate)
@@ -96,13 +81,10 @@ func (s *Server) Serve() {
 	}
 	defer jaegerflush()
 
-	ctx, inslog = inslogger.WithField(ctx, "nodeid", certManager.GetCertificate().GetNodeRef().String())
-	ctx, inslog = inslogger.WithField(ctx, "role", certManager.GetCertificate().GetRole().String())
+	ctx, inslog = inslogger.WithField(ctx, "nodeid", cmp.NodeRef)
+	ctx, inslog = inslogger.WithField(ctx, "role", cmp.NodeRole)
 	ctx = inslogger.SetLogger(ctx, inslog)
 	log.SetGlobalLogger(inslog)
-
-	err = cm.Init(ctx)
-	checkError(ctx, err, "failed to init components")
 
 	var gracefulStop = make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
@@ -115,12 +97,12 @@ func (s *Server) Serve() {
 		inslog.Debug("caught sig: ", sig)
 
 		inslog.Warn("GRACEFULL STOP APP")
-		err = cm.Stop(ctx)
+		err = cmp.Stop(ctx)
 		checkError(ctx, err, "failed to graceful stop components")
 		close(waitChannel)
 	}()
 
-	err = cm.Start(ctx)
+	err = cmp.Start(ctx)
 	checkError(ctx, err, "failed to start components")
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("All components were started")
