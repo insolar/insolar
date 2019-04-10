@@ -53,6 +53,7 @@ package nodenetwork
 import (
 	"testing"
 
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/node"
 	"github.com/stretchr/testify/assert"
@@ -62,6 +63,12 @@ func newTestNode(reference insolar.Reference, state insolar.NodeState) insolar.N
 	result := node.NewNode(reference, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
 	result.(node.MutableNode).SetState(state)
 	return result
+}
+
+func newTestJoinClaim(reference insolar.Reference) packets.ReferendumClaim {
+	return &packets.NodeJoinClaim{
+		NodeRef: reference,
+	}
 }
 
 func Test_copyActiveNodes(t *testing.T) {
@@ -86,4 +93,34 @@ func Test_copyActiveNodes(t *testing.T) {
 	// state is not changed if node state is NodeReady or above
 	assert.Equal(t, insolar.NodeLeaving, copy[insolar.Reference{3}].GetState())
 	assert.Nil(t, copy[insolar.Reference{4}])
+}
+
+func TestGetMergedCopy_NilClaims(t *testing.T) {
+	nodes := []insolar.NetworkNode{
+		newTestNode(insolar.Reference{1}, insolar.NodePending),
+		newTestNode(insolar.Reference{2}, insolar.NodeReady),
+		newTestNode(insolar.Reference{3}, insolar.NodeLeaving),
+	}
+
+	result, err := GetMergedCopy(nodes, nil)
+	assert.NoError(t, err)
+	assert.False(t, result.NodesJoinedDuringPrevPulse)
+	assert.Equal(t, 3, len(result.ActiveList))
+}
+
+func TestGetMergedCopy_JoinClaims(t *testing.T) {
+	nodes := []insolar.NetworkNode{
+		newTestNode(insolar.Reference{1}, insolar.NodePending),
+		newTestNode(insolar.Reference{2}, insolar.NodeReady),
+		newTestNode(insolar.Reference{3}, insolar.NodeLeaving),
+	}
+	claims := []packets.ReferendumClaim{
+		newTestJoinClaim(insolar.Reference{4}),
+		newTestJoinClaim(insolar.Reference{5}),
+		&packets.NodeBroadcast{},
+	}
+	result, err := GetMergedCopy(nodes, claims)
+	assert.NoError(t, err)
+	assert.True(t, result.NodesJoinedDuringPrevPulse)
+	assert.Equal(t, 5, len(result.ActiveList))
 }
