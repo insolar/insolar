@@ -122,7 +122,7 @@ func (g *Generator) activateRootDomain(
 }
 
 func (g *Generator) activateNodeDomain(
-	ctx context.Context, domain *insolar.ID, cb *ContractsBuilder,
+	ctx context.Context, domain *insolar.ID, nodeDomainProto insolar.Reference,
 ) (artifact.ObjectDescriptor, error) {
 	nd, _ := nodedomain.NewNodeDomain()
 
@@ -148,7 +148,7 @@ func (g *Generator) activateNodeDomain(
 		insolar.Reference{},
 		*contract,
 		*g.rootDomainRef,
-		*cb.Prototypes[nodeDomain],
+		nodeDomainProto,
 		false,
 		instanceData,
 	)
@@ -166,7 +166,10 @@ func (g *Generator) activateNodeDomain(
 }
 
 func (g *Generator) activateRootMember(
-	ctx context.Context, domain *insolar.ID, cb *ContractsBuilder, rootPubKey string,
+	ctx context.Context,
+	domain *insolar.ID,
+	rootPubKey string,
+	memberContractProto insolar.Reference,
 ) error {
 
 	m, err := member.New("RootMember", rootPubKey)
@@ -196,7 +199,7 @@ func (g *Generator) activateRootMember(
 		insolar.Reference{},
 		*contract,
 		*g.rootDomainRef,
-		*cb.Prototypes[memberContract],
+		memberContractProto,
 		false,
 		instanceData,
 	)
@@ -234,7 +237,7 @@ func (g *Generator) updateRootDomain(
 }
 
 func (g *Generator) activateRootMemberWallet(
-	ctx context.Context, domain *insolar.ID, cb *ContractsBuilder,
+	ctx context.Context, domain *insolar.ID, walletContractProto insolar.Reference,
 ) error {
 
 	w, err := wallet.New(g.config.RootBalance)
@@ -264,7 +267,7 @@ func (g *Generator) activateRootMemberWallet(
 		insolar.Reference{},
 		*contract,
 		*g.rootMemberRef,
-		*cb.Prototypes[walletContract],
+		walletContractProto,
 		true,
 		instanceData,
 	)
@@ -280,7 +283,11 @@ func (g *Generator) activateRootMemberWallet(
 }
 
 func (g *Generator) activateSmartContracts(
-	ctx context.Context, cb *ContractsBuilder, rootPubKey string, rootDomainID *insolar.ID,
+	ctx context.Context,
+	cb *ContractsBuilder,
+	rootPubKey string,
+	rootDomainID *insolar.ID,
+	prototypes Prototypes,
 ) ([]genesisNode, error) {
 
 	rootDomainDesc, err := g.activateRootDomain(ctx, cb, rootDomainID)
@@ -288,11 +295,11 @@ func (g *Generator) activateSmartContracts(
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
-	nodeDomainDesc, err := g.activateNodeDomain(ctx, rootDomainID, cb)
+	nodeDomainDesc, err := g.activateNodeDomain(ctx, rootDomainID, *prototypes[nodeDomain])
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
-	err = g.activateRootMember(ctx, rootDomainID, cb, rootPubKey)
+	err = g.activateRootMember(ctx, rootDomainID, rootPubKey, *cb.Prototypes[memberContract])
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
@@ -301,13 +308,13 @@ func (g *Generator) activateSmartContracts(
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
-	err = g.activateRootMemberWallet(ctx, rootDomainID, cb)
+	err = g.activateRootMemberWallet(ctx, rootDomainID, *cb.Prototypes[walletContract])
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
 	indexMap := make(map[string]string)
 
-	discoveryNodes, indexMap, err := g.addDiscoveryIndex(ctx, cb, indexMap)
+	discoveryNodes, indexMap, err := g.addDiscoveryIndex(ctx, indexMap, *cb.Prototypes[nodeRecord])
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
@@ -327,7 +334,11 @@ type genesisNode struct {
 	role    string
 }
 
-func (g *Generator) activateDiscoveryNodes(ctx context.Context, cb *ContractsBuilder, nodesInfo []nodeInfo) ([]genesisNode, error) {
+func (g *Generator) activateDiscoveryNodes(
+	ctx context.Context,
+	nodeRecordProto insolar.Reference,
+	nodesInfo []nodeInfo,
+) ([]genesisNode, error) {
 	if len(nodesInfo) != len(g.config.DiscoveryNodes) {
 		return nil, errors.New("[ activateDiscoveryNodes ] len of nodesInfo param must be equal to len of DiscoveryNodes in genesis config")
 	}
@@ -344,7 +355,7 @@ func (g *Generator) activateDiscoveryNodes(ctx context.Context, cb *ContractsBui
 				Role:      insolar.GetStaticRoleFromString(discoverNode.Role),
 			},
 		}
-		contract, err := g.activateNodeRecord(ctx, cb, nodeState, "discoverynoderecord_"+strconv.Itoa(i))
+		contract, err := g.activateNodeRecord(ctx, nodeState, "discoverynoderecord_"+strconv.Itoa(i), nodeRecordProto)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ activateDiscoveryNodes ] Couldn't activateNodeRecord node instance")
 		}
@@ -363,7 +374,12 @@ func (g *Generator) activateDiscoveryNodes(ctx context.Context, cb *ContractsBui
 	return nodes, nil
 }
 
-func (g *Generator) activateNodeRecord(ctx context.Context, cb *ContractsBuilder, record *noderecord.NodeRecord, name string) (*insolar.Reference, error) {
+func (g *Generator) activateNodeRecord(
+	ctx context.Context,
+	record *noderecord.NodeRecord,
+	name string,
+	nodeRecordProto insolar.Reference,
+) (*insolar.Reference, error) {
 	nodeData, err := insolar.Serialize(record)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't serialize node instance")
@@ -385,7 +401,7 @@ func (g *Generator) activateNodeRecord(ctx context.Context, cb *ContractsBuilder
 		insolar.Reference{},
 		*contract,
 		*g.nodeDomainRef,
-		*cb.Prototypes[nodeRecord],
+		nodeRecordProto,
 		false,
 		nodeData,
 	)
@@ -399,20 +415,27 @@ func (g *Generator) activateNodeRecord(ctx context.Context, cb *ContractsBuilder
 	return contract, nil
 }
 
-func (g *Generator) addDiscoveryIndex(ctx context.Context, cb *ContractsBuilder, indexMap map[string]string) ([]genesisNode, map[string]string, error) {
+func (g *Generator) addDiscoveryIndex(
+	ctx context.Context,
+	indexMap map[string]string,
+	nodeRecordProto insolar.Reference,
+) ([]genesisNode, map[string]string, error) {
 	errMsg := "[ addDiscoveryIndex ]"
 	discoveryKeysPath, err := absPath(g.config.DiscoveryKeysDir)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, errMsg)
 	}
+
 	discoveryKeys, err := g.uploadKeys(ctx, discoveryKeysPath, len(g.config.DiscoveryNodes))
 	if err != nil {
 		return nil, nil, errors.Wrap(err, errMsg)
 	}
-	discoveryNodes, err := g.activateDiscoveryNodes(ctx, cb, discoveryKeys)
+
+	discoveryNodes, err := g.activateDiscoveryNodes(ctx, nodeRecordProto, discoveryKeys)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, errMsg)
 	}
+
 	for _, node := range discoveryNodes {
 		indexMap[node.node.PublicKey] = node.ref.String()
 	}
@@ -519,7 +542,7 @@ func (g *Generator) Run(ctx context.Context) error {
 	defer cb.Clean()
 
 	inslog.Info("[ Genesis ] buildSmartContracts ...")
-	_, err = cb.Build(ctx, rootDomainID)
+	prototypes, err := cb.Build(ctx, rootDomainID)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] couldn't build contracts"))
 	}
@@ -531,7 +554,7 @@ func (g *Generator) Run(ctx context.Context) error {
 	}
 
 	inslog.Info("[ Genesis ] activateSmartContracts ...")
-	nodes, err := g.activateSmartContracts(ctx, cb, rootPubKey, rootDomainID)
+	nodes, err := g.activateSmartContracts(ctx, cb, rootPubKey, rootDomainID, prototypes)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
 	}

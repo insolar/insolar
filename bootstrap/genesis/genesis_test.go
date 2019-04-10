@@ -74,7 +74,6 @@ func mockGenerator(t *testing.T, am artifact.Manager) *Generator {
 			ReuseKeys:        true,
 			DiscoveryNodes:   discoveryNodes,
 			DiscoveryKeysDir: testDataPath,
-			NodeKeysDir:      testDataPath,
 		},
 		rootDomainRef: &ref,
 		nodeDomainRef: &ref,
@@ -206,7 +205,7 @@ func TestActivateNodeRecord_RegisterRequest_Err(t *testing.T) {
 		},
 	}
 
-	_, err := g.activateNodeRecord(ctx, cb, record, name)
+	_, err := g.activateNodeRecord(ctx, record, name, *cb.Prototypes[nodeRecord])
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "[ activateNodeRecord ] Couldn't register request: test reasons")
 }
@@ -234,7 +233,7 @@ func TestActivateNodeRecord_Activate_Err(t *testing.T) {
 		},
 	}
 
-	_, err := g.activateNodeRecord(ctx, cb, record, name)
+	_, err := g.activateNodeRecord(ctx, record, name, *cb.Prototypes[nodeRecord])
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "[ activateNodeRecord ] Could'n activateNodeRecord node object: test reasons")
 }
@@ -265,7 +264,7 @@ func TestActivateNodeRecord_RegisterResult_Err(t *testing.T) {
 		},
 	}
 
-	_, err := g.activateNodeRecord(ctx, cb, record, name)
+	_, err := g.activateNodeRecord(ctx, record, name, *cb.Prototypes[nodeRecord])
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "[ activateNodeRecord ] Couldn't register result: test reasons")
 }
@@ -285,7 +284,7 @@ func TestActivateNodeRecord(t *testing.T) {
 		},
 	}
 
-	contract, err := g.activateNodeRecord(ctx, cb, record, name)
+	contract, err := g.activateNodeRecord(ctx, record, name, *cb.Prototypes[nodeRecord])
 	require.Nil(t, err)
 	require.NotNil(t, contract)
 }
@@ -304,7 +303,7 @@ func TestActivateDiscoveryNodes_DiffLen(t *testing.T) {
 		},
 	)
 
-	_, err := g.activateDiscoveryNodes(ctx, cb, nodes)
+	_, err := g.activateDiscoveryNodes(ctx, *cb.Prototypes[nodeRecord], nodes)
 	require.EqualError(t, err, "[ activateDiscoveryNodes ] len of nodesInfo param must be equal to len of DiscoveryNodes in genesis config")
 }
 
@@ -326,7 +325,7 @@ func TestActivateDiscoveryNodes_Err(t *testing.T) {
 	)
 	require.Len(t, nodes, len(g.config.DiscoveryNodes))
 
-	_, err := g.activateDiscoveryNodes(ctx, cb, nodes)
+	_, err := g.activateDiscoveryNodes(ctx, *cb.Prototypes[nodeRecord], nodes)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "[ activateDiscoveryNodes ] Couldn't activateNodeRecord node instance:")
 }
@@ -349,7 +348,7 @@ func TestActivateDiscoveryNodes(t *testing.T) {
 	)
 	require.Len(t, nodes, len(g.config.DiscoveryNodes))
 
-	genesisNodes, err := g.activateDiscoveryNodes(ctx, cb, nodes)
+	genesisNodes, err := g.activateDiscoveryNodes(ctx, *cb.Prototypes[nodeRecord], nodes)
 	require.Nil(t, err)
 	require.Len(t, genesisNodes, len(g.config.DiscoveryNodes))
 	for i := 0; i < len(g.config.DiscoveryNodes); i++ {
@@ -371,7 +370,7 @@ func (s *genesisWithDataSuite) TestAddDiscoveryIndex_ActivateErr() {
 
 	indexMap := make(map[string]string)
 
-	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, cb, indexMap)
+	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, indexMap, *cb.Prototypes[nodeRecord])
 	require.NotNil(s.T(), err)
 	require.Contains(s.T(), err.Error(), "[ addDiscoveryIndex ]: [ activateDiscoveryNodes ] Couldn't activateNodeRecord node instance")
 	require.Empty(s.T(), genesisNodes)
@@ -388,7 +387,7 @@ func TestAddDiscoveryIndex_UploadErr(t *testing.T) {
 
 	indexMap := make(map[string]string)
 
-	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, cb, indexMap)
+	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, indexMap, *cb.Prototypes[nodeRecord])
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "[ addDiscoveryIndex ]: [ uploadKeys ] can't read dir")
 	require.Empty(t, genesisNodes)
@@ -405,7 +404,7 @@ func (s *genesisWithDataSuite) TestAddDiscoveryIndex() {
 
 	indexMap := make(map[string]string)
 
-	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, cb, indexMap)
+	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, indexMap, *cb.Prototypes[nodeRecord])
 	require.Nil(s.T(), err)
 	require.Len(s.T(), genesisNodes, len(g.config.DiscoveryNodes))
 	require.Len(s.T(), resIndexMap, len(g.config.DiscoveryNodes))
