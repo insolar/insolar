@@ -20,6 +20,7 @@ import (
 	"io"
 	stdlog "log"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -28,7 +29,7 @@ import (
 )
 
 const defaultSkipCallNumber = 3
-const timestampFormat = "2006-01-02 15:04:05.000000"
+const timestampFormat = time.RFC3339Nano
 
 // NewLog creates logger instance with particular configuration
 func NewLog(cfg configuration.Log) (core.Logger, error) {
