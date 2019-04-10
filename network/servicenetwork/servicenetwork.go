@@ -56,6 +56,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -66,7 +67,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
@@ -265,7 +265,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	// (for fresh bootstrapped light-material with in-memory pulse-tracker)
 	if currentPulse, err := n.PulseAccessor.Latest(ctx); err != nil {
 		if err != pulse.ErrNotFound {
-			logger.Fatalf("Could not get current pulse: %s", err.Error())
+			currentPulse = *insolar.GenesisPulse
 		}
 	} else {
 		if !isNextPulse(&currentPulse, &newPulse) {
