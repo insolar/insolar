@@ -54,19 +54,6 @@ func (f *delegationTokenFactory) IssuePendingExecution(
 	return token, nil
 }
 
-// IssueGetObjectRedirect creates new token for provided message.
-func (f *delegationTokenFactory) IssueGetObjectRedirect(
-	sender *insolar.Reference, redirectedMessage insolar.Message,
-) (insolar.DelegationToken, error) {
-	parsedMessage := redirectedMessage.(*message.GetObject)
-	dataForSign := append(sender.Bytes(), message.ToBytes(parsedMessage)...)
-	sign, err := f.Cryptography.Sign(dataForSign)
-	if err != nil {
-		return nil, err
-	}
-	return &GetObjectRedirectToken{Signature: sign.Bytes()}, nil
-}
-
 // IssueGetChildrenRedirect creates new token for provided message.
 func (f *delegationTokenFactory) IssueGetChildrenRedirect(
 	sender *insolar.Reference, redirectedMessage insolar.Message,

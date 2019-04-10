@@ -51,6 +51,14 @@ type IndexModifier interface {
 	Set(ctx context.Context, id insolar.ID, index Lifeline) error
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexStorage -o ./ -s _mock.go
+
+// IndexStorage combines IndexAccessor and IndexModifier.
+type IndexStorage interface {
+	IndexAccessor
+	IndexModifier
+}
+
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexCleaner -o ./ -s _mock.go
 
 // IndexCleaner provides an interface for removing interfaces from a storage.

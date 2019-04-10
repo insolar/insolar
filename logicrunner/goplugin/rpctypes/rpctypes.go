@@ -24,8 +24,9 @@ import (
 // Calls from goplugin to goinsider go "downwards" and names are
 // prefixed with "Down". Reverse calls go "upwards", so "Up" prefix
 
+// todo it may use foundation.Context
 // DownCallMethodReq is a set of arguments for CallMethod RPC in the runner
-type DownCallMethodReq struct { // todo it may use foundation.Context
+type DownCallMethodReq struct {
 	Context   *insolar.LogicCallContext
 	Code      insolar.Reference
 	Data      []byte
@@ -80,6 +81,7 @@ type UpGetCodeResp struct {
 type UpRouteReq struct {
 	UpBaseReq
 	Wait           bool
+	Immutable      bool
 	Object         insolar.Reference
 	Method         string
 	Arguments      insolar.Arguments

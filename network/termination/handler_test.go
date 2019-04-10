@@ -168,5 +168,5 @@ func (s *AbortTestSuite) TestBasicUsage() {
 		}
 	}()
 
-	s.handler.Abort()
+	s.handler.Abort("abort")
 }
