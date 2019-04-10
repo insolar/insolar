@@ -98,7 +98,6 @@ type Bootstrapper interface {
 	ZeroBootstrap(ctx context.Context) (*network.BootstrapResult, error)
 	SetLastPulse(number insolar.PulseNumber)
 	GetLastPulse() insolar.PulseNumber
-	// GetFirstFakePulseTime() time.Time
 }
 
 type bootstrapper struct {
@@ -122,7 +121,7 @@ type bootstrapper struct {
 
 	firstPulseTime time.Time
 
-	reconnectToNewNetwork func(result network.BootstrapResult)
+	reconnectToNewNetwork func(ctx context.Context, node insolar.DiscoveryNode)
 }
 
 func (bc *bootstrapper) GetFirstFakePulseTime() time.Time {
@@ -585,7 +584,7 @@ func (bc *bootstrapper) startCyclicBootstrap(ctx context.Context) {
 				}
 			}
 			if networkSize > len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) {
-				bc.reconnectToNewNetwork(*results[index])
+				bc.reconnectToNewNetwork(ctx, nodes[index])
 			}
 		}
 		time.Sleep(time.Second * bootstrapTimeout)
@@ -654,13 +653,11 @@ func (bc *bootstrapper) getInactivenodes() []insolar.DiscoveryNode {
 	return res
 }
 
-func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(result network.BootstrapResult)) Bootstrapper {
+func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(ctx context.Context, node insolar.DiscoveryNode)) Bootstrapper {
 	return &bootstrapper{
-		options:       options,
-		bootstrapLock: make(chan struct{}),
-
+		options:                 options,
+		bootstrapLock:           make(chan struct{}),
 		genesisRequestsReceived: make(map[insolar.Reference]*GenesisRequest),
-
-		reconnectToNewNetwork: reconnectToNewNetwork,
+		reconnectToNewNetwork:   reconnectToNewNetwork,
 	}
 }

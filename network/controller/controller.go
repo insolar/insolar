@@ -105,8 +105,8 @@ func (c *Controller) Init(ctx context.Context) error {
 	return nil
 }
 
-func (c *Controller) AuthenticateToDiscoveryNode(ctx context.Context, discovery *insolar.DiscoveryNode) error {
-	return c.Bootstrapper.AuthenticateToDiscoveryNode(ctx, discovery)
+func (c *Controller) AuthenticateToDiscoveryNode(ctx context.Context, discovery insolar.DiscoveryNode) error {
+	return c.Bootstrapper.AuthenticateToDiscoveryNode(ctx, nil)
 }
 
 // ConfigureOptions convert daemon configuration to controller options

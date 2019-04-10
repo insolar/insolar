@@ -53,12 +53,11 @@ package bootstrap
 import (
 	"context"
 
-	"github.com/insolar/insolar/network/node"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/pkg/errors"
 )
@@ -67,7 +66,7 @@ type NetworkBootstrapper interface {
 	Bootstrap(ctx context.Context) (*network.BootstrapResult, error)
 	SetLastPulse(number insolar.PulseNumber)
 	GetLastPulse() insolar.PulseNumber
-	AuthenticateToDiscoveryNode(ctx context.Context, discovery *insolar.DiscoveryNode) error
+	AuthenticateToDiscoveryNode(ctx context.Context, discovery *DiscoveryNode) error
 }
 
 type networkBootstrapper struct {
@@ -121,11 +120,10 @@ func (nb *networkBootstrapper) bootstrapJoiner(ctx context.Context) (*network.Bo
 	if err != nil {
 		return nil, errors.Wrap(err, "Error bootstrapping to discovery node")
 	}
-
 	return result, nb.AuthenticateToDiscoveryNode(ctx, discoveryNode)
 }
 
-func (nb *networkBootstrapper) AuthenticateToDiscoveryNode(ctx context.Context, discovery *insolar.DiscoveryNode) error {
+func (nb *networkBootstrapper) AuthenticateToDiscoveryNode(ctx context.Context, discovery *DiscoveryNode) error {
 	sessionID, err := nb.AuthController.Authorize(ctx, discovery, nb.Certificate)
 	if err != nil {
 		return errors.Wrap(err, "Error authorizing on discovery node")
