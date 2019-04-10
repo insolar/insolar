@@ -19,9 +19,6 @@ package light
 import (
 	"context"
 
-	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/network/termination"
-
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -31,16 +28,18 @@ import (
 	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/state"
+	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/version/manager"
 )
 
 type components struct {
@@ -57,11 +56,15 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) *compon
 		CertManager   insolar.CertificateManager
 	)
 	{
+		var err error
+		// Private key storage.
 		ks, err := keystore.NewKeyStore(cfg.KeysPath)
 		checkError(ctx, err, "failed to load KeyStore")
-
+		// Public key manipulations.
 		KeyProcessor = platformpolicy.NewKeyProcessor()
+		// Platform cryptography.
 		CryptoScheme = platformpolicy.NewPlatformCryptographyScheme()
+		// Sign, verify, etc.
 		CryptoService = cryptography.NewCryptographyService()
 
 		c := component.Manager{}
@@ -70,6 +73,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) *compon
 		publicKey, err := CryptoService.GetPublicKey()
 		checkError(ctx, err, "failed to retrieve node public key")
 
+		// Node certificate.
 		CertManager, err = certificate.NewManagerReadCertificate(publicKey, KeyProcessor, cfg.CertificatePath)
 		checkError(ctx, err, "failed to start Certificate")
 	}
@@ -82,18 +86,20 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) *compon
 	// Network.
 	var (
 		NetworkService     insolar.Network
-		Termination        insolar.TerminationHandler
 		NetworkCoordinator insolar.NetworkCoordinator
 		NodeNetwork        insolar.NodeNetwork
 		NetworkSwitcher    insolar.NetworkSwitcher
+		Termination        insolar.TerminationHandler
 	)
 	{
 		var err error
+		// External communication.
 		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, &c.cmp, false)
 		checkError(ctx, err, "failed to start Network")
 
 		Termination = termination.NewHandler(NetworkService)
 
+		// Node info.
 		NodeNetwork, err = nodenetwork.NewNodeNetwork(cfg.Host, CertManager.GetCertificate())
 		checkError(ctx, err, "failed to start NodeNetwork")
 
@@ -104,20 +110,37 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) *compon
 		checkError(ctx, err, "failed to start NetworkCoordinator")
 	}
 
-	contractRequester, err := contractrequester.New()
-	checkError(ctx, err, "failed to start ContractRequester")
+	// API.
+	var (
+		Requester insolar.ContractRequester
+		Genesis   insolar.GenesisDataProvider
+		API       insolar.APIRunner
+	)
+	{
+		var err error
+		Requester, err = contractrequester.New()
+		checkError(ctx, err, "failed to start ContractRequester")
 
-	genesisDataProvider, err := genesisdataprovider.New()
-	checkError(ctx, err, "failed to start GenesisDataProvider")
+		Genesis, err = genesisdataprovider.New()
+		checkError(ctx, err, "failed to start GenesisDataProvider")
 
-	apiRunner, err := api.NewRunner(&cfg.APIRunner)
-	checkError(ctx, err, "failed to start ApiRunner")
+		API, err = api.NewRunner(&cfg.APIRunner)
+		checkError(ctx, err, "failed to start ApiRunner")
+	}
 
-	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
-	parcelFactory := messagebus.NewParcelFactory()
-
-	messageBus, err := messagebus.NewMessageBus(cfg)
-	checkError(ctx, err, "failed to start MessageBus")
+	// Communication.
+	var (
+		Tokens  insolar.DelegationTokenFactory
+		Parcels message.ParcelFactory
+		Bus     insolar.MessageBus
+	)
+	{
+		var err error
+		Tokens = delegationtoken.NewDelegationTokenFactory()
+		Parcels = messagebus.NewParcelFactory()
+		Bus, err = messagebus.NewMessageBus(cfg)
+		checkError(ctx, err, "failed to start MessageBus")
+	}
 
 	metricsHandler, err := metrics.NewMetrics(
 		ctx,
@@ -126,9 +149,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) *compon
 		c.NodeRole,
 	)
 	checkError(ctx, err, "failed to start Metrics")
-
-	_, err = manager.NewVersionManager(cfg.VersionManager)
-	checkError(ctx, err, "failed to load VersionManager: ")
 
 	c.cmp.Register(
 		Termination,
@@ -142,22 +162,23 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) *compon
 
 	components := ledger.GetLedgerComponents(cfg.Ledger, CertManager.GetCertificate())
 
-	components = append(components, []interface{}{
-		messageBus,
-		contractRequester,
-		delegationTokenFactory,
-		parcelFactory,
-		artifacts.NewClient(),
-		genesisDataProvider,
-		apiRunner,
-		metricsHandler,
-		NetworkSwitcher,
-		NetworkCoordinator,
-		CryptoService,
-		KeyProcessor,
-	}...)
+	c.cmp.Inject(
+		append(components, []interface{}{
+			Bus,
+			Requester,
+			Tokens,
+			Parcels,
+			artifacts.NewClient(),
+			Genesis,
+			API,
+			metricsHandler,
+			NetworkSwitcher,
+			NetworkCoordinator,
+			CryptoService,
+			KeyProcessor,
+		}...)...,
+	)
 
-	c.cmp.Inject(components...)
 	err = c.cmp.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
