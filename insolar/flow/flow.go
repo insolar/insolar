@@ -31,6 +31,8 @@ type Handle func(context.Context, Flow) error
 type MakeHandle func(bus.Message) Handle
 
 // Procedure is a task that can execute itself.
+// Procedure is supposed to be executed in one pulse. If you have multiple steps that can be executed
+// in different pulses split them into separate Procedures. Otherwise join the steps to the single Procedure.
 // It's a good idea to keep Procedures in a separate package to hide internal state from Handle.
 type Procedure interface {
 	// Proceed is called when Procedure is given control. When it returns, control will be given back to Handle.
