@@ -243,8 +243,6 @@ const (
 	TypeUpdateObject
 	// TypeRegisterChild registers child on the parent object.
 	TypeRegisterChild
-	// TypeJetDrop carries jet drop to validators
-	TypeJetDrop
 	// TypeSetRecord saves record in storage.
 	TypeSetRecord
 	// TypeValidateRecord saves record in storage.
@@ -265,9 +263,6 @@ const (
 	TypeGetRequest
 	// TypeGetPendingRequestID fetches a pending request id from ledger
 	TypeGetPendingRequestID
-
-	// TypeValidationCheck checks if validation of a particular record can be performed.
-	TypeValidationCheck
 
 	// Heavy replication
 

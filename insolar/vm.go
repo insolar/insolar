@@ -78,5 +78,6 @@ type LogicCallContext struct {
 	Caller          *Reference // Contract that made the call
 	Time            time.Time  // Time when call was made
 	Pulse           Pulse      // Number of the pulse
+	Immutable       bool
 	TraceID         string
 }

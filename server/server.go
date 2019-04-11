@@ -17,6 +17,7 @@
 package server
 
 import (
+	"github.com/insolar/insolar/server/internal/heavy"
 	"github.com/insolar/insolar/server/internal/light"
 	"github.com/insolar/insolar/server/internal/virtual"
 )
@@ -27,6 +28,10 @@ type Server interface {
 
 func NewLightServer(cfgPath string, trace bool) Server {
 	return light.New(cfgPath, trace)
+}
+
+func NewHeavyServer(cfgPath string, trace bool) Server {
+	return heavy.New(cfgPath, trace)
 }
 
 func NewVirtualServer(cfgPath string, trace bool) Server {

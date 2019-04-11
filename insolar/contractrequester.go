@@ -25,7 +25,7 @@ import (
 type ContractRequester interface {
 	SendRequest(ctx context.Context, ref *Reference, method string, argsIn []interface{}) (Reply, error)
 	// CallMethod - low level calls contract
-	CallMethod(ctx context.Context, base Message, async bool,
+	CallMethod(ctx context.Context, base Message, async bool, immutable bool,
 		ref *Reference, method string, argsIn Arguments,
 		mustPrototype *Reference) (Reply, error)
 	CallConstructor(ctx context.Context, base Message, async bool,

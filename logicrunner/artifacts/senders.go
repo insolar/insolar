@@ -135,7 +135,7 @@ func followRedirectSender(bus insolar.MessageBus) PreSender {
 }
 
 // retryJetSender is using for refreshing jet-tree, if destination has no idea about a jet from message
-func retryJetSender(pulseNumber insolar.PulseNumber, jetModifier jet.Modifier) PreSender {
+func retryJetSender(jetModifier jet.Modifier) PreSender {
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg insolar.Message, options *insolar.MessageSendOptions) (insolar.Reply, error) {
 			retries := jetMissRetryCount
@@ -146,7 +146,7 @@ func retryJetSender(pulseNumber insolar.PulseNumber, jetModifier jet.Modifier) P
 				}
 
 				if r, ok := rep.(*reply.JetMiss); ok {
-					jetModifier.Update(ctx, pulseNumber, true, insolar.JetID(r.JetID))
+					jetModifier.Update(ctx, r.Pulse, true, insolar.JetID(r.JetID))
 				} else {
 					return rep, err
 				}

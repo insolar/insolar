@@ -42,6 +42,7 @@ import (
 )
 
 const HOST = "http://localhost:19101"
+const HOST_DEBUG = "http://localhost:8001"
 const TestAPIURL = HOST + "/api"
 const TestRPCUrl = TestAPIURL + "/rpc"
 const TestCallUrl = TestAPIURL + "/call"

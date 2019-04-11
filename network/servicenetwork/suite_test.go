@@ -64,14 +64,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
@@ -93,6 +92,8 @@ type fixture struct {
 	networkNodes   []*networkNode
 	pulsar         TestPulsar
 }
+
+const cacheDir = "network_cache/"
 
 func newFixture(t *testing.T) *fixture {
 	return &fixture{
@@ -416,6 +417,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	cfg.Pulsar.PulseTime = pulseTimeMs // pulse 5 sec for faster tests
 	cfg.Host.Transport.Address = node.host
 	cfg.Service.Skip = 5
+	cfg.Service.CacheDirectory = cacheDir + node.host
 
 	node.componentManager = &component.Manager{}
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
@@ -444,7 +446,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	terminationHandler := testutils.NewTerminationHandlerMock(s.T())
 	terminationHandler.LeaveFunc = func(p context.Context, p1 insolar.PulseNumber) {}
 	terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {}
-	terminationHandler.AbortFunc = func() {}
+	terminationHandler.AbortFunc = func(reason string) { log.Error(reason) }
 
 	mblocker := testutils.NewMessageBusLockerMock(s.T())
 	GIL := testutils.NewGlobalInsolarLockMock(s.T())

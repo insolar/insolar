@@ -56,11 +56,12 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/network/gateway"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
+	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/consensus/packets"
@@ -68,7 +69,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
@@ -268,7 +268,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 		n.Controller.SetLastIgnoredPulse(newPulse.NextPulseNumber)
 		return
 	}
-	if n.isDiscovery && newPulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+insolar.PulseNumber(n.skip) {
+	if n.shoudIgnorePulse(newPulse) {
 		log.Infof("Ignore pulse %d: network is not yet initialized", newPulse.PulseNumber)
 		return
 	}
@@ -285,7 +285,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	// (for fresh bootstrapped light-material with in-memory pulse-tracker)
 	if currentPulse, err := n.PulseAccessor.Latest(ctx); err != nil {
 		if err != pulse.ErrNotFound {
-			logger.Fatalf("Could not get current pulse: %s", err.Error())
+			currentPulse = *insolar.GenesisPulse
 		}
 	} else {
 		if !isNextPulse(&currentPulse, &newPulse) {
@@ -303,12 +303,18 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
 }
 
+func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {
+	return n.isDiscovery && !n.NodeKeeper.GetConsensusInfo().IsJoiner() &&
+		newPulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+insolar.PulseNumber(n.skip)
+}
+
 func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insolar.Pulse, pulseStartTime time.Time) {
 	logger := inslogger.FromContext(ctx)
 
 	if err := n.PhaseManager.OnPulse(ctx, &newPulse, pulseStartTime); err != nil {
-		logger.Error("Failed to pass consensus: " + err.Error())
-		n.TerminationHandler.Abort()
+		errMsg := "Failed to pass consensus: " + err.Error()
+		logger.Error(errMsg)
+		n.TerminationHandler.Abort(errMsg)
 	}
 }
 
