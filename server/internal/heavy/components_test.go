@@ -14,26 +14,25 @@
 // limitations under the License.
 //
 
-package server
+package heavy
 
 import (
-	"github.com/insolar/insolar/server/internal/heavy"
-	"github.com/insolar/insolar/server/internal/light"
-	"github.com/insolar/insolar/server/internal/virtual"
+	"context"
+	"testing"
+
+	"github.com/insolar/insolar/configuration"
+	"github.com/stretchr/testify/require"
 )
 
-type Server interface {
-	Serve()
-}
+func TestComponents(t *testing.T) {
+	ctx := context.Background()
+	cfg := configuration.NewConfiguration()
+	cfg.KeysPath = "testdata/bootstrap_keys.json"
+	cfg.CertificatePath = "testdata/certificate.json"
 
-func NewLightServer(cfgPath string, trace bool) Server {
-	return light.New(cfgPath, trace)
-}
-
-func NewHeavyServer(cfgPath string, trace bool) Server {
-	return heavy.New(cfgPath, trace)
-}
-
-func NewVirtualServer(cfgPath string, trace bool) Server {
-	return virtual.New(cfgPath, trace)
+	c := newComponents(ctx, cfg)
+	err := c.Start(ctx)
+	require.NoError(t, err)
+	err = c.Stop(ctx)
+	require.NoError(t, err)
 }
