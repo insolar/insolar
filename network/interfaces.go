@@ -216,30 +216,6 @@ type ConsensusInfo interface {
 	IsJoiner() bool
 }
 
-// UnsyncList is a snapshot of active list for pulse that is previous to consensus pulse
-//go:generate minimock -i github.com/insolar/insolar/network.UnsyncList -o ../testutils/network -s _mock.go
-type UnsyncList interface {
-	consensus.BitSetMapper
-	// AddNode add node to the snapshot of the current consensus
-	AddNode(node insolar.NetworkNode, bitsetIndex uint16)
-	// AddProof add node pulse proof of a specific node
-	AddProof(nodeID insolar.Reference, proof *consensus.NodePulseProof)
-	// GetProof get node pulse proof of a specific node
-	GetProof(nodeID insolar.Reference) *consensus.NodePulseProof
-	// GetGlobuleHashSignature get globule hash signature of a specific node
-	GetGlobuleHashSignature(ref insolar.Reference) (consensus.GlobuleHashSignature, bool)
-	// SetGlobuleHashSignature set globule hash signature of a specific node
-	SetGlobuleHashSignature(insolar.Reference, consensus.GlobuleHashSignature)
-	// GetActiveNode get active node by reference ID for current consensus
-	GetActiveNode(ref insolar.Reference) insolar.NetworkNode
-	// GetActiveNodes get active nodes for current consensus
-	GetActiveNodes() []insolar.NetworkNode
-	// GetOrigin get origin node for the current insolard
-	GetOrigin() insolar.NetworkNode
-	// RemoveNode remove node
-	RemoveNode(nodeID insolar.Reference)
-}
-
 // PartitionPolicy contains all rules how to initiate globule resharding.
 type PartitionPolicy interface {
 	ShardsCount() int
