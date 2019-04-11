@@ -55,7 +55,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 			nil, errors.New("some"),
 		)
 
-		nodes, err := jtu.OtherNodesForPulse(ctx, insolar.PulseNumber(100))
+		nodes, err := jtu.otherNodesForPulse(ctx, insolar.PulseNumber(100))
 		require.Error(t, err)
 		require.Empty(t, nodes)
 	})
@@ -71,7 +71,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 			[]insolar.Node{}, nil,
 		)
 
-		nodes, err := jtu.OtherNodesForPulse(ctx, insolar.PulseNumber(100))
+		nodes, err := jtu.otherNodesForPulse(ctx, insolar.PulseNumber(100))
 		require.Error(t, err)
 		require.Empty(t, nodes)
 	})
@@ -83,7 +83,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 			[]insolar.Node{{ID: meRef}}, nil,
 		)
 
-		nodes, err := jtu.OtherNodesForPulse(ctx, insolar.PulseNumber(100))
+		nodes, err := jtu.otherNodesForPulse(ctx, insolar.PulseNumber(100))
 		require.Error(t, err)
 		require.Empty(t, nodes)
 	})
@@ -96,7 +96,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 			[]insolar.Node{someNode}, nil,
 		)
 
-		nodes, err := jtu.OtherNodesForPulse(ctx, insolar.PulseNumber(100))
+		nodes, err := jtu.otherNodesForPulse(ctx, insolar.PulseNumber(100))
 		require.NoError(t, err)
 		require.Contains(t, nodes, someNode)
 	})
@@ -111,7 +111,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 			[]insolar.Node{someNode, meNode}, nil,
 		)
 
-		nodes, err := jtu.OtherNodesForPulse(ctx, insolar.PulseNumber(100))
+		nodes, err := jtu.otherNodesForPulse(ctx, insolar.PulseNumber(100))
 		require.NoError(t, err)
 		require.Contains(t, nodes, someNode)
 		require.NotContains(t, nodes, meNode)
@@ -148,7 +148,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 
 		mb.SendMock.Return(nil, errors.New("some"))
 
-		jetID, err := jtu.FetchActualJetFromOtherNodes(ctx, target, insolar.PulseNumber(100))
+		jetID, err := jtu.fetchActualJetFromOtherNodes(ctx, target, insolar.PulseNumber(100))
 		require.Error(t, err)
 		require.Nil(t, jetID)
 	})
@@ -161,7 +161,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 			nil,
 		)
 
-		jetID, err := jtu.FetchActualJetFromOtherNodes(ctx, target, insolar.PulseNumber(100))
+		jetID, err := jtu.fetchActualJetFromOtherNodes(ctx, target, insolar.PulseNumber(100))
 		require.Error(t, err)
 		require.Nil(t, jetID)
 	})
@@ -173,7 +173,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 			nil,
 		)
 
-		jetID, err := jtu.FetchActualJetFromOtherNodes(ctx, target, insolar.PulseNumber(100))
+		jetID, err := jtu.fetchActualJetFromOtherNodes(ctx, target, insolar.PulseNumber(100))
 		require.NoError(t, err)
 		require.Equal(t, insolar.ID(*insolar.NewJetID(0, nil)), *jetID)
 	})
