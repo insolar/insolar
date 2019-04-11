@@ -126,7 +126,7 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 		err = code.Write(ctr)
 		ctr.Close()
 		if err != nil {
-			return errors.Wrap(err, "[ buildPrototypes ] Can't MakeFileWithDir")
+			return errors.Wrap(err, "[ buildPrototypes ] Can't makeFileWithDir")
 		}
 
 		proxyPath := filepath.Join(cb.root, "src", proxySources, name)
@@ -273,9 +273,9 @@ func prependGoPath(path string) string {
 	return path + string(os.PathListSeparator) + goPATH()
 }
 
-// MakeFileWithDir dumps `text` into file named `name` into directory `dir`.
+// makeFileWithDir dumps `text` into file named `name` into directory `dir`.
 // Creates directory if needed as well as file
-func MakeFileWithDir(dir string, name string, text string) error {
+func makeFileWithDir(dir string, name string, text string) error {
 	err := os.MkdirAll(dir, 0775)
 	if err != nil {
 		return err

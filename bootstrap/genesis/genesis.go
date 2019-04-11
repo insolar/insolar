@@ -524,7 +524,7 @@ func (g *Generator) createKeys(ctx context.Context, dir string, amount int) erro
 		}
 
 		name := fmt.Sprintf(g.config.KeysNameFormat, i)
-		err = MakeFileWithDir(dir, name, string(result))
+		err = makeFileWithDir(dir, name, string(result))
 		if err != nil {
 			return errors.Wrap(err, "[ createKeys ] couldn't write keys to file")
 		}
@@ -610,7 +610,7 @@ func (g *Generator) makeCertificates(nodes []genesisNode) error {
 
 		err = ioutil.WriteFile(path.Join(g.keyOut, g.config.DiscoveryNodes[i].CertName), cert, 0644)
 		if err != nil {
-			return errors.Wrap(err, "[ makeCertificates ] MakeFileWithDir")
+			return errors.Wrap(err, "[ makeCertificates ] makeFileWithDir")
 		}
 	}
 	return nil
