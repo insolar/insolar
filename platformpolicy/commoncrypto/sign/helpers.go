@@ -17,7 +17,7 @@
 package sign
 
 import (
-	"crypto/ecdsa"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/ecdsa"
 	"github.com/insolar/insolar/platformpolicy/keys"
 )
 

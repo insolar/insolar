@@ -5,12 +5,11 @@
 package x509
 
 import (
-	"crypto/ecdsa"
-	"crypto/rsa"
 	"crypto/x509/pkix"
 	"encoding/asn1"
 	"errors"
 	"fmt"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/ecdsa"
 )
 
 // pkcs8 reflects an ASN.1, PKCS#8 PrivateKey. See
@@ -31,13 +30,6 @@ func ParsePKCS8PrivateKey(der []byte) (key interface{}, err error) {
 		return nil, err
 	}
 	switch {
-	case privKey.Algo.Algorithm.Equal(oidPublicKeyRSA):
-		key, err = ParsePKCS1PrivateKey(privKey.PrivateKey)
-		if err != nil {
-			return nil, errors.New("x509: failed to parse RSA private key embedded in PKCS#8: " + err.Error())
-		}
-		return key, nil
-
 	case privKey.Algo.Algorithm.Equal(oidPublicKeyECDSA):
 		bytes := privKey.Algo.Parameters.FullBytes
 		namedCurveOID := new(asn1.ObjectIdentifier)
@@ -64,13 +56,6 @@ func MarshalPKCS8PrivateKey(key interface{}) ([]byte, error) {
 	var privKey pkcs8
 
 	switch k := key.(type) {
-	case *rsa.PrivateKey:
-		privKey.Algo = pkix.AlgorithmIdentifier{
-			Algorithm:  oidPublicKeyRSA,
-			Parameters: asn1.NullRawValue,
-		}
-		privKey.PrivateKey = MarshalPKCS1PrivateKey(k)
-
 	case *ecdsa.PrivateKey:
 		oid, ok := oidFromNamedCurve(k.Curve)
 		if !ok {

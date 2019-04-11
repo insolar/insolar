@@ -275,11 +275,11 @@ func parseRFC2821Mailbox(in string) (mailbox rfc2821Mailbox, ok bool) {
 
 			case c == 11 ||
 				c == 12 ||
-			// Space (char 32) is not allowed based on the
-			// BNF, but RFC 3696 gives an example that
-			// assumes that it is. Several “verified”
-			// errata continue to argue about this point.
-			// We choose to accept it.
+				// Space (char 32) is not allowed based on the
+				// BNF, but RFC 3696 gives an example that
+				// assumes that it is. Several “verified”
+				// errata continue to argue about this point.
+				// We choose to accept it.
 				c == 32 ||
 				c == 33 ||
 				c == 127 ||

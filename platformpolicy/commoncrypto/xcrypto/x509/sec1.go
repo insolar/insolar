@@ -5,11 +5,11 @@
 package x509
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"encoding/asn1"
 	"errors"
 	"fmt"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/ecdsa"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/elliptic"
 	"math/big"
 )
 

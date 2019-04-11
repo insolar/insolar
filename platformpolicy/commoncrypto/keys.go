@@ -17,18 +17,17 @@
 package commoncrypto
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/x509"
 	"encoding/pem"
 	"fmt"
-
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/x509"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy/commoncrypto/sign"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/ecdsa"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/elliptic"
 	"github.com/insolar/insolar/platformpolicy/keys"
+	"github.com/pkg/errors"
 )
 
 type keyProcessor struct {
@@ -37,7 +36,7 @@ type keyProcessor struct {
 
 func NewKeyProcessor() insolar.KeyProcessor {
 	return &keyProcessor{
-		curve: elliptic.P256(),
+		curve: elliptic.Secp256k1(),
 	}
 }
 

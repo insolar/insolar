@@ -17,11 +17,11 @@
 package sign
 
 import (
-	"crypto/ecdsa"
 	"crypto/rand"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/ecdsa"
 	"github.com/pkg/errors"
 )
 
