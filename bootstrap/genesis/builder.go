@@ -273,14 +273,13 @@ func prependGoPath(path string) string {
 	return path + string(os.PathListSeparator) + goPATH()
 }
 
-// makeFileWithDir dumps `text` into file named `name` into directory `dir`.
-// Creates directory if needed as well as file
-func makeFileWithDir(dir string, name string, text string) error {
+// makeFileWithDir dumps data into file in provided directory, creates directory if it does not exist.
+func makeFileWithDir(dir string, name string, data []byte) error {
 	err := os.MkdirAll(dir, 0775)
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filepath.Join(dir, name), []byte(text), 0644)
+	return ioutil.WriteFile(filepath.Join(dir, name), data, 0644)
 }
 
 func openFileInDir(dir string, name string) (*os.File, error) {

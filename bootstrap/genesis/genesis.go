@@ -524,7 +524,7 @@ func (g *Generator) createKeys(ctx context.Context, dir string, amount int) erro
 		}
 
 		name := fmt.Sprintf(g.config.KeysNameFormat, i)
-		err = makeFileWithDir(dir, name, string(result))
+		err = makeFileWithDir(dir, name, result)
 		if err != nil {
 			return errors.Wrap(err, "[ createKeys ] couldn't write keys to file")
 		}
