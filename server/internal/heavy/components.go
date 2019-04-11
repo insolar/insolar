@@ -28,9 +28,20 @@ import (
 	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/ledger"
+	"github.com/insolar/insolar/ledger/heavy"
+	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
+	"github.com/insolar/insolar/ledger/heavyserver"
+	"github.com/insolar/insolar/ledger/jetcoordinator"
+	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/blob"
+	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
@@ -40,6 +51,7 @@ import (
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/pkg/errors"
 )
 
 type components struct {
@@ -150,30 +162,97 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) *compon
 	)
 	checkError(ctx, err, "failed to start Metrics")
 
-	components := ledger.GetLedgerComponents(cfg.Ledger, CertManager.GetCertificate())
+	var (
+		HeavyComp    []interface{}
+		Sync         insolar.HeavySync
+		Drops        drop.Modifier
+		Blobs        blob.Modifier
+		Indices      object.IndexModifier
+		Replica      storage.ReplicaStorage
+		LegacyDB     storage.DBContext
+		Coordinator  insolar.JetCoordinator
+		Records      object.RecordAccessor
+		Pulses       pulse.Accessor
+		Jets         jet.Storage
+		PulseManager insolar.PulseManager
+	)
+	{
+		conf := cfg.Ledger
+
+		LegacyDB, err = storage.NewDB(conf, nil)
+		if err != nil {
+			panic(errors.Wrap(err, "failed to initialize DB"))
+		}
+
+		db, err := store.NewBadgerDB(conf.Storage.DataDirectoryNewDB)
+		if err != nil {
+			panic(errors.Wrap(err, "failed to initialize DB"))
+		}
+
+		pulses := pulse.NewDB(db)
+		records := object.NewRecordDB(db)
+		nodes := node.NewStorage()
+		jets := jet.NewStore()
+
+		cord := jetcoordinator.NewJetCoordinator(conf.LightChainLimit)
+		cord.PulseCalculator = pulses
+		cord.PulseAccessor = pulses
+		cord.JetAccessor = jets
+		cord.NodeNet = NodeNetwork
+		cord.PlatformCryptographyScheme = CryptoScheme
+		cord.Nodes = nodes
+
+		pm := pulsemanager.NewPulseManager()
+		pm.Bus = Bus
+		pm.NodeNet = NodeNetwork
+		pm.NodeSetter = nodes
+		pm.Nodes = nodes
+		pm.PulseAppender = pulses
+
+		Indices = object.NewIndexDB(db)
+		Blobs = blob.NewDB(db)
+		Drops = drop.NewDB(db)
+		Sync = heavyserver.NewSync(LegacyDB, records)
+		HeavyComp = heavy.Components()
+		Replica = storage.NewReplicaStorage()
+		Coordinator = cord
+		Records = records
+		Pulses = pulses
+		Jets = jets
+		PulseManager = pm
+	}
 
 	c.cmp.Inject(
-		append(components, []interface{}{
-			Bus,
-			Requester,
-			Tokens,
-			Parcels,
-			artifacts.NewClient(),
-			Genesis,
-			API,
-			metricsHandler,
-			NetworkSwitcher,
-			NetworkCoordinator,
-			KeyProcessor,
-			Termination,
-			CryptoScheme,
-			CryptoService,
-			CertManager,
-			NodeNetwork,
-			NetworkService,
-		}...)...,
+		PulseManager,
+		Jets,
+		Pulses,
+		Records,
+		Coordinator,
+		HeavyComp[0],
+		Sync,
+		Drops,
+		Blobs,
+		Indices,
+		Replica,
+		LegacyDB,
+		metricsHandler,
+		Bus,
+		Requester,
+		Tokens,
+		Parcels,
+		artifacts.NewClient(),
+		Genesis,
+		API,
+		NetworkSwitcher,
+		NetworkCoordinator,
+		KeyProcessor,
+		Termination,
+		CryptoScheme,
+		CryptoService,
+		CertManager,
+		NodeNetwork,
+		NetworkService,
 	)
-
 	err = c.cmp.Init(ctx)
 	checkError(ctx, err, "failed to init components")
 
