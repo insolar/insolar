@@ -24,39 +24,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestInitComponents(t *testing.T) {
+func TestComponents(t *testing.T) {
 	ctx := context.Background()
 	cfg := configuration.NewConfiguration()
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
 
-	bootstrapComponents := initBootstrapComponents(ctx, cfg)
-	cert := initCertificateManager(
-		ctx,
-		cfg,
-		false,
-		bootstrapComponents.CryptographyService,
-		bootstrapComponents.KeyProcessor,
-	)
-	cm, err := initComponents(
-		ctx,
-		cfg,
-		bootstrapComponents.CryptographyService,
-		bootstrapComponents.PlatformCryptographyScheme,
-		bootstrapComponents.KeyStore,
-		bootstrapComponents.KeyProcessor,
-		cert,
-		false,
-	)
+	c, err := newComponents(ctx, cfg)
 	require.NoError(t, err)
-	require.NotNil(t, cm)
-
-	err = cm.Init(ctx)
+	err = c.Start(ctx)
 	require.NoError(t, err)
-
-	err = cm.Start(ctx)
-	require.NoError(t, err)
-
-	err = cm.Stop(ctx)
+	err = c.Stop(ctx)
 	require.NoError(t, err)
 }

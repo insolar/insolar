@@ -61,7 +61,6 @@ func Start(ctx context.Context, t *testing.T) TestMetrics {
 
 	cm := testutils.NewCertificateManagerMock(t)
 	cm.GetCertificateMock.Return(cert)
-	m.CertificateManager = cm
 
 	err = m.Start(ctx)
 	if err != nil {
