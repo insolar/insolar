@@ -54,6 +54,7 @@ import (
 	"context"
 	"net"
 	"sync"
+	"sync/atomic"
 
 	"github.com/insolar/insolar/network/node"
 
@@ -147,8 +148,7 @@ type nodekeeper struct {
 	syncNodes  []insolar.NetworkNode
 	syncClaims []consensus.ReferendumClaim
 
-	isBootstrap     bool
-	isBootstrapLock sync.RWMutex
+	bootstrapped uint32
 
 	Cryptography       insolar.CryptographyService `inject:""`
 	TerminationHandler insolar.TerminationHandler  `inject:""`
@@ -196,10 +196,7 @@ func (nk *nodekeeper) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.
 func (nk *nodekeeper) Wipe(isDiscovery bool) {
 	log.Warn("don't use it in production")
 
-	nk.isBootstrapLock.Lock()
-	nk.isBootstrap = false
-	nk.isBootstrapLock.Unlock()
-
+	nk.SetIsBootstrapped(false)
 	nk.consensusInfo.flush(false)
 
 	nk.cloudHashLock.Lock()
@@ -224,19 +221,17 @@ func (nk *nodekeeper) Wipe(isDiscovery bool) {
 // TODO: remove this method when bootstrap mechanism completed
 // IsBootstrapped method returns true when bootstrapNodes are connected to each other
 func (nk *nodekeeper) IsBootstrapped() bool {
-	nk.isBootstrapLock.RLock()
-	defer nk.isBootstrapLock.RUnlock()
-
-	return nk.isBootstrap
+	return atomic.LoadUint32(&nk.bootstrapped) == 1
 }
 
 // TODO: remove this method when bootstrap mechanism completed
 // SetIsBootstrapped method set is bootstrap completed
 func (nk *nodekeeper) SetIsBootstrapped(isBootstrap bool) {
-	nk.isBootstrapLock.Lock()
-	defer nk.isBootstrapLock.Unlock()
-
-	nk.isBootstrap = isBootstrap
+	if isBootstrap {
+		atomic.StoreUint32(&nk.bootstrapped, 1)
+	} else {
+		atomic.StoreUint32(&nk.bootstrapped, 0)
+	}
 }
 
 func (nk *nodekeeper) GetOrigin() insolar.NetworkNode {
