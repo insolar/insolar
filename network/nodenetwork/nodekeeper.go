@@ -171,7 +171,11 @@ func (nk *nodekeeper) SetInitialSnapshot(nodes []insolar.NetworkNode) {
 	}
 	nk.snapshot = node.NewSnapshot(insolar.FirstPulseNumber, nodesMap)
 	nk.accessor = node.NewAccessor(nk.snapshot)
+
+	nk.syncLock.Lock()
 	nk.syncNodes = nk.accessor.GetActiveNodes()
+	nk.syncClaims = make([]consensus.ReferendumClaim, 0)
+	nk.syncLock.Unlock()
 }
 
 func (nk *nodekeeper) GetAccessor() network.Accessor {
@@ -204,18 +208,11 @@ func (nk *nodekeeper) Wipe(isDiscovery bool) {
 	nk.cloudHashLock.Unlock()
 
 	nk.SetInitialSnapshot([]insolar.NetworkNode{})
+	nk.claimQueue.Clear()
 
-	nk.activeLock.Lock()
-	defer nk.activeLock.Unlock()
-
-	nk.claimQueue = newClaimQueue()
-	nk.syncLock.Lock()
-	nk.syncNodes = make([]insolar.NetworkNode, 0)
-	nk.syncClaims = make([]consensus.ReferendumClaim, 0)
 	if isDiscovery {
 		nk.origin.(node.MutableNode).SetState(insolar.NodeReady)
 	}
-	nk.syncLock.Unlock()
 }
 
 // TODO: remove this method when bootstrap mechanism completed
