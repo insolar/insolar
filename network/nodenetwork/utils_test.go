@@ -131,3 +131,39 @@ func TestGetMergedCopy_JoinClaims(t *testing.T) {
 	assert.Equal(t, insolar.NodeReady, result.ActiveList[insolar.Reference{2}].GetState())
 	assert.Equal(t, insolar.NodeLeaving, result.ActiveList[insolar.Reference{3}].GetState())
 }
+
+func TestGetMergedCopy_LeaveClaims(t *testing.T) {
+	nodes := []insolar.NetworkNode{
+		newTestNode(insolar.Reference{1}, insolar.NodePending),
+		newTestNode(insolar.Reference{2}, insolar.NodeReady),
+		newTestNode(insolar.Reference{3}, insolar.NodeLeaving),
+	}
+	claims := []packets.ReferendumClaim{
+		newTestJoinClaim(insolar.Reference{4}),
+		newTestLeaveClaim(insolar.Reference{2}, insolar.PulseNumber(50)),
+		&packets.NodeBroadcast{},
+		&packets.NodeBroadcast{},
+	}
+	result, err := GetMergedCopy(nodes, claims)
+	assert.NoError(t, err)
+	assert.Equal(t, 4, len(result.ActiveList))
+	assert.Equal(t, insolar.NodePending, result.ActiveList[insolar.Reference{4}].GetState())
+	assert.Equal(t, insolar.NodeReady, result.ActiveList[insolar.Reference{1}].GetState())
+	assert.Equal(t, insolar.NodeLeaving, result.ActiveList[insolar.Reference{2}].GetState())
+	assert.Equal(t, insolar.PulseNumber(50), result.ActiveList[insolar.Reference{2}].LeavingETA())
+	assert.Equal(t, insolar.NodeLeaving, result.ActiveList[insolar.Reference{3}].GetState())
+}
+
+func TestGetMergedCopy_InvalidLeaveClaim(t *testing.T) {
+	nodes := []insolar.NetworkNode{
+		newTestNode(insolar.Reference{1}, insolar.NodePending),
+		newTestNode(insolar.Reference{2}, insolar.NodeReady),
+		newTestNode(insolar.Reference{3}, insolar.NodeLeaving),
+	}
+	claims := []packets.ReferendumClaim{
+		newTestLeaveClaim(insolar.Reference{5}, insolar.PulseNumber(50)),
+	}
+	result, err := GetMergedCopy(nodes, claims)
+	assert.NoError(t, err)
+	assert.Equal(t, 3, len(result.ActiveList))
+}
