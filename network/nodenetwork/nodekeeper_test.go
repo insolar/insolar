@@ -57,8 +57,10 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNodekeeper_GetCloudHash(t *testing.T) {
@@ -82,4 +84,39 @@ func TestNewNodeNetwork(t *testing.T) {
 	cfg.Address = "127.0.0.1:3355"
 	_, err = NewNodeNetwork(cfg, &certMock)
 	assert.NoError(t, err)
+}
+
+func newNodeKeeper(t *testing.T) network.NodeKeeper {
+	cfg := configuration.Transport{Address: "127.0.0.1:3355"}
+	certMock := &testutils.CertificateMock{}
+	certMock.GetRoleFunc = func() insolar.StaticRole { return insolar.StaticRoleUnknown }
+	certMock.GetPublicKeyFunc = func() crypto.PublicKey { return /*pk*/ nil }
+	certMock.GetNodeRefFunc = func() *insolar.Reference { return &insolar.Reference{137} }
+	certMock.GetDiscoveryNodesFunc = func() []insolar.DiscoveryNode { return nil }
+	nw, err := NewNodeNetwork(cfg, certMock)
+	require.NoError(t, err)
+	return nw.(network.NodeKeeper)
+}
+
+func TestNodekeeper_GetWorkingNodes(t *testing.T) {
+	nk := newNodeKeeper(t)
+	assert.Empty(t, nk.GetAccessor().GetActiveNodes())
+	assert.Empty(t, nk.GetWorkingNodes())
+	nk.SetInitialSnapshot([]insolar.NetworkNode{
+		newTestNode(insolar.Reference{0}, insolar.NodeUndefined),
+		newTestNode(insolar.Reference{1}, insolar.NodePending),
+		newTestNodeWithRole(insolar.Reference{2}, insolar.NodeReady, insolar.StaticRoleLightMaterial),
+		newTestNodeWithRole(insolar.Reference{3}, insolar.NodeReady, insolar.StaticRoleVirtual),
+		newTestNode(insolar.Reference{4}, insolar.NodeLeaving),
+	})
+	assert.Equal(t, 5, len(nk.GetAccessor().GetActiveNodes()))
+	assert.Equal(t, 2, len(nk.GetWorkingNodes()))
+	assert.Equal(t, insolar.Reference{2}, nk.GetWorkingNodesByRole(insolar.DynamicRoleLightValidator)[0])
+	assert.Equal(t, insolar.Reference{3}, nk.GetWorkingNodesByRole(insolar.DynamicRoleVirtualExecutor)[0])
+	assert.Empty(t, nk.GetWorkingNodesByRole(insolar.DynamicRoleHeavyExecutor))
+	assert.NotNil(t, nk.GetWorkingNode(insolar.Reference{2}))
+	assert.Nil(t, nk.GetWorkingNode(insolar.Reference{1}))
+
+	assert.Nil(t, nk.GetWorkingNode(insolar.Reference{0}))
+	assert.NotNil(t, nk.GetAccessor().GetActiveNode(insolar.Reference{0}))
 }

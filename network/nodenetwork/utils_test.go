@@ -60,7 +60,11 @@ import (
 )
 
 func newTestNode(reference insolar.Reference, state insolar.NodeState) insolar.NetworkNode {
-	result := node.NewNode(reference, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
+	return newTestNodeWithRole(reference, state, insolar.StaticRoleUnknown)
+}
+
+func newTestNodeWithRole(reference insolar.Reference, state insolar.NodeState, role insolar.StaticRole) insolar.NetworkNode {
+	result := node.NewNode(reference, role, nil, "127.0.0.1:5432", "")
 	result.(node.MutableNode).SetState(state)
 	return result
 }
