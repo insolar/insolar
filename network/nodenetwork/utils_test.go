@@ -66,9 +66,11 @@ func newTestNode(reference insolar.Reference, state insolar.NodeState) insolar.N
 }
 
 func newTestJoinClaim(reference insolar.Reference) packets.ReferendumClaim {
-	return &packets.NodeJoinClaim{
-		NodeRef: reference,
-	}
+	return &packets.NodeJoinClaim{NodeRef: reference}
+}
+
+func newTestLeaveClaim(reference insolar.Reference, ETA insolar.PulseNumber) packets.ReferendumClaim {
+	return &packets.NodeLeaveClaim{NodeID: reference, ETA: ETA}
 }
 
 func Test_copyActiveNodes(t *testing.T) {
@@ -123,4 +125,9 @@ func TestGetMergedCopy_JoinClaims(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, result.NodesJoinedDuringPrevPulse)
 	assert.Equal(t, 5, len(result.ActiveList))
+	assert.Equal(t, insolar.NodePending, result.ActiveList[insolar.Reference{4}].GetState())
+	assert.Equal(t, insolar.NodePending, result.ActiveList[insolar.Reference{5}].GetState())
+	assert.Equal(t, insolar.NodeReady, result.ActiveList[insolar.Reference{1}].GetState())
+	assert.Equal(t, insolar.NodeReady, result.ActiveList[insolar.Reference{2}].GetState())
+	assert.Equal(t, insolar.NodeLeaving, result.ActiveList[insolar.Reference{3}].GetState())
 }
