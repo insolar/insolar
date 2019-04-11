@@ -70,7 +70,7 @@ func TestConsensusInfo(t *testing.T) {
 	assert.Equal(t, ref, ci.ResolveConsensus(sid).NodeID)
 	assert.False(t, ci.NodesJoinedDuringPreviousPulse())
 
-	ci.flush(true)
+	ci.Flush(true)
 	assert.Nil(t, ci.ResolveConsensusRef(ref))
 	assert.Nil(t, ci.ResolveConsensus(sid))
 	assert.True(t, ci.NodesJoinedDuringPreviousPulse())

@@ -135,7 +135,7 @@ func NewNodeKeeper(origin insolar.NetworkNode) network.NodeKeeper {
 type nodekeeper struct {
 	origin        insolar.NetworkNode
 	claimQueue    *claimQueue
-	consensusInfo *consensusInfo
+	consensusInfo *ConsensusInfo
 
 	cloudHashLock sync.RWMutex
 	cloudHash     []byte
@@ -313,7 +313,7 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.Pulse
 	nk.snapshot = node.NewSnapshot(number, mergeResult.ActiveList)
 	nk.accessor = node.NewAccessor(nk.snapshot)
 	stats.Record(ctx, consensusMetrics.ActiveNodes.M(int64(len(nk.accessor.GetActiveNodes()))))
-	nk.consensusInfo.flush(mergeResult.NodesJoinedDuringPrevPulse)
+	nk.consensusInfo.Flush(mergeResult.NodesJoinedDuringPrevPulse)
 	nk.gracefulStopIfNeeded(ctx)
 	return nil
 }
