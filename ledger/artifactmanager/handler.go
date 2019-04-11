@@ -298,12 +298,9 @@ func (h *MessageHandler) setHandlersForHeavy(m *middleware) {
 
 	h.Bus.MustRegister(
 		core.TypeGetRequest,
-		BuildMiddleware(
-			h.handleGetRequest,
+		BuildMiddleware(h.handleGetRequest,
 			instrumentHandler("handleGetRequest"),
-			m.checkJet,
-		),
-	)
+			m.zeroJetForHeavy))
 }
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel core.Parcel) (core.Reply, error) {
@@ -466,7 +463,7 @@ func (h *MessageHandler) handleGetObject(
 				"going_to": node.String(),
 			}).Debug("fetching object (on heavy)")
 
-			obj, err := h.fetchObject(ctx, msg.Head, *node, stateID, parcel.Pulse())
+			obj, err := h.fetchObject(ctx, msg.Head, *node, stateID)
 			if err != nil {
 				if err == core.ErrDeactivated {
 					return &reply.Error{ErrType: reply.ErrDeactivated}, nil
@@ -512,7 +509,7 @@ func (h *MessageHandler) handleGetObject(
 			"going_to": node.String(),
 		}).Debug("fetching object (record not found)")
 
-		obj, err := h.fetchObject(ctx, msg.Head, *node, stateID, parcel.Pulse())
+		obj, err := h.fetchObject(ctx, msg.Head, *node, stateID)
 		if err != nil {
 			if err == core.ErrDeactivated {
 				return &reply.Error{ErrType: reply.ErrDeactivated}, nil
@@ -1157,12 +1154,12 @@ func (h *MessageHandler) saveIndexFromHeavy(
 }
 
 func (h *MessageHandler) fetchObject(
-	ctx context.Context, obj core.RecordRef, node core.RecordRef, stateID *core.RecordID, pulse core.PulseNumber,
+	ctx context.Context, obj core.RecordRef, node core.RecordRef, stateID *core.RecordID,
 ) (*reply.Object, error) {
 	sender := BuildSender(
 		h.Bus.Send,
 		followRedirectSender(h.Bus),
-		retryJetSender(pulse, h.JetStorage),
+		retryJetSender(h.JetStorage),
 	)
 	genericReply, err := sender(
 		ctx,

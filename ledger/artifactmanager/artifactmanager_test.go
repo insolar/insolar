@@ -925,7 +925,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 	s.T().Run("returns error on exceeding retry limit", func(t *testing.T) {
 		mb := testutils.NewMessageBusMock(mc)
 		am.DefaultBus = mb
-		mb.SendMock.Return(&reply.JetMiss{JetID: *jet.NewID(5, []byte{1, 2, 3})}, nil)
+		mb.SendMock.Return(&reply.JetMiss{JetID: *jet.NewID(5, []byte{1, 2, 3}), Pulse: core.FirstPulseNumber}, nil)
 		_, err := am.RegisterRequest(s.ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.Error(t, err)
 	})
@@ -939,7 +939,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 				return &reply.ID{}, nil
 			}
 			retries--
-			return &reply.JetMiss{JetID: *jet.NewID(4, []byte{0xD5})}, nil
+			return &reply.JetMiss{JetID: *jet.NewID(4, []byte{0xD5}), Pulse: core.FirstPulseNumber}, nil
 		}
 		_, err := am.RegisterRequest(s.ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.NoError(t, err)
