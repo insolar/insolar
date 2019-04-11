@@ -197,19 +197,6 @@ func (nk *nodekeeper) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.
 	return nk.GetAccessor().GetWorkingNodesByRole(role)
 }
 
-func (nk *nodekeeper) Wipe(isDiscovery bool) {
-	log.Warn("don't use it in production")
-
-	nk.SetIsBootstrapped(false)
-	nk.consensusInfo.flush(false)
-	nk.SetCloudHash(nil)
-	nk.SetInitialSnapshot([]insolar.NetworkNode{})
-	nk.claimQueue.Clear()
-	if isDiscovery {
-		nk.origin.(node.MutableNode).SetState(insolar.NodeReady)
-	}
-}
-
 // TODO: remove this method when bootstrap mechanism completed
 // IsBootstrapped method returns true when bootstrapNodes are connected to each other
 func (nk *nodekeeper) IsBootstrapped() bool {

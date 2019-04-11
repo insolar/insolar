@@ -63,11 +63,6 @@ import (
 	"github.com/insolar/insolar/network/node"
 )
 
-type nodeKeeperTestInterface interface {
-	// Wipe all active nodes for test purposes
-	Wipe(isDiscovery bool)
-}
-
 type nodeKeeperWrapper struct {
 	original network.NodeKeeper
 }
@@ -94,10 +89,6 @@ func (n *nodeKeeperWrapper) GetWorkingNodes() []insolar.NetworkNode {
 
 func (n *nodeKeeperWrapper) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
 	return n.original.GetWorkingNodesByRole(role)
-}
-
-func (n *nodeKeeperWrapper) Wipe(isDiscovery bool) {
-	n.original.(nodeKeeperTestInterface).Wipe(isDiscovery)
 }
 
 type phaseManagerWrapper struct {
