@@ -91,17 +91,6 @@ func (n *nodeKeeperWrapper) GetWorkingNodesByRole(role insolar.DynamicRole) []in
 	return n.original.GetWorkingNodesByRole(role)
 }
 
-type phaseManagerWrapper struct {
-	original phases.PhaseManager
-	result   chan error
-}
-
-func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
-	res := p.original.OnPulse(ctx, pulse, pulseStartTime)
-	p.result <- res
-	return res
-}
-
 func (n *nodeKeeperWrapper) GetOrigin() insolar.NetworkNode {
 	return n.original.GetOrigin()
 }
@@ -144,4 +133,15 @@ func (n *nodeKeeperWrapper) Sync(ctx context.Context, nodes []insolar.NetworkNod
 
 func (n *nodeKeeperWrapper) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error {
 	return n.original.MoveSyncToActive(ctx, number)
+}
+
+type phaseManagerWrapper struct {
+	original phases.PhaseManager
+	result   chan error
+}
+
+func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
+	res := p.original.OnPulse(ctx, pulse, pulseStartTime)
+	p.result <- res
+	return res
 }
