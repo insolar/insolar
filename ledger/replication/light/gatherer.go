@@ -44,7 +44,7 @@ func NewDataGatherer(
 	blobsAccessor blob.CollectionAccessor,
 	recsAccessor object.RecordCollectionAccessor,
 	indexesAccessor object.IndexCollectionAccessor,
-) *dataGatherer {
+) DataGatherer {
 	return &dataGatherer{
 		dropAccessor:    dropAccessor,
 		blobsAccessor:   blobsAccessor,

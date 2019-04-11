@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 )
 
 type Cleaner interface {
@@ -41,7 +42,32 @@ type cleaner struct {
 	blobCleaner    blob.Cleaner
 	recCleaner     object.RecordCleaner
 	indexCleaner   object.IndexCleaner
-	recentProvider recentstorage.RecentStorageProvider
+	recentProvider recentstorage.Provider
+	pulseShifter   pulse.Shifter
+}
+
+func NewCleaner(
+	jetModifier jet.Modifier,
+	jetAccessor jet.Accessor,
+	nodeModifier node.Modifier,
+	dropCleaner drop.Cleaner,
+	blobCleaner blob.Cleaner,
+	recCleaner object.RecordCleaner,
+	indexCleaner object.IndexCleaner,
+	recentProvider recentstorage.Provider,
+	pulseShifter pulse.Shifter,
+) Cleaner {
+	return &cleaner{
+		jetModifier:    jetModifier,
+		jetAccessor:    jetAccessor,
+		nodeModifier:   nodeModifier,
+		dropCleaner:    dropCleaner,
+		blobCleaner:    blobCleaner,
+		recCleaner:     recCleaner,
+		indexCleaner:   indexCleaner,
+		recentProvider: recentProvider,
+		pulseShifter:   pulseShifter,
+	}
 }
 
 func (c *cleaner) Clean(ctx context.Context, pn insolar.PulseNumber) {
@@ -55,7 +81,7 @@ func (c *cleaner) Clean(ctx context.Context, pn insolar.PulseNumber) {
 	excIdx := c.getExcludedIndexes(ctx, pn)
 	c.indexCleaner.RemoveUntil(ctx, pn, excIdx)
 
-	err = m.PulseShifter.Shift(ctx, p.PulseNumber)
+	err := c.pulseShifter.Shift(ctx, pn)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
 	}
@@ -64,8 +90,8 @@ func (c *cleaner) Clean(ctx context.Context, pn insolar.PulseNumber) {
 func (c *cleaner) getExcludedIndexes(ctx context.Context, pn insolar.PulseNumber) map[insolar.ID]struct{} {
 	jets := c.jetAccessor.All(ctx, pn)
 	res := make(map[insolar.ID]struct{})
-	for _, jet := range jets {
-		storage := c.recentProvider.GetIndexStorage(ctx, insolar.ID(jet))
+	for _, j := range jets {
+		storage := c.recentProvider.GetIndexStorage(ctx, insolar.ID(j))
 		ids := storage.GetObjects()
 		for id, ttl := range ids {
 			if id.Pulse() > pn {

@@ -668,7 +668,7 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse insolar.Puls
 			idxs[idxID] = struct{}{}
 		}
 	}
-	m.IndexCleaner.RemoveWithIDs(ctx, idxs)
+	// m.IndexCleaner.RemoveWithIDs(ctx, idxs)
 
 	err = m.PulseShifter.Shift(ctx, p.PulseNumber)
 	if err != nil {

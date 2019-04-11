@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "IndexCleaner" can be found in github.com/insolar/insolar/ledger/storage/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,11 +20,11 @@ import (
 type IndexCleanerMock struct {
 	t minimock.Tester
 
-	RemoveWithIDsFunc func(p context.Context, p1 map[insolar.ID]struct {
+	RemoveUntilFunc func(p context.Context, p1 insolar.PulseNumber, p2 map[insolar.ID]struct {
 	})
-	RemoveWithIDsCounter    uint64
-	RemoveWithIDsPreCounter uint64
-	RemoveWithIDsMock       mIndexCleanerMockRemoveWithIDs
+	RemoveUntilCounter    uint64
+	RemoveUntilPreCounter uint64
+	RemoveUntilMock       mIndexCleanerMockRemoveUntil
 }
 
 //NewIndexCleanerMock returns a mock for github.com/insolar/insolar/ledger/storage/object.IndexCleaner
@@ -35,135 +35,136 @@ func NewIndexCleanerMock(t minimock.Tester) *IndexCleanerMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.RemoveWithIDsMock = mIndexCleanerMockRemoveWithIDs{mock: m}
+	m.RemoveUntilMock = mIndexCleanerMockRemoveUntil{mock: m}
 
 	return m
 }
 
-type mIndexCleanerMockRemoveWithIDs struct {
+type mIndexCleanerMockRemoveUntil struct {
 	mock              *IndexCleanerMock
-	mainExpectation   *IndexCleanerMockRemoveWithIDsExpectation
-	expectationSeries []*IndexCleanerMockRemoveWithIDsExpectation
+	mainExpectation   *IndexCleanerMockRemoveUntilExpectation
+	expectationSeries []*IndexCleanerMockRemoveUntilExpectation
 }
 
-type IndexCleanerMockRemoveWithIDsExpectation struct {
-	input *IndexCleanerMockRemoveWithIDsInput
+type IndexCleanerMockRemoveUntilExpectation struct {
+	input *IndexCleanerMockRemoveUntilInput
 }
 
-type IndexCleanerMockRemoveWithIDsInput struct {
+type IndexCleanerMockRemoveUntilInput struct {
 	p  context.Context
-	p1 map[insolar.ID]struct {
+	p1 insolar.PulseNumber
+	p2 map[insolar.ID]struct {
 	}
 }
 
-//Expect specifies that invocation of IndexCleaner.RemoveWithIDs is expected from 1 to Infinity times
-func (m *mIndexCleanerMockRemoveWithIDs) Expect(p context.Context, p1 map[insolar.ID]struct {
-}) *mIndexCleanerMockRemoveWithIDs {
-	m.mock.RemoveWithIDsFunc = nil
+// Expect specifies that invocation of IndexCleaner.RemoveUntil is expected from 1 to Infinity times
+func (m *mIndexCleanerMockRemoveUntil) Expect(p context.Context, p1 insolar.PulseNumber, p2 map[insolar.ID]struct {
+}) *mIndexCleanerMockRemoveUntil {
+	m.mock.RemoveUntilFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &IndexCleanerMockRemoveWithIDsExpectation{}
+		m.mainExpectation = &IndexCleanerMockRemoveUntilExpectation{}
 	}
-	m.mainExpectation.input = &IndexCleanerMockRemoveWithIDsInput{p, p1}
+	m.mainExpectation.input = &IndexCleanerMockRemoveUntilInput{p, p1, p2}
 	return m
 }
 
-//Return specifies results of invocation of IndexCleaner.RemoveWithIDs
-func (m *mIndexCleanerMockRemoveWithIDs) Return() *IndexCleanerMock {
-	m.mock.RemoveWithIDsFunc = nil
+// Return specifies results of invocation of IndexCleaner.RemoveUntil
+func (m *mIndexCleanerMockRemoveUntil) Return() *IndexCleanerMock {
+	m.mock.RemoveUntilFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &IndexCleanerMockRemoveWithIDsExpectation{}
+		m.mainExpectation = &IndexCleanerMockRemoveUntilExpectation{}
 	}
 
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of IndexCleaner.RemoveWithIDs is expected once
-func (m *mIndexCleanerMockRemoveWithIDs) ExpectOnce(p context.Context, p1 map[insolar.ID]struct {
-}) *IndexCleanerMockRemoveWithIDsExpectation {
-	m.mock.RemoveWithIDsFunc = nil
+// ExpectOnce specifies that invocation of IndexCleaner.RemoveUntil is expected once
+func (m *mIndexCleanerMockRemoveUntil) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 map[insolar.ID]struct {
+}) *IndexCleanerMockRemoveUntilExpectation {
+	m.mock.RemoveUntilFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &IndexCleanerMockRemoveWithIDsExpectation{}
-	expectation.input = &IndexCleanerMockRemoveWithIDsInput{p, p1}
+	expectation := &IndexCleanerMockRemoveUntilExpectation{}
+	expectation.input = &IndexCleanerMockRemoveUntilInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-//Set uses given function f as a mock of IndexCleaner.RemoveWithIDs method
-func (m *mIndexCleanerMockRemoveWithIDs) Set(f func(p context.Context, p1 map[insolar.ID]struct {
+// Set uses given function f as a mock of IndexCleaner.RemoveUntil method
+func (m *mIndexCleanerMockRemoveUntil) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 map[insolar.ID]struct {
 })) *IndexCleanerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.RemoveWithIDsFunc = f
+	m.mock.RemoveUntilFunc = f
 	return m.mock
 }
 
-//RemoveWithIDs implements github.com/insolar/insolar/ledger/storage/object.IndexCleaner interface
-func (m *IndexCleanerMock) RemoveWithIDs(p context.Context, p1 map[insolar.ID]struct {
+// RemoveUntil implements github.com/insolar/insolar/ledger/storage/object.IndexCleaner interface
+func (m *IndexCleanerMock) RemoveUntil(p context.Context, p1 insolar.PulseNumber, p2 map[insolar.ID]struct {
 }) {
-	counter := atomic.AddUint64(&m.RemoveWithIDsPreCounter, 1)
-	defer atomic.AddUint64(&m.RemoveWithIDsCounter, 1)
+	counter := atomic.AddUint64(&m.RemoveUntilPreCounter, 1)
+	defer atomic.AddUint64(&m.RemoveUntilCounter, 1)
 
-	if len(m.RemoveWithIDsMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.RemoveWithIDsMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to IndexCleanerMock.RemoveWithIDs. %v %v", p, p1)
+	if len(m.RemoveUntilMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.RemoveUntilMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to IndexCleanerMock.RemoveUntil. %v %v %v", p, p1, p2)
 			return
 		}
 
-		input := m.RemoveWithIDsMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, IndexCleanerMockRemoveWithIDsInput{p, p1}, "IndexCleaner.RemoveWithIDs got unexpected parameters")
+		input := m.RemoveUntilMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, IndexCleanerMockRemoveUntilInput{p, p1, p2}, "IndexCleaner.RemoveUntil got unexpected parameters")
 
 		return
 	}
 
-	if m.RemoveWithIDsMock.mainExpectation != nil {
+	if m.RemoveUntilMock.mainExpectation != nil {
 
-		input := m.RemoveWithIDsMock.mainExpectation.input
+		input := m.RemoveUntilMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, IndexCleanerMockRemoveWithIDsInput{p, p1}, "IndexCleaner.RemoveWithIDs got unexpected parameters")
+			testify_assert.Equal(m.t, *input, IndexCleanerMockRemoveUntilInput{p, p1, p2}, "IndexCleaner.RemoveUntil got unexpected parameters")
 		}
 
 		return
 	}
 
-	if m.RemoveWithIDsFunc == nil {
-		m.t.Fatalf("Unexpected call to IndexCleanerMock.RemoveWithIDs. %v %v", p, p1)
+	if m.RemoveUntilFunc == nil {
+		m.t.Fatalf("Unexpected call to IndexCleanerMock.RemoveUntil. %v %v %v", p, p1, p2)
 		return
 	}
 
-	m.RemoveWithIDsFunc(p, p1)
+	m.RemoveUntilFunc(p, p1, p2)
 }
 
-//RemoveWithIDsMinimockCounter returns a count of IndexCleanerMock.RemoveWithIDsFunc invocations
-func (m *IndexCleanerMock) RemoveWithIDsMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.RemoveWithIDsCounter)
+// RemoveUntilMinimockCounter returns a count of IndexCleanerMock.RemoveUntilFunc invocations
+func (m *IndexCleanerMock) RemoveUntilMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.RemoveUntilCounter)
 }
 
-//RemoveWithIDsMinimockPreCounter returns the value of IndexCleanerMock.RemoveWithIDs invocations
-func (m *IndexCleanerMock) RemoveWithIDsMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.RemoveWithIDsPreCounter)
+// RemoveUntilMinimockPreCounter returns the value of IndexCleanerMock.RemoveUntil invocations
+func (m *IndexCleanerMock) RemoveUntilMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.RemoveUntilPreCounter)
 }
 
-//RemoveWithIDsFinished returns true if mock invocations count is ok
-func (m *IndexCleanerMock) RemoveWithIDsFinished() bool {
+// RemoveUntilFinished returns true if mock invocations count is ok
+func (m *IndexCleanerMock) RemoveUntilFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.RemoveWithIDsMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.RemoveWithIDsCounter) == uint64(len(m.RemoveWithIDsMock.expectationSeries))
+	if len(m.RemoveUntilMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.RemoveUntilCounter) == uint64(len(m.RemoveUntilMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.RemoveWithIDsMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.RemoveWithIDsCounter) > 0
+	if m.RemoveUntilMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.RemoveUntilCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.RemoveWithIDsFunc != nil {
-		return atomic.LoadUint64(&m.RemoveWithIDsCounter) > 0
+	if m.RemoveUntilFunc != nil {
+		return atomic.LoadUint64(&m.RemoveUntilCounter) > 0
 	}
 
 	return true
@@ -173,8 +174,8 @@ func (m *IndexCleanerMock) RemoveWithIDsFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexCleanerMock) ValidateCallCounters() {
 
-	if !m.RemoveWithIDsFinished() {
-		m.t.Fatal("Expected call to IndexCleanerMock.RemoveWithIDs")
+	if !m.RemoveUntilFinished() {
+		m.t.Fatal("Expected call to IndexCleanerMock.RemoveUntil")
 	}
 
 }
@@ -194,8 +195,8 @@ func (m *IndexCleanerMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *IndexCleanerMock) MinimockFinish() {
 
-	if !m.RemoveWithIDsFinished() {
-		m.t.Fatal("Expected call to IndexCleanerMock.RemoveWithIDs")
+	if !m.RemoveUntilFinished() {
+		m.t.Fatal("Expected call to IndexCleanerMock.RemoveUntil")
 	}
 
 }
@@ -212,7 +213,7 @@ func (m *IndexCleanerMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.RemoveWithIDsFinished()
+		ok = ok && m.RemoveUntilFinished()
 
 		if ok {
 			return
@@ -221,8 +222,8 @@ func (m *IndexCleanerMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.RemoveWithIDsFinished() {
-				m.t.Error("Expected call to IndexCleanerMock.RemoveWithIDs")
+			if !m.RemoveUntilFinished() {
+				m.t.Error("Expected call to IndexCleanerMock.RemoveUntil")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -237,7 +238,7 @@ func (m *IndexCleanerMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *IndexCleanerMock) AllMocksCalled() bool {
 
-	if !m.RemoveWithIDsFinished() {
+	if !m.RemoveUntilFinished() {
 		return false
 	}
 

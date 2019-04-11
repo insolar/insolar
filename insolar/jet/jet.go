@@ -24,11 +24,15 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Accessor -o ./ -s _mock.go
+
 // Accessor provides an interface for accessing jet IDs.
 type Accessor interface {
 	All(ctx context.Context, pulse insolar.PulseNumber) []insolar.JetID
 	ForID(ctx context.Context, pulse insolar.PulseNumber, recordID insolar.ID) (insolar.JetID, bool)
 }
+
+//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Modifier -o ./ -s _mock.go
 
 // Modifier provides an interface for modifying jet IDs.
 type Modifier interface {
