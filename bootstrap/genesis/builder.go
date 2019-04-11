@@ -119,7 +119,7 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 	for name, code := range contracts {
 		code.ChangePackageToMain()
 
-		ctr, err := openFileInDir(filepath.Join(cb.root, "src/contract", name), "main.go")
+		ctr, err := createFileInDir(filepath.Join(cb.root, "src/contract", name), "main.go")
 		if err != nil {
 			return errors.Wrap(err, "[ buildPrototypes ] Can't open contract file")
 		}
@@ -130,7 +130,7 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 		}
 
 		proxyPath := filepath.Join(cb.root, "src", proxySources, name)
-		proxy, err := openFileInDir(proxyPath, "main.go")
+		proxy, err := createFileInDir(proxyPath, "main.go")
 		if err != nil {
 			return errors.Wrap(err, "[ buildPrototypes ] Can't open proxy file")
 		}
@@ -140,7 +140,7 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 			return errors.Wrap(err, "[ buildPrototypes ] Can't write proxy")
 		}
 
-		wrp, err := openFileInDir(filepath.Join(cb.root, "src/contract", name), "main_wrapper.go")
+		wrp, err := createFileInDir(filepath.Join(cb.root, "src/contract", name), "main_wrapper.go")
 		if err != nil {
 			return errors.Wrap(err, "[ buildPrototypes ] Can't open wrapper file")
 		}
@@ -282,7 +282,8 @@ func makeFileWithDir(dir string, name string, data []byte) error {
 	return ioutil.WriteFile(filepath.Join(dir, name), data, 0644)
 }
 
-func openFileInDir(dir string, name string) (*os.File, error) {
+// createFileInDir opens file in provided directory, creates directory if it does not exist.
+func createFileInDir(dir string, name string) (*os.File, error) {
 	err := os.MkdirAll(dir, 0775)
 	if err != nil {
 		return nil, err
