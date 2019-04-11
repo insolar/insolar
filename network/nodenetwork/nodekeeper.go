@@ -240,9 +240,6 @@ func (nk *nodekeeper) SetIsBootstrapped(isBootstrap bool) {
 }
 
 func (nk *nodekeeper) GetOrigin() insolar.NetworkNode {
-	nk.activeLock.RLock()
-	defer nk.activeLock.RUnlock()
-
 	return nk.origin
 }
 
@@ -265,16 +262,10 @@ func (nk *nodekeeper) GetWorkingNodes() []insolar.NetworkNode {
 }
 
 func (nk *nodekeeper) GetOriginJoinClaim() (*consensus.NodeJoinClaim, error) {
-	nk.activeLock.RLock()
-	defer nk.activeLock.RUnlock()
-
 	return nk.nodeToSignedClaim()
 }
 
 func (nk *nodekeeper) GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error) {
-	nk.activeLock.RLock()
-	defer nk.activeLock.RUnlock()
-
 	return nk.nodeToAnnounceClaim(mapper)
 }
 
