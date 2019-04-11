@@ -447,10 +447,11 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	terminationHandler.AbortFunc = func() {}
 
 	mblocker := testutils.NewMessageBusLockerMock(s.T())
+	GIL := testutils.NewGlobalInsolarLockMock(s.T())
 	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
 
-	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService, mblocker)
+	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService, mblocker, GIL)
 	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler)
 
 	node.serviceNetwork = serviceNetwork
