@@ -42,7 +42,7 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 	jc := testutils.NewJetCoordinatorMock(mc)
 	ans := node.NewAccessorMock(mc)
 	js := NewStorageMock(mc)
-	jtu := &jetTreeUpdater{
+	jtu := &treeUpdater{
 		Nodes:          ans,
 		JetStorage:     js,
 		JetCoordinator: jc,
@@ -127,7 +127,7 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 	ans := node.NewAccessorMock(mc)
 	js := NewStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
-	jtu := &jetTreeUpdater{
+	jtu := &treeUpdater{
 		Nodes:          ans,
 		JetStorage:     js,
 		JetCoordinator: jc,
@@ -191,7 +191,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	ans := node.NewAccessorMock(mc)
 	js := NewStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
-	jtu := &jetTreeUpdater{
+	jtu := &treeUpdater{
 		Nodes:          ans,
 		JetStorage:     js,
 		JetCoordinator: jc,
@@ -246,7 +246,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 	ans := node.NewAccessorMock(mc)
 	js := NewStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
-	jtu := &jetTreeUpdater{
+	jtu := &treeUpdater{
 		Nodes:          ans,
 		JetStorage:     js,
 		JetCoordinator: jc,
