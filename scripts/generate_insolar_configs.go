@@ -89,8 +89,8 @@ func writeGorundPorts(gorundPorts [][]string) {
 	for _, ports := range gorundPorts {
 		portsData += ports[0] + " " + ports[1] + "\n"
 	}
-	err := genesis.WriteFile("./", gorundPortsPath, portsData)
-	check("Can't WriteFile: "+gorundPortsPath, err)
+	err := genesis.MakeFileWithDir("./", gorundPortsPath, portsData)
+	check("Can't MakeFileWithDir: "+gorundPortsPath, err)
 }
 
 func writeInsolarConfigs(output string, insolarConfigs []configuration.Configuration) {
@@ -98,16 +98,16 @@ func writeInsolarConfigs(output string, insolarConfigs []configuration.Configura
 		data, err := yaml.Marshal(conf)
 		check("Can't Marshal insolard config", err)
 		fileName := fmt.Sprintf(defaultOutputConfigNameTmpl, index+1)
-		err = genesis.WriteFile(output, fileName, string(data))
-		check("Can't WriteFile: "+fileName, err)
+		err = genesis.MakeFileWithDir(output, fileName, string(data))
+		check("Can't MakeFileWithDir: "+fileName, err)
 	}
 }
 
 func writePulsarConfig(conf configuration.Configuration) {
 	data, err := yaml.Marshal(conf)
 	check("Can't Marshal pulsard config", err)
-	err = genesis.WriteFile(outputDir, "pulsar.yaml", string(data))
-	check("Can't WriteFile: pulsar.yaml", err)
+	err = genesis.MakeFileWithDir(outputDir, "pulsar.yaml", string(data))
+	check("Can't MakeFileWithDir: pulsar.yaml", err)
 }
 
 type promContext struct {
@@ -133,8 +133,8 @@ func writePromConfig(pctx *promContext) {
 	err = templates.Execute(&b, pctx)
 	check("Can't process template: "+prometheusConfigTmpl, err)
 
-	err = genesis.WriteFile(outputDir, prometheusFileName, b.String())
-	check("Can't WriteFile: "+prometheusFileName, err)
+	err = genesis.MakeFileWithDir(outputDir, prometheusFileName, b.String())
+	check("Can't MakeFileWithDir: "+prometheusFileName, err)
 }
 
 func main() {

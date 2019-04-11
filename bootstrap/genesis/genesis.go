@@ -101,12 +101,12 @@ func (g *Generator) Run(ctx context.Context) error {
 		panic(errors.Wrap(err, "[ Genesis ] Couldn't create rootdomain instance"))
 	}
 
-	inslog.Info("[ Genesis ] NewContractBuilder ...")
-	cb := NewContractBuilder(g.genesisRef, g.artifactManager)
-	defer cb.Clean()
+	inslog.Info("[ Genesis ] newContractBuilder ...")
+	cb := newContractBuilder(g.genesisRef, g.artifactManager)
+	defer cb.clean()
 
 	inslog.Info("[ Genesis ] buildSmartContracts ...")
-	prototypes, err := cb.Build(ctx, rootDomainID)
+	prototypes, err := cb.buildPrototypes(ctx, rootDomainID)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] couldn't build contracts"))
 	}
@@ -134,7 +134,7 @@ func (g *Generator) Run(ctx context.Context) error {
 
 func (g *Generator) activateRootDomain(
 	ctx context.Context,
-	cb *ContractsBuilder,
+	cb *contractsBuilder,
 	contractID *insolar.ID,
 ) (artifact.ObjectDescriptor, error) {
 	rd, err := rootdomain.NewRootDomain()
@@ -332,7 +332,7 @@ func (g *Generator) activateRootMemberWallet(
 
 func (g *Generator) activateSmartContracts(
 	ctx context.Context,
-	cb *ContractsBuilder,
+	cb *contractsBuilder,
 	rootPubKey string,
 	rootDomainID *insolar.ID,
 	prototypes prototypes,
@@ -524,7 +524,7 @@ func (g *Generator) createKeys(ctx context.Context, dir string, amount int) erro
 		}
 
 		name := fmt.Sprintf(g.config.KeysNameFormat, i)
-		err = WriteFile(dir, name, string(result))
+		err = MakeFileWithDir(dir, name, string(result))
 		if err != nil {
 			return errors.Wrap(err, "[ createKeys ] couldn't write keys to file")
 		}
@@ -610,7 +610,7 @@ func (g *Generator) makeCertificates(nodes []genesisNode) error {
 
 		err = ioutil.WriteFile(path.Join(g.keyOut, g.config.DiscoveryNodes[i].CertName), cert, 0644)
 		if err != nil {
-			return errors.Wrap(err, "[ makeCertificates ] WriteFile")
+			return errors.Wrap(err, "[ makeCertificates ] MakeFileWithDir")
 		}
 	}
 	return nil

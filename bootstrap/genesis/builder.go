@@ -41,8 +41,8 @@ var (
 // prototypes holds name -> code reference pair
 type prototypes map[string]*insolar.Reference
 
-// ContractsBuilder for tests
-type ContractsBuilder struct {
+// contractsBuilder for tests
+type contractsBuilder struct {
 	root string
 
 	prototypes prototypes
@@ -51,15 +51,15 @@ type ContractsBuilder struct {
 	artifactManager artifact.Manager
 }
 
-// NewContractBuilder returns a new `ContractsBuilder`,
+// newContractBuilder returns a new `contractsBuilder`,
 // requires initialized artifact manager.
-func NewContractBuilder(genesisRef insolar.Reference, am artifact.Manager) *ContractsBuilder {
+func newContractBuilder(genesisRef insolar.Reference, am artifact.Manager) *contractsBuilder {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	if err != nil {
 		return nil
 	}
 
-	cb := &ContractsBuilder{
+	cb := &contractsBuilder{
 		root:       tmpDir,
 		prototypes: make(map[string]*insolar.Reference),
 
@@ -69,8 +69,8 @@ func NewContractBuilder(genesisRef insolar.Reference, am artifact.Manager) *Cont
 	return cb
 }
 
-// Clean deletes tmp directory used for contracts building
-func (cb *ContractsBuilder) Clean() {
+// clean deletes tmp directory used for contracts building
+func (cb *contractsBuilder) clean() {
 	log.Debugf("Cleaning build directory %q", cb.root)
 	err := os.RemoveAll(cb.root)
 	if err != nil {
@@ -78,7 +78,7 @@ func (cb *ContractsBuilder) Clean() {
 	}
 }
 
-func (cb *ContractsBuilder) Build(ctx context.Context, rootDomainID *insolar.ID) (prototypes, error) {
+func (cb *contractsBuilder) buildPrototypes(ctx context.Context, rootDomainID *insolar.ID) (prototypes, error) {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ buildSmartContracts ] building contracts:", contractNames)
 	contracts, err := parseContracts()
@@ -96,8 +96,8 @@ func (cb *ContractsBuilder) Build(ctx context.Context, rootDomainID *insolar.ID)
 	return cb.prototypes, nil
 }
 
-// Build ...
-func (cb *ContractsBuilder) build(ctx context.Context, contracts map[string]*preprocessor.ParsedFile, domain *insolar.ID) error {
+// buildPrototypes ...
+func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*preprocessor.ParsedFile, domain *insolar.ID) error {
 
 	domainRef := insolar.NewReference(*domain, *domain)
 
@@ -111,7 +111,7 @@ func (cb *ContractsBuilder) build(ctx context.Context, contracts map[string]*pre
 				},
 			})
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't RegisterRequest for contract")
+			return errors.Wrap(err, "[ buildPrototypes ] Can't RegisterRequest for contract")
 		}
 		cb.prototypes[name] = insolar.NewReference(*domain, *protoID)
 	}
@@ -119,35 +119,35 @@ func (cb *ContractsBuilder) build(ctx context.Context, contracts map[string]*pre
 	for name, code := range contracts {
 		code.ChangePackageToMain()
 
-		ctr, err := OpenFile(filepath.Join(cb.root, "src/contract", name), "main.go")
+		ctr, err := openFileInDir(filepath.Join(cb.root, "src/contract", name), "main.go")
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't open contract file")
+			return errors.Wrap(err, "[ buildPrototypes ] Can't open contract file")
 		}
 		err = code.Write(ctr)
 		ctr.Close()
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't WriteFile")
+			return errors.Wrap(err, "[ buildPrototypes ] Can't MakeFileWithDir")
 		}
 
 		proxyPath := filepath.Join(cb.root, "src", proxySources, name)
-		proxy, err := OpenFile(proxyPath, "main.go")
+		proxy, err := openFileInDir(proxyPath, "main.go")
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't open proxy file")
+			return errors.Wrap(err, "[ buildPrototypes ] Can't open proxy file")
 		}
 		err = code.WriteProxy(cb.prototypes[name].String(), proxy)
 		proxy.Close()
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't write proxy")
+			return errors.Wrap(err, "[ buildPrototypes ] Can't write proxy")
 		}
 
-		wrp, err := OpenFile(filepath.Join(cb.root, "src/contract", name), "main_wrapper.go")
+		wrp, err := openFileInDir(filepath.Join(cb.root, "src/contract", name), "main_wrapper.go")
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't open wrapper file")
+			return errors.Wrap(err, "[ buildPrototypes ] Can't open wrapper file")
 		}
 		err = code.WriteWrapper(wrp)
 		wrp.Close()
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't write wrapper")
+			return errors.Wrap(err, "[ buildPrototypes ] Can't write wrapper")
 		}
 	}
 
@@ -155,12 +155,12 @@ func (cb *ContractsBuilder) build(ctx context.Context, contracts map[string]*pre
 		log.Debugf("Building plugin for contract %q in %q", name, cb.root)
 		err := cb.plugin(name)
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't call plugin")
+			return errors.Wrap(err, "[ buildPrototypes ] Can't call plugin")
 		}
 
 		pluginBinary, err := ioutil.ReadFile(filepath.Join(cb.root, "plugins", name+".so"))
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't ReadFile")
+			return errors.Wrap(err, "[ buildPrototypes ] Can't ReadFile")
 		}
 		codeReq, err := cb.artifactManager.RegisterRequest(
 			ctx,
@@ -170,7 +170,7 @@ func (cb *ContractsBuilder) build(ctx context.Context, contracts map[string]*pre
 			},
 		)
 		if err != nil {
-			return errors.Wrapf(err, "[ Build ] Can't RegisterRequest for code '%v'", name)
+			return errors.Wrapf(err, "[ buildPrototypes ] Can't RegisterRequest for code '%v'", name)
 		}
 
 		log.Debugf("Deploying code for contract %q", name)
@@ -180,13 +180,13 @@ func (cb *ContractsBuilder) build(ctx context.Context, contracts map[string]*pre
 			pluginBinary, insolar.MachineTypeGoPlugin,
 		)
 		if err != nil {
-			return errors.Wrapf(err, "[ Build ] Can't DeployCode for code '%v", name)
+			return errors.Wrapf(err, "[ buildPrototypes ] Can't DeployCode for code '%v", name)
 		}
 
 		codeRef := insolar.NewReference(*domain, *codeID)
 		_, err = cb.artifactManager.RegisterResult(ctx, *domainRef, *codeRef, nil)
 		if err != nil {
-			return errors.Wrapf(err, "[ Build ] Can't SetRecord for code '%v'", name)
+			return errors.Wrapf(err, "[ buildPrototypes ] Can't SetRecord for code '%v'", name)
 		}
 
 		log.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
@@ -200,12 +200,12 @@ func (cb *ContractsBuilder) build(ctx context.Context, contracts map[string]*pre
 			nil,
 		)
 		if err != nil {
-			return errors.Wrapf(err, "[ Build ] Can't ActivatePrototypef for code '%v'", name)
+			return errors.Wrapf(err, "[ buildPrototypes ] Can't ActivatePrototypef for code '%v'", name)
 		}
 
 		_, err = cb.artifactManager.RegisterResult(ctx, *domainRef, *cb.prototypes[name], nil)
 		if err != nil {
-			return errors.Wrapf(err, "[ Build ] Can't RegisterResult of prototype for code '%v'", name)
+			return errors.Wrapf(err, "[ buildPrototypes ] Can't RegisterResult of prototype for code '%v'", name)
 		}
 	}
 
@@ -213,7 +213,7 @@ func (cb *ContractsBuilder) build(ctx context.Context, contracts map[string]*pre
 }
 
 // compile plugin
-func (cb *ContractsBuilder) plugin(name string) error {
+func (cb *contractsBuilder) plugin(name string) error {
 	dstDir := filepath.Join(cb.root, "plugins")
 
 	err := os.MkdirAll(dstDir, 0777)
@@ -228,7 +228,7 @@ func (cb *ContractsBuilder) plugin(name string) error {
 		"-o", filepath.Join(dstDir, name+".so"),
 		filepath.Join(cb.root, "src/contract", name),
 	)
-	cmd.Env = append(os.Environ(), "GOPATH="+PrependGoPath(cb.root))
+	cmd.Env = append(os.Environ(), "GOPATH="+prependGoPath(cb.root))
 	out, err := cmd.CombinedOutput()
 	if err != nil {
 		return errors.Wrapf(err, "can't build contract: %v", string(out))
@@ -266,16 +266,16 @@ func parseContracts() (map[string]*preprocessor.ParsedFile, error) {
 	return contracts, nil
 }
 
-// PrependGoPath prepends `path` to GOPATH environment variable
+// prependGoPath prepends `path` to GOPATH environment variable
 // accounting for possibly for default value. Returns new value.
 // NOTE: that environment is not changed
-func PrependGoPath(path string) string {
+func prependGoPath(path string) string {
 	return path + string(os.PathListSeparator) + goPATH()
 }
 
-// WriteFile dumps `text` into file named `name` into directory `dir`.
+// MakeFileWithDir dumps `text` into file named `name` into directory `dir`.
 // Creates directory if needed as well as file
-func WriteFile(dir string, name string, text string) error {
+func MakeFileWithDir(dir string, name string, text string) error {
 	err := os.MkdirAll(dir, 0775)
 	if err != nil {
 		return err
@@ -283,7 +283,7 @@ func WriteFile(dir string, name string, text string) error {
 	return ioutil.WriteFile(filepath.Join(dir, name), []byte(text), 0644)
 }
 
-func OpenFile(dir string, name string) (*os.File, error) {
+func openFileInDir(dir string, name string) (*os.File, error) {
 	err := os.MkdirAll(dir, 0775)
 	if err != nil {
 		return nil, err
