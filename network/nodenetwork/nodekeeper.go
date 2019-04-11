@@ -202,14 +202,9 @@ func (nk *nodekeeper) Wipe(isDiscovery bool) {
 
 	nk.SetIsBootstrapped(false)
 	nk.consensusInfo.flush(false)
-
-	nk.cloudHashLock.Lock()
-	nk.cloudHash = nil
-	nk.cloudHashLock.Unlock()
-
+	nk.SetCloudHash(nil)
 	nk.SetInitialSnapshot([]insolar.NetworkNode{})
 	nk.claimQueue.Clear()
-
 	if isDiscovery {
 		nk.origin.(node.MutableNode).SetState(insolar.NodeReady)
 	}
