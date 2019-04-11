@@ -50,6 +50,8 @@ type Backoff struct {
 	Jitter bool
 	// Min and Max are the minimum and maximum values of the counter
 	Min, Max time.Duration
+
+	MaxAttempts int
 }
 
 // RecentStorage holds configuration for RecentStorage

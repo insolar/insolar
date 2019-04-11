@@ -1,18 +1,18 @@
-/*
- *    Copyright 2019 Insolar Technologies
- *
- *    Licensed under the Apache License, Version 2.0 (the "License");
- *    you may not use this file except in compliance with the License.
- *    You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- *    Unless required by applicable law or agreed to in writing, software
- *    distributed under the License is distributed on an "AS IS" BASIS,
- *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- *    See the License for the specific language governing permissions and
- *    limitations under the License.
- */
+//
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+//
 
 package light
 
@@ -22,15 +22,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/utils/backoff"
 )
 
@@ -38,163 +35,168 @@ type ToHeavySyncer interface {
 	SyncPulse(pn insolar.PulseNumber) error
 }
 
-type Cleaner interface {
-	Clean(ctx context.Context)
-}
-
-type DataGatherer interface {
-	ForPulseAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) (*message.HeavyPayload, error)
-}
-
 type toHeavySyncer struct {
-	waitingQueueChecker *time.Ticker
-	problemQueueChecker *time.Ticker
+	once sync.Once
 
-	syncWaitingPulses    pulseLinkedList
-	sendingProblemPulses pulseLinkedList
+	checker *time.Ticker
 
-	jetAccessor     jet.Accessor
-	dropAccessor    drop.Accessor
-	blobsAccessor   blob.CollectionAccessor
-	recsAccessor    object.RecordCollectionAccessor
-	indexesAccessor object.IndexCollectionAccessor
+	waitingMux       sync.Mutex
+	syncWaitingSlots []syncSlot
 
-	cleaner Cleaner
+	sendingProblemMux   sync.Mutex
+	sendingProblemSlots []syncSlot
 
-	msgBus insolar.MessageBus
+	jetAccessor  jet.Accessor
+	dataGatherer DataGatherer
+	cleaner      Cleaner
+	msgBus       insolar.MessageBus
+
+	bconf configuration.Backoff
 }
 
-type pulseLinkedList struct {
-	pulsesMux sync.Mutex
-	head      *listNode
-	tail      *listNode
+type syncSlot struct {
+	pn    insolar.PulseNumber
+	jetID insolar.JetID
+
+	lastAttempt time.Time
+	backoff     *backoff.Backoff
 }
 
-type listNode struct {
-	current insolar.PulseNumber
-	jetID   insolar.JetID
+func (t *toHeavySyncer) addToWaitingSlots(pn insolar.PulseNumber) {
+	t.waitingMux.Lock()
+	defer t.waitingMux.Unlock()
 
-	next *listNode
-
-	backoff *backoff.Backoff
+	t.syncWaitingSlots = append(t.syncWaitingSlots, syncSlot{pn: pn})
 }
 
-func (p *pulseLinkedList) addPulse(pn insolar.PulseNumber) {
-	p.pulsesMux.Lock()
-	defer p.pulsesMux.Unlock()
+func (t *toHeavySyncer) extractWaitingSlot() (syncSlot, bool) {
+	t.waitingMux.Lock()
+	defer t.waitingMux.Unlock()
 
-	if p.head == nil {
-		p.head = &listNode{
-			current: pn,
-		}
-		p.tail = p.head
+	if len(t.syncWaitingSlots) == 0 {
+		return syncSlot{}, false
+	}
+
+	slot := t.syncWaitingSlots[0]
+	// it's a copy
+	t.syncWaitingSlots = append([]syncSlot(nil), t.syncWaitingSlots[1:]...)
+	return slot, true
+}
+
+func (t *toHeavySyncer) addToProblemsSlots(pn insolar.PulseNumber, jetID insolar.JetID) {
+	t.sendingProblemMux.Lock()
+	defer t.sendingProblemMux.Unlock()
+
+	t.sendingProblemSlots = append(t.sendingProblemSlots,
+		syncSlot{
+			pn:          pn,
+			jetID:       jetID,
+			lastAttempt: time.Now(),
+			backoff:     backoffFromConfig(t.bconf)},
+	)
+}
+
+func (t *toHeavySyncer) reAddToProblemsSlots(ctx context.Context, slot syncSlot) {
+	t.sendingProblemMux.Lock()
+	defer t.sendingProblemMux.Unlock()
+
+	if slot.backoff.Attempt() > t.bconf.MaxAttempts {
+		inslogger.FromContext(ctx).Errorf("Failed to sync pulse - %v with jetID - %v. Attempts - %v", slot.pn, slot.jetID, slot.backoff.Attempt()-1)
 		return
 	}
 
-	p.tail.next = &listNode{
-		current: pn,
-	}
-	p.tail = p.tail.next
+	t.sendingProblemSlots = append(t.sendingProblemSlots, slot)
 }
 
-func (p *pulseLinkedList) enqueuePulseWithJet(pn insolar.PulseNumber, jetID insolar.JetID) {
-	p.pulsesMux.Lock()
-	defer p.pulsesMux.Unlock()
+func (t *toHeavySyncer) extractProblemSlot() (syncSlot, bool) {
+	t.sendingProblemMux.Lock()
+	defer t.sendingProblemMux.Unlock()
 
-	if p.head == nil {
-		p.head = &listNode{
-			current: pn,
-			jetID:   jetID,
+	for i, slot := range t.sendingProblemSlots {
+		pause := slot.backoff.ForAttempt(slot.backoff.Attempt())
+		timeDiff := time.Now().Truncate(pause)
+		if slot.lastAttempt.Before(timeDiff) {
+			temp := append(t.sendingProblemSlots[:i], t.sendingProblemSlots[i+1:]...)
+			// it's a copy
+			t.sendingProblemSlots = append([]syncSlot(nil), temp...)
+			return slot, true
 		}
-		p.tail = p.head
-		return
 	}
 
-	p.tail.next = &listNode{
-		current: pn,
-		jetID:   jetID,
-	}
-	p.tail = p.tail.next
+	return syncSlot{}, false
 }
 
-func (p *pulseLinkedList) dequeuePulse() (insolar.PulseNumber, bool) {
-	p.pulsesMux.Lock()
-	defer p.pulsesMux.Unlock()
-
-	if p.head == nil {
-		return 0, false
+func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
+	return &backoff.Backoff{
+		Jitter: bconf.Jitter,
+		Min:    bconf.Min,
+		Max:    bconf.Max,
+		Factor: bconf.Factor,
 	}
-
-	h := p.head
-	p.head = p.head.next
-
-	return h.current, true
 }
 
 func (t *toHeavySyncer) SyncPulse(ctx context.Context, pn insolar.PulseNumber) {
-	t.syncWaitingPulses.enqueuePulse(pn)
-
+	t.addToWaitingSlots(pn)
+	t.lazyInit(ctx)
 }
 
 func (t *toHeavySyncer) lazyInit(ctx context.Context) {
-	if t.waitingQueueChecker == nil {
-		t.waitingQueueChecker = time.NewTicker(500 * time.Millisecond)
+	t.once.Do(func() {
+		t.checker = time.NewTicker(500 * time.Millisecond)
 		go func() {
-			for range t.waitingQueueChecker.C {
+			for range t.checker.C {
 				go t.sync(ctx)
+				go t.retrySync(ctx)
 			}
 		}()
-	}
+	})
 }
 
 func (t *toHeavySyncer) sync(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
-	pnForSync, ok := t.syncWaitingPulses.dequeuePulse()
+	slot, ok := t.extractWaitingSlot()
 	if !ok {
 		logger.Infof("Sync queue is empty")
 		return
 	}
 
-	jets := t.jetAccessor.All(ctx, pnForSync)
+	jets := t.jetAccessor.All(ctx, slot.pn)
 	for _, jID := range jets {
-		msg, err := t.gatherForPnAndJet(ctx, pnForSync, jID)
+		msg, err := t.gatherForPnAndJet(ctx, slot.pn, jID)
 		if err != nil {
-			logger.Error(fmt.Sprintf("Problems with gather data for a pulse - %v and jet - %v", pnForSync, jID.DebugString()))
+			logger.Error(fmt.Sprintf("Problems with gather data for a pulse - %v and jet - %v", slot.pn, jID.DebugString()))
 			continue
 		}
 		err = t.sendToHeavy(ctx, msg)
 		if err != nil {
 			logger.Errorf("Problems with sending msg to a heavy node", err)
-			t.sendingProblemPulses.enqueuePulseWithJet(pnForSync, jID)
+			t.addToProblemsSlots(slot.pn, jID)
 		}
 	}
-
 }
 
-func (t *toHeavySyncer) gatherForPnAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) (*message.HeavyPayload, error) {
-	dr, err := t.dropAccessor.ForPulse(ctx, jetID, pn)
+func (t *toHeavySyncer) retrySync(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+	slot, ok := t.extractProblemSlot()
+	if !ok {
+		logger.Infof("Retry queue is empty")
+		return
+	}
+
+	msg, err := t.dataGatherer.ForPulseAndJet(ctx, slot.pn, slot.jetID)
 	if err != nil {
-		inslogger.FromContext(ctx).Error("synchronize: can't fetch a drop")
-		return nil, err
+		logger.Error(fmt.Sprintf("Problems with gather data for a pulse - %v and jet - %v", slot.pn, slot.jetID.DebugString()))
+		slot.backoff.Duration()
+		t.reAddToProblemsSlots(ctx, slot)
+		return
 	}
-
-	bls := t.blobsAccessor.ForPulse(ctx, jetID, pn)
-	records := t.recsAccessor.ForPulse(ctx, jetID, pn)
-
-	indexes := t.indexesAccessor.ForPulseAndJet(ctx, jetID, pn)
-	resIdx := map[insolar.ID][]byte{}
-	for id, idx := range indexes {
-		resIdx[id] = object.EncodeIndex(idx)
+	err = t.sendToHeavy(ctx, msg)
+	if err != nil {
+		logger.Errorf("Problems with sending msg to a heavy node", err)
+		slot.backoff.Duration()
+		t.reAddToProblemsSlots(ctx, slot)
+		return
 	}
-
-	return &message.HeavyPayload{
-		JetID:    jetID,
-		PulseNum: pn,
-		Indexes:  resIdx,
-		Drop:     drop.MustEncode(&dr),
-		Blobs:    convertBlobs(bls),
-		Records:  convertRecords(records),
-	}, nil
 }
 
 func (t *toHeavySyncer) sendToHeavy(ctx context.Context, data *message.HeavyPayload) error {
@@ -209,19 +211,4 @@ func (t *toHeavySyncer) sendToHeavy(ctx context.Context, data *message.HeavyPayl
 		}
 	}
 	return nil
-}
-
-func convertBlobs(blobs []blob.Blob) [][]byte {
-	var res [][]byte
-	for _, b := range blobs {
-		res = append(res, blob.MustEncode(&b))
-	}
-	return res
-}
-
-func convertRecords(records []record.MaterialRecord) (result [][]byte) {
-	for _, r := range records {
-		result = append(result, object.EncodeMaterial(r))
-	}
-	return
 }

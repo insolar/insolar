@@ -63,8 +63,10 @@ type IndexStorage interface {
 
 // IndexCleaner provides an interface for removing interfaces from a storage.
 type IndexCleaner interface {
-	// RemoveWithIDs method removes interfaces from a storage for a provided map of ids
-	RemoveWithIDs(ctx context.Context, ids map[insolar.ID]struct{})
+	// RemoveUntil method removes indexes from a storage for provided pulse and earlier pulses
+	// excluded contains list of indexes' ids, that would be excluded from removing process
+	// It supposed, that list of excluded would be fetched from Recent Storage
+	RemoveUntil(ctx context.Context, pn insolar.PulseNumber, excluded map[insolar.ID]struct{})
 }
 
 // Lifeline represents meta information for record object.
@@ -200,14 +202,19 @@ func (m *IndexMemory) ForPulseAndJet(ctx context.Context, jetID insolar.JetID, p
 	return res
 }
 
-// RemoveWithIDs method removes interfaces from a storage for a provided map of ids
-func (m *IndexMemory) RemoveWithIDs(ctx context.Context, ids map[insolar.ID]struct{}) {
+// RemoveUntil method removes indexes from a storage for provided pulse and earlier pulses
+// excluded contains list of indexes' ids, that would be excluded from removing process
+// It supposed, that list of excluded would be fetched from Recent Storage
+func (m *IndexMemory) RemoveUntil(ctx context.Context, pn insolar.PulseNumber, excluded map[insolar.ID]struct{}) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	for id, idx := range m.memory {
-		_, ok := ids[id]
+		_, ok := excluded[id]
 		if ok {
+			continue
+		}
+		if id.Pulse() <= pn {
 			delete(m.memory, id)
 			m.jetIndex.Delete(id, idx.JetID)
 		}
