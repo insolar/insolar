@@ -269,11 +269,6 @@ func (nk *nodekeeper) GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*co
 	return nk.nodeToAnnounceClaim(mapper)
 }
 
-func (nk *nodekeeper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
-	nk.claimQueue.Push(claim)
-	return true
-}
-
 func (nk *nodekeeper) GetClaimQueue() network.ClaimQueue {
 	return nk.claimQueue
 }
