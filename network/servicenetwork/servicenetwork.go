@@ -56,12 +56,9 @@ import (
 	"sync"
 	"time"
 
-
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/ledger/storage/pulse"
-	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/consensus/packets"
@@ -69,10 +66,12 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/controller/bootstrap"
+	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"

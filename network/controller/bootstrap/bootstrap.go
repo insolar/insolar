@@ -104,11 +104,11 @@ type Bootstrapper interface {
 }
 
 type bootstrapper struct {
-	Certificate insolar.Certificate `inject:""`
-	NodeKeeper  network.NodeKeeper  `inject:""`
-	Network     network.HostNetwork `inject:""`
-	Gatewayer   network.Gatewayer   `inject:""`
-	PulseAccessor   pulse.Accessor          `inject:""`
+	Certificate   insolar.Certificate `inject:""`
+	NodeKeeper    network.NodeKeeper  `inject:""`
+	Network       network.HostNetwork `inject:""`
+	Gatewayer     network.Gatewayer   `inject:""`
+	PulseAccessor pulse.Accessor      `inject:""`
 
 	options *common.Options
 	pinger  *pinger.Pinger
