@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/storage"
@@ -38,16 +37,13 @@ type ActiveListSwapper interface {
 
 // PulseManager implements insolar.PulseManager.
 type PulseManager struct {
-	LR                insolar.LogicRunner       `inject:""`
 	Bus               insolar.MessageBus        `inject:""`
 	NodeNet           insolar.NodeNetwork       `inject:""`
 	GIL               insolar.GlobalInsolarLock `inject:""`
 	ActiveListSwapper ActiveListSwapper         `inject:""`
 	NodeSetter        node.Modifier             `inject:""`
 	Nodes             node.Accessor             `inject:""`
-	PulseAccessor     pulse.Accessor            `inject:""`
 	PulseAppender     pulse.Appender            `inject:""`
-	JetModifier       jet.Modifier              `inject:""`
 
 	currentPulse insolar.Pulse
 
@@ -95,24 +91,12 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 		inslogger.FromContext(ctx).Error(errors.Wrap(err, "MessageBus OnPulse() returns error"))
 	}
 
-	err = m.LR.OnPulse(ctx, newPulse)
-	if err != nil {
-		return err
-	}
-
 	return nil
 }
 
 func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.Pulse, persist bool) error {
 	m.GIL.Acquire(ctx)
 	ctx, span := instracer.StartSpan(ctx, "pulse.gil_locked")
-
-	storagePulse, err := m.PulseAccessor.Latest(ctx)
-	if err == pulse.ErrNotFound {
-		storagePulse = *insolar.GenesisPulse
-	} else if err != nil {
-		return errors.Wrap(err, "call of GetLatestPulseNumber failed")
-	}
 
 	defer span.End()
 	defer m.GIL.Release(ctx)
@@ -127,7 +111,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	m.currentPulse = newPulse
 
 	// swap active nodes
-	err = m.ActiveListSwapper.MoveSyncToActive(ctx)
+	err := m.ActiveListSwapper.MoveSyncToActive(ctx)
 	if err != nil {
 		return errors.Wrap(err, "failed to apply new active node list")
 	}
@@ -146,7 +130,6 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 		}
 	}
 
-	m.JetModifier.Clone(ctx, storagePulse.PulseNumber, newPulse.PulseNumber)
 	return nil
 }
 

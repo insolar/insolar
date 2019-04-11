@@ -28,8 +28,11 @@ import (
 	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/ledger"
+	"github.com/insolar/insolar/ledger/jetcoordinator"
+	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
@@ -166,16 +169,18 @@ func initComponents(
 		pulsemanager.NewPulseManager(),
 	)
 
-	components := ledger.GetLedgerComponents(cfg.Ledger, certManager.GetCertificate())
-
-	components = append(components, []interface{}{
+	components := []interface{}{
 		messageBus,
 		contractRequester,
 		logicRunner,
 		artifacts.NewClient(),
+		pulse.NewStorageMem(),
+		jet.NewStore(),
+		jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit),
+		node.NewStorage(),
 		delegationTokenFactory,
 		parcelFactory,
-	}...)
+	}
 	components = append(components, []interface{}{
 		genesisDataProvider,
 		apiRunner,

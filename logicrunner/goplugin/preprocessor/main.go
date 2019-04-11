@@ -47,6 +47,8 @@ var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation
 var proxyctxPath = "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 var corePath = "github.com/insolar/insolar/insolar"
 
+var immutableFlag = "//ins:immutable"
+
 // ParsedFile struct with prepared info we extract from source code
 type ParsedFile struct {
 	name    string
@@ -257,6 +259,7 @@ func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]
 			"Arguments":           numberedVars(fun.Type.Params, "args"),
 			"Results":             numberedVars(fun.Type.Results, "ret"),
 			"ErrorInterfaceInRes": typeIndexes(pf, fun.Type.Results, "error"),
+			"Immutable":           isImmutable(fun), // only for methods, not constructors
 		}
 		res = append(res, info)
 	}
@@ -319,11 +322,11 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	return nil
 }
 
-func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]string {
-	var res []map[string]string
+func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]interface{} {
+	var res []map[string]interface{}
 
 	for _, fun := range list {
-		info := map[string]string{
+		info := map[string]interface{}{
 			"Name":            fun.Name.Name,
 			"Arguments":       genFieldList(pf, fun.Type.Params, true),
 			"InitArgs":        generateInitArguments(fun.Type.Params),
@@ -333,6 +336,7 @@ func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]st
 			"ResultsWithErr":  commaAppend(numberedVarsI(fun.Type.Results.NumFields()-1, "ret"), "err"),
 			"ResultsNilError": commaAppend(numberedVarsI(fun.Type.Results.NumFields()-1, "ret"), "nil"),
 			"ResultsTypes":    genFieldList(pf, fun.Type.Results, false),
+			"Immutable":       isImmutable(fun),
 		}
 		res = append(res, info)
 	}
@@ -611,4 +615,16 @@ func slurpFile(fileName string) ([]byte, error) {
 		return nil, errors.Wrap(err, "Can't read file '"+fileName+"'")
 	}
 	return res, nil
+}
+
+func isImmutable(decl *ast.FuncDecl) bool {
+	var isImmutable = false
+	if decl.Doc != nil && decl.Doc.List != nil {
+		for _, comment := range decl.Doc.List {
+			if comment.Text == immutableFlag {
+				isImmutable = true
+			}
+		}
+	}
+	return isImmutable
 }

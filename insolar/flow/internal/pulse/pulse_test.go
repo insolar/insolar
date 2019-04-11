@@ -14,26 +14,27 @@
 // limitations under the License.
 //
 
-package server
+package pulse
 
 import (
-	"github.com/insolar/insolar/server/internal/heavy"
-	"github.com/insolar/insolar/server/internal/light"
-	"github.com/insolar/insolar/server/internal/virtual"
+	"context"
+	"testing"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/stretchr/testify/require"
 )
 
-type Server interface {
-	Serve()
+const testPulse = insolar.PulseNumber(42)
+
+func TestContextWith(t *testing.T) {
+	t.Parallel()
+	ctx := ContextWith(context.Background(), testPulse)
+	require.Equal(t, testPulse, ctx.Value(contextKey{}))
 }
 
-func NewLightServer(cfgPath string, trace bool) Server {
-	return light.New(cfgPath, trace)
-}
-
-func NewHeavyServer(cfgPath string, trace bool) Server {
-	return heavy.New(cfgPath, trace)
-}
-
-func NewVirtualServer(cfgPath string, trace bool) Server {
-	return virtual.New(cfgPath, trace)
+func TestFromContext(t *testing.T) {
+	t.Parallel()
+	ctx := context.WithValue(context.Background(), contextKey{}, testPulse)
+	result := FromContext(ctx)
+	require.Equal(t, testPulse, result)
 }

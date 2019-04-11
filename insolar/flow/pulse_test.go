@@ -14,26 +14,20 @@
 // limitations under the License.
 //
 
-package server
+package flow
 
 import (
-	"github.com/insolar/insolar/server/internal/heavy"
-	"github.com/insolar/insolar/server/internal/light"
-	"github.com/insolar/insolar/server/internal/virtual"
+	"context"
+	"testing"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow/internal/pulse"
+	"github.com/stretchr/testify/require"
 )
 
-type Server interface {
-	Serve()
-}
-
-func NewLightServer(cfgPath string, trace bool) Server {
-	return light.New(cfgPath, trace)
-}
-
-func NewHeavyServer(cfgPath string, trace bool) Server {
-	return heavy.New(cfgPath, trace)
-}
-
-func NewVirtualServer(cfgPath string, trace bool) Server {
-	return virtual.New(cfgPath, trace)
+func TestPulse(t *testing.T) {
+	t.Parallel()
+	ctx := pulse.ContextWith(context.Background(), 42)
+	result := Pulse(ctx)
+	require.Equal(t, insolar.PulseNumber(42), result)
 }

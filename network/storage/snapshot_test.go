@@ -52,6 +52,10 @@ package storage
 
 import (
 	"context"
+	"io/ioutil"
+	"os"
+	"testing"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -59,9 +63,6 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
-	"io/ioutil"
-	"os"
-	"testing"
 )
 
 func TestNewSnapshotStorage(t *testing.T) {

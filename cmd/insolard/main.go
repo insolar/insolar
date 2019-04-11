@@ -95,8 +95,12 @@ func main() {
 		log.Error(errors.Wrap(err, "[ newCertificate ] failed to parse certificate json"))
 		return
 	}
+
 	switch cert.GetRole() {
-	case insolar.StaticRoleHeavyMaterial, insolar.StaticRoleLightMaterial:
+	case insolar.StaticRoleHeavyMaterial:
+		s := server.NewHeavyServer(params.configPath, params.traceEnabled)
+		s.Serve()
+	case insolar.StaticRoleLightMaterial:
 		s := server.NewLightServer(params.configPath, params.traceEnabled)
 		s.Serve()
 	case insolar.StaticRoleVirtual:

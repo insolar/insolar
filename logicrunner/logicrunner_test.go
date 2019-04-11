@@ -276,7 +276,7 @@ func executeMethod(
 		Nonce:  nonce,
 	}
 
-	rep, err := rlr.ContractRequester.CallMethod(ctx, &bm, false, &objRef, method, argsSerialized, &proxyPrototype)
+	rep, err := rlr.ContractRequester.CallMethod(ctx, &bm, false, false, &objRef, method, argsSerialized, &proxyPrototype)
 	return rep, err
 }
 
@@ -2071,4 +2071,107 @@ func TestLogicRunnerFunc(t *testing.T) {
 
 	t.Parallel()
 	suite.Run(t, new(LogicRunnerFuncSuite))
+}
+
+func (s *LogicRunnerFuncSuite) TestImmutableAnnotation() {
+	if parallel {
+		s.T().Parallel()
+	}
+	var codeOne = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "github.com/insolar/insolar/application/proxy/two"
+
+type One struct {
+	foundation.BaseContract
+}
+
+func (r *One) ExternalImmutableCall() (int, error) {
+	holder := two.New()
+	objTwo, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return 0, err
+	}
+	return objTwo.ReturnNumberAsImmutable()
+}
+
+func (r *One) ExternalImmutableCallMakesExternalCall() (error) {
+	holder := two.New()
+	objTwo, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return err
+	}
+	return objTwo.Immutable()
+}
+`
+
+	var codeTwo = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+import "github.com/insolar/insolar/application/proxy/three"
+
+type Two struct {
+	foundation.BaseContract
+}
+
+func New() (*Two, error) {
+	return &Two{}, nil
+}
+
+func (r *Two) ReturnNumber() (int, error) {
+	return 42, nil
+}
+
+//ins:immutable
+func (r *Two) Immutable() (error) {
+	holder := three.New()
+	objThree, err := holder.AsChild(r.GetReference())
+	if err != nil {
+		return err
+	}
+	return objThree.DoNothing()
+}
+
+`
+
+	var codeThree = `
+package main
+
+import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
+
+type Three struct {
+	foundation.BaseContract
+}
+
+func New() (*Three, error) {
+	return &Three{}, nil
+}
+
+func (r *Three) DoNothing() (error) {
+	return nil
+}
+
+`
+
+	ctx := context.TODO()
+	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	defer cleaner()
+
+	err := cb.Build(map[string]string{"one": codeOne, "two": codeTwo, "three": codeThree})
+	s.NoError(err)
+
+	obj, prototype := s.getObjectInstance(ctx, am, cb, "one")
+
+	res, err := executeMethod(ctx, lr, pm, *obj, *prototype, 0, "ExternalImmutableCall")
+	s.NoError(err)
+	resParsed := goplugintestutils.CBORUnMarshalToSlice(s.T(), res.(*reply.CallMethod).Result)
+	s.Equal(uint64(42), resParsed[0])
+	s.Equal(nil, resParsed[1])
+
+	res, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "ExternalImmutableCallMakesExternalCall")
+	s.NoError(err, "contract call")
+	resParsed = goplugintestutils.CBORUnMarshalToSlice(s.T(), res.(*reply.CallMethod).Result)
+	s.Equal(map[interface{}]interface{}{"S": "[ RouteCall ] on calling main API: Try to call route from immutable method"}, resParsed[0])
 }

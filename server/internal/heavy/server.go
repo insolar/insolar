@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package light
+package heavy
 
 import (
 	"context"
@@ -64,8 +64,7 @@ func (s *Server) Serve() {
 	log.SetGlobalLogger(inslog)
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
-	cmp, err := newComponents(ctx, *cfg)
-	checkError(ctx, err, "failed to create components")
+	cmp := newComponents(ctx, *cfg)
 
 	jaegerflush := func() {}
 	if s.trace {
