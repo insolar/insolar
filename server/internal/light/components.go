@@ -109,7 +109,7 @@ func initComponents(
 ) (*component.Manager, error) {
 	cm := component.Manager{}
 
-	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
+	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
 
 	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, isGenesis)

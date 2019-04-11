@@ -441,7 +441,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	certManager, cryptographyService := s.initCrypto(node)
 
-	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
+	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	s.Require().NoError(err)
 	terminationHandler := testutils.NewTerminationHandlerMock(s.T())
 	terminationHandler.LeaveFunc = func(p context.Context, p1 insolar.PulseNumber) {}

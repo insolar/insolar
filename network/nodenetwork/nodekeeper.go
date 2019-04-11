@@ -73,7 +73,7 @@ import (
 )
 
 // NewNodeNetwork create active node component
-func NewNodeNetwork(configuration configuration.HostNetwork, certificate insolar.Certificate) (insolar.NodeNetwork, error) {
+func NewNodeNetwork(configuration configuration.Transport, certificate insolar.Certificate) (insolar.NodeNetwork, error) {
 	origin, err := createOrigin(configuration, certificate)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create origin node")
@@ -85,7 +85,7 @@ func NewNodeNetwork(configuration configuration.HostNetwork, certificate insolar
 	return nodeKeeper, nil
 }
 
-func createOrigin(configuration configuration.HostNetwork, certificate insolar.Certificate) (insolar.NetworkNode, error) {
+func createOrigin(configuration configuration.Transport, certificate insolar.Certificate) (insolar.NetworkNode, error) {
 	publicAddress, err := resolveAddress(configuration)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to resolve public address")
@@ -106,12 +106,12 @@ func createOrigin(configuration configuration.HostNetwork, certificate insolar.C
 	), nil
 }
 
-func resolveAddress(configuration configuration.HostNetwork) (string, error) {
-	addr, err := net.ResolveTCPAddr("tcp", configuration.Transport.Address)
+func resolveAddress(configuration configuration.Transport) (string, error) {
+	addr, err := net.ResolveTCPAddr("tcp", configuration.Address)
 	if err != nil {
 		return "", err
 	}
-	address, err := transport.Resolve(configuration.Transport.FixedPublicAddress, addr.String())
+	address, err := transport.Resolve(configuration.FixedPublicAddress, addr.String())
 	if err != nil {
 		return "", err
 	}
