@@ -116,6 +116,15 @@ func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 			p.Dep.RecordAccessor = h.RecordAccessor
 			return p
 		},
+		GetCodeRec: func(p *GetCodeRec) *GetCodeRec {
+			p.Dep.Bus = h.Bus
+			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
+			p.Dep.RecordAccessor = h.RecordAccessor
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.Accessor = h.BlobAccessor
+			p.Dep.BlobModifier = h.BlobModifier
+			return p
+		},
 	}
 
 	h.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
@@ -175,11 +184,12 @@ func (h *MessageHandler) OnPulse(ctx context.Context, pn insolar.Pulse) {
 
 func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	// Generic.
-	h.Bus.MustRegister(insolar.TypeGetCode, BuildMiddleware(h.handleGetCode,
-		instrumentHandler("handleGetCode"),
-		m.addFieldsToLogger,
-		m.checkJet,
-	))
+	// h.Bus.MustRegister(insolar.TypeGetCode, BuildMiddleware(h.handleGetCode,
+	// 	instrumentHandler("handleGetCode"),
+	// 	m.addFieldsToLogger,
+	// 	m.checkJet,
+	// ))
+	h.Bus.MustRegister(insolar.TypeGetCode, h.FlowHandler.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeGetObject, h.FlowHandler.WrapBusHandle)
 

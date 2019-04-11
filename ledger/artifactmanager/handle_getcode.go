@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,49 +12,53 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
 package artifactmanager
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 )
 
-type Init struct {
+type GetCode struct {
 	dep *Dependencies
 
 	Message bus.Message
 }
 
-func (s *Init) Future(ctx context.Context, f flow.Flow) error {
-	return f.Migrate(ctx, s.Present)
-}
+func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
+	msg := s.Message.Parcel.Message().(*message.GetCode)
 
-func (s *Init) Present(ctx context.Context, f flow.Flow) error {
-	switch s.Message.Parcel.Message().Type() {
-	case insolar.TypeGetObject:
-		h := &GetObject{
-			dep:     s.dep,
-			Message: s.Message,
+	jet := s.dep.FetchJet(&FetchJet{Parcel: s.Message.Parcel})
+	if err := f.Procedure(ctx, jet); err != nil {
+		if err == flow.ErrCancelled {
+			return err
 		}
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetCode:
-		h := &GetCode{
-			dep:     s.dep,
-			Message: s.Message,
-		}
-		return f.Handle(ctx, h.Present)
-	default:
-		return fmt.Errorf("no handler for message type %s", s.Message.Parcel.Message().Type().String())
+		return err
 	}
-}
 
-func (s *Init) Past(ctx context.Context, f flow.Flow) error {
-	return f.Procedure(ctx, &ReturnReply{ReplyTo: s.Message.ReplyTo, Err: errors.New("no past handler")})
+	if jet.Result.Miss {
+		rep := &ReturnReply{
+			ReplyTo: s.Message.ReplyTo,
+			Reply:   &reply.JetMiss{JetID: insolar.ID(jet.Result.Jet)},
+		}
+		if err := f.Procedure(ctx, rep); err != nil {
+			return err
+		}
+		return errors.New("jet miss")
+	}
+
+	codeRec := s.dep.GetCodeRec(&GetCodeRec{
+		JetID:   jet.Result.Jet,
+		Message: s.Message,
+		Code:    msg.Code,
+	})
+	return f.Procedure(ctx, codeRec)
 }
