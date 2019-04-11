@@ -63,15 +63,6 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNodekeeper_GetCloudHash(t *testing.T) {
-	nk := NewNodeKeeper(newTestNode(testutils.RandomRef(), insolar.NodeReady))
-	assert.Nil(t, nk.GetCloudHash())
-	cloudHash := make([]byte, 64)
-	rand.Read(cloudHash)
-	nk.SetCloudHash(cloudHash)
-	assert.Equal(t, cloudHash, nk.GetCloudHash())
-}
-
 func TestNewNodeNetwork(t *testing.T) {
 	cfg := configuration.Transport{Address: "invalid"}
 	certMock := testutils.CertificateMock{}
@@ -96,6 +87,33 @@ func newNodeKeeper(t *testing.T) network.NodeKeeper {
 	nw, err := NewNodeNetwork(cfg, certMock)
 	require.NoError(t, err)
 	return nw.(network.NodeKeeper)
+}
+
+func TestNewNodeKeeper(t *testing.T) {
+	nk := newNodeKeeper(t)
+	assert.NotNil(t, nk.GetOrigin())
+	assert.NotNil(t, nk.GetConsensusInfo())
+	assert.NotNil(t, nk.GetClaimQueue())
+	assert.NotNil(t, nk.GetAccessor())
+	assert.NotNil(t, nk.GetSnapshotCopy())
+}
+
+func TestNodekeeper_IsBootstrapped(t *testing.T) {
+	nk := newNodeKeeper(t)
+	assert.False(t, nk.IsBootstrapped())
+	nk.SetIsBootstrapped(true)
+	assert.True(t, nk.IsBootstrapped())
+	nk.SetIsBootstrapped(false)
+	assert.False(t, nk.IsBootstrapped())
+}
+
+func TestNodekeeper_GetCloudHash(t *testing.T) {
+	nk := newNodeKeeper(t)
+	assert.Nil(t, nk.GetCloudHash())
+	cloudHash := make([]byte, 64)
+	rand.Read(cloudHash)
+	nk.SetCloudHash(cloudHash)
+	assert.Equal(t, cloudHash, nk.GetCloudHash())
 }
 
 func TestNodekeeper_GetWorkingNodes(t *testing.T) {
