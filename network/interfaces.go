@@ -246,6 +246,8 @@ type ClaimQueue interface {
 	Length() int
 	// Push adds claim to the queue.
 	Push(claim consensus.ReferendumClaim)
+	// Clear removes all claims from queue
+	Clear()
 }
 
 // Accessor is interface that provides read access to nodekeeper internal snapshot
