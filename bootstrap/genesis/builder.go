@@ -18,6 +18,7 @@ package genesis
 
 import (
 	"context"
+	"go/build"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -37,39 +38,14 @@ var (
 	proxySources    = insolar.RootModule + "/application/proxy"
 )
 
-// PrependGoPath prepends `path` to GOPATH environment variable
-// accounting for possibly for default value. Returns new value.
-// NOTE: that environment is not changed
-func PrependGoPath(path string) string {
-	return path + string(os.PathListSeparator) + goPATH()
-}
-
-// WriteFile dumps `text` into file named `name` into directory `dir`.
-// Creates directory if needed as well as file
-func WriteFile(dir string, name string, text string) error {
-	err := os.MkdirAll(dir, 0775)
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(filepath.Join(dir, name), []byte(text), 0644)
-}
-
-func OpenFile(dir string, name string) (*os.File, error) {
-	err := os.MkdirAll(dir, 0775)
-	if err != nil {
-		return nil, err
-	}
-	return os.OpenFile(filepath.Join(dir, name), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-}
-
-// Prototypes holds name -> code reference pair
-type Prototypes map[string]*insolar.Reference
+// prototypes holds name -> code reference pair
+type prototypes map[string]*insolar.Reference
 
 // ContractsBuilder for tests
 type ContractsBuilder struct {
 	root string
 
-	Prototypes Prototypes
+	prototypes prototypes
 
 	genesisRef      insolar.Reference
 	artifactManager artifact.Manager
@@ -85,7 +61,7 @@ func NewContractBuilder(genesisRef insolar.Reference, am artifact.Manager) *Cont
 
 	cb := &ContractsBuilder{
 		root:       tmpDir,
-		Prototypes: make(map[string]*insolar.Reference),
+		prototypes: make(map[string]*insolar.Reference),
 
 		genesisRef:      genesisRef,
 		artifactManager: am,
@@ -102,7 +78,7 @@ func (cb *ContractsBuilder) Clean() {
 	}
 }
 
-func (cb *ContractsBuilder) Build(ctx context.Context, rootDomainID *insolar.ID) (Prototypes, error) {
+func (cb *ContractsBuilder) Build(ctx context.Context, rootDomainID *insolar.ID) (prototypes, error) {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ buildSmartContracts ] building contracts:", contractNames)
 	contracts, err := parseContracts()
@@ -117,7 +93,7 @@ func (cb *ContractsBuilder) Build(ctx context.Context, rootDomainID *insolar.ID)
 	}
 	inslog.Info("[ buildSmartContracts ] Stop building contracts ...")
 
-	return cb.Prototypes, nil
+	return cb.prototypes, nil
 }
 
 // Build ...
@@ -137,7 +113,7 @@ func (cb *ContractsBuilder) build(ctx context.Context, contracts map[string]*pre
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest for contract")
 		}
-		cb.Prototypes[name] = insolar.NewReference(*domain, *protoID)
+		cb.prototypes[name] = insolar.NewReference(*domain, *protoID)
 	}
 
 	for name, code := range contracts {
@@ -158,7 +134,7 @@ func (cb *ContractsBuilder) build(ctx context.Context, contracts map[string]*pre
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't open proxy file")
 		}
-		err = code.WriteProxy(cb.Prototypes[name].String(), proxy)
+		err = code.WriteProxy(cb.prototypes[name].String(), proxy)
 		proxy.Close()
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't write proxy")
@@ -218,7 +194,7 @@ func (cb *ContractsBuilder) build(ctx context.Context, contracts map[string]*pre
 		_, err = cb.artifactManager.ActivatePrototype(
 			ctx,
 			*domainRef,
-			*cb.Prototypes[name],
+			*cb.prototypes[name],
 			cb.genesisRef,
 			*codeRef,
 			nil,
@@ -227,7 +203,7 @@ func (cb *ContractsBuilder) build(ctx context.Context, contracts map[string]*pre
 			return errors.Wrapf(err, "[ Build ] Can't ActivatePrototypef for code '%v'", name)
 		}
 
-		_, err = cb.artifactManager.RegisterResult(ctx, *domainRef, *cb.Prototypes[name], nil)
+		_, err = cb.artifactManager.RegisterResult(ctx, *domainRef, *cb.prototypes[name], nil)
 		if err != nil {
 			return errors.Wrapf(err, "[ Build ] Can't RegisterResult of prototype for code '%v'", name)
 		}
@@ -258,4 +234,59 @@ func (cb *ContractsBuilder) plugin(name string) error {
 		return errors.Wrapf(err, "can't build contract: %v", string(out))
 	}
 	return nil
+}
+
+func goPATH() string {
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		gopath = build.Default.GOPATH
+	}
+	return gopath
+}
+
+func getContractPath(name string) (string, error) {
+	contractDir := filepath.Join(goPATH(), "src", contractSources)
+	contractFile := name + ".go"
+	return filepath.Join(contractDir, name, contractFile), nil
+}
+
+func parseContracts() (map[string]*preprocessor.ParsedFile, error) {
+	contracts := make(map[string]*preprocessor.ParsedFile)
+	for _, name := range contractNames {
+		contractPath, err := getContractPath(name)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ contractsMap ] couldn't get path to contracts: ")
+		}
+		parsed, err := preprocessor.ParseFile(contractPath)
+		if err != nil {
+			return nil, errors.Wrapf(err, "[ contractsMap ] couldn't read contract: %v", contractPath)
+		}
+		contracts[name] = parsed
+	}
+	return contracts, nil
+}
+
+// PrependGoPath prepends `path` to GOPATH environment variable
+// accounting for possibly for default value. Returns new value.
+// NOTE: that environment is not changed
+func PrependGoPath(path string) string {
+	return path + string(os.PathListSeparator) + goPATH()
+}
+
+// WriteFile dumps `text` into file named `name` into directory `dir`.
+// Creates directory if needed as well as file
+func WriteFile(dir string, name string, text string) error {
+	err := os.MkdirAll(dir, 0775)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filepath.Join(dir, name), []byte(text), 0644)
+}
+
+func OpenFile(dir string, name string) (*os.File, error) {
+	err := os.MkdirAll(dir, 0775)
+	if err != nil {
+		return nil, err
+	}
+	return os.OpenFile(filepath.Join(dir, name), os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 }

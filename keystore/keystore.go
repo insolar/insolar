@@ -28,11 +28,11 @@ import (
 
 type keyStore struct {
 	Loader privatekey.Loader `inject:""`
-	path   string
+	file   string
 }
 
 func (ks *keyStore) GetPrivateKey(identifier string) (crypto.PrivateKey, error) {
-	return ks.Loader.Load(ks.path)
+	return ks.Loader.Load(ks.file)
 }
 
 func (ks *keyStore) Start(ctx context.Context) error {
@@ -84,7 +84,7 @@ func (ks *cachedKeyStore) Start(ctx context.Context) error {
 
 func NewKeyStore(path string) (insolar.KeyStore, error) {
 	keyStore := &keyStore{
-		path: path,
+		file: path,
 	}
 
 	cachedKeyStore := &cachedKeyStore{

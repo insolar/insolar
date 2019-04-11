@@ -292,7 +292,10 @@ genesis()
 {
     prepare
     if [[ "$SKIP_BUILD" != "1" ]]; then
+        echo "build binaries"
         build_binaries
+    else
+        echo "SKIP: build binaries"
     fi
     generate_bootstrap_keys
     generate_root_member_keys

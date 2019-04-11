@@ -22,7 +22,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path"
 	"path/filepath"
 	"strconv"
@@ -83,6 +82,56 @@ func NewGenerator(config *Config, am artifact.Manager, genesisRef insolar.Refere
 	}
 }
 
+// Run generates genesis data.
+func (g *Generator) Run(ctx context.Context) error {
+	inslog := inslogger.FromContext(ctx)
+	inslog.Info("[ Genesis ] Starting  ...")
+	defer inslog.Info("[ Genesis ] Finished.")
+
+	rootDomainID, err := g.artifactManager.RegisterRequest(
+		ctx,
+		g.genesisRef,
+		&message.Parcel{
+			Msg: &message.GenesisRequest{
+				Name: rootDomain,
+			},
+		},
+	)
+	if err != nil {
+		panic(errors.Wrap(err, "[ Genesis ] Couldn't create rootdomain instance"))
+	}
+
+	inslog.Info("[ Genesis ] NewContractBuilder ...")
+	cb := NewContractBuilder(g.genesisRef, g.artifactManager)
+	defer cb.Clean()
+
+	inslog.Info("[ Genesis ] buildSmartContracts ...")
+	prototypes, err := cb.Build(ctx, rootDomainID)
+	if err != nil {
+		panic(errors.Wrap(err, "[ Genesis ] couldn't build contracts"))
+	}
+
+	inslog.Info("[ Genesis ] getKeysFromFile ...")
+	_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
+	}
+
+	inslog.Info("[ Genesis ] activateSmartContracts ...")
+	nodes, err := g.activateSmartContracts(ctx, cb, rootPubKey, rootDomainID, prototypes)
+	if err != nil {
+		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
+	}
+
+	inslog.Info("[ Genesis ] makeCertificates ...")
+	err = g.makeCertificates(nodes)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] Couldn't generate discovery certificates")
+	}
+
+	return nil
+}
+
 func (g *Generator) activateRootDomain(
 	ctx context.Context,
 	cb *ContractsBuilder,
@@ -104,7 +153,7 @@ func (g *Generator) activateRootDomain(
 		insolar.Reference{},
 		*contract,
 		g.genesisRef,
-		*cb.Prototypes[rootDomain],
+		*cb.prototypes[rootDomain],
 		false,
 		instanceData,
 	)
@@ -286,7 +335,7 @@ func (g *Generator) activateSmartContracts(
 	cb *ContractsBuilder,
 	rootPubKey string,
 	rootDomainID *insolar.ID,
-	prototypes Prototypes,
+	prototypes prototypes,
 ) ([]genesisNode, error) {
 
 	rootDomainDesc, err := g.activateRootDomain(ctx, cb, rootDomainID)
@@ -298,7 +347,7 @@ func (g *Generator) activateSmartContracts(
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
-	err = g.activateRootMember(ctx, rootDomainID, rootPubKey, *cb.Prototypes[memberContract])
+	err = g.activateRootMember(ctx, rootDomainID, rootPubKey, *cb.prototypes[memberContract])
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
@@ -307,13 +356,13 @@ func (g *Generator) activateSmartContracts(
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
-	err = g.activateRootMemberWallet(ctx, rootDomainID, *cb.Prototypes[walletContract])
+	err = g.activateRootMemberWallet(ctx, rootDomainID, *cb.prototypes[walletContract])
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
 	indexMap := make(map[string]string)
 
-	discoveryNodes, indexMap, err := g.addDiscoveryIndex(ctx, indexMap, *cb.Prototypes[nodeRecord])
+	discoveryNodes, indexMap, err := g.addDiscoveryIndex(ctx, indexMap, *cb.prototypes[nodeRecord])
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
@@ -420,7 +469,7 @@ func (g *Generator) addDiscoveryIndex(
 	nodeRecordProto insolar.Reference,
 ) ([]genesisNode, map[string]string, error) {
 	errMsg := "[ addDiscoveryIndex ]"
-	discoveryKeysPath, err := absPath(g.config.DiscoveryKeysDir)
+	discoveryKeysPath, err := filepath.Abs(g.config.DiscoveryKeysDir)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, errMsg)
 	}
@@ -441,11 +490,12 @@ func (g *Generator) addDiscoveryIndex(
 	return discoveryNodes, indexMap, nil
 }
 
-func (g *Generator) createKeys(ctx context.Context, path string, amount int) error {
-	err := os.RemoveAll(path)
-	if err != nil {
-		return errors.Wrap(err, "[ createKeys ] couldn't remove old dir")
-	}
+func (g *Generator) createKeys(ctx context.Context, dir string, amount int) error {
+	fmt.Println("createKeys, skip RemoveAll of", dir)
+	// err := os.RemoveAll(dir)
+	// if err != nil {
+	// 	return errors.Wrap(err, "[ createKeys ] couldn't remove old dir")
+	// }
 
 	for i := 0; i < amount; i++ {
 		ks := platformpolicy.NewKeyProcessor()
@@ -474,7 +524,7 @@ func (g *Generator) createKeys(ctx context.Context, path string, amount int) err
 		}
 
 		name := fmt.Sprintf(g.config.KeysNameFormat, i)
-		err = WriteFile(path, name, string(result))
+		err = WriteFile(dir, name, string(result))
 		if err != nil {
 			return errors.Wrap(err, "[ createKeys ] couldn't write keys to file")
 		}
@@ -483,16 +533,16 @@ func (g *Generator) createKeys(ctx context.Context, path string, amount int) err
 	return nil
 }
 
-func (g *Generator) uploadKeys(ctx context.Context, path string, amount int) ([]nodeInfo, error) {
+func (g *Generator) uploadKeys(ctx context.Context, dir string, amount int) ([]nodeInfo, error) {
 	var err error
 	if !g.config.ReuseKeys {
-		err = g.createKeys(ctx, path, amount)
+		err = g.createKeys(ctx, dir, amount)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ uploadKeys ]")
 		}
 	}
 
-	files, err := ioutil.ReadDir(path)
+	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ uploadKeys ] can't read dir")
 	}
@@ -502,7 +552,7 @@ func (g *Generator) uploadKeys(ctx context.Context, path string, amount int) ([]
 
 	var keys []nodeInfo
 	for _, f := range files {
-		privKey, nodePubKey, err := getKeysFromFile(ctx, filepath.Join(path, f.Name()))
+		privKey, nodePubKey, err := getKeysFromFile(ctx, filepath.Join(dir, f.Name()))
 		if err != nil {
 			return nil, errors.Wrap(err, "[ uploadKeys ] can't get keys from file")
 		}
@@ -515,56 +565,6 @@ func (g *Generator) uploadKeys(ctx context.Context, path string, amount int) ([]
 	}
 
 	return keys, nil
-}
-
-// Run generates genesis data.
-func (g *Generator) Run(ctx context.Context) error {
-	inslog := inslogger.FromContext(ctx)
-	inslog.Info("[ Genesis ] Starting  ...")
-	defer inslog.Info("[ Genesis ] Finished.")
-
-	rootDomainID, err := g.artifactManager.RegisterRequest(
-		ctx,
-		g.genesisRef,
-		&message.Parcel{
-			Msg: &message.GenesisRequest{
-				Name: rootDomain,
-			},
-		},
-	)
-	if err != nil {
-		panic(errors.Wrap(err, "[ Genesis ] Couldn't create rootdomain instance"))
-	}
-
-	inslog.Info("[ Genesis ] NewContractBuilder ...")
-	cb := NewContractBuilder(g.genesisRef, g.artifactManager)
-	defer cb.Clean()
-
-	inslog.Info("[ Genesis ] buildSmartContracts ...")
-	prototypes, err := cb.Build(ctx, rootDomainID)
-	if err != nil {
-		panic(errors.Wrap(err, "[ Genesis ] couldn't build contracts"))
-	}
-
-	inslog.Info("[ Genesis ] getKeysFromFile ...")
-	_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
-	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
-	}
-
-	inslog.Info("[ Genesis ] activateSmartContracts ...")
-	nodes, err := g.activateSmartContracts(ctx, cb, rootPubKey, rootDomainID, prototypes)
-	if err != nil {
-		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
-	}
-
-	inslog.Info("[ Genesis ] makeCertificates ...")
-	err = g.makeCertificates(nodes)
-	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] Couldn't generate discovery certificates")
-	}
-
-	return nil
 }
 
 func (g *Generator) makeCertificates(nodes []genesisNode) error {
@@ -638,4 +638,32 @@ func (g *Generator) updateNodeDomainIndex(ctx context.Context, nodeDomainDesc ar
 	}
 
 	return nil
+}
+
+func getKeysFromFile(ctx context.Context, file string) (crypto.PrivateKey, string, error) {
+	absPath, err := filepath.Abs(file)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't get abs path")
+	}
+	data, err := ioutil.ReadFile(absPath)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't read keys file "+absPath)
+	}
+	var keys map[string]string
+	err = json.Unmarshal(data, &keys)
+	if err != nil {
+		return nil, "", errors.Wrapf(err, "[ getKeyFromFile ] couldn't unmarshal data from %s", absPath)
+	}
+	if keys["private_key"] == "" {
+		return nil, "", errors.New("[ getKeyFromFile ] empty private key")
+	}
+	if keys["public_key"] == "" {
+		return nil, "", errors.New("[ getKeyFromFile ] empty public key")
+	}
+	kp := platformpolicy.NewKeyProcessor()
+	key, err := kp.ImportPrivateKeyPEM([]byte(keys["private_key"]))
+	if err != nil {
+		return nil, "", errors.Wrapf(err, "[ getKeyFromFile ] couldn't import private key")
+	}
+	return key, keys["public_key"], nil
 }
