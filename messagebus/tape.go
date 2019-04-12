@@ -29,10 +29,11 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/messagebus.tape -o .
+
 // Tape is an abstraction for saving replies for messages and restoring them.
 //
 // There can be many active tapes simultaneously and they do not share saved replies.
-//go:generate minimock -i github.com/insolar/insolar/messagebus.tape -o .
 type tape interface {
 	Write(ctx context.Context, writer io.Writer) error
 	Get(ctx context.Context, msgHash []byte) (*TapeItem, error)
