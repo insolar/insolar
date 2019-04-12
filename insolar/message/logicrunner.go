@@ -128,6 +128,7 @@ func (rr *ReturnResults) AllowedSenderObjectAndRole() (*insolar.Reference, insol
 type CallMethod struct {
 	BaseLogicMessage
 	ReturnMode     MethodReturnMode
+	Immutable      bool
 	ObjectRef      insolar.Reference
 	Method         string
 	Arguments      insolar.Arguments

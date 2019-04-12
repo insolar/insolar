@@ -60,6 +60,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/utils"
 
@@ -106,6 +108,7 @@ type bootstrapper struct {
 	NodeKeeper      network.NodeKeeper      `inject:""`
 	NetworkSwitcher insolar.NetworkSwitcher `inject:""`
 	Network         network.HostNetwork     `inject:""`
+	PulseAccessor   pulse.Accessor          `inject:""`
 
 	options *common.Options
 	pinger  *pinger.Pinger
@@ -143,14 +146,27 @@ func (bc *bootstrapper) setRequest(ref insolar.Reference, req *GenesisRequest) {
 	bc.genesisRequestsReceived[ref] = req
 }
 
-type NodeBootstrapRequest struct{}
+type NodeBootstrapRequest struct {
+	// TODO: change to mandate cuz cert not registered for gob
+	// Certificate   insolar.Certificate
+	JoinClaim     packets.NodeJoinClaim
+	LastNodePulse insolar.PulseNumber
+	// Permission will be implemented later.
+}
 
 type NodeBootstrapResponse struct {
 	Code         Code
-	RedirectHost string
 	RejectReason string
-	NetworkSize  int
-	// FirstPulseTimeUnix int64
+	// ETA - promise to accept joiner node to the network (in seconds).
+	ETA int
+	// AssignShortID is an demand to use this short id.
+	AssignShortID insolar.ShortNodeID
+	// UpdateSincePulse is a pulse number from which origin have to update storage.
+	UpdateSincePulse insolar.PulseNumber
+	// Permission will be implemented later.
+	RedirectHost string
+	// NetworkSize is a size of the network from bootstrap node.
+	NetworkSize int
 }
 
 type GenesisRequest struct {
@@ -538,7 +554,19 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to ping address %s", address)
 	}
-	request := bc.Network.NewRequestBuilder().Type(types.Bootstrap).Data(&NodeBootstrapRequest{}).Build()
+	claim, err := bc.NodeKeeper.GetOriginJoinClaim()
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to get a join claim")
+	}
+	lastPulse, err := bc.PulseAccessor.Latest(ctx)
+	if err != nil {
+		lastPulse = *insolar.GenesisPulse
+	}
+	bootstrapReq := &NodeBootstrapRequest{
+		JoinClaim:     *claim,
+		LastNodePulse: lastPulse.PulseNumber,
+	}
+	request := bc.Network.NewRequestBuilder().Type(types.Bootstrap).Data(bootstrapReq).Build()
 	future, err := bc.Network.SendRequestToHost(ctx, request, bootstrapHost)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to send bootstrap request to address %s", address)
@@ -555,7 +583,6 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 		return bootstrap(ctx, data.RedirectHost, bc.options, bc.startBootstrap)
 	}
 	return &network.BootstrapResult{
-		// FirstPulseTime:    time.Unix(data.FirstPulseTimeUnix, 0),
 		Host:              response.GetSenderHost(),
 		ReconnectRequired: data.Code == ReconnectRequired,
 		NetworkSize:       data.NetworkSize,
@@ -597,18 +624,35 @@ func (bc *bootstrapper) StopCyclicBootstrap() {
 }
 
 func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Request) (network.Response, error) {
-	// TODO: redirect logic to another node if needed
 	var code Code
 	if bc.NetworkSwitcher.GetState() == insolar.CompleteNetworkState {
 		code = ReconnectRequired
 	} else {
 		code = Accepted
 	}
+	bootstrapRequest := request.GetData().(*NodeBootstrapRequest)
+	if bootstrapRequest == nil {
+		return nil, errors.New("received broken bootstrap request")
+	}
+	var shortID insolar.ShortNodeID
+	if CheckShortIDCollision(bc.NodeKeeper, bootstrapRequest.JoinClaim.ShortNodeID) {
+		shortID = GenerateShortID(bc.NodeKeeper, bootstrapRequest.JoinClaim.GetNodeID())
+	} else {
+		shortID = bootstrapRequest.JoinClaim.ShortNodeID
+	}
+	lastPulse, err := bc.PulseAccessor.Latest(ctx)
+	if err != nil {
+		lastPulse = *insolar.GenesisPulse
+	}
 	return bc.Network.BuildResponse(ctx, request,
 		&NodeBootstrapResponse{
-			Code:        code,
+			Code:         code,
+			RejectReason: "",
+			// TODO: calculate an ETA
+			AssignShortID:    shortID,
+			UpdateSincePulse: lastPulse.PulseNumber,
+			// TODO: implement permissions
 			NetworkSize: len(bc.NodeKeeper.GetAccessor().GetActiveNodes()),
-			// FirstPulseTimeUnix: bc.firstPulseTime.Unix(),
 		}), nil
 }
 
@@ -656,11 +700,9 @@ func (bc *bootstrapper) getInactivenodes() []insolar.DiscoveryNode {
 
 func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(result network.BootstrapResult)) Bootstrapper {
 	return &bootstrapper{
-		options:       options,
-		bootstrapLock: make(chan struct{}),
-
+		options:                 options,
+		bootstrapLock:           make(chan struct{}),
 		genesisRequestsReceived: make(map[insolar.Reference]*GenesisRequest),
-
-		reconnectToNewNetwork: reconnectToNewNetwork,
+		reconnectToNewNetwork:   reconnectToNewNetwork,
 	}
 }

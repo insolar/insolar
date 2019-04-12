@@ -76,7 +76,7 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 	bm := &message.BaseLogicMessage{
 		Nonce: randomUint64(),
 	}
-	routResult, err := cr.CallMethod(ctx, bm, false, ref, method, args, nil)
+	routResult, err := cr.CallMethod(ctx, bm, false, false, ref, method, args, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't route call")
 	}
@@ -84,7 +84,7 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 	return routResult, nil
 }
 
-func (cr *ContractRequester) CallMethod(ctx context.Context, base insolar.Message, async bool, ref *insolar.Reference, method string, argsIn insolar.Arguments, mustPrototype *insolar.Reference) (insolar.Reply, error) {
+func (cr *ContractRequester) CallMethod(ctx context.Context, base insolar.Message, async bool, immutable bool, ref *insolar.Reference, method string, argsIn insolar.Arguments, mustPrototype *insolar.Reference) (insolar.Reply, error) {
 	ctx, span := instracer.StartSpan(ctx, "ContractRequester.CallMethod "+method)
 	defer span.End()
 
@@ -110,6 +110,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base insolar.Messag
 	msg := &message.CallMethod{
 		BaseLogicMessage: *baseMessage,
 		ReturnMode:       mode,
+		Immutable:        immutable,
 		ObjectRef:        *ref,
 		Method:           method,
 		Arguments:        argsIn,

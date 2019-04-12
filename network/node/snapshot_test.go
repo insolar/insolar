@@ -51,11 +51,12 @@
 package node
 
 import (
+	"testing"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func TestSnapshotEncodeDecode(t *testing.T) {
