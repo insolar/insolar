@@ -68,7 +68,6 @@ const udpMaxPacketSize = 1400
 
 type udpTransport struct {
 	conn    net.PacketConn
-	address string
 	handler DatagramHandler
 }
 
@@ -87,17 +86,8 @@ func newUDPTransport(listenAddress, fixedPublicAddress string) (*udpTransport, s
 }
 
 // SendDatagram sends datagram to remote host
-func (t *udpTransport) SendDatagram(ctx context.Context, address string, buff []byte) error {
-	return t.send(ctx, address, buff)
-}
-
-// SetDatagramHandler registers callback to process received datagram
-func (t *udpTransport) SetDatagramHandler(h DatagramHandler) {
-	t.handler = h
-}
-
-func (t *udpTransport) send(ctx context.Context, recvAddress string, data []byte) error {
-	log.Debug("Sending PURE_UDP request")
+func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []byte) error {
+	logger := inslogger.FromContext(ctx)
 	if len(data) > udpMaxPacketSize {
 		return errors.New(fmt.Sprintf("udpTransport.send: too big input data. Maximum: %d. Current: %d",
 			udpMaxPacketSize, len(data)))
@@ -105,29 +95,23 @@ func (t *udpTransport) send(ctx context.Context, recvAddress string, data []byte
 
 	// TODO: may be try to send second time if error
 	// TODO: skip resolving every time by caching result
-	udpAddr, err := net.ResolveUDPAddr("udp", recvAddress)
+	udpAddr, err := net.ResolveUDPAddr("udp", address)
 	if err != nil {
-		return errors.Wrap(err, "udpTransport.send")
+		return errors.Wrap(err, "Failed to resolve UDP address")
 	}
 
-	log.Debug("udpTransport.send: len = ", len(data))
+	logger.Debug("udpTransport.send: len = ", len(data))
 	n, err := t.conn.WriteTo(data, udpAddr)
+	if err != nil {
+		return errors.Wrap(err, "Failed to write data")
+	}
 	stats.Record(ctx, consensus.SentSize.M(int64(n)))
-	return errors.Wrap(err, "Failed to write data")
+	return nil
 }
 
-func (t *udpTransport) prepareListen() (net.PacketConn, error) {
-	if t.conn != nil {
-		t.address = t.conn.LocalAddr().String()
-	} else {
-		var err error
-		t.conn, err = net.ListenPacket("udp", t.address)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to listen UDP")
-		}
-	}
-
-	return t.conn, nil
+// SetDatagramHandler registers callback to process received datagram
+func (t *udpTransport) SetDatagramHandler(h DatagramHandler) {
+	t.handler = h
 }
 
 // Start starts networking.
@@ -135,17 +119,11 @@ func (t *udpTransport) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Start ] Start UDP transport")
 
-	conn, err := t.prepareListen()
-	if err != nil {
-		logger.Infof("[ Start ] Failed to prepare UDP transport: " + err.Error())
-		return err
-	}
-
 	go func() {
 		for {
 			//todo handle stop
 			buf := make([]byte, udpMaxPacketSize)
-			n, addr, err := conn.ReadFrom(buf)
+			n, addr, err := t.conn.ReadFrom(buf)
 			if err != nil {
 				logger.Error("failed to read UDP: ", err.Error())
 				return // TODO: we probably shouldn't return here
