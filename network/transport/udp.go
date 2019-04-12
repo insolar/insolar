@@ -68,7 +68,7 @@ const udpMaxPacketSize = 1400
 type udpTransport struct {
 	conn      net.PacketConn
 	address   string
-	processor DgramProcessor
+	processor DatagramProcessor
 }
 
 func newUDPTransport(listenAddress, fixedPublicAddress string) (*udpTransport, string, error) {
@@ -85,19 +85,15 @@ func newUDPTransport(listenAddress, fixedPublicAddress string) (*udpTransport, s
 	return transport, publicAddress, nil
 }
 
-func (t *udpTransport) SendBuffer(ctx context.Context, address string, buff []byte) error {
+// SendDatagram sends datagram to remote host
+func (t *udpTransport) SendDatagram(ctx context.Context, address string, buff []byte) error {
 	return t.send(ctx, address, buff)
 }
 
-func (t *udpTransport) SendDgram(ctx context.Context, address string, buff []byte) error {
-	return t.send(ctx, address, buff)
-}
-
-func (t *udpTransport) SetDgramProcessor(processor DgramProcessor) {
+// SetDatagramProcessor registers callback to process received datagram
+func (t *udpTransport) SetDatagramProcessor(processor DatagramProcessor) {
 	t.processor = processor
 }
-
-func (t *udpTransport) SetStreamProcessor(processor StreamProcessor) {}
 
 func (t *udpTransport) send(ctx context.Context, recvAddress string, data []byte) error {
 	log.Debug("Sending PURE_UDP request")
@@ -120,7 +116,6 @@ func (t *udpTransport) send(ctx context.Context, recvAddress string, data []byte
 }
 
 func (t *udpTransport) prepareListen() (net.PacketConn, error) {
-
 	if t.conn != nil {
 		t.address = t.conn.LocalAddr().String()
 	} else {
@@ -151,14 +146,13 @@ func (t *udpTransport) Start(ctx context.Context) error {
 			buf := make([]byte, udpMaxPacketSize)
 			n, addr, err := conn.ReadFrom(buf)
 			if err != nil {
-				//<-t.disconnectFinished
 				logger.Error("failed to read UDP: ", err.Error())
 				return // TODO: we probably shouldn't return here
 			}
 
 			stats.Record(ctx, consensus.RecvSize.M(int64(n)))
 			go func() {
-				err := t.processor.ProcessDgram(addr.String(), buf[:n])
+				err := t.processor.ProcessDatagram(addr.String(), buf[:n])
 				if err != nil {
 					logger.Error("failed to process UDP packet: ", err.Error())
 				}

@@ -51,6 +51,7 @@
 package packet
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/binary"
 	"encoding/gob"
@@ -123,23 +124,31 @@ func SerializePacket(q *Packet) ([]byte, error) {
 // DeserializePacket reads packet from io.Reader.
 func DeserializePacket(conn io.Reader) (*Packet, error) {
 
-	lengthBytes := make([]byte, 8)
-	if _, err := io.ReadFull(conn, lengthBytes); err != nil {
+	r := bufio.NewReader(conn)
+	lengthBytes, err := r.Peek(8)
+	if err != nil {
 		return nil, err
 	}
-	lengthReader := bytes.NewBuffer(lengthBytes)
-	length, err := binary.ReadUvarint(lengthReader)
-	if err != nil {
-		return nil, io.ErrUnexpectedEOF
-	}
+
+	// lengthBytes := make([]byte, 8)
+	// if _, err := io.ReadFull(conn, lengthBytes); err != nil {
+	// 	return nil, err
+	// }
+
+	//lengthReader := bytes.NewBuffer(lengthBytes)
+	length, _ := binary.Uvarint(lengthBytes)
+	r.Discard(8)
 
 	log.Debugf("[ DeserializePacket ] packet length %d", length)
 	buf := make([]byte, length)
-	if _, err := io.ReadFull(conn, buf); err != nil {
+	buf, err = r.Peek(int(length))
+	if err != nil {
 		log.Error("[ DeserializePacket ] couldn't read packet: ", err)
 		return nil, err
 	}
 	log.Debugf("[ DeserializePacket ] read packet")
+
+	r.Discard(int(length))
 
 	msg := &Packet{}
 	dec := gob.NewDecoder(bytes.NewReader(buf))

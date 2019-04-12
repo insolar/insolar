@@ -52,9 +52,9 @@ package transport
 
 import (
 	"context"
-	"io"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -62,15 +62,14 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/transport/pool"
-	"github.com/insolar/insolar/network/utils"
 )
 
 type tcpTransport struct {
-	baseTransport
-
-	pool     pool.ConnectionPool
-	listener net.Listener
-	address  string
+	pool      pool.ConnectionPool
+	listener  net.Listener
+	address   string
+	processor StreamProcessor
+	cancel    context.CancelFunc
 }
 
 func newTCPTransport(listenAddress, fixedPublicAddress string) (*tcpTransport, string, error) {
@@ -85,36 +84,34 @@ func newTCPTransport(listenAddress, fixedPublicAddress string) (*tcpTransport, s
 	}
 
 	transport := &tcpTransport{
-		baseTransport: newBaseTransport(publicAddress),
-		listener:      listener,
-		pool:          pool.NewConnectionPool(&tcpConnectionFactory{}),
+		listener: listener,
+		pool:     pool.NewConnectionPool(&tcpConnectionFactory{}),
 	}
-
-	transport.sendFunc = transport.send
 
 	return transport, publicAddress, nil
 }
 
-func (t *tcpTransport) send(address string, data []byte) error {
-	ctx := context.Background()
-	logger := inslogger.FromContext(ctx)
+func (t *tcpTransport) SetStreamProcessor(processor StreamProcessor) {
+	t.processor = processor
+}
 
+func (t *tcpTransport) SendBuffer(ctx context.Context, address string, buff []byte) error {
 	conn, err := t.pool.GetConnection(ctx, address)
 	if err != nil {
-		return errors.Wrap(err, "[ send ] Failed to get connection")
+		return err
 	}
-
-	logger.Debug("[ send ] len = ", len(data))
-
-	n, err := conn.Write(data)
-
+	log.Warn("=== Before Write")
+	conn.SetDeadline(time.Now().Add(2 * time.Second))
+	n, err := conn.Write(buff)
 	if err != nil {
+		// retry
+		log.Warn("=== Before Retry")
 		t.pool.CloseConnection(ctx, address)
 		conn, err = t.pool.GetConnection(ctx, address)
 		if err != nil {
-			return errors.Wrap(err, "[ send ] Failed to get connection")
+			return errors.Wrap(err, "[ SendBuffer ] Failed to get connection")
 		}
-		n, err = conn.Write(data)
+		n, err = conn.Write(buff)
 	}
 
 	if err == nil {
@@ -124,13 +121,11 @@ func (t *tcpTransport) send(address string, data []byte) error {
 	return errors.Wrap(err, "[ send ] Failed to write data")
 }
 
+func (t *tcpTransport) SendDatagram(ctx context.Context, address string, buff []byte) error {
+	panic("tcp can't send dgram")
+}
+
 func (t *tcpTransport) prepareListen() (net.Listener, error) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
-	t.disconnectStarted = make(chan bool, 1)
-	t.disconnectFinished = make(chan bool, 1)
-
 	if t.listener != nil {
 		t.address = t.listener.Addr().String()
 	} else {
@@ -148,6 +143,7 @@ func (t *tcpTransport) prepareListen() (net.Listener, error) {
 func (t *tcpTransport) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Start ] Start TCP transport")
+	//ctx, t.cancel = context.WithCancel(ctx)
 
 	listener, err := t.prepareListen()
 	if err != nil {
@@ -159,7 +155,6 @@ func (t *tcpTransport) Start(ctx context.Context) error {
 		for {
 			conn, err := listener.Accept()
 			if err != nil {
-				<-t.disconnectFinished
 				if strings.Contains(strings.ToLower(err.Error()), "use of closed network connection") {
 					logger.Info("Connection closed, quiting accept loop")
 					return
@@ -169,9 +164,16 @@ func (t *tcpTransport) Start(ctx context.Context) error {
 				return
 			}
 
-			logger.Debugf("[ Start ] Accepted new connection from %s", conn.RemoteAddr())
+			logger.Infof("[ Start ] Accepted new connection from %s", conn.RemoteAddr())
 
+			// t.pool.AddConnection(ctx, conn)
 			go t.handleAcceptedConnection(conn)
+
+			// select {
+			// case <-ctx.Done():
+			// 	return
+			// default:
+			// }
 		}
 
 	}()
@@ -180,38 +182,19 @@ func (t *tcpTransport) Start(ctx context.Context) error {
 }
 
 // Stop stops networking.
-func (t *tcpTransport) Stop() {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
+func (t *tcpTransport) Stop(ctx context.Context) error {
 	log.Info("[ Stop ] Stop TCP transport")
-	t.prepareDisconnect()
-
-	if t.listener != nil {
-		utils.CloseVerbose(t.listener)
-		t.listener = nil
-	}
+	err := t.listener.Close()
 	t.pool.Reset()
+	//	t.cancel()
+	return err
 }
 
 func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
-	defer utils.CloseVerbose(conn)
+	//defer utils.CloseVerbose(conn)
 
-	for {
-		msg, err := t.serializer.DeserializePacket(conn)
-
-		if err != nil {
-			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				log.Warn("[ handleAcceptedConnection ] Connection closed by peer")
-				return
-			}
-
-			log.Error("[ handleAcceptedConnection ] Failed to deserialize packet: ", err.Error())
-		} else {
-			ctx, logger := inslogger.WithTraceField(context.Background(), msg.TraceID)
-			logger.Debug("[ handleAcceptedConnection ] Handling packet: ", msg.RequestID)
-
-			go t.packetHandler.Handle(ctx, msg)
-		}
+	err := t.processor.ProcessStream(conn.RemoteAddr().String(), conn)
+	if err != nil {
+		inslogger.FromContext(context.Background()).Error("failed to process TCP stream: ", err.Error())
 	}
 }

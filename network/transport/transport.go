@@ -56,66 +56,46 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/hostnetwork/future"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
 
 	"github.com/pkg/errors"
 )
 
+// StreamProcessor interface provides callback method to process data stream
 type StreamProcessor interface {
 	ProcessStream(address string, reader io.Reader) error
 }
 
-type DgramProcessor interface {
-	ProcessDgram(address string, buf []byte) error
+// DatagramProcessor interface provides callback method to process received datagrams
+type DatagramProcessor interface {
+	ProcessDatagram(address string, buf []byte) error
 }
 
-type Transport2 interface {
+// DatagramTransport interface provides methods to send and receive datagrams
+type DatagramTransport interface {
 	component.Starter
 	component.Stopper
 
-	SendBuffer(ctx context.Context, address string, buff []byte) error
-	SendDgram(ctx context.Context, address string, buff []byte) error
+	SendDatagram(ctx context.Context, address string, data []byte) error
+	SetDatagramProcessor(processor DatagramProcessor)
+}
 
-	SetDgramProcessor(processor DgramProcessor)
+// StreamTransport interface provides methods to send and receive data streams
+type StreamTransport interface {
+	component.Starter
+	component.Stopper
+
+	SendBuffer(ctx context.Context, address string, data []byte) error
 	SetStreamProcessor(processor StreamProcessor)
 }
 
-// Transport is an interface for network transport.
-type Transport interface {
-	// SendRequest sends packet to destination. Sequence number is generated automatically.
-	SendRequest(context.Context, *packet.Packet) (future.Future, error)
-
-	// SendResponse sends response packet for request with passed request id.
-	SendResponse(context.Context, network.RequestID, *packet.Packet) error
-
-	// SendPacket low-level send packet without requestId and without spawning a waiting future
-	SendPacket(ctx context.Context, p *packet.Packet) error // for
-
-	// Start starts thread to listen incoming packets.
-	Start(ctx context.Context) error
-
-	// Stop gracefully stops listening.
-	Stop()
-
-	// Close disposing all transport underlying structures after stopped are called.
-	Close()
-
-	// Packets returns channel to listen incoming packets.
-	Packets() <-chan *packet.Packet
-
-	// Stopped returns signal channel to support graceful shutdown.
-	Stopped() <-chan bool
-}
-
-func NewTransport2(cfg configuration.Transport) (Transport2, string, error) {
+// NewDatagramTransport creates new UDP DatagramTransport
+func NewDatagramTransport(cfg configuration.Transport) (DatagramTransport, string, error) {
 	return newUDPTransport(cfg.Address, cfg.FixedPublicAddress)
 }
 
 // NewTransport creates new Network with particular configuration
-func NewTransport(cfg configuration.Transport) (Transport, string, error) {
+func NewTransport(cfg configuration.Transport) (StreamTransport, string, error) {
 	switch cfg.Protocol {
 	case "TCP":
 		return newTCPTransport(cfg.Address, cfg.FixedPublicAddress)

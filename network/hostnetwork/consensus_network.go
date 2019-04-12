@@ -73,7 +73,7 @@ import (
 type networkConsensus struct {
 	Resolver network.RoutingTable `inject:""`
 
-	transport         transport.Transport2
+	transport         transport.DatagramTransport
 	origin            *host.Host
 	started           uint32
 	sequenceGenerator sequence.Generator
@@ -141,7 +141,7 @@ func (nc *networkConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
 		return errors.Wrap(err, "Failed to serialize packet.")
 	}
 
-	err = nc.transport.SendDgram(ctx, receiverHost.Address.String(), buf)
+	err = nc.transport.SendDatagram(ctx, receiverHost.Address.String(), buf)
 	if err == nil {
 		statsErr := stats.RecordWithTags(ctx, []tag.Mutator{
 			tag.Upsert(consensus.TagPhase, packet.GetType().String()),
@@ -154,11 +154,6 @@ func (nc *networkConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
 }
 
 func (nc *networkConsensus) processMessage(p packets.ConsensusPacket) {
-	// p, ok := msg.Data.(packets.ConsensusPacket)
-	// if !ok {
-	// 	log.Error("Error processing incoming message: failed to convert to ConsensusPacket")
-	// 	return
-	// }
 	log.Debugf("Got %s request from host, shortID: %d", p.GetType(), p.GetOrigin())
 	if p.GetTarget() != nc.origin.ShortID {
 		log.Errorf("Error processing incoming message: target ID %d differs from origin %d", p.GetTarget(), nc.origin.ShortID)
@@ -191,7 +186,7 @@ func NewConsensusNetwork(address, nodeID string, shortID insolar.ShortNodeID) (n
 	conf.Address = address
 	conf.Protocol = "PURE_UDP"
 
-	tp, publicAddress, err := transport.NewTransport2(conf)
+	tp, publicAddress, err := transport.NewDatagramTransport(conf)
 	if err != nil {
 		return nil, errors.Wrap(err, "error creating transport")
 	}
@@ -207,7 +202,7 @@ func NewConsensusNetwork(address, nodeID string, shortID insolar.ShortNodeID) (n
 	result := &networkConsensus{handlers: make(map[packets.PacketType]network.ConsensusPacketHandler)}
 
 	result.transport = tp
-	tp.SetDgramProcessor(result)
+	tp.SetDatagramProcessor(result)
 
 	result.sequenceGenerator = sequence.NewGeneratorImpl()
 	result.origin = origin
@@ -215,7 +210,7 @@ func NewConsensusNetwork(address, nodeID string, shortID insolar.ShortNodeID) (n
 	return result, nil
 }
 
-func (nc *networkConsensus) ProcessDgram(address string, buf []byte) error {
+func (nc *networkConsensus) ProcessDatagram(address string, buf []byte) error {
 	r := bytes.NewReader(buf)
 	p, err := packets.ExtractPacket(r)
 	if err != nil {
