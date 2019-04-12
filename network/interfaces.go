@@ -99,9 +99,9 @@ type HostNetwork interface {
 	// GetNodeID get current node ID.
 	GetNodeID() insolar.Reference
 
-	// SendRequest send request to a remote node.
+	// SendRequest send request to a remote node addressed by reference.
 	SendRequest(ctx context.Context, request Request, receiver insolar.Reference) (Future, error)
-	// SendRequestToHost send request packet to a remote node.
+	// SendRequestToHost send request packet to a remote host.
 	SendRequestToHost(ctx context.Context, request Request, receiver *host.Host) (Future, error)
 	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 	RegisterRequestHandler(t types.PacketType, handler RequestHandler)
