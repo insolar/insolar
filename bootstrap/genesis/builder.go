@@ -43,27 +43,22 @@ type prototypes map[string]*insolar.Reference
 
 // contractsBuilder for tests
 type contractsBuilder struct {
-	root string
-
-	prototypes prototypes
-
-	genesisRef      insolar.Reference
+	root            string
+	prototypes      prototypes
 	artifactManager artifact.Manager
 }
 
 // newContractBuilder returns a new `contractsBuilder`,
 // requires initialized artifact manager.
-func newContractBuilder(genesisRef insolar.Reference, am artifact.Manager) *contractsBuilder {
+func newContractBuilder(am artifact.Manager) *contractsBuilder {
 	tmpDir, err := ioutil.TempDir("", "test-")
 	if err != nil {
 		return nil
 	}
 
 	cb := &contractsBuilder{
-		root:       tmpDir,
-		prototypes: make(map[string]*insolar.Reference),
-
-		genesisRef:      genesisRef,
+		root:            tmpDir,
+		prototypes:      make(map[string]*insolar.Reference),
 		artifactManager: am,
 	}
 	return cb
@@ -195,7 +190,7 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 			ctx,
 			*domainRef,
 			*cb.prototypes[name],
-			cb.genesisRef,
+			insolar.GenesisRecord.Ref(),
 			*codeRef,
 			nil,
 		)

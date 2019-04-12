@@ -96,7 +96,7 @@ func (g *Generator) Run(ctx context.Context) error {
 	rootDomainID := g.rootRecord.ID()
 
 	inslog.Info("[ Genesis ] newContractBuilder ...")
-	cb := newContractBuilder(insolar.GenesisRecord.Ref(), g.artifactManager)
+	cb := newContractBuilder(g.artifactManager)
 	defer cb.clean()
 
 	// TODO: don't build prototypes, just get they references from builtins

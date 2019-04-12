@@ -66,15 +66,6 @@ func NewClient() *client { // nolint
 	}
 }
 
-// GenesisRef returns the root record reference.
-//
-// Root record is the parent for all top-level records.
-// DEPRECATED: just switch to insolar.GenesisRecord.Ref()
-func (m *client) GenesisRef() *insolar.Reference {
-	ref := insolar.GenesisRecord.Ref()
-	return &ref
-}
-
 // RegisterRequest sends message for request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterRequest(
