@@ -30,8 +30,9 @@ func TestComponents(t *testing.T) {
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
 
-	c := newComponents(ctx, cfg)
-	err := c.Start(ctx)
+	c, err := newComponents(ctx, cfg)
+	require.NoError(t, err)
+	err = c.Start(ctx)
 	require.NoError(t, err)
 	err = c.Stop(ctx)
 	require.NoError(t, err)

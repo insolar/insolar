@@ -70,7 +70,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		var err error
 		// Private key storage.
 		ks, err := keystore.NewKeyStore(cfg.KeysPath)
-		checkError(ctx, err, "failed to load KeyStore")
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to load KeyStore")
+		}
 		// Public key manipulations.
 		KeyProcessor = platformpolicy.NewKeyProcessor()
 		// Platform cryptography.
@@ -82,11 +84,15 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		c.Inject(CryptoService, CryptoScheme, KeyProcessor, ks)
 
 		publicKey, err := CryptoService.GetPublicKey()
-		checkError(ctx, err, "failed to retrieve node public key")
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to retrieve node public key")
+		}
 
 		// Node certificate.
 		CertManager, err = certificate.NewManagerReadCertificate(publicKey, KeyProcessor, cfg.CertificatePath)
-		checkError(ctx, err, "failed to start Certificate")
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start Certificate")
+		}
 	}
 
 	c := &components{}
@@ -106,19 +112,27 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		var err error
 		// External communication.
 		NetworkService, err = servicenetwork.NewServiceNetwork(cfg, &c.cmp, false)
-		checkError(ctx, err, "failed to start Network")
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start Network")
+		}
 
 		Termination = termination.NewHandler(NetworkService)
 
 		// Node info.
 		NodeNetwork, err = nodenetwork.NewNodeNetwork(cfg.Host, CertManager.GetCertificate())
-		checkError(ctx, err, "failed to start NodeNetwork")
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start NodeNetwork")
+		}
 
 		NetworkSwitcher, err = state.NewNetworkSwitcher()
-		checkError(ctx, err, "failed to start NetworkSwitcher")
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start NetworkSwitcher")
+		}
 
 		NetworkCoordinator, err = networkcoordinator.New()
-		checkError(ctx, err, "failed to start NetworkCoordinator")
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start NetworkCoordinator")
+		}
 	}
 
 	// API.
@@ -130,13 +144,19 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	{
 		var err error
 		Requester, err = contractrequester.New()
-		checkError(ctx, err, "failed to start ContractRequester")
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start ContractRequester")
+		}
 
 		Genesis, err = genesisdataprovider.New()
-		checkError(ctx, err, "failed to start GenesisDataProvider")
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start GenesisDataProvider")
+		}
 
 		API, err = api.NewRunner(&cfg.APIRunner)
-		checkError(ctx, err, "failed to start ApiRunner")
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start ApiRunner")
+		}
 	}
 
 	// Communication.
@@ -150,7 +170,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Tokens = delegationtoken.NewDelegationTokenFactory()
 		Parcels = messagebus.NewParcelFactory()
 		Bus, err = messagebus.NewMessageBus(cfg)
-		checkError(ctx, err, "failed to start MessageBus")
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to start MessageBus")
+		}
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -159,7 +181,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		metrics.GetInsolarRegistry(c.NodeRole),
 		c.NodeRole,
 	)
-	checkError(ctx, err, "failed to start Metrics")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to start Metrics")
+	}
 
 	// Light components.
 	var (
@@ -283,7 +307,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	)
 
 	err = c.cmp.Init(ctx)
-	checkError(ctx, err, "failed to init components")
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to init components")
+	}
 
 	return c, nil
 }

@@ -24,11 +24,10 @@ import (
 	"syscall"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/server/internal"
 	"github.com/insolar/insolar/version"
 )
 
@@ -59,27 +58,16 @@ func (s *Server) Serve() {
 	cfg := &cfgHolder.Configuration
 	cfg.Metrics.Namespace = "insolard"
 
-	traceID := "main_" + utils.RandTraceID()
-	ctx, inslog := initLogger(context.Background(), cfg.Log, traceID)
-	log.SetGlobalLogger(inslog)
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
-	cmp := newComponents(ctx, *cfg)
+	ctx := context.Background()
+	cmp, err := newComponents(ctx, *cfg)
+	fatal(ctx, err, "failed to create components")
 
-	jaegerflush := func() {}
-	if s.trace {
-		jconf := cfg.Tracer.Jaeger
-		log.Infof("Tracing enabled. Agent endpoint: '%s', collector endpoint: '%s'\n", jconf.AgentEndpoint, jconf.CollectorEndpoint)
-		jaegerflush = instracer.ShouldRegisterJaeger(
-			ctx,
-			cmp.NodeRole,
-			cmp.NodeRef,
-			jconf.AgentEndpoint,
-			jconf.CollectorEndpoint,
-			jconf.ProbabilityRate)
-		ctx = instracer.SetBaggage(ctx, instracer.Entry{Key: "traceid", Value: traceID})
-	}
-	defer jaegerflush()
+	traceID := "main_" + utils.RandTraceID()
+	ctx, inslog := internal.Logger(ctx, cfg.Log, traceID, cmp.NodeRef, cmp.NodeRole)
+	ctx, jaegerFlush := internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, cmp.NodeRef, cmp.NodeRole)
+	defer jaegerFlush()
 
 	ctx, inslog = inslogger.WithField(ctx, "nodeid", cmp.NodeRef)
 	ctx, inslog = inslogger.WithField(ctx, "role", cmp.NodeRole)
@@ -98,35 +86,18 @@ func (s *Server) Serve() {
 
 		inslog.Warn("GRACEFULL STOP APP")
 		err = cmp.Stop(ctx)
-		checkError(ctx, err, "failed to graceful stop components")
+		fatal(ctx, err, "failed to graceful stop components")
 		close(waitChannel)
 	}()
 
 	err = cmp.Start(ctx)
-	checkError(ctx, err, "failed to start components")
+	fatal(ctx, err, "failed to start components")
 	fmt.Println("Version: ", version.GetFullVersion())
 	fmt.Println("All components were started")
 	<-waitChannel
 }
 
-func initLogger(ctx context.Context, cfg configuration.Log, traceid string) (context.Context, insolar.Logger) {
-	inslog, err := log.NewLog(cfg)
-	if err != nil {
-		panic(err)
-	}
-
-	if newInslog, err := inslog.WithLevel(cfg.Level); err != nil {
-		inslog.Error(err.Error())
-	} else {
-		inslog = newInslog
-	}
-
-	ctx = inslogger.SetLogger(ctx, inslog)
-	ctx, inslog = inslogger.WithTraceField(ctx, traceid)
-	return ctx, inslog
-}
-
-func checkError(ctx context.Context, err error, message string) {
+func fatal(ctx context.Context, err error, message string) {
 	if err == nil {
 		return
 	}
