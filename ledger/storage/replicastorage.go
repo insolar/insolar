@@ -27,8 +27,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ReplicaStorage is a heavy-based storage
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.ReplicaStorage -o ./ -s _mock.go
+
+// ReplicaStorage is a heavy-based storage
 type ReplicaStorage interface {
 	SetHeavySyncedPulse(ctx context.Context, jetID insolar.ID, pulsenum insolar.PulseNumber) error
 	GetHeavySyncedPulse(ctx context.Context, jetID insolar.ID) (pn insolar.PulseNumber, err error)
