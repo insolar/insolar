@@ -49,7 +49,7 @@ func (Key) ID() []byte {
 }
 
 func (Key) Scope() store.Scope {
-	return store.ScopeSystem
+	return store.ScopeGenesis
 }
 
 // CreateIfNeeded creates new base genesis record if needed.

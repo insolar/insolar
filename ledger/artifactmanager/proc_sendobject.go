@@ -163,7 +163,7 @@ func (p *SendObject) handle(
 	virtRec := rec.Record
 	state, ok := virtRec.(object.State)
 	if !ok {
-		return nil, errors.New("invalid object record")
+		return nil, fmt.Errorf("invalid object record %#v", virtRec)
 	}
 
 	if state.ID() == object.StateDeactivation {

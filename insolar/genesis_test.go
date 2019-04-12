@@ -14,37 +14,24 @@
 // limitations under the License.
 //
 
-package rootdomain
+package insolar
 
 import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 )
 
 var (
-	idHex  = "0001000163820cf09ad46a8927b80d87542c11650f91f2bf12372442629c4d73"
-	refHex = idHex + idHex
+	genesisIDHex  = "00010001ac000000000000000000000000000000000000000000000000000000"
+	genesisRefHex = genesisIDHex + genesisIDHex
 )
 
-func TestID(t *testing.T) {
-	rootRecord := &Record{
-		PCS: initPCS(),
-	}
-	require.Equal(t, idHex, hex.EncodeToString(rootRecord.ID().Bytes()), "root domain ID should always be the same")
+func TestGenesisRecordID(t *testing.T) {
+	require.Equal(t, genesisIDHex, hex.EncodeToString(GenesisRecord.ID().Bytes()), "genesis ID should always be the same")
 }
 
 func TestReference(t *testing.T) {
-	rootRecord := &Record{
-		PCS: initPCS(),
-	}
-	require.Equal(t, refHex, hex.EncodeToString(rootRecord.Ref().Bytes()), "root domain Ref should always be the same")
-
-}
-
-func initPCS() insolar.PlatformCryptographyScheme {
-	return platformpolicy.NewPlatformCryptographyScheme()
+	require.Equal(t, genesisRefHex, hex.EncodeToString(GenesisRecord.Ref().Bytes()), "genesisRef should always be the same")
 }
