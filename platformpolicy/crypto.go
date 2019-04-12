@@ -17,10 +17,10 @@
 package platformpolicy
 
 const (
-	CurrentCrypto cryptoStruct = CustomCrypto
+	CurrentCrypto cryptoStruct = Secp256k1
 
-	CommonCrypto cryptoStruct = iota + 1
-	CustomCrypto
+	P256 cryptoStruct = iota + 1
+	Secp256k1
 )
 
 type cryptoStruct float64

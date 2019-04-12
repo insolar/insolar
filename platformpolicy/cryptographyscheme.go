@@ -25,7 +25,7 @@ import (
 func NewPlatformCryptographyScheme() insolar.PlatformCryptographyScheme {
 
 	switch CurrentCrypto {
-	case CustomCrypto:
+	case Secp256k1:
 		return customcrypto.NewPlatformCryptographyScheme()
 
 	default:
