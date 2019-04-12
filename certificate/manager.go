@@ -17,11 +17,12 @@
 package certificate
 
 import (
-	"github.com/insolar/insolar/platformpolicy/keys"
 	"io"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
 // CertificateManager is a component for working with current node certificate

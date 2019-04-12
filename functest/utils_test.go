@@ -23,7 +23,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -32,9 +31,10 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 const sendRetryCount = 5

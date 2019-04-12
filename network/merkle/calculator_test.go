@@ -53,7 +53,6 @@ package merkle
 import (
 	"context"
 	"encoding/hex"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"testing"
 
 	"github.com/stretchr/testify/require"

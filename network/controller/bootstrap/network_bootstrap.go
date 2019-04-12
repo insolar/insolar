@@ -53,14 +53,14 @@ package bootstrap
 import (
 	"context"
 
-	"github.com/insolar/insolar/network/node"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
 )
 
 type NetworkBootstrapper interface {

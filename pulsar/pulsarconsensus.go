@@ -18,13 +18,14 @@ package pulsar
 
 import (
 	"context"
-	"github.com/insolar/insolar/platformpolicy/keys"
 	"sync"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
 // SetBftGridItem set item of the bftGrid in the thread-safe way

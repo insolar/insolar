@@ -51,11 +51,11 @@
 package packets
 
 import (
-	"github.com/insolar/insolar/platformpolicy/keys"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
 type Phase1Packet struct {

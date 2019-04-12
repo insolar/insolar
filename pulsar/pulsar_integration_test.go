@@ -18,20 +18,21 @@ package pulsar
 
 import (
 	"context"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"net"
 	"testing"
 	"time"
+
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestTwoPulsars_Handshake(t *testing.T) {
@@ -329,7 +330,7 @@ func TestSevenPulsars_Full_Consensus(t *testing.T) {
 
 	keyProcessor := platformpolicy.NewKeyProcessor()
 
-	pulsarsPrivateKeys := [7]platformpolicy.PrivateKey{}
+	pulsarsPrivateKeys := [7]keys.PrivateKey{}
 	for pkIndex := 0; pkIndex < 7; pkIndex++ {
 		privateKey, err := keyProcessor.GeneratePrivateKey()
 		require.NoError(t, err)

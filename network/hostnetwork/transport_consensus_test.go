@@ -52,7 +52,6 @@ package hostnetwork
 
 import (
 	"context"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"sync"
 	"testing"
 
@@ -65,6 +64,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
 type consensusTransportSuite struct {

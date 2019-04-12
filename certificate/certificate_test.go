@@ -19,11 +19,11 @@ package certificate
 import (
 	"bytes"
 	"encoding/json"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"testing"
 
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/stretchr/testify/require"
 )
 

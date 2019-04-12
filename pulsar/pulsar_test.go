@@ -19,8 +19,6 @@ package pulsar
 import (
 	"bytes"
 	"context"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
-	"github.com/insolar/insolar/platformpolicy/keys"
 	"net"
 	"net/rpc"
 	"testing"
@@ -35,6 +33,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
@@ -846,7 +845,7 @@ func TestPulsar_verify_Success(t *testing.T) {
 		return Verifying
 	}
 
-	keyGenerator := func() (platformpolicy.PrivateKey, keys.PublicKey, string) {
+	keyGenerator := func() (keys.PrivateKey, keys.PublicKey, string) {
 		kp := platformpolicy.NewKeyProcessor()
 		key, _ := kp.GeneratePrivateKey()
 		publicKey := kp.ExtractPublicKey(key)

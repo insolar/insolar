@@ -63,7 +63,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -71,12 +71,12 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/suite"
 )
 
 var (

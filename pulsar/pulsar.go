@@ -19,21 +19,20 @@ package pulsar
 import (
 	"context"
 	"encoding/gob"
-	"github.com/insolar/insolar/platformpolicy/keys"
 	"net"
 	"net/rpc"
 	"sync"
 
-	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/platformpolicy/keys"
+	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/pulsar/storage"
 )
 

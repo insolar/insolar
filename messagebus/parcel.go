@@ -18,13 +18,14 @@ package messagebus
 
 import (
 	"context"
-	"github.com/insolar/insolar/platformpolicy/keys"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
 type parcelFactory struct {

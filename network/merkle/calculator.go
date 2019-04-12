@@ -52,10 +52,11 @@ package merkle
 
 import (
 	"context"
-	"github.com/insolar/insolar/platformpolicy/keys"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
 type stater interface {

@@ -53,8 +53,6 @@ package merkle
 import (
 	"context"
 	"encoding/hex"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
-	"github.com/insolar/insolar/platformpolicy/keys"
 	"testing"
 
 	"github.com/pkg/errors"
@@ -65,6 +63,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	pulse2 "github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/nodekeeper"

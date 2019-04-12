@@ -51,13 +51,13 @@
 package packets
 
 import (
-	"github.com/insolar/insolar/platformpolicy/keys"
 	"io"
 	"strconv"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
 type PacketRoutable interface {

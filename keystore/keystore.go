@@ -19,11 +19,12 @@ package keystore
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/keystore/internal/privatekey"
 	"github.com/insolar/insolar/platformpolicy/keys"
-	"github.com/pkg/errors"
 )
 
 type keyStore struct {

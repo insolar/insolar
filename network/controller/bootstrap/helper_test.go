@@ -51,16 +51,16 @@
 package bootstrap
 
 import (
-	"github.com/insolar/insolar/platformpolicy/keys"
 	"testing"
 
-	"github.com/insolar/insolar/network/node"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/platformpolicy/keys"
+	"github.com/insolar/insolar/testutils"
 )
 
 func newTestNode() insolar.NetworkNode {

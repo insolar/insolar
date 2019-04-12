@@ -17,17 +17,16 @@
 package messagebus
 
 import (
-	"github.com/insolar/insolar/platformpolicy/keys"
 	"testing"
 
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"github.com/insolar/insolar/testutils"
-
-	"github.com/stretchr/testify/assert"
 )
 
 func Test_parcelFactory_Create_CheckLogLevel(t *testing.T) {

@@ -23,13 +23,14 @@ import (
 	"io"
 	"os"
 
+	"github.com/spf13/pflag"
+
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/platformpolicy/keys"
-	"github.com/spf13/pflag"
 )
 
 const defaultURL = "http://localhost:19101/api"

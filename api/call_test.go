@@ -19,7 +19,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
 	"net/http"
 	"testing"
 	"time"
@@ -30,6 +29,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"

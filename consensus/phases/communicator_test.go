@@ -52,19 +52,19 @@ package phases
 
 import (
 	"context"
-	"github.com/insolar/insolar/platformpolicy/keys"
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/network/node"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"github.com/insolar/insolar/testutils"
 	networkUtils "github.com/insolar/insolar/testutils/network"
-	"github.com/stretchr/testify/suite"
 )
 
 type communicatorSuite struct {

@@ -17,8 +17,9 @@
 package insolar
 
 import (
-	"github.com/insolar/insolar/platformpolicy/keys"
 	"hash"
+
+	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
 type Hasher interface {
