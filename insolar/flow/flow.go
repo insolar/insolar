@@ -34,8 +34,9 @@ type Handle func(context.Context, Flow) error
 type MakeHandle func(bus.Message) Handle
 
 // Procedure is a task that can execute itself.
-// Procedure is supposed to be executed in one pulse. If you have multiple steps that can be executed
-// in different pulses split them into separate Procedures. Otherwise join the steps to the single Procedure.
+// Please not that the Procedure is canceled if a pulse happens during it's execution.
+// Thus if you have multiple steps that can be executed in different pulses split them into separate Procedures.
+// Otherwise join the steps to a single Procedure.
 // It's a good idea to keep Procedures in a separate package to hide internal state from Handle.
 //go:generate minimock -i github.com/insolar/insolar/insolar/flow.Procedure -o . -s _mock.go
 type Procedure interface {
@@ -53,7 +54,7 @@ type Flow interface {
 
 	// Procedure starts a routine and blocks Handle execution until cancellation happens or routine returns.
 	// If cancellation happens first, ErrCancelled will immediately be returned to the Handle. The Procedure
-	// continues to execute in the background, but it's return value will be discarded.
+	// continues to execute in the background, but it's return value must be discarded by the Flow implementation.
 	// If Routine returns first, Procedure error (if any) will be returned.
 	// Procedure can figure out whether it's execution was canceled and there is no point to continue
 	// the execution by reading from context.Done()
