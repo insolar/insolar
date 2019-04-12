@@ -19,7 +19,6 @@ package handler
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
@@ -28,8 +27,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
-
-const handleTimeout = 10 * time.Second
 
 type Handler struct {
 	handles struct {
