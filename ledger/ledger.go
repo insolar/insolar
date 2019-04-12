@@ -17,6 +17,7 @@
 package ledger
 
 import (
+	"github.com/insolar/insolar/ledger/replication/light"
 	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
 
@@ -38,7 +39,7 @@ import (
 )
 
 // GetLedgerComponents returns ledger components.
-func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certificate) []interface{} {
+func GetLedgerComponents(conf configuration.Ledger, msgBus insolar.MessageBus, certificate insolar.Certificate) []interface{} {
 	idLocker := storage.NewIDLocker()
 
 	legacyDB, err := storage.NewDB(conf, nil)
@@ -50,6 +51,10 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
+
+	jetStorage := jet.NewStore()
+	nodeStorage := node.NewStorage()
+	rsProvide := recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL)
 
 	var dropModifier drop.Modifier
 	var dropAccessor drop.Accessor
@@ -130,7 +135,12 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		collectionIndexAccessor = indexDB
 	}
 
-	pm := pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, pulseShifter, recordCleaner, recSyncAccessor, collectionIndexAccessor, indexCleaner)
+	dataGatherer := light.NewDataGatherer(dropAccessor, blobCollectionAccessor, recSyncAccessor, collectionIndexAccessor)
+	lightCleaner := light.NewCleaner(jetStorage, nodeStorage, dropCleaner, blobCleaner, recordCleaner, indexCleaner, rsProvide, pulseShifter)
+
+	lSyncer := light.NewToHeavySyncer(jetStorage, dataGatherer, lightCleaner, msgBus, conf.LightToHeavySync)
+
+	pm := pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, pulseShifter, recordCleaner, recSyncAccessor, collectionIndexAccessor, indexCleaner, lSyncer)
 
 	components := []interface{}{
 		legacyDB,
@@ -147,10 +157,10 @@ func GetLedgerComponents(conf configuration.Ledger, certificate insolar.Certific
 		recordAccessor,
 		indexAccessor,
 		indexModifier,
-		jet.NewStore(),
-		node.NewStorage(),
+		jetStorage,
+		nodeStorage,
 		storage.NewReplicaStorage(),
-		recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL),
+		rsProvide,
 		artifactmanager.NewHotDataWaiterConcrete(),
 		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),
 		heavyserver.NewSync(legacyDB, recordModifier),

@@ -118,12 +118,12 @@ type jetInfo struct {
 
 // Just store ledger configuration in PM. This is not required.
 type pmOptions struct {
-	enableSync            bool
-	splitThreshold        uint64
-	dropHistorySize       int
-	storeLightPulses      int
-	heavySyncMessageLimit int
-	lightChainLimit       int
+	// enableSync            bool
+	splitThreshold   uint64
+	dropHistorySize  int
+	storeLightPulses int
+	// heavySyncMessageLimit int
+	lightChainLimit int
 }
 
 // NewPulseManager creates PulseManager instance.
@@ -144,11 +144,11 @@ func NewPulseManager(
 	pm := &PulseManager{
 		currentPulse: *insolar.GenesisPulse,
 		options: pmOptions{
-			enableSync:            pmconf.HeavySyncEnabled,
-			splitThreshold:        pmconf.SplitThreshold,
-			storeLightPulses:      conf.LightChainLimit,
-			heavySyncMessageLimit: pmconf.HeavySyncMessageLimit,
-			lightChainLimit:       conf.LightChainLimit,
+			// enableSync:            pmconf.HeavySyncEnabled,
+			splitThreshold:   pmconf.SplitThreshold,
+			storeLightPulses: conf.LightChainLimit,
+			// heavySyncMessageLimit: pmconf.HeavySyncMessageLimit,
+			lightChainLimit: conf.LightChainLimit,
 		},
 		DropCleaner:             dropCleaner,
 		BlobCleaner:             blobCleaner,

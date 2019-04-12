@@ -35,8 +35,7 @@ type Cleaner interface {
 }
 
 type cleaner struct {
-	jetModifier    jet.Modifier
-	jetAccessor    jet.Accessor
+	jetStorage     jet.Storage
 	nodeModifier   node.Modifier
 	dropCleaner    drop.Cleaner
 	blobCleaner    blob.Cleaner
@@ -47,8 +46,7 @@ type cleaner struct {
 }
 
 func NewCleaner(
-	jetModifier jet.Modifier,
-	jetAccessor jet.Accessor,
+	jetStorage jet.Storage,
 	nodeModifier node.Modifier,
 	dropCleaner drop.Cleaner,
 	blobCleaner blob.Cleaner,
@@ -58,8 +56,7 @@ func NewCleaner(
 	pulseShifter pulse.Shifter,
 ) Cleaner {
 	return &cleaner{
-		jetModifier:    jetModifier,
-		jetAccessor:    jetAccessor,
+		jetStorage:     jetStorage,
 		nodeModifier:   nodeModifier,
 		dropCleaner:    dropCleaner,
 		blobCleaner:    blobCleaner,
@@ -76,7 +73,7 @@ func (c *cleaner) Clean(ctx context.Context, pn insolar.PulseNumber) {
 	c.blobCleaner.Delete(ctx, pn)
 	c.recCleaner.Remove(ctx, pn)
 
-	c.jetModifier.Delete(ctx, pn)
+	c.jetStorage.Delete(ctx, pn)
 
 	excIdx := c.getExcludedIndexes(ctx, pn)
 	c.indexCleaner.RemoveUntil(ctx, pn, excIdx)
@@ -88,7 +85,7 @@ func (c *cleaner) Clean(ctx context.Context, pn insolar.PulseNumber) {
 }
 
 func (c *cleaner) getExcludedIndexes(ctx context.Context, pn insolar.PulseNumber) map[insolar.ID]struct{} {
-	jets := c.jetAccessor.All(ctx, pn)
+	jets := c.jetStorage.All(ctx, pn)
 	res := make(map[insolar.ID]struct{})
 	for _, j := range jets {
 		storage := c.recentProvider.GetIndexStorage(ctx, insolar.ID(j))

@@ -157,7 +157,7 @@ func (t *toHeavySyncer) SyncPulse(ctx context.Context, pn insolar.PulseNumber) {
 
 func (t *toHeavySyncer) lazyInit(ctx context.Context) {
 	t.once.Do(func() {
-		t.checker = time.NewTicker(500 * time.Millisecond)
+		t.checker = time.NewTicker(t.conf.SyncLoopDuration)
 		go func() {
 			for range t.checker.C {
 				go t.sync(ctx)

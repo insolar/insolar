@@ -33,19 +33,22 @@ type Storage struct {
 
 // PulseManager holds configuration for PulseManager.
 type PulseManager struct {
-	// HeavySyncEnabled enables replication to heavy (could be disabled for testing purposes)
-	HeavySyncEnabled bool
-	// HeavySyncMessageLimit soft limit of single message for replication to heavy.
-	HeavySyncMessageLimit int
-	// Backoff configures retry backoff algorithm for Heavy Sync
-	HeavyBackoff Backoff
+	// // HeavySyncEnabled enables replication to heavy (could be disabled for testing purposes)
+	// HeavySyncEnabled bool
+	// // HeavySyncMessageLimit soft limit of single message for replication to heavy.
+	// HeavySyncMessageLimit int
+	// // Backoff configures retry backoff algorithm for Heavy Sync
+	// HeavyBackoff Backoff
 	// SplitThreshold is a drop size threshold in bytes to perform split.
 	SplitThreshold uint64
 }
 
+// LightToHeavySync holds settings for a light to heavy sync process
 type LightToHeavySync struct {
-	Backoff     Backoff
-	SyncLoopDur time.Duration
+	// Backoff holds a backoff configuration for failed sendings of payload from a light to a heavy
+	Backoff Backoff
+	// SyncLoopDuration holds a value of a light's sync process frequency
+	SyncLoopDuration time.Duration
 }
 
 // Backoff configures retry backoff algorithm
@@ -55,7 +58,7 @@ type Backoff struct {
 	Jitter bool
 	// Min and Max are the minimum and maximum values of the counter
 	Min, Max time.Duration
-
+	// MaxAttempts holds max count of attempts for a instance of Backoff
 	MaxAttempts int
 }
 
@@ -94,6 +97,9 @@ type Ledger struct {
 	// PendingRequestsLimit holds a number of pending requests, what can be stored in the system
 	// before they are declined
 	PendingRequestsLimit int
+
+	// LightToHeavySync holds settings for a light to heavy sync process
+	LightToHeavySync LightToHeavySync
 }
 
 // NewLedger creates new default Ledger configuration.
@@ -106,15 +112,21 @@ func NewLedger() Ledger {
 		},
 
 		PulseManager: PulseManager{
-			HeavySyncEnabled:      true,
-			HeavySyncMessageLimit: 1 << 20, // 1Mb
-			HeavyBackoff: Backoff{
-				Jitter: true,
-				Min:    200 * time.Millisecond,
-				Max:    2 * time.Second,
-				Factor: 2,
-			},
+			// HeavySyncEnabled:      true,
+			// HeavySyncMessageLimit: 1 << 20, // 1Mb
+			// HeavyBackoff:
 			SplitThreshold: 10 * 100, // 10 megabytes.
+		},
+
+		LightToHeavySync: LightToHeavySync{
+			Backoff: Backoff{
+				Jitter:      true,
+				Min:         200 * time.Millisecond,
+				Max:         2 * time.Second,
+				Factor:      2,
+				MaxAttempts: 10,
+			},
+			SyncLoopDuration: 1 * time.Second,
 		},
 
 		RecentStorage: RecentStorage{
