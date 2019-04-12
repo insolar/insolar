@@ -22,15 +22,17 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// Accessor provides info about active nodes.
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/node.Accessor -o ./ -s _mock.go
+
+// Accessor provides info about active nodes.
 type Accessor interface {
 	All(pulse insolar.PulseNumber) ([]insolar.Node, error)
 	InRole(pulse insolar.PulseNumber, role insolar.StaticRole) ([]insolar.Node, error)
 }
 
-// Modifier provides methods for setting active nodes.
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/node.Modifier -o ./ -s _mock.go
+
+// Modifier provides methods for setting active nodes.
 type Modifier interface {
 	Set(pulse insolar.PulseNumber, nodes []insolar.Node) error
 	Delete(pulse insolar.PulseNumber)

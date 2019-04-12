@@ -4,6 +4,16 @@ package insolar
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[NodeUndefined-0]
+	_ = x[NodePending-1]
+	_ = x[NodeReady-2]
+	_ = x[NodeLeaving-3]
+}
+
 const _NodeState_name = "NodeUndefinedNodePendingNodeReadyNodeLeaving"
 
 var _NodeState_index = [...]uint8{0, 13, 24, 33, 44}

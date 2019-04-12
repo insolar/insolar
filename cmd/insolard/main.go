@@ -73,30 +73,12 @@ func main() {
 		return
 	}
 
-	var err error
-	cfgHolder := configuration.NewHolder()
-	if len(params.configPath) != 0 {
-		err = cfgHolder.LoadFromFile(params.configPath)
-	} else {
-		err = cfgHolder.Load()
-	}
+	role, err := readRole(params.configPath)
 	if err != nil {
-		log.Error("failed to load configuration from file: ", err.Error())
-		return
-	}
-	data, err := ioutil.ReadFile(filepath.Clean(cfgHolder.Configuration.CertificatePath))
-	if err != nil {
-		log.Error(errors.Wrapf(err, "[ ReadCertificate ] failed to read certificate from: %s", cfgHolder.Configuration.CertificatePath))
-		return
-	}
-	cert := certificate.AuthorizationCertificate{}
-	err = json.Unmarshal(data, &cert)
-	if err != nil {
-		log.Error(errors.Wrap(err, "[ newCertificate ] failed to parse certificate json"))
-		return
+		log.Fatal(err)
 	}
 
-	switch cert.GetRole() {
+	switch role {
 	case insolar.StaticRoleHeavyMaterial:
 		s := server.NewHeavyServer(params.configPath, params.traceEnabled)
 		s.Serve()
@@ -107,4 +89,32 @@ func main() {
 		s := server.NewVirtualServer(params.configPath, params.traceEnabled)
 		s.Serve()
 	}
+}
+
+func readRole(path string) (insolar.StaticRole, error) {
+	var err error
+	cfg := configuration.NewHolder()
+	if len(path) != 0 {
+		err = cfg.LoadFromFile(path)
+	} else {
+		err = cfg.Load()
+	}
+	if err != nil {
+		return insolar.StaticRoleUnknown, errors.Wrap(err, "failed to load configuration from file")
+	}
+
+	data, err := ioutil.ReadFile(filepath.Clean(cfg.Configuration.CertificatePath))
+	if err != nil {
+		return insolar.StaticRoleUnknown, errors.Wrapf(
+			err,
+			"failed to read certificate from: %s",
+			cfg.Configuration.CertificatePath,
+		)
+	}
+	cert := certificate.AuthorizationCertificate{}
+	err = json.Unmarshal(data, &cert)
+	if err != nil {
+		return insolar.StaticRoleUnknown, errors.Wrap(err, "failed to parse certificate json")
+	}
+	return cert.GetRole(), nil
 }
