@@ -17,14 +17,14 @@
 package privatekey
 
 import (
-	"crypto/x509"
 	"encoding/json"
-	"encoding/pem"
-	"github.com/insolar/insolar/platformpolicy/keys"
 	"io/ioutil"
 	"path/filepath"
 
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
 type keyLoader struct {
@@ -71,16 +71,7 @@ func readJSON(path string) ([]byte, error) {
 }
 
 func pemParse(key []byte) (keys.PrivateKey, error) {
-	block, _ := pem.Decode(key)
-	if block == nil {
-		return nil, errors.Errorf("[ Parse ] Problems with decoding. Key - %v", key)
-	}
+	kp := platformpolicy.NewKeyProcessor()
 
-	x509Encoded := block.Bytes
-	privateKey, err := x509.ParseECPrivateKey(x509Encoded)
-	if err != nil {
-		return nil, errors.Errorf("[ Parse ] Problems with parsing. Key - %v", key)
-	}
-
-	return privateKey, nil
+	return kp.ImportPrivateKeyPEM(key)
 }

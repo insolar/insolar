@@ -533,11 +533,9 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:5d8a2568841fccb76089cd3a1036370faad94f2cf33d524693e78e81ad6b58c3"
+  digest = "1:caef035da871d195e883f8d0258532cb8b9e5c87d089e326a6f98f02444564f1"
   name = "golang.org/x/crypto"
   packages = [
-    "cryptobyte",
-    "cryptobyte/asn1",
     "curve25519",
     "hkdf",
     "sha3",
@@ -679,8 +677,6 @@
     "go.opencensus.io/tag",
     "go.opencensus.io/trace",
     "go.opencensus.io/zpages",
-    "golang.org/x/crypto/cryptobyte",
-    "golang.org/x/crypto/cryptobyte/asn1",
     "golang.org/x/crypto/sha3",
     "golang.org/x/sync/errgroup",
     "golang.org/x/sync/singleflight",

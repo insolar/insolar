@@ -20,14 +20,15 @@ import (
 	"crypto/rand"
 	"encoding/pem"
 	"fmt"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/x509"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy/commoncrypto/sign"
 	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/ecdsa"
 	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/elliptic"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/x509"
 	"github.com/insolar/insolar/platformpolicy/keys"
-	"github.com/pkg/errors"
 )
 
 type keyProcessor struct {
