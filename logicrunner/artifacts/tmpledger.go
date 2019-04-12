@@ -128,7 +128,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	am := NewClient()
 	am.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
-	conf.PulseManager.HeavySyncEnabled = false
+	// conf.PulseManager.HeavySyncEnabled = false
 	pm := pulsemanager.NewPulseManager()
 	jc := testutils.NewJetCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)

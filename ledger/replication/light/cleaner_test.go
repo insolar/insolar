@@ -118,7 +118,7 @@ func TestCleaner_Clean(t *testing.T) {
 
 	cleaner := NewCleaner(jm, ja, nm, dc, bc, rc, ic, rp, ps)
 
-	cleaner.Clean(ctx, pn)
+	cleaner.NotifyAboutPulse(ctx, pn)
 
 	ctrl.Finish()
 }

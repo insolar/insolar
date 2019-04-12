@@ -42,6 +42,10 @@ type Modifier interface {
 	Delete(ctx context.Context, pulse insolar.PulseNumber)
 }
 
+type Calculator interface {
+	MineForPulse(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID
+}
+
 //go:generate minimock -i github.com/insolar/insolar/insolar/jet.Storage -o ./ -s _mock.go
 
 // Storage composes Accessor and Modifier interfaces.

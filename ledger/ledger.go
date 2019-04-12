@@ -55,6 +55,7 @@ func GetLedgerComponents(conf configuration.Ledger, msgBus insolar.MessageBus, c
 	jetStorage := jet.NewStore()
 	nodeStorage := node.NewStorage()
 	rsProvide := recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL)
+	jetCoordinator := jetcoordinator.NewJetCoordinator(conf.LightChainLimit)
 
 	var dropModifier drop.Modifier
 	var dropAccessor drop.Accessor
@@ -136,9 +137,9 @@ func GetLedgerComponents(conf configuration.Ledger, msgBus insolar.MessageBus, c
 	}
 
 	dataGatherer := light.NewDataGatherer(dropAccessor, blobCollectionAccessor, recSyncAccessor, collectionIndexAccessor)
-	lightCleaner := light.NewCleaner(jetStorage, nodeStorage, dropCleaner, blobCleaner, recordCleaner, indexCleaner, rsProvide, pulseShifter)
+	lightCleaner := light.NewCleaner(jetStorage, nodeStorage, dropCleaner, blobCleaner, recordCleaner, indexCleaner, rsProvide, pulseShifter, conf.LightChainLimit)
 
-	lSyncer := light.NewToHeavySyncer(jetStorage, dataGatherer, lightCleaner, msgBus, conf.LightToHeavySync)
+	lSyncer := light.NewToHeavySyncer(jet.NewCalculator(jetCoordinator, jetStorage), dataGatherer, lightCleaner, msgBus, conf.LightToHeavySync, pulseCalculator)
 
 	pm := pulsemanager.NewPulseManager(conf, dropCleaner, blobCleaner, blobCollectionAccessor, pulseShifter, recordCleaner, recSyncAccessor, collectionIndexAccessor, indexCleaner, lSyncer)
 
@@ -162,7 +163,7 @@ func GetLedgerComponents(conf configuration.Ledger, msgBus insolar.MessageBus, c
 		storage.NewReplicaStorage(),
 		rsProvide,
 		artifactmanager.NewHotDataWaiterConcrete(),
-		jetcoordinator.NewJetCoordinator(conf.LightChainLimit),
+		jetCoordinator,
 		heavyserver.NewSync(legacyDB, recordModifier),
 	}
 

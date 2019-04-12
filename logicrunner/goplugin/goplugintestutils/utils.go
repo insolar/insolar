@@ -436,7 +436,7 @@ func NewContractBuilder(am artifacts.Client, icc string) *ContractsBuilder {
 	return cb
 }
 
-// Clean deletes tmp directory used for contracts building
+// NotifyAboutPulse deletes tmp directory used for contracts building
 func (cb *ContractsBuilder) Clean() {
 	log.Debugf("Cleaning build directory %q", cb.root)
 	err := os.RemoveAll(cb.root) // nolint: errcheck

@@ -161,7 +161,7 @@ func initComponents(
 		nw,
 	)
 
-	components := ledger.GetLedgerComponents(cfg.Ledger, certManager.GetCertificate())
+	components := ledger.GetLedgerComponents(cfg.Ledger, messageBus, certManager.GetCertificate())
 
 	components = append(components, []interface{}{
 		messageBus,

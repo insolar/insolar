@@ -47,8 +47,8 @@ type PulseManager struct {
 type LightToHeavySync struct {
 	// Backoff holds a backoff configuration for failed sendings of payload from a light to a heavy
 	Backoff Backoff
-	// SyncLoopDuration holds a value of a light's sync process frequency
-	SyncLoopDuration time.Duration
+	// RetryLoopDuration holds a value of a light's sync process frequency
+	RetryLoopDuration time.Duration
 }
 
 // Backoff configures retry backoff algorithm
@@ -126,7 +126,7 @@ func NewLedger() Ledger {
 				Factor:      2,
 				MaxAttempts: 10,
 			},
-			SyncLoopDuration: 1 * time.Second,
+			RetryLoopDuration: 1 * time.Second,
 		},
 
 		RecentStorage: RecentStorage{

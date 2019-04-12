@@ -28,11 +28,12 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/utils/backoff"
 )
 
 type ToHeavySyncer interface {
-	SyncPulse(ctx context.Context, pn insolar.PulseNumber)
+	NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber)
 }
 
 type toHeavySyncer struct {
@@ -40,33 +41,36 @@ type toHeavySyncer struct {
 
 	checker *time.Ticker
 
-	waitingMux        sync.Mutex
-	syncWaitingPulses []insolar.PulseNumber
+	syncWaitingPulses chan insolar.PulseNumber
 
 	notSentPayloadsMux sync.Mutex
 	notSentPayloads    []notSentPayload
 
-	jetAccessor  jet.Accessor
-	dataGatherer DataGatherer
-	cleaner      Cleaner
-	msgBus       insolar.MessageBus
+	jetCalculator   jet.Calculator
+	dataGatherer    DataGatherer
+	cleaner         Cleaner
+	msgBus          insolar.MessageBus
+	pulseCalculator pulse.Calculator
 
 	conf configuration.LightToHeavySync
 }
 
 func NewToHeavySyncer(
-	jetAccessor jet.Accessor,
+	jetCalculator jet.Calculator,
 	dataGatherer DataGatherer,
 	cleaner Cleaner,
 	msgBus insolar.MessageBus,
 	conf configuration.LightToHeavySync,
+	calculator pulse.Calculator,
 ) ToHeavySyncer {
 	return &toHeavySyncer{
-		jetAccessor:  jetAccessor,
-		dataGatherer: dataGatherer,
-		cleaner:      cleaner,
-		msgBus:       msgBus,
-		conf:         conf,
+		jetCalculator:     jetCalculator,
+		dataGatherer:      dataGatherer,
+		cleaner:           cleaner,
+		msgBus:            msgBus,
+		pulseCalculator:   calculator,
+		conf:              conf,
+		syncWaitingPulses: make(chan insolar.PulseNumber),
 	}
 }
 
@@ -75,27 +79,6 @@ type notSentPayload struct {
 
 	lastAttempt time.Time
 	backoff     *backoff.Backoff
-}
-
-func (t *toHeavySyncer) addToWaitingPulses(pn insolar.PulseNumber) {
-	t.waitingMux.Lock()
-	defer t.waitingMux.Unlock()
-
-	t.syncWaitingPulses = append(t.syncWaitingPulses, pn)
-}
-
-func (t *toHeavySyncer) extractWaitingPulse() (insolar.PulseNumber, bool) {
-	t.waitingMux.Lock()
-	defer t.waitingMux.Unlock()
-
-	if len(t.syncWaitingPulses) == 0 {
-		return insolar.FirstPulseNumber, false
-	}
-
-	slot := t.syncWaitingPulses[0]
-	// it's a copy
-	t.syncWaitingPulses = append([]insolar.PulseNumber(nil), t.syncWaitingPulses[1:]...)
-	return slot, true
 }
 
 func (t *toHeavySyncer) addToNotSentPayloads(payload *message.HeavyPayload) {
@@ -150,17 +133,22 @@ func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
 	}
 }
 
-func (t *toHeavySyncer) SyncPulse(ctx context.Context, pn insolar.PulseNumber) {
-	t.addToWaitingPulses(pn)
+func (t *toHeavySyncer) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
 	t.lazyInit(ctx)
+	prevPN, err := t.pulseCalculator.Backwards(ctx, pn, 1)
+	if err != nil {
+		inslogger.FromContext(ctx).Error("[NotifyAboutPulse]", err)
+		return
+	}
+	t.syncWaitingPulses <- prevPN.PulseNumber
 }
 
 func (t *toHeavySyncer) lazyInit(ctx context.Context) {
 	t.once.Do(func() {
-		t.checker = time.NewTicker(t.conf.SyncLoopDuration)
+		go t.sync(ctx)
+		t.checker = time.NewTicker(t.conf.RetryLoopDuration)
 		go func() {
 			for range t.checker.C {
-				go t.sync(ctx)
 				go t.retrySync(ctx)
 			}
 		}()
@@ -169,27 +157,23 @@ func (t *toHeavySyncer) lazyInit(ctx context.Context) {
 
 func (t *toHeavySyncer) sync(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
-	pn, ok := t.extractWaitingPulse()
-	if !ok {
-		logger.Infof("Sync queue is empty")
-		return
-	}
-
-	jets := t.jetAccessor.All(ctx, pn)
-	for _, jID := range jets {
-		msg, err := t.dataGatherer.ForPulseAndJet(ctx, pn, jID)
-		if err != nil {
-			panic(fmt.Sprintf("Problems with gather data for a pulse - %v and jet - %v", pn, jID.DebugString()))
+	for pn := range t.syncWaitingPulses {
+		jets := t.jetCalculator.MineForPulse(ctx, pn)
+		for _, jID := range jets {
+			msg, err := t.dataGatherer.ForPulseAndJet(ctx, pn, jID)
+			if err != nil {
+				panic(fmt.Sprintf("Problems with gather data for a pulse - %v and jet - %v. err - %v", pn, jID.DebugString(), err))
+			}
+			err = t.sendToHeavy(ctx, msg)
+			if err != nil {
+				logger.Errorf("Problems with sending msg to a heavy node", err)
+				t.addToNotSentPayloads(msg)
+				continue
+			}
 		}
-		err = t.sendToHeavy(ctx, msg)
-		if err != nil {
-			logger.Errorf("Problems with sending msg to a heavy node", err)
-			t.addToNotSentPayloads(msg)
-			continue
-		}
-	}
 
-	t.cleaner.Clean(ctx, pn)
+		t.cleaner.NotifyAboutPulse(ctx, pn)
+	}
 }
 
 func (t *toHeavySyncer) retrySync(ctx context.Context) {

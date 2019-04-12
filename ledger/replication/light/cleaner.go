@@ -18,6 +18,7 @@ package light
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -31,10 +32,15 @@ import (
 )
 
 type Cleaner interface {
-	Clean(ctx context.Context, pn insolar.PulseNumber)
+	NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber)
 }
 
 type cleaner struct {
+	pulsesMux sync.Mutex
+	pulses    []insolar.PulseNumber
+
+	lightChainLimint int
+
 	jetStorage     jet.Storage
 	nodeModifier   node.Modifier
 	dropCleaner    drop.Cleaner
@@ -54,20 +60,35 @@ func NewCleaner(
 	indexCleaner object.IndexCleaner,
 	recentProvider recentstorage.Provider,
 	pulseShifter pulse.Shifter,
+	lightChainLimint int,
 ) Cleaner {
 	return &cleaner{
-		jetStorage:     jetStorage,
-		nodeModifier:   nodeModifier,
-		dropCleaner:    dropCleaner,
-		blobCleaner:    blobCleaner,
-		recCleaner:     recCleaner,
-		indexCleaner:   indexCleaner,
-		recentProvider: recentProvider,
-		pulseShifter:   pulseShifter,
+		jetStorage:       jetStorage,
+		nodeModifier:     nodeModifier,
+		dropCleaner:      dropCleaner,
+		blobCleaner:      blobCleaner,
+		recCleaner:       recCleaner,
+		indexCleaner:     indexCleaner,
+		recentProvider:   recentProvider,
+		pulseShifter:     pulseShifter,
+		lightChainLimint: lightChainLimint,
 	}
 }
 
-func (c *cleaner) Clean(ctx context.Context, pn insolar.PulseNumber) {
+func (c *cleaner) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
+	c.pulsesMux.Lock()
+	defer c.pulsesMux.Unlock()
+
+	c.pulses = append(c.pulses, pn)
+
+	for len(c.pulses) > c.lightChainLimint && len(c.pulses) > 0 {
+		pnForClean := c.pulses[0]
+		c.pulses = c.pulses[1:]
+		c.cleanPulse(ctx, pnForClean)
+	}
+}
+
+func (c cleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 	c.nodeModifier.Delete(pn)
 	c.dropCleaner.Delete(pn)
 	c.blobCleaner.Delete(ctx, pn)

@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"math/rand"
 	"sync"
-	"time"
 
 	"github.com/insolar/insolar/ledger/replication/light"
 	"github.com/insolar/insolar/ledger/storage/blob"
@@ -463,7 +462,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 	)
 	defer span.End()
 
-	jets, jetIndexesRemoved, oldPulse, prevPN, err := m.setUnderGilSection(ctx, newPulse, persist)
+	jets, _, oldPulse, prevPN, err := m.setUnderGilSection(ctx, newPulse, persist)
 	if err != nil {
 		return err
 	}
@@ -481,7 +480,8 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 		}
 		m.postProcessJets(ctx, newPulse, jets)
 		// m.addSync(ctx, jets, oldPulse.PulseNumber)
-		go m.cleanLightData(ctx, newPulse, jetIndexesRemoved)
+		// go m.cleanLightData(ctx, newPulse, jetIndexesRemoved)
+		go m.ToHeavySyncer.NotifyAboutPulse(ctx, newPulse.PulseNumber)
 	}
 
 	err = m.Bus.OnPulse(ctx, newPulse)
@@ -629,55 +629,54 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse insolar.Pul
 	}
 }
 
-func (m *PulseManager) cleanLightData(ctx context.Context, newPulse insolar.Pulse, jetIndexesRemoved map[insolar.ID][]insolar.ID) {
-	startSync := time.Now()
-	inslog := inslogger.FromContext(ctx)
-	ctx, span := instracer.StartSpan(ctx, "pulse.clean")
-	defer func() {
-		latency := time.Since(startSync)
-		stats.Record(ctx, statCleanLatencyTotal.M(latency.Nanoseconds()/1e6))
-		span.End()
-		inslog.Infof("cleanLightData all time spend=%v", latency)
-	}()
-
-	delta := m.options.storeLightPulses
-
-	p, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, delta)
-	if err != nil {
-		inslogger.FromContext(ctx).Errorf("Can't get %dth previous pulse: %s", delta, err)
-		return
-	}
-	m.ToHeavySyncer.SyncPulse(ctx, p.PulseNumber)
-	// err = m.syncClientsPool.LightCleanup(ctx, pn, m.RecentStorageProvider, jetIndexesRemoved)
-	// if err != nil {
-	// 	inslogger.FromContext(ctx).Errorf(
-	// 		"Error on light cleanup, until pulse = %v, singlefligt err = %v", pn, err)
-	// }
-	//
-	// p, err = m.PulseCalculator.Backwards(ctx, pn, delta)
-	// if err != nil {
-	// 	inslogger.FromContext(ctx).Errorf("Can't get previous pulse: %s", err)
-	// 	return
-	// }
-	// m.JetModifier.Delete(ctx, p.PulseNumber)
-	// m.NodeSetter.Delete(p.PulseNumber)
-	// m.DropCleaner.Delete(p.PulseNumber)
-	// m.BlobCleaner.Delete(ctx, p.PulseNumber)
-	// m.RecCleaner.Remove(ctx, p.PulseNumber)
-	//
-	// idxs := map[insolar.ID]struct{}{}
-	// for _, idxIDs := range jetIndexesRemoved {
-	// 	for _, idxID := range idxIDs {
-	// 		idxs[idxID] = struct{}{}
-	// 	}
-	// }
-	// // m.IndexCleaner.RemoveWithIDs(ctx, idxs)
-	//
-	// err = m.PulseShifter.Shift(ctx, p.PulseNumber)
-	// if err != nil {
-	// 	inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
-	// }
-}
+// func (m *PulseManager) cleanLightData(ctx context.Context, newPulse insolar.Pulse, jetIndexesRemoved map[insolar.ID][]insolar.ID) {
+// 	startSync := time.Now()
+// 	inslog := inslogger.FromContext(ctx)
+// 	ctx, span := instracer.StartSpan(ctx, "pulse.clean")
+// 	defer func() {
+// 		latency := time.Since(startSync)
+// 		stats.Record(ctx, statCleanLatencyTotal.M(latency.Nanoseconds()/1e6))
+// 		span.End()
+// 		inslog.Infof("cleanLightData all time spend=%v", latency)
+// 	}()
+//
+// 	// delta := m.options.storeLightPulses
+// 	//
+// 	// p, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, delta)
+// 	// if err != nil {
+// 	// 	inslogger.FromContext(ctx).Errorf("Can't get %dth previous pulse: %s", delta, err)
+// 	// 	return
+// 	}
+// 	// err = m.syncClientsPool.LightCleanup(ctx, pn, m.RecentStorageProvider, jetIndexesRemoved)
+// 	// if err != nil {
+// 	// 	inslogger.FromContext(ctx).Errorf(
+// 	// 		"Error on light cleanup, until pulse = %v, singlefligt err = %v", pn, err)
+// 	// }
+// 	//
+// 	// p, err = m.PulseCalculator.Backwards(ctx, pn, delta)
+// 	// if err != nil {
+// 	// 	inslogger.FromContext(ctx).Errorf("Can't get previous pulse: %s", err)
+// 	// 	return
+// 	// }
+// 	// m.JetModifier.Delete(ctx, p.PulseNumber)
+// 	// m.NodeSetter.Delete(p.PulseNumber)
+// 	// m.DropCleaner.Delete(p.PulseNumber)
+// 	// m.BlobCleaner.Delete(ctx, p.PulseNumber)
+// 	// m.RecCleaner.Remove(ctx, p.PulseNumber)
+// 	//
+// 	// idxs := map[insolar.ID]struct{}{}
+// 	// for _, idxIDs := range jetIndexesRemoved {
+// 	// 	for _, idxID := range idxIDs {
+// 	// 		idxs[idxID] = struct{}{}
+// 	// 	}
+// 	// }
+// 	// // m.IndexCleaner.RemoveWithIDs(ctx, idxs)
+// 	//
+// 	// err = m.PulseShifter.Shift(ctx, p.PulseNumber)
+// 	// if err != nil {
+// 	// 	inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
+// 	// }
+// }
 
 func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse insolar.Pulse, jets []jetInfo) {
 	ctx, span := instracer.StartSpan(ctx, "early.close")
