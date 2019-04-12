@@ -84,12 +84,14 @@ func TestToHeavySyncer_addToNotSentPayloads_BackoffConstructedProperly(t *testin
 	var payload message.HeavyPayload
 	fuzz.New().NilChance(0).Fuzz(&payload)
 	syncer := toHeavySyncer{
-		bconf: configuration.Backoff{
-			MaxAttempts: 10,
-			Max:         10,
-			Factor:      1,
-			Jitter:      false,
-			Min:         0,
+		conf: configuration.LightToHeavySync{
+			Backoff: configuration.Backoff{
+				MaxAttempts: 10,
+				Max:         10,
+				Factor:      1,
+				Jitter:      false,
+				Min:         0,
+			},
 		},
 	}
 	syncer.addToNotSentPayloads(&payload)
@@ -108,9 +110,11 @@ func TestToHeavySyncer_extractNotSentPayload(t *testing.T) {
 	fuzzer.Fuzz(&tPayload)
 
 	syncer := toHeavySyncer{
-		bconf: configuration.Backoff{
-			Max: 2,
-			Min: 1,
+		conf: configuration.LightToHeavySync{
+			Backoff: configuration.Backoff{
+				Max: 2,
+				Min: 1,
+			},
 		},
 	}
 
@@ -139,9 +143,11 @@ func TestToHeavySyncer_extractNotSentPayload_LongTimeout(t *testing.T) {
 	fuzzer.Fuzz(&fPayload)
 
 	syncer := toHeavySyncer{
-		bconf: configuration.Backoff{
-			Max: 0, // because of the Backoff realisation
-			Min: 0,
+		conf: configuration.LightToHeavySync{
+			Backoff: configuration.Backoff{
+				Max: 0, // because of the Backoff realisation
+				Min: 0,
+			},
 		},
 	}
 
@@ -159,10 +165,12 @@ func TestToHeavySyncer_reAddToNotSentPayloads(t *testing.T) {
 	fuzz.New().NilChance(0).Fuzz(&fPayload)
 
 	syncer := toHeavySyncer{
-		bconf: configuration.Backoff{
-			Max:         2,
-			Min:         1,
-			MaxAttempts: 3,
+		conf: configuration.LightToHeavySync{
+			Backoff: configuration.Backoff{
+				Max:         2,
+				Min:         1,
+				MaxAttempts: 3,
+			},
 		},
 	}
 

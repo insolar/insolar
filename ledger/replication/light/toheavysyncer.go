@@ -51,7 +51,7 @@ type toHeavySyncer struct {
 	cleaner      Cleaner
 	msgBus       insolar.MessageBus
 
-	bconf configuration.Backoff
+	conf configuration.LightToHeavySync
 }
 
 func NewToHeavySyncer(
@@ -59,14 +59,14 @@ func NewToHeavySyncer(
 	dataGatherer DataGatherer,
 	cleaner Cleaner,
 	msgBus insolar.MessageBus,
-	bconf configuration.Backoff,
+	conf configuration.LightToHeavySync,
 ) ToHeavySyncer {
 	return &toHeavySyncer{
 		jetAccessor:  jetAccessor,
 		dataGatherer: dataGatherer,
 		cleaner:      cleaner,
 		msgBus:       msgBus,
-		bconf:        bconf,
+		conf:         conf,
 	}
 }
 
@@ -105,7 +105,7 @@ func (t *toHeavySyncer) addToNotSentPayloads(payload *message.HeavyPayload) {
 	t.notSentPayloads = append(t.notSentPayloads,
 		notSentPayload{
 			msg:         payload,
-			backoff:     backoffFromConfig(t.bconf),
+			backoff:     backoffFromConfig(t.conf.Backoff),
 			lastAttempt: time.Now(),
 		},
 	)
@@ -115,7 +115,7 @@ func (t *toHeavySyncer) reAddToNotSentPayloads(ctx context.Context, payload notS
 	t.notSentPayloadsMux.Lock()
 	defer t.notSentPayloadsMux.Unlock()
 
-	if payload.backoff.Attempt() > t.bconf.MaxAttempts {
+	if payload.backoff.Attempt() > t.conf.Backoff.MaxAttempts {
 		inslogger.FromContext(ctx).Errorf("Failed to sync pulse - %v with jetID - %v. Attempts - %v", payload.msg.PulseNum, payload.msg.JetID, payload.backoff.Attempt()-1)
 		return
 	}

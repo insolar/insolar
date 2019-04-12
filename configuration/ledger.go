@@ -43,6 +43,11 @@ type PulseManager struct {
 	SplitThreshold uint64
 }
 
+type LightToHeavySync struct {
+	Backoff     Backoff
+	SyncLoopDur time.Duration
+}
+
 // Backoff configures retry backoff algorithm
 type Backoff struct {
 	Factor float64
