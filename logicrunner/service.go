@@ -123,6 +123,8 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (e
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
+	// TODO: delegation token
+
 	bm := MakeBaseMessage(req.UpBaseReq, es)
 	res, err := gpr.lr.ContractRequester.CallMethod(ctx,
 		&bm,
