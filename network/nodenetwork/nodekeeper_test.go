@@ -53,13 +53,16 @@ package nodenetwork
 import (
 	"context"
 	"crypto"
+	"errors"
 	"math/rand"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -79,20 +82,29 @@ func TestNewNodeNetwork(t *testing.T) {
 	assert.NoError(t, err)
 }
 
-func newNodeKeeper(t *testing.T) network.NodeKeeper {
+func newNodeKeeper(t *testing.T, service insolar.CryptographyService) network.NodeKeeper {
 	cfg := configuration.Transport{Address: "127.0.0.1:3355"}
 	certMock := &testutils.CertificateMock{}
+	keyProcessor := platformpolicy.NewKeyProcessor()
+	secret, err := keyProcessor.GeneratePrivateKey()
+	require.NoError(t, err)
+	pk := keyProcessor.ExtractPublicKey(secret)
+	if service == nil {
+		service = cryptography.NewKeyBoundCryptographyService(secret)
+	}
+	require.NoError(t, err)
 	certMock.GetRoleFunc = func() insolar.StaticRole { return insolar.StaticRoleUnknown }
-	certMock.GetPublicKeyFunc = func() crypto.PublicKey { return nil }
+	certMock.GetPublicKeyFunc = func() crypto.PublicKey { return pk }
 	certMock.GetNodeRefFunc = func() *insolar.Reference { return &insolar.Reference{137} }
 	certMock.GetDiscoveryNodesFunc = func() []insolar.DiscoveryNode { return nil }
 	nw, err := NewNodeNetwork(cfg, certMock)
 	require.NoError(t, err)
+	nw.(*nodekeeper).Cryptography = service
 	return nw.(network.NodeKeeper)
 }
 
 func TestNewNodeKeeper(t *testing.T) {
-	nk := newNodeKeeper(t)
+	nk := newNodeKeeper(t, nil)
 	assert.NotNil(t, nk.GetOrigin())
 	assert.NotNil(t, nk.GetConsensusInfo())
 	assert.NotNil(t, nk.GetClaimQueue())
@@ -101,7 +113,7 @@ func TestNewNodeKeeper(t *testing.T) {
 }
 
 func TestNodekeeper_IsBootstrapped(t *testing.T) {
-	nk := newNodeKeeper(t)
+	nk := newNodeKeeper(t, nil)
 	assert.False(t, nk.IsBootstrapped())
 	nk.SetIsBootstrapped(true)
 	assert.True(t, nk.IsBootstrapped())
@@ -110,7 +122,7 @@ func TestNodekeeper_IsBootstrapped(t *testing.T) {
 }
 
 func TestNodekeeper_GetCloudHash(t *testing.T) {
-	nk := newNodeKeeper(t)
+	nk := newNodeKeeper(t, nil)
 	assert.Nil(t, nk.GetCloudHash())
 	cloudHash := make([]byte, 64)
 	rand.Read(cloudHash)
@@ -119,7 +131,7 @@ func TestNodekeeper_GetCloudHash(t *testing.T) {
 }
 
 func TestNodekeeper_GetWorkingNodes(t *testing.T) {
-	nk := newNodeKeeper(t)
+	nk := newNodeKeeper(t, nil)
 	assert.Empty(t, nk.GetAccessor().GetActiveNodes())
 	assert.Empty(t, nk.GetWorkingNodes())
 	origin, node1, node2, node3, node4 :=
@@ -167,7 +179,7 @@ func TestNodekeeper_GetWorkingNodes(t *testing.T) {
 }
 
 func TestNodekeeper_GracefulStop(t *testing.T) {
-	nk := newNodeKeeper(t)
+	nk := newNodeKeeper(t, nil)
 	nodeLeaveTriggered := false
 	handler := testutils.NewTerminationHandlerMock(t)
 	handler.OnLeaveApprovedFunc = func(context.Context) {
@@ -188,4 +200,21 @@ func TestNodekeeper_GracefulStop(t *testing.T) {
 	assert.NoError(t, err)
 
 	assert.True(t, nodeLeaveTriggered)
+}
+
+func TestNodekeeper_GetOriginJoinClaim(t *testing.T) {
+	nk := newNodeKeeper(t, nil)
+	claim, err := nk.GetOriginJoinClaim()
+	assert.NoError(t, err)
+	assert.Equal(t, claim.NodeRef, nk.GetOrigin().ID())
+	assert.Equal(t, claim.ShortNodeID, nk.GetOrigin().ShortID())
+	assert.Equal(t, claim.NodeAddress.Get(), nk.GetOrigin().Address())
+}
+
+func TestNodekeeper_GetOriginJoinClaimError(t *testing.T) {
+	service := testutils.NewCryptographyServiceMock(t)
+	service.SignFunc = func(p []byte) (*insolar.Signature, error) { return nil, errors.New("sign error") }
+	nk := newNodeKeeper(t, service)
+	_, err := nk.GetOriginJoinClaim()
+	assert.Error(t, err)
 }
