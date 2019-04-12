@@ -26,8 +26,8 @@ func Logger(
 	}
 
 	ctx = inslogger.SetLogger(ctx, inslog)
-	ctx, inslog = inslogger.WithTraceField(ctx, traceID)
-	ctx, inslog = inslogger.WithField(ctx, "nodeid", nodeRef)
+	ctx, _ = inslogger.WithTraceField(ctx, traceID)
+	ctx, _ = inslogger.WithField(ctx, "nodeid", nodeRef)
 	ctx, inslog = inslogger.WithField(ctx, "role", nodeRole)
 	ctx = inslogger.SetLogger(ctx, inslog)
 	log.SetGlobalLogger(inslog)
