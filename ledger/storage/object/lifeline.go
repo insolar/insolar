@@ -19,6 +19,7 @@ package object
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -216,6 +217,7 @@ func (m *IndexMemory) RemoveUntil(ctx context.Context, pn insolar.PulseNumber, e
 		}
 		if id.Pulse() <= pn {
 			delete(m.memory, id)
+			println(fmt.Sprintf("удаляю индекс ид - %v, pn - %v, jetID - %v", id.DebugString(), pn, idx.JetID.DebugString()))
 			m.jetIndex.Delete(id, idx.JetID)
 		}
 	}

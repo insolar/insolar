@@ -134,18 +134,24 @@ func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
 }
 
 func (t *toHeavySyncer) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("[NotifyAboutPulse] pn - %v", pn)
+
 	t.lazyInit(ctx)
 	prevPN, err := t.pulseCalculator.Backwards(ctx, pn, 1)
 	if err != nil {
-		inslogger.FromContext(ctx).Error("[NotifyAboutPulse]", err)
+		logger.Error("[NotifyAboutPulse]", err)
 		return
 	}
+
+	logger.Debugf("[NotifyAboutPulse] prevPn - %v", prevPN.PulseNumber)
 	t.syncWaitingPulses <- prevPN.PulseNumber
 }
 
 func (t *toHeavySyncer) lazyInit(ctx context.Context) {
 	t.once.Do(func() {
 		go t.sync(ctx)
+		inslogger.FromContext(ctx).Debugf("[lazyInit] start rechecker with duration - %v", t.conf.RetryLoopDuration)
 		t.checker = time.NewTicker(t.conf.RetryLoopDuration)
 		go func() {
 			for range t.checker.C {
@@ -158,18 +164,22 @@ func (t *toHeavySyncer) lazyInit(ctx context.Context) {
 func (t *toHeavySyncer) sync(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 	for pn := range t.syncWaitingPulses {
+		logger.Debugf("[sync] pn received - %v", pn)
+
 		jets := t.jetCalculator.MineForPulse(ctx, pn)
+		logger.Debugf("[sync] founds %v jets", len(jets))
 		for _, jID := range jets {
 			msg, err := t.dataGatherer.ForPulseAndJet(ctx, pn, jID)
 			if err != nil {
-				panic(fmt.Sprintf("Problems with gather data for a pulse - %v and jet - %v. err - %v", pn, jID.DebugString(), err))
+				panic(fmt.Sprintf("[sync] Problems with gather data for a pulse - %v and jet - %v. err - %v", pn, jID.DebugString(), err))
 			}
 			err = t.sendToHeavy(ctx, msg)
 			if err != nil {
-				logger.Errorf("Problems with sending msg to a heavy node", err)
+				logger.Errorf("[sync] Problems with sending msg to a heavy node", err)
 				t.addToNotSentPayloads(msg)
 				continue
 			}
+			logger.Debugf("[sync] data has been sent to a heavy. pn - %v, jetID - %v", msg.PulseNum, msg.JetID.DebugString())
 		}
 
 		t.cleaner.NotifyAboutPulse(ctx, pn)

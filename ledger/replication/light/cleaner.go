@@ -18,7 +18,7 @@ package light
 
 import (
 	"context"
-	"sync"
+	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -36,11 +36,6 @@ type Cleaner interface {
 }
 
 type cleaner struct {
-	pulsesMux sync.Mutex
-	pulses    []insolar.PulseNumber
-
-	lightChainLimint int
-
 	jetStorage     jet.Storage
 	nodeModifier   node.Modifier
 	dropCleaner    drop.Cleaner
@@ -49,6 +44,10 @@ type cleaner struct {
 	indexCleaner   object.IndexCleaner
 	recentProvider recentstorage.Provider
 	pulseShifter   pulse.Shifter
+
+	pulseCalculator pulse.Calculator
+
+	lightChainLimit int
 }
 
 func NewCleaner(
@@ -60,35 +59,42 @@ func NewCleaner(
 	indexCleaner object.IndexCleaner,
 	recentProvider recentstorage.Provider,
 	pulseShifter pulse.Shifter,
+	jetCalculator jet.Calculator,
+	pulseCalculator pulse.Calculator,
 	lightChainLimint int,
 ) Cleaner {
 	return &cleaner{
-		jetStorage:       jetStorage,
-		nodeModifier:     nodeModifier,
-		dropCleaner:      dropCleaner,
-		blobCleaner:      blobCleaner,
-		recCleaner:       recCleaner,
-		indexCleaner:     indexCleaner,
-		recentProvider:   recentProvider,
-		pulseShifter:     pulseShifter,
-		lightChainLimint: lightChainLimint,
+		jetStorage:      jetStorage,
+		nodeModifier:    nodeModifier,
+		dropCleaner:     dropCleaner,
+		blobCleaner:     blobCleaner,
+		recCleaner:      recCleaner,
+		indexCleaner:    indexCleaner,
+		recentProvider:  recentProvider,
+		pulseShifter:    pulseShifter,
+		pulseCalculator: pulseCalculator,
+		lightChainLimit: lightChainLimint,
 	}
 }
 
 func (c *cleaner) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
-	c.pulsesMux.Lock()
-	defer c.pulsesMux.Unlock()
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("[NotifyAboutPulse] pn - %v", pn)
 
-	c.pulses = append(c.pulses, pn)
-
-	for len(c.pulses) > c.lightChainLimint && len(c.pulses) > 0 {
-		pnForClean := c.pulses[0]
-		c.pulses = c.pulses[1:]
-		c.cleanPulse(ctx, pnForClean)
+	expiredPn, err := c.pulseCalculator.Backwards(ctx, pn, c.lightChainLimit)
+	if err == pulse.ErrNotFound {
+		logger.Errorf("[NotifyAboutPulse] expiredPn for pn - %v doesn't eist", pn)
+		return
 	}
+	if err != nil {
+		panic(err)
+	}
+
+	c.cleanPulse(ctx, expiredPn.PulseNumber)
 }
 
 func (c cleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
+	inslogger.FromContext(ctx).Debugf("[cleanPulse] start cleaning. pn - %v", pn)
 	c.nodeModifier.Delete(pn)
 	c.dropCleaner.Delete(pn)
 	c.blobCleaner.Delete(ctx, pn)
@@ -97,25 +103,28 @@ func (c cleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 	c.jetStorage.Delete(ctx, pn)
 
 	excIdx := c.getExcludedIndexes(ctx, pn)
+	println(fmt.Sprintf("удаляю индекс ид. исключили - %v", len(excIdx)))
 	c.indexCleaner.RemoveUntil(ctx, pn, excIdx)
 
 	err := c.pulseShifter.Shift(ctx, pn)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
 	}
+	inslogger.FromContext(ctx).Debugf("[cleanPulse] end cleaning. pn - %v", pn)
 }
 
 func (c *cleaner) getExcludedIndexes(ctx context.Context, pn insolar.PulseNumber) map[insolar.ID]struct{} {
 	jets := c.jetStorage.All(ctx, pn)
+	println(fmt.Sprintf("удаляю индекс ид. жеты - %v, pn - %v", len(jets), pn))
 	res := make(map[insolar.ID]struct{})
 	for _, j := range jets {
+		println(fmt.Sprintf("удаляю индекс ид. был жет - %v", j.DebugString()))
 		storage := c.recentProvider.GetIndexStorage(ctx, insolar.ID(j))
 		ids := storage.GetObjects()
 		for id, ttl := range ids {
-			if id.Pulse() > pn {
-				continue
-			}
+			println(fmt.Sprintf("удаляю индекс ид. был id - %v, ttl - %v", id.DebugString(), ttl))
 			if ttl > 0 {
+				println(fmt.Sprintf("удаляю индекс ид. был id - %v, внес в список", id.DebugString()))
 				res[id] = struct{}{}
 			}
 		}

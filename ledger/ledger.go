@@ -137,7 +137,7 @@ func GetLedgerComponents(conf configuration.Ledger, msgBus insolar.MessageBus, c
 	}
 
 	dataGatherer := light.NewDataGatherer(dropAccessor, blobCollectionAccessor, recSyncAccessor, collectionIndexAccessor)
-	lightCleaner := light.NewCleaner(jetStorage, nodeStorage, dropCleaner, blobCleaner, recordCleaner, indexCleaner, rsProvide, pulseShifter, conf.LightChainLimit)
+	lightCleaner := light.NewCleaner(jetStorage, nodeStorage, dropCleaner, blobCleaner, recordCleaner, indexCleaner, rsProvide, pulseShifter, jet.NewCalculator(jetCoordinator, jetStorage), pulseCalculator, conf.LightChainLimit)
 
 	lSyncer := light.NewToHeavySyncer(jet.NewCalculator(jetCoordinator, jetStorage), dataGatherer, lightCleaner, msgBus, conf.LightToHeavySync, pulseCalculator)
 
