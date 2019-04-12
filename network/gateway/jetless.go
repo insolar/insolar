@@ -71,7 +71,3 @@ func (g *Jetless) Run(ctx context.Context) {
 func (g *Jetless) GetState() insolar.NetworkState {
 	panic("implement me")
 }
-
-func (g *Jetless) OnPulse(context.Context, insolar.Pulse) error {
-	panic("implement me")
-}

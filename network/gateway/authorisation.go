@@ -71,7 +71,3 @@ func (g *Authorisation) Run(ctx context.Context) {
 func (g *Authorisation) GetState() insolar.NetworkState {
 	panic("implement me")
 }
-
-func (g *Authorisation) OnPulse(context.Context, insolar.Pulse) error {
-	panic("implement me")
-}

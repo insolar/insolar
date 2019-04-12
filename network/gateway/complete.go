@@ -71,13 +71,13 @@ type Complete struct {
 func (g *Complete) Run(ctx context.Context) {
 	g.GIL.Release(ctx)
 	metrics.NetworkComplete.Set(float64(time.Now().Unix()))
-	inslogger.FromContext(ctx).Infof("Current NetworkSwitcher state switched to: CompleteNetworkState")
 }
 
 func (g *Complete) GetState() insolar.NetworkState {
 	return insolar.CompleteNetworkState
 }
 
-func (g *Complete) OnPulse(context.Context, insolar.Pulse) error {
-	panic("implement me")
+func (g *Complete) OnPulse(ctx context.Context, pu insolar.Pulse) error {
+	inslogger.FromContext(ctx).Debugf("Gateway.Complete: pulse happens %d", pu.PulseNumber)
+	return nil
 }

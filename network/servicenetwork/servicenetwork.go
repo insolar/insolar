@@ -193,7 +193,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
 
-	n.gateway = gateway.NewNoNetwork(n, n.GIL)
+	n.gateway = gateway.NewNoNetwork(n, n.GIL, n.NodeKeeper)
 	n.gateway.Run(ctx)
 
 	return nil
@@ -297,6 +297,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 		logger.Error(errors.Wrap(err, "Failed to call OnPulse on Gateway"))
 	}
 
+	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
 	err := n.PulseManager.Set(ctx, newPulse, n.Gateway().GetState() == insolar.CompleteNetworkState)
 	if err != nil {
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())

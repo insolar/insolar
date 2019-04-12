@@ -450,6 +450,8 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	mblocker := testutils.NewMessageBusLockerMock(s.T())
 	GIL := testutils.NewGlobalInsolarLockMock(s.T())
+	GIL.AcquireMock.Return()
+	GIL.ReleaseMock.Return()
 	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
 

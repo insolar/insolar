@@ -50,6 +50,10 @@
 package gateway
 
 import (
+	"context"
+
+	"github.com/insolar/insolar/log" // TODO remove before merge
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 )
@@ -57,12 +61,14 @@ import (
 // Base is abstract class for gateways
 
 type Base struct {
-	Network network.Gatewayer
-	GIL     insolar.GlobalInsolarLock
+	Network            network.Gatewayer
+	GIL                insolar.GlobalInsolarLock
+	SwitcherWorkAround insolar.SwitcherWorkAround // nodekeeper
 }
 
 // NewGateway creates new gateway on top of existing
 func (b *Base) NewGateway(state insolar.NetworkState) network.Gateway {
+	log.Warnf("NewGateway %s", state.String())
 	switch state {
 	case insolar.NoNetworkState:
 		panic("Do not reinit network with alive gateway")
@@ -76,4 +82,12 @@ func (b *Base) NewGateway(state insolar.NetworkState) network.Gateway {
 		return NewComple(b)
 	}
 	panic("Try to switch network to unknown state. Memory of process is inconsistent.")
+}
+
+func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {
+	if g.SwitcherWorkAround.IsBootstrapped() {
+		g.Network.SetGateway(g.Network.Gateway().NewGateway(insolar.CompleteNetworkState))
+		g.Network.Gateway().Run(ctx)
+	}
+	return nil
 }

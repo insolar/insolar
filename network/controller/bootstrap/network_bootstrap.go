@@ -102,8 +102,6 @@ func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.Bootstra
 		return nil, errors.Wrap(err, "failed to bootstrap")
 	}
 	nb.NodeKeeper.SetIsBootstrapped(true)
-	nb.Gatewayer.SetGateway(nb.Gatewayer.Gateway().NewGateway(insolar.CompleteNetworkState))
-	nb.Gatewayer.Gateway().Run(ctx)
 	return result, nil
 }
 

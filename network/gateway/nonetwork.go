@@ -60,8 +60,8 @@ import (
 )
 
 // NewNoNetwork this initial constructor have special signature to be called outside
-func NewNoNetwork(n network.Gatewayer, gil insolar.GlobalInsolarLock) *NoNetwork {
-	return &NoNetwork{&Base{Network: n, GIL: gil}}
+func NewNoNetwork(n network.Gatewayer, gil insolar.GlobalInsolarLock, swa insolar.SwitcherWorkAround) *NoNetwork {
+	return &NoNetwork{&Base{Network: n, GIL: gil, SwitcherWorkAround: swa}}
 }
 
 // NoNetwork initial state
@@ -76,6 +76,6 @@ func (g *NoNetwork) GetState() insolar.NetworkState {
 	return insolar.NoNetworkState
 }
 
-func (g *NoNetwork) OnPulse(context.Context, insolar.Pulse) error {
-	panic("oops")
+func (g *NoNetwork) OnPulse(ctx context.Context, pu insolar.Pulse) error {
+	return g.Base.OnPulse(ctx, pu)
 }

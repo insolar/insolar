@@ -73,6 +73,6 @@ func (g *Void) GetState() insolar.NetworkState {
 	return insolar.VoidNetworkState
 }
 
-func (g *Void) OnPulse(context.Context, insolar.Pulse) error {
-	panic("implement me")
+func (g *Void) OnPulse(ctx context.Context, pu insolar.Pulse) error {
+	return g.Base.OnPulse(ctx, pu)
 }
