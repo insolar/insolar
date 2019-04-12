@@ -30,12 +30,16 @@ type Handle func(context.Context, Flow) error
 // MakeHandle is a function that constructs new Handle.
 type MakeHandle func(bus.Message) Handle
 
+//go:generate minimock -i github.com/insolar/insolar/insolar/flow.Procedure -o . -s _mock.go
+
 // Procedure is a task that can execute itself.
 // It's a good idea to keep Procedures in a separate package to hide internal state from Handle.
 type Procedure interface {
 	// Proceed is called when Procedure is given control. When it returns, control will be given back to Handle.
 	Proceed(context.Context) error
 }
+
+//go:generate minimock -i github.com/insolar/insolar/insolar/flow.Flow -o . -s _mock.go
 
 // Flow will be pasted to all Handles to control execution.
 // This is very important not to blow this interface. Keep it minimal.

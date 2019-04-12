@@ -53,10 +53,11 @@ package storage
 import (
 	"context"
 
+	"sync"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/node"
 	"github.com/pkg/errors"
-	"sync"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/network/storage.SnapshotAccessor -o ../../testutils/network -s _mock.go

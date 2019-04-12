@@ -37,8 +37,9 @@ func (m MachineType) Equal(other MachineType) bool {
 	return m == other
 }
 
-// MachineLogicExecutor is an interface for implementers of one particular machine type
 //go:generate minimock -i github.com/insolar/insolar/insolar.MachineLogicExecutor -o ../testutils -s _mock.go
+
+// MachineLogicExecutor is an interface for implementers of one particular machine type
 type MachineLogicExecutor interface {
 	CallMethod(
 		ctx context.Context, callContext *LogicCallContext,
@@ -56,8 +57,9 @@ type MachineLogicExecutor interface {
 	Stop() error
 }
 
-// LogicRunner is an interface that should satisfy logic executor
 //go:generate minimock -i github.com/insolar/insolar/insolar.LogicRunner -o ../testutils -s _mock.go
+
+// LogicRunner is an interface that should satisfy logic executor
 type LogicRunner interface {
 	Execute(context.Context, Parcel) (res Reply, err error)
 	HandleValidateCaseBindMessage(context.Context, Parcel) (res Reply, err error)
@@ -78,5 +80,6 @@ type LogicCallContext struct {
 	Caller          *Reference // Contract that made the call
 	Time            time.Time  // Time when call was made
 	Pulse           Pulse      // Number of the pulse
+	Immutable       bool
 	TraceID         string
 }

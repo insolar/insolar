@@ -91,6 +91,7 @@ func (e *ObjectIndex) Type() insolar.ReplyType {
 // JetMiss is returned for miscalculated jets due to incomplete jet tree.
 type JetMiss struct {
 	JetID insolar.ID
+	Pulse insolar.PulseNumber
 }
 
 // Type implementation of Reply interface.

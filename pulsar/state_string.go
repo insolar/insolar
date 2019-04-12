@@ -4,6 +4,24 @@ package pulsar
 
 import "strconv"
 
+func _() {
+	// An "invalid array index" compiler error signifies that the constant values have changed.
+	// Re-run the stringer command to generate them again.
+	var x [1]struct{}
+	_ = x[Failed-0]
+	_ = x[WaitingForStart-1]
+	_ = x[GenerateEntropy-2]
+	_ = x[WaitingForEntropySigns-3]
+	_ = x[SendingEntropy-4]
+	_ = x[WaitingForEntropy-5]
+	_ = x[SendingVector-6]
+	_ = x[WaitingForVectors-7]
+	_ = x[Verifying-8]
+	_ = x[SendingPulseSign-9]
+	_ = x[WaitingForPulseSigns-10]
+	_ = x[SendingPulse-11]
+}
+
 const _State_name = "FailedWaitingForStartGenerateEntropyWaitingForEntropySignsSendingEntropyWaitingForEntropySendingVectorWaitingForVectorsVerifyingSendingPulseSignWaitingForPulseSignsSendingPulse"
 
 var _State_index = [...]uint8{0, 6, 21, 36, 58, 72, 89, 102, 119, 128, 144, 164, 176}
