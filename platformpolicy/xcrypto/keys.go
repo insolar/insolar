@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package customcrypto
+package xcrypto
 
 import (
 	"crypto/rand"
@@ -24,8 +24,8 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy/customcrypto/internal/sign"
 	"github.com/insolar/insolar/platformpolicy/keys"
+	"github.com/insolar/insolar/platformpolicy/xcrypto/internal/sign"
 	"github.com/insolar/x-crypto/ecdsa"
 	"github.com/insolar/x-crypto/elliptic"
 	"github.com/insolar/x-crypto/x509"

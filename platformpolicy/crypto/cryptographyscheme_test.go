@@ -14,25 +14,20 @@
 // limitations under the License.
 //
 
-package sign
+package crypto
 
 import (
-	"crypto/ecdsa"
-	"github.com/insolar/insolar/platformpolicy/keys"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-func MustConvertPublicKeyToEcdsa(publicKey keys.PublicKey) *ecdsa.PublicKey {
-	ecdsaPublicKey, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		panic("[ Sign ] Failed to convert public key to ecdsa public key")
-	}
-	return ecdsaPublicKey
-}
+func TestNewPlatformPolicy(t *testing.T) {
+	pcs := NewPlatformCryptographyScheme()
 
-func MustConvertPrivateKeyToEcdsa(privateKey keys.PrivateKey) *ecdsa.PrivateKey {
-	ecdsaPrivateKey, ok := privateKey.(*ecdsa.PrivateKey)
-	if !ok {
-		panic("[ Sign ] Failed to convert private key to ecdsa private key")
-	}
-	return ecdsaPrivateKey
+	require.NotNil(t, pcs)
+
+	pcsImpl := pcs.(*platformCryptographyScheme)
+	require.NotNil(t, pcsImpl.HashProvider)
+	require.NotNil(t, pcsImpl.SignProvider)
 }

@@ -18,15 +18,15 @@ package platformpolicy
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
-	"github.com/insolar/insolar/platformpolicy/customcrypto"
+	"github.com/insolar/insolar/platformpolicy/crypto"
+	"github.com/insolar/insolar/platformpolicy/xcrypto"
 )
 
 func NewKeyProcessor() insolar.KeyProcessor {
 	switch CurrentCrypto {
 	case Secp256k1:
-		return customcrypto.NewKeyProcessor()
+		return xcrypto.NewKeyProcessor()
 	default:
-		return commoncrypto.NewKeyProcessor()
+		return crypto.NewKeyProcessor()
 	}
 }

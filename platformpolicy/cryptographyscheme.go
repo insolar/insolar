@@ -18,17 +18,17 @@ package platformpolicy
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
-	"github.com/insolar/insolar/platformpolicy/customcrypto"
+	"github.com/insolar/insolar/platformpolicy/crypto"
+	"github.com/insolar/insolar/platformpolicy/xcrypto"
 )
 
 func NewPlatformCryptographyScheme() insolar.PlatformCryptographyScheme {
 
 	switch CurrentCrypto {
 	case Secp256k1:
-		return customcrypto.NewPlatformCryptographyScheme()
+		return xcrypto.NewPlatformCryptographyScheme()
 
 	default:
-		return commoncrypto.NewPlatformCryptographyScheme()
+		return crypto.NewPlatformCryptographyScheme()
 	}
 }

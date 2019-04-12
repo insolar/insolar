@@ -14,14 +14,14 @@
 // limitations under the License.
 //
 
-package commoncrypto
+package crypto
 
 import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy/algorithmprovider"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto/internal/hash"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto/internal/sign"
+	"github.com/insolar/insolar/platformpolicy/crypto/internal/hash"
+	"github.com/insolar/insolar/platformpolicy/crypto/internal/sign"
 	"github.com/insolar/insolar/platformpolicy/keys"
 )
 

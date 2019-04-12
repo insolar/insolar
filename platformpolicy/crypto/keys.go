@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package commoncrypto
+package crypto
 
 import (
 	"crypto/ecdsa"
@@ -27,7 +27,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto/internal/sign"
+	"github.com/insolar/insolar/platformpolicy/crypto/internal/sign"
 	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
