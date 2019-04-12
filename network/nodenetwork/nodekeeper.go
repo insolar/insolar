@@ -55,6 +55,7 @@ import (
 	"net"
 	"sync"
 
+	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -65,7 +66,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/version"
 	"github.com/pkg/errors"
@@ -111,7 +111,7 @@ func resolveAddress(configuration configuration.HostNetwork) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	address, err := transport.Resolve(configuration.Transport.FixedPublicAddress, addr.String())
+	address, err := resolver.Resolve(configuration.Transport.FixedPublicAddress, addr.String())
 	if err != nil {
 		return "", err
 	}

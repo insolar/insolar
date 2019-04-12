@@ -103,23 +103,3 @@ func NewTransport(cfg configuration.Transport) (StreamTransport, string, error) 
 		return nil, "", errors.New("invalid transport configuration")
 	}
 }
-
-// Resolve resolves public address
-func Resolve(fixedPublicAddress, address string) (string, error) {
-	resolver, err := createResolver(fixedPublicAddress)
-	if err != nil {
-		return "", errors.Wrap(err, "[ Resolve ] Failed to create resolver")
-	}
-	publicAddress, err := resolver.Resolve(address)
-	if err != nil {
-		return "", errors.Wrap(err, "[ Resolve ] Failed to resolve public address")
-	}
-	return publicAddress, nil
-}
-
-func createResolver(fixedPublicAddress string) (resolver.PublicAddressResolver, error) {
-	if fixedPublicAddress != "" {
-		return resolver.NewFixedAddressResolver(fixedPublicAddress), nil
-	}
-	return resolver.NewExactResolver(), nil
-}
