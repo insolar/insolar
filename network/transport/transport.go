@@ -60,9 +60,9 @@ import (
 	"github.com/insolar/insolar/configuration"
 )
 
-// DatagramProcessor interface provides callback method to process received datagrams
-type DatagramProcessor interface {
-	ProcessDatagram(address string, buf []byte) error
+// DatagramHandler interface provides callback method to process received datagrams
+type DatagramHandler interface {
+	HandleDatagram(address string, buf []byte) error
 }
 
 // DatagramTransport interface provides methods to send and receive datagrams
@@ -71,7 +71,7 @@ type DatagramTransport interface {
 	component.Stopper
 
 	SendDatagram(ctx context.Context, address string, data []byte) error
-	SetDatagramProcessor(processor DatagramProcessor)
+	SetDatagramProcessor(processor DatagramHandler)
 }
 
 // StreamHandler interface provides callback method to process data stream

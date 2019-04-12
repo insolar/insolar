@@ -210,7 +210,7 @@ func NewConsensusNetwork(address, nodeID string, shortID insolar.ShortNodeID) (n
 	return result, nil
 }
 
-func (nc *networkConsensus) ProcessDatagram(address string, buf []byte) error {
+func (nc *networkConsensus) HandleDatagram(address string, buf []byte) error {
 	r := bytes.NewReader(buf)
 	p, err := packets.ExtractPacket(r)
 	if err != nil {
