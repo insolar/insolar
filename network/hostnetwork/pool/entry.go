@@ -52,45 +52,86 @@ package pool
 
 import (
 	"context"
-	"net"
+	"io"
+	"sync"
+
+	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/network/utils"
 )
 
-type ConnectionPool interface {
-	GetConnection(ctx context.Context, address string) (net.Conn, error)
-	CloseConnection(ctx context.Context, address string)
-	Reset()
+type entryImpl struct {
+	connectionFactory connectionFactory
+	address           string
+	onClose           onClose
+
+	mutex *sync.Mutex
+
+	conn io.ReadWriteCloser
 }
 
-type connectionFactory interface {
-	CreateConnection(ctx context.Context, address string) (net.Conn, error)
+func newEntryImpl(connectionFactory connectionFactory, address string, onClose onClose) *entryImpl {
+	return &entryImpl{
+		connectionFactory: connectionFactory,
+		address:           address,
+		mutex:             &sync.Mutex{},
+		onClose:           onClose,
+	}
 }
 
-type entry interface {
-	Open(ctx context.Context) (net.Conn, error)
-	Close()
+func (e *entryImpl) Open(ctx context.Context) (io.ReadWriteCloser, error) {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
+
+	if e.conn != nil {
+		return e.conn, nil
+	}
+
+	conn, err := e.open(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	e.conn = conn
+	return e.conn, nil
 }
 
-type onClose func(ctx context.Context, addr string)
+func (e *entryImpl) open(ctx context.Context) (io.ReadWriteCloser, error) {
+	logger := inslogger.FromContext(ctx)
+	ctx, span := instracer.StartSpan(ctx, "connectionPool.open")
+	span.AddAttributes(
+		trace.StringAttribute("create connect to", e.address),
+	)
+	defer span.End()
 
-func newEntry(connectionFactory connectionFactory, address string, onClose onClose) entry {
-	return newEntryImpl(connectionFactory, address, onClose)
+	conn, err := e.connectionFactory.CreateConnection(ctx, e.address)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Open ] Failed to create TCP connection")
+	}
+
+	go func(e *entryImpl, conn io.ReadWriteCloser) {
+		b := make([]byte, 1)
+		_, err := conn.Read(b)
+		if err != nil {
+			logger.Infof("[ Open ] remote host 'closed' connection to %s: %s", e.address, err)
+			e.onClose(ctx, e.address)
+			return
+		}
+
+		logger.Errorf("[ Open ] unexpected data on connection to %s", e.address)
+	}(e, conn)
+
+	return conn, nil
 }
 
-type iterateFunc func(entry entry)
+func (e *entryImpl) Close() {
+	e.mutex.Lock()
+	defer e.mutex.Unlock()
 
-type entryHolder interface {
-	Get(address string) (entry, bool)
-	Delete(address string)
-	Add(address string, entry entry)
-	Size() int
-	Clear()
-	Iterate(iterateFunc iterateFunc)
-}
-
-func newEntryHolder() entryHolder {
-	return newEntryHolderImpl()
-}
-
-func NewConnectionPool(connectionFactory connectionFactory) ConnectionPool {
-	return newConnectionPool(connectionFactory)
+	if e.conn != nil {
+		utils.CloseVerbose(e.conn)
+	}
 }

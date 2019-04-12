@@ -52,7 +52,7 @@ package pool
 
 import (
 	"context"
-	"net"
+	"io"
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -74,7 +74,7 @@ func newConnectionPool(connectionFactory connectionFactory) *connectionPool {
 	}
 }
 
-func (cp *connectionPool) GetConnection(ctx context.Context, address string) (net.Conn, error) {
+func (cp *connectionPool) GetConnection(ctx context.Context, address string) (io.ReadWriteCloser, error) {
 	logger := inslogger.FromContext(ctx)
 
 	entry, ok := cp.getEntry(address)
