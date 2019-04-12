@@ -278,7 +278,9 @@ func (nk *nodekeeper) syncOrigin(n insolar.NetworkNode) {
 	}
 	mutableOrigin := nk.origin.(node.MutableNode)
 	mutableOrigin.SetState(n.GetState())
-	mutableOrigin.SetLeavingETA(n.LeavingETA())
+	if n.GetState() == insolar.NodeLeaving {
+		mutableOrigin.SetLeavingETA(n.LeavingETA())
+	}
 	mutableOrigin.SetShortID(n.ShortID())
 }
 
