@@ -12,7 +12,6 @@ import (
 	"net/url"
 	"os"
 	"reflect"
-	"runtime"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -702,97 +701,6 @@ func (c *Certificate) isValid(certType int, currentChain []*Certificate, opts *V
 	}
 
 	return nil
-}
-
-// Verify attempts to verify c by building one or more chains from c to a
-// certificate in opts.Roots, using certificates in opts.Intermediates if
-// needed. If successful, it returns one or more chains where the first
-// element of the chain is c and the last element is from opts.Roots.
-//
-// If opts.Roots is nil and system roots are unavailable the returned error
-// will be of type SystemRootsError.
-//
-// Name constraints in the intermediates will be applied to all names claimed
-// in the chain, not just opts.DNSName. Thus it is invalid for a leaf to claim
-// example.com if an intermediate doesn't permit it, even if example.com is not
-// the name being validated. Note that DirectoryName constraints are not
-// supported.
-//
-// Extended Key Usage values are enforced down a chain, so an intermediate or
-// root that enumerates EKUs prevents a leaf from asserting an EKU not in that
-// list.
-//
-// WARNING: this function doesn't do any revocation checking.
-func (c *Certificate) Verify(opts VerifyOptions) (chains [][]*Certificate, err error) {
-	// Platform-specific verification needs the ASN.1 contents so
-	// this makes the behavior consistent across platforms.
-	if len(c.Raw) == 0 {
-		return nil, errNotParsed
-	}
-	if opts.Intermediates != nil {
-		for _, intermediate := range opts.Intermediates.certs {
-			if len(intermediate.Raw) == 0 {
-				return nil, errNotParsed
-			}
-		}
-	}
-
-	// Use Windows's own verification and chain building.
-	if opts.Roots == nil && runtime.GOOS == "windows" {
-		return c.systemVerify(&opts)
-	}
-
-	if opts.Roots == nil {
-		opts.Roots = systemRootsPool()
-		if opts.Roots == nil {
-			return nil, SystemRootsError{systemRootsErr}
-		}
-	}
-
-	err = c.isValid(leafCertificate, nil, &opts)
-	if err != nil {
-		return
-	}
-
-	if len(opts.DNSName) > 0 {
-		err = c.VerifyHostname(opts.DNSName)
-		if err != nil {
-			return
-		}
-	}
-
-	var candidateChains [][]*Certificate
-	if opts.Roots.contains(c) {
-		candidateChains = append(candidateChains, []*Certificate{c})
-	} else {
-		if candidateChains, err = c.buildChains(make(map[int][][]*Certificate), []*Certificate{c}, &opts); err != nil {
-			return nil, err
-		}
-	}
-
-	keyUsages := opts.KeyUsages
-	if len(keyUsages) == 0 {
-		keyUsages = []ExtKeyUsage{ExtKeyUsageServerAuth}
-	}
-
-	// If any key usage is acceptable then we're done.
-	for _, usage := range keyUsages {
-		if usage == ExtKeyUsageAny {
-			return candidateChains, nil
-		}
-	}
-
-	for _, candidate := range candidateChains {
-		if checkChainForKeyUsage(candidate, keyUsages) {
-			chains = append(chains, candidate)
-		}
-	}
-
-	if len(chains) == 0 {
-		return nil, CertificateInvalidError{c, IncompatibleUsage, ""}
-	}
-
-	return chains, nil
 }
 
 func appendToFreshChain(chain []*Certificate, cert *Certificate) []*Certificate {

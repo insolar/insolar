@@ -6,8 +6,6 @@ package x509
 
 import (
 	"encoding/pem"
-	"errors"
-	"runtime"
 )
 
 // CertPool is a set of certificates.
@@ -43,26 +41,6 @@ func (s *CertPool) copy() *CertPool {
 	}
 	copy(p.certs, s.certs)
 	return p
-}
-
-// SystemCertPool returns a copy of the system cert pool.
-//
-// Any mutations to the returned pool are not written to disk and do
-// not affect any other pool.
-//
-// New changes in the the system cert pool might not be reflected
-// in subsequent calls.
-func SystemCertPool() (*CertPool, error) {
-	if runtime.GOOS == "windows" {
-		// Issue 16736, 18609:
-		return nil, errors.New("crypto/x509: system root pool is not available on Windows")
-	}
-
-	if sysRoots := systemRootsPool(); sysRoots != nil {
-		return sysRoots.copy(), nil
-	}
-
-	return loadSystemRoots()
 }
 
 // findVerifiedParents attempts to find certificates in s which have signed the
