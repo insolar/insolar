@@ -75,8 +75,8 @@ func mockGenerator(t *testing.T, am artifact.Manager) *Generator {
 			DiscoveryNodes:   discoveryNodes,
 			DiscoveryKeysDir: testDataPath,
 		},
-		rootDomainRef: &ref,
-		nodeDomainRef: &ref,
+		rootDomainContract: &ref,
+		nodeDomainContract: &ref,
 
 		artifactManager: am,
 	}
