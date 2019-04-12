@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow/internal/pulse"
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
 )
 
 const handleTimeout = 10 * time.Second
@@ -70,11 +69,6 @@ func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (ins
 			logger.Error("Handling failed", err)
 		}
 	}()
-	var rep bus.Reply
-	select {
-	case rep = <-msg.ReplyTo:
-		return rep.Reply, rep.Err
-	case <-time.After(handleTimeout):
-		return nil, errors.New("handler timeout")
-	}
+	rep := <-msg.ReplyTo
+	return rep.Reply, rep.Err
 }
