@@ -7,7 +7,7 @@
 // This file is run by the x509 tests to ensure that a program with minimal
 // imports can sign certificates without errors resulting from missing hash
 // functions.
-package main
+package x509
 
 import (
 	"crypto/rand"

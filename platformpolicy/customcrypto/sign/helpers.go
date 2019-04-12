@@ -14,21 +14,25 @@
 // limitations under the License.
 //
 
-package platformpolicy
+package sign
 
 import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
-	"github.com/insolar/insolar/platformpolicy/customcrypto"
+	"github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/ecdsa"
+	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
-func NewPlatformCryptographyScheme() insolar.PlatformCryptographyScheme {
-
-	switch CURRENT_CRYPTO {
-	case CUSTOM_CRYPTO:
-		return customcrypto.NewPlatformCryptographyScheme()
-
-	default:
-		return commoncrypto.NewPlatformCryptographyScheme()
+func MustConvertPublicKeyToEcdsa(publicKey keys.PublicKey) *ecdsa.PublicKey {
+	ecdsaPublicKey, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		panic("[ Sign ] Failed to convert public key to ecdsa public key")
 	}
+	return ecdsaPublicKey
+}
+
+func MustConvertPrivateKeyToEcdsa(privateKey keys.PrivateKey) *ecdsa.PrivateKey {
+	ecdsaPrivateKey, ok := privateKey.(*ecdsa.PrivateKey)
+	if !ok {
+		panic("[ Sign ] Failed to convert private key to ecdsa private key")
+	}
+	return ecdsaPrivateKey
 }

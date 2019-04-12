@@ -17,22 +17,29 @@
 package sign
 
 import (
-	"crypto/ecdsa"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/platformpolicy/algorithmprovider"
 	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
-func MustConvertPublicKeyToEcdsa(publicKey keys.PublicKey) *ecdsa.PublicKey {
-	ecdsaPublicKey, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		panic("[ Sign ] Failed to convert public key to ecdsa public key")
-	}
-	return ecdsaPublicKey
+type ecdsaProvider struct {
+	HashProvider algorithmprovider.HashAlgorithmProvider `inject:""`
 }
 
-func MustConvertPrivateKeyToEcdsa(privateKey keys.PrivateKey) *ecdsa.PrivateKey {
-	ecdsaPrivateKey, ok := privateKey.(*ecdsa.PrivateKey)
-	if !ok {
-		panic("[ Sign ] Failed to convert private key to ecdsa private key")
+func NewECDSAProvider() algorithmprovider.SignAlgorithmProvider {
+	return &ecdsaProvider{}
+}
+
+func (p *ecdsaProvider) Sign(privateKey keys.PrivateKey) insolar.Signer {
+	return &ecdsaSignerWrapper{
+		privateKey: MustConvertPrivateKeyToEcdsa(privateKey),
+		hasher:     p.HashProvider.Hash256bits(),
 	}
-	return ecdsaPrivateKey
+}
+
+func (p *ecdsaProvider) Verify(publicKey keys.PublicKey) insolar.Verifier {
+	return &ecdsaVerifyWrapper{
+		publicKey: MustConvertPublicKeyToEcdsa(publicKey),
+		hasher:    p.HashProvider.Hash256bits(),
+	}
 }

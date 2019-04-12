@@ -16,19 +16,11 @@
 
 package platformpolicy
 
-import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
-	"github.com/insolar/insolar/platformpolicy/customcrypto"
+const (
+	COMMON_CRYPTO cryptoStruct = "COMMON_CRYPTO"
+	CUSTOM_CRYPTO cryptoStruct = "CUSTOM_CRYPTO"
+
+	CURRENT_CRYPTO cryptoStruct = CUSTOM_CRYPTO
 )
 
-func NewPlatformCryptographyScheme() insolar.PlatformCryptographyScheme {
-
-	switch CURRENT_CRYPTO {
-	case CUSTOM_CRYPTO:
-		return customcrypto.NewPlatformCryptographyScheme()
-
-	default:
-		return commoncrypto.NewPlatformCryptographyScheme()
-	}
-}
+type cryptoStruct string

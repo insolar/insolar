@@ -17,10 +17,10 @@ import (
 	"encoding/pem"
 	"errors"
 	"fmt"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/cryptobyte"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/ecdsa"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/elliptic"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/x509/pkix"
+	"github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/cryptobyte"
+	"github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/ecdsa"
+	"github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/elliptic"
+	"github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/x509/pkix"
 	"io"
 	"math/big"
 	"net"
@@ -30,7 +30,7 @@ import (
 	"time"
 	"unicode/utf8"
 
-	cryptobyte_asn1 "github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/cryptobyte"
+	cryptobyte_asn1 "github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/cryptobyte"
 )
 
 // pkixPublicKey reflects a PKIX public key structure. See SubjectPublicKeyInfo

@@ -14,21 +14,37 @@
 // limitations under the License.
 //
 
-package platformpolicy
+package hash
 
 import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
-	"github.com/insolar/insolar/platformpolicy/customcrypto"
+	"hash"
 )
 
-func NewPlatformCryptographyScheme() insolar.PlatformCryptographyScheme {
+type hashWrapper struct {
+	hash    hash.Hash
+	sumFunc func([]byte) []byte
+}
 
-	switch CURRENT_CRYPTO {
-	case CUSTOM_CRYPTO:
-		return customcrypto.NewPlatformCryptographyScheme()
+func (h *hashWrapper) Write(p []byte) (n int, err error) {
+	return h.hash.Write(p)
+}
 
-	default:
-		return commoncrypto.NewPlatformCryptographyScheme()
-	}
+func (h *hashWrapper) Sum(b []byte) []byte {
+	return h.hash.Sum(b)
+}
+
+func (h *hashWrapper) Reset() {
+	h.hash.Reset()
+}
+
+func (h *hashWrapper) Size() int {
+	return h.hash.Size()
+}
+
+func (h *hashWrapper) BlockSize() int {
+	return h.hash.BlockSize()
+}
+
+func (h *hashWrapper) Hash(b []byte) []byte {
+	return h.sumFunc(b)[:]
 }

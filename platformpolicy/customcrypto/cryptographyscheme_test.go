@@ -14,21 +14,20 @@
 // limitations under the License.
 //
 
-package platformpolicy
+package customcrypto
 
 import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto"
-	"github.com/insolar/insolar/platformpolicy/customcrypto"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-func NewPlatformCryptographyScheme() insolar.PlatformCryptographyScheme {
+func TestNewPlatformPolicy(t *testing.T) {
+	pcs := NewPlatformCryptographyScheme()
 
-	switch CURRENT_CRYPTO {
-	case CUSTOM_CRYPTO:
-		return customcrypto.NewPlatformCryptographyScheme()
+	require.NotNil(t, pcs)
 
-	default:
-		return commoncrypto.NewPlatformCryptographyScheme()
-	}
+	pcsImpl := pcs.(*platformCryptographyScheme)
+	require.NotNil(t, pcsImpl.HashProvider)
+	require.NotNil(t, pcsImpl.SignProvider)
 }

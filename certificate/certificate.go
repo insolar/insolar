@@ -18,7 +18,6 @@ package certificate
 
 import (
 	"encoding/json"
-	"github.com/insolar/insolar/platformpolicy/keys"
 	"io"
 	"io/ioutil"
 	"path/filepath"
@@ -29,6 +28,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/platformpolicy/keys"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )

@@ -14,20 +14,20 @@
 // limitations under the License.
 //
 
-package commoncrypto
+package customcrypto
 
 import (
-	"crypto/ecdsa"
-	"crypto/elliptic"
 	"crypto/rand"
-	"crypto/x509"
 	"encoding/pem"
 	"fmt"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto/sign"
+	"github.com/insolar/insolar/platformpolicy/customcrypto/sign"
+	"github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/ecdsa"
+	"github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/elliptic"
+	"github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/x509"
 	"github.com/insolar/insolar/platformpolicy/keys"
 )
 
@@ -37,7 +37,7 @@ type keyProcessor struct {
 
 func NewKeyProcessor() insolar.KeyProcessor {
 	return &keyProcessor{
-		curve: elliptic.P256(),
+		curve: elliptic.Secp256k1(),
 	}
 }
 

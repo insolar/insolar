@@ -9,7 +9,7 @@ import (
 	"encoding/asn1"
 	"errors"
 	"fmt"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/ecdsa"
+	"github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/ecdsa"
 )
 
 // pkcs8 reflects an ASN.1, PKCS#8 PrivateKey. See

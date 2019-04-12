@@ -17,13 +17,13 @@
 package sign
 
 import (
-	"crypto/ecdsa"
 	"crypto/rand"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/ecdsa"
 )
 
 type ecdsaSignerWrapper struct {

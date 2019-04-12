@@ -14,7 +14,7 @@
 // Apple publishes the list of trusted root certificates for iOS on
 // support.apple.com. So we parse the list and extract the certificates from
 // an OS X machine and embed them into the x509 package.
-package main
+package x509
 
 import (
 	"bytes"

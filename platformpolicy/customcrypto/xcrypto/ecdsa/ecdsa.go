@@ -23,11 +23,11 @@ import (
 	"crypto/sha512"
 	"encoding/asn1"
 	"errors"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/elliptic"
+	"github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/elliptic"
 	"io"
 	"math/big"
 
-	"github.com/insolar/insolar/platformpolicy/commoncrypto/xcrypto/randutil"
+	"github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/randutil"
 )
 
 // A invertible implements fast inverse mod Curve.Params().N
