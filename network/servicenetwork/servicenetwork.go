@@ -125,6 +125,10 @@ func (nk *ServiceNetwork) SetGateway(g network.Gateway) {
 	nk.gateway = g
 }
 
+func (nk *ServiceNetwork) GetState() insolar.NetworkState {
+	return nk.Gateway().GetState()
+}
+
 // SendMessage sends a message from MessageBus.
 func (n *ServiceNetwork) SendMessage(nodeID insolar.Reference, method string, msg insolar.Parcel) ([]byte, error) {
 	return n.Controller.SendMessage(nodeID, method, msg)

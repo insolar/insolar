@@ -25,6 +25,10 @@ import (
 type testNetwork struct {
 }
 
+func (n *testNetwork) GetState() insolar.NetworkState {
+	panic("implement me")
+}
+
 func (n *testNetwork) SendMessage(nodeID insolar.Reference, method string, msg insolar.Parcel) ([]byte, error) {
 	return make([]byte, 0), nil
 }

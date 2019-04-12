@@ -25,8 +25,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/network"
-
 	"github.com/gorilla/rpc/v2"
 	jsonrpc "github.com/gorilla/rpc/v2/json2"
 	"github.com/insolar/insolar/application/extractor"
@@ -50,7 +48,7 @@ type Runner struct {
 	NetworkCoordinator  insolar.NetworkCoordinator  `inject:""`
 	GenesisDataProvider insolar.GenesisDataProvider `inject:""`
 	NodeNetwork         insolar.NodeNetwork         `inject:""`
-	Gatewayer           network.Gatewayer           `inject:""`
+	ServiceNetwork      insolar.Network             `inject:""`
 	PulseAccessor       pulse.Accessor              `inject:""`
 	ArtifactManager     artifacts.Client            `inject:""`
 	server              *http.Server

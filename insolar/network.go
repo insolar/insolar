@@ -44,6 +44,8 @@ type Network interface {
 	RemoteProcedureRegister(name string, method RemoteProcedure)
 	// Leave notify other nodes that this node want to leave and doesn't want to receive new tasks
 	Leave(ctx context.Context, ETA PulseNumber)
+	// GetState returns our current thoughs about whole network
+	GetState() NetworkState
 }
 
 // PulseDistributor is interface for pulse distribution.
