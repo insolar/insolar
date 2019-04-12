@@ -100,7 +100,7 @@ func RecordFromType(i TypeID) record.VirtualRecord {
 		return new({{ .TypeName }})
 	{{- end }}
 	default:
-		panic(fmt.Sprintf("identificator %v is not registered", i))
+		panic(fmt.Sprintf("identificator %d is not registered", i))
 	}
 }
 
@@ -111,7 +111,7 @@ func (i TypeID) String() string {
 		return "{{ .TypeName }}"
 	{{- end }}
 	default:
-		panic(fmt.Sprintf("identificator %v is not registered", i))
+		panic(fmt.Sprintf("identificator %d is not registered", i))
 	}
 }
 `))

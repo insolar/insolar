@@ -55,7 +55,7 @@ func RecordFromType(i TypeID) record.VirtualRecord {
 	case 305:
 		return new(DeactivationRecord)
 	default:
-		panic(fmt.Sprintf("identificator %v is not registered", i))
+		panic(fmt.Sprintf("identificator %d is not registered", i))
 	}
 }
 
@@ -80,6 +80,6 @@ func (i TypeID) String() string {
 	case 305:
 		return "DeactivationRecord"
 	default:
-		panic(fmt.Sprintf("identificator %v is not registered", i))
+		panic(fmt.Sprintf("identificator %d is not registered", i))
 	}
 }
