@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow/internal/pulse"
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
 )
 
 const handleTimeout = 10 * time.Second
@@ -54,27 +53,20 @@ func (h *Handler) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
 
 func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := bus.Message{
-		ReplyTo: make(chan bus.Reply),
+		ReplyTo: make(chan bus.Reply, 1),
 		Parcel:  parcel,
 	}
 	ctx, logger := inslogger.WithField(ctx, "pulse", fmt.Sprintf("%d", parcel.Pulse()))
 	ctx = pulse.ContextWith(ctx, parcel.Pulse())
-	go func() {
-		f := thread.NewThread(msg, h.controller)
-		err := f.Run(ctx, h.handles.present(msg))
-		if err != nil {
-			select {
-			case msg.ReplyTo <- bus.Reply{Err: err}:
-			default:
-			}
-			logger.Error("Handling failed", err)
+	f := thread.NewThread(msg, h.controller)
+	err := f.Run(ctx, h.handles.present(msg))
+	if err != nil {
+		select {
+		case msg.ReplyTo <- bus.Reply{Err: err}:
+		default:
 		}
-	}()
-	var rep bus.Reply
-	select {
-	case rep = <-msg.ReplyTo:
-		return rep.Reply, rep.Err
-	case <-time.After(handleTimeout):
-		return nil, errors.New("handler timeout")
+		logger.Error("Handling failed", err)
 	}
+	rep := <-msg.ReplyTo
+	return rep.Reply, rep.Err
 }

@@ -91,22 +91,3 @@ func TestHandler_WrapBusHandle_Error(t *testing.T) {
 	require.EqualError(t, err, "test error")
 	require.Nil(t, result)
 }
-
-func TestHandler_WrapBusHandle_Timeout(t *testing.T) {
-	t.Parallel()
-	h := &Handler{
-		controller: thread.NewController(),
-	}
-	h.handles.present = func(msg bus.Message) flow.Handle {
-		return func(ctx context.Context, f flow.Flow) error {
-			return nil
-		}
-	}
-	parcel := &testutils.ParcelMock{}
-	parcel.PulseFunc = func() insolar.PulseNumber {
-		return 42
-	}
-	result, err := h.WrapBusHandle(context.Background(), parcel)
-	require.EqualError(t, err, "handler timeout")
-	require.Nil(t, result)
-}
