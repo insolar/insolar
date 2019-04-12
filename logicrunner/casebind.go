@@ -17,17 +17,16 @@
 package logicrunner
 
 import (
-	"bytes"
 	"context"
 	"encoding/gob"
 	"reflect"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type CaseRequest struct {
@@ -52,14 +51,10 @@ func NewCaseBindFromValidateMessage(ctx context.Context, mb insolar.MessageBus, 
 		Requests: make([]CaseRequest, len(msg.Requests)),
 	}
 	for i, req := range msg.Requests {
-		mb, err := mb.NewPlayer(ctx, bytes.NewReader(req.MessageBusTape))
-		if err != nil {
-			panic("couldn't read tape: " + err.Error())
-		}
+		// TODO: here we used message bus player
 		res.Requests[i] = CaseRequest{
 			Parcel:     req.Parcel,
 			Request:    req.Request,
-			MessageBus: mb,
 			Reply:      req.Reply,
 			Error:      req.Error,
 		}
@@ -165,7 +160,8 @@ func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p insolar.Pulse, c
 		traceID := "TODO" // FIXME
 
 		ctx = inslogger.ContextWithTrace(ctx, traceID)
-		ctx = insolar.ContextWithMessageBus(ctx, request.MessageBus)
+
+		// TODO: here we were injecting message bus into context
 
 		sender := request.Parcel.GetSender()
 		vs.Current = &CurrentExecution{
