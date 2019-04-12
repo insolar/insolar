@@ -350,7 +350,11 @@ func (nk *nodekeeper) nodeToAnnounceClaim(mapper consensus.BitSetMapper) (*conse
 	}
 	claim.NodeAnnouncerIndex = uint16(announcerIndex)
 	claim.BitSetMapper = mapper
-	claim.SetCloudHash(nk.GetCloudHash())
+	hash := nk.GetCloudHash()
+	if hash == nil {
+		hash = make([]byte, consensus.HashLength)
+	}
+	claim.SetCloudHash(hash)
 	return &claim, nil
 }
 

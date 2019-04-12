@@ -124,7 +124,7 @@ func TestNodekeeper_IsBootstrapped(t *testing.T) {
 func TestNodekeeper_GetCloudHash(t *testing.T) {
 	nk := newNodeKeeper(t, nil)
 	assert.Nil(t, nk.GetCloudHash())
-	cloudHash := make([]byte, 64)
+	cloudHash := make([]byte, packets.HashLength)
 	rand.Read(cloudHash)
 	nk.SetCloudHash(cloudHash)
 	assert.Equal(t, cloudHash, nk.GetCloudHash())
@@ -216,5 +216,42 @@ func TestNodekeeper_GetOriginJoinClaimError(t *testing.T) {
 	service.SignFunc = func(p []byte) (*insolar.Signature, error) { return nil, errors.New("sign error") }
 	nk := newNodeKeeper(t, service)
 	_, err := nk.GetOriginJoinClaim()
+	assert.Error(t, err)
+}
+
+func TestNodekeeper_GetOriginAnnounceClaim(t *testing.T) {
+	bm := packets.NewBitSetMapperMock(t)
+	bm.RefToIndexFunc = func(insolar.Reference) (r int, r1 error) { return 0, nil }
+	bm.LengthFunc = func() int { return 2 }
+	nk := newNodeKeeper(t, nil)
+	cloudHash := make([]byte, packets.HashLength)
+	claim, err := nk.GetOriginAnnounceClaim(bm)
+	assert.NoError(t, err)
+
+	check := func(claim *packets.NodeAnnounceClaim) {
+		assert.Equal(t, claim.NodeRef, nk.GetOrigin().ID())
+		assert.Equal(t, claim.ShortNodeID, nk.GetOrigin().ShortID())
+		assert.Equal(t, claim.NodeAddress.Get(), nk.GetOrigin().Address())
+		assert.EqualValues(t, 0, claim.NodeAnnouncerIndex)
+		assert.EqualValues(t, 2, claim.NodeCount)
+		assert.Equal(t, cloudHash, claim.CloudHash[:])
+	}
+
+	check(claim)
+
+	rand.Read(cloudHash)
+	nk.SetCloudHash(cloudHash)
+	claim, err = nk.GetOriginAnnounceClaim(bm)
+	assert.NoError(t, err)
+
+	check(claim)
+}
+
+func TestNodekeeper_GetOriginAnnounceClaimError(t *testing.T) {
+	bm := packets.NewBitSetMapperMock(t)
+	bm.RefToIndexFunc = func(insolar.Reference) (r int, r1 error) { return 0, errors.New("map error") }
+	bm.LengthFunc = func() int { return 2 }
+	nk := newNodeKeeper(t, nil)
+	_, err := nk.GetOriginAnnounceClaim(bm)
 	assert.Error(t, err)
 }
