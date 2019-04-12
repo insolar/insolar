@@ -139,7 +139,7 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 		if err != nil {
 			return errors.Wrap(err, "[ buildPrototypes ] Can't open wrapper file")
 		}
-		err = code.WriteWrapper(wrp)
+		err = code.WriteWrapper(wrp, "main")
 		wrp.Close()
 		if err != nil {
 			return errors.Wrap(err, "[ buildPrototypes ] Can't write wrapper")

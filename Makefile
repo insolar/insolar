@@ -195,3 +195,6 @@ $(RECORDBUILDER):
 generate-protobuf:
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
 	PATH="$(BIN_DIR):$(PATH)" protoc -I./vendor -I./ --gorecord_out=./ insolar/record/record.proto
+
+regen-builtin: $(BININSGOCC)
+	$(BININSGOCC) regen-builtin

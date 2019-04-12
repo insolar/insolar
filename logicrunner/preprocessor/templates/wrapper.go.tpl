@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package main
+package {{ .Package }}
 
 import (
 {{- range $import, $i := .Imports }}
@@ -158,3 +158,18 @@ func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error) {
 	return ret, err
 }
 {{ end }}
+
+{{ if $.GenerateInitialize -}}
+func Initialize() map[string]interface{} {
+    return map[string]interface{}{
+        "INSMETHOD_GetCode": INSMETHOD_GetCode,
+        "INSMETHOD_GetPrototype": INSMETHOD_GetPrototype,
+{{ range $method := .Methods -}}
+        "INSMETHOD_{{ $method.Name }}": INSMETHOD_{{ $method.Name }},
+{{- end }}
+{{ range $f := .Functions -}}
+        "INSCONSTRUCTOR_{{ $f.Name }}": INSCONSTRUCTOR_{{ $f.Name }},
+{{ end }}
+    }
+}
+{{- end }}
