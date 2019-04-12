@@ -51,10 +51,12 @@ type Flow interface {
 	// If cancellation happens during Handle execution, ErrCancelled will be returned.
 	Handle(context.Context, Handle) error
 
-	// Procedure starts routine and blocks Handle execution until cancellation happens or routine returns.
-	// If cancellation happens first, ErrCancelled will be returned.
+	// Procedure starts a routine and blocks Handle execution until cancellation happens or routine returns.
+	// If cancellation happens first, ErrCancelled will immediately be returned to the Handle. The Procedure
+	// continues to execute in the background, but it's return value will be discarded.
 	// If Routine returns first, Procedure error (if any) will be returned.
-	// Procedure can figure out whether current pulse has ended by reading from context.Done()
+	// Procedure can figure out whether it's execution was canceled and there is no point to continue
+	// the execution by reading from context.Done()
 	Procedure(context.Context, Procedure) error
 
 	// Migrate blocks caller execution until cancellation happens then runs provided Handle in a new flow.
