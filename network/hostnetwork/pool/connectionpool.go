@@ -58,19 +58,19 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/transport"
 )
 
 type connectionPool struct {
-	connectionFactory connectionFactory
+	transport transport.StreamTransport
 
 	entryHolder entryHolder
 	mutex       sync.RWMutex
 }
 
-func newConnectionPool(connectionFactory connectionFactory) *connectionPool {
+func newConnectionPool(t transport.StreamTransport) *connectionPool {
 	return &connectionPool{
-		connectionFactory: connectionFactory,
-
+		transport:   t,
 		entryHolder: newEntryHolder(),
 	}
 }
@@ -99,7 +99,7 @@ func (cp *connectionPool) CloseConnection(ctx context.Context, host *host.Host) 
 	logger := inslogger.FromContext(ctx)
 
 	entry, ok := cp.entryHolder.Get(host)
-	logger.Debugf("[ CloseConnection ] Finding entry for connection to %s in pool: %s", host, ok)
+	logger.Debugf("[ CloseConnection ] Finding entry for connection to %s in pool: %t", host, ok)
 
 	if ok {
 		entry.Close()
@@ -128,7 +128,7 @@ func (cp *connectionPool) getOrCreateEntry(ctx context.Context, host *host.Host)
 	defer cp.mutex.Unlock()
 
 	entry, ok := cp.entryHolder.Get(host)
-	logger.Debugf("[ getOrCreateEntry ] Finding entry for connection to %s in pool: %s", host, ok)
+	logger.Debugf("[ getOrCreateEntry ] Finding entry for connection to %s in pool: %t", host, ok)
 
 	if ok {
 		return entry
@@ -136,7 +136,7 @@ func (cp *connectionPool) getOrCreateEntry(ctx context.Context, host *host.Host)
 
 	logger.Debugf("[ getOrCreateEntry ] Failed to retrieve entry for connection to %s, creating it", host)
 
-	entry = newEntry(cp.connectionFactory, host, cp.CloseConnection)
+	entry = newEntry(cp.transport, host, cp.CloseConnection)
 
 	cp.entryHolder.Add(host, entry)
 	size := cp.entryHolder.Size()

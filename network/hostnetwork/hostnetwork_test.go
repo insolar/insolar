@@ -140,6 +140,21 @@ func mockConfiguration(address string) configuration.Configuration {
 	return result
 }
 
+func assertTimeout(t *testing.T, wg *sync.WaitGroup) {
+	done := make(chan struct{})
+	go func() {
+		wg.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+		return
+	case <-time.After(10 * time.Second):
+		t.Error("WaitGroup timeout")
+	}
+}
+
 func TestNewHostNetwork_InvalidConfiguration(t *testing.T) {
 	// broken address
 	n, err := NewHostNetwork(mockConfiguration("abirvalg"), ID1+DOMAIN)
@@ -178,10 +193,13 @@ func TestNewHostNetwork(t *testing.T) {
 	ctx := context.Background()
 	ctx2 := context.Background()
 	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
+
 	ref1, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
 	require.NoError(t, err)
 	require.Equal(t, *ref1, n1.GetNodeID())
+
 	ref2, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
+	require.NoError(t, err)
 	require.Equal(t, *ref2, n2.GetNodeID())
 	require.NoError(t, err)
 
@@ -198,10 +216,17 @@ func TestNewHostNetwork(t *testing.T) {
 
 	err = n2.Start(ctx2)
 	assert.NoError(t, err)
-	defer n2.Stop(ctx2)
+	defer func() {
+		err = n2.Stop(ctx2)
+		assert.NoError(t, err)
+	}()
+
 	err = n1.Start(ctx)
 	assert.NoError(t, err)
-	defer n1.Stop(ctx)
+	defer func() {
+		err = n1.Stop(ctx2)
+		assert.NoError(t, err)
+	}()
 
 	for i := 0; i < count; i++ {
 		request := n1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
@@ -210,7 +235,8 @@ func TestNewHostNetwork(t *testing.T) {
 		_, err = n1.SendRequest(ctx, request, *ref)
 		require.NoError(t, err)
 	}
-	wg.Wait()
+
+	assertTimeout(t, &wg)
 }
 
 func TestHostNetwork_SendRequestPacket(t *testing.T) {
@@ -286,7 +312,8 @@ func TestHostNetwork_SendRequestPacket2(t *testing.T) {
 	require.NoError(t, err)
 	_, err = n1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
-	wg.Wait()
+
+	assertTimeout(t, &wg)
 }
 
 func TestHostNetwork_SendRequestPacket3(t *testing.T) {
@@ -474,6 +501,7 @@ func TestStartStopSend(t *testing.T) {
 	require.NoError(t, err)
 
 	send()
-	wg.Wait()
+
+	assertTimeout(t, &wg)
 	t1.Stop(ctx)
 }
