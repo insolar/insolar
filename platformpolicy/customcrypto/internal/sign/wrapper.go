@@ -23,7 +23,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/ecdsa"
+	"github.com/insolar/x-crypto/ecdsa"
 )
 
 type ecdsaSignerWrapper struct {

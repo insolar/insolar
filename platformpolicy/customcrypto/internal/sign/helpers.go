@@ -17,8 +17,8 @@
 package sign
 
 import (
-	"github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/ecdsa"
 	"github.com/insolar/insolar/platformpolicy/keys"
+	"github.com/insolar/x-crypto/ecdsa"
 )
 
 func MustConvertPublicKeyToEcdsa(publicKey keys.PublicKey) *ecdsa.PublicKey {

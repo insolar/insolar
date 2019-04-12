@@ -24,11 +24,11 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy/customcrypto/sign"
-	"github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/ecdsa"
-	"github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/elliptic"
-	"github.com/insolar/insolar/platformpolicy/customcrypto/xcrypto/x509"
+	"github.com/insolar/insolar/platformpolicy/customcrypto/internal/sign"
 	"github.com/insolar/insolar/platformpolicy/keys"
+	"github.com/insolar/x-crypto/ecdsa"
+	"github.com/insolar/x-crypto/elliptic"
+	"github.com/insolar/x-crypto/x509"
 )
 
 type keyProcessor struct {

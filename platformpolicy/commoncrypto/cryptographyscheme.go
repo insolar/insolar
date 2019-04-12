@@ -20,8 +20,8 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy/algorithmprovider"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto/hash"
-	"github.com/insolar/insolar/platformpolicy/commoncrypto/sign"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto/internal/hash"
+	"github.com/insolar/insolar/platformpolicy/commoncrypto/internal/sign"
 	"github.com/insolar/insolar/platformpolicy/keys"
 )
 

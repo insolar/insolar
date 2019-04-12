@@ -23,8 +23,8 @@ import (
 )
 
 func NewKeyProcessor() insolar.KeyProcessor {
-	switch CURRENT_CRYPTO {
-	case CUSTOM_CRYPTO:
+	switch CurrentCrypto {
+	case CustomCrypto:
 		return customcrypto.NewKeyProcessor()
 	default:
 		return commoncrypto.NewKeyProcessor()

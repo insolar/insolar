@@ -17,10 +17,10 @@
 package platformpolicy
 
 const (
-	COMMON_CRYPTO cryptoStruct = "COMMON_CRYPTO"
-	CUSTOM_CRYPTO cryptoStruct = "CUSTOM_CRYPTO"
+	CurrentCrypto cryptoStruct = CustomCrypto
 
-	CURRENT_CRYPTO cryptoStruct = CUSTOM_CRYPTO
+	CommonCrypto cryptoStruct = iota + 1
+	CustomCrypto
 )
 
-type cryptoStruct string
+type cryptoStruct float64
