@@ -149,5 +149,43 @@ func TestNodekeeper_GetWorkingNodes(t *testing.T) {
 
 	assert.Nil(t, nk.GetAccessor().GetActiveNode(node4.ID()))
 	assert.Equal(t, insolar.NodeReady, nk.GetAccessor().GetActiveNode(node1.ID()).GetState())
-	assert.NotNil(t, nk.GetAccessor().GetActiveNode(insolar.Reference{5}))
+	node5 := nk.GetAccessor().GetActiveNode(insolar.Reference{5})
+	assert.NotNil(t, node5)
+	assert.Nil(t, nk.GetWorkingNode(node5.ID()))
+
+	nodes = []insolar.NetworkNode{nk.GetOrigin(), node1, node2, node3, node5}
+	err = nk.Sync(context.Background(), nodes, nil)
+	assert.NoError(t, err)
+	err = nk.MoveSyncToActive(context.Background(), 0)
+	assert.NoError(t, err)
+
+	assert.Equal(t, insolar.NodeReady, nk.GetAccessor().GetActiveNode(node5.ID()).GetState())
+
+	nodes = []insolar.NetworkNode{node1, node2, node3, node5}
+	err = nk.Sync(context.Background(), nodes, nil)
+	assert.Error(t, err)
+}
+
+func TestNodekeeper_GracefulStop(t *testing.T) {
+	nk := newNodeKeeper(t)
+	nodeLeaveTriggered := false
+	handler := testutils.NewTerminationHandlerMock(t)
+	handler.OnLeaveApprovedFunc = func(context.Context) {
+		nodeLeaveTriggered = true
+	}
+	nk.(*nodekeeper).TerminationHandler = handler
+	nodes := []insolar.NetworkNode{
+		nk.GetOrigin(),
+		newTestNode(insolar.Reference{1}, insolar.NodeReady),
+		newTestNode(insolar.Reference{2}, insolar.NodeReady),
+	}
+	nk.SetInitialSnapshot(nodes)
+
+	claims := []packets.ReferendumClaim{&packets.NodeLeaveClaim{NodeID: nk.GetOrigin().ID()}}
+	err := nk.Sync(context.Background(), nodes, claims)
+	assert.NoError(t, err)
+	err = nk.MoveSyncToActive(context.Background(), 0)
+	assert.NoError(t, err)
+
+	assert.True(t, nodeLeaveTriggered)
 }
