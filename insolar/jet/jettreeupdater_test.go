@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package artifactmanager
+package jet
 
 import (
 	"context"
@@ -28,7 +28,6 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -42,8 +41,8 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 	ans := node.NewAccessorMock(mc)
-	js := jet.NewStorageMock(mc)
-	jtu := &jetTreeUpdater{
+	js := NewStorageMock(mc)
+	jtu := &treeUpdater{
 		Nodes:          ans,
 		JetStorage:     js,
 		JetCoordinator: jc,
@@ -126,9 +125,9 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 	ans := node.NewAccessorMock(mc)
-	js := jet.NewStorageMock(mc)
+	js := NewStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
-	jtu := &jetTreeUpdater{
+	jtu := &treeUpdater{
 		Nodes:          ans,
 		JetStorage:     js,
 		JetCoordinator: jc,
@@ -190,9 +189,9 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 	ans := node.NewAccessorMock(mc)
-	js := jet.NewStorageMock(mc)
+	js := NewStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
-	jtu := &jetTreeUpdater{
+	jtu := &treeUpdater{
 		Nodes:          ans,
 		JetStorage:     js,
 		JetCoordinator: jc,
@@ -205,7 +204,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	t.Run("quick reply, data is up to date", func(t *testing.T) {
 		fjmr := *insolar.NewJetID(0, nil)
 		js.ForIDMock.Return(fjmr, true)
-		jetID, err := jtu.fetchJet(ctx, target, insolar.PulseNumber(100))
+		jetID, err := jtu.FetchJet(ctx, target, insolar.PulseNumber(100))
 		require.NoError(t, err)
 		require.Equal(t, fjmr, insolar.JetID(*jetID))
 	})
@@ -232,7 +231,7 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 			require.Equal(t, []insolar.JetID{*insolar.NewJetID(0, nil)}, jets)
 		}
 
-		jetID, err := jtu.fetchJet(ctx, target, insolar.PulseNumber(100))
+		jetID, err := jtu.FetchJet(ctx, target, insolar.PulseNumber(100))
 		require.NoError(t, err)
 		require.Equal(t, insolar.ID(*insolar.NewJetID(0, nil)), *jetID)
 	})
@@ -245,9 +244,9 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 
 	jc := testutils.NewJetCoordinatorMock(mc)
 	ans := node.NewAccessorMock(mc)
-	js := jet.NewStorageMock(mc)
+	js := NewStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
-	jtu := &jetTreeUpdater{
+	jtu := &treeUpdater{
 		Nodes:          ans,
 		JetStorage:     js,
 		JetCoordinator: jc,
@@ -289,7 +288,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 		i--
 
 		treeMu := sync.Mutex{}
-		tree := jet.NewTree(false)
+		tree := NewTree(false)
 
 		js.UpdateFunc = func(ctx context.Context, pn insolar.PulseNumber, actual bool, jets ...insolar.JetID) {
 			treeMu.Lock()
@@ -313,7 +312,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 			go func(b byte) {
 				target := insolar.NewID(0, []byte{b})
 
-				jetID, err := jtu.fetchJet(ctx, *target, insolar.PulseNumber(100))
+				jetID, err := jtu.FetchJet(ctx, *target, insolar.PulseNumber(100))
 				require.NoError(t, err)
 
 				dataMu.Lock()
@@ -325,7 +324,7 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 		}
 		go func() {
 			dataMu.Lock()
-			jtu.releaseJet(ctx, *data[128], insolar.PulseNumber(100))
+			jtu.ReleaseJet(ctx, *data[128], insolar.PulseNumber(100))
 			dataMu.Unlock()
 
 			wg.Done()

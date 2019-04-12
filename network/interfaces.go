@@ -89,8 +89,9 @@ type Controller interface {
 // RequestHandler handler function to process incoming requests from network.
 type RequestHandler func(context.Context, Request) (Response, error)
 
-// HostNetwork simple interface to send network requests and process network responses.
 //go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock.go
+
+// HostNetwork simple interface to send network requests and process network responses.
 type HostNetwork interface {
 	component.Starter
 	component.Stopper
@@ -160,14 +161,16 @@ type RequestBuilder interface {
 	Build() Request
 }
 
-// PulseHandler interface to process new pulse.
 //go:generate minimock -i github.com/insolar/insolar/network.PulseHandler -o ../testutils/network -s _mock.go
+
+// PulseHandler interface to process new pulse.
 type PulseHandler interface {
 	HandlePulse(ctx context.Context, pulse insolar.Pulse)
 }
 
-// NodeKeeper manages unsync, sync and active lists.
 //go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go
+
+// NodeKeeper manages unsync, sync and active lists.
 type NodeKeeper interface {
 	insolar.NodeNetwork
 

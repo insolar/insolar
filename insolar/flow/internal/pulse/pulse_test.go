@@ -14,21 +14,27 @@
 // limitations under the License.
 //
 
-package messagebus
+package pulse
 
 import (
 	"context"
+	"testing"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/stretchr/testify/require"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/messagebus.sender -o .
+const testPulse = insolar.PulseNumber(42)
 
-// Sender is an internal interface used by recorder and player. It should not be publicated.
-//
-// Sender provides access to private MessageBus methods.
-type sender interface {
-	insolar.MessageBus
-	CreateParcel(ctx context.Context, msg insolar.Message, token insolar.DelegationToken, currentPulse insolar.Pulse) (insolar.Parcel, error)
-	SendParcel(ctx context.Context, msg insolar.Parcel, currentPulse insolar.Pulse, ops *insolar.MessageSendOptions) (insolar.Reply, error)
+func TestContextWith(t *testing.T) {
+	t.Parallel()
+	ctx := ContextWith(context.Background(), testPulse)
+	require.Equal(t, testPulse, ctx.Value(contextKey{}))
+}
+
+func TestFromContext(t *testing.T) {
+	t.Parallel()
+	ctx := context.WithValue(context.Background(), contextKey{}, testPulse)
+	result := FromContext(ctx)
+	require.Equal(t, testPulse, result)
 }
