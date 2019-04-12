@@ -67,19 +67,19 @@ type Base struct {
 }
 
 // NewGateway creates new gateway on top of existing
-func (b *Base) NewGateway(state insolar.NetworkState) network.Gateway {
+func (g *Base) NewGateway(state insolar.NetworkState) network.Gateway {
 	log.Warnf("NewGateway %s", state.String())
 	switch state {
 	case insolar.NoNetworkState:
 		panic("Do not reinit network with alive gateway")
 	case insolar.VoidNetworkState:
-		return NewVoid(b)
+		return NewVoid(g)
 	case insolar.JetlessNetworkState:
-		return NewJetless(b)
+		return NewJetless(g)
 	case insolar.AuthorizationNetworkState:
-		return NewAuthorisation(b)
+		return NewAuthorisation(g)
 	case insolar.CompleteNetworkState:
-		return NewComple(b)
+		return NewComple(g)
 	}
 	panic("Try to switch network to unknown state. Memory of process is inconsistent.")
 }
