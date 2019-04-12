@@ -55,6 +55,7 @@ import (
 	"io"
 
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/transport"
 )
 
 type ConnectionPool interface {
@@ -64,10 +65,6 @@ type ConnectionPool interface {
 	Reset()
 }
 
-type connectionFactory interface {
-	CreateConnection(ctx context.Context, host *host.Host) (io.ReadWriteCloser, error)
-}
-
 type entry interface {
 	Open(ctx context.Context) (io.ReadWriteCloser, error)
 	Close()
@@ -75,8 +72,8 @@ type entry interface {
 
 type onClose func(ctx context.Context, host *host.Host)
 
-func newEntry(connectionFactory connectionFactory, host *host.Host, onClose onClose) entry {
-	return newEntryImpl(connectionFactory, host, onClose)
+func newEntry(t transport.StreamTransport, host *host.Host, onClose onClose) entry {
+	return newEntryImpl(t, host, onClose)
 }
 
 type iterateFunc func(entry entry)
@@ -94,6 +91,6 @@ func newEntryHolder() entryHolder {
 	return newEntryHolderImpl()
 }
 
-func NewConnectionPool(connectionFactory connectionFactory) ConnectionPool {
-	return newConnectionPool(connectionFactory)
+func NewConnectionPool(t transport.StreamTransport) ConnectionPool {
+	return newConnectionPool(t)
 }

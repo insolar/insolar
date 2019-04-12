@@ -61,25 +61,26 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/utils"
 )
 
 type entryImpl struct {
-	connectionFactory connectionFactory
-	host              *host.Host
-	onClose           onClose
+	transport transport.StreamTransport
+	host      *host.Host
+	onClose   onClose
 
 	mutex *sync.Mutex
 
 	conn io.ReadWriteCloser
 }
 
-func newEntryImpl(connectionFactory connectionFactory, host *host.Host, onClose onClose) *entryImpl {
+func newEntryImpl(t transport.StreamTransport, host *host.Host, onClose onClose) *entryImpl {
 	return &entryImpl{
-		connectionFactory: connectionFactory,
-		host:              host,
-		mutex:             &sync.Mutex{},
-		onClose:           onClose,
+		transport: t,
+		host:      host,
+		mutex:     &sync.Mutex{},
+		onClose:   onClose,
 	}
 }
 
@@ -108,7 +109,7 @@ func (e *entryImpl) open(ctx context.Context) (io.ReadWriteCloser, error) {
 	)
 	defer span.End()
 
-	conn, err := e.connectionFactory.CreateConnection(ctx, e.host)
+	conn, err := e.transport.Dial(ctx, e.host.Address.String())
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Open ] Failed to create TCP connection")
 	}
