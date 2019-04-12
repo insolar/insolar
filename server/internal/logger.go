@@ -9,6 +9,7 @@ import (
 	"github.com/insolar/insolar/log"
 )
 
+// Logger is a default insolar logger preset.
 func Logger(
 	ctx context.Context,
 	cfg configuration.Log,

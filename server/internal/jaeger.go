@@ -8,6 +8,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
+// Jaeger is a default insolar tracer preset.
 func Jaeger(
 	ctx context.Context,
 	cfg configuration.JaegerConfig,
