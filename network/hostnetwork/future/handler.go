@@ -61,14 +61,11 @@ import (
 
 type packetHandlerImpl struct {
 	futureManager Manager
-
-	received chan *packet.Packet
 }
 
 func newPacketHandlerImpl(futureManager Manager) *packetHandlerImpl {
 	return &packetHandlerImpl{
 		futureManager: futureManager,
-		received:      make(chan *packet.Packet),
 	}
 }
 
@@ -78,12 +75,6 @@ func (ph *packetHandlerImpl) Handle(ctx context.Context, msg *packet.Packet) {
 		ph.processResponse(ctx, msg)
 		return
 	}
-
-	ph.processRequest(ctx, msg)
-}
-
-func (ph *packetHandlerImpl) Received() <-chan *packet.Packet {
-	return ph.received
 }
 
 func (ph *packetHandlerImpl) processResponse(ctx context.Context, msg *packet.Packet) {
@@ -101,13 +92,6 @@ func (ph *packetHandlerImpl) processResponse(ctx context.Context, msg *packet.Pa
 		}
 		future.Cancel()
 	}
-}
-
-func (ph *packetHandlerImpl) processRequest(ctx context.Context, msg *packet.Packet) {
-	logger := inslogger.FromContext(ctx)
-	logger.Debugf("[ processRequest ] Process request %s from %s with RequestID = %d", msg.Type, msg.RemoteAddress, msg.RequestID)
-
-	ph.received <- msg
 }
 
 func shouldProcessPacket(future Future, msg *packet.Packet) bool {

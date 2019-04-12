@@ -67,7 +67,6 @@ func NewManager() Manager {
 
 type PacketHandler interface {
 	Handle(ctx context.Context, msg *packet.Packet)
-	Received() <-chan *packet.Packet
 }
 
 func NewPacketHandler(futureManager Manager) PacketHandler {
