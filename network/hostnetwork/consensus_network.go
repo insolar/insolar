@@ -63,6 +63,7 @@ import (
 	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -77,7 +78,6 @@ type networkConsensus struct {
 	origin            *host.Host
 	started           uint32
 	sequenceGenerator sequence.Generator
-	messageProcessor  func(p packets.ConsensusPacket)
 	handlers          map[packets.PacketType]network.ConsensusPacketHandler
 }
 
@@ -153,34 +153,6 @@ func (nc *networkConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
 	return err
 }
 
-func (nc *networkConsensus) processMessage(p packets.ConsensusPacket) {
-	log.Debugf("Got %s request from host, shortID: %d", p.GetType(), p.GetOrigin())
-	if p.GetTarget() != nc.origin.ShortID {
-		log.Errorf("Error processing incoming message: target ID %d differs from origin %d", p.GetTarget(), nc.origin.ShortID)
-		return
-	}
-	if p.GetOrigin() == nc.origin.ShortID {
-		log.Errorf("Error processing incoming message: sender ID %d equals to origin %d", p.GetTarget(), nc.origin.ShortID)
-		return
-	}
-	sender, err := nc.Resolver.ResolveConsensus(p.GetOrigin())
-	// TODO: NETD18-79
-	// special case for Phase1 because we can get a valid packet from a node we don't know yet (first consensus case)
-	if err != nil && p.GetType() != packets.Phase1 {
-		log.Errorf("Error processing incoming message: failed to resolve ShortID (%d) -> NodeID", p.GetOrigin())
-		return
-	}
-	if sender == nil {
-		sender = &host.Host{}
-	}
-	handler, exist := nc.handlers[p.GetType()]
-	if !exist {
-		log.Errorf("No handler set for packet type %s from node %d, %s", p.GetType(), sender.ShortID, sender.NodeID)
-		return
-	}
-	handler(p, sender.NodeID)
-}
-
 func NewConsensusNetwork(address, nodeID string, shortID insolar.ShortNodeID) (network.ConsensusNetwork, error) {
 	conf := configuration.Transport{}
 	conf.Address = address
@@ -199,24 +171,50 @@ func NewConsensusNetwork(address, nodeID string, shortID insolar.ShortNodeID) (n
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting origin")
 	}
-	result := &networkConsensus{handlers: make(map[packets.PacketType]network.ConsensusPacketHandler)}
 
-	result.transport = tp
-	tp.SetDatagramProcessor(result)
+	result := &networkConsensus{
+		handlers:          make(map[packets.PacketType]network.ConsensusPacketHandler),
+		transport:         tp,
+		sequenceGenerator: sequence.NewGeneratorImpl(),
+		origin:            origin,
+	}
 
-	result.sequenceGenerator = sequence.NewGeneratorImpl()
-	result.origin = origin
-	result.messageProcessor = result.processMessage
+	tp.SetDatagramHandler(result)
 	return result, nil
 }
 
-func (nc *networkConsensus) HandleDatagram(address string, buf []byte) error {
+func (nc *networkConsensus) HandleDatagram(address string, buf []byte) {
+	logger := inslogger.FromContext(context.Background())
 	r := bytes.NewReader(buf)
 	p, err := packets.ExtractPacket(r)
 	if err != nil {
-		return errors.Wrap(err, "could not convert network datagram to ConsensusPacket")
+		logger.Error("[ HandleDatagram ] could not convert network datagram to ConsensusPacket")
+		return
 	}
 
-	nc.processMessage(p)
-	return nil
+	log.Debugf("Got %s request from host, shortID: %d", p.GetType(), p.GetOrigin())
+	if p.GetTarget() != nc.origin.ShortID {
+		logger.Errorf("[ HandleDatagram ] target ID %d differs from origin %d", p.GetTarget(), nc.origin.ShortID)
+		return
+	}
+	if p.GetOrigin() == nc.origin.ShortID {
+		logger.Errorf("[ HandleDatagram ] sender ID %d equals to origin %d", p.GetTarget(), nc.origin.ShortID)
+		return
+	}
+	sender, err := nc.Resolver.ResolveConsensus(p.GetOrigin())
+	// TODO: NETD18-79
+	// special case for Phase1 because we can get a valid packet from a node we don't know yet (first consensus case)
+	if err != nil && p.GetType() != packets.Phase1 {
+		logger.Errorf("[ HandleDatagram ] failed to resolve ShortID (%d) -> NodeID", p.GetOrigin())
+		return
+	}
+	if sender == nil {
+		sender = &host.Host{}
+	}
+	handler, exist := nc.handlers[p.GetType()]
+	if !exist {
+		logger.Errorf("[ HandleDatagram ] No handler set for packet type %s from node %d, %s", p.GetType(), sender.ShortID, sender.NodeID)
+		return
+	}
+	handler(p, sender.NodeID)
 }

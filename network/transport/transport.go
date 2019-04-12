@@ -62,7 +62,7 @@ import (
 
 // DatagramHandler interface provides callback method to process received datagrams
 type DatagramHandler interface {
-	HandleDatagram(address string, buf []byte) error
+	HandleDatagram(address string, buf []byte)
 }
 
 // DatagramTransport interface provides methods to send and receive datagrams
@@ -71,12 +71,12 @@ type DatagramTransport interface {
 	component.Stopper
 
 	SendDatagram(ctx context.Context, address string, data []byte) error
-	SetDatagramProcessor(processor DatagramHandler)
+	SetDatagramHandler(processor DatagramHandler)
 }
 
 // StreamHandler interface provides callback method to process data stream
 type StreamHandler interface {
-	HandleStream(address string, stream io.ReadWriteCloser) error
+	HandleStream(address string, stream io.ReadWriteCloser)
 }
 
 // StreamTransport interface provides methods to send and receive data streams

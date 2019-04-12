@@ -280,14 +280,14 @@ func (hn *hostNetwork) sendPacket(ctx context.Context, p *packet.Packet) error {
 	return errors.Wrap(err, "[ send ] Failed to write data")
 }
 
-func (hn *hostNetwork) HandleStream(address string, reader io.ReadWriteCloser) error {
+func (hn *hostNetwork) HandleStream(address string, reader io.ReadWriteCloser) {
 	for {
 		p, err := packet.DeserializePacket(reader)
 
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
 				log.Warn("[ HandleStream ] Connection closed by peer")
-				return err
+				return
 			}
 
 			log.Error("[ HandleStream ] Failed to deserialize packet: ", err.Error())
@@ -300,7 +300,6 @@ func (hn *hostNetwork) HandleStream(address string, reader io.ReadWriteCloser) e
 			} else {
 				go hn.handleRequest(p)
 			}
-			//return nil
 		}
 	}
 }

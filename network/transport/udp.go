@@ -67,9 +67,9 @@ import (
 const udpMaxPacketSize = 1400
 
 type udpTransport struct {
-	conn      net.PacketConn
-	address   string
-	processor DatagramHandler
+	conn    net.PacketConn
+	address string
+	handler DatagramHandler
 }
 
 func newUDPTransport(listenAddress, fixedPublicAddress string) (*udpTransport, string, error) {
@@ -91,9 +91,9 @@ func (t *udpTransport) SendDatagram(ctx context.Context, address string, buff []
 	return t.send(ctx, address, buff)
 }
 
-// SetDatagramProcessor registers callback to process received datagram
-func (t *udpTransport) SetDatagramProcessor(processor DatagramHandler) {
-	t.processor = processor
+// SetDatagramHandler registers callback to process received datagram
+func (t *udpTransport) SetDatagramHandler(h DatagramHandler) {
+	t.handler = h
 }
 
 func (t *udpTransport) send(ctx context.Context, recvAddress string, data []byte) error {
@@ -152,12 +152,7 @@ func (t *udpTransport) Start(ctx context.Context) error {
 			}
 
 			stats.Record(ctx, consensus.RecvSize.M(int64(n)))
-			go func() {
-				err := t.processor.HandleDatagram(addr.String(), buf[:n])
-				if err != nil {
-					logger.Error("failed to process UDP packet: ", err.Error())
-				}
-			}()
+			go t.handler.HandleDatagram(addr.String(), buf[:n])
 		}
 	}()
 

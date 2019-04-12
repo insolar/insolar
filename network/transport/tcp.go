@@ -64,10 +64,10 @@ import (
 )
 
 type tcpTransport struct {
-	listener  net.Listener
-	address   string
-	processor StreamHandler
-	cancel    context.CancelFunc
+	listener net.Listener
+	address  string
+	handler  StreamHandler
+	cancel   context.CancelFunc
 }
 
 func newTCPTransport(listenAddress, fixedPublicAddress string) (*tcpTransport, string, error) {
@@ -88,8 +88,8 @@ func newTCPTransport(listenAddress, fixedPublicAddress string) (*tcpTransport, s
 	return transport, publicAddress, nil
 }
 
-func (t *tcpTransport) SetStreamHandler(processor StreamHandler) {
-	t.processor = processor
+func (t *tcpTransport) SetStreamHandler(h StreamHandler) {
+	t.handler = h
 }
 
 func (t *tcpTransport) Dial(ctx context.Context, address string) (io.ReadWriteCloser, error) {
@@ -165,8 +165,7 @@ func (t *tcpTransport) listen(ctx context.Context) {
 
 		logger.Infof("[ listen ] Accepted new connection from %s", conn.RemoteAddr())
 
-		// t.pool.AddConnection(ctx, conn)
-		go t.handleAcceptedConnection(conn)
+		go t.handler.HandleStream(conn.RemoteAddr().String(), conn)
 
 		// select {
 		// case <-ctx.Done():
@@ -182,12 +181,4 @@ func (t *tcpTransport) Stop(ctx context.Context) error {
 	err := t.listener.Close()
 	//	t.cancel()
 	return err
-}
-
-func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
-
-	err := t.processor.HandleStream(conn.RemoteAddr().String(), conn)
-	if err != nil {
-		inslogger.FromContext(context.Background()).Error("failed to process TCP stream: ", err.Error())
-	}
 }
