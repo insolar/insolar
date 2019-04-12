@@ -14,26 +14,27 @@
 // limitations under the License.
 //
 
-package heavy
+package pulse
 
 import (
 	"context"
 	"testing"
 
-	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
 )
 
-func TestComponents(t *testing.T) {
-	ctx := context.Background()
-	cfg := configuration.NewConfiguration()
-	cfg.KeysPath = "testdata/bootstrap_keys.json"
-	cfg.CertificatePath = "testdata/certificate.json"
+const testPulse = insolar.PulseNumber(42)
 
-	c, err := newComponents(ctx, cfg)
-	require.NoError(t, err)
-	err = c.Start(ctx)
-	require.NoError(t, err)
-	err = c.Stop(ctx)
-	require.NoError(t, err)
+func TestContextWith(t *testing.T) {
+	t.Parallel()
+	ctx := ContextWith(context.Background(), testPulse)
+	require.Equal(t, testPulse, ctx.Value(contextKey{}))
+}
+
+func TestFromContext(t *testing.T) {
+	t.Parallel()
+	ctx := context.WithValue(context.Background(), contextKey{}, testPulse)
+	result := FromContext(ctx)
+	require.Equal(t, testPulse, result)
 }

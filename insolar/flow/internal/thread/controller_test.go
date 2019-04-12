@@ -14,26 +14,43 @@
 // limitations under the License.
 //
 
-package heavy
+package thread
 
 import (
-	"context"
 	"testing"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/stretchr/testify/require"
 )
 
-func TestComponents(t *testing.T) {
-	ctx := context.Background()
-	cfg := configuration.NewConfiguration()
-	cfg.KeysPath = "testdata/bootstrap_keys.json"
-	cfg.CertificatePath = "testdata/certificate.json"
+func TestNewController(t *testing.T) {
+	t.Parallel()
+	c := NewController()
+	require.NotNil(t, c)
+	require.NotNil(t, c.cancel)
+}
 
-	c, err := newComponents(ctx, cfg)
-	require.NoError(t, err)
-	err = c.Start(ctx)
-	require.NoError(t, err)
-	err = c.Stop(ctx)
-	require.NoError(t, err)
+func TestController_Cancel(t *testing.T) {
+	t.Parallel()
+	ch := make(chan struct{})
+	controller := Controller{
+		cancel: ch,
+	}
+	var expected <-chan struct{} = ch
+	require.Equal(t, expected, controller.Cancel())
+}
+
+func TestController_Pulse(t *testing.T) {
+	t.Parallel()
+	ch := make(chan struct{})
+	controller := Controller{
+		cancel: ch,
+	}
+	var unexpected <-chan struct{} = ch
+	controller.Pulse()
+	require.NotEqual(t, unexpected, controller.cancel)
+	select {
+	case <-ch:
+	default:
+		t.Fatal("cancel channel should be closed")
+	}
 }
