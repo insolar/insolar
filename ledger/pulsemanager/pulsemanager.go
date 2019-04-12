@@ -427,7 +427,6 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID in
 	for id := range indexStorage.GetObjects() {
 		idx, err := m.IndexAccessor.ForID(ctx, id)
 		if err != nil {
-			println(fmt.Sprintf("удаленный индекс ид - %v", id.DebugString()))
 			if err == object.ErrIndexNotFound {
 				logger.WithField("id", id.DebugString()).Error("rewrite index not found")
 				continue
@@ -437,7 +436,6 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID in
 		idx.JetID = insolar.JetID(toJetID)
 		err = m.IndexModifier.Set(ctx, id, idx)
 		if err != nil {
-			println(fmt.Sprintf("удаленный индекс ид - %v", id.DebugString()))
 			return errors.Wrap(err, "failed to rewrite index")
 		}
 	}

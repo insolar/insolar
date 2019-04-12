@@ -18,7 +18,6 @@ package light
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -103,7 +102,6 @@ func (c cleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 	c.jetStorage.Delete(ctx, pn)
 
 	excIdx := c.getExcludedIndexes(ctx, pn)
-	println(fmt.Sprintf("удаляю индекс ид. исключили - %v", len(excIdx)))
 	c.indexCleaner.RemoveUntil(ctx, pn, excIdx)
 
 	err := c.pulseShifter.Shift(ctx, pn)
@@ -115,16 +113,12 @@ func (c cleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 
 func (c *cleaner) getExcludedIndexes(ctx context.Context, pn insolar.PulseNumber) map[insolar.ID]struct{} {
 	jets := c.jetStorage.All(ctx, pn)
-	println(fmt.Sprintf("удаляю индекс ид. жеты - %v, pn - %v", len(jets), pn))
 	res := make(map[insolar.ID]struct{})
 	for _, j := range jets {
-		println(fmt.Sprintf("удаляю индекс ид. был жет - %v", j.DebugString()))
 		storage := c.recentProvider.GetIndexStorage(ctx, insolar.ID(j))
 		ids := storage.GetObjects()
 		for id, ttl := range ids {
-			println(fmt.Sprintf("удаляю индекс ид. был id - %v, ttl - %v", id.DebugString(), ttl))
 			if ttl > 0 {
-				println(fmt.Sprintf("удаляю индекс ид. был id - %v, внес в список", id.DebugString()))
 				res[id] = struct{}{}
 			}
 		}
