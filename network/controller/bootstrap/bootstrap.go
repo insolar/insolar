@@ -602,20 +602,28 @@ func (bc *bootstrapper) startCyclicBootstrap(ctx context.Context) {
 			results = append(results, res)
 		}
 		if len(results) != 0 {
-			networkSize := results[0].NetworkSize
-			index := 0
-			for i := 1; i < len(results); i++ {
-				if results[i].NetworkSize > networkSize {
-					networkSize = results[i].NetworkSize
-					index = i
-				}
-			}
-			if networkSize > len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) {
+			index := bc.getLagerNetorkIndex(ctx, results)
+			if index >= 0 {
 				bc.reconnectToNewNetwork(ctx, nodes[index])
 			}
 		}
 		time.Sleep(time.Second * bootstrapTimeout)
 	}
+}
+
+func (bc *bootstrapper) getLagerNetorkIndex(ctx context.Context, results []*network.BootstrapResult) int {
+	networkSize := results[0].NetworkSize
+	index := 0
+	for i := 1; i < len(results); i++ {
+		if results[i].NetworkSize > networkSize {
+			networkSize = results[i].NetworkSize
+			index = i
+		}
+	}
+	if networkSize > len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) {
+		return index
+	}
+	return -1
 }
 
 func (bc *bootstrapper) StopCyclicBootstrap() {
