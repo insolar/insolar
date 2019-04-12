@@ -53,20 +53,22 @@ func (h *Handler) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
 
 func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := bus.Message{
-		ReplyTo: make(chan bus.Reply, 1),
+		ReplyTo: make(chan bus.Reply),
 		Parcel:  parcel,
 	}
 	ctx, logger := inslogger.WithField(ctx, "pulse", fmt.Sprintf("%d", parcel.Pulse()))
 	ctx = pulse.ContextWith(ctx, parcel.Pulse())
-	f := thread.NewThread(msg, h.controller)
-	err := f.Run(ctx, h.handles.present(msg))
-	if err != nil {
-		select {
-		case msg.ReplyTo <- bus.Reply{Err: err}:
-		default:
+	go func() {
+		f := thread.NewThread(msg, h.controller)
+		err := f.Run(ctx, h.handles.present(msg))
+		if err != nil {
+			select {
+			case msg.ReplyTo <- bus.Reply{Err: err}:
+			default:
+			}
+			logger.Error("Handling failed", err)
 		}
-		logger.Error("Handling failed", err)
-	}
+	}()
 	rep := <-msg.ReplyTo
 	return rep.Reply, rep.Err
 }
