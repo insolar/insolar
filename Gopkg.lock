@@ -236,6 +236,21 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:1e0f0ec1aef9d4d80731561b903e30ad9784239546e8f7925d308b2d1a57c167"
+  name = "github.com/insolar/x-crypto"
+  packages = [
+    "cryptobyte",
+    "ecdsa",
+    "elliptic",
+    "randutil",
+    "x509",
+    "x509/pkix",
+  ]
+  pruneopts = "UT"
+  revision = "a9496a2079382bca2c1687ad5670f66af1ec18cb"
+
+[[projects]]
+  branch = "master"
   digest = "1:fa3a7dc0a780fb19838fb96d4e18c0b9a019d9bb618798308d7b6ca48fcb9876"
   name = "github.com/jbenet/go-base58"
   packages = ["."]
@@ -650,6 +665,9 @@
     "github.com/gorilla/rpc/v2",
     "github.com/gorilla/rpc/v2/json2",
     "github.com/hashicorp/go-multierror",
+    "github.com/insolar/x-crypto/ecdsa",
+    "github.com/insolar/x-crypto/elliptic",
+    "github.com/insolar/x-crypto/x509",
     "github.com/jbenet/go-base58",
     "github.com/lucas-clemente/quic-go",
     "github.com/magiconair/properties/assert",
