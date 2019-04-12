@@ -52,23 +52,21 @@ package transport
 
 import (
 	"context"
+	"io"
 	"net"
 	"strings"
-	"time"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network/transport/pool"
+	"github.com/insolar/insolar/network/hostnetwork/resolver"
 )
 
 type tcpTransport struct {
-	pool      pool.ConnectionPool
 	listener  net.Listener
 	address   string
-	processor StreamProcessor
+	processor StreamHandler
 	cancel    context.CancelFunc
 }
 
@@ -78,51 +76,46 @@ func newTCPTransport(listenAddress, fixedPublicAddress string) (*tcpTransport, s
 	if err != nil {
 		return nil, "", errors.Wrap(err, "failed to listen UDP")
 	}
-	publicAddress, err := Resolve(fixedPublicAddress, listener.Addr().String())
+	publicAddress, err := resolver.Resolve(fixedPublicAddress, listener.Addr().String())
 	if err != nil {
 		return nil, "", errors.Wrap(err, "failed to resolve public address")
 	}
 
 	transport := &tcpTransport{
 		listener: listener,
-		pool:     pool.NewConnectionPool(&tcpConnectionFactory{}),
 	}
 
 	return transport, publicAddress, nil
 }
 
-func (t *tcpTransport) SetStreamProcessor(processor StreamProcessor) {
+func (t *tcpTransport) SetStreamHandler(processor StreamHandler) {
 	t.processor = processor
 }
 
-func (t *tcpTransport) SendBuffer(ctx context.Context, address string, buff []byte) error {
-	conn, err := t.pool.GetConnection(ctx, address)
+func (t *tcpTransport) Dial(ctx context.Context, address string) (io.ReadWriteCloser, error) {
+	logger := inslogger.FromContext(ctx)
+	tcpAddress, err := net.ResolveTCPAddr("tcp", address)
 	if err != nil {
-		return err
-	}
-	log.Warn("=== Before Write")
-	conn.SetDeadline(time.Now().Add(2 * time.Second))
-	n, err := conn.Write(buff)
-	if err != nil {
-		// retry
-		log.Warn("=== Before Retry")
-		t.pool.CloseConnection(ctx, address)
-		conn, err = t.pool.GetConnection(ctx, address)
-		if err != nil {
-			return errors.Wrap(err, "[ SendBuffer ] Failed to get connection")
-		}
-		n, err = conn.Write(buff)
+		return nil, errors.New("[ Dial ] Failed to get tcp address")
 	}
 
-	if err == nil {
-		metrics.NetworkSentSize.Add(float64(n))
-		return nil
+	conn, err := net.DialTCP("tcp", nil, tcpAddress)
+	if err != nil {
+		logger.Errorf("[ Dial ] Failed to open connection to %s: %s", address, err.Error())
+		return nil, errors.Wrap(err, "[ Dial ] Failed to open connection")
 	}
-	return errors.Wrap(err, "[ send ] Failed to write data")
-}
 
-func (t *tcpTransport) SendDatagram(ctx context.Context, address string, buff []byte) error {
-	panic("tcp can't send dgram")
+	err = conn.SetKeepAlive(true)
+	if err != nil {
+		logger.Error("[ Dial ] Failed to set keep alive")
+	}
+
+	err = conn.SetNoDelay(true)
+	if err != nil {
+		logger.Error("[ Dial ] Failed to set connection no delay: ", err.Error())
+	}
+
+	return conn, nil
 }
 
 func (t *tcpTransport) prepareListen() (net.Listener, error) {
@@ -143,57 +136,57 @@ func (t *tcpTransport) prepareListen() (net.Listener, error) {
 func (t *tcpTransport) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ Start ] Start TCP transport")
-	//ctx, t.cancel = context.WithCancel(ctx)
+	ctx, t.cancel = context.WithCancel(ctx)
+
+	go t.listen(ctx)
+	return nil
+}
+
+func (t *tcpTransport) listen(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
 
 	listener, err := t.prepareListen()
 	if err != nil {
 		logger.Info("[ Start ] Failed to prepare TCP transport: ", err.Error())
-		return err
+		return
 	}
 
-	go func() {
-		for {
-			conn, err := listener.Accept()
-			if err != nil {
-				if strings.Contains(strings.ToLower(err.Error()), "use of closed network connection") {
-					logger.Info("Connection closed, quiting accept loop")
-					return
-				}
-
-				logger.Error("[ Start ] Failed to accept connection: ", err.Error())
+	for {
+		conn, err := listener.Accept()
+		if err != nil {
+			if strings.Contains(strings.ToLower(err.Error()), "use of closed network connection") {
+				logger.Info("Connection closed, quiting accept loop")
 				return
 			}
 
-			logger.Infof("[ Start ] Accepted new connection from %s", conn.RemoteAddr())
-
-			// t.pool.AddConnection(ctx, conn)
-			go t.handleAcceptedConnection(conn)
-
-			// select {
-			// case <-ctx.Done():
-			// 	return
-			// default:
-			// }
+			logger.Error("[ listen ] Failed to accept connection: ", err.Error())
+			return
 		}
 
-	}()
+		logger.Infof("[ listen ] Accepted new connection from %s", conn.RemoteAddr())
 
-	return nil
+		// t.pool.AddConnection(ctx, conn)
+		go t.handleAcceptedConnection(conn)
+
+		// select {
+		// case <-ctx.Done():
+		// 	return
+		// default:
+		// }
+	}
 }
 
 // Stop stops networking.
 func (t *tcpTransport) Stop(ctx context.Context) error {
 	log.Info("[ Stop ] Stop TCP transport")
 	err := t.listener.Close()
-	t.pool.Reset()
 	//	t.cancel()
 	return err
 }
 
 func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
-	//defer utils.CloseVerbose(conn)
 
-	err := t.processor.ProcessStream(conn.RemoteAddr().String(), conn)
+	err := t.processor.HandleStream(conn.RemoteAddr().String(), conn)
 	if err != nil {
 		inslogger.FromContext(context.Background()).Error("failed to process TCP stream: ", err.Error())
 	}

@@ -69,10 +69,12 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"github.com/insolar/insolar/network/hostnetwork/pool"
 	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
 )
 
+// NewHostNetwork constructor creates new NewHostNetwork component
 func NewHostNetwork(conf configuration.Configuration, nodeRef string) (network.HostNetwork, error) {
 	tp, publicAddress, err := transport.NewTransport(conf.Host.Transport)
 	if err != nil {
@@ -87,14 +89,21 @@ func NewHostNetwork(conf configuration.Configuration, nodeRef string) (network.H
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting origin")
 	}
-	result := &hostNetwork{handlers: make(map[types.PacketType]network.RequestHandler)}
-	result.sequenceGenerator = sequence.NewGeneratorImpl()
-	result.transport = tp
-	result.transport.SetStreamProcessor(result)
-	result.origin = origin
-	result.messageProcessor = result.processMessage
-	result.futureManager = future.NewManager()
-	result.packetHandler = future.NewPacketHandler(result.futureManager)
+
+	futureManager := future.NewManager()
+
+	result := &hostNetwork{
+		handlers:          make(map[types.PacketType]network.RequestHandler),
+		sequenceGenerator: sequence.NewGeneratorImpl(),
+		transport:         tp,
+		origin:            origin,
+		futureManager:     futureManager,
+		responseHandler:   future.NewPacketHandler(futureManager),
+		pool:              pool.NewConnectionPool(tp),
+	}
+
+	result.transport.SetStreamHandler(result) // TODO: ugly
+
 	return result, nil
 }
 
@@ -104,11 +113,11 @@ type hostNetwork struct {
 	started           uint32
 	transport         transport.StreamTransport
 	origin            *host.Host
-	messageProcessor  func(msg *packet.Packet)
 	sequenceGenerator sequence.Generator
 	handlers          map[types.PacketType]network.RequestHandler
 	futureManager     future.Manager
-	packetHandler     future.PacketHandler
+	responseHandler   future.PacketHandler
+	pool              pool.ConnectionPool
 }
 
 // Start start listening to network requests, should be started in goroutine.
@@ -154,41 +163,47 @@ func (hn *hostNetwork) NewRequestBuilder() network.RequestBuilder {
 	return &Builder{sender: hn.origin, id: network.RequestID(hn.sequenceGenerator.Generate())}
 }
 
-func (hn *hostNetwork) processMessage(msg *packet.Packet) {
-	ctx, logger := inslogger.WithTraceField(context.Background(), msg.TraceID)
-	logger.Debugf("Got %s request from host %s; RequestID: %d", msg.Type.String(), msg.Sender.String(), msg.RequestID)
-	handler, exist := hn.handlers[msg.Type]
+func (hn *hostNetwork) handleRequest(p *packet.Packet) {
+	ctx, logger := inslogger.WithTraceField(context.Background(), p.TraceID)
+	logger.Debugf("Got %s request from host %s; RequestID: %d", p.Type.String(), p.Sender.String(), p.RequestID)
+	handler, exist := hn.handlers[p.Type]
 	if !exist {
 		logger.Errorf("No handler set for packet type %s from node %s",
-			msg.Type.String(), msg.Sender.NodeID.String())
+			p.Type.String(), p.Sender.NodeID.String())
 		return
 	}
 	ctx, span := instracer.StartSpan(ctx, "hostTransport.processMessage")
 	span.AddAttributes(
-		trace.StringAttribute("msg receiver", msg.Receiver.Address.String()),
-		trace.StringAttribute("msg trace", msg.TraceID),
-		trace.StringAttribute("msg type", msg.Type.String()),
+		trace.StringAttribute("msg receiver", p.Receiver.Address.String()),
+		trace.StringAttribute("msg trace", p.TraceID),
+		trace.StringAttribute("msg type", p.Type.String()),
 	)
 	defer span.End()
-	response, err := handler(ctx, msg)
+	response, err := handler(ctx, p)
 	if err != nil {
 		logger.Errorf("Error handling request %s from node %s: %s",
-			msg.Type.String(), msg.Sender.NodeID.String(), err)
+			p.Type.String(), p.Sender.NodeID.String(), err)
 		return
 	}
-	err = hn.sendResponse(ctx, msg.RequestID, response.(*packet.Packet))
+	err = hn.sendResponse(ctx, p.RequestID, response.(*packet.Packet))
 	if err != nil {
-		logger.Error(err)
+		logger.Errorf("Failed to send response: %s", err.Error())
 	}
 }
 
 // SendRequestToHost send request packet to a remote node.
 func (hn *hostNetwork) SendRequestToHost(ctx context.Context, request network.Request, receiver *host.Host) (network.Future, error) {
-	inslogger.FromContext(ctx).Debugf("Send %s request to host %s", request.GetType().String(), receiver.String())
-	f, err := hn.sendRequest(ctx, hn.buildRequest(ctx, request, receiver))
+	p := hn.buildRequest(ctx, request, receiver)
+
+	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d", p.Type, p.Receiver.String(), p.RequestID)
+
+	f := hn.futureManager.Create(p)
+	err := hn.sendPacket(ctx, p)
 	if err != nil {
-		return nil, err
+		f.Cancel()
+		return nil, errors.Wrap(err, "Failed to send transport packet")
 	}
+	metrics.NetworkPacketSentTotal.WithLabelValues(p.Type.String()).Inc()
 	return f, nil
 }
 
@@ -218,7 +233,7 @@ func (hn *hostNetwork) SendRequest(ctx context.Context, request network.Request,
 	return hn.SendRequestToHost(ctx, request, h)
 }
 
-// RegisterPacketHandler register a handler function to process incoming requests of a specific type.
+// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 func (hn *hostNetwork) RegisterRequestHandler(t types.PacketType, handler network.RequestHandler) {
 	f := func(ctx context.Context, request network.Request) (network.Response, error) {
 		hn.Resolver.AddToKnownHosts(request.GetSenderHost())
@@ -227,20 +242,10 @@ func (hn *hostNetwork) RegisterRequestHandler(t types.PacketType, handler networ
 	hn.RegisterPacketHandler(t, f)
 }
 
-func (hn *hostNetwork) sendRequest(ctx context.Context, msg *packet.Packet) (future.Future, error) {
-	f := hn.futureManager.Create(msg)
-	err := hn.sendPacket(ctx, msg)
-	if err != nil {
-		f.Cancel()
-		return nil, errors.Wrap(err, "Failed to send transport packet")
-	}
-	metrics.NetworkPacketSentTotal.WithLabelValues(msg.Type.String()).Inc()
-	return f, nil
-}
-
-func (hn *hostNetwork) sendResponse(ctx context.Context, requestID network.RequestID, msg *packet.Packet) error {
-	msg.RequestID = requestID
-	return hn.sendPacket(ctx, msg)
+func (hn *hostNetwork) sendResponse(ctx context.Context, requestID network.RequestID, p *packet.Packet) error {
+	p.RequestID = requestID
+	inslogger.FromContext(ctx).Debugf("Send %s response to %s with RequestID = %d", p.Type, p.Receiver.String(), p.RequestID)
+	return hn.sendPacket(ctx, p)
 }
 
 func (hn *hostNetwork) sendPacket(ctx context.Context, p *packet.Packet) error {
@@ -249,32 +254,53 @@ func (hn *hostNetwork) sendPacket(ctx context.Context, p *packet.Packet) error {
 		return errors.Wrap(err, "Failed to serialize packet")
 	}
 
-	recvAddress := p.Receiver.Address.String()
-	inslogger.FromContext(ctx).Debugf("Send %s packet to %s with RequestID = %d", p.Type, recvAddress, p.RequestID)
-	return hn.transport.SendBuffer(ctx, recvAddress, data)
+	conn, err := hn.pool.GetConnection(ctx, p.Receiver)
+	if err != nil {
+		return errors.Wrap(err, "Failed to get connection")
+	}
+
+	n, err := conn.Write(data)
+	if err != nil {
+		// retry
+		log.Warn("=== Before Retry")
+		conn.Close()
+		//t.pool.CloseConnection(ctx, address)
+		//conn, err = t.pool.GetConnection(ctx, address)
+		conn, err := hn.pool.GetConnection(ctx, p.Receiver)
+
+		if err != nil {
+			return errors.Wrap(err, "[ SendBuffer ] Failed to get connection")
+		}
+		n, err = conn.Write(data)
+	}
+	if err == nil {
+		metrics.NetworkSentSize.Add(float64(n))
+		return nil
+	}
+	return errors.Wrap(err, "[ send ] Failed to write data")
 }
 
-func (hn *hostNetwork) ProcessStream(address string, reader io.Reader) error {
+func (hn *hostNetwork) HandleStream(address string, reader io.ReadWriteCloser) error {
 	for {
-		msg, err := packet.DeserializePacket(reader)
+		p, err := packet.DeserializePacket(reader)
 
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				log.Warn("[ handleAcceptedConnection ] Connection closed by peer")
+				log.Warn("[ HandleStream ] Connection closed by peer")
 				return err
 			}
 
-			log.Error("[ handleAcceptedConnection ] Failed to deserialize packet: ", err.Error())
+			log.Error("[ HandleStream ] Failed to deserialize packet: ", err.Error())
 		} else {
-			ctx, logger := inslogger.WithTraceField(context.Background(), msg.TraceID)
-			logger.Debug("[ handleAcceptedConnection ] Handling packet: ", msg.RequestID)
+			ctx, logger := inslogger.WithTraceField(context.Background(), p.TraceID)
+			logger.Debug("[ HandleStream ] Handling packet RequestID = ", p.RequestID)
 
-			if msg.IsResponse {
-				go hn.packetHandler.Handle(ctx, msg) // response, future call
+			if p.IsResponse {
+				go hn.responseHandler.Handle(ctx, p)
 			} else {
-				go hn.messageProcessor(msg) // request callback
+				go hn.handleRequest(p)
 			}
-			return nil
+			//return nil
 		}
 	}
 }

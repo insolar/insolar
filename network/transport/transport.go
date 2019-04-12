@@ -54,17 +54,11 @@ import (
 	"context"
 	"io"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/network/hostnetwork/resolver"
-
-	"github.com/pkg/errors"
 )
-
-// StreamProcessor interface provides callback method to process data stream
-type StreamProcessor interface {
-	ProcessStream(address string, reader io.Reader) error
-}
 
 // DatagramProcessor interface provides callback method to process received datagrams
 type DatagramProcessor interface {
@@ -80,13 +74,18 @@ type DatagramTransport interface {
 	SetDatagramProcessor(processor DatagramProcessor)
 }
 
+// StreamHandler interface provides callback method to process data stream
+type StreamHandler interface {
+	HandleStream(address string, stream io.ReadWriteCloser) error
+}
+
 // StreamTransport interface provides methods to send and receive data streams
 type StreamTransport interface {
 	component.Starter
 	component.Stopper
 
-	SendBuffer(ctx context.Context, address string, data []byte) error
-	SetStreamProcessor(processor StreamProcessor)
+	Dial(ctx context.Context, address string) (io.ReadWriteCloser, error)
+	SetStreamHandler(processor StreamHandler)
 }
 
 // NewDatagramTransport creates new UDP DatagramTransport

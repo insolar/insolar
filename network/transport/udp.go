@@ -61,6 +61,7 @@ import (
 	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/hostnetwork/resolver"
 )
 
 const udpMaxPacketSize = 1400
@@ -76,7 +77,7 @@ func newUDPTransport(listenAddress, fixedPublicAddress string) (*udpTransport, s
 	if err != nil {
 		return nil, "", errors.Wrap(err, "failed to listen UDP")
 	}
-	publicAddress, err := Resolve(fixedPublicAddress, conn.LocalAddr().String())
+	publicAddress, err := resolver.Resolve(fixedPublicAddress, conn.LocalAddr().String())
 	if err != nil {
 		return nil, "", errors.Wrap(err, "failed to resolve public address")
 	}
