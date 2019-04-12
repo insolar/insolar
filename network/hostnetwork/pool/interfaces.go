@@ -53,16 +53,19 @@ package pool
 import (
 	"context"
 	"io"
+
+	"github.com/insolar/insolar/network/hostnetwork/host"
 )
 
 type ConnectionPool interface {
-	GetConnection(ctx context.Context, address string) (io.ReadWriteCloser, error)
-	CloseConnection(ctx context.Context, address string)
+	GetConnection(ctx context.Context, host *host.Host) (io.ReadWriteCloser, error)
+	HandleConnection(host *host.Host, conn io.ReadWriteCloser) error
+	CloseConnection(ctx context.Context, host *host.Host)
 	Reset()
 }
 
 type connectionFactory interface {
-	CreateConnection(ctx context.Context, address string) (io.ReadWriteCloser, error)
+	CreateConnection(ctx context.Context, host *host.Host) (io.ReadWriteCloser, error)
 }
 
 type entry interface {
@@ -70,18 +73,18 @@ type entry interface {
 	Close()
 }
 
-type onClose func(ctx context.Context, addr string)
+type onClose func(ctx context.Context, host *host.Host)
 
-func newEntry(connectionFactory connectionFactory, address string, onClose onClose) entry {
-	return newEntryImpl(connectionFactory, address, onClose)
+func newEntry(connectionFactory connectionFactory, host *host.Host, onClose onClose) entry {
+	return newEntryImpl(connectionFactory, host, onClose)
 }
 
 type iterateFunc func(entry entry)
 
 type entryHolder interface {
-	Get(address string) (entry, bool)
-	Delete(address string)
-	Add(address string, entry entry)
+	Get(host *host.Host) (entry, bool)
+	Delete(host *host.Host)
+	Add(host *host.Host, entry entry)
 	Size() int
 	Clear()
 	Iterate(iterateFunc iterateFunc)

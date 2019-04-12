@@ -50,6 +50,8 @@
 
 package pool
 
+import "github.com/insolar/insolar/network/hostnetwork/host"
+
 type entryHolderImpl struct {
 	entries map[string]entry
 }
@@ -60,22 +62,22 @@ func newEntryHolderImpl() entryHolder {
 	}
 }
 
-func (eh *entryHolderImpl) key(address string) string {
-	return address
+func (eh *entryHolderImpl) key(host *host.Host) string {
+	return host.NodeID.String()
 }
 
-func (eh *entryHolderImpl) Get(address string) (entry, bool) {
-	entry, ok := eh.entries[eh.key(address)]
+func (eh *entryHolderImpl) Get(host *host.Host) (entry, bool) {
+	entry, ok := eh.entries[eh.key(host)]
 
 	return entry, ok
 }
 
-func (eh *entryHolderImpl) Delete(address string) {
-	delete(eh.entries, eh.key(address))
+func (eh *entryHolderImpl) Delete(host *host.Host) {
+	delete(eh.entries, eh.key(host))
 }
 
-func (eh *entryHolderImpl) Add(address string, entry entry) {
-	eh.entries[eh.key(address)] = entry
+func (eh *entryHolderImpl) Add(host *host.Host, entry entry) {
+	eh.entries[eh.key(host)] = entry
 }
 
 func (eh *entryHolderImpl) Clear() {

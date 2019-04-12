@@ -60,12 +60,13 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/utils"
 )
 
 type entryImpl struct {
 	connectionFactory connectionFactory
-	address           string
+	host              *host.Host
 	onClose           onClose
 
 	mutex *sync.Mutex
@@ -73,10 +74,10 @@ type entryImpl struct {
 	conn io.ReadWriteCloser
 }
 
-func newEntryImpl(connectionFactory connectionFactory, address string, onClose onClose) *entryImpl {
+func newEntryImpl(connectionFactory connectionFactory, host *host.Host, onClose onClose) *entryImpl {
 	return &entryImpl{
 		connectionFactory: connectionFactory,
-		address:           address,
+		host:              host,
 		mutex:             &sync.Mutex{},
 		onClose:           onClose,
 	}
@@ -103,11 +104,11 @@ func (e *entryImpl) open(ctx context.Context) (io.ReadWriteCloser, error) {
 	logger := inslogger.FromContext(ctx)
 	ctx, span := instracer.StartSpan(ctx, "connectionPool.open")
 	span.AddAttributes(
-		trace.StringAttribute("create connect to", e.address),
+		trace.StringAttribute("create connect to", e.host.String()),
 	)
 	defer span.End()
 
-	conn, err := e.connectionFactory.CreateConnection(ctx, e.address)
+	conn, err := e.connectionFactory.CreateConnection(ctx, e.host)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Open ] Failed to create TCP connection")
 	}
@@ -116,12 +117,12 @@ func (e *entryImpl) open(ctx context.Context) (io.ReadWriteCloser, error) {
 		b := make([]byte, 1)
 		_, err := conn.Read(b)
 		if err != nil {
-			logger.Infof("[ Open ] remote host 'closed' connection to %s: %s", e.address, err)
-			e.onClose(ctx, e.address)
+			logger.Infof("[ Open ] remote host 'closed' connection to %s: %s", e.host.String(), err)
+			e.onClose(ctx, e.host)
 			return
 		}
 
-		logger.Errorf("[ Open ] unexpected data on connection to %s", e.address)
+		logger.Errorf("[ Open ] unexpected data on connection to %s", e.host)
 	}(e, conn)
 
 	return conn, nil
