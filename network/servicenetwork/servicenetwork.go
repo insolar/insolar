@@ -293,6 +293,10 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 		}
 	}
 
+	if err := n.Gateway().OnPulse(ctx, newPulse); err != nil {
+		logger.Error(errors.Wrap(err, "Failed to call OnPulse on Gateway"))
+	}
+
 	err := n.PulseManager.Set(ctx, newPulse, n.Gateway().GetState() == insolar.CompleteNetworkState)
 	if err != nil {
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())
