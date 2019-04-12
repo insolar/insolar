@@ -14,21 +14,26 @@
 // limitations under the License.
 //
 
-package messagebus
+package heavy
 
 import (
 	"context"
+	"testing"
 
-	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/configuration"
+	"github.com/stretchr/testify/require"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/messagebus.sender -o .
+func TestComponents(t *testing.T) {
+	ctx := context.Background()
+	cfg := configuration.NewConfiguration()
+	cfg.KeysPath = "testdata/bootstrap_keys.json"
+	cfg.CertificatePath = "testdata/certificate.json"
 
-// Sender is an internal interface used by recorder and player. It should not be publicated.
-//
-// Sender provides access to private MessageBus methods.
-type sender interface {
-	insolar.MessageBus
-	CreateParcel(ctx context.Context, msg insolar.Message, token insolar.DelegationToken, currentPulse insolar.Pulse) (insolar.Parcel, error)
-	SendParcel(ctx context.Context, msg insolar.Parcel, currentPulse insolar.Pulse, ops *insolar.MessageSendOptions) (insolar.Reply, error)
+	c, err := newComponents(ctx, cfg)
+	require.NoError(t, err)
+	err = c.Start(ctx)
+	require.NoError(t, err)
+	err = c.Stop(ctx)
+	require.NoError(t, err)
 }

@@ -22,8 +22,9 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// Provider provides different types of storages for a specific jet
 //go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.Provider -o ./ -s _mock.go
+
+// Provider provides different types of storages for a specific jet
 type Provider interface {
 	GetIndexStorage(ctx context.Context, jetID insolar.ID) RecentIndexStorage
 	GetPendingStorage(ctx context.Context, jetID insolar.ID) PendingStorage
@@ -38,10 +39,11 @@ type Provider interface {
 	RemovePendingStorage(ctx context.Context, id insolar.ID)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.RecentIndexStorage -o ./ -s _mock.go
+
 // RecentIndexStorage is a struct which contains `recent indexes` for a specific jet
 // `recent index` is a index which was called between TTL-border
 // If index is put to a recent storage, it'll be there for TTL-pulses at least
-//go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.RecentIndexStorage -o ./ -s _mock.go
 type RecentIndexStorage interface {
 	AddObject(ctx context.Context, id insolar.ID)
 	AddObjectWithTLL(ctx context.Context, id insolar.ID, ttl int)

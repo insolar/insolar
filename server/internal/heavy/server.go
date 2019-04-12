@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package light
+package heavy
 
 import (
 	"context"
@@ -54,6 +54,7 @@ func (s *Server) Serve() {
 	if err != nil {
 		log.Warn("failed to load configuration from file: ", err.Error())
 	}
+
 	cfg := &cfgHolder.Configuration
 	cfg.Metrics.Namespace = "insolard"
 
@@ -67,6 +68,11 @@ func (s *Server) Serve() {
 	ctx, inslog := internal.Logger(ctx, cfg.Log, traceID, cmp.NodeRef, cmp.NodeRole)
 	ctx, jaegerFlush := internal.Jaeger(ctx, cfg.Tracer.Jaeger, traceID, cmp.NodeRef, cmp.NodeRole)
 	defer jaegerFlush()
+
+	ctx, inslog = inslogger.WithField(ctx, "nodeid", cmp.NodeRef)
+	ctx, inslog = inslogger.WithField(ctx, "role", cmp.NodeRole)
+	ctx = inslogger.SetLogger(ctx, inslog)
+	log.SetGlobalLogger(inslog)
 
 	var gracefulStop = make(chan os.Signal, 1)
 	signal.Notify(gracefulStop, syscall.SIGTERM)
