@@ -197,8 +197,8 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) RegisterHandlers() {
-	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.Execute)
-	lr.MessageBus.MustRegister(insolar.TypeCallConstructor, lr.Execute)
+	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.HandleCalls)
+	lr.MessageBus.MustRegister(insolar.TypeCallConstructor, lr.HandleCalls)
 	lr.MessageBus.MustRegister(insolar.TypeExecutorResults, lr.HandleExecutorResultsMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
@@ -280,8 +280,7 @@ func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context
 	return context
 }
 
-// Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
+func (lr *LogicRunner) HandleCalls(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	ctx = loggerWithTargetID(ctx, parcel)
 	inslogger.FromContext(ctx).Debug("LogicRunner.Execute starts ...")
 
@@ -290,17 +289,11 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel insolar.Parcel) (inso
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
 	}
 
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.Execute")
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.HandleCalls")
 	span.AddAttributes(
 		trace.StringAttribute("msg.Type", msg.Type().String()),
 	)
 	defer span.End()
-
-	rep, err := lr.executeActual(ctx, parcel, msg)
-	return rep, err
-}
-
-func (lr *LogicRunner) executeActual(ctx context.Context, parcel insolar.Parcel, msg message.IBaseLogicMessage) (insolar.Reply, error) {
 
 	ref := msg.GetReference()
 	os := lr.UpsertObjectState(ref)
