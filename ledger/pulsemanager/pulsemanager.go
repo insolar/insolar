@@ -23,7 +23,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/internal/ledger/hot"
+	"github.com/insolar/insolar/ledger/hot"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"

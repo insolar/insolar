@@ -21,7 +21,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/internal/ledger/hot"
+	"github.com/insolar/insolar/ledger/hot"
 	"github.com/insolar/insolar/ledger/storage/object"
 
 	"github.com/insolar/insolar/component"
