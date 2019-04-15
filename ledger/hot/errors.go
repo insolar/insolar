@@ -14,29 +14,10 @@
 // limitations under the License.
 //
 
-package artifactmanager
+package hot
 
-import (
-	"context"
+import "github.com/pkg/errors"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
+var (
+	ErrWaiterNotLocked = errors.New("unlocked waiter unlock attempt")
 )
-
-type Dependencies struct {
-	FetchJet   func(*FetchJet) *FetchJet
-	WaitHot    func(*WaitHot) *WaitHot
-	GetIndex   func(*GetIndex) *GetIndex
-	SendObject func(p *SendObject) *SendObject
-}
-
-type ReturnReply struct {
-	ReplyTo chan<- bus.Reply
-	Err     error
-	Reply   insolar.Reply
-}
-
-func (p *ReturnReply) Proceed(context.Context) error {
-	p.ReplyTo <- bus.Reply{Reply: p.Reply, Err: p.Err}
-	return nil
-}
