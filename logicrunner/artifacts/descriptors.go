@@ -32,8 +32,6 @@ type codeDescriptor struct {
 	code        []byte
 	machineType insolar.MachineType
 	ref         insolar.Reference
-
-	ctx context.Context
 }
 
 // Ref returns reference to represented code record.
@@ -53,9 +51,6 @@ func (d *codeDescriptor) Code() ([]byte, error) {
 
 // ObjectDescriptor represents meta info required to fetch all object data.
 type objectDescriptor struct {
-	ctx context.Context
-	am  Client
-
 	head         insolar.Reference
 	state        insolar.ID
 	prototype    *insolar.Reference
@@ -110,11 +105,6 @@ func (d *objectDescriptor) ChildPointer() *insolar.ID {
 // Memory fetches latest memory of the object known to storage.
 func (d *objectDescriptor) Memory() []byte {
 	return d.memory
-}
-
-// Children returns object's children references.
-func (d *objectDescriptor) Children(pulse *insolar.PulseNumber) (RefIterator, error) {
-	return d.am.GetChildren(d.ctx, d.head, pulse)
 }
 
 // Parent returns object's parent.
