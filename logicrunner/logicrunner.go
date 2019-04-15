@@ -186,7 +186,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 	})
 	inHandler := handler.NewHandler(func(msg bus.Message) flow.Handle {
 		innerMsg := msg.WatermillMsg
-		return (&InitInner{
+		return (&InnerInit{
 			dep:     dep,
 			Message: *innerMsg,
 		}).Present

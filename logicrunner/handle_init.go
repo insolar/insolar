@@ -47,13 +47,13 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	}
 }
 
-type InitInner struct {
+type InnerInit struct {
 	dep *Dependencies
 
 	Message message.Message
 }
 
-func (s *InitInner) Present(ctx context.Context, f flow.Flow) error {
+func (s *InnerInit) Present(ctx context.Context, f flow.Flow) error {
 	switch s.Message.Metadata.Get("Type") {
 	default:
 		return fmt.Errorf("no handler for message type %s", s.Message.Metadata.Get("Type"))
