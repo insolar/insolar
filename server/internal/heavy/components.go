@@ -123,9 +123,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			return nil, errors.Wrap(err, "failed to start NodeNetwork")
 		}
 
-		NetworkSwitcher, err = state.NewNetworkSwitcher()
-		checkError(ctx, err, "failed to start NetworkSwitcher")
-
 		NetworkCoordinator, err = networkcoordinator.New()
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start NetworkCoordinator")
