@@ -17,26 +17,21 @@
 package insolar
 
 import (
-	"io"
+	"encoding/hex"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-type genesisBinary []byte
+var (
+	genesisIDHex  = "00010001ac000000000000000000000000000000000000000000000000000000"
+	genesisRefHex = genesisIDHex + genesisIDHex
+)
 
-// GenesisRecord is initial chain record.
-var GenesisRecord genesisBinary = []byte{0xAC}
-
-// WriteHashData implements record.VirtualRecord.
-func (r genesisBinary) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(r)
+func TestGenesisRecordID(t *testing.T) {
+	require.Equal(t, genesisIDHex, hex.EncodeToString(GenesisRecord.ID().Bytes()), "genesis ID should always be the same")
 }
 
-// ID returns genesis record id.
-func (r genesisBinary) ID() ID {
-	return *NewID(GenesisPulse.PulseNumber, r)
-}
-
-// Ref returns genesis record reference.
-func (r genesisBinary) Ref() Reference {
-	id := r.ID()
-	return *NewReference(id, id)
+func TestReference(t *testing.T) {
+	require.Equal(t, genesisRefHex, hex.EncodeToString(GenesisRecord.Ref().Bytes()), "genesisRef should always be the same")
 }

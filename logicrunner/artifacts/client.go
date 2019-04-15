@@ -66,15 +66,6 @@ func NewClient() *client { // nolint
 	}
 }
 
-// GenesisRef returns the root record reference.
-//
-// Root record is the parent for all top-level records.
-func (m *client) GenesisRef() *insolar.Reference {
-	id := object.NewRecordIDFromRecord(m.PlatformCryptographyScheme, insolar.FirstPulseNumber, &object.GenesisRecord{})
-	ref := insolar.NewReference(*id, *id)
-	return ref
-}
-
 // RegisterRequest sends message for request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterRequest(

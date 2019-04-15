@@ -14,29 +14,22 @@
 // limitations under the License.
 //
 
-package insolar
+package object
 
 import (
 	"io"
+
+	"github.com/insolar/insolar/insolar"
 )
 
-type genesisBinary []byte
+// ChildRecord is a child activation record. Its used for children iterating.
+type ChildRecord struct {
+	PrevChild *insolar.ID
 
-// GenesisRecord is initial chain record.
-var GenesisRecord genesisBinary = []byte{0xAC}
-
-// WriteHashData implements record.VirtualRecord.
-func (r genesisBinary) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(r)
+	Ref insolar.Reference // Reference to the child's head.
 }
 
-// ID returns genesis record id.
-func (r genesisBinary) ID() ID {
-	return *NewID(GenesisPulse.PulseNumber, r)
-}
-
-// Ref returns genesis record reference.
-func (r genesisBinary) Ref() Reference {
-	id := r.ID()
-	return *NewReference(id, id)
+// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+func (r *ChildRecord) WriteHashData(w io.Writer) (int, error) {
+	return w.Write(EncodeVirtual(r))
 }

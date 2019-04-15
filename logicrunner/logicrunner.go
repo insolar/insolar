@@ -623,7 +623,7 @@ func (lr *LogicRunner) executeOrValidate(
 	seq := es.Current.Sequence
 
 	go func() {
-		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", request)
+		inslogger.FromContext(ctx).Debugf("Sending Method Results for %#v", request)
 
 		_, err := insolar.MessageBusFromContext(ctx, lr.MessageBus).Send(
 			ctx,
