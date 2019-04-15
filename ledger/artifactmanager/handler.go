@@ -75,7 +75,7 @@ type MessageHandler struct {
 
 	conf           *configuration.Ledger
 	middleware     *middleware
-	jetTreeUpdater *jetTreeUpdater
+	jetTreeUpdater jet.TreeUpdater
 
 	FlowHandler *handler.Handler
 	handlers    map[insolar.MessageType]insolar.MessageHandler
@@ -171,7 +171,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	m := newMiddleware(h)
 	h.middleware = m
 
-	h.jetTreeUpdater = newJetTreeUpdater(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
+	h.jetTreeUpdater = jet.NewJetTreeUpdater(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
 
 	h.setHandlersForLight(m)
 
@@ -455,7 +455,7 @@ func (h *MessageHandler) handleGetChildren(
 	childJet = (*insolar.ID)(&childJetID)
 
 	if !actual {
-		actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Parent.Record(), currentChild.Pulse())
+		actualJet, err := h.jetTreeUpdater.FetchJet(ctx, *msg.Parent.Record(), currentChild.Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -899,7 +899,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 		ctx, msg.PulseNumber, true, insolar.JetID(jetID),
 	)
 
-	h.jetTreeUpdater.releaseJet(ctx, jetID, msg.PulseNumber)
+	h.jetTreeUpdater.ReleaseJet(ctx, jetID, msg.PulseNumber)
 
 	return &reply.OK{}, nil
 }

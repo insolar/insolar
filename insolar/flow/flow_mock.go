@@ -19,6 +19,11 @@ import (
 type FlowMock struct {
 	t minimock.Tester
 
+	ContinueFunc       func(p context.Context)
+	ContinueCounter    uint64
+	ContinuePreCounter uint64
+	ContinueMock       mFlowMockContinue
+
 	HandleFunc       func(p context.Context, p1 Handle) (r error)
 	HandleCounter    uint64
 	HandlePreCounter uint64
@@ -43,11 +48,135 @@ func NewFlowMock(t minimock.Tester) *FlowMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.ContinueMock = mFlowMockContinue{mock: m}
 	m.HandleMock = mFlowMockHandle{mock: m}
 	m.MigrateMock = mFlowMockMigrate{mock: m}
 	m.ProcedureMock = mFlowMockProcedure{mock: m}
 
 	return m
+}
+
+type mFlowMockContinue struct {
+	mock              *FlowMock
+	mainExpectation   *FlowMockContinueExpectation
+	expectationSeries []*FlowMockContinueExpectation
+}
+
+type FlowMockContinueExpectation struct {
+	input *FlowMockContinueInput
+}
+
+type FlowMockContinueInput struct {
+	p context.Context
+}
+
+//Expect specifies that invocation of Flow.Continue is expected from 1 to Infinity times
+func (m *mFlowMockContinue) Expect(p context.Context) *mFlowMockContinue {
+	m.mock.ContinueFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &FlowMockContinueExpectation{}
+	}
+	m.mainExpectation.input = &FlowMockContinueInput{p}
+	return m
+}
+
+//Return specifies results of invocation of Flow.Continue
+func (m *mFlowMockContinue) Return() *FlowMock {
+	m.mock.ContinueFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &FlowMockContinueExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Flow.Continue is expected once
+func (m *mFlowMockContinue) ExpectOnce(p context.Context) *FlowMockContinueExpectation {
+	m.mock.ContinueFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &FlowMockContinueExpectation{}
+	expectation.input = &FlowMockContinueInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of Flow.Continue method
+func (m *mFlowMockContinue) Set(f func(p context.Context)) *FlowMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.ContinueFunc = f
+	return m.mock
+}
+
+//Continue implements github.com/insolar/insolar/insolar/flow.Flow interface
+func (m *FlowMock) Continue(p context.Context) {
+	counter := atomic.AddUint64(&m.ContinuePreCounter, 1)
+	defer atomic.AddUint64(&m.ContinueCounter, 1)
+
+	if len(m.ContinueMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ContinueMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to FlowMock.Continue. %v", p)
+			return
+		}
+
+		input := m.ContinueMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, FlowMockContinueInput{p}, "Flow.Continue got unexpected parameters")
+
+		return
+	}
+
+	if m.ContinueMock.mainExpectation != nil {
+
+		input := m.ContinueMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, FlowMockContinueInput{p}, "Flow.Continue got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.ContinueFunc == nil {
+		m.t.Fatalf("Unexpected call to FlowMock.Continue. %v", p)
+		return
+	}
+
+	m.ContinueFunc(p)
+}
+
+//ContinueMinimockCounter returns a count of FlowMock.ContinueFunc invocations
+func (m *FlowMock) ContinueMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ContinueCounter)
+}
+
+//ContinueMinimockPreCounter returns the value of FlowMock.Continue invocations
+func (m *FlowMock) ContinueMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ContinuePreCounter)
+}
+
+//ContinueFinished returns true if mock invocations count is ok
+func (m *FlowMock) ContinueFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.ContinueMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ContinueCounter) == uint64(len(m.ContinueMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.ContinueMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ContinueCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.ContinueFunc != nil {
+		return atomic.LoadUint64(&m.ContinueCounter) > 0
+	}
+
+	return true
 }
 
 type mFlowMockHandle struct {
@@ -498,6 +627,10 @@ func (m *FlowMock) ProcedureFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *FlowMock) ValidateCallCounters() {
 
+	if !m.ContinueFinished() {
+		m.t.Fatal("Expected call to FlowMock.Continue")
+	}
+
 	if !m.HandleFinished() {
 		m.t.Fatal("Expected call to FlowMock.Handle")
 	}
@@ -527,6 +660,10 @@ func (m *FlowMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *FlowMock) MinimockFinish() {
 
+	if !m.ContinueFinished() {
+		m.t.Fatal("Expected call to FlowMock.Continue")
+	}
+
 	if !m.HandleFinished() {
 		m.t.Fatal("Expected call to FlowMock.Handle")
 	}
@@ -553,6 +690,7 @@ func (m *FlowMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.ContinueFinished()
 		ok = ok && m.HandleFinished()
 		ok = ok && m.MigrateFinished()
 		ok = ok && m.ProcedureFinished()
@@ -563,6 +701,10 @@ func (m *FlowMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if !m.ContinueFinished() {
+				m.t.Error("Expected call to FlowMock.Continue")
+			}
 
 			if !m.HandleFinished() {
 				m.t.Error("Expected call to FlowMock.Handle")
@@ -587,6 +729,10 @@ func (m *FlowMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *FlowMock) AllMocksCalled() bool {
+
+	if !m.ContinueFinished() {
+		return false
+	}
 
 	if !m.HandleFinished() {
 		return false
