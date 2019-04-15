@@ -57,7 +57,7 @@ type Flow interface {
 
 	// Procedure starts a routine and blocks Handle execution until cancellation happens or routine returns.
 	// If cancellation happens first, ErrCancelled will immediately be returned to the Handle. The Procedure
-	// continues to execute in the background, but it's return value must be discarded by the Flow implementation.
+	// continues to execute in the background, but it's state must be discarded by the Handle as invalid.
 	// If Routine returns first, Procedure error (if any) will be returned.
 	// Procedure can figure out whether it's execution was canceled and there is no point to continue
 	// the execution by reading from context.Done()
