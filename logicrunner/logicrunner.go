@@ -30,6 +30,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+	"github.com/ThreeDotsLabs/watermill/message/router/plugin"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/handler"
@@ -172,18 +173,29 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		state: make(map[Ref]*ObjectState),
 	}
 
+	err := initHandlers(&res)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error while init handlers for logic runner:")
+	}
+
+	return &res, nil
+}
+
+func initHandlers(lr *LogicRunner) error {
 	wmLogger := watermill.NewStdLogger(false, false)
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
+
 	dep := &Dependencies{
 		Publisher: pubSub,
 	}
 
-	res.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
+	lr.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
 		return (&Init{
 			dep:     dep,
 			Message: msg,
 		}).Present
 	})
+
 	inHandler := handler.NewHandler(func(msg bus.Message) flow.Handle {
 		innerMsg := msg.WatermillMsg
 		return (&InnerInit{
@@ -191,10 +203,14 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 			Message: *innerMsg,
 		}).Present
 	})
+
 	router, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, wmLogger)
 	if err != nil {
-		return nil, errors.Wrap(err, "Error while creating new watermill router")
+		return errors.Wrap(err, "Error while creating new watermill router")
 	}
+	// this plugin will gracefully shutdown router, when SIGTERM was sent
+	router.AddPlugin(plugin.SignalsHandler)
+
 	router.AddNoPublisherHandler(
 		"InnerMsgHandler",
 		InnerMsgTopic,
@@ -207,8 +223,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 			inslogger.FromContext(ctx).Error("Error while running router", err)
 		}
 	}()
-
-	return &res, nil
+	return nil
 }
 
 // Start starts logic runner component

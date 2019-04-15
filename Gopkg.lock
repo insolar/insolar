@@ -19,7 +19,7 @@
   revision = "343706a395b76e5ca5c7dca46a5d937b48febc74"
 
 [[projects]]
-  digest = "1:c9ae073450893c4313b42c03e6c440ba65bda6c41c19570cf5b54f49a7ab3df1"
+  digest = "1:472b2b3b07a5f4ef80c66cde7964c30c75ed6ece251d9bfb94fdb2060b75489e"
   name = "github.com/ThreeDotsLabs/watermill"
   packages = [
     ".",
@@ -27,6 +27,7 @@
     "internal/sync",
     "message",
     "message/infrastructure/gochannel",
+    "message/router/plugin",
   ]
   pruneopts = "UT"
   revision = "fa394272631757fe84b31989cc935122a5fbcb20"
@@ -593,6 +594,7 @@
     "github.com/ThreeDotsLabs/watermill",
     "github.com/ThreeDotsLabs/watermill/message",
     "github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel",
+    "github.com/ThreeDotsLabs/watermill/message/router/plugin",
     "github.com/blang/semver",
     "github.com/dgraph-io/badger",
     "github.com/gogo/protobuf/gogoproto",
