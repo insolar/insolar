@@ -34,12 +34,17 @@ type JetIndexModifier interface {
 
 // JetIndexAccessor is an interface for modifying index records.
 type JetIndexAccessor interface {
-	For(jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]struct{}
+	For(jetID insolar.JetID) map[insolar.ID]struct{}
 }
 
-// JetIndex contains methods to implement quick access to data by jet. Indexes are stored in memory. Consider disk
+type JetIndex interface {
+	JetIndexModifier
+	JetIndexAccessor
+}
+
+// jetIndex contains methods to implement quick access to data by jet. Indexes are stored in memory. Consider disk
 // implementation for large collections.
-type JetIndex struct {
+type jetIndex struct {
 	lock    sync.Mutex
 	storage map[insolar.JetID]recordSet
 }
@@ -47,12 +52,12 @@ type JetIndex struct {
 type recordSet map[insolar.ID]struct{}
 
 // NewJetIndex creates new index instance.
-func NewJetIndex() *JetIndex {
-	return &JetIndex{storage: map[insolar.JetID]recordSet{}}
+func NewJetIndex() *jetIndex {
+	return &jetIndex{storage: map[insolar.JetID]recordSet{}}
 }
 
 // Add creates index record for specified id and jet. To remove clean up index, use "Delete" method.
-func (i *JetIndex) Add(id insolar.ID, jetID insolar.JetID) {
+func (i *jetIndex) Add(id insolar.ID, jetID insolar.JetID) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -65,7 +70,7 @@ func (i *JetIndex) Add(id insolar.ID, jetID insolar.JetID) {
 }
 
 // Delete removes specified id - jet record from index.
-func (i *JetIndex) Delete(id insolar.ID, jetID insolar.JetID) {
+func (i *jetIndex) Delete(id insolar.ID, jetID insolar.JetID) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -81,7 +86,7 @@ func (i *JetIndex) Delete(id insolar.ID, jetID insolar.JetID) {
 }
 
 // For returns a collection of ids, that are stored for a specific jetID and a pulse number
-func (i *JetIndex) For(jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]struct{} {
+func (i *jetIndex) For(jetID insolar.JetID) map[insolar.ID]struct{} {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 

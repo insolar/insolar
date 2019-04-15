@@ -33,7 +33,7 @@ func TestRecordStorage_NewStorageMemory(t *testing.T) {
 	t.Parallel()
 
 	recordStorage := NewRecordMemory()
-	assert.Equal(t, 0, len(recordStorage.memory))
+	assert.Equal(t, 0, len(recordStorage.recsStor))
 }
 
 func TestRecordStorage_ForID(t *testing.T) {
@@ -52,7 +52,7 @@ func TestRecordStorage_ForID(t *testing.T) {
 		t.Parallel()
 
 		recordStorage := NewRecordMemory()
-		recordStorage.memory[id] = rec
+		recordStorage.recsStor[id] = rec
 
 		resultRec, err := recordStorage.ForID(ctx, id)
 		require.NoError(t, err)
@@ -64,7 +64,7 @@ func TestRecordStorage_ForID(t *testing.T) {
 		t.Parallel()
 
 		recordStorage := NewRecordMemory()
-		recordStorage.memory[id] = rec
+		recordStorage.recsStor[id] = rec
 
 		_, err := recordStorage.ForID(ctx, gen.ID())
 		require.Error(t, err)
@@ -91,9 +91,9 @@ func TestRecordStorage_Set(t *testing.T) {
 
 		err := recordStorage.Set(ctx, id, rec)
 		require.NoError(t, err)
-		assert.Equal(t, 1, len(recordStorage.memory))
-		assert.Equal(t, rec, recordStorage.memory[id])
-		assert.Equal(t, jetID, recordStorage.memory[id].JetID)
+		assert.Equal(t, 1, len(recordStorage.recsStor))
+		assert.Equal(t, rec, recordStorage.recsStor[id])
+		assert.Equal(t, jetID, recordStorage.recsStor[id].JetID)
 	})
 
 	t.Run("returns override error when saving with the same id", func(t *testing.T) {
@@ -139,10 +139,10 @@ func TestRecordStorage_Delete(t *testing.T) {
 			err := recordStorage.Set(ctx, *id, record.MaterialRecord{})
 			require.NoError(t, err)
 		}
-		assert.Equal(t, countFirstPulse+countSecondPulse, int32(len(recordStorage.memory)))
+		assert.Equal(t, countFirstPulse+countSecondPulse, int32(len(recordStorage.recsStor)))
 
 		recordStorage.Remove(ctx, firstPulse)
-		assert.Equal(t, countSecondPulse, int32(len(recordStorage.memory)))
+		assert.Equal(t, countSecondPulse, int32(len(recordStorage.recsStor)))
 	})
 }
 

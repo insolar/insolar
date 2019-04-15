@@ -30,12 +30,12 @@ var (
 var (
 	statIndexInMemoryCount = stats.Int64(
 		"indexstorage/inmemory/count",
-		"How many index-records have been saved in in-memory index storage",
+		"How many index-records have been saved in in-indexStorage index storage",
 		stats.UnitDimensionless,
 	)
 	statRecordInMemoryCount = stats.Int64(
 		"recordstorage/inmemory/count",
-		"How many records have been saved in in-memory record storage",
+		"How many records have been saved in in-indexStorage record storage",
 		stats.UnitDimensionless,
 	)
 )

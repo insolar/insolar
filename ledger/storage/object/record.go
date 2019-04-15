@@ -83,20 +83,20 @@ type RecordCleaner interface {
 	Remove(ctx context.Context, pulse insolar.PulseNumber)
 }
 
-// RecordMemory is an in-memory struct for record-storage.
+// RecordMemory is an in-indexStorage struct for record-storage.
 type RecordMemory struct {
 	jetIndex         store.JetIndexModifier
 	jetIndexAccessor store.JetIndexAccessor
 
-	lock   sync.RWMutex
-	memory map[insolar.ID]record.MaterialRecord
+	lock     sync.RWMutex
+	recsStor map[insolar.ID]record.MaterialRecord
 }
 
 // NewRecordMemory creates a new instance of RecordMemory storage.
 func NewRecordMemory() *RecordMemory {
 	ji := store.NewJetIndex()
 	return &RecordMemory{
-		memory:           map[insolar.ID]record.MaterialRecord{},
+		recsStor:         map[insolar.ID]record.MaterialRecord{},
 		jetIndex:         ji,
 		jetIndexAccessor: ji,
 	}
@@ -107,12 +107,12 @@ func (m *RecordMemory) Set(ctx context.Context, id insolar.ID, rec record.Materi
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	_, ok := m.memory[id]
+	_, ok := m.recsStor[id]
 	if ok {
 		return ErrOverride
 	}
 
-	m.memory[id] = rec
+	m.recsStor[id] = rec
 	m.jetIndex.Add(id, rec.JetID)
 
 	stats.Record(ctx,
@@ -127,7 +127,7 @@ func (m *RecordMemory) ForID(ctx context.Context, id insolar.ID) (rec record.Mat
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
-	rec, ok := m.memory[id]
+	rec, ok := m.recsStor[id]
 	if !ok {
 		err = ErrNotFound
 		return
@@ -143,11 +143,13 @@ func (m *RecordMemory) ForPulse(
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
-	ids := m.jetIndexAccessor.For(jetID, pn)
+	ids := m.jetIndexAccessor.For(jetID)
 	var res []record.MaterialRecord
 	for id := range ids {
-		rec := m.memory[id]
-		res = append(res, rec)
+		if id.Pulse() == pn {
+			rec := m.recsStor[id]
+			res = append(res, rec)
+		}
 	}
 
 	return res
@@ -158,13 +160,13 @@ func (m *RecordMemory) Remove(ctx context.Context, pulse insolar.PulseNumber) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	for id, rec := range m.memory {
+	for id, rec := range m.recsStor {
 		if id.Pulse() != pulse {
 			continue
 		}
 
 		m.jetIndex.Delete(id, rec.JetID)
-		delete(m.memory, id)
+		delete(m.recsStor, id)
 	}
 }
 

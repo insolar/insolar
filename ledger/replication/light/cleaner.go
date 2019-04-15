@@ -102,7 +102,7 @@ func (c cleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 	c.jetStorage.Delete(ctx, pn)
 
 	excIdx := c.getExcludedIndexes(ctx, pn)
-	c.indexCleaner.RemoveUntil(ctx, pn, excIdx)
+	c.indexCleaner.RemoveForPulse(ctx, pn)
 
 	err := c.pulseShifter.Shift(ctx, pn)
 	if err != nil {

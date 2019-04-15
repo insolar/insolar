@@ -41,7 +41,7 @@ func (r *GenesisRecord) WriteHashData(w io.Writer) (int, error) {
 	return w.Write(EncodeVirtual(r))
 }
 
-// GetMemory returns state memory.
+// GetMemory returns state indexStorage.
 func (*GenesisRecord) GetMemory() *insolar.ID {
 	return nil
 }

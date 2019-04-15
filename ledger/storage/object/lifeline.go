@@ -49,6 +49,7 @@ type IndexCollectionAccessor interface {
 type IndexModifier interface {
 	// Set saves new Index-value in storage.
 	Set(ctx context.Context, id insolar.ID, index Lifeline) error
+	UpdateUsagePulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexStorage -o ./ -s _mock.go
@@ -63,10 +64,8 @@ type IndexStorage interface {
 
 // IndexCleaner provides an interface for removing interfaces from a storage.
 type IndexCleaner interface {
-	// RemoveUntil method removes indexes from a storage for provided pulse and earlier pulses
-	// excluded contains list of indexes' ids, that would be excluded from removing process
-	// It supposed, that list of excluded would be fetched from Recent Storage
-	RemoveUntil(ctx context.Context, pn insolar.PulseNumber, excluded map[insolar.ID]struct{})
+	// RemoveForPulse method removes indexes from a storage for a provided
+	RemoveForPulse(ctx context.Context, pn insolar.PulseNumber)
 }
 
 // Lifeline represents meta information for record object.
@@ -136,30 +135,31 @@ func CloneIndex(idx Lifeline) Lifeline {
 	return idx
 }
 
-// IndexMemory is an in-memory struct for index-storage.
+// IndexMemory is an in-indexStorage struct for index-storage.
 type IndexMemory struct {
-	jetIndex store.JetIndexModifier
+	jetIndex   store.JetIndex
+	pulseIndex PulseIndex
 
-	lock   sync.RWMutex
-	memory map[insolar.ID]Lifeline
+	storageLock  sync.RWMutex
+	indexStorage map[insolar.ID]Lifeline
 }
 
 // NewIndexMemory creates a new instance of IndexMemory storage.
 func NewIndexMemory() *IndexMemory {
 	return &IndexMemory{
-		memory:   map[insolar.ID]Lifeline{},
-		jetIndex: store.NewJetIndex(),
+		indexStorage: map[insolar.ID]Lifeline{},
+		jetIndex:     store.NewJetIndex(),
 	}
 }
 
 // Set saves new Index-value in storage.
 func (m *IndexMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) error {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+	m.storageLock.Lock()
+	defer m.storageLock.Unlock()
 
 	idx := CloneIndex(index)
 
-	m.memory[id] = idx
+	m.indexStorage[id] = idx
 	m.jetIndex.Add(id, idx.JetID)
 
 	stats.Record(ctx,
@@ -169,29 +169,48 @@ func (m *IndexMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) er
 	return nil
 }
 
-// ForID returns Index for provided id.
-func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (index Lifeline, err error) {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+func (m *IndexMemory) UpdateUsagePulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber) error {
+	m.storageLock.RLock()
+	defer m.storageLock.RUnlock()
 
-	idx, ok := m.memory[id]
+	_, ok := m.indexStorage[id]
 	if !ok {
-		err = ErrIndexNotFound
-		return
+		return ErrIndexNotFound
+	}
+
+	m.pulseIndex.DeleteForPulseAndID(pn, id)
+	m.pulseIndex.Add(id, pn)
+
+	return nil
+}
+
+// ForID returns Index for provided id.
+func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (Lifeline, error) {
+	m.storageLock.RLock()
+	defer m.storageLock.RUnlock()
+	var index Lifeline
+
+	idx, ok := m.indexStorage[id]
+	if !ok {
+		return index, ErrIndexNotFound
+
 	}
 
 	index = CloneIndex(idx)
 
-	return
+	return index, ErrIndexNotFound
 }
 
 // ForPulseAndJet returns an object's lifeline for a provided id.
 func (m *IndexMemory) ForPulseAndJet(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]Lifeline {
-	m.lock.RLock()
-	defer m.lock.RUnlock()
+	m.storageLock.RLock()
+	defer m.storageLock.RUnlock()
+
+	idxByJet := m.jetIndex.For(jetID)
+	idxByPn := m.pulseIndex.ForPN(pn)
 
 	res := map[insolar.ID]Lifeline{}
-	for id, idx := range m.memory {
+	for id, idx := range m.indexStorage {
 		if id.Pulse() != pn || idx.JetID != jetID {
 			continue
 		}
@@ -202,21 +221,21 @@ func (m *IndexMemory) ForPulseAndJet(ctx context.Context, jetID insolar.JetID, p
 	return res
 }
 
-// RemoveUntil method removes indexes from a storage for provided pulse and earlier pulses
+// RemoveForPulse method removes indexes from a storage for provided pulse and earlier pulses
 // excluded contains list of indexes' ids, that would be excluded from removing process
 // It supposed, that list of excluded would be fetched from Recent Storage
-func (m *IndexMemory) RemoveUntil(ctx context.Context, pn insolar.PulseNumber, excluded map[insolar.ID]struct{}) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
+func (m *IndexMemory) RemoveForPulse(ctx context.Context, pn insolar.PulseNumber) {
+	m.storageLock.Lock()
+	defer m.storageLock.Unlock()
 
-	for id, idx := range m.memory {
-		_, ok := excluded[id]
+	rmIDs := m.pulseIndex.ForPN(pn)
+	m.pulseIndex.DeleteForPulse(pn)
+
+	for id := range rmIDs {
+		idx, ok := m.indexStorage[id]
 		if ok {
-			continue
-		}
-		if id.Pulse() <= pn {
-			delete(m.memory, id)
 			m.jetIndex.Delete(id, idx.JetID)
+			delete(m.indexStorage, id)
 		}
 	}
 }
