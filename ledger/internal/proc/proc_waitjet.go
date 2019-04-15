@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/hot"
 	"github.com/pkg/errors"
 )
 
@@ -122,7 +121,7 @@ type WaitHot struct {
 	}
 
 	Dep struct {
-		Waiter hot.JetWaiter
+		Waiter HotDataWaiter
 	}
 }
 

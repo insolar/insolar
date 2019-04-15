@@ -36,6 +36,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/internal/ledger/hot"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
@@ -68,7 +69,8 @@ type MessageHandler struct {
 	Nodes          node.Accessor         `inject:""`
 
 	DBContext     storage.DBContext    `inject:""`
-	HotDataWaiter HotDataWaiter        `inject:""`
+	HotDataWaiter hot.JetWaiter        `inject:""`
+	JetReleaser   hot.JetReleaser      `inject:""`
 	IndexAccessor object.IndexAccessor `inject:""`
 	IndexModifier object.IndexModifier `inject:""`
 	IndexStorage  object.IndexStorage  `inject:""`
