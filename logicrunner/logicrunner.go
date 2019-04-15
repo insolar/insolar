@@ -27,6 +27,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill"
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/handler"
@@ -169,7 +172,11 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		state: make(map[Ref]*ObjectState),
 	}
 
-	dep := &Dependencies{}
+	wmLogger := watermill.NewStdLogger(false, false)
+	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
+	dep := &Dependencies{
+		Publisher: pubSub,
+	}
 
 	res.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
 		return (&Init{
@@ -177,6 +184,29 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 			Message: msg,
 		}).Present
 	})
+	inHandler := handler.NewHandler(func(msg bus.Message) flow.Handle {
+		innerMsg := msg.WatermillMsg
+		return (&InitInner{
+			dep:     dep,
+			Message: *innerMsg,
+		}).Present
+	})
+	router, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, wmLogger)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error while creating new watermill router")
+	}
+	router.AddNoPublisherHandler(
+		"InnerMsgHandler",
+		InnerMsgTopic,
+		pubSub,
+		inHandler.InnerSubscriber,
+	)
+	go func() {
+		if err := router.Run(); err != nil {
+			ctx := context.Background()
+			inslogger.FromContext(ctx).Error("Error while running router", err)
+		}
+	}()
 
 	return &res, nil
 }

@@ -20,12 +20,16 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 )
 
+const InnerMsgTopic = "InnerMsg"
+
 type Dependencies struct {
+	Publisher message.Publisher
 }
 
 type Init struct {
@@ -40,5 +44,18 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		return nil
 	default:
 		return fmt.Errorf("no handler for message type %s", s.Message.Parcel.Message().Type().String())
+	}
+}
+
+type InitInner struct {
+	dep *Dependencies
+
+	Message message.Message
+}
+
+func (s *InitInner) Present(ctx context.Context, f flow.Flow) error {
+	switch s.Message.Metadata.Get("Type") {
+	default:
+		return fmt.Errorf("no handler for message type %s", s.Message.Metadata.Get("Type"))
 	}
 }
