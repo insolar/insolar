@@ -16,6 +16,8 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
  const a = 1
+
+
 //PulseAppenderMock implements github.com/insolar/insolar/network/storage.PulseAppender
 type PulseAppenderMock struct {
 	t minimock.Tester
