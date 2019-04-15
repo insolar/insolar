@@ -22,12 +22,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"path"
 	"path/filepath"
 	"strconv"
-
-	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/nodedomain"
@@ -40,6 +37,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/pkg/errors"
 )
 
 const (
@@ -49,7 +47,6 @@ const (
 	walletContract    = "wallet"
 	memberContract    = "member"
 	allowanceContract = "allowance"
-	nodeAmount        = 32
 )
 
 var contractNames = []string{walletContract, memberContract, allowanceContract, rootDomain, nodeDomain, nodeRecord}
@@ -57,7 +54,6 @@ var contractNames = []string{walletContract, memberContract, allowanceContract, 
 type nodeInfo struct {
 	privateKey crypto.PrivateKey
 	publicKey  string
-	ref        *insolar.Reference
 }
 
 // Generator is a component for generating RootDomain instance and genesis contracts.
@@ -86,27 +82,59 @@ func NewGenerator(config *Config, am artifact.Manager, genesisRef insolar.Refere
 	}
 }
 
-func buildSmartContracts(ctx context.Context, cb *ContractsBuilder, rootDomainID *insolar.ID) error {
+// Run generates genesis data.
+func (g *Generator) Run(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
-	inslog.Info("[ buildSmartContracts ] building contracts:", contractNames)
-	contracts, err := getContractsMap()
+	inslog.Info("[ Genesis ] Starting  ...")
+	defer inslog.Info("[ Genesis ] Finished.")
+
+	rootDomainID, err := g.artifactManager.RegisterRequest(
+		ctx,
+		g.genesisRef,
+		&message.Parcel{
+			Msg: &message.GenesisRequest{
+				Name: rootDomain,
+			},
+		},
+	)
 	if err != nil {
-		return errors.Wrap(err, "[ buildSmartContracts ] failed to get contracts map")
+		panic(errors.Wrap(err, "[ Genesis ] Couldn't create rootdomain instance"))
 	}
 
-	inslog.Info("[ buildSmartContracts ] Start building contracts ...")
-	err = cb.Build(ctx, contracts, rootDomainID)
+	inslog.Info("[ Genesis ] newContractBuilder ...")
+	cb := newContractBuilder(g.genesisRef, g.artifactManager)
+	defer cb.clean()
+
+	inslog.Info("[ Genesis ] buildSmartContracts ...")
+	prototypes, err := cb.buildPrototypes(ctx, rootDomainID)
 	if err != nil {
-		return errors.Wrap(err, "[ buildSmartContracts ] couldn't build contracts")
+		panic(errors.Wrap(err, "[ Genesis ] couldn't build contracts"))
 	}
-	inslog.Info("[ buildSmartContracts ] Stop building contracts ...")
+
+	inslog.Info("[ Genesis ] getKeysFromFile ...")
+	_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
+	}
+
+	inslog.Info("[ Genesis ] activateSmartContracts ...")
+	nodes, err := g.activateSmartContracts(ctx, cb, rootPubKey, rootDomainID, prototypes)
+	if err != nil {
+		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
+	}
+
+	inslog.Info("[ Genesis ] makeCertificates ...")
+	err = g.makeCertificates(nodes)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] Couldn't generate discovery certificates")
+	}
 
 	return nil
 }
 
 func (g *Generator) activateRootDomain(
 	ctx context.Context,
-	cb *ContractsBuilder,
+	cb *contractsBuilder,
 	contractID *insolar.ID,
 ) (artifact.ObjectDescriptor, error) {
 	rd, err := rootdomain.NewRootDomain()
@@ -125,7 +153,7 @@ func (g *Generator) activateRootDomain(
 		insolar.Reference{},
 		*contract,
 		g.genesisRef,
-		*cb.Prototypes[rootDomain],
+		*cb.prototypes[rootDomain],
 		false,
 		instanceData,
 	)
@@ -142,7 +170,7 @@ func (g *Generator) activateRootDomain(
 }
 
 func (g *Generator) activateNodeDomain(
-	ctx context.Context, domain *insolar.ID, cb *ContractsBuilder,
+	ctx context.Context, domain *insolar.ID, nodeDomainProto insolar.Reference,
 ) (artifact.ObjectDescriptor, error) {
 	nd, _ := nodedomain.NewNodeDomain()
 
@@ -168,7 +196,7 @@ func (g *Generator) activateNodeDomain(
 		insolar.Reference{},
 		*contract,
 		*g.rootDomainRef,
-		*cb.Prototypes[nodeDomain],
+		nodeDomainProto,
 		false,
 		instanceData,
 	)
@@ -186,7 +214,10 @@ func (g *Generator) activateNodeDomain(
 }
 
 func (g *Generator) activateRootMember(
-	ctx context.Context, domain *insolar.ID, cb *ContractsBuilder, rootPubKey string,
+	ctx context.Context,
+	domain *insolar.ID,
+	rootPubKey string,
+	memberContractProto insolar.Reference,
 ) error {
 
 	m, err := member.New("RootMember", rootPubKey)
@@ -216,7 +247,7 @@ func (g *Generator) activateRootMember(
 		insolar.Reference{},
 		*contract,
 		*g.rootDomainRef,
-		*cb.Prototypes[memberContract],
+		memberContractProto,
 		false,
 		instanceData,
 	)
@@ -254,7 +285,7 @@ func (g *Generator) updateRootDomain(
 }
 
 func (g *Generator) activateRootMemberWallet(
-	ctx context.Context, domain *insolar.ID, cb *ContractsBuilder,
+	ctx context.Context, domain *insolar.ID, walletContractProto insolar.Reference,
 ) error {
 
 	w, err := wallet.New(g.config.RootBalance)
@@ -284,7 +315,7 @@ func (g *Generator) activateRootMemberWallet(
 		insolar.Reference{},
 		*contract,
 		*g.rootMemberRef,
-		*cb.Prototypes[walletContract],
+		walletContractProto,
 		true,
 		instanceData,
 	)
@@ -300,7 +331,11 @@ func (g *Generator) activateRootMemberWallet(
 }
 
 func (g *Generator) activateSmartContracts(
-	ctx context.Context, cb *ContractsBuilder, rootPubKey string, rootDomainID *insolar.ID,
+	ctx context.Context,
+	cb *contractsBuilder,
+	rootPubKey string,
+	rootDomainID *insolar.ID,
+	prototypes prototypes,
 ) ([]genesisNode, error) {
 
 	rootDomainDesc, err := g.activateRootDomain(ctx, cb, rootDomainID)
@@ -308,11 +343,11 @@ func (g *Generator) activateSmartContracts(
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
-	nodeDomainDesc, err := g.activateNodeDomain(ctx, rootDomainID, cb)
+	nodeDomainDesc, err := g.activateNodeDomain(ctx, rootDomainID, *prototypes[nodeDomain])
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
-	err = g.activateRootMember(ctx, rootDomainID, cb, rootPubKey)
+	err = g.activateRootMember(ctx, rootDomainID, rootPubKey, *cb.prototypes[memberContract])
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
@@ -321,21 +356,15 @@ func (g *Generator) activateSmartContracts(
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
-	err = g.activateRootMemberWallet(ctx, rootDomainID, cb)
+	err = g.activateRootMemberWallet(ctx, rootDomainID, *cb.prototypes[walletContract])
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
 	}
 	indexMap := make(map[string]string)
 
-	discoveryNodes, indexMap, err := g.addDiscoveryIndex(ctx, cb, indexMap)
+	discoveryNodes, indexMap, err := g.addDiscoveryIndex(ctx, indexMap, *cb.prototypes[nodeRecord])
 	if err != nil {
 		return nil, errors.Wrap(err, errMsg)
-
-	}
-	indexMap, err = g.addIndex(ctx, cb, indexMap)
-	if err != nil {
-		return nil, errors.Wrap(err, errMsg)
-
 	}
 
 	err = g.updateNodeDomainIndex(ctx, nodeDomainDesc, indexMap)
@@ -353,7 +382,11 @@ type genesisNode struct {
 	role    string
 }
 
-func (g *Generator) activateDiscoveryNodes(ctx context.Context, cb *ContractsBuilder, nodesInfo []nodeInfo) ([]genesisNode, error) {
+func (g *Generator) activateDiscoveryNodes(
+	ctx context.Context,
+	nodeRecordProto insolar.Reference,
+	nodesInfo []nodeInfo,
+) ([]genesisNode, error) {
 	if len(nodesInfo) != len(g.config.DiscoveryNodes) {
 		return nil, errors.New("[ activateDiscoveryNodes ] len of nodesInfo param must be equal to len of DiscoveryNodes in genesis config")
 	}
@@ -370,7 +403,7 @@ func (g *Generator) activateDiscoveryNodes(ctx context.Context, cb *ContractsBui
 				Role:      insolar.GetStaticRoleFromString(discoverNode.Role),
 			},
 		}
-		contract, err := g.activateNodeRecord(ctx, cb, nodeState, "discoverynoderecord_"+strconv.Itoa(i))
+		contract, err := g.activateNodeRecord(ctx, nodeState, "discoverynoderecord_"+strconv.Itoa(i), nodeRecordProto)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ activateDiscoveryNodes ] Couldn't activateNodeRecord node instance")
 		}
@@ -389,31 +422,12 @@ func (g *Generator) activateDiscoveryNodes(ctx context.Context, cb *ContractsBui
 	return nodes, nil
 }
 
-func (g *Generator) activateNodes(ctx context.Context, cb *ContractsBuilder, nodes []nodeInfo) ([]nodeInfo, error) {
-	var updatedNodes []nodeInfo
-
-	for i, node := range nodes {
-		nodeState := &noderecord.NodeRecord{
-			Record: noderecord.RecordInfo{
-				PublicKey: node.publicKey,
-				Role:      insolar.StaticRoleVirtual,
-			},
-		}
-		contract, err := g.activateNodeRecord(ctx, cb, nodeState, "noderecord_"+strconv.Itoa(i))
-		if err != nil {
-			return nil, errors.Wrap(err, "[ activateNodes ] Couldn't activateNodeRecord node instance")
-		}
-		updatedNode := nodeInfo{
-			ref:       contract,
-			publicKey: node.publicKey,
-		}
-		updatedNodes = append(updatedNodes, updatedNode)
-	}
-
-	return updatedNodes, nil
-}
-
-func (g *Generator) activateNodeRecord(ctx context.Context, cb *ContractsBuilder, record *noderecord.NodeRecord, name string) (*insolar.Reference, error) {
+func (g *Generator) activateNodeRecord(
+	ctx context.Context,
+	record *noderecord.NodeRecord,
+	name string,
+	nodeRecordProto insolar.Reference,
+) (*insolar.Reference, error) {
 	nodeData, err := insolar.Serialize(record)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't serialize node instance")
@@ -435,7 +449,7 @@ func (g *Generator) activateNodeRecord(ctx context.Context, cb *ContractsBuilder
 		insolar.Reference{},
 		*contract,
 		*g.nodeDomainRef,
-		*cb.Prototypes[nodeRecord],
+		nodeRecordProto,
 		false,
 		nodeData,
 	)
@@ -449,51 +463,39 @@ func (g *Generator) activateNodeRecord(ctx context.Context, cb *ContractsBuilder
 	return contract, nil
 }
 
-func (g *Generator) addDiscoveryIndex(ctx context.Context, cb *ContractsBuilder, indexMap map[string]string) ([]genesisNode, map[string]string, error) {
+func (g *Generator) addDiscoveryIndex(
+	ctx context.Context,
+	indexMap map[string]string,
+	nodeRecordProto insolar.Reference,
+) ([]genesisNode, map[string]string, error) {
 	errMsg := "[ addDiscoveryIndex ]"
-	discoveryKeysPath, err := absPath(g.config.DiscoveryKeysDir)
+	discoveryKeysPath, err := filepath.Abs(g.config.DiscoveryKeysDir)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, errMsg)
 	}
+
 	discoveryKeys, err := g.uploadKeys(ctx, discoveryKeysPath, len(g.config.DiscoveryNodes))
 	if err != nil {
 		return nil, nil, errors.Wrap(err, errMsg)
 	}
-	discoveryNodes, err := g.activateDiscoveryNodes(ctx, cb, discoveryKeys)
+
+	discoveryNodes, err := g.activateDiscoveryNodes(ctx, nodeRecordProto, discoveryKeys)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, errMsg)
 	}
+
 	for _, node := range discoveryNodes {
 		indexMap[node.node.PublicKey] = node.ref.String()
 	}
 	return discoveryNodes, indexMap, nil
 }
 
-func (g *Generator) addIndex(ctx context.Context, cb *ContractsBuilder, indexMap map[string]string) (map[string]string, error) {
-	errMsg := "[ addIndex ]"
-	nodeKeysPath, err := absPath(g.config.NodeKeysDir)
-	if err != nil {
-		return nil, errors.Wrap(err, errMsg)
-	}
-	userKeys, err := g.uploadKeys(ctx, nodeKeysPath, nodeAmount)
-	if err != nil {
-		return nil, errors.Wrap(err, errMsg)
-	}
-	nodes, err := g.activateNodes(ctx, cb, userKeys)
-	if err != nil {
-		return nil, errors.Wrap(err, errMsg)
-	}
-	for _, node := range nodes {
-		indexMap[node.publicKey] = node.ref.String()
-	}
-	return indexMap, nil
-}
-
-func (g *Generator) createKeys(ctx context.Context, path string, amount int) error {
-	err := os.RemoveAll(path)
-	if err != nil {
-		return errors.Wrap(err, "[ createKeys ] couldn't remove old dir")
-	}
+func (g *Generator) createKeys(ctx context.Context, dir string, amount int) error {
+	fmt.Println("createKeys, skip RemoveAll of", dir)
+	// err := os.RemoveAll(dir)
+	// if err != nil {
+	// 	return errors.Wrap(err, "[ createKeys ] couldn't remove old dir")
+	// }
 
 	for i := 0; i < amount; i++ {
 		ks := platformpolicy.NewKeyProcessor()
@@ -522,7 +524,7 @@ func (g *Generator) createKeys(ctx context.Context, path string, amount int) err
 		}
 
 		name := fmt.Sprintf(g.config.KeysNameFormat, i)
-		err = WriteFile(path, name, string(result))
+		err = makeFileWithDir(dir, name, result)
 		if err != nil {
 			return errors.Wrap(err, "[ createKeys ] couldn't write keys to file")
 		}
@@ -531,16 +533,16 @@ func (g *Generator) createKeys(ctx context.Context, path string, amount int) err
 	return nil
 }
 
-func (g *Generator) uploadKeys(ctx context.Context, path string, amount int) ([]nodeInfo, error) {
+func (g *Generator) uploadKeys(ctx context.Context, dir string, amount int) ([]nodeInfo, error) {
 	var err error
 	if !g.config.ReuseKeys {
-		err = g.createKeys(ctx, path, amount)
+		err = g.createKeys(ctx, dir, amount)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ uploadKeys ]")
 		}
 	}
 
-	files, err := ioutil.ReadDir(path)
+	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ uploadKeys ] can't read dir")
 	}
@@ -550,7 +552,7 @@ func (g *Generator) uploadKeys(ctx context.Context, path string, amount int) ([]
 
 	var keys []nodeInfo
 	for _, f := range files {
-		privKey, nodePubKey, err := getKeysFromFile(ctx, filepath.Join(path, f.Name()))
+		privKey, nodePubKey, err := getKeysFromFile(ctx, filepath.Join(dir, f.Name()))
 		if err != nil {
 			return nil, errors.Wrap(err, "[ uploadKeys ] can't get keys from file")
 		}
@@ -563,56 +565,6 @@ func (g *Generator) uploadKeys(ctx context.Context, path string, amount int) ([]
 	}
 
 	return keys, nil
-}
-
-// Run generates genesis data. Accidentally it also generates certificates (it should be fixed).
-func (g *Generator) Run(ctx context.Context) error {
-	inslog := inslogger.FromContext(ctx)
-	inslog.Info("[ Genesis ] Starting  ...")
-	defer inslog.Info("[ Genesis ] Finished.")
-
-	rootDomainID, err := g.artifactManager.RegisterRequest(
-		ctx,
-		g.genesisRef,
-		&message.Parcel{
-			Msg: &message.GenesisRequest{
-				Name: rootDomain,
-			},
-		},
-	)
-	if err != nil {
-		panic(errors.Wrap(err, "[ Genesis ] Couldn't create rootdomain instance"))
-	}
-
-	inslog.Info("[ Genesis ] NewContractBuilder ...")
-	cb := NewContractBuilder(g.genesisRef, g.artifactManager)
-	defer cb.Clean()
-
-	inslog.Info("[ Genesis ] buildSmartContracts ...")
-	err = buildSmartContracts(ctx, cb, rootDomainID)
-	if err != nil {
-		panic(errors.Wrap(err, "[ Genesis ] couldn't build contracts"))
-	}
-
-	inslog.Info("[ Genesis ] getKeysFromFile ...")
-	_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
-	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
-	}
-
-	inslog.Info("[ Genesis ] activateSmartContracts ...")
-	nodes, err := g.activateSmartContracts(ctx, cb, rootPubKey, rootDomainID)
-	if err != nil {
-		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
-	}
-
-	inslog.Info("[ Genesis ] makeCertificates ...")
-	err = g.makeCertificates(nodes)
-	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] Couldn't generate discovery certificates")
-	}
-
-	return nil
 }
 
 func (g *Generator) makeCertificates(nodes []genesisNode) error {
@@ -658,7 +610,7 @@ func (g *Generator) makeCertificates(nodes []genesisNode) error {
 
 		err = ioutil.WriteFile(path.Join(g.keyOut, g.config.DiscoveryNodes[i].CertName), cert, 0644)
 		if err != nil {
-			return errors.Wrap(err, "[ makeCertificates ] WriteFile")
+			return errors.Wrap(err, "[ makeCertificates ] makeFileWithDir")
 		}
 	}
 	return nil
@@ -686,4 +638,32 @@ func (g *Generator) updateNodeDomainIndex(ctx context.Context, nodeDomainDesc ar
 	}
 
 	return nil
+}
+
+func getKeysFromFile(ctx context.Context, file string) (crypto.PrivateKey, string, error) {
+	absPath, err := filepath.Abs(file)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't get abs path")
+	}
+	data, err := ioutil.ReadFile(absPath)
+	if err != nil {
+		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't read keys file "+absPath)
+	}
+	var keys map[string]string
+	err = json.Unmarshal(data, &keys)
+	if err != nil {
+		return nil, "", errors.Wrapf(err, "[ getKeyFromFile ] couldn't unmarshal data from %s", absPath)
+	}
+	if keys["private_key"] == "" {
+		return nil, "", errors.New("[ getKeyFromFile ] empty private key")
+	}
+	if keys["public_key"] == "" {
+		return nil, "", errors.New("[ getKeyFromFile ] empty public key")
+	}
+	kp := platformpolicy.NewKeyProcessor()
+	key, err := kp.ImportPrivateKeyPEM([]byte(keys["private_key"]))
+	if err != nil {
+		return nil, "", errors.Wrapf(err, "[ getKeyFromFile ] couldn't import private key")
+	}
+	return key, keys["public_key"], nil
 }
