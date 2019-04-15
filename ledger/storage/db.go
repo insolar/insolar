@@ -36,8 +36,9 @@ const (
 	sysLastSyncedPulseOnHeavy byte = 4
 )
 
-// DBContext provides base db methods
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage.DBContext -o ./ -s _mock.go
+
+// DBContext provides base db methods
 type DBContext interface {
 	BeginTransaction(update bool) (*TransactionManager, error)
 	View(ctx context.Context, fn func(*TransactionManager) error) error
