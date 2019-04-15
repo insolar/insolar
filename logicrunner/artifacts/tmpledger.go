@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/ledger/hot"
 	"github.com/insolar/insolar/ledger/storage/object"
 
 	"github.com/insolar/insolar/component"
@@ -229,9 +230,10 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	pm.PulseAccessor = ps
 	pm.PulseAppender = ps
 
-	hdw := artifactmanager.NewHotDataWaiterConcrete()
+	hdw := hot.NewChannelWaiter()
 
 	handler.HotDataWaiter = hdw
+	handler.JetReleaser = hdw
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(t)
 	pendingMock := recentstorage.NewPendingStorageMock(t)

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package artifactmanager
+package proc
 
 import (
 	"context"
@@ -49,7 +49,6 @@ type SendObject struct {
 }
 
 func (p *SendObject) Proceed(ctx context.Context) error {
-	ctx = contextWithJet(ctx, insolar.ID(p.Jet))
 	r := bus.Reply{}
 	r.Reply, r.Err = p.handle(ctx, p.Message.Parcel)
 	p.Message.ReplyTo <- r

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package artifactmanager
+package handle
 
 import (
 	"context"
@@ -23,12 +23,13 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/proc"
 )
 
 // =====================================================================================================================
 
 type GetObject struct {
-	dep *Dependencies
+	dep *proc.Dependencies
 
 	Message bus.Message
 }
@@ -45,7 +46,7 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	idx := s.dep.GetIndex(&GetIndex{
+	idx := s.dep.GetIndex(&proc.GetIndex{
 		Object: msg.Head,
 		Jet:    jet.Res.Jet,
 	})
@@ -53,13 +54,13 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 		if err == flow.ErrCancelled {
 			return err
 		}
-		return f.Procedure(ctx, &ReturnReply{
+		return f.Procedure(ctx, &proc.ReturnReply{
 			ReplyTo: s.Message.ReplyTo,
 			Err:     err,
 		})
 	}
 
-	p := s.dep.SendObject(&SendObject{
+	p := s.dep.SendObject(&proc.SendObject{
 		Jet:     jet.Res.Jet,
 		Index:   idx.Result.Index,
 		Message: s.Message,
