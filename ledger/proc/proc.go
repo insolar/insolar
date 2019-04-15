@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package artifactmanager
+package proc
 
 import (
 	"context"

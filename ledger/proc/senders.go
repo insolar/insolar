@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package artifactmanager
+package proc
 
 import (
 	"context"
@@ -24,10 +24,29 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 )
 
 const jetMissRetryCount = 10
+
+// PreSender is an alias for a function
+// which is working like a `middleware` for messagebus.Send
+type PreSender func(Sender) Sender
+
+// Sender is an alias for signature of messagebus.Send
+type Sender func(context.Context, insolar.Message, *insolar.MessageSendOptions) (insolar.Reply, error)
+
+// BuildSender allows us to build a chain of PreSender before calling Sender
+// The main idea of it is ability to make a different things before sending message
+// For example we can cache some replies. Another example is the sendAndFollow redirect method
+func BuildSender(sender Sender, preSenders ...PreSender) Sender {
+	result := sender
+
+	for i := range preSenders {
+		result = preSenders[len(preSenders)-1-i](result)
+	}
+
+	return result
+}
 
 // followRedirectSender is using for redirecting responses with delegation token
 func followRedirectSender(bus insolar.MessageBus) PreSender {
@@ -39,8 +58,6 @@ func followRedirectSender(bus insolar.MessageBus) PreSender {
 			}
 
 			if r, ok := rep.(insolar.RedirectReply); ok {
-				stats.Record(ctx, statRedirects.M(1))
-
 				redirected := r.Redirected(msg)
 				inslogger.FromContext(ctx).Debugf("redirect reciever=%v", r.GetReceiver())
 
