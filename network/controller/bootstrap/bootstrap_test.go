@@ -52,14 +52,43 @@ package bootstrap
 
 import (
 	"context"
+	"strconv"
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/certificate"
+	"github.com/insolar/insolar/cryptography"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
+
+const TestCert = "../../../certificate/testdata/cert.json"
+const TestKeys = "../../../certificate/testdata/keys.json"
+const activeNodesCount = 5
+
+func getBootstrapResults(t *testing.T, ips []string) []*network.BootstrapResult {
+	results := make([]*network.BootstrapResult, activeNodesCount)
+	for i := 0; i < activeNodesCount; i++ {
+		host, err := host.NewHost(ips[i])
+		assert.NoError(t, err)
+
+		results[i] = &network.BootstrapResult{
+			Host:              host,
+			ReconnectRequired: false,
+			NetworkSize:       activeNodesCount,
+		}
+	}
+	results[activeNodesCount-1].NetworkSize = activeNodesCount + 1
+	return results
+}
 
 func getOptions(infinity bool) *common.Options {
 	return &common.Options{
@@ -101,4 +130,42 @@ func TestBootstrap(t *testing.T) {
 	endTime := time.Now()
 	assert.NoError(t, err)
 	assert.WithinDuration(t, expectedTime.Round(time.Millisecond), endTime.Round(time.Millisecond), time.Millisecond*100)
+}
+
+func TestCyclicBootstrap(t *testing.T) {
+	ctx := context.Background()
+
+	cs, _ := cryptography.NewStorageBoundCryptographyService(TestKeys)
+	kp := platformpolicy.NewKeyProcessor()
+	pk, _ := cs.GetPublicKey()
+	cert, err := certificate.ReadCertificate(pk, kp, TestCert)
+	require.NoError(t, err)
+	require.NotEmpty(t, cert.PublicKey)
+
+	activeNodes := make([]insolar.NetworkNode, activeNodesCount)
+	ips := make([]string, activeNodesCount)
+	for i := 0; i < activeNodesCount; i++ {
+		ip := "127.0.0.1:" + strconv.Itoa(i) + strconv.Itoa(i)
+		ips[i] = ip
+		activeNodes[i] = node.NewNode(insolar.Reference{}, insolar.StaticRoleUnknown, nil, ip, "")
+	}
+
+	node := node.NewNode(insolar.Reference{}, insolar.StaticRoleUnknown, nil, "127.0.0.1:8432", "")
+	nodekeeper := nodenetwork.NewNodeKeeper(node)
+	nodekeeper.SetInitialSnapshot(activeNodes)
+
+	origin := bootstrapper{
+		options:                 getOptions(false),
+		bootstrapLock:           make(chan struct{}),
+		genesisRequestsReceived: make(map[insolar.Reference]*GenesisRequest),
+		Certificate:             cert,
+		NodeKeeper:              nodekeeper,
+	}
+
+	index := origin.getLagerNetorkIndex(ctx, getBootstrapResults(t, ips))
+	reconnectRequired := false
+	if index >= 0 {
+		reconnectRequired = true
+	}
+	assert.True(t, reconnectRequired)
 }

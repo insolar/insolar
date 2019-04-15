@@ -1896,7 +1896,7 @@ package main
 
 	resp, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "GetChildPrototype")
 	s.NoError(err, "contract call")
-	s.Equal(*cb.Prototypes["two"], Ref{}.FromSlice(firstMethodRes(s.T(), resp).([]byte)), "Compare Code Prototypes")
+	s.Equal(*cb.Prototypes["two"], Ref{}.FromSlice(firstMethodRes(s.T(), resp).([]byte)), "Compare Code prototypes")
 }
 
 func (s *LogicRunnerFuncSuite) TestNoLoopsWhileNotificationCallError() {

@@ -23,8 +23,11 @@ import (
 )
 
 // Handle is a one-function synchronous process that can call routines to do long processing.
-//
 // IMPORTANT: Asynchronous code is NOT ALLOWED here.
+// To create a new Handle of a given message use handler.NewHandler procedure.
+// After creating a Handle you can register it in MessageBus like this:
+// `h.Bus.MustRegister(insolar.TypeGetObject, createdHandle.WrapBusHandle)`
+// You can find an example in insolar/ladger/artifactmanager/handler.go
 type Handle func(context.Context, Flow) error
 
 // MakeHandle is a function that constructs new Handle.
@@ -33,6 +36,10 @@ type MakeHandle func(bus.Message) Handle
 //go:generate minimock -i github.com/insolar/insolar/insolar/flow.Procedure -o . -s _mock.go
 
 // Procedure is a task that can execute itself.
+// Please note that the Procedure is marked as canceled if a pulse happens during it's execution. This means that it
+// continues to execute in the background, though it's return value will be discarded.
+// Thus if you have multiple steps that can be executed in different pulses split them into separate Procedures.
+// Otherwise join the steps into a single Procedure.
 // It's a good idea to keep Procedures in a separate package to hide internal state from Handle.
 type Procedure interface {
 	// Proceed is called when Procedure is given control. When it returns, control will be given back to Handle.
@@ -48,9 +55,12 @@ type Flow interface {
 	// If cancellation happens during Handle execution, ErrCancelled will be returned.
 	Handle(context.Context, Handle) error
 
-	// Procedure starts routine and blocks Handle execution until cancellation happens or routine returns.
-	// If cancellation happens first, ErrCancelled will be returned.
+	// Procedure starts a routine and blocks Handle execution until cancellation happens or routine returns.
+	// If cancellation happens first, ErrCancelled will immediately be returned to the Handle. The Procedure
+	// continues to execute in the background, but it's state must be discarded by the Handle as invalid.
 	// If Routine returns first, Procedure error (if any) will be returned.
+	// Procedure can figure out whether it's execution was canceled and there is no point to continue
+	// the execution by reading from context.Done()
 	Procedure(context.Context, Procedure) error
 
 	// Migrate blocks caller execution until cancellation happens then runs provided Handle in a new flow.

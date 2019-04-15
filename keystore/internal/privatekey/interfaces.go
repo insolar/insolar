@@ -21,5 +21,5 @@ import (
 )
 
 type Loader interface {
-	Load(string) (crypto.PrivateKey, error)
+	Load(file string) (crypto.PrivateKey, error)
 }
