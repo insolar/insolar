@@ -469,7 +469,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		code = re.ReplaceAllString(code, "package main")
 		err := WriteFile(filepath.Join(cb.root, "src/contract", name), "main.go", code)
 		if err != nil {
-			return errors.Wrap(err, "[ Build ] Can't WriteFile")
+			return errors.Wrap(err, "[ buildPrototypes ] Can't WriteFile")
 		}
 		err = cb.proxy(name)
 		if err != nil {
