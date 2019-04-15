@@ -629,14 +629,10 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	assert.True(s.T(), has.Has)
 }
 
-func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
+func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
-
-	tf := testutils.NewDelegationTokenFactoryMock(mc)
-	jc := testutils.NewJetCoordinatorMock(mc)
-	mb := testutils.NewMessageBusMock(mc)
-	mb.MustRegisterMock.Return()
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
@@ -650,61 +646,69 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
-	tf.IssueGetCodeRedirectMock.Return(&delegationtoken.GetCodeRedirectToken{Signature: []byte{1, 2, 3}}, nil)
-
+	mb := testutils.NewMessageBusMock(mc)
+	mb.MustRegisterMock.Return()
+	jc := testutils.NewJetCoordinatorMock(mc)
 	h := NewMessageHandler(&configuration.Ledger{
 		LightChainLimit: 2,
 	})
-	h.JetCoordinator = jc
-	h.DelegationTokenFactory = tf
-	h.Bus = mb
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.DBContext = s.db
 	h.IndexModifier = s.indexModifier
 	h.IndexAccessor = s.indexAccessor
-	h.RecordAccessor = s.recordAccessor
-	err := h.Init(s.ctx)
-	require.NoError(s.T(), err)
-
 	h.RecentStorageProvider = provideMock
+	h.PlatformCryptographyScheme = s.scheme
+	h.RecordModifier = s.recordModifier
 
-	jetID := insolar.ID(*insolar.NewJetID(0, nil))
-	msg := message.GetCode{
-		Code: *genRandomRef(insolar.FirstPulseNumber),
+	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock.LockMock.Return()
+	idLockMock.UnlockMock.Return()
+	h.IDLocker = idLockMock
+
+	objIndex := object.Lifeline{LatestState: genRandomID(0), State: object.StateActivation}
+	childRecord := object.ChildRecord{
+		Ref:       *genRandomRef(0),
+		PrevChild: nil,
+	}
+	amendHash := s.scheme.ReferenceHasher()
+	_, err := childRecord.WriteHashData(amendHash)
+	require.NoError(s.T(), err)
+	childID := insolar.NewID(0, amendHash.Sum(nil))
+
+	msg := message.RegisterChild{
+		Record: object.EncodeVirtual(&childRecord),
+		Parent: *genRandomRef(0),
 	}
 
-	s.T().Run("redirects to light before limit threshold", func(t *testing.T) {
-		require.NoError(t, err)
-		lightRef := genRandomRef(0)
-		jc.NodeForJetMock.Return(lightRef, nil)
-		rep, err := h.handleGetCode(contextWithJet(s.ctx, jetID), &message.Parcel{
-			Msg:         &msg,
-			PulseNumber: insolar.FirstPulseNumber + 1,
-		})
-		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetCodeRedirectReply)
-		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetCodeRedirectToken)
-		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-		assert.Equal(t, lightRef, redirect.GetReceiver())
-	})
+	mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
+		if m, ok := gm.(*message.GetObjectIndex); ok {
+			assert.Equal(s.T(), msg.Parent, m.Object)
+			buf := object.EncodeIndex(objIndex)
+			require.NoError(s.T(), err)
+			return &reply.ObjectIndex{Index: buf}, nil
+		}
 
-	s.T().Run("redirects to heavy after limit threshold", func(t *testing.T) {
-		require.NoError(t, err)
-		heavyRef := genRandomRef(0)
-		jc.NodeForJetMock.Return(heavyRef, nil)
-		rep, err := h.handleGetCode(contextWithJet(s.ctx, jetID), &message.Parcel{
-			Msg:         &msg,
-			PulseNumber: insolar.FirstPulseNumber + 2,
-		})
-		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetCodeRedirectReply)
-		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetCodeRedirectToken)
-		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-		assert.Equal(t, heavyRef, redirect.GetReceiver())
+		panic("unexpected call")
+	}
+
+	h.JetCoordinator = jc
+	h.Bus = mb
+	err = h.Init(s.ctx)
+	require.NoError(s.T(), err)
+	heavyRef := genRandomRef(0)
+	jc.HeavyMock.Return(heavyRef, nil)
+	rep, err := h.handleRegisterChild(contextWithJet(s.ctx, jetID), &message.Parcel{
+		Msg: &msg,
 	})
+	require.NoError(s.T(), err)
+	objRep, ok := rep.(*reply.ID)
+	require.True(s.T(), ok)
+	assert.Equal(s.T(), *childID, objRep.ID)
+
+	idx, err := s.indexAccessor.ForID(s.ctx, *msg.Parent.Record())
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), childID, idx.ChildPointer)
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated() {
