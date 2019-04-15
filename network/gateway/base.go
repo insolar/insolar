@@ -79,7 +79,7 @@ func (g *Base) NewGateway(state insolar.NetworkState) network.Gateway {
 	case insolar.AuthorizationNetworkState:
 		return NewAuthorisation(g)
 	case insolar.CompleteNetworkState:
-		return NewComple(g)
+		return NewComplete(g)
 	}
 	panic("Try to switch network to unknown state. Memory of process is inconsistent.")
 }

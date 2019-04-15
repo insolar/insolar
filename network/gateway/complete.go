@@ -60,7 +60,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-func NewComple(b *Base) *Complete {
+func NewComplete(b *Base) *Complete {
 	return &Complete{Base: b}
 }
 
