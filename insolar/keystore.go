@@ -16,7 +16,7 @@
 
 package insolar
 
-import "crypto"
+import "github.com/insolar/x-crypto"
 
 type KeyStore interface {
 	GetPrivateKey(string) (crypto.PrivateKey, error)

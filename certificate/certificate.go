@@ -17,8 +17,8 @@
 package certificate
 
 import (
-	"crypto"
 	"encoding/json"
+	"github.com/insolar/x-crypto"
 	"io"
 	"io/ioutil"
 	"path/filepath"

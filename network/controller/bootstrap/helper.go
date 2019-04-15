@@ -51,8 +51,8 @@
 package bootstrap
 
 import (
-	"crypto/rand"
 	"fmt"
+	"github.com/insolar/x-crypto/rand"
 	"math"
 	"sort"
 

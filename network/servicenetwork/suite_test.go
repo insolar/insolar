@@ -54,8 +54,8 @@ package servicenetwork
 
 import (
 	"context"
-	"crypto"
 	"fmt"
+	"github.com/insolar/x-crypto"
 	"math/rand"
 	"strconv"
 	"strings"

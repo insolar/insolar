@@ -18,8 +18,8 @@ package entropy
 
 import (
 	"bytes"
-	"crypto/rand"
 	"fmt"
+	"github.com/insolar/x-crypto/rand"
 	mrand "math/rand"
 	"sort"
 	"testing"

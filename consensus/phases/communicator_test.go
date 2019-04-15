@@ -52,7 +52,7 @@ package phases
 
 import (
 	"context"
-	"crypto"
+	"github.com/insolar/x-crypto"
 	"testing"
 	"time"
 

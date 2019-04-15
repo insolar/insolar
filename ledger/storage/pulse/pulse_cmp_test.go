@@ -17,7 +17,7 @@
 package pulse_test
 
 import (
-	"crypto/rand"
+	"github.com/insolar/x-crypto/rand"
 	rand2 "math/rand"
 	"testing"
 

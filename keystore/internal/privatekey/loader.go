@@ -17,10 +17,10 @@
 package privatekey
 
 import (
-	"crypto"
-	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
+	"github.com/insolar/x-crypto"
+	"github.com/insolar/x-crypto/x509"
 	"io/ioutil"
 	"path/filepath"
 

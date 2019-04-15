@@ -52,8 +52,8 @@ package packet
 
 import (
 	"bytes"
-	"crypto/rand"
 	"encoding/gob"
+	"github.com/insolar/x-crypto/rand"
 	"testing"
 
 	"github.com/insolar/insolar/network/hostnetwork/host"

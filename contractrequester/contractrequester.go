@@ -18,8 +18,8 @@ package contractrequester
 
 import (
 	"context"
-	"crypto/rand"
 	"encoding/binary"
+	"github.com/insolar/x-crypto/rand"
 	"sync"
 	"time"
 

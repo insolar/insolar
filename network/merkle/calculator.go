@@ -52,7 +52,7 @@ package merkle
 
 import (
 	"context"
-	"crypto"
+	"github.com/insolar/x-crypto"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"

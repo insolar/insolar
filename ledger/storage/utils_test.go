@@ -17,8 +17,8 @@
 package storage_test
 
 import (
-	"crypto/rand"
 	"encoding/hex"
+	"github.com/insolar/x-crypto/rand"
 
 	"github.com/insolar/insolar/insolar"
 )

@@ -17,7 +17,7 @@
 package privatekey
 
 import (
-	"crypto"
+	"github.com/insolar/x-crypto"
 )
 
 type Loader interface {

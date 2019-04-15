@@ -18,7 +18,7 @@ package logicrunner
 
 import (
 	"context"
-	"crypto"
+	"github.com/insolar/x-crypto"
 	"testing"
 
 	"github.com/insolar/insolar/component"

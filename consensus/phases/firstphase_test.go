@@ -51,7 +51,7 @@
 package phases
 
 import (
-	"crypto"
+	"github.com/insolar/x-crypto"
 	"testing"
 
 	"github.com/insolar/insolar/consensus/packets"

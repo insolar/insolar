@@ -18,8 +18,8 @@ package api
 
 import (
 	"context"
-	"crypto"
 	"fmt"
+	"github.com/insolar/x-crypto"
 	"net"
 	"net/http"
 	"sync"

@@ -52,8 +52,8 @@ package merkle
 
 import (
 	"context"
-	"crypto"
 	"encoding/hex"
+	"github.com/insolar/x-crypto"
 	"testing"
 
 	"github.com/pkg/errors"

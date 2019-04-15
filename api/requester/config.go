@@ -17,8 +17,8 @@
 package requester
 
 import (
-	"crypto"
 	"encoding/json"
+	"github.com/insolar/x-crypto"
 	"io/ioutil"
 	"os"
 	"path/filepath"

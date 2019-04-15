@@ -18,9 +18,9 @@ package genesis
 
 import (
 	"context"
-	"crypto"
 	"encoding/json"
 	"fmt"
+	"github.com/insolar/x-crypto"
 	"io/ioutil"
 	"path"
 	"path/filepath"

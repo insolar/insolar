@@ -19,7 +19,7 @@ package pulsar
 import (
 	"bytes"
 	"context"
-	"crypto"
+	"github.com/insolar/x-crypto"
 	"net"
 	"net/rpc"
 	"testing"

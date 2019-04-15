@@ -17,14 +17,14 @@
 package testutils
 
 import (
-	"crypto"
-	"crypto/rand"
 	"fmt"
+	"github.com/insolar/x-crypto"
+	"github.com/insolar/x-crypto/rand"
 	"hash"
 	"math/big"
 
 	"github.com/insolar/insolar/insolar"
-	uuid "github.com/satori/go.uuid"
+	"github.com/satori/go.uuid"
 	"golang.org/x/crypto/sha3"
 )
 

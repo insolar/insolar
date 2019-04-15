@@ -17,7 +17,7 @@
 package keystore
 
 import (
-	"crypto/ecdsa"
+	"github.com/insolar/x-crypto/ecdsa"
 	"testing"
 
 	"github.com/stretchr/testify/require"

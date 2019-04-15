@@ -18,8 +18,8 @@ package pulsar
 
 import (
 	"context"
-	"crypto"
 	"encoding/gob"
+	"github.com/insolar/x-crypto"
 	"net"
 	"net/rpc"
 	"sync"
@@ -34,7 +34,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/log"
-	pulsarstorage "github.com/insolar/insolar/pulsar/storage"
+	"github.com/insolar/insolar/pulsar/storage"
 )
 
 // Pulsar is a base struct for pulsar's node

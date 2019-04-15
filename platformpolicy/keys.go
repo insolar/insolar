@@ -17,13 +17,13 @@
 package platformpolicy
 
 import (
-	"crypto"
-	"crypto/ecdsa"
-	"crypto/elliptic"
-	"crypto/rand"
-	"crypto/x509"
 	"encoding/pem"
 	"fmt"
+	"github.com/insolar/x-crypto"
+	"github.com/insolar/x-crypto/ecdsa"
+	"github.com/insolar/x-crypto/elliptic"
+	"github.com/insolar/x-crypto/rand"
+	"github.com/insolar/x-crypto/x509"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/platformpolicy/internal/sign"
@@ -36,7 +36,7 @@ type keyProcessor struct {
 
 func NewKeyProcessor() insolar.KeyProcessor {
 	return &keyProcessor{
-		curve: elliptic.P256(),
+		curve: elliptic.Secp256k1(),
 	}
 }
 

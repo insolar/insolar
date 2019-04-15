@@ -17,7 +17,7 @@
 package insolar
 
 import (
-	"crypto"
+	"github.com/insolar/x-crypto"
 )
 
 // ShortNodeID is the shortened ID of node that is unique inside the globe

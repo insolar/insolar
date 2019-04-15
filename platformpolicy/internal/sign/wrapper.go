@@ -17,8 +17,8 @@
 package sign
 
 import (
-	"crypto/ecdsa"
-	"crypto/rand"
+	"github.com/insolar/x-crypto/ecdsa"
+	"github.com/insolar/x-crypto/rand"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"

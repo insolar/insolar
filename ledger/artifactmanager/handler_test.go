@@ -19,7 +19,7 @@ package artifactmanager
 import (
 	"bytes"
 	"context"
-	"crypto/rand"
+	"github.com/insolar/x-crypto/rand"
 	"testing"
 
 	"github.com/gojuno/minimock"

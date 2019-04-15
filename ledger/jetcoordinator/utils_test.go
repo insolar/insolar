@@ -17,8 +17,8 @@
 package jetcoordinator
 
 import (
-	"crypto/rand"
 	"fmt"
+	"github.com/insolar/x-crypto/rand"
 	"os"
 	"strings"
 	"testing"

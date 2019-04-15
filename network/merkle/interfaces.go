@@ -51,7 +51,7 @@
 package merkle
 
 import (
-	"crypto"
+	"github.com/insolar/x-crypto"
 
 	"github.com/insolar/insolar/insolar"
 )

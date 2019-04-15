@@ -17,7 +17,7 @@
 package certificate
 
 import (
-	"crypto"
+	"github.com/insolar/x-crypto"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"

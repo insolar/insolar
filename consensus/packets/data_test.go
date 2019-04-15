@@ -52,7 +52,7 @@ package packets
 
 import (
 	"bytes"
-	"crypto/rand"
+	"github.com/insolar/x-crypto/rand"
 	"reflect"
 	"strings"
 	"testing"

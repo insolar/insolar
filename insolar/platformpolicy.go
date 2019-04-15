@@ -17,7 +17,7 @@
 package insolar
 
 import (
-	"crypto"
+	"github.com/insolar/x-crypto"
 	"hash"
 )
 

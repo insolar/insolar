@@ -17,7 +17,7 @@
 package pulsar
 
 import (
-	"crypto"
+	"github.com/insolar/x-crypto"
 	"net"
 	"net/rpc"
 	"sync"

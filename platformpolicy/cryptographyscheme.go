@@ -17,7 +17,7 @@
 package platformpolicy
 
 import (
-	"crypto"
+	"github.com/insolar/x-crypto"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"

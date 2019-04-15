@@ -17,7 +17,7 @@
 package messagebus
 
 import (
-	"crypto"
+	"github.com/insolar/x-crypto"
 	"testing"
 
 	"github.com/insolar/insolar/insolar/message"

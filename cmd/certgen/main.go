@@ -18,9 +18,9 @@ package main
 
 import (
 	"context"
-	"crypto"
 	"encoding/json"
 	"fmt"
+	"github.com/insolar/x-crypto"
 	"io"
 	"os"
 

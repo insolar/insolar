@@ -18,10 +18,10 @@ package logicrunner
 
 import (
 	"context"
-	"crypto"
-	"crypto/rand"
 	"errors"
 	"fmt"
+	"github.com/insolar/x-crypto"
+	"github.com/insolar/x-crypto/rand"
 	"io/ioutil"
 	"net/rpc"
 	"os"

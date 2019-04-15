@@ -17,7 +17,7 @@
 package entropygenerator
 
 import (
-	"crypto/rand"
+	"github.com/insolar/x-crypto/rand"
 
 	"github.com/insolar/insolar/insolar"
 )

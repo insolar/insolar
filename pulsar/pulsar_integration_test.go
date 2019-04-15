@@ -18,7 +18,7 @@ package pulsar
 
 import (
 	"context"
-	"crypto"
+	"github.com/insolar/x-crypto"
 	"net"
 	"testing"
 	"time"

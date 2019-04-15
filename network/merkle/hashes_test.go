@@ -52,9 +52,9 @@ package merkle
 
 import (
 	"context"
-	"crypto"
 	"encoding/hex"
 	"fmt"
+	"github.com/insolar/x-crypto"
 	"testing"
 
 	"github.com/stretchr/testify/require"

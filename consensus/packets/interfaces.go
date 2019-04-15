@@ -51,7 +51,7 @@
 package packets
 
 import (
-	"crypto"
+	"github.com/insolar/x-crypto"
 	"io"
 	"strconv"
 

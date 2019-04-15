@@ -51,8 +51,8 @@
 package controller
 
 import (
-	"crypto"
-	"crypto/rand"
+	"github.com/insolar/x-crypto"
+	"github.com/insolar/x-crypto/rand"
 	"testing"
 
 	"github.com/insolar/insolar/cryptography"

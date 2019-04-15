@@ -52,7 +52,7 @@ package claimhandler
 
 import (
 	"bytes"
-	"crypto/rand"
+	"github.com/insolar/x-crypto/rand"
 	"testing"
 
 	"github.com/insolar/insolar/consensus/packets"

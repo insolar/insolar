@@ -51,8 +51,8 @@
 package node
 
 import (
-	"crypto"
 	"encoding/gob"
+	"github.com/insolar/x-crypto"
 	"sync"
 	"sync/atomic"
 
