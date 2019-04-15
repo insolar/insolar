@@ -25,8 +25,9 @@ type NodeMeta interface {
 	GetPublicKey() crypto.PublicKey
 }
 
-// Certificate interface provides methods to manage keys
 //go:generate minimock -i github.com/insolar/insolar/insolar.Certificate -o ../testutils -s _mock.go
+
+// Certificate interface provides methods to manage keys
 type Certificate interface {
 	AuthorizationCertificate
 
@@ -50,8 +51,9 @@ type AuthorizationCertificate interface {
 	GetDiscoverySigns() map[Reference][]byte
 }
 
-// CertificateManager interface provides methods to manage nodes certificate
 //go:generate minimock -i github.com/insolar/insolar/insolar.CertificateManager -o ../testutils -s _mock.go
+
+// CertificateManager interface provides methods to manage nodes certificate
 type CertificateManager interface {
 	GetCertificate() Certificate
 	VerifyAuthorizationCertificate(authCert AuthorizationCertificate) (bool, error)

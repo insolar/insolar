@@ -104,8 +104,9 @@ type MessageSignature interface {
 	GetSender() Reference
 }
 
-// Parcel by senders private key.
 //go:generate minimock -i github.com/insolar/insolar/insolar.Parcel -o ../testutils -s _mock.go
+
+// Parcel by senders private key.
 type Parcel interface {
 	Message
 	MessageSignature
@@ -148,8 +149,9 @@ func (o *MessageSendOptions) Safe() *MessageSendOptions {
 	return o
 }
 
-// MessageBus interface
 //go:generate minimock -i github.com/insolar/insolar/insolar.MessageBus -o ../testutils -s _mock.go
+
+// MessageBus interface
 type MessageBus interface {
 	// Send an `Message` and get a `Reply` or error from remote host.
 	Send(context.Context, Message, *MessageSendOptions) (Reply, error)

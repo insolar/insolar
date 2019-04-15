@@ -20,8 +20,9 @@ import (
 	"context"
 )
 
-// HeavySync provides methods for sync on heavy node.
 //go:generate minimock -i github.com/insolar/insolar/insolar.HeavySync -o ../testutils -s _mock.go
+
+// HeavySync provides methods for sync on heavy node.
 type HeavySync interface {
 	Start(ctx context.Context, jet ID, pn PulseNumber) error
 	StoreIndexes(ctx context.Context, jet ID, pn PulseNumber, rawIndexes map[ID][]byte) error
