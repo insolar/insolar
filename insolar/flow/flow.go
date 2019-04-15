@@ -39,7 +39,7 @@ type MakeHandle func(bus.Message) Handle
 // Please note that the Procedure is marked as canceled if a pulse happens during it's execution. This means that it
 // continues to execute in the background, though it's return value will be discarded.
 // Thus if you have multiple steps that can be executed in different pulses split them into separate Procedures.
-// Otherwise join the steps to a single Procedure.
+// Otherwise join the steps into a single Procedure.
 // It's a good idea to keep Procedures in a separate package to hide internal state from Handle.
 type Procedure interface {
 	// Proceed is called when Procedure is given control. When it returns, control will be given back to Handle.
