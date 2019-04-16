@@ -228,7 +228,7 @@ func (jc *JetCoordinator) Heavy(ctx context.Context, pulse insolar.PulseNumber) 
 func (jc *JetCoordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN insolar.PulseNumber) (bool, error) {
 	backPN, err := jc.PulseCalculator.Backwards(ctx, currentPN, jc.lightChainLimit)
 	if err != nil {
-		return false, err
+		return false, errors.Wrapf(err, "[PulseCalculator.Backwards] failed, currentPN - %v, lightChainLimit - %v", currentPN, jc.lightChainLimit)
 	}
 
 	if backPN.PulseNumber < targetPN {
@@ -247,7 +247,7 @@ func (jc *JetCoordinator) NodeForJet(ctx context.Context, jetID insolar.ID, root
 
 	toHeavy, err := jc.IsBeyondLimit(ctx, rootPN, targetPN)
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrapf(err, "[IsBeyondLimit] failed, rootPN - %v, targetPN - %v", rootPN, targetPN)
 	}
 
 	if toHeavy {

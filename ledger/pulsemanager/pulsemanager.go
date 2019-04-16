@@ -657,24 +657,24 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse insolar.Puls
 		inslogger.FromContext(ctx).Errorf("Can't get previous pulse: %s", err)
 		return
 	}
-	m.JetModifier.Delete(ctx, p.PulseNumber)
+	// m.JetModifier.Delete(ctx, p.PulseNumber)
 	m.NodeSetter.Delete(p.PulseNumber)
 	m.DropCleaner.Delete(p.PulseNumber)
 	m.BlobCleaner.Delete(ctx, p.PulseNumber)
 	m.RecCleaner.Remove(ctx, p.PulseNumber)
 
-	idxs := map[insolar.ID]struct{}{}
-	for _, idxIDs := range jetIndexesRemoved {
-		for _, idxID := range idxIDs {
-			idxs[idxID] = struct{}{}
-		}
-	}
-	m.IndexCleaner.RemoveWithIDs(ctx, idxs)
+	// idxs := map[insolar.ID]struct{}{}
+	// for _, idxIDs := range jetIndexesRemoved {
+	// 	for _, idxID := range idxIDs {
+	// 		idxs[idxID] = struct{}{}
+	// 	}
+	// }
+	// m.IndexCleaner.RemoveWithIDs(ctx, idxs)
 
-	err = m.PulseShifter.Shift(ctx, p.PulseNumber)
-	if err != nil {
-		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
-	}
+	// err = m.PulseShifter.Shift(ctx, p.PulseNumber)
+	// if err != nil {
+	// 	inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
+	// }
 }
 
 func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse insolar.Pulse, jets []jetInfo) {
