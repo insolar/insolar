@@ -143,7 +143,7 @@ func initPulsar(ctx context.Context, cfg configuration.Configuration) (*componen
 		inslogger.FromContext(ctx).Fatal(err)
 	}
 
-	pulseDistributor, err := pulsenetwork.NewDistributor(cfg.Pulsar.PulseDistributor, publicAddress)
+	pulseDistributor, err := pulsenetwork.NewDistributor(cfg.Pulsar.PulseDistributor, tp, publicAddress)
 	if err != nil {
 		inslogger.FromContext(ctx).Fatal(err)
 	}

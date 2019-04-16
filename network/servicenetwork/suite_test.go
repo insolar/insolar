@@ -66,6 +66,8 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -77,7 +79,6 @@ import (
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/suite"
 )
 
 var (

@@ -96,7 +96,7 @@ func NewTestPulsar(pulseTimeMs, requestsTimeoutMs, pulseDelta int32) (TestPulsar
 }
 
 type testPulsar struct {
-	transport     transport.Transport
+	transport     transport.StreamTransport
 	publicAddress string
 	distributor   insolar.PulseDistributor
 	generator     entropygenerator.EntropyGenerator
@@ -118,7 +118,7 @@ func (tp *testPulsar) Start(ctx context.Context, bootstrapHosts []string) error 
 		PulseRequestTimeout:       tp.reqTimeoutMs,
 		RandomNodesCount:          1,
 	}
-	tp.distributor, err = pulsenetwork.NewDistributor(distributorCfg, tp.publicAddress)
+	tp.distributor, err = pulsenetwork.NewDistributor(distributorCfg, tp.transport, tp.publicAddress)
 	if err != nil {
 		return errors.Wrap(err, "Failed to create pulse distributor")
 	}
