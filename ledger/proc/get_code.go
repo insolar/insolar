@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package artifactmanager
+package proc
 
 import (
 	"context"
@@ -24,12 +24,13 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
 )
 
-type GetCodeRec struct {
+type GetCode struct {
 	JetID   insolar.JetID
 	Message bus.Message
 	Code    insolar.Reference
@@ -48,15 +49,15 @@ type GetCodeRec struct {
 	}
 }
 
-func (p *GetCodeRec) Proceed(ctx context.Context) error {
-	ctx = contextWithJet(ctx, insolar.ID(p.JetID))
+func (p *GetCode) Proceed(ctx context.Context) error {
+	// ctx = contextWithJet(ctx, insolar.ID(p.JetID))
 	r := bus.Reply{}
 	r.Reply, r.Err = p.handle(ctx)
 	p.Message.ReplyTo <- r
 	return nil
 }
 
-func (p *GetCodeRec) handle(ctx context.Context /*, parcel insolar.Parcel*/) (insolar.Reply, error) {
+func (p *GetCode) handle(ctx context.Context /*, parcel insolar.Parcel*/) (insolar.Reply, error) {
 	parcel := p.Message.Parcel
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, *p.Code.Record())
 	if err == object.ErrNotFound {
@@ -74,7 +75,7 @@ func (p *GetCodeRec) handle(ctx context.Context /*, parcel insolar.Parcel*/) (in
 	virtRec := rec.Record
 	codeRec, ok := virtRec.(*object.CodeRecord)
 	if !ok {
-		return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
+		return nil, errors.Wrap(artifactmanager.ErrInvalidRef, "failed to retrieve code record")
 	}
 
 	code, err := p.Dep.Accessor.ForID(ctx, *codeRec.Code)
@@ -94,7 +95,7 @@ func (p *GetCodeRec) handle(ctx context.Context /*, parcel insolar.Parcel*/) (in
 	return &rep, nil
 }
 
-func (p *GetCodeRec) saveCodeFromHeavy(
+func (p *GetCode) saveCodeFromHeavy(
 	ctx context.Context, jetID insolar.JetID, code insolar.Reference, blobID insolar.ID, heavy *insolar.Reference,
 ) (*reply.Code, error) {
 	genericReply, err := p.Dep.Bus.Send(ctx, &message.GetCode{

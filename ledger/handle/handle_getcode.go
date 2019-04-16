@@ -14,7 +14,7 @@
 // limitations under the License.
 ///
 
-package artifactmanager
+package handle
 
 import (
 	"context"
@@ -24,11 +24,12 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/ledger/proc"
 	"github.com/pkg/errors"
 )
 
 type GetCode struct {
-	dep *Dependencies
+	dep *proc.Dependencies
 
 	Message bus.Message
 }
@@ -36,7 +37,7 @@ type GetCode struct {
 func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
 	msg := s.Message.Parcel.Message().(*message.GetCode)
 
-	jet := s.dep.FetchJet(&FetchJet{Parcel: s.Message.Parcel})
+	jet := s.dep.FetchJet(&proc.FetchJet{Parcel: s.Message.Parcel})
 	if err := f.Procedure(ctx, jet); err != nil {
 		if err == flow.ErrCancelled {
 			return err
@@ -45,7 +46,7 @@ func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	if jet.Result.Miss {
-		rep := &ReturnReply{
+		rep := &proc.ReturnReply{
 			ReplyTo: s.Message.ReplyTo,
 			Reply:   &reply.JetMiss{JetID: insolar.ID(jet.Result.Jet)},
 		}
@@ -55,7 +56,7 @@ func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
 		return errors.New("jet miss")
 	}
 
-	codeRec := s.dep.GetCodeRec(&GetCodeRec{
+	codeRec := s.dep.GetCodeRec(&proc.GetCode{
 		JetID:   jet.Result.Jet,
 		Message: s.Message,
 		Code:    msg.Code,

@@ -120,7 +120,7 @@ func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 			p.Dep.RecordAccessor = h.RecordAccessor
 			return p
 		},
-		GetCodeRec: func(p *GetCodeRec) *GetCodeRec {
+		GetCode: func(p *proc.GetCode) *proc.GetCode {
 			p.Dep.Bus = h.Bus
 			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
 			p.Dep.RecordAccessor = h.RecordAccessor
