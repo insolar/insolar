@@ -107,7 +107,7 @@ func (n *node) GetState() insolar.NodeState {
 func (n *node) ChangeState() {
 	// we don't expect concurrent changes, so do not CAS
 	currentState := atomic.LoadUint32(&n.state)
-	if currentState == uint32(insolar.NodeReady) {
+	if currentState >= uint32(insolar.NodeReady) {
 		return
 	}
 	atomic.StoreUint32(&n.state, currentState+1)

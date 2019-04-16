@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package artifactmanager
+package proc
 
 import (
 	"context"
@@ -49,7 +49,6 @@ type SendObject struct {
 }
 
 func (p *SendObject) Proceed(ctx context.Context) error {
-	ctx = contextWithJet(ctx, insolar.ID(p.Jet))
 	r := bus.Reply{}
 	r.Reply, r.Err = p.handle(ctx, p.Message.Parcel)
 	p.Message.ReplyTo <- r
@@ -163,7 +162,7 @@ func (p *SendObject) handle(
 	virtRec := rec.Record
 	state, ok := virtRec.(object.State)
 	if !ok {
-		return nil, errors.New("invalid object record")
+		return nil, fmt.Errorf("invalid object record %#v", virtRec)
 	}
 
 	if state.ID() == object.StateDeactivation {

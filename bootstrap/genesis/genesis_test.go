@@ -74,20 +74,19 @@ func mockGenerator(t *testing.T, am artifact.Manager) *Generator {
 			ReuseKeys:        true,
 			DiscoveryNodes:   discoveryNodes,
 			DiscoveryKeysDir: testDataPath,
-			NodeKeysDir:      testDataPath,
 		},
-		rootDomainRef: &ref,
-		nodeDomainRef: &ref,
+		rootDomainContract: &ref,
+		nodeDomainContract: &ref,
 
 		artifactManager: am,
 	}
 	return g
 }
 
-func mockContractBuilder(t *testing.T, g *Generator) *ContractsBuilder {
+func mockContractBuilder(t *testing.T, g *Generator) *contractsBuilder {
 	ref := gen.Reference()
-	cb := NewContractBuilder(gen.Reference(), g.artifactManager)
-	cb.Prototypes[nodeRecord] = &ref
+	cb := newContractBuilder(g.artifactManager)
+	cb.prototypes[nodeRecord] = &ref
 	return cb
 }
 
@@ -206,7 +205,7 @@ func TestActivateNodeRecord_RegisterRequest_Err(t *testing.T) {
 		},
 	}
 
-	_, err := g.activateNodeRecord(ctx, cb, record, name)
+	_, err := g.activateNodeRecord(ctx, record, name, *cb.prototypes[nodeRecord])
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "[ activateNodeRecord ] Couldn't register request: test reasons")
 }
@@ -234,7 +233,7 @@ func TestActivateNodeRecord_Activate_Err(t *testing.T) {
 		},
 	}
 
-	_, err := g.activateNodeRecord(ctx, cb, record, name)
+	_, err := g.activateNodeRecord(ctx, record, name, *cb.prototypes[nodeRecord])
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "[ activateNodeRecord ] Could'n activateNodeRecord node object: test reasons")
 }
@@ -265,7 +264,7 @@ func TestActivateNodeRecord_RegisterResult_Err(t *testing.T) {
 		},
 	}
 
-	_, err := g.activateNodeRecord(ctx, cb, record, name)
+	_, err := g.activateNodeRecord(ctx, record, name, *cb.prototypes[nodeRecord])
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "[ activateNodeRecord ] Couldn't register result: test reasons")
 }
@@ -285,56 +284,9 @@ func TestActivateNodeRecord(t *testing.T) {
 		},
 	}
 
-	contract, err := g.activateNodeRecord(ctx, cb, record, name)
+	contract, err := g.activateNodeRecord(ctx, record, name, *cb.prototypes[nodeRecord])
 	require.Nil(t, err)
 	require.NotNil(t, contract)
-}
-
-func TestActivateNodes_Err(t *testing.T) {
-	am := requestWithError(mockArtifactManager(t))
-
-	g := mockGenerator(t, am)
-	cb := mockContractBuilder(t, g)
-	ctx := inslogger.TestContext(t)
-
-	var nodes []nodeInfo
-	nodes = append(nodes,
-		nodeInfo{
-			publicKey: "test_pk_1",
-		},
-		nodeInfo{
-			publicKey: "test_pk_2",
-		},
-	)
-
-	_, err := g.activateNodes(ctx, cb, nodes)
-	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "[ activateNodes ] Couldn't activateNodeRecord node instance:")
-}
-
-func TestActivateNodes(t *testing.T) {
-	am := mockArtifactManager(t)
-	g := mockGenerator(t, am)
-	cb := mockContractBuilder(t, g)
-	ctx := inslogger.TestContext(t)
-
-	var nodes []nodeInfo
-	nodes = append(nodes,
-		nodeInfo{
-			publicKey: "test_pk_1",
-		},
-		nodeInfo{
-			publicKey: "test_pk_2",
-		},
-	)
-
-	updatedNodes, err := g.activateNodes(ctx, cb, nodes)
-	require.Nil(t, err)
-	require.Len(t, updatedNodes, len(nodes))
-	for i := 0; i < len(nodes); i++ {
-		require.Equal(t, nodes[i].publicKey, updatedNodes[i].publicKey)
-		require.NotNil(t, updatedNodes[i].ref)
-	}
 }
 
 func TestActivateDiscoveryNodes_DiffLen(t *testing.T) {
@@ -351,7 +303,7 @@ func TestActivateDiscoveryNodes_DiffLen(t *testing.T) {
 		},
 	)
 
-	_, err := g.activateDiscoveryNodes(ctx, cb, nodes)
+	_, err := g.activateDiscoveryNodes(ctx, *cb.prototypes[nodeRecord], nodes)
 	require.EqualError(t, err, "[ activateDiscoveryNodes ] len of nodesInfo param must be equal to len of DiscoveryNodes in genesis config")
 }
 
@@ -373,7 +325,7 @@ func TestActivateDiscoveryNodes_Err(t *testing.T) {
 	)
 	require.Len(t, nodes, len(g.config.DiscoveryNodes))
 
-	_, err := g.activateDiscoveryNodes(ctx, cb, nodes)
+	_, err := g.activateDiscoveryNodes(ctx, *cb.prototypes[nodeRecord], nodes)
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "[ activateDiscoveryNodes ] Couldn't activateNodeRecord node instance:")
 }
@@ -396,7 +348,7 @@ func TestActivateDiscoveryNodes(t *testing.T) {
 	)
 	require.Len(t, nodes, len(g.config.DiscoveryNodes))
 
-	genesisNodes, err := g.activateDiscoveryNodes(ctx, cb, nodes)
+	genesisNodes, err := g.activateDiscoveryNodes(ctx, *cb.prototypes[nodeRecord], nodes)
 	require.Nil(t, err)
 	require.Len(t, genesisNodes, len(g.config.DiscoveryNodes))
 	for i := 0; i < len(g.config.DiscoveryNodes); i++ {
@@ -418,7 +370,7 @@ func (s *genesisWithDataSuite) TestAddDiscoveryIndex_ActivateErr() {
 
 	indexMap := make(map[string]string)
 
-	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, cb, indexMap)
+	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, indexMap, *cb.prototypes[nodeRecord])
 	require.NotNil(s.T(), err)
 	require.Contains(s.T(), err.Error(), "[ addDiscoveryIndex ]: [ activateDiscoveryNodes ] Couldn't activateNodeRecord node instance")
 	require.Empty(s.T(), genesisNodes)
@@ -435,7 +387,7 @@ func TestAddDiscoveryIndex_UploadErr(t *testing.T) {
 
 	indexMap := make(map[string]string)
 
-	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, cb, indexMap)
+	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, indexMap, *cb.prototypes[nodeRecord])
 	require.NotNil(t, err)
 	require.Contains(t, err.Error(), "[ addDiscoveryIndex ]: [ uploadKeys ] can't read dir")
 	require.Empty(t, genesisNodes)
@@ -452,55 +404,8 @@ func (s *genesisWithDataSuite) TestAddDiscoveryIndex() {
 
 	indexMap := make(map[string]string)
 
-	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, cb, indexMap)
+	genesisNodes, resIndexMap, err := g.addDiscoveryIndex(ctx, indexMap, *cb.prototypes[nodeRecord])
 	require.Nil(s.T(), err)
 	require.Len(s.T(), genesisNodes, len(g.config.DiscoveryNodes))
 	require.Len(s.T(), resIndexMap, len(g.config.DiscoveryNodes))
-}
-
-func (s *genesisWithDataSuite) TestAddIndex_ActivateErr() {
-	t := s.T()
-	am := requestWithError(mockArtifactManager(t))
-	g := mockGenerator(s.T(), am)
-	cb := mockContractBuilder(s.T(), g)
-	ctx := inslogger.TestContext(s.T())
-	err := g.createKeys(ctx, testDataPath, nodeAmount)
-	require.Nil(s.T(), err)
-
-	indexMap := make(map[string]string)
-
-	resIndexMap, err := g.addIndex(ctx, cb, indexMap)
-	require.NotNil(s.T(), err)
-	require.Contains(s.T(), err.Error(), "[ addIndex ]: [ activateNodes ] Couldn't activateNodeRecord node instance")
-	require.Empty(s.T(), resIndexMap)
-}
-
-func TestAddIndex_UploadErr(t *testing.T) {
-	am := requestWithError(mockArtifactManager(t))
-	g := mockGenerator(t, am)
-	g.config.NodeKeysDir = "not_existed_testDataPath"
-	cb := mockContractBuilder(t, g)
-	ctx := inslogger.TestContext(t)
-
-	indexMap := make(map[string]string)
-
-	resIndexMap, err := g.addIndex(ctx, cb, indexMap)
-	require.NotNil(t, err)
-	require.Contains(t, err.Error(), "[ addIndex ]: [ uploadKeys ] can't read dir")
-	require.Empty(t, resIndexMap)
-}
-
-func (s *genesisWithDataSuite) TestAddIndex() {
-	am := mockArtifactManager(s.T())
-	g := mockGenerator(s.T(), am)
-	cb := mockContractBuilder(s.T(), g)
-	ctx := inslogger.TestContext(s.T())
-	err := g.createKeys(ctx, testDataPath, nodeAmount)
-	require.Nil(s.T(), err)
-
-	indexMap := make(map[string]string)
-
-	resIndexMap, err := g.addIndex(ctx, cb, indexMap)
-	require.Nil(s.T(), err)
-	require.Len(s.T(), resIndexMap, nodeAmount)
 }

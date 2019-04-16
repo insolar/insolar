@@ -1128,7 +1128,7 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	// Initializing Root Domain
 	rootDomainID, err := am.RegisterRequest(
 		ctx,
-		*am.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		&message.Parcel{
 			Msg: &message.GenesisRequest{
 				Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa",
@@ -1141,7 +1141,7 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 		ctx,
 		insolar.Reference{},
 		*rootDomainRef,
-		*am.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		*cb.Prototypes["rootdomain"],
 		false,
 		goplugintestutils.CBORMarshal(s.T(), nil),
@@ -1159,7 +1159,7 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 
 	rootMemberID, err := am.RegisterRequest(
 		ctx,
-		*am.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		&message.Parcel{
 			Msg: &message.GenesisRequest{
 				Name: "4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa",
@@ -1506,14 +1506,14 @@ func (r *One) CreateAllowance(member string) (error) {
 	kp := platformpolicy.NewKeyProcessor()
 
 	// Initializing Root Domain
-	rootDomainID, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"}})
+	rootDomainID, err := am.RegisterRequest(ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"}})
 	s.NoError(err)
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
 		ctx,
 		insolar.Reference{},
 		*rootDomainRef,
-		*am.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		*cb.Prototypes["rootdomain"],
 		false,
 		goplugintestutils.CBORMarshal(s.T(), nil),
@@ -1529,7 +1529,7 @@ func (r *One) CreateAllowance(member string) (error) {
 
 	rootMemberID, err := am.RegisterRequest(
 		ctx,
-		*am.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		&message.Parcel{
 			Msg: &message.GenesisRequest{
 				Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa",
@@ -1573,14 +1573,14 @@ func (r *One) CreateAllowance(member string) (error) {
 	// Call CreateAllowance method in custom contract
 	domain, err := insolar.NewReferenceFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
 	s.Require().NoError(err)
-	contractID, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallConstructor{}})
+	contractID, err := am.RegisterRequest(ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.CallConstructor{}})
 	s.NoError(err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
 		ctx,
 		*domain,
 		*contract,
-		*am.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		*cb.Prototypes["one"],
 		false,
 		goplugintestutils.CBORMarshal(s.T(), nil),
@@ -1896,7 +1896,7 @@ package main
 
 	resp, err = executeMethod(ctx, lr, pm, *obj, *prototype, 0, "GetChildPrototype")
 	s.NoError(err, "contract call")
-	s.Equal(*cb.Prototypes["two"], Ref{}.FromSlice(firstMethodRes(s.T(), resp).([]byte)), "Compare Code Prototypes")
+	s.Equal(*cb.Prototypes["two"], Ref{}.FromSlice(firstMethodRes(s.T(), resp).([]byte)), "Compare Code prototypes")
 }
 
 func (s *LogicRunnerFuncSuite) TestNoLoopsWhileNotificationCallError() {
@@ -2043,7 +2043,7 @@ func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am artifac
 	s.Require().NoError(err)
 	contractID, err := am.RegisterRequest(
 		ctx,
-		*am.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: testutils.RandomRef()}},
 	)
 	s.NoError(err)
@@ -2053,7 +2053,7 @@ func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am artifac
 		ctx,
 		*domain,
 		*objectRef,
-		*am.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		*cb.Prototypes[contractName],
 		false,
 		goplugintestutils.CBORMarshal(s.T(), nil),

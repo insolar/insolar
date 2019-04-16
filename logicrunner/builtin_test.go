@@ -122,7 +122,7 @@ func TestBareHelloworld(t *testing.T) {
 	_, _, protoRef, err := goplugintestutils.AMPublishCode(t, am, domain, request, insolar.MachineTypeBuiltin, []byte("helloworld"))
 	assert.NoError(t, err)
 
-	contract, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: byteRecorRef(4)}})
+	contract, err := am.RegisterRequest(ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: byteRecorRef(4)}})
 	assert.NoError(t, err)
 
 	// TODO: use proper conversion
@@ -130,7 +130,7 @@ func TestBareHelloworld(t *testing.T) {
 	reqref.SetRecord(*contract)
 
 	_, err = am.ActivateObject(
-		ctx, domain, reqref, *am.GenesisRef(), *protoRef, false,
+		ctx, domain, reqref, insolar.GenesisRecord.Ref(), *protoRef, false,
 		goplugintestutils.CBORMarshal(t, hw),
 	)
 	assert.NoError(t, err)

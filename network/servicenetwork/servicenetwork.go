@@ -326,7 +326,12 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 	}
 }
 
-func (n *ServiceNetwork) connectToNewNetwork(result network.BootstrapResult) {
+func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, node insolar.DiscoveryNode) {
+	err := n.Controller.AuthenticateToDiscoveryNode(ctx, node)
+	if err != nil {
+		logger := inslogger.FromContext(ctx)
+		logger.Errorf("Failed to authenticate a node: " + err.Error())
+	}
 }
 
 func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {

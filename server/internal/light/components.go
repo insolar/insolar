@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/artifactmanager"
+	"github.com/insolar/insolar/ledger/hot"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
@@ -117,7 +118,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Termination = termination.NewHandler(NetworkService)
 
 		// Node info.
-		NodeNetwork, err = nodenetwork.NewNodeNetwork(cfg.Host, CertManager.GetCertificate())
+		NodeNetwork, err = nodenetwork.NewNodeNetwork(cfg.Host.Transport, CertManager.GetCertificate())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start NodeNetwork")
 		}
@@ -208,7 +209,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		c.Inject(replica, legacyDB, CryptoScheme)
 
 		hots := recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL)
-		waiter := artifactmanager.NewHotDataWaiterConcrete()
+		waiter := hot.NewChannelWaiter()
 		cord := jetcoordinator.NewJetCoordinator(conf.LightChainLimit)
 		cord.PulseCalculator = pulses
 		cord.PulseAccessor = pulses
@@ -235,6 +236,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.Nodes = nodes
 		handler.DBContext = legacyDB
 		handler.HotDataWaiter = waiter
+		handler.JetReleaser = waiter
 		handler.IndexAccessor = indices
 		handler.IndexModifier = indices
 		handler.IndexStorage = indices
@@ -249,7 +251,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		pm.CryptographyService = CryptoService
 		pm.PlatformCryptographyScheme = CryptoScheme
 		pm.RecentStorageProvider = hots
-		pm.HotDataWaiter = waiter
+		pm.JetReleaser = waiter
 		pm.JetAccessor = jets
 		pm.JetModifier = jets
 		pm.IndexAccessor = indices

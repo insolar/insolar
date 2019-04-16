@@ -14,29 +14,24 @@
 // limitations under the License.
 //
 
-package artifactmanager
+package insolar
 
 import (
-	"context"
+	"encoding/hex"
+	"testing"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/stretchr/testify/require"
 )
 
-type Dependencies struct {
-	FetchJet   func(*FetchJet) *FetchJet
-	WaitHot    func(*WaitHot) *WaitHot
-	GetIndex   func(*GetIndex) *GetIndex
-	SendObject func(p *SendObject) *SendObject
+var (
+	genesisIDHex  = "00010001ac000000000000000000000000000000000000000000000000000000"
+	genesisRefHex = genesisIDHex + genesisIDHex
+)
+
+func TestGenesisRecordID(t *testing.T) {
+	require.Equal(t, genesisIDHex, hex.EncodeToString(GenesisRecord.ID().Bytes()), "genesis ID should always be the same")
 }
 
-type ReturnReply struct {
-	ReplyTo chan<- bus.Reply
-	Err     error
-	Reply   insolar.Reply
-}
-
-func (p *ReturnReply) Proceed(context.Context) error {
-	p.ReplyTo <- bus.Reply{Reply: p.Reply, Err: p.Err}
-	return nil
+func TestReference(t *testing.T) {
+	require.Equal(t, genesisRefHex, hex.EncodeToString(GenesisRecord.Ref().Bytes()), "genesisRef should always be the same")
 }

@@ -32,6 +32,7 @@ type Thread struct {
 	migrated   bool
 }
 
+// NewThread creates a new Thread instance. Thread implements the Flow interface.
 func NewThread(msg bus.Message, controller *Controller) *Thread {
 	return &Thread{
 		controller: controller,

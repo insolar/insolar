@@ -66,15 +66,6 @@ func NewClient() *client { // nolint
 	}
 }
 
-// GenesisRef returns the root record reference.
-//
-// Root record is the parent for all top-level records.
-func (m *client) GenesisRef() *insolar.Reference {
-	id := object.NewRecordIDFromRecord(m.PlatformCryptographyScheme, insolar.FirstPulseNumber, &object.GenesisRecord{})
-	ref := insolar.NewReference(*id, *id)
-	return ref
-}
-
 // RegisterRequest sends message for request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterRequest(
@@ -131,11 +122,10 @@ func (m *client) GetCode(
 		instrumenter.end()
 	}()
 
-	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(
-		bus.Send,
+		m.DefaultBus.Send,
 		m.senders.cachedSender(m.PlatformCryptographyScheme),
-		followRedirectSender(bus),
+		followRedirectSender(m.DefaultBus),
 		retryJetSender(m.JetStorage),
 	)
 
@@ -194,10 +184,9 @@ func (m *client) GetObject(
 		Approved: approved,
 	}
 
-	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(
-		bus.Send,
-		followRedirectSender(bus),
+		m.DefaultBus.Send,
+		followRedirectSender(m.DefaultBus),
 		retryJetSender(m.JetStorage),
 	)
 
@@ -242,9 +231,8 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 		instrumenter.end()
 	}()
 
-	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(
-		bus.Send,
+		m.DefaultBus.Send,
 		retryJetSender(m.JetStorage),
 	)
 
@@ -276,7 +264,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 	}
 
 	sender = BuildSender(
-		bus.Send,
+		m.DefaultBus.Send,
 		retryJetSender(m.JetStorage),
 	)
 	genericReply, err = sender(
@@ -315,9 +303,8 @@ func (m *client) HasPendingRequests(
 	ctx context.Context,
 	object insolar.Reference,
 ) (bool, error) {
-	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
 	sender := BuildSender(
-		bus.Send,
+		m.DefaultBus.Send,
 		retryJetSender(m.JetStorage),
 	)
 
@@ -355,8 +342,11 @@ func (m *client) GetDelegate(
 		instrumenter.end()
 	}()
 
-	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
-	sender := BuildSender(bus.Send, followRedirectSender(bus), retryJetSender(m.JetStorage))
+	sender := BuildSender(
+		m.DefaultBus.Send,
+		followRedirectSender(m.DefaultBus),
+		retryJetSender(m.JetStorage),
+	)
 	genericReact, err := sender(ctx, &message.GetDelegate{
 		Head:   head,
 		AsType: asType,
@@ -393,8 +383,11 @@ func (m *client) GetChildren(
 		instrumenter.end()
 	}()
 
-	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
-	sender := BuildSender(bus.Send, followRedirectSender(bus), retryJetSender(m.JetStorage))
+	sender := BuildSender(
+		m.DefaultBus.Send,
+		followRedirectSender(m.DefaultBus),
+		retryJetSender(m.JetStorage),
+	)
 	iter, err := NewChildIterator(ctx, sender, parent, pulse, m.getChildrenChunkSize)
 	return iter, err
 }
@@ -653,8 +646,10 @@ func (m *client) RegisterValidation(
 		ValidationMessages: validationMessages,
 	}
 
-	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
-	sender := BuildSender(bus.Send, retryJetSender(m.JetStorage))
+	sender := BuildSender(
+		m.DefaultBus.Send,
+		retryJetSender(m.JetStorage),
+	)
 	_, err = sender(ctx, &msg, nil)
 
 	return err
@@ -836,9 +831,7 @@ func (m *client) setRecord(
 	rec record.VirtualRecord,
 	target insolar.Reference,
 ) (*insolar.ID, error) {
-	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
-
-	sender := BuildSender(bus.Send, retryJetSender(m.JetStorage))
+	sender := BuildSender(m.DefaultBus.Send, retryJetSender(m.JetStorage))
 	genericReply, err := sender(ctx, &message.SetRecord{
 		Record:    object.EncodeVirtual(rec),
 		TargetRef: target,
@@ -864,8 +857,7 @@ func (m *client) setBlob(
 	target insolar.Reference,
 ) (*insolar.ID, error) {
 
-	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
-	sender := BuildSender(bus.Send, retryJetSender(m.JetStorage))
+	sender := BuildSender(m.DefaultBus.Send, retryJetSender(m.JetStorage))
 	genericReact, err := sender(ctx, &message.SetBlob{
 		Memory:    blob,
 		TargetRef: target,
@@ -891,8 +883,7 @@ func (m *client) sendUpdateObject(
 	obj insolar.Reference,
 	memory []byte,
 ) (*reply.Object, error) {
-	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
-	sender := BuildSender(bus.Send, retryJetSender(m.JetStorage))
+	sender := BuildSender(m.DefaultBus.Send, retryJetSender(m.JetStorage))
 	genericReply, err := sender(
 		ctx,
 		&message.UpdateObject{
@@ -922,8 +913,7 @@ func (m *client) registerChild(
 	child insolar.Reference,
 	asType *insolar.Reference,
 ) (*insolar.ID, error) {
-	bus := insolar.MessageBusFromContext(ctx, m.DefaultBus)
-	sender := BuildSender(bus.Send, retryJetSender(m.JetStorage))
+	sender := BuildSender(m.DefaultBus.Send, retryJetSender(m.JetStorage))
 	genericReact, err := sender(ctx, &message.RegisterChild{
 		Record: object.EncodeVirtual(rec),
 		Parent: parent,
