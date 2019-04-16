@@ -21,11 +21,9 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"io"
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
@@ -37,6 +35,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 )
 
 const deliverRPCMethodName = "MessageBus.Deliver"
@@ -72,28 +71,6 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	}
 	mb.Lock(context.Background())
 	return mb, nil
-}
-
-// NewPlayer creates a new player from stream. This is a very long operation, as it saves replies in storage until the
-// stream is exhausted.
-//
-// Player can be created from MessageBus and passed as MessageBus instance.
-func (mb *MessageBus) NewPlayer(ctx context.Context, reader io.Reader) (insolar.MessageBus, error) {
-	tape, err := newMemoryTapeFromReader(ctx, reader)
-	if err != nil {
-		return nil, err
-	}
-	pl := newPlayer(mb, tape, mb.PlatformCryptographyScheme, mb.PulseAccessor)
-	return pl, nil
-}
-
-// NewRecorder creates a new recorder with unique tape that can be used to store message replies.
-//
-// Recorder can be created from MessageBus and passed as MessageBus instance.
-func (mb *MessageBus) NewRecorder(ctx context.Context, currentPulse insolar.Pulse) (insolar.MessageBus, error) {
-	tape := newMemoryTape(currentPulse.PulseNumber)
-	rec := newRecorder(mb, tape, mb.PlatformCryptographyScheme, mb.PulseAccessor)
-	return rec, nil
 }
 
 // Start initializes message bus.
@@ -304,19 +281,19 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel insolar.Parcel, loc
 		// Parcel is from past. Return error for some messages, allow for others.
 		switch parcel.Message().(type) {
 		case
-			*message.GetObject,
-			*message.GetDelegate,
-			*message.GetChildren,
-			*message.SetRecord,
-			*message.UpdateObject,
-			*message.RegisterChild,
-			*message.SetBlob,
-			*message.GetObjectIndex,
-			*message.GetPendingRequests,
-			*message.ValidateRecord,
-			*message.CallConstructor,
-			*message.HotData,
-			*message.CallMethod:
+				*message.GetObject,
+				*message.GetDelegate,
+				*message.GetChildren,
+				*message.SetRecord,
+				*message.UpdateObject,
+				*message.RegisterChild,
+				*message.SetBlob,
+				*message.GetObjectIndex,
+				*message.GetPendingRequests,
+				*message.ValidateRecord,
+				*message.CallConstructor,
+				*message.HotData,
+				*message.CallMethod:
 			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", ppn, pulse.PulseNumber)
 			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", ppn, pulse.PulseNumber)
 		}

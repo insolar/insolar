@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package artifactmanager
+package hot
 
 import (
 	"sync"
@@ -32,7 +32,7 @@ func TestNewHotDataWaiterConcrete(t *testing.T) {
 	t.Parallel()
 
 	// Act
-	hdw := NewHotDataWaiterConcrete()
+	hdw := NewChannelWaiter()
 
 	// Assert
 	require.NotNil(t, hdw)
@@ -43,7 +43,7 @@ func TestHotDataWaiterConcrete_Get_CreateIfNil(t *testing.T) {
 	t.Parallel()
 
 	// Arrange
-	hdw := NewHotDataWaiterConcrete()
+	hdw := NewChannelWaiter()
 	jetID := testutils.RandomID()
 
 	// Act
@@ -60,9 +60,9 @@ func TestHotDataWaiterConcrete_Wait_UnlockHotData(t *testing.T) {
 
 	// Arrange
 	syncChannel := make(chan struct{})
-	hdw := NewHotDataWaiterConcrete()
+	hdw := NewChannelWaiter()
 	hdwLock := sync.Mutex{}
-	hdwGetter := func() HotDataWaiter {
+	hdwGetter := func() *ChannelWaiter {
 		hdwLock.Lock()
 		defer hdwLock.Unlock()
 
@@ -96,9 +96,9 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout(t *testing.T) {
 
 	// Arrange
 	syncChannel := make(chan struct{})
-	hdw := NewHotDataWaiterConcrete()
+	hdw := NewChannelWaiter()
 	hdwLock := sync.Mutex{}
-	hdwGetter := func() HotDataWaiter {
+	hdwGetter := func() *ChannelWaiter {
 		hdwLock.Lock()
 		defer hdwLock.Unlock()
 
@@ -134,9 +134,9 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout_MultipleMembers(t *testing.T) {
 
 	// Arrange
 	syncChannel := make(chan struct{})
-	hdw := NewHotDataWaiterConcrete()
+	hdw := NewChannelWaiter()
 	hdwLock := sync.Mutex{}
-	hdwGetter := func() HotDataWaiter {
+	hdwGetter := func() *ChannelWaiter {
 		hdwLock.Lock()
 		defer hdwLock.Unlock()
 

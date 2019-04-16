@@ -14,29 +14,29 @@
 // limitations under the License.
 //
 
-package insolar
+package proc
 
 import (
-	"io"
+	"context"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow/bus"
 )
 
-type genesisBinary []byte
-
-// GenesisRecord is initial chain record.
-var GenesisRecord genesisBinary = []byte{0xAC}
-
-// WriteHashData implements record.VirtualRecord.
-func (r genesisBinary) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(r)
+type Dependencies struct {
+	FetchJet   func(*FetchJet) *FetchJet
+	WaitHot    func(*WaitHot) *WaitHot
+	GetIndex   func(*GetIndex) *GetIndex
+	SendObject func(p *SendObject) *SendObject
 }
 
-// ID returns genesis record id.
-func (r genesisBinary) ID() ID {
-	return *NewID(GenesisPulse.PulseNumber, r)
+type ReturnReply struct {
+	ReplyTo chan<- bus.Reply
+	Err     error
+	Reply   insolar.Reply
 }
 
-// Ref returns genesis record reference.
-func (r genesisBinary) Ref() Reference {
-	id := r.ID()
-	return *NewReference(id, id)
+func (p *ReturnReply) Proceed(context.Context) error {
+	p.ReplyTo <- bus.Reply{Reply: p.Reply, Err: p.Err}
+	return nil
 }
