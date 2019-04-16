@@ -20,8 +20,8 @@ cp $INSOLAR/bin/insgorund bin/
 ROOT_MEMBER_KEY=keys/root_member.key.json
 BOOTSTRAP_KEY=keys/bootstrap.key.json
 [[ -d keys ]] || mkdir keys
-[[ -f $ROOT_MEMBER_KEY ]] || $INSOLAR/bin/insolar -c gen_keys > $ROOT_MEMBER_KEY
-[[ -f $BOOTSTRAP_KEY ]] || $INSOLAR/bin/insolar -c gen_keys > $BOOTSTRAP_KEY
+[[ -f $ROOT_MEMBER_KEY ]] || $INSOLAR/bin/insolar gen-key-pair > $ROOT_MEMBER_KEY
+[[ -f $BOOTSTRAP_KEY ]] || $INSOLAR/bin/insolar gen-key-pair > $BOOTSTRAP_KEY
 
 echo Creating node config
 cp $INSOLAR/scripts/build/genesis/insolar.yaml insolar.cfg.yaml

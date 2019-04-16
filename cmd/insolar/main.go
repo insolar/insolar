@@ -25,23 +25,270 @@ import (
 	"reflect"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/version"
-
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+	"github.com/spf13/pflag"
 )
 
-const defaultStdoutPath = "-"
+var (
+	verbose bool
+)
 
-var defaultURL = "http://localhost:19101/api"
+func main() {
+	var sendURL string
+	addURLFlag := func(fs *pflag.FlagSet) {
+		fs.StringVarP(&sendURL, "url", "u", defaultURL(), "API URL")
+	}
+
+	var rootCmd = &cobra.Command{
+		Use:   "insolar",
+		Short: "insolar is the command line client for Insolar Platform",
+	}
+	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "be verbose (default false)")
+
+	var versionCmd = &cobra.Command{
+		Use:   "version",
+		Short: "Print the version number",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Println(version.GetFullVersion())
+		},
+	}
+	rootCmd.AddCommand(versionCmd)
+
+	var infoCmd = &cobra.Command{
+		Use:   "get-info",
+		Short: "info about root member, root domain",
+		Run: func(cmd *cobra.Command, args []string) {
+			getInfo(sendURL)
+		},
+	}
+	addURLFlag(infoCmd.Flags())
+	rootCmd.AddCommand(infoCmd)
+
+	var logLevel string
+	var createMemberCmd = &cobra.Command{
+		Use:   "create-member",
+		Short: "creates member with random keys pair",
+		Args:  cobra.ExactArgs(1), // username
+		Run: func(cmd *cobra.Command, args []string) {
+			createMember(sendURL, args[0], logLevel)
+		},
+	}
+	createMemberCmd.Flags().StringVarP(
+		&logLevel, "log-level-server", "L", "", "log level passed on server via request")
+	addURLFlag(createMemberCmd.Flags())
+	rootCmd.AddCommand(createMemberCmd)
+
+	var genKeysPairCmd = &cobra.Command{
+		Use:   "gen-key-pair",
+		Short: "generates public/private keys pair",
+		Run: func(cmd *cobra.Command, args []string) {
+			generateKeysPair()
+		},
+	}
+	rootCmd.AddCommand(genKeysPairCmd)
+
+	var printDefaultsCmd = &cobra.Command{
+		Use:   "default-config",
+		Short: "prints insolard defaults",
+		Run: func(cmd *cobra.Command, args []string) {
+			printDefaultConfig()
+		},
+	}
+	rootCmd.AddCommand(printDefaultsCmd)
+
+	var printSendConfigsCmd = &cobra.Command{
+		Use:   "default-send-configs",
+		Short: "prints defaults of request & user configs",
+		Run: func(cmd *cobra.Command, args []string) {
+			dumpSendConfigs()
+		},
+	}
+	rootCmd.AddCommand(printSendConfigsCmd)
+
+	var (
+		configPath   string
+		paramsPath   string
+		rootAsCaller bool
+	)
+	var sendRequestCmd = &cobra.Command{
+		Use:   "send-request",
+		Short: "sends request",
+		Run: func(cmd *cobra.Command, args []string) {
+			sendRequest(sendURL, configPath, paramsPath, rootAsCaller)
+		},
+	}
+	addURLFlag(sendRequestCmd.Flags())
+	sendRequestCmd.Flags().StringVarP(
+		&configPath, "config", "g", "config.json", "path to configuration file")
+	sendRequestCmd.Flags().StringVarP(
+		&paramsPath, "params", "p", "", "path to params file (default params.json)")
+	sendRequestCmd.Flags().BoolVarP(
+		&rootAsCaller, "root-caller", "r", false, "use root member as caller")
+	rootCmd.AddCommand(sendRequestCmd)
+
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func defaultURL() string {
+	if u := os.Getenv("INSOLAR_API_URL"); u != "" {
+		return u
+	}
+	return "http://localhost:19101/api"
+}
+
+type mixedConfig struct {
+	PrivateKey string `json:"private_key"`
+	PublicKey  string `json:"public_key"`
+	Caller     string `json:"caller"`
+}
+
+func createMember(sendURL string, userName string, serverLogLevel string) {
+	ks := platformpolicy.NewKeyProcessor()
+
+	logLevelInsolar, err := insolar.ParseLevel(serverLogLevel)
+	check("Failed to parse logging level", err)
+
+	privKey, err := ks.GeneratePrivateKey()
+	check("Problems with generating of private key:", err)
+
+	privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
+	check("Problems with serialization of private key:", err)
+
+	pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
+	check("Problems with serialization of public key:", err)
+
+	cfg := mixedConfig{
+		PrivateKey: string(privKeyStr),
+		PublicKey:  string(pubKeyStr),
+	}
+
+	info, err := requester.Info(sendURL)
+	check("Problems with obtaining info", err)
+
+	ucfg, err := requester.CreateUserConfig(info.RootMember, cfg.PrivateKey)
+	check("Problems with creating user config:", err)
+
+	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
+	req := requester.RequestConfigJSON{
+		Params:   []interface{}{userName, cfg.PublicKey},
+		Method:   "CreateMember",
+		LogLevel: logLevelInsolar,
+	}
+	r, err := requester.Send(ctx, sendURL, ucfg, &req)
+	check("Problems with sending request", err)
+
+	var rStruct struct {
+		Result string `json:"result"`
+	}
+	err = json.Unmarshal(r, &rStruct)
+	check("Problems with understanding result", err)
+
+	cfg.Caller = rStruct.Result
+	result, err := json.MarshalIndent(cfg, "", "    ")
+	check("Problems with marshaling config:", err)
+
+	mustWrite(os.Stdout, string(result))
+}
+
+func verboseInfo(msg string) {
+	if verbose {
+		fmt.Fprintln(os.Stderr, msg)
+	}
+}
+
+func mustWrite(out io.Writer, data string) {
+	_, err := out.Write([]byte(data))
+	check("Can't write data to output", err)
+}
+
+func printDefaultConfig() {
+	cfgHolder := configuration.NewHolder()
+	mustWrite(os.Stdout, configuration.ToString(cfgHolder.Configuration))
+}
+
+func generateKeysPair() {
+	ks := platformpolicy.NewKeyProcessor()
+
+	privKey, err := ks.GeneratePrivateKey()
+	check("Problems with generating of private key:", err)
+
+	privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
+	check("Problems with serialization of private key:", err)
+
+	pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
+	check("Problems with serialization of public key:", err)
+
+	result, err := json.MarshalIndent(map[string]interface{}{
+		"private_key": string(privKeyStr),
+		"public_key":  string(pubKeyStr),
+	}, "", "    ")
+	check("Problems with marshaling keys:", err)
+
+	mustWrite(os.Stdout, string(result))
+}
+
+func sendRequest(sendURL string, configPath string, paramsPath string, rootAsCaller bool) {
+	requester.SetVerbose(verbose)
+
+	userCfg, err := requester.ReadUserConfigFromFile(configPath)
+	check("[ sendRequest ]", err)
+
+	if rootAsCaller || userCfg.Caller == "" {
+		info, err := requester.Info(sendURL)
+		check("[ sendRequest ]", err)
+		userCfg.Caller = info.RootMember
+	}
+
+	pPath := paramsPath
+	if len(pPath) == 0 {
+		pPath = configPath
+	}
+	reqCfg, err := requester.ReadRequestConfigFromFile(pPath)
+	check("[ sendRequest ]", err)
+
+	verboseInfo(fmt.Sprintln("User Config: ", userCfg))
+	verboseInfo(fmt.Sprintln("Requester Config: ", reqCfg))
+
+	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
+	response, err := requester.Send(ctx, sendURL, userCfg, reqCfg)
+	check("[ sendRequest ]", err)
+
+	mustWrite(os.Stdout, string(response))
+}
+
+func dumpSendConfigs() {
+	out := os.Stdout
+	reqConf, err := genDefaultConfig(requester.RequestConfigJSON{})
+	check("[ genSendConfigs ]", err)
+
+	userConf, err := genDefaultConfig(requester.UserConfigJSON{})
+	check("[ genSendConfigs ]", err)
+
+	mustWrite(out, "Request config:\n")
+	mustWrite(out, string(reqConf))
+	mustWrite(out, "\n\n")
+
+	mustWrite(out, "User config:\n")
+	mustWrite(out, string(userConf)+"\n")
+}
+
+func getInfo(url string) {
+	info, err := requester.Info(url)
+	check("[ sendRequest ]", err)
+	fmt.Printf("TraceID    : %s\n", info.TraceID)
+	fmt.Printf("RootMember : %s\n", info.RootMember)
+	fmt.Printf("NodeDomain : %s\n", info.NodeDomain)
+	fmt.Printf("RootDomain : %s\n", info.RootDomain)
+}
 
 func genDefaultConfig(r interface{}) ([]byte, error) {
 	t := reflect.TypeOf(r)
@@ -65,260 +312,9 @@ func genDefaultConfig(r interface{}) ([]byte, error) {
 	return rawJSON, nil
 }
 
-func chooseOutput(path string) (io.Writer, error) {
-	var res io.Writer
-	if path == defaultStdoutPath {
-		res = os.Stdout
-	} else {
-		var err error
-		res, err = os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
-		if err != nil {
-			return nil, errors.Wrap(err, "couldn't open file for writing")
-		}
-	}
-	return res, nil
-}
-
 func check(msg string, err error) {
 	if err != nil {
-		fmt.Println(msg, err)
+		fmt.Fprintln(os.Stderr, msg, err)
 		os.Exit(1)
 	}
-}
-
-var (
-	output             string
-	cmd                string
-	numberCertificates uint
-	configPath         string
-	paramsPath         string
-	verbose            bool
-	sendUrls           string
-	rootAsCaller       bool
-	logLevelServer     insolar.LogLevel
-)
-
-func parseInputParams() {
-	var rootCmd = &cobra.Command{}
-	rootCmd.Flags().StringVarP(&cmd, "cmd", "c", "",
-		"available commands: default_config | random_ref | version | gen_keys | gen_certificate | send_request | gen_send_configs | get_info | create_member")
-	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "be verbose (default false)")
-	rootCmd.Flags().StringVarP(&output, "output", "o", defaultStdoutPath, "output file (use - for STDOUT)")
-	rootCmd.Flags().StringVarP(&sendUrls, "url", "u", defaultURL, "api url")
-	rootCmd.Flags().UintVarP(&numberCertificates, "num_certs", "n", 3, "number of certificates")
-	rootCmd.Flags().StringVarP(&configPath, "config", "g", "config.json", "path to configuration file")
-	rootCmd.Flags().StringVarP(&paramsPath, "params", "p", "", "path to params file (default params.json)")
-	rootCmd.Flags().BoolVarP(&rootAsCaller, "root_as_caller", "r", false, "use root member as caller")
-
-	var logLevelServerString string
-	rootCmd.Flags().StringVarP(&logLevelServerString, "log_level_server", "L", "", "server log level")
-
-	err := rootCmd.Execute()
-	check("Wrong input params:", err)
-
-	logLevelServer, err = insolar.ParseLevel(logLevelServerString)
-	check("Failed to parse logging level", err)
-
-	if len(cmd) == 0 {
-		err = rootCmd.Usage()
-		check("[ parseInputParams ]", err)
-		os.Exit(0)
-	}
-}
-
-func main() {
-	if u := os.Getenv("INSOLAR_API_URL"); u != "" {
-		defaultURL = u
-	}
-	parseInputParams()
-
-	out, err := chooseOutput(output)
-	check("Problems with parsing input:", err)
-
-	switch cmd {
-	case "default_config":
-		printDefaultConfig(out)
-	case "random_ref":
-		randomRef(out)
-	case "version":
-		fmt.Println(version.GetFullVersion())
-	case "gen_keys":
-		generateKeysPair(out)
-	case "gen_certificate":
-		generateCertificate(out)
-	case "send_request":
-		sendRequest(out)
-	case "gen_send_configs":
-		genSendConfigs(out)
-	case "get_info":
-		getInfo(out)
-	case "create_member":
-		createMember(out)
-	}
-}
-
-type mixedConfig struct {
-	PrivateKey string `json:"private_key"`
-	PublicKey  string `json:"public_key"`
-	Caller     string `json:"caller"`
-}
-
-func createMember(out io.Writer) {
-	userName := os.Args[len(os.Args)-1]
-
-	ks := platformpolicy.NewKeyProcessor()
-	privKey, err := ks.GeneratePrivateKey()
-	check("Problems with generating of private key:", err)
-	privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
-	check("Problems with serialization of private key:", err)
-	pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
-	check("Problems with serialization of public key:", err)
-
-	cfg := mixedConfig{
-		PrivateKey: string(privKeyStr),
-		PublicKey:  string(pubKeyStr),
-	}
-
-	info, err := requester.Info(sendUrls)
-	check("Problems with obtaining info", err)
-
-	ucfg, err := requester.CreateUserConfig(info.RootMember, cfg.PrivateKey)
-	check("Problems with creating user config:", err)
-
-	req := requester.RequestConfigJSON{
-		Params:   []interface{}{userName, cfg.PublicKey},
-		Method:   "CreateMember",
-		LogLevel: logLevelServer,
-	}
-
-	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
-	r, err := requester.Send(ctx, sendUrls, ucfg, &req)
-	check("Problems with sending request", err)
-
-	var rStruct struct {
-		Result string `json:"result"`
-	}
-
-	err = json.Unmarshal(r, &rStruct)
-	check("Problems with understanding result", err)
-
-	cfg.Caller = rStruct.Result
-
-	result, err := json.MarshalIndent(cfg, "", "    ")
-	check("Problems with marshaling config:", err)
-
-	writeToOutput(out, string(result))
-
-}
-
-func verboseInfo(msg string) {
-	if verbose {
-		log.Info(msg)
-	}
-}
-
-func writeToOutput(out io.Writer, data string) {
-	_, err := out.Write([]byte(data))
-	check("Can't write data to output", err)
-}
-
-func printDefaultConfig(out io.Writer) {
-	cfgHolder := configuration.NewHolder()
-	writeToOutput(out, configuration.ToString(cfgHolder.Configuration))
-}
-
-func randomRef(out io.Writer) {
-	ref := testutils.RandomRef()
-
-	writeToOutput(out, ref.String()+"\n")
-}
-
-func generateKeysPair(out io.Writer) {
-	ks := platformpolicy.NewKeyProcessor()
-
-	privKey, err := ks.GeneratePrivateKey()
-	check("Problems with generating of private key:", err)
-
-	privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
-	check("Problems with serialization of private key:", err)
-
-	pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
-	check("Problems with serialization of public key:", err)
-
-	result, err := json.MarshalIndent(map[string]interface{}{
-		"private_key": string(privKeyStr),
-		"public_key":  string(pubKeyStr),
-	}, "", "    ")
-	check("Problems with marshaling keys:", err)
-
-	writeToOutput(out, string(result))
-}
-
-func generateCertificate(out io.Writer) {
-	boundCryptographyService, err := cryptography.NewStorageBoundCryptographyService(configPath)
-	check("[ generateCertificate ] failed to create cryptography service", err)
-
-	keyProcessor := platformpolicy.NewKeyProcessor()
-
-	publicKey, err := boundCryptographyService.GetPublicKey()
-	check("[ generateCertificate ] failed to retrieve public key", err)
-
-	cert, err := certificate.NewCertificatesWithKeys(publicKey, keyProcessor)
-	check("[ generateCertificate ] Can't create certificate", err)
-
-	data, err := cert.Dump()
-	check("[ generateCertificate ] Can't dump certificate", err)
-	writeToOutput(out, data)
-}
-
-func sendRequest(out io.Writer) {
-	requester.SetVerbose(verbose)
-	userCfg, err := requester.ReadUserConfigFromFile(configPath)
-	check("[ sendRequest ]", err)
-
-	if rootAsCaller || userCfg.Caller == "" {
-		info, err := requester.Info(sendUrls)
-		check("[ sendRequest ]", err)
-		userCfg.Caller = info.RootMember
-	}
-
-	pPath := paramsPath
-	if len(pPath) == 0 {
-		pPath = configPath
-	}
-	reqCfg, err := requester.ReadRequestConfigFromFile(pPath)
-	check("[ sendRequest ]", err)
-
-	verboseInfo(fmt.Sprintln("User Config: ", userCfg))
-	verboseInfo(fmt.Sprintln("Requester Config: ", reqCfg))
-
-	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
-	response, err := requester.Send(ctx, sendUrls, userCfg, reqCfg)
-	check("[ sendRequest ]", err)
-
-	writeToOutput(out, string(response))
-}
-
-func genSendConfigs(out io.Writer) {
-	reqConf, err := genDefaultConfig(requester.RequestConfigJSON{})
-	check("[ genSendConfigs ]", err)
-
-	userConf, err := genDefaultConfig(requester.UserConfigJSON{})
-	check("[ genSendConfigs ]", err)
-
-	writeToOutput(out, "Request config:\n")
-	writeToOutput(out, string(reqConf))
-	writeToOutput(out, "\n\n")
-
-	writeToOutput(out, "User config:\n")
-	writeToOutput(out, string(userConf)+"\n")
-}
-
-func getInfo(out io.Writer) {
-	info, err := requester.Info(sendUrls)
-	check("[ sendRequest ]", err)
-	fmt.Fprintf(out, "TraceID    : %s\n", info.TraceID)
-	fmt.Fprintf(out, "RootMember : %s\n", info.RootMember)
-	fmt.Fprintf(out, "NodeDomain : %s\n", info.NodeDomain)
-	fmt.Fprintf(out, "RootDomain : %s\n", info.RootDomain)
 }
