@@ -152,6 +152,7 @@ func NewIndexMemory() *IndexMemory {
 	return &IndexMemory{
 		indexStorage: map[insolar.ID]Lifeline{},
 		jetIndex:     store.NewJetIndex(),
+		pulseIndex:   NewPulseIndex(),
 	}
 }
 
