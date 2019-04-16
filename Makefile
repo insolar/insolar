@@ -42,7 +42,7 @@ lint: ci-lint
 
 .PHONY: ci-lint
 ci-lint:
-	golangci-lint run $(ALL_PACKAGES)
+	golangci-lint run --new-from-rev=c8f94b7f41b9ae0d2b7ed618d37358b78f479bee
 
 .PHONY: metalint
 metalint:
