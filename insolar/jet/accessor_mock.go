@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Accessor" can be found in github.com/insolar/insolar/insolar/jet
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// AccessorMock implements github.com/insolar/insolar/insolar/jet.Accessor
+//AccessorMock implements github.com/insolar/insolar/insolar/jet.Accessor
 type AccessorMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type AccessorMock struct {
 	ForIDMock       mAccessorMockForID
 }
 
-// NewAccessorMock returns a mock for github.com/insolar/insolar/insolar/jet.Accessor
+//NewAccessorMock returns a mock for github.com/insolar/insolar/insolar/jet.Accessor
 func NewAccessorMock(t minimock.Tester) *AccessorMock {
 	m := &AccessorMock{t: t}
 
@@ -65,7 +65,7 @@ type AccessorMockAllResult struct {
 	r []insolar.JetID
 }
 
-// Expect specifies that invocation of Accessor.All is expected from 1 to Infinity times
+//Expect specifies that invocation of Accessor.All is expected from 1 to Infinity times
 func (m *mAccessorMockAll) Expect(p context.Context, p1 insolar.PulseNumber) *mAccessorMockAll {
 	m.mock.AllFunc = nil
 	m.expectationSeries = nil
@@ -77,7 +77,7 @@ func (m *mAccessorMockAll) Expect(p context.Context, p1 insolar.PulseNumber) *mA
 	return m
 }
 
-// Return specifies results of invocation of Accessor.All
+//Return specifies results of invocation of Accessor.All
 func (m *mAccessorMockAll) Return(r []insolar.JetID) *AccessorMock {
 	m.mock.AllFunc = nil
 	m.expectationSeries = nil
@@ -89,7 +89,7 @@ func (m *mAccessorMockAll) Return(r []insolar.JetID) *AccessorMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Accessor.All is expected once
+//ExpectOnce specifies that invocation of Accessor.All is expected once
 func (m *mAccessorMockAll) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *AccessorMockAllExpectation {
 	m.mock.AllFunc = nil
 	m.mainExpectation = nil
@@ -104,7 +104,7 @@ func (e *AccessorMockAllExpectation) Return(r []insolar.JetID) {
 	e.result = &AccessorMockAllResult{r}
 }
 
-// Set uses given function f as a mock of Accessor.All method
+//Set uses given function f as a mock of Accessor.All method
 func (m *mAccessorMockAll) Set(f func(p context.Context, p1 insolar.PulseNumber) (r []insolar.JetID)) *AccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -113,7 +113,7 @@ func (m *mAccessorMockAll) Set(f func(p context.Context, p1 insolar.PulseNumber)
 	return m.mock
 }
 
-// All implements github.com/insolar/insolar/insolar/jet.Accessor interface
+//All implements github.com/insolar/insolar/insolar/jet.Accessor interface
 func (m *AccessorMock) All(p context.Context, p1 insolar.PulseNumber) (r []insolar.JetID) {
 	counter := atomic.AddUint64(&m.AllPreCounter, 1)
 	defer atomic.AddUint64(&m.AllCounter, 1)
@@ -163,17 +163,17 @@ func (m *AccessorMock) All(p context.Context, p1 insolar.PulseNumber) (r []insol
 	return m.AllFunc(p, p1)
 }
 
-// AllMinimockCounter returns a count of AccessorMock.AllFunc invocations
+//AllMinimockCounter returns a count of AccessorMock.AllFunc invocations
 func (m *AccessorMock) AllMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.AllCounter)
 }
 
-// AllMinimockPreCounter returns the value of AccessorMock.All invocations
+//AllMinimockPreCounter returns the value of AccessorMock.All invocations
 func (m *AccessorMock) AllMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.AllPreCounter)
 }
 
-// AllFinished returns true if mock invocations count is ok
+//AllFinished returns true if mock invocations count is ok
 func (m *AccessorMock) AllFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.AllMock.expectationSeries) > 0 {
@@ -215,7 +215,7 @@ type AccessorMockForIDResult struct {
 	r1 bool
 }
 
-// Expect specifies that invocation of Accessor.ForID is expected from 1 to Infinity times
+//Expect specifies that invocation of Accessor.ForID is expected from 1 to Infinity times
 func (m *mAccessorMockForID) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *mAccessorMockForID {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
@@ -227,7 +227,7 @@ func (m *mAccessorMockForID) Expect(p context.Context, p1 insolar.PulseNumber, p
 	return m
 }
 
-// Return specifies results of invocation of Accessor.ForID
+//Return specifies results of invocation of Accessor.ForID
 func (m *mAccessorMockForID) Return(r insolar.JetID, r1 bool) *AccessorMock {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
@@ -239,7 +239,7 @@ func (m *mAccessorMockForID) Return(r insolar.JetID, r1 bool) *AccessorMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Accessor.ForID is expected once
+//ExpectOnce specifies that invocation of Accessor.ForID is expected once
 func (m *mAccessorMockForID) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *AccessorMockForIDExpectation {
 	m.mock.ForIDFunc = nil
 	m.mainExpectation = nil
@@ -254,7 +254,7 @@ func (e *AccessorMockForIDExpectation) Return(r insolar.JetID, r1 bool) {
 	e.result = &AccessorMockForIDResult{r, r1}
 }
 
-// Set uses given function f as a mock of Accessor.ForID method
+//Set uses given function f as a mock of Accessor.ForID method
 func (m *mAccessorMockForID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r insolar.JetID, r1 bool)) *AccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -263,7 +263,7 @@ func (m *mAccessorMockForID) Set(f func(p context.Context, p1 insolar.PulseNumbe
 	return m.mock
 }
 
-// ForID implements github.com/insolar/insolar/insolar/jet.Accessor interface
+//ForID implements github.com/insolar/insolar/insolar/jet.Accessor interface
 func (m *AccessorMock) ForID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r insolar.JetID, r1 bool) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
@@ -315,17 +315,17 @@ func (m *AccessorMock) ForID(p context.Context, p1 insolar.PulseNumber, p2 insol
 	return m.ForIDFunc(p, p1, p2)
 }
 
-// ForIDMinimockCounter returns a count of AccessorMock.ForIDFunc invocations
+//ForIDMinimockCounter returns a count of AccessorMock.ForIDFunc invocations
 func (m *AccessorMock) ForIDMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ForIDCounter)
 }
 
-// ForIDMinimockPreCounter returns the value of AccessorMock.ForID invocations
+//ForIDMinimockPreCounter returns the value of AccessorMock.ForID invocations
 func (m *AccessorMock) ForIDMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ForIDPreCounter)
 }
 
-// ForIDFinished returns true if mock invocations count is ok
+//ForIDFinished returns true if mock invocations count is ok
 func (m *AccessorMock) ForIDFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.ForIDMock.expectationSeries) > 0 {
@@ -345,8 +345,8 @@ func (m *AccessorMock) ForIDFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *AccessorMock) ValidateCallCounters() {
 
 	if !m.AllFinished() {
@@ -359,19 +359,19 @@ func (m *AccessorMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *AccessorMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *AccessorMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *AccessorMock) MinimockFinish() {
 
 	if !m.AllFinished() {
@@ -384,14 +384,14 @@ func (m *AccessorMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *AccessorMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *AccessorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -422,8 +422,8 @@ func (m *AccessorMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *AccessorMock) AllMocksCalled() bool {
 
 	if !m.AllFinished() {

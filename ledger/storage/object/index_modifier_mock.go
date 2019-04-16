@@ -24,6 +24,11 @@ type IndexModifierMock struct {
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mIndexModifierMockSet
+
+	UpdateUsagePulseFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r error)
+	UpdateUsagePulseCounter    uint64
+	UpdateUsagePulsePreCounter uint64
+	UpdateUsagePulseMock       mIndexModifierMockUpdateUsagePulse
 }
 
 //NewIndexModifierMock returns a mock for github.com/insolar/insolar/ledger/storage/object.IndexModifier
@@ -35,6 +40,7 @@ func NewIndexModifierMock(t minimock.Tester) *IndexModifierMock {
 	}
 
 	m.SetMock = mIndexModifierMockSet{mock: m}
+	m.UpdateUsagePulseMock = mIndexModifierMockUpdateUsagePulse{mock: m}
 
 	return m
 }
@@ -188,12 +194,165 @@ func (m *IndexModifierMock) SetFinished() bool {
 	return true
 }
 
+type mIndexModifierMockUpdateUsagePulse struct {
+	mock              *IndexModifierMock
+	mainExpectation   *IndexModifierMockUpdateUsagePulseExpectation
+	expectationSeries []*IndexModifierMockUpdateUsagePulseExpectation
+}
+
+type IndexModifierMockUpdateUsagePulseExpectation struct {
+	input  *IndexModifierMockUpdateUsagePulseInput
+	result *IndexModifierMockUpdateUsagePulseResult
+}
+
+type IndexModifierMockUpdateUsagePulseInput struct {
+	p  context.Context
+	p1 insolar.ID
+	p2 insolar.PulseNumber
+}
+
+type IndexModifierMockUpdateUsagePulseResult struct {
+	r error
+}
+
+//Expect specifies that invocation of IndexModifier.UpdateUsagePulse is expected from 1 to Infinity times
+func (m *mIndexModifierMockUpdateUsagePulse) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *mIndexModifierMockUpdateUsagePulse {
+	m.mock.UpdateUsagePulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &IndexModifierMockUpdateUsagePulseExpectation{}
+	}
+	m.mainExpectation.input = &IndexModifierMockUpdateUsagePulseInput{p, p1, p2}
+	return m
+}
+
+//Return specifies results of invocation of IndexModifier.UpdateUsagePulse
+func (m *mIndexModifierMockUpdateUsagePulse) Return(r error) *IndexModifierMock {
+	m.mock.UpdateUsagePulseFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &IndexModifierMockUpdateUsagePulseExpectation{}
+	}
+	m.mainExpectation.result = &IndexModifierMockUpdateUsagePulseResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of IndexModifier.UpdateUsagePulse is expected once
+func (m *mIndexModifierMockUpdateUsagePulse) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *IndexModifierMockUpdateUsagePulseExpectation {
+	m.mock.UpdateUsagePulseFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &IndexModifierMockUpdateUsagePulseExpectation{}
+	expectation.input = &IndexModifierMockUpdateUsagePulseInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *IndexModifierMockUpdateUsagePulseExpectation) Return(r error) {
+	e.result = &IndexModifierMockUpdateUsagePulseResult{r}
+}
+
+//Set uses given function f as a mock of IndexModifier.UpdateUsagePulse method
+func (m *mIndexModifierMockUpdateUsagePulse) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r error)) *IndexModifierMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.UpdateUsagePulseFunc = f
+	return m.mock
+}
+
+//UpdateUsagePulse implements github.com/insolar/insolar/ledger/storage/object.IndexModifier interface
+func (m *IndexModifierMock) UpdateUsagePulse(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r error) {
+	counter := atomic.AddUint64(&m.UpdateUsagePulsePreCounter, 1)
+	defer atomic.AddUint64(&m.UpdateUsagePulseCounter, 1)
+
+	if len(m.UpdateUsagePulseMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.UpdateUsagePulseMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to IndexModifierMock.UpdateUsagePulse. %v %v %v", p, p1, p2)
+			return
+		}
+
+		input := m.UpdateUsagePulseMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, IndexModifierMockUpdateUsagePulseInput{p, p1, p2}, "IndexModifier.UpdateUsagePulse got unexpected parameters")
+
+		result := m.UpdateUsagePulseMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the IndexModifierMock.UpdateUsagePulse")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.UpdateUsagePulseMock.mainExpectation != nil {
+
+		input := m.UpdateUsagePulseMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, IndexModifierMockUpdateUsagePulseInput{p, p1, p2}, "IndexModifier.UpdateUsagePulse got unexpected parameters")
+		}
+
+		result := m.UpdateUsagePulseMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the IndexModifierMock.UpdateUsagePulse")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.UpdateUsagePulseFunc == nil {
+		m.t.Fatalf("Unexpected call to IndexModifierMock.UpdateUsagePulse. %v %v %v", p, p1, p2)
+		return
+	}
+
+	return m.UpdateUsagePulseFunc(p, p1, p2)
+}
+
+//UpdateUsagePulseMinimockCounter returns a count of IndexModifierMock.UpdateUsagePulseFunc invocations
+func (m *IndexModifierMock) UpdateUsagePulseMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.UpdateUsagePulseCounter)
+}
+
+//UpdateUsagePulseMinimockPreCounter returns the value of IndexModifierMock.UpdateUsagePulse invocations
+func (m *IndexModifierMock) UpdateUsagePulseMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.UpdateUsagePulsePreCounter)
+}
+
+//UpdateUsagePulseFinished returns true if mock invocations count is ok
+func (m *IndexModifierMock) UpdateUsagePulseFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.UpdateUsagePulseMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.UpdateUsagePulseCounter) == uint64(len(m.UpdateUsagePulseMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.UpdateUsagePulseMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.UpdateUsagePulseCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.UpdateUsagePulseFunc != nil {
+		return atomic.LoadUint64(&m.UpdateUsagePulseCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexModifierMock) ValidateCallCounters() {
 
 	if !m.SetFinished() {
 		m.t.Fatal("Expected call to IndexModifierMock.Set")
+	}
+
+	if !m.UpdateUsagePulseFinished() {
+		m.t.Fatal("Expected call to IndexModifierMock.UpdateUsagePulse")
 	}
 
 }
@@ -217,6 +376,10 @@ func (m *IndexModifierMock) MinimockFinish() {
 		m.t.Fatal("Expected call to IndexModifierMock.Set")
 	}
 
+	if !m.UpdateUsagePulseFinished() {
+		m.t.Fatal("Expected call to IndexModifierMock.UpdateUsagePulse")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -232,6 +395,7 @@ func (m *IndexModifierMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.SetFinished()
+		ok = ok && m.UpdateUsagePulseFinished()
 
 		if ok {
 			return
@@ -242,6 +406,10 @@ func (m *IndexModifierMock) MinimockWait(timeout time.Duration) {
 
 			if !m.SetFinished() {
 				m.t.Error("Expected call to IndexModifierMock.Set")
+			}
+
+			if !m.UpdateUsagePulseFinished() {
+				m.t.Error("Expected call to IndexModifierMock.UpdateUsagePulse")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -257,6 +425,10 @@ func (m *IndexModifierMock) MinimockWait(timeout time.Duration) {
 func (m *IndexModifierMock) AllMocksCalled() bool {
 
 	if !m.SetFinished() {
+		return false
+	}
+
+	if !m.UpdateUsagePulseFinished() {
 		return false
 	}
 

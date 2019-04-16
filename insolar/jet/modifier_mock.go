@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Modifier" can be found in github.com/insolar/insolar/insolar/jet
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// ModifierMock implements github.com/insolar/insolar/insolar/jet.Modifier
+//ModifierMock implements github.com/insolar/insolar/insolar/jet.Modifier
 type ModifierMock struct {
 	t minimock.Tester
 
@@ -41,7 +41,7 @@ type ModifierMock struct {
 	UpdateMock       mModifierMockUpdate
 }
 
-// NewModifierMock returns a mock for github.com/insolar/insolar/insolar/jet.Modifier
+//NewModifierMock returns a mock for github.com/insolar/insolar/insolar/jet.Modifier
 func NewModifierMock(t minimock.Tester) *ModifierMock {
 	m := &ModifierMock{t: t}
 
@@ -73,7 +73,7 @@ type ModifierMockCloneInput struct {
 	p2 insolar.PulseNumber
 }
 
-// Expect specifies that invocation of Modifier.Clone is expected from 1 to Infinity times
+//Expect specifies that invocation of Modifier.Clone is expected from 1 to Infinity times
 func (m *mModifierMockClone) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) *mModifierMockClone {
 	m.mock.CloneFunc = nil
 	m.expectationSeries = nil
@@ -85,7 +85,7 @@ func (m *mModifierMockClone) Expect(p context.Context, p1 insolar.PulseNumber, p
 	return m
 }
 
-// Return specifies results of invocation of Modifier.Clone
+//Return specifies results of invocation of Modifier.Clone
 func (m *mModifierMockClone) Return() *ModifierMock {
 	m.mock.CloneFunc = nil
 	m.expectationSeries = nil
@@ -97,7 +97,7 @@ func (m *mModifierMockClone) Return() *ModifierMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Modifier.Clone is expected once
+//ExpectOnce specifies that invocation of Modifier.Clone is expected once
 func (m *mModifierMockClone) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) *ModifierMockCloneExpectation {
 	m.mock.CloneFunc = nil
 	m.mainExpectation = nil
@@ -108,7 +108,7 @@ func (m *mModifierMockClone) ExpectOnce(p context.Context, p1 insolar.PulseNumbe
 	return expectation
 }
 
-// Set uses given function f as a mock of Modifier.Clone method
+//Set uses given function f as a mock of Modifier.Clone method
 func (m *mModifierMockClone) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber)) *ModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -117,7 +117,7 @@ func (m *mModifierMockClone) Set(f func(p context.Context, p1 insolar.PulseNumbe
 	return m.mock
 }
 
-// Clone implements github.com/insolar/insolar/insolar/jet.Modifier interface
+//Clone implements github.com/insolar/insolar/insolar/jet.Modifier interface
 func (m *ModifierMock) Clone(p context.Context, p1 insolar.PulseNumber, p2 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.ClonePreCounter, 1)
 	defer atomic.AddUint64(&m.CloneCounter, 1)
@@ -152,17 +152,17 @@ func (m *ModifierMock) Clone(p context.Context, p1 insolar.PulseNumber, p2 insol
 	m.CloneFunc(p, p1, p2)
 }
 
-// CloneMinimockCounter returns a count of ModifierMock.CloneFunc invocations
+//CloneMinimockCounter returns a count of ModifierMock.CloneFunc invocations
 func (m *ModifierMock) CloneMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.CloneCounter)
 }
 
-// CloneMinimockPreCounter returns the value of ModifierMock.Clone invocations
+//CloneMinimockPreCounter returns the value of ModifierMock.Clone invocations
 func (m *ModifierMock) CloneMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ClonePreCounter)
 }
 
-// CloneFinished returns true if mock invocations count is ok
+//CloneFinished returns true if mock invocations count is ok
 func (m *ModifierMock) CloneFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.CloneMock.expectationSeries) > 0 {
@@ -197,7 +197,7 @@ type ModifierMockDeleteInput struct {
 	p1 insolar.PulseNumber
 }
 
-// Expect specifies that invocation of Modifier.Delete is expected from 1 to Infinity times
+//Expect specifies that invocation of Modifier.Delete is expected from 1 to Infinity times
 func (m *mModifierMockDelete) Expect(p context.Context, p1 insolar.PulseNumber) *mModifierMockDelete {
 	m.mock.DeleteFunc = nil
 	m.expectationSeries = nil
@@ -209,7 +209,7 @@ func (m *mModifierMockDelete) Expect(p context.Context, p1 insolar.PulseNumber) 
 	return m
 }
 
-// Return specifies results of invocation of Modifier.Delete
+//Return specifies results of invocation of Modifier.Delete
 func (m *mModifierMockDelete) Return() *ModifierMock {
 	m.mock.DeleteFunc = nil
 	m.expectationSeries = nil
@@ -221,7 +221,7 @@ func (m *mModifierMockDelete) Return() *ModifierMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Modifier.Delete is expected once
+//ExpectOnce specifies that invocation of Modifier.Delete is expected once
 func (m *mModifierMockDelete) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *ModifierMockDeleteExpectation {
 	m.mock.DeleteFunc = nil
 	m.mainExpectation = nil
@@ -232,7 +232,7 @@ func (m *mModifierMockDelete) ExpectOnce(p context.Context, p1 insolar.PulseNumb
 	return expectation
 }
 
-// Set uses given function f as a mock of Modifier.Delete method
+//Set uses given function f as a mock of Modifier.Delete method
 func (m *mModifierMockDelete) Set(f func(p context.Context, p1 insolar.PulseNumber)) *ModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -241,7 +241,7 @@ func (m *mModifierMockDelete) Set(f func(p context.Context, p1 insolar.PulseNumb
 	return m.mock
 }
 
-// Delete implements github.com/insolar/insolar/insolar/jet.Modifier interface
+//Delete implements github.com/insolar/insolar/insolar/jet.Modifier interface
 func (m *ModifierMock) Delete(p context.Context, p1 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteCounter, 1)
@@ -276,17 +276,17 @@ func (m *ModifierMock) Delete(p context.Context, p1 insolar.PulseNumber) {
 	m.DeleteFunc(p, p1)
 }
 
-// DeleteMinimockCounter returns a count of ModifierMock.DeleteFunc invocations
+//DeleteMinimockCounter returns a count of ModifierMock.DeleteFunc invocations
 func (m *ModifierMock) DeleteMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.DeleteCounter)
 }
 
-// DeleteMinimockPreCounter returns the value of ModifierMock.Delete invocations
+//DeleteMinimockPreCounter returns the value of ModifierMock.Delete invocations
 func (m *ModifierMock) DeleteMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.DeletePreCounter)
 }
 
-// DeleteFinished returns true if mock invocations count is ok
+//DeleteFinished returns true if mock invocations count is ok
 func (m *ModifierMock) DeleteFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.DeleteMock.expectationSeries) > 0 {
@@ -329,7 +329,7 @@ type ModifierMockSplitResult struct {
 	r2 error
 }
 
-// Expect specifies that invocation of Modifier.Split is expected from 1 to Infinity times
+//Expect specifies that invocation of Modifier.Split is expected from 1 to Infinity times
 func (m *mModifierMockSplit) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *mModifierMockSplit {
 	m.mock.SplitFunc = nil
 	m.expectationSeries = nil
@@ -341,7 +341,7 @@ func (m *mModifierMockSplit) Expect(p context.Context, p1 insolar.PulseNumber, p
 	return m
 }
 
-// Return specifies results of invocation of Modifier.Split
+//Return specifies results of invocation of Modifier.Split
 func (m *mModifierMockSplit) Return(r insolar.JetID, r1 insolar.JetID, r2 error) *ModifierMock {
 	m.mock.SplitFunc = nil
 	m.expectationSeries = nil
@@ -353,7 +353,7 @@ func (m *mModifierMockSplit) Return(r insolar.JetID, r1 insolar.JetID, r2 error)
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Modifier.Split is expected once
+//ExpectOnce specifies that invocation of Modifier.Split is expected once
 func (m *mModifierMockSplit) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *ModifierMockSplitExpectation {
 	m.mock.SplitFunc = nil
 	m.mainExpectation = nil
@@ -368,7 +368,7 @@ func (e *ModifierMockSplitExpectation) Return(r insolar.JetID, r1 insolar.JetID,
 	e.result = &ModifierMockSplitResult{r, r1, r2}
 }
 
-// Set uses given function f as a mock of Modifier.Split method
+//Set uses given function f as a mock of Modifier.Split method
 func (m *mModifierMockSplit) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r insolar.JetID, r1 insolar.JetID, r2 error)) *ModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -377,7 +377,7 @@ func (m *mModifierMockSplit) Set(f func(p context.Context, p1 insolar.PulseNumbe
 	return m.mock
 }
 
-// Split implements github.com/insolar/insolar/insolar/jet.Modifier interface
+//Split implements github.com/insolar/insolar/insolar/jet.Modifier interface
 func (m *ModifierMock) Split(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r insolar.JetID, r1 insolar.JetID, r2 error) {
 	counter := atomic.AddUint64(&m.SplitPreCounter, 1)
 	defer atomic.AddUint64(&m.SplitCounter, 1)
@@ -431,17 +431,17 @@ func (m *ModifierMock) Split(p context.Context, p1 insolar.PulseNumber, p2 insol
 	return m.SplitFunc(p, p1, p2)
 }
 
-// SplitMinimockCounter returns a count of ModifierMock.SplitFunc invocations
+//SplitMinimockCounter returns a count of ModifierMock.SplitFunc invocations
 func (m *ModifierMock) SplitMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SplitCounter)
 }
 
-// SplitMinimockPreCounter returns the value of ModifierMock.Split invocations
+//SplitMinimockPreCounter returns the value of ModifierMock.Split invocations
 func (m *ModifierMock) SplitMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SplitPreCounter)
 }
 
-// SplitFinished returns true if mock invocations count is ok
+//SplitFinished returns true if mock invocations count is ok
 func (m *ModifierMock) SplitFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SplitMock.expectationSeries) > 0 {
@@ -478,7 +478,7 @@ type ModifierMockUpdateInput struct {
 	p3 []insolar.JetID
 }
 
-// Expect specifies that invocation of Modifier.Update is expected from 1 to Infinity times
+//Expect specifies that invocation of Modifier.Update is expected from 1 to Infinity times
 func (m *mModifierMockUpdate) Expect(p context.Context, p1 insolar.PulseNumber, p2 bool, p3 ...insolar.JetID) *mModifierMockUpdate {
 	m.mock.UpdateFunc = nil
 	m.expectationSeries = nil
@@ -490,7 +490,7 @@ func (m *mModifierMockUpdate) Expect(p context.Context, p1 insolar.PulseNumber, 
 	return m
 }
 
-// Return specifies results of invocation of Modifier.Update
+//Return specifies results of invocation of Modifier.Update
 func (m *mModifierMockUpdate) Return() *ModifierMock {
 	m.mock.UpdateFunc = nil
 	m.expectationSeries = nil
@@ -502,7 +502,7 @@ func (m *mModifierMockUpdate) Return() *ModifierMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Modifier.Update is expected once
+//ExpectOnce specifies that invocation of Modifier.Update is expected once
 func (m *mModifierMockUpdate) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 bool, p3 ...insolar.JetID) *ModifierMockUpdateExpectation {
 	m.mock.UpdateFunc = nil
 	m.mainExpectation = nil
@@ -513,7 +513,7 @@ func (m *mModifierMockUpdate) ExpectOnce(p context.Context, p1 insolar.PulseNumb
 	return expectation
 }
 
-// Set uses given function f as a mock of Modifier.Update method
+//Set uses given function f as a mock of Modifier.Update method
 func (m *mModifierMockUpdate) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 bool, p3 ...insolar.JetID)) *ModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -522,7 +522,7 @@ func (m *mModifierMockUpdate) Set(f func(p context.Context, p1 insolar.PulseNumb
 	return m.mock
 }
 
-// Update implements github.com/insolar/insolar/insolar/jet.Modifier interface
+//Update implements github.com/insolar/insolar/insolar/jet.Modifier interface
 func (m *ModifierMock) Update(p context.Context, p1 insolar.PulseNumber, p2 bool, p3 ...insolar.JetID) {
 	counter := atomic.AddUint64(&m.UpdatePreCounter, 1)
 	defer atomic.AddUint64(&m.UpdateCounter, 1)
@@ -557,17 +557,17 @@ func (m *ModifierMock) Update(p context.Context, p1 insolar.PulseNumber, p2 bool
 	m.UpdateFunc(p, p1, p2, p3...)
 }
 
-// UpdateMinimockCounter returns a count of ModifierMock.UpdateFunc invocations
+//UpdateMinimockCounter returns a count of ModifierMock.UpdateFunc invocations
 func (m *ModifierMock) UpdateMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.UpdateCounter)
 }
 
-// UpdateMinimockPreCounter returns the value of ModifierMock.Update invocations
+//UpdateMinimockPreCounter returns the value of ModifierMock.Update invocations
 func (m *ModifierMock) UpdateMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.UpdatePreCounter)
 }
 
-// UpdateFinished returns true if mock invocations count is ok
+//UpdateFinished returns true if mock invocations count is ok
 func (m *ModifierMock) UpdateFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.UpdateMock.expectationSeries) > 0 {
@@ -587,8 +587,8 @@ func (m *ModifierMock) UpdateFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ModifierMock) ValidateCallCounters() {
 
 	if !m.CloneFinished() {
@@ -609,19 +609,19 @@ func (m *ModifierMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ModifierMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *ModifierMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *ModifierMock) MinimockFinish() {
 
 	if !m.CloneFinished() {
@@ -642,14 +642,14 @@ func (m *ModifierMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *ModifierMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *ModifierMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -690,8 +690,8 @@ func (m *ModifierMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *ModifierMock) AllMocksCalled() bool {
 
 	if !m.CloneFinished() {

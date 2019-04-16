@@ -178,7 +178,6 @@ func (m *IndexMemory) UpdateUsagePulse(ctx context.Context, id insolar.ID, pn in
 		return ErrIndexNotFound
 	}
 
-	m.pulseIndex.DeleteForPulseAndID(pn, id)
 	m.pulseIndex.Add(id, pn)
 
 	return nil
@@ -210,20 +209,19 @@ func (m *IndexMemory) ForPulseAndJet(ctx context.Context, jetID insolar.JetID, p
 	idxByPn := m.pulseIndex.ForPN(pn)
 
 	res := map[insolar.ID]Lifeline{}
-	for id, idx := range m.indexStorage {
-		if id.Pulse() != pn || idx.JetID != jetID {
-			continue
-		}
 
-		res[id] = CloneIndex(idx)
+	for pIdx := range idxByPn {
+		_, mergedOk := idxByJet[pIdx]
+		idx, memOk := m.indexStorage[pIdx]
+		if mergedOk && memOk {
+			res[pIdx] = CloneIndex(idx)
+		}
 	}
 
 	return res
 }
 
-// RemoveForPulse method removes indexes from a storage for provided pulse and earlier pulses
-// excluded contains list of indexes' ids, that would be excluded from removing process
-// It supposed, that list of excluded would be fetched from Recent Storage
+// RemoveForPulse method removes indexes from a indexByPulseStor for a provided pulse
 func (m *IndexMemory) RemoveForPulse(ctx context.Context, pn insolar.PulseNumber) {
 	m.storageLock.Lock()
 	defer m.storageLock.Unlock()
