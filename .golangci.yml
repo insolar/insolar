@@ -24,7 +24,6 @@ linters:
     - dupl
     - goconst
     - goimports
-    - maligned
     - misspell
     - lll
     - unparam
