@@ -120,7 +120,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Termination = termination.NewHandler(NetworkService)
 
 		// Node info.
-		NodeNetwork, err = nodenetwork.NewNodeNetwork(cfg.Host, CertManager.GetCertificate())
+		NodeNetwork, err = nodenetwork.NewNodeNetwork(cfg.Host.Transport, CertManager.GetCertificate())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start NodeNetwork")
 		}

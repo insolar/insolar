@@ -63,7 +63,9 @@ import (
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 )
@@ -458,6 +460,15 @@ func (s *testSuite) TestDiscoveryDown() {
 	}
 }
 
+func flushNodeKeeper(keeper network.NodeKeeper) {
+	keeper.SetIsBootstrapped(false)
+	keeper.GetConsensusInfo().(*nodenetwork.ConsensusInfo).Flush(false)
+	keeper.SetCloudHash(nil)
+	keeper.SetInitialSnapshot([]insolar.NetworkNode{})
+	keeper.GetClaimQueue().Clear()
+	keeper.GetOrigin().(node.MutableNode).SetState(insolar.NodeReady)
+}
+
 func (s *testSuite) TestDiscoveryRestart() {
 	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
@@ -467,7 +478,7 @@ func (s *testSuite) TestDiscoveryRestart() {
 
 	log.Info("Discovery node stopping...")
 	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
-	s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.(*nodeKeeperWrapper).Wipe(true)
+	flushNodeKeeper(s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper)
 	log.Info("Discovery node stopped...")
 	s.Require().NoError(err)
 
@@ -496,7 +507,7 @@ func (s *testSuite) TestDiscoveryRestartNoWait() {
 
 	log.Info("Discovery node stopping...")
 	err := s.fixture().bootstrapNodes[0].serviceNetwork.Stop(context.Background())
-	s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.(*nodeKeeperWrapper).Wipe(true)
+	flushNodeKeeper(s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper)
 	log.Info("Discovery node stopped...")
 	s.Require().NoError(err)
 

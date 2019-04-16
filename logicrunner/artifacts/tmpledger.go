@@ -213,7 +213,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	gilMock.ReleaseFunc = func(context.Context) {}
 
 	alsMock := testutils.NewActiveListSwapperMock(t)
-	alsMock.MoveSyncToActiveFunc = func(context.Context) error { return nil }
+	alsMock.MoveSyncToActiveFunc = func(context.Context, insolar.PulseNumber) error { return nil }
 
 	handler.Bus = c.MessageBus
 
