@@ -14,14 +14,13 @@
 // limitations under the License.
 //
 
-package artifacts
+package messagebus
 
 import (
 	"context"
 	"sync"
 
 	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -29,6 +28,8 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
+
+const jetMissRetryCount = 10
 
 // PreSender is an alias for a function
 // which is working like a `middleware` for messagebus.Send
@@ -50,9 +51,9 @@ func BuildSender(sender Sender, preSenders ...PreSender) Sender {
 	return result
 }
 
-// ledgerArtifactSenders is a some kind of a middleware layer
+// Senders is a some kind of a middleware layer
 // it contains cache meta-data for calls
-type ledgerArtifactSenders struct {
+type Senders struct {
 	cacheLock sync.Mutex
 	caches    map[string]*cacheEntry
 }
@@ -62,14 +63,14 @@ type cacheEntry struct {
 	reply insolar.Reply
 }
 
-func newLedgerArtifactSenders() *ledgerArtifactSenders {
-	return &ledgerArtifactSenders{
+func NewSenders() *Senders {
+	return &Senders{
 		caches: map[string]*cacheEntry{},
 	}
 }
 
-// cachedSender is using for caching replies
-func (m *ledgerArtifactSenders) cachedSender(scheme insolar.PlatformCryptographyScheme) PreSender {
+// CachedSender is using for caching replies
+func (m *Senders) CachedSender(scheme insolar.PlatformCryptographyScheme) PreSender {
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg insolar.Message, options *insolar.MessageSendOptions) (insolar.Reply, error) {
 
@@ -101,8 +102,8 @@ func (m *ledgerArtifactSenders) cachedSender(scheme insolar.PlatformCryptography
 	}
 }
 
-// followRedirectSender is using for redirecting responses with delegation token
-func followRedirectSender(bus insolar.MessageBus) PreSender {
+// FollowRedirectSender is using for redirecting responses with delegation token
+func FollowRedirectSender(bus insolar.MessageBus) PreSender {
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg insolar.Message, options *insolar.MessageSendOptions) (insolar.Reply, error) {
 			rep, err := sender(ctx, msg, options)
@@ -111,8 +112,6 @@ func followRedirectSender(bus insolar.MessageBus) PreSender {
 			}
 
 			if r, ok := rep.(insolar.RedirectReply); ok {
-				stats.Record(ctx, statRedirects.M(1))
-
 				redirected := r.Redirected(msg)
 				inslogger.FromContext(ctx).Debugf("redirect reciever=%v", r.GetReceiver())
 
@@ -134,8 +133,8 @@ func followRedirectSender(bus insolar.MessageBus) PreSender {
 	}
 }
 
-// retryJetSender is using for refreshing jet-tree, if destination has no idea about a jet from message
-func retryJetSender(jetModifier jet.Modifier) PreSender {
+// RetryJetSender is using for refreshing jet-tree, if destination has no idea about a jet from message
+func RetryJetSender(jetModifier jet.Modifier) PreSender {
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg insolar.Message, options *insolar.MessageSendOptions) (insolar.Reply, error) {
 			retries := jetMissRetryCount

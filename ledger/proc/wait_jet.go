@@ -31,8 +31,9 @@ type FetchJet struct {
 	Parcel insolar.Parcel
 
 	Result struct {
-		Jet  insolar.JetID
-		Miss bool
+		Jet   insolar.JetID
+		Miss  bool
+		Pulse insolar.PulseNumber
 	}
 
 	Dep struct {
@@ -85,10 +86,18 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 	}
 
 	// Calculate jet for current pulse.
+	// Calculate jet and pulse.
 	var jetID insolar.ID
+	var pulse insolar.PulseNumber
 	if msg.DefaultTarget().Record().Pulse() == insolar.PulseNumberJet {
 		jetID = *msg.DefaultTarget().Record()
 	} else {
+		if gr, ok := msg.(*message.GetRequest); ok {
+			pulse = gr.Request.Pulse()
+		} else {
+			pulse = p.Parcel.Pulse()
+		}
+
 		j, err := p.Dep.JetUpdater.FetchJet(ctx, *msg.DefaultTarget().Record(), p.Parcel.Pulse())
 		if err != nil {
 			return errors.Wrap(err, "failed to fetch jet tree")
@@ -105,6 +114,7 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 
 	if *node != p.Dep.Coordinator.Me() {
 		p.Result.Miss = true
+		p.Result.Pulse = pulse
 		p.Result.Jet = insolar.JetID(jetID)
 		return nil
 	}
