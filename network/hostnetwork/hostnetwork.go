@@ -52,6 +52,7 @@ package hostnetwork
 
 import (
 	"context"
+	"sync/atomic"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -109,7 +110,7 @@ func NewHostNetwork(conf configuration.Configuration, nodeRef string) (network.H
 type hostNetwork struct {
 	Resolver network.RoutingTable `inject:""`
 
-	//started           uint32
+	started           uint32
 	transport         transport.StreamTransport
 	origin            *host.Host
 	sequenceGenerator sequence.Generator
@@ -121,9 +122,9 @@ type hostNetwork struct {
 
 // Start start listening to network requests, should be started in goroutine.
 func (hn *hostNetwork) Start(ctx context.Context) error {
-	// if !atomic.CompareAndSwapUint32(&hn.started, 0, 1) {
-	// 	return errors.New("Failed to start transport: double listen initiated")
-	// }
+	if !atomic.CompareAndSwapUint32(&hn.started, 0, 1) {
+		return errors.New("Failed to start transport: double listen initiated")
+	}
 	if err := hn.transport.Start(ctx); err != nil {
 		return errors.Wrap(err, "Failed to start transport: listen syscall failed")
 	}
@@ -133,12 +134,12 @@ func (hn *hostNetwork) Start(ctx context.Context) error {
 
 // Disconnect stop listening to network requests.
 func (hn *hostNetwork) Stop(ctx context.Context) error {
-	//if atomic.CompareAndSwapUint32(&hn.started, 1, 0) {
-	err := hn.transport.Stop(ctx)
-	if err != nil {
-		return errors.Wrap(err, "Failed to stop transport.")
+	if atomic.CompareAndSwapUint32(&hn.started, 1, 0) {
+		err := hn.transport.Stop(ctx)
+		if err != nil {
+			return errors.Wrap(err, "Failed to stop transport.")
+		}
 	}
-	//}
 	return nil
 }
 
