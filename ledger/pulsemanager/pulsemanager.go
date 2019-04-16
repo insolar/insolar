@@ -71,6 +71,7 @@ type PulseManager struct {
 	IndexModifier           object.IndexModifier `inject:""`
 	CollectionIndexAccessor object.IndexCollectionAccessor
 	IndexCleaner            object.IndexCleaner
+	IndexStateAccessor      object.IndexStateAccessor
 
 	NodeSetter node.Modifier `inject:""`
 	Nodes      node.Accessor `inject:""`
@@ -136,6 +137,7 @@ func NewPulseManager(
 	recSyncAccessor object.RecordCollectionAccessor,
 	idxCollectionAccessor object.IndexCollectionAccessor,
 	indexCleaner object.IndexCleaner,
+	indexStateAccessor object.IndexStateAccessor,
 	lightToHeavySyncer light.ToHeavySyncer,
 ) *PulseManager {
 	pmconf := conf.PulseManager
@@ -157,6 +159,7 @@ func NewPulseManager(
 		RecSyncAccessor:         recSyncAccessor,
 		CollectionIndexAccessor: idxCollectionAccessor,
 		IndexCleaner:            indexCleaner,
+		IndexStateAccessor:      indexStateAccessor,
 		ToHeavySyncer:           lightToHeavySyncer,
 	}
 	return pm
@@ -275,11 +278,11 @@ func (m *PulseManager) getExecutorHotData(
 	defer span.End()
 
 	logger := inslogger.FromContext(ctx)
-	indexStorage := m.RecentStorageProvider.GetIndexStorage(ctx, jetID)
-	pendingStorage := m.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-	recentObjectsIds := indexStorage.GetObjects()
+	// indexStorage := m.RecentStorageProvider.GetIndexStorage(ctx, jetID)
+	// pendingStorage := m.RecentStorageProvider.GetPendingStorage(ctx, jetID)
+	// recentObjectsIds := indexStorage.GetObjects()
 
-	recentObjects := map[insolar.ID]message.HotIndex{}
+	recentObjects := map[insolar.PulseNumber]message.HotIndex{}
 	pendingRequests := map[insolar.ID]recentstorage.PendingObjectContext{}
 
 	for id, ttl := range recentObjectsIds {

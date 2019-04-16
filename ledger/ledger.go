@@ -80,6 +80,7 @@ func GetLedgerComponents(conf configuration.Ledger, msgBus insolar.MessageBus, c
 	var indexModifier object.IndexModifier
 	var collectionIndexAccessor object.IndexCollectionAccessor
 	var indexCleaner object.IndexCleaner
+	var indexStateModifier object.IndexStateModifier
 
 	// Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
 	switch certificate.GetRole() {
@@ -133,6 +134,7 @@ func GetLedgerComponents(conf configuration.Ledger, msgBus insolar.MessageBus, c
 		indexAccessor = indexDB
 		indexModifier = indexDB
 		indexCleaner = indexDB
+		indexStateModifier = indexDB
 		collectionIndexAccessor = indexDB
 	}
 

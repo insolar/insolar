@@ -25,22 +25,22 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
 )
 
 type GetIndex struct {
-	Object insolar.Reference
-	Jet    insolar.JetID
+	Object   insolar.Reference
+	Jet      insolar.JetID
+	ParcelPN insolar.PulseNumber
 
 	Result struct {
 		Index object.Lifeline
 	}
 
 	Dep struct {
-		Recent      recentstorage.Provider
+		IndexState  object.IndexStateModifier
 		Locker      storage.IDLocker
 		Storage     object.IndexStorage
 		Coordinator insolar.JetCoordinator
@@ -51,7 +51,7 @@ type GetIndex struct {
 func (p *GetIndex) Proceed(ctx context.Context) error {
 	objectID := *p.Object.Record()
 	logger := inslogger.FromContext(ctx)
-	p.Dep.Recent.GetIndexStorage(ctx, insolar.ID(p.Jet)).AddObject(ctx, objectID)
+	p.Dep.IndexState.SetUsagePulse(ctx, objectID, p.ParcelPN)
 
 	p.Dep.Locker.Lock(&objectID)
 	defer p.Dep.Locker.Unlock(&objectID)

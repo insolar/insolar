@@ -344,8 +344,9 @@ func (*HotData) Type() insolar.MessageType {
 
 // HotIndex contains meat about hot-data
 type HotIndex struct {
-	TTL   int
-	Index []byte
+	LastUsed insolar.PulseNumber
+	Index    []byte
+	ID       insolar.ID
 }
 
 // GetPendingRequests fetches pending requests for object.

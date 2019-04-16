@@ -25,15 +25,15 @@ import (
 // Provider provides different types of storages for a specific jet
 //go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.Provider -o ./ -s _mock.go
 type Provider interface {
-	GetIndexStorage(ctx context.Context, jetID insolar.ID) RecentIndexStorage
+	// GetIndexStorage(ctx context.Context, jetID insolar.ID) RecentIndexStorage
 	GetPendingStorage(ctx context.Context, jetID insolar.ID) PendingStorage
 
 	Count() int
 
-	CloneIndexStorage(ctx context.Context, fromJetID, toJetID insolar.ID)
+	// CloneIndexStorage(ctx context.Context, fromJetID, toJetID insolar.ID)
 	ClonePendingStorage(ctx context.Context, fromJetID, toJetID insolar.ID)
 
-	DecreaseIndexesTTL(ctx context.Context) map[insolar.ID][]insolar.ID
+	// DecreaseIndexesTTL(ctx context.Context) map[insolar.ID][]insolar.ID
 
 	RemovePendingStorage(ctx context.Context, id insolar.ID)
 }
@@ -42,16 +42,16 @@ type Provider interface {
 // `recent index` is a index which was called between TTL-border
 // If index is put to a recent storage, it'll be there for TTL-pulses at least
 //go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.RecentIndexStorage -o ./ -s _mock.go
-type RecentIndexStorage interface {
-	AddObject(ctx context.Context, id insolar.ID)
-	AddObjectWithTLL(ctx context.Context, id insolar.ID, ttl int)
-
-	GetObjects() map[insolar.ID]int
-
-	DecreaseIndexTTL(ctx context.Context) []insolar.ID
-
-	FilterNotExistWithLock(ctx context.Context, candidates []insolar.ID, fn func(filtered []insolar.ID))
-}
+// type RecentIndexStorage interface {
+// 	AddObject(ctx context.Context, id insolar.ID)
+// 	AddObjectWithTLL(ctx context.Context, id insolar.ID, ttl int)
+//
+// 	GetObjects() map[insolar.ID]int
+//
+// 	DecreaseIndexTTL(ctx context.Context) []insolar.ID
+//
+// 	FilterNotExistWithLock(ctx context.Context, candidates []insolar.ID, fn func(filtered []insolar.ID))
+// }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.PendingStorage -o ./ -s _mock.go
 type PendingStorage interface {

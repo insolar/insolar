@@ -52,7 +52,7 @@ type IndexModifier interface {
 }
 
 type IndexStateModifier interface {
-	UpdateUsagePulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber) error
+	SetUsagePulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexStorage -o ./ -s _mock.go
@@ -173,18 +173,12 @@ func (m *IndexMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) er
 	return nil
 }
 
-func (m *IndexMemory) UpdateUsagePulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber) error {
-	m.storageLock.RLock()
-	defer m.storageLock.RUnlock()
-
-	_, ok := m.indexStorage[id]
-	if !ok {
-		return ErrIndexNotFound
-	}
-
+func (m *IndexMemory) SetUsagePulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber) {
 	m.pulseIndex.Add(id, pn)
+}
 
-	return nil
+func (m *IndexMemory) UsageForPulse(ctx context.Context, pn insolar.PulseNumber) []insolar.ID {
+	return m.pulseIndex.ForPN(pn)
 }
 
 // ForID returns Index for provided id.
