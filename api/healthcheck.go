@@ -28,6 +28,7 @@ type HealthChecker struct {
 	NodeNetwork        core.NodeNetwork
 }
 
+// NewHealthChecker creates new HealthChecker.
 func NewHealthChecker(cm core.CertificateManager, nn core.NodeNetwork) *HealthChecker {
 	return &HealthChecker{CertificateManager: cm, NodeNetwork: nn}
 }
