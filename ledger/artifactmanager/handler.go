@@ -71,7 +71,7 @@ type MessageHandler struct {
 	HotDataWaiter HotDataWaiter     `inject:""`
 
 	IndexStorage       object.IndexStorage
-	IndexStateModifier object.LightIndexModifier
+	IndexStateModifier object.ExtendedIndexModifier
 
 	conf           *configuration.Ledger
 	middleware     *middleware
@@ -84,7 +84,7 @@ type MessageHandler struct {
 // NewMessageHandler creates new handler.
 func NewMessageHandler(
 	indexStorage object.IndexStorage,
-	indexStateModifier object.LightIndexModifier,
+	indexStateModifier object.ExtendedIndexModifier,
 	conf *configuration.Ledger,
 ) *MessageHandler {
 

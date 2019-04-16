@@ -68,7 +68,7 @@ func TestDataGatherer_ForPulseAndJet(t *testing.T) {
 		LatestState:  insolar.NewID(gen.PulseNumber(), nil),
 	}
 	idxID := gen.ID()
-	ia.ForPulseAndJetMock.Expect(ctx, jetID, pn).Return(map[insolar.ID]object.Lifeline{
+	ia.ForPulseAndJetMock.Expect(ctx, pn, jetID).Return(map[insolar.ID]object.Lifeline{
 		idxID: idx,
 	})
 

@@ -37,11 +37,6 @@ type JetIndexAccessor interface {
 	For(jetID insolar.JetID) map[insolar.ID]struct{}
 }
 
-type JetIndex interface {
-	JetIndexModifier
-	JetIndexAccessor
-}
-
 // jetIndex contains methods to implement quick access to data by jet. Indexes are stored in memory. Consider disk
 // implementation for large collections.
 type jetIndex struct {

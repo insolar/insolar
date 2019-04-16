@@ -40,7 +40,7 @@ type GetIndex struct {
 	}
 
 	Dep struct {
-		IndexState  object.LightIndexModifier
+		IndexState  object.ExtendedIndexModifier
 		Locker      storage.IDLocker
 		Storage     object.IndexStorage
 		Coordinator insolar.JetCoordinator

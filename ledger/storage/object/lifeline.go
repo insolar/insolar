@@ -52,7 +52,8 @@ type IndexModifier interface {
 	Set(ctx context.Context, id insolar.ID, index Lifeline) error
 }
 
-type LightIndexModifier interface {
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.ExtendedIndexModifier -o ./ -s _mock.go
+type ExtendedIndexModifier interface {
 	SetWithMeta(ctx context.Context, id insolar.ID, pn insolar.PulseNumber, index Lifeline) error
 	SetUsageForPulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber)
 }
@@ -142,8 +143,9 @@ func CloneIndex(idx Lifeline) Lifeline {
 
 // IndexMemory is an in-indexStorage struct for index-storage.
 type IndexMemory struct {
-	jetIndex   store.JetIndex
-	pulseIndex PulseIndex
+	jetIndexModifier store.JetIndexModifier
+	jetIndexAccessor store.JetIndexAccessor
+	pulseIndex       PulseIndex
 
 	storageLock  sync.RWMutex
 	indexStorage map[insolar.ID]Lifeline
@@ -151,10 +153,12 @@ type IndexMemory struct {
 
 // NewIndexMemory creates a new instance of IndexMemory storage.
 func NewIndexMemory() *IndexMemory {
+	idx := store.NewJetIndex()
 	return &IndexMemory{
-		indexStorage: map[insolar.ID]Lifeline{},
-		jetIndex:     store.NewJetIndex(),
-		pulseIndex:   NewPulseIndex(),
+		indexStorage:     map[insolar.ID]Lifeline{},
+		jetIndexModifier: idx,
+		jetIndexAccessor: idx,
+		pulseIndex:       NewPulseIndex(),
 	}
 }
 
@@ -166,7 +170,7 @@ func (m *IndexMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) er
 	idx := CloneIndex(index)
 
 	m.indexStorage[id] = idx
-	m.jetIndex.Add(id, idx.JetID)
+	m.jetIndexModifier.Add(id, idx.JetID)
 
 	stats.Record(ctx,
 		statIndexInMemoryCount.M(1),
@@ -182,7 +186,7 @@ func (m *IndexMemory) SetWithMeta(ctx context.Context, id insolar.ID, pn insolar
 	idx := CloneIndex(index)
 
 	m.indexStorage[id] = idx
-	m.jetIndex.Add(id, idx.JetID)
+	m.jetIndexModifier.Add(id, idx.JetID)
 	m.pulseIndex.Add(id, pn)
 
 	stats.Record(ctx,
@@ -210,7 +214,7 @@ func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (Lifeline, error
 
 	index = CloneIndex(idx)
 
-	return index, ErrIndexNotFound
+	return index, nil
 }
 
 type LifelineMeta struct {
@@ -223,7 +227,7 @@ func (m *IndexMemory) ForJet(ctx context.Context, jetID insolar.JetID) map[insol
 	m.storageLock.RLock()
 	defer m.storageLock.RUnlock()
 
-	idxByJet := m.jetIndex.For(jetID)
+	idxByJet := m.jetIndexAccessor.For(jetID)
 
 	res := map[insolar.ID]LifelineMeta{}
 
@@ -249,7 +253,7 @@ func (m *IndexMemory) ForPulseAndJet(ctx context.Context, pn insolar.PulseNumber
 	m.storageLock.RLock()
 	defer m.storageLock.RUnlock()
 
-	idxByJet := m.jetIndex.For(jetID)
+	idxByJet := m.jetIndexAccessor.For(jetID)
 	idxByPN := m.pulseIndex.ForPN(pn)
 
 	res := map[insolar.ID]Lifeline{}
@@ -276,7 +280,7 @@ func (m *IndexMemory) RemoveForPulse(ctx context.Context, pn insolar.PulseNumber
 	for id := range rmIDs {
 		idx, ok := m.indexStorage[id]
 		if ok {
-			m.jetIndex.Delete(id, idx.JetID)
+			m.jetIndexModifier.Delete(id, idx.JetID)
 			delete(m.indexStorage, id)
 		}
 	}

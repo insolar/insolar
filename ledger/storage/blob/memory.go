@@ -28,7 +28,8 @@ import (
 
 // StorageMemory is an in-blobsStor struct for blob-storage.
 type StorageMemory struct {
-	jetIndex store.JetIndex
+	jetIndexModifier store.JetIndexModifier
+	jetIndexAccessor store.JetIndexAccessor
 
 	lock      sync.RWMutex
 	blobsStor map[insolar.ID]Blob
@@ -38,8 +39,9 @@ type StorageMemory struct {
 func NewStorageMemory() *StorageMemory {
 	ji := store.NewJetIndex()
 	return &StorageMemory{
-		blobsStor: map[insolar.ID]Blob{},
-		jetIndex:  ji,
+		blobsStor:        map[insolar.ID]Blob{},
+		jetIndexModifier: ji,
+		jetIndexAccessor: ji,
 	}
 }
 
@@ -72,7 +74,7 @@ func (s *StorageMemory) Set(ctx context.Context, id insolar.ID, blob Blob) error
 	b := Clone(blob)
 
 	s.blobsStor[id] = b
-	s.jetIndex.Add(id, b.JetID)
+	s.jetIndexModifier.Add(id, b.JetID)
 
 	blobSize := int64(len(b.Value))
 
@@ -89,7 +91,7 @@ func (s *StorageMemory) ForPulse(ctx context.Context, jetID insolar.JetID, pn in
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	ids := s.jetIndex.For(jetID)
+	ids := s.jetIndexAccessor.For(jetID)
 	var res []Blob
 	for id := range ids {
 		if id.Pulse() == pn {
@@ -111,7 +113,7 @@ func (s *StorageMemory) Delete(ctx context.Context, pulse insolar.PulseNumber) {
 			continue
 		}
 
-		s.jetIndex.Delete(id, blob.JetID)
+		s.jetIndexModifier.Delete(id, blob.JetID)
 		delete(s.blobsStor, id)
 	}
 }

@@ -50,6 +50,7 @@ func (c *JetClient) HeavySync(
 	ctx context.Context,
 	pn insolar.PulseNumber,
 ) error {
+	panic("bux bux bux")
 	jetID := c.jetID
 	inslog := inslogger.FromContext(ctx)
 	inslog = inslog.WithField("jetID", jetID.DebugString())
@@ -74,7 +75,7 @@ func (c *JetClient) HeavySync(
 
 	records := c.recSyncAccessor.ForPulse(ctx, jetID, pn)
 
-	indexes := c.idxCollectionAccessor.ForPulseAndJet(ctx, jetID, pn)
+	indexes := c.idxCollectionAccessor.ForPulseAndJet(ctx, pn, jetID)
 	resIdx := map[insolar.ID][]byte{}
 	for id, idx := range indexes {
 		resIdx[id] = object.EncodeIndex(idx)

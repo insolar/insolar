@@ -68,7 +68,7 @@ type PulseManager struct {
 	JetModifier jet.Modifier `inject:""`
 
 	IndexAccessor           object.IndexAccessor `inject:""`
-	IndexModifier           object.LightIndexModifier
+	IndexModifier           object.ExtendedIndexModifier
 	CollectionIndexAccessor object.IndexCollectionAccessor
 	IndexCleaner            object.IndexCleaner
 

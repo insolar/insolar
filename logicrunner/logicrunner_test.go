@@ -151,12 +151,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 		},
 	)
 
-	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
-	indexMock.AddObjectMock.Return()
-
 	providerMock := recentstorage.NewProviderMock(s.T())
-	providerMock.GetIndexStorageMock.Return(indexMock)
-	providerMock.DecreaseIndexesTTLMock.Return(nil)
 
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
@@ -206,7 +201,6 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr inso
 		&message.HotData{
 			Jet:             *insolar.NewReference(insolar.DomainID, insolar.ID(rootJetId)),
 			Drop:            drop.Drop{Pulse: 1, JetID: rootJetId},
-			RecentObjects:   nil,
 			PendingRequests: nil,
 			PulseNumber:     newPulseNumber,
 		}, nil,

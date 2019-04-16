@@ -231,10 +231,8 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 
 	handler.HotDataWaiter = hdw
 
-	indexMock := recentstorage.NewRecentIndexStorageMock(t)
 	pendingMock := recentstorage.NewPendingStorageMock(t)
 
-	indexMock.AddObjectMock.Return()
 	pendingMock.GetRequestsForObjectMock.Return(nil)
 	pendingMock.AddPendingRequestMock.Return()
 	pendingMock.RemovePendingRequestMock.Return()
