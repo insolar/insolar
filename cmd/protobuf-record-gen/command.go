@@ -17,9 +17,6 @@
 package main
 
 import (
-	"strings"
-
-	"github.com/gogo/protobuf/proto"
 	"github.com/gogo/protobuf/vanity"
 	"github.com/gogo/protobuf/vanity/command"
 )
@@ -52,14 +49,9 @@ func main() {
 
 	// generate basic output and rename files
 	respBase := command.Generate(req)
-	for _, file := range respBase.File {
-		file.Name = proto.String(
-			strings.Replace(*file.Name, ".pb.go", ".proto.go", -1),
-		)
-	}
 	command.Write(respBase)
 
 	gen := RecordPluginGenerator{}
-	respPlugin := command.GeneratePlugin(req, &gen, ".marshal.proto.go")
+	respPlugin := command.GeneratePlugin(req, &gen, ".marshal.pb.go")
 	command.Write(respPlugin)
 }
