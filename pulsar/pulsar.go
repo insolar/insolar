@@ -34,7 +34,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/pulsar/storage"
+	pulsarstorage "github.com/insolar/insolar/pulsar/storage"
 )
 
 // Pulsar is a base struct for pulsar's node

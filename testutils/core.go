@@ -24,7 +24,7 @@ import (
 	"math/big"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/satori/go.uuid"
+	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/sha3"
 )
 

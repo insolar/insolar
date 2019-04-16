@@ -6,7 +6,7 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "KeyProcessor" can be found in github.com/insolar/insolar/insolar
 */
 import (
-	"github.com/insolar/x-crypto"
+	crypto "github.com/insolar/x-crypto"
 	"sync/atomic"
 	"time"
 

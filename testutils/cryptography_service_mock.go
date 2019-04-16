@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "CryptographyService" can be found in github.com/insolar/insolar/insolar
 */
 import (
-	"github.com/insolar/x-crypto"
+	crypto "github.com/insolar/x-crypto"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
