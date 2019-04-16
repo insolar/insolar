@@ -21,7 +21,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/core"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
@@ -52,12 +52,12 @@ func (w mockResponseWriter) WriteHeader(statusCode int) {
 	w.header["status"] = []string{strconv.Itoa(statusCode)}
 }
 
-func randomNodeList(t *testing.T, size int) []insolar.DiscoveryNode {
-	list := make([]insolar.DiscoveryNode, size)
+func randomNodeList(t *testing.T, size int) []core.DiscoveryNode {
+	list := make([]core.DiscoveryNode, size)
 	for i := 0; i < size; i++ {
 		dn := testutils.NewDiscoveryNodeMock(t)
 		r := testutils.RandomRef()
-		dn.GetNodeRefFunc = func() *insolar.Reference {
+		dn.GetNodeRefFunc = func() *core.RecordRef {
 			return &r
 		}
 		list[i] = dn
@@ -65,11 +65,11 @@ func randomNodeList(t *testing.T, size int) []insolar.DiscoveryNode {
 	return list
 }
 
-func mockCertManager(t *testing.T, nodeList []insolar.DiscoveryNode) *testutils.CertificateManagerMock {
+func mockCertManager(t *testing.T, nodeList []core.DiscoveryNode) *testutils.CertificateManagerMock {
 	cm := testutils.NewCertificateManagerMock(t)
-	cm.GetCertificateFunc = func() insolar.Certificate {
+	cm.GetCertificateFunc = func() core.Certificate {
 		c := testutils.NewCertificateMock(t)
-		c.GetDiscoveryNodesFunc = func() []insolar.DiscoveryNode {
+		c.GetDiscoveryNodesFunc = func() []core.DiscoveryNode {
 			return nodeList
 		}
 		return c
@@ -77,15 +77,15 @@ func mockCertManager(t *testing.T, nodeList []insolar.DiscoveryNode) *testutils.
 	return cm
 }
 
-func mockNodeNetwork(t *testing.T, nodeList []insolar.DiscoveryNode) *network.NodeNetworkMock {
+func mockNodeNetwork(t *testing.T, nodeList []core.DiscoveryNode) *network.NodeNetworkMock {
 	nn := network.NewNodeNetworkMock(t)
-	nodeMap := make(map[insolar.Reference]insolar.DiscoveryNode)
+	nodeMap := make(map[core.RecordRef]core.DiscoveryNode)
 	for _, node := range nodeList {
 		nodeMap[*node.GetNodeRef()] = node
 	}
-	nn.GetWorkingNodeFunc = func(ref insolar.Reference) insolar.NetworkNode {
+	nn.GetWorkingNodeFunc = func(ref core.RecordRef) core.Node {
 		if _, ok := nodeMap[ref]; ok {
-			return network.NewNetworkNodeMock(t)
+			return network.NewNodeMock(t)
 		}
 		return nil
 	}
