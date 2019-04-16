@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "IndexCollectionAccessor" can be found in github.com/insolar/insolar/ledger/storage/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -65,7 +65,7 @@ type IndexCollectionAccessorMockForJetResult struct {
 	r map[insolar.ID]LifelineMeta
 }
 
-// Expect specifies that invocation of IndexCollectionAccessor.ForJet is expected from 1 to Infinity times
+//Expect specifies that invocation of IndexCollectionAccessor.ForJet is expected from 1 to Infinity times
 func (m *mIndexCollectionAccessorMockForJet) Expect(p context.Context, p1 insolar.JetID) *mIndexCollectionAccessorMockForJet {
 	m.mock.ForJetFunc = nil
 	m.expectationSeries = nil
@@ -77,7 +77,7 @@ func (m *mIndexCollectionAccessorMockForJet) Expect(p context.Context, p1 insola
 	return m
 }
 
-// Return specifies results of invocation of IndexCollectionAccessor.ForJet
+//Return specifies results of invocation of IndexCollectionAccessor.ForJet
 func (m *mIndexCollectionAccessorMockForJet) Return(r map[insolar.ID]LifelineMeta) *IndexCollectionAccessorMock {
 	m.mock.ForJetFunc = nil
 	m.expectationSeries = nil
@@ -89,7 +89,7 @@ func (m *mIndexCollectionAccessorMockForJet) Return(r map[insolar.ID]LifelineMet
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of IndexCollectionAccessor.ForJet is expected once
+//ExpectOnce specifies that invocation of IndexCollectionAccessor.ForJet is expected once
 func (m *mIndexCollectionAccessorMockForJet) ExpectOnce(p context.Context, p1 insolar.JetID) *IndexCollectionAccessorMockForJetExpectation {
 	m.mock.ForJetFunc = nil
 	m.mainExpectation = nil
@@ -104,7 +104,7 @@ func (e *IndexCollectionAccessorMockForJetExpectation) Return(r map[insolar.ID]L
 	e.result = &IndexCollectionAccessorMockForJetResult{r}
 }
 
-// Set uses given function f as a mock of IndexCollectionAccessor.ForJet method
+//Set uses given function f as a mock of IndexCollectionAccessor.ForJet method
 func (m *mIndexCollectionAccessorMockForJet) Set(f func(p context.Context, p1 insolar.JetID) (r map[insolar.ID]LifelineMeta)) *IndexCollectionAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -113,7 +113,7 @@ func (m *mIndexCollectionAccessorMockForJet) Set(f func(p context.Context, p1 in
 	return m.mock
 }
 
-// ForJet implements github.com/insolar/insolar/ledger/storage/object.IndexCollectionAccessor interface
+//ForJet implements github.com/insolar/insolar/ledger/storage/object.IndexCollectionAccessor interface
 func (m *IndexCollectionAccessorMock) ForJet(p context.Context, p1 insolar.JetID) (r map[insolar.ID]LifelineMeta) {
 	counter := atomic.AddUint64(&m.ForJetPreCounter, 1)
 	defer atomic.AddUint64(&m.ForJetCounter, 1)
@@ -163,17 +163,17 @@ func (m *IndexCollectionAccessorMock) ForJet(p context.Context, p1 insolar.JetID
 	return m.ForJetFunc(p, p1)
 }
 
-// ForJetMinimockCounter returns a count of IndexCollectionAccessorMock.ForJetFunc invocations
+//ForJetMinimockCounter returns a count of IndexCollectionAccessorMock.ForJetFunc invocations
 func (m *IndexCollectionAccessorMock) ForJetMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ForJetCounter)
 }
 
-// ForJetMinimockPreCounter returns the value of IndexCollectionAccessorMock.ForJet invocations
+//ForJetMinimockPreCounter returns the value of IndexCollectionAccessorMock.ForJet invocations
 func (m *IndexCollectionAccessorMock) ForJetMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ForJetPreCounter)
 }
 
-// ForJetFinished returns true if mock invocations count is ok
+//ForJetFinished returns true if mock invocations count is ok
 func (m *IndexCollectionAccessorMock) ForJetFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.ForJetMock.expectationSeries) > 0 {

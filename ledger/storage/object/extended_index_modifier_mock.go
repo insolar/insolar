@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "ExtendedIndexModifier" can be found in github.com/insolar/insolar/ledger/storage/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// ExtendedIndexModifierMock implements github.com/insolar/insolar/ledger/storage/object.ExtendedIndexModifier
+//ExtendedIndexModifierMock implements github.com/insolar/insolar/ledger/storage/object.ExtendedIndexModifier
 type ExtendedIndexModifierMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type ExtendedIndexModifierMock struct {
 	SetWithMetaMock       mExtendedIndexModifierMockSetWithMeta
 }
 
-// NewExtendedIndexModifierMock returns a mock for github.com/insolar/insolar/ledger/storage/object.ExtendedIndexModifier
+//NewExtendedIndexModifierMock returns a mock for github.com/insolar/insolar/ledger/storage/object.ExtendedIndexModifier
 func NewExtendedIndexModifierMock(t minimock.Tester) *ExtendedIndexModifierMock {
 	m := &ExtendedIndexModifierMock{t: t}
 
@@ -61,7 +61,7 @@ type ExtendedIndexModifierMockSetUsageForPulseInput struct {
 	p2 insolar.PulseNumber
 }
 
-// Expect specifies that invocation of ExtendedIndexModifier.SetUsageForPulse is expected from 1 to Infinity times
+//Expect specifies that invocation of ExtendedIndexModifier.SetUsageForPulse is expected from 1 to Infinity times
 func (m *mExtendedIndexModifierMockSetUsageForPulse) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *mExtendedIndexModifierMockSetUsageForPulse {
 	m.mock.SetUsageForPulseFunc = nil
 	m.expectationSeries = nil
@@ -73,7 +73,7 @@ func (m *mExtendedIndexModifierMockSetUsageForPulse) Expect(p context.Context, p
 	return m
 }
 
-// Return specifies results of invocation of ExtendedIndexModifier.SetUsageForPulse
+//Return specifies results of invocation of ExtendedIndexModifier.SetUsageForPulse
 func (m *mExtendedIndexModifierMockSetUsageForPulse) Return() *ExtendedIndexModifierMock {
 	m.mock.SetUsageForPulseFunc = nil
 	m.expectationSeries = nil
@@ -85,7 +85,7 @@ func (m *mExtendedIndexModifierMockSetUsageForPulse) Return() *ExtendedIndexModi
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ExtendedIndexModifier.SetUsageForPulse is expected once
+//ExpectOnce specifies that invocation of ExtendedIndexModifier.SetUsageForPulse is expected once
 func (m *mExtendedIndexModifierMockSetUsageForPulse) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *ExtendedIndexModifierMockSetUsageForPulseExpectation {
 	m.mock.SetUsageForPulseFunc = nil
 	m.mainExpectation = nil
@@ -96,7 +96,7 @@ func (m *mExtendedIndexModifierMockSetUsageForPulse) ExpectOnce(p context.Contex
 	return expectation
 }
 
-// Set uses given function f as a mock of ExtendedIndexModifier.SetUsageForPulse method
+//Set uses given function f as a mock of ExtendedIndexModifier.SetUsageForPulse method
 func (m *mExtendedIndexModifierMockSetUsageForPulse) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber)) *ExtendedIndexModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -105,7 +105,7 @@ func (m *mExtendedIndexModifierMockSetUsageForPulse) Set(f func(p context.Contex
 	return m.mock
 }
 
-// SetUsageForPulse implements github.com/insolar/insolar/ledger/storage/object.ExtendedIndexModifier interface
+//SetUsageForPulse implements github.com/insolar/insolar/ledger/storage/object.ExtendedIndexModifier interface
 func (m *ExtendedIndexModifierMock) SetUsageForPulse(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.SetUsageForPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.SetUsageForPulseCounter, 1)
@@ -140,17 +140,17 @@ func (m *ExtendedIndexModifierMock) SetUsageForPulse(p context.Context, p1 insol
 	m.SetUsageForPulseFunc(p, p1, p2)
 }
 
-// SetUsageForPulseMinimockCounter returns a count of ExtendedIndexModifierMock.SetUsageForPulseFunc invocations
+//SetUsageForPulseMinimockCounter returns a count of ExtendedIndexModifierMock.SetUsageForPulseFunc invocations
 func (m *ExtendedIndexModifierMock) SetUsageForPulseMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetUsageForPulseCounter)
 }
 
-// SetUsageForPulseMinimockPreCounter returns the value of ExtendedIndexModifierMock.SetUsageForPulse invocations
+//SetUsageForPulseMinimockPreCounter returns the value of ExtendedIndexModifierMock.SetUsageForPulse invocations
 func (m *ExtendedIndexModifierMock) SetUsageForPulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetUsageForPulsePreCounter)
 }
 
-// SetUsageForPulseFinished returns true if mock invocations count is ok
+//SetUsageForPulseFinished returns true if mock invocations count is ok
 func (m *ExtendedIndexModifierMock) SetUsageForPulseFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetUsageForPulseMock.expectationSeries) > 0 {
@@ -192,7 +192,7 @@ type ExtendedIndexModifierMockSetWithMetaResult struct {
 	r error
 }
 
-// Expect specifies that invocation of ExtendedIndexModifier.SetWithMeta is expected from 1 to Infinity times
+//Expect specifies that invocation of ExtendedIndexModifier.SetWithMeta is expected from 1 to Infinity times
 func (m *mExtendedIndexModifierMockSetWithMeta) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 Lifeline) *mExtendedIndexModifierMockSetWithMeta {
 	m.mock.SetWithMetaFunc = nil
 	m.expectationSeries = nil
@@ -204,7 +204,7 @@ func (m *mExtendedIndexModifierMockSetWithMeta) Expect(p context.Context, p1 ins
 	return m
 }
 
-// Return specifies results of invocation of ExtendedIndexModifier.SetWithMeta
+//Return specifies results of invocation of ExtendedIndexModifier.SetWithMeta
 func (m *mExtendedIndexModifierMockSetWithMeta) Return(r error) *ExtendedIndexModifierMock {
 	m.mock.SetWithMetaFunc = nil
 	m.expectationSeries = nil
@@ -216,7 +216,7 @@ func (m *mExtendedIndexModifierMockSetWithMeta) Return(r error) *ExtendedIndexMo
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of ExtendedIndexModifier.SetWithMeta is expected once
+//ExpectOnce specifies that invocation of ExtendedIndexModifier.SetWithMeta is expected once
 func (m *mExtendedIndexModifierMockSetWithMeta) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 Lifeline) *ExtendedIndexModifierMockSetWithMetaExpectation {
 	m.mock.SetWithMetaFunc = nil
 	m.mainExpectation = nil
@@ -231,7 +231,7 @@ func (e *ExtendedIndexModifierMockSetWithMetaExpectation) Return(r error) {
 	e.result = &ExtendedIndexModifierMockSetWithMetaResult{r}
 }
 
-// Set uses given function f as a mock of ExtendedIndexModifier.SetWithMeta method
+//Set uses given function f as a mock of ExtendedIndexModifier.SetWithMeta method
 func (m *mExtendedIndexModifierMockSetWithMeta) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 Lifeline) (r error)) *ExtendedIndexModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -240,7 +240,7 @@ func (m *mExtendedIndexModifierMockSetWithMeta) Set(f func(p context.Context, p1
 	return m.mock
 }
 
-// SetWithMeta implements github.com/insolar/insolar/ledger/storage/object.ExtendedIndexModifier interface
+//SetWithMeta implements github.com/insolar/insolar/ledger/storage/object.ExtendedIndexModifier interface
 func (m *ExtendedIndexModifierMock) SetWithMeta(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 Lifeline) (r error) {
 	counter := atomic.AddUint64(&m.SetWithMetaPreCounter, 1)
 	defer atomic.AddUint64(&m.SetWithMetaCounter, 1)
@@ -290,17 +290,17 @@ func (m *ExtendedIndexModifierMock) SetWithMeta(p context.Context, p1 insolar.ID
 	return m.SetWithMetaFunc(p, p1, p2, p3)
 }
 
-// SetWithMetaMinimockCounter returns a count of ExtendedIndexModifierMock.SetWithMetaFunc invocations
+//SetWithMetaMinimockCounter returns a count of ExtendedIndexModifierMock.SetWithMetaFunc invocations
 func (m *ExtendedIndexModifierMock) SetWithMetaMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetWithMetaCounter)
 }
 
-// SetWithMetaMinimockPreCounter returns the value of ExtendedIndexModifierMock.SetWithMeta invocations
+//SetWithMetaMinimockPreCounter returns the value of ExtendedIndexModifierMock.SetWithMeta invocations
 func (m *ExtendedIndexModifierMock) SetWithMetaMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetWithMetaPreCounter)
 }
 
-// SetWithMetaFinished returns true if mock invocations count is ok
+//SetWithMetaFinished returns true if mock invocations count is ok
 func (m *ExtendedIndexModifierMock) SetWithMetaFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetWithMetaMock.expectationSeries) > 0 {
@@ -320,8 +320,8 @@ func (m *ExtendedIndexModifierMock) SetWithMetaFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ExtendedIndexModifierMock) ValidateCallCounters() {
 
 	if !m.SetUsageForPulseFinished() {
@@ -334,19 +334,19 @@ func (m *ExtendedIndexModifierMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ExtendedIndexModifierMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *ExtendedIndexModifierMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *ExtendedIndexModifierMock) MinimockFinish() {
 
 	if !m.SetUsageForPulseFinished() {
@@ -359,14 +359,14 @@ func (m *ExtendedIndexModifierMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *ExtendedIndexModifierMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *ExtendedIndexModifierMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -397,8 +397,8 @@ func (m *ExtendedIndexModifierMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *ExtendedIndexModifierMock) AllMocksCalled() bool {
 
 	if !m.SetUsageForPulseFinished() {
