@@ -49,6 +49,9 @@ type IndexCollectionAccessor interface {
 type IndexModifier interface {
 	// Set saves new Index-value in storage.
 	Set(ctx context.Context, id insolar.ID, index Lifeline) error
+}
+
+type IndexStateModifier interface {
 	UpdateUsagePulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber) error
 }
 

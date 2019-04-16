@@ -100,8 +100,6 @@ func (c cleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 	c.recCleaner.Remove(ctx, pn)
 
 	c.jetStorage.Delete(ctx, pn)
-
-	excIdx := c.getExcludedIndexes(ctx, pn)
 	c.indexCleaner.RemoveForPulse(ctx, pn)
 
 	err := c.pulseShifter.Shift(ctx, pn)
@@ -109,19 +107,4 @@ func (c cleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
 	}
 	inslogger.FromContext(ctx).Debugf("[cleanPulse] end cleaning. pn - %v", pn)
-}
-
-func (c *cleaner) getExcludedIndexes(ctx context.Context, pn insolar.PulseNumber) map[insolar.ID]struct{} {
-	jets := c.jetStorage.All(ctx, pn)
-	res := make(map[insolar.ID]struct{})
-	for _, j := range jets {
-		storage := c.recentProvider.GetIndexStorage(ctx, insolar.ID(j))
-		ids := storage.GetObjects()
-		for id, ttl := range ids {
-			if ttl > 0 {
-				res[id] = struct{}{}
-			}
-		}
-	}
-	return res
 }
