@@ -21,7 +21,6 @@ import (
 	"context"
 	"encoding/gob"
 	"fmt"
-	"io"
 	"sync"
 	"time"
 
@@ -314,19 +313,19 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel insolar.Parcel, loc
 		// Parcel is from past. Return error for some messages, allow for others.
 		switch parcel.Message().(type) {
 		case
-				*message.GetObject,
-				*message.GetDelegate,
-				*message.GetChildren,
-				*message.SetRecord,
-				*message.UpdateObject,
-				*message.RegisterChild,
-				*message.SetBlob,
-				*message.GetObjectIndex,
-				*message.GetPendingRequests,
-				*message.ValidateRecord,
-				*message.CallConstructor,
-				*message.HotData,
-				*message.CallMethod:
+			*message.GetObject,
+			*message.GetDelegate,
+			*message.GetChildren,
+			*message.SetRecord,
+			*message.UpdateObject,
+			*message.RegisterChild,
+			*message.SetBlob,
+			*message.GetObjectIndex,
+			*message.GetPendingRequests,
+			*message.ValidateRecord,
+			*message.CallConstructor,
+			*message.HotData,
+			*message.CallMethod:
 			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", ppn, pulse.PulseNumber)
 			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", ppn, pulse.PulseNumber)
 		}
