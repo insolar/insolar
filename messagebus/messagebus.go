@@ -102,7 +102,7 @@ func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 		signmessages:             config.Host.SignMessages,
 		NextPulseMessagePoolChan: make(chan interface{}),
 	}
-	mb.Lock(context.Background())
+	mb.Acquire(context.Background())
 	return mb, nil
 }
 
