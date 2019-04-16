@@ -56,7 +56,7 @@ func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
 		return errors.New("jet miss")
 	}
 
-	codeRec := s.dep.GetCodeRec(&proc.GetCode{
+	codeRec := s.dep.GetCode(&proc.GetCode{
 		JetID:   jet.Result.Jet,
 		Message: s.Message,
 		Code:    msg.Code,

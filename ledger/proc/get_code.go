@@ -24,7 +24,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
@@ -75,7 +74,8 @@ func (p *GetCode) handle(ctx context.Context /*, parcel insolar.Parcel*/) (insol
 	virtRec := rec.Record
 	codeRec, ok := virtRec.(*object.CodeRecord)
 	if !ok {
-		return nil, errors.Wrap(artifactmanager.ErrInvalidRef, "failed to retrieve code record")
+		// return nil, errors.Wrap(artifactmanager.ErrInvalidRef, "failed to retrieve code record")
+		return nil, errors.Wrap(errors.New("invalid reference"), "failed to retrieve code record")
 	}
 
 	code, err := p.Dep.Accessor.ForID(ctx, *codeRec.Code)
