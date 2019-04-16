@@ -113,6 +113,33 @@ func main() {
 		&rootAsCaller, "root-caller", "r", false, "use root member as caller")
 	rootCmd.AddCommand(sendRequestCmd)
 
+	var (
+		rootConfig string
+		role       string
+		reuseKeys  bool
+		keysFile   string
+		certFile   string
+	)
+	var certgenCmd = &cobra.Command{
+		Use:   "certgen",
+		Short: "generates keys and cerificate by root config",
+		Run: func(cmd *cobra.Command, args []string) {
+			genCertificate(rootConfig, role, sendURL, keysFile, certFile, reuseKeys)
+		},
+	}
+	addURLFlag(certgenCmd.Flags())
+	certgenCmd.Flags().StringVarP(
+		&rootConfig, "root-conf", "t", "", "Config that contains public/private keys of root member")
+	certgenCmd.Flags().StringVarP(
+		&role, "role", "r", "virtual", "The role of the new node")
+	certgenCmd.Flags().BoolVarP(
+		&reuseKeys, "reuse-keys", "", false, "Read keys from file instead og generating of new ones")
+	certgenCmd.Flags().StringVarP(
+		&keysFile, "keys-file", "k", "keys.json", "The OUT/IN ( depends on 'reuse-keys' ) file for public/private keys of the node")
+	certgenCmd.Flags().StringVarP(
+		&certFile, "cert-file", "c", "cert.json", "The OUT file the node certificate")
+	rootCmd.AddCommand(certgenCmd)
+
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
 		os.Exit(1)

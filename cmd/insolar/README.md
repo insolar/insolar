@@ -32,3 +32,7 @@ Than use send_request command with this file:
 Check available commands: `./bin/insolar -h`
 
 Help on any command: `./bin/insolar help COMMAND`
+
+## how to generate certificate and keys for node
+
+    ./bin/insolar certgen --root-conf=scripts/insolard/configs/root_member_keys.json
