@@ -71,7 +71,7 @@ type MessageHandler struct {
 	HotDataWaiter HotDataWaiter     `inject:""`
 
 	IndexStorage       object.IndexStorage
-	IndexStateModifier object.IndexStateModifier
+	IndexStateModifier object.LightIndexModifier
 
 	conf           *configuration.Ledger
 	middleware     *middleware
@@ -84,7 +84,7 @@ type MessageHandler struct {
 // NewMessageHandler creates new handler.
 func NewMessageHandler(
 	indexStorage object.IndexStorage,
-	indexStateModifier object.IndexStateModifier,
+	indexStateModifier object.LightIndexModifier,
 	conf *configuration.Ledger,
 ) *MessageHandler {
 
@@ -397,7 +397,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	msg := parcel.Message().(*message.GetDelegate)
 	jetID := jetFromContext(ctx)
 
-	h.IndexStateModifier.SetUsagePulse(ctx, *msg.Head.Record(), parcel.Pulse())
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Head.Record(), parcel.Pulse())
 
 	h.IDLocker.Lock(msg.Head.Record())
 	defer h.IDLocker.Unlock(msg.Head.Record())
@@ -434,7 +434,7 @@ func (h *MessageHandler) handleGetChildren(
 	msg := parcel.Message().(*message.GetChildren)
 	jetID := jetFromContext(ctx)
 
-	h.IndexStateModifier.SetUsagePulse(ctx, *msg.Parent.Record(), parcel.Pulse())
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
 
 	h.IDLocker.Lock(msg.Parent.Record())
 	defer h.IDLocker.Unlock(msg.Parent.Record())
@@ -603,7 +603,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 		return nil, errors.New("wrong object state record")
 	}
 
-	h.IndexStateModifier.SetUsagePulse(ctx, *msg.Object.Record(), parcel.Pulse())
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Object.Record(), parcel.Pulse())
 
 	calculatedID := object.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
@@ -711,7 +711,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 		return nil, errors.New("wrong child record")
 	}
 
-	h.IndexStateModifier.SetUsagePulse(ctx, *msg.Parent.Record(), parcel.Pulse())
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
 
 	h.IDLocker.Lock(msg.Parent.Record())
 	defer h.IDLocker.Unlock(msg.Parent.Record())
@@ -951,20 +951,18 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 		}
 	}()
 
-	for id, meta := range msg.RecentObjects {
+	for id, meta := range msg.HotIndexes {
 		decodedIndex, err := object.DecodeIndex(meta.Index)
 		if err != nil {
 			logger.Error(err)
 			continue
 		}
 
-		err = h.IndexStorage.Set(ctx, id, decodedIndex)
+		err = h.IndexStateModifier.SetWithMeta(ctx, id, meta.LastUsed, decodedIndex)
 		if err != nil {
 			logger.Error(err)
 			continue
 		}
-
-		h.IndexStateModifier.SetUsagePulse(ctx, id, parcel.Pulse())
 	}
 
 	h.JetStorage.Update(

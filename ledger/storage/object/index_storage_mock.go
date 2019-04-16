@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "IndexStorage" can be found in github.com/insolar/insolar/ledger/storage/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -29,11 +29,6 @@ type IndexStorageMock struct {
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mIndexStorageMockSet
-
-	UpdateUsagePulseFunc       func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r error)
-	UpdateUsagePulseCounter    uint64
-	UpdateUsagePulsePreCounter uint64
-	UpdateUsagePulseMock       mIndexStorageMockUpdateUsagePulse
 }
 
 //NewIndexStorageMock returns a mock for github.com/insolar/insolar/ledger/storage/object.IndexStorage
@@ -46,7 +41,6 @@ func NewIndexStorageMock(t minimock.Tester) *IndexStorageMock {
 
 	m.ForIDMock = mIndexStorageMockForID{mock: m}
 	m.SetMock = mIndexStorageMockSet{mock: m}
-	m.UpdateUsagePulseMock = mIndexStorageMockUpdateUsagePulse{mock: m}
 
 	return m
 }
@@ -351,155 +345,6 @@ func (m *IndexStorageMock) SetFinished() bool {
 	return true
 }
 
-type mIndexStorageMockUpdateUsagePulse struct {
-	mock              *IndexStorageMock
-	mainExpectation   *IndexStorageMockUpdateUsagePulseExpectation
-	expectationSeries []*IndexStorageMockUpdateUsagePulseExpectation
-}
-
-type IndexStorageMockUpdateUsagePulseExpectation struct {
-	input  *IndexStorageMockUpdateUsagePulseInput
-	result *IndexStorageMockUpdateUsagePulseResult
-}
-
-type IndexStorageMockUpdateUsagePulseInput struct {
-	p  context.Context
-	p1 insolar.ID
-	p2 insolar.PulseNumber
-}
-
-type IndexStorageMockUpdateUsagePulseResult struct {
-	r error
-}
-
-//Expect specifies that invocation of IndexStorage.UpdateUsagePulse is expected from 1 to Infinity times
-func (m *mIndexStorageMockUpdateUsagePulse) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *mIndexStorageMockUpdateUsagePulse {
-	m.mock.UpdateUsagePulseFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &IndexStorageMockUpdateUsagePulseExpectation{}
-	}
-	m.mainExpectation.input = &IndexStorageMockUpdateUsagePulseInput{p, p1, p2}
-	return m
-}
-
-//Return specifies results of invocation of IndexStorage.UpdateUsagePulse
-func (m *mIndexStorageMockUpdateUsagePulse) Return(r error) *IndexStorageMock {
-	m.mock.UpdateUsagePulseFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &IndexStorageMockUpdateUsagePulseExpectation{}
-	}
-	m.mainExpectation.result = &IndexStorageMockUpdateUsagePulseResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of IndexStorage.UpdateUsagePulse is expected once
-func (m *mIndexStorageMockUpdateUsagePulse) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *IndexStorageMockUpdateUsagePulseExpectation {
-	m.mock.UpdateUsagePulseFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &IndexStorageMockUpdateUsagePulseExpectation{}
-	expectation.input = &IndexStorageMockUpdateUsagePulseInput{p, p1, p2}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *IndexStorageMockUpdateUsagePulseExpectation) Return(r error) {
-	e.result = &IndexStorageMockUpdateUsagePulseResult{r}
-}
-
-//Set uses given function f as a mock of IndexStorage.UpdateUsagePulse method
-func (m *mIndexStorageMockUpdateUsagePulse) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r error)) *IndexStorageMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.UpdateUsagePulseFunc = f
-	return m.mock
-}
-
-//UpdateUsagePulse implements github.com/insolar/insolar/ledger/storage/object.IndexStorage interface
-func (m *IndexStorageMock) UpdateUsagePulse(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) (r error) {
-	counter := atomic.AddUint64(&m.UpdateUsagePulsePreCounter, 1)
-	defer atomic.AddUint64(&m.UpdateUsagePulseCounter, 1)
-
-	if len(m.UpdateUsagePulseMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.UpdateUsagePulseMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to IndexStorageMock.UpdateUsagePulse. %v %v %v", p, p1, p2)
-			return
-		}
-
-		input := m.UpdateUsagePulseMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, IndexStorageMockUpdateUsagePulseInput{p, p1, p2}, "IndexStorage.UpdateUsagePulse got unexpected parameters")
-
-		result := m.UpdateUsagePulseMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the IndexStorageMock.UpdateUsagePulse")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.UpdateUsagePulseMock.mainExpectation != nil {
-
-		input := m.UpdateUsagePulseMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, IndexStorageMockUpdateUsagePulseInput{p, p1, p2}, "IndexStorage.UpdateUsagePulse got unexpected parameters")
-		}
-
-		result := m.UpdateUsagePulseMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the IndexStorageMock.UpdateUsagePulse")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.UpdateUsagePulseFunc == nil {
-		m.t.Fatalf("Unexpected call to IndexStorageMock.UpdateUsagePulse. %v %v %v", p, p1, p2)
-		return
-	}
-
-	return m.UpdateUsagePulseFunc(p, p1, p2)
-}
-
-//UpdateUsagePulseMinimockCounter returns a count of IndexStorageMock.UpdateUsagePulseFunc invocations
-func (m *IndexStorageMock) UpdateUsagePulseMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.UpdateUsagePulseCounter)
-}
-
-//UpdateUsagePulseMinimockPreCounter returns the value of IndexStorageMock.UpdateUsagePulse invocations
-func (m *IndexStorageMock) UpdateUsagePulseMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.UpdateUsagePulsePreCounter)
-}
-
-//UpdateUsagePulseFinished returns true if mock invocations count is ok
-func (m *IndexStorageMock) UpdateUsagePulseFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.UpdateUsagePulseMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.UpdateUsagePulseCounter) == uint64(len(m.UpdateUsagePulseMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.UpdateUsagePulseMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.UpdateUsagePulseCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.UpdateUsagePulseFunc != nil {
-		return atomic.LoadUint64(&m.UpdateUsagePulseCounter) > 0
-	}
-
-	return true
-}
-
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexStorageMock) ValidateCallCounters() {
@@ -510,10 +355,6 @@ func (m *IndexStorageMock) ValidateCallCounters() {
 
 	if !m.SetFinished() {
 		m.t.Fatal("Expected call to IndexStorageMock.Set")
-	}
-
-	if !m.UpdateUsagePulseFinished() {
-		m.t.Fatal("Expected call to IndexStorageMock.UpdateUsagePulse")
 	}
 
 }
@@ -541,10 +382,6 @@ func (m *IndexStorageMock) MinimockFinish() {
 		m.t.Fatal("Expected call to IndexStorageMock.Set")
 	}
 
-	if !m.UpdateUsagePulseFinished() {
-		m.t.Fatal("Expected call to IndexStorageMock.UpdateUsagePulse")
-	}
-
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -561,7 +398,6 @@ func (m *IndexStorageMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.ForIDFinished()
 		ok = ok && m.SetFinished()
-		ok = ok && m.UpdateUsagePulseFinished()
 
 		if ok {
 			return
@@ -576,10 +412,6 @@ func (m *IndexStorageMock) MinimockWait(timeout time.Duration) {
 
 			if !m.SetFinished() {
 				m.t.Error("Expected call to IndexStorageMock.Set")
-			}
-
-			if !m.UpdateUsagePulseFinished() {
-				m.t.Error("Expected call to IndexStorageMock.UpdateUsagePulse")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -599,10 +431,6 @@ func (m *IndexStorageMock) AllMocksCalled() bool {
 	}
 
 	if !m.SetFinished() {
-		return false
-	}
-
-	if !m.UpdateUsagePulseFinished() {
 		return false
 	}
 

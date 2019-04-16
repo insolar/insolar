@@ -63,7 +63,7 @@ func (d *dataGatherer) ForPulseAndJet(ctx context.Context, pn insolar.PulseNumbe
 	bls := d.blobsAccessor.ForPulse(ctx, jetID, pn)
 	records := d.recsAccessor.ForPulse(ctx, jetID, pn)
 
-	indexes := d.indexesAccessor.ForPulseAndJet(ctx, jetID, pn)
+	indexes := d.indexesAccessor.ForPulseAndJet(ctx, pn, jetID)
 	resIdx := map[insolar.ID][]byte{}
 	for id, idx := range indexes {
 		resIdx[id] = object.EncodeIndex(idx)

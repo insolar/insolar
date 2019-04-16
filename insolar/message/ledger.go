@@ -317,7 +317,7 @@ type HotData struct {
 	ledgerMessage
 	Jet             insolar.Reference
 	Drop            drop.Drop
-	RecentObjects   map[insolar.ID]HotIndex
+	HotIndexes      map[insolar.ID]HotIndex
 	PendingRequests map[insolar.ID]recentstorage.PendingObjectContext
 	PulseNumber     insolar.PulseNumber
 }
@@ -346,7 +346,6 @@ func (*HotData) Type() insolar.MessageType {
 type HotIndex struct {
 	LastUsed insolar.PulseNumber
 	Index    []byte
-	ID       insolar.ID
 }
 
 // GetPendingRequests fetches pending requests for object.

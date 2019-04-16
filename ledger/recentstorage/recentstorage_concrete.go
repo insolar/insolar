@@ -32,14 +32,11 @@ type RecentStorageProvider struct { //nolint: golint
 
 	indexLock   sync.Mutex
 	pendingLock sync.Mutex
-
-	DefaultTTL int
 }
 
 // NewRecentStorageProvider creates new provider
-func NewRecentStorageProvider(defaultTTL int) *RecentStorageProvider {
+func NewRecentStorageProvider() *RecentStorageProvider {
 	return &RecentStorageProvider{
-		DefaultTTL: defaultTTL,
 		// indexStorages:   map[insolar.ID]*RecentIndexStorageConcrete{},
 		pendingStorages: map[insolar.ID]*PendingStorageConcrete{},
 	}

@@ -40,7 +40,7 @@ type GetIndex struct {
 	}
 
 	Dep struct {
-		IndexState  object.IndexStateModifier
+		IndexState  object.LightIndexModifier
 		Locker      storage.IDLocker
 		Storage     object.IndexStorage
 		Coordinator insolar.JetCoordinator
@@ -51,7 +51,7 @@ type GetIndex struct {
 func (p *GetIndex) Proceed(ctx context.Context) error {
 	objectID := *p.Object.Record()
 	logger := inslogger.FromContext(ctx)
-	p.Dep.IndexState.SetUsagePulse(ctx, objectID, p.ParcelPN)
+	p.Dep.IndexState.SetUsageForPulse(ctx, objectID, p.ParcelPN)
 
 	p.Dep.Locker.Lock(&objectID)
 	defer p.Dep.Locker.Unlock(&objectID)

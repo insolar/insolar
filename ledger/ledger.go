@@ -54,7 +54,7 @@ func GetLedgerComponents(conf configuration.Ledger, msgBus insolar.MessageBus, c
 
 	jetStorage := jet.NewStore()
 	nodeStorage := node.NewStorage()
-	rsProvide := recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL)
+	rsProvide := recentstorage.NewRecentStorageProvider()
 	jetCoordinator := jetcoordinator.NewJetCoordinator(conf.LightChainLimit)
 
 	var dropModifier drop.Modifier
@@ -76,11 +76,10 @@ func GetLedgerComponents(conf configuration.Ledger, msgBus insolar.MessageBus, c
 	var recSyncAccessor object.RecordCollectionAccessor
 	var recordCleaner object.RecordCleaner
 
-	var indexAccessor object.IndexAccessor
-	var indexModifier object.IndexModifier
+	var indexStorage object.IndexStorage
 	var collectionIndexAccessor object.IndexCollectionAccessor
 	var indexCleaner object.IndexCleaner
-	var indexStateModifier object.IndexStateModifier
+	var lightIndexModifier object.LightIndexModifier
 
 	// Comparision with insolar.StaticRoleUnknown is a hack for genesis pulse (INS-1537)
 	switch certificate.GetRole() {
@@ -104,8 +103,7 @@ func GetLedgerComponents(conf configuration.Ledger, msgBus insolar.MessageBus, c
 		recordAccessor = records
 
 		indexDB := object.NewIndexDB(db)
-		indexAccessor = indexDB
-		indexModifier = indexDB
+		indexStorage = indexDB
 	default:
 		ps := pulse.NewStorageMem()
 		pulseAccessor = ps
@@ -131,10 +129,9 @@ func GetLedgerComponents(conf configuration.Ledger, msgBus insolar.MessageBus, c
 		recordCleaner = records
 
 		indexDB := object.NewIndexMemory()
-		indexAccessor = indexDB
-		indexModifier = indexDB
+		indexStorage = indexDB
 		indexCleaner = indexDB
-		indexStateModifier = indexDB
+		lightIndexModifier = indexDB
 		collectionIndexAccessor = indexDB
 	}
 
@@ -158,8 +155,7 @@ func GetLedgerComponents(conf configuration.Ledger, msgBus insolar.MessageBus, c
 		pulseCalculator,
 		recordModifier,
 		recordAccessor,
-		indexAccessor,
-		indexModifier,
+		indexStorage,
 		jetStorage,
 		nodeStorage,
 		storage.NewReplicaStorage(),
@@ -171,7 +167,7 @@ func GetLedgerComponents(conf configuration.Ledger, msgBus insolar.MessageBus, c
 
 	switch certificate.GetRole() {
 	case insolar.StaticRoleUnknown, insolar.StaticRoleLightMaterial:
-		h := artifactmanager.NewMessageHandler(&conf)
+		h := artifactmanager.NewMessageHandler(indexStorage, lightIndexModifier, &conf)
 		pm.MessageHandler = h
 		components = append(components, h)
 		components = append(components, pm)

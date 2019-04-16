@@ -40,7 +40,8 @@ type IndexAccessor interface {
 // IndexCollectionAccessor provides methods for querying a collection of blobs with specific search conditions.
 type IndexCollectionAccessor interface {
 	// ForPulseAndJet returns []Blob for a provided jetID and a pulse number.
-	ForPulseAndJet(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]Lifeline
+	ForJet(ctx context.Context, jetID insolar.JetID) map[insolar.ID]LifelineMeta
+	ForPulseAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) map[insolar.ID]Lifeline
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexModifier -o ./ -s _mock.go
@@ -51,8 +52,9 @@ type IndexModifier interface {
 	Set(ctx context.Context, id insolar.ID, index Lifeline) error
 }
 
-type IndexStateModifier interface {
-	SetUsagePulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber)
+type LightIndexModifier interface {
+	SetWithMeta(ctx context.Context, id insolar.ID, pn insolar.PulseNumber, index Lifeline) error
+	SetUsageForPulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexStorage -o ./ -s _mock.go
@@ -173,12 +175,25 @@ func (m *IndexMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) er
 	return nil
 }
 
-func (m *IndexMemory) SetUsagePulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber) {
+func (m *IndexMemory) SetWithMeta(ctx context.Context, id insolar.ID, pn insolar.PulseNumber, index Lifeline) error {
+	m.storageLock.Lock()
+	defer m.storageLock.Unlock()
+
+	idx := CloneIndex(index)
+
+	m.indexStorage[id] = idx
+	m.jetIndex.Add(id, idx.JetID)
 	m.pulseIndex.Add(id, pn)
+
+	stats.Record(ctx,
+		statIndexInMemoryCount.M(1),
+	)
+
+	return nil
 }
 
-func (m *IndexMemory) UsageForPulse(ctx context.Context, pn insolar.PulseNumber) []insolar.ID {
-	return m.pulseIndex.ForPN(pn)
+func (m *IndexMemory) SetUsageForPulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber) {
+	m.pulseIndex.Add(id, pn)
 }
 
 // ForID returns Index for provided id.
@@ -198,22 +213,53 @@ func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (Lifeline, error
 	return index, ErrIndexNotFound
 }
 
+type LifelineMeta struct {
+	Index    Lifeline
+	LastUsed insolar.PulseNumber
+}
+
 // ForPulseAndJet returns an object's lifeline for a provided id.
-func (m *IndexMemory) ForPulseAndJet(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]Lifeline {
+func (m *IndexMemory) ForJet(ctx context.Context, jetID insolar.JetID) map[insolar.ID]LifelineMeta {
 	m.storageLock.RLock()
 	defer m.storageLock.RUnlock()
 
 	idxByJet := m.jetIndex.For(jetID)
-	idxByPn := m.pulseIndex.ForPN(pn)
+
+	res := map[insolar.ID]LifelineMeta{}
+
+	for id := range idxByJet {
+		idx, ok := m.indexStorage[id]
+		if ok {
+			lstPN, lstOk := m.pulseIndex.LastUsage(id)
+			if !lstOk {
+				panic("index isn't in a consistent state")
+			}
+
+			res[id] = LifelineMeta{
+				Index:    CloneIndex(idx),
+				LastUsed: lstPN,
+			}
+		}
+	}
+
+	return res
+}
+
+func (m *IndexMemory) ForPulseAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) map[insolar.ID]Lifeline {
+	m.storageLock.RLock()
+	defer m.storageLock.RUnlock()
+
+	idxByJet := m.jetIndex.For(jetID)
+	idxByPN := m.pulseIndex.ForPN(pn)
 
 	res := map[insolar.ID]Lifeline{}
 
-	for pIdx := range idxByPn {
-		_, mergedOk := idxByJet[pIdx]
-		idx, memOk := m.indexStorage[pIdx]
-		if mergedOk && memOk {
-			res[pIdx] = CloneIndex(idx)
+	for id := range idxByJet {
+		_, existInPn := idxByPN[id]
+		if existInPn {
+			res[id] = m.indexStorage[id]
 		}
+
 	}
 
 	return res

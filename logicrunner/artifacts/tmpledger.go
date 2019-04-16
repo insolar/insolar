@@ -156,12 +156,10 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(networknode.NewNode(insolar.Reference{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
-	handler := artifactmanager.NewMessageHandler(&conf)
+	handler := artifactmanager.NewMessageHandler(is, is, &conf)
 	handler.JetStorage = js
 	handler.Nodes = ns
 	handler.DBContext = tmpDB
-	handler.IndexModifier = is
-	handler.IndexAccessor = is
 	handler.IndexStorage = is
 	handler.DropModifier = ds
 	handler.BlobModifier = bs
@@ -242,7 +240,6 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	pendingMock.RemovePendingRequestMock.Return()
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 	provideMock.CountMock.Return(0)
 

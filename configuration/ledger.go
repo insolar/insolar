@@ -62,12 +62,6 @@ type Backoff struct {
 	MaxAttempts int
 }
 
-// RecentStorage holds configuration for RecentStorage
-type RecentStorage struct {
-	// Default TTL is a value of default ttl for redirects
-	DefaultTTL int
-}
-
 // Exporter holds configuration of Exporter
 type Exporter struct {
 	// ExportLag is lag in second before we start to export pulse
@@ -80,8 +74,6 @@ type Ledger struct {
 	Storage Storage
 	// PulseManager holds configuration for PulseManager.
 	PulseManager PulseManager
-	// RecentStorage holds configuration for RecentStorage
-	RecentStorage RecentStorage
 
 	// common/sharable values:
 
@@ -127,10 +119,6 @@ func NewLedger() Ledger {
 				MaxAttempts: 10,
 			},
 			RetryLoopDuration: 1 * time.Second,
-		},
-
-		RecentStorage: RecentStorage{
-			DefaultTTL: 10,
 		},
 
 		LightChainLimit: 5, // 5 pulses
