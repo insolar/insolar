@@ -23,6 +23,8 @@ import (
 	"hash"
 	"math/big"
 
+	"github.com/gojuno/minimock"
+
 	"github.com/insolar/insolar/insolar"
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/sha3"
@@ -185,4 +187,8 @@ func (m *cryptographySchemeMock) SignatureSIze() int {
 
 func NewPlatformCryptographyScheme() insolar.PlatformCryptographyScheme {
 	return &cryptographySchemeMock{}
+}
+
+func GetTestNetwork(t minimock.Tester) insolar.Network {
+	return NewNetworkMock(t)
 }

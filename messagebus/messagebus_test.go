@@ -51,7 +51,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	mb, err := NewMessageBus(configuration.Configuration{})
 	require.NoError(t, err)
 
-	net := network.GetTestNetwork()
+	net := testutils.GetTestNetwork(t)
 	jc := testutils.NewJetCoordinatorMock(t)
 	nn := network.NewNodeNetworkMock(t)
 	nn.GetOriginFunc = func() (r insolar.NetworkNode) {
