@@ -25,7 +25,6 @@ import (
 	"reflect"
 
 	"github.com/insolar/insolar/api/requester"
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
@@ -92,24 +91,6 @@ func main() {
 		},
 	}
 	rootCmd.AddCommand(genKeysPairCmd)
-
-	var printDefaultsCmd = &cobra.Command{
-		Use:   "default-config",
-		Short: "prints insolard defaults",
-		Run: func(cmd *cobra.Command, args []string) {
-			printDefaultConfig()
-		},
-	}
-	rootCmd.AddCommand(printDefaultsCmd)
-
-	var printSendConfigsCmd = &cobra.Command{
-		Use:   "default-send-configs",
-		Short: "prints defaults of request & user configs",
-		Run: func(cmd *cobra.Command, args []string) {
-			dumpSendConfigs()
-		},
-	}
-	rootCmd.AddCommand(printSendConfigsCmd)
 
 	var (
 		configPath   string
@@ -210,11 +191,6 @@ func mustWrite(out io.Writer, data string) {
 	check("Can't write data to output", err)
 }
 
-func printDefaultConfig() {
-	cfgHolder := configuration.NewHolder()
-	mustWrite(os.Stdout, configuration.ToString(cfgHolder.Configuration))
-}
-
 func generateKeysPair() {
 	ks := platformpolicy.NewKeyProcessor()
 
@@ -263,22 +239,6 @@ func sendRequest(sendURL string, configPath string, paramsPath string, rootAsCal
 	check("[ sendRequest ]", err)
 
 	mustWrite(os.Stdout, string(response))
-}
-
-func dumpSendConfigs() {
-	out := os.Stdout
-	reqConf, err := genDefaultConfig(requester.RequestConfigJSON{})
-	check("[ genSendConfigs ]", err)
-
-	userConf, err := genDefaultConfig(requester.UserConfigJSON{})
-	check("[ genSendConfigs ]", err)
-
-	mustWrite(out, "Request config:\n")
-	mustWrite(out, string(reqConf))
-	mustWrite(out, "\n\n")
-
-	mustWrite(out, "User config:\n")
-	mustWrite(out, string(userConf)+"\n")
 }
 
 func getInfo(url string) {
