@@ -22,14 +22,12 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"reflect"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/version"
-	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
 )
@@ -275,28 +273,6 @@ func getInfo(url string) {
 	fmt.Printf("RootMember : %s\n", info.RootMember)
 	fmt.Printf("NodeDomain : %s\n", info.NodeDomain)
 	fmt.Printf("RootDomain : %s\n", info.RootDomain)
-}
-
-func genDefaultConfig(r interface{}) ([]byte, error) {
-	t := reflect.TypeOf(r)
-	res := map[string]interface{}{}
-	for i := 0; i < t.NumField(); i++ {
-		field := t.Field(i)
-		tag := field.Tag.Get("json")
-		switch field.Type.Kind() {
-		case reflect.String:
-			res[tag] = ""
-		case reflect.Slice:
-			res[tag] = []int{}
-		}
-	}
-
-	rawJSON, err := json.MarshalIndent(res, "", "    ")
-	if err != nil {
-		return nil, errors.Wrap(err, "[ genDefaultConfig ]")
-	}
-
-	return rawJSON, nil
 }
 
 func check(msg string, err error) {
