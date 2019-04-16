@@ -237,7 +237,6 @@ func TestCloneObjectLifeline_InsureDelegatesMapNotNil(t *testing.T) {
 }
 
 func TestIndexMemory_ForPulseAndJet(t *testing.T) {
-	t.Skip("temporary, it should be rewritten")
 	t.Parallel()
 	memStor := NewIndexMemory()
 	ctx := inslogger.TestContext(t)
@@ -248,7 +247,9 @@ func TestIndexMemory_ForPulseAndJet(t *testing.T) {
 	tPulse := gen.PulseNumber()
 
 	_ = memStor.Set(ctx, *insolar.NewID(fPulse, []byte{1}), Lifeline{JetID: jetID, LatestUpdate: gen.PulseNumber()})
+	memStor.SetUsageForPulse(ctx, *insolar.NewID(fPulse, []byte{1}), fPulse)
 	_ = memStor.Set(ctx, *insolar.NewID(fPulse, []byte{2}), Lifeline{JetID: jetID, LatestUpdate: gen.PulseNumber()})
+	memStor.SetUsageForPulse(ctx, *insolar.NewID(fPulse, []byte{2}), fPulse)
 	_ = memStor.Set(ctx, *insolar.NewID(sPulse, nil), Lifeline{JetID: jetID})
 	_ = memStor.Set(ctx, *insolar.NewID(tPulse, nil), Lifeline{JetID: jetID})
 
