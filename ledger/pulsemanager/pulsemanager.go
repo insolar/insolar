@@ -658,10 +658,10 @@ func (m *PulseManager) cleanLightData(ctx context.Context, newPulse insolar.Puls
 		return
 	}
 	// m.JetModifier.Delete(ctx, p.PulseNumber)
-	// m.NodeSetter.Delete(p.PulseNumber)
-	// m.DropCleaner.Delete(p.PulseNumber)
-	// m.BlobCleaner.Delete(ctx, p.PulseNumber)
-	// //m.RecCleaner.Remove(ctx, p.PulseNumber)
+	m.NodeSetter.Delete(p.PulseNumber)
+	m.DropCleaner.Delete(p.PulseNumber)
+	m.BlobCleaner.Delete(ctx, p.PulseNumber)
+	m.RecCleaner.Remove(ctx, p.PulseNumber)
 
 	// idxs := map[insolar.ID]struct{}{}
 	// for _, idxIDs := range jetIndexesRemoved {
