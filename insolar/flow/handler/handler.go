@@ -18,6 +18,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
@@ -64,8 +65,14 @@ func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (ins
 			default:
 			}
 			logger.Error("Handling failed", err)
+		} else {
+			select {
+			case msg.ReplyTo <- bus.Reply{Err: errors.New("no reply from handler")}:
+			default:
+			}
 		}
 	}()
 	rep := <-msg.ReplyTo
+	close(msg.ReplyTo)
 	return rep.Reply, rep.Err
 }
