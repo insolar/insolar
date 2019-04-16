@@ -290,10 +290,10 @@ func MakeUpBaseReq() rpctypes.UpBaseReq {
 	}
 
 	return rpctypes.UpBaseReq{
-		Mode:      callCtx.Mode,
-		Callee:    *callCtx.Callee,
-		Prototype: *callCtx.Prototype,
-		Request:   *callCtx.Request,
+		Mode:            callCtx.Mode,
+		Callee:          *callCtx.Callee,
+		CalleePrototype: *callCtx.Prototype,
+		Request:         *callCtx.Request,
 	}
 }
 
@@ -304,13 +304,13 @@ func (gi *GoInsider) RouteCall(ref insolar.Reference, wait bool, immutable bool,
 		return nil, err
 	}
 	req := rpctypes.UpRouteReq{
-		UpBaseReq:      MakeUpBaseReq(),
-		Wait:           wait,
-		Immutable:      immutable,
-		Object:         ref,
-		Method:         method,
-		Arguments:      args,
-		ProxyPrototype: proxyPrototype,
+		UpBaseReq: MakeUpBaseReq(),
+		Wait:      wait,
+		Immutable: immutable,
+		Object:    ref,
+		Method:    method,
+		Arguments: args,
+		Prototype: proxyPrototype,
 	}
 
 	res := rpctypes.UpRouteResp{}
@@ -368,7 +368,7 @@ func (gi *GoInsider) GetObjChildrenIterator(obj insolar.Reference, prototype ins
 		UpBaseReq: MakeUpBaseReq(),
 
 		IteratorID: iteratorID,
-		Obj:        obj,
+		Object:     obj,
 		Prototype:  prototype,
 	}
 	err = client.Call("RPC.GetObjChildrenIterator", req, &res)

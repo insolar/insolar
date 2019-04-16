@@ -25,8 +25,9 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
-	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -102,10 +103,13 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't marshal")
 	}
 
-	bm := &message.BaseLogicMessage{
-		Nonce: randomUint64(),
+	msg := &message.CallMethod{
+		Object:    ref,
+		Method:    method,
+		Arguments: args,
 	}
-	routResult, err := cr.CallMethod(ctx, bm, false, false, ref, method, args, nil)
+
+	routResult, err := cr.CallMethod(ctx, msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ ContractRequester::SendRequest ] Can't route call")
 	}
@@ -113,32 +117,16 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 	return routResult, nil
 }
 
-func (cr *ContractRequester) CallMethod(ctx context.Context, base insolar.Message, async bool, immutable bool, ref *insolar.Reference, method string, argsIn insolar.Arguments, mustPrototype *insolar.Reference) (insolar.Reply, error) {
-	ctx, span := instracer.StartSpan(ctx, "ContractRequester.CallMethod "+method)
+func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (insolar.Reply, error) {
+	ctx, span := instracer.StartSpan(ctx, "ContractRequester.Call")
 	defer span.End()
 
-	baseMessage, ok := base.(*message.BaseLogicMessage)
-	if !ok {
-		return nil, errors.New("Wrong type for BaseMessage")
-	}
+	msg := inMsg.(*message.CallMethod)
 
-	var mode message.MethodReturnMode
-	if async {
-		mode = message.ReturnNoWait
-	} else {
-		mode = message.ReturnResult
-	}
+	async := msg.ReturnMode == message.ReturnNoWait
 
-	msg := &message.CallMethod{
-		BaseLogicMessage: *baseMessage,
-		ReturnMode:       mode,
-		Immutable:        immutable,
-		ObjectRef:        *ref,
-		Method:           method,
-		Arguments:        argsIn,
-	}
-	if mustPrototype != nil {
-		msg.ProxyPrototype = *mustPrototype
+	if msg.Nonce == 0 {
+		msg.Nonce = randomUint64()
 	}
 
 	var seq uint64
@@ -156,7 +144,6 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base insolar.Messag
 	}
 
 	res, err := cr.MessageBus.Send(ctx, msg, nil)
-
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't dispatch event")
 	}
@@ -169,11 +156,11 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base insolar.Messag
 	if async {
 		return res, nil
 	}
+
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(configuration.NewAPIRunner().Timeout)*time.Second)
 	defer cancel()
-	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request)
 
-	var result *reply.CallMethod
+	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request)
 
 	select {
 	case ret := <-ch:
@@ -181,86 +168,28 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base insolar.Messag
 		if ret.Error != "" {
 			return nil, errors.Wrap(errors.New(ret.Error), "CallMethod returns error")
 		}
-		retReply, ok := ret.Reply.(*reply.CallMethod)
-		if !ok {
-			return nil, errors.New("Reply is not CallMethod")
-		}
-		result = &reply.CallMethod{
-			Request: r.Request,
-			Result:  retReply.Result,
-		}
+		return ret.Reply, nil
 	case <-ctx.Done():
 		cr.ResultMutex.Lock()
 		delete(cr.ResultMap, seq)
 		cr.ResultMutex.Unlock()
 		return nil, errors.New("canceled")
 	}
-
-	return result, nil
 }
 
-func (cr *ContractRequester) CallConstructor(ctx context.Context, base insolar.Message, async bool,
-	prototype *insolar.Reference, to *insolar.Reference, method string,
-	argsIn insolar.Arguments, saveAs int) (*insolar.Reference, error) {
-	baseMessage, ok := base.(*message.BaseLogicMessage)
-	if !ok {
-		return nil, errors.New("Wrong type for BaseMessage")
-	}
+func (cr *ContractRequester) CallMethod(ctx context.Context, inMsg insolar.Message) (insolar.Reply, error) {
+	return cr.Call(ctx, inMsg)
+}
 
-	msg := &message.CallConstructor{
-		BaseLogicMessage: *baseMessage,
-		PrototypeRef:     *prototype,
-		ParentRef:        *to,
-		Method:           method,
-		Arguments:        argsIn,
-		SaveAs:           message.SaveAs(saveAs),
-	}
-
-	var seq uint64
-	var ch chan *message.ReturnResults
-	if !async {
-		cr.ResultMutex.Lock()
-
-		cr.Sequence++
-		seq = cr.Sequence
-		msg.Sequence = seq
-		ch = make(chan *message.ReturnResults, 1)
-		cr.ResultMap[seq] = ch
-
-		cr.ResultMutex.Unlock()
-	}
-
-	res, err := cr.MessageBus.Send(ctx, msg, nil)
+func (cr *ContractRequester) CallConstructor(ctx context.Context, inMsg insolar.Message) (*insolar.Reference, error) {
+	res, err := cr.Call(ctx, inMsg)
 	if err != nil {
-		return nil, errors.Wrap(err, "couldn't save new object as delegate")
+		return nil, err
 	}
 
-	r, ok := res.(*reply.RegisterRequest)
+	rep, ok := res.(*reply.CallConstructor)
 	if !ok {
-		return nil, errors.New("Got not reply.CallConstructor in reply for CallConstructor")
+		return nil, errors.New("Reply is not CallConstructor")
 	}
-
-	if async {
-		return &r.Request, nil
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(configuration.NewAPIRunner().Timeout)*time.Second)
-	defer cancel()
-	inslogger.FromContext(ctx).Debug("Waiting for constructor results req=", r.Request, " seq=", seq)
-
-	select {
-	case ret := <-ch:
-		inslogger.FromContext(ctx).Debug("Got Constructor results")
-		if ret.Error != "" {
-			return nil, errors.New(ret.Error)
-		}
-		return &r.Request, nil
-	case <-ctx.Done():
-
-		cr.ResultMutex.Lock()
-		delete(cr.ResultMap, seq)
-		cr.ResultMutex.Unlock()
-
-		return nil, errors.New("canceled")
-	}
+	return rep.Object, nil
 }
