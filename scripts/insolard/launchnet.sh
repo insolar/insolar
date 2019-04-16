@@ -1,6 +1,13 @@
 #! /usr/bin/env bash
 set -e
+# Changeable environment variables (parameters)
+# LOG_SYMLINKS_BY_NODE_REF activates log_symlinks_by_node_refs function
+LOG_SYMLINKS_BY_NODE_REF=
+INSOLAR_LOG_FORMATTER=${INSOLAR_LOG_FORMATTER:-"text"}
+INSOLAR_LOG_LEVEL=${INSOLAR_LOG_LEVEL:-"debug"}
+GORUND_LOG_LEVEL=${GORUND_LOG_LEVEL:-${INSOLAR_LOG_LEVEL}}
 
+# predefined environment variables
 BIN_DIR=bin
 TEST_DATA=testdata
 INSOLARD=$BIN_DIR/insolard
@@ -23,8 +30,9 @@ GENERATED_DISCOVERY_CONFIGS_DIR=$GENERATED_CONFIGS_DIR/discoverynodes
 INSGORUND_PORT_FILE=$BASE_DIR/$CONFIGS_DIR/insgorund_ports.txt
 PULSEWATCHER_CONFIG=$GENERATED_CONFIGS_DIR/utils/pulsewatcher.yaml
 
-insolar_log_level=${INSOLAR_LOG_LEVEL:-"Debug"}
-gorund_log_level=$insolar_log_level
+
+export INSOLAR_LOG_FORMATTER
+export INSOLAR_LOG_LEVEL
 
 NUM_DISCOVERY_NODES=$(sed '/^nodes:/ q' $GENESIS_CONFIG | grep "host:" | grep -v "#" | wc -l)
 
@@ -96,6 +104,7 @@ stop_listening()
 clear_dirs()
 {
     echo "clear_dirs() starts ..."
+    set -x
     rm -rfv $CONTRACT_STORAGE/*
     rm -rfv $LEDGER_DIR/*
     rm -rfv $LEDGER_NEW_DIR/*
@@ -103,7 +112,7 @@ clear_dirs()
     rm -rfv $GENERATED_CONFIGS_DIR/*
     rm -rfv $INSGORUND_DATA/*
     rm -rfv $NODES_DATA/*
-    echo "clear_dirs() end."
+    set +x
 }
 
 create_required_dirs()
@@ -130,13 +139,16 @@ create_required_dirs()
 
 generate_insolard_configs()
 {
+    echo "generate configs"
     go run scripts/generate_insolar_configs.go -o $GENERATED_CONFIGS_DIR -p $INSGORUND_PORT_FILE -g $GENESIS_CONFIG -t $BASE_DIR/pulsar_template.yaml
 }
 
 prepare()
 {
     echo "prepare() starts ..."
-    stop_listening $run_insgorund
+    if [[ "$NO_STOP_LISTENING_ON_PREPARE" != "1" ]]; then
+        stop_listening $run_insgorund
+    fi
     clear_dirs
     create_required_dirs
     echo "prepare() end."
@@ -155,16 +167,14 @@ rebuild_binaries()
 
 generate_bootstrap_keys()
 {
-    echo "generate_bootstrap_keys() starts ..."
-	bin/insolar -c gen_keys > $KEYS_FILE
-	echo "generate_bootstrap_keys() end."
+    echo "generate bootstrap keys"
+    bin/insolar -c gen_keys > $KEYS_FILE
 }
 
 generate_root_member_keys()
 {
-    echo "generate_root_member_keys() starts ..."
-	bin/insolar -c gen_keys > $ROOT_MEMBER_KEYS_FILE
-	echo "generate_root_member_keys() end."
+    echo "generate root member_keys"
+    bin/insolar -c gen_keys > $ROOT_MEMBER_KEYS_FILE
 }
 
 check_working_dir()
@@ -184,7 +194,8 @@ usage()
     echo "possible options: "
     echo -e "\t-h - show help"
     echo -e "\t-n - don't run insgorund"
-    echo -e "\t-g - preventively generate initial ledger"
+    echo -e "\t-g - generate genesis"
+    echo -e "\t-G - generate genesis and exit, show generation log"
     echo -e "\t-l - clear all and exit"
     echo -e "\t-C - generate configs only"
 }
@@ -192,7 +203,7 @@ usage()
 process_input_params()
 {
     OPTIND=1
-    while getopts "h?nglwC" opt; do
+    while getopts "h?ngGlwC" opt; do
         case "$opt" in
         h|\?)
             usage
@@ -203,6 +214,13 @@ process_input_params()
             ;;
         g)
             genesis
+            ;;
+        G)
+            NO_GENESIS_LOG_REDIRECT=1
+            NO_STOP_LISTENING_ON_PREPARE=${NO_STOP_LISTENING_ON_PREPARE:-"1"}
+            SKIP_BUILD=${SKIP_BUILD:-"1"}
+            genesis
+            exit 0
             ;;
         l)
             prepare
@@ -228,7 +246,7 @@ launch_insgorund()
         listen_port=$( echo "$line" | awk '{print $1}' )
         rpc_port=$( echo "$line" | awk '{print $2}' )
 
-        $INSGORUND -l $host:$listen_port --rpc $host:$rpc_port --log-level=$gorund_log_level --metrics :$metrics_port &> $INSGORUND_DATA/$rpc_port.log &
+        $INSGORUND -l $host:$listen_port --rpc $host:$rpc_port --log-level=$GORUND_LOG_LEVEL --metrics :$metrics_port &> $INSGORUND_DATA/$rpc_port.log &
 
     done < "$INSGORUND_PORT_FILE"
 }
@@ -273,18 +291,34 @@ wait_for_complete_network_state()
 genesis()
 {
     prepare
-    build_binaries
+    if [[ "$SKIP_BUILD" != "1" ]]; then
+        echo "build binaries"
+        build_binaries
+    else
+        echo "SKIP: build binaries"
+    fi
     generate_bootstrap_keys
     generate_root_member_keys
     generate_insolard_configs
 
     printf "start genesis ... \n"
-    $INSOLARD --config $BASE_DIR/insolar.yaml --genesis $GENESIS_CONFIG --keyout $DISCOVERY_NODES_DATA/certs > $DISCOVERY_NODES_DATA/genesis_output.log
+    CMD="$INSOLARD --config $BASE_DIR/insolar.yaml --genesis $GENESIS_CONFIG --keyout $DISCOVERY_NODES_DATA/certs"
+    if [[ "$NO_GENESIS_LOG_REDIRECT" != "1" ]]; then
+        ${CMD} &> $DISCOVERY_NODES_DATA/genesis_output.log
+    else
+        ${CMD}
+    fi
     printf "genesis is done\n"
 
     copy_data
     copy_discovery_certs
 
+    if [[ "$LOG_SYMLINKS_BY_NODE_REF" != "" ]]; then
+        log_symlinks_by_node_refs
+    fi
+}
+
+log_symlinks_by_node_refs() {
     if which jq ; then
         NL=$BASE_DIR/loglinks
         mkdir  $NL || \

@@ -88,4 +88,17 @@ func TestClaimQueue_Pop(t *testing.T) {
 
 	assert.Equal(t, packets.TypeNodeJoinClaim, cq.Pop().Type())
 	assert.Equal(t, packets.TypeNodeBroadcast, cq.Pop().Type())
+	assert.Nil(t, cq.Front())
+	assert.Nil(t, cq.Pop())
+}
+
+func TestClaimQueue_Clear(t *testing.T) {
+	cq := newClaimQueue()
+	size := 10
+	for i := 0; i < size; i++ {
+		cq.Push(newTestClaim(packets.TypeNodeJoinClaim))
+	}
+	assert.Equal(t, size, cq.Length())
+	cq.Clear()
+	assert.Equal(t, 0, cq.Length())
 }

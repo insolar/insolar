@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package artifactmanager
+package proc
 
 import (
 	"context"
@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/hot"
 	"github.com/pkg/errors"
 )
 
@@ -121,7 +122,7 @@ type WaitHot struct {
 	}
 
 	Dep struct {
-		Waiter HotDataWaiter
+		Waiter hot.JetWaiter
 	}
 }
 

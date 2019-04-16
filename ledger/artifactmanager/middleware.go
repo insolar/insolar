@@ -27,13 +27,15 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/hot"
 )
 
 type middleware struct {
 	jetAccessor    jet.Accessor
 	jetCoordinator insolar.JetCoordinator
 	messageBus     insolar.MessageBus
-	hotDataWaiter  HotDataWaiter
+	jetReleaser    hot.JetReleaser
+	jetWaiter      hot.JetWaiter
 	conf           *configuration.Ledger
 	handler        *MessageHandler
 }
@@ -45,7 +47,8 @@ func newMiddleware(
 		jetAccessor:    h.JetStorage,
 		jetCoordinator: h.JetCoordinator,
 		messageBus:     h.Bus,
-		hotDataWaiter:  h.HotDataWaiter,
+		jetReleaser:    h.JetReleaser,
+		jetWaiter:      h.HotDataWaiter,
 		handler:        h,
 		conf:           h.conf,
 	}
@@ -177,7 +180,7 @@ func (m *middleware) waitForHotData(handler insolar.MessageHandler) insolar.Mess
 		}
 
 		jetID := jetFromContext(ctx)
-		err := m.hotDataWaiter.Wait(ctx, jetID)
+		err := m.jetWaiter.Wait(ctx, jetID)
 		if err != nil {
 			return &reply.Error{ErrType: reply.ErrHotDataTimeout}, nil
 		}
@@ -191,7 +194,7 @@ func (m *middleware) releaseHotDataWaiters(handler insolar.MessageHandler) insol
 
 		hotDataMessage := parcel.Message().(*message.HotData)
 		jetID := hotDataMessage.Jet.Record()
-		unlockErr := m.hotDataWaiter.Unlock(ctx, *jetID)
+		unlockErr := m.jetReleaser.Unlock(ctx, *jetID)
 		if unlockErr != nil {
 			inslogger.FromContext(ctx).Error(err)
 		}

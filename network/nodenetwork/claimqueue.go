@@ -100,3 +100,10 @@ func (cq *claimQueue) Push(claim packets.ReferendumClaim) {
 
 	cq.data = append(cq.data, claim)
 }
+
+func (cq *claimQueue) Clear() {
+	cq.lock.Lock()
+	defer cq.lock.Unlock()
+
+	cq.data = make([]packets.ReferendumClaim, 0)
+}

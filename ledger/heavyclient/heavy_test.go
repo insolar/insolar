@@ -27,6 +27,7 @@ import (
 	"github.com/dgraph-io/badger"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/ledger/hot"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/stretchr/testify/assert"
@@ -39,7 +40,6 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/ledger/artifactmanager"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
@@ -197,7 +197,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 
 	// Mock N8: Active List Swapper mock
 	alsMock := testutils.NewActiveListSwapperMock(s.T())
-	alsMock.MoveSyncToActiveFunc = func(context.Context) error { return nil }
+	alsMock.MoveSyncToActiveFunc = func(context.Context, insolar.PulseNumber) error { return nil }
 
 	// Mock N9: Crypto things mock
 	cryptoServiceMock := testutils.NewCryptographyServiceMock(s.T())
@@ -294,7 +294,7 @@ func sendToHeavy(s *heavySuite, withretry bool) {
 	pm.PulseAccessor = s.pulseStorage
 	pm.PulseCalculator = s.pulseStorage
 
-	pm.HotDataWaiter = artifactmanager.NewHotDataWaiterConcrete()
+	pm.JetReleaser = hot.NewChannelWaiter()
 
 	providerMock := recentstorage.NewProviderMock(s.T())
 	providerMock.GetIndexStorageMock.Return(recentMock)

@@ -99,7 +99,11 @@ func (a *Accessor) GetWorkingNodes() []insolar.NetworkNode {
 
 func (a *Accessor) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
 	staticRole := dynamicToStaticRole(role)
-	return a.roleIndex[staticRole].Collect()
+	nodes := a.roleIndex[staticRole]
+	if nodes == nil {
+		return []insolar.Reference{}
+	}
+	return nodes.Collect()
 }
 
 func GetSnapshotActiveNodes(snapshot *Snapshot) []insolar.NetworkNode {

@@ -40,7 +40,7 @@ var emptyRecordsGens = []recordgen{
 	func() record.VirtualRecord { return &AmendRecord{} },
 	func() record.VirtualRecord { return &TypeRecord{} },
 	func() record.VirtualRecord { return &ChildRecord{} },
-	func() record.VirtualRecord { return &GenesisRecord{} },
+	func() record.VirtualRecord { return &GenesisRecord{insolar.GenesisRecord} },
 }
 
 func getRecordHashData(rec record.VirtualRecord) []byte {

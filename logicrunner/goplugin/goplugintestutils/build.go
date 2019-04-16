@@ -36,7 +36,7 @@ func buildCLI(name string) (string, error) {
 		filepath.Join(insolarImportPath, "cmd", name),
 	).CombinedOutput()
 	if err != nil {
-		return "", errors.Wrapf(err, "can't build preprocessor. Build output: %s", string(out))
+		return "", errors.Wrapf(err, "can't build preprocessor. buildPrototypes output: %s", string(out))
 	}
 	return binPath, nil
 }

@@ -131,7 +131,6 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 
 	if !opts.nobootstrap {
 		genesisBaseRecord := &genesis.BaseRecord{
-			PCS:            PCS,
 			DB:             storageDB,
 			DropModifier:   dropDB,
 			PulseAppender:  pulseDB,
@@ -139,7 +138,7 @@ func TmpDB(ctx context.Context, t testing.TB, options ...Option) (storage.DBCont
 			RecordModifier: recordModifier,
 			IndexModifier:  im,
 		}
-		_, _, err := genesisBaseRecord.CreateIfNeeded(ctx)
+		_, err := genesisBaseRecord.CreateIfNeeded(ctx)
 		if err != nil {
 			t.Error(err, "failed to create base genesis record")
 		}

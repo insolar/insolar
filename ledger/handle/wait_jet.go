@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package artifactmanager
+package handle
 
 import (
 	"context"
@@ -23,11 +23,12 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/ledger/proc"
 	"github.com/pkg/errors"
 )
 
 type WaitJet struct {
-	dep *Dependencies
+	dep *proc.Dependencies
 
 	Message bus.Message
 
@@ -38,7 +39,7 @@ type WaitJet struct {
 }
 
 func (s *WaitJet) Present(ctx context.Context, f flow.Flow) error {
-	jet := s.dep.FetchJet(&FetchJet{Parcel: s.Message.Parcel})
+	jet := s.dep.FetchJet(&proc.FetchJet{Parcel: s.Message.Parcel})
 	if err := f.Procedure(ctx, jet); err != nil {
 		if err == flow.ErrCancelled {
 			return err
@@ -47,7 +48,7 @@ func (s *WaitJet) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	if jet.Result.Miss {
-		rep := &ReturnReply{
+		rep := &proc.ReturnReply{
 			ReplyTo: s.Message.ReplyTo,
 			Reply:   &reply.JetMiss{JetID: insolar.ID(jet.Result.Jet)},
 		}
@@ -57,7 +58,7 @@ func (s *WaitJet) Present(ctx context.Context, f flow.Flow) error {
 		return errors.New("jet miss")
 	}
 
-	hot := s.dep.WaitHot(&WaitHot{
+	hot := s.dep.WaitHot(&proc.WaitHot{
 		Parcel: s.Message.Parcel,
 		JetID:  jet.Result.Jet,
 	})
@@ -65,7 +66,7 @@ func (s *WaitJet) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 	if hot.Res.Timeout {
-		rep := &ReturnReply{
+		rep := &proc.ReturnReply{
 			ReplyTo: s.Message.ReplyTo,
 			Reply:   &reply.Error{ErrType: reply.ErrHotDataTimeout},
 		}

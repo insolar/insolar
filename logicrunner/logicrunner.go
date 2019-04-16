@@ -623,9 +623,9 @@ func (lr *LogicRunner) executeOrValidate(
 	seq := es.Current.Sequence
 
 	go func() {
-		inslogger.FromContext(ctx).Debugf("Sending Method Results for ", request)
+		inslogger.FromContext(ctx).Debugf("Sending Method Results for %#v", request)
 
-		_, err := insolar.MessageBusFromContext(ctx, lr.MessageBus).Send(
+		_, err := lr.MessageBus.Send(
 			ctx,
 			&message.ReturnResults{
 				Caller:   lr.NodeNetwork.GetOrigin().ID(),
@@ -895,8 +895,6 @@ func (lr *LogicRunner) getDescriptorsByPrototypeRef(
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't get code reference")
 	}
-	// we don't want to record GetCode messages because of cache
-	ctx = insolar.ContextWithMessageBus(ctx, lr.MessageBus)
 	codeDesc, err := lr.ArtifactManager.GetCode(ctx, *codeRef)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't get code descriptor")

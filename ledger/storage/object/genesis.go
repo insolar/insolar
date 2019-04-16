@@ -17,14 +17,19 @@
 package object
 
 import (
-	"io"
-
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 )
 
 // GenesisRecord is the first record created on storage. It's used to link root objects to it.
+// this type is a wrapper for insolar.GenesisRecord, which makes records storage work for it.
 type GenesisRecord struct {
+	record.VirtualRecord
 }
+
+// methods below implements State interface (required in some places of logic runner code)
+
+var _ State = &GenesisRecord{}
 
 // PrevStateID returns previous state id.
 func (r *GenesisRecord) PrevStateID() *insolar.ID {
@@ -34,11 +39,6 @@ func (r *GenesisRecord) PrevStateID() *insolar.ID {
 // StateID returns state id.
 func (r *GenesisRecord) ID() StateID {
 	return StateActivation
-}
-
-// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-func (r *GenesisRecord) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(EncodeVirtual(r))
 }
 
 // GetMemory returns state memory.
@@ -54,16 +54,4 @@ func (*GenesisRecord) GetImage() *insolar.Reference {
 // GetIsPrototype returns state code.
 func (*GenesisRecord) GetIsPrototype() bool {
 	return false
-}
-
-// ChildRecord is a child activation record. Its used for children iterating.
-type ChildRecord struct {
-	PrevChild *insolar.ID
-
-	Ref insolar.Reference // Reference to the child's head.
-}
-
-// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-func (r *ChildRecord) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(EncodeVirtual(r))
 }
