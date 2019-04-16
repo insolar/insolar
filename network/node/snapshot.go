@@ -100,6 +100,9 @@ func (s *Snapshot) Equal(s2 *Snapshot) bool {
 	}
 
 	for t, list := range s.nodeList {
+		if len(list) != len(s2.nodeList[t]) {
+			return false
+		}
 		for i, n := range list {
 			n2 := s2.nodeList[t][i]
 			if !reflect.DeepEqual(n, n2) {

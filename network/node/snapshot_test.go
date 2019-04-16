@@ -84,3 +84,61 @@ func TestSnapshotEncodeDecode(t *testing.T) {
 	assert.NoError(t, err)
 	assert.True(t, s.Equal(&s2))
 }
+
+func TestSnapshot_Decode(t *testing.T) {
+	buff := []byte("hohoho i'm so broken")
+	s := Snapshot{}
+	assert.Error(t, s.Decode(buff))
+}
+
+func TestSnapshot_Copy(t *testing.T) {
+	snapshot := NewSnapshot(insolar.FirstPulseNumber, nil)
+	mutator := NewMutator(snapshot)
+	node1 := newMutableNode(insolar.Reference{22}, insolar.StaticRoleVirtual, nil, insolar.NodeReady, "127.0.0.1:0", "")
+	mutator.AddWorkingNode(node1)
+
+	snapshot2 := snapshot.Copy()
+	accessor := NewAccessor(snapshot2)
+
+	node2 := newMutableNode(insolar.Reference{11}, insolar.StaticRoleLightMaterial, nil, insolar.NodeReady, "127.0.0.1:0", "")
+	mutator.AddWorkingNode(node2)
+
+	// mutator and accessor observe different copies of snapshot and don't affect each other
+	assert.Equal(t, 2, len(mutator.GetActiveNodes()))
+	assert.Equal(t, 1, len(accessor.GetActiveNodes()))
+	assert.False(t, snapshot.Equal(snapshot2))
+}
+
+func TestSnapshot_GetPulse(t *testing.T) {
+	snapshot := NewSnapshot(10, nil)
+	assert.EqualValues(t, 10, snapshot.GetPulse())
+	snapshot = NewSnapshot(152, nil)
+	assert.EqualValues(t, 152, snapshot.GetPulse())
+}
+
+func TestSnapshot_Equal(t *testing.T) {
+	snapshot := NewSnapshot(10, nil)
+	snapshot2 := NewSnapshot(11, nil)
+	assert.False(t, snapshot.Equal(snapshot2))
+
+	snapshot2.pulse = insolar.PulseNumber(10)
+
+	genNodeCopy := func(reference insolar.Reference) insolar.NetworkNode {
+		return newMutableNode(reference, insolar.StaticRoleLightMaterial,
+			nil, insolar.NodeReady, "127.0.0.1:0", "")
+	}
+
+	node1 := genNodeCopy(insolar.Reference{11})
+	node2 := genNodeCopy(insolar.Reference{22})
+	node3 := genNodeCopy(insolar.Reference{22})
+
+	mutator := NewMutator(snapshot)
+	mutator.AddWorkingNode(node1)
+	mutator.AddWorkingNode(node2)
+
+	mutator2 := NewMutator(snapshot2)
+	mutator2.AddWorkingNode(node1)
+	mutator2.AddWorkingNode(node3)
+
+	assert.True(t, snapshot.Equal(snapshot2))
+}
