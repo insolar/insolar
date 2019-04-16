@@ -56,7 +56,7 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 	return nil
 }
 
-func (p *GetCode) handle(ctx context.Context /*, parcel insolar.Parcel*/) (insolar.Reply, error) {
+func (p *GetCode) handle(ctx context.Context) (insolar.Reply, error) {
 	parcel := p.Message.Parcel
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, *p.Code.Record())
 	if err == object.ErrNotFound {
@@ -74,8 +74,7 @@ func (p *GetCode) handle(ctx context.Context /*, parcel insolar.Parcel*/) (insol
 	virtRec := rec.Record
 	codeRec, ok := virtRec.(*object.CodeRecord)
 	if !ok {
-		// return nil, errors.Wrap(artifactmanager.ErrInvalidRef, "failed to retrieve code record")
-		return nil, errors.Wrap(errors.New("invalid reference"), "failed to retrieve code record")
+		return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
 	}
 
 	code, err := p.Dep.Accessor.ForID(ctx, *codeRec.Code)
