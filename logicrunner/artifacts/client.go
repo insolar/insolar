@@ -139,7 +139,6 @@ func (m *client) GetCode(
 	switch rep := genericReact.(type) {
 	case *reply.Code:
 		desc := codeDescriptor{
-			ctx:         ctx,
 			ref:         code,
 			machineType: rep.MachineType,
 			code:        rep.Code,
@@ -199,8 +198,6 @@ func (m *client) GetObject(
 	switch r := genericReact.(type) {
 	case *reply.Object:
 		desc = &objectDescriptor{
-			ctx:          ctx,
-			am:           m,
 			head:         r.Head,
 			state:        r.State,
 			prototype:    r.Prototype,
@@ -760,8 +757,6 @@ func (m *client) activateObject(
 	}
 
 	return &objectDescriptor{
-		ctx:          ctx,
-		am:           m,
 		head:         o.Head,
 		state:        o.State,
 		prototype:    o.Prototype,
@@ -816,8 +811,6 @@ func (m *client) updateObject(
 	}
 
 	return &objectDescriptor{
-		ctx:          ctx,
-		am:           m,
 		head:         o.Head,
 		state:        o.State,
 		prototype:    o.Prototype,
