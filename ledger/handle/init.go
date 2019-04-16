@@ -47,7 +47,7 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetCode:
 		h := &GetCode{
-			dep:     s.dep,
+			dep:     s.Dep,
 			Message: s.Message,
 		}
 		return f.Handle(ctx, h.Present)
