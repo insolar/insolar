@@ -27,9 +27,11 @@ import (
 )
 
 const InnerMsgTopic = "InnerMsg"
+const MessageTypeField = "Type"
 
 type Dependencies struct {
 	Publisher message.Publisher
+	lr        *LogicRunner
 }
 
 type Init struct {
@@ -41,7 +43,11 @@ type Init struct {
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	switch s.Message.Parcel.Message().Type() {
 	case insolar.TypeCallMethod:
-		return nil
+		h := &Execute{
+			dep:     s.dep,
+			Message: s.Message,
+		}
+		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s", s.Message.Parcel.Message().Type().String())
 	}
@@ -50,11 +56,23 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 type InnerInit struct {
 	dep *Dependencies
 
-	Message message.Message
+	Message *message.Message
 }
 
 func (s *InnerInit) Present(ctx context.Context, f flow.Flow) error {
-	switch s.Message.Metadata.Get("Type") {
+	switch s.Message.Metadata.Get(MessageTypeField) {
+	case "ProcessExecutionQueue":
+		h := ProcessExecutionQueue{
+			dep:     s.dep,
+			Message: s.Message,
+		}
+		return f.Handle(ctx, h.Present)
+	case "getLedgerPendingRequest":
+		h := GetLedgerPendingRequest{
+			dep:     s.dep,
+			Message: s.Message,
+		}
+		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s", s.Message.Metadata.Get("Type"))
 	}

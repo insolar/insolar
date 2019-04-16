@@ -136,6 +136,14 @@ func (st *ObjectState) WrapError(err error, message string) error {
 	}
 }
 
+func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
+	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
+	wmMsg.SetContext(ctx)
+	wmMsg.Metadata.Set(MessageTypeField, msgType)
+
+	return wmMsg
+}
+
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	MessageBus                 insolar.MessageBus                 `inject:""`
@@ -187,6 +195,7 @@ func initHandlers(lr *LogicRunner) error {
 
 	dep := &Dependencies{
 		Publisher: pubSub,
+		lr:        lr,
 	}
 
 	lr.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
@@ -200,7 +209,7 @@ func initHandlers(lr *LogicRunner) error {
 		innerMsg := msg.WatermillMsg
 		return (&InnerInit{
 			dep:     dep,
-			Message: *innerMsg,
+			Message: innerMsg,
 		}).Present
 	})
 
@@ -257,7 +266,7 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) RegisterHandlers() {
-	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.Execute)
+	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.FlowHandler.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeCallConstructor, lr.Execute)
 	lr.MessageBus.MustRegister(insolar.TypeExecutorResults, lr.HandleExecutorResultsMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
@@ -704,6 +713,23 @@ func (lr *LogicRunner) executeOrValidate(
 	}()
 
 	return re, err
+}
+
+func (lr *LogicRunner) getExecStateFromRef(ctx context.Context, rawRef []byte) *ExecutionState {
+	ref := Ref{}.FromSlice(rawRef)
+
+	// TODO: we should stop processing here if 'ref' doesn't exist. Made UpsertObjectState return error if so?
+	os := lr.UpsertObjectState(ref)
+
+	os.Lock()
+	if os.ExecutionState == nil {
+		inslogger.FromContext(ctx).Warn("[ ProcessExecutionQueue ] got not existing reference. It's strange")
+		return nil
+	}
+	es := os.ExecutionState
+	os.Unlock()
+
+	return es
 }
 
 // never call this under es.Lock(), this leads to deadlock

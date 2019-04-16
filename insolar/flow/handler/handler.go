@@ -31,7 +31,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-const handleTimeout = 10 * time.Second
+const handleTimeout = 10000 * time.Second
 
 type Handler struct {
 	handles struct {
@@ -84,8 +84,8 @@ func (h *Handler) InnerSubscriber(watermillMsg *message.Message) ([]*message.Mes
 	msg := bus.Message{
 		WatermillMsg: watermillMsg,
 	}
-	ctx := context.Background()
-	ctx = inslogger.ContextWithTrace(ctx, watermillMsg.Metadata.Get("TraceID"))
+
+	ctx := watermillMsg.Context()
 	logger := inslogger.FromContext(ctx)
 	go func() {
 		f := thread.NewThread(msg, h.controller)
