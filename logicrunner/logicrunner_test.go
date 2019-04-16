@@ -59,7 +59,6 @@ import (
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 )
@@ -138,7 +137,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 
 	mb := testmessagebus.NewTestMessageBus(s.T())
 
-	nw := network.GetTestNetwork()
+	nw := testutils.GetTestNetwork(s.T())
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, db, cleaner := artifacts.TmpLedger(
 		s.T(),

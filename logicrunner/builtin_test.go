@@ -36,7 +36,6 @@ import (
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 	"github.com/stretchr/testify/assert"
@@ -99,7 +98,7 @@ func TestBareHelloworld(t *testing.T) {
 		true,
 	)
 
-	nw := network.GetTestNetwork()
+	nw := testutils.GetTestNetwork(t)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	cm := &component.Manager{}
