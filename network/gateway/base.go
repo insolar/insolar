@@ -46,79 +46,48 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
-//
 
-package networkcoordinator
+package gateway
 
 import (
 	"context"
 
-	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/log" // TODO remove before merge
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network"
 )
 
-// NetworkCoordinator encapsulates logic of network configuration
-type NetworkCoordinator struct {
-	CertificateManager insolar.CertificateManager  `inject:""`
-	ContractRequester  insolar.ContractRequester   `inject:""`
-	MessageBus         insolar.MessageBus          `inject:""`
-	Gatewayer          network.Gatewayer           `inject:""`
-	CS                 insolar.CryptographyService `inject:""`
+// Base is abstract class for gateways
 
-	realCoordinator Coordinator
-	zeroCoordinator Coordinator
-	isStarted       bool
+type Base struct {
+	Network            network.Gatewayer
+	GIL                insolar.GlobalInsolarLock
+	SwitcherWorkAround insolar.SwitcherWorkAround // nodekeeper
 }
 
-// New creates new NetworkCoordinator
-func New() (*NetworkCoordinator, error) {
-	return &NetworkCoordinator{}, nil
-}
-
-// Start implements interface of Component
-func (nc *NetworkCoordinator) Start(ctx context.Context) error {
-	nc.MessageBus.MustRegister(insolar.TypeNodeSignRequest, nc.signCertHandler)
-
-	nc.zeroCoordinator = newZeroNetworkCoordinator()
-	nc.realCoordinator = newRealNetworkCoordinator(
-		nc.CertificateManager,
-		nc.ContractRequester,
-		nc.MessageBus,
-		nc.CS,
-	)
-	nc.isStarted = true
-	return nil
-}
-
-func (nc *NetworkCoordinator) getCoordinator() Coordinator {
-	if nc.Gatewayer.Gateway().GetState() == insolar.CompleteNetworkState {
-		return nc.realCoordinator
+// NewGateway creates new gateway on top of existing
+func (g *Base) NewGateway(state insolar.NetworkState) network.Gateway {
+	log.Warnf("NewGateway %s", state.String())
+	switch state {
+	case insolar.NoNetworkState:
+		panic("Do not reinit network with alive gateway")
+	case insolar.VoidNetworkState:
+		return NewVoid(g)
+	case insolar.JetlessNetworkState:
+		return NewJetless(g)
+	case insolar.AuthorizationNetworkState:
+		return NewAuthorisation(g)
+	case insolar.CompleteNetworkState:
+		return NewComplete(g)
 	}
-	return nc.zeroCoordinator
+	panic("Try to switch network to unknown state. Memory of process is inconsistent.")
 }
 
-// IsStarted returns true if component was started and false in other way
-func (nc *NetworkCoordinator) IsStarted() bool {
-	return nc.isStarted
-}
-
-// GetCert method returns node certificate by requesting sign from discovery nodes
-func (nc *NetworkCoordinator) GetCert(ctx context.Context, registeredNodeRef *insolar.Reference) (insolar.Certificate, error) {
-	return nc.getCoordinator().GetCert(ctx, registeredNodeRef)
-}
-
-// ValidateCert validates node certificate
-func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
-	return nc.CertificateManager.VerifyAuthorizationCertificate(certificate)
-}
-
-// signCertHandler is MsgBus handler that signs certificate for some node with node own key
-func (nc *NetworkCoordinator) signCertHandler(ctx context.Context, p insolar.Parcel) (insolar.Reply, error) {
-	return nc.getCoordinator().signCertHandler(ctx, p)
-}
-
-// SetPulse writes pulse data on local storage
-func (nc *NetworkCoordinator) SetPulse(ctx context.Context, pulse insolar.Pulse) error {
-	return nc.getCoordinator().SetPulse(ctx, pulse)
+func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {
+	if g.SwitcherWorkAround.IsBootstrapped() {
+		g.Network.SetGateway(g.Network.Gateway().NewGateway(insolar.CompleteNetworkState))
+		g.Network.Gateway().Run(ctx)
+	}
+	return nil
 }

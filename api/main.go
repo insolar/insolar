@@ -47,8 +47,8 @@ type Runner struct {
 	ContractRequester   insolar.ContractRequester   `inject:""`
 	NetworkCoordinator  insolar.NetworkCoordinator  `inject:""`
 	GenesisDataProvider insolar.GenesisDataProvider `inject:""`
-	NetworkSwitcher     insolar.NetworkSwitcher     `inject:""`
 	NodeNetwork         insolar.NodeNetwork         `inject:""`
+	ServiceNetwork      insolar.Network             `inject:""`
 	PulseAccessor       pulse.Accessor              `inject:""`
 	ArtifactManager     artifacts.Client            `inject:""`
 	server              *http.Server

@@ -48,77 +48,36 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package networkcoordinator
+package gateway
 
 import (
 	"context"
+	"time"
 
-	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/metrics"
 
 	"github.com/insolar/insolar/insolar"
 )
 
-// NetworkCoordinator encapsulates logic of network configuration
-type NetworkCoordinator struct {
-	CertificateManager insolar.CertificateManager  `inject:""`
-	ContractRequester  insolar.ContractRequester   `inject:""`
-	MessageBus         insolar.MessageBus          `inject:""`
-	Gatewayer          network.Gatewayer           `inject:""`
-	CS                 insolar.CryptographyService `inject:""`
-
-	realCoordinator Coordinator
-	zeroCoordinator Coordinator
-	isStarted       bool
+func NewComplete(b *Base) *Complete {
+	return &Complete{Base: b}
 }
 
-// New creates new NetworkCoordinator
-func New() (*NetworkCoordinator, error) {
-	return &NetworkCoordinator{}, nil
+type Complete struct {
+	*Base
 }
 
-// Start implements interface of Component
-func (nc *NetworkCoordinator) Start(ctx context.Context) error {
-	nc.MessageBus.MustRegister(insolar.TypeNodeSignRequest, nc.signCertHandler)
+func (g *Complete) Run(ctx context.Context) {
+	g.GIL.Release(ctx)
+	metrics.NetworkComplete.Set(float64(time.Now().Unix()))
+}
 
-	nc.zeroCoordinator = newZeroNetworkCoordinator()
-	nc.realCoordinator = newRealNetworkCoordinator(
-		nc.CertificateManager,
-		nc.ContractRequester,
-		nc.MessageBus,
-		nc.CS,
-	)
-	nc.isStarted = true
+func (g *Complete) GetState() insolar.NetworkState {
+	return insolar.CompleteNetworkState
+}
+
+func (g *Complete) OnPulse(ctx context.Context, pu insolar.Pulse) error {
+	inslogger.FromContext(ctx).Debugf("Gateway.Complete: pulse happens %d", pu.PulseNumber)
 	return nil
-}
-
-func (nc *NetworkCoordinator) getCoordinator() Coordinator {
-	if nc.Gatewayer.Gateway().GetState() == insolar.CompleteNetworkState {
-		return nc.realCoordinator
-	}
-	return nc.zeroCoordinator
-}
-
-// IsStarted returns true if component was started and false in other way
-func (nc *NetworkCoordinator) IsStarted() bool {
-	return nc.isStarted
-}
-
-// GetCert method returns node certificate by requesting sign from discovery nodes
-func (nc *NetworkCoordinator) GetCert(ctx context.Context, registeredNodeRef *insolar.Reference) (insolar.Certificate, error) {
-	return nc.getCoordinator().GetCert(ctx, registeredNodeRef)
-}
-
-// ValidateCert validates node certificate
-func (nc *NetworkCoordinator) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
-	return nc.CertificateManager.VerifyAuthorizationCertificate(certificate)
-}
-
-// signCertHandler is MsgBus handler that signs certificate for some node with node own key
-func (nc *NetworkCoordinator) signCertHandler(ctx context.Context, p insolar.Parcel) (insolar.Reply, error) {
-	return nc.getCoordinator().signCertHandler(ctx, p)
-}
-
-// SetPulse writes pulse data on local storage
-func (nc *NetworkCoordinator) SetPulse(ctx context.Context, pulse insolar.Pulse) error {
-	return nc.getCoordinator().SetPulse(ctx, pulse)
 }
