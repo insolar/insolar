@@ -64,7 +64,7 @@ func NewQuicTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress stri
 	return transport, nil
 }
 
-func (t *quicTransport) send(recvAddress string, data []byte) error {
+func (t *quicTransport) send(_ context.Context, recvAddress string, data []byte) error {
 	conn, ok := t.connections[recvAddress]
 	var stream quic.Stream
 	var err error

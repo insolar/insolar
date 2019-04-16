@@ -71,8 +71,10 @@ func newUDPTransport(conn net.PacketConn, proxy relay.Proxy, publicAddress strin
 	return transport, nil
 }
 
-func (t *udpTransport) send(recvAddress string, data []byte) error {
-	log.Debug("Sending PURE_UDP request")
+func (t *udpTransport) send(ctx context.Context, recvAddress string, data []byte) error {
+	logger := inslogger.FromContext(ctx)
+
+	logger.Debug("Sending PURE_UDP request")
 	if len(data) > udpMaxPacketSize {
 		return errors.New(fmt.Sprintf("udpTransport.send: too big input data. Maximum: %d. Current: %d",
 			udpMaxPacketSize, len(data)))
@@ -91,7 +93,7 @@ func (t *udpTransport) send(recvAddress string, data []byte) error {
 	}
 	defer utils.CloseVerbose(udpConn)
 
-	log.Debug("udpTransport.send: len = ", len(data))
+	logger.Debug("udpTransport.send: len = ", len(data))
 	n, err := udpConn.Write(data)
 	stats.Record(context.Background(), consensus.SentSize.M(int64(n)))
 	return errors.Wrap(err, "Failed to write data")
