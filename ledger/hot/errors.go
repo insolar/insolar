@@ -14,29 +14,10 @@
 // limitations under the License.
 //
 
-package insolar
+package hot
 
-import (
-	"io"
+import "github.com/pkg/errors"
+
+var (
+	ErrWaiterNotLocked = errors.New("unlocked waiter unlock attempt")
 )
-
-type genesisBinary []byte
-
-// GenesisRecord is initial chain record.
-var GenesisRecord genesisBinary = []byte{0xAC}
-
-// WriteHashData implements record.VirtualRecord.
-func (r genesisBinary) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(r)
-}
-
-// ID returns genesis record id.
-func (r genesisBinary) ID() ID {
-	return *NewID(GenesisPulse.PulseNumber, r)
-}
-
-// Ref returns genesis record reference.
-func (r genesisBinary) Ref() Reference {
-	id := r.ID()
-	return *NewReference(id, id)
-}

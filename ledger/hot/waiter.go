@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package artifactmanager
+package hot
 
 import (
 	"context"
@@ -24,22 +24,19 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage.HotDataWaiter -o ./ -s _mock.go
-
-// HotDataWaiter provides waiting system for a specific jet
-// We tend to think, that it will be used for waiting hot-data in handler
-// Also, because of the some jet pitfalls, we need to have an instrument
-// to handler edge-cases from pulse manager.
-// The main case is when a light material executes a jet for more then 1 pulse
-// If it happens, we need to stop waiters from raising and waiting
-type HotDataWaiter interface {
+// JetWaiter provides method for locking on jet id.
+type JetWaiter interface {
 	Wait(ctx context.Context, jetID insolar.ID) error
+}
+
+// JetReleaser provides methods for releasing jet waiters.
+type JetReleaser interface {
 	Unlock(ctx context.Context, jetID insolar.ID) error
 	ThrowTimeout(ctx context.Context)
 }
 
-// HotDataWaiterConcrete is an implementation of HotDataWaiter
-type HotDataWaiterConcrete struct {
+// ChannelWaiter implements methods for locking and unlocking a certain jet id.
+type ChannelWaiter struct {
 	lock    sync.Mutex
 	waiters map[insolar.ID]waiter
 	timeout chan struct{}
@@ -56,15 +53,15 @@ func (w waiter) isClosed() bool {
 	return false
 }
 
-// NewHotDataWaiterConcrete is a constructor
-func NewHotDataWaiterConcrete() *HotDataWaiterConcrete {
-	return &HotDataWaiterConcrete{
+// NewChannelWaiter creates new waiter instance.
+func NewChannelWaiter() *ChannelWaiter {
+	return &ChannelWaiter{
 		waiters: map[insolar.ID]waiter{},
 		timeout: make(chan struct{}),
 	}
 }
 
-func (w *HotDataWaiterConcrete) waiterForJet(jetID insolar.ID) waiter {
+func (w *ChannelWaiter) waiterForJet(jetID insolar.ID) waiter {
 	if _, ok := w.waiters[jetID]; !ok {
 		w.waiters[jetID] = make(waiter)
 	}
@@ -74,7 +71,7 @@ func (w *HotDataWaiterConcrete) waiterForJet(jetID insolar.ID) waiter {
 // Wait waits for the raising one of two channels.
 // If hotDataChannel or timeoutChannel was raised, the method returns error
 // Either nil or ErrHotDataTimeout
-func (w *HotDataWaiterConcrete) Wait(ctx context.Context, jetID insolar.ID) error {
+func (w *ChannelWaiter) Wait(ctx context.Context, jetID insolar.ID) error {
 	w.lock.Lock()
 	waiter := w.waiterForJet(jetID)
 	timeout := w.timeout
@@ -89,7 +86,7 @@ func (w *HotDataWaiterConcrete) Wait(ctx context.Context, jetID insolar.ID) erro
 }
 
 // Unlock raises hotDataChannel
-func (w *HotDataWaiterConcrete) Unlock(ctx context.Context, jetID insolar.ID) error {
+func (w *ChannelWaiter) Unlock(ctx context.Context, jetID insolar.ID) error {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 
@@ -102,7 +99,7 @@ func (w *HotDataWaiterConcrete) Unlock(ctx context.Context, jetID insolar.ID) er
 }
 
 // ThrowTimeout raises all timeoutChannel
-func (w *HotDataWaiterConcrete) ThrowTimeout(ctx context.Context) {
+func (w *ChannelWaiter) ThrowTimeout(ctx context.Context) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 

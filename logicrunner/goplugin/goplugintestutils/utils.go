@@ -180,9 +180,6 @@ func NewTestArtifactManager() *TestArtifactManager {
 	}
 }
 
-// GenesisRef implementation for tests
-func (t *TestArtifactManager) GenesisRef() *insolar.Reference { return &insolar.Reference{} }
-
 // RegisterRequest implementation for tests
 func (t *TestArtifactManager) RegisterRequest(ctx context.Context, obj insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error) {
 	nonce := testutils.RandomID()
@@ -399,11 +396,11 @@ func AMPublishCode(
 	codeRef.SetRecord(*codeID)
 
 	nonce := testutils.RandomRef()
-	protoID, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}})
+	protoID, err := am.RegisterRequest(ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}})
 	assert.NoError(t, err)
 	protoRef = &insolar.Reference{}
 	protoRef.SetRecord(*protoID)
-	_, err = am.ActivatePrototype(ctx, domain, *protoRef, *am.GenesisRef(), *codeRef, nil)
+	_, err = am.ActivatePrototype(ctx, domain, *protoRef, insolar.GenesisRecord.Ref(), *codeRef, nil)
 	assert.NoError(t, err, "create template for contract data")
 
 	return typeRef, codeRef, protoRef, err
@@ -452,7 +449,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 	for name := range contracts {
 		nonce := testutils.RandomRef()
 		protoID, err := cb.ArtifactManager.RegisterRequest(
-			ctx, *cb.ArtifactManager.GenesisRef(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
+			ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
@@ -495,7 +492,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		}
 		nonce := testutils.RandomRef()
 		codeReq, err := cb.ArtifactManager.RegisterRequest(
-			ctx, *cb.ArtifactManager.GenesisRef(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
+			ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
@@ -520,7 +517,7 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 			ctx,
 			insolar.Reference{},
 			*cb.Prototypes[name],
-			*cb.ArtifactManager.GenesisRef(), // FIXME: Only bootstrap can do this!
+			insolar.GenesisRecord.Ref(), // FIXME: Only bootstrap can do this!
 			*codeRef,
 			nil,
 		)

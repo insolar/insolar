@@ -33,8 +33,6 @@ import (
 
 // BaseRecord provides methods for genesis base record manipulation.
 type BaseRecord struct {
-	PCS insolar.PlatformCryptographyScheme
-
 	DB             store.DB
 	DropModifier   drop.Modifier
 	PulseAppender  pulse.Appender
@@ -51,12 +49,12 @@ func (Key) ID() []byte {
 }
 
 func (Key) Scope() store.Scope {
-	return store.ScopeSystem
+	return store.ScopeGenesis
 }
 
 // CreateIfNeeded creates new base genesis record if needed.
 // Returns reference of genesis record and flag if base record have been created.
-func (gi *BaseRecord) CreateIfNeeded(ctx context.Context) (*insolar.Reference, bool, error) {
+func (gi *BaseRecord) CreateIfNeeded(ctx context.Context) (bool, error) {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("start storage bootstrap")
 
@@ -70,7 +68,7 @@ func (gi *BaseRecord) CreateIfNeeded(ctx context.Context) (*insolar.Reference, b
 		return &genesisRef, nil
 	}
 
-	createGenesisRecord := func() (*insolar.Reference, error) {
+	createGenesisRecord := func() error {
 		err := gi.PulseAppender.Append(
 			ctx,
 			insolar.Pulse{
@@ -79,67 +77,66 @@ func (gi *BaseRecord) CreateIfNeeded(ctx context.Context) (*insolar.Reference, b
 			},
 		)
 		if err != nil {
-			return nil, errors.Wrap(err, "fail to set genesis pulse")
+			return errors.Wrap(err, "fail to set genesis pulse")
 		}
 		// Add initial drop
 		err = gi.DropModifier.Set(ctx, drop.Drop{JetID: insolar.ZeroJetID})
 		if err != nil {
-			return nil, errors.Wrap(err, "fail to set initial drop")
+			return errors.Wrap(err, "fail to set initial drop")
 		}
 
 		lastPulse, err := gi.PulseAccessor.Latest(ctx)
 		if err != nil {
-			return nil, errors.Wrap(err, "fail to get last pulse")
+			return errors.Wrap(err, "fail to get last pulse")
 		}
 		if lastPulse.PulseNumber != insolar.GenesisPulse.PulseNumber {
-			return nil, fmt.Errorf(
+			return fmt.Errorf(
 				"last pulse number %v is not equal to genesis special value %v",
 				lastPulse.PulseNumber,
 				insolar.GenesisPulse.PulseNumber,
 			)
 		}
 
-		virtRec := &object.GenesisRecord{}
-		genesisID := object.NewRecordIDFromRecord(gi.PCS, lastPulse.PulseNumber, virtRec)
+		genesisID := insolar.GenesisRecord.ID()
 		rec := record.MaterialRecord{
-			Record: virtRec,
-			JetID:  insolar.ZeroJetID,
+			Record: &object.GenesisRecord{
+				VirtualRecord: insolar.GenesisRecord,
+			},
+			JetID: insolar.ZeroJetID,
 		}
-		err = gi.RecordModifier.Set(ctx, *genesisID, rec)
+		err = gi.RecordModifier.Set(ctx, genesisID, rec)
 		if err != nil {
-			return nil, errors.Wrap(err, "can't save genesis record into storage")
+			return errors.Wrap(err, "can't save genesis record into storage")
 		}
 
 		err = gi.IndexModifier.Set(
 			ctx,
-			*genesisID,
+			genesisID,
 			object.Lifeline{
-				LatestState:         genesisID,
-				LatestStateApproved: genesisID,
+				LatestState:         &genesisID,
+				LatestStateApproved: &genesisID,
 				JetID:               insolar.ZeroJetID,
 			},
 		)
 		if err != nil {
-			return nil, errors.Wrap(err, "fail to set genesis index")
+			return errors.Wrap(err, "fail to set genesis index")
 		}
 
-		genesisRef := insolar.NewReference(*genesisID, *genesisID)
-		return genesisRef, gi.DB.Set(Key{}, genesisRef[:])
+		return gi.DB.Set(Key{}, insolar.GenesisRecord.Ref().Bytes())
 	}
 
-	var err error
-	genesisRef, err := getGenesisRef()
+	_, err := getGenesisRef()
 	if err == nil {
-		return genesisRef, false, nil
+		return false, nil
 	}
 	if err != store.ErrNotFound {
-		return nil, false, errors.Wrap(err, "genesis bootstrap failed")
+		return false, errors.Wrap(err, "genesis bootstrap failed")
 	}
 
-	genesisRef, err = createGenesisRecord()
+	err = createGenesisRecord()
 	if err != nil {
-		return nil, true, err
+		return true, err
 	}
 
-	return genesisRef, true, nil
+	return true, nil
 }
