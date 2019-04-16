@@ -28,6 +28,7 @@ type HealthChecker struct {
 	NodeNetwork        insolar.NodeNetwork
 }
 
+// NewHealthChecker creates new HealthChecker.
 func NewHealthChecker(cm insolar.CertificateManager, nn insolar.NodeNetwork) *HealthChecker {
 	return &HealthChecker{CertificateManager: cm, NodeNetwork: nn}
 }
