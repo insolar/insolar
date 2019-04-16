@@ -48,7 +48,7 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package transport
+package hostnetwork
 
 import (
 	"context"
@@ -56,49 +56,84 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/network/hostnetwork/future"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/pool"
 )
 
-// DatagramHandler interface provides callback method to process received datagrams
-type DatagramHandler interface {
-	HandleDatagram(address string, buf []byte)
+// RequestHandler is callback function for request handling
+type RequestHandler func(p *packet.Packet)
+
+// StreamHandler parses packets from data stream and calls request handler or response handler
+type StreamHandler struct {
+	requestHandler  RequestHandler
+	responseHandler future.PacketHandler
 }
 
-// DatagramTransport interface provides methods to send and receive datagrams
-type DatagramTransport interface {
-	component.Starter
-	component.Stopper
-
-	SendDatagram(ctx context.Context, address string, data []byte) error
-	SetDatagramHandler(DatagramHandler)
-}
-
-// StreamHandler interface provides callback method to process data stream
-type StreamHandler interface {
-	HandleStream(address string, stream io.ReadWriteCloser)
-}
-
-// StreamTransport interface provides methods to send and receive data streams
-type StreamTransport interface {
-	component.Starter
-	component.Stopper
-
-	Dial(ctx context.Context, address string) (io.ReadWriteCloser, error)
-	SetStreamHandler(processor StreamHandler)
-}
-
-// NewDatagramTransport creates new UDP DatagramTransport
-func NewDatagramTransport(cfg configuration.Transport) (DatagramTransport, string, error) {
-	return newUDPTransport(cfg.Address, cfg.FixedPublicAddress)
-}
-
-// NewTransport creates new Network with particular configuration
-func NewTransport(cfg configuration.Transport) (StreamTransport, string, error) {
-	switch cfg.Protocol {
-	case "TCP":
-		return newTCPTransport(cfg.Address, cfg.FixedPublicAddress)
-	default:
-		return nil, "", errors.New("invalid transport configuration")
+// NewStreamHandler creates new StreamHandler
+func NewStreamHandler(requestHandler RequestHandler, responseHandler future.PacketHandler) *StreamHandler {
+	return &StreamHandler{
+		requestHandler:  requestHandler,
+		responseHandler: responseHandler,
 	}
+}
+
+func (s *StreamHandler) HandleStream(address string, reader io.ReadWriteCloser) {
+	for {
+		p, err := packet.DeserializePacket(reader)
+
+		if err != nil {
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
+				log.Warn("[ HandleStream ] Connection closed by peer")
+				return
+			}
+
+			log.Error("[ HandleStream ] Failed to deserialize packet: ", err.Error())
+		} else {
+			ctx, logger := inslogger.WithTraceField(context.Background(), p.TraceID)
+			logger.Debug("[ HandleStream ] Handling packet RequestID = ", p.RequestID)
+
+			if p.IsResponse {
+				go s.responseHandler.Handle(ctx, p)
+			} else {
+				go s.requestHandler(p)
+			}
+		}
+	}
+}
+
+// SendPacket sends packet using connection from pool
+func SendPacket(ctx context.Context, pool pool.ConnectionPool, p *packet.Packet) error {
+	data, err := packet.SerializePacket(p)
+	if err != nil {
+		return errors.Wrap(err, "Failed to serialize packet")
+	}
+
+	conn, err := pool.GetConnection(ctx, p.Receiver)
+	if err != nil {
+		return errors.Wrap(err, "Failed to get connection")
+	}
+
+	n, err := conn.Write(data)
+	if err != nil {
+		// retry
+		//log.Warn("=== Before Retry")
+		conn.Close()
+		//t.pool.CloseConnection(ctx, address)
+		//conn, err = t.pool.GetConnection(ctx, address)
+		conn, err := pool.GetConnection(ctx, p.Receiver)
+
+		if err != nil {
+			return errors.Wrap(err, "[ SendBuffer ] Failed to get connection")
+		}
+		n, err = conn.Write(data)
+	}
+	if err == nil {
+		metrics.NetworkSentSize.Add(float64(n))
+		return nil
+	}
+	return errors.Wrap(err, "[ send ] Failed to write data")
 }

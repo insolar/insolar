@@ -52,8 +52,6 @@ package hostnetwork
 
 import (
 	"context"
-	"io"
-	"sync/atomic"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -102,7 +100,8 @@ func NewHostNetwork(conf configuration.Configuration, nodeRef string) (network.H
 		pool:              pool.NewConnectionPool(tp),
 	}
 
-	result.transport.SetStreamHandler(result) // TODO: ugly
+	handler := NewStreamHandler(result.handleRequest, result.responseHandler)
+	result.transport.SetStreamHandler(handler)
 
 	return result, nil
 }
@@ -110,7 +109,7 @@ func NewHostNetwork(conf configuration.Configuration, nodeRef string) (network.H
 type hostNetwork struct {
 	Resolver network.RoutingTable `inject:""`
 
-	started           uint32
+	//started           uint32
 	transport         transport.StreamTransport
 	origin            *host.Host
 	sequenceGenerator sequence.Generator
@@ -122,9 +121,9 @@ type hostNetwork struct {
 
 // Start start listening to network requests, should be started in goroutine.
 func (hn *hostNetwork) Start(ctx context.Context) error {
-	if !atomic.CompareAndSwapUint32(&hn.started, 0, 1) {
-		return errors.New("Failed to start transport: double listen initiated")
-	}
+	// if !atomic.CompareAndSwapUint32(&hn.started, 0, 1) {
+	// 	return errors.New("Failed to start transport: double listen initiated")
+	// }
 	if err := hn.transport.Start(ctx); err != nil {
 		return errors.Wrap(err, "Failed to start transport: listen syscall failed")
 	}
@@ -134,12 +133,12 @@ func (hn *hostNetwork) Start(ctx context.Context) error {
 
 // Disconnect stop listening to network requests.
 func (hn *hostNetwork) Stop(ctx context.Context) error {
-	if atomic.CompareAndSwapUint32(&hn.started, 1, 0) {
-		err := hn.transport.Stop(ctx)
-		if err != nil {
-			return errors.Wrap(err, "Failed to stop transport.")
-		}
+	//if atomic.CompareAndSwapUint32(&hn.started, 1, 0) {
+	err := hn.transport.Stop(ctx)
+	if err != nil {
+		return errors.Wrap(err, "Failed to stop transport.")
 	}
+	//}
 	return nil
 }
 
@@ -185,7 +184,10 @@ func (hn *hostNetwork) handleRequest(p *packet.Packet) {
 			p.Type.String(), p.Sender.NodeID.String(), err)
 		return
 	}
-	err = hn.sendResponse(ctx, p.RequestID, response.(*packet.Packet))
+
+	responsePacket := response.(*packet.Packet)
+	responsePacket.RequestID = p.RequestID
+	err = SendPacket(ctx, hn.pool, responsePacket)
 	if err != nil {
 		logger.Errorf("Failed to send response: %s", err.Error())
 	}
@@ -198,7 +200,7 @@ func (hn *hostNetwork) SendRequestToHost(ctx context.Context, request network.Re
 	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d", p.Type, p.Receiver.String(), p.RequestID)
 
 	f := hn.futureManager.Create(p)
-	err := hn.sendPacket(ctx, p)
+	err := SendPacket(ctx, hn.pool, p)
 	if err != nil {
 		f.Cancel()
 		return nil, errors.Wrap(err, "Failed to send transport packet")
@@ -240,66 +242,4 @@ func (hn *hostNetwork) RegisterRequestHandler(t types.PacketType, handler networ
 		return handler(ctx, request)
 	}
 	hn.RegisterPacketHandler(t, f)
-}
-
-func (hn *hostNetwork) sendResponse(ctx context.Context, requestID network.RequestID, p *packet.Packet) error {
-	p.RequestID = requestID
-	inslogger.FromContext(ctx).Debugf("Send %s response to %s with RequestID = %d", p.Type, p.Receiver.String(), p.RequestID)
-	return hn.sendPacket(ctx, p)
-}
-
-func (hn *hostNetwork) sendPacket(ctx context.Context, p *packet.Packet) error {
-	data, err := packet.SerializePacket(p)
-	if err != nil {
-		return errors.Wrap(err, "Failed to serialize packet")
-	}
-
-	conn, err := hn.pool.GetConnection(ctx, p.Receiver)
-	if err != nil {
-		return errors.Wrap(err, "Failed to get connection")
-	}
-
-	n, err := conn.Write(data)
-	if err != nil {
-		// retry
-		log.Warn("=== Before Retry")
-		conn.Close()
-		//t.pool.CloseConnection(ctx, address)
-		//conn, err = t.pool.GetConnection(ctx, address)
-		conn, err := hn.pool.GetConnection(ctx, p.Receiver)
-
-		if err != nil {
-			return errors.Wrap(err, "[ SendBuffer ] Failed to get connection")
-		}
-		n, err = conn.Write(data)
-	}
-	if err == nil {
-		metrics.NetworkSentSize.Add(float64(n))
-		return nil
-	}
-	return errors.Wrap(err, "[ send ] Failed to write data")
-}
-
-func (hn *hostNetwork) HandleStream(address string, reader io.ReadWriteCloser) {
-	for {
-		p, err := packet.DeserializePacket(reader)
-
-		if err != nil {
-			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				log.Warn("[ HandleStream ] Connection closed by peer")
-				return
-			}
-
-			log.Error("[ HandleStream ] Failed to deserialize packet: ", err.Error())
-		} else {
-			ctx, logger := inslogger.WithTraceField(context.Background(), p.TraceID)
-			logger.Debug("[ HandleStream ] Handling packet RequestID = ", p.RequestID)
-
-			if p.IsResponse {
-				go hn.responseHandler.Handle(ctx, p)
-			} else {
-				go hn.handleRequest(p)
-			}
-		}
-	}
 }
