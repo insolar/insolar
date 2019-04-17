@@ -9,7 +9,6 @@ BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
-CERTGEN = certgen
 RECORDBUILDER = protoc-gen-gorecord
 
 ALL_PACKAGES = ./...
@@ -42,7 +41,7 @@ lint: ci-lint
 
 .PHONY: ci-lint
 ci-lint:
-	golangci-lint run $(ALL_PACKAGES)
+	golangci-lint run --new-from-rev=c8f94b7f41b9ae0d2b7ed618d37358b78f479bee
 
 .PHONY: metalint
 metalint:
@@ -62,6 +61,7 @@ install-godep:
 
 .PHONY: install-build-tools
 install-build-tools:
+	go clean -modcache
 	./scripts/build/fetchdeps golang.org/x/tools/cmd/stringer 63e6ed9258fa6cbc90aab9b1eef3e0866e89b874
 	./scripts/build/fetchdeps github.com/gojuno/minimock/cmd/minimock 890c67cef23dd06d694294d4f7b1026ed7bac8e6
 	./scripts/build/fetchdeps github.com/gogo/protobuf/protoc-gen-gogoslick v1.2.1
@@ -85,7 +85,7 @@ ensure:
 	dep ensure
 
 .PHONY: build
-build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) $(CERTGEN)
+build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -127,10 +127,6 @@ $(APIREQUESTER):
 .PHONY: $(HEALTHCHECK)
 $(HEALTHCHECK):
 	go build -o $(BIN_DIR)/$(HEALTHCHECK) -ldflags "${LDFLAGS}" cmd/healthcheck/*.go
-
-.PHONY: $(CERTGEN)
-$(CERTGEN):
-	go build -o $(BIN_DIR)/$(CERTGEN) -ldflags "${LDFLAGS}" cmd/certgen/*.go
 
 .PHONY: functest
 functest:
@@ -197,6 +193,5 @@ $(RECORDBUILDER):
 	go build -o $(BIN_DIR)/$(RECORDBUILDER) -ldflags "${LDFLAGS}" cmd/protobuf-record-gen/*.go
 
 generate-protobuf:
-	# protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
-	# protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
 	PATH="$(BIN_DIR):$(PATH)" protoc -I./vendor -I./ --gorecord_out=./ insolar/record/record.proto

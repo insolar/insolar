@@ -100,15 +100,14 @@ type Bootstrapper interface {
 	ZeroBootstrap(ctx context.Context) (*network.BootstrapResult, error)
 	SetLastPulse(number insolar.PulseNumber)
 	GetLastPulse() insolar.PulseNumber
-	// GetFirstFakePulseTime() time.Time
 }
 
 type bootstrapper struct {
-	Certificate     insolar.Certificate     `inject:""`
-	NodeKeeper      network.NodeKeeper      `inject:""`
-	NetworkSwitcher insolar.NetworkSwitcher `inject:""`
-	Network         network.HostNetwork     `inject:""`
-	PulseAccessor   pulse.Accessor          `inject:""`
+	Certificate   insolar.Certificate `inject:""`
+	NodeKeeper    network.NodeKeeper  `inject:""`
+	Network       network.HostNetwork `inject:""`
+	Gatewayer     network.Gatewayer   `inject:""`
+	PulseAccessor pulse.Accessor      `inject:""`
 
 	options *common.Options
 	pinger  *pinger.Pinger
@@ -125,7 +124,7 @@ type bootstrapper struct {
 
 	firstPulseTime time.Time
 
-	reconnectToNewNetwork func(result network.BootstrapResult)
+	reconnectToNewNetwork func(ctx context.Context, node insolar.DiscoveryNode)
 }
 
 func (bc *bootstrapper) GetFirstFakePulseTime() time.Time {
@@ -603,20 +602,28 @@ func (bc *bootstrapper) startCyclicBootstrap(ctx context.Context) {
 			results = append(results, res)
 		}
 		if len(results) != 0 {
-			networkSize := results[0].NetworkSize
-			index := 0
-			for i := 1; i < len(results); i++ {
-				if results[i].NetworkSize > networkSize {
-					networkSize = results[i].NetworkSize
-					index = i
-				}
-			}
-			if networkSize > len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) {
-				bc.reconnectToNewNetwork(*results[index])
+			index := bc.getLagerNetorkIndex(ctx, results)
+			if index >= 0 {
+				bc.reconnectToNewNetwork(ctx, nodes[index])
 			}
 		}
 		time.Sleep(time.Second * bootstrapTimeout)
 	}
+}
+
+func (bc *bootstrapper) getLagerNetorkIndex(ctx context.Context, results []*network.BootstrapResult) int {
+	networkSize := results[0].NetworkSize
+	index := 0
+	for i := 1; i < len(results); i++ {
+		if results[i].NetworkSize > networkSize {
+			networkSize = results[i].NetworkSize
+			index = i
+		}
+	}
+	if networkSize > len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) {
+		return index
+	}
+	return -1
 }
 
 func (bc *bootstrapper) StopCyclicBootstrap() {
@@ -625,7 +632,7 @@ func (bc *bootstrapper) StopCyclicBootstrap() {
 
 func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Request) (network.Response, error) {
 	var code Code
-	if bc.NetworkSwitcher.GetState() == insolar.CompleteNetworkState {
+	if bc.Gatewayer.Gateway().GetState() == insolar.CompleteNetworkState {
 		code = ReconnectRequired
 	} else {
 		code = Accepted
@@ -698,7 +705,7 @@ func (bc *bootstrapper) getInactivenodes() []insolar.DiscoveryNode {
 	return res
 }
 
-func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(result network.BootstrapResult)) Bootstrapper {
+func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(ctx context.Context, node insolar.DiscoveryNode)) Bootstrapper {
 	return &bootstrapper{
 		options:                 options,
 		bootstrapLock:           make(chan struct{}),

@@ -28,8 +28,11 @@ import (
 	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/ledger"
+	"github.com/insolar/insolar/ledger/jetcoordinator"
+	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
@@ -37,7 +40,6 @@ import (
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
-	"github.com/insolar/insolar/network/state"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/platformpolicy"
@@ -112,7 +114,7 @@ func initComponents(
 ) (*component.Manager, insolar.TerminationHandler, error) {
 	cm := component.Manager{}
 
-	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
+	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
 
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
@@ -141,9 +143,6 @@ func initComponents(
 	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
 	checkError(ctx, err, "failed to start Metrics")
 
-	networkSwitcher, err := state.NewNetworkSwitcher()
-	checkError(ctx, err, "failed to start NetworkSwitcher")
-
 	networkCoordinator, err := networkcoordinator.New()
 	checkError(ctx, err, "failed to start NetworkCoordinator")
 
@@ -166,21 +165,22 @@ func initComponents(
 		pulsemanager.NewPulseManager(),
 	)
 
-	components := ledger.GetLedgerComponents(cfg.Ledger, messageBus, certManager.GetCertificate())
-
-	components = append(components, []interface{}{
+	components := []interface{}{
 		messageBus,
 		contractRequester,
 		logicRunner,
 		artifacts.NewClient(),
+		pulse.NewStorageMem(),
+		jet.NewStore(),
+		jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit),
+		node.NewStorage(),
 		delegationTokenFactory,
 		parcelFactory,
-	}...)
+	}
 	components = append(components, []interface{}{
 		genesisDataProvider,
 		apiRunner,
 		metricsHandler,
-		networkSwitcher,
 		networkCoordinator,
 		cryptographyService,
 		keyProcessor,

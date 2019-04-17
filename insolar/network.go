@@ -34,6 +34,7 @@ type Cascade struct {
 type RemoteProcedure func(ctx context.Context, args [][]byte) ([]byte, error)
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.Network -o ../testutils -s _mock.go
+
 // Network is interface for network modules facade.
 type Network interface {
 	// SendParcel sends a message.
@@ -44,10 +45,13 @@ type Network interface {
 	RemoteProcedureRegister(name string, method RemoteProcedure)
 	// Leave notify other nodes that this node want to leave and doesn't want to receive new tasks
 	Leave(ctx context.Context, ETA PulseNumber)
+	// GetState returns our current thoughs about whole network
+	GetState() NetworkState
 }
 
-// PulseDistributor is interface for pulse distribution.
 //go:generate minimock -i github.com/insolar/insolar/insolar.PulseDistributor -o ../testutils -s _mock.go
+
+// PulseDistributor is interface for pulse distribution.
 type PulseDistributor interface {
 	// Distribute distributes a pulse across the network.
 	Distribute(context.Context, Pulse)

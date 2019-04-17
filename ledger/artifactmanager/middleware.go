@@ -27,13 +27,15 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/hot"
 )
 
 type middleware struct {
 	jetAccessor    jet.Accessor
 	jetCoordinator insolar.JetCoordinator
 	messageBus     insolar.MessageBus
-	hotDataWaiter  HotDataWaiter
+	jetReleaser    hot.JetReleaser
+	jetWaiter      hot.JetWaiter
 	conf           *configuration.Ledger
 	handler        *MessageHandler
 }
@@ -45,7 +47,8 @@ func newMiddleware(
 		jetAccessor:    h.JetStorage,
 		jetCoordinator: h.JetCoordinator,
 		messageBus:     h.Bus,
-		hotDataWaiter:  h.HotDataWaiter,
+		jetReleaser:    h.JetReleaser,
+		jetWaiter:      h.HotDataWaiter,
 		handler:        h,
 		conf:           h.conf,
 	}
@@ -128,32 +131,37 @@ func (m *middleware) checkJet(handler insolar.MessageHandler) insolar.MessageHan
 			return handler(contextWithJet(ctx, insolar.ID(jetID)), parcel)
 		}
 
-		// Calculate jet for current pulse.
-		var jetID insolar.ID
+		// Calculate jet and pulse.
+		var jetID *insolar.ID
+		var pulse insolar.PulseNumber
 		if msg.DefaultTarget().Record().Pulse() == insolar.PulseNumberJet {
-			jetID = *msg.DefaultTarget().Record()
+			jetID = msg.DefaultTarget().Record()
 		} else {
-			j, err := m.handler.jetTreeUpdater.fetchJet(ctx, *msg.DefaultTarget().Record(), parcel.Pulse())
+			if gr, ok := msg.(*message.GetRequest); ok {
+				pulse = gr.Request.Pulse()
+			} else {
+				pulse = parcel.Pulse()
+			}
+
+			var err error
+			jetID, err = m.handler.jetTreeUpdater.FetchJet(ctx, *msg.DefaultTarget().Record(), pulse)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to fetch jet tree")
 			}
-
-			jetID = *j
 		}
 
 		// Check if jet is ours.
-		node, err := m.jetCoordinator.LightExecutorForJet(ctx, jetID, parcel.Pulse())
+		node, err := m.jetCoordinator.LightExecutorForJet(ctx, *jetID, pulse)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to calculate executor for jet")
 		}
-
 		if *node != m.jetCoordinator.Me() {
-			return &reply.JetMiss{JetID: jetID}, nil
+			return &reply.JetMiss{JetID: *jetID, Pulse: pulse}, nil
 		}
 
-		ctx = addJetIDToLogger(ctx, jetID)
+		ctx = addJetIDToLogger(ctx, *jetID)
 
-		return handler(contextWithJet(ctx, jetID), parcel)
+		return handler(contextWithJet(ctx, *jetID), parcel)
 	}
 }
 
@@ -172,7 +180,7 @@ func (m *middleware) waitForHotData(handler insolar.MessageHandler) insolar.Mess
 		}
 
 		jetID := jetFromContext(ctx)
-		err := m.hotDataWaiter.Wait(ctx, jetID)
+		err := m.jetWaiter.Wait(ctx, jetID)
 		if err != nil {
 			return &reply.Error{ErrType: reply.ErrHotDataTimeout}, nil
 		}
@@ -186,7 +194,7 @@ func (m *middleware) releaseHotDataWaiters(handler insolar.MessageHandler) insol
 
 		hotDataMessage := parcel.Message().(*message.HotData)
 		jetID := hotDataMessage.Jet.Record()
-		unlockErr := m.hotDataWaiter.Unlock(ctx, *jetID)
+		unlockErr := m.jetReleaser.Unlock(ctx, *jetID)
 		if unlockErr != nil {
 			inslogger.FromContext(ctx).Error(err)
 		}

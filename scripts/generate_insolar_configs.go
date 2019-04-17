@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -89,8 +90,8 @@ func writeGorundPorts(gorundPorts [][]string) {
 	for _, ports := range gorundPorts {
 		portsData += ports[0] + " " + ports[1] + "\n"
 	}
-	err := genesis.WriteFile("./", gorundPortsPath, portsData)
-	check("Can't WriteFile: "+gorundPortsPath, err)
+	err := makeFileWithDir("./", gorundPortsPath, portsData)
+	check("Can't makeFileWithDir: "+gorundPortsPath, err)
 }
 
 func writeInsolarConfigs(output string, insolarConfigs []configuration.Configuration) {
@@ -98,16 +99,16 @@ func writeInsolarConfigs(output string, insolarConfigs []configuration.Configura
 		data, err := yaml.Marshal(conf)
 		check("Can't Marshal insolard config", err)
 		fileName := fmt.Sprintf(defaultOutputConfigNameTmpl, index+1)
-		err = genesis.WriteFile(output, fileName, string(data))
-		check("Can't WriteFile: "+fileName, err)
+		err = makeFileWithDir(output, fileName, string(data))
+		check("Can't makeFileWithDir: "+fileName, err)
 	}
 }
 
 func writePulsarConfig(conf configuration.Configuration) {
 	data, err := yaml.Marshal(conf)
 	check("Can't Marshal pulsard config", err)
-	err = genesis.WriteFile(outputDir, "pulsar.yaml", string(data))
-	check("Can't WriteFile: pulsar.yaml", err)
+	err = makeFileWithDir(outputDir, "pulsar.yaml", string(data))
+	check("Can't makeFileWithDir: pulsar.yaml", err)
 }
 
 type promContext struct {
@@ -133,8 +134,8 @@ func writePromConfig(pctx *promContext) {
 	err = templates.Execute(&b, pctx)
 	check("Can't process template: "+prometheusConfigTmpl, err)
 
-	err = genesis.WriteFile(outputDir, prometheusFileName, b.String())
-	check("Can't WriteFile: "+prometheusFileName, err)
+	err = makeFileWithDir(outputDir, prometheusFileName, b.String())
+	check("Can't makeFileWithDir: "+prometheusFileName, err)
 }
 
 func main() {
@@ -240,4 +241,14 @@ func main() {
 	pwConfig.Timeout = 1 * time.Second
 	err = pulsewatcher.WriteConfig(filepath.Join(outputDir, "/utils"), pulsewatcherFileName, pwConfig)
 	check("couldn't write pulsewatcher config file", err)
+}
+
+// makeFileWithDir dumps `text` into file named `name` into directory `dir`.
+// Creates directory if needed as well as file
+func makeFileWithDir(dir string, name string, text string) error {
+	err := os.MkdirAll(dir, 0775)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(filepath.Join(dir, name), []byte(text), 0644)
 }

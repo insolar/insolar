@@ -84,13 +84,15 @@ type Controller interface {
 	SetLastIgnoredPulse(number insolar.PulseNumber)
 	// GetLastIgnoredPulse get last pulse that will be ignored
 	GetLastIgnoredPulse() insolar.PulseNumber
+	AuthenticateToDiscoveryNode(ctx context.Context, discovery insolar.DiscoveryNode) error
 }
 
 // RequestHandler handler function to process incoming requests from network.
 type RequestHandler func(context.Context, Request) (Response, error)
 
-// HostNetwork simple interface to send network requests and process network responses.
 //go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock.go
+
+// HostNetwork simple interface to send network requests and process network responses.
 type HostNetwork interface {
 	component.Starter
 	component.Stopper
@@ -160,14 +162,16 @@ type RequestBuilder interface {
 	Build() Request
 }
 
-// PulseHandler interface to process new pulse.
 //go:generate minimock -i github.com/insolar/insolar/network.PulseHandler -o ../testutils/network -s _mock.go
+
+// PulseHandler interface to process new pulse.
 type PulseHandler interface {
 	HandlePulse(ctx context.Context, pulse insolar.Pulse)
 }
 
-// NodeKeeper manages unsync, sync and active lists.
 //go:generate minimock -i github.com/insolar/insolar/network.NodeKeeper -o ../testutils/network -s _mock.go
+
+// NodeKeeper manages unsync, sync and active lists.
 type NodeKeeper interface {
 	insolar.NodeNetwork
 
@@ -194,7 +198,7 @@ type NodeKeeper interface {
 	// Sync move unsync -> sync
 	Sync(context.Context, []insolar.NetworkNode, []consensus.ReferendumClaim) error
 	// MoveSyncToActive merge sync list with active nodes
-	MoveSyncToActive(ctx context.Context) error
+	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
 	// GetConsensusInfo get additional info for the current consensus process
 	GetConsensusInfo() ConsensusInfo
 }
@@ -214,30 +218,6 @@ type ConsensusInfo interface {
 	SetIsJoiner(isJoiner bool)
 	// IsJoiner true if current node should perform consensus as joiner
 	IsJoiner() bool
-}
-
-// UnsyncList is a snapshot of active list for pulse that is previous to consensus pulse
-//go:generate minimock -i github.com/insolar/insolar/network.UnsyncList -o ../testutils/network -s _mock.go
-type UnsyncList interface {
-	consensus.BitSetMapper
-	// AddNode add node to the snapshot of the current consensus
-	AddNode(node insolar.NetworkNode, bitsetIndex uint16)
-	// AddProof add node pulse proof of a specific node
-	AddProof(nodeID insolar.Reference, proof *consensus.NodePulseProof)
-	// GetProof get node pulse proof of a specific node
-	GetProof(nodeID insolar.Reference) *consensus.NodePulseProof
-	// GetGlobuleHashSignature get globule hash signature of a specific node
-	GetGlobuleHashSignature(ref insolar.Reference) (consensus.GlobuleHashSignature, bool)
-	// SetGlobuleHashSignature set globule hash signature of a specific node
-	SetGlobuleHashSignature(insolar.Reference, consensus.GlobuleHashSignature)
-	// GetActiveNode get active node by reference ID for current consensus
-	GetActiveNode(ref insolar.Reference) insolar.NetworkNode
-	// GetActiveNodes get active nodes for current consensus
-	GetActiveNodes() []insolar.NetworkNode
-	// GetOrigin get origin node for the current insolard
-	GetOrigin() insolar.NetworkNode
-	// RemoveNode remove node
-	RemoveNode(nodeID insolar.Reference)
 }
 
 // PartitionPolicy contains all rules how to initiate globule resharding.
@@ -260,7 +240,6 @@ type RoutingTable interface {
 }
 
 // ClaimQueue is the queue that contains consensus claims.
-//go:generate minimock -i github.com/insolar/insolar/network.ClaimQueue -o ../testutils/network -s _mock.go
 type ClaimQueue interface {
 	// Pop takes claim from the queue.
 	Pop() consensus.ReferendumClaim
@@ -270,6 +249,8 @@ type ClaimQueue interface {
 	Length() int
 	// Push adds claim to the queue.
 	Push(claim consensus.ReferendumClaim)
+	// Clear removes all claims from queue
+	Clear()
 }
 
 // Accessor is interface that provides read access to nodekeeper internal snapshot
@@ -294,4 +275,19 @@ type Mutator interface {
 	Accessor
 	// AddWorkingNode adds active node to index and underlying snapshot so it is accessible via GetActiveNode(s).
 	AddWorkingNode(n insolar.NetworkNode)
+}
+
+// Gatewayer is a network which can change it's Gateway
+//go:generate minimock -i github.com/insolar/insolar/network.Gatewayer -o ../testutils/network -s _mock.go
+type Gatewayer interface {
+	Gateway() Gateway
+	SetGateway(Gateway)
+}
+
+// Gateway responds for whole network state
+type Gateway interface {
+	Run(context.Context)
+	GetState() insolar.NetworkState
+	OnPulse(context.Context, insolar.Pulse) error
+	NewGateway(insolar.NetworkState) Gateway
 }

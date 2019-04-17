@@ -56,18 +56,21 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-func TestGetSnapshotActiveNodes(t *testing.T) {
+func TestAccessor(t *testing.T) {
 	m := make(map[insolar.Reference]insolar.NetworkNode)
 
 	node := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, insolar.NodeReady, "127.0.0.1:0", "")
 	m[node.ID()] = node
 
 	node2 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, insolar.NodePending, "127.0.0.1:0", "")
+	node2.SetShortID(11)
 	m[node2.ID()] = node2
 
 	node3 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, insolar.NodeLeaving, "127.0.0.1:0", "")
+	node3.SetShortID(10)
 	m[node3.ID()] = node3
 
 	node4 := newMutableNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, insolar.NodeUndefined, "127.0.0.1:0", "")
@@ -82,4 +85,38 @@ func TestGetSnapshotActiveNodes(t *testing.T) {
 	assert.NotNil(t, accessor.GetActiveNode(node2.ID()))
 	assert.NotNil(t, accessor.GetActiveNode(node3.ID()))
 	assert.NotNil(t, accessor.GetActiveNode(node4.ID()))
+
+	assert.Empty(t, accessor.GetWorkingNodesByRole(insolar.DynamicRoleLightValidator))
+	assert.Equal(t, 1, len(accessor.GetWorkingNodesByRole(insolar.DynamicRoleVirtualValidator)))
+
+	assert.NotNil(t, accessor.GetActiveNodeByShortID(10))
+	assert.NotNil(t, accessor.GetActiveNodeByShortID(11))
+	assert.Nil(t, accessor.GetActiveNodeByShortID(12))
+}
+
+func Test_dynamicToStaticRole(t *testing.T) {
+	assert.Equal(t, insolar.StaticRoleVirtual, dynamicToStaticRole(insolar.DynamicRoleVirtualExecutor))
+	assert.Equal(t, insolar.StaticRoleLightMaterial, dynamicToStaticRole(insolar.DynamicRoleLightExecutor))
+	assert.Equal(t, insolar.StaticRoleHeavyMaterial, dynamicToStaticRole(insolar.DynamicRoleHeavyExecutor))
+	assert.Equal(t, insolar.StaticRoleUnknown, dynamicToStaticRole(150))
+}
+
+func TestMutator(t *testing.T) {
+	snapshot := NewSnapshot(insolar.FirstPulseNumber, nil)
+	mutator := NewMutator(snapshot)
+	node1 := newMutableNode(insolar.Reference{22}, insolar.StaticRoleVirtual, nil, insolar.NodeReady, "127.0.0.1:0", "")
+	mutator.AddWorkingNode(node1)
+	node2 := newMutableNode(insolar.Reference{11}, insolar.StaticRoleLightMaterial, nil, insolar.NodeReady, "127.0.0.1:0", "")
+	mutator.AddWorkingNode(node2)
+
+	assert.Equal(t, 2, len(mutator.GetActiveNodes()))
+	// duplicating key
+	node3 := newMutableNode(insolar.Reference{11}, insolar.StaticRoleHeavyMaterial, nil, insolar.NodeReady, "127.0.0.1:0", "")
+	mutator.AddWorkingNode(node3)
+	assert.Equal(t, 2, len(mutator.GetActiveNodes()))
+
+	nodes := mutator.GetWorkingNodes()
+	require.Equal(t, 2, len(mutator.GetWorkingNodes()))
+	assert.Equal(t, insolar.Reference{11}, nodes[0].ID())
+	assert.Equal(t, insolar.Reference{22}, nodes[1].ID())
 }

@@ -60,7 +60,7 @@ type Accessor struct {
 	snapshot  *Snapshot
 	refIndex  map[insolar.Reference]insolar.NetworkNode
 	sidIndex  map[insolar.ShortNodeID]insolar.NetworkNode
-	roleIndex map[insolar.StaticRole]*recordRefSet
+	roleIndex map[insolar.StaticRole]*refSet
 	// should be removed in future
 	active []insolar.NetworkNode
 }
@@ -99,7 +99,11 @@ func (a *Accessor) GetWorkingNodes() []insolar.NetworkNode {
 
 func (a *Accessor) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
 	staticRole := dynamicToStaticRole(role)
-	return a.roleIndex[staticRole].Collect()
+	nodes := a.roleIndex[staticRole]
+	if nodes == nil {
+		return []insolar.Reference{}
+	}
+	return nodes.Collect()
 }
 
 func GetSnapshotActiveNodes(snapshot *Snapshot) []insolar.NetworkNode {
@@ -125,7 +129,7 @@ func (a *Accessor) addToIndex(node insolar.NetworkNode) {
 
 	list, ok := a.roleIndex[node.Role()]
 	if !ok {
-		list = newRecordRefSet()
+		list = newRefSet()
 	}
 
 	list.Add(node.ID())
@@ -137,7 +141,7 @@ func NewAccessor(snapshot *Snapshot) *Accessor {
 		snapshot:  snapshot,
 		refIndex:  make(map[insolar.Reference]insolar.NetworkNode),
 		sidIndex:  make(map[insolar.ShortNodeID]insolar.NetworkNode),
-		roleIndex: make(map[insolar.StaticRole]*recordRefSet),
+		roleIndex: make(map[insolar.StaticRole]*refSet),
 	}
 	result.active = GetSnapshotActiveNodes(snapshot)
 	for _, node := range result.active {

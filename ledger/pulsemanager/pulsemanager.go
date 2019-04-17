@@ -23,6 +23,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/ledger/replication/light"
+	"github.com/insolar/insolar/ledger/hot"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
@@ -47,7 +48,7 @@ import (
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
 type ActiveListSwapper interface {
-	MoveSyncToActive(ctx context.Context) error
+	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
 }
 
 // PulseManager implements insolar.PulseManager.
@@ -62,7 +63,7 @@ type PulseManager struct {
 	ActiveListSwapper          ActiveListSwapper                  `inject:""`
 	MessageHandler             *artifactmanager.MessageHandler
 
-	HotDataWaiter artifactmanager.HotDataWaiter `inject:""`
+	JetReleaser hot.JetReleaser `inject:""`
 
 	JetAccessor jet.Accessor `inject:""`
 	JetModifier jet.Modifier `inject:""`
@@ -523,7 +524,7 @@ func (m *PulseManager) setUnderGilSection(
 	m.currentPulse = newPulse
 
 	// swap active nodes
-	err = m.ActiveListSwapper.MoveSyncToActive(ctx)
+	err = m.ActiveListSwapper.MoveSyncToActive(ctx, newPulse.PulseNumber)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "failed to apply new active node list")
 	}
@@ -568,7 +569,7 @@ func (m *PulseManager) setUnderGilSection(
 			// Activate zero jet for jet tree and unlock jet waiter.
 			zeroJet := insolar.NewJetID(0, nil)
 			m.JetModifier.Update(ctx, newPulse.PulseNumber, true, *zeroJet)
-			err := m.HotDataWaiter.Unlock(ctx, insolar.ID(*zeroJet))
+			err := m.JetReleaser.Unlock(ctx, insolar.ID(*zeroJet))
 			if err != nil {
 				if err == artifactmanager.ErrWaiterNotLocked {
 					inslogger.FromContext(ctx).Error(err)
@@ -659,14 +660,14 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 	ctx, span := instracer.StartSpan(ctx, "early.close")
 	defer span.End()
 
-	m.HotDataWaiter.ThrowTimeout(ctx)
+	m.JetReleaser.ThrowTimeout(ctx)
 
 	logger := inslogger.FromContext(ctx)
 	for _, jetInfo := range jets {
 		if jetInfo.left == nil && jetInfo.right == nil {
 			// No split happened.
 			if jetInfo.mineNext {
-				err := m.HotDataWaiter.Unlock(ctx, insolar.ID(jetInfo.id))
+				err := m.JetReleaser.Unlock(ctx, insolar.ID(jetInfo.id))
 				if err != nil {
 					logger.Error(err)
 				}
@@ -674,13 +675,13 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 		} else {
 			// Split happened.
 			if jetInfo.left.mineNext {
-				err := m.HotDataWaiter.Unlock(ctx, insolar.ID(jetInfo.left.id))
+				err := m.JetReleaser.Unlock(ctx, insolar.ID(jetInfo.left.id))
 				if err != nil {
 					logger.Error(err)
 				}
 			}
 			if jetInfo.right.mineNext {
-				err := m.HotDataWaiter.Unlock(ctx, insolar.ID(jetInfo.right.id))
+				err := m.JetReleaser.Unlock(ctx, insolar.ID(jetInfo.right.id))
 				if err != nil {
 					logger.Error(err)
 				}

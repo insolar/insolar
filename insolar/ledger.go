@@ -49,16 +49,18 @@ func (r DynamicRole) IsVirtualRole() bool {
 	return false
 }
 
-// PulseManager provides Ledger's methods related to Pulse.
 //go:generate minimock -i github.com/insolar/insolar/insolar.PulseManager -o ../testutils -s _mock.go
+
+// PulseManager provides Ledger's methods related to Pulse.
 type PulseManager interface {
 	// Set set's new pulse and closes current jet drop. If dry is true, nothing will be saved to storage.
 	Set(ctx context.Context, pulse Pulse, persist bool) error
 }
 
+//go:generate minimock -i github.com/insolar/insolar/insolar.JetCoordinator -o ../testutils -s _mock.go
+
 // JetCoordinator provides methods for calculating Jet affinity
 // (e.g. to which Jet a message should be sent).
-//go:generate minimock -i github.com/insolar/insolar/insolar.JetCoordinator -o ../testutils -s _mock.go
 type JetCoordinator interface {
 	// Me returns current node.
 	Me() Reference
