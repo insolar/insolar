@@ -54,11 +54,15 @@ import (
 	"context"
 	"net"
 	"sync"
+	"sync/atomic"
 
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/configuration"
 	consensusMetrics "github.com/insolar/insolar/consensus"
@@ -68,12 +72,10 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/version"
-	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 )
 
 // NewNodeNetwork create active node component
-func NewNodeNetwork(configuration configuration.HostNetwork, certificate insolar.Certificate) (insolar.NodeNetwork, error) {
+func NewNodeNetwork(configuration configuration.Transport, certificate insolar.Certificate) (insolar.NodeNetwork, error) {
 	origin, err := createOrigin(configuration, certificate)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to create origin node")
@@ -85,7 +87,7 @@ func NewNodeNetwork(configuration configuration.HostNetwork, certificate insolar
 	return nodeKeeper, nil
 }
 
-func createOrigin(configuration configuration.HostNetwork, certificate insolar.Certificate) (insolar.NetworkNode, error) {
+func createOrigin(configuration configuration.Transport, certificate insolar.Certificate) (insolar.NetworkNode, error) {
 	publicAddress, err := resolveAddress(configuration)
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to resolve public address")
@@ -106,12 +108,12 @@ func createOrigin(configuration configuration.HostNetwork, certificate insolar.C
 	), nil
 }
 
-func resolveAddress(configuration configuration.HostNetwork) (string, error) {
-	addr, err := net.ResolveTCPAddr("tcp", configuration.Transport.Address)
+func resolveAddress(configuration configuration.Transport) (string, error) {
+	addr, err := net.ResolveTCPAddr("tcp", configuration.Address)
 	if err != nil {
 		return "", err
 	}
-	address, err := resolver.Resolve(configuration.Transport.FixedPublicAddress, addr.String())
+	address, err := resolver.Resolve(configuration.FixedPublicAddress, addr.String())
 	if err != nil {
 		return "", err
 	}
@@ -134,7 +136,7 @@ func NewNodeKeeper(origin insolar.NetworkNode) network.NodeKeeper {
 type nodekeeper struct {
 	origin        insolar.NetworkNode
 	claimQueue    *claimQueue
-	consensusInfo *consensusInfo
+	consensusInfo *ConsensusInfo
 
 	cloudHashLock sync.RWMutex
 	cloudHash     []byte
@@ -147,8 +149,7 @@ type nodekeeper struct {
 	syncNodes  []insolar.NetworkNode
 	syncClaims []consensus.ReferendumClaim
 
-	isBootstrap     bool
-	isBootstrapLock sync.RWMutex
+	bootstrapped uint32
 
 	Cryptography       insolar.CryptographyService `inject:""`
 	TerminationHandler insolar.TerminationHandler  `inject:""`
@@ -171,7 +172,11 @@ func (nk *nodekeeper) SetInitialSnapshot(nodes []insolar.NetworkNode) {
 	}
 	nk.snapshot = node.NewSnapshot(insolar.FirstPulseNumber, nodesMap)
 	nk.accessor = node.NewAccessor(nk.snapshot)
+
+	nk.syncLock.Lock()
 	nk.syncNodes = nk.accessor.GetActiveNodes()
+	nk.syncClaims = make([]consensus.ReferendumClaim, 0)
+	nk.syncLock.Unlock()
 }
 
 func (nk *nodekeeper) GetAccessor() network.Accessor {
@@ -193,56 +198,23 @@ func (nk *nodekeeper) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.
 	return nk.GetAccessor().GetWorkingNodesByRole(role)
 }
 
-func (nk *nodekeeper) Wipe(isDiscovery bool) {
-	log.Warn("don't use it in production")
-
-	nk.isBootstrapLock.Lock()
-	nk.isBootstrap = false
-	nk.isBootstrapLock.Unlock()
-
-	nk.consensusInfo.flush(false)
-
-	nk.cloudHashLock.Lock()
-	nk.cloudHash = nil
-	nk.cloudHashLock.Unlock()
-
-	nk.SetInitialSnapshot([]insolar.NetworkNode{})
-
-	nk.activeLock.Lock()
-	defer nk.activeLock.Unlock()
-
-	nk.claimQueue = newClaimQueue()
-	nk.syncLock.Lock()
-	nk.syncNodes = make([]insolar.NetworkNode, 0)
-	nk.syncClaims = make([]consensus.ReferendumClaim, 0)
-	if isDiscovery {
-		nk.origin.(node.MutableNode).SetState(insolar.NodeReady)
-	}
-	nk.syncLock.Unlock()
-}
-
 // TODO: remove this method when bootstrap mechanism completed
 // IsBootstrapped method returns true when bootstrapNodes are connected to each other
 func (nk *nodekeeper) IsBootstrapped() bool {
-	nk.isBootstrapLock.RLock()
-	defer nk.isBootstrapLock.RUnlock()
-
-	return nk.isBootstrap
+	return atomic.LoadUint32(&nk.bootstrapped) == 1
 }
 
 // TODO: remove this method when bootstrap mechanism completed
 // SetIsBootstrapped method set is bootstrap completed
 func (nk *nodekeeper) SetIsBootstrapped(isBootstrap bool) {
-	nk.isBootstrapLock.Lock()
-	defer nk.isBootstrapLock.Unlock()
-
-	nk.isBootstrap = isBootstrap
+	if isBootstrap {
+		atomic.StoreUint32(&nk.bootstrapped, 1)
+	} else {
+		atomic.StoreUint32(&nk.bootstrapped, 0)
+	}
 }
 
 func (nk *nodekeeper) GetOrigin() insolar.NetworkNode {
-	nk.activeLock.RLock()
-	defer nk.activeLock.RUnlock()
-
 	return nk.origin
 }
 
@@ -265,22 +237,11 @@ func (nk *nodekeeper) GetWorkingNodes() []insolar.NetworkNode {
 }
 
 func (nk *nodekeeper) GetOriginJoinClaim() (*consensus.NodeJoinClaim, error) {
-	nk.activeLock.RLock()
-	defer nk.activeLock.RUnlock()
-
 	return nk.nodeToSignedClaim()
 }
 
 func (nk *nodekeeper) GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error) {
-	nk.activeLock.RLock()
-	defer nk.activeLock.RUnlock()
-
 	return nk.nodeToAnnounceClaim(mapper)
-}
-
-func (nk *nodekeeper) AddPendingClaim(claim consensus.ReferendumClaim) bool {
-	nk.claimQueue.Push(claim)
-	return true
 }
 
 func (nk *nodekeeper) GetClaimQueue() network.ClaimQueue {
@@ -318,11 +279,13 @@ func (nk *nodekeeper) syncOrigin(n insolar.NetworkNode) {
 	}
 	mutableOrigin := nk.origin.(node.MutableNode)
 	mutableOrigin.SetState(n.GetState())
-	mutableOrigin.SetLeavingETA(n.LeavingETA())
+	if n.GetState() == insolar.NodeLeaving {
+		mutableOrigin.SetLeavingETA(n.LeavingETA())
+	}
 	mutableOrigin.SetShortID(n.ShortID())
 }
 
-func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
+func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error {
 	nk.activeLock.Lock()
 	nk.syncLock.Lock()
 	defer func() {
@@ -337,10 +300,10 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context) error {
 	inslogger.FromContext(ctx).Infof("[ MoveSyncToActive ] New active list confirmed. Active list size: %d -> %d",
 		len(nk.accessor.GetActiveNodes()), len(mergeResult.ActiveList))
 
-	nk.snapshot = node.NewSnapshot(insolar.PulseNumber(0), mergeResult.ActiveList)
+	nk.snapshot = node.NewSnapshot(number, mergeResult.ActiveList)
 	nk.accessor = node.NewAccessor(nk.snapshot)
 	stats.Record(ctx, consensusMetrics.ActiveNodes.M(int64(len(nk.accessor.GetActiveNodes()))))
-	nk.consensusInfo.flush(mergeResult.NodesJoinedDuringPrevPulse)
+	nk.consensusInfo.Flush(mergeResult.NodesJoinedDuringPrevPulse)
 	nk.gracefulStopIfNeeded(ctx)
 	return nil
 }
@@ -388,7 +351,11 @@ func (nk *nodekeeper) nodeToAnnounceClaim(mapper consensus.BitSetMapper) (*conse
 	}
 	claim.NodeAnnouncerIndex = uint16(announcerIndex)
 	claim.BitSetMapper = mapper
-	claim.SetCloudHash(nk.GetCloudHash())
+	hash := nk.GetCloudHash()
+	if hash == nil {
+		hash = make([]byte, consensus.HashLength)
+	}
+	claim.SetCloudHash(hash)
 	return &claim, nil
 }
 

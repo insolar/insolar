@@ -124,8 +124,6 @@ func getEmptyReply(t insolar.ReplyType) (insolar.Reply, error) {
 		return &ObjectIndex{}, nil
 	case TypeGetCodeRedirect:
 		return &GetCodeRedirectReply{}, nil
-	case TypeGetObjectRedirect:
-		return &GetObjectRedirectReply{}, nil
 	case TypeGetChildrenRedirect:
 		return &GetChildrenRedirectReply{}, nil
 	case TypeJetMiss:
@@ -197,7 +195,6 @@ func init() {
 	gob.Register(&OK{})
 	gob.Register(&ObjectIndex{})
 	gob.Register(&GetCodeRedirectReply{})
-	gob.Register(&GetObjectRedirectReply{})
 	gob.Register(&GetChildrenRedirectReply{})
 	gob.Register(&HeavyError{})
 	gob.Register(&JetMiss{})

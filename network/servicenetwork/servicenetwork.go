@@ -71,6 +71,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/controller/bootstrap"
+	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
@@ -89,8 +90,8 @@ type ServiceNetwork struct {
 	CryptographyService insolar.CryptographyService `inject:""`
 	NetworkCoordinator  insolar.NetworkCoordinator  `inject:""`
 	NodeKeeper          network.NodeKeeper          `inject:""`
-	NetworkSwitcher     insolar.NetworkSwitcher     `inject:""`
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
+	GIL                 insolar.GlobalInsolarLock   `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
@@ -101,12 +102,31 @@ type ServiceNetwork struct {
 	skip        int
 
 	lock sync.Mutex
+
+	gateway   network.Gateway
+	gatewayMu sync.RWMutex
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager, isGenesis bool) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, isGenesis: isGenesis, skip: conf.Service.Skip}
 	return serviceNetwork, nil
+}
+
+func (nk *ServiceNetwork) Gateway() network.Gateway {
+	nk.gatewayMu.RLock()
+	defer nk.gatewayMu.RUnlock()
+	return nk.gateway
+}
+
+func (nk *ServiceNetwork) SetGateway(g network.Gateway) {
+	nk.gatewayMu.Lock()
+	defer nk.gatewayMu.Unlock()
+	nk.gateway = g
+}
+
+func (nk *ServiceNetwork) GetState() insolar.NetworkState {
+	return nk.Gateway().GetState()
 }
 
 // SendMessage sends a message from MessageBus.
@@ -176,6 +196,9 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
+
+	n.gateway = gateway.NewNoNetwork(n, n.GIL, n.NodeKeeper)
+	n.gateway.Run(ctx)
 
 	return nil
 }
@@ -248,7 +271,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 		n.Controller.SetLastIgnoredPulse(newPulse.NextPulseNumber)
 		return
 	}
-	if n.isDiscovery && newPulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+insolar.PulseNumber(n.skip) {
+	if n.shoudIgnorePulse(newPulse) {
 		log.Infof("Ignore pulse %d: network is not yet initialized", newPulse.PulseNumber)
 		return
 	}
@@ -265,7 +288,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	// (for fresh bootstrapped light-material with in-memory pulse-tracker)
 	if currentPulse, err := n.PulseAccessor.Latest(ctx); err != nil {
 		if err != pulse.ErrNotFound {
-			logger.Fatalf("Could not get current pulse: %s", err.Error())
+			currentPulse = *insolar.GenesisPulse
 		}
 	} else {
 		if !isNextPulse(&currentPulse, &newPulse) {
@@ -274,13 +297,12 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 		}
 	}
 
-	err := n.NetworkSwitcher.OnPulse(ctx, newPulse)
-	if err != nil {
-		logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
+	if err := n.Gateway().OnPulse(ctx, newPulse); err != nil {
+		logger.Error(errors.Wrap(err, "Failed to call OnPulse on Gateway"))
 	}
 
 	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
-	err = n.PulseManager.Set(ctx, newPulse, n.NetworkSwitcher.GetState() == insolar.CompleteNetworkState)
+	err := n.PulseManager.Set(ctx, newPulse, n.Gateway().GetState() == insolar.CompleteNetworkState)
 	if err != nil {
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
@@ -289,16 +311,27 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
 }
 
+func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {
+	return n.isDiscovery && !n.NodeKeeper.GetConsensusInfo().IsJoiner() &&
+		newPulse.PulseNumber <= n.Controller.GetLastIgnoredPulse()+insolar.PulseNumber(n.skip)
+}
+
 func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insolar.Pulse, pulseStartTime time.Time) {
 	logger := inslogger.FromContext(ctx)
 
 	if err := n.PhaseManager.OnPulse(ctx, &newPulse, pulseStartTime); err != nil {
-		logger.Error("Failed to pass consensus: " + err.Error())
-		n.TerminationHandler.Abort()
+		errMsg := "Failed to pass consensus: " + err.Error()
+		logger.Error(errMsg)
+		n.TerminationHandler.Abort(errMsg)
 	}
 }
 
-func (n *ServiceNetwork) connectToNewNetwork(result network.BootstrapResult) {
+func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, node insolar.DiscoveryNode) {
+	err := n.Controller.AuthenticateToDiscoveryNode(ctx, node)
+	if err != nil {
+		logger := inslogger.FromContext(ctx)
+		logger.Errorf("Failed to authenticate a node: " + err.Error())
+	}
 }
 
 func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {

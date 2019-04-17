@@ -52,16 +52,21 @@ package controller
 
 import (
 	"context"
+	"sync/atomic"
 
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/pulsar"
+)
+
+const (
+	skippedPulsesLimit = 15
 )
 
 type PulseController interface {
@@ -76,6 +81,9 @@ type pulseController struct {
 	CryptographyService insolar.CryptographyService        `inject:""`
 	Resolver            network.RoutingTable               `inject:""`
 	Network             network.HostNetwork                `inject:""`
+	TerminationHandler  insolar.TerminationHandler         `inject:""`
+
+	skippedPulses uint32
 }
 
 func (pc *pulseController) Init(ctx context.Context) error {
@@ -97,6 +105,11 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Req
 		go pc.PulseHandler.HandlePulse(context.Background(), data.Pulse)
 	} else {
 		log.Debugf("Ignore pulse %v from pulsar, waiting for consensus phase1 packet", data.Pulse)
+		skipped := atomic.AddUint32(&pc.skippedPulses, 1)
+		if skipped >= skippedPulsesLimit {
+			// we definitely failed to receive pulse via phase1 packet and should exit
+			pc.TerminationHandler.Abort("Failed to receive phase1 packet with pulse during bootstrap")
+		}
 	}
 	return pc.Network.BuildResponse(ctx, request, &packet.ResponsePulse{Success: true, Error: ""}), nil
 }

@@ -17,32 +17,35 @@
 package artifactmanager
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"time"
 
-	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/ledger/handle"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/flow/handler"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/hack"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/ledger/hot"
+	"github.com/insolar/insolar/ledger/proc"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 )
 
 // MessageHandler processes messages for local storage interaction.
@@ -59,31 +62,74 @@ type MessageHandler struct {
 
 	BlobModifier blob.Modifier `inject:""`
 	BlobAccessor blob.Accessor `inject:""`
+	Blobs        blob.Storage  `inject:""`
 
 	IDLocker storage.IDLocker `inject:""`
-
-	IndexAccessor object.IndexAccessor `inject:""`
-	IndexModifier object.IndexModifier `inject:""`
 
 	RecordModifier object.RecordModifier `inject:""`
 	RecordAccessor object.RecordAccessor `inject:""`
 	Nodes          node.Accessor         `inject:""`
 
-	DBContext     storage.DBContext `inject:""`
-	HotDataWaiter HotDataWaiter     `inject:""`
+	DBContext     storage.DBContext    `inject:""`
+	HotDataWaiter hot.JetWaiter        `inject:""`
+	JetReleaser   hot.JetReleaser      `inject:""`
+	IndexAccessor object.IndexAccessor `inject:""`
+	IndexModifier object.IndexModifier `inject:""`
+	IndexStorage  object.IndexStorage  `inject:""`
 
-	replayHandlers map[insolar.MessageType]insolar.MessageHandler
 	conf           *configuration.Ledger
 	middleware     *middleware
-	jetTreeUpdater *jetTreeUpdater
+	jetTreeUpdater jet.TreeUpdater
+
+	FlowHandler *handler.Handler
+	handlers    map[insolar.MessageType]insolar.MessageHandler
 }
 
 // NewMessageHandler creates new handler.
 func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
-	return &MessageHandler{
-		replayHandlers: map[insolar.MessageType]insolar.MessageHandler{},
-		conf:           conf,
+	h := &MessageHandler{
+		handlers: map[insolar.MessageType]insolar.MessageHandler{},
+		conf:     conf,
 	}
+
+	dep := &proc.Dependencies{
+		FetchJet: func(p *proc.FetchJet) *proc.FetchJet {
+			p.Dep.JetAccessor = h.JetStorage
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.JetUpdater = h.jetTreeUpdater
+			return p
+		},
+		WaitHot: func(p *proc.WaitHot) *proc.WaitHot {
+			p.Dep.Waiter = h.HotDataWaiter
+			return p
+		},
+		GetIndex: func(p *proc.GetIndex) *proc.GetIndex {
+			p.Dep.Recent = h.RecentStorageProvider
+			p.Dep.Locker = h.IDLocker
+			p.Dep.Storage = h.IndexStorage
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.Bus = h.Bus
+			return p
+		},
+		SendObject: func(p *proc.SendObject) *proc.SendObject {
+			p.Dep.Jets = h.JetStorage
+			p.Dep.Blobs = h.Blobs
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.JetUpdater = h.jetTreeUpdater
+			p.Dep.Bus = h.Bus
+			p.Dep.RecordAccessor = h.RecordAccessor
+			return p
+		},
+	}
+
+	h.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
+		return (&handle.Init{
+			Dep: dep,
+
+			Message: msg,
+		}).Present
+	})
+	return h
 }
 
 func instrumentHandler(name string) Handler {
@@ -120,12 +166,15 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	m := newMiddleware(h)
 	h.middleware = m
 
-	h.jetTreeUpdater = newJetTreeUpdater(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
+	h.jetTreeUpdater = jet.NewJetTreeUpdater(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
 
 	h.setHandlersForLight(m)
-	h.setReplayHandlers(m)
 
 	return nil
+}
+
+func (h *MessageHandler) OnPulse(ctx context.Context, pn insolar.Pulse) {
+	h.FlowHandler.ChangePulse(ctx, pn)
 }
 
 func (h *MessageHandler) setHandlersForLight(m *middleware) {
@@ -136,12 +185,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 		m.checkJet,
 	))
 
-	h.Bus.MustRegister(insolar.TypeGetObject,
-		BuildMiddleware(h.handleGetObject,
-			instrumentHandler("handleGetObject"),
-			m.addFieldsToLogger,
-			m.checkJet,
-			m.waitForHotData))
+	h.Bus.MustRegister(insolar.TypeGetObject, h.FlowHandler.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeGetDelegate,
 		BuildMiddleware(h.handleGetDelegate,
@@ -226,40 +270,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 		),
 	)
 
-	// Validation.
-	h.Bus.MustRegister(insolar.TypeValidateRecord,
-		BuildMiddleware(h.handleValidateRecord,
-			m.addFieldsToLogger,
-			m.checkJet))
-
-	h.Bus.MustRegister(insolar.TypeValidationCheck,
-		BuildMiddleware(h.handleValidationCheck,
-			m.addFieldsToLogger,
-			m.checkJet))
-
-	h.Bus.MustRegister(insolar.TypeJetDrop,
-		BuildMiddleware(h.handleJetDrop,
-			m.addFieldsToLogger,
-			m.checkJet))
-}
-
-func (h *MessageHandler) setReplayHandlers(m *middleware) {
-	// Generic.
-	h.replayHandlers[insolar.TypeGetCode] = BuildMiddleware(h.handleGetCode, m.addFieldsToLogger)
-	h.replayHandlers[insolar.TypeGetObject] = BuildMiddleware(h.handleGetObject, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeGetDelegate] = BuildMiddleware(h.handleGetDelegate, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeGetChildren] = BuildMiddleware(h.handleGetChildren, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeSetRecord] = BuildMiddleware(h.handleSetRecord, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeUpdateObject] = BuildMiddleware(h.handleUpdateObject, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeRegisterChild] = BuildMiddleware(h.handleRegisterChild, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeSetBlob] = BuildMiddleware(h.handleSetBlob, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeGetObjectIndex] = BuildMiddleware(h.handleGetObjectIndex, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeGetPendingRequests] = BuildMiddleware(h.handleHasPendingRequests, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeGetJet] = BuildMiddleware(h.handleGetJet)
-
-	// Validation.
-	h.replayHandlers[insolar.TypeValidateRecord] = BuildMiddleware(h.handleValidateRecord, m.addFieldsToLogger, m.checkJet)
-	h.replayHandlers[insolar.TypeValidationCheck] = BuildMiddleware(h.handleValidationCheck, m.addFieldsToLogger, m.checkJet)
+	h.Bus.MustRegister(insolar.TypeValidateRecord, h.handleValidateRecord)
 }
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
@@ -353,182 +364,6 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel insolar.Parce
 	rep := reply.Code{
 		Code:        code.Value,
 		MachineType: codeRec.MachineType,
-	}
-
-	return &rep, nil
-}
-
-func (h *MessageHandler) handleGetObject(
-	ctx context.Context, parcel insolar.Parcel,
-) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetObject)
-	jetID := jetFromContext(ctx)
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"object": msg.Head.Record().DebugString(),
-		"pulse":  parcel.Pulse(),
-	})
-
-	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
-
-	h.IDLocker.Lock(msg.Head.Record())
-	defer h.IDLocker.Unlock(msg.Head.Record())
-
-	// Fetch object index. If not found redirect.
-	idx, err := h.IndexAccessor.ForID(ctx, *msg.Head.Record())
-	if err == object.ErrIndexNotFound {
-		logger.Debug("failed to fetch index (fetching from heavy)")
-		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Head, node)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch index from heavy")
-		}
-	} else if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch object index %s", msg.Head.Record().String())
-	}
-
-	// Determine object state id.
-	var stateID *insolar.ID
-	if msg.State != nil {
-		stateID = msg.State
-	} else {
-		if msg.Approved {
-			stateID = idx.LatestStateApproved
-		} else {
-			stateID = idx.LatestState
-		}
-	}
-	if stateID == nil {
-		return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
-	}
-
-	var (
-		stateJet *insolar.ID
-	)
-	onHeavy, err := h.JetCoordinator.IsBeyondLimit(ctx, parcel.Pulse(), stateID.Pulse())
-	if err != nil && err != pulse.ErrNotFound {
-		return nil, err
-	}
-	if onHeavy {
-		hNode, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		logger.WithFields(map[string]interface{}{
-			"state":    stateID.DebugString(),
-			"going_to": hNode.String(),
-		}).Debug("fetching object (on heavy)")
-
-		obj, err := h.fetchObject(ctx, msg.Head, *hNode, stateID, parcel.Pulse())
-		if err != nil {
-			if err == insolar.ErrDeactivated {
-				return &reply.Error{ErrType: reply.ErrDeactivated}, nil
-			}
-			return nil, err
-		}
-
-		return &reply.Object{
-			Head:         msg.Head,
-			State:        *stateID,
-			Prototype:    obj.Prototype,
-			IsPrototype:  obj.IsPrototype,
-			ChildPointer: idx.ChildPointer,
-			Parent:       idx.Parent,
-			Memory:       obj.Memory,
-		}, nil
-	}
-
-	stateJetID, actual := h.JetStorage.ForID(ctx, stateID.Pulse(), *msg.Head.Record())
-	stateJet = (*insolar.ID)(&stateJetID)
-
-	if !actual {
-		actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Head.Record(), stateID.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		stateJet = actualJet
-	}
-
-	// Fetch state record.
-	rec, err := h.RecordAccessor.ForID(ctx, *stateID)
-
-	if err == object.ErrNotFound {
-		// The record wasn't found on the current suitNode. Return redirect to the node that contains it.
-		// We get Jet tree for pulse when given state was added.
-		suitNode, err := h.JetCoordinator.NodeForJet(ctx, *stateJet, parcel.Pulse(), stateID.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		logger.WithFields(map[string]interface{}{
-			"state":    stateID.DebugString(),
-			"going_to": suitNode.String(),
-		}).Debug("fetching object (record not found)")
-
-		obj, err := h.fetchObject(ctx, msg.Head, *suitNode, stateID, parcel.Pulse())
-		if err != nil {
-			if err == insolar.ErrDeactivated {
-				return &reply.Error{ErrType: reply.ErrDeactivated}, nil
-			}
-			return nil, err
-		}
-
-		return &reply.Object{
-			Head:         msg.Head,
-			State:        *stateID,
-			Prototype:    obj.Prototype,
-			IsPrototype:  obj.IsPrototype,
-			ChildPointer: idx.ChildPointer,
-			Parent:       idx.Parent,
-			Memory:       obj.Memory,
-		}, nil
-	}
-	if err != nil {
-		return nil, errors.Wrap(err, "can't fetch record from storage")
-	}
-
-	virtRec := rec.Record
-	state, ok := virtRec.(object.State)
-	if !ok {
-		return nil, errors.New("invalid object record")
-	}
-
-	if state.ID() == object.StateDeactivation {
-		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
-	}
-
-	var childPointer *insolar.ID
-	if idx.ChildPointer != nil {
-		childPointer = idx.ChildPointer
-	}
-	rep := reply.Object{
-		Head:         msg.Head,
-		State:        *stateID,
-		Prototype:    state.GetImage(),
-		IsPrototype:  state.GetIsPrototype(),
-		ChildPointer: childPointer,
-		Parent:       idx.Parent,
-	}
-
-	if state.GetMemory() != nil {
-		b, err := h.BlobAccessor.ForID(ctx, *state.GetMemory())
-		if err == blob.ErrNotFound {
-			hNode, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-			if err != nil {
-				return nil, err
-			}
-			obj, err := h.fetchObject(ctx, msg.Head, *hNode, stateID, parcel.Pulse())
-			if err != nil {
-				return nil, err
-			}
-			err = h.BlobModifier.Set(ctx, *state.GetMemory(), blob.Blob{JetID: insolar.JetID(jetID), Value: obj.Memory})
-			if err != nil {
-				return nil, err
-			}
-			b.Value = obj.Memory
-		}
-		rep.Memory = b.Value
 	}
 
 	return &rep, nil
@@ -652,7 +487,7 @@ func (h *MessageHandler) handleGetChildren(
 	childJet = (*insolar.ID)(&childJetID)
 
 	if !actual {
-		actualJet, err := h.jetTreeUpdater.fetchJet(ctx, *msg.Parent.Record(), currentChild.Pulse())
+		actualJet, err := h.jetTreeUpdater.FetchJet(ctx, *msg.Parent.Record(), currentChild.Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -930,91 +765,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 	return &reply.ID{ID: *child}, nil
 }
 
-func (h *MessageHandler) handleJetDrop(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.JetDrop)
-
-	if !hack.SkipValidation(ctx) {
-		for _, parcelBuff := range msg.Messages {
-			jetDropMsg, err := message.Deserialize(bytes.NewBuffer(parcelBuff))
-			if err != nil {
-				return nil, err
-			}
-			handler, ok := h.replayHandlers[jetDropMsg.Type()]
-			if !ok {
-				return nil, errors.New("unknown message type")
-			}
-
-			_, err = handler(ctx, &message.Parcel{Msg: jetDropMsg})
-			if err != nil {
-				return nil, err
-			}
-		}
-	}
-
-	h.JetStorage.Update(
-		ctx, parcel.Pulse(), true, insolar.JetID(msg.JetID),
-	)
-
-	return &reply.OK{}, nil
-}
-
 func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.ValidateRecord)
-	jetID := jetFromContext(ctx)
-
-	h.IDLocker.Lock(msg.Object.Record())
-	defer h.IDLocker.Unlock(msg.Object.Record())
-
-	idx, err := h.IndexAccessor.ForID(ctx, *msg.Object.Record())
-	if err == object.ErrIndexNotFound {
-		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Object, heavy)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch index from heavy")
-		}
-	} else if err != nil {
-		return nil, err
-	}
-
-	// Find node that has this state.
-	node, err := h.JetCoordinator.NodeForJet(ctx, jetID, parcel.Pulse(), msg.Object.Record().Pulse())
-	if err != nil {
-		return nil, err
-	}
-
-	// Send checking message.
-	genericReply, err := h.Bus.Send(ctx, &message.ValidationCheck{
-		Object:              msg.Object,
-		ValidatedState:      msg.State,
-		LatestStateApproved: idx.LatestStateApproved,
-	}, &insolar.MessageSendOptions{
-		Receiver: node,
-	})
-	if err != nil {
-		return nil, err
-	}
-	switch genericReply.(type) {
-	case *reply.OK:
-		if msg.IsValid {
-			idx.LatestStateApproved = &msg.State
-		} else {
-			idx.LatestState = idx.LatestStateApproved
-		}
-		idx.LatestUpdate = parcel.Pulse()
-		idx.JetID = insolar.JetID(jetID)
-		err = h.IndexModifier.Set(ctx, *msg.Object.Record(), idx)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to save object index")
-		}
-	case *reply.NotOK:
-		return nil, errors.New("validation sequence integrity failure")
-	default:
-		return nil, errors.New("handleValidateRecord: unexpected reply")
-	}
-
 	return &reply.OK{}, nil
 }
 
@@ -1032,29 +783,6 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insola
 	buf := object.EncodeIndex(idx)
 
 	return &reply.ObjectIndex{Index: buf}, nil
-}
-
-func (h *MessageHandler) handleValidationCheck(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.ValidationCheck)
-
-	rec, err := h.RecordAccessor.ForID(ctx, msg.ValidatedState)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch state record")
-	}
-
-	virtRec := rec.Record
-	state, ok := virtRec.(object.State)
-	if !ok {
-		return nil, errors.New("failed to fetch state record")
-	}
-
-	approved := msg.LatestStateApproved
-	validated := state.PrevStateID()
-	if validated != nil && approved != nil && !approved.Equal(*validated) {
-		return &reply.NotOK{}, nil
-	}
-
-	return &reply.OK{}, nil
 }
 
 func (h *MessageHandler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeRecord, error) {
@@ -1100,7 +828,11 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	if !ok {
 		return object.Lifeline{}, fmt.Errorf("failed to fetch object index: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
 	}
-	idx := object.MustDecodeIndex(rep.Index)
+	idx, err := object.DecodeIndex(rep.Index)
+	if err != nil {
+		return object.Lifeline{}, errors.Wrap(err, "failed to decode")
+	}
+
 	idx.JetID = insolar.JetID(jetID)
 	err = h.IndexModifier.Set(ctx, *obj.Record(), idx)
 	if err != nil {
@@ -1132,39 +864,40 @@ func (h *MessageHandler) saveCodeFromHeavy(
 	return rep, nil
 }
 
-func (h *MessageHandler) fetchObject(
-	ctx context.Context, obj insolar.Reference, node insolar.Reference, stateID *insolar.ID, pulse insolar.PulseNumber,
-) (*reply.Object, error) {
-	sender := BuildSender(
-		h.Bus.Send,
-		followRedirectSender(h.Bus),
-		retryJetSender(pulse, h.JetStorage),
-	)
-	genericReply, err := sender(
-		ctx,
-		&message.GetObject{
-			Head:     obj,
-			Approved: false,
-			State:    stateID,
-		},
-		&insolar.MessageSendOptions{
-			Receiver: &node,
-			Token:    &delegationtoken.GetObjectRedirectToken{},
-		},
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch object state")
-	}
-	if rep, ok := genericReply.(*reply.Error); ok {
-		return nil, rep.Error()
-	}
-
-	rep, ok := genericReply.(*reply.Object)
-	if !ok {
-		return nil, fmt.Errorf("failed to fetch object state: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
-	}
-	return rep, nil
-}
+//
+// func (h *MessageHandler) fetchObject(
+// 	ctx context.Context, obj insolar.Reference, node insolar.Reference, stateID *insolar.ID,
+// ) (*reply.Object, error) {
+// 	sender := BuildSender(
+// 		h.Bus.Send,
+// 		followRedirectSender(h.Bus),
+// 		retryJetSender(h.JetStorage),
+// 	)
+// 	genericReply, err := sender(
+// 		ctx,
+// 		&message.GetObject{
+// 			Head:     obj,
+// 			Approved: false,
+// 			State:    stateID,
+// 		},
+// 		&insolar.MessageSendOptions{
+// 			Receiver: &node,
+// 			Token:    &delegationtoken.GetObjectRedirectToken{},
+// 		},
+// 	)
+// 	if err != nil {
+// 		return nil, errors.Wrap(err, "failed to fetch object state")
+// 	}
+// 	if rep, ok := genericReply.(*reply.Error); ok {
+// 		return nil, rep.Error()
+// 	}
+//
+// 	rep, ok := genericReply.(*reply.Object)
+// 	if !ok {
+// 		return nil, fmt.Errorf("failed to fetch object state: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
+// 	}
+// 	return rep, nil
+// }
 
 func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	logger := inslogger.FromContext(ctx)
@@ -1217,8 +950,12 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 
 	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, jetID)
 	for id, meta := range msg.RecentObjects {
-		decodedIndex := object.MustDecodeIndex(meta.Index)
-		decodedIndex.JetID = insolar.JetID(jetID)
+		decodedIndex, err := object.DecodeIndex(meta.Index)
+		if err != nil {
+			logger.Error(err)
+			continue
+		}
+
 		err = h.IndexModifier.Set(ctx, id, decodedIndex)
 		if err != nil {
 			logger.Error(err)
@@ -1232,7 +969,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 		ctx, msg.PulseNumber, true, insolar.JetID(jetID),
 	)
 
-	h.jetTreeUpdater.releaseJet(ctx, jetID, msg.PulseNumber)
+	h.jetTreeUpdater.ReleaseJet(ctx, jetID, msg.PulseNumber)
 
 	return &reply.OK{}, nil
 }

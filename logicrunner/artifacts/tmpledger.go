@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/ledger/hot"
 	"github.com/insolar/insolar/ledger/storage/object"
 
 	"github.com/insolar/insolar/component"
@@ -162,9 +163,11 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	handler.DBContext = tmpDB
 	handler.IndexModifier = is
 	handler.IndexAccessor = is
+	handler.IndexStorage = is
 	handler.DropModifier = ds
 	handler.BlobModifier = bs
 	handler.BlobAccessor = bs
+	handler.Blobs = bs
 	handler.RecordModifier = recordModifier
 	handler.RecordAccessor = recordAccessor
 
@@ -210,7 +213,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	gilMock.ReleaseFunc = func(context.Context) {}
 
 	alsMock := testutils.NewActiveListSwapperMock(t)
-	alsMock.MoveSyncToActiveFunc = func(context.Context) error { return nil }
+	alsMock.MoveSyncToActiveFunc = func(context.Context, insolar.PulseNumber) error { return nil }
 
 	handler.Bus = c.MessageBus
 
@@ -227,9 +230,10 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	pm.PulseAccessor = ps
 	pm.PulseAppender = ps
 
-	hdw := artifactmanager.NewHotDataWaiterConcrete()
+	hdw := hot.NewChannelWaiter()
 
 	handler.HotDataWaiter = hdw
+	handler.JetReleaser = hdw
 
 	indexMock := recentstorage.NewRecentIndexStorageMock(t)
 	pendingMock := recentstorage.NewPendingStorageMock(t)

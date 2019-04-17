@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
 
 // +build functest
 
@@ -121,7 +121,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 
 	contractID, err := s.runner.ArtifactManager.RegisterRequest(
 		ctx,
-		*s.runner.ArtifactManager.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: testutils.RandomRef()}}, // TODO protoRef?
 	)
 
@@ -138,7 +138,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 		ctx,
 		*domain,
 		objectRef,
-		*s.runner.ArtifactManager.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		*protoRef,
 		false,
 		memory,
@@ -188,7 +188,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 
 	argsSerialized, _ := insolar.Serialize(args.MethodArgs)
 
-	callMethodReply, err := s.runner.ContractRequester.CallMethod(ctx, &bm, false, objectRef, args.Method, argsSerialized, nil)
+	callMethodReply, err := s.runner.ContractRequester.CallMethod(ctx, &bm, false, false, objectRef, args.Method, argsSerialized, nil)
 	if err != nil {
 		return errors.Wrap(err, "CallMethod failed with error")
 	}

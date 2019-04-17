@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
 
 package pulsemanager
 
@@ -33,7 +33,7 @@ import (
 
 // ActiveListSwapper is required by network to swap active list.
 type ActiveListSwapper interface {
-	MoveSyncToActive(ctx context.Context) error
+	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
 }
 
 // PulseManager implements insolar.PulseManager.
@@ -127,7 +127,7 @@ func (m *PulseManager) setUnderGilSection(ctx context.Context, newPulse insolar.
 	m.currentPulse = newPulse
 
 	// swap active nodes
-	err = m.ActiveListSwapper.MoveSyncToActive(ctx)
+	err = m.ActiveListSwapper.MoveSyncToActive(ctx, newPulse.PulseNumber)
 	if err != nil {
 		return errors.Wrap(err, "failed to apply new active node list")
 	}

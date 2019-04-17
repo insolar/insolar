@@ -24,6 +24,7 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/messagebus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -160,7 +161,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 		PulseAccessor:              pa,
 		JetCoordinator:             jc,
 		PlatformCryptographyScheme: s.scheme,
-		senders:                    newLedgerArtifactSenders(),
+		senders:                    messagebus.NewSenders(),
 	}
 
 	desc, err := am.GetCode(s.ctx, codeRef)
@@ -178,47 +179,6 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), code, receivedCode)
 
-}
-
-func (s *amSuite) TestLedgerArtifactManager_GetObject_FollowsRedirect() {
-	mc := minimock.NewController(s.T())
-	am := NewClient()
-	mb := testutils.NewMessageBusMock(mc)
-
-	pa := pulse.NewAccessorMock(s.T())
-	pa.LatestMock.Return(*insolar.GenesisPulse, nil)
-	am.PulseAccessor = pa
-
-	objRef := genRandomRef(0)
-	nodeRef := genRandomRef(0)
-	mb.SendFunc = func(c context.Context, m insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-		o = o.Safe()
-
-		switch m.(type) {
-		case *message.GetObjectIndex:
-			return &reply.ObjectIndex{}, nil
-		case *message.GetObject:
-			if o.Receiver == nil {
-				return &reply.GetObjectRedirectReply{
-					Receiver: nodeRef,
-					Token:    &delegationtoken.GetObjectRedirectToken{Signature: []byte{1, 2, 3}},
-				}, nil
-			}
-
-			token, ok := o.Token.(*delegationtoken.GetObjectRedirectToken)
-			assert.True(s.T(), ok)
-			assert.Equal(s.T(), []byte{1, 2, 3}, token.Signature)
-			assert.Equal(s.T(), nodeRef, o.Receiver)
-			return &reply.Object{}, nil
-		default:
-			panic("unexpected call")
-		}
-	}
-	am.DefaultBus = mb
-
-	_, err := am.GetObject(s.ctx, *objRef, nil, false)
-
-	require.NoError(s.T(), err)
 }
 
 func (s *amSuite) TestLedgerArtifactManager_GetChildren_FollowsRedirect() {
@@ -272,7 +232,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 		mb.SendMock.Return(&reply.JetMiss{
 			JetID: insolar.ID(*insolar.NewJetID(5, []byte{1, 2, 3})),
 		}, nil)
-		_, err := am.RegisterRequest(s.ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
+		_, err := am.RegisterRequest(s.ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.Error(t, err)
 	})
 
@@ -287,9 +247,9 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 				return &reply.ID{}, nil
 			}
 			retries--
-			return &reply.JetMiss{JetID: insolar.ID(*insolar.NewJetID(4, []byte{b_11010101}))}, nil
+			return &reply.JetMiss{JetID: insolar.ID(*insolar.NewJetID(4, []byte{b_11010101})), Pulse: insolar.FirstPulseNumber}, nil
 		}
-		_, err := am.RegisterRequest(s.ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
+		_, err := am.RegisterRequest(s.ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.NoError(t, err)
 
 		jetID, actual := s.jetStorage.ForID(

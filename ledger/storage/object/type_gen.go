@@ -4,6 +4,8 @@
 package object
 
 import (
+	"fmt"
+
 	record "github.com/insolar/insolar/insolar/record"
 )
 
@@ -28,7 +30,7 @@ func TypeFromRecord(generic record.VirtualRecord) TypeID {
 	case *DeactivationRecord:
 		return 305
 	default:
-		panic("record is not registered")
+		panic(fmt.Sprintf("%T record is not registered", generic))
 	}
 }
 
@@ -53,7 +55,7 @@ func RecordFromType(i TypeID) record.VirtualRecord {
 	case 305:
 		return new(DeactivationRecord)
 	default:
-		panic("record is not registered")
+		panic(fmt.Sprintf("identificator %d is not registered", i))
 	}
 }
 
@@ -78,6 +80,6 @@ func (i TypeID) String() string {
 	case 305:
 		return "DeactivationRecord"
 	default:
-		panic("record is not registered")
+		panic(fmt.Sprintf("identificator %d is not registered", i))
 	}
 }

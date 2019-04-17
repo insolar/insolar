@@ -3,4 +3,4 @@ coverage:
 ignore:
   - "**/*_mock.go"
   - "**/*_string.go"
-  - "**/*.proto.go"
+  - "**/*.pb.go"

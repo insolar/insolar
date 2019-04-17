@@ -59,6 +59,7 @@ import (
 )
 
 //go:generate stringer -type=ClaimType
+
 type ClaimType uint8
 
 const (
@@ -259,6 +260,7 @@ func getClaimWithHeaderSize(claim ReferendumClaim) uint16 {
 	return getClaimSize(claim) + claimHeaderSize
 }
 
+// If you need a signed join claim use NodeKeeper.GetOriginJoinClaim()
 func NodeToClaim(node insolar.NetworkNode) (*NodeJoinClaim, error) {
 	keyProc := platformpolicy.NewKeyProcessor()
 	exportedKey, err := keyProc.ExportPublicKeyBinary(node.PublicKey())

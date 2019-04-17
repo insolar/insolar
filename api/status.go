@@ -63,7 +63,7 @@ func (s *StatusService) Get(r *http.Request, args *interface{}, reply *StatusRep
 
 	inslog.Infof("[ StatusService.Get ] Incoming request: %s", r.RequestURI)
 
-	reply.NetworkState = s.runner.NetworkSwitcher.GetState().String()
+	reply.NetworkState = s.runner.ServiceNetwork.GetState().String()
 	reply.NodeState = s.runner.NodeNetwork.GetOrigin().GetState().String()
 
 	activeNodes := s.runner.NodeNetwork.(network.NodeKeeper).GetAccessor().GetActiveNodes()

@@ -64,21 +64,19 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-
-	"github.com/stretchr/testify/suite"
-
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/suite"
 )
 
 var (
@@ -94,6 +92,8 @@ type fixture struct {
 	networkNodes   []*networkNode
 	pulsar         TestPulsar
 }
+
+const cacheDir = "network_cache/"
 
 func newFixture(t *testing.T) *fixture {
 	return &fixture{
@@ -400,7 +400,7 @@ func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse, persist
 	p.pulse = pulse
 	p.lock.Unlock()
 
-	return p.keeper.MoveSyncToActive(ctx)
+	return p.keeper.MoveSyncToActive(ctx, pulse.PulseNumber)
 }
 
 type staterMock struct {
@@ -417,6 +417,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	cfg.Pulsar.PulseTime = pulseTimeMs // pulse 5 sec for faster tests
 	cfg.Host.Transport.Address = node.host
 	cfg.Service.Skip = 5
+	cfg.Service.CacheDirectory = cacheDir + node.host
 
 	node.componentManager = &component.Manager{}
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
@@ -440,17 +441,21 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	certManager, cryptographyService := s.initCrypto(node)
 
-	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
+	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	s.Require().NoError(err)
 	terminationHandler := testutils.NewTerminationHandlerMock(s.T())
 	terminationHandler.LeaveFunc = func(p context.Context, p1 insolar.PulseNumber) {}
 	terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {}
-	terminationHandler.AbortFunc = func() {}
+	terminationHandler.AbortFunc = func(reason string) { log.Error(reason) }
 
+	mblocker := testutils.NewMessageBusLockerMock(s.T())
+	GIL := testutils.NewGlobalInsolarLockMock(s.T())
+	GIL.AcquireMock.Return()
+	GIL.ReleaseMock.Return()
 	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
 
-	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService)
+	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService, mblocker, GIL)
 	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler)
 
 	node.serviceNetwork = serviceNetwork

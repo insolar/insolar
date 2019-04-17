@@ -17,17 +17,15 @@
 package logicrunner
 
 import (
-	"bytes"
 	"context"
 	"encoding/gob"
-	"reflect"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type CaseRequest struct {
@@ -52,16 +50,12 @@ func NewCaseBindFromValidateMessage(ctx context.Context, mb insolar.MessageBus, 
 		Requests: make([]CaseRequest, len(msg.Requests)),
 	}
 	for i, req := range msg.Requests {
-		mb, err := mb.NewPlayer(ctx, bytes.NewReader(req.MessageBusTape))
-		if err != nil {
-			panic("couldn't read tape: " + err.Error())
-		}
+		// TODO: here we used message bus player
 		res.Requests[i] = CaseRequest{
-			Parcel:     req.Parcel,
-			Request:    req.Request,
-			MessageBus: mb,
-			Reply:      req.Reply,
-			Error:      req.Error,
+			Parcel:  req.Parcel,
+			Request: req.Request,
+			Reply:   req.Reply,
+			Error:   req.Error,
 		}
 	}
 	return res
@@ -144,47 +138,48 @@ func (r *CaseBindReplay) NextRequest() *CaseRequest {
 }
 
 func (lr *LogicRunner) Validate(ctx context.Context, ref Ref, p insolar.Pulse, cb CaseBind) (int, error) {
-	os := lr.UpsertObjectState(ref)
-	vs := os.StartValidation(ref)
-
-	vs.Lock()
-	defer vs.Unlock()
-
-	checker := &ValidationChecker{
-		lr: lr,
-		cb: NewCaseBindReplay(cb),
-	}
-	vs.Behaviour = checker
-
-	for {
-		request := checker.NextRequest()
-		if request == nil {
-			break
-		}
-
-		traceID := "TODO" // FIXME
-
-		ctx = inslogger.ContextWithTrace(ctx, traceID)
-		ctx = insolar.ContextWithMessageBus(ctx, request.MessageBus)
-
-		sender := request.Parcel.GetSender()
-		vs.Current = &CurrentExecution{
-			Context:       ctx,
-			Request:       &request.Request,
-			RequesterNode: &sender,
-		}
-
-		rep, err := func() (insolar.Reply, error) {
-			vs.Unlock()
-			defer vs.Lock()
-			return lr.executeOrValidate(ctx, vs, request.Parcel)
-		}()
-
-		err = vs.Behaviour.Result(rep, err)
-		if err != nil {
-			return 0, errors.Wrap(err, "validation step failed")
-		}
-	}
+	//os := lr.UpsertObjectState(ref)
+	//vs := os.StartValidation(ref)
+	//
+	//vs.Lock()
+	//defer vs.Unlock()
+	//
+	//checker := &ValidationChecker{
+	//	lr: lr,
+	//	cb: NewCaseBindReplay(cb),
+	//}
+	//vs.Behaviour = checker
+	//
+	//for {
+	//	request := checker.NextRequest()
+	//	if request == nil {
+	//		break
+	//	}
+	//
+	//	traceID := "TODO" // FIXME
+	//
+	//	ctx = inslogger.ContextWithTrace(ctx, traceID)
+	//
+	//	// TODO: here we were injecting message bus into context
+	//
+	//	sender := request.Parcel.GetSender()
+	//	vs.Current = &CurrentExecution{
+	//		Context:       ctx,
+	//		Request:       &request.Request,
+	//		RequesterNode: &sender,
+	//	}
+	//
+	//	rep, err := func() (insolar.Reply, error) {
+	//		vs.Unlock()
+	//		defer vs.Lock()
+	//		return lr.executeOrValidate(ctx, vs, request.Parcel)
+	//	}()
+	//
+	//	err = vs.Behaviour.Result(rep, err)
+	//	if err != nil {
+	//		return 0, errors.Wrap(err, "validation step failed")
+	//	}
+	//}
 	return 1, nil
 }
 
@@ -257,67 +252,6 @@ func (lr *LogicRunner) HandleExecutorResultsMessage(ctx context.Context, inmsg i
 	// c.AddExecutor(ctx, inmsg, msg)
 
 	return &reply.OK{}, nil
-}
-
-// ValidationBehaviour is a special object that responsible for validation behavior of other methods.
-type ValidationBehaviour interface {
-	Mode() string
-	Result(reply insolar.Reply, err error) error
-}
-
-type ValidationSaver struct {
-	lr       *LogicRunner
-	caseBind *CaseBind
-	current  *CaseRequest
-}
-
-func (vb *ValidationSaver) Mode() string {
-	return "execution"
-}
-
-func (vb *ValidationSaver) NewRequest(p insolar.Parcel, request Ref, mb insolar.MessageBus) {
-	vb.current = vb.caseBind.NewRequest(p, request, mb)
-}
-
-func (vb *ValidationSaver) Result(reply insolar.Reply, err error) error {
-	if vb.current == nil {
-		return errors.New("result call without request registered")
-	}
-	vb.current.Reply = reply
-	if err != nil {
-		vb.current.Error = err.Error()
-	}
-	return nil
-}
-
-type ValidationChecker struct {
-	lr      *LogicRunner
-	cb      *CaseBindReplay
-	current *CaseRequest
-}
-
-func (vb *ValidationChecker) Mode() string {
-	return "validation"
-}
-
-func (vb *ValidationChecker) NextRequest() *CaseRequest {
-	vb.current = vb.cb.NextRequest()
-	return vb.current
-}
-
-func (vb *ValidationChecker) Result(reply insolar.Reply, err error) error {
-	if vb.current == nil {
-		return errors.New("result call without request registered")
-	}
-	// TODO: reflect.DeepEqual is not what we want to go with, we should
-	// go with HASH comparision
-	if !reflect.DeepEqual(vb.current.Reply, reply) {
-		return errors.Errorf("replies arn't equal: expected: %+v, got: %+v, err: %+v", vb.current.Reply, reply, err)
-	}
-	if !reflect.DeepEqual(vb.current.Error, err) {
-		return errors.New("errors arn't equal")
-	}
-	return nil
 }
 
 func init() {

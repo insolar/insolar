@@ -84,8 +84,6 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
-	// we don't want to record GetCode messages because of cache
-	ctx = insolar.ContextWithMessageBus(ctx, gpr.lr.MessageBus)
 	inslogger.FromContext(ctx).Debug("In RPC.GetCode ....")
 
 	am := gpr.lr.ArtifactManager
@@ -120,13 +118,18 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (e
 	defer recoverRPC(&err)
 
 	os := gpr.lr.MustObjectState(req.Callee)
+
+	if os.ExecutionState.Current.LogicContext.Immutable {
+		return errors.New("Try to call route from immutable method")
+	}
+
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
-
 	bm := MakeBaseMessage(req.UpBaseReq, es)
 	res, err := gpr.lr.ContractRequester.CallMethod(ctx,
 		&bm,
 		!req.Wait,
+		req.Immutable,
 		&req.Object,
 		req.Method,
 		req.Arguments,

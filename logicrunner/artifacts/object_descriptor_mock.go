@@ -11,8 +11,6 @@ import (
 
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
-
-	testify_assert "github.com/stretchr/testify/assert"
 )
 
 //ObjectDescriptorMock implements github.com/insolar/insolar/logicrunner/artifacts.ObjectDescriptor
@@ -23,11 +21,6 @@ type ObjectDescriptorMock struct {
 	ChildPointerCounter    uint64
 	ChildPointerPreCounter uint64
 	ChildPointerMock       mObjectDescriptorMockChildPointer
-
-	ChildrenFunc       func(p *insolar.PulseNumber) (r RefIterator, r1 error)
-	ChildrenCounter    uint64
-	ChildrenPreCounter uint64
-	ChildrenMock       mObjectDescriptorMockChildren
 
 	CodeFunc       func() (r *insolar.Reference, r1 error)
 	CodeCounter    uint64
@@ -74,7 +67,6 @@ func NewObjectDescriptorMock(t minimock.Tester) *ObjectDescriptorMock {
 	}
 
 	m.ChildPointerMock = mObjectDescriptorMockChildPointer{mock: m}
-	m.ChildrenMock = mObjectDescriptorMockChildren{mock: m}
 	m.CodeMock = mObjectDescriptorMockCode{mock: m}
 	m.HeadRefMock = mObjectDescriptorMockHeadRef{mock: m}
 	m.IsPrototypeMock = mObjectDescriptorMockIsPrototype{mock: m}
@@ -215,156 +207,6 @@ func (m *ObjectDescriptorMock) ChildPointerFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.ChildPointerFunc != nil {
 		return atomic.LoadUint64(&m.ChildPointerCounter) > 0
-	}
-
-	return true
-}
-
-type mObjectDescriptorMockChildren struct {
-	mock              *ObjectDescriptorMock
-	mainExpectation   *ObjectDescriptorMockChildrenExpectation
-	expectationSeries []*ObjectDescriptorMockChildrenExpectation
-}
-
-type ObjectDescriptorMockChildrenExpectation struct {
-	input  *ObjectDescriptorMockChildrenInput
-	result *ObjectDescriptorMockChildrenResult
-}
-
-type ObjectDescriptorMockChildrenInput struct {
-	p *insolar.PulseNumber
-}
-
-type ObjectDescriptorMockChildrenResult struct {
-	r  RefIterator
-	r1 error
-}
-
-//Expect specifies that invocation of ObjectDescriptor.Children is expected from 1 to Infinity times
-func (m *mObjectDescriptorMockChildren) Expect(p *insolar.PulseNumber) *mObjectDescriptorMockChildren {
-	m.mock.ChildrenFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ObjectDescriptorMockChildrenExpectation{}
-	}
-	m.mainExpectation.input = &ObjectDescriptorMockChildrenInput{p}
-	return m
-}
-
-//Return specifies results of invocation of ObjectDescriptor.Children
-func (m *mObjectDescriptorMockChildren) Return(r RefIterator, r1 error) *ObjectDescriptorMock {
-	m.mock.ChildrenFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ObjectDescriptorMockChildrenExpectation{}
-	}
-	m.mainExpectation.result = &ObjectDescriptorMockChildrenResult{r, r1}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of ObjectDescriptor.Children is expected once
-func (m *mObjectDescriptorMockChildren) ExpectOnce(p *insolar.PulseNumber) *ObjectDescriptorMockChildrenExpectation {
-	m.mock.ChildrenFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ObjectDescriptorMockChildrenExpectation{}
-	expectation.input = &ObjectDescriptorMockChildrenInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ObjectDescriptorMockChildrenExpectation) Return(r RefIterator, r1 error) {
-	e.result = &ObjectDescriptorMockChildrenResult{r, r1}
-}
-
-//Set uses given function f as a mock of ObjectDescriptor.Children method
-func (m *mObjectDescriptorMockChildren) Set(f func(p *insolar.PulseNumber) (r RefIterator, r1 error)) *ObjectDescriptorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.ChildrenFunc = f
-	return m.mock
-}
-
-//Children implements github.com/insolar/insolar/logicrunner/artifacts.ObjectDescriptor interface
-func (m *ObjectDescriptorMock) Children(p *insolar.PulseNumber) (r RefIterator, r1 error) {
-	counter := atomic.AddUint64(&m.ChildrenPreCounter, 1)
-	defer atomic.AddUint64(&m.ChildrenCounter, 1)
-
-	if len(m.ChildrenMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ChildrenMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ObjectDescriptorMock.Children. %v", p)
-			return
-		}
-
-		input := m.ChildrenMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ObjectDescriptorMockChildrenInput{p}, "ObjectDescriptor.Children got unexpected parameters")
-
-		result := m.ChildrenMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ObjectDescriptorMock.Children")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.ChildrenMock.mainExpectation != nil {
-
-		input := m.ChildrenMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, ObjectDescriptorMockChildrenInput{p}, "ObjectDescriptor.Children got unexpected parameters")
-		}
-
-		result := m.ChildrenMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ObjectDescriptorMock.Children")
-		}
-
-		r = result.r
-		r1 = result.r1
-
-		return
-	}
-
-	if m.ChildrenFunc == nil {
-		m.t.Fatalf("Unexpected call to ObjectDescriptorMock.Children. %v", p)
-		return
-	}
-
-	return m.ChildrenFunc(p)
-}
-
-//ChildrenMinimockCounter returns a count of ObjectDescriptorMock.ChildrenFunc invocations
-func (m *ObjectDescriptorMock) ChildrenMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.ChildrenCounter)
-}
-
-//ChildrenMinimockPreCounter returns the value of ObjectDescriptorMock.Children invocations
-func (m *ObjectDescriptorMock) ChildrenMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.ChildrenPreCounter)
-}
-
-//ChildrenFinished returns true if mock invocations count is ok
-func (m *ObjectDescriptorMock) ChildrenFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ChildrenMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ChildrenCounter) == uint64(len(m.ChildrenMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.ChildrenMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ChildrenCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.ChildrenFunc != nil {
-		return atomic.LoadUint64(&m.ChildrenCounter) > 0
 	}
 
 	return true
@@ -1322,10 +1164,6 @@ func (m *ObjectDescriptorMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ObjectDescriptorMock.ChildPointer")
 	}
 
-	if !m.ChildrenFinished() {
-		m.t.Fatal("Expected call to ObjectDescriptorMock.Children")
-	}
-
 	if !m.CodeFinished() {
 		m.t.Fatal("Expected call to ObjectDescriptorMock.Code")
 	}
@@ -1375,10 +1213,6 @@ func (m *ObjectDescriptorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ObjectDescriptorMock.ChildPointer")
 	}
 
-	if !m.ChildrenFinished() {
-		m.t.Fatal("Expected call to ObjectDescriptorMock.Children")
-	}
-
 	if !m.CodeFinished() {
 		m.t.Fatal("Expected call to ObjectDescriptorMock.Code")
 	}
@@ -1422,7 +1256,6 @@ func (m *ObjectDescriptorMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.ChildPointerFinished()
-		ok = ok && m.ChildrenFinished()
 		ok = ok && m.CodeFinished()
 		ok = ok && m.HeadRefFinished()
 		ok = ok && m.IsPrototypeFinished()
@@ -1440,10 +1273,6 @@ func (m *ObjectDescriptorMock) MinimockWait(timeout time.Duration) {
 
 			if !m.ChildPointerFinished() {
 				m.t.Error("Expected call to ObjectDescriptorMock.ChildPointer")
-			}
-
-			if !m.ChildrenFinished() {
-				m.t.Error("Expected call to ObjectDescriptorMock.Children")
 			}
 
 			if !m.CodeFinished() {
@@ -1487,10 +1316,6 @@ func (m *ObjectDescriptorMock) MinimockWait(timeout time.Duration) {
 func (m *ObjectDescriptorMock) AllMocksCalled() bool {
 
 	if !m.ChildPointerFinished() {
-		return false
-	}
-
-	if !m.ChildrenFinished() {
 		return false
 	}
 
