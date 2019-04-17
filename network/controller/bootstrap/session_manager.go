@@ -240,13 +240,17 @@ func (sm *sessionManager) ChallengePassed(id SessionID) error {
 
 func (sm *sessionManager) ReleaseSession(id SessionID) (*Session, error) {
 	sm.lock.Lock()
-	defer sm.lock.Unlock()
 
 	session, err := sm.checkSession(id, Challenge2)
 	if err != nil {
+		sm.lock.Unlock()
 		return nil, err
 	}
 	delete(sm.sessions, id)
+	sm.lock.Unlock()
+
+	sm.newSessionNotification <- notification{}
+
 	return session, nil
 }
 
