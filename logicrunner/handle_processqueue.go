@@ -116,8 +116,14 @@ func (s *StartQueueProcessorIfNeeded) Present(ctx context.Context, f flow.Flow) 
 
 	pub := s.dep.Publisher
 	rawRef := s.ref.Bytes()
-	pub.Publish(InnerMsgTopic, makeWMMessage(ctx, rawRef, "ProcessExecutionQueue"))
-	pub.Publish(InnerMsgTopic, makeWMMessage(ctx, rawRef, "getLedgerPendingRequest"))
+	err := pub.Publish(InnerMsgTopic, makeWMMessage(ctx, rawRef, "ProcessExecutionQueue"))
+	if err != nil {
+		return errors.Wrap(err, "can't send ProcessExecutionQueue msg")
+	}
+	err = pub.Publish(InnerMsgTopic, makeWMMessage(ctx, rawRef, "getLedgerPendingRequest"))
+	if err != nil {
+		return errors.Wrap(err, "can't send getLedgerPendingRequest msg")
+	}
 
 	return nil
 }
