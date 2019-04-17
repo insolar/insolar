@@ -53,7 +53,11 @@ func NewDataGatherer(
 	}
 }
 
-func (d *dataGatherer) ForPulseAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) (*message.HeavyPayload, error) {
+func (d *dataGatherer) ForPulseAndJet(
+	ctx context.Context,
+	pn insolar.PulseNumber,
+	jetID insolar.JetID,
+) (*message.HeavyPayload, error) {
 	dr, err := d.dropAccessor.ForPulse(ctx, jetID, pn)
 	if err != nil {
 		inslogger.FromContext(ctx).Error("synchronize: can't fetch a drop")

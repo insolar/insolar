@@ -100,7 +100,12 @@ func (t *toHeavySyncer) reAddToNotSentPayloads(ctx context.Context, payload notS
 	defer t.notSentPayloadsMux.Unlock()
 
 	if payload.backoff.Attempt() > t.conf.Backoff.MaxAttempts {
-		inslogger.FromContext(ctx).Errorf("Failed to sync pulse - %v with jetID - %v. Attempts - %v", payload.msg.PulseNum, payload.msg.JetID, payload.backoff.Attempt()-1)
+		inslogger.FromContext(ctx).Errorf(
+			"Failed to sync pulse - %v with jetID - %v. Attempts - %v",
+			payload.msg.PulseNum,
+			payload.msg.JetID,
+			payload.backoff.Attempt()-1,
+		)
 		return
 	}
 
@@ -172,7 +177,14 @@ func (t *toHeavySyncer) sync(ctx context.Context) {
 		for _, jID := range jets {
 			msg, err := t.dataGatherer.ForPulseAndJet(ctx, pn, jID)
 			if err != nil {
-				panic(fmt.Sprintf("[sync] Problems with gather data for a pulse - %v and jet - %v. err - %v", pn, jID.DebugString(), err))
+				panic(
+					fmt.Sprintf(
+						"[sync] Problems with gather data for a pulse - %v and jet - %v. err - %v",
+						pn,
+						jID.DebugString(),
+						err,
+					),
+				)
 			}
 			err = t.sendToHeavy(ctx, msg)
 			if err != nil {

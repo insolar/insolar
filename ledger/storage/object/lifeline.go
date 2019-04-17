@@ -249,7 +249,11 @@ func (m *IndexMemory) ForJet(ctx context.Context, jetID insolar.JetID) map[insol
 	return res
 }
 
-func (m *IndexMemory) ForPulseAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) map[insolar.ID]Lifeline {
+func (m *IndexMemory) ForPulseAndJet(
+	ctx context.Context,
+	pn insolar.PulseNumber,
+	jetID insolar.JetID,
+) map[insolar.ID]Lifeline {
 	m.storageLock.RLock()
 	defer m.storageLock.RUnlock()
 
