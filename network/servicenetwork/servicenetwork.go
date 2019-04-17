@@ -113,20 +113,20 @@ func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manag
 	return serviceNetwork, nil
 }
 
-func (nk *ServiceNetwork) Gateway() network.Gateway {
-	nk.gatewayMu.RLock()
-	defer nk.gatewayMu.RUnlock()
-	return nk.gateway
+func (n *ServiceNetwork) Gateway() network.Gateway {
+	n.gatewayMu.RLock()
+	defer n.gatewayMu.RUnlock()
+	return n.gateway
 }
 
-func (nk *ServiceNetwork) SetGateway(g network.Gateway) {
-	nk.gatewayMu.Lock()
-	defer nk.gatewayMu.Unlock()
-	nk.gateway = g
+func (n *ServiceNetwork) SetGateway(g network.Gateway) {
+	n.gatewayMu.Lock()
+	defer n.gatewayMu.Unlock()
+	n.gateway = g
 }
 
-func (nk *ServiceNetwork) GetState() insolar.NetworkState {
-	return nk.Gateway().GetState()
+func (n *ServiceNetwork) GetState() insolar.NetworkState {
+	return n.Gateway().GetState()
 }
 
 // SendMessage sends a message from MessageBus.

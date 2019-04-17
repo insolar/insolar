@@ -175,7 +175,6 @@ func createTwoHostNetworks(id1, id2 string) (n1, n2 network.HostNetwork, err err
 }
 
 func TestNewHostNetwork(t *testing.T) {
-	t.Skip("fixme")
 	ctx := context.Background()
 	ctx2 := context.Background()
 	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
