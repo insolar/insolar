@@ -126,7 +126,7 @@ func (s *PreprocessorSuite) TestBasicGeneration() {
 		a := assert.New(t)
 
 		buf := bytes.Buffer{}
-		err := parsed.WriteWrapper(&buf)
+		err := parsed.WriteWrapper(&buf, parsed.ContractName())
 		a.NoError(err)
 
 		code, err := ioutil.ReadAll(&buf)
@@ -359,7 +359,7 @@ func (a *A) Get(
 	s.NoError(err)
 
 	var bufWrapper bytes.Buffer
-	err = parsed.WriteWrapper(&bufWrapper)
+	err = parsed.WriteWrapper(&bufWrapper, parsed.ContractName())
 	s.NoError(err)
 	s.Contains(bufWrapper.String(), "var args0 int")
 	s.Contains(bufWrapper.String(), "args[0] = &args0")
@@ -460,7 +460,7 @@ func ( A ) GetPointer(i *pointerPath.SomeType) error {
 	s.NotEqual(len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = parsed.WriteWrapper(&bufWrapper)
+	err = parsed.WriteWrapper(&bufWrapper, parsed.ContractName())
 	s.NoError(err)
 	s.Contains(bufWrapper.String(), `"some/test/import/path"`)
 	s.Contains(bufWrapper.String(), `"some/test/import/pointerPath"`)
@@ -502,7 +502,7 @@ func ( A ) Get(i someAlias.SomeType) error {
 	s.NotEqual(len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = parsed.WriteWrapper(&bufWrapper)
+	err = parsed.WriteWrapper(&bufWrapper, parsed.ContractName())
 	s.NoError(err)
 	s.Contains(bufWrapper.String(), `someAlias "some/test/import/path"`)
 	s.NotContains(bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
@@ -544,7 +544,7 @@ func ( A ) Get() error {
 	s.NotEqual(len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = parsed.WriteWrapper(&bufWrapper)
+	err = parsed.WriteWrapper(&bufWrapper, parsed.ContractName())
 	s.NoError(err)
 	s.NotContains(bufWrapper.String(), `"some/test/import/path"`)
 }
@@ -585,7 +585,7 @@ func ( A ) Get() (path.SomeValue, error) {
 	s.NotEqual(len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = parsed.WriteWrapper(&bufWrapper)
+	err = parsed.WriteWrapper(&bufWrapper, parsed.ContractName())
 	s.NoError(err)
 	s.NotContains(bufWrapper.String(), `"some/test/import/path"`)
 }

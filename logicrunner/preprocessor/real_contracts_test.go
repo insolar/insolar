@@ -103,7 +103,7 @@ func (s *RealContractsSuite) TestGenerateWrappers() {
 			a.NoError(err)
 
 			var buf bytes.Buffer
-			err = parsed.WriteWrapper(&buf)
+			err = parsed.WriteWrapper(&buf, parsed.ContractName())
 			a.NoError(err)
 
 			code, err := ioutil.ReadAll(&buf)
