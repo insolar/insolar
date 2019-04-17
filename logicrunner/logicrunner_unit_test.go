@@ -25,6 +25,9 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/pkg/errors"
@@ -33,9 +36,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
@@ -795,7 +795,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 			ctx := inslogger.ContextWithTrace(suite.ctx, "req-"+strconv.Itoa(i))
 
-			_, err := suite.lr.HandleCalls(ctx, parcel)
+			_, err := suite.lr.FlowHandler.WrapBusHandle(ctx, parcel)
 			suite.Require().NoError(err)
 
 			wg.Done()
@@ -1030,7 +1030,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 
 			ctx := inslogger.ContextWithTrace(suite.ctx, "req")
 
-			_, err := suite.lr.HandleCalls(ctx, parcel)
+			_, err := suite.lr.FlowHandler.WrapBusHandle(ctx, parcel)
 			if test.errorExpected {
 				suite.Require().Error(err)
 			} else {
@@ -1042,6 +1042,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	}
 }
 
+/*
 func (suite *LogicRunnerTestSuite) TestGracefulStop() {
 	suite.lr.isStopping = false
 	suite.lr.stopChan = make(chan struct{}, 0)
@@ -1070,6 +1071,7 @@ func (suite *LogicRunnerTestSuite) TestGracefulStop() {
 
 	suite.Require().NoError(err)
 }
+*/
 
 func TestLogicRunner(t *testing.T) {
 	t.Parallel()
@@ -1333,9 +1335,9 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef:             s.objectRef,
-				Requests:              make([]message.CaseBindRequest, 0),
-				Queue:                 messagesQueue,
+				RecordRef: s.objectRef,
+				Requests:  make([]message.CaseBindRequest, 0),
+				Queue:     messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 

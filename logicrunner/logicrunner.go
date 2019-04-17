@@ -267,7 +267,7 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 
 func (lr *LogicRunner) RegisterHandlers() {
 	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.FlowHandler.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeCallConstructor, lr.HandleCalls)
+	lr.MessageBus.MustRegister(insolar.TypeCallConstructor, lr.FlowHandler.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeExecutorResults, lr.HandleExecutorResultsMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
@@ -341,103 +341,13 @@ func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel insolar.Parce
 
 	res := obj
 	res.SetRecord(*id)
+
 	return &res, nil
 }
 
 func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context {
 	context, _ := inslogger.WithField(ctx, "targetid", msg.DefaultTarget().String())
 	return context
-}
-
-func (lr *LogicRunner) HandleCalls(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	ctx = loggerWithTargetID(ctx, parcel)
-	inslogger.FromContext(ctx).Debug("LogicRunner.Execute starts ...")
-
-	msg, ok := parcel.Message().(message.IBaseLogicMessage)
-	if !ok {
-		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
-	}
-
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.HandleCalls")
-	span.AddAttributes(
-		trace.StringAttribute("msg.Type", msg.Type().String()),
-	)
-	defer span.End()
-
-	ref := msg.GetReference()
-	os := lr.UpsertObjectState(ref)
-
-	os.Lock()
-	if os.ExecutionState == nil {
-		os.ExecutionState = &ExecutionState{
-			Ref:       ref,
-			Queue:     make([]ExecutionQueueElement, 0),
-			Behaviour: &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
-		}
-	}
-	es := os.ExecutionState
-	os.Unlock()
-
-	// ExecutionState should be locked between CheckOurRole and
-	// appending ExecutionQueueElement to the queue to prevent a race condition.
-	// Otherwise it's possible that OnPulse will clean up the queue and set
-	// ExecutionState.Pending to NotPending. Execute will add an element to the
-	// queue afterwards. In this case cross-pulse execution will break.
-	es.Lock()
-
-	err := lr.CheckOurRole(ctx, msg, insolar.DynamicRoleVirtualExecutor)
-	if err != nil {
-		es.Unlock()
-		return nil, errors.Wrap(err, "[ Execute ] can't play role")
-	}
-
-	if lr.CheckExecutionLoop(ctx, es, parcel) {
-		es.Unlock()
-		return nil, os.WrapError(nil, "loop detected")
-	}
-	es.Unlock()
-
-	request, err := lr.RegisterRequest(ctx, parcel)
-	if err != nil {
-		return nil, os.WrapError(err, "[ Execute ] can't create request")
-	}
-
-	es.Lock()
-	pulse := lr.pulse(ctx)
-	if pulse.PulseNumber != parcel.Pulse() {
-		meCurrent, _ := lr.JetCoordinator.IsAuthorized(
-			ctx, insolar.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
-		)
-		if !meCurrent {
-			es.Unlock()
-			return &reply.RegisterRequest{
-				Request: *request,
-			}, nil
-		}
-	}
-
-	qElement := ExecutionQueueElement{
-		ctx:     ctx,
-		parcel:  parcel,
-		request: request,
-	}
-
-	es.Queue = append(es.Queue, qElement)
-	es.Unlock()
-
-	err = lr.ClarifyPendingState(ctx, es, parcel)
-	if err != nil {
-		return nil, err
-	}
-
-	err = lr.StartQueueProcessorIfNeeded(ctx, es)
-	if err != nil {
-		return nil, err
-	}
-
-	return &reply.RegisterRequest{
-		Request: *request,
-	}, nil
 }
 
 func (lr *LogicRunner) CheckExecutionLoop(
@@ -1057,6 +967,7 @@ func (lr *LogicRunner) executeConstructorCall(
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 	lr.stateMutex.Lock()
+	lr.FlowHandler.ChangePulse(ctx, pulse)
 
 	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
 	defer span.End()

@@ -48,8 +48,14 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 			Message: s.Message,
 		}
 		return f.Handle(ctx, h.Present)
+	case insolar.TypeCallConstructor:
+		h := &HandleCall{
+			dep:     s.dep,
+			Message: s.Message,
+		}
+		return f.Handle(ctx, h.Present)
 	default:
-		return fmt.Errorf("no handler for message type %s", s.Message.Parcel.Message().Type().String())
+		return fmt.Errorf("[ Init.Present ] no handler for message type %s", s.Message.Parcel.Message().Type().String())
 	}
 }
 
@@ -74,6 +80,6 @@ func (s *InnerInit) Present(ctx context.Context, f flow.Flow) error {
 		}
 		return f.Handle(ctx, h.Present)
 	default:
-		return fmt.Errorf("no handler for message type %s", s.Message.Metadata.Get("Type"))
+		return fmt.Errorf("[ InnerInit.Present ] no handler for message type %s", s.Message.Metadata.Get("Type"))
 	}
 }

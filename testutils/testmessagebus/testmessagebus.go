@@ -150,7 +150,7 @@ func (mb *TestMessageBus) Send(ctx context.Context, m insolar.Message, _ *insola
 	t := parcel.Message().Type()
 	handler, ok := mb.handlers[t]
 	if !ok {
-		return nil, errors.New(fmt.Sprint("no handler for message type:", t.String()))
+		return nil, errors.New(fmt.Sprint("[ TestMessageBus ] no handler for message type:", t.String()))
 	}
 
 	ctx = parcel.Context(context.Background())

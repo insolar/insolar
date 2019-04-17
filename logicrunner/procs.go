@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -34,15 +33,16 @@ type CheckOurRole struct {
 	role insolar.DynamicRole
 
 	Dep struct {
-		JetCoordinator insolar.JetCoordinator
+		lr *LogicRunner
 	}
 }
 
 func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := ch.msg.DefaultTarget()
-	isAuthorized, err := ch.Dep.JetCoordinator.IsAuthorized(
-		ctx, ch.role, *target.Record(), flow.Pulse(ctx) /* Could it be like that */, ch.Dep.JetCoordinator.Me(),
+	isAuthorized, err := ch.Dep.lr.JetCoordinator.IsAuthorized(
+		// TODO: change ch.Dep.lr.pulse(ctx).PulseNumber -> flow.Pulse(ctx)
+		ctx, ch.role, *target.Record(), ch.Dep.lr.pulse(ctx).PulseNumber, ch.Dep.lr.JetCoordinator.Me(),
 	)
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")
@@ -130,10 +130,12 @@ func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
 	defer c.es.HasPendingCheckMutex.Unlock()
 
 	c.es.Lock()
+
 	if c.es.pending != message.PendingUnknown {
 		c.es.Unlock()
 		return nil
 	}
+
 	c.es.Unlock()
 
 	has, err := c.Dep.ArtifactManager.HasPendingRequests(ctx, c.es.Ref)

@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -47,7 +46,6 @@ func (h *HandleCall) executeActual(
 	lr := h.dep.lr
 	ref := msg.GetReference()
 	os := lr.UpsertObjectState(ref)
-	log.Info("After UpsertObjectState")
 
 	os.Lock()
 	if os.ExecutionState == nil {
@@ -70,15 +68,13 @@ func (h *HandleCall) executeActual(
 	procCheckRole := CheckOurRole{
 		msg:  msg,
 		role: insolar.DynamicRoleVirtualExecutor,
-		Dep: struct{ JetCoordinator insolar.JetCoordinator }{
-			JetCoordinator: lr.JetCoordinator,
-		},
+		Dep:  struct{ lr *LogicRunner }{lr: lr},
 	}
 
 	if err := f.Procedure(ctx, &procCheckRole); err != nil {
 		es.Unlock()
 		// TODO: check if error is ErrCancelled
-		return nil, errors.Wrap(err, "[ Execute ] can't play role")
+		return nil, errors.Wrap(err, "[ executeActual ] can't play role")
 	}
 
 	if lr.CheckExecutionLoop(ctx, es, parcel) {
@@ -90,8 +86,14 @@ func (h *HandleCall) executeActual(
 	procRegisterRequest := NewRegisterRequest(parcel, h.dep)
 
 	if err := f.Procedure(ctx, procRegisterRequest); err != nil {
+		if err == flow.ErrCancelled {
+			request := procRegisterRequest.getResult()
+			return &reply.RegisterRequest{
+				Request: *request,
+			}, nil
+		}
 		// TODO: check if error is ErrCancelled
-		return nil, os.WrapError(err, "[ Execute ] can't create request")
+		return nil, os.WrapError(err, "[ executeActual ] can't create request")
 	}
 
 	request := procRegisterRequest.getResult()
@@ -115,8 +117,12 @@ func (h *HandleCall) executeActual(
 	}
 
 	if err := f.Procedure(ctx, &procClarifyPendingState); err != nil {
-		// TODO: check if error is ErrCancelled
-		return nil, err
+		if err == flow.ErrCancelled {
+			// TODO: it's done to support current logic. Do it correctly when go to flow
+			f.Continue(ctx)
+		} else {
+			return nil, err
+		}
 	}
 
 	s := StartQueueProcessorIfNeeded{
@@ -137,14 +143,14 @@ func (h *HandleCall) executeActual(
 func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 	parcel := h.Message.Parcel
 	ctx = loggerWithTargetID(ctx, parcel)
-	inslogger.FromContext(ctx).Debug("LogicRunner.Execute starts ...")
+	inslogger.FromContext(ctx).Debug("HandleCall.Present starts ...")
 
 	msg, ok := parcel.Message().(message.IBaseLogicMessage)
 	if !ok {
-		return errors.New("Execute( ! message.IBaseLogicMessage )")
+		return errors.New("HandleCall( ! message.IBaseLogicMessage )")
 	}
 
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.Execute")
+	ctx, span := instracer.StartSpan(ctx, "HandleCall.Present")
 	span.AddAttributes(
 		trace.StringAttribute("msg.Type", msg.Type().String()),
 	)
