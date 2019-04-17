@@ -32,19 +32,19 @@ import (
 	"go.opencensus.io/trace"
 )
 
-type Execute struct {
+type HandleCall struct {
 	dep *Dependencies
 
 	Message bus.Message
 }
 
-func (e *Execute) executeActual(
+func (h *HandleCall) executeActual(
 	ctx context.Context,
 	parcel insolar.Parcel,
 	msg message.IBaseLogicMessage,
 	f flow.Flow) (insolar.Reply, error) {
 
-	lr := e.dep.lr
+	lr := h.dep.lr
 	ref := msg.GetReference()
 	os := lr.UpsertObjectState(ref)
 	log.Info("After UpsertObjectState")
@@ -87,7 +87,7 @@ func (e *Execute) executeActual(
 	}
 	es.Unlock()
 
-	procRegisterRequest := NewRegisterRequest(parcel, e.dep)
+	procRegisterRequest := NewRegisterRequest(parcel, h.dep)
 
 	if err := f.Procedure(ctx, procRegisterRequest); err != nil {
 		// TODO: check if error is ErrCancelled
@@ -119,12 +119,12 @@ func (e *Execute) executeActual(
 		return nil, err
 	}
 
-	h := StartQueueProcessorIfNeeded{
+	s := StartQueueProcessorIfNeeded{
 		es:  es,
-		dep: e.dep,
+		dep: h.dep,
 		ref: &ref,
 	}
-	if err := f.Handle(ctx, h.Present); err != nil {
+	if err := f.Handle(ctx, s.Present); err != nil {
 		inslogger.FromContext(ctx).Warn("[ executeActual ] StartQueueProcessorIfNeeded returns error: ", err)
 	}
 
@@ -134,10 +134,8 @@ func (e *Execute) executeActual(
 
 }
 
-func (e *Execute) Present(ctx context.Context, f flow.Flow) error {
-	log.Info(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-
-	parcel := e.Message.Parcel
+func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
+	parcel := h.Message.Parcel
 	ctx = loggerWithTargetID(ctx, parcel)
 	inslogger.FromContext(ctx).Debug("LogicRunner.Execute starts ...")
 
@@ -153,9 +151,9 @@ func (e *Execute) Present(ctx context.Context, f flow.Flow) error {
 	defer span.End()
 
 	r := bus.Reply{}
-	r.Reply, r.Err = e.executeActual(ctx, parcel, msg, f)
+	r.Reply, r.Err = h.executeActual(ctx, parcel, msg, f)
 
-	e.Message.ReplyTo <- r
+	h.Message.ReplyTo <- r
 	return nil
 
 }

@@ -81,7 +81,6 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 		res.reply, res.err = lr.executeOrValidate(current.Context, es, qe.parcel)
 
 		if qe.fromLedger {
-			//go lr.getLedgerPendingRequest(ctx, es)
 			pub := p.dep.Publisher
 			pub.Publish(InnerMsgTopic, makeWMMessage(ctx, p.Message.Payload, "getLedgerPendingRequest"))
 		}
@@ -127,10 +126,6 @@ func (s *StartQueueProcessorIfNeeded) Present(ctx context.Context, f flow.Flow) 
 
 	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
 	s.es.QueueProcessorActive = true
-
-	//go s.dep.lr.ProcessExecutionQueue(ctx, s.es)
-	//go s.dep.lr.getLedgerPendingRequest(ctx, s.es)
-	// These Publishes run new flow
 
 	pub := s.dep.Publisher
 	rawRef := s.ref.Bytes()
