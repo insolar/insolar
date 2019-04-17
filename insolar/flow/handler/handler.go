@@ -60,7 +60,7 @@ func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (ins
 		f := thread.NewThread(msg, h.controller)
 		err := f.Run(ctx, h.handles.present(msg))
 		defer func() {
-			recover()
+			_ = recover()
 		}()
 		if err != nil {
 			select {
