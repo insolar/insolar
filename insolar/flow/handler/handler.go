@@ -59,6 +59,9 @@ func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (ins
 	go func() {
 		f := thread.NewThread(msg, h.controller)
 		err := f.Run(ctx, h.handles.present(msg))
+		defer func() {
+			recover()
+		}()
 		if err != nil {
 			select {
 			case msg.ReplyTo <- bus.Reply{Err: err}:

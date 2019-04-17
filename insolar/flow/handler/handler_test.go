@@ -18,6 +18,7 @@ package handler
 
 import (
 	"context"
+	"runtime"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -60,6 +61,7 @@ func TestHandler_WrapBusHandle(t *testing.T) {
 	}
 	h.handles.present = func(msg bus.Message) flow.Handle {
 		msg.ReplyTo <- reply
+		runtime.Gosched()
 		return func(ctx context.Context, f flow.Flow) error {
 			return nil
 		}
@@ -98,10 +100,11 @@ func TestHandler_WrapBusHandle_ReplyError(t *testing.T) {
 		controller: thread.NewController(),
 	}
 	h.handles.present = func(msg bus.Message) flow.Handle {
+		msg.ReplyTo <- bus.Reply{
+			Err: errors.New("reply error"),
+		}
+		runtime.Gosched()
 		return func(ctx context.Context, f flow.Flow) error {
-			msg.ReplyTo <- bus.Reply{
-				Err: errors.New("reply error"),
-			}
 			return errors.New("test error")
 		}
 	}
@@ -142,8 +145,9 @@ func TestHandler_WrapBusHandle_ReplyWithError(t *testing.T) {
 		Reply: replyMock(42),
 	}
 	h.handles.present = func(msg bus.Message) flow.Handle {
+		msg.ReplyTo <- reply
+		runtime.Gosched()
 		return func(ctx context.Context, f flow.Flow) error {
-			msg.ReplyTo <- reply
 			return errors.New("test error")
 		}
 	}
