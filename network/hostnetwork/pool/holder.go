@@ -50,48 +50,52 @@
 
 package pool
 
-import "github.com/insolar/insolar/network/hostnetwork/host"
+import (
+	"fmt"
+)
 
-type entryHolderImpl struct {
-	entries map[string]entry
+type iterateFunc func(entry *entry)
+
+type entryHolder struct {
+	entries map[string]*entry
 }
 
-func newEntryHolderImpl() entryHolder {
-	return &entryHolderImpl{
-		entries: make(map[string]entry),
+func newEntryHolder() *entryHolder {
+	return &entryHolder{
+		entries: make(map[string]*entry),
 	}
 }
 
-func (eh *entryHolderImpl) key(host *host.Host) string {
-	return host.NodeID.String()
+func (eh *entryHolder) key(host fmt.Stringer) string {
+	return host.String()
 }
 
-func (eh *entryHolderImpl) Get(host *host.Host) (entry, bool) {
-	entry, ok := eh.entries[eh.key(host)]
+func (eh *entryHolder) get(host fmt.Stringer) (*entry, bool) {
+	e, ok := eh.entries[eh.key(host)]
 
-	return entry, ok
+	return e, ok
 }
 
-func (eh *entryHolderImpl) Delete(host *host.Host) {
+func (eh *entryHolder) delete(host fmt.Stringer) {
 	delete(eh.entries, eh.key(host))
 }
 
-func (eh *entryHolderImpl) Add(host *host.Host, entry entry) {
+func (eh *entryHolder) add(host fmt.Stringer, entry *entry) {
 	eh.entries[eh.key(host)] = entry
 }
 
-func (eh *entryHolderImpl) Clear() {
+func (eh *entryHolder) clear() {
 	for key := range eh.entries {
 		delete(eh.entries, key)
 	}
 }
 
-func (eh *entryHolderImpl) Iterate(iterateFunc iterateFunc) {
-	for _, entry := range eh.entries {
-		iterateFunc(entry)
+func (eh *entryHolder) iterate(iterateFunc iterateFunc) {
+	for _, h := range eh.entries {
+		iterateFunc(h)
 	}
 }
 
-func (eh *entryHolderImpl) Size() int {
+func (eh *entryHolder) size() int {
 	return len(eh.entries)
 }

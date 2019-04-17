@@ -52,6 +52,7 @@ package pool
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"sync"
 
@@ -61,10 +62,21 @@ import (
 	"github.com/insolar/insolar/network/transport"
 )
 
+type ConnectionPool interface {
+	GetConnection(ctx context.Context, host *host.Host) (io.ReadWriteCloser, error)
+	HandleConnection(host *host.Host, conn io.ReadWriteCloser) error
+	CloseConnection(ctx context.Context, host *host.Host)
+	Reset()
+}
+
+func NewConnectionPool(t transport.StreamTransport) ConnectionPool {
+	return newConnectionPool(t)
+}
+
 type connectionPool struct {
 	transport transport.StreamTransport
 
-	entryHolder entryHolder
+	entryHolder *entryHolder
 	mutex       sync.RWMutex
 }
 
@@ -98,14 +110,14 @@ func (cp *connectionPool) CloseConnection(ctx context.Context, host *host.Host) 
 
 	logger := inslogger.FromContext(ctx)
 
-	entry, ok := cp.entryHolder.Get(host)
+	entry, ok := cp.entryHolder.get(host)
 	logger.Debugf("[ CloseConnection ] Finding entry for connection to %s in pool: %t", host, ok)
 
 	if ok {
 		entry.Close()
 
 		logger.Debugf("[ CloseConnection ] Delete entry for connection to %s from pool", host)
-		cp.entryHolder.Delete(host)
+		cp.entryHolder.delete(host)
 		metrics.NetworkConnections.Dec()
 	}
 }
@@ -114,20 +126,20 @@ func (cp *connectionPool) HandleConnection(host *host.Host, conn io.ReadWriteClo
 	panic("implement me")
 }
 
-func (cp *connectionPool) getEntry(host *host.Host) (entry, bool) {
+func (cp *connectionPool) getEntry(host fmt.Stringer) (*entry, bool) {
 	cp.mutex.RLock()
 	defer cp.mutex.RUnlock()
 
-	return cp.entryHolder.Get(host)
+	return cp.entryHolder.get(host)
 }
 
-func (cp *connectionPool) getOrCreateEntry(ctx context.Context, host *host.Host) entry {
+func (cp *connectionPool) getOrCreateEntry(ctx context.Context, host *host.Host) *entry {
 	logger := inslogger.FromContext(ctx)
 
 	cp.mutex.Lock()
 	defer cp.mutex.Unlock()
 
-	entry, ok := cp.entryHolder.Get(host)
+	entry, ok := cp.entryHolder.get(host)
 	logger.Debugf("[ getOrCreateEntry ] Finding entry for connection to %s in pool: %t", host, ok)
 
 	if ok {
@@ -138,8 +150,8 @@ func (cp *connectionPool) getOrCreateEntry(ctx context.Context, host *host.Host)
 
 	entry = newEntry(cp.transport, host, cp.CloseConnection)
 
-	cp.entryHolder.Add(host, entry)
-	size := cp.entryHolder.Size()
+	cp.entryHolder.add(host, entry)
+	size := cp.entryHolder.size()
 	logger.Debugf(
 		"[ getOrCreateEntry ] Added entry for connection to %s. Current pool size: %d",
 		host,
@@ -154,9 +166,9 @@ func (cp *connectionPool) Reset() {
 	cp.mutex.Lock()
 	defer cp.mutex.Unlock()
 
-	cp.entryHolder.Iterate(func(entry entry) {
+	cp.entryHolder.iterate(func(entry *entry) {
 		entry.Close()
 	})
-	cp.entryHolder.Clear()
-	metrics.NetworkConnections.Set(float64(cp.entryHolder.Size()))
+	cp.entryHolder.clear()
+	metrics.NetworkConnections.Set(float64(cp.entryHolder.size()))
 }

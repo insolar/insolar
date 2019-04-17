@@ -65,7 +65,9 @@ import (
 	"github.com/insolar/insolar/network/utils"
 )
 
-type entryImpl struct {
+type onClose func(ctx context.Context, host *host.Host)
+
+type entry struct {
 	transport transport.StreamTransport
 	host      *host.Host
 	onClose   onClose
@@ -75,8 +77,8 @@ type entryImpl struct {
 	conn io.ReadWriteCloser
 }
 
-func newEntryImpl(t transport.StreamTransport, host *host.Host, onClose onClose) *entryImpl {
-	return &entryImpl{
+func newEntry(t transport.StreamTransport, host *host.Host, onClose onClose) *entry {
+	return &entry{
 		transport: t,
 		host:      host,
 		mutex:     &sync.Mutex{},
@@ -84,7 +86,7 @@ func newEntryImpl(t transport.StreamTransport, host *host.Host, onClose onClose)
 	}
 }
 
-func (e *entryImpl) Open(ctx context.Context) (io.ReadWriteCloser, error) {
+func (e *entry) Open(ctx context.Context) (io.ReadWriteCloser, error) {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
@@ -101,7 +103,7 @@ func (e *entryImpl) Open(ctx context.Context) (io.ReadWriteCloser, error) {
 	return e.conn, nil
 }
 
-func (e *entryImpl) open(ctx context.Context) (io.ReadWriteCloser, error) {
+func (e *entry) open(ctx context.Context) (io.ReadWriteCloser, error) {
 	logger := inslogger.FromContext(ctx)
 	ctx, span := instracer.StartSpan(ctx, "connectionPool.open")
 	span.AddAttributes(
@@ -114,7 +116,7 @@ func (e *entryImpl) open(ctx context.Context) (io.ReadWriteCloser, error) {
 		return nil, errors.Wrap(err, "[ Open ] Failed to create TCP connection")
 	}
 
-	go func(e *entryImpl, conn io.ReadWriteCloser) {
+	go func(e *entry, conn io.ReadWriteCloser) {
 		b := make([]byte, 1)
 		_, err := conn.Read(b)
 		if err != nil {
@@ -129,7 +131,7 @@ func (e *entryImpl) open(ctx context.Context) (io.ReadWriteCloser, error) {
 	return conn, nil
 }
 
-func (e *entryImpl) Close() {
+func (e *entry) Close() {
 	e.mutex.Lock()
 	defer e.mutex.Unlock()
 
