@@ -113,3 +113,31 @@ func TestPulseIndex_DeleteForPulse(t *testing.T) {
 	pn = pi.lastUsagePn[fthID]
 	require.Equal(t, sPn, pn)
 }
+
+func TestPulseIndex_ForPN(t *testing.T) {
+	pi := pulseIndex{
+		lastUsagePn: map[insolar.ID]insolar.PulseNumber{},
+		idsByPulse:  map[insolar.PulseNumber]map[insolar.ID]struct{}{},
+	}
+
+	fID := gen.ID()
+	sID := gen.ID()
+	tID := gen.ID()
+	fthID := gen.ID()
+
+	fPn := gen.PulseNumber()
+	sPn := gen.PulseNumber()
+
+	pi.Add(fID, fPn)
+	pi.Add(sID, sPn)
+	pi.Add(tID, fPn)
+	pi.Add(fthID, sPn)
+
+	res := pi.ForPN(fPn)
+
+	require.Equal(t, 2, len(res))
+	_, ok := res[fID]
+	require.Equal(t, true, ok)
+	_, ok = res[tID]
+	require.Equal(t, true, ok)
+}
