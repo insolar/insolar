@@ -53,12 +53,10 @@ package pool
 import (
 	"context"
 	"io"
-	"sync"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/transport"
@@ -71,30 +69,25 @@ type entry struct {
 	transport transport.StreamTransport
 	host      *host.Host
 	onClose   onClose
-
-	mutex *sync.Mutex
-
-	conn io.ReadWriteCloser
+	conn      io.ReadWriteCloser
 }
 
-func newEntry(t transport.StreamTransport, host *host.Host, onClose onClose) *entry {
+func newEntry(t transport.StreamTransport, conn io.ReadWriteCloser, host *host.Host, onClose onClose) *entry {
 	return &entry{
 		transport: t,
+		conn:      conn,
 		host:      host,
-		mutex:     &sync.Mutex{},
 		onClose:   onClose,
 	}
 }
 
-func (e *entry) Open(ctx context.Context) (io.ReadWriteCloser, error) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
+func (e *entry) open(ctx context.Context) (io.ReadWriteCloser, error) {
 
 	if e.conn != nil {
 		return e.conn, nil
 	}
 
-	conn, err := e.open(ctx)
+	conn, err := e.dial(ctx)
 	if err != nil {
 		return nil, err
 	}
@@ -103,8 +96,7 @@ func (e *entry) Open(ctx context.Context) (io.ReadWriteCloser, error) {
 	return e.conn, nil
 }
 
-func (e *entry) open(ctx context.Context) (io.ReadWriteCloser, error) {
-	logger := inslogger.FromContext(ctx)
+func (e *entry) dial(ctx context.Context) (io.ReadWriteCloser, error) {
 	ctx, span := instracer.StartSpan(ctx, "connectionPool.open")
 	span.AddAttributes(
 		trace.StringAttribute("create connect to", e.host.String()),
@@ -116,25 +108,10 @@ func (e *entry) open(ctx context.Context) (io.ReadWriteCloser, error) {
 		return nil, errors.Wrap(err, "[ Open ] Failed to create TCP connection")
 	}
 
-	go func(e *entry, conn io.ReadWriteCloser) {
-		b := make([]byte, 1)
-		_, err := conn.Read(b)
-		if err != nil {
-			logger.Infof("[ Open ] remote host 'closed' connection to %s: %s", e.host.String(), err)
-			e.onClose(ctx, e.host)
-			return
-		}
-
-		logger.Errorf("[ Open ] unexpected data on connection to %s", e.host)
-	}(e, conn)
-
 	return conn, nil
 }
 
-func (e *entry) Close() {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
+func (e *entry) close() {
 	if e.conn != nil {
 		utils.CloseVerbose(e.conn)
 	}

@@ -72,7 +72,6 @@ func (eh *entryHolder) key(host fmt.Stringer) string {
 
 func (eh *entryHolder) get(host fmt.Stringer) (*entry, bool) {
 	e, ok := eh.entries[eh.key(host)]
-
 	return e, ok
 }
 

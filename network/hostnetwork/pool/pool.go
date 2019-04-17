@@ -52,7 +52,6 @@ package pool
 
 import (
 	"context"
-	"fmt"
 	"io"
 	"sync"
 
@@ -62,13 +61,15 @@ import (
 	"github.com/insolar/insolar/network/transport"
 )
 
+// ConnectionPool interface provides methods to manage pool of network connections
 type ConnectionPool interface {
-	GetConnection(ctx context.Context, host *host.Host) (io.ReadWriteCloser, error)
-	HandleConnection(host *host.Host, conn io.ReadWriteCloser) error
+	GetConnection(ctx context.Context, host *host.Host) (io.ReadWriter, error)
+	AddConnection(host *host.Host, conn io.ReadWriteCloser) error
 	CloseConnection(ctx context.Context, host *host.Host)
 	Reset()
 }
 
+// NewConnectionPool constructor creates new ConnectionPool
 func NewConnectionPool(t transport.StreamTransport) ConnectionPool {
 	return newConnectionPool(t)
 }
@@ -76,8 +77,8 @@ func NewConnectionPool(t transport.StreamTransport) ConnectionPool {
 type connectionPool struct {
 	transport transport.StreamTransport
 
-	entryHolder *entryHolder
 	mutex       sync.RWMutex
+	entryHolder *entryHolder
 }
 
 func newConnectionPool(t transport.StreamTransport) *connectionPool {
@@ -87,34 +88,27 @@ func newConnectionPool(t transport.StreamTransport) *connectionPool {
 	}
 }
 
-func (cp *connectionPool) GetConnection(ctx context.Context, host *host.Host) (io.ReadWriteCloser, error) {
+// GetConnection returns connection from the pool, if connection isn't exist, it will be created
+func (cp *connectionPool) GetConnection(ctx context.Context, host *host.Host) (io.ReadWriter, error) {
 	logger := inslogger.FromContext(ctx)
+	logger.Debugf("[ GetConnection ] Finding entry for connection to %s in pool", host)
 
-	entry, ok := cp.getEntry(host)
-
-	logger.Debugf("[ GetConnection ] Finding entry for connection to %s in pool: %t", host, ok)
-
-	if ok {
-		return entry.Open(ctx)
-	}
-
-	logger.Debugf("[ GetConnection ] Missing entry for connection to %s in pool ", host)
-	entry = cp.getOrCreateEntry(ctx, host)
-
-	return entry.Open(ctx)
+	e := cp.getOrCreateEntry(ctx, host)
+	return e.open(ctx)
 }
 
+// CloseConnection closes connection to the host
 func (cp *connectionPool) CloseConnection(ctx context.Context, host *host.Host) {
 	cp.mutex.Lock()
 	defer cp.mutex.Unlock()
 
 	logger := inslogger.FromContext(ctx)
 
-	entry, ok := cp.entryHolder.get(host)
+	e, ok := cp.entryHolder.get(host)
 	logger.Debugf("[ CloseConnection ] Finding entry for connection to %s in pool: %t", host, ok)
 
 	if ok {
-		entry.Close()
+		e.close()
 
 		logger.Debugf("[ CloseConnection ] Delete entry for connection to %s from pool", host)
 		cp.entryHolder.delete(host)
@@ -122,15 +116,15 @@ func (cp *connectionPool) CloseConnection(ctx context.Context, host *host.Host) 
 	}
 }
 
-func (cp *connectionPool) HandleConnection(host *host.Host, conn io.ReadWriteCloser) error {
-	panic("implement me")
-}
+// AddConnection adds created outside connection to the pool
+func (cp *connectionPool) AddConnection(host *host.Host, conn io.ReadWriteCloser) error {
+	cp.mutex.Lock()
+	defer cp.mutex.Unlock()
 
-func (cp *connectionPool) getEntry(host fmt.Stringer) (*entry, bool) {
-	cp.mutex.RLock()
-	defer cp.mutex.RUnlock()
-
-	return cp.entryHolder.get(host)
+	// TODO: return err if connection to the host is already exist
+	cp.entryHolder.add(host, newEntry(cp.transport, conn, host, cp.CloseConnection))
+	metrics.NetworkConnections.Inc()
+	return nil
 }
 
 func (cp *connectionPool) getOrCreateEntry(ctx context.Context, host *host.Host) *entry {
@@ -139,18 +133,18 @@ func (cp *connectionPool) getOrCreateEntry(ctx context.Context, host *host.Host)
 	cp.mutex.Lock()
 	defer cp.mutex.Unlock()
 
-	entry, ok := cp.entryHolder.get(host)
+	e, ok := cp.entryHolder.get(host)
 	logger.Debugf("[ getOrCreateEntry ] Finding entry for connection to %s in pool: %t", host, ok)
 
 	if ok {
-		return entry
+		return e
 	}
 
 	logger.Debugf("[ getOrCreateEntry ] Failed to retrieve entry for connection to %s, creating it", host)
 
-	entry = newEntry(cp.transport, host, cp.CloseConnection)
+	e = newEntry(cp.transport, nil, host, cp.CloseConnection)
 
-	cp.entryHolder.add(host, entry)
+	cp.entryHolder.add(host, e)
 	size := cp.entryHolder.size()
 	logger.Debugf(
 		"[ getOrCreateEntry ] Added entry for connection to %s. Current pool size: %d",
@@ -159,15 +153,16 @@ func (cp *connectionPool) getOrCreateEntry(ctx context.Context, host *host.Host)
 	)
 	metrics.NetworkConnections.Inc()
 
-	return entry
+	return e
 }
 
+// Reset closes and removes all connections from the pool
 func (cp *connectionPool) Reset() {
 	cp.mutex.Lock()
 	defer cp.mutex.Unlock()
 
 	cp.entryHolder.iterate(func(entry *entry) {
-		entry.Close()
+		entry.close()
 	})
 	cp.entryHolder.clear()
 	metrics.NetworkConnections.Set(float64(cp.entryHolder.size()))
