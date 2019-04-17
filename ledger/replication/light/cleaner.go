@@ -77,7 +77,7 @@ func (c *cleaner) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) 
 
 	expiredPn, err := c.pulseCalculator.Backwards(ctx, pn, c.lightChainLimit)
 	if err == pulse.ErrNotFound {
-		logger.Errorf("[NotifyAboutPulse] expiredPn for pn - %v doesn't eist", pn)
+		logger.Errorf("[NotifyAboutPulse] expiredPn for pn - %v doesn't exist", pn)
 		return
 	}
 	if err != nil {

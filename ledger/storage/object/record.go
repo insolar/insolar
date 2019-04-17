@@ -116,7 +116,7 @@ func (m *RecordMemory) Set(ctx context.Context, id insolar.ID, rec record.Materi
 	m.jetIndex.Add(id, rec.JetID)
 
 	stats.Record(ctx,
-		statIndexInMemoryAddedCount.M(1),
+		statRecordInMemoryAddedCount.M(1),
 	)
 
 	return nil
