@@ -28,6 +28,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/utils/backoff"
 )
@@ -134,6 +135,8 @@ func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
 }
 
 func (t *toHeavySyncer) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
+	_, span := instracer.StartSpan(ctx, "ToHeavySyncer.NotifyAboutPulse")
+	defer span.End()
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[NotifyAboutPulse] pn - %v", pn)
 
@@ -200,6 +203,9 @@ func (t *toHeavySyncer) retrySync(ctx context.Context) {
 }
 
 func (t *toHeavySyncer) sendToHeavy(ctx context.Context, data *message.HeavyPayload) error {
+	_, span := instracer.StartSpan(ctx, "ToHeavySyncer.sendToHeavy")
+	defer span.End()
+
 	rep, err := t.msgBus.Send(ctx, data, nil)
 	if err != nil {
 		return err

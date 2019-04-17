@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/pkg/errors"
 
@@ -293,6 +294,9 @@ func (h *Handler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeReco
 }
 
 func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
+	_, span := instracer.StartSpan(ctx, "ToHeavySyncer handleHeavyPayload on heavy")
+	defer span.End()
+
 	msg := genericMsg.Message().(*message.HeavyPayload)
 
 	h.HeavySync.StoreRecords(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Records)
