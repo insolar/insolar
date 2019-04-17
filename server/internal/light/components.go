@@ -243,9 +243,26 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.IndexStorage = indexes
 
 		jetCalculator := jet.NewCalculator(Coordinator, jets)
-		lightCleaner := light.NewCleaner(jets, nodes, drops, blobs, records, indexes, hots, pulses, pulses, conf.LightChainLimit)
+		var lightCleaner = light.NewCleaner(
+			jets,
+			nodes,
+			drops,
+			blobs,
+			records,
+			indexes,
+			pulses,
+			pulses,
+			conf.LightChainLimit,
+		)
 		dataGatherer := light.NewDataGatherer(drops, blobs, records, indexes)
-		lthSyncer := light.NewToHeavySyncer(jetCalculator, dataGatherer, lightCleaner, Bus, conf.LightToHeavySync, pulses)
+		lthSyncer := light.NewToHeavySyncer(
+			jetCalculator,
+			dataGatherer,
+			lightCleaner,
+			Bus,
+			conf.LightToHeavySync,
+			pulses,
+		)
 
 		pm := pulsemanager.NewPulseManager(
 			conf, drops, blobs, blobs, pulses, records, records, indexes, indexes, lthSyncer,
