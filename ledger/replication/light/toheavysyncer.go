@@ -203,7 +203,7 @@ func (t *toHeavySyncer) retrySync(ctx context.Context) {
 	}
 }
 
-func (t *toHeavySyncer) sendToHeavy(ctx context.Context, data *message.HeavyPayload) error {
+func (t *toHeavySyncer) sendToHeavy(ctx context.Context, data insolar.Message) error {
 	rep, err := t.msgBus.Send(ctx, data, nil)
 	if err != nil {
 		stats.Record(ctx,
