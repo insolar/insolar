@@ -144,7 +144,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.NoError(t, err)
 	// #1
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld1")
-	resp, err := lr.Execute(
+	resp, err := lr.HandleCalls(
 		ctx,
 		parcel,
 	)
@@ -162,7 +162,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.NoError(t, err)
 	// #2
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld2")
-	resp, err = lr.Execute(
+	resp, err = lr.HandleCalls(
 		ctx,
 		parcel,
 	)
