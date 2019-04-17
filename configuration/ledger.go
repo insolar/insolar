@@ -33,12 +33,6 @@ type Storage struct {
 
 // PulseManager holds configuration for PulseManager.
 type PulseManager struct {
-	// // HeavySyncEnabled enables replication to heavy (could be disabled for testing purposes)
-	// HeavySyncEnabled bool
-	// // HeavySyncMessageLimit soft limit of single message for replication to heavy.
-	// HeavySyncMessageLimit int
-	// // Backoff configures retry backoff algorithm for Heavy Sync
-	// HeavyBackoff Backoff
 	// SplitThreshold is a drop size threshold in bytes to perform split.
 	SplitThreshold uint64
 }
@@ -104,9 +98,6 @@ func NewLedger() Ledger {
 		},
 
 		PulseManager: PulseManager{
-			// HeavySyncEnabled:      true,
-			// HeavySyncMessageLimit: 1 << 20, // 1Mb
-			// HeavyBackoff:
 			SplitThreshold: 10 * 100, // 10 megabytes.
 		},
 
