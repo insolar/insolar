@@ -1,4 +1,5 @@
 #! /usr/bin/env bash
+set -e
 
 BIN_DIR=bin
 BASE_DIR=scripts/insolard
