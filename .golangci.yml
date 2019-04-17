@@ -31,7 +31,6 @@ linters:
     - prealloc
     - scopelint
     - gocritic
-    - gochecknoglobals
 
 linters-settings:
   goimports:
