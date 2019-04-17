@@ -530,7 +530,6 @@ func (s *testSuite) TestDiscoveryRestartNoWait() {
 }
 
 func (s *testSuite) setCommunicatorMock(opt CommunicatorTestOpt) {
-
 	nodes := s.fixture().bootstrapNodes
 	ref := nodes[0].id
 
@@ -543,6 +542,7 @@ func (s *testSuite) setCommunicatorMock(opt CommunicatorTestOpt) {
 	}
 
 	s.fixture().pulsar.Pause()
+	defer s.fixture().pulsar.Continue()
 
 	for i := 1; i <= timedOutNodesCount; i++ {
 		comm := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.(*phases.FirstPhaseImpl).Communicator
@@ -552,6 +552,4 @@ func (s *testSuite) setCommunicatorMock(opt CommunicatorTestOpt) {
 		phasemanager.SecondPhase.(*phases.SecondPhaseImpl).Communicator = wrapper
 		phasemanager.ThirdPhase.(*phases.ThirdPhaseImpl).Communicator = wrapper
 	}
-
-	s.fixture().pulsar.Continue()
 }
