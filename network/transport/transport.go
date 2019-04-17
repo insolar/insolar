@@ -79,6 +79,8 @@ type StreamHandler interface {
 	HandleStream(address string, stream io.ReadWriteCloser)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network/transport.StreamTransport -o ../../testutils/network -s _mock.go
+
 // StreamTransport interface provides methods to send and receive data streams
 type StreamTransport interface {
 	component.Starter
