@@ -282,6 +282,9 @@ func (m *IndexMemory) RemoveForPulse(ctx context.Context, pn insolar.PulseNumber
 		if ok {
 			m.jetIndexModifier.Delete(id, idx.JetID)
 			delete(m.indexStorage, id)
+			stats.Record(ctx,
+				statIndexInMemoryCount.M(-1),
+			)
 		}
 	}
 }

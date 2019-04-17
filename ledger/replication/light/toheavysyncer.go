@@ -28,9 +28,9 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/utils/backoff"
+	"go.opencensus.io/stats"
 )
 
 type ToHeavySyncer interface {
@@ -135,8 +135,6 @@ func backoffFromConfig(bconf configuration.Backoff) *backoff.Backoff {
 }
 
 func (t *toHeavySyncer) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
-	_, span := instracer.StartSpan(ctx, "ToHeavySyncer.NotifyAboutPulse")
-	defer span.End()
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[NotifyAboutPulse] pn - %v", pn)
 
@@ -199,22 +197,31 @@ func (t *toHeavySyncer) retrySync(ctx context.Context) {
 			payload.backoff.Duration()
 			t.reAddToNotSentPayloads(ctx, payload)
 		}
+		stats.Record(ctx,
+			statRetryHeavyPayloadCount.M(1),
+		)
 	}
 }
 
 func (t *toHeavySyncer) sendToHeavy(ctx context.Context, data *message.HeavyPayload) error {
-	_, span := instracer.StartSpan(ctx, "ToHeavySyncer.sendToHeavy")
-	defer span.End()
-
 	rep, err := t.msgBus.Send(ctx, data, nil)
 	if err != nil {
+		stats.Record(ctx,
+			statErrHeavyPayloadCount.M(1),
+		)
 		return err
 	}
 	if rep != nil {
 		err, ok := rep.(*reply.HeavyError)
 		if ok {
+			stats.Record(ctx,
+				statErrHeavyPayloadCount.M(1),
+			)
 			return err
 		}
 	}
+	stats.Record(ctx,
+		statHeavyPayloadCount.M(1),
+	)
 	return nil
 }

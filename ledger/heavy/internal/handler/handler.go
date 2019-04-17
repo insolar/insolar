@@ -20,9 +20,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
@@ -294,9 +294,6 @@ func (h *Handler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeReco
 }
 
 func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
-	_, span := instracer.StartSpan(ctx, "ToHeavySyncer handleHeavyPayload on heavy")
-	defer span.End()
-
 	msg := genericMsg.Message().(*message.HeavyPayload)
 
 	h.HeavySync.StoreRecords(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Records)
@@ -311,6 +308,10 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 	if err := h.HeavySync.StoreBlobs(ctx, msg.PulseNum, msg.Blobs); err != nil {
 		return heavyerrreply(err)
 	}
+
+	stats.Record(ctx,
+		statHeavyPayloadCount.M(1),
+	)
 
 	return &reply.OK{}, nil
 }
