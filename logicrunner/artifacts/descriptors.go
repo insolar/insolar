@@ -20,12 +20,12 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/messagebus"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/messagebus"
 )
 
 // CodeDescriptor represents meta info required to fetch all code data.
