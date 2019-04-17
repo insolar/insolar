@@ -36,6 +36,7 @@ import (
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/replication/light"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
@@ -200,7 +201,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		drops := drop.NewStorageMemory()
 		blobs := blob.NewStorageMemory()
 		records := object.NewRecordMemory()
-		indices := object.NewIndexMemory()
+		indexes := object.NewIndexMemory()
 		jets := jet.NewStore()
 		nodes := node.NewStorage()
 
@@ -208,7 +209,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		c := component.Manager{}
 		c.Inject(replica, legacyDB, CryptoScheme)
 
-		hots := recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL)
+		hots := recentstorage.NewRecentStorageProvider()
 		waiter := hot.NewChannelWaiter()
 		cord := jetcoordinator.NewJetCoordinator(conf.LightChainLimit)
 		cord.PulseCalculator = pulses
@@ -218,7 +219,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		cord.PlatformCryptographyScheme = CryptoScheme
 		cord.Nodes = nodes
 
-		handler := artifactmanager.NewMessageHandler(&conf)
+		handler := artifactmanager.NewMessageHandler(indexes, indexes, &conf)
 		handler.RecentStorageProvider = hots
 		handler.Bus = Bus
 		handler.PlatformCryptographyScheme = CryptoScheme
@@ -237,12 +238,17 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.DBContext = legacyDB
 		handler.HotDataWaiter = waiter
 		handler.JetReleaser = waiter
-		handler.IndexAccessor = indices
-		handler.IndexModifier = indices
-		handler.IndexStorage = indices
+		handler.IndexStorage = indexes
+		handler.IndexStateModifier = indexes
+		handler.IndexStorage = indexes
+
+		jetCalculator := jet.NewCalculator(Coordinator, jets)
+		lightCleaner := light.NewCleaner(jets, nodes, drops, blobs, records, indexes, hots, pulses, pulses, conf.LightChainLimit)
+		dataGatherer := light.NewDataGatherer(drops, blobs, records, indexes)
+		lthSyncer := light.NewToHeavySyncer(jetCalculator, dataGatherer, lightCleaner, Bus, conf.LightToHeavySync, pulses)
 
 		pm := pulsemanager.NewPulseManager(
-			conf, drops, blobs, blobs, pulses, records, records, indices, indices,
+			conf, drops, blobs, blobs, pulses, records, records, indexes, indexes, lthSyncer,
 		)
 		pm.MessageHandler = handler
 		pm.Bus = Bus
@@ -254,10 +260,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		pm.JetReleaser = waiter
 		pm.JetAccessor = jets
 		pm.JetModifier = jets
-		pm.IndexAccessor = indices
-		pm.IndexModifier = indices
-		pm.CollectionIndexAccessor = indices
-		pm.IndexCleaner = indices
+		pm.IndexAccessor = indexes
+		pm.IndexModifier = indexes
+		pm.CollectionIndexAccessor = indexes
+		pm.IndexCleaner = indexes
 		pm.NodeSetter = nodes
 		pm.Nodes = nodes
 		pm.ReplicaStorage = replica
