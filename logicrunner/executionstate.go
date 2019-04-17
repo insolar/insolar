@@ -33,8 +33,6 @@ type ExecutionState struct {
 	deactivate bool
 	nonce      uint64
 
-	Behaviour ValidationBehaviour
-
 	Current               *CurrentExecution
 	Queue                 []ExecutionQueueElement
 	QueueProcessorActive  bool

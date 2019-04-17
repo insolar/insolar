@@ -51,38 +51,22 @@
 package node
 
 import (
+	"testing"
+
 	"github.com/insolar/insolar/insolar"
+	"github.com/stretchr/testify/assert"
 )
 
-type none struct{}
-
-type recordRefSet struct {
-	data map[insolar.Reference]none
-}
-
-func newRecordRefSet() *recordRefSet {
-	return &recordRefSet{data: make(map[insolar.Reference]none)}
-}
-
-func (s *recordRefSet) Add(ref insolar.Reference) {
-	s.data[ref] = none{}
-}
-
-func (s *recordRefSet) Remove(ref insolar.Reference) {
-	delete(s.data, ref)
-}
-
-func (s *recordRefSet) Contains(ref insolar.Reference) bool {
-	_, ok := s.data[ref]
-	return ok
-}
-
-func (s *recordRefSet) Collect() []insolar.Reference {
-	result := make([]insolar.Reference, len(s.data))
-	i := 0
-	for ref := range s.data {
-		result[i] = ref
-		i++
-	}
-	return result
+func TestRecordRefSet_Collect(t *testing.T) {
+	r := newRefSet()
+	assert.Equal(t, 0, len(r.Collect()))
+	r.Add(insolar.Reference{0})
+	r.Add(insolar.Reference{1})
+	assert.True(t, r.Contains(insolar.Reference{0}))
+	assert.False(t, r.Contains(insolar.Reference{2}))
+	assert.Equal(t, 2, len(r.Collect()))
+	r.Remove(insolar.Reference{0})
+	assert.False(t, r.Contains(insolar.Reference{0}))
+	assert.True(t, r.Contains(insolar.Reference{1}))
+	assert.Equal(t, 1, len(r.Collect()))
 }

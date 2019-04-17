@@ -30,6 +30,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/messagebus"
 	"github.com/pkg/errors"
 )
 
@@ -211,10 +212,10 @@ func (p *SendObject) handle(
 func (p *SendObject) fetchObject(
 	ctx context.Context, obj insolar.Reference, node insolar.Reference, stateID *insolar.ID, pulse insolar.PulseNumber,
 ) (*reply.Object, error) {
-	sender := BuildSender(
+	sender := messagebus.BuildSender(
 		p.Dep.Bus.Send,
-		followRedirectSender(p.Dep.Bus),
-		retryJetSender(pulse, p.Dep.Jets),
+		messagebus.FollowRedirectSender(p.Dep.Bus),
+		messagebus.RetryJetSender(p.Dep.Jets),
 	)
 	genericReply, err := sender(
 		ctx,
