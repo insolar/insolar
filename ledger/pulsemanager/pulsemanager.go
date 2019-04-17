@@ -368,10 +368,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse i
 			}
 			if *nextLeftExecutor == me {
 				info.left.mineNext = true
-				err := m.rewriteHotData(ctx, jetID, leftJetID)
-				if err != nil {
-					return nil, err
-				}
+				m.rewriteHotData(ctx, jetID, leftJetID)
 			}
 			nextRightExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(rightJetID), newPulse)
 			if err != nil {
@@ -379,10 +376,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse i
 			}
 			if *nextRightExecutor == me {
 				info.right.mineNext = true
-				err := m.rewriteHotData(ctx, jetID, rightJetID)
-				if err != nil {
-					return nil, err
-				}
+				m.rewriteHotData(ctx, jetID, rightJetID)
 			}
 
 			logger.WithFields(map[string]interface{}{
@@ -406,7 +400,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse i
 	return results, nil
 }
 
-func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID insolar.JetID) error {
+func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID insolar.JetID) {
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"from_jet": fromJetID.DebugString(),
 		"to_jet":   toJetID.DebugString(),
@@ -423,8 +417,6 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID in
 	}
 
 	m.RecentStorageProvider.ClonePendingStorage(ctx, insolar.ID(fromJetID), insolar.ID(toJetID))
-
-	return nil
 }
 
 // Set set's new pulse and closes current jet drop.
