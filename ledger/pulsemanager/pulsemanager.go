@@ -22,8 +22,8 @@ import (
 	"math/rand"
 	"sync"
 
-	"github.com/insolar/insolar/ledger/replication/light"
 	"github.com/insolar/insolar/ledger/hot"
+	"github.com/insolar/insolar/ledger/replication/light"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"

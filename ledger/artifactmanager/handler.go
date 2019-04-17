@@ -71,8 +71,8 @@ type MessageHandler struct {
 	Nodes          node.Accessor         `inject:""`
 
 	DBContext     storage.DBContext `inject:""`
-	HotDataWaiter hot.JetWaiter        `inject:""`
-	JetReleaser   hot.JetReleaser     `inject:""`
+	HotDataWaiter hot.JetWaiter     `inject:""`
+	JetReleaser   hot.JetReleaser   `inject:""`
 
 	IndexStorage       object.IndexStorage
 	IndexStateModifier object.ExtendedIndexModifier

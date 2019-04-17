@@ -58,7 +58,6 @@ func NewCleaner(
 	indexCleaner object.IndexCleaner,
 	recentProvider recentstorage.Provider,
 	pulseShifter pulse.Shifter,
-	jetCalculator jet.Calculator,
 	pulseCalculator pulse.Calculator,
 	lightChainLimint int,
 ) Cleaner {
