@@ -27,6 +27,12 @@ type GenesisRecord struct {
 	record.VirtualRecord
 }
 
+// Init is initialization method for deserialization purpose.
+func (r *GenesisRecord) Init() *GenesisRecord {
+	r.VirtualRecord = insolar.GenesisRecord
+	return r
+}
+
 // methods below implements State interface (required in some places of logic runner code)
 
 var _ State = &GenesisRecord{}

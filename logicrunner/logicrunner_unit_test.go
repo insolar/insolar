@@ -112,10 +112,9 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 	}
 
 	es := &ExecutionState{
-		Ref:       objectRef,
-		Behaviour: &ValidationSaver{},
-		Current:   &CurrentExecution{},
-		pending:   message.NotPending,
+		Ref:     objectRef,
+		Current: &CurrentExecution{},
+		pending: message.NotPending,
 	}
 
 	// make sure that if there is no pending finishPendingIfNeeded returns false,
@@ -509,7 +508,6 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 	// If we already have task in InPending, but it wasn't confirmed
 	suite.lr.state[objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
-			Behaviour:        &ValidationSaver{},
 			Current:          nil,
 			Queue:            make([]ExecutionQueueElement, 0),
 			pending:          message.InPending,
@@ -1109,9 +1107,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestEmptyES() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 
 	s.lr.state[s.objectRef] = &ObjectState{
-		ExecutionState: &ExecutionState{
-			Behaviour: &ValidationSaver{},
-		},
+		ExecutionState: &ExecutionState{},
 	}
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
@@ -1125,11 +1121,9 @@ func (s *LogicRunnerOnPulseTestSuite) TestEmptyESWithValidation() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 
 	s.lr.state[s.objectRef] = &ObjectState{
-		ExecutionState: &ExecutionState{
-			Behaviour: &ValidationSaver{},
-		},
-		Validation: &ExecutionState{},
-		Consensus:  &Consensus{},
+		ExecutionState: &ExecutionState{},
+		Validation:     &ExecutionState{},
+		Consensus:      &Consensus{},
 	}
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
@@ -1146,9 +1140,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestESWithValidationCurrent() {
 
 	s.lr.state[s.objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
-			Behaviour: &ValidationSaver{},
-			Current:   &CurrentExecution{},
-			pending:   message.NotPending,
+			Current: &CurrentExecution{},
+			pending: message.NotPending,
 		},
 	}
 	err := s.lr.OnPulse(s.ctx, s.pulse)
@@ -1165,10 +1158,9 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithNotEmptyQueue() {
 
 	s.lr.state[s.objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
-			Behaviour: &ValidationSaver{},
-			Current:   &CurrentExecution{},
-			Queue:     append(make([]ExecutionQueueElement, 0), ExecutionQueueElement{}),
-			pending:   message.NotPending,
+			Current: &CurrentExecution{},
+			Queue:   append(make([]ExecutionQueueElement, 0), ExecutionQueueElement{}),
+			pending: message.NotPending,
 		},
 	}
 
@@ -1186,10 +1178,9 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithEmptyQueue() {
 
 	s.lr.state[s.objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
-			Behaviour: &ValidationSaver{},
-			Current:   &CurrentExecution{},
-			Queue:     make([]ExecutionQueueElement, 0),
-			pending:   message.NotPending,
+			Current: &CurrentExecution{},
+			Queue:   make([]ExecutionQueueElement, 0),
+			pending: message.NotPending,
 		},
 	}
 
@@ -1206,10 +1197,9 @@ func (s *LogicRunnerOnPulseTestSuite) TestExecutorSameNode() {
 
 	s.lr.state[s.objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
-			Behaviour: &ValidationSaver{},
-			Current:   &CurrentExecution{},
-			Queue:     make([]ExecutionQueueElement, 0),
-			pending:   message.NotPending,
+			Current: &CurrentExecution{},
+			Queue:   make([]ExecutionQueueElement, 0),
+			pending: message.NotPending,
 		},
 	}
 
@@ -1226,10 +1216,9 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer1() {
 
 	s.lr.state[s.objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
-			Behaviour: &ValidationSaver{},
-			Current:   &CurrentExecution{},
-			Queue:     make([]ExecutionQueueElement, 0),
-			pending:   message.InPending,
+			Current: &CurrentExecution{},
+			Queue:   make([]ExecutionQueueElement, 0),
+			pending: message.InPending,
 		},
 	}
 
@@ -1248,7 +1237,6 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer2() {
 
 	s.lr.state[s.objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
-			Behaviour:        &ValidationSaver{},
 			Current:          nil,
 			Queue:            make([]ExecutionQueueElement, 0),
 			pending:          message.InPending,
@@ -1270,7 +1258,6 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer3() {
 
 	s.lr.state[s.objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
-			Behaviour:        &ValidationSaver{},
 			Current:          nil,
 			Queue:            make([]ExecutionQueueElement, 0),
 			pending:          message.InPending,
@@ -1295,7 +1282,6 @@ func (s *LogicRunnerOnPulseTestSuite) TestSendTaskToNextExecutor() {
 
 	s.lr.state[s.objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
-			Behaviour:        &ValidationSaver{},
 			Current:          nil,
 			Queue:            make([]ExecutionQueueElement, 0),
 			pending:          message.InPending,
@@ -1336,7 +1322,6 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 
 			expectedMessage := &message.ExecutorResults{
 				RecordRef: s.objectRef,
-				Requests:  make([]message.CaseBindRequest, 0),
 				Queue:     messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
@@ -1354,8 +1339,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			lr.MessageBus = mb
 			lr.state[s.objectRef] = &ObjectState{
 				ExecutionState: &ExecutionState{
-					Behaviour: &ValidationSaver{},
-					Queue:     test.queue,
+					Queue: test.queue,
 				},
 			}
 
@@ -1399,7 +1383,6 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) AfterTest(suiteName, testName
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueElement() {
 	es := &ExecutionState{
 		Ref:                s.ref,
-		Behaviour:          &ValidationSaver{},
 		LedgerQueueElement: &ExecutionQueueElement{},
 	}
 
@@ -1412,8 +1395,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecutionState() {
 	es := &ExecutionState{
-		Ref:                   s.ref,
-		Behaviour:             &ValidationSaver{},
+		Ref: s.ref,
 		LedgerHasMoreRequests: false,
 	}
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
@@ -1421,7 +1403,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecution
 }
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInLedger() {
-	es := &ExecutionState{Ref: s.ref, Behaviour: &ValidationSaver{}, LedgerHasMoreRequests: true}
+	es := &ExecutionState{Ref: s.ref, LedgerHasMoreRequests: true}
 
 	am := artifacts.NewClientMock(s.mc)
 	am.GetPendingRequestMock.Return(nil, insolar.ErrNoPendingRequest)
@@ -1431,7 +1413,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInLedger() 
 }
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestDoesNotAuthorized() {
-	es := &ExecutionState{Ref: s.ref, Behaviour: &ValidationSaver{}, LedgerHasMoreRequests: true}
+	es := &ExecutionState{Ref: s.ref, LedgerHasMoreRequests: true}
 
 	parcel := &message.Parcel{
 		PulseNumber: s.oldRequestPulseNumber,
@@ -1449,7 +1431,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestDoesNotAuthorized() {
 }
 
 func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequest() {
-	es := &ExecutionState{Ref: s.ref, Behaviour: &ValidationSaver{}, LedgerHasMoreRequests: true}
+	es := &ExecutionState{Ref: s.ref, LedgerHasMoreRequests: true}
 
 	parcel := &message.Parcel{
 		PulseNumber: s.oldRequestPulseNumber,

@@ -72,23 +72,10 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 
 		es.Unlock()
 
-		res := ExecutionQueueResult{}
-
-		inslogger.FromContext(qe.ctx).Debug("Registering request within execution behaviour")
-
-		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, *qe.request, lr.MessageBus)
-
-		res.reply, res.err = lr.executeOrValidate(current.Context, es, qe.parcel)
+		lr.executeOrValidate(current.Context, es, qe.parcel)
 
 		if qe.fromLedger {
-			pub := p.dep.Publisher
-			pub.Publish(InnerMsgTopic, makeWMMessage(ctx, p.Message.Payload, "getLedgerPendingRequest"))
-		}
-
-		inslogger.FromContext(qe.ctx).Debug("Registering result within execution behaviour")
-		err := es.Behaviour.Result(res.reply, res.err)
-		if err != nil {
-			res.err = err
+			go lr.getLedgerPendingRequest(ctx, es)
 		}
 
 		lr.finishPendingIfNeeded(ctx, es)

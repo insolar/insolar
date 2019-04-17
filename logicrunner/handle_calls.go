@@ -50,9 +50,8 @@ func (h *HandleCall) executeActual(
 	os.Lock()
 	if os.ExecutionState == nil {
 		os.ExecutionState = &ExecutionState{
-			Ref:       ref,
-			Queue:     make([]ExecutionQueueElement, 0),
-			Behaviour: &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
+			Ref:   ref,
+			Queue: make([]ExecutionQueueElement, 0),
 		}
 	}
 	es := os.ExecutionState

@@ -10,10 +10,10 @@ ls -alhR /opt
 if [ "$HOSTNAME" = seed-0 ] && ! ( test -e /opt/insolar/config/finished )
 then
     echo "generate bootstrap key"
-    insolar -c gen_keys > $CONFIG_DIR/bootstrap_keys.json
+    insolar gen-key-pair > $CONFIG_DIR/bootstrap_keys.json
 
     echo "generate root member key"
-    insolar -c gen_keys > $CONFIG_DIR/root_member_keys.json
+    insolar gen-key-pair > $CONFIG_DIR/root_member_keys.json
 
     echo "generate genesis"
     mkdir -vp $NODES_DATA
