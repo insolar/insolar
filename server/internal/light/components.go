@@ -265,7 +265,16 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		)
 
 		pm := pulsemanager.NewPulseManager(
-			conf, drops, blobs, blobs, pulses, records, records, indexes, indexes, lthSyncer,
+			conf,
+			drops,
+			blobs,
+			blobs,
+			pulses,
+			records,
+			records,
+			indexes,
+			indexes,
+			lthSyncer,
 		)
 		pm.MessageHandler = handler
 		pm.Bus = Bus

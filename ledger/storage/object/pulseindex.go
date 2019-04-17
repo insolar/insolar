@@ -42,15 +42,15 @@ type PulseIndex interface {
 }
 
 type pulseIndex struct {
-	lock             sync.RWMutex
-	indexByPulseStor map[insolar.PulseNumber]map[insolar.ID]struct{}
-	pulseByIndexStor map[insolar.ID]insolar.PulseNumber
+	lock        sync.RWMutex
+	idsByPulse  map[insolar.PulseNumber]map[insolar.ID]struct{}
+	lastUsagePn map[insolar.ID]insolar.PulseNumber
 }
 
 func NewPulseIndex() PulseIndex {
 	return &pulseIndex{
-		indexByPulseStor: map[insolar.PulseNumber]map[insolar.ID]struct{}{},
-		pulseByIndexStor: map[insolar.ID]insolar.PulseNumber{},
+		idsByPulse:  map[insolar.PulseNumber]map[insolar.ID]struct{}{},
+		lastUsagePn: map[insolar.ID]insolar.PulseNumber{},
 	}
 }
 
@@ -58,38 +58,43 @@ func (p *pulseIndex) Add(id insolar.ID, pn insolar.PulseNumber) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	ids, ok := p.indexByPulseStor[pn]
+	ids, ok := p.idsByPulse[pn]
 	if !ok {
 		ids = map[insolar.ID]struct{}{}
-		p.indexByPulseStor[pn] = ids
+		p.idsByPulse[pn] = ids
 	}
 
-	lstPN, ok := p.pulseByIndexStor[id]
+	lstPN, ok := p.lastUsagePn[id]
 	if ok {
-		delete(p.indexByPulseStor[lstPN], id)
+		delete(p.idsByPulse[lstPN], id)
 	}
 
 	ids[id] = struct{}{}
-	p.pulseByIndexStor[id] = pn
+	p.lastUsagePn[id] = pn
 }
 
 func (p *pulseIndex) DeleteForPulse(pn insolar.PulseNumber) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
 
-	_, ok := p.indexByPulseStor[pn]
+	_, ok := p.idsByPulse[pn]
 	if !ok {
 		return
 	}
 
-	delete(p.indexByPulseStor, pn)
+	delete(p.idsByPulse, pn)
+	for id, lpn := range p.lastUsagePn {
+		if lpn == pn {
+			delete(p.lastUsagePn, id)
+		}
+	}
 }
 
 func (p *pulseIndex) ForPN(pn insolar.PulseNumber) map[insolar.ID]struct{} {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
-	ids, ok := p.indexByPulseStor[pn]
+	ids, ok := p.idsByPulse[pn]
 	if !ok {
 		return nil
 	}
@@ -106,6 +111,6 @@ func (p *pulseIndex) LastUsage(id insolar.ID) (insolar.PulseNumber, bool) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
 
-	res, ok := p.pulseByIndexStor[id]
+	res, ok := p.lastUsagePn[id]
 	return res, ok
 }
