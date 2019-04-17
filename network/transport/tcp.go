@@ -72,6 +72,7 @@ type tcpTransport struct {
 
 func newTCPTransport(listenAddress, fixedPublicAddress string) (*tcpTransport, string, error) {
 
+	// TODO : prepare Listener
 	listener, err := net.Listen("tcp", listenAddress)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "failed to listen UDP")

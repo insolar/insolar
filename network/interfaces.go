@@ -95,6 +95,9 @@ type RequestHandler func(context.Context, Request) (Response, error)
 type HostNetwork interface {
 	component.Starter
 	component.Stopper
+
+	// TODO: replace this two methods with GetOrigin()
+
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 	// GetNodeID get current node ID.
