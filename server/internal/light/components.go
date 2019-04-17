@@ -218,6 +218,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		cord.NodeNet = NodeNetwork
 		cord.PlatformCryptographyScheme = CryptoScheme
 		cord.Nodes = nodes
+		Coordinator = cord
 
 		handler := artifactmanager.NewMessageHandler(indexes, indexes, &conf)
 		handler.RecentStorageProvider = hots
@@ -302,7 +303,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		pm.PulseAppender = pulses
 
 		PulseManager = pm
-		Coordinator = cord
 		Pulses = pulses
 		Jets = jets
 		Handler = handler
