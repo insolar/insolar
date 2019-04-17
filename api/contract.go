@@ -121,7 +121,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 
 	contractID, err := s.runner.ArtifactManager.RegisterRequest(
 		ctx,
-		*s.runner.ArtifactManager.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: testutils.RandomRef()}}, // TODO protoRef?
 	)
 
@@ -138,7 +138,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 		ctx,
 		*domain,
 		objectRef,
-		*s.runner.ArtifactManager.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		*protoRef,
 		false,
 		memory,

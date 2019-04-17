@@ -50,9 +50,6 @@ type ObjectDescriptor interface {
 	// Prototype returns prototype reference.
 	Prototype() (*insolar.Reference, error)
 
-	// Children returns object's children references.
-	Children(pulse *insolar.PulseNumber) (RefIterator, error)
-
 	// ChildPointer returns the latest child for this object.
 	ChildPointer() *insolar.ID
 
@@ -116,11 +113,6 @@ func (d *objectDescriptor) ChildPointer() *insolar.ID {
 // Memory fetches latest memory of the object known to storage.
 func (d *objectDescriptor) Memory() []byte {
 	return d.memory
-}
-
-// Children returns object's children references.
-func (d *objectDescriptor) Children(pulse *insolar.PulseNumber) (RefIterator, error) {
-	panic("Children method not implemented for artifact.Descriptor")
 }
 
 // Parent returns object's parent.

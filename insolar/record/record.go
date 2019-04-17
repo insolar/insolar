@@ -14,7 +14,6 @@
 // limitations under the License.
 //
 
-// /go:generate protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
 package record
 
 import (

@@ -58,7 +58,7 @@ func NewID(pulse PulseNumber, hash []byte) *ID {
 }
 
 // Bytes returns byte slice of ID.
-func (id *ID) Bytes() []byte {
+func (id ID) Bytes() []byte {
 	return id[:]
 }
 

@@ -80,7 +80,6 @@ func GetMergedCopy(nodes []insolar.NetworkNode, claims []consensus.ReferendumCla
 		if err != nil {
 			return nil, errors.Wrap(err, "[ GetMergedCopy ] failed to merge a claim")
 		}
-
 		nodesJoinedDuringPrevPulse = nodesJoinedDuringPrevPulse || isJoin
 	}
 
@@ -92,6 +91,7 @@ func GetMergedCopy(nodes []insolar.NetworkNode, claims []consensus.ReferendumCla
 
 func mergeClaim(nodes map[insolar.Reference]insolar.NetworkNode, claim consensus.ReferendumClaim) (bool, error) {
 	isJoinClaim := false
+
 	switch t := claim.(type) {
 	case *consensus.NodeJoinClaim:
 		isJoinClaim = true
@@ -106,7 +106,6 @@ func mergeClaim(nodes map[insolar.Reference]insolar.NetworkNode, claim consensus
 		if nodes[t.NodeID] == nil {
 			break
 		}
-
 		n := nodes[t.NodeID].(node.MutableNode)
 		if t.ETA == 0 || n.GetState() != insolar.NodeLeaving {
 			n.SetLeavingETA(t.ETA)

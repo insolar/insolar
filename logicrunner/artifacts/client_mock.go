@@ -45,11 +45,6 @@ type ClientMock struct {
 	DeployCodePreCounter uint64
 	DeployCodeMock       mClientMockDeployCode
 
-	GenesisRefFunc       func() (r *insolar.Reference)
-	GenesisRefCounter    uint64
-	GenesisRefPreCounter uint64
-	GenesisRefMock       mClientMockGenesisRef
-
 	GetChildrenFunc       func(p context.Context, p1 insolar.Reference, p2 *insolar.PulseNumber) (r RefIterator, r1 error)
 	GetChildrenCounter    uint64
 	GetChildrenPreCounter uint64
@@ -124,7 +119,6 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 	m.DeactivateObjectMock = mClientMockDeactivateObject{mock: m}
 	m.DeclareTypeMock = mClientMockDeclareType{mock: m}
 	m.DeployCodeMock = mClientMockDeployCode{mock: m}
-	m.GenesisRefMock = mClientMockGenesisRef{mock: m}
 	m.GetChildrenMock = mClientMockGetChildren{mock: m}
 	m.GetCodeMock = mClientMockGetCode{mock: m}
 	m.GetDelegateMock = mClientMockGetDelegate{mock: m}
@@ -907,140 +901,6 @@ func (m *ClientMock) DeployCodeFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.DeployCodeFunc != nil {
 		return atomic.LoadUint64(&m.DeployCodeCounter) > 0
-	}
-
-	return true
-}
-
-type mClientMockGenesisRef struct {
-	mock              *ClientMock
-	mainExpectation   *ClientMockGenesisRefExpectation
-	expectationSeries []*ClientMockGenesisRefExpectation
-}
-
-type ClientMockGenesisRefExpectation struct {
-	result *ClientMockGenesisRefResult
-}
-
-type ClientMockGenesisRefResult struct {
-	r *insolar.Reference
-}
-
-//Expect specifies that invocation of Client.GenesisRef is expected from 1 to Infinity times
-func (m *mClientMockGenesisRef) Expect() *mClientMockGenesisRef {
-	m.mock.GenesisRefFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockGenesisRefExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of Client.GenesisRef
-func (m *mClientMockGenesisRef) Return(r *insolar.Reference) *ClientMock {
-	m.mock.GenesisRefFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ClientMockGenesisRefExpectation{}
-	}
-	m.mainExpectation.result = &ClientMockGenesisRefResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Client.GenesisRef is expected once
-func (m *mClientMockGenesisRef) ExpectOnce() *ClientMockGenesisRefExpectation {
-	m.mock.GenesisRefFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ClientMockGenesisRefExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ClientMockGenesisRefExpectation) Return(r *insolar.Reference) {
-	e.result = &ClientMockGenesisRefResult{r}
-}
-
-//Set uses given function f as a mock of Client.GenesisRef method
-func (m *mClientMockGenesisRef) Set(f func() (r *insolar.Reference)) *ClientMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GenesisRefFunc = f
-	return m.mock
-}
-
-//GenesisRef implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) GenesisRef() (r *insolar.Reference) {
-	counter := atomic.AddUint64(&m.GenesisRefPreCounter, 1)
-	defer atomic.AddUint64(&m.GenesisRefCounter, 1)
-
-	if len(m.GenesisRefMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GenesisRefMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ClientMock.GenesisRef.")
-			return
-		}
-
-		result := m.GenesisRefMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.GenesisRef")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GenesisRefMock.mainExpectation != nil {
-
-		result := m.GenesisRefMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ClientMock.GenesisRef")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GenesisRefFunc == nil {
-		m.t.Fatalf("Unexpected call to ClientMock.GenesisRef.")
-		return
-	}
-
-	return m.GenesisRefFunc()
-}
-
-//GenesisRefMinimockCounter returns a count of ClientMock.GenesisRefFunc invocations
-func (m *ClientMock) GenesisRefMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GenesisRefCounter)
-}
-
-//GenesisRefMinimockPreCounter returns the value of ClientMock.GenesisRef invocations
-func (m *ClientMock) GenesisRefMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GenesisRefPreCounter)
-}
-
-//GenesisRefFinished returns true if mock invocations count is ok
-func (m *ClientMock) GenesisRefFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GenesisRefMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GenesisRefCounter) == uint64(len(m.GenesisRefMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GenesisRefMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GenesisRefCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GenesisRefFunc != nil {
-		return atomic.LoadUint64(&m.GenesisRefCounter) > 0
 	}
 
 	return true
@@ -2882,10 +2742,6 @@ func (m *ClientMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ClientMock.DeployCode")
 	}
 
-	if !m.GenesisRefFinished() {
-		m.t.Fatal("Expected call to ClientMock.GenesisRef")
-	}
-
 	if !m.GetChildrenFinished() {
 		m.t.Fatal("Expected call to ClientMock.GetChildren")
 	}
@@ -2971,10 +2827,6 @@ func (m *ClientMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ClientMock.DeployCode")
 	}
 
-	if !m.GenesisRefFinished() {
-		m.t.Fatal("Expected call to ClientMock.GenesisRef")
-	}
-
 	if !m.GetChildrenFinished() {
 		m.t.Fatal("Expected call to ClientMock.GetChildren")
 	}
@@ -3042,7 +2894,6 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.DeactivateObjectFinished()
 		ok = ok && m.DeclareTypeFinished()
 		ok = ok && m.DeployCodeFinished()
-		ok = ok && m.GenesisRefFinished()
 		ok = ok && m.GetChildrenFinished()
 		ok = ok && m.GetCodeFinished()
 		ok = ok && m.GetDelegateFinished()
@@ -3081,10 +2932,6 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 
 			if !m.DeployCodeFinished() {
 				m.t.Error("Expected call to ClientMock.DeployCode")
-			}
-
-			if !m.GenesisRefFinished() {
-				m.t.Error("Expected call to ClientMock.GenesisRef")
 			}
 
 			if !m.GetChildrenFinished() {
@@ -3164,10 +3011,6 @@ func (m *ClientMock) AllMocksCalled() bool {
 	}
 
 	if !m.DeployCodeFinished() {
-		return false
-	}
-
-	if !m.GenesisRefFinished() {
 		return false
 	}
 

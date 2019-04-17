@@ -117,6 +117,7 @@ type SaveObject struct {
 }
 
 // These functions represent message handling in different time slots.
+// Each function is a Handle.
 
 func (s *SaveObject) Future(ctx context.Context, f flow.Flow) error {
 	return f.Migrate(ctx, s.Present)

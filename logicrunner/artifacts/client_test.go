@@ -24,6 +24,7 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/messagebus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -160,7 +161,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 		PulseAccessor:              pa,
 		JetCoordinator:             jc,
 		PlatformCryptographyScheme: s.scheme,
-		senders:                    newLedgerArtifactSenders(),
+		senders:                    messagebus.NewSenders(),
 	}
 
 	desc, err := am.GetCode(s.ctx, codeRef)
@@ -231,7 +232,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 		mb.SendMock.Return(&reply.JetMiss{
 			JetID: insolar.ID(*insolar.NewJetID(5, []byte{1, 2, 3})),
 		}, nil)
-		_, err := am.RegisterRequest(s.ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
+		_, err := am.RegisterRequest(s.ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.Error(t, err)
 	})
 
@@ -248,7 +249,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 			retries--
 			return &reply.JetMiss{JetID: insolar.ID(*insolar.NewJetID(4, []byte{b_11010101})), Pulse: insolar.FirstPulseNumber}, nil
 		}
-		_, err := am.RegisterRequest(s.ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallMethod{}})
+		_, err := am.RegisterRequest(s.ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.CallMethod{}})
 		require.NoError(t, err)
 
 		jetID, actual := s.jetStorage.ForID(

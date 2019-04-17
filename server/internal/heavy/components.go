@@ -47,7 +47,6 @@ import (
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
-	"github.com/insolar/insolar/network/state"
 	"github.com/insolar/insolar/network/termination"
 	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/platformpolicy"
@@ -106,7 +105,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		NetworkService     insolar.Network
 		NetworkCoordinator insolar.NetworkCoordinator
 		NodeNetwork        insolar.NodeNetwork
-		NetworkSwitcher    insolar.NetworkSwitcher
 		Termination        insolar.TerminationHandler
 	)
 	{
@@ -120,14 +118,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Termination = termination.NewHandler(NetworkService)
 
 		// Node info.
-		NodeNetwork, err = nodenetwork.NewNodeNetwork(cfg.Host, CertManager.GetCertificate())
+		NodeNetwork, err = nodenetwork.NewNodeNetwork(cfg.Host.Transport, CertManager.GetCertificate())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start NodeNetwork")
-		}
-
-		NetworkSwitcher, err = state.NewNetworkSwitcher()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start NetworkSwitcher")
 		}
 
 		NetworkCoordinator, err = networkcoordinator.New()
@@ -267,7 +260,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		artifacts.NewClient(),
 		Genesis,
 		API,
-		NetworkSwitcher,
 		NetworkCoordinator,
 		KeyProcessor,
 		Termination,

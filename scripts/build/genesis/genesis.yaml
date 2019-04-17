@@ -1,5 +1,4 @@
 root_keys_file: "keys/root_member.key.json"
-node_keys_dir: "keys"
 discovery_keys_dir: "keys"
 keys_name_format: "/node_%02d.json"
 reuse_keys: false

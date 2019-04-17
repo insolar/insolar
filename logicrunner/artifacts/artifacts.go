@@ -26,11 +26,6 @@ import (
 
 // Client is a high level storage interface.
 type Client interface {
-	// GenesisRef returns the root record reference.
-	//
-	// Root record is the parent for all top-level records.
-	GenesisRef() *insolar.Reference
-
 	// RegisterRequest creates request record in storage.
 	RegisterRequest(ctx context.Context, object insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error)
 
@@ -169,9 +164,6 @@ type ObjectDescriptor interface {
 
 	// Prototype returns prototype reference.
 	Prototype() (*insolar.Reference, error)
-
-	// Children returns object's children references.
-	Children(pulse *insolar.PulseNumber) (RefIterator, error)
 
 	// ChildPointer returns the latest child for this object.
 	ChildPointer() *insolar.ID

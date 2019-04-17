@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/messagebus"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -32,8 +33,6 @@ type codeDescriptor struct {
 	code        []byte
 	machineType insolar.MachineType
 	ref         insolar.Reference
-
-	ctx context.Context
 }
 
 // Ref returns reference to represented code record.
@@ -53,9 +52,6 @@ func (d *codeDescriptor) Code() ([]byte, error) {
 
 // ObjectDescriptor represents meta info required to fetch all object data.
 type objectDescriptor struct {
-	ctx context.Context
-	am  Client
-
 	head         insolar.Reference
 	state        insolar.ID
 	prototype    *insolar.Reference
@@ -112,11 +108,6 @@ func (d *objectDescriptor) Memory() []byte {
 	return d.memory
 }
 
-// Children returns object's children references.
-func (d *objectDescriptor) Children(pulse *insolar.PulseNumber) (RefIterator, error) {
-	return d.am.GetChildren(d.ctx, d.head, pulse)
-}
-
 // Parent returns object's parent.
 func (d *objectDescriptor) Parent() *insolar.Reference {
 	return &d.parent
@@ -143,7 +134,7 @@ func (d *objectDescriptor) Parent() *insolar.Reference {
 // 10. H (children 6 ... 15 EOF) -> R
 type ChildIterator struct {
 	ctx         context.Context
-	senderChain Sender
+	senderChain messagebus.Sender
 	parent      insolar.Reference
 	chunkSize   int
 	fromPulse   *insolar.PulseNumber
@@ -156,7 +147,7 @@ type ChildIterator struct {
 // NewChildIterator creates new child iterator.
 func NewChildIterator(
 	ctx context.Context,
-	senderChain Sender,
+	senderChain messagebus.Sender,
 	parent insolar.Reference,
 	fromPulse *insolar.PulseNumber,
 	chunkSize int,
