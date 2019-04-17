@@ -76,8 +76,7 @@ type PulseManager struct {
 	NodeSetter node.Modifier `inject:""`
 	Nodes      node.Accessor `inject:""`
 
-	ReplicaStorage storage.ReplicaStorage `inject:""`
-	DBContext      storage.DBContext      `inject:""`
+	DBContext storage.DBContext `inject:""`
 
 	DropModifier drop.Modifier `inject:""`
 	DropAccessor drop.Accessor `inject:""`
@@ -95,8 +94,6 @@ type PulseManager struct {
 	RecCleaner      object.RecordCleaner
 
 	ToHeavySyncer light.ToHeavySyncer
-
-	// syncClientsPool *heavyclient.Pool
 
 	currentPulse insolar.Pulse
 
@@ -144,11 +141,9 @@ func NewPulseManager(
 	pm := &PulseManager{
 		currentPulse: *insolar.GenesisPulse,
 		options: pmOptions{
-			// enableSync:            pmconf.HeavySyncEnabled,
 			splitThreshold:   pmconf.SplitThreshold,
 			storeLightPulses: conf.LightChainLimit,
-			// heavySyncMessageLimit: pmconf.HeavySyncMessageLimit,
-			lightChainLimit: conf.LightChainLimit,
+			lightChainLimit:  conf.LightChainLimit,
 		},
 		DropCleaner:             dropCleaner,
 		BlobCleaner:             blobCleaner,
@@ -583,19 +578,6 @@ func (m *PulseManager) setUnderGilSection(
 	return jets, oldPulse, prevPN, nil
 }
 
-// func (m *PulseManager) addSync(ctx context.Context, jets []jetInfo, pulse insolar.PulseNumber) {
-// 	ctx, span := instracer.StartSpan(ctx, "pulse.add_sync")
-// 	defer span.End()
-//
-// 	if !m.options.enableSync || m.NodeNet.GetOrigin().Role() != insolar.StaticRoleLightMaterial {
-// 		return
-// 	}
-//
-// 	for _, jInfo := range jets {
-// 		m.syncClientsPool.AddPulsesToSyncClient(ctx, insolar.ID(jInfo.id), true, pulse)
-// 	}
-// }
-
 func (m *PulseManager) postProcessJets(ctx context.Context, newPulse insolar.Pulse, jets []jetInfo) {
 	ctx, span := instracer.StartSpan(ctx, "jets.post_process")
 	defer span.End()
@@ -606,55 +588,6 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse insolar.Pul
 		}
 	}
 }
-
-// func (m *PulseManager) cleanLightData(ctx context.Context, newPulse insolar.Pulse, jetIndexesRemoved map[insolar.ID][]insolar.ID) {
-// 	startSync := time.Now()
-// 	inslog := inslogger.FromContext(ctx)
-// 	ctx, span := instracer.StartSpan(ctx, "pulse.clean")
-// 	defer func() {
-// 		latency := time.Since(startSync)
-// 		stats.Record(ctx, statCleanLatencyTotal.M(latency.Nanoseconds()/1e6))
-// 		span.End()
-// 		inslog.Infof("cleanLightData all time spend=%v", latency)
-// 	}()
-//
-// 	// delta := m.options.storeLightPulses
-// 	//
-// 	// p, err := m.PulseCalculator.Backwards(ctx, newPulse.PulseNumber, delta)
-// 	// if err != nil {
-// 	// 	inslogger.FromContext(ctx).Errorf("Can't get %dth previous pulse: %s", delta, err)
-// 	// 	return
-// 	}
-// 	// err = m.syncClientsPool.LightCleanup(ctx, pn, m.RecentStorageProvider, jetIndexesRemoved)
-// 	// if err != nil {
-// 	// 	inslogger.FromContext(ctx).Errorf(
-// 	// 		"Error on light cleanup, until pulse = %v, singlefligt err = %v", pn, err)
-// 	// }
-// 	//
-// 	// p, err = m.PulseCalculator.Backwards(ctx, pn, delta)
-// 	// if err != nil {
-// 	// 	inslogger.FromContext(ctx).Errorf("Can't get previous pulse: %s", err)
-// 	// 	return
-// 	// }
-// 	// m.JetModifier.Delete(ctx, p.PulseNumber)
-// 	// m.NodeSetter.Delete(p.PulseNumber)
-// 	// m.DropCleaner.Delete(p.PulseNumber)
-// 	// m.BlobCleaner.Delete(ctx, p.PulseNumber)
-// 	// m.RecCleaner.Remove(ctx, p.PulseNumber)
-// 	//
-// 	// idxs := map[insolar.ID]struct{}{}
-// 	// for _, idxIDs := range jetIndexesRemoved {
-// 	// 	for _, idxID := range idxIDs {
-// 	// 		idxs[idxID] = struct{}{}
-// 	// 	}
-// 	// }
-// 	// // m.IndexCleaner.RemoveWithIDs(ctx, idxs)
-// 	//
-// 	// err = m.PulseShifter.Shift(ctx, p.PulseNumber)
-// 	// if err != nil {
-// 	// 	inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
-// 	// }
-// }
 
 func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse insolar.Pulse, jets []jetInfo) {
 	ctx, span := instracer.StartSpan(ctx, "early.close")
@@ -690,7 +623,7 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 	}
 }
 
-// Start starts pulse manager, spawns replication goroutine under a hood.
+// Start starts pulse manager
 func (m *PulseManager) Start(ctx context.Context) error {
 	origin := m.NodeNet.GetOrigin()
 	err := m.NodeSetter.Set(insolar.FirstPulseNumber, []insolar.Node{{ID: origin.ID(), Role: origin.Role()}})
@@ -698,44 +631,15 @@ func (m *PulseManager) Start(ctx context.Context) error {
 		return err
 	}
 
-	// if m.options.enableSync && m.NodeNet.GetOrigin().Role() == insolar.StaticRoleLightMaterial {
-	// 	heavySyncPool := heavyclient.NewPool(
-	// 		m.Bus,
-	// 		m.PulseAccessor,
-	// 		m.PulseCalculator,
-	// 		m.ReplicaStorage,
-	// 		m.DropAccessor,
-	// 		m.BlobSyncAccessor,
-	// 		m.RecSyncAccessor,
-	// 		m.CollectionIndexAccessor,
-	// 		m.IndexCleaner,
-	// 		m.DBContext,
-	// 		heavyclient.Options{
-	// 			SyncMessageLimit: m.options.heavySyncMessageLimit,
-	// 			PulsesDeltaLimit: m.options.lightChainLimit,
-	// 		},
-	// 	)
-	// 	m.syncClientsPool = heavySyncPool
-	//
-	// 	err := m.initJetSyncState(ctx)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// }
-
 	return nil
 }
 
-// Stop stops PulseManager. Waits replication goroutine is done.
+// Stop stops PulseManager
 func (m *PulseManager) Stop(ctx context.Context) error {
 	// There should not to be any Set call after Stop call
 	m.setLock.Lock()
 	m.stopped = true
 	m.setLock.Unlock()
 
-	// if m.options.enableSync && m.NodeNet.GetOrigin().Role() == insolar.StaticRoleLightMaterial {
-	// 	inslogger.FromContext(ctx).Info("waiting finish of heavy replication client...")
-	// 	m.syncClientsPool.Stop(ctx)
-	// }
 	return nil
 }

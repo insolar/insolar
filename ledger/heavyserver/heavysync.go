@@ -18,7 +18,6 @@ package heavyserver
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"time"
 
@@ -83,7 +82,6 @@ type Sync struct {
 	DropModifier               drop.Modifier                      `inject:""`
 	BlobModifier               blob.Modifier                      `inject:""`
 	IndexModifier              object.IndexModifier               `inject:""`
-	ReplicaStorage             storage.ReplicaStorage             `inject:""`
 	DBContext                  storage.DBContext
 
 	RecordModifier object.RecordModifier
@@ -99,74 +97,6 @@ func NewSync(db storage.DBContext, records object.RecordModifier) *Sync {
 		RecordModifier: records,
 		jetSyncStates:  map[jetprefix]*syncstate{},
 	}
-}
-
-func (s *Sync) checkIsNextPulse(ctx context.Context, jetID insolar.ID, jetstate *syncstate, pn insolar.PulseNumber) error {
-	var (
-		checkpoint insolar.PulseNumber
-		err        error
-	)
-
-	checkpoint = jetstate.lastok
-	if checkpoint == 0 {
-		checkpoint, err = s.ReplicaStorage.GetHeavySyncedPulse(ctx, jetID)
-		if err != nil {
-			return errors.Wrap(err, "heavyserver: GetHeavySyncedPulse failed")
-		}
-	}
-
-	// just start sync on first sync
-	if checkpoint == 0 {
-		return nil
-	}
-
-	if pn <= jetstate.lastok {
-		return fmt.Errorf("heavyserver: pulse %v is not greater than last synced pulse %v (jet=%v)",
-			pn, jetstate.lastok, jetID)
-	}
-
-	return nil
-}
-
-func (s *Sync) getJetSyncState(ctx context.Context, jetID insolar.ID) *syncstate {
-	var jp jetprefix
-	jpBuf := insolar.JetID(jetID).Prefix()
-	copy(jp[:], jpBuf)
-	s.Lock()
-	jetState, ok := s.jetSyncStates[jp]
-	if !ok {
-		jetState = &syncstate{}
-		s.jetSyncStates[jp] = jetState
-	}
-	s.Unlock()
-	return jetState
-}
-
-// Start try to start heavy sync for provided pulse.
-func (s *Sync) Start(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber) error {
-	jetState := s.getJetSyncState(ctx, jetID)
-	jetState.Lock()
-	defer jetState.Unlock()
-
-	if jetState.syncpulse != nil {
-		if *jetState.syncpulse >= pn {
-			return fmt.Errorf("heavyserver: pulse %v is not greater than current in-sync pulse %v (jet=%v)",
-				pn, *jetState.syncpulse, jetID)
-		}
-		return errSyncInProgress(jetID, pn)
-	}
-
-	if pn <= insolar.FirstPulseNumber {
-		return fmt.Errorf("heavyserver: sync pulse should be greater than first pulse %v (got %v)", insolar.FirstPulseNumber, pn)
-	}
-
-	if err := s.checkIsNextPulse(ctx, jetID, jetState, pn); err != nil {
-		return err
-	}
-
-	jetState.syncpulse = &pn
-	jetState.resetTimeout(ctx, defaultTimeout)
-	return nil
 }
 
 // StoreIndexes stores recieved key/value pairs for indices at heavy storage.
@@ -244,48 +174,4 @@ func (s *Sync) StoreRecords(ctx context.Context, jetID insolar.ID, pn insolar.Pu
 			continue
 		}
 	}
-}
-
-// Stop successfully stops replication for specified pulse.
-func (s *Sync) Stop(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber) error {
-	jetState := s.getJetSyncState(ctx, jetID)
-	jetState.Lock()
-	defer jetState.Unlock()
-
-	if jetState.syncpulse == nil {
-		return errors.Errorf("Jet %v not in sync mode", jetID)
-	}
-	if *jetState.syncpulse != pn {
-		return fmt.Errorf(
-			"heavyserver: Passed pulse %v doesn't match pulse %v current in sync for jet %v",
-			pn, *jetState.syncpulse, jetID)
-	}
-	if jetState.insync {
-		return errSyncInProgress(jetID, pn)
-	}
-	jetState.syncpulse = nil
-
-	err := s.ReplicaStorage.SetHeavySyncedPulse(ctx, jetID, pn)
-	if err != nil {
-		return err
-	}
-	inslogger.FromContext(ctx).Debugf("heavyserver: Fin sync: jetID=%v, pulse=%v", jetID, pn)
-	jetState.lastok = pn
-	return nil
-}
-
-// Reset resets sync for provided pulse.
-func (s *Sync) Reset(ctx context.Context, jetID insolar.ID, pn insolar.PulseNumber) error {
-	jetState := s.getJetSyncState(ctx, jetID)
-	jetState.Lock()
-	defer jetState.Unlock()
-
-	if jetState.lastok == pn {
-		// Sync is finished. No need to reset.
-		return nil
-	}
-
-	inslogger.FromContext(ctx).Debugf("heavyserver: Reset sync: jetID=%v, pulse=%v", jetID, pn)
-	jetState.syncpulse = nil
-	return nil
 }
