@@ -16,16 +16,16 @@ var _ = proto.Marshal
 var _ = fmt.Errorf
 var _ = math.Inf
 
-type GenesisRecord X_GenesisRecord
-type ChildRecord X_ChildRecord
-type JetRecord X_JetRecord
-type RequestRecord X_RequestRecord
-type ResultRecord X_ResultRecord
-type TypeRecord X_TypeRecord
-type CodeRecord X_CodeRecord
-type ObjectActivateRecord X_ObjectActivateRecord
-type ObjectAmendRecord X_ObjectAmendRecord
-type ObjectDeactivateRecord X_ObjectDeactivateRecord
+type Genesis X_GenesisRecord
+type Child X_ChildRecord
+type Jet X_JetRecord
+type Request X_RequestRecord
+type Result X_ResultRecord
+type Type X_TypeRecord
+type Code X_CodeRecord
+type Activate X_ActivateRecord
+type Amend X_AmendRecord
+type Deactivate X_DeactivateRecord
 
 // Returns pointer to any sub-record type or error
 func UnmarshalRecord(data []byte) (Record, error) {
@@ -45,25 +45,25 @@ func UnmarshalRecord(data []byte) (Record, error) {
 
 	switch union.(type) {
 	case *X_Record_Genesis:
-		subRecord = (*GenesisRecord)(((union).(*X_Record_Genesis).Genesis))
+		subRecord = (*Genesis)(((union).(*X_Record_Genesis).Genesis))
 	case *X_Record_Child:
-		subRecord = (*ChildRecord)(((union).(*X_Record_Child).Child))
+		subRecord = (*Child)(((union).(*X_Record_Child).Child))
 	case *X_Record_Jet:
-		subRecord = (*JetRecord)(((union).(*X_Record_Jet).Jet))
+		subRecord = (*Jet)(((union).(*X_Record_Jet).Jet))
 	case *X_Record_Request:
-		subRecord = (*RequestRecord)(((union).(*X_Record_Request).Request))
+		subRecord = (*Request)(((union).(*X_Record_Request).Request))
 	case *X_Record_Result:
-		subRecord = (*ResultRecord)(((union).(*X_Record_Result).Result))
+		subRecord = (*Result)(((union).(*X_Record_Result).Result))
 	case *X_Record_Type:
-		subRecord = (*TypeRecord)(((union).(*X_Record_Type).Type))
+		subRecord = (*Type)(((union).(*X_Record_Type).Type))
 	case *X_Record_Code:
-		subRecord = (*CodeRecord)(((union).(*X_Record_Code).Code))
-	case *X_Record_ObjectActivate:
-		subRecord = (*ObjectActivateRecord)(((union).(*X_Record_ObjectActivate).ObjectActivate))
-	case *X_Record_ObjectAmend:
-		subRecord = (*ObjectAmendRecord)(((union).(*X_Record_ObjectAmend).ObjectAmend))
-	case *X_Record_ObjectDeactivate:
-		subRecord = (*ObjectDeactivateRecord)(((union).(*X_Record_ObjectDeactivate).ObjectDeactivate))
+		subRecord = (*Code)(((union).(*X_Record_Code).Code))
+	case *X_Record_Activate:
+		subRecord = (*Activate)(((union).(*X_Record_Activate).Activate))
+	case *X_Record_Amend:
+		subRecord = (*Amend)(((union).(*X_Record_Amend).Amend))
+	case *X_Record_Deactivate:
+		subRecord = (*Deactivate)(((union).(*X_Record_Deactivate).Deactivate))
 	default:
 		return nil, fmt.Errorf("__Record.union has unexpected type %T", subRecord)
 	}
@@ -75,26 +75,26 @@ func MarshalRecord(subRecord Record) ([]byte, error) {
 	base := X_Record{}
 
 	switch subRecord.(type) {
-	case *GenesisRecord:
-		base.Union = &X_Record_Genesis{(*X_GenesisRecord)(subRecord.(*GenesisRecord))}
-	case *ChildRecord:
-		base.Union = &X_Record_Child{(*X_ChildRecord)(subRecord.(*ChildRecord))}
-	case *JetRecord:
-		base.Union = &X_Record_Jet{(*X_JetRecord)(subRecord.(*JetRecord))}
-	case *RequestRecord:
-		base.Union = &X_Record_Request{(*X_RequestRecord)(subRecord.(*RequestRecord))}
-	case *ResultRecord:
-		base.Union = &X_Record_Result{(*X_ResultRecord)(subRecord.(*ResultRecord))}
-	case *TypeRecord:
-		base.Union = &X_Record_Type{(*X_TypeRecord)(subRecord.(*TypeRecord))}
-	case *CodeRecord:
-		base.Union = &X_Record_Code{(*X_CodeRecord)(subRecord.(*CodeRecord))}
-	case *ObjectActivateRecord:
-		base.Union = &X_Record_ObjectActivate{(*X_ObjectActivateRecord)(subRecord.(*ObjectActivateRecord))}
-	case *ObjectAmendRecord:
-		base.Union = &X_Record_ObjectAmend{(*X_ObjectAmendRecord)(subRecord.(*ObjectAmendRecord))}
-	case *ObjectDeactivateRecord:
-		base.Union = &X_Record_ObjectDeactivate{(*X_ObjectDeactivateRecord)(subRecord.(*ObjectDeactivateRecord))}
+	case *Genesis:
+		base.Union = &X_Record_Genesis{(*X_GenesisRecord)(subRecord.(*Genesis))}
+	case *Child:
+		base.Union = &X_Record_Child{(*X_ChildRecord)(subRecord.(*Child))}
+	case *Jet:
+		base.Union = &X_Record_Jet{(*X_JetRecord)(subRecord.(*Jet))}
+	case *Request:
+		base.Union = &X_Record_Request{(*X_RequestRecord)(subRecord.(*Request))}
+	case *Result:
+		base.Union = &X_Record_Result{(*X_ResultRecord)(subRecord.(*Result))}
+	case *Type:
+		base.Union = &X_Record_Type{(*X_TypeRecord)(subRecord.(*Type))}
+	case *Code:
+		base.Union = &X_Record_Code{(*X_CodeRecord)(subRecord.(*Code))}
+	case *Activate:
+		base.Union = &X_Record_Activate{(*X_ActivateRecord)(subRecord.(*Activate))}
+	case *Amend:
+		base.Union = &X_Record_Amend{(*X_AmendRecord)(subRecord.(*Amend))}
+	case *Deactivate:
+		base.Union = &X_Record_Deactivate{(*X_DeactivateRecord)(subRecord.(*Deactivate))}
 	default:
 		return nil, fmt.Errorf("__Record.union has unexpected type %T", subRecord)
 	}

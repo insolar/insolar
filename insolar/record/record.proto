@@ -48,7 +48,7 @@ message __CodeRecord {
     uint32 MachineType = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.MachineType", (gogoproto.nullable) = false];
 }
 
-message __ObjectActivateRecord {
+message __ActivateRecord {
     option (gogoproto.face) = true;
     bytes  Domain      = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes  Request     = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
@@ -59,7 +59,7 @@ message __ObjectActivateRecord {
     bool   IsDelegate  = 7;
 }
 
-message __ObjectAmendRecord {
+message __AmendRecord {
     option (gogoproto.face) = true;
     bytes  Domain      = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes  Request     = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
@@ -69,7 +69,7 @@ message __ObjectAmendRecord {
     bytes  PrevState   = 6 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];
 }
 
-message __ObjectDeactivateRecord {
+message __DeactivateRecord {
     option (gogoproto.face) = true;
     bytes  Domain    = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes  Request   = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
@@ -85,8 +85,8 @@ message __Record {
         __ResultRecord             Result             = 300;
         __TypeRecord               Type               = 301;
         __CodeRecord               Code               = 302;
-        __ObjectActivateRecord     ObjectActivate     = 303;
-        __ObjectAmendRecord        ObjectAmend        = 304;
-        __ObjectDeactivateRecord   ObjectDeactivate   = 305;
+        __ActivateRecord           Activate           = 303;
+        __AmendRecord              Amend              = 304;
+        __DeactivateRecord         Deactivate         = 305;
     }
 }

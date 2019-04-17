@@ -57,7 +57,7 @@ func prefixType(inp string) string {
 func (p *RecordPluginGenerator) generateIsolation(msg *descriptor.DescriptorProto) {
 	for _, field := range msg.GetField() {
 		oldType := prefixType(InternalPrefix + field.GetName() + RecordSuffix)
-		newType := field.GetName() + RecordSuffix
+		newType := field.GetName()
 		p.P(`type `, newType, ` `, oldType, `;`)
 	}
 	p.P()
@@ -86,7 +86,7 @@ func (p *RecordPluginGenerator) generateMarshal(msg *descriptor.DescriptorProto)
 	p.P(`  switch union.(type) {`)
 	for _, field := range msg.GetField() {
 		uniType := prefixType(BaseRecordName + "_" + field.GetName())
-		newType := field.GetName() + RecordSuffix
+		newType := field.GetName()
 
 		p.P(`  case *`, uniType, `:`)
 		p.P(`    subRecord = (*`, newType, `)(((union).(*`, uniType, `).`, field.GetName(), `))`)
@@ -110,9 +110,9 @@ func (p *RecordPluginGenerator) generateUnmarshal(msg *descriptor.DescriptorProt
 	for _, field := range msg.GetField() {
 		uniType := prefixType(BaseRecordName + "_" + field.GetName())
 		oldType := prefixType(InternalPrefix + field.GetName() + RecordSuffix)
-		newType := field.GetName() + RecordSuffix
+		newType := field.GetName()
 
-		p.P(`  case *`, field.GetName(), RecordSuffix, `:`)
+		p.P(`  case *`, field.GetName(), `:`)
 		p.P(`    base.Union = &`, uniType, `{ (*`, oldType, `)(subRecord.(*`, newType, `)) }`)
 	}
 	p.P(`  default:`)

@@ -40,7 +40,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 	t.Run("GenesisRecordTest", func(t *testing.T) {
 		a := assert.New(t)
 		t.Parallel()
-		var record GenesisRecord
+		var record Genesis
 
 		for i := 0; i < 1; i++ {
 			f.Fuzz(&record)
@@ -62,7 +62,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 	t.Run("ChildRecordTest", func(t *testing.T) {
 		a := assert.New(t)
 		t.Parallel()
-		var record ChildRecord
+		var record Child
 
 		for i := 0; i < 10; i++ {
 			f.Fuzz(&record)
@@ -84,7 +84,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 	t.Run("JetRecordTest", func(t *testing.T) {
 		a := assert.New(t)
 		t.Parallel()
-		var record JetRecord
+		var record Jet
 
 		for i := 0; i < 10; i++ {
 			f.Fuzz(&record)
@@ -106,7 +106,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 	t.Run("RequestRecordTest", func(t *testing.T) {
 		a := assert.New(t)
 		t.Parallel()
-		var record RequestRecord
+		var record Request
 
 		for i := 0; i < 10; i++ {
 			f.Fuzz(&record)
@@ -128,7 +128,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 	t.Run("ResultRecordTest", func(t *testing.T) {
 		a := assert.New(t)
 		t.Parallel()
-		var record ResultRecord
+		var record Result
 
 		for i := 0; i < 10; i++ {
 			f.Fuzz(&record)
@@ -150,7 +150,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 	t.Run("TypeRecordTest", func(t *testing.T) {
 		a := assert.New(t)
 		t.Parallel()
-		var record TypeRecord
+		var record Type
 
 		for i := 0; i < 10; i++ {
 			f.Fuzz(&record)
@@ -172,7 +172,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 	t.Run("CodeRecordTest", func(t *testing.T) {
 		a := assert.New(t)
 		t.Parallel()
-		var record CodeRecord
+		var record Code
 
 		for i := 0; i < 10; i++ {
 			f.Fuzz(&record)
@@ -191,10 +191,10 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 		}
 	})
 
-	t.Run("ObjectActivateRecordTest", func(t *testing.T) {
+	t.Run("ActivateRecordTest", func(t *testing.T) {
 		a := assert.New(t)
 		t.Parallel()
-		var record ObjectActivateRecord
+		var record Activate
 
 		for i := 0; i < 10; i++ {
 			f.Fuzz(&record)
@@ -213,10 +213,10 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 		}
 	})
 
-	t.Run("ObjectAmendRecordTest", func(t *testing.T) {
+	t.Run("AmendRecordTest", func(t *testing.T) {
 		a := assert.New(t)
 		t.Parallel()
-		var record ObjectAmendRecord
+		var record Amend
 
 		for i := 0; i < 10; i++ {
 			f.Fuzz(&record)
@@ -235,10 +235,10 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 		}
 	})
 
-	t.Run("ObjectDeactivateRecordTest", func(t *testing.T) {
+	t.Run("DeactivateRecordTest", func(t *testing.T) {
 		a := assert.New(t)
 		t.Parallel()
-		var record ObjectDeactivateRecord
+		var record Deactivate
 
 		for i := 0; i < 10; i++ {
 			f.Fuzz(&record)
