@@ -22,7 +22,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
@@ -35,14 +34,13 @@ type Cleaner interface {
 }
 
 type cleaner struct {
-	jetStorage     jet.Storage
-	nodeModifier   node.Modifier
-	dropCleaner    drop.Cleaner
-	blobCleaner    blob.Cleaner
-	recCleaner     object.RecordCleaner
-	indexCleaner   object.IndexCleaner
-	recentProvider recentstorage.Provider
-	pulseShifter   pulse.Shifter
+	jetStorage   jet.Storage
+	nodeModifier node.Modifier
+	dropCleaner  drop.Cleaner
+	blobCleaner  blob.Cleaner
+	recCleaner   object.RecordCleaner
+	indexCleaner object.IndexCleaner
+	pulseShifter pulse.Shifter
 
 	pulseCalculator pulse.Calculator
 
@@ -56,7 +54,6 @@ func NewCleaner(
 	blobCleaner blob.Cleaner,
 	recCleaner object.RecordCleaner,
 	indexCleaner object.IndexCleaner,
-	recentProvider recentstorage.Provider,
 	pulseShifter pulse.Shifter,
 	pulseCalculator pulse.Calculator,
 	lightChainLimint int,
@@ -68,7 +65,6 @@ func NewCleaner(
 		blobCleaner:     blobCleaner,
 		recCleaner:      recCleaner,
 		indexCleaner:    indexCleaner,
-		recentProvider:  recentProvider,
 		pulseShifter:    pulseShifter,
 		pulseCalculator: pulseCalculator,
 		lightChainLimit: lightChainLimint,
