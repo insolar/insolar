@@ -59,17 +59,17 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
-type packetHandlerImpl struct {
+type packetHandler struct {
 	futureManager Manager
 }
 
-func newPacketHandlerImpl(futureManager Manager) *packetHandlerImpl {
-	return &packetHandlerImpl{
+func newPacketHandler(futureManager Manager) *packetHandler {
+	return &packetHandler{
 		futureManager: futureManager,
 	}
 }
 
-func (ph *packetHandlerImpl) Handle(ctx context.Context, p *packet.Packet) {
+func (ph *packetHandler) Handle(ctx context.Context, p *packet.Packet) {
 	metrics.NetworkPacketReceivedTotal.WithLabelValues(p.Type.String()).Inc()
 	if !p.IsResponse {
 		return

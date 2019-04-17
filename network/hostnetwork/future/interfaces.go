@@ -62,7 +62,7 @@ type Manager interface {
 }
 
 func NewManager() Manager {
-	return newFutureManagerImpl()
+	return newFutureManager()
 }
 
 type PacketHandler interface {
@@ -70,5 +70,5 @@ type PacketHandler interface {
 }
 
 func NewPacketHandler(futureManager Manager) PacketHandler {
-	return newPacketHandlerImpl(futureManager)
+	return newPacketHandler(futureManager)
 }
