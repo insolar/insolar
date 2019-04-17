@@ -28,13 +28,18 @@ var (
 )
 
 var (
-	statIndexInMemoryCount = stats.Int64(
-		"indexstorage/inmemory/count",
+	statIndexInMemoryAddedCount = stats.Int64(
+		"indexstorage/added/count",
 		"How many index-records have been saved in in-indexStorage index storage",
 		stats.UnitDimensionless,
 	)
-	statRecordInMemoryCount = stats.Int64(
-		"recordstorage/inmemory/count",
+	statIndexInMemoryRemovedCount = stats.Int64(
+		"indexstorage/removed/count",
+		"How many index-records have been removed from an index storage",
+		stats.UnitDimensionless,
+	)
+	statRecordInMemoryAddedCount = stats.Int64(
+		"recordstorage/added/count",
 		"How many records have been saved in in-indexStorage record storage",
 		stats.UnitDimensionless,
 	)
@@ -43,16 +48,23 @@ var (
 func init() {
 	err := view.Register(
 		&view.View{
-			Name:        statIndexInMemoryCount.Name(),
-			Description: statIndexInMemoryCount.Description(),
-			Measure:     statIndexInMemoryCount,
+			Name:        statIndexInMemoryAddedCount.Name(),
+			Description: statIndexInMemoryAddedCount.Description(),
+			Measure:     statIndexInMemoryAddedCount,
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{inmemoryStorage},
 		},
 		&view.View{
-			Name:        statRecordInMemoryCount.Name(),
-			Description: statRecordInMemoryCount.Description(),
-			Measure:     statRecordInMemoryCount,
+			Name:        statIndexInMemoryRemovedCount.Name(),
+			Description: statIndexInMemoryRemovedCount.Description(),
+			Measure:     statIndexInMemoryRemovedCount,
+			Aggregation: view.Count(),
+			TagKeys:     []tag.Key{inmemoryStorage},
+		},
+		&view.View{
+			Name:        statRecordInMemoryAddedCount.Name(),
+			Description: statRecordInMemoryAddedCount.Description(),
+			Measure:     statRecordInMemoryAddedCount,
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{inmemoryStorage},
 		},

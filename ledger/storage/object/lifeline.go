@@ -169,12 +169,17 @@ func (m *IndexMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) er
 
 	idx := CloneIndex(index)
 
+	_, exist := m.indexStorage[id]
+
 	m.indexStorage[id] = idx
 	m.jetIndexModifier.Add(id, idx.JetID)
 
-	stats.Record(ctx,
-		statIndexInMemoryCount.M(1),
-	)
+	if !exist {
+		stats.Record(ctx,
+			statIndexInMemoryAddedCount.M(1),
+		)
+
+	}
 
 	return nil
 }
@@ -185,13 +190,18 @@ func (m *IndexMemory) SetWithMeta(ctx context.Context, id insolar.ID, pn insolar
 
 	idx := CloneIndex(index)
 
+	_, exist := m.indexStorage[id]
+
 	m.indexStorage[id] = idx
 	m.jetIndexModifier.Add(id, idx.JetID)
 	m.pulseIndex.Add(id, pn)
 
-	stats.Record(ctx,
-		statIndexInMemoryCount.M(1),
-	)
+	if !exist {
+		stats.Record(ctx,
+			statIndexInMemoryAddedCount.M(1),
+		)
+
+	}
 
 	return nil
 }
@@ -274,6 +284,8 @@ func (m *IndexMemory) RemoveForPulse(ctx context.Context, pn insolar.PulseNumber
 	m.storageLock.Lock()
 	defer m.storageLock.Unlock()
 
+	cBefore := len(m.indexStorage)
+
 	rmIDs := m.pulseIndex.ForPN(pn)
 	m.pulseIndex.DeleteForPulse(pn)
 
@@ -282,11 +294,12 @@ func (m *IndexMemory) RemoveForPulse(ctx context.Context, pn insolar.PulseNumber
 		if ok {
 			m.jetIndexModifier.Delete(id, idx.JetID)
 			delete(m.indexStorage, id)
-			stats.Record(ctx,
-				statIndexInMemoryCount.M(-1),
-			)
 		}
 	}
+
+	stats.Record(ctx,
+		statIndexInMemoryRemovedCount.M(int64(len(m.indexStorage)-cBefore)),
+	)
 }
 
 type IndexDB struct {
