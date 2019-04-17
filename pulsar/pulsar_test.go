@@ -370,6 +370,7 @@ func TestPulsar_CheckConnectionsToPulsars_NilClient_FirstConnectionFailed(t *tes
 }
 
 func TestPulsar_CheckConnectionsToPulsars_NilClient_SecondConnectionFailed(t *testing.T) {
+	t.Skip("Network of pulsars should be rewritten")
 	ctx := inslogger.TestContext(t)
 
 	done := make(chan *rpc.Call, 1)
@@ -477,6 +478,7 @@ func TestPulsar_broadcastSignatureOfEntropy_StateFailed(t *testing.T) {
 }
 
 func TestPulsar_broadcastSignatureOfEntropy_SendToNeighbours(t *testing.T) {
+	t.Skip("Network of pulsar should be rewritten")
 	ctx := inslogger.TestContext(t)
 	done := make(chan *rpc.Call, 2)
 	done <- &rpc.Call{}
@@ -537,6 +539,7 @@ func TestPulsar_broadcastVector_StateFailed(t *testing.T) {
 }
 
 func TestPulsar_broadcastVector_SendToNeighbours(t *testing.T) {
+	t.Skip("Network of pulsars don't work and should be rewritten")
 	ctx := inslogger.TestContext(t)
 	done := make(chan *rpc.Call, 2)
 	done <- &rpc.Call{}
@@ -597,6 +600,7 @@ func TestPulsar_broadcastEntropy_StateFailed(t *testing.T) {
 }
 
 func TestPulsar_broadcastEntropy_SendToNeighbours(t *testing.T) {
+	t.Skip("network of pulsars should be rewritten")
 	ctx := inslogger.TestContext(t)
 	done := make(chan *rpc.Call, 2)
 	done <- &rpc.Call{}

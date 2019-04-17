@@ -139,6 +139,8 @@ func (ar *Runner) IsAPIRunner() bool {
 
 // Start runs api server
 func (ar *Runner) Start(ctx context.Context) error {
+	hc := NewHealthChecker(ar.CertificateManager, ar.NodeNetwork)
+	http.HandleFunc("/healthcheck", hc.CheckHandler)
 	ar.SeedManager = seedmanager.New()
 	http.HandleFunc(ar.cfg.Call, ar.callHandler())
 	http.Handle(ar.cfg.RPC, ar.rpcServer)
