@@ -141,3 +141,39 @@ func TestPulseIndex_ForPN(t *testing.T) {
 	_, ok = res[tID]
 	require.Equal(t, true, ok)
 }
+
+func TestPulseIndex_LastUsage(t *testing.T) {
+	pi := pulseIndex{
+		lastUsagePn: map[insolar.ID]insolar.PulseNumber{},
+		idsByPulse:  map[insolar.PulseNumber]map[insolar.ID]struct{}{},
+	}
+
+	id := gen.ID()
+	fPn := gen.PulseNumber()
+	sPn := gen.PulseNumber()
+
+	pi.Add(id, fPn)
+	pi.Add(id, sPn)
+
+	res, ok := pi.LastUsage(id)
+
+	require.Equal(t, true, ok)
+	require.Equal(t, res, sPn)
+}
+
+func TestPulseIndex_LastUsage_NoIds(t *testing.T) {
+	pi := NewPulseIndex()
+
+	id := gen.ID()
+	_, ok := pi.LastUsage(id)
+
+	require.Equal(t, false, ok)
+}
+
+func TestPulseIndex_ForPN_NoData(t *testing.T) {
+	pi := NewPulseIndex()
+
+	res := pi.ForPN(gen.PulseNumber())
+
+	require.Equal(t, 0, len(res))
+}
