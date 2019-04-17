@@ -51,7 +51,7 @@ func New() *Handler {
 }
 
 func (h *Handler) Init(ctx context.Context) error {
-	h.Bus.MustRegister(insolar.TypeHeavyStartStop, h.handleHeavyStartStop)
+	// h.Bus.MustRegister(insolar.TypeHeavyStartStop, h.handleHeavyStartStop)
 	h.Bus.MustRegister(insolar.TypeHeavyPayload, h.handleHeavyPayload)
 
 	h.Bus.MustRegister(insolar.TypeGetCode, h.handleGetCode)
@@ -311,22 +311,22 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 	return &reply.OK{}, nil
 }
 
-func (h *Handler) handleHeavyStartStop(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
-	msg := genericMsg.Message().(*message.HeavyStartStop)
-
-	// stop
-	if msg.Finished {
-		if err := h.HeavySync.Stop(ctx, insolar.ID(msg.JetID), msg.PulseNum); err != nil {
-			return nil, err
-		}
-		return &reply.OK{}, nil
-	}
-	// start
-	if err := h.HeavySync.Start(ctx, insolar.ID(msg.JetID), msg.PulseNum); err != nil {
-		return heavyerrreply(err)
-	}
-	return &reply.OK{}, nil
-}
+// func (h *Handler) handleHeavyStartStop(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
+// 	msg := genericMsg.Message().(*message.HeavyStartStop)
+//
+// 	// stop
+// 	if msg.Finished {
+// 		if err := h.HeavySync.Stop(ctx, insolar.ID(msg.JetID), msg.PulseNum); err != nil {
+// 			return nil, err
+// 		}
+// 		return &reply.OK{}, nil
+// 	}
+// 	// start
+// 	if err := h.HeavySync.Start(ctx, insolar.ID(msg.JetID), msg.PulseNum); err != nil {
+// 		return heavyerrreply(err)
+// 	}
+// 	return &reply.OK{}, nil
+// }
 
 func heavyerrreply(err error) (insolar.Reply, error) {
 	if herr, ok := err.(*reply.HeavyError); ok {
