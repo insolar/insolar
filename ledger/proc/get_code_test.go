@@ -29,7 +29,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func Test_saveCodeFromHeavy_SendFailed(t *testing.T) {
+func TestGetCode_handle(t *testing.T) {
+	gc := GetCode{}
+	ctx := context.Background()
+	gc.handle(ctx)
+}
+
+func TestGetCode_saveCodeFromHeavy_SendFailed(t *testing.T) {
 	jetID := gen.JetID()
 	codeRef := gen.Reference()
 	blobID := gen.ID()
@@ -49,7 +55,7 @@ func Test_saveCodeFromHeavy_SendFailed(t *testing.T) {
 	require.EqualError(t, err, "failed to send: test error")
 }
 
-func Test_saveCodeFromHeavy_WrongAnswer(t *testing.T) {
+func TestGetCode_saveCodeFromHeavy_WrongAnswer(t *testing.T) {
 	jetID := gen.JetID()
 	codeRef := gen.Reference()
 	blobID := gen.ID()
@@ -69,7 +75,7 @@ func Test_saveCodeFromHeavy_WrongAnswer(t *testing.T) {
 	require.EqualError(t, err, "failed to fetch code: unexpected reply type *reply.NotOK (reply=&{})")
 }
 
-func Test_saveCodeFromHeavy_SaveFailed(t *testing.T) {
+func TestGetCode_saveCodeFromHeavy_SaveFailed(t *testing.T) {
 	jetID := gen.JetID()
 	codeRef := gen.Reference()
 	blobID := gen.ID()
@@ -100,7 +106,7 @@ func Test_saveCodeFromHeavy_SaveFailed(t *testing.T) {
 	require.EqualError(t, err, "failed to save: test error")
 }
 
-func Test_saveCodeFromHeavy(t *testing.T) {
+func TestGetCode_saveCodeFromHeavy(t *testing.T) {
 	jetID := gen.JetID()
 	codeRef := gen.Reference()
 	blobID := gen.ID()
