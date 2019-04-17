@@ -117,7 +117,6 @@ type jetInfo struct {
 type pmOptions struct {
 	// enableSync            bool
 	splitThreshold   uint64
-	dropHistorySize  int
 	storeLightPulses int
 	// heavySyncMessageLimit int
 	lightChainLimit int

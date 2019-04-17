@@ -37,9 +37,9 @@ type JetIndexAccessor interface {
 	For(jetID insolar.JetID) map[insolar.ID]struct{}
 }
 
-// jetIndex contains methods to implement quick access to data by jet. Indexes are stored in memory. Consider disk
+// JetIndex contains methods to implement quick access to data by jet. Indexes are stored in memory. Consider disk
 // implementation for large collections.
-type jetIndex struct {
+type JetIndex struct {
 	lock    sync.Mutex
 	storage map[insolar.JetID]recordSet
 }
@@ -47,12 +47,12 @@ type jetIndex struct {
 type recordSet map[insolar.ID]struct{}
 
 // NewJetIndex creates new index instance.
-func NewJetIndex() *jetIndex {
-	return &jetIndex{storage: map[insolar.JetID]recordSet{}}
+func NewJetIndex() *JetIndex {
+	return &JetIndex{storage: map[insolar.JetID]recordSet{}}
 }
 
 // Add creates index record for specified id and jet. To remove clean up index, use "Delete" method.
-func (i *jetIndex) Add(id insolar.ID, jetID insolar.JetID) {
+func (i *JetIndex) Add(id insolar.ID, jetID insolar.JetID) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -65,7 +65,7 @@ func (i *jetIndex) Add(id insolar.ID, jetID insolar.JetID) {
 }
 
 // Delete removes specified id - jet record from index.
-func (i *jetIndex) Delete(id insolar.ID, jetID insolar.JetID) {
+func (i *JetIndex) Delete(id insolar.ID, jetID insolar.JetID) {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -81,7 +81,7 @@ func (i *jetIndex) Delete(id insolar.ID, jetID insolar.JetID) {
 }
 
 // For returns a collection of ids, that are stored for a specific jetID and a pulse number
-func (i *jetIndex) For(jetID insolar.JetID) map[insolar.ID]struct{} {
+func (i *JetIndex) For(jetID insolar.JetID) map[insolar.ID]struct{} {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
