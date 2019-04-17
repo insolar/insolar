@@ -63,6 +63,7 @@ func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (ins
 			select {
 			case msg.ReplyTo <- bus.Reply{Err: err}:
 			default:
+				logger.Errorf("error %s from handler was returned but replay was sent already", err)
 			}
 			logger.Error("Handling failed", err)
 		} else {
