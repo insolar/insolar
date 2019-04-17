@@ -133,7 +133,12 @@ func main() {
 	certgenCmd.Flags().BoolVarP(
 		&reuseKeys, "reuse-keys", "", false, "Read keys from file instead og generating of new ones")
 	certgenCmd.Flags().StringVarP(
-		&keysFile, "keys-file", "k", "keys.json", "The OUT/IN ( depends on 'reuse-keys' ) file for public/private keys of the node")
+		&keysFile,
+		"keys-file",
+		"k",
+		"keys.json",
+		"The OUT/IN ( depends on 'reuse-keys' ) file for public/private keys of the node",
+	)
 	certgenCmd.Flags().StringVarP(
 		&certFile, "cert-file", "c", "cert.json", "The OUT file the node certificate")
 	rootCmd.AddCommand(certgenCmd)
