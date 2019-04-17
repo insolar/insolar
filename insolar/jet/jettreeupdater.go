@@ -20,7 +20,6 @@ import (
 	"context"
 	"sync"
 
-	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -28,6 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/ledger/storage/node"
 )
 
 type seqEntry struct {
@@ -237,7 +237,7 @@ func (tu *treeUpdater) fetchActualJetFromOtherNodes(
 				"pulse":  pulse,
 				"object": target.DebugString(),
 			}).Error("all lights for pulse have no actual jet for object")
-			ch <- fetchResult{nil, errors.New("impossible situation")}
+			ch <- fetchResult{nil, errors.New("all lights for pulse have no actual jet for object")}
 			close(ch)
 		} else if len(res) > 1 {
 			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
@@ -276,7 +276,7 @@ func (tu *treeUpdater) otherNodesForPulse(
 			"This shouldn't happen. We're solo active light material",
 		)
 
-		return nil, errors.New("impossible situation")
+		return nil, errors.New("no other light to fetch jet tree data from")
 	}
 
 	return res, nil
