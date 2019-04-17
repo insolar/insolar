@@ -185,7 +185,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Drops        drop.Modifier
 		Blobs        blob.Modifier
 		Indices      object.IndexModifier
-		Replica      storage.ReplicaStorage
 		LegacyDB     storage.DBContext
 		Coordinator  insolar.JetCoordinator
 		Records      object.RecordAccessor
@@ -231,7 +230,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Drops = drop.NewDB(db)
 		Sync = heavyserver.NewSync(LegacyDB, records)
 		HeavyComp = heavy.Components()
-		Replica = storage.NewReplicaStorage()
 		Coordinator = cord
 		Records = records
 		Pulses = pulses
@@ -250,7 +248,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Drops,
 		Blobs,
 		Indices,
-		Replica,
 		LegacyDB,
 		metricsHandler,
 		Bus,

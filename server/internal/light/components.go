@@ -205,9 +205,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		jets := jet.NewStore()
 		nodes := node.NewStorage()
 
-		replica := storage.NewReplicaStorage()
 		c := component.Manager{}
-		c.Inject(replica, legacyDB, CryptoScheme)
+		c.Inject(legacyDB, CryptoScheme)
 
 		hots := recentstorage.NewRecentStorageProvider()
 		waiter := hot.NewChannelWaiter()
@@ -293,7 +292,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		pm.IndexCleaner = indexes
 		pm.NodeSetter = nodes
 		pm.Nodes = nodes
-		pm.ReplicaStorage = replica
 		pm.DBContext = legacyDB
 		pm.DropModifier = drops
 		pm.DropAccessor = drops
