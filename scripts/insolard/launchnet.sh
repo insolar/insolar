@@ -168,13 +168,13 @@ rebuild_binaries()
 generate_bootstrap_keys()
 {
     echo "generate bootstrap keys"
-    bin/insolar -c gen_keys > $KEYS_FILE
+    bin/insolar gen-key-pair > $KEYS_FILE
 }
 
 generate_root_member_keys()
 {
     echo "generate root member_keys"
-    bin/insolar -c gen_keys > $ROOT_MEMBER_KEYS_FILE
+    bin/insolar gen-key-pair > $ROOT_MEMBER_KEYS_FILE
 }
 
 check_working_dir()

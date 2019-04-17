@@ -9,7 +9,6 @@ BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
-CERTGEN = certgen
 RECORDBUILDER = protoc-gen-gorecord
 
 ALL_PACKAGES = ./...
@@ -86,7 +85,7 @@ ensure:
 	dep ensure
 
 .PHONY: build
-build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER) $(CERTGEN)
+build: $(BIN_DIR) $(INSOLARD) $(INSOLAR) $(INSGOCC) $(PULSARD) $(INSGORUND) $(HEALTHCHECK) $(BENCHMARK) $(APIREQUESTER) $(PULSEWATCHER)
 
 $(BIN_DIR):
 	mkdir -p $(BIN_DIR)
@@ -128,10 +127,6 @@ $(APIREQUESTER):
 .PHONY: $(HEALTHCHECK)
 $(HEALTHCHECK):
 	go build -o $(BIN_DIR)/$(HEALTHCHECK) -ldflags "${LDFLAGS}" cmd/healthcheck/*.go
-
-.PHONY: $(CERTGEN)
-$(CERTGEN):
-	go build -o $(BIN_DIR)/$(CERTGEN) -ldflags "${LDFLAGS}" cmd/certgen/*.go
 
 .PHONY: functest
 functest:
