@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "LogicRunner" can be found in github.com/insolar/insolar/insolar
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -84,7 +84,7 @@ type LogicRunnerMockHandleCallsResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of LogicRunner.HandleCalls is expected from 1 to Infinity times
+//Expect specifies that invocation of LogicRunner.HandleCalls is expected from 1 to Infinity times
 func (m *mLogicRunnerMockHandleCalls) Expect(p context.Context, p1 insolar.Parcel) *mLogicRunnerMockHandleCalls {
 	m.mock.HandleCallsFunc = nil
 	m.expectationSeries = nil
@@ -96,7 +96,7 @@ func (m *mLogicRunnerMockHandleCalls) Expect(p context.Context, p1 insolar.Parce
 	return m
 }
 
-// Return specifies results of invocation of LogicRunner.HandleCalls
+//Return specifies results of invocation of LogicRunner.HandleCalls
 func (m *mLogicRunnerMockHandleCalls) Return(r insolar.Reply, r1 error) *LogicRunnerMock {
 	m.mock.HandleCallsFunc = nil
 	m.expectationSeries = nil
@@ -108,7 +108,7 @@ func (m *mLogicRunnerMockHandleCalls) Return(r insolar.Reply, r1 error) *LogicRu
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of LogicRunner.HandleCalls is expected once
+//ExpectOnce specifies that invocation of LogicRunner.HandleCalls is expected once
 func (m *mLogicRunnerMockHandleCalls) ExpectOnce(p context.Context, p1 insolar.Parcel) *LogicRunnerMockHandleCallsExpectation {
 	m.mock.HandleCallsFunc = nil
 	m.mainExpectation = nil
@@ -123,7 +123,7 @@ func (e *LogicRunnerMockHandleCallsExpectation) Return(r insolar.Reply, r1 error
 	e.result = &LogicRunnerMockHandleCallsResult{r, r1}
 }
 
-// Set uses given function f as a mock of LogicRunner.HandleCalls method
+//Set uses given function f as a mock of LogicRunner.HandleCalls method
 func (m *mLogicRunnerMockHandleCalls) Set(f func(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error)) *LogicRunnerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -132,7 +132,7 @@ func (m *mLogicRunnerMockHandleCalls) Set(f func(p context.Context, p1 insolar.P
 	return m.mock
 }
 
-// HandleCalls implements github.com/insolar/insolar/insolar.LogicRunner interface
+//HandleCalls implements github.com/insolar/insolar/insolar.LogicRunner interface
 func (m *LogicRunnerMock) HandleCalls(p context.Context, p1 insolar.Parcel) (r insolar.Reply, r1 error) {
 	counter := atomic.AddUint64(&m.HandleCallsPreCounter, 1)
 	defer atomic.AddUint64(&m.HandleCallsCounter, 1)
@@ -184,17 +184,17 @@ func (m *LogicRunnerMock) HandleCalls(p context.Context, p1 insolar.Parcel) (r i
 	return m.HandleCallsFunc(p, p1)
 }
 
-// HandleCallsMinimockCounter returns a count of LogicRunnerMock.HandleCallsFunc invocations
+//HandleCallsMinimockCounter returns a count of LogicRunnerMock.HandleCallsFunc invocations
 func (m *LogicRunnerMock) HandleCallsMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.HandleCallsCounter)
 }
 
-// HandleCallsMinimockPreCounter returns the value of LogicRunnerMock.HandleCalls invocations
+//HandleCallsMinimockPreCounter returns the value of LogicRunnerMock.HandleCalls invocations
 func (m *LogicRunnerMock) HandleCallsMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.HandleCallsPreCounter)
 }
 
-// HandleCallsFinished returns true if mock invocations count is ok
+//HandleCallsFinished returns true if mock invocations count is ok
 func (m *LogicRunnerMock) HandleCallsFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.HandleCallsMock.expectationSeries) > 0 {
