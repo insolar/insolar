@@ -144,7 +144,7 @@ func TestDropStorageMemory_Delete(t *testing.T) {
 	_ = ms.Set(ctx, Drop{JetID: fJet, Pulse: sPn, Size: sSize})
 	_ = ms.Set(ctx, Drop{JetID: sJet, Pulse: fPn, Size: tSize})
 
-	ms.DeleteForPN(fPn)
+	ms.DeleteForPN(ctx, fPn)
 
 	drop, err := ms.ForPulse(ctx, fJet, sPn)
 	require.NoError(t, err)

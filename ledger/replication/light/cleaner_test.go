@@ -40,19 +40,19 @@ func TestCleaner_Clean(t *testing.T) {
 	ctrl := minimock.NewController(t)
 
 	jm := jet.NewStorageMock(ctrl)
-	jm.DeleteMock.Expect(ctx, calculatedPulse.PulseNumber)
+	jm.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
 
 	nm := node.NewModifierMock(ctrl)
-	nm.DeleteMock.Expect(calculatedPulse.PulseNumber)
+	nm.DeleteForPNMock.Expect(calculatedPulse.PulseNumber)
 
 	dc := drop.NewCleanerMock(ctrl)
-	dc.DeleteMock.Expect(calculatedPulse.PulseNumber)
+	dc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
 
 	bc := blob.NewCleanerMock(ctrl)
-	bc.DeleteMock.Expect(ctx, calculatedPulse.PulseNumber)
+	bc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
 
 	rc := object.NewRecordCleanerMock(ctrl)
-	rc.RemoveMock.Expect(ctx, calculatedPulse.PulseNumber)
+	rc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
 
 	ic := object.NewIndexCleanerMock(ctrl)
 	ic.RemoveForPulseMock.Expect(ctx, calculatedPulse.PulseNumber)
