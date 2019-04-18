@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Cleaner" can be found in github.com/insolar/insolar/ledger/storage/blob
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,10 +20,10 @@ import (
 type CleanerMock struct {
 	t minimock.Tester
 
-	DeleteFunc       func(p context.Context, p1 insolar.PulseNumber)
-	DeleteCounter    uint64
-	DeletePreCounter uint64
-	DeleteMock       mCleanerMockDelete
+	DeleteForPNFunc       func(p context.Context, p1 insolar.PulseNumber)
+	DeleteForPNCounter    uint64
+	DeleteForPNPreCounter uint64
+	DeleteForPNMock       mCleanerMockDeleteForPN
 }
 
 //NewCleanerMock returns a mock for github.com/insolar/insolar/ledger/storage/blob.Cleaner
@@ -34,130 +34,130 @@ func NewCleanerMock(t minimock.Tester) *CleanerMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.DeleteMock = mCleanerMockDelete{mock: m}
+	m.DeleteForPNMock = mCleanerMockDeleteForPN{mock: m}
 
 	return m
 }
 
-type mCleanerMockDelete struct {
+type mCleanerMockDeleteForPN struct {
 	mock              *CleanerMock
-	mainExpectation   *CleanerMockDeleteExpectation
-	expectationSeries []*CleanerMockDeleteExpectation
+	mainExpectation   *CleanerMockDeleteForPNExpectation
+	expectationSeries []*CleanerMockDeleteForPNExpectation
 }
 
-type CleanerMockDeleteExpectation struct {
-	input *CleanerMockDeleteInput
+type CleanerMockDeleteForPNExpectation struct {
+	input *CleanerMockDeleteForPNInput
 }
 
-type CleanerMockDeleteInput struct {
+type CleanerMockDeleteForPNInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
 }
 
-//Expect specifies that invocation of Cleaner.Delete is expected from 1 to Infinity times
-func (m *mCleanerMockDelete) Expect(p context.Context, p1 insolar.PulseNumber) *mCleanerMockDelete {
-	m.mock.DeleteFunc = nil
+//Expect specifies that invocation of Cleaner.DeleteForPN is expected from 1 to Infinity times
+func (m *mCleanerMockDeleteForPN) Expect(p context.Context, p1 insolar.PulseNumber) *mCleanerMockDeleteForPN {
+	m.mock.DeleteForPNFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &CleanerMockDeleteExpectation{}
+		m.mainExpectation = &CleanerMockDeleteForPNExpectation{}
 	}
-	m.mainExpectation.input = &CleanerMockDeleteInput{p, p1}
+	m.mainExpectation.input = &CleanerMockDeleteForPNInput{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of Cleaner.Delete
-func (m *mCleanerMockDelete) Return() *CleanerMock {
-	m.mock.DeleteFunc = nil
+//Return specifies results of invocation of Cleaner.DeleteForPN
+func (m *mCleanerMockDeleteForPN) Return() *CleanerMock {
+	m.mock.DeleteForPNFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &CleanerMockDeleteExpectation{}
+		m.mainExpectation = &CleanerMockDeleteForPNExpectation{}
 	}
 
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Cleaner.Delete is expected once
-func (m *mCleanerMockDelete) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *CleanerMockDeleteExpectation {
-	m.mock.DeleteFunc = nil
+//ExpectOnce specifies that invocation of Cleaner.DeleteForPN is expected once
+func (m *mCleanerMockDeleteForPN) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *CleanerMockDeleteForPNExpectation {
+	m.mock.DeleteForPNFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &CleanerMockDeleteExpectation{}
-	expectation.input = &CleanerMockDeleteInput{p, p1}
+	expectation := &CleanerMockDeleteForPNExpectation{}
+	expectation.input = &CleanerMockDeleteForPNInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-//Set uses given function f as a mock of Cleaner.Delete method
-func (m *mCleanerMockDelete) Set(f func(p context.Context, p1 insolar.PulseNumber)) *CleanerMock {
+//Set uses given function f as a mock of Cleaner.DeleteForPN method
+func (m *mCleanerMockDeleteForPN) Set(f func(p context.Context, p1 insolar.PulseNumber)) *CleanerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.DeleteFunc = f
+	m.mock.DeleteForPNFunc = f
 	return m.mock
 }
 
-//Delete implements github.com/insolar/insolar/ledger/storage/blob.Cleaner interface
+//DeleteForPN implements github.com/insolar/insolar/ledger/storage/blob.Cleaner interface
 func (m *CleanerMock) DeleteForPN(p context.Context, p1 insolar.PulseNumber) {
-	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
-	defer atomic.AddUint64(&m.DeleteCounter, 1)
+	counter := atomic.AddUint64(&m.DeleteForPNPreCounter, 1)
+	defer atomic.AddUint64(&m.DeleteForPNCounter, 1)
 
-	if len(m.DeleteMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.DeleteMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to CleanerMock.Delete. %v %v", p, p1)
+	if len(m.DeleteForPNMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.DeleteForPNMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to CleanerMock.DeleteForPN. %v %v", p, p1)
 			return
 		}
 
-		input := m.DeleteMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, CleanerMockDeleteInput{p, p1}, "Cleaner.Delete got unexpected parameters")
+		input := m.DeleteForPNMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, CleanerMockDeleteForPNInput{p, p1}, "Cleaner.DeleteForPN got unexpected parameters")
 
 		return
 	}
 
-	if m.DeleteMock.mainExpectation != nil {
+	if m.DeleteForPNMock.mainExpectation != nil {
 
-		input := m.DeleteMock.mainExpectation.input
+		input := m.DeleteForPNMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, CleanerMockDeleteInput{p, p1}, "Cleaner.Delete got unexpected parameters")
+			testify_assert.Equal(m.t, *input, CleanerMockDeleteForPNInput{p, p1}, "Cleaner.DeleteForPN got unexpected parameters")
 		}
 
 		return
 	}
 
-	if m.DeleteFunc == nil {
-		m.t.Fatalf("Unexpected call to CleanerMock.Delete. %v %v", p, p1)
+	if m.DeleteForPNFunc == nil {
+		m.t.Fatalf("Unexpected call to CleanerMock.DeleteForPN. %v %v", p, p1)
 		return
 	}
 
-	m.DeleteFunc(p, p1)
+	m.DeleteForPNFunc(p, p1)
 }
 
-//DeleteMinimockCounter returns a count of CleanerMock.DeleteFunc invocations
-func (m *CleanerMock) DeleteMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.DeleteCounter)
+//DeleteForPNMinimockCounter returns a count of CleanerMock.DeleteForPNFunc invocations
+func (m *CleanerMock) DeleteForPNMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.DeleteForPNCounter)
 }
 
-//DeleteMinimockPreCounter returns the value of CleanerMock.Delete invocations
-func (m *CleanerMock) DeleteMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.DeletePreCounter)
+//DeleteForPNMinimockPreCounter returns the value of CleanerMock.DeleteForPN invocations
+func (m *CleanerMock) DeleteForPNMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.DeleteForPNPreCounter)
 }
 
-//DeleteFinished returns true if mock invocations count is ok
-func (m *CleanerMock) DeleteFinished() bool {
+//DeleteForPNFinished returns true if mock invocations count is ok
+func (m *CleanerMock) DeleteForPNFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.DeleteMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.DeleteCounter) == uint64(len(m.DeleteMock.expectationSeries))
+	if len(m.DeleteForPNMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.DeleteForPNCounter) == uint64(len(m.DeleteForPNMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.DeleteMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.DeleteCounter) > 0
+	if m.DeleteForPNMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.DeleteForPNCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.DeleteFunc != nil {
-		return atomic.LoadUint64(&m.DeleteCounter) > 0
+	if m.DeleteForPNFunc != nil {
+		return atomic.LoadUint64(&m.DeleteForPNCounter) > 0
 	}
 
 	return true
@@ -167,8 +167,8 @@ func (m *CleanerMock) DeleteFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CleanerMock) ValidateCallCounters() {
 
-	if !m.DeleteFinished() {
-		m.t.Fatal("Expected call to CleanerMock.Delete")
+	if !m.DeleteForPNFinished() {
+		m.t.Fatal("Expected call to CleanerMock.DeleteForPN")
 	}
 
 }
@@ -188,8 +188,8 @@ func (m *CleanerMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *CleanerMock) MinimockFinish() {
 
-	if !m.DeleteFinished() {
-		m.t.Fatal("Expected call to CleanerMock.Delete")
+	if !m.DeleteForPNFinished() {
+		m.t.Fatal("Expected call to CleanerMock.DeleteForPN")
 	}
 
 }
@@ -206,7 +206,7 @@ func (m *CleanerMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.DeleteFinished()
+		ok = ok && m.DeleteForPNFinished()
 
 		if ok {
 			return
@@ -215,8 +215,8 @@ func (m *CleanerMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.DeleteFinished() {
-				m.t.Error("Expected call to CleanerMock.Delete")
+			if !m.DeleteForPNFinished() {
+				m.t.Error("Expected call to CleanerMock.DeleteForPN")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -231,7 +231,7 @@ func (m *CleanerMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *CleanerMock) AllMocksCalled() bool {
 
-	if !m.DeleteFinished() {
+	if !m.DeleteForPNFinished() {
 		return false
 	}
 

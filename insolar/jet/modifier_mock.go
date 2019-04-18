@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Modifier" can be found in github.com/insolar/insolar/insolar/jet
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -25,10 +25,10 @@ type ModifierMock struct {
 	ClonePreCounter uint64
 	CloneMock       mModifierMockClone
 
-	DeleteFunc       func(p context.Context, p1 insolar.PulseNumber)
-	DeleteCounter    uint64
-	DeletePreCounter uint64
-	DeleteMock       mModifierMockDelete
+	DeleteForPNFunc       func(p context.Context, p1 insolar.PulseNumber)
+	DeleteForPNCounter    uint64
+	DeleteForPNPreCounter uint64
+	DeleteForPNMock       mModifierMockDeleteForPN
 
 	SplitFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r insolar.JetID, r1 insolar.JetID, r2 error)
 	SplitCounter    uint64
@@ -50,7 +50,7 @@ func NewModifierMock(t minimock.Tester) *ModifierMock {
 	}
 
 	m.CloneMock = mModifierMockClone{mock: m}
-	m.DeleteMock = mModifierMockDelete{mock: m}
+	m.DeleteForPNMock = mModifierMockDeleteForPN{mock: m}
 	m.SplitMock = mModifierMockSplit{mock: m}
 	m.UpdateMock = mModifierMockUpdate{mock: m}
 
@@ -182,125 +182,125 @@ func (m *ModifierMock) CloneFinished() bool {
 	return true
 }
 
-type mModifierMockDelete struct {
+type mModifierMockDeleteForPN struct {
 	mock              *ModifierMock
-	mainExpectation   *ModifierMockDeleteExpectation
-	expectationSeries []*ModifierMockDeleteExpectation
+	mainExpectation   *ModifierMockDeleteForPNExpectation
+	expectationSeries []*ModifierMockDeleteForPNExpectation
 }
 
-type ModifierMockDeleteExpectation struct {
-	input *ModifierMockDeleteInput
+type ModifierMockDeleteForPNExpectation struct {
+	input *ModifierMockDeleteForPNInput
 }
 
-type ModifierMockDeleteInput struct {
+type ModifierMockDeleteForPNInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
 }
 
-//Expect specifies that invocation of Modifier.Delete is expected from 1 to Infinity times
-func (m *mModifierMockDelete) Expect(p context.Context, p1 insolar.PulseNumber) *mModifierMockDelete {
-	m.mock.DeleteFunc = nil
+//Expect specifies that invocation of Modifier.DeleteForPN is expected from 1 to Infinity times
+func (m *mModifierMockDeleteForPN) Expect(p context.Context, p1 insolar.PulseNumber) *mModifierMockDeleteForPN {
+	m.mock.DeleteForPNFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &ModifierMockDeleteExpectation{}
+		m.mainExpectation = &ModifierMockDeleteForPNExpectation{}
 	}
-	m.mainExpectation.input = &ModifierMockDeleteInput{p, p1}
+	m.mainExpectation.input = &ModifierMockDeleteForPNInput{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of Modifier.Delete
-func (m *mModifierMockDelete) Return() *ModifierMock {
-	m.mock.DeleteFunc = nil
+//Return specifies results of invocation of Modifier.DeleteForPN
+func (m *mModifierMockDeleteForPN) Return() *ModifierMock {
+	m.mock.DeleteForPNFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &ModifierMockDeleteExpectation{}
+		m.mainExpectation = &ModifierMockDeleteForPNExpectation{}
 	}
 
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Modifier.Delete is expected once
-func (m *mModifierMockDelete) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *ModifierMockDeleteExpectation {
-	m.mock.DeleteFunc = nil
+//ExpectOnce specifies that invocation of Modifier.DeleteForPN is expected once
+func (m *mModifierMockDeleteForPN) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *ModifierMockDeleteForPNExpectation {
+	m.mock.DeleteForPNFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &ModifierMockDeleteExpectation{}
-	expectation.input = &ModifierMockDeleteInput{p, p1}
+	expectation := &ModifierMockDeleteForPNExpectation{}
+	expectation.input = &ModifierMockDeleteForPNInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-//Set uses given function f as a mock of Modifier.Delete method
-func (m *mModifierMockDelete) Set(f func(p context.Context, p1 insolar.PulseNumber)) *ModifierMock {
+//Set uses given function f as a mock of Modifier.DeleteForPN method
+func (m *mModifierMockDeleteForPN) Set(f func(p context.Context, p1 insolar.PulseNumber)) *ModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.DeleteFunc = f
+	m.mock.DeleteForPNFunc = f
 	return m.mock
 }
 
-//Delete implements github.com/insolar/insolar/insolar/jet.Modifier interface
+//DeleteForPN implements github.com/insolar/insolar/insolar/jet.Modifier interface
 func (m *ModifierMock) DeleteForPN(p context.Context, p1 insolar.PulseNumber) {
-	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
-	defer atomic.AddUint64(&m.DeleteCounter, 1)
+	counter := atomic.AddUint64(&m.DeleteForPNPreCounter, 1)
+	defer atomic.AddUint64(&m.DeleteForPNCounter, 1)
 
-	if len(m.DeleteMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.DeleteMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ModifierMock.Delete. %v %v", p, p1)
+	if len(m.DeleteForPNMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.DeleteForPNMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ModifierMock.DeleteForPN. %v %v", p, p1)
 			return
 		}
 
-		input := m.DeleteMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ModifierMockDeleteInput{p, p1}, "Modifier.Delete got unexpected parameters")
+		input := m.DeleteForPNMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ModifierMockDeleteForPNInput{p, p1}, "Modifier.DeleteForPN got unexpected parameters")
 
 		return
 	}
 
-	if m.DeleteMock.mainExpectation != nil {
+	if m.DeleteForPNMock.mainExpectation != nil {
 
-		input := m.DeleteMock.mainExpectation.input
+		input := m.DeleteForPNMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ModifierMockDeleteInput{p, p1}, "Modifier.Delete got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ModifierMockDeleteForPNInput{p, p1}, "Modifier.DeleteForPN got unexpected parameters")
 		}
 
 		return
 	}
 
-	if m.DeleteFunc == nil {
-		m.t.Fatalf("Unexpected call to ModifierMock.Delete. %v %v", p, p1)
+	if m.DeleteForPNFunc == nil {
+		m.t.Fatalf("Unexpected call to ModifierMock.DeleteForPN. %v %v", p, p1)
 		return
 	}
 
-	m.DeleteFunc(p, p1)
+	m.DeleteForPNFunc(p, p1)
 }
 
-//DeleteMinimockCounter returns a count of ModifierMock.DeleteFunc invocations
-func (m *ModifierMock) DeleteMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.DeleteCounter)
+//DeleteForPNMinimockCounter returns a count of ModifierMock.DeleteForPNFunc invocations
+func (m *ModifierMock) DeleteForPNMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.DeleteForPNCounter)
 }
 
-//DeleteMinimockPreCounter returns the value of ModifierMock.Delete invocations
-func (m *ModifierMock) DeleteMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.DeletePreCounter)
+//DeleteForPNMinimockPreCounter returns the value of ModifierMock.DeleteForPN invocations
+func (m *ModifierMock) DeleteForPNMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.DeleteForPNPreCounter)
 }
 
-//DeleteFinished returns true if mock invocations count is ok
-func (m *ModifierMock) DeleteFinished() bool {
+//DeleteForPNFinished returns true if mock invocations count is ok
+func (m *ModifierMock) DeleteForPNFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.DeleteMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.DeleteCounter) == uint64(len(m.DeleteMock.expectationSeries))
+	if len(m.DeleteForPNMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.DeleteForPNCounter) == uint64(len(m.DeleteForPNMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.DeleteMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.DeleteCounter) > 0
+	if m.DeleteForPNMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.DeleteForPNCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.DeleteFunc != nil {
-		return atomic.LoadUint64(&m.DeleteCounter) > 0
+	if m.DeleteForPNFunc != nil {
+		return atomic.LoadUint64(&m.DeleteForPNCounter) > 0
 	}
 
 	return true
@@ -595,8 +595,8 @@ func (m *ModifierMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ModifierMock.Clone")
 	}
 
-	if !m.DeleteFinished() {
-		m.t.Fatal("Expected call to ModifierMock.Delete")
+	if !m.DeleteForPNFinished() {
+		m.t.Fatal("Expected call to ModifierMock.DeleteForPN")
 	}
 
 	if !m.SplitFinished() {
@@ -628,8 +628,8 @@ func (m *ModifierMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ModifierMock.Clone")
 	}
 
-	if !m.DeleteFinished() {
-		m.t.Fatal("Expected call to ModifierMock.Delete")
+	if !m.DeleteForPNFinished() {
+		m.t.Fatal("Expected call to ModifierMock.DeleteForPN")
 	}
 
 	if !m.SplitFinished() {
@@ -655,7 +655,7 @@ func (m *ModifierMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.CloneFinished()
-		ok = ok && m.DeleteFinished()
+		ok = ok && m.DeleteForPNFinished()
 		ok = ok && m.SplitFinished()
 		ok = ok && m.UpdateFinished()
 
@@ -670,8 +670,8 @@ func (m *ModifierMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to ModifierMock.Clone")
 			}
 
-			if !m.DeleteFinished() {
-				m.t.Error("Expected call to ModifierMock.Delete")
+			if !m.DeleteForPNFinished() {
+				m.t.Error("Expected call to ModifierMock.DeleteForPN")
 			}
 
 			if !m.SplitFinished() {
@@ -698,7 +698,7 @@ func (m *ModifierMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.DeleteFinished() {
+	if !m.DeleteForPNFinished() {
 		return false
 	}
 
