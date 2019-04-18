@@ -40,7 +40,12 @@ var (
 	)
 	statRecordInMemoryAddedCount = stats.Int64(
 		"recordstorage/added/count",
-		"How many records have been saved in in-indexStorage record storage",
+		"How many records have been saved to a in-memory storage",
+		stats.UnitDimensionless,
+	)
+	statRecordInMemoryRemovedCount = stats.Int64(
+		"recordstorage/added/count",
+		"How many records have been removed from a in-memory storage",
 		stats.UnitDimensionless,
 	)
 )

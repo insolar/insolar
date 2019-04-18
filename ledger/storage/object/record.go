@@ -167,6 +167,10 @@ func (m *RecordMemory) Remove(ctx context.Context, pulse insolar.PulseNumber) {
 
 		m.jetIndex.Delete(id, rec.JetID)
 		delete(m.recsStor, id)
+
+		stats.Record(ctx,
+			statRecordInMemoryRemovedCount.M(1),
+		)
 	}
 }
 

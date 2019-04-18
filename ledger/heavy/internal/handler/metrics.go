@@ -28,9 +28,9 @@ var (
 )
 
 var (
-	statHeavyPayloadCount = stats.Int64(
+	statRecivedHeavyPayloadCount = stats.Int64(
 		"heavySyncer/heavypayload/count",
-		"How many heavy-payload messages were sent to a heavy node",
+		"How many heavy-payload messages were received from a light-node",
 		stats.UnitDimensionless,
 	)
 )
@@ -38,9 +38,9 @@ var (
 func init() {
 	err := view.Register(
 		&view.View{
-			Name:        statHeavyPayloadCount.Name(),
-			Description: statHeavyPayloadCount.Description(),
-			Measure:     statHeavyPayloadCount,
+			Name:        statRecivedHeavyPayloadCount.Name(),
+			Description: statRecivedHeavyPayloadCount.Description(),
+			Measure:     statRecivedHeavyPayloadCount,
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{heavySyncer},
 		},

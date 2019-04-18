@@ -36,31 +36,6 @@ const (
 	sysLastSyncedPulseOnHeavy byte = 4
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage.DBContext -o ./ -s _mock.go
-
-// DBContext provides base db methods
-type DBContext interface {
-	BeginTransaction(update bool) (*TransactionManager, error)
-	View(ctx context.Context, fn func(*TransactionManager) error) error
-	Update(ctx context.Context, fn func(*TransactionManager) error) error
-
-	StoreKeyValues(ctx context.Context, kvs []insolar.KV) error
-
-	GetBadgerDB() *badger.DB
-
-	Close() error
-
-	Set(ctx context.Context, key, value []byte) error
-	Get(ctx context.Context, key []byte) ([]byte, error)
-
-	WaitingFlight()
-
-	iterate(ctx context.Context,
-		prefix []byte,
-		handler func(k, v []byte) error,
-	) error
-}
-
 // DB represents BadgerDB storage implementation.
 type DB struct {
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`

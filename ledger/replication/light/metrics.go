@@ -33,11 +33,6 @@ var (
 		"How many heavy-payload messages were sent to a heavy node",
 		stats.UnitDimensionless,
 	)
-	statRetryHeavyPayloadCount = stats.Int64(
-		"lightsyncer/retryheavypayload/count",
-		"How many heavy-payload messages were failed and retried to sent to a heavy node",
-		stats.UnitDimensionless,
-	)
 	statErrHeavyPayloadCount = stats.Int64(
 		"lightsyncer/failedheavypayload/count",
 		"How many heavy-payload messages were failed",
@@ -51,13 +46,6 @@ func init() {
 			Name:        statHeavyPayloadCount.Name(),
 			Description: statHeavyPayloadCount.Description(),
 			Measure:     statHeavyPayloadCount,
-			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{lightSyncer},
-		},
-		&view.View{
-			Name:        statRetryHeavyPayloadCount.Name(),
-			Description: statRetryHeavyPayloadCount.Description(),
-			Measure:     statRetryHeavyPayloadCount,
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{lightSyncer},
 		},
