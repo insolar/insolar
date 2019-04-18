@@ -1,20 +1,20 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+/*
+ *    Copyright 2019 Insolar Technologies
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 
-package light
+package replication
 
 import (
 	"context"
@@ -34,21 +34,22 @@ type DataGatherer interface {
 	ForPulseAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) (*message.HeavyPayload, error)
 }
 
-type dataGatherer struct {
+// LightDataGatherer is a realisation of DataGatherer
+type LightDataGatherer struct {
 	dropAccessor    drop.Accessor
 	blobsAccessor   blob.CollectionAccessor
 	recsAccessor    object.RecordCollectionAccessor
 	indexesAccessor object.IndexCollectionAccessor
 }
 
-// NewDataGatherer creates a new instance of DataGatherer
+// NewDataGatherer creates a new instance of LightDataGatherer
 func NewDataGatherer(
 	dropAccessor drop.Accessor,
 	blobsAccessor blob.CollectionAccessor,
 	recsAccessor object.RecordCollectionAccessor,
 	indexesAccessor object.IndexCollectionAccessor,
-) DataGatherer {
-	return &dataGatherer{
+) *LightDataGatherer {
+	return &LightDataGatherer{
 		dropAccessor:    dropAccessor,
 		blobsAccessor:   blobsAccessor,
 		recsAccessor:    recsAccessor,
@@ -57,7 +58,7 @@ func NewDataGatherer(
 }
 
 // ForPulseAndJet returns HeavyPayload message for a provided pulse and a jetID
-func (d *dataGatherer) ForPulseAndJet(
+func (d *LightDataGatherer) ForPulseAndJet(
 	ctx context.Context,
 	pn insolar.PulseNumber,
 	jetID insolar.JetID,
@@ -72,19 +73,23 @@ func (d *dataGatherer) ForPulseAndJet(
 	records := d.recsAccessor.ForPulse(ctx, jetID, pn)
 
 	indexes := d.indexesAccessor.ForPulseAndJet(ctx, pn, jetID)
-	resIdx := map[insolar.ID][]byte{}
-	for id, idx := range indexes {
-		resIdx[id] = object.EncodeIndex(idx)
-	}
 
 	return &message.HeavyPayload{
 		JetID:    jetID,
 		PulseNum: pn,
-		Indexes:  resIdx,
+		Indexes:  convertIndexes(indexes),
 		Drop:     drop.MustEncode(&dr),
 		Blobs:    convertBlobs(bls),
 		Records:  convertRecords(records),
 	}, nil
+}
+
+func convertIndexes(indexes map[insolar.ID]object.Lifeline) map[insolar.ID][]byte {
+	resIdx := map[insolar.ID][]byte{}
+	for id, idx := range indexes {
+		resIdx[id] = object.EncodeIndex(idx)
+	}
+	return resIdx
 }
 
 func convertBlobs(blobs []blob.Blob) [][]byte {

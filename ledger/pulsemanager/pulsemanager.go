@@ -23,7 +23,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/ledger/hot"
-	"github.com/insolar/insolar/ledger/replication/light"
+	"github.com/insolar/insolar/ledger/replication"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
@@ -91,7 +91,7 @@ type PulseManager struct {
 	RecSyncAccessor object.RecordCollectionAccessor
 	RecCleaner      object.RecordCleaner
 
-	ToHeavySyncer light.ToHeavySyncer
+	ToHeavySyncer replication.ToHeavySyncer
 
 	currentPulse insolar.Pulse
 
@@ -131,7 +131,7 @@ func NewPulseManager(
 	recSyncAccessor object.RecordCollectionAccessor,
 	idxCollectionAccessor object.IndexCollectionAccessor,
 	indexCleaner object.IndexCleaner,
-	lightToHeavySyncer light.ToHeavySyncer,
+	lightToHeavySyncer replication.ToHeavySyncer,
 ) *PulseManager {
 	pmconf := conf.PulseManager
 

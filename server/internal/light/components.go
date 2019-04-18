@@ -36,7 +36,7 @@ import (
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/replication/light"
+	"github.com/insolar/insolar/ledger/replication"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
@@ -236,7 +236,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.IndexStorage = indexes
 
 		jetCalculator := jet.NewCalculator(Coordinator, jets)
-		var lightCleaner = light.NewCleaner(
+		var lightCleaner = replication.NewCleaner(
 			jets,
 			nodes,
 			drops,
@@ -247,8 +247,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			pulses,
 			conf.LightChainLimit,
 		)
-		dataGatherer := light.NewDataGatherer(drops, blobs, records, indexes)
-		lthSyncer := light.NewToHeavySyncer(
+		dataGatherer := replication.NewDataGatherer(drops, blobs, records, indexes)
+		lthSyncer := replication.NewToHeavySyncer(
 			jetCalculator,
 			dataGatherer,
 			lightCleaner,

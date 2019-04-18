@@ -1,20 +1,20 @@
-//
-// Copyright 2019 Insolar Technologies GmbH
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
+/*
+ *    Copyright 2019 Insolar Technologies
+ *
+ *    Licensed under the Apache License, Version 2.0 (the "License");
+ *    you may not use this file except in compliance with the License.
+ *    You may obtain a copy of the License at
+ *
+ *        http://www.apache.org/licenses/LICENSE-2.0
+ *
+ *    Unless required by applicable law or agreed to in writing, software
+ *    distributed under the License is distributed on an "AS IS" BASIS,
+ *    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ *    See the License for the specific language governing permissions and
+ *    limitations under the License.
+ */
 
-package light
+package replication
 
 import (
 	"context"
@@ -36,7 +36,8 @@ type Cleaner interface {
 	NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber)
 }
 
-type cleaner struct {
+// LightCleaner is an implementation of Cleaner interface
+type LightCleaner struct {
 	jetStorage   jet.Storage
 	nodeModifier node.Modifier
 	dropCleaner  drop.Cleaner
@@ -50,6 +51,7 @@ type cleaner struct {
 	lightChainLimit int
 }
 
+// NewCleaner creates a new instance of LightCleaner
 func NewCleaner(
 	jetStorage jet.Storage,
 	nodeModifier node.Modifier,
@@ -59,9 +61,9 @@ func NewCleaner(
 	indexCleaner object.IndexCleaner,
 	pulseShifter pulse.Shifter,
 	pulseCalculator pulse.Calculator,
-	lightChainLimint int,
-) Cleaner {
-	return &cleaner{
+	lightChainLimit int,
+) *LightCleaner {
+	return &LightCleaner{
 		jetStorage:      jetStorage,
 		nodeModifier:    nodeModifier,
 		dropCleaner:     dropCleaner,
@@ -70,14 +72,14 @@ func NewCleaner(
 		indexCleaner:    indexCleaner,
 		pulseShifter:    pulseShifter,
 		pulseCalculator: pulseCalculator,
-		lightChainLimit: lightChainLimint,
+		lightChainLimit: lightChainLimit,
 	}
 }
 
 // NotifyAboutPulse cleans a light's data. When it's called, it tries to fetch
 // pulse, which is backwards by a size of lightChainLimit. If a pulse is fetched successfully,
 // all the data for it will be cleaned
-func (c *cleaner) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
+func (c *LightCleaner) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[NotifyAboutPulse] pn - %v", pn)
 
@@ -93,7 +95,7 @@ func (c *cleaner) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) 
 	c.cleanPulse(ctx, expiredPn.PulseNumber)
 }
 
-func (c cleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
+func (c LightCleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 	inslogger.FromContext(ctx).Debugf("[cleanPulse] start cleaning. pn - %v", pn)
 	c.nodeModifier.DeleteForPN(pn)
 	c.dropCleaner.DeleteForPN(ctx, pn)

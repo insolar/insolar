@@ -35,14 +35,6 @@ type PulseManager struct {
 	SplitThreshold uint64
 }
 
-// LightToHeavySync holds settings for a light to heavy sync process
-type LightToHeavySync struct {
-	// Backoff holds a backoff configuration for failed sendings of payload from a light to a heavy
-	Backoff Backoff
-	// RetryLoopDuration holds a value of a light's sync process frequency
-	RetryLoopDuration time.Duration
-}
-
 // Backoff configures retry backoff algorithm
 type Backoff struct {
 	Factor float64
@@ -81,9 +73,6 @@ type Ledger struct {
 	// PendingRequestsLimit holds a number of pending requests, what can be stored in the system
 	// before they are declined
 	PendingRequestsLimit int
-
-	// LightToHeavySync holds settings for a light to heavy sync process
-	LightToHeavySync LightToHeavySync
 }
 
 // NewLedger creates new default Ledger configuration.
@@ -97,18 +86,6 @@ func NewLedger() Ledger {
 		PulseManager: PulseManager{
 			SplitThreshold: 10 * 100, // 10 megabytes.
 		},
-
-		LightToHeavySync: LightToHeavySync{
-			Backoff: Backoff{
-				Jitter:      true,
-				Min:         200 * time.Millisecond,
-				Max:         2 * time.Second,
-				Factor:      2,
-				MaxAttempts: 10,
-			},
-			RetryLoopDuration: 1 * time.Second,
-		},
-
 		LightChainLimit: 5, // 5 pulses
 
 		Exporter: Exporter{
