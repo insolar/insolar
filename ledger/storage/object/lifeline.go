@@ -93,6 +93,14 @@ type Lifeline struct {
 	JetID               insolar.JetID
 }
 
+// LifelineMeta holds additional info about Lifeline
+// It provides LastUsed pulse number
+// That can be used for placed in a special bucket in processing structs
+type LifelineMeta struct {
+	Index    Lifeline
+	LastUsed insolar.PulseNumber
+}
+
 // EncodeIndex converts lifeline index into binary format.
 func EncodeIndex(index Lifeline) []byte {
 	buff := bytes.NewBuffer(nil)
@@ -225,11 +233,6 @@ func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (Lifeline, error
 	index = CloneIndex(idx)
 
 	return index, nil
-}
-
-type LifelineMeta struct {
-	Index    Lifeline
-	LastUsed insolar.PulseNumber
 }
 
 // ForJet returns a collection of lifelines for a provided jetID
