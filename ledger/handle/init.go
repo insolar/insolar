@@ -45,6 +45,12 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 			Message: s.Message,
 		}
 		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetChildren:
+		h := &GetChildren{
+			// dep: s.Dep,
+			Message: s.Message,
+		}
+		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s", s.Message.Parcel.Message().Type().String())
 	}

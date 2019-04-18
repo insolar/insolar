@@ -194,12 +194,13 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 			m.checkJet,
 			m.waitForHotData))
 
-	h.Bus.MustRegister(insolar.TypeGetChildren,
-		BuildMiddleware(h.handleGetChildren,
-			instrumentHandler("handleGetChildren"),
-			m.addFieldsToLogger,
-			m.checkJet,
-			m.waitForHotData))
+	//h.Bus.MustRegister(insolar.TypeGetChildren,
+	//	//	BuildMiddleware(h.handleGetChildren,
+	//	//		instrumentHandler("handleGetChildren"),
+	//	//		m.addFieldsToLogger,
+	//	//		m.checkJet,
+	//	//		m.waitForHotData))
+	h.Bus.MustRegister(insolar.TypeGetChildren, h.FlowHandler.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeSetRecord,
 		BuildMiddleware(h.handleSetRecord,
