@@ -37,6 +37,8 @@ type GetChildren struct {
 }
 
 func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
+	// TODO: recursive Migrate if ErrCanceled
+	// TODO: why this is equivalent to jetFromContext?
 	jet := &WaitJet{
 		dep:     s.dep,
 		Message: s.Message,
@@ -49,10 +51,19 @@ func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
 		Jet:     insolar.ID(jet.Res.Jet),
 		Message: s.Message,
 	})
-	// TODO: send Result.Reply somewhere...
-	return f.Procedure(ctx, p)
+	if err := f.Procedure(ctx, p); err != nil {
+		return err
+	}
 
-	// TODO: recursive Migrate if ErrCanceled
+	rep := &proc.ReturnReply{
+		ReplyTo: s.Message.ReplyTo,
+		Reply:   p.Result.Reply,
+	}
+	if err := f.Procedure(ctx, rep); err != nil {
+		return err
+	}
+
+	return nil
 
 	/*
 		ctx, _ = inslogger.WithField(ctx, "object", msg.Head.Record().DebugString())
