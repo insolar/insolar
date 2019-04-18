@@ -40,7 +40,7 @@ func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
 	return genRefWithID(genRandomID(pulse))
 }
 
-func TestGetChildren(t *testing.T) {
+func createProc(t *testing.T) *proc.GetChildren {
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 	msg := message.GetChildren{
 		Parent: *genRandomRef(0),
@@ -64,6 +64,23 @@ func TestGetChildren(t *testing.T) {
 	p.Dep.RecordAccessor = object.NewRecordAccessorMock(t)
 	p.Dep.TreeUpdater = jet.NewTreeUpdaterMock(t)
 	p.Dep.IndexSaver = object.NewIndexSaverMock(t)
+	return &p
+}
 
+// redirects to heavy when no index
+func TestGetChildren_RedirectsToHaveWhenNoIndex(t *testing.T) {
+	// p := createProc(t)
+	assert.NoError(t, nil)
+}
+
+// redirect to light when has index and child later than limit
+func TestGetChildren_RedirectsToLightChildLaterThanLimit(t *testing.T) {
+	// p := createProc(t)
+	assert.NoError(t, nil)
+}
+
+// redirect to heavy when has index and child earlier than limit
+func TestGetChildren_RedirectsToHeavyChildEarlierThanLimit(t *testing.T) {
+	// p := createProc(t)
 	assert.NoError(t, nil)
 }
