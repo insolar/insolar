@@ -41,7 +41,8 @@ func (h *HandleCall) executeActual(
 	ctx context.Context,
 	parcel insolar.Parcel,
 	msg message.IBaseLogicMessage,
-	f flow.Flow) (insolar.Reply, error) {
+	f flow.Flow,
+) (insolar.Reply, error) {
 
 	lr := h.dep.lr
 	ref := msg.GetReference()
