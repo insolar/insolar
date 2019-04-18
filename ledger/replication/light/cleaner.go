@@ -29,7 +29,10 @@ import (
 	"github.com/insolar/insolar/ledger/storage/pulse"
 )
 
+// Cleaner is an interface that represents a cleaner-component
+// It's supposed, that all the process of cleaning data from LME will be doing by it
 type Cleaner interface {
+	// NotifyAboutPulse notifies a component about a pulse
 	NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber)
 }
 
@@ -71,6 +74,9 @@ func NewCleaner(
 	}
 }
 
+// NotifyAboutPulse cleans a light's data. When it's called, it tries to fetch
+// pulse, which is backwards by a size of lightChainLimit. If a pulse is fetched successfully,
+// all the data for it will be cleaned
 func (c *cleaner) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[NotifyAboutPulse] pn - %v", pn)

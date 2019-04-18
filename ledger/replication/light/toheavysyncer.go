@@ -30,7 +30,9 @@ import (
 	"go.opencensus.io/stats"
 )
 
+// ToHeavySyncer is a base interface for a sync component
 type ToHeavySyncer interface {
+	// NotifyAboutPulse is method for notifying a sync component about new pulse
 	NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber)
 }
 
@@ -48,6 +50,7 @@ type toHeavySyncer struct {
 	conf configuration.LightToHeavySync
 }
 
+// NewToHeavySyncer creates new instance of ToHeavySyncer
 func NewToHeavySyncer(
 	jetCalculator jet.Calculator,
 	dataGatherer DataGatherer,
@@ -67,6 +70,12 @@ func NewToHeavySyncer(
 	}
 }
 
+// NotifyAboutPulse is method for notifying a sync component about new pulse
+// When it's called, a provided pulse is added to a channel.
+// There is a special gorutine that is reading that channel. When a new pulse is being received,
+// the routine starts to gather data (with using of dataGatherer). After gathering all the data,
+// it attempts to send it to the heavy. After sending a heavy payload to a heavy, data is deleted
+// with help of Cleaner
 func (t *toHeavySyncer) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
 	t.once.Do(func() {
 		go t.sync(ctx)
@@ -107,9 +116,9 @@ func (t *toHeavySyncer) sync(ctx context.Context) {
 			err = t.sendToHeavy(ctx, msg)
 			if err != nil {
 				logger.Errorf("[sync] Problems with sending msg to a heavy node", err)
-				continue
+			} else {
+				logger.Debugf("[sync] data has been sent to a heavy. pn - %v, jetID - %v", msg.PulseNum, msg.JetID.DebugString())
 			}
-			logger.Debugf("[sync] data has been sent to a heavy. pn - %v, jetID - %v", msg.PulseNum, msg.JetID.DebugString())
 		}
 
 		t.cleaner.NotifyAboutPulse(ctx, pn)

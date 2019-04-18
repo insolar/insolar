@@ -28,7 +28,9 @@ import (
 	"github.com/insolar/insolar/ledger/storage/object"
 )
 
+// DataGatherer is an inteface, that provides methods for gathering a heavy payload for a provided pulse
 type DataGatherer interface {
+	// ForPulseAndJet returns HeavyPayload message for a provided pulse and a jetID
 	ForPulseAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) (*message.HeavyPayload, error)
 }
 
@@ -39,6 +41,7 @@ type dataGatherer struct {
 	indexesAccessor object.IndexCollectionAccessor
 }
 
+// NewDataGatherer creates a new instance of DataGatherer
 func NewDataGatherer(
 	dropAccessor drop.Accessor,
 	blobsAccessor blob.CollectionAccessor,
@@ -53,6 +56,7 @@ func NewDataGatherer(
 	}
 }
 
+// ForPulseAndJet returns HeavyPayload message for a provided pulse and a jetID
 func (d *dataGatherer) ForPulseAndJet(
 	ctx context.Context,
 	pn insolar.PulseNumber,
