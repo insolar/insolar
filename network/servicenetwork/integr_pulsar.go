@@ -106,8 +106,6 @@ type testPulsar struct {
 	cm            *component.Manager
 
 	activityMutex sync.Mutex
-	active        bool
-	distributing  bool
 
 	pulseTimeMs  int32
 	reqTimeoutMs int32
@@ -140,36 +138,16 @@ func (tp *testPulsar) Start(ctx context.Context, bootstrapHosts []string) error 
 		return errors.Wrap(err, "Failed to start test pulsar components")
 	}
 
-	tp.active = true
 	go tp.distribute(ctx)
 	return nil
 }
 
 func (tp *testPulsar) Pause() {
 	tp.activityMutex.Lock()
-	tp.active = false
-	tp.activityMutex.Unlock()
-
-	for {
-		tp.activityMutex.Lock()
-		if !tp.distributing {
-			tp.activityMutex.Unlock()
-			return
-		}
-		tp.activityMutex.Unlock()
-	}
 }
 
 func (tp *testPulsar) Continue() {
-	for {
-		tp.activityMutex.Lock()
-		if !tp.distributing {
-			tp.active = true
-			tp.activityMutex.Unlock()
-			return
-		}
-		tp.activityMutex.Unlock()
-	}
+	tp.activityMutex.Unlock()
 }
 
 func (tp *testPulsar) distribute(ctx context.Context) {
@@ -195,26 +173,14 @@ func (tp *testPulsar) distribute(ctx context.Context) {
 	for {
 		select {
 		case <-time.After(time.Duration(tp.pulseTimeMs) * time.Millisecond):
-			tp.activityMutex.Lock()
-			if tp.active {
-				if tp.distributing {
-					tp.activityMutex.Unlock()
-					log.Fatal("Time for a new Pulse came while still distributing")
-				}
+			go func(pulse insolar.Pulse) {
+				tp.activityMutex.Lock()
+				defer tp.activityMutex.Unlock()
 
-				tp.distributing = true
-				tp.activityMutex.Unlock()
-				go func(pulse insolar.Pulse) {
-					tp.distributor.Distribute(ctx, pulse)
+				tp.distributor.Distribute(ctx, pulse)
+			}(pulse)
 
-					tp.activityMutex.Lock()
-					tp.distributing = false
-					tp.activityMutex.Unlock()
-				}(pulse)
-				pulse = tp.incrementPulse(pulse)
-			} else {
-				tp.activityMutex.Unlock()
-			}
+			pulse = tp.incrementPulse(pulse)
 		case <-tp.cancellationToken:
 			return
 		}
