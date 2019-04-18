@@ -19,7 +19,8 @@ package proc
 import (
 	"context"
 
-	h "github.com/golang/dep/hack/licenseok"
+	"github.com/insolar/insolar/ledger/artifactmanager"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -46,6 +47,8 @@ type GetChildren struct {
 		JetStorage             jet.Storage
 		DelegationTokenFactory insolar.DelegationTokenFactory
 		RecordAccessor         object.RecordAccessor
+		TreeUpdater            jet.TreeUpdater
+		IndexSaver             artifactmanager.IndexSaver
 	}
 
 	Result struct {
@@ -69,7 +72,7 @@ func (p *GetChildren) Proceed(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
-		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
+		idx, err = p.Dep.IndexSaver.SaveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
 		if err != nil {
 			return errors.Wrap(err, "failed to fetch index from heavy")
 		}
@@ -117,7 +120,7 @@ func (p *GetChildren) Proceed(ctx context.Context) error {
 	childJet = (*insolar.ID)(&childJetID)
 
 	if !actual {
-		actualJet, err := h.jetTreeUpdater.FetchJet(ctx, *msg.Parent.Record(), currentChild.Pulse())
+		actualJet, err := p.Dep.TreeUpdater.FetchJet(ctx, *msg.Parent.Record(), currentChild.Pulse())
 		if err != nil {
 			return err
 		}

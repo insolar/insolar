@@ -84,6 +84,15 @@ type MessageHandler struct {
 	handlers    map[insolar.MessageType]insolar.MessageHandler
 }
 
+// IndexSaver is implemented by MessageHandler and can be used by various message Handler's.
+// This is a temporary interface used during the migration to Flow. If the migration is complete
+// feel free to refactor this the way you like.
+type IndexSaver interface {
+	SaveIndexFromHeavy(
+		ctx context.Context, jetID insolar.ID, obj insolar.Reference, heavy *insolar.Reference,
+	) (object.Lifeline, error)
+}
+
 // NewMessageHandler creates new handler.
 func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 	h := &MessageHandler{
@@ -127,6 +136,8 @@ func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 			p.Dep.JetStorage = h.JetStorage
 			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
 			p.Dep.RecordAccessor = h.RecordAccessor
+			p.Dep.TreeUpdater = h.jetTreeUpdater
+			p.Dep.IndexSaver = h
 			return p
 		},
 	}
@@ -415,7 +426,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 		if err != nil {
 			return nil, err
 		}
-		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Head, heavy)
+		idx, err = h.SaveIndexFromHeavy(ctx, jetID, msg.Head, heavy)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
@@ -453,7 +464,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 		if err != nil {
 			return nil, err
 		}
-		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
+		idx, err = h.SaveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
@@ -644,7 +655,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 			if err != nil {
 				return nil, err
 			}
-			idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Object, heavy)
+			idx, err = h.SaveIndexFromHeavy(ctx, jetID, msg.Object, heavy)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to fetch index from heavy")
 			}
@@ -731,7 +742,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 		if err != nil {
 			return nil, err
 		}
-		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
+		idx, err = h.SaveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
@@ -824,7 +835,7 @@ func validateState(old object.StateID, new object.StateID) error {
 	return nil
 }
 
-func (h *MessageHandler) saveIndexFromHeavy(
+func (h *MessageHandler) SaveIndexFromHeavy(
 	ctx context.Context, jetID insolar.ID, obj insolar.Reference, heavy *insolar.Reference,
 ) (object.Lifeline, error) {
 	genericReply, err := h.Bus.Send(ctx, &message.GetObjectIndex{
