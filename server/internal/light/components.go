@@ -190,12 +190,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	)
 	{
 		conf := cfg.Ledger
-
-		legacyDB, err := storage.NewDB(conf, nil)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to initialize DB")
-		}
-
 		idLocker := storage.NewIDLocker()
 		pulses := pulse.NewStorageMem()
 		drops := drop.NewStorageMemory()
@@ -206,7 +200,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		nodes := node.NewStorage()
 
 		c := component.Manager{}
-		c.Inject(legacyDB, CryptoScheme)
+		c.Inject(CryptoScheme)
 
 		hots := recentstorage.NewRecentStorageProvider()
 		waiter := hot.NewChannelWaiter()

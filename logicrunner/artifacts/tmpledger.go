@@ -21,6 +21,7 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/ledger/hot"
 	"github.com/insolar/insolar/ledger/storage/object"
 
@@ -37,7 +38,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/pulse"
-	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
 	"github.com/insolar/insolar/messagebus"
@@ -51,7 +51,6 @@ import (
 // TMPLedger
 // DEPRECATED
 type TMPLedger struct {
-	db              *storage.DB
 	ArtifactManager Client
 	PulseManager    insolar.PulseManager   `inject:""`
 	JetCoordinator  insolar.JetCoordinator `inject:""`
@@ -81,13 +80,11 @@ func (l *TMPLedger) GetArtifactManager() Client {
 // NewTestLedger is the util function for creation of Ledger with provided
 // private members (suitable for tests).
 func NewTestLedger(
-	db *storage.DB,
 	am Client,
 	pm *pulsemanager.PulseManager,
 	jc insolar.JetCoordinator,
 ) *TMPLedger {
 	return &TMPLedger{
-		db:              db,
 		ArtifactManager: am,
 		PulseManager:    pm,
 		JetCoordinator:  jc,
@@ -97,7 +94,7 @@ func NewTestLedger(
 // TmpLedger creates ledger on top of temporary database.
 // Returns *ledger.Ledger and cleanup function.
 // DEPRECATED
-func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *storage.DB, func()) {
+func TmpLedger(t *testing.T, dir string, c insolar.Components) *TMPLedger {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
@@ -108,12 +105,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *sto
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
-	tmpDB, recMem, dbcancel := storagetest.TmpDB(ctx,
-		t,
-		storagetest.Dir(dir),
-		storagetest.PulseStorage(ps),
-		storagetest.IndexStorage(is),
-	)
+	recordStorage := object.NewRecordMemory()
 	memoryMockDB := store.NewMemoryMockDB()
 
 	cm := &component.Manager{}
@@ -122,8 +114,21 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *sto
 	ds := drop.NewDB(memoryMockDB)
 	bs := blob.NewDB(memoryMockDB)
 
-	recordAccessor := recMem
-	recordModifier := recMem
+	genesisBaseRecord := &genesis.BaseRecord{
+		DB:             memoryMockDB,
+		DropModifier:   ds,
+		PulseAppender:  ps,
+		PulseAccessor:  ps,
+		RecordModifier: recordStorage,
+		IndexModifier:  is,
+	}
+	_, err := genesisBaseRecord.CreateIfNeeded(ctx)
+	if err != nil {
+		t.Error(err, "failed to create base genesis record")
+	}
+
+	recordAccessor := recordStorage
+	recordModifier := recordStorage
 
 	am := NewClient()
 	am.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
@@ -180,7 +185,6 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *sto
 
 	cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
-		tmpDB,
 		memoryMockDB,
 		js,
 		ns,
@@ -193,7 +197,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *sto
 		recordModifier,
 	)
 
-	err := cm.Init(ctx)
+	err = cm.Init(ctx)
 	if err != nil {
 		t.Error("ComponentManager init failed", err)
 	}
@@ -247,7 +251,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *sto
 	}
 
 	// Create ledger.
-	l := NewTestLedger(tmpDB, am, pm, jc)
+	l := NewTestLedger(am, pm, jc)
 
-	return l, tmpDB, dbcancel
+	return l
 }
