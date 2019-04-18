@@ -18,6 +18,7 @@ package handler
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -60,15 +61,25 @@ func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (ins
 	go func() {
 		f := thread.NewThread(msg, h.controller)
 		err := f.Run(ctx, h.handles.present(msg))
+		defer func() {
+			_ = recover()
+		}()
 		if err != nil {
 			select {
 			case msg.ReplyTo <- bus.Reply{Err: err}:
 			default:
+				logger.Errorf("error %s from handler was returned but replay was sent already", err)
 			}
 			logger.Error("Handling failed", err)
+		} else {
+			select {
+			case msg.ReplyTo <- bus.Reply{Err: errors.New("no reply from handler")}:
+			default:
+			}
 		}
 	}()
 	rep := <-msg.ReplyTo
+	close(msg.ReplyTo)
 	return rep.Reply, rep.Err
 }
 

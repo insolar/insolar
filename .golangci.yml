@@ -21,9 +21,7 @@ linters:
     - golint
     - interfacer
     - unconvert
-    - dupl
     - goconst
-    - goimports
     - misspell
     - lll
     - unparam

@@ -59,12 +59,12 @@ func (f *Thread) Handle(ctx context.Context, handle flow.Handle) error {
 	return nil
 }
 
-func (f *Thread) Procedure(ctx context.Context, p flow.Procedure) error {
+func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure) error {
 	if f.cancelled() {
 		return flow.ErrCancelled
 	}
 
-	if p == nil {
+	if proc == nil {
 		return errors.New("procedure called with nil procedure")
 	}
 
@@ -74,7 +74,7 @@ func (f *Thread) Procedure(ctx context.Context, p flow.Procedure) error {
 	case <-f.cancel:
 		cancel()
 		return flow.ErrCancelled
-	case err = <-f.procedure(ctx, p):
+	case err = <-f.procedure(ctx, proc):
 		cancel()
 	}
 
@@ -105,15 +105,15 @@ func (f *Thread) Run(ctx context.Context, h flow.Handle) error {
 
 // =====================================================================================================================
 
-func (f *Thread) procedure(ctx context.Context, a flow.Procedure) <-chan error {
-	if d, ok := f.procedures[a]; ok {
+func (f *Thread) procedure(ctx context.Context, proc flow.Procedure) <-chan error {
+	if d, ok := f.procedures[proc]; ok {
 		return d
 	}
 
 	done := make(chan error, 1)
-	f.procedures[a] = done
+	f.procedures[proc] = done
 	go func() {
-		done <- a.Proceed(ctx)
+		done <- proc.Proceed(ctx)
 	}()
 	return done
 }
