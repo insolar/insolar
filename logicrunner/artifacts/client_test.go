@@ -24,6 +24,7 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/messagebus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -160,7 +161,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 		PulseAccessor:              pa,
 		JetCoordinator:             jc,
 		PlatformCryptographyScheme: s.scheme,
-		senders:                    newLedgerArtifactSenders(),
+		senders:                    messagebus.NewSenders(),
 	}
 
 	desc, err := am.GetCode(s.ctx, codeRef)

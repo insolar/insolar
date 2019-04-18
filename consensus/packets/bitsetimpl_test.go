@@ -86,18 +86,18 @@ func initDiffBitCells(refs []insolar.Reference) []BitSetCell {
 	return result
 }
 
-type BitSetMapperMock struct {
+type mapperMock struct {
 	refs []insolar.Reference
 }
 
-func (bsmm *BitSetMapperMock) IndexToRef(index int) (insolar.Reference, error) {
+func (bsmm *mapperMock) IndexToRef(index int) (insolar.Reference, error) {
 	if index > len(bsmm.refs)-1 {
 		return testutils.RandomRef(), ErrBitSetOutOfRange
 	}
 	return bsmm.refs[index], nil
 }
 
-func (bsmm *BitSetMapperMock) RefToIndex(nodeID insolar.Reference) (int, error) {
+func (bsmm *mapperMock) RefToIndex(nodeID insolar.Reference) (int, error) {
 	for i, ref := range bsmm.refs {
 		if ref == nodeID {
 			return i, nil
@@ -106,7 +106,7 @@ func (bsmm *BitSetMapperMock) RefToIndex(nodeID insolar.Reference) (int, error) 
 	return 0, ErrBitSetNodeIsMissing
 }
 
-func (bsmm *BitSetMapperMock) Length() int {
+func (bsmm *mapperMock) Length() int {
 	return len(bsmm.refs)
 }
 
@@ -115,7 +115,7 @@ func TestBitSet_GetBuckets(t *testing.T) {
 	refs := initRefs(count)
 	cells := initBitCells(refs)
 
-	mapper := &BitSetMapperMock{refs: refs}
+	mapper := &mapperMock{refs: refs}
 	bitset, _ := NewBitSet(len(cells))
 	err := bitset.ApplyChanges(cells, mapper)
 	assert.NoError(t, err)
@@ -131,15 +131,15 @@ func TestBitSet_ApplyChanges(t *testing.T) {
 
 	bitset, _ := NewBitSet(len(cells))
 
-	mapper := &BitSetMapperMock{refs: refs}
+	mapper := &mapperMock{refs: refs}
 	cells[count-3].State = Fraud
 	err := bitset.ApplyChanges(cells, mapper)
 	assert.NoError(t, err)
-	newCells1, err := bitset.GetCells(&BitSetMapperMock{refs: refs})
+	newCells1, err := bitset.GetCells(&mapperMock{refs: refs})
 	assert.NoError(t, err)
 	assert.Equal(t, cells, newCells1)
 	cells[count-4].State = Legit
-	newCells2, err := bitset.GetCells(&BitSetMapperMock{refs: refs})
+	newCells2, err := bitset.GetCells(&mapperMock{refs: refs})
 	assert.NoError(t, err)
 	assert.NotEqual(t, cells, newCells2)
 }
@@ -246,7 +246,7 @@ func TestBitSet_ThousandDiffStates(t *testing.T) {
 }
 
 func testSerializeDeserialize(t *testing.T, refs []insolar.Reference, cells []BitSetCell, compressed bool) {
-	mapper := &BitSetMapperMock{refs: refs}
+	mapper := &mapperMock{refs: refs}
 
 	bitset, _ := NewBitSetImpl(len(cells), compressed)
 	err := bitset.ApplyChanges(cells, mapper)

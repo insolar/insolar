@@ -48,61 +48,26 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package nodenetwork
+package gateway
 
 import (
-	"encoding/binary"
-	"fmt"
-	"hash"
+	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy"
 )
 
-func hashWriteChecked(hash hash.Hash, data []byte) {
-	n, err := hash.Write(data)
-	if n != len(data) {
-		panic(fmt.Sprintf("Error writing hash. Bytes expected: %d; bytes actual: %d", len(data), n))
-	}
-	if err != nil {
-		panic(err)
-	}
+func NewJetless(b *Base) *Jetless {
+	return &Jetless{Base: b}
 }
 
-func calculateNodeHash(scheme insolar.PlatformCryptographyScheme, processor insolar.KeyProcessor, node insolar.NetworkNode) []byte {
-	h := scheme.IntegrityHasher()
-	hashWriteChecked(h, node.ID().Bytes())
-
-	b := [8]byte{}
-	binary.LittleEndian.PutUint32(b[:4], uint32(node.ShortID()))
-	hashWriteChecked(h, b[:4])
-	binary.LittleEndian.PutUint32(b[:4], uint32(node.Role()))
-
-	hashWriteChecked(h, b[:4])
-	pk, err := processor.ExportPublicKeyBinary(node.PublicKey())
-	if err != nil {
-		panic(err)
-	}
-	hashWriteChecked(h, pk)
-	hashWriteChecked(h, []byte(node.Address()))
-	hashWriteChecked(h, []byte(node.Version()))
-	return h.Sum(nil)
+type Jetless struct {
+	*Base
 }
 
-// CalculateHash calculates hash of active node list
-func CalculateHash(scheme insolar.PlatformCryptographyScheme, list []insolar.NetworkNode) (result []byte, err error) {
-	// catch possible panic from hashWriteChecked in this function and in all calculateNodeHash funcs
-	defer func() {
-		if r := recover(); r != nil {
-			result, err = nil, fmt.Errorf("error calculating h: %s", r)
-		}
-	}()
+func (g *Jetless) Run(ctx context.Context) {
+	panic("implement me")
+}
 
-	h := scheme.IntegrityHasher()
-	processor := platformpolicy.NewKeyProcessor()
-	for _, node := range list {
-		nodeHash := calculateNodeHash(scheme, processor, node)
-		hashWriteChecked(h, nodeHash)
-	}
-	return h.Sum(nil), nil
+func (g *Jetless) GetState() insolar.NetworkState {
+	panic("implement me")
 }

@@ -36,7 +36,6 @@ import (
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 	"github.com/stretchr/testify/assert"
@@ -99,7 +98,7 @@ func TestBareHelloworld(t *testing.T) {
 		true,
 	)
 
-	nw := network.GetTestNetwork()
+	nw := testutils.GetTestNetwork(t)
 	scheme := platformpolicy.NewPlatformCryptographyScheme()
 
 	cm := &component.Manager{}
@@ -145,7 +144,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.NoError(t, err)
 	// #1
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld1")
-	resp, err := lr.Execute(
+	resp, err := lr.HandleCalls(
 		ctx,
 		parcel,
 	)
@@ -163,7 +162,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.NoError(t, err)
 	// #2
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld2")
-	resp, err = lr.Execute(
+	resp, err = lr.HandleCalls(
 		ctx,
 		parcel,
 	)

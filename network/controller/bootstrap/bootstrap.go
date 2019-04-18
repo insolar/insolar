@@ -103,11 +103,11 @@ type Bootstrapper interface {
 }
 
 type bootstrapper struct {
-	Certificate     insolar.Certificate     `inject:""`
-	NodeKeeper      network.NodeKeeper      `inject:""`
-	NetworkSwitcher insolar.NetworkSwitcher `inject:""`
-	Network         network.HostNetwork     `inject:""`
-	PulseAccessor   pulse.Accessor          `inject:""`
+	Certificate   insolar.Certificate `inject:""`
+	NodeKeeper    network.NodeKeeper  `inject:""`
+	Network       network.HostNetwork `inject:""`
+	Gatewayer     network.Gatewayer   `inject:""`
+	PulseAccessor pulse.Accessor      `inject:""`
 
 	options *common.Options
 	pinger  *pinger.Pinger
@@ -632,7 +632,7 @@ func (bc *bootstrapper) StopCyclicBootstrap() {
 
 func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Request) (network.Response, error) {
 	var code Code
-	if bc.NetworkSwitcher.GetState() == insolar.CompleteNetworkState {
+	if bc.Gatewayer.Gateway().GetState() == insolar.CompleteNetworkState {
 		code = ReconnectRequired
 	} else {
 		code = Accepted

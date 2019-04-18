@@ -27,9 +27,10 @@ import (
 	"sync"
 	"time"
 
+	"go.opencensus.io/trace"
+
 	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
 
@@ -65,11 +66,6 @@ type CurrentExecution struct {
 	RequesterNode *Ref
 	ReturnMode    message.MethodReturnMode
 	SentResult    bool
-}
-
-type ExecutionQueueResult struct {
-	reply insolar.Reply
-	err   error
 }
 
 type ExecutionQueueElement struct {
@@ -197,8 +193,8 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) RegisterHandlers() {
-	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.Execute)
-	lr.MessageBus.MustRegister(insolar.TypeCallConstructor, lr.Execute)
+	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.HandleCalls)
+	lr.MessageBus.MustRegister(insolar.TypeCallConstructor, lr.HandleCalls)
 	lr.MessageBus.MustRegister(insolar.TypeExecutorResults, lr.HandleExecutorResultsMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
@@ -280,8 +276,7 @@ func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context
 	return context
 }
 
-// Execute runs a method on an object, ATM just thin proxy to `GoPlugin.Exec`
-func (lr *LogicRunner) Execute(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
+func (lr *LogicRunner) HandleCalls(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	ctx = loggerWithTargetID(ctx, parcel)
 	inslogger.FromContext(ctx).Debug("LogicRunner.Execute starts ...")
 
@@ -290,17 +285,11 @@ func (lr *LogicRunner) Execute(ctx context.Context, parcel insolar.Parcel) (inso
 		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
 	}
 
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.Execute")
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.HandleCalls")
 	span.AddAttributes(
 		trace.StringAttribute("msg.Type", msg.Type().String()),
 	)
 	defer span.End()
-
-	rep, err := lr.executeActual(ctx, parcel, msg)
-	return rep, err
-}
-
-func (lr *LogicRunner) executeActual(ctx context.Context, parcel insolar.Parcel, msg message.IBaseLogicMessage) (insolar.Reply, error) {
 
 	ref := msg.GetReference()
 	os := lr.UpsertObjectState(ref)
@@ -308,9 +297,8 @@ func (lr *LogicRunner) executeActual(ctx context.Context, parcel insolar.Parcel,
 	os.Lock()
 	if os.ExecutionState == nil {
 		os.ExecutionState = &ExecutionState{
-			Ref:       ref,
-			Queue:     make([]ExecutionQueueElement, 0),
-			Behaviour: &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
+			Ref:   ref,
+			Queue: make([]ExecutionQueueElement, 0),
 		}
 	}
 	es := os.ExecutionState
@@ -425,7 +413,6 @@ func (lr *LogicRunner) HandlePendingFinishedMessage(
 		os.ExecutionState = &ExecutionState{
 			Ref:       *ref,
 			Queue:     make([]ExecutionQueueElement, 0),
-			Behaviour: &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
 			pending:   message.NotPending,
 		}
 		os.Unlock()
@@ -517,22 +504,10 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 
 		es.Unlock()
 
-		res := ExecutionQueueResult{}
-
-		inslogger.FromContext(qe.ctx).Debug("Registering request within execution behaviour")
-
-		es.Behaviour.(*ValidationSaver).NewRequest(qe.parcel, *qe.request, lr.MessageBus)
-
-		res.reply, res.err = lr.executeOrValidate(current.Context, es, qe.parcel)
+		lr.executeOrValidate(current.Context, es, qe.parcel)
 
 		if qe.fromLedger {
 			go lr.getLedgerPendingRequest(ctx, es)
-		}
-
-		inslogger.FromContext(qe.ctx).Debug("Registering result within execution behaviour")
-		err := es.Behaviour.Result(res.reply, res.err)
-		if err != nil {
-			res.err = err
 		}
 
 		lr.finishPendingIfNeeded(ctx, es)
@@ -571,8 +546,6 @@ func (lr *LogicRunner) finishPendingIfNeeded(ctx context.Context, es *ExecutionS
 
 func (lr *LogicRunner) executeOrValidate(
 	ctx context.Context, es *ExecutionState, parcel insolar.Parcel,
-) (
-	insolar.Reply, error,
 ) {
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.ExecuteOrValidate")
 	defer span.End()
@@ -581,7 +554,7 @@ func (lr *LogicRunner) executeOrValidate(
 	ref := msg.GetReference()
 
 	es.Current.LogicContext = &insolar.LogicCallContext{
-		Mode:            es.Behaviour.Mode(),
+		Mode:            "execution",
 		Caller:          msg.GetCaller(),
 		Callee:          &ref,
 		Request:         es.Current.Request,
@@ -615,7 +588,7 @@ func (lr *LogicRunner) executeOrValidate(
 
 	es.Current.SentResult = true
 	if es.Current.ReturnMode != message.ReturnResult {
-		return re, err
+		return
 	}
 
 	target := *es.Current.RequesterNode
@@ -642,8 +615,6 @@ func (lr *LogicRunner) executeOrValidate(
 			inslogger.FromContext(ctx).Error("couldn't deliver results: ", err)
 		}
 	}()
-
-	return re, err
 }
 
 // never call this under es.Lock(), this leads to deadlock
@@ -747,7 +718,6 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 		state.ExecutionState = &ExecutionState{
 			Ref:       ref,
 			Queue:     make([]ExecutionQueueElement, 0),
-			Behaviour: &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
 		}
 	}
 	es := state.ExecutionState
@@ -1030,8 +1000,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 				if len(queue) > 0 || sendExecResults {
 					// TODO: we also should send when executed something for validation
 					// TODO: now validation is disabled
-					caseBind := es.Behaviour.(*ValidationSaver).caseBind
-					requests := caseBind.getCaseBindForMessage(ctx)
 					messagesQueue := convertQueueToMessageQueue(queue)
 
 					messages = append(
@@ -1044,7 +1012,6 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 						&message.ExecutorResults{
 							RecordRef:             ref,
 							Pending:               es.pending,
-							Requests:              requests,
 							Queue:                 messagesQueue,
 							LedgerHasMoreRequests: es.LedgerHasMoreRequests || ledgerHasMoreRequest,
 						},
@@ -1124,7 +1091,6 @@ func (lr *LogicRunner) HandleStillExecutingMessage(
 		os.ExecutionState = &ExecutionState{
 			Ref:              *ref,
 			Queue:            make([]ExecutionQueueElement, 0),
-			Behaviour:        &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
 			pending:          message.InPending,
 			PendingConfirmed: true,
 		}
@@ -1164,7 +1130,6 @@ func (lr *LogicRunner) HandleAbandonedRequestsNotificationMessage(
 		os.ExecutionState = &ExecutionState{
 			Ref:                   *ref,
 			Queue:                 make([]ExecutionQueueElement, 0),
-			Behaviour:             &ValidationSaver{lr: lr, caseBind: NewCaseBind()},
 			pending:               message.InPending,
 			PendingConfirmed:      false,
 			LedgerHasMoreRequests: true,

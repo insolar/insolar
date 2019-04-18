@@ -119,11 +119,6 @@ func (t *TestObjectDescriptor) Memory() []byte {
 	return t.Data
 }
 
-// Children implementation for tests
-func (t *TestObjectDescriptor) Children(pulse *insolar.PulseNumber) (artifacts.RefIterator, error) {
-	panic("not implemented")
-}
-
 // IsPrototype implementation for tests
 func (t *TestObjectDescriptor) IsPrototype() bool {
 	return false

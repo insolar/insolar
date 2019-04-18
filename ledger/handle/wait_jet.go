@@ -50,7 +50,7 @@ func (s *WaitJet) Present(ctx context.Context, f flow.Flow) error {
 	if jet.Result.Miss {
 		rep := &proc.ReturnReply{
 			ReplyTo: s.Message.ReplyTo,
-			Reply:   &reply.JetMiss{JetID: insolar.ID(jet.Result.Jet)},
+			Reply:   &reply.JetMiss{JetID: insolar.ID(jet.Result.Jet), Pulse: jet.Result.Pulse},
 		}
 		if err := f.Procedure(ctx, rep); err != nil {
 			return err

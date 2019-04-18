@@ -29,58 +29,25 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/spf13/pflag"
 )
 
-const defaultURL = "http://localhost:19101/api"
-
-var ks = platformpolicy.NewKeyProcessor()
-
-var (
-	role        string
-	api         string
-	keysFile    string
-	certFileOut string
-	rootConfig  string
-	verbose     bool
-	reuseKeys   bool
-)
-
-func parseInputParams() {
-	pflag.StringVarP(&role, "role", "r", "virtual", "The role of the new node")
-	pflag.StringVarP(&api, "url", "h", defaultURL, "Insolar API URL")
-	pflag.BoolVarP(&verbose, "verbose", "v", false, "Be verbose (default false)")
-	pflag.BoolVarP(&reuseKeys, "reuse-keys", "u", false, "Read keys from file instead og generating of new ones")
-	pflag.StringVarP(&keysFile, "keys-file", "k", "keys.json", "The OUT/IN ( depends on 'reuse-keys' ) file for public/private keys of the node")
-	pflag.StringVarP(&certFileOut, "cert-file", "c", "cert.json", "The OUT file the node certificate")
-	pflag.StringVarP(&rootConfig, "root-conf", "t", "", "Config that contains public/private keys of root member")
-	pflag.Parse()
-}
-
-func generateKeys() (crypto.PublicKey, crypto.PrivateKey) {
-	privKey, err := ks.GeneratePrivateKey()
+func (g *certGen) generateKeys() {
+	privKey, err := g.keyProcessor.GeneratePrivateKey()
 	checkError("Failed to generate private key:", err)
-	pubKey := ks.ExtractPublicKey(privKey)
-	fmt.Println("Generate reys")
-	return pubKey, privKey
+	pubKey := g.keyProcessor.ExtractPublicKey(privKey)
+	fmt.Println("Generate keys")
+	g.pubKey, g.privKey = pubKey, privKey
 }
 
-func loadKeys() (crypto.PublicKey, crypto.PrivateKey) {
-	keyStore, err := keystore.NewKeyStore(keysFile)
+func (g *certGen) loadKeys() {
+	keyStore, err := keystore.NewKeyStore(g.keysFileOut)
 	checkError("Failed to laod keys", err)
 
-	privKey, err := keyStore.GetPrivateKey("")
+	g.privKey, err = keyStore.GetPrivateKey("")
 	checkError("Failed to GetPrivateKey", err)
 
 	fmt.Println("Load keys")
-	return ks.ExtractPublicKey(privKey), privKey
-}
-
-func getKeys() (crypto.PublicKey, crypto.PrivateKey) {
-	if reuseKeys {
-		return loadKeys()
-	}
-	return generateKeys()
+	g.pubKey = g.keyProcessor.ExtractPublicKey(g.privKey)
 }
 
 type RegisterResult struct {
@@ -102,21 +69,20 @@ func extractReference(response []byte, requestTypeMsg string) insolar.Reference 
 	return *ref
 }
 
-func registerNode(key crypto.PublicKey, staticRole insolar.StaticRole) insolar.Reference {
-	userCfg := getUserConfig()
+func (g *certGen) registerNode() insolar.Reference {
+	userCfg := g.getUserConfig()
 
-	keySerialized, err := ks.ExportPublicKeyPEM(key)
+	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.pubKey)
 	checkError("Failed to export public key:", err)
 	request := requester.RequestConfigJSON{
 		Method: "RegisterNode",
-		Params: []interface{}{keySerialized, staticRole.String()},
+		Params: []interface{}{keySerialized, g.staticRole.String()},
 	}
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
-	response, err := requester.Send(ctx, api, userCfg, &request)
+	response, err := requester.Send(ctx, g.API, userCfg, &request)
 	checkError("Failed to execute register node request", err)
 
-	fmt.Println("Register node")
 	return extractReference(response, "registerNode")
 }
 
@@ -130,11 +96,11 @@ type GetCertificateResponse struct {
 	Result  GetCertificateResult `json:"result"`
 }
 
-func fetchCertificate(ref insolar.Reference) []byte {
+func (g *certGen) fetchCertificate(ref insolar.Reference) []byte {
 	params := requester.PostParams{
 		"ref": ref.String(),
 	}
-	response, err := requester.GetResponseBody(api+"/rpc", requester.PostParams{
+	response, err := requester.GetResponseBody(g.API+"/rpc", requester.PostParams{
 		"jsonrpc": "2.0",
 		"method":  "cert.Get",
 		"id":      "",
@@ -151,11 +117,11 @@ func fetchCertificate(ref insolar.Reference) []byte {
 	return cert
 }
 
-func writeKeys(pubKey crypto.PublicKey, privKey crypto.PrivateKey) {
-	privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
+func (g *certGen) writeKeys() {
+	privKeyStr, err := g.keyProcessor.ExportPrivateKeyPEM(g.privKey)
 	checkError("Failed to deserialize private key:", err)
 
-	pubKeyStr, err := ks.ExportPublicKeyPEM(pubKey)
+	pubKeyStr, err := g.keyProcessor.ExportPublicKeyPEM(g.pubKey)
 	checkError("Failed to deserialize public key:", err)
 
 	result, err := json.MarshalIndent(map[string]interface{}{
@@ -163,17 +129,24 @@ func writeKeys(pubKey crypto.PublicKey, privKey crypto.PrivateKey) {
 		"public_key":  string(pubKeyStr),
 	}, "", "    ")
 	checkError("Failed to serialize file with private/public keys:", err)
-	f, err := openFile(keysFile)
+
+	f, err := openFile(g.keysFileOut)
 	checkError("Failed to open file with private/public keys:", err)
+
 	_, err = f.Write([]byte(result))
 	checkError("Failed to write file with private/public keys:", err)
+
+	fmt.Println("Write keys to", g.keysFileOut)
 }
 
-func writeCertificate(cert []byte) {
-	f, err := openFile(certFileOut)
+func (g *certGen) writeCertificate(cert []byte) {
+	f, err := openFile(g.certFileOut)
 	checkError("Failed to open file with certificate:", err)
+
 	_, err = f.Write(cert)
 	checkError("Failed to write file with certificate:", err)
+
+	fmt.Println("Write certificate to", g.certFileOut)
 }
 
 func checkError(msg string, err error) {
@@ -187,21 +160,21 @@ func openFile(path string) (io.Writer, error) {
 	return os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
 }
 
-func getUserConfig() *requester.UserConfigJSON {
+func (g *certGen) getUserConfig() *requester.UserConfigJSON {
 	requester.SetVerbose(verbose)
-	userCfg, err := requester.ReadUserConfigFromFile(rootConfig)
+	userCfg, err := requester.ReadUserConfigFromFile(g.rootConfig)
 	checkError("Failed to read root config:", err)
-	info, err := requester.Info(api)
+	info, err := requester.Info(g.API)
 	checkError("Failed to execute info request to API:", err)
 	userCfg.Caller = info.RootMember
 
 	return userCfg
 }
 
-func getNodeRefByPk(key crypto.PublicKey) insolar.Reference {
-	userCfg := getUserConfig()
+func (g *certGen) getNodeRefByPk() insolar.Reference {
+	userCfg := g.getUserConfig()
 
-	keySerialized, err := ks.ExportPublicKeyPEM(key)
+	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.privKey)
 	checkError("Failed to export public key:", err)
 	request := requester.RequestConfigJSON{
 		Method: "GetNodeRef",
@@ -209,37 +182,64 @@ func getNodeRefByPk(key crypto.PublicKey) insolar.Reference {
 	}
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")
-	response, err := requester.Send(ctx, api, userCfg, &request)
+	response, err := requester.Send(ctx, g.API, userCfg, &request)
 	checkError("Failed to execute GetNodeRefByPK node request", err)
 
 	fmt.Println("Extract node by PK")
 	return extractReference(response, "getNodeRefByPk")
 }
 
-func getNodeRef(pubKey crypto.PublicKey, staticRole insolar.StaticRole) insolar.Reference {
-	if reuseKeys {
-		return getNodeRefByPk(pubKey)
-	}
+type certGen struct {
+	keyProcessor insolar.KeyProcessor
 
-	return registerNode(pubKey, staticRole)
+	rootConfig string
+	API        string
+	staticRole insolar.StaticRole
+
+	keysFileOut string
+	certFileOut string
+
+	pubKey  crypto.PublicKey
+	privKey crypto.PrivateKey
 }
 
-func main() {
-	parseInputParams()
+func genCertificate(
+	rootConfig string,
+	role string,
+	url string,
+	keysFile string,
+	certFile string,
+	reuseKeys bool,
+) {
 	staticRole := insolar.GetStaticRoleFromString(role)
 	if staticRole == insolar.StaticRoleUnknown {
 		fmt.Println("Invalid role:", role)
 		os.Exit(1)
 	}
 
-	pub, priv := getKeys()
-	ref := getNodeRef(pub, staticRole)
-	cert := fetchCertificate(ref)
+	g := &certGen{
+		keyProcessor: platformpolicy.NewKeyProcessor(),
+		rootConfig:   rootConfig,
+		API:          url,
+		staticRole:   staticRole,
+		keysFileOut:  keysFile,
+		certFileOut:  certFile,
+	}
+
+	var ref insolar.Reference
+	if reuseKeys {
+		g.loadKeys()
+		ref = g.getNodeRefByPk()
+	} else {
+		g.generateKeys()
+		ref = g.registerNode()
+		fmt.Println("Register node", ref)
+	}
+
+	cert := g.fetchCertificate(ref)
 
 	if !reuseKeys {
-		writeKeys(pub, priv)
-		fmt.Println("Write keys")
+		g.writeKeys()
 	}
-	writeCertificate(cert)
-	fmt.Println("Write certificate")
+	g.writeCertificate(cert)
 }

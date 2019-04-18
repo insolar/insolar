@@ -56,7 +56,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -67,10 +66,12 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/controller/bootstrap"
+	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
@@ -89,8 +90,8 @@ type ServiceNetwork struct {
 	CryptographyService insolar.CryptographyService `inject:""`
 	NetworkCoordinator  insolar.NetworkCoordinator  `inject:""`
 	NodeKeeper          network.NodeKeeper          `inject:""`
-	NetworkSwitcher     insolar.NetworkSwitcher     `inject:""`
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
+	GIL                 insolar.GlobalInsolarLock   `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
@@ -101,12 +102,31 @@ type ServiceNetwork struct {
 	skip        int
 
 	lock sync.Mutex
+
+	gateway   network.Gateway
+	gatewayMu sync.RWMutex
 }
 
 // NewServiceNetwork returns a new ServiceNetwork.
 func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manager, isGenesis bool) (*ServiceNetwork, error) {
 	serviceNetwork := &ServiceNetwork{cm: component.NewManager(rootCm), cfg: conf, isGenesis: isGenesis, skip: conf.Service.Skip}
 	return serviceNetwork, nil
+}
+
+func (nk *ServiceNetwork) Gateway() network.Gateway {
+	nk.gatewayMu.RLock()
+	defer nk.gatewayMu.RUnlock()
+	return nk.gateway
+}
+
+func (nk *ServiceNetwork) SetGateway(g network.Gateway) {
+	nk.gatewayMu.Lock()
+	defer nk.gatewayMu.Unlock()
+	nk.gateway = g
+}
+
+func (nk *ServiceNetwork) GetState() insolar.NetworkState {
+	return nk.Gateway().GetState()
 }
 
 // SendMessage sends a message from MessageBus.
@@ -176,6 +196,9 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
+
+	n.gateway = gateway.NewNoNetwork(n, n.GIL, n.NodeKeeper)
+	n.gateway.Run(ctx)
 
 	return nil
 }
@@ -274,13 +297,12 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 		}
 	}
 
-	err := n.NetworkSwitcher.OnPulse(ctx, newPulse)
-	if err != nil {
-		logger.Error(errors.Wrap(err, "Failed to call OnPulse on NetworkSwitcher"))
+	if err := n.Gateway().OnPulse(ctx, newPulse); err != nil {
+		logger.Error(errors.Wrap(err, "Failed to call OnPulse on Gateway"))
 	}
 
 	logger.Debugf("Before set new current pulse number: %d", newPulse.PulseNumber)
-	err = n.PulseManager.Set(ctx, newPulse, n.NetworkSwitcher.GetState() == insolar.CompleteNetworkState)
+	err := n.PulseManager.Set(ctx, newPulse, n.Gateway().GetState() == insolar.CompleteNetworkState)
 	if err != nil {
 		logger.Fatalf("Failed to set new pulse: %s", err.Error())
 	}
