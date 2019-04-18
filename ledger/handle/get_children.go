@@ -27,8 +27,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 )
 
-// =====================================================================================================================
-
 // GetChildren Handler
 type GetChildren struct {
 	dep *proc.Dependencies
@@ -37,8 +35,6 @@ type GetChildren struct {
 }
 
 func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
-	// TODO: recursive Migrate if ErrCanceled
-	// TODO: why this is equivalent to jetFromContext?
 	jet := &WaitJet{
 		dep:     s.dep,
 		Message: s.Message,
@@ -64,37 +60,4 @@ func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	return nil
-
-	/*
-		ctx, _ = inslogger.WithField(ctx, "object", msg.Head.Record().DebugString())
-
-		jet := &WaitJet{
-			dep:     s.dep,
-			Message: s.Message,
-		}
-		if err := f.Handle(ctx, jet.Present); err != nil {
-			return err
-		}
-
-		idx := s.dep.GetIndex(&proc.GetIndex{
-			Object: msg.Head,
-			Jet:    jet.Res.Jet,
-		})
-		if err := f.Procedure(ctx, idx); err != nil {
-			if err == flow.ErrCancelled {
-				return err
-			}
-			return f.Procedure(ctx, &proc.ReturnReply{
-				ReplyTo: s.Message.ReplyTo,
-				Err:     err,
-			})
-		}
-
-		p := s.dep.SendObject(&proc.SendObject{
-			Jet:     jet.Res.Jet,
-			Index:   idx.Result.Index,
-			Message: s.Message,
-		})
-		return f.Procedure(ctx, p)
-	*/
 }
