@@ -52,7 +52,11 @@ type SendObject struct {
 func (p *SendObject) Proceed(ctx context.Context) error {
 	r := bus.Reply{}
 	r.Reply, r.Err = p.handle(ctx, p.Message.Parcel)
-	p.Message.ReplyTo <- r
+
+	select {
+	case p.Message.ReplyTo <- r:
+	case <-ctx.Done():
+	}
 	return nil
 }
 

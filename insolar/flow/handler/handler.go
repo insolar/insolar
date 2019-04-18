@@ -52,9 +52,6 @@ func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (ins
 		ReplyTo: make(chan bus.Reply, 1),
 		Parcel:  parcel,
 	}
-	defer func() {
-		close(msg.ReplyTo)
-	}()
 
 	ctx = pulse.ContextWith(ctx, parcel.Pulse())
 
