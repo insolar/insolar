@@ -290,4 +290,13 @@ type Gateway interface {
 	GetState() insolar.NetworkState
 	OnPulse(context.Context, insolar.Pulse) error
 	NewGateway(insolar.NetworkState) Gateway
+	Auther() Auther
+}
+
+type Auther interface {
+	// GetCert returns certificate object by node reference, using discovery nodes for signing
+	GetCert(context.Context, *insolar.Reference) (insolar.Certificate, error)
+	// ValidateCert checks certificate signature
+	// TODO make this cert.validate()
+	ValidateCert(context.Context, insolar.AuthorizationCertificate) (bool, error)
 }

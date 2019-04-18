@@ -61,6 +61,7 @@ import (
 // Base is abstract class for gateways
 
 type Base struct {
+	Me                 network.Gateway
 	Network            network.Gatewayer
 	GIL                insolar.GlobalInsolarLock
 	SwitcherWorkAround insolar.SwitcherWorkAround // nodekeeper
@@ -71,17 +72,19 @@ func (g *Base) NewGateway(state insolar.NetworkState) network.Gateway {
 	log.Warnf("NewGateway %s", state.String())
 	switch state {
 	case insolar.NoNetworkState:
-		panic("Do not reinit network with alive gateway")
+		g.Me = &NoNetwork{g}
 	case insolar.VoidNetworkState:
-		return NewVoid(g)
+		g.Me = NewVoid(g)
 	case insolar.JetlessNetworkState:
-		return NewJetless(g)
+		g.Me = NewJetless(g)
 	case insolar.AuthorizationNetworkState:
-		return NewAuthorisation(g)
+		g.Me = NewAuthorisation(g)
 	case insolar.CompleteNetworkState:
-		return NewComplete(g)
+		g.Me = NewComplete(g)
+	default:
+		panic("Try to switch network to unknown state. Memory of process is inconsistent.")
 	}
-	panic("Try to switch network to unknown state. Memory of process is inconsistent.")
+	return g.Me
 }
 
 func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {
@@ -90,4 +93,22 @@ func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 		g.Network.Gateway().Run(ctx)
 	}
 	return nil
+}
+
+// Auther casts us to Auther or obtain it in another way
+func (g *Base) Auther() network.Auther {
+	if ret, ok := g.Me.(network.Auther); ok {
+		return ret
+	}
+	panic("Our network gateway suddenly is not an Auther")
+}
+
+// GetCert method returns node certificate by requesting sign from discovery nodes
+func (nc *Base) GetCert(ctx context.Context, ref *insolar.Reference) (insolar.Certificate, error) {
+	panic("GetCert() is not useable in this state")
+}
+
+// ValidateCert validates node certificate
+func (nc *Base) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
+	panic("ValidateCert()  is not useable in this state")
 }

@@ -60,8 +60,8 @@ import (
 )
 
 // NewNoNetwork this initial constructor have special signature to be called outside
-func NewNoNetwork(n network.Gatewayer, gil insolar.GlobalInsolarLock, swa insolar.SwitcherWorkAround) *NoNetwork {
-	return &NoNetwork{&Base{Network: n, GIL: gil, SwitcherWorkAround: swa}}
+func NewNoNetwork(n network.Gatewayer, gil insolar.GlobalInsolarLock, swa insolar.SwitcherWorkAround) network.Gateway {
+	return (&Base{Network: n, GIL: gil, SwitcherWorkAround: swa}).NewGateway(insolar.NoNetworkState)
 }
 
 // NoNetwork initial state
