@@ -4,11 +4,12 @@ import (
 	"math/rand"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/ledger/recentstorage"
 
@@ -61,7 +62,8 @@ func TestGetChildren(t *testing.T) {
 	p.Dep.JetStorage = jet.NewStorageMock(t)
 	p.Dep.DelegationTokenFactory = testutils.NewDelegationTokenFactoryMock(t)
 	p.Dep.RecordAccessor = object.NewRecordAccessorMock(t)
-	// p.Dep.TreeUpdater =
+	p.Dep.TreeUpdater = jet.NewTreeUpdaterMock(t)
+	p.Dep.IndexSaver = object.NewIndexSaverMock(t)
 
 	assert.NoError(t, nil)
 }
