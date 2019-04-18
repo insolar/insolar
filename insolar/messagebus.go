@@ -163,6 +163,12 @@ type MessageBus interface {
 	OnPulse(context.Context, Pulse) error
 }
 
+//go:generate minimock -i github.com/insolar/insolar/insolar.MessageBusLocker -o ../testutils -s _mock.go
+type MessageBusLocker interface {
+	Lock(ctx context.Context)
+	Unlock(ctx context.Context)
+}
+
 // MessageHandler is a function for message handling. It should be registered via Register method.
 type MessageHandler func(context.Context, Parcel) (Reply, error)
 

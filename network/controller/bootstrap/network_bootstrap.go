@@ -76,6 +76,7 @@ type networkBootstrapper struct {
 	SessionManager      SessionManager              `inject:""`
 	AuthController      AuthorizationController     `inject:""`
 	ChallengeController ChallengeResponseController `inject:""`
+	Gatewayer           network.Gatewayer           `inject:""`
 }
 
 func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult, error) {

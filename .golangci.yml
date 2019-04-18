@@ -12,13 +12,26 @@ linters:
     - staticcheck
     - unused
     - gosimple
-    - gas
+    - gosec
     - structcheck
     - varcheck
     - ineffassign
     - deadcode
     - typecheck
     - golint
+    - interfacer
+    - unconvert
+    - goconst
+    - misspell
+    - unparam
+    - nakedret
+    - prealloc
+    - scopelint
+    - gocritic
+
+linters-settings:
+  goimports:
+    local-prefixes: github.com/insolar/insolar
 
 issues:
   exclude-rules:

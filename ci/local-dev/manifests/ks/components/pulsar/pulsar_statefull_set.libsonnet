@@ -32,7 +32,7 @@ local image_params = params.insolar.image;
 						"command": [
 							"/bin/sh",
 							"-c",
-							"/go/bin/insolar -c gen_keys > /opt/insolar/config/bootstrap_keys.json;"
+							"/go/bin/insolar gen-key-pair > /opt/insolar/config/bootstrap_keys.json;"
 						],
 						"env": [
 							{

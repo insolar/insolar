@@ -448,10 +448,14 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {}
 	terminationHandler.AbortFunc = func(reason string) { log.Error(reason) }
 
+	mblocker := testutils.NewMessageBusLockerMock(s.T())
+	GIL := testutils.NewGlobalInsolarLockMock(s.T())
+	GIL.AcquireMock.Return()
+	GIL.ReleaseMock.Return()
 	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
 
-	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService)
+	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService, mblocker, GIL)
 	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler)
 
 	node.serviceNetwork = serviceNetwork

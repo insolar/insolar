@@ -20,6 +20,11 @@ import (
 type NetworkMock struct {
 	t minimock.Tester
 
+	GetStateFunc       func() (r insolar.NetworkState)
+	GetStateCounter    uint64
+	GetStatePreCounter uint64
+	GetStateMock       mNetworkMockGetState
+
 	LeaveFunc       func(p context.Context, p1 insolar.PulseNumber)
 	LeaveCounter    uint64
 	LeavePreCounter uint64
@@ -49,12 +54,147 @@ func NewNetworkMock(t minimock.Tester) *NetworkMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.GetStateMock = mNetworkMockGetState{mock: m}
 	m.LeaveMock = mNetworkMockLeave{mock: m}
 	m.RemoteProcedureRegisterMock = mNetworkMockRemoteProcedureRegister{mock: m}
 	m.SendCascadeMessageMock = mNetworkMockSendCascadeMessage{mock: m}
 	m.SendMessageMock = mNetworkMockSendMessage{mock: m}
 
 	return m
+}
+
+type mNetworkMockGetState struct {
+	mock              *NetworkMock
+	mainExpectation   *NetworkMockGetStateExpectation
+	expectationSeries []*NetworkMockGetStateExpectation
+}
+
+type NetworkMockGetStateExpectation struct {
+	result *NetworkMockGetStateResult
+}
+
+type NetworkMockGetStateResult struct {
+	r insolar.NetworkState
+}
+
+//Expect specifies that invocation of Network.GetState is expected from 1 to Infinity times
+func (m *mNetworkMockGetState) Expect() *mNetworkMockGetState {
+	m.mock.GetStateFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NetworkMockGetStateExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Network.GetState
+func (m *mNetworkMockGetState) Return(r insolar.NetworkState) *NetworkMock {
+	m.mock.GetStateFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NetworkMockGetStateExpectation{}
+	}
+	m.mainExpectation.result = &NetworkMockGetStateResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Network.GetState is expected once
+func (m *mNetworkMockGetState) ExpectOnce() *NetworkMockGetStateExpectation {
+	m.mock.GetStateFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NetworkMockGetStateExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NetworkMockGetStateExpectation) Return(r insolar.NetworkState) {
+	e.result = &NetworkMockGetStateResult{r}
+}
+
+//Set uses given function f as a mock of Network.GetState method
+func (m *mNetworkMockGetState) Set(f func() (r insolar.NetworkState)) *NetworkMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetStateFunc = f
+	return m.mock
+}
+
+//GetState implements github.com/insolar/insolar/insolar.Network interface
+func (m *NetworkMock) GetState() (r insolar.NetworkState) {
+	counter := atomic.AddUint64(&m.GetStatePreCounter, 1)
+	defer atomic.AddUint64(&m.GetStateCounter, 1)
+
+	if len(m.GetStateMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetStateMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NetworkMock.GetState.")
+			return
+		}
+
+		result := m.GetStateMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NetworkMock.GetState")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetStateMock.mainExpectation != nil {
+
+		result := m.GetStateMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NetworkMock.GetState")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.GetStateFunc == nil {
+		m.t.Fatalf("Unexpected call to NetworkMock.GetState.")
+		return
+	}
+
+	return m.GetStateFunc()
+}
+
+//GetStateMinimockCounter returns a count of NetworkMock.GetStateFunc invocations
+func (m *NetworkMock) GetStateMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetStateCounter)
+}
+
+//GetStateMinimockPreCounter returns the value of NetworkMock.GetState invocations
+func (m *NetworkMock) GetStateMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetStatePreCounter)
+}
+
+//GetStateFinished returns true if mock invocations count is ok
+func (m *NetworkMock) GetStateFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetStateMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetStateCounter) == uint64(len(m.GetStateMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetStateMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetStateCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetStateFunc != nil {
+		return atomic.LoadUint64(&m.GetStateCounter) > 0
+	}
+
+	return true
 }
 
 type mNetworkMockLeave struct {
@@ -610,6 +750,10 @@ func (m *NetworkMock) SendMessageFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *NetworkMock) ValidateCallCounters() {
 
+	if !m.GetStateFinished() {
+		m.t.Fatal("Expected call to NetworkMock.GetState")
+	}
+
 	if !m.LeaveFinished() {
 		m.t.Fatal("Expected call to NetworkMock.Leave")
 	}
@@ -643,6 +787,10 @@ func (m *NetworkMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *NetworkMock) MinimockFinish() {
 
+	if !m.GetStateFinished() {
+		m.t.Fatal("Expected call to NetworkMock.GetState")
+	}
+
 	if !m.LeaveFinished() {
 		m.t.Fatal("Expected call to NetworkMock.Leave")
 	}
@@ -673,6 +821,7 @@ func (m *NetworkMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.GetStateFinished()
 		ok = ok && m.LeaveFinished()
 		ok = ok && m.RemoteProcedureRegisterFinished()
 		ok = ok && m.SendCascadeMessageFinished()
@@ -684,6 +833,10 @@ func (m *NetworkMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if !m.GetStateFinished() {
+				m.t.Error("Expected call to NetworkMock.GetState")
+			}
 
 			if !m.LeaveFinished() {
 				m.t.Error("Expected call to NetworkMock.Leave")
@@ -712,6 +865,10 @@ func (m *NetworkMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *NetworkMock) AllMocksCalled() bool {
+
+	if !m.GetStateFinished() {
+		return false
+	}
 
 	if !m.LeaveFinished() {
 		return false

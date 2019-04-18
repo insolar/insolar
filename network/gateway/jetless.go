@@ -48,41 +48,26 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package node
+package gateway
 
 import (
+	"context"
+
 	"github.com/insolar/insolar/insolar"
 )
 
-type none struct{}
-
-type recordRefSet struct {
-	data map[insolar.Reference]none
+func NewJetless(b *Base) *Jetless {
+	return &Jetless{Base: b}
 }
 
-func newRecordRefSet() *recordRefSet {
-	return &recordRefSet{data: make(map[insolar.Reference]none)}
+type Jetless struct {
+	*Base
 }
 
-func (s *recordRefSet) Add(ref insolar.Reference) {
-	s.data[ref] = none{}
+func (g *Jetless) Run(ctx context.Context) {
+	panic("implement me")
 }
 
-func (s *recordRefSet) Remove(ref insolar.Reference) {
-	delete(s.data, ref)
-}
-
-func (s *recordRefSet) Contains(ref insolar.Reference) bool {
-	_, ok := s.data[ref]
-	return ok
-}
-
-func (s *recordRefSet) Collect() []insolar.Reference {
-	result := make([]insolar.Reference, len(s.data))
-	i := 0
-	for ref := range s.data {
-		result[i] = ref
-		i++
-	}
-	return result
+func (g *Jetless) GetState() insolar.NetworkState {
+	panic("implement me")
 }

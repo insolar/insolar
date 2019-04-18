@@ -18,14 +18,13 @@ package handler
 
 import (
 	"context"
-	"fmt"
+	"errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/internal/pulse"
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type Handler struct {
@@ -50,22 +49,28 @@ func (h *Handler) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
 
 func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := bus.Message{
-		ReplyTo: make(chan bus.Reply),
+		ReplyTo: make(chan bus.Reply, 1),
 		Parcel:  parcel,
 	}
-	ctx, logger := inslogger.WithField(ctx, "pulse", fmt.Sprintf("%d", parcel.Pulse()))
-	ctx = pulse.ContextWith(ctx, parcel.Pulse())
-	go func() {
-		f := thread.NewThread(msg, h.controller)
-		err := f.Run(ctx, h.handles.present(msg))
-		if err != nil {
-			select {
-			case msg.ReplyTo <- bus.Reply{Err: err}:
-			default:
-			}
-			logger.Error("Handling failed", err)
-		}
+	defer func() {
+		close(msg.ReplyTo)
 	}()
-	rep := <-msg.ReplyTo
-	return rep.Reply, rep.Err
+
+	ctx = pulse.ContextWith(ctx, parcel.Pulse())
+
+	f := thread.NewThread(msg, h.controller)
+	err := f.Run(ctx, h.handles.present(msg))
+
+	var rep bus.Reply
+	select {
+	case rep = <-msg.ReplyTo:
+		return rep.Reply, rep.Err
+	default:
+	}
+
+	if err != nil {
+		return nil, err
+	}
+
+	return nil, errors.New("no reply from handler")
 }
