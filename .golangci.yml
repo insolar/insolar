@@ -21,17 +21,13 @@ linters:
     - golint
     - interfacer
     - unconvert
-    - dupl
     - goconst
-    - goimports
     - misspell
-    - lll
     - unparam
     - nakedret
     - prealloc
     - scopelint
     - gocritic
-    - gochecknoglobals
 
 linters-settings:
   goimports:
