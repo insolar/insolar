@@ -36,7 +36,7 @@ func (hw *HelloWorld) Greet(name string) (interface{}, error) {
 	return fmt.Sprintf("Hello %s' world", name), nil
 }
 
-// NewHelloWorld returns a new empty contract
+// New returns a new empty contract
 func New() (*HelloWorld, error) {
 	return &HelloWorld{
 		Greeted: 0,

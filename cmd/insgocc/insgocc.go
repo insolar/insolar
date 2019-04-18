@@ -138,7 +138,6 @@ func getRootProjectDir() (string, error) {
 		}
 
 		rootProjectDir, rootProjectError = "", errors.New("Not found github.com/insolar/insolar in GOPATH")
-		return
 	})
 	return rootProjectDir, rootProjectError
 }
@@ -185,7 +184,10 @@ func mkdirIfNotExists(pathParts ...string) (string, error) {
 	return "", errors.Wrap(err, "failed to mkdir "+newPath)
 }
 
-func openDefaultProxyPath(proxyOut *outputFlag, machineType insolar.MachineType, parsed *preprocessor.ParsedFile) error {
+func openDefaultProxyPath(proxyOut *outputFlag,
+	machineType insolar.MachineType,
+	parsed *preprocessor.ParsedFile) error {
+
 	p, err := getAppropriateContractDir(machineType, "proxy")
 	if err != nil {
 		return err

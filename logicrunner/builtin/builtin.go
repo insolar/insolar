@@ -32,10 +32,6 @@ import (
 
 type ContractMethods map[string]interface{}
 
-// Contract is a interface for builtin contract
-// type Contract interface {
-// }
-
 // BuiltIn is a contract runner engine
 type BuiltIn struct {
 	AM          artifacts.Client
