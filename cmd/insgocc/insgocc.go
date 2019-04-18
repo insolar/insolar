@@ -18,16 +18,21 @@ package main
 
 import (
 	"fmt"
+	"go/build"
 	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
+	"strings"
+	"sync"
 
-	"github.com/insolar/insolar/logicrunner/goplugin/preprocessor"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/preprocessor"
 )
 
 type outputFlag struct {
@@ -59,116 +64,250 @@ func (r *outputFlag) Set(arg string) error {
 	return nil
 }
 
+func (r *outputFlag) SetJoin(pathParts ...string) error {
+	return r.Set(path.Join(pathParts...))
+}
+
 func (r *outputFlag) Type() string {
 	return "file"
 }
 
-func main() {
+type machineTypeFlag struct {
+	name string
+	num  insolar.MachineType
+}
 
+func newMachineTypeFlag(name string) *machineTypeFlag {
+	flag := machineTypeFlag{}
+	if err := flag.Set(name); err != nil {
+		panic(fmt.Sprintf("unknown error: %s", err))
+	}
+	return &flag
+}
+
+func (r *machineTypeFlag) Set(arg string) error {
+	switch arg {
+	case "":
+		fallthrough
+	case "go":
+		fallthrough
+	case "golang":
+		r.num = insolar.MachineTypeGoPlugin
+	case "builtin":
+		r.num = insolar.MachineTypeBuiltin
+	default:
+		return fmt.Errorf("unknown machine type: %s", arg)
+	}
+	r.name = arg
+	return nil
+}
+
+func (r *machineTypeFlag) String() string {
+	return r.name
+}
+
+func (r *machineTypeFlag) Type() string {
+	return "machineType"
+}
+
+func (r *machineTypeFlag) Value() insolar.MachineType {
+	return r.num
+}
+
+var (
+	rootProjectDir   string
+	rootProjectError error
+	rootProjectOnce  sync.Once
+)
+
+func getRootProjectDir() (string, error) {
+	rootProjectOnce.Do(func() {
+		gopath := build.Default.GOPATH
+		if gopath == "" {
+			rootProjectDir, rootProjectError = "", errors.New("GOPATH is not set")
+			return
+		}
+		contractsPath := ""
+		for _, p := range strings.Split(gopath, ":") {
+			contractsPath = path.Join(p, "src/github.com/insolar/insolar/")
+			_, err := os.Stat(contractsPath)
+			if err == nil {
+				rootProjectDir, rootProjectError = contractsPath, nil
+				return
+			}
+		}
+
+		rootProjectDir, rootProjectError = "", errors.New("Not found github.com/insolar/insolar in GOPATH")
+	})
+	return rootProjectDir, rootProjectError
+}
+
+func getBuiltinContractDir(dir string) (string, error) {
+	projectRoot, err := getRootProjectDir()
+	if err != nil {
+		return "", err
+	}
+	return path.Join(projectRoot, "logicrunner", "builtin", dir), nil
+}
+
+func getApplicationContractDir(dir string) (string, error) {
+	projectRoot, err := getRootProjectDir()
+	if err != nil {
+		return "", err
+	}
+	return path.Join(projectRoot, "application", dir), nil
+}
+
+func getAppropriateContractDir(machineType insolar.MachineType, dir string) (string, error) {
+	if machineType == insolar.MachineTypeBuiltin {
+		return getBuiltinContractDir(dir)
+	} else if machineType == insolar.MachineTypeGoPlugin {
+		return getApplicationContractDir(dir)
+	}
+	panic("unreachable")
+}
+
+func mkdirIfNotExists(pathParts ...string) (string, error) {
+	newPath := path.Join(pathParts...)
+	stat, err := os.Stat(newPath)
+	if err == nil {
+		if stat.IsDir() {
+			return newPath, nil
+		}
+		return "", fmt.Errorf("failed to mkdir '%s': already exists and is not dir", newPath)
+	} else if os.IsNotExist(err) {
+		if err := os.MkdirAll(newPath, 0755); err != nil {
+			return "", errors.Wrap(err, "failed to mkdir "+newPath)
+		}
+		return newPath, nil
+	}
+	return "", errors.Wrap(err, "failed to mkdir "+newPath)
+}
+
+func openDefaultProxyPath(proxyOut *outputFlag,
+	machineType insolar.MachineType,
+	parsed *preprocessor.ParsedFile) error {
+
+	p, err := getAppropriateContractDir(machineType, "proxy")
+	if err != nil {
+		return err
+	}
+
+	proxyPackage, err := parsed.ProxyPackageName()
+	if err != nil {
+		return err
+	}
+
+	proxyPath, err := mkdirIfNotExists(p, proxyPackage)
+	if err != nil {
+		return err
+	}
+
+	err = proxyOut.SetJoin(proxyPath, proxyPackage+".go")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func openDefaultInitializationPath(output *outputFlag) error {
+	initPath, err := getBuiltinContractDir("")
+	if err != nil {
+		return err
+	}
+
+	err = output.SetJoin(initPath, "initialization.go")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func checkError(err error) {
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+}
+
+func findContractPath(contractDirPath string) *string {
+	contractName := path.Base(contractDirPath)
+	for _, contractFileName := range []string{"main.go", contractName + ".go"} {
+		contractPath := path.Join(contractDirPath, contractFileName)
+		if stat, err := os.Stat(contractPath); err == nil && !stat.IsDir() {
+			return &contractPath
+		}
+	}
+	return nil
+}
+
+func main() {
 	var reference, outdir string
 	output := newOutputFlag("-")
 	proxyOut := newOutputFlag("")
+	machineType := newMachineTypeFlag("go")
 
 	var cmdProxy = &cobra.Command{
 		Use:   "proxy [flags] <file name to process>",
 		Short: "Generate contract's proxy",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-
-			if len(args) != 1 {
-				fmt.Println("proxy command should be followed by exactly one file name to process")
-				os.Exit(1)
-			}
-
-			parsed, err := preprocessor.ParseFile(args[0])
+			parsed, err := preprocessor.ParseFile(args[0], machineType.Value())
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "couldn't parse"))
 				os.Exit(1)
 			}
 
 			if proxyOut.String() == "" {
-				p, err := preprocessor.GetRealApplicationDir("proxy")
-				if err != nil {
-					fmt.Println(err)
-					os.Exit(1)
-				}
-				proxyPackage, err := parsed.ProxyPackageName()
-				if err != nil {
-					fmt.Println(err)
-					os.Exit(1)
-				}
-
-				_, err = os.Stat(path.Join(p, proxyPackage))
-				if err != nil {
-					err := os.Mkdir(path.Join(p, proxyPackage), 0755)
-					if err != nil {
-						fmt.Println(err)
-						os.Exit(1)
-					}
-				}
-
-				err = proxyOut.Set(path.Join(p, proxyPackage, proxyPackage+".go"))
-				if err != nil {
-					fmt.Println(err)
-					os.Exit(1)
-				}
+				err = openDefaultProxyPath(proxyOut, machineType.Value(), parsed)
+				checkError(err)
 			}
 
 			err = parsed.WriteProxy(reference, proxyOut.writer)
-
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
+			checkError(err)
 		},
 	}
 	cmdProxy.Flags().StringVarP(&reference, "code-reference", "r", "", "reference to code of")
 	cmdProxy.Flags().VarP(proxyOut, "output", "o", "output file (use - for STDOUT)")
+	cmdProxy.Flags().VarP(machineType, "machine-type", "m", "machine type (one of builtin/go)")
 
 	var cmdWrapper = &cobra.Command{
 		Use:   "wrapper [flags] <file name to process>",
 		Short: "Generate contract's wrapper",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
-				fmt.Println("wrapper command should be followed by exactly one file name to process")
-				os.Exit(1)
-			}
-			parsed, err := preprocessor.ParseFile(args[0])
+			parsed, err := preprocessor.ParseFile(args[0], machineType.Value())
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "couldn't parse"))
 				os.Exit(1)
 			}
 
-			err = parsed.WriteWrapper(output.writer)
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
+			err = parsed.WriteWrapper(output.writer, "main")
+			checkError(err)
 		},
 	}
 	cmdWrapper.Flags().VarP(output, "output", "o", "output file (use - for STDOUT)")
+	cmdWrapper.Flags().VarP(machineType, "machine-type", "m", "machine type (one of builtin/go)")
 
 	var cmdImports = &cobra.Command{
 		Use:   "imports [flags] <file name to process>",
 		Short: "Rewrite imports in contract file",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
-			if len(args) != 1 {
-				fmt.Println("imports command should be followed by exactly one file name to process")
-				os.Exit(1)
-			}
-			parsed, err := preprocessor.ParseFile(args[0])
+			parsed, err := preprocessor.ParseFile(args[0], machineType.Value())
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "couldn't parse"))
 				os.Exit(1)
 			}
 
 			err = parsed.Write(output.writer)
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
+			checkError(err)
 		},
 	}
 	cmdImports.Flags().VarP(output, "output", "o", "output file (use - for STDOUT)")
+	cmdImports.Flags().VarP(machineType, "machine-type", "m", "machine type (one of builtin/go)")
 
 	// PLEASE NOTE that `insgocc compile` is in fact not used for compiling contracts by insolard.
 	// Instead contracts are compiled when `insolard genesis` is executed without using `insgocc`.
@@ -176,28 +315,17 @@ func main() {
 	var cmdCompile = &cobra.Command{
 		Use:   "compile [flags] <file name to compile>",
 		Short: "Compile contract",
+		Args:  cobra.ExactArgs(1),
 		Run: func(cmd *cobra.Command, args []string) {
 			dir, err := os.Getwd()
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
-			if len(args) != 1 {
-				fmt.Println("compile command should be followed by exactly one file name to compile")
-				os.Exit(1)
-			}
-			parsed, err := preprocessor.ParseFile(args[0])
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
+			checkError(err)
+
+			parsed, err := preprocessor.ParseFile(args[0], machineType.Value())
+			checkError(err)
 
 			// make temporary dir
 			tmpDir, err := ioutil.TempDir("", "temp-")
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
+			checkError(err)
 
 			defer func() {
 				if keepTemp {
@@ -210,39 +338,26 @@ func main() {
 			name := parsed.ContractName()
 
 			contract, err := os.Create(filepath.Join(tmpDir, name+".go"))
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
+			checkError(err)
 			defer contract.Close()
 
 			parsed.ChangePackageToMain()
 			err = parsed.Write(contract)
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
+			checkError(err)
 
 			wrapper, err := os.Create(filepath.Join(tmpDir, name+".wrapper.go"))
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
+			checkError(err)
 			defer wrapper.Close()
 
-			err = parsed.WriteWrapper(wrapper)
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
+			err = parsed.WriteWrapper(wrapper, "main")
+			checkError(err)
 
 			err = os.Chdir(tmpDir)
-			if err != nil {
-				fmt.Println(err)
-				os.Exit(1)
-			}
+			checkError(err)
 
-			out, err := exec.Command("go", "build", "-buildmode=plugin", "-o", path.Join(dir, outdir, name+".so")).CombinedOutput()
+			contractPath := path.Join(dir, outdir, name+".so")
+			cmdArgs := []string{"build", "-buildmode=plugin", "-o", contractPath}
+			out, err := exec.Command("go", cmdArgs...).CombinedOutput()
 			if err != nil {
 				fmt.Println(errors.Wrap(err, "can't build contract: "+string(out)))
 				os.Exit(1)
@@ -253,9 +368,75 @@ func main() {
 	cmdCompile.Flags().StringVarP(&outdir, "output-dir", "o", ".", "output dir")
 	// default value for bool flags is not displayed automatically, thus it's done manually here
 	cmdCompile.Flags().BoolVarP(&keepTemp, "keep-temp", "k", false, "keep temp directory (default \"false\")")
+	cmdCompile.Flags().VarP(machineType, "machine-type", "m", "machine type (one of builtin/go)")
+
+	var cmdGenerateBuiltins = &cobra.Command{
+		Use:   "regen-builtin [flags] <dir path to builtin contracts>",
+		Short: "Build builtin proxy, wrappers and initializator",
+		Args:  cobra.ExactArgs(0),
+		Run: func(cmd *cobra.Command, args []string) {
+			contractPath, err := getBuiltinContractDir("contract")
+			checkError(err)
+
+			fileList, err := ioutil.ReadDir(contractPath)
+			checkError(err)
+
+			contractList := make(preprocessor.ContractList, 0)
+
+			rootProjectDir, err := getRootProjectDir()
+			checkError(err)
+
+			// find all contracts in the folder
+			for _, file := range fileList {
+				if file.IsDir() {
+					contractDirPath := path.Join(contractPath, file.Name())
+
+					contractPath := findContractPath(contractDirPath)
+					if contractPath != nil {
+						parsedFile, err := preprocessor.ParseFile(*contractPath, insolar.MachineTypeBuiltin)
+						checkError(err)
+
+						contract := preprocessor.ContractListEntry{
+							Name:       file.Name(),
+							Path:       *contractPath,
+							Parsed:     parsedFile,
+							ImportPath: "github.com/insolar/insolar/" + contractDirPath[len(rootProjectDir)+1:],
+						}
+						contractList = append(contractList, contract)
+					}
+				}
+			}
+
+			for _, contract := range contractList {
+				/* write proxy */
+				output := newOutputFlag("")
+				err := openDefaultProxyPath(output, insolar.MachineTypeBuiltin, contract.Parsed)
+				checkError(err)
+
+				reference := contract.GenerateReference()
+				err = contract.Parsed.WriteProxy(reference.String(), output.writer)
+				checkError(err)
+
+				/* write wrappers */
+				err = output.SetJoin(path.Dir(contract.Path), contract.Name+".wrapper.go")
+				checkError(err)
+
+				err = contract.Parsed.WriteWrapper(output.writer, contract.Parsed.ContractName())
+				checkError(err)
+			}
+
+			// write include contract + write initialization function
+			initializeOutput := newOutputFlag("")
+			err = openDefaultInitializationPath(initializeOutput)
+			checkError(err)
+
+			err = preprocessor.GenerateInitializationList(initializeOutput.writer, contractList)
+			checkError(err)
+		},
+	}
 
 	var rootCmd = &cobra.Command{Use: "insgocc"}
-	rootCmd.AddCommand(cmdProxy, cmdWrapper, cmdImports, cmdCompile)
+	rootCmd.AddCommand(cmdProxy, cmdWrapper, cmdImports, cmdCompile, cmdGenerateBuiltins)
 	err := rootCmd.Execute()
 	if err != nil {
 		fmt.Println(err)
