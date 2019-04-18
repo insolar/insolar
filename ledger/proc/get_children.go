@@ -36,7 +36,7 @@ import (
 
 // GetChildren Procedure
 type GetChildren struct {
-	Jet     insolar.ID
+	// Jet     insolar.ID
 	Message bus.Message
 
 	Dep struct {
@@ -49,6 +49,7 @@ type GetChildren struct {
 		RecordAccessor         object.RecordAccessor
 		TreeUpdater            jet.TreeUpdater
 		IndexSaver             artifactmanager.IndexSaver
+		JetContextReader       artifactmanager.JetContextReader
 	}
 
 	Result struct {
@@ -57,7 +58,7 @@ type GetChildren struct {
 }
 
 func (p *GetChildren) Proceed(ctx context.Context) error {
-	jetID := p.Jet
+	jetID := p.Dep.JetContextReader.JetFromContext(ctx)
 	parcel := p.Message.Parcel
 	msg := parcel.Message().(*message.GetChildren)
 

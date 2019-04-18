@@ -93,6 +93,18 @@ type IndexSaver interface {
 	) (object.Lifeline, error)
 }
 
+// JetContextReader is a temporary interface used during migration to Flow. If the migration is complete
+// feel free to refactor the code the way you like.
+type JetContextReader interface {
+	JetFromContext(ctx context.Context) insolar.ID
+}
+
+type jetContextReader struct{}
+
+func (*jetContextReader) JetFromContext(ctx context.Context) insolar.ID {
+	return jetFromContext(ctx)
+}
+
 // NewMessageHandler creates new handler.
 func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 	h := &MessageHandler{
@@ -138,6 +150,7 @@ func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.TreeUpdater = h.jetTreeUpdater
 			p.Dep.IndexSaver = h
+			p.Dep.JetContextReader = &jetContextReader{}
 			return p
 		},
 	}

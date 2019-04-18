@@ -44,7 +44,7 @@ func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	p := s.dep.GetChildren(&proc.GetChildren{
-		Jet:     jet.Res.Jet, // TODO: learn how to convert insolar.JetID to insolar.ID or pass a context
+		//Jet:     jet.Res.Jet, // ??? learn how to convert insolar.JetID to insolar.ID or pass a context?
 		Message: s.Message,
 	})
 	// TODO: send Result.Reply somewhere...
