@@ -19,6 +19,8 @@ package handle
 import (
 	"context"
 
+	"github.com/insolar/insolar/ledger/proc"
+
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 )
@@ -33,8 +35,12 @@ type GetChildren struct {
 
 func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
 	// msg := s.Message.Parcel.Message().(*message.GetChildren)
-	// TODO implement
-	return nil
+	return f.Procedure(ctx, &proc.GetChildren{
+		// ... TODO ...
+	})
+
+	// TODO: recursive Migrate if ErrCanceled
+
 	/*
 		ctx, _ = inslogger.WithField(ctx, "object", msg.Head.Record().DebugString())
 

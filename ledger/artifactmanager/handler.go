@@ -426,6 +426,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	return &rep, nil
 }
 
+// TODO: move to proc/get_children.go
 func (h *MessageHandler) handleGetChildren(
 	ctx context.Context, parcel insolar.Parcel,
 ) (insolar.Reply, error) {
