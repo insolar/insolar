@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Storage" can be found in github.com/insolar/insolar/insolar/jet
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -402,7 +402,7 @@ func (m *mStorageMockDelete) Set(f func(p context.Context, p1 insolar.PulseNumbe
 }
 
 //Delete implements github.com/insolar/insolar/insolar/jet.Storage interface
-func (m *StorageMock) Delete(p context.Context, p1 insolar.PulseNumber) {
+func (m *StorageMock) DeleteForPN(p context.Context, p1 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteCounter, 1)
 

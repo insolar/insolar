@@ -64,7 +64,7 @@ func TestDropStorageMemory(t *testing.T) {
 
 	// Delete
 	for inp := range genInputs {
-		ms.Delete(inp.pn)
+		ms.DeleteForPN(inp.pn)
 	}
 
 	// Check for deleting

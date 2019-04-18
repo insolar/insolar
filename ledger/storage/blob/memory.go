@@ -103,8 +103,8 @@ func (s *StorageMemory) ForPulse(ctx context.Context, jetID insolar.JetID, pn in
 	return res
 }
 
-// Delete cleans blobs for a provided pulse from blobsStor
-func (s *StorageMemory) Delete(ctx context.Context, pulse insolar.PulseNumber) {
+// DeleteForPN cleans blobs for a provided pulse from blobsStor
+func (s *StorageMemory) DeleteForPN(ctx context.Context, pulse insolar.PulseNumber) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
@@ -115,5 +115,9 @@ func (s *StorageMemory) Delete(ctx context.Context, pulse insolar.PulseNumber) {
 
 		s.jetIndexModifier.Delete(id, blob.JetID)
 		delete(s.blobsStor, id)
+
+		stats.Record(ctx,
+			statBlobInMemoryRemovedCount.M(1),
+		)
 	}
 }

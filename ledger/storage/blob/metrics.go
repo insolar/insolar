@@ -32,6 +32,11 @@ var (
 		"How many blob-records saved in blobsStor",
 		stats.UnitDimensionless,
 	)
+	statBlobInMemoryRemovedCount = stats.Int64(
+		"blobstorage/inmemory/removed/count",
+		"How many blob-records removed from blobsStor",
+		stats.UnitDimensionless,
+	)
 	statBlobInStorageSize = stats.Int64(
 		"blobstorage/persistent/size",
 		"Size of the blob-records persisted in blob storage",
@@ -56,6 +61,12 @@ func init() {
 			Name:        statBlobInMemoryCount.Name(),
 			Description: statBlobInMemoryCount.Description(),
 			Measure:     statBlobInMemoryCount,
+			Aggregation: view.Count(),
+		},
+		&view.View{
+			Name:        statBlobInMemoryRemovedCount.Name(),
+			Description: statBlobInMemoryRemovedCount.Description(),
+			Measure:     statBlobInMemoryRemovedCount,
 			Aggregation: view.Count(),
 		},
 		&view.View{

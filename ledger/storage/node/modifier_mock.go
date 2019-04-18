@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -103,7 +103,7 @@ func (m *mModifierMockDelete) Set(f func(p insolar.PulseNumber)) *ModifierMock {
 }
 
 //Delete implements github.com/insolar/insolar/ledger/storage/node.Modifier interface
-func (m *ModifierMock) Delete(p insolar.PulseNumber) {
+func (m *ModifierMock) DeleteForPN(p insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteCounter, 1)
 

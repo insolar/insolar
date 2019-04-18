@@ -73,6 +73,13 @@ func init() {
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{inmemoryStorage},
 		},
+		&view.View{
+			Name:        statRecordInMemoryRemovedCount.Name(),
+			Description: statRecordInMemoryRemovedCount.Description(),
+			Measure:     statRecordInMemoryRemovedCount,
+			Aggregation: view.Count(),
+			TagKeys:     []tag.Key{inmemoryStorage},
+		},
 	)
 	if err != nil {
 		panic(err)

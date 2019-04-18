@@ -89,12 +89,12 @@ func (c *cleaner) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) 
 
 func (c cleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 	inslogger.FromContext(ctx).Debugf("[cleanPulse] start cleaning. pn - %v", pn)
-	c.nodeModifier.Delete(pn)
-	c.dropCleaner.Delete(pn)
-	c.blobCleaner.Delete(ctx, pn)
+	c.nodeModifier.DeleteForPN(pn)
+	c.dropCleaner.DeleteForPN(ctx, pn)
+	c.blobCleaner.DeleteForPN(ctx, pn)
 	c.recCleaner.DeleteForPN(ctx, pn)
 
-	c.jetStorage.Delete(ctx, pn)
+	c.jetStorage.DeleteForPN(ctx, pn)
 	c.indexCleaner.RemoveForPulse(ctx, pn)
 
 	err := c.pulseShifter.Shift(ctx, pn)

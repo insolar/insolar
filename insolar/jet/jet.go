@@ -39,7 +39,7 @@ type Modifier interface {
 	Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID)
 	Split(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) (insolar.JetID, insolar.JetID, error)
 	Clone(ctx context.Context, from, to insolar.PulseNumber)
-	Delete(ctx context.Context, pulse insolar.PulseNumber)
+	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
 }
 
 type Calculator interface {

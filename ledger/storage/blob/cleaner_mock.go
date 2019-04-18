@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Cleaner" can be found in github.com/insolar/insolar/ledger/storage/blob
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -99,7 +99,7 @@ func (m *mCleanerMockDelete) Set(f func(p context.Context, p1 insolar.PulseNumbe
 }
 
 //Delete implements github.com/insolar/insolar/ledger/storage/blob.Cleaner interface
-func (m *CleanerMock) Delete(p context.Context, p1 insolar.PulseNumber) {
+func (m *CleanerMock) DeleteForPN(p context.Context, p1 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteCounter, 1)
 
