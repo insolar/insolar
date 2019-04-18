@@ -22,19 +22,29 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
+// PulseIndexModifier provides methods for adding data to an index
 type PulseIndexModifier interface {
+	// Add adds an id to a pulse slot of index
+	// If id is added twice, only last pulse will be saved
 	Add(id insolar.ID, pn insolar.PulseNumber)
 }
 
+// PulseIndexCleaner is a set of methods for cleaning an index
 type PulseIndexCleaner interface {
+	// DeleteForPulse removes all ids from a pulse slot for a provided pulse
 	DeleteForPulse(pn insolar.PulseNumber)
 }
 
+// PulseIndexAccessor returns methods for fetching data from pulse slots
 type PulseIndexAccessor interface {
+	// ForPN returns map of ids from a specified pulse slot
 	ForPN(pn insolar.PulseNumber) map[insolar.ID]struct{}
+	// LastUsage returns a pulse slot for specific ID
+	// Second argument is a status of an operation
 	LastUsage(id insolar.ID) (insolar.PulseNumber, bool)
 }
 
+// PulseIndex is a union of PulseIndexModifier, PulseIndexCleaner and PulseIndexAccessor
 type PulseIndex interface {
 	PulseIndexModifier
 	PulseIndexCleaner
@@ -47,6 +57,7 @@ type pulseIndex struct {
 	lastUsagePn map[insolar.ID]insolar.PulseNumber
 }
 
+// NewPulseIndex creates a new instance of PulseIndex
 func NewPulseIndex() PulseIndex {
 	return &pulseIndex{
 		idsByPulse:  map[insolar.PulseNumber]map[insolar.ID]struct{}{},
@@ -54,6 +65,8 @@ func NewPulseIndex() PulseIndex {
 	}
 }
 
+// Add adds an id to a pulse slot of index
+// If id is added twice, only last pulse will be saved
 func (p *pulseIndex) Add(id insolar.ID, pn insolar.PulseNumber) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -73,6 +86,7 @@ func (p *pulseIndex) Add(id insolar.ID, pn insolar.PulseNumber) {
 	p.lastUsagePn[id] = pn
 }
 
+// DeleteForPulse removes all ids from a pulse slot for a provided pulse
 func (p *pulseIndex) DeleteForPulse(pn insolar.PulseNumber) {
 	p.lock.Lock()
 	defer p.lock.Unlock()
@@ -90,6 +104,7 @@ func (p *pulseIndex) DeleteForPulse(pn insolar.PulseNumber) {
 	}
 }
 
+// ForPN returns map of ids from a specified pulse slot
 func (p *pulseIndex) ForPN(pn insolar.PulseNumber) map[insolar.ID]struct{} {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
@@ -107,6 +122,8 @@ func (p *pulseIndex) ForPN(pn insolar.PulseNumber) map[insolar.ID]struct{} {
 	return res
 }
 
+// LastUsage returns a pulse slot for specific ID
+// Second argument is a status of an operation
 func (p *pulseIndex) LastUsage(id insolar.ID) (insolar.PulseNumber, bool) {
 	p.lock.RLock()
 	defer p.lock.RUnlock()
