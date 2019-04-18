@@ -54,6 +54,7 @@ package servicenetwork
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"github.com/pkg/errors"
@@ -72,6 +73,8 @@ import (
 
 type TestPulsar interface {
 	Start(ctx context.Context, bootstrapHosts []string) error
+	Pause()
+	Continue()
 	component.Stopper
 }
 
@@ -101,6 +104,8 @@ type testPulsar struct {
 	distributor   insolar.PulseDistributor
 	generator     entropygenerator.EntropyGenerator
 	cm            *component.Manager
+
+	activityMutex sync.Mutex
 
 	pulseTimeMs  int32
 	reqTimeoutMs int32
@@ -137,6 +142,14 @@ func (tp *testPulsar) Start(ctx context.Context, bootstrapHosts []string) error 
 	return nil
 }
 
+func (tp *testPulsar) Pause() {
+	tp.activityMutex.Lock()
+}
+
+func (tp *testPulsar) Continue() {
+	tp.activityMutex.Unlock()
+}
+
 func (tp *testPulsar) distribute(ctx context.Context) {
 	timeNow := time.Now()
 	pulseNumber := insolar.CalculatePulseNumber(timeNow)
@@ -160,7 +173,13 @@ func (tp *testPulsar) distribute(ctx context.Context) {
 	for {
 		select {
 		case <-time.After(time.Duration(tp.pulseTimeMs) * time.Millisecond):
-			go tp.distributor.Distribute(ctx, pulse)
+			go func(pulse insolar.Pulse) {
+				tp.activityMutex.Lock()
+				defer tp.activityMutex.Unlock()
+
+				tp.distributor.Distribute(ctx, pulse)
+			}(pulse)
+
 			pulse = tp.incrementPulse(pulse)
 		case <-tp.cancellationToken:
 			return
