@@ -233,6 +233,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 
 		jc.HeavyMock.Return(heavyRef, nil)
 		jc.IsBeyondLimitMock.Return(true, nil)
+
 		rep, err := h.handleGetChildren(contextWithJet(s.ctx, jetID), &message.Parcel{
 			Msg:         &msg,
 			PulseNumber: insolar.FirstPulseNumber + 1,

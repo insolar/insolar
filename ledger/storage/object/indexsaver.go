@@ -10,6 +10,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexSaver -o ./ -s _mock.go
+
 type IndexSaver interface {
 	SaveIndexFromHeavy(
 		ctx context.Context, jetID insolar.ID, obj insolar.Reference, heavy *insolar.Reference,

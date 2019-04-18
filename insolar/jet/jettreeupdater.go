@@ -45,6 +45,8 @@ type fetchResult struct {
 	err error
 }
 
+//go:generate minimock -i github.com/insolar/insolar/jet.TreeUpdater -o ./ -s _mock.go
+
 type TreeUpdater interface {
 	FetchJet(ctx context.Context, target insolar.ID, pulse insolar.PulseNumber) (*insolar.ID, error)
 	ReleaseJet(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber)
