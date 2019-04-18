@@ -18,6 +18,7 @@ package replication
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -38,6 +39,9 @@ type Cleaner interface {
 
 // LightCleaner is an implementation of Cleaner interface
 type LightCleaner struct {
+	once          sync.Once
+	pulseForClean chan insolar.PulseNumber
+
 	jetStorage   jet.Storage
 	nodeModifier node.Modifier
 	dropCleaner  drop.Cleaner
@@ -80,19 +84,29 @@ func NewCleaner(
 // pulse, which is backwards by a size of lightChainLimit. If a pulse is fetched successfully,
 // all the data for it will be cleaned
 func (c *LightCleaner) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
+	c.once.Do(func() {
+		go c.clean(ctx)
+	})
+
+	c.pulseForClean <- pn
+}
+
+func (c *LightCleaner) clean(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
-	logger.Debugf("[NotifyAboutPulse] pn - %v", pn)
+	for pn := range c.pulseForClean {
+		logger.Debugf("[NotifyAboutPulse] pn - %v", pn)
 
-	expiredPn, err := c.pulseCalculator.Backwards(ctx, pn, c.lightChainLimit)
-	if err == pulse.ErrNotFound {
-		logger.Errorf("[NotifyAboutPulse] expiredPn for pn - %v doesn't exist", pn)
-		return
-	}
-	if err != nil {
-		panic(err)
-	}
+		expiredPn, err := c.pulseCalculator.Backwards(ctx, pn, c.lightChainLimit)
+		if err == pulse.ErrNotFound {
+			logger.Errorf("[NotifyAboutPulse] expiredPn for pn - %v doesn't exist", pn)
+			return
+		}
+		if err != nil {
+			panic(err)
+		}
 
-	c.cleanPulse(ctx, expiredPn.PulseNumber)
+		c.cleanPulse(ctx, expiredPn.PulseNumber)
+	}
 }
 
 func (c LightCleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
