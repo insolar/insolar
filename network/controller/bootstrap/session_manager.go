@@ -58,11 +58,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
 )
 
 type SessionID uint64
@@ -122,16 +123,16 @@ type sessionManager struct {
 	sessions map[SessionID]*Session
 	state    uint32
 
-	newSessionNotification  chan notification
-	stopCleanupNotification chan notification
+	sessionsChangeNotification chan notification
+	stopCleanupNotification    chan notification
 }
 
 func NewSessionManager() SessionManager {
 	return &sessionManager{
-		sessions:                make(map[SessionID]*Session),
-		newSessionNotification:  make(chan notification),
-		stopCleanupNotification: make(chan notification),
-		state:                   stateIdle,
+		sessions:                   make(map[SessionID]*Session),
+		sessionsChangeNotification: make(chan notification),
+		stopCleanupNotification:    make(chan notification),
+		state:                      stateIdle,
 	}
 }
 
@@ -180,7 +181,7 @@ func (sm *sessionManager) addSession(id SessionID, session *Session) {
 	sm.sessions[id] = session
 	sm.lock.Unlock()
 
-	sm.newSessionNotification <- notification{}
+	sm.sessionsChangeNotification <- notification{}
 }
 
 func (sm *sessionManager) CheckSession(id SessionID, expected SessionState) error {
@@ -240,13 +241,17 @@ func (sm *sessionManager) ChallengePassed(id SessionID) error {
 
 func (sm *sessionManager) ReleaseSession(id SessionID) (*Session, error) {
 	sm.lock.Lock()
-	defer sm.lock.Unlock()
 
 	session, err := sm.checkSession(id, Challenge2)
 	if err != nil {
+		sm.lock.Unlock()
 		return nil, err
 	}
 	delete(sm.sessions, id)
+	sm.lock.Unlock()
+
+	sm.sessionsChangeNotification <- notification{}
+
 	return session, nil
 }
 
@@ -272,7 +277,7 @@ func (sm *sessionManager) cleanupExpiredSessions() {
 			// Have no active sessions.
 			// Block until sessions will be added or session manager begins to stop.
 			select {
-			case <-sm.newSessionNotification:
+			case <-sm.sessionsChangeNotification:
 				sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
 			case <-sm.stopCleanupNotification:
 				return
@@ -289,7 +294,7 @@ func (sm *sessionManager) cleanupExpiredSessions() {
 		waitTime := time.Until(nextSessionToExpire.expirationTime())
 
 		select {
-		case <-sm.newSessionNotification:
+		case <-sm.sessionsChangeNotification:
 			// Handle new session. reorder expiration short list
 			sessionsByExpirationTime = sm.sortSessionsByExpirationTime()
 
