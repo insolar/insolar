@@ -21,11 +21,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/insolar/insolar/ledger/handle"
-	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
-	"go.opencensus.io/tag"
-
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
@@ -37,6 +32,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/ledger/handle"
 	"github.com/insolar/insolar/ledger/hot"
 	"github.com/insolar/insolar/ledger/proc"
 	"github.com/insolar/insolar/ledger/recentstorage"
@@ -45,6 +41,9 @@ import (
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
 )
 
 // MessageHandler processes messages for local storage interaction.
@@ -75,6 +74,7 @@ type MessageHandler struct {
 	IndexAccessor object.IndexAccessor `inject:""`
 	IndexModifier object.IndexModifier `inject:""`
 	IndexStorage  object.IndexStorage  `inject:""`
+	IndexSaver    object.IndexSaver    `inject:""`
 
 	conf           *configuration.Ledger
 	middleware     *middleware
@@ -82,27 +82,6 @@ type MessageHandler struct {
 
 	FlowHandler *handler.Handler
 	handlers    map[insolar.MessageType]insolar.MessageHandler
-}
-
-// IndexSaver is implemented by MessageHandler and can be used by various message Handler's.
-// This is a temporary interface used during the migration to Flow. If the migration is complete
-// feel free to refactor this the way you like.
-type IndexSaver interface {
-	SaveIndexFromHeavy(
-		ctx context.Context, jetID insolar.ID, obj insolar.Reference, heavy *insolar.Reference,
-	) (object.Lifeline, error)
-}
-
-// JetContextReader is a temporary interface used during migration to Flow. If the migration is complete
-// feel free to refactor the code the way you like.
-type JetContextReader interface {
-	JetFromContext(ctx context.Context) insolar.ID
-}
-
-type jetContextReader struct{}
-
-func (*jetContextReader) JetFromContext(ctx context.Context) insolar.ID {
-	return jetFromContext(ctx)
 }
 
 // NewMessageHandler creates new handler.
@@ -149,8 +128,7 @@ func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.TreeUpdater = h.jetTreeUpdater
-			p.Dep.IndexSaver = h
-			p.Dep.JetContextReader = &jetContextReader{}
+			p.Dep.IndexSaver = h.IndexSaver
 			return p
 		},
 	}
@@ -439,7 +417,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 		if err != nil {
 			return nil, err
 		}
-		idx, err = h.SaveIndexFromHeavy(ctx, jetID, msg.Head, heavy)
+		idx, err = h.IndexSaver.SaveIndexFromHeavy(ctx, jetID, msg.Head, heavy)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
@@ -477,7 +455,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 		if err != nil {
 			return nil, err
 		}
-		idx, err = h.SaveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
+		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
@@ -668,7 +646,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 			if err != nil {
 				return nil, err
 			}
-			idx, err = h.SaveIndexFromHeavy(ctx, jetID, msg.Object, heavy)
+			idx, err = h.IndexSaver.SaveIndexFromHeavy(ctx, jetID, msg.Object, heavy)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to fetch index from heavy")
 			}
@@ -755,7 +733,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 		if err != nil {
 			return nil, err
 		}
-		idx, err = h.SaveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
+		idx, err = h.IndexSaver.SaveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
@@ -846,34 +824,6 @@ func validateState(old object.StateID, new object.StateID) error {
 		return errors.New("object is already activated")
 	}
 	return nil
-}
-
-func (h *MessageHandler) SaveIndexFromHeavy(
-	ctx context.Context, jetID insolar.ID, obj insolar.Reference, heavy *insolar.Reference,
-) (object.Lifeline, error) {
-	genericReply, err := h.Bus.Send(ctx, &message.GetObjectIndex{
-		Object: obj,
-	}, &insolar.MessageSendOptions{
-		Receiver: heavy,
-	})
-	if err != nil {
-		return object.Lifeline{}, errors.Wrap(err, "failed to send")
-	}
-	rep, ok := genericReply.(*reply.ObjectIndex)
-	if !ok {
-		return object.Lifeline{}, fmt.Errorf("failed to fetch object index: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
-	}
-	idx, err := object.DecodeIndex(rep.Index)
-	if err != nil {
-		return object.Lifeline{}, errors.Wrap(err, "failed to decode")
-	}
-
-	idx.JetID = insolar.JetID(jetID)
-	err = h.IndexModifier.Set(ctx, *obj.Record(), idx)
-	if err != nil {
-		return object.Lifeline{}, errors.Wrap(err, "failed to save")
-	}
-	return idx, nil
 }
 
 func (h *MessageHandler) saveCodeFromHeavy(

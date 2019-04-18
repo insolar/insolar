@@ -164,6 +164,7 @@ func (s *handlerSuite) AfterTest(suiteName, testName string) {
 	s.cleaner()
 }
 
+// TODO: there is no more handleGetChildren method, refactor
 func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()

@@ -19,8 +19,6 @@ package proc
 import (
 	"context"
 
-	"github.com/insolar/insolar/ledger/artifactmanager"
-
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -36,7 +34,7 @@ import (
 
 // GetChildren Procedure
 type GetChildren struct {
-	// Jet     insolar.ID
+	Jet     insolar.ID
 	Message bus.Message
 
 	Dep struct {
@@ -48,8 +46,7 @@ type GetChildren struct {
 		DelegationTokenFactory insolar.DelegationTokenFactory
 		RecordAccessor         object.RecordAccessor
 		TreeUpdater            jet.TreeUpdater
-		IndexSaver             artifactmanager.IndexSaver
-		JetContextReader       artifactmanager.JetContextReader
+		IndexSaver             object.IndexSaver
 	}
 
 	Result struct {
@@ -58,7 +55,7 @@ type GetChildren struct {
 }
 
 func (p *GetChildren) Proceed(ctx context.Context) error {
-	jetID := p.Dep.JetContextReader.JetFromContext(ctx)
+	jetID := p.Jet
 	parcel := p.Message.Parcel
 	msg := parcel.Message().(*message.GetChildren)
 

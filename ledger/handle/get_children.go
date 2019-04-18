@@ -19,6 +19,8 @@ package handle
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
+
 	"github.com/insolar/insolar/ledger/proc"
 
 	"github.com/insolar/insolar/insolar/flow"
@@ -44,7 +46,7 @@ func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	p := s.dep.GetChildren(&proc.GetChildren{
-		//Jet:     jet.Res.Jet, // ??? learn how to convert insolar.JetID to insolar.ID or pass a context?
+		Jet:     interface{}(jet.Res.Jet).(insolar.ID),
 		Message: s.Message,
 	})
 	// TODO: send Result.Reply somewhere...

@@ -240,6 +240,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.IndexAccessor = indices
 		handler.IndexModifier = indices
 		handler.IndexStorage = indices
+		handler.IndexSaver = object.NewIndexSaver(Bus, indices)
 
 		pm := pulsemanager.NewPulseManager(
 			conf, drops, blobs, blobs, pulses, records, records, indices, indices,
