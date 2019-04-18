@@ -101,8 +101,6 @@ func (a *Redirect) Proceed(context.Context) error {
 	return nil
 }
 
-// =====================================================================================================================
-
 // SaveObject describes handling "save object" message flow.
 type SaveObject struct {
 	Message map[string]string
