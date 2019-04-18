@@ -4,6 +4,8 @@ package record;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
+option (gogoproto.goproto_getters_all) = false;
+
 message __GenesisRecord {
     option (gogoproto.face) = true;
 }
