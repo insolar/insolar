@@ -39,8 +39,9 @@ type IndexAccessor interface {
 
 // IndexCollectionAccessor provides methods for querying a collection of blobs with specific search conditions.
 type IndexCollectionAccessor interface {
-	// ForPulseAndJet returns []Blob for a provided jetID and a pulse number.
+	// ForJet returns a collection of lifelines for a provided jetID
 	ForJet(ctx context.Context, jetID insolar.JetID) map[insolar.ID]LifelineMeta
+	// ForPulseAndJet returns a collection of lifelines for a provided jetID and a pulse number
 	ForPulseAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) map[insolar.ID]Lifeline
 }
 
@@ -53,14 +54,20 @@ type IndexModifier interface {
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.ExtendedIndexModifier -o ./ -s _mock.go
+
+// ExtendedIndexModifier provides methods for setting Index-values to storage.
+// The main difference with IndexModifier is an opportunity to modify a state of an internal pulse-index
 type ExtendedIndexModifier interface {
+	// SetWithMeta saves index to the storage and sets its index and pulse number in internal indexes
 	SetWithMeta(ctx context.Context, id insolar.ID, pn insolar.PulseNumber, index Lifeline) error
+	// SetUsageForPulse updates an internal state of an internal pulse-index
+	// Calling this method guaranties that provied pn will be used as a LastUsagePulse for an id
 	SetUsageForPulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexStorage -o ./ -s _mock.go
 
-// IndexStorage combines IndexAccessor and IndexModifier.
+// IndexStorage is an union of IndexAccessor and IndexModifier.
 type IndexStorage interface {
 	IndexAccessor
 	IndexModifier
@@ -70,8 +77,8 @@ type IndexStorage interface {
 
 // IndexCleaner provides an interface for removing interfaces from a storage.
 type IndexCleaner interface {
-	// RemoveForPulse method removes indexes from a storage for a provided
-	RemoveForPulse(ctx context.Context, pn insolar.PulseNumber)
+	// DeleteForPN method removes indexes from a storage for a provided
+	DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
 }
 
 // Lifeline represents meta information for record object.
@@ -179,6 +186,7 @@ func (m *IndexMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) er
 	return nil
 }
 
+// SetWithMeta saves index to the storage and sets its index and pulse number in internal indexes
 func (m *IndexMemory) SetWithMeta(ctx context.Context, id insolar.ID, pn insolar.PulseNumber, index Lifeline) error {
 	m.storageLock.Lock()
 	defer m.storageLock.Unlock()
@@ -196,6 +204,8 @@ func (m *IndexMemory) SetWithMeta(ctx context.Context, id insolar.ID, pn insolar
 	return nil
 }
 
+// SetUsageForPulse updates an internal state of an internal pulse-index
+// Calling this method guaranties that provied pn will be used as a LastUsagePulse for an id
 func (m *IndexMemory) SetUsageForPulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber) {
 	m.pulseIndex.Add(id, pn)
 }
@@ -222,7 +232,7 @@ type LifelineMeta struct {
 	LastUsed insolar.PulseNumber
 }
 
-// ForPulseAndJet returns an object's lifeline for a provided id.
+// ForJet returns a collection of lifelines for a provided jetID
 func (m *IndexMemory) ForJet(ctx context.Context, jetID insolar.JetID) map[insolar.ID]LifelineMeta {
 	m.storageLock.RLock()
 	defer m.storageLock.RUnlock()
@@ -249,6 +259,7 @@ func (m *IndexMemory) ForJet(ctx context.Context, jetID insolar.JetID) map[insol
 	return res
 }
 
+// ForPulseAndJet returns a collection of lifelines for a provided jetID and a pulse number
 func (m *IndexMemory) ForPulseAndJet(
 	ctx context.Context,
 	pn insolar.PulseNumber,
@@ -273,8 +284,8 @@ func (m *IndexMemory) ForPulseAndJet(
 	return res
 }
 
-// RemoveForPulse method removes indexes from a indexByPulseStor for a provided pulse
-func (m *IndexMemory) RemoveForPulse(ctx context.Context, pn insolar.PulseNumber) {
+// DeleteForPN method removes indexes from a indexByPulseStor for a provided pulse
+func (m *IndexMemory) DeleteForPN(ctx context.Context, pn insolar.PulseNumber) {
 	m.storageLock.Lock()
 	defer m.storageLock.Unlock()
 
