@@ -59,6 +59,7 @@ import (
 )
 
 //go:generate stringer -type=ClaimType
+
 type ClaimType uint8
 
 const (

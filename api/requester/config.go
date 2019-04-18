@@ -63,9 +63,9 @@ func readFile(path string, configType interface{}) error {
 }
 
 // ReadUserConfigFromFile read user config from file
-func ReadUserConfigFromFile(path string) (*UserConfigJSON, error) {
+func ReadUserConfigFromFile(file string) (*UserConfigJSON, error) {
 	cfgJSON := &UserConfigJSON{}
-	err := readFile(path, cfgJSON)
+	err := readFile(file, cfgJSON)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ readUserConfigFromFile ] ")
 	}

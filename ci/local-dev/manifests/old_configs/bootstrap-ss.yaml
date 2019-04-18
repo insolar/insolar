@@ -172,20 +172,20 @@ spec:
               ls -alhR /opt
               if [ "$HOSTNAME" = seed-0 ]; then
                  echo generate bootstrap key
-                 insolar -c gen_keys > /opt/insolar/config/bootstrap_keys.json
+                 insolar gen-key-pair > /opt/insolar/config/bootstrap_keys.json
                  echo generate root member key
-                 insolar -c gen_keys > /opt/insolar/config/root_member_keys.json
+                 insolar gen-key-pair > /opt/insolar/config/root_member_keys.json
                  echo generate discovery node keys
                  mkdir -p /opt/insolar/config/nodes/seed-0
                  mkdir -p /opt/insolar/config/nodes/seed-1
                  mkdir -p /opt/insolar/config/nodes/seed-2
                  mkdir -p /opt/insolar/config/nodes/seed-3
                  mkdir -p /opt/insolar/config/nodes/seed-4
-                 insolar -c gen_keys > /opt/insolar/config/nodes/seed-0/keys.json
-                 insolar -c gen_keys > /opt/insolar/config/nodes/seed-1/keys.json
-                 insolar -c gen_keys > /opt/insolar/config/nodes/seed-2/keys.json
-                 insolar -c gen_keys > /opt/insolar/config/nodes/seed-3/keys.json
-                 insolar -c gen_keys > /opt/insolar/config/nodes/seed-4/keys.json
+                 insolar gen-key-pair > /opt/insolar/config/nodes/seed-0/keys.json
+                 insolar gen-key-pair > /opt/insolar/config/nodes/seed-1/keys.json
+                 insolar gen-key-pair > /opt/insolar/config/nodes/seed-2/keys.json
+                 insolar gen-key-pair > /opt/insolar/config/nodes/seed-3/keys.json
+                 insolar gen-key-pair > /opt/insolar/config/nodes/seed-4/keys.json
                  echo generate genesis
                  mkdir -p /opt/insolar/config/nodes/certs
                  mkdir -p /opt/insolar/config/data

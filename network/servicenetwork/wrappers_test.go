@@ -63,11 +63,6 @@ import (
 	"github.com/insolar/insolar/network/node"
 )
 
-type nodeKeeperTestInterface interface {
-	// Wipe all active nodes for test purposes
-	Wipe(isDiscovery bool)
-}
-
 type nodeKeeperWrapper struct {
 	original network.NodeKeeper
 }
@@ -94,21 +89,6 @@ func (n *nodeKeeperWrapper) GetWorkingNodes() []insolar.NetworkNode {
 
 func (n *nodeKeeperWrapper) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
 	return n.original.GetWorkingNodesByRole(role)
-}
-
-func (n *nodeKeeperWrapper) Wipe(isDiscovery bool) {
-	n.original.(nodeKeeperTestInterface).Wipe(isDiscovery)
-}
-
-type phaseManagerWrapper struct {
-	original phases.PhaseManager
-	result   chan error
-}
-
-func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
-	res := p.original.OnPulse(ctx, pulse, pulseStartTime)
-	p.result <- res
-	return res
 }
 
 func (n *nodeKeeperWrapper) GetOrigin() insolar.NetworkNode {
@@ -151,6 +131,17 @@ func (n *nodeKeeperWrapper) Sync(ctx context.Context, nodes []insolar.NetworkNod
 	return n.original.Sync(ctx, nodes, claims)
 }
 
-func (n *nodeKeeperWrapper) MoveSyncToActive(ctx context.Context) error {
-	return n.original.MoveSyncToActive(ctx)
+func (n *nodeKeeperWrapper) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error {
+	return n.original.MoveSyncToActive(ctx, number)
+}
+
+type phaseManagerWrapper struct {
+	original phases.PhaseManager
+	result   chan error
+}
+
+func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
+	res := p.original.OnPulse(ctx, pulse, pulseStartTime)
+	p.result <- res
+	return res
 }

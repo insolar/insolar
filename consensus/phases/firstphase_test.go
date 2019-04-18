@@ -78,7 +78,7 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 	communicatorMock := NewCommunicatorMock(t)
 	consensusNetworkMock := network.NewConsensusNetworkMock(t)
 	terminationHandler := testutils.NewTerminationHandlerMock(t)
-
+	messageBus := testutils.NewMessageBusLockerMock(t)
 	cryptoServ := testutils.NewCryptographyServiceMock(t)
 	cryptoServ.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
 		signature := insolar.SignatureFromBytes(nil)
@@ -89,7 +89,7 @@ func TestFirstPhase_HandlePulse(t *testing.T) {
 	}
 
 	cm := component.Manager{}
-	cm.Inject(cryptoServ, nodeKeeper, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock, terminationHandler)
+	cm.Inject(cryptoServ, nodeKeeper, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock, terminationHandler, messageBus)
 
 	require.NotNil(t, firstPhase.Calculator)
 	require.NotNil(t, firstPhase.NodeKeeper)

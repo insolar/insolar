@@ -92,13 +92,6 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base insolar.Messag
 	if !ok {
 		return nil, errors.New("Wrong type for BaseMessage")
 	}
-	log := inslogger.FromContext(ctx)
-
-	mb := insolar.MessageBusFromContext(ctx, cr.MessageBus)
-	if mb == nil {
-		log.Debug("Context doesn't provide MessageBus")
-		mb = cr.MessageBus
-	}
 
 	var mode message.MethodReturnMode
 	if async {
@@ -133,7 +126,7 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base insolar.Messag
 		cr.ResultMutex.Unlock()
 	}
 
-	res, err := mb.Send(ctx, msg, nil)
+	res, err := cr.MessageBus.Send(ctx, msg, nil)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't dispatch event")
@@ -186,11 +179,6 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base insolar.M
 		return nil, errors.New("Wrong type for BaseMessage")
 	}
 
-	mb := insolar.MessageBusFromContext(ctx, cr.MessageBus)
-	if mb == nil {
-		return nil, errors.New("No access to message bus")
-	}
-
 	msg := &message.CallConstructor{
 		BaseLogicMessage: *baseMessage,
 		PrototypeRef:     *prototype,
@@ -214,7 +202,7 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base insolar.M
 		cr.ResultMutex.Unlock()
 	}
 
-	res, err := mb.Send(ctx, msg, nil)
+	res, err := cr.MessageBus.Send(ctx, msg, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't save new object as delegate")
 	}

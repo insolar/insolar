@@ -170,3 +170,9 @@ func (mb *TestMessageBus) Send(ctx context.Context, m insolar.Message, _ *insola
 func (mb *TestMessageBus) OnPulse(context.Context, insolar.Pulse) error {
 	return nil
 }
+
+func (mb *TestMessageBus) Lock(context.Context) {
+}
+
+func (mb *TestMessageBus) Unlock(context.Context) {
+}

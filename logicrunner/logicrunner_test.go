@@ -30,7 +30,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"github.com/ugorji/go/codec"
 
@@ -59,7 +58,6 @@ import (
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/network"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/insolar/insolar/testutils/testmessagebus"
 )
@@ -99,8 +97,8 @@ func (s *LogicRunnerFuncSuite) SetupSuite() {
 }
 
 func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr insolar.LogicRunner) {
-	mb.ReRegister(insolar.TypeCallMethod, lr.Execute)
-	mb.ReRegister(insolar.TypeCallConstructor, lr.Execute)
+	mb.ReRegister(insolar.TypeCallMethod, lr.HandleCalls)
+	mb.ReRegister(insolar.TypeCallConstructor, lr.HandleCalls)
 	mb.ReRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	mb.ReRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
 	mb.ReRegister(insolar.TypeExecutorResults, lr.HandleExecutorResultsMessage)
@@ -138,7 +136,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 
 	mb := testmessagebus.NewTestMessageBus(s.T())
 
-	nw := network.GetTestNetwork()
+	nw := testutils.GetTestNetwork(s.T())
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
 	l, db, cleaner := artifacts.TmpLedger(
 		s.T(),
@@ -228,30 +226,6 @@ func mockCryptographyService(t *testing.T) insolar.CryptographyService {
 
 func ValidateAllResults(t testing.TB, ctx context.Context, lr insolar.LogicRunner, mustfail ...insolar.Reference) {
 	return // TODO REMOVE
-	failmap := make(map[insolar.Reference]struct{})
-	for _, r := range mustfail {
-		failmap[r] = struct{}{}
-	}
-
-	rlr := lr.(*LogicRunner)
-
-	a := assert.New(t)
-
-	for ref, state := range rlr.state {
-		log.Debugf("TEST validating: %s", ref)
-
-		msg := state.ExecutionState.Behaviour.(*ValidationSaver).caseBind.ToValidateMessage(
-			ctx, ref, *rlr.pulse(ctx),
-		)
-		cb := NewCaseBindFromValidateMessage(ctx, rlr.MessageBus, msg)
-
-		_, err := rlr.Validate(ctx, ref, *rlr.pulse(ctx), *cb)
-		if _, ok := failmap[ref]; ok {
-			a.Error(err, "validation %s", ref)
-		} else {
-			a.NoError(err, "validation %s", ref)
-		}
-	}
 }
 
 func executeMethod(
@@ -1128,7 +1102,7 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	// Initializing Root Domain
 	rootDomainID, err := am.RegisterRequest(
 		ctx,
-		*am.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		&message.Parcel{
 			Msg: &message.GenesisRequest{
 				Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa",
@@ -1141,7 +1115,7 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 		ctx,
 		insolar.Reference{},
 		*rootDomainRef,
-		*am.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		*cb.Prototypes["rootdomain"],
 		false,
 		goplugintestutils.CBORMarshal(s.T(), nil),
@@ -1159,7 +1133,7 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 
 	rootMemberID, err := am.RegisterRequest(
 		ctx,
-		*am.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		&message.Parcel{
 			Msg: &message.GenesisRequest{
 				Name: "4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa",
@@ -1506,14 +1480,14 @@ func (r *One) CreateAllowance(member string) (error) {
 	kp := platformpolicy.NewKeyProcessor()
 
 	// Initializing Root Domain
-	rootDomainID, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"}})
+	rootDomainID, err := am.RegisterRequest(ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"}})
 	s.NoError(err)
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
 		ctx,
 		insolar.Reference{},
 		*rootDomainRef,
-		*am.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		*cb.Prototypes["rootdomain"],
 		false,
 		goplugintestutils.CBORMarshal(s.T(), nil),
@@ -1529,7 +1503,7 @@ func (r *One) CreateAllowance(member string) (error) {
 
 	rootMemberID, err := am.RegisterRequest(
 		ctx,
-		*am.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		&message.Parcel{
 			Msg: &message.GenesisRequest{
 				Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa",
@@ -1573,14 +1547,14 @@ func (r *One) CreateAllowance(member string) (error) {
 	// Call CreateAllowance method in custom contract
 	domain, err := insolar.NewReferenceFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
 	s.Require().NoError(err)
-	contractID, err := am.RegisterRequest(ctx, *am.GenesisRef(), &message.Parcel{Msg: &message.CallConstructor{}})
+	contractID, err := am.RegisterRequest(ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.CallConstructor{}})
 	s.NoError(err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
 		ctx,
 		*domain,
 		*contract,
-		*am.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		*cb.Prototypes["one"],
 		false,
 		goplugintestutils.CBORMarshal(s.T(), nil),
@@ -2043,7 +2017,7 @@ func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am artifac
 	s.Require().NoError(err)
 	contractID, err := am.RegisterRequest(
 		ctx,
-		*am.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: testutils.RandomRef()}},
 	)
 	s.NoError(err)
@@ -2053,7 +2027,7 @@ func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am artifac
 		ctx,
 		*domain,
 		*objectRef,
-		*am.GenesisRef(),
+		insolar.GenesisRecord.Ref(),
 		*cb.Prototypes[contractName],
 		false,
 		goplugintestutils.CBORMarshal(s.T(), nil),

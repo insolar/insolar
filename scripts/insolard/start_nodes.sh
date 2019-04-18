@@ -1,4 +1,5 @@
 #! /usr/bin/env bash
+set -e
 
 BIN_DIR=bin
 BASE_DIR=scripts/insolard
@@ -8,7 +9,7 @@ INSOLARD=$BIN_DIR/insolard
 CONFIGS_DIR=configs
 ROOT_MEMBER_KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/root_member_keys.json
 GENERATED_CONFIGS_DIR=$BASE_DIR/$CONFIGS_DIR/generated_configs/nodes
-CERT_GENERATOR=$BIN_DIR/certgen
+INSOLAR_CMD=$BIN_DIR/insolar
 
 insolar_log_level=Debug
 
@@ -42,7 +43,7 @@ generate_nodes_certs()
     do
         role="${ROLES[$i]//\"}"
         i=$((i + 1))
-        $CERT_GENERATOR --root-conf $ROOT_MEMBER_KEYS_FILE -h "http://127.0.0.1:19101/api" -c $NODES_DATA/certs/node_cert_$i.json -k $node/keys.json -r $role
+        $INSOLAR_CMD certgen --root-conf $ROOT_MEMBER_KEYS_FILE -u "http://127.0.0.1:19101/api" -c $NODES_DATA/certs/node_cert_$i.json -k $node/keys.json -r $role
         cp -v $NODES_DATA/certs/node_cert_$i.json $node/cert.json
     done
     echo "generate_nodes_certs() end."

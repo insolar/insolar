@@ -400,7 +400,7 @@ func (p *pulseManagerMock) Set(ctx context.Context, pulse insolar.Pulse, persist
 	p.pulse = pulse
 	p.lock.Unlock()
 
-	return p.keeper.MoveSyncToActive(ctx)
+	return p.keeper.MoveSyncToActive(ctx, pulse.PulseNumber)
 }
 
 type staterMock struct {
@@ -441,17 +441,21 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	certManager, cryptographyService := s.initCrypto(node)
 
-	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host, certManager.GetCertificate())
+	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	s.Require().NoError(err)
 	terminationHandler := testutils.NewTerminationHandlerMock(s.T())
 	terminationHandler.LeaveFunc = func(p context.Context, p1 insolar.PulseNumber) {}
 	terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {}
 	terminationHandler.AbortFunc = func(reason string) { log.Error(reason) }
 
+	mblocker := testutils.NewMessageBusLockerMock(s.T())
+	GIL := testutils.NewGlobalInsolarLockMock(s.T())
+	GIL.AcquireMock.Return()
+	GIL.ReleaseMock.Return()
 	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
 
-	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService)
+	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService, mblocker, GIL)
 	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler)
 
 	node.serviceNetwork = serviceNetwork

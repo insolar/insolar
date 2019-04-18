@@ -18,6 +18,7 @@ package handler
 
 import (
 	"context"
+	"runtime"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
@@ -60,6 +61,7 @@ func TestHandler_WrapBusHandle(t *testing.T) {
 	}
 	h.handles.present = func(msg bus.Message) flow.Handle {
 		msg.ReplyTo <- reply
+		runtime.Gosched()
 		return func(ctx context.Context, f flow.Flow) error {
 			return nil
 		}
@@ -90,4 +92,70 @@ func TestHandler_WrapBusHandle_Error(t *testing.T) {
 	result, err := h.WrapBusHandle(context.Background(), parcel)
 	require.EqualError(t, err, "test error")
 	require.Nil(t, result)
+}
+
+func TestHandler_WrapBusHandle_ReplyError(t *testing.T) {
+	t.Parallel()
+	h := &Handler{
+		controller: thread.NewController(),
+	}
+	h.handles.present = func(msg bus.Message) flow.Handle {
+		msg.ReplyTo <- bus.Reply{
+			Err: errors.New("reply error"),
+		}
+		runtime.Gosched()
+		return func(ctx context.Context, f flow.Flow) error {
+			return errors.New("test error")
+		}
+	}
+	parcel := &testutils.ParcelMock{}
+	parcel.PulseFunc = func() insolar.PulseNumber {
+		return 42
+	}
+	result, err := h.WrapBusHandle(context.Background(), parcel)
+	require.EqualError(t, err, "reply error")
+	require.Nil(t, result)
+}
+
+func TestHandler_WrapBusHandle_NoReply(t *testing.T) {
+	t.Parallel()
+	h := &Handler{
+		controller: thread.NewController(),
+	}
+	h.handles.present = func(msg bus.Message) flow.Handle {
+		return func(ctx context.Context, f flow.Flow) error {
+			return nil
+		}
+	}
+	parcel := &testutils.ParcelMock{}
+	parcel.PulseFunc = func() insolar.PulseNumber {
+		return 42
+	}
+	result, err := h.WrapBusHandle(context.Background(), parcel)
+	require.EqualError(t, err, "no reply from handler")
+	require.Nil(t, result)
+}
+
+func TestHandler_WrapBusHandle_ReplyWithError(t *testing.T) {
+	t.Parallel()
+	h := &Handler{
+		controller: thread.NewController(),
+	}
+	reply := bus.Reply{
+		Reply: replyMock(42),
+	}
+	h.handles.present = func(msg bus.Message) flow.Handle {
+		msg.ReplyTo <- reply
+		runtime.Gosched()
+		return func(ctx context.Context, f flow.Flow) error {
+			return errors.New("test error")
+		}
+	}
+	parcel := &testutils.ParcelMock{}
+	parcel.PulseFunc = func() insolar.PulseNumber {
+		return 42
+	}
+	result, err := h.WrapBusHandle(context.Background(), parcel)
+	require.NoError(t, err)
+	require.Equal(t, reply.Reply, result)
 }

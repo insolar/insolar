@@ -60,7 +60,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/host"
 )
 
-type consensusInfo struct {
+type ConsensusInfo struct {
 	lock                       sync.RWMutex
 	tempMapR                   map[insolar.Reference]*host.Host
 	tempMapS                   map[insolar.ShortNodeID]*host.Host
@@ -68,28 +68,28 @@ type consensusInfo struct {
 	isJoiner                   bool
 }
 
-func (ci *consensusInfo) SetIsJoiner(isJoiner bool) {
+func (ci *ConsensusInfo) SetIsJoiner(isJoiner bool) {
 	ci.lock.Lock()
 	defer ci.lock.Unlock()
 
 	ci.isJoiner = isJoiner
 }
 
-func (ci *consensusInfo) IsJoiner() bool {
+func (ci *ConsensusInfo) IsJoiner() bool {
 	ci.lock.RLock()
 	defer ci.lock.RUnlock()
 
 	return ci.isJoiner
 }
 
-func (ci *consensusInfo) NodesJoinedDuringPreviousPulse() bool {
+func (ci *ConsensusInfo) NodesJoinedDuringPreviousPulse() bool {
 	ci.lock.RLock()
 	defer ci.lock.RUnlock()
 
 	return ci.nodesJoinedDuringPrevPulse
 }
 
-func (ci *consensusInfo) AddTemporaryMapping(nodeID insolar.Reference, shortID insolar.ShortNodeID, address string) error {
+func (ci *ConsensusInfo) AddTemporaryMapping(nodeID insolar.Reference, shortID insolar.ShortNodeID, address string) error {
 	h, err := host.NewHostNS(address, nodeID, shortID)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to generate address (%s, %s, %d)", address, nodeID, shortID)
@@ -102,21 +102,21 @@ func (ci *consensusInfo) AddTemporaryMapping(nodeID insolar.Reference, shortID i
 	return nil
 }
 
-func (ci *consensusInfo) ResolveConsensus(shortID insolar.ShortNodeID) *host.Host {
+func (ci *ConsensusInfo) ResolveConsensus(shortID insolar.ShortNodeID) *host.Host {
 	ci.lock.RLock()
 	defer ci.lock.RUnlock()
 
 	return ci.tempMapS[shortID]
 }
 
-func (ci *consensusInfo) ResolveConsensusRef(nodeID insolar.Reference) *host.Host {
+func (ci *ConsensusInfo) ResolveConsensusRef(nodeID insolar.Reference) *host.Host {
 	ci.lock.RLock()
 	defer ci.lock.RUnlock()
 
 	return ci.tempMapR[nodeID]
 }
 
-func (ci *consensusInfo) flush(nodesJoinedDuringPrevPulse bool) {
+func (ci *ConsensusInfo) Flush(nodesJoinedDuringPrevPulse bool) {
 	ci.lock.Lock()
 	defer ci.lock.Unlock()
 
@@ -125,8 +125,8 @@ func (ci *consensusInfo) flush(nodesJoinedDuringPrevPulse bool) {
 	ci.nodesJoinedDuringPrevPulse = nodesJoinedDuringPrevPulse
 }
 
-func newConsensusInfo() *consensusInfo {
-	return &consensusInfo{
+func newConsensusInfo() *ConsensusInfo {
+	return &ConsensusInfo{
 		tempMapR: make(map[insolar.Reference]*host.Host),
 		tempMapS: make(map[insolar.ShortNodeID]*host.Host),
 	}

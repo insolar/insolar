@@ -53,15 +53,17 @@ package networkcoordinator
 import (
 	"context"
 
+	"github.com/insolar/insolar/network"
+
 	"github.com/insolar/insolar/insolar"
 )
 
 // NetworkCoordinator encapsulates logic of network configuration
 type NetworkCoordinator struct {
 	CertificateManager insolar.CertificateManager  `inject:""`
-	NetworkSwitcher    insolar.NetworkSwitcher     `inject:""`
 	ContractRequester  insolar.ContractRequester   `inject:""`
 	MessageBus         insolar.MessageBus          `inject:""`
+	Gatewayer          network.Gatewayer           `inject:""`
 	CS                 insolar.CryptographyService `inject:""`
 
 	realCoordinator Coordinator
@@ -90,7 +92,7 @@ func (nc *NetworkCoordinator) Start(ctx context.Context) error {
 }
 
 func (nc *NetworkCoordinator) getCoordinator() Coordinator {
-	if nc.NetworkSwitcher.GetState() == insolar.CompleteNetworkState {
+	if nc.Gatewayer.Gateway().GetState() == insolar.CompleteNetworkState {
 		return nc.realCoordinator
 	}
 	return nc.zeroCoordinator
