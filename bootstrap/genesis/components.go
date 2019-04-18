@@ -87,7 +87,7 @@ type storageComponents struct {
 }
 
 func initStorageComponents(conf configuration.Ledger) storageComponents {
-	db, err := store.NewBadgerDB(conf.Storage.DataDirectoryNewDB)
+	db, err := store.NewBadgerDB(conf.Storage.DataDirectory)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}

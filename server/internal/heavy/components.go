@@ -193,7 +193,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	{
 		conf := cfg.Ledger
 
-		db, err := store.NewBadgerDB(conf.Storage.DataDirectoryNewDB)
+		db, err := store.NewBadgerDB(conf.Storage.DataDirectory)
 		if err != nil {
 			panic(errors.Wrap(err, "failed to initialize DB"))
 		}
