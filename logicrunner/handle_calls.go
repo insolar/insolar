@@ -82,20 +82,10 @@ func (h *HandleCall) executeActual(
 	}
 	es.Unlock()
 
-	procRegisterRequest := NewRegisterRequest(parcel, h.dep)
-
-	if err := f.Procedure(ctx, procRegisterRequest); err != nil {
-		if err == flow.ErrCancelled {
-			request := procRegisterRequest.getResult()
-			return &reply.RegisterRequest{
-				Request: *request,
-			}, nil
-		}
-		// TODO: check if error is ErrCancelled
-		return nil, os.WrapError(err, "[ executeActual ] can't create request")
+	request, err := lr.RegisterRequest(ctx, parcel)
+	if err != nil {
+		return nil, os.WrapError(err, "[ Execute ] can't create request")
 	}
-
-	request := procRegisterRequest.getResult()
 
 	es.Lock()
 	qElement := ExecutionQueueElement{
