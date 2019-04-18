@@ -75,12 +75,12 @@ func NewRegisterRequest(parcel insolar.Parcel, dep *Dependencies) *RegisterReque
 	}
 }
 
-func (r *RegisterRequest) setResult(result *Ref) {
+func (r *RegisterRequest) setResult(result *Ref) { // nolint
 	r.result <- result
 }
 
 // getResult is blocking
-func (r *RegisterRequest) getResult() *Ref {
+func (r *RegisterRequest) getResult() *Ref { // nolint
 	return <-r.result
 }
 
