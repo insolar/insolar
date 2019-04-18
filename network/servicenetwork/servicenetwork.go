@@ -148,7 +148,7 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method insolar.Rem
 func (n *ServiceNetwork) Init(ctx context.Context) error {
 	hostNetwork, err := hostnetwork.NewHostNetwork(n.cfg, n.CertificateManager.GetCertificate().GetNodeRef().String())
 	if err != nil {
-		return errors.Wrap(err, "Failed to create internal transport")
+		return errors.Wrap(err, "Failed to create hostnetwork")
 	}
 
 	consensusAddress := n.cfg.Host.Transport.Address
