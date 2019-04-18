@@ -42,13 +42,7 @@ type Init struct {
 
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	switch s.Message.Parcel.Message().Type() {
-	case insolar.TypeCallMethod:
-		h := &HandleCall{
-			dep:     s.dep,
-			Message: s.Message,
-		}
-		return f.Handle(ctx, h.Present)
-	case insolar.TypeCallConstructor:
+	case insolar.TypeCallMethod, insolar.TypeCallConstructor:
 		h := &HandleCall{
 			dep:     s.dep,
 			Message: s.Message,
