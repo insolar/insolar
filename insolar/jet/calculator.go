@@ -22,16 +22,19 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-type calculator struct {
+// JetCalculator is a struct, that implements jet.Calculator
+type JetCalculator struct {
 	jetCoordinator insolar.JetCoordinator
 	jetAccessor    Accessor
 }
 
-func NewCalculator(jetCoordinator insolar.JetCoordinator, jetAccessor Accessor) Calculator {
-	return &calculator{jetCoordinator: jetCoordinator, jetAccessor: jetAccessor}
+// NewCalculator returns a new instance of a calculator
+func NewCalculator(jetCoordinator insolar.JetCoordinator, jetAccessor Accessor) *JetCalculator {
+	return &JetCalculator{jetCoordinator: jetCoordinator, jetAccessor: jetAccessor}
 }
 
-func (c *calculator) MineForPulse(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID {
+// MineForPulse returns current node's jets for a provided pulse
+func (c *JetCalculator) MineForPulse(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID {
 	var res []insolar.JetID
 
 	jetIDs := c.jetAccessor.All(ctx, pn)

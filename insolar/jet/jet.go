@@ -42,7 +42,9 @@ type Modifier interface {
 	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
 }
 
+// Calculator provides methods for calculating jets
 type Calculator interface {
+	// MineForPulse returns current node's jets for a provided pulse
 	MineForPulse(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID
 }
 
