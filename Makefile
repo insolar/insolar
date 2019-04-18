@@ -99,7 +99,7 @@ $(INSOLAR):
 	go build -o $(BIN_DIR)/$(INSOLAR) ${BUILD_TAGS} -ldflags "${LDFLAGS}" cmd/insolar/*.go
 
 .PHONY: $(INSGOCC)
-$(INSGOCC): cmd/insgocc/insgocc.go logicrunner/goplugin/preprocessor
+$(INSGOCC): cmd/insgocc/insgocc.go logicrunner/preprocessor
 	go build -o $(BININSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
 
 $(BININSGOCC): $(INSGOCC)
@@ -195,3 +195,6 @@ $(RECORDBUILDER):
 generate-protobuf:
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
 	PATH="$(BIN_DIR):$(PATH)" protoc -I./vendor -I./ --gorecord_out=./ insolar/record/record.proto
+
+regen-builtin: $(BININSGOCC)
+	$(BININSGOCC) regen-builtin

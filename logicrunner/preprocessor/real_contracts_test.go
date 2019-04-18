@@ -26,6 +26,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/testutils"
@@ -75,7 +76,7 @@ func (s *RealContractsSuite) TestGenerateProxies() {
 			t.Parallel()
 			a := assert.New(t)
 
-			parsed, err := ParseFile(file)
+			parsed, err := ParseFile(file, insolar.MachineTypeGoPlugin)
 			a.NoError(err)
 
 			var buf bytes.Buffer
@@ -98,11 +99,11 @@ func (s *RealContractsSuite) TestGenerateWrappers() {
 			t.Parallel()
 			a := assert.New(t)
 
-			parsed, err := ParseFile(file)
+			parsed, err := ParseFile(file, insolar.MachineTypeGoPlugin)
 			a.NoError(err)
 
 			var buf bytes.Buffer
-			err = parsed.WriteWrapper(&buf)
+			err = parsed.WriteWrapper(&buf, parsed.ContractName())
 			a.NoError(err)
 
 			code, err := ioutil.ReadAll(&buf)

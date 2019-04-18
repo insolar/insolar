@@ -97,6 +97,8 @@ const (
 	PulseNumberJet = PulseNumber(1)
 	// PulseNumberCurrent is a special pulse number value that signifies current pulse number.
 	PulseNumberCurrent = PulseNumber(2)
+	// BuiltinPulseNumber declares special pulse number that creates namespace for builtin contracts
+	BuiltinPulseNumber = PulseNumber(200)
 )
 
 // GenesisPulse is a first pulse for the system

@@ -18,9 +18,10 @@
 package foundation
 
 import (
+	"github.com/tylerb/gls"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
-	"github.com/tylerb/gls"
 )
 
 // BaseContract is a base class for all contracts.

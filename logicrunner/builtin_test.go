@@ -30,7 +30,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
+	"github.com/insolar/insolar/logicrunner/builtin/contract/helloworld"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
 	"github.com/insolar/insolar/messagebus"
@@ -114,7 +114,7 @@ func TestBareHelloworld(t *testing.T) {
 
 	MessageBusTrivialBehavior(mb, lr)
 
-	hw := helloworld.NewHelloWorld()
+	hw, _ := helloworld.New()
 
 	domain := byteRecorRef(2)
 	request := byteRecorRef(3)
