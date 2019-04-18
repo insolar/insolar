@@ -79,8 +79,8 @@ type RecordModifier interface {
 
 // RecordCleaner provides an interface for removing records from a storage.
 type RecordCleaner interface {
-	// Remove method removes records from a storage for a pulse
-	Remove(ctx context.Context, pulse insolar.PulseNumber)
+	// DeleteForPN method removes records from a storage for a pulse
+	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
 }
 
 // RecordMemory is an in-indexStorage struct for record-storage.
@@ -155,8 +155,8 @@ func (m *RecordMemory) ForPulse(
 	return res
 }
 
-// Remove method removes records from a storage for all pulses until pulse (pulse included)
-func (m *RecordMemory) Remove(ctx context.Context, pulse insolar.PulseNumber) {
+// DeleteForPN method removes records from a storage for all pulses until pulse (pulse included)
+func (m *RecordMemory) DeleteForPN(ctx context.Context, pulse insolar.PulseNumber) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 

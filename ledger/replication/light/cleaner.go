@@ -92,7 +92,7 @@ func (c cleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 	c.nodeModifier.Delete(pn)
 	c.dropCleaner.Delete(pn)
 	c.blobCleaner.Delete(ctx, pn)
-	c.recCleaner.Remove(ctx, pn)
+	c.recCleaner.DeleteForPN(ctx, pn)
 
 	c.jetStorage.Delete(ctx, pn)
 	c.indexCleaner.RemoveForPulse(ctx, pn)

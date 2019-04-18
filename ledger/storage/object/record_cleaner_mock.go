@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "RecordCleaner" can be found in github.com/insolar/insolar/ledger/storage/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -99,7 +99,7 @@ func (m *mRecordCleanerMockRemove) Set(f func(p context.Context, p1 insolar.Puls
 }
 
 //Remove implements github.com/insolar/insolar/ledger/storage/object.RecordCleaner interface
-func (m *RecordCleanerMock) Remove(p context.Context, p1 insolar.PulseNumber) {
+func (m *RecordCleanerMock) DeleteForPN(p context.Context, p1 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.RemovePreCounter, 1)
 	defer atomic.AddUint64(&m.RemoveCounter, 1)
 

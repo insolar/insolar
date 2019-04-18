@@ -141,7 +141,7 @@ func TestRecordStorage_Delete(t *testing.T) {
 		}
 		assert.Equal(t, countFirstPulse+countSecondPulse, int32(len(recordStorage.recsStor)))
 
-		recordStorage.Remove(ctx, firstPulse)
+		recordStorage.DeleteForPN(ctx, firstPulse)
 		assert.Equal(t, countSecondPulse, int32(len(recordStorage.recsStor)))
 	})
 }
