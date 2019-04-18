@@ -27,17 +27,28 @@ import (
 
 // =====================================================================================================================
 
+// GetChildren Handler
 type GetChildren struct {
-	//	dep *proc.Dependencies
+	dep *proc.Dependencies
 
 	Message bus.Message
 }
 
 func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
-	// msg := s.Message.Parcel.Message().(*message.GetChildren)
-	return f.Procedure(ctx, &proc.GetChildren{
-		// ... TODO ...
+	jet := &WaitJet{
+		dep:     s.dep,
+		Message: s.Message,
+	}
+	if err := f.Handle(ctx, jet.Present); err != nil {
+		return err
+	}
+
+	p := s.dep.GetChildren(&proc.GetChildren{
+		Jet:     jet.Res.Jet, // TODO: learn how to convert insolar.JetID to insolar.ID or pass a context
+		Message: s.Message,
 	})
+	// TODO: send Result.Reply somewhere...
+	return f.Procedure(ctx, p)
 
 	// TODO: recursive Migrate if ErrCanceled
 

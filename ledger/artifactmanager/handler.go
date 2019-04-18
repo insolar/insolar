@@ -45,7 +45,6 @@ import (
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
-	"github.com/insolar/insolar/ledger/storage/pulse"
 )
 
 // MessageHandler processes messages for local storage interaction.
@@ -117,6 +116,16 @@ func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.JetUpdater = h.jetTreeUpdater
 			p.Dep.Bus = h.Bus
+			p.Dep.RecordAccessor = h.RecordAccessor
+			return p
+		},
+		GetChildren: func(p *proc.GetChildren) *proc.GetChildren {
+			p.Dep.RecentStorageProvider = h.RecentStorageProvider
+			p.Dep.IDLocker = h.IDLocker
+			p.Dep.IndexAccessor = h.IndexAccessor
+			p.Dep.JetCoordinator = h.JetCoordinator
+			p.Dep.JetStorage = h.JetStorage
+			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
 			p.Dep.RecordAccessor = h.RecordAccessor
 			return p
 		},
@@ -427,7 +436,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 }
 
 // TODO: move to proc/get_children.go
-func (h *MessageHandler) handleGetChildren(
+/*func (h *MessageHandler) handleGetChildren(
 	ctx context.Context, parcel insolar.Parcel,
 ) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetChildren)
@@ -544,8 +553,8 @@ func (h *MessageHandler) handleGetChildren(
 		refs = append(refs, childRec.Ref)
 	}
 
-	return &reply.Children{Refs: refs, NextFrom: nil}, nil
-}
+	return &reply.Children{Refs: refs, NextFrom: nil}, nil // TODO: see proc/proc.go ReturnReply procedure
+}*/
 
 func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetRequest)

@@ -547,6 +547,7 @@
     "github.com/gogo/protobuf/vanity",
     "github.com/gogo/protobuf/vanity/command",
     "github.com/gojuno/minimock",
+    "github.com/golang/dep/hack/licenseok",
     "github.com/google/gofuzz",
     "github.com/gorilla/rpc/v2",
     "github.com/gorilla/rpc/v2/json2",
