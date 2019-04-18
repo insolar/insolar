@@ -70,7 +70,7 @@ func setOptions(o *badger.Options) *badger.Options {
 
 // NewDB returns storage.DB with BadgerDB instance initialized by opts.
 // Creates database in provided dir or in current directory if dir parameter is empty.
-func NewDB(conf configuration.Ledger, opts *badger.Options) (DBContext, error) {
+func NewDB(conf configuration.Ledger, opts *badger.Options) (*DB, error) {
 	opts = setOptions(opts)
 	dir, err := filepath.Abs(conf.Storage.DataDirectory)
 	if err != nil {

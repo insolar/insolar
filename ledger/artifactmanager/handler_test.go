@@ -44,17 +44,14 @@ import (
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
-	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils"
 )
 
 type handlerSuite struct {
 	suite.Suite
 
-	cm      *component.Manager
-	ctx     context.Context
-	cleaner func()
-	db      storage.DBContext
+	cm  *component.Manager
+	ctx context.Context
 
 	scheme      insolar.PlatformCryptographyScheme
 	nodeStorage node.Accessor
@@ -108,9 +105,6 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	tmpDB, _, cleaner := storagetest.TmpDB(s.ctx, s.T())
-	s.cleaner = cleaner
-	s.db = tmpDB
 	s.scheme = testutils.NewPlatformCryptographyScheme()
 	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
@@ -132,7 +126,6 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 
 	s.cm.Inject(
 		s.scheme,
-		s.db,
 		s.indexMemoryStor,
 		store.NewMemoryMockDB(),
 		s.jetStorage,
@@ -158,7 +151,6 @@ func (s *handlerSuite) AfterTest(suiteName, testName string) {
 	if err != nil {
 		s.T().Error("ComponentManager stop failed", err)
 	}
-	s.cleaner()
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
@@ -192,7 +184,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
-	h.DBContext = s.db
 	h.RecordAccessor = s.recordAccessor
 
 	locker := storage.NewIDLockerMock(s.T())
@@ -305,7 +296,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
-	h.DBContext = s.db
 
 	h.RecentStorageProvider = provideMock
 	idLock := storage.NewIDLockerMock(s.T())
@@ -374,7 +364,6 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
-	h.DBContext = s.db
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
 	h.RecordModifier = s.recordModifier
@@ -451,7 +440,6 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
-	h.DBContext = s.db
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecordModifier = s.recordModifier
@@ -528,7 +516,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
-	h.DBContext = s.db
 
 	idLock := storage.NewIDLockerMock(s.T())
 	idLock.LockMock.Return()
@@ -578,7 +565,6 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
-	h.DBContext = s.db
 
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
@@ -626,7 +612,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetCode_Redirects() {
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
-	h.DBContext = s.db
 	h.RecordAccessor = s.recordAccessor
 	err := h.Init(s.ctx)
 	require.NoError(s.T(), err)
@@ -693,7 +678,6 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
-	h.DBContext = s.db
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecordModifier = s.recordModifier
@@ -768,7 +752,6 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
-	h.DBContext = s.db
 	h.IndexStorage = s.indexMemoryStor
 	h.IndexStateModifier = s.indexMemoryStor
 	h.RecentStorageProvider = provideMock
@@ -890,7 +873,6 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	h.Bus = mb
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
-	h.DBContext = s.db
 	h.DropModifier = s.dropModifier
 
 	err = h.Init(s.ctx)

@@ -235,7 +235,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.RecordModifier = records
 		handler.RecordAccessor = records
 		handler.Nodes = nodes
-		handler.DBContext = legacyDB
 		handler.HotDataWaiter = waiter
 		handler.JetReleaser = waiter
 		handler.IndexStorage = indexes
@@ -292,7 +291,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		pm.IndexCleaner = indexes
 		pm.NodeSetter = nodes
 		pm.Nodes = nodes
-		pm.DBContext = legacyDB
 		pm.DropModifier = drops
 		pm.DropAccessor = drops
 		pm.DropCleaner = drops

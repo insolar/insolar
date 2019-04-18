@@ -51,7 +51,7 @@ import (
 // TMPLedger
 // DEPRECATED
 type TMPLedger struct {
-	db              storage.DBContext
+	db              *storage.DB
 	ArtifactManager Client
 	PulseManager    insolar.PulseManager   `inject:""`
 	JetCoordinator  insolar.JetCoordinator `inject:""`
@@ -81,7 +81,7 @@ func (l *TMPLedger) GetArtifactManager() Client {
 // NewTestLedger is the util function for creation of Ledger with provided
 // private members (suitable for tests).
 func NewTestLedger(
-	db storage.DBContext,
+	db *storage.DB,
 	am Client,
 	pm *pulsemanager.PulseManager,
 	jc insolar.JetCoordinator,
@@ -97,7 +97,7 @@ func NewTestLedger(
 // TmpLedger creates ledger on top of temporary database.
 // Returns *ledger.Ledger and cleanup function.
 // DEPRECATED
-func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, storage.DBContext, func()) {
+func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *storage.DB, func()) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
@@ -158,7 +158,6 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	handler := artifactmanager.NewMessageHandler(is, is, &conf)
 	handler.JetStorage = js
 	handler.Nodes = ns
-	handler.DBContext = tmpDB
 	handler.IndexStorage = is
 	handler.DropModifier = ds
 	handler.BlobModifier = bs

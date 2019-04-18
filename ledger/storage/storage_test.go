@@ -29,10 +29,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
-	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
@@ -40,10 +38,8 @@ import (
 type storageSuite struct {
 	suite.Suite
 
-	cm      *component.Manager
-	ctx     context.Context
-	cleaner func()
-	db      storage.DBContext
+	cm  *component.Manager
+	ctx context.Context
 
 	indexAccessor object.IndexAccessor
 	indexModifier object.IndexModifier
@@ -69,10 +65,6 @@ func (s *storageSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	tmpDB, _, cleaner := storagetest.TmpDB(s.ctx, s.T())
-	s.db = tmpDB
-	s.cleaner = cleaner
-
 	idxStor := object.NewIndexMemory()
 	s.indexModifier = idxStor
 	s.indexAccessor = idxStor
@@ -85,7 +77,6 @@ func (s *storageSuite) BeforeTest(suiteName, testName string) {
 
 	s.cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
-		s.db,
 		store.NewMemoryMockDB(),
 		idxStor,
 		s.dropModifier,
@@ -108,7 +99,6 @@ func (s *storageSuite) AfterTest(suiteName, testName string) {
 	if err != nil {
 		s.T().Error("ComponentManager stop failed", err)
 	}
-	s.cleaner()
 }
 
 func (s *storageSuite) TestDB_SetObjectIndex_ReturnsNotFoundIfNoIndex() {

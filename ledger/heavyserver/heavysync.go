@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage"
 )
 
 const defaultTimeout = time.Second * 10
@@ -82,7 +81,6 @@ type Sync struct {
 	DropModifier               drop.Modifier                      `inject:""`
 	BlobModifier               blob.Modifier                      `inject:""`
 	IndexModifier              object.IndexModifier               `inject:""`
-	DBContext                  storage.DBContext
 
 	RecordModifier object.RecordModifier
 
@@ -91,9 +89,8 @@ type Sync struct {
 }
 
 // NewSync creates new Sync instance.
-func NewSync(db storage.DBContext, records object.RecordModifier) *Sync {
+func NewSync(records object.RecordModifier) *Sync {
 	return &Sync{
-		DBContext:      db,
 		RecordModifier: records,
 		jetSyncStates:  map[jetprefix]*syncstate{},
 	}

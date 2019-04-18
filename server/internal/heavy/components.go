@@ -36,7 +36,6 @@ import (
 	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
 	"github.com/insolar/insolar/ledger/heavyserver"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
@@ -185,7 +184,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Drops        drop.Modifier
 		Blobs        blob.Modifier
 		Indices      object.IndexModifier
-		LegacyDB     storage.DBContext
 		Coordinator  insolar.JetCoordinator
 		Records      object.RecordAccessor
 		Pulses       pulse.Accessor
@@ -194,11 +192,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	)
 	{
 		conf := cfg.Ledger
-
-		LegacyDB, err = storage.NewDB(conf, nil)
-		if err != nil {
-			panic(errors.Wrap(err, "failed to initialize DB"))
-		}
 
 		db, err := store.NewBadgerDB(conf.Storage.DataDirectoryNewDB)
 		if err != nil {
@@ -228,7 +221,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Indices = object.NewIndexDB(db)
 		Blobs = blob.NewDB(db)
 		Drops = drop.NewDB(db)
-		Sync = heavyserver.NewSync(LegacyDB, records)
+		Sync = heavyserver.NewSync(records)
 		HeavyComp = heavy.Components()
 		Coordinator = cord
 		Records = records
@@ -248,7 +241,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Drops,
 		Blobs,
 		Indices,
-		LegacyDB,
 		metricsHandler,
 		Bus,
 		Requester,

@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
@@ -78,8 +77,7 @@ func createCertificateManager(
 }
 
 type storageComponents struct {
-	storeBadgerDB    *store.BadgerDB
-	storageDBContext storage.DBContext
+	storeBadgerDB *store.BadgerDB
 
 	dropDB   *drop.DB
 	blobDB   *blob.DB
@@ -89,19 +87,13 @@ type storageComponents struct {
 }
 
 func initStorageComponents(conf configuration.Ledger) storageComponents {
-	legacyDB, err := storage.NewDB(conf, nil)
-	if err != nil {
-		panic(errors.Wrap(err, "failed to initialize DB"))
-	}
-
 	db, err := store.NewBadgerDB(conf.Storage.DataDirectoryNewDB)
 	if err != nil {
 		panic(errors.Wrap(err, "failed to initialize DB"))
 	}
 
 	return storageComponents{
-		storeBadgerDB:    db,
-		storageDBContext: legacyDB,
+		storeBadgerDB: db,
 
 		dropDB:   drop.NewDB(db),
 		blobDB:   blob.NewDB(db),

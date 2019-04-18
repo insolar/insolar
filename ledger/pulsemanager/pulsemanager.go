@@ -76,8 +76,6 @@ type PulseManager struct {
 	NodeSetter node.Modifier `inject:""`
 	Nodes      node.Accessor `inject:""`
 
-	DBContext storage.DBContext `inject:""`
-
 	DropModifier drop.Modifier `inject:""`
 	DropAccessor drop.Accessor `inject:""`
 	DropCleaner  drop.Cleaner
