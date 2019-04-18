@@ -21,6 +21,8 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
@@ -79,4 +81,21 @@ func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (ins
 	rep := <-msg.ReplyTo
 	close(msg.ReplyTo)
 	return rep.Reply, rep.Err
+}
+
+func (h *Handler) InnerSubscriber(watermillMsg *message.Message) ([]*message.Message, error) {
+	msg := bus.Message{
+		WatermillMsg: watermillMsg,
+	}
+
+	ctx := watermillMsg.Context()
+	logger := inslogger.FromContext(ctx)
+	go func() {
+		f := thread.NewThread(msg, h.controller)
+		err := f.Run(ctx, h.handles.present(msg))
+		if err != nil {
+			logger.Error("Handling failed", err)
+		}
+	}()
+	return nil, nil
 }
