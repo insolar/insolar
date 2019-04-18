@@ -86,6 +86,10 @@ func (p *GetCode) handle(ctx context.Context) (insolar.Reply, error) {
 		return p.saveCodeFromHeavy(ctx, p.JetID, p.Code, *codeRec.Code, hNode)
 	}
 
+	if err != nil {
+		return nil, err
+	}
+
 	rep := reply.Code{
 		Code:        code.Value,
 		MachineType: codeRec.MachineType,
