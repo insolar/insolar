@@ -253,7 +253,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			dataGatherer,
 			lightCleaner,
 			Bus,
-			conf.LightToHeavySync,
 			pulses,
 		)
 
