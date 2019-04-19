@@ -192,6 +192,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	h.DBContext = s.db
 	h.IndexModifier = s.indexModifier
 	h.IndexAccessor = s.indexAccessor
+	h.IndexSaver = object.NewIndexSaver(mb, s.indexModifier)
 
 	h.RecentStorageProvider = provideMock
 	idLock := storage.NewIDLockerMock(s.T())
@@ -269,6 +270,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecentStorageProvider = provideMock
 	h.RecordModifier = s.recordModifier
+	h.IndexSaver = object.NewIndexSaver(mb, s.indexModifier)
 
 	blobStorage := blob.NewStorageMemory()
 	h.BlobModifier = blobStorage
@@ -532,6 +534,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecordModifier = s.recordModifier
+	h.IndexSaver = object.NewIndexSaver(mb, s.indexModifier)
 
 	idLockMock := storage.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
