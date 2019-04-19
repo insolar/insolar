@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/pkg/errors"
@@ -32,17 +33,15 @@ type CheckOurRole struct {
 	msg  insolar.Message
 	role insolar.DynamicRole
 
-	Dep struct {
-		lr *LogicRunner
-	}
+	lr *LogicRunner
 }
 
 func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := ch.msg.DefaultTarget()
-	isAuthorized, err := ch.Dep.lr.JetCoordinator.IsAuthorized(
+	isAuthorized, err := ch.lr.JetCoordinator.IsAuthorized(
 		// TODO: change ch.Dep.lr.pulse(ctx).PulseNumber -> flow.Pulse(ctx)
-		ctx, ch.role, *target.Record(), ch.Dep.lr.pulse(ctx).PulseNumber, ch.Dep.lr.JetCoordinator.Me(),
+		ctx, ch.role, *target.Record(), ch.lr.pulse(ctx).PulseNumber, ch.lr.JetCoordinator.Me(),
 	)
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")
@@ -152,6 +151,37 @@ func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
 		}
 	}
 	c.es.Unlock()
+
+	return nil
+}
+
+// FinishPendingIfNeeded checks whether last execution was a pending one.
+// If this is true as a side effect the function sends a PendingFinished
+// message to the current executor
+type FinishPendingIfNeeded struct {
+	es *ExecutionState
+	lr *LogicRunner
+}
+
+func (c *FinishPendingIfNeeded) Proceed(ctx context.Context) error {
+	c.es.Lock()
+	defer c.es.Unlock()
+
+	if c.es.pending != message.InPending {
+		return nil
+	}
+
+	c.es.pending = message.NotPending
+	c.es.PendingConfirmed = false
+
+	c.es.objectbody = nil
+	go func() {
+		msg := message.PendingFinished{Reference: c.es.Ref}
+		_, err := c.lr.MessageBus.Send(ctx, &msg, nil)
+		if err != nil {
+			inslogger.FromContext(ctx).Error("Unable to send PendingFinished message:", err)
+		}
+	}()
 
 	return nil
 }
