@@ -18,14 +18,14 @@ package thread
 
 import (
 	"context"
-	"runtime"
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/bus"
 )
 
 func TestNewThread(t *testing.T) {
@@ -118,6 +118,7 @@ func TestThread_Procedure_NilProcedureError(t *testing.T) {
 func TestThread_Procedure_CancelledWhenProcedureWorks(t *testing.T) {
 	t.Parallel()
 	cancel := make(chan struct{})
+	finish := make(chan struct{})
 	thread := Thread{
 		cancel:     cancel,
 		procedures: map[flow.Procedure]chan error{},
@@ -125,13 +126,14 @@ func TestThread_Procedure_CancelledWhenProcedureWorks(t *testing.T) {
 	pm := flow.NewProcedureMock(t)
 	pm.ProceedFunc = func(ctx context.Context) error {
 		close(cancel)
-		runtime.Gosched()
-		<-cancel
+		<-finish
 		return nil
 	}
 	err := thread.Procedure(context.Background(), pm)
 	require.Error(t, err)
 	require.Equal(t, flow.ErrCancelled, err)
+
+	close(finish)
 }
 
 func TestThread_Procedure_ProceedReturnsError(t *testing.T) {
