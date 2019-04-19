@@ -269,7 +269,7 @@ func (lr *LogicRunner) RegisterHandlers() {
 	lr.MessageBus.MustRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
 	lr.MessageBus.MustRegister(insolar.TypePendingFinished, lr.FlowHandler.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeStillExecuting, lr.HandleStillExecutingMessage)
+	lr.MessageBus.MustRegister(insolar.TypeStillExecuting, lr.FlowHandler.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeAbandonedRequestsNotification, lr.HandleAbandonedRequestsNotificationMessage)
 }
 
@@ -1028,46 +1028,6 @@ func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
 		}
 		lr.stopLock.Unlock()
 	}
-}
-
-func (lr *LogicRunner) HandleStillExecutingMessage(
-	ctx context.Context, parcel insolar.Parcel,
-) (
-	insolar.Reply, error,
-) {
-	ctx = loggerWithTargetID(ctx, parcel)
-	inslogger.FromContext(ctx).Debug("LogicRunner.HandleStillExecutingMessage starts ...")
-
-	msg := parcel.Message().(*message.StillExecuting)
-	ref := msg.DefaultTarget()
-	os := lr.UpsertObjectState(*ref)
-
-	inslogger.FromContext(ctx).Debug("Got information that ", ref, " is still executing")
-
-	os.Lock()
-	if os.ExecutionState == nil {
-		// we are first, strange, soon ExecuteResults message should come
-		os.ExecutionState = &ExecutionState{
-			Ref:              *ref,
-			Queue:            make([]ExecutionQueueElement, 0),
-			pending:          message.InPending,
-			PendingConfirmed: true,
-		}
-	} else {
-		es := os.ExecutionState
-		es.Lock()
-		if es.pending == message.NotPending {
-			inslogger.FromContext(ctx).Error(
-				"got StillExecuting message, but our state says that it's not in pending",
-			)
-		} else {
-			es.PendingConfirmed = true
-		}
-		es.Unlock()
-	}
-	os.Unlock()
-
-	return &reply.OK{}, nil
 }
 
 func (lr *LogicRunner) HandleAbandonedRequestsNotificationMessage(

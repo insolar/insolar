@@ -484,9 +484,11 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 	)
 
 	parcel.DefaultTargetMock.Return(&insolar.Reference{})
+	p := insolar.Pulse{PulseNumber: 100}
+	parcel.PulseFunc = func() insolar.PulseNumber { return p.PulseNumber }
 
 	// check that creation of new execution state is handled (on StillExecuting Message)
-	re, err := suite.lr.HandleStillExecutingMessage(suite.ctx, parcel)
+	re, err := suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Require().Equal(&reply.OK{}, re)
 
@@ -498,7 +500,7 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 	st.ExecutionState.pending = message.NotPending
 	st.ExecutionState.PendingConfirmed = false
 
-	re, err = suite.lr.HandleStillExecutingMessage(suite.ctx, parcel)
+	re, err = suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Require().Equal(&reply.OK{}, re)
 
@@ -516,7 +518,7 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 			PendingConfirmed: false,
 		},
 	}
-	re, err = suite.lr.HandleStillExecutingMessage(suite.ctx, parcel)
+	re, err = suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Equal(message.InPending, suite.lr.state[objectRef].ExecutionState.pending)
 	suite.Equal(true, suite.lr.state[objectRef].ExecutionState.PendingConfirmed)
