@@ -96,9 +96,10 @@ func (s *LogicRunnerFuncSuite) SetupSuite() {
 	}
 }
 
-func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr insolar.LogicRunner) {
-	mb.ReRegister(insolar.TypeCallMethod, lr.HandleCalls)
-	mb.ReRegister(insolar.TypeCallConstructor, lr.HandleCalls)
+func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr *LogicRunner) {
+	mb.ReRegister(insolar.TypeCallMethod, lr.FlowHandler.WrapBusHandle)
+	mb.ReRegister(insolar.TypeCallConstructor, lr.FlowHandler.WrapBusHandle)
+
 	mb.ReRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	mb.ReRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
 	mb.ReRegister(insolar.TypeExecutorResults, lr.HandleExecutorResultsMessage)

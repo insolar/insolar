@@ -29,6 +29,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/insolar/insolar/testutils"
 )
@@ -116,7 +117,7 @@ func (s *PreprocessorSuite) TestBasicGeneration() {
 	err = goplugintestutils.WriteFile(tmpDir, "main.go", randomTestCode)
 	s.NoError(err)
 
-	parsed, err := ParseFile(filepath.Join(tmpDir, "main.go"))
+	parsed, err := ParseFile(filepath.Join(tmpDir, "main.go"), insolar.MachineTypeGoPlugin)
 	s.NoError(err)
 	s.NotNil(parsed)
 
@@ -125,7 +126,7 @@ func (s *PreprocessorSuite) TestBasicGeneration() {
 		a := assert.New(t)
 
 		buf := bytes.Buffer{}
-		err := parsed.WriteWrapper(&buf)
+		err := parsed.WriteWrapper(&buf, parsed.ContractName())
 		a.NoError(err)
 
 		code, err := ioutil.ReadAll(&buf)
@@ -171,7 +172,7 @@ func NewFromString(s string) (*One, error) {
 	err = goplugintestutils.WriteFile(tmpDir, "code1", code)
 	s.NoError(err)
 
-	info, err := ParseFile(filepath.Join(tmpDir, "code1"))
+	info, err := ParseFile(filepath.Join(tmpDir, "code1"), insolar.MachineTypeGoPlugin)
 	s.NoError(err)
 
 	s.Equal(1, len(info.constructors))
@@ -194,7 +195,7 @@ func New() {
 	err = goplugintestutils.WriteFile(tmpDir, "code1", code)
 	s.NoError(err)
 
-	_, err = ParseFile(filepath.Join(tmpDir, "code1"))
+	_, err = ParseFile(filepath.Join(tmpDir, "code1"), insolar.MachineTypeGoPlugin)
 	s.Error(err)
 
 	code = `
@@ -212,7 +213,7 @@ func New() *One {
 	err = goplugintestutils.WriteFile(tmpDir, "code1", code)
 	s.NoError(err)
 
-	_, err = ParseFile(filepath.Join(tmpDir, "code1"))
+	_, err = ParseFile(filepath.Join(tmpDir, "code1"), insolar.MachineTypeGoPlugin)
 	s.Error(err)
 }
 
@@ -238,7 +239,7 @@ func (s *PreprocessorSuite) TestCompileContractProxy() {
 	err = goplugintestutils.WriteFile(filepath.Join(tmpDir, "/contracts/secondary/"), "main.go", randomTestCode)
 	s.NoError(err)
 
-	parsed, err := ParseFile(filepath.Join(tmpDir, "/contracts/secondary/main.go"))
+	parsed, err := ParseFile(filepath.Join(tmpDir, "/contracts/secondary/main.go"), insolar.MachineTypeGoPlugin)
 	s.NoError(err)
 
 	err = parsed.WriteProxy(testutils.RandomRef().String(), proxyFh)
@@ -282,7 +283,7 @@ type A struct{
 `)
 	s.NoError(err)
 
-	_, err = ParseFile(tmpDir + testContract)
+	_, err = ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
 	s.EqualError(err, "Only one smart contract must exist")
 }
 
@@ -311,7 +312,7 @@ func ( a *A ) Get(
 
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir + testContract)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -354,11 +355,11 @@ func (a *A) Get(
 `)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir + testContract)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
 	s.NoError(err)
 
 	var bufWrapper bytes.Buffer
-	err = parsed.WriteWrapper(&bufWrapper)
+	err = parsed.WriteWrapper(&bufWrapper, parsed.ContractName())
 	s.NoError(err)
 	s.Contains(bufWrapper.String(), "var args0 int")
 	s.Contains(bufWrapper.String(), "args[0] = &args0")
@@ -389,7 +390,7 @@ type A struct{
 `)
 	s.NoError(err)
 
-	_, err = ParseFile(tmpDir + testContract)
+	_, err = ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
 	s.EqualError(err, "Only one smart contract must exist")
 }
 
@@ -413,7 +414,7 @@ type B struct{
 `)
 	s.NoError(err)
 
-	_, err = ParseFile(tmpDir + testContract)
+	_, err = ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
 	s.EqualError(err, ": more than one contract in a file")
 }
 
@@ -445,7 +446,7 @@ func ( A ) GetPointer(i *pointerPath.SomeType) error {
 `)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir + testContract)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -459,7 +460,7 @@ func ( A ) GetPointer(i *pointerPath.SomeType) error {
 	s.NotEqual(len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = parsed.WriteWrapper(&bufWrapper)
+	err = parsed.WriteWrapper(&bufWrapper, parsed.ContractName())
 	s.NoError(err)
 	s.Contains(bufWrapper.String(), `"some/test/import/path"`)
 	s.Contains(bufWrapper.String(), `"some/test/import/pointerPath"`)
@@ -488,7 +489,7 @@ func ( A ) Get(i someAlias.SomeType) error {
 `)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir + testContract)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -501,7 +502,7 @@ func ( A ) Get(i someAlias.SomeType) error {
 	s.NotEqual(len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = parsed.WriteWrapper(&bufWrapper)
+	err = parsed.WriteWrapper(&bufWrapper, parsed.ContractName())
 	s.NoError(err)
 	s.Contains(bufWrapper.String(), `someAlias "some/test/import/path"`)
 	s.NotContains(bufProxy.String(), `"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"`)
@@ -531,7 +532,7 @@ func ( A ) Get() error {
 `)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir + testContract)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -543,7 +544,7 @@ func ( A ) Get() error {
 	s.NotEqual(len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = parsed.WriteWrapper(&bufWrapper)
+	err = parsed.WriteWrapper(&bufWrapper, parsed.ContractName())
 	s.NoError(err)
 	s.NotContains(bufWrapper.String(), `"some/test/import/path"`)
 }
@@ -572,7 +573,7 @@ func ( A ) Get() (path.SomeValue, error) {
 `)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir + testContract)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -584,7 +585,7 @@ func ( A ) Get() (path.SomeValue, error) {
 	s.NotEqual(len(code), 0)
 
 	var bufWrapper bytes.Buffer
-	err = parsed.WriteWrapper(&bufWrapper)
+	err = parsed.WriteWrapper(&bufWrapper, parsed.ContractName())
 	s.NoError(err)
 	s.NotContains(bufWrapper.String(), `"some/test/import/path"`)
 }
@@ -604,7 +605,7 @@ type A struct{
 `)
 	s.NoError(err)
 
-	parsed, err := ParseFile(tmpDir + testContract)
+	parsed, err := ParseFile(tmpDir+testContract, insolar.MachineTypeGoPlugin)
 	s.NoError(err)
 
 	var bufProxy bytes.Buffer
@@ -627,7 +628,7 @@ func (s *PreprocessorSuite) TestProxyGeneration() {
 			t.Parallel()
 			a, r := assert.New(t), require.New(t)
 
-			parsed, err := ParseFile(path.Join(contractDir, contract, contract+".go"))
+			parsed, err := ParseFile(path.Join(contractDir, contract, contract+".go"), insolar.MachineTypeGoPlugin)
 			a.NotNil(parsed, "have parsed object")
 			a.NoError(err)
 

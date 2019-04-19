@@ -28,29 +28,27 @@ import (
 	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/builtin/helloworld"
 )
 
-// Contract is a interface for builtin contract
-type Contract interface {
-}
+type ContractMethods map[string]interface{}
 
 // BuiltIn is a contract runner engine
 type BuiltIn struct {
-	AM       artifacts.Client
-	EB       insolar.MessageBus
-	Registry map[string]Contract
+	AM          artifacts.Client
+	EB          insolar.MessageBus
+	Registry    map[string]ContractMethods
+	RefRegistry map[insolar.Reference]string
 }
 
 // NewBuiltIn is an constructor
 func NewBuiltIn(eb insolar.MessageBus, am artifacts.Client) *BuiltIn {
 	bi := BuiltIn{
-		AM:       am,
-		EB:       eb,
-		Registry: make(map[string]Contract),
+		AM: am,
+		EB: eb,
 	}
 
-	bi.Registry["helloworld"] = helloworld.NewHelloWorld()
+	bi.Registry = InitializeContractMethods()
+	bi.RefRegistry = InitializeContractRefs()
 
 	return &bi
 }

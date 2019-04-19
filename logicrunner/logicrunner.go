@@ -27,6 +27,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill"
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/flow/handler"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/ledger/storage/pulse"
@@ -125,6 +131,14 @@ func (st *ObjectState) WrapError(err error, message string) error {
 	}
 }
 
+func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
+	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
+	wmMsg.SetContext(ctx)
+	wmMsg.Metadata.Set(MessageTypeField, msgType)
+
+	return wmMsg
+}
+
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	MessageBus                 insolar.MessageBus                 `inject:""`
@@ -143,11 +157,15 @@ type LogicRunner struct {
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
 	stateMutex sync.RWMutex
 
+	FlowHandler *handler.Handler
+
 	sock net.Listener
 
 	stopLock   sync.Mutex
 	isStopping bool
 	stopChan   chan struct{}
+
+	router *watermillMsg.Router
 }
 
 // NewLogicRunner is constructor for LogicRunner
@@ -159,7 +177,59 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		Cfg:   cfg,
 		state: make(map[Ref]*ObjectState),
 	}
+
+	err := initHandlers(&res)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error while init handlers for logic runner:")
+	}
+
 	return &res, nil
+}
+
+func initHandlers(lr *LogicRunner) error {
+	wmLogger := watermill.NewStdLogger(false, false)
+	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
+
+	dep := &Dependencies{
+		Publisher: pubSub,
+		lr:        lr,
+	}
+
+	lr.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
+		return (&Init{
+			dep:     dep,
+			Message: msg,
+		}).Present
+	})
+
+	inHandler := handler.NewHandler(func(msg bus.Message) flow.Handle {
+		innerMsg := msg.WatermillMsg
+		return (&InnerInit{
+			dep:     dep,
+			Message: innerMsg,
+		}).Present
+	})
+
+	router, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, wmLogger)
+	if err != nil {
+		return errors.Wrap(err, "Error while creating new watermill router")
+	}
+
+	router.AddNoPublisherHandler(
+		"InnerMsgHandler",
+		InnerMsgTopic,
+		pubSub,
+		inHandler.InnerSubscriber,
+	)
+	go func() {
+		if err := router.Run(); err != nil {
+			ctx := context.Background()
+			inslogger.FromContext(ctx).Error("Error while running router", err)
+		}
+	}()
+	lr.router = router
+
+	return nil
 }
 
 // Start starts logic runner component
@@ -193,8 +263,8 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) RegisterHandlers() {
-	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.HandleCalls)
-	lr.MessageBus.MustRegister(insolar.TypeCallConstructor, lr.HandleCalls)
+	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.FlowHandler.WrapBusHandle)
+	lr.MessageBus.MustRegister(insolar.TypeCallConstructor, lr.FlowHandler.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeExecutorResults, lr.HandleExecutorResultsMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
@@ -221,6 +291,8 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 			return err
 		}
 	}
+
+	lr.router.Close()
 
 	return reterr
 }
@@ -268,102 +340,13 @@ func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel insolar.Parce
 
 	res := obj
 	res.SetRecord(*id)
+
 	return &res, nil
 }
 
 func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context {
 	context, _ := inslogger.WithField(ctx, "targetid", msg.DefaultTarget().String())
 	return context
-}
-
-func (lr *LogicRunner) HandleCalls(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	ctx = loggerWithTargetID(ctx, parcel)
-	inslogger.FromContext(ctx).Debug("LogicRunner.Execute starts ...")
-
-	msg, ok := parcel.Message().(message.IBaseLogicMessage)
-	if !ok {
-		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
-	}
-
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.HandleCalls")
-	span.AddAttributes(
-		trace.StringAttribute("msg.Type", msg.Type().String()),
-	)
-	defer span.End()
-
-	ref := msg.GetReference()
-	os := lr.UpsertObjectState(ref)
-
-	os.Lock()
-	if os.ExecutionState == nil {
-		os.ExecutionState = &ExecutionState{
-			Ref:   ref,
-			Queue: make([]ExecutionQueueElement, 0),
-		}
-	}
-	es := os.ExecutionState
-	os.Unlock()
-
-	// ExecutionState should be locked between CheckOurRole and
-	// appending ExecutionQueueElement to the queue to prevent a race condition.
-	// Otherwise it's possible that OnPulse will clean up the queue and set
-	// ExecutionState.Pending to NotPending. Execute will add an element to the
-	// queue afterwards. In this case cross-pulse execution will break.
-	es.Lock()
-
-	err := lr.CheckOurRole(ctx, msg, insolar.DynamicRoleVirtualExecutor)
-	if err != nil {
-		es.Unlock()
-		return nil, errors.Wrap(err, "[ Execute ] can't play role")
-	}
-
-	if lr.CheckExecutionLoop(ctx, es, parcel) {
-		es.Unlock()
-		return nil, os.WrapError(nil, "loop detected")
-	}
-	es.Unlock()
-
-	request, err := lr.RegisterRequest(ctx, parcel)
-	if err != nil {
-		return nil, os.WrapError(err, "[ Execute ] can't create request")
-	}
-
-	es.Lock()
-	pulse := lr.pulse(ctx)
-	if pulse.PulseNumber != parcel.Pulse() {
-		meCurrent, _ := lr.JetCoordinator.IsAuthorized(
-			ctx, insolar.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
-		)
-		if !meCurrent {
-			es.Unlock()
-			return &reply.RegisterRequest{
-				Request: *request,
-			}, nil
-		}
-	}
-
-	qElement := ExecutionQueueElement{
-		ctx:     ctx,
-		parcel:  parcel,
-		request: request,
-	}
-
-	es.Queue = append(es.Queue, qElement)
-	es.Unlock()
-
-	err = lr.ClarifyPendingState(ctx, es, parcel)
-	if err != nil {
-		return nil, err
-	}
-
-	err = lr.StartQueueProcessorIfNeeded(ctx, es)
-	if err != nil {
-		return nil, err
-	}
-
-	return &reply.RegisterRequest{
-		Request: *request,
-	}, nil
 }
 
 func (lr *LogicRunner) CheckExecutionLoop(
@@ -411,9 +394,9 @@ func (lr *LogicRunner) HandlePendingFinishedMessage(
 	if os.ExecutionState == nil {
 		// we are first, strange, soon ExecuteResults message should come
 		os.ExecutionState = &ExecutionState{
-			Ref:       *ref,
-			Queue:     make([]ExecutionQueueElement, 0),
-			pending:   message.NotPending,
+			Ref:     *ref,
+			Queue:   make([]ExecutionQueueElement, 0),
+			pending: message.NotPending,
 		}
 		os.Unlock()
 		return &reply.OK{}, nil
@@ -617,6 +600,23 @@ func (lr *LogicRunner) executeOrValidate(
 	}()
 }
 
+func (lr *LogicRunner) getExecStateFromRef(ctx context.Context, rawRef []byte) *ExecutionState {
+	ref := Ref{}.FromSlice(rawRef)
+
+	// TODO: we should stop processing here if 'ref' doesn't exist. Made UpsertObjectState return error if so?
+	os := lr.UpsertObjectState(ref)
+
+	os.Lock()
+	if os.ExecutionState == nil {
+		inslogger.FromContext(ctx).Warn("[ ProcessExecutionQueue ] got not existing reference. It's strange")
+		return nil
+	}
+	es := os.ExecutionState
+	os.Unlock()
+
+	return es
+}
+
 // never call this under es.Lock(), this leads to deadlock
 func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *ExecutionState) {
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getLedgerPendingRequest")
@@ -716,8 +716,8 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 	state.Lock()
 	if state.ExecutionState == nil {
 		state.ExecutionState = &ExecutionState{
-			Ref:       ref,
-			Queue:     make([]ExecutionQueueElement, 0),
+			Ref:   ref,
+			Queue: make([]ExecutionQueueElement, 0),
 		}
 	}
 	es := state.ExecutionState
@@ -948,6 +948,7 @@ func (lr *LogicRunner) executeConstructorCall(
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 	lr.stateMutex.Lock()
+	lr.FlowHandler.ChangePulse(ctx, pulse)
 
 	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
 	defer span.End()

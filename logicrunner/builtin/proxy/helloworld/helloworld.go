@@ -14,57 +14,52 @@
 // limitations under the License.
 //
 
-package {{ .PackageName }}
+package helloworld
 
 import (
-	{{- range $import, $i := .Imports }}
-		{{$import}}
-	{{- end }}
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
-
-{{ range $typeStruct := .Types }}
-	{{- $typeStruct }}
-{{ end }}
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("{{ .ClassReference }}")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("111A7dKMBxqsyvN8sWZqJt6RzxgyfS9Z6ozpGpBqJMM.11111111111111111111111111111111")
 
-
-// {{ .ContractType }} holds proxy type
-type {{ .ContractType }} struct {
+// HelloWorld holds proxy type
+type HelloWorld struct {
 	Reference insolar.Reference
 	Prototype insolar.Reference
-	Code insolar.Reference
+	Code      insolar.Reference
 }
 
 // ContractConstructorHolder holds logic with object construction
 type ContractConstructorHolder struct {
 	constructorName string
-	argsSerialized []byte
+	argsSerialized  []byte
 }
 
 // AsChild saves object as child
-func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*{{ .ContractType }}, error) {
+func (r *ContractConstructorHolder) AsChild(objRef insolar.Reference) (*HelloWorld, error) {
 	ref, err := proxyctx.Current.SaveAsChild(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
-	return &{{ .ContractType }}{Reference: ref}, nil
+	return &HelloWorld{Reference: ref}, nil
 }
 
 // AsDelegate saves object as delegate
-func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*{{ .ContractType }}, error) {
+func (r *ContractConstructorHolder) AsDelegate(objRef insolar.Reference) (*HelloWorld, error) {
 	ref, err := proxyctx.Current.SaveAsDelegate(objRef, *PrototypeReference, r.constructorName, r.argsSerialized)
 	if err != nil {
 		return nil, err
 	}
-	return &{{ .ContractType }}{Reference: ref}, nil
+	return &HelloWorld{Reference: ref}, nil
 }
 
 // GetObject returns proxy object
-func GetObject(ref insolar.Reference) (r *{{ .ContractType }}) {
-	return &{{ .ContractType }}{Reference: ref}
+func GetObject(ref insolar.Reference) (r *HelloWorld) {
+	return &HelloWorld{Reference: ref}
 }
 
 // GetPrototype returns reference to the prototype
@@ -73,7 +68,7 @@ func GetPrototype() insolar.Reference {
 }
 
 // GetImplementationFrom returns proxy to delegate of given type
-func GetImplementationFrom(object insolar.Reference) (*{{ .ContractType }}, error) {
+func GetImplementationFrom(object insolar.Reference) (*HelloWorld, error) {
 	ref, err := proxyctx.Current.GetDelegate(object, *PrototypeReference)
 	if err != nil {
 		return nil, err
@@ -81,10 +76,9 @@ func GetImplementationFrom(object insolar.Reference) (*{{ .ContractType }}, erro
 	return GetObject(ref), nil
 }
 
-{{ range $func := .ConstructorsProxies }}
-// {{ $func.Name }} is constructor
-func {{ $func.Name }}( {{ $func.Arguments }} ) *ContractConstructorHolder {
-	{{ $func.InitArgs }}
+// New is constructor
+func New() *ContractConstructorHolder {
+	var args [0]interface{}
 
 	var argsSerialized []byte
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
@@ -92,17 +86,16 @@ func {{ $func.Name }}( {{ $func.Arguments }} ) *ContractConstructorHolder {
 		panic(err)
 	}
 
-	return &ContractConstructorHolder{constructorName: "{{ $func.Name }}", argsSerialized: argsSerialized}
+	return &ContractConstructorHolder{constructorName: "New", argsSerialized: argsSerialized}
 }
-{{ end }}
 
 // GetReference returns reference of the object
-func (r *{{ $.ContractType }}) GetReference() insolar.Reference {
+func (r *HelloWorld) GetReference() insolar.Reference {
 	return r.Reference
 }
 
 // GetPrototype returns reference to the code
-func (r *{{ $.ContractType }}) GetPrototype() (insolar.Reference, error) {
+func (r *HelloWorld) GetPrototype() (insolar.Reference, error) {
 	if r.Prototype.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 insolar.Reference
@@ -132,7 +125,7 @@ func (r *{{ $.ContractType }}) GetPrototype() (insolar.Reference, error) {
 }
 
 // GetCode returns reference to the code
-func (r *{{ $.ContractType }}) GetCode() (insolar.Reference, error) {
+func (r *HelloWorld) GetCode() (insolar.Reference, error) {
 	if r.Code.IsEmpty() {
 		ret := [2]interface{}{}
 		var ret0 insolar.Reference
@@ -160,38 +153,45 @@ func (r *{{ $.ContractType }}) GetCode() (insolar.Reference, error) {
 	return r.Code, nil
 }
 
-{{ range $method := .MethodsProxies }}
-// {{ $method.Name }} is proxy generated method
-func (r *{{ $.ContractType }}) {{ $method.Name }}{{if $method.Immutable}}AsMutable{{end}}( {{ $method.Arguments }} ) ( {{ $method.ResultsTypes }} ) {
-	{{ $method.InitArgs }}
+// Greet is proxy generated method
+func (r *HelloWorld) Greet(name string) (interface{}, error) {
+	var args [1]interface{}
+	args[0] = name
+
 	var argsSerialized []byte
 
-	{{ $method.ResultZeroList }}
+	ret := [2]interface{}{}
+	var ret0 interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		return {{ $method.ResultsWithErr }}
+		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "Greet", argsSerialized, *PrototypeReference)
 	if err != nil {
-		return {{ $method.ResultsWithErr }}
+		return ret0, err
 	}
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		return {{ $method.ResultsWithErr }}
+		return ret0, err
 	}
 
-	if {{ $method.ErrorVar }} != nil {
-		return {{ $method.Results }}
+	if ret1 != nil {
+		return ret0, ret1
 	}
-	return {{ $method.ResultsNilError }}
+	return ret0, nil
 }
 
-// {{ $method.Name }}NoWait is proxy generated method
-func (r *{{ $.ContractType }}) {{ $method.Name }}NoWait( {{ $method.Arguments }} ) error {
-	{{ $method.InitArgs }}
+// GreetNoWait is proxy generated method
+func (r *HelloWorld) GreetNoWait(name string) error {
+	var args [1]interface{}
+	args[0] = name
+
 	var argsSerialized []byte
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
@@ -199,7 +199,7 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}NoWait( {{ $method.Arguments }}
 		return err
 	}
 
-	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "Greet", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return err
 	}
@@ -207,31 +207,36 @@ func (r *{{ $.ContractType }}) {{ $method.Name }}NoWait( {{ $method.Arguments }}
 	return nil
 }
 
-// {{ $method.Name }}AsImmutable is proxy generated method
-func (r *{{ $.ContractType }}) {{ $method.Name }}{{if not $method.Immutable}}AsImmutable{{end}}( {{ $method.Arguments }} ) ( {{ $method.ResultsTypes }} ) {
-	{{ $method.InitArgs }}
+// GreetAsImmutable is proxy generated method
+func (r *HelloWorld) GreetAsImmutable(name string) (interface{}, error) {
+	var args [1]interface{}
+	args[0] = name
+
 	var argsSerialized []byte
 
-	{{ $method.ResultZeroList }}
+	ret := [2]interface{}{}
+	var ret0 interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
 
 	err := proxyctx.Current.Serialize(args, &argsSerialized)
 	if err != nil {
-		return {{ $method.ResultsWithErr }}
+		return ret0, err
 	}
 
-	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "{{ $method.Name }}", argsSerialized, *PrototypeReference)
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "Greet", argsSerialized, *PrototypeReference)
 	if err != nil {
-		return {{ $method.ResultsWithErr }}
+		return ret0, err
 	}
 
 	err = proxyctx.Current.Deserialize(res, &ret)
 	if err != nil {
-		return {{ $method.ResultsWithErr }}
+		return ret0, err
 	}
 
-	if {{ $method.ErrorVar }} != nil {
-		return {{ $method.Results }}
+	if ret1 != nil {
+		return ret0, ret1
 	}
-	return {{ $method.ResultsNilError }}
+	return ret0, nil
 }
-{{ end }}
