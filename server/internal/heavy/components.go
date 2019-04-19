@@ -32,7 +32,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/ledger/heavy"
+	"github.com/insolar/insolar/ledger/heavy/handler"
 	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
 	"github.com/insolar/insolar/ledger/heavyserver"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
@@ -179,7 +179,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	}
 
 	var (
-		HeavyComp    []interface{}
 		Sync         insolar.HeavySync
 		Drops        drop.Modifier
 		Blobs        blob.Modifier
@@ -189,6 +188,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Pulses       pulse.Accessor
 		Jets         jet.Storage
 		PulseManager insolar.PulseManager
+		Handler      *handler.Handler
 	)
 	{
 		conf := cfg.Ledger
@@ -222,12 +222,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Blobs = blob.NewDB(db)
 		Drops = drop.NewDB(db)
 		Sync = heavyserver.NewSync(records)
-		HeavyComp = heavy.Components()
 		Coordinator = cord
 		Records = records
 		Pulses = pulses
 		Jets = jets
 		PulseManager = pm
+		Handler = handler.New()
 	}
 
 	c.cmp.Inject(
@@ -236,7 +236,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Pulses,
 		Records,
 		Coordinator,
-		HeavyComp[0],
+		Handler,
 		Sync,
 		Drops,
 		Blobs,
