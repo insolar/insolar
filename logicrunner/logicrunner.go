@@ -30,7 +30,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
-	"github.com/ThreeDotsLabs/watermill/message/router/plugin"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/handler"
@@ -165,6 +164,8 @@ type LogicRunner struct {
 	stopLock   sync.Mutex
 	isStopping bool
 	stopChan   chan struct{}
+
+	router *watermillMsg.Router
 }
 
 // NewLogicRunner is constructor for LogicRunner
@@ -213,8 +214,6 @@ func initHandlers(lr *LogicRunner) error {
 	if err != nil {
 		return errors.Wrap(err, "Error while creating new watermill router")
 	}
-	// this plugin will gracefully shutdown router, when SIGTERM was sent
-	router.AddPlugin(plugin.SignalsHandler)
 
 	router.AddNoPublisherHandler(
 		"InnerMsgHandler",
@@ -228,6 +227,8 @@ func initHandlers(lr *LogicRunner) error {
 			inslogger.FromContext(ctx).Error("Error while running router", err)
 		}
 	}()
+	lr.router = router
+
 	return nil
 }
 
@@ -290,6 +291,8 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 			return err
 		}
 	}
+
+	lr.router.Close()
 
 	return reterr
 }
