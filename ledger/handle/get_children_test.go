@@ -5,14 +5,15 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/stretchr/testify/require"
+	"github.com/insolar/insolar/insolar/delegationtoken"
 
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/testutils"
 
-	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow/bus"
@@ -41,10 +42,12 @@ func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
 	return genRefWithID(genRandomID(pulse))
 }
 
-func createProc(t *testing.T, ctx context.Context) *proc.GetChildren {
+// redirects to heavy when no index
+func TestGetChildren_RedirectsToHaveWhenNoIndex(t *testing.T) {
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 	msg := message.GetChildren{
-		Parent: *genRandomRef(0),
+		Parent:    *genRandomRef(0),
+		FromChild: genRandomID(0),
 	}
 	parcel := &message.Parcel{
 		Msg:         &msg,
@@ -56,6 +59,8 @@ func createProc(t *testing.T, ctx context.Context) *proc.GetChildren {
 		Message: bus.Message{Parcel: parcel /* TODO replyTo */},
 	}
 
+	ctx := context.Background()
+
 	recentIndexStorage := recentstorage.NewRecentIndexStorageMock(t)
 	recentIndexStorage.AddObjectMock.ExpectOnce(ctx, *msg.Parent.Record())
 
@@ -66,43 +71,32 @@ func createProc(t *testing.T, ctx context.Context) *proc.GetChildren {
 	idLocker := storage.NewIDLockerMock(t)
 	idLocker.LockMock.ExpectOnce(msg.Parent.Record())
 	idLocker.UnlockMock.ExpectOnce(msg.Parent.Record())
-
 	p.Dep.IDLocker = idLocker
-	p.Dep.IndexAccessor = object.NewIndexAccessorMock(t)
-	p.Dep.JetCoordinator = testutils.NewJetCoordinatorMock(t)
+
+	indexAccessor := object.NewIndexAccessorMock(t)
+	indexAccessor.ForIDMock.ExpectOnce(ctx, *msg.Parent.Record()).Return(object.Lifeline{}, nil)
+	p.Dep.IndexAccessor = indexAccessor
+
+	jetCoordinator := testutils.NewJetCoordinatorMock(t)
+	jetCoordinator.IsBeyondLimitMock.ExpectOnce(ctx, parcel.Pulse(), msg.FromChild.Pulse()).Return(true, nil)
+	jetCoordinator.HeavyMock.ExpectOnce(ctx, parcel.Pulse()).Return(genRandomRef(0), nil)
+	p.Dep.JetCoordinator = jetCoordinator
+
+	token := &delegationtoken.GetChildrenRedirectToken{}
+	delegationTokenFactory := testutils.NewDelegationTokenFactoryMock(t)
+	delegationTokenFactory.IssueGetChildrenRedirectFunc = func(sender *insolar.Reference, redirectedMessage insolar.Message) (insolar.DelegationToken, error) {
+		return token, nil
+	}
+	p.Dep.DelegationTokenFactory = delegationTokenFactory
+
 	p.Dep.JetStorage = jet.NewStorageMock(t)
-	p.Dep.DelegationTokenFactory = testutils.NewDelegationTokenFactoryMock(t)
 	p.Dep.RecordAccessor = object.NewRecordAccessorMock(t)
 	p.Dep.TreeUpdater = jet.NewTreeUpdaterMock(t)
 	p.Dep.IndexSaver = object.NewIndexSaverMock(t)
-	return &p
-}
-
-// redirects to heavy when no index
-func TestGetChildren_RedirectsToHaveWhenNoIndex(t *testing.T) {
-	ctx := context.Background()
-	p := createProc(t, ctx)
-	/*
-		fl := flow.NewFlowMock(t)
-		fl.ProcedureFunc = func(ctx context.Context, pr flow.Procedure) error {
-			if fetchJet, ok := pr.(*proc.FetchJet); ok {
-				require.Equal(t, "TypeGetChildren", fetchJet.Parcel.Message().Type().String())
-				fetchJet.Result.Jet = insolar.JetID(jetID)
-				return nil
-			} else if getChildren, ok := pr.(*proc.GetChildren); ok {
-				require.Equal(t, getChildren.Jet, jetID)
-				//require.Equal(t, getChildren.Code, codeRef)
-				//require.Equal(t, getChildren.Message, msg)
-				return nil
-			}
-			t.Fatal("you shouldn't be here")
-			return nil
-		}
-	*/
 
 	err := p.Proceed(ctx)
-	//err := p.Present(ctx, fl)
 	require.NoError(t, err)
+	require.Equal(t, token, p.Result.Reply.(insolar.RedirectReply).GetToken())
 }
 
 /*
