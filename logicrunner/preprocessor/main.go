@@ -49,12 +49,17 @@ var corePath = "github.com/insolar/insolar/insolar"
 
 var immutableFlag = "//ins:immutable"
 
+const (
+	TemplateDirectory = "templates"
+)
+
 // ParsedFile struct with prepared info we extract from source code
 type ParsedFile struct {
-	name    string
-	code    []byte
-	fileSet *token.FileSet
-	node    *ast.File
+	name        string
+	code        []byte
+	fileSet     *token.FileSet
+	node        *ast.File
+	machineType insolar.MachineType
 
 	types        map[string]*ast.TypeSpec
 	methods      map[string][]*ast.FuncDecl
@@ -64,9 +69,10 @@ type ParsedFile struct {
 
 // ParseFile parses a file as Go source code of a smart contract
 // and returns it as `ParsedFile`
-func ParseFile(fileName string) (*ParsedFile, error) {
+func ParseFile(fileName string, machineType insolar.MachineType) (*ParsedFile, error) {
 	res := &ParsedFile{
-		name: fileName,
+		name:        fileName,
+		machineType: machineType,
 	}
 	sourceCode, err := slurpFile(fileName)
 	if err != nil {
@@ -223,31 +229,65 @@ func (pf *ParsedFile) ContractName() string {
 	return pf.node.Name.Name
 }
 
-// WriteWrapper generates and writes into `out` source code
-// of wrapper for the contract
-func (pf *ParsedFile) WriteWrapper(out io.Writer) error {
-	packageName := pf.node.Name.Name
+func checkMachineType(machineType insolar.MachineType) error {
+	if machineType != insolar.MachineTypeGoPlugin &&
+		machineType != insolar.MachineTypeBuiltin {
+		return errors.New("Unsupported machine type")
+	}
+	return nil
+}
 
-	tmpl, err := openTemplate("templates/wrapper.go.tpl")
+func templatePathConstruct(tplType string) string {
+	return path.Join(TemplateDirectory, tplType+".go.tpl")
+}
+
+func formatAndWrite(out io.Writer, templateName string, data map[string]interface{}) error {
+	templatePath := templatePathConstruct(templateName)
+	tmpl, err := openTemplate(templatePath)
 	if err != nil {
 		return errors.Wrap(err, "couldn't open template file for wrapper")
 	}
 
-	data := map[string]interface{}{
-		"PackageName":    packageName,
-		"ContractType":   pf.contract,
-		"Methods":        pf.functionInfoForWrapper(pf.methods[pf.contract]),
-		"Functions":      pf.functionInfoForWrapper(pf.constructors[pf.contract]),
-		"ParsedCode":     pf.code,
-		"FoundationPath": foundationPath,
-		"Imports":        pf.generateImports(true),
-	}
-	err = tmpl.Execute(out, data)
+	var buff bytes.Buffer
+
+	err = tmpl.Execute(&buff, data)
 	if err != nil {
 		return errors.Wrap(err, "couldn't write code output handle")
 	}
 
+	fmtOut, err := format.Source(buff.Bytes())
+	if err != nil {
+
+		return errors.Wrap(err, "couldn't format code "+buff.String())
+	}
+
+	_, err = out.Write(fmtOut)
+	if err != nil {
+		return errors.Wrap(err, "couldn't write code to output")
+	}
+
 	return nil
+}
+
+// WriteWrapper generates and writes into `out` source code
+// of wrapper for the contract
+func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
+	if err := checkMachineType(pf.machineType); err != nil {
+		return err
+	}
+
+	data := map[string]interface{}{
+		"Package":            packageName,
+		"ContractType":       pf.contract,
+		"Methods":            pf.functionInfoForWrapper(pf.methods[pf.contract]),
+		"Functions":          pf.functionInfoForWrapper(pf.constructors[pf.contract]),
+		"ParsedCode":         pf.code,
+		"FoundationPath":     foundationPath,
+		"Imports":            pf.generateImports(true),
+		"GenerateInitialize": pf.machineType == insolar.MachineTypeBuiltin,
+	}
+
+	return formatAndWrite(out, "wrapper", data)
 }
 
 func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]interface{} {
@@ -266,6 +306,12 @@ func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]
 	return res
 }
 
+func generateTextReference(pulse insolar.PulseNumber, code []byte) *insolar.Reference {
+	hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
+	codeHash := hasher.Hash(code)
+	return insolar.NewReference(insolar.ID{}, *insolar.NewID(pulse, codeHash))
+}
+
 // WriteProxy generates and writes into `out` source code of contract's proxy
 func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	proxyPackageName, err := pf.ProxyPackageName()
@@ -274,19 +320,16 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 	}
 
 	if classReference == "" {
-		hasher := platformpolicy.NewPlatformCryptographyScheme().ReferenceHasher()
-		codeHash := hasher.Hash([]byte(pf.code))
-		ref := insolar.NewReference(insolar.ID{}, *insolar.NewID(0, codeHash))
-		classReference = ref.String()
+		classReference = generateTextReference(0, pf.code).String()
 	}
+
 	_, err = insolar.NewReferenceFromBase58(classReference)
 	if err != nil {
 		return errors.Wrap(err, "can't write proxy: ")
 	}
 
-	tmpl, err := openTemplate("templates/proxy.go.tpl")
-	if err != nil {
-		return errors.Wrap(err, "couldn't open template file for proxy")
+	if err := checkMachineType(pf.machineType); err != nil {
+		return err
 	}
 
 	methodsProxies := pf.functionInfoForProxy(pf.methods[pf.contract])
@@ -302,24 +345,7 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 		"Imports":             pf.generateImports(false),
 	}
 
-	var buff bytes.Buffer
-
-	err = tmpl.Execute(&buff, data)
-	if err != nil {
-		return errors.Wrap(err, "couldn't write code output handle")
-	}
-
-	fmtOut, err := format.Source(buff.Bytes())
-	if err != nil {
-		return errors.Wrap(err, "couldn't format code")
-	}
-
-	_, err = out.Write(fmtOut)
-	if err != nil {
-		return errors.Wrap(err, "couldn't write code to output")
-	}
-
-	return nil
+	return formatAndWrite(out, "proxy", data)
 }
 
 func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]interface{} {
@@ -627,4 +653,40 @@ func isImmutable(decl *ast.FuncDecl) bool {
 		}
 	}
 	return isImmutable
+}
+
+type ContractListEntry struct {
+	Name       string
+	Path       string
+	Parsed     *ParsedFile
+	ImportPath string
+}
+
+func (e *ContractListEntry) GenerateReference() *insolar.Reference {
+	return generateTextReference(insolar.BuiltinPulseNumber, []byte(e.Name))
+}
+
+type ContractList []ContractListEntry
+
+func generateContractList(contracts ContractList) interface{} {
+	importList := make([]interface{}, 0)
+	for _, contract := range contracts {
+		data := map[string]interface{}{
+			"Name":       contract.Name,
+			"ImportName": contract.Name,
+			"ImportPath": contract.ImportPath,
+			"Reference":  contract.GenerateReference().String(),
+		}
+		importList = append(importList, data)
+	}
+	return importList
+}
+
+func GenerateInitializationList(out io.Writer, contracts ContractList) error {
+	data := map[string]interface{}{
+		"Contracts": generateContractList(contracts),
+		"Package":   "builtin",
+	}
+
+	return formatAndWrite(out, "initialize", data)
 }

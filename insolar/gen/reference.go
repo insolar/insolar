@@ -30,13 +30,16 @@ func ID() (id insolar.ID) {
 
 // JetID generates random jet id.
 func JetID() (jetID insolar.JetID) {
-	f := fuzz.New().Funcs(func(id *insolar.JetID, c fuzz.Continue) {
-		c.Fuzz(id)
+	f := fuzz.New().Funcs(func(jet *insolar.JetID, c fuzz.Continue) {
+		var id insolar.ID
+		c.Fuzz(&id)
+		copy(jet[:], id[:])
 		// set special pulse number
-		copy(id[:insolar.PulseNumberSize], insolar.PulseNumberJet.Bytes())
+		copy(jet[:insolar.PulseNumberSize], insolar.PulseNumberJet.Bytes())
 		// set depth
 		// adds 1 because Intn returns [0,n)
-		id[insolar.PulseNumberSize] = byte(c.Intn(insolar.JetMaximumDepth + 1))
+		jet[insolar.PulseNumberSize] = byte(c.Intn(insolar.JetMaximumDepth + 1))
+
 	})
 	f.Fuzz(&jetID)
 	return

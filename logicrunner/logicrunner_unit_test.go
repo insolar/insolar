@@ -25,6 +25,9 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/pkg/errors"
@@ -33,9 +36,6 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
@@ -112,9 +112,9 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 	}
 
 	es := &ExecutionState{
-		Ref:       objectRef,
-		Current:   &CurrentExecution{},
-		pending:   message.NotPending,
+		Ref:     objectRef,
+		Current: &CurrentExecution{},
+		pending: message.NotPending,
 	}
 
 	// make sure that if there is no pending finishPendingIfNeeded returns false,
@@ -793,7 +793,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 			ctx := inslogger.ContextWithTrace(suite.ctx, "req-"+strconv.Itoa(i))
 
-			_, err := suite.lr.HandleCalls(ctx, parcel)
+			_, err := suite.lr.FlowHandler.WrapBusHandle(ctx, parcel)
 			suite.Require().NoError(err)
 
 			wg.Done()
@@ -1028,7 +1028,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 
 			ctx := inslogger.ContextWithTrace(suite.ctx, "req")
 
-			_, err := suite.lr.HandleCalls(ctx, parcel)
+			_, err := suite.lr.FlowHandler.WrapBusHandle(ctx, parcel)
 			if test.errorExpected {
 				suite.Require().Error(err)
 			} else {
@@ -1040,6 +1040,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	}
 }
 
+/*
 func (suite *LogicRunnerTestSuite) TestGracefulStop() {
 	suite.lr.isStopping = false
 	suite.lr.stopChan = make(chan struct{}, 0)
@@ -1068,6 +1069,7 @@ func (suite *LogicRunnerTestSuite) TestGracefulStop() {
 
 	suite.Require().NoError(err)
 }
+*/
 
 func TestLogicRunner(t *testing.T) {
 	t.Parallel()
@@ -1105,8 +1107,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestEmptyES() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 
 	s.lr.state[s.objectRef] = &ObjectState{
-		ExecutionState: &ExecutionState{
-		},
+		ExecutionState: &ExecutionState{},
 	}
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
@@ -1120,10 +1121,9 @@ func (s *LogicRunnerOnPulseTestSuite) TestEmptyESWithValidation() {
 	s.jc.IsAuthorizedMock.Return(false, nil)
 
 	s.lr.state[s.objectRef] = &ObjectState{
-		ExecutionState: &ExecutionState{
-		},
-		Validation: &ExecutionState{},
-		Consensus:  &Consensus{},
+		ExecutionState: &ExecutionState{},
+		Validation:     &ExecutionState{},
+		Consensus:      &Consensus{},
 	}
 	err := s.lr.OnPulse(s.ctx, s.pulse)
 	s.Require().NoError(err)
@@ -1140,8 +1140,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestESWithValidationCurrent() {
 
 	s.lr.state[s.objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
-			Current:   &CurrentExecution{},
-			pending:   message.NotPending,
+			Current: &CurrentExecution{},
+			pending: message.NotPending,
 		},
 	}
 	err := s.lr.OnPulse(s.ctx, s.pulse)
@@ -1158,9 +1158,9 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithNotEmptyQueue() {
 
 	s.lr.state[s.objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
-			Current:   &CurrentExecution{},
-			Queue:     append(make([]ExecutionQueueElement, 0), ExecutionQueueElement{}),
-			pending:   message.NotPending,
+			Current: &CurrentExecution{},
+			Queue:   append(make([]ExecutionQueueElement, 0), ExecutionQueueElement{}),
+			pending: message.NotPending,
 		},
 	}
 
@@ -1178,9 +1178,9 @@ func (s *LogicRunnerOnPulseTestSuite) TestWithEmptyQueue() {
 
 	s.lr.state[s.objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
-			Current:   &CurrentExecution{},
-			Queue:     make([]ExecutionQueueElement, 0),
-			pending:   message.NotPending,
+			Current: &CurrentExecution{},
+			Queue:   make([]ExecutionQueueElement, 0),
+			pending: message.NotPending,
 		},
 	}
 
@@ -1197,9 +1197,9 @@ func (s *LogicRunnerOnPulseTestSuite) TestExecutorSameNode() {
 
 	s.lr.state[s.objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
-			Current:   &CurrentExecution{},
-			Queue:     make([]ExecutionQueueElement, 0),
-			pending:   message.NotPending,
+			Current: &CurrentExecution{},
+			Queue:   make([]ExecutionQueueElement, 0),
+			pending: message.NotPending,
 		},
 	}
 
@@ -1216,9 +1216,9 @@ func (s *LogicRunnerOnPulseTestSuite) TestStateTransfer1() {
 
 	s.lr.state[s.objectRef] = &ObjectState{
 		ExecutionState: &ExecutionState{
-			Current:   &CurrentExecution{},
-			Queue:     make([]ExecutionQueueElement, 0),
-			pending:   message.InPending,
+			Current: &CurrentExecution{},
+			Queue:   make([]ExecutionQueueElement, 0),
+			pending: message.InPending,
 		},
 	}
 
@@ -1321,8 +1321,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef:             s.objectRef,
-				Queue:                 messagesQueue,
+				RecordRef: s.objectRef,
+				Queue:     messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 
@@ -1339,7 +1339,7 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			lr.MessageBus = mb
 			lr.state[s.objectRef] = &ObjectState{
 				ExecutionState: &ExecutionState{
-					Queue:     test.queue,
+					Queue: test.queue,
 				},
 			}
 
@@ -1395,7 +1395,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecutionState() {
 	es := &ExecutionState{
-		Ref:                   s.ref,
+		Ref: s.ref,
 		LedgerHasMoreRequests: false,
 	}
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)

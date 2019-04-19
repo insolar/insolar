@@ -97,13 +97,9 @@ func (f *Thread) Continue(context.Context) {
 	f.cancel = f.controller.Cancel()
 }
 
-// =====================================================================================================================
-
 func (f *Thread) Run(ctx context.Context, h flow.Handle) error {
 	return h(ctx, f)
 }
-
-// =====================================================================================================================
 
 func (f *Thread) procedure(ctx context.Context, proc flow.Procedure) <-chan error {
 	if d, ok := f.procedures[proc]; ok {

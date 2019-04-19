@@ -27,7 +27,8 @@ type Dependencies struct {
 	FetchJet    func(*FetchJet) *FetchJet
 	WaitHot     func(*WaitHot) *WaitHot
 	GetIndex    func(*GetIndex) *GetIndex
-	SendObject  func(*SendObject) *SendObject
+	SendObject  func(p *SendObject) *SendObject
+	GetCode     func(*GetCode) *GetCode
 	GetChildren func(*GetChildren) *GetChildren
 }
 

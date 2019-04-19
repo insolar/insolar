@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,56 +12,54 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
 package handle
 
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/proc"
+	"github.com/pkg/errors"
 )
 
-type GetObject struct {
+type GetCode struct {
 	dep *proc.Dependencies
 
 	Message bus.Message
 }
 
-func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
-	msg := s.Message.Parcel.Message().(*message.GetObject)
-	ctx, _ = inslogger.WithField(ctx, "object", msg.Head.Record().DebugString())
+func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
+	msg := s.Message.Parcel.Message().(*message.GetCode)
 
-	jet := &WaitJet{
-		dep:     s.dep,
-		Message: s.Message,
-	}
-	if err := f.Handle(ctx, jet.Present); err != nil {
-		return err
-	}
-
-	idx := s.dep.GetIndex(&proc.GetIndex{
-		Object: msg.Head,
-		Jet:    jet.Res.Jet,
-	})
-	if err := f.Procedure(ctx, idx); err != nil {
+	jet := s.dep.FetchJet(&proc.FetchJet{Parcel: s.Message.Parcel})
+	if err := f.Procedure(ctx, jet); err != nil {
 		if err == flow.ErrCancelled {
 			return err
 		}
-		return f.Procedure(ctx, &proc.ReturnReply{
-			ReplyTo: s.Message.ReplyTo,
-			Err:     err,
-		})
+		return err
 	}
 
-	p := s.dep.SendObject(&proc.SendObject{
-		Jet:     jet.Res.Jet,
-		Index:   idx.Result.Index,
+	if jet.Result.Miss {
+		rep := &proc.ReturnReply{
+			ReplyTo: s.Message.ReplyTo,
+			Reply:   &reply.JetMiss{JetID: insolar.ID(jet.Result.Jet)},
+		}
+		if err := f.Procedure(ctx, rep); err != nil {
+			return err
+		}
+		return errors.New("jet miss")
+	}
+
+	codeRec := s.dep.GetCode(&proc.GetCode{
+		JetID:   jet.Result.Jet,
 		Message: s.Message,
+		Code:    msg.Code,
 	})
-	return f.Procedure(ctx, p)
+	return f.Procedure(ctx, codeRec)
 }

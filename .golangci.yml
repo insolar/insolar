@@ -23,7 +23,6 @@ linters:
     - unconvert
     - goconst
     - misspell
-    - lll
     - unparam
     - nakedret
     - prealloc

@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,32 +12,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
-package helloworld
+package proc
 
-import "github.com/insolar/insolar/insolar"
+import (
+	"errors"
+)
 
-// HelloWorld contract
-type HelloWorld struct {
-	// Greeted - how many callers we "greated"
-	Greeted int
-}
-
-// CodeRef returns something strange
-func CodeRef() insolar.Reference {
-	var ref insolar.Reference
-	ref[insolar.RecordRefSize-1] = 1
-	return ref
-}
-
-// NewHelloWorld returns a new empty contract
-func NewHelloWorld() *HelloWorld {
-	return &HelloWorld{}
-}
-
-// Greet greats the caller
-func (hw *HelloWorld) Greet(name string) string {
-	hw.Greeted++
-	return "Hello " + name + "'s world"
-}
+var (
+	ErrInvalidRef = errors.New("invalid reference")
+)

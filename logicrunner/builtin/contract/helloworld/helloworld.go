@@ -14,20 +14,31 @@
 // limitations under the License.
 //
 
-package bus
+package helloworld
 
 import (
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar"
+	"fmt"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
-type Reply struct {
-	Reply insolar.Reply
-	Err   error
+// HelloWorld contract
+type HelloWorld struct {
+	foundation.BaseContract
+	Greeted int
 }
 
-type Message struct {
-	Parcel       insolar.Parcel
-	WatermillMsg *message.Message
-	ReplyTo      chan Reply
+var INSATTR_Greet_API = true
+
+// Greet greats the caller
+func (hw *HelloWorld) Greet(name string) (interface{}, error) {
+	hw.Greeted++
+	return fmt.Sprintf("Hello %s' world", name), nil
+}
+
+// New returns a new empty contract
+func New() (*HelloWorld, error) {
+	return &HelloWorld{
+		Greeted: 0,
+	}, nil
 }
