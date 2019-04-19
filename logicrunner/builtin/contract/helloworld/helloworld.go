@@ -16,28 +16,29 @@
 
 package helloworld
 
-import "github.com/insolar/insolar/insolar"
+import (
+	"fmt"
+
+	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+)
 
 // HelloWorld contract
 type HelloWorld struct {
-	// Greeted - how many callers we "greated"
+	foundation.BaseContract
 	Greeted int
 }
 
-// CodeRef returns something strange
-func CodeRef() insolar.Reference {
-	var ref insolar.Reference
-	ref[insolar.RecordRefSize-1] = 1
-	return ref
-}
-
-// NewHelloWorld returns a new empty contract
-func NewHelloWorld() *HelloWorld {
-	return &HelloWorld{}
-}
+var INSATTR_Greet_API = true
 
 // Greet greats the caller
-func (hw *HelloWorld) Greet(name string) string {
+func (hw *HelloWorld) Greet(name string) (interface{}, error) {
 	hw.Greeted++
-	return "Hello " + name + "'s world"
+	return fmt.Sprintf("Hello %s' world", name), nil
+}
+
+// New returns a new empty contract
+func New() (*HelloWorld, error) {
+	return &HelloWorld{
+		Greeted: 0,
+	}, nil
 }
