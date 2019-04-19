@@ -22,3 +22,5 @@ const PulseMetadataKey = "pulse"
 const TypeMetadataKey = "type"
 const ReceiverMetadataKey = "receiver"
 const SenderMetadataKey = "sender"
+
+const ReplyTypeMetadataValue = "reply"

@@ -53,10 +53,6 @@ package servicenetwork
 import (
 	"bytes"
 	"context"
-	"encoding/gob"
-	"fmt"
-	"io"
-	"io/ioutil"
 	"strconv"
 	"sync"
 	"time"
@@ -392,35 +388,6 @@ func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
 	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
 }
 
-// SerializeMessage returns io.Reader on buffer with encoded message.Message (from watermill).
-func SerializeMessage(msg message.Message) (io.Reader, error) {
-	buff := &bytes.Buffer{}
-	enc := gob.NewEncoder(buff)
-	err := enc.Encode(msg)
-	return buff, err
-}
-
-// DeserializeMessage returns decoded signed message.
-func DeserializeMessage(buff io.Reader) (*message.Message, error) {
-	var signed message.Message
-	enc := gob.NewDecoder(buff)
-	err := enc.Decode(&signed)
-	return &signed, err
-}
-
-// MessageToBytes deserialize a message.Message (from watermill) to bytes.
-func MessageToBytes(msg message.Message) []byte {
-	reqBuff, err := SerializeMessage(msg)
-	if err != nil {
-		panic("failed to serialize message: " + err.Error())
-	}
-	buf, err := ioutil.ReadAll(reqBuff)
-	if err != nil {
-		panic("failed to serialize message: " + err.Error())
-	}
-	return buf
-}
-
 func (n *ServiceNetwork) processIncome(ctx context.Context, args [][]byte) ([]byte, error) {
 	if len(args) < 1 {
 		return nil, errors.New("need exactly one argument when n.processIncome()")
@@ -430,11 +397,9 @@ func (n *ServiceNetwork) processIncome(ctx context.Context, args [][]byte) ([]by
 		return nil, err
 	}
 	// TODO: check pulse here
-	fmt.Println("error love processIncome type - ", msg.Metadata.Get("Type"))
 
-	if msg.Metadata.Get(insolar.TypeMetadataKey) == "Reply" {
+	if msg.Metadata.Get(insolar.TypeMetadataKey) == insolar.ReplyTypeMetadataValue {
 		n.ResultSetter.SetResult(ctx, *msg)
-		fmt.Println("error love processIncome")
 	} else {
 		err = n.Handler.Process(ctx, msg)
 		if err != nil {
