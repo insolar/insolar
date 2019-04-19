@@ -172,6 +172,7 @@ func (mb *MessageBus) SendViaWatermill(ctx context.Context, msg insolar.Message,
 
 	wmMsg := mb.createWatermillMessage(ctx, parcel, ops, currentPulse)
 
+	// now there is only one reply for message
 	rep := make(chan insolar.Reply, 1)
 	mb.repliesMutex.Lock()
 	mb.replies[middleware.MessageCorrelationID(wmMsg)] = rep
@@ -243,6 +244,8 @@ func (mb *MessageBus) SetResult(ctx context.Context, msg watermillMsg.Message) {
 		return
 	}
 	ch <- res
+	// now there is only one reply for message
+	delete(mb.replies, id)
 }
 
 // Send an `Message` and get a `Value` or error from remote host.
