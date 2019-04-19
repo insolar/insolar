@@ -27,7 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/hot"
+	"github.com/insolar/insolar/ledger/light/hot"
 )
 
 type middleware struct {

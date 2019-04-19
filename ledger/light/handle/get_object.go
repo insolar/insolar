@@ -23,7 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/proc"
+	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type GetObject struct {

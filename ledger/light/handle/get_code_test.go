@@ -25,7 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/ledger/proc"
+	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )

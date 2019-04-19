@@ -22,7 +22,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/ledger/genesis"
-	"github.com/insolar/insolar/ledger/hot"
+	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/storage/object"
 
 	"github.com/insolar/insolar/component"
@@ -31,8 +31,8 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/ledger/artifactmanager"
-	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/light/artifactmanager"
+	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"

@@ -22,21 +22,23 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/ledger/proc"
+	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
 )
 
-type GetCode struct {
+type WaitJet struct {
 	dep *proc.Dependencies
 
 	Message bus.Message
+
+	Res struct {
+		Jet insolar.JetID
+		Err error
+	}
 }
 
-func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
-	msg := s.Message.Parcel.Message().(*message.GetCode)
-
+func (s *WaitJet) Present(ctx context.Context, f flow.Flow) error {
 	jet := s.dep.FetchJet(&proc.FetchJet{Parcel: s.Message.Parcel})
 	if err := f.Procedure(ctx, jet); err != nil {
 		if err == flow.ErrCancelled {
@@ -44,13 +46,12 @@ func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
 		} else {
 			return err
 		}
-		return err
 	}
 
 	if jet.Result.Miss {
 		rep := &proc.ReturnReply{
 			ReplyTo: s.Message.ReplyTo,
-			Reply:   &reply.JetMiss{JetID: insolar.ID(jet.Result.Jet)},
+			Reply:   &reply.JetMiss{JetID: insolar.ID(jet.Result.Jet), Pulse: jet.Result.Pulse},
 		}
 		if err := f.Procedure(ctx, rep); err != nil {
 			if err == flow.ErrCancelled {
@@ -62,10 +63,33 @@ func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
 		return errors.New("jet miss")
 	}
 
-	codeRec := s.dep.GetCode(&proc.GetCode{
-		JetID:   jet.Result.Jet,
-		Message: s.Message,
-		Code:    msg.Code,
+	hot := s.dep.WaitHot(&proc.WaitHot{
+		Parcel: s.Message.Parcel,
+		JetID:  jet.Result.Jet,
 	})
-	return f.Procedure(ctx, codeRec)
+	if err := f.Procedure(ctx, hot); err != nil {
+		if err == flow.ErrCancelled {
+			f.Continue(ctx)
+		} else {
+			return err
+		}
+	}
+	if hot.Res.Timeout {
+		rep := &proc.ReturnReply{
+			ReplyTo: s.Message.ReplyTo,
+			Reply:   &reply.Error{ErrType: reply.ErrHotDataTimeout},
+		}
+		if err := f.Procedure(ctx, rep); err != nil {
+			if err == flow.ErrCancelled {
+				f.Continue(ctx)
+			} else {
+				return err
+			}
+		}
+		return errors.New("hot waiter timeout")
+	}
+
+	s.Res.Jet = jet.Result.Jet
+
+	return nil
 }
