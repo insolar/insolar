@@ -305,9 +305,7 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 	if err := storeDrop(ctx, h.DropModifier, msg.Drop); err != nil {
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
-	if err := storeBlobs(ctx, h.BlobModifier, h.PCS, msg.PulseNum, msg.Blobs); err != nil {
-		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
-	}
+	storeBlobs(ctx, h.BlobModifier, h.PCS, msg.PulseNum, msg.Blobs)
 
 	stats.Record(ctx,
 		statReceivedHeavyPayloadCount.M(1),
