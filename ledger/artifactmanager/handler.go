@@ -126,6 +126,15 @@ func NewMessageHandler(
 			p.Dep.RecordAccessor = h.RecordAccessor
 			return p
 		},
+		GetCode: func(p *proc.GetCode) *proc.GetCode {
+			p.Dep.Bus = h.Bus
+			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
+			p.Dep.RecordAccessor = h.RecordAccessor
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.Accessor = h.BlobAccessor
+			p.Dep.BlobModifier = h.BlobModifier
+			return p
+		},
 	}
 
 	h.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
@@ -185,12 +194,8 @@ func (h *MessageHandler) OnPulse(ctx context.Context, pn insolar.Pulse) {
 
 func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	// Generic.
-	h.Bus.MustRegister(insolar.TypeGetCode, BuildMiddleware(h.handleGetCode,
-		instrumentHandler("handleGetCode"),
-		m.addFieldsToLogger,
-		m.checkJet,
-	))
 
+	h.Bus.MustRegister(insolar.TypeGetCode, h.FlowHandler.WrapBusHandle)
 	h.Bus.MustRegister(insolar.TypeGetObject, h.FlowHandler.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeGetDelegate,
@@ -340,39 +345,6 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel insolar.Parce
 		return &reply.ID{ID: *calculatedID}, nil
 	}
 	return nil, err
-}
-
-func (h *MessageHandler) handleGetCode(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetCode)
-	jetID := jetFromContext(ctx)
-
-	codeRec, err := h.getCode(ctx, msg.Code.Record())
-	if err == object.ErrNotFound {
-		// We don't have code record. Must be on another node.
-		node, err := h.JetCoordinator.NodeForJet(ctx, jetID, parcel.Pulse(), msg.Code.Record().Pulse())
-		if err != nil {
-			return nil, err
-		}
-		return reply.NewGetCodeRedirect(h.DelegationTokenFactory, parcel, node)
-	}
-	if err != nil {
-		return nil, err
-	}
-	code, err := h.BlobAccessor.ForID(ctx, *codeRec.Code)
-	if err == blob.ErrNotFound {
-		hNode, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		return h.saveCodeFromHeavy(ctx, insolar.JetID(jetID), msg.Code, *codeRec.Code, hNode)
-	}
-
-	rep := reply.Code{
-		Code:        code.Value,
-		MachineType: codeRec.MachineType,
-	}
-
-	return &rep, nil
 }
 
 func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
@@ -791,21 +763,6 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insola
 	return &reply.ObjectIndex{Index: buf}, nil
 }
 
-func (h *MessageHandler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeRecord, error) {
-	rec, err := h.RecordAccessor.ForID(ctx, *id)
-	if err != nil {
-		return nil, err
-	}
-
-	virtRec := rec.Record
-	codeRec, ok := virtRec.(*object.CodeRecord)
-	if !ok {
-		return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
-	}
-
-	return codeRec, nil
-}
-
 func validateState(old object.StateID, new object.StateID) error {
 	if old == object.StateDeactivation {
 		return ErrObjectDeactivated
@@ -845,29 +802,6 @@ func (h *MessageHandler) saveIndexFromHeavy(
 		return object.Lifeline{}, errors.Wrap(err, "failed to save")
 	}
 	return idx, nil
-}
-
-func (h *MessageHandler) saveCodeFromHeavy(
-	ctx context.Context, jetID insolar.JetID, code insolar.Reference, blobID insolar.ID, heavy *insolar.Reference,
-) (*reply.Code, error) {
-	genericReply, err := h.Bus.Send(ctx, &message.GetCode{
-		Code: code,
-	}, &insolar.MessageSendOptions{
-		Receiver: heavy,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to send")
-	}
-	rep, ok := genericReply.(*reply.Code)
-	if !ok {
-		return nil, fmt.Errorf("failed to fetch code: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
-	}
-
-	err = h.BlobModifier.Set(ctx, blobID, blob.Blob{JetID: jetID, Value: rep.Code})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to save")
-	}
-	return rep, nil
 }
 
 //
