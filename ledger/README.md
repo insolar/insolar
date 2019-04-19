@@ -1,4 +1,4 @@
-Insolar — Material
+Insolar — Ledger
 ================
 Record storage engine
 
