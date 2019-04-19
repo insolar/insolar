@@ -70,9 +70,9 @@ type MessageBus struct {
 	NextPulseMessagePoolCounter uint32
 	NextPulseMessagePoolLock    sync.RWMutex
 
-	pub         watermillMsg.Publisher
-	resultMap   map[string]*future
-	resultMutex sync.RWMutex
+	pub          watermillMsg.Publisher
+	replies      map[string]chan insolar.Reply
+	repliesMutex sync.RWMutex
 }
 
 func (mb *MessageBus) Acquire(ctx context.Context) {
@@ -110,7 +110,7 @@ func NewMessageBus(config configuration.Configuration, pub watermillMsg.Publishe
 		signmessages:             config.Host.SignMessages,
 		NextPulseMessagePoolChan: make(chan interface{}),
 		pub:                      pub,
-		resultMap:                make(map[string]*future),
+		replies:                  make(map[string]chan insolar.Reply),
 	}
 	mb.Acquire(context.Background())
 	return mb, nil
@@ -171,15 +171,15 @@ func (mb *MessageBus) SendViaWatermill(ctx context.Context, msg insolar.Message,
 		return nil, err
 	}
 
-	f := newFuture()
+	// f := newFuture()
 	payload := message.ParcelToBytes(parcel)
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
 	id := watermill.NewUUID()
 	middleware.SetCorrelationID(id, wmMsg)
-
-	mb.resultMutex.Lock()
-	mb.resultMap[id] = f
-	mb.resultMutex.Unlock()
+	rep := make(chan insolar.Reply, 1)
+	mb.repliesMutex.Lock()
+	mb.replies[id] = rep
+	mb.repliesMutex.Unlock()
 	inslogger.FromContext(ctx).Debugf("[ SendViaWatermill ] message with CorrelationID %s was sent", id)
 	fmt.Println("create with UUid", id)
 
@@ -192,7 +192,7 @@ func (mb *MessageBus) SendViaWatermill(ctx context.Context, msg insolar.Message,
 	if err != nil {
 		return nil, errors.Wrapf(err, "[ SendViaWatermill ] can't publish message to %s topic", bus.ExternalMsgTopic)
 	}
-	r, err := f.GetResult(time.Second * 100)
+	r := <-rep
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendViaWatermill ] can't get reply")
 	}
@@ -227,9 +227,9 @@ func (mb *MessageBus) GetReceiver(ctx context.Context, parcel insolar.Parcel, cu
 // SetResult returns reply to waiting channel.
 func (mb *MessageBus) SetResult(ctx context.Context, msg watermillMsg.Message) {
 	id := middleware.MessageCorrelationID(&msg)
-	mb.resultMutex.RLock()
-	f, ok := mb.resultMap[id]
-	mb.resultMutex.RUnlock()
+	mb.repliesMutex.RLock()
+	ch, ok := mb.replies[id]
+	mb.repliesMutex.RUnlock()
 	if !ok {
 		inslogger.FromContext(ctx).Errorf("[ MessageBus.SetResult ] message with CorrelationID %s wasn't found in results map", id)
 		return
@@ -240,7 +240,7 @@ func (mb *MessageBus) SetResult(ctx context.Context, msg watermillMsg.Message) {
 		inslogger.FromContext(ctx).Errorf("[ MessageBus.SetResult ] can't deserialize payload: %s", err.Error())
 		return
 	}
-	f.SetResult(res)
+	ch <- res
 }
 
 // Send an `Message` and get a `Value` or error from remote host.
