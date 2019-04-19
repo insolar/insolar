@@ -67,9 +67,9 @@ type MessageBus struct {
 }
 
 func (mb *MessageBus) Acquire(ctx context.Context) {
-	ctx, span := instracer.StartSpan(ctx, "NetworkSwitcher.Acquire")
+	ctx, span := instracer.StartSpan(ctx, "MessageBuss.Acquire")
 	defer span.End()
-	inslogger.FromContext(ctx).Info("Call Acquire in NetworkSwitcher: ", mb.counter)
+	inslogger.FromContext(ctx).Info("Call Acquire in MessageBuss: ", mb.counter)
 	mb.counter = mb.counter + 1
 	if mb.counter-1 == 0 {
 		inslogger.FromContext(ctx).Info("Lock MB")
@@ -79,9 +79,9 @@ func (mb *MessageBus) Acquire(ctx context.Context) {
 }
 
 func (mb *MessageBus) Release(ctx context.Context) {
-	ctx, span := instracer.StartSpan(ctx, "NetworkSwitcher.Release")
+	ctx, span := instracer.StartSpan(ctx, "MessageBuss.Release")
 	defer span.End()
-	inslogger.FromContext(ctx).Info("Call Release in NetworkSwitcher: ", mb.counter)
+	inslogger.FromContext(ctx).Info("Call Release in MessageBuss: ", mb.counter)
 	if mb.counter == 0 {
 		panic("Trying to unlock without locking")
 	}
