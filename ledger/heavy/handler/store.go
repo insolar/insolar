@@ -72,7 +72,7 @@ func storeBlobs(
 	pcs insolar.PlatformCryptographyScheme,
 	pn insolar.PulseNumber,
 	rawBlobs [][]byte,
-) error {
+) {
 	inslog := inslogger.FromContext(ctx)
 
 	for _, rwb := range rawBlobs {
@@ -89,7 +89,6 @@ func storeBlobs(
 			continue
 		}
 	}
-	return nil
 }
 
 func storeRecords(
