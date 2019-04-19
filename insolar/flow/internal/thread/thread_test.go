@@ -20,7 +20,6 @@ import (
 	"context"
 	"runtime"
 	"testing"
-	"time"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
@@ -271,14 +270,8 @@ func TestThread_procedure(t *testing.T) {
 	}
 
 	ch := thread.procedure(context.Background(), procedure)
-	require.NotNil(t, ch)
-	timer := time.NewTimer(10 * time.Millisecond)
-	select {
-	case result := <-ch:
-		require.EqualError(t, result, "test error")
-	case <-timer.C:
-		t.Fatal("timeout")
-	}
+	result := <-ch
+	require.EqualError(t, result, "test error")
 }
 
 func TestThread_canceled_Canceled(t *testing.T) {
