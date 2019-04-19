@@ -125,7 +125,7 @@ func TestLightDataGatherer_convertIndexes(t *testing.T) {
 
 func TestDataGatherer_convertBlobs(t *testing.T) {
 	var blobs []blob.Blob
-	fuzz.New().NumElements(500, 1000).Fuzz(&blobs)
+	fuzz.New().NilChance(0).NumElements(500, 1000).Fuzz(&blobs)
 	var expected [][]byte
 	for _, b := range blobs {
 		temp := b
