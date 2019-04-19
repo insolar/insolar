@@ -27,7 +27,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
-	"github.com/insolar/insolar/bus"
 
 	"go.opencensus.io/trace"
 
@@ -171,31 +170,31 @@ func (mb *MessageBus) SendViaWatermill(ctx context.Context, msg insolar.Message,
 		return nil, err
 	}
 
-	// f := newFuture()
 	payload := message.ParcelToBytes(parcel)
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
-	id := watermill.NewUUID()
-	middleware.SetCorrelationID(id, wmMsg)
+
+	correlationID := watermill.NewUUID()
+	middleware.SetCorrelationID(correlationID, wmMsg)
+
 	rep := make(chan insolar.Reply, 1)
 	mb.repliesMutex.Lock()
-	mb.replies[id] = rep
+	mb.replies[correlationID] = rep
 	mb.repliesMutex.Unlock()
-	inslogger.FromContext(ctx).Debugf("[ SendViaWatermill ] message with CorrelationID %s was sent", id)
-	fmt.Println("create with UUid", id)
 
-	wmMsg.Metadata.Set("Pulse", fmt.Sprintf("%d", currentPulse.PulseNumber))
-	wmMsg.Metadata.Set("Type", parcel.Message().Type().String())
-	wmMsg.Metadata.Set("Receiver", mb.GetReceiver(ctx, parcel, currentPulse, ops))
-	wmMsg.Metadata.Set("Sender", mb.NodeNetwork.GetOrigin().ID().String())
+	wmMsg.Metadata.Set(insolar.PulseMetadataKey, fmt.Sprintf("%d", currentPulse.PulseNumber))
+	wmMsg.Metadata.Set(insolar.TypeMetadataKey, parcel.Message().Type().String())
+	wmMsg.Metadata.Set(insolar.ReceiverMetadataKey, mb.GetReceiver(ctx, parcel, currentPulse, ops))
+	wmMsg.Metadata.Set(insolar.SenderMetadataKey, mb.NodeNetwork.GetOrigin().ID().String())
 
-	err = mb.pub.Publish(bus.ExternalMsgTopic, wmMsg)
+	err = mb.pub.Publish(insolar.ExternalMsgTopic, wmMsg)
 	if err != nil {
-		return nil, errors.Wrapf(err, "[ SendViaWatermill ] can't publish message to %s topic", bus.ExternalMsgTopic)
+		return nil, errors.Wrapf(err, "[ SendViaWatermill ] can't publish message to %s topic", insolar.ExternalMsgTopic)
 	}
 	r := <-rep
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendViaWatermill ] can't get reply")
 	}
+	inslogger.FromContext(ctx).Debugf("[ SendViaWatermill ] message with CorrelationID %s was sent successfully", correlationID)
 	return r, nil
 }
 

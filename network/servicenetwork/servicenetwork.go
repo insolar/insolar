@@ -355,10 +355,11 @@ func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, node insolar.D
 
 // ProcessOutcome processes received message.
 func (n *ServiceNetwork) ProcessOutcome(msg *message.Message) ([]*message.Message, error) {
-	if msg.Metadata.Get("Receiver") == "" {
+	receiver := msg.Metadata.Get(insolar.ReceiverMetadataKey)
+	if receiver == "" {
 		return nil, errors.New("Receiver in msg.Metadata not set")
 	}
-	ref, err := insolar.NewReferenceFromBase58(msg.Metadata.Get("Receiver"))
+	ref, err := insolar.NewReferenceFromBase58(receiver)
 	if err != nil {
 		return nil, errors.Wrap(err, "incorrect Receiver in msg.Metadata: ")
 	}
@@ -431,7 +432,7 @@ func (n *ServiceNetwork) processIncome(ctx context.Context, args [][]byte) ([]by
 	// TODO: check pulse here
 	fmt.Println("error love processIncome type - ", msg.Metadata.Get("Type"))
 
-	if msg.Metadata.Get("Type") == "Reply" {
+	if msg.Metadata.Get(insolar.TypeMetadataKey) == "Reply" {
 		n.ResultSetter.SetResult(ctx, *msg)
 		fmt.Println("error love processIncome")
 	} else {

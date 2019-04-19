@@ -74,6 +74,6 @@ func (s *InnerInit) Present(ctx context.Context, f flow.Flow) error {
 		}
 		return f.Handle(ctx, h.Present)
 	default:
-		return fmt.Errorf("[ InnerInit.Present ] no handler for message type %s", s.Message.Metadata.Get("Type"))
+		return fmt.Errorf("[ InnerInit.Present ] no handler for message type %s", s.Message.Metadata.Get(MessageTypeField))
 	}
 }

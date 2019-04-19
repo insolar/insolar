@@ -21,13 +21,13 @@ import (
 	"errors"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/internal/pulse"
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type Handler struct {
