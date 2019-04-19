@@ -57,6 +57,10 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 
 	net := testutils.GetTestNetwork(t)
 	jc := testutils.NewJetCoordinatorMock(t)
+	jc.QueryRoleFunc = func(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber) (r []insolar.Reference, r1 error) {
+		return []insolar.Reference{testutils.RandomRef()}, nil
+	}
+
 	nn := network.NewNodeNetworkMock(t)
 	nn.GetOriginFunc = func() (r insolar.NetworkNode) {
 		n := network.NewNetworkNodeMock(t)
@@ -66,6 +70,10 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 
 	pcs := testutils.NewPlatformCryptographyScheme()
 	cs := testutils.NewCryptographyServiceMock(t)
+	cs.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+		return &insolar.Signature{}, nil
+	}
+
 	dtf := testutils.NewDelegationTokenFactoryMock(t)
 	pf := NewParcelFactory()
 	ps := pulse.NewAccessorMock(t)
@@ -179,63 +187,6 @@ func TestMessageBus_doDeliver_TwoAheadPulses(t *testing.T) {
 	require.Equal(t, insolar.PulseNumber(102), pulse.PulseNumber)
 }
 
-func messageBusMock(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) (*MessageBus, *pulse.AccessorMock, insolar.Parcel) {
-	mb, err := NewMessageBus(configuration.Configuration{}, nil)
-	require.NoError(t, err)
-
-	net := testutils.GetTestNetwork(t)
-	jc := testutils.NewJetCoordinatorMock(t)
-	jc.QueryRoleFunc = func(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber) (r []insolar.Reference, r1 error) {
-		return []insolar.Reference{testutils.RandomRef()}, nil
-	}
-
-	nn := network.NewNodeNetworkMock(t)
-	nn.GetOriginFunc = func() (r insolar.NetworkNode) {
-		n := network.NewNetworkNodeMock(t)
-		n.IDMock.Return(insolar.Reference{})
-		return n
-	}
-
-	pcs := testutils.NewPlatformCryptographyScheme()
-	cs := testutils.NewCryptographyServiceMock(t)
-	cs.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
-		return &insolar.Signature{}, nil
-	}
-
-	dtf := testutils.NewDelegationTokenFactoryMock(t)
-	pf := NewParcelFactory()
-	ps := pulse.NewAccessorMock(t)
-
-	(&component.Manager{}).Inject(net, jc, nn, pcs, cs, dtf, pf, ps, mb)
-
-	ps.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
-		return insolar.Pulse{
-			PulseNumber:     insolar.PulseNumber(currentPulse),
-			NextPulseNumber: insolar.PulseNumber(currentPulse + 1),
-		}, nil
-	}
-
-	err = mb.Register(testType, testHandler)
-	require.NoError(t, err)
-
-	parcel := testutils.NewParcelMock(t)
-
-	parcel.PulseFunc = func() insolar.PulseNumber {
-		return insolar.PulseNumber(msgPulse)
-	}
-	parcel.TypeFunc = func() insolar.MessageType {
-		return testType
-	}
-	parcel.GetSenderFunc = func() (r insolar.Reference) {
-		return testutils.RandomRef()
-	}
-	parcel.MessageMock.Return(&message.GetObject{})
-
-	mb.Unlock(ctx)
-
-	return mb, ps, parcel
-}
-
 func TestMessageBus_SendViaWatermill(t *testing.T) {
 	ctx := context.Background()
 	logger := watermill.NewStdLogger(false, false)
@@ -243,7 +194,7 @@ func TestMessageBus_SendViaWatermill(t *testing.T) {
 	inMessages, err := pubsub.Subscribe(context.Background(), insolar.ExternalMsgTopic)
 	require.NoError(t, err)
 
-	mb, _, _ := messageBusMock(t, ctx, 100, 100)
+	mb, _, _ := prepare(t, ctx, 100, 100)
 	mb.pub = pubsub
 	go func(ctx context.Context, messages <-chan *watermillMsg.Message) {
 		for msg := range messages {
