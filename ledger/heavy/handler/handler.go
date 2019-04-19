@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/ledger/storage/blob"
+	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
@@ -31,15 +32,16 @@ import (
 )
 
 type Handler struct {
-	Bus            insolar.MessageBus                 `inject:""`
-	JetCoordinator insolar.JetCoordinator             `inject:""`
-	HeavySync      insolar.HeavySync                  `inject:""`
-	PCS            insolar.PlatformCryptographyScheme `inject:""`
-
-	BlobAccessor blob.Accessor         `inject:""`
-	Records      object.RecordAccessor `inject:""`
-
-	IndexAccessor object.IndexAccessor `inject:""`
+	Bus            insolar.MessageBus
+	JetCoordinator insolar.JetCoordinator
+	PCS            insolar.PlatformCryptographyScheme
+	BlobAccessor   blob.Accessor
+	BlobModifier   blob.Modifier
+	RecordAccessor object.RecordAccessor
+	RecordModifier object.RecordModifier
+	IndexAccessor  object.IndexAccessor
+	IndexModifier  object.IndexModifier
+	DropModifier   drop.Modifier
 
 	jetID insolar.JetID
 }
@@ -112,7 +114,7 @@ func (h *Handler) handleGetObject(
 	}
 
 	// Fetch state record.
-	rec, err := h.Records.ForID(ctx, *stateID)
+	rec, err := h.RecordAccessor.ForID(ctx, *stateID)
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch state %s for %s", stateID.DebugString(), msg.Head.Record()))
 	}
@@ -197,7 +199,7 @@ func (h *Handler) handleGetChildren(
 	}
 
 	// Try to fetch the first child.
-	_, err = h.Records.ForID(ctx, *currentChild)
+	_, err = h.RecordAccessor.ForID(ctx, *currentChild)
 	if err == object.ErrNotFound {
 		text := fmt.Sprintf(
 			"failed to fetch child %s for %s",
@@ -215,7 +217,7 @@ func (h *Handler) handleGetChildren(
 		}
 		counter++
 
-		rec, err := h.Records.ForID(ctx, *currentChild)
+		rec, err := h.RecordAccessor.ForID(ctx, *currentChild)
 
 		// We don't have this child reference. Return what was collected.
 		if err == object.ErrNotFound {
@@ -246,7 +248,7 @@ func (h *Handler) handleGetChildren(
 func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetRequest)
 
-	rec, err := h.Records.ForID(ctx, msg.Request)
+	rec, err := h.RecordAccessor.ForID(ctx, msg.Request)
 	if err != nil {
 		return nil, errors.New("failed to fetch request")
 	}
@@ -279,7 +281,7 @@ func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parce
 }
 
 func (h *Handler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeRecord, error) {
-	rec, err := h.Records.ForID(ctx, *id)
+	rec, err := h.RecordAccessor.ForID(ctx, *id)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't get record from storage")
 	}
@@ -296,16 +298,14 @@ func (h *Handler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeReco
 func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
 	msg := genericMsg.Message().(*message.HeavyPayload)
 
-	h.HeavySync.StoreRecords(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Records)
-
-	if err := h.HeavySync.StoreIndexes(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Indexes); err != nil {
+	storeRecords(ctx, h.RecordModifier, h.PCS, msg.PulseNum, msg.Records)
+	if err := storeIndexes(ctx, h.IndexModifier, msg.Indexes); err != nil {
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
-
-	if err := h.HeavySync.StoreDrop(ctx, msg.JetID, msg.Drop); err != nil {
+	if err := storeDrop(ctx, h.DropModifier, msg.Drop); err != nil {
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
-	if err := h.HeavySync.StoreBlobs(ctx, msg.PulseNum, msg.Blobs); err != nil {
+	if err := storeBlobs(ctx, h.BlobModifier, h.PCS, msg.PulseNum, msg.Blobs); err != nil {
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
 
