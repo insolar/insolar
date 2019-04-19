@@ -68,7 +68,7 @@ func (h *HandleCall) executeActual(
 	procCheckRole := CheckOurRole{
 		msg:  msg,
 		role: insolar.DynamicRoleVirtualExecutor,
-		Dep:  struct{ lr *LogicRunner }{lr: lr},
+		lr:   lr,
 	}
 
 	if err := f.Procedure(ctx, &procCheckRole); err != nil {
@@ -140,7 +140,7 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 		return errors.New("HandleCall( ! message.IBaseLogicMessage )")
 	}
 
-	ctx, span := instracer.StartSpan(ctx, "HandleCall.Present")
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.Execute")
 	span.AddAttributes(
 		trace.StringAttribute("msg.Type", msg.Type().String()),
 	)
