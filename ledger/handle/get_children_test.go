@@ -1,10 +1,11 @@
 package handle
 
 import (
+	"context"
 	"math/rand"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/ledger/storage"
@@ -40,7 +41,7 @@ func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
 	return genRefWithID(genRandomID(pulse))
 }
 
-func createProc(t *testing.T) *proc.GetChildren {
+func createProc(t *testing.T, ctx context.Context) *proc.GetChildren {
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 	msg := message.GetChildren{
 		Parent: *genRandomRef(0),
@@ -55,8 +56,18 @@ func createProc(t *testing.T) *proc.GetChildren {
 		Message: bus.Message{Parcel: parcel /* TODO replyTo */},
 	}
 
-	p.Dep.RecentStorageProvider = recentstorage.NewProviderMock(t)
-	p.Dep.IDLocker = storage.NewIDLockerMock(t)
+	recentIndexStorage := recentstorage.NewRecentIndexStorageMock(t)
+	recentIndexStorage.AddObjectMock.ExpectOnce(ctx, *msg.Parent.Record())
+
+	recentStorageProvider := recentstorage.NewProviderMock(t)
+	recentStorageProvider.GetIndexStorageMock.ExpectOnce(ctx, jetID).Return(recentIndexStorage)
+	p.Dep.RecentStorageProvider = recentStorageProvider
+
+	idLocker := storage.NewIDLockerMock(t)
+	idLocker.LockMock.ExpectOnce(msg.Parent.Record())
+	idLocker.UnlockMock.ExpectOnce(msg.Parent.Record())
+
+	p.Dep.IDLocker = idLocker
 	p.Dep.IndexAccessor = object.NewIndexAccessorMock(t)
 	p.Dep.JetCoordinator = testutils.NewJetCoordinatorMock(t)
 	p.Dep.JetStorage = jet.NewStorageMock(t)
@@ -69,10 +80,32 @@ func createProc(t *testing.T) *proc.GetChildren {
 
 // redirects to heavy when no index
 func TestGetChildren_RedirectsToHaveWhenNoIndex(t *testing.T) {
-	// p := createProc(t)
-	assert.NoError(t, nil)
+	ctx := context.Background()
+	p := createProc(t, ctx)
+	/*
+		fl := flow.NewFlowMock(t)
+		fl.ProcedureFunc = func(ctx context.Context, pr flow.Procedure) error {
+			if fetchJet, ok := pr.(*proc.FetchJet); ok {
+				require.Equal(t, "TypeGetChildren", fetchJet.Parcel.Message().Type().String())
+				fetchJet.Result.Jet = insolar.JetID(jetID)
+				return nil
+			} else if getChildren, ok := pr.(*proc.GetChildren); ok {
+				require.Equal(t, getChildren.Jet, jetID)
+				//require.Equal(t, getChildren.Code, codeRef)
+				//require.Equal(t, getChildren.Message, msg)
+				return nil
+			}
+			t.Fatal("you shouldn't be here")
+			return nil
+		}
+	*/
+
+	err := p.Proceed(ctx)
+	//err := p.Present(ctx, fl)
+	require.NoError(t, err)
 }
 
+/*
 // redirect to light when has index and child later than limit
 func TestGetChildren_RedirectsToLightChildLaterThanLimit(t *testing.T) {
 	// p := createProc(t)
@@ -84,3 +117,4 @@ func TestGetChildren_RedirectsToHeavyChildEarlierThanLimit(t *testing.T) {
 	// p := createProc(t)
 	assert.NoError(t, nil)
 }
+*/

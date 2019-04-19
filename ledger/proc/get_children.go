@@ -110,6 +110,7 @@ func (p *GetChildren) Proceed(ctx context.Context) error {
 		if err != nil {
 			return err
 		}
+		// TODO: first rest is for this case
 		p.Result.Reply, err = reply.NewGetChildrenRedirect(p.Dep.DelegationTokenFactory, parcel, node, *currentChild)
 		return err
 	}
