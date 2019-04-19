@@ -78,31 +78,31 @@ func (t *LightReplicatorDefault) NotifyAboutPulse(ctx context.Context, pn insola
 	})
 
 	logger := inslogger.FromContext(ctx)
-	logger.Debugf("[NotifyAboutPulse] pn - %v", pn)
+	logger.Debugf("[Replicator][NotifyAboutPulse] received pulse - %v", pn)
 
 	prevPN, err := t.pulseCalculator.Backwards(ctx, pn, 1)
 	if err != nil {
-		logger.Error("[NotifyAboutPulse]", err)
+		logger.Error("[Replicator][NotifyAboutPulse]", err)
 		return
 	}
 
-	logger.Debugf("[NotifyAboutPulse] prevPn - %v", prevPN.PulseNumber)
+	logger.Debugf("[Replicator][NotifyAboutPulse] start replication, pulse - %v", prevPN.PulseNumber)
 	t.syncWaitingPulses <- prevPN.PulseNumber
 }
 
 func (t *LightReplicatorDefault) sync(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 	for pn := range t.syncWaitingPulses {
-		logger.Debugf("[sync] pn received - %v", pn)
+		logger.Debugf("[Replicator][sync] pn received - %v", pn)
 
 		jets := t.jetCalculator.MineForPulse(ctx, pn)
-		logger.Debugf("[sync] founds %v jets", len(jets))
+		logger.Debugf("[Replicator][sync] founds %v jets", len(jets))
 		for _, jID := range jets {
 			msg, err := t.dataGatherer.ForPulseAndJet(ctx, pn, jID)
 			if err != nil {
 				panic(
 					fmt.Sprintf(
-						"[sync] Problems with gather data for a pulse - %v and jet - %v. err - %v",
+						"[Replicator][sync] Problems with gather data for a pulse - %v and jet - %v. err - %v",
 						pn,
 						jID.DebugString(),
 						err,
@@ -111,9 +111,9 @@ func (t *LightReplicatorDefault) sync(ctx context.Context) {
 			}
 			err = t.sendToHeavy(ctx, msg)
 			if err != nil {
-				logger.Errorf("[sync] Problems with sending msg to a heavy node", err)
+				logger.Errorf("[Replicator][sync]  Problems with sending msg to a heavy node", err)
 			} else {
-				logger.Debugf("[sync] data has been sent to a heavy. pn - %v, jetID - %v", msg.PulseNum, msg.JetID.DebugString())
+				logger.Debugf("[Replicator][sync]  Data has been sent to a heavy. pn - %v, jetID - %v", msg.PulseNum, msg.JetID.DebugString())
 			}
 		}
 

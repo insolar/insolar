@@ -90,19 +90,19 @@ func (c *LightCleaner) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNum
 	c.once.Do(func() {
 		go c.clean(ctx)
 	})
-
+	inslogger.FromContext(ctx).Debugf("[Cleaner][NotifyAboutPulse] received pulse - %v", pn)
 	c.pulseForClean <- pn
 }
 
 func (c *LightCleaner) clean(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 	for pn := range c.pulseForClean {
-		logger.Debugf("[NotifyAboutPulse] pn - %v", pn)
+		logger.Debugf("[Cleaner][NotifyAboutPulse] start cleaning pulse - %v", pn)
 
 		expiredPn, err := c.pulseCalculator.Backwards(ctx, pn, c.lightChainLimit)
 		if err == pulse.ErrNotFound {
-			logger.Errorf("[NotifyAboutPulse] expiredPn for pn - %v doesn't exist", pn)
-			return
+			logger.Errorf("[Cleaner][NotifyAboutPulse] expiredPn for pn - %v doesn't exist. limit - %v", pn, c.lightChainLimit)
+			continue
 		}
 		if err != nil {
 			panic(err)
@@ -113,7 +113,7 @@ func (c *LightCleaner) clean(ctx context.Context) {
 }
 
 func (c *LightCleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
-	inslogger.FromContext(ctx).Debugf("[cleanPulse] start cleaning. pn - %v", pn)
+	inslogger.FromContext(ctx).Debugf("[Cleaner][cleanPulse] start cleaning. pn - %v", pn)
 	c.nodeModifier.DeleteForPN(pn)
 	c.dropCleaner.DeleteForPN(ctx, pn)
 	c.blobCleaner.DeleteForPN(ctx, pn)
@@ -124,7 +124,7 @@ func (c *LightCleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 
 	err := c.pulseShifter.Shift(ctx, pn)
 	if err != nil {
-		inslogger.FromContext(ctx).Errorf("Can't clean pulse-tracker from pulse: %s", err)
+		inslogger.FromContext(ctx).Errorf("[Cleaner][cleanPulse] Can't clean pulse-tracker from pulse: %s", err)
 	}
-	inslogger.FromContext(ctx).Debugf("[cleanPulse] end cleaning. pn - %v", pn)
+	inslogger.FromContext(ctx).Debugf("[Cleaner][cleanPulse] end cleaning. pn - %v", pn)
 }

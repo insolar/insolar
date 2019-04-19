@@ -310,7 +310,7 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 	}
 
 	stats.Record(ctx,
-		statRecivedHeavyPayloadCount.M(1),
+		statReceivedHeavyPayloadCount.M(1),
 	)
 
 	return &reply.OK{}, nil

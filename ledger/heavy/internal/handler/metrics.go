@@ -17,19 +17,13 @@
 package handler
 
 import (
-	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
 )
 
 var (
-	heavySyncer = insmetrics.MustTagKey("heavySyncer")
-)
-
-var (
-	statRecivedHeavyPayloadCount = stats.Int64(
-		"heavySyncer/heavypayload/count",
+	statReceivedHeavyPayloadCount = stats.Int64(
+		"heavysyncer/heavypayload/count",
 		"How many heavy-payload messages were received from a light-node",
 		stats.UnitDimensionless,
 	)
@@ -38,11 +32,10 @@ var (
 func init() {
 	err := view.Register(
 		&view.View{
-			Name:        statRecivedHeavyPayloadCount.Name(),
-			Description: statRecivedHeavyPayloadCount.Description(),
-			Measure:     statRecivedHeavyPayloadCount,
+			Name:        statReceivedHeavyPayloadCount.Name(),
+			Description: statReceivedHeavyPayloadCount.Description(),
+			Measure:     statReceivedHeavyPayloadCount,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{heavySyncer},
 		},
 	)
 	if err != nil {

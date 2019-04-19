@@ -91,7 +91,7 @@ type PulseManager struct {
 	RecSyncAccessor object.RecordCollectionAccessor
 	RecCleaner      object.RecordCleaner
 
-	ToHeavySyncer replication.LightReplicator
+	LightReplicator replication.LightReplicator
 
 	currentPulse insolar.Pulse
 
@@ -150,7 +150,7 @@ func NewPulseManager(
 		RecSyncAccessor:         recSyncAccessor,
 		CollectionIndexAccessor: idxCollectionAccessor,
 		IndexCleaner:            indexCleaner,
-		ToHeavySyncer:           lightToHeavySyncer,
+		LightReplicator:         lightToHeavySyncer,
 	}
 	return pm
 }
@@ -451,7 +451,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 		m.postProcessJets(ctx, newPulse, jets)
 		// m.addSync(ctx, jets, oldPulse.PulseNumber)
 		// go m.cleanLightData(ctx, newPulse, jetIndexesRemoved)
-		go m.ToHeavySyncer.NotifyAboutPulse(ctx, newPulse.PulseNumber)
+		go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
 	}
 
 	err = m.Bus.OnPulse(ctx, newPulse)

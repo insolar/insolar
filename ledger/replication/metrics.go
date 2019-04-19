@@ -17,14 +17,8 @@
 package replication
 
 import (
-	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/stats/view"
-	"go.opencensus.io/tag"
-)
-
-var (
-	lightSyncer = insmetrics.MustTagKey("lightsyncer")
 )
 
 var (
@@ -47,14 +41,12 @@ func init() {
 			Description: statHeavyPayloadCount.Description(),
 			Measure:     statHeavyPayloadCount,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{lightSyncer},
 		},
 		&view.View{
 			Name:        statErrHeavyPayloadCount.Name(),
 			Description: statErrHeavyPayloadCount.Description(),
 			Measure:     statErrHeavyPayloadCount,
 			Aggregation: view.Count(),
-			TagKeys:     []tag.Key{lightSyncer},
 		},
 	)
 	if err != nil {
