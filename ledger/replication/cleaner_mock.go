@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Cleaner" can be found in github.com/insolar/insolar/ledger/replication
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// CleanerMock implements github.com/insolar/insolar/ledger/replication.Cleaner
+//CleanerMock implements github.com/insolar/insolar/ledger/replication.Cleaner
 type CleanerMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type CleanerMock struct {
 	NotifyAboutPulseMock       mCleanerMockNotifyAboutPulse
 }
 
-// NewCleanerMock returns a mock for github.com/insolar/insolar/ledger/replication.Cleaner
+//NewCleanerMock returns a mock for github.com/insolar/insolar/ledger/replication.Cleaner
 func NewCleanerMock(t minimock.Tester) *CleanerMock {
 	m := &CleanerMock{t: t}
 
@@ -54,7 +54,7 @@ type CleanerMockNotifyAboutPulseInput struct {
 	p1 insolar.PulseNumber
 }
 
-// Expect specifies that invocation of Cleaner.NotifyAboutPulse is expected from 1 to Infinity times
+//Expect specifies that invocation of Cleaner.NotifyAboutPulse is expected from 1 to Infinity times
 func (m *mCleanerMockNotifyAboutPulse) Expect(p context.Context, p1 insolar.PulseNumber) *mCleanerMockNotifyAboutPulse {
 	m.mock.NotifyAboutPulseFunc = nil
 	m.expectationSeries = nil
@@ -66,7 +66,7 @@ func (m *mCleanerMockNotifyAboutPulse) Expect(p context.Context, p1 insolar.Puls
 	return m
 }
 
-// Return specifies results of invocation of Cleaner.NotifyAboutPulse
+//Return specifies results of invocation of Cleaner.NotifyAboutPulse
 func (m *mCleanerMockNotifyAboutPulse) Return() *CleanerMock {
 	m.mock.NotifyAboutPulseFunc = nil
 	m.expectationSeries = nil
@@ -78,7 +78,7 @@ func (m *mCleanerMockNotifyAboutPulse) Return() *CleanerMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Cleaner.NotifyAboutPulse is expected once
+//ExpectOnce specifies that invocation of Cleaner.NotifyAboutPulse is expected once
 func (m *mCleanerMockNotifyAboutPulse) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *CleanerMockNotifyAboutPulseExpectation {
 	m.mock.NotifyAboutPulseFunc = nil
 	m.mainExpectation = nil
@@ -89,7 +89,7 @@ func (m *mCleanerMockNotifyAboutPulse) ExpectOnce(p context.Context, p1 insolar.
 	return expectation
 }
 
-// Set uses given function f as a mock of Cleaner.NotifyAboutPulse method
+//Set uses given function f as a mock of Cleaner.NotifyAboutPulse method
 func (m *mCleanerMockNotifyAboutPulse) Set(f func(p context.Context, p1 insolar.PulseNumber)) *CleanerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -98,7 +98,7 @@ func (m *mCleanerMockNotifyAboutPulse) Set(f func(p context.Context, p1 insolar.
 	return m.mock
 }
 
-// NotifyAboutPulse implements github.com/insolar/insolar/ledger/replication.Cleaner interface
+//NotifyAboutPulse implements github.com/insolar/insolar/ledger/replication.Cleaner interface
 func (m *CleanerMock) NotifyAboutPulse(p context.Context, p1 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.NotifyAboutPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.NotifyAboutPulseCounter, 1)
@@ -133,17 +133,17 @@ func (m *CleanerMock) NotifyAboutPulse(p context.Context, p1 insolar.PulseNumber
 	m.NotifyAboutPulseFunc(p, p1)
 }
 
-// NotifyAboutPulseMinimockCounter returns a count of CleanerMock.NotifyAboutPulseFunc invocations
+//NotifyAboutPulseMinimockCounter returns a count of CleanerMock.NotifyAboutPulseFunc invocations
 func (m *CleanerMock) NotifyAboutPulseMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.NotifyAboutPulseCounter)
 }
 
-// NotifyAboutPulseMinimockPreCounter returns the value of CleanerMock.NotifyAboutPulse invocations
+//NotifyAboutPulseMinimockPreCounter returns the value of CleanerMock.NotifyAboutPulse invocations
 func (m *CleanerMock) NotifyAboutPulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.NotifyAboutPulsePreCounter)
 }
 
-// NotifyAboutPulseFinished returns true if mock invocations count is ok
+//NotifyAboutPulseFinished returns true if mock invocations count is ok
 func (m *CleanerMock) NotifyAboutPulseFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.NotifyAboutPulseMock.expectationSeries) > 0 {
@@ -163,8 +163,8 @@ func (m *CleanerMock) NotifyAboutPulseFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CleanerMock) ValidateCallCounters() {
 
 	if !m.NotifyAboutPulseFinished() {
@@ -173,19 +173,19 @@ func (m *CleanerMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CleanerMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *CleanerMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *CleanerMock) MinimockFinish() {
 
 	if !m.NotifyAboutPulseFinished() {
@@ -194,14 +194,14 @@ func (m *CleanerMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *CleanerMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *CleanerMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -227,8 +227,8 @@ func (m *CleanerMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *CleanerMock) AllMocksCalled() bool {
 
 	if !m.NotifyAboutPulseFinished() {

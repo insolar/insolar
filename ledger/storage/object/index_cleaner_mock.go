@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "IndexCleaner" can be found in github.com/insolar/insolar/ledger/storage/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -54,7 +54,7 @@ type IndexCleanerMockDeleteForPNInput struct {
 	p1 insolar.PulseNumber
 }
 
-// Expect specifies that invocation of IndexCleaner.DeleteForPN is expected from 1 to Infinity times
+//Expect specifies that invocation of IndexCleaner.DeleteForPN is expected from 1 to Infinity times
 func (m *mIndexCleanerMockDeleteForPN) Expect(p context.Context, p1 insolar.PulseNumber) *mIndexCleanerMockDeleteForPN {
 	m.mock.DeleteForPNFunc = nil
 	m.expectationSeries = nil
@@ -66,7 +66,7 @@ func (m *mIndexCleanerMockDeleteForPN) Expect(p context.Context, p1 insolar.Puls
 	return m
 }
 
-// Return specifies results of invocation of IndexCleaner.DeleteForPN
+//Return specifies results of invocation of IndexCleaner.DeleteForPN
 func (m *mIndexCleanerMockDeleteForPN) Return() *IndexCleanerMock {
 	m.mock.DeleteForPNFunc = nil
 	m.expectationSeries = nil
@@ -78,7 +78,7 @@ func (m *mIndexCleanerMockDeleteForPN) Return() *IndexCleanerMock {
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of IndexCleaner.DeleteForPN is expected once
+//ExpectOnce specifies that invocation of IndexCleaner.DeleteForPN is expected once
 func (m *mIndexCleanerMockDeleteForPN) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *IndexCleanerMockDeleteForPNExpectation {
 	m.mock.DeleteForPNFunc = nil
 	m.mainExpectation = nil
@@ -89,7 +89,7 @@ func (m *mIndexCleanerMockDeleteForPN) ExpectOnce(p context.Context, p1 insolar.
 	return expectation
 }
 
-// Set uses given function f as a mock of IndexCleaner.DeleteForPN method
+//Set uses given function f as a mock of IndexCleaner.DeleteForPN method
 func (m *mIndexCleanerMockDeleteForPN) Set(f func(p context.Context, p1 insolar.PulseNumber)) *IndexCleanerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -98,7 +98,7 @@ func (m *mIndexCleanerMockDeleteForPN) Set(f func(p context.Context, p1 insolar.
 	return m.mock
 }
 
-// DeleteForPN implements github.com/insolar/insolar/ledger/storage/object.IndexCleaner interface
+//DeleteForPN implements github.com/insolar/insolar/ledger/storage/object.IndexCleaner interface
 func (m *IndexCleanerMock) DeleteForPN(p context.Context, p1 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.DeleteForPNPreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteForPNCounter, 1)
@@ -133,17 +133,17 @@ func (m *IndexCleanerMock) DeleteForPN(p context.Context, p1 insolar.PulseNumber
 	m.DeleteForPNFunc(p, p1)
 }
 
-// DeleteForPNMinimockCounter returns a count of IndexCleanerMock.DeleteForPNFunc invocations
+//DeleteForPNMinimockCounter returns a count of IndexCleanerMock.DeleteForPNFunc invocations
 func (m *IndexCleanerMock) DeleteForPNMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.DeleteForPNCounter)
 }
 
-// DeleteForPNMinimockPreCounter returns the value of IndexCleanerMock.DeleteForPN invocations
+//DeleteForPNMinimockPreCounter returns the value of IndexCleanerMock.DeleteForPN invocations
 func (m *IndexCleanerMock) DeleteForPNMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.DeleteForPNPreCounter)
 }
 
-// DeleteForPNFinished returns true if mock invocations count is ok
+//DeleteForPNFinished returns true if mock invocations count is ok
 func (m *IndexCleanerMock) DeleteForPNFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.DeleteForPNMock.expectationSeries) > 0 {

@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Calculator" can be found in github.com/insolar/insolar/insolar/jet
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// CalculatorMock implements github.com/insolar/insolar/insolar/jet.Calculator
+//CalculatorMock implements github.com/insolar/insolar/insolar/jet.Calculator
 type CalculatorMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type CalculatorMock struct {
 	MineForPulseMock       mCalculatorMockMineForPulse
 }
 
-// NewCalculatorMock returns a mock for github.com/insolar/insolar/insolar/jet.Calculator
+//NewCalculatorMock returns a mock for github.com/insolar/insolar/insolar/jet.Calculator
 func NewCalculatorMock(t minimock.Tester) *CalculatorMock {
 	m := &CalculatorMock{t: t}
 
@@ -59,7 +59,7 @@ type CalculatorMockMineForPulseResult struct {
 	r []insolar.JetID
 }
 
-// Expect specifies that invocation of Calculator.MineForPulse is expected from 1 to Infinity times
+//Expect specifies that invocation of Calculator.MineForPulse is expected from 1 to Infinity times
 func (m *mCalculatorMockMineForPulse) Expect(p context.Context, p1 insolar.PulseNumber) *mCalculatorMockMineForPulse {
 	m.mock.MineForPulseFunc = nil
 	m.expectationSeries = nil
@@ -71,7 +71,7 @@ func (m *mCalculatorMockMineForPulse) Expect(p context.Context, p1 insolar.Pulse
 	return m
 }
 
-// Return specifies results of invocation of Calculator.MineForPulse
+//Return specifies results of invocation of Calculator.MineForPulse
 func (m *mCalculatorMockMineForPulse) Return(r []insolar.JetID) *CalculatorMock {
 	m.mock.MineForPulseFunc = nil
 	m.expectationSeries = nil
@@ -83,7 +83,7 @@ func (m *mCalculatorMockMineForPulse) Return(r []insolar.JetID) *CalculatorMock 
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of Calculator.MineForPulse is expected once
+//ExpectOnce specifies that invocation of Calculator.MineForPulse is expected once
 func (m *mCalculatorMockMineForPulse) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *CalculatorMockMineForPulseExpectation {
 	m.mock.MineForPulseFunc = nil
 	m.mainExpectation = nil
@@ -98,7 +98,7 @@ func (e *CalculatorMockMineForPulseExpectation) Return(r []insolar.JetID) {
 	e.result = &CalculatorMockMineForPulseResult{r}
 }
 
-// Set uses given function f as a mock of Calculator.MineForPulse method
+//Set uses given function f as a mock of Calculator.MineForPulse method
 func (m *mCalculatorMockMineForPulse) Set(f func(p context.Context, p1 insolar.PulseNumber) (r []insolar.JetID)) *CalculatorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -107,7 +107,7 @@ func (m *mCalculatorMockMineForPulse) Set(f func(p context.Context, p1 insolar.P
 	return m.mock
 }
 
-// MineForPulse implements github.com/insolar/insolar/insolar/jet.Calculator interface
+//MineForPulse implements github.com/insolar/insolar/insolar/jet.Calculator interface
 func (m *CalculatorMock) MineForPulse(p context.Context, p1 insolar.PulseNumber) (r []insolar.JetID) {
 	counter := atomic.AddUint64(&m.MineForPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.MineForPulseCounter, 1)
@@ -157,17 +157,17 @@ func (m *CalculatorMock) MineForPulse(p context.Context, p1 insolar.PulseNumber)
 	return m.MineForPulseFunc(p, p1)
 }
 
-// MineForPulseMinimockCounter returns a count of CalculatorMock.MineForPulseFunc invocations
+//MineForPulseMinimockCounter returns a count of CalculatorMock.MineForPulseFunc invocations
 func (m *CalculatorMock) MineForPulseMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.MineForPulseCounter)
 }
 
-// MineForPulseMinimockPreCounter returns the value of CalculatorMock.MineForPulse invocations
+//MineForPulseMinimockPreCounter returns the value of CalculatorMock.MineForPulse invocations
 func (m *CalculatorMock) MineForPulseMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.MineForPulsePreCounter)
 }
 
-// MineForPulseFinished returns true if mock invocations count is ok
+//MineForPulseFinished returns true if mock invocations count is ok
 func (m *CalculatorMock) MineForPulseFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.MineForPulseMock.expectationSeries) > 0 {
@@ -187,8 +187,8 @@ func (m *CalculatorMock) MineForPulseFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CalculatorMock) ValidateCallCounters() {
 
 	if !m.MineForPulseFinished() {
@@ -197,19 +197,19 @@ func (m *CalculatorMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *CalculatorMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *CalculatorMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *CalculatorMock) MinimockFinish() {
 
 	if !m.MineForPulseFinished() {
@@ -218,14 +218,14 @@ func (m *CalculatorMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *CalculatorMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *CalculatorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -251,8 +251,8 @@ func (m *CalculatorMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *CalculatorMock) AllMocksCalled() bool {
 
 	if !m.MineForPulseFinished() {

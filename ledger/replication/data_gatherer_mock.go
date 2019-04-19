@@ -6,18 +6,18 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "DataGatherer" can be found in github.com/insolar/insolar/ledger/replication
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
+	insolar "github.com/insolar/insolar/insolar"
+	message "github.com/insolar/insolar/insolar/message"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// DataGathererMock implements github.com/insolar/insolar/ledger/replication.DataGatherer
+//DataGathererMock implements github.com/insolar/insolar/ledger/replication.DataGatherer
 type DataGathererMock struct {
 	t minimock.Tester
 
@@ -27,7 +27,7 @@ type DataGathererMock struct {
 	ForPulseAndJetMock       mDataGathererMockForPulseAndJet
 }
 
-// NewDataGathererMock returns a mock for github.com/insolar/insolar/ledger/replication.DataGatherer
+//NewDataGathererMock returns a mock for github.com/insolar/insolar/ledger/replication.DataGatherer
 func NewDataGathererMock(t minimock.Tester) *DataGathererMock {
 	m := &DataGathererMock{t: t}
 
@@ -62,7 +62,7 @@ type DataGathererMockForPulseAndJetResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of DataGatherer.ForPulseAndJet is expected from 1 to Infinity times
+//Expect specifies that invocation of DataGatherer.ForPulseAndJet is expected from 1 to Infinity times
 func (m *mDataGathererMockForPulseAndJet) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *mDataGathererMockForPulseAndJet {
 	m.mock.ForPulseAndJetFunc = nil
 	m.expectationSeries = nil
@@ -74,7 +74,7 @@ func (m *mDataGathererMockForPulseAndJet) Expect(p context.Context, p1 insolar.P
 	return m
 }
 
-// Return specifies results of invocation of DataGatherer.ForPulseAndJet
+//Return specifies results of invocation of DataGatherer.ForPulseAndJet
 func (m *mDataGathererMockForPulseAndJet) Return(r *message.HeavyPayload, r1 error) *DataGathererMock {
 	m.mock.ForPulseAndJetFunc = nil
 	m.expectationSeries = nil
@@ -86,7 +86,7 @@ func (m *mDataGathererMockForPulseAndJet) Return(r *message.HeavyPayload, r1 err
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of DataGatherer.ForPulseAndJet is expected once
+//ExpectOnce specifies that invocation of DataGatherer.ForPulseAndJet is expected once
 func (m *mDataGathererMockForPulseAndJet) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *DataGathererMockForPulseAndJetExpectation {
 	m.mock.ForPulseAndJetFunc = nil
 	m.mainExpectation = nil
@@ -101,7 +101,7 @@ func (e *DataGathererMockForPulseAndJetExpectation) Return(r *message.HeavyPaylo
 	e.result = &DataGathererMockForPulseAndJetResult{r, r1}
 }
 
-// Set uses given function f as a mock of DataGatherer.ForPulseAndJet method
+//Set uses given function f as a mock of DataGatherer.ForPulseAndJet method
 func (m *mDataGathererMockForPulseAndJet) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r *message.HeavyPayload, r1 error)) *DataGathererMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -110,7 +110,7 @@ func (m *mDataGathererMockForPulseAndJet) Set(f func(p context.Context, p1 insol
 	return m.mock
 }
 
-// ForPulseAndJet implements github.com/insolar/insolar/ledger/replication.DataGatherer interface
+//ForPulseAndJet implements github.com/insolar/insolar/ledger/replication.DataGatherer interface
 func (m *DataGathererMock) ForPulseAndJet(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r *message.HeavyPayload, r1 error) {
 	counter := atomic.AddUint64(&m.ForPulseAndJetPreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseAndJetCounter, 1)
@@ -162,17 +162,17 @@ func (m *DataGathererMock) ForPulseAndJet(p context.Context, p1 insolar.PulseNum
 	return m.ForPulseAndJetFunc(p, p1, p2)
 }
 
-// ForPulseAndJetMinimockCounter returns a count of DataGathererMock.ForPulseAndJetFunc invocations
+//ForPulseAndJetMinimockCounter returns a count of DataGathererMock.ForPulseAndJetFunc invocations
 func (m *DataGathererMock) ForPulseAndJetMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.ForPulseAndJetCounter)
 }
 
-// ForPulseAndJetMinimockPreCounter returns the value of DataGathererMock.ForPulseAndJet invocations
+//ForPulseAndJetMinimockPreCounter returns the value of DataGathererMock.ForPulseAndJet invocations
 func (m *DataGathererMock) ForPulseAndJetMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.ForPulseAndJetPreCounter)
 }
 
-// ForPulseAndJetFinished returns true if mock invocations count is ok
+//ForPulseAndJetFinished returns true if mock invocations count is ok
 func (m *DataGathererMock) ForPulseAndJetFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.ForPulseAndJetMock.expectationSeries) > 0 {
@@ -192,8 +192,8 @@ func (m *DataGathererMock) ForPulseAndJetFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *DataGathererMock) ValidateCallCounters() {
 
 	if !m.ForPulseAndJetFinished() {
@@ -202,19 +202,19 @@ func (m *DataGathererMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *DataGathererMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *DataGathererMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *DataGathererMock) MinimockFinish() {
 
 	if !m.ForPulseAndJetFinished() {
@@ -223,14 +223,14 @@ func (m *DataGathererMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *DataGathererMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *DataGathererMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -256,8 +256,8 @@ func (m *DataGathererMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *DataGathererMock) AllMocksCalled() bool {
 
 	if !m.ForPulseAndJetFinished() {
