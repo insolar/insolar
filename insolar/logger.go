@@ -84,6 +84,9 @@ type Logger interface {
 	// SetLevelNumber set log level with number
 	WithLevelNumber(level LogLevel) (Logger, error)
 
+	// SkipFrame returns new log instance with provided skipFrameCount.
+	SkipFrame(skipFrameCount int) Logger
+
 	// Debug logs a message at level Debug.
 	Debug(...interface{})
 	// Debugf formatted logs a message at level Debug.

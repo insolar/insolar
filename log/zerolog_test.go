@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/configuration"
 )
 
+// XXX: beware to adding lines in this test (check test code)
 func TestZeroLogAdapter_CallerInfo(t *testing.T) {
 	log, err := NewLog(configuration.Log{Level: "info", Adapter: "zerolog", Formatter: "json"})
 	require.NoError(t, err)
@@ -35,5 +36,5 @@ func TestZeroLogAdapter_CallerInfo(t *testing.T) {
 
 	log.Error("test")
 
-	require.Contains(t, buf.String(), "zerolog_test.go:36")
+	require.Contains(t, buf.String(), "zerolog_test.go:37")
 }

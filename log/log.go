@@ -68,7 +68,7 @@ var GlobalLogger = func() insolar.Logger {
 	if err != nil {
 		stdlog.Println("warning:", err.Error())
 	}
-	return logger
+	return logger.SkipFrame(3)
 }()
 
 func SetGlobalLogger(logger insolar.Logger) {

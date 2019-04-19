@@ -21,6 +21,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -35,7 +36,8 @@ func init() {
 }
 
 type zerologAdapter struct {
-	logger zerolog.Logger
+	logger         zerolog.Logger
+	skipFrameCount int
 }
 
 type loglevelChangeHandler struct {
@@ -102,9 +104,12 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 		return nil, errors.New("unknown formatter " + cfg.Formatter)
 	}
 
-	zerolog.CallerSkipFrameCount = 3
-	logger := zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Caller().Logger()
-	return &zerologAdapter{logger}, nil
+	logger := zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Logger()
+	za := &zerologAdapter{
+		logger:         logger,
+		skipFrameCount: 3,
+	}
+	return za, nil
 }
 
 // WithFields return copy of adapter with predefined fields.
@@ -113,72 +118,97 @@ func (z *zerologAdapter) WithFields(fields map[string]interface{}) insolar.Logge
 	for key, value := range fields {
 		w = w.Interface(key, value)
 	}
-	return &zerologAdapter{w.Logger()}
+	return &zerologAdapter{
+		logger:         w.Logger(),
+		skipFrameCount: z.skipFrameCount,
+	}
 }
 
 // WithField return copy of adapter with predefined single field.
 func (z *zerologAdapter) WithField(key string, value interface{}) insolar.Logger {
-	return &zerologAdapter{z.logger.With().Interface(key, value).Logger()}
+	return &zerologAdapter{
+		logger:         z.logger.With().Interface(key, value).Logger(),
+		skipFrameCount: z.skipFrameCount,
+	}
+}
+
+func (z *zerologAdapter) caller() *zerologAdapter {
+	cInfo := getCallInfo(z.skipFrameCount)
+	return &zerologAdapter{
+		logger: z.logger.With().
+			Str("package", cInfo.packageName).
+			Str("file", cInfo.fileName+":"+strconv.Itoa(cInfo.line)).
+			Str("func", cInfo.funcName).
+			Logger(),
+	}
+}
+
+// SkipFrame returns new log instance with provided skipFrameCount.
+func (z *zerologAdapter) SkipFrame(skipFrameCount int) insolar.Logger {
+	return &zerologAdapter{
+		logger:         z.logger,
+		skipFrameCount: skipFrameCount,
+	}
 }
 
 // Debug logs a message at level Debug on the stdout.
 func (z *zerologAdapter) Debug(args ...interface{}) {
-	z.logger.Debug().Msg(fmt.Sprint(args...))
+	z.caller().logger.Debug().Msg(fmt.Sprint(args...))
 }
 
 // Debugf formatted logs a message at level Debug on the stdout.
 func (z *zerologAdapter) Debugf(format string, args ...interface{}) {
-	z.logger.Debug().Msgf(format, args...)
+	z.caller().logger.Debug().Msgf(format, args...)
 }
 
 // Info logs a message at level Info on the stdout.
 func (z *zerologAdapter) Info(args ...interface{}) {
-	z.logger.Info().Msg(fmt.Sprint(args...))
+	z.caller().logger.Info().Msg(fmt.Sprint(args...))
 }
 
 // Infof formatted logs a message at level Info on the stdout.
 func (z *zerologAdapter) Infof(format string, args ...interface{}) {
-	z.logger.Info().Msgf(format, args...)
+	z.caller().logger.Info().Msgf(format, args...)
 }
 
 // Warn logs a message at level Warn on the stdout.
 func (z *zerologAdapter) Warn(args ...interface{}) {
-	z.logger.Warn().Msg(fmt.Sprint(args...))
+	z.caller().logger.Warn().Msg(fmt.Sprint(args...))
 }
 
 // Warnf formatted logs a message at level Warn on the stdout.
 func (z *zerologAdapter) Warnf(format string, args ...interface{}) {
-	z.logger.Warn().Msgf(format, args...)
+	z.caller().logger.Warn().Msgf(format, args...)
 }
 
 // Error logs a message at level Error on the stdout.
 func (z *zerologAdapter) Error(args ...interface{}) {
-	z.logger.Error().Msg(fmt.Sprint(args...))
+	z.caller().logger.Error().Msg(fmt.Sprint(args...))
 }
 
 // Errorf formatted logs a message at level Error on the stdout.
 func (z *zerologAdapter) Errorf(format string, args ...interface{}) {
-	z.logger.Error().Msgf(format, args...)
+	z.caller().logger.Error().Msgf(format, args...)
 }
 
 // Fatal logs a message at level Fatal on the stdout.
 func (z *zerologAdapter) Fatal(args ...interface{}) {
-	z.logger.Fatal().Msg(fmt.Sprint(args...))
+	z.caller().logger.Fatal().Msg(fmt.Sprint(args...))
 }
 
 // Fatalf formatted logs a message at level Fatal on the stdout.
 func (z *zerologAdapter) Fatalf(format string, args ...interface{}) {
-	z.logger.Fatal().Msgf(format, args...)
+	z.caller().logger.Fatal().Msgf(format, args...)
 }
 
 // Panic logs a message at level Panic on the stdout.
 func (z *zerologAdapter) Panic(args ...interface{}) {
-	z.logger.Panic().Msg(fmt.Sprint(args...))
+	z.caller().logger.Panic().Msg(fmt.Sprint(args...))
 }
 
 // Panicf formatted logs a message at level Panic on the stdout.
 func (z zerologAdapter) Panicf(format string, args ...interface{}) {
-	z.logger.Panic().Msgf(format, args...)
+	z.caller().logger.Panic().Msgf(format, args...)
 }
 
 // WithLevel sets log level
