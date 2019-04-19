@@ -21,6 +21,7 @@ import (
 	"errors"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
