@@ -37,7 +37,6 @@ create_nodes_dir()
     for i in `seq 1 $NUM_NODES`
     do
         set -x
-        mkdir -vp ${NODES_DATA}${i}/data
         mkdir -vp ${NODES_LOGS}${i}
         { set +x; } 2>/dev/null
     done
@@ -49,7 +48,6 @@ clear_dirs()
     for i in `seq 1 $NUM_NODES`
     do
         set -x
-        rm -rvf ${NODES_DATA}${i}/data
         rm -rvf ${NODES_LOGS}${i}
         { set +x; } 2>/dev/null
     done

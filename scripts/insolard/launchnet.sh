@@ -268,21 +268,10 @@ launch_insgorund()
 
 copy_data()
 {
-    echo "copy_data() starts ..."
-
-    echo "prepare heavy data"
+    echo "copy data dir to heavy"
     set -x
     mv ${LEDGER_DIR}/ ${DISCOVERY_NODES_HEAVY_DATA}/data
     { set +x; } 2>/dev/null
-
-    echo "prepare legacy dirs"
-    for node in "${DISCOVERY_NODE_DIRS[@]}"
-    do
-        set -x
-        mkdir -p ${node}/data
-        { set +x; } 2>/dev/null
-    done
-    echo "copy_data() end."
 }
 
 copy_discovery_certs()
