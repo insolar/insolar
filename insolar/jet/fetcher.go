@@ -30,27 +30,33 @@ import (
 	"github.com/insolar/insolar/ledger/storage/node"
 )
 
+// Fetcher can be used to get actual jets. It involves fetching jet from other nodes via network and updating local
+// jet tree.
+type Fetcher interface {
+	Fetch(ctx context.Context, target insolar.ID, pulse insolar.PulseNumber) (*insolar.ID, error)
+	Release(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber)
+}
+
+// Used to queue fetching routines.
 type seqEntry struct {
 	ch   chan struct{}
 	once sync.Once
 }
 
+// Used as an id for fetching routines. Each jet is updated individually and independently, but routines with the same
+// jets are queued.
 type seqKey struct {
 	pulse insolar.PulseNumber
-	jet   insolar.ID
+	jet   insolar.JetID
 }
 
+// Used to pass fetching result over channels.
 type fetchResult struct {
 	jet *insolar.ID
 	err error
 }
 
-type TreeUpdater interface {
-	FetchJet(ctx context.Context, target insolar.ID, pulse insolar.PulseNumber) (*insolar.ID, error)
-	ReleaseJet(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber)
-}
-
-type treeUpdater struct {
+type fetcher struct {
 	Nodes          node.Accessor
 	JetStorage     Storage
 	MessageBus     insolar.MessageBus
@@ -60,13 +66,14 @@ type treeUpdater struct {
 	sequencer map[seqKey]*seqEntry
 }
 
-func NewJetTreeUpdater(
+// NewFetcher creates new fetcher instance.
+func NewFetcher(
 	ans node.Accessor,
 	js Storage,
 	mb insolar.MessageBus,
 	jc insolar.JetCoordinator,
-) TreeUpdater {
-	return &treeUpdater{
+) Fetcher {
+	return &fetcher{
 		Nodes:          ans,
 		JetStorage:     js,
 		MessageBus:     mb,
@@ -75,7 +82,16 @@ func NewJetTreeUpdater(
 	}
 }
 
-func (tu *treeUpdater) FetchJet(
+// Fetch coordinates jet fetching routines. It is safe to call concurrently on the same instance.
+//
+// Multiple routines enter the fetching section and grouped by jet id and pulse. All groups are executed independently.
+// Routines within one group executed sequentially. Each routine goes through steps:
+// 1. Look in the local tree. If actual jet is found - return.
+// 2. Enter the queue.
+// 3. Fetch actual jet over network.
+// 4. Update local tree.
+// 5. Exit the queue.
+func (tu *fetcher) Fetch(
 	ctx context.Context, target insolar.ID, pulse insolar.PulseNumber,
 ) (*insolar.ID, error) {
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.fetch_jet")
@@ -89,12 +105,15 @@ func (tu *treeUpdater) FetchJet(
 
 	// Not actual in our tree, asking neighbors for jet.
 	span.Annotate(nil, "tree in DB is not actual")
-	key := seqKey{pulse, insolar.ID(jetID)}
+	key := seqKey{pulse, jetID}
 
+	// Indicates that this routine is the first in the queue and should do the fetching.
+	// Other routines wait in the queue.
 	executing := false
 
 	tu.seqMutex.Lock()
 	if _, ok := tu.sequencer[key]; !ok {
+		// Key is not found in the queue. We are the first.
 		tu.sequencer[key] = &seqEntry{ch: make(chan struct{})}
 		executing = true
 	}
@@ -104,41 +123,49 @@ func (tu *treeUpdater) FetchJet(
 	span.Annotate(nil, "got sequencer entry")
 
 	if !executing {
+		// We are not the first, waiting in the queue.
 		<-entry.ch
 
 		// Tree was updated in another thread, rechecking.
 		span.Annotate(nil, "somebody else updated actuality")
-		return tu.FetchJet(ctx, target, pulse)
+		return tu.Fetch(ctx, target, pulse)
 	}
 
 	defer func() {
+		// Prevents closing of a closed channel.
 		entry.once.Do(func() {
 			close(entry.ch)
 		})
 
+		// Exiting the queue.
 		tu.seqMutex.Lock()
 		delete(tu.sequencer, key)
 		tu.seqMutex.Unlock()
 	}()
 
-	resJet, err := tu.fetchActualJetFromOtherNodes(ctx, target, pulse)
+	// Fetching jet via network.
+	resJet, err := tu.fetch(ctx, target, pulse)
 	if err != nil {
 		return nil, err
 	}
 
+	// Updating local tree.
 	tu.JetStorage.Update(ctx, pulse, true, insolar.JetID(*resJet))
 
 	return resJet, nil
 }
 
-func (tu *treeUpdater) ReleaseJet(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) {
+// Release unlocks all the queses on the branch for provided jet. I.e. all the jets that are higher in the tree on the
+// current branch get released and "fall through" until they hit provided jet or branch out.
+func (tu *fetcher) Release(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) {
 	tu.seqMutex.Lock()
 	defer tu.seqMutex.Unlock()
 
-	depth := insolar.JetID(jetID).Depth()
+	depth := jetID.Depth()
 	for {
 		key := seqKey{pulse, jetID}
 		if v, ok := tu.sequencer[key]; ok {
+			// Unlocking jets queue.
 			v.once.Do(func() {
 				close(v.ch)
 			})
@@ -149,21 +176,25 @@ func (tu *treeUpdater) ReleaseJet(ctx context.Context, jetID insolar.ID, pulse i
 		if depth == 0 {
 			break
 		}
-		jetID = insolar.ID(Parent(insolar.JetID(jetID)))
+		// Iterating over jet parents (going up the tree).
+		jetID = Parent(jetID)
 		depth--
 	}
 }
 
-func (tu *treeUpdater) fetchActualJetFromOtherNodes(
+// Fetching jet over network.
+func (tu *fetcher) fetch(
 	ctx context.Context, target insolar.ID, pulse insolar.PulseNumber,
 ) (*insolar.ID, error) {
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.fetch_jet_from_other_nodes")
 	defer span.End()
 
+	// Fetching result will be written here.
 	ch := make(chan fetchResult, 1)
 
 	go func() {
-		nodes, err := tu.otherNodesForPulse(ctx, pulse)
+		// Other nodes that might have the actual jet.
+		nodes, err := tu.nodesForPulse(ctx, pulse)
 		if err != nil {
 			ch <- fetchResult{nil, err}
 			return
@@ -178,6 +209,7 @@ func (tu *treeUpdater) fetchActualJetFromOtherNodes(
 
 		replies := make([]*reply.Jet, num)
 		for i, node := range nodes {
+			// Asking all the nodes concurrently.
 			go func(i int, node insolar.Node) {
 				ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.one_node_get_jet")
 				defer span.End()
@@ -185,6 +217,7 @@ func (tu *treeUpdater) fetchActualJetFromOtherNodes(
 				defer wg.Done()
 
 				nodeID := node.ID
+				// Asking the node for jet.
 				rep, err := tu.MessageBus.Send(
 					ctx,
 					&message.GetJet{Object: target, Pulse: pulse},
@@ -199,7 +232,7 @@ func (tu *treeUpdater) fetchActualJetFromOtherNodes(
 
 				r, ok := rep.(*reply.Jet)
 				if !ok {
-					inslogger.FromContext(ctx).Errorf("middleware.fetchActualJetFromOtherNodes: unexpected reply: %#v\n", rep)
+					inslogger.FromContext(ctx).Errorf("middleware.fetch: unexpected reply: %#v\n", rep)
 					return
 				}
 
@@ -207,6 +240,8 @@ func (tu *treeUpdater) fetchActualJetFromOtherNodes(
 					return
 				}
 
+				// Only one routine writes the result. The rest will still collect their result for future comparison.
+				// We compare all the results to find potential problems.
 				once.Do(func() {
 					jetID := r.ID
 					ch <- fetchResult{&jetID, nil}
@@ -218,21 +253,18 @@ func (tu *treeUpdater) fetchActualJetFromOtherNodes(
 		}
 		wg.Wait()
 
-		seen := make(map[insolar.ID]struct{})
-		res := make([]*insolar.ID, 0)
+		// Collect non-nil replies (only actual).
+		res := make(map[insolar.ID]struct{})
 		for _, r := range replies {
 			if r == nil {
 				continue
 			}
-			if _, ok := seen[r.ID]; ok {
-				continue
-			}
 
-			seen[r.ID] = struct{}{}
-			res = append(res, &r.ID)
+			res[r.ID] = struct{}{}
 		}
 
 		if len(res) == 0 {
+			// No one knows the actual jet.
 			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 				"pulse":  pulse,
 				"object": target.DebugString(),
@@ -240,6 +272,7 @@ func (tu *treeUpdater) fetchActualJetFromOtherNodes(
 			ch <- fetchResult{nil, errors.New("all lights for pulse have no actual jet for object")}
 			close(ch)
 		} else if len(res) > 1 {
+			// We have multiple different opinions on the actual jet.
 			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 				"pulse":  pulse,
 				"object": target.DebugString(),
@@ -251,9 +284,8 @@ func (tu *treeUpdater) fetchActualJetFromOtherNodes(
 	return res.jet, res.err
 }
 
-func (tu *treeUpdater) otherNodesForPulse(
-	ctx context.Context, pulse insolar.PulseNumber,
-) ([]insolar.Node, error) {
+// All light materials except ourselves.
+func (tu *fetcher) nodesForPulse(ctx context.Context, pulse insolar.PulseNumber) ([]insolar.Node, error) {
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.other_nodes_for_pulse")
 	defer span.End()
 

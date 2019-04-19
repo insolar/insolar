@@ -39,7 +39,7 @@ type FetchJet struct {
 	Dep struct {
 		JetAccessor jet.Accessor
 		Coordinator insolar.JetCoordinator
-		JetUpdater  jet.TreeUpdater
+		JetUpdater  jet.Fetcher
 	}
 }
 
@@ -98,7 +98,7 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 			pulse = p.Parcel.Pulse()
 		}
 
-		j, err := p.Dep.JetUpdater.FetchJet(ctx, *msg.DefaultTarget().Record(), p.Parcel.Pulse())
+		j, err := p.Dep.JetUpdater.Fetch(ctx, *msg.DefaultTarget().Record(), p.Parcel.Pulse())
 		if err != nil {
 			return errors.Wrap(err, "failed to fetch jet tree")
 		}

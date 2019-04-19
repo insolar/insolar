@@ -78,7 +78,7 @@ type MessageHandler struct {
 
 	conf           *configuration.Ledger
 	middleware     *middleware
-	jetTreeUpdater jet.TreeUpdater
+	jetTreeUpdater jet.Fetcher
 
 	FlowHandler *handler.Handler
 	handlers    map[insolar.MessageType]insolar.MessageHandler
@@ -181,7 +181,7 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 	m := newMiddleware(h)
 	h.middleware = m
 
-	h.jetTreeUpdater = jet.NewJetTreeUpdater(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
+	h.jetTreeUpdater = jet.NewFetcher(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
 
 	h.setHandlersForLight(m)
 
@@ -465,7 +465,7 @@ func (h *MessageHandler) handleGetChildren(
 	childJet = (*insolar.ID)(&childJetID)
 
 	if !actual {
-		actualJet, err := h.jetTreeUpdater.FetchJet(ctx, *msg.Parent.Record(), currentChild.Pulse())
+		actualJet, err := h.jetTreeUpdater.Fetch(ctx, *msg.Parent.Record(), currentChild.Pulse())
 		if err != nil {
 			return nil, err
 		}
@@ -843,7 +843,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 	logger := inslogger.FromContext(ctx)
 
 	msg := parcel.Message().(*message.HotData)
-	jetID := *msg.Jet.Record()
+	jetID := insolar.JetID(*msg.Jet.Record())
 
 	logger.WithFields(map[string]interface{}{
 		"jet": jetID.DebugString(),
@@ -857,7 +857,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 		return nil, errors.Wrapf(err, "[jet]: drop error (pulse: %v)", msg.Drop.Pulse)
 	}
 
-	pendingStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
+	pendingStorage := h.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(jetID))
 	logger.Debugf("received %d pending requests", len(msg.PendingRequests))
 
 	var notificationList []insolar.ID
@@ -906,7 +906,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 		ctx, msg.PulseNumber, true, insolar.JetID(jetID),
 	)
 
-	h.jetTreeUpdater.ReleaseJet(ctx, jetID, msg.PulseNumber)
+	h.jetTreeUpdater.Release(ctx, jetID, msg.PulseNumber)
 
 	return &reply.OK{}, nil
 }
