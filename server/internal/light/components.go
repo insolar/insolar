@@ -248,7 +248,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			conf.LightChainLimit,
 		)
 		dataGatherer := replication.NewDataGatherer(drops, blobs, records, indexes)
-		lthSyncer := replication.NewToHeavySyncer(
+		lthSyncer := replication.NewReplicatorDefault(
 			jetCalculator,
 			dataGatherer,
 			lightCleaner,

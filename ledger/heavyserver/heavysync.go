@@ -18,62 +18,14 @@ package heavyserver
 
 import (
 	"context"
-	"sync"
-	"time"
 
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 )
-
-const defaultTimeout = time.Second * 10
-
-func errSyncInProgress(jetID insolar.ID, pn insolar.PulseNumber) *reply.HeavyError {
-	return &reply.HeavyError{
-		Message:  "Heavy node sync in progress",
-		SubType:  reply.ErrHeavySyncInProgress,
-		JetID:    jetID,
-		PulseNum: pn,
-	}
-}
-
-// in testnet we start with only one jet
-type syncstate struct {
-	sync.Mutex
-	lastok insolar.PulseNumber
-	// insyncend insolar.PulseNumber
-	syncpulse *insolar.PulseNumber
-	insync    bool
-	timer     *time.Timer
-}
-
-func (s *syncstate) resetTimeout(ctx context.Context, timeout time.Duration) {
-	if s.timer != nil {
-		s.timer.Reset(timeout)
-	} else {
-		s.timer = time.NewTimer(timeout)
-	}
-	timer := s.timer
-	go func() {
-		<-timer.C
-
-		s.Lock()
-		if s.timer == timer {
-			stats.Record(ctx, statSyncedTimeout.M(1))
-			s.syncpulse = nil
-			s.timer = nil
-		}
-		s.Unlock()
-	}()
-}
-
-type jetprefix [insolar.JetPrefixSize]byte
 
 // Sync provides methods for syncing records to heavy storage.
 type Sync struct {
@@ -83,16 +35,12 @@ type Sync struct {
 	IndexModifier              object.IndexModifier               `inject:""`
 
 	RecordModifier object.RecordModifier
-
-	sync.Mutex
-	jetSyncStates map[jetprefix]*syncstate
 }
 
 // NewSync creates new Sync instance.
 func NewSync(records object.RecordModifier) *Sync {
 	return &Sync{
 		RecordModifier: records,
-		jetSyncStates:  map[jetprefix]*syncstate{},
 	}
 }
 

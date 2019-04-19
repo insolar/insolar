@@ -22,6 +22,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Calculator -o ./ -s _mock.go
+
 // CalculatorDefault is a struct, that implements jet.Calculator
 type CalculatorDefault struct {
 	jetCoordinator insolar.JetCoordinator

@@ -299,14 +299,14 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 	h.HeavySync.StoreRecords(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Records)
 
 	if err := h.HeavySync.StoreIndexes(ctx, insolar.ID(msg.JetID), msg.PulseNum, msg.Indexes); err != nil {
-		return heavyerrreply(err)
+		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
 
 	if err := h.HeavySync.StoreDrop(ctx, msg.JetID, msg.Drop); err != nil {
-		return heavyerrreply(err)
+		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
 	if err := h.HeavySync.StoreBlobs(ctx, msg.PulseNum, msg.Blobs); err != nil {
-		return heavyerrreply(err)
+		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
 
 	stats.Record(ctx,
@@ -314,11 +314,4 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 	)
 
 	return &reply.OK{}, nil
-}
-
-func heavyerrreply(err error) (insolar.Reply, error) {
-	if herr, ok := err.(*reply.HeavyError); ok {
-		return herr, nil
-	}
-	return nil, err
 }

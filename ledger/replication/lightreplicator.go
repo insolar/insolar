@@ -48,8 +48,8 @@ type LightReplicatorDefault struct {
 	pulseCalculator pulse.Calculator
 }
 
-// NewToHeavySyncer creates new instance of LightReplicator
-func NewToHeavySyncer(
+// NewReplicatorDefault creates new instance of LightReplicator
+func NewReplicatorDefault(
 	jetCalculator jet.Calculator,
 	dataGatherer DataGatherer,
 	cleaner Cleaner,
