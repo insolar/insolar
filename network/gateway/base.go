@@ -108,11 +108,11 @@ func (g *Base) Auther() network.Auther {
 }
 
 // GetCert method returns node certificate by requesting sign from discovery nodes
-func (nc *Base) GetCert(ctx context.Context, ref *insolar.Reference) (insolar.Certificate, error) {
+func (g *Base) GetCert(ctx context.Context, ref *insolar.Reference) (insolar.Certificate, error) {
 	panic("GetCert() is not useable in this state")
 }
 
 // ValidateCert validates node certificate
-func (nc *Base) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
+func (g *Base) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
 	panic("ValidateCert()  is not useable in this state")
 }
