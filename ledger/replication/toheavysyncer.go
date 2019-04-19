@@ -29,13 +29,14 @@ import (
 	"go.opencensus.io/stats"
 )
 
-// ToHeavySyncer is a base interface for a sync component
-type ToHeavySyncer interface {
+// LightReplicator is a base interface for a sync component
+type LightReplicator interface {
 	// NotifyAboutPulse is method for notifying a sync component about new pulse
 	NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber)
 }
 
-type toHeavySyncer struct {
+// LightReplicatorDefault is a base impl of LightReplicator
+type LightReplicatorDefault struct {
 	once sync.Once
 
 	syncWaitingPulses chan insolar.PulseNumber
@@ -47,15 +48,15 @@ type toHeavySyncer struct {
 	pulseCalculator pulse.Calculator
 }
 
-// NewToHeavySyncer creates new instance of ToHeavySyncer
+// NewToHeavySyncer creates new instance of LightReplicator
 func NewToHeavySyncer(
 	jetCalculator jet.Calculator,
 	dataGatherer DataGatherer,
 	cleaner Cleaner,
 	msgBus insolar.MessageBus,
 	calculator pulse.Calculator,
-) ToHeavySyncer {
-	return &toHeavySyncer{
+) *LightReplicatorDefault {
+	return &LightReplicatorDefault{
 		jetCalculator:     jetCalculator,
 		dataGatherer:      dataGatherer,
 		cleaner:           cleaner,
@@ -71,7 +72,7 @@ func NewToHeavySyncer(
 // the routine starts to gather data (with using of LightDataGatherer). After gathering all the data,
 // it attempts to send it to the heavy. After sending a heavy payload to a heavy, data is deleted
 // with help of Cleaner
-func (t *toHeavySyncer) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
+func (t *LightReplicatorDefault) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNumber) {
 	t.once.Do(func() {
 		go t.sync(ctx)
 	})
@@ -89,7 +90,7 @@ func (t *toHeavySyncer) NotifyAboutPulse(ctx context.Context, pn insolar.PulseNu
 	t.syncWaitingPulses <- prevPN.PulseNumber
 }
 
-func (t *toHeavySyncer) sync(ctx context.Context) {
+func (t *LightReplicatorDefault) sync(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 	for pn := range t.syncWaitingPulses {
 		logger.Debugf("[sync] pn received - %v", pn)
@@ -120,7 +121,7 @@ func (t *toHeavySyncer) sync(ctx context.Context) {
 	}
 }
 
-func (t *toHeavySyncer) sendToHeavy(ctx context.Context, data insolar.Message) error {
+func (t *LightReplicatorDefault) sendToHeavy(ctx context.Context, data insolar.Message) error {
 	rep, err := t.msgBus.Send(ctx, data, nil)
 	if err != nil {
 		stats.Record(ctx,

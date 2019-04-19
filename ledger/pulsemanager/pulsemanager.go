@@ -91,7 +91,7 @@ type PulseManager struct {
 	RecSyncAccessor object.RecordCollectionAccessor
 	RecCleaner      object.RecordCleaner
 
-	ToHeavySyncer replication.ToHeavySyncer
+	ToHeavySyncer replication.LightReplicator
 
 	currentPulse insolar.Pulse
 
@@ -131,7 +131,7 @@ func NewPulseManager(
 	recSyncAccessor object.RecordCollectionAccessor,
 	idxCollectionAccessor object.IndexCollectionAccessor,
 	indexCleaner object.IndexCleaner,
-	lightToHeavySyncer replication.ToHeavySyncer,
+	lightToHeavySyncer replication.LightReplicator,
 ) *PulseManager {
 	pmconf := conf.PulseManager
 

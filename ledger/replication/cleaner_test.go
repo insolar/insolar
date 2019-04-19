@@ -18,6 +18,7 @@ package replication
 
 import (
 	"testing"
+	"time"
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
@@ -30,12 +31,49 @@ import (
 	"github.com/insolar/insolar/ledger/storage/pulse"
 )
 
-func TestCleaner_Clean(t *testing.T) {
+func TestCleaner_cleanPulse(t *testing.T) {
+	t.Parallel()
 	ctx := inslogger.TestContext(t)
 
-	inputPulse := insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}
+	inputPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(111)}
+
+	ctrl := minimock.NewController(t)
+
+	jm := jet.NewStorageMock(ctrl)
+	jm.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
+
+	nm := node.NewModifierMock(ctrl)
+	nm.DeleteForPNMock.Expect(inputPulse.PulseNumber)
+
+	dc := drop.NewCleanerMock(ctrl)
+	dc.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
+
+	bc := blob.NewCleanerMock(ctrl)
+	bc.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
+
+	rc := object.NewRecordCleanerMock(ctrl)
+	rc.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
+
+	ic := object.NewIndexCleanerMock(ctrl)
+	ic.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
+
+	ps := pulse.NewShifterMock(ctrl)
+	ps.ShiftMock.Expect(ctx, inputPulse.PulseNumber).Return(nil)
+
+	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, nil, 0)
+
+	cleaner.cleanPulse(ctx, inputPulse.PulseNumber)
+
+	ctrl.Finish()
+}
+
+func TestCleaner_clean(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+
+	inputPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(111)}
 	calculatedPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(98765)}
-	lcl := 123
+	limit := 123
 
 	ctrl := minimock.NewController(t)
 
@@ -55,16 +93,57 @@ func TestCleaner_Clean(t *testing.T) {
 	rc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
 
 	ic := object.NewIndexCleanerMock(ctrl)
-	ic.RemoveForPulseMock.Expect(ctx, calculatedPulse.PulseNumber)
+	ic.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
 
 	ps := pulse.NewShifterMock(ctrl)
 	ps.ShiftMock.Expect(ctx, calculatedPulse.PulseNumber).Return(nil)
 
 	pc := pulse.NewCalculatorMock(ctrl)
-	pc.BackwardsMock.Expect(ctx, inputPulse.PulseNumber, lcl).Return(calculatedPulse, nil)
+	pc.BackwardsMock.Expect(ctx, inputPulse.PulseNumber, limit).Return(calculatedPulse, nil)
 
-	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, lcl)
-	cleaner.NotifyAboutPulse(ctx, inputPulse.PulseNumber)
+	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, limit)
+	go cleaner.clean(ctx)
+	cleaner.pulseForClean <- inputPulse.PulseNumber
 
-	ctrl.Finish()
+	ctrl.Wait(10 * time.Millisecond)
+}
+
+func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
+	t.Parallel()
+	ctx := inslogger.TestContext(t)
+
+	inputPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(111)}
+	calculatedPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(98765)}
+	limit := 123
+
+	ctrl := minimock.NewController(t)
+
+	jm := jet.NewStorageMock(ctrl)
+	jm.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
+
+	nm := node.NewModifierMock(ctrl)
+	nm.DeleteForPNMock.Expect(calculatedPulse.PulseNumber)
+
+	dc := drop.NewCleanerMock(ctrl)
+	dc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
+
+	bc := blob.NewCleanerMock(ctrl)
+	bc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
+
+	rc := object.NewRecordCleanerMock(ctrl)
+	rc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
+
+	ic := object.NewIndexCleanerMock(ctrl)
+	ic.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
+
+	ps := pulse.NewShifterMock(ctrl)
+	ps.ShiftMock.Expect(ctx, calculatedPulse.PulseNumber).Return(nil)
+
+	pc := pulse.NewCalculatorMock(ctrl)
+	pc.BackwardsMock.Expect(ctx, inputPulse.PulseNumber, limit).Return(calculatedPulse, nil)
+
+	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, limit)
+	go cleaner.NotifyAboutPulse(ctx, inputPulse.PulseNumber)
+
+	ctrl.Wait(10 * time.Millisecond)
 }

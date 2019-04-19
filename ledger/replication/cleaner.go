@@ -77,6 +77,7 @@ func NewCleaner(
 		pulseShifter:    pulseShifter,
 		pulseCalculator: pulseCalculator,
 		lightChainLimit: lightChainLimit,
+		pulseForClean:   make(chan insolar.PulseNumber),
 	}
 }
 
