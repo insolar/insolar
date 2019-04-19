@@ -5,20 +5,19 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/ledger/proc"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/testutils"
-
-	"github.com/stretchr/testify/require"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/ledger/proc"
 )
 
 var (
@@ -99,13 +98,13 @@ func TestGetChildren_RedirectsToHaveWhenNoIndex(t *testing.T) {
 	require.Equal(t, token, p.Result.Reply.(insolar.RedirectReply).GetToken())
 }
 
-/*
 // redirect to light when has index and child later than limit
 func TestGetChildren_RedirectsToLightChildLaterThanLimit(t *testing.T) {
 	// p := createProc(t)
 	assert.NoError(t, nil)
 }
 
+/*
 // redirect to heavy when has index and child earlier than limit
 func TestGetChildren_RedirectsToHeavyChildEarlierThanLimit(t *testing.T) {
 	// p := createProc(t)
