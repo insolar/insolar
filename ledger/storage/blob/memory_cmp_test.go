@@ -42,8 +42,8 @@ func TestBlobStorages(t *testing.T) {
 		Modifier
 	}
 	storages := map[string]storage{
-		"memory": memStorage,
-		"badger": dbStorage,
+		"blobsStor": memStorage,
+		"badger":    dbStorage,
 	}
 
 	seen := map[insolar.ID]bool{}
@@ -103,13 +103,13 @@ func TestBlobStorages(t *testing.T) {
 		})
 	}
 
-	t.Run("compare memory and storage implementations", func(t *testing.T) {
+	t.Run("compare blobsStor and storage implementations", func(t *testing.T) {
 		for _, bl := range blobs {
 			resMem, err := memStorage.ForID(ctx, bl.id)
 			require.NoError(t, err)
 			dbBlob, err := dbStorage.ForID(ctx, bl.id)
 			require.NoError(t, err)
-			assert.Equal(t, resMem, dbBlob, "memory and persistent result should be match")
+			assert.Equal(t, resMem, dbBlob, "blobsStor and persistent result should be match")
 		}
 	})
 }

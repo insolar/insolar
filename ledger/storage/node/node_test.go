@@ -19,7 +19,7 @@ package node
 import (
 	"testing"
 
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/stretchr/testify/assert"
@@ -167,7 +167,7 @@ func TestNewStorage_Delete(t *testing.T) {
 			assert.Equal(t, nodes, result)
 		}
 		{
-			nodeStorage.Delete(pulse)
+			nodeStorage.DeleteForPN(pulse)
 			result, err := nodeStorage.All(pulse)
 			assert.Equal(t, ErrNoNodes, err)
 			assert.Nil(t, result)

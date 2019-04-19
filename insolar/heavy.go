@@ -24,11 +24,8 @@ import (
 
 // HeavySync provides methods for sync on heavy node.
 type HeavySync interface {
-	Start(ctx context.Context, jet ID, pn PulseNumber) error
 	StoreIndexes(ctx context.Context, jet ID, pn PulseNumber, rawIndexes map[ID][]byte) error
 	StoreDrop(ctx context.Context, jetID JetID, rawDrop []byte) error
 	StoreBlobs(ctx context.Context, pn PulseNumber, rawBlobs [][]byte) error
 	StoreRecords(ctx context.Context, jet ID, pn PulseNumber, rawRecords [][]byte)
-	Stop(ctx context.Context, jet ID, pn PulseNumber) error
-	Reset(ctx context.Context, jet ID, pn PulseNumber) error
 }

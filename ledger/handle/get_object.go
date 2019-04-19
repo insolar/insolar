@@ -41,15 +41,22 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 		Message: s.Message,
 	}
 	if err := f.Handle(ctx, jet.Present); err != nil {
-		return err
+		if err == flow.ErrCancelled {
+			f.Continue(ctx)
+		} else {
+			return err
+		}
 	}
 
 	idx := s.dep.GetIndex(&proc.GetIndex{
-		Object: msg.Head,
-		Jet:    jet.Res.Jet,
+		Object:   msg.Head,
+		Jet:      jet.Res.Jet,
+		ParcelPN: s.Message.Parcel.Pulse(),
 	})
 	if err := f.Procedure(ctx, idx); err != nil {
 		if err == flow.ErrCancelled {
+			f.Continue(ctx)
+		} else {
 			return err
 		}
 		return f.Procedure(ctx, &proc.ReturnReply{

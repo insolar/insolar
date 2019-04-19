@@ -24,18 +24,28 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Accessor -o ./ -s _mock.go
+
 // Accessor provides an interface for accessing jet IDs.
 type Accessor interface {
 	All(ctx context.Context, pulse insolar.PulseNumber) []insolar.JetID
 	ForID(ctx context.Context, pulse insolar.PulseNumber, recordID insolar.ID) (insolar.JetID, bool)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Modifier -o ./ -s _mock.go
+
 // Modifier provides an interface for modifying jet IDs.
 type Modifier interface {
 	Update(ctx context.Context, pulse insolar.PulseNumber, actual bool, ids ...insolar.JetID)
 	Split(ctx context.Context, pulse insolar.PulseNumber, id insolar.JetID) (insolar.JetID, insolar.JetID, error)
 	Clone(ctx context.Context, from, to insolar.PulseNumber)
-	Delete(ctx context.Context, pulse insolar.PulseNumber)
+	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
+}
+
+// Calculator provides methods for calculating jets
+type Calculator interface {
+	// MineForPulse returns current node's jets for a provided pulse
+	MineForPulse(ctx context.Context, pn insolar.PulseNumber) []insolar.JetID
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/jet.Storage -o ./ -s _mock.go

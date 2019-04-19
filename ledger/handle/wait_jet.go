@@ -42,9 +42,10 @@ func (s *WaitJet) Present(ctx context.Context, f flow.Flow) error {
 	jet := s.dep.FetchJet(&proc.FetchJet{Parcel: s.Message.Parcel})
 	if err := f.Procedure(ctx, jet); err != nil {
 		if err == flow.ErrCancelled {
+			f.Continue(ctx)
+		} else {
 			return err
 		}
-		return err
 	}
 
 	if jet.Result.Miss {
@@ -53,7 +54,11 @@ func (s *WaitJet) Present(ctx context.Context, f flow.Flow) error {
 			Reply:   &reply.JetMiss{JetID: insolar.ID(jet.Result.Jet), Pulse: jet.Result.Pulse},
 		}
 		if err := f.Procedure(ctx, rep); err != nil {
-			return err
+			if err == flow.ErrCancelled {
+				f.Continue(ctx)
+			} else {
+				return err
+			}
 		}
 		return errors.New("jet miss")
 	}
@@ -63,7 +68,11 @@ func (s *WaitJet) Present(ctx context.Context, f flow.Flow) error {
 		JetID:  jet.Result.Jet,
 	})
 	if err := f.Procedure(ctx, hot); err != nil {
-		return err
+		if err == flow.ErrCancelled {
+			f.Continue(ctx)
+		} else {
+			return err
+		}
 	}
 	if hot.Res.Timeout {
 		rep := &proc.ReturnReply{
@@ -71,7 +80,11 @@ func (s *WaitJet) Present(ctx context.Context, f flow.Flow) error {
 			Reply:   &reply.Error{ErrType: reply.ErrHotDataTimeout},
 		}
 		if err := f.Procedure(ctx, rep); err != nil {
-			return err
+			if err == flow.ErrCancelled {
+				f.Continue(ctx)
+			} else {
+				return err
+			}
 		}
 		return errors.New("hot waiter timeout")
 	}
