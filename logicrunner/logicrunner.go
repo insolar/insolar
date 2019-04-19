@@ -608,7 +608,7 @@ func (lr *LogicRunner) getExecStateFromRef(ctx context.Context, rawRef []byte) *
 
 	os.Lock()
 	if os.ExecutionState == nil {
-		inslogger.FromContext(ctx).Warn("[ ProcessExecutionQueue ] got not existing reference. It's strange")
+		inslogger.FromContext(ctx).Info("[ ProcessExecutionQueue ] got not existing reference. Somebody already taken it")
 		return nil
 	}
 	es := os.ExecutionState
