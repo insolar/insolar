@@ -494,6 +494,10 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		}
 
 		lr.finishPendingIfNeeded(ctx, es)
+
+		proc := FinishPendingIfNeeded{es: es, lr: lr}
+
+		proc.Proceed(ctx)
 	}
 }
 
