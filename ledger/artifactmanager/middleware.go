@@ -144,7 +144,7 @@ func (m *middleware) checkJet(handler insolar.MessageHandler) insolar.MessageHan
 			}
 
 			var err error
-			jetID, err = m.handler.jetTreeUpdater.FetchJet(ctx, *msg.DefaultTarget().Record(), pulse)
+			jetID, err = m.handler.jetTreeUpdater.Fetch(ctx, *msg.DefaultTarget().Record(), pulse)
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to fetch jet tree")
 			}
