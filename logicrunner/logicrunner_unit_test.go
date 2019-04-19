@@ -394,14 +394,16 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 
 func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
 	objectRef := testutils.RandomRef()
+	p := insolar.Pulse{PulseNumber: 100}
 
 	parcel := testutils.NewParcelMock(suite.mc).MessageMock.Return(
 		&message.PendingFinished{Reference: objectRef},
 	)
 
 	parcel.DefaultTargetMock.Return(&insolar.Reference{})
+	parcel.PulseFunc = func() insolar.PulseNumber { return p.PulseNumber }
 
-	re, err := suite.lr.HandlePendingFinishedMessage(suite.ctx, parcel)
+	re, err := suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Require().Equal(&reply.OK{}, re)
 
@@ -412,12 +414,12 @@ func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
 	suite.Require().Equal(message.NotPending, es.pending)
 
 	es.Current = &CurrentExecution{}
-	re, err = suite.lr.HandlePendingFinishedMessage(suite.ctx, parcel)
+	re, err = suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().Error(err)
 
 	es.Current = nil
 
-	re, err = suite.lr.HandlePendingFinishedMessage(suite.ctx, parcel)
+	re, err = suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Require().Equal(&reply.OK{}, re)
 }
