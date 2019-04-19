@@ -685,64 +685,6 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	return idx, nil
 }
 
-//
-// func (h *MessageHandler) fetchObject(
-// 	ctx context.Context, obj insolar.Reference, node insolar.Reference, stateID *insolar.ID,
-// ) (*reply.Object, error) {
-// 	sender := BuildSender(
-// 		h.Bus.Send,
-// 		followRedirectSender(h.Bus),
-// 		retryJetSender(h.JetStorage),
-// 	)
-// 	genericReply, err := sender(
-// 		ctx,
-// 		&message.GetObject{
-// 			Head:     obj,
-// 			Approved: false,
-// 			State:    stateID,
-// 		},
-// 		&insolar.MessageSendOptions{
-// 			Receiver: &node,
-// 			Token:    &delegationtoken.GetObjectRedirectToken{},
-// 		},
-// 	)
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, "failed to fetch object state")
-// 	}
-// 	if rep, ok := genericReply.(*reply.Error); ok {
-// 		return nil, rep.Error()
-// 	}
-//
-// 	rep, ok := genericReply.(*reply.Object)
-// 	if !ok {
-// 		return nil, fmt.Errorf("failed to fetch object state: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
-// 	}
-// 	return rep, nil
-// }
-
-func (h *MessageHandler) saveCodeFromHeavy(
-	ctx context.Context, jetID insolar.JetID, code insolar.Reference, blobID insolar.ID, heavy *insolar.Reference,
-) (*reply.Code, error) {
-	genericReply, err := h.Bus.Send(ctx, &message.GetCode{
-		Code: code,
-	}, &insolar.MessageSendOptions{
-		Receiver: heavy,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to send")
-	}
-	rep, ok := genericReply.(*reply.Code)
-	if !ok {
-		return nil, fmt.Errorf("failed to fetch code: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
-	}
-
-	err = h.BlobModifier.Set(ctx, blobID, blob.Blob{JetID: jetID, Value: rep.Code})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to save")
-	}
-	return rep, nil
-}
-
 func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	logger := inslogger.FromContext(ctx)
 
