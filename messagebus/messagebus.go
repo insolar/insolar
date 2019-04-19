@@ -182,11 +182,7 @@ func (mb *MessageBus) SendViaWatermill(ctx context.Context, msg insolar.Message,
 	if err != nil {
 		return nil, errors.Wrapf(err, "[ SendViaWatermill ] can't publish message to %s topic", insolar.ExternalMsgTopic)
 	}
-	r := <-rep
-	if err != nil {
-		return nil, errors.Wrap(err, "[ SendViaWatermill ] can't get reply")
-	}
-	return r, nil
+	return <-rep, nil
 }
 
 func (mb *MessageBus) createWatermillMessage(ctx context.Context, parcel insolar.Parcel, ops *insolar.MessageSendOptions, currentPulse insolar.Pulse) *watermillMsg.Message {
