@@ -61,10 +61,14 @@ import (
 // Base is abstract class for gateways
 
 type Base struct {
-	Me                 network.Gateway
-	Network            network.Gatewayer
-	GIL                insolar.GlobalInsolarLock
-	SwitcherWorkAround insolar.SwitcherWorkAround // nodekeeper
+	Me                  network.Gateway
+	Network             network.Gatewayer
+	ContractRequester   insolar.ContractRequester
+	CryptographyService insolar.CryptographyService
+	CertificateManager  insolar.CertificateManager
+	GIL                 insolar.GlobalInsolarLock
+	MessageBus          insolar.MessageBus
+	SwitcherWorkAround  insolar.SwitcherWorkAround // nodekeeper
 }
 
 // NewGateway creates new gateway on top of existing
