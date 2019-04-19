@@ -80,20 +80,22 @@ message Deactivate {
 
 message Virtual {
     oneof union {
-        Genesis            Genesis            = 100;
-        Child              Child              = 101;
-        Jet                Jet                = 102;
-        Request            Request            = 200;
-        Result             Result             = 300;
-        Type               Type               = 301;
-        Code               Code               = 302;
-        Activate           Activate           = 303;
-        Amend              Amend              = 304;
-        Deactivate         Deactivate         = 305;
+        Genesis            Genesis            = 101;
+        Child              Child              = 102;
+        Jet                Jet                = 103;
+        Request            Request            = 104;
+        Result             Result             = 105;
+        Type               Type               = 106;
+        Code               Code               = 107;
+        Activate           Activate           = 108;
+        Amend              Amend              = 109;
+        Deactivate         Deactivate         = 110;
     }
+    bytes Signature = 200;
 }
 
 message Material {
-    Virtual Virtual = 1;
-    bytes  JetID    = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    Virtual Virtual   = 1;
+    bytes   JetID     = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    bytes   Signature = 200;
 }
