@@ -81,7 +81,7 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
-	suite.mc.Wait(10 * time.Second)
+	suite.mc.Wait(time.Minute)
 	suite.mc.Finish()
 }
 
@@ -131,7 +131,7 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 	suite.Require().Equal(message.NotPending, es.pending)
 	suite.Require().Nil(es.objectbody)
 
-	suite.mc.Wait(time.Second) // message bus' send is called in a goroutine
+	suite.mc.Wait(time.Minute) // message bus' send is called in a goroutine
 
 	es.pending = message.InPending
 	es.objectbody = &ObjectBody{}
