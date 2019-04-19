@@ -366,7 +366,7 @@ func (n *ServiceNetwork) ProcessOutcome(msg *message.Message) ([]*message.Messag
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
 	if node.Equal(origin.ID()) {
-		// err := n.Handler.Process(msg.Context(), msg)
+		err := n.Handler.Process(msg.Context(), msg)
 		if err != nil {
 			return nil, errors.Wrap(err, "error while start handle for msg:")
 		}
@@ -435,7 +435,10 @@ func (n *ServiceNetwork) processIncome(ctx context.Context, args [][]byte) ([]by
 		n.ResultSetter.SetResult(ctx, *msg)
 		fmt.Println("error love processIncome")
 	} else {
-		// _ = n.Handler.Process(ctx, msg)
+		err = n.Handler.Process(ctx, msg)
+		if err != nil {
+			return nil, errors.Wrap(err, "error while start handle for msg:")
+		}
 	}
 
 	rd, err := reply.Serialize(&reply.OK{})
