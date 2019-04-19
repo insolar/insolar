@@ -903,7 +903,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 	logger := inslogger.FromContext(ctx)
 
 	msg := parcel.Message().(*message.HotData)
-	jetID := *msg.Jet.Record()
+	jetID := insolar.JetID(*msg.Jet.Record())
 
 	logger.WithFields(map[string]interface{}{
 		"jet": jetID.DebugString(),
@@ -917,7 +917,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 		return nil, errors.Wrapf(err, "[jet]: drop error (pulse: %v)", msg.Drop.Pulse)
 	}
 
-	pendingStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
+	pendingStorage := h.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(jetID))
 	logger.Debugf("received %d pending requests", len(msg.PendingRequests))
 
 	var notificationList []insolar.ID
@@ -948,7 +948,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 		}
 	}()
 
-	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, jetID)
+	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, insolar.ID(jetID))
 	for id, meta := range msg.RecentObjects {
 		decodedIndex, err := object.DecodeIndex(meta.Index)
 		if err != nil {

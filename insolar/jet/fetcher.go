@@ -34,7 +34,7 @@ import (
 // jet tree.
 type Fetcher interface {
 	Fetch(ctx context.Context, target insolar.ID, pulse insolar.PulseNumber) (*insolar.ID, error)
-	Release(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber)
+	Release(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber)
 }
 
 // Used to queue fetching routines.
@@ -47,7 +47,7 @@ type seqEntry struct {
 // jets are queued.
 type seqKey struct {
 	pulse insolar.PulseNumber
-	jet   insolar.ID
+	jet   insolar.JetID
 }
 
 // Used to pass fetching result over channels.
@@ -105,7 +105,7 @@ func (tu *fetcher) Fetch(
 
 	// Not actual in our tree, asking neighbors for jet.
 	span.Annotate(nil, "tree in DB is not actual")
-	key := seqKey{pulse, insolar.ID(jetID)}
+	key := seqKey{pulse, jetID}
 
 	// Indicates that this routine is the first in the queue and should do the fetching.
 	// Other routines wait in the queue.
@@ -157,11 +157,11 @@ func (tu *fetcher) Fetch(
 
 // Release unlocks all the queses on the branch for provided jet. I.e. all the jets that are higher in the tree on the
 // current branch get released and "fall through" until they hit provided jet or branch out.
-func (tu *fetcher) Release(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) {
+func (tu *fetcher) Release(ctx context.Context, jetID insolar.JetID, pulse insolar.PulseNumber) {
 	tu.seqMutex.Lock()
 	defer tu.seqMutex.Unlock()
 
-	depth := insolar.JetID(jetID).Depth()
+	depth := jetID.Depth()
 	for {
 		key := seqKey{pulse, jetID}
 		if v, ok := tu.sequencer[key]; ok {
@@ -177,7 +177,7 @@ func (tu *fetcher) Release(ctx context.Context, jetID insolar.ID, pulse insolar.
 			break
 		}
 		// Iterating over jet parents (going up the tree).
-		jetID = insolar.ID(Parent(insolar.JetID(jetID)))
+		jetID = Parent(jetID)
 		depth--
 	}
 }
