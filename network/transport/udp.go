@@ -53,15 +53,18 @@ package transport
 import (
 	"context"
 	"fmt"
+	"log"
 	"net"
+	"sync/atomic"
+	"time"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
+	"github.com/insolar/insolar/network/utils"
 )
 
 const udpMaxPacketSize = 1400
@@ -69,6 +72,9 @@ const udpMaxPacketSize = 1400
 type udpTransport struct {
 	conn    net.PacketConn
 	handler DatagramHandler
+	started uint32
+	address string
+	cancel  context.CancelFunc
 }
 
 func newUDPTransport(listenAddress, fixedPublicAddress string) (*udpTransport, string, error) {
@@ -81,7 +87,7 @@ func newUDPTransport(listenAddress, fixedPublicAddress string) (*udpTransport, s
 		return nil, "", errors.Wrap(err, "failed to resolve public address")
 	}
 
-	transport := &udpTransport{conn: conn}
+	transport := &udpTransport{conn: conn, address: publicAddress, started: 0}
 	return transport, publicAddress, nil
 }
 
@@ -100,10 +106,17 @@ func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []
 		return errors.Wrap(err, "Failed to resolve UDP address")
 	}
 
+	// udpConn, err := net.DialUDP("udp", nil, udpAddr)
+	// udpConn.SetWriteDeadline(time.Now().Add(time.Second * 5))
+	// if err != nil {
+	// 	return errors.Wrap(err, "========================================= Failed to DialUDP")
+	// }
+	// defer utils.CloseVerbose(udpConn)
+
 	logger.Debug("udpTransport.send: len = ", len(data))
-	n, err := t.conn.WriteTo(data, udpAddr)
+	n, err := t.conn.WriteTo(data, udpAddr) // Write(data)
 	if err != nil {
-		return errors.Wrap(err, "Failed to write data")
+		return errors.Wrap(err, "========================================== Failed to write data")
 	}
 	stats.Record(ctx, consensus.SentSize.M(int64(n)))
 	return nil
@@ -117,28 +130,69 @@ func (t *udpTransport) SetDatagramHandler(h DatagramHandler) {
 // Start starts networking.
 func (t *udpTransport) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
-	logger.Info("[ Start ] Start UDP transport")
 
-	go func() {
-		for {
-			//todo handle stop
-			buf := make([]byte, udpMaxPacketSize)
-			n, addr, err := t.conn.ReadFrom(buf)
-			if err != nil {
-				logger.Error("failed to read UDP: ", err.Error())
-				return // TODO: we probably shouldn't return here
+	if !atomic.CompareAndSwapUint32(&t.started, 0, 1) {
+		log.Println("==== net.ListenPacket")
+		var err error
+		t.conn, err = net.ListenPacket("udp", t.address)
+		if err != nil {
+			return errors.Wrap(err, "failed to listen UDP")
+		}
+
+		logger.Warn("Failed to start transport: double listen initiated")
+	}
+
+	logger.Info("[ Start ] Start UDP transport")
+	ctx, t.cancel = context.WithCancel(ctx)
+	go t.loop(ctx)
+	return nil
+}
+
+func (t *udpTransport) loop(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+		//todo handle stop
+		t.conn.SetDeadline(time.Now().Add(time.Second * 12))
+
+		buf := make([]byte, udpMaxPacketSize)
+		n, addr, err := t.conn.ReadFrom(buf)
+
+		if err != nil {
+			if utils.IsConnectionClosed(err) {
+				logger.Info("Connection closed, quiting ReadFrom loop")
+				return
 			}
 
-			stats.Record(ctx, consensus.RecvSize.M(int64(n)))
-			go t.handler.HandleDatagram(addr.String(), buf[:n])
+			logger.Error("failed to read UDP: ", err.Error())
+			continue
 		}
-	}()
 
-	return nil
+		stats.Record(ctx, consensus.RecvSize.M(int64(n)))
+		go t.handler.HandleDatagram(addr.String(), buf[:n])
+	}
 }
 
 // Stop stops networking.
 func (t *udpTransport) Stop(ctx context.Context) error {
-	log.Info("Stop UDP transport")
-	return t.conn.Close()
+	//if !atomic.CompareAndSwapUint32(&t.started, 1, 0) {
+	logger := inslogger.FromContext(ctx)
+	logger.Warn("Stop UDP transport")
+	t.cancel()
+	err := t.conn.Close()
+
+	if err != nil {
+		if utils.IsConnectionClosed(err) {
+			logger.Error("Connection already closed")
+		} else {
+			return err
+		}
+	}
+	//}
+	return nil
 }

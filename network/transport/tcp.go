@@ -54,13 +54,12 @@ import (
 	"context"
 	"io"
 	"net"
-	"strings"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
+	"github.com/insolar/insolar/network/utils"
 )
 
 type tcpTransport struct {
@@ -84,6 +83,7 @@ func newTCPTransport(listenAddress, fixedPublicAddress string) (*tcpTransport, s
 
 	transport := &tcpTransport{
 		listener: listener,
+		address:  publicAddress,
 	}
 
 	return transport, publicAddress, nil
@@ -120,16 +120,13 @@ func (t *tcpTransport) Dial(ctx context.Context, address string) (io.ReadWriteCl
 }
 
 func (t *tcpTransport) prepareListen() (net.Listener, error) {
-	if t.listener != nil {
-		t.address = t.listener.Addr().String()
-	} else {
+	if t.listener == nil {
 		var err error
 		t.listener, err = net.Listen("tcp", t.address)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to listen TCP")
 		}
 	}
-
 	return t.listener, nil
 }
 
@@ -155,7 +152,7 @@ func (t *tcpTransport) listen(ctx context.Context) {
 	for {
 		conn, err := listener.Accept()
 		if err != nil {
-			if strings.Contains(strings.ToLower(err.Error()), "use of closed network connection") {
+			if utils.IsConnectionClosed(err) {
 				logger.Info("Connection closed, quiting accept loop")
 				return
 			}
@@ -178,8 +175,17 @@ func (t *tcpTransport) listen(ctx context.Context) {
 
 // Stop stops networking.
 func (t *tcpTransport) Stop(ctx context.Context) error {
-	log.Info("[ Stop ] Stop TCP transport")
+	logger := inslogger.FromContext(ctx)
+
+	logger.Info("[ Stop ] Stop TCP transport")
 	err := t.listener.Close()
+	if err != nil {
+		if utils.IsConnectionClosed(err) {
+			logger.Info("Connection already closed")
+		} else {
+			return err
+		}
+	}
 	//	t.cancel()
-	return err
+	return nil
 }

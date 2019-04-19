@@ -121,10 +121,8 @@ func SendPacket(ctx context.Context, pool pool.ConnectionPool, p *packet.Packet)
 	if err != nil {
 		// retry
 		//log.Warn("=== Before Retry")
-		conn.Close()
-		//t.pool.CloseConnection(ctx, address)
-		//conn, err = t.pool.GetConnection(ctx, address)
-		conn, err := pool.GetConnection(ctx, p.Receiver)
+		pool.CloseConnection(ctx, p.Receiver)
+		conn, err = pool.GetConnection(ctx, p.Receiver)
 
 		if err != nil {
 			return errors.Wrap(err, "[ SendBuffer ] Failed to get connection")

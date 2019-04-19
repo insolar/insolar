@@ -83,10 +83,11 @@ type networkConsensus struct {
 
 func (nc *networkConsensus) Start(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&nc.started, 0, 1) {
-		return errors.New("Failed to start transport: double listen initiated")
+		inslogger.FromContext(ctx).Warn("NetworkConsensus component already started")
+		return nil
 	}
 	if err := nc.transport.Start(ctx); err != nil {
-		return errors.Wrap(err, "Failed to start transport: listen syscall failed")
+		return errors.Wrap(err, "Failed to datagram transport")
 	}
 
 	return nil
@@ -123,6 +124,10 @@ func (nc *networkConsensus) RegisterPacketHandler(t packets.PacketType, handler 
 
 func (nc *networkConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
 	receiver insolar.Reference, service insolar.CryptographyService) error {
+
+	if atomic.LoadUint32(&nc.started) == 0 {
+		return nil
+	}
 
 	receiverHost, err := nc.Resolver.ResolveConsensusRef(receiver)
 	if err != nil {
@@ -184,6 +189,11 @@ func NewConsensusNetwork(address, nodeID string, shortID insolar.ShortNodeID) (n
 }
 
 func (nc *networkConsensus) HandleDatagram(address string, buf []byte) {
+
+	if atomic.LoadUint32(&nc.started) == 0 {
+		return
+	}
+
 	logger := inslogger.FromContext(context.Background())
 	r := bytes.NewReader(buf)
 	p, err := packets.ExtractPacket(r)
