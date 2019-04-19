@@ -6,43 +6,43 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
 option (gogoproto.goproto_getters_all) = false;
 
-message __GenesisRecord {
+message Genesis {
     option (gogoproto.face) = true;
 }
 
-message __ChildRecord {
+message Child {
     option (gogoproto.face) = true;
     bytes PrevChild = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];
     bytes Ref       = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
 }
 
-message __JetRecord {
+message Jet {
     option (gogoproto.face) = true;
     // TODO
 }
 
-message __RequestRecord {
+message Request {
     option (gogoproto.face) = true;
-    bytes Object      = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",       (gogoproto.nullable) = false];
+    bytes Object      = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     bytes Parcel      = 2;
     bytes MessageHash = 3;
 }
 
-message __ResultRecord {
+message Result {
     option (gogoproto.face) = true;
     bytes Object  = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];
     bytes Request = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes Payload = 3;
 }
 
-message __TypeRecord {
+message Type {
     option (gogoproto.face) = true;
     bytes Domain          = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes Request         = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes TypeDeclaration = 3;
 }
 
-message __CodeRecord {
+message Code {
     option (gogoproto.face) = true;
     bytes Domain      = 1  [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference",   (gogoproto.nullable) = false];
     bytes Request     = 2  [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference",   (gogoproto.nullable) = false];
@@ -50,7 +50,7 @@ message __CodeRecord {
     uint32 MachineType = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.MachineType", (gogoproto.nullable) = false];
 }
 
-message __ActivateRecord {
+message Activate {
     option (gogoproto.face) = true;
     bytes  Domain      = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes  Request     = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
@@ -61,7 +61,7 @@ message __ActivateRecord {
     bool   IsDelegate  = 7;
 }
 
-message __AmendRecord {
+message Amend {
     option (gogoproto.face) = true;
     bytes  Domain      = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes  Request     = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
@@ -71,24 +71,29 @@ message __AmendRecord {
     bytes  PrevState   = 6 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];
 }
 
-message __DeactivateRecord {
+message Deactivate {
     option (gogoproto.face) = true;
     bytes  Domain    = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes  Request   = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes  PrevState = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];
 }
 
-message __Record {
+message Virtual {
     oneof union {
-        __GenesisRecord            Genesis            = 100;
-        __ChildRecord              Child              = 101;
-        __JetRecord                Jet                = 102;
-        __RequestRecord            Request            = 200;
-        __ResultRecord             Result             = 300;
-        __TypeRecord               Type               = 301;
-        __CodeRecord               Code               = 302;
-        __ActivateRecord           Activate           = 303;
-        __AmendRecord              Amend              = 304;
-        __DeactivateRecord         Deactivate         = 305;
+        Genesis            Genesis            = 100;
+        Child              Child              = 101;
+        Jet                Jet                = 102;
+        Request            Request            = 200;
+        Result             Result             = 300;
+        Type               Type               = 301;
+        Code               Code               = 302;
+        Activate           Activate           = 303;
+        Amend              Amend              = 304;
+        Deactivate         Deactivate         = 305;
     }
+}
+
+message Material {
+    Virtual Virtual = 1;
+    bytes  JetID    = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
 }
