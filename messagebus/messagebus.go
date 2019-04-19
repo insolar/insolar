@@ -170,21 +170,12 @@ func (mb *MessageBus) SendViaWatermill(ctx context.Context, msg insolar.Message,
 		return nil, err
 	}
 
-	payload := message.ParcelToBytes(parcel)
-	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
-
-	correlationID := watermill.NewUUID()
-	middleware.SetCorrelationID(correlationID, wmMsg)
+	wmMsg := mb.createWatermillMessage(ctx, parcel, ops, currentPulse)
 
 	rep := make(chan insolar.Reply, 1)
 	mb.repliesMutex.Lock()
-	mb.replies[correlationID] = rep
+	mb.replies[middleware.MessageCorrelationID(wmMsg)] = rep
 	mb.repliesMutex.Unlock()
-
-	wmMsg.Metadata.Set(insolar.PulseMetadataKey, fmt.Sprintf("%d", currentPulse.PulseNumber))
-	wmMsg.Metadata.Set(insolar.TypeMetadataKey, parcel.Message().Type().String())
-	wmMsg.Metadata.Set(insolar.ReceiverMetadataKey, mb.GetReceiver(ctx, parcel, currentPulse, ops))
-	wmMsg.Metadata.Set(insolar.SenderMetadataKey, mb.NodeNetwork.GetOrigin().ID().String())
 
 	err = mb.pub.Publish(insolar.ExternalMsgTopic, wmMsg)
 	if err != nil {
@@ -194,12 +185,24 @@ func (mb *MessageBus) SendViaWatermill(ctx context.Context, msg insolar.Message,
 	if err != nil {
 		return nil, errors.Wrap(err, "[ SendViaWatermill ] can't get reply")
 	}
-	inslogger.FromContext(ctx).Debugf("[ SendViaWatermill ] message with CorrelationID %s was sent successfully", correlationID)
 	return r, nil
 }
 
-// GetReceiver calculates receiver for parcel.
-func (mb *MessageBus) GetReceiver(ctx context.Context, parcel insolar.Parcel, currentPulse insolar.Pulse, options *insolar.MessageSendOptions) string {
+func (mb *MessageBus) createWatermillMessage(ctx context.Context, parcel insolar.Parcel, ops *insolar.MessageSendOptions, currentPulse insolar.Pulse) *watermillMsg.Message {
+	payload := message.ParcelToBytes(parcel)
+	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
+
+	correlationID := watermill.NewUUID()
+	middleware.SetCorrelationID(correlationID, wmMsg)
+
+	wmMsg.Metadata.Set(insolar.PulseMetadataKey, fmt.Sprintf("%d", currentPulse.PulseNumber))
+	wmMsg.Metadata.Set(insolar.TypeMetadataKey, parcel.Message().Type().String())
+	wmMsg.Metadata.Set(insolar.ReceiverMetadataKey, mb.getReceiver(ctx, parcel, currentPulse, ops))
+	wmMsg.Metadata.Set(insolar.SenderMetadataKey, mb.NodeNetwork.GetOrigin().ID().String())
+	return wmMsg
+}
+
+func (mb *MessageBus) getReceiver(ctx context.Context, parcel insolar.Parcel, currentPulse insolar.Pulse, options *insolar.MessageSendOptions) string {
 	var node insolar.Reference
 	if options != nil && options.Receiver != nil {
 		node = *options.Receiver
