@@ -105,7 +105,6 @@ func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr *LogicRunne
 
 	mb.ReRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	mb.ReRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
-	mb.ReRegister(insolar.TypeExecutorResults, lr.HandleExecutorResultsMessage)
 }
 
 func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts.Client, *goplugintestutils.ContractsBuilder, insolar.PulseManager, *artifactmanager.MessageHandler, func()) {
