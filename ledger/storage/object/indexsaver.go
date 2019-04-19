@@ -18,19 +18,19 @@ type IndexSaver interface {
 	) (Lifeline, error)
 }
 
-type indexSaverImpl struct {
+type indexSaver struct {
 	Bus           insolar.MessageBus `inject:""`
 	IndexModifier IndexModifier      `inject:""`
 }
 
 func NewIndexSaver(bus insolar.MessageBus, indexModifier IndexModifier) IndexSaver {
-	return &indexSaverImpl{
+	return &indexSaver{
 		Bus:           bus,
 		IndexModifier: indexModifier,
 	}
 }
 
-func (h *indexSaverImpl) SaveIndexFromHeavy(
+func (h *indexSaver) SaveIndexFromHeavy(
 	ctx context.Context, jetID insolar.ID, obj insolar.Reference, heavy *insolar.Reference,
 ) (Lifeline, error) {
 	genericReply, err := h.Bus.Send(ctx, &message.GetObjectIndex{
