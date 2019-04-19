@@ -37,7 +37,10 @@ type ReturnReply struct {
 	Reply   insolar.Reply
 }
 
-func (p *ReturnReply) Proceed(context.Context) error {
-	p.ReplyTo <- bus.Reply{Reply: p.Reply, Err: p.Err}
+func (p *ReturnReply) Proceed(ctx context.Context) error {
+	select {
+	case p.ReplyTo <- bus.Reply{Reply: p.Reply, Err: p.Err}:
+	case <-ctx.Done():
+	}
 	return nil
 }
