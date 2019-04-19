@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Certificate" can be found in github.com/insolar/insolar/insolar
 */
 import (
-	crypto "github.com/insolar/x-crypto"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
+	crypto "github.com/insolar/x-crypto"
 )
 
 //CertificateMock implements github.com/insolar/insolar/insolar.Certificate

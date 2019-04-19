@@ -6,12 +6,12 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "Calculator" can be found in github.com/insolar/insolar/network/merkle
 */
 import (
-	crypto "github.com/insolar/x-crypto"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
 	merkle "github.com/insolar/insolar/network/merkle"
+	crypto "github.com/insolar/x-crypto"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
