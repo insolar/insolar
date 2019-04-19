@@ -102,14 +102,7 @@ func (suite *LogicRunnerTestSuite) AfterTest(suiteName, testName string) {
 }
 
 func (suite *LogicRunnerTestSuite) TestPendingFinished() {
-	pulse := insolar.Pulse{}
 	objectRef := testutils.RandomRef()
-	meRef := testutils.RandomRef()
-
-	suite.jc.MeMock.Return(meRef)
-	suite.ps.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
-		return pulse, nil
-	}
 
 	es := &ExecutionState{
 		Ref:     objectRef,
@@ -119,15 +112,20 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 
 	// make sure that if there is no pending finishPendingIfNeeded returns false,
 	// doesn't send PendingFinished message and doesn't change ExecutionState.pending
-	suite.lr.finishPendingIfNeeded(suite.ctx, es)
+	proc := FinishPendingIfNeeded{es: es, lr: suite.lr}
+	suite.Require().NoError(proc.Proceed(suite.ctx))
 	suite.Require().Zero(suite.mb.SendCounter)
 	suite.Require().Equal(message.NotPending, es.pending)
 
 	es.pending = message.InPending
 	es.objectbody = &ObjectBody{}
-	suite.mb.SendMock.ExpectOnce(suite.ctx, &message.PendingFinished{Reference: objectRef}, nil).Return(&reply.ID{}, nil)
-	suite.jc.IsAuthorizedMock.Return(false, nil)
-	suite.lr.finishPendingIfNeeded(suite.ctx, es)
+
+	suite.mb.SendFunc = func(p context.Context, msg insolar.Message, opts *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
+		suite.Require().Equal(&message.PendingFinished{Reference: objectRef}, msg)
+		return nil, nil
+	}
+	proc = FinishPendingIfNeeded{es: es, lr: suite.lr}
+	suite.Require().NoError(proc.Proceed(suite.ctx))
 	suite.Require().Equal(message.NotPending, es.pending)
 	suite.Require().Nil(es.objectbody)
 
@@ -135,10 +133,11 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 
 	es.pending = message.InPending
 	es.objectbody = &ObjectBody{}
-	suite.jc.IsAuthorizedMock.Return(true, nil)
-	suite.lr.finishPendingIfNeeded(suite.ctx, es)
+	//suite.jc.IsAuthorizedMock.Return(true, nil)
+	proc = FinishPendingIfNeeded{es: es, lr: suite.lr}
+	suite.Require().NoError(proc.Proceed(suite.ctx))
 	suite.Require().Equal(message.NotPending, es.pending)
-	suite.Require().NotNil(es.objectbody)
+	suite.Require().Nil(es.objectbody)
 }
 
 func (suite *LogicRunnerTestSuite) TestStartQueueProcessorIfNeeded_DontStartQueueProcessorWhenPending() {
@@ -1321,8 +1320,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef: s.objectRef,
-				Queue:     messagesQueue,
+				RecordRef:             s.objectRef,
+				Queue:                 messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 
@@ -1395,7 +1394,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecutionState() {
 	es := &ExecutionState{
-		Ref: s.ref,
+		Ref:                   s.ref,
 		LedgerHasMoreRequests: false,
 	}
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
