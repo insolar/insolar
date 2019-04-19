@@ -5,7 +5,8 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/insolar/record"
+
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
@@ -41,8 +42,8 @@ func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
 	return genRefWithID(genRandomID(pulse))
 }
 
-// redirects to heavy when no index
-func TestGetChildren_RedirectsToHaveWhenNoIndex(t *testing.T) {
+// redirects when index can't be found
+func TestGetChildren_RedirectsWhenNoIndex(t *testing.T) {
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 	msg := message.GetChildren{
 		Parent:    *genRandomRef(0),
@@ -55,7 +56,7 @@ func TestGetChildren_RedirectsToHaveWhenNoIndex(t *testing.T) {
 
 	p := proc.GetChildren{
 		Jet:     jetID,
-		Message: bus.Message{Parcel: parcel /* TODO replyTo */},
+		Message: bus.Message{Parcel: parcel},
 	}
 
 	ctx := context.Background()
@@ -98,16 +99,68 @@ func TestGetChildren_RedirectsToHaveWhenNoIndex(t *testing.T) {
 	require.Equal(t, token, p.Result.Reply.(insolar.RedirectReply).GetToken())
 }
 
-// redirect to light when has index and child later than limit
-func TestGetChildren_RedirectsToLightChildLaterThanLimit(t *testing.T) {
-	// p := createProc(t)
-	assert.NoError(t, nil)
-}
+// redirect when there is an index but the child can't be found
+func TestGetChildren_RedirectWhenFirstChildNotFound(t *testing.T) {
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
+	msg := message.GetChildren{
+		Parent:    *genRandomRef(0),
+		FromChild: genRandomID(0),
+	}
+	parcel := &message.Parcel{
+		Msg:         &msg,
+		PulseNumber: insolar.FirstPulseNumber + 1,
+	}
 
-/*
-// redirect to heavy when has index and child earlier than limit
-func TestGetChildren_RedirectsToHeavyChildEarlierThanLimit(t *testing.T) {
-	// p := createProc(t)
-	assert.NoError(t, nil)
+	p := proc.GetChildren{
+		Jet:     jetID,
+		Message: bus.Message{Parcel: parcel},
+	}
+
+	ctx := context.Background()
+
+	recentIndexStorage := recentstorage.NewRecentIndexStorageMock(t)
+	recentIndexStorage.AddObjectMock.ExpectOnce(ctx, *msg.Parent.Record())
+
+	recentStorageProvider := recentstorage.NewProviderMock(t)
+	recentStorageProvider.GetIndexStorageMock.ExpectOnce(ctx, jetID).Return(recentIndexStorage)
+	p.Dep.RecentStorageProvider = recentStorageProvider
+
+	idLocker := storage.NewIDLockerMock(t)
+	idLocker.LockMock.ExpectOnce(msg.Parent.Record())
+	idLocker.UnlockMock.ExpectOnce(msg.Parent.Record())
+	p.Dep.IDLocker = idLocker
+
+	indexAccessor := object.NewIndexAccessorMock(t)
+	indexAccessor.ForIDMock.ExpectOnce(ctx, *msg.Parent.Record()).Return(object.Lifeline{}, nil)
+	p.Dep.IndexAccessor = indexAccessor
+
+	jetCoordinator := testutils.NewJetCoordinatorMock(t)
+	jetCoordinator.IsBeyondLimitMock.ExpectOnce(ctx, parcel.Pulse(), msg.FromChild.Pulse()).Return(false, nil)
+	jetCoordinator.HeavyMock.ExpectOnce(ctx, parcel.Pulse()).Return(genRandomRef(0), nil)
+
+	childJetId := insolar.JetID(*genRandomID(0))
+	jetCoordinator.NodeForJetMock.ExpectOnce(ctx, insolar.ID(childJetId), parcel.Pulse(), msg.FromChild.Pulse()).Return(genRandomRef(0), nil)
+	p.Dep.JetCoordinator = jetCoordinator
+
+	token := &delegationtoken.GetChildrenRedirectToken{}
+	delegationTokenFactory := testutils.NewDelegationTokenFactoryMock(t)
+	delegationTokenFactory.IssueGetChildrenRedirectFunc = func(sender *insolar.Reference, redirectedMessage insolar.Message) (insolar.DelegationToken, error) {
+		return token, nil
+	}
+	p.Dep.DelegationTokenFactory = delegationTokenFactory
+
+	jetStorage := jet.NewStorageMock(t)
+	jetStorage.ForIDMock.ExpectOnce(ctx, msg.FromChild.Pulse(), *msg.Parent.Record()).Return(childJetId, true)
+	p.Dep.JetStorage = jetStorage
+
+	recordAccessor := object.NewRecordAccessorMock(t)
+	recordAccessor.ForIDMock.ExpectOnce(ctx, *msg.FromChild).Return(record.MaterialRecord{}, object.ErrNotFound)
+	p.Dep.RecordAccessor = recordAccessor
+
+	p.Dep.TreeUpdater = jet.NewTreeUpdaterMock(t)
+	p.Dep.IndexSaver = object.NewIndexSaverMock(t)
+
+	err := p.Proceed(ctx)
+	require.NoError(t, err)
+	require.Equal(t, token, p.Result.Reply.(insolar.RedirectReply).GetToken())
 }
-*/
