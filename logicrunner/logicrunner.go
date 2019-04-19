@@ -378,48 +378,6 @@ func (lr *LogicRunner) CheckExecutionLoop(
 	return true
 }
 
-func (lr *LogicRunner) HandlePendingFinishedMessage(
-	ctx context.Context, parcel insolar.Parcel,
-) (
-	insolar.Reply, error,
-) {
-	ctx = loggerWithTargetID(ctx, parcel)
-	inslogger.FromContext(ctx).Debug("LogicRunner.HandlePendingFinishedMessage starts ...")
-
-	msg := parcel.Message().(*message.PendingFinished)
-	ref := msg.DefaultTarget()
-	os := lr.UpsertObjectState(*ref)
-
-	os.Lock()
-	if os.ExecutionState == nil {
-		// we are first, strange, soon ExecuteResults message should come
-		os.ExecutionState = &ExecutionState{
-			Ref:     *ref,
-			Queue:   make([]ExecutionQueueElement, 0),
-			pending: message.NotPending,
-		}
-		os.Unlock()
-		return &reply.OK{}, nil
-	}
-	es := os.ExecutionState
-	os.Unlock()
-
-	es.Lock()
-	es.pending = message.NotPending
-	if es.Current != nil {
-		es.Unlock()
-		return nil, errors.New("received PendingFinished when we are already executing")
-	}
-	es.Unlock()
-
-	err := lr.StartQueueProcessorIfNeeded(ctx, es)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't start queue processor")
-	}
-
-	return &reply.OK{}, nil
-}
-
 func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 	ctx context.Context, es *ExecutionState,
 ) error {
