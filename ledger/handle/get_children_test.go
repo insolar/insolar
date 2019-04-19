@@ -69,7 +69,7 @@ func TestGetChildren_RedirectsWhenNoIndex(t *testing.T) {
 
 	p.Dep.JetStorage = jet.NewStorageMock(t)
 	p.Dep.RecordAccessor = object.NewRecordAccessorMock(t)
-	p.Dep.TreeUpdater = jet.NewTreeUpdaterMock(t)
+	p.Dep.TreeUpdater = jet.NewFetcherMock(t)
 	p.Dep.IndexSaver = object.NewIndexSaverMock(t)
 
 	err := p.Proceed(ctx)
@@ -135,7 +135,7 @@ func TestGetChildren_RedirectWhenFirstChildNotFound(t *testing.T) {
 	recordAccessor.ForIDMock.ExpectOnce(ctx, *msg.FromChild).Return(record.MaterialRecord{}, object.ErrNotFound)
 	p.Dep.RecordAccessor = recordAccessor
 
-	p.Dep.TreeUpdater = jet.NewTreeUpdaterMock(t)
+	p.Dep.TreeUpdater = jet.NewFetcherMock(t)
 	p.Dep.IndexSaver = object.NewIndexSaverMock(t)
 
 	err := p.Proceed(ctx)

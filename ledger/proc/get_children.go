@@ -45,7 +45,7 @@ type GetChildren struct {
 		JetStorage             jet.Storage
 		DelegationTokenFactory insolar.DelegationTokenFactory
 		RecordAccessor         object.RecordAccessor
-		TreeUpdater            jet.TreeUpdater
+		TreeUpdater            jet.Fetcher
 		IndexSaver             object.IndexSaver
 	}
 
@@ -118,7 +118,7 @@ func (p *GetChildren) Proceed(ctx context.Context) error {
 	childJet = (*insolar.ID)(&childJetID)
 
 	if !actual {
-		actualJet, err := p.Dep.TreeUpdater.FetchJet(ctx, *msg.Parent.Record(), currentChild.Pulse())
+		actualJet, err := p.Dep.TreeUpdater.Fetch(ctx, *msg.Parent.Record(), currentChild.Pulse())
 		if err != nil {
 			return err
 		}
