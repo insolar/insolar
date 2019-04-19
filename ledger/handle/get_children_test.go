@@ -23,9 +23,11 @@ import (
 // redirects when index can't be found
 func TestGetChildren_RedirectsWhenNoIndex(t *testing.T) {
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
+	randID := gen.ID()
+	randRef := gen.Reference()
 	msg := message.GetChildren{
 		Parent:    gen.Reference(),
-		FromChild: gen.IDPointer(),
+		FromChild: &randID,
 	}
 	parcel := &message.Parcel{
 		Msg:         &msg,
@@ -57,7 +59,7 @@ func TestGetChildren_RedirectsWhenNoIndex(t *testing.T) {
 
 	jetCoordinator := testutils.NewJetCoordinatorMock(t)
 	jetCoordinator.IsBeyondLimitMock.ExpectOnce(ctx, parcel.Pulse(), msg.FromChild.Pulse()).Return(true, nil)
-	jetCoordinator.HeavyMock.ExpectOnce(ctx, parcel.Pulse()).Return(gen.ReferencePointer(), nil)
+	jetCoordinator.HeavyMock.ExpectOnce(ctx, parcel.Pulse()).Return(&randRef, nil)
 	p.Dep.JetCoordinator = jetCoordinator
 
 	token := &delegationtoken.GetChildrenRedirectToken{}
@@ -80,9 +82,11 @@ func TestGetChildren_RedirectsWhenNoIndex(t *testing.T) {
 // redirect when there is an index but the child can't be found
 func TestGetChildren_RedirectWhenFirstChildNotFound(t *testing.T) {
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
+	randID := gen.ID()
+	randRef := gen.Reference()
 	msg := message.GetChildren{
 		Parent:    gen.Reference(),
-		FromChild: gen.IDPointer(),
+		FromChild: &randID,
 	}
 	parcel := &message.Parcel{
 		Msg:         &msg,
@@ -114,10 +118,10 @@ func TestGetChildren_RedirectWhenFirstChildNotFound(t *testing.T) {
 
 	jetCoordinator := testutils.NewJetCoordinatorMock(t)
 	jetCoordinator.IsBeyondLimitMock.ExpectOnce(ctx, parcel.Pulse(), msg.FromChild.Pulse()).Return(false, nil)
-	jetCoordinator.HeavyMock.ExpectOnce(ctx, parcel.Pulse()).Return(gen.ReferencePointer(), nil)
+	jetCoordinator.HeavyMock.ExpectOnce(ctx, parcel.Pulse()).Return(&randRef, nil)
 
 	childJetId := insolar.JetID(gen.ID())
-	jetCoordinator.NodeForJetMock.ExpectOnce(ctx, insolar.ID(childJetId), parcel.Pulse(), msg.FromChild.Pulse()).Return(gen.ReferencePointer(), nil)
+	jetCoordinator.NodeForJetMock.ExpectOnce(ctx, insolar.ID(childJetId), parcel.Pulse(), msg.FromChild.Pulse()).Return(&randRef, nil)
 	p.Dep.JetCoordinator = jetCoordinator
 
 	token := &delegationtoken.GetChildrenRedirectToken{}
