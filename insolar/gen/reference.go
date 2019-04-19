@@ -28,6 +28,11 @@ func ID() (id insolar.ID) {
 	return
 }
 
+func IDPointer() *insolar.ID {
+	id := ID()
+	return &id
+}
+
 // JetID generates random jet id.
 func JetID() (jetID insolar.JetID) {
 	f := fuzz.New().Funcs(func(jet *insolar.JetID, c fuzz.Continue) {

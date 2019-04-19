@@ -2,18 +2,17 @@ package handle
 
 import (
 	"context"
-	"math/rand"
 	"testing"
-
-	"github.com/insolar/insolar/insolar/record"
 
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/proc"
 	"github.com/insolar/insolar/ledger/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
@@ -22,24 +21,15 @@ import (
 )
 
 var (
-	domainID = *genRandomID(0)
+	domainID = gen.ID()
 )
-
-func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
-	buff := [insolar.RecordIDSize - insolar.PulseNumberSize]byte{}
-	_, err := rand.Read(buff[:])
-	if err != nil {
-		panic(err)
-	}
-	return insolar.NewID(pulse, buff[:])
-}
 
 func genRefWithID(id *insolar.ID) *insolar.Reference {
 	return insolar.NewReference(domainID, *id)
 }
 
 func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
-	return genRefWithID(genRandomID(pulse))
+	return genRefWithID(gen.IDPointer())
 }
 
 // redirects when index can't be found
@@ -47,7 +37,7 @@ func TestGetChildren_RedirectsWhenNoIndex(t *testing.T) {
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 	msg := message.GetChildren{
 		Parent:    *genRandomRef(0),
-		FromChild: genRandomID(0),
+		FromChild: gen.IDPointer(),
 	}
 	parcel := &message.Parcel{
 		Msg:         &msg,
@@ -104,7 +94,7 @@ func TestGetChildren_RedirectWhenFirstChildNotFound(t *testing.T) {
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 	msg := message.GetChildren{
 		Parent:    *genRandomRef(0),
-		FromChild: genRandomID(0),
+		FromChild: gen.IDPointer(),
 	}
 	parcel := &message.Parcel{
 		Msg:         &msg,
@@ -138,7 +128,7 @@ func TestGetChildren_RedirectWhenFirstChildNotFound(t *testing.T) {
 	jetCoordinator.IsBeyondLimitMock.ExpectOnce(ctx, parcel.Pulse(), msg.FromChild.Pulse()).Return(false, nil)
 	jetCoordinator.HeavyMock.ExpectOnce(ctx, parcel.Pulse()).Return(genRandomRef(0), nil)
 
-	childJetId := insolar.JetID(*genRandomID(0))
+	childJetId := insolar.JetID(gen.ID())
 	jetCoordinator.NodeForJetMock.ExpectOnce(ctx, insolar.ID(childJetId), parcel.Pulse(), msg.FromChild.Pulse()).Return(genRandomRef(0), nil)
 	p.Dep.JetCoordinator = jetCoordinator
 
