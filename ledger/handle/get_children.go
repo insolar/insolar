@@ -55,9 +55,6 @@ func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
 		ReplyTo: s.Message.ReplyTo,
 		Reply:   p.Result.Reply,
 	}
-	if err := f.Procedure(ctx, rep); err != nil {
-		return err
-	}
 
-	return nil
+	return f.Procedure(ctx, rep)
 }
