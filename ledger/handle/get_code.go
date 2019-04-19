@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
 
 package handle
 
@@ -40,6 +40,8 @@ func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
 	jet := s.dep.FetchJet(&proc.FetchJet{Parcel: s.Message.Parcel})
 	if err := f.Procedure(ctx, jet); err != nil {
 		if err == flow.ErrCancelled {
+			f.Continue(ctx)
+		} else {
 			return err
 		}
 		return err
@@ -51,7 +53,11 @@ func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
 			Reply:   &reply.JetMiss{JetID: insolar.ID(jet.Result.Jet)},
 		}
 		if err := f.Procedure(ctx, rep); err != nil {
-			return err
+			if err == flow.ErrCancelled {
+				f.Continue(ctx)
+			} else {
+				return err
+			}
 		}
 		return errors.New("jet miss")
 	}
