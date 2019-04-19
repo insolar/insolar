@@ -70,12 +70,11 @@ type MessageHandler struct {
 	RecordAccessor object.RecordAccessor `inject:""`
 	Nodes          node.Accessor         `inject:""`
 
-	DBContext     storage.DBContext    `inject:""`
-	HotDataWaiter hot.JetWaiter        `inject:""`
-	JetReleaser   hot.JetReleaser      `inject:""`
-	IndexAccessor object.IndexAccessor `inject:""`
-	IndexModifier object.IndexModifier `inject:""`
-	IndexStorage  object.IndexStorage  `inject:""`
+	HotDataWaiter hot.JetWaiter   `inject:""`
+	JetReleaser   hot.JetReleaser `inject:""`
+
+	IndexStorage       object.IndexStorage
+	IndexStateModifier object.ExtendedIndexModifier
 
 	conf           *configuration.Ledger
 	middleware     *middleware
@@ -86,10 +85,17 @@ type MessageHandler struct {
 }
 
 // NewMessageHandler creates new handler.
-func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
+func NewMessageHandler(
+	indexStorage object.IndexStorage,
+	indexStateModifier object.ExtendedIndexModifier,
+	conf *configuration.Ledger,
+) *MessageHandler {
+
 	h := &MessageHandler{
-		handlers: map[insolar.MessageType]insolar.MessageHandler{},
-		conf:     conf,
+		handlers:           map[insolar.MessageType]insolar.MessageHandler{},
+		conf:               conf,
+		IndexStorage:       indexStorage,
+		IndexStateModifier: indexStateModifier,
 	}
 
 	dep := &proc.Dependencies{
@@ -104,7 +110,7 @@ func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 			return p
 		},
 		GetIndex: func(p *proc.GetIndex) *proc.GetIndex {
-			p.Dep.Recent = h.RecentStorageProvider
+			p.Dep.IndexState = h.IndexStateModifier
 			p.Dep.Locker = h.IDLocker
 			p.Dep.Storage = h.IndexStorage
 			p.Dep.Coordinator = h.JetCoordinator
@@ -366,12 +372,12 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	msg := parcel.Message().(*message.GetDelegate)
 	jetID := jetFromContext(ctx)
 
-	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Head.Record())
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Head.Record(), parcel.Pulse())
 
 	h.IDLocker.Lock(msg.Head.Record())
 	defer h.IDLocker.Unlock(msg.Head.Record())
 
-	idx, err := h.IndexAccessor.ForID(ctx, *msg.Head.Record())
+	idx, err := h.IndexStorage.ForID(ctx, *msg.Head.Record())
 	if err == object.ErrIndexNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -403,12 +409,12 @@ func (h *MessageHandler) handleGetChildren(
 	msg := parcel.Message().(*message.GetChildren)
 	jetID := jetFromContext(ctx)
 
-	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
 
 	h.IDLocker.Lock(msg.Parent.Record())
 	defer h.IDLocker.Unlock(msg.Parent.Record())
 
-	idx, err := h.IndexAccessor.ForID(ctx, *msg.Parent.Record())
+	idx, err := h.IndexStorage.ForID(ctx, *msg.Parent.Record())
 	if err == object.ErrIndexNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -572,7 +578,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 		return nil, errors.New("wrong object state record")
 	}
 
-	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Object.Record())
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Object.Record(), parcel.Pulse())
 
 	calculatedID := object.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
@@ -592,7 +598,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 	h.IDLocker.Lock(msg.Object.Record())
 	defer h.IDLocker.Unlock(msg.Object.Record())
 
-	idx, err := h.IndexAccessor.ForID(ctx, *msg.Object.Record())
+	idx, err := h.IndexStorage.ForID(ctx, *msg.Object.Record())
 	// No index on our node.
 	if err == object.ErrIndexNotFound {
 		if state.ID() == object.StateActivation {
@@ -648,7 +654,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 
 	idx.LatestUpdate = parcel.Pulse()
 	idx.JetID = insolar.JetID(jetID)
-	err = h.IndexModifier.Set(ctx, *msg.Object.Record(), idx)
+	err = h.IndexStorage.Set(ctx, *msg.Object.Record(), idx)
 	if err != nil {
 		return nil, err
 	}
@@ -680,13 +686,13 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 		return nil, errors.New("wrong child record")
 	}
 
-	h.RecentStorageProvider.GetIndexStorage(ctx, jetID).AddObject(ctx, *msg.Parent.Record())
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
 
 	h.IDLocker.Lock(msg.Parent.Record())
 	defer h.IDLocker.Unlock(msg.Parent.Record())
 
 	var child *insolar.ID
-	idx, err := h.IndexAccessor.ForID(ctx, *msg.Parent.Record())
+	idx, err := h.IndexStorage.ForID(ctx, *msg.Parent.Record())
 	if err == object.ErrIndexNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -729,7 +735,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 	}
 	idx.LatestUpdate = parcel.Pulse()
 	idx.JetID = insolar.JetID(jetID)
-	err = h.IndexModifier.Set(ctx, *msg.Parent.Record(), idx)
+	err = h.IndexStorage.Set(ctx, *msg.Parent.Record(), idx)
 	if err != nil {
 		return nil, err
 	}
@@ -747,7 +753,7 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insola
 	h.IDLocker.Lock(msg.Object.Record())
 	defer h.IDLocker.Unlock(msg.Object.Record())
 
-	idx, err := h.IndexAccessor.ForID(ctx, *msg.Object.Record())
+	idx, err := h.IndexStorage.ForID(ctx, *msg.Object.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
@@ -791,7 +797,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	}
 
 	idx.JetID = insolar.JetID(jetID)
-	err = h.IndexModifier.Set(ctx, *obj.Record(), idx)
+	err = h.IndexStorage.Set(ctx, *obj.Record(), idx)
 	if err != nil {
 		return object.Lifeline{}, errors.Wrap(err, "failed to save")
 	}
@@ -882,21 +888,18 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 		}
 	}()
 
-	indexStorage := h.RecentStorageProvider.GetIndexStorage(ctx, insolar.ID(jetID))
-	for id, meta := range msg.RecentObjects {
+	for id, meta := range msg.HotIndexes {
 		decodedIndex, err := object.DecodeIndex(meta.Index)
 		if err != nil {
 			logger.Error(err)
 			continue
 		}
 
-		err = h.IndexModifier.Set(ctx, id, decodedIndex)
+		err = h.IndexStateModifier.SetWithMeta(ctx, id, meta.LastUsed, decodedIndex)
 		if err != nil {
 			logger.Error(err)
 			continue
 		}
-
-		indexStorage.AddObjectWithTLL(ctx, id, meta.TTL)
 	}
 
 	h.JetStorage.Update(

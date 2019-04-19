@@ -67,7 +67,7 @@ func TestJetIndex_For(t *testing.T) {
 		}
 	}
 
-	res := idx.For(jetID, insolar.PulseNumber(4))
+	res := idx.For(jetID)
 
 	require.Equal(t, 3, len(res))
 	_, ok := res[*id]

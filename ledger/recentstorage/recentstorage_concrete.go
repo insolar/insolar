@@ -21,42 +21,23 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
 	"go.opencensus.io/stats"
 )
 
 // RecentStorageProvider provides a recent storage for jet
 type RecentStorageProvider struct { //nolint: golint
-	indexStorages   map[insolar.ID]*RecentIndexStorageConcrete
 	pendingStorages map[insolar.ID]*PendingStorageConcrete
 
 	indexLock   sync.Mutex
 	pendingLock sync.Mutex
-
-	DefaultTTL int
 }
 
 // NewRecentStorageProvider creates new provider
-func NewRecentStorageProvider(defaultTTL int) *RecentStorageProvider {
+func NewRecentStorageProvider() *RecentStorageProvider {
 	return &RecentStorageProvider{
-		DefaultTTL:      defaultTTL,
-		indexStorages:   map[insolar.ID]*RecentIndexStorageConcrete{},
 		pendingStorages: map[insolar.ID]*PendingStorageConcrete{},
 	}
-}
-
-// GetIndexStorage returns a recent indexes for a specific jet
-func (p *RecentStorageProvider) GetIndexStorage(ctx context.Context, jetID insolar.ID) RecentIndexStorage {
-	p.indexLock.Lock()
-	defer p.indexLock.Unlock()
-
-	storage, ok := p.indexStorages[jetID]
-	if !ok {
-		storage = NewRecentIndexStorage(jetID, p.DefaultTTL)
-		p.indexStorages[jetID] = storage
-	}
-	return storage
 }
 
 // GetPendingStorage returns pendings for a specific jet
@@ -83,27 +64,6 @@ func (p *RecentStorageProvider) Count() int {
 	}
 
 	return count
-}
-
-// CloneIndexStorage clones indexes from one jet to another one
-func (p *RecentStorageProvider) CloneIndexStorage(ctx context.Context, fromJetID, toJetID insolar.ID) {
-	p.indexLock.Lock()
-	defer p.indexLock.Unlock()
-
-	fromStorage, ok := p.indexStorages[fromJetID]
-	if !ok {
-		return
-	}
-	toStorage := &RecentIndexStorageConcrete{
-		jetID:      toJetID,
-		indexes:    map[insolar.ID]recentObjectMeta{},
-		DefaultTTL: p.DefaultTTL,
-	}
-	for k, v := range fromStorage.indexes {
-		clone := v
-		toStorage.indexes[k] = clone
-	}
-	p.indexStorages[toJetID] = toStorage
 }
 
 // ClonePendingStorage clones pending requests from one jet to another one
@@ -145,43 +105,6 @@ func (p *RecentStorageProvider) ClonePendingStorage(ctx context.Context, fromJet
 	p.pendingLock.Unlock()
 }
 
-// DecreaseIndexesTTL decrease ttl of all indexes in all storages
-// If storage contains indexes with zero ttl, they are removed from storage and returned to a caller
-// If there are no indexes with ttl more then 0, storage is removed
-func (p *RecentStorageProvider) DecreaseIndexesTTL(ctx context.Context) map[insolar.ID][]insolar.ID {
-	p.indexLock.Lock()
-	defer p.indexLock.Unlock()
-
-	resMapLock := sync.Mutex{}
-	resMap := map[insolar.ID][]insolar.ID{}
-	wg := sync.WaitGroup{}
-	wg.Add(len(p.indexStorages))
-
-	for jetID, storage := range p.indexStorages {
-		go func(jetID insolar.ID, s *RecentIndexStorageConcrete) {
-			res := s.DecreaseIndexTTL(ctx)
-
-			if len(res) > 0 {
-				resMapLock.Lock()
-				resMap[jetID] = res
-				resMapLock.Unlock()
-			}
-
-			wg.Done()
-		}(jetID, storage)
-	}
-
-	wg.Wait()
-
-	for jetID, storage := range p.indexStorages {
-		if len(storage.indexes) == 0 {
-			delete(p.indexStorages, jetID)
-		}
-	}
-
-	return resMap
-}
-
 // RemovePendingStorage removes pending requests for a specific jet from provider
 // If there is a reference to RecentIndexStorage somewhere, it won't be affected
 func (p *RecentStorageProvider) RemovePendingStorage(ctx context.Context, id insolar.ID) {
@@ -197,103 +120,6 @@ func (p *RecentStorageProvider) RemovePendingStorage(ctx context.Context, id ins
 
 		delete(p.pendingStorages, id)
 	}
-}
-
-// RecentIndexStorageConcrete is an implementation of RecentIndexStorage interface
-// This is a in-memory cache for indexes` ids
-type RecentIndexStorageConcrete struct {
-	jetID      insolar.ID
-	indexes    map[insolar.ID]recentObjectMeta
-	lock       sync.Mutex
-	DefaultTTL int
-}
-
-type recentObjectMeta struct {
-	ttl int
-}
-
-// NewRecentIndexStorage creates new *RecentIndexStorage
-func NewRecentIndexStorage(jetID insolar.ID, defaultTTL int) *RecentIndexStorageConcrete {
-	return &RecentIndexStorageConcrete{jetID: jetID, DefaultTTL: defaultTTL, indexes: map[insolar.ID]recentObjectMeta{}}
-}
-
-// AddObject adds index's id to an in-memory cache and sets DefaultTTL for it
-func (r *RecentIndexStorageConcrete) AddObject(ctx context.Context, id insolar.ID) {
-	r.AddObjectWithTLL(ctx, id, r.DefaultTTL)
-}
-
-// AddObjectWithTLL adds index's id to an in-memory cache with provided ttl
-func (r *RecentIndexStorageConcrete) AddObjectWithTLL(ctx context.Context, id insolar.ID, ttl int) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	if ttl < 0 {
-		inslogger.FromContext(ctx).Error("below zero ttl happened")
-		panic("below zero ttl happened")
-	}
-
-	r.indexes[id] = recentObjectMeta{ttl: ttl}
-
-	ctx = insmetrics.InsertTag(ctx, tagJet, r.jetID.DebugString())
-	stats.Record(ctx, statRecentStorageObjectsAdded.M(1))
-}
-
-// GetObjects returns deep copy of indexes' ids
-func (r *RecentIndexStorageConcrete) GetObjects() map[insolar.ID]int {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	targetMap := make(map[insolar.ID]int, len(r.indexes))
-	for key, value := range r.indexes {
-		targetMap[key] = value.ttl
-	}
-
-	return targetMap
-}
-
-// FilterNotExistWithLock filters candidates from params
-// found indexes, which aren't removed from cache
-// and the passes it to lockedFn
-func (r *RecentIndexStorageConcrete) FilterNotExistWithLock(
-	ctx context.Context,
-	candidates []insolar.ID,
-	lockedFn func(filtered []insolar.ID),
-) {
-	r.lock.Lock()
-	markedCandidates := r.markForDelete(candidates)
-	lockedFn(markedCandidates)
-	r.lock.Unlock()
-}
-
-func (r *RecentIndexStorageConcrete) markForDelete(candidates []insolar.ID) []insolar.ID {
-	result := make([]insolar.ID, 0, len(candidates))
-
-	for _, c := range candidates {
-		_, exists := r.indexes[c]
-		if !exists {
-			result = append(result, c)
-		}
-	}
-	return result
-}
-
-// DecreaseIndexTTL decreases ttls and remove indexes with 0 ttl
-// Removed indexes will be returned as a functon's result
-func (r *RecentIndexStorageConcrete) DecreaseIndexTTL(ctx context.Context) []insolar.ID {
-	r.lock.Lock()
-	defer r.lock.Unlock()
-
-	var clearedObjects []insolar.ID
-	for key, value := range r.indexes {
-		value.ttl--
-		if value.ttl <= 0 {
-			clearedObjects = append(clearedObjects, key)
-			delete(r.indexes, key)
-			continue
-		}
-		r.indexes[key] = value
-	}
-	return clearedObjects
 }
 
 // PendingStorageConcrete contains indexes of unclosed requests (pendings) for a specific object id

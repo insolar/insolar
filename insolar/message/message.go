@@ -81,8 +81,6 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 		return &GetRequest{}, nil
 
 	// heavy sync
-	case insolar.TypeHeavyStartStop:
-		return &HeavyStartStop{}, nil
 	case insolar.TypeHeavyPayload:
 		return &HeavyPayload{}, nil
 	// Bootstrap
@@ -216,7 +214,6 @@ func init() {
 	gob.Register(&GetRequest{})
 
 	// heavy
-	gob.Register(&HeavyStartStop{})
 	gob.Register(&HeavyPayload{})
 
 	// Bootstrap

@@ -36,6 +36,7 @@ import (
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/pulsemanager"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/replication"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
@@ -189,26 +190,19 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	)
 	{
 		conf := cfg.Ledger
-
-		legacyDB, err := storage.NewDB(conf, nil)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to initialize DB")
-		}
-
 		idLocker := storage.NewIDLocker()
 		pulses := pulse.NewStorageMem()
 		drops := drop.NewStorageMemory()
 		blobs := blob.NewStorageMemory()
 		records := object.NewRecordMemory()
-		indices := object.NewIndexMemory()
+		indexes := object.NewIndexMemory()
 		jets := jet.NewStore()
 		nodes := node.NewStorage()
 
-		replica := storage.NewReplicaStorage()
 		c := component.Manager{}
-		c.Inject(replica, legacyDB, CryptoScheme)
+		c.Inject(CryptoScheme)
 
-		hots := recentstorage.NewRecentStorageProvider(conf.RecentStorage.DefaultTTL)
+		hots := recentstorage.NewRecentStorageProvider()
 		waiter := hot.NewChannelWaiter()
 		cord := jetcoordinator.NewJetCoordinator(conf.LightChainLimit)
 		cord.PulseCalculator = pulses
@@ -217,8 +211,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		cord.NodeNet = NodeNetwork
 		cord.PlatformCryptographyScheme = CryptoScheme
 		cord.Nodes = nodes
+		Coordinator = cord
 
-		handler := artifactmanager.NewMessageHandler(&conf)
+		handler := artifactmanager.NewMessageHandler(indexes, indexes, &conf)
 		handler.RecentStorageProvider = hots
 		handler.Bus = Bus
 		handler.PlatformCryptographyScheme = CryptoScheme
@@ -234,15 +229,44 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.RecordModifier = records
 		handler.RecordAccessor = records
 		handler.Nodes = nodes
-		handler.DBContext = legacyDB
 		handler.HotDataWaiter = waiter
 		handler.JetReleaser = waiter
-		handler.IndexAccessor = indices
-		handler.IndexModifier = indices
-		handler.IndexStorage = indices
+		handler.IndexStorage = indexes
+		handler.IndexStateModifier = indexes
+		handler.IndexStorage = indexes
+
+		jetCalculator := jet.NewCalculator(Coordinator, jets)
+		var lightCleaner = replication.NewCleaner(
+			jets,
+			nodes,
+			drops,
+			blobs,
+			records,
+			indexes,
+			pulses,
+			pulses,
+			conf.LightChainLimit,
+		)
+		dataGatherer := replication.NewDataGatherer(drops, blobs, records, indexes)
+		lthSyncer := replication.NewReplicatorDefault(
+			jetCalculator,
+			dataGatherer,
+			lightCleaner,
+			Bus,
+			pulses,
+		)
 
 		pm := pulsemanager.NewPulseManager(
-			conf, drops, blobs, blobs, pulses, records, records, indices, indices,
+			conf,
+			drops,
+			blobs,
+			blobs,
+			pulses,
+			records,
+			records,
+			indexes,
+			indexes,
+			lthSyncer,
 		)
 		pm.MessageHandler = handler
 		pm.Bus = Bus
@@ -254,14 +278,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		pm.JetReleaser = waiter
 		pm.JetAccessor = jets
 		pm.JetModifier = jets
-		pm.IndexAccessor = indices
-		pm.IndexModifier = indices
-		pm.CollectionIndexAccessor = indices
-		pm.IndexCleaner = indices
+		pm.IndexAccessor = indexes
+		pm.IndexModifier = indexes
+		pm.CollectionIndexAccessor = indexes
+		pm.IndexCleaner = indexes
 		pm.NodeSetter = nodes
 		pm.Nodes = nodes
-		pm.ReplicaStorage = replica
-		pm.DBContext = legacyDB
 		pm.DropModifier = drops
 		pm.DropAccessor = drops
 		pm.DropCleaner = drops
@@ -270,7 +292,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		pm.PulseAppender = pulses
 
 		PulseManager = pm
-		Coordinator = cord
 		Pulses = pulses
 		Jets = jets
 		Handler = handler

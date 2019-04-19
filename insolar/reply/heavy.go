@@ -22,16 +22,10 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-// ErrHeavySyncInProgress returned when heavy sync in progress.
-const (
-	ErrHeavySyncInProgress ErrType = iota + 1
-)
-
 // HeavyError carries heavy sync error information.
 type HeavyError struct {
 	Message  string
-	SubType  ErrType
-	JetID    insolar.ID
+	JetID    insolar.JetID
 	PulseNum insolar.PulseNumber
 }
 
@@ -40,17 +34,7 @@ func (e *HeavyError) Type() insolar.ReplyType {
 	return TypeHeavyError
 }
 
-// ConcreteType returns concrete error type.
-func (e *HeavyError) ConcreteType() ErrType {
-	return e.SubType
-}
-
 // Error returns error message for stored type.
 func (e *HeavyError) Error() string {
 	return fmt.Sprintf("%v (JetID=%v, PulseNum=%v)", e.Message, e.JetID, e.PulseNum)
-}
-
-// IsRetryable returns true if retry could be performed.
-func (e *HeavyError) IsRetryable() bool {
-	return e.SubType == ErrHeavySyncInProgress
 }

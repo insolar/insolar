@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/pulse"
-	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/testutils"
@@ -40,9 +39,8 @@ import (
 type jetCoordinatorSuite struct {
 	suite.Suite
 
-	cm      *component.Manager
-	ctx     context.Context
-	cleaner func()
+	cm  *component.Manager
+	ctx context.Context
 
 	pulseAccessor pulse.Accessor
 	pulseAppender pulse.Appender
@@ -66,9 +64,6 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	db, _, cleaner := storagetest.TmpDB(s.ctx, s.T())
-
-	s.cleaner = cleaner
 	ps := pulse.NewStorageMem()
 	s.pulseAppender = ps
 	s.pulseAccessor = ps
@@ -80,7 +75,6 @@ func (s *jetCoordinatorSuite) BeforeTest(suiteName, testName string) {
 
 	s.cm.Inject(
 		testutils.NewPlatformCryptographyScheme(),
-		db,
 		ps,
 		storage,
 		s.nodeStorage,
@@ -102,7 +96,6 @@ func (s *jetCoordinatorSuite) AfterTest(suiteName, testName string) {
 	if err != nil {
 		s.T().Error("ComponentManager stop failed", err)
 	}
-	s.cleaner()
 }
 
 func (s *jetCoordinatorSuite) TestJetCoordinator_QueryRole() {

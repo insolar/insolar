@@ -17,7 +17,6 @@
 package storage_test
 
 import (
-	"crypto/rand"
 	"encoding/hex"
 
 	"github.com/insolar/insolar/insolar"
@@ -25,15 +24,6 @@ import (
 
 func zerohash() []byte {
 	b := make([]byte, insolar.RecordHashSize)
-	return b
-}
-
-func randhash() []byte {
-	b := zerohash()
-	_, err := rand.Read(b)
-	if err != nil {
-		panic(err)
-	}
 	return b
 }
 
@@ -48,11 +38,4 @@ func hexhash(hash string) []byte {
 	}
 	_ = copy(b, h)
 	return b
-}
-
-func referenceWithHashes(domainhash, recordhash string) insolar.Reference {
-	dh := hexhash(domainhash)
-	rh := hexhash(recordhash)
-
-	return *insolar.NewReference(*insolar.NewID(0, dh), *insolar.NewID(0, rh))
 }

@@ -43,7 +43,7 @@ type Accessor interface {
 
 // Cleaner provides an interface for removing jetdrops from a storage.
 type Cleaner interface {
-	Delete(pulse insolar.PulseNumber)
+	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
 }
 
 // Drop is a blockchain block.
