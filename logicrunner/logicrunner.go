@@ -133,7 +133,7 @@ func (st *ObjectState) WrapError(err error, message string) error {
 
 func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
-	wmMsg.SetContext(ctx)
+	wmMsg.Metadata.Set("TraceID", inslogger.TraceID(ctx))
 	wmMsg.Metadata.Set(MessageTypeField, msgType)
 
 	return wmMsg

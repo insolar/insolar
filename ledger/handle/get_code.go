@@ -67,5 +67,6 @@ func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
 		Message: s.Message,
 		Code:    msg.Code,
 	})
-	return f.Procedure(ctx, codeRec)
+
+	return codeRec.Proceed(ctx)
 }
