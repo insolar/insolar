@@ -28,6 +28,7 @@ type Dependencies struct {
 	WaitHot    func(*WaitHot) *WaitHot
 	GetIndex   func(*GetIndex) *GetIndex
 	SendObject func(p *SendObject) *SendObject
+	GetCode    func(*GetCode) *GetCode
 }
 
 type ReturnReply struct {
