@@ -18,11 +18,9 @@ package pulsewatcher
 
 import (
 	"io/ioutil"
-	"os"
-	"path/filepath"
 	"time"
 
-	yaml "gopkg.in/yaml.v2"
+	"gopkg.in/yaml.v2"
 )
 
 type Config struct {
@@ -31,16 +29,12 @@ type Config struct {
 	Timeout  time.Duration
 }
 
-func WriteConfig(dir string, file string, conf Config) error {
-	err := os.MkdirAll(dir, 0775)
-	if err != nil {
-		return err
-	}
+func WriteConfig(file string, conf Config) error {
 	data, err := yaml.Marshal(conf)
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filepath.Join(dir, file), data, 0644)
+	return ioutil.WriteFile(file, data, 0644)
 }
 
 func ReadConfig(file string) (*Config, error) {
