@@ -23,7 +23,7 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/insolar.NetworkCoordinator -o ../testutils -s _mock.go
 
 // NetworkCoordinator encapsulates logic of network configuration
-type NetworkCoordinator interface {
+type XNetworkCoordinator interface {
 	// GetCert returns certificate object by node reference, using discovery nodes for signing
 	GetCert(context.Context, *Reference) (Certificate, error)
 

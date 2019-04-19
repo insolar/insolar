@@ -88,7 +88,6 @@ type ServiceNetwork struct {
 	PulseManager        insolar.PulseManager        `inject:""`
 	PulseAccessor       pulse.Accessor              `inject:""`
 	CryptographyService insolar.CryptographyService `inject:""`
-	NetworkCoordinator  insolar.NetworkCoordinator  `inject:""`
 	NodeKeeper          network.NodeKeeper          `inject:""`
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
 	GIL                 insolar.GlobalInsolarLock   `inject:""`

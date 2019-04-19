@@ -48,7 +48,6 @@ import (
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
-	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
@@ -102,10 +101,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	// Network.
 	var (
-		NetworkService     insolar.Network
-		NetworkCoordinator insolar.NetworkCoordinator
-		NodeNetwork        insolar.NodeNetwork
-		Termination        insolar.TerminationHandler
+		NetworkService insolar.Network
+		NodeNetwork    insolar.NodeNetwork
+		Termination    insolar.TerminationHandler
 	)
 	{
 		var err error
@@ -123,10 +121,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			return nil, errors.Wrap(err, "failed to start NodeNetwork")
 		}
 
-		NetworkCoordinator, err = networkcoordinator.New()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start NetworkCoordinator")
-		}
 	}
 
 	// API.
@@ -260,7 +254,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		artifacts.NewClient(),
 		Genesis,
 		API,
-		NetworkCoordinator,
 		KeyProcessor,
 		Termination,
 		CryptoScheme,
