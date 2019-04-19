@@ -109,7 +109,7 @@ func (c *LightCleaner) clean(ctx context.Context) {
 	}
 }
 
-func (c LightCleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
+func (c *LightCleaner) cleanPulse(ctx context.Context, pn insolar.PulseNumber) {
 	inslogger.FromContext(ctx).Debugf("[cleanPulse] start cleaning. pn - %v", pn)
 	c.nodeModifier.DeleteForPN(pn)
 	c.dropCleaner.DeleteForPN(ctx, pn)
