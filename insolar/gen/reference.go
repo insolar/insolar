@@ -55,3 +55,8 @@ func Reference() (ref insolar.Reference) {
 	fuzz.New().NilChance(0).Fuzz(&ref)
 	return
 }
+
+func ReferencePointer() *insolar.Reference {
+	ref := Reference()
+	return &ref
+}
