@@ -42,7 +42,7 @@ type SendObject struct {
 	Dep struct {
 		Coordinator    insolar.JetCoordinator
 		Jets           jet.Storage
-		JetUpdater     jet.TreeUpdater
+		JetUpdater     jet.Fetcher
 		RecordAccessor object.RecordAccessor
 		Blobs          blob.Storage
 		Bus            insolar.MessageBus
@@ -116,7 +116,7 @@ func (p *SendObject) handle(
 	stateJet = (*insolar.ID)(&stateJetID)
 
 	if !actual {
-		actualJet, err := p.Dep.JetUpdater.FetchJet(ctx, *msg.Head.Record(), stateID.Pulse())
+		actualJet, err := p.Dep.JetUpdater.Fetch(ctx, *msg.Head.Record(), stateID.Pulse())
 		if err != nil {
 			return nil, err
 		}

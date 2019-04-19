@@ -45,12 +45,12 @@ type fetchResult struct {
 	err error
 }
 
-type TreeUpdater interface {
-	FetchJet(ctx context.Context, target insolar.ID, pulse insolar.PulseNumber) (*insolar.ID, error)
-	ReleaseJet(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber)
+type Fetcher interface {
+	Fetch(ctx context.Context, target insolar.ID, pulse insolar.PulseNumber) (*insolar.ID, error)
+	Release(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber)
 }
 
-type treeUpdater struct {
+type fetcher struct {
 	Nodes          node.Accessor
 	JetStorage     Storage
 	MessageBus     insolar.MessageBus
@@ -60,13 +60,13 @@ type treeUpdater struct {
 	sequencer map[seqKey]*seqEntry
 }
 
-func NewJetTreeUpdater(
+func NewFetcher(
 	ans node.Accessor,
 	js Storage,
 	mb insolar.MessageBus,
 	jc insolar.JetCoordinator,
-) TreeUpdater {
-	return &treeUpdater{
+) Fetcher {
+	return &fetcher{
 		Nodes:          ans,
 		JetStorage:     js,
 		MessageBus:     mb,
@@ -75,7 +75,7 @@ func NewJetTreeUpdater(
 	}
 }
 
-func (tu *treeUpdater) FetchJet(
+func (tu *fetcher) Fetch(
 	ctx context.Context, target insolar.ID, pulse insolar.PulseNumber,
 ) (*insolar.ID, error) {
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.fetch_jet")
@@ -108,7 +108,7 @@ func (tu *treeUpdater) FetchJet(
 
 		// Tree was updated in another thread, rechecking.
 		span.Annotate(nil, "somebody else updated actuality")
-		return tu.FetchJet(ctx, target, pulse)
+		return tu.Fetch(ctx, target, pulse)
 	}
 
 	defer func() {
@@ -121,7 +121,7 @@ func (tu *treeUpdater) FetchJet(
 		tu.seqMutex.Unlock()
 	}()
 
-	resJet, err := tu.fetchActualJetFromOtherNodes(ctx, target, pulse)
+	resJet, err := tu.fetch(ctx, target, pulse)
 	if err != nil {
 		return nil, err
 	}
@@ -131,7 +131,7 @@ func (tu *treeUpdater) FetchJet(
 	return resJet, nil
 }
 
-func (tu *treeUpdater) ReleaseJet(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) {
+func (tu *fetcher) Release(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) {
 	tu.seqMutex.Lock()
 	defer tu.seqMutex.Unlock()
 
@@ -154,7 +154,7 @@ func (tu *treeUpdater) ReleaseJet(ctx context.Context, jetID insolar.ID, pulse i
 	}
 }
 
-func (tu *treeUpdater) fetchActualJetFromOtherNodes(
+func (tu *fetcher) fetch(
 	ctx context.Context, target insolar.ID, pulse insolar.PulseNumber,
 ) (*insolar.ID, error) {
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.fetch_jet_from_other_nodes")
@@ -163,7 +163,7 @@ func (tu *treeUpdater) fetchActualJetFromOtherNodes(
 	ch := make(chan fetchResult, 1)
 
 	go func() {
-		nodes, err := tu.otherNodesForPulse(ctx, pulse)
+		nodes, err := tu.nodesForPulse(ctx, pulse)
 		if err != nil {
 			ch <- fetchResult{nil, err}
 			return
@@ -199,7 +199,7 @@ func (tu *treeUpdater) fetchActualJetFromOtherNodes(
 
 				r, ok := rep.(*reply.Jet)
 				if !ok {
-					inslogger.FromContext(ctx).Errorf("middleware.fetchActualJetFromOtherNodes: unexpected reply: %#v\n", rep)
+					inslogger.FromContext(ctx).Errorf("middleware.fetch: unexpected reply: %#v\n", rep)
 					return
 				}
 
@@ -251,9 +251,7 @@ func (tu *treeUpdater) fetchActualJetFromOtherNodes(
 	return res.jet, res.err
 }
 
-func (tu *treeUpdater) otherNodesForPulse(
-	ctx context.Context, pulse insolar.PulseNumber,
-) ([]insolar.Node, error) {
+func (tu *fetcher) nodesForPulse(ctx context.Context, pulse insolar.PulseNumber) ([]insolar.Node, error) {
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.other_nodes_for_pulse")
 	defer span.End()
 
