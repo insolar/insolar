@@ -41,7 +41,11 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 		Message: s.Message,
 	}
 	if err := f.Handle(ctx, jet.Present); err != nil {
-		return err
+		if err == flow.ErrCancelled {
+			f.Continue(ctx)
+		} else {
+			return err
+		}
 	}
 
 	idx := s.dep.GetIndex(&proc.GetIndex{
@@ -51,6 +55,8 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 	})
 	if err := f.Procedure(ctx, idx); err != nil {
 		if err == flow.ErrCancelled {
+			f.Continue(ctx)
+		} else {
 			return err
 		}
 		return f.Procedure(ctx, &proc.ReturnReply{
