@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,22 +12,14 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
-package bus
+package proc
 
 import (
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar"
+	"errors"
 )
 
-type Reply struct {
-	Reply insolar.Reply
-	Err   error
-}
-
-type Message struct {
-	Parcel       insolar.Parcel
-	WatermillMsg *message.Message
-	ReplyTo      chan Reply
-}
+var (
+	ErrInvalidRef = errors.New("invalid reference")
+)

@@ -18,14 +18,13 @@ package thread
 
 import (
 	"context"
-	"runtime"
 	"testing"
-	"time"
+
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/require"
 )
 
 func TestNewThread(t *testing.T) {
@@ -118,6 +117,7 @@ func TestThread_Procedure_NilProcedureError(t *testing.T) {
 func TestThread_Procedure_CancelledWhenProcedureWorks(t *testing.T) {
 	t.Parallel()
 	cancel := make(chan struct{})
+	finish := make(chan struct{})
 	thread := Thread{
 		cancel:     cancel,
 		procedures: map[flow.Procedure]chan error{},
@@ -125,13 +125,14 @@ func TestThread_Procedure_CancelledWhenProcedureWorks(t *testing.T) {
 	pm := flow.NewProcedureMock(t)
 	pm.ProceedFunc = func(ctx context.Context) error {
 		close(cancel)
-		runtime.Gosched()
-		<-cancel
+		<-finish
 		return nil
 	}
 	err := thread.Procedure(context.Background(), pm)
 	require.Error(t, err)
 	require.Equal(t, flow.ErrCancelled, err)
+
+	close(finish)
 }
 
 func TestThread_Procedure_ProceedReturnsError(t *testing.T) {
@@ -271,14 +272,8 @@ func TestThread_procedure(t *testing.T) {
 	}
 
 	ch := thread.procedure(context.Background(), procedure)
-	require.NotNil(t, ch)
-	timer := time.NewTimer(10 * time.Millisecond)
-	select {
-	case result := <-ch:
-		require.EqualError(t, result, "test error")
-	case <-timer.C:
-		t.Fatal("timeout")
-	}
+	result := <-ch
+	require.EqualError(t, result, "test error")
 }
 
 func TestThread_canceled_Canceled(t *testing.T) {
