@@ -101,12 +101,35 @@ func TestDataGatherer_ForPulseAndJet_DropFetchingFailed(t *testing.T) {
 	require.Error(t, err, errors.New("everything is broken"))
 }
 
+func TestLightDataGatherer_convertIndexes(t *testing.T) {
+	var idxs []object.Lifeline
+	fuzz.New().NilChance(0).NumElements(500, 1000).Funcs(func(elem *object.Lifeline, c fuzz.Continue) {
+		elem.JetID = gen.JetID()
+		elem.LatestUpdate = gen.PulseNumber()
+	}).Fuzz(&idxs)
+
+	expected := map[insolar.ID][]byte{}
+	input := map[insolar.ID]object.Lifeline{}
+
+	for _, idx := range idxs {
+		id := gen.ID()
+		expected[id] = object.EncodeIndex(idx)
+		input[id] = idx
+	}
+
+	resp := convertIndexes(input)
+
+	require.Equal(t, resp, expected)
+
+}
+
 func TestDataGatherer_convertBlobs(t *testing.T) {
 	var blobs []blob.Blob
 	fuzz.New().NumElements(500, 1000).Fuzz(&blobs)
 	var expected [][]byte
 	for _, b := range blobs {
-		expected = append(expected, blob.MustEncode(&b))
+		temp := b
+		expected = append(expected, blob.MustEncode(&temp))
 	}
 
 	resp := convertBlobs(blobs)
@@ -116,7 +139,7 @@ func TestDataGatherer_convertBlobs(t *testing.T) {
 
 func TestDataGatherer_convertRecords(t *testing.T) {
 	var recs []record.MaterialRecord
-	fuzz.New().NumElements(500, 1000).Funcs(func(elem *record.MaterialRecord, c fuzz.Continue) {
+	fuzz.New().NilChance(0).NumElements(500, 1000).Funcs(func(elem *record.MaterialRecord, c fuzz.Continue) {
 		elem.JetID = gen.JetID()
 		elem.Record = &object.CodeRecord{Code: insolar.NewID(gen.PulseNumber(), nil)}
 	}).Fuzz(&recs)

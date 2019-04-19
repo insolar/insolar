@@ -94,16 +94,17 @@ func convertIndexes(indexes map[insolar.ID]object.Lifeline) map[insolar.ID][]byt
 
 func convertBlobs(blobs []blob.Blob) [][]byte {
 	res := make([][]byte, len(blobs))
-	for _, b := range blobs {
+	for i, b := range blobs {
 		temp := b
-		res = append(res, blob.MustEncode(&temp))
+		res[i] = blob.MustEncode(&temp)
 	}
 	return res
 }
 
-func convertRecords(records []record.MaterialRecord) (result [][]byte) {
-	for _, r := range records {
-		result = append(result, object.EncodeMaterial(r))
+func convertRecords(records []record.MaterialRecord) [][]byte {
+	res := make([][]byte, len(records))
+	for i, r := range records {
+		res[i] = object.EncodeMaterial(r)
 	}
-	return
+	return res
 }
