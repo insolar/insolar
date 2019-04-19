@@ -123,7 +123,7 @@ func TestLightReplicatorDefault_sync(t *testing.T) {
 	go r.sync(ctx)
 	r.syncWaitingPulses <- pn
 
-	ctrl.Wait(10 * time.Millisecond)
+	ctrl.Wait(time.Minute)
 	ctrl.Finish()
 }
 
@@ -162,6 +162,6 @@ func TestLightReplicatorDefault_NotifyAboutPulse(t *testing.T) {
 
 	go r.NotifyAboutPulse(ctx, inputPN)
 
-	ctrl.Wait(10 * time.Millisecond)
+	ctrl.Wait(time.Minute)
 	ctrl.Finish()
 }
