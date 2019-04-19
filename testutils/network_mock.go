@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
+	message "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
 
@@ -29,6 +30,11 @@ type NetworkMock struct {
 	LeaveCounter    uint64
 	LeavePreCounter uint64
 	LeaveMock       mNetworkMockLeave
+
+	ProcessOutcomeFunc       func(p *message.Message) (r []*message.Message, r1 error)
+	ProcessOutcomeCounter    uint64
+	ProcessOutcomePreCounter uint64
+	ProcessOutcomeMock       mNetworkMockProcessOutcome
 
 	RemoteProcedureRegisterFunc       func(p string, p1 insolar.RemoteProcedure)
 	RemoteProcedureRegisterCounter    uint64
@@ -56,6 +62,7 @@ func NewNetworkMock(t minimock.Tester) *NetworkMock {
 
 	m.GetStateMock = mNetworkMockGetState{mock: m}
 	m.LeaveMock = mNetworkMockLeave{mock: m}
+	m.ProcessOutcomeMock = mNetworkMockProcessOutcome{mock: m}
 	m.RemoteProcedureRegisterMock = mNetworkMockRemoteProcedureRegister{mock: m}
 	m.SendCascadeMessageMock = mNetworkMockSendCascadeMessage{mock: m}
 	m.SendMessageMock = mNetworkMockSendMessage{mock: m}
@@ -316,6 +323,156 @@ func (m *NetworkMock) LeaveFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.LeaveFunc != nil {
 		return atomic.LoadUint64(&m.LeaveCounter) > 0
+	}
+
+	return true
+}
+
+type mNetworkMockProcessOutcome struct {
+	mock              *NetworkMock
+	mainExpectation   *NetworkMockProcessOutcomeExpectation
+	expectationSeries []*NetworkMockProcessOutcomeExpectation
+}
+
+type NetworkMockProcessOutcomeExpectation struct {
+	input  *NetworkMockProcessOutcomeInput
+	result *NetworkMockProcessOutcomeResult
+}
+
+type NetworkMockProcessOutcomeInput struct {
+	p *message.Message
+}
+
+type NetworkMockProcessOutcomeResult struct {
+	r  []*message.Message
+	r1 error
+}
+
+//Expect specifies that invocation of Network.ProcessOutcome is expected from 1 to Infinity times
+func (m *mNetworkMockProcessOutcome) Expect(p *message.Message) *mNetworkMockProcessOutcome {
+	m.mock.ProcessOutcomeFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NetworkMockProcessOutcomeExpectation{}
+	}
+	m.mainExpectation.input = &NetworkMockProcessOutcomeInput{p}
+	return m
+}
+
+//Return specifies results of invocation of Network.ProcessOutcome
+func (m *mNetworkMockProcessOutcome) Return(r []*message.Message, r1 error) *NetworkMock {
+	m.mock.ProcessOutcomeFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NetworkMockProcessOutcomeExpectation{}
+	}
+	m.mainExpectation.result = &NetworkMockProcessOutcomeResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Network.ProcessOutcome is expected once
+func (m *mNetworkMockProcessOutcome) ExpectOnce(p *message.Message) *NetworkMockProcessOutcomeExpectation {
+	m.mock.ProcessOutcomeFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NetworkMockProcessOutcomeExpectation{}
+	expectation.input = &NetworkMockProcessOutcomeInput{p}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NetworkMockProcessOutcomeExpectation) Return(r []*message.Message, r1 error) {
+	e.result = &NetworkMockProcessOutcomeResult{r, r1}
+}
+
+//Set uses given function f as a mock of Network.ProcessOutcome method
+func (m *mNetworkMockProcessOutcome) Set(f func(p *message.Message) (r []*message.Message, r1 error)) *NetworkMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.ProcessOutcomeFunc = f
+	return m.mock
+}
+
+//ProcessOutcome implements github.com/insolar/insolar/insolar.Network interface
+func (m *NetworkMock) ProcessOutcome(p *message.Message) (r []*message.Message, r1 error) {
+	counter := atomic.AddUint64(&m.ProcessOutcomePreCounter, 1)
+	defer atomic.AddUint64(&m.ProcessOutcomeCounter, 1)
+
+	if len(m.ProcessOutcomeMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ProcessOutcomeMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NetworkMock.ProcessOutcome. %v", p)
+			return
+		}
+
+		input := m.ProcessOutcomeMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, NetworkMockProcessOutcomeInput{p}, "Network.ProcessOutcome got unexpected parameters")
+
+		result := m.ProcessOutcomeMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NetworkMock.ProcessOutcome")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.ProcessOutcomeMock.mainExpectation != nil {
+
+		input := m.ProcessOutcomeMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, NetworkMockProcessOutcomeInput{p}, "Network.ProcessOutcome got unexpected parameters")
+		}
+
+		result := m.ProcessOutcomeMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NetworkMock.ProcessOutcome")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.ProcessOutcomeFunc == nil {
+		m.t.Fatalf("Unexpected call to NetworkMock.ProcessOutcome. %v", p)
+		return
+	}
+
+	return m.ProcessOutcomeFunc(p)
+}
+
+//ProcessOutcomeMinimockCounter returns a count of NetworkMock.ProcessOutcomeFunc invocations
+func (m *NetworkMock) ProcessOutcomeMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ProcessOutcomeCounter)
+}
+
+//ProcessOutcomeMinimockPreCounter returns the value of NetworkMock.ProcessOutcome invocations
+func (m *NetworkMock) ProcessOutcomeMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ProcessOutcomePreCounter)
+}
+
+//ProcessOutcomeFinished returns true if mock invocations count is ok
+func (m *NetworkMock) ProcessOutcomeFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.ProcessOutcomeMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ProcessOutcomeCounter) == uint64(len(m.ProcessOutcomeMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.ProcessOutcomeMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ProcessOutcomeCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.ProcessOutcomeFunc != nil {
+		return atomic.LoadUint64(&m.ProcessOutcomeCounter) > 0
 	}
 
 	return true
@@ -758,6 +915,10 @@ func (m *NetworkMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NetworkMock.Leave")
 	}
 
+	if !m.ProcessOutcomeFinished() {
+		m.t.Fatal("Expected call to NetworkMock.ProcessOutcome")
+	}
+
 	if !m.RemoteProcedureRegisterFinished() {
 		m.t.Fatal("Expected call to NetworkMock.RemoteProcedureRegister")
 	}
@@ -795,6 +956,10 @@ func (m *NetworkMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NetworkMock.Leave")
 	}
 
+	if !m.ProcessOutcomeFinished() {
+		m.t.Fatal("Expected call to NetworkMock.ProcessOutcome")
+	}
+
 	if !m.RemoteProcedureRegisterFinished() {
 		m.t.Fatal("Expected call to NetworkMock.RemoteProcedureRegister")
 	}
@@ -823,6 +988,7 @@ func (m *NetworkMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.GetStateFinished()
 		ok = ok && m.LeaveFinished()
+		ok = ok && m.ProcessOutcomeFinished()
 		ok = ok && m.RemoteProcedureRegisterFinished()
 		ok = ok && m.SendCascadeMessageFinished()
 		ok = ok && m.SendMessageFinished()
@@ -840,6 +1006,10 @@ func (m *NetworkMock) MinimockWait(timeout time.Duration) {
 
 			if !m.LeaveFinished() {
 				m.t.Error("Expected call to NetworkMock.Leave")
+			}
+
+			if !m.ProcessOutcomeFinished() {
+				m.t.Error("Expected call to NetworkMock.ProcessOutcome")
 			}
 
 			if !m.RemoteProcedureRegisterFinished() {
@@ -871,6 +1041,10 @@ func (m *NetworkMock) AllMocksCalled() bool {
 	}
 
 	if !m.LeaveFinished() {
+		return false
+	}
+
+	if !m.ProcessOutcomeFinished() {
 		return false
 	}
 

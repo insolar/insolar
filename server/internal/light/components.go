@@ -163,7 +163,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		var err error
 		Tokens = delegationtoken.NewDelegationTokenFactory()
 		Parcels = messagebus.NewParcelFactory()
-		Bus, err = messagebus.NewMessageBus(cfg)
+		Bus, err = messagebus.NewMessageBus(cfg, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}

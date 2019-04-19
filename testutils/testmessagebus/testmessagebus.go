@@ -167,6 +167,51 @@ func (mb *TestMessageBus) Send(ctx context.Context, m insolar.Message, _ *insola
 	return reply, err
 }
 
+func (mb *TestMessageBus) SendViaWatermill(ctx context.Context, m insolar.Message, _ *insolar.MessageSendOptions) (insolar.Reply, error) {
+	if mb.ReadingTape != nil {
+		if len(mb.ReadingTape) == 0 {
+			return nil, errors.Errorf("No expected messages, got %+v", m)
+		}
+		head, tail := mb.ReadingTape[0], mb.ReadingTape[1:]
+		mb.ReadingTape = tail
+
+		inslogger.FromContext(ctx).Debugf("Reading message %+v off the tape", head.Message)
+
+		if !reflect.DeepEqual(head.Message, m) {
+			return nil, errors.Errorf("Message in the tape and sended arn't equal; got: %+v, expected: %+v", m, head.Message)
+		}
+		return head.Reply, head.Error
+	}
+
+	currentPulse, err := mb.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	parcel, err := mb.pf.Create(ctx, m, testutils.RandomRef(), nil, insolar.Pulse{PulseNumber: currentPulse.PulseNumber, Entropy: insolar.Entropy{}})
+	if err != nil {
+		return nil, err
+	}
+	t := parcel.Message().Type()
+	handler, ok := mb.handlers[t]
+	if !ok {
+		return nil, errors.New(fmt.Sprint("no handler for message type:", t.String()))
+	}
+
+	ctx = parcel.Context(context.Background())
+
+	reply, err := handler(ctx, parcel)
+	if mb.WritingTape != nil {
+		// WARNING! The following commented line of code is cursed.
+		// It makes some test (e.g. TestNilResults) hang under the debugger, and we have no idea why.
+		// Don't uncomment unless you solved this mystery.
+		// inslogger.FromContext(ctx).Debugf("Writing message %+v on the tape", m)
+		mb.WritingTape = append(mb.WritingTape, TapeRecord{Message: m, Reply: reply, Error: err})
+	}
+
+	return reply, err
+}
+
 func (mb *TestMessageBus) OnPulse(context.Context, insolar.Pulse) error {
 	return nil
 }

@@ -24,6 +24,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill"
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+	"github.com/insolar/insolar/bus"
+
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/ledger/storage/pulse"
@@ -64,6 +69,10 @@ type MessageBus struct {
 	NextPulseMessagePoolChan    chan interface{}
 	NextPulseMessagePoolCounter uint32
 	NextPulseMessagePoolLock    sync.RWMutex
+
+	pub         watermillMsg.Publisher
+	resultMap   map[string]*future
+	resultMutex sync.RWMutex
 }
 
 func (mb *MessageBus) Acquire(ctx context.Context) {
@@ -95,11 +104,13 @@ func (mb *MessageBus) Release(ctx context.Context) {
 
 // NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that
 // wrap it, providing additional functionality.
-func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
+func NewMessageBus(config configuration.Configuration, pub watermillMsg.Publisher) (*MessageBus, error) {
 	mb := &MessageBus{
 		handlers:                 map[insolar.MessageType]insolar.MessageHandler{},
 		signmessages:             config.Host.SignMessages,
 		NextPulseMessagePoolChan: make(chan interface{}),
+		pub:                      pub,
+		resultMap:                make(map[string]*future),
 	}
 	mb.Acquire(context.Background())
 	return mb, nil
@@ -143,6 +154,93 @@ func (mb *MessageBus) MustRegister(p insolar.MessageType, handler insolar.Messag
 	if err != nil {
 		panic(err)
 	}
+}
+
+// SendViaWatermill sends an `Message` and get a `Value` or error from remote host, using watermill pub/sub system.
+func (mb *MessageBus) SendViaWatermill(ctx context.Context, msg insolar.Message, ops *insolar.MessageSendOptions) (insolar.Reply, error) {
+	ctx, span := instracer.StartSpan(ctx, "MessageBus.SendViaWatermill "+msg.Type().String())
+	defer span.End()
+
+	currentPulse, err := mb.PulseAccessor.Latest(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token, currentPulse)
+	if err != nil {
+		return nil, err
+	}
+
+	f := newFuture()
+	payload := message.ParcelToBytes(parcel)
+	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
+	id := watermill.NewUUID()
+	middleware.SetCorrelationID(id, wmMsg)
+
+	mb.resultMutex.Lock()
+	mb.resultMap[id] = f
+	mb.resultMutex.Unlock()
+	inslogger.FromContext(ctx).Debugf("[ SendViaWatermill ] message with CorrelationID %s was sent", id)
+	fmt.Println("create with UUid", id)
+
+	wmMsg.Metadata.Set("Pulse", fmt.Sprintf("%d", currentPulse.PulseNumber))
+	wmMsg.Metadata.Set("Type", parcel.Message().Type().String())
+	wmMsg.Metadata.Set("Receiver", mb.GetReceiver(ctx, parcel, currentPulse, ops))
+	wmMsg.Metadata.Set("Sender", mb.NodeNetwork.GetOrigin().ID().String())
+
+	err = mb.pub.Publish(bus.ExternalMsgTopic, wmMsg)
+	if err != nil {
+		return nil, errors.Wrapf(err, "[ SendViaWatermill ] can't publish message to %s topic", bus.ExternalMsgTopic)
+	}
+	r, err := f.GetResult(time.Second * 100)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SendViaWatermill ] can't get reply")
+	}
+	return r, nil
+}
+
+// GetReceiver calculates receiver for parcel.
+func (mb *MessageBus) GetReceiver(ctx context.Context, parcel insolar.Parcel, currentPulse insolar.Pulse, options *insolar.MessageSendOptions) string {
+	var node insolar.Reference
+	if options != nil && options.Receiver != nil {
+		node = *options.Receiver
+	} else {
+		// TODO: send to all actors of the role if nil Target
+		target := parcel.DefaultTarget()
+		// FIXME: @andreyromancev. 21.12.18. Temp hack. All messages should have a default target.
+		if target == nil {
+			target = &insolar.Reference{}
+		}
+		nodes, err := mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), *target.Record(), currentPulse.PulseNumber)
+		if err != nil {
+			inslogger.FromContext(ctx).Errorf("[ GetReceiver ] can't query role: %s", err.Error())
+			return ""
+		}
+		if len(nodes) > 1 {
+			inslogger.FromContext(ctx).Errorf("[ GetReceiver ] several nodes was queried for %s role: %s, first was chosen", parcel.DefaultRole(), nodes)
+		}
+		node = nodes[0]
+	}
+	return node.String()
+}
+
+// SetResult returns reply to waiting channel.
+func (mb *MessageBus) SetResult(ctx context.Context, msg watermillMsg.Message) {
+	id := middleware.MessageCorrelationID(&msg)
+	mb.resultMutex.RLock()
+	f, ok := mb.resultMap[id]
+	mb.resultMutex.RUnlock()
+	if !ok {
+		inslogger.FromContext(ctx).Errorf("[ MessageBus.SetResult ] message with CorrelationID %s wasn't found in results map", id)
+		return
+	}
+
+	res, err := reply.Deserialize(bytes.NewBuffer(msg.Payload))
+	if err != nil {
+		inslogger.FromContext(ctx).Errorf("[ MessageBus.SetResult ] can't deserialize payload: %s", err.Error())
+		return
+	}
+	f.SetResult(res)
 }
 
 // Send an `Message` and get a `Value` or error from remote host.

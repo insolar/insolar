@@ -51,11 +51,19 @@
 package servicenetwork
 
 import (
+	"bytes"
 	"context"
+	"encoding/gob"
+	"fmt"
+	"io"
+	"io/ioutil"
 	"strconv"
 	"sync"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/flow/handler"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -78,6 +86,12 @@ import (
 	"github.com/insolar/insolar/network/utils"
 )
 
+type resultSetter interface {
+	SetResult(ctx context.Context, msg message.Message)
+}
+
+const deliverWatermillMsg = "ServiceNetwork.processIncome"
+
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
 	cfg configuration.Configuration
@@ -92,10 +106,13 @@ type ServiceNetwork struct {
 	NodeKeeper          network.NodeKeeper          `inject:""`
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
 	GIL                 insolar.GlobalInsolarLock   `inject:""`
+	ResultSetter        resultSetter                `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
 	Controller   network.Controller  `inject:"subcomponent"`
+
+	Handler *handler.Handler
 
 	isGenesis   bool
 	isDiscovery bool
@@ -219,6 +236,8 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
 
+	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncome)
+
 	logger.Info("Service network started")
 	return nil
 }
@@ -334,6 +353,99 @@ func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, node insolar.D
 	}
 }
 
+// ProcessOutcome processes received message.
+func (n *ServiceNetwork) ProcessOutcome(msg *message.Message) ([]*message.Message, error) {
+	if msg.Metadata.Get("Receiver") == "" {
+		return nil, errors.New("Receiver in msg.Metadata not set")
+	}
+	ref, err := insolar.NewReferenceFromBase58(msg.Metadata.Get("Receiver"))
+	if err != nil {
+		return nil, errors.Wrap(err, "incorrect Receiver in msg.Metadata: ")
+	}
+	node := *ref
+	// Short path when sending to self node. Skip serialization
+	origin := n.NodeKeeper.GetOrigin()
+	if node.Equal(origin.ID()) {
+		// err := n.Handler.Process(msg.Context(), msg)
+		if err != nil {
+			return nil, errors.Wrap(err, "error while start handle for msg:")
+		}
+		return nil, nil
+	}
+	msgBytes := MessageToBytes(*msg)
+	res, err := n.Controller.SendBytes(msg.Context(), node, deliverWatermillMsg, msgBytes)
+	if err != nil {
+		return nil, errors.Wrap(err, "error while sending watermillMsg to controller:")
+	}
+	rep, err := reply.Deserialize(bytes.NewBuffer(res))
+	if err != nil {
+		return nil, errors.Wrap(err, "error while deserialize reply:")
+	}
+	if rep.Type() != reply.TypeOK {
+		return nil, errors.Errorf("reply is not ok: %s", rep)
+	}
+	return nil, nil
+}
+
 func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
 	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
+}
+
+// SerializeMessage returns io.Reader on buffer with encoded message.Message (from watermill).
+func SerializeMessage(msg message.Message) (io.Reader, error) {
+	buff := &bytes.Buffer{}
+	enc := gob.NewEncoder(buff)
+	err := enc.Encode(msg)
+	return buff, err
+}
+
+// DeserializeMessage returns decoded signed message.
+func DeserializeMessage(buff io.Reader) (*message.Message, error) {
+	var signed message.Message
+	enc := gob.NewDecoder(buff)
+	err := enc.Decode(&signed)
+	return &signed, err
+}
+
+// MessageToBytes deserialize a message.Message (from watermill) to bytes.
+func MessageToBytes(msg message.Message) []byte {
+	reqBuff, err := SerializeMessage(msg)
+	if err != nil {
+		panic("failed to serialize message: " + err.Error())
+	}
+	buf, err := ioutil.ReadAll(reqBuff)
+	if err != nil {
+		panic("failed to serialize message: " + err.Error())
+	}
+	return buf
+}
+
+func (n *ServiceNetwork) processIncome(ctx context.Context, args [][]byte) ([]byte, error) {
+	if len(args) < 1 {
+		return nil, errors.New("need exactly one argument when n.processIncome()")
+	}
+	msg, err := DeserializeMessage(bytes.NewBuffer(args[0]))
+	if err != nil {
+		return nil, err
+	}
+	// TODO: check pulse here
+	fmt.Println("error love processIncome type - ", msg.Metadata.Get("Type"))
+
+	if msg.Metadata.Get("Type") == "Reply" {
+		n.ResultSetter.SetResult(ctx, *msg)
+		fmt.Println("error love processIncome")
+	} else {
+		// _ = n.Handler.Process(ctx, msg)
+	}
+
+	rd, err := reply.Serialize(&reply.OK{})
+	if err != nil {
+		return nil, err
+	}
+	buf := new(bytes.Buffer)
+	_, err = buf.ReadFrom(rd)
+	if err != nil {
+		return nil, err
+	}
+	return buf.Bytes(), nil
 }

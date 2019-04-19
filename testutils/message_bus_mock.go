@@ -39,6 +39,11 @@ type MessageBusMock struct {
 	SendCounter    uint64
 	SendPreCounter uint64
 	SendMock       mMessageBusMockSend
+
+	SendViaWatermillFunc       func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error)
+	SendViaWatermillCounter    uint64
+	SendViaWatermillPreCounter uint64
+	SendViaWatermillMock       mMessageBusMockSendViaWatermill
 }
 
 //NewMessageBusMock returns a mock for github.com/insolar/insolar/insolar.MessageBus
@@ -53,6 +58,7 @@ func NewMessageBusMock(t minimock.Tester) *MessageBusMock {
 	m.OnPulseMock = mMessageBusMockOnPulse{mock: m}
 	m.RegisterMock = mMessageBusMockRegister{mock: m}
 	m.SendMock = mMessageBusMockSend{mock: m}
+	m.SendViaWatermillMock = mMessageBusMockSendViaWatermill{mock: m}
 
 	return m
 }
@@ -629,6 +635,158 @@ func (m *MessageBusMock) SendFinished() bool {
 	return true
 }
 
+type mMessageBusMockSendViaWatermill struct {
+	mock              *MessageBusMock
+	mainExpectation   *MessageBusMockSendViaWatermillExpectation
+	expectationSeries []*MessageBusMockSendViaWatermillExpectation
+}
+
+type MessageBusMockSendViaWatermillExpectation struct {
+	input  *MessageBusMockSendViaWatermillInput
+	result *MessageBusMockSendViaWatermillResult
+}
+
+type MessageBusMockSendViaWatermillInput struct {
+	p  context.Context
+	p1 insolar.Message
+	p2 *insolar.MessageSendOptions
+}
+
+type MessageBusMockSendViaWatermillResult struct {
+	r  insolar.Reply
+	r1 error
+}
+
+//Expect specifies that invocation of MessageBus.SendViaWatermill is expected from 1 to Infinity times
+func (m *mMessageBusMockSendViaWatermill) Expect(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) *mMessageBusMockSendViaWatermill {
+	m.mock.SendViaWatermillFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &MessageBusMockSendViaWatermillExpectation{}
+	}
+	m.mainExpectation.input = &MessageBusMockSendViaWatermillInput{p, p1, p2}
+	return m
+}
+
+//Return specifies results of invocation of MessageBus.SendViaWatermill
+func (m *mMessageBusMockSendViaWatermill) Return(r insolar.Reply, r1 error) *MessageBusMock {
+	m.mock.SendViaWatermillFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &MessageBusMockSendViaWatermillExpectation{}
+	}
+	m.mainExpectation.result = &MessageBusMockSendViaWatermillResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of MessageBus.SendViaWatermill is expected once
+func (m *mMessageBusMockSendViaWatermill) ExpectOnce(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) *MessageBusMockSendViaWatermillExpectation {
+	m.mock.SendViaWatermillFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &MessageBusMockSendViaWatermillExpectation{}
+	expectation.input = &MessageBusMockSendViaWatermillInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *MessageBusMockSendViaWatermillExpectation) Return(r insolar.Reply, r1 error) {
+	e.result = &MessageBusMockSendViaWatermillResult{r, r1}
+}
+
+//Set uses given function f as a mock of MessageBus.SendViaWatermill method
+func (m *mMessageBusMockSendViaWatermill) Set(f func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error)) *MessageBusMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.SendViaWatermillFunc = f
+	return m.mock
+}
+
+//SendViaWatermill implements github.com/insolar/insolar/insolar.MessageBus interface
+func (m *MessageBusMock) SendViaWatermill(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
+	counter := atomic.AddUint64(&m.SendViaWatermillPreCounter, 1)
+	defer atomic.AddUint64(&m.SendViaWatermillCounter, 1)
+
+	if len(m.SendViaWatermillMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SendViaWatermillMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to MessageBusMock.SendViaWatermill. %v %v %v", p, p1, p2)
+			return
+		}
+
+		input := m.SendViaWatermillMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, MessageBusMockSendViaWatermillInput{p, p1, p2}, "MessageBus.SendViaWatermill got unexpected parameters")
+
+		result := m.SendViaWatermillMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the MessageBusMock.SendViaWatermill")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.SendViaWatermillMock.mainExpectation != nil {
+
+		input := m.SendViaWatermillMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, MessageBusMockSendViaWatermillInput{p, p1, p2}, "MessageBus.SendViaWatermill got unexpected parameters")
+		}
+
+		result := m.SendViaWatermillMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the MessageBusMock.SendViaWatermill")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.SendViaWatermillFunc == nil {
+		m.t.Fatalf("Unexpected call to MessageBusMock.SendViaWatermill. %v %v %v", p, p1, p2)
+		return
+	}
+
+	return m.SendViaWatermillFunc(p, p1, p2)
+}
+
+//SendViaWatermillMinimockCounter returns a count of MessageBusMock.SendViaWatermillFunc invocations
+func (m *MessageBusMock) SendViaWatermillMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SendViaWatermillCounter)
+}
+
+//SendViaWatermillMinimockPreCounter returns the value of MessageBusMock.SendViaWatermill invocations
+func (m *MessageBusMock) SendViaWatermillMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SendViaWatermillPreCounter)
+}
+
+//SendViaWatermillFinished returns true if mock invocations count is ok
+func (m *MessageBusMock) SendViaWatermillFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.SendViaWatermillMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SendViaWatermillCounter) == uint64(len(m.SendViaWatermillMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.SendViaWatermillMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SendViaWatermillCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.SendViaWatermillFunc != nil {
+		return atomic.LoadUint64(&m.SendViaWatermillCounter) > 0
+	}
+
+	return true
+}
+
 //ValidateCallCounters checks that all mocked methods of the interface have been called at least once
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *MessageBusMock) ValidateCallCounters() {
@@ -647,6 +805,10 @@ func (m *MessageBusMock) ValidateCallCounters() {
 
 	if !m.SendFinished() {
 		m.t.Fatal("Expected call to MessageBusMock.Send")
+	}
+
+	if !m.SendViaWatermillFinished() {
+		m.t.Fatal("Expected call to MessageBusMock.SendViaWatermill")
 	}
 
 }
@@ -682,6 +844,10 @@ func (m *MessageBusMock) MinimockFinish() {
 		m.t.Fatal("Expected call to MessageBusMock.Send")
 	}
 
+	if !m.SendViaWatermillFinished() {
+		m.t.Fatal("Expected call to MessageBusMock.SendViaWatermill")
+	}
+
 }
 
 //Wait waits for all mocked methods to be called at least once
@@ -700,6 +866,7 @@ func (m *MessageBusMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.OnPulseFinished()
 		ok = ok && m.RegisterFinished()
 		ok = ok && m.SendFinished()
+		ok = ok && m.SendViaWatermillFinished()
 
 		if ok {
 			return
@@ -722,6 +889,10 @@ func (m *MessageBusMock) MinimockWait(timeout time.Duration) {
 
 			if !m.SendFinished() {
 				m.t.Error("Expected call to MessageBusMock.Send")
+			}
+
+			if !m.SendViaWatermillFinished() {
+				m.t.Error("Expected call to MessageBusMock.SendViaWatermill")
 			}
 
 			m.t.Fatalf("Some mocks were not called on time: %s", timeout)
@@ -749,6 +920,10 @@ func (m *MessageBusMock) AllMocksCalled() bool {
 	}
 
 	if !m.SendFinished() {
+		return false
+	}
+
+	if !m.SendViaWatermillFinished() {
 		return false
 	}
 

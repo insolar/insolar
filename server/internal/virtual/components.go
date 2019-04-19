@@ -128,7 +128,7 @@ func initComponents(
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	parcelFactory := messagebus.NewParcelFactory()
 
-	messageBus, err := messagebus.NewMessageBus(cfg)
+	messageBus, err := messagebus.NewMessageBus(cfg, nil)
 	checkError(ctx, err, "failed to start MessageBus")
 
 	contractRequester, err := contractrequester.New()
