@@ -97,8 +97,6 @@ type HostNetwork interface {
 	component.Starter
 	component.Stopper
 
-	// TODO: replace this two methods with GetOrigin()
-
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 	// GetNodeID get current node ID.
@@ -125,6 +123,7 @@ type ConsensusPacketHandler func(incomingPacket consensus.ConsensusPacket, sende
 type ConsensusNetwork interface {
 	component.Starter
 	component.Stopper
+
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
 	// GetNodeID get current node ID.
@@ -230,8 +229,6 @@ type ConsensusInfo interface {
 type PartitionPolicy interface {
 	ShardsCount() int
 }
-
-//go:generate minimock -i github.com/insolar/insolar/network.RoutingTable -o ../testutils/network -s _mock.go
 
 // RoutingTable contains all routing information of the network.
 type RoutingTable interface {
