@@ -25,9 +25,10 @@ import (
 
 	"github.com/gojuno/minimock"
 
-	"github.com/insolar/insolar/insolar"
 	uuid "github.com/satori/go.uuid"
 	"golang.org/x/crypto/sha3"
+
+	"github.com/insolar/insolar/insolar"
 )
 
 //
