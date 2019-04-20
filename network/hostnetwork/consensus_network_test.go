@@ -86,6 +86,16 @@ func createTwoConsensusNetworks(id1, id2 insolar.ShortNodeID) (t1, t2 network.Co
 		return nil, nil, err
 	}
 
+	ctx := context.Background()
+	err = cn1.Start(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = cn2.Start(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
 	ref1, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	if err != nil {
 		return nil, nil, err

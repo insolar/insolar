@@ -86,8 +86,13 @@ func (nc *networkConsensus) Start(ctx context.Context) error {
 		inslogger.FromContext(ctx).Warn("NetworkConsensus component already started")
 		return nil
 	}
+
+	if err := nc.createTransport(); err != nil {
+		return errors.Wrap(err, "Failed to create datagram transport")
+	}
+
 	if err := nc.transport.Start(ctx); err != nil {
-		return errors.Wrap(err, "Failed to datagram transport")
+		return errors.Wrap(err, "Failed to start datagram transport")
 	}
 
 	return nil
@@ -158,36 +163,50 @@ func (nc *networkConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
 	return err
 }
 
+// NewConsensusNetwork constructor creates new ConsensusNetwork
 func NewConsensusNetwork(address, nodeID string, shortID insolar.ShortNodeID) (network.ConsensusNetwork, error) {
-	conf := configuration.Transport{}
-	conf.Address = address
-	conf.Protocol = "PURE_UDP"
 
-	tp, publicAddress, err := transport.NewDatagramTransport(conf)
-	if err != nil {
-		return nil, errors.Wrap(err, "error creating transport")
-	}
 	id, err := insolar.NewReferenceFromBase58(nodeID)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid nodeID")
 	}
 
-	origin, err := host.NewHostNS(publicAddress, *id, shortID)
+	origin, err := host.NewHostNS(address, *id, shortID)
 	if err != nil {
 		return nil, errors.Wrap(err, "error getting origin")
 	}
 
 	result := &networkConsensus{
 		handlers:          make(map[packets.PacketType]network.ConsensusPacketHandler),
-		transport:         tp,
 		sequenceGenerator: sequence.NewGeneratorImpl(),
 		origin:            origin,
 	}
 
-	tp.SetDatagramHandler(result)
 	return result, nil
 }
 
+func (nc *networkConsensus) createTransport() error {
+	conf := configuration.Transport{}
+	conf.Address = nc.origin.Address.String()
+	conf.Protocol = "PURE_UDP"
+
+	tp, publicAddress, err := transport.NewDatagramTransport(conf)
+	if err != nil {
+		return errors.Wrap(err, "error creating transport")
+	}
+
+	addr, err := host.NewAddress(publicAddress)
+	if err != nil {
+		return errors.Wrap(err, "error creating transport")
+	}
+
+	nc.origin.Address = addr
+	tp.SetDatagramHandler(nc)
+	nc.transport = tp
+	return nil
+}
+
+// HandleDatagram callback method handles udp datagram from transport
 func (nc *networkConsensus) HandleDatagram(address string, buf []byte) {
 
 	if atomic.LoadUint32(&nc.started) == 0 {
