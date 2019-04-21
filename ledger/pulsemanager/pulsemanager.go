@@ -22,10 +22,6 @@ import (
 	"math/rand"
 	"sync"
 
-	"github.com/insolar/insolar/ledger/hot"
-	"github.com/insolar/insolar/ledger/replication"
-	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/trace"
@@ -39,11 +35,15 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/ledger/artifactmanager"
+	"github.com/insolar/insolar/ledger/hot"
 	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/replication"
 	"github.com/insolar/insolar/ledger/storage"
+	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/storage/pulse"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
@@ -540,6 +540,12 @@ func (m *PulseManager) setUnderGilSection(
 		}
 		if err != nil {
 			return nil, nil, nil, errors.Wrap(err, "failed to process jets")
+		}
+	}
+
+	if oldPulse != nil && prevPN != nil {
+		if m.NodeNet.GetOrigin().Role() == insolar.StaticRoleLightMaterial {
+			m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
 		}
 	}
 
