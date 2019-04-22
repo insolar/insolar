@@ -23,10 +23,15 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/flow/handler"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -39,15 +44,34 @@ type ContractRequester struct {
 	ResultMutex sync.Mutex
 	ResultMap   map[uint64]chan *message.ReturnResults
 	Sequence    uint64
+	FlowHandler *handler.Handler
 }
 
 // New creates new ContractRequester
 func New() (*ContractRequester, error) {
-	return &ContractRequester{
+	res := &ContractRequester{
 		ResultMap: make(map[uint64]chan *message.ReturnResults),
-	}, nil
+	}
+
+	wmLogger := watermill.NewStdLogger(false, false)
+	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
+
+	dep := &Dependencies{
+		Publisher: pubSub,
+		cr:        res,
+	}
+
+	res.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
+		return (&Init{
+			dep:     dep,
+			Message: msg,
+		}).Present
+	})
+
+	return res, nil
 }
 
+// TODO change handler
 func (cr *ContractRequester) Start(ctx context.Context) error {
 	cr.MessageBus.MustRegister(insolar.TypeReturnResults, cr.ReceiveResult)
 	return nil
@@ -237,6 +261,7 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base insolar.M
 	}
 }
 
+// TODO write test
 func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg, ok := parcel.Message().(*message.ReturnResults)
 	if !ok {
