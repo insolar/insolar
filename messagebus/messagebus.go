@@ -224,8 +224,8 @@ func (mb *MessageBus) getReceiver(ctx context.Context, parcel insolar.Parcel, cu
 }
 
 // SetResult returns reply to waiting channel.
-func (mb *MessageBus) SetResult(ctx context.Context, msg watermillMsg.Message) {
-	id := middleware.MessageCorrelationID(&msg)
+func (mb *MessageBus) SetResult(ctx context.Context, msg *watermillMsg.Message) {
+	id := middleware.MessageCorrelationID(msg)
 	mb.repliesMutex.RLock()
 	ch, ok := mb.replies[id]
 	mb.repliesMutex.RUnlock()

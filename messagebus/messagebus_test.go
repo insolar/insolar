@@ -204,7 +204,7 @@ func TestMessageBus_SendViaWatermill(t *testing.T) {
 			replyMsg := watermillMsg.NewMessage(watermill.NewUUID(), reply.ToBytes(&reply.OK{}))
 			id := middleware.MessageCorrelationID(msg)
 			middleware.SetCorrelationID(id, replyMsg)
-			mb.SetResult(ctx, *replyMsg)
+			mb.SetResult(ctx, replyMsg)
 			msg.Ack()
 		}
 	}(ctx, inMessages)
@@ -274,7 +274,7 @@ func TestMessageBus_SetResult(t *testing.T) {
 	mb.replies[middleware.MessageCorrelationID(msg)] = rep
 	mb.repliesMutex.Unlock()
 
-	mb.SetResult(ctx, *msg)
+	mb.SetResult(ctx, msg)
 
 	require.Equal(t, &res, <-rep)
 	require.Empty(t, mb.replies)
@@ -293,7 +293,7 @@ func TestMessageBus_SetResult_WrongReply(t *testing.T) {
 	mb.replies[middleware.MessageCorrelationID(msg)] = rep
 	mb.repliesMutex.Unlock()
 
-	mb.SetResult(ctx, *msg)
+	mb.SetResult(ctx, msg)
 
 	select {
 	case <-rep:
@@ -311,5 +311,5 @@ func TestMessageBus_SetResult_MsgNotExist(t *testing.T) {
 	correlationID := watermill.NewUUID()
 	middleware.SetCorrelationID(correlationID, msg)
 
-	mb.SetResult(ctx, *msg)
+	mb.SetResult(ctx, msg)
 }

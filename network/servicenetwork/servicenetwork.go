@@ -83,7 +83,7 @@ import (
 )
 
 type resultSetter interface {
-	SetResult(ctx context.Context, msg message.Message)
+	SetResult(ctx context.Context, msg *message.Message)
 }
 
 const deliverWatermillMsg = "ServiceNetwork.processIncome"
@@ -126,20 +126,20 @@ func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manag
 	return serviceNetwork, nil
 }
 
-func (nk *ServiceNetwork) Gateway() network.Gateway {
-	nk.gatewayMu.RLock()
-	defer nk.gatewayMu.RUnlock()
-	return nk.gateway
+func (n *ServiceNetwork) Gateway() network.Gateway {
+	n.gatewayMu.RLock()
+	defer n.gatewayMu.RUnlock()
+	return n.gateway
 }
 
-func (nk *ServiceNetwork) SetGateway(g network.Gateway) {
-	nk.gatewayMu.Lock()
-	defer nk.gatewayMu.Unlock()
-	nk.gateway = g
+func (n *ServiceNetwork) SetGateway(g network.Gateway) {
+	n.gatewayMu.Lock()
+	defer n.gatewayMu.Unlock()
+	n.gateway = g
 }
 
-func (nk *ServiceNetwork) GetState() insolar.NetworkState {
-	return nk.Gateway().GetState()
+func (n *ServiceNetwork) GetState() insolar.NetworkState {
+	return n.Gateway().GetState()
 }
 
 // SendMessage sends a message from MessageBus.
@@ -369,7 +369,7 @@ func (n *ServiceNetwork) ProcessOutcome(msg *message.Message) ([]*message.Messag
 		}
 		return nil, nil
 	}
-	msgBytes := MessageToBytes(*msg)
+	msgBytes := MessageToBytes(msg)
 	res, err := n.Controller.SendBytes(msg.Context(), node, deliverWatermillMsg, msgBytes)
 	if err != nil {
 		return nil, errors.Wrap(err, "error while sending watermillMsg to controller:")
@@ -399,7 +399,7 @@ func (n *ServiceNetwork) processIncome(ctx context.Context, args [][]byte) ([]by
 	// TODO: check pulse here
 
 	if msg.Metadata.Get(insolar.TypeMetadataKey) == insolar.ReplyTypeMetadataValue {
-		n.ResultSetter.SetResult(ctx, *msg)
+		n.ResultSetter.SetResult(ctx, msg)
 	} else {
 		err = n.Handler.Process(ctx, msg)
 		if err != nil {

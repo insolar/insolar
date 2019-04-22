@@ -64,7 +64,7 @@ func TestSerializeDeserialize(t *testing.T) {
 	msg := message.NewMessage(watermill.NewUUID(), payload)
 	msg.Metadata.Set("testKey", "testValue")
 
-	serializedMsg, err := SerializeMessage(*msg)
+	serializedMsg, err := SerializeMessage(msg)
 
 	require.NoError(t, err)
 	require.NotEmpty(t, serializedMsg)
@@ -82,7 +82,7 @@ func TestMessageToBytes(t *testing.T) {
 	msg := message.NewMessage(watermill.NewUUID(), payload)
 	msg.Metadata.Set("testKey", "testValue")
 
-	serializedMsg := MessageToBytes(*msg)
+	serializedMsg := MessageToBytes(msg)
 
 	require.NotEmpty(t, serializedMsg)
 
