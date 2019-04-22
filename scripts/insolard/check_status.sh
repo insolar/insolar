@@ -8,7 +8,6 @@ LAUNCHNET_BASE_DIR=${LAUNCHNET_BASE_DIR:-"${INSOLAR_ARTIFACTS_DIR}launchnet"}/
 # check is discovery nodes ready
 
 confs=${LAUNCHNET_BASE_DIR}discoverynodes/
-#(>&2 echo "grep -A 1 'apirunner' ${confs}*/insolard.yaml  | grep address  |  grep -o ':\d\+' | grep -o '\d\+' | tr '\n' ' '")
 api_ports=$( grep -A 1 "apirunner" ${confs}*/insolard.yaml  | grep address  |  grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
 grep_exit=$?
 if [[ $grep_exit -ne 0 ]]; then

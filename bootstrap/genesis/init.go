@@ -140,7 +140,7 @@ func initLogger(ctx context.Context, cfg configuration.Log) (context.Context, in
 
 	inslog, err = inslog.WithLevel(cfg.Level)
 	if err != nil {
-		inslog.Error(err.Error())
+		panic(err.Error())
 	}
 
 	ctx = inslogger.SetLogger(ctx, inslog)
