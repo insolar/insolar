@@ -22,14 +22,14 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
-	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
 
@@ -43,11 +43,11 @@ type UpdateObject struct {
 		RecordModifier             object.RecordModifier
 		IndexModifier              object.IndexModifier
 		Bus                        insolar.MessageBus
-		Coordinator                insolar.JetCoordinator
+		Coordinator                jet.Coordinator
 		BlobModifier               blob.Modifier
 		RecentStorageProvider      recentstorage.Provider
 		PlatformCryptographyScheme insolar.PlatformCryptographyScheme
-		IDLocker                   storage.IDLocker
+		IDLocker                   object.IDLocker
 		IndexStorage               object.IndexStorage
 		IndexStateModifier         object.ExtendedIndexModifier
 	}
