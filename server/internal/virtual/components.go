@@ -18,8 +18,10 @@ package virtual
 
 import (
 	"context"
+	"time"
 
 	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/bus"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -114,6 +116,9 @@ func initComponents(
 ) (*component.Manager, insolar.TerminationHandler, error) {
 	cm := component.Manager{}
 
+	// Create router, run it and set pub to bus constructor instead of nil
+	b := bus.NewBus(nil, time.Second)
+
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
 
@@ -128,7 +133,7 @@ func initComponents(
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
 	parcelFactory := messagebus.NewParcelFactory()
 
-	messageBus, err := messagebus.NewMessageBus(cfg, nil)
+	messageBus, err := messagebus.NewMessageBus(cfg)
 	checkError(ctx, err, "failed to start MessageBus")
 
 	contractRequester, err := contractrequester.New()
@@ -166,6 +171,7 @@ func initComponents(
 	)
 
 	components := []interface{}{
+		b,
 		messageBus,
 		contractRequester,
 		logicRunner,

@@ -20,6 +20,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
@@ -154,8 +155,6 @@ func (o *MessageSendOptions) Safe() *MessageSendOptions {
 type MessageBus interface {
 	// Send an `Message` and get a `Reply` or error from remote host.
 	Send(context.Context, Message, *MessageSendOptions) (Reply, error)
-	// SendViaWatermill sends an `Message` and get a `Value` or error from remote host, using watermill pub/sub system.
-	SendViaWatermill(ctx context.Context, msg Message, ops *MessageSendOptions) (Reply, error)
 	// Register saves message handler in the registry. Only one handler can be registered for a message type.
 	Register(p MessageType, handler MessageHandler) error
 	// MustRegister is a Register wrapper that panics if an error was returned.
@@ -163,6 +162,12 @@ type MessageBus interface {
 
 	// Called each new pulse, cleans next pulse messages buffer
 	OnPulse(context.Context, Pulse) error
+}
+
+// Bus interface
+type Bus interface {
+	// Send an `Message` and get a `Reply` or error from remote host.
+	Send(ctx context.Context, msg *message.Message) <-chan *message.Message
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.MessageBusLocker -o ../testutils -s _mock.go

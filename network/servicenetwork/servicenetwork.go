@@ -58,7 +58,7 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar/flow/handler"
+	"github.com/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -108,7 +108,7 @@ type ServiceNetwork struct {
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
 	Controller   network.Controller  `inject:"subcomponent"`
 
-	Handler *handler.Handler
+	pub message.Publisher
 
 	isGenesis   bool
 	isDiscovery bool
@@ -351,32 +351,32 @@ func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, node insolar.D
 
 // ProcessOutcome processes received message.
 func (n *ServiceNetwork) ProcessOutcome(msg *message.Message) ([]*message.Message, error) {
-	receiver := msg.Metadata.Get(insolar.ReceiverMetadataKey)
+	receiver := msg.Metadata.Get(bus.ReceiverMetadataKey)
 	if receiver == "" {
 		return nil, errors.New("Receiver in msg.Metadata not set")
 	}
 	ref, err := insolar.NewReferenceFromBase58(receiver)
 	if err != nil {
-		return nil, errors.Wrap(err, "incorrect Receiver in msg.Metadata: ")
+		return nil, errors.Wrap(err, "incorrect Receiver in msg.Metadata")
 	}
 	node := *ref
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
 	if node.Equal(origin.ID()) {
-		err := n.Handler.Process(msg.Context(), msg)
+		err := n.pub.Publish(bus.IncomingMsgTopic, msg)
 		if err != nil {
-			return nil, errors.Wrap(err, "error while start handle for msg:")
+			return nil, errors.Wrap(err, "error while publish msg to IncomingMsgTopic")
 		}
 		return nil, nil
 	}
 	msgBytes := MessageToBytes(msg)
 	res, err := n.Controller.SendBytes(msg.Context(), node, deliverWatermillMsg, msgBytes)
 	if err != nil {
-		return nil, errors.Wrap(err, "error while sending watermillMsg to controller:")
+		return nil, errors.Wrap(err, "error while sending watermillMsg to controller")
 	}
 	rep, err := reply.Deserialize(bytes.NewBuffer(res))
 	if err != nil {
-		return nil, errors.Wrap(err, "error while deserialize reply:")
+		return nil, errors.Wrap(err, "error while deserialize reply")
 	}
 	if rep.Type() != reply.TypeOK {
 		return nil, errors.Errorf("reply is not ok: %s", rep)
@@ -398,12 +398,12 @@ func (n *ServiceNetwork) processIncome(ctx context.Context, args [][]byte) ([]by
 	}
 	// TODO: check pulse here
 
-	if msg.Metadata.Get(insolar.TypeMetadataKey) == insolar.ReplyTypeMetadataValue {
+	if msg.Metadata.Get(bus.TypeMetadataKey) == bus.ReplyTypeMetadataValue {
 		n.ResultSetter.SetResult(ctx, msg)
 	} else {
-		err = n.Handler.Process(ctx, msg)
+		err := n.pub.Publish(bus.IncomingMsgTopic, msg)
 		if err != nil {
-			return nil, errors.Wrap(err, "error while start handle for msg:")
+			return nil, errors.Wrap(err, "error while publish msg to IncomingMsgTopic")
 		}
 	}
 

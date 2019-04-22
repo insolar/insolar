@@ -96,6 +96,6 @@ func (h *Handler) InnerSubscriber(watermillMsg *message.Message) ([]*message.Mes
 }
 
 // Process handles incoming message.
-func (h *Handler) Process(ctx context.Context, msg *message.Message) error {
-	return nil
+func (h *Handler) Process(msg *message.Message) ([]*message.Message, error) {
+	return nil, nil
 }

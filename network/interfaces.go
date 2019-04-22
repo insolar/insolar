@@ -69,6 +69,8 @@ type BootstrapResult struct {
 	NetworkSize       int
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network.Controller -o ../testutils/network -s _mock.go
+
 // Controller contains network logic.
 type Controller interface {
 	component.Initer

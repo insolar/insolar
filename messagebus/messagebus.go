@@ -27,6 +27,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+	"github.com/insolar/insolar/bus"
 
 	"go.opencensus.io/trace"
 
@@ -57,6 +58,7 @@ type MessageBus struct {
 	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
 	ParcelFactory              message.ParcelFactory              `inject:""`
 	PulseAccessor              pulse.Accessor                     `inject:""`
+	Bus                        insolar.Bus                        `inject:""`
 
 	handlers     map[insolar.MessageType]insolar.MessageHandler
 	signmessages bool
@@ -68,10 +70,6 @@ type MessageBus struct {
 	NextPulseMessagePoolChan    chan interface{}
 	NextPulseMessagePoolCounter uint32
 	NextPulseMessagePoolLock    sync.RWMutex
-
-	pub          watermillMsg.Publisher
-	replies      map[string]chan insolar.Reply
-	repliesMutex sync.RWMutex
 }
 
 func (mb *MessageBus) Acquire(ctx context.Context) {
@@ -103,13 +101,11 @@ func (mb *MessageBus) Release(ctx context.Context) {
 
 // NewMessageBus creates plain MessageBus instance. It can be used to create Player and Recorder instances that
 // wrap it, providing additional functionality.
-func NewMessageBus(config configuration.Configuration, pub watermillMsg.Publisher) (*MessageBus, error) {
+func NewMessageBus(config configuration.Configuration) (*MessageBus, error) {
 	mb := &MessageBus{
 		handlers:                 map[insolar.MessageType]insolar.MessageHandler{},
 		signmessages:             config.Host.SignMessages,
 		NextPulseMessagePoolChan: make(chan interface{}),
-		pub:                      pub,
-		replies:                  make(map[string]chan insolar.Reply),
 	}
 	mb.Acquire(context.Background())
 	return mb, nil
@@ -155,36 +151,6 @@ func (mb *MessageBus) MustRegister(p insolar.MessageType, handler insolar.Messag
 	}
 }
 
-// SendViaWatermill sends an `Message` and get a `Value` or error from remote host, using watermill pub/sub system.
-func (mb *MessageBus) SendViaWatermill(ctx context.Context, msg insolar.Message, ops *insolar.MessageSendOptions) (insolar.Reply, error) {
-	ctx, span := instracer.StartSpan(ctx, "MessageBus.SendViaWatermill "+msg.Type().String())
-	defer span.End()
-
-	currentPulse, err := mb.PulseAccessor.Latest(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token, currentPulse)
-	if err != nil {
-		return nil, err
-	}
-
-	wmMsg := mb.createWatermillMessage(ctx, parcel, ops, currentPulse)
-
-	// now there is only one reply for message
-	rep := make(chan insolar.Reply, 1)
-	mb.repliesMutex.Lock()
-	mb.replies[middleware.MessageCorrelationID(wmMsg)] = rep
-	mb.repliesMutex.Unlock()
-
-	err = mb.pub.Publish(insolar.ExternalMsgTopic, wmMsg)
-	if err != nil {
-		return nil, errors.Wrapf(err, "[ SendViaWatermill ] can't publish message to %s topic", insolar.ExternalMsgTopic)
-	}
-	return <-rep, nil
-}
-
 func (mb *MessageBus) createWatermillMessage(ctx context.Context, parcel insolar.Parcel, ops *insolar.MessageSendOptions, currentPulse insolar.Pulse) *watermillMsg.Message {
 	payload := message.ParcelToBytes(parcel)
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
@@ -192,10 +158,10 @@ func (mb *MessageBus) createWatermillMessage(ctx context.Context, parcel insolar
 	correlationID := watermill.NewUUID()
 	middleware.SetCorrelationID(correlationID, wmMsg)
 
-	wmMsg.Metadata.Set(insolar.PulseMetadataKey, fmt.Sprintf("%d", currentPulse.PulseNumber))
-	wmMsg.Metadata.Set(insolar.TypeMetadataKey, parcel.Message().Type().String())
-	wmMsg.Metadata.Set(insolar.ReceiverMetadataKey, mb.getReceiver(ctx, parcel, currentPulse, ops))
-	wmMsg.Metadata.Set(insolar.SenderMetadataKey, mb.NodeNetwork.GetOrigin().ID().String())
+	wmMsg.Metadata.Set(bus.PulseMetadataKey, fmt.Sprintf("%d", currentPulse.PulseNumber))
+	wmMsg.Metadata.Set(bus.TypeMetadataKey, parcel.Message().Type().String())
+	wmMsg.Metadata.Set(bus.ReceiverMetadataKey, mb.getReceiver(ctx, parcel, currentPulse, ops))
+	wmMsg.Metadata.Set(bus.SenderMetadataKey, mb.NodeNetwork.GetOrigin().ID().String())
 	return wmMsg
 }
 
@@ -223,27 +189,6 @@ func (mb *MessageBus) getReceiver(ctx context.Context, parcel insolar.Parcel, cu
 	return node.String()
 }
 
-// SetResult returns reply to waiting channel.
-func (mb *MessageBus) SetResult(ctx context.Context, msg *watermillMsg.Message) {
-	id := middleware.MessageCorrelationID(msg)
-	mb.repliesMutex.RLock()
-	ch, ok := mb.replies[id]
-	mb.repliesMutex.RUnlock()
-	if !ok {
-		inslogger.FromContext(ctx).Errorf("[ MessageBus.SetResult ] message with CorrelationID %s wasn't found in results map", id)
-		return
-	}
-
-	res, err := reply.Deserialize(bytes.NewBuffer(msg.Payload))
-	if err != nil {
-		inslogger.FromContext(ctx).Errorf("[ MessageBus.SetResult ] can't deserialize payload: %s", err.Error())
-		return
-	}
-	ch <- res
-	// now there is only one reply for message
-	delete(mb.replies, id)
-}
-
 // Send an `Message` and get a `Value` or error from remote host.
 func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insolar.MessageSendOptions) (insolar.Reply, error) {
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.Send "+msg.Type().String())
@@ -257,6 +202,19 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token, currentPulse)
 	if err != nil {
 		return nil, err
+	}
+
+	switch msg.Type() {
+	// TODO: uncomment this after move first message type to watermill
+	// case insolar.TypeGetObject:
+	// 	wmMsg := mb.createWatermillMessage(ctx, parcel, ops, currentPulse)
+	// 	res := mb.Bus.Send(ctx, wmMsg)
+	// 	repMsg := <-res
+	// 	rep, err := reply.Deserialize(bytes.NewBuffer(repMsg.Payload))
+	// 	if err != nil {
+	// 		return nil, errors.Wrap(err, "can't deserialize payload")
+	// 	}
+	// 	return rep, nil
 	}
 
 	rep, err := mb.SendParcel(ctx, parcel, currentPulse, ops)

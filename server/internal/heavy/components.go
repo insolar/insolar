@@ -18,8 +18,10 @@ package heavy
 
 import (
 	"context"
+	"time"
 
 	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/bus"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -158,15 +160,18 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Tokens  insolar.DelegationTokenFactory
 		Parcels message.ParcelFactory
 		Bus     insolar.MessageBus
+		WmBus   insolar.Bus
 	)
 	{
 		var err error
 		Tokens = delegationtoken.NewDelegationTokenFactory()
 		Parcels = messagebus.NewParcelFactory()
-		Bus, err = messagebus.NewMessageBus(cfg, nil)
+		Bus, err = messagebus.NewMessageBus(cfg)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
+		// Create router, run it and set pub to bus constructor instead of nil
+		WmBus = bus.NewBus(nil, time.Second)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -240,6 +245,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	}
 
 	c.cmp.Inject(
+		WmBus,
 		PulseManager,
 		Jets,
 		Pulses,
