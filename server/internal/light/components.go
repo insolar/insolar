@@ -29,13 +29,13 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/pulsemanager"
@@ -182,7 +182,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	// Light components.
 	var (
 		PulseManager insolar.PulseManager
-		Coordinator  insolar.JetCoordinator
+		Coordinator  jet.Coordinator
 		Pulses       pulse.Accessor
 		Jets         jet.Accessor
 		Handler      *artifactmanager.MessageHandler

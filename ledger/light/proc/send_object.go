@@ -40,7 +40,7 @@ type SendObject struct {
 	Index   object.Lifeline
 
 	Dep struct {
-		Coordinator    insolar.JetCoordinator
+		Coordinator    jet.Coordinator
 		Jets           jet.Storage
 		JetUpdater     jet.Fetcher
 		RecordAccessor object.RecordAccessor

@@ -31,8 +31,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// JetCoordinator is responsible for all jet interactions
-type JetCoordinator struct {
+// Coordinator is responsible for all jet interactions
+type Coordinator struct {
 	NodeNet                    insolar.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 
@@ -46,8 +46,8 @@ type JetCoordinator struct {
 }
 
 // NewJetCoordinator creates new coordinator instance.
-func NewJetCoordinator(lightChainLimit int) *JetCoordinator {
-	return &JetCoordinator{lightChainLimit: lightChainLimit}
+func NewJetCoordinator(lightChainLimit int) *Coordinator {
+	return &Coordinator{lightChainLimit: lightChainLimit}
 }
 
 // Hardcoded roles count for validation and execution
@@ -60,12 +60,12 @@ const (
 )
 
 // Me returns current node.
-func (jc *JetCoordinator) Me() insolar.Reference {
+func (jc *Coordinator) Me() insolar.Reference {
 	return jc.NodeNet.GetOrigin().ID()
 }
 
 // IsAuthorized checks for role on concrete pulse for the address.
-func (jc *JetCoordinator) IsAuthorized(
+func (jc *Coordinator) IsAuthorized(
 	ctx context.Context,
 	role insolar.DynamicRole,
 	obj insolar.ID,
@@ -85,7 +85,7 @@ func (jc *JetCoordinator) IsAuthorized(
 }
 
 // QueryRole returns node refs responsible for role bound operations for given object and pulse.
-func (jc *JetCoordinator) QueryRole(
+func (jc *Coordinator) QueryRole(
 	ctx context.Context,
 	role insolar.DynamicRole,
 	objID insolar.ID,
@@ -131,7 +131,7 @@ func (jc *JetCoordinator) QueryRole(
 }
 
 // VirtualExecutorForObject returns list of VEs for a provided pulse and objID
-func (jc *JetCoordinator) VirtualExecutorForObject(
+func (jc *Coordinator) VirtualExecutorForObject(
 	ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber,
 ) (*insolar.Reference, error) {
 	nodes, err := jc.virtualsForObject(ctx, objID, pulse, VirtualExecutorCount)
@@ -142,7 +142,7 @@ func (jc *JetCoordinator) VirtualExecutorForObject(
 }
 
 // VirtualValidatorsForObject returns list of VVs for a provided pulse and objID
-func (jc *JetCoordinator) VirtualValidatorsForObject(
+func (jc *Coordinator) VirtualValidatorsForObject(
 	ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber,
 ) ([]insolar.Reference, error) {
 	nodes, err := jc.virtualsForObject(ctx, objID, pulse, VirtualValidatorCount+VirtualExecutorCount)
@@ -155,7 +155,7 @@ func (jc *JetCoordinator) VirtualValidatorsForObject(
 }
 
 // LightExecutorForJet returns list of LEs for a provided pulse and jetID
-func (jc *JetCoordinator) LightExecutorForJet(
+func (jc *Coordinator) LightExecutorForJet(
 	ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber,
 ) (*insolar.Reference, error) {
 	nodes, err := jc.lightMaterialsForJet(ctx, jetID, pulse, MaterialExecutorCount)
@@ -166,7 +166,7 @@ func (jc *JetCoordinator) LightExecutorForJet(
 }
 
 // LightValidatorsForJet returns list of LVs for a provided pulse and jetID
-func (jc *JetCoordinator) LightValidatorsForJet(
+func (jc *Coordinator) LightValidatorsForJet(
 	ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber,
 ) ([]insolar.Reference, error) {
 	nodes, err := jc.lightMaterialsForJet(ctx, jetID, pulse, MaterialValidatorCount+MaterialExecutorCount)
@@ -179,7 +179,7 @@ func (jc *JetCoordinator) LightValidatorsForJet(
 }
 
 // LightExecutorForObject returns list of LEs for a provided pulse and objID
-func (jc *JetCoordinator) LightExecutorForObject(
+func (jc *Coordinator) LightExecutorForObject(
 	ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber,
 ) (*insolar.Reference, error) {
 	jetID, _ := jc.JetAccessor.ForID(ctx, pulse, objID)
@@ -187,7 +187,7 @@ func (jc *JetCoordinator) LightExecutorForObject(
 }
 
 // LightValidatorsForObject returns list of LVs for a provided pulse and objID
-func (jc *JetCoordinator) LightValidatorsForObject(
+func (jc *Coordinator) LightValidatorsForObject(
 	ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber,
 ) ([]insolar.Reference, error) {
 	jetID, _ := jc.JetAccessor.ForID(ctx, pulse, objID)
@@ -195,7 +195,7 @@ func (jc *JetCoordinator) LightValidatorsForObject(
 }
 
 // Heavy returns *insolar.RecorRef to a heavy of specific pulse
-func (jc *JetCoordinator) Heavy(ctx context.Context, pulse insolar.PulseNumber) (*insolar.Reference, error) {
+func (jc *Coordinator) Heavy(ctx context.Context, pulse insolar.PulseNumber) (*insolar.Reference, error) {
 	candidates, err := jc.Nodes.InRole(pulse, insolar.StaticRoleHeavyMaterial)
 	if err == node.ErrNoNodes {
 		return nil, err
@@ -225,7 +225,7 @@ func (jc *JetCoordinator) Heavy(ctx context.Context, pulse insolar.PulseNumber) 
 
 // IsBeyondLimit calculates if target pulse is behind clean-up limit
 // or if currentPN|targetPN didn't found in in-memory pulse-storage.
-func (jc *JetCoordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN insolar.PulseNumber) (bool, error) {
+func (jc *Coordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN insolar.PulseNumber) (bool, error) {
 	backPN, err := jc.PulseCalculator.Backwards(ctx, currentPN, jc.lightChainLimit)
 	// We are not aware of pulses beyond limit. Returning false is the only way.
 	if err == pulse.ErrNotFound {
@@ -243,7 +243,7 @@ func (jc *JetCoordinator) IsBeyondLimit(ctx context.Context, currentPN, targetPN
 }
 
 // NodeForJet calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
-func (jc *JetCoordinator) NodeForJet(ctx context.Context, jetID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
+func (jc *Coordinator) NodeForJet(ctx context.Context, jetID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
 	// Genesis case. When there is no any data on a lme
 	if targetPN <= insolar.GenesisPulse.PulseNumber {
 		return jc.Heavy(ctx, rootPN)
@@ -261,7 +261,7 @@ func (jc *JetCoordinator) NodeForJet(ctx context.Context, jetID insolar.ID, root
 }
 
 // NodeForObject calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
-func (jc *JetCoordinator) NodeForObject(ctx context.Context, objectID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
+func (jc *Coordinator) NodeForObject(ctx context.Context, objectID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
 	// Genesis case. When there is no any data on a lme
 	if targetPN <= insolar.GenesisPulse.PulseNumber {
 		return jc.Heavy(ctx, rootPN)
@@ -278,7 +278,7 @@ func (jc *JetCoordinator) NodeForObject(ctx context.Context, objectID insolar.ID
 	return jc.LightExecutorForObject(ctx, objectID, targetPN)
 }
 
-func (jc *JetCoordinator) virtualsForObject(
+func (jc *Coordinator) virtualsForObject(
 	ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber, count int,
 ) ([]insolar.Reference, error) {
 	candidates, err := jc.Nodes.InRole(pulse, insolar.StaticRoleVirtual)
@@ -305,7 +305,7 @@ func (jc *JetCoordinator) virtualsForObject(
 	)
 }
 
-func (jc *JetCoordinator) lightMaterialsForJet(
+func (jc *Coordinator) lightMaterialsForJet(
 	ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber, count int,
 ) ([]insolar.Reference, error) {
 	prefix := insolar.JetID(jetID).Prefix()
@@ -334,7 +334,7 @@ func (jc *JetCoordinator) lightMaterialsForJet(
 	)
 }
 
-func (jc *JetCoordinator) entropy(ctx context.Context, pulse insolar.PulseNumber) (insolar.Entropy, error) {
+func (jc *Coordinator) entropy(ctx context.Context, pulse insolar.PulseNumber) (insolar.Entropy, error) {
 	current, err := jc.PulseAccessor.Latest(ctx)
 	if err != nil {
 		return insolar.Entropy{}, errors.Wrap(err, "failed to get current pulse")

@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/pkg/errors"
@@ -33,7 +34,7 @@ import (
 
 type Handler struct {
 	Bus            insolar.MessageBus
-	JetCoordinator insolar.JetCoordinator
+	JetCoordinator jet.Coordinator
 	PCS            insolar.PlatformCryptographyScheme
 	BlobAccessor   blob.Accessor
 	BlobModifier   blob.Modifier

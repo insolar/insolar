@@ -57,10 +57,10 @@ type fetchResult struct {
 }
 
 type fetcher struct {
-	Nodes          node.Accessor
-	JetStorage     Storage
-	MessageBus     insolar.MessageBus
-	JetCoordinator insolar.JetCoordinator
+	Nodes       node.Accessor
+	JetStorage  Storage
+	MessageBus  insolar.MessageBus
+	coordinator Coordinator
 
 	seqMutex  sync.Mutex
 	sequencer map[seqKey]*seqEntry
@@ -71,14 +71,14 @@ func NewFetcher(
 	ans node.Accessor,
 	js Storage,
 	mb insolar.MessageBus,
-	jc insolar.JetCoordinator,
+	jc Coordinator,
 ) Fetcher {
 	return &fetcher{
-		Nodes:          ans,
-		JetStorage:     js,
-		MessageBus:     mb,
-		JetCoordinator: jc,
-		sequencer:      map[seqKey]*seqEntry{},
+		Nodes:       ans,
+		JetStorage:  js,
+		MessageBus:  mb,
+		coordinator: jc,
+		sequencer:   map[seqKey]*seqEntry{},
 	}
 }
 
@@ -294,7 +294,7 @@ func (tu *fetcher) nodesForPulse(ctx context.Context, pulse insolar.PulseNumber)
 		return nil, err
 	}
 
-	me := tu.JetCoordinator.Me()
+	me := tu.coordinator.Me()
 	for i := range res {
 		if res[i].ID == me {
 			res = append(res[:i], res[i+1:]...)

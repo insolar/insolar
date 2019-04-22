@@ -32,7 +32,7 @@ import (
 
 type middleware struct {
 	jetAccessor    jet.Accessor
-	jetCoordinator insolar.JetCoordinator
+	jetCoordinator jet.Coordinator
 	messageBus     insolar.MessageBus
 	jetReleaser    hot.JetReleaser
 	jetWaiter      hot.JetWaiter

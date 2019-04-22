@@ -57,38 +57,6 @@ type PulseManager interface {
 	Set(ctx context.Context, pulse Pulse, persist bool) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/insolar.JetCoordinator -o ../testutils -s _mock.go
-
-// JetCoordinator provides methods for calculating Jet affinity
-// (e.g. to which Jet a message should be sent).
-type JetCoordinator interface {
-	// Me returns current node.
-	Me() Reference
-
-	// IsAuthorized checks for role on concrete pulse for the address.
-	IsAuthorized(ctx context.Context, role DynamicRole, obj ID, pulse PulseNumber, node Reference) (bool, error)
-
-	// QueryRole returns node refs responsible for role bound operations for given object and pulse.
-	QueryRole(ctx context.Context, role DynamicRole, obj ID, pulse PulseNumber) ([]Reference, error)
-
-	VirtualExecutorForObject(ctx context.Context, objID ID, pulse PulseNumber) (*Reference, error)
-	VirtualValidatorsForObject(ctx context.Context, objID ID, pulse PulseNumber) ([]Reference, error)
-
-	LightExecutorForObject(ctx context.Context, objID ID, pulse PulseNumber) (*Reference, error)
-	LightValidatorsForObject(ctx context.Context, objID ID, pulse PulseNumber) ([]Reference, error)
-	// LightExecutorForJet calculates light material executor for provided jet.
-	LightExecutorForJet(ctx context.Context, jetID ID, pulse PulseNumber) (*Reference, error)
-	LightValidatorsForJet(ctx context.Context, jetID ID, pulse PulseNumber) ([]Reference, error)
-
-	Heavy(ctx context.Context, pulse PulseNumber) (*Reference, error)
-
-	IsBeyondLimit(ctx context.Context, currentPN, targetPN PulseNumber) (bool, error)
-	NodeForJet(ctx context.Context, jetID ID, rootPN, targetPN PulseNumber) (*Reference, error)
-
-	// NodeForObject calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
-	NodeForObject(ctx context.Context, objectID ID, rootPN, targetPN PulseNumber) (*Reference, error)
-}
-
 // KV is a generic key/value struct.
 type KV struct {
 	K []byte

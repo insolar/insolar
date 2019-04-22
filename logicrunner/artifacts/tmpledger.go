@@ -51,8 +51,8 @@ import (
 // DEPRECATED
 type TMPLedger struct {
 	ArtifactManager Client
-	PulseManager    insolar.PulseManager   `inject:""`
-	JetCoordinator  insolar.JetCoordinator `inject:""`
+	PulseManager    insolar.PulseManager `inject:""`
+	JetCoordinator  jet.Coordinator      `inject:""`
 }
 
 // Deprecated: remove after deleting TmpLedger
@@ -63,8 +63,8 @@ func (l *TMPLedger) GetPulseManager() insolar.PulseManager {
 }
 
 // Deprecated: remove after deleting TmpLedger
-// GetJetCoordinator returns JetCoordinator.
-func (l *TMPLedger) GetJetCoordinator() insolar.JetCoordinator {
+// GetJetCoordinator returns Coordinator.
+func (l *TMPLedger) GetJetCoordinator() jet.Coordinator {
 	log.Warn("GetJetCoordinator is deprecated. Use component injection.")
 	return l.JetCoordinator
 }
@@ -81,7 +81,7 @@ func (l *TMPLedger) GetArtifactManager() Client {
 func NewTestLedger(
 	am Client,
 	pm *pulsemanager.PulseManager,
-	jc insolar.JetCoordinator,
+	jc jet.Coordinator,
 ) *TMPLedger {
 	return &TMPLedger{
 		ArtifactManager: am,
@@ -133,7 +133,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) *TMPLedger {
 	am.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
 	pm := pulsemanager.NewPulseManager()
-	jc := testutils.NewJetCoordinatorMock(mc)
+	jc := jet.NewCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)
 	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
 	jc.HeavyMock.Return(&insolar.Reference{}, nil)

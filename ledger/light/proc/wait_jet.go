@@ -38,7 +38,7 @@ type FetchJet struct {
 
 	Dep struct {
 		JetAccessor jet.Accessor
-		Coordinator insolar.JetCoordinator
+		Coordinator jet.Coordinator
 		JetUpdater  jet.Fetcher
 	}
 }

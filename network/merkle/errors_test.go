@@ -56,6 +56,7 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -188,7 +189,7 @@ func TestCalculatorError(t *testing.T) {
 			return []byte{1, 2, 3}, nil
 		},
 	}
-	jc := testutils.NewJetCoordinatorMock(t)
+	jc := jet.NewCoordinatorMock(t)
 
 	cm.Inject(th, nk, jc, &am, calculator, service, scheme, ps, mblock)
 

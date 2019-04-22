@@ -54,7 +54,7 @@ type ActiveListSwapper interface {
 type PulseManager struct {
 	Bus                        insolar.MessageBus                 `inject:""`
 	NodeNet                    insolar.NodeNetwork                `inject:""`
-	JetCoordinator             insolar.JetCoordinator             `inject:""`
+	JetCoordinator             jet.Coordinator                    `inject:""`
 	GIL                        insolar.GlobalInsolarLock          `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`

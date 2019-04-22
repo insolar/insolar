@@ -140,7 +140,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 		}, nil
 	}
 
-	jc := testutils.NewJetCoordinatorMock(s.T())
+	jc := jet.NewCoordinatorMock(s.T())
 	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
 	jc.MeMock.Return(insolar.Reference{})
 
@@ -261,7 +261,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 
 	node := testutils.RandomRef()
 
-	jc := testutils.NewJetCoordinatorMock(mc)
+	jc := jet.NewCoordinatorMock(mc)
 	jc.NodeForObjectMock.Return(&node, nil)
 
 	pulseAccessor := pulse.NewAccessorMock(s.T())

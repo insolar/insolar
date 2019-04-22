@@ -47,7 +47,7 @@ type jetCoordinatorSuite struct {
 
 	jetStorage  jet.Storage
 	nodeStorage *node.AccessorMock
-	coordinator *JetCoordinator
+	coordinator *Coordinator
 }
 
 func NewJetCoordinatorSuite() *jetCoordinatorSuite {

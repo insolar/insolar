@@ -52,7 +52,7 @@ type MessageHandler struct {
 	RecentStorageProvider      recentstorage.Provider             `inject:""`
 	Bus                        insolar.MessageBus                 `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
-	JetCoordinator             insolar.JetCoordinator             `inject:""`
+	JetCoordinator             jet.Coordinator                    `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
 	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
 	JetStorage                 jet.Storage                        `inject:""`

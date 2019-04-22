@@ -38,7 +38,6 @@ import (
 
 const (
 	getChildrenChunkSize = 10 * 1000
-	jetMissRetryCount    = 10
 )
 
 // Client provides concrete API to storage for processing module.
@@ -47,7 +46,7 @@ type client struct {
 	DefaultBus                 insolar.MessageBus                 `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	PulseAccessor              pulse.Accessor                     `inject:""`
-	JetCoordinator             insolar.JetCoordinator             `inject:""`
+	JetCoordinator             jet.Coordinator                    `inject:""`
 
 	getChildrenChunkSize int
 	senders              *messagebus.Senders

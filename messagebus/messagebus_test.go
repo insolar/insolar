@@ -22,6 +22,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/stretchr/testify/require"
 
@@ -52,7 +53,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	require.NoError(t, err)
 
 	net := testutils.GetTestNetwork(t)
-	jc := testutils.NewJetCoordinatorMock(t)
+	jc := jet.NewCoordinatorMock(t)
 	nn := network.NewNodeNetworkMock(t)
 	nn.GetOriginFunc = func() (r insolar.NetworkNode) {
 		n := network.NewNetworkNodeMock(t)
