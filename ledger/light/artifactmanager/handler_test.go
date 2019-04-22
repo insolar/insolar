@@ -35,15 +35,14 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/ledger/blob"
+	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
-	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/node"
-	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -162,7 +161,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	tf.IssueGetChildrenRedirectMock.Return(&delegationtoken.GetChildrenRedirectToken{Signature: []byte{1, 2, 3}}, nil)
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
-	jc := testutils.NewJetCoordinatorMock(mc)
+	jc := jet.NewCoordinatorMock(mc)
 
 	pendingMock := recentstorage.NewPendingStorageMock(s.T())
 
@@ -186,7 +185,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	h.Nodes = s.nodeStorage
 	h.RecordAccessor = s.recordAccessor
 
-	locker := storage.NewIDLockerMock(s.T())
+	locker := object.NewIDLockerMock(s.T())
 	locker.LockMock.Return()
 	locker.UnlockMock.Return()
 	h.IDLocker = locker
@@ -289,7 +288,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
-	jc := testutils.NewJetCoordinatorMock(mc)
+	jc := jet.NewCoordinatorMock(mc)
 
 	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{
 		LightChainLimit: 3,
@@ -298,7 +297,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	h.Nodes = s.nodeStorage
 
 	h.RecentStorageProvider = provideMock
-	idLock := storage.NewIDLockerMock(s.T())
+	idLock := object.NewIDLockerMock(s.T())
 	idLock.LockMock.Return()
 	idLock.UnlockMock.Return()
 	h.IDLocker = idLock
@@ -357,7 +356,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
-	jc := testutils.NewJetCoordinatorMock(mc)
+	jc := jet.NewCoordinatorMock(mc)
 
 	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{
 		LightChainLimit: 3,
@@ -372,7 +371,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.BlobModifier = blobStorage
 	h.BlobAccessor = blobStorage
 
-	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock := object.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 	h.IDLocker = idLockMock
@@ -448,7 +447,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.BlobModifier = blobStorage
 	h.BlobAccessor = blobStorage
 
-	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock := object.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 	h.IDLocker = idLockMock
@@ -504,7 +503,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	provideMock := recentstorage.NewProviderMock(s.T())
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
-	jc := testutils.NewJetCoordinatorMock(mc)
+	jc := jet.NewCoordinatorMock(mc)
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
@@ -517,7 +516,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 
-	idLock := storage.NewIDLockerMock(s.T())
+	idLock := object.NewIDLockerMock(s.T())
 	idLock.LockMock.Return()
 	idLock.UnlockMock.Return()
 	h.IDLocker = idLock
@@ -556,7 +555,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	recentStorageMock.GetRequestsForObjectMock.Return(pendingRequests)
 
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
-	jc := testutils.NewJetCoordinatorMock(mc)
+	jc := jet.NewCoordinatorMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
 
@@ -600,7 +599,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
-	jc := testutils.NewJetCoordinatorMock(mc)
+	jc := jet.NewCoordinatorMock(mc)
 	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{
 		LightChainLimit: 2,
 	})
@@ -610,7 +609,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecordModifier = s.recordModifier
 
-	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock := object.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 	h.IDLocker = idLockMock
@@ -686,7 +685,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecordModifier = s.recordModifier
 
-	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock := object.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 	h.IDLocker = idLockMock
@@ -726,7 +725,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	mc := minimock.NewController(s.T())
 	jetID := gen.JetID()
 
-	jc := testutils.NewJetCoordinatorMock(mc)
+	jc := jet.NewCoordinatorMock(mc)
 
 	firstID := insolar.NewID(insolar.FirstPulseNumber, []byte{1, 2, 3})
 	secondID := object.NewRecordIDFromRecord(s.scheme, insolar.FirstPulseNumber, &object.CodeRecord{})

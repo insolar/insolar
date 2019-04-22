@@ -23,9 +23,9 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/blob"
+	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/object"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/replication.DataGatherer -o ./ -s _mock.go

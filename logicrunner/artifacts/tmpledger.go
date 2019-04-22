@@ -23,21 +23,20 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/object"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/node"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
+	"github.com/insolar/insolar/ledger/blob"
+	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
-	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/node"
-	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
 	"github.com/insolar/insolar/messagebus"
@@ -52,8 +51,8 @@ import (
 // DEPRECATED
 type TMPLedger struct {
 	ArtifactManager Client
-	PulseManager    insolar.PulseManager   `inject:""`
-	JetCoordinator  insolar.JetCoordinator `inject:""`
+	PulseManager    insolar.PulseManager `inject:""`
+	JetCoordinator  jet.Coordinator      `inject:""`
 }
 
 // Deprecated: remove after deleting TmpLedger
@@ -64,8 +63,8 @@ func (l *TMPLedger) GetPulseManager() insolar.PulseManager {
 }
 
 // Deprecated: remove after deleting TmpLedger
-// GetJetCoordinator returns JetCoordinator.
-func (l *TMPLedger) GetJetCoordinator() insolar.JetCoordinator {
+// GetJetCoordinator returns Coordinator.
+func (l *TMPLedger) GetJetCoordinator() jet.Coordinator {
 	log.Warn("GetJetCoordinator is deprecated. Use component injection.")
 	return l.JetCoordinator
 }
@@ -82,7 +81,7 @@ func (l *TMPLedger) GetArtifactManager() Client {
 func NewTestLedger(
 	am Client,
 	pm *pulsemanager.PulseManager,
-	jc insolar.JetCoordinator,
+	jc jet.Coordinator,
 ) *TMPLedger {
 	return &TMPLedger{
 		ArtifactManager: am,
@@ -134,7 +133,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) *TMPLedger {
 	am.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
 	pm := pulsemanager.NewPulseManager()
-	jc := testutils.NewJetCoordinatorMock(mc)
+	jc := jet.NewCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)
 	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
 	jc.HeavyMock.Return(&insolar.Reference{}, nil)
@@ -171,7 +170,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) *TMPLedger {
 	handler.RecordModifier = recordModifier
 	handler.RecordAccessor = recordAccessor
 
-	idLockerMock := storage.NewIDLockerMock(t)
+	idLockerMock := object.NewIDLockerMock(t)
 	idLockerMock.LockMock.Return()
 	idLockerMock.UnlockMock.Return()
 

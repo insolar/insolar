@@ -56,13 +56,14 @@ import (
 	"encoding/hex"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
-	pulse2 "github.com/insolar/insolar/ledger/storage/pulse"
+	pulse2 "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"
@@ -188,7 +189,7 @@ func TestCalculatorError(t *testing.T) {
 			return []byte{1, 2, 3}, nil
 		},
 	}
-	jc := testutils.NewJetCoordinatorMock(t)
+	jc := jet.NewCoordinatorMock(t)
 
 	cm.Inject(th, nk, jc, &am, calculator, service, scheme, ps, mblock)
 
