@@ -37,7 +37,6 @@ import (
 	"github.com/insolar/insolar/ledger/light/pulsemanager"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/light/replication"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
@@ -190,7 +189,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	)
 	{
 		conf := cfg.Ledger
-		idLocker := storage.NewIDLocker()
+		idLocker := object.NewIDLocker()
 		pulses := pulse.NewStorageMem()
 		drops := drop.NewStorageMemory()
 		blobs := blob.NewStorageMemory()

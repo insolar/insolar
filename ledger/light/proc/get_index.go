@@ -25,7 +25,6 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
 )
@@ -41,7 +40,7 @@ type GetIndex struct {
 
 	Dep struct {
 		IndexState  object.ExtendedIndexModifier
-		Locker      storage.IDLocker
+		Locker      object.IDLocker
 		Storage     object.IndexStorage
 		Coordinator insolar.JetCoordinator
 		Bus         insolar.MessageBus

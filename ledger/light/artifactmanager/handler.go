@@ -64,7 +64,7 @@ type MessageHandler struct {
 	BlobAccessor blob.Accessor `inject:""`
 	Blobs        blob.Storage  `inject:""`
 
-	IDLocker storage.IDLocker `inject:""`
+	IDLocker object.IDLocker `inject:""`
 
 	RecordModifier object.RecordModifier `inject:""`
 	RecordAccessor object.RecordAccessor `inject:""`

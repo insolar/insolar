@@ -1,9 +1,9 @@
-package storage
+package object
 
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "IDLocker" can be found in github.com/insolar/insolar/ledger/storage
+The original interface "IDLocker" can be found in github.com/insolar/insolar/ledger/storage/object
 */
 import (
 	"sync/atomic"
@@ -15,7 +15,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//IDLockerMock implements github.com/insolar/insolar/ledger/storage.IDLocker
+//IDLockerMock implements github.com/insolar/insolar/ledger/storage/object.IDLocker
 type IDLockerMock struct {
 	t minimock.Tester
 
@@ -30,7 +30,7 @@ type IDLockerMock struct {
 	UnlockMock       mIDLockerMockUnlock
 }
 
-//NewIDLockerMock returns a mock for github.com/insolar/insolar/ledger/storage.IDLocker
+//NewIDLockerMock returns a mock for github.com/insolar/insolar/ledger/storage/object.IDLocker
 func NewIDLockerMock(t minimock.Tester) *IDLockerMock {
 	m := &IDLockerMock{t: t}
 
@@ -102,7 +102,7 @@ func (m *mIDLockerMockLock) Set(f func(p *insolar.ID)) *IDLockerMock {
 	return m.mock
 }
 
-//Lock implements github.com/insolar/insolar/ledger/storage.IDLocker interface
+//Lock implements github.com/insolar/insolar/ledger/storage/object.IDLocker interface
 func (m *IDLockerMock) Lock(p *insolar.ID) {
 	counter := atomic.AddUint64(&m.LockPreCounter, 1)
 	defer atomic.AddUint64(&m.LockCounter, 1)
@@ -225,7 +225,7 @@ func (m *mIDLockerMockUnlock) Set(f func(p *insolar.ID)) *IDLockerMock {
 	return m.mock
 }
 
-//Unlock implements github.com/insolar/insolar/ledger/storage.IDLocker interface
+//Unlock implements github.com/insolar/insolar/ledger/storage/object.IDLocker interface
 func (m *IDLockerMock) Unlock(p *insolar.ID) {
 	counter := atomic.AddUint64(&m.UnlockPreCounter, 1)
 	defer atomic.AddUint64(&m.UnlockCounter, 1)

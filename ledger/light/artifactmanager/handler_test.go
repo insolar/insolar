@@ -39,7 +39,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
@@ -186,7 +185,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 	h.Nodes = s.nodeStorage
 	h.RecordAccessor = s.recordAccessor
 
-	locker := storage.NewIDLockerMock(s.T())
+	locker := object.NewIDLockerMock(s.T())
 	locker.LockMock.Return()
 	locker.UnlockMock.Return()
 	h.IDLocker = locker
@@ -298,7 +297,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	h.Nodes = s.nodeStorage
 
 	h.RecentStorageProvider = provideMock
-	idLock := storage.NewIDLockerMock(s.T())
+	idLock := object.NewIDLockerMock(s.T())
 	idLock.LockMock.Return()
 	idLock.UnlockMock.Return()
 	h.IDLocker = idLock
@@ -372,7 +371,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	h.BlobModifier = blobStorage
 	h.BlobAccessor = blobStorage
 
-	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock := object.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 	h.IDLocker = idLockMock
@@ -448,7 +447,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.BlobModifier = blobStorage
 	h.BlobAccessor = blobStorage
 
-	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock := object.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 	h.IDLocker = idLockMock
@@ -517,7 +516,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 
-	idLock := storage.NewIDLockerMock(s.T())
+	idLock := object.NewIDLockerMock(s.T())
 	idLock.LockMock.Return()
 	idLock.UnlockMock.Return()
 	h.IDLocker = idLock
@@ -610,7 +609,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecordModifier = s.recordModifier
 
-	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock := object.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 	h.IDLocker = idLockMock
@@ -686,7 +685,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecordModifier = s.recordModifier
 
-	idLockMock := storage.NewIDLockerMock(s.T())
+	idLockMock := object.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 	h.IDLocker = idLockMock
