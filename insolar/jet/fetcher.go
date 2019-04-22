@@ -24,10 +24,10 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/ledger/storage/node"
 )
 
 // Fetcher can be used to get actual jets. It involves fetching jet from other nodes via network and updating local
@@ -57,10 +57,10 @@ type fetchResult struct {
 }
 
 type fetcher struct {
-	Nodes          node.Accessor
-	JetStorage     Storage
-	MessageBus     insolar.MessageBus
-	JetCoordinator insolar.JetCoordinator
+	Nodes       node.Accessor
+	JetStorage  Storage
+	MessageBus  insolar.MessageBus
+	coordinator Coordinator
 
 	seqMutex  sync.Mutex
 	sequencer map[seqKey]*seqEntry
@@ -71,14 +71,14 @@ func NewFetcher(
 	ans node.Accessor,
 	js Storage,
 	mb insolar.MessageBus,
-	jc insolar.JetCoordinator,
+	jc Coordinator,
 ) Fetcher {
 	return &fetcher{
-		Nodes:          ans,
-		JetStorage:     js,
-		MessageBus:     mb,
-		JetCoordinator: jc,
-		sequencer:      map[seqKey]*seqEntry{},
+		Nodes:       ans,
+		JetStorage:  js,
+		MessageBus:  mb,
+		coordinator: jc,
+		sequencer:   map[seqKey]*seqEntry{},
 	}
 }
 
@@ -294,7 +294,7 @@ func (tu *fetcher) nodesForPulse(ctx context.Context, pulse insolar.PulseNumber)
 		return nil, err
 	}
 
-	me := tu.JetCoordinator.Me()
+	me := tu.coordinator.Me()
 	for i := range res {
 		if res[i].ID == me {
 			res = append(res[:i], res[i+1:]...)

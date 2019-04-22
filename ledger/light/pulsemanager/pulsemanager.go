@@ -31,19 +31,18 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/node"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/ledger/blob"
+	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/light/replication"
-	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/node"
-	"github.com/insolar/insolar/ledger/storage/object"
-	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/ledger/object"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/pulsemanager.ActiveListSwapper -o ../../../testutils -s _mock.go
@@ -55,7 +54,7 @@ type ActiveListSwapper interface {
 type PulseManager struct {
 	Bus                        insolar.MessageBus                 `inject:""`
 	NodeNet                    insolar.NodeNetwork                `inject:""`
-	JetCoordinator             insolar.JetCoordinator             `inject:""`
+	JetCoordinator             jet.Coordinator                    `inject:""`
 	GIL                        insolar.GlobalInsolarLock          `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
@@ -622,7 +621,7 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 func (m *PulseManager) Start(ctx context.Context) error {
 	origin := m.NodeNet.GetOrigin()
 	err := m.NodeSetter.Set(insolar.FirstPulseNumber, []insolar.Node{{ID: origin.ID(), Role: origin.Role()}})
-	if err != nil && err != storage.ErrOverride {
+	if err != nil && err != node.ErrOverride {
 		return err
 	}
 
