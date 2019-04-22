@@ -3,7 +3,7 @@ package blob
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Storage" can be found in github.com/insolar/insolar/ledger/storage/blob
+The original interface "Storage" can be found in github.com/insolar/insolar/ledger/blob
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//StorageMock implements github.com/insolar/insolar/ledger/storage/blob.Storage
+//StorageMock implements github.com/insolar/insolar/ledger/blob.Storage
 type StorageMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type StorageMock struct {
 	SetMock       mStorageMockSet
 }
 
-//NewStorageMock returns a mock for github.com/insolar/insolar/ledger/storage/blob.Storage
+//NewStorageMock returns a mock for github.com/insolar/insolar/ledger/blob.Storage
 func NewStorageMock(t minimock.Tester) *StorageMock {
 	m := &StorageMock{t: t}
 
@@ -114,7 +114,7 @@ func (m *mStorageMockForID) Set(f func(p context.Context, p1 insolar.ID) (r Blob
 	return m.mock
 }
 
-//ForID implements github.com/insolar/insolar/ledger/storage/blob.Storage interface
+//ForID implements github.com/insolar/insolar/ledger/blob.Storage interface
 func (m *StorageMock) ForID(p context.Context, p1 insolar.ID) (r Blob, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
@@ -265,7 +265,7 @@ func (m *mStorageMockSet) Set(f func(p context.Context, p1 insolar.ID, p2 Blob) 
 	return m.mock
 }
 
-//Set implements github.com/insolar/insolar/ledger/storage/blob.Storage interface
+//Set implements github.com/insolar/insolar/ledger/blob.Storage interface
 func (m *StorageMock) Set(p context.Context, p1 insolar.ID, p2 Blob) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)

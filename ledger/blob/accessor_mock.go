@@ -3,7 +3,7 @@ package blob
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Accessor" can be found in github.com/insolar/insolar/ledger/storage/blob
+The original interface "Accessor" can be found in github.com/insolar/insolar/ledger/blob
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//AccessorMock implements github.com/insolar/insolar/ledger/storage/blob.Accessor
+//AccessorMock implements github.com/insolar/insolar/ledger/blob.Accessor
 type AccessorMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type AccessorMock struct {
 	ForIDMock       mAccessorMockForID
 }
 
-//NewAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/blob.Accessor
+//NewAccessorMock returns a mock for github.com/insolar/insolar/ledger/blob.Accessor
 func NewAccessorMock(t minimock.Tester) *AccessorMock {
 	m := &AccessorMock{t: t}
 
@@ -108,7 +108,7 @@ func (m *mAccessorMockForID) Set(f func(p context.Context, p1 insolar.ID) (r Blo
 	return m.mock
 }
 
-//ForID implements github.com/insolar/insolar/ledger/storage/blob.Accessor interface
+//ForID implements github.com/insolar/insolar/ledger/blob.Accessor interface
 func (m *AccessorMock) ForID(p context.Context, p1 insolar.ID) (r Blob, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)

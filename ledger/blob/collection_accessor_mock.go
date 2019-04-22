@@ -3,7 +3,7 @@ package blob
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "CollectionAccessor" can be found in github.com/insolar/insolar/ledger/storage/blob
+The original interface "CollectionAccessor" can be found in github.com/insolar/insolar/ledger/blob
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//CollectionAccessorMock implements github.com/insolar/insolar/ledger/storage/blob.CollectionAccessor
+//CollectionAccessorMock implements github.com/insolar/insolar/ledger/blob.CollectionAccessor
 type CollectionAccessorMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type CollectionAccessorMock struct {
 	ForPulseMock       mCollectionAccessorMockForPulse
 }
 
-//NewCollectionAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/blob.CollectionAccessor
+//NewCollectionAccessorMock returns a mock for github.com/insolar/insolar/ledger/blob.CollectionAccessor
 func NewCollectionAccessorMock(t minimock.Tester) *CollectionAccessorMock {
 	m := &CollectionAccessorMock{t: t}
 
@@ -108,7 +108,7 @@ func (m *mCollectionAccessorMockForPulse) Set(f func(p context.Context, p1 insol
 	return m.mock
 }
 
-//ForPulse implements github.com/insolar/insolar/ledger/storage/blob.CollectionAccessor interface
+//ForPulse implements github.com/insolar/insolar/ledger/blob.CollectionAccessor interface
 func (m *CollectionAccessorMock) ForPulse(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) (r []Blob) {
 	counter := atomic.AddUint64(&m.ForPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseCounter, 1)

@@ -24,7 +24,7 @@ import (
 	"github.com/ugorji/go/codec"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Accessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/blob.Accessor -o ./ -s _mock.go
 
 // Accessor provides info about Blob-values from storage.
 type Accessor interface {
@@ -32,7 +32,7 @@ type Accessor interface {
 	ForID(ctx context.Context, id insolar.ID) (Blob, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.CollectionAccessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/blob.CollectionAccessor -o ./ -s _mock.go
 
 // CollectionAccessor provides methods for querying blobs with specific search conditions.
 type CollectionAccessor interface {
@@ -40,7 +40,7 @@ type CollectionAccessor interface {
 	ForPulse(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []Blob
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Modifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/blob.Modifier -o ./ -s _mock.go
 
 // Modifier provides methods for setting Blob-values to storage.
 type Modifier interface {
@@ -48,7 +48,7 @@ type Modifier interface {
 	Set(ctx context.Context, id insolar.ID, blob Blob) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Storage -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/blob.Storage -o ./ -s _mock.go
 
 // Storage is a union of Accessor and Modifier
 type Storage interface {
@@ -56,7 +56,7 @@ type Storage interface {
 	Modifier
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Cleaner -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/blob.Cleaner -o ./ -s _mock.go
 
 // Cleaner provides an interface for removing blobs from a storage.
 type Cleaner interface {
