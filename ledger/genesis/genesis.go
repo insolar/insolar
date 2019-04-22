@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/pulse"
 )

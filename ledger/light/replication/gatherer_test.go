@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
-	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"

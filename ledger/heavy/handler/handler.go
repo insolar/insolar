@@ -21,7 +21,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/ledger/blob"
-	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/drop"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 

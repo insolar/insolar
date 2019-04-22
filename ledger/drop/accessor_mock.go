@@ -3,7 +3,7 @@ package drop
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Accessor" can be found in github.com/insolar/insolar/ledger/storage/drop
+The original interface "Accessor" can be found in github.com/insolar/insolar/ledger/drop
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//AccessorMock implements github.com/insolar/insolar/ledger/storage/drop.Accessor
+//AccessorMock implements github.com/insolar/insolar/ledger/drop.Accessor
 type AccessorMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type AccessorMock struct {
 	ForPulseMock       mAccessorMockForPulse
 }
 
-//NewAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/drop.Accessor
+//NewAccessorMock returns a mock for github.com/insolar/insolar/ledger/drop.Accessor
 func NewAccessorMock(t minimock.Tester) *AccessorMock {
 	m := &AccessorMock{t: t}
 
@@ -109,7 +109,7 @@ func (m *mAccessorMockForPulse) Set(f func(p context.Context, p1 insolar.JetID, 
 	return m.mock
 }
 
-//ForPulse implements github.com/insolar/insolar/ledger/storage/drop.Accessor interface
+//ForPulse implements github.com/insolar/insolar/ledger/drop.Accessor interface
 func (m *AccessorMock) ForPulse(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) (r Drop, r1 error) {
 	counter := atomic.AddUint64(&m.ForPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseCounter, 1)

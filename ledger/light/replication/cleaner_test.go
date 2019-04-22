@@ -25,7 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
-	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/pulse"

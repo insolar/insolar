@@ -18,8 +18,8 @@ package message
 
 import (
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
-	"github.com/insolar/insolar/ledger/storage/drop"
 )
 
 // FIXME: @andreyromancev. 21.12.18. Remove this and create 'LogicRunnerMessage' interface to get rid of 'GetCaller' in ledger.

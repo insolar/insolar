@@ -3,7 +3,7 @@ package drop
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Cleaner" can be found in github.com/insolar/insolar/ledger/storage/drop
+The original interface "Cleaner" can be found in github.com/insolar/insolar/ledger/drop
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//CleanerMock implements github.com/insolar/insolar/ledger/storage/drop.Cleaner
+//CleanerMock implements github.com/insolar/insolar/ledger/drop.Cleaner
 type CleanerMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type CleanerMock struct {
 	DeleteForPNMock       mCleanerMockDeleteForPN
 }
 
-//NewCleanerMock returns a mock for github.com/insolar/insolar/ledger/storage/drop.Cleaner
+//NewCleanerMock returns a mock for github.com/insolar/insolar/ledger/drop.Cleaner
 func NewCleanerMock(t minimock.Tester) *CleanerMock {
 	m := &CleanerMock{t: t}
 
@@ -98,7 +98,7 @@ func (m *mCleanerMockDeleteForPN) Set(f func(p context.Context, p1 insolar.Pulse
 	return m.mock
 }
 
-//DeleteForPN implements github.com/insolar/insolar/ledger/storage/drop.Cleaner interface
+//DeleteForPN implements github.com/insolar/insolar/ledger/drop.Cleaner interface
 func (m *CleanerMock) DeleteForPN(p context.Context, p1 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.DeleteForPNPreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteForPNCounter, 1)

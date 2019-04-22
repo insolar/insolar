@@ -3,7 +3,7 @@ package drop
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Modifier" can be found in github.com/insolar/insolar/ledger/storage/drop
+The original interface "Modifier" can be found in github.com/insolar/insolar/ledger/drop
 */
 import (
 	context "context"
@@ -15,7 +15,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//ModifierMock implements github.com/insolar/insolar/ledger/storage/drop.Modifier
+//ModifierMock implements github.com/insolar/insolar/ledger/drop.Modifier
 type ModifierMock struct {
 	t minimock.Tester
 
@@ -25,7 +25,7 @@ type ModifierMock struct {
 	SetMock       mModifierMockSet
 }
 
-//NewModifierMock returns a mock for github.com/insolar/insolar/ledger/storage/drop.Modifier
+//NewModifierMock returns a mock for github.com/insolar/insolar/ledger/drop.Modifier
 func NewModifierMock(t minimock.Tester) *ModifierMock {
 	m := &ModifierMock{t: t}
 
@@ -106,7 +106,7 @@ func (m *mModifierMockSet) Set(f func(p context.Context, p1 Drop) (r error)) *Mo
 	return m.mock
 }
 
-//Set implements github.com/insolar/insolar/ledger/storage/drop.Modifier interface
+//Set implements github.com/insolar/insolar/ledger/drop.Modifier interface
 func (m *ModifierMock) Set(p context.Context, p1 Drop) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)

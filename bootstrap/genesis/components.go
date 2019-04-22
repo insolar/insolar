@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/blob"
-	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/storage/object"
 	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/platformpolicy"
