@@ -40,7 +40,6 @@ import (
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
-	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
 	"github.com/insolar/insolar/ledger/storage/node"
@@ -850,7 +849,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 	}).Info("received hot data")
 
 	err := h.DropModifier.Set(ctx, msg.Drop)
-	if err == storage.ErrOverride {
+	if err == drop.ErrOverride {
 		err = nil
 	}
 	if err != nil {
