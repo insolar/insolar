@@ -113,16 +113,16 @@ func NewServiceNetwork(conf configuration.Configuration, rootCm *component.Manag
 	return serviceNetwork, nil
 }
 
-func (nk *ServiceNetwork) Gateway() network.Gateway {
-	nk.gatewayMu.RLock()
-	defer nk.gatewayMu.RUnlock()
-	return nk.gateway
+func (n *ServiceNetwork) Gateway() network.Gateway {
+	n.gatewayMu.RLock()
+	defer n.gatewayMu.RUnlock()
+	return n.gateway
 }
 
-func (nk *ServiceNetwork) SetGateway(g network.Gateway) {
-	nk.gatewayMu.Lock()
-	defer nk.gatewayMu.Unlock()
-	nk.gateway = g
+func (n *ServiceNetwork) SetGateway(g network.Gateway) {
+	n.gatewayMu.Lock()
+	defer n.gatewayMu.Unlock()
+	n.gateway = g
 }
 
 func (nk *ServiceNetwork) GetState() insolar.NetworkState {
@@ -319,19 +319,35 @@ func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {
 func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insolar.Pulse, pulseStartTime time.Time) {
 	logger := inslogger.FromContext(ctx)
 
-	if err := n.PhaseManager.OnPulse(ctx, &newPulse, pulseStartTime); err != nil {
+	if err := n.PhaseManager.OnPulse(ctx, &newPulse, pulseStartTime, n.connectToNewNetwork); err != nil {
 		errMsg := "Failed to pass consensus: " + err.Error()
 		logger.Error(errMsg)
 		n.TerminationHandler.Abort(errMsg)
 	}
 }
 
-func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, node insolar.DiscoveryNode) {
-	err := n.Controller.AuthenticateToDiscoveryNode(ctx, node)
+func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, address string) {
+	n.NodeKeeper.GetClaimQueue().Push(&packets.ChangeNetworkClaim{Address: address})
+	logger := inslogger.FromContext(ctx)
+
+	node, err := getNode(address, n.CertificateManager.GetCertificate().GetDiscoveryNodes())
 	if err != nil {
-		logger := inslogger.FromContext(ctx)
+		logger.Warnf("Failed to find a discovery node: ", err)
+	}
+
+	err = n.Controller.AuthenticateToDiscoveryNode(ctx, node)
+	if err != nil {
 		logger.Errorf("Failed to authenticate a node: " + err.Error())
 	}
+}
+
+func getNode(address string, nodes []insolar.DiscoveryNode) (insolar.DiscoveryNode, error) {
+	for _, node := range nodes {
+		if node.GetHost() == address {
+			return node, nil
+		}
+	}
+	return nil, errors.New("Failed to find a discovery node with address: " + address)
 }
 
 func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {

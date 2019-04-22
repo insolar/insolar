@@ -161,7 +161,17 @@ func (tp *ThirdPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse, sta
 		ActiveNodes:    nodes,
 		GlobuleProof:   state.GlobuleProof,
 		ApprovedClaims: claimSplit.ApprovedClaims,
+		ReconnectTo:    checkReconnectClaim(claimSplit.ApprovedClaims),
 	}, nil
+}
+
+func checkReconnectClaim(claims []packets.ReferendumClaim) string {
+	for _, claim := range claims {
+		if claim.Type() == packets.TypeChangeNetworkClaim {
+			return claim.(*packets.ChangeNetworkClaim).Address
+		}
+	}
+	return ""
 }
 
 func (tp *ThirdPhaseImpl) checkPacketSignature(packet *packets.Phase3Packet, recordRef insolar.Reference, accessor network.Accessor) error {

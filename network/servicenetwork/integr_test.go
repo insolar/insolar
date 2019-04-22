@@ -329,7 +329,7 @@ func TestServiceNetworkManyNodes(t *testing.T) {
 type FullTimeoutPhaseManager struct {
 }
 
-func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
+func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time, connectToNetwork func(context.Context, string)) error {
 	return nil
 }
 
