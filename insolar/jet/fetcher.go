@@ -24,10 +24,10 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/ledger/storage/node"
 )
 
 // Fetcher can be used to get actual jets. It involves fetching jet from other nodes via network and updating local

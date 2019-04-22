@@ -31,6 +31,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -41,7 +42,6 @@ import (
 	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/light/replication"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/insolar/insolar/ledger/storage/node"
 	"github.com/insolar/insolar/ledger/storage/pulse"
 )
 

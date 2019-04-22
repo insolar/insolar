@@ -22,7 +22,7 @@ import (
 	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/insolar/node"
 	"github.com/stretchr/testify/assert"
 )
 

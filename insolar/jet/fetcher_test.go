@@ -23,7 +23,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/insolar/node"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 

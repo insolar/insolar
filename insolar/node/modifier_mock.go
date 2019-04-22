@@ -3,7 +3,7 @@ package node
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Modifier" can be found in github.com/insolar/insolar/ledger/storage/node
+The original interface "Modifier" can be found in github.com/insolar/insolar/insolar/node
 */
 import (
 	"sync/atomic"
@@ -15,7 +15,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//ModifierMock implements github.com/insolar/insolar/ledger/storage/node.Modifier
+//ModifierMock implements github.com/insolar/insolar/insolar/node.Modifier
 type ModifierMock struct {
 	t minimock.Tester
 
@@ -30,7 +30,7 @@ type ModifierMock struct {
 	SetMock       mModifierMockSet
 }
 
-//NewModifierMock returns a mock for github.com/insolar/insolar/ledger/storage/node.Modifier
+//NewModifierMock returns a mock for github.com/insolar/insolar/insolar/node.Modifier
 func NewModifierMock(t minimock.Tester) *ModifierMock {
 	m := &ModifierMock{t: t}
 
@@ -102,7 +102,7 @@ func (m *mModifierMockDeleteForPN) Set(f func(p insolar.PulseNumber)) *ModifierM
 	return m.mock
 }
 
-//DeleteForPN implements github.com/insolar/insolar/ledger/storage/node.Modifier interface
+//DeleteForPN implements github.com/insolar/insolar/insolar/node.Modifier interface
 func (m *ModifierMock) DeleteForPN(p insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.DeleteForPNPreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteForPNCounter, 1)
@@ -235,7 +235,7 @@ func (m *mModifierMockSet) Set(f func(p insolar.PulseNumber, p1 []insolar.Node) 
 	return m.mock
 }
 
-//Set implements github.com/insolar/insolar/ledger/storage/node.Modifier interface
+//Set implements github.com/insolar/insolar/insolar/node.Modifier interface
 func (m *ModifierMock) Set(p insolar.PulseNumber, p1 []insolar.Node) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
