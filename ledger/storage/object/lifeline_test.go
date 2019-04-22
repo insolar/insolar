@@ -19,7 +19,7 @@ package object
 import (
 	"testing"
 
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -32,7 +32,7 @@ func TestIndexStorage_NewStorageMemory(t *testing.T) {
 	t.Parallel()
 
 	indexStorage := NewIndexMemory()
-	assert.Equal(t, 0, len(indexStorage.memory))
+	assert.Equal(t, 0, len(indexStorage.indexStorage))
 }
 
 func TestIndexStorage_ForID(t *testing.T) {
@@ -52,9 +52,9 @@ func TestIndexStorage_ForID(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := &IndexMemory{
-			memory: map[insolar.ID]Lifeline{},
+			indexStorage: map[insolar.ID]Lifeline{},
 		}
-		indexStorage.memory[id] = idx
+		indexStorage.indexStorage[id] = idx
 
 		resultIdx, err := indexStorage.ForID(ctx, id)
 		require.NoError(t, err)
@@ -66,9 +66,9 @@ func TestIndexStorage_ForID(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := &IndexMemory{
-			memory: map[insolar.ID]Lifeline{},
+			indexStorage: map[insolar.ID]Lifeline{},
 		}
-		indexStorage.memory[id] = idx
+		indexStorage.indexStorage[id] = idx
 
 		_, err := indexStorage.ForID(ctx, gen.ID())
 		require.Error(t, err)
@@ -108,8 +108,8 @@ func TestIndexDB_Set(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := &IndexMemory{
-			memory:   map[insolar.ID]Lifeline{},
-			jetIndex: jetIndex,
+			indexStorage:     map[insolar.ID]Lifeline{},
+			jetIndexModifier: jetIndex,
 		}
 		err := indexStorage.Set(ctx, id, idx)
 		require.NoError(t, err)
@@ -150,22 +150,22 @@ func TestIndexStorage_Set(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := &IndexMemory{
-			memory:   map[insolar.ID]Lifeline{},
-			jetIndex: jetIndex,
+			indexStorage:     map[insolar.ID]Lifeline{},
+			jetIndexModifier: jetIndex,
 		}
 		err := indexStorage.Set(ctx, id, idx)
 		require.NoError(t, err)
-		assert.Equal(t, 1, len(indexStorage.memory))
-		assert.Equal(t, idx, indexStorage.memory[id])
-		assert.Equal(t, jetID, indexStorage.memory[id].JetID)
+		assert.Equal(t, 1, len(indexStorage.indexStorage))
+		assert.Equal(t, idx, indexStorage.indexStorage[id])
+		assert.Equal(t, jetID, indexStorage.indexStorage[id].JetID)
 	})
 
 	t.Run("override indices is ok", func(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := &IndexMemory{
-			memory:   map[insolar.ID]Lifeline{},
-			jetIndex: jetIndex,
+			indexStorage:     map[insolar.ID]Lifeline{},
+			jetIndexModifier: jetIndex,
 		}
 		err := indexStorage.Set(ctx, id, idx)
 		require.NoError(t, err)
@@ -196,12 +196,12 @@ func TestIndexStorage_Set_SaveLastUpdate(t *testing.T) {
 		t.Parallel()
 
 		indexStorage := &IndexMemory{
-			memory:   map[insolar.ID]Lifeline{},
-			jetIndex: jetIndex,
+			indexStorage:     map[insolar.ID]Lifeline{},
+			jetIndexModifier: jetIndex,
 		}
 		err := indexStorage.Set(ctx, id, idx)
 		require.NoError(t, err)
-		assert.Equal(t, pn, indexStorage.memory[id].LatestUpdate)
+		assert.Equal(t, pn, indexStorage.indexStorage[id].LatestUpdate)
 	})
 }
 
@@ -247,16 +247,18 @@ func TestIndexMemory_ForPulseAndJet(t *testing.T) {
 	tPulse := gen.PulseNumber()
 
 	_ = memStor.Set(ctx, *insolar.NewID(fPulse, []byte{1}), Lifeline{JetID: jetID, LatestUpdate: gen.PulseNumber()})
+	memStor.SetUsageForPulse(ctx, *insolar.NewID(fPulse, []byte{1}), fPulse)
 	_ = memStor.Set(ctx, *insolar.NewID(fPulse, []byte{2}), Lifeline{JetID: jetID, LatestUpdate: gen.PulseNumber()})
+	memStor.SetUsageForPulse(ctx, *insolar.NewID(fPulse, []byte{2}), fPulse)
 	_ = memStor.Set(ctx, *insolar.NewID(sPulse, nil), Lifeline{JetID: jetID})
 	_ = memStor.Set(ctx, *insolar.NewID(tPulse, nil), Lifeline{JetID: jetID})
 
-	res := memStor.ForPulseAndJet(ctx, jetID, fPulse)
+	res := memStor.ForPulseAndJet(ctx, fPulse, jetID)
 
 	require.Equal(t, 2, len(res))
-	_, ok := memStor.memory[*insolar.NewID(fPulse, []byte{1})]
+	_, ok := memStor.indexStorage[*insolar.NewID(fPulse, []byte{1})]
 	require.Equal(t, true, ok)
-	_, ok = memStor.memory[*insolar.NewID(fPulse, []byte{2})]
+	_, ok = memStor.indexStorage[*insolar.NewID(fPulse, []byte{2})]
 	require.Equal(t, true, ok)
 }
 

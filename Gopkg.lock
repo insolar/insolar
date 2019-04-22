@@ -515,12 +515,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7e6e1df21a7681f3f060a2a330f6e38f9058160ed9d08eb41330b779e3f32668"
+  digest = "1:d6b0cfc5ae30841c4b116ac589629f56f8add0955a39f11d8c0d06ca67f5b3d5"
   name = "golang.org/x/sync"
   packages = [
     "errgroup",
     "semaphore",
-    "singleflight",
   ]
   pruneopts = "UT"
   revision = "42b317875d0fa942474b76e1b46a6060d720ae6e"
@@ -631,7 +630,6 @@
     "go.opencensus.io/zpages",
     "golang.org/x/crypto/sha3",
     "golang.org/x/sync/errgroup",
-    "golang.org/x/sync/singleflight",
     "gopkg.in/yaml.v2",
   ]
   solver-name = "gps-cdcl"

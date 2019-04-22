@@ -45,7 +45,7 @@ type State interface {
 	GetImage() *insolar.Reference
 	// GetIsPrototype returns state code.
 	GetIsPrototype() bool
-	// GetMemory returns state memory.
+	// GetMemory returns state indexStorage.
 	GetMemory() *insolar.ID
 	// PrevStateID returns previous state id.
 	PrevStateID() *insolar.ID
@@ -101,7 +101,7 @@ type StateRecord struct {
 	IsPrototype bool              // If true, Image should point to a prototype object. Otherwise to a code.
 }
 
-// GetMemory returns state memory.
+// GetMemory returns state indexStorage.
 func (r *StateRecord) GetMemory() *insolar.ID {
 	return r.Memory
 }
@@ -189,7 +189,7 @@ func (*DeactivationRecord) GetMachineType() insolar.MachineType {
 	return insolar.MachineTypeNotExist
 }
 
-// GetMemory returns state memory.
+// GetMemory returns state indexStorage.
 func (*DeactivationRecord) GetMemory() *insolar.ID {
 	return nil
 }

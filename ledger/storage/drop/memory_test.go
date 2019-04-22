@@ -72,10 +72,11 @@ func TestDropStorageMemory_ForPulse(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	ms := NewStorageMemory()
 
-	fJet := gen.JetID()
+	var fJet, sJet insolar.JetID
+	gen.UniqueJetIDs(&fJet, &sJet)
+
 	fPn := gen.PulseNumber()
 	_ = ms.Set(ctx, Drop{JetID: fJet, Pulse: fPn})
-	sJet := gen.JetID()
 	sPn := gen.PulseNumber()
 	_ = ms.Set(ctx, Drop{JetID: sJet, Pulse: sPn})
 
@@ -132,8 +133,9 @@ func TestDropStorageMemory_Delete(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	ms := NewStorageMemory()
 
-	fJet := gen.JetID()
-	sJet := gen.JetID()
+	var fJet, sJet insolar.JetID
+	gen.UniqueJetIDs(&fJet, &sJet)
+
 	fPn := gen.PulseNumber()
 	sPn := gen.PulseNumber()
 	fSize := rand.Uint64()
@@ -144,7 +146,7 @@ func TestDropStorageMemory_Delete(t *testing.T) {
 	_ = ms.Set(ctx, Drop{JetID: fJet, Pulse: sPn, Size: sSize})
 	_ = ms.Set(ctx, Drop{JetID: sJet, Pulse: fPn, Size: tSize})
 
-	ms.Delete(fPn)
+	ms.DeleteForPN(ctx, fPn)
 
 	drop, err := ms.ForPulse(ctx, fJet, sPn)
 	require.NoError(t, err)

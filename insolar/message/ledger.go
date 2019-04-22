@@ -18,7 +18,7 @@ package message
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/storage/drop"
 )
 
@@ -317,7 +317,7 @@ type HotData struct {
 	ledgerMessage
 	Jet             insolar.Reference
 	Drop            drop.Drop
-	RecentObjects   map[insolar.ID]HotIndex
+	HotIndexes      map[insolar.ID]HotIndex
 	PendingRequests map[insolar.ID]recentstorage.PendingObjectContext
 	PulseNumber     insolar.PulseNumber
 }
@@ -344,8 +344,8 @@ func (*HotData) Type() insolar.MessageType {
 
 // HotIndex contains meat about hot-data
 type HotIndex struct {
-	TTL   int
-	Index []byte
+	LastUsed insolar.PulseNumber
+	Index    []byte
 }
 
 // GetPendingRequests fetches pending requests for object.
