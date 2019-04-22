@@ -217,6 +217,30 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:ddb9b7ebab4261a8e8b4c632d64485249e71b528d135b536722e984aef8a70e5"
+  name = "github.com/insolar/x-crypto"
+  packages = [
+    ".",
+    "dsa",
+    "ecdsa",
+    "elliptic",
+    "internal/randutil",
+    "md5",
+    "rand",
+    "rand/internal/unix",
+    "rsa",
+    "sha1",
+    "sha256",
+    "sha512",
+    "subtle",
+    "x509",
+    "x509/pkix",
+  ]
+  pruneopts = "UT"
+  revision = "db8a21017dd3363729033141e4f12be88b7256c3"
+
+[[projects]]
+  branch = "master"
   digest = "1:fa3a7dc0a780fb19838fb96d4e18c0b9a019d9bb618798308d7b6ca48fcb9876"
   name = "github.com/jbenet/go-base58"
   packages = ["."]
@@ -531,9 +555,12 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8775d8a768d9e65e8b659172804aac5db1fc8d563ba766470a6c2698c57c61a7"
+  digest = "1:b5822e8b1920b7225e6282614078af440c70f0a2243676063a571f715cd77d58"
   name = "golang.org/x/sys"
-  packages = ["unix"]
+  packages = [
+    "cpu",
+    "unix",
+  ]
   pruneopts = "UT"
   revision = "4ed8d59d0b35e1e29334a206d1b3f38b1e5dfb31"
 
@@ -611,6 +638,11 @@
     "github.com/google/gofuzz",
     "github.com/gorilla/rpc/v2",
     "github.com/gorilla/rpc/v2/json2",
+    "github.com/insolar/x-crypto",
+    "github.com/insolar/x-crypto/ecdsa",
+    "github.com/insolar/x-crypto/elliptic",
+    "github.com/insolar/x-crypto/rand",
+    "github.com/insolar/x-crypto/x509",
     "github.com/jbenet/go-base58",
     "github.com/magiconair/properties/assert",
     "github.com/olekukonko/tablewriter",
