@@ -27,7 +27,7 @@ import (
 	"go.opencensus.io/stats"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexAccessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexAccessor -o ./ -s _mock.go
 
 // IndexAccessor provides info about Index-values from storage.
 type IndexAccessor interface {
@@ -35,7 +35,7 @@ type IndexAccessor interface {
 	ForID(ctx context.Context, id insolar.ID) (Lifeline, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexCollectionAccessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexCollectionAccessor -o ./ -s _mock.go
 
 // IndexCollectionAccessor provides methods for querying a collection of blobs with specific search conditions.
 type IndexCollectionAccessor interface {
@@ -45,7 +45,7 @@ type IndexCollectionAccessor interface {
 	ForPulseAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) map[insolar.ID]Lifeline
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexModifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexModifier -o ./ -s _mock.go
 
 // IndexModifier provides methods for setting Index-values to storage.
 type IndexModifier interface {
@@ -53,7 +53,7 @@ type IndexModifier interface {
 	Set(ctx context.Context, id insolar.ID, index Lifeline) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.ExtendedIndexModifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.ExtendedIndexModifier -o ./ -s _mock.go
 
 // ExtendedIndexModifier provides methods for setting Index-values to storage.
 // The main difference with IndexModifier is an opportunity to modify a state of an internal pulse-index
@@ -65,7 +65,7 @@ type ExtendedIndexModifier interface {
 	SetUsageForPulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexStorage -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexStorage -o ./ -s _mock.go
 
 // IndexStorage is an union of IndexAccessor and IndexModifier.
 type IndexStorage interface {
@@ -73,7 +73,7 @@ type IndexStorage interface {
 	IndexModifier
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.IndexCleaner -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexCleaner -o ./ -s _mock.go
 
 // IndexCleaner provides an interface for removing interfaces from a storage.
 type IndexCleaner interface {

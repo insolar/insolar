@@ -31,7 +31,7 @@ import (
 	"reflect"
 	"sort"
 
-	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/object"
 )
 
 type typedRecord struct {

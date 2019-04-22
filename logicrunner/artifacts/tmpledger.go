@@ -23,7 +23,7 @@ import (
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/object"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"

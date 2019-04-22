@@ -3,7 +3,7 @@ package object
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "RecordAccessor" can be found in github.com/insolar/insolar/ledger/storage/object
+The original interface "RecordAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
 	context "context"
@@ -17,7 +17,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//RecordAccessorMock implements github.com/insolar/insolar/ledger/storage/object.RecordAccessor
+//RecordAccessorMock implements github.com/insolar/insolar/ledger/object.RecordAccessor
 type RecordAccessorMock struct {
 	t minimock.Tester
 
@@ -27,7 +27,7 @@ type RecordAccessorMock struct {
 	ForIDMock       mRecordAccessorMockForID
 }
 
-//NewRecordAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/object.RecordAccessor
+//NewRecordAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.RecordAccessor
 func NewRecordAccessorMock(t minimock.Tester) *RecordAccessorMock {
 	m := &RecordAccessorMock{t: t}
 
@@ -109,7 +109,7 @@ func (m *mRecordAccessorMockForID) Set(f func(p context.Context, p1 insolar.ID) 
 	return m.mock
 }
 
-//ForID implements github.com/insolar/insolar/ledger/storage/object.RecordAccessor interface
+//ForID implements github.com/insolar/insolar/ledger/object.RecordAccessor interface
 func (m *RecordAccessorMock) ForID(p context.Context, p1 insolar.ID) (r record.MaterialRecord, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)

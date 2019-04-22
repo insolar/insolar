@@ -3,7 +3,7 @@ package object
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "ExtendedIndexModifier" can be found in github.com/insolar/insolar/ledger/storage/object
+The original interface "ExtendedIndexModifier" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//ExtendedIndexModifierMock implements github.com/insolar/insolar/ledger/storage/object.ExtendedIndexModifier
+//ExtendedIndexModifierMock implements github.com/insolar/insolar/ledger/object.ExtendedIndexModifier
 type ExtendedIndexModifierMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type ExtendedIndexModifierMock struct {
 	SetWithMetaMock       mExtendedIndexModifierMockSetWithMeta
 }
 
-//NewExtendedIndexModifierMock returns a mock for github.com/insolar/insolar/ledger/storage/object.ExtendedIndexModifier
+//NewExtendedIndexModifierMock returns a mock for github.com/insolar/insolar/ledger/object.ExtendedIndexModifier
 func NewExtendedIndexModifierMock(t minimock.Tester) *ExtendedIndexModifierMock {
 	m := &ExtendedIndexModifierMock{t: t}
 
@@ -105,7 +105,7 @@ func (m *mExtendedIndexModifierMockSetUsageForPulse) Set(f func(p context.Contex
 	return m.mock
 }
 
-//SetUsageForPulse implements github.com/insolar/insolar/ledger/storage/object.ExtendedIndexModifier interface
+//SetUsageForPulse implements github.com/insolar/insolar/ledger/object.ExtendedIndexModifier interface
 func (m *ExtendedIndexModifierMock) SetUsageForPulse(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.SetUsageForPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.SetUsageForPulseCounter, 1)
@@ -240,7 +240,7 @@ func (m *mExtendedIndexModifierMockSetWithMeta) Set(f func(p context.Context, p1
 	return m.mock
 }
 
-//SetWithMeta implements github.com/insolar/insolar/ledger/storage/object.ExtendedIndexModifier interface
+//SetWithMeta implements github.com/insolar/insolar/ledger/object.ExtendedIndexModifier interface
 func (m *ExtendedIndexModifierMock) SetWithMeta(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 Lifeline) (r error) {
 	counter := atomic.AddUint64(&m.SetWithMetaPreCounter, 1)
 	defer atomic.AddUint64(&m.SetWithMetaCounter, 1)

@@ -3,7 +3,7 @@ package object
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "IndexAccessor" can be found in github.com/insolar/insolar/ledger/storage/object
+The original interface "IndexAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//IndexAccessorMock implements github.com/insolar/insolar/ledger/storage/object.IndexAccessor
+//IndexAccessorMock implements github.com/insolar/insolar/ledger/object.IndexAccessor
 type IndexAccessorMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type IndexAccessorMock struct {
 	ForIDMock       mIndexAccessorMockForID
 }
 
-//NewIndexAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/object.IndexAccessor
+//NewIndexAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.IndexAccessor
 func NewIndexAccessorMock(t minimock.Tester) *IndexAccessorMock {
 	m := &IndexAccessorMock{t: t}
 
@@ -108,7 +108,7 @@ func (m *mIndexAccessorMockForID) Set(f func(p context.Context, p1 insolar.ID) (
 	return m.mock
 }
 
-//ForID implements github.com/insolar/insolar/ledger/storage/object.IndexAccessor interface
+//ForID implements github.com/insolar/insolar/ledger/object.IndexAccessor interface
 func (m *IndexAccessorMock) ForID(p context.Context, p1 insolar.ID) (r Lifeline, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)

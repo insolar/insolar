@@ -3,7 +3,7 @@ package object
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "RecordCollectionAccessor" can be found in github.com/insolar/insolar/ledger/storage/object
+The original interface "RecordCollectionAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
 	context "context"
@@ -17,7 +17,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//RecordCollectionAccessorMock implements github.com/insolar/insolar/ledger/storage/object.RecordCollectionAccessor
+//RecordCollectionAccessorMock implements github.com/insolar/insolar/ledger/object.RecordCollectionAccessor
 type RecordCollectionAccessorMock struct {
 	t minimock.Tester
 
@@ -27,7 +27,7 @@ type RecordCollectionAccessorMock struct {
 	ForPulseMock       mRecordCollectionAccessorMockForPulse
 }
 
-//NewRecordCollectionAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/object.RecordCollectionAccessor
+//NewRecordCollectionAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.RecordCollectionAccessor
 func NewRecordCollectionAccessorMock(t minimock.Tester) *RecordCollectionAccessorMock {
 	m := &RecordCollectionAccessorMock{t: t}
 
@@ -109,7 +109,7 @@ func (m *mRecordCollectionAccessorMockForPulse) Set(f func(p context.Context, p1
 	return m.mock
 }
 
-//ForPulse implements github.com/insolar/insolar/ledger/storage/object.RecordCollectionAccessor interface
+//ForPulse implements github.com/insolar/insolar/ledger/object.RecordCollectionAccessor interface
 func (m *RecordCollectionAccessorMock) ForPulse(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) (r []record.MaterialRecord) {
 	counter := atomic.AddUint64(&m.ForPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseCounter, 1)

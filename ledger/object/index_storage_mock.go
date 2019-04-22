@@ -3,7 +3,7 @@ package object
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "IndexStorage" can be found in github.com/insolar/insolar/ledger/storage/object
+The original interface "IndexStorage" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//IndexStorageMock implements github.com/insolar/insolar/ledger/storage/object.IndexStorage
+//IndexStorageMock implements github.com/insolar/insolar/ledger/object.IndexStorage
 type IndexStorageMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type IndexStorageMock struct {
 	SetMock       mIndexStorageMockSet
 }
 
-//NewIndexStorageMock returns a mock for github.com/insolar/insolar/ledger/storage/object.IndexStorage
+//NewIndexStorageMock returns a mock for github.com/insolar/insolar/ledger/object.IndexStorage
 func NewIndexStorageMock(t minimock.Tester) *IndexStorageMock {
 	m := &IndexStorageMock{t: t}
 
@@ -114,7 +114,7 @@ func (m *mIndexStorageMockForID) Set(f func(p context.Context, p1 insolar.ID) (r
 	return m.mock
 }
 
-//ForID implements github.com/insolar/insolar/ledger/storage/object.IndexStorage interface
+//ForID implements github.com/insolar/insolar/ledger/object.IndexStorage interface
 func (m *IndexStorageMock) ForID(p context.Context, p1 insolar.ID) (r Lifeline, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
@@ -265,7 +265,7 @@ func (m *mIndexStorageMockSet) Set(f func(p context.Context, p1 insolar.ID, p2 L
 	return m.mock
 }
 
-//Set implements github.com/insolar/insolar/ledger/storage/object.IndexStorage interface
+//Set implements github.com/insolar/insolar/ledger/object.IndexStorage interface
 func (m *IndexStorageMock) Set(p context.Context, p1 insolar.ID, p2 Lifeline) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)

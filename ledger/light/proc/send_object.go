@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
-	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/pkg/errors"

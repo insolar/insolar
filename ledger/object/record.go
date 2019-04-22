@@ -51,7 +51,7 @@ func init() {
 	register(305, new(DeactivationRecord))
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.RecordAccessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordAccessor -o ./ -s _mock.go
 
 // RecordAccessor provides info about record-values from storage.
 type RecordAccessor interface {
@@ -59,7 +59,7 @@ type RecordAccessor interface {
 	ForID(ctx context.Context, id insolar.ID) (record.MaterialRecord, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.RecordCollectionAccessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordCollectionAccessor -o ./ -s _mock.go
 
 // RecordCollectionAccessor provides methods for querying records with specific search conditions.
 type RecordCollectionAccessor interface {
@@ -67,7 +67,7 @@ type RecordCollectionAccessor interface {
 	ForPulse(ctx context.Context, jetID insolar.JetID, pn insolar.PulseNumber) []record.MaterialRecord
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.RecordModifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordModifier -o ./ -s _mock.go
 
 // RecordModifier provides methods for setting record-values to storage.
 type RecordModifier interface {
@@ -75,7 +75,7 @@ type RecordModifier interface {
 	Set(ctx context.Context, id insolar.ID, rec record.MaterialRecord) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/storage/object.RecordCleaner -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordCleaner -o ./ -s _mock.go
 
 // RecordCleaner provides an interface for removing records from a storage.
 type RecordCleaner interface {

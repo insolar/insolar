@@ -3,7 +3,7 @@ package object
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "IndexCollectionAccessor" can be found in github.com/insolar/insolar/ledger/storage/object
+The original interface "IndexCollectionAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//IndexCollectionAccessorMock implements github.com/insolar/insolar/ledger/storage/object.IndexCollectionAccessor
+//IndexCollectionAccessorMock implements github.com/insolar/insolar/ledger/object.IndexCollectionAccessor
 type IndexCollectionAccessorMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type IndexCollectionAccessorMock struct {
 	ForPulseAndJetMock       mIndexCollectionAccessorMockForPulseAndJet
 }
 
-//NewIndexCollectionAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/object.IndexCollectionAccessor
+//NewIndexCollectionAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.IndexCollectionAccessor
 func NewIndexCollectionAccessorMock(t minimock.Tester) *IndexCollectionAccessorMock {
 	m := &IndexCollectionAccessorMock{t: t}
 
@@ -113,7 +113,7 @@ func (m *mIndexCollectionAccessorMockForJet) Set(f func(p context.Context, p1 in
 	return m.mock
 }
 
-//ForJet implements github.com/insolar/insolar/ledger/storage/object.IndexCollectionAccessor interface
+//ForJet implements github.com/insolar/insolar/ledger/object.IndexCollectionAccessor interface
 func (m *IndexCollectionAccessorMock) ForJet(p context.Context, p1 insolar.JetID) (r map[insolar.ID]LifelineMeta) {
 	counter := atomic.AddUint64(&m.ForJetPreCounter, 1)
 	defer atomic.AddUint64(&m.ForJetCounter, 1)
@@ -262,7 +262,7 @@ func (m *mIndexCollectionAccessorMockForPulseAndJet) Set(f func(p context.Contex
 	return m.mock
 }
 
-//ForPulseAndJet implements github.com/insolar/insolar/ledger/storage/object.IndexCollectionAccessor interface
+//ForPulseAndJet implements github.com/insolar/insolar/ledger/object.IndexCollectionAccessor interface
 func (m *IndexCollectionAccessorMock) ForPulseAndJet(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r map[insolar.ID]Lifeline) {
 	counter := atomic.AddUint64(&m.ForPulseAndJetPreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseAndJetCounter, 1)
