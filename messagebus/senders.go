@@ -18,7 +18,9 @@ package messagebus
 
 import (
 	"context"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -30,6 +32,7 @@ import (
 )
 
 const jetMissRetryCount = 10
+const incorrectPulseRetryCount = 3
 
 // PreSender is an alias for a function
 // which is working like a `middleware` for messagebus.Send
@@ -154,6 +157,34 @@ func RetryJetSender(jetModifier jet.Modifier) PreSender {
 			}
 
 			return nil, errors.New("failed to find jet (retry limit exceeded on client)")
+		}
+	}
+}
+
+// RetryIncorrectPulse retries messages after small delay when pulses on source and destination are out of sync.
+// NOTE: This is not completely correct way to behave: 1) we should wait until pulse switches, not some hardcoded time,
+// 2) it should be handled by recipient and get it right with Flow "handles"
+func RetryIncorrectPulse() PreSender {
+	return func(sender Sender) Sender {
+		return func(
+			ctx context.Context, msg insolar.Message, options *insolar.MessageSendOptions,
+		) (insolar.Reply, error) {
+			retries := incorrectPulseRetryCount
+			for {
+				rep, err := sender(ctx, msg, options)
+				if err == nil || !strings.Contains(err.Error(), "Incorrect message pulse") {
+					return rep, err
+				}
+
+				if retries <= 0 {
+					inslogger.FromContext(ctx).Warn("got incorrect message pulse too many times")
+					return rep, err
+
+				}
+				retries--
+
+				time.Sleep(100*time.Millisecond)
+			}
 		}
 	}
 }
