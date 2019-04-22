@@ -22,12 +22,15 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// XXX: beware to adding lines in this test (test output depend on test code offset!)
 func TestLog_getCallInfo(t *testing.T) {
+	expectedLine := 28 // should be equal of line number where getCallInfo is called
 	info := getCallInfo(1)
+
 	assert.Equal(t, "log", info.packageName)
 	assert.Equal(t, "sourceinfo_test.go", info.fileName)
 	assert.Equal(t, "TestLog_getCallInfo", info.funcName)
-	assert.Equal(t, 26, info.line)
+	assert.Equal(t, expectedLine, info.line)
 }
 
 func TestLog_stripPackageName(t *testing.T) {

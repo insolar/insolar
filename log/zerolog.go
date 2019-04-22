@@ -21,6 +21,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/pkg/errors"
@@ -30,8 +31,17 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
+var insolarPrefix = "github.com/insolar/insolar/"
+
 func init() {
 	zerolog.TimeFieldFormat = timestampFormat
+	zerolog.CallerMarshalFunc = func(file string, line int) string {
+		var skip = 0
+		if idx := strings.Index(file, insolarPrefix); idx != -1 {
+			skip = idx + len(insolarPrefix)
+		}
+		return file[skip:] + ":" + strconv.Itoa(line)
+	}
 }
 
 type zerologAdapter struct {
