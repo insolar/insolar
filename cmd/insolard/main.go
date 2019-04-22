@@ -75,7 +75,7 @@ func main() {
 
 	role, err := readRole(params.configPath)
 	if err != nil {
-		log.Fatal(err)
+		log.Fatal(errors.Wrap(err, "readRole failed"))
 	}
 
 	switch role {

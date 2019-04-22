@@ -1,5 +1,5 @@
-root_keys_file: "scripts/insolard/configs/root_member_keys.json"
-discovery_keys_dir: "scripts/insolard/reusekeys/discovery"
+root_keys_file: "{{ .BaseDir }}/configs/root_member_keys.json"
+discovery_keys_dir: "{{ .BaseDir }}/reusekeys/discovery"
 keys_name_format: "/node_%02d.json"
 reuse_keys: false
 root_balance: 1000000000
@@ -8,6 +8,7 @@ min_roles:
   virtual:  1
   heavy_material: 1
   light_material: 1
+# TODO: check pulsar_public_keys usage
 pulsar_public_keys:
   - "pulsar_public_key"
 discovery_nodes:
@@ -108,7 +109,7 @@ nodes:
   -
     host: "127.0.0.1:63836"
     role: "virtual"
-    keys_file: "scripts/insolard/nodes/1/keys.json"
+    keys_file: "{{ .BaseDir }}/nodes/1/keys.json"
     cert_name: "node_cert_1.json"
 #  -
 #    host: "127.0.0.1:63846"
