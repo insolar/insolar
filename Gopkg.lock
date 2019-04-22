@@ -217,7 +217,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:ddb9b7ebab4261a8e8b4c632d64485249e71b528d135b536722e984aef8a70e5"
+  digest = "1:dad2c954d4fb9f0fca2096f94e5361292a8795dd239c74c667c2128eb7183afa"
   name = "github.com/insolar/x-crypto"
   packages = [
     ".",
@@ -237,7 +237,7 @@
     "x509/pkix",
   ]
   pruneopts = "UT"
-  revision = "db8a21017dd3363729033141e4f12be88b7256c3"
+  revision = "5f602f3a0662f0aaf37187bd9e8d5b34c1b68c27"
 
 [[projects]]
   branch = "master"
