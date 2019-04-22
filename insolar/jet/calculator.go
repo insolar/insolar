@@ -26,13 +26,13 @@ import (
 
 // CalculatorDefault is a struct, that implements jet.Calculator
 type CalculatorDefault struct {
-	jetCoordinator insolar.JetCoordinator
-	jetAccessor    Accessor
+	coordinator Coordinator
+	jetAccessor Accessor
 }
 
 // NewCalculator returns a new instance of a calculator
-func NewCalculator(jetCoordinator insolar.JetCoordinator, jetAccessor Accessor) *CalculatorDefault {
-	return &CalculatorDefault{jetCoordinator: jetCoordinator, jetAccessor: jetAccessor}
+func NewCalculator(jetCoordinator Coordinator, jetAccessor Accessor) *CalculatorDefault {
+	return &CalculatorDefault{coordinator: jetCoordinator, jetAccessor: jetAccessor}
 }
 
 // MineForPulse returns current node's jets for a provided pulse
@@ -40,10 +40,10 @@ func (c *CalculatorDefault) MineForPulse(ctx context.Context, pn insolar.PulseNu
 	var res []insolar.JetID
 
 	jetIDs := c.jetAccessor.All(ctx, pn)
-	me := c.jetCoordinator.Me()
+	me := c.coordinator.Me()
 
 	for _, jetID := range jetIDs {
-		executor, err := c.jetCoordinator.LightExecutorForJet(ctx, insolar.ID(jetID), pn)
+		executor, err := c.coordinator.LightExecutorForJet(ctx, insolar.ID(jetID), pn)
 		if err != nil {
 			continue
 		}

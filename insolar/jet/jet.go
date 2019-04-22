@@ -56,6 +56,38 @@ type Storage interface {
 	Modifier
 }
 
+//go:generate minimock -i github.com/insolar/insolar/insolar/jet.Coordinator -o ./ -s _mock.go
+
+// Coordinator provides methods for calculating Jet affinity
+// (e.g. to which Jet a message should be sent).
+type Coordinator interface {
+	// Me returns current node.
+	Me() insolar.Reference
+
+	// IsAuthorized checks for role on concrete pulse for the address.
+	IsAuthorized(ctx context.Context, role insolar.DynamicRole, obj insolar.ID, pulse insolar.PulseNumber, node insolar.Reference) (bool, error)
+
+	// QueryRole returns node refs responsible for role bound operations for given object and pulse.
+	QueryRole(ctx context.Context, role insolar.DynamicRole, obj insolar.ID, pulse insolar.PulseNumber) ([]insolar.Reference, error)
+
+	VirtualExecutorForObject(ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber) (*insolar.Reference, error)
+	VirtualValidatorsForObject(ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber) ([]insolar.Reference, error)
+
+	LightExecutorForObject(ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber) (*insolar.Reference, error)
+	LightValidatorsForObject(ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber) ([]insolar.Reference, error)
+	// LightExecutorForJet calculates light material executor for provided jet.
+	LightExecutorForJet(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) (*insolar.Reference, error)
+	LightValidatorsForJet(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) ([]insolar.Reference, error)
+
+	Heavy(ctx context.Context, pulse insolar.PulseNumber) (*insolar.Reference, error)
+
+	IsBeyondLimit(ctx context.Context, currentPN, targetPN insolar.PulseNumber) (bool, error)
+	NodeForJet(ctx context.Context, jetID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error)
+
+	// NodeForObject calculates a node (LME or heavy) for a specific jet for a specific pulseNumber
+	NodeForObject(ctx context.Context, objectID insolar.ID, rootPN, targetPN insolar.PulseNumber) (*insolar.Reference, error)
+}
+
 // Parent returns a parent of the jet or jet itself if depth of provided JetID is zero.
 func Parent(id insolar.JetID) insolar.JetID {
 	depth, prefix := id.Depth(), id.Prefix()

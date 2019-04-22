@@ -23,7 +23,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/ledger/storage/node"
+	"github.com/insolar/insolar/insolar/node"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
@@ -39,13 +39,13 @@ func TestJetTreeUpdater_otherNodesForPulse(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
-	jc := testutils.NewJetCoordinatorMock(mc)
+	jc := NewCoordinatorMock(mc)
 	ans := node.NewAccessorMock(mc)
 	js := NewStorageMock(mc)
 	jtu := &fetcher{
-		Nodes:          ans,
-		JetStorage:     js,
-		JetCoordinator: jc,
+		Nodes:       ans,
+		JetStorage:  js,
+		coordinator: jc,
 	}
 
 	t.Run("active nodes storage returns error", func(t *testing.T) {
@@ -123,15 +123,15 @@ func TestJetTreeUpdater_fetchActualJetFromOtherNodes(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
-	jc := testutils.NewJetCoordinatorMock(mc)
+	jc := NewCoordinatorMock(mc)
 	ans := node.NewAccessorMock(mc)
 	js := NewStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &fetcher{
-		Nodes:          ans,
-		JetStorage:     js,
-		JetCoordinator: jc,
-		MessageBus:     mb,
+		Nodes:       ans,
+		JetStorage:  js,
+		coordinator: jc,
+		MessageBus:  mb,
 	}
 
 	meRef := testutils.RandomRef()
@@ -187,16 +187,16 @@ func TestJetTreeUpdater_fetchJet(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
-	jc := testutils.NewJetCoordinatorMock(mc)
+	jc := NewCoordinatorMock(mc)
 	ans := node.NewAccessorMock(mc)
 	js := NewStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &fetcher{
-		Nodes:          ans,
-		JetStorage:     js,
-		JetCoordinator: jc,
-		MessageBus:     mb,
-		sequencer:      map[seqKey]*seqEntry{},
+		Nodes:       ans,
+		JetStorage:  js,
+		coordinator: jc,
+		MessageBus:  mb,
+		sequencer:   map[seqKey]*seqEntry{},
 	}
 
 	target := testutils.RandomID()
@@ -242,16 +242,16 @@ func TestJetTreeUpdater_Concurrency(t *testing.T) {
 	mc := minimock.NewController(t)
 	defer mc.Finish()
 
-	jc := testutils.NewJetCoordinatorMock(mc)
+	jc := NewCoordinatorMock(mc)
 	ans := node.NewAccessorMock(mc)
 	js := NewStorageMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	jtu := &fetcher{
-		Nodes:          ans,
-		JetStorage:     js,
-		JetCoordinator: jc,
-		MessageBus:     mb,
-		sequencer:      map[seqKey]*seqEntry{},
+		Nodes:       ans,
+		JetStorage:  js,
+		coordinator: jc,
+		MessageBus:  mb,
+		sequencer:   map[seqKey]*seqEntry{},
 	}
 
 	meRef := testutils.RandomRef()

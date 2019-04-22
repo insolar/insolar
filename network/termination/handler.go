@@ -55,8 +55,8 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/pulse"
 
 	"github.com/insolar/insolar/insolar"
 )
