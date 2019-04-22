@@ -280,3 +280,7 @@ func (id *ID) DebugString() string {
 
 	return fmt.Sprintf("[%d | %s]", id.Pulse(), id.String())
 }
+
+var (
+	DomainID = *NewID(0, nil)
+)

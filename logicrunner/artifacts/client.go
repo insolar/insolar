@@ -21,8 +21,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/messagebus"
 
 	"github.com/pkg/errors"
@@ -33,12 +33,11 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/object"
 )
 
 const (
 	getChildrenChunkSize = 10 * 1000
-	jetMissRetryCount    = 10
 )
 
 // Client provides concrete API to storage for processing module.
@@ -47,7 +46,7 @@ type client struct {
 	DefaultBus                 insolar.MessageBus                 `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	PulseAccessor              pulse.Accessor                     `inject:""`
-	JetCoordinator             insolar.JetCoordinator             `inject:""`
+	JetCoordinator             jet.Coordinator                    `inject:""`
 
 	getChildrenChunkSize int
 	senders              *messagebus.Senders
