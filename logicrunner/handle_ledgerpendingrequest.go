@@ -37,6 +37,9 @@ func (p *GetLedgerPendingRequest) Present(ctx context.Context, f flow.Flow) erro
 
 	lr := p.dep.lr
 	es := lr.getExecStateFromRef(ctx, p.Message.Payload)
+	if es == nil {
+		return nil
+	}
 
 	es.getLedgerPendingMutex.Lock()
 	defer es.getLedgerPendingMutex.Unlock()

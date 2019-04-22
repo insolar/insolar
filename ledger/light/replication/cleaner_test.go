@@ -105,7 +105,7 @@ func TestCleaner_clean(t *testing.T) {
 	go cleaner.clean(ctx)
 	cleaner.pulseForClean <- inputPulse.PulseNumber
 
-	ctrl.Wait(10 * time.Millisecond)
+	ctrl.Wait(time.Minute)
 }
 
 func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
@@ -145,5 +145,5 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, limit)
 	go cleaner.NotifyAboutPulse(ctx, inputPulse.PulseNumber)
 
-	ctrl.Wait(10 * time.Millisecond)
+	ctrl.Wait(time.Minute)
 }

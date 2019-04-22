@@ -133,7 +133,7 @@ func (st *ObjectState) WrapError(err error, message string) error {
 
 func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
-	wmMsg.SetContext(ctx)
+	wmMsg.Metadata.Set("TraceID", inslogger.TraceID(ctx))
 	wmMsg.Metadata.Set(MessageTypeField, msgType)
 
 	return wmMsg
@@ -607,12 +607,12 @@ func (lr *LogicRunner) getExecStateFromRef(ctx context.Context, rawRef []byte) *
 	os := lr.UpsertObjectState(ref)
 
 	os.Lock()
+	defer os.Unlock()
 	if os.ExecutionState == nil {
-		inslogger.FromContext(ctx).Warn("[ ProcessExecutionQueue ] got not existing reference. It's strange")
+		inslogger.FromContext(ctx).Info("[ ProcessExecutionQueue ] got not existing reference. It's strange")
 		return nil
 	}
 	es := os.ExecutionState
-	os.Unlock()
 
 	return es
 }
