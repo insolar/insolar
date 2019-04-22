@@ -3,7 +3,7 @@ package recentstorage
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "PendingStorage" can be found in github.com/insolar/insolar/ledger/recentstorage
+The original interface "PendingStorage" can be found in github.com/insolar/insolar/ledger/light/recentstorage
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//PendingStorageMock implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage
+//PendingStorageMock implements github.com/insolar/insolar/ledger/light/recentstorage.PendingStorage
 type PendingStorageMock struct {
 	t minimock.Tester
 
@@ -46,7 +46,7 @@ type PendingStorageMock struct {
 	SetContextToObjectMock       mPendingStorageMockSetContextToObject
 }
 
-//NewPendingStorageMock returns a mock for github.com/insolar/insolar/ledger/recentstorage.PendingStorage
+//NewPendingStorageMock returns a mock for github.com/insolar/insolar/ledger/light/recentstorage.PendingStorage
 func NewPendingStorageMock(t minimock.Tester) *PendingStorageMock {
 	m := &PendingStorageMock{t: t}
 
@@ -123,7 +123,7 @@ func (m *mPendingStorageMockAddPendingRequest) Set(f func(p context.Context, p1 
 	return m.mock
 }
 
-//AddPendingRequest implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
+//AddPendingRequest implements github.com/insolar/insolar/ledger/light/recentstorage.PendingStorage interface
 func (m *PendingStorageMock) AddPendingRequest(p context.Context, p1 insolar.ID, p2 insolar.ID) {
 	counter := atomic.AddUint64(&m.AddPendingRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.AddPendingRequestCounter, 1)
@@ -250,7 +250,7 @@ func (m *mPendingStorageMockGetRequests) Set(f func() (r map[insolar.ID]PendingO
 	return m.mock
 }
 
-//GetRequests implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
+//GetRequests implements github.com/insolar/insolar/ledger/light/recentstorage.PendingStorage interface
 func (m *PendingStorageMock) GetRequests() (r map[insolar.ID]PendingObjectContext) {
 	counter := atomic.AddUint64(&m.GetRequestsPreCounter, 1)
 	defer atomic.AddUint64(&m.GetRequestsCounter, 1)
@@ -389,7 +389,7 @@ func (m *mPendingStorageMockGetRequestsForObject) Set(f func(p insolar.ID) (r []
 	return m.mock
 }
 
-//GetRequestsForObject implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
+//GetRequestsForObject implements github.com/insolar/insolar/ledger/light/recentstorage.PendingStorage interface
 func (m *PendingStorageMock) GetRequestsForObject(p insolar.ID) (r []insolar.ID) {
 	counter := atomic.AddUint64(&m.GetRequestsForObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.GetRequestsForObjectCounter, 1)
@@ -529,7 +529,7 @@ func (m *mPendingStorageMockRemovePendingRequest) Set(f func(p context.Context, 
 	return m.mock
 }
 
-//RemovePendingRequest implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
+//RemovePendingRequest implements github.com/insolar/insolar/ledger/light/recentstorage.PendingStorage interface
 func (m *PendingStorageMock) RemovePendingRequest(p context.Context, p1 insolar.ID, p2 insolar.ID) {
 	counter := atomic.AddUint64(&m.RemovePendingRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.RemovePendingRequestCounter, 1)
@@ -654,7 +654,7 @@ func (m *mPendingStorageMockSetContextToObject) Set(f func(p context.Context, p1
 	return m.mock
 }
 
-//SetContextToObject implements github.com/insolar/insolar/ledger/recentstorage.PendingStorage interface
+//SetContextToObject implements github.com/insolar/insolar/ledger/light/recentstorage.PendingStorage interface
 func (m *PendingStorageMock) SetContextToObject(p context.Context, p1 insolar.ID, p2 PendingObjectContext) {
 	counter := atomic.AddUint64(&m.SetContextToObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.SetContextToObjectCounter, 1)

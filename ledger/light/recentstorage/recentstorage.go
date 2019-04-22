@@ -22,7 +22,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.Provider -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/recentstorage.Provider -o ./ -s _mock.go
 
 // Provider provides different types of storages for a specific jet
 type Provider interface {
@@ -35,7 +35,7 @@ type Provider interface {
 	RemovePendingStorage(ctx context.Context, id insolar.ID)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/recentstorage.PendingStorage -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/recentstorage.PendingStorage -o ./ -s _mock.go
 type PendingStorage interface {
 	AddPendingRequest(ctx context.Context, obj, req insolar.ID)
 	SetContextToObject(ctx context.Context, obj insolar.ID, objContext PendingObjectContext)

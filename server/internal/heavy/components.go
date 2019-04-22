@@ -32,9 +32,8 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/keystore"
-	"github.com/insolar/insolar/ledger/heavy"
+	"github.com/insolar/insolar/ledger/heavy/handler"
 	"github.com/insolar/insolar/ledger/heavy/pulsemanager"
-	"github.com/insolar/insolar/ledger/heavyserver"
 	"github.com/insolar/insolar/ledger/jetcoordinator"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/drop"
@@ -179,16 +178,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	}
 
 	var (
-		HeavyComp    []interface{}
-		Sync         insolar.HeavySync
-		Drops        drop.Modifier
-		Blobs        blob.Modifier
-		Indices      object.IndexModifier
 		Coordinator  insolar.JetCoordinator
-		Records      object.RecordAccessor
 		Pulses       pulse.Accessor
 		Jets         jet.Storage
 		PulseManager insolar.PulseManager
+		Handler      *handler.Handler
 	)
 	{
 		conf := cfg.Ledger
@@ -202,6 +196,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		records := object.NewRecordDB(db)
 		nodes := node.NewStorage()
 		jets := jet.NewStore()
+		indexes := object.NewIndexDB(db)
+		blobs := blob.NewDB(db)
+		drops := drop.NewDB(db)
 
 		cord := jetcoordinator.NewJetCoordinator(conf.LightChainLimit)
 		cord.PulseCalculator = pulses
@@ -218,29 +215,31 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		pm.Nodes = nodes
 		pm.PulseAppender = pulses
 
-		Indices = object.NewIndexDB(db)
-		Blobs = blob.NewDB(db)
-		Drops = drop.NewDB(db)
-		Sync = heavyserver.NewSync(records)
-		HeavyComp = heavy.Components()
+		h := handler.New()
+		h.RecordAccessor = records
+		h.RecordModifier = records
+		h.JetCoordinator = Coordinator
+		h.IndexAccessor = indexes
+		h.IndexModifier = indexes
+		h.Bus = Bus
+		h.BlobAccessor = blobs
+		h.BlobModifier = blobs
+		h.DropModifier = drops
+		h.PCS = CryptoScheme
+
 		Coordinator = cord
-		Records = records
 		Pulses = pulses
 		Jets = jets
 		PulseManager = pm
+		Handler = h
 	}
 
 	c.cmp.Inject(
+		Handler,
 		PulseManager,
 		Jets,
 		Pulses,
-		Records,
 		Coordinator,
-		HeavyComp[0],
-		Sync,
-		Drops,
-		Blobs,
-		Indices,
 		metricsHandler,
 		Bus,
 		Requester,

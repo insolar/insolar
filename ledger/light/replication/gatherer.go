@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/object"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/replication.DataGatherer -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/replication.DataGatherer -o ./ -s _mock.go
 
 // DataGatherer is an inteface, that provides methods for gathering a heavy payload for a provided pulse
 type DataGatherer interface {

@@ -3,7 +3,7 @@ package recentstorage
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Provider" can be found in github.com/insolar/insolar/ledger/recentstorage
+The original interface "Provider" can be found in github.com/insolar/insolar/ledger/light/recentstorage
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//ProviderMock implements github.com/insolar/insolar/ledger/recentstorage.Provider
+//ProviderMock implements github.com/insolar/insolar/ledger/light/recentstorage.Provider
 type ProviderMock struct {
 	t minimock.Tester
 
@@ -41,7 +41,7 @@ type ProviderMock struct {
 	RemovePendingStorageMock       mProviderMockRemovePendingStorage
 }
 
-//NewProviderMock returns a mock for github.com/insolar/insolar/ledger/recentstorage.Provider
+//NewProviderMock returns a mock for github.com/insolar/insolar/ledger/light/recentstorage.Provider
 func NewProviderMock(t minimock.Tester) *ProviderMock {
 	m := &ProviderMock{t: t}
 
@@ -117,7 +117,7 @@ func (m *mProviderMockClonePendingStorage) Set(f func(p context.Context, p1 inso
 	return m.mock
 }
 
-//ClonePendingStorage implements github.com/insolar/insolar/ledger/recentstorage.Provider interface
+//ClonePendingStorage implements github.com/insolar/insolar/ledger/light/recentstorage.Provider interface
 func (m *ProviderMock) ClonePendingStorage(p context.Context, p1 insolar.ID, p2 insolar.ID) {
 	counter := atomic.AddUint64(&m.ClonePendingStoragePreCounter, 1)
 	defer atomic.AddUint64(&m.ClonePendingStorageCounter, 1)
@@ -244,7 +244,7 @@ func (m *mProviderMockCount) Set(f func() (r int)) *ProviderMock {
 	return m.mock
 }
 
-//Count implements github.com/insolar/insolar/ledger/recentstorage.Provider interface
+//Count implements github.com/insolar/insolar/ledger/light/recentstorage.Provider interface
 func (m *ProviderMock) Count() (r int) {
 	counter := atomic.AddUint64(&m.CountPreCounter, 1)
 	defer atomic.AddUint64(&m.CountCounter, 1)
@@ -384,7 +384,7 @@ func (m *mProviderMockGetPendingStorage) Set(f func(p context.Context, p1 insola
 	return m.mock
 }
 
-//GetPendingStorage implements github.com/insolar/insolar/ledger/recentstorage.Provider interface
+//GetPendingStorage implements github.com/insolar/insolar/ledger/light/recentstorage.Provider interface
 func (m *ProviderMock) GetPendingStorage(p context.Context, p1 insolar.ID) (r PendingStorage) {
 	counter := atomic.AddUint64(&m.GetPendingStoragePreCounter, 1)
 	defer atomic.AddUint64(&m.GetPendingStorageCounter, 1)
@@ -523,7 +523,7 @@ func (m *mProviderMockRemovePendingStorage) Set(f func(p context.Context, p1 ins
 	return m.mock
 }
 
-//RemovePendingStorage implements github.com/insolar/insolar/ledger/recentstorage.Provider interface
+//RemovePendingStorage implements github.com/insolar/insolar/ledger/light/recentstorage.Provider interface
 func (m *ProviderMock) RemovePendingStorage(p context.Context, p1 insolar.ID) {
 	counter := atomic.AddUint64(&m.RemovePendingStoragePreCounter, 1)
 	defer atomic.AddUint64(&m.RemovePendingStorageCounter, 1)
