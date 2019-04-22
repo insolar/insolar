@@ -26,7 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/storage"
 	"github.com/insolar/insolar/ledger/storage/blob"
 	"github.com/insolar/insolar/ledger/storage/object"
@@ -48,7 +48,8 @@ type UpdateObject struct {
 		RecentStorageProvider      recentstorage.Provider
 		PlatformCryptographyScheme insolar.PlatformCryptographyScheme
 		IDLocker                   storage.IDLocker
-		IndexAccessor              object.IndexAccessor
+		IndexStorage               object.IndexStorage
+		IndexStateModifier         object.ExtendedIndexModifier
 	}
 }
 
@@ -71,7 +72,7 @@ func (p *UpdateObject) handle(ctx context.Context) (insolar.Reply, error) {
 		return nil, errors.New("wrong object state record")
 	}
 
-	p.Dep.RecentStorageProvider.GetIndexStorage(ctx, insolar.ID(p.JetID)).AddObject(ctx, *p.Message.Object.Record())
+	p.Dep.IndexStateModifier.SetUsageForPulse(ctx, *p.Message.Object.Record(), p.Parcel.Pulse())
 
 	calculatedID := object.CalculateIDForBlob(p.Dep.PlatformCryptographyScheme, p.Parcel.Pulse(), p.Message.Memory)
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
@@ -91,7 +92,7 @@ func (p *UpdateObject) handle(ctx context.Context) (insolar.Reply, error) {
 	p.Dep.IDLocker.Lock(p.Message.Object.Record())
 	defer p.Dep.IDLocker.Unlock(p.Message.Object.Record())
 
-	idx, err := p.Dep.IndexAccessor.ForID(ctx, *p.Message.Object.Record())
+	idx, err := p.Dep.IndexStorage.ForID(ctx, *p.Message.Object.Record())
 	// No index on our node.
 	if err == object.ErrIndexNotFound {
 		if state.ID() == object.StateActivation {
@@ -147,7 +148,7 @@ func (p *UpdateObject) handle(ctx context.Context) (insolar.Reply, error) {
 
 	idx.LatestUpdate = p.Parcel.Pulse()
 	idx.JetID = p.JetID
-	err = p.Dep.IndexModifier.Set(ctx, *p.Message.Object.Record(), idx)
+	err = p.Dep.IndexStorage.Set(ctx, *p.Message.Object.Record(), idx)
 	if err != nil {
 		return nil, err
 	}

@@ -137,14 +137,14 @@ func NewMessageHandler(
 		},
 		UpdateObject: func(p *proc.UpdateObject) *proc.UpdateObject {
 			p.Dep.RecordModifier = h.RecordModifier
-			p.Dep.IndexModifier = h.IndexModifier
 			p.Dep.Bus = h.Bus
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.BlobModifier = h.BlobModifier
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
 			p.Dep.IDLocker = h.IDLocker
-			p.Dep.IndexAccessor = h.IndexAccessor
+			p.Dep.IndexStateModifier = h.IndexStateModifier
+			p.Dep.IndexStorage = h.IndexStorage
 			return p
 		},
 	}
