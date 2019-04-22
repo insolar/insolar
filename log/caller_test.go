@@ -18,12 +18,24 @@ package log
 
 import (
 	"bytes"
+	"encoding/json"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
+
+type loggerField struct {
+	Caller string
+}
+
+func logFields(t *testing.T, b []byte) loggerField {
+	var lf loggerField
+	err := json.Unmarshal(b, &lf)
+	require.NoError(t, err)
+	return lf
+}
 
 // XXX: beware test result depends on it's file name.
 func TestLog_ZerologCaller(t *testing.T) {
@@ -36,10 +48,22 @@ func TestLog_ZerologCaller(t *testing.T) {
 
 	var b bytes.Buffer
 	l = l.WithOutput(&b)
-
 	l.Info("test")
-	assert.Contains(t, b.String(), "log/caller_test.go:",
+
+	lf := logFields(t, b.Bytes())
+
+	assert.Regexp(t, "^log/caller_test.go:", lf.Caller,
 		"log contains call place")
-	assert.NotContains(t, b.String(), "github.com/insolar/insolar",
+	assert.NotContains(t, "github.com/insolar/insolar", lf.Caller,
 		"log not contains package name")
+}
+
+func TestLog_GlobalCaller(t *testing.T) {
+	var b bytes.Buffer
+	GlobalLogger = GlobalLogger.WithOutput(&b)
+
+	Info("test")
+	lf := logFields(t, b.Bytes())
+	assert.Regexp(t, "^log/caller_test.go:", lf.Caller,
+		"log contains call place")
 }
