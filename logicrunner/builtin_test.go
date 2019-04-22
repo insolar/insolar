@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/recentstorage"
+	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/builtin/contract/helloworld"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
@@ -70,7 +70,7 @@ func TestBareHelloworld(t *testing.T) {
 	mb := testmessagebus.NewTestMessageBus(t)
 
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	l, db, cleaner := artifacts.TmpLedger(
+	l := artifacts.TmpLedger(
 		t,
 		"",
 		insolar.Components{
@@ -79,7 +79,6 @@ func TestBareHelloworld(t *testing.T) {
 			MessageBus:  mb,
 		},
 	)
-	defer cleaner()
 
 	recent := recentstorage.NewProviderMock(t)
 
@@ -104,7 +103,7 @@ func TestBareHelloworld(t *testing.T) {
 	cm := &component.Manager{}
 	cm.Register(scheme)
 	cm.Register(l.GetPulseManager(), l.GetArtifactManager(), l.GetJetCoordinator())
-	cm.Inject(db, nk, recent, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
+	cm.Inject(nk, recent, l, lr, nw, mb, delegationTokenFactory, parcelFactory, mock)
 	err = cm.Init(ctx)
 	assert.NoError(t, err)
 	err = cm.Start(ctx)

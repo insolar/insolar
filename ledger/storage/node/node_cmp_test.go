@@ -19,7 +19,7 @@ package node_test
 import (
 	"testing"
 
-	"github.com/google/gofuzz"
+	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/ledger/storage/node"
@@ -69,7 +69,7 @@ func TestNode(t *testing.T) {
 	}
 	// Deletes nodes.
 	{
-		storage.Delete(pulse)
+		storage.DeleteForPN(pulse)
 		result, err := storage.All(pulse)
 		assert.Equal(t, node.ErrNoNodes, err)
 		assert.Nil(t, result)

@@ -21,6 +21,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"go.opencensus.io/stats"
 )
 
 type dropKey struct {
@@ -66,15 +67,22 @@ func (m *dropStorageMemory) Set(ctx context.Context, drop Drop) error {
 	}
 	m.drops[key] = drop
 
+	stats.Record(ctx,
+		statDropInMemoryAddedCount.M(1),
+	)
+
 	return nil
 }
 
-// Delete methods removes a drop from a memory storage.
-func (m *dropStorageMemory) Delete(pulse insolar.PulseNumber) {
+// DeleteForPN methods removes a drop from a memory storage.
+func (m *dropStorageMemory) DeleteForPN(ctx context.Context, pulse insolar.PulseNumber) {
 	m.lock.Lock()
 	for key := range m.drops {
 		if key.pulse == pulse {
 			delete(m.drops, key)
+			stats.Record(ctx,
+				statDropInMemoryRemovedCount.M(1),
+			)
 		}
 	}
 	m.lock.Unlock()

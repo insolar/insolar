@@ -28,15 +28,6 @@ func zerohash() []byte {
 	return b
 }
 
-func randhash() []byte {
-	b := zerohash()
-	_, err := rand.Read(b)
-	if err != nil {
-		panic(err)
-	}
-	return b
-}
-
 func hexhash(hash string) []byte {
 	b := zerohash()
 	if len(hash)%2 == 1 {
@@ -48,11 +39,4 @@ func hexhash(hash string) []byte {
 	}
 	_ = copy(b, h)
 	return b
-}
-
-func referenceWithHashes(domainhash, recordhash string) insolar.Reference {
-	dh := hexhash(domainhash)
-	rh := hexhash(recordhash)
-
-	return *insolar.NewReference(*insolar.NewID(0, dh), *insolar.NewID(0, rh))
 }

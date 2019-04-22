@@ -47,7 +47,7 @@ func (r *GenesisRecord) ID() StateID {
 	return StateActivation
 }
 
-// GetMemory returns state memory.
+// GetMemory returns state indexStorage.
 func (*GenesisRecord) GetMemory() *insolar.ID {
 	return nil
 }

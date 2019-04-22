@@ -16,7 +16,6 @@ PULSARD=$BIN_DIR/pulsard
 PULSEWATCHER=$BIN_DIR/pulsewatcher
 CONTRACT_STORAGE=contractstorage
 LEDGER_DIR=data
-LEDGER_NEW_DIR=new-data
 CONFIGS_DIR=configs
 BASE_DIR=scripts/insolard
 KEYS_FILE=$BASE_DIR/$CONFIGS_DIR/bootstrap_keys.json
@@ -107,7 +106,6 @@ clear_dirs()
     set -x
     rm -rfv $CONTRACT_STORAGE/*
     rm -rfv $LEDGER_DIR/*
-    rm -rfv $LEDGER_NEW_DIR/*
     rm -rfv $DISCOVERY_NODES_DATA/*
     rm -rfv $GENERATED_CONFIGS_DIR/*
     rm -rfv $INSGORUND_DATA/*
@@ -120,7 +118,6 @@ create_required_dirs()
     echo "create_required_dirs() starts ..."
     mkdir -vp $CONTRACT_STORAGE
     mkdir -vp $LEDGER_DIR
-    mkdir -vp $LEDGER_NEW_DIR
     mkdir -vp $DISCOVERY_NODES_DATA/certs
     mkdir -vp $GENERATED_CONFIGS_DIR
     mkdir -vp $INSGORUND_DATA
@@ -129,7 +126,6 @@ create_required_dirs()
     for node in "${DISCOVERY_NODES[@]}"
     do
         mkdir -vp $node/data
-        mkdir -vp $node/new-data
     done
 
     mkdir -p scripts/insolard/$CONFIGS_DIR
@@ -257,7 +253,6 @@ copy_data()
     for node in "${DISCOVERY_NODES[@]}"
     do
         cp -v $LEDGER_DIR/* $node/data
-        cp -v $LEDGER_NEW_DIR/* $node/new-data
     done
     echo "copy_data() end."
 }

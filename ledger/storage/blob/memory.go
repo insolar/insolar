@@ -26,21 +26,21 @@ import (
 	"github.com/insolar/insolar/internal/ledger/store"
 )
 
-// StorageMemory is an in-memory struct for blob-storage.
+// StorageMemory is an in-blobsStor struct for blob-storage.
 type StorageMemory struct {
-	jetIndex         store.JetIndexModifier
+	jetIndexModifier store.JetIndexModifier
 	jetIndexAccessor store.JetIndexAccessor
 
-	lock   sync.RWMutex
-	memory map[insolar.ID]Blob
+	lock      sync.RWMutex
+	blobsStor map[insolar.ID]Blob
 }
 
 // NewStorageMemory creates a new instance of Storage.
 func NewStorageMemory() *StorageMemory {
 	ji := store.NewJetIndex()
 	return &StorageMemory{
-		memory:           map[insolar.ID]Blob{},
-		jetIndex:         ji,
+		blobsStor:        map[insolar.ID]Blob{},
+		jetIndexModifier: ji,
 		jetIndexAccessor: ji,
 	}
 }
@@ -50,7 +50,7 @@ func (s *StorageMemory) ForID(ctx context.Context, id insolar.ID) (blob Blob, er
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	b, ok := s.memory[id]
+	b, ok := s.blobsStor[id]
 	if !ok {
 		err = ErrNotFound
 		return
@@ -66,15 +66,15 @@ func (s *StorageMemory) Set(ctx context.Context, id insolar.ID, blob Blob) error
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	_, ok := s.memory[id]
+	_, ok := s.blobsStor[id]
 	if ok {
 		return ErrOverride
 	}
 
 	b := Clone(blob)
 
-	s.memory[id] = b
-	s.jetIndex.Add(id, b.JetID)
+	s.blobsStor[id] = b
+	s.jetIndexModifier.Add(id, b.JetID)
 
 	blobSize := int64(len(b.Value))
 
@@ -91,27 +91,33 @@ func (s *StorageMemory) ForPulse(ctx context.Context, jetID insolar.JetID, pn in
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
-	ids := s.jetIndexAccessor.For(jetID, pn)
+	ids := s.jetIndexAccessor.For(jetID)
 	var res []Blob
 	for id := range ids {
-		b := s.memory[id]
-		res = append(res, b)
+		if id.Pulse() == pn {
+			b := s.blobsStor[id]
+			res = append(res, b)
+		}
 	}
 
 	return res
 }
 
-// Delete cleans blobs for a provided pulse from memory
-func (s *StorageMemory) Delete(ctx context.Context, pulse insolar.PulseNumber) {
+// DeleteForPN cleans blobs for a provided pulse from blobsStor
+func (s *StorageMemory) DeleteForPN(ctx context.Context, pulse insolar.PulseNumber) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	for id, blob := range s.memory {
+	for id, blob := range s.blobsStor {
 		if id.Pulse() != pulse {
 			continue
 		}
 
-		s.jetIndex.Delete(id, blob.JetID)
-		delete(s.memory, id)
+		s.jetIndexModifier.Delete(id, blob.JetID)
+		delete(s.blobsStor, id)
+
+		stats.Record(ctx,
+			statBlobInMemoryRemovedCount.M(1),
+		)
 	}
 }

@@ -24,8 +24,6 @@ import (
 type Storage struct {
 	// DataDirectory is a directory where database's files live.
 	DataDirectory string
-	// DataDirectoryNewDB is a directory where new database's files live.
-	DataDirectoryNewDB string
 	// TxRetriesOnConflict defines how many retries on transaction conflicts
 	// storage update methods should do.
 	TxRetriesOnConflict int
@@ -33,12 +31,6 @@ type Storage struct {
 
 // PulseManager holds configuration for PulseManager.
 type PulseManager struct {
-	// HeavySyncEnabled enables replication to heavy (could be disabled for testing purposes)
-	HeavySyncEnabled bool
-	// HeavySyncMessageLimit soft limit of single message for replication to heavy.
-	HeavySyncMessageLimit int
-	// Backoff configures retry backoff algorithm for Heavy Sync
-	HeavyBackoff Backoff
 	// SplitThreshold is a drop size threshold in bytes to perform split.
 	SplitThreshold uint64
 }
@@ -50,12 +42,8 @@ type Backoff struct {
 	Jitter bool
 	// Min and Max are the minimum and maximum values of the counter
 	Min, Max time.Duration
-}
-
-// RecentStorage holds configuration for RecentStorage
-type RecentStorage struct {
-	// Default TTL is a value of default ttl for redirects
-	DefaultTTL int
+	// MaxAttempts holds max count of attempts for a instance of Backoff
+	MaxAttempts int
 }
 
 // Exporter holds configuration of Exporter
@@ -70,8 +58,6 @@ type Ledger struct {
 	Storage Storage
 	// PulseManager holds configuration for PulseManager.
 	PulseManager PulseManager
-	// RecentStorage holds configuration for RecentStorage
-	RecentStorage RecentStorage
 
 	// common/sharable values:
 
@@ -94,26 +80,12 @@ func NewLedger() Ledger {
 	return Ledger{
 		Storage: Storage{
 			DataDirectory:       "./data",
-			DataDirectoryNewDB:  "./new-data",
 			TxRetriesOnConflict: 3,
 		},
 
 		PulseManager: PulseManager{
-			HeavySyncEnabled:      true,
-			HeavySyncMessageLimit: 1 << 20, // 1Mb
-			HeavyBackoff: Backoff{
-				Jitter: true,
-				Min:    200 * time.Millisecond,
-				Max:    2 * time.Second,
-				Factor: 2,
-			},
 			SplitThreshold: 10 * 100, // 10 megabytes.
 		},
-
-		RecentStorage: RecentStorage{
-			DefaultTTL: 10,
-		},
-
 		LightChainLimit: 5, // 5 pulses
 
 		Exporter: Exporter{

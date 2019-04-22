@@ -36,6 +36,9 @@ type ProcessExecutionQueue struct {
 func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error {
 	lr := p.dep.lr
 	es := lr.getExecStateFromRef(ctx, p.Message.Payload)
+	if es == nil {
+		return nil
+	}
 
 	for {
 		es.Lock()

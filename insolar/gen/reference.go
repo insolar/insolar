@@ -45,6 +45,21 @@ func JetID() (jetID insolar.JetID) {
 	return
 }
 
+// UniqueJetIDs generates several different jet ids
+func UniqueJetIDs(jets ...*insolar.JetID) {
+	seen := make(map[insolar.JetID]struct{})
+
+	for _, j := range jets {
+		for {
+			*j = JetID()
+			if _, ok := seen[*j]; !ok {
+				break
+			}
+		}
+		seen[*j] = struct{}{}
+	}
+}
+
 // Reference generates random reference.
 func Reference() (ref insolar.Reference) {
 	fuzz.New().NilChance(0).Fuzz(&ref)
