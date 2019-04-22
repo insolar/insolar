@@ -372,7 +372,7 @@ echo "start discovery nodes ..."
 for i in `seq 1 $NUM_DISCOVERY_NODES`
 do
     set -x
-    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD \
+    $INSOLARD \
         --config ${DISCOVERY_NODES_DATA}${i}/insolard.yaml \
         --trace &> ${DISCOVERY_NODE_LOGS}${i}/output.log &
     { set +x; } 2>/dev/null
