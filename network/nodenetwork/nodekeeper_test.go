@@ -52,8 +52,8 @@ package nodenetwork
 
 import (
 	"context"
-	"crypto"
 	"errors"
+	"github.com/insolar/x-crypto"
 	"math/rand"
 	"testing"
 
