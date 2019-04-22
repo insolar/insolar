@@ -33,9 +33,10 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/handler"
+	"github.com/insolar/insolar/insolar/jet"
 	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -148,7 +149,7 @@ type LogicRunner struct {
 	ParcelFactory              message.ParcelFactory              `inject:""`
 	PulseAccessor              pulse.Accessor                     `inject:""`
 	ArtifactManager            artifacts.Client                   `inject:""`
-	JetCoordinator             insolar.JetCoordinator             `inject:""`
+	JetCoordinator             jet.Coordinator                    `inject:""`
 
 	Executors    [insolar.MachineTypesLastID]insolar.MachineLogicExecutor
 	machinePrefs []insolar.MachineType
@@ -227,6 +228,8 @@ func initHandlers(lr *LogicRunner) error {
 			inslogger.FromContext(ctx).Error("Error while running router", err)
 		}
 	}()
+	<- router.Running()
+
 	lr.router = router
 
 	return nil

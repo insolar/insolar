@@ -20,20 +20,21 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/ledger/blob"
+	"github.com/insolar/insolar/ledger/drop"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/object"
 )
 
 type Handler struct {
 	Bus            insolar.MessageBus
-	JetCoordinator insolar.JetCoordinator
+	JetCoordinator jet.Coordinator
 	PCS            insolar.PlatformCryptographyScheme
 	BlobAccessor   blob.Accessor
 	BlobModifier   blob.Modifier

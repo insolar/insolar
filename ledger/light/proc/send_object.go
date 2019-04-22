@@ -25,11 +25,11 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/insolar/insolar/ledger/storage/object"
-	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/ledger/blob"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/pkg/errors"
 )
@@ -40,7 +40,7 @@ type SendObject struct {
 	Index   object.Lifeline
 
 	Dep struct {
-		Coordinator    insolar.JetCoordinator
+		Coordinator    jet.Coordinator
 		Jets           jet.Storage
 		JetUpdater     jet.Fetcher
 		RecordAccessor object.RecordAccessor

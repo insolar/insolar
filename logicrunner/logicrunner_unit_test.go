@@ -26,9 +26,10 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -48,7 +49,7 @@ type LogicRunnerCommonTestSuite struct {
 	ctx context.Context
 	am  *artifacts.ClientMock
 	mb  *testutils.MessageBusMock
-	jc  *testutils.JetCoordinatorMock
+	jc  *jet.CoordinatorMock
 	lr  *LogicRunner
 	es  ExecutionState
 	ps  *pulse.AccessorMock
@@ -64,7 +65,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	suite.mc = minimock.NewController(suite.T())
 	suite.am = artifacts.NewClientMock(suite.mc)
 	suite.mb = testutils.NewMessageBusMock(suite.mc)
-	suite.jc = testutils.NewJetCoordinatorMock(suite.mc)
+	suite.jc = jet.NewCoordinatorMock(suite.mc)
 	suite.ps = pulse.NewAccessorMock(suite.mc)
 	suite.nn = network.NewNodeNetworkMock(suite.mc)
 

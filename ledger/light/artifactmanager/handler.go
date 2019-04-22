@@ -33,19 +33,18 @@ import (
 	"github.com/insolar/insolar/insolar/flow/handler"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/node"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
+	"github.com/insolar/insolar/ledger/blob"
+	"github.com/insolar/insolar/ledger/drop"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
-	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/node"
-	"github.com/insolar/insolar/ledger/storage/object"
-	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/ledger/object"
 )
 
 // MessageHandler processes messages for local storage interaction.
@@ -53,7 +52,7 @@ type MessageHandler struct {
 	RecentStorageProvider      recentstorage.Provider             `inject:""`
 	Bus                        insolar.MessageBus                 `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
-	JetCoordinator             insolar.JetCoordinator             `inject:""`
+	JetCoordinator             jet.Coordinator                    `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
 	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
 	JetStorage                 jet.Storage                        `inject:""`
@@ -64,7 +63,7 @@ type MessageHandler struct {
 	BlobAccessor blob.Accessor `inject:""`
 	Blobs        blob.Storage  `inject:""`
 
-	IDLocker storage.IDLocker `inject:""`
+	IDLocker object.IDLocker `inject:""`
 
 	RecordModifier object.RecordModifier `inject:""`
 	RecordAccessor object.RecordAccessor `inject:""`
@@ -850,7 +849,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 	}).Info("received hot data")
 
 	err := h.DropModifier.Set(ctx, msg.Drop)
-	if err == storage.ErrOverride {
+	if err == drop.ErrOverride {
 		err = nil
 	}
 	if err != nil {

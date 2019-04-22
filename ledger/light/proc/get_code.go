@@ -22,10 +22,11 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/blob"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
 )
 
@@ -42,7 +43,7 @@ type GetCode struct {
 		Bus                    insolar.MessageBus
 		DelegationTokenFactory insolar.DelegationTokenFactory
 		RecordAccessor         object.RecordAccessor
-		Coordinator            insolar.JetCoordinator
+		Coordinator            jet.Coordinator
 		Accessor               blob.Accessor
 		BlobModifier           blob.Modifier
 	}

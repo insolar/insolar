@@ -24,11 +24,12 @@ import (
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/blob"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
@@ -52,7 +53,7 @@ func TestGetCode_handle_RecordAccessorErrNotFound_Error(t *testing.T) {
 		require.Equal(t, *gc.Code.Record(), id)
 		return record.MaterialRecord{}, object.ErrNotFound
 	}
-	coo := testutils.NewJetCoordinatorMock(t)
+	coo := jet.NewCoordinatorMock(t)
 	coo.NodeForJetFunc = func(ctx context.Context, id insolar.ID, rootPN insolar.PulseNumber, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
 		require.Equal(t, insolar.ID(jetID), id)
 		require.Equal(t, insolar.PulseNumber(42), rootPN)
@@ -93,7 +94,7 @@ func TestGetCode_handle_RecordAccessorErrNotFound(t *testing.T) {
 		return record.MaterialRecord{}, object.ErrNotFound
 	}
 	nodeRef := gen.Reference()
-	coo := testutils.NewJetCoordinatorMock(t)
+	coo := jet.NewCoordinatorMock(t)
 	coo.NodeForJetFunc = func(ctx context.Context, id insolar.ID, rootPN insolar.PulseNumber, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
 		require.Equal(t, insolar.ID(jetID), id)
 		require.Equal(t, insolar.PulseNumber(42), rootPN)
@@ -194,7 +195,7 @@ func TestGetCode_handle_AccessorErrNotFound_Error(t *testing.T) {
 		require.Equal(t, id, codeID)
 		return blob.Blob{}, blob.ErrNotFound
 	}
-	coo := testutils.NewJetCoordinatorMock(t)
+	coo := jet.NewCoordinatorMock(t)
 	coo.HeavyFunc = func(ctx context.Context, pulse insolar.PulseNumber) (*insolar.Reference, error) {
 		require.Equal(t, insolar.PulseNumber(42), pulse)
 		return nil, errors.New("test error")
@@ -235,7 +236,7 @@ func TestGetCode_handle_AccessorErrNotFound(t *testing.T) {
 		require.Equal(t, id, codeID)
 		return blob.Blob{}, blob.ErrNotFound
 	}
-	coo := testutils.NewJetCoordinatorMock(t)
+	coo := jet.NewCoordinatorMock(t)
 	heavyRef := gen.Reference()
 	coo.HeavyFunc = func(ctx context.Context, pulse insolar.PulseNumber) (*insolar.Reference, error) {
 		require.Equal(t, insolar.PulseNumber(42), pulse)

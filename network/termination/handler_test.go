@@ -56,7 +56,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/insolar/pulse"
 
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/suite"
