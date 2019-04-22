@@ -382,7 +382,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 		if err != nil {
 			return nil, err
 		}
-		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Head, heavy)
+		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Head, heavy, parcel.Pulse())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
@@ -419,7 +419,7 @@ func (h *MessageHandler) handleGetChildren(
 		if err != nil {
 			return nil, err
 		}
-		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
+		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Parent, heavy, parcel.Pulse())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
@@ -610,7 +610,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 			if err != nil {
 				return nil, err
 			}
-			idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Object, heavy)
+			idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Object, heavy, parcel.Pulse())
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to fetch index from heavy")
 			}
@@ -697,7 +697,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 		if err != nil {
 			return nil, err
 		}
-		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
+		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Parent, heavy, parcel.Pulse())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
@@ -776,7 +776,7 @@ func validateState(old object.StateID, new object.StateID) error {
 }
 
 func (h *MessageHandler) saveIndexFromHeavy(
-	ctx context.Context, jetID insolar.ID, obj insolar.Reference, heavy *insolar.Reference,
+	ctx context.Context, jetID insolar.ID, obj insolar.Reference, heavy *insolar.Reference, pn insolar.PulseNumber,
 ) (object.Lifeline, error) {
 	genericReply, err := h.Bus.Send(ctx, &message.GetObjectIndex{
 		Object: obj,
@@ -800,6 +800,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	if err != nil {
 		return object.Lifeline{}, errors.Wrap(err, "failed to save")
 	}
+	h.IndexStateModifier.SetUsageForPulse(ctx, *obj.Record(), pn)
 	return idx, nil
 }
 
