@@ -217,7 +217,7 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:dad2c954d4fb9f0fca2096f94e5361292a8795dd239c74c667c2128eb7183afa"
+  digest = "1:29da6c3ca289ef767e037a1fc9b44f770b7be7e70eafed76b3b28bbee87af5c0"
   name = "github.com/insolar/x-crypto"
   packages = [
     ".",
@@ -237,7 +237,7 @@
     "x509/pkix",
   ]
   pruneopts = "UT"
-  revision = "5f602f3a0662f0aaf37187bd9e8d5b34c1b68c27"
+  revision = "bca1b237ad1890bcfac114c84531b81dbb887867"
 
 [[projects]]
   branch = "master"
@@ -248,7 +248,6 @@
   revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
 
 [[projects]]
-  digest = "1:53e8c5c79716437e601696140e8b1801aae4204f4ec54a504333702a49572c4f"
   name = "github.com/magiconair/properties"
   packages = [
     ".",
