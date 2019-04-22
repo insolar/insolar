@@ -63,7 +63,7 @@ import (
 )
 
 type PhaseManager interface {
-	OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error
+	OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time, connectToNewNetwork func(ctx context.Context, address string)) error
 }
 
 type Phases struct {
@@ -85,7 +85,8 @@ func NewPhaseManager() PhaseManager {
 }
 
 // OnPulse starts calculate args on phases.
-func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
+func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time,
+	connectToNewNetwork func(ctx context.Context, address string)) error {
 	pm.lock.Lock()
 	defer pm.lock.Unlock()
 
@@ -98,7 +99,8 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 	pm.lastPulse = pulse.PulseNumber
 
 	consensusDelay := time.Since(pulseStartTime)
-	inslogger.FromContext(ctx).Infof("[ NET Consensus ] Starting consensus process, delay: %v", consensusDelay)
+	logger := inslogger.FromContext(ctx)
+	logger.Infof("[ NET Consensus ] Starting consensus process, delay: %v", consensusDelay)
 
 	pulseDuration, err := getPulseDuration(pulse)
 	if err != nil {
@@ -153,6 +155,11 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 		return errors.Wrap(err, "[ NET Consensus ] Error calculating cloud hash")
 	}
 	pm.NodeKeeper.SetCloudHash(hash)
+
+	if len(thirdPhaseState.ReconnectTo) > 0 {
+		go connectToNewNetwork(ctx, state.ReconnectTo)
+	}
+
 	return pm.NodeKeeper.Sync(ctx, state.ActiveNodes, state.ApprovedClaims)
 }
 

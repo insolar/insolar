@@ -124,7 +124,7 @@ type bootstrapper struct {
 
 	firstPulseTime time.Time
 
-	reconnectToNewNetwork func(ctx context.Context, node insolar.DiscoveryNode)
+	reconnectToNewNetwork func(ctx context.Context, address string)
 }
 
 func (bc *bootstrapper) GetFirstFakePulseTime() time.Time {
@@ -604,7 +604,7 @@ func (bc *bootstrapper) startCyclicBootstrap(ctx context.Context) {
 		if len(results) != 0 {
 			index := bc.getLagerNetorkIndex(ctx, results)
 			if index >= 0 {
-				bc.reconnectToNewNetwork(ctx, nodes[index])
+				bc.reconnectToNewNetwork(ctx, nodes[index].GetHost())
 			}
 		}
 		time.Sleep(time.Second * bootstrapTimeout)
@@ -705,7 +705,7 @@ func (bc *bootstrapper) getInactivenodes() []insolar.DiscoveryNode {
 	return res
 }
 
-func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(ctx context.Context, node insolar.DiscoveryNode)) Bootstrapper {
+func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(ctx context.Context, address string)) Bootstrapper {
 	return &bootstrapper{
 		options:                 options,
 		bootstrapLock:           make(chan struct{}),

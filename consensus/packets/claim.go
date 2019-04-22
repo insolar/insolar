@@ -76,10 +76,16 @@ const claimHeaderSize = 2
 
 // ChangeNetworkClaim uses to change network state.
 type ChangeNetworkClaim struct {
+	Address string
 }
 
 func (cnc *ChangeNetworkClaim) Type() ClaimType {
 	return TypeChangeNetworkClaim
+}
+
+func (cnc *ChangeNetworkClaim) Clone() ReferendumClaim {
+	result := *cnc
+	return &result
 }
 
 type ReferendumClaim interface {
