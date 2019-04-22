@@ -36,7 +36,7 @@ type loggerField struct {
 func logFields(t *testing.T, b []byte) loggerField {
 	var lf loggerField
 	err := json.Unmarshal(b, &lf)
-	require.NoError(t, err)
+	require.NoErrorf(t, err, "failed decode: '%v'", string(b))
 	return lf
 }
 
@@ -80,9 +80,13 @@ func TestLog_ZerologCallerWithFunc(t *testing.T) {
 }
 
 func TestLog_GlobalCaller(t *testing.T) {
+	gl := GlobalLogger
+	defer func() { GlobalLogger = gl }()
+
 	var b bytes.Buffer
 	GlobalLogger = GlobalLogger.WithOutput(&b)
 
+	SetLevel("info")
 	Info("test")
 
 	lf := logFields(t, b.Bytes())
@@ -91,10 +95,14 @@ func TestLog_GlobalCaller(t *testing.T) {
 
 // XXX: test result depends on test name
 func TestLog_GlobalCallerWithFunc(t *testing.T) {
+	gl := GlobalLogger
+	defer func() { GlobalLogger = gl }()
+
 	var b bytes.Buffer
 	GlobalLogger = GlobalLogger.WithOutput(&b)
 	GlobalLogger = GlobalLogger.WithFuncName(true)
 
+	SetLevel("info")
 	Info("test")
 
 	lf := logFields(t, b.Bytes())

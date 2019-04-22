@@ -213,7 +213,7 @@ func (z zerologAdapter) Panicf(format string, args ...interface{}) {
 	z.loggerWithHooks().Panic().Msgf(format, args...)
 }
 
-// WithLevel sets log level
+// WithLevel sets log level.
 func (z *zerologAdapter) WithLevel(level string) (insolar.Logger, error) {
 	levelNumber, err := insolar.ParseLevel(level)
 	if err != nil {
@@ -222,6 +222,7 @@ func (z *zerologAdapter) WithLevel(level string) (insolar.Logger, error) {
 	return z.WithLevelNumber(levelNumber)
 }
 
+// WithLevelNumber sets log level with constant.
 func (z *zerologAdapter) WithLevelNumber(level insolar.LogLevel) (insolar.Logger, error) {
 	if level == insolar.NoLevel {
 		return z, nil
@@ -258,7 +259,7 @@ func (z *zerologAdapter) WithSkipFrameCount(skipFrameCount int) insolar.Logger {
 	return &zCopy
 }
 
-// WithCaller switch on/off 'caller' field computation.
+// WithCaller switch on/off 'func' field computation.
 func (z *zerologAdapter) WithFuncName(flag bool) insolar.Logger {
 	zCopy := *z
 	zCopy.callerConfig.funcname = flag

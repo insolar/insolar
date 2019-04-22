@@ -20,6 +20,7 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// FuncFieldName is the field name used for func field.
 var FuncFieldName = "func"
 
 type callerHook struct {
@@ -30,6 +31,7 @@ func newCallerHook(skipFrameCount int) *callerHook {
 	return &callerHook{callerSkipFrameCount: skipFrameCount}
 }
 
+// Run implements zerolog.Hook.
 func (ch *callerHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 	if e == nil {
 		return
@@ -37,5 +39,4 @@ func (ch *callerHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
 	info := getCallInfo(ch.callerSkipFrameCount)
 	e.Str(zerolog.CallerFieldName, info.fileName)
 	e.Str(FuncFieldName, info.funcName)
-	return
 }

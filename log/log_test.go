@@ -96,6 +96,7 @@ func TestLog_NewLog_Config(t *testing.T) {
 }
 
 func TestLog_GlobalLogger_Level(t *testing.T) {
+	defer SetLevel("info")
 	assert.NoError(t, SetLevel("error"))
 	assert.Error(t, SetLevel("errorrr"))
 }
