@@ -162,7 +162,7 @@ func openFile(path string) (io.Writer, error) {
 
 func (g *certGen) getUserConfig() *requester.UserConfigJSON {
 	requester.SetVerbose(verbose)
-	userCfg, err := requester.ReadUserConfigFromFile(g.rootConfig)
+	userCfg, err := requester.ReadUserConfigFromFile(g.rootKeysFile)
 	checkError("Failed to read root config:", err)
 	info, err := requester.Info(g.API)
 	checkError("Failed to execute info request to API:", err)
@@ -192,9 +192,9 @@ func (g *certGen) getNodeRefByPk() insolar.Reference {
 type certGen struct {
 	keyProcessor insolar.KeyProcessor
 
-	rootConfig string
-	API        string
-	staticRole insolar.StaticRole
+	rootKeysFile string
+	API          string
+	staticRole   insolar.StaticRole
 
 	keysFileOut string
 	certFileOut string
@@ -204,7 +204,7 @@ type certGen struct {
 }
 
 func genCertificate(
-	rootConfig string,
+	rootKeysFile string,
 	role string,
 	url string,
 	keysFile string,
@@ -219,7 +219,7 @@ func genCertificate(
 
 	g := &certGen{
 		keyProcessor: platformpolicy.NewKeyProcessor(),
-		rootConfig:   rootConfig,
+		rootKeysFile: rootKeysFile,
 		API:          url,
 		staticRole:   staticRole,
 		keysFileOut:  keysFile,
