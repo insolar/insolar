@@ -16,10 +16,6 @@
 
 package insolar
 
-import (
-	"context"
-)
-
 // DynamicRole is number representing a node role.
 type DynamicRole int
 
@@ -48,36 +44,3 @@ func (r DynamicRole) IsVirtualRole() bool {
 	}
 	return false
 }
-
-//go:generate minimock -i github.com/insolar/insolar/insolar.PulseManager -o ../testutils -s _mock.go
-
-// PulseManager provides Ledger's methods related to Pulse.
-type PulseManager interface {
-	// Set set's new pulse and closes current jet drop. If dry is true, nothing will be saved to storage.
-	Set(ctx context.Context, pulse Pulse, persist bool) error
-}
-
-// KV is a generic key/value struct.
-type KV struct {
-	K []byte
-	V []byte
-}
-
-// KVSize returns size of key/value array in bytes.
-func KVSize(kvs []KV) (amount int64) {
-	for _, kv := range kvs {
-		amount += int64(len(kv.K) + len(kv.V))
-	}
-	return
-}
-
-// StorageExportResult represents storage data view.
-type StorageExportResult struct {
-	Data     map[string]interface{}
-	NextFrom *PulseNumber
-	Size     int
-}
-
-var (
-	DomainID = *NewID(0, nil)
-)
