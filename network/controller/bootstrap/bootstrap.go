@@ -61,7 +61,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/utils"
 
