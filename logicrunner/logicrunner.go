@@ -35,7 +35,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow/handler"
 	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 
 	"github.com/insolar/insolar/instrumentation/instracer"

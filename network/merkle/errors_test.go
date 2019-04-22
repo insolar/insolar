@@ -62,7 +62,7 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
-	pulse2 "github.com/insolar/insolar/ledger/storage/pulse"
+	pulse2 "github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar/pulsartestutils"
 	"github.com/insolar/insolar/testutils"

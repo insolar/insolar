@@ -22,8 +22,8 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

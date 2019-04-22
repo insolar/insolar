@@ -22,7 +22,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/component"

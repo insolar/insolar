@@ -26,7 +26,7 @@ import (
 
 	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 

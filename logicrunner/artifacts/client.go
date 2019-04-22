@@ -21,8 +21,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/messagebus"
 
 	"github.com/pkg/errors"

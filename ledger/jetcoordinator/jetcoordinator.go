@@ -25,8 +25,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/node"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/utils"
-	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/utils/entropy"
 	"github.com/pkg/errors"
 )

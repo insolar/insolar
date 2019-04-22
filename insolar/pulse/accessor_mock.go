@@ -3,7 +3,7 @@ package pulse
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Accessor" can be found in github.com/insolar/insolar/ledger/storage/pulse
+The original interface "Accessor" can be found in github.com/insolar/insolar/insolar/pulse
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//AccessorMock implements github.com/insolar/insolar/ledger/storage/pulse.Accessor
+//AccessorMock implements github.com/insolar/insolar/insolar/pulse.Accessor
 type AccessorMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type AccessorMock struct {
 	LatestMock       mAccessorMockLatest
 }
 
-//NewAccessorMock returns a mock for github.com/insolar/insolar/ledger/storage/pulse.Accessor
+//NewAccessorMock returns a mock for github.com/insolar/insolar/insolar/pulse.Accessor
 func NewAccessorMock(t minimock.Tester) *AccessorMock {
 	m := &AccessorMock{t: t}
 
@@ -114,7 +114,7 @@ func (m *mAccessorMockForPulseNumber) Set(f func(p context.Context, p1 insolar.P
 	return m.mock
 }
 
-//ForPulseNumber implements github.com/insolar/insolar/ledger/storage/pulse.Accessor interface
+//ForPulseNumber implements github.com/insolar/insolar/insolar/pulse.Accessor interface
 func (m *AccessorMock) ForPulseNumber(p context.Context, p1 insolar.PulseNumber) (r insolar.Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.ForPulseNumberPreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseNumberCounter, 1)
@@ -264,7 +264,7 @@ func (m *mAccessorMockLatest) Set(f func(p context.Context) (r insolar.Pulse, r1
 	return m.mock
 }
 
-//Latest implements github.com/insolar/insolar/ledger/storage/pulse.Accessor interface
+//Latest implements github.com/insolar/insolar/insolar/pulse.Accessor interface
 func (m *AccessorMock) Latest(p context.Context) (r insolar.Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.LatestPreCounter, 1)
 	defer atomic.AddUint64(&m.LatestCounter, 1)

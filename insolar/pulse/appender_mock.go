@@ -3,7 +3,7 @@ package pulse
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Appender" can be found in github.com/insolar/insolar/ledger/storage/pulse
+The original interface "Appender" can be found in github.com/insolar/insolar/insolar/pulse
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//AppenderMock implements github.com/insolar/insolar/ledger/storage/pulse.Appender
+//AppenderMock implements github.com/insolar/insolar/insolar/pulse.Appender
 type AppenderMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type AppenderMock struct {
 	AppendMock       mAppenderMockAppend
 }
 
-//NewAppenderMock returns a mock for github.com/insolar/insolar/ledger/storage/pulse.Appender
+//NewAppenderMock returns a mock for github.com/insolar/insolar/insolar/pulse.Appender
 func NewAppenderMock(t minimock.Tester) *AppenderMock {
 	m := &AppenderMock{t: t}
 
@@ -107,7 +107,7 @@ func (m *mAppenderMockAppend) Set(f func(p context.Context, p1 insolar.Pulse) (r
 	return m.mock
 }
 
-//Append implements github.com/insolar/insolar/ledger/storage/pulse.Appender interface
+//Append implements github.com/insolar/insolar/insolar/pulse.Appender interface
 func (m *AppenderMock) Append(p context.Context, p1 insolar.Pulse) (r error) {
 	counter := atomic.AddUint64(&m.AppendPreCounter, 1)
 	defer atomic.AddUint64(&m.AppendCounter, 1)

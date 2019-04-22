@@ -3,7 +3,7 @@ package pulse
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Shifter" can be found in github.com/insolar/insolar/ledger/storage/pulse
+The original interface "Shifter" can be found in github.com/insolar/insolar/insolar/pulse
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//ShifterMock implements github.com/insolar/insolar/ledger/storage/pulse.Shifter
+//ShifterMock implements github.com/insolar/insolar/insolar/pulse.Shifter
 type ShifterMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type ShifterMock struct {
 	ShiftMock       mShifterMockShift
 }
 
-//NewShifterMock returns a mock for github.com/insolar/insolar/ledger/storage/pulse.Shifter
+//NewShifterMock returns a mock for github.com/insolar/insolar/insolar/pulse.Shifter
 func NewShifterMock(t minimock.Tester) *ShifterMock {
 	m := &ShifterMock{t: t}
 
@@ -107,7 +107,7 @@ func (m *mShifterMockShift) Set(f func(p context.Context, p1 insolar.PulseNumber
 	return m.mock
 }
 
-//Shift implements github.com/insolar/insolar/ledger/storage/pulse.Shifter interface
+//Shift implements github.com/insolar/insolar/insolar/pulse.Shifter interface
 func (m *ShifterMock) Shift(p context.Context, p1 insolar.PulseNumber) (r error) {
 	counter := atomic.AddUint64(&m.ShiftPreCounter, 1)
 	defer atomic.AddUint64(&m.ShiftCounter, 1)

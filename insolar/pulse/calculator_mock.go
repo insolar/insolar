@@ -3,7 +3,7 @@ package pulse
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Calculator" can be found in github.com/insolar/insolar/ledger/storage/pulse
+The original interface "Calculator" can be found in github.com/insolar/insolar/insolar/pulse
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//CalculatorMock implements github.com/insolar/insolar/ledger/storage/pulse.Calculator
+//CalculatorMock implements github.com/insolar/insolar/insolar/pulse.Calculator
 type CalculatorMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type CalculatorMock struct {
 	ForwardsMock       mCalculatorMockForwards
 }
 
-//NewCalculatorMock returns a mock for github.com/insolar/insolar/ledger/storage/pulse.Calculator
+//NewCalculatorMock returns a mock for github.com/insolar/insolar/insolar/pulse.Calculator
 func NewCalculatorMock(t minimock.Tester) *CalculatorMock {
 	m := &CalculatorMock{t: t}
 
@@ -115,7 +115,7 @@ func (m *mCalculatorMockBackwards) Set(f func(p context.Context, p1 insolar.Puls
 	return m.mock
 }
 
-//Backwards implements github.com/insolar/insolar/ledger/storage/pulse.Calculator interface
+//Backwards implements github.com/insolar/insolar/insolar/pulse.Calculator interface
 func (m *CalculatorMock) Backwards(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.BackwardsPreCounter, 1)
 	defer atomic.AddUint64(&m.BackwardsCounter, 1)
@@ -267,7 +267,7 @@ func (m *mCalculatorMockForwards) Set(f func(p context.Context, p1 insolar.Pulse
 	return m.mock
 }
 
-//Forwards implements github.com/insolar/insolar/ledger/storage/pulse.Calculator interface
+//Forwards implements github.com/insolar/insolar/insolar/pulse.Calculator interface
 func (m *CalculatorMock) Forwards(p context.Context, p1 insolar.PulseNumber, p2 int) (r insolar.Pulse, r1 error) {
 	counter := atomic.AddUint64(&m.ForwardsPreCounter, 1)
 	defer atomic.AddUint64(&m.ForwardsCounter, 1)
