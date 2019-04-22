@@ -121,8 +121,5 @@ func IsConnectionClosed(err error) bool {
 		return false
 	}
 	err = errors.Cause(err)
-	if strings.Contains(err.Error(), "use of closed network connection") {
-		return true
-	}
-	return false
+	return strings.Contains(err.Error(), "use of closed network connection")
 }
