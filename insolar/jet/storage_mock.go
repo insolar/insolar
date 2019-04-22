@@ -30,10 +30,10 @@ type StorageMock struct {
 	ClonePreCounter uint64
 	CloneMock       mStorageMockClone
 
-	DeleteFunc       func(p context.Context, p1 insolar.PulseNumber)
-	DeleteCounter    uint64
-	DeletePreCounter uint64
-	DeleteMock       mStorageMockDelete
+	DeleteForPNFunc       func(p context.Context, p1 insolar.PulseNumber)
+	DeleteForPNCounter    uint64
+	DeleteForPNPreCounter uint64
+	DeleteForPNMock       mStorageMockDeleteForPN
 
 	ForIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r insolar.JetID, r1 bool)
 	ForIDCounter    uint64
@@ -61,7 +61,7 @@ func NewStorageMock(t minimock.Tester) *StorageMock {
 
 	m.AllMock = mStorageMockAll{mock: m}
 	m.CloneMock = mStorageMockClone{mock: m}
-	m.DeleteMock = mStorageMockDelete{mock: m}
+	m.DeleteForPNMock = mStorageMockDeleteForPN{mock: m}
 	m.ForIDMock = mStorageMockForID{mock: m}
 	m.SplitMock = mStorageMockSplit{mock: m}
 	m.UpdateMock = mStorageMockUpdate{mock: m}
@@ -342,125 +342,125 @@ func (m *StorageMock) CloneFinished() bool {
 	return true
 }
 
-type mStorageMockDelete struct {
+type mStorageMockDeleteForPN struct {
 	mock              *StorageMock
-	mainExpectation   *StorageMockDeleteExpectation
-	expectationSeries []*StorageMockDeleteExpectation
+	mainExpectation   *StorageMockDeleteForPNExpectation
+	expectationSeries []*StorageMockDeleteForPNExpectation
 }
 
-type StorageMockDeleteExpectation struct {
-	input *StorageMockDeleteInput
+type StorageMockDeleteForPNExpectation struct {
+	input *StorageMockDeleteForPNInput
 }
 
-type StorageMockDeleteInput struct {
+type StorageMockDeleteForPNInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
 }
 
-//Expect specifies that invocation of Storage.Delete is expected from 1 to Infinity times
-func (m *mStorageMockDelete) Expect(p context.Context, p1 insolar.PulseNumber) *mStorageMockDelete {
-	m.mock.DeleteFunc = nil
+//Expect specifies that invocation of Storage.DeleteForPN is expected from 1 to Infinity times
+func (m *mStorageMockDeleteForPN) Expect(p context.Context, p1 insolar.PulseNumber) *mStorageMockDeleteForPN {
+	m.mock.DeleteForPNFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StorageMockDeleteExpectation{}
+		m.mainExpectation = &StorageMockDeleteForPNExpectation{}
 	}
-	m.mainExpectation.input = &StorageMockDeleteInput{p, p1}
+	m.mainExpectation.input = &StorageMockDeleteForPNInput{p, p1}
 	return m
 }
 
-//Return specifies results of invocation of Storage.Delete
-func (m *mStorageMockDelete) Return() *StorageMock {
-	m.mock.DeleteFunc = nil
+//Return specifies results of invocation of Storage.DeleteForPN
+func (m *mStorageMockDeleteForPN) Return() *StorageMock {
+	m.mock.DeleteForPNFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &StorageMockDeleteExpectation{}
+		m.mainExpectation = &StorageMockDeleteForPNExpectation{}
 	}
 
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Storage.Delete is expected once
-func (m *mStorageMockDelete) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *StorageMockDeleteExpectation {
-	m.mock.DeleteFunc = nil
+//ExpectOnce specifies that invocation of Storage.DeleteForPN is expected once
+func (m *mStorageMockDeleteForPN) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *StorageMockDeleteForPNExpectation {
+	m.mock.DeleteForPNFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &StorageMockDeleteExpectation{}
-	expectation.input = &StorageMockDeleteInput{p, p1}
+	expectation := &StorageMockDeleteForPNExpectation{}
+	expectation.input = &StorageMockDeleteForPNInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-//Set uses given function f as a mock of Storage.Delete method
-func (m *mStorageMockDelete) Set(f func(p context.Context, p1 insolar.PulseNumber)) *StorageMock {
+//Set uses given function f as a mock of Storage.DeleteForPN method
+func (m *mStorageMockDeleteForPN) Set(f func(p context.Context, p1 insolar.PulseNumber)) *StorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.DeleteFunc = f
+	m.mock.DeleteForPNFunc = f
 	return m.mock
 }
 
-//Delete implements github.com/insolar/insolar/insolar/jet.Storage interface
-func (m *StorageMock) Delete(p context.Context, p1 insolar.PulseNumber) {
-	counter := atomic.AddUint64(&m.DeletePreCounter, 1)
-	defer atomic.AddUint64(&m.DeleteCounter, 1)
+//DeleteForPN implements github.com/insolar/insolar/insolar/jet.Storage interface
+func (m *StorageMock) DeleteForPN(p context.Context, p1 insolar.PulseNumber) {
+	counter := atomic.AddUint64(&m.DeleteForPNPreCounter, 1)
+	defer atomic.AddUint64(&m.DeleteForPNCounter, 1)
 
-	if len(m.DeleteMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.DeleteMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to StorageMock.Delete. %v %v", p, p1)
+	if len(m.DeleteForPNMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.DeleteForPNMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to StorageMock.DeleteForPN. %v %v", p, p1)
 			return
 		}
 
-		input := m.DeleteMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, StorageMockDeleteInput{p, p1}, "Storage.Delete got unexpected parameters")
+		input := m.DeleteForPNMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, StorageMockDeleteForPNInput{p, p1}, "Storage.DeleteForPN got unexpected parameters")
 
 		return
 	}
 
-	if m.DeleteMock.mainExpectation != nil {
+	if m.DeleteForPNMock.mainExpectation != nil {
 
-		input := m.DeleteMock.mainExpectation.input
+		input := m.DeleteForPNMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, StorageMockDeleteInput{p, p1}, "Storage.Delete got unexpected parameters")
+			testify_assert.Equal(m.t, *input, StorageMockDeleteForPNInput{p, p1}, "Storage.DeleteForPN got unexpected parameters")
 		}
 
 		return
 	}
 
-	if m.DeleteFunc == nil {
-		m.t.Fatalf("Unexpected call to StorageMock.Delete. %v %v", p, p1)
+	if m.DeleteForPNFunc == nil {
+		m.t.Fatalf("Unexpected call to StorageMock.DeleteForPN. %v %v", p, p1)
 		return
 	}
 
-	m.DeleteFunc(p, p1)
+	m.DeleteForPNFunc(p, p1)
 }
 
-//DeleteMinimockCounter returns a count of StorageMock.DeleteFunc invocations
-func (m *StorageMock) DeleteMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.DeleteCounter)
+//DeleteForPNMinimockCounter returns a count of StorageMock.DeleteForPNFunc invocations
+func (m *StorageMock) DeleteForPNMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.DeleteForPNCounter)
 }
 
-//DeleteMinimockPreCounter returns the value of StorageMock.Delete invocations
-func (m *StorageMock) DeleteMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.DeletePreCounter)
+//DeleteForPNMinimockPreCounter returns the value of StorageMock.DeleteForPN invocations
+func (m *StorageMock) DeleteForPNMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.DeleteForPNPreCounter)
 }
 
-//DeleteFinished returns true if mock invocations count is ok
-func (m *StorageMock) DeleteFinished() bool {
+//DeleteForPNFinished returns true if mock invocations count is ok
+func (m *StorageMock) DeleteForPNFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.DeleteMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.DeleteCounter) == uint64(len(m.DeleteMock.expectationSeries))
+	if len(m.DeleteForPNMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.DeleteForPNCounter) == uint64(len(m.DeleteForPNMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.DeleteMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.DeleteCounter) > 0
+	if m.DeleteForPNMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.DeleteForPNCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.DeleteFunc != nil {
-		return atomic.LoadUint64(&m.DeleteCounter) > 0
+	if m.DeleteForPNFunc != nil {
+		return atomic.LoadUint64(&m.DeleteForPNCounter) > 0
 	}
 
 	return true
@@ -911,8 +911,8 @@ func (m *StorageMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to StorageMock.Clone")
 	}
 
-	if !m.DeleteFinished() {
-		m.t.Fatal("Expected call to StorageMock.Delete")
+	if !m.DeleteForPNFinished() {
+		m.t.Fatal("Expected call to StorageMock.DeleteForPN")
 	}
 
 	if !m.ForIDFinished() {
@@ -952,8 +952,8 @@ func (m *StorageMock) MinimockFinish() {
 		m.t.Fatal("Expected call to StorageMock.Clone")
 	}
 
-	if !m.DeleteFinished() {
-		m.t.Fatal("Expected call to StorageMock.Delete")
+	if !m.DeleteForPNFinished() {
+		m.t.Fatal("Expected call to StorageMock.DeleteForPN")
 	}
 
 	if !m.ForIDFinished() {
@@ -984,7 +984,7 @@ func (m *StorageMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.AllFinished()
 		ok = ok && m.CloneFinished()
-		ok = ok && m.DeleteFinished()
+		ok = ok && m.DeleteForPNFinished()
 		ok = ok && m.ForIDFinished()
 		ok = ok && m.SplitFinished()
 		ok = ok && m.UpdateFinished()
@@ -1004,8 +1004,8 @@ func (m *StorageMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to StorageMock.Clone")
 			}
 
-			if !m.DeleteFinished() {
-				m.t.Error("Expected call to StorageMock.Delete")
+			if !m.DeleteForPNFinished() {
+				m.t.Error("Expected call to StorageMock.DeleteForPN")
 			}
 
 			if !m.ForIDFinished() {
@@ -1040,7 +1040,7 @@ func (m *StorageMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.DeleteFinished() {
+	if !m.DeleteForPNFinished() {
 		return false
 	}
 

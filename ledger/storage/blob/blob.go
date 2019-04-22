@@ -50,6 +50,7 @@ type Modifier interface {
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/storage/blob.Storage -o ./ -s _mock.go
 
+// Storage is a union of Accessor and Modifier
 type Storage interface {
 	Accessor
 	Modifier
@@ -59,7 +60,7 @@ type Storage interface {
 
 // Cleaner provides an interface for removing blobs from a storage.
 type Cleaner interface {
-	Delete(ctx context.Context, pulse insolar.PulseNumber)
+	DeleteForPN(ctx context.Context, pulse insolar.PulseNumber)
 }
 
 // Blob represents blob-value with jetID.

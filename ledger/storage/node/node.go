@@ -35,7 +35,7 @@ type Accessor interface {
 // Modifier provides methods for setting active nodes.
 type Modifier interface {
 	Set(pulse insolar.PulseNumber, nodes []insolar.Node) error
-	Delete(pulse insolar.PulseNumber)
+	DeleteForPN(pulse insolar.PulseNumber)
 }
 
 // Storage is an in-memory active node storage for each pulse. It's required to calculate node roles
@@ -103,8 +103,8 @@ func (a *Storage) InRole(pulse insolar.PulseNumber, role insolar.StaticRole) ([]
 	return inRole, nil
 }
 
-// Delete erases nodes for specified pulse.
-func (a *Storage) Delete(pulse insolar.PulseNumber) {
+// DeleteForPN erases nodes for specified pulse.
+func (a *Storage) DeleteForPN(pulse insolar.PulseNumber) {
 	a.lock.Lock()
 	delete(a.nodes, pulse)
 	a.lock.Unlock()

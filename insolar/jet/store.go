@@ -127,7 +127,7 @@ func (s *Store) Clone(
 }
 
 // Delete concurrent safe.
-func (s *Store) Delete(
+func (s *Store) DeleteForPN(
 	ctx context.Context, pulse insolar.PulseNumber,
 ) {
 	s.Lock()

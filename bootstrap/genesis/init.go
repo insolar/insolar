@@ -83,7 +83,6 @@ func (s *Initializer) Run() {
 		sc.blobDB,
 		sc.dropDB,
 		sc.recordDB,
-		sc.storageDBContext,
 		sc.storeBadgerDB,
 		sc.pulseDB,
 	)
