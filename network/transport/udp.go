@@ -53,7 +53,6 @@ package transport
 import (
 	"context"
 	"fmt"
-	"log"
 	"net"
 	"sync/atomic"
 	"time"
@@ -87,7 +86,8 @@ func newUDPTransport(listenAddress, fixedPublicAddress string) (*udpTransport, s
 		return nil, "", errors.Wrap(err, "failed to resolve public address")
 	}
 
-	transport := &udpTransport{conn: conn, address: publicAddress, started: 0}
+	transport := &udpTransport{conn: conn, address: publicAddress}
+	atomic.StoreUint32(&transport.started, 1)
 	return transport, publicAddress, nil
 }
 
@@ -105,13 +105,6 @@ func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []
 	if err != nil {
 		return errors.Wrap(err, "Failed to resolve UDP address")
 	}
-
-	// udpConn, err := net.DialUDP("udp", nil, udpAddr)
-	// udpConn.SetWriteDeadline(time.Now().Add(time.Second * 5))
-	// if err != nil {
-	// 	return errors.Wrap(err, "========================================= Failed to DialUDP")
-	// }
-	// defer utils.CloseVerbose(udpConn)
 
 	logger.Debug("udpTransport.send: len = ", len(data))
 	n, err := t.conn.WriteTo(data, udpAddr) // Write(data)
@@ -131,20 +124,18 @@ func (t *udpTransport) SetDatagramHandler(h DatagramHandler) {
 func (t *udpTransport) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
-	if !atomic.CompareAndSwapUint32(&t.started, 0, 1) {
-		log.Println("==== net.ListenPacket")
+	if atomic.CompareAndSwapUint32(&t.started, 0, 1) {
 		var err error
 		t.conn, err = net.ListenPacket("udp", t.address)
 		if err != nil {
 			return errors.Wrap(err, "failed to listen UDP")
 		}
-
-		logger.Warn("Failed to start transport: double listen initiated")
 	}
 
 	logger.Info("[ Start ] Start UDP transport")
 	ctx, t.cancel = context.WithCancel(ctx)
 	go t.loop(ctx)
+
 	return nil
 }
 
@@ -157,8 +148,10 @@ func (t *udpTransport) loop(ctx context.Context) {
 			return
 		default:
 		}
-		//todo handle stop
-		t.conn.SetDeadline(time.Now().Add(time.Second * 12))
+		err := t.conn.SetDeadline(time.Now().Add(time.Second * 12))
+		if err != nil {
+			logger.Error(err.Error())
+		}
 
 		buf := make([]byte, udpMaxPacketSize)
 		n, addr, err := t.conn.ReadFrom(buf)
@@ -180,19 +173,22 @@ func (t *udpTransport) loop(ctx context.Context) {
 
 // Stop stops networking.
 func (t *udpTransport) Stop(ctx context.Context) error {
-	//if !atomic.CompareAndSwapUint32(&t.started, 1, 0) {
 	logger := inslogger.FromContext(ctx)
-	logger.Warn("Stop UDP transport")
-	t.cancel()
-	err := t.conn.Close()
 
-	if err != nil {
-		if utils.IsConnectionClosed(err) {
-			logger.Error("Connection already closed")
-		} else {
-			return err
+	if atomic.CompareAndSwapUint32(&t.started, 1, 0) {
+		logger.Warn("Stop UDP transport")
+		t.cancel()
+		err := t.conn.Close()
+
+		if err != nil {
+			if utils.IsConnectionClosed(err) {
+				logger.Error("Connection already closed")
+			} else {
+				return err
+			}
 		}
+	} else {
+		logger.Warn("Failed to stop transport")
 	}
-	//}
 	return nil
 }
