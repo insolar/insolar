@@ -248,6 +248,7 @@
   revision = "6237cf65f3a6f7111cd8a42be3590df99a66bc7d"
 
 [[projects]]
+  digest = "1:53e8c5c79716437e601696140e8b1801aae4204f4ec54a504333702a49572c4f"
   name = "github.com/magiconair/properties"
   packages = [
     ".",
