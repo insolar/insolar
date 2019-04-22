@@ -105,12 +105,6 @@ func envVarWithDefault(name string, defaultValue string) string {
 	return defaultValue
 }
 
-// func baseDir() string {
-// 	artifactsDir := envVarWithDefault("INSOLAR_ARTIFACTS_DIR", ".artifacts")
-// 	launchnedArtifactsDir := filepath.Join(artifactsDir, "launchnet")
-// 	return envVarWithDefault("LAUNCHNET_BASE_DIR", launchnedArtifactsDir)
-// }
-
 func baseDir() string {
 	artifactsDir := envVarWithDefault("INSOLAR_ARTIFACTS_DIR", ".artifacts")
 	launchnedArtifactsDir := filepath.Join(artifactsDir, "launchnet")
