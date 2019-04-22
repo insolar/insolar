@@ -33,20 +33,23 @@ import (
 
 var insolarPrefix = "github.com/insolar/insolar/"
 
+func trimInsolarPrefix(file string, line int) string {
+	var skip = 0
+	if idx := strings.Index(file, insolarPrefix); idx != -1 {
+		skip = idx + len(insolarPrefix)
+	}
+	return file[skip:] + ":" + strconv.Itoa(line)
+}
+
 func init() {
 	zerolog.TimeFieldFormat = timestampFormat
-	zerolog.CallerMarshalFunc = func(file string, line int) string {
-		var skip = 0
-		if idx := strings.Index(file, insolarPrefix); idx != -1 {
-			skip = idx + len(insolarPrefix)
-		}
-		return file[skip:] + ":" + strconv.Itoa(line)
-	}
+	zerolog.CallerMarshalFunc = trimInsolarPrefix
 }
 
 type callerHookConfig struct {
 	enabled        bool
 	skipFrameCount int
+	funcname       bool
 }
 
 type zerologAdapter struct {
@@ -243,6 +246,8 @@ func (z *zerologAdapter) WithOutput(w io.Writer) insolar.Logger {
 func (z *zerologAdapter) WithCaller(flag bool) insolar.Logger {
 	zCopy := *z
 	zCopy.callerConfig.enabled = flag
+	// if caller disabled, probably we should avoid cost of call runtime.Caller, so disable func field
+	zCopy.callerConfig.funcname = flag
 	return &zCopy
 }
 
@@ -253,9 +258,18 @@ func (z *zerologAdapter) WithSkipFrameCount(skipFrameCount int) insolar.Logger {
 	return &zCopy
 }
 
+// WithCaller switch on/off 'caller' field computation.
+func (z *zerologAdapter) WithFuncName(flag bool) insolar.Logger {
+	zCopy := *z
+	zCopy.callerConfig.funcname = flag
+	return &zCopy
+}
+
 func (z *zerologAdapter) loggerWithHooks() *zerolog.Logger {
 	l := z.logger
-	if z.callerConfig.enabled {
+	if z.callerConfig.funcname {
+		l = l.Hook(newCallerHook(z.callerConfig.skipFrameCount + 2))
+	} else if z.callerConfig.enabled {
 		l = l.With().CallerWithSkipFrameCount(z.callerConfig.skipFrameCount).Logger()
 	}
 	return &l

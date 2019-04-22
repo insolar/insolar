@@ -27,8 +27,7 @@ func TestLog_getCallInfo(t *testing.T) {
 	expectedLine := 28 // should be equal of line number where getCallInfo is called
 	info := getCallInfo(1)
 
-	assert.Equal(t, "log", info.packageName)
-	assert.Equal(t, "sourceinfo_test.go", info.fileName)
+	assert.Contains(t, info.fileName, "log/sourceinfo_test.go:")
 	assert.Equal(t, "TestLog_getCallInfo", info.funcName)
 	assert.Equal(t, expectedLine, info.line)
 }

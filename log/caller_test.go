@@ -26,8 +26,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+// XXX: Beware, test results there depends on test file name (caller_test.go)!
+
 type loggerField struct {
 	Caller string
+	Func   string
 }
 
 func logFields(t *testing.T, b []byte) loggerField {
@@ -37,7 +40,6 @@ func logFields(t *testing.T, b []byte) loggerField {
 	return lf
 }
 
-// XXX: beware test result depends on it's file name.
 func TestLog_ZerologCaller(t *testing.T) {
 	l, err := NewLog(configuration.Log{
 		Level:     "info",
@@ -48,14 +50,33 @@ func TestLog_ZerologCaller(t *testing.T) {
 
 	var b bytes.Buffer
 	l = l.WithOutput(&b)
+
 	l.Info("test")
 
 	lf := logFields(t, b.Bytes())
+	assert.Regexp(t, "^log/caller_test.go:", lf.Caller, "log contains call place")
+	assert.NotContains(t, "github.com/insolar/insolar", lf.Caller, "log not contains package name")
+}
 
-	assert.Regexp(t, "^log/caller_test.go:", lf.Caller,
-		"log contains call place")
-	assert.NotContains(t, "github.com/insolar/insolar", lf.Caller,
-		"log not contains package name")
+// XXX: test result depends on test name
+func TestLog_ZerologCallerWithFunc(t *testing.T) {
+	l, err := NewLog(configuration.Log{
+		Level:     "info",
+		Adapter:   "zerolog",
+		Formatter: "json",
+	})
+	require.NoError(t, err, "log creation")
+
+	var b bytes.Buffer
+	l = l.WithFuncName(true)
+	l = l.WithOutput(&b)
+
+	l.Info("test")
+
+	lf := logFields(t, b.Bytes())
+	assert.Regexp(t, "^log/caller_test.go:", lf.Caller, "log contains call place")
+	assert.NotContains(t, "github.com/insolar/insolar", lf.Caller, "log not contains package name")
+	assert.Equal(t, "TestLog_ZerologCallerWithFunc", lf.Func, "log contains call place")
 }
 
 func TestLog_GlobalCaller(t *testing.T) {
@@ -63,7 +84,20 @@ func TestLog_GlobalCaller(t *testing.T) {
 	GlobalLogger = GlobalLogger.WithOutput(&b)
 
 	Info("test")
+
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, "^log/caller_test.go:", lf.Caller,
-		"log contains call place")
+	assert.Regexp(t, "^log/caller_test.go:", lf.Caller, "log contains call place")
+}
+
+// XXX: test result depends on test name
+func TestLog_GlobalCallerWithFunc(t *testing.T) {
+	var b bytes.Buffer
+	GlobalLogger = GlobalLogger.WithOutput(&b)
+	GlobalLogger = GlobalLogger.WithFuncName(true)
+
+	Info("test")
+
+	lf := logFields(t, b.Bytes())
+	assert.Regexp(t, "^log/caller_test.go:", lf.Caller, "log contains call place")
+	assert.Equal(t, "TestLog_GlobalCallerWithFunc", lf.Func, "log contains call place")
 }
