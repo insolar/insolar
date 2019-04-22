@@ -68,13 +68,13 @@ services:
 # elastic and kibana are optional here,
 # but they provide more powerful  search and analysis than Jaeger's UI (augments it actually).
   elasticsearch:
-    image: "docker.elastic.co/elasticsearch/elasticsearch:6.5.4"
+    image: "docker.elastic.co/elasticsearch/elasticsearch:6.6.1"
     ports:
       - "9200:9200"
       - "9300:9300"
     environment:
       path.repo: "/tmp/backup"
-      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+      ES_JAVA_OPTS: "-Xmx512m -Xms512m"
       discovery.type: "single-node"
       xpack.security.enabled: "false"
     volumes:
