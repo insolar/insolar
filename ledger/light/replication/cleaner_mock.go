@@ -3,7 +3,7 @@ package replication
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Cleaner" can be found in github.com/insolar/insolar/ledger/replication
+The original interface "Cleaner" can be found in github.com/insolar/insolar/ledger/light/replication
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//CleanerMock implements github.com/insolar/insolar/ledger/replication.Cleaner
+//CleanerMock implements github.com/insolar/insolar/ledger/light/replication.Cleaner
 type CleanerMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type CleanerMock struct {
 	NotifyAboutPulseMock       mCleanerMockNotifyAboutPulse
 }
 
-//NewCleanerMock returns a mock for github.com/insolar/insolar/ledger/replication.Cleaner
+//NewCleanerMock returns a mock for github.com/insolar/insolar/ledger/light/replication.Cleaner
 func NewCleanerMock(t minimock.Tester) *CleanerMock {
 	m := &CleanerMock{t: t}
 
@@ -98,7 +98,7 @@ func (m *mCleanerMockNotifyAboutPulse) Set(f func(p context.Context, p1 insolar.
 	return m.mock
 }
 
-//NotifyAboutPulse implements github.com/insolar/insolar/ledger/replication.Cleaner interface
+//NotifyAboutPulse implements github.com/insolar/insolar/ledger/light/replication.Cleaner interface
 func (m *CleanerMock) NotifyAboutPulse(p context.Context, p1 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.NotifyAboutPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.NotifyAboutPulseCounter, 1)

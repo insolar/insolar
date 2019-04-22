@@ -3,7 +3,7 @@ package replication
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "DataGatherer" can be found in github.com/insolar/insolar/ledger/replication
+The original interface "DataGatherer" can be found in github.com/insolar/insolar/ledger/light/replication
 */
 import (
 	context "context"
@@ -17,7 +17,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//DataGathererMock implements github.com/insolar/insolar/ledger/replication.DataGatherer
+//DataGathererMock implements github.com/insolar/insolar/ledger/light/replication.DataGatherer
 type DataGathererMock struct {
 	t minimock.Tester
 
@@ -27,7 +27,7 @@ type DataGathererMock struct {
 	ForPulseAndJetMock       mDataGathererMockForPulseAndJet
 }
 
-//NewDataGathererMock returns a mock for github.com/insolar/insolar/ledger/replication.DataGatherer
+//NewDataGathererMock returns a mock for github.com/insolar/insolar/ledger/light/replication.DataGatherer
 func NewDataGathererMock(t minimock.Tester) *DataGathererMock {
 	m := &DataGathererMock{t: t}
 
@@ -110,7 +110,7 @@ func (m *mDataGathererMockForPulseAndJet) Set(f func(p context.Context, p1 insol
 	return m.mock
 }
 
-//ForPulseAndJet implements github.com/insolar/insolar/ledger/replication.DataGatherer interface
+//ForPulseAndJet implements github.com/insolar/insolar/ledger/light/replication.DataGatherer interface
 func (m *DataGathererMock) ForPulseAndJet(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r *message.HeavyPayload, r1 error) {
 	counter := atomic.AddUint64(&m.ForPulseAndJetPreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseAndJetCounter, 1)

@@ -46,7 +46,7 @@ import (
 	"github.com/insolar/insolar/ledger/storage/pulse"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/light/pulsemanager.ActiveListSwapper -o ../../testutils -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/light/pulsemanager.ActiveListSwapper -o ../../../testutils -s _mock.go
 type ActiveListSwapper interface {
 	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
 }
