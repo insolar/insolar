@@ -129,6 +129,18 @@ func NewMessageHandler(conf *configuration.Ledger) *MessageHandler {
 			p.Dep.BlobModifier = h.BlobModifier
 			return p
 		},
+		UpdateObject: func(p *proc.UpdateObject) *proc.UpdateObject {
+			p.Dep.RecordModifier = h.RecordModifier
+			p.Dep.IndexModifier = h.IndexModifier
+			p.Dep.Bus = h.Bus
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.BlobModifier = h.BlobModifier
+			p.Dep.RecentStorageProvider = h.RecentStorageProvider
+			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.IDLocker = h.IDLocker
+			p.Dep.IndexAccessor = h.IndexAccessor
+			return p
+		},
 	}
 
 	h.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
@@ -191,6 +203,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 
 	h.Bus.MustRegister(insolar.TypeGetCode, h.FlowHandler.WrapBusHandle)
 	h.Bus.MustRegister(insolar.TypeGetObject, h.FlowHandler.WrapBusHandle)
+	h.Bus.MustRegister(insolar.TypeUpdateObject, h.FlowHandler.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeGetDelegate,
 		BuildMiddleware(h.handleGetDelegate,
@@ -213,12 +226,12 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 			m.checkJet,
 			m.waitForHotData))
 
-	h.Bus.MustRegister(insolar.TypeUpdateObject,
-		BuildMiddleware(h.handleUpdateObject,
-			instrumentHandler("handleUpdateObject"),
-			m.addFieldsToLogger,
-			m.checkJet,
-			m.waitForHotData))
+	// h.Bus.MustRegister(insolar.TypeUpdateObject,
+	// 	BuildMiddleware(h.handleUpdateObject,
+	// 		instrumentHandler("handleUpdateObject"),
+	// 		m.addFieldsToLogger,
+	// 		m.checkJet,
+	// 		m.waitForHotData))
 
 	h.Bus.MustRegister(insolar.TypeRegisterChild,
 		BuildMiddleware(h.handleRegisterChild,

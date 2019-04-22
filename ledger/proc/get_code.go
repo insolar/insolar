@@ -34,10 +34,6 @@ type GetCode struct {
 	Message bus.Message
 	Code    insolar.Reference
 
-	Result struct {
-		CodeRec *object.CodeRecord
-	}
-
 	Dep struct {
 		Bus                    insolar.MessageBus
 		DelegationTokenFactory insolar.DelegationTokenFactory

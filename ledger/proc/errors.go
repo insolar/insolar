@@ -21,5 +21,6 @@ import (
 )
 
 var (
-	ErrInvalidRef = errors.New("invalid reference")
+	ErrInvalidRef        = errors.New("invalid reference")
+	ErrObjectDeactivated = errors.New("object is deactivated")
 )
