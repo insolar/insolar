@@ -57,7 +57,7 @@ func (b *Bus) Send(ctx context.Context, msg *message.Message) <-chan *message.Me
 	rep := make(chan *message.Message)
 	b.repliesMutex.Lock()
 	_, ok := b.replies[id]
-	if !ok {
+	if ok {
 		b.repliesMutex.Unlock()
 		inslogger.FromContext(ctx).Errorf("[ Send ] message with CorrelationID %s already exist in replies map", id)
 		return nil
