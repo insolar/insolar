@@ -30,6 +30,20 @@ type tCase struct {
 }
 
 var cases = []tCase{
+
+	// ArtifactsDir checks
+	{
+		defFn:  ArtifactsDir,
+		expect: ".artifacts",
+	},
+	{
+		env: map[string]string{
+			"INSOLAR_ARTIFACTS_DIR": "blah/bla",
+		},
+		defFn:  ArtifactsDir,
+		expect: "blah/bla",
+	},
+
 	// LaunchnetDir checks
 	{
 		defFn:  LaunchnetDir,
