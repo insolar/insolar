@@ -25,7 +25,8 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/bus"
-	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/component"
@@ -55,7 +56,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	require.NoError(t, err)
 
 	net := testutils.GetTestNetwork(t)
-	jc := testutils.NewJetCoordinatorMock(t)
+	jc := jet.NewCoordinatorMock(t)
 	expectedRef := testutils.RandomRef()
 	jc.QueryRoleFunc = func(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber) (r []insolar.Reference, r1 error) {
 		return []insolar.Reference{expectedRef}, nil
@@ -216,7 +217,7 @@ func TestMessageBus_getReceiver(t *testing.T) {
 	mb, err := NewMessageBus(configuration.Configuration{})
 	require.NoError(t, err)
 	expectedRef := testutils.RandomRef()
-	jc := testutils.NewJetCoordinatorMock(t)
+	jc := jet.NewCoordinatorMock(t)
 	jc.QueryRoleFunc = func(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber) (r []insolar.Reference, r1 error) {
 		return []insolar.Reference{expectedRef}, nil
 	}

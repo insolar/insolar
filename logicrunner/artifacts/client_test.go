@@ -22,8 +22,8 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -34,13 +34,11 @@ import (
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/node"
-	"github.com/insolar/insolar/ledger/storage/object"
-	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
@@ -48,10 +46,8 @@ import (
 type amSuite struct {
 	suite.Suite
 
-	cm      *component.Manager
-	ctx     context.Context
-	cleaner func()
-	db      storage.DBContext
+	cm  *component.Manager
+	ctx context.Context
 
 	scheme      insolar.PlatformCryptographyScheme
 	nodeStorage node.Accessor
@@ -76,9 +72,6 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 	s.cm = &component.Manager{}
 	s.ctx = inslogger.TestContext(s.T())
 
-	tempDB, _, cleaner := storagetest.TmpDB(s.ctx, s.T())
-	s.cleaner = cleaner
-	s.db = tempDB
 	s.scheme = platformpolicy.NewPlatformCryptographyScheme()
 	s.jetStorage = jet.NewStore()
 	s.nodeStorage = node.NewStorage()
@@ -90,7 +83,6 @@ func (s *amSuite) BeforeTest(suiteName, testName string) {
 
 	s.cm.Inject(
 		s.scheme,
-		s.db,
 		store.NewMemoryMockDB(),
 		s.jetStorage,
 		s.nodeStorage,
@@ -114,7 +106,6 @@ func (s *amSuite) AfterTest(suiteName, testName string) {
 	if err != nil {
 		s.T().Error("ComponentManager stop failed", err)
 	}
-	s.cleaner()
 }
 
 var (
@@ -149,7 +140,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 		}, nil
 	}
 
-	jc := testutils.NewJetCoordinatorMock(s.T())
+	jc := jet.NewCoordinatorMock(s.T())
 	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
 	jc.MeMock.Return(insolar.Reference{})
 
@@ -270,7 +261,7 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 
 	node := testutils.RandomRef()
 
-	jc := testutils.NewJetCoordinatorMock(mc)
+	jc := jet.NewCoordinatorMock(mc)
 	jc.NodeForObjectMock.Return(&node, nil)
 
 	pulseAccessor := pulse.NewAccessorMock(s.T())

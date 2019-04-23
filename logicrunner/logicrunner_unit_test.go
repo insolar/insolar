@@ -26,9 +26,10 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -48,7 +49,7 @@ type LogicRunnerCommonTestSuite struct {
 	ctx context.Context
 	am  *artifacts.ClientMock
 	mb  *testutils.MessageBusMock
-	jc  *testutils.JetCoordinatorMock
+	jc  *jet.CoordinatorMock
 	lr  *LogicRunner
 	es  ExecutionState
 	ps  *pulse.AccessorMock
@@ -64,7 +65,7 @@ func (suite *LogicRunnerCommonTestSuite) BeforeTest(suiteName, testName string) 
 	suite.mc = minimock.NewController(suite.T())
 	suite.am = artifacts.NewClientMock(suite.mc)
 	suite.mb = testutils.NewMessageBusMock(suite.mc)
-	suite.jc = testutils.NewJetCoordinatorMock(suite.mc)
+	suite.jc = jet.NewCoordinatorMock(suite.mc)
 	suite.ps = pulse.NewAccessorMock(suite.mc)
 	suite.nn = network.NewNodeNetworkMock(suite.mc)
 
@@ -81,7 +82,7 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
-	suite.mc.Wait(10 * time.Second)
+	suite.mc.Wait(time.Minute)
 	suite.mc.Finish()
 }
 
@@ -131,7 +132,7 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 	suite.Require().Equal(message.NotPending, es.pending)
 	suite.Require().Nil(es.objectbody)
 
-	suite.mc.Wait(time.Second) // message bus' send is called in a goroutine
+	suite.mc.Wait(time.Minute) // message bus' send is called in a goroutine
 
 	es.pending = message.InPending
 	es.objectbody = &ObjectBody{}
@@ -394,14 +395,16 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 
 func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
 	objectRef := testutils.RandomRef()
+	p := insolar.Pulse{PulseNumber: 100}
 
 	parcel := testutils.NewParcelMock(suite.mc).MessageMock.Return(
 		&message.PendingFinished{Reference: objectRef},
 	)
 
 	parcel.DefaultTargetMock.Return(&insolar.Reference{})
+	parcel.PulseFunc = func() insolar.PulseNumber { return p.PulseNumber }
 
-	re, err := suite.lr.HandlePendingFinishedMessage(suite.ctx, parcel)
+	re, err := suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Require().Equal(&reply.OK{}, re)
 
@@ -412,12 +415,12 @@ func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
 	suite.Require().Equal(message.NotPending, es.pending)
 
 	es.Current = &CurrentExecution{}
-	re, err = suite.lr.HandlePendingFinishedMessage(suite.ctx, parcel)
+	re, err = suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().Error(err)
 
 	es.Current = nil
 
-	re, err = suite.lr.HandlePendingFinishedMessage(suite.ctx, parcel)
+	re, err = suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Require().Equal(&reply.OK{}, re)
 }
@@ -482,9 +485,11 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 	)
 
 	parcel.DefaultTargetMock.Return(&insolar.Reference{})
+	p := insolar.Pulse{PulseNumber: 100}
+	parcel.PulseFunc = func() insolar.PulseNumber { return p.PulseNumber }
 
 	// check that creation of new execution state is handled (on StillExecuting Message)
-	re, err := suite.lr.HandleStillExecutingMessage(suite.ctx, parcel)
+	re, err := suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Require().Equal(&reply.OK{}, re)
 
@@ -496,7 +501,7 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 	st.ExecutionState.pending = message.NotPending
 	st.ExecutionState.PendingConfirmed = false
 
-	re, err = suite.lr.HandleStillExecutingMessage(suite.ctx, parcel)
+	re, err = suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Require().Equal(&reply.OK{}, re)
 
@@ -514,7 +519,7 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 			PendingConfirmed: false,
 		},
 	}
-	re, err = suite.lr.HandleStillExecutingMessage(suite.ctx, parcel)
+	re, err = suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Equal(message.InPending, suite.lr.state[objectRef].ExecutionState.pending)
 	suite.Equal(true, suite.lr.state[objectRef].ExecutionState.PendingConfirmed)
@@ -1321,8 +1326,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef: s.objectRef,
-				Queue:     messagesQueue,
+				RecordRef:             s.objectRef,
+				Queue:                 messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 
@@ -1395,7 +1400,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecutionState() {
 	es := &ExecutionState{
-		Ref: s.ref,
+		Ref:                   s.ref,
 		LedgerHasMoreRequests: false,
 	}
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)

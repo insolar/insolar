@@ -3,7 +3,7 @@ package testutils
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "ActiveListSwapper" can be found in github.com/insolar/insolar/ledger/pulsemanager
+The original interface "ActiveListSwapper" can be found in github.com/insolar/insolar/ledger/light/pulsemanager
 */
 import (
 	context "context"
@@ -16,7 +16,7 @@ import (
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//ActiveListSwapperMock implements github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper
+//ActiveListSwapperMock implements github.com/insolar/insolar/ledger/light/pulsemanager.ActiveListSwapper
 type ActiveListSwapperMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type ActiveListSwapperMock struct {
 	MoveSyncToActiveMock       mActiveListSwapperMockMoveSyncToActive
 }
 
-//NewActiveListSwapperMock returns a mock for github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper
+//NewActiveListSwapperMock returns a mock for github.com/insolar/insolar/ledger/light/pulsemanager.ActiveListSwapper
 func NewActiveListSwapperMock(t minimock.Tester) *ActiveListSwapperMock {
 	m := &ActiveListSwapperMock{t: t}
 
@@ -107,7 +107,7 @@ func (m *mActiveListSwapperMockMoveSyncToActive) Set(f func(p context.Context, p
 	return m.mock
 }
 
-//MoveSyncToActive implements github.com/insolar/insolar/ledger/pulsemanager.ActiveListSwapper interface
+//MoveSyncToActive implements github.com/insolar/insolar/ledger/light/pulsemanager.ActiveListSwapper interface
 func (m *ActiveListSwapperMock) MoveSyncToActive(p context.Context, p1 insolar.PulseNumber) (r error) {
 	counter := atomic.AddUint64(&m.MoveSyncToActivePreCounter, 1)
 	defer atomic.AddUint64(&m.MoveSyncToActiveCounter, 1)

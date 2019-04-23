@@ -56,7 +56,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/insolar/pulse"
 
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/suite"
@@ -89,7 +89,7 @@ func (s *CommonTestSuite) BeforeTest(suiteName, testName string) {
 }
 
 func (s *CommonTestSuite) AfterTest(suiteName, testName string) {
-	s.mc.Wait(10 * time.Second)
+	s.mc.Wait(time.Minute)
 	s.mc.Finish()
 }
 

@@ -55,9 +55,6 @@ func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (ins
 		ReplyTo: make(chan bus.Reply, 1),
 		Parcel:  parcel,
 	}
-	defer func() {
-		close(msg.ReplyTo)
-	}()
 
 	ctx = pulse.ContextWith(ctx, parcel.Pulse())
 
@@ -83,7 +80,8 @@ func (h *Handler) InnerSubscriber(watermillMsg *message.Message) ([]*message.Mes
 		WatermillMsg: watermillMsg,
 	}
 
-	ctx := watermillMsg.Context()
+	ctx := context.Background()
+	ctx = inslogger.ContextWithTrace(ctx, watermillMsg.Metadata.Get("TraceID"))
 	logger := inslogger.FromContext(ctx)
 	go func() {
 		f := thread.NewThread(msg, h.controller)
