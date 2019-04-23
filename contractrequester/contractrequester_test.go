@@ -198,3 +198,41 @@ func TestCallMethodWaitResults(t *testing.T) {
 	_, err = cr.CallMethod(ctx, msg, false, false, &ref, method, insolar.Arguments{}, &prototypeRef)
 	require.NoError(t, err)
 }
+
+func TestReceiveResult(t *testing.T) {
+	ctx := context.Background()
+	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*10)
+	defer cancelFunc()
+
+	cr, err := New()
+	require.NoError(t, err)
+
+	mc := minimock.NewController(t)
+	defer mc.Finish()
+
+	sequence := randomUint64()
+	msg := &message.ReturnResults{Sequence: sequence}
+	parcel := testutils.NewParcelMock(mc).MessageMock.Return(
+		msg,
+	)
+
+	// unexpected result
+	rep, err := cr.ReceiveResult(ctx, parcel)
+	require.NoError(t, err)
+	require.Equal(t, &reply.OK{}, rep)
+
+	// expected result
+	resChan := make(chan *message.ReturnResults)
+	chanResult := make(chan *message.ReturnResults)
+	cr.ResultMap[sequence] = resChan
+
+	go func() {
+		chanResult <- <-cr.ResultMap[sequence]
+	}()
+
+	rep, err = cr.ReceiveResult(ctx, parcel)
+	require.NoError(t, err)
+	require.Equal(t, &reply.OK{}, rep)
+	require.Equal(t, 0, len(cr.ResultMap))
+	require.Equal(t, msg, <-chanResult)
+}
