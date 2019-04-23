@@ -72,8 +72,6 @@ func (p *UpdateObject) handle(ctx context.Context) (insolar.Reply, error) {
 		return nil, errors.New("wrong object state record")
 	}
 
-	p.Dep.IndexStateModifier.SetUsageForPulse(ctx, *p.Message.Object.Record(), p.Parcel.Pulse())
-
 	calculatedID := object.CalculateIDForBlob(p.Dep.PlatformCryptographyScheme, p.Parcel.Pulse(), p.Message.Memory)
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
 	//  id will not match the one calculated on the server.
@@ -91,6 +89,7 @@ func (p *UpdateObject) handle(ctx context.Context) (insolar.Reply, error) {
 
 	p.Dep.IDLocker.Lock(p.Message.Object.Record())
 	defer p.Dep.IDLocker.Unlock(p.Message.Object.Record())
+	p.Dep.IndexStateModifier.SetUsageForPulse(ctx, *p.Message.Object.Record(), p.Parcel.Pulse())
 
 	idx, err := p.Dep.IndexStorage.ForID(ctx, *p.Message.Object.Record())
 	// No index on our node.

@@ -1,0 +1,205 @@
+///
+// Copyright 2019 Insolar Technologies GmbH
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+///
+
+package proc
+
+import (
+	"context"
+	"crypto/rand"
+	"testing"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/ledger/blob"
+	"github.com/insolar/insolar/ledger/light/recentstorage"
+	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+)
+
+var (
+	domainID = *genRandomID(0)
+)
+
+func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
+	buff := [insolar.RecordIDSize - insolar.PulseNumberSize]byte{}
+	_, err := rand.Read(buff[:])
+	if err != nil {
+		panic(err)
+	}
+	return insolar.NewID(pulse, buff[:])
+}
+
+func genRefWithID(id *insolar.ID) *insolar.Reference {
+	return insolar.NewReference(domainID, *id)
+}
+
+func genRandomRef(pulse insolar.PulseNumber) *insolar.Reference {
+	return genRefWithID(genRandomID(pulse))
+}
+
+func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
+
+	pendingMock := recentstorage.NewPendingStorageMock(t)
+
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(t)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
+
+	mb := testutils.NewMessageBusMock(t)
+	mb.MustRegisterMock.Return()
+	jc := jet.NewCoordinatorMock(t)
+
+	scheme := testutils.NewPlatformCryptographyScheme()
+	indexMemoryStor := object.NewIndexMemory()
+
+	idLockMock := object.NewIDLockerMock(t)
+	idLockMock.LockMock.Return()
+	idLockMock.UnlockMock.Return()
+
+	objIndex := object.Lifeline{LatestState: genRandomID(0), State: object.StateActivation}
+	amendRecord := object.AmendRecord{
+		PrevState: *objIndex.LatestState,
+	}
+	amendHash := scheme.ReferenceHasher()
+	_, err := amendRecord.WriteHashData(amendHash)
+	require.NoError(t, err)
+
+	msg := message.UpdateObject{
+		Record: object.EncodeVirtual(&amendRecord),
+		Object: *genRandomRef(0),
+	}
+
+	mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
+		if m, ok := gm.(*message.GetObjectIndex); ok {
+			assert.Equal(t, msg.Object, m.Object)
+			buf := object.EncodeIndex(objIndex)
+			return &reply.ObjectIndex{Index: buf}, nil
+		}
+
+		panic("unexpected call")
+	}
+
+	ctx := context.Background()
+	heavyRef := genRandomRef(0)
+	jc.HeavyMock.Return(heavyRef, nil)
+
+	recordStorage := object.NewRecordMemory()
+
+	updateObject := UpdateObject{
+		JetID:   insolar.JetID(jetID),
+		Message: &msg,
+		Parcel: &message.Parcel{
+			Msg:         &msg,
+			PulseNumber: insolar.FirstPulseNumber,
+		},
+	}
+	updateObject.Dep.Bus = mb
+	updateObject.Dep.BlobModifier = blob.NewStorageMemory()
+	updateObject.Dep.IDLocker = idLockMock
+	updateObject.Dep.Coordinator = jc
+	updateObject.Dep.IndexStorage = indexMemoryStor
+	updateObject.Dep.PlatformCryptographyScheme = scheme
+	updateObject.Dep.RecordModifier = recordStorage
+	updateObject.Dep.IndexModifier = indexMemoryStor
+	updateObject.Dep.IndexStateModifier = object.NewIndexMemory()
+
+	rep, err := updateObject.handle(ctx)
+
+	require.NoError(t, err)
+	objRep, ok := rep.(*reply.Object)
+	require.True(t, ok)
+
+	idx, err := indexMemoryStor.ForID(ctx, *msg.Object.Record())
+	require.NoError(t, err)
+	assert.Equal(t, objRep.State, *idx.LatestState)
+}
+
+func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
+	jetID := insolar.ID(*insolar.NewJetID(0, nil))
+
+	pendingMock := recentstorage.NewPendingStorageMock(t)
+
+	pendingMock.GetRequestsForObjectMock.Return(nil)
+	pendingMock.AddPendingRequestMock.Return()
+	pendingMock.RemovePendingRequestMock.Return()
+
+	provideMock := recentstorage.NewProviderMock(t)
+	provideMock.GetPendingStorageMock.Return(pendingMock)
+
+	scheme := testutils.NewPlatformCryptographyScheme()
+	indexMemoryStor := object.NewIndexMemory()
+	recordStorage := object.NewRecordMemory()
+
+	idLockMock := object.NewIDLockerMock(t)
+	idLockMock.LockMock.Return()
+	idLockMock.UnlockMock.Return()
+
+	objIndex := object.Lifeline{
+		LatestState:  genRandomID(0),
+		State:        object.StateActivation,
+		LatestUpdate: 0,
+		JetID:        insolar.JetID(jetID),
+	}
+	amendRecord := object.AmendRecord{
+		PrevState: *objIndex.LatestState,
+	}
+	amendHash := scheme.ReferenceHasher()
+	_, err := amendRecord.WriteHashData(amendHash)
+	require.NoError(t, err)
+
+	msg := message.UpdateObject{
+		Record: object.EncodeVirtual(&amendRecord),
+		Object: *genRandomRef(0),
+	}
+	ctx := context.Background()
+	err = indexMemoryStor.Set(ctx, *msg.Object.Record(), objIndex)
+	require.NoError(t, err)
+
+	// Act
+	updateObject := UpdateObject{
+		JetID:   insolar.JetID(jetID),
+		Message: &msg,
+		Parcel: &message.Parcel{
+			Msg:         &msg,
+			PulseNumber: insolar.FirstPulseNumber,
+		},
+	}
+	updateObject.Dep.BlobModifier = blob.NewStorageMemory()
+	updateObject.Dep.IDLocker = idLockMock
+	updateObject.Dep.IndexStorage = indexMemoryStor
+	updateObject.Dep.PlatformCryptographyScheme = scheme
+	updateObject.Dep.RecordModifier = recordStorage
+	updateObject.Dep.IndexModifier = indexMemoryStor
+	updateObject.Dep.IndexStateModifier = object.NewIndexMemory()
+
+	rep, err := updateObject.handle(ctx)
+	require.NoError(t, err)
+	_, ok := rep.(*reply.Object)
+	require.True(t, ok)
+
+	// Arrange
+	idx, err := indexMemoryStor.ForID(ctx, *msg.Object.Record())
+	require.NoError(t, err)
+	require.Equal(t, insolar.FirstPulseNumber, int(idx.LatestUpdate))
+}
