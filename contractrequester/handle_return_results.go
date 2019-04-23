@@ -55,6 +55,7 @@ func (h *HandleReturnResults) Present(ctx context.Context, f flow.Flow) error {
 	c, ok := cr.ResultMap[msg.Sequence]
 	if !ok {
 		logger.Info("oops unwaited results seq=", msg.Sequence)
+		h.Message.ReplyTo <- replyOk
 		return nil
 	}
 	logger.Debug("Got wanted results seq=", msg.Sequence)
