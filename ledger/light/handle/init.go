@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
 )
@@ -44,13 +45,16 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 			dep:     s.Dep,
 			Message: s.Message,
 		}
-		return f.Handle(ctx, h.Present)
+		return h.Present(ctx, f)
 	case insolar.TypeGetCode:
+		msg := s.Message.Parcel.Message().(*message.GetCode)
 		h := &GetCode{
 			dep:     s.Dep,
 			Message: s.Message,
+			Code:    msg.Code,
 		}
-		return f.Handle(ctx, h.Present)
+		panic("init")
+		return h.Present(ctx, f)
 	default:
 		return fmt.Errorf("no handler for message type %s", s.Message.Parcel.Message().Type().String())
 	}
