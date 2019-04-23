@@ -50,7 +50,7 @@ COPY --from=insolard-builder        \
 COPY docker/insolard-entrypoint.sh /opt/bin/docker-entrypoint.sh
 
 EXPOSE 7900 7901 8001 18182 19191
-HEALTHCHECK --start-period=3m --interval=5m --timeout=30s --retries=5 \
+HEALTHCHECK --start-period=5m --interval=1m --timeout=30s --retries=5 \
     CMD [ "/opt/bin/healthcheck.sh" ]
 VOLUME [ "/etc/insolar", "/var/lib/insolar" ]
 
