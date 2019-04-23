@@ -14,11 +14,23 @@
 # ./scripts/monitor.sh logs -f jaeger
 # ./scripts/monitor.sh restart jaeger
 
+# configurable vars
+INSOLAR_ARTIFACTS_DIR=${INSOLAR_ARTIFACTS_DIR:-".artifacts"}/
+LAUNCHNET_BASE_DIR=${LAUNCHNET_BASE_DIR:-"${INSOLAR_ARTIFACTS_DIR}launchnet"}/
+
+PROMETHEUS_IN_CONFIG=${LAUNCHNET_BASE_DIR}prometheus.yaml
+CONFIG_DIR=scripts/monitor/prometheus/
+
 set -e
+
 
 if [ $# -lt 1 ]; then
     echo "pregen configs (required for prometheus config generation)"
     ./scripts/insolard/launchnet.sh -C
+    mkdir -p ${CONFIG_DIR}
+    cp ${PROMETHEUS_IN_CONFIG} ${CONFIG_DIR}
+
+    echo "start monitoring stack"
     cd scripts/
 
     docker-compose down
