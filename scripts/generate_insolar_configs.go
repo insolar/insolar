@@ -56,7 +56,7 @@ var (
 	prometheusFileName   = "prometheus.yaml"
 
 	genesisConfigTmpl = "scripts/insolard/genesis_template.yaml"
-	genesisFileName   = withBaseDir("genesis.yaml")
+	genesisFileName   = ""
 
 	insolardConfigTmpl = "scripts/insolard/insolard_template.yaml"
 	insolardFileName   = withBaseDir("insolard.yaml")
@@ -80,6 +80,7 @@ func parseInputParams() {
 		&debugLevel, "debuglevel", "d", "Debug", "debug level")
 	rootCmd.Flags().StringVarP(
 		&gorundPortsPath, "gorundports", "p", "", "path to insgorund ports (required)")
+	rootCmd.Flags().StringVarP(&genesisFileName, "genesis-config", "", "", "input genesis file")
 
 	err := rootCmd.Execute()
 	check("Wrong input params:", err)
@@ -117,7 +118,11 @@ func main() {
 
 	mustMakeDir(outputDir)
 	writeInsloardConfig()
-	writeGenesisConfig()
+
+	if genesisFileName == "" {
+		genesisFileName = withBaseDir("genesis.yaml")
+		writeGenesisConfig()
+	}
 
 	genesisConf, err := genesis.ParseGenesisConfig(genesisFileName)
 	check("Can't read genesis config", err)
