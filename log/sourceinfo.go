@@ -24,7 +24,6 @@ import (
 // callInfo bundles the info about the call environment
 // when a logging statement occurred.
 type callInfo struct {
-	// packageName string
 	fileName string
 	funcName string
 	line     int

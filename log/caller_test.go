@@ -26,7 +26,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// XXX: Beware, test results there depends on test file name (caller_test.go)!
+// Beware, test results there depends on test file name (caller_test.go)!
 
 type loggerField struct {
 	Caller string
@@ -58,7 +58,7 @@ func TestLog_ZerologCaller(t *testing.T) {
 	assert.NotContains(t, "github.com/insolar/insolar", lf.Caller, "log not contains package name")
 }
 
-// XXX: test result depends on test name
+// this test result depends on test name!
 func TestLog_ZerologCallerWithFunc(t *testing.T) {
 	l, err := NewLog(configuration.Log{
 		Level:     "info",
@@ -93,7 +93,7 @@ func TestLog_GlobalCaller(t *testing.T) {
 	assert.Regexp(t, "^log/caller_test.go:", lf.Caller, "log contains call place")
 }
 
-// XXX: test result depends on test name
+// this test result depends on test name!
 func TestLog_GlobalCallerWithFunc(t *testing.T) {
 	gl := GlobalLogger
 	defer func() { GlobalLogger = gl }()

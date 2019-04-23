@@ -33,7 +33,7 @@ func newCallerHook(skipFrameCount int) *callerHook {
 
 // Run implements zerolog.Hook.
 func (ch *callerHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
-	if e == nil {
+	if level == zerolog.NoLevel {
 		return
 	}
 	info := getCallInfo(ch.callerSkipFrameCount)
