@@ -35,7 +35,7 @@ const IncomingMsgTopic = "IncomingMsgTopic"
 // PulseMetadataKey is key for Pulse
 const PulseMetadataKey = "pulse"
 
-// PulseMetadataKey is key for Type
+// TypeMetadataKey is key for Type
 const TypeMetadataKey = "type"
 
 // ReceiverMetadataKey is key for Receiver
