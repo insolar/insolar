@@ -79,6 +79,13 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
+func init() {
+	err := log.SetLevel("debug")
+	if err != nil {
+		log.Fatal("couldn't set log level to debug: ", err)
+	}
+}
+
 var (
 	testNetworkPort uint32 = 10010
 	pulseTimeMs     int32  = 5000
