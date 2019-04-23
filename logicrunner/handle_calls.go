@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
@@ -99,11 +98,9 @@ func (h *HandleCall) executeActual(
 	es.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{
-		es:     es,
-		parcel: parcel,
-		Dep: struct{ ArtifactManager artifacts.Client }{
-			ArtifactManager: lr.ArtifactManager,
-		},
+		es:              es,
+		parcel:          parcel,
+		ArtifactManager: lr.ArtifactManager,
 	}
 
 	if err := f.Procedure(ctx, &procClarifyPendingState); err != nil {
