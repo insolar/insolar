@@ -67,7 +67,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestProcessOutcome_ReceiverNotSet(t *testing.T) {
+func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 
 	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
@@ -75,12 +75,12 @@ func TestProcessOutcome_ReceiverNotSet(t *testing.T) {
 	payload := []byte{1, 2, 3, 4, 5}
 	inMsg := message.NewMessage(watermill.NewUUID(), payload)
 
-	outMsgs, err := serviceNetwork.ProcessOutcome(inMsg)
+	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.EqualError(t, err, "Receiver in msg.Metadata not set")
 	require.Nil(t, outMsgs)
 }
 
-func TestProcessOutcome_IncorrectReceiver(t *testing.T) {
+func TestSendMessageHandler_IncorrectReceiver(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.Service.Skip = 5
 
@@ -90,7 +90,7 @@ func TestProcessOutcome_IncorrectReceiver(t *testing.T) {
 	inMsg := message.NewMessage(watermill.NewUUID(), payload)
 	inMsg.Metadata.Set(bus.ReceiverMetadataKey, "someBadValue")
 
-	outMsgs, err := serviceNetwork.ProcessOutcome(inMsg)
+	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "incorrect Receiver in msg.Metadata")
 	require.Nil(t, outMsgs)
@@ -106,7 +106,7 @@ func (p *PublisherMock) Close() error {
 	return nil
 }
 
-func TestProcessOutcome_SameNode(t *testing.T) {
+func TestSendMessageHandler_SameNode(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.Service.Skip = 5
 	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
@@ -127,12 +127,12 @@ func TestProcessOutcome_SameNode(t *testing.T) {
 	inMsg := message.NewMessage(watermill.NewUUID(), payload)
 	inMsg.Metadata.Set(bus.ReceiverMetadataKey, nodeRef.String())
 
-	outMsgs, err := serviceNetwork.ProcessOutcome(inMsg)
+	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
 	require.Nil(t, outMsgs)
 }
 
-func TestProcessOutcome_SendError(t *testing.T) {
+func TestSendMessageHandler_SendError(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.Service.Skip = 5
 	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
@@ -155,13 +155,13 @@ func TestProcessOutcome_SendError(t *testing.T) {
 	inMsg := message.NewMessage(watermill.NewUUID(), payload)
 	inMsg.Metadata.Set(bus.ReceiverMetadataKey, testutils.RandomRef().String())
 
-	outMsgs, err := serviceNetwork.ProcessOutcome(inMsg)
+	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "error while sending watermillMsg to controller")
 	require.Nil(t, outMsgs)
 }
 
-func TestProcessOutcome_WrongReply(t *testing.T) {
+func TestSendMessageHandler_WrongReply(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.Service.Skip = 5
 	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
@@ -184,13 +184,13 @@ func TestProcessOutcome_WrongReply(t *testing.T) {
 	inMsg := message.NewMessage(watermill.NewUUID(), payload)
 	inMsg.Metadata.Set(bus.ReceiverMetadataKey, testutils.RandomRef().String())
 
-	outMsgs, err := serviceNetwork.ProcessOutcome(inMsg)
+	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "error while deserialize reply")
 	require.Nil(t, outMsgs)
 }
 
-func TestProcessOutcome_NotOKReply(t *testing.T) {
+func TestSendMessageHandler_NotOKReply(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.Service.Skip = 5
 	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
@@ -213,13 +213,13 @@ func TestProcessOutcome_NotOKReply(t *testing.T) {
 	inMsg := message.NewMessage(watermill.NewUUID(), payload)
 	inMsg.Metadata.Set(bus.ReceiverMetadataKey, testutils.RandomRef().String())
 
-	outMsgs, err := serviceNetwork.ProcessOutcome(inMsg)
+	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "reply is not ok")
 	require.Nil(t, outMsgs)
 }
 
-func TestProcessOutcome(t *testing.T) {
+func TestSendMessageHandler(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.Service.Skip = 5
 	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
@@ -242,7 +242,7 @@ func TestProcessOutcome(t *testing.T) {
 	inMsg := message.NewMessage(watermill.NewUUID(), payload)
 	inMsg.Metadata.Set(bus.ReceiverMetadataKey, testutils.RandomRef().String())
 
-	outMsgs, err := serviceNetwork.ProcessOutcome(inMsg)
+	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
 	require.Nil(t, outMsgs)
 }

@@ -82,10 +82,6 @@ import (
 	"github.com/insolar/insolar/network/utils"
 )
 
-type resultSetter interface {
-	SetResult(ctx context.Context, msg *message.Message)
-}
-
 const deliverWatermillMsg = "ServiceNetwork.processIncome"
 
 // ServiceNetwork is facade for network.
@@ -102,7 +98,6 @@ type ServiceNetwork struct {
 	NodeKeeper          network.NodeKeeper          `inject:""`
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
 	GIL                 insolar.GlobalInsolarLock   `inject:""`
-	ResultSetter        resultSetter                `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
@@ -349,8 +344,8 @@ func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, node insolar.D
 	}
 }
 
-// ProcessOutcome processes received message.
-func (n *ServiceNetwork) ProcessOutcome(msg *message.Message) ([]*message.Message, error) {
+// SendMessageHandler async sends message with confirmation of delivery.
+func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Message, error) {
 	receiver := msg.Metadata.Get(bus.ReceiverMetadataKey)
 	if receiver == "" {
 		return nil, errors.New("Receiver in msg.Metadata not set")
@@ -363,9 +358,9 @@ func (n *ServiceNetwork) ProcessOutcome(msg *message.Message) ([]*message.Messag
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
 	if node.Equal(origin.ID()) {
-		err := n.pub.Publish(bus.IncomingMsgTopic, msg)
+		err := n.pub.Publish(bus.IncomingMsg, msg)
 		if err != nil {
-			return nil, errors.Wrap(err, "error while publish msg to IncomingMsgTopic")
+			return nil, errors.Wrap(err, "error while publish msg to IncomingMsg")
 		}
 		return nil, nil
 	}
@@ -399,11 +394,14 @@ func (n *ServiceNetwork) processIncome(ctx context.Context, args [][]byte) ([]by
 	// TODO: check pulse here
 
 	if msg.Metadata.Get(bus.TypeMetadataKey) == bus.ReplyTypeMetadataValue {
-		n.ResultSetter.SetResult(ctx, msg)
-	} else {
-		err := n.pub.Publish(bus.IncomingMsgTopic, msg)
+		err := n.pub.Publish(bus.ReplyingMsg, msg)
 		if err != nil {
-			return nil, errors.Wrap(err, "error while publish msg to IncomingMsgTopic")
+			return nil, errors.Wrap(err, "error while publish msg to ReplyingMsg")
+		}
+	} else {
+		err := n.pub.Publish(bus.IncomingMsg, msg)
+		if err != nil {
+			return nil, errors.Wrap(err, "error while publish msg to IncomingMsg")
 		}
 	}
 

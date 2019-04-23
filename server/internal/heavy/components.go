@@ -18,7 +18,6 @@ package heavy
 
 import (
 	"context"
-	"time"
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/bus"
@@ -169,7 +168,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
 		// Create router, run it and set pub to bus constructor instead of nil
-		WmBus = bus.NewBus(nil, time.Second)
+		WmBus = bus.NewBus(nil)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(

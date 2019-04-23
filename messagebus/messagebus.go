@@ -26,7 +26,6 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"go.opencensus.io/trace"
@@ -47,7 +46,7 @@ import (
 
 const deliverRPCMethodName = "MessageBus.Deliver"
 
-var useWatermillTypes = make(map[insolar.MessageType]struct{})
+var transferredToWatermill = make(map[insolar.MessageType]struct{})
 
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
@@ -157,9 +156,6 @@ func (mb *MessageBus) createWatermillMessage(ctx context.Context, parcel insolar
 	payload := message.ParcelToBytes(parcel)
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
 
-	correlationID := watermill.NewUUID()
-	middleware.SetCorrelationID(correlationID, wmMsg)
-
 	wmMsg.Metadata.Set(bus.PulseMetadataKey, fmt.Sprintf("%d", currentPulse.PulseNumber))
 	wmMsg.Metadata.Set(bus.TypeMetadataKey, parcel.Message().Type().String())
 	wmMsg.Metadata.Set(bus.ReceiverMetadataKey, mb.getReceiver(ctx, parcel, currentPulse, ops))
@@ -206,7 +202,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 		return nil, err
 	}
 
-	_, ok := useWatermillTypes[msg.Type()]
+	_, ok := transferredToWatermill[msg.Type()]
 	if ok {
 		wmMsg := mb.createWatermillMessage(ctx, parcel, ops, currentPulse)
 		res := mb.Bus.Send(ctx, wmMsg)

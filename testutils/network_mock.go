@@ -31,10 +31,10 @@ type NetworkMock struct {
 	LeavePreCounter uint64
 	LeaveMock       mNetworkMockLeave
 
-	ProcessOutcomeFunc       func(p *message.Message) (r []*message.Message, r1 error)
-	ProcessOutcomeCounter    uint64
-	ProcessOutcomePreCounter uint64
-	ProcessOutcomeMock       mNetworkMockProcessOutcome
+	SendMessageHandlerFunc       func(p *message.Message) (r []*message.Message, r1 error)
+	SendMessageHandlerCounter    uint64
+	SendMessageHandlerPreCounter uint64
+	SendMessageHandlerMock       mNetworkMockSendMessageHandler
 
 	RemoteProcedureRegisterFunc       func(p string, p1 insolar.RemoteProcedure)
 	RemoteProcedureRegisterCounter    uint64
@@ -62,7 +62,7 @@ func NewNetworkMock(t minimock.Tester) *NetworkMock {
 
 	m.GetStateMock = mNetworkMockGetState{mock: m}
 	m.LeaveMock = mNetworkMockLeave{mock: m}
-	m.ProcessOutcomeMock = mNetworkMockProcessOutcome{mock: m}
+	m.SendMessageHandlerMock = mNetworkMockSendMessageHandler{mock: m}
 	m.RemoteProcedureRegisterMock = mNetworkMockRemoteProcedureRegister{mock: m}
 	m.SendCascadeMessageMock = mNetworkMockSendCascadeMessage{mock: m}
 	m.SendMessageMock = mNetworkMockSendMessage{mock: m}
@@ -328,91 +328,91 @@ func (m *NetworkMock) LeaveFinished() bool {
 	return true
 }
 
-type mNetworkMockProcessOutcome struct {
+type mNetworkMockSendMessageHandler struct {
 	mock              *NetworkMock
-	mainExpectation   *NetworkMockProcessOutcomeExpectation
-	expectationSeries []*NetworkMockProcessOutcomeExpectation
+	mainExpectation   *NetworkMockSendMessageHandlerExpectation
+	expectationSeries []*NetworkMockSendMessageHandlerExpectation
 }
 
-type NetworkMockProcessOutcomeExpectation struct {
-	input  *NetworkMockProcessOutcomeInput
-	result *NetworkMockProcessOutcomeResult
+type NetworkMockSendMessageHandlerExpectation struct {
+	input  *NetworkMockSendMessageHandlerInput
+	result *NetworkMockSendMessageHandlerResult
 }
 
-type NetworkMockProcessOutcomeInput struct {
+type NetworkMockSendMessageHandlerInput struct {
 	p *message.Message
 }
 
-type NetworkMockProcessOutcomeResult struct {
+type NetworkMockSendMessageHandlerResult struct {
 	r  []*message.Message
 	r1 error
 }
 
-//Expect specifies that invocation of Network.ProcessOutcome is expected from 1 to Infinity times
-func (m *mNetworkMockProcessOutcome) Expect(p *message.Message) *mNetworkMockProcessOutcome {
-	m.mock.ProcessOutcomeFunc = nil
+//Expect specifies that invocation of Network.SendMessageHandler is expected from 1 to Infinity times
+func (m *mNetworkMockSendMessageHandler) Expect(p *message.Message) *mNetworkMockSendMessageHandler {
+	m.mock.SendMessageHandlerFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &NetworkMockProcessOutcomeExpectation{}
+		m.mainExpectation = &NetworkMockSendMessageHandlerExpectation{}
 	}
-	m.mainExpectation.input = &NetworkMockProcessOutcomeInput{p}
+	m.mainExpectation.input = &NetworkMockSendMessageHandlerInput{p}
 	return m
 }
 
-//Return specifies results of invocation of Network.ProcessOutcome
-func (m *mNetworkMockProcessOutcome) Return(r []*message.Message, r1 error) *NetworkMock {
-	m.mock.ProcessOutcomeFunc = nil
+//Return specifies results of invocation of Network.SendMessageHandler
+func (m *mNetworkMockSendMessageHandler) Return(r []*message.Message, r1 error) *NetworkMock {
+	m.mock.SendMessageHandlerFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
-		m.mainExpectation = &NetworkMockProcessOutcomeExpectation{}
+		m.mainExpectation = &NetworkMockSendMessageHandlerExpectation{}
 	}
-	m.mainExpectation.result = &NetworkMockProcessOutcomeResult{r, r1}
+	m.mainExpectation.result = &NetworkMockSendMessageHandlerResult{r, r1}
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of Network.ProcessOutcome is expected once
-func (m *mNetworkMockProcessOutcome) ExpectOnce(p *message.Message) *NetworkMockProcessOutcomeExpectation {
-	m.mock.ProcessOutcomeFunc = nil
+//ExpectOnce specifies that invocation of Network.SendMessageHandler is expected once
+func (m *mNetworkMockSendMessageHandler) ExpectOnce(p *message.Message) *NetworkMockSendMessageHandlerExpectation {
+	m.mock.SendMessageHandlerFunc = nil
 	m.mainExpectation = nil
 
-	expectation := &NetworkMockProcessOutcomeExpectation{}
-	expectation.input = &NetworkMockProcessOutcomeInput{p}
+	expectation := &NetworkMockSendMessageHandlerExpectation{}
+	expectation.input = &NetworkMockSendMessageHandlerInput{p}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
-func (e *NetworkMockProcessOutcomeExpectation) Return(r []*message.Message, r1 error) {
-	e.result = &NetworkMockProcessOutcomeResult{r, r1}
+func (e *NetworkMockSendMessageHandlerExpectation) Return(r []*message.Message, r1 error) {
+	e.result = &NetworkMockSendMessageHandlerResult{r, r1}
 }
 
-//Set uses given function f as a mock of Network.ProcessOutcome method
-func (m *mNetworkMockProcessOutcome) Set(f func(p *message.Message) (r []*message.Message, r1 error)) *NetworkMock {
+//Set uses given function f as a mock of Network.SendMessageHandler method
+func (m *mNetworkMockSendMessageHandler) Set(f func(p *message.Message) (r []*message.Message, r1 error)) *NetworkMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
-	m.mock.ProcessOutcomeFunc = f
+	m.mock.SendMessageHandlerFunc = f
 	return m.mock
 }
 
-//ProcessOutcome implements github.com/insolar/insolar/insolar.Network interface
-func (m *NetworkMock) ProcessOutcome(p *message.Message) (r []*message.Message, r1 error) {
-	counter := atomic.AddUint64(&m.ProcessOutcomePreCounter, 1)
-	defer atomic.AddUint64(&m.ProcessOutcomeCounter, 1)
+//SendMessageHandler implements github.com/insolar/insolar/insolar.Network interface
+func (m *NetworkMock) SendMessageHandler(p *message.Message) (r []*message.Message, r1 error) {
+	counter := atomic.AddUint64(&m.SendMessageHandlerPreCounter, 1)
+	defer atomic.AddUint64(&m.SendMessageHandlerCounter, 1)
 
-	if len(m.ProcessOutcomeMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.ProcessOutcomeMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to NetworkMock.ProcessOutcome. %v", p)
+	if len(m.SendMessageHandlerMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.SendMessageHandlerMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NetworkMock.SendMessageHandler. %v", p)
 			return
 		}
 
-		input := m.ProcessOutcomeMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, NetworkMockProcessOutcomeInput{p}, "Network.ProcessOutcome got unexpected parameters")
+		input := m.SendMessageHandlerMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, NetworkMockSendMessageHandlerInput{p}, "Network.SendMessageHandler got unexpected parameters")
 
-		result := m.ProcessOutcomeMock.expectationSeries[counter-1].result
+		result := m.SendMessageHandlerMock.expectationSeries[counter-1].result
 		if result == nil {
-			m.t.Fatal("No results are set for the NetworkMock.ProcessOutcome")
+			m.t.Fatal("No results are set for the NetworkMock.SendMessageHandler")
 			return
 		}
 
@@ -422,16 +422,16 @@ func (m *NetworkMock) ProcessOutcome(p *message.Message) (r []*message.Message, 
 		return
 	}
 
-	if m.ProcessOutcomeMock.mainExpectation != nil {
+	if m.SendMessageHandlerMock.mainExpectation != nil {
 
-		input := m.ProcessOutcomeMock.mainExpectation.input
+		input := m.SendMessageHandlerMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, NetworkMockProcessOutcomeInput{p}, "Network.ProcessOutcome got unexpected parameters")
+			testify_assert.Equal(m.t, *input, NetworkMockSendMessageHandlerInput{p}, "Network.SendMessageHandler got unexpected parameters")
 		}
 
-		result := m.ProcessOutcomeMock.mainExpectation.result
+		result := m.SendMessageHandlerMock.mainExpectation.result
 		if result == nil {
-			m.t.Fatal("No results are set for the NetworkMock.ProcessOutcome")
+			m.t.Fatal("No results are set for the NetworkMock.SendMessageHandler")
 		}
 
 		r = result.r
@@ -440,39 +440,39 @@ func (m *NetworkMock) ProcessOutcome(p *message.Message) (r []*message.Message, 
 		return
 	}
 
-	if m.ProcessOutcomeFunc == nil {
-		m.t.Fatalf("Unexpected call to NetworkMock.ProcessOutcome. %v", p)
+	if m.SendMessageHandlerFunc == nil {
+		m.t.Fatalf("Unexpected call to NetworkMock.SendMessageHandler. %v", p)
 		return
 	}
 
-	return m.ProcessOutcomeFunc(p)
+	return m.SendMessageHandlerFunc(p)
 }
 
-//ProcessOutcomeMinimockCounter returns a count of NetworkMock.ProcessOutcomeFunc invocations
-func (m *NetworkMock) ProcessOutcomeMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.ProcessOutcomeCounter)
+//SendMessageHandlerMinimockCounter returns a count of NetworkMock.SendMessageHandlerFunc invocations
+func (m *NetworkMock) SendMessageHandlerMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.SendMessageHandlerCounter)
 }
 
-//ProcessOutcomeMinimockPreCounter returns the value of NetworkMock.ProcessOutcome invocations
-func (m *NetworkMock) ProcessOutcomeMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.ProcessOutcomePreCounter)
+//SendMessageHandlerMinimockPreCounter returns the value of NetworkMock.SendMessageHandler invocations
+func (m *NetworkMock) SendMessageHandlerMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.SendMessageHandlerPreCounter)
 }
 
-//ProcessOutcomeFinished returns true if mock invocations count is ok
-func (m *NetworkMock) ProcessOutcomeFinished() bool {
+//SendMessageHandlerFinished returns true if mock invocations count is ok
+func (m *NetworkMock) SendMessageHandlerFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.ProcessOutcomeMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.ProcessOutcomeCounter) == uint64(len(m.ProcessOutcomeMock.expectationSeries))
+	if len(m.SendMessageHandlerMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.SendMessageHandlerCounter) == uint64(len(m.SendMessageHandlerMock.expectationSeries))
 	}
 
 	// if main expectation was set then invocations count should be greater than zero
-	if m.ProcessOutcomeMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.ProcessOutcomeCounter) > 0
+	if m.SendMessageHandlerMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.SendMessageHandlerCounter) > 0
 	}
 
 	// if func was set then invocations count should be greater than zero
-	if m.ProcessOutcomeFunc != nil {
-		return atomic.LoadUint64(&m.ProcessOutcomeCounter) > 0
+	if m.SendMessageHandlerFunc != nil {
+		return atomic.LoadUint64(&m.SendMessageHandlerCounter) > 0
 	}
 
 	return true
@@ -915,8 +915,8 @@ func (m *NetworkMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NetworkMock.Leave")
 	}
 
-	if !m.ProcessOutcomeFinished() {
-		m.t.Fatal("Expected call to NetworkMock.ProcessOutcome")
+	if !m.SendMessageHandlerFinished() {
+		m.t.Fatal("Expected call to NetworkMock.SendMessageHandler")
 	}
 
 	if !m.RemoteProcedureRegisterFinished() {
@@ -956,8 +956,8 @@ func (m *NetworkMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NetworkMock.Leave")
 	}
 
-	if !m.ProcessOutcomeFinished() {
-		m.t.Fatal("Expected call to NetworkMock.ProcessOutcome")
+	if !m.SendMessageHandlerFinished() {
+		m.t.Fatal("Expected call to NetworkMock.SendMessageHandler")
 	}
 
 	if !m.RemoteProcedureRegisterFinished() {
@@ -988,7 +988,7 @@ func (m *NetworkMock) MinimockWait(timeout time.Duration) {
 		ok := true
 		ok = ok && m.GetStateFinished()
 		ok = ok && m.LeaveFinished()
-		ok = ok && m.ProcessOutcomeFinished()
+		ok = ok && m.SendMessageHandlerFinished()
 		ok = ok && m.RemoteProcedureRegisterFinished()
 		ok = ok && m.SendCascadeMessageFinished()
 		ok = ok && m.SendMessageFinished()
@@ -1008,8 +1008,8 @@ func (m *NetworkMock) MinimockWait(timeout time.Duration) {
 				m.t.Error("Expected call to NetworkMock.Leave")
 			}
 
-			if !m.ProcessOutcomeFinished() {
-				m.t.Error("Expected call to NetworkMock.ProcessOutcome")
+			if !m.SendMessageHandlerFinished() {
+				m.t.Error("Expected call to NetworkMock.SendMessageHandler")
 			}
 
 			if !m.RemoteProcedureRegisterFinished() {
@@ -1044,7 +1044,7 @@ func (m *NetworkMock) AllMocksCalled() bool {
 		return false
 	}
 
-	if !m.ProcessOutcomeFinished() {
+	if !m.SendMessageHandlerFinished() {
 		return false
 	}
 

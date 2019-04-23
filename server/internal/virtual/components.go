@@ -18,7 +18,6 @@ package virtual
 
 import (
 	"context"
-	"time"
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/bus"
@@ -117,7 +116,7 @@ func initComponents(
 	cm := component.Manager{}
 
 	// Create router, run it and set pub to bus constructor instead of nil
-	b := bus.NewBus(nil, time.Second)
+	b := bus.NewBus(nil)
 
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")

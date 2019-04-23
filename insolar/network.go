@@ -18,8 +18,6 @@ package insolar
 
 import (
 	"context"
-
-	"github.com/ThreeDotsLabs/watermill/message"
 )
 
 // Cascade contains routing data for cascade sending
@@ -49,8 +47,6 @@ type Network interface {
 	Leave(ctx context.Context, ETA PulseNumber)
 	// GetState returns our current thoughs about whole network
 	GetState() NetworkState
-	// ProcessOutcome processes received message.
-	ProcessOutcome(msg *message.Message) ([]*message.Message, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.PulseDistributor -o ../testutils -s _mock.go
