@@ -79,16 +79,16 @@ func createTwoConsensusNetworks(id1, id2 insolar.ShortNodeID) (t1, t2 network.Co
 	m := newMockResolver()
 
 	cm1 := component.NewManager(nil)
-	f1 := transport.NewFactory(configuration.Transport{Address: "127.0.0.1:0"})
-	cn1, err := NewConsensusNetwork("", ID1+DOMAIN, id1)
+	f1 := transport.NewFactory(configuration.NewHostNetwork().Transport)
+	cn1, err := NewConsensusNetwork(ID1+DOMAIN, id1)
 	if err != nil {
 		return nil, nil, err
 	}
 	cm1.Inject(f1, cn1, m)
 
 	cm2 := component.NewManager(nil)
-	f2 := transport.NewFactory(configuration.Transport{Address: "127.0.0.1:0"})
-	cn2, err := NewConsensusNetwork("", ID2+DOMAIN, id2)
+	f2 := transport.NewFactory(configuration.NewHostNetwork().Transport)
+	cn2, err := NewConsensusNetwork(ID2+DOMAIN, id2)
 	if err != nil {
 		return nil, nil, err
 	}

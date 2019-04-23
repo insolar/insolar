@@ -69,24 +69,16 @@ import (
 const udpMaxPacketSize = 1400
 
 type udpTransport struct {
-	conn    net.PacketConn
-	handler DatagramHandler
-	started uint32
-	address string
-	cancel  context.CancelFunc
+	conn               net.PacketConn
+	handler            DatagramHandler
+	started            uint32
+	address            string
+	fixedPublicAddress string
+	cancel             context.CancelFunc
 }
 
 func newUDPTransport(listenAddress, fixedPublicAddress string, handler DatagramHandler) (*udpTransport, error) {
-	conn, err := net.ListenPacket("udp", listenAddress)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to listen UDP")
-	}
-	publicAddress, err := resolver.Resolve(fixedPublicAddress, conn.LocalAddr().String())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to resolve public address")
-	}
-
-	transport := &udpTransport{conn: conn, address: publicAddress, handler: handler}
+	transport := &udpTransport{address: listenAddress, fixedPublicAddress: fixedPublicAddress, handler: handler}
 	return transport, nil
 }
 
@@ -122,17 +114,23 @@ func (t *udpTransport) Address() string {
 func (t *udpTransport) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
-	if !atomic.CompareAndSwapUint32(&t.started, 0, 1) {
+	if atomic.CompareAndSwapUint32(&t.started, 0, 1) {
+
 		var err error
 		t.conn, err = net.ListenPacket("udp", t.address)
 		if err != nil {
 			return errors.Wrap(err, "failed to listen UDP")
 		}
-	}
 
-	logger.Info("[ Start ] Start UDP transport")
-	ctx, t.cancel = context.WithCancel(ctx)
-	go t.loop(ctx)
+		t.address, err = resolver.Resolve(t.fixedPublicAddress, t.conn.LocalAddr().String())
+		if err != nil {
+			return errors.Wrap(err, "failed to resolve public address")
+		}
+
+		logger.Info("[ Start ] Start UDP transport")
+		ctx, t.cancel = context.WithCancel(ctx)
+		go t.loop(ctx)
+	}
 
 	return nil
 }
@@ -173,20 +171,20 @@ func (t *udpTransport) loop(ctx context.Context) {
 func (t *udpTransport) Stop(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
-	//if atomic.CompareAndSwapUint32(&t.started, 1, 0) {
-	logger.Warn("Stop UDP transport")
-	t.cancel()
-	err := t.conn.Close()
+	if atomic.CompareAndSwapUint32(&t.started, 1, 0) {
+		logger.Warn("Stop UDP transport")
+		t.cancel()
+		err := t.conn.Close()
 
-	if err != nil {
-		if utils.IsConnectionClosed(err) {
-			logger.Error("Connection already closed")
-		} else {
-			return err
+		if err != nil {
+			if utils.IsConnectionClosed(err) {
+				logger.Error("Connection already closed")
+			} else {
+				return err
+			}
 		}
+	} else {
+		logger.Warn("Failed to stop transport")
 	}
-	// } else {
-	// 	logger.Warn("Failed to stop transport")
-	// }
 	return nil
 }

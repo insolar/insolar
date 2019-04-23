@@ -59,7 +59,6 @@ import (
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
@@ -83,18 +82,12 @@ type networkConsensus struct {
 }
 
 func (nc *networkConsensus) Init(ctx context.Context) error {
-
-	conf := configuration.Transport{}
-	conf.Address = nc.origin.Address.String()
-
 	var err error
 	nc.transport, err = nc.Factory.CreateDatagramTransport(nc)
 	if err != nil {
 		return errors.Wrap(err, "Failed to create datagram transport")
 	}
 
-	// todo: do this after transport start
-	nc.origin, err = host.NewHostNS(nc.transport.Address(), nc.origin.NodeID, nc.origin.ShortID)
 	return err
 }
 
@@ -108,7 +101,10 @@ func (nc *networkConsensus) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to start datagram transport")
 	}
 
-	return nil
+	var err error
+	a := nc.transport.Address()
+	nc.origin, err = host.NewHostNS(a, nc.origin.NodeID, nc.origin.ShortID)
+	return err
 }
 
 func (nc *networkConsensus) Stop(ctx context.Context) error {
@@ -177,22 +173,17 @@ func (nc *networkConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
 }
 
 // NewConsensusNetwork constructor creates new ConsensusNetwork
-func NewConsensusNetwork(address, nodeID string, shortID insolar.ShortNodeID) (network.ConsensusNetwork, error) {
+func NewConsensusNetwork(nodeID string, shortID insolar.ShortNodeID) (network.ConsensusNetwork, error) {
 
 	id, err := insolar.NewReferenceFromBase58(nodeID)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid nodeID")
 	}
 
-	origin, err := host.NewHostNS(address, *id, shortID)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting origin")
-	}
-
 	result := &networkConsensus{
 		handlers:          make(map[packets.PacketType]network.ConsensusPacketHandler),
 		sequenceGenerator: sequence.NewGeneratorImpl(),
-		origin:            origin,
+		origin:            &host.Host{NodeID: *id, ShortID: shortID},
 	}
 
 	return result, nil
