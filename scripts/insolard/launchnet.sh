@@ -101,10 +101,10 @@ stop_listening()
 
     for port in $ports
     do
-        echo "kill port '$port' owner"
-        kill_port $port &
+        echo "killing process using port '$port'"
+        kill_port $port
     done
-    wait
+
     echo "stop_listening() end."
 }
 
