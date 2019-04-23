@@ -49,15 +49,16 @@ const TestCallUrl = TestAPIURL + "/call"
 
 const insolarRootMemberKeys = "root_member_keys.json"
 
-const conf_dir = "../scripts/insolard/"
-
 var cmd *exec.Cmd
 var cmdCompleted = make(chan error, 1)
 var stdin io.WriteCloser
 var stdout io.ReadCloser
 var stderr io.ReadCloser
 
-var insolarRootMemberKeysPath = filepath.Join(conf_dir+"/configs", insolarRootMemberKeys)
+var (
+	insolarRootMemberKeysPath = filepath.Join("..", baseDir(), "configs", insolarRootMemberKeys)
+	insolarGenesisConfigPath  = filepath.Join("..", baseDir(), "genesis.yaml")
+)
 
 var info *requester.InfoResponse
 var root user
@@ -75,7 +76,7 @@ func getNumberNodes() (int, error) {
 
 	var conf genesisConf
 
-	buff, err := ioutil.ReadFile(conf_dir + "/genesis.yaml")
+	buff, err := ioutil.ReadFile(insolarGenesisConfigPath)
 	if err != nil {
 		return 0, errors.Wrap(err, "[ getNumberNodes ] Can't read genesis conf")
 	}
@@ -96,12 +97,18 @@ func functestPath() string {
 	return filepath.Join(p.Dir, "functest")
 }
 
-func createDirForContracts() error {
-	return os.MkdirAll(filepath.Join(functestPath(), "contractstorage"), 0777)
+func envVarWithDefault(name string, defaultValue string) string {
+	value := os.Getenv(name)
+	if value != "" {
+		return value
+	}
+	return defaultValue
 }
 
-func deleteDirForContracts() error {
-	return os.RemoveAll(filepath.Join(functestPath(), "contractstorage"))
+func baseDir() string {
+	artifactsDir := envVarWithDefault("INSOLAR_ARTIFACTS_DIR", ".artifacts")
+	launchnedArtifactsDir := filepath.Join(artifactsDir, "launchnet")
+	return envVarWithDefault("LAUNCHNET_BASE_DIR", launchnedArtifactsDir)
 }
 
 func loadRootKeys() error {
@@ -317,13 +324,7 @@ func waitForLaunch() error {
 }
 
 func setup() error {
-	err := createDirForContracts()
-	if err != nil {
-		return errors.Wrap(err, "[ setup ] could't create dirs for test: ")
-	}
-	fmt.Println("[ setup ] directory for contracts cache was successfully created")
-
-	err = buildGinsiderCLI()
+	err := buildGinsiderCLI()
 	if err != nil {
 		return errors.Wrap(err, "[ setup ] could't build ginsider CLI: ")
 	}
@@ -385,10 +386,6 @@ func teardown() {
 	}
 	fmt.Println("[ teardown ] insgorund was successfully stoped")
 
-	err = deleteDirForContracts()
-	if err != nil {
-		fmt.Println("[ teardown ] failed to remove directory for contracts cache for func tests: ", err)
-	}
 	fmt.Println("[ teardown ] directory for contracts cache was successfully deleted")
 }
 

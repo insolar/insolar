@@ -2,7 +2,8 @@ pulsar:
   connectiontype: tcp
   mainlisteneraddress: 127.0.0.1:58090
   storage:
-    datadirectory: ./.artifacts/pulsar_data
+    datadirectory: "{{ .DataDir }}"
+    datadirectorynewdb: ""
     txretriesonconflict: 0
   pulsetime: 10000
   receivingsigntimeout: 1000
@@ -10,18 +11,20 @@ pulsar:
   receivingvectortimeout: 1000
   receivingsignsforchosentimeout: 0
   neighbours: []
-  numberofrandomhosts: 5
   numberdelta: 10
   distributiontransport:
     protocol: TCP
     address: 127.0.0.1:58091
-keyspath: "scripts/insolard/configs/bootstrap_keys.json"
-log:
-  level: Debug
-  adapter: zerolog
-tracer:
-  jaeger:
-    collectorendpoint: ""
-    agentendpoint: 127.0.0.1:6831
-    probabilityrate: 1
-  samplingrules: {}
+    fixedpublicaddress: ""
+  pulsedistributor:
+    bootstraphosts:
+{{-  range .BootstrapHosts }}
+      - {{ . }}
+{{- end }}
+    pingrequesttimeout: 1000
+    randomhostsrequesttimeout: 1000
+    pulserequesttimeout: 1000
+    randomnodescount: 5
+versionmanager:
+  minalowedversion: v0.3.0
+keyspath: "{{ .BaseDir }}/configs/bootstrap_keys.json"

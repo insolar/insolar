@@ -26,7 +26,6 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
-	"github.com/insolar/insolar/ledger/storage/storagetest"
 	"github.com/insolar/insolar/testutils/testmetrics"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -101,25 +100,6 @@ func TestMetrics_ZPages(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, http.StatusOK, code)
 	// fmt.Println("/debug/tracez => ", content)
-
-	assert.NoError(t, testm.Stop())
-}
-
-func TestMetrics_Badger(t *testing.T) {
-	t.Parallel()
-	ctx := inslogger.TestContext(t)
-
-	_, _, cleaner := storagetest.TmpDB(ctx, nil)
-	defer cleaner()
-
-	testm := testmetrics.Start(ctx, t)
-
-	code, content, err := testm.FetchURL("/metrics")
-	_ = content
-	require.NoError(t, err)
-	require.Equal(t, http.StatusOK, code)
-	// fmt.Println("/metrics => ", content)
-	assert.Contains(t, content, "insolar_badger_blocked_puts_total")
 
 	assert.NoError(t, testm.Stop())
 }

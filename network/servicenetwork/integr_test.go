@@ -338,10 +338,8 @@ func (s *testSuite) TestFullTimeOut() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	// TODO: make this set operation thread-safe somehow (race detector does not like this code)
-	wrapper := s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager.(*phaseManagerWrapper)
-	wrapper.original = &FullTimeoutPhaseManager{}
-	s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager = wrapper
+
+	s.setPhaseManagerMock()
 
 	s.waitForConsensus(2)
 
@@ -552,4 +550,13 @@ func (s *testSuite) setCommunicatorMock(opt CommunicatorTestOpt) {
 		phasemanager.SecondPhase.(*phases.SecondPhaseImpl).Communicator = wrapper
 		phasemanager.ThirdPhase.(*phases.ThirdPhaseImpl).Communicator = wrapper
 	}
+}
+
+func (s *testSuite) setPhaseManagerMock() {
+	s.fixture().pulsar.Pause()
+	defer s.fixture().pulsar.Continue()
+
+	wrapper := s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager.(*phaseManagerWrapper)
+	wrapper.original = &FullTimeoutPhaseManager{}
+	s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager = wrapper
 }

@@ -27,9 +27,16 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill"
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/flow/handler"
+	"github.com/insolar/insolar/insolar/jet"
 	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -125,6 +132,14 @@ func (st *ObjectState) WrapError(err error, message string) error {
 	}
 }
 
+func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
+	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
+	wmMsg.Metadata.Set("TraceID", inslogger.TraceID(ctx))
+	wmMsg.Metadata.Set(MessageTypeField, msgType)
+
+	return wmMsg
+}
+
 // LogicRunner is a general interface of contract executor
 type LogicRunner struct {
 	MessageBus                 insolar.MessageBus                 `inject:""`
@@ -134,7 +149,7 @@ type LogicRunner struct {
 	ParcelFactory              message.ParcelFactory              `inject:""`
 	PulseAccessor              pulse.Accessor                     `inject:""`
 	ArtifactManager            artifacts.Client                   `inject:""`
-	JetCoordinator             insolar.JetCoordinator             `inject:""`
+	JetCoordinator             jet.Coordinator                    `inject:""`
 
 	Executors    [insolar.MachineTypesLastID]insolar.MachineLogicExecutor
 	machinePrefs []insolar.MachineType
@@ -143,11 +158,15 @@ type LogicRunner struct {
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
 	stateMutex sync.RWMutex
 
+	FlowHandler *handler.Handler
+
 	sock net.Listener
 
 	stopLock   sync.Mutex
 	isStopping bool
 	stopChan   chan struct{}
+
+	router *watermillMsg.Router
 }
 
 // NewLogicRunner is constructor for LogicRunner
@@ -159,7 +178,61 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		Cfg:   cfg,
 		state: make(map[Ref]*ObjectState),
 	}
+
+	err := initHandlers(&res)
+	if err != nil {
+		return nil, errors.Wrap(err, "Error while init handlers for logic runner:")
+	}
+
 	return &res, nil
+}
+
+func initHandlers(lr *LogicRunner) error {
+	wmLogger := watermill.NewStdLogger(false, false)
+	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
+
+	dep := &Dependencies{
+		Publisher: pubSub,
+		lr:        lr,
+	}
+
+	lr.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
+		return (&Init{
+			dep:     dep,
+			Message: msg,
+		}).Present
+	})
+
+	inHandler := handler.NewHandler(func(msg bus.Message) flow.Handle {
+		innerMsg := msg.WatermillMsg
+		return (&InnerInit{
+			dep:     dep,
+			Message: innerMsg,
+		}).Present
+	})
+
+	router, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, wmLogger)
+	if err != nil {
+		return errors.Wrap(err, "Error while creating new watermill router")
+	}
+
+	router.AddNoPublisherHandler(
+		"InnerMsgHandler",
+		InnerMsgTopic,
+		pubSub,
+		inHandler.InnerSubscriber,
+	)
+	go func() {
+		if err := router.Run(); err != nil {
+			ctx := context.Background()
+			inslogger.FromContext(ctx).Error("Error while running router", err)
+		}
+	}()
+	<- router.Running()
+
+	lr.router = router
+
+	return nil
 }
 
 // Start starts logic runner component
@@ -193,13 +266,13 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) RegisterHandlers() {
-	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.HandleCalls)
-	lr.MessageBus.MustRegister(insolar.TypeCallConstructor, lr.HandleCalls)
+	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.FlowHandler.WrapBusHandle)
+	lr.MessageBus.MustRegister(insolar.TypeCallConstructor, lr.FlowHandler.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeExecutorResults, lr.HandleExecutorResultsMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
-	lr.MessageBus.MustRegister(insolar.TypePendingFinished, lr.HandlePendingFinishedMessage)
-	lr.MessageBus.MustRegister(insolar.TypeStillExecuting, lr.HandleStillExecutingMessage)
+	lr.MessageBus.MustRegister(insolar.TypePendingFinished, lr.FlowHandler.WrapBusHandle)
+	lr.MessageBus.MustRegister(insolar.TypeStillExecuting, lr.FlowHandler.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeAbandonedRequestsNotification, lr.HandleAbandonedRequestsNotificationMessage)
 }
 
@@ -221,6 +294,8 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 			return err
 		}
 	}
+
+	lr.router.Close()
 
 	return reterr
 }
@@ -268,102 +343,13 @@ func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel insolar.Parce
 
 	res := obj
 	res.SetRecord(*id)
+
 	return &res, nil
 }
 
 func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context {
 	context, _ := inslogger.WithField(ctx, "targetid", msg.DefaultTarget().String())
 	return context
-}
-
-func (lr *LogicRunner) HandleCalls(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	ctx = loggerWithTargetID(ctx, parcel)
-	inslogger.FromContext(ctx).Debug("LogicRunner.Execute starts ...")
-
-	msg, ok := parcel.Message().(message.IBaseLogicMessage)
-	if !ok {
-		return nil, errors.New("Execute( ! message.IBaseLogicMessage )")
-	}
-
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.HandleCalls")
-	span.AddAttributes(
-		trace.StringAttribute("msg.Type", msg.Type().String()),
-	)
-	defer span.End()
-
-	ref := msg.GetReference()
-	os := lr.UpsertObjectState(ref)
-
-	os.Lock()
-	if os.ExecutionState == nil {
-		os.ExecutionState = &ExecutionState{
-			Ref:   ref,
-			Queue: make([]ExecutionQueueElement, 0),
-		}
-	}
-	es := os.ExecutionState
-	os.Unlock()
-
-	// ExecutionState should be locked between CheckOurRole and
-	// appending ExecutionQueueElement to the queue to prevent a race condition.
-	// Otherwise it's possible that OnPulse will clean up the queue and set
-	// ExecutionState.Pending to NotPending. Execute will add an element to the
-	// queue afterwards. In this case cross-pulse execution will break.
-	es.Lock()
-
-	err := lr.CheckOurRole(ctx, msg, insolar.DynamicRoleVirtualExecutor)
-	if err != nil {
-		es.Unlock()
-		return nil, errors.Wrap(err, "[ Execute ] can't play role")
-	}
-
-	if lr.CheckExecutionLoop(ctx, es, parcel) {
-		es.Unlock()
-		return nil, os.WrapError(nil, "loop detected")
-	}
-	es.Unlock()
-
-	request, err := lr.RegisterRequest(ctx, parcel)
-	if err != nil {
-		return nil, os.WrapError(err, "[ Execute ] can't create request")
-	}
-
-	es.Lock()
-	pulse := lr.pulse(ctx)
-	if pulse.PulseNumber != parcel.Pulse() {
-		meCurrent, _ := lr.JetCoordinator.IsAuthorized(
-			ctx, insolar.DynamicRoleVirtualExecutor, *ref.Record(), pulse.PulseNumber, lr.JetCoordinator.Me(),
-		)
-		if !meCurrent {
-			es.Unlock()
-			return &reply.RegisterRequest{
-				Request: *request,
-			}, nil
-		}
-	}
-
-	qElement := ExecutionQueueElement{
-		ctx:     ctx,
-		parcel:  parcel,
-		request: request,
-	}
-
-	es.Queue = append(es.Queue, qElement)
-	es.Unlock()
-
-	err = lr.ClarifyPendingState(ctx, es, parcel)
-	if err != nil {
-		return nil, err
-	}
-
-	err = lr.StartQueueProcessorIfNeeded(ctx, es)
-	if err != nil {
-		return nil, err
-	}
-
-	return &reply.RegisterRequest{
-		Request: *request,
-	}, nil
 }
 
 func (lr *LogicRunner) CheckExecutionLoop(
@@ -393,48 +379,6 @@ func (lr *LogicRunner) CheckExecutionLoop(
 	inslogger.FromContext(ctx).Debug("loop detected")
 
 	return true
-}
-
-func (lr *LogicRunner) HandlePendingFinishedMessage(
-	ctx context.Context, parcel insolar.Parcel,
-) (
-	insolar.Reply, error,
-) {
-	ctx = loggerWithTargetID(ctx, parcel)
-	inslogger.FromContext(ctx).Debug("LogicRunner.HandlePendingFinishedMessage starts ...")
-
-	msg := parcel.Message().(*message.PendingFinished)
-	ref := msg.DefaultTarget()
-	os := lr.UpsertObjectState(*ref)
-
-	os.Lock()
-	if os.ExecutionState == nil {
-		// we are first, strange, soon ExecuteResults message should come
-		os.ExecutionState = &ExecutionState{
-			Ref:       *ref,
-			Queue:     make([]ExecutionQueueElement, 0),
-			pending:   message.NotPending,
-		}
-		os.Unlock()
-		return &reply.OK{}, nil
-	}
-	es := os.ExecutionState
-	os.Unlock()
-
-	es.Lock()
-	es.pending = message.NotPending
-	if es.Current != nil {
-		es.Unlock()
-		return nil, errors.New("received PendingFinished when we are already executing")
-	}
-	es.Unlock()
-
-	err := lr.StartQueueProcessorIfNeeded(ctx, es)
-	if err != nil {
-		return nil, errors.Wrap(err, "couldn't start queue processor")
-	}
-
-	return &reply.OK{}, nil
 }
 
 func (lr *LogicRunner) StartQueueProcessorIfNeeded(
@@ -617,6 +561,23 @@ func (lr *LogicRunner) executeOrValidate(
 	}()
 }
 
+func (lr *LogicRunner) getExecStateFromRef(ctx context.Context, rawRef []byte) *ExecutionState {
+	ref := Ref{}.FromSlice(rawRef)
+
+	// TODO: we should stop processing here if 'ref' doesn't exist. Made UpsertObjectState return error if so?
+	os := lr.UpsertObjectState(ref)
+
+	os.Lock()
+	defer os.Unlock()
+	if os.ExecutionState == nil {
+		inslogger.FromContext(ctx).Info("[ ProcessExecutionQueue ] got not existing reference. It's strange")
+		return nil
+	}
+	es := os.ExecutionState
+
+	return es
+}
+
 // never call this under es.Lock(), this leads to deadlock
 func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *ExecutionState) {
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getLedgerPendingRequest")
@@ -716,8 +677,8 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 	state.Lock()
 	if state.ExecutionState == nil {
 		state.ExecutionState = &ExecutionState{
-			Ref:       ref,
-			Queue:     make([]ExecutionQueueElement, 0),
+			Ref:   ref,
+			Queue: make([]ExecutionQueueElement, 0),
 		}
 	}
 	es := state.ExecutionState
@@ -948,6 +909,7 @@ func (lr *LogicRunner) executeConstructorCall(
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 	lr.stateMutex.Lock()
+	lr.FlowHandler.ChangePulse(ctx, pulse)
 
 	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
 	defer span.End()
@@ -1069,46 +1031,6 @@ func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
 		}
 		lr.stopLock.Unlock()
 	}
-}
-
-func (lr *LogicRunner) HandleStillExecutingMessage(
-	ctx context.Context, parcel insolar.Parcel,
-) (
-	insolar.Reply, error,
-) {
-	ctx = loggerWithTargetID(ctx, parcel)
-	inslogger.FromContext(ctx).Debug("LogicRunner.HandleStillExecutingMessage starts ...")
-
-	msg := parcel.Message().(*message.StillExecuting)
-	ref := msg.DefaultTarget()
-	os := lr.UpsertObjectState(*ref)
-
-	inslogger.FromContext(ctx).Debug("Got information that ", ref, " is still executing")
-
-	os.Lock()
-	if os.ExecutionState == nil {
-		// we are first, strange, soon ExecuteResults message should come
-		os.ExecutionState = &ExecutionState{
-			Ref:              *ref,
-			Queue:            make([]ExecutionQueueElement, 0),
-			pending:          message.InPending,
-			PendingConfirmed: true,
-		}
-	} else {
-		es := os.ExecutionState
-		es.Lock()
-		if es.pending == message.NotPending {
-			inslogger.FromContext(ctx).Error(
-				"got StillExecuting message, but our state says that it's not in pending",
-			)
-		} else {
-			es.PendingConfirmed = true
-		}
-		es.Unlock()
-	}
-	os.Unlock()
-
-	return &reply.OK{}, nil
 }
 
 func (lr *LogicRunner) HandleAbandonedRequestsNotificationMessage(

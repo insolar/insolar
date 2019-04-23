@@ -18,8 +18,8 @@ package message
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/light/recentstorage"
 )
 
 // FIXME: @andreyromancev. 21.12.18. Remove this and create 'LogicRunnerMessage' interface to get rid of 'GetCaller' in ledger.
@@ -317,7 +317,7 @@ type HotData struct {
 	ledgerMessage
 	Jet             insolar.Reference
 	Drop            drop.Drop
-	RecentObjects   map[insolar.ID]HotIndex
+	HotIndexes      map[insolar.ID]HotIndex
 	PendingRequests map[insolar.ID]recentstorage.PendingObjectContext
 	PulseNumber     insolar.PulseNumber
 }
@@ -344,8 +344,8 @@ func (*HotData) Type() insolar.MessageType {
 
 // HotIndex contains meat about hot-data
 type HotIndex struct {
-	TTL   int
-	Index []byte
+	LastUsed insolar.PulseNumber
+	Index    []byte
 }
 
 // GetPendingRequests fetches pending requests for object.

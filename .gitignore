@@ -14,7 +14,7 @@
 *.out
 
 
-### Example user template
+### MacOS stuff
 .DS_Store
 
 ### IntelliJ project files
@@ -28,9 +28,6 @@ out
 
 # Go dep
 vendor
-
-# LevelDB storage files
-_db
 
 # wasm tests
 vm/wasm/test/data/!simple!.wasm
@@ -47,18 +44,10 @@ coverage.txt
 # GoReleaser dist dir
 /dist
 
-/scripts/insolard/configs
-/scripts/insolard/nodes
-/scripts/insolard/discoverynodes
-/scripts/insolard/insgorund
-/scripts/insolard/loglinks
-/scripts/insolard/benchmark
+/scripts/monitor/prometheus
 
 /ci/local-dev/logs
 /ci/local-dev/manifests/ks/lib
-/scripts/insolard/reusekeys
-cmd/insolard/new-data
-new-data
 network/servicenetwork/network_cache
 network_cache
 

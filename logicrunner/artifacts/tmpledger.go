@@ -21,23 +21,22 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/ledger/hot"
-	"github.com/insolar/insolar/ledger/storage/object"
+	"github.com/insolar/insolar/ledger/genesis"
+	"github.com/insolar/insolar/ledger/light/hot"
+	"github.com/insolar/insolar/ledger/object"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/node"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/insolar/insolar/ledger/artifactmanager"
-	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/storage"
-	"github.com/insolar/insolar/ledger/storage/blob"
-	"github.com/insolar/insolar/ledger/storage/drop"
-	"github.com/insolar/insolar/ledger/storage/node"
-	"github.com/insolar/insolar/ledger/storage/pulse"
-	"github.com/insolar/insolar/ledger/storage/storagetest"
+	"github.com/insolar/insolar/ledger/blob"
+	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/light/artifactmanager"
+	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
 	"github.com/insolar/insolar/messagebus"
@@ -51,10 +50,9 @@ import (
 // TMPLedger
 // DEPRECATED
 type TMPLedger struct {
-	db              storage.DBContext
 	ArtifactManager Client
-	PulseManager    insolar.PulseManager   `inject:""`
-	JetCoordinator  insolar.JetCoordinator `inject:""`
+	PulseManager    insolar.PulseManager `inject:""`
+	JetCoordinator  jet.Coordinator      `inject:""`
 }
 
 // Deprecated: remove after deleting TmpLedger
@@ -65,8 +63,8 @@ func (l *TMPLedger) GetPulseManager() insolar.PulseManager {
 }
 
 // Deprecated: remove after deleting TmpLedger
-// GetJetCoordinator returns JetCoordinator.
-func (l *TMPLedger) GetJetCoordinator() insolar.JetCoordinator {
+// GetJetCoordinator returns Coordinator.
+func (l *TMPLedger) GetJetCoordinator() jet.Coordinator {
 	log.Warn("GetJetCoordinator is deprecated. Use component injection.")
 	return l.JetCoordinator
 }
@@ -81,13 +79,11 @@ func (l *TMPLedger) GetArtifactManager() Client {
 // NewTestLedger is the util function for creation of Ledger with provided
 // private members (suitable for tests).
 func NewTestLedger(
-	db storage.DBContext,
 	am Client,
 	pm *pulsemanager.PulseManager,
-	jc insolar.JetCoordinator,
+	jc jet.Coordinator,
 ) *TMPLedger {
 	return &TMPLedger{
-		db:              db,
 		ArtifactManager: am,
 		PulseManager:    pm,
 		JetCoordinator:  jc,
@@ -97,7 +93,7 @@ func NewTestLedger(
 // TmpLedger creates ledger on top of temporary database.
 // Returns *ledger.Ledger and cleanup function.
 // DEPRECATED
-func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, storage.DBContext, func()) {
+func TmpLedger(t *testing.T, dir string, c insolar.Components) *TMPLedger {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
@@ -108,12 +104,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
 	conf := configuration.NewLedger()
-	tmpDB, recMem, dbcancel := storagetest.TmpDB(ctx,
-		t,
-		storagetest.Dir(dir),
-		storagetest.PulseStorage(ps),
-		storagetest.IndexStorage(is),
-	)
+	recordStorage := object.NewRecordMemory()
 	memoryMockDB := store.NewMemoryMockDB()
 
 	cm := &component.Manager{}
@@ -121,17 +112,28 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	ns := node.NewStorage()
 	ds := drop.NewDB(memoryMockDB)
 	bs := blob.NewDB(memoryMockDB)
-	rs := storage.NewReplicaStorage()
 
-	recordAccessor := recMem
-	recordModifier := recMem
+	genesisBaseRecord := &genesis.BaseRecord{
+		DB:             memoryMockDB,
+		DropModifier:   ds,
+		PulseAppender:  ps,
+		PulseAccessor:  ps,
+		RecordModifier: recordStorage,
+		IndexModifier:  is,
+	}
+	_, err := genesisBaseRecord.CreateIfNeeded(ctx)
+	if err != nil {
+		t.Error(err, "failed to create base genesis record")
+	}
+
+	recordAccessor := recordStorage
+	recordModifier := recordStorage
 
 	am := NewClient()
 	am.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
 
-	conf.PulseManager.HeavySyncEnabled = false
 	pm := pulsemanager.NewPulseManager()
-	jc := testutils.NewJetCoordinatorMock(mc)
+	jc := jet.NewCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)
 	jc.LightExecutorForJetMock.Return(&insolar.Reference{}, nil)
 	jc.HeavyMock.Return(&insolar.Reference{}, nil)
@@ -157,12 +159,9 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(networknode.NewNode(insolar.Reference{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
-	handler := artifactmanager.NewMessageHandler(&conf)
+	handler := artifactmanager.NewMessageHandler(is, is, &conf)
 	handler.JetStorage = js
 	handler.Nodes = ns
-	handler.DBContext = tmpDB
-	handler.IndexModifier = is
-	handler.IndexAccessor = is
 	handler.IndexStorage = is
 	handler.DropModifier = ds
 	handler.BlobModifier = bs
@@ -171,7 +170,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	handler.RecordModifier = recordModifier
 	handler.RecordAccessor = recordAccessor
 
-	idLockerMock := storage.NewIDLockerMock(t)
+	idLockerMock := object.NewIDLockerMock(t)
 	idLockerMock.LockMock.Return()
 	idLockerMock.UnlockMock.Return()
 
@@ -185,7 +184,6 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 
 	cm.Inject(
 		platformpolicy.NewPlatformCryptographyScheme(),
-		tmpDB,
 		memoryMockDB,
 		js,
 		ns,
@@ -194,12 +192,11 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 		ps,
 		ds,
 		am,
-		rs,
 		recordAccessor,
 		recordModifier,
 	)
 
-	err := cm.Init(ctx)
+	err = cm.Init(ctx)
 	if err != nil {
 		t.Error("ComponentManager init failed", err)
 	}
@@ -235,16 +232,13 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	handler.HotDataWaiter = hdw
 	handler.JetReleaser = hdw
 
-	indexMock := recentstorage.NewRecentIndexStorageMock(t)
 	pendingMock := recentstorage.NewPendingStorageMock(t)
 
-	indexMock.AddObjectMock.Return()
 	pendingMock.GetRequestsForObjectMock.Return(nil)
 	pendingMock.AddPendingRequestMock.Return()
 	pendingMock.RemovePendingRequestMock.Return()
 
 	provideMock := recentstorage.NewProviderMock(t)
-	provideMock.GetIndexStorageMock.Return(indexMock)
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 	provideMock.CountMock.Return(0)
 
@@ -256,7 +250,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, stor
 	}
 
 	// Create ledger.
-	l := NewTestLedger(tmpDB, am, pm, jc)
+	l := NewTestLedger(am, pm, jc)
 
-	return l, tmpDB, dbcancel
+	return l
 }
