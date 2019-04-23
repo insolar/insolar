@@ -21,7 +21,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/pkg/errors"
@@ -151,37 +150,6 @@ func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
 		}
 	}
 	c.es.Unlock()
-
-	return nil
-}
-
-// FinishPendingIfNeeded checks whether last execution was a pending one.
-// If this is true as a side effect the function sends a PendingFinished
-// message to the current executor
-type FinishPendingIfNeeded struct {
-	es *ExecutionState
-	lr *LogicRunner
-}
-
-func (c *FinishPendingIfNeeded) Proceed(ctx context.Context) error {
-	c.es.Lock()
-	defer c.es.Unlock()
-
-	if c.es.pending != message.InPending {
-		return nil
-	}
-
-	c.es.pending = message.NotPending
-	c.es.PendingConfirmed = false
-
-	c.es.objectbody = nil
-	go func() {
-		msg := message.PendingFinished{Reference: c.es.Ref}
-		_, err := c.lr.MessageBus.Send(ctx, &msg, nil)
-		if err != nil {
-			inslogger.FromContext(ctx).Error("Unable to send PendingFinished message:", err)
-		}
-	}()
 
 	return nil
 }
