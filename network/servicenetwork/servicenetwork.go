@@ -152,13 +152,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to create hostnetwork")
 	}
 
-	consensusAddress := n.cfg.Host.Transport.Address
-	if n.cfg.Host.Transport.FixedPublicAddress == "" {
-		consensusAddress = n.NodeKeeper.GetOrigin().Address()
-	}
-
 	consensusNetwork, err := hostnetwork.NewConsensusNetwork(
-		consensusAddress,
 		n.CertificateManager.GetCertificate().GetNodeRef().String(),
 		n.NodeKeeper.GetOrigin().ShortID(),
 	)

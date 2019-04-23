@@ -92,10 +92,20 @@ func TestNewDatagramTransport(t *testing.T) {
 
 	for _, test := range table {
 		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
 			udp, err := NewFactory(test.cfg).CreateDatagramTransport(nil)
-			assert.Equal(t, test.success, err == nil)
+			assert.NoError(t, err)
+
+			var err2, err3 error
+			err2 = udp.Start(ctx)
+			if err != nil {
+				err3 = udp.Stop(ctx)
+			}
+
+			assert.Equal(t, test.success, err2 == nil && err3 == nil)
 			if test.success {
-				assert.NoError(t, err)
+				assert.NoError(t, err2)
+				assert.NoError(t, err3)
 				assert.NotNil(t, udp)
 			}
 		})
