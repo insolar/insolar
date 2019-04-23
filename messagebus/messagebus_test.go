@@ -78,7 +78,9 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	pf := NewParcelFactory()
 	ps := pulse.NewAccessorMock(t)
 
-	(&component.Manager{}).Inject(net, jc, nn, pcs, cs, dtf, pf, ps, mb)
+	b := testutils.NewBusMock(t)
+
+	(&component.Manager{}).Inject(net, jc, nn, pcs, cs, dtf, pf, ps, mb, b)
 
 	ps.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
 		return insolar.Pulse{
@@ -187,32 +189,6 @@ func TestMessageBus_doDeliver_TwoAheadPulses(t *testing.T) {
 	require.Equal(t, insolar.PulseNumber(102), pulse.PulseNumber)
 }
 
-// func TestMessageBus_SendViaWatermill(t *testing.T) {
-// 	ctx := context.Background()
-// 	logger := watermill.NewStdLogger(false, false)
-// 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-// 	inMessages, err := pubsub.Subscribe(context.Background(), insolar.ExternalMsgTopic)
-// 	require.NoError(t, err)
-//
-// 	mb, _, _, _ := prepare(t, ctx, 100, 100)
-// 	mb.pub = pubsub
-// 	go func(ctx context.Context, messages <-chan *watermillMsg.Message) {
-// 		for msg := range messages {
-// 			replyMsg := watermillMsg.NewMessage(watermill.NewUUID(), reply.ToBytes(&reply.OK{}))
-// 			id := middleware.MessageCorrelationID(msg)
-// 			middleware.SetCorrelationID(id, replyMsg)
-// 			mb.SetResult(ctx, replyMsg)
-// 			msg.Ack()
-// 		}
-// 	}(ctx, inMessages)
-// 	msg := &message.GetObject{}
-//
-// 	rep, err := mb.SendViaWatermill(ctx, msg, nil)
-//
-// 	require.NoError(t, err)
-// 	require.Equal(t, &reply.OK{}, rep)
-// }
-
 func TestMessageBus_createWatermillMessage(t *testing.T) {
 	ctx := context.Background()
 	mb, _, _, expectedRef := prepare(t, ctx, 100, 100)
@@ -256,58 +232,3 @@ func TestMessageBus_getReceiver(t *testing.T) {
 
 	require.Equal(t, expectedRef.String(), r)
 }
-
-//
-// func TestMessageBus_SetResult(t *testing.T) {
-// 	ctx := context.Background()
-// 	mb, _, _, _ := prepare(t, ctx, 100, 100)
-//
-// 	res := reply.OK{}
-// 	msg := watermillMsg.NewMessage(watermill.NewUUID(), reply.ToBytes(&res))
-// 	correlationID := watermill.NewUUID()
-// 	middleware.SetCorrelationID(correlationID, msg)
-//
-// 	rep := make(chan insolar.Reply, 1)
-// 	mb.repliesMutex.Lock()
-// 	mb.replies[middleware.MessageCorrelationID(msg)] = rep
-// 	mb.repliesMutex.Unlock()
-//
-// 	mb.SetResult(ctx, msg)
-//
-// 	require.Equal(t, &res, <-rep)
-// 	require.Empty(t, mb.replies)
-// }
-//
-// func TestMessageBus_SetResult_WrongReply(t *testing.T) {
-// 	ctx := context.Background()
-// 	mb, _, _, _ := prepare(t, ctx, 100, 100)
-//
-// 	msg := watermillMsg.NewMessage(watermill.NewUUID(), nil)
-// 	correlationID := watermill.NewUUID()
-// 	middleware.SetCorrelationID(correlationID, msg)
-//
-// 	rep := make(chan insolar.Reply, 1)
-// 	mb.repliesMutex.Lock()
-// 	mb.replies[middleware.MessageCorrelationID(msg)] = rep
-// 	mb.repliesMutex.Unlock()
-//
-// 	mb.SetResult(ctx, msg)
-//
-// 	select {
-// 	case <-rep:
-// 		require.Fail(t, "")
-// 	default:
-// 	}
-// 	require.NotEmpty(t, mb.replies)
-// }
-//
-// func TestMessageBus_SetResult_MsgNotExist(t *testing.T) {
-// 	ctx := context.Background()
-// 	mb, _, _, _ := prepare(t, ctx, 100, 100)
-//
-// 	msg := watermillMsg.NewMessage(watermill.NewUUID(), nil)
-// 	correlationID := watermill.NewUUID()
-// 	middleware.SetCorrelationID(correlationID, msg)
-//
-// 	mb.SetResult(ctx, msg)
-// }

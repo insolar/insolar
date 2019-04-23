@@ -22,6 +22,8 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/insolar.Bus -o ../testutils -s _mock.go
+
 // Bus interface
 type Bus interface {
 	// Send an `Message` and get a `Reply` or error from remote host.
