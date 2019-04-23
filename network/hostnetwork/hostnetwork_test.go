@@ -420,8 +420,8 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	_, err = f.GetResponse(time.Second)
-	require.Error(t, err)
+	_, err = f.GetResponse(time.Second * 2)
+	require.NoError(t, err)
 }
 
 func TestHostNetwork_WrongHandler(t *testing.T) {
@@ -457,34 +457,6 @@ func TestHostNetwork_WrongHandler(t *testing.T) {
 	result := utils.WaitTimeout(&wg, time.Millisecond*100)
 	require.False(t, result)
 }
-
-// func TestDoubleStart(t *testing.T) {
-// 	ctx := context.Background()
-// 	tp, err := NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
-// 	require.NoError(t, err)
-//
-// 	err = tp.Start(ctx)
-// 	assert.NoError(t, err)
-// 	err = tp.Start(ctx)
-// 	assert.Error(t, err)
-//
-// 	tp.Stop(ctx)
-// }
-//
-// func TestStartStop(t *testing.T) {
-// 	ctx := context.Background()
-// 	tp, err := NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
-// 	require.NoError(t, err)
-//
-// 	err = tp.Start(ctx)
-// 	assert.NoError(t, err)
-// 	defer tp.Stop(ctx)
-//
-// 	err = tp.Stop(ctx)
-// 	assert.NoError(t, err)
-// 	err = tp.Start(ctx)
-// 	assert.NoError(t, err)
-// }
 
 func TestStartStopSend(t *testing.T) {
 	t1, t2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)

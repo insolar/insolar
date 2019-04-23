@@ -92,7 +92,7 @@ func TestNewDatagramTransport(t *testing.T) {
 
 	for _, test := range table {
 		t.Run(test.name, func(t *testing.T) {
-			udp, err := NewFactory().CreateDatagramTransport(test.cfg, nil)
+			udp, err := NewFactory(test.cfg).CreateDatagramTransport(nil)
 			assert.Equal(t, test.success, err == nil)
 			if test.success {
 				assert.NoError(t, err)
@@ -116,7 +116,7 @@ func newTestNode(port int) (*testNode, error) {
 	cfg.Address = fmt.Sprintf("127.0.0.1:%d", port)
 
 	node := &testNode{}
-	udp, err := NewFactory().CreateDatagramTransport(cfg, node)
+	udp, err := NewFactory(cfg).CreateDatagramTransport(node)
 	if err != nil {
 		return nil, err
 	}

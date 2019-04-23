@@ -83,13 +83,13 @@ func NewTestPulsar(pulseTimeMs, requestsTimeoutMs, pulseDelta int32) (TestPulsar
 		Protocol: "TCP",
 		Address:  "127.0.0.1:0",
 	}
-	tp, publicAddress, err := transport.NewTransport(transportCfg)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to create distributor transport")
-	}
+
+	// tp, publicAddress, err := transport.NewTransport(transportCfg)
+	// if err != nil {
+	// 	return nil, errors.Wrap(err, "Failed to create distributor transport")
+	// }
 	return &testPulsar{
-		transport:         tp,
-		publicAddress:     publicAddress,
+		Factory:           transport.NewFactory(transportCfg),
 		generator:         &entropygenerator.StandardEntropyGenerator{},
 		pulseTimeMs:       pulseTimeMs,
 		reqTimeoutMs:      requestsTimeoutMs,
@@ -99,6 +99,7 @@ func NewTestPulsar(pulseTimeMs, requestsTimeoutMs, pulseDelta int32) (TestPulsar
 }
 
 type testPulsar struct {
+	Factory       transport.Factory
 	transport     transport.StreamTransport
 	publicAddress string
 	distributor   insolar.PulseDistributor
@@ -115,7 +116,10 @@ type testPulsar struct {
 }
 
 func (tp *testPulsar) Start(ctx context.Context, bootstrapHosts []string) error {
+
 	var err error
+	transport, err := tp.Factory.CreateStreamTransport(nil)
+
 	distributorCfg := configuration.PulseDistributor{
 		BootstrapHosts:            bootstrapHosts,
 		PingRequestTimeout:        tp.reqTimeoutMs,
@@ -123,7 +127,7 @@ func (tp *testPulsar) Start(ctx context.Context, bootstrapHosts []string) error 
 		PulseRequestTimeout:       tp.reqTimeoutMs,
 		RandomNodesCount:          1,
 	}
-	tp.distributor, err = pulsenetwork.NewDistributor(distributorCfg, tp.transport, tp.publicAddress)
+	tp.distributor, err = pulsenetwork.NewDistributor(distributorCfg)
 	if err != nil {
 		return errors.Wrap(err, "Failed to create pulse distributor")
 	}
