@@ -72,7 +72,8 @@ type BootstrapResult struct {
 // Controller contains network logic.
 type Controller interface {
 	component.Initer
-	// SendParcel send message to nodeID.
+
+	// SendMessage send message to nodeID.
 	SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error)
 	// RemoteProcedureRegister register remote procedure that will be executed when message is received.
 	RemoteProcedureRegister(name string, method insolar.RemoteProcedure)
@@ -94,6 +95,7 @@ type RequestHandler func(context.Context, Request) (Response, error)
 
 // HostNetwork simple interface to send network requests and process network responses.
 type HostNetwork interface {
+	component.Initer
 	component.Starter
 	component.Stopper
 
@@ -121,6 +123,7 @@ type ConsensusPacketHandler func(incomingPacket consensus.ConsensusPacket, sende
 
 // ConsensusNetwork interface to send and handling consensus packets
 type ConsensusNetwork interface {
+	component.Initer
 	component.Starter
 	component.Stopper
 
@@ -208,8 +211,8 @@ type NodeKeeper interface {
 	GetConsensusInfo() ConsensusInfo
 }
 
-// TODO: refactor code and make it not necessary
 // ConsensusInfo additional info for the current consensus process
+// TODO: refactor code and make it not necessary
 type ConsensusInfo interface {
 	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
 	NodesJoinedDuringPreviousPulse() bool
@@ -284,8 +287,9 @@ type Mutator interface {
 	AddWorkingNode(n insolar.NetworkNode)
 }
 
-// Gatewayer is a network which can change it's Gateway
 //go:generate minimock -i github.com/insolar/insolar/network.Gatewayer -o ../testutils/network -s _mock.go
+
+// Gatewayer is a network which can change it's Gateway
 type Gatewayer interface {
 	Gateway() Gateway
 	SetGateway(Gateway)

@@ -120,7 +120,6 @@ func SendPacket(ctx context.Context, pool pool.ConnectionPool, p *packet.Packet)
 	n, err := conn.Write(data)
 	if err != nil {
 		// retry
-		//log.Warn("=== Before Retry")
 		pool.CloseConnection(ctx, p.Receiver)
 		conn, err = pool.GetConnection(ctx, p.Receiver)
 

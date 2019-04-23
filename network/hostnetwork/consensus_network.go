@@ -73,6 +73,7 @@ import (
 
 type networkConsensus struct {
 	Resolver network.RoutingTable `inject:""`
+	Factory  transport.Factory    `inject:""`
 
 	transport         transport.DatagramTransport
 	origin            *host.Host
@@ -81,14 +82,26 @@ type networkConsensus struct {
 	handlers          map[packets.PacketType]network.ConsensusPacketHandler
 }
 
+func (nc *networkConsensus) Init(ctx context.Context) error {
+
+	conf := configuration.Transport{}
+	conf.Address = nc.origin.Address.String()
+
+	var err error
+	nc.transport, err = nc.Factory.CreateDatagramTransport(nc)
+	if err != nil {
+		return errors.Wrap(err, "Failed to create datagram transport")
+	}
+
+	// todo: do this after transport start
+	nc.origin, err = host.NewHostNS(nc.transport.Address(), nc.origin.NodeID, nc.origin.ShortID)
+	return err
+}
+
 func (nc *networkConsensus) Start(ctx context.Context) error {
 	if !atomic.CompareAndSwapUint32(&nc.started, 0, 1) {
 		inslogger.FromContext(ctx).Warn("NetworkConsensus component already started")
 		return nil
-	}
-
-	if err := nc.createTransport(); err != nil {
-		return errors.Wrap(err, "Failed to create datagram transport")
 	}
 
 	if err := nc.transport.Start(ctx); err != nil {
@@ -183,27 +196,6 @@ func NewConsensusNetwork(address, nodeID string, shortID insolar.ShortNodeID) (n
 	}
 
 	return result, nil
-}
-
-func (nc *networkConsensus) createTransport() error {
-	conf := configuration.Transport{}
-	conf.Address = nc.origin.Address.String()
-	conf.Protocol = "PURE_UDP"
-
-	tp, publicAddress, err := transport.NewDatagramTransport(conf)
-	if err != nil {
-		return errors.Wrap(err, "error creating transport")
-	}
-
-	addr, err := host.NewAddress(publicAddress)
-	if err != nil {
-		return errors.Wrap(err, "error creating transport")
-	}
-
-	nc.origin.Address = addr
-	tp.SetDatagramHandler(nc)
-	nc.transport = tp
-	return nil
 }
 
 // HandleDatagram callback method handles udp datagram from transport

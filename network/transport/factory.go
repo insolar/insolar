@@ -51,38 +51,37 @@
 package transport
 
 import (
-	"context"
-	"io"
+	"errors"
 
-	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/configuration"
 )
 
-// DatagramHandler interface provides callback method to process received datagrams
-type DatagramHandler interface {
-	HandleDatagram(address string, buf []byte)
+// Factory interface provides methods for creating stream or datagram transports
+type Factory interface {
+	CreateStreamTransport(StreamHandler) (StreamTransport, error)
+	CreateDatagramTransport(DatagramHandler) (DatagramTransport, error)
 }
 
-// DatagramTransport interface provides methods to send and receive datagrams
-type DatagramTransport interface {
-	component.Starter
-	component.Stopper
-
-	SendDatagram(ctx context.Context, address string, data []byte) error
-	Address() string
+// NewFactory constructor creates new transport factory
+func NewFactory(cfg configuration.Transport) Factory {
+	return &factory{cfg: cfg}
 }
 
-// StreamHandler interface provides callback method to process data stream
-type StreamHandler interface {
-	HandleStream(address string, stream io.ReadWriteCloser)
+type factory struct {
+	cfg configuration.Transport
 }
 
-//go:generate minimock -i github.com/insolar/insolar/network/transport.StreamTransport -o ../../testutils/network -s _mock.go
+// CreateStreamTransport creates new TCP transport
+func (f *factory) CreateStreamTransport(handler StreamHandler) (StreamTransport, error) {
+	switch f.cfg.Protocol {
+	case "TCP":
+		return newTCPTransport(f.cfg.Address, f.cfg.FixedPublicAddress, handler)
+	default:
+		return nil, errors.New("invalid transport configuration")
+	}
+}
 
-// StreamTransport interface provides methods to send and receive data streams
-type StreamTransport interface {
-	component.Starter
-	component.Stopper
-
-	Dial(ctx context.Context, address string) (io.ReadWriteCloser, error)
-	Address() string
+// CreateDatagramTransport creates new UDP transport
+func (f *factory) CreateDatagramTransport(handler DatagramHandler) (DatagramTransport, error) {
+	return newUDPTransport(f.cfg.Address, f.cfg.FixedPublicAddress, handler)
 }

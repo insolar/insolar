@@ -76,19 +76,18 @@ type udpTransport struct {
 	cancel  context.CancelFunc
 }
 
-func newUDPTransport(listenAddress, fixedPublicAddress string) (*udpTransport, string, error) {
+func newUDPTransport(listenAddress, fixedPublicAddress string, handler DatagramHandler) (*udpTransport, error) {
 	conn, err := net.ListenPacket("udp", listenAddress)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "failed to listen UDP")
+		return nil, errors.Wrap(err, "failed to listen UDP")
 	}
 	publicAddress, err := resolver.Resolve(fixedPublicAddress, conn.LocalAddr().String())
 	if err != nil {
-		return nil, "", errors.Wrap(err, "failed to resolve public address")
+		return nil, errors.Wrap(err, "failed to resolve public address")
 	}
 
-	transport := &udpTransport{conn: conn, address: publicAddress}
-	atomic.StoreUint32(&transport.started, 1)
-	return transport, publicAddress, nil
+	transport := &udpTransport{conn: conn, address: publicAddress, handler: handler}
+	return transport, nil
 }
 
 // SendDatagram sends datagram to remote host
@@ -115,16 +114,15 @@ func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []
 	return nil
 }
 
-// SetDatagramHandler registers callback to process received datagram
-func (t *udpTransport) SetDatagramHandler(h DatagramHandler) {
-	t.handler = h
+func (t *udpTransport) Address() string {
+	return t.address
 }
 
 // Start starts networking.
 func (t *udpTransport) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
-	if atomic.CompareAndSwapUint32(&t.started, 0, 1) {
+	if !atomic.CompareAndSwapUint32(&t.started, 0, 1) {
 		var err error
 		t.conn, err = net.ListenPacket("udp", t.address)
 		if err != nil {
@@ -175,20 +173,20 @@ func (t *udpTransport) loop(ctx context.Context) {
 func (t *udpTransport) Stop(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
-	if atomic.CompareAndSwapUint32(&t.started, 1, 0) {
-		logger.Warn("Stop UDP transport")
-		t.cancel()
-		err := t.conn.Close()
+	//if atomic.CompareAndSwapUint32(&t.started, 1, 0) {
+	logger.Warn("Stop UDP transport")
+	t.cancel()
+	err := t.conn.Close()
 
-		if err != nil {
-			if utils.IsConnectionClosed(err) {
-				logger.Error("Connection already closed")
-			} else {
-				return err
-			}
+	if err != nil {
+		if utils.IsConnectionClosed(err) {
+			logger.Error("Connection already closed")
+		} else {
+			return err
 		}
-	} else {
-		logger.Warn("Failed to stop transport")
 	}
+	// } else {
+	// 	logger.Warn("Failed to stop transport")
+	// }
 	return nil
 }

@@ -57,7 +57,6 @@ import (
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -74,19 +73,11 @@ import (
 )
 
 // NewHostNetwork constructor creates new NewHostNetwork component
-func NewHostNetwork(conf configuration.Configuration, nodeRef string) (network.HostNetwork, error) {
-	tp, publicAddress, err := transport.NewTransport(conf.Host.Transport)
-	if err != nil {
-		return nil, errors.Wrap(err, "error creating transport")
-	}
+func NewHostNetwork(nodeRef string) (network.HostNetwork, error) {
+
 	id, err := insolar.NewReferenceFromBase58(nodeRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid nodeRef")
-	}
-
-	origin, err := host.NewHostN(publicAddress, *id)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting origin")
 	}
 
 	futureManager := future.NewManager()
@@ -94,21 +85,17 @@ func NewHostNetwork(conf configuration.Configuration, nodeRef string) (network.H
 	result := &hostNetwork{
 		handlers:          make(map[types.PacketType]network.RequestHandler),
 		sequenceGenerator: sequence.NewGeneratorImpl(),
-		transport:         tp,
-		origin:            origin,
+		origin:            &host.Host{NodeID: *id},
 		futureManager:     futureManager,
 		responseHandler:   future.NewPacketHandler(futureManager),
-		pool:              pool.NewConnectionPool(tp),
 	}
-
-	handler := NewStreamHandler(result.handleRequest, result.responseHandler)
-	result.transport.SetStreamHandler(handler)
 
 	return result, nil
 }
 
 type hostNetwork struct {
 	Resolver network.RoutingTable `inject:""`
+	Factory  transport.Factory    `inject:""`
 
 	started           uint32
 	transport         transport.StreamTransport
@@ -120,19 +107,45 @@ type hostNetwork struct {
 	pool              pool.ConnectionPool
 }
 
-// Start start listening to network requests, should be started in goroutine.
-func (hn *hostNetwork) Start(ctx context.Context) error {
-	if !atomic.CompareAndSwapUint32(&hn.started, 0, 1) {
-		return errors.New("Failed to start transport: double listen initiated")
+func (hn *hostNetwork) Init(ctx context.Context) error {
+
+	handler := NewStreamHandler(hn.handleRequest, hn.responseHandler)
+
+	var err error
+	hn.transport, err = hn.Factory.CreateStreamTransport(handler)
+	if err != nil {
+		return errors.Wrap(err, "Failed to create stream transport")
 	}
-	if err := hn.transport.Start(ctx); err != nil {
-		return errors.Wrap(err, "Failed to start transport: listen syscall failed")
+
+	hn.pool = pool.NewConnectionPool(hn.transport)
+
+	// todo: do this after transport start
+	hn.origin, err = host.NewHostN(hn.transport.Address(), hn.origin.NodeID)
+	return err
+}
+
+// Start listening to network requests, should be started in goroutine.
+func (hn *hostNetwork) Start(ctx context.Context) error {
+	if atomic.CompareAndSwapUint32(&hn.started, 0, 1) {
+
+		err := hn.transport.Start(ctx)
+		if err != nil {
+			return errors.Wrap(err, "Failed to start transport: listen syscall failed")
+		}
+
+		hn.origin, err = host.NewHostN(hn.transport.Address(), hn.origin.NodeID)
+		if err != nil {
+			return errors.Wrap(err, "Failed to start transport: listen syscall failed")
+		}
+	} else {
+		inslogger.FromContext(ctx).Warn("Failed to start transport: double listen initiated")
+
 	}
 
 	return nil
 }
 
-// Disconnect stop listening to network requests.
+// Stop listening to network requests.
 func (hn *hostNetwork) Stop(ctx context.Context) error {
 	if atomic.CompareAndSwapUint32(&hn.started, 1, 0) {
 		err := hn.transport.Stop(ctx)

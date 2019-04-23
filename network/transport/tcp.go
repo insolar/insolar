@@ -69,28 +69,29 @@ type tcpTransport struct {
 	cancel   context.CancelFunc
 }
 
-func newTCPTransport(listenAddress, fixedPublicAddress string) (*tcpTransport, string, error) {
+func newTCPTransport(listenAddress, fixedPublicAddress string, handler StreamHandler) (*tcpTransport, error) {
 
 	// TODO : prepare Listener
 	listener, err := net.Listen("tcp", listenAddress)
 	if err != nil {
-		return nil, "", errors.Wrap(err, "failed to listen UDP")
+		return nil, errors.Wrap(err, "failed to listen UDP")
 	}
 	publicAddress, err := resolver.Resolve(fixedPublicAddress, listener.Addr().String())
 	if err != nil {
-		return nil, "", errors.Wrap(err, "failed to resolve public address")
+		return nil, errors.Wrap(err, "failed to resolve public address")
 	}
 
 	transport := &tcpTransport{
 		listener: listener,
 		address:  publicAddress,
+		handler:  handler,
 	}
 
-	return transport, publicAddress, nil
+	return transport, nil
 }
 
-func (t *tcpTransport) SetStreamHandler(h StreamHandler) {
-	t.handler = h
+func (t *tcpTransport) Address() string {
+	return t.address
 }
 
 func (t *tcpTransport) Dial(ctx context.Context, address string) (io.ReadWriteCloser, error) {

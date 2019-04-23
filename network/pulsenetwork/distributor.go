@@ -74,6 +74,7 @@ import (
 )
 
 type distributor struct {
+	Factory     transport.Factory `inject:""`
 	transport   transport.StreamTransport
 	idGenerator sequence.Generator
 
@@ -91,7 +92,7 @@ type distributor struct {
 }
 
 // NewDistributor creates a new distributor object of pulses
-func NewDistributor(conf configuration.PulseDistributor, tp transport.StreamTransport, publicAddress string) (insolar.PulseDistributor, error) {
+func NewDistributor(conf configuration.PulseDistributor) (insolar.PulseDistributor, error) {
 
 	futureManager := future.NewManager()
 
@@ -102,18 +103,28 @@ func NewDistributor(conf configuration.PulseDistributor, tp transport.StreamTran
 		randomHostsRequestTimeout: time.Duration(conf.RandomHostsRequestTimeout) * time.Millisecond,
 		pulseRequestTimeout:       time.Duration(conf.PulseRequestTimeout) * time.Millisecond,
 		randomNodesCount:          conf.RandomNodesCount,
-		publicAddress:             publicAddress,
 
 		bootstrapHosts:  conf.BootstrapHosts,
-		transport:       tp,
 		futureManager:   futureManager,
 		responseHandler: future.NewPacketHandler(futureManager),
-		pool:            pool.NewConnectionPool(tp),
 	}
 
-	handler := hostnetwork.NewStreamHandler(func(p *packet.Packet) {}, result.responseHandler)
-	result.transport.SetStreamHandler(handler)
 	return result, nil
+}
+
+func (d *distributor) Init(ctx context.Context) error {
+	handler := hostnetwork.NewStreamHandler(func(p *packet.Packet) {}, d.responseHandler)
+
+	var err error
+	d.transport, err = d.Factory.CreateStreamTransport(handler)
+	if err != nil {
+		return errors.Wrap(err, "Failed to create transport")
+	}
+	d.pool = pool.NewConnectionPool(d.transport)
+
+	// todo: do this after transport start
+	d.publicAddress = d.transport.Address()
+	return nil
 }
 
 func (d *distributor) Start(ctx context.Context) error {
@@ -154,6 +165,7 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 		return
 	}
 
+	// TODO: make correct pause-resume
 	// if err := d.resume(ctx); err != nil {
 	// 	logger.Error("[ Distribute ] resume distribution error: " + err.Error())
 	// 	return
