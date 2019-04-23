@@ -261,7 +261,6 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base insolar.M
 	}
 }
 
-// TODO write test
 func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg, ok := parcel.Message().(*message.ReturnResults)
 	if !ok {
