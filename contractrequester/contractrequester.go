@@ -71,7 +71,6 @@ func New() (*ContractRequester, error) {
 	return res, nil
 }
 
-// TODO change handler
 func (cr *ContractRequester) Start(ctx context.Context) error {
 	cr.MessageBus.MustRegister(insolar.TypeReturnResults, cr.FlowHandler.WrapBusHandle)
 	return nil
