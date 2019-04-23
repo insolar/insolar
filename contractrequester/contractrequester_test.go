@@ -215,9 +215,10 @@ func TestReceiveResult(t *testing.T) {
 	parcel := testutils.NewParcelMock(mc).MessageMock.Return(
 		msg,
 	)
+	parcel.PulseFunc = func() insolar.PulseNumber { return insolar.PulseNumber(100) }
 
 	// unexpected result
-	rep, err := cr.ReceiveResult(ctx, parcel)
+	rep, err := cr.FlowHandler.WrapBusHandle(ctx, parcel)
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, rep)
 
@@ -230,7 +231,8 @@ func TestReceiveResult(t *testing.T) {
 		chanResult <- <-cr.ResultMap[sequence]
 	}()
 
-	rep, err = cr.ReceiveResult(ctx, parcel)
+	rep, err = cr.FlowHandler.WrapBusHandle(ctx, parcel)
+
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, rep)
 	require.Equal(t, 0, len(cr.ResultMap))
