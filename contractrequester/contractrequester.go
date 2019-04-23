@@ -260,29 +260,3 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base insolar.M
 		return nil, errors.New("canceled")
 	}
 }
-
-func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg, ok := parcel.Message().(*message.ReturnResults)
-	if !ok {
-		return nil, errors.New("ReceiveResult() accepts only message.ReturnResults")
-	}
-
-	ctx, span := instracer.StartSpan(ctx, "ContractRequester.ReceiveResult")
-	defer span.End()
-
-	cr.ResultMutex.Lock()
-	defer cr.ResultMutex.Unlock()
-
-	logger := inslogger.FromContext(ctx)
-	c, ok := cr.ResultMap[msg.Sequence]
-	if !ok {
-		logger.Info("oops unwaited results seq=", msg.Sequence)
-		return &reply.OK{}, nil
-	}
-	logger.Debug("Got wanted results seq=", msg.Sequence)
-
-	c <- msg
-	delete(cr.ResultMap, msg.Sequence)
-
-	return &reply.OK{}, nil
-}
