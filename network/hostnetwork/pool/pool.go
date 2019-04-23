@@ -53,6 +53,7 @@ package pool
 import (
 	"context"
 	"io"
+	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/metrics"
@@ -76,6 +77,7 @@ func NewConnectionPool(t transport.StreamTransport) ConnectionPool {
 type connectionPool struct {
 	transport transport.StreamTransport
 
+	mutex       sync.RWMutex
 	entryHolder *entryHolder
 }
 
@@ -88,6 +90,9 @@ func newConnectionPool(t transport.StreamTransport) *connectionPool {
 
 // GetConnection returns connection from the pool, if connection isn't exist, it will be created
 func (cp *connectionPool) GetConnection(ctx context.Context, host *host.Host) (io.ReadWriter, error) {
+	cp.mutex.Lock()
+	defer cp.mutex.Unlock()
+
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[ GetConnection ] Finding entry for connection to %s in pool", host)
 
@@ -97,6 +102,9 @@ func (cp *connectionPool) GetConnection(ctx context.Context, host *host.Host) (i
 
 // CloseConnection closes connection to the host
 func (cp *connectionPool) CloseConnection(ctx context.Context, host *host.Host) {
+	cp.mutex.Lock()
+	defer cp.mutex.Unlock()
+
 	logger := inslogger.FromContext(ctx)
 
 	e, ok := cp.entryHolder.get(host)
@@ -113,6 +121,9 @@ func (cp *connectionPool) CloseConnection(ctx context.Context, host *host.Host) 
 
 // AddConnection adds created outside connection to the pool
 func (cp *connectionPool) AddConnection(host *host.Host, conn io.ReadWriteCloser) error {
+	cp.mutex.Lock()
+	defer cp.mutex.Unlock()
+
 	// TODO: return err if connection to the host is already exist
 	cp.entryHolder.add(host, newEntry(cp.transport, conn, host, cp.CloseConnection))
 	metrics.NetworkConnections.Inc()
@@ -147,6 +158,9 @@ func (cp *connectionPool) getOrCreateEntry(ctx context.Context, host *host.Host)
 
 // Reset closes and removes all connections from the pool
 func (cp *connectionPool) Reset() {
+	cp.mutex.Lock()
+	defer cp.mutex.Unlock()
+
 	cp.entryHolder.iterate(func(entry *entry) {
 		entry.close()
 	})
