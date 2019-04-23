@@ -49,18 +49,6 @@ var cases = []tCase{
 		defFn:  LaunchnetDir,
 		expect: "blah/bla",
 	},
-	// ArtifactsDir checks
-	{
-		defFn:  ArtifactsDir,
-		expect: ".artifacts",
-	},
-	{
-		env: map[string]string{
-			"INSOLAR_ARTIFACTS_DIR": "blah/bla",
-		},
-		defFn:  ArtifactsDir,
-		expect: "blah/bla",
-	},
 }
 
 func TestDefaults(t *testing.T) {

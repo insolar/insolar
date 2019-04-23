@@ -27,19 +27,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/insolar/insolar/log"
-
 	"github.com/insolar/insolar/bootstrap/genesis"
 	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar/defaults"
+	"github.com/insolar/insolar/log"
 	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v2"
 )
 
 func baseDir() string {
-	artifactsDir := envVarWithDefault("INSOLAR_ARTIFACTS_DIR", ".artifacts")
-	launchnedArtifactsDir := filepath.Join(artifactsDir, "launchnet")
-	return envVarWithDefault("LAUNCHNET_BASE_DIR", launchnedArtifactsDir)
+	return defaults.LaunchnetDir()
 }
 
 var (
@@ -321,14 +319,6 @@ func mustMakeDir(dir string) {
 	err := os.MkdirAll(dir, 0775)
 	check("couldn't create directory "+dir, err)
 	fmt.Println("generate_insolar_configs.go: creates dir", dir)
-}
-
-func envVarWithDefault(name string, defaultValue string) string {
-	value := os.Getenv(name)
-	if value != "" {
-		return value
-	}
-	return defaultValue
 }
 
 func withBaseDir(subpath string) string {
