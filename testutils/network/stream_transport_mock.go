@@ -12,7 +12,6 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	transport "github.com/insolar/insolar/network/transport"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -21,15 +20,15 @@ import (
 type StreamTransportMock struct {
 	t minimock.Tester
 
+	AddressFunc       func() (r string)
+	AddressCounter    uint64
+	AddressPreCounter uint64
+	AddressMock       mStreamTransportMockAddress
+
 	DialFunc       func(p context.Context, p1 string) (r io.ReadWriteCloser, r1 error)
 	DialCounter    uint64
 	DialPreCounter uint64
 	DialMock       mStreamTransportMockDial
-
-	SetStreamHandlerFunc       func(p transport.StreamHandler)
-	SetStreamHandlerCounter    uint64
-	SetStreamHandlerPreCounter uint64
-	SetStreamHandlerMock       mStreamTransportMockSetStreamHandler
 
 	StartFunc       func(p context.Context) (r error)
 	StartCounter    uint64
@@ -50,12 +49,146 @@ func NewStreamTransportMock(t minimock.Tester) *StreamTransportMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.AddressMock = mStreamTransportMockAddress{mock: m}
 	m.DialMock = mStreamTransportMockDial{mock: m}
-	m.SetStreamHandlerMock = mStreamTransportMockSetStreamHandler{mock: m}
 	m.StartMock = mStreamTransportMockStart{mock: m}
 	m.StopMock = mStreamTransportMockStop{mock: m}
 
 	return m
+}
+
+type mStreamTransportMockAddress struct {
+	mock              *StreamTransportMock
+	mainExpectation   *StreamTransportMockAddressExpectation
+	expectationSeries []*StreamTransportMockAddressExpectation
+}
+
+type StreamTransportMockAddressExpectation struct {
+	result *StreamTransportMockAddressResult
+}
+
+type StreamTransportMockAddressResult struct {
+	r string
+}
+
+//Expect specifies that invocation of StreamTransport.Address is expected from 1 to Infinity times
+func (m *mStreamTransportMockAddress) Expect() *mStreamTransportMockAddress {
+	m.mock.AddressFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &StreamTransportMockAddressExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of StreamTransport.Address
+func (m *mStreamTransportMockAddress) Return(r string) *StreamTransportMock {
+	m.mock.AddressFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &StreamTransportMockAddressExpectation{}
+	}
+	m.mainExpectation.result = &StreamTransportMockAddressResult{r}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of StreamTransport.Address is expected once
+func (m *mStreamTransportMockAddress) ExpectOnce() *StreamTransportMockAddressExpectation {
+	m.mock.AddressFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &StreamTransportMockAddressExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *StreamTransportMockAddressExpectation) Return(r string) {
+	e.result = &StreamTransportMockAddressResult{r}
+}
+
+//Set uses given function f as a mock of StreamTransport.Address method
+func (m *mStreamTransportMockAddress) Set(f func() (r string)) *StreamTransportMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.AddressFunc = f
+	return m.mock
+}
+
+//Address implements github.com/insolar/insolar/network/transport.StreamTransport interface
+func (m *StreamTransportMock) Address() (r string) {
+	counter := atomic.AddUint64(&m.AddressPreCounter, 1)
+	defer atomic.AddUint64(&m.AddressCounter, 1)
+
+	if len(m.AddressMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.AddressMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to StreamTransportMock.Address.")
+			return
+		}
+
+		result := m.AddressMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the StreamTransportMock.Address")
+			return
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.AddressMock.mainExpectation != nil {
+
+		result := m.AddressMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the StreamTransportMock.Address")
+		}
+
+		r = result.r
+
+		return
+	}
+
+	if m.AddressFunc == nil {
+		m.t.Fatalf("Unexpected call to StreamTransportMock.Address.")
+		return
+	}
+
+	return m.AddressFunc()
+}
+
+//AddressMinimockCounter returns a count of StreamTransportMock.AddressFunc invocations
+func (m *StreamTransportMock) AddressMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.AddressCounter)
+}
+
+//AddressMinimockPreCounter returns the value of StreamTransportMock.Address invocations
+func (m *StreamTransportMock) AddressMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.AddressPreCounter)
+}
+
+//AddressFinished returns true if mock invocations count is ok
+func (m *StreamTransportMock) AddressFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.AddressMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.AddressCounter) == uint64(len(m.AddressMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.AddressMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.AddressCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.AddressFunc != nil {
+		return atomic.LoadUint64(&m.AddressCounter) > 0
+	}
+
+	return true
 }
 
 type mStreamTransportMockDial struct {
@@ -204,129 +337,6 @@ func (m *StreamTransportMock) DialFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.DialFunc != nil {
 		return atomic.LoadUint64(&m.DialCounter) > 0
-	}
-
-	return true
-}
-
-type mStreamTransportMockSetStreamHandler struct {
-	mock              *StreamTransportMock
-	mainExpectation   *StreamTransportMockSetStreamHandlerExpectation
-	expectationSeries []*StreamTransportMockSetStreamHandlerExpectation
-}
-
-type StreamTransportMockSetStreamHandlerExpectation struct {
-	input *StreamTransportMockSetStreamHandlerInput
-}
-
-type StreamTransportMockSetStreamHandlerInput struct {
-	p transport.StreamHandler
-}
-
-//Expect specifies that invocation of StreamTransport.SetStreamHandler is expected from 1 to Infinity times
-func (m *mStreamTransportMockSetStreamHandler) Expect(p transport.StreamHandler) *mStreamTransportMockSetStreamHandler {
-	m.mock.SetStreamHandlerFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &StreamTransportMockSetStreamHandlerExpectation{}
-	}
-	m.mainExpectation.input = &StreamTransportMockSetStreamHandlerInput{p}
-	return m
-}
-
-//Return specifies results of invocation of StreamTransport.SetStreamHandler
-func (m *mStreamTransportMockSetStreamHandler) Return() *StreamTransportMock {
-	m.mock.SetStreamHandlerFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &StreamTransportMockSetStreamHandlerExpectation{}
-	}
-
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of StreamTransport.SetStreamHandler is expected once
-func (m *mStreamTransportMockSetStreamHandler) ExpectOnce(p transport.StreamHandler) *StreamTransportMockSetStreamHandlerExpectation {
-	m.mock.SetStreamHandlerFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &StreamTransportMockSetStreamHandlerExpectation{}
-	expectation.input = &StreamTransportMockSetStreamHandlerInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-//Set uses given function f as a mock of StreamTransport.SetStreamHandler method
-func (m *mStreamTransportMockSetStreamHandler) Set(f func(p transport.StreamHandler)) *StreamTransportMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.SetStreamHandlerFunc = f
-	return m.mock
-}
-
-//SetStreamHandler implements github.com/insolar/insolar/network/transport.StreamTransport interface
-func (m *StreamTransportMock) SetStreamHandler(p transport.StreamHandler) {
-	counter := atomic.AddUint64(&m.SetStreamHandlerPreCounter, 1)
-	defer atomic.AddUint64(&m.SetStreamHandlerCounter, 1)
-
-	if len(m.SetStreamHandlerMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.SetStreamHandlerMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to StreamTransportMock.SetStreamHandler. %v", p)
-			return
-		}
-
-		input := m.SetStreamHandlerMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, StreamTransportMockSetStreamHandlerInput{p}, "StreamTransport.SetStreamHandler got unexpected parameters")
-
-		return
-	}
-
-	if m.SetStreamHandlerMock.mainExpectation != nil {
-
-		input := m.SetStreamHandlerMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, StreamTransportMockSetStreamHandlerInput{p}, "StreamTransport.SetStreamHandler got unexpected parameters")
-		}
-
-		return
-	}
-
-	if m.SetStreamHandlerFunc == nil {
-		m.t.Fatalf("Unexpected call to StreamTransportMock.SetStreamHandler. %v", p)
-		return
-	}
-
-	m.SetStreamHandlerFunc(p)
-}
-
-//SetStreamHandlerMinimockCounter returns a count of StreamTransportMock.SetStreamHandlerFunc invocations
-func (m *StreamTransportMock) SetStreamHandlerMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.SetStreamHandlerCounter)
-}
-
-//SetStreamHandlerMinimockPreCounter returns the value of StreamTransportMock.SetStreamHandler invocations
-func (m *StreamTransportMock) SetStreamHandlerMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.SetStreamHandlerPreCounter)
-}
-
-//SetStreamHandlerFinished returns true if mock invocations count is ok
-func (m *StreamTransportMock) SetStreamHandlerFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.SetStreamHandlerMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.SetStreamHandlerCounter) == uint64(len(m.SetStreamHandlerMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.SetStreamHandlerMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.SetStreamHandlerCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.SetStreamHandlerFunc != nil {
-		return atomic.LoadUint64(&m.SetStreamHandlerCounter) > 0
 	}
 
 	return true
@@ -630,12 +640,12 @@ func (m *StreamTransportMock) StopFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *StreamTransportMock) ValidateCallCounters() {
 
-	if !m.DialFinished() {
-		m.t.Fatal("Expected call to StreamTransportMock.Dial")
+	if !m.AddressFinished() {
+		m.t.Fatal("Expected call to StreamTransportMock.Address")
 	}
 
-	if !m.SetStreamHandlerFinished() {
-		m.t.Fatal("Expected call to StreamTransportMock.SetStreamHandler")
+	if !m.DialFinished() {
+		m.t.Fatal("Expected call to StreamTransportMock.Dial")
 	}
 
 	if !m.StartFinished() {
@@ -663,12 +673,12 @@ func (m *StreamTransportMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *StreamTransportMock) MinimockFinish() {
 
-	if !m.DialFinished() {
-		m.t.Fatal("Expected call to StreamTransportMock.Dial")
+	if !m.AddressFinished() {
+		m.t.Fatal("Expected call to StreamTransportMock.Address")
 	}
 
-	if !m.SetStreamHandlerFinished() {
-		m.t.Fatal("Expected call to StreamTransportMock.SetStreamHandler")
+	if !m.DialFinished() {
+		m.t.Fatal("Expected call to StreamTransportMock.Dial")
 	}
 
 	if !m.StartFinished() {
@@ -693,8 +703,8 @@ func (m *StreamTransportMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.AddressFinished()
 		ok = ok && m.DialFinished()
-		ok = ok && m.SetStreamHandlerFinished()
 		ok = ok && m.StartFinished()
 		ok = ok && m.StopFinished()
 
@@ -705,12 +715,12 @@ func (m *StreamTransportMock) MinimockWait(timeout time.Duration) {
 		select {
 		case <-timeoutCh:
 
-			if !m.DialFinished() {
-				m.t.Error("Expected call to StreamTransportMock.Dial")
+			if !m.AddressFinished() {
+				m.t.Error("Expected call to StreamTransportMock.Address")
 			}
 
-			if !m.SetStreamHandlerFinished() {
-				m.t.Error("Expected call to StreamTransportMock.SetStreamHandler")
+			if !m.DialFinished() {
+				m.t.Error("Expected call to StreamTransportMock.Dial")
 			}
 
 			if !m.StartFinished() {
@@ -733,11 +743,11 @@ func (m *StreamTransportMock) MinimockWait(timeout time.Duration) {
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *StreamTransportMock) AllMocksCalled() bool {
 
-	if !m.DialFinished() {
+	if !m.AddressFinished() {
 		return false
 	}
 
-	if !m.SetStreamHandlerFinished() {
+	if !m.DialFinished() {
 		return false
 	}
 
