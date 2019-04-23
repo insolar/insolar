@@ -12,8 +12,8 @@ Insolar’s vision is to facilitate seamless low friction interactions between c
 
 The Insolar platform is the most secure, scalable, and comprehensive business-ready blockchain toolkit in the world. Insolar’s goal is to give businesses access to features and services that enable them to launch new decentralized applications quickly and easily, whether they need a minimum viable product or full-scale production software and to integrate those applications with existing systems.
 
-[Distinctive Features](features.md)
+[Distinctive Features](features.rst)
 
-[Architecture](architecture.md)
+[Architecture](architecture.rst)
 
 [Terms](terms.md)
