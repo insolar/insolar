@@ -2,6 +2,8 @@ version: '3.7'
 services:
   insolard:
     image: "insolar/insolard:v0.8.6"
+    labels:
+      - autoheal=true
     environment:
       - INSOLARD_LOG_LEVEL=warn
       - INSOLARD_TRANSPORT_FIXED_ADDRESS=<YOUR-PUBLIC-IP-HERE>
@@ -116,3 +118,11 @@ services:
       retries: 5
       start_period: 30s
     restart: on-failure
+
+  healthchecker:
+    image: "willfarrell/autoheal"
+    environment:
+      AUTOHEAL_INTERVAL: 60
+      AUTOHEAL_DEFAULT_STOP_TIMEOUT: 60
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
