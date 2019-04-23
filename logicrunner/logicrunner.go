@@ -228,6 +228,8 @@ func initHandlers(lr *LogicRunner) error {
 			inslogger.FromContext(ctx).Error("Error while running router", err)
 		}
 	}()
+	<- router.Running()
+
 	lr.router = router
 
 	return nil

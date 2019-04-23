@@ -3,7 +3,7 @@ host:
     address: 127.0.0.1:53837
 ledger:
   storage:
-    datadirectory: ./data
+    datadirectory: "{{ .BaseDir }}/data"
 log:
   level: Debug
 logicrunner:
@@ -12,4 +12,4 @@ logicrunner:
     runnerlisten: 127.0.0.1:28111
 pulsar:
   listenaddress: 127.0.0.1:8090
-keyspath: "scripts/insolard/configs/bootstrap_keys.json"
+keyspath: "{{ .BaseDir }}/configs/bootstrap_keys.json"

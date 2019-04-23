@@ -1,12 +1,19 @@
 #! /usr/bin/env bash
 set -o pipefail
 
-confs=$( dirname $0 )"/configs/generated_configs/discoverynodes"
-api_ports=$( grep -A 1 "apirunner" $confs/insolar_*.yaml  | grep address  |  grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
+# Changeable environment variables (parameters)
+INSOLAR_ARTIFACTS_DIR=${INSOLAR_ARTIFACTS_DIR:-".artifacts"}/
+LAUNCHNET_BASE_DIR=${LAUNCHNET_BASE_DIR:-"${INSOLAR_ARTIFACTS_DIR}launchnet"}/
+
+# check is discovery nodes ready
+
+confs=${LAUNCHNET_BASE_DIR}discoverynodes/
+api_ports=$( grep -A 1 "apirunner" ${confs}*/insolard.yaml  | grep address  |  grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
 grep_exit=$?
 if [[ $grep_exit -ne 0 ]]; then
     exit 1
 fi
+#(>&2 echo "api_ports=$api_ports")
 
 exit_code=0
 for port in $api_ports
