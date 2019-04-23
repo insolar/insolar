@@ -47,6 +47,8 @@ import (
 
 const deliverRPCMethodName = "MessageBus.Deliver"
 
+var useWatermillTypes = make(map[insolar.MessageType]struct{})
+
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
@@ -204,17 +206,16 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 		return nil, err
 	}
 
-	switch msg.Type() {
-	// TODO: uncomment this after move first message type to watermill
-	// case insolar.TypeGetObject:
-	// 	wmMsg := mb.createWatermillMessage(ctx, parcel, ops, currentPulse)
-	// 	res := mb.Bus.Send(ctx, wmMsg)
-	// 	repMsg := <-res
-	// 	rep, err := reply.Deserialize(bytes.NewBuffer(repMsg.Payload))
-	// 	if err != nil {
-	// 		return nil, errors.Wrap(err, "can't deserialize payload")
-	// 	}
-	// 	return rep, nil
+	_, ok := useWatermillTypes[msg.Type()]
+	if ok {
+		wmMsg := mb.createWatermillMessage(ctx, parcel, ops, currentPulse)
+		res := mb.Bus.Send(ctx, wmMsg)
+		repMsg := <-res
+		rep, err := reply.Deserialize(bytes.NewBuffer(repMsg.Payload))
+		if err != nil {
+			return nil, errors.Wrap(err, "can't deserialize payload")
+		}
+		return rep, nil
 	}
 
 	rep, err := mb.SendParcel(ctx, parcel, currentPulse, ops)
