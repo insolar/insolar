@@ -68,8 +68,10 @@ func TestDataGatherer_ForPulseAndJet(t *testing.T) {
 		LatestState:  insolar.NewID(gen.PulseNumber(), nil),
 	}
 	idxID := gen.ID()
-	ia.ForPulseAndJetMock.Expect(ctx, pn, jetID).Return(map[insolar.ID]object.Lifeline{
-		idxID: idx,
+	ia.ForJetMock.Expect(ctx, jetID).Return(map[insolar.ID]object.LifelineMeta{
+		idxID: {
+			Index: idx,
+		},
 	})
 
 	expectedMsg := &message.HeavyPayload{
@@ -102,18 +104,21 @@ func TestDataGatherer_ForPulseAndJet_DropFetchingFailed(t *testing.T) {
 }
 
 func TestLightDataGatherer_convertIndexes(t *testing.T) {
-	var idxs []object.Lifeline
-	fuzz.New().NilChance(0).NumElements(500, 1000).Funcs(func(elem *object.Lifeline, c fuzz.Continue) {
-		elem.JetID = gen.JetID()
-		elem.LatestUpdate = gen.PulseNumber()
+	var idxs []object.LifelineMeta
+	fuzz.New().NilChance(0).NumElements(500, 1000).Funcs(func(elem *object.LifelineMeta, c fuzz.Continue) {
+		elem.Index = object.Lifeline{
+			JetID:        gen.JetID(),
+			LatestUpdate: gen.PulseNumber(),
+		}
+		elem.LastUsed = gen.PulseNumber()
 	}).Fuzz(&idxs)
 
 	expected := map[insolar.ID][]byte{}
-	input := map[insolar.ID]object.Lifeline{}
+	input := map[insolar.ID]object.LifelineMeta{}
 
 	for _, idx := range idxs {
 		id := gen.ID()
-		expected[id] = object.EncodeIndex(idx)
+		expected[id] = object.EncodeIndex(idx.Index)
 		input[id] = idx
 	}
 
