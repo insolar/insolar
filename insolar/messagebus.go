@@ -20,7 +20,6 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 	"github.com/ugorji/go/codec"
 )
@@ -162,12 +161,6 @@ type MessageBus interface {
 
 	// Called each new pulse, cleans next pulse messages buffer
 	OnPulse(context.Context, Pulse) error
-}
-
-// Bus interface
-type Bus interface {
-	// Send an `Message` and get a `Reply` or error from remote host.
-	Send(ctx context.Context, msg *message.Message) <-chan *message.Message
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.MessageBusLocker -o ../testutils -s _mock.go

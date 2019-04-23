@@ -47,13 +47,21 @@ func NewBus(pub message.Publisher, timeout time.Duration) *Bus {
 	return &Bus{
 		timeout: timeout,
 		pub:     pub,
+		replies: make(map[string]chan *message.Message),
 	}
 }
 
+// Send an watermill's Message and return channel for replies.
 func (b *Bus) Send(ctx context.Context, msg *message.Message) <-chan *message.Message {
 	id := middleware.MessageCorrelationID(msg)
 	rep := make(chan *message.Message)
 	b.repliesMutex.Lock()
+	_, ok := b.replies[id]
+	if !ok {
+		b.repliesMutex.Unlock()
+		inslogger.FromContext(ctx).Errorf("[ Send ] message with CorrelationID %s already exist in replies map", id)
+		return nil
+	}
 	b.replies[id] = rep
 	b.repliesMutex.Unlock()
 
@@ -72,7 +80,7 @@ func (b *Bus) SetResult(ctx context.Context, msg *message.Message) {
 	ch, ok := b.replies[id]
 	b.repliesMutex.RUnlock()
 	if !ok {
-		inslogger.FromContext(ctx).Errorf("[ SetResult ] message with CorrelationID %s wasn't found in results map", id)
+		inslogger.FromContext(ctx).Errorf("[ SetResult ] message with CorrelationID %s wasn't found in replies map", id)
 		return
 	}
 
@@ -82,7 +90,11 @@ func (b *Bus) SetResult(ctx context.Context, msg *message.Message) {
 	case <-time.After(b.timeout):
 		inslogger.FromContext(ctx).Infof("[ SetResult ] can't return result for message with correlationID %s: timeout %s exceeded", id, b.timeout)
 		b.repliesMutex.Lock()
-		// TODO: check if channel already closed
+		ch, ok := b.replies[id]
+		if !ok {
+			b.repliesMutex.Unlock()
+			return
+		}
 		close(ch)
 		delete(b.replies, id)
 		b.repliesMutex.Unlock()
