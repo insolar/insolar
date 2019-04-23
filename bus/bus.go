@@ -26,16 +26,28 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
+// ExternalMsgTopic is topic for external calls
 const ExternalMsgTopic = "ExternalMsgTopic"
+
+// IncomingMsgTopic is topic for incoming calls
 const IncomingMsgTopic = "IncomingMsgTopic"
 
+// PulseMetadataKey is key for Pulse
 const PulseMetadataKey = "pulse"
+
+// PulseMetadataKey is key for Type
 const TypeMetadataKey = "type"
+
+// ReceiverMetadataKey is key for Receiver
 const ReceiverMetadataKey = "receiver"
+
+// SenderMetadataKey is key for Sender
 const SenderMetadataKey = "sender"
 
+// ReplyTypeMetadataValue is type for Message which reply to other Message
 const ReplyTypeMetadataValue = "reply"
 
+// Bus is component that sends messages and gives access to replies for them.
 type Bus struct {
 	pub          message.Publisher
 	replies      map[string]chan *message.Message
@@ -43,6 +55,7 @@ type Bus struct {
 	timeout      time.Duration
 }
 
+// NewBus creates Bus instance with provided values.
 func NewBus(pub message.Publisher, timeout time.Duration) *Bus {
 	return &Bus{
 		timeout: timeout,
@@ -51,7 +64,7 @@ func NewBus(pub message.Publisher, timeout time.Duration) *Bus {
 	}
 }
 
-// Send an watermill's Message and return channel for replies.
+// Send a watermill's Message and return channel for replies.
 func (b *Bus) Send(ctx context.Context, msg *message.Message) <-chan *message.Message {
 	id := middleware.MessageCorrelationID(msg)
 	rep := make(chan *message.Message)
