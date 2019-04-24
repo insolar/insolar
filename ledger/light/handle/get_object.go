@@ -37,32 +37,37 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 	msg := s.Message.Parcel.Message().(*message.GetObject)
 	ctx, _ = inslogger.WithField(ctx, "object", msg.Head.Record().DebugString())
 
-	// Workaround to fetch object states.
-	var pn insolar.PulseNumber
+	var jetID insolar.JetID
 	if s.Message.Parcel.DelegationToken() == nil {
-		pn = flow.Pulse(ctx)
+		jet := proc.NewFetchJet(*msg.Head.Record(), flow.Pulse(ctx), s.Message.ReplyTo)
+		s.dep.FetchJet(jet)
+		if err := f.Procedure(ctx, jet, false); err != nil {
+			return err
+		}
+		hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.Message.ReplyTo)
+		s.dep.WaitHot(hot)
+		if err := f.Procedure(ctx, hot, false); err != nil {
+			return err
+		}
+
+		jetID = jet.Result.Jet
 	} else {
-		pn = msg.State.Pulse()
-	}
-	jet := proc.NewFetchJet(*msg.Head.Record(), pn, s.Message.ReplyTo)
-	s.dep.FetchJet(jet)
-	if err := jet.Proceed(ctx); err != nil {
-		return err
-	}
-
-	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.Message.ReplyTo)
-	s.dep.WaitHot(hot)
-	if err := jet.Proceed(ctx); err != nil {
-		return err
+		// Workaround to fetch object states.
+		jet := proc.NewFetchJet(*msg.Head.Record(), msg.State.Pulse(), s.Message.ReplyTo)
+		s.dep.FetchJet(jet)
+		if err := f.Procedure(ctx, jet, false); err != nil {
+			return err
+		}
+		jetID = jet.Result.Jet
 	}
 
-	idx := proc.NewGetIndex(msg.Head, jet.Result.Jet, s.Message.ReplyTo)
+	idx := proc.NewGetIndex(msg.Head, jetID, s.Message.ReplyTo)
 	s.dep.GetIndex(idx)
-	if err := idx.Proceed(ctx); err != nil {
+	if err := f.Procedure(ctx, idx, false); err != nil {
 		return err
 	}
 
-	send := proc.NewSendObject(s.Message, jet.Result.Jet, idx.Result.Index)
+	send := proc.NewSendObject(s.Message, jetID, idx.Result.Index)
 	s.dep.SendObject(send)
-	return send.Proceed(ctx)
+	return f.Procedure(ctx, send, false)
 }

@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/reply"
@@ -87,11 +86,6 @@ func NewWaitHot(j insolar.JetID, pn insolar.PulseNumber, rep chan<- bus.Reply) *
 }
 
 func (p *WaitHot) Proceed(ctx context.Context) error {
-	// Workaround to skip waiting on past pulses.
-	if p.pulse < flow.Pulse(ctx) {
-		return nil
-	}
-
 	err := p.Dep.Waiter.Wait(ctx, insolar.ID(p.jetID))
 	if err != nil {
 		p.replyTo <- bus.Reply{Reply: &reply.Error{ErrType: reply.ErrHotDataTimeout}}

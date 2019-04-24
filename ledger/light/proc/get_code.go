@@ -58,14 +58,6 @@ func (p *GetCode) Proceed(ctx context.Context) error {
 
 func (p *GetCode) reply(ctx context.Context) bus.Reply {
 	codeID := *p.code.Record()
-	jetID, mine, err := p.Dep.CheckJet(ctx, codeID, codeID.Pulse())
-	if err != nil {
-		return bus.Reply{Err: errors.Wrap(err, "failed to check jet")}
-	}
-	if !mine {
-		return bus.Reply{Reply: &reply.JetMiss{JetID: insolar.ID(jetID), Pulse: codeID.Pulse()}}
-	}
-
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, codeID)
 	if err == object.ErrNotFound {
 		heavy, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
