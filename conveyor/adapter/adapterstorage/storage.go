@@ -83,6 +83,7 @@ func registerCommonAdapters() {
 }
 
 func registerAdaptersForHeavy() {
+	addAdapter(artifactmanager.NewGetCodeProcessor, adapterid.GetCode)
 }
 
 func registerAdaptersForLight() {
@@ -104,7 +105,7 @@ func GetAllProcessors(role insolar.StaticRole) []interface{} {
 	case insolar.StaticRoleUnknown:
 		// register all
 		registerAdaptersForVirtual()
-		registerAdaptersForHeavy()
+		// registerAdaptersForHeavy()
 		registerAdaptersForLight()
 	case insolar.StaticRoleVirtual:
 		registerAdaptersForVirtual()

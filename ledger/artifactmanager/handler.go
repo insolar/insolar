@@ -318,6 +318,7 @@ func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel insolar.Parce
 }
 
 func (h *MessageHandler) GetCode(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
+	ctx = contextWithJet(ctx, insolar.ID(*insolar.NewJetID(0, nil)))
 	return h.handleGetCode(ctx, parcel)
 }
 
@@ -332,6 +333,9 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel insolar.Parce
 		if err != nil {
 			return nil, err
 		}
+		fmt.Println("handleGetCode sorry1", jetID)
+		fmt.Println("handleGetCode sorry2", parcel.Pulse())
+		fmt.Println("handleGetCode sorry3", msg.Code.Record().Pulse())
 		return reply.NewGetCodeRedirect(h.DelegationTokenFactory, parcel, node)
 	}
 	if err != nil {
@@ -339,6 +343,9 @@ func (h *MessageHandler) handleGetCode(ctx context.Context, parcel insolar.Parce
 	}
 	code, err := h.BlobAccessor.ForID(ctx, *codeRec.Code)
 	if err == blob.ErrNotFound {
+		fmt.Println("handleGetCode sorryHeavy1", jetID)
+		fmt.Println("handleGetCode sorryHeavy2", parcel.Pulse())
+		fmt.Println("handleGetCode sorryHeavy3", msg.Code.Record().Pulse())
 		hNode, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err

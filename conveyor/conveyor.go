@@ -181,6 +181,8 @@ func (c *PulseConveyor) PreparePulse(pulse insolar.Pulse, callback queue.SyncDon
 
 	c.futurePulseData = &pulse
 	c.state = insolar.ConveyorPreparingPulse
+	// TODO: fix me sweetie
+	c.slotMap[pulse.PulseNumber].SetPulse(pulse)
 	return nil
 }
 

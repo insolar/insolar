@@ -18,8 +18,11 @@ package artifactmanager
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/insolar/insolar/conveyor/adapter"
+	"github.com/insolar/insolar/conveyor/adapter/adapterid"
+	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
@@ -33,8 +36,8 @@ type GetCodeTask struct {
 
 // GetCodeResp is response for adapter for getting code
 type GetCodeResp struct {
-	Parcel insolar.Reply
-	Err    error
+	Reply insolar.Reply
+	Err   error
 }
 
 // GetCodeProcessor is worker for adapter for getting code
@@ -53,13 +56,30 @@ func (p *GetCodeProcessor) Process(task adapter.Task, nestedEventHelper adapter.
 	var msg GetCodeResp
 	if !ok {
 		msg.Err = errors.Errorf("[ GetCodeProcessor.Process ] Incorrect payload type: %T", task.TaskPayload)
+		fmt.Println("GetCodeProcessor love")
+		fmt.Println(msg.Err)
 		return msg
 	}
 
 	ctx := context.Background()
-	parcel, err := p.Ledger.GetCode(ctx, payload.Parcel)
-	msg = GetCodeResp{parcel, err}
+	reply, err := p.Ledger.GetCode(ctx, payload.Parcel)
+	if err != nil {
+		fmt.Println("GetCodeProcessor err is not nil,", err)
+	}
+	msg = GetCodeResp{reply, err}
 	log.Info("[ GetCodeProcessor.Process ] Process was dome successfully")
 
 	return msg
+}
+
+// GetCodeHelper is helper for GetCodeProcessor
+type GetCodeHelper struct{}
+
+// GetCode makes correct message and send it to adapter
+func (r *GetCodeHelper) GetCode(element fsm.SlotElementHelper, parcel insolar.Parcel, respHandlerID uint32) error {
+	task := GetCodeTask{
+		Parcel: parcel,
+	}
+	err := element.SendTask(adapterid.GetCode, task, respHandlerID)
+	return errors.Wrap(err, "[ GetCodeHelper.SendResponse ] Can't SendTask")
 }

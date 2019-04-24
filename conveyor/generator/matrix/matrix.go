@@ -20,6 +20,7 @@ import (
 	"github.com/insolar/insolar/conveyor/adapter/adapterhelper"
 	"github.com/insolar/insolar/conveyor/fsm"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/get_object"
+	"github.com/insolar/insolar/conveyor/generator/state_machines/getcode"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/initial"
 	"github.com/insolar/insolar/conveyor/generator/state_machines/sample"
 	
@@ -53,6 +54,7 @@ const (
 	GetObjectStateMachine  fsm.ID = iota + 1
 	SampleStateMachine
 	Initial
+	GetCode
 	
 )
 
@@ -76,6 +78,10 @@ func NewMatrix() *Matrix {
 	m.future.addMachine(initial.RawInitialFutureFactory(helpers))
 	m.present.addMachine(initial.RawInitialPresentFactory(helpers))
 	m.past.addMachine(initial.RawInitialPastFactory(helpers))
+	
+	m.future.addMachine(getcode.RawGetCodeFutureFactory(helpers))
+	m.present.addMachine(getcode.RawGetCodePresentFactory(helpers))
+	m.past.addMachine(getcode.RawGetCodePastFactory(helpers))
 	
 	return &m
 }

@@ -18,6 +18,7 @@ package messagebus
 
 import (
 	"errors"
+	"fmt"
 	"sync/atomic"
 	"time"
 
@@ -32,14 +33,16 @@ var (
 )
 
 type future struct {
-	result   chan insolar.Reply
-	finished uint64
+	result     chan insolar.Reply
+	finished   uint64
+	createTime time.Time
 }
 
 // NewFuture creates new ConveyorFuture.
 func NewFuture() insolar.ConveyorFuture {
 	return &future{
-		result: make(chan insolar.Reply, 1),
+		result:     make(chan insolar.Reply, 1),
+		createTime: time.Now(),
 	}
 }
 
@@ -58,11 +61,16 @@ func (future *future) SetResult(res insolar.Reply) {
 
 // GetResult gets the future result from Result() channel with a timeout set to `duration`.
 func (future *future) GetResult(duration time.Duration) (insolar.Reply, error) {
+	fmt.Println("mb GetResult time since creation", time.Since(future.createTime))
+	waitTime := time.Now()
 	select {
 	case result, ok := <-future.Result():
 		if !ok {
 			return nil, ErrFutureChannelClosed
 		}
+		fmt.Println("mb GetResult time since creation:", time.Since(future.createTime))
+		fmt.Println("mb GetResult time since wait:", time.Since(waitTime))
+		fmt.Println("mb GetResult time since duration:", duration)
 		return result, nil
 	case <-time.After(duration):
 		future.Cancel()

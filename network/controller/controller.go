@@ -114,7 +114,7 @@ func ConfigureOptions(conf configuration.Configuration) *common.Options {
 		MinTimeout:          time.Duration(config.MinTimeout) * time.Second,
 		MaxTimeout:          time.Duration(config.MaxTimeout) * time.Second,
 		PingTimeout:         1 * time.Second,
-		PacketTimeout:       10 * time.Second,
+		PacketTimeout:       20 * time.Second,
 		BootstrapTimeout:    10 * time.Second,
 		HandshakeSessionTTL: time.Duration(config.HandshakeSessionTTL) * time.Millisecond,
 		FakePulseDuration:   time.Duration(conf.Pulsar.PulseTime) * time.Millisecond,

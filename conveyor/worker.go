@@ -14,7 +14,7 @@
  *    limitations under the License.
  */
 
-package slot
+package conveyor
 
 import (
 	"context"
@@ -35,20 +35,20 @@ import (
 	"github.com/pkg/errors"
 )
 
-// workerState shows slot working mode
-type workerState int
+// WorkerState shows slot working mode
+type WorkerState int
 
-//go:generate stringer -type=workerState
+//go:generate stringer -type=WorkerState
 const (
-	unknown = workerState(iota)
-	readInputQueue
-	readResponseQueue
-	processElements
+	Unknown = WorkerState(iota)
+	ReadInputQueue
+	ReadResponseQueue
+	ProcessElements
 )
 
 type worker struct { // nolint: unused
-	slot               *slot
-	nextWorkerState    workerState
+	slot               *Slot
+	nextWorkerState    WorkerState
 	postponedResponses []queue.OutputElement
 	stop               bool
 
@@ -58,13 +58,13 @@ type worker struct { // nolint: unused
 	ctxLogger insolar.Logger
 }
 
-func newWorker(slot *slot) worker {
+func newWorker(slot *Slot) worker {
 
 	slot.slotState = Initializing
 
 	w := worker{
 		slot:               slot,
-		nextWorkerState:    readInputQueue,
+		nextWorkerState:    ReadInputQueue,
 		postponedResponses: make([]queue.OutputElement, 0),
 		stop:               false,
 		ctxLogger:          inslogger.FromContext(context.Background()),
@@ -75,7 +75,7 @@ func newWorker(slot *slot) worker {
 	return w
 }
 
-func (w *worker) getStateMachineByType(mType fsm.ID) matrix.StateMachine {
+func (w *worker) GetStateMachineByType(mType fsm.ID) matrix.StateMachine {
 	return w.slot.handlersConfiguration.pulseStateMachines.GetStateMachineByID(mType)
 }
 
@@ -97,12 +97,12 @@ func (w *worker) changePulseState() {
 	case Antique:
 		w.ctxLogger.Error("[ changePulseState ] Try to change pulse state for 'Antique' slot. Skip it")
 	default:
-		panic("[ changePulseState ] unknown state: " + w.slot.pulseState.String())
+		panic("[ changePulseState ] Unknown state: " + w.slot.pulseState.String())
 	}
 	w.setLoggerFields()
 }
 
-func (w *worker) changeSlotState(state State) {
+func (w *worker) changeSlotState(state SlotState) {
 	w.slot.slotState = state
 	w.setLoggerFields()
 }
@@ -165,7 +165,7 @@ func (w *worker) processSignalsWorking(elements []queue.OutputElement) int {
 
 func (w *worker) readInputQueueWorking() error {
 	w.ctxLogger.Debugf("[ readInputQueueWorking ] starts ...")
-	w.nextWorkerState = readResponseQueue
+	w.nextWorkerState = ReadResponseQueue
 	elements := w.slot.inputQueue.RemoveAll()
 
 	numSignals := w.processSignalsWorking(elements)
@@ -192,7 +192,7 @@ func (w *worker) updateElement(element *slotElement, payload interface{}, fullSt
 		sm, state := fullState.Parse()
 		machineType := element.stateMachine
 		if sm != 0 {
-			machineType = w.getStateMachineByType(sm)
+			machineType = w.GetStateMachineByType(sm)
 		}
 		element.update(state, payload, machineType)
 		return
@@ -207,7 +207,7 @@ func (w *worker) processResponse(resp queue.OutputElement) error {
 	}
 	element := w.slot.extractSlotElementByID(adapterResp.GetElementID())
 	if element == nil {
-		w.ctxLogger.Warnf("[ processResponse ] unknown element id: %d. AdapterResp: %+v", adapterResp.GetElementID(), adapterResp)
+		w.ctxLogger.Warnf("[ processResponse ] Unknown element id: %d. AdapterResp: %+v", adapterResp.GetElementID(), adapterResp)
 		return nil
 	}
 
@@ -218,8 +218,7 @@ func (w *worker) processResponse(resp queue.OutputElement) error {
 	fmt.Println("respHandler element.stateMachine", element.stateMachine)
 	payload, newState, err := respHandler(element, adapterResp.GetRespPayload())
 	if err != nil {
-
-		w.ctxLogger.Error("[ processResponse ] Response handler errors: ", err)
+		w.ctxLogger.Error("[ processResponse ] AdapterResponse handler errors: ", err)
 		respErrorHandler := element.stateMachine.GetResponseErrorHandler(element.state)
 		if respErrorHandler == nil {
 			panic(fmt.Sprintf("[ processResponse ] No response error handler. State: %d. AdapterResp: %+v", element.state, adapterResp))
@@ -249,8 +248,8 @@ func (w *worker) processNestedEvent(resp queue.OutputElement) {
 
 func (w *worker) readResponseQueue() error {
 	w.ctxLogger.Debugf("[ readResponseQueue ] starts ...")
-	w.ctxLogger.Info("[ readResponseQueue ] Set next worker state to 'processElements'")
-	w.nextWorkerState = processElements
+	w.ctxLogger.Info("[ readResponseQueue ] Set next worker state to 'ProcessElements'")
+	w.nextWorkerState = ProcessElements
 	w.postponedResponses = append(w.postponedResponses, w.slot.responseQueue.RemoveAll()...)
 
 	totalNumElements := len(w.postponedResponses)
@@ -269,8 +268,8 @@ func (w *worker) readResponseQueue() error {
 		numProcessedElements++
 
 		if w.slot.inputQueue.HasSignal() {
-			w.ctxLogger.Info("[ readResponseQueue ] Set next worker state to 'readInputQueue'")
-			w.nextWorkerState = readInputQueue
+			w.ctxLogger.Info("[ readResponseQueue ] Set next worker state to 'ReadInputQueue'")
+			w.nextWorkerState = ReadInputQueue
 			break
 		}
 	}
@@ -298,14 +297,14 @@ func (w *worker) processingElements() {
 		}
 		// TODO: fix me sweetie
 		// should we set ReadInputQueue ore return? or just go is ok?
-		w.nextWorkerState = readInputQueue
+		w.nextWorkerState = ReadInputQueue
 		return
 		// w.waitQueuesOrTick()
 	}
 
 	if w.slot.inputQueue.HasSignal() {
-		w.ctxLogger.Info("[ processingElements ] Set next worker state to 'readInputQueue'")
-		w.nextWorkerState = readInputQueue
+		w.ctxLogger.Info("[ processingElements ] Set next worker state to 'ReadInputQueue'")
+		w.nextWorkerState = ReadInputQueue
 		return
 	}
 
@@ -322,8 +321,8 @@ func (w *worker) processingElements() {
 			}
 
 			if w.slot.inputQueue.HasSignal() {
-				w.nextWorkerState = readInputQueue
-				w.ctxLogger.Info("[ processingElements ] Set next worker state to 'readInputQueue'")
+				w.nextWorkerState = ReadInputQueue
+				w.ctxLogger.Info("[ processingElements ] Set next worker state to 'ReadInputQueue'")
 				breakProcessing = true
 				break
 			}
@@ -357,17 +356,17 @@ func (w *worker) working() {
 
 	for w.slot.isWorking() {
 		switch w.nextWorkerState {
-		case readInputQueue:
+		case ReadInputQueue:
 			err := w.readInputQueueWorking()
 			if err != nil {
 				panic(fmt.Sprintf("[ working ] readInputQueueWorking. Error: %s", err))
 			}
-		case readResponseQueue:
+		case ReadResponseQueue:
 			err := w.readResponseQueue()
 			if err != nil {
 				panic(fmt.Sprintf("[ working ] readResponseQueue. Error: %s", err))
 			}
-		case processElements:
+		case ProcessElements:
 			w.processingElements()
 		default:
 			panic("[ working ] unknown nextWorkerState: " + w.nextWorkerState.String())
@@ -422,7 +421,7 @@ func (w *worker) processSignalsSuspending(elements []queue.OutputElement) int {
 				w.changeSlotState(Canceling)
 				w.stop = true // TODO: do it more correctly
 			default:
-				panic(fmt.Sprintf("[ processSignalsSuspending ] unknown signal: %+v", el.GetItemType()))
+				panic(fmt.Sprintf("[ processSignalsSuspending ] Unknown signal: %+v", el.GetItemType()))
 			}
 		} else {
 			break
@@ -507,7 +506,7 @@ func (w *worker) migrate(status ActivationStatus) error {
 
 		payload, newState, err := migHandler(element)
 		if err != nil {
-			w.ctxLogger.Error("[ migrate ] Response handler errors: ", err)
+			w.ctxLogger.Error("[ migrate ] AdapterResponse handler errors: ", err)
 			respErrorHandler := element.stateMachine.GetTransitionErrorHandler(element.state)
 
 			payload, newState = respErrorHandler(element, err)

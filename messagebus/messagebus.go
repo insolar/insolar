@@ -40,7 +40,9 @@ import (
 
 const deliverRPCMethodName = "MessageBus.Deliver"
 
-var conveyorReadyTypes = map[insolar.MessageType]bool{}
+var conveyorReadyTypes = map[insolar.MessageType]bool{
+	insolar.TypeGetCode: true,
+}
 
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
@@ -274,7 +276,9 @@ func (mb *MessageBus) doDeliver(ctx context.Context, msg insolar.Parcel) (insola
 			return nil, err
 		}
 		resp, err := f.GetResult(mb.conveyorPendingTimeout)
+		fmt.Println("mb here love", resp)
 		if err != nil {
+			fmt.Println("mb here err")
 			return nil, &serializableError{
 				S: err.Error(),
 			}
