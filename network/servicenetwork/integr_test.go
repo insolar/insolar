@@ -81,8 +81,11 @@ func (s *testSuite) TestNetworkConsensus3Times() {
 }
 
 func (s *testSuite) TestNodeConnect() {
+	if len(s.fixture().bootstrapNodes) > 1 {
+		s.T().Skip()
+	}
 	testNode := s.newNetworkNode("testNode")
-	s.preInitNode(testNode)
+	s.preInitNode(testNode, SmallNetwork)
 
 	s.InitNode(testNode)
 	s.StartNode(testNode)
@@ -110,7 +113,7 @@ func (s *testSuite) TestNodeConnect() {
 
 func (s *testSuite) TestNodeConnectInvalidVersion() {
 	testNode := s.newNetworkNode("testNode")
-	s.preInitNode(testNode)
+	s.preInitNode(testNode, SmallNetwork)
 	testNode.serviceNetwork.NodeKeeper.GetOrigin().(node.MutableNode).SetVersion("ololo")
 	s.InitNode(testNode)
 	err := testNode.componentManager.Start(s.fixture().ctx)
@@ -136,7 +139,7 @@ func (s *testSuite) TestManyNodesConnect() {
 
 	for _, node := range nodes {
 		go func(wg *sync.WaitGroup, node *networkNode) {
-			s.preInitNode(node)
+			s.preInitNode(node, SmallNetwork)
 			s.InitNode(node)
 			s.StartNode(node)
 			wg.Done()
@@ -164,7 +167,7 @@ func (s *testSuite) TestNodeLeave() {
 	}
 
 	testNode := s.newNetworkNode("testNode")
-	s.preInitNode(testNode)
+	s.preInitNode(testNode, SmallNetwork)
 
 	s.InitNode(testNode)
 	s.StartNode(testNode)
@@ -201,7 +204,7 @@ func (s *testSuite) TestNodeLeaveAtETA() {
 	}
 
 	testNode := s.newNetworkNode("testNode")
-	s.preInitNode(testNode)
+	s.preInitNode(testNode, SmallNetwork)
 
 	s.InitNode(testNode)
 	s.StartNode(testNode)
@@ -242,7 +245,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 	}
 
 	leavingNode := s.newNetworkNode("leavingNode")
-	s.preInitNode(leavingNode)
+	s.preInitNode(leavingNode, SmallNetwork)
 
 	s.InitNode(leavingNode)
 	s.StartNode(leavingNode)
@@ -266,7 +269,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 	s.waitForConsensus(1)
 
 	newNode := s.newNetworkNode("testNode")
-	s.preInitNode(newNode)
+	s.preInitNode(newNode, SmallNetwork)
 
 	s.InitNode(newNode)
 	s.StartNode(newNode)
@@ -337,7 +340,6 @@ func (s *testSuite) TestFullTimeOut() {
 	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
-
 
 	s.setPhaseManagerMock()
 
@@ -525,6 +527,29 @@ func (s *testSuite) TestDiscoveryRestartNoWait() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
+}
+
+func (s *testSuite) TestChangeNetwork() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
+	go s.waitForConsensus(1)
+	s.waitForLConsensus(1)
+
+	testNode := s.newNetworkNode("testNode")
+	s.preInitNode(testNode, CombinedNetwork)
+
+	s.InitNode(testNode)
+	s.StartNode(testNode)
+	defer func(s *testSuite) {
+		s.StopNode(testNode)
+	}(s)
+
+	s.waitForLConsensus(6)
+
+	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	s.Equal(s.bootstrapCount+s.lBootstrapCount+1, len(activeNodes))
 }
 
 func (s *testSuite) setCommunicatorMock(opt CommunicatorTestOpt) {
