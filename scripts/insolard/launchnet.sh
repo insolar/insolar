@@ -9,6 +9,8 @@ LAUNCHNET_BASE_DIR=${LAUNCHNET_BASE_DIR:-"${INSOLAR_ARTIFACTS_DIR}launchnet"}/
 INSOLAR_LOG_FORMATTER=${INSOLAR_LOG_FORMATTER:-"text"}
 INSOLAR_LOG_LEVEL=${INSOLAR_LOG_LEVEL:-"debug"}
 GORUND_LOG_LEVEL=${GORUND_LOG_LEVEL:-${INSOLAR_LOG_LEVEL}}
+# we can skip build binaries (by default in CI environment they skips)
+SKIP_BUILD=${SKIP_BUILD:-${CI_ENV}}
 
 # predefined/dependent environment variables
 
@@ -233,7 +235,6 @@ process_input_params()
         G)
             NO_GENESIS_LOG_REDIRECT=1
             NO_STOP_LISTENING_ON_PREPARE=${NO_STOP_LISTENING_ON_PREPARE:-"1"}
-            SKIP_BUILD=${SKIP_BUILD:-"1"}
             genesis
             exit 0
             ;;
@@ -314,7 +315,7 @@ genesis()
         echo "build binaries"
         build_binaries
     else
-        echo "SKIP: build binaries"
+        echo "SKIP: build binaries (SKIP_BUILD=$SKIP_BUILD)"
     fi
     generate_bootstrap_keys
     generate_root_member_keys
