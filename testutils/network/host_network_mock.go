@@ -13,7 +13,7 @@ import (
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
 	network "github.com/insolar/insolar/network"
-	types "github.com/insolar/insolar/network/transport/packet/types"
+	types "github.com/insolar/insolar/network/hostnetwork/packet/types"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )

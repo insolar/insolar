@@ -53,10 +53,11 @@ package hostnetwork
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport/packet/types"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
 // TransportResolvable is implementation of HostNetwork interface that is capable of address resolving.

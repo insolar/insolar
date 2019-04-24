@@ -35,10 +35,6 @@ required = [
 
 [[constraint]]
   branch = "master"
-  name = "github.com/ccding/go-stun"
-
-[[constraint]]
-  branch = "master"
   name = "github.com/jbenet/go-base58"
 
 [[constraint]]

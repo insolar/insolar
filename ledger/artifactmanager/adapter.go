@@ -51,8 +51,7 @@ func NewGetCodeProcessor() adapter.Processor {
 }
 
 // Process implements Processor interface
-func (p *GetCodeProcessor) Process(task adapter.AdapterTask, nestedEventHelper adapter.NestedEventHelper, cancelInfo adapter.CancelInfo) interface{} {
-	fmt.Println("we are in GetCodeProcessor")
+func (p *GetCodeProcessor) Process(task adapter.Task, nestedEventHelper adapter.NestedEventHelper, cancelInfo adapter.CancelInfo) interface{} {
 	payload, ok := task.TaskPayload.(GetCodeTask)
 	var msg GetCodeResp
 	if !ok {

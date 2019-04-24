@@ -17,7 +17,7 @@
 package gen
 
 import (
-	fuzz "github.com/google/gofuzz"
+	"github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 )
 

@@ -41,7 +41,7 @@ func NewSendResponseProcessor() Processor {
 }
 
 // Process implements Processor interface
-func (rs *SendResponseProcessor) Process(task AdapterTask, nestedEventHelper NestedEventHelper, cancelInfo CancelInfo) interface{} {
+func (rs *SendResponseProcessor) Process(task Task, nestedEventHelper NestedEventHelper, cancelInfo CancelInfo) interface{} {
 	payload, ok := task.TaskPayload.(SendResponseTask)
 	var msg interface{}
 

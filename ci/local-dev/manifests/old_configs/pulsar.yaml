@@ -22,7 +22,6 @@ data:
       distributiontransport:
         protocol: TCP
         address: 0.0.0.0:58091
-        behindnat: false
       pulsedistributor:
         bootstraphosts:
           - seed-0.bootstrap:7900
