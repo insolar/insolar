@@ -14,6 +14,7 @@ GORUND_LOG_LEVEL=${GORUND_LOG_LEVEL:-${INSOLAR_LOG_LEVEL}}
 
 LAUNCHNET_LOGS_DIR=${LAUNCHNET_BASE_DIR}logs/
 DISCOVERY_NODE_LOGS=${LAUNCHNET_LOGS_DIR}discoverynodes/
+INSGORUND_LOGS=${LAUNCHNET_LOGS_DIR}insgorund/
 
 BIN_DIR=bin
 INSOLARD=$BIN_DIR/insolard
@@ -41,7 +42,6 @@ DISCOVERY_NODES_DATA=${LAUNCHNET_BASE_DIR}discoverynodes/
 DISCOVERY_NODES_HEAVY_DATA=${DISCOVERY_NODES_DATA}1/
 
 NODES_DATA=${LAUNCHNET_BASE_DIR}nodes/
-INSGORUND_DATA=${LAUNCHNET_BASE_DIR}insgorund/
 
 GENESIS_TEMPLATE=${SCRIPTS_DIR}genesis_template.yaml
 GENESIS_CONFIG=${LAUNCHNET_BASE_DIR}genesis.yaml
@@ -115,7 +115,6 @@ clear_dirs()
     set -x
     rm -rfv ${LEDGER_DIR}
     rm -rfv ${DISCOVERY_NODES_DATA}
-    rm -rfv ${INSGORUND_DATA}
     rm -rfv ${NODES_DATA}
     rm -rfv ${LAUNCHNET_LOGS_DIR}
     { set +x; } 2>/dev/null
@@ -134,7 +133,6 @@ create_required_dirs()
     set -x
     mkdir -p $LEDGER_DIR
     mkdir -p $DISCOVERY_NODES_DATA/certs
-    mkdir -p $INSGORUND_DATA
     mkdir -p $CONFIGS_DIR
 
     touch $INSGORUND_PORT_FILE
@@ -262,9 +260,14 @@ launch_insgorund()
         listen_port=$( echo "$line" | awk '{print $1}' )
         rpc_port=$( echo "$line" | awk '{print $2}' )
 
-        $INSGORUND -l $host:$listen_port --rpc $host:$rpc_port --log-level=$GORUND_LOG_LEVEL --metrics :$metrics_port &> $INSGORUND_DATA$rpc_port.log &
+        ${INSGORUND} \
+            -l ${host}:${listen_port} \
+            --rpc ${host}:${rpc_port} \
+            --log-level=${GORUND_LOG_LEVEL} \
+            --metrics :${metrics_port} \
+            &> ${INSGORUND_LOGS}${rpc_port}.log &
 
-    done < "$INSGORUND_PORT_FILE"
+    done < "${INSGORUND_PORT_FILE}"
 }
 
 copy_data()
