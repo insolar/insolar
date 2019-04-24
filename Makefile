@@ -154,7 +154,7 @@ test_with_coverage_fast:
 
 .PHONY: ci_test_with_coverage
 ci_test_with_coverage:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic -v $(ALL_PACKAGES) | tee unit.file
+	CGO_ENABLED=1 go test $(TEST_ARGS) -count 1 -parallel 4 --coverprofile=$(COVERPROFILE) --covermode=atomic -v $(ALL_PACKAGES) | tee unit.file
 
 .PHONY: ci_test_func
 ci_test_func:
