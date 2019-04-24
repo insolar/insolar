@@ -24,7 +24,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 
 	"github.com/insolar/insolar/api"
-	"github.com/insolar/insolar/bus"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -32,6 +31,7 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
@@ -161,7 +161,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Tokens  insolar.DelegationTokenFactory
 		Parcels message.ParcelFactory
 		Bus     insolar.MessageBus
-		WmBus   bus.WatermillMessageSender
+		WmBus   bus.Sender
 		Pub     watermillMsg.Publisher
 	)
 	{

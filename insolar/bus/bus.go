@@ -46,10 +46,10 @@ const ReceiverMetadataKey = "receiver"
 // SenderMetadataKey is key for Sender
 const SenderMetadataKey = "sender"
 
-//go:generate minimock -i github.com/insolar/insolar/bus.WatermillMessageSender -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock.go
 
-// WatermillMessageSender interface sends messages by watermill.
-type WatermillMessageSender interface {
+// Sender interface sends messages by watermill.
+type Sender interface {
 	// Send an `Message` and get a `Reply` or error from remote host.
 	Send(ctx context.Context, msg *message.Message) <-chan *message.Message
 }
