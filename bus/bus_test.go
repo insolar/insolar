@@ -23,6 +23,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,6 +32,8 @@ func TestMessageBus_Send(t *testing.T) {
 	logger := watermill.NewStdLogger(false, false)
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	b := NewBus(pubsub)
+	externalMsgCh, err := pubsub.Subscribe(ctx, ExternalMsg)
+	require.NoError(t, err)
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
@@ -40,64 +43,63 @@ func TestMessageBus_Send(t *testing.T) {
 
 	require.NotNil(t, results)
 	require.Equal(t, mapSizeBefore+1, len(b.replies))
+	externalMsg := <-externalMsgCh
+	require.Equal(t, msg.Metadata, externalMsg.Metadata)
+	require.Equal(t, msg.Payload, externalMsg.Payload)
+	require.Equal(t, msg.UUID, externalMsg.UUID)
 }
 
-// func TestMessageBus_SetResult(t *testing.T) {
-// 	ctx := context.Background()
-// 	logger := watermill.NewStdLogger(false, false)
-// 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-// 	b := NewBus(pubsub)
-//
-// 	payload := []byte{1, 2, 3, 4, 5}
-// 	msg := message.NewMessage(watermill.NewUUID(), payload)
-// 	correlationID := watermill.NewUUID()
-// 	middleware.SetCorrelationID(correlationID, msg)
-//
-// 	rep := make(chan *message.Message)
-// 	b.replies[middleware.MessageCorrelationID(msg)] = rep
-//
-// 	ch := make(chan interface{})
-// 	var repMsg *message.Message
-// 	go func() {
-// 		repMsg = <-rep
-// 		ch <- nil
-// 	}()
-//
-// 	msgs, err := b.SetResult(msg)
-// 	<-ch
-//
-// 	require.Equal(t, msg, repMsg)
-// }
-//
-// func TestMessageBus_SetResult_Timeout(t *testing.T) {
-// 	ctx := context.Background()
-// 	logger := watermill.NewStdLogger(false, false)
-// 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-// 	b := NewBus(pubsub)
-//
-// 	msg := message.NewMessage(watermill.NewUUID(), nil)
-// 	correlationID := watermill.NewUUID()
-// 	middleware.SetCorrelationID(correlationID, msg)
-//
-// 	rep := make(chan *message.Message)
-// 	b.replies[middleware.MessageCorrelationID(msg)] = rep
-//
-// 	b.SetResult(ctx, msg)
-//
-// 	require.Empty(t, b.replies)
-// 	_, ok := <-rep
-// 	require.False(t, ok)
-// }
-//
-// func TestMessageBus_SetResult_MsgNotExist(t *testing.T) {
-// 	ctx := context.Background()
-// 	logger := watermill.NewStdLogger(false, false)
-// 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-// 	b := NewBus(pubsub)
-//
-// 	msg := message.NewMessage(watermill.NewUUID(), nil)
-// 	correlationID := watermill.NewUUID()
-// 	middleware.SetCorrelationID(correlationID, msg)
-//
-// 	b.SetResult(ctx, msg)
-// }
+func TestMessageBus_IncomingMessageRouter_Request(t *testing.T) {
+	incomingHandlerCalls := 0
+	logger := watermill.NewStdLogger(false, false)
+	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	b := NewBus(pubsub)
+
+	resMsg := message.NewMessage(watermill.NewUUID(), []byte{10, 20, 30, 40, 50})
+
+	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
+		incomingHandlerCalls++
+		return []*message.Message{resMsg}, nil
+	}
+	handler := b.IncomingMessageRouter(incomingHandler)
+
+	msg := message.NewMessage(watermill.NewUUID(), []byte{1, 2, 3, 4, 5})
+	middleware.SetCorrelationID(watermill.NewUUID(), msg)
+
+	res, err := handler(msg)
+
+	require.NoError(t, err)
+	require.Equal(t, []*message.Message{resMsg}, res)
+	require.Equal(t, 1, incomingHandlerCalls)
+}
+
+func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
+	incomingHandlerCalls := 0
+	logger := watermill.NewStdLogger(false, false)
+	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	b := NewBus(pubsub)
+	correlationId := watermill.NewUUID()
+	resChan := make(chan *message.Message)
+	b.replies[correlationId] = resChan
+
+	resMsg := message.NewMessage(watermill.NewUUID(), []byte{10, 20, 30, 40, 50})
+
+	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
+		incomingHandlerCalls++
+		return []*message.Message{resMsg}, nil
+	}
+	handler := b.IncomingMessageRouter(incomingHandler)
+
+	msg := message.NewMessage(watermill.NewUUID(), []byte{1, 2, 3, 4, 5})
+	middleware.SetCorrelationID(correlationId, msg)
+
+	go func() {
+		res, err := handler(msg)
+		require.NoError(t, err)
+		require.Nil(t, res)
+
+	}()
+
+	require.Equal(t, 0, incomingHandlerCalls)
+	require.Equal(t, msg, <-resChan)
+}
