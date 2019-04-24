@@ -148,6 +148,11 @@ func (s *slot) SinkPush(data interface{}) error {
 	return s.inputQueue.SinkPush(data)
 }
 
+// TODO: fix me sweetie, this must not exist
+func (s *slot) SetPulse(pulse insolar.Pulse) {
+	s.pulse = pulse
+}
+
 func (s *slot) SinkPushAll(data []interface{}) error {
 	return s.inputQueue.SinkPushAll(data)
 }

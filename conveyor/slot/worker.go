@@ -149,7 +149,7 @@ func (w *worker) processSignalsWorking(elements []queue.OutputElement) int {
 				w.ctxLogger.Info("[ processSignalsWorking ] Got CancelSignal. Set slot state to 'Canceling'")
 				w.changeSlotState(Canceling)
 			default:
-				panic(fmt.Sprintf("[ processSignalsWorking ] unknown signal: %+v", el.GetItemType()))
+				panic(fmt.Sprintf("[ processSignalsWorking ] Unknown signal: %+v", el.GetItemType()))
 			}
 		} else {
 			break
@@ -174,6 +174,8 @@ func (w *worker) readInputQueueWorking() error {
 	for i := 0; i < len(elements); i++ {
 		el := elements[i]
 
+		// TODO: fix me sweetie
+		// use state 0, and let InitialSM take care of the rest
 		_, err := w.slot.createElement(w.getInitialStateMachine(), 0, el)
 		if err != nil {
 			return errors.Wrapf(err, "[ readInputQueueWorking ] Can't createElement: %+v", el)
@@ -209,8 +211,11 @@ func (w *worker) processResponse(resp queue.OutputElement) error {
 		return nil
 	}
 
-	respHandler := element.stateMachine.GetResponseHandler(element.state)
+	respHandler := element.stateMachine.GetResponseHandler(fsm.StateID(adapterResp.GetHandlerID()))
 
+	fmt.Println("adapterResp love", adapterResp)
+	fmt.Println("respHandler love", respHandler)
+	fmt.Println("respHandler element.stateMachine", element.stateMachine)
 	payload, newState, err := respHandler(element, adapterResp.GetRespPayload())
 	if err != nil {
 
@@ -224,6 +229,12 @@ func (w *worker) processResponse(resp queue.OutputElement) error {
 	}
 
 	w.updateElement(element, payload, newState)
+	// TODO: fix me sweetie
+	element.Reactivate()
+	// TODO: fix me sweetie
+	if newState == 0 {
+		element.activationStatus = EmptyElement
+	}
 	err = w.slot.pushElement(element)
 	if err != nil {
 		return errors.Wrapf(err, "[ processResponse ] Can't pushElement: %+v", element)
@@ -285,7 +296,11 @@ func (w *worker) processingElements() {
 				return
 			}
 		}
-		w.waitQueuesOrTick()
+		// TODO: fix me sweetie
+		// should we set ReadInputQueue ore return? or just go is ok?
+		w.nextWorkerState = readInputQueue
+		return
+		// w.waitQueuesOrTick()
 	}
 
 	if w.slot.inputQueue.HasSignal() {
@@ -429,6 +444,8 @@ func (w *worker) readInputQueueSuspending() error {
 	for i := 0; i < len(elements); i++ {
 		el := elements[i]
 
+		// TODO: fix me sweetie
+		// use state 0, and let InitialSM take care of the rest
 		_, err := w.slot.createElement(w.getInitialStateMachine(), 0, el)
 		if err != nil {
 			return errors.Wrap(err, "[ readInputQueueSuspending ] Can't createElement")
@@ -566,7 +583,7 @@ func (w *worker) run() {
 		case Suspending:
 			w.suspending()
 		default:
-			panic("[ run ] unknown slot state: " + w.slot.slotState.String())
+			panic("[ run ] Unknown slot state: " + w.slot.slotState.String())
 		}
 	}
 	w.ctxLogger.Debug("[ run ] ends")
