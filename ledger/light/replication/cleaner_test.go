@@ -32,7 +32,6 @@ import (
 )
 
 func TestCleaner_cleanPulse(t *testing.T) {
-	t.Parallel()
 	ctx := inslogger.TestContext(t)
 
 	inputPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(111)}
@@ -68,7 +67,6 @@ func TestCleaner_cleanPulse(t *testing.T) {
 }
 
 func TestCleaner_clean(t *testing.T) {
-	t.Parallel()
 	ctx := inslogger.TestContext(t)
 
 	inputPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(111)}
@@ -102,6 +100,8 @@ func TestCleaner_clean(t *testing.T) {
 	pc.BackwardsMock.Expect(ctx, inputPulse.PulseNumber, limit).Return(calculatedPulse, nil)
 
 	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, limit)
+	defer close(cleaner.pulseForClean)
+
 	go cleaner.clean(ctx)
 	cleaner.pulseForClean <- inputPulse.PulseNumber
 
@@ -109,7 +109,6 @@ func TestCleaner_clean(t *testing.T) {
 }
 
 func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
-	t.Parallel()
 	ctx := inslogger.TestContext(t)
 
 	inputPulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(111)}
@@ -143,6 +142,8 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 	pc.BackwardsMock.Expect(ctx, inputPulse.PulseNumber, limit).Return(calculatedPulse, nil)
 
 	cleaner := NewCleaner(jm, nm, dc, bc, rc, ic, ps, pc, limit)
+	defer close(cleaner.pulseForClean)
+
 	go cleaner.NotifyAboutPulse(ctx, inputPulse.PulseNumber)
 
 	ctrl.Wait(time.Minute)
