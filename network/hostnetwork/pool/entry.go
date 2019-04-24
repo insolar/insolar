@@ -53,6 +53,7 @@ package pool
 import (
 	"context"
 	"io"
+	"sync"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -66,6 +67,7 @@ import (
 type onClose func(ctx context.Context, host *host.Host)
 
 type entry struct {
+	sync.Mutex
 	transport transport.StreamTransport
 	host      *host.Host
 	onClose   onClose
@@ -82,7 +84,8 @@ func newEntry(t transport.StreamTransport, conn io.ReadWriteCloser, host *host.H
 }
 
 func (e *entry) open(ctx context.Context) (io.ReadWriteCloser, error) {
-
+	e.Lock()
+	defer e.Unlock()
 	if e.conn != nil {
 		return e.conn, nil
 	}
