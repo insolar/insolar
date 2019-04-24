@@ -1,0 +1,79 @@
+host:
+  transport:
+    protocol: TCP
+    address: 127.0.0.1:13831
+    fixedpublicaddress: ""
+  infinitybootstrap: false
+  mintimeout: 1
+  maxtimeout: 60
+  timeoutmult: 2
+  signmessages: false
+  handshakesessionttl: 5000
+service:
+  skip: 10
+  cachedirectory: network_cache
+ledger:
+  storage:
+    datadirectory: scripts/insolard/discoverynodes/1/data
+    txretriesonconflict: 3
+  pulsemanager:
+    splitthreshold: 1000
+  lightchainlimit: 5
+  exporter:
+    exportlag: 40
+  pendingrequestslimit: 1000
+log:
+  level: Debug
+  adapter: zerolog
+  formatter: json
+metrics:
+  listenaddress: 127.0.0.1:8001
+  namespace: insolar
+  zpagesenabled: true
+  reportingperiod: 0s
+logicrunner:
+  rpclisten: 127.0.0.1:33301
+  rpcprotocol: tcp
+  builtin: {}
+  goplugin:
+    runnerlisten: 127.0.0.1:33300
+    runnerprotocol: tcp
+apirunner:
+  address: 127.0.0.1:19101
+  call: /api/call
+  rpc: /api/rpc
+  timeout: 15
+pulsar:
+  connectiontype: tcp
+  mainlisteneraddress: 0.0.0.0:18090
+  storage:
+    datadirectory: ./.artifacts/pulsar_data
+    txretriesonconflict: 0
+  pulsetime: 10000
+  receivingsigntimeout: 1000
+  receivingnumbertimeout: 1000
+  receivingvectortimeout: 1000
+  receivingsignsforchosentimeout: 0
+  neighbours: []
+  numberdelta: 10
+  distributiontransport:
+    protocol: TCP
+    address: 0.0.0.0:18091
+    fixedpublicaddress: ""
+  pulsedistributor:
+    bootstraphosts:
+    - localhost:53837
+    pingrequesttimeout: 1000
+    randomhostsrequesttimeout: 1000
+    pulserequesttimeout: 1000
+    randomnodescount: 5
+versionmanager:
+  minalowedversion: v0.3.0
+keyspath: scripts/insolard/reusekeys/discovery/node_00.json
+certificatepath: scripts/insolard/discoverynodes/1/cert.json
+tracer:
+  jaeger:
+    collectorendpoint: ""
+    agentendpoint: 127.0.0.1:6831
+    probabilityrate: 1
+  samplingrules: {}
