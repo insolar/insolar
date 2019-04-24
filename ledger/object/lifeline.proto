@@ -1,0 +1,22 @@
+syntax = "proto3";
+
+package object;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+message LifelineRaw {
+    bytes LatestState = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
+    bytes LatestStateApproved = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
+    bytes ChildPointer = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
+    bytes Parent = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    repeated DelegateKeyValue Delegates = 5 [(gogoproto.nullable) = false];
+    uint32 State = 6 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar/ledger/object.StateID", (gogoproto.nullable) = false];
+    uint32 LatestUpdate = 7 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bytes JetID = 8 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+}
+
+message DelegateKeyValue {
+    bytes Key = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Value = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+}
+

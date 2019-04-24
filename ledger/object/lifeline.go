@@ -17,13 +17,11 @@
 package object
 
 import (
-	"bytes"
 	"context"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/internal/ledger/store"
-	"github.com/ugorji/go/codec"
 	"go.opencensus.io/stats"
 )
 
@@ -103,27 +101,63 @@ type LifelineMeta struct {
 
 // EncodeIndex converts lifeline index into binary format.
 func EncodeIndex(index Lifeline) []byte {
-	buff := bytes.NewBuffer(nil)
-	enc := codec.NewEncoder(buff, &codec.CborHandle{})
-	enc.MustEncode(index)
+	rawIdx := LifelineRaw{
+		LatestState:         index.LatestState,
+		LatestStateApproved: index.LatestStateApproved,
+		ChildPointer:        index.ChildPointer,
+		Parent:              index.Parent,
+		State:               index.State,
+		Delegates:           []DelegateKeyValue{},
+		LatestUpdate:        index.LatestUpdate,
+		JetID:               index.JetID,
+	}
+	for k, d := range index.Delegates {
+		rawIdx.Delegates = append(rawIdx.Delegates, DelegateKeyValue{
+			Key:   k,
+			Value: d,
+		})
+	}
+	data, err := rawIdx.Marshal()
+	if err != nil {
+		panic("can't marshal lifeline")
+	}
 
-	return buff.Bytes()
+	return data
 }
 
 // MustDecodeIndex converts byte array into lifeline index struct.
 func MustDecodeIndex(buff []byte) (index Lifeline) {
-	dec := codec.NewDecoderBytes(buff, &codec.CborHandle{})
-	dec.MustDecode(&index)
+	idx, err := DecodeIndex(buff)
+	if err != nil {
+		panic(err)
+	}
 
-	return
+	return idx
 }
 
 // DecodeIndex converts byte array into lifeline index struct.
-func DecodeIndex(buff []byte) (index Lifeline, err error) {
-	dec := codec.NewDecoderBytes(buff, &codec.CborHandle{})
-	err = dec.Decode(&index)
+func DecodeIndex(buff []byte) (Lifeline, error) {
+	rawIdx := LifelineRaw{}
+	err := rawIdx.Unmarshal(buff)
+	if err != nil {
+		return Lifeline{}, nil
+	}
 
-	return
+	idx := Lifeline{
+		LatestState:         rawIdx.LatestState,
+		LatestStateApproved: rawIdx.LatestStateApproved,
+		ChildPointer:        rawIdx.ChildPointer,
+		Parent:              rawIdx.Parent,
+		State:               rawIdx.State,
+		Delegates:           map[insolar.Reference]insolar.Reference{},
+		LatestUpdate:        rawIdx.LatestUpdate,
+		JetID:               rawIdx.JetID,
+	}
+	for _, v := range rawIdx.Delegates {
+		idx.Delegates[v.Key] = v.Value
+	}
+
+	return idx, nil
 }
 
 // CloneIndex returns copy of argument idx value.
