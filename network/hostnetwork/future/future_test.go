@@ -162,7 +162,7 @@ func TestFuture_GetResult(t *testing.T) {
 	require.Error(t, err)
 
 	// Please note that cancelCallback is called asynchronously thus
-	// it's not guaranteed that &canceled is changed when f.GetResult returns.
+	// it's not guaranteed that it is called and finished when f.GetResult returns.
 	// For this reason in this test we have to use a channel, not
 	// an atomic variable or something else.
 	tmp := <-canceled
