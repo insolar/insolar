@@ -51,8 +51,10 @@ PULSEWATCHER_CONFIG=${LAUNCHNET_BASE_DIR}/pulsewatcher.yaml
 
 INSGORUND_PORT_FILE=$CONFIGS_DIR/insgorund_ports.txt
 
-export INSOLAR_LOG_FORMATTER
-export INSOLAR_LOG_LEVEL
+set -x
+export INSOLAR_LOG_FORMATTER=${INSOLAR_LOG_FORMATTER}
+export INSOLAR_LOG_LEVEL=${INSOLAR_LOG_LEVEL}
+{ set +x; } 2>/dev/null
 
 NUM_DISCOVERY_NODES=$(sed '/^nodes:/ q' $GENESIS_TEMPLATE | grep "host:" | grep -v "#" | wc -l | tr -d '[:space:]')
 NUM_NODES=$(sed -n '/^nodes:/,$p' $GENESIS_TEMPLATE | grep "host:" | grep -v "#" | wc -l | tr -d '[:space:]')
@@ -77,7 +79,6 @@ kill_port()
 
 stop_listening()
 {
-#    set -x
     echo "stop_listening(): starts ..."
     stop_insgorund=$1
     ports="$ports 58090" # Pulsar
@@ -101,10 +102,10 @@ stop_listening()
 
     for port in $ports
     do
-        echo "kill port '$port' owner"
-        kill_port $port &
+        echo "killing process using port '$port'"
+        kill_port $port
     done
-    wait
+
     echo "stop_listening() end."
 }
 
@@ -372,7 +373,7 @@ echo "start discovery nodes ..."
 for i in `seq 1 $NUM_DISCOVERY_NODES`
 do
     set -x
-    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD \
+    $INSOLARD \
         --config ${DISCOVERY_NODES_DATA}${i}/insolard.yaml \
         --trace &> ${DISCOVERY_NODE_LOGS}${i}/output.log &
     { set +x; } 2>/dev/null

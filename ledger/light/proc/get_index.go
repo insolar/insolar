@@ -64,6 +64,7 @@ func (p *GetIndex) Proceed(ctx context.Context) error {
 	if err != object.ErrIndexNotFound {
 		return errors.Wrap(err, "failed to fetch index")
 	}
+	p.Dep.IndexState.SetUsageForPulse(ctx, objectID, p.ParcelPN)
 
 	logger.Debug("failed to fetch index (fetching from heavy)")
 	heavy, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))

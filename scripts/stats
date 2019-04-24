@@ -1,6 +1,0 @@
-#! /usr/bin/env bash
-#
-# Show nodes stats
-
-ls -l ./scripts/insolard/nodes/{1,2,3}/output.log
-du -sh ./scripts/insolard/nodes/{1,2,3}/data
