@@ -383,6 +383,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Head.Record(), parcel.Pulse())
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
@@ -401,8 +402,6 @@ func (h *MessageHandler) handleGetChildren(
 ) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetChildren)
 	jetID := jetFromContext(ctx)
-
-	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
 
 	h.IDLocker.Lock(msg.Parent.Record())
 	defer h.IDLocker.Unlock(msg.Parent.Record())
@@ -423,6 +422,7 @@ func (h *MessageHandler) handleGetChildren(
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
 
 	var (
 		refs         []insolar.Reference
@@ -612,6 +612,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 	} else if err != nil {
 		return nil, err
 	}
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Object.Record(), parcel.Pulse())
 
 	if err = validateState(idx.State, state.ID()); err != nil {
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
@@ -679,8 +680,6 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 		return nil, errors.New("wrong child record")
 	}
 
-	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
-
 	h.IDLocker.Lock(msg.Parent.Record())
 	defer h.IDLocker.Unlock(msg.Parent.Record())
 
@@ -698,6 +697,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 	} else if err != nil {
 		return nil, err
 	}
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
 
 	recID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), childRec)
 
@@ -750,6 +750,7 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insola
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Object.Record(), parcel.Pulse())
 
 	buf := object.EncodeIndex(idx)
 

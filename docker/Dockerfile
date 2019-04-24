@@ -11,8 +11,7 @@ RUN set -x && \
             alpine-sdk    \
             bash
 
-COPY [ "/docker/genconfig/genconfig.go",          \
-       "/docker/healthcheck/healthcheck.go",        \
+COPY [ "/docker/genconfig/genconfig.go", \
        "/opt/tmp/" ]
 
 COPY . /go/src/github.com/insolar/insolar
@@ -26,7 +25,6 @@ RUN set -x && \
         cp bin/insolar bin/insolard bin/benchmark bin/apirequester /opt/bin && \
         : "--------- helper utilities --------------" && \
         go get gopkg.in/yaml.v2 && \
-        go build -o /opt/bin/healthcheck /opt/tmp/healthcheck.go && \
         go build -o /opt/bin/genconfig   /opt/tmp/genconfig.go
 
 #                             INSOLARD CONTAINER
@@ -39,21 +37,21 @@ RUN set -x && \
             bash    \
             curl
 
-COPY [ "/docker/insolard.yaml.default", \
-       "/opt/tmp/" ]
+COPY [ "/docker/insolard.yaml.default", "/opt/tmp/" ]
+COPY [ "/docker/healthcheck.sh", "/opt/bin/" ]
 
 COPY --from=insolard-builder        \
         [ "/opt/bin/insolar",       \
           "/opt/bin/insolard",      \
           "/opt/bin/benchmark",     \
           "/opt/bin/apirequester",  \
-          "/opt/bin/healthcheck",   \
           "/opt/bin/genconfig",     \
           "/opt/bin/"]
 COPY docker/insolard-entrypoint.sh /opt/bin/docker-entrypoint.sh
 
 EXPOSE 7900 7901 8001 18182 19191
-HEALTHCHECK --start-period=3m --interval=1m --timeout=30s CMD [ "/opt/bin/healthcheck" ]
+HEALTHCHECK --start-period=5m --interval=1m --timeout=30s --retries=5 \
+    CMD [ "/opt/bin/healthcheck.sh" ]
 VOLUME [ "/etc/insolar", "/var/lib/insolar" ]
 
 ENTRYPOINT [ "/opt/bin/docker-entrypoint.sh"  ]

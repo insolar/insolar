@@ -68,7 +68,6 @@ func (p *GetIndex) Proceed(ctx context.Context) error {
 func (p *GetIndex) process(ctx context.Context) error {
 	objectID := *p.object.Record()
 	logger := inslogger.FromContext(ctx)
-	p.Dep.IndexState.SetUsageForPulse(ctx, objectID, flow.Pulse(ctx))
 
 	p.Dep.Locker.Lock(&objectID)
 	defer p.Dep.Locker.Unlock(&objectID)
@@ -81,6 +80,7 @@ func (p *GetIndex) process(ctx context.Context) error {
 	if err != object.ErrIndexNotFound {
 		return errors.Wrap(err, "failed to fetch index")
 	}
+	p.Dep.IndexState.SetUsageForPulse(ctx, objectID, flow.Pulse(ctx))
 
 	logger.Debug("failed to fetch index (fetching from heavy)")
 	heavy, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
