@@ -109,33 +109,29 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 	if err != nil {
 		return err
 	}
-	defer cancel()
-
 	firstPhaseState, err := pm.FirstPhase.Execute(tctx, pulse)
+	cancel()
 	if err != nil {
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 1")
 	}
 
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.05)
-	defer cancel()
-
 	secondPhaseState, err := pm.SecondPhase.Execute(tctx, pulse, firstPhaseState)
+	cancel()
 	if err != nil {
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 2.0")
 	}
 
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.05)
-	defer cancel()
-
 	secondPhaseState, err = pm.SecondPhase.Execute21(tctx, pulse, secondPhaseState)
+	cancel()
 	if err != nil {
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 2.1")
 	}
 
 	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.05)
-	defer cancel()
-
 	thirdPhaseState, err := pm.ThirdPhase.Execute(tctx, pulse, secondPhaseState)
+	cancel()
 	if err != nil {
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 3")
 	}
