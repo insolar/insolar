@@ -74,6 +74,7 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 			dep:     s.dep,
 			Message: s.Message,
 		}
+		return f.Handle(ctx, h.Present)
 	case insolar.TypeExecutorResults:
 		h := &HandleExecutorResults{
 			dep:     s.dep,

@@ -115,6 +115,64 @@ type HandleExecutorResults struct {
 	Message bus.Message
 }
 
+func (h *HandleExecutorResults) realPresent(ctx context.Context, f flow.Flow) error {
+	parcel := h.Message.Parcel
+	logger := inslogger.FromContext(ctx)
+	msg := parcel.Message().(*message.ExecutorResults)
+
+	// now we have 2 different types of data in message.HandleExecutorResultsMessage
+	// one part of it is about consensus
+	// another one is about prepare state on new executor after pulse
+	// TODO make it in different goroutines
+
+	// prepare state after previous executor
+	procInitializeExecutionState := initializeExecutionState{
+		LR:  h.dep.lr,
+		msg: msg,
+	}
+	if err := f.Procedure(ctx, &procInitializeExecutionState, true); err != nil {
+		if err == flow.ErrCancelled {
+			return nil
+		}
+		err := errors.Wrap(err, "[ HandleExecutorResults ] Failed to initialize execution state")
+		return err
+	}
+
+	if !procInitializeExecutionState.Result.clarifyPending {
+		procClarifyPending := ClarifyPendingState{
+			es:     procInitializeExecutionState.Result.es,
+			parcel: parcel,
+		}
+		procClarifyPending.Dep.ArtifactManager = h.dep.lr.ArtifactManager
+
+		if err := f.Procedure(ctx, &procClarifyPending, true); err != nil {
+			if err == flow.ErrCancelled {
+				return nil
+			}
+
+			err := errors.Wrap(err, "[ HandleExecutorResults ] Failed to clarify pending")
+			return err
+		}
+	}
+
+	ref := msg.GetReference()
+	procStartQueueProcessorIfNeeded := StartQueueProcessorIfNeeded{
+		es:  procInitializeExecutionState.Result.es,
+		dep: h.dep,
+		ref: &ref,
+	}
+	if err := f.Handle(ctx, procStartQueueProcessorIfNeeded.Present); err != nil {
+		if err == flow.ErrCancelled {
+			return nil
+		}
+
+		logger.Warn("[ HandleExecutorResults ] StartQueueProcessorIfNeeded returns error: ", err)
+		return errors.Wrap(err, "[ HandleExecutorResults ] Failed to process queue")
+	}
+
+	return nil
+}
+
 func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error {
 	parcel := h.Message.Parcel
 	ctx = loggerWithTargetID(ctx, parcel)
@@ -131,48 +189,13 @@ func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error 
 	span.AddAttributes(trace.StringAttribute("msg.Type", msg.Type().String()))
 	defer span.End()
 
-	// now we have 2 different types of data in message.HandleExecutorResultsMessage
-	// one part of it is about consensus
-	// another one is about prepare state on new executor after pulse
-	// TODO make it in different goroutines
+	err := h.realPresent(ctx, f)
 
-	// prepare state after previous executor
-	procInitializeExecutionState := initializeExecutionState{
-		LR:  h.dep.lr,
-		msg: msg,
-	}
-	if err := f.Procedure(ctx, &procInitializeExecutionState); err != nil {
-		err := errors.Wrap(err, "[ HandleExecutorResults ] Failed to initialize execution state")
+	if err != nil {
 		h.Message.ReplyTo <- bus.Reply{Reply: &reply.Error{}, Err: err}
-		return err
+	} else {
+		h.Message.ReplyTo <- bus.Reply{Reply: &reply.OK{}, Err: nil}
 	}
 
-	if procInitializeExecutionState.Result.clarifyPending == false {
-		procClarifyPending := ClarifyPendingState{
-			es:     procInitializeExecutionState.Result.es,
-			parcel: parcel,
-		}
-		procClarifyPending.Dep.ArtifactManager = h.dep.lr.ArtifactManager
-
-		if err := f.Procedure(ctx, &procClarifyPending); err != nil {
-			err := errors.Wrap(err, "[ HandleExecutorResults ] Failed to clarify pending")
-			h.Message.ReplyTo <- bus.Reply{Reply: &reply.Error{}, Err: err}
-			return err
-		}
-	}
-
-	ref := msg.GetReference()
-	procStartQueueProcessorIfNeeded := StartQueueProcessorIfNeeded{
-		es:  procInitializeExecutionState.Result.es,
-		dep: h.dep,
-		ref: &ref,
-	}
-	if err := f.Handle(ctx, procStartQueueProcessorIfNeeded.Present); err != nil {
-		logger.Warn("[ HandleExecutorResults ] StartQueueProcessorIfNeeded returns error: ", err)
-		return errors.Wrap(err, "[ HandleExecutorResults ] Failed to process queue")
-	}
-
-	h.Message.ReplyTo <- bus.Reply{Reply: &reply.OK{}, Err: nil}
-
-	return nil
+	return err
 }
