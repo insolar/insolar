@@ -55,11 +55,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/merkle"
-	"github.com/pkg/errors"
 )
 
 type PhaseManager interface {
@@ -108,40 +109,41 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 	var tctx context.Context
 	var cancel context.CancelFunc
 
-	tctx, cancel, err = contextTimeoutWithDelay(ctx, *pulseDuration, consensusDelay, 0.3)
-	if err != nil {
-		return err
-	}
+	tctx, cancel = contextTimeoutFromPulseStart(ctx, pulseStartTime, *pulseDuration, 0.3)
 	defer cancel()
 
 	firstPhaseState, err := pm.FirstPhase.Execute(tctx, pulse)
 	if err != nil {
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 1")
 	}
+	inslogger.FromContext(ctx).Info("[ NET Consensus ] Done phase 1")
 
-	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.05)
+	tctx, cancel = contextTimeoutFromPulseStart(ctx, pulseStartTime, *pulseDuration, 0.35)
 	defer cancel()
 
 	secondPhaseState, err := pm.SecondPhase.Execute(tctx, pulse, firstPhaseState)
 	if err != nil {
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 2.0")
 	}
+	inslogger.FromContext(ctx).Info("[ NET Consensus ] Done phase 2.0")
 
-	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.05)
+	tctx, cancel = contextTimeoutFromPulseStart(ctx, pulseStartTime, *pulseDuration, 0.40)
 	defer cancel()
 
 	secondPhaseState, err = pm.SecondPhase.Execute21(tctx, pulse, secondPhaseState)
 	if err != nil {
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 2.1")
 	}
+	inslogger.FromContext(ctx).Info("[ NET Consensus ] Done phase 2.1")
 
-	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.05)
+	tctx, cancel = contextTimeoutFromPulseStart(ctx, pulseStartTime, *pulseDuration, 0.65)
 	defer cancel()
 
 	thirdPhaseState, err := pm.ThirdPhase.Execute(tctx, pulse, secondPhaseState)
 	if err != nil {
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 3")
 	}
+	inslogger.FromContext(ctx).Info("[ NET Consensus ] Done phase 3")
 
 	state := thirdPhaseState
 	cloud := &merkle.CloudEntry{
@@ -153,6 +155,8 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 		return errors.Wrap(err, "[ NET Consensus ] Error calculating cloud hash")
 	}
 	pm.NodeKeeper.SetCloudHash(hash)
+	inslogger.FromContext(ctx).Info("[ NET Consensus ] Done")
+
 	return pm.NodeKeeper.Sync(ctx, state.ActiveNodes, state.ApprovedClaims)
 }
 
@@ -167,11 +171,9 @@ func contextTimeout(ctx context.Context, duration time.Duration, k float64) (con
 	return timedCtx, cancelFund
 }
 
-func contextTimeoutWithDelay(ctx context.Context, duration, delay time.Duration, k float64) (context.Context, context.CancelFunc, error) {
-	timeout := time.Duration(k*float64(duration)) - delay
-	if timeout < 0 {
-		return nil, nil, errors.New("[ NET Consensus ] Not enough time for consensus process")
-	}
-	timedCtx, cancelFund := context.WithTimeout(ctx, timeout)
-	return timedCtx, cancelFund, nil
+func contextTimeoutFromPulseStart(
+	ctx context.Context, ps time.Time, duration time.Duration, k float64,
+) (context.Context, context.CancelFunc) {
+	timeout := ps.Add( time.Duration(k*float64(duration)) )
+	return context.WithDeadline(ctx, timeout)
 }

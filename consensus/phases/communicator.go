@@ -350,10 +350,9 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 				result[res.id] = res.packet
 			}
 
-			// FIXME: early return is commented to have synchronized length of phases on all nodes
-			// if len(result) == len(participants) {
-			// 	return result, nil
-			// }
+			if len(result) == len(participants) {
+				return result, nil
+			}
 		case <-ctx.Done():
 			return result, nil
 		}
@@ -413,10 +412,9 @@ func (nc *ConsensusCommunicator) ExchangePhase2(ctx context.Context, state *Cons
 			result[res.id] = res.packet
 			sentRequests[res.id] = none{}
 
-			// FIXME: early return is commented to have synchronized length of phases on all nodes
-			// if len(result) == len(participants) {
-			// 	return result, nil
-			// }
+			if len(result) == len(participants) {
+				return result, nil
+			}
 		case <-ctx.Done():
 			return result, nil
 		}
@@ -581,10 +579,9 @@ func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participant
 			result[res.id] = res.packet
 			sentRequests[res.id] = none{}
 
-			// FIXME: early return is commented to have synchronized length of phases on all nodes
-			// if len(result) == len(participants) {
-			// 	return result, nil
-			// }
+			if len(result) == len(participants) {
+				return result, nil
+			}
 		case <-ctx.Done():
 			return result, nil
 		}
