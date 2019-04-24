@@ -135,12 +135,6 @@ func newMockResolver() *MockResolver {
 	}
 }
 
-func mockConfiguration(address string) configuration.Configuration {
-	result := configuration.Configuration{}
-	result.Host.Transport = configuration.Transport{Protocol: "TCP", Address: address}
-	return result
-}
-
 func TestNewHostNetwork_InvalidReference(t *testing.T) {
 	n, err := NewHostNetwork("invalid reference")
 	require.Error(t, err)

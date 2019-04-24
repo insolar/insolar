@@ -54,6 +54,7 @@ import (
 	"context"
 	"io"
 	"net"
+	"sync/atomic"
 
 	"github.com/pkg/errors"
 
@@ -63,31 +64,20 @@ import (
 )
 
 type tcpTransport struct {
-	listener net.Listener
-	address  string
-	handler  StreamHandler
-	cancel   context.CancelFunc
+	listener           net.Listener
+	address            string
+	started            uint32
+	fixedPublicAddress string
+	handler            StreamHandler
+	cancel             context.CancelFunc
 }
 
-func newTCPTransport(listenAddress, fixedPublicAddress string, handler StreamHandler) (*tcpTransport, error) {
-
-	// TODO : prepare Listener
-	listener, err := net.Listen("tcp", listenAddress)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to listen TCP")
+func newTCPTransport(listenAddress, fixedPublicAddress string, handler StreamHandler) *tcpTransport {
+	return &tcpTransport{
+		address:            listenAddress,
+		fixedPublicAddress: fixedPublicAddress,
+		handler:            handler,
 	}
-	publicAddress, err := resolver.Resolve(fixedPublicAddress, listener.Addr().String())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to resolve public address")
-	}
-
-	transport := &tcpTransport{
-		listener: listener,
-		address:  publicAddress,
-		handler:  handler,
-	}
-
-	return transport, nil
 }
 
 func (t *tcpTransport) Address() string {
@@ -120,38 +110,40 @@ func (t *tcpTransport) Dial(ctx context.Context, address string) (io.ReadWriteCl
 	return conn, nil
 }
 
-func (t *tcpTransport) prepareListen() (net.Listener, error) {
-	if t.listener == nil {
+// Start starts networking.
+func (t *tcpTransport) Start(ctx context.Context) error {
+	if atomic.CompareAndSwapUint32(&t.started, 0, 1) {
+
+		logger := inslogger.FromContext(ctx)
+		logger.Info("[ Start ] Start TCP transport")
+		ctx, t.cancel = context.WithCancel(ctx)
+
 		var err error
 		t.listener, err = net.Listen("tcp", t.address)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to listen TCP")
+			return errors.Wrap(err, "Failed to Listen TCP ")
 		}
+		t.address, err = resolver.Resolve(t.fixedPublicAddress, t.listener.Addr().String())
+		if err != nil {
+			return errors.Wrap(err, "Failed to resolve public address")
+		}
+
+		go t.listen(ctx)
 	}
-	return t.listener, nil
-}
-
-// Start starts networking.
-func (t *tcpTransport) Start(ctx context.Context) error {
-	logger := inslogger.FromContext(ctx)
-	logger.Info("[ Start ] Start TCP transport")
-	ctx, t.cancel = context.WithCancel(ctx)
-
-	go t.listen(ctx)
 	return nil
 }
 
 func (t *tcpTransport) listen(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 
-	listener, err := t.prepareListen()
-	if err != nil {
-		logger.Info("[ Start ] Failed to prepare TCP transport: ", err.Error())
-		return
-	}
-
 	for {
-		conn, err := listener.Accept()
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		conn, err := t.listener.Accept()
 		if err != nil {
 			if utils.IsConnectionClosed(err) {
 				logger.Info("Connection closed, quiting accept loop")
@@ -165,28 +157,26 @@ func (t *tcpTransport) listen(ctx context.Context) {
 		logger.Infof("[ listen ] Accepted new connection from %s", conn.RemoteAddr())
 
 		go t.handler.HandleStream(conn.RemoteAddr().String(), conn)
-
-		// select {
-		// case <-ctx.Done():
-		// 	return
-		// default:
-		// }
 	}
 }
 
 // Stop stops networking.
 func (t *tcpTransport) Stop(ctx context.Context) error {
-	logger := inslogger.FromContext(ctx)
+	if atomic.CompareAndSwapUint32(&t.started, 1, 0) {
 
-	logger.Info("[ Stop ] Stop TCP transport")
-	err := t.listener.Close()
-	if err != nil {
-		if utils.IsConnectionClosed(err) {
-			logger.Info("Connection already closed")
-		} else {
-			return err
+		logger := inslogger.FromContext(ctx)
+
+		logger.Info("[ Stop ] Stop TCP transport")
+		t.cancel()
+
+		err := t.listener.Close()
+		if err != nil {
+			if utils.IsConnectionClosed(err) {
+				logger.Info("Connection already closed")
+			} else {
+				return err
+			}
 		}
 	}
-	//	t.cancel()
 	return nil
 }

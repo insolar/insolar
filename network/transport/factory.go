@@ -75,7 +75,7 @@ type factory struct {
 func (f *factory) CreateStreamTransport(handler StreamHandler) (StreamTransport, error) {
 	switch f.cfg.Protocol {
 	case "TCP":
-		return newTCPTransport(f.cfg.Address, f.cfg.FixedPublicAddress, handler)
+		return newTCPTransport(f.cfg.Address, f.cfg.FixedPublicAddress, handler), nil
 	default:
 		return nil, errors.New("invalid transport configuration")
 	}
