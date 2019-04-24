@@ -233,6 +233,8 @@ type PartitionPolicy interface {
 	ShardsCount() int
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network.RoutingTable -o ../testutils/network -s _mock.go
+
 // RoutingTable contains all routing information of the network.
 type RoutingTable interface {
 	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
