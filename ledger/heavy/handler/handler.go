@@ -43,6 +43,7 @@ type Handler struct {
 	IndexAccessor  object.IndexAccessor
 	IndexModifier  object.IndexModifier
 	DropModifier   drop.Modifier
+	recordSequence object.SequenceRecordModifier
 
 	jetID insolar.JetID
 }
@@ -299,7 +300,7 @@ func (h *Handler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeReco
 func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {
 	msg := genericMsg.Message().(*message.HeavyPayload)
 
-	storeRecords(ctx, h.RecordModifier, h.PCS, msg.PulseNum, msg.Records)
+	storeRecords(ctx, h.RecordModifier, h.recordSequence, h.PCS, msg.PulseNum, msg.Records)
 	if err := storeIndexes(ctx, h.IndexModifier, msg.Indexes); err != nil {
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}

@@ -56,4 +56,11 @@ const (
 
 	// ScopeGenesis is the scope for a genesis records.
 	ScopeGenesis Scope = 8
+
+	// ScopeReplicaPosition is the scope for replication process position.
+	ScopeReplicaPosition = 9
+	// ScopePulseLabel is the scope for ordered record pulse labels.
+	ScopePulseLabel = 10
+	// ScopeSequenceRecord is the scope for ordered record storage.
+	ScopeSequenceRecord = 11
 )

@@ -59,6 +59,10 @@ func UInt32ToBytes(n uint32) []byte {
 	return buff
 }
 
+func Bytes2UINT32(buff []byte) uint32 {
+	return binary.BigEndian.Uint32(buff)
+}
+
 func SendGracefulStopSignal() error {
 	p, err := os.FindProcess(os.Getpid())
 	if err != nil {
