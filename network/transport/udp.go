@@ -54,7 +54,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"sync"
 	"sync/atomic"
 	"time"
 
@@ -75,9 +74,7 @@ type udpTransport struct {
 	started            uint32
 	fixedPublicAddress string
 	cancel             context.CancelFunc
-
-	mutex   sync.RWMutex
-	address string
+	address            string
 }
 
 func newUDPTransport(listenAddress, fixedPublicAddress string, handler DatagramHandler) *udpTransport {
@@ -100,7 +97,12 @@ func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []
 	}
 
 	logger.Debug("udpTransport.send: len = ", len(data))
-	n, err := t.conn.WriteTo(data, udpAddr) // Write(data)
+	conn, err := net.DialUDP("udp", nil, udpAddr)
+	if err != nil {
+		return errors.Wrap(err, "Failed to dial UDP")
+	}
+
+	n, err := conn.Write(data)
 	if err != nil {
 		return errors.Wrap(err, "========================================== Failed to write data")
 	}
@@ -109,10 +111,6 @@ func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []
 }
 
 func (t *udpTransport) Address() string {
-	// TODO mutex
-	t.mutex.RLock()
-	defer t.mutex.RUnlock()
-
 	return t.address
 }
 
@@ -128,8 +126,6 @@ func (t *udpTransport) Start(ctx context.Context) error {
 			return errors.Wrap(err, "failed to listen UDP")
 		}
 
-		t.mutex.Lock()
-		defer t.mutex.Unlock()
 		t.address, err = resolver.Resolve(t.fixedPublicAddress, t.conn.LocalAddr().String())
 		if err != nil {
 			return errors.Wrap(err, "failed to resolve public address")
@@ -152,7 +148,9 @@ func (t *udpTransport) loop(ctx context.Context) {
 			return
 		default:
 		}
+
 		err := t.conn.SetDeadline(time.Now().Add(time.Second * 12))
+
 		if err != nil {
 			logger.Error(err.Error())
 		}

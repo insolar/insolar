@@ -117,8 +117,8 @@ type testNode struct {
 	address string
 }
 
-func (testNode) HandleDatagram(address string, buf []byte) {
-	log.Println("Datagram from ", address, " data: ", buf)
+func (t *testNode) HandleDatagram(address string, buf []byte) {
+	log.Println("Handle Datagram ", buf)
 }
 
 func newTestNode(port int) (*testNode, error) {
@@ -172,5 +172,4 @@ func TestUdpTransport_SendDatagram(t *testing.T) {
 	assert.NoError(t, err)
 	err = node2.udp.Stop(ctx)
 	assert.NoError(t, err)
-
 }
