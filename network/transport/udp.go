@@ -80,9 +80,8 @@ type udpTransport struct {
 	address string
 }
 
-func newUDPTransport(listenAddress, fixedPublicAddress string, handler DatagramHandler) (*udpTransport, error) {
-	transport := &udpTransport{address: listenAddress, fixedPublicAddress: fixedPublicAddress, handler: handler}
-	return transport, nil
+func newUDPTransport(listenAddress, fixedPublicAddress string, handler DatagramHandler) *udpTransport {
+	return &udpTransport{address: listenAddress, fixedPublicAddress: fixedPublicAddress, handler: handler}
 }
 
 // SendDatagram sends datagram to remote host

@@ -74,7 +74,7 @@ func newTCPTransport(listenAddress, fixedPublicAddress string, handler StreamHan
 	// TODO : prepare Listener
 	listener, err := net.Listen("tcp", listenAddress)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to listen UDP")
+		return nil, errors.Wrap(err, "failed to listen TCP")
 	}
 	publicAddress, err := resolver.Resolve(fixedPublicAddress, listener.Addr().String())
 	if err != nil {
