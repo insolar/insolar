@@ -59,7 +59,6 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -83,6 +82,8 @@ import (
 )
 
 const deliverWatermillMsg = "ServiceNetwork.processIncome"
+
+var ack = []byte{1}
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
@@ -369,12 +370,8 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	if err != nil {
 		return nil, errors.Wrap(err, "error while sending watermillMsg to controller")
 	}
-	rep, err := reply.Deserialize(bytes.NewBuffer(res))
-	if err != nil {
-		return nil, errors.Wrap(err, "error while deserialize reply")
-	}
-	if rep.Type() != reply.TypeOK {
-		return nil, errors.Errorf("reply is not ok: %s", rep)
+	if !bytes.Equal(res, ack) {
+		return nil, errors.Errorf("reply is not ack: %s", res)
 	}
 	return nil, nil
 }
@@ -393,26 +390,10 @@ func (n *ServiceNetwork) processIncome(ctx context.Context, args [][]byte) ([]by
 	}
 	// TODO: check pulse here
 
-	if msg.Metadata.Get(bus.TypeMetadataKey) == bus.ReplyTypeMetadataValue {
-		err := n.pub.Publish(bus.ReplyingMsg, msg)
-		if err != nil {
-			return nil, errors.Wrap(err, "error while publish msg to ReplyingMsg")
-		}
-	} else {
-		err := n.pub.Publish(bus.IncomingMsg, msg)
-		if err != nil {
-			return nil, errors.Wrap(err, "error while publish msg to IncomingMsg")
-		}
+	err = n.pub.Publish(bus.IncomingMsg, msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "error while publish msg to IncomingMsg")
 	}
 
-	rd, err := reply.Serialize(&reply.OK{})
-	if err != nil {
-		return nil, err
-	}
-	buf := new(bytes.Buffer)
-	_, err = buf.ReadFrom(rd)
-	if err != nil {
-		return nil, err
-	}
-	return buf.Bytes(), nil
+	return ack, nil
 }

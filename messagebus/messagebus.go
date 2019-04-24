@@ -59,7 +59,7 @@ type MessageBus struct {
 	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
 	ParcelFactory              message.ParcelFactory              `inject:""`
 	PulseAccessor              pulse.Accessor                     `inject:""`
-	Bus                        insolar.Bus                        `inject:""`
+	WatermillMessageSender     bus.WatermillMessageSender         `inject:""`
 
 	handlers     map[insolar.MessageType]insolar.MessageHandler
 	signmessages bool
@@ -205,7 +205,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 	_, ok := transferredToWatermill[msg.Type()]
 	if ok {
 		wmMsg := mb.createWatermillMessage(ctx, parcel, ops, currentPulse)
-		res := mb.Bus.Send(ctx, wmMsg)
+		res := mb.WatermillMessageSender.Send(ctx, wmMsg)
 		repMsg := <-res
 		rep, err := reply.Deserialize(bytes.NewBuffer(repMsg.Payload))
 		if err != nil {

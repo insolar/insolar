@@ -52,6 +52,14 @@ const SenderMetadataKey = "sender"
 // ReplyTypeMetadataValue is type for Message which reply to other Message
 const ReplyTypeMetadataValue = "reply"
 
+//go:generate minimock -i github.com/insolar/insolar/bus.WatermillMessageSender -o ./ -s _mock.go
+
+// WatermillMessageSender interface sends messages by watermill.
+type WatermillMessageSender interface {
+	// Send an `Message` and get a `Reply` or error from remote host.
+	Send(ctx context.Context, msg *message.Message) <-chan *message.Message
+}
+
 // Bus is component that sends messages and gives access to replies for them.
 type Bus struct {
 	pub     message.Publisher
@@ -98,7 +106,7 @@ func (b *Bus) removeReplyChannel(id string) {
 // Send a watermill's Message and return channel for replies.
 func (b *Bus) Send(ctx context.Context, msg *message.Message) <-chan *message.Message {
 	id := watermill.NewUUID()
-	middleware.SetCorrelationID(watermill.NewUUID(), msg)
+	middleware.SetCorrelationID(id, msg)
 	rep := make(chan *message.Message)
 	b.setReplyChannel(id, rep)
 
@@ -110,20 +118,22 @@ func (b *Bus) Send(ctx context.Context, msg *message.Message) <-chan *message.Me
 	return rep
 }
 
-// SetResult returns reply to waiting channel.
-func (b *Bus) SetResult(msg *message.Message) ([]*message.Message, error) {
-	id := middleware.MessageCorrelationID(msg)
-	ch, ok := b.getReplyChannel(id)
-	if !ok {
-		return nil, errors.Errorf("[ SetResult ] message with CorrelationID %s wasn't found in replies map", id)
-	}
+// IncomingMessageRouter is watermill middleware for incoming messages - it decides, how to handle it.
+func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
+	return func(msg *message.Message) ([]*message.Message, error) {
+		id := middleware.MessageCorrelationID(msg)
+		ch, ok := b.getReplyChannel(id)
+		if !ok {
+			return h(msg)
+		}
 
-	select {
-	case ch <- msg:
-		inslogger.FromContext(msg.Context()).Infof("[ SetResult ] result for message with correlationID %s was send", id)
-		return nil, nil
-	case <-time.After(b.timeout):
-		b.removeReplyChannel(id)
-		return nil, errors.Errorf("[ SetResult ] can't return result for message with correlationID %s: timeout %s exceeded", id, b.timeout)
+		select {
+		case ch <- msg:
+			inslogger.FromContext(msg.Context()).Infof("[ SetResult ] result for message with correlationID %s was send", id)
+			return nil, nil
+		case <-time.After(b.timeout):
+			b.removeReplyChannel(id)
+			return nil, errors.Errorf("[ SetResult ] can't return result for message with correlationID %s: timeout %s exceeded", id, b.timeout)
+		}
 	}
 }

@@ -23,7 +23,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -79,7 +78,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	pf := NewParcelFactory()
 	ps := pulse.NewAccessorMock(t)
 
-	b := testutils.NewBusMock(t)
+	b := bus.NewWatermillMessageSenderMock(t)
 
 	(&component.Manager{}).Inject(net, jc, nn, pcs, cs, dtf, pf, ps, mb, b)
 
@@ -205,7 +204,6 @@ func TestMessageBus_createWatermillMessage(t *testing.T) {
 
 	require.NotNil(t, msg)
 	require.NotNil(t, msg.Payload)
-	require.NotEmpty(t, middleware.MessageCorrelationID(msg))
 	require.Equal(t, fmt.Sprintf("%d", pulse.PulseNumber), msg.Metadata.Get(bus.PulseMetadataKey))
 	require.Equal(t, parcel.Msg.Type().String(), msg.Metadata.Get(bus.TypeMetadataKey))
 	require.Equal(t, expectedRef.String(), msg.Metadata.Get(bus.ReceiverMetadataKey))

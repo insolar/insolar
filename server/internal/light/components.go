@@ -159,7 +159,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Tokens  insolar.DelegationTokenFactory
 		Parcels message.ParcelFactory
 		Bus     insolar.MessageBus
-		WmBus   insolar.Bus
+		WmBus   bus.WatermillMessageSender
 	)
 	{
 		var err error

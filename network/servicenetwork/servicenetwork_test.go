@@ -60,7 +60,6 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/testutils"
 	networkUtils "github.com/insolar/insolar/testutils/network"
 	"github.com/pkg/errors"
@@ -186,36 +185,7 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.Error(t, err)
-	require.Contains(t, err.Error(), "error while deserialize reply")
-	require.Nil(t, outMsgs)
-}
-
-func TestSendMessageHandler_NotOKReply(t *testing.T) {
-	cfg := configuration.NewConfiguration()
-	cfg.Service.Skip = 5
-	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
-	nodeN := networkUtils.NewNodeKeeperMock(t)
-	nodeN.GetOriginFunc = func() (r insolar.NetworkNode) {
-		n := networkUtils.NewNetworkNodeMock(t)
-		n.IDFunc = func() (r insolar.Reference) {
-			return testutils.RandomRef()
-		}
-		return n
-	}
-	controller := networkUtils.NewControllerMock(t)
-	controller.SendBytesFunc = func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
-		return reply.ToBytes(&reply.ID{}), nil
-	}
-	serviceNetwork.Controller = controller
-	serviceNetwork.NodeKeeper = nodeN
-
-	payload := []byte{1, 2, 3, 4, 5}
-	inMsg := message.NewMessage(watermill.NewUUID(), payload)
-	inMsg.Metadata.Set(bus.ReceiverMetadataKey, testutils.RandomRef().String())
-
-	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "reply is not ok")
+	require.Contains(t, err.Error(), "reply is not ack")
 	require.Nil(t, outMsgs)
 }
 
@@ -233,7 +203,7 @@ func TestSendMessageHandler(t *testing.T) {
 	}
 	controller := networkUtils.NewControllerMock(t)
 	controller.SendBytesFunc = func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
-		return reply.ToBytes(&reply.OK{}), nil
+		return ack, nil
 	}
 	serviceNetwork.Controller = controller
 	serviceNetwork.NodeKeeper = nodeN
