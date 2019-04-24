@@ -109,7 +109,7 @@ type future struct {
 	finished       uint32
 }
 
-// NewFuture creates new Future.
+// NewFuture creates a new Future.
 func NewFuture(requestID network.RequestID, actor *host.Host, msg *packet.Packet, cancelCallback CancelCallback) Future {
 	metrics.NetworkFutures.WithLabelValues(msg.Type.String()).Inc()
 	return &future{
@@ -164,7 +164,9 @@ func (f *future) GetResult(duration time.Duration) (*packet.Packet, error) {
 	}
 }
 
-// Cancel allows to cancel Future processing.
+// Cancel cancels Future processing.
+// Please note that cancelCallback is called asynchronously. In other words it's not guaranteed
+// it was called and finished when GetResult() returns ErrChannelClosed.
 func (f *future) Cancel() {
 	if atomic.CompareAndSwapUint32(&f.finished, 0, 1) {
 		f.finish()
