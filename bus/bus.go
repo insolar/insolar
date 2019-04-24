@@ -28,14 +28,11 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ExternalMsg is topic for external calls
-const ExternalMsg = "ExternalMsg"
+// OutcomingMsg is topic for external calls
+const OutcomingMsg = "OutcomingMsg"
 
 // IncomingMsg is topic for incoming calls
 const IncomingMsg = "IncomingMsg"
-
-// ReplyingMsg is topic for incoming calls
-const ReplyingMsg = "ReplyingMsg"
 
 // PulseMetadataKey is key for Pulse
 const PulseMetadataKey = "pulse"
@@ -48,9 +45,6 @@ const ReceiverMetadataKey = "receiver"
 
 // SenderMetadataKey is key for Sender
 const SenderMetadataKey = "sender"
-
-// ReplyTypeMetadataValue is type for Message which reply to other Message
-const ReplyTypeMetadataValue = "reply"
 
 //go:generate minimock -i github.com/insolar/insolar/bus.WatermillMessageSender -o ./ -s _mock.go
 
@@ -110,9 +104,9 @@ func (b *Bus) Send(ctx context.Context, msg *message.Message) <-chan *message.Me
 	rep := make(chan *message.Message)
 	b.setReplyChannel(id, rep)
 
-	err := b.pub.Publish(ExternalMsg, msg)
+	err := b.pub.Publish(OutcomingMsg, msg)
 	if err != nil {
-		inslogger.FromContext(ctx).Errorf("[ Send ] can't publish message to %s topic: %s", ExternalMsg, err.Error())
+		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", OutcomingMsg, err.Error())
 		return nil
 	}
 	return rep
@@ -129,11 +123,11 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 
 		select {
 		case ch <- msg:
-			inslogger.FromContext(msg.Context()).Infof("[ SetResult ] result for message with correlationID %s was send", id)
+			inslogger.FromContext(msg.Context()).Infof("result for message with correlationID %s was send", id)
 			return nil, nil
 		case <-time.After(b.timeout):
 			b.removeReplyChannel(id)
-			return nil, errors.Errorf("[ SetResult ] can't return result for message with correlationID %s: timeout %s exceeded", id, b.timeout)
+			return nil, errors.Errorf("can't return result for message with correlationID %s: timeout %s exceeded", id, b.timeout)
 		}
 	}
 }

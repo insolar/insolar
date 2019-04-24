@@ -32,7 +32,7 @@ func TestMessageBus_Send(t *testing.T) {
 	logger := watermill.NewStdLogger(false, false)
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	b := NewBus(pubsub)
-	externalMsgCh, err := pubsub.Subscribe(ctx, ExternalMsg)
+	externalMsgCh, err := pubsub.Subscribe(ctx, OutcomingMsg)
 	require.NoError(t, err)
 
 	payload := []byte{1, 2, 3, 4, 5}
