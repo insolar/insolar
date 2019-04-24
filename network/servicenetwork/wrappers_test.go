@@ -56,84 +56,9 @@ import (
 	"context"
 	"time"
 
-	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/node"
 )
-
-type nodeKeeperWrapper struct {
-	original network.NodeKeeper
-}
-
-func (n *nodeKeeperWrapper) GetSnapshotCopy() *node.Snapshot {
-	return n.original.GetSnapshotCopy()
-}
-
-func (n *nodeKeeperWrapper) GetAccessor() network.Accessor {
-	return n.original.GetAccessor()
-}
-
-func (n *nodeKeeperWrapper) GetConsensusInfo() network.ConsensusInfo {
-	return n.original.GetConsensusInfo()
-}
-
-func (n *nodeKeeperWrapper) GetWorkingNode(ref insolar.Reference) insolar.NetworkNode {
-	return n.original.GetWorkingNode(ref)
-}
-
-func (n *nodeKeeperWrapper) GetWorkingNodes() []insolar.NetworkNode {
-	return n.original.GetWorkingNodes()
-}
-
-func (n *nodeKeeperWrapper) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
-	return n.original.GetWorkingNodesByRole(role)
-}
-
-func (n *nodeKeeperWrapper) GetOrigin() insolar.NetworkNode {
-	return n.original.GetOrigin()
-}
-
-func (n *nodeKeeperWrapper) GetCloudHash() []byte {
-	return n.original.GetCloudHash()
-}
-
-func (n *nodeKeeperWrapper) IsBootstrapped() bool {
-	return n.original.IsBootstrapped()
-}
-
-func (n *nodeKeeperWrapper) SetIsBootstrapped(isBootstrap bool) {
-	n.original.SetIsBootstrapped(isBootstrap)
-}
-
-func (n *nodeKeeperWrapper) SetCloudHash(hash []byte) {
-	n.original.SetCloudHash(hash)
-}
-
-func (n *nodeKeeperWrapper) SetInitialSnapshot(nodes []insolar.NetworkNode) {
-	n.original.SetInitialSnapshot(nodes)
-}
-
-func (n *nodeKeeperWrapper) GetOriginJoinClaim() (*consensus.NodeJoinClaim, error) {
-	return n.original.GetOriginJoinClaim()
-}
-
-func (n *nodeKeeperWrapper) GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error) {
-	return n.original.GetOriginAnnounceClaim(mapper)
-}
-
-func (n *nodeKeeperWrapper) GetClaimQueue() network.ClaimQueue {
-	return n.original.GetClaimQueue()
-}
-
-func (n *nodeKeeperWrapper) Sync(ctx context.Context, nodes []insolar.NetworkNode, claims []consensus.ReferendumClaim) error {
-	return n.original.Sync(ctx, nodes, claims)
-}
-
-func (n *nodeKeeperWrapper) MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error {
-	return n.original.MoveSyncToActive(ctx, number)
-}
 
 type phaseManagerWrapper struct {
 	original phases.PhaseManager

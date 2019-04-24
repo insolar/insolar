@@ -325,7 +325,6 @@ func incrementTestPort() int {
 func (n *networkNode) init() error {
 	err := n.componentManager.Init(n.ctx)
 	n.serviceNetwork.PhaseManager = &phaseManagerWrapper{original: n.serviceNetwork.PhaseManager, result: n.consensusResult}
-	n.serviceNetwork.NodeKeeper = &nodeKeeperWrapper{original: n.serviceNetwork.NodeKeeper}
 	return err
 }
 
