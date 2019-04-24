@@ -203,7 +203,7 @@ func (p *SendObject) handle(
 				return nil, err
 			}
 			err = p.Dep.Blobs.Set(ctx, *state.GetMemory(), blob.Blob{
-				JetID: insolar.JetID(p.jet),
+				JetID: p.jet,
 				Value: obj.Memory},
 			)
 			if err != nil {
