@@ -60,7 +60,7 @@ type Flow interface {
 	// If Routine returns first, Procedure error (if any) will be returned.
 	// Procedure can figure out whether it's execution was canceled and there is no point to continue
 	// the execution by reading from context.Done()
-	Procedure(ctx context.Context, proc Procedure, cancel bool) error
+	Procedure(ctx context.Context, proc Procedure, cancelable bool) error
 
 	// Migrate blocks caller execution until cancellation happens then runs provided Handle in a new flow.
 	// Note that this method can be called after cancellation. Use it to migrate processing after Handle or Procedure
