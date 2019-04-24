@@ -130,6 +130,7 @@ func NewMessageHandler(
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.CheckJet = proc.NewCheckJet(h.jetTreeUpdater, h.JetCoordinator)
+			p.Dep.BlobAccessor = h.BlobAccessor
 			return p
 		},
 	}
