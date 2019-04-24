@@ -90,9 +90,9 @@ const (
 	pulseDelta   int32 = 5
 
 	Phase1Timeout  float64 = 0.45
-	Phase2Timeout  float64 = 0.15
-	Phase21Timeout float64 = 0.15
-	Phase3Timeout  float64 = 0.15
+	Phase2Timeout  float64 = 0.60
+	Phase21Timeout float64 = 0.75
+	Phase3Timeout  float64 = 0.90
 )
 
 type fixture struct {

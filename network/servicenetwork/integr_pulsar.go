@@ -161,7 +161,6 @@ func (tp *testPulsar) distribute(ctx context.Context) {
 		PrevPulseNumber:  pulseNumber - insolar.PulseNumber(tp.pulseDelta),
 		EpochPulseNumber: 1,
 		OriginID:         [16]byte{206, 41, 229, 190, 7, 240, 162, 155, 121, 245, 207, 56, 161, 67, 189, 0},
-		PulseTimestamp:   timeNow.Unix(),
 	}
 
 	var err error
@@ -176,6 +175,8 @@ func (tp *testPulsar) distribute(ctx context.Context) {
 			go func(pulse insolar.Pulse) {
 				tp.activityMutex.Lock()
 				defer tp.activityMutex.Unlock()
+
+				pulse.PulseTimestamp = time.Now().UnixNano()
 
 				tp.distributor.Distribute(ctx, pulse)
 			}(pulse)
@@ -196,7 +197,7 @@ func (tp *testPulsar) incrementPulse(pulse insolar.Pulse) insolar.Pulse {
 		PrevPulseNumber:  pulse.PulseNumber,
 		EpochPulseNumber: pulse.EpochPulseNumber,
 		OriginID:         pulse.OriginID,
-		PulseTimestamp:   time.Now().Unix(),
+		PulseTimestamp:   time.Now().UnixNano(),
 		Signs:            pulse.Signs,
 	}
 	var err error
