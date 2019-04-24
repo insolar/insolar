@@ -135,6 +135,7 @@ create_required_dirs()
     mkdir -p $DISCOVERY_NODES_DATA/certs
     mkdir -p $CONFIGS_DIR
 
+    mkdir -p ${INSGORUND_LOGS}
     touch $INSGORUND_PORT_FILE
     { set +x; } 2>/dev/null
 
