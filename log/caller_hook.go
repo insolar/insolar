@@ -14,38 +14,29 @@
 // limitations under the License.
 //
 
-package pulsewatcher
+package log
 
 import (
-	"io/ioutil"
-	"time"
-
-	"gopkg.in/yaml.v2"
+	"github.com/rs/zerolog"
 )
 
-type Config struct {
-	Nodes    []string
-	Interval time.Duration
-	Timeout  time.Duration
+// FuncFieldName is the field name used for func field.
+var FuncFieldName = "func"
+
+type callerHook struct {
+	callerSkipFrameCount int
 }
 
-func WriteConfig(file string, conf Config) error {
-	data, err := yaml.Marshal(conf)
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(file, data, 0644)
+func newCallerHook(skipFrameCount int) *callerHook {
+	return &callerHook{callerSkipFrameCount: skipFrameCount}
 }
 
-func ReadConfig(file string) (*Config, error) {
-	var conf Config
-	data, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, err
+// Run implements zerolog.Hook.
+func (ch *callerHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
+	if level == zerolog.NoLevel {
+		return
 	}
-	err = yaml.Unmarshal(data, &conf)
-	if err != nil {
-		return nil, err
-	}
-	return &conf, nil
+	info := getCallInfo(ch.callerSkipFrameCount)
+	e.Str(zerolog.CallerFieldName, info.fileName)
+	e.Str(FuncFieldName, info.funcName)
 }

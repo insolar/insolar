@@ -14,38 +14,25 @@
 // limitations under the License.
 //
 
-package pulsewatcher
+package defaults
 
 import (
-	"io/ioutil"
-	"time"
-
-	"gopkg.in/yaml.v2"
+	"os"
+	"path/filepath"
 )
 
-type Config struct {
-	Nodes    []string
-	Interval time.Duration
-	Timeout  time.Duration
+func ArtifactsDir() string {
+	return envVarWithDefault("INSOLAR_ARTIFACTS_DIR", ".artifacts")
 }
 
-func WriteConfig(file string, conf Config) error {
-	data, err := yaml.Marshal(conf)
-	if err != nil {
-		return err
-	}
-	return ioutil.WriteFile(file, data, 0644)
+func LaunchnetDir() string {
+	return envVarWithDefault("LAUNCHNET_BASE_DIR", filepath.Join(ArtifactsDir(), "launchnet"))
 }
 
-func ReadConfig(file string) (*Config, error) {
-	var conf Config
-	data, err := ioutil.ReadFile(file)
-	if err != nil {
-		return nil, err
+func envVarWithDefault(name string, defaultValue string) string {
+	value := os.Getenv(name)
+	if value != "" {
+		return value
 	}
-	err = yaml.Unmarshal(data, &conf)
-	if err != nil {
-		return nil, err
-	}
-	return &conf, nil
+	return defaultValue
 }

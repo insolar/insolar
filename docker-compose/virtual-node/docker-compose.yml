@@ -1,12 +1,15 @@
 version: '3.7'
 services:
   insolard:
-    image: "insolar/insolard:v0.8.4"
+    image: "insolar/insolard:v0.8.7"
+    labels:
+      - autoheal=true
     environment:
       - INSOLARD_LOG_LEVEL=warn
-      - INSOLARD_TRANSPORT_FIXED_ADDRESS=
+      - INSOLARD_TRANSPORT_FIXED_ADDRESS=<YOUR-PUBLIC-IP-HERE>
       - INSGORUND_ENDPOINT=insgorund:18181
       - INSOLARD_JAEGER_ENDPOINT=jaeger:6831
+      - INSOLAR_API_URL=http://insolard:19191/api
     volumes:
       - "./configs:/etc/insolar"
       - "./genesis:/var/lib/insolar"
@@ -68,13 +71,13 @@ services:
 # elastic and kibana are optional here,
 # but they provide more powerful  search and analysis than Jaeger's UI (augments it actually).
   elasticsearch:
-    image: "docker.elastic.co/elasticsearch/elasticsearch:6.5.4"
+    image: "docker.elastic.co/elasticsearch/elasticsearch:6.6.1"
     ports:
       - "9200:9200"
       - "9300:9300"
     environment:
       path.repo: "/tmp/backup"
-      ES_JAVA_OPTS: "-Xmx256m -Xms256m"
+      ES_JAVA_OPTS: "-Xmx512m -Xms512m"
       discovery.type: "single-node"
       xpack.security.enabled: "false"
     volumes:
@@ -115,3 +118,11 @@ services:
       retries: 5
       start_period: 30s
     restart: on-failure
+
+  healthchecker:
+    image: "willfarrell/autoheal"
+    environment:
+      AUTOHEAL_INTERVAL: 60
+      AUTOHEAL_DEFAULT_STOP_TIMEOUT: 120
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"

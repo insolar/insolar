@@ -534,7 +534,8 @@ func (g *Generator) createKeys(ctx context.Context, dir string, amount int) erro
 			return errors.Wrap(err, "[ createKeys ] couldn't marshal keys")
 		}
 
-		name := fmt.Sprintf(g.config.KeysNameFormat, i)
+		name := fmt.Sprintf(g.config.KeysNameFormat, i+1)
+		inslogger.FromContext(ctx).Info("Genesis write key " + filepath.Join(dir, name))
 		err = makeFileWithDir(dir, name, result)
 		if err != nil {
 			return errors.Wrap(err, "[ createKeys ] couldn't write keys to file")
