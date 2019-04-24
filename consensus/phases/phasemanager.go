@@ -100,10 +100,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 	consensusDelay := time.Since(pulseStartTime)
 	inslogger.FromContext(ctx).Infof("[ NET Consensus ] Starting consensus process, delay: %v", consensusDelay)
 
-	pulseDuration, err := getPulseDuration(pulse)
-	if err != nil {
-		return errors.Wrap(err, "[ NET Consensus ] Failed to get pulse duration")
-	}
+	pulseDuration := getPulseDuration(pulse)
 
 	var tctx context.Context
 	var cancel context.CancelFunc
@@ -156,9 +153,9 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 	return pm.NodeKeeper.Sync(ctx, state.ActiveNodes, state.ApprovedClaims)
 }
 
-func getPulseDuration(pulse *insolar.Pulse) (*time.Duration, error) {
+func getPulseDuration(pulse *insolar.Pulse) *time.Duration {
 	duration := time.Duration(pulse.NextPulseNumber-pulse.PulseNumber) * time.Second
-	return &duration, nil
+	return &duration
 }
 
 func contextTimeout(ctx context.Context, duration time.Duration, k float64) (context.Context, context.CancelFunc) {
