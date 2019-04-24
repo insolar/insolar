@@ -28,8 +28,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// OutcomingMsg is topic for external calls
-const OutcomingMsg = "OutcomingMsg"
+// OutgoingMsg is topic for external calls
+const OutgoingMsg = "OutgoingMsg"
 
 // IncomingMsg is topic for incoming calls
 const IncomingMsg = "IncomingMsg"
@@ -104,9 +104,9 @@ func (b *Bus) Send(ctx context.Context, msg *message.Message) <-chan *message.Me
 	rep := make(chan *message.Message)
 	b.setReplyChannel(id, rep)
 
-	err := b.pub.Publish(OutcomingMsg, msg)
+	err := b.pub.Publish(OutgoingMsg, msg)
 	if err != nil {
-		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", OutcomingMsg, err.Error())
+		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", OutgoingMsg, err.Error())
 		return nil
 	}
 	return rep
