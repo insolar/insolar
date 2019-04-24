@@ -19,6 +19,9 @@ package light
 import (
 	"context"
 
+	"github.com/ThreeDotsLabs/watermill"
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/bus"
 	"github.com/insolar/insolar/certificate"
@@ -160,6 +163,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Parcels message.ParcelFactory
 		Bus     insolar.MessageBus
 		WmBus   bus.WatermillMessageSender
+		Pub     watermillMsg.Publisher
 	)
 	{
 		var err error
@@ -169,8 +173,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
-		// Create router, run it and set pub to bus constructor instead of nil
-		WmBus = bus.NewBus(nil)
+		// TODO: use insolar.Logger
+		logger := watermill.NewStdLogger(false, false)
+		Pub = gochannel.NewGoChannel(gochannel.Config{}, logger)
+		WmBus = bus.NewBus(Pub)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -323,6 +329,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		CertManager,
 		NodeNetwork,
 		NetworkService,
+		Pub,
 	)
 
 	err = c.cmp.Init(ctx)

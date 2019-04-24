@@ -19,6 +19,8 @@ package virtual
 import (
 	"context"
 
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/bus"
 	"github.com/insolar/insolar/certificate"
@@ -115,8 +117,11 @@ func initComponents(
 ) (*component.Manager, insolar.TerminationHandler, error) {
 	cm := component.Manager{}
 
-	// Create router, run it and set pub to bus constructor instead of nil
-	b := bus.NewBus(nil)
+	// TODO: use insolar.Logger
+	logger := watermill.NewStdLogger(false, false)
+	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+
+	b := bus.NewBus(pubsub)
 
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
@@ -171,6 +176,7 @@ func initComponents(
 
 	components := []interface{}{
 		b,
+		pubsub,
 		messageBus,
 		contractRequester,
 		logicRunner,

@@ -99,12 +99,11 @@ type ServiceNetwork struct {
 	NodeKeeper          network.NodeKeeper          `inject:""`
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
 	GIL                 insolar.GlobalInsolarLock   `inject:""`
+	Pub                 message.Publisher           `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
 	Controller   network.Controller  `inject:"subcomponent"`
-
-	pub message.Publisher
 
 	isGenesis   bool
 	isDiscovery bool
@@ -359,7 +358,7 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
 	if node.Equal(origin.ID()) {
-		err := n.pub.Publish(bus.IncomingMsg, msg)
+		err := n.Pub.Publish(bus.IncomingMsg, msg)
 		if err != nil {
 			return nil, errors.Wrap(err, "error while publish msg to IncomingMsg")
 		}
@@ -390,7 +389,7 @@ func (n *ServiceNetwork) processIncome(ctx context.Context, args [][]byte) ([]by
 	}
 	// TODO: check pulse here
 
-	err = n.pub.Publish(bus.IncomingMsg, msg)
+	err = n.Pub.Publish(bus.IncomingMsg, msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "error while publish msg to IncomingMsg")
 	}
