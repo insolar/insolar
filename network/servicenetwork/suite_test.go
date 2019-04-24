@@ -87,35 +87,48 @@ var (
 )
 
 type fixture struct {
-	ctx            context.Context
-	bootstrapNodes []*networkNode
-	networkNodes   []*networkNode
-	pulsar         TestPulsar
+	ctx             context.Context
+	bootstrapNodes  []*networkNode
+	lBootstrapNodes []*networkNode // network largest than bootstrapNodes
+	networkNodes    []*networkNode
+	pulsar          TestPulsar
+	lPulsar         TestPulsar // Pulsar for largest network
 }
 
 const cacheDir = "network_cache/"
 
+type NetworkType int
+
+const (
+	SmallNetwork = iota + 1
+	LargeNetwork
+	CombinedNetwork
+)
+
 func newFixture(t *testing.T) *fixture {
 	return &fixture{
-		ctx:            inslogger.TestContext(t),
-		bootstrapNodes: make([]*networkNode, 0),
-		networkNodes:   make([]*networkNode, 0),
+		ctx:             inslogger.TestContext(t),
+		bootstrapNodes:  make([]*networkNode, 0),
+		networkNodes:    make([]*networkNode, 0),
+		lBootstrapNodes: make([]*networkNode, 0),
 	}
 }
 
 type testSuite struct {
 	suite.Suite
-	fixtureMap     map[string]*fixture
-	bootstrapCount int
-	nodesCount     int
+	fixtureMap      map[string]*fixture
+	bootstrapCount  int
+	nodesCount      int
+	lBootstrapCount int // largest network bootstrap nodes count
 }
 
 func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
 	return &testSuite{
-		Suite:          suite.Suite{},
-		fixtureMap:     make(map[string]*fixture, 0),
-		bootstrapCount: bootstrapCount,
-		nodesCount:     nodesCount,
+		Suite:           suite.Suite{},
+		fixtureMap:      make(map[string]*fixture, 0),
+		bootstrapCount:  bootstrapCount,
+		lBootstrapCount: bootstrapCount + 1,
+		nodesCount:      nodesCount,
 	}
 }
 
@@ -129,11 +142,17 @@ func (s *testSuite) SetupTest() {
 	var err error
 	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
 	s.Require().NoError(err)
+	s.fixture().lPulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
+	s.Require().NoError(err)
 
 	log.Info("SetupTest")
 
 	for i := 0; i < s.bootstrapCount; i++ {
 		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNode(fmt.Sprintf("bootstrap_%d", i)))
+	}
+
+	for i := 0; i < s.lBootstrapCount; i++ {
+		s.fixture().lBootstrapNodes = append(s.fixture().lBootstrapNodes, s.newNetworkNode(fmt.Sprintf("large_network_bootstrap_%d", i)))
 	}
 
 	for i := 0; i < s.nodesCount; i++ {
@@ -145,20 +164,35 @@ func (s *testSuite) SetupTest() {
 		pulseReceivers = append(pulseReceivers, node.host)
 	}
 
+	lPulseReceivers := make([]string, 0)
+	for _, node := range s.fixture().lBootstrapNodes {
+		lPulseReceivers = append(lPulseReceivers, node.host)
+	}
+
 	log.Info("Start test pulsar")
 	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
 	s.Require().NoError(err)
 
-	log.Info("Setup bootstrap nodes")
-	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
+	log.Info("Start test large pulsar")
+	err = s.fixture().lPulsar.Start(s.fixture().ctx, lPulseReceivers)
+	s.Require().NoError(err)
+
+	log.Info("Setup bootstrap nodes: " + strconv.Itoa(s.bootstrapCount))
+	s.SetupNodesNetwork(s.fixture().bootstrapNodes, SmallNetwork)
+
+	log.Info("Setup large network bootstrap nodes")
+	s.SetupNodesNetwork(s.fixture().lBootstrapNodes, LargeNetwork)
 
 	<-time.After(time.Second * 2)
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Require().Equal(len(s.fixture().bootstrapNodes), len(activeNodes))
 
+	activeNodes = s.fixture().lBootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	s.Require().Equal(len(s.fixture().lBootstrapNodes), len(activeNodes))
+
 	if len(s.fixture().networkNodes) > 0 {
 		log.Info("Setup network nodes")
-		s.SetupNodesNetwork(s.fixture().networkNodes)
+		s.SetupNodesNetwork(s.fixture().networkNodes, SmallNetwork)
 		s.waitForConsensus(2)
 
 		// active nodes count verification
@@ -171,9 +205,9 @@ func (s *testSuite) SetupTest() {
 	fmt.Println("=================== SetupTest() Done")
 }
 
-func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
+func (s *testSuite) SetupNodesNetwork(nodes []*networkNode, networkType NetworkType) {
 	for _, node := range nodes {
-		s.preInitNode(node)
+		s.preInitNode(node, networkType)
 	}
 
 	results := make(chan error, len(nodes))
@@ -221,8 +255,16 @@ func (s *testSuite) TearDownTest() {
 		err := n.componentManager.Stop(n.ctx)
 		s.NoError(err)
 	}
+	for _, n := range s.fixture().lBootstrapNodes {
+		err := n.componentManager.Stop(n.ctx)
+		s.NoError(err)
+	}
 	log.Info("Stop test pulsar")
-	s.fixture().pulsar.Stop(s.fixture().ctx)
+	err := s.fixture().pulsar.Stop(s.fixture().ctx)
+	s.NoError(err)
+	log.Info("Stop test pulsar")
+	err = s.fixture().lPulsar.Stop(s.fixture().ctx)
+	s.NoError(err)
 }
 
 func (s *testSuite) waitForConsensus(consensusCount int) {
@@ -236,6 +278,13 @@ func (s *testSuite) waitForConsensus(consensusCount int) {
 			err := <-n.consensusResult
 			s.NoError(err)
 		}
+	}
+}
+
+func (s *testSuite) waitForLConsensus(consensusCount int) {
+	for _, n := range s.fixture().lBootstrapNodes {
+		err := <-n.consensusResult
+		s.NoError(err)
 	}
 }
 
@@ -369,6 +418,100 @@ func (s *testSuite) initCrypto(node *networkNode) (*certificate.CertificateManag
 	return certificate.NewCertificateManager(cert), node.cryptographyService
 }
 
+func (s *testSuite) initLargestNetworkCrypto(node *networkNode) (*certificate.CertificateManager, insolar.CryptographyService) {
+	pubKey, err := node.cryptographyService.GetPublicKey()
+	s.Require().NoError(err)
+
+	// init certificate
+
+	proc := platformpolicy.NewKeyProcessor()
+	publicKey, err := proc.ExportPublicKeyPEM(pubKey)
+	s.Require().NoError(err)
+
+	cert := &certificate.Certificate{}
+	cert.PublicKey = string(publicKey[:])
+	cert.Reference = node.id.String()
+	cert.Role = node.role.String()
+	cert.BootstrapNodes = make([]certificate.BootstrapNode, 0)
+
+	for _, b := range s.fixture().lBootstrapNodes {
+		pubKey, _ := b.cryptographyService.GetPublicKey()
+		pubKeyBuf, err := proc.ExportPublicKeyPEM(pubKey)
+		s.Require().NoError(err)
+
+		bootstrapNode := certificate.NewBootstrapNode(
+			pubKey,
+			string(pubKeyBuf[:]),
+			b.host,
+			b.id.String())
+
+		cert.BootstrapNodes = append(cert.BootstrapNodes, *bootstrapNode)
+	}
+
+	// dump cert and read it again from json for correct private files initialization
+	jsonCert, err := cert.Dump()
+	s.Require().NoError(err)
+	log.Infof("cert: %s", jsonCert)
+
+	cert, err = certificate.ReadCertificateFromReader(pubKey, proc, strings.NewReader(jsonCert))
+	s.Require().NoError(err)
+	return certificate.NewCertificateManager(cert), node.cryptographyService
+}
+
+func (s *testSuite) initCombinedNetworkCrypto(node *networkNode) (*certificate.CertificateManager, insolar.CryptographyService) {
+	pubKey, err := node.cryptographyService.GetPublicKey()
+	s.Require().NoError(err)
+
+	// init certificate
+
+	proc := platformpolicy.NewKeyProcessor()
+	publicKey, err := proc.ExportPublicKeyPEM(pubKey)
+	s.Require().NoError(err)
+
+	cert := &certificate.Certificate{}
+	cert.PublicKey = string(publicKey[:])
+	cert.Reference = node.id.String()
+	cert.Role = node.role.String()
+	cert.BootstrapNodes = make([]certificate.BootstrapNode, 0)
+
+	for _, b := range s.fixture().bootstrapNodes {
+		pubKey, _ := b.cryptographyService.GetPublicKey()
+		pubKeyBuf, err := proc.ExportPublicKeyPEM(pubKey)
+		s.Require().NoError(err)
+
+		bootstrapNode := certificate.NewBootstrapNode(
+			pubKey,
+			string(pubKeyBuf[:]),
+			b.host,
+			b.id.String())
+
+		cert.BootstrapNodes = append(cert.BootstrapNodes, *bootstrapNode)
+	}
+
+	for _, b := range s.fixture().lBootstrapNodes {
+		pubKey, _ := b.cryptographyService.GetPublicKey()
+		pubKeyBuf, err := proc.ExportPublicKeyPEM(pubKey)
+		s.Require().NoError(err)
+
+		bootstrapNode := certificate.NewBootstrapNode(
+			pubKey,
+			string(pubKeyBuf[:]),
+			b.host,
+			b.id.String())
+
+		cert.BootstrapNodes = append(cert.BootstrapNodes, *bootstrapNode)
+	}
+
+	// dump cert and read it again from json for correct private files initialization
+	jsonCert, err := cert.Dump()
+	s.Require().NoError(err)
+	log.Infof("cert: %s", jsonCert)
+
+	cert, err = certificate.ReadCertificateFromReader(pubKey, proc, strings.NewReader(jsonCert))
+	s.Require().NoError(err)
+	return certificate.NewCertificateManager(cert), node.cryptographyService
+}
+
 func RandomRole() insolar.StaticRole {
 	i := rand.Int()%3 + 1
 	return insolar.StaticRole(i)
@@ -412,7 +555,7 @@ func (m staterMock) State() ([]byte, error) {
 }
 
 // preInitNode inits previously created node with mocks and external dependencies
-func (s *testSuite) preInitNode(node *networkNode) {
+func (s *testSuite) preInitNode(node *networkNode, networkType NetworkType) {
 	cfg := configuration.NewConfiguration()
 	cfg.Pulsar.PulseTime = pulseTimeMs // pulse 5 sec for faster tests
 	cfg.Host.Transport.Address = node.host
@@ -439,7 +582,18 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		},
 	}
 
-	certManager, cryptographyService := s.initCrypto(node)
+	var certManager *certificate.CertificateManager
+	var cryptographyService insolar.CryptographyService
+	switch networkType {
+	case SmallNetwork:
+		certManager, cryptographyService = s.initCrypto(node)
+	case LargeNetwork:
+		certManager, cryptographyService = s.initLargestNetworkCrypto(node)
+	case CombinedNetwork:
+		certManager, cryptographyService = s.initCombinedNetworkCrypto(node)
+	default:
+		certManager, cryptographyService = s.initCrypto(node)
+	}
 
 	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	s.Require().NoError(err)
