@@ -127,11 +127,10 @@ func NewMessageHandler(
 		},
 		GetCode: func(p *proc.GetCode) *proc.GetCode {
 			p.Dep.Bus = h.Bus
-			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.Accessor = h.BlobAccessor
-			p.Dep.BlobModifier = h.BlobModifier
+			p.Dep.CheckJet = proc.NewCheckJet(h.jetTreeUpdater, h.JetCoordinator)
+			p.Dep.BlobAccessor = h.BlobAccessor
 			return p
 		},
 	}
