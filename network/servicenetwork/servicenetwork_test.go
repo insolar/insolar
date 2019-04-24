@@ -120,7 +120,7 @@ func TestSendMessageHandler_SameNode(t *testing.T) {
 	}
 	pubMock := &PublisherMock{}
 	serviceNetwork.NodeKeeper = nodeN
-	serviceNetwork.pub = pubMock
+	serviceNetwork.Pub = pubMock
 
 	payload := []byte{1, 2, 3, 4, 5}
 	inMsg := message.NewMessage(watermill.NewUUID(), payload)
