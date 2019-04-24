@@ -87,7 +87,7 @@ func (s *StreamHandler) HandleStream(address string, reader io.ReadWriteCloser) 
 
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				log.Warn("[ HandleStream ] Connection closed by peer")
+				log.Info("[ HandleStream ] Connection closed by peer")
 				return
 			}
 

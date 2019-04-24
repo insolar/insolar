@@ -149,7 +149,7 @@ func TestUdpTransport_SendDatagram(t *testing.T) {
 	node2, err := newTestNode(0)
 	assert.NoError(t, err)
 
-	err = node1.udp.SendDatagram(ctx, node2.udp.Address(), []byte{1, 2, 3})
+	err = node1.udp.SendDatagram(ctx, node2.address, []byte{1, 2, 3})
 	assert.NoError(t, err)
 
 	err = node2.udp.SendDatagram(ctx, node1.address, []byte{5, 4, 3})

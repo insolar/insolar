@@ -54,6 +54,7 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 	"sync/atomic"
 	"time"
 
@@ -72,9 +73,11 @@ type udpTransport struct {
 	conn               net.PacketConn
 	handler            DatagramHandler
 	started            uint32
-	address            string
 	fixedPublicAddress string
 	cancel             context.CancelFunc
+
+	mutex   sync.RWMutex
+	address string
 }
 
 func newUDPTransport(listenAddress, fixedPublicAddress string, handler DatagramHandler) (*udpTransport, error) {
@@ -107,6 +110,10 @@ func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []
 }
 
 func (t *udpTransport) Address() string {
+	// TODO mutex
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+
 	return t.address
 }
 
@@ -122,6 +129,8 @@ func (t *udpTransport) Start(ctx context.Context) error {
 			return errors.Wrap(err, "failed to listen UDP")
 		}
 
+		t.mutex.Lock()
+		defer t.mutex.Unlock()
 		t.address, err = resolver.Resolve(t.fixedPublicAddress, t.conn.LocalAddr().String())
 		if err != nil {
 			return errors.Wrap(err, "failed to resolve public address")
