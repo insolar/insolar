@@ -40,9 +40,7 @@ func NewGetCode(dep *proc.Dependencies, rep chan<- bus.Reply, code insolar.Refer
 }
 
 func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
-	code := s.dep.GetCode(&proc.GetCode{
-		ReplyTo: s.replyTo,
-		Code:    s.code,
-	})
+	code := proc.NewGetCode(s.code, s.replyTo)
+	s.dep.GetCode(code)
 	return code.Proceed(ctx)
 }

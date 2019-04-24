@@ -19,6 +19,7 @@ package handle
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
@@ -36,39 +37,32 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 	msg := s.Message.Parcel.Message().(*message.GetObject)
 	ctx, _ = inslogger.WithField(ctx, "object", msg.Head.Record().DebugString())
 
-	jet := &WaitJet{
-		dep:     s.dep,
-		Message: s.Message,
+	// Workaround to fetch object states.
+	var pn insolar.PulseNumber
+	if s.Message.Parcel.DelegationToken() == nil {
+		pn = flow.Pulse(ctx)
+	} else {
+		pn = msg.State.Pulse()
 	}
-	if err := f.Handle(ctx, jet.Present); err != nil {
-		if err == flow.ErrCancelled {
-			f.Continue(ctx)
-		} else {
-			return err
-		}
-	}
-
-	idx := s.dep.GetIndex(&proc.GetIndex{
-		Object:   msg.Head,
-		Jet:      jet.Res.Jet,
-		ParcelPN: s.Message.Parcel.Pulse(),
-	})
-	if err := f.Procedure(ctx, idx); err != nil {
-		if err == flow.ErrCancelled {
-			f.Continue(ctx)
-		} else {
-			return err
-		}
-		return f.Procedure(ctx, &proc.ReturnReply{
-			ReplyTo: s.Message.ReplyTo,
-			Err:     err,
-		})
+	jet := proc.NewFetchJet(*msg.Head.Record(), pn, s.Message.ReplyTo)
+	s.dep.FetchJet(jet)
+	if err := jet.Proceed(ctx); err != nil {
+		return err
 	}
 
-	p := s.dep.SendObject(&proc.SendObject{
-		Jet:     jet.Res.Jet,
-		Index:   idx.Result.Index,
-		Message: s.Message,
-	})
-	return f.Procedure(ctx, p)
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.Message.ReplyTo)
+	s.dep.WaitHot(hot)
+	if err := jet.Proceed(ctx); err != nil {
+		return err
+	}
+
+	idx := proc.NewGetIndex(msg.Head, jet.Result.Jet, s.Message.ReplyTo)
+	s.dep.GetIndex(idx)
+	if err := idx.Proceed(ctx); err != nil {
+		return err
+	}
+
+	send := proc.NewSendObject(s.Message, jet.Result.Jet, idx.Result.Index)
+	s.dep.SendObject(send)
+	return send.Proceed(ctx)
 }
