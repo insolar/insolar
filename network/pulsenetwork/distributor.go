@@ -122,12 +122,17 @@ func (d *distributor) Init(ctx context.Context) error {
 	}
 	d.pool = pool.NewConnectionPool(d.transport)
 
-	// todo: do this after transport start
-	d.publicAddress = d.transport.Address()
 	return nil
 }
 
 func (d *distributor) Start(ctx context.Context) error {
+
+	err := d.transport.Start(ctx)
+	if err != nil {
+		return err
+	}
+	d.publicAddress = d.transport.Address()
+
 	pulsarHost, err := host.NewHost(d.publicAddress)
 	if err != nil {
 		return errors.Wrap(err, "[ NewDistributor ] failed to create pulsar host")
@@ -165,12 +170,11 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 		return
 	}
 
-	// TODO: make correct pause-resume
-	// if err := d.resume(ctx); err != nil {
-	// 	logger.Error("[ Distribute ] resume distribution error: " + err.Error())
-	// 	return
-	// }
-	// defer d.pause(ctx)
+	if err := d.resume(ctx); err != nil {
+		logger.Error("[ Distribute ] resume distribution error: " + err.Error())
+		return
+	}
+	defer d.pause(ctx)
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(bootstrapHosts))
@@ -222,11 +226,6 @@ func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 		logger.Error(err)
 		return errors.Wrap(err, "[ pingHost ] failed to get ping result")
 	}
-
-	// if result.Error != nil {
-	// 	logger.Error(result.Error)
-	// 	return errors.Wrap(err, "[ pingHost ] ping result returned error")
-	// }
 
 	host.NodeID = result.GetSender()
 	logger.Debugf("ping request is done")
