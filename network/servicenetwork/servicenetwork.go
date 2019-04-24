@@ -202,6 +202,8 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		n.gateway = gateway.NewNoNetwork(n, n.GIL, n.NodeKeeper, n.ContractRequester,
 			n.CryptographyService, n.MessageBus, n.CertificateManager)
 		n.gateway.Run(ctx)
+		inslogger.FromContext(ctx).Debug("Launch network gateway")
+
 	}
 
 	return nil
