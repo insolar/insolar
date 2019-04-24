@@ -68,6 +68,7 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -459,4 +460,39 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler)
 
 	node.serviceNetwork = serviceNetwork
+}
+
+func (s *testSuite) SetCommunicationPolicy(policy CommunicationPolicy) {
+	if policy == FullTimeout {
+		s.fixture().pulsar.Pause()
+		defer s.fixture().pulsar.Continue()
+
+		wrapper := s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager.(*phaseManagerWrapper)
+		wrapper.original = &FullTimeoutPhaseManager{}
+		s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager = wrapper
+		return
+	}
+
+	nodes := s.fixture().bootstrapNodes
+	ref := nodes[0].id // TODO: should we declare argument to select this node?
+
+	timedOutNodesCount := 0
+	switch policy {
+	case PartialNegative1Phase, PartialNegative2Phase, PartialNegative3Phase, PartialNegative23Phase:
+		timedOutNodesCount = int(float64(len(nodes)) * 0.6)
+	case PartialPositive1Phase, PartialPositive2Phase, PartialPositive3Phase, PartialPositive23Phase:
+		timedOutNodesCount = int(float64(len(nodes)) * 0.2)
+	}
+
+	s.fixture().pulsar.Pause()
+	defer s.fixture().pulsar.Continue()
+
+	for i := 1; i <= timedOutNodesCount; i++ {
+		comm := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.(*phases.FirstPhaseImpl).Communicator
+		wrapper := &CommunicatorMock{communicator: comm, ignoreFrom: ref, policy: policy}
+		phasemanager := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases)
+		phasemanager.FirstPhase.(*phases.FirstPhaseImpl).Communicator = wrapper
+		phasemanager.SecondPhase.(*phases.SecondPhaseImpl).Communicator = wrapper
+		phasemanager.ThirdPhase.(*phases.ThirdPhaseImpl).Communicator = wrapper
+	}
 }
