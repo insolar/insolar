@@ -198,9 +198,11 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
 
-	n.gateway = gateway.NewNoNetwork(n, n.GIL, n.NodeKeeper, n.ContractRequester,
-		n.CryptographyService, n.MessageBus, n.CertificateManager)
-	n.gateway.Run(ctx)
+	if n.Gateway() == nil {
+		n.gateway = gateway.NewNoNetwork(n, n.GIL, n.NodeKeeper, n.ContractRequester,
+			n.CryptographyService, n.MessageBus, n.CertificateManager)
+		n.gateway.Run(ctx)
+	}
 
 	return nil
 }

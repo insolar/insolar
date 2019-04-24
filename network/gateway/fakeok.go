@@ -54,6 +54,9 @@ package gateway
 
 import (
 	"context"
+	"runtime"
+
+	"github.com/insolar/insolar/log"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
@@ -64,7 +67,9 @@ type FakeOk struct {
 }
 
 func NewFakeOk() network.Gateway {
-	return &FakeOk{}
+	g := &FakeOk{}
+	g.Base.Me = g
+	return g
 }
 
 func (g *FakeOk) OnPulse(context.Context, insolar.Pulse) error {
@@ -75,6 +80,8 @@ func (g *FakeOk) Run(context.Context) {
 }
 
 func (g *FakeOk) GetState() insolar.NetworkState {
+	_, f, l, _ := runtime.Caller(1)
+	log.Warnf("XXX>> %s:%d", f, l)
 	return insolar.CompleteNetworkState
 }
 

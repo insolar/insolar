@@ -64,6 +64,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/network/gateway"
+
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -424,6 +426,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
 	serviceNetwork, err := NewServiceNetwork(cfg, node.componentManager, false)
 	s.Require().NoError(err)
+
+	serviceNetwork.SetGateway(gateway.NewFakeOk())
+	serviceNetwork.Gateway().Run(context.Background())
 
 	amMock := staterMock{
 		stateFunc: func() ([]byte, error) {
