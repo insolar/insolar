@@ -56,6 +56,7 @@ func TestLog_ZerologCaller(t *testing.T) {
 	lf := logFields(t, b.Bytes())
 	assert.Regexp(t, "^log/caller_test.go:", lf.Caller, "log contains call place")
 	assert.NotContains(t, "github.com/insolar/insolar", lf.Caller, "log not contains package name")
+	assert.Equal(t, "", lf.Func, "log not contains func name")
 }
 
 // this test result depends on test name!
@@ -74,9 +75,9 @@ func TestLog_ZerologCallerWithFunc(t *testing.T) {
 	l.Info("test")
 
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, "^log/caller_test.go:", lf.Caller, "log contains call place")
+	assert.Regexp(t, "^log/caller_test.go:", lf.Caller, "log contains proper caller place")
 	assert.NotContains(t, "github.com/insolar/insolar", lf.Caller, "log not contains package name")
-	assert.Equal(t, "TestLog_ZerologCallerWithFunc", lf.Func, "log contains call place")
+	assert.Equal(t, "TestLog_ZerologCallerWithFunc", lf.Func, "log contains func name")
 }
 
 func TestLog_GlobalCaller(t *testing.T) {
@@ -90,7 +91,8 @@ func TestLog_GlobalCaller(t *testing.T) {
 	Info("test")
 
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, "^log/caller_test.go:", lf.Caller, "log contains call place")
+	assert.Regexp(t, "^log/caller_test.go:", lf.Caller, "log contains proper call place")
+	assert.Equal(t, "TestLog_GlobalCaller", lf.Func, "log contains func name")
 }
 
 // this test result depends on test name!
