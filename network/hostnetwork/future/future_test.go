@@ -176,9 +176,9 @@ func TestFuture_GetResult2(t *testing.T) {
 	}
 	go func() {
 		time.Sleep(time.Millisecond)
-		close(c)
+		f.Cancel()
 	}()
-	_, err := f.GetResult(10 * time.Millisecond)
+	_, err := f.GetResult(1000 * time.Millisecond)
 	require.Error(t, err)
 }
 
