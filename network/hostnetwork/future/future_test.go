@@ -52,7 +52,6 @@ package future
 
 import (
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -149,9 +148,9 @@ func TestFuture_Cancel(t *testing.T) {
 func TestFuture_GetResult(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 	m := &packet.Packet{}
-	var cancelled uint32 = 0
+	canceled := make(chan bool)
 	cancelCallback := func(f Future) {
-		atomic.StoreUint32(&cancelled, 1)
+		canceled <- true
 	}
 	f := NewFuture(network.RequestID(1), n, m, cancelCallback)
 	go func() {
@@ -161,7 +160,13 @@ func TestFuture_GetResult(t *testing.T) {
 
 	_, err := f.GetResult(10 * time.Millisecond)
 	require.Error(t, err)
-	require.Equal(t, uint32(1), atomic.LoadUint32(&cancelled))
+
+	// Please note that cancelCallback is called asynchronously thus
+	// it's not guaranteed that &canceled is changed when f.GetResult returns.
+	// For this reason in this test we have to use a channel, not
+	// an atomic variable or something else.
+	tmp := <-canceled
+	require.Equal(t, true, tmp)
 }
 
 func TestFuture_GetResult2(t *testing.T) {
