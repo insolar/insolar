@@ -51,5 +51,5 @@ func (*GenesisRequest) Type() insolar.MessageType {
 
 // GetCaller implementation for genesis request.
 func (*GenesisRequest) GetCaller() *insolar.Reference {
-	return nil
+	panic("never use GenesisRequest as message for messageBus, see comment on type declaration")
 }
