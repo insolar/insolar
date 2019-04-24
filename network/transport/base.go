@@ -90,7 +90,7 @@ type baseTransport struct {
 	mutex *sync.RWMutex
 
 	publicAddress string
-	sendFunc      func(recvAddress string, data []byte) error
+	sendFunc      func(ctx context.Context, recvAddress string, data []byte) error
 }
 
 func newBaseTransport(publicAddress string) baseTransport {
@@ -162,5 +162,5 @@ func (t *baseTransport) SendPacket(ctx context.Context, p *packet.Packet) error 
 	}
 
 	inslogger.FromContext(ctx).Debugf("Send %s packet to %s with RequestID = %d", p.Type, recvAddress, p.RequestID)
-	return t.sendFunc(recvAddress, data)
+	return t.sendFunc(ctx, recvAddress, data)
 }

@@ -95,8 +95,7 @@ func newTCPTransport(listenAddress, fixedPublicAddress string) (*tcpTransport, s
 	return transport, publicAddress, nil
 }
 
-func (t *tcpTransport) send(address string, data []byte) error {
-	ctx := context.Background()
+func (t *tcpTransport) send(ctx context.Context, address string, data []byte) error {
 	logger := inslogger.FromContext(ctx)
 
 	addr, err := net.ResolveTCPAddr("tcp", address)
@@ -110,10 +109,10 @@ func (t *tcpTransport) send(address string, data []byte) error {
 	}
 
 	logger.Debug("[ send ] len = ", len(data))
-
 	n, err := conn.Write(data)
 
 	if err != nil {
+		logger.Debug("[ send ] Reopening connection")
 		t.pool.CloseConnection(ctx, addr)
 		conn, err = t.pool.GetConnection(ctx, addr)
 		if err != nil {
@@ -124,6 +123,7 @@ func (t *tcpTransport) send(address string, data []byte) error {
 
 	if err == nil {
 		metrics.NetworkSentSize.Add(float64(n))
+		logger.Debugf("[ send ] Successfully sent %d bytes", n)
 		return nil
 	}
 	return errors.Wrap(err, "[ send ] Failed to write data")
@@ -202,18 +202,21 @@ func (t *tcpTransport) Stop() {
 func (t *tcpTransport) handleAcceptedConnection(conn net.Conn) {
 	defer utils.CloseVerbose(conn)
 
+	ctx := context.Background()
+	logger := inslogger.FromContext(ctx).WithField("clientIP", conn.RemoteAddr())
+
 	for {
 		msg, err := t.serializer.DeserializePacket(conn)
 
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
-				log.Warn("[ handleAcceptedConnection ] Connection closed by peer")
+				logger.Warn("[ handleAcceptedConnection ] Connection closed by peer")
 				return
 			}
 
-			log.Error("[ handleAcceptedConnection ] Failed to deserialize packet: ", err.Error())
+			logger.Error("[ handleAcceptedConnection ] Failed to deserialize packet: ", err.Error())
 		} else {
-			ctx, logger := inslogger.WithTraceField(context.Background(), msg.TraceID)
+			ctx, logger := inslogger.WithTraceField(ctx, msg.TraceID)
 			logger.Debug("[ handleAcceptedConnection ] Handling packet: ", msg.RequestID)
 
 			go t.packetHandler.Handle(ctx, msg)
