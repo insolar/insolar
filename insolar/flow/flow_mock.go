@@ -34,7 +34,7 @@ type FlowMock struct {
 	MigratePreCounter uint64
 	MigrateMock       mFlowMockMigrate
 
-	ProcedureFunc       func(p context.Context, p1 Procedure) (r error)
+	ProcedureFunc       func(p context.Context, p1 Procedure, p2 bool) (r error)
 	ProcedureCounter    uint64
 	ProcedurePreCounter uint64
 	ProcedureMock       mFlowMockProcedure
@@ -489,6 +489,7 @@ type FlowMockProcedureExpectation struct {
 type FlowMockProcedureInput struct {
 	p  context.Context
 	p1 Procedure
+	p2 bool
 }
 
 type FlowMockProcedureResult struct {
@@ -496,14 +497,14 @@ type FlowMockProcedureResult struct {
 }
 
 //Expect specifies that invocation of Flow.Procedure is expected from 1 to Infinity times
-func (m *mFlowMockProcedure) Expect(p context.Context, p1 Procedure) *mFlowMockProcedure {
+func (m *mFlowMockProcedure) Expect(p context.Context, p1 Procedure, p2 bool) *mFlowMockProcedure {
 	m.mock.ProcedureFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &FlowMockProcedureExpectation{}
 	}
-	m.mainExpectation.input = &FlowMockProcedureInput{p, p1}
+	m.mainExpectation.input = &FlowMockProcedureInput{p, p1, p2}
 	return m
 }
 
@@ -520,12 +521,12 @@ func (m *mFlowMockProcedure) Return(r error) *FlowMock {
 }
 
 //ExpectOnce specifies that invocation of Flow.Procedure is expected once
-func (m *mFlowMockProcedure) ExpectOnce(p context.Context, p1 Procedure) *FlowMockProcedureExpectation {
+func (m *mFlowMockProcedure) ExpectOnce(p context.Context, p1 Procedure, p2 bool) *FlowMockProcedureExpectation {
 	m.mock.ProcedureFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &FlowMockProcedureExpectation{}
-	expectation.input = &FlowMockProcedureInput{p, p1}
+	expectation.input = &FlowMockProcedureInput{p, p1, p2}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -535,7 +536,7 @@ func (e *FlowMockProcedureExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of Flow.Procedure method
-func (m *mFlowMockProcedure) Set(f func(p context.Context, p1 Procedure) (r error)) *FlowMock {
+func (m *mFlowMockProcedure) Set(f func(p context.Context, p1 Procedure, p2 bool) (r error)) *FlowMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -544,18 +545,18 @@ func (m *mFlowMockProcedure) Set(f func(p context.Context, p1 Procedure) (r erro
 }
 
 //Procedure implements github.com/insolar/insolar/insolar/flow.Flow interface
-func (m *FlowMock) Procedure(p context.Context, p1 Procedure) (r error) {
+func (m *FlowMock) Procedure(p context.Context, p1 Procedure, p2 bool) (r error) {
 	counter := atomic.AddUint64(&m.ProcedurePreCounter, 1)
 	defer atomic.AddUint64(&m.ProcedureCounter, 1)
 
 	if len(m.ProcedureMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.ProcedureMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to FlowMock.Procedure. %v %v", p, p1)
+			m.t.Fatalf("Unexpected call to FlowMock.Procedure. %v %v %v", p, p1, p2)
 			return
 		}
 
 		input := m.ProcedureMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, FlowMockProcedureInput{p, p1}, "Flow.Procedure got unexpected parameters")
+		testify_assert.Equal(m.t, *input, FlowMockProcedureInput{p, p1, p2}, "Flow.Procedure got unexpected parameters")
 
 		result := m.ProcedureMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -572,7 +573,7 @@ func (m *FlowMock) Procedure(p context.Context, p1 Procedure) (r error) {
 
 		input := m.ProcedureMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, FlowMockProcedureInput{p, p1}, "Flow.Procedure got unexpected parameters")
+			testify_assert.Equal(m.t, *input, FlowMockProcedureInput{p, p1, p2}, "Flow.Procedure got unexpected parameters")
 		}
 
 		result := m.ProcedureMock.mainExpectation.result
@@ -586,11 +587,11 @@ func (m *FlowMock) Procedure(p context.Context, p1 Procedure) (r error) {
 	}
 
 	if m.ProcedureFunc == nil {
-		m.t.Fatalf("Unexpected call to FlowMock.Procedure. %v %v", p, p1)
+		m.t.Fatalf("Unexpected call to FlowMock.Procedure. %v %v %v", p, p1, p2)
 		return
 	}
 
-	return m.ProcedureFunc(p, p1)
+	return m.ProcedureFunc(p, p1, p2)
 }
 
 //ProcedureMinimockCounter returns a count of FlowMock.ProcedureFunc invocations

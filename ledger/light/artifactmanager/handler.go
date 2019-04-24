@@ -98,48 +98,42 @@ func NewMessageHandler(
 	}
 
 	dep := &proc.Dependencies{
-		FetchJet: func(p *proc.FetchJet) *proc.FetchJet {
+		FetchJet: func(p *proc.FetchJet) {
 			p.Dep.JetAccessor = h.JetStorage
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.JetUpdater = h.jetTreeUpdater
-			return p
+			p.Dep.CheckJet = proc.NewCheckJet(h.jetTreeUpdater, h.JetCoordinator)
 		},
-		WaitHot: func(p *proc.WaitHot) *proc.WaitHot {
+		WaitHot: func(p *proc.WaitHot) {
 			p.Dep.Waiter = h.HotDataWaiter
-			return p
 		},
-		GetIndex: func(p *proc.GetIndex) *proc.GetIndex {
+		GetIndex: func(p *proc.GetIndex) {
 			p.Dep.IndexState = h.IndexStateModifier
 			p.Dep.Locker = h.IDLocker
 			p.Dep.Storage = h.IndexStorage
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
-			return p
 		},
-		SendObject: func(p *proc.SendObject) *proc.SendObject {
+		SendObject: func(p *proc.SendObject) {
 			p.Dep.Jets = h.JetStorage
 			p.Dep.Blobs = h.Blobs
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.JetUpdater = h.jetTreeUpdater
 			p.Dep.Bus = h.Bus
 			p.Dep.RecordAccessor = h.RecordAccessor
-			return p
 		},
-		GetCode: func(p *proc.GetCode) *proc.GetCode {
+		GetCode: func(p *proc.GetCode) {
 			p.Dep.Bus = h.Bus
-			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.Accessor = h.BlobAccessor
-			p.Dep.BlobModifier = h.BlobModifier
-			return p
+			p.Dep.CheckJet = proc.NewCheckJet(h.jetTreeUpdater, h.JetCoordinator)
+			p.Dep.BlobAccessor = h.BlobAccessor
 		},
 	}
 
 	h.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
 		return (&handle.Init{
-			Dep: dep,
-
+			Dep:     dep,
 			Message: msg,
 		}).Present
 	})

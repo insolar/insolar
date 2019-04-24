@@ -37,6 +37,7 @@ import (
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/defaults"
 	"github.com/insolar/insolar/logicrunner/goplugin/goplugintestutils"
 	"github.com/pkg/errors"
 )
@@ -56,9 +57,19 @@ var stdout io.ReadCloser
 var stderr io.ReadCloser
 
 var (
-	insolarRootMemberKeysPath = filepath.Join("..", baseDir(), "configs", insolarRootMemberKeys)
-	insolarGenesisConfigPath  = filepath.Join("..", baseDir(), "genesis.yaml")
+	insolarRootMemberKeysPath = launchnetPath("configs", insolarRootMemberKeys)
+	insolarGenesisConfigPath  = launchnetPath("genesis.yaml")
 )
+
+func launchnetPath(a ...string) string {
+	d := defaults.LaunchnetDir()
+	parts := []string{"..", d}
+	if strings.HasPrefix(d, "/") {
+		parts = []string{d}
+	}
+	parts = append(parts, a...)
+	return filepath.Join(parts...)
+}
 
 var info *requester.InfoResponse
 var root user
@@ -103,12 +114,6 @@ func envVarWithDefault(name string, defaultValue string) string {
 		return value
 	}
 	return defaultValue
-}
-
-func baseDir() string {
-	artifactsDir := envVarWithDefault("INSOLAR_ARTIFACTS_DIR", ".artifacts")
-	launchnedArtifactsDir := filepath.Join(artifactsDir, "launchnet")
-	return envVarWithDefault("LAUNCHNET_BASE_DIR", launchnedArtifactsDir)
 }
 
 func loadRootKeys() error {
