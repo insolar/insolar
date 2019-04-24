@@ -69,6 +69,7 @@ type Phase3Packet struct {
 
 func (p3p *Phase3Packet) Clone() ConsensusPacket {
 	clone := *p3p
+	clone.bitset = p3p.bitset.Clone()
 	return &clone
 }
 

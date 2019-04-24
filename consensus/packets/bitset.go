@@ -106,6 +106,8 @@ type BitSet interface {
 	GetTristateArray() ([]BitSetState, error)
 	// ApplyChanges returns copy of the current bitset with changes applied
 	ApplyChanges(changes []BitSetCell, mapper BitSetMapper) error
+	// Clone makes deep copy of bitset
+	Clone() BitSet
 }
 
 // NewBitSet creates bitset from a set of buckets and the mapper. Size == cells count.

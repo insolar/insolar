@@ -75,6 +75,11 @@ type Phase2Packet struct {
 
 func (p2p *Phase2Packet) Clone() ConsensusPacket {
 	clone := *p2p
+	clone.bitSet = p2p.bitSet.Clone()
+	clone.votesAndAnswers = make([]ReferendumVote, 0)
+	for _, vote := range p2p.votesAndAnswers {
+		clone.AddVote(vote.Clone())
+	}
 	return &clone
 }
 
