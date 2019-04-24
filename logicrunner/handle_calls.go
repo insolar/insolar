@@ -71,7 +71,7 @@ func (h *HandleCall) executeActual(
 		Dep:  struct{ lr *LogicRunner }{lr: lr},
 	}
 
-	if err := f.Procedure(ctx, &procCheckRole); err != nil {
+	if err := f.Procedure(ctx, &procCheckRole, true); err != nil {
 		es.Unlock()
 		// TODO: check if error is ErrCancelled
 		return nil, errors.Wrap(err, "[ executeActual ] can't play role")
@@ -106,7 +106,7 @@ func (h *HandleCall) executeActual(
 		},
 	}
 
-	if err := f.Procedure(ctx, &procClarifyPendingState); err != nil {
+	if err := f.Procedure(ctx, &procClarifyPendingState, true); err != nil {
 		if err == flow.ErrCancelled {
 			// TODO: it's done to support current logic. Do it correctly when go to flow
 			f.Continue(ctx)

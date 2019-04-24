@@ -43,12 +43,16 @@ func NewThread(msg bus.Message, controller *Controller) *Thread {
 }
 
 func (f *Thread) Handle(ctx context.Context, handle flow.Handle) error {
-	if f.cancelled() {
-		return flow.ErrCancelled
+	return handle(ctx, f)
+}
+
+func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool) error {
+	if proc == nil {
+		panic("procedure called with nil procedure")
 	}
 
-	err := handle(ctx, f)
-	if err != nil {
+	if !cancel {
+		err := <-f.procedure(ctx, proc)
 		return err
 	}
 
@@ -56,26 +60,14 @@ func (f *Thread) Handle(ctx context.Context, handle flow.Handle) error {
 		return flow.ErrCancelled
 	}
 
-	return nil
-}
-
-func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure) error {
-	if f.cancelled() {
-		return flow.ErrCancelled
-	}
-
-	if proc == nil {
-		return errors.New("procedure called with nil procedure")
-	}
-
-	ctx, cancel := context.WithCancel(ctx)
+	ctx, cl := context.WithCancel(ctx)
 	var err error
 	select {
 	case <-f.cancel:
-		cancel()
+		cl()
 		return flow.ErrCancelled
 	case err = <-f.procedure(ctx, proc):
-		cancel()
+		cl()
 	}
 
 	return err
