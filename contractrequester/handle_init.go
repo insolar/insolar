@@ -14,35 +14,38 @@
 // limitations under the License.
 //
 
-package handle
+package contractrequester
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/ledger/light/proc"
 )
 
-type GetCode struct {
-	dep     *proc.Dependencies
-	code    insolar.Reference
-	replyTo chan<- bus.Reply
+type Dependencies struct {
+	Publisher message.Publisher
+	cr        *ContractRequester
 }
 
-func NewGetCode(dep *proc.Dependencies, rep chan<- bus.Reply, code insolar.Reference) *GetCode {
-	return &GetCode{
-		dep:     dep,
-		code:    code,
-		replyTo: rep,
+type Init struct {
+	dep *Dependencies
+
+	Message bus.Message
+}
+
+func (s *Init) Present(ctx context.Context, f flow.Flow) error {
+	switch s.Message.Parcel.Message().Type() {
+	case insolar.TypeReturnResults:
+		h := &HandleReturnResults{
+			dep:     s.dep,
+			Message: s.Message,
+		}
+		return f.Handle(ctx, h.Present)
+	default:
+		return fmt.Errorf("[ Init.Present ] no handler for message type %s", s.Message.Parcel.Message().Type().String())
 	}
-}
-
-func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
-	code := s.dep.GetCode(&proc.GetCode{
-		ReplyTo: s.replyTo,
-		Code:    s.code,
-	})
-	return code.Proceed(ctx)
 }

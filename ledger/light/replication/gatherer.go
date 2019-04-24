@@ -74,7 +74,7 @@ func (d *LightDataGatherer) ForPulseAndJet(
 	bls := d.blobsAccessor.ForPulse(ctx, jetID, pn)
 	records := d.recsAccessor.ForPulse(ctx, jetID, pn)
 
-	indexes := d.indexesAccessor.ForPulseAndJet(ctx, pn, jetID)
+	indexes := d.indexesAccessor.ForJet(ctx, jetID)
 
 	return &message.HeavyPayload{
 		JetID:    jetID,
@@ -86,10 +86,10 @@ func (d *LightDataGatherer) ForPulseAndJet(
 	}, nil
 }
 
-func convertIndexes(indexes map[insolar.ID]object.Lifeline) map[insolar.ID][]byte {
+func convertIndexes(indexes map[insolar.ID]object.LifelineMeta) map[insolar.ID][]byte {
 	resIdx := map[insolar.ID][]byte{}
 	for id, idx := range indexes {
-		resIdx[id] = object.EncodeIndex(idx)
+		resIdx[id] = object.EncodeIndex(idx.Index)
 	}
 	return resIdx
 }
