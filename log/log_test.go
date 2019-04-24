@@ -33,8 +33,9 @@ import (
 func capture(f func()) string {
 	var buf bytes.Buffer
 	SetOutput(&buf)
+	defer SetOutput(os.Stderr)
+
 	f()
-	SetOutput(os.Stderr)
 	return buf.String()
 }
 
@@ -58,8 +59,8 @@ func TestLog_GlobalLogger(t *testing.T) {
 	assertHelloWorld(t, capture(func() { Error("HelloWorld") }))
 	assertHelloWorld(t, capture(func() { Errorf("%s", "HelloWorld") }))
 
-	assert.Panics(t, func() { Panic("HelloWorld") })
-	assert.Panics(t, func() { Panicf("%s", "HelloWorld") })
+	assert.Panics(t, func() { capture(func() { Panic("HelloWorld") }) })
+	assert.Panics(t, func() { capture(func() { Panicf("%s", "HelloWorld") }) })
 
 	// can't catch os.exit() to test Fatal
 	// Fatal("HelloWorld")
@@ -95,6 +96,7 @@ func TestLog_NewLog_Config(t *testing.T) {
 }
 
 func TestLog_GlobalLogger_Level(t *testing.T) {
+	defer SetLevel("info")
 	assert.NoError(t, SetLevel("error"))
 	assert.Error(t, SetLevel("errorrr"))
 }
