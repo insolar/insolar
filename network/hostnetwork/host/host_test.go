@@ -65,6 +65,49 @@ func TestNewHost(t *testing.T) {
 	require.Equal(t, expectedHost, actualHost)
 }
 
+func TestNewHost_Error(t *testing.T) {
+	_, err := NewHost("invalid_addr")
+
+	require.Error(t, err)
+}
+
+func TestNewHostN(t *testing.T) {
+	ref := testutils.RandomRef()
+
+	actualHost, _ := NewHostN("127.0.0.1:31337", ref)
+	expectedHost, _ := NewHostN("127.0.0.1:31337", ref)
+
+	require.True(t, actualHost.NodeID.Equal(ref))
+	require.True(t, expectedHost.NodeID.Equal(ref))
+
+	require.Equal(t, expectedHost, actualHost)
+}
+
+func TestNewHostN_Error(t *testing.T) {
+	_, err := NewHostN("invalid_addr", testutils.RandomRef())
+
+	require.Error(t, err)
+}
+
+func TestNewHostNS(t *testing.T) {
+	ref := testutils.RandomRef()
+	shortID := insolar.ShortNodeID(123)
+
+	actualHost, _ := NewHostNS("127.0.0.1:31337", ref, shortID)
+	expectedHost, _ := NewHostNS("127.0.0.1:31337", ref, shortID)
+
+	require.Equal(t, actualHost.ShortID, shortID)
+	require.Equal(t, expectedHost.ShortID, shortID)
+
+	require.Equal(t, expectedHost, actualHost)
+}
+
+func TestNewHostNS_Error(t *testing.T) {
+	_, err := NewHostNS("invalid_addr", testutils.RandomRef(), insolar.ShortNodeID(123))
+
+	require.Error(t, err)
+}
+
 func TestHost_String(t *testing.T) {
 	nd, _ := NewHost("127.0.0.1:31337")
 	nd.NodeID = testutils.RandomRef()
