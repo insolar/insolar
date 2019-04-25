@@ -3,20 +3,20 @@ package object
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "ExtendedIndexModifier" can be found in github.com/insolar/insolar/ledger/object
+The original interface "ExtendedLifelineModifier" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//ExtendedIndexModifierMock implements github.com/insolar/insolar/ledger/object.ExtendedIndexModifier
+// ExtendedIndexModifierMock implements github.com/insolar/insolar/ledger/object.ExtendedLifelineModifier
 type ExtendedIndexModifierMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type ExtendedIndexModifierMock struct {
 	SetWithMetaMock       mExtendedIndexModifierMockSetWithMeta
 }
 
-//NewExtendedIndexModifierMock returns a mock for github.com/insolar/insolar/ledger/object.ExtendedIndexModifier
+// NewExtendedIndexModifierMock returns a mock for github.com/insolar/insolar/ledger/object.ExtendedLifelineModifier
 func NewExtendedIndexModifierMock(t minimock.Tester) *ExtendedIndexModifierMock {
 	m := &ExtendedIndexModifierMock{t: t}
 
@@ -61,7 +61,7 @@ type ExtendedIndexModifierMockSetUsageForPulseInput struct {
 	p2 insolar.PulseNumber
 }
 
-//Expect specifies that invocation of ExtendedIndexModifier.SetUsageForPulse is expected from 1 to Infinity times
+// Expect specifies that invocation of ExtendedLifelineModifier.SetUsageForPulse is expected from 1 to Infinity times
 func (m *mExtendedIndexModifierMockSetUsageForPulse) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *mExtendedIndexModifierMockSetUsageForPulse {
 	m.mock.SetUsageForPulseFunc = nil
 	m.expectationSeries = nil
@@ -73,7 +73,7 @@ func (m *mExtendedIndexModifierMockSetUsageForPulse) Expect(p context.Context, p
 	return m
 }
 
-//Return specifies results of invocation of ExtendedIndexModifier.SetUsageForPulse
+// Return specifies results of invocation of ExtendedLifelineModifier.SetUsageForPulse
 func (m *mExtendedIndexModifierMockSetUsageForPulse) Return() *ExtendedIndexModifierMock {
 	m.mock.SetUsageForPulseFunc = nil
 	m.expectationSeries = nil
@@ -85,7 +85,7 @@ func (m *mExtendedIndexModifierMockSetUsageForPulse) Return() *ExtendedIndexModi
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of ExtendedIndexModifier.SetUsageForPulse is expected once
+// ExpectOnce specifies that invocation of ExtendedLifelineModifier.SetUsageForPulse is expected once
 func (m *mExtendedIndexModifierMockSetUsageForPulse) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) *ExtendedIndexModifierMockSetUsageForPulseExpectation {
 	m.mock.SetUsageForPulseFunc = nil
 	m.mainExpectation = nil
@@ -96,7 +96,7 @@ func (m *mExtendedIndexModifierMockSetUsageForPulse) ExpectOnce(p context.Contex
 	return expectation
 }
 
-//Set uses given function f as a mock of ExtendedIndexModifier.SetUsageForPulse method
+// Set uses given function f as a mock of ExtendedLifelineModifier.SetUsageForPulse method
 func (m *mExtendedIndexModifierMockSetUsageForPulse) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber)) *ExtendedIndexModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -105,7 +105,7 @@ func (m *mExtendedIndexModifierMockSetUsageForPulse) Set(f func(p context.Contex
 	return m.mock
 }
 
-//SetUsageForPulse implements github.com/insolar/insolar/ledger/object.ExtendedIndexModifier interface
+// SetUsageForPulse implements github.com/insolar/insolar/ledger/object.ExtendedLifelineModifier interface
 func (m *ExtendedIndexModifierMock) SetUsageForPulse(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.SetUsageForPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.SetUsageForPulseCounter, 1)
@@ -117,7 +117,7 @@ func (m *ExtendedIndexModifierMock) SetUsageForPulse(p context.Context, p1 insol
 		}
 
 		input := m.SetUsageForPulseMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ExtendedIndexModifierMockSetUsageForPulseInput{p, p1, p2}, "ExtendedIndexModifier.SetUsageForPulse got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ExtendedIndexModifierMockSetUsageForPulseInput{p, p1, p2}, "ExtendedLifelineModifier.SetUsageForPulse got unexpected parameters")
 
 		return
 	}
@@ -126,7 +126,7 @@ func (m *ExtendedIndexModifierMock) SetUsageForPulse(p context.Context, p1 insol
 
 		input := m.SetUsageForPulseMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ExtendedIndexModifierMockSetUsageForPulseInput{p, p1, p2}, "ExtendedIndexModifier.SetUsageForPulse got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ExtendedIndexModifierMockSetUsageForPulseInput{p, p1, p2}, "ExtendedLifelineModifier.SetUsageForPulse got unexpected parameters")
 		}
 
 		return
@@ -192,7 +192,7 @@ type ExtendedIndexModifierMockSetWithMetaResult struct {
 	r error
 }
 
-//Expect specifies that invocation of ExtendedIndexModifier.SetWithMeta is expected from 1 to Infinity times
+// Expect specifies that invocation of ExtendedLifelineModifier.SetWithMeta is expected from 1 to Infinity times
 func (m *mExtendedIndexModifierMockSetWithMeta) Expect(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 Lifeline) *mExtendedIndexModifierMockSetWithMeta {
 	m.mock.SetWithMetaFunc = nil
 	m.expectationSeries = nil
@@ -204,7 +204,7 @@ func (m *mExtendedIndexModifierMockSetWithMeta) Expect(p context.Context, p1 ins
 	return m
 }
 
-//Return specifies results of invocation of ExtendedIndexModifier.SetWithMeta
+// Return specifies results of invocation of ExtendedLifelineModifier.SetWithMeta
 func (m *mExtendedIndexModifierMockSetWithMeta) Return(r error) *ExtendedIndexModifierMock {
 	m.mock.SetWithMetaFunc = nil
 	m.expectationSeries = nil
@@ -216,7 +216,7 @@ func (m *mExtendedIndexModifierMockSetWithMeta) Return(r error) *ExtendedIndexMo
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of ExtendedIndexModifier.SetWithMeta is expected once
+// ExpectOnce specifies that invocation of ExtendedLifelineModifier.SetWithMeta is expected once
 func (m *mExtendedIndexModifierMockSetWithMeta) ExpectOnce(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 Lifeline) *ExtendedIndexModifierMockSetWithMetaExpectation {
 	m.mock.SetWithMetaFunc = nil
 	m.mainExpectation = nil
@@ -231,7 +231,7 @@ func (e *ExtendedIndexModifierMockSetWithMetaExpectation) Return(r error) {
 	e.result = &ExtendedIndexModifierMockSetWithMetaResult{r}
 }
 
-//Set uses given function f as a mock of ExtendedIndexModifier.SetWithMeta method
+// Set uses given function f as a mock of ExtendedLifelineModifier.SetWithMeta method
 func (m *mExtendedIndexModifierMockSetWithMeta) Set(f func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 Lifeline) (r error)) *ExtendedIndexModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -240,7 +240,7 @@ func (m *mExtendedIndexModifierMockSetWithMeta) Set(f func(p context.Context, p1
 	return m.mock
 }
 
-//SetWithMeta implements github.com/insolar/insolar/ledger/object.ExtendedIndexModifier interface
+// SetWithMeta implements github.com/insolar/insolar/ledger/object.ExtendedLifelineModifier interface
 func (m *ExtendedIndexModifierMock) SetWithMeta(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 Lifeline) (r error) {
 	counter := atomic.AddUint64(&m.SetWithMetaPreCounter, 1)
 	defer atomic.AddUint64(&m.SetWithMetaCounter, 1)
@@ -252,7 +252,7 @@ func (m *ExtendedIndexModifierMock) SetWithMeta(p context.Context, p1 insolar.ID
 		}
 
 		input := m.SetWithMetaMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ExtendedIndexModifierMockSetWithMetaInput{p, p1, p2, p3}, "ExtendedIndexModifier.SetWithMeta got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ExtendedIndexModifierMockSetWithMetaInput{p, p1, p2, p3}, "ExtendedLifelineModifier.SetWithMeta got unexpected parameters")
 
 		result := m.SetWithMetaMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -269,7 +269,7 @@ func (m *ExtendedIndexModifierMock) SetWithMeta(p context.Context, p1 insolar.ID
 
 		input := m.SetWithMetaMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ExtendedIndexModifierMockSetWithMetaInput{p, p1, p2, p3}, "ExtendedIndexModifier.SetWithMeta got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ExtendedIndexModifierMockSetWithMetaInput{p, p1, p2, p3}, "ExtendedLifelineModifier.SetWithMeta got unexpected parameters")
 		}
 
 		result := m.SetWithMetaMock.mainExpectation.result

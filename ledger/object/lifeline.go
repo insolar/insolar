@@ -51,11 +51,11 @@ type LifelineModifier interface {
 	Set(ctx context.Context, id insolar.ID, index Lifeline) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.ExtendedIndexModifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.ExtendedLifelineModifier -o ./ -s _mock.go
 
-// ExtendedIndexModifier provides methods for setting Index-values to storage.
+// ExtendedLifelineModifier provides methods for setting Index-values to storage.
 // The main difference with LifelineModifier is an opportunity to modify a state of an internal pulse-index
-type ExtendedIndexModifier interface {
+type ExtendedLifelineModifier interface {
 	// SetWithMeta saves index to the storage and sets its index and pulse number in internal indexes
 	SetWithMeta(ctx context.Context, id insolar.ID, pn insolar.PulseNumber, index Lifeline) error
 	// SetUsageForPulse updates an internal state of an internal pulse-index

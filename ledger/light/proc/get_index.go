@@ -41,7 +41,7 @@ type GetIndex struct {
 	}
 
 	Dep struct {
-		IndexState  object.ExtendedIndexModifier
+		IndexState  object.ExtendedLifelineModifier
 		Locker      object.IDLocker
 		Storage     object.IndexStorage
 		Coordinator jet.Coordinator
