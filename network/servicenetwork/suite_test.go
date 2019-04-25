@@ -79,11 +79,16 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-var (
+const (
 	testNetworkPort uint32 = 10010
 	pulseTimeMs     int32  = 5000
 	reqTimeoutMs    int32  = 2000
 	pulseDelta      int32  = 5
+
+	Phase1Timeout  float64 = 0.45
+	Phase2Timeout  float64 = 0.15
+	Phase21Timeout float64 = 0.15
+	Phase3Timeout  float64 = 0.15
 )
 
 type fixture struct {
@@ -418,6 +423,10 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	cfg.Host.Transport.Address = node.host
 	cfg.Service.Skip = 5
 	cfg.Service.CacheDirectory = cacheDir + node.host
+	cfg.Service.Consensus.Phase1Timeout = Phase1Timeout
+	cfg.Service.Consensus.Phase2Timeout = Phase2Timeout
+	cfg.Service.Consensus.Phase21Timeout = Phase21Timeout
+	cfg.Service.Consensus.Phase3Timeout = Phase3Timeout
 
 	node.componentManager = &component.Manager{}
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
