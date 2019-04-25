@@ -52,72 +52,91 @@ package transport
 
 import (
 	"context"
-	"fmt"
-	"log"
+	"net"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
 )
 
-type testNode struct {
-	udp     DatagramTransport
-	address string
-}
-
-func (t *testNode) HandleDatagram(address string, buf []byte) {
-	log.Println("Handle Datagram ", buf)
-}
-
-func newTestNode(port int) (*testNode, error) {
-	cfg := configuration.NewHostNetwork().Transport
-	cfg.Address = fmt.Sprintf("127.0.0.1:%d", port)
-
-	node := &testNode{}
-	udp, err := NewFactory(cfg).CreateDatagramTransport(node)
-	if err != nil {
-		return nil, err
-	}
-	node.udp = udp
-
-	err = node.udp.Start(context.Background())
-	if err != nil {
-		return nil, err
+func TestFactory_Positive(t *testing.T) {
+	table := []struct {
+		name    string
+		cfg     configuration.Transport
+		success bool
+	}{
+		{
+			name: "default config",
+			cfg:  configuration.NewHostNetwork().Transport,
+		},
+		{
+			name: "localhost",
+			cfg:  configuration.Transport{Address: "localhost:0", Protocol: "TCP"},
+		},
+		{
+			name: "FixedPublicAddress",
+			cfg:  configuration.Transport{Address: "localhost:0", FixedPublicAddress: "192.168.1.1", Protocol: "TCP"},
+		},
 	}
 
-	node.address = udp.Address()
-	return node, nil
+	for _, test := range table {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			f := NewFactory(test.cfg)
+			require.NotNil(t, f)
+
+			udp, err := f.CreateDatagramTransport(nil)
+			assert.NoError(t, err)
+			require.NotNil(t, udp)
+
+			tcp, err := f.CreateStreamTransport(nil)
+			assert.NoError(t, err)
+			require.NotNil(t, tcp)
+
+			assert.NoError(t, udp.Start(ctx))
+			assert.NoError(t, tcp.Start(ctx))
+
+			addrUDP, err := net.ResolveUDPAddr("udp", udp.Address())
+			assert.NoError(t, err)
+			assert.NotEqual(t, 0, addrUDP.Port)
+
+			addrTCP, err := net.ResolveTCPAddr("tcp", tcp.Address())
+			assert.NoError(t, err)
+			assert.NotEqual(t, 0, addrTCP.Port)
+
+			assert.NoError(t, udp.Stop(ctx))
+			assert.NoError(t, tcp.Stop(ctx))
+
+		})
+	}
 }
 
-func TestUdpTransport_SendDatagram(t *testing.T) {
-	ctx := context.Background()
+func TestFactoryStreamTransport_Negative(t *testing.T) {
+	table := []struct {
+		name    string
+		cfg     configuration.Transport
+		success bool
+	}{
+		{
+			name: "invalid address",
+			cfg:  configuration.Transport{Address: "invalid"},
+		},
+		{
+			name: "invalid protocol",
+			cfg:  configuration.Transport{Address: "localhost:0", FixedPublicAddress: "192.168.1.1", Protocol: "HTTP"},
+		},
+	}
 
-	node1, err := newTestNode(0)
-	assert.NoError(t, err)
-	node2, err := newTestNode(0)
-	assert.NoError(t, err)
+	for _, test := range table {
+		t.Run(test.name, func(t *testing.T) {
+			f := NewFactory(test.cfg)
+			require.NotNil(t, f)
 
-	err = node1.udp.SendDatagram(ctx, node2.address, []byte{1, 2, 3})
-	assert.NoError(t, err)
-
-	err = node2.udp.SendDatagram(ctx, node1.address, []byte{5, 4, 3})
-	assert.NoError(t, err)
-
-	err = node1.udp.Stop(ctx)
-	assert.NoError(t, err)
-
-	err = node1.udp.Start(ctx)
-	assert.NoError(t, err)
-
-	err = node1.udp.SendDatagram(ctx, node2.address, []byte{1, 2, 3})
-	assert.NoError(t, err)
-
-	err = node2.udp.SendDatagram(ctx, node1.address, []byte{5, 4, 3})
-	assert.NoError(t, err)
-
-	err = node1.udp.Stop(ctx)
-	assert.NoError(t, err)
-	err = node2.udp.Stop(ctx)
-	assert.NoError(t, err)
+			tcp, err := f.CreateStreamTransport(nil)
+			assert.Error(t, err)
+			require.Nil(t, tcp)
+		})
+	}
 }
