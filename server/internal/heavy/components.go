@@ -199,6 +199,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		indexes := object.NewIndexDB(db)
 		blobs := blob.NewDB(db)
 		drops := drop.NewDB(db)
+		recordSequence := object.NewSequenceRecordDB(db)
 
 		cord := jetcoordinator.NewJetCoordinator(conf.LightChainLimit)
 		cord.PulseCalculator = pulses
@@ -225,6 +226,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		h.BlobAccessor = blobs
 		h.BlobModifier = blobs
 		h.DropModifier = drops
+		h.RecordSequence = recordSequence
 		h.PCS = CryptoScheme
 
 		Coordinator = cord

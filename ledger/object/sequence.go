@@ -37,6 +37,7 @@ var (
 	ErrNoSequenceSyncPulses = errors.New("No synchronized pulses")
 )
 
+// SequenceRecordPosition represents info about the order (position) of the associated record in the store.
 type SequenceRecordPosition struct {
 	Index       uint32
 	PulseNumber insolar.PulseNumber
@@ -57,6 +58,7 @@ type SequenceRecord struct {
 	Record   record.MaterialRecord
 }
 
+// SequenceRecordAccessor provides access to records by their positions.
 type SequenceRecordAccessor interface {
 	// ForPosition returns sequence record for provided record position.
 	ForPosition(ctx context.Context, pos SequenceRecordPosition) (SequenceRecord, error)
@@ -64,18 +66,24 @@ type SequenceRecordAccessor interface {
 	FromPosition(ctx context.Context, pos SequenceRecordPosition, limit uint32) chan interface{}
 }
 
+// SequenceRecordModifier provides methods to save reference to record with associated position.
 type SequenceRecordModifier interface {
 	// Push saves new record-value in storage and increment topIndex position.
 	Push(ctx context.Context, pn insolar.PulseNumber, id insolar.ID) error
 }
 
+// SequenceRecordCursor provides info about what the position of the consistently stored data (TopSync, FirstSync)
+// and what the position achieved in process of replication the parent HM (Top).
 type SequenceRecordCursor interface {
+	// FirstSync returns first position of sequence.
+	FirstSync() (SequenceRecordPosition, error)
 	// Top returns the greatest position for sequence records.
 	Top(ctx context.Context) (SequenceRecordPosition, error)
 	// TopSync returns position for sequence records at last synced pulse.
 	TopSync(ctx context.Context) (SequenceRecordPosition, error)
 }
 
+// SequenceRecordStorage is a union of interfaces to work with records sequence index.
 type SequenceRecordStorage interface {
 	SequenceRecordAccessor
 	SequenceRecordModifier
@@ -85,13 +93,20 @@ type SequenceRecordStorage interface {
 	UpdatePulse(ctx context.Context, pn insolar.PulseNumber) error
 }
 
+// SequenceRecordMemory is an in-memory storage for sequence.
 type SequenceRecordMemory struct{}
 
+// SequenceRecordDB is an db storage impl. It saves sequence to disk and does not allow removal.
 type SequenceRecordDB struct {
 	lock    sync.RWMutex
 	db      store.DB
 	top     SequenceRecordPosition
 	records RecordAccessor
+}
+
+// NewSequenceRecordDB creates new DB storage instance.
+func NewSequenceRecordDB(db store.DB) *SequenceRecordDB {
+	return &SequenceRecordDB{db: db}
 }
 
 // Push saves new record-value in storage and increment topIndex position.
@@ -185,7 +200,7 @@ func (s *SequenceRecordDB) UpdatePulse(ctx context.Context, pn insolar.PulseNumb
 	return s.updateTop(pn)
 }
 
-func (s *SequenceRecordDB) FirstPulse() (SequenceRecordPosition, error) {
+func (s *SequenceRecordDB) FirstSync() (SequenceRecordPosition, error) {
 	s.lock.RLock()
 	defer s.lock.RUnlock()
 
@@ -193,7 +208,7 @@ func (s *SequenceRecordDB) FirstPulse() (SequenceRecordPosition, error) {
 	if err != nil {
 		return SequenceRecordPosition{}, err
 	}
-	return SequenceRecordPosition{Index: desc.topIndex, PulseNumber: desc.curr}, nil
+	return SequenceRecordPosition{Index: 0, PulseNumber: desc.curr}, nil
 }
 
 // Top returns the greatest position for sequence records.
