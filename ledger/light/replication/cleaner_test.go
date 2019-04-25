@@ -54,7 +54,7 @@ func TestCleaner_cleanPulse(t *testing.T) {
 	rc := object.NewRecordCleanerMock(ctrl)
 	rc.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
 
-	ic := object.NewIndexCleanerMock(ctrl)
+	ic := object.NewLifelineCleanerMock(ctrl)
 	ic.DeleteForPNMock.Expect(ctx, inputPulse.PulseNumber)
 
 	ps := pulse.NewShifterMock(ctrl)
@@ -92,7 +92,7 @@ func TestCleaner_clean(t *testing.T) {
 	rc := object.NewRecordCleanerMock(ctrl)
 	rc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
 
-	ic := object.NewIndexCleanerMock(ctrl)
+	ic := object.NewLifelineCleanerMock(ctrl)
 	ic.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
 
 	ps := pulse.NewShifterMock(ctrl)
@@ -133,7 +133,7 @@ func TestLightCleaner_NotifyAboutPulse(t *testing.T) {
 	rc := object.NewRecordCleanerMock(ctrl)
 	rc.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
 
-	ic := object.NewIndexCleanerMock(ctrl)
+	ic := object.NewLifelineCleanerMock(ctrl)
 	ic.DeleteForPNMock.Expect(ctx, calculatedPulse.PulseNumber)
 
 	ps := pulse.NewShifterMock(ctrl)

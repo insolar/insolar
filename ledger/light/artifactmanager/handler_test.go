@@ -787,7 +787,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 
 		return nil
 	}
-	idxStor := object.NewIndexStorageMock(s.T())
+	idxStor := object.NewLifelineStorageMock(s.T())
 
 	provideMock := recentstorage.NewProviderMock(s.T())
 	provideMock.GetPendingStorageMock.Return(pendingMock)
