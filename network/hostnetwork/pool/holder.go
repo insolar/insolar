@@ -79,10 +79,17 @@ func (eh *entryHolder) get(host fmt.Stringer) (*entry, bool) {
 	return e, ok
 }
 
-func (eh *entryHolder) delete(host fmt.Stringer) {
+func (eh *entryHolder) delete(host fmt.Stringer) bool {
 	eh.Lock()
 	defer eh.Unlock()
-	delete(eh.entries, eh.key(host))
+
+	e, ok := eh.entries[eh.key(host)]
+	if ok {
+		e.close()
+		delete(eh.entries, eh.key(host))
+		return true
+	}
+	return false
 }
 
 func (eh *entryHolder) add(host fmt.Stringer, entry *entry) {

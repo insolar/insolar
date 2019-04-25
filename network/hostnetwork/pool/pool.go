@@ -99,14 +99,8 @@ func (cp *connectionPool) GetConnection(ctx context.Context, host *host.Host) (i
 func (cp *connectionPool) CloseConnection(ctx context.Context, host *host.Host) {
 	logger := inslogger.FromContext(ctx)
 
-	e, ok := cp.entryHolder.get(host)
-	logger.Debugf("[ CloseConnection ] Finding entry for connection to %s in pool: %t", host, ok)
-
-	if ok {
-		e.close()
-
-		logger.Debugf("[ CloseConnection ] Delete entry for connection to %s from pool", host)
-		cp.entryHolder.delete(host)
+	logger.Debugf("[ CloseConnection ] Delete entry for connection to %s from pool", host)
+	if cp.entryHolder.delete(host) == true {
 		metrics.NetworkConnections.Dec()
 	}
 }
