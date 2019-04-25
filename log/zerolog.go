@@ -134,12 +134,12 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 
 // WithFields return copy of adapter with predefined fields.
 func (z *zerologAdapter) WithFields(fields map[string]interface{}) insolar.Logger {
-	w := z.logger.With()
+	zCtx := z.logger.With()
 	for key, value := range fields {
-		w = w.Interface(key, value)
+		zCtx = zCtx.Interface(key, value)
 	}
 	return &zerologAdapter{
-		logger:       w.Logger(),
+		logger:       zCtx.Logger(),
 		callerConfig: z.callerConfig,
 	}
 }
