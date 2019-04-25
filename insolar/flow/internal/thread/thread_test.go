@@ -19,8 +19,10 @@ package thread
 import (
 	"context"
 	"testing"
+	"time"
 
 	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/insolar/flow"
@@ -42,59 +44,6 @@ func TestNewThread(t *testing.T) {
 	require.Equal(t, msg, thread.message)
 }
 
-func TestThread_Handle_CancelledBefore(t *testing.T) {
-	t.Parallel()
-	cancel := make(chan struct{})
-	thread := Thread{
-		cancel: cancel,
-	}
-	close(cancel)
-	handle := func(ctx context.Context, f flow.Flow) error {
-		return nil
-	}
-	err := thread.Handle(context.Background(), handle)
-	require.Error(t, err)
-	require.Equal(t, err, flow.ErrCancelled)
-}
-
-func TestThread_Handle_Error(t *testing.T) {
-	t.Parallel()
-	thread := Thread{}
-
-	handleError := errors.New("test error")
-	handle := func(ctx context.Context, f flow.Flow) error {
-		return handleError
-	}
-	err := thread.Handle(context.Background(), handle)
-	require.Error(t, err)
-	require.Equal(t, err, handleError)
-}
-
-func TestThread_Handle_CanceledAfter(t *testing.T) {
-	t.Parallel()
-	cancel := make(chan struct{})
-	thread := Thread{
-		cancel: cancel,
-	}
-	handle := func(ctx context.Context, f flow.Flow) error {
-		close(cancel)
-		return nil
-	}
-	err := thread.Handle(context.Background(), handle)
-	require.Error(t, err)
-	require.Equal(t, err, flow.ErrCancelled)
-}
-
-func TestThread_Handle(t *testing.T) {
-	t.Parallel()
-	thread := Thread{}
-	handle := func(ctx context.Context, f flow.Flow) error {
-		return nil
-	}
-	err := thread.Handle(context.Background(), handle)
-	require.NoError(t, err)
-}
-
 func TestThread_Procedure_CancelledBefore(t *testing.T) {
 	t.Parallel()
 	cancel := make(chan struct{})
@@ -102,7 +51,8 @@ func TestThread_Procedure_CancelledBefore(t *testing.T) {
 		cancel: cancel,
 	}
 	close(cancel)
-	err := thread.Procedure(context.Background(), nil)
+	proc := flow.NewProcedureMock(t)
+	err := thread.Procedure(context.Background(), proc, true)
 	require.Error(t, err)
 	require.Equal(t, err, flow.ErrCancelled)
 }
@@ -110,8 +60,9 @@ func TestThread_Procedure_CancelledBefore(t *testing.T) {
 func TestThread_Procedure_NilProcedureError(t *testing.T) {
 	t.Parallel()
 	thread := Thread{}
-	err := thread.Procedure(context.Background(), nil)
-	require.EqualError(t, err, "procedure called with nil procedure")
+	require.Panics(t, func() {
+		_ = thread.Procedure(context.Background(), nil, true)
+	})
 }
 
 func TestThread_Procedure_CancelledWhenProcedureWorks(t *testing.T) {
@@ -120,7 +71,7 @@ func TestThread_Procedure_CancelledWhenProcedureWorks(t *testing.T) {
 	finish := make(chan struct{})
 	thread := Thread{
 		cancel:     cancel,
-		procedures: map[flow.Procedure]chan error{},
+		procedures: map[flow.Procedure]*result{},
 	}
 	pm := flow.NewProcedureMock(t)
 	pm.ProceedFunc = func(ctx context.Context) error {
@@ -128,23 +79,36 @@ func TestThread_Procedure_CancelledWhenProcedureWorks(t *testing.T) {
 		<-finish
 		return nil
 	}
-	err := thread.Procedure(context.Background(), pm)
+	err := thread.Procedure(context.Background(), pm, true)
 	require.Error(t, err)
 	require.Equal(t, flow.ErrCancelled, err)
-
 	close(finish)
+}
+
+func TestThread_Procedure_NotCancelled(t *testing.T) {
+	t.Parallel()
+	cancel := make(chan struct{})
+	thread := Thread{
+		cancel:     cancel,
+		procedures: map[flow.Procedure]*result{},
+	}
+	close(cancel)
+	proc := flow.NewProcedureMock(t)
+	proc.ProceedMock.Return(nil)
+	err := thread.Procedure(context.Background(), proc, false)
+	require.NoError(t, err)
 }
 
 func TestThread_Procedure_ProceedReturnsError(t *testing.T) {
 	t.Parallel()
 	thread := Thread{
-		procedures: map[flow.Procedure]chan error{},
+		procedures: map[flow.Procedure]*result{},
 	}
 	pm := flow.NewProcedureMock(t)
 	pm.ProceedFunc = func(ctx context.Context) error {
 		return errors.New("proceed test error")
 	}
-	err := thread.Procedure(context.Background(), pm)
+	err := thread.Procedure(context.Background(), pm, true)
 	require.Error(t, err)
 	require.EqualError(t, err, "proceed test error")
 }
@@ -152,14 +116,39 @@ func TestThread_Procedure_ProceedReturnsError(t *testing.T) {
 func TestThread_Procedure(t *testing.T) {
 	t.Parallel()
 	thread := Thread{
-		procedures: map[flow.Procedure]chan error{},
+		procedures: map[flow.Procedure]*result{},
 	}
 	pm := flow.NewProcedureMock(t)
 	pm.ProceedFunc = func(ctx context.Context) error {
 		return nil
 	}
-	err := thread.Procedure(context.Background(), pm)
+	err := thread.Procedure(context.Background(), pm, true)
 	require.NoError(t, err)
+}
+
+func TestThread_Procedure_Reattach(t *testing.T) {
+	t.Parallel()
+	thread := Thread{
+		procedures: map[flow.Procedure]*result{},
+	}
+	procErr := errors.New("test error")
+	pm := flow.NewProcedureMock(t)
+	pm.ProceedFunc = func(ctx context.Context) error {
+		return procErr
+	}
+	err := thread.Procedure(context.Background(), pm, true)
+	require.Equal(t, procErr, err)
+	done := make(chan struct{})
+	go func() {
+		err = thread.Procedure(context.Background(), pm, true)
+		require.Equal(t, procErr, err)
+		close(done)
+	}()
+	select {
+	case <-done:
+	case <-time.After(time.Second):
+		assert.Fail(t, "reattach deadlock")
+	}
 }
 
 func TestThread_Migrate_MigratedError(t *testing.T) {
@@ -245,54 +234,4 @@ func TestThread_Run(t *testing.T) {
 	}
 	err := thread.Run(context.Background(), handle)
 	require.NoError(t, err)
-}
-
-func TestThread_procedure_AlreadyExists(t *testing.T) {
-	t.Parallel()
-	thread := Thread{
-		procedures: map[flow.Procedure]chan error{},
-	}
-	procedure := flow.NewProcedureMock(t)
-	done := make(chan error, 1)
-	thread.procedures[procedure] = done
-
-	ch := thread.procedure(context.Background(), procedure)
-	var expected <-chan error = done
-	require.Equal(t, expected, ch)
-}
-
-func TestThread_procedure(t *testing.T) {
-	t.Parallel()
-	thread := Thread{
-		procedures: map[flow.Procedure]chan error{},
-	}
-	procedure := flow.NewProcedureMock(t)
-	procedure.ProceedFunc = func(ctx context.Context) error {
-		return errors.New("test error")
-	}
-
-	ch := thread.procedure(context.Background(), procedure)
-	result := <-ch
-	require.EqualError(t, result, "test error")
-}
-
-func TestThread_canceled_Canceled(t *testing.T) {
-	t.Parallel()
-	cancel := make(chan struct{})
-	thread := Thread{
-		cancel: cancel,
-	}
-	close(cancel)
-	result := thread.cancelled()
-	require.True(t, result)
-}
-
-func TestThread_canceled(t *testing.T) {
-	t.Parallel()
-	cancel := make(chan struct{})
-	thread := Thread{
-		cancel: cancel,
-	}
-	result := thread.cancelled()
-	require.False(t, result)
 }

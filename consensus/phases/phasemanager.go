@@ -55,6 +55,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
@@ -77,11 +78,13 @@ type Phases struct {
 
 	lastPulse insolar.PulseNumber
 	lock      sync.Mutex
+
+	cfg configuration.Consensus
 }
 
 // NewPhaseManager creates and returns a new phase manager.
-func NewPhaseManager() PhaseManager {
-	return &Phases{}
+func NewPhaseManager(cfg configuration.Consensus) PhaseManager {
+	return &Phases{cfg: cfg}
 }
 
 // OnPulse starts calculate args on phases.
@@ -108,7 +111,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 	var tctx context.Context
 	var cancel context.CancelFunc
 
-	tctx, cancel, err = contextTimeoutWithDelay(ctx, *pulseDuration, consensusDelay, 0.3)
+	tctx, cancel, err = contextTimeoutWithDelay(ctx, *pulseDuration, consensusDelay, pm.cfg.Phase1Timeout)
 	if err != nil {
 		return err
 	}
@@ -119,7 +122,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 1")
 	}
 
-	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.05)
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, pm.cfg.Phase2Timeout)
 	defer cancel()
 
 	secondPhaseState, err := pm.SecondPhase.Execute(tctx, pulse, firstPhaseState)
@@ -127,7 +130,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 2.0")
 	}
 
-	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.05)
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, pm.cfg.Phase21Timeout)
 	defer cancel()
 
 	secondPhaseState, err = pm.SecondPhase.Execute21(tctx, pulse, secondPhaseState)
@@ -135,7 +138,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 2.1")
 	}
 
-	tctx, cancel = contextTimeout(ctx, *pulseDuration, 0.05)
+	tctx, cancel = contextTimeout(ctx, *pulseDuration, pm.cfg.Phase3Timeout)
 	defer cancel()
 
 	thirdPhaseState, err := pm.ThirdPhase.Execute(tctx, pulse, secondPhaseState)

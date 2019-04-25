@@ -32,8 +32,8 @@ import (
 )
 
 type GetCode struct {
-	ReplyTo chan<- bus.Reply
-	Code    insolar.Reference
+	replyTo chan<- bus.Reply
+	code    insolar.Reference
 
 	Dep struct {
 		Bus            insolar.MessageBus
@@ -44,21 +44,20 @@ type GetCode struct {
 	}
 }
 
+func NewGetCode(code insolar.Reference, replyTo chan<- bus.Reply) *GetCode {
+	return &GetCode{
+		code:    code,
+		replyTo: replyTo,
+	}
+}
+
 func (p *GetCode) Proceed(ctx context.Context) error {
-	p.ReplyTo <- p.reply(ctx)
+	p.replyTo <- p.reply(ctx)
 	return nil
 }
 
 func (p *GetCode) reply(ctx context.Context) bus.Reply {
-	codeID := *p.Code.Record()
-	jetID, mine, err := p.Dep.CheckJet(ctx, codeID, codeID.Pulse())
-	if err != nil {
-		return bus.Reply{Err: errors.Wrap(err, "failed to check jet")}
-	}
-	if !mine {
-		return bus.Reply{Reply: &reply.JetMiss{JetID: insolar.ID(jetID), Pulse: codeID.Pulse()}}
-	}
-
+	codeID := *p.code.Record()
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, codeID)
 	if err == object.ErrNotFound {
 		heavy, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
@@ -66,7 +65,7 @@ func (p *GetCode) reply(ctx context.Context) bus.Reply {
 			return bus.Reply{Err: errors.Wrap(err, "failed to calculate heavy")}
 		}
 		genericReply, err := p.Dep.Bus.Send(ctx, &message.GetCode{
-			Code: p.Code,
+			Code: p.code,
 		}, &insolar.MessageSendOptions{
 			Receiver: heavy,
 		})

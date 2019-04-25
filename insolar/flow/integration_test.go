@@ -74,7 +74,7 @@ func TestCallEmptyProcedure(t *testing.T) {
 	hand := handler.NewHandler(
 		func(message bus.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
-				err := f.Procedure(context, &EmptyProcedure{})
+				err := f.Procedure(context, &EmptyProcedure{}, true)
 				require.NoError(t, err)
 				message.ReplyTo <- bus.Reply{Reply: testReply}
 				return nil
@@ -99,7 +99,7 @@ func TestProcedureReturnError(t *testing.T) {
 	hand := handler.NewHandler(
 		func(message bus.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
-				err := f.Procedure(context, &ErrorProcedure{})
+				err := f.Procedure(context, &ErrorProcedure{}, true)
 				require.Error(t, err)
 				message.ReplyTo <- bus.Reply{Reply: testReply}
 				return nil
@@ -131,7 +131,7 @@ func TestChangePulse(t *testing.T) {
 			return func(context context.Context, f flow.Flow) error {
 				longProcedure := LongProcedure{}
 				longProcedure.started = procedureStarted
-				err := f.Procedure(context, &longProcedure)
+				err := f.Procedure(context, &longProcedure, true)
 				require.Equal(t, flow.ErrCancelled, err)
 				message.ReplyTo <- bus.Reply{Reply: testReply}
 				return nil
@@ -165,14 +165,14 @@ func TestChangePulseAndMigrate(t *testing.T) {
 			return func(ctx context.Context, f1 flow.Flow) error {
 				longProcedure := LongProcedure{}
 				longProcedure.started = firstProcedureStarted
-				err := f1.Procedure(ctx, &longProcedure)
+				err := f1.Procedure(ctx, &longProcedure, true)
 				require.Equal(t, flow.ErrCancelled, err)
 
 				f1.Migrate(ctx, func(c context.Context, f2 flow.Flow) error {
 					migrateStarted <- struct{}{}
 					longProcedure := LongProcedure{}
 					longProcedure.started = secondProcedureStarted
-					err := f2.Procedure(ctx, &longProcedure)
+					err := f2.Procedure(ctx, &longProcedure, true)
 					require.Equal(t, flow.ErrCancelled, err)
 
 					message.ReplyTo <- bus.Reply{Reply: testReply}
