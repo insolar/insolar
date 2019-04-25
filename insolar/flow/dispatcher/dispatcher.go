@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package handler
+package dispatcher
 
 import (
 	"context"
@@ -30,27 +30,27 @@ import (
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
 )
 
-type Handler struct {
+type Dispatcher struct {
 	handles struct {
 		present flow.MakeHandle
 	}
 	controller *thread.Controller
 }
 
-func NewHandler(present flow.MakeHandle) *Handler {
-	h := &Handler{
+func NewDispatcher(present flow.MakeHandle) *Dispatcher {
+	d := &Dispatcher{
 		controller: thread.NewController(),
 	}
-	h.handles.present = present
-	return h
+	d.handles.present = present
+	return d
 }
 
 // ChangePulse is a handle for pulse change vent.
-func (h *Handler) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
-	h.controller.Pulse()
+func (d *Dispatcher) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
+	d.controller.Pulse()
 }
 
-func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
+func (d *Dispatcher) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := bus.Message{
 		ReplyTo: make(chan bus.Reply, 1),
 		Parcel:  parcel,
@@ -58,8 +58,8 @@ func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (ins
 
 	ctx = pulse.ContextWith(ctx, parcel.Pulse())
 
-	f := thread.NewThread(msg, h.controller)
-	err := f.Run(ctx, h.handles.present(msg))
+	f := thread.NewThread(msg, d.controller)
+	err := f.Run(ctx, d.handles.present(msg))
 
 	var rep bus.Reply
 	select {
@@ -75,7 +75,7 @@ func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (ins
 	return nil, errors.New("no reply from handler")
 }
 
-func (h *Handler) InnerSubscriber(watermillMsg *message.Message) ([]*message.Message, error) {
+func (d *Dispatcher) InnerSubscriber(watermillMsg *message.Message) ([]*message.Message, error) {
 	msg := bus.Message{
 		WatermillMsg: watermillMsg,
 	}
@@ -84,8 +84,8 @@ func (h *Handler) InnerSubscriber(watermillMsg *message.Message) ([]*message.Mes
 	ctx = inslogger.ContextWithTrace(ctx, watermillMsg.Metadata.Get("TraceID"))
 	logger := inslogger.FromContext(ctx)
 	go func() {
-		f := thread.NewThread(msg, h.controller)
-		err := f.Run(ctx, h.handles.present(msg))
+		f := thread.NewThread(msg, d.controller)
+		err := f.Run(ctx, d.handles.present(msg))
 		if err != nil {
 			logger.Error("Handling failed", err)
 		}

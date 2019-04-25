@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package handler
+package dispatcher
 
 import (
 	"context"
@@ -37,7 +37,7 @@ func TestNewHandler(t *testing.T) {
 		return nil
 	}
 	require.False(t, ok)
-	h := NewHandler(f)
+	h := NewDispatcher(f)
 	require.NotNil(t, h.controller)
 	handle := h.handles.present(bus.Message{})
 	require.Nil(t, handle)
@@ -52,7 +52,7 @@ func (replyMock) Type() insolar.ReplyType {
 
 func TestHandler_WrapBusHandle(t *testing.T) {
 	t.Parallel()
-	h := &Handler{
+	h := &Dispatcher{
 		controller: thread.NewController(),
 	}
 	reply := bus.Reply{
@@ -75,7 +75,7 @@ func TestHandler_WrapBusHandle(t *testing.T) {
 
 func TestHandler_WrapBusHandle_Error(t *testing.T) {
 	t.Parallel()
-	h := &Handler{
+	h := &Dispatcher{
 		controller: thread.NewController(),
 	}
 	h.handles.present = func(msg bus.Message) flow.Handle {
@@ -94,7 +94,7 @@ func TestHandler_WrapBusHandle_Error(t *testing.T) {
 
 func TestHandler_WrapBusHandle_ReplyError(t *testing.T) {
 	t.Parallel()
-	h := &Handler{
+	h := &Dispatcher{
 		controller: thread.NewController(),
 	}
 	h.handles.present = func(msg bus.Message) flow.Handle {
@@ -116,7 +116,7 @@ func TestHandler_WrapBusHandle_ReplyError(t *testing.T) {
 
 func TestHandler_WrapBusHandle_NoReply(t *testing.T) {
 	t.Parallel()
-	h := &Handler{
+	h := &Dispatcher{
 		controller: thread.NewController(),
 	}
 	h.handles.present = func(msg bus.Message) flow.Handle {
@@ -135,7 +135,7 @@ func TestHandler_WrapBusHandle_NoReply(t *testing.T) {
 
 func TestHandler_WrapBusHandle_ReplyWithError(t *testing.T) {
 	t.Parallel()
-	h := &Handler{
+	h := &Dispatcher{
 		controller: thread.NewController(),
 	}
 	reply := bus.Reply{
