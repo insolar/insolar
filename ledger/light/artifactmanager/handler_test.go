@@ -779,7 +779,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		s.T().Fail()
 	}
 
-	extendedModifierMock := object.NewExtendedIndexModifierMock(s.T())
+	extendedModifierMock := object.NewExtendedLifelineModifierMock(s.T())
 	extendedModifierMock.SetWithMetaFunc = func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 object.Lifeline) (r error) {
 		require.Equal(s.T(), *firstID, p1)
 		require.Equal(s.T(), insolar.PulseNumber(234), p2)
