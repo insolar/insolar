@@ -100,7 +100,7 @@ func (cp *connectionPool) CloseConnection(ctx context.Context, host *host.Host) 
 	logger := inslogger.FromContext(ctx)
 
 	logger.Debugf("[ CloseConnection ] Delete entry for connection to %s from pool", host)
-	if cp.entryHolder.delete(host) == true {
+	if cp.entryHolder.delete(host) {
 		metrics.NetworkConnections.Dec()
 	}
 }
