@@ -54,8 +54,6 @@ import (
 	"context"
 	"io"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -109,11 +107,10 @@ func (cp *connectionPool) CloseConnection(ctx context.Context, host *host.Host) 
 
 // AddConnection adds created outside connection to the pool
 func (cp *connectionPool) AddConnection(host *host.Host, conn io.ReadWriteCloser) error {
-	if cp.entryHolder.add(host, newEntry(cp.transport, conn, host, cp.CloseConnection)) {
-		metrics.NetworkConnections.Inc()
-		return nil
-	}
-	return errors.New("connection already in pool")
+	// TODO: return err if connection to the host is already exist
+	cp.entryHolder.add(host, newEntry(cp.transport, conn, host, cp.CloseConnection))
+	metrics.NetworkConnections.Inc()
+	return nil
 }
 
 func (cp *connectionPool) getOrCreateEntry(ctx context.Context, host *host.Host) *entry {
