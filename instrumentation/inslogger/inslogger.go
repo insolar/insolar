@@ -78,11 +78,16 @@ func ContextWithTrace(ctx context.Context, traceid string) context.Context {
 }
 
 func getLogger(ctx context.Context) insolar.Logger {
-	l := ctx.Value(loggerKey{})
-	if l == nil {
+	val := ctx.Value(loggerKey{})
+	if val == nil {
 		return logger.GlobalLogger.ChangeSkipFrameCount(-1)
 	}
-	return l.(insolar.Logger)
+	l := val.(insolar.Logger)
+	ln := GetLoggerLevel(ctx)
+	if ln != insolar.NoLevel {
+		l, _ = l.WithLevelNumber(ln)
+	}
+	return l
 }
 
 // TestContext returns context with initalized log field "testname" equal t.Name() value.
