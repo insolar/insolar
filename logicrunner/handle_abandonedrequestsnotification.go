@@ -62,8 +62,6 @@ func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx cont
 	return nil
 }
 
-// ---------------
-
 type HandleAbandonedRequestsNotification struct {
 	dep *Dependencies
 
