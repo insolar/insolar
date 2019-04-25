@@ -161,7 +161,22 @@ func (s *testSuite) SetupTest() {
 	log.Info("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
 
-	<-time.After(time.Second * 2)
+	expectedBootstrapsCount := len(s.fixture().bootstrapNodes)
+	retries := 100
+	for {
+		activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+		if  expectedBootstrapsCount == len(activeNodes) {
+			break
+		}
+
+		retries--
+		if retries == 0 {
+			break
+		}
+
+		time.Sleep(100*time.Millisecond)
+	}
+
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Require().Equal(len(s.fixture().bootstrapNodes), len(activeNodes))
 
