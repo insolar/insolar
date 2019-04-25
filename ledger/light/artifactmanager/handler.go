@@ -72,8 +72,8 @@ type MessageHandler struct {
 	HotDataWaiter hot.JetWaiter   `inject:""`
 	JetReleaser   hot.JetReleaser `inject:""`
 
-	LifelineStorage          object.LifelineStorage
-	ExtendedLifelineModifier object.ExtendedLifelineModifier
+	// LifelineStorage          object.LifelineStorage
+	// ExtendedLifelineModifier object.ExtendedLifelineModifier
 
 	IndexModifier object.IndexModifier
 
@@ -384,7 +384,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	defer h.IDLocker.Unlock(msg.Head.Record())
 
 	idx, err := h.LifelineStorage.ForID(ctx, *msg.Head.Record())
-	if err == object.ErrIndexNotFound {
+	if err == object.ErrLifelineNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
@@ -420,7 +420,7 @@ func (h *MessageHandler) handleGetChildren(
 	defer h.IDLocker.Unlock(msg.Parent.Record())
 
 	idx, err := h.LifelineStorage.ForID(ctx, *msg.Parent.Record())
-	if err == object.ErrIndexNotFound {
+	if err == object.ErrLifelineNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
@@ -606,7 +606,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 
 	idx, err := h.LifelineStorage.ForID(ctx, *msg.Object.Record())
 	// No index on our node.
-	if err == object.ErrIndexNotFound {
+	if err == object.ErrLifelineNotFound {
 		if state.ID() == object.StateActivation {
 			// We are activating the object. There is no index for it anywhere.
 			idx = object.Lifeline{State: object.StateUndefined}
@@ -698,7 +698,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 
 	var child *insolar.ID
 	idx, err := h.LifelineStorage.ForID(ctx, *msg.Parent.Record())
-	if err == object.ErrIndexNotFound {
+	if err == object.ErrLifelineNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err

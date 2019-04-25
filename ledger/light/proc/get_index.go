@@ -77,7 +77,7 @@ func (p *GetIndex) process(ctx context.Context) error {
 		p.Result.Index = idx
 		return nil
 	}
-	if err != object.ErrIndexNotFound {
+	if err != object.ErrLifelineNotFound {
 		return errors.Wrap(err, "failed to fetch index")
 	}
 	p.Dep.IndexState.SetUsageForPulse(ctx, objectID, flow.Pulse(ctx))

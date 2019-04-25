@@ -8,6 +8,7 @@ import (
 )
 
 type IndexAccessor interface {
+	LifelineForPulse(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error)
 }
 
 type IndexModifier interface {
@@ -18,7 +19,7 @@ type IndexModifier interface {
 
 type indexBucket struct {
 	lifelineLock sync.RWMutex
-	lifeline     Lifeline
+	lifeline     *Lifeline
 
 	requestLock sync.RWMutex
 	requests    []insolar.ID
@@ -27,9 +28,12 @@ type indexBucket struct {
 	results    []insolar.ID
 }
 
-func (i *indexBucket) Lifeline() Lifeline {
+func (i *indexBucket) Lifeline() (*Lifeline, error) {
 	i.lifelineLock.RLock()
 	defer i.lifelineLock.RUnlock()
+	if i.lifeline == nil {
+		return nil, ErrLifelineNotFound
+	}
 
 	return i.lifeline
 }
@@ -38,7 +42,7 @@ func (i *indexBucket) setLifeline(lifeline Lifeline) {
 	i.lifelineLock.Lock()
 	defer i.lifelineLock.Unlock()
 
-	i.lifeline = lifeline
+	i.lifeline = &lifeline
 }
 
 func (i *indexBucket) setRequest(reqID insolar.ID) {
@@ -96,4 +100,8 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 func (i *InMemoryIndex) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) {
 	b := i.getBucket(ctx, pn, objID)
 	b.setResult(resID)
+}
+
+func (i *InMemoryIndex) LifelineForPulse(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
+	b :=
 }

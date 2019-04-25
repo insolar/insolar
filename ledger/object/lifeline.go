@@ -91,6 +91,7 @@ type Lifeline struct {
 	JetID               insolar.JetID
 
 	LatestRequest *insolar.ID
+	LastUsed      insolar.PulseNumber
 }
 
 // LifelineMeta holds additional info about Lifeline
@@ -264,7 +265,7 @@ func (m *LifelineStorageMemory) ForID(ctx context.Context, id insolar.ID) (Lifel
 
 	idx, ok := m.indexStorage[id]
 	if !ok {
-		return index, ErrIndexNotFound
+		return index, ErrLifelineNotFound
 
 	}
 
@@ -396,7 +397,7 @@ func (i *IndexDB) set(id insolar.ID, index Lifeline) error {
 func (i *IndexDB) get(id insolar.ID) (index Lifeline, err error) {
 	buff, err := i.db.Get(indexKey(id))
 	if err == store.ErrNotFound {
-		err = ErrIndexNotFound
+		err = ErrLifelineNotFound
 		return
 	}
 	if err != nil {

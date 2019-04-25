@@ -92,8 +92,8 @@ func TestIndex_Components(t *testing.T) {
 			_, dbErr := indexDB.ForID(ctx, gen.ID())
 			require.Error(t, memErr)
 			require.Error(t, dbErr)
-			assert.Equal(t, object.ErrIndexNotFound, memErr)
-			assert.Equal(t, object.ErrIndexNotFound, dbErr)
+			assert.Equal(t, object.ErrLifelineNotFound, memErr)
+			assert.Equal(t, object.ErrLifelineNotFound, dbErr)
 		}
 	})
 

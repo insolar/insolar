@@ -72,7 +72,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 
 		_, err := indexStorage.ForID(ctx, gen.ID())
 		require.Error(t, err)
-		assert.Equal(t, ErrIndexNotFound, err)
+		assert.Equal(t, ErrLifelineNotFound, err)
 	})
 }
 

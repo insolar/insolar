@@ -406,7 +406,7 @@ func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID in
 	for id, meta := range idxs {
 		meta.Index.JetID = toJetID
 		err := m.IndexModifier.SetWithMeta(ctx, id, meta.LastUsed, meta.Index)
-		if err == object.ErrIndexNotFound {
+		if err == object.ErrLifelineNotFound {
 			logger.WithField("id", id.DebugString()).Error("failed to rewrite index")
 			continue
 		}
