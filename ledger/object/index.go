@@ -8,11 +8,13 @@ import (
 )
 
 type IndexAccessor interface {
-	LifelineForPulse(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error)
+	LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error)
 }
 
 type IndexModifier interface {
 	SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline)
+	SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
+
 	SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID)
 	SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID)
 }
@@ -28,21 +30,21 @@ type indexBucket struct {
 	results    []insolar.ID
 }
 
-func (i *indexBucket) Lifeline() (*Lifeline, error) {
+func (i *indexBucket) getLifeline() (*Lifeline, error) {
 	i.lifelineLock.RLock()
 	defer i.lifelineLock.RUnlock()
 	if i.lifeline == nil {
 		return nil, ErrLifelineNotFound
 	}
 
-	return i.lifeline
+	return i.lifeline, nil
 }
 
-func (i *indexBucket) setLifeline(lifeline Lifeline) {
+func (i *indexBucket) setLifeline(lifeline *Lifeline) {
 	i.lifelineLock.Lock()
 	defer i.lifelineLock.Unlock()
 
-	i.lifeline = &lifeline
+	i.lifeline = lifeline
 }
 
 func (i *indexBucket) setRequest(reqID insolar.ID) {
@@ -89,7 +91,7 @@ func (i *InMemoryIndex) getBucket(ctx context.Context, pn insolar.PulseNumber, o
 
 func (i *InMemoryIndex) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) {
 	b := i.getBucket(ctx, pn, objID)
-	b.setLifeline(lifeline)
+	b.setLifeline(&lifeline)
 }
 
 func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) {
@@ -102,6 +104,25 @@ func (i *InMemoryIndex) SetResultRecord(ctx context.Context, pn insolar.PulseNum
 	b.setResult(resID)
 }
 
-func (i *InMemoryIndex) LifelineForPulse(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
-	b :=
+func (i *InMemoryIndex) LifelineForObjectAndPN(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
+	b := i.getBucket(ctx, pn, objID)
+	lfl, err := b.getLifeline()
+	if err != nil {
+		return Lifeline{}, err
+	}
+
+	return *lfl, nil
+}
+
+func (i *InMemoryIndex) SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
+	b := i.getBucket(ctx, pn, objID)
+	lfl, err := b.getLifeline()
+	if err != nil {
+		return err
+	}
+
+	lfl.LastUsed = pn
+	b.setLifeline(lfl)
+
+	return nil
 }
