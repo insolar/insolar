@@ -221,7 +221,7 @@ func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 	}
 
 	logger.Debugf("before ping request")
-	result, err := pingCall.GetResponse(d.pingRequestTimeout)
+	result, err := pingCall.WaitResponse(d.pingRequestTimeout)
 	if err != nil {
 		logger.Error(err)
 		return errors.Wrap(err, "[ pingHost ] failed to get ping result")
@@ -249,7 +249,7 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *insolar.Pulse,
 	if err != nil {
 		return err
 	}
-	_, err = call.GetResponse(d.pulseRequestTimeout)
+	_, err = call.WaitResponse(d.pulseRequestTimeout)
 	if err != nil {
 		return err
 	}

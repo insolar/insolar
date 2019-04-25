@@ -356,9 +356,9 @@ func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 	require.NoError(t, err)
 	f, err := n1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
-	require.Equal(t, f.GetRequest().GetSender(), request.GetSender())
+	require.Equal(t, f.Request().GetSender(), request.GetSender())
 
-	r, err := f.GetResponse(time.Second)
+	r, err := f.WaitResponse(time.Second)
 	require.NoError(t, err)
 
 	d := r.GetData().(*Data)
@@ -404,7 +404,7 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 	f, err := n1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
 
-	_, err = f.GetResponse(time.Millisecond)
+	_, err = f.WaitResponse(time.Millisecond)
 	require.Error(t, err)
 
 	f, err = n1.SendRequest(ctx, request, *ref)
@@ -414,7 +414,7 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	_, err = f.GetResponse(time.Second * 2)
+	_, err = f.WaitResponse(time.Second * 2)
 	require.NoError(t, err)
 }
 

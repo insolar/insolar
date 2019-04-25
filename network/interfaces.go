@@ -158,9 +158,9 @@ type Response Packet
 
 // Future allows to handle responses to a previously sent request.
 type Future interface {
-	GetRequest() Request
+	Request() Request
 	Response() <-chan Response
-	GetResponse(duration time.Duration) (Response, error)
+	WaitResponse(duration time.Duration) (Response, error)
 }
 
 // RequestBuilder allows to build a Request.

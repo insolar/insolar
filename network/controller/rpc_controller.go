@@ -224,10 +224,10 @@ func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data in
 	}
 
 	go func(ctx context.Context, f network.Future, duration time.Duration) {
-		response, err := f.GetResponse(duration)
+		response, err := f.WaitResponse(duration)
 		if err != nil {
 			inslogger.FromContext(ctx).Warnf("Failed to get response to cascade message request from node %s: %s",
-				future.GetRequest().GetSender(), err.Error())
+				future.Request().GetSender(), err.Error())
 			return
 		}
 		data := response.GetData().(*ResponseCascade)
@@ -260,7 +260,7 @@ func (rpc *rpcController) SendMessage(nodeID insolar.Reference, name string, msg
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error sending RPC request to node %s", nodeID.String())
 	}
-	response, err := future.GetResponse(rpc.options.PacketTimeout)
+	response, err := future.WaitResponse(rpc.options.PacketTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error getting RPC response from node %s", nodeID.String())
 	}
