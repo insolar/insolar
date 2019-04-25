@@ -41,14 +41,6 @@ func (s *UpdateObject) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	/*jet := &WaitJet{
-		dep:     s.dep,
-		Message: s.Message,
-	}
-	if err := f.Handle(ctx, jet.Present); err != nil {
-		return err
-	}*/
-
 	updateProc := &proc.UpdateObject{
 		JetID:   jet.Result.Jet,
 		BusMsg:  s.Message,
@@ -60,7 +52,6 @@ func (s *UpdateObject) Present(ctx context.Context, f flow.Flow) error {
 	if err := f.Procedure(ctx, updateProc, false); err != nil {
 		return err
 	}
-	// return updateProc.Proceed(ctx)
 
 	return nil
 }
