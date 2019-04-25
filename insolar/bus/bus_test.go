@@ -90,7 +90,7 @@ func TestMessageBus_Send_Timeout(t *testing.T) {
 	logger := watermill.NewStdLogger(false, false)
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	b := NewBus(pubsub)
-	b.timeout = time.Millisecond * 10
+	b.readTimeout = time.Millisecond * 10
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
@@ -164,7 +164,7 @@ func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {
 	logger := watermill.NewStdLogger(false, false)
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	b := NewBus(pubsub)
-	b.timeout = time.Millisecond
+	b.writeTimeout = time.Millisecond
 	correlationId := watermill.NewUUID()
 	resChan := make(chan *message.Message)
 	b.replies[correlationId] = resChan
@@ -219,7 +219,7 @@ func TestMessageBus_Send_IncomingMessageRouter(t *testing.T) {
 
 func TestMessageBus_Send_IncomingMessageRouter_ReadAfterTimeout(t *testing.T) {
 	b := NewBus(&PublisherMock{pubErr: nil})
-	b.timeout = time.Millisecond * 10
+	b.writeTimeout = time.Millisecond * 10
 	ctx := context.Background()
 
 	payload := []byte{1, 2, 3, 4, 5}
@@ -245,7 +245,7 @@ func TestMessageBus_Send_IncomingMessageRouter_ReadAfterTimeout(t *testing.T) {
 
 func TestMessageBus_Send_IncomingMessageRouter_WriteAfterTimeout(t *testing.T) {
 	b := NewBus(&PublisherMock{pubErr: nil})
-	b.timeout = time.Millisecond * 10
+	b.readTimeout = time.Millisecond * 10
 	ctx := context.Background()
 
 	payload := []byte{1, 2, 3, 4, 5}

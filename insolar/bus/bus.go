@@ -56,8 +56,9 @@ type Sender interface {
 
 // Bus is component that sends messages and gives access to replies for them.
 type Bus struct {
-	pub     message.Publisher
-	timeout time.Duration
+	pub          message.Publisher
+	writeTimeout time.Duration
+	readTimeout  time.Duration
 
 	repliesMutex sync.RWMutex
 	replies      map[string]chan *message.Message
@@ -66,9 +67,10 @@ type Bus struct {
 // NewBus creates Bus instance with provided values.
 func NewBus(pub message.Publisher) *Bus {
 	return &Bus{
-		timeout: time.Minute * 2,
-		pub:     pub,
-		replies: make(map[string]chan *message.Message),
+		writeTimeout: time.Second * 2,
+		readTimeout:  time.Minute * 2,
+		pub:          pub,
+		replies:      make(map[string]chan *message.Message),
 	}
 }
 
@@ -105,7 +107,7 @@ func (b *Bus) Send(ctx context.Context, msg *message.Message) <-chan *message.Me
 		return nil
 	}
 	go func(b *Bus) {
-		<-time.After(b.timeout)
+		<-time.After(b.readTimeout)
 		b.removeReplyChannel(ctx, id)
 	}(b)
 	return rep
@@ -128,9 +130,9 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 			inslogger.FromContext(msg.Context()).Infof("result for message with correlationID %s was send", id)
 			b.repliesMutex.RUnlock()
 			return nil, nil
-		case <-time.After(b.timeout):
+		case <-time.After(b.writeTimeout):
 			b.repliesMutex.RUnlock()
-			return nil, errors.Errorf("can't return result for message with correlationID %s: timeout %s exceeded", id, b.timeout)
+			return nil, errors.Errorf("can't return result for message with correlationID %s: timeout %s exceeded", id, b.writeTimeout)
 		}
 	}
 }
