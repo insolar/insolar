@@ -21,10 +21,10 @@ type indexBucket struct {
 	lifeline     Lifeline
 
 	requestLock sync.RWMutex
-	requests    map[insolar.ID]struct{}
+	requests    []insolar.ID
 
 	resultLock sync.RWMutex
-	results    map[insolar.ID]struct{}
+	results    []insolar.ID
 }
 
 func (i *indexBucket) Lifeline() Lifeline {
@@ -45,22 +45,14 @@ func (i *indexBucket) setRequest(reqID insolar.ID) {
 	i.requestLock.Lock()
 	defer i.requestLock.Unlock()
 
-	if i.requests == nil {
-		i.requests = map[insolar.ID]struct{}{}
-	}
-
-	i.requests[reqID] = struct{}{}
+	i.requests = append(i.requests, reqID)
 }
 
 func (i *indexBucket) setResult(resID insolar.ID) {
 	i.resultLock.Lock()
 	defer i.resultLock.Unlock()
 
-	if i.results == nil {
-		i.results = map[insolar.ID]struct{}{}
-	}
-
-	i.results[resID] = struct{}{}
+	i.results = append(i.results, resID)
 }
 
 type InMemoryIndex struct {
@@ -82,8 +74,8 @@ func (i *InMemoryIndex) getBucket(ctx context.Context, pn insolar.PulseNumber, o
 	bucket := objsByPn[objID]
 	if bucket == nil {
 		bucket = &indexBucket{
-			requests: map[insolar.ID]struct{}{},
-			results:  map[insolar.ID]struct{}{},
+			requests: []insolar.ID{},
+			results:  []insolar.ID{},
 		}
 		objsByPn[objID] = bucket
 	}

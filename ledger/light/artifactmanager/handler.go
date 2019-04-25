@@ -288,23 +288,6 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Par
 	jetID := jetFromContext(ctx)
 
 	calculatedID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), virtRec)
-
-	switch r := virtRec.(type) {
-	case object.Request:
-		if h.RecentStorageProvider.Count() > h.conf.PendingRequestsLimit {
-			return &reply.Error{ErrType: reply.ErrTooManyPendingRequests}, nil
-		}
-		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		recentStorage.AddPendingRequest(ctx, r.GetObject(), *calculatedID)
-
-		h.IndexModifier.SetRequest(ctx, parcel.Pulse(), r.GetObject(), *calculatedID)
-	case *object.ResultRecord:
-		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
-
-		h.IndexModifier.SetResultRecord(ctx, parcel.Pulse(), *r.Request.Record(), *calculatedID)
-	}
-
 	rec := record.MaterialRecord{
 		Record: virtRec,
 		JetID:  insolar.JetID(jetID),
@@ -316,6 +299,32 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Par
 		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", virtRec)).Warn("set record override")
 	} else if err != nil {
 		return nil, errors.Wrap(err, "can't save record into storage")
+	}
+
+	switch r := virtRec.(type) {
+	case object.Request:
+		if h.RecentStorageProvider.Count() > h.conf.PendingRequestsLimit {
+			return &reply.Error{ErrType: reply.ErrTooManyPendingRequests}, nil
+		}
+		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
+		recentStorage.AddPendingRequest(ctx, r.GetObject(), *calculatedID)
+
+		idx, err := h.LifelineStorage.ForID(ctx, r.GetObject())
+		if err != nil {
+			return nil, errors.Wrap(err, "can't fetch index")
+		}
+		idx.LatestRequest = calculatedID
+		err = h.LifelineStorage.Set(ctx, r.GetObject(), idx)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't save index")
+		}
+
+		h.IndexModifier.SetRequest(ctx, parcel.Pulse(), r.GetObject(), *calculatedID)
+	case *object.ResultRecord:
+		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
+		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
+
+		h.IndexModifier.SetResultRecord(ctx, parcel.Pulse(), *r.Request.Record(), *calculatedID)
 	}
 
 	return &reply.ID{ID: *calculatedID}, nil
