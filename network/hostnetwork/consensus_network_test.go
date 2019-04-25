@@ -245,20 +245,6 @@ func (t *consensusNetworkSuite) sendPacketAndVerify(packet consensus.ConsensusPa
 	t.True(<-result)
 }
 
-// func (t *consensusNetworkSuite) TestStartStop() {
-// 	cn, err := NewConsensusNetwork("127.0.0.1:0", ID1+DOMAIN, 0)
-// 	t.Require().NoError(err)
-// 	ctx := context.Background()
-// 	err = cn.Start(ctx)
-// 	t.Require().NoError(err)
-// 	defer cn.Stop(ctx)
-//
-// 	err = cn.Stop(ctx)
-// 	t.Require().NoError(err)
-// 	err = cn.Start(ctx)
-// 	t.Require().NoError(err)
-// }
-
 func (t *consensusNetworkSuite) TestVerifySignPhase1() {
 	packet := newPhase1Packet()
 	t.sendPacketAndVerify(packet)

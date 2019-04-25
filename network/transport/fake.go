@@ -110,7 +110,7 @@ func (f *fakeDatagramTransport) Stop(ctx context.Context) error {
 }
 
 func (f *fakeDatagramTransport) SendDatagram(ctx context.Context, address string, data []byte) error {
-	// log.Debugf("fakeDatagramTransport SendDatagram to %s : %v", address, data)
+	log.Debugf("fakeDatagramTransport SendDatagram to %s : %v", address, data)
 
 	udpMutex.RLock()
 	defer udpMutex.RUnlock()

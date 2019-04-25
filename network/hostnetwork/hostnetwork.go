@@ -118,9 +118,6 @@ func (hn *hostNetwork) Init(ctx context.Context) error {
 	}
 
 	hn.pool = pool.NewConnectionPool(hn.transport)
-
-	// todo: do this after transport start
-	hn.origin, err = host.NewHostN(hn.transport.Address(), hn.origin.NodeID)
 	return err
 }
 
