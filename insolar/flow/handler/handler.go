@@ -59,9 +59,8 @@ func (h *Handler) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
 func (h *Handler) getHandleByPulse(msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
 	if uint32(msgPulseNumber) > atomic.LoadUint32(&h.currentPulseNumber) {
 		return h.handles.future
-	} else {
-		return h.handles.present
 	}
+	return h.handles.present
 }
 
 func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
