@@ -65,7 +65,7 @@ type handlerSuite struct {
 	recordModifier object.RecordModifier
 	recordAccessor object.RecordAccessor
 
-	indexMemoryStor *object.IndexMemory
+	indexMemoryStor *object.LifelineStorageMemory
 }
 
 var (

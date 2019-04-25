@@ -51,7 +51,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 	t.Run("returns correct index-value", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := &IndexMemory{
+		indexStorage := &LifelineStorageMemory{
 			indexStorage: map[insolar.ID]Lifeline{},
 		}
 		indexStorage.indexStorage[id] = idx
@@ -65,7 +65,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 	t.Run("returns error when no index-value for id", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := &IndexMemory{
+		indexStorage := &LifelineStorageMemory{
 			indexStorage: map[insolar.ID]Lifeline{},
 		}
 		indexStorage.indexStorage[id] = idx
@@ -107,7 +107,7 @@ func TestIndexDB_Set(t *testing.T) {
 	t.Run("override indices is ok", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := &IndexMemory{
+		indexStorage := &LifelineStorageMemory{
 			indexStorage:     map[insolar.ID]Lifeline{},
 			jetIndexModifier: jetIndex,
 		}
@@ -149,7 +149,7 @@ func TestIndexStorage_Set(t *testing.T) {
 	t.Run("saves correct index-value", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := &IndexMemory{
+		indexStorage := &LifelineStorageMemory{
 			indexStorage:     map[insolar.ID]Lifeline{},
 			jetIndexModifier: jetIndex,
 		}
@@ -163,7 +163,7 @@ func TestIndexStorage_Set(t *testing.T) {
 	t.Run("override indices is ok", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := &IndexMemory{
+		indexStorage := &LifelineStorageMemory{
 			indexStorage:     map[insolar.ID]Lifeline{},
 			jetIndexModifier: jetIndex,
 		}
@@ -195,7 +195,7 @@ func TestIndexStorage_Set_SaveLastUpdate(t *testing.T) {
 	t.Run("saves correct LastUpdate field in index", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := &IndexMemory{
+		indexStorage := &LifelineStorageMemory{
 			indexStorage:     map[insolar.ID]Lifeline{},
 			jetIndexModifier: jetIndex,
 		}

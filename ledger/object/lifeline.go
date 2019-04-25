@@ -190,8 +190,8 @@ func CloneIndex(idx Lifeline) Lifeline {
 	return idx
 }
 
-// IndexMemory is an in-indexStorage struct for index-storage.
-type IndexMemory struct {
+// LifelineStorageMemory is an in-indexStorage struct for index-storage.
+type LifelineStorageMemory struct {
 	jetIndexModifier store.JetIndexModifier
 	jetIndexAccessor store.JetIndexAccessor
 	pulseIndex       PulseIndex
@@ -200,10 +200,10 @@ type IndexMemory struct {
 	indexStorage map[insolar.ID]Lifeline
 }
 
-// NewIndexMemory creates a new instance of IndexMemory storage.
-func NewIndexMemory() *IndexMemory {
+// NewIndexMemory creates a new instance of LifelineStorageMemory storage.
+func NewIndexMemory() *LifelineStorageMemory {
 	idx := store.NewJetIndex()
-	return &IndexMemory{
+	return &LifelineStorageMemory{
 		indexStorage:     map[insolar.ID]Lifeline{},
 		jetIndexModifier: idx,
 		jetIndexAccessor: idx,
@@ -212,7 +212,7 @@ func NewIndexMemory() *IndexMemory {
 }
 
 // Set saves new Index-value in storage.
-func (m *IndexMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) error {
+func (m *LifelineStorageMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) error {
 	m.storageLock.Lock()
 	defer m.storageLock.Unlock()
 
@@ -229,7 +229,7 @@ func (m *IndexMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) er
 }
 
 // SetWithMeta saves index to the storage and sets its index and pulse number in internal indexes
-func (m *IndexMemory) SetWithMeta(ctx context.Context, id insolar.ID, pn insolar.PulseNumber, index Lifeline) error {
+func (m *LifelineStorageMemory) SetWithMeta(ctx context.Context, id insolar.ID, pn insolar.PulseNumber, index Lifeline) error {
 	m.storageLock.Lock()
 	defer m.storageLock.Unlock()
 
@@ -248,12 +248,12 @@ func (m *IndexMemory) SetWithMeta(ctx context.Context, id insolar.ID, pn insolar
 
 // SetUsageForPulse updates an internal state of an internal pulse-index
 // Calling this method guaranties that provied pn will be used as a LastUsagePulse for an id
-func (m *IndexMemory) SetUsageForPulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber) {
+func (m *LifelineStorageMemory) SetUsageForPulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber) {
 	m.pulseIndex.Add(id, pn)
 }
 
 // ForID returns Index for provided id.
-func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (Lifeline, error) {
+func (m *LifelineStorageMemory) ForID(ctx context.Context, id insolar.ID) (Lifeline, error) {
 	m.storageLock.RLock()
 	defer m.storageLock.RUnlock()
 	var index Lifeline
@@ -270,7 +270,7 @@ func (m *IndexMemory) ForID(ctx context.Context, id insolar.ID) (Lifeline, error
 }
 
 // ForJet returns a collection of lifelines for a provided jetID
-func (m *IndexMemory) ForJet(ctx context.Context, jetID insolar.JetID) map[insolar.ID]LifelineMeta {
+func (m *LifelineStorageMemory) ForJet(ctx context.Context, jetID insolar.JetID) map[insolar.ID]LifelineMeta {
 	m.storageLock.RLock()
 	defer m.storageLock.RUnlock()
 
@@ -297,7 +297,7 @@ func (m *IndexMemory) ForJet(ctx context.Context, jetID insolar.JetID) map[insol
 }
 
 // ForPulseAndJet returns a collection of lifelines for a provided jetID and a pulse number
-func (m *IndexMemory) ForPulseAndJet(
+func (m *LifelineStorageMemory) ForPulseAndJet(
 	ctx context.Context,
 	pn insolar.PulseNumber,
 	jetID insolar.JetID,
@@ -322,7 +322,7 @@ func (m *IndexMemory) ForPulseAndJet(
 }
 
 // DeleteForPN method removes indexes from a indexByPulseStor for a provided pulse
-func (m *IndexMemory) DeleteForPN(ctx context.Context, pn insolar.PulseNumber) {
+func (m *LifelineStorageMemory) DeleteForPN(ctx context.Context, pn insolar.PulseNumber) {
 	m.storageLock.Lock()
 	defer m.storageLock.Unlock()
 
