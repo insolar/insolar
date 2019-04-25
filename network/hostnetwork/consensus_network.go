@@ -182,7 +182,7 @@ func NewConsensusNetwork(nodeID string, shortID insolar.ShortNodeID) (network.Co
 
 	result := &networkConsensus{
 		handlers:          make(map[packets.PacketType]network.ConsensusPacketHandler),
-		sequenceGenerator: sequence.NewGeneratorImpl(),
+		sequenceGenerator: sequence.NewGenerator(),
 		origin:            &host.Host{NodeID: *id, ShortID: shortID},
 	}
 

@@ -97,7 +97,7 @@ func NewDistributor(conf configuration.PulseDistributor) (insolar.PulseDistribut
 	futureManager := future.NewManager()
 
 	result := &distributor{
-		idGenerator: sequence.NewGeneratorImpl(),
+		idGenerator: sequence.NewGenerator(),
 
 		pingRequestTimeout:        time.Duration(conf.PingRequestTimeout) * time.Millisecond,
 		randomHostsRequestTimeout: time.Duration(conf.RandomHostsRequestTimeout) * time.Millisecond,
