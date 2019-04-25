@@ -15,6 +15,8 @@ message LifelineRaw {
     uint32 State = 6 [(gogoproto.customtype) = "StateID", (gogoproto.nullable) = false];
     uint32 LatestUpdate = 7 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
     bytes JetID = 8 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+
+    bytes LatestRequest = 9 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
 }
 
 message DelegateKeyValue {

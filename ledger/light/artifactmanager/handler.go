@@ -294,13 +294,13 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Par
 		if h.RecentStorageProvider.Count() > h.conf.PendingRequestsLimit {
 			return &reply.Error{ErrType: reply.ErrTooManyPendingRequests}, nil
 		}
-		// recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		// recentStorage.AddPendingRequest(ctx, r.GetObject(), *calculatedID)
+		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
+		recentStorage.AddPendingRequest(ctx, r.GetObject(), *calculatedID)
 
 		h.IndexModifier.SetRequest(ctx, parcel.Pulse(), r.GetObject(), *calculatedID)
 	case *object.ResultRecord:
-		// recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		// recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
+		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
+		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 
 		h.IndexModifier.SetResultRecord(ctx, parcel.Pulse(), *r.Request.Record(), *calculatedID)
 	}

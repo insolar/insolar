@@ -89,6 +89,8 @@ type Lifeline struct {
 	State               StateID
 	LatestUpdate        insolar.PulseNumber
 	JetID               insolar.JetID
+
+	LatestRequest *insolar.ID
 }
 
 // LifelineMeta holds additional info about Lifeline
@@ -110,6 +112,7 @@ func EncodeIndex(index Lifeline) []byte {
 		Delegates:           []DelegateKeyValue{},
 		LatestUpdate:        index.LatestUpdate,
 		JetID:               index.JetID,
+		LatestRequest:       index.LatestRequest,
 	}
 	for k, d := range index.Delegates {
 		rawIdx.Delegates = append(rawIdx.Delegates, DelegateKeyValue{
@@ -152,6 +155,7 @@ func DecodeIndex(buff []byte) (Lifeline, error) {
 		Delegates:           map[insolar.Reference]insolar.Reference{},
 		LatestUpdate:        rawIdx.LatestUpdate,
 		JetID:               rawIdx.JetID,
+		LatestRequest:       rawIdx.LatestRequest,
 	}
 	for _, v := range rawIdx.Delegates {
 		idx.Delegates[v.Key] = v.Value
