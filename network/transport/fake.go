@@ -59,6 +59,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/log"
 )
 
 var (
@@ -79,8 +80,6 @@ type fakeFactory struct {
 
 // CreateStreamTransport creates fake StreamTransport for tests
 func (f *fakeFactory) CreateStreamTransport(handler StreamHandler) (StreamTransport, error) {
-	// return newTCPTransport(f.cfg.Address, f.cfg.FixedPublicAddress, handler), nil
-
 	return &fakeStreamTransport{address: f.cfg.Address, handler: handler}, nil
 }
 
@@ -111,7 +110,7 @@ func (f *fakeDatagramTransport) Stop(ctx context.Context) error {
 }
 
 func (f *fakeDatagramTransport) SendDatagram(ctx context.Context, address string, data []byte) error {
-	// log.Printf("fakeDatagramTransport SendDatagram to %s : %v", address, data)
+	// log.Debugf("fakeDatagramTransport SendDatagram to %s : %v", address, data)
 
 	udpMutex.RLock()
 	defer udpMutex.RUnlock()
@@ -150,7 +149,7 @@ func (f *fakeStreamTransport) Stop(ctx context.Context) error {
 }
 
 func (f *fakeStreamTransport) Dial(ctx context.Context, address string) (io.ReadWriteCloser, error) {
-	// log.Printf("fakeStreamTransport Dial from %s to %s", f.address, address)
+	log.Debug("fakeStreamTransport Dial from %s to %s", f.address, address)
 
 	tcpMutex.RLock()
 	defer tcpMutex.RUnlock()

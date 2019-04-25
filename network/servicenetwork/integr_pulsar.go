@@ -120,7 +120,7 @@ func (tp *testPulsar) Start(ctx context.Context, bootstrapHosts []string) error 
 	}
 
 	tp.cm = &component.Manager{}
-	tp.cm.Inject(tp.distributor, transport.NewFactory(configuration.NewHostNetwork().Transport))
+	tp.cm.Inject(tp.distributor, transport.NewFakeFactory(configuration.NewHostNetwork().Transport))
 
 	if err = tp.cm.Init(ctx); err != nil {
 		return errors.Wrap(err, "Failed to init test pulsar components")

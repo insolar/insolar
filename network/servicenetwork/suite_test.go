@@ -471,7 +471,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
 
 	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService, mblocker, GIL)
-	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler, transport.NewFactory(cfg.Host.Transport))
+	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler, transport.NewFakeFactory(cfg.Host.Transport))
 
 	node.serviceNetwork = serviceNetwork
 }
