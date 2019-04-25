@@ -3,20 +3,20 @@ package object
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "IndexCleaner" can be found in github.com/insolar/insolar/ledger/object
+The original interface "LifelineCleaner" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//IndexCleanerMock implements github.com/insolar/insolar/ledger/object.IndexCleaner
+// IndexCleanerMock implements github.com/insolar/insolar/ledger/object.LifelineCleaner
 type IndexCleanerMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type IndexCleanerMock struct {
 	DeleteForPNMock       mIndexCleanerMockDeleteForPN
 }
 
-//NewIndexCleanerMock returns a mock for github.com/insolar/insolar/ledger/object.IndexCleaner
+// NewIndexCleanerMock returns a mock for github.com/insolar/insolar/ledger/object.LifelineCleaner
 func NewIndexCleanerMock(t minimock.Tester) *IndexCleanerMock {
 	m := &IndexCleanerMock{t: t}
 
@@ -54,7 +54,7 @@ type IndexCleanerMockDeleteForPNInput struct {
 	p1 insolar.PulseNumber
 }
 
-//Expect specifies that invocation of IndexCleaner.DeleteForPN is expected from 1 to Infinity times
+// Expect specifies that invocation of LifelineCleaner.DeleteForPN is expected from 1 to Infinity times
 func (m *mIndexCleanerMockDeleteForPN) Expect(p context.Context, p1 insolar.PulseNumber) *mIndexCleanerMockDeleteForPN {
 	m.mock.DeleteForPNFunc = nil
 	m.expectationSeries = nil
@@ -66,7 +66,7 @@ func (m *mIndexCleanerMockDeleteForPN) Expect(p context.Context, p1 insolar.Puls
 	return m
 }
 
-//Return specifies results of invocation of IndexCleaner.DeleteForPN
+// Return specifies results of invocation of LifelineCleaner.DeleteForPN
 func (m *mIndexCleanerMockDeleteForPN) Return() *IndexCleanerMock {
 	m.mock.DeleteForPNFunc = nil
 	m.expectationSeries = nil
@@ -78,7 +78,7 @@ func (m *mIndexCleanerMockDeleteForPN) Return() *IndexCleanerMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of IndexCleaner.DeleteForPN is expected once
+// ExpectOnce specifies that invocation of LifelineCleaner.DeleteForPN is expected once
 func (m *mIndexCleanerMockDeleteForPN) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *IndexCleanerMockDeleteForPNExpectation {
 	m.mock.DeleteForPNFunc = nil
 	m.mainExpectation = nil
@@ -89,7 +89,7 @@ func (m *mIndexCleanerMockDeleteForPN) ExpectOnce(p context.Context, p1 insolar.
 	return expectation
 }
 
-//Set uses given function f as a mock of IndexCleaner.DeleteForPN method
+// Set uses given function f as a mock of LifelineCleaner.DeleteForPN method
 func (m *mIndexCleanerMockDeleteForPN) Set(f func(p context.Context, p1 insolar.PulseNumber)) *IndexCleanerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -98,7 +98,7 @@ func (m *mIndexCleanerMockDeleteForPN) Set(f func(p context.Context, p1 insolar.
 	return m.mock
 }
 
-//DeleteForPN implements github.com/insolar/insolar/ledger/object.IndexCleaner interface
+// DeleteForPN implements github.com/insolar/insolar/ledger/object.LifelineCleaner interface
 func (m *IndexCleanerMock) DeleteForPN(p context.Context, p1 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.DeleteForPNPreCounter, 1)
 	defer atomic.AddUint64(&m.DeleteForPNCounter, 1)
@@ -110,7 +110,7 @@ func (m *IndexCleanerMock) DeleteForPN(p context.Context, p1 insolar.PulseNumber
 		}
 
 		input := m.DeleteForPNMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, IndexCleanerMockDeleteForPNInput{p, p1}, "IndexCleaner.DeleteForPN got unexpected parameters")
+		testify_assert.Equal(m.t, *input, IndexCleanerMockDeleteForPNInput{p, p1}, "LifelineCleaner.DeleteForPN got unexpected parameters")
 
 		return
 	}
@@ -119,7 +119,7 @@ func (m *IndexCleanerMock) DeleteForPN(p context.Context, p1 insolar.PulseNumber
 
 		input := m.DeleteForPNMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, IndexCleanerMockDeleteForPNInput{p, p1}, "IndexCleaner.DeleteForPN got unexpected parameters")
+			testify_assert.Equal(m.t, *input, IndexCleanerMockDeleteForPNInput{p, p1}, "LifelineCleaner.DeleteForPN got unexpected parameters")
 		}
 
 		return

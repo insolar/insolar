@@ -71,10 +71,10 @@ type LifelineStorage interface {
 	LifelineModifier
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexCleaner -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineCleaner -o ./ -s _mock.go
 
-// IndexCleaner provides an interface for removing interfaces from a storage.
-type IndexCleaner interface {
+// LifelineCleaner provides an interface for removing interfaces from a storage.
+type LifelineCleaner interface {
 	// DeleteForPN method removes indexes from a storage for a provided
 	DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
 }

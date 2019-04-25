@@ -49,7 +49,7 @@ type LightCleaner struct {
 	dropCleaner  drop.Cleaner
 	blobCleaner  blob.Cleaner
 	recCleaner   object.RecordCleaner
-	indexCleaner object.IndexCleaner
+	indexCleaner object.LifelineCleaner
 	pulseShifter pulse.Shifter
 
 	pulseCalculator pulse.Calculator
@@ -64,7 +64,7 @@ func NewCleaner(
 	dropCleaner drop.Cleaner,
 	blobCleaner blob.Cleaner,
 	recCleaner object.RecordCleaner,
-	indexCleaner object.IndexCleaner,
+	indexCleaner object.LifelineCleaner,
 	pulseShifter pulse.Shifter,
 	pulseCalculator pulse.Calculator,
 	lightChainLimit int,

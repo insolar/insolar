@@ -70,7 +70,7 @@ type PulseManager struct {
 	IndexAccessor           object.LifelineAccessor `inject:""`
 	IndexModifier           object.ExtendedLifelineModifier
 	CollectionIndexAccessor object.LifelineCollectionAccessor
-	IndexCleaner            object.IndexCleaner
+	IndexCleaner            object.LifelineCleaner
 
 	NodeSetter node.Modifier `inject:""`
 	Nodes      node.Accessor `inject:""`
@@ -129,7 +129,7 @@ func NewPulseManager(
 	recCleaner object.RecordCleaner,
 	recSyncAccessor object.RecordCollectionAccessor,
 	idxCollectionAccessor object.LifelineCollectionAccessor,
-	indexCleaner object.IndexCleaner,
+	indexCleaner object.LifelineCleaner,
 	lightToHeavySyncer replication.LightReplicator,
 ) *PulseManager {
 	pmconf := conf.PulseManager
