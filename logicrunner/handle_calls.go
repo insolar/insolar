@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 )
@@ -68,7 +67,7 @@ func (h *HandleCall) executeActual(
 	procCheckRole := CheckOurRole{
 		msg:  msg,
 		role: insolar.DynamicRoleVirtualExecutor,
-		Dep:  struct{ lr *LogicRunner }{lr: lr},
+		lr:   lr,
 	}
 
 	if err := f.Procedure(ctx, &procCheckRole, true); err != nil {
@@ -99,11 +98,9 @@ func (h *HandleCall) executeActual(
 	es.Unlock()
 
 	procClarifyPendingState := ClarifyPendingState{
-		es:     es,
-		parcel: parcel,
-		Dep: struct{ ArtifactManager artifacts.Client }{
-			ArtifactManager: lr.ArtifactManager,
-		},
+		es:              es,
+		parcel:          parcel,
+		ArtifactManager: lr.ArtifactManager,
 	}
 
 	if err := f.Procedure(ctx, &procClarifyPendingState, true); err != nil {
@@ -140,7 +137,7 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 		return errors.New("HandleCall( ! message.IBaseLogicMessage )")
 	}
 
-	ctx, span := instracer.StartSpan(ctx, "HandleCall.Present")
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.Execute")
 	span.AddAttributes(
 		trace.StringAttribute("msg.Type", msg.Type().String()),
 	)
