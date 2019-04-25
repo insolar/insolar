@@ -111,9 +111,8 @@ type HandleExecutorResults struct {
 	Message bus.Message
 }
 
-func (h *HandleExecutorResults) realPresent(ctx context.Context, f flow.Flow) error {
+func (h *HandleExecutorResults) realHandleExecutorState(ctx context.Context, f flow.Flow) error {
 	parcel := h.Message.Parcel
-	logger := inslogger.FromContext(ctx)
 	msg := parcel.Message().(*message.ExecutorResults)
 
 	// now we have 2 different types of data in message.HandleExecutorResultsMessage
@@ -134,12 +133,12 @@ func (h *HandleExecutorResults) realPresent(ctx context.Context, f flow.Flow) er
 		return err
 	}
 
-	if !procInitializeExecutionState.Result.clarifyPending {
+	if procInitializeExecutionState.Result.clarifyPending {
 		procClarifyPending := ClarifyPendingState{
-			es:     procInitializeExecutionState.Result.es,
-			parcel: parcel,
+			es:              procInitializeExecutionState.Result.es,
+			parcel:          nil,
+			ArtifactManager: h.dep.lr.ArtifactManager,
 		}
-		procClarifyPending.Dep.ArtifactManager = h.dep.lr.ArtifactManager
 
 		if err := f.Procedure(ctx, &procClarifyPending, true); err != nil {
 			if err == flow.ErrCancelled {
@@ -162,7 +161,6 @@ func (h *HandleExecutorResults) realPresent(ctx context.Context, f flow.Flow) er
 			return nil
 		}
 
-		logger.Warn("[ HandleExecutorResults ] StartQueueProcessorIfNeeded returns error: ", err)
 		return errors.Wrap(err, "[ HandleExecutorResults ] Failed to process queue")
 	}
 
@@ -185,7 +183,7 @@ func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error 
 	span.AddAttributes(trace.StringAttribute("msg.Type", msg.Type().String()))
 	defer span.End()
 
-	err := h.realPresent(ctx, f)
+	err := h.realHandleExecutorState(ctx, f)
 
 	actualReply := bus.Reply{Reply: &reply.OK{}, Err: err}
 	if err != nil {

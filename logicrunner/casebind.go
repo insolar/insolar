@@ -233,7 +233,7 @@ func (lr *LogicRunner) HandleValidationResultsMessage(ctx context.Context, inmsg
 }
 
 func (lr *LogicRunner) HandleExecutorResultsMessage(ctx context.Context, inmsg insolar.Parcel) (insolar.Reply, error) {
-	return lr.FlowHandler.WrapBusHandle(ctx, inmsg)
+	return lr.FlowDispatcher.WrapBusHandle(ctx, inmsg)
 }
 
 func init() {
