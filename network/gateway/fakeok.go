@@ -66,7 +66,7 @@ type FakeOk struct {
 
 func NewFakeOk() network.Gateway {
 	g := &FakeOk{}
-	g.Base.Me = g
+	g.Base.Self = g
 	g.State = insolar.NoNetworkState
 	return g
 }

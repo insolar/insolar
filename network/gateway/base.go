@@ -61,7 +61,7 @@ import (
 // Base is abstract class for gateways
 
 type Base struct {
-	Me                  network.Gateway
+	Self                network.Gateway
 	Network             network.Gatewayer
 	ContractRequester   insolar.ContractRequester
 	CryptographyService insolar.CryptographyService
@@ -76,19 +76,19 @@ func (g *Base) NewGateway(state insolar.NetworkState) network.Gateway {
 	log.Warnf("NewGateway %s", state.String())
 	switch state {
 	case insolar.NoNetworkState:
-		g.Me = &NoNetwork{g}
+		g.Self = &NoNetwork{g}
 	case insolar.VoidNetworkState:
-		g.Me = NewVoid(g)
+		g.Self = NewVoid(g)
 	case insolar.JetlessNetworkState:
-		g.Me = NewJetless(g)
+		g.Self = NewJetless(g)
 	case insolar.AuthorizationNetworkState:
-		g.Me = NewAuthorisation(g)
+		g.Self = NewAuthorisation(g)
 	case insolar.CompleteNetworkState:
-		g.Me = NewComplete(g)
+		g.Self = NewComplete(g)
 	default:
 		panic("Try to switch network to unknown state. Memory of process is inconsistent.")
 	}
-	return g.Me
+	return g.Self
 }
 
 func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {
@@ -101,7 +101,7 @@ func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 
 // Auther casts us to Auther or obtain it in another way
 func (g *Base) Auther() network.Auther {
-	if ret, ok := g.Me.(network.Auther); ok {
+	if ret, ok := g.Self.(network.Auther); ok {
 		return ret
 	}
 	panic("Our network gateway suddenly is not an Auther")
