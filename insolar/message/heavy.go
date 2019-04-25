@@ -55,35 +55,3 @@ func (HeavyPayload) GetCaller() *insolar.Reference {
 func (hp *HeavyPayload) Type() insolar.MessageType {
 	return insolar.TypeHeavyPayload
 }
-
-// HeavyStartStop carries heavy replication start/stop signal with pulse number.
-type HeavyStartStop struct {
-	JetID    insolar.JetID
-	PulseNum insolar.PulseNumber
-	Finished bool
-}
-
-// AllowedSenderObjectAndRole implements interface method
-func (*HeavyStartStop) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
-	return nil, 0
-}
-
-// DefaultTarget returns of target of this event.
-func (*HeavyStartStop) DefaultTarget() *insolar.Reference {
-	return &insolar.Reference{}
-}
-
-// DefaultRole returns role for this event
-func (*HeavyStartStop) DefaultRole() insolar.DynamicRole {
-	return insolar.DynamicRoleHeavyExecutor
-}
-
-// GetCaller implementation of Message interface.
-func (HeavyStartStop) GetCaller() *insolar.Reference {
-	return nil
-}
-
-// Type implementation of Message interface.
-func (e *HeavyStartStop) Type() insolar.MessageType {
-	return insolar.TypeHeavyStartStop
-}

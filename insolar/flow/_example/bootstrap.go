@@ -33,8 +33,6 @@ func (s *GetObject) Past(context.Context, flow.Flow) error    { /* ... */ return
 func (s *GetObject) Present(context.Context, flow.Flow) error { /* ... */ return nil }
 func (s *GetObject) Future(context.Context, flow.Flow) error  { /* ... */ return nil }
 
-// =====================================================================================================================
-
 func bootstrapExample() { // nolint
 	DBConnection := bytes.NewBuffer(nil)
 

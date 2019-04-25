@@ -30,56 +30,59 @@ import (
 	"github.com/insolar/insolar/bootstrap/genesis"
 	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar/defaults"
+	"github.com/insolar/insolar/log"
 	"github.com/spf13/cobra"
-	"gopkg.in/yaml.v2"
+	yaml "gopkg.in/yaml.v2"
 )
 
-func check(msg string, err error) {
-	if err != nil {
-		fmt.Println(msg, err)
-		os.Exit(1)
-	}
+func baseDir() string {
+	return defaults.LaunchnetDir()
 }
 
-const (
-	defaultOutputConfigNameTmpl       = "insolar_%d.yaml"
-	defaultHost                       = "127.0.0.1"
-	defaultJaegerEndPoint             = defaultHost + ":6831"
-	defaultLogLevel                   = "Debug"
-	defaultGenesisFile                = "genesis.yaml"
-	defaultPulsarTemplate             = "scripts/insolard/pulsar_template.yaml"
-	discoveryDataDirectoryTemplate    = "scripts/insolard/discoverynodes/%d/data"
-	discoveryNewDataDirectoryTemplate = "scripts/insolard/discoverynodes/%d/new-data"
-	discoveryCertificatePathTemplate  = "scripts/insolard/discoverynodes/%d/cert.json"
-	nodeDataDirectoryTemplate         = "scripts/insolard/nodes/%d/data"
-	nodeCertificatePathTemplate       = "scripts/insolard/nodes/%d/cert.json"
-	pulsewatcherFileName              = "pulsewatcher.yaml"
+var (
+	defaultOutputConfigNameTmpl      = "%d/insolard.yaml"
+	defaultHost                      = "127.0.0.1"
+	defaultJaegerEndPoint            = defaultHost + ":6831"
+	discoveryDataDirectoryTemplate   = withBaseDir("discoverynodes/%d/data")
+	discoveryCertificatePathTemplate = withBaseDir("discoverynodes/certs/discovery_cert_%d.json")
+	nodeDataDirectoryTemplate        = "nodes/%d/data"
+	nodeCertificatePathTemplate      = "nodes/%d/cert.json"
+	pulsewatcherFileName             = withBaseDir("pulsewatcher.yaml")
 
 	prometheusConfigTmpl = "scripts/prom/server.yml.tmpl"
 	prometheusFileName   = "prometheus.yaml"
+
+	genesisConfigTmpl = "scripts/insolard/genesis_template.yaml"
+	genesisFileName   = withBaseDir("genesis.yaml")
+
+	insolardConfigTmpl = "scripts/insolard/insolard_template.yaml"
+	insolardFileName   = withBaseDir("insolard.yaml")
+
+	pulsardConfigTmpl = "scripts/insolard/pulsar_template.yaml"
+	pulsardFileName   = withBaseDir("pulsar.yaml")
 )
 
 var (
-	genesisFile     string
 	outputDir       string
 	debugLevel      string
 	gorundPortsPath string
-	pulsarTemplate  string
 )
 
 func parseInputParams() {
 	var rootCmd = &cobra.Command{}
 
-	rootCmd.Flags().StringVarP(&genesisFile, "genesis", "g", defaultGenesisFile, "input genesis file")
-	rootCmd.Flags().StringVarP(&pulsarTemplate, "pulsar-template", "t", defaultPulsarTemplate, "path to pulsar template file")
-	rootCmd.Flags().StringVarP(&outputDir, "output", "o", "", "output directory ( required )")
-	rootCmd.Flags().StringVarP(&debugLevel, "debuglevel", "d", defaultLogLevel, "debug level")
-	rootCmd.Flags().StringVarP(&gorundPortsPath, "gorundports", "p", "", "path to insgorund ports ( required )")
+	rootCmd.Flags().StringVarP(
+		&outputDir, "output", "o", baseDir(), "output directory")
+	rootCmd.Flags().StringVarP(
+		&debugLevel, "debuglevel", "d", "Debug", "debug level")
+	rootCmd.Flags().StringVarP(
+		&gorundPortsPath, "gorundports", "p", "", "path to insgorund ports (required)")
 
 	err := rootCmd.Execute()
 	check("Wrong input params:", err)
 
-	if outputDir == "" || gorundPortsPath == "" {
+	if gorundPortsPath == "" {
 		err := rootCmd.Usage()
 		check("[ parseInputParams ]", err)
 	}
@@ -91,57 +94,30 @@ func writeGorundPorts(gorundPorts [][]string) {
 		portsData += ports[0] + " " + ports[1] + "\n"
 	}
 	err := makeFileWithDir("./", gorundPortsPath, portsData)
-	check("Can't makeFileWithDir: "+gorundPortsPath, err)
+	check("failed to create gorund ports file: "+gorundPortsPath, err)
 }
 
-func writeInsolarConfigs(output string, insolarConfigs []configuration.Configuration) {
-	for index, conf := range insolarConfigs {
+func writeInsolardConfigs(dir string, insolardConfigs []configuration.Configuration) {
+	fmt.Println("generate_insolar_configs.go: writeInsolardConfigs...")
+	for index, conf := range insolardConfigs {
 		data, err := yaml.Marshal(conf)
 		check("Can't Marshal insolard config", err)
+
 		fileName := fmt.Sprintf(defaultOutputConfigNameTmpl, index+1)
-		err = makeFileWithDir(output, fileName, string(data))
-		check("Can't makeFileWithDir: "+fileName, err)
+		fileName = filepath.Join(dir, fileName)
+		err = createFileWithDir(fileName, string(data))
+		check("failed to create insolard config: "+fileName, err)
 	}
-}
-
-func writePulsarConfig(conf configuration.Configuration) {
-	data, err := yaml.Marshal(conf)
-	check("Can't Marshal pulsard config", err)
-	err = makeFileWithDir(outputDir, "pulsar.yaml", string(data))
-	check("Can't makeFileWithDir: pulsar.yaml", err)
-}
-
-type promContext struct {
-	Jobs map[string][]string
-}
-
-func newPromContext() *promContext {
-	return &promContext{Jobs: map[string][]string{}}
-}
-
-func (pctx *promContext) addTarget(name string, conf configuration.Configuration) {
-	jobs := pctx.Jobs
-	addrPair := strings.SplitN(conf.Metrics.ListenAddress, ":", 2)
-	addr := "host.docker.internal:" + addrPair[1]
-	jobs[name] = append(jobs[name], addr)
-}
-
-func writePromConfig(pctx *promContext) {
-	templates, err := template.ParseFiles(prometheusConfigTmpl)
-	check("Can't parse template: "+prometheusConfigTmpl, err)
-
-	var b bytes.Buffer
-	err = templates.Execute(&b, pctx)
-	check("Can't process template: "+prometheusConfigTmpl, err)
-
-	err = makeFileWithDir(outputDir, prometheusFileName, b.String())
-	check("Can't makeFileWithDir: "+prometheusFileName, err)
 }
 
 func main() {
 	parseInputParams()
 
-	genesisConf, err := genesis.ParseGenesisConfig(genesisFile)
+	mustMakeDir(outputDir)
+	writeInsloardConfig()
+	writeGenesisConfig()
+
+	genesisConf, err := genesis.ParseGenesisConfig(genesisFileName)
 	check("Can't read genesis config", err)
 
 	pwConfig := pulsewatcher.Config{}
@@ -149,8 +125,11 @@ func main() {
 
 	var gorundPorts [][]string
 
-	pctx := newPromContext()
+	promVars := &promConfigVars{
+		Jobs: map[string][]string{},
+	}
 
+	// process discovery nodes
 	for index, node := range genesisConf.DiscoveryNodes {
 		nodeIndex := index + 1
 		conf := configuration.NewConfiguration()
@@ -173,20 +152,22 @@ func main() {
 		conf.Log.Level = debugLevel
 		conf.Log.Adapter = "zerolog"
 		conf.Log.Formatter = "json"
-		conf.KeysPath = genesisConf.DiscoveryKeysDir + fmt.Sprintf(genesisConf.KeysNameFormat, index)
+		conf.KeysPath = genesisConf.DiscoveryKeysDir + fmt.Sprintf(genesisConf.KeysNameFormat, nodeIndex)
 		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(discoveryDataDirectoryTemplate, nodeIndex)
-		conf.Ledger.Storage.DataDirectoryNewDB = fmt.Sprintf(discoveryNewDataDirectoryTemplate, nodeIndex)
 		conf.CertificatePath = fmt.Sprintf(discoveryCertificatePathTemplate, nodeIndex)
 
 		discoveryNodesConfigs = append(discoveryNodesConfigs, conf)
 
-		pctx.addTarget(node.Role, conf)
+		promVars.addTarget(node.Role, conf)
 
 		pwConfig.Nodes = append(pwConfig.Nodes, conf.APIRunner.Address)
 	}
 
-	nodesConfigs := make([]configuration.Configuration, 0, len(genesisConf.DiscoveryNodes))
+	// process extra nodes
+	nodeDataDirectoryTemplate = filepath.Join(outputDir, nodeDataDirectoryTemplate)
+	nodeCertificatePathTemplate = filepath.Join(outputDir, nodeCertificatePathTemplate)
 
+	nodesConfigs := make([]configuration.Configuration, 0, len(genesisConf.DiscoveryNodes))
 	for index, node := range genesisConf.Nodes {
 		nodeIndex := index + 1
 
@@ -215,32 +196,112 @@ func main() {
 
 		nodesConfigs = append(nodesConfigs, conf)
 
-		pctx.addTarget(node.Role, conf)
+		promVars.addTarget(node.Role, conf)
 
 		pwConfig.Nodes = append(pwConfig.Nodes, conf.APIRunner.Address)
 	}
 
-	cfgHolder := configuration.NewHolder()
-	err = cfgHolder.LoadFromFile(pulsarTemplate)
-	check("Can't read pulsar template config", err)
-	fmt.Println("pulsar template config: " + pulsarTemplate)
-
-	pulsarConfig := cfgHolder.Configuration
-	pulsarConfig.Pulsar.PulseDistributor.BootstrapHosts = []string{}
-	for _, node := range genesisConf.DiscoveryNodes {
-		pulsarConfig.Pulsar.PulseDistributor.BootstrapHosts = append(pulsarConfig.Pulsar.PulseDistributor.BootstrapHosts, node.Host)
-	}
-
-	writeInsolarConfigs(filepath.Join(outputDir, "/discoverynodes"), discoveryNodesConfigs)
-	writeInsolarConfigs(filepath.Join(outputDir, "/nodes"), nodesConfigs)
+	writePromConfig(promVars)
+	writeInsolardConfigs(filepath.Join(outputDir, "/discoverynodes"), discoveryNodesConfigs)
+	writeInsolardConfigs(filepath.Join(outputDir, "/nodes"), nodesConfigs)
 	writeGorundPorts(gorundPorts)
-	writePulsarConfig(pulsarConfig)
-	writePromConfig(pctx)
+	writeGenesisConfig()
+
+	pulsarConf := &pulsarConfigVars{}
+	pulsarConf.DataDir = withBaseDir("pulsar_data")
+	pulsarConf.BaseDir = baseDir()
+	for _, node := range genesisConf.DiscoveryNodes {
+		pulsarConf.BootstrapHosts = append(pulsarConf.BootstrapHosts, node.Host)
+	}
+	writePulsarConfig(pulsarConf)
 
 	pwConfig.Interval = 500 * time.Millisecond
 	pwConfig.Timeout = 1 * time.Second
-	err = pulsewatcher.WriteConfig(filepath.Join(outputDir, "/utils"), pulsewatcherFileName, pwConfig)
+	mustMakeDir(filepath.Dir(pulsewatcherFileName))
+	err = pulsewatcher.WriteConfig(pulsewatcherFileName, pwConfig)
 	check("couldn't write pulsewatcher config file", err)
+	fmt.Println("generate_insolar_configs.go: write to file", pulsewatcherFileName)
+}
+
+type commonConfigVars struct {
+	BaseDir string
+}
+
+func writeGenesisConfig() {
+	templates, err := template.ParseFiles(genesisConfigTmpl)
+	check("Can't parse template: "+genesisConfigTmpl, err)
+
+	var b bytes.Buffer
+	err = templates.Execute(&b, &commonConfigVars{BaseDir: baseDir()})
+	check("Can't process template: "+genesisConfigTmpl, err)
+
+	err = makeFile(genesisFileName, b.String())
+	check("Can't makeFileWithDir: "+genesisFileName, err)
+}
+
+func writeInsloardConfig() {
+	templates, err := template.ParseFiles(insolardConfigTmpl)
+	check("Can't parse template: "+insolardConfigTmpl, err)
+
+	var b bytes.Buffer
+	err = templates.Execute(&b, &commonConfigVars{BaseDir: baseDir()})
+	check("Can't process template: "+insolardConfigTmpl, err)
+
+	// fmt.Println("insolardFileName:", insolardFileName)
+	// os.Exit(1)
+	err = createFileWithDir(insolardFileName, b.String())
+	check("Can't makeFileWithDir: "+insolardFileName, err)
+}
+
+type pulsarConfigVars struct {
+	commonConfigVars
+	BootstrapHosts []string
+	DataDir        string
+}
+
+func writePulsarConfig(pcv *pulsarConfigVars) {
+	templates, err := template.ParseFiles(pulsardConfigTmpl)
+	check("Can't parse template: "+pulsardConfigTmpl, err)
+
+	var b bytes.Buffer
+	err = templates.Execute(&b, pcv)
+	check("Can't process template: "+pulsardConfigTmpl, err)
+
+	err = makeFile(pulsardFileName, b.String())
+	check("Can't makeFileWithDir: "+pulsardFileName, err)
+}
+
+type promConfigVars struct {
+	Jobs map[string][]string
+}
+
+func (pcv *promConfigVars) addTarget(name string, conf configuration.Configuration) {
+	jobs := pcv.Jobs
+	addrPair := strings.SplitN(conf.Metrics.ListenAddress, ":", 2)
+	addr := "host.docker.internal:" + addrPair[1]
+	jobs[name] = append(jobs[name], addr)
+}
+
+func writePromConfig(pcv *promConfigVars) {
+	templates, err := template.ParseFiles(prometheusConfigTmpl)
+	check("Can't parse template: "+prometheusConfigTmpl, err)
+
+	var b bytes.Buffer
+	err = templates.Execute(&b, pcv)
+	check("Can't process template: "+prometheusConfigTmpl, err)
+
+	err = makeFileWithDir(outputDir, prometheusFileName, b.String())
+	check("Can't makeFileWithDir: "+prometheusFileName, err)
+}
+
+func makeFile(name string, text string) error {
+	fmt.Println("generate_insolar_configs.go: write to file", name)
+	return ioutil.WriteFile(name, []byte(text), 0644)
+}
+
+func createFileWithDir(file string, text string) error {
+	mustMakeDir(filepath.Dir(file))
+	return makeFile(file, text)
 }
 
 // makeFileWithDir dumps `text` into file named `name` into directory `dir`.
@@ -250,5 +311,27 @@ func makeFileWithDir(dir string, name string, text string) error {
 	if err != nil {
 		return err
 	}
-	return ioutil.WriteFile(filepath.Join(dir, name), []byte(text), 0644)
+	file := filepath.Join(dir, name)
+	return makeFile(file, text)
+}
+
+func mustMakeDir(dir string) {
+	err := os.MkdirAll(dir, 0775)
+	check("couldn't create directory "+dir, err)
+	fmt.Println("generate_insolar_configs.go: creates dir", dir)
+}
+
+func withBaseDir(subpath string) string {
+	return filepath.Join(baseDir(), subpath)
+}
+
+func check(msg string, err error) {
+	if err == nil {
+		return
+	}
+
+	logCfg := configuration.NewLog()
+	logCfg.Formatter = "text"
+	inslog, _ := log.NewLog(logCfg)
+	inslog.WithField("error", err).Fatal(msg)
 }

@@ -24,9 +24,10 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/insolar/jet"
 	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/ledger/storage/pulse"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
@@ -46,7 +47,7 @@ const deliverRPCMethodName = "MessageBus.Deliver"
 // e.g. glue between network and logic runner
 type MessageBus struct {
 	Network                    insolar.Network                    `inject:""`
-	JetCoordinator             insolar.JetCoordinator             `inject:""`
+	JetCoordinator             jet.Coordinator                    `inject:""`
 	NodeNetwork                insolar.NodeNetwork                `inject:""`
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
@@ -457,7 +458,7 @@ func (mb *MessageBus) checkParcel(ctx context.Context, parcel insolar.Parcel) er
 	// 	return nil
 	// }
 	//
-	// validSender, err := mb.JetCoordinator.IsAuthorized(
+	// validSender, err := mb.Coordinator.IsAuthorized(
 	// 	ctx, allowedSenderRole, *sendingObject.Record(), parcel.Pulse(), sender,
 	// )
 	// if err != nil {

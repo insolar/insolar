@@ -84,6 +84,13 @@ type Logger interface {
 	// SetLevelNumber set log level with number
 	WithLevelNumber(level LogLevel) (Logger, error)
 
+	// WithCaller switch on/off 'caller' field computation.
+	WithCaller(flag bool) Logger
+	// WithSkipFrameCount configures skipFrameCount for 'caller' field computation.
+	WithSkipFrameCount(skipFrameCount int) Logger
+	// WithFuncName switch on/off 'func' field computation.
+	WithFuncName(flag bool) Logger
+
 	// Debug logs a message at level Debug.
 	Debug(...interface{})
 	// Debugf formatted logs a message at level Debug.

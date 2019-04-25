@@ -64,9 +64,9 @@ import (
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/ledger/storage/pulse"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller"
@@ -183,7 +183,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		phases.NewFirstPhase(),
 		phases.NewSecondPhase(),
 		phases.NewThirdPhase(),
-		phases.NewPhaseManager(),
+		phases.NewPhaseManager(n.cfg.Service.Consensus),
 		bootstrap.NewSessionManager(),
 		controller.NewNetworkController(),
 		controller.NewRPCController(options),

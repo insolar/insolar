@@ -46,8 +46,8 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/ledger/recentstorage"
-	"github.com/insolar/insolar/ledger/storage/drop"
+	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/goplugin"
@@ -96,9 +96,10 @@ func (s *LogicRunnerFuncSuite) SetupSuite() {
 	}
 }
 
-func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr insolar.LogicRunner) {
-	mb.ReRegister(insolar.TypeCallMethod, lr.HandleCalls)
-	mb.ReRegister(insolar.TypeCallConstructor, lr.HandleCalls)
+func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr *LogicRunner) {
+	mb.ReRegister(insolar.TypeCallMethod, lr.FlowHandler.WrapBusHandle)
+	mb.ReRegister(insolar.TypeCallConstructor, lr.FlowHandler.WrapBusHandle)
+
 	mb.ReRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	mb.ReRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
 	mb.ReRegister(insolar.TypeExecutorResults, lr.HandleExecutorResultsMessage)
@@ -138,7 +139,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 
 	nw := testutils.GetTestNetwork(s.T())
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	l, db, cleaner := artifacts.TmpLedger(
+	l := artifacts.TmpLedger(
 		s.T(),
 		"",
 		insolar.Components{
@@ -149,12 +150,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 		},
 	)
 
-	indexMock := recentstorage.NewRecentIndexStorageMock(s.T())
-	indexMock.AddObjectMock.Return()
-
 	providerMock := recentstorage.NewProviderMock(s.T())
-	providerMock.GetIndexStorageMock.Return(indexMock)
-	providerMock.DecreaseIndexesTTLMock.Return(nil)
 
 	parcelFactory := messagebus.NewParcelFactory()
 	cm := &component.Manager{}
@@ -165,7 +161,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	pulseAccessor := l.PulseManager.(*pulsemanager.PulseManager).PulseAccessor
 	nth := testutils.NewTerminationHandlerMock(s.T())
 
-	cm.Inject(db, pulseAccessor, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, nth, mock)
+	cm.Inject(pulseAccessor, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, nth, mock)
 	err = cm.Init(ctx)
 	s.NoError(err)
 	err = cm.Start(ctx)
@@ -181,7 +177,6 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	return lr, am, cb, pm, func() {
 		cb.Clean()
 		lr.Stop(ctx)
-		cleaner()
 		rundCleaner()
 	}
 }
@@ -204,7 +199,6 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr inso
 		&message.HotData{
 			Jet:             *insolar.NewReference(insolar.DomainID, insolar.ID(rootJetId)),
 			Drop:            drop.Drop{Pulse: 1, JetID: rootJetId},
-			RecentObjects:   nil,
 			PendingRequests: nil,
 			PulseNumber:     newPulseNumber,
 		}, nil,

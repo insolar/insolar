@@ -34,7 +34,7 @@ type JetIndexModifier interface {
 
 // JetIndexAccessor is an interface for modifying index records.
 type JetIndexAccessor interface {
-	For(jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]struct{}
+	For(jetID insolar.JetID) map[insolar.ID]struct{}
 }
 
 // JetIndex contains methods to implement quick access to data by jet. Indexes are stored in memory. Consider disk
@@ -81,7 +81,7 @@ func (i *JetIndex) Delete(id insolar.ID, jetID insolar.JetID) {
 }
 
 // For returns a collection of ids, that are stored for a specific jetID and a pulse number
-func (i *JetIndex) For(jetID insolar.JetID, pn insolar.PulseNumber) map[insolar.ID]struct{} {
+func (i *JetIndex) For(jetID insolar.JetID) map[insolar.ID]struct{} {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 

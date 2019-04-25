@@ -19,6 +19,20 @@
   revision = "343706a395b76e5ca5c7dca46a5d937b48febc74"
 
 [[projects]]
+  digest = "1:c9ae073450893c4313b42c03e6c440ba65bda6c41c19570cf5b54f49a7ab3df1"
+  name = "github.com/ThreeDotsLabs/watermill"
+  packages = [
+    ".",
+    "internal",
+    "internal/sync",
+    "message",
+    "message/infrastructure/gochannel",
+  ]
+  pruneopts = "UT"
+  revision = "fa394272631757fe84b31989cc935122a5fbcb20"
+  version = "v0.3.0"
+
+[[projects]]
   branch = "master"
   digest = "1:d6afaeed1502aa28e80a4ed0981d570ad91b2579193404256ce672ed0a609e0d"
   name = "github.com/beorn7/perks"
@@ -140,6 +154,14 @@
   revision = "24818f796faf91cd76ec7bddd72458fbced7a6c1"
 
 [[projects]]
+  digest = "1:582b704bebaa06b48c29b0cec224a6058a09c86883aaddabde889cd1a5f73e1b"
+  name = "github.com/google/uuid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "0cd6bf5da1e1c83f8b45653022c74f71af0538a4"
+  version = "v1.1.1"
+
+[[projects]]
   digest = "1:9fe4b4f866007c9981c6c44c02d5533b1fb78ca408355eb64e767ef416eb9dfb"
   name = "github.com/gorilla/rpc"
   packages = [
@@ -149,6 +171,22 @@
   pruneopts = "UT"
   revision = "22c016f3df3febe0c1f6727598b6389507e03a18"
   version = "v1.1.0"
+
+[[projects]]
+  digest = "1:0ade334594e69404d80d9d323445d2297ff8161637f9b2d347cc6973d2d6f05b"
+  name = "github.com/hashicorp/errwrap"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "8a6fb523712970c966eefc6b39ed2c5e74880354"
+  version = "v1.0.0"
+
+[[projects]]
+  digest = "1:f668349b83f7d779567c880550534addeca7ebadfdcf44b0b9c39be61864b4b7"
+  name = "github.com/hashicorp/go-multierror"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "886a7fbe3eb1c874d46f623bfa70af45f425b3d1"
+  version = "v1.0.0"
 
 [[projects]]
   digest = "1:c0d19ab64b32ce9fe5cf4ddceba78d5bc9807f0016db6b1183599da3dcc24d10"
@@ -219,6 +257,14 @@
   pruneopts = "UT"
   revision = "3536a929edddb9a5b34bd6861dc4a9647cb459fe"
   version = "v1.1.2"
+
+[[projects]]
+  digest = "1:4f5513cb656b73fb4c4f77ccd482c8366d6290278564d2b1d3285f45e45f4a1e"
+  name = "github.com/oklog/ulid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "02a8604050d8466dd915307496174adb9be4593a"
+  version = "v1.3.1"
 
 [[projects]]
   digest = "1:abcdbf03ca6ca13d3697e2186edc1f33863bbdac2b3a44dfa39015e8903f7409"
@@ -306,7 +352,15 @@
   revision = "619930b0b4713cc1280189bf0a4c54b3fb506f60"
 
 [[projects]]
-  digest = "1:9be615b2a72fc4a99e623c6776cce3afe3451741c34ea1805ea4a9b58604b9df"
+  digest = "1:4853aea8a727b1cc962f687688aef22ce0dd040a9f695c07f303559e4595a152"
+  name = "github.com/renstrom/shortuuid"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "1be5ab5d90f6624ae0484197d1bb079a399712f0"
+  version = "v3.0.3"
+
+[[projects]]
+  digest = "1:2ac83274ed1a4c6faa46983a9199d9def820df889d7e7619f6849991cddc2d2a"
   name = "github.com/rs/zerolog"
   packages = [
     ".",
@@ -314,8 +368,8 @@
     "internal/json",
   ]
   pruneopts = "UT"
-  revision = "6d6350a51143b5c0d0a6a3b736ee2b41315f7269"
-  version = "v1.12.0"
+  revision = "3e85c4b21c1adb254dd43a93d93263fbe7d9dc13"
+  version = "v1.14.0"
 
 [[projects]]
   branch = "master"
@@ -461,12 +515,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:7e6e1df21a7681f3f060a2a330f6e38f9058160ed9d08eb41330b779e3f32668"
+  digest = "1:d6b0cfc5ae30841c4b116ac589629f56f8add0955a39f11d8c0d06ca67f5b3d5"
   name = "golang.org/x/sync"
   packages = [
     "errgroup",
     "semaphore",
-    "singleflight",
   ]
   pruneopts = "UT"
   revision = "42b317875d0fa942474b76e1b46a6060d720ae6e"
@@ -536,6 +589,9 @@
   analyzer-name = "dep"
   analyzer-version = 1
   input-imports = [
+    "github.com/ThreeDotsLabs/watermill",
+    "github.com/ThreeDotsLabs/watermill/message",
+    "github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel",
     "github.com/blang/semver",
     "github.com/dgraph-io/badger",
     "github.com/gogo/protobuf/gogoproto",
@@ -578,7 +634,6 @@
     "go.opencensus.io/zpages",
     "golang.org/x/crypto/sha3",
     "golang.org/x/sync/errgroup",
-    "golang.org/x/sync/singleflight",
     "gopkg.in/yaml.v2",
   ]
   solver-name = "gps-cdcl"

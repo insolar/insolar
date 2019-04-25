@@ -95,7 +95,7 @@ func TestJetStorage_DeleteJetTree(t *testing.T) {
 	_, _, err := s.Split(ctx, 100, *insolar.NewJetID(0, nil))
 	require.NoError(t, err)
 
-	s.Delete(ctx, 100)
+	s.DeleteForPN(ctx, 100)
 
 	_, ok := treeForPulse(s, 100)
 	require.False(t, ok, "tree should be an empty")

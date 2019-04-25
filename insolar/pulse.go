@@ -17,6 +17,7 @@
 package insolar
 
 import (
+	"context"
 	"encoding/binary"
 	"fmt"
 	"time"
@@ -50,6 +51,14 @@ func NewPulseNumber(buf []byte) PulseNumber {
 // Bytes serializes pulse number.
 func (pn PulseNumber) Bytes() []byte {
 	return utils.UInt32ToBytes(uint32(pn))
+}
+
+//go:generate minimock -i github.com/insolar/insolar/insolar.PulseManager -o ../testutils -s _mock.go
+
+// PulseManager provides Ledger's methods related to Pulse.
+type PulseManager interface {
+	// Set set's new pulse and closes current jet drop. If dry is true, nothing will be saved to storage.
+	Set(ctx context.Context, pulse Pulse, persist bool) error
 }
 
 // PulseRange represents range of pulses.
@@ -97,6 +106,8 @@ const (
 	PulseNumberJet = PulseNumber(1)
 	// PulseNumberCurrent is a special pulse number value that signifies current pulse number.
 	PulseNumberCurrent = PulseNumber(2)
+	// BuiltinPulseNumber declares special pulse number that creates namespace for builtin contracts
+	BuiltinPulseNumber = PulseNumber(200)
 )
 
 // GenesisPulse is a first pulse for the system

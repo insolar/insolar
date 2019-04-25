@@ -15,7 +15,7 @@ ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
 TESTED_PACKAGES ?= $(shell go list ${ALL_PACKAGES} | grep -v "${MOCKS_PACKAGE}")
 COVERPROFILE ?= coverage.txt
-TEST_ARGS ?=
+TEST_ARGS ?= -timeout 1200s
 BUILD_TAGS ?=
 
 BUILD_NUMBER := $(TRAVIS_BUILD_NUMBER)
@@ -99,7 +99,7 @@ $(INSOLAR):
 	go build -o $(BIN_DIR)/$(INSOLAR) ${BUILD_TAGS} -ldflags "${LDFLAGS}" cmd/insolar/*.go
 
 .PHONY: $(INSGOCC)
-$(INSGOCC): cmd/insgocc/insgocc.go logicrunner/goplugin/preprocessor
+$(INSGOCC): cmd/insgocc/insgocc.go logicrunner/preprocessor
 	go build -o $(BININSGOCC) -ldflags "${LDFLAGS}" cmd/insgocc/*.go
 
 $(BININSGOCC): $(INSGOCC)
@@ -154,7 +154,7 @@ test_with_coverage_fast:
 
 .PHONY: ci_test_with_coverage
 ci_test_with_coverage:
-	CGO_ENABLED=1 go test -count 1 -parallel 4 --coverprofile=$(COVERPROFILE) --covermode=atomic -v $(ALL_PACKAGES) | tee unit.file
+	CGO_ENABLED=1 go test $(TEST_ARGS) -count 1 -parallel 4 --coverprofile=$(COVERPROFILE) --covermode=atomic -v $(ALL_PACKAGES) | tee unit.file
 
 .PHONY: ci_test_func
 ci_test_func:
@@ -162,7 +162,7 @@ ci_test_func:
 
 .PHONY: ci_test_integrtest
 ci_test_integrtest:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -timeout 40m -tags networktest -v ./network/servicenetwork -count=1 | tee integr.file
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags networktest -v ./network/servicenetwork -count=1 | tee integr.file
 
 
 .PHONY: regen-proxies
@@ -195,3 +195,6 @@ $(RECORDBUILDER):
 generate-protobuf:
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
 	PATH="$(BIN_DIR):$(PATH)" protoc -I./vendor -I./ --gorecord_out=./ insolar/record/record.proto
+
+regen-builtin: $(BININSGOCC)
+	$(BININSGOCC) regen-builtin
