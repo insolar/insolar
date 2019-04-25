@@ -58,7 +58,7 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 

@@ -66,7 +66,7 @@ type Bus struct {
 // NewBus creates Bus instance with provided values.
 func NewBus(pub message.Publisher) *Bus {
 	return &Bus{
-		timeout: time.Second * 10,
+		timeout: time.Minute * 2,
 		pub:     pub,
 		replies: make(map[string]chan *message.Message),
 	}
@@ -85,8 +85,9 @@ func (b *Bus) getReplyChannel(id string) (chan *message.Message, bool) {
 	return ch, ok
 }
 
-func (b *Bus) removeReplyChannel(id string) {
+func (b *Bus) removeReplyChannel(ctx context.Context, id string) {
 	b.repliesMutex.Lock()
+	inslogger.FromContext(ctx).Infof("remove reply channel for message with correlationID %s", id)
 	ch, ok := b.replies[id]
 	if !ok {
 		b.repliesMutex.Unlock()
@@ -106,17 +107,27 @@ func (b *Bus) Send(ctx context.Context, msg *message.Message) <-chan *message.Me
 
 	err := b.pub.Publish(OutgoingMsg, msg)
 	if err != nil {
+		b.removeReplyChannel(ctx, id)
 		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", OutgoingMsg, err.Error())
 		return nil
 	}
+	go func(b *Bus) {
+		select {
+		case <-time.After(b.timeout):
+			b.removeReplyChannel(ctx, id)
+		}
+	}(b)
 	return rep
 }
 
 // IncomingMessageRouter is watermill middleware for incoming messages - it decides, how to handle it.
 func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
+		b.repliesMutex.RLock()
+		defer b.repliesMutex.RUnlock()
+
 		id := middleware.MessageCorrelationID(msg)
-		ch, ok := b.getReplyChannel(id)
+		ch, ok := b.replies[id]
 		if !ok {
 			return h(msg)
 		}
@@ -126,7 +137,6 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 			inslogger.FromContext(msg.Context()).Infof("result for message with correlationID %s was send", id)
 			return nil, nil
 		case <-time.After(b.timeout):
-			b.removeReplyChannel(id)
 			return nil, errors.Errorf("can't return result for message with correlationID %s: timeout %s exceeded", id, b.timeout)
 		}
 	}

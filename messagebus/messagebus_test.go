@@ -23,7 +23,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/stretchr/testify/require"
@@ -78,7 +78,7 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 	pf := NewParcelFactory()
 	ps := pulse.NewAccessorMock(t)
 
-	b := bus.NewWatermillMessageSenderMock(t)
+	b := bus.NewSenderMock(t)
 
 	(&component.Manager{}).Inject(net, jc, nn, pcs, cs, dtf, pf, ps, mb, b)
 
