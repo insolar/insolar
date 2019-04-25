@@ -25,13 +25,13 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/flow/handler"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -40,11 +40,11 @@ import (
 
 // ContractRequester helps to call contracts
 type ContractRequester struct {
-	MessageBus  insolar.MessageBus `inject:""`
-	ResultMutex sync.Mutex
-	ResultMap   map[uint64]chan *message.ReturnResults
-	Sequence    uint64
-	FlowHandler *handler.Handler
+	MessageBus     insolar.MessageBus `inject:""`
+	ResultMutex    sync.Mutex
+	ResultMap      map[uint64]chan *message.ReturnResults
+	Sequence       uint64
+	FlowDispatcher *dispatcher.Dispatcher
 }
 
 // New creates new ContractRequester
@@ -61,7 +61,7 @@ func New() (*ContractRequester, error) {
 		cr:        res,
 	}
 
-	res.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
+	res.FlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
 		return (&Init{
 			dep:     dep,
 			Message: msg,
@@ -72,7 +72,7 @@ func New() (*ContractRequester, error) {
 }
 
 func (cr *ContractRequester) Start(ctx context.Context) error {
-	cr.MessageBus.MustRegister(insolar.TypeReturnResults, cr.FlowHandler.WrapBusHandle)
+	cr.MessageBus.MustRegister(insolar.TypeReturnResults, cr.FlowDispatcher.WrapBusHandle)
 	return nil
 }
 
