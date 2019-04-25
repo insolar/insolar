@@ -1,46 +1,63 @@
-# Terms
+-----
+Terms
+-----
 
-### Cloud
+Cloud
+=====
 Blockchain network under the same node membership policy
 
-### Domain
+Domain
+======
 Decentralized application (dApp) that governs access, consensus, mutability, and other capabilities for other dApps
 
-### Dust
+Dust
+====
 Auxiliary object or record; a log record stored within a sidechain
 
-### Dustline
+Dustline
+========
 Removable Sideline for a Dust record
 
-### Federation
+Federation
+==========
 Interconnected blockchain networks running on the Insolar platform
 
-### Filament
+Filament
+========
 Linked sequence of records
 
-### Jet Drop
+Jet Drop
+========
 Block of a shardchain with adjoined blocks of relevant sidechains that keeps records produced at a specific Pulse
 
-### Lifeline
+Lifeline
+========
 Chain of records (Filaments) for a single object with relevant Sidelines, representing auxiliary information about the object
 
-### Material Jet
+Material Jet
+============
 Shardchain that keeps records of a subset of objects contained by a cloud; it is allocated nodes to store related records
 
-### Node
+Node
+====
 Server that serves hardware capacity to a cloud
 
-### Object
+Object
+======
 Smart contract, dApp, application object
 
-### Pulse
+Pulse
+=====
 Tick that opens up a new block
 
-### Record
+Record
+======
 Similar to a transaction record; Insolar has a variety of record types
 
-### Sideline
+Sideline
+========
 Sidechain (Filament) for auxiliary information, such as logs, etc.
 
-### Virtual Jet
+Virtual Jet
+===========
 Logical group of affined objects for allocating nodes to process requests related to these objects

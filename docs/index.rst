@@ -1,6 +1,9 @@
-# Introduction
+------------
+Introduction
+------------
 
-## About
+About
+=====
 
 Insolar outlines a new vision for blockchain, in which key features such as network capacity and consensus are addressed in a way that will enable shared business processes and optimize contractual transactions for enterprise operations.
 
@@ -11,9 +14,3 @@ Insolar’s smart contracts are designed with enterprise developers’ needs in 
 Insolar’s vision is to facilitate seamless low friction interactions between companies by distributing trust, thus accelerating and opening up new opportunities for innovation and value creation. 
 
 The Insolar platform is the most secure, scalable, and comprehensive business-ready blockchain toolkit in the world. Insolar’s goal is to give businesses access to features and services that enable them to launch new decentralized applications quickly and easily, whether they need a minimum viable product or full-scale production software and to integrate those applications with existing systems.
-
-[Distinctive Features](features.rst)
-
-[Architecture](architecture.rst)
-
-[Terms](terms.md)

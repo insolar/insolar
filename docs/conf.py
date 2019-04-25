@@ -1,1 +1,1 @@
-extensions = ['recommonmark']
+project="Insolar"
