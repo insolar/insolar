@@ -123,12 +123,12 @@ func (s *SaveObject) Future(ctx context.Context, f flow.Flow) error {
 
 func (s *SaveObject) Present(ctx context.Context, f flow.Flow) error {
 	s.perms = &CheckPermissions{Node: s.Message["node"]}
-	if err := f.Procedure(ctx, s.perms); err != nil {
+	if err := f.Procedure(ctx, s.perms, true); err != nil {
 		return err
 	}
 
 	s.object = &GetObjectFromDB{Hash: string(s.Message["payload"])}
-	if err := f.Procedure(ctx, s.object); err != nil {
+	if err := f.Procedure(ctx, s.object, true); err != nil {
 		if err != flow.ErrCancelled {
 			return err
 		}
@@ -136,32 +136,36 @@ func (s *SaveObject) Present(ctx context.Context, f flow.Flow) error {
 	}
 
 	if !s.perms.Result.AllowedToSave {
-		return f.Procedure(nil, &SendReply{Message: "You shall not pass!"})
+		return f.Procedure(ctx, &SendReply{Message: "You shall not pass!"}, true)
 	}
 
 	if s.object.Result.Exists {
-		return f.Procedure(nil, &SendReply{Message: "Object already exists"})
+		return f.Procedure(ctx, &SendReply{Message: "Object already exists"}, true)
 	}
 
 	saved := &SaveObjectToDB{Hash: string(s.Message["payload"])}
-	if err := f.Procedure(ctx, saved); err != nil {
+	if err := f.Procedure(ctx, saved, true); err != nil {
 		if err != flow.ErrCancelled {
-			return f.Procedure(ctx, &SendReply{Message: "Failed to save object"})
+			return f.Procedure(ctx, &SendReply{Message: "Failed to save object"}, true)
 		}
 		return f.Migrate(ctx, s.migrate)
 	}
 
-	return f.Procedure(nil, &SendReply{Message: fmt.Sprintf("Object saved. ID: %d", saved.Result.ID)})
+	return f.Procedure(
+		ctx,
+		&SendReply{Message: fmt.Sprintf("Object saved. ID: %d", saved.Result.ID)},
+		true,
+	)
 }
 
 func (s *SaveObject) Past(ctx context.Context, f flow.Flow) error {
-	return f.Procedure(nil, &SendReply{Message: "Too late to save object"})
+	return f.Procedure(ctx, &SendReply{Message: "Too late to save object"}, true)
 }
 
 func (s *SaveObject) migrate(ctx context.Context, f flow.Flow) error {
 	if !s.perms.Result.AllowedToSave {
-		return f.Procedure(nil, &SendReply{Message: "You shall not pass!"})
+		return f.Procedure(ctx, &SendReply{Message: "You shall not pass!"}, true)
 	}
 
-	return f.Procedure(nil, &Redirect{ToNode: "node that saves objects now"})
+	return f.Procedure(ctx, &Redirect{ToNode: "node that saves objects now"}, true)
 }

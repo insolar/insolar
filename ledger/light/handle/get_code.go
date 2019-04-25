@@ -22,50 +22,31 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/pkg/errors"
 )
 
 type GetCode struct {
-	dep *proc.Dependencies
+	dep     *proc.Dependencies
+	code    insolar.Reference
+	replyTo chan<- bus.Reply
+}
 
-	Message bus.Message
+func NewGetCode(dep *proc.Dependencies, rep chan<- bus.Reply, code insolar.Reference) *GetCode {
+	return &GetCode{
+		dep:     dep,
+		code:    code,
+		replyTo: rep,
+	}
 }
 
 func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
-	msg := s.Message.Parcel.Message().(*message.GetCode)
-
-	jet := s.dep.FetchJet(&proc.FetchJet{Parcel: s.Message.Parcel})
-	if err := f.Procedure(ctx, jet); err != nil {
-		if err == flow.ErrCancelled {
-			f.Continue(ctx)
-		} else {
-			return err
-		}
+	jet := proc.NewFetchJet(*s.code.Record(), flow.Pulse(ctx), s.replyTo)
+	s.dep.FetchJet(jet)
+	if err := f.Procedure(ctx, jet, false); err != nil {
 		return err
 	}
 
-	if jet.Result.Miss {
-		rep := &proc.ReturnReply{
-			ReplyTo: s.Message.ReplyTo,
-			Reply:   &reply.JetMiss{JetID: insolar.ID(jet.Result.Jet)},
-		}
-		if err := f.Procedure(ctx, rep); err != nil {
-			if err == flow.ErrCancelled {
-				f.Continue(ctx)
-			} else {
-				return err
-			}
-		}
-		return errors.New("jet miss")
-	}
-
-	codeRec := s.dep.GetCode(&proc.GetCode{
-		JetID:   jet.Result.Jet,
-		Message: s.Message,
-		Code:    msg.Code,
-	})
-	return f.Procedure(ctx, codeRec)
+	code := proc.NewGetCode(s.code, s.replyTo)
+	s.dep.GetCode(code)
+	return f.Procedure(ctx, code, false)
 }

@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
@@ -31,9 +32,9 @@ import (
 )
 
 type GetIndex struct {
-	Object   insolar.Reference
-	Jet      insolar.JetID
-	ParcelPN insolar.PulseNumber
+	object  insolar.Reference
+	jet     insolar.JetID
+	replyTo chan<- bus.Reply
 
 	Result struct {
 		Index object.Lifeline
@@ -48,10 +49,25 @@ type GetIndex struct {
 	}
 }
 
+func NewGetIndex(obj insolar.Reference, jetID insolar.JetID, rep chan<- bus.Reply) *GetIndex {
+	return &GetIndex{
+		object:  obj,
+		jet:     jetID,
+		replyTo: rep,
+	}
+}
+
 func (p *GetIndex) Proceed(ctx context.Context) error {
-	objectID := *p.Object.Record()
+	err := p.process(ctx)
+	if err != nil {
+		p.replyTo <- bus.Reply{Err: err}
+	}
+	return err
+}
+
+func (p *GetIndex) process(ctx context.Context) error {
+	objectID := *p.object.Record()
 	logger := inslogger.FromContext(ctx)
-	p.Dep.IndexState.SetUsageForPulse(ctx, objectID, p.ParcelPN)
 
 	p.Dep.Locker.Lock(&objectID)
 	defer p.Dep.Locker.Unlock(&objectID)
@@ -64,7 +80,7 @@ func (p *GetIndex) Proceed(ctx context.Context) error {
 	if err != object.ErrIndexNotFound {
 		return errors.Wrap(err, "failed to fetch index")
 	}
-	p.Dep.IndexState.SetUsageForPulse(ctx, objectID, p.ParcelPN)
+	p.Dep.IndexState.SetUsageForPulse(ctx, objectID, flow.Pulse(ctx))
 
 	logger.Debug("failed to fetch index (fetching from heavy)")
 	heavy, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
@@ -72,7 +88,7 @@ func (p *GetIndex) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to calculate heavy")
 	}
 	genericReply, err := p.Dep.Bus.Send(ctx, &message.GetObjectIndex{
-		Object: p.Object,
+		Object: p.object,
 	}, &insolar.MessageSendOptions{
 		Receiver: heavy,
 	})
@@ -89,7 +105,7 @@ func (p *GetIndex) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to decode index")
 	}
 
-	p.Result.Index.JetID = p.Jet
+	p.Result.Index.JetID = p.jet
 	err = p.Dep.Storage.Set(ctx, objectID, p.Result.Index)
 	if err != nil {
 		return errors.Wrap(err, "failed to save index")
