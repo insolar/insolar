@@ -497,6 +497,8 @@ func (s *testSuite) SetCommunicationPolicyForNode(nodeID insolar.Reference, poli
 		timedOutNodesCount = int(float64(len(nodes)) * 0.6)
 	case PartialPositive1Phase, PartialPositive2Phase, PartialPositive3Phase, PartialPositive23Phase:
 		timedOutNodesCount = int(float64(len(nodes)) * 0.2)
+	case SplitCase:
+		timedOutNodesCount = int(float64(len(nodes)) * 0.5)
 	}
 
 	s.fixture().pulsar.Pause()
