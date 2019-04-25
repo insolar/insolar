@@ -71,6 +71,7 @@ const (
 	PartialNegative3Phase
 	PartialPositive23Phase
 	PartialNegative23Phase
+	SplitCase
 )
 
 type CommunicatorMock struct {
@@ -90,7 +91,7 @@ func (cm *CommunicatorMock) ExchangePhase1(
 		return nil, err
 	}
 	switch cm.testOpt {
-	case PartialNegative1Phase, PartialPositive1Phase:
+	case PartialNegative1Phase, PartialPositive1Phase, SplitCase:
 		delete(pckts, cm.ignoreFrom)
 	}
 	return pckts, nil
@@ -104,7 +105,7 @@ func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, state *phases.Co
 		return nil, err
 	}
 	switch cm.testOpt {
-	case PartialPositive2Phase, PartialNegative2Phase, PartialPositive23Phase, PartialNegative23Phase:
+	case PartialPositive2Phase, PartialNegative2Phase, PartialPositive23Phase, PartialNegative23Phase, SplitCase:
 		delete(pckts, cm.ignoreFrom)
 	}
 	return pckts, nil
@@ -122,7 +123,7 @@ func (cm *CommunicatorMock) ExchangePhase3(ctx context.Context, participants []i
 		return nil, err
 	}
 	switch cm.testOpt {
-	case PartialPositive3Phase, PartialNegative3Phase, PartialPositive23Phase, PartialNegative23Phase:
+	case PartialPositive3Phase, PartialNegative3Phase, PartialPositive23Phase, PartialNegative23Phase, SplitCase:
 		delete(pckts, cm.ignoreFrom)
 	}
 	return pckts, nil

@@ -314,7 +314,7 @@ func TestServiceNetworkOneBootstrap(t *testing.T) {
 }
 
 func TestServiceNetworkManyBootstraps(t *testing.T) {
-	s := NewTestSuite(15, 0)
+	s := NewTestSuite(16, 0)
 	suite.Run(t, s)
 }
 
@@ -337,7 +337,6 @@ func (s *testSuite) TestFullTimeOut() {
 	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
-
 
 	s.setPhaseManagerMock()
 
@@ -527,9 +526,46 @@ func (s *testSuite) TestDiscoveryRestartNoWait() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
+func (s *testSuite) TestJoinerSplitPackets() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
+	testNode := s.newNetworkNode("testNode")
+	s.setCommunicatorMockIgnoreNode(testNode.id, SplitCase)
+	s.preInitNode(testNode)
+
+	s.InitNode(testNode)
+	s.StartNode(testNode)
+	defer func(s *testSuite) {
+		s.StopNode(testNode)
+	}(s)
+
+	s.waitForConsensus(1)
+
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+
+	s.waitForConsensus(1)
+
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+
+	s.waitForConsensus(2)
+
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
+	activeNodes = testNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
+}
+
 func (s *testSuite) setCommunicatorMock(opt CommunicatorTestOpt) {
+	ref := s.fixture().bootstrapNodes[0].id
+	s.setCommunicatorMockIgnoreNode(ref, opt)
+}
+
+func (s *testSuite) setCommunicatorMockIgnoreNode(nodeID insolar.Reference, opt CommunicatorTestOpt) {
 	nodes := s.fixture().bootstrapNodes
-	ref := nodes[0].id
 
 	timedOutNodesCount := 0
 	switch opt {
@@ -537,6 +573,8 @@ func (s *testSuite) setCommunicatorMock(opt CommunicatorTestOpt) {
 		timedOutNodesCount = int(float64(len(nodes)) * 0.6)
 	case PartialPositive1Phase, PartialPositive2Phase, PartialPositive3Phase, PartialPositive23Phase:
 		timedOutNodesCount = int(float64(len(nodes)) * 0.2)
+	case SplitCase:
+		timedOutNodesCount = int(float64(len(nodes)) * 0.5)
 	}
 
 	s.fixture().pulsar.Pause()
@@ -544,7 +582,7 @@ func (s *testSuite) setCommunicatorMock(opt CommunicatorTestOpt) {
 
 	for i := 1; i <= timedOutNodesCount; i++ {
 		comm := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.(*phases.FirstPhaseImpl).Communicator
-		wrapper := &CommunicatorMock{communicator: comm, ignoreFrom: ref, testOpt: opt}
+		wrapper := &CommunicatorMock{communicator: comm, ignoreFrom: nodeID, testOpt: opt}
 		phasemanager := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases)
 		phasemanager.FirstPhase.(*phases.FirstPhaseImpl).Communicator = wrapper
 		phasemanager.SecondPhase.(*phases.SecondPhaseImpl).Communicator = wrapper
