@@ -72,11 +72,7 @@ type MessageHandler struct {
 	HotDataWaiter hot.JetWaiter   `inject:""`
 	JetReleaser   hot.JetReleaser `inject:""`
 
-	// LifelineStorage          object.LifelineStorage
-	// ExtendedLifelineModifier object.ExtendedLifelineModifier
-
-	IndexModifier object.IndexModifier
-	IndexAccessor object.IndexAccessor
+	Index object.Index
 
 	conf           *configuration.Ledger
 	middleware     *middleware
@@ -88,16 +84,14 @@ type MessageHandler struct {
 
 // NewMessageHandler creates new handler.
 func NewMessageHandler(
-	indexStorage object.LifelineStorage,
-	indexStateModifier object.ExtendedLifelineModifier,
+	index object.Index,
 	conf *configuration.Ledger,
 ) *MessageHandler {
 
 	h := &MessageHandler{
-		handlers:                 map[insolar.MessageType]insolar.MessageHandler{},
-		conf:                     conf,
-		LifelineStorage:          indexStorage,
-		ExtendedLifelineModifier: indexStateModifier,
+		handlers: map[insolar.MessageType]insolar.MessageHandler{},
+		conf:     conf,
+		Index:    index,
 	}
 
 	dep := &proc.Dependencies{
@@ -111,9 +105,8 @@ func NewMessageHandler(
 			p.Dep.Waiter = h.HotDataWaiter
 		},
 		GetIndex: func(p *proc.GetIndex) {
-			p.Dep.IndexState = h.ExtendedLifelineModifier
+			p.Dep.Index = h.Index
 			p.Dep.Locker = h.IDLocker
-			p.Dep.Storage = h.LifelineStorage
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
 		},
@@ -310,8 +303,8 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Par
 		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
 		recentStorage.AddPendingRequest(ctx, r.GetObject(), *calculatedID)
 
-		h.IndexModifier.SetRequest(ctx, parcel.Pulse(), r.GetObject(), *calculatedID)
-		err := h.IndexModifier.SetLifelineUsage(ctx, parcel.Pulse(), r.GetObject())
+		h.Index.SetRequest(ctx, parcel.Pulse(), r.GetObject(), *calculatedID)
+		err := h.Index.SetLifelineUsage(ctx, parcel.Pulse(), r.GetObject())
 		if err != nil {
 			return nil, errors.Wrapf(err, "can't update lifeline usage")
 		}
@@ -319,7 +312,7 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Par
 		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 
-		h.IndexModifier.SetResultRecord(ctx, parcel.Pulse(), *r.Request.Record(), *calculatedID)
+		h.Index.SetResultRecord(ctx, parcel.Pulse(), *r.Request.Record(), *calculatedID)
 	}
 
 	return &reply.ID{ID: *calculatedID}, nil
@@ -376,7 +369,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	h.IDLocker.Lock(msg.Head.Record())
 	defer h.IDLocker.Unlock(msg.Head.Record())
 
-	idx, err := h.IndexAccessor.LifelineForID(ctx, parcel.Pulse(), *msg.Head.Record())
+	idx, err := h.Index.LifelineForID(ctx, parcel.Pulse(), *msg.Head.Record())
 	if err == object.ErrLifelineNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -389,7 +382,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	err = h.IndexModifier.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Head.Record())
+	err = h.Index.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Head.Record())
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't update lifeline")
 	}
@@ -415,7 +408,7 @@ func (h *MessageHandler) handleGetChildren(
 	h.IDLocker.Lock(msg.Parent.Record())
 	defer h.IDLocker.Unlock(msg.Parent.Record())
 
-	idx, err := h.IndexAccessor.LifelineForID(ctx, parcel.Pulse(), *msg.Parent.Record())
+	idx, err := h.Index.LifelineForID(ctx, parcel.Pulse(), *msg.Parent.Record())
 	if err == object.ErrLifelineNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -431,7 +424,7 @@ func (h *MessageHandler) handleGetChildren(
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	err = h.IndexModifier.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Parent.Record())
+	err = h.Index.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Parent.Record())
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't update lifeline")
 	}
@@ -583,7 +576,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 		return nil, errors.New("wrong object state record")
 	}
 
-	err = h.IndexModifier.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Object.Record())
+	err = h.Index.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Object.Record())
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't update lifeline")
 	}
@@ -606,7 +599,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 	h.IDLocker.Lock(msg.Object.Record())
 	defer h.IDLocker.Unlock(msg.Object.Record())
 
-	idx, err := h.IndexAccessor.LifelineForID(ctx, parcel.Pulse(), *msg.Object.Record())
+	idx, err := h.Index.LifelineForID(ctx, parcel.Pulse(), *msg.Object.Record())
 	// No index on our node.
 	if err == object.ErrLifelineNotFound {
 		if state.ID() == object.StateActivation {
@@ -627,7 +620,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 	} else if err != nil {
 		return nil, err
 	}
-	err = h.IndexModifier.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Object.Record())
+	err = h.Index.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Object.Record())
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't update lifeline")
 	}
@@ -666,7 +659,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 
 	idx.LatestUpdate = parcel.Pulse()
 	idx.JetID = insolar.JetID(jetID)
-	h.IndexModifier.SetLifeline(ctx, parcel.Pulse(), *msg.Object.Record(), idx)
+	h.Index.SetLifeline(ctx, parcel.Pulse(), *msg.Object.Record(), idx)
 
 	logger.WithField("state", idx.LatestState.DebugString()).Debug("saved object")
 
@@ -699,7 +692,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 	defer h.IDLocker.Unlock(msg.Parent.Record())
 
 	var child *insolar.ID
-	idx, err := h.IndexAccessor.LifelineForID(ctx, parcel.Pulse(), *msg.Parent.Record())
+	idx, err := h.Index.LifelineForID(ctx, parcel.Pulse(), *msg.Parent.Record())
 	if err == object.ErrLifelineNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -712,7 +705,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 	} else if err != nil {
 		return nil, err
 	}
-	err = h.IndexModifier.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Parent.Record())
+	err = h.Index.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Parent.Record())
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't update lifeline")
 	}
@@ -746,7 +739,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 	}
 	idx.LatestUpdate = parcel.Pulse()
 	idx.JetID = insolar.JetID(jetID)
-	h.IndexModifier.SetLifeline(ctx, parcel.Pulse(), *msg.Parent.Record(), idx)
+	h.Index.SetLifeline(ctx, parcel.Pulse(), *msg.Parent.Record(), idx)
 
 	return &reply.ID{ID: *child}, nil
 }
@@ -761,11 +754,11 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insola
 	h.IDLocker.Lock(msg.Object.Record())
 	defer h.IDLocker.Unlock(msg.Object.Record())
 
-	idx, err := h.IndexAccessor.LifelineForID(ctx, parcel.Pulse(), *msg.Object.Record())
+	idx, err := h.Index.LifelineForID(ctx, parcel.Pulse(), *msg.Object.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	err = h.IndexModifier.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Object.Record())
+	err = h.Index.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Object.Record())
 	if err != nil {
 		return nil, errors.Wrapf(err, "can't update object")
 	}
@@ -809,7 +802,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	}
 
 	idx.JetID = insolar.JetID(jetID)
-	h.IndexModifier.SetLifeline(ctx, parcelPN, *obj.Record(), idx)
+	h.Index.SetLifeline(ctx, parcelPN, *obj.Record(), idx)
 	return idx, nil
 }
 
@@ -869,7 +862,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 			continue
 		}
 
-		h.IndexModifier.SetLifeline(ctx, parcel.Pulse(), id, decodedIndex)
+		h.Index.SetLifeline(ctx, parcel.Pulse(), id, decodedIndex)
 	}
 
 	h.JetStorage.Update(

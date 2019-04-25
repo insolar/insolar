@@ -7,6 +7,11 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
+type Index interface {
+	IndexAccessor
+	IndexModifier
+}
+
 type IndexAccessor interface {
 	LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error)
 }
