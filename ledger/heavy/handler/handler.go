@@ -40,7 +40,7 @@ type Handler struct {
 	BlobModifier   blob.Modifier
 	RecordAccessor object.RecordAccessor
 	RecordModifier object.RecordModifier
-	IndexAccessor  object.IndexAccessor
+	IndexAccessor  object.LifelineAccessor
 	IndexModifier  object.IndexModifier
 	DropModifier   drop.Modifier
 

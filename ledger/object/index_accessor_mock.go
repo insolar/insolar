@@ -3,20 +3,20 @@ package object
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "IndexAccessor" can be found in github.com/insolar/insolar/ledger/object
+The original interface "LifelineAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//IndexAccessorMock implements github.com/insolar/insolar/ledger/object.IndexAccessor
+// IndexAccessorMock implements github.com/insolar/insolar/ledger/object.LifelineAccessor
 type IndexAccessorMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type IndexAccessorMock struct {
 	ForIDMock       mIndexAccessorMockForID
 }
 
-//NewIndexAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.IndexAccessor
+// NewIndexAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.LifelineAccessor
 func NewIndexAccessorMock(t minimock.Tester) *IndexAccessorMock {
 	m := &IndexAccessorMock{t: t}
 
@@ -60,7 +60,7 @@ type IndexAccessorMockForIDResult struct {
 	r1 error
 }
 
-//Expect specifies that invocation of IndexAccessor.ForID is expected from 1 to Infinity times
+// Expect specifies that invocation of LifelineAccessor.ForID is expected from 1 to Infinity times
 func (m *mIndexAccessorMockForID) Expect(p context.Context, p1 insolar.ID) *mIndexAccessorMockForID {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
@@ -72,7 +72,7 @@ func (m *mIndexAccessorMockForID) Expect(p context.Context, p1 insolar.ID) *mInd
 	return m
 }
 
-//Return specifies results of invocation of IndexAccessor.ForID
+// Return specifies results of invocation of LifelineAccessor.ForID
 func (m *mIndexAccessorMockForID) Return(r Lifeline, r1 error) *IndexAccessorMock {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
@@ -84,7 +84,7 @@ func (m *mIndexAccessorMockForID) Return(r Lifeline, r1 error) *IndexAccessorMoc
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of IndexAccessor.ForID is expected once
+// ExpectOnce specifies that invocation of LifelineAccessor.ForID is expected once
 func (m *mIndexAccessorMockForID) ExpectOnce(p context.Context, p1 insolar.ID) *IndexAccessorMockForIDExpectation {
 	m.mock.ForIDFunc = nil
 	m.mainExpectation = nil
@@ -99,7 +99,7 @@ func (e *IndexAccessorMockForIDExpectation) Return(r Lifeline, r1 error) {
 	e.result = &IndexAccessorMockForIDResult{r, r1}
 }
 
-//Set uses given function f as a mock of IndexAccessor.ForID method
+// Set uses given function f as a mock of LifelineAccessor.ForID method
 func (m *mIndexAccessorMockForID) Set(f func(p context.Context, p1 insolar.ID) (r Lifeline, r1 error)) *IndexAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -108,7 +108,7 @@ func (m *mIndexAccessorMockForID) Set(f func(p context.Context, p1 insolar.ID) (
 	return m.mock
 }
 
-//ForID implements github.com/insolar/insolar/ledger/object.IndexAccessor interface
+// ForID implements github.com/insolar/insolar/ledger/object.LifelineAccessor interface
 func (m *IndexAccessorMock) ForID(p context.Context, p1 insolar.ID) (r Lifeline, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
@@ -120,7 +120,7 @@ func (m *IndexAccessorMock) ForID(p context.Context, p1 insolar.ID) (r Lifeline,
 		}
 
 		input := m.ForIDMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, IndexAccessorMockForIDInput{p, p1}, "IndexAccessor.ForID got unexpected parameters")
+		testify_assert.Equal(m.t, *input, IndexAccessorMockForIDInput{p, p1}, "LifelineAccessor.ForID got unexpected parameters")
 
 		result := m.ForIDMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -138,7 +138,7 @@ func (m *IndexAccessorMock) ForID(p context.Context, p1 insolar.ID) (r Lifeline,
 
 		input := m.ForIDMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, IndexAccessorMockForIDInput{p, p1}, "IndexAccessor.ForID got unexpected parameters")
+			testify_assert.Equal(m.t, *input, IndexAccessorMockForIDInput{p, p1}, "LifelineAccessor.ForID got unexpected parameters")
 		}
 
 		result := m.ForIDMock.mainExpectation.result

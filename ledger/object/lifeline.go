@@ -25,10 +25,10 @@ import (
 	"go.opencensus.io/stats"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexAccessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineAccessor -o ./ -s _mock.go
 
-// IndexAccessor provides info about Index-values from storage.
-type IndexAccessor interface {
+// LifelineAccessor provides info about Index-values from storage.
+type LifelineAccessor interface {
 	// ForID returns Index for provided id.
 	ForID(ctx context.Context, id insolar.ID) (Lifeline, error)
 }
@@ -65,9 +65,9 @@ type ExtendedIndexModifier interface {
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexStorage -o ./ -s _mock.go
 
-// IndexStorage is an union of IndexAccessor and IndexModifier.
+// IndexStorage is an union of LifelineAccessor and IndexModifier.
 type IndexStorage interface {
-	IndexAccessor
+	LifelineAccessor
 	IndexModifier
 }
 

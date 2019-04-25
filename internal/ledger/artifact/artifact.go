@@ -72,7 +72,7 @@ type Scope struct {
 	RecordsModifier            object.RecordModifier
 
 	IndexModifier object.IndexModifier
-	IndexAccessor object.IndexAccessor
+	IndexAccessor object.LifelineAccessor
 }
 
 func (m *Scope) RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error) {
