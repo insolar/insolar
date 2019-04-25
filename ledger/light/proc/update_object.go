@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
@@ -35,9 +36,8 @@ import (
 
 type UpdateObject struct {
 	JetID   insolar.JetID
-	BusMsg  bus.Message
 	Message *message.UpdateObject
-	Parcel  insolar.Parcel
+	ReplyTo chan<- bus.Reply
 
 	Dep struct {
 		RecordModifier             object.RecordModifier
@@ -53,10 +53,18 @@ type UpdateObject struct {
 	}
 }
 
+func NewUpdateObject(JetID insolar.JetID, Message *message.UpdateObject, ReplyTo chan<- bus.Reply) *UpdateObject {
+	return &UpdateObject{
+		JetID:   JetID,
+		Message: Message,
+		ReplyTo: ReplyTo,
+	}
+}
+
 func (p *UpdateObject) Proceed(ctx context.Context) error {
 	r := bus.Reply{}
 	r.Reply, r.Err = p.handle(ctx)
-	p.BusMsg.ReplyTo <- r
+	p.ReplyTo <- r
 	return nil
 }
 
@@ -72,7 +80,7 @@ func (p *UpdateObject) handle(ctx context.Context) (insolar.Reply, error) {
 		return nil, errors.New("wrong object state record")
 	}
 
-	calculatedID := object.CalculateIDForBlob(p.Dep.PlatformCryptographyScheme, p.Parcel.Pulse(), p.Message.Memory)
+	calculatedID := object.CalculateIDForBlob(p.Dep.PlatformCryptographyScheme, flow.Pulse(ctx), p.Message.Memory)
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
 	//  id will not match the one calculated on the server.
 	err = p.Dep.BlobModifier.Set(ctx, *calculatedID, blob.Blob{JetID: p.JetID, Value: p.Message.Memory})
@@ -89,7 +97,7 @@ func (p *UpdateObject) handle(ctx context.Context) (insolar.Reply, error) {
 
 	p.Dep.IDLocker.Lock(p.Message.Object.Record())
 	defer p.Dep.IDLocker.Unlock(p.Message.Object.Record())
-	p.Dep.IndexStateModifier.SetUsageForPulse(ctx, *p.Message.Object.Record(), p.Parcel.Pulse())
+	p.Dep.IndexStateModifier.SetUsageForPulse(ctx, *p.Message.Object.Record(), flow.Pulse(ctx))
 
 	idx, err := p.Dep.IndexStorage.ForID(ctx, *p.Message.Object.Record())
 	// No index on our node.
@@ -100,7 +108,7 @@ func (p *UpdateObject) handle(ctx context.Context) (insolar.Reply, error) {
 		} else {
 			logger.Debug("failed to fetch index (fetching from heavy)")
 			// We are updating object. Index should be on the heavy executor.
-			heavy, err := p.Dep.Coordinator.Heavy(ctx, p.Parcel.Pulse())
+			heavy, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
 			if err != nil {
 				return nil, err
 			}
@@ -117,7 +125,7 @@ func (p *UpdateObject) handle(ctx context.Context) (insolar.Reply, error) {
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 	}
 
-	recID := object.NewRecordIDFromRecord(p.Dep.PlatformCryptographyScheme, p.Parcel.Pulse(), virtRec)
+	recID := object.NewRecordIDFromRecord(p.Dep.PlatformCryptographyScheme, flow.Pulse(ctx), virtRec)
 
 	// Index exists and latest record id does not match (preserving chain consistency).
 	// For the case when vm can't save or send result to another vm and it tries to update the same record again
@@ -125,7 +133,7 @@ func (p *UpdateObject) handle(ctx context.Context) (insolar.Reply, error) {
 		return nil, errors.New("invalid state record")
 	}
 
-	id := object.NewRecordIDFromRecord(p.Dep.PlatformCryptographyScheme, p.Parcel.Pulse(), virtRec)
+	id := object.NewRecordIDFromRecord(p.Dep.PlatformCryptographyScheme, flow.Pulse(ctx), virtRec)
 	rec := record.MaterialRecord{
 		Record: virtRec,
 		JetID:  p.JetID,
@@ -145,7 +153,7 @@ func (p *UpdateObject) handle(ctx context.Context) (insolar.Reply, error) {
 		idx.Parent = state.(*object.ActivateRecord).Parent
 	}
 
-	idx.LatestUpdate = p.Parcel.Pulse()
+	idx.LatestUpdate = flow.Pulse(ctx)
 	idx.JetID = p.JetID
 	err = p.Dep.IndexStorage.Set(ctx, *p.Message.Object.Record(), idx)
 	if err != nil {

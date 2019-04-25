@@ -26,32 +26,32 @@ import (
 )
 
 type UpdateObject struct {
-	dep *proc.Dependencies
-
-	Message bus.Message
+	dep     *proc.Dependencies
+	msg     *message.UpdateObject
 	replyTo chan<- bus.Reply
 }
 
+func NewUpdateObject(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.UpdateObject) *UpdateObject {
+	return &UpdateObject{
+		dep:     dep,
+		msg:     msg,
+		replyTo: rep,
+	}
+}
+
 func (s *UpdateObject) Present(ctx context.Context, f flow.Flow) error {
-	msg := s.Message.Parcel.Message().(*message.UpdateObject)
-
-	jet := proc.NewFetchJet(*msg.Object.Record(), flow.Pulse(ctx), s.replyTo)
+	jet := proc.NewFetchJet(*s.msg.Object.Record(), flow.Pulse(ctx), s.replyTo)
 	s.dep.FetchJet(jet)
-	if err := f.Procedure(ctx, jet, false); err != nil {
+	if err := f.Procedure(ctx, jet, true); err != nil {
+		return err
+	}
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.replyTo)
+	s.dep.WaitHot(hot)
+	if err := f.Procedure(ctx, hot, true); err != nil {
 		return err
 	}
 
-	updateProc := &proc.UpdateObject{
-		JetID:   jet.Result.Jet,
-		BusMsg:  s.Message,
-		Message: msg,
-		Parcel:  s.Message.Parcel,
-	}
-	s.dep.UpdateObject(updateProc)
-
-	if err := f.Procedure(ctx, updateProc, false); err != nil {
-		return err
-	}
-
-	return nil
+	update := proc.NewUpdateObject(jet.Result.Jet, s.msg, s.replyTo)
+	s.dep.UpdateObject(update)
+	return f.Procedure(ctx, update, false)
 }
