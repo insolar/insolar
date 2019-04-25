@@ -32,7 +32,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewHandler(t *testing.T) {
+func TestNewDispatcher(t *testing.T) {
 	t.Parallel()
 	ok := false
 	var f flow.MakeHandle = func(bus.Message) flow.Handle {
@@ -54,7 +54,7 @@ func (replyMock) Type() insolar.ReplyType {
 	return insolar.ReplyType(42)
 }
 
-func TestHandler_WrapBusHandle(t *testing.T) {
+func TestDispatcher_WrapBusHandle(t *testing.T) {
 	t.Parallel()
 
 	d := &Dispatcher{
@@ -79,7 +79,7 @@ func TestHandler_WrapBusHandle(t *testing.T) {
 	require.Equal(t, reply.Reply, result)
 }
 
-func TestHandler_WrapBusHandle_Error(t *testing.T) {
+func TestDispatcher_WrapBusHandle_Error(t *testing.T) {
 	t.Parallel()
 
 	d := &Dispatcher{
@@ -100,7 +100,7 @@ func TestHandler_WrapBusHandle_Error(t *testing.T) {
 	require.Nil(t, result)
 }
 
-func TestHandler_WrapBusHandle_ReplyError(t *testing.T) {
+func TestDispatcher_WrapBusHandle_ReplyError(t *testing.T) {
 	t.Parallel()
 
 	d := &Dispatcher{
@@ -124,7 +124,7 @@ func TestHandler_WrapBusHandle_ReplyError(t *testing.T) {
 	require.Nil(t, result)
 }
 
-func TestHandler_WrapBusHandle_NoReply(t *testing.T) {
+func TestDispatcher_WrapBusHandle_NoReply(t *testing.T) {
 	t.Parallel()
 
 	d := &Dispatcher{
@@ -145,7 +145,7 @@ func TestHandler_WrapBusHandle_NoReply(t *testing.T) {
 	require.Nil(t, result)
 }
 
-func TestHandler_WrapBusHandle_ReplyWithError(t *testing.T) {
+func TestDispatcher_WrapBusHandle_ReplyWithError(t *testing.T) {
 	t.Parallel()
 
 	d := &Dispatcher{
@@ -170,7 +170,7 @@ func TestHandler_WrapBusHandle_ReplyWithError(t *testing.T) {
 	require.Equal(t, reply.Reply, result)
 }
 
-func TestHandler_WrapBusHandle_CallFutureHandler(t *testing.T) {
+func TestDispatcher_WrapBusHandle_CallFutureDispatcher(t *testing.T) {
 	t.Parallel()
 	d := &Dispatcher{
 		controller:         thread.NewController(),
@@ -203,7 +203,7 @@ func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload) *watermill
 	return wmMsg
 }
 
-func TestHandler_InnerSubscriber(t *testing.T) {
+func TestDispatcher_InnerSubscriber(t *testing.T) {
 	t.Parallel()
 	d := &Dispatcher{
 		controller:         thread.NewController(),
@@ -225,7 +225,7 @@ func TestHandler_InnerSubscriber(t *testing.T) {
 	require.Equal(t, testResult, <-result)
 }
 
-func TestHandler_InnerSubscriber_Error(t *testing.T) {
+func TestDispatcher_InnerSubscriber_Error(t *testing.T) {
 	t.Parallel()
 	d := &Dispatcher{
 		controller:         thread.NewController(),
