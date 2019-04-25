@@ -43,10 +43,10 @@ type LifelineCollectionAccessor interface {
 	ForPulseAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) map[insolar.ID]Lifeline
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexModifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineModifier -o ./ -s _mock.go
 
-// IndexModifier provides methods for setting Index-values to storage.
-type IndexModifier interface {
+// LifelineModifier provides methods for setting Index-values to storage.
+type LifelineModifier interface {
 	// Set saves new Index-value in storage.
 	Set(ctx context.Context, id insolar.ID, index Lifeline) error
 }
@@ -54,7 +54,7 @@ type IndexModifier interface {
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.ExtendedIndexModifier -o ./ -s _mock.go
 
 // ExtendedIndexModifier provides methods for setting Index-values to storage.
-// The main difference with IndexModifier is an opportunity to modify a state of an internal pulse-index
+// The main difference with LifelineModifier is an opportunity to modify a state of an internal pulse-index
 type ExtendedIndexModifier interface {
 	// SetWithMeta saves index to the storage and sets its index and pulse number in internal indexes
 	SetWithMeta(ctx context.Context, id insolar.ID, pn insolar.PulseNumber, index Lifeline) error
@@ -65,10 +65,10 @@ type ExtendedIndexModifier interface {
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexStorage -o ./ -s _mock.go
 
-// IndexStorage is an union of LifelineAccessor and IndexModifier.
+// IndexStorage is an union of LifelineAccessor and LifelineModifier.
 type IndexStorage interface {
 	LifelineAccessor
-	IndexModifier
+	LifelineModifier
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexCleaner -o ./ -s _mock.go

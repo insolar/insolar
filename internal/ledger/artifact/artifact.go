@@ -71,7 +71,7 @@ type Scope struct {
 	BlobModifier               blob.Modifier
 	RecordsModifier            object.RecordModifier
 
-	IndexModifier object.IndexModifier
+	IndexModifier object.LifelineModifier
 	IndexAccessor object.LifelineAccessor
 }
 

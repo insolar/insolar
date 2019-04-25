@@ -3,20 +3,20 @@ package object
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "IndexModifier" can be found in github.com/insolar/insolar/ledger/object
+The original interface "LifelineModifier" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//IndexModifierMock implements github.com/insolar/insolar/ledger/object.IndexModifier
+// IndexModifierMock implements github.com/insolar/insolar/ledger/object.LifelineModifier
 type IndexModifierMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type IndexModifierMock struct {
 	SetMock       mIndexModifierMockSet
 }
 
-//NewIndexModifierMock returns a mock for github.com/insolar/insolar/ledger/object.IndexModifier
+// NewIndexModifierMock returns a mock for github.com/insolar/insolar/ledger/object.LifelineModifier
 func NewIndexModifierMock(t minimock.Tester) *IndexModifierMock {
 	m := &IndexModifierMock{t: t}
 
@@ -60,7 +60,7 @@ type IndexModifierMockSetResult struct {
 	r error
 }
 
-//Expect specifies that invocation of IndexModifier.Set is expected from 1 to Infinity times
+// Expect specifies that invocation of LifelineModifier.Set is expected from 1 to Infinity times
 func (m *mIndexModifierMockSet) Expect(p context.Context, p1 insolar.ID, p2 Lifeline) *mIndexModifierMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
@@ -72,7 +72,7 @@ func (m *mIndexModifierMockSet) Expect(p context.Context, p1 insolar.ID, p2 Life
 	return m
 }
 
-//Return specifies results of invocation of IndexModifier.Set
+// Return specifies results of invocation of LifelineModifier.Set
 func (m *mIndexModifierMockSet) Return(r error) *IndexModifierMock {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
@@ -84,7 +84,7 @@ func (m *mIndexModifierMockSet) Return(r error) *IndexModifierMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of IndexModifier.Set is expected once
+// ExpectOnce specifies that invocation of LifelineModifier.Set is expected once
 func (m *mIndexModifierMockSet) ExpectOnce(p context.Context, p1 insolar.ID, p2 Lifeline) *IndexModifierMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
@@ -99,7 +99,7 @@ func (e *IndexModifierMockSetExpectation) Return(r error) {
 	e.result = &IndexModifierMockSetResult{r}
 }
 
-//Set uses given function f as a mock of IndexModifier.Set method
+// Set uses given function f as a mock of LifelineModifier.Set method
 func (m *mIndexModifierMockSet) Set(f func(p context.Context, p1 insolar.ID, p2 Lifeline) (r error)) *IndexModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -108,7 +108,7 @@ func (m *mIndexModifierMockSet) Set(f func(p context.Context, p1 insolar.ID, p2 
 	return m.mock
 }
 
-//Set implements github.com/insolar/insolar/ledger/object.IndexModifier interface
+// Set implements github.com/insolar/insolar/ledger/object.LifelineModifier interface
 func (m *IndexModifierMock) Set(p context.Context, p1 insolar.ID, p2 Lifeline) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
@@ -120,7 +120,7 @@ func (m *IndexModifierMock) Set(p context.Context, p1 insolar.ID, p2 Lifeline) (
 		}
 
 		input := m.SetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, IndexModifierMockSetInput{p, p1, p2}, "IndexModifier.Set got unexpected parameters")
+		testify_assert.Equal(m.t, *input, IndexModifierMockSetInput{p, p1, p2}, "LifelineModifier.Set got unexpected parameters")
 
 		result := m.SetMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -137,7 +137,7 @@ func (m *IndexModifierMock) Set(p context.Context, p1 insolar.ID, p2 Lifeline) (
 
 		input := m.SetMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, IndexModifierMockSetInput{p, p1, p2}, "IndexModifier.Set got unexpected parameters")
+			testify_assert.Equal(m.t, *input, IndexModifierMockSetInput{p, p1, p2}, "LifelineModifier.Set got unexpected parameters")
 		}
 
 		result := m.SetMock.mainExpectation.result

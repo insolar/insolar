@@ -29,7 +29,7 @@ import (
 
 func storeIndexes(
 	ctx context.Context,
-	indexes object.IndexModifier,
+	indexes object.LifelineModifier,
 	rawIndexes map[insolar.ID][]byte,
 ) error {
 	for id, rwi := range rawIndexes {

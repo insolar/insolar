@@ -38,7 +38,7 @@ type BaseRecord struct {
 	PulseAppender  pulse.Appender
 	PulseAccessor  pulse.Accessor
 	RecordModifier object.RecordModifier
-	IndexModifier  object.IndexModifier
+	IndexModifier  object.LifelineModifier
 }
 
 // Key is genesis key.
