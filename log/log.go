@@ -28,7 +28,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-const defaultSkipCallNumber = 3
 const timestampFormat = time.RFC3339Nano
 
 // NewLog creates logger instance with particular configuration
@@ -68,7 +67,7 @@ var GlobalLogger = func() insolar.Logger {
 	if err != nil {
 		stdlog.Println("warning:", err.Error())
 	}
-	return logger.WithCaller(true).WithSkipFrameCount(4)
+	return logger.WithCaller(true).ChangeSkipFrameCount(1)
 }()
 
 func SetGlobalLogger(logger insolar.Logger) {
