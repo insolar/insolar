@@ -90,7 +90,7 @@ type PulseDataExt struct {
 	PrevPulseDelta uint16
 	OriginID       [16]byte
 	EpochPulseNo   uint32
-	PulseTimestamp uint32
+	PulseTimestamp int64
 	Entropy        insolar.Entropy
 }
 

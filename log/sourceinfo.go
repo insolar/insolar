@@ -17,7 +17,6 @@
 package log
 
 import (
-	"path"
 	"runtime"
 	"strings"
 )
@@ -25,37 +24,31 @@ import (
 // callInfo bundles the info about the call environment
 // when a logging statement occurred.
 type callInfo struct {
-	packageName string
-	fileName    string
-	funcName    string
-	line        int
+	fileName string
+	funcName string
+	line     int
 }
 
 func getCallInfo(skipCallNumber int) *callInfo {
 	pc, file, line, _ := runtime.Caller(skipCallNumber)
-	_, fileName := path.Split(file)
+
 	parts := strings.Split(runtime.FuncForPC(pc).Name(), ".")
 	pl := len(parts)
-	packageName := ""
 	funcName := parts[pl-1]
 
-	if pl > 1 && parts[pl-2][0] == '(' {
+	if pl > 1 && strings.HasPrefix(parts[pl-2], "(") {
 		funcName = parts[pl-2] + "." + funcName
-		packageName = strings.Join(parts[0:pl-2], ".")
-	} else {
-		packageName = strings.Join(parts[0:pl-1], ".")
 	}
 
 	return &callInfo{
-		packageName: stripPackageName(packageName),
-		fileName:    fileName,
-		funcName:    funcName,
-		line:        line,
+		fileName: trimInsolarPrefix(file, line),
+		funcName: funcName,
+		line:     line,
 	}
 }
 
 func stripPackageName(packageName string) string {
-	result := strings.TrimPrefix(packageName, "github.com/insolar/insolar/")
+	result := strings.TrimPrefix(packageName, insolarPrefix)
 	i := strings.Index(result, ".")
 	if result == packageName || i == -1 {
 		return result

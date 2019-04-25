@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -30,7 +31,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/flow/handler"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
@@ -79,8 +79,8 @@ type MessageHandler struct {
 	middleware     *middleware
 	jetTreeUpdater jet.Fetcher
 
-	FlowHandler *handler.Handler
-	handlers    map[insolar.MessageType]insolar.MessageHandler
+	FlowDispatcher *dispatcher.Dispatcher
+	handlers       map[insolar.MessageType]insolar.MessageHandler
 }
 
 // NewMessageHandler creates new handler.
@@ -98,50 +98,50 @@ func NewMessageHandler(
 	}
 
 	dep := &proc.Dependencies{
-		FetchJet: func(p *proc.FetchJet) *proc.FetchJet {
+		FetchJet: func(p *proc.FetchJet) {
 			p.Dep.JetAccessor = h.JetStorage
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.JetUpdater = h.jetTreeUpdater
-			return p
+			p.Dep.CheckJet = proc.NewCheckJet(h.jetTreeUpdater, h.JetCoordinator)
 		},
-		WaitHot: func(p *proc.WaitHot) *proc.WaitHot {
+		WaitHot: func(p *proc.WaitHot) {
 			p.Dep.Waiter = h.HotDataWaiter
-			return p
 		},
-		GetIndex: func(p *proc.GetIndex) *proc.GetIndex {
+		GetIndex: func(p *proc.GetIndex) {
 			p.Dep.IndexState = h.IndexStateModifier
 			p.Dep.Locker = h.IDLocker
 			p.Dep.Storage = h.IndexStorage
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
-			return p
 		},
-		SendObject: func(p *proc.SendObject) *proc.SendObject {
+		SendObject: func(p *proc.SendObject) {
 			p.Dep.Jets = h.JetStorage
 			p.Dep.Blobs = h.Blobs
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.JetUpdater = h.jetTreeUpdater
 			p.Dep.Bus = h.Bus
 			p.Dep.RecordAccessor = h.RecordAccessor
-			return p
 		},
-		GetCode: func(p *proc.GetCode) *proc.GetCode {
+		GetCode: func(p *proc.GetCode) {
 			p.Dep.Bus = h.Bus
-			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.Accessor = h.BlobAccessor
-			p.Dep.BlobModifier = h.BlobModifier
-			return p
+			p.Dep.CheckJet = proc.NewCheckJet(h.jetTreeUpdater, h.JetCoordinator)
+			p.Dep.BlobAccessor = h.BlobAccessor
 		},
 	}
 
-	h.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
-		return (&handle.Init{
-			Dep: dep,
-
+	initHandle := func(msg bus.Message) *handle.Init {
+		return &handle.Init{
+			Dep:     dep,
 			Message: msg,
-		}).Present
+		}
+	}
+
+	h.FlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
+		return initHandle(msg).Present
+	}, func(msg bus.Message) flow.Handle {
+		return initHandle(msg).Future
 	})
 	return h
 }
@@ -188,14 +188,14 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 }
 
 func (h *MessageHandler) OnPulse(ctx context.Context, pn insolar.Pulse) {
-	h.FlowHandler.ChangePulse(ctx, pn)
+	h.FlowDispatcher.ChangePulse(ctx, pn)
 }
 
 func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	// Generic.
 
-	h.Bus.MustRegister(insolar.TypeGetCode, h.FlowHandler.WrapBusHandle)
-	h.Bus.MustRegister(insolar.TypeGetObject, h.FlowHandler.WrapBusHandle)
+	h.Bus.MustRegister(insolar.TypeGetCode, h.FlowDispatcher.WrapBusHandle)
+	h.Bus.MustRegister(insolar.TypeGetObject, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeGetDelegate,
 		BuildMiddleware(h.handleGetDelegate,
@@ -389,6 +389,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Head.Record(), parcel.Pulse())
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
@@ -407,8 +408,6 @@ func (h *MessageHandler) handleGetChildren(
 ) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetChildren)
 	jetID := jetFromContext(ctx)
-
-	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
 
 	h.IDLocker.Lock(msg.Parent.Record())
 	defer h.IDLocker.Unlock(msg.Parent.Record())
@@ -429,6 +428,7 @@ func (h *MessageHandler) handleGetChildren(
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
 
 	var (
 		refs         []insolar.Reference
@@ -618,6 +618,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 	} else if err != nil {
 		return nil, err
 	}
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Object.Record(), parcel.Pulse())
 
 	if err = validateState(idx.State, state.ID()); err != nil {
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
@@ -685,8 +686,6 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 		return nil, errors.New("wrong child record")
 	}
 
-	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
-
 	h.IDLocker.Lock(msg.Parent.Record())
 	defer h.IDLocker.Unlock(msg.Parent.Record())
 
@@ -704,6 +703,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 	} else if err != nil {
 		return nil, err
 	}
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
 
 	recID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), childRec)
 
@@ -756,6 +756,7 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insola
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
+	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Object.Record(), parcel.Pulse())
 
 	buf := object.EncodeIndex(idx)
 

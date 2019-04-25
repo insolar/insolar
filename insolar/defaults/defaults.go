@@ -14,30 +14,25 @@
 // limitations under the License.
 //
 
-package thread
+package defaults
 
 import (
-	"sync"
+	"os"
+	"path/filepath"
 )
 
-type Controller struct {
-	cancelMu sync.Mutex
-	cancel   chan struct{}
+func ArtifactsDir() string {
+	return envVarWithDefault("INSOLAR_ARTIFACTS_DIR", ".artifacts")
 }
 
-func NewController() *Controller {
-	return &Controller{cancel: make(chan struct{})}
+func LaunchnetDir() string {
+	return envVarWithDefault("LAUNCHNET_BASE_DIR", filepath.Join(ArtifactsDir(), "launchnet"))
 }
 
-func (c *Controller) Cancel() <-chan struct{} {
-	return c.cancel
-}
-
-func (c *Controller) Pulse() {
-	c.cancelMu.Lock()
-	defer c.cancelMu.Unlock()
-
-	toClose := c.cancel
-	c.cancel = make(chan struct{})
-	close(toClose)
+func envVarWithDefault(name string, defaultValue string) string {
+	value := os.Getenv(name)
+	if value != "" {
+		return value
+	}
+	return defaultValue
 }

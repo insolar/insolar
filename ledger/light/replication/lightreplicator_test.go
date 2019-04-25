@@ -42,6 +42,7 @@ func TestNewReplicatorDefault(t *testing.T) {
 		testutils.NewMessageBusMock(t),
 		pulse.NewCalculatorMock(t),
 	)
+	defer close(r.syncWaitingPulses)
 
 	require.NotNil(t, r.jetCalculator)
 	require.NotNil(t, r.dataGatherer)
@@ -107,6 +108,7 @@ func TestLightReplicatorDefault_sync(t *testing.T) {
 		mb,
 		pc,
 	)
+	defer close(r.syncWaitingPulses)
 
 	pn := gen.PulseNumber()
 	msg := message.HeavyPayload{
@@ -148,6 +150,7 @@ func TestLightReplicatorDefault_NotifyAboutPulse(t *testing.T) {
 		mb,
 		pc,
 	)
+	defer close(r.syncWaitingPulses)
 
 	msg := message.HeavyPayload{
 		JetID:    gen.JetID(),

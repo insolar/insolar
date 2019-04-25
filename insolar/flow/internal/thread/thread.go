@@ -27,9 +27,14 @@ import (
 type Thread struct {
 	controller *Controller
 	cancel     <-chan struct{}
-	procedures map[flow.Procedure]chan error
+	procedures map[flow.Procedure]*result
 	message    bus.Message
 	migrated   bool
+}
+
+type result struct {
+	done chan struct{}
+	err  error
 }
 
 // NewThread creates a new Thread instance. Thread implements the Flow interface.
@@ -37,48 +42,40 @@ func NewThread(msg bus.Message, controller *Controller) *Thread {
 	return &Thread{
 		controller: controller,
 		cancel:     controller.Cancel(),
-		procedures: map[flow.Procedure]chan error{},
+		procedures: map[flow.Procedure]*result{},
 		message:    msg,
 	}
 }
 
 func (f *Thread) Handle(ctx context.Context, handle flow.Handle) error {
-	if f.cancelled() {
-		return flow.ErrCancelled
-	}
-
-	err := handle(ctx, f)
-	if err != nil {
-		return err
-	}
-
-	if f.cancelled() {
-		return flow.ErrCancelled
-	}
-
-	return nil
+	return handle(ctx, f)
 }
 
-func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure) error {
+func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool) error {
+	if proc == nil {
+		panic("procedure called with nil procedure")
+	}
+
+	if !cancel {
+		res := f.procedure(ctx, proc)
+		<-res.done
+		return res.err
+	}
+
 	if f.cancelled() {
 		return flow.ErrCancelled
 	}
 
-	if proc == nil {
-		return errors.New("procedure called with nil procedure")
-	}
-
-	ctx, cancel := context.WithCancel(ctx)
-	var err error
+	ctx, cl := context.WithCancel(ctx)
+	res := f.procedure(ctx, proc)
 	select {
 	case <-f.cancel:
-		cancel()
+		cl()
 		return flow.ErrCancelled
-	case err = <-f.procedure(ctx, proc):
-		cancel()
+	case <-res.done:
+		cl()
+		return res.err
 	}
-
-	return err
 }
 
 func (f *Thread) Migrate(ctx context.Context, to flow.Handle) error {
@@ -101,17 +98,21 @@ func (f *Thread) Run(ctx context.Context, h flow.Handle) error {
 	return h(ctx, f)
 }
 
-func (f *Thread) procedure(ctx context.Context, proc flow.Procedure) <-chan error {
-	if d, ok := f.procedures[proc]; ok {
-		return d
+func (f *Thread) procedure(ctx context.Context, proc flow.Procedure) *result {
+	if res, ok := f.procedures[proc]; ok {
+		return res
 	}
 
-	done := make(chan error, 1)
-	f.procedures[proc] = done
+	res := &result{
+		done: make(chan struct{}),
+		err:  nil,
+	}
+	f.procedures[proc] = res
 	go func() {
-		done <- proc.Proceed(ctx)
+		res.err = proc.Proceed(ctx)
+		close(res.done)
 	}()
-	return done
+	return res
 }
 
 func (f *Thread) cancelled() bool {

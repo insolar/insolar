@@ -14,30 +14,29 @@
 // limitations under the License.
 //
 
-package thread
+package log
 
 import (
-	"sync"
+	"github.com/rs/zerolog"
 )
 
-type Controller struct {
-	cancelMu sync.Mutex
-	cancel   chan struct{}
+// FuncFieldName is the field name used for func field.
+var FuncFieldName = "func"
+
+type callerHook struct {
+	callerSkipFrameCount int
 }
 
-func NewController() *Controller {
-	return &Controller{cancel: make(chan struct{})}
+func newCallerHook(skipFrameCount int) *callerHook {
+	return &callerHook{callerSkipFrameCount: skipFrameCount}
 }
 
-func (c *Controller) Cancel() <-chan struct{} {
-	return c.cancel
-}
-
-func (c *Controller) Pulse() {
-	c.cancelMu.Lock()
-	defer c.cancelMu.Unlock()
-
-	toClose := c.cancel
-	c.cancel = make(chan struct{})
-	close(toClose)
+// Run implements zerolog.Hook.
+func (ch *callerHook) Run(e *zerolog.Event, level zerolog.Level, msg string) {
+	if level == zerolog.NoLevel {
+		return
+	}
+	info := getCallInfo(ch.callerSkipFrameCount)
+	e.Str(zerolog.CallerFieldName, info.fileName)
+	e.Str(FuncFieldName, info.funcName)
 }
