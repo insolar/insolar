@@ -19,6 +19,7 @@ package messagebus
 import (
 	"context"
 	"fmt"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -166,19 +167,25 @@ func TestMessageBus_doDeliver_TwoAheadPulses(t *testing.T) {
 	ctx := context.Background()
 	mb, ps, parcel, _ := prepare(t, ctx, 100, 102)
 
+	var mu sync.Mutex
 	pulse := &insolar.Pulse{
 		PulseNumber:     100,
 		NextPulseNumber: 101,
 	}
 	ps.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
+		mu.Lock()
+		defer mu.Unlock()
+
 		return *pulse, nil
 	}
 	go func() {
 		for i := 1; i <= 2; i++ {
+			mu.Lock()
 			pulse = &insolar.Pulse{
 				PulseNumber:     insolar.PulseNumber(100 + i),
 				NextPulseNumber: insolar.PulseNumber(100 + i + 1),
 			}
+			mu.Unlock()
 			err := mb.OnPulse(ctx, *pulse)
 			require.NoError(t, err)
 		}
