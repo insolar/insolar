@@ -30,8 +30,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
-// ---------------
-
 type initializeExecutionState struct {
 	LR  *LogicRunner
 	msg *message.ExecutorResults
@@ -106,8 +104,6 @@ func (p *initializeExecutionState) Proceed(ctx context.Context) error {
 
 	return nil
 }
-
-// ---------------
 
 type HandleExecutorResults struct {
 	dep *Dependencies
@@ -191,11 +187,11 @@ func (h *HandleExecutorResults) Present(ctx context.Context, f flow.Flow) error 
 
 	err := h.realPresent(ctx, f)
 
+	actualReply := bus.Reply{Reply: &reply.OK{}, Err: err}
 	if err != nil {
-		h.Message.ReplyTo <- bus.Reply{Reply: &reply.Error{}, Err: err}
-	} else {
-		h.Message.ReplyTo <- bus.Reply{Reply: &reply.OK{}, Err: nil}
+		actualReply.Reply = &reply.Error{}
 	}
+	h.Message.ReplyTo <- actualReply
 
 	return err
 }
