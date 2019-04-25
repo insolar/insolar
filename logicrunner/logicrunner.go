@@ -32,7 +32,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/flow/handler"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"go.opencensus.io/trace"
 
@@ -158,7 +158,7 @@ type LogicRunner struct {
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
 	stateMutex sync.RWMutex
 
-	FlowHandler *handler.Handler
+	FlowHandler *dispatcher.Dispatcher
 
 	sock net.Listener
 
@@ -196,14 +196,14 @@ func initHandlers(lr *LogicRunner) error {
 		lr:        lr,
 	}
 
-	lr.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
+	lr.FlowHandler = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
 		return (&Init{
 			dep:     dep,
 			Message: msg,
 		}).Present
 	})
 
-	inHandler := handler.NewHandler(func(msg bus.Message) flow.Handle {
+	inHandler := dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
 		innerMsg := msg.WatermillMsg
 		return (&InnerInit{
 			dep:     dep,
@@ -228,7 +228,7 @@ func initHandlers(lr *LogicRunner) error {
 			inslogger.FromContext(ctx).Error("Error while running router", err)
 		}
 	}()
-	<- router.Running()
+	<-router.Running()
 
 	lr.router = router
 
