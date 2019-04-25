@@ -63,7 +63,6 @@ import (
 // ConnectionPool interface provides methods to manage pool of network connections
 type ConnectionPool interface {
 	GetConnection(ctx context.Context, host *host.Host) (io.ReadWriter, error)
-	AddConnection(host *host.Host, conn io.ReadWriteCloser) error
 	CloseConnection(ctx context.Context, host *host.Host)
 	Reset()
 }
@@ -103,14 +102,6 @@ func (cp *connectionPool) CloseConnection(ctx context.Context, host *host.Host) 
 	if cp.entryHolder.delete(host) {
 		metrics.NetworkConnections.Dec()
 	}
-}
-
-// AddConnection adds created outside connection to the pool
-func (cp *connectionPool) AddConnection(host *host.Host, conn io.ReadWriteCloser) error {
-	// TODO: return err if connection to the host is already exist
-	cp.entryHolder.add(host, newEntry(cp.transport, conn, host, cp.CloseConnection))
-	metrics.NetworkConnections.Inc()
-	return nil
 }
 
 func (cp *connectionPool) getOrCreateEntry(ctx context.Context, host *host.Host) *entry {

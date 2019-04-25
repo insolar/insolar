@@ -111,22 +111,3 @@ func TestNewConnectionPool(t *testing.T) {
 	pool.CloseConnection(ctx, h)
 	pool.Reset()
 }
-
-func TestConnectionPool_AddConnection(t *testing.T) {
-	ctx := context.Background()
-	tr := newTransportMock(t)
-
-	pool := NewConnectionPool(tr)
-
-	h, err := host.NewHost("127.0.0.1:80")
-	assert.NoError(t, err)
-
-	conn, err := tr.Dial(ctx, h.Address.String())
-	assert.NotNil(t, conn)
-	err = pool.AddConnection(h, conn)
-	assert.NoError(t, err)
-
-	conn2, err := pool.GetConnection(ctx, h)
-	assert.NotNil(t, conn2)
-	assert.Equal(t, conn, conn2)
-}
