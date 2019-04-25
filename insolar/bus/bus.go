@@ -78,13 +78,6 @@ func (b *Bus) setReplyChannel(id string, ch chan *message.Message) {
 	b.repliesMutex.Unlock()
 }
 
-func (b *Bus) getReplyChannel(id string) (chan *message.Message, bool) {
-	b.repliesMutex.RLock()
-	ch, ok := b.replies[id]
-	b.repliesMutex.RUnlock()
-	return ch, ok
-}
-
 func (b *Bus) removeReplyChannel(ctx context.Context, id string) {
 	b.repliesMutex.Lock()
 	inslogger.FromContext(ctx).Infof("remove reply channel for message with correlationID %s", id)
@@ -112,10 +105,8 @@ func (b *Bus) Send(ctx context.Context, msg *message.Message) <-chan *message.Me
 		return nil
 	}
 	go func(b *Bus) {
-		select {
-		case <-time.After(b.timeout):
-			b.removeReplyChannel(ctx, id)
-		}
+		<-time.After(b.timeout)
+		b.removeReplyChannel(ctx, id)
 	}(b)
 	return rep
 }

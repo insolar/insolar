@@ -78,6 +78,13 @@ func TestMessageBus_Send_Publish_Err(t *testing.T) {
 	require.Equal(t, mapSizeBefore, len(b.replies))
 }
 
+func getReplyChannel(b *Bus, id string) (chan *message.Message, bool) {
+	b.repliesMutex.RLock()
+	ch, ok := b.replies[id]
+	b.repliesMutex.RUnlock()
+	return ch, ok
+}
+
 func TestMessageBus_Send_Timeout(t *testing.T) {
 	ctx := context.Background()
 	logger := watermill.NewStdLogger(false, false)
@@ -95,7 +102,7 @@ func TestMessageBus_Send_Timeout(t *testing.T) {
 	require.False(t, ok)
 	require.Nil(t, res)
 
-	_, ok = b.getReplyChannel(middleware.MessageCorrelationID(msg))
+	_, ok = getReplyChannel(b, middleware.MessageCorrelationID(msg))
 	require.False(t, ok)
 }
 
