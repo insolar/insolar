@@ -30,7 +30,6 @@ import (
 
 func TestNewHotDataWaiterConcrete(t *testing.T) {
 	t.Parallel()
-
 	// Act
 	hdw := NewChannelWaiter()
 
@@ -41,7 +40,6 @@ func TestNewHotDataWaiterConcrete(t *testing.T) {
 
 func TestHotDataWaiterConcrete_Get_CreateIfNil(t *testing.T) {
 	t.Parallel()
-
 	// Arrange
 	hdw := NewChannelWaiter()
 	jetID := testutils.RandomID()
@@ -57,9 +55,10 @@ func TestHotDataWaiterConcrete_Get_CreateIfNil(t *testing.T) {
 
 func TestHotDataWaiterConcrete_Wait_UnlockHotData(t *testing.T) {
 	t.Parallel()
-
 	// Arrange
-	syncChannel := make(chan struct{})
+	waitingStarted := make(chan struct{}, 1)
+	waitingFinished := make(chan struct{})
+
 	hdw := NewChannelWaiter()
 	hdwLock := sync.Mutex{}
 	hdwGetter := func() *ChannelWaiter {
@@ -73,18 +72,20 @@ func TestHotDataWaiterConcrete_Wait_UnlockHotData(t *testing.T) {
 
 	// Act
 	go func() {
+		waitingStarted <- struct{}{}
 		err := hdwGetter().Wait(inslogger.TestContext(t), jetID)
 		require.Nil(t, err)
-		close(syncChannel)
+		close(waitingFinished)
 	}()
 
-	time.Sleep(10 * time.Millisecond)
+	<-waitingStarted
+	time.Sleep(1 * time.Second)
 
 	// Closing waiter the first time, no error.
 	err := hdwGetter().Unlock(inslogger.TestContext(t), jetID)
 	require.NoError(t, err)
 
-	<-syncChannel
+	<-waitingFinished
 
 	// Closing waiter the second time, error.
 	err = hdwGetter().Unlock(inslogger.TestContext(t), jetID)
@@ -93,9 +94,10 @@ func TestHotDataWaiterConcrete_Wait_UnlockHotData(t *testing.T) {
 
 func TestHotDataWaiterConcrete_Wait_ThrowTimeout(t *testing.T) {
 	t.Parallel()
-
 	// Arrange
-	syncChannel := make(chan struct{})
+	waitingStarted := make(chan struct{}, 1)
+	waitingFinished := make(chan struct{})
+
 	hdw := NewChannelWaiter()
 	hdwLock := sync.Mutex{}
 	hdwGetter := func() *ChannelWaiter {
@@ -115,25 +117,28 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout(t *testing.T) {
 
 	// Act
 	go func() {
+		waitingStarted <- struct{}{}
 		err := hdwGetter().Wait(inslogger.TestContext(t), jetID)
 		require.NotNil(t, err)
 		require.Equal(t, insolar.ErrHotDataTimeout, err)
-		close(syncChannel)
+		close(waitingFinished)
 	}()
 
-	time.Sleep(10 * time.Millisecond)
+	<-waitingStarted
+	time.Sleep(1 * time.Second)
 
 	hdwGetter().ThrowTimeout(inslogger.TestContext(t))
 
-	<-syncChannel
+	<-waitingFinished
 	require.Equal(t, 0, hdwLengthGetter())
 }
 
 func TestHotDataWaiterConcrete_Wait_ThrowTimeout_MultipleMembers(t *testing.T) {
 	t.Parallel()
-
 	// Arrange
-	syncChannel := make(chan struct{})
+	waitingStarted := make(chan struct{}, 2)
+	waitingFinished := make(chan struct{})
+
 	hdw := NewChannelWaiter()
 	hdwLock := sync.Mutex{}
 	hdwGetter := func() *ChannelWaiter {
@@ -154,24 +159,28 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout_MultipleMembers(t *testing.T) {
 
 	// Act
 	go func() {
+		waitingStarted <- struct{}{}
 		err := hdwGetter().Wait(inslogger.TestContext(t), jetID)
 		require.NotNil(t, err)
 		require.Equal(t, insolar.ErrHotDataTimeout, err)
-		syncChannel <- struct{}{}
+		waitingFinished <- struct{}{}
 	}()
 	go func() {
+		waitingStarted <- struct{}{}
 		err := hdwGetter().Wait(inslogger.TestContext(t), secondJetID)
 		require.NotNil(t, err)
 		require.Equal(t, insolar.ErrHotDataTimeout, err)
-		syncChannel <- struct{}{}
+		waitingFinished <- struct{}{}
 	}()
 
-	time.Sleep(10 * time.Millisecond)
+	<-waitingStarted
+	<-waitingStarted
+	time.Sleep(1 * time.Second)
 
 	hdwGetter().ThrowTimeout(inslogger.TestContext(t))
 
-	<-syncChannel
-	<-syncChannel
+	<-waitingFinished
+	<-waitingFinished
 
 	require.Equal(t, 0, hdwLengthGetter())
 }
