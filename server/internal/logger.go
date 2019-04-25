@@ -30,8 +30,9 @@ func Logger(
 	ctx, _ = inslogger.WithTraceField(ctx, traceID)
 	ctx, _ = inslogger.WithField(ctx, "nodeid", nodeRef)
 	ctx, inslog = inslogger.WithField(ctx, "role", nodeRole)
-	ctx = inslogger.SetLogger(ctx, inslog)
-	log.SetGlobalLogger(inslog)
 
-	return ctx, inslog
+	ctx = inslogger.SetLogger(ctx, inslog.WithField("loginstance", "inslog"))
+	log.SetGlobalLogger(inslog.ChangeSkipFrameCount(1).WithField("loginstance", "global"))
+
+	return ctx, inslog.WithField("loginstance", "Logger")
 }
