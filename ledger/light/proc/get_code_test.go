@@ -45,10 +45,8 @@ func TestGetCode_Proceed(t *testing.T) {
 		Code:        &blobID,
 		MachineType: insolar.MachineTypeBuiltin,
 	}
-	getCode := proc.GetCode{
-		ReplyTo: replyTo,
-		Code:    gen.Reference(),
-	}
+	codeRef := gen.Reference()
+	getCode := proc.NewGetCode(codeRef, replyTo)
 	getCode.Dep.CheckJet = func(
 		ctx context.Context,
 		target insolar.ID,
@@ -58,7 +56,7 @@ func TestGetCode_Proceed(t *testing.T) {
 	}
 	records := object.NewRecordAccessorMock(mc)
 	records.ForIDFunc = func(c context.Context, id insolar.ID) (record.MaterialRecord, error) {
-		a.Equal(*getCode.Code.Record(), id)
+		a.Equal(*codeRef.Record(), id)
 		return record.MaterialRecord{Record: &codeRec}, nil
 	}
 	blobs := blob.NewAccessorMock(mc)

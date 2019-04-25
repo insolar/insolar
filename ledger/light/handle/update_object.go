@@ -29,27 +29,35 @@ type UpdateObject struct {
 	dep *proc.Dependencies
 
 	Message bus.Message
+	replyTo chan<- bus.Reply
 }
 
 func (s *UpdateObject) Present(ctx context.Context, f flow.Flow) error {
 	msg := s.Message.Parcel.Message().(*message.UpdateObject)
 
-	jet := &WaitJet{
+	jet := proc.NewFetchJet(*msg.Object.Record(), flow.Pulse(ctx), s.replyTo)
+	s.dep.FetchJet(jet)
+	if err := f.Procedure(ctx, jet, false); err != nil {
+		return err
+	}
+
+	/*jet := &WaitJet{
 		dep:     s.dep,
 		Message: s.Message,
 	}
 	if err := f.Handle(ctx, jet.Present); err != nil {
 		return err
-	}
+	}*/
 
-	updateProc := s.dep.UpdateObject(&proc.UpdateObject{
-		JetID:   jet.Res.Jet,
+	updateProc := &proc.UpdateObject{
+		JetID:   jet.Result.Jet,
 		BusMsg:  s.Message,
 		Message: msg,
 		Parcel:  s.Message.Parcel,
-	})
+	}
+	s.dep.UpdateObject(updateProc)
 
-	if err := f.Procedure(ctx, updateProc); err != nil {
+	if err := f.Procedure(ctx, updateProc, false); err != nil {
 		return err
 	}
 	// return updateProc.Proceed(ctx)
