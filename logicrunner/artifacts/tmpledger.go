@@ -99,7 +99,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) *TMPLedger {
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 	mc := minimock.NewController(t)
 	ps := pulse.NewStorageMem()
-	is := object.NewIndexMemory()
+	index := object.NewInMemoryIndex()
 
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
@@ -159,10 +159,10 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) *TMPLedger {
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(networknode.NewNode(insolar.Reference{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
-	handler := artifactmanager.NewMessageHandler(is, is, &conf)
+	handler := artifactmanager.NewMessageHandler(index, &conf)
 	handler.JetStorage = js
 	handler.Nodes = ns
-	handler.LifelineStorage = is
+	handler.Index = index
 	handler.DropModifier = ds
 	handler.BlobModifier = bs
 	handler.BlobAccessor = bs
@@ -187,7 +187,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) *TMPLedger {
 		memoryMockDB,
 		js,
 		ns,
-		is,
+		index,
 		ps,
 		ps,
 		ds,

@@ -108,7 +108,10 @@ func (p *GetIndex) process(ctx context.Context) error {
 	}
 
 	p.Result.Index.JetID = p.jet
-	p.Dep.Index.SetLifeline(ctx, flow.Pulse(ctx), objectID, p.Result.Index)
+	err = p.Dep.Index.SetLifeline(ctx, flow.Pulse(ctx), objectID, p.Result.Index)
+	if err != nil {
+		return errors.Wrap(err, "failed to save lifeline")
+	}
 
 	return nil
 }

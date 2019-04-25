@@ -659,7 +659,10 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 
 	idx.LatestUpdate = parcel.Pulse()
 	idx.JetID = insolar.JetID(jetID)
-	h.Index.SetLifeline(ctx, parcel.Pulse(), *msg.Object.Record(), idx)
+	err = h.Index.SetLifeline(ctx, parcel.Pulse(), *msg.Object.Record(), idx)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to save lifeline")
+	}
 
 	logger.WithField("state", idx.LatestState.DebugString()).Debug("saved object")
 
@@ -739,7 +742,10 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 	}
 	idx.LatestUpdate = parcel.Pulse()
 	idx.JetID = insolar.JetID(jetID)
-	h.Index.SetLifeline(ctx, parcel.Pulse(), *msg.Parent.Record(), idx)
+	err = h.Index.SetLifeline(ctx, parcel.Pulse(), *msg.Parent.Record(), idx)
+	if err != nil {
+		return nil, errors.Wrapf(err, "failed to set lifeline")
+	}
 
 	return &reply.ID{ID: *child}, nil
 }
@@ -802,7 +808,11 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	}
 
 	idx.JetID = insolar.JetID(jetID)
-	h.Index.SetLifeline(ctx, parcelPN, *obj.Record(), idx)
+	err = h.Index.SetLifeline(ctx, parcelPN, *obj.Record(), idx)
+	if err != nil {
+		return idx, errors.Wrap(err, "failed to save lifeline")
+	}
+
 	return idx, nil
 }
 
@@ -862,7 +872,10 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 			continue
 		}
 
-		h.Index.SetLifeline(ctx, parcel.Pulse(), id, decodedIndex)
+		err = h.Index.SetLifeline(ctx, parcel.Pulse(), id, decodedIndex)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to set lifeline")
+		}
 	}
 
 	h.JetStorage.Update(

@@ -17,7 +17,7 @@ type IndexAccessor interface {
 }
 
 type IndexModifier interface {
-	SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline)
+	SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error
 	SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
 
 	SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID)
@@ -71,6 +71,10 @@ type InMemoryIndex struct {
 	buckets     map[insolar.PulseNumber]map[insolar.ID]*indexBucket
 }
 
+func NewInMemoryIndex() *InMemoryIndex {
+	return &InMemoryIndex{buckets: map[insolar.PulseNumber]map[insolar.ID]*indexBucket{}}
+}
+
 func (i *InMemoryIndex) getBucket(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *indexBucket {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
@@ -109,7 +113,7 @@ func (i *InMemoryIndex) SetResultRecord(ctx context.Context, pn insolar.PulseNum
 	b.setResult(resID)
 }
 
-func (i *InMemoryIndex) LifelineForObjectAndPN(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
+func (i *InMemoryIndex) LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
 	b := i.getBucket(ctx, pn, objID)
 	lfl, err := b.getLifeline()
 	if err != nil {

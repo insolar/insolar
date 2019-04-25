@@ -38,7 +38,7 @@ type BaseRecord struct {
 	PulseAppender  pulse.Appender
 	PulseAccessor  pulse.Accessor
 	RecordModifier object.RecordModifier
-	IndexModifier  object.LifelineModifier
+	IndexModifier  object.IndexModifier
 }
 
 // Key is genesis key.
@@ -109,8 +109,9 @@ func (gi *BaseRecord) CreateIfNeeded(ctx context.Context) (bool, error) {
 			return errors.Wrap(err, "can't save genesis record into storage")
 		}
 
-		err = gi.IndexModifier.Set(
+		err = gi.IndexModifier.SetLifeline(
 			ctx,
+			insolar.FirstPulseNumber,
 			genesisID,
 			object.Lifeline{
 				LatestState:         &genesisID,
