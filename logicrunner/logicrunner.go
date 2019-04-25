@@ -158,7 +158,7 @@ type LogicRunner struct {
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
 	stateMutex sync.RWMutex
 
-	FlowHandler *dispatcher.Dispatcher
+	FlowDispatcher *dispatcher.Dispatcher
 
 	sock net.Listener
 
@@ -196,19 +196,30 @@ func initHandlers(lr *LogicRunner) error {
 		lr:        lr,
 	}
 
-	lr.FlowHandler = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
-		return (&Init{
+	initHandle := func(msg bus.Message) *Init {
+		return &Init{
 			dep:     dep,
 			Message: msg,
-		}).Present
+		}
+	}
+	lr.FlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
+		return initHandle(msg).Present
+	}, func(msg bus.Message) flow.Handle {
+		return initHandle(msg).Future
 	})
 
-	inHandler := dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
+	innerInitHandle := func(msg bus.Message) *InnerInit {
 		innerMsg := msg.WatermillMsg
-		return (&InnerInit{
+		return &InnerInit{
 			dep:     dep,
 			Message: innerMsg,
-		}).Present
+		}
+	}
+
+	innerDispatcher := dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
+		return innerInitHandle(msg).Present
+	}, func(msg bus.Message) flow.Handle {
+		return innerInitHandle(msg).Present
 	})
 
 	router, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, wmLogger)
@@ -220,7 +231,7 @@ func initHandlers(lr *LogicRunner) error {
 		"InnerMsgHandler",
 		InnerMsgTopic,
 		pubSub,
-		inHandler.InnerSubscriber,
+		innerDispatcher.InnerSubscriber,
 	)
 	go func() {
 		if err := router.Run(); err != nil {
@@ -266,13 +277,13 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) RegisterHandlers() {
-	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.FlowHandler.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeCallConstructor, lr.FlowHandler.WrapBusHandle)
+	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.FlowDispatcher.WrapBusHandle)
+	lr.MessageBus.MustRegister(insolar.TypeCallConstructor, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeExecutorResults, lr.HandleExecutorResultsMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
-	lr.MessageBus.MustRegister(insolar.TypePendingFinished, lr.FlowHandler.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeStillExecuting, lr.FlowHandler.WrapBusHandle)
+	lr.MessageBus.MustRegister(insolar.TypePendingFinished, lr.FlowDispatcher.WrapBusHandle)
+	lr.MessageBus.MustRegister(insolar.TypeStillExecuting, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeAbandonedRequestsNotification, lr.HandleAbandonedRequestsNotificationMessage)
 }
 
@@ -909,7 +920,7 @@ func (lr *LogicRunner) executeConstructorCall(
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 	lr.stateMutex.Lock()
-	lr.FlowHandler.ChangePulse(ctx, pulse)
+	lr.FlowDispatcher.ChangePulse(ctx, pulse)
 
 	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
 	defer span.End()
