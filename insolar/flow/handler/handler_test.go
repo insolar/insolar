@@ -231,7 +231,7 @@ func TestHandler_InnerSubscriber_Error(t *testing.T) {
 	h.handles.present = func(msg bus.Message) flow.Handle {
 		return func(ctx context.Context, f flow.Flow) error {
 			result <- testResult
-			return errors.New("some error")
+			return errors.New("some error.")
 		}
 	}
 	_, err := h.InnerSubscriber(makeWMMessage(context.Background(), nil))
