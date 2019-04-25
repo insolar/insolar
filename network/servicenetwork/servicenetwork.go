@@ -182,7 +182,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		phases.NewFirstPhase(),
 		phases.NewSecondPhase(),
 		phases.NewThirdPhase(),
-		phases.NewPhaseManager(),
+		phases.NewPhaseManager(n.cfg.Service.Consensus),
 		bootstrap.NewSessionManager(),
 		controller.NewNetworkController(),
 		controller.NewRPCController(options),
