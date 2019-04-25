@@ -28,56 +28,56 @@ import (
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineAccessor -o ./ -s _mock.go
 
 // LifelineAccessor provides info about Index-values from storage.
-type LifelineAccessor interface {
-	// ForID returns Index for provided id.
-	ForID(ctx context.Context, id insolar.ID) (Lifeline, error)
-}
+// type LifelineAccessor interface {
+// 	// ForID returns Index for provided id.
+// 	ForID(ctx context.Context, id insolar.ID) (Lifeline, error)
+// }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineCollectionAccessor -o ./ -s _mock.go
 
 // LifelineCollectionAccessor provides methods for querying a collection of blobs with specific search conditions.
-type LifelineCollectionAccessor interface {
-	// ForJet returns a collection of lifelines for a provided jetID
-	ForJet(ctx context.Context, jetID insolar.JetID) map[insolar.ID]LifelineMeta
-	// ForPulseAndJet returns a collection of lifelines for a provided jetID and a pulse number
-	ForPulseAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) map[insolar.ID]Lifeline
-}
+// type LifelineCollectionAccessor interface {
+// 	// ForJet returns a collection of lifelines for a provided jetID
+// 	ForJet(ctx context.Context, jetID insolar.JetID) map[insolar.ID]LifelineMeta
+// 	// ForPulseAndJet returns a collection of lifelines for a provided jetID and a pulse number
+// 	ForPulseAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) map[insolar.ID]Lifeline
+// }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineModifier -o ./ -s _mock.go
 
 // LifelineModifier provides methods for setting Index-values to storage.
-type LifelineModifier interface {
-	// Set saves new Index-value in storage.
-	Set(ctx context.Context, id insolar.ID, index Lifeline) error
-}
+// type LifelineModifier interface {
+// 	// Set saves new Index-value in storage.
+// 	Set(ctx context.Context, id insolar.ID, index Lifeline) error
+// }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.ExtendedLifelineModifier -o ./ -s _mock.go
 
 // ExtendedLifelineModifier provides methods for setting Index-values to storage.
 // The main difference with LifelineModifier is an opportunity to modify a state of an internal pulse-index
-type ExtendedLifelineModifier interface {
-	// SetWithMeta saves index to the storage and sets its index and pulse number in internal indexes
-	SetWithMeta(ctx context.Context, id insolar.ID, pn insolar.PulseNumber, index Lifeline) error
-	// SetUsageForPulse updates an internal state of an internal pulse-index
-	// Calling this method guaranties that provied pn will be used as a LastUsagePulse for an id
-	SetUsageForPulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber)
-}
+// type ExtendedLifelineModifier interface {
+// 	// SetWithMeta saves index to the storage and sets its index and pulse number in internal indexes
+// 	SetWithMeta(ctx context.Context, id insolar.ID, pn insolar.PulseNumber, index Lifeline) error
+// 	// SetUsageForPulse updates an internal state of an internal pulse-index
+// 	// Calling this method guaranties that provied pn will be used as a LastUsagePulse for an id
+// 	SetUsageForPulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber)
+// }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineStorage -o ./ -s _mock.go
 
 // LifelineStorage is an union of LifelineAccessor and LifelineModifier.
-type LifelineStorage interface {
-	LifelineAccessor
-	LifelineModifier
-}
+// type LifelineStorage interface {
+// 	LifelineAccessor
+// 	LifelineModifier
+// }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineCleaner -o ./ -s _mock.go
 
-// LifelineCleaner provides an interface for removing interfaces from a storage.
-type LifelineCleaner interface {
-	// DeleteForPN method removes indexes from a storage for a provided
-	DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
-}
+// // LifelineCleaner provides an interface for removing interfaces from a storage.
+// type LifelineCleaner interface {
+// 	// DeleteForPN method removes indexes from a storage for a provided
+// 	DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
+// }
 
 // Lifeline represents meta information for record object.
 type Lifeline struct {

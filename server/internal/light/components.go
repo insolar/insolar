@@ -194,7 +194,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		drops := drop.NewStorageMemory()
 		blobs := blob.NewStorageMemory()
 		records := object.NewRecordMemory()
-		indexes := object.NewIndexMemory()
+		indexes := object.NewInMemoryIndex()
 		jets := jet.NewStore()
 		nodes := node.NewStorage()
 
@@ -212,7 +212,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		cord.Nodes = nodes
 		Coordinator = cord
 
-		handler := artifactmanager.NewMessageHandler(indexes, indexes, &conf)
+		handler := artifactmanager.NewMessageHandler(indexes, &conf)
 		handler.RecentStorageProvider = hots
 		handler.Bus = Bus
 		handler.PlatformCryptographyScheme = CryptoScheme
@@ -230,9 +230,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.Nodes = nodes
 		handler.HotDataWaiter = waiter
 		handler.JetReleaser = waiter
-		handler.LifelineStorage = indexes
-		handler.ExtendedLifelineModifier = indexes
-		handler.LifelineStorage = indexes
 
 		jetCalculator := jet.NewCalculator(Coordinator, jets)
 		var lightCleaner = replication.NewCleaner(

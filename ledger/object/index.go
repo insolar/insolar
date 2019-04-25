@@ -98,9 +98,11 @@ func (i *InMemoryIndex) getBucket(ctx context.Context, pn insolar.PulseNumber, o
 	return bucket
 }
 
-func (i *InMemoryIndex) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) {
+func (i *InMemoryIndex) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error {
 	b := i.getBucket(ctx, pn, objID)
 	b.setLifeline(&lifeline)
+
+	return nil
 }
 
 func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) {

@@ -119,7 +119,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) *TMPLedger {
 		PulseAppender:  ps,
 		PulseAccessor:  ps,
 		RecordModifier: recordStorage,
-		IndexModifier:  is,
+		IndexModifier:  index,
 	}
 	_, err := genesisBaseRecord.CreateIfNeeded(ctx)
 	if err != nil {
