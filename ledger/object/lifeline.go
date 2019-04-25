@@ -33,10 +33,10 @@ type LifelineAccessor interface {
 	ForID(ctx context.Context, id insolar.ID) (Lifeline, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexCollectionAccessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineCollectionAccessor -o ./ -s _mock.go
 
-// IndexCollectionAccessor provides methods for querying a collection of blobs with specific search conditions.
-type IndexCollectionAccessor interface {
+// LifelineCollectionAccessor provides methods for querying a collection of blobs with specific search conditions.
+type LifelineCollectionAccessor interface {
 	// ForJet returns a collection of lifelines for a provided jetID
 	ForJet(ctx context.Context, jetID insolar.JetID) map[insolar.ID]LifelineMeta
 	// ForPulseAndJet returns a collection of lifelines for a provided jetID and a pulse number

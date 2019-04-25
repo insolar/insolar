@@ -3,20 +3,20 @@ package object
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "IndexCollectionAccessor" can be found in github.com/insolar/insolar/ledger/object
+The original interface "LifelineCollectionAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//IndexCollectionAccessorMock implements github.com/insolar/insolar/ledger/object.IndexCollectionAccessor
+// IndexCollectionAccessorMock implements github.com/insolar/insolar/ledger/object.LifelineCollectionAccessor
 type IndexCollectionAccessorMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type IndexCollectionAccessorMock struct {
 	ForPulseAndJetMock       mIndexCollectionAccessorMockForPulseAndJet
 }
 
-//NewIndexCollectionAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.IndexCollectionAccessor
+// NewIndexCollectionAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.LifelineCollectionAccessor
 func NewIndexCollectionAccessorMock(t minimock.Tester) *IndexCollectionAccessorMock {
 	m := &IndexCollectionAccessorMock{t: t}
 
@@ -65,7 +65,7 @@ type IndexCollectionAccessorMockForJetResult struct {
 	r map[insolar.ID]LifelineMeta
 }
 
-//Expect specifies that invocation of IndexCollectionAccessor.ForJet is expected from 1 to Infinity times
+// Expect specifies that invocation of LifelineCollectionAccessor.ForJet is expected from 1 to Infinity times
 func (m *mIndexCollectionAccessorMockForJet) Expect(p context.Context, p1 insolar.JetID) *mIndexCollectionAccessorMockForJet {
 	m.mock.ForJetFunc = nil
 	m.expectationSeries = nil
@@ -77,7 +77,7 @@ func (m *mIndexCollectionAccessorMockForJet) Expect(p context.Context, p1 insola
 	return m
 }
 
-//Return specifies results of invocation of IndexCollectionAccessor.ForJet
+// Return specifies results of invocation of LifelineCollectionAccessor.ForJet
 func (m *mIndexCollectionAccessorMockForJet) Return(r map[insolar.ID]LifelineMeta) *IndexCollectionAccessorMock {
 	m.mock.ForJetFunc = nil
 	m.expectationSeries = nil
@@ -89,7 +89,7 @@ func (m *mIndexCollectionAccessorMockForJet) Return(r map[insolar.ID]LifelineMet
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of IndexCollectionAccessor.ForJet is expected once
+// ExpectOnce specifies that invocation of LifelineCollectionAccessor.ForJet is expected once
 func (m *mIndexCollectionAccessorMockForJet) ExpectOnce(p context.Context, p1 insolar.JetID) *IndexCollectionAccessorMockForJetExpectation {
 	m.mock.ForJetFunc = nil
 	m.mainExpectation = nil
@@ -104,7 +104,7 @@ func (e *IndexCollectionAccessorMockForJetExpectation) Return(r map[insolar.ID]L
 	e.result = &IndexCollectionAccessorMockForJetResult{r}
 }
 
-//Set uses given function f as a mock of IndexCollectionAccessor.ForJet method
+// Set uses given function f as a mock of LifelineCollectionAccessor.ForJet method
 func (m *mIndexCollectionAccessorMockForJet) Set(f func(p context.Context, p1 insolar.JetID) (r map[insolar.ID]LifelineMeta)) *IndexCollectionAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -113,7 +113,7 @@ func (m *mIndexCollectionAccessorMockForJet) Set(f func(p context.Context, p1 in
 	return m.mock
 }
 
-//ForJet implements github.com/insolar/insolar/ledger/object.IndexCollectionAccessor interface
+// ForJet implements github.com/insolar/insolar/ledger/object.LifelineCollectionAccessor interface
 func (m *IndexCollectionAccessorMock) ForJet(p context.Context, p1 insolar.JetID) (r map[insolar.ID]LifelineMeta) {
 	counter := atomic.AddUint64(&m.ForJetPreCounter, 1)
 	defer atomic.AddUint64(&m.ForJetCounter, 1)
@@ -125,7 +125,7 @@ func (m *IndexCollectionAccessorMock) ForJet(p context.Context, p1 insolar.JetID
 		}
 
 		input := m.ForJetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, IndexCollectionAccessorMockForJetInput{p, p1}, "IndexCollectionAccessor.ForJet got unexpected parameters")
+		testify_assert.Equal(m.t, *input, IndexCollectionAccessorMockForJetInput{p, p1}, "LifelineCollectionAccessor.ForJet got unexpected parameters")
 
 		result := m.ForJetMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -142,7 +142,7 @@ func (m *IndexCollectionAccessorMock) ForJet(p context.Context, p1 insolar.JetID
 
 		input := m.ForJetMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, IndexCollectionAccessorMockForJetInput{p, p1}, "IndexCollectionAccessor.ForJet got unexpected parameters")
+			testify_assert.Equal(m.t, *input, IndexCollectionAccessorMockForJetInput{p, p1}, "LifelineCollectionAccessor.ForJet got unexpected parameters")
 		}
 
 		result := m.ForJetMock.mainExpectation.result
@@ -214,7 +214,7 @@ type IndexCollectionAccessorMockForPulseAndJetResult struct {
 	r map[insolar.ID]Lifeline
 }
 
-//Expect specifies that invocation of IndexCollectionAccessor.ForPulseAndJet is expected from 1 to Infinity times
+// Expect specifies that invocation of LifelineCollectionAccessor.ForPulseAndJet is expected from 1 to Infinity times
 func (m *mIndexCollectionAccessorMockForPulseAndJet) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *mIndexCollectionAccessorMockForPulseAndJet {
 	m.mock.ForPulseAndJetFunc = nil
 	m.expectationSeries = nil
@@ -226,7 +226,7 @@ func (m *mIndexCollectionAccessorMockForPulseAndJet) Expect(p context.Context, p
 	return m
 }
 
-//Return specifies results of invocation of IndexCollectionAccessor.ForPulseAndJet
+// Return specifies results of invocation of LifelineCollectionAccessor.ForPulseAndJet
 func (m *mIndexCollectionAccessorMockForPulseAndJet) Return(r map[insolar.ID]Lifeline) *IndexCollectionAccessorMock {
 	m.mock.ForPulseAndJetFunc = nil
 	m.expectationSeries = nil
@@ -238,7 +238,7 @@ func (m *mIndexCollectionAccessorMockForPulseAndJet) Return(r map[insolar.ID]Lif
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of IndexCollectionAccessor.ForPulseAndJet is expected once
+// ExpectOnce specifies that invocation of LifelineCollectionAccessor.ForPulseAndJet is expected once
 func (m *mIndexCollectionAccessorMockForPulseAndJet) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) *IndexCollectionAccessorMockForPulseAndJetExpectation {
 	m.mock.ForPulseAndJetFunc = nil
 	m.mainExpectation = nil
@@ -253,7 +253,7 @@ func (e *IndexCollectionAccessorMockForPulseAndJetExpectation) Return(r map[inso
 	e.result = &IndexCollectionAccessorMockForPulseAndJetResult{r}
 }
 
-//Set uses given function f as a mock of IndexCollectionAccessor.ForPulseAndJet method
+// Set uses given function f as a mock of LifelineCollectionAccessor.ForPulseAndJet method
 func (m *mIndexCollectionAccessorMockForPulseAndJet) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r map[insolar.ID]Lifeline)) *IndexCollectionAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -262,7 +262,7 @@ func (m *mIndexCollectionAccessorMockForPulseAndJet) Set(f func(p context.Contex
 	return m.mock
 }
 
-//ForPulseAndJet implements github.com/insolar/insolar/ledger/object.IndexCollectionAccessor interface
+// ForPulseAndJet implements github.com/insolar/insolar/ledger/object.LifelineCollectionAccessor interface
 func (m *IndexCollectionAccessorMock) ForPulseAndJet(p context.Context, p1 insolar.PulseNumber, p2 insolar.JetID) (r map[insolar.ID]Lifeline) {
 	counter := atomic.AddUint64(&m.ForPulseAndJetPreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseAndJetCounter, 1)
@@ -274,7 +274,7 @@ func (m *IndexCollectionAccessorMock) ForPulseAndJet(p context.Context, p1 insol
 		}
 
 		input := m.ForPulseAndJetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, IndexCollectionAccessorMockForPulseAndJetInput{p, p1, p2}, "IndexCollectionAccessor.ForPulseAndJet got unexpected parameters")
+		testify_assert.Equal(m.t, *input, IndexCollectionAccessorMockForPulseAndJetInput{p, p1, p2}, "LifelineCollectionAccessor.ForPulseAndJet got unexpected parameters")
 
 		result := m.ForPulseAndJetMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -291,7 +291,7 @@ func (m *IndexCollectionAccessorMock) ForPulseAndJet(p context.Context, p1 insol
 
 		input := m.ForPulseAndJetMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, IndexCollectionAccessorMockForPulseAndJetInput{p, p1, p2}, "IndexCollectionAccessor.ForPulseAndJet got unexpected parameters")
+			testify_assert.Equal(m.t, *input, IndexCollectionAccessorMockForPulseAndJetInput{p, p1, p2}, "LifelineCollectionAccessor.ForPulseAndJet got unexpected parameters")
 		}
 
 		result := m.ForPulseAndJetMock.mainExpectation.result

@@ -41,7 +41,7 @@ type LightDataGatherer struct {
 	dropAccessor    drop.Accessor
 	blobsAccessor   blob.CollectionAccessor
 	recsAccessor    object.RecordCollectionAccessor
-	indexesAccessor object.IndexCollectionAccessor
+	indexesAccessor object.LifelineCollectionAccessor
 }
 
 // NewDataGatherer creates a new instance of LightDataGatherer
@@ -49,7 +49,7 @@ func NewDataGatherer(
 	dropAccessor drop.Accessor,
 	blobsAccessor blob.CollectionAccessor,
 	recsAccessor object.RecordCollectionAccessor,
-	indexesAccessor object.IndexCollectionAccessor,
+	indexesAccessor object.LifelineCollectionAccessor,
 ) *LightDataGatherer {
 	return &LightDataGatherer{
 		dropAccessor:    dropAccessor,
