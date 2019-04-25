@@ -57,6 +57,7 @@ import (
 	"crypto"
 	"fmt"
 	"math/rand"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -117,6 +118,7 @@ type testSuite struct {
 	fixtureMap     map[string]*fixture
 	bootstrapCount int
 	nodesCount     int
+	needToStop     bool
 }
 
 func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
@@ -125,7 +127,18 @@ func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
 		fixtureMap:     make(map[string]*fixture, 0),
 		bootstrapCount: bootstrapCount,
 		nodesCount:     nodesCount,
+		needToStop:     needStop(),
 	}
+}
+
+func needStop() bool {
+	value := os.Getenv("SUSPEND_TEST")
+	if value == "" {
+		value = "false"
+	}
+
+	b, _ := strconv.ParseBool(value)
+	return b
 }
 
 func (s *testSuite) fixture() *fixture {
@@ -220,6 +233,10 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
 func (s *testSuite) TearDownTest() {
 	log.Info("=================== TearDownTest()")
+	if s.Suite.T().Failed() && s.needToStop {
+		waitFileToBeRemoved()
+	}
+
 	log.Info("Stop network nodes")
 	for _, n := range s.fixture().networkNodes {
 		err := n.componentManager.Stop(n.ctx)
@@ -232,6 +249,27 @@ func (s *testSuite) TearDownTest() {
 	}
 	log.Info("Stop test pulsar")
 	s.fixture().pulsar.Stop(s.fixture().ctx)
+}
+
+func waitFileToBeRemoved() {
+	var fileMarker = "DELETE_THIS_FILE_FOR_CONTINUE"
+	file, err := os.OpenFile(fileMarker, os.O_RDONLY|os.O_CREATE, 0600)
+	if err != nil {
+		log.Warn("Cannot create file " + fileMarker)
+		return
+	}
+	for fileExists(file.Name()) {
+		time.Sleep(time.Second * 5)
+		log.Info("Tests are suspended. Delete file to continue. " + fileMarker)
+	}
+}
+
+func fileExists(filename string) bool {
+	info, err := os.Stat(filename)
+	if os.IsNotExist(err) {
+		return false
+	}
+	return !info.IsDir()
 }
 
 func (s *testSuite) waitForConsensus(consensusCount int) {
