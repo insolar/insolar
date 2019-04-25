@@ -94,7 +94,7 @@ func storeBlobs(
 func storeRecords(
 	ctx context.Context,
 	records object.RecordModifier,
-	orderedRecords object.SequenceRecordModifier,
+	recordSequence object.SequenceRecordModifier,
 	pcs insolar.PlatformCryptographyScheme,
 	pn insolar.PulseNumber,
 	rawRecords [][]byte,
@@ -117,7 +117,7 @@ func storeRecords(
 			continue
 		}
 
-		err = orderedRecords.Push(ctx, pn, *id)
+		err = recordSequence.Push(ctx, pn, *id)
 		if err != nil {
 			inslog.Error(err, "heavyserver: store ordered record index failed")
 			continue

@@ -19,6 +19,7 @@ package object
 import (
 	"bytes"
 	"context"
+	"encoding/binary"
 	"fmt"
 	"sync"
 	"unsafe"
@@ -260,7 +261,7 @@ func (s *SequenceRecordDB) topPulse() (insolar.PulseNumber, error) {
 	} else if err != nil {
 		return 0, err
 	}
-	return insolar.PulseNumber(utils.Bytes2UINT32(buff)), nil
+	return insolar.PulseNumber(binary.BigEndian.Uint32(buff)), nil
 }
 
 func (s *SequenceRecordDB) firstPulse() (insolar.PulseNumber, error) {
@@ -271,7 +272,7 @@ func (s *SequenceRecordDB) firstPulse() (insolar.PulseNumber, error) {
 	} else if err != nil {
 		return 0, err
 	}
-	return insolar.PulseNumber(utils.Bytes2UINT32(buff)), nil
+	return insolar.PulseNumber(binary.BigEndian.Uint32(buff)), nil
 }
 
 func (s *SequenceRecordDB) updateTop(pn insolar.PulseNumber) error {
