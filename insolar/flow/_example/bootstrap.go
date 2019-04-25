@@ -45,6 +45,12 @@ func bootstrapExample() { // nolint
 			}
 			return s.Present
 		},
+		func(msg bus.Message) flow.Handle {
+			s := GetObject{
+				DBConnection: DBConnection,
+			}
+			return s.Future
+		},
 	)
 
 	// Use handler to handle incoming messages.

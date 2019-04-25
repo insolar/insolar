@@ -55,7 +55,7 @@ func TestEmptyHandle(t *testing.T) {
 				message.ReplyTo <- bus.Reply{Reply: testReply}
 				return nil
 			}
-		})
+		}, nil)
 
 	reply, err := hand.WrapBusHandle(context.Background(), makeParcelMock(t))
 	require.NoError(t, err)
@@ -79,7 +79,7 @@ func TestCallEmptyProcedure(t *testing.T) {
 				message.ReplyTo <- bus.Reply{Reply: testReply}
 				return nil
 			}
-		})
+		}, nil)
 
 	reply, err := hand.WrapBusHandle(context.Background(), makeParcelMock(t))
 	require.NoError(t, err)
@@ -104,7 +104,7 @@ func TestProcedureReturnError(t *testing.T) {
 				message.ReplyTo <- bus.Reply{Reply: testReply}
 				return nil
 			}
-		})
+		}, nil)
 
 	reply, err := hand.WrapBusHandle(context.Background(), makeParcelMock(t))
 	require.NoError(t, err)
@@ -136,7 +136,7 @@ func TestChangePulse(t *testing.T) {
 				message.ReplyTo <- bus.Reply{Reply: testReply}
 				return nil
 			}
-		})
+		}, nil)
 
 	handleProcessed := make(chan struct{})
 	go func() {
@@ -181,7 +181,7 @@ func TestChangePulseAndMigrate(t *testing.T) {
 				})
 				return nil
 			}
-		})
+		}, nil)
 
 	handleProcessed := make(chan struct{})
 	go func() {

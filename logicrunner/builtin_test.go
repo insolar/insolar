@@ -70,7 +70,7 @@ func TestBareHelloworld(t *testing.T) {
 	mb := testmessagebus.NewTestMessageBus(t)
 
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	l := artifacts.TmpLedger(
+	l, _ := artifacts.TmpLedger(
 		t,
 		"",
 		insolar.Components{

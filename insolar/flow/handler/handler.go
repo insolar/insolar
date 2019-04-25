@@ -19,6 +19,7 @@ package handler
 import (
 	"context"
 	"errors"
+	"sync/atomic"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -35,21 +36,33 @@ const TraceIDField = "TraceID"
 type Handler struct {
 	handles struct {
 		present flow.MakeHandle
+		future  flow.MakeHandle
 	}
-	controller *thread.Controller
+	controller         *thread.Controller
+	currentPulseNumber uint32
 }
 
-func NewHandler(present flow.MakeHandle) *Handler {
+func NewHandler(present flow.MakeHandle, future flow.MakeHandle) *Handler {
 	h := &Handler{
 		controller: thread.NewController(),
 	}
 	h.handles.present = present
+	h.handles.future = future
+	h.currentPulseNumber = insolar.FirstPulseNumber
 	return h
 }
 
 // ChangePulse is a handle for pulse change vent.
 func (h *Handler) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
 	h.controller.Pulse()
+	atomic.StoreUint32(&h.currentPulseNumber, uint32(pulse.PulseNumber))
+}
+
+func (h *Handler) getHandleByPulse(msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
+	if uint32(msgPulseNumber) > atomic.LoadUint32(&h.currentPulseNumber) {
+		return h.handles.future
+	}
+	return h.handles.present
 }
 
 func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
@@ -61,8 +74,9 @@ func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (ins
 	ctx = pulse.ContextWith(ctx, parcel.Pulse())
 
 	f := thread.NewThread(msg, h.controller)
-	err := f.Run(ctx, h.handles.present(msg))
+	handle := h.getHandleByPulse(parcel.Pulse())
 
+	err := f.Run(ctx, handle(msg))
 	var rep bus.Reply
 	select {
 	case rep = <-msg.ReplyTo:

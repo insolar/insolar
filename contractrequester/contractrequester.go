@@ -61,11 +61,17 @@ func New() (*ContractRequester, error) {
 		cr:        res,
 	}
 
-	res.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
-		return (&Init{
+	initHandle := func(msg bus.Message) *Init {
+		return &Init{
 			dep:     dep,
 			Message: msg,
-		}).Present
+		}
+	}
+
+	res.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
+		return initHandle(msg).Present
+	}, func(msg bus.Message) flow.Handle {
+		return initHandle(msg).Present
 	})
 
 	return res, nil
