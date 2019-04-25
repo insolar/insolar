@@ -143,38 +143,32 @@ func (s *SequenceRecordDB) ForPosition(ctx context.Context, pos SequenceRecordPo
 	return s.get(ctx, pos)
 }
 
-// FromPosition returns sequence record stream from provided record position with corresponding limit.
-func (s *SequenceRecordDB) FromPosition(ctx context.Context, pos SequenceRecordPosition, limit uint32) chan interface{} {
-	out := make(chan interface{}, limit)
-	go func() {
-		defer close(out)
+// FromPosition returns sequence record slice from provided record position with corresponding limit.
+func (s *SequenceRecordDB) FromPosition(ctx context.Context, pos SequenceRecordPosition, limit uint32) ([]SequenceRecord, error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
 
-		s.lock.RLock()
-		defer s.lock.RUnlock()
-
-		capacity := uint32(0)
-		for {
-			curr, err := s.exactPulse(pos.PulseNumber)
-			if err != nil {
-				out <- err
-				return
-			}
-			for ; pos.Index <= curr.topIndex && capacity < limit; pos.Index++ {
-				rec, err := s.get(ctx, pos)
-				if err != nil {
-					out <- err
-					return
-				}
-				out <- rec
-				capacity++
-			}
-			if 0 == curr.next || capacity == limit {
-				break
-			}
-			pos = SequenceRecordPosition{Index: 0, PulseNumber: curr.next}
+	out := []SequenceRecord{}
+	capacity := uint32(0)
+	for {
+		curr, err := s.exactPulse(pos.PulseNumber)
+		if err != nil {
+			return nil, errors.Wrap(err, "[SequenceRecordIndex] failed to get pulse meta")
 		}
-	}()
-	return out
+		for ; pos.Index <= curr.topIndex && capacity < limit; pos.Index++ {
+			rec, err := s.get(ctx, pos)
+			if err != nil {
+				return nil, errors.Wrap(err, "[SequenceRecordIndex] failed to get record")
+			}
+			out = append(out, rec)
+			capacity++
+		}
+		if 0 == curr.next || capacity == limit {
+			break
+		}
+		pos = SequenceRecordPosition{Index: 0, PulseNumber: curr.next}
+	}
+	return out, nil
 }
 
 // UpdatePulse makes "upsert" for top pulse number and sets at old pulse descriptor link to next pulse
