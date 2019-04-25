@@ -79,11 +79,14 @@ import (
 	"github.com/stretchr/testify/suite"
 )
 
-const (
+var (
 	testNetworkPort uint32 = 10010
-	pulseTimeMs     int32  = 5000
-	reqTimeoutMs    int32  = 2000
-	pulseDelta      int32  = 5
+)
+
+const (
+	pulseTimeMs  int32 = 5000
+	reqTimeoutMs int32 = 2000
+	pulseDelta   int32 = 5
 
 	Phase1Timeout  float64 = 0.45
 	Phase2Timeout  float64 = 0.15
