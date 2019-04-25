@@ -115,19 +115,21 @@ func (b *Bus) Send(ctx context.Context, msg *message.Message) <-chan *message.Me
 func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
 		b.repliesMutex.RLock()
-		defer b.repliesMutex.RUnlock()
 
 		id := middleware.MessageCorrelationID(msg)
 		ch, ok := b.replies[id]
 		if !ok {
+			b.repliesMutex.RUnlock()
 			return h(msg)
 		}
 
 		select {
 		case ch <- msg:
 			inslogger.FromContext(msg.Context()).Infof("result for message with correlationID %s was send", id)
+			b.repliesMutex.RUnlock()
 			return nil, nil
 		case <-time.After(b.timeout):
+			b.repliesMutex.RUnlock()
 			return nil, errors.Errorf("can't return result for message with correlationID %s: timeout %s exceeded", id, b.timeout)
 		}
 	}
