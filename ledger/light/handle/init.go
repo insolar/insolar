@@ -45,11 +45,11 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 			dep:     s.Dep,
 			Message: s.Message,
 		}
-		return h.Present(ctx, f)
+		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetCode:
 		msg := s.Message.Parcel.Message().(*message.GetCode)
 		h := NewGetCode(s.Dep, s.Message.ReplyTo, msg.Code)
-		return h.Present(ctx, f)
+		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s", s.Message.Parcel.Message().Type().String())
 	}
@@ -59,5 +59,5 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 	return f.Procedure(ctx, &proc.ReturnReply{
 		ReplyTo: s.Message.ReplyTo,
 		Err:     errors.New("no past handler"),
-	})
+	}, false)
 }
