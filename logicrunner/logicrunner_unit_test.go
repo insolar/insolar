@@ -406,7 +406,7 @@ func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
 	parcel.DefaultTargetMock.Return(&insolar.Reference{})
 	parcel.PulseFunc = func() insolar.PulseNumber { return p.PulseNumber }
 
-	re, err := suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
+	re, err := suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Require().Equal(&reply.OK{}, re)
 
@@ -417,12 +417,12 @@ func (suite *LogicRunnerTestSuite) TestHandlePendingFinishedMessage() {
 	suite.Require().Equal(message.NotPending, es.pending)
 
 	es.Current = &CurrentExecution{}
-	re, err = suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
+	re, err = suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().Error(err)
 
 	es.Current = nil
 
-	re, err = suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
+	re, err = suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Require().Equal(&reply.OK{}, re)
 }
@@ -491,7 +491,7 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 	parcel.PulseFunc = func() insolar.PulseNumber { return p.PulseNumber }
 
 	// check that creation of new execution state is handled (on StillExecuting Message)
-	re, err := suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
+	re, err := suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Require().Equal(&reply.OK{}, re)
 
@@ -503,7 +503,7 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 	st.ExecutionState.pending = message.NotPending
 	st.ExecutionState.PendingConfirmed = false
 
-	re, err = suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
+	re, err = suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Require().Equal(&reply.OK{}, re)
 
@@ -521,7 +521,7 @@ func (suite *LogicRunnerTestSuite) TestHandleStillExecutingMessage() {
 			PendingConfirmed: false,
 		},
 	}
-	re, err = suite.lr.FlowHandler.WrapBusHandle(suite.ctx, parcel)
+	re, err = suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Equal(message.InPending, suite.lr.state[objectRef].ExecutionState.pending)
 	suite.Equal(true, suite.lr.state[objectRef].ExecutionState.PendingConfirmed)
@@ -800,7 +800,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 
 			ctx := inslogger.ContextWithTrace(suite.ctx, "req-"+strconv.Itoa(i))
 
-			_, err := suite.lr.FlowHandler.WrapBusHandle(ctx, parcel)
+			_, err := suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
 			suite.Require().NoError(err)
 
 			wg.Done()
@@ -1036,8 +1036,8 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			ctx := inslogger.ContextWithTrace(suite.ctx, "req")
 
 			pulse := pulsar.NewPulse(1, parcel.Pulse(), &entropygenerator.StandardEntropyGenerator{})
-			suite.lr.FlowHandler.ChangePulse(ctx, *pulse)
-			_, err := suite.lr.FlowHandler.WrapBusHandle(ctx, parcel)
+			suite.lr.FlowDispatcher.ChangePulse(ctx, *pulse)
+			_, err := suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
 			if test.errorExpected {
 				suite.Require().Error(err)
 			} else {
@@ -1330,8 +1330,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef: s.objectRef,
-				Queue:     messagesQueue,
+				RecordRef:             s.objectRef,
+				Queue:                 messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 
@@ -1404,7 +1404,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecutionState() {
 	es := &ExecutionState{
-		Ref: s.ref,
+		Ref:                   s.ref,
 		LedgerHasMoreRequests: false,
 	}
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)

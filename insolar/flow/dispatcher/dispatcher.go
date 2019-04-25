@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package handler
+package dispatcher
 
 import (
 	"context"
@@ -33,7 +33,7 @@ import (
 
 const TraceIDField = "TraceID"
 
-type Handler struct {
+type Dispatcher struct {
 	handles struct {
 		present flow.MakeHandle
 		future  flow.MakeHandle
@@ -42,30 +42,30 @@ type Handler struct {
 	currentPulseNumber uint32
 }
 
-func NewHandler(present flow.MakeHandle, future flow.MakeHandle) *Handler {
-	h := &Handler{
+func NewDispatcher(present flow.MakeHandle, future flow.MakeHandle) *Dispatcher {
+	d := &Dispatcher{
 		controller: thread.NewController(),
 	}
-	h.handles.present = present
-	h.handles.future = future
-	h.currentPulseNumber = insolar.FirstPulseNumber
-	return h
+	d.handles.present = present
+	d.handles.future = future
+	d.currentPulseNumber = insolar.FirstPulseNumber
+	return d
 }
 
 // ChangePulse is a handle for pulse change vent.
-func (h *Handler) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
-	h.controller.Pulse()
-	atomic.StoreUint32(&h.currentPulseNumber, uint32(pulse.PulseNumber))
+func (d *Dispatcher) ChangePulse(ctx context.Context, pulse insolar.Pulse) {
+	d.controller.Pulse()
+	atomic.StoreUint32(&d.currentPulseNumber, uint32(pulse.PulseNumber))
 }
 
-func (h *Handler) getHandleByPulse(msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
-	if uint32(msgPulseNumber) > atomic.LoadUint32(&h.currentPulseNumber) {
-		return h.handles.future
+func (d *Dispatcher) getHandleByPulse(msgPulseNumber insolar.PulseNumber) flow.MakeHandle {
+	if uint32(msgPulseNumber) > atomic.LoadUint32(&d.currentPulseNumber) {
+		return d.handles.future
 	}
-	return h.handles.present
+	return d.handles.present
 }
 
-func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
+func (d *Dispatcher) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := bus.Message{
 		ReplyTo: make(chan bus.Reply, 1),
 		Parcel:  parcel,
@@ -73,8 +73,8 @@ func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (ins
 
 	ctx = pulse.ContextWith(ctx, parcel.Pulse())
 
-	f := thread.NewThread(msg, h.controller)
-	handle := h.getHandleByPulse(parcel.Pulse())
+	f := thread.NewThread(msg, d.controller)
+	handle := d.getHandleByPulse(parcel.Pulse())
 
 	err := f.Run(ctx, handle(msg))
 	var rep bus.Reply
@@ -91,7 +91,7 @@ func (h *Handler) WrapBusHandle(ctx context.Context, parcel insolar.Parcel) (ins
 	return nil, errors.New("no reply from handler")
 }
 
-func (h *Handler) InnerSubscriber(watermillMsg *message.Message) ([]*message.Message, error) {
+func (d *Dispatcher) InnerSubscriber(watermillMsg *message.Message) ([]*message.Message, error) {
 	msg := bus.Message{
 		WatermillMsg: watermillMsg,
 	}
@@ -100,8 +100,8 @@ func (h *Handler) InnerSubscriber(watermillMsg *message.Message) ([]*message.Mes
 	ctx = inslogger.ContextWithTrace(ctx, watermillMsg.Metadata.Get(TraceIDField))
 	logger := inslogger.FromContext(ctx)
 	go func() {
-		f := thread.NewThread(msg, h.controller)
-		err := f.Run(ctx, h.handles.present(msg))
+		f := thread.NewThread(msg, d.controller)
+		err := f.Run(ctx, d.handles.present(msg))
 		if err != nil {
 			logger.Error("Handling failed", err)
 		}

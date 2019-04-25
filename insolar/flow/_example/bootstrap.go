@@ -22,7 +22,7 @@ import (
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/flow/handler"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 )
 
 type GetObject struct {
@@ -36,7 +36,7 @@ func (s *GetObject) Future(context.Context, flow.Flow) error  { /* ... */ return
 func bootstrapExample() { // nolint
 	DBConnection := bytes.NewBuffer(nil)
 
-	hand := handler.NewHandler(
+	disp := dispatcher.NewDispatcher(
 		// These functions can provide any variables via closure.
 		// IMPORTANT: they must create NEW handle instances on every call.
 		func(msg bus.Message) flow.Handle {
@@ -53,6 +53,6 @@ func bootstrapExample() { // nolint
 		},
 	)
 
-	// Use handler to handle incoming messages.
-	_ = hand
+	// Use dispatcher to handle incoming messages.
+	_ = disp
 }

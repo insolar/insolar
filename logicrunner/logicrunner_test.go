@@ -100,8 +100,8 @@ func (s *LogicRunnerFuncSuite) SetupSuite() {
 }
 
 func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr *LogicRunner) {
-	mb.ReRegister(insolar.TypeCallMethod, lr.FlowHandler.WrapBusHandle)
-	mb.ReRegister(insolar.TypeCallConstructor, lr.FlowHandler.WrapBusHandle)
+	mb.ReRegister(insolar.TypeCallMethod, lr.FlowDispatcher.WrapBusHandle)
+	mb.ReRegister(insolar.TypeCallConstructor, lr.FlowDispatcher.WrapBusHandle)
 
 	mb.ReRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	mb.ReRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
@@ -331,7 +331,7 @@ func (c *One) Dec() (int, error) {
 
 func changePulse(ctx context.Context, lr insolar.LogicRunner, msgHandler *artifactmanager.MessageHandler) {
 	pulse := pulsar.NewPulse(1, insolar.FirstPulseNumber, &entropygenerator.StandardEntropyGenerator{})
-	lr.(*LogicRunner).FlowHandler.ChangePulse(ctx, *pulse)
+	lr.(*LogicRunner).FlowDispatcher.ChangePulse(ctx, *pulse)
 	msgHandler.OnPulse(ctx, *pulse)
 }
 
