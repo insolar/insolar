@@ -40,8 +40,8 @@ type Handler struct {
 	BlobModifier   blob.Modifier
 	RecordAccessor object.RecordAccessor
 	RecordModifier object.RecordModifier
-	IndexAccessor  object.LifelineAccessor
-	IndexModifier  object.LifelineModifier
+	IndexAccessor  object.IndexAccessor
+	IndexModifier  object.IndexModifier
 	DropModifier   drop.Modifier
 
 	jetID insolar.JetID
@@ -94,7 +94,7 @@ func (h *Handler) handleGetObject(
 	msg := parcel.Message().(*message.GetObject)
 
 	// Fetch object index. If not found redirect.
-	idx, err := h.IndexAccessor.ForID(ctx, *msg.Head.Record())
+	idx, err := h.IndexAccessor.LifelineForID(ctx, parcel.Pulse(), *msg.Head.Record())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch object index for %s", msg.Head.Record().DebugString())
 	}
@@ -156,7 +156,7 @@ func (h *Handler) handleGetObject(
 func (h *Handler) handleGetDelegate(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetDelegate)
 
-	idx, err := h.IndexAccessor.ForID(ctx, *msg.Head.Record())
+	idx, err := h.IndexAccessor.LifelineForID(ctx, parcel.Pulse(), *msg.Head.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch index for %v", msg.Head.Record()))
 	}
@@ -177,7 +177,7 @@ func (h *Handler) handleGetChildren(
 ) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetChildren)
 
-	idx, err := h.IndexAccessor.ForID(ctx, *msg.Parent.Record())
+	idx, err := h.IndexAccessor.LifelineForID(ctx, parcel.Pulse(), *msg.Parent.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch index for %v", msg.Parent.Record()))
 	}
@@ -271,7 +271,7 @@ func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (
 func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetObjectIndex)
 
-	idx, err := h.IndexAccessor.ForID(ctx, *msg.Object.Record())
+	idx, err := h.IndexAccessor.LifelineForID(ctx, parcel.Pulse(), *msg.Object.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
@@ -300,7 +300,7 @@ func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Par
 	msg := genericMsg.Message().(*message.HeavyPayload)
 
 	storeRecords(ctx, h.RecordModifier, h.PCS, msg.PulseNum, msg.Records)
-	if err := storeIndexes(ctx, h.IndexModifier, msg.Indexes); err != nil {
+	if err := storeIndexes(ctx, h.IndexModifier, msg.Indexes, msg.PulseNum); err != nil {
 		return &reply.HeavyError{Message: err.Error(), JetID: msg.JetID, PulseNum: msg.PulseNum}, nil
 	}
 	if err := storeDrop(ctx, h.DropModifier, msg.Drop); err != nil {

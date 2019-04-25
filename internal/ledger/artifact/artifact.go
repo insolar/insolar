@@ -71,8 +71,8 @@ type Scope struct {
 	BlobModifier               blob.Modifier
 	RecordsModifier            object.RecordModifier
 
-	IndexModifier object.LifelineModifier
-	IndexAccessor object.LifelineAccessor
+	IndexModifier object.IndexModifier
+	IndexAccessor object.IndexAccessor
 }
 
 func (m *Scope) RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error) {
@@ -122,7 +122,7 @@ func (m *Scope) activateObject(
 	asDelegate bool,
 	memory []byte,
 ) (ObjectDescriptor, error) {
-	parentIdx, err := m.IndexAccessor.ForID(ctx, *parent.Record())
+	parentIdx, err := m.IndexAccessor.LifelineForID(ctx, m.PulseNumber, *parent.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, "not found parent index for activated object")
 	}
@@ -258,7 +258,7 @@ func (m *Scope) registerChild(
 	asType *insolar.Reference,
 ) error {
 	var jetID = insolar.ID(insolar.ZeroJetID)
-	idx, err := m.IndexAccessor.ForID(ctx, *parent.Record())
+	idx, err := m.IndexAccessor.LifelineForID(ctx, m.PulseNumber, *parent.Record())
 	if err != nil {
 		return err
 	}
@@ -287,7 +287,7 @@ func (m *Scope) registerChild(
 	}
 	idx.LatestUpdate = m.PulseNumber
 	idx.JetID = insolar.JetID(jetID)
-	return m.IndexModifier.Set(ctx, *parent.Record(), idx)
+	return m.IndexModifier.SetLifeline(ctx, m.PulseNumber, *parent.Record(), idx)
 }
 
 func (m *Scope) updateStateObject(
@@ -314,7 +314,7 @@ func (m *Scope) updateStateObject(
 		panic("unknown state object type")
 	}
 
-	idx, err := m.IndexAccessor.ForID(ctx, *objRef.Record())
+	idx, err := m.IndexAccessor.LifelineForID(ctx, m.PulseNumber, *objRef.Record())
 	// No index on our node.
 	if err != nil {
 		if err != object.ErrLifelineNotFound {
@@ -342,7 +342,7 @@ func (m *Scope) updateStateObject(
 		idx.Parent = stateObject.(*object.ActivateRecord).Parent
 	}
 	idx.JetID = insolar.JetID(jetID)
-	err = m.IndexModifier.Set(ctx, *objRef.Record(), idx)
+	err = m.IndexModifier.SetLifeline(ctx, m.PulseNumber, *objRef.Record(), idx)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail set index for state object")
 	}

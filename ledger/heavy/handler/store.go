@@ -29,8 +29,9 @@ import (
 
 func storeIndexes(
 	ctx context.Context,
-	indexes object.LifelineModifier,
+	indexes object.IndexModifier,
 	rawIndexes map[insolar.ID][]byte,
+	pn insolar.PulseNumber,
 ) error {
 	for id, rwi := range rawIndexes {
 		idx, err := object.DecodeIndex(rwi)
@@ -39,7 +40,7 @@ func storeIndexes(
 			continue
 		}
 
-		err = indexes.Set(ctx, id, idx)
+		err = indexes.SetLifeline(ctx, pn, id, idx)
 		if err != nil {
 			return errors.Wrapf(err, "heavyserver: index storing failed")
 		}
