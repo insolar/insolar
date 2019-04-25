@@ -134,7 +134,7 @@ func (st *ObjectState) WrapError(err error, message string) error {
 
 func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
-	wmMsg.Metadata.Set("TraceID", inslogger.TraceID(ctx))
+	wmMsg.Metadata.Set(handler.TraceIDField, inslogger.TraceID(ctx))
 	wmMsg.Metadata.Set(MessageTypeField, msgType)
 
 	return wmMsg
@@ -228,7 +228,7 @@ func initHandlers(lr *LogicRunner) error {
 			inslogger.FromContext(ctx).Error("Error while running router", err)
 		}
 	}()
-	<- router.Running()
+	<-router.Running()
 
 	lr.router = router
 
