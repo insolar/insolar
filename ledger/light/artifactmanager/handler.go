@@ -72,8 +72,10 @@ type MessageHandler struct {
 	HotDataWaiter hot.JetWaiter   `inject:""`
 	JetReleaser   hot.JetReleaser `inject:""`
 
-	IndexStorage       object.LifelineStorage
-	IndexStateModifier object.ExtendedLifelineModifier
+	LifelineStorage          object.LifelineStorage
+	ExtendedLifelineModifier object.ExtendedLifelineModifier
+
+	IndexModifier object.IndexModifier
 
 	conf           *configuration.Ledger
 	middleware     *middleware
@@ -91,10 +93,10 @@ func NewMessageHandler(
 ) *MessageHandler {
 
 	h := &MessageHandler{
-		handlers:           map[insolar.MessageType]insolar.MessageHandler{},
-		conf:               conf,
-		IndexStorage:       indexStorage,
-		IndexStateModifier: indexStateModifier,
+		handlers:                 map[insolar.MessageType]insolar.MessageHandler{},
+		conf:                     conf,
+		LifelineStorage:          indexStorage,
+		ExtendedLifelineModifier: indexStateModifier,
 	}
 
 	dep := &proc.Dependencies{
@@ -108,9 +110,9 @@ func NewMessageHandler(
 			p.Dep.Waiter = h.HotDataWaiter
 		},
 		GetIndex: func(p *proc.GetIndex) {
-			p.Dep.IndexState = h.IndexStateModifier
+			p.Dep.IndexState = h.ExtendedLifelineModifier
 			p.Dep.Locker = h.IDLocker
-			p.Dep.Storage = h.IndexStorage
+			p.Dep.Storage = h.LifelineStorage
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
 		},
@@ -292,29 +294,31 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Par
 		if h.RecentStorageProvider.Count() > h.conf.PendingRequestsLimit {
 			return &reply.Error{ErrType: reply.ErrTooManyPendingRequests}, nil
 		}
-		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		recentStorage.AddPendingRequest(ctx, r.GetObject(), *calculatedID)
+		// recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
+		// recentStorage.AddPendingRequest(ctx, r.GetObject(), *calculatedID)
+
+		h.IndexModifier.SetRequest(ctx, parcel.Pulse(), r.GetObject(), *calculatedID)
 	case *object.ResultRecord:
-		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
+		// recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
+		// recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
+
+		h.IndexModifier.SetResultRecord(ctx, parcel.Pulse(), *r.Request.Record(), *calculatedID)
 	}
 
-	id := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), virtRec)
 	rec := record.MaterialRecord{
 		Record: virtRec,
 		JetID:  insolar.JetID(jetID),
 	}
 
-	err = h.RecordModifier.Set(ctx, *id, rec)
+	err = h.RecordModifier.Set(ctx, *calculatedID, rec)
 
 	if err == object.ErrOverride {
 		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", virtRec)).Warn("set record override")
-		id = calculatedID
 	} else if err != nil {
 		return nil, errors.Wrap(err, "can't save record into storage")
 	}
 
-	return &reply.ID{ID: *id}, nil
+	return &reply.ID{ID: *calculatedID}, nil
 }
 
 func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
@@ -365,12 +369,12 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	msg := parcel.Message().(*message.GetDelegate)
 	jetID := jetFromContext(ctx)
 
-	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Head.Record(), parcel.Pulse())
+	h.ExtendedLifelineModifier.SetUsageForPulse(ctx, *msg.Head.Record(), parcel.Pulse())
 
 	h.IDLocker.Lock(msg.Head.Record())
 	defer h.IDLocker.Unlock(msg.Head.Record())
 
-	idx, err := h.IndexStorage.ForID(ctx, *msg.Head.Record())
+	idx, err := h.LifelineStorage.ForID(ctx, *msg.Head.Record())
 	if err == object.ErrIndexNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -383,7 +387,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Head.Record(), parcel.Pulse())
+	h.ExtendedLifelineModifier.SetUsageForPulse(ctx, *msg.Head.Record(), parcel.Pulse())
 
 	delegateRef, ok := idx.Delegates[msg.AsType]
 	if !ok {
@@ -406,7 +410,7 @@ func (h *MessageHandler) handleGetChildren(
 	h.IDLocker.Lock(msg.Parent.Record())
 	defer h.IDLocker.Unlock(msg.Parent.Record())
 
-	idx, err := h.IndexStorage.ForID(ctx, *msg.Parent.Record())
+	idx, err := h.LifelineStorage.ForID(ctx, *msg.Parent.Record())
 	if err == object.ErrIndexNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -422,7 +426,7 @@ func (h *MessageHandler) handleGetChildren(
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
+	h.ExtendedLifelineModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
 
 	var (
 		refs         []insolar.Reference
@@ -571,7 +575,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 		return nil, errors.New("wrong object state record")
 	}
 
-	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Object.Record(), parcel.Pulse())
+	h.ExtendedLifelineModifier.SetUsageForPulse(ctx, *msg.Object.Record(), parcel.Pulse())
 
 	calculatedID := object.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
@@ -591,7 +595,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 	h.IDLocker.Lock(msg.Object.Record())
 	defer h.IDLocker.Unlock(msg.Object.Record())
 
-	idx, err := h.IndexStorage.ForID(ctx, *msg.Object.Record())
+	idx, err := h.LifelineStorage.ForID(ctx, *msg.Object.Record())
 	// No index on our node.
 	if err == object.ErrIndexNotFound {
 		if state.ID() == object.StateActivation {
@@ -612,7 +616,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 	} else if err != nil {
 		return nil, err
 	}
-	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Object.Record(), parcel.Pulse())
+	h.ExtendedLifelineModifier.SetUsageForPulse(ctx, *msg.Object.Record(), parcel.Pulse())
 
 	if err = validateState(idx.State, state.ID()); err != nil {
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
@@ -648,7 +652,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 
 	idx.LatestUpdate = parcel.Pulse()
 	idx.JetID = insolar.JetID(jetID)
-	err = h.IndexStorage.Set(ctx, *msg.Object.Record(), idx)
+	err = h.LifelineStorage.Set(ctx, *msg.Object.Record(), idx)
 	if err != nil {
 		return nil, err
 	}
@@ -684,7 +688,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 	defer h.IDLocker.Unlock(msg.Parent.Record())
 
 	var child *insolar.ID
-	idx, err := h.IndexStorage.ForID(ctx, *msg.Parent.Record())
+	idx, err := h.LifelineStorage.ForID(ctx, *msg.Parent.Record())
 	if err == object.ErrIndexNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -697,7 +701,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 	} else if err != nil {
 		return nil, err
 	}
-	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
+	h.ExtendedLifelineModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
 
 	recID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), childRec)
 
@@ -728,7 +732,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 	}
 	idx.LatestUpdate = parcel.Pulse()
 	idx.JetID = insolar.JetID(jetID)
-	err = h.IndexStorage.Set(ctx, *msg.Parent.Record(), idx)
+	err = h.LifelineStorage.Set(ctx, *msg.Parent.Record(), idx)
 	if err != nil {
 		return nil, err
 	}
@@ -746,11 +750,11 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insola
 	h.IDLocker.Lock(msg.Object.Record())
 	defer h.IDLocker.Unlock(msg.Object.Record())
 
-	idx, err := h.IndexStorage.ForID(ctx, *msg.Object.Record())
+	idx, err := h.LifelineStorage.ForID(ctx, *msg.Object.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Object.Record(), parcel.Pulse())
+	h.ExtendedLifelineModifier.SetUsageForPulse(ctx, *msg.Object.Record(), parcel.Pulse())
 
 	buf := object.EncodeIndex(idx)
 
@@ -791,7 +795,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	}
 
 	idx.JetID = insolar.JetID(jetID)
-	err = h.IndexStorage.Set(ctx, *obj.Record(), idx)
+	err = h.LifelineStorage.Set(ctx, *obj.Record(), idx)
 	if err != nil {
 		return object.Lifeline{}, errors.Wrap(err, "failed to save")
 	}
@@ -889,7 +893,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 			continue
 		}
 
-		err = h.IndexStateModifier.SetWithMeta(ctx, id, meta.LastUsed, decodedIndex)
+		err = h.ExtendedLifelineModifier.SetWithMeta(ctx, id, meta.LastUsed, decodedIndex)
 		if err != nil {
 			logger.Error(err)
 			continue

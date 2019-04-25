@@ -230,9 +230,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.Nodes = nodes
 		handler.HotDataWaiter = waiter
 		handler.JetReleaser = waiter
-		handler.IndexStorage = indexes
-		handler.IndexStateModifier = indexes
-		handler.IndexStorage = indexes
+		handler.LifelineStorage = indexes
+		handler.ExtendedLifelineModifier = indexes
+		handler.LifelineStorage = indexes
 
 		jetCalculator := jet.NewCalculator(Coordinator, jets)
 		var lightCleaner = replication.NewCleaner(

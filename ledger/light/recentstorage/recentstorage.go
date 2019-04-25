@@ -37,11 +37,11 @@ type Provider interface {
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/recentstorage.PendingStorage -o ./ -s _mock.go
 type PendingStorage interface {
-	AddPendingRequest(ctx context.Context, obj, req insolar.ID)
+	// AddPendingRequest(ctx context.Context, obj, req insolar.ID)
 	SetContextToObject(ctx context.Context, obj insolar.ID, objContext PendingObjectContext)
 
 	GetRequests() map[insolar.ID]PendingObjectContext
 	GetRequestsForObject(obj insolar.ID) []insolar.ID
 
-	RemovePendingRequest(ctx context.Context, obj, req insolar.ID)
+	// RemovePendingRequest(ctx context.Context, obj, req insolar.ID)
 }

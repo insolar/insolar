@@ -2,31 +2,106 @@ package object
 
 import (
 	"context"
+	"sync"
 
 	"github.com/insolar/insolar/insolar"
 )
 
 type IndexAccessor interface {
-	ForPnAndID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID)
 }
 
 type IndexModifier interface {
-	Set(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, index Lifeline) error
-	SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, req Request)
-	SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, res ResultRecord)
+	SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline)
+	SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID)
+	SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID)
+}
+
+type indexBucket struct {
+	lifelineLock sync.RWMutex
+	lifeline     Lifeline
+
+	requestLock sync.RWMutex
+	requests    map[insolar.ID]struct{}
+
+	resultLock sync.RWMutex
+	results    map[insolar.ID]struct{}
+}
+
+func (i *indexBucket) Lifeline() Lifeline {
+	i.lifelineLock.RLock()
+	defer i.lifelineLock.RUnlock()
+
+	return i.lifeline
+}
+
+func (i *indexBucket) setLifeline(lifeline Lifeline) {
+	i.lifelineLock.Lock()
+	defer i.lifelineLock.Unlock()
+
+	i.lifeline = lifeline
+}
+
+func (i *indexBucket) setRequest(reqID insolar.ID) {
+	i.requestLock.Lock()
+	defer i.requestLock.Unlock()
+
+	if i.requests == nil {
+		i.requests = map[insolar.ID]struct{}{}
+	}
+
+	i.requests[reqID] = struct{}{}
+}
+
+func (i *indexBucket) setResult(resID insolar.ID) {
+	i.resultLock.Lock()
+	defer i.resultLock.Unlock()
+
+	if i.results == nil {
+		i.results = map[insolar.ID]struct{}{}
+	}
+
+	i.results[resID] = struct{}{}
 }
 
 type InMemoryIndex struct {
+	bucketsLock sync.RWMutex
+	buckets     map[insolar.PulseNumber]map[insolar.ID]*indexBucket
 }
 
-func (*InMemoryIndex) Set(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, index Lifeline) error {
-	panic("implement me")
+func (i *InMemoryIndex) getBucket(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *indexBucket {
+	i.bucketsLock.Lock()
+	defer i.bucketsLock.Unlock()
+
+	var objsByPn map[insolar.ID]*indexBucket
+	objsByPn, ok := i.buckets[pn]
+	if !ok {
+		objsByPn = map[insolar.ID]*indexBucket{}
+		i.buckets[pn] = objsByPn
+	}
+
+	bucket := objsByPn[objID]
+	if bucket == nil {
+		bucket = &indexBucket{
+			requests: map[insolar.ID]struct{}{},
+			results:  map[insolar.ID]struct{}{},
+		}
+		objsByPn[objID] = bucket
+	}
+
+	return bucket
 }
 
-func (*InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, req Request) {
-	panic("implement me")
+func (i *InMemoryIndex) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) {
+	b := i.getBucket(ctx, pn, objID)
+	b.setLifeline(lifeline)
 }
 
-func (*InMemoryIndex) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, res ResultRecord) {
-	panic("implement me")
+func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) {
+	b := i.getBucket(ctx, pn, objID)
+	b.setRequest(reqID)
+}
+
+func (i *InMemoryIndex) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) {
+	b := i.getBucket(ctx, pn, objID)
+	b.setResult(resID)
 }

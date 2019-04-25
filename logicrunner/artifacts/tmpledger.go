@@ -162,7 +162,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) *TMPLedger {
 	handler := artifactmanager.NewMessageHandler(is, is, &conf)
 	handler.JetStorage = js
 	handler.Nodes = ns
-	handler.IndexStorage = is
+	handler.LifelineStorage = is
 	handler.DropModifier = ds
 	handler.BlobModifier = bs
 	handler.BlobAccessor = bs

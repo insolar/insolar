@@ -679,8 +679,8 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
-	h.IndexStorage = s.indexMemoryStor
-	h.IndexStateModifier = s.indexMemoryStor
+	h.LifelineStorage = s.indexMemoryStor
+	h.ExtendedLifelineModifier = s.indexMemoryStor
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecordModifier = s.recordModifier
