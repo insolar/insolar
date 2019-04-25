@@ -54,16 +54,17 @@ package servicenetwork
 
 import (
 	"context"
+	"time"
 
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
 )
 
-type CommunicatorTestOpt int
+type CommunicationPolicy int
 
 const (
-	PartialPositive1Phase = CommunicatorTestOpt(iota + 1)
+	PartialPositive1Phase = CommunicationPolicy(iota + 1)
 	PartialNegative1Phase
 	PartialPositive2Phase
 	PartialNegative2Phase
@@ -71,12 +72,13 @@ const (
 	PartialNegative3Phase
 	PartialPositive23Phase
 	PartialNegative23Phase
+	FullTimeout
 )
 
 type CommunicatorMock struct {
 	communicator phases.Communicator
 	ignoreFrom   insolar.Reference
-	testOpt      CommunicatorTestOpt
+	policy       CommunicationPolicy
 }
 
 func (cm *CommunicatorMock) ExchangePhase1(
@@ -89,7 +91,7 @@ func (cm *CommunicatorMock) ExchangePhase1(
 	if err != nil {
 		return nil, err
 	}
-	switch cm.testOpt {
+	switch cm.policy {
 	case PartialNegative1Phase, PartialPositive1Phase:
 		delete(pckts, cm.ignoreFrom)
 	}
@@ -103,7 +105,7 @@ func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, state *phases.Co
 	if err != nil {
 		return nil, err
 	}
-	switch cm.testOpt {
+	switch cm.policy {
 	case PartialPositive2Phase, PartialNegative2Phase, PartialPositive23Phase, PartialNegative23Phase:
 		delete(pckts, cm.ignoreFrom)
 	}
@@ -121,7 +123,7 @@ func (cm *CommunicatorMock) ExchangePhase3(ctx context.Context, participants []i
 	if err != nil {
 		return nil, err
 	}
-	switch cm.testOpt {
+	switch cm.policy {
 	case PartialPositive3Phase, PartialNegative3Phase, PartialPositive23Phase, PartialNegative23Phase:
 		delete(pckts, cm.ignoreFrom)
 	}
@@ -130,4 +132,11 @@ func (cm *CommunicatorMock) ExchangePhase3(ctx context.Context, participants []i
 
 func (cm *CommunicatorMock) Init(ctx context.Context) error {
 	return cm.communicator.Init(ctx)
+}
+
+type FullTimeoutPhaseManager struct {
+}
+
+func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
+	return nil
 }
