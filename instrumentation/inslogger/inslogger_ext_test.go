@@ -20,10 +20,12 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"fmt"
+	"runtime"
+	"strconv"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/stretchr/testify/assert"
@@ -50,33 +52,36 @@ func logFields(t *testing.T, b []byte) loggerField {
 	return lf
 }
 
+func logFromContextWithSkip(ctx context.Context) insolar.Logger {
+	// skip testing.go & runtime wrappers
+	return inslogger.FromContext(ctx).ChangeSkipFrameCount(-2)
+}
+
 func TestExt_Global(t *testing.T) {
 
-	l := inslogger.FromContext(context.TODO())
+	l := logFromContextWithSkip(context.Background())
 	var b bytes.Buffer
 	l = l.WithOutput(&b)
 
+	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
 
-	fmt.Println(b.String())
-
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, callerRe, lf.Caller, "log contains call place")
+	assert.Regexp(t, callerRe+strconv.Itoa(line+1), lf.Caller, "log contains call place")
 	assert.Equal(t, "", lf.Func, "log not contains func name")
 }
 
 func TestExt_Global_WithFunc(t *testing.T) {
-	l := inslogger.FromContext(context.TODO())
+	l := logFromContextWithSkip(context.Background())
 	var b bytes.Buffer
 	l = l.WithOutput(&b)
 	l = l.WithFuncName(true)
 
+	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
 
-	fmt.Println(b.String())
-
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, callerRe, lf.Caller, "log contains call place")
+	assert.Regexp(t, callerRe+strconv.Itoa(line+1), lf.Caller, "log contains call place")
 	assert.Equal(t, t.Name(), lf.Func, "log not contains func name")
 }
 
@@ -93,12 +98,11 @@ func TestExt_Log(t *testing.T) {
 	var b bytes.Buffer
 	l = l.WithOutput(&b)
 
+	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
 
-	fmt.Println(b.String())
-
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, callerRe, lf.Caller, "log contains call place")
+	assert.Regexp(t, callerRe+strconv.Itoa(line+1), lf.Caller, "log contains call place")
 	assert.Equal(t, "", lf.Func, "log not contains func name")
 }
 
@@ -117,13 +121,12 @@ func TestExt_Log_WithFunc(t *testing.T) {
 	l = l.WithFuncName(true)
 	l, _ = l.WithLevel("info")
 
+	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
-	// l.Debug("test")
-
-	fmt.Println(b.String())
 
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, callerRe, lf.Caller, "log contains call place")
+	assert.Regexp(t, callerRe+strconv.Itoa(line+1), lf.Caller,
+		"log contains call place")
 	assert.Equal(t, t.Name(), lf.Func, "log not contains func name")
 }
 
@@ -136,21 +139,34 @@ func TestExt_Log_SubCall(t *testing.T) {
 	require.NoError(t, err, "log creation")
 	ctx := inslogger.SetLogger(context.TODO(), logPut.WithFuncName(true))
 
-	lf := logCaller(ctx, t)
-	assert.Regexp(t, callerRe, lf.Caller, "log contains call place")
+	lf, line := logCaller(ctx, t)
+	assert.Regexp(t, callerRe+line, lf.Caller, "log contains call place")
 	assert.Equal(t, "logCaller", lf.Func, "log not contains func name")
 }
 
-func TestExt_Global_SubCall(t *testing.T) {
-	lf := logCaller(context.Background(), t)
-	assert.Regexp(t, callerRe, lf.Caller, "log contains call place")
-}
-
-func logCaller(ctx context.Context, t *testing.T) loggerField {
+func logCaller(ctx context.Context, t *testing.T) (loggerField, string) {
 	l := inslogger.FromContext(ctx)
 	var b bytes.Buffer
 	l = l.WithOutput(&b)
+
+	_, _, line, _ := runtime.Caller(0)
+	l.Info("test")
+
+	return logFields(t, b.Bytes()), strconv.Itoa(line + 1)
+}
+
+func TestExt_Global_SubCall(t *testing.T) {
+	lf, line := logCallerGlobal(context.Background(), t)
+	assert.Regexp(t, callerRe+line, lf.Caller, "log contains call place")
+}
+
+func logCallerGlobal(ctx context.Context, t *testing.T) (loggerField, string) {
+	l := inslogger.FromContext(ctx).ChangeSkipFrameCount(-2)
+	var b bytes.Buffer
+	l = l.WithOutput(&b)
+
+	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
 	// fmt.Print("logCaller:\n", b.String())
-	return logFields(t, b.Bytes())
+	return logFields(t, b.Bytes()), strconv.Itoa(line + 1)
 }
