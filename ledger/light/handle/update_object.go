@@ -51,7 +51,7 @@ func (s *UpdateObject) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	update := proc.NewUpdateObject(jet.Result.Jet, s.msg, s.replyTo)
+	update := proc.NewUpdateObject(jet.Result.Jet, s.msg, flow.Pulse(ctx), s.replyTo)
 	s.dep.UpdateObject(update)
 	return f.Procedure(ctx, update, false)
 }
