@@ -54,8 +54,8 @@ import (
 	"context"
 	"fmt"
 	"net"
+	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -69,6 +69,7 @@ import (
 const udpMaxPacketSize = 1400
 
 type udpTransport struct {
+	mutex              sync.RWMutex
 	conn               net.PacketConn
 	handler            DatagramHandler
 	started            uint32
@@ -120,6 +121,9 @@ func (t *udpTransport) Start(ctx context.Context) error {
 
 	if atomic.CompareAndSwapUint32(&t.started, 0, 1) {
 
+		t.mutex.Lock()
+		defer t.mutex.Unlock()
+
 		var err error
 		t.conn, err = net.ListenPacket("udp", t.address)
 		if err != nil {
@@ -142,17 +146,14 @@ func (t *udpTransport) Start(ctx context.Context) error {
 func (t *udpTransport) loop(ctx context.Context) {
 	logger := inslogger.FromContext(ctx)
 
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
+
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		default:
-		}
-
-		err := t.conn.SetDeadline(time.Now().Add(time.Second * 12))
-
-		if err != nil {
-			logger.Error(err.Error())
 		}
 
 		buf := make([]byte, udpMaxPacketSize)

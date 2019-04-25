@@ -55,7 +55,6 @@ import (
 	"fmt"
 	"log"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 
@@ -158,7 +157,6 @@ func TestUdpTransport_SendDatagram(t *testing.T) {
 	err = node1.udp.Stop(ctx)
 	assert.NoError(t, err)
 
-	<-time.After(time.Second)
 	err = node1.udp.Start(ctx)
 	assert.NoError(t, err)
 
