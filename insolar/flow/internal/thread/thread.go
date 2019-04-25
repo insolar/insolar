@@ -27,9 +27,14 @@ import (
 type Thread struct {
 	controller *Controller
 	cancel     <-chan struct{}
-	procedures map[flow.Procedure]chan error
+	procedures map[flow.Procedure]*result
 	message    bus.Message
 	migrated   bool
+}
+
+type result struct {
+	done chan struct{}
+	err  error
 }
 
 // NewThread creates a new Thread instance. Thread implements the Flow interface.
@@ -37,7 +42,7 @@ func NewThread(msg bus.Message, controller *Controller) *Thread {
 	return &Thread{
 		controller: controller,
 		cancel:     controller.Cancel(),
-		procedures: map[flow.Procedure]chan error{},
+		procedures: map[flow.Procedure]*result{},
 		message:    msg,
 	}
 }
@@ -52,8 +57,9 @@ func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool
 	}
 
 	if !cancel {
-		err := <-f.procedure(ctx, proc)
-		return err
+		res := f.procedure(ctx, proc)
+		<-res.done
+		return res.err
 	}
 
 	if f.cancelled() {
@@ -61,16 +67,15 @@ func (f *Thread) Procedure(ctx context.Context, proc flow.Procedure, cancel bool
 	}
 
 	ctx, cl := context.WithCancel(ctx)
-	var err error
+	res := f.procedure(ctx, proc)
 	select {
 	case <-f.cancel:
 		cl()
 		return flow.ErrCancelled
-	case err = <-f.procedure(ctx, proc):
+	case <-res.done:
 		cl()
+		return res.err
 	}
-
-	return err
 }
 
 func (f *Thread) Migrate(ctx context.Context, to flow.Handle) error {
@@ -93,17 +98,21 @@ func (f *Thread) Run(ctx context.Context, h flow.Handle) error {
 	return h(ctx, f)
 }
 
-func (f *Thread) procedure(ctx context.Context, proc flow.Procedure) <-chan error {
-	if d, ok := f.procedures[proc]; ok {
-		return d
+func (f *Thread) procedure(ctx context.Context, proc flow.Procedure) *result {
+	if res, ok := f.procedures[proc]; ok {
+		return res
 	}
 
-	done := make(chan error, 1)
-	f.procedures[proc] = done
+	res := &result{
+		done: make(chan struct{}),
+		err:  nil,
+	}
+	f.procedures[proc] = res
 	go func() {
-		done <- proc.Proceed(ctx)
+		res.err = proc.Proceed(ctx)
+		close(res.done)
 	}()
-	return done
+	return res
 }
 
 func (f *Thread) cancelled() bool {
