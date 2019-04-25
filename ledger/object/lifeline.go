@@ -63,10 +63,10 @@ type ExtendedLifelineModifier interface {
 	SetUsageForPulse(ctx context.Context, id insolar.ID, pn insolar.PulseNumber)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexStorage -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineStorage -o ./ -s _mock.go
 
-// IndexStorage is an union of LifelineAccessor and LifelineModifier.
-type IndexStorage interface {
+// LifelineStorage is an union of LifelineAccessor and LifelineModifier.
+type LifelineStorage interface {
 	LifelineAccessor
 	LifelineModifier
 }

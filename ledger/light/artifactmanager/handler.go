@@ -72,7 +72,7 @@ type MessageHandler struct {
 	HotDataWaiter hot.JetWaiter   `inject:""`
 	JetReleaser   hot.JetReleaser `inject:""`
 
-	IndexStorage       object.IndexStorage
+	IndexStorage       object.LifelineStorage
 	IndexStateModifier object.ExtendedLifelineModifier
 
 	conf           *configuration.Ledger
@@ -85,7 +85,7 @@ type MessageHandler struct {
 
 // NewMessageHandler creates new handler.
 func NewMessageHandler(
-	indexStorage object.IndexStorage,
+	indexStorage object.LifelineStorage,
 	indexStateModifier object.ExtendedLifelineModifier,
 	conf *configuration.Ledger,
 ) *MessageHandler {

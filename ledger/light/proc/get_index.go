@@ -43,7 +43,7 @@ type GetIndex struct {
 	Dep struct {
 		IndexState  object.ExtendedLifelineModifier
 		Locker      object.IDLocker
-		Storage     object.IndexStorage
+		Storage     object.LifelineStorage
 		Coordinator jet.Coordinator
 		Bus         insolar.MessageBus
 	}

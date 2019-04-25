@@ -3,20 +3,20 @@ package object
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "IndexStorage" can be found in github.com/insolar/insolar/ledger/object
+The original interface "LifelineStorage" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//IndexStorageMock implements github.com/insolar/insolar/ledger/object.IndexStorage
+// IndexStorageMock implements github.com/insolar/insolar/ledger/object.LifelineStorage
 type IndexStorageMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type IndexStorageMock struct {
 	SetMock       mIndexStorageMockSet
 }
 
-//NewIndexStorageMock returns a mock for github.com/insolar/insolar/ledger/object.IndexStorage
+// NewIndexStorageMock returns a mock for github.com/insolar/insolar/ledger/object.LifelineStorage
 func NewIndexStorageMock(t minimock.Tester) *IndexStorageMock {
 	m := &IndexStorageMock{t: t}
 
@@ -66,7 +66,7 @@ type IndexStorageMockForIDResult struct {
 	r1 error
 }
 
-//Expect specifies that invocation of IndexStorage.ForID is expected from 1 to Infinity times
+// Expect specifies that invocation of LifelineStorage.ForID is expected from 1 to Infinity times
 func (m *mIndexStorageMockForID) Expect(p context.Context, p1 insolar.ID) *mIndexStorageMockForID {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
@@ -78,7 +78,7 @@ func (m *mIndexStorageMockForID) Expect(p context.Context, p1 insolar.ID) *mInde
 	return m
 }
 
-//Return specifies results of invocation of IndexStorage.ForID
+// Return specifies results of invocation of LifelineStorage.ForID
 func (m *mIndexStorageMockForID) Return(r Lifeline, r1 error) *IndexStorageMock {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
@@ -90,7 +90,7 @@ func (m *mIndexStorageMockForID) Return(r Lifeline, r1 error) *IndexStorageMock 
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of IndexStorage.ForID is expected once
+// ExpectOnce specifies that invocation of LifelineStorage.ForID is expected once
 func (m *mIndexStorageMockForID) ExpectOnce(p context.Context, p1 insolar.ID) *IndexStorageMockForIDExpectation {
 	m.mock.ForIDFunc = nil
 	m.mainExpectation = nil
@@ -105,7 +105,7 @@ func (e *IndexStorageMockForIDExpectation) Return(r Lifeline, r1 error) {
 	e.result = &IndexStorageMockForIDResult{r, r1}
 }
 
-//Set uses given function f as a mock of IndexStorage.ForID method
+// Set uses given function f as a mock of LifelineStorage.ForID method
 func (m *mIndexStorageMockForID) Set(f func(p context.Context, p1 insolar.ID) (r Lifeline, r1 error)) *IndexStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -114,7 +114,7 @@ func (m *mIndexStorageMockForID) Set(f func(p context.Context, p1 insolar.ID) (r
 	return m.mock
 }
 
-//ForID implements github.com/insolar/insolar/ledger/object.IndexStorage interface
+// ForID implements github.com/insolar/insolar/ledger/object.LifelineStorage interface
 func (m *IndexStorageMock) ForID(p context.Context, p1 insolar.ID) (r Lifeline, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
@@ -126,7 +126,7 @@ func (m *IndexStorageMock) ForID(p context.Context, p1 insolar.ID) (r Lifeline, 
 		}
 
 		input := m.ForIDMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, IndexStorageMockForIDInput{p, p1}, "IndexStorage.ForID got unexpected parameters")
+		testify_assert.Equal(m.t, *input, IndexStorageMockForIDInput{p, p1}, "LifelineStorage.ForID got unexpected parameters")
 
 		result := m.ForIDMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -144,7 +144,7 @@ func (m *IndexStorageMock) ForID(p context.Context, p1 insolar.ID) (r Lifeline, 
 
 		input := m.ForIDMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, IndexStorageMockForIDInput{p, p1}, "IndexStorage.ForID got unexpected parameters")
+			testify_assert.Equal(m.t, *input, IndexStorageMockForIDInput{p, p1}, "LifelineStorage.ForID got unexpected parameters")
 		}
 
 		result := m.ForIDMock.mainExpectation.result
@@ -217,7 +217,7 @@ type IndexStorageMockSetResult struct {
 	r error
 }
 
-//Expect specifies that invocation of IndexStorage.Set is expected from 1 to Infinity times
+// Expect specifies that invocation of LifelineStorage.Set is expected from 1 to Infinity times
 func (m *mIndexStorageMockSet) Expect(p context.Context, p1 insolar.ID, p2 Lifeline) *mIndexStorageMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
@@ -229,7 +229,7 @@ func (m *mIndexStorageMockSet) Expect(p context.Context, p1 insolar.ID, p2 Lifel
 	return m
 }
 
-//Return specifies results of invocation of IndexStorage.Set
+// Return specifies results of invocation of LifelineStorage.Set
 func (m *mIndexStorageMockSet) Return(r error) *IndexStorageMock {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
@@ -241,7 +241,7 @@ func (m *mIndexStorageMockSet) Return(r error) *IndexStorageMock {
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of IndexStorage.Set is expected once
+// ExpectOnce specifies that invocation of LifelineStorage.Set is expected once
 func (m *mIndexStorageMockSet) ExpectOnce(p context.Context, p1 insolar.ID, p2 Lifeline) *IndexStorageMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
@@ -256,7 +256,7 @@ func (e *IndexStorageMockSetExpectation) Return(r error) {
 	e.result = &IndexStorageMockSetResult{r}
 }
 
-//Set uses given function f as a mock of IndexStorage.Set method
+// Set uses given function f as a mock of LifelineStorage.Set method
 func (m *mIndexStorageMockSet) Set(f func(p context.Context, p1 insolar.ID, p2 Lifeline) (r error)) *IndexStorageMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -265,7 +265,7 @@ func (m *mIndexStorageMockSet) Set(f func(p context.Context, p1 insolar.ID, p2 L
 	return m.mock
 }
 
-//Set implements github.com/insolar/insolar/ledger/object.IndexStorage interface
+// Set implements github.com/insolar/insolar/ledger/object.LifelineStorage interface
 func (m *IndexStorageMock) Set(p context.Context, p1 insolar.ID, p2 Lifeline) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
@@ -277,7 +277,7 @@ func (m *IndexStorageMock) Set(p context.Context, p1 insolar.ID, p2 Lifeline) (r
 		}
 
 		input := m.SetMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, IndexStorageMockSetInput{p, p1, p2}, "IndexStorage.Set got unexpected parameters")
+		testify_assert.Equal(m.t, *input, IndexStorageMockSetInput{p, p1, p2}, "LifelineStorage.Set got unexpected parameters")
 
 		result := m.SetMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -294,7 +294,7 @@ func (m *IndexStorageMock) Set(p context.Context, p1 insolar.ID, p2 Lifeline) (r
 
 		input := m.SetMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, IndexStorageMockSetInput{p, p1, p2}, "IndexStorage.Set got unexpected parameters")
+			testify_assert.Equal(m.t, *input, IndexStorageMockSetInput{p, p1, p2}, "LifelineStorage.Set got unexpected parameters")
 		}
 
 		result := m.SetMock.mainExpectation.result
