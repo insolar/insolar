@@ -104,7 +104,7 @@ func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []
 
 	n, err := conn.Write(data)
 	if err != nil {
-		return errors.Wrap(err, "========================================== Failed to write data")
+		return errors.Wrap(err, "Failed to write data")
 	}
 	stats.Record(ctx, consensus.SentSize.M(int64(n)))
 	return nil
