@@ -20,7 +20,7 @@ import (
 type SenderMock struct {
 	t minimock.Tester
 
-	SendFunc       func(p context.Context, p1 *message.Message) (r <-chan *message.Message)
+	SendFunc       func(p context.Context, p1 *message.Message) (r <-chan *message.Message, r1 func())
 	SendCounter    uint64
 	SendPreCounter uint64
 	SendMock       mSenderMockSend
@@ -56,7 +56,8 @@ type SenderMockSendInput struct {
 }
 
 type SenderMockSendResult struct {
-	r <-chan *message.Message
+	r  <-chan *message.Message
+	r1 func()
 }
 
 //Expect specifies that invocation of Sender.Send is expected from 1 to Infinity times
@@ -72,14 +73,14 @@ func (m *mSenderMockSend) Expect(p context.Context, p1 *message.Message) *mSende
 }
 
 //Return specifies results of invocation of Sender.Send
-func (m *mSenderMockSend) Return(r <-chan *message.Message) *SenderMock {
+func (m *mSenderMockSend) Return(r <-chan *message.Message, r1 func()) *SenderMock {
 	m.mock.SendFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &SenderMockSendExpectation{}
 	}
-	m.mainExpectation.result = &SenderMockSendResult{r}
+	m.mainExpectation.result = &SenderMockSendResult{r, r1}
 	return m.mock
 }
 
@@ -94,12 +95,12 @@ func (m *mSenderMockSend) ExpectOnce(p context.Context, p1 *message.Message) *Se
 	return expectation
 }
 
-func (e *SenderMockSendExpectation) Return(r <-chan *message.Message) {
-	e.result = &SenderMockSendResult{r}
+func (e *SenderMockSendExpectation) Return(r <-chan *message.Message, r1 func()) {
+	e.result = &SenderMockSendResult{r, r1}
 }
 
 //Set uses given function f as a mock of Sender.Send method
-func (m *mSenderMockSend) Set(f func(p context.Context, p1 *message.Message) (r <-chan *message.Message)) *SenderMock {
+func (m *mSenderMockSend) Set(f func(p context.Context, p1 *message.Message) (r <-chan *message.Message, r1 func())) *SenderMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -108,7 +109,7 @@ func (m *mSenderMockSend) Set(f func(p context.Context, p1 *message.Message) (r 
 }
 
 //Send implements github.com/insolar/insolar/insolar/bus.Sender interface
-func (m *SenderMock) Send(p context.Context, p1 *message.Message) (r <-chan *message.Message) {
+func (m *SenderMock) Send(p context.Context, p1 *message.Message) (r <-chan *message.Message, r1 func()) {
 	counter := atomic.AddUint64(&m.SendPreCounter, 1)
 	defer atomic.AddUint64(&m.SendCounter, 1)
 
@@ -128,6 +129,7 @@ func (m *SenderMock) Send(p context.Context, p1 *message.Message) (r <-chan *mes
 		}
 
 		r = result.r
+		r1 = result.r1
 
 		return
 	}
@@ -145,6 +147,7 @@ func (m *SenderMock) Send(p context.Context, p1 *message.Message) (r <-chan *mes
 		}
 
 		r = result.r
+		r1 = result.r1
 
 		return
 	}

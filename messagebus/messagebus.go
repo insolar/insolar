@@ -205,8 +205,9 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 	_, ok := transferredToWatermill[msg.Type()]
 	if ok {
 		wmMsg := mb.createWatermillMessage(ctx, parcel, ops, currentPulse)
-		res := mb.Sender.Send(ctx, wmMsg)
+		res, done := mb.Sender.Send(ctx, wmMsg)
 		repMsg := <-res
+		done()
 		rep, err := reply.Deserialize(bytes.NewBuffer(repMsg.Payload))
 		if err != nil {
 			return nil, errors.Wrap(err, "can't deserialize payload")
