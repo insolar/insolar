@@ -83,7 +83,7 @@ type storageComponents struct {
 	blobDB   *blob.DB
 	recordDB *object.RecordDB
 	pulseDB  *pulse.DB
-	indexDB  *object.IndexDB
+	indexDB  *object.LifelineDB
 }
 
 func initStorageComponents(conf configuration.Ledger) storageComponents {

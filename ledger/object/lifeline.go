@@ -347,7 +347,7 @@ func (m *LifelineStorageMemory) DeleteForPN(ctx context.Context, pn insolar.Puls
 
 }
 
-type IndexDB struct {
+type LifelineDB struct {
 	lock sync.RWMutex
 	db   store.DB
 }
@@ -364,12 +364,12 @@ func (k indexKey) ID() []byte {
 }
 
 // NewIndexDB creates new DB storage instance.
-func NewIndexDB(db store.DB) *IndexDB {
-	return &IndexDB{db: db}
+func NewIndexDB(db store.DB) *LifelineDB {
+	return &LifelineDB{db: db}
 }
 
 // Set saves new index-value in storage.
-func (i *IndexDB) Set(ctx context.Context, id insolar.ID, index Lifeline) error {
+func (i *LifelineDB) Set(ctx context.Context, id insolar.ID, index Lifeline) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -381,20 +381,20 @@ func (i *IndexDB) Set(ctx context.Context, id insolar.ID, index Lifeline) error 
 }
 
 // ForID returns index for provided id.
-func (i *IndexDB) ForID(ctx context.Context, id insolar.ID) (index Lifeline, err error) {
+func (i *LifelineDB) ForID(ctx context.Context, id insolar.ID) (index Lifeline, err error) {
 	i.lock.RLock()
 	defer i.lock.RUnlock()
 
 	return i.get(id)
 }
 
-func (i *IndexDB) set(id insolar.ID, index Lifeline) error {
+func (i *LifelineDB) set(id insolar.ID, index Lifeline) error {
 	key := indexKey(id)
 
 	return i.db.Set(key, EncodeIndex(index))
 }
 
-func (i *IndexDB) get(id insolar.ID) (index Lifeline, err error) {
+func (i *LifelineDB) get(id insolar.ID) (index Lifeline, err error) {
 	buff, err := i.db.Get(indexKey(id))
 	if err == store.ErrNotFound {
 		err = ErrLifelineNotFound
