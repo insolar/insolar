@@ -117,6 +117,7 @@ func NewMessageHandler(
 		SetRecord: func(p *proc.SetRecord) {
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 			p.Dep.RecordModifier = h.RecordModifier
+			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
 			p.Dep.PendingRequestsLimit = h.conf.PendingRequestsLimit
 		},
 		SetBlob: func(p *proc.SetBlob) {
