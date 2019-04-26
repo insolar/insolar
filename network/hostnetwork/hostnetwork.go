@@ -86,7 +86,7 @@ func NewHostNetwork(nodeRef string) (network.HostNetwork, error) {
 	result := &hostNetwork{
 		handlers:          make(map[types.PacketType]network.RequestHandler),
 		sequenceGenerator: sequence.NewGenerator(),
-		origin:            &host.Host{NodeID: *id},
+		nodeID:            *id,
 		futureManager:     futureManager,
 		responseHandler:   future.NewPacketHandler(futureManager),
 	}
@@ -98,6 +98,7 @@ type hostNetwork struct {
 	Resolver network.RoutingTable `inject:""`
 	Factory  transport.Factory    `inject:""`
 
+	nodeID            insolar.Reference
 	started           uint32
 	transport         transport.StreamTransport
 	sequenceGenerator sequence.Generator

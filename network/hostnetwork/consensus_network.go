@@ -53,6 +53,7 @@ package hostnetwork
 import (
 	"bytes"
 	"context"
+	"sync"
 	"sync/atomic"
 
 	"github.com/pkg/errors"
@@ -75,10 +76,12 @@ type networkConsensus struct {
 	Factory  transport.Factory    `inject:""`
 
 	transport         transport.DatagramTransport
-	origin            *host.Host
 	started           uint32
 	sequenceGenerator sequence.Generator
 	handlers          map[packets.PacketType]network.ConsensusPacketHandler
+
+	mu     sync.RWMutex
+	origin *host.Host
 }
 
 func (nc *networkConsensus) Init(ctx context.Context) error {
@@ -103,7 +106,10 @@ func (nc *networkConsensus) Start(ctx context.Context) error {
 
 	var err error
 	a := nc.transport.Address()
-	nc.origin, err = host.NewHostNS(a, nc.origin.NodeID, nc.origin.ShortID)
+	h, err := host.NewHostNS(a, nc.origin.NodeID, nc.origin.ShortID)
+	if err == nil {
+		nc.origin = h
+	}
 	return err
 }
 
@@ -119,12 +125,12 @@ func (nc *networkConsensus) Stop(ctx context.Context) error {
 
 // PublicAddress returns public address that can be published for all nodes.
 func (nc *networkConsensus) PublicAddress() string {
-	return nc.origin.Address.String()
+	return nc.getOrigin().Address.String()
 }
 
 // GetNodeID get current node ID.
 func (nc *networkConsensus) GetNodeID() insolar.Reference {
-	return nc.origin.NodeID
+	return nc.getOrigin().NodeID
 }
 
 // RegisterPacketHandler register a handler function to process incoming requests of a specific type.
@@ -148,7 +154,7 @@ func (nc *networkConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
 		return errors.Wrapf(err, "Failed to resolve %s request to node %s", packet.GetType(), receiver.String())
 	}
 	log.Debugf("Send %s request to host %s", packet.GetType(), receiverHost)
-	packet.SetRouting(nc.origin.ShortID, receiverHost.ShortID)
+	packet.SetRouting(nc.getOrigin().ShortID, receiverHost.ShortID)
 	err = packet.Sign(service)
 	if err != nil {
 		return errors.Wrapf(err, "Failed to sign %s request to node %s", packet.GetType(), receiver.String())
@@ -199,13 +205,14 @@ func (nc *networkConsensus) HandleDatagram(address string, buf []byte) {
 		return
 	}
 
+	origin := nc.getOrigin()
 	log.Debugf("Got %s request from host, shortID: %d", p.GetType(), p.GetOrigin())
-	if p.GetTarget() != nc.origin.ShortID {
-		logger.Errorf("[ HandleDatagram ] target ID %d differs from origin %d", p.GetTarget(), nc.origin.ShortID)
+	if p.GetTarget() != origin.ShortID {
+		logger.Errorf("[ HandleDatagram ] target ID %d differs from origin %d", p.GetTarget(), origin.ShortID)
 		return
 	}
-	if p.GetOrigin() == nc.origin.ShortID {
-		logger.Errorf("[ HandleDatagram ] sender ID %d equals to origin %d", p.GetTarget(), nc.origin.ShortID)
+	if p.GetOrigin() == origin.ShortID {
+		logger.Errorf("[ HandleDatagram ] sender ID %d equals to origin %d", p.GetTarget(), origin.ShortID)
 		return
 	}
 	sender, err := nc.Resolver.ResolveConsensus(p.GetOrigin())
@@ -224,4 +231,11 @@ func (nc *networkConsensus) HandleDatagram(address string, buf []byte) {
 		return
 	}
 	handler(p, sender.NodeID)
+}
+
+func (nc *networkConsensus) getOrigin() *host.Host {
+	nc.mu.RLock()
+	defer nc.mu.RUnlock()
+
+	return nc.origin
 }
