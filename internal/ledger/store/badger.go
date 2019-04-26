@@ -102,10 +102,10 @@ func (b *BadgerDB) NewIterator(scope Scope) Iterator {
 	opts := badger.DefaultIteratorOptions
 	bi.whenClose = make(chan bool, 1)
 	out := make(chan *badger.Iterator, 1)
+	defer close(out)
 	go func() {
 		err := b.backend.View(func(txn *badger.Txn) error {
 			out <- txn.NewIterator(opts)
-			close(out)
 			<-bi.whenClose
 			return nil
 		})
