@@ -342,59 +342,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	assert.Equal(s.T(), objIndex.Delegates, idx.Delegates)
 }
 
-func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
-	mc := minimock.NewController(s.T())
-	defer mc.Finish()
-	jetID := insolar.ID(*insolar.NewJetID(0, nil))
-	msg := message.GetObjectIndex{
-		Object: *genRandomRef(0),
-	}
-	pendingMock := recentstorage.NewPendingStorageMock(s.T())
-
-	pendingMock.GetRequestsForObjectMock.Return(nil)
-	pendingMock.AddPendingRequestMock.Return()
-	pendingMock.RemovePendingRequestMock.Return()
-
-	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetPendingStorageMock.Return(pendingMock)
-
-	jc := jet.NewCoordinatorMock(mc)
-
-	mb := testutils.NewMessageBusMock(mc)
-	mb.MustRegisterMock.Return()
-
-	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{
-		LightChainLimit: 3,
-	})
-	h.JetCoordinator = jc
-	h.Bus = mb
-	h.JetStorage = s.jetStorage
-	h.Nodes = s.nodeStorage
-
-	idLock := object.NewIDLockerMock(s.T())
-	idLock.LockMock.Return()
-	idLock.UnlockMock.Return()
-	h.IDLocker = idLock
-
-	err := h.Init(s.ctx)
-	require.NoError(s.T(), err)
-
-	h.RecentStorageProvider = provideMock
-
-	objectIndex := object.Lifeline{LatestState: genRandomID(0), JetID: insolar.JetID(jetID), Delegates: map[insolar.Reference]insolar.Reference{}}
-	err = s.indexMemoryStor.Set(s.ctx, *msg.Object.Record(), objectIndex)
-	require.NoError(s.T(), err)
-
-	rep, err := h.handleGetObjectIndex(contextWithJet(s.ctx, jetID), &message.Parcel{
-		Msg: &msg,
-	})
-	require.NoError(s.T(), err)
-	indexRep, ok := rep.(*reply.ObjectIndex)
-	require.True(s.T(), ok)
-	decodedIndex := object.MustDecodeIndex(indexRep.Index)
-	assert.Equal(s.T(), objectIndex, decodedIndex)
-}
-
 func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
