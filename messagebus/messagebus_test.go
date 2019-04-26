@@ -211,10 +211,10 @@ func TestMessageBus_createWatermillMessage(t *testing.T) {
 
 	require.NotNil(t, msg)
 	require.NotNil(t, msg.Payload)
-	require.Equal(t, fmt.Sprintf("%d", pulse.PulseNumber), msg.Metadata.Get(bus.PulseMetadataKey))
-	require.Equal(t, parcel.Msg.Type().String(), msg.Metadata.Get(bus.TypeMetadataKey))
-	require.Equal(t, expectedRef.String(), msg.Metadata.Get(bus.ReceiverMetadataKey))
-	require.Equal(t, insolar.Reference{}.String(), msg.Metadata.Get(bus.SenderMetadataKey))
+	require.Equal(t, fmt.Sprintf("%d", pulse.PulseNumber), msg.Metadata.Get(bus.MetaPulse))
+	require.Equal(t, parcel.Msg.Type().String(), msg.Metadata.Get(bus.MetaType))
+	require.Equal(t, expectedRef.String(), msg.Metadata.Get(bus.MetaReceiver))
+	require.Equal(t, insolar.Reference{}.String(), msg.Metadata.Get(bus.MetaSender))
 }
 
 func TestMessageBus_getReceiver(t *testing.T) {

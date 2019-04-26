@@ -346,7 +346,7 @@ func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, node insolar.D
 
 // SendMessageHandler async sends message with confirmation of delivery.
 func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Message, error) {
-	receiver := msg.Metadata.Get(bus.ReceiverMetadataKey)
+	receiver := msg.Metadata.Get(bus.MetaReceiver)
 	if receiver == "" {
 		return nil, errors.New("Receiver in msg.Metadata not set")
 	}
@@ -358,9 +358,9 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
 	if node.Equal(origin.ID()) {
-		err := n.Pub.Publish(bus.IncomingMsg, msg)
+		err := n.Pub.Publish(bus.TopicIncoming, msg)
 		if err != nil {
-			return nil, errors.Wrap(err, "error while publish msg to IncomingMsg")
+			return nil, errors.Wrap(err, "error while publish msg to TopicIncoming")
 		}
 		return nil, nil
 	}
@@ -389,9 +389,9 @@ func (n *ServiceNetwork) processIncome(ctx context.Context, args [][]byte) ([]by
 	}
 	// TODO: check pulse here
 
-	err = n.Pub.Publish(bus.IncomingMsg, msg)
+	err = n.Pub.Publish(bus.TopicIncoming, msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "error while publish msg to IncomingMsg")
+		return nil, errors.Wrap(err, "error while publish msg to TopicIncoming")
 	}
 
 	return ack, nil

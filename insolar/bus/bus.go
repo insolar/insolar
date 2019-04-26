@@ -28,23 +28,25 @@ import (
 	"github.com/pkg/errors"
 )
 
-// OutgoingMsg is topic for external calls
-const OutgoingMsg = "OutgoingMsg"
+const (
+	// TopicOutgoing is topic for external calls
+	TopicOutgoing = "TopicOutgoing"
 
-// IncomingMsg is topic for incoming calls
-const IncomingMsg = "IncomingMsg"
+	// TopicIncoming is topic for incoming calls
+	TopicIncoming = "TopicIncoming"
 
-// PulseMetadataKey is key for Pulse
-const PulseMetadataKey = "pulse"
+	// MetaPulse is key for Pulse
+	MetaPulse = "pulse"
 
-// TypeMetadataKey is key for Type
-const TypeMetadataKey = "type"
+	// MetaType is key for Type
+	MetaType = "type"
 
-// ReceiverMetadataKey is key for Receiver
-const ReceiverMetadataKey = "receiver"
+	// MetaReceiver is key for Receiver
+	MetaReceiver = "receiver"
 
-// SenderMetadataKey is key for Sender
-const SenderMetadataKey = "sender"
+	// MetaSender is key for Sender
+	MetaSender = "sender"
+)
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock.go
 
@@ -100,10 +102,11 @@ func (b *Bus) Send(ctx context.Context, msg *message.Message) <-chan *message.Me
 	rep := make(chan *message.Message)
 	b.setReplyChannel(id, rep)
 
-	err := b.pub.Publish(OutgoingMsg, msg)
+	// под общим локом, отпускать по defer
+	err := b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
 		b.removeReplyChannel(ctx, id)
-		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", OutgoingMsg, err.Error())
+		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
 		return nil
 	}
 	go func(b *Bus) {
@@ -119,6 +122,7 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 		b.repliesMutex.RLock()
 
 		id := middleware.MessageCorrelationID(msg)
+		// лочить ток запись, отпускать по defer
 		ch, ok := b.replies[id]
 		if !ok {
 			b.repliesMutex.RUnlock()
@@ -130,6 +134,7 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 			inslogger.FromContext(msg.Context()).Infof("result for message with correlationID %s was send", id)
 			b.repliesMutex.RUnlock()
 			return nil, nil
+		// 	спец канал
 		case <-time.After(b.writeTimeout):
 			b.repliesMutex.RUnlock()
 			return nil, errors.Errorf("can't return result for message with correlationID %s: timeout %s exceeded", id, b.writeTimeout)

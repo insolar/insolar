@@ -87,7 +87,7 @@ func TestSendMessageHandler_IncorrectReceiver(t *testing.T) {
 
 	payload := []byte{1, 2, 3, 4, 5}
 	inMsg := message.NewMessage(watermill.NewUUID(), payload)
-	inMsg.Metadata.Set(bus.ReceiverMetadataKey, "someBadValue")
+	inMsg.Metadata.Set(bus.MetaReceiver, "someBadValue")
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.Error(t, err)
@@ -124,7 +124,7 @@ func TestSendMessageHandler_SameNode(t *testing.T) {
 
 	payload := []byte{1, 2, 3, 4, 5}
 	inMsg := message.NewMessage(watermill.NewUUID(), payload)
-	inMsg.Metadata.Set(bus.ReceiverMetadataKey, nodeRef.String())
+	inMsg.Metadata.Set(bus.MetaReceiver, nodeRef.String())
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
@@ -152,7 +152,7 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 
 	payload := []byte{1, 2, 3, 4, 5}
 	inMsg := message.NewMessage(watermill.NewUUID(), payload)
-	inMsg.Metadata.Set(bus.ReceiverMetadataKey, testutils.RandomRef().String())
+	inMsg.Metadata.Set(bus.MetaReceiver, testutils.RandomRef().String())
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.Error(t, err)
@@ -181,7 +181,7 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 
 	payload := []byte{1, 2, 3, 4, 5}
 	inMsg := message.NewMessage(watermill.NewUUID(), payload)
-	inMsg.Metadata.Set(bus.ReceiverMetadataKey, testutils.RandomRef().String())
+	inMsg.Metadata.Set(bus.MetaReceiver, testutils.RandomRef().String())
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.Error(t, err)
@@ -210,7 +210,7 @@ func TestSendMessageHandler(t *testing.T) {
 
 	payload := []byte{1, 2, 3, 4, 5}
 	inMsg := message.NewMessage(watermill.NewUUID(), payload)
-	inMsg.Metadata.Set(bus.ReceiverMetadataKey, testutils.RandomRef().String())
+	inMsg.Metadata.Set(bus.MetaReceiver, testutils.RandomRef().String())
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
 	require.NoError(t, err)
