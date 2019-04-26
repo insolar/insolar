@@ -82,11 +82,15 @@ const (
 )
 
 type MockResolver struct {
+	mu       sync.RWMutex
 	mapping  map[insolar.Reference]*host.Host
 	smapping map[insolar.ShortNodeID]*host.Host
 }
 
 func (m *MockResolver) ResolveConsensus(id insolar.ShortNodeID) (*host.Host, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	result, exist := m.smapping[id]
 	if !exist {
 		return nil, errors.New("failed to resolve")
@@ -99,6 +103,9 @@ func (m *MockResolver) ResolveConsensusRef(nodeID insolar.Reference) (*host.Host
 }
 
 func (m *MockResolver) Resolve(nodeID insolar.Reference) (*host.Host, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	result, exist := m.mapping[nodeID]
 	if !exist {
 		return nil, errors.New("failed to resolve")
@@ -118,11 +125,18 @@ func (m *MockResolver) addMapping(key, value string) error {
 	if err != nil {
 		return err
 	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	m.mapping[*k] = h
 	return nil
 }
 
 func (m *MockResolver) addMappingHost(h *host.Host) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	m.mapping[h.NodeID] = h
 	m.smapping[h.ShortID] = h
 }
