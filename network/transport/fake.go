@@ -52,6 +52,7 @@ package transport
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"net"
 	"sync"
@@ -111,6 +112,15 @@ func (f *fakeDatagramTransport) Stop(ctx context.Context) error {
 
 func (f *fakeDatagramTransport) SendDatagram(ctx context.Context, address string, data []byte) error {
 	log.Debugf("fakeDatagramTransport SendDatagram to %s : %v", address, data)
+
+	if len(data) > udpMaxPacketSize {
+		return errors.New(fmt.Sprintf("udpTransport.send: too big input data. Maximum: %d. Current: %d",
+			udpMaxPacketSize, len(data)))
+	}
+	_, err := net.ResolveUDPAddr("udp", address)
+	if err != nil {
+		return errors.Wrap(err, "Failed to resolve UDP address")
+	}
 
 	udpMutex.RLock()
 	defer udpMutex.RUnlock()
