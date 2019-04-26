@@ -128,6 +128,21 @@ func TestMessageBus_Send_Timeout(t *testing.T) {
 	require.False(t, ok)
 }
 
+func TestMessageBus_Send_Timeout_Close_Race(t *testing.T) {
+	ctx := context.Background()
+	logger := watermill.NewStdLogger(false, false)
+	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	b := NewBus(pubsub)
+	b.timeout = time.Second
+
+	payload := []byte{1, 2, 3, 4, 5}
+	msg := message.NewMessage(watermill.NewUUID(), payload)
+
+	_, done := b.Send(ctx, msg)
+	<-time.After(b.timeout)
+	done()
+}
+
 func TestMessageBus_IncomingMessageRouter_Request(t *testing.T) {
 	incomingHandlerCalls := 0
 	logger := watermill.NewStdLogger(false, false)

@@ -19,7 +19,6 @@ package bus
 import (
 	"context"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -61,8 +60,8 @@ type lockedReply struct {
 	mutex    sync.RWMutex
 	messages chan *message.Message
 
-	isDone uint32
-	done   chan struct{}
+	once sync.Once
+	done chan struct{}
 }
 
 // Bus is component that sends messages and gives access to replies for them.
@@ -84,7 +83,7 @@ func NewBus(pub message.Publisher) *Bus {
 }
 
 func (b *Bus) removeReplyChannel(ctx context.Context, id string, reply *lockedReply) {
-	if atomic.CompareAndSwapUint32(&reply.isDone, 0, 1) {
+	reply.once.Do(func() {
 		close(reply.done)
 
 		b.repliesMutex.Lock()
@@ -96,7 +95,7 @@ func (b *Bus) removeReplyChannel(ctx context.Context, id string, reply *lockedRe
 		reply.mutex.Lock()
 		close(reply.messages)
 		reply.mutex.Unlock()
-	}
+	})
 }
 
 // Send a watermill's Message and return channel for replies.
