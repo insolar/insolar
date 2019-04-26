@@ -128,6 +128,9 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.BlobAccessor = h.BlobAccessor
 		},
+		GetRequest: func(p *proc.GetRequest) {
+			p.Dep.RecordAccessor = h.RecordAccessor
+		},
 	}
 
 	initHandle := func(msg bus.Message) *handle.Init {
@@ -261,14 +264,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 			instrumentHandler("handleHotRecords"),
 			m.releaseHotDataWaiters))
 
-	h.Bus.MustRegister(
-		insolar.TypeGetRequest,
-		BuildMiddleware(
-			h.handleGetRequest,
-			instrumentHandler("handleGetRequest"),
-			m.checkJet,
-		),
-	)
+	h.Bus.MustRegister(insolar.TypeGetRequest, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(
 		insolar.TypeGetPendingRequestID,
@@ -519,28 +515,6 @@ func (h *MessageHandler) handleGetChildren(
 	}
 
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
-}
-
-func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetRequest)
-
-	rec, err := h.RecordAccessor.ForID(ctx, msg.Request)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch request")
-	}
-
-	virtRec := rec.Record
-	req, ok := virtRec.(*object.RequestRecord)
-	if !ok {
-		return nil, errors.New("failed to decode request")
-	}
-
-	rep := reply.Request{
-		ID:     msg.Request,
-		Record: object.EncodeVirtual(req),
-	}
-
-	return &rep, nil
 }
 
 func (h *MessageHandler) handleGetPendingRequestID(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
