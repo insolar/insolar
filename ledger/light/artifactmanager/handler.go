@@ -114,6 +114,11 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
 		},
+		SetBlob: func(p *proc.SetBlob) {
+			p.Dep.BlobAccessor = h.BlobAccessor
+			p.Dep.BlobModifier = h.BlobModifier
+			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+		},
 		SendObject: func(p *proc.SendObject) {
 			p.Dep.Jets = h.JetStorage
 			p.Dep.Blobs = h.Blobs
@@ -236,12 +241,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 			m.checkJet,
 			m.waitForHotData))
 
-	h.Bus.MustRegister(insolar.TypeSetBlob,
-		BuildMiddleware(h.handleSetBlob,
-			instrumentHandler("handleSetBlob"),
-			m.addFieldsToLogger,
-			m.checkJet,
-			m.waitForHotData))
+	h.Bus.MustRegister(insolar.TypeSetBlob, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeGetObjectIndex,
 		BuildMiddleware(h.handleGetObjectIndex,
@@ -325,29 +325,6 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Par
 	}
 
 	return &reply.ID{ID: *id}, nil
-}
-
-func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.SetBlob)
-	jetID := jetFromContext(ctx)
-	calculatedID := object.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
-
-	_, err := h.BlobAccessor.ForID(ctx, *calculatedID)
-	if err == nil {
-		return &reply.ID{ID: *calculatedID}, nil
-	}
-	if err != nil && err != blob.ErrNotFound {
-		return nil, err
-	}
-
-	err = h.BlobModifier.Set(ctx, *calculatedID, blob.Blob{Value: msg.Memory, JetID: insolar.JetID(jetID)})
-	if err == nil {
-		return &reply.ID{ID: *calculatedID}, nil
-	}
-	if err == blob.ErrOverride {
-		return &reply.ID{ID: *calculatedID}, nil
-	}
-	return nil, err
 }
 
 func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
