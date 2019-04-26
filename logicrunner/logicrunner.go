@@ -279,7 +279,7 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 func (lr *LogicRunner) RegisterHandlers() {
 	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeCallConstructor, lr.FlowDispatcher.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeExecutorResults, lr.HandleExecutorResultsMessage)
+	lr.MessageBus.MustRegister(insolar.TypeExecutorResults, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
 	lr.MessageBus.MustRegister(insolar.TypePendingFinished, lr.FlowDispatcher.WrapBusHandle)
@@ -680,82 +680,6 @@ type ObjectBody struct {
 
 func init() {
 	gob.Register(&ObjectBody{})
-}
-
-func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.ExecutorResults) error {
-	ref := msg.GetReference()
-	state := lr.UpsertObjectState(ref)
-	state.Lock()
-	if state.ExecutionState == nil {
-		state.ExecutionState = &ExecutionState{
-			Ref:   ref,
-			Queue: make([]ExecutionQueueElement, 0),
-		}
-	}
-	es := state.ExecutionState
-	state.Unlock()
-
-	es.Lock()
-
-	clarifyPending := false
-
-	if es.pending == message.InPending {
-		if es.Current != nil {
-			inslogger.FromContext(ctx).Debug(
-				"execution returned to node that is still executing pending",
-			)
-			es.pending = message.NotPending
-			es.PendingConfirmed = false
-		} else if msg.Pending == message.NotPending {
-			inslogger.FromContext(ctx).Debug(
-				"executor we came to thinks that execution pending, but previous said to continue",
-			)
-
-			es.pending = message.NotPending
-		}
-	} else if es.pending == message.PendingUnknown {
-		es.pending = msg.Pending
-
-		if es.pending == message.PendingUnknown {
-			clarifyPending = true
-		}
-	}
-
-	// set false to true is good, set true to false may be wrong, better make unnecessary call
-	if !es.LedgerHasMoreRequests && msg.LedgerHasMoreRequests {
-		es.LedgerHasMoreRequests = msg.LedgerHasMoreRequests
-	}
-
-	//prepare Queue
-	if msg.Queue != nil {
-		queueFromMessage := make([]ExecutionQueueElement, 0)
-		for _, qe := range msg.Queue {
-			queueFromMessage = append(
-				queueFromMessage,
-				ExecutionQueueElement{
-					ctx:     qe.Parcel.Context(context.Background()),
-					parcel:  qe.Parcel,
-					request: qe.Request,
-				})
-		}
-		es.Queue = append(queueFromMessage, es.Queue...)
-	}
-
-	es.Unlock()
-
-	if clarifyPending {
-		err := lr.ClarifyPendingState(ctx, es, nil)
-		if err != nil {
-			return err
-		}
-	}
-
-	err := lr.StartQueueProcessorIfNeeded(ctx, es)
-	if err != nil {
-		return errors.Wrap(err, "can't start Queue Processor from prepareObjectState")
-	}
-
-	return nil
 }
 
 func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState, m *message.CallMethod) (insolar.Reply, error) {

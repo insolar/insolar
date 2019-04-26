@@ -19,11 +19,12 @@ package logicrunner
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
-	"github.com/pkg/errors"
 )
 
 // ------------- CheckOurRole
