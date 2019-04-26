@@ -83,8 +83,8 @@ func getEmptyMessage(mt insolar.MessageType) (insolar.Message, error) {
 	// heavy sync
 	case insolar.TypeHeavyPayload:
 		return &HeavyPayload{}, nil
-	// Bootstrap
-	case insolar.TypeBootstrapRequest:
+	// Genesis
+	case insolar.TypeGenesisRequest:
 		return &GenesisRequest{}, nil
 
 	// NodeCert
