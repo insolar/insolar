@@ -57,13 +57,11 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/consensus/claimhandler"
-	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
@@ -81,9 +79,6 @@ func (s *testSuite) TestNetworkConsensus3Times() {
 }
 
 func (s *testSuite) TestNodeConnect() {
-	if len(s.fixture().bootstrapNodes) > 1 {
-		s.T().Skip()
-	}
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode, SmallNetwork)
 
@@ -328,23 +323,14 @@ func TestServiceNetworkManyNodes(t *testing.T) {
 	suite.Run(t, s)
 }
 
-// Full timeout test
-type FullTimeoutPhaseManager struct {
-}
-
-func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time, connectToNetwork func(context.Context, string)) error {
-	return nil
-}
-
 func (s *testSuite) TestFullTimeOut() {
 	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	s.setPhaseManagerMock()
+	s.SetCommunicationPolicy(FullTimeout)
 
 	s.waitForConsensus(2)
-
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount()-1, len(activeNodes))
 }
@@ -356,7 +342,7 @@ func (s *testSuite) TestPartialPositive1PhaseTimeOut() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	s.setCommunicatorMock(PartialPositive1Phase)
+	s.SetCommunicationPolicy(PartialPositive1Phase)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
@@ -368,7 +354,7 @@ func (s *testSuite) TestPartialPositive2PhaseTimeOut() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	s.setCommunicatorMock(PartialPositive2Phase)
+	s.SetCommunicationPolicy(PartialPositive2Phase)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
@@ -380,7 +366,7 @@ func (s *testSuite) TestPartialNegative1PhaseTimeOut() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	s.setCommunicatorMock(PartialNegative1Phase)
+	s.SetCommunicationPolicy(PartialNegative1Phase)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
@@ -392,7 +378,7 @@ func (s *testSuite) TestPartialNegative2PhaseTimeOut() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	s.setCommunicatorMock(PartialNegative2Phase)
+	s.SetCommunicationPolicy(PartialNegative2Phase)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
@@ -404,7 +390,7 @@ func (s *testSuite) TestPartialNegative3PhaseTimeOut() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	s.setCommunicatorMock(PartialNegative3Phase)
+	s.SetCommunicationPolicy(PartialNegative3Phase)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
@@ -416,7 +402,7 @@ func (s *testSuite) TestPartialPositive3PhaseTimeOut() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	s.setCommunicatorMock(PartialPositive3Phase)
+	s.SetCommunicationPolicy(PartialPositive3Phase)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
@@ -428,7 +414,7 @@ func (s *testSuite) TestPartialNegative23PhaseTimeOut() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	s.setCommunicatorMock(PartialNegative23Phase)
+	s.SetCommunicationPolicy(PartialNegative23Phase)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
@@ -440,7 +426,7 @@ func (s *testSuite) TestPartialPositive23PhaseTimeOut() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	s.setCommunicatorMock(PartialPositive23Phase)
+	s.SetCommunicationPolicy(PartialPositive23Phase)
 
 	s.waitForConsensusExcept(2, s.fixture().bootstrapNodes[0].id)
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
@@ -550,38 +536,4 @@ func (s *testSuite) TestChangeNetwork() {
 
 	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Equal(s.bootstrapCount+s.lBootstrapCount+1, len(activeNodes))
-}
-
-func (s *testSuite) setCommunicatorMock(opt CommunicatorTestOpt) {
-	nodes := s.fixture().bootstrapNodes
-	ref := nodes[0].id
-
-	timedOutNodesCount := 0
-	switch opt {
-	case PartialNegative1Phase, PartialNegative2Phase, PartialNegative3Phase, PartialNegative23Phase:
-		timedOutNodesCount = int(float64(len(nodes)) * 0.6)
-	case PartialPositive1Phase, PartialPositive2Phase, PartialPositive3Phase, PartialPositive23Phase:
-		timedOutNodesCount = int(float64(len(nodes)) * 0.2)
-	}
-
-	s.fixture().pulsar.Pause()
-	defer s.fixture().pulsar.Continue()
-
-	for i := 1; i <= timedOutNodesCount; i++ {
-		comm := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.(*phases.FirstPhaseImpl).Communicator
-		wrapper := &CommunicatorMock{communicator: comm, ignoreFrom: ref, testOpt: opt}
-		phasemanager := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases)
-		phasemanager.FirstPhase.(*phases.FirstPhaseImpl).Communicator = wrapper
-		phasemanager.SecondPhase.(*phases.SecondPhaseImpl).Communicator = wrapper
-		phasemanager.ThirdPhase.(*phases.ThirdPhaseImpl).Communicator = wrapper
-	}
-}
-
-func (s *testSuite) setPhaseManagerMock() {
-	s.fixture().pulsar.Pause()
-	defer s.fixture().pulsar.Continue()
-
-	wrapper := s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager.(*phaseManagerWrapper)
-	wrapper.original = &FullTimeoutPhaseManager{}
-	s.fixture().bootstrapNodes[1].serviceNetwork.PhaseManager = wrapper
 }

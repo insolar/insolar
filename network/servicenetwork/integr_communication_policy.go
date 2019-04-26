@@ -48,70 +48,95 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package nodenetwork
+// +build networktest
+
+package servicenetwork
 
 import (
-	"github.com/pkg/errors"
+	"context"
+	"time"
 
-	consensus "github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/node"
 )
 
-type MergedListCopy struct {
-	ActiveList                 map[insolar.Reference]insolar.NetworkNode
-	NodesJoinedDuringPrevPulse bool
+type CommunicationPolicy int
+
+const (
+	PartialPositive1Phase = CommunicationPolicy(iota + 1)
+	PartialNegative1Phase
+	PartialPositive2Phase
+	PartialNegative2Phase
+	PartialPositive3Phase
+	PartialNegative3Phase
+	PartialPositive23Phase
+	PartialNegative23Phase
+	FullTimeout
+)
+
+type CommunicatorMock struct {
+	communicator phases.Communicator
+	ignoreFrom   insolar.Reference
+	policy       CommunicationPolicy
 }
 
-func copyActiveNodes(nodes []insolar.NetworkNode) map[insolar.Reference]insolar.NetworkNode {
-	result := make(map[insolar.Reference]insolar.NetworkNode, len(nodes))
-	for _, n := range nodes {
-		n.(node.MutableNode).ChangeState()
-		result[n.ID()] = n
+func (cm *CommunicatorMock) ExchangePhase1(
+	ctx context.Context,
+	originClaim *packets.NodeAnnounceClaim,
+	participants []insolar.NetworkNode,
+	packet *packets.Phase1Packet,
+) (map[insolar.Reference]*packets.Phase1Packet, error) {
+	pckts, err := cm.communicator.ExchangePhase1(ctx, originClaim, participants, packet)
+	if err != nil {
+		return nil, err
 	}
-	return result
+	switch cm.policy {
+	case PartialNegative1Phase, PartialPositive1Phase:
+		delete(pckts, cm.ignoreFrom)
+	}
+	return pckts, nil
 }
 
-func GetMergedCopy(nodes []insolar.NetworkNode, claims []consensus.ReferendumClaim) (*MergedListCopy, error) {
-	nodesMap := copyActiveNodes(nodes)
+func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, state *phases.ConsensusState,
+	participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.Reference]*packets.Phase2Packet, error) {
 
-	var nodesJoinedDuringPrevPulse bool
-	for _, claim := range claims {
-		isJoin, err := mergeClaim(nodesMap, claim)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ GetMergedCopy ] failed to merge a claim")
-		}
-		nodesJoinedDuringPrevPulse = nodesJoinedDuringPrevPulse || isJoin
+	pckts, err := cm.communicator.ExchangePhase2(ctx, state, participants, packet)
+	if err != nil {
+		return nil, err
 	}
-
-	return &MergedListCopy{
-		ActiveList:                 nodesMap,
-		NodesJoinedDuringPrevPulse: nodesJoinedDuringPrevPulse,
-	}, nil
+	switch cm.policy {
+	case PartialPositive2Phase, PartialNegative2Phase, PartialPositive23Phase, PartialNegative23Phase:
+		delete(pckts, cm.ignoreFrom)
+	}
+	return pckts, nil
 }
 
-func mergeClaim(nodes map[insolar.Reference]insolar.NetworkNode, claim consensus.ReferendumClaim) (bool, error) {
-	isJoinClaim := false
+func (cm *CommunicatorMock) ExchangePhase21(ctx context.Context, state *phases.ConsensusState,
+	packet *packets.Phase2Packet, additionalRequests []*phases.AdditionalRequest) ([]packets.ReferendumVote, error) {
 
-	switch t := claim.(type) {
-	case *consensus.NodeJoinClaim:
-		isJoinClaim = true
-		// TODO: fix version
-		n, err := node.ClaimToNode("", t)
-		if err != nil {
-			return isJoinClaim, errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> NetworkNode")
-		}
-		n.(node.MutableNode).SetState(insolar.NodePending)
-		nodes[n.ID()] = n
-	case *consensus.NodeLeaveClaim:
-		if nodes[t.NodeID] == nil {
-			break
-		}
-		n := nodes[t.NodeID].(node.MutableNode)
-		if t.ETA == 0 || n.GetState() != insolar.NodeLeaving {
-			n.SetLeavingETA(t.ETA)
-		}
+	return cm.communicator.ExchangePhase21(ctx, state, packet, additionalRequests)
+}
+
+func (cm *CommunicatorMock) ExchangePhase3(ctx context.Context, participants []insolar.NetworkNode, packet *packets.Phase3Packet) (map[insolar.Reference]*packets.Phase3Packet, error) {
+	pckts, err := cm.communicator.ExchangePhase3(ctx, participants, packet)
+	if err != nil {
+		return nil, err
 	}
+	switch cm.policy {
+	case PartialPositive3Phase, PartialNegative3Phase, PartialPositive23Phase, PartialNegative23Phase:
+		delete(pckts, cm.ignoreFrom)
+	}
+	return pckts, nil
+}
 
-	return isJoinClaim, nil
+func (cm *CommunicatorMock) Init(ctx context.Context) error {
+	return cm.communicator.Init(ctx)
+}
+
+type FullTimeoutPhaseManager struct {
+}
+
+func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
+	return nil
 }

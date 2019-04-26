@@ -48,49 +48,89 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package pool
+package hostnetwork
 
 import (
 	"context"
-	"net"
+	"io"
+
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/network/hostnetwork/future"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/pool"
 )
 
-type ConnectionPool interface {
-	GetConnection(ctx context.Context, address net.Addr) (net.Conn, error)
-	CloseConnection(ctx context.Context, address net.Addr)
-	Reset()
+// RequestHandler is callback function for request handling
+type RequestHandler func(p *packet.Packet)
+
+// StreamHandler parses packets from data stream and calls request handler or response handler
+type StreamHandler struct {
+	requestHandler  RequestHandler
+	responseHandler future.PacketHandler
 }
 
-type connectionFactory interface {
-	CreateConnection(ctx context.Context, address net.Addr) (net.Conn, error)
+// NewStreamHandler creates new StreamHandler
+func NewStreamHandler(requestHandler RequestHandler, responseHandler future.PacketHandler) *StreamHandler {
+	return &StreamHandler{
+		requestHandler:  requestHandler,
+		responseHandler: responseHandler,
+	}
 }
 
-type entry interface {
-	Open(ctx context.Context) (net.Conn, error)
-	Close()
+func (s *StreamHandler) HandleStream(address string, reader io.ReadWriteCloser) {
+	for {
+		p, err := packet.DeserializePacket(reader)
+
+		if err != nil {
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
+				log.Info("[ HandleStream ] Connection closed by peer")
+				return
+			}
+
+			log.Error("[ HandleStream ] Failed to deserialize packet: ", err.Error())
+		} else {
+			ctx, logger := inslogger.WithTraceField(context.Background(), p.TraceID)
+			logger.Debug("[ HandleStream ] Handling packet RequestID = ", p.RequestID)
+
+			if p.IsResponse {
+				go s.responseHandler.Handle(ctx, p)
+			} else {
+				go s.requestHandler(p)
+			}
+		}
+	}
 }
 
-type onClose func(ctx context.Context, addr net.Addr)
+// SendPacket sends packet using connection from pool
+func SendPacket(ctx context.Context, pool pool.ConnectionPool, p *packet.Packet) error {
+	data, err := packet.SerializePacket(p)
+	if err != nil {
+		return errors.Wrap(err, "Failed to serialize packet")
+	}
 
-func newEntry(connectionFactory connectionFactory, address net.Addr, onClose onClose) entry {
-	return newEntryImpl(connectionFactory, address, onClose)
-}
+	conn, err := pool.GetConnection(ctx, p.Receiver)
+	if err != nil {
+		return errors.Wrap(err, "Failed to get connection")
+	}
 
-type iterateFunc func(entry entry)
+	n, err := conn.Write(data)
+	if err != nil {
+		// retry
+		pool.CloseConnection(ctx, p.Receiver)
+		conn, err = pool.GetConnection(ctx, p.Receiver)
 
-type entryHolder interface {
-	Get(address net.Addr) (entry, bool)
-	Delete(address net.Addr)
-	Add(address net.Addr, entry entry)
-	Size() int
-	Clear()
-	Iterate(iterateFunc iterateFunc)
-}
-
-func newEntryHolder() entryHolder {
-	return newEntryHolderImpl()
-}
-
-func NewConnectionPool(connectionFactory connectionFactory) ConnectionPool {
-	return newConnectionPool(connectionFactory)
+		if err != nil {
+			return errors.Wrap(err, "[ SendBuffer ] Failed to get connection")
+		}
+		n, err = conn.Write(data)
+	}
+	if err == nil {
+		metrics.NetworkSentSize.Add(float64(n))
+		return nil
+	}
+	return errors.Wrap(err, "[ send ] Failed to write data")
 }

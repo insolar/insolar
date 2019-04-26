@@ -48,110 +48,40 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package pool
+package transport
 
 import (
-	"context"
-	"net"
-	"sync"
+	"errors"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/configuration"
 )
 
-type connectionPool struct {
-	connectionFactory connectionFactory
-
-	entryHolder entryHolder
-	mutex       sync.RWMutex
+// Factory interface provides methods for creating stream or datagram transports
+type Factory interface {
+	CreateStreamTransport(StreamHandler) (StreamTransport, error)
+	CreateDatagramTransport(DatagramHandler) (DatagramTransport, error)
 }
 
-func newConnectionPool(connectionFactory connectionFactory) *connectionPool {
-	return &connectionPool{
-		connectionFactory: connectionFactory,
+// NewFactory constructor creates new transport factory
+func NewFactory(cfg configuration.Transport) Factory {
+	return &factory{cfg: cfg}
+}
 
-		entryHolder: newEntryHolder(),
+type factory struct {
+	cfg configuration.Transport
+}
+
+// CreateStreamTransport creates new TCP transport
+func (f *factory) CreateStreamTransport(handler StreamHandler) (StreamTransport, error) {
+	switch f.cfg.Protocol {
+	case "TCP":
+		return newTCPTransport(f.cfg.Address, f.cfg.FixedPublicAddress, handler), nil
+	default:
+		return nil, errors.New("invalid transport configuration")
 	}
 }
 
-func (cp *connectionPool) GetConnection(ctx context.Context, address net.Addr) (net.Conn, error) {
-	logger := inslogger.FromContext(ctx)
-
-	entry, ok := cp.getEntry(address)
-
-	logger.Debugf("[ GetConnection ] Finding entry for connection to %s in pool: %t", address, ok)
-
-	if ok {
-		return entry.Open(ctx)
-	}
-
-	logger.Debugf("[ GetConnection ] Missing entry for connection to %s in pool ", address)
-	entry = cp.getOrCreateEntry(ctx, address)
-
-	return entry.Open(ctx)
-}
-
-func (cp *connectionPool) CloseConnection(ctx context.Context, address net.Addr) {
-	cp.mutex.Lock()
-	defer cp.mutex.Unlock()
-
-	logger := inslogger.FromContext(ctx)
-
-	entry, ok := cp.entryHolder.Get(address)
-	logger.Debugf("[ CloseConnection ] Finding entry for connection to %s in pool: %s", address, ok)
-
-	if ok {
-		entry.Close()
-
-		logger.Debugf("[ CloseConnection ] Delete entry for connection to %s from pool", address)
-		cp.entryHolder.Delete(address)
-		metrics.NetworkConnections.Dec()
-	}
-}
-
-func (cp *connectionPool) getEntry(address net.Addr) (entry, bool) {
-	cp.mutex.RLock()
-	defer cp.mutex.RUnlock()
-
-	return cp.entryHolder.Get(address)
-}
-
-func (cp *connectionPool) getOrCreateEntry(ctx context.Context, address net.Addr) entry {
-	logger := inslogger.FromContext(ctx)
-
-	cp.mutex.Lock()
-	defer cp.mutex.Unlock()
-
-	entry, ok := cp.entryHolder.Get(address)
-	logger.Debugf("[ getOrCreateEntry ] Finding entry for connection to %s in pool: %s", address, ok)
-
-	if ok {
-		return entry
-	}
-
-	logger.Debugf("[ getOrCreateEntry ] Failed to retrieve entry for connection to %s, creating it", address)
-
-	entry = newEntry(cp.connectionFactory, address, cp.CloseConnection)
-
-	cp.entryHolder.Add(address, entry)
-	size := cp.entryHolder.Size()
-	logger.Debugf(
-		"[ getOrCreateEntry ] Added entry for connection to %s. Current pool size: %d",
-		address.String(),
-		size,
-	)
-	metrics.NetworkConnections.Inc()
-
-	return entry
-}
-
-func (cp *connectionPool) Reset() {
-	cp.mutex.Lock()
-	defer cp.mutex.Unlock()
-
-	cp.entryHolder.Iterate(func(entry entry) {
-		entry.Close()
-	})
-	cp.entryHolder.Clear()
-	metrics.NetworkConnections.Set(float64(cp.entryHolder.Size()))
+// CreateDatagramTransport creates new UDP transport
+func (f *factory) CreateDatagramTransport(handler DatagramHandler) (DatagramTransport, error) {
+	return newUDPTransport(f.cfg.Address, f.cfg.FixedPublicAddress, handler), nil
 }

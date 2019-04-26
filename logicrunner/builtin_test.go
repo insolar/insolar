@@ -70,7 +70,7 @@ func TestBareHelloworld(t *testing.T) {
 	mb := testmessagebus.NewTestMessageBus(t)
 
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	l := artifacts.TmpLedger(
+	l, _ := artifacts.TmpLedger(
 		t,
 		"",
 		insolar.Components{
@@ -143,7 +143,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.NoError(t, err)
 	// #1
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld1")
-	resp, err := lr.FlowHandler.WrapBusHandle(
+	resp, err := lr.FlowDispatcher.WrapBusHandle(
 		ctx,
 		parcel,
 	)
@@ -161,7 +161,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.NoError(t, err)
 	// #2
 	ctx = inslogger.ContextWithTrace(ctx, "TestBareHelloworld2")
-	resp, err = lr.FlowHandler.WrapBusHandle(
+	resp, err = lr.FlowDispatcher.WrapBusHandle(
 		ctx,
 		parcel,
 	)

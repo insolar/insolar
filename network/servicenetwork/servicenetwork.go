@@ -75,6 +75,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
+	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/utils"
 )
 
@@ -125,8 +126,8 @@ func (n *ServiceNetwork) SetGateway(g network.Gateway) {
 	n.gateway = g
 }
 
-func (nk *ServiceNetwork) GetState() insolar.NetworkState {
-	return nk.Gateway().GetState()
+func (n *ServiceNetwork) GetState() insolar.NetworkState {
+	return n.Gateway().GetState()
 }
 
 // SendMessage sends a message from MessageBus.
@@ -144,20 +145,14 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method insolar.Rem
 	n.Controller.RemoteProcedureRegister(name, method)
 }
 
-// Start implements component.Initer
+// Init implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
-	hostNetwork, err := hostnetwork.NewHostNetwork(n.cfg, n.CertificateManager.GetCertificate().GetNodeRef().String())
+	hostNetwork, err := hostnetwork.NewHostNetwork(n.CertificateManager.GetCertificate().GetNodeRef().String())
 	if err != nil {
-		return errors.Wrap(err, "Failed to create internal transport")
-	}
-
-	consensusAddress := n.cfg.Host.Transport.Address
-	if n.cfg.Host.Transport.FixedPublicAddress == "" {
-		consensusAddress = n.NodeKeeper.GetOrigin().Address()
+		return errors.Wrap(err, "Failed to create hostnetwork")
 	}
 
 	consensusNetwork, err := hostnetwork.NewConsensusNetwork(
-		consensusAddress,
 		n.CertificateManager.GetCertificate().GetNodeRef().String(),
 		n.NodeKeeper.GetOrigin().ShortID(),
 	)
@@ -173,6 +168,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.cm.Inject(n,
 		&routing.Table{},
 		cert,
+		transport.NewFactory(n.cfg.Host.Transport),
 		hostNetwork,
 		// use flaky network instead of hostNetwork to imitate network delays
 		// NewFlakyNetwork(hostNetwork),
@@ -182,7 +178,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		phases.NewFirstPhase(),
 		phases.NewSecondPhase(),
 		phases.NewThirdPhase(),
-		phases.NewPhaseManager(),
+		phases.NewPhaseManager(n.cfg.Service.Consensus),
 		bootstrap.NewSessionManager(),
 		controller.NewNetworkController(),
 		controller.NewRPCController(options),
@@ -250,7 +246,7 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse) {
-	currentTime := time.Now()
+	pulseTime := time.Unix(0, newPulse.PulseTimestamp)
 
 	n.lock.Lock()
 	defer n.lock.Unlock()
@@ -279,7 +275,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	if n.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		// do not set pulse because otherwise we will set invalid active list
 		// pass consensus, prepare valid active list and set it on next pulse
-		go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
+		go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
 		return
 	}
 
@@ -308,7 +304,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	}
 	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
 
-	go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
+	go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
 }
 
 func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {

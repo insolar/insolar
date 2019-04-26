@@ -51,70 +51,40 @@
 package transport
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"io"
 	"net"
+	"sync"
+	"sync/atomic"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/consensus"
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/utils"
 )
 
 const udpMaxPacketSize = 1400
 
 type udpTransport struct {
-	baseTransport
-	conn    net.PacketConn
-	address string
+	mutex              sync.RWMutex
+	conn               net.PacketConn
+	handler            DatagramHandler
+	started            uint32
+	fixedPublicAddress string
+	cancel             context.CancelFunc
+	address            string
 }
 
-type udpSerializer struct{}
-
-func (b *udpSerializer) SerializePacket(q *packet.Packet) ([]byte, error) {
-	data, ok := q.Data.(packets.ConsensusPacket)
-	if !ok {
-		return nil, errors.New("could not convert packet to ConsensusPacket type")
-	}
-	return data.Serialize()
+func newUDPTransport(listenAddress, fixedPublicAddress string, handler DatagramHandler) *udpTransport {
+	return &udpTransport{address: listenAddress, fixedPublicAddress: fixedPublicAddress, handler: handler}
 }
 
-func (b *udpSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error) {
-	data, err := packets.ExtractPacket(conn)
-	if err != nil {
-		return nil, errors.Wrap(err, "could not convert network datagram to ConsensusPacket")
-	}
-	p := &packet.Packet{}
-	p.Data = data
-	return p, nil
-}
-
-func newUDPTransport(listenAddress, fixedPublicAddress string) (*udpTransport, string, error) {
-	conn, err := net.ListenPacket("udp", listenAddress)
-	if err != nil {
-		return nil, "", errors.Wrap(err, "failed to listen UDP")
-	}
-	publicAddress, err := Resolve(fixedPublicAddress, conn.LocalAddr().String())
-	if err != nil {
-		return nil, "", errors.Wrap(err, "failed to resolve public address")
-	}
-
-	transport := &udpTransport{baseTransport: newBaseTransport(publicAddress), conn: conn}
-	transport.sendFunc = transport.send
-	transport.serializer = &udpSerializer{}
-
-	return transport, publicAddress, nil
-}
-
-func (t *udpTransport) send(recvAddress string, data []byte) error {
-	log.Debug("Sending PURE_UDP request")
+// SendDatagram sends datagram to remote host
+func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []byte) error {
+	logger := inslogger.FromContext(ctx)
 	if len(data) > udpMaxPacketSize {
 		return errors.New(fmt.Sprintf("udpTransport.send: too big input data. Maximum: %d. Current: %d",
 			udpMaxPacketSize, len(data)))
@@ -122,94 +92,106 @@ func (t *udpTransport) send(recvAddress string, data []byte) error {
 
 	// TODO: may be try to send second time if error
 	// TODO: skip resolving every time by caching result
-	udpAddr, err := net.ResolveUDPAddr("udp", recvAddress)
+	udpAddr, err := net.ResolveUDPAddr("udp", address)
 	if err != nil {
-		return errors.Wrap(err, "udpTransport.send")
+		return errors.Wrap(err, "Failed to resolve UDP address")
 	}
 
-	udpConn, err := net.DialUDP("udp", nil, udpAddr)
+	logger.Debug("udpTransport.send: len = ", len(data))
+	conn, err := net.DialUDP("udp", nil, udpAddr)
 	if err != nil {
-		return errors.Wrap(err, "udpTransport.send")
+		return errors.Wrap(err, "Failed to dial UDP")
 	}
-	defer utils.CloseVerbose(udpConn)
 
-	log.Debug("udpTransport.send: len = ", len(data))
-	n, err := udpConn.Write(data)
-	stats.Record(context.Background(), consensus.SentSize.M(int64(n)))
-	return errors.Wrap(err, "Failed to write data")
+	n, err := conn.Write(data)
+	if err != nil {
+		return errors.Wrap(err, "Failed to write data")
+	}
+	stats.Record(ctx, consensus.SentSize.M(int64(n)))
+	return nil
 }
 
-func (t *udpTransport) prepareListen() (net.PacketConn, error) {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
-	t.disconnectStarted = make(chan bool, 1)
-	t.disconnectFinished = make(chan bool, 1)
-
-	if t.conn != nil {
-		t.address = t.conn.LocalAddr().String()
-	} else {
-		var err error
-		t.conn, err = net.ListenPacket("udp", t.address)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to listen UDP")
-		}
-	}
-
-	return t.conn, nil
+func (t *udpTransport) Address() string {
+	return t.address
 }
 
 // Start starts networking.
 func (t *udpTransport) Start(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
-	logger.Info("[ Start ] Start UDP transport")
 
-	conn, err := t.prepareListen()
-	if err != nil {
-		logger.Infof("[ Start ] Failed to prepare UDP transport: " + err.Error())
-		return err
-	}
+	if atomic.CompareAndSwapUint32(&t.started, 0, 1) {
 
-	go func() {
-		for {
-			buf := make([]byte, udpMaxPacketSize)
-			n, addr, err := conn.ReadFrom(buf)
-			if err != nil {
-				<-t.disconnectFinished
-				logger.Error("failed to read UDP: ", err.Error())
-				return // TODO: we probably shouldn't return here
-			}
+		t.mutex.Lock()
+		defer t.mutex.Unlock()
 
-			stats.Record(ctx, consensus.RecvSize.M(int64(n)))
-			go t.handleAcceptedConnection(buf[:n], addr)
+		var err error
+		t.conn, err = net.ListenPacket("udp", t.address)
+		if err != nil {
+			return errors.Wrap(err, "failed to listen UDP")
 		}
-	}()
+
+		t.address, err = resolver.Resolve(t.fixedPublicAddress, t.conn.LocalAddr().String())
+		if err != nil {
+			return errors.Wrap(err, "failed to resolve public address")
+		}
+
+		logger.Info("[ Start ] Start UDP transport")
+		ctx, t.cancel = context.WithCancel(ctx)
+		go t.loop(ctx)
+	}
 
 	return nil
 }
 
-// Stop stops networking.
-func (t *udpTransport) Stop() {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
+func (t *udpTransport) loop(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
 
-	log.Info("Stop UDP transport")
-	t.prepareDisconnect()
+	t.mutex.RLock()
+	defer t.mutex.RUnlock()
 
-	if t.conn != nil {
-		utils.CloseVerbose(t.conn)
-		t.conn = nil
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+
+		buf := make([]byte, udpMaxPacketSize)
+		n, addr, err := t.conn.ReadFrom(buf)
+
+		if err != nil {
+			if utils.IsConnectionClosed(err) {
+				logger.Info("Connection closed, quiting ReadFrom loop")
+				return
+			}
+
+			logger.Error("failed to read UDP: ", err.Error())
+			continue
+		}
+
+		stats.Record(ctx, consensus.RecvSize.M(int64(n)))
+		go t.handler.HandleDatagram(addr.String(), buf[:n])
 	}
 }
 
-func (t *udpTransport) handleAcceptedConnection(data []byte, addr net.Addr) {
-	r := bytes.NewReader(data)
-	msg, err := t.serializer.DeserializePacket(r)
-	if err != nil {
-		log.Error("[ handleAcceptedConnection ] ", err)
-		return
-	}
-	log.Debug("[ handleAcceptedConnection ] Packet processed. size: ", len(data), ". Address: ", addr)
+// Stop stops networking.
+func (t *udpTransport) Stop(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx)
 
-	go t.packetHandler.Handle(context.TODO(), msg)
+	if atomic.CompareAndSwapUint32(&t.started, 1, 0) {
+		logger.Warn("Stop UDP transport")
+		t.cancel()
+		err := t.conn.Close()
+
+		if err != nil {
+			if utils.IsConnectionClosed(err) {
+				logger.Error("Connection already closed")
+			} else {
+				return err
+			}
+		}
+	} else {
+		logger.Warn("Failed to stop transport")
+	}
+	return nil
 }

@@ -52,7 +52,6 @@ package future
 
 import (
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -149,19 +148,16 @@ func TestFuture_Cancel(t *testing.T) {
 func TestFuture_GetResult(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 	m := &packet.Packet{}
-	var cancelled uint32 = 0
+	canceled := make(chan bool, 1)
 	cancelCallback := func(f Future) {
-		atomic.StoreUint32(&cancelled, 1)
+		canceled <- true
 	}
 	f := NewFuture(network.RequestID(1), n, m, cancelCallback)
-	go func() {
-		time.Sleep(time.Millisecond)
-		f.Cancel()
-	}()
-
-	_, err := f.GetResult(10 * time.Millisecond)
+	_, err := f.GetResult(time.Millisecond)
 	require.Error(t, err)
-	require.Equal(t, uint32(1), atomic.LoadUint32(&cancelled))
+	require.Equal(t, ErrTimeout, err)
+	tmp := <-canceled
+	require.Equal(t, true, tmp)
 }
 
 func TestFuture_GetResult2(t *testing.T) {
@@ -176,9 +172,9 @@ func TestFuture_GetResult2(t *testing.T) {
 	}
 	go func() {
 		time.Sleep(time.Millisecond)
-		close(c)
+		f.Cancel()
 	}()
-	_, err := f.GetResult(10 * time.Millisecond)
+	_, err := f.GetResult(1000 * time.Millisecond)
 	require.Error(t, err)
 }
 
