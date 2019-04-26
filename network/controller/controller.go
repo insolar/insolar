@@ -59,6 +59,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/controller/common"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
@@ -105,8 +106,8 @@ func (c *Controller) Init(ctx context.Context) error {
 	return nil
 }
 
-func (c *Controller) AuthenticateToDiscoveryNode(ctx context.Context, discovery insolar.DiscoveryNode) error {
-	return c.Bootstrapper.AuthenticateToDiscoveryNode(ctx, nil)
+func (c *Controller) AuthenticateToDiscoveryNode(ctx context.Context, discovery insolar.DiscoveryNode, host *host.Host) error {
+	return c.Bootstrapper.AuthenticateToDiscoveryNode(ctx, &bootstrap.DiscoveryNode{Host: host, Node: discovery})
 }
 
 // ConfigureOptions convert daemon configuration to controller options
@@ -122,7 +123,7 @@ func ConfigureOptions(conf configuration.Configuration) *common.Options {
 		BootstrapTimeout:       10 * time.Second,
 		HandshakeSessionTTL:    time.Duration(config.HandshakeSessionTTL) * time.Millisecond,
 		FakePulseDuration:      time.Duration(conf.Pulsar.PulseTime) * time.Millisecond,
-		CyclicBootstrapEnabled: false,
+		CyclicBootstrapEnabled: true,
 	}
 }
 

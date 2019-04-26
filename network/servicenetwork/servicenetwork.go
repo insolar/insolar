@@ -56,6 +56,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -331,7 +332,12 @@ func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, address string
 		logger.Warnf("Failed to find a discovery node: ", err)
 	}
 
-	err = n.Controller.AuthenticateToDiscoveryNode(ctx, node)
+	host, err := host.NewHostN(address, *node.GetNodeRef())
+	if err != nil {
+		logger.Error("Faield to create a host")
+		return
+	}
+	err = n.Controller.AuthenticateToDiscoveryNode(ctx, node, host)
 	if err != nil {
 		logger.Errorf("Failed to authenticate a node: " + err.Error())
 	}

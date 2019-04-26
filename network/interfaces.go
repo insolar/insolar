@@ -85,7 +85,7 @@ type Controller interface {
 	SetLastIgnoredPulse(number insolar.PulseNumber)
 	// GetLastIgnoredPulse get last pulse that will be ignored
 	GetLastIgnoredPulse() insolar.PulseNumber
-	AuthenticateToDiscoveryNode(ctx context.Context, discovery insolar.DiscoveryNode) error
+	AuthenticateToDiscoveryNode(ctx context.Context, discovery insolar.DiscoveryNode, host *host.Host) error
 }
 
 // RequestHandler handler function to process incoming requests from network.

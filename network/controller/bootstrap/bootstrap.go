@@ -337,12 +337,13 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 	for {
 		ch := bc.getDiscoveryNodesChannel(ctx, discoveryNodes, discoveryCount)
 		bootstrapResults, hosts = bc.waitResultsFromChannel(ctx, ch, discoveryCount)
-		if len(hosts) == discoveryCount {
+		if (len(hosts) == discoveryCount) || (len(hosts) >= 5) {
 			// we connected to all discovery nodes
 			break
 		} else {
 			logger.Infof("[ BootstrapDiscovery ] Connected to %d/%d discovery nodes", len(hosts), discoveryCount)
 		}
+		time.Sleep(time.Second)
 	}
 	reconnectRequests := 0
 	for _, bootstrapResult := range bootstrapResults {
@@ -361,8 +362,8 @@ func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.Bootst
 	<-bc.bootstrapLock
 	logger.Debugf("[ BootstrapDiscovery ] After bootstrap lock")
 
-	ch := bc.getGenesisRequestsChannel(ctx, hosts)
-	activeNodes, lastPulses, err := bc.waitGenesisResults(ctx, ch, len(hosts))
+	channel := bc.getGenesisRequestsChannel(ctx, hosts)
+	activeNodes, lastPulses, err := bc.waitGenesisResults(ctx, channel, len(hosts))
 	if err != nil {
 		return nil, err
 	}
@@ -596,7 +597,7 @@ func (bc *bootstrapper) startCyclicBootstrap(ctx context.Context) {
 			res, err := bc.startBootstrap(ctx, node.GetHost())
 			if err != nil {
 				logger := inslogger.FromContext(ctx)
-				logger.Errorf("[ StartCyclicBootstrap ] ", err)
+				logger.Errorf("[ StartCyclicBootstrap ]: ", err)
 				continue
 			}
 			results = append(results, res)
@@ -604,7 +605,7 @@ func (bc *bootstrapper) startCyclicBootstrap(ctx context.Context) {
 		if len(results) != 0 {
 			index := bc.getLagerNetorkIndex(ctx, results)
 			if index >= 0 {
-				bc.reconnectToNewNetwork(ctx, nodes[index].GetHost())
+				bc.reconnectToNewNetwork(ctx, results[index].Host.Address.String())
 			}
 		}
 		time.Sleep(time.Second * bootstrapTimeout)
