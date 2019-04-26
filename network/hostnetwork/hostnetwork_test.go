@@ -495,7 +495,7 @@ func TestStartStopSend(t *testing.T) {
 	t1.Stop(ctx)
 }
 
-func Test_hostNetwork_SendRequestToHost_NotStarted(t *testing.T) {
+func TestHostNetwork_SendRequestToHost_NotStarted(t *testing.T) {
 	hn, err := NewHostNetwork(ID1 + DOMAIN)
 	require.NoError(t, err)
 
