@@ -28,8 +28,9 @@ type IndexStateModifier interface {
 }
 
 type IndexBucket struct {
-	lifelineLock sync.RWMutex
-	lifeline     *Lifeline
+	lifelineLock     sync.RWMutex
+	lifeline         *Lifeline
+	lifelineLastUsed insolar.PulseNumber
 
 	requestLock sync.RWMutex
 	requests    []insolar.ID
@@ -138,9 +139,11 @@ func (i *InMemoryIndex) SetLifelineUsage(ctx context.Context, pn insolar.PulseNu
 	if err != nil {
 		return err
 	}
+	if lfl == nil {
+		return ErrLifelineNotFound
+	}
 
-	lfl.LastUsed = pn
-	b.setLifeline(lfl)
+	b.lifelineLastUsed = pn
 
 	return nil
 }
@@ -216,6 +219,18 @@ func (i *IndexDB) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, o
 	return i.set(pn, objID, buc)
 }
 
+func (i *IndexDB) LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
+	buck, err := i.get(pn, objID)
+	if err != nil {
+		return Lifeline{}, err
+	}
+	if buck.lifeline == nil {
+		return Lifeline{}, ErrLifelineNotFound
+	}
+
+	return *buck.lifeline, nil
+}
+
 func (i *IndexDB) set(pn insolar.PulseNumber, objID insolar.ID, bucket *IndexBucket) error {
 	key := indexKey{pn: pn, objID: objID}
 
@@ -281,40 +296,6 @@ func MustDecodeBucket(buff []byte) *IndexBucket {
 	return buck
 }
 
-//
-// type LifelineDB struct {
-// 	lock sync.RWMutex
-// 	db   store.DB
-// }
-//
-// type lifelineKey insolar.ID
-//
-// func (k lifelineKey) Scope() store.Scope {
-// 	return store.ScopeLifeline
-// }
-//
-// func (k lifelineKey) ID() []byte {
-// 	res := insolar.ID(k)
-// 	return (&res).Bytes()
-// }
-//
-// // NewLifelineDB creates new DB storage instance.
-// func NewLifelineDB(db store.DB) *LifelineDB {
-// 	return &LifelineDB{db: db}
-// }
-//
-// // Set saves new index-value in storage.
-// func (i *LifelineDB) Set(ctx context.Context, id insolar.ID, index Lifeline) error {
-// 	i.lock.Lock()
-// 	defer i.lock.Unlock()
-//
-// 	if index.Delegates == nil {
-// 		index.Delegates = map[insolar.Reference]insolar.Reference{}
-// 	}
-//
-// 	return i.set(id, index)
-// }
-//
 // // ForID returns index for provided id.
 // func (i *LifelineDB) ForID(ctx context.Context, id insolar.ID) (index Lifeline, err error) {
 // 	i.lock.RLock()
