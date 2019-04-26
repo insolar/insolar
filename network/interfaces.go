@@ -101,8 +101,6 @@ type HostNetwork interface {
 
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
-	// GetNodeID get current node ID.
-	GetNodeID() insolar.Reference
 
 	// SendRequest send request to a remote node addressed by reference.
 	SendRequest(ctx context.Context, request Request, receiver insolar.Reference) (Future, error)
@@ -129,8 +127,6 @@ type ConsensusNetwork interface {
 
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
-	// GetNodeID get current node ID.
-	GetNodeID() insolar.Reference
 
 	// SignAndSendPacket send request to a remote node.
 	SignAndSendPacket(packet consensus.ConsensusPacket, receiver insolar.Reference, service insolar.CryptographyService) error
@@ -158,9 +154,9 @@ type Response Packet
 
 // Future allows to handle responses to a previously sent request.
 type Future interface {
-	GetRequest() Request
+	Request() Request
 	Response() <-chan Response
-	GetResponse(duration time.Duration) (Response, error)
+	WaitResponse(duration time.Duration) (Response, error)
 }
 
 // RequestBuilder allows to build a Request.

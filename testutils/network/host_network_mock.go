@@ -28,11 +28,6 @@ type HostNetworkMock struct {
 	BuildResponsePreCounter uint64
 	BuildResponseMock       mHostNetworkMockBuildResponse
 
-	GetNodeIDFunc       func() (r insolar.Reference)
-	GetNodeIDCounter    uint64
-	GetNodeIDPreCounter uint64
-	GetNodeIDMock       mHostNetworkMockGetNodeID
-
 	InitFunc       func(p context.Context) (r error)
 	InitCounter    uint64
 	InitPreCounter uint64
@@ -83,7 +78,6 @@ func NewHostNetworkMock(t minimock.Tester) *HostNetworkMock {
 	}
 
 	m.BuildResponseMock = mHostNetworkMockBuildResponse{mock: m}
-	m.GetNodeIDMock = mHostNetworkMockGetNodeID{mock: m}
 	m.InitMock = mHostNetworkMockInit{mock: m}
 	m.NewRequestBuilderMock = mHostNetworkMockNewRequestBuilder{mock: m}
 	m.PublicAddressMock = mHostNetworkMockPublicAddress{mock: m}
@@ -240,140 +234,6 @@ func (m *HostNetworkMock) BuildResponseFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.BuildResponseFunc != nil {
 		return atomic.LoadUint64(&m.BuildResponseCounter) > 0
-	}
-
-	return true
-}
-
-type mHostNetworkMockGetNodeID struct {
-	mock              *HostNetworkMock
-	mainExpectation   *HostNetworkMockGetNodeIDExpectation
-	expectationSeries []*HostNetworkMockGetNodeIDExpectation
-}
-
-type HostNetworkMockGetNodeIDExpectation struct {
-	result *HostNetworkMockGetNodeIDResult
-}
-
-type HostNetworkMockGetNodeIDResult struct {
-	r insolar.Reference
-}
-
-//Expect specifies that invocation of HostNetwork.GetNodeID is expected from 1 to Infinity times
-func (m *mHostNetworkMockGetNodeID) Expect() *mHostNetworkMockGetNodeID {
-	m.mock.GetNodeIDFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &HostNetworkMockGetNodeIDExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of HostNetwork.GetNodeID
-func (m *mHostNetworkMockGetNodeID) Return(r insolar.Reference) *HostNetworkMock {
-	m.mock.GetNodeIDFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &HostNetworkMockGetNodeIDExpectation{}
-	}
-	m.mainExpectation.result = &HostNetworkMockGetNodeIDResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of HostNetwork.GetNodeID is expected once
-func (m *mHostNetworkMockGetNodeID) ExpectOnce() *HostNetworkMockGetNodeIDExpectation {
-	m.mock.GetNodeIDFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &HostNetworkMockGetNodeIDExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *HostNetworkMockGetNodeIDExpectation) Return(r insolar.Reference) {
-	e.result = &HostNetworkMockGetNodeIDResult{r}
-}
-
-//Set uses given function f as a mock of HostNetwork.GetNodeID method
-func (m *mHostNetworkMockGetNodeID) Set(f func() (r insolar.Reference)) *HostNetworkMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetNodeIDFunc = f
-	return m.mock
-}
-
-//GetNodeID implements github.com/insolar/insolar/network.HostNetwork interface
-func (m *HostNetworkMock) GetNodeID() (r insolar.Reference) {
-	counter := atomic.AddUint64(&m.GetNodeIDPreCounter, 1)
-	defer atomic.AddUint64(&m.GetNodeIDCounter, 1)
-
-	if len(m.GetNodeIDMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetNodeIDMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to HostNetworkMock.GetNodeID.")
-			return
-		}
-
-		result := m.GetNodeIDMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the HostNetworkMock.GetNodeID")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodeIDMock.mainExpectation != nil {
-
-		result := m.GetNodeIDMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the HostNetworkMock.GetNodeID")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodeIDFunc == nil {
-		m.t.Fatalf("Unexpected call to HostNetworkMock.GetNodeID.")
-		return
-	}
-
-	return m.GetNodeIDFunc()
-}
-
-//GetNodeIDMinimockCounter returns a count of HostNetworkMock.GetNodeIDFunc invocations
-func (m *HostNetworkMock) GetNodeIDMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodeIDCounter)
-}
-
-//GetNodeIDMinimockPreCounter returns the value of HostNetworkMock.GetNodeID invocations
-func (m *HostNetworkMock) GetNodeIDMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodeIDPreCounter)
-}
-
-//GetNodeIDFinished returns true if mock invocations count is ok
-func (m *HostNetworkMock) GetNodeIDFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetNodeIDMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetNodeIDCounter) == uint64(len(m.GetNodeIDMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetNodeIDMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetNodeIDCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetNodeIDFunc != nil {
-		return atomic.LoadUint64(&m.GetNodeIDCounter) > 0
 	}
 
 	return true
@@ -1524,10 +1384,6 @@ func (m *HostNetworkMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to HostNetworkMock.BuildResponse")
 	}
 
-	if !m.GetNodeIDFinished() {
-		m.t.Fatal("Expected call to HostNetworkMock.GetNodeID")
-	}
-
 	if !m.InitFinished() {
 		m.t.Fatal("Expected call to HostNetworkMock.Init")
 	}
@@ -1581,10 +1437,6 @@ func (m *HostNetworkMock) MinimockFinish() {
 		m.t.Fatal("Expected call to HostNetworkMock.BuildResponse")
 	}
 
-	if !m.GetNodeIDFinished() {
-		m.t.Fatal("Expected call to HostNetworkMock.GetNodeID")
-	}
-
 	if !m.InitFinished() {
 		m.t.Fatal("Expected call to HostNetworkMock.Init")
 	}
@@ -1632,7 +1484,6 @@ func (m *HostNetworkMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.BuildResponseFinished()
-		ok = ok && m.GetNodeIDFinished()
 		ok = ok && m.InitFinished()
 		ok = ok && m.NewRequestBuilderFinished()
 		ok = ok && m.PublicAddressFinished()
@@ -1651,10 +1502,6 @@ func (m *HostNetworkMock) MinimockWait(timeout time.Duration) {
 
 			if !m.BuildResponseFinished() {
 				m.t.Error("Expected call to HostNetworkMock.BuildResponse")
-			}
-
-			if !m.GetNodeIDFinished() {
-				m.t.Error("Expected call to HostNetworkMock.GetNodeID")
 			}
 
 			if !m.InitFinished() {
@@ -1702,10 +1549,6 @@ func (m *HostNetworkMock) MinimockWait(timeout time.Duration) {
 func (m *HostNetworkMock) AllMocksCalled() bool {
 
 	if !m.BuildResponseFinished() {
-		return false
-	}
-
-	if !m.GetNodeIDFinished() {
 		return false
 	}
 

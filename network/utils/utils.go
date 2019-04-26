@@ -55,7 +55,6 @@ import (
 	"io"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
 
 	"github.com/pkg/errors"
@@ -75,16 +74,6 @@ func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 		return true // completed normally
 	case <-time.After(timeout):
 		return false // timed out
-	}
-}
-
-// AtomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.
-func AtomicLoadAndIncrementUint64(addr *uint64) uint64 {
-	for {
-		val := atomic.LoadUint64(addr)
-		if atomic.CompareAndSwapUint64(addr, val, val+1) {
-			return val
-		}
 	}
 }
 

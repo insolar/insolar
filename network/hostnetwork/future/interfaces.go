@@ -52,23 +52,54 @@ package future
 
 import (
 	"context"
+	"errors"
+	"time"
 
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
-type Manager interface {
-	Get(msg *packet.Packet) Future
-	Create(msg *packet.Packet) Future
+var (
+	// ErrTimeout is returned when the operation timeout is exceeded.
+	ErrTimeout = errors.New("timeout")
+	// ErrChannelClosed is returned when the input channel is closed.
+	ErrChannelClosed = errors.New("channel closed")
+)
+
+// Future is network response future.
+type Future interface {
+
+	// ID returns packet sequence number.
+	ID() network.RequestID
+
+	// Receiver returns the initiator of the packet.
+	Receiver() *host.Host
+
+	// Request returns origin request.
+	Request() network.Request
+
+	// Response is a channel to listen for future response.
+	Response() <-chan network.Response
+
+	// SetResponse makes packet to appear in response channel.
+	SetResponse(network.Response)
+
+	// WaitResponse gets the future response from Response() channel with a timeout set to `duration`.
+	WaitResponse(duration time.Duration) (network.Response, error)
+
+	// Cancel closes all channels and cleans up underlying structures.
+	Cancel()
 }
 
-func NewManager() Manager {
-	return newFutureManager()
+// CancelCallback is a callback function executed when cancelling Future.
+type CancelCallback func(Future)
+
+type Manager interface {
+	Get(packet *packet.Packet) Future
+	Create(packet *packet.Packet) Future
 }
 
 type PacketHandler interface {
 	Handle(ctx context.Context, msg *packet.Packet)
-}
-
-func NewPacketHandler(futureManager Manager) PacketHandler {
-	return newPacketHandler(futureManager)
 }

@@ -102,7 +102,7 @@ func NewMessageHandler(
 			p.Dep.JetAccessor = h.JetStorage
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.JetUpdater = h.jetTreeUpdater
-			p.Dep.CheckJet = proc.NewCheckJet(h.jetTreeUpdater, h.JetCoordinator)
+			p.Dep.JetFetcher = h.jetTreeUpdater
 		},
 		WaitHot: func(p *proc.WaitHot) {
 			p.Dep.Waiter = h.HotDataWaiter
@@ -126,8 +126,18 @@ func NewMessageHandler(
 			p.Dep.Bus = h.Bus
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.Coordinator = h.JetCoordinator
-			p.Dep.CheckJet = proc.NewCheckJet(h.jetTreeUpdater, h.JetCoordinator)
 			p.Dep.BlobAccessor = h.BlobAccessor
+		},
+		UpdateObject: func(p *proc.UpdateObject) {
+			p.Dep.RecordModifier = h.RecordModifier
+			p.Dep.Bus = h.Bus
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.BlobModifier = h.BlobModifier
+			p.Dep.RecentStorageProvider = h.RecentStorageProvider
+			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.IDLocker = h.IDLocker
+			p.Dep.IndexStateModifier = h.IndexStateModifier
+			p.Dep.IndexStorage = h.IndexStorage
 		},
 	}
 
@@ -196,6 +206,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 
 	h.Bus.MustRegister(insolar.TypeGetCode, h.FlowDispatcher.WrapBusHandle)
 	h.Bus.MustRegister(insolar.TypeGetObject, h.FlowDispatcher.WrapBusHandle)
+	h.Bus.MustRegister(insolar.TypeUpdateObject, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeGetDelegate,
 		BuildMiddleware(h.handleGetDelegate,
@@ -214,13 +225,6 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	h.Bus.MustRegister(insolar.TypeSetRecord,
 		BuildMiddleware(h.handleSetRecord,
 			instrumentHandler("handleSetRecord"),
-			m.addFieldsToLogger,
-			m.checkJet,
-			m.waitForHotData))
-
-	h.Bus.MustRegister(insolar.TypeUpdateObject,
-		BuildMiddleware(h.handleUpdateObject,
-			instrumentHandler("handleUpdateObject"),
 			m.addFieldsToLogger,
 			m.checkJet,
 			m.waitForHotData))
@@ -560,118 +564,6 @@ func (h *MessageHandler) handleGetPendingRequestID(ctx context.Context, parcel i
 	return &rep, nil
 }
 
-func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.UpdateObject)
-	jetID := jetFromContext(ctx)
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"object": msg.Object.Record().DebugString(),
-		"pulse":  parcel.Pulse(),
-	})
-
-	virtRec, err := object.DecodeVirtual(msg.Record)
-	if err != nil {
-		return nil, errors.Wrap(err, "can't deserialize record")
-	}
-	state, ok := virtRec.(object.State)
-	if !ok {
-		return nil, errors.New("wrong object state record")
-	}
-
-	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Object.Record(), parcel.Pulse())
-
-	calculatedID := object.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
-	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
-	//  id will not match the one calculated on the server.
-	err = h.BlobModifier.Set(ctx, *calculatedID, blob.Blob{JetID: insolar.JetID(jetID), Value: msg.Memory})
-	if err != nil && err != blob.ErrOverride {
-		return nil, errors.Wrap(err, "failed to set blob")
-	}
-
-	switch s := state.(type) {
-	case *object.ActivateRecord:
-		s.Memory = calculatedID
-	case *object.AmendRecord:
-		s.Memory = calculatedID
-	}
-
-	h.IDLocker.Lock(msg.Object.Record())
-	defer h.IDLocker.Unlock(msg.Object.Record())
-
-	idx, err := h.IndexStorage.ForID(ctx, *msg.Object.Record())
-	// No index on our node.
-	if err == object.ErrIndexNotFound {
-		if state.ID() == object.StateActivation {
-			// We are activating the object. There is no index for it anywhere.
-			idx = object.Lifeline{State: object.StateUndefined}
-		} else {
-			logger.Debug("failed to fetch index (fetching from heavy)")
-			// We are updating object. Index should be on the heavy executor.
-			heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-			if err != nil {
-				return nil, err
-			}
-			idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Object, heavy)
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to fetch index from heavy")
-			}
-		}
-	} else if err != nil {
-		return nil, err
-	}
-	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Object.Record(), parcel.Pulse())
-
-	if err = validateState(idx.State, state.ID()); err != nil {
-		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
-	}
-
-	recID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), virtRec)
-
-	// Index exists and latest record id does not match (preserving chain consistency).
-	// For the case when vm can't save or send result to another vm and it tries to update the same record again
-	if idx.LatestState != nil && !state.PrevStateID().Equal(*idx.LatestState) && idx.LatestState != recID {
-		return nil, errors.New("invalid state record")
-	}
-
-	id := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), virtRec)
-	rec := record.MaterialRecord{
-		Record: virtRec,
-		JetID:  insolar.JetID(jetID),
-	}
-
-	err = h.RecordModifier.Set(ctx, *id, rec)
-
-	if err == object.ErrOverride {
-		logger.WithField("type", fmt.Sprintf("%T", virtRec)).Warn("set record override (#1)")
-		id = recID
-	} else if err != nil {
-		return nil, errors.Wrap(err, "can't save record into storage")
-	}
-	idx.LatestState = id
-	idx.State = state.ID()
-	if state.ID() == object.StateActivation {
-		idx.Parent = state.(*object.ActivateRecord).Parent
-	}
-
-	idx.LatestUpdate = parcel.Pulse()
-	idx.JetID = insolar.JetID(jetID)
-	err = h.IndexStorage.Set(ctx, *msg.Object.Record(), idx)
-	if err != nil {
-		return nil, err
-	}
-
-	logger.WithField("state", idx.LatestState.DebugString()).Debug("saved object")
-
-	rep := reply.Object{
-		Head:         msg.Object,
-		State:        *idx.LatestState,
-		Prototype:    state.GetImage(),
-		IsPrototype:  state.GetIsPrototype(),
-		ChildPointer: idx.ChildPointer,
-		Parent:       idx.Parent,
-	}
-	return &rep, nil
-}
-
 func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	logger := inslogger.FromContext(ctx)
 
@@ -763,19 +655,6 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insola
 	return &reply.ObjectIndex{Index: buf}, nil
 }
 
-func validateState(old object.StateID, new object.StateID) error {
-	if old == object.StateDeactivation {
-		return ErrObjectDeactivated
-	}
-	if old == object.StateUndefined && new != object.StateActivation {
-		return errors.New("object is not activated")
-	}
-	if old != object.StateUndefined && new == object.StateActivation {
-		return errors.New("object is already activated")
-	}
-	return nil
-}
-
 func (h *MessageHandler) saveIndexFromHeavy(
 	ctx context.Context, jetID insolar.ID, obj insolar.Reference, heavy *insolar.Reference,
 ) (object.Lifeline, error) {
@@ -803,41 +682,6 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	}
 	return idx, nil
 }
-
-//
-// func (h *MessageHandler) fetchObject(
-// 	ctx context.Context, obj insolar.Reference, node insolar.Reference, stateID *insolar.ID,
-// ) (*reply.Object, error) {
-// 	sender := BuildSender(
-// 		h.Bus.Send,
-// 		followRedirectSender(h.Bus),
-// 		retryJetSender(h.JetStorage),
-// 	)
-// 	genericReply, err := sender(
-// 		ctx,
-// 		&message.GetObject{
-// 			Head:     obj,
-// 			Approved: false,
-// 			State:    stateID,
-// 		},
-// 		&insolar.MessageSendOptions{
-// 			Receiver: &node,
-// 			Token:    &delegationtoken.GetObjectRedirectToken{},
-// 		},
-// 	)
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, "failed to fetch object state")
-// 	}
-// 	if rep, ok := genericReply.(*reply.Error); ok {
-// 		return nil, rep.Error()
-// 	}
-//
-// 	rep, ok := genericReply.(*reply.Object)
-// 	if !ok {
-// 		return nil, fmt.Errorf("failed to fetch object state: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
-// 	}
-// 	return rep, nil
-// }
 
 func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	logger := inslogger.FromContext(ctx)
