@@ -91,7 +91,6 @@ type Lifeline struct {
 	JetID               insolar.JetID
 
 	LatestRequest *insolar.ID
-	LastUsed      insolar.PulseNumber
 }
 
 // LifelineMeta holds additional info about Lifeline
