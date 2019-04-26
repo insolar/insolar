@@ -103,7 +103,8 @@ type LifelineMeta struct {
 
 // EncodeIndex converts lifeline index into binary format.
 func EncodeIndex(index Lifeline) []byte {
-	data, err := index.toRaw().Marshal()
+	rwLfl := index.toRaw()
+	data, err := rwLfl.Marshal()
 	if err != nil {
 		panic("can't marshal lifeline")
 	}

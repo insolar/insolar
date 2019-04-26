@@ -42,6 +42,7 @@ type GetIndex struct {
 
 	Dep struct {
 		Index       object.Index
+		IndexState  object.IndexStateModifier
 		Locker      object.IDLocker
 		Coordinator jet.Coordinator
 		Bus         insolar.MessageBus
@@ -79,7 +80,7 @@ func (p *GetIndex) process(ctx context.Context) error {
 	if err != object.ErrLifelineNotFound {
 		return errors.Wrap(err, "failed to fetch index")
 	}
-	err = p.Dep.Index.SetLifelineUsage(ctx, flow.Pulse(ctx), objectID)
+	err = p.Dep.IndexState.SetLifelineUsage(ctx, flow.Pulse(ctx), objectID)
 	if err != nil {
 		return errors.Wrap(err, "failed to update lifeline usage")
 	}

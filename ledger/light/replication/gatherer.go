@@ -38,10 +38,10 @@ type DataGatherer interface {
 
 // LightDataGatherer is a realisation of DataGatherer
 type LightDataGatherer struct {
-	dropAccessor    drop.Accessor
-	blobsAccessor   blob.CollectionAccessor
-	recsAccessor    object.RecordCollectionAccessor
-	indexesAccessor object.LifelineCollectionAccessor
+	dropAccessor         drop.Accessor
+	blobsAccessor        blob.CollectionAccessor
+	recsAccessor         object.RecordCollectionAccessor
+	indexReplicaAccessor object.IndexReplicaAccessor
 }
 
 // NewDataGatherer creates a new instance of LightDataGatherer
@@ -49,13 +49,13 @@ func NewDataGatherer(
 	dropAccessor drop.Accessor,
 	blobsAccessor blob.CollectionAccessor,
 	recsAccessor object.RecordCollectionAccessor,
-	indexesAccessor object.LifelineCollectionAccessor,
+	indexReplicaAccessor object.IndexReplicaAccessor,
 ) *LightDataGatherer {
 	return &LightDataGatherer{
-		dropAccessor:    dropAccessor,
-		blobsAccessor:   blobsAccessor,
-		recsAccessor:    recsAccessor,
-		indexesAccessor: indexesAccessor,
+		dropAccessor:         dropAccessor,
+		blobsAccessor:        blobsAccessor,
+		recsAccessor:         recsAccessor,
+		indexReplicaAccessor: indexReplicaAccessor,
 	}
 }
 
@@ -74,7 +74,7 @@ func (d *LightDataGatherer) ForPulseAndJet(
 	bls := d.blobsAccessor.ForPulse(ctx, jetID, pn)
 	records := d.recsAccessor.ForPulse(ctx, jetID, pn)
 
-	indexes := d.indexesAccessor.ForJet(ctx, jetID)
+	indexes := d.indexReplicaAccessor.ForPNAndJet(ctx, pn, jetID)
 
 	return &message.HeavyPayload{
 		JetID:    jetID,

@@ -27,10 +27,21 @@ type IndexStateModifier interface {
 	SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
 }
 
+// IndexCleaner provides an interface for removing backets from a storage.
+type IndexCleaner interface {
+	// DeleteForPN method removes indexes from a storage for a provided
+	DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
+}
+
+type IndexReplicaAccessor interface {
+	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) ([]IndexBucket, bool)
+}
+
 type IndexBucket struct {
-	lifelineLock     sync.RWMutex
-	lifeline         *Lifeline
-	lifelineLastUsed insolar.PulseNumber
+	objID insolar.ID
+
+	lifelineLock sync.RWMutex
+	lifeline     *Lifeline
 
 	requestLock sync.RWMutex
 	requests    []insolar.ID
@@ -93,6 +104,7 @@ func (i *InMemoryIndex) getBucket(ctx context.Context, pn insolar.PulseNumber, o
 	bucket := objsByPn[objID]
 	if bucket == nil {
 		bucket = &IndexBucket{
+			objID:    objID,
 			requests: []insolar.ID{},
 			results:  []insolar.ID{},
 		}
@@ -133,6 +145,48 @@ func (i *InMemoryIndex) LifelineForID(ctx context.Context, pn insolar.PulseNumbe
 	return *lfl, nil
 }
 
+func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) ([]IndexBucket, bool) {
+	i.bucketsLock.Lock()
+	defer i.bucketsLock.Unlock()
+
+	bucks, ok := i.buckets[pn]
+	if !ok {
+		return nil, false
+	}
+
+	var res []IndexBucket
+
+	for _, b := range bucks {
+		if b.lifeline == nil {
+			panic("empty interface")
+		}
+		if b.lifeline.JetID != jetID {
+			continue
+		}
+
+		clonedLfl := CloneIndex(*b.lifeline)
+		var clonedResults []insolar.ID
+		var clonedRequests []insolar.ID
+
+		for _, r := range b.requests {
+			clonedRequests = append(clonedRequests, r)
+		}
+		for _, r := range b.results {
+			clonedResults = append(clonedResults, r)
+		}
+
+		res = append(res, IndexBucket{
+			lifeline:         &clonedLfl,
+			lifelineLastUsed: b.lifelineLastUsed,
+			results:          clonedResults,
+			requests:         clonedRequests,
+		})
+
+	}
+
+	return res, true
+}
+
 func (i *InMemoryIndex) SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
 	b := i.getBucket(ctx, pn, objID)
 	lfl, err := b.getLifeline()
@@ -146,6 +200,13 @@ func (i *InMemoryIndex) SetLifelineUsage(ctx context.Context, pn insolar.PulseNu
 	b.lifelineLastUsed = pn
 
 	return nil
+}
+
+func (i *InMemoryIndex) DeleteForPN(ctx context.Context, pn insolar.PulseNumber) {
+	i.bucketsLock.Lock()
+	defer i.bucketsLock.Unlock()
+
+	delete(i.buckets, pn)
 }
 
 type IndexDB struct {
