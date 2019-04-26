@@ -55,6 +55,7 @@ import (
 	"io"
 	"net"
 	"sync/atomic"
+	"time"
 
 	"github.com/pkg/errors"
 
@@ -63,8 +64,12 @@ import (
 	"github.com/insolar/insolar/network/utils"
 )
 
+const (
+	keepAlivePeriod = 10 * time.Second
+)
+
 type tcpTransport struct {
-	listener           net.Listener
+	listener           *net.TCPListener
 	address            string
 	started            uint32
 	fixedPublicAddress string
@@ -85,7 +90,7 @@ func (t *tcpTransport) Address() string {
 }
 
 func (t *tcpTransport) Dial(ctx context.Context, address string) (io.ReadWriteCloser, error) {
-	logger := inslogger.FromContext(ctx)
+	logger := inslogger.FromContext(ctx).WithField("address", address)
 	tcpAddress, err := net.ResolveTCPAddr("tcp", address)
 	if err != nil {
 		return nil, errors.New("[ Dial ] Failed to get tcp address")
@@ -93,19 +98,11 @@ func (t *tcpTransport) Dial(ctx context.Context, address string) (io.ReadWriteCl
 
 	conn, err := net.DialTCP("tcp", nil, tcpAddress)
 	if err != nil {
-		logger.Errorf("[ Dial ] Failed to open connection to %s: %s", address, err.Error())
+		logger.Error("[ Dial ] Failed to open connection: ", err)
 		return nil, errors.Wrap(err, "[ Dial ] Failed to open connection")
 	}
 
-	err = conn.SetKeepAlive(true)
-	if err != nil {
-		logger.Error("[ Dial ] Failed to set keep alive")
-	}
-
-	err = conn.SetNoDelay(true)
-	if err != nil {
-		logger.Error("[ Dial ] Failed to set connection no delay: ", err.Error())
-	}
+	setupConnection(ctx, conn)
 
 	return conn, nil
 }
@@ -118,11 +115,16 @@ func (t *tcpTransport) Start(ctx context.Context) error {
 		logger.Info("[ Start ] Start TCP transport")
 		ctx, t.cancel = context.WithCancel(ctx)
 
-		var err error
-		t.listener, err = net.Listen("tcp", t.address)
+		addr, err := net.ResolveTCPAddr("tcp", t.address)
+		if err != nil {
+			return errors.Wrap(err, "Failed to resolve TCP addr")
+		}
+
+		t.listener, err = net.ListenTCP("tcp", addr)
 		if err != nil {
 			return errors.Wrap(err, "Failed to Listen TCP ")
 		}
+
 		t.address, err = resolver.Resolve(t.fixedPublicAddress, t.listener.Addr().String())
 		if err != nil {
 			return errors.Wrap(err, "Failed to resolve public address")
@@ -143,18 +145,19 @@ func (t *tcpTransport) listen(ctx context.Context) {
 		default:
 		}
 
-		conn, err := t.listener.Accept()
+		conn, err := t.listener.AcceptTCP()
 		if err != nil {
 			if utils.IsConnectionClosed(err) {
-				logger.Info("Connection closed, quiting accept loop")
+				logger.Info("[ listen ] Connection closed, quiting accept loop")
 				return
 			}
 
-			logger.Error("[ listen ] Failed to accept connection: ", err.Error())
+			logger.Error("[ listen ] Failed to accept connection: ", err)
 			return
 		}
-
-		logger.Infof("[ listen ] Accepted new connection from %s", conn.RemoteAddr())
+		logger = logger.WithField("address", conn.RemoteAddr())
+		logger.Infof("[ listen ] Accepted new connection")
+		setupConnection(ctx, conn)
 
 		go t.handler.HandleStream(conn.RemoteAddr().String(), conn)
 	}
@@ -162,21 +165,35 @@ func (t *tcpTransport) listen(ctx context.Context) {
 
 // Stop stops networking.
 func (t *tcpTransport) Stop(ctx context.Context) error {
+	logger := inslogger.FromContext(ctx)
+
 	if atomic.CompareAndSwapUint32(&t.started, 1, 0) {
-
-		logger := inslogger.FromContext(ctx)
-
 		logger.Info("[ Stop ] Stop TCP transport")
-		t.cancel()
 
+		t.cancel()
 		err := t.listener.Close()
 		if err != nil {
-			if utils.IsConnectionClosed(err) {
-				logger.Info("Connection already closed")
-			} else {
+			if !utils.IsConnectionClosed(err) {
 				return err
 			}
+			logger.Info("[ Stop ] Connection already closed")
 		}
 	}
 	return nil
+}
+
+func setupConnection(ctx context.Context, conn *net.TCPConn) {
+	logger := inslogger.FromContext(ctx).WithField("address", conn.RemoteAddr())
+
+	if err := conn.SetNoDelay(true); err != nil {
+		logger.Error("[ setupConnection ] Failed to set connection no delay: ", err)
+	}
+
+	if err := conn.SetKeepAlivePeriod(keepAlivePeriod); err != nil {
+		logger.Error("[ setupConnection ] Failed to set keep alive period", err)
+	}
+
+	if err := conn.SetKeepAlive(true); err != nil {
+		logger.Error("[ setupConnection ] Failed to set keep alive", err)
+	}
 }

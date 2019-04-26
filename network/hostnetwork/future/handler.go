@@ -63,36 +63,40 @@ type packetHandler struct {
 	futureManager Manager
 }
 
-func newPacketHandler(futureManager Manager) *packetHandler {
+func NewPacketHandler(futureManager Manager) PacketHandler {
 	return &packetHandler{
 		futureManager: futureManager,
 	}
 }
 
-func (ph *packetHandler) Handle(ctx context.Context, p *packet.Packet) {
-	metrics.NetworkPacketReceivedTotal.WithLabelValues(p.Type.String()).Inc()
-	if !p.IsResponse {
+func (ph *packetHandler) Handle(ctx context.Context, response *packet.Packet) {
+	metrics.NetworkPacketReceivedTotal.WithLabelValues(response.Type.String()).Inc()
+	if !response.IsResponse {
 		return
 	}
 
-	logger := inslogger.FromContext(ctx)
-	logger.Debugf("[ processResponse ] Process response %s from %s with RequestID = %d", p.Type, p.RemoteAddress, p.RequestID)
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+		"type":           response.Type,
+		"remote_address": response.RemoteAddress,
+		"request_id":     response.RequestID,
+	})
+	logger.Debug("[ processResponse ] Processing response")
 
-	future := ph.futureManager.Get(p)
+	future := ph.futureManager.Get(response)
 	if future != nil {
-		if shouldProcessPacket(future, p) {
-			logger.Debugf("[ processResponse ] Processing future with RequestID = %v", p.RequestID)
-			future.SetResult(p)
+		if shouldProcessPacket(future, response) {
+			logger.Debug("[ processResponse ] Processing future")
+			future.SetResponse(response)
 		} else {
-			logger.Debugf("[ processResponse ] Canceling future with RequestID = %v", p.RequestID)
+			logger.Debug("[ processResponse ] Canceling future")
+			future.Cancel()
 		}
-		future.Cancel()
 	}
 }
 
 func shouldProcessPacket(future Future, p *packet.Packet) bool {
-	typesShouldBeEqual := p.Type == future.Request().Type
-	responseIsForRightSender := future.Actor().Equal(*p.Sender)
+	typesShouldBeEqual := p.Type == future.Request().GetType()
+	responseIsForRightSender := future.Receiver().Equal(*p.Sender)
 
 	return typesShouldBeEqual && (responseIsForRightSender || p.Type == types.Ping)
 }

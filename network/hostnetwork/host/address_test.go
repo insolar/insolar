@@ -68,6 +68,12 @@ func TestNewAddress(t *testing.T) {
 	require.True(t, actualAddr.Equal(*expectedAddr))
 }
 
+func TestNewAddress_Error(t *testing.T) {
+	_, err := NewAddress("invalid_addr")
+
+	require.Error(t, err)
+}
+
 func TestAddress_Equal(t *testing.T) {
 	addr1, _ := NewAddress("127.0.0.1:31337")
 	addr2, _ := NewAddress("127.0.0.1:31337")

@@ -62,35 +62,33 @@ type futureManager struct {
 	futures map[network.RequestID]Future
 }
 
-func newFutureManager() *futureManager {
+func NewManager() Manager {
 	return &futureManager{
 		futures: make(map[network.RequestID]Future),
 	}
 }
 
-func (fm *futureManager) Create(msg *packet.Packet) Future {
-	future := NewFuture(msg.RequestID, msg.Receiver, msg, func(f Future) {
-		fm.delete(f.ID())
-	})
+func (fm *futureManager) Create(packet *packet.Packet) Future {
+	future := NewFuture(packet.RequestID, packet.Receiver, packet, fm.canceler)
 
 	fm.mutex.Lock()
 	defer fm.mutex.Unlock()
 
-	fm.futures[msg.RequestID] = future
+	fm.futures[packet.RequestID] = future
 
 	return future
 }
 
-func (fm *futureManager) Get(msg *packet.Packet) Future {
+func (fm *futureManager) Get(packet *packet.Packet) Future {
 	fm.mutex.RLock()
 	defer fm.mutex.RUnlock()
 
-	return fm.futures[msg.RequestID]
+	return fm.futures[packet.RequestID]
 }
 
-func (fm *futureManager) delete(id network.RequestID) {
+func (fm *futureManager) canceler(f Future) {
 	fm.mutex.Lock()
 	defer fm.mutex.Unlock()
 
-	delete(fm.futures, id)
+	delete(fm.futures, f.ID())
 }

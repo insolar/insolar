@@ -277,7 +277,7 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 	logger := inslogger.FromContext(ctx)
 
 	result := make(map[insolar.Reference]*packets.Phase1Packet, len(participants))
-	result[nc.ConsensusNetwork.GetNodeID()] = packet
+	result[nc.NodeKeeper.GetOrigin().ID()] = packet
 	nc.setPulseNumber(packet.GetPulse().PulseNumber)
 
 	var request *packets.Phase1Packet
@@ -369,7 +369,7 @@ func (nc *ConsensusCommunicator) ExchangePhase2(ctx context.Context, state *Cons
 
 	result := make(map[insolar.Reference]*packets.Phase2Packet, len(participants))
 
-	result[nc.ConsensusNetwork.GetNodeID()] = packet
+	result[nc.NodeKeeper.GetOrigin().ID()] = packet
 
 	nc.sendRequestToNodes(ctx, participants, packet)
 
@@ -530,7 +530,7 @@ func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participant
 	defer span.End()
 	logger := inslogger.FromContext(ctx)
 
-	result[nc.ConsensusNetwork.GetNodeID()] = packet
+	result[nc.NodeKeeper.GetOrigin().ID()] = packet
 
 	nc.sendRequestToNodes(ctx, participants, packet)
 

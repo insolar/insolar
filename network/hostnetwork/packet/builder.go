@@ -67,9 +67,7 @@ func NewBuilder(sender *host.Host) Builder {
 	cb := Builder{}
 	cb.actions = append(cb.actions, func(packet *Packet) {
 		packet.Sender = sender
-		if sender.Address != nil {
-			packet.RemoteAddress = sender.Address.String()
-		}
+		packet.RemoteAddress = sender.Address.String()
 	})
 	return cb
 }

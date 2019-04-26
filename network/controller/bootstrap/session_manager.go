@@ -58,12 +58,12 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/insolar/insolar/network/sequence"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/network/utils"
 )
 
 type SessionID uint64
@@ -118,10 +118,11 @@ type SessionManager interface {
 }
 
 type sessionManager struct {
-	sequence uint64
 	lock     sync.RWMutex
 	sessions map[SessionID]*Session
 	state    uint32
+
+	sequence sequence.Generator
 
 	sessionsChangeNotification chan notification
 	stopCleanupNotification    chan notification
@@ -130,9 +131,10 @@ type sessionManager struct {
 func NewSessionManager() SessionManager {
 	return &sessionManager{
 		sessions:                   make(map[SessionID]*Session),
+		state:                      stateIdle,
+		sequence:                   sequence.NewGenerator(),
 		sessionsChangeNotification: make(chan notification),
 		stopCleanupNotification:    make(chan notification),
-		state:                      stateIdle,
 	}
 }
 
@@ -163,7 +165,7 @@ func (sm *sessionManager) Stop(ctx context.Context) error {
 }
 
 func (sm *sessionManager) NewSession(ref insolar.Reference, cert insolar.AuthorizationCertificate, ttl time.Duration) SessionID {
-	id := utils.AtomicLoadAndIncrementUint64(&sm.sequence)
+	id := sm.sequence.Generate()
 	session := &Session{
 		NodeID: ref,
 		State:  Authorized,

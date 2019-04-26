@@ -54,6 +54,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/insolar/insolar/network"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/network/hostnetwork/host"
@@ -64,7 +65,13 @@ func TestBuilder_Build_RequestPacket(t *testing.T) {
 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 	builder := NewBuilder(sender)
-	m := builder.Receiver(receiver).Type(TestPacket).Request(&RequestTest{[]byte{0, 1, 2, 3}}).Build()
+	m := builder.
+		Receiver(receiver).
+		Type(TestPacket).
+		Request(&RequestTest{[]byte{0, 1, 2, 3}}).
+		RequestID(network.RequestID(123)).
+		TraceID("trace_id").
+		Build()
 
 	expectedPacket := &Packet{
 		Sender:        sender,
@@ -74,6 +81,8 @@ func TestBuilder_Build_RequestPacket(t *testing.T) {
 		Data:          &RequestTest{[]byte{0, 1, 2, 3}},
 		IsResponse:    false,
 		Error:         nil,
+		RequestID:     network.RequestID(123),
+		TraceID:       "trace_id",
 	}
 	require.Equal(t, expectedPacket, m)
 }
@@ -82,7 +91,13 @@ func TestBuilder_Build_ResponsePacket(t *testing.T) {
 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 	builder := NewBuilder(sender)
-	m := builder.Receiver(receiver).Type(TestPacket).Response(&ResponseTest{42}).Build()
+	m := builder.
+		Receiver(receiver).
+		Type(TestPacket).
+		Response(&ResponseTest{42}).
+		RequestID(network.RequestID(123)).
+		TraceID("trace_id").
+		Build()
 
 	expectedPacket := &Packet{
 		Sender:        sender,
@@ -92,6 +107,8 @@ func TestBuilder_Build_ResponsePacket(t *testing.T) {
 		Data:          &ResponseTest{42},
 		IsResponse:    true,
 		Error:         nil,
+		RequestID:     network.RequestID(123),
+		TraceID:       "trace_id",
 	}
 	require.Equal(t, expectedPacket, m)
 }
@@ -100,7 +117,14 @@ func TestBuilder_Build_ErrorPacket(t *testing.T) {
 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 	builder := NewBuilder(sender)
-	m := builder.Receiver(receiver).Type(TestPacket).Response(&ResponseTest{}).Error(errors.New("test error")).Build()
+	m := builder.
+		Receiver(receiver).
+		Type(TestPacket).
+		Response(&ResponseTest{}).
+		Error(errors.New("test error")).
+		RequestID(network.RequestID(123)).
+		TraceID("trace_id").
+		Build()
 
 	expectedPacket := &Packet{
 		Sender:        sender,
@@ -110,6 +134,8 @@ func TestBuilder_Build_ErrorPacket(t *testing.T) {
 		Data:          &ResponseTest{},
 		IsResponse:    true,
 		Error:         errors.New("test error"),
+		RequestID:     network.RequestID(123),
+		TraceID:       "trace_id",
 	}
 	require.Equal(t, expectedPacket, m)
 }

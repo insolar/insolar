@@ -158,7 +158,7 @@ func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode 
 	if err != nil {
 		return 0, errors.Wrapf(err, "Error sending authorize request")
 	}
-	response, err := future.GetResponse(ac.options.PacketTimeout)
+	response, err := future.WaitResponse(ac.options.PacketTimeout)
 	if err != nil {
 		return 0, errors.Wrapf(err, "Error getting response for authorize request")
 	}
@@ -201,7 +201,7 @@ func (ac *authorizationController) register(ctx context.Context, discoveryNode *
 	if err != nil {
 		return errors.Wrapf(err, "Error sending register request")
 	}
-	response, err := future.GetResponse(ac.options.PacketTimeout)
+	response, err := future.WaitResponse(ac.options.PacketTimeout)
 	if err != nil {
 		return errors.Wrapf(err, "Error getting response for register request")
 	}
