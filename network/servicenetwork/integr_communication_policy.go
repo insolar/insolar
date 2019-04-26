@@ -48,89 +48,95 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package pool
+// +build networktest
+
+package servicenetwork
 
 import (
 	"context"
-	"net"
-	"sync"
+	"time"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
+	"github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/consensus/phases"
+	"github.com/insolar/insolar/insolar"
 )
 
-type entryImpl struct {
-	connectionFactory connectionFactory
-	address           net.Addr
-	onClose           onClose
+type CommunicationPolicy int
 
-	mutex *sync.Mutex
+const (
+	PartialPositive1Phase = CommunicationPolicy(iota + 1)
+	PartialNegative1Phase
+	PartialPositive2Phase
+	PartialNegative2Phase
+	PartialPositive3Phase
+	PartialNegative3Phase
+	PartialPositive23Phase
+	PartialNegative23Phase
+	FullTimeout
+)
 
-	conn net.Conn
+type CommunicatorMock struct {
+	communicator phases.Communicator
+	ignoreFrom   insolar.Reference
+	policy       CommunicationPolicy
 }
 
-func newEntryImpl(connectionFactory connectionFactory, address net.Addr, onClose onClose) *entryImpl {
-	return &entryImpl{
-		connectionFactory: connectionFactory,
-		address:           address,
-		mutex:             &sync.Mutex{},
-		onClose:           onClose,
-	}
-}
-
-func (e *entryImpl) Open(ctx context.Context) (net.Conn, error) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
-	if e.conn != nil {
-		return e.conn, nil
-	}
-
-	conn, err := e.open(ctx)
+func (cm *CommunicatorMock) ExchangePhase1(
+	ctx context.Context,
+	originClaim *packets.NodeAnnounceClaim,
+	participants []insolar.NetworkNode,
+	packet *packets.Phase1Packet,
+) (map[insolar.Reference]*packets.Phase1Packet, error) {
+	pckts, err := cm.communicator.ExchangePhase1(ctx, originClaim, participants, packet)
 	if err != nil {
 		return nil, err
 	}
-
-	e.conn = conn
-	return e.conn, nil
+	switch cm.policy {
+	case PartialNegative1Phase, PartialPositive1Phase:
+		delete(pckts, cm.ignoreFrom)
+	}
+	return pckts, nil
 }
 
-func (e *entryImpl) open(ctx context.Context) (net.Conn, error) {
-	logger := inslogger.FromContext(ctx)
-	ctx, span := instracer.StartSpan(ctx, "connectionPool.open")
-	span.AddAttributes(
-		trace.StringAttribute("create connect to", e.address.String()),
-	)
-	defer span.End()
+func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, state *phases.ConsensusState,
+	participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.Reference]*packets.Phase2Packet, error) {
 
-	conn, err := e.connectionFactory.CreateConnection(ctx, e.address)
+	pckts, err := cm.communicator.ExchangePhase2(ctx, state, participants, packet)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ Open ] Failed to create TCP connection")
+		return nil, err
 	}
-
-	go func(e *entryImpl, conn net.Conn) {
-		b := make([]byte, 1)
-		_, err := conn.Read(b)
-		if err != nil {
-			logger.Infof("[ Open ] remote host 'closed' connection to %s: %s", e.address, err)
-			e.onClose(ctx, e.address)
-			return
-		}
-
-		logger.Errorf("[ Open ] unexpected data on connection to %s", e.address)
-	}(e, conn)
-
-	return conn, nil
+	switch cm.policy {
+	case PartialPositive2Phase, PartialNegative2Phase, PartialPositive23Phase, PartialNegative23Phase:
+		delete(pckts, cm.ignoreFrom)
+	}
+	return pckts, nil
 }
 
-func (e *entryImpl) Close() {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
+func (cm *CommunicatorMock) ExchangePhase21(ctx context.Context, state *phases.ConsensusState,
+	packet *packets.Phase2Packet, additionalRequests []*phases.AdditionalRequest) ([]packets.ReferendumVote, error) {
 
-	if e.conn != nil {
-		utils.CloseVerbose(e.conn)
+	return cm.communicator.ExchangePhase21(ctx, state, packet, additionalRequests)
+}
+
+func (cm *CommunicatorMock) ExchangePhase3(ctx context.Context, participants []insolar.NetworkNode, packet *packets.Phase3Packet) (map[insolar.Reference]*packets.Phase3Packet, error) {
+	pckts, err := cm.communicator.ExchangePhase3(ctx, participants, packet)
+	if err != nil {
+		return nil, err
 	}
+	switch cm.policy {
+	case PartialPositive3Phase, PartialNegative3Phase, PartialPositive23Phase, PartialNegative23Phase:
+		delete(pckts, cm.ignoreFrom)
+	}
+	return pckts, nil
+}
+
+func (cm *CommunicatorMock) Init(ctx context.Context) error {
+	return cm.communicator.Init(ctx)
+}
+
+type FullTimeoutPhaseManager struct {
+}
+
+func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
+	return nil
 }

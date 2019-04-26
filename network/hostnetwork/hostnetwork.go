@@ -52,154 +52,177 @@ package hostnetwork
 
 import (
 	"context"
+	"sync"
 	"sync/atomic"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/future"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"github.com/insolar/insolar/network/hostnetwork/pool"
 	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
 )
 
-func NewHostNetwork(conf configuration.Configuration, nodeRef string) (network.HostNetwork, error) {
-	tp, publicAddress, err := transport.NewTransport(conf.Host.Transport)
-	if err != nil {
-		return nil, errors.Wrap(err, "error creating transport")
-	}
+// NewHostNetwork constructor creates new NewHostNetwork component
+func NewHostNetwork(nodeRef string) (network.HostNetwork, error) {
+
 	id, err := insolar.NewReferenceFromBase58(nodeRef)
 	if err != nil {
 		return nil, errors.Wrap(err, "invalid nodeRef")
 	}
 
-	origin, err := host.NewHostN(publicAddress, *id)
-	if err != nil {
-		return nil, errors.Wrap(err, "error getting origin")
+	futureManager := future.NewManager()
+
+	result := &hostNetwork{
+		handlers:          make(map[types.PacketType]network.RequestHandler),
+		sequenceGenerator: sequence.NewGenerator(),
+		nodeID:            *id,
+		futureManager:     futureManager,
+		responseHandler:   future.NewPacketHandler(futureManager),
 	}
-	result := &hostNetwork{handlers: make(map[types.PacketType]network.RequestHandler)}
-	result.sequenceGenerator = sequence.NewGeneratorImpl()
-	result.transport = tp
-	result.origin = origin
-	result.messageProcessor = result.processMessage
+
 	return result, nil
 }
 
 type hostNetwork struct {
 	Resolver network.RoutingTable `inject:""`
+	Factory  transport.Factory    `inject:""`
 
+	nodeID            insolar.Reference
 	started           uint32
-	transport         transport.Transport
-	origin            *host.Host
-	messageProcessor  func(msg *packet.Packet)
+	transport         transport.StreamTransport
 	sequenceGenerator sequence.Generator
 	handlers          map[types.PacketType]network.RequestHandler
+	futureManager     future.Manager
+	responseHandler   future.PacketHandler
+	pool              pool.ConnectionPool
+
+	muOrigin sync.RWMutex
+	origin   *host.Host
 }
 
-// Start start listening to network requests, should be started in goroutine.
-func (hn *hostNetwork) Start(ctx context.Context) error {
-	if !atomic.CompareAndSwapUint32(&hn.started, 0, 1) {
-		return errors.New("Failed to start transport: double listen initiated")
-	}
-	if err := hn.transport.Start(ctx); err != nil {
-		return errors.Wrap(err, "Failed to start transport: listen syscall failed")
+func (hn *hostNetwork) Init(ctx context.Context) error {
+
+	handler := NewStreamHandler(hn.handleRequest, hn.responseHandler)
+
+	var err error
+	hn.transport, err = hn.Factory.CreateStreamTransport(handler)
+	if err != nil {
+		return errors.Wrap(err, "Failed to create stream transport")
 	}
 
-	go hn.listen(ctx)
+	hn.pool = pool.NewConnectionPool(hn.transport)
+	return err
+}
+
+// Start listening to network requests, should be started in goroutine.
+func (hn *hostNetwork) Start(ctx context.Context) error {
+	if !atomic.CompareAndSwapUint32(&hn.started, 0, 1) {
+		inslogger.FromContext(ctx).Warn("HostNetwork component already started")
+		return nil
+	}
+
+	hn.muOrigin.Lock()
+	defer hn.muOrigin.Unlock()
+
+	if err := hn.transport.Start(ctx); err != nil {
+		return errors.Wrap(err, "failed to start stream transport")
+	}
+
+	h, err := host.NewHostN(hn.transport.Address(), hn.nodeID)
+	if err != nil {
+		return errors.Wrap(err, "failed to create host")
+	}
+
+	hn.origin = h
+
 	return nil
 }
 
-func (hn *hostNetwork) listen(ctx context.Context) {
-	logger := inslogger.FromContext(ctx)
-	for {
-		select {
-		case msg := <-hn.transport.Packets():
-			if msg == nil {
-				logger.Error("HostNetwork receiving channel is closed")
-				break
-			}
-			if msg.Error != nil {
-				logger.Warnf("Received error response: %s", msg.Error.Error())
-			}
-			go hn.messageProcessor(msg)
-		case <-hn.transport.Stopped():
-			return
-		}
-	}
-}
-
-// Disconnect stop listening to network requests.
+// Stop listening to network requests.
 func (hn *hostNetwork) Stop(ctx context.Context) error {
 	if atomic.CompareAndSwapUint32(&hn.started, 1, 0) {
-		go hn.transport.Stop()
-		<-hn.transport.Stopped()
-		hn.transport.Close()
+		err := hn.transport.Stop(ctx)
+		if err != nil {
+			return errors.Wrap(err, "Failed to stop transport.")
+		}
 	}
 	return nil
 }
 
 func (hn *hostNetwork) buildRequest(ctx context.Context, request network.Request, receiver *host.Host) *packet.Packet {
-	return packet.NewBuilder(hn.origin).Receiver(receiver).Type(request.GetType()).RequestID(request.GetRequestID()).
+	return packet.NewBuilder(hn.getOrigin()).Receiver(receiver).Type(request.GetType()).RequestID(request.GetRequestID()).
 		Request(request.GetData()).TraceID(inslogger.TraceID(ctx)).Build()
 }
 
 // PublicAddress returns public address that can be published for all nodes.
 func (hn *hostNetwork) PublicAddress() string {
-	return hn.origin.Address.String()
-}
-
-// GetNodeID get current node ID.
-func (hn *hostNetwork) GetNodeID() insolar.Reference {
-	return hn.origin.NodeID
+	return hn.getOrigin().Address.String()
 }
 
 // NewRequestBuilder create packet Builder for an outgoing request with sender set to current node.
 func (hn *hostNetwork) NewRequestBuilder() network.RequestBuilder {
-	return &Builder{sender: hn.origin, id: network.RequestID(hn.sequenceGenerator.Generate())}
+	return &Builder{sender: hn.getOrigin(), id: network.RequestID(hn.sequenceGenerator.Generate())}
 }
 
-func (hn *hostNetwork) processMessage(msg *packet.Packet) {
-	ctx, logger := inslogger.WithTraceField(context.Background(), msg.TraceID)
-	logger.Debugf("Got %s request from host %s; RequestID: %d", msg.Type.String(), msg.Sender.String(), msg.RequestID)
-	handler, exist := hn.handlers[msg.Type]
+func (hn *hostNetwork) handleRequest(p *packet.Packet) {
+	ctx, logger := inslogger.WithTraceField(context.Background(), p.TraceID)
+	logger.Debugf("Got %s request from host %s; RequestID: %d", p.Type.String(), p.Sender.String(), p.RequestID)
+	handler, exist := hn.handlers[p.Type]
 	if !exist {
 		logger.Errorf("No handler set for packet type %s from node %s",
-			msg.Type.String(), msg.Sender.NodeID.String())
+			p.Type.String(), p.Sender.NodeID.String())
 		return
 	}
 	ctx, span := instracer.StartSpan(ctx, "hostTransport.processMessage")
 	span.AddAttributes(
-		trace.StringAttribute("msg receiver", msg.Receiver.Address.String()),
-		trace.StringAttribute("msg trace", msg.TraceID),
-		trace.StringAttribute("msg type", msg.Type.String()),
+		trace.StringAttribute("msg receiver", p.Receiver.Address.String()),
+		trace.StringAttribute("msg trace", p.TraceID),
+		trace.StringAttribute("msg type", p.Type.String()),
 	)
 	defer span.End()
-	response, err := handler(ctx, msg)
+	response, err := handler(ctx, p)
 	if err != nil {
 		logger.Errorf("Error handling request %s from node %s: %s",
-			msg.Type.String(), msg.Sender.NodeID.String(), err)
+			p.Type.String(), p.Sender.NodeID.String(), err)
 		return
 	}
-	err = hn.transport.SendResponse(ctx, msg.RequestID, response.(*packet.Packet))
+
+	responsePacket := response.(*packet.Packet)
+	responsePacket.RequestID = p.RequestID
+	err = SendPacket(ctx, hn.pool, responsePacket)
 	if err != nil {
-		logger.Error(err)
+		logger.Errorf("Failed to send response: %s", err.Error())
 	}
 }
 
 // SendRequestToHost send request packet to a remote node.
 func (hn *hostNetwork) SendRequestToHost(ctx context.Context, request network.Request, receiver *host.Host) (network.Future, error) {
-	inslogger.FromContext(ctx).Debugf("Send %s request to host %s", request.GetType().String(), receiver.String())
-	f, err := hn.transport.SendRequest(ctx, hn.buildRequest(ctx, request, receiver))
-	if err != nil {
-		return nil, err
+	if atomic.LoadUint32(&hn.started) == 0 {
+		return nil, errors.New("host network is not started")
 	}
+
+	p := hn.buildRequest(ctx, request, receiver)
+
+	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d", p.Type, p.Receiver.String(), p.RequestID)
+
+	f := hn.futureManager.Create(p)
+	err := SendPacket(ctx, hn.pool, p)
+	if err != nil {
+		f.Cancel()
+		return nil, errors.Wrap(err, "Failed to send transport packet")
+	}
+	metrics.NetworkPacketSentTotal.WithLabelValues(p.Type.String()).Inc()
 	return f, nil
 }
 
@@ -214,8 +237,9 @@ func (hn *hostNetwork) RegisterPacketHandler(t types.PacketType, handler network
 
 // BuildResponse create response to an incoming request with Data set to responseData.
 func (hn *hostNetwork) BuildResponse(ctx context.Context, request network.Request, responseData interface{}) network.Response {
+
 	sender := request.GetSenderHost()
-	p := packet.NewBuilder(hn.origin).Type(request.GetType()).Receiver(sender).RequestID(request.GetRequestID()).
+	p := packet.NewBuilder(hn.getOrigin()).Type(request.GetType()).Receiver(sender).RequestID(request.GetRequestID()).
 		Response(responseData).TraceID(inslogger.TraceID(ctx)).Build()
 	return p
 }
@@ -229,11 +253,18 @@ func (hn *hostNetwork) SendRequest(ctx context.Context, request network.Request,
 	return hn.SendRequestToHost(ctx, request, h)
 }
 
-// RegisterPacketHandler register a handler function to process incoming requests of a specific type.
+// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 func (hn *hostNetwork) RegisterRequestHandler(t types.PacketType, handler network.RequestHandler) {
 	f := func(ctx context.Context, request network.Request) (network.Response, error) {
 		hn.Resolver.AddToKnownHosts(request.GetSenderHost())
 		return handler(ctx, request)
 	}
 	hn.RegisterPacketHandler(t, f)
+}
+
+func (hn *hostNetwork) getOrigin() *host.Host {
+	hn.muOrigin.RLock()
+	defer hn.muOrigin.RUnlock()
+
+	return hn.origin
 }

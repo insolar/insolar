@@ -56,9 +56,11 @@ import (
 	"encoding/gob"
 	"testing"
 
+	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
 func init() {
@@ -114,4 +116,47 @@ func TestDeserializeBigPacket(t *testing.T) {
 
 	deserializedData := deserializedMsg.Data.(*RequestTest).Data
 	require.Equal(t, data, deserializedData)
+}
+
+type PacketSuite struct {
+	suite.Suite
+	sender *host.Host
+	packet *Packet
+}
+
+func (s *PacketSuite) TestGetSender() {
+	s.Equal(s.packet.GetSender(), s.sender.NodeID)
+}
+
+func (s *PacketSuite) TestGetSenderHost() {
+	s.Equal(s.packet.GetSenderHost(), s.sender)
+}
+
+func (s *PacketSuite) TestGetType() {
+	s.Equal(s.packet.GetType(), TestPacket)
+}
+
+func (s *PacketSuite) TestGetData() {
+	s.Equal(s.packet.GetData(), &RequestTest{[]byte{0, 1, 2, 3}})
+}
+
+func (s *PacketSuite) TestGetRequestID() {
+	s.Equal(s.packet.GetRequestID(), network.RequestID(123))
+}
+
+func TestPacketMethods(t *testing.T) {
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
+	builder := NewBuilder(sender)
+	p := builder.
+		Receiver(receiver).
+		Type(TestPacket).
+		Request(&RequestTest{[]byte{0, 1, 2, 3}}).
+		RequestID(network.RequestID(123)).
+		Build()
+
+	suite.Run(t, &PacketSuite{
+		sender: sender,
+		packet: p,
+	})
 }

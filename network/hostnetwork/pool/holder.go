@@ -48,86 +48,74 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-// +build networktest
-
-package servicenetwork
+package pool
 
 import (
-	"context"
-
-	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/consensus/phases"
-	"github.com/insolar/insolar/insolar"
+	"fmt"
+	"sync"
 )
 
-type CommunicatorTestOpt int
+type iterateFunc func(entry *entry)
 
-const (
-	PartialPositive1Phase = CommunicatorTestOpt(iota + 1)
-	PartialNegative1Phase
-	PartialPositive2Phase
-	PartialNegative2Phase
-	PartialPositive3Phase
-	PartialNegative3Phase
-	PartialPositive23Phase
-	PartialNegative23Phase
-)
-
-type CommunicatorMock struct {
-	communicator phases.Communicator
-	ignoreFrom   insolar.Reference
-	testOpt      CommunicatorTestOpt
+type entryHolder struct {
+	sync.RWMutex
+	entries map[string]*entry
 }
 
-func (cm *CommunicatorMock) ExchangePhase1(
-	ctx context.Context,
-	originClaim *packets.NodeAnnounceClaim,
-	participants []insolar.NetworkNode,
-	packet *packets.Phase1Packet,
-) (map[insolar.Reference]*packets.Phase1Packet, error) {
-	pckts, err := cm.communicator.ExchangePhase1(ctx, originClaim, participants, packet)
-	if err != nil {
-		return nil, err
+func newEntryHolder() *entryHolder {
+	return &entryHolder{
+		entries: make(map[string]*entry),
 	}
-	switch cm.testOpt {
-	case PartialNegative1Phase, PartialPositive1Phase:
-		delete(pckts, cm.ignoreFrom)
-	}
-	return pckts, nil
 }
 
-func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, state *phases.ConsensusState,
-	participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.Reference]*packets.Phase2Packet, error) {
-
-	pckts, err := cm.communicator.ExchangePhase2(ctx, state, participants, packet)
-	if err != nil {
-		return nil, err
-	}
-	switch cm.testOpt {
-	case PartialPositive2Phase, PartialNegative2Phase, PartialPositive23Phase, PartialNegative23Phase:
-		delete(pckts, cm.ignoreFrom)
-	}
-	return pckts, nil
+func (eh *entryHolder) key(host fmt.Stringer) string {
+	return host.String()
 }
 
-func (cm *CommunicatorMock) ExchangePhase21(ctx context.Context, state *phases.ConsensusState,
-	packet *packets.Phase2Packet, additionalRequests []*phases.AdditionalRequest) ([]packets.ReferendumVote, error) {
-
-	return cm.communicator.ExchangePhase21(ctx, state, packet, additionalRequests)
+func (eh *entryHolder) get(host fmt.Stringer) (*entry, bool) {
+	eh.RLock()
+	defer eh.RUnlock()
+	e, ok := eh.entries[eh.key(host)]
+	return e, ok
 }
 
-func (cm *CommunicatorMock) ExchangePhase3(ctx context.Context, participants []insolar.NetworkNode, packet *packets.Phase3Packet) (map[insolar.Reference]*packets.Phase3Packet, error) {
-	pckts, err := cm.communicator.ExchangePhase3(ctx, participants, packet)
-	if err != nil {
-		return nil, err
+func (eh *entryHolder) delete(host fmt.Stringer) bool {
+	eh.Lock()
+	defer eh.Unlock()
+
+	e, ok := eh.entries[eh.key(host)]
+	if ok {
+		e.close()
+		delete(eh.entries, eh.key(host))
+		return true
 	}
-	switch cm.testOpt {
-	case PartialPositive3Phase, PartialNegative3Phase, PartialPositive23Phase, PartialNegative23Phase:
-		delete(pckts, cm.ignoreFrom)
-	}
-	return pckts, nil
+	return false
 }
 
-func (cm *CommunicatorMock) Init(ctx context.Context) error {
-	return cm.communicator.Init(ctx)
+func (eh *entryHolder) add(host fmt.Stringer, entry *entry) {
+	eh.Lock()
+	defer eh.Unlock()
+	eh.entries[eh.key(host)] = entry
+}
+
+func (eh *entryHolder) clear() {
+	eh.Lock()
+	defer eh.Unlock()
+	for key := range eh.entries {
+		delete(eh.entries, key)
+	}
+}
+
+func (eh *entryHolder) iterate(iterateFunc iterateFunc) {
+	eh.Lock()
+	defer eh.Unlock()
+	for _, h := range eh.entries {
+		iterateFunc(h)
+	}
+}
+
+func (eh *entryHolder) size() int {
+	eh.RLock()
+	defer eh.RUnlock()
+	return len(eh.entries)
 }

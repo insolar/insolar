@@ -48,119 +48,89 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package transport
+package hostnetwork
 
 import (
 	"context"
 	"io"
-	"sync"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/metrics"
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/future"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/pool"
 )
 
-type transportSerializer interface {
-	SerializePacket(q *packet.Packet) ([]byte, error)
-	DeserializePacket(conn io.Reader) (*packet.Packet, error)
+// RequestHandler is callback function for request handling
+type RequestHandler func(p *packet.Packet)
+
+// StreamHandler parses packets from data stream and calls request handler or response handler
+type StreamHandler struct {
+	requestHandler  RequestHandler
+	responseHandler future.PacketHandler
 }
 
-type baseSerializer struct{}
-
-func (b *baseSerializer) SerializePacket(q *packet.Packet) ([]byte, error) {
-	return packet.SerializePacket(q)
-}
-
-func (b *baseSerializer) DeserializePacket(conn io.Reader) (*packet.Packet, error) {
-	return packet.DeserializePacket(conn)
-}
-
-type baseTransport struct {
-	futureManager future.Manager
-	serializer    transportSerializer
-	packetHandler future.PacketHandler
-
-	disconnectStarted  chan bool
-	disconnectFinished chan bool
-
-	mutex *sync.RWMutex
-
-	publicAddress string
-	sendFunc      func(recvAddress string, data []byte) error
-}
-
-func newBaseTransport(publicAddress string) baseTransport {
-	futureManager := future.NewManager()
-	return baseTransport{
-		futureManager: futureManager,
-		packetHandler: future.NewPacketHandler(futureManager),
-		serializer:    &baseSerializer{},
-
-		mutex: &sync.RWMutex{},
-
-		disconnectStarted:  make(chan bool, 1),
-		disconnectFinished: make(chan bool, 1),
-
-		publicAddress: publicAddress,
+// NewStreamHandler creates new StreamHandler
+func NewStreamHandler(requestHandler RequestHandler, responseHandler future.PacketHandler) *StreamHandler {
+	return &StreamHandler{
+		requestHandler:  requestHandler,
+		responseHandler: responseHandler,
 	}
 }
 
-// SendRequest sends request packet and returns future.
-func (t *baseTransport) SendRequest(ctx context.Context, msg *packet.Packet) (future.Future, error) {
-	future := t.futureManager.Create(msg)
-	err := t.SendPacket(ctx, msg)
-	if err != nil {
-		future.Cancel()
-		return nil, errors.Wrap(err, "Failed to send transport packet")
+func (s *StreamHandler) HandleStream(address string, reader io.ReadWriteCloser) {
+	for {
+		p, err := packet.DeserializePacket(reader)
+
+		if err != nil {
+			if err == io.EOF || err == io.ErrUnexpectedEOF {
+				log.Info("[ HandleStream ] Connection closed by peer")
+				return
+			}
+
+			log.Error("[ HandleStream ] Failed to deserialize packet: ", err.Error())
+		} else {
+			ctx, logger := inslogger.WithTraceField(context.Background(), p.TraceID)
+			logger.Debug("[ HandleStream ] Handling packet RequestID = ", p.RequestID)
+
+			if p.IsResponse {
+				go s.responseHandler.Handle(ctx, p)
+			} else {
+				go s.requestHandler(p)
+			}
+		}
 	}
-	metrics.NetworkPacketSentTotal.WithLabelValues(msg.Type.String()).Inc()
-	return future, nil
 }
 
-// SendResponse sends response packet.
-func (t *baseTransport) SendResponse(ctx context.Context, requestID network.RequestID, msg *packet.Packet) error {
-	msg.RequestID = requestID
-
-	return t.SendPacket(ctx, msg)
-}
-
-// Close closes packet channels.
-func (t *baseTransport) Close() {
-	t.mutex.Lock()
-	defer t.mutex.Unlock()
-
-	close(t.disconnectFinished)
-}
-
-// Packets returns incoming packets channel.
-func (t *baseTransport) Packets() <-chan *packet.Packet {
-	return t.packetHandler.Received()
-}
-
-// Stopped checks if networking is stopped already.
-func (t *baseTransport) Stopped() <-chan bool {
-	t.mutex.RLock()
-	defer t.mutex.RUnlock()
-
-	return t.disconnectStarted
-}
-
-func (t *baseTransport) prepareDisconnect() {
-	t.disconnectStarted <- true
-	close(t.disconnectStarted)
-}
-
-func (t *baseTransport) SendPacket(ctx context.Context, p *packet.Packet) error {
-	recvAddress := p.Receiver.Address.String()
-	data, err := t.serializer.SerializePacket(p)
+// SendPacket sends packet using connection from pool
+func SendPacket(ctx context.Context, pool pool.ConnectionPool, p *packet.Packet) error {
+	data, err := packet.SerializePacket(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize packet")
 	}
 
-	inslogger.FromContext(ctx).Debugf("Send %s packet to %s with RequestID = %d", p.Type, recvAddress, p.RequestID)
-	return t.sendFunc(recvAddress, data)
+	conn, err := pool.GetConnection(ctx, p.Receiver)
+	if err != nil {
+		return errors.Wrap(err, "Failed to get connection")
+	}
+
+	n, err := conn.Write(data)
+	if err != nil {
+		// retry
+		pool.CloseConnection(ctx, p.Receiver)
+		conn, err = pool.GetConnection(ctx, p.Receiver)
+
+		if err != nil {
+			return errors.Wrap(err, "[ SendBuffer ] Failed to get connection")
+		}
+		n, err = conn.Write(data)
+	}
+	if err == nil {
+		metrics.NetworkSentSize.Add(float64(n))
+		return nil
+	}
+	return errors.Wrap(err, "[ send ] Failed to write data")
 }

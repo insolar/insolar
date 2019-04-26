@@ -53,8 +53,9 @@ package host
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar"
 )
 
 // Host is the over-the-wire representation of a host.

@@ -277,7 +277,7 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 	logger := inslogger.FromContext(ctx)
 
 	result := make(map[insolar.Reference]*packets.Phase1Packet, len(participants))
-	result[nc.ConsensusNetwork.GetNodeID()] = packet
+	result[nc.NodeKeeper.GetOrigin().ID()] = packet
 	nc.setPulseNumber(packet.GetPulse().PulseNumber)
 
 	var request *packets.Phase1Packet
@@ -350,10 +350,9 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 				result[res.id] = res.packet
 			}
 
-			// FIXME: early return is commented to have synchronized length of phases on all nodes
-			// if len(result) == len(participants) {
-			// 	return result, nil
-			// }
+			if len(result) == len(participants) {
+				return result, nil
+			}
 		case <-ctx.Done():
 			return result, nil
 		}
@@ -370,19 +369,14 @@ func (nc *ConsensusCommunicator) ExchangePhase2(ctx context.Context, state *Cons
 
 	result := make(map[insolar.Reference]*packets.Phase2Packet, len(participants))
 
-	result[nc.ConsensusNetwork.GetNodeID()] = packet
+	result[nc.NodeKeeper.GetOrigin().ID()] = packet
 
 	nc.sendRequestToNodes(ctx, participants, packet)
 
-	type none struct{}
-	sentRequests := make(map[insolar.Reference]none)
-
 	shouldSendResponse := func(p *phase2Result) bool {
-		_, ok := sentRequests[p.id]
-		return !ok || p.packet.ContainsRequests()
+		return p.packet.ContainsRequests()
 	}
 
-	var err error
 	for {
 		select {
 		case res := <-nc.phase2result:
@@ -393,33 +387,39 @@ func (nc *ConsensusCommunicator) ExchangePhase2(ctx context.Context, state *Cons
 					res.packet.GetPulseNumber(), currentPulse)
 				continue
 			}
+			result[res.id] = res.packet
 
 			if shouldSendResponse(&res) {
-				logger.Debugf("Send phase2 response to %s", res.id)
-				// send response
-				response := packet
-				if res.packet.ContainsRequests() {
-					response, err = nc.generatePhase2Response(ctx, packet, res.packet, state)
-					if err != nil {
-						logger.Warnf("Failed to generate phase 2 response packet: %s", err.Error())
-						continue
-					}
-				}
-				err := nc.ConsensusNetwork.SignAndSendPacket(response, res.id, nc.Cryptography)
-				if err != nil {
-					logger.Error("Error sending phase2 response: " + err.Error())
-				}
+				go nc.sendPhase2Response(ctx, &res, packet, state)
 			}
-			result[res.id] = res.packet
-			sentRequests[res.id] = none{}
 
-			// FIXME: early return is commented to have synchronized length of phases on all nodes
-			// if len(result) == len(participants) {
-			// 	return result, nil
-			// }
+			if len(result) == len(participants) {
+				return result, nil
+			}
 		case <-ctx.Done():
 			return result, nil
 		}
+	}
+}
+
+func (nc *ConsensusCommunicator) sendPhase2Response(
+	ctx context.Context, res *phase2Result, packet *packets.Phase2Packet, state *ConsensusState,
+) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("Send phase2 response to %s", res.id)
+	// send response
+	response := packet
+	if res.packet.ContainsRequests() {
+		var err error
+		response, err = nc.generatePhase2Response(ctx, packet, res.packet, state)
+		if err != nil {
+			logger.Error("Failed to generate phase 2 response packet: ", err)
+			return
+		}
+	}
+	err := nc.ConsensusNetwork.SignAndSendPacket(response, res.id, nc.Cryptography)
+	if err != nil {
+		logger.Error("Error sending phase2 response: ", err)
 	}
 }
 
@@ -461,15 +461,13 @@ func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, state *Con
 	logger := inslogger.FromContext(ctx)
 
 	type none struct{}
-	incoming := make(map[insolar.Reference]none)
 	responsesFilter := make(map[int]none)
 	for _, req := range additionalRequests {
 		responsesFilter[req.RequestIndex] = none{}
 	}
 
 	shouldSendResponse := func(p *phase2Result) bool {
-		_, ok := incoming[p.id]
-		return !ok || p.packet.ContainsRequests()
+		return p.packet.ContainsRequests()
 	}
 
 	result := make([]packets.ReferendumVote, 0)
@@ -490,7 +488,7 @@ func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, state *Con
 	for {
 		select {
 		case res := <-nc.phase2result:
-			logger.Debugf("Got phase2 request from %s", res.id)
+			logger.Debugf("Got phase 2.1 request from %s", res.id)
 			currentPulse := nc.getPulseNumber()
 			if res.packet.GetPulseNumber() != currentPulse {
 				logger.Debugf("Filtered phase2 packet, packet pulse %d != %d (current pulse)",
@@ -499,20 +497,7 @@ func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, state *Con
 			}
 
 			if shouldSendResponse(&res) {
-				logger.Debugf("Send phase2 response to %s", res.id)
-				// send response
-				response := packet
-				if res.packet.ContainsRequests() {
-					response, err = nc.generatePhase2Response(ctx, packet, res.packet, state)
-					if err != nil {
-						logger.Warnf("Failed to generate phase 2 response packet: %s", err.Error())
-						continue
-					}
-				}
-				err := nc.ConsensusNetwork.SignAndSendPacket(response, res.id, nc.Cryptography)
-				if err != nil {
-					logger.Error("Error sending phase2 response: " + err.Error())
-				}
+				go nc.sendPhase2Response(ctx, &res, packet, state)
 			}
 
 			if res.packet.ContainsResponses() {
@@ -526,8 +511,6 @@ func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, state *Con
 					}
 				}
 			}
-
-			incoming[res.id] = none{}
 
 			// FIXME: early return is commented to have synchronized length of phases on all nodes
 			// if len(result) == len(participants) {
@@ -547,7 +530,7 @@ func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participant
 	defer span.End()
 	logger := inslogger.FromContext(ctx)
 
-	result[nc.ConsensusNetwork.GetNodeID()] = packet
+	result[nc.NodeKeeper.GetOrigin().ID()] = packet
 
 	nc.sendRequestToNodes(ctx, participants, packet)
 
@@ -581,10 +564,9 @@ func (nc *ConsensusCommunicator) ExchangePhase3(ctx context.Context, participant
 			result[res.id] = res.packet
 			sentRequests[res.id] = none{}
 
-			// FIXME: early return is commented to have synchronized length of phases on all nodes
-			// if len(result) == len(participants) {
-			// 	return result, nil
-			// }
+			if len(result) == len(participants) {
+				return result, nil
+			}
 		case <-ctx.Done():
 			return result, nil
 		}

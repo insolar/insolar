@@ -24,10 +24,10 @@ import (
 
 // Handle is a one-function synchronous process that can call routines to do long processing.
 // IMPORTANT: Asynchronous code is NOT ALLOWED here.
-// To create a new Handle of a given message use handler.NewHandler procedure.
+// To create a new Handle of a given message use dispatcher.NewHandler procedure.
 // After creating a Handle you can register it in MessageBus like this:
 // `h.Bus.MustRegister(insolar.TypeGetObject, createdHandle.WrapBusHandle)`
-// You can find an example in insolar/ladger/artifactmanager/handler.go
+// You can find an example in insolar/ladger/artifactmanager/dispatcher.go
 type Handle func(context.Context, Flow) error
 
 // MakeHandle is a function that constructs new Handle.
@@ -51,8 +51,7 @@ type Procedure interface {
 // Flow will be pasted to all Handles to control execution.
 // This is very important not to blow this interface. Keep it minimal.
 type Flow interface {
-	// Handle gives control to another handle and waits for its return. Consider it "calling" another handler.
-	// If cancellation happens during Handle execution, ErrCancelled will be returned.
+	// Handle gives control to another handle and waits for its return. Consider it "calling" another dispatcher.
 	Handle(context.Context, Handle) error
 
 	// Procedure starts a routine and blocks Handle execution until cancellation happens or routine returns.
@@ -61,7 +60,7 @@ type Flow interface {
 	// If Routine returns first, Procedure error (if any) will be returned.
 	// Procedure can figure out whether it's execution was canceled and there is no point to continue
 	// the execution by reading from context.Done()
-	Procedure(context.Context, Procedure) error
+	Procedure(ctx context.Context, proc Procedure, cancelable bool) error
 
 	// Migrate blocks caller execution until cancellation happens then runs provided Handle in a new flow.
 	// Note that this method can be called after cancellation. Use it to migrate processing after Handle or Procedure

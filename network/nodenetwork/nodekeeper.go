@@ -56,9 +56,13 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
+
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
 
 	"github.com/insolar/insolar/configuration"
 	consensusMetrics "github.com/insolar/insolar/consensus"
@@ -66,11 +70,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/version"
-	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 )
 
 // NewNodeNetwork create active node component
@@ -112,7 +113,7 @@ func resolveAddress(configuration configuration.Transport) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	address, err := transport.Resolve(configuration.FixedPublicAddress, addr.String())
+	address, err := resolver.Resolve(configuration.FixedPublicAddress, addr.String())
 	if err != nil {
 		return "", err
 	}

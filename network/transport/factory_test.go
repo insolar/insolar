@@ -48,49 +48,95 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package pool
+package transport
 
 import (
 	"context"
 	"net"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/configuration"
 )
 
-type ConnectionPool interface {
-	GetConnection(ctx context.Context, address net.Addr) (net.Conn, error)
-	CloseConnection(ctx context.Context, address net.Addr)
-	Reset()
+func TestFactory_Positive(t *testing.T) {
+	table := []struct {
+		name    string
+		cfg     configuration.Transport
+		success bool
+	}{
+		{
+			name: "default config",
+			cfg:  configuration.NewHostNetwork().Transport,
+		},
+		{
+			name: "localhost",
+			cfg:  configuration.Transport{Address: "localhost:0", Protocol: "TCP"},
+		},
+		{
+			name: "FixedPublicAddress",
+			cfg:  configuration.Transport{Address: "localhost:0", FixedPublicAddress: "192.168.1.1", Protocol: "TCP"},
+		},
+	}
+
+	for _, test := range table {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			f := NewFactory(test.cfg)
+			require.NotNil(t, f)
+
+			udp, err := f.CreateDatagramTransport(nil)
+			assert.NoError(t, err)
+			require.NotNil(t, udp)
+
+			tcp, err := f.CreateStreamTransport(nil)
+			assert.NoError(t, err)
+			require.NotNil(t, tcp)
+
+			assert.NoError(t, udp.Start(ctx))
+			assert.NoError(t, tcp.Start(ctx))
+
+			addrUDP, err := net.ResolveUDPAddr("udp", udp.Address())
+			assert.NoError(t, err)
+			assert.NotEqual(t, 0, addrUDP.Port)
+
+			addrTCP, err := net.ResolveTCPAddr("tcp", tcp.Address())
+			assert.NoError(t, err)
+			assert.NotEqual(t, 0, addrTCP.Port)
+
+			assert.NoError(t, udp.Stop(ctx))
+			assert.NoError(t, tcp.Stop(ctx))
+
+		})
+	}
 }
 
-type connectionFactory interface {
-	CreateConnection(ctx context.Context, address net.Addr) (net.Conn, error)
-}
+func TestFactoryStreamTransport_Negative(t *testing.T) {
+	table := []struct {
+		name    string
+		cfg     configuration.Transport
+		success bool
+	}{
+		{
+			name: "invalid address",
+			cfg:  configuration.Transport{Address: "invalid"},
+		},
+		{
+			name: "invalid protocol",
+			cfg:  configuration.Transport{Address: "localhost:0", FixedPublicAddress: "192.168.1.1", Protocol: "HTTP"},
+		},
+	}
 
-type entry interface {
-	Open(ctx context.Context) (net.Conn, error)
-	Close()
-}
+	for _, test := range table {
+		t.Run(test.name, func(t *testing.T) {
+			f := NewFactory(test.cfg)
+			require.NotNil(t, f)
 
-type onClose func(ctx context.Context, addr net.Addr)
-
-func newEntry(connectionFactory connectionFactory, address net.Addr, onClose onClose) entry {
-	return newEntryImpl(connectionFactory, address, onClose)
-}
-
-type iterateFunc func(entry entry)
-
-type entryHolder interface {
-	Get(address net.Addr) (entry, bool)
-	Delete(address net.Addr)
-	Add(address net.Addr, entry entry)
-	Size() int
-	Clear()
-	Iterate(iterateFunc iterateFunc)
-}
-
-func newEntryHolder() entryHolder {
-	return newEntryHolderImpl()
-}
-
-func NewConnectionPool(connectionFactory connectionFactory) ConnectionPool {
-	return newConnectionPool(connectionFactory)
+			tcp, err := f.CreateStreamTransport(nil)
+			assert.Error(t, err)
+			require.Nil(t, tcp)
+		})
+	}
 }

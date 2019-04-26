@@ -218,7 +218,7 @@ func TestReceiveResult(t *testing.T) {
 	parcel.PulseFunc = func() insolar.PulseNumber { return insolar.PulseNumber(100) }
 
 	// unexpected result
-	rep, err := cr.FlowHandler.WrapBusHandle(ctx, parcel)
+	rep, err := cr.FlowDispatcher.WrapBusHandle(ctx, parcel)
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, rep)
 
@@ -231,7 +231,7 @@ func TestReceiveResult(t *testing.T) {
 		chanResult <- <-cr.ResultMap[sequence]
 	}()
 
-	rep, err = cr.FlowHandler.WrapBusHandle(ctx, parcel)
+	rep, err = cr.FlowDispatcher.WrapBusHandle(ctx, parcel)
 
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, rep)

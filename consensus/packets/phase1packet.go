@@ -142,7 +142,7 @@ func pulseToDataExt(pulse insolar.Pulse) PulseDataExt {
 	result.NextPulseDelta = uint16(pulse.NextPulseNumber - pulse.PulseNumber)
 	result.PrevPulseDelta = uint16(pulse.PulseNumber - pulse.PrevPulseNumber)
 	result.OriginID = pulse.OriginID
-	result.PulseTimestamp = uint32(pulse.PulseTimestamp)
+	result.PulseTimestamp = pulse.PulseTimestamp
 	return result
 }
 
@@ -154,7 +154,7 @@ func dataToPulse(number insolar.PulseNumber, data PulseDataExt) insolar.Pulse {
 	result.NextPulseNumber = number + insolar.PulseNumber(data.NextPulseDelta)
 	result.PrevPulseNumber = number - insolar.PulseNumber(data.PrevPulseDelta)
 	result.OriginID = data.OriginID
-	result.PulseTimestamp = int64(data.PulseTimestamp)
+	result.PulseTimestamp = data.PulseTimestamp
 	return result
 }
 
