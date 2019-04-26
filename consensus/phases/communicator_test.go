@@ -108,10 +108,6 @@ func (s *communicatorSuite) SetupTest() {
 
 	s.consensusNetworkMock.StartMock.Set(func(context.Context) error { return nil })
 
-	s.consensusNetworkMock.GetNodeIDMock.Set(func() (r insolar.Reference) {
-		return s.originNode.ID()
-	})
-
 	s.pulseHandlerMock.HandlePulseMock.Set(func(p context.Context, p1 insolar.Pulse) {
 
 	})
