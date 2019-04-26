@@ -140,7 +140,7 @@ func (nc *networkConsensus) SignAndSendPacket(packet packets.ConsensusPacket,
 	receiver insolar.Reference, service insolar.CryptographyService) error {
 
 	if atomic.LoadUint32(&nc.started) == 0 {
-		return nil
+		return errors.New("consensus network is not started")
 	}
 
 	receiverHost, err := nc.Resolver.ResolveConsensusRef(receiver)
@@ -191,11 +191,6 @@ func NewConsensusNetwork(nodeID string, shortID insolar.ShortNodeID) (network.Co
 
 // HandleDatagram callback method handles udp datagram from transport
 func (nc *networkConsensus) HandleDatagram(address string, buf []byte) {
-
-	if atomic.LoadUint32(&nc.started) == 0 {
-		return
-	}
-
 	logger := inslogger.FromContext(context.Background())
 	r := bytes.NewReader(buf)
 	p, err := packets.ExtractPacket(r)

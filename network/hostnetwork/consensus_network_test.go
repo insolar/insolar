@@ -55,6 +55,7 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
@@ -280,4 +281,12 @@ func TestConsensusNetwork(t *testing.T) {
 	s, err := NewSuite()
 	require.NoError(t, err)
 	suite.Run(t, s)
+}
+
+func TestNetworkConsensus_SignAndSendPacket_NotStarted(t *testing.T) {
+	cn, err := NewConsensusNetwork(ID1+DOMAIN, 1)
+	require.NoError(t, err)
+
+	err = cn.SignAndSendPacket(nil, testutils.RandomRef(), nil)
+	require.EqualError(t, err, "consensus network is not started")
 }
