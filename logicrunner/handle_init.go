@@ -45,6 +45,10 @@ type Init struct {
 	Message bus.Message
 }
 
+func (s *Init) Future(ctx context.Context, f flow.Flow) error {
+	return f.Migrate(ctx, s.Present)
+}
+
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	switch s.Message.Parcel.Message().Type() {
 	case insolar.TypeCallMethod, insolar.TypeCallConstructor:

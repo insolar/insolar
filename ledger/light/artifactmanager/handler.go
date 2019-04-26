@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -30,7 +31,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/flow/handler"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
@@ -79,8 +79,8 @@ type MessageHandler struct {
 	middleware     *middleware
 	jetTreeUpdater jet.Fetcher
 
-	FlowHandler *handler.Handler
-	handlers    map[insolar.MessageType]insolar.MessageHandler
+	FlowDispatcher *dispatcher.Dispatcher
+	handlers       map[insolar.MessageType]insolar.MessageHandler
 }
 
 // NewMessageHandler creates new handler.
@@ -142,11 +142,17 @@ func NewMessageHandler(
 		},
 	}
 
-	h.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
-		return (&handle.Init{
+	initHandle := func(msg bus.Message) *handle.Init {
+		return &handle.Init{
 			Dep:     dep,
 			Message: msg,
-		}).Present
+		}
+	}
+
+	h.FlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
+		return initHandle(msg).Present
+	}, func(msg bus.Message) flow.Handle {
+		return initHandle(msg).Future
 	})
 	return h
 }
@@ -193,15 +199,15 @@ func (h *MessageHandler) Init(ctx context.Context) error {
 }
 
 func (h *MessageHandler) OnPulse(ctx context.Context, pn insolar.Pulse) {
-	h.FlowHandler.ChangePulse(ctx, pn)
+	h.FlowDispatcher.ChangePulse(ctx, pn)
 }
 
 func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	// Generic.
 
-	h.Bus.MustRegister(insolar.TypeGetCode, h.FlowHandler.WrapBusHandle)
-	h.Bus.MustRegister(insolar.TypeGetObject, h.FlowHandler.WrapBusHandle)
-	h.Bus.MustRegister(insolar.TypeUpdateObject, h.FlowHandler.WrapBusHandle)
+	h.Bus.MustRegister(insolar.TypeGetCode, h.FlowDispatcher.WrapBusHandle)
+	h.Bus.MustRegister(insolar.TypeGetObject, h.FlowDispatcher.WrapBusHandle)
+	h.Bus.MustRegister(insolar.TypeUpdateObject, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeGetDelegate,
 		BuildMiddleware(h.handleGetDelegate,
@@ -677,41 +683,6 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	}
 	return idx, nil
 }
-
-//
-// func (h *MessageHandler) fetchObject(
-// 	ctx context.Context, obj insolar.Reference, node insolar.Reference, stateID *insolar.ID,
-// ) (*reply.Object, error) {
-// 	sender := BuildSender(
-// 		h.Bus.Send,
-// 		followRedirectSender(h.Bus),
-// 		retryJetSender(h.JetStorage),
-// 	)
-// 	genericReply, err := sender(
-// 		ctx,
-// 		&message.GetObject{
-// 			Head:     obj,
-// 			Approved: false,
-// 			State:    stateID,
-// 		},
-// 		&insolar.MessageSendOptions{
-// 			Receiver: &node,
-// 			Token:    &delegationtoken.GetObjectRedirectToken{},
-// 		},
-// 	)
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, "failed to fetch object state")
-// 	}
-// 	if rep, ok := genericReply.(*reply.Error); ok {
-// 		return nil, rep.Error()
-// 	}
-//
-// 	rep, ok := genericReply.(*reply.Object)
-// 	if !ok {
-// 		return nil, fmt.Errorf("failed to fetch object state: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
-// 	}
-// 	return rep, nil
-// }
 
 func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	logger := inslogger.FromContext(ctx)
