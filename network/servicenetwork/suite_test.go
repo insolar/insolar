@@ -259,7 +259,7 @@ func waitFileToBeRemoved() {
 		return
 	}
 	for fileExists(file.Name()) {
-		time.Sleep(time.Second * 5)
+		time.Sleep(time.Second * 60)
 		log.Info("Tests are suspended. Delete file to continue. " + fileMarker)
 	}
 }
