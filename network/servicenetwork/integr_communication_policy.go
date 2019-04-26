@@ -137,6 +137,6 @@ func (cm *CommunicatorMock) Init(ctx context.Context) error {
 type FullTimeoutPhaseManager struct {
 }
 
-func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
+func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time, reconnect func(ctx context.Context, address string)) error {
 	return nil
 }

@@ -57,6 +57,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -520,20 +521,21 @@ func (s *testSuite) TestChangeNetwork() {
 		s.T().Skip(consensusMinMsg)
 	}
 
-	go s.waitForConsensus(1)
-	s.waitForLConsensus(1)
-
-	testNode := s.newNetworkNode("testNode")
-	s.preInitNode(testNode, CombinedNetwork)
-
-	s.InitNode(testNode)
-	s.StartNode(testNode)
+	testBootstrapNode := s.newNetworkNode("testBootstrapNode")
+	s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, testBootstrapNode)
+	s.preInitNode(testBootstrapNode, CombinedNetwork)
+	s.InitNode(testBootstrapNode)
+	s.StartNode(testBootstrapNode)
 	defer func(s *testSuite) {
-		s.StopNode(testNode)
+		s.StopNode(testBootstrapNode)
 	}(s)
 
-	s.waitForLConsensus(6)
+	// s.waitForConsensus(4)
 
-	activeNodes := s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	s.setupLargeNetwork()
+
+	time.Sleep(time.Minute * 5)
+
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Equal(s.bootstrapCount+s.lBootstrapCount+1, len(activeNodes))
 }

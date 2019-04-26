@@ -103,7 +103,6 @@ type fixture struct {
 	lBootstrapNodes []*networkNode // network largest than bootstrapNodes
 	networkNodes    []*networkNode
 	pulsar          TestPulsar
-	lPulsar         TestPulsar // Pulsar for largest network
 }
 
 const cacheDir = "network_cache/"
@@ -131,6 +130,7 @@ type testSuite struct {
 	bootstrapCount  int
 	nodesCount      int
 	lBootstrapCount int // largest network bootstrap nodes count
+	lNetworkInited  bool
 }
 
 func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
@@ -138,8 +138,9 @@ func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
 		Suite:           suite.Suite{},
 		fixtureMap:      make(map[string]*fixture, 0),
 		bootstrapCount:  bootstrapCount,
-		lBootstrapCount: bootstrapCount + 1,
+		lBootstrapCount: bootstrapCount + 2,
 		nodesCount:      nodesCount,
+		lNetworkInited:  false,
 	}
 }
 
@@ -152,8 +153,6 @@ func (s *testSuite) SetupTest() {
 	s.fixtureMap[s.T().Name()] = newFixture(s.T())
 	var err error
 	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
-	s.Require().NoError(err)
-	s.fixture().lPulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
 	s.Require().NoError(err)
 
 	log.Info("SetupTest")
@@ -171,34 +170,25 @@ func (s *testSuite) SetupTest() {
 	}
 
 	pulseReceivers := make([]string, 0)
+	pulseReceivers = append(pulseReceivers, "127.0.0.1:10047")
 	for _, node := range s.fixture().bootstrapNodes {
 		pulseReceivers = append(pulseReceivers, node.host)
-	}
-
-	lPulseReceivers := make([]string, 0)
-	for _, node := range s.fixture().lBootstrapNodes {
-		lPulseReceivers = append(lPulseReceivers, node.host)
 	}
 
 	log.Info("Start test pulsar")
 	err = s.fixture().pulsar.Start(s.fixture().ctx, pulseReceivers)
 	s.Require().NoError(err)
 
-	log.Info("Start test large pulsar")
-	err = s.fixture().lPulsar.Start(s.fixture().ctx, lPulseReceivers)
-	s.Require().NoError(err)
-
 	log.Info("Setup bootstrap nodes: " + strconv.Itoa(s.bootstrapCount))
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes, SmallNetwork)
 
-	log.Info("Setup large network bootstrap nodes")
-	s.SetupNodesNetwork(s.fixture().lBootstrapNodes, LargeNetwork)
+	<-time.After(time.Second * 2)
 
 	expectedBootstrapsCount := len(s.fixture().bootstrapNodes)
 	retries := 100
 	for {
 		activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-		if  expectedBootstrapsCount == len(activeNodes) {
+		if expectedBootstrapsCount == len(activeNodes) {
 			break
 		}
 
@@ -207,14 +197,11 @@ func (s *testSuite) SetupTest() {
 			break
 		}
 
-		time.Sleep(100*time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Require().Equal(len(s.fixture().bootstrapNodes), len(activeNodes))
-
-	activeNodes = s.fixture().lBootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-	s.Require().Equal(len(s.fixture().lBootstrapNodes), len(activeNodes))
 
 	if len(s.fixture().networkNodes) > 0 {
 		log.Info("Setup network nodes")
@@ -229,6 +216,16 @@ func (s *testSuite) SetupTest() {
 		s.Require().Equal(s.getNodesCount(), len(activeNodes2))
 	}
 	fmt.Println("=================== SetupTest() Done")
+}
+
+func (s *testSuite) setupLargeNetwork() {
+	log.Info("Setup large network bootstrap nodes")
+	s.SetupNodesNetwork(s.fixture().lBootstrapNodes, LargeNetwork)
+
+	activeNodes := s.fixture().lBootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	s.Require().Equal(len(s.fixture().lBootstrapNodes), len(activeNodes))
+
+	s.lNetworkInited = true
 }
 
 func (s *testSuite) SetupNodesNetwork(nodes []*networkNode, networkType NetworkType) {
@@ -281,15 +278,14 @@ func (s *testSuite) TearDownTest() {
 		err := n.componentManager.Stop(n.ctx)
 		s.NoError(err)
 	}
-	for _, n := range s.fixture().lBootstrapNodes {
-		err := n.componentManager.Stop(n.ctx)
-		s.NoError(err)
+	if s.lNetworkInited {
+		for _, n := range s.fixture().lBootstrapNodes {
+			err := n.componentManager.Stop(n.ctx)
+			s.NoError(err)
+		}
 	}
 	log.Info("Stop test pulsar")
 	err := s.fixture().pulsar.Stop(s.fixture().ctx)
-	s.NoError(err)
-	log.Info("Stop test pulsar")
-	err = s.fixture().lPulsar.Stop(s.fixture().ctx)
 	s.NoError(err)
 }
 
