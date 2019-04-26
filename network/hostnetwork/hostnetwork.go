@@ -52,6 +52,7 @@ package hostnetwork
 
 import (
 	"context"
+	"sync"
 	"sync/atomic"
 
 	"github.com/pkg/errors"
@@ -99,12 +100,14 @@ type hostNetwork struct {
 
 	started           uint32
 	transport         transport.StreamTransport
-	origin            *host.Host
 	sequenceGenerator sequence.Generator
 	handlers          map[types.PacketType]network.RequestHandler
 	futureManager     future.Manager
 	responseHandler   future.PacketHandler
 	pool              pool.ConnectionPool
+
+	mu     sync.RWMutex
+	origin *host.Host
 }
 
 func (hn *hostNetwork) Init(ctx context.Context) error {
@@ -130,10 +133,13 @@ func (hn *hostNetwork) Start(ctx context.Context) error {
 			return errors.Wrap(err, "Failed to start transport: listen syscall failed")
 		}
 
-		hn.origin, err = host.NewHostN(hn.transport.Address(), hn.origin.NodeID)
+		hn.mu.Lock()
+		defer hn.mu.Unlock()
+		h, err := host.NewHostN(hn.transport.Address(), hn.origin.NodeID)
 		if err != nil {
 			return errors.Wrap(err, "Failed to start transport: listen syscall failed")
 		}
+		hn.origin = h
 	} else {
 		inslogger.FromContext(ctx).Warn("Failed to start transport: double listen initiated")
 
@@ -154,23 +160,18 @@ func (hn *hostNetwork) Stop(ctx context.Context) error {
 }
 
 func (hn *hostNetwork) buildRequest(ctx context.Context, request network.Request, receiver *host.Host) *packet.Packet {
-	return packet.NewBuilder(hn.origin).Receiver(receiver).Type(request.GetType()).RequestID(request.GetRequestID()).
+	return packet.NewBuilder(hn.getOrigin()).Receiver(receiver).Type(request.GetType()).RequestID(request.GetRequestID()).
 		Request(request.GetData()).TraceID(inslogger.TraceID(ctx)).Build()
 }
 
 // PublicAddress returns public address that can be published for all nodes.
 func (hn *hostNetwork) PublicAddress() string {
-	return hn.origin.Address.String()
-}
-
-// GetNodeID get current node ID.
-func (hn *hostNetwork) GetNodeID() insolar.Reference {
-	return hn.origin.NodeID
+	return hn.getOrigin().Address.String()
 }
 
 // NewRequestBuilder create packet Builder for an outgoing request with sender set to current node.
 func (hn *hostNetwork) NewRequestBuilder() network.RequestBuilder {
-	return &Builder{sender: hn.origin, id: network.RequestID(hn.sequenceGenerator.Generate())}
+	return &Builder{sender: hn.getOrigin(), id: network.RequestID(hn.sequenceGenerator.Generate())}
 }
 
 func (hn *hostNetwork) handleRequest(p *packet.Packet) {
@@ -235,8 +236,9 @@ func (hn *hostNetwork) RegisterPacketHandler(t types.PacketType, handler network
 
 // BuildResponse create response to an incoming request with Data set to responseData.
 func (hn *hostNetwork) BuildResponse(ctx context.Context, request network.Request, responseData interface{}) network.Response {
+
 	sender := request.GetSenderHost()
-	p := packet.NewBuilder(hn.origin).Type(request.GetType()).Receiver(sender).RequestID(request.GetRequestID()).
+	p := packet.NewBuilder(hn.getOrigin()).Type(request.GetType()).Receiver(sender).RequestID(request.GetRequestID()).
 		Response(responseData).TraceID(inslogger.TraceID(ctx)).Build()
 	return p
 }
@@ -257,4 +259,11 @@ func (hn *hostNetwork) RegisterRequestHandler(t types.PacketType, handler networ
 		return handler(ctx, request)
 	}
 	hn.RegisterPacketHandler(t, f)
+}
+
+func (hn *hostNetwork) getOrigin() *host.Host {
+	hn.mu.RLock()
+	defer hn.mu.RUnlock()
+
+	return hn.origin
 }
