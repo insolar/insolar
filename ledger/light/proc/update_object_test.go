@@ -21,6 +21,8 @@ import (
 	"crypto/rand"
 	"testing"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
@@ -100,19 +102,16 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 		panic("unexpected call")
 	}
 
-	ctx := context.Background()
+	ctx := inslogger.TestContext(t)
 	heavyRef := genRandomRef(0)
 	jc.HeavyMock.Return(heavyRef, nil)
 
 	recordStorage := object.NewRecordMemory()
 
 	updateObject := UpdateObject{
-		JetID:   insolar.JetID(jetID),
-		Message: &msg,
-		Parcel: &message.Parcel{
-			Msg:         &msg,
-			PulseNumber: insolar.FirstPulseNumber,
-		},
+		JetID:       insolar.JetID(jetID),
+		Message:     &msg,
+		PulseNumber: insolar.FirstPulseNumber,
 	}
 	updateObject.Dep.Bus = mb
 	updateObject.Dep.BlobModifier = blob.NewStorageMemory()
@@ -124,10 +123,9 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	updateObject.Dep.IndexModifier = indexMemoryStor
 	updateObject.Dep.IndexStateModifier = object.NewIndexMemory()
 
-	rep, err := updateObject.handle(ctx)
-
-	require.NoError(t, err)
-	objRep, ok := rep.(*reply.Object)
+	rep := updateObject.handle(ctx)
+	require.NoError(t, rep.Err)
+	objRep, ok := rep.Reply.(*reply.Object)
 	require.True(t, ok)
 
 	idx, err := indexMemoryStor.ForID(ctx, *msg.Object.Record())
@@ -178,12 +176,9 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 
 	// Act
 	updateObject := UpdateObject{
-		JetID:   insolar.JetID(jetID),
-		Message: &msg,
-		Parcel: &message.Parcel{
-			Msg:         &msg,
-			PulseNumber: insolar.FirstPulseNumber,
-		},
+		JetID:       insolar.JetID(jetID),
+		Message:     &msg,
+		PulseNumber: insolar.FirstPulseNumber,
 	}
 	updateObject.Dep.BlobModifier = blob.NewStorageMemory()
 	updateObject.Dep.IDLocker = idLockMock
@@ -193,9 +188,9 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	updateObject.Dep.IndexModifier = indexMemoryStor
 	updateObject.Dep.IndexStateModifier = object.NewIndexMemory()
 
-	rep, err := updateObject.handle(ctx)
-	require.NoError(t, err)
-	_, ok := rep.(*reply.Object)
+	rep := updateObject.handle(ctx)
+	require.NoError(t, rep.Err)
+	_, ok := rep.Reply.(*reply.Object)
 	require.True(t, ok)
 
 	// Arrange
