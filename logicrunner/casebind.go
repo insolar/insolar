@@ -191,8 +191,12 @@ func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg 
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
 
-	err := lr.CheckOurRole(ctx, msg, insolar.DynamicRoleVirtualValidator)
-	if err != nil {
+	procCheckRole := CheckOurRole{
+		msg:  msg,
+		role: insolar.DynamicRoleVirtualValidator,
+		lr:   lr,
+	}
+	if err := procCheckRole.Proceed(ctx); err != nil {
 		return nil, errors.Wrap(err, "[ HandleValidateCaseBindMessage ] can't play role")
 	}
 
@@ -204,7 +208,7 @@ func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg 
 		errstr = validationError.Error()
 	}
 
-	_, err = lr.MessageBus.Send(ctx, &message.ValidationResults{
+	_, err := lr.MessageBus.Send(ctx, &message.ValidationResults{
 		RecordRef:        msg.GetReference(),
 		PassedStepsCount: passedStepsCount,
 		Error:            errstr,

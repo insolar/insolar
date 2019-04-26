@@ -29,6 +29,11 @@ import (
 const InnerMsgTopic = "InnerMsg"
 const MessageTypeField = "Type"
 
+const (
+	processExecutionQueueMsg   = "ProcessExecutionQueue"
+	getLedgerPendingRequestMsg = "GetLedgerPendingRequest"
+)
+
 type Dependencies struct {
 	Publisher message.Publisher
 	lr        *LogicRunner
@@ -38,6 +43,10 @@ type Init struct {
 	dep *Dependencies
 
 	Message bus.Message
+}
+
+func (s *Init) Future(ctx context.Context, f flow.Flow) error {
+	return f.Migrate(ctx, s.Present)
 }
 
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
@@ -60,6 +69,12 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 			Message: s.Message,
 		}
 		return f.Handle(ctx, h.Present)
+	case insolar.TypeAbandonedRequestsNotification:
+		h := &HandleAbandonedRequestsNotification{
+			dep:     s.dep,
+			Message: s.Message,
+		}
+		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("[ Init.Present ] no handler for message type %s", s.Message.Parcel.Message().Type().String())
 	}
@@ -73,13 +88,13 @@ type InnerInit struct {
 
 func (s *InnerInit) Present(ctx context.Context, f flow.Flow) error {
 	switch s.Message.Metadata.Get(MessageTypeField) {
-	case "ProcessExecutionQueue":
+	case processExecutionQueueMsg:
 		h := ProcessExecutionQueue{
 			dep:     s.dep,
 			Message: s.Message,
 		}
 		return f.Handle(ctx, h.Present)
-	case "getLedgerPendingRequest":
+	case getLedgerPendingRequestMsg:
 		h := GetLedgerPendingRequest{
 			dep:     s.dep,
 			Message: s.Message,

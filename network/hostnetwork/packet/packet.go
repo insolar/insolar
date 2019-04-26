@@ -65,7 +65,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
-// Packet is DHT packet object.
+// Packet is network packet object for requests and responses.
 type Packet struct {
 	Sender        *host.Host
 	Receiver      *host.Host

@@ -162,7 +162,7 @@ func (fp *FakePulsar) Stop(ctx context.Context) {
 
 func (fp *FakePulsar) newPulse() *insolar.Pulse {
 	return &insolar.Pulse{
-		PulseTimestamp:   time.Now().Unix(),
+		PulseTimestamp:   time.Now().UnixNano(),
 		PrevPulseNumber:  insolar.PulseNumber(fp.currentPulseNumber - fp.pulseNumberDelta),
 		PulseNumber:      insolar.PulseNumber(fp.currentPulseNumber),
 		NextPulseNumber:  insolar.PulseNumber(fp.currentPulseNumber + fp.pulseNumberDelta),

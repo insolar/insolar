@@ -40,7 +40,7 @@ type FetchJet struct {
 		JetAccessor jet.Accessor
 		Coordinator jet.Coordinator
 		JetUpdater  jet.Fetcher
-		CheckJet    CheckJet
+		JetFetcher  jet.Fetcher
 	}
 }
 
@@ -53,17 +53,30 @@ func NewFetchJet(target insolar.ID, pn insolar.PulseNumber, rep chan<- bus.Reply
 }
 
 func (p *FetchJet) Proceed(ctx context.Context) error {
-	jetID, mine, err := p.Dep.CheckJet(ctx, p.target, p.pulse)
+	// Special case for genesis pulse. No one was executor at that time, so anyone can fetch data from it.
+	if p.pulse <= insolar.FirstPulseNumber {
+		p.Result.Jet = *insolar.NewJetID(0, nil)
+		return nil
+	}
+
+	jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.target, p.pulse)
 	if err != nil {
-		err := errors.Wrap(err, "failed to check jet")
+		err := errors.Wrap(err, "failed to fetch jet")
 		p.replyTo <- bus.Reply{Err: err}
 		return err
 	}
-	if !mine {
-		p.replyTo <- bus.Reply{Reply: &reply.JetMiss{JetID: insolar.ID(jetID), Pulse: p.pulse}}
+	executor, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, p.pulse)
+	if err != nil {
+		err := errors.Wrap(err, "failed to calculate executor for jet")
+		p.replyTo <- bus.Reply{Err: err}
+		return err
+	}
+	if *executor != p.Dep.Coordinator.Me() {
+		p.replyTo <- bus.Reply{Reply: &reply.JetMiss{JetID: *jetID, Pulse: p.pulse}}
 		return errors.New("jet miss")
 	}
-	p.Result.Jet = jetID
+
+	p.Result.Jet = insolar.JetID(*jetID)
 	return nil
 }
 

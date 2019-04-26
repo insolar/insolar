@@ -64,6 +64,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/network/gateway"
 
 	"github.com/insolar/insolar/certificate"
@@ -77,9 +79,9 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/suite"
 )
 
 var (
@@ -92,9 +94,9 @@ const (
 	pulseDelta   int32 = 5
 
 	Phase1Timeout  float64 = 0.45
-	Phase2Timeout  float64 = 0.15
-	Phase21Timeout float64 = 0.15
-	Phase3Timeout  float64 = 0.15
+	Phase2Timeout  float64 = 0.60
+	Phase21Timeout float64 = 0.75
+	Phase3Timeout  float64 = 0.90
 )
 
 type fixture struct {
@@ -163,7 +165,22 @@ func (s *testSuite) SetupTest() {
 	log.Info("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
 
-	<-time.After(time.Second * 2)
+	expectedBootstrapsCount := len(s.fixture().bootstrapNodes)
+	retries := 100
+	for {
+		activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+		if  expectedBootstrapsCount == len(activeNodes) {
+			break
+		}
+
+		retries--
+		if retries == 0 {
+			break
+		}
+
+		time.Sleep(100*time.Millisecond)
+	}
+
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Require().Equal(len(s.fixture().bootstrapNodes), len(activeNodes))
 
@@ -424,7 +441,6 @@ func (m staterMock) State() ([]byte, error) {
 
 // preInitNode inits previously created node with mocks and external dependencies
 func (s *testSuite) preInitNode(node *networkNode) {
-	t := s.T()
 	cfg := configuration.NewConfiguration()
 	cfg.Pulsar.PulseTime = pulseTimeMs // pulse 5 sec for faster tests
 	cfg.Host.Transport.Address = node.host
@@ -465,10 +481,8 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
 
-	node.componentManager.Register(&amMock, certManager, cryptographyService, mblocker, GIL)
-	node.componentManager.Inject(serviceNetwork, keyProc, terminationHandler,
-		testutils.NewMessageBusMock(t),
-		testutils.NewContractRequesterMock(t))
+	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService, mblocker, GIL)
+	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler, transport.NewFakeFactory(cfg.Host.Transport))
 
 	node.serviceNetwork = serviceNetwork
 }

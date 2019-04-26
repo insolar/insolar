@@ -19,9 +19,10 @@ package thread
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/pkg/errors"
 )
 
 type Thread struct {

@@ -43,8 +43,8 @@ func NewServiceNetwork() ServiceNetwork {
 func NewConsensus() Consensus {
 	return Consensus{
 		Phase1Timeout:  0.3,
-		Phase2Timeout:  0.05,
-		Phase21Timeout: 0.05,
-		Phase3Timeout:  0.05,
+		Phase2Timeout:  0.35,
+		Phase21Timeout: 0.40,
+		Phase3Timeout:  0.45,
 	}
 }

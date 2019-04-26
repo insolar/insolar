@@ -73,7 +73,7 @@ type Base struct {
 
 // NewGateway creates new gateway on top of existing
 func (g *Base) NewGateway(state insolar.NetworkState) network.Gateway {
-	log.Warnf("NewGateway %s", state.String())
+	log.Infof("NewGateway %s", state.String())
 	switch state {
 	case insolar.NoNetworkState:
 		g.Self = &NoNetwork{g}

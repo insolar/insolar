@@ -32,17 +32,15 @@ type CheckOurRole struct {
 	msg  insolar.Message
 	role insolar.DynamicRole
 
-	Dep struct {
-		lr *LogicRunner
-	}
+	lr *LogicRunner
 }
 
 func (ch *CheckOurRole) Proceed(ctx context.Context) error {
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := ch.msg.DefaultTarget()
-	isAuthorized, err := ch.Dep.lr.JetCoordinator.IsAuthorized(
+	isAuthorized, err := ch.lr.JetCoordinator.IsAuthorized(
 		// TODO: change ch.Dep.lr.pulse(ctx).PulseNumber -> flow.Pulse(ctx)
-		ctx, ch.role, *target.Record(), ch.Dep.lr.pulse(ctx).PulseNumber, ch.Dep.lr.JetCoordinator.Me(),
+		ctx, ch.role, *target.Record(), ch.lr.pulse(ctx).PulseNumber, ch.lr.JetCoordinator.Me(),
 	)
 	if err != nil {
 		return errors.Wrap(err, "authorization failed with error")
@@ -60,18 +58,14 @@ type RegisterRequest struct {
 
 	result chan *Ref
 
-	Dep struct {
-		ArtifactManager artifacts.Client
-	}
+	ArtifactManager artifacts.Client
 }
 
 func NewRegisterRequest(parcel insolar.Parcel, dep *Dependencies) *RegisterRequest {
 	return &RegisterRequest{
-		parcel: parcel,
-		Dep: struct{ ArtifactManager artifacts.Client }{
-			ArtifactManager: dep.lr.ArtifactManager,
-		},
-		result: make(chan *Ref, 1),
+		parcel:          parcel,
+		ArtifactManager: dep.lr.ArtifactManager,
+		result:          make(chan *Ref, 1),
 	}
 }
 
@@ -89,7 +83,7 @@ func (r *RegisterRequest) Proceed(ctx context.Context) error {
 	defer span.End()
 
 	obj := r.parcel.Message().(message.IBaseLogicMessage).GetReference()
-	id, err := r.Dep.ArtifactManager.RegisterRequest(ctx, obj, r.parcel)
+	id, err := r.ArtifactManager.RegisterRequest(ctx, obj, r.parcel)
 	if err != nil {
 		return err
 	}
@@ -107,9 +101,7 @@ type ClarifyPendingState struct {
 	es     *ExecutionState
 	parcel insolar.Parcel
 
-	Dep struct {
-		ArtifactManager artifacts.Client
-	}
+	ArtifactManager artifacts.Client
 }
 
 func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
@@ -138,7 +130,7 @@ func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
 
 	c.es.Unlock()
 
-	has, err := c.Dep.ArtifactManager.HasPendingRequests(ctx, c.es.Ref)
+	has, err := c.ArtifactManager.HasPendingRequests(ctx, c.es.Ref)
 	if err != nil {
 		return err
 	}
