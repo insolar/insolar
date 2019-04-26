@@ -54,6 +54,10 @@ import (
 	"context"
 	"testing"
 
+	"github.com/insolar/insolar/certificate"
+
+	"github.com/insolar/insolar/insolar/reply"
+
 	"github.com/insolar/insolar/network"
 	testnet "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/require"
@@ -100,4 +104,63 @@ func TestSWitch(t *testing.T) {
 
 	require.Equal(t, "CompleteNetworkState", ge.GetState().String())
 	require.True(t, gilreleased)
+}
+
+func TestComplete_GetCert(t *testing.T) {
+	ctx := context.Background()
+
+	nodekeeper := testnet.NewNodeKeeperMock(t)
+	gatewayer := testnet.NewGatewayerMock(t)
+	GIL := testutils.NewGlobalInsolarLockMock(t)
+	MB := testutils.NewMessageBusMock(t)
+
+	MB.MustRegisterFunc = func(p insolar.MessageType, p1 insolar.MessageHandler) {}
+
+	CR := testutils.NewContractRequesterMock(t)
+	CM := testutils.NewCertificateManagerMock(t)
+	ge := NewNoNetwork(gatewayer, GIL,
+		nodekeeper, CR,
+		testutils.NewCryptographyServiceMock(t), MB,
+		CM)
+
+	require.NotNil(t, ge)
+	require.Equal(t, "NoNetworkState", ge.GetState().String())
+
+	ge.Run(ctx)
+
+	nodekeeper.IsBootstrappedFunc = func() (r bool) { return true }
+	gatewayer.GatewayFunc = func() (r network.Gateway) { return ge }
+	gatewayer.SetGatewayFunc = func(p network.Gateway) { ge = p }
+	gilreleased := false
+	GIL.ReleaseFunc = func(p context.Context) { gilreleased = true }
+
+	ge.OnPulse(ctx, insolar.Pulse{})
+
+	require.Equal(t, "CompleteNetworkState", ge.GetState().String())
+	require.True(t, gilreleased)
+
+	cref := testutils.RandomRef()
+
+	CR.SendRequestFunc = func(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{},
+	) (r insolar.Reply, r1 error) {
+		require.Equal(t, &cref, ref)
+		require.Equal(t, "GetNodeInfo", method)
+		repl, _ := insolar.Serialize(struct {
+			PublicKey string
+			Role      insolar.StaticRole
+		}{"LALALA", insolar.StaticRoleVirtual})
+		return &reply.CallMethod{
+			Result: repl,
+		}, nil
+	}
+
+	CM.GetCertificateFunc = func() (r insolar.Certificate) { return &certificate.Certificate{} }
+	CM.NewUnsignedCertificateFunc = func(p string, p1 string, p2 string) (r insolar.Certificate, r1 error) {
+		return &certificate.Certificate{}, nil
+	}
+	cert, err := ge.Auther().GetCert(ctx, &cref)
+
+	require.NoError(t, err)
+	require.NotNil(t, cert)
+	require.Equal(t, cert, &certificate.Certificate{})
 }
