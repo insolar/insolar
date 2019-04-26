@@ -182,7 +182,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		phases.NewFirstPhase(),
 		phases.NewSecondPhase(),
 		phases.NewThirdPhase(),
-		phases.NewPhaseManager(),
+		phases.NewPhaseManager(n.cfg.Service.Consensus),
 		bootstrap.NewSessionManager(),
 		controller.NewNetworkController(),
 		controller.NewRPCController(options),
@@ -250,7 +250,7 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse) {
-	currentTime := time.Now()
+	pulseTime := time.Unix(0, newPulse.PulseTimestamp)
 
 	n.lock.Lock()
 	defer n.lock.Unlock()
@@ -279,7 +279,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	if n.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		// do not set pulse because otherwise we will set invalid active list
 		// pass consensus, prepare valid active list and set it on next pulse
-		go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
+		go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
 		return
 	}
 
@@ -308,7 +308,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	}
 	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
 
-	go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
+	go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
 }
 
 func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {

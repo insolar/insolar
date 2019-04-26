@@ -119,7 +119,7 @@ func makeDefaultPulseDataExt() PulseDataExt {
 	pulseDataExt.Entropy = insolar.Entropy{}
 	pulseDataExt.Entropy[1] = '3'
 	pulseDataExt.EpochPulseNo = uint32(21)
-	pulseDataExt.PulseTimestamp = uint32(33)
+	pulseDataExt.PulseTimestamp = int64(33)
 	pulseDataExt.OriginID = [16]byte{}
 
 	return pulseDataExt
