@@ -135,7 +135,7 @@ func TestSWitch(t *testing.T) {
 
 }
 
-func TestComplete_GetCert(t *testing.T) {
+func TestDumbComplete_GetCert(t *testing.T) {
 	ctx := context.Background()
 
 	nodekeeper := testnet.NewNodeKeeperMock(t)
