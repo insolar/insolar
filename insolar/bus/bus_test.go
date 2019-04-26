@@ -197,11 +197,11 @@ func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {
 	b := NewBus(pubsub)
 	b.timeout = time.Millisecond
 	correlationId := watermill.NewUUID()
-	resChan := lockedReply{
+	resChan := &lockedReply{
 		messages: make(chan *message.Message),
 		done:     make(chan struct{}),
 	}
-	b.replies[correlationId] = &resChan
+	b.replies[correlationId] = resChan
 
 	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
 		incomingHandlerCalls++
@@ -212,7 +212,7 @@ func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {
 	msg := message.NewMessage(watermill.NewUUID(), []byte{1, 2, 3, 4, 5})
 	middleware.SetCorrelationID(correlationId, msg)
 
-	resChan.close()
+	close(resChan.done)
 
 	res, err := handler(msg)
 	require.Error(t, err)

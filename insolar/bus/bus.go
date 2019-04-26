@@ -54,7 +54,7 @@ const (
 // Sender interface sends messages by watermill.
 type Sender interface {
 	// Send an `Message` and get a `Reply` or error from remote host.
-	Send(ctx context.Context, msg *message.Message) <-chan *message.Message
+	Send(ctx context.Context, msg *message.Message) (<-chan *message.Message, func())
 }
 
 type lockedReply struct {
@@ -63,14 +63,6 @@ type lockedReply struct {
 
 	isDone uint32
 	done   chan struct{}
-}
-
-func (r *lockedReply) close() bool {
-	if atomic.CompareAndSwapUint32(&r.isDone, 0, 1) {
-		close(r.done)
-		return true
-	}
-	return false
 }
 
 // Bus is component that sends messages and gives access to replies for them.
@@ -91,20 +83,20 @@ func NewBus(pub message.Publisher) *Bus {
 	}
 }
 
-func (b *Bus) removeReplyChannel(ctx context.Context, id string) {
-	b.repliesMutex.Lock()
-	defer b.repliesMutex.Unlock()
-	ch, ok := b.replies[id]
-	if !ok {
-		return
+func (b *Bus) removeReplyChannel(ctx context.Context, id string, reply *lockedReply) {
+	if atomic.CompareAndSwapUint32(&reply.isDone, 0, 1) {
+		close(reply.done)
+
+		b.repliesMutex.Lock()
+		defer b.repliesMutex.Unlock()
+		delete(b.replies, id)
+
+		inslogger.FromContext(ctx).Infof("close reply channel for message with correlationID %s", id)
+
+		reply.mutex.Lock()
+		close(reply.messages)
+		reply.mutex.Unlock()
 	}
-
-	ch.mutex.Lock()
-	inslogger.FromContext(ctx).Infof("close reply channel for message with correlationID %s", id)
-	close(ch.messages)
-	ch.mutex.Unlock()
-
-	delete(b.replies, id)
 }
 
 // Send a watermill's Message and return channel for replies.
@@ -126,15 +118,11 @@ func (b *Bus) Send(ctx context.Context, msg *message.Message) (<-chan *message.M
 
 	b.replies[id] = reply
 
-	c := func(b *Bus, reply *lockedReply) func() {
+	c := func(ctx context.Context, b *Bus, reply *lockedReply) func() {
 		return func() {
-
-			closed := reply.close()
-			if closed {
-				b.removeReplyChannel(ctx, id)
-			}
+			b.removeReplyChannel(ctx, id, reply)
 		}
-	}(b, reply)
+	}(ctx, b, reply)
 
 	go func(c func()) {
 		select {
