@@ -161,7 +161,10 @@ func (t *consensusNetworkSuite) sendPacket(packet consensus.ConsensusPacket) {
 		cn2.Stop(ctx2)
 	}()
 
-	err = cn1.SignAndSendPacket(packet, cn2.GetNodeID(), t.crypto)
+	ref2, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
+	t.Require().NoError(err)
+
+	err = cn1.SignAndSendPacket(packet, *ref2, t.crypto)
 	t.Require().NoError(err)
 	wg.Wait()
 }
@@ -241,7 +244,10 @@ func (t *consensusNetworkSuite) sendPacketAndVerify(packet consensus.ConsensusPa
 		cn2.Stop(ctx2)
 	}()
 
-	err = cn1.SignAndSendPacket(packet, cn2.GetNodeID(), t.crypto)
+	ref2, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
+	t.Require().NoError(err)
+
+	err = cn1.SignAndSendPacket(packet, *ref2, t.crypto)
 	t.Require().NoError(err)
 	t.True(<-result)
 }

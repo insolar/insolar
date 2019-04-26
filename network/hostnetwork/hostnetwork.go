@@ -127,23 +127,22 @@ func (hn *hostNetwork) Init(ctx context.Context) error {
 
 // Start listening to network requests, should be started in goroutine.
 func (hn *hostNetwork) Start(ctx context.Context) error {
-	if atomic.CompareAndSwapUint32(&hn.started, 0, 1) {
+	if !atomic.CompareAndSwapUint32(&hn.started, 0, 1) {
+		inslogger.FromContext(ctx).Warn("HostNetwork component already started")
+		return nil
+	}
 
-		err := hn.transport.Start(ctx)
-		if err != nil {
-			return errors.Wrap(err, "Failed to start transport: listen syscall failed")
-		}
+	hn.mu.Lock()
+	defer hn.mu.Unlock()
 
-		hn.mu.Lock()
-		defer hn.mu.Unlock()
-		h, err := host.NewHostN(hn.transport.Address(), hn.origin.NodeID)
-		if err != nil {
-			return errors.Wrap(err, "Failed to start transport: listen syscall failed")
-		}
-		hn.origin = h
+	if err := hn.transport.Start(ctx); err != nil {
+		return errors.Wrap(err, "failed to start stream transport")
+	}
+
+	if h, err := host.NewHostN(hn.transport.Address(), hn.nodeID); err != nil {
+		return errors.Wrap(err, "failed to create host")
 	} else {
-		inslogger.FromContext(ctx).Warn("Failed to start transport: double listen initiated")
-
+		hn.origin = h
 	}
 
 	return nil

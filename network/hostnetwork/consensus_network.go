@@ -75,6 +75,8 @@ type networkConsensus struct {
 	Resolver network.RoutingTable `inject:""`
 	Factory  transport.Factory    `inject:""`
 
+	nodeID            insolar.Reference
+	shortID           insolar.ShortNodeID
 	transport         transport.DatagramTransport
 	started           uint32
 	sequenceGenerator sequence.Generator
@@ -100,17 +102,20 @@ func (nc *networkConsensus) Start(ctx context.Context) error {
 		return nil
 	}
 
+	nc.mu.Lock()
+	defer nc.mu.Unlock()
+
 	if err := nc.transport.Start(ctx); err != nil {
 		return errors.Wrap(err, "Failed to start datagram transport")
 	}
 
-	var err error
-	a := nc.transport.Address()
-	h, err := host.NewHostNS(a, nc.origin.NodeID, nc.origin.ShortID)
-	if err == nil {
+	if h, err := host.NewHostNS(nc.transport.Address(), nc.nodeID, nc.shortID); err != nil {
+		return errors.Wrap(err, "failed to create host")
+	} else {
 		nc.origin = h
 	}
-	return err
+
+	return nil
 }
 
 func (nc *networkConsensus) Stop(ctx context.Context) error {
@@ -126,11 +131,6 @@ func (nc *networkConsensus) Stop(ctx context.Context) error {
 // PublicAddress returns public address that can be published for all nodes.
 func (nc *networkConsensus) PublicAddress() string {
 	return nc.getOrigin().Address.String()
-}
-
-// GetNodeID get current node ID.
-func (nc *networkConsensus) GetNodeID() insolar.Reference {
-	return nc.getOrigin().NodeID
 }
 
 // RegisterPacketHandler register a handler function to process incoming requests of a specific type.
@@ -189,7 +189,8 @@ func NewConsensusNetwork(nodeID string, shortID insolar.ShortNodeID) (network.Co
 	result := &networkConsensus{
 		handlers:          make(map[packets.PacketType]network.ConsensusPacketHandler),
 		sequenceGenerator: sequence.NewGenerator(),
-		origin:            &host.Host{NodeID: *id, ShortID: shortID},
+		nodeID:            *id,
+		shortID:           shortID,
 	}
 
 	return result, nil
@@ -206,6 +207,7 @@ func (nc *networkConsensus) HandleDatagram(address string, buf []byte) {
 	}
 
 	origin := nc.getOrigin()
+
 	log.Debugf("Got %s request from host, shortID: %d", p.GetType(), p.GetOrigin())
 	if p.GetTarget() != origin.ShortID {
 		logger.Errorf("[ HandleDatagram ] target ID %d differs from origin %d", p.GetTarget(), origin.ShortID)

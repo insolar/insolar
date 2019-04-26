@@ -127,8 +127,6 @@ type ConsensusNetwork interface {
 
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
-	// GetNodeID get current node ID.
-	GetNodeID() insolar.Reference
 
 	// SignAndSendPacket send request to a remote node.
 	SignAndSendPacket(packet consensus.ConsensusPacket, receiver insolar.Reference, service insolar.CryptographyService) error
