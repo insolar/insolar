@@ -63,12 +63,12 @@ import (
 type Base struct {
 	Self                network.Gateway
 	Network             network.Gatewayer
+	Nodekeeper          network.NodeKeeper
 	ContractRequester   insolar.ContractRequester
 	CryptographyService insolar.CryptographyService
 	CertificateManager  insolar.CertificateManager
 	GIL                 insolar.GlobalInsolarLock
 	MessageBus          insolar.MessageBus
-	SwitcherWorkAround  insolar.SwitcherWorkAround // nodekeeper
 }
 
 // NewGateway creates new gateway on top of existing
@@ -92,7 +92,7 @@ func (g *Base) NewGateway(state insolar.NetworkState) network.Gateway {
 }
 
 func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {
-	if g.SwitcherWorkAround.IsBootstrapped() {
+	if g.Nodekeeper.IsBootstrapped() {
 		g.Network.SetGateway(g.Network.Gateway().NewGateway(insolar.CompleteNetworkState))
 		g.Network.Gateway().Run(ctx)
 	}

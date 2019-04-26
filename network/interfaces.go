@@ -179,8 +179,10 @@ type PulseHandler interface {
 type NodeKeeper interface {
 	insolar.NodeNetwork
 
-	// TODO: remove this interface when bootstrap mechanism completed
-	insolar.SwitcherWorkAround
+	// IsBootstrapped method shows that all DiscoveryNodes finds each other
+	IsBootstrapped() bool
+	// SetIsBootstrapped method set is bootstrap completed
+	SetIsBootstrapped(isBootstrap bool)
 
 	// GetCloudHash returns current cloud hash
 	GetCloudHash() []byte

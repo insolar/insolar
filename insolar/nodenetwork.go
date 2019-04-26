@@ -74,14 +74,3 @@ type NodeNetwork interface {
 	// GetWorkingNodesByRole get working nodes by role.
 	GetWorkingNodesByRole(role DynamicRole) []Reference
 }
-
-//go:generate minimock -i github.com/insolar/insolar/insolar.SwitcherWorkAround -o ../testutils/network -s _mock.go
-
-// TODO: remove this interface when bootstrap mechanism completed
-// SwitcherWorkAround temp interface for NetworkSwitcher interaction
-type SwitcherWorkAround interface {
-	// IsBootstrapped method shows that all DiscoveryNodes finds each other
-	IsBootstrapped() bool
-	// SetIsBootstrapped method set is bootstrap completed
-	SetIsBootstrapped(isBootstrap bool)
-}

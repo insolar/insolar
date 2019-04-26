@@ -63,12 +63,12 @@ import (
 // TODO Remove message bus here and switch communication to network.rpc
 // NewNoNetwork this initial constructor have special signature to be called outside
 func NewNoNetwork(n network.Gatewayer, gil insolar.GlobalInsolarLock,
-	swa insolar.SwitcherWorkAround, cr insolar.ContractRequester,
+	nk network.NodeKeeper, cr insolar.ContractRequester,
 	cs insolar.CryptographyService, mb insolar.MessageBus,
 	cm insolar.CertificateManager) network.Gateway {
 	return (&Base{
 		Network: n, GIL: gil,
-		SwitcherWorkAround: swa, ContractRequester: cr,
+		Nodekeeper: nk, ContractRequester: cr,
 		CryptographyService: cs, MessageBus: mb,
 		CertificateManager: cm,
 	}).NewGateway(insolar.NoNetworkState)
