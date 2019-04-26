@@ -206,6 +206,10 @@ func (hn *hostNetwork) handleRequest(p *packet.Packet) {
 
 // SendRequestToHost send request packet to a remote node.
 func (hn *hostNetwork) SendRequestToHost(ctx context.Context, request network.Request, receiver *host.Host) (network.Future, error) {
+	if atomic.LoadUint32(&hn.started) == 0 {
+		return nil, errors.New("host network is not started")
+	}
+
 	p := hn.buildRequest(ctx, request, receiver)
 
 	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d", p.Type, p.Receiver.String(), p.RequestID)

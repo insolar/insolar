@@ -57,10 +57,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -70,6 +66,9 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/utils"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -494,4 +493,12 @@ func TestStartStopSend(t *testing.T) {
 	send()
 	wg.Wait()
 	t1.Stop(ctx)
+}
+
+func Test_hostNetwork_SendRequestToHost_NotStarted(t *testing.T) {
+	hn, err := NewHostNetwork(ID1 + DOMAIN)
+	require.NoError(t, err)
+
+	_, err = hn.SendRequestToHost(context.Background(), nil, nil)
+	require.EqualError(t, err, "host network is not started")
 }
