@@ -256,7 +256,7 @@ func (rpc *rpcController) SendBytes(ctx context.Context, nodeID insolar.Referenc
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error sending RPC request to node %s", nodeID.String())
 	}
-	response, err := future.GetResponse(rpc.options.PacketTimeout)
+	response, err := future.WaitResponse(rpc.options.PacketTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error getting RPC response from node %s", nodeID.String())
 	}
