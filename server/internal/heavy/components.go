@@ -196,7 +196,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		records := object.NewRecordDB(db)
 		nodes := node.NewStorage()
 		jets := jet.NewStore()
-		indexes := object.NewIndexDB(db)
+		indexes := object.NewLifelineDB(db)
 		blobs := blob.NewDB(db)
 		drops := drop.NewDB(db)
 

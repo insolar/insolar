@@ -28,4 +28,6 @@ var (
 
 	// ErrLifelineNotFound is returned when an index not found.
 	ErrLifelineNotFound = errors.New("index not found")
+	// ErrIndexBucketNotFound is returned when an index not found.
+	ErrIndexBucketNotFound = errors.New("index bucket not found")
 )

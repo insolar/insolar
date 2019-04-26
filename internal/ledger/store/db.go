@@ -48,8 +48,10 @@ const (
 	ScopeRecord Scope = 2
 	// ScopeJetDrop is the scope for a jet drop storage.
 	ScopeJetDrop Scope = 3
-	// ScopeLifeline is the scope for an index records.
+	// ScopeLifeline is the scope for an lifeline records.
 	ScopeLifeline Scope = 4
+	// ScopeIndex is the scope for an index records.
+	ScopeIndex Scope = 5
 
 	// ScopeBlob is the scope for a blobs records.
 	ScopeBlob Scope = 7

@@ -95,7 +95,7 @@ func TestIndexDB_Set(t *testing.T) {
 	t.Run("saves correct index-value", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := NewIndexDB(store.NewMemoryMockDB())
+		indexStorage := NewLifelineDB(store.NewMemoryMockDB())
 		err := indexStorage.Set(ctx, id, idx)
 		require.NoError(t, err)
 		savedIdx, err := indexStorage.ForID(ctx, id)
@@ -121,7 +121,7 @@ func TestIndexDB_Set(t *testing.T) {
 	t.Run("init delegates, when nil", func(t *testing.T) {
 		t.Parallel()
 
-		indexStorage := NewIndexDB(store.NewMemoryMockDB())
+		indexStorage := NewLifelineDB(store.NewMemoryMockDB())
 		err := indexStorage.Set(ctx, id, Lifeline{Delegates: nil})
 		require.NoError(t, err)
 		savedIdx, err := indexStorage.ForID(ctx, id)

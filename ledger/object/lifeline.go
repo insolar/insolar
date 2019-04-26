@@ -363,8 +363,8 @@ func (k lifelineKey) ID() []byte {
 	return (&res).Bytes()
 }
 
-// NewIndexDB creates new DB storage instance.
-func NewIndexDB(db store.DB) *LifelineDB {
+// NewLifelineDB creates new DB storage instance.
+func NewLifelineDB(db store.DB) *LifelineDB {
 	return &LifelineDB{db: db}
 }
 

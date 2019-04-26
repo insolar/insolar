@@ -36,7 +36,7 @@ func TestIndex_Components(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	indexMemory := object.NewIndexMemory()
-	indexDB := object.NewIndexDB(store.NewMemoryMockDB())
+	indexDB := object.NewLifelineDB(store.NewMemoryMockDB())
 
 	type tempIndex struct {
 		id  insolar.ID
@@ -101,7 +101,7 @@ func TestIndex_Components(t *testing.T) {
 		t.Parallel()
 
 		indexMemory := object.NewIndexMemory()
-		indexDB := object.NewIndexDB(store.NewMemoryMockDB())
+		indexDB := object.NewLifelineDB(store.NewMemoryMockDB())
 
 		for _, i := range indices {
 			memErr := indexMemory.Set(ctx, i.id, i.idx)
