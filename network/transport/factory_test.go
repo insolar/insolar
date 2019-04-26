@@ -48,89 +48,95 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package pool
+package transport
 
 import (
 	"context"
 	"net"
-	"sync"
+	"testing"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/configuration"
 )
 
-type entryImpl struct {
-	connectionFactory connectionFactory
-	address           net.Addr
-	onClose           onClose
+func TestFactory_Positive(t *testing.T) {
+	table := []struct {
+		name    string
+		cfg     configuration.Transport
+		success bool
+	}{
+		{
+			name: "default config",
+			cfg:  configuration.NewHostNetwork().Transport,
+		},
+		{
+			name: "localhost",
+			cfg:  configuration.Transport{Address: "localhost:0", Protocol: "TCP"},
+		},
+		{
+			name: "FixedPublicAddress",
+			cfg:  configuration.Transport{Address: "localhost:0", FixedPublicAddress: "192.168.1.1", Protocol: "TCP"},
+		},
+	}
 
-	mutex *sync.Mutex
+	for _, test := range table {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			f := NewFactory(test.cfg)
+			require.NotNil(t, f)
 
-	conn net.Conn
-}
+			udp, err := f.CreateDatagramTransport(nil)
+			assert.NoError(t, err)
+			require.NotNil(t, udp)
 
-func newEntryImpl(connectionFactory connectionFactory, address net.Addr, onClose onClose) *entryImpl {
-	return &entryImpl{
-		connectionFactory: connectionFactory,
-		address:           address,
-		mutex:             &sync.Mutex{},
-		onClose:           onClose,
+			tcp, err := f.CreateStreamTransport(nil)
+			assert.NoError(t, err)
+			require.NotNil(t, tcp)
+
+			assert.NoError(t, udp.Start(ctx))
+			assert.NoError(t, tcp.Start(ctx))
+
+			addrUDP, err := net.ResolveUDPAddr("udp", udp.Address())
+			assert.NoError(t, err)
+			assert.NotEqual(t, 0, addrUDP.Port)
+
+			addrTCP, err := net.ResolveTCPAddr("tcp", tcp.Address())
+			assert.NoError(t, err)
+			assert.NotEqual(t, 0, addrTCP.Port)
+
+			assert.NoError(t, udp.Stop(ctx))
+			assert.NoError(t, tcp.Stop(ctx))
+
+		})
 	}
 }
 
-func (e *entryImpl) Open(ctx context.Context) (net.Conn, error) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
-	if e.conn != nil {
-		return e.conn, nil
+func TestFactoryStreamTransport_Negative(t *testing.T) {
+	table := []struct {
+		name    string
+		cfg     configuration.Transport
+		success bool
+	}{
+		{
+			name: "invalid address",
+			cfg:  configuration.Transport{Address: "invalid"},
+		},
+		{
+			name: "invalid protocol",
+			cfg:  configuration.Transport{Address: "localhost:0", FixedPublicAddress: "192.168.1.1", Protocol: "HTTP"},
+		},
 	}
 
-	conn, err := e.open(ctx)
-	if err != nil {
-		return nil, err
-	}
+	for _, test := range table {
+		t.Run(test.name, func(t *testing.T) {
+			f := NewFactory(test.cfg)
+			require.NotNil(t, f)
 
-	e.conn = conn
-	return e.conn, nil
-}
-
-func (e *entryImpl) open(ctx context.Context) (net.Conn, error) {
-	logger := inslogger.FromContext(ctx)
-	ctx, span := instracer.StartSpan(ctx, "connectionPool.open")
-	span.AddAttributes(
-		trace.StringAttribute("create connect to", e.address.String()),
-	)
-	defer span.End()
-
-	conn, err := e.connectionFactory.CreateConnection(ctx, e.address)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Open ] Failed to create TCP connection")
-	}
-
-	go func(e *entryImpl, conn net.Conn) {
-		b := make([]byte, 1)
-		_, err := conn.Read(b)
-		if err != nil {
-			logger.Infof("[ Open ] remote host 'closed' connection to %s: %s", e.address, err)
-			e.onClose(ctx, e.address)
-			return
-		}
-
-		logger.Errorf("[ Open ] unexpected data on connection to %s", e.address)
-	}(e, conn)
-
-	return conn, nil
-}
-
-func (e *entryImpl) Close() {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
-
-	if e.conn != nil {
-		utils.CloseVerbose(e.conn)
+			tcp, err := f.CreateStreamTransport(nil)
+			assert.Error(t, err)
+			require.Nil(t, tcp)
+		})
 	}
 }

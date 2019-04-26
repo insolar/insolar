@@ -78,6 +78,7 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
+	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/utils"
 )
 
@@ -152,20 +153,14 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method insolar.Rem
 	n.Controller.RemoteProcedureRegister(name, method)
 }
 
-// Start implements component.Initer
+// Init implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
-	hostNetwork, err := hostnetwork.NewHostNetwork(n.cfg, n.CertificateManager.GetCertificate().GetNodeRef().String())
+	hostNetwork, err := hostnetwork.NewHostNetwork(n.CertificateManager.GetCertificate().GetNodeRef().String())
 	if err != nil {
-		return errors.Wrap(err, "Failed to create internal transport")
-	}
-
-	consensusAddress := n.cfg.Host.Transport.Address
-	if n.cfg.Host.Transport.FixedPublicAddress == "" {
-		consensusAddress = n.NodeKeeper.GetOrigin().Address()
+		return errors.Wrap(err, "Failed to create hostnetwork")
 	}
 
 	consensusNetwork, err := hostnetwork.NewConsensusNetwork(
-		consensusAddress,
 		n.CertificateManager.GetCertificate().GetNodeRef().String(),
 		n.NodeKeeper.GetOrigin().ShortID(),
 	)
@@ -181,6 +176,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.cm.Inject(n,
 		&routing.Table{},
 		cert,
+		transport.NewFactory(n.cfg.Host.Transport),
 		hostNetwork,
 		// use flaky network instead of hostNetwork to imitate network delays
 		// NewFlakyNetwork(hostNetwork),

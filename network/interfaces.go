@@ -74,7 +74,8 @@ type BootstrapResult struct {
 // Controller contains network logic.
 type Controller interface {
 	component.Initer
-	// SendParcel send message to nodeID.
+
+	// SendMessage send message to nodeID.
 	SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error)
 	// SendBytes send bytes to nodeID.
 	SendBytes(ctx context.Context, nodeID insolar.Reference, name string, msgBytes []byte) ([]byte, error)
@@ -98,16 +99,16 @@ type RequestHandler func(context.Context, Request) (Response, error)
 
 // HostNetwork simple interface to send network requests and process network responses.
 type HostNetwork interface {
+	component.Initer
 	component.Starter
 	component.Stopper
+
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
-	// GetNodeID get current node ID.
-	GetNodeID() insolar.Reference
 
-	// SendRequest send request to a remote node.
+	// SendRequest send request to a remote node addressed by reference.
 	SendRequest(ctx context.Context, request Request, receiver insolar.Reference) (Future, error)
-	// SendRequestToHost send request packet to a remote node.
+	// SendRequestToHost send request packet to a remote host.
 	SendRequestToHost(ctx context.Context, request Request, receiver *host.Host) (Future, error)
 	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 	RegisterRequestHandler(t types.PacketType, handler RequestHandler)
@@ -117,16 +118,19 @@ type HostNetwork interface {
 	BuildResponse(ctx context.Context, request Request, responseData interface{}) Response
 }
 
+// ConsensusPacketHandler callback function for consensus packets handling
 type ConsensusPacketHandler func(incomingPacket consensus.ConsensusPacket, sender insolar.Reference)
 
 //go:generate minimock -i github.com/insolar/insolar/network.ConsensusNetwork -o ../testutils/network -s _mock.go
+
+// ConsensusNetwork interface to send and handling consensus packets
 type ConsensusNetwork interface {
+	component.Initer
 	component.Starter
 	component.Stopper
+
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
-	// GetNodeID get current node ID.
-	GetNodeID() insolar.Reference
 
 	// SignAndSendPacket send request to a remote node.
 	SignAndSendPacket(packet consensus.ConsensusPacket, receiver insolar.Reference, service insolar.CryptographyService) error
@@ -154,9 +158,9 @@ type Response Packet
 
 // Future allows to handle responses to a previously sent request.
 type Future interface {
-	GetRequest() Request
+	Request() Request
 	Response() <-chan Response
-	GetResponse(duration time.Duration) (Response, error)
+	WaitResponse(duration time.Duration) (Response, error)
 }
 
 // RequestBuilder allows to build a Request.
@@ -207,8 +211,8 @@ type NodeKeeper interface {
 	GetConsensusInfo() ConsensusInfo
 }
 
-// TODO: refactor code and make it not necessary
 // ConsensusInfo additional info for the current consensus process
+// TODO: refactor code and make it not necessary
 type ConsensusInfo interface {
 	// NodesJoinedDuringPreviousPulse returns true if the last Sync call contained approved Join claims
 	NodesJoinedDuringPreviousPulse() bool
@@ -229,6 +233,8 @@ type PartitionPolicy interface {
 	ShardsCount() int
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network.RoutingTable -o ../testutils/network -s _mock.go
+
 // RoutingTable contains all routing information of the network.
 type RoutingTable interface {
 	// Resolve NodeID -> ShortID, Address. Can initiate network requests.
@@ -242,6 +248,8 @@ type RoutingTable interface {
 	// Rebalance recreate shards of routing table with known hosts according to new partition policy.
 	Rebalance(PartitionPolicy)
 }
+
+//go:generate minimock -i github.com/insolar/insolar/network.ClaimQueue -o ../testutils/network -s _mock.go
 
 // ClaimQueue is the queue that contains consensus claims.
 type ClaimQueue interface {
@@ -281,8 +289,9 @@ type Mutator interface {
 	AddWorkingNode(n insolar.NetworkNode)
 }
 
-// Gatewayer is a network which can change it's Gateway
 //go:generate minimock -i github.com/insolar/insolar/network.Gatewayer -o ../testutils/network -s _mock.go
+
+// Gatewayer is a network which can change it's Gateway
 type Gatewayer interface {
 	Gateway() Gateway
 	SetGateway(Gateway)

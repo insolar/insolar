@@ -24,8 +24,13 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill"
+	message2 "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -253,6 +258,30 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 	})
 }
 
+func prepareParcel(t minimock.Tester, msg insolar.Message, needType bool) insolar.Parcel {
+	parcel := testutils.NewParcelMock(t)
+	parcel.MessageMock.Return(msg)
+	if needType {
+		parcel.TypeMock.Return(msg.Type())
+	}
+	return parcel
+}
+
+func prepareWatermill(t minimock.Tester) (flow.Flow, message2.PubSub) {
+	flowMock := flow.NewFlowMock(t)
+	flowMock.ProcedureMock.Set(func(p context.Context, p1 flow.Procedure, p2 bool) (r error) {
+		return p1.Proceed(p)
+	})
+	flowMock.HandleMock.Set(func(p context.Context, p1 flow.Handle) (r error) {
+		return p1(p, flowMock)
+	})
+
+	wmLogger := watermill.NewStdLogger(false, false)
+	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
+
+	return flowMock, pubSub
+}
+
 func (suite *LogicRunnerTestSuite) TestPrepareState() {
 	type msgt struct {
 		pending  message.PendingState
@@ -387,7 +416,16 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 				suite.am.HasPendingRequestsMock.Return(true, nil)
 			}
 
-			err := suite.lr.prepareObjectState(suite.ctx, msg)
+			flowMock, pubSub := prepareWatermill(suite.mc)
+			fakeParcel := prepareParcel(suite.mc, msg, false)
+
+			h := HandleExecutorResults{
+				dep:     &Dependencies{Publisher: pubSub, lr: suite.lr},
+				Message: bus.Message{Parcel: fakeParcel, ReplyTo: make(chan bus.Reply)},
+			}
+			err := h.realHandleExecutorState(suite.ctx, flowMock)
+			suite.mc.Wait(time.Minute)
+
 			suite.Require().NoError(err)
 			suite.Require().Equal(test.expected.pending, suite.lr.state[object].ExecutionState.pending)
 			suite.Require().Equal(test.expected.queueLen, len(suite.lr.state[object].ExecutionState.Queue))
@@ -621,31 +659,44 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {
 	ref := testutils.RandomRef()
 
+	flowMock, pubSub := prepareWatermill(suite.mc)
+	var fakeParcel insolar.Parcel
+	var h HandleExecutorResults
+	var err error
+
 	msg := &message.ExecutorResults{RecordRef: ref}
+	fakeParcel = prepareParcel(suite.mc, msg, false)
+	h = HandleExecutorResults{
+		dep:     &Dependencies{Publisher: pubSub, lr: suite.lr},
+		Message: bus.Message{Parcel: fakeParcel, ReplyTo: make(chan bus.Reply)},
+	}
 
 	// we are in pending and come to ourselves again
 	suite.lr.state[ref] = &ObjectState{ExecutionState: &ExecutionState{
 		pending: message.InPending, Current: &CurrentExecution{}},
 	}
-	err := suite.lr.prepareObjectState(suite.ctx, msg)
+	err = h.realHandleExecutorState(suite.ctx, flowMock)
 	suite.Require().NoError(err)
 	suite.Equal(message.NotPending, suite.lr.state[ref].ExecutionState.pending)
 	suite.Equal(false, suite.lr.state[ref].ExecutionState.PendingConfirmed)
 
 	// previous executor decline pending, trust him
 	msg = &message.ExecutorResults{RecordRef: ref, Pending: message.NotPending}
+	fakeParcel = prepareParcel(suite.mc, msg, false)
+	h = HandleExecutorResults{
+		dep:     &Dependencies{Publisher: pubSub, lr: suite.lr},
+		Message: bus.Message{Parcel: fakeParcel, ReplyTo: make(chan bus.Reply)},
+	}
 	suite.lr.state[ref] = &ObjectState{ExecutionState: &ExecutionState{
 		pending: message.InPending, Current: nil},
 	}
-	err = suite.lr.prepareObjectState(suite.ctx, msg)
+	err = h.realHandleExecutorState(suite.ctx, flowMock)
 	suite.Require().NoError(err)
 	suite.Equal(message.NotPending, suite.lr.state[ref].ExecutionState.pending)
 }
 
 func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangeLedgerHasMoreRequests() {
 	ref := testutils.RandomRef()
-
-	msg := &message.ExecutorResults{RecordRef: ref}
 
 	type testCase struct {
 		messageStatus             bool
@@ -661,9 +712,27 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangeLedgerHasMoreRequ
 	}
 
 	for _, test := range testCases {
-		msg = &message.ExecutorResults{RecordRef: ref, LedgerHasMoreRequests: test.messageStatus, Pending: message.NotPending}
-		suite.lr.state[ref] = &ObjectState{ExecutionState: &ExecutionState{QueueProcessorActive: true, LedgerHasMoreRequests: test.objectStateStatus}}
-		err := suite.lr.prepareObjectState(suite.ctx, msg)
+		msg := &message.ExecutorResults{
+			RecordRef:             ref,
+			LedgerHasMoreRequests: test.messageStatus,
+			Pending:               message.NotPending,
+		}
+
+		flowMock, pubSub := prepareWatermill(suite.mc)
+		fakeParcel := prepareParcel(suite.mc, msg, false)
+
+		h := HandleExecutorResults{
+			dep:     &Dependencies{Publisher: pubSub, lr: suite.lr},
+			Message: bus.Message{Parcel: fakeParcel, ReplyTo: make(chan bus.Reply)},
+		}
+
+		suite.lr.state[ref] = &ObjectState{
+			ExecutionState: &ExecutionState{
+				QueueProcessorActive:  true,
+				LedgerHasMoreRequests: test.objectStateStatus,
+			},
+		}
+		err := h.realHandleExecutorState(suite.ctx, flowMock)
 		suite.Require().NoError(err)
 		suite.Equal(test.expectedObjectStateStatue, suite.lr.state[ref].ExecutionState.LedgerHasMoreRequests)
 	}

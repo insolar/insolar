@@ -51,10 +51,11 @@
 package nodenetwork
 
 import (
+	"github.com/pkg/errors"
+
 	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/node"
-	"github.com/pkg/errors"
 )
 
 type MergedListCopy struct {

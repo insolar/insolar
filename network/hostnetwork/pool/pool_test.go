@@ -52,45 +52,62 @@ package pool
 
 import (
 	"context"
-	"net"
+	"io"
+	"testing"
+
+	"github.com/stretchr/testify/assert"
+
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/testutils/network"
 )
 
-type ConnectionPool interface {
-	GetConnection(ctx context.Context, address net.Addr) (net.Conn, error)
-	CloseConnection(ctx context.Context, address net.Addr)
-	Reset()
+type fakeConnection struct {
+	io.ReadWriteCloser
 }
 
-type connectionFactory interface {
-	CreateConnection(ctx context.Context, address net.Addr) (net.Conn, error)
+func (fakeConnection) Read(p []byte) (n int, err error) {
+	panic("implement me")
 }
 
-type entry interface {
-	Open(ctx context.Context) (net.Conn, error)
-	Close()
+func (fakeConnection) Write(p []byte) (n int, err error) {
+	panic("implement me")
 }
 
-type onClose func(ctx context.Context, addr net.Addr)
+func (fakeConnection) Close() error {
+	return nil
 
-func newEntry(connectionFactory connectionFactory, address net.Addr, onClose onClose) entry {
-	return newEntryImpl(connectionFactory, address, onClose)
 }
 
-type iterateFunc func(entry entry)
-
-type entryHolder interface {
-	Get(address net.Addr) (entry, bool)
-	Delete(address net.Addr)
-	Add(address net.Addr, entry entry)
-	Size() int
-	Clear()
-	Iterate(iterateFunc iterateFunc)
+func newTransportMock(t *testing.T) transport.StreamTransport {
+	tr := network.NewStreamTransportMock(t)
+	tr.DialMock.Set(func(p context.Context, p1 string) (r io.ReadWriteCloser, r1 error) {
+		return fakeConnection{}, nil
+	})
+	return tr
 }
 
-func newEntryHolder() entryHolder {
-	return newEntryHolderImpl()
-}
+func TestNewConnectionPool(t *testing.T) {
+	ctx := context.Background()
+	tr := newTransportMock(t)
 
-func NewConnectionPool(connectionFactory connectionFactory) ConnectionPool {
-	return newConnectionPool(connectionFactory)
+	pool := NewConnectionPool(tr)
+
+	h, err := host.NewHost("127.0.0.1:8080")
+	h2, err := host.NewHost("127.0.0.1:4200")
+
+	conn, err := pool.GetConnection(ctx, h)
+	assert.NoError(t, err)
+	assert.NotNil(t, conn)
+
+	conn2, err := pool.GetConnection(ctx, h2)
+	assert.NoError(t, err)
+	assert.NotNil(t, conn2)
+
+	conn3, err := pool.GetConnection(ctx, h2)
+	assert.NotNil(t, conn2)
+	assert.Equal(t, conn2, conn3)
+
+	pool.CloseConnection(ctx, h)
+	pool.Reset()
 }

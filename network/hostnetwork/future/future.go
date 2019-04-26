@@ -51,7 +51,6 @@
 package future
 
 import (
-	"errors"
 	"sync/atomic"
 	"time"
 
@@ -61,48 +60,9 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
-var (
-	// ErrTimeout is returned when the operation timeout is exceeded.
-	ErrTimeout = errors.New("timeout")
-	// ErrChannelClosed is returned when the input channel is closed.
-	ErrChannelClosed = errors.New("channel closed")
-)
-
-// Future is network response future.
-type Future interface {
-
-	// ID returns packet sequence number.
-	ID() network.RequestID
-
-	// Actor returns the initiator of the packet.
-	Actor() *host.Host
-
-	// Request returns origin request.
-	Request() *packet.Packet
-
-	// Result is a channel to listen for future result.
-	Result() <-chan *packet.Packet
-
-	// SetResult makes packet to appear in result channel.
-	SetResult(*packet.Packet)
-
-	// GetResult gets the future result from Result() channel with a timeout set to `duration`.
-	GetResult(duration time.Duration) (*packet.Packet, error)
-
-	// Cancel closes all channels and cleans up underlying structures.
-	Cancel()
-
-	GetRequest() network.Request
-	Response() <-chan network.Response
-	GetResponse(duration time.Duration) (network.Response, error)
-}
-
-// CancelCallback is a callback function executed when cancelling Future.
-type CancelCallback func(Future)
-
 type future struct {
-	result         chan *packet.Packet
-	actor          *host.Host
+	response       chan network.Response
+	receiver       *host.Host
 	request        *packet.Packet
 	requestID      network.RequestID
 	cancelCallback CancelCallback
@@ -110,12 +70,12 @@ type future struct {
 }
 
 // NewFuture creates a new Future.
-func NewFuture(requestID network.RequestID, actor *host.Host, msg *packet.Packet, cancelCallback CancelCallback) Future {
-	metrics.NetworkFutures.WithLabelValues(msg.Type.String()).Inc()
+func NewFuture(requestID network.RequestID, receiver *host.Host, packet *packet.Packet, cancelCallback CancelCallback) Future {
+	metrics.NetworkFutures.WithLabelValues(packet.Type.String()).Inc()
 	return &future{
-		result:         make(chan *packet.Packet, 1),
-		actor:          actor,
-		request:        msg,
+		response:       make(chan network.Response, 1),
+		receiver:       receiver,
+		request:        packet,
 		requestID:      requestID,
 		cancelCallback: cancelCallback,
 	}
@@ -126,37 +86,37 @@ func (f *future) ID() network.RequestID {
 	return f.requestID
 }
 
-// Actor returns Host address that was used to create packet.
-func (f *future) Actor() *host.Host {
-	return f.actor
+// Receiver returns Host address that was used to create packet.
+func (f *future) Receiver() *host.Host {
+	return f.receiver
 }
 
 // Request returns original request packet.
-func (f *future) Request() *packet.Packet {
+func (f *future) Request() network.Request {
 	return f.request
 }
 
-// Result returns result packet channel.
-func (f *future) Result() <-chan *packet.Packet {
-	return f.result
+// Response returns response packet channel.
+func (f *future) Response() <-chan network.Response {
+	return f.response
 }
 
-// SetResult write packet to the result channel.
-func (f *future) SetResult(msg *packet.Packet) {
+// SetResponse write packet to the response channel.
+func (f *future) SetResponse(response network.Response) {
 	if atomic.CompareAndSwapUint32(&f.finished, 0, 1) {
-		f.result <- msg
+		f.response <- response
 		f.finish()
 	}
 }
 
-// GetResult gets the future result from Result() channel with a timeout set to `duration`.
-func (f *future) GetResult(duration time.Duration) (*packet.Packet, error) {
+// WaitResponse gets the future response from Response() channel with a timeout set to `duration`.
+func (f *future) WaitResponse(duration time.Duration) (network.Response, error) {
 	select {
-	case result, ok := <-f.Result():
+	case response, ok := <-f.Response():
 		if !ok {
 			return nil, ErrChannelClosed
 		}
-		return result, nil
+		return response, nil
 	case <-time.After(duration):
 		f.Cancel()
 		metrics.NetworkPacketTimeoutTotal.WithLabelValues(f.request.Type.String()).Inc()
@@ -166,7 +126,7 @@ func (f *future) GetResult(duration time.Duration) (*packet.Packet, error) {
 
 // Cancel cancels Future processing.
 // Please note that cancelCallback is called asynchronously. In other words it's not guaranteed
-// it was called and finished when GetResult() returns ErrChannelClosed.
+// it was called and finished when WaitResponse() returns ErrChannelClosed.
 func (f *future) Cancel() {
 	if atomic.CompareAndSwapUint32(&f.finished, 0, 1) {
 		f.finish()
@@ -175,34 +135,6 @@ func (f *future) Cancel() {
 }
 
 func (f *future) finish() {
-	close(f.result)
+	close(f.response)
 	f.cancelCallback(f)
-}
-
-// Response get channel that receives response to sent request
-func (f *future) Response() <-chan network.Response {
-	in := f.Result()
-	out := make(chan network.Response, cap(in))
-	go func(in <-chan *packet.Packet, out chan<- network.Response) {
-		for packet := range in {
-			out <- packet
-		}
-		close(out)
-	}(in, out)
-	return out
-}
-
-// GetResponse get response to sent request with `duration` timeout
-func (f *future) GetResponse(duration time.Duration) (network.Response, error) {
-	result, err := f.GetResult(duration)
-	if err != nil {
-		return nil, err
-	}
-	return result, nil
-}
-
-// GetRequest get initiating request.
-func (f *future) GetRequest() network.Request {
-	request := f.Request()
-	return request
 }

@@ -47,13 +47,6 @@ func TestGetCode_Proceed(t *testing.T) {
 	}
 	codeRef := gen.Reference()
 	getCode := proc.NewGetCode(codeRef, replyTo)
-	getCode.Dep.CheckJet = func(
-		ctx context.Context,
-		target insolar.ID,
-		pn insolar.PulseNumber,
-	) (insolar.JetID, bool, error) {
-		return *insolar.NewJetID(0, nil), true, nil
-	}
 	records := object.NewRecordAccessorMock(mc)
 	records.ForIDFunc = func(c context.Context, id insolar.ID) (record.MaterialRecord, error) {
 		a.Equal(*codeRef.Record(), id)

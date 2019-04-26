@@ -51,107 +51,71 @@
 package pool
 
 import (
-	"context"
-	"net"
+	"fmt"
 	"sync"
-
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/metrics"
 )
 
-type connectionPool struct {
-	connectionFactory connectionFactory
+type iterateFunc func(entry *entry)
 
-	entryHolder entryHolder
-	mutex       sync.RWMutex
+type entryHolder struct {
+	sync.RWMutex
+	entries map[string]*entry
 }
 
-func newConnectionPool(connectionFactory connectionFactory) *connectionPool {
-	return &connectionPool{
-		connectionFactory: connectionFactory,
-
-		entryHolder: newEntryHolder(),
+func newEntryHolder() *entryHolder {
+	return &entryHolder{
+		entries: make(map[string]*entry),
 	}
 }
 
-func (cp *connectionPool) GetConnection(ctx context.Context, address net.Addr) (net.Conn, error) {
-	logger := inslogger.FromContext(ctx)
+func (eh *entryHolder) key(host fmt.Stringer) string {
+	return host.String()
+}
 
-	entry, ok := cp.getEntry(address)
+func (eh *entryHolder) get(host fmt.Stringer) (*entry, bool) {
+	eh.RLock()
+	defer eh.RUnlock()
+	e, ok := eh.entries[eh.key(host)]
+	return e, ok
+}
 
-	logger.Debugf("[ GetConnection ] Finding entry for connection to %s in pool: %t", address, ok)
+func (eh *entryHolder) delete(host fmt.Stringer) bool {
+	eh.Lock()
+	defer eh.Unlock()
 
+	e, ok := eh.entries[eh.key(host)]
 	if ok {
-		return entry.Open(ctx)
+		e.close()
+		delete(eh.entries, eh.key(host))
+		return true
 	}
-
-	logger.Debugf("[ GetConnection ] Missing entry for connection to %s in pool ", address)
-	entry = cp.getOrCreateEntry(ctx, address)
-
-	return entry.Open(ctx)
+	return false
 }
 
-func (cp *connectionPool) CloseConnection(ctx context.Context, address net.Addr) {
-	cp.mutex.Lock()
-	defer cp.mutex.Unlock()
+func (eh *entryHolder) add(host fmt.Stringer, entry *entry) {
+	eh.Lock()
+	defer eh.Unlock()
+	eh.entries[eh.key(host)] = entry
+}
 
-	logger := inslogger.FromContext(ctx)
-
-	entry, ok := cp.entryHolder.Get(address)
-	logger.Debugf("[ CloseConnection ] Finding entry for connection to %s in pool: %s", address, ok)
-
-	if ok {
-		entry.Close()
-
-		logger.Debugf("[ CloseConnection ] Delete entry for connection to %s from pool", address)
-		cp.entryHolder.Delete(address)
-		metrics.NetworkConnections.Dec()
+func (eh *entryHolder) clear() {
+	eh.Lock()
+	defer eh.Unlock()
+	for key := range eh.entries {
+		delete(eh.entries, key)
 	}
 }
 
-func (cp *connectionPool) getEntry(address net.Addr) (entry, bool) {
-	cp.mutex.RLock()
-	defer cp.mutex.RUnlock()
-
-	return cp.entryHolder.Get(address)
-}
-
-func (cp *connectionPool) getOrCreateEntry(ctx context.Context, address net.Addr) entry {
-	logger := inslogger.FromContext(ctx)
-
-	cp.mutex.Lock()
-	defer cp.mutex.Unlock()
-
-	entry, ok := cp.entryHolder.Get(address)
-	logger.Debugf("[ getOrCreateEntry ] Finding entry for connection to %s in pool: %s", address, ok)
-
-	if ok {
-		return entry
+func (eh *entryHolder) iterate(iterateFunc iterateFunc) {
+	eh.Lock()
+	defer eh.Unlock()
+	for _, h := range eh.entries {
+		iterateFunc(h)
 	}
-
-	logger.Debugf("[ getOrCreateEntry ] Failed to retrieve entry for connection to %s, creating it", address)
-
-	entry = newEntry(cp.connectionFactory, address, cp.CloseConnection)
-
-	cp.entryHolder.Add(address, entry)
-	size := cp.entryHolder.Size()
-	logger.Debugf(
-		"[ getOrCreateEntry ] Added entry for connection to %s. Current pool size: %d",
-		address.String(),
-		size,
-	)
-	metrics.NetworkConnections.Inc()
-
-	return entry
 }
 
-func (cp *connectionPool) Reset() {
-	cp.mutex.Lock()
-	defer cp.mutex.Unlock()
-
-	cp.entryHolder.Iterate(func(entry entry) {
-		entry.Close()
-	})
-	cp.entryHolder.Clear()
-	metrics.NetworkConnections.Set(float64(cp.entryHolder.Size()))
+func (eh *entryHolder) size() int {
+	eh.RLock()
+	defer eh.RUnlock()
+	return len(eh.entries)
 }

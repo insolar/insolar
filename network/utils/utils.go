@@ -53,9 +53,11 @@ package utils
 import (
 	"hash/crc32"
 	"io"
+	"strings"
 	"sync"
-	"sync/atomic"
 	"time"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
@@ -72,16 +74,6 @@ func WaitTimeout(wg *sync.WaitGroup, timeout time.Duration) bool {
 		return true // completed normally
 	case <-time.After(timeout):
 		return false // timed out
-	}
-}
-
-// AtomicLoadAndIncrementUint64 performs CAS loop, increments counter and returns old value.
-func AtomicLoadAndIncrementUint64(addr *uint64) uint64 {
-	for {
-		val := atomic.LoadUint64(addr)
-		if atomic.CompareAndSwapUint64(addr, val, val+1) {
-			return val
-		}
 	}
 }
 
@@ -110,4 +102,13 @@ func CloseVerbose(closer io.Closer) {
 	if err != nil {
 		log.Errorf("[ CloseVerbose ] Failed to close: %s", err.Error())
 	}
+}
+
+// IsConnectionClosed checks err for connection closed, workaround for poll.ErrNetClosing https://github.com/golang/go/issues/4373
+func IsConnectionClosed(err error) bool {
+	if err == nil {
+		return false
+	}
+	err = errors.Cause(err)
+	return strings.Contains(err.Error(), "use of closed network connection")
 }
