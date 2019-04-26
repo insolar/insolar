@@ -208,3 +208,25 @@ func TestComplete_GetCert(t *testing.T) {
 	require.Equal(t, []byte("test_sig"), cert.BootstrapNodes[0].NodeSign)
 	require.Equal(t, certNodeRef.String(), cert.BootstrapNodes[0].NodeRef)
 }
+
+func TestComplete_handler(t *testing.T) {
+	nodeRef := testutils.RandomRef()
+	certNodeRef := testutils.RandomRef()
+
+	gatewayer := network.NewGatewayerMock(t)
+	GIL := testutils.NewGlobalInsolarLockMock(t)
+	nodekeeper := network.NewNodeKeeperMock(t)
+
+	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
+	mb := mockMessageBus(t, true, &nodeRef, &certNodeRef)
+	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
+	cs := mockCryptographyService(t, true)
+
+	ge := NewNoNetwork(gatewayer, GIL, nodekeeper, cr, cs, mb, cm)
+	ge = ge.NewGateway(insolar.CompleteNetworkState)
+	ctx := context.Background()
+
+	result, err := ge.(*Complete).signCertHandler(ctx, &message.Parcel{Msg: &message.NodeSignPayload{NodeRef: &nodeRef}})
+	require.NoError(t, err)
+	require.Equal(t, []byte("test_sig"), result.(*reply.NodeSign).Sign)
+}
