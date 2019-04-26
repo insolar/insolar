@@ -238,8 +238,8 @@ const (
 
 	// Bootstrap
 
-	// TypeBootstrapRequest used for bootstrap object generation.
-	TypeBootstrapRequest
+	// TypeGenesisRequest used for bootstrap object generation.
+	TypeGenesisRequest
 
 	// NetworkCoordinator
 

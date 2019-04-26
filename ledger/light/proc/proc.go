@@ -29,7 +29,10 @@ type Dependencies struct {
 	GetIndex     func(*GetIndex)
 	SendObject   func(*SendObject)
 	GetCode      func(*GetCode)
+	GetRequest   func(*GetRequest)
 	UpdateObject func(*UpdateObject)
+	SetBlob      func(*SetBlob)
+	SetRecord    func(*SetRecord)
 }
 
 type ReturnReply struct {

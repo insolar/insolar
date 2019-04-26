@@ -114,6 +114,17 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
 		},
+		SetRecord: func(p *proc.SetRecord) {
+			p.Dep.RecentStorageProvider = h.RecentStorageProvider
+			p.Dep.RecordModifier = h.RecordModifier
+			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.PendingRequestsLimit = h.conf.PendingRequestsLimit
+		},
+		SetBlob: func(p *proc.SetBlob) {
+			p.Dep.BlobAccessor = h.BlobAccessor
+			p.Dep.BlobModifier = h.BlobModifier
+			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+		},
 		SendObject: func(p *proc.SendObject) {
 			p.Dep.Jets = h.JetStorage
 			p.Dep.Blobs = h.Blobs
@@ -127,6 +138,9 @@ func NewMessageHandler(
 			p.Dep.RecordAccessor = h.RecordAccessor
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.BlobAccessor = h.BlobAccessor
+		},
+		GetRequest: func(p *proc.GetRequest) {
+			p.Dep.RecordAccessor = h.RecordAccessor
 		},
 		UpdateObject: func(p *proc.UpdateObject) {
 			p.Dep.RecordModifier = h.RecordModifier
@@ -222,12 +236,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 			m.checkJet,
 			m.waitForHotData))
 
-	h.Bus.MustRegister(insolar.TypeSetRecord,
-		BuildMiddleware(h.handleSetRecord,
-			instrumentHandler("handleSetRecord"),
-			m.addFieldsToLogger,
-			m.checkJet,
-			m.waitForHotData))
+	h.Bus.MustRegister(insolar.TypeSetRecord, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeRegisterChild,
 		BuildMiddleware(h.handleRegisterChild,
@@ -236,19 +245,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 			m.checkJet,
 			m.waitForHotData))
 
-	h.Bus.MustRegister(insolar.TypeSetBlob,
-		BuildMiddleware(h.handleSetBlob,
-			instrumentHandler("handleSetBlob"),
-			m.addFieldsToLogger,
-			m.checkJet,
-			m.waitForHotData))
-
-	h.Bus.MustRegister(insolar.TypeGetObjectIndex,
-		BuildMiddleware(h.handleGetObjectIndex,
-			instrumentHandler("handleGetObjectIndex"),
-			m.addFieldsToLogger,
-			m.checkJet,
-			m.waitForHotData))
+	h.Bus.MustRegister(insolar.TypeSetBlob, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeGetPendingRequests,
 		BuildMiddleware(h.handleHasPendingRequests,
@@ -266,14 +263,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 			instrumentHandler("handleHotRecords"),
 			m.releaseHotDataWaiters))
 
-	h.Bus.MustRegister(
-		insolar.TypeGetRequest,
-		BuildMiddleware(
-			h.handleGetRequest,
-			instrumentHandler("handleGetRequest"),
-			m.checkJet,
-		),
-	)
+	h.Bus.MustRegister(insolar.TypeGetRequest, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(
 		insolar.TypeGetPendingRequestID,
@@ -285,69 +275,6 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	)
 
 	h.Bus.MustRegister(insolar.TypeValidateRecord, h.handleValidateRecord)
-}
-
-func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.SetRecord)
-	virtRec, err := object.DecodeVirtual(msg.Record)
-	if err != nil {
-		return nil, errors.Wrap(err, "can't deserialize record")
-	}
-	jetID := jetFromContext(ctx)
-
-	calculatedID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), virtRec)
-
-	switch r := virtRec.(type) {
-	case object.Request:
-		if h.RecentStorageProvider.Count() > h.conf.PendingRequestsLimit {
-			return &reply.Error{ErrType: reply.ErrTooManyPendingRequests}, nil
-		}
-		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		recentStorage.AddPendingRequest(ctx, r.GetObject(), *calculatedID)
-	case *object.ResultRecord:
-		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
-	}
-
-	id := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), virtRec)
-	rec := record.MaterialRecord{
-		Record: virtRec,
-		JetID:  insolar.JetID(jetID),
-	}
-
-	err = h.RecordModifier.Set(ctx, *id, rec)
-
-	if err == object.ErrOverride {
-		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", virtRec)).Warn("set record override")
-		id = calculatedID
-	} else if err != nil {
-		return nil, errors.Wrap(err, "can't save record into storage")
-	}
-
-	return &reply.ID{ID: *id}, nil
-}
-
-func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.SetBlob)
-	jetID := jetFromContext(ctx)
-	calculatedID := object.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
-
-	_, err := h.BlobAccessor.ForID(ctx, *calculatedID)
-	if err == nil {
-		return &reply.ID{ID: *calculatedID}, nil
-	}
-	if err != nil && err != blob.ErrNotFound {
-		return nil, err
-	}
-
-	err = h.BlobModifier.Set(ctx, *calculatedID, blob.Blob{Value: msg.Memory, JetID: insolar.JetID(jetID)})
-	if err == nil {
-		return &reply.ID{ID: *calculatedID}, nil
-	}
-	if err == blob.ErrOverride {
-		return &reply.ID{ID: *calculatedID}, nil
-	}
-	return nil, err
 }
 
 func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
@@ -526,28 +453,6 @@ func (h *MessageHandler) handleGetChildren(
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
 }
 
-func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetRequest)
-
-	rec, err := h.RecordAccessor.ForID(ctx, msg.Request)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch request")
-	}
-
-	virtRec := rec.Record
-	req, ok := virtRec.(*object.RequestRecord)
-	if !ok {
-		return nil, errors.New("failed to decode request")
-	}
-
-	rep := reply.Request{
-		ID:     msg.Request,
-		Record: object.EncodeVirtual(req),
-	}
-
-	return &rep, nil
-}
-
 func (h *MessageHandler) handleGetPendingRequestID(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	jetID := jetFromContext(ctx)
 	msg := parcel.Message().(*message.GetPendingRequestID)
@@ -636,23 +541,6 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 
 func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	return &reply.OK{}, nil
-}
-
-func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetObjectIndex)
-
-	h.IDLocker.Lock(msg.Object.Record())
-	defer h.IDLocker.Unlock(msg.Object.Record())
-
-	idx, err := h.IndexStorage.ForID(ctx, *msg.Object.Record())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch object index")
-	}
-	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Object.Record(), parcel.Pulse())
-
-	buf := object.EncodeIndex(idx)
-
-	return &reply.ObjectIndex{Index: buf}, nil
 }
 
 func (h *MessageHandler) saveIndexFromHeavy(

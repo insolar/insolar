@@ -73,6 +73,7 @@ const (
 type ReferendumVote interface {
 	Serializer
 	Type() VoteType
+	Clone() ReferendumVote
 }
 
 type StateFraudNodeSupplementaryVote struct {
@@ -81,9 +82,19 @@ type StateFraudNodeSupplementaryVote struct {
 	PulseData       PulseData // optional
 }
 
+func (v *StateFraudNodeSupplementaryVote) Clone() ReferendumVote {
+	clone := *v
+	return &clone
+}
+
 type NodeListSupplementaryVote struct {
 	NodeListCount uint16
 	NodeListHash  NodeListHash
+}
+
+func (v *NodeListSupplementaryVote) Clone() ReferendumVote {
+	clone := *v
+	return &clone
 }
 
 type MissingNodeClaim struct {
@@ -91,6 +102,12 @@ type MissingNodeClaim struct {
 	claimSize uint16
 
 	Claim ReferendumClaim
+}
+
+func (mn *MissingNodeClaim) Clone() ReferendumVote {
+	clone := *mn
+	clone.Claim = mn.Claim.Clone()
+	return &clone
 }
 
 func (mn *MissingNodeClaim) Type() VoteType {
@@ -105,8 +122,18 @@ type MissingNodeSupplementaryVote struct {
 	NodeClaimUnsigned NodeJoinClaim
 }
 
+func (v *MissingNodeSupplementaryVote) Clone() ReferendumVote {
+	clone := *v
+	return &clone
+}
+
 type MissingNode struct {
 	NodeIndex uint16
+}
+
+func (mn *MissingNode) Clone() ReferendumVote {
+	clone := *mn
+	return &clone
 }
 
 func (mn *MissingNode) Type() VoteType {

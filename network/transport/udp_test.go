@@ -61,56 +61,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 )
 
-func TestNewDatagramTransport(t *testing.T) {
-	table := []struct {
-		name    string
-		cfg     configuration.Transport
-		success bool
-	}{
-		{
-			name:    "default config",
-			cfg:     configuration.NewHostNetwork().Transport,
-			success: true,
-		},
-		{
-			name:    "localhost",
-			cfg:     configuration.Transport{Address: "localhost:0"},
-			success: true,
-		},
-		{
-			name:    "invalid address",
-			cfg:     configuration.Transport{Address: "invalid"},
-			success: false,
-		},
-		{
-			name:    "FixedPublicAddress",
-			cfg:     configuration.Transport{Address: "localhost:0", FixedPublicAddress: "192.168.1.1"},
-			success: true,
-		},
-	}
-
-	for _, test := range table {
-		t.Run(test.name, func(t *testing.T) {
-			ctx := context.Background()
-			udp, err := NewFactory(test.cfg).CreateDatagramTransport(nil)
-			assert.NoError(t, err)
-
-			var err2, err3 error
-			err2 = udp.Start(ctx)
-			if err != nil {
-				err3 = udp.Stop(ctx)
-			}
-
-			assert.Equal(t, test.success, err2 == nil && err3 == nil)
-			if test.success {
-				assert.NoError(t, err2)
-				assert.NoError(t, err3)
-				assert.NotNil(t, udp)
-			}
-		})
-	}
-}
-
 type testNode struct {
 	udp     DatagramTransport
 	address string
