@@ -175,7 +175,7 @@ ci_test_unit:
 
 .PHONY: ci_test_slow
 ci_test_slow:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -v -tags slowtest ./logicrunner/ -race -count 1 | tee -a unit.file
+	CGO_ENABLED=1 go test $(TEST_ARGS) -v -tags slowtest ./logicrunner/ -count 1 | tee -a unit.file
 
 .PHONY: ci_test_func
 ci_test_func:
