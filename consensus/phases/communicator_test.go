@@ -91,7 +91,9 @@ func (s *communicatorSuite) SetupTest() {
 	s.consensusNetworkMock = networkUtils.NewConsensusNetworkMock(s.T())
 	s.pulseHandlerMock = networkUtils.NewPulseHandlerMock(s.T())
 	s.originNode = makeRandomNode()
+
 	nodeN := networkUtils.NewNodeKeeperMock(s.T())
+	nodeN.GetOriginMock.Return(s.originNode)
 
 	cryptoServ := testutils.NewCryptographyServiceMock(s.T())
 	cryptoServ.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
