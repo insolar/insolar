@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
 
 package proc
 
@@ -66,7 +66,7 @@ func (p *SetBlob) reply(ctx context.Context) bus.Reply {
 		return bus.Reply{Err: err}
 	}
 
-	err = p.Dep.BlobModifier.Set(ctx, *calculatedID, blob.Blob{Value: msg.Memory, JetID: insolar.JetID(p.jet)})
+	err = p.Dep.BlobModifier.Set(ctx, *calculatedID, blob.Blob{Value: msg.Memory, JetID: p.jet})
 	if err == nil {
 		return bus.Reply{Reply: &reply.ID{ID: *calculatedID}}
 	}
