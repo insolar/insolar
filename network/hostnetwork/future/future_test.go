@@ -145,30 +145,6 @@ func TestFuture_Cancel(t *testing.T) {
 	require.True(t, cbCalled)
 }
 
-func TestFuture_WaitResponse_TimeoutAndCancel(t *testing.T) {
-	n, _ := host.NewHost("127.0.0.1:8080")
-	m := &packet.Packet{}
-	canceled := make(chan bool)
-	cancelCallback := func(f Future) {
-		canceled <- true
-	}
-	f := NewFuture(network.RequestID(1), n, m, cancelCallback)
-	go func() {
-		time.Sleep(time.Millisecond)
-		f.Cancel()
-	}()
-
-	_, err := f.WaitResponse(10 * time.Millisecond)
-	require.Error(t, err)
-
-	// Please note that cancelCallback is called asynchronously thus
-	// it's not guaranteed that it is called and finished when f.WaitResponse returns.
-	// For this reason in this test we have to use a channel, not
-	// an atomic variable or something else.
-	tmp := <-canceled
-	require.Equal(t, true, tmp)
-}
-
 func TestFuture_WaitResponse_Cancel(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 	c := make(chan network.Response)

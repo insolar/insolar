@@ -92,9 +92,9 @@ const (
 	pulseDelta   int32 = 5
 
 	Phase1Timeout  float64 = 0.45
-	Phase2Timeout  float64 = 0.15
-	Phase21Timeout float64 = 0.15
-	Phase3Timeout  float64 = 0.15
+	Phase2Timeout  float64 = 0.60
+	Phase21Timeout float64 = 0.75
+	Phase3Timeout  float64 = 0.90
 )
 
 type fixture struct {
@@ -163,7 +163,22 @@ func (s *testSuite) SetupTest() {
 	log.Info("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
 
-	<-time.After(time.Second * 2)
+	expectedBootstrapsCount := len(s.fixture().bootstrapNodes)
+	retries := 100
+	for {
+		activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+		if  expectedBootstrapsCount == len(activeNodes) {
+			break
+		}
+
+		retries--
+		if retries == 0 {
+			break
+		}
+
+		time.Sleep(100*time.Millisecond)
+	}
+
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Require().Equal(len(s.fixture().bootstrapNodes), len(activeNodes))
 
