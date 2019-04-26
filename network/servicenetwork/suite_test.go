@@ -169,7 +169,7 @@ func (s *testSuite) SetupTest() {
 	retries := 100
 	for {
 		activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-		if  expectedBootstrapsCount == len(activeNodes) {
+		if expectedBootstrapsCount == len(activeNodes) {
 			break
 		}
 
@@ -178,7 +178,7 @@ func (s *testSuite) SetupTest() {
 			break
 		}
 
-		time.Sleep(100*time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
@@ -441,6 +441,7 @@ func (m staterMock) State() ([]byte, error) {
 
 // preInitNode inits previously created node with mocks and external dependencies
 func (s *testSuite) preInitNode(node *networkNode) {
+	t := s.T()
 	cfg := configuration.NewConfiguration()
 	cfg.Pulsar.PulseTime = pulseTimeMs // pulse 5 sec for faster tests
 	cfg.Host.Transport.Address = node.host
@@ -481,8 +482,9 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	keyProc := platformpolicy.NewKeyProcessor()
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
 
-	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService, mblocker, GIL)
-	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler, transport.NewFakeFactory(cfg.Host.Transport))
+	node.componentManager.Register(&amMock, certManager, cryptographyService, mblocker, GIL)
+	node.componentManager.Inject(serviceNetwork, keyProc, terminationHandler, transport.NewFakeFactory(cfg.Host.Transport),
+		testutils.NewMessageBusMock(t), testutils.NewContractRequesterMock(t))
 
 	node.serviceNetwork = serviceNetwork
 }
