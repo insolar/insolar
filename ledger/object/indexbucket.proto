@@ -4,12 +4,11 @@ package object;
 
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-import "lifeline.proto";
 
-message IndexBucket {
+message IndexBucketRaw {
     option (gogoproto.equal) = false;
 
-    LifelineRaw Lifeline = 1 [(gogoproto.nullable) = true];
+    bytes Lifeline = 1 [(gogoproto.nullable) = true];
     repeated bytes Requests = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
     repeated bytes Results = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
 }

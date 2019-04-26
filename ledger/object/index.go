@@ -236,11 +236,49 @@ func (i *IndexDB) get(pn insolar.PulseNumber, objID insolar.ID) (*IndexBucket, e
 }
 
 func MustEncodeBucket(buck *IndexBucket) []byte {
-	panic("bux")
+	rawBuck := IndexBucketRaw{}
+	if buck.lifeline != nil {
+		rawBuck.Lifeline = EncodeIndex(*buck.lifeline)
+	}
+
+	rawBuck.Requests = buck.requests
+	rawBuck.Results = buck.results
+
+	res, err := rawBuck.Marshal()
+	if err != nil {
+		panic(err)
+	}
+
+	return res
+}
+
+func DecodeBucket(buff []byte) (*IndexBucket, error) {
+	rawBuck := IndexBucketRaw{}
+	err := rawBuck.Unmarshal(buff)
+	if err != nil {
+		return nil, err
+	}
+	rawLfl := LifelineRaw{}
+	err = rawLfl.Unmarshal(rawBuck.Lifeline)
+	if err != nil {
+		return nil, err
+	}
+	lfl := rawLfl.toLifeline()
+
+	return &IndexBucket{
+		lifeline: &lfl,
+		results:  rawBuck.Results,
+		requests: rawBuck.Requests,
+	}, nil
 }
 
 func MustDecodeBucket(buff []byte) *IndexBucket {
-	panic("bux")
+	buck, err := DecodeBucket(buff)
+	if err != nil {
+		panic(err)
+	}
+
+	return buck
 }
 
 //

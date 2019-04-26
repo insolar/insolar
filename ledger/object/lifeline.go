@@ -103,29 +103,34 @@ type LifelineMeta struct {
 
 // EncodeIndex converts lifeline index into binary format.
 func EncodeIndex(index Lifeline) []byte {
-	rawIdx := LifelineRaw{
-		LatestState:         index.LatestState,
-		LatestStateApproved: index.LatestStateApproved,
-		ChildPointer:        index.ChildPointer,
-		Parent:              index.Parent,
-		State:               index.State,
-		Delegates:           []DelegateKeyValue{},
-		LatestUpdate:        index.LatestUpdate,
-		JetID:               index.JetID,
-		LatestRequest:       index.LatestRequest,
-	}
-	for k, d := range index.Delegates {
-		rawIdx.Delegates = append(rawIdx.Delegates, DelegateKeyValue{
-			Key:   k,
-			Value: d,
-		})
-	}
-	data, err := rawIdx.Marshal()
+	data, err := index.toRaw().Marshal()
 	if err != nil {
 		panic("can't marshal lifeline")
 	}
 
 	return data
+}
+
+func (l *Lifeline) toRaw() LifelineRaw {
+	rawIdx := LifelineRaw{
+		LatestState:         l.LatestState,
+		LatestStateApproved: l.LatestStateApproved,
+		ChildPointer:        l.ChildPointer,
+		Parent:              l.Parent,
+		State:               l.State,
+		Delegates:           []DelegateKeyValue{},
+		LatestUpdate:        l.LatestUpdate,
+		JetID:               l.JetID,
+		LatestRequest:       l.LatestRequest,
+	}
+	for k, d := range l.Delegates {
+		rawIdx.Delegates = append(rawIdx.Delegates, DelegateKeyValue{
+			Key:   k,
+			Value: d,
+		})
+	}
+
+	return rawIdx
 }
 
 // MustDecodeIndex converts byte array into lifeline index struct.
@@ -146,22 +151,26 @@ func DecodeIndex(buff []byte) (Lifeline, error) {
 		return Lifeline{}, nil
 	}
 
+	return rawIdx.toLifeline(), nil
+}
+
+func (m *LifelineRaw) toLifeline() Lifeline {
 	idx := Lifeline{
-		LatestState:         rawIdx.LatestState,
-		LatestStateApproved: rawIdx.LatestStateApproved,
-		ChildPointer:        rawIdx.ChildPointer,
-		Parent:              rawIdx.Parent,
-		State:               rawIdx.State,
+		LatestState:         m.LatestState,
+		LatestStateApproved: m.LatestStateApproved,
+		ChildPointer:        m.ChildPointer,
+		Parent:              m.Parent,
+		State:               m.State,
 		Delegates:           map[insolar.Reference]insolar.Reference{},
-		LatestUpdate:        rawIdx.LatestUpdate,
-		JetID:               rawIdx.JetID,
-		LatestRequest:       rawIdx.LatestRequest,
+		LatestUpdate:        m.LatestUpdate,
+		JetID:               m.JetID,
+		LatestRequest:       m.LatestRequest,
 	}
-	for _, v := range rawIdx.Delegates {
+	for _, v := range m.Delegates {
 		idx.Delegates[v.Key] = v.Value
 	}
 
-	return idx, nil
+	return idx
 }
 
 // CloneIndex returns copy of argument idx value.
