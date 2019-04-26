@@ -51,7 +51,7 @@
 package sequence
 
 import (
-	"github.com/insolar/insolar/network/utils"
+	"sync/atomic"
 )
 
 type Sequence uint64
@@ -60,16 +60,16 @@ type Generator interface {
 	Generate() Sequence
 }
 
-type generatorImpl struct {
+type generator struct {
 	sequence *uint64
 }
 
-func NewGeneratorImpl() Generator {
-	return &generatorImpl{
+func NewGenerator() Generator {
+	return &generator{
 		sequence: new(uint64),
 	}
 }
 
-func (sg *generatorImpl) Generate() Sequence {
-	return Sequence(utils.AtomicLoadAndIncrementUint64(sg.sequence))
+func (g *generator) Generate() Sequence {
+	return Sequence(atomic.AddUint64(g.sequence, 1))
 }

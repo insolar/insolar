@@ -57,10 +57,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -70,6 +66,9 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/utils"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const (
@@ -83,11 +82,15 @@ const (
 )
 
 type MockResolver struct {
+	mu       sync.RWMutex
 	mapping  map[insolar.Reference]*host.Host
 	smapping map[insolar.ShortNodeID]*host.Host
 }
 
 func (m *MockResolver) ResolveConsensus(id insolar.ShortNodeID) (*host.Host, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	result, exist := m.smapping[id]
 	if !exist {
 		return nil, errors.New("failed to resolve")
@@ -100,6 +103,9 @@ func (m *MockResolver) ResolveConsensusRef(nodeID insolar.Reference) (*host.Host
 }
 
 func (m *MockResolver) Resolve(nodeID insolar.Reference) (*host.Host, error) {
+	m.mu.RLock()
+	defer m.mu.RUnlock()
+
 	result, exist := m.mapping[nodeID]
 	if !exist {
 		return nil, errors.New("failed to resolve")
@@ -119,11 +125,18 @@ func (m *MockResolver) addMapping(key, value string) error {
 	if err != nil {
 		return err
 	}
+
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	m.mapping[*k] = h
 	return nil
 }
 
 func (m *MockResolver) addMappingHost(h *host.Host) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
 	m.mapping[h.NodeID] = h
 	m.smapping[h.ShortID] = h
 }
@@ -196,15 +209,6 @@ func TestNewHostNetwork(t *testing.T) {
 	ctx := context.Background()
 	ctx2 := context.Background()
 	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
-	require.NoError(t, err)
-
-	ref1, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
-	require.NoError(t, err)
-	require.Equal(t, *ref1, n1.GetNodeID())
-
-	ref2, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
-	require.NoError(t, err)
-	require.Equal(t, *ref2, n2.GetNodeID())
 	require.NoError(t, err)
 
 	count := 10
@@ -356,9 +360,9 @@ func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 	require.NoError(t, err)
 	f, err := n1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
-	require.Equal(t, f.GetRequest().GetSender(), request.GetSender())
+	require.Equal(t, f.Request().GetSender(), request.GetSender())
 
-	r, err := f.GetResponse(time.Second)
+	r, err := f.WaitResponse(time.Second)
 	require.NoError(t, err)
 
 	d := r.GetData().(*Data)
@@ -404,7 +408,7 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 	f, err := n1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
 
-	_, err = f.GetResponse(time.Millisecond)
+	_, err = f.WaitResponse(time.Millisecond)
 	require.Error(t, err)
 
 	f, err = n1.SendRequest(ctx, request, *ref)
@@ -414,7 +418,7 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	_, err = f.GetResponse(time.Second * 2)
+	_, err = f.WaitResponse(time.Second * 2)
 	require.NoError(t, err)
 }
 
@@ -494,4 +498,12 @@ func TestStartStopSend(t *testing.T) {
 	send()
 	wg.Wait()
 	t1.Stop(ctx)
+}
+
+func TestHostNetwork_SendRequestToHost_NotStarted(t *testing.T) {
+	hn, err := NewHostNetwork(ID1 + DOMAIN)
+	require.NoError(t, err)
+
+	_, err = hn.SendRequestToHost(context.Background(), nil, nil)
+	require.EqualError(t, err, "host network is not started")
 }
