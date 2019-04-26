@@ -26,7 +26,7 @@ import (
 )
 
 func TestNewVersionManager(t *testing.T) {
-	vm, err := GetVersionManager()
+	vm, err := NewVersionManager(configuration.NewVersionManager())
 	assert.NoError(t, err)
 	feature, err := vm.Add("INSOLAR", "v1.1.1", "Version manager for Insolar platform test")
 	assert.NoError(t, err)
@@ -39,9 +39,6 @@ func TestNewVersionManager(t *testing.T) {
 	feature, err = vm.Add("INSOLAR2", "v1.1.2", "Version manager for Insolar platform test")
 	assert.NoError(t, err)
 	assert.NotNil(t, feature)
-	vm2, err := GetVersionManager()
-	assert.NoError(t, err)
-	assert.Equal(t, vm, vm2)
 
 	vm.AgreedVersion, err = ParseVersion("v1.1.1")
 	assert.NoError(t, err)
