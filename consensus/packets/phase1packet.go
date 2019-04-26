@@ -80,6 +80,7 @@ func (p1p *Phase1Packet) Clone() ConsensusPacket {
 	for i := 0; i < len(p1p.claims); i++ {
 		clone.claims[i] = p1p.claims[i].Clone()
 	}
+	clone.updateHeader()
 	return &clone
 }
 
