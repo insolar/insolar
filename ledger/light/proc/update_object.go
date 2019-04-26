@@ -53,12 +53,12 @@ type UpdateObject struct {
 	}
 }
 
-func NewUpdateObject(JetID insolar.JetID, Message *message.UpdateObject, PulseNumber insolar.PulseNumber, ReplyTo chan<- bus.Reply) *UpdateObject {
+func NewUpdateObject(jetID insolar.JetID, message *message.UpdateObject, pulseNumber insolar.PulseNumber, replyTo chan<- bus.Reply) *UpdateObject {
 	return &UpdateObject{
-		JetID:       JetID,
-		Message:     Message,
-		ReplyTo:     ReplyTo,
-		PulseNumber: PulseNumber,
+		JetID:       jetID,
+		Message:     message,
+		ReplyTo:     replyTo,
+		PulseNumber: pulseNumber,
 	}
 }
 
