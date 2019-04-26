@@ -46,7 +46,7 @@ func (gr *GenesisRequest) DefaultTarget() *insolar.Reference {
 
 // Type implementation for genesis request.
 func (*GenesisRequest) Type() insolar.MessageType {
-	return insolar.TypeBootstrapRequest
+	return insolar.TypeGenesisRequest
 }
 
 // GetCaller implementation for genesis request.
