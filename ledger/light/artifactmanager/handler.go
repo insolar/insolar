@@ -128,6 +128,9 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.BlobAccessor = h.BlobAccessor
 		},
+		GetRequest: func(p *proc.GetRequest) {
+			p.Dep.RecordAccessor = h.RecordAccessor
+		},
 		UpdateObject: func(p *proc.UpdateObject) {
 			p.Dep.RecordModifier = h.RecordModifier
 			p.Dep.Bus = h.Bus
@@ -243,13 +246,6 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 			m.checkJet,
 			m.waitForHotData))
 
-	h.Bus.MustRegister(insolar.TypeGetObjectIndex,
-		BuildMiddleware(h.handleGetObjectIndex,
-			instrumentHandler("handleGetObjectIndex"),
-			m.addFieldsToLogger,
-			m.checkJet,
-			m.waitForHotData))
-
 	h.Bus.MustRegister(insolar.TypeGetPendingRequests,
 		BuildMiddleware(h.handleHasPendingRequests,
 			instrumentHandler("handleHasPendingRequests"),
@@ -266,14 +262,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 			instrumentHandler("handleHotRecords"),
 			m.releaseHotDataWaiters))
 
-	h.Bus.MustRegister(
-		insolar.TypeGetRequest,
-		BuildMiddleware(
-			h.handleGetRequest,
-			instrumentHandler("handleGetRequest"),
-			m.checkJet,
-		),
-	)
+	h.Bus.MustRegister(insolar.TypeGetRequest, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(
 		insolar.TypeGetPendingRequestID,
@@ -526,28 +515,6 @@ func (h *MessageHandler) handleGetChildren(
 	return &reply.Children{Refs: refs, NextFrom: nil}, nil
 }
 
-func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetRequest)
-
-	rec, err := h.RecordAccessor.ForID(ctx, msg.Request)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch request")
-	}
-
-	virtRec := rec.Record
-	req, ok := virtRec.(*object.RequestRecord)
-	if !ok {
-		return nil, errors.New("failed to decode request")
-	}
-
-	rep := reply.Request{
-		ID:     msg.Request,
-		Record: object.EncodeVirtual(req),
-	}
-
-	return &rep, nil
-}
-
 func (h *MessageHandler) handleGetPendingRequestID(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	jetID := jetFromContext(ctx)
 	msg := parcel.Message().(*message.GetPendingRequestID)
@@ -636,23 +603,6 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 
 func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	return &reply.OK{}, nil
-}
-
-func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetObjectIndex)
-
-	h.IDLocker.Lock(msg.Object.Record())
-	defer h.IDLocker.Unlock(msg.Object.Record())
-
-	idx, err := h.IndexStorage.ForID(ctx, *msg.Object.Record())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch object index")
-	}
-	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Object.Record(), parcel.Pulse())
-
-	buf := object.EncodeIndex(idx)
-
-	return &reply.ObjectIndex{Index: buf}, nil
 }
 
 func (h *MessageHandler) saveIndexFromHeavy(

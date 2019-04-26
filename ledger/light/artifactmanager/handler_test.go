@@ -23,7 +23,9 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -340,59 +342,6 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	assert.Equal(s.T(), objIndex.Delegates, idx.Delegates)
 }
 
-func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
-	mc := minimock.NewController(s.T())
-	defer mc.Finish()
-	jetID := insolar.ID(*insolar.NewJetID(0, nil))
-	msg := message.GetObjectIndex{
-		Object: *genRandomRef(0),
-	}
-	pendingMock := recentstorage.NewPendingStorageMock(s.T())
-
-	pendingMock.GetRequestsForObjectMock.Return(nil)
-	pendingMock.AddPendingRequestMock.Return()
-	pendingMock.RemovePendingRequestMock.Return()
-
-	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetPendingStorageMock.Return(pendingMock)
-
-	jc := jet.NewCoordinatorMock(mc)
-
-	mb := testutils.NewMessageBusMock(mc)
-	mb.MustRegisterMock.Return()
-
-	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{
-		LightChainLimit: 3,
-	})
-	h.JetCoordinator = jc
-	h.Bus = mb
-	h.JetStorage = s.jetStorage
-	h.Nodes = s.nodeStorage
-
-	idLock := object.NewIDLockerMock(s.T())
-	idLock.LockMock.Return()
-	idLock.UnlockMock.Return()
-	h.IDLocker = idLock
-
-	err := h.Init(s.ctx)
-	require.NoError(s.T(), err)
-
-	h.RecentStorageProvider = provideMock
-
-	objectIndex := object.Lifeline{LatestState: genRandomID(0), JetID: insolar.JetID(jetID), Delegates: map[insolar.Reference]insolar.Reference{}}
-	err = s.indexMemoryStor.Set(s.ctx, *msg.Object.Record(), objectIndex)
-	require.NoError(s.T(), err)
-
-	rep, err := h.handleGetObjectIndex(contextWithJet(s.ctx, jetID), &message.Parcel{
-		Msg: &msg,
-	})
-	require.NoError(s.T(), err)
-	indexRep, ok := rep.(*reply.ObjectIndex)
-	require.True(s.T(), ok)
-	decodedIndex := object.MustDecodeIndex(indexRep.Index)
-	assert.Equal(s.T(), objectIndex, decodedIndex)
-}
-
 func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
@@ -689,19 +638,18 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	err := s.recordModifier.Set(s.ctx, *reqID, rec)
 	require.NoError(s.T(), err)
 
-	msg := message.GetRequest{
-		Request: *reqID,
-	}
-
 	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{})
 	h.RecordAccessor = s.recordAccessor
 
-	rep, err := h.handleGetRequest(contextWithJet(s.ctx, jetID), &message.Parcel{
-		Msg:         &msg,
-		PulseNumber: insolar.FirstPulseNumber + 1,
-	})
+	replyTo := make(chan bus.Reply, 1)
+	procGetRequest := proc.NewGetRequest(*reqID, replyTo)
+	procGetRequest.Dep.RecordAccessor = s.recordAccessor
+
+	err = procGetRequest.Proceed(contextWithJet(s.ctx, jetID))
+
 	require.NoError(s.T(), err)
-	reqReply, ok := rep.(*reply.Request)
+	res := <-replyTo
+	reqReply, ok := (res.Reply).(*reply.Request)
 	require.True(s.T(), ok)
 	vrec, _ := object.DecodeVirtual(reqReply.Record)
 	assert.Equal(s.T(), req, *vrec.(*object.RequestRecord))
