@@ -284,7 +284,7 @@ func (lr *LogicRunner) RegisterHandlers() {
 	lr.MessageBus.MustRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
 	lr.MessageBus.MustRegister(insolar.TypePendingFinished, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeStillExecuting, lr.FlowDispatcher.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeAbandonedRequestsNotification, lr.HandleAbandonedRequestsNotificationMessage)
+	lr.MessageBus.MustRegister(insolar.TypeAbandonedRequestsNotification, lr.FlowDispatcher.WrapBusHandle)
 }
 
 // Stop stops logic runner component and its executors
@@ -1049,33 +1049,7 @@ func (lr *LogicRunner) HandleAbandonedRequestsNotificationMessage(
 ) (
 	insolar.Reply, error,
 ) {
-	ctx = loggerWithTargetID(ctx, parcel)
-	inslogger.FromContext(ctx).Debug("LogicRunner.HandleAbandonedRequestsNotificationMessage starts ...")
-
-	msg := parcel.Message().(*message.AbandonedRequestsNotification)
-	ref := msg.DefaultTarget()
-	os := lr.UpsertObjectState(*ref)
-
-	inslogger.FromContext(ctx).Debug("Got information that ", ref, " has abandoned requests")
-
-	os.Lock()
-	if os.ExecutionState == nil {
-		os.ExecutionState = &ExecutionState{
-			Ref:                   *ref,
-			Queue:                 make([]ExecutionQueueElement, 0),
-			pending:               message.InPending,
-			PendingConfirmed:      false,
-			LedgerHasMoreRequests: true,
-		}
-	} else {
-		es := os.ExecutionState
-		es.Lock()
-		es.LedgerHasMoreRequests = true
-		es.Unlock()
-	}
-	os.Unlock()
-
-	return &reply.OK{}, nil
+	return lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
 }
 
 func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages []insolar.Message) {

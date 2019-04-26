@@ -22,11 +22,6 @@ import (
 type ConsensusNetworkMock struct {
 	t minimock.Tester
 
-	GetNodeIDFunc       func() (r insolar.Reference)
-	GetNodeIDCounter    uint64
-	GetNodeIDPreCounter uint64
-	GetNodeIDMock       mConsensusNetworkMockGetNodeID
-
 	InitFunc       func(p context.Context) (r error)
 	InitCounter    uint64
 	InitPreCounter uint64
@@ -66,7 +61,6 @@ func NewConsensusNetworkMock(t minimock.Tester) *ConsensusNetworkMock {
 		controller.RegisterMocker(m)
 	}
 
-	m.GetNodeIDMock = mConsensusNetworkMockGetNodeID{mock: m}
 	m.InitMock = mConsensusNetworkMockInit{mock: m}
 	m.PublicAddressMock = mConsensusNetworkMockPublicAddress{mock: m}
 	m.RegisterPacketHandlerMock = mConsensusNetworkMockRegisterPacketHandler{mock: m}
@@ -75,140 +69,6 @@ func NewConsensusNetworkMock(t minimock.Tester) *ConsensusNetworkMock {
 	m.StopMock = mConsensusNetworkMockStop{mock: m}
 
 	return m
-}
-
-type mConsensusNetworkMockGetNodeID struct {
-	mock              *ConsensusNetworkMock
-	mainExpectation   *ConsensusNetworkMockGetNodeIDExpectation
-	expectationSeries []*ConsensusNetworkMockGetNodeIDExpectation
-}
-
-type ConsensusNetworkMockGetNodeIDExpectation struct {
-	result *ConsensusNetworkMockGetNodeIDResult
-}
-
-type ConsensusNetworkMockGetNodeIDResult struct {
-	r insolar.Reference
-}
-
-//Expect specifies that invocation of ConsensusNetwork.GetNodeID is expected from 1 to Infinity times
-func (m *mConsensusNetworkMockGetNodeID) Expect() *mConsensusNetworkMockGetNodeID {
-	m.mock.GetNodeIDFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ConsensusNetworkMockGetNodeIDExpectation{}
-	}
-
-	return m
-}
-
-//Return specifies results of invocation of ConsensusNetwork.GetNodeID
-func (m *mConsensusNetworkMockGetNodeID) Return(r insolar.Reference) *ConsensusNetworkMock {
-	m.mock.GetNodeIDFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &ConsensusNetworkMockGetNodeIDExpectation{}
-	}
-	m.mainExpectation.result = &ConsensusNetworkMockGetNodeIDResult{r}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of ConsensusNetwork.GetNodeID is expected once
-func (m *mConsensusNetworkMockGetNodeID) ExpectOnce() *ConsensusNetworkMockGetNodeIDExpectation {
-	m.mock.GetNodeIDFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &ConsensusNetworkMockGetNodeIDExpectation{}
-
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *ConsensusNetworkMockGetNodeIDExpectation) Return(r insolar.Reference) {
-	e.result = &ConsensusNetworkMockGetNodeIDResult{r}
-}
-
-//Set uses given function f as a mock of ConsensusNetwork.GetNodeID method
-func (m *mConsensusNetworkMockGetNodeID) Set(f func() (r insolar.Reference)) *ConsensusNetworkMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetNodeIDFunc = f
-	return m.mock
-}
-
-//GetNodeID implements github.com/insolar/insolar/network.ConsensusNetwork interface
-func (m *ConsensusNetworkMock) GetNodeID() (r insolar.Reference) {
-	counter := atomic.AddUint64(&m.GetNodeIDPreCounter, 1)
-	defer atomic.AddUint64(&m.GetNodeIDCounter, 1)
-
-	if len(m.GetNodeIDMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetNodeIDMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ConsensusNetworkMock.GetNodeID.")
-			return
-		}
-
-		result := m.GetNodeIDMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the ConsensusNetworkMock.GetNodeID")
-			return
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodeIDMock.mainExpectation != nil {
-
-		result := m.GetNodeIDMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the ConsensusNetworkMock.GetNodeID")
-		}
-
-		r = result.r
-
-		return
-	}
-
-	if m.GetNodeIDFunc == nil {
-		m.t.Fatalf("Unexpected call to ConsensusNetworkMock.GetNodeID.")
-		return
-	}
-
-	return m.GetNodeIDFunc()
-}
-
-//GetNodeIDMinimockCounter returns a count of ConsensusNetworkMock.GetNodeIDFunc invocations
-func (m *ConsensusNetworkMock) GetNodeIDMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodeIDCounter)
-}
-
-//GetNodeIDMinimockPreCounter returns the value of ConsensusNetworkMock.GetNodeID invocations
-func (m *ConsensusNetworkMock) GetNodeIDMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetNodeIDPreCounter)
-}
-
-//GetNodeIDFinished returns true if mock invocations count is ok
-func (m *ConsensusNetworkMock) GetNodeIDFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetNodeIDMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetNodeIDCounter) == uint64(len(m.GetNodeIDMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetNodeIDMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetNodeIDCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetNodeIDFunc != nil {
-		return atomic.LoadUint64(&m.GetNodeIDCounter) > 0
-	}
-
-	return true
 }
 
 type mConsensusNetworkMockInit struct {
@@ -1063,10 +923,6 @@ func (m *ConsensusNetworkMock) StopFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *ConsensusNetworkMock) ValidateCallCounters() {
 
-	if !m.GetNodeIDFinished() {
-		m.t.Fatal("Expected call to ConsensusNetworkMock.GetNodeID")
-	}
-
 	if !m.InitFinished() {
 		m.t.Fatal("Expected call to ConsensusNetworkMock.Init")
 	}
@@ -1108,10 +964,6 @@ func (m *ConsensusNetworkMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *ConsensusNetworkMock) MinimockFinish() {
 
-	if !m.GetNodeIDFinished() {
-		m.t.Fatal("Expected call to ConsensusNetworkMock.GetNodeID")
-	}
-
 	if !m.InitFinished() {
 		m.t.Fatal("Expected call to ConsensusNetworkMock.Init")
 	}
@@ -1150,7 +1002,6 @@ func (m *ConsensusNetworkMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
-		ok = ok && m.GetNodeIDFinished()
 		ok = ok && m.InitFinished()
 		ok = ok && m.PublicAddressFinished()
 		ok = ok && m.RegisterPacketHandlerFinished()
@@ -1164,10 +1015,6 @@ func (m *ConsensusNetworkMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
-
-			if !m.GetNodeIDFinished() {
-				m.t.Error("Expected call to ConsensusNetworkMock.GetNodeID")
-			}
 
 			if !m.InitFinished() {
 				m.t.Error("Expected call to ConsensusNetworkMock.Init")
@@ -1204,10 +1051,6 @@ func (m *ConsensusNetworkMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *ConsensusNetworkMock) AllMocksCalled() bool {
-
-	if !m.GetNodeIDFinished() {
-		return false
-	}
 
 	if !m.InitFinished() {
 		return false

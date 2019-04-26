@@ -413,7 +413,7 @@ func (bc *bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (*
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to send genesis request to address %s", h)
 	}
-	response, err := future.GetResponse(bc.options.BootstrapTimeout)
+	response, err := future.WaitResponse(bc.options.BootstrapTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to get response to genesis request from address %s", h)
 	}
@@ -570,7 +570,7 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to send bootstrap request to address %s", address)
 	}
-	response, err := future.GetResponse(bc.options.BootstrapTimeout)
+	response, err := future.WaitResponse(bc.options.BootstrapTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to get response to bootstrap request from address %s", address)
 	}
