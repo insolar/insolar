@@ -22,8 +22,6 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
-
-	"github.com/insolar/insolar/log"
 )
 
 // BadgerDB is a badger DB implementation.
@@ -99,21 +97,9 @@ func (b *BadgerDB) Set(key Key, value []byte) error {
 // NewIterator returns new Iterator over the store.
 func (b *BadgerDB) NewIterator(scope Scope) Iterator {
 	bi := badgerIterator{scope: scope, fullPrefix: scope.Bytes()}
+	bi.txn = b.backend.NewTransaction(false)
 	opts := badger.DefaultIteratorOptions
-	bi.whenClose = make(chan bool, 1)
-	out := make(chan *badger.Iterator, 1)
-	defer close(out)
-	go func() {
-		err := b.backend.View(func(txn *badger.Txn) error {
-			out <- txn.NewIterator(opts)
-			<-bi.whenClose
-			return nil
-		})
-		if err != nil {
-			log.Error(errors.Wrap(err, "failed to execute badger View"))
-		}
-	}()
-	bi.it = <-out
+	bi.it = bi.txn.NewIterator(opts)
 	return &bi
 }
 
@@ -125,13 +111,13 @@ func (b *BadgerDB) Stop(ctx context.Context) error {
 type badgerIterator struct {
 	scope      Scope
 	fullPrefix []byte
+	txn        *badger.Txn
 	it         *badger.Iterator
-	whenClose  chan bool
 }
 
 func (bi *badgerIterator) Close() {
 	bi.it.Close()
-	bi.whenClose <- true
+	bi.txn.Discard()
 }
 
 func (bi *badgerIterator) Seek(prefix []byte) {
