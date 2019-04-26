@@ -106,45 +106,38 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 	logger := inslogger.FromContext(ctx)
 	logger.Infof("[ NET Consensus ] Starting consensus process, delay: %v", consensusDelay)
 
-	pulseDuration, err := getPulseDuration(pulse)
-	if err != nil {
-		return errors.Wrap(err, "[ NET Consensus ] Failed to get pulse duration")
-	}
+	pulseDuration := getPulseDuration(pulse)
 
 	var tctx context.Context
 	var cancel context.CancelFunc
 
 	tctx, cancel = contextTimeoutFromPulseStart(ctx, pulseStartTime, *pulseDuration, pm.cfg.Phase1Timeout)
-	defer cancel()
-
 	firstPhaseState, err := pm.FirstPhase.Execute(tctx, pulse)
+	cancel()
 	if err != nil {
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 1")
 	}
 	inslogger.FromContext(ctx).Info("[ NET Consensus ] Done phase 1")
 
 	tctx, cancel = contextTimeoutFromPulseStart(ctx, pulseStartTime, *pulseDuration, pm.cfg.Phase2Timeout)
-	defer cancel()
-
 	secondPhaseState, err := pm.SecondPhase.Execute(tctx, pulse, firstPhaseState)
+	cancel()
 	if err != nil {
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 2.0")
 	}
 	inslogger.FromContext(ctx).Info("[ NET Consensus ] Done phase 2.0")
 
 	tctx, cancel = contextTimeoutFromPulseStart(ctx, pulseStartTime, *pulseDuration, pm.cfg.Phase21Timeout)
-	defer cancel()
-
 	secondPhaseState, err = pm.SecondPhase.Execute21(tctx, pulse, secondPhaseState)
+	cancel()
 	if err != nil {
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 2.1")
 	}
 	inslogger.FromContext(ctx).Info("[ NET Consensus ] Done phase 2.1")
 
 	tctx, cancel = contextTimeoutFromPulseStart(ctx, pulseStartTime, *pulseDuration, pm.cfg.Phase3Timeout)
-	defer cancel()
-
 	thirdPhaseState, err := pm.ThirdPhase.Execute(tctx, pulse, secondPhaseState)
+	cancel()
 	if err != nil {
 		return errors.Wrap(err, "[ NET Consensus ] Error executing phase 3")
 	}
@@ -169,15 +162,9 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 	return pm.NodeKeeper.Sync(ctx, state.ActiveNodes, state.ApprovedClaims)
 }
 
-func getPulseDuration(pulse *insolar.Pulse) (*time.Duration, error) {
+func getPulseDuration(pulse *insolar.Pulse) *time.Duration {
 	duration := time.Duration(pulse.NextPulseNumber-pulse.PulseNumber) * time.Second
-	return &duration, nil
-}
-
-func contextTimeout(ctx context.Context, duration time.Duration, k float64) (context.Context, context.CancelFunc) {
-	timeout := time.Duration(k * float64(duration))
-	timedCtx, cancelFund := context.WithTimeout(ctx, timeout)
-	return timedCtx, cancelFund
+	return &duration
 }
 
 func contextTimeoutFromPulseStart(
