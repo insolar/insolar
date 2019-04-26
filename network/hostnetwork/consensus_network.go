@@ -84,8 +84,8 @@ type networkConsensus struct {
 	muHandlers sync.RWMutex
 	handlers   map[packets.PacketType]network.ConsensusPacketHandler
 
-	mu     sync.RWMutex
-	origin *host.Host
+	muOrigin sync.RWMutex
+	origin   *host.Host
 }
 
 func (nc *networkConsensus) Init(ctx context.Context) error {
@@ -104,8 +104,8 @@ func (nc *networkConsensus) Start(ctx context.Context) error {
 		return nil
 	}
 
-	nc.mu.Lock()
-	defer nc.mu.Unlock()
+	nc.muOrigin.Lock()
+	defer nc.muOrigin.Unlock()
 
 	if err := nc.transport.Start(ctx); err != nil {
 		return errors.Wrap(err, "Failed to start datagram transport")
@@ -236,6 +236,7 @@ func (nc *networkConsensus) HandleDatagram(address string, buf []byte) {
 
 	nc.muHandlers.RLock()
 	defer nc.muHandlers.RUnlock()
+
 	handler, exist := nc.handlers[p.GetType()]
 	if !exist {
 		logger.Errorf("[ HandleDatagram ] No handler set for packet type %s from node %d, %s", p.GetType(), sender.ShortID, sender.NodeID)
@@ -245,8 +246,8 @@ func (nc *networkConsensus) HandleDatagram(address string, buf []byte) {
 }
 
 func (nc *networkConsensus) getOrigin() *host.Host {
-	nc.mu.RLock()
-	defer nc.mu.RUnlock()
+	nc.muOrigin.RLock()
+	defer nc.muOrigin.RUnlock()
 
 	return nc.origin
 }

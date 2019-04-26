@@ -107,8 +107,8 @@ type hostNetwork struct {
 	responseHandler   future.PacketHandler
 	pool              pool.ConnectionPool
 
-	mu     sync.RWMutex
-	origin *host.Host
+	muOrigin sync.RWMutex
+	origin   *host.Host
 }
 
 func (hn *hostNetwork) Init(ctx context.Context) error {
@@ -132,8 +132,8 @@ func (hn *hostNetwork) Start(ctx context.Context) error {
 		return nil
 	}
 
-	hn.mu.Lock()
-	defer hn.mu.Unlock()
+	hn.muOrigin.Lock()
+	defer hn.muOrigin.Unlock()
 
 	if err := hn.transport.Start(ctx); err != nil {
 		return errors.Wrap(err, "failed to start stream transport")
@@ -263,8 +263,8 @@ func (hn *hostNetwork) RegisterRequestHandler(t types.PacketType, handler networ
 }
 
 func (hn *hostNetwork) getOrigin() *host.Host {
-	hn.mu.RLock()
-	defer hn.mu.RUnlock()
+	hn.muOrigin.RLock()
+	defer hn.muOrigin.RUnlock()
 
 	return hn.origin
 }
