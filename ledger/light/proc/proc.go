@@ -24,12 +24,13 @@ import (
 )
 
 type Dependencies struct {
-	FetchJet   func(*FetchJet)
-	WaitHot    func(*WaitHot)
-	GetIndex   func(*GetIndex)
-	SendObject func(*SendObject)
-	GetCode    func(*GetCode)
-	GetRequest func(*GetRequest)
+	FetchJet     func(*FetchJet)
+	WaitHot      func(*WaitHot)
+	GetIndex     func(*GetIndex)
+	SendObject   func(*SendObject)
+	GetCode      func(*GetCode)
+	GetRequest   func(*GetRequest)
+	UpdateObject func(*UpdateObject)
 }
 
 type ReturnReply struct {

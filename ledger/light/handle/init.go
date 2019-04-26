@@ -54,6 +54,10 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		msg := s.Message.Parcel.Message().(*message.GetRequest)
 		h := NewGetRequest(s.Dep, s.Message.ReplyTo, msg.Request)
 		return f.Handle(ctx, h.Present)
+	case insolar.TypeUpdateObject:
+		msg := s.Message.Parcel.Message().(*message.UpdateObject)
+		h := NewUpdateObject(s.Dep, s.Message.ReplyTo, msg)
+		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s", s.Message.Parcel.Message().Type().String())
 	}
