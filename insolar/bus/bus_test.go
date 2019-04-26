@@ -18,6 +18,7 @@ package bus
 
 import (
 	"context"
+	"math/rand"
 	"sync"
 	"testing"
 	"time"
@@ -369,5 +370,35 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 	for i := 0; i < count; i++ {
 		ok := <-isReplyOk
 		require.True(t, ok)
+	}
+}
+
+func TestMessageBus_Send_IncomingMessageRouter_SeveralMsgForOneSend(t *testing.T) {
+	ctx := context.Background()
+	count := 100
+	b := NewBus(&PublisherMock{pubErr: nil})
+	b.timeout = time.Millisecond * time.Duration(rand.Intn(10))
+
+	payload := []byte{1, 2, 3, 4, 5}
+	msg := message.NewMessage(watermill.NewUUID(), payload)
+
+	// send message
+	results, _ := b.Send(ctx, msg)
+
+	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
+		return nil, nil
+	}
+	handler := b.IncomingMessageRouter(incomingHandler)
+
+	// reply to messages
+	for i := 0; i < count; i++ {
+		go func() {
+			_, _ = handler(msg)
+		}()
+	}
+
+	// wait for all handlers stopped
+	for i := 0; i < count; i++ {
+		<-results
 	}
 }
