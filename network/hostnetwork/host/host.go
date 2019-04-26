@@ -99,11 +99,7 @@ func NewHostNS(address string, nodeID insolar.Reference, shortID insolar.ShortNo
 
 // String representation of Host.
 func (host Host) String() string {
-	address := ""
-	if host.Address != nil {
-		address = host.Address.String()
-	}
-	return fmt.Sprintf("%s (%s)", host.NodeID.String(), address)
+	return fmt.Sprintf("%s (%s)", host.NodeID.String(), host.Address.String())
 }
 
 // Equal checks if host equals to other host (e.g. hosts' IDs and network addresses match).
