@@ -62,7 +62,7 @@ func (p *SetBlob) reply(ctx context.Context) bus.Reply {
 	if err == nil {
 		return bus.Reply{Reply: &reply.ID{ID: *calculatedID}}
 	}
-	if err != nil && err != blob.ErrNotFound {
+	if err != blob.ErrNotFound {
 		return bus.Reply{Err: err}
 	}
 
