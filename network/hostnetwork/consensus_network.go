@@ -80,7 +80,9 @@ type networkConsensus struct {
 	transport         transport.DatagramTransport
 	started           uint32
 	sequenceGenerator sequence.Generator
-	handlers          map[packets.PacketType]network.ConsensusPacketHandler
+
+	muHandlers sync.RWMutex
+	handlers   map[packets.PacketType]network.ConsensusPacketHandler
 
 	mu     sync.RWMutex
 	origin *host.Host
@@ -136,6 +138,9 @@ func (nc *networkConsensus) PublicAddress() string {
 
 // RegisterPacketHandler register a handler function to process incoming requests of a specific type.
 func (nc *networkConsensus) RegisterPacketHandler(t packets.PacketType, handler network.ConsensusPacketHandler) {
+	nc.muHandlers.Lock()
+	defer nc.muHandlers.Unlock()
+
 	_, exists := nc.handlers[t]
 	if exists {
 		log.Warnf("Multiple handlers for packet type %s are not supported! New handler will replace the old one!", t)
@@ -228,6 +233,9 @@ func (nc *networkConsensus) HandleDatagram(address string, buf []byte) {
 	if sender == nil {
 		sender = &host.Host{}
 	}
+
+	nc.muHandlers.RLock()
+	defer nc.muHandlers.RUnlock()
 	handler, exist := nc.handlers[p.GetType()]
 	if !exist {
 		logger.Errorf("[ HandleDatagram ] No handler set for packet type %s from node %d, %s", p.GetType(), sender.ShortID, sender.NodeID)
