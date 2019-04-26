@@ -19,6 +19,7 @@ package bus
 import (
 	"context"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -56,88 +57,120 @@ type Sender interface {
 	Send(ctx context.Context, msg *message.Message) <-chan *message.Message
 }
 
+type lockedReply struct {
+	mutex    sync.RWMutex
+	messages chan *message.Message
+
+	isDone uint32
+	done   chan struct{}
+}
+
+func (r *lockedReply) close() bool {
+	if atomic.CompareAndSwapUint32(&r.isDone, 0, 1) {
+		close(r.done)
+		return true
+	}
+	return false
+}
+
 // Bus is component that sends messages and gives access to replies for them.
 type Bus struct {
-	pub          message.Publisher
-	writeTimeout time.Duration
-	readTimeout  time.Duration
+	pub     message.Publisher
+	timeout time.Duration
 
 	repliesMutex sync.RWMutex
-	replies      map[string]chan *message.Message
+	replies      map[string]*lockedReply
 }
 
 // NewBus creates Bus instance with provided values.
 func NewBus(pub message.Publisher) *Bus {
 	return &Bus{
-		writeTimeout: time.Second * 2,
-		readTimeout:  time.Minute * 2,
-		pub:          pub,
-		replies:      make(map[string]chan *message.Message),
+		timeout: time.Minute * 10,
+		pub:     pub,
+		replies: make(map[string]*lockedReply),
 	}
-}
-
-func (b *Bus) setReplyChannel(id string, ch chan *message.Message) {
-	b.repliesMutex.Lock()
-	b.replies[id] = ch
-	b.repliesMutex.Unlock()
 }
 
 func (b *Bus) removeReplyChannel(ctx context.Context, id string) {
 	b.repliesMutex.Lock()
-	inslogger.FromContext(ctx).Infof("remove reply channel for message with correlationID %s", id)
+	defer b.repliesMutex.Unlock()
 	ch, ok := b.replies[id]
 	if !ok {
-		b.repliesMutex.Unlock()
 		return
 	}
-	close(ch)
+
+	ch.mutex.Lock()
+	inslogger.FromContext(ctx).Infof("close reply channel for message with correlationID %s", id)
+	close(ch.messages)
+	ch.mutex.Unlock()
+
 	delete(b.replies, id)
-	b.repliesMutex.Unlock()
 }
 
 // Send a watermill's Message and return channel for replies.
-func (b *Bus) Send(ctx context.Context, msg *message.Message) <-chan *message.Message {
+func (b *Bus) Send(ctx context.Context, msg *message.Message) (<-chan *message.Message, func()) {
 	id := watermill.NewUUID()
 	middleware.SetCorrelationID(id, msg)
-	rep := make(chan *message.Message)
-	b.setReplyChannel(id, rep)
+	reply := &lockedReply{
+		messages: make(chan *message.Message),
+		done:     make(chan struct{}),
+	}
+	b.repliesMutex.Lock()
+	defer b.repliesMutex.Unlock()
 
-	// под общим локом, отпускать по defer
 	err := b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
-		b.removeReplyChannel(ctx, id)
 		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
-		return nil
+		return nil, nil
 	}
-	go func(b *Bus) {
-		<-time.After(b.readTimeout)
-		b.removeReplyChannel(ctx, id)
-	}(b)
-	return rep
+
+	b.replies[id] = reply
+
+	c := func(b *Bus, reply *lockedReply) func() {
+		return func() {
+
+			closed := reply.close()
+			if closed {
+				b.removeReplyChannel(ctx, id)
+			}
+		}
+	}(b, reply)
+
+	go func(c func()) {
+		select {
+		case <-reply.done:
+			inslogger.FromContext(msg.Context()).Infof("reply channel for message with correlationID %s was closed", id)
+		case <-time.After(b.timeout):
+			c()
+		}
+	}(c)
+
+	return reply.messages, c
 }
 
 // IncomingMessageRouter is watermill middleware for incoming messages - it decides, how to handle it.
 func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
-		b.repliesMutex.RLock()
-
 		id := middleware.MessageCorrelationID(msg)
-		// лочить ток запись, отпускать по defer
-		ch, ok := b.replies[id]
+
+		b.repliesMutex.RLock()
+		reply, ok := b.replies[id]
 		if !ok {
 			b.repliesMutex.RUnlock()
 			return h(msg)
 		}
 
+		reply.mutex.RLock()
+		defer reply.mutex.RUnlock()
+
+		b.repliesMutex.RUnlock()
+
 		select {
-		case ch <- msg:
+		case reply.messages <- msg:
 			inslogger.FromContext(msg.Context()).Infof("result for message with correlationID %s was send", id)
-			b.repliesMutex.RUnlock()
 			return nil, nil
-		// 	спец канал
-		case <-time.After(b.writeTimeout):
-			b.repliesMutex.RUnlock()
-			return nil, errors.Errorf("can't return result for message with correlationID %s: timeout %s exceeded", id, b.writeTimeout)
+		case <-reply.done:
+			return nil, errors.Errorf("can't return result for message with correlationID %s: timeout for reading (%s) was exceeded", id, b.timeout)
 		}
 	}
 }

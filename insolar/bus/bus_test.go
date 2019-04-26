@@ -42,9 +42,10 @@ func TestMessageBus_Send(t *testing.T) {
 	msg := message.NewMessage(watermill.NewUUID(), payload)
 
 	mapSizeBefore := len(b.replies)
-	results := b.Send(ctx, msg)
+	results, done := b.Send(ctx, msg)
 
 	require.NotNil(t, results)
+	require.NotNil(t, done)
 	require.Equal(t, mapSizeBefore+1, len(b.replies))
 	externalMsg := <-externalMsgCh
 	require.Equal(t, msg.Metadata, externalMsg.Metadata)
@@ -72,17 +73,38 @@ func TestMessageBus_Send_Publish_Err(t *testing.T) {
 	msg := message.NewMessage(watermill.NewUUID(), payload)
 
 	mapSizeBefore := len(b.replies)
-	results := b.Send(ctx, msg)
+	results, done := b.Send(ctx, msg)
 
 	require.Nil(t, results)
+	require.Nil(t, done)
 	require.Equal(t, mapSizeBefore, len(b.replies))
 }
 
-func getReplyChannel(b *Bus, id string) (chan *message.Message, bool) {
+func TestMessageBus_Send_Close(t *testing.T) {
+	ctx := context.Background()
+	b := NewBus(&PublisherMock{pubErr: nil})
+
+	payload := []byte{1, 2, 3, 4, 5}
+	msg := message.NewMessage(watermill.NewUUID(), payload)
+
+	mapSizeBefore := len(b.replies)
+	results, done := b.Send(ctx, msg)
+
+	done()
+	select {
+	case <-results:
+	default:
+		t.Fatal("results must be closed now")
+	}
+
+	require.Equal(t, mapSizeBefore, len(b.replies))
+}
+
+func isReplyExist(b *Bus, id string) bool {
 	b.repliesMutex.RLock()
-	ch, ok := b.replies[id]
+	_, ok := b.replies[id]
 	b.repliesMutex.RUnlock()
-	return ch, ok
+	return ok
 }
 
 func TestMessageBus_Send_Timeout(t *testing.T) {
@@ -90,19 +112,19 @@ func TestMessageBus_Send_Timeout(t *testing.T) {
 	logger := watermill.NewStdLogger(false, false)
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	b := NewBus(pubsub)
-	b.readTimeout = time.Millisecond * 10
+	b.timeout = time.Millisecond * 10
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
 
-	results := b.Send(ctx, msg)
+	results, _ := b.Send(ctx, msg)
 
 	res, ok := <-results
 
 	require.False(t, ok)
 	require.Nil(t, res)
 
-	_, ok = getReplyChannel(b, middleware.MessageCorrelationID(msg))
+	ok = isReplyExist(b, middleware.MessageCorrelationID(msg))
 	require.False(t, ok)
 }
 
@@ -136,8 +158,10 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	b := NewBus(pubsub)
 	correlationId := watermill.NewUUID()
-	// for test reason channel is buffered here
-	resChan := make(chan *message.Message, 1)
+	resChan := &lockedReply{
+		messages: make(chan *message.Message),
+		done:     make(chan struct{}),
+	}
 	b.replies[correlationId] = resChan
 
 	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
@@ -149,13 +173,20 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 	msg := message.NewMessage(watermill.NewUUID(), []byte{1, 2, 3, 4, 5})
 	middleware.SetCorrelationID(correlationId, msg)
 
+	var receivedMsg *message.Message
+	done := make(chan struct{})
+
+	go func() {
+		receivedMsg = <-resChan.messages
+		done <- struct{}{}
+	}()
+
 	res, err := handler(msg)
 	require.NoError(t, err)
 	require.Nil(t, res)
 
-	receivedMsg := <-resChan
-
 	require.Equal(t, 0, incomingHandlerCalls)
+	<-done
 	require.Equal(t, msg, receivedMsg)
 }
 
@@ -164,10 +195,13 @@ func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {
 	logger := watermill.NewStdLogger(false, false)
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	b := NewBus(pubsub)
-	b.writeTimeout = time.Millisecond
+	b.timeout = time.Millisecond
 	correlationId := watermill.NewUUID()
-	resChan := make(chan *message.Message)
-	b.replies[correlationId] = resChan
+	resChan := lockedReply{
+		messages: make(chan *message.Message),
+		done:     make(chan struct{}),
+	}
+	b.replies[correlationId] = &resChan
 
 	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
 		incomingHandlerCalls++
@@ -177,6 +211,8 @@ func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {
 
 	msg := message.NewMessage(watermill.NewUUID(), []byte{1, 2, 3, 4, 5})
 	middleware.SetCorrelationID(correlationId, msg)
+
+	resChan.close()
 
 	res, err := handler(msg)
 	require.Error(t, err)
@@ -191,7 +227,7 @@ func TestMessageBus_Send_IncomingMessageRouter(t *testing.T) {
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
 
-	results := b.Send(ctx, msg)
+	results, _ := b.Send(ctx, msg)
 
 	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
 		return nil, nil
@@ -219,13 +255,13 @@ func TestMessageBus_Send_IncomingMessageRouter(t *testing.T) {
 
 func TestMessageBus_Send_IncomingMessageRouter_ReadAfterTimeout(t *testing.T) {
 	b := NewBus(&PublisherMock{pubErr: nil})
-	b.writeTimeout = time.Millisecond * 10
+	b.timeout = time.Millisecond * 10
 	ctx := context.Background()
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
 
-	results := b.Send(ctx, msg)
+	results, _ := b.Send(ctx, msg)
 
 	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
 		return nil, nil
@@ -245,13 +281,17 @@ func TestMessageBus_Send_IncomingMessageRouter_ReadAfterTimeout(t *testing.T) {
 
 func TestMessageBus_Send_IncomingMessageRouter_WriteAfterTimeout(t *testing.T) {
 	b := NewBus(&PublisherMock{pubErr: nil})
-	b.readTimeout = time.Millisecond * 10
+	b.timeout = time.Millisecond * 10
 	ctx := context.Background()
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
 
-	results := b.Send(ctx, msg)
+	results, _ := b.Send(ctx, msg)
+
+	resSend, ok := <-results
+	require.False(t, ok)
+	require.Nil(t, resSend)
 
 	resMsg := message.NewMessage(watermill.NewUUID(), []byte{10, 20, 30, 40, 50})
 	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
@@ -259,12 +299,60 @@ func TestMessageBus_Send_IncomingMessageRouter_WriteAfterTimeout(t *testing.T) {
 	}
 	handler := b.IncomingMessageRouter(incomingHandler)
 
-	resSend, ok := <-results
-
-	require.False(t, ok)
-	require.Nil(t, resSend)
-
 	resHandler, err := handler(msg)
 	require.NoError(t, err)
 	require.Equal(t, []*message.Message{resMsg}, resHandler)
+}
+
+func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
+	count := 100
+	isReplyOk := make(chan bool)
+	done := make(chan error)
+	b := NewBus(&PublisherMock{pubErr: nil})
+	ctx := context.Background()
+
+	payload := []byte{1, 2, 3, 4, 5}
+	var msg []*message.Message
+	for i := 0; i < count; i++ {
+		msg = append(msg, message.NewMessage(watermill.NewUUID(), payload))
+	}
+
+	// send messages
+	for i := 0; i < count; i++ {
+		go func(i int) {
+			results, _ := b.Send(ctx, msg[i])
+			done <- nil
+			_, ok := <-results
+			isReplyOk <- ok
+		}(i)
+	}
+
+	// wait for all messages send
+	for i := 0; i < count; i++ {
+		err := <-done
+		require.NoError(t, err)
+	}
+
+	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
+		return nil, nil
+	}
+	handler := b.IncomingMessageRouter(incomingHandler)
+
+	// reply to messages
+	for i := 0; i < count; i++ {
+		go func(i int) {
+			_, err := handler(msg[i])
+			done <- err
+		}(i)
+	}
+
+	// wait for all messages received reply
+	for i := 0; i < count; i++ {
+		err := <-done
+		require.NoError(t, err)
+	}
+	for i := 0; i < count; i++ {
+		ok := <-isReplyOk
+		require.True(t, ok)
+	}
 }
