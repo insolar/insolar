@@ -40,7 +40,6 @@ type GetCode struct {
 		RecordAccessor object.RecordAccessor
 		Coordinator    jet.Coordinator
 		BlobAccessor   blob.Accessor
-		CheckJet       CheckJet
 	}
 }
 
