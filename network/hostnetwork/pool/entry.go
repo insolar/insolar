@@ -48,70 +48,74 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package nodenetwork
+package pool
 
 import (
-	"github.com/pkg/errors"
+	"context"
+	"io"
+	"sync"
 
-	consensus "github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/node"
+	"github.com/pkg/errors"
+	"go.opencensus.io/trace"
+
+	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/network/utils"
 )
 
-type MergedListCopy struct {
-	ActiveList                 map[insolar.Reference]insolar.NetworkNode
-	NodesJoinedDuringPrevPulse bool
+type onClose func(ctx context.Context, host *host.Host)
+
+type entry struct {
+	sync.Mutex
+	transport transport.StreamTransport
+	host      *host.Host
+	onClose   onClose
+	conn      io.ReadWriteCloser
 }
 
-func copyActiveNodes(nodes []insolar.NetworkNode) map[insolar.Reference]insolar.NetworkNode {
-	result := make(map[insolar.Reference]insolar.NetworkNode, len(nodes))
-	for _, n := range nodes {
-		n.(node.MutableNode).ChangeState()
-		result[n.ID()] = n
+func newEntry(t transport.StreamTransport, conn io.ReadWriteCloser, host *host.Host, onClose onClose) *entry {
+	return &entry{
+		transport: t,
+		conn:      conn,
+		host:      host,
+		onClose:   onClose,
 	}
-	return result
 }
 
-func GetMergedCopy(nodes []insolar.NetworkNode, claims []consensus.ReferendumClaim) (*MergedListCopy, error) {
-	nodesMap := copyActiveNodes(nodes)
-
-	var nodesJoinedDuringPrevPulse bool
-	for _, claim := range claims {
-		isJoin, err := mergeClaim(nodesMap, claim)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ GetMergedCopy ] failed to merge a claim")
-		}
-		nodesJoinedDuringPrevPulse = nodesJoinedDuringPrevPulse || isJoin
+func (e *entry) open(ctx context.Context) (io.ReadWriteCloser, error) {
+	e.Lock()
+	defer e.Unlock()
+	if e.conn != nil {
+		return e.conn, nil
 	}
 
-	return &MergedListCopy{
-		ActiveList:                 nodesMap,
-		NodesJoinedDuringPrevPulse: nodesJoinedDuringPrevPulse,
-	}, nil
+	conn, err := e.dial(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	e.conn = conn
+	return e.conn, nil
 }
 
-func mergeClaim(nodes map[insolar.Reference]insolar.NetworkNode, claim consensus.ReferendumClaim) (bool, error) {
-	isJoinClaim := false
+func (e *entry) dial(ctx context.Context) (io.ReadWriteCloser, error) {
+	ctx, span := instracer.StartSpan(ctx, "connectionPool.open")
+	span.AddAttributes(
+		trace.StringAttribute("create connect to", e.host.String()),
+	)
+	defer span.End()
 
-	switch t := claim.(type) {
-	case *consensus.NodeJoinClaim:
-		isJoinClaim = true
-		// TODO: fix version
-		n, err := node.ClaimToNode("", t)
-		if err != nil {
-			return isJoinClaim, errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> NetworkNode")
-		}
-		n.(node.MutableNode).SetState(insolar.NodePending)
-		nodes[n.ID()] = n
-	case *consensus.NodeLeaveClaim:
-		if nodes[t.NodeID] == nil {
-			break
-		}
-		n := nodes[t.NodeID].(node.MutableNode)
-		if t.ETA == 0 || n.GetState() != insolar.NodeLeaving {
-			n.SetLeavingETA(t.ETA)
-		}
+	conn, err := e.transport.Dial(ctx, e.host.Address.String())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Open ] Failed to create TCP connection")
 	}
 
-	return isJoinClaim, nil
+	return conn, nil
+}
+
+func (e *entry) close() {
+	if e.conn != nil {
+		utils.CloseVerbose(e.conn)
+	}
 }

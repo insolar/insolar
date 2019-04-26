@@ -48,52 +48,40 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package pool
+package transport
 
 import (
-	"net"
+	"errors"
+
+	"github.com/insolar/insolar/configuration"
 )
 
-type entryHolderImpl struct {
-	entries map[string]entry
+// Factory interface provides methods for creating stream or datagram transports
+type Factory interface {
+	CreateStreamTransport(StreamHandler) (StreamTransport, error)
+	CreateDatagramTransport(DatagramHandler) (DatagramTransport, error)
 }
 
-func newEntryHolderImpl() entryHolder {
-	return &entryHolderImpl{
-		entries: make(map[string]entry),
+// NewFactory constructor creates new transport factory
+func NewFactory(cfg configuration.Transport) Factory {
+	return &factory{cfg: cfg}
+}
+
+type factory struct {
+	cfg configuration.Transport
+}
+
+// CreateStreamTransport creates new TCP transport
+func (f *factory) CreateStreamTransport(handler StreamHandler) (StreamTransport, error) {
+	switch f.cfg.Protocol {
+	case "TCP":
+		return newTCPTransport(f.cfg.Address, f.cfg.FixedPublicAddress, handler), nil
+	default:
+		return nil, errors.New("invalid transport configuration")
 	}
 }
 
-func (eh *entryHolderImpl) key(address net.Addr) string {
-	return address.String()
-}
-
-func (eh *entryHolderImpl) Get(address net.Addr) (entry, bool) {
-	entry, ok := eh.entries[eh.key(address)]
-
-	return entry, ok
-}
-
-func (eh *entryHolderImpl) Delete(address net.Addr) {
-	delete(eh.entries, eh.key(address))
-}
-
-func (eh *entryHolderImpl) Add(address net.Addr, entry entry) {
-	eh.entries[eh.key(address)] = entry
-}
-
-func (eh *entryHolderImpl) Clear() {
-	for key := range eh.entries {
-		delete(eh.entries, key)
-	}
-}
-
-func (eh *entryHolderImpl) Iterate(iterateFunc iterateFunc) {
-	for _, entry := range eh.entries {
-		iterateFunc(entry)
-	}
-}
-
-func (eh *entryHolderImpl) Size() int {
-	return len(eh.entries)
+// CreateDatagramTransport creates new UDP transport
+func (f *factory) CreateDatagramTransport(handler DatagramHandler) (DatagramTransport, error) {
+	return newUDPTransport(f.cfg.Address, f.cfg.FixedPublicAddress, handler), nil
 }

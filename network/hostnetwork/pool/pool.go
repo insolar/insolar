@@ -48,70 +48,93 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package nodenetwork
+package pool
 
 import (
-	"github.com/pkg/errors"
+	"context"
+	"io"
 
-	consensus "github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/metrics"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/transport"
 )
 
-type MergedListCopy struct {
-	ActiveList                 map[insolar.Reference]insolar.NetworkNode
-	NodesJoinedDuringPrevPulse bool
+// ConnectionPool interface provides methods to manage pool of network connections
+type ConnectionPool interface {
+	GetConnection(ctx context.Context, host *host.Host) (io.ReadWriter, error)
+	CloseConnection(ctx context.Context, host *host.Host)
+	Reset()
 }
 
-func copyActiveNodes(nodes []insolar.NetworkNode) map[insolar.Reference]insolar.NetworkNode {
-	result := make(map[insolar.Reference]insolar.NetworkNode, len(nodes))
-	for _, n := range nodes {
-		n.(node.MutableNode).ChangeState()
-		result[n.ID()] = n
-	}
-	return result
+// NewConnectionPool constructor creates new ConnectionPool
+func NewConnectionPool(t transport.StreamTransport) ConnectionPool {
+	return newConnectionPool(t)
 }
 
-func GetMergedCopy(nodes []insolar.NetworkNode, claims []consensus.ReferendumClaim) (*MergedListCopy, error) {
-	nodesMap := copyActiveNodes(nodes)
+type connectionPool struct {
+	transport transport.StreamTransport
 
-	var nodesJoinedDuringPrevPulse bool
-	for _, claim := range claims {
-		isJoin, err := mergeClaim(nodesMap, claim)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ GetMergedCopy ] failed to merge a claim")
-		}
-		nodesJoinedDuringPrevPulse = nodesJoinedDuringPrevPulse || isJoin
-	}
-
-	return &MergedListCopy{
-		ActiveList:                 nodesMap,
-		NodesJoinedDuringPrevPulse: nodesJoinedDuringPrevPulse,
-	}, nil
+	entryHolder *entryHolder
 }
 
-func mergeClaim(nodes map[insolar.Reference]insolar.NetworkNode, claim consensus.ReferendumClaim) (bool, error) {
-	isJoinClaim := false
+func newConnectionPool(t transport.StreamTransport) *connectionPool {
+	return &connectionPool{
+		transport:   t,
+		entryHolder: newEntryHolder(),
+	}
+}
 
-	switch t := claim.(type) {
-	case *consensus.NodeJoinClaim:
-		isJoinClaim = true
-		// TODO: fix version
-		n, err := node.ClaimToNode("", t)
-		if err != nil {
-			return isJoinClaim, errors.Wrap(err, "[ mergeClaim ] failed to convert Claim -> NetworkNode")
-		}
-		n.(node.MutableNode).SetState(insolar.NodePending)
-		nodes[n.ID()] = n
-	case *consensus.NodeLeaveClaim:
-		if nodes[t.NodeID] == nil {
-			break
-		}
-		n := nodes[t.NodeID].(node.MutableNode)
-		if t.ETA == 0 || n.GetState() != insolar.NodeLeaving {
-			n.SetLeavingETA(t.ETA)
-		}
+// GetConnection returns connection from the pool, if connection isn't exist, it will be created
+func (cp *connectionPool) GetConnection(ctx context.Context, host *host.Host) (io.ReadWriter, error) {
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("[ GetConnection ] Finding entry for connection to %s in pool", host)
+
+	e := cp.getOrCreateEntry(ctx, host)
+	return e.open(ctx)
+}
+
+// CloseConnection closes connection to the host
+func (cp *connectionPool) CloseConnection(ctx context.Context, host *host.Host) {
+	logger := inslogger.FromContext(ctx)
+
+	logger.Debugf("[ CloseConnection ] Delete entry for connection to %s from pool", host)
+	if cp.entryHolder.delete(host) {
+		metrics.NetworkConnections.Dec()
+	}
+}
+
+func (cp *connectionPool) getOrCreateEntry(ctx context.Context, host *host.Host) *entry {
+	logger := inslogger.FromContext(ctx)
+
+	e, ok := cp.entryHolder.get(host)
+	logger.Debugf("[ getOrCreateEntry ] Finding entry for connection to %s in pool: %t", host, ok)
+
+	if ok {
+		return e
 	}
 
-	return isJoinClaim, nil
+	logger.Debugf("[ getOrCreateEntry ] Failed to retrieve entry for connection to %s, creating it", host)
+
+	e = newEntry(cp.transport, nil, host, cp.CloseConnection)
+
+	cp.entryHolder.add(host, e)
+	size := cp.entryHolder.size()
+	logger.Debugf(
+		"[ getOrCreateEntry ] Added entry for connection to %s. Current pool size: %d",
+		host,
+		size,
+	)
+	metrics.NetworkConnections.Inc()
+
+	return e
+}
+
+// Reset closes and removes all connections from the pool
+func (cp *connectionPool) Reset() {
+	cp.entryHolder.iterate(func(entry *entry) {
+		entry.close()
+	})
+	cp.entryHolder.clear()
+	metrics.NetworkConnections.Set(float64(cp.entryHolder.size()))
 }

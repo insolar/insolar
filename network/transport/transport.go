@@ -52,71 +52,37 @@ package transport
 
 import (
 	"context"
+	"io"
 
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/hostnetwork/future"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/resolver"
-
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/component"
 )
 
-// Transport is an interface for network transport.
-type Transport interface {
-	// SendRequest sends packet to destination. Sequence number is generated automatically.
-	SendRequest(context.Context, *packet.Packet) (future.Future, error)
-
-	// SendResponse sends response packet for request with passed request id.
-	SendResponse(context.Context, network.RequestID, *packet.Packet) error
-
-	// SendPacket low-level send packet without requestId and without spawning a waiting future
-	SendPacket(ctx context.Context, p *packet.Packet) error
-
-	// Start starts thread to listen incoming packets.
-	Start(ctx context.Context) error
-
-	// Stop gracefully stops listening.
-	Stop()
-
-	// Close disposing all transport underlying structures after stopped are called.
-	Close()
-
-	// Packets returns channel to listen incoming packets.
-	Packets() <-chan *packet.Packet
-
-	// Stopped returns signal channel to support graceful shutdown.
-	Stopped() <-chan bool
+// DatagramHandler interface provides callback method to process received datagrams
+type DatagramHandler interface {
+	HandleDatagram(address string, buf []byte)
 }
 
-// NewTransport creates new Network with particular configuration
-func NewTransport(cfg configuration.Transport) (Transport, string, error) {
-	switch cfg.Protocol {
-	case "TCP":
-		return newTCPTransport(cfg.Address, cfg.FixedPublicAddress)
-	case "PURE_UDP":
-		return newUDPTransport(cfg.Address, cfg.FixedPublicAddress)
-	default:
-		return nil, "", errors.New("invalid transport configuration")
-	}
+// DatagramTransport interface provides methods to send and receive datagrams
+type DatagramTransport interface {
+	component.Starter
+	component.Stopper
+
+	SendDatagram(ctx context.Context, address string, data []byte) error
+	Address() string
 }
 
-// Resolve resolves public address
-func Resolve(fixedPublicAddress, address string) (string, error) {
-	resolver, err := createResolver(fixedPublicAddress)
-	if err != nil {
-		return "", errors.Wrap(err, "[ Resolve ] Failed to create resolver")
-	}
-	publicAddress, err := resolver.Resolve(address)
-	if err != nil {
-		return "", errors.Wrap(err, "[ Resolve ] Failed to resolve public address")
-	}
-	return publicAddress, nil
+// StreamHandler interface provides callback method to process data stream
+type StreamHandler interface {
+	HandleStream(address string, stream io.ReadWriteCloser)
 }
 
-func createResolver(fixedPublicAddress string) (resolver.PublicAddressResolver, error) {
-	if fixedPublicAddress != "" {
-		return resolver.NewFixedAddressResolver(fixedPublicAddress), nil
-	}
-	return resolver.NewExactResolver(), nil
+//go:generate minimock -i github.com/insolar/insolar/network/transport.StreamTransport -o ../../testutils/network -s _mock.go
+
+// StreamTransport interface provides methods to send and receive data streams
+type StreamTransport interface {
+	component.Starter
+	component.Stopper
+
+	Dial(ctx context.Context, address string) (io.ReadWriteCloser, error)
+	Address() string
 }

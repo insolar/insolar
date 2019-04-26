@@ -68,6 +68,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/utils"
 )
 
@@ -134,15 +135,8 @@ func newMockResolver() *MockResolver {
 	}
 }
 
-func mockConfiguration(address string) configuration.Configuration {
-	result := configuration.Configuration{}
-	result.Host.Transport = configuration.Transport{Protocol: "TCP", Address: address}
-	return result
-}
-
-func TestNewHostNetwork_InvalidConfiguration(t *testing.T) {
-	// broken address
-	n, err := NewHostNetwork(mockConfiguration("abirvalg"), ID1+DOMAIN)
+func TestNewHostNetwork_InvalidReference(t *testing.T) {
+	n, err := NewHostNetwork("invalid reference")
 	require.Error(t, err)
 	require.Nil(t, n)
 }
@@ -150,17 +144,41 @@ func TestNewHostNetwork_InvalidConfiguration(t *testing.T) {
 func createTwoHostNetworks(id1, id2 string) (n1, n2 network.HostNetwork, err error) {
 	m := newMockResolver()
 
-	n1, err = NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
+	cm1 := component.NewManager(nil)
+	f1 := transport.NewFactory(configuration.NewHostNetwork().Transport)
+	n1, err = NewHostNetwork(ID1 + DOMAIN)
 	if err != nil {
 		return nil, nil, err
 	}
-	n1.(*hostNetwork).Resolver = m
+	cm1.Inject(f1, n1, m)
 
-	n2, err = NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID2+DOMAIN)
+	cm2 := component.NewManager(nil)
+	f2 := transport.NewFactory(configuration.NewHostNetwork().Transport)
+	n2, err = NewHostNetwork(ID2 + DOMAIN)
 	if err != nil {
 		return nil, nil, err
 	}
-	n2.(*hostNetwork).Resolver = m
+	cm2.Inject(f2, n2, m)
+
+	ctx := context.Background()
+
+	err = n1.Init(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = n2.Init(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = n1.Start(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = n2.Start(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
 
 	err = m.addMapping(id1, n1.PublicAddress())
 	if err != nil {
@@ -178,10 +196,14 @@ func TestNewHostNetwork(t *testing.T) {
 	ctx := context.Background()
 	ctx2 := context.Background()
 	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
+	require.NoError(t, err)
+
 	ref1, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
 	require.NoError(t, err)
 	require.Equal(t, *ref1, n1.GetNodeID())
+
 	ref2, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
+	require.NoError(t, err)
 	require.Equal(t, *ref2, n2.GetNodeID())
 	require.NoError(t, err)
 
@@ -198,10 +220,17 @@ func TestNewHostNetwork(t *testing.T) {
 
 	err = n2.Start(ctx2)
 	assert.NoError(t, err)
-	defer n2.Stop(ctx2)
+	defer func() {
+		err = n2.Stop(ctx2)
+		assert.NoError(t, err)
+	}()
+
 	err = n1.Start(ctx)
 	assert.NoError(t, err)
-	defer n1.Stop(ctx)
+	defer func() {
+		err = n1.Stop(ctx2)
+		assert.NoError(t, err)
+	}()
 
 	for i := 0; i < count; i++ {
 		request := n1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
@@ -210,6 +239,7 @@ func TestNewHostNetwork(t *testing.T) {
 		_, err = n1.SendRequest(ctx, request, *ref)
 		require.NoError(t, err)
 	}
+
 	wg.Wait()
 }
 
@@ -217,16 +247,21 @@ func TestHostNetwork_SendRequestPacket(t *testing.T) {
 	m := newMockResolver()
 	ctx := context.Background()
 
-	n1, err := NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
+	n1, err := NewHostNetwork(ID1 + DOMAIN)
 	require.NoError(t, err)
 
 	cm := component.NewManager(nil)
-	cm.Register(m, n1)
+	cm.Register(m, n1, transport.NewFactory(configuration.NewHostNetwork().Transport))
 	cm.Inject()
+	err = cm.Init(ctx)
+	require.NoError(t, err)
 	err = cm.Start(ctx)
 	require.NoError(t, err)
 
-	defer cm.Stop(ctx)
+	defer func() {
+		err = cm.Stop(ctx)
+		assert.NoError(t, err)
+	}()
 
 	unknownID, err := insolar.NewReferenceFromBase58(IDUNKNOWN + DOMAIN)
 	require.NoError(t, err)
@@ -286,6 +321,7 @@ func TestHostNetwork_SendRequestPacket2(t *testing.T) {
 	require.NoError(t, err)
 	_, err = n1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
+
 	wg.Wait()
 }
 
@@ -351,9 +387,16 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 	}
 	n2.RegisterRequestHandler(types.Ping, handler)
 
-	n2.Start(ctx2)
-	defer n2.Stop(ctx2)
-	n1.Start(ctx)
+	err = n2.Start(ctx2)
+	require.NoError(t, err)
+
+	defer func() {
+		err = n2.Stop(ctx2)
+		assert.NoError(t, err)
+	}()
+
+	err = n1.Start(ctx)
+	require.NoError(t, err)
 
 	request := n1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
@@ -366,10 +409,13 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 
 	f, err = n1.SendRequest(ctx, request, *ref)
 	require.NoError(t, err)
-	n1.Stop(ctx)
+	defer func() {
+		err = n1.Stop(ctx2)
+		assert.NoError(t, err)
+	}()
 
-	_, err = f.GetResponse(time.Second)
-	require.Error(t, err)
+	_, err = f.GetResponse(time.Second * 2)
+	require.NoError(t, err)
 }
 
 func TestHostNetwork_WrongHandler(t *testing.T) {
@@ -404,34 +450,6 @@ func TestHostNetwork_WrongHandler(t *testing.T) {
 	// should timeout because there is no handler set for Ping packet
 	result := utils.WaitTimeout(&wg, time.Millisecond*100)
 	require.False(t, result)
-}
-
-func TestDoubleStart(t *testing.T) {
-	ctx := context.Background()
-	tp, err := NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
-	require.NoError(t, err)
-
-	err = tp.Start(ctx)
-	assert.NoError(t, err)
-	err = tp.Start(ctx)
-	assert.Error(t, err)
-
-	tp.Stop(ctx)
-}
-
-func TestStartStop(t *testing.T) {
-	ctx := context.Background()
-	tp, err := NewHostNetwork(mockConfiguration("127.0.0.1:0"), ID1+DOMAIN)
-	require.NoError(t, err)
-
-	err = tp.Start(ctx)
-	assert.NoError(t, err)
-	defer tp.Stop(ctx)
-
-	err = tp.Stop(ctx)
-	assert.NoError(t, err)
-	err = tp.Start(ctx)
-	assert.NoError(t, err)
 }
 
 func TestStartStopSend(t *testing.T) {

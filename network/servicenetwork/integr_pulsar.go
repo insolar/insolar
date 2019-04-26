@@ -79,17 +79,8 @@ type TestPulsar interface {
 }
 
 func NewTestPulsar(pulseTimeMs, requestsTimeoutMs, pulseDelta int32) (TestPulsar, error) {
-	transportCfg := configuration.Transport{
-		Protocol: "TCP",
-		Address:  "127.0.0.1:0",
-	}
-	tp, publicAddress, err := transport.NewTransport(transportCfg)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to create distributor transport")
-	}
+
 	return &testPulsar{
-		transport:         tp,
-		publicAddress:     publicAddress,
 		generator:         &entropygenerator.StandardEntropyGenerator{},
 		pulseTimeMs:       pulseTimeMs,
 		reqTimeoutMs:      requestsTimeoutMs,
@@ -99,11 +90,9 @@ func NewTestPulsar(pulseTimeMs, requestsTimeoutMs, pulseDelta int32) (TestPulsar
 }
 
 type testPulsar struct {
-	transport     transport.Transport
-	publicAddress string
-	distributor   insolar.PulseDistributor
-	generator     entropygenerator.EntropyGenerator
-	cm            *component.Manager
+	distributor insolar.PulseDistributor
+	generator   entropygenerator.EntropyGenerator
+	cm          *component.Manager
 
 	activityMutex sync.Mutex
 
@@ -115,7 +104,7 @@ type testPulsar struct {
 }
 
 func (tp *testPulsar) Start(ctx context.Context, bootstrapHosts []string) error {
-	var err error
+
 	distributorCfg := configuration.PulseDistributor{
 		BootstrapHosts:            bootstrapHosts,
 		PingRequestTimeout:        tp.reqTimeoutMs,
@@ -123,13 +112,15 @@ func (tp *testPulsar) Start(ctx context.Context, bootstrapHosts []string) error 
 		PulseRequestTimeout:       tp.reqTimeoutMs,
 		RandomNodesCount:          1,
 	}
-	tp.distributor, err = pulsenetwork.NewDistributor(distributorCfg, tp.publicAddress)
+
+	var err error
+	tp.distributor, err = pulsenetwork.NewDistributor(distributorCfg)
 	if err != nil {
 		return errors.Wrap(err, "Failed to create pulse distributor")
 	}
 
 	tp.cm = &component.Manager{}
-	tp.cm.Inject(tp.transport, tp.distributor)
+	tp.cm.Inject(tp.distributor, transport.NewFakeFactory(configuration.NewHostNetwork().Transport))
 
 	if err = tp.cm.Init(ctx); err != nil {
 		return errors.Wrap(err, "Failed to init test pulsar components")
