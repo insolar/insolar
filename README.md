@@ -27,8 +27,6 @@ Blockchain network layer.
 * Network routing with a host or host group becoming relays for others hosts.
 * Ability to limit number of gateways to corporate host group via relays to keep the host group secure.
 
-See [package readme](network/dhtnetwork) for more details.
-
 ### [Ledger](ledger)
 
 Record storage engine backed by [BadgerDB](https://github.com/dgraph-io/badger).
