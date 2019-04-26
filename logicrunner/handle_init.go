@@ -69,6 +69,18 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 			Message: s.Message,
 		}
 		return f.Handle(ctx, h.Present)
+	case insolar.TypeAbandonedRequestsNotification:
+		h := &HandleAbandonedRequestsNotification{
+			dep:     s.dep,
+			Message: s.Message,
+		}
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeExecutorResults:
+		h := &HandleExecutorResults{
+			dep:     s.dep,
+			Message: s.Message,
+		}
+		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("[ Init.Present ] no handler for message type %s", s.Message.Parcel.Message().Type().String())
 	}

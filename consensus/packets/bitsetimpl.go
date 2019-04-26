@@ -70,6 +70,13 @@ type bitsetImpl struct {
 	array      bitArray
 }
 
+func (dbs *bitsetImpl) Clone() BitSet {
+	clone := bitsetImpl{compressed: dbs.compressed}
+	clone.array = make(bitArray, len(dbs.array))
+	copy(clone.array, dbs.array)
+	return &clone
+}
+
 func (dbs *bitsetImpl) GetCells(mapper BitSetMapper) ([]BitSetCell, error) {
 	cells := make([]BitSetCell, len(dbs.array))
 	for i := 0; i < len(dbs.array); i++ {

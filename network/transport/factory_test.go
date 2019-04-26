@@ -48,25 +48,95 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-// +build networktest
-
-package servicenetwork
+package transport
 
 import (
 	"context"
-	"time"
+	"net"
+	"testing"
 
-	"github.com/insolar/insolar/consensus/phases"
-	"github.com/insolar/insolar/insolar"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/configuration"
 )
 
-type phaseManagerWrapper struct {
-	original phases.PhaseManager
-	result   chan error
+func TestFactory_Positive(t *testing.T) {
+	table := []struct {
+		name    string
+		cfg     configuration.Transport
+		success bool
+	}{
+		{
+			name: "default config",
+			cfg:  configuration.NewHostNetwork().Transport,
+		},
+		{
+			name: "localhost",
+			cfg:  configuration.Transport{Address: "localhost:0", Protocol: "TCP"},
+		},
+		{
+			name: "FixedPublicAddress",
+			cfg:  configuration.Transport{Address: "localhost:0", FixedPublicAddress: "192.168.1.1", Protocol: "TCP"},
+		},
+	}
+
+	for _, test := range table {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			f := NewFactory(test.cfg)
+			require.NotNil(t, f)
+
+			udp, err := f.CreateDatagramTransport(nil)
+			assert.NoError(t, err)
+			require.NotNil(t, udp)
+
+			tcp, err := f.CreateStreamTransport(nil)
+			assert.NoError(t, err)
+			require.NotNil(t, tcp)
+
+			assert.NoError(t, udp.Start(ctx))
+			assert.NoError(t, tcp.Start(ctx))
+
+			addrUDP, err := net.ResolveUDPAddr("udp", udp.Address())
+			assert.NoError(t, err)
+			assert.NotEqual(t, 0, addrUDP.Port)
+
+			addrTCP, err := net.ResolveTCPAddr("tcp", tcp.Address())
+			assert.NoError(t, err)
+			assert.NotEqual(t, 0, addrTCP.Port)
+
+			assert.NoError(t, udp.Stop(ctx))
+			assert.NoError(t, tcp.Stop(ctx))
+
+		})
+	}
 }
 
-func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
-	res := p.original.OnPulse(ctx, pulse, pulseStartTime)
-	p.result <- res
-	return res
+func TestFactoryStreamTransport_Negative(t *testing.T) {
+	table := []struct {
+		name    string
+		cfg     configuration.Transport
+		success bool
+	}{
+		{
+			name: "invalid address",
+			cfg:  configuration.Transport{Address: "invalid"},
+		},
+		{
+			name: "invalid protocol",
+			cfg:  configuration.Transport{Address: "localhost:0", FixedPublicAddress: "192.168.1.1", Protocol: "HTTP"},
+		},
+	}
+
+	for _, test := range table {
+		t.Run(test.name, func(t *testing.T) {
+			f := NewFactory(test.cfg)
+			require.NotNil(t, f)
+
+			tcp, err := f.CreateStreamTransport(nil)
+			assert.Error(t, err)
+			require.Nil(t, tcp)
+		})
+	}
 }
