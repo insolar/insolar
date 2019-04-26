@@ -30,6 +30,8 @@ import (
 
 const timestampFormat = time.RFC3339Nano
 
+const defaultCallerSkipFrameCount = 3
+
 // NewLog creates logger instance with particular configuration
 func NewLog(cfg configuration.Log) (insolar.Logger, error) {
 	var logger insolar.Logger

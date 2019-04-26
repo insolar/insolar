@@ -126,7 +126,7 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 		logger: logger,
 		callerConfig: callerHookConfig{
 			enabled:        true,
-			skipFrameCount: 3,
+			skipFrameCount: defaultCallerSkipFrameCount,
 		},
 	}
 	return za, nil
@@ -270,7 +270,7 @@ func (z *zerologAdapter) WithFuncName(flag bool) insolar.Logger {
 func (z *zerologAdapter) loggerWithHooks() *zerolog.Logger {
 	l := z.logger
 	if z.callerConfig.funcname {
-		l = l.Hook(newCallerHook(z.callerConfig.skipFrameCount + defaultCallerSkipFrameCount))
+		l = l.Hook(newCallerHook(z.callerConfig.skipFrameCount + 2))
 	} else if z.callerConfig.enabled {
 		l = l.With().CallerWithSkipFrameCount(z.callerConfig.skipFrameCount).Logger()
 	}
