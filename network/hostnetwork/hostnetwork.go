@@ -139,11 +139,12 @@ func (hn *hostNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "failed to start stream transport")
 	}
 
-	if h, err := host.NewHostN(hn.transport.Address(), hn.nodeID); err != nil {
+	h, err := host.NewHostN(hn.transport.Address(), hn.nodeID)
+	if err != nil {
 		return errors.Wrap(err, "failed to create host")
-	} else {
-		hn.origin = h
 	}
+
+	hn.origin = h
 
 	return nil
 }

@@ -109,11 +109,12 @@ func (nc *networkConsensus) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to start datagram transport")
 	}
 
-	if h, err := host.NewHostNS(nc.transport.Address(), nc.nodeID, nc.shortID); err != nil {
+	h, err := host.NewHostNS(nc.transport.Address(), nc.nodeID, nc.shortID)
+	if err != nil {
 		return errors.Wrap(err, "failed to create host")
-	} else {
-		nc.origin = h
 	}
+
+	nc.origin = h
 
 	return nil
 }
