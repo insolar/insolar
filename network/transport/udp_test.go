@@ -48,89 +48,126 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package pool
+package transport
 
 import (
 	"context"
-	"net"
-	"sync"
+	"fmt"
+	"log"
+	"testing"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
-	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
-	"go.opencensus.io/trace"
+	"github.com/stretchr/testify/assert"
+
+	"github.com/insolar/insolar/configuration"
 )
 
-type entryImpl struct {
-	connectionFactory connectionFactory
-	address           net.Addr
-	onClose           onClose
+func TestNewDatagramTransport(t *testing.T) {
+	table := []struct {
+		name    string
+		cfg     configuration.Transport
+		success bool
+	}{
+		{
+			name:    "default config",
+			cfg:     configuration.NewHostNetwork().Transport,
+			success: true,
+		},
+		{
+			name:    "localhost",
+			cfg:     configuration.Transport{Address: "localhost:0"},
+			success: true,
+		},
+		{
+			name:    "invalid address",
+			cfg:     configuration.Transport{Address: "invalid"},
+			success: false,
+		},
+		{
+			name:    "FixedPublicAddress",
+			cfg:     configuration.Transport{Address: "localhost:0", FixedPublicAddress: "192.168.1.1"},
+			success: true,
+		},
+	}
 
-	mutex *sync.Mutex
+	for _, test := range table {
+		t.Run(test.name, func(t *testing.T) {
+			ctx := context.Background()
+			udp, err := NewFactory(test.cfg).CreateDatagramTransport(nil)
+			assert.NoError(t, err)
 
-	conn net.Conn
-}
+			var err2, err3 error
+			err2 = udp.Start(ctx)
+			if err != nil {
+				err3 = udp.Stop(ctx)
+			}
 
-func newEntryImpl(connectionFactory connectionFactory, address net.Addr, onClose onClose) *entryImpl {
-	return &entryImpl{
-		connectionFactory: connectionFactory,
-		address:           address,
-		mutex:             &sync.Mutex{},
-		onClose:           onClose,
+			assert.Equal(t, test.success, err2 == nil && err3 == nil)
+			if test.success {
+				assert.NoError(t, err2)
+				assert.NoError(t, err3)
+				assert.NotNil(t, udp)
+			}
+		})
 	}
 }
 
-func (e *entryImpl) Open(ctx context.Context) (net.Conn, error) {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
+type testNode struct {
+	udp     DatagramTransport
+	address string
+}
 
-	if e.conn != nil {
-		return e.conn, nil
+func (t *testNode) HandleDatagram(address string, buf []byte) {
+	log.Println("Handle Datagram ", buf)
+}
+
+func newTestNode(port int) (*testNode, error) {
+	cfg := configuration.NewHostNetwork().Transport
+	cfg.Address = fmt.Sprintf("127.0.0.1:%d", port)
+
+	node := &testNode{}
+	udp, err := NewFactory(cfg).CreateDatagramTransport(node)
+	if err != nil {
+		return nil, err
 	}
+	node.udp = udp
 
-	conn, err := e.open(ctx)
+	err = node.udp.Start(context.Background())
 	if err != nil {
 		return nil, err
 	}
 
-	e.conn = conn
-	return e.conn, nil
+	node.address = udp.Address()
+	return node, nil
 }
 
-func (e *entryImpl) open(ctx context.Context) (net.Conn, error) {
-	logger := inslogger.FromContext(ctx)
-	ctx, span := instracer.StartSpan(ctx, "connectionPool.open")
-	span.AddAttributes(
-		trace.StringAttribute("create connect to", e.address.String()),
-	)
-	defer span.End()
+func TestUdpTransport_SendDatagram(t *testing.T) {
+	ctx := context.Background()
 
-	conn, err := e.connectionFactory.CreateConnection(ctx, e.address)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Open ] Failed to create TCP connection")
-	}
+	node1, err := newTestNode(0)
+	assert.NoError(t, err)
+	node2, err := newTestNode(0)
+	assert.NoError(t, err)
 
-	go func(e *entryImpl, conn net.Conn) {
-		b := make([]byte, 1)
-		_, err := conn.Read(b)
-		if err != nil {
-			logger.Infof("[ Open ] remote host 'closed' connection to %s: %s", e.address, err)
-			e.onClose(ctx, e.address)
-			return
-		}
+	err = node1.udp.SendDatagram(ctx, node2.address, []byte{1, 2, 3})
+	assert.NoError(t, err)
 
-		logger.Errorf("[ Open ] unexpected data on connection to %s", e.address)
-	}(e, conn)
+	err = node2.udp.SendDatagram(ctx, node1.address, []byte{5, 4, 3})
+	assert.NoError(t, err)
 
-	return conn, nil
-}
+	err = node1.udp.Stop(ctx)
+	assert.NoError(t, err)
 
-func (e *entryImpl) Close() {
-	e.mutex.Lock()
-	defer e.mutex.Unlock()
+	err = node1.udp.Start(ctx)
+	assert.NoError(t, err)
 
-	if e.conn != nil {
-		utils.CloseVerbose(e.conn)
-	}
+	err = node1.udp.SendDatagram(ctx, node2.address, []byte{1, 2, 3})
+	assert.NoError(t, err)
+
+	err = node2.udp.SendDatagram(ctx, node1.address, []byte{5, 4, 3})
+	assert.NoError(t, err)
+
+	err = node1.udp.Stop(ctx)
+	assert.NoError(t, err)
+	err = node2.udp.Stop(ctx)
+	assert.NoError(t, err)
 }

@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/flow/handler"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/testutils"
@@ -49,15 +49,15 @@ func makeParcelMock(t *testing.T) insolar.Parcel {
 
 func TestEmptyHandle(t *testing.T) {
 	testReply := &mockReply{}
-	hand := handler.NewHandler(
+	disp := dispatcher.NewDispatcher(
 		func(message bus.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
 				message.ReplyTo <- bus.Reply{Reply: testReply}
 				return nil
 			}
-		})
+		}, nil)
 
-	reply, err := hand.WrapBusHandle(context.Background(), makeParcelMock(t))
+	reply, err := disp.WrapBusHandle(context.Background(), makeParcelMock(t))
 	require.NoError(t, err)
 	require.Equal(t, testReply, reply)
 }
@@ -71,7 +71,7 @@ func (p *EmptyProcedure) Proceed(context.Context) error {
 func TestCallEmptyProcedure(t *testing.T) {
 	testReply := &mockReply{}
 
-	hand := handler.NewHandler(
+	disp := dispatcher.NewDispatcher(
 		func(message bus.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
 				err := f.Procedure(context, &EmptyProcedure{}, true)
@@ -79,9 +79,9 @@ func TestCallEmptyProcedure(t *testing.T) {
 				message.ReplyTo <- bus.Reply{Reply: testReply}
 				return nil
 			}
-		})
+		}, nil)
 
-	reply, err := hand.WrapBusHandle(context.Background(), makeParcelMock(t))
+	reply, err := disp.WrapBusHandle(context.Background(), makeParcelMock(t))
 	require.NoError(t, err)
 	require.Equal(t, testReply, reply)
 
@@ -96,7 +96,7 @@ func (p *ErrorProcedure) Proceed(context.Context) error {
 func TestProcedureReturnError(t *testing.T) {
 	testReply := &mockReply{}
 
-	hand := handler.NewHandler(
+	disp := dispatcher.NewDispatcher(
 		func(message bus.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
 				err := f.Procedure(context, &ErrorProcedure{}, true)
@@ -104,9 +104,9 @@ func TestProcedureReturnError(t *testing.T) {
 				message.ReplyTo <- bus.Reply{Reply: testReply}
 				return nil
 			}
-		})
+		}, nil)
 
-	reply, err := hand.WrapBusHandle(context.Background(), makeParcelMock(t))
+	reply, err := disp.WrapBusHandle(context.Background(), makeParcelMock(t))
 	require.NoError(t, err)
 	require.Equal(t, testReply, reply)
 }
@@ -126,7 +126,7 @@ func TestChangePulse(t *testing.T) {
 
 	procedureStarted := make(chan struct{})
 
-	hand := handler.NewHandler(
+	disp := dispatcher.NewDispatcher(
 		func(message bus.Message) flow.Handle {
 			return func(context context.Context, f flow.Flow) error {
 				longProcedure := LongProcedure{}
@@ -136,11 +136,11 @@ func TestChangePulse(t *testing.T) {
 				message.ReplyTo <- bus.Reply{Reply: testReply}
 				return nil
 			}
-		})
+		}, nil)
 
 	handleProcessed := make(chan struct{})
 	go func() {
-		reply, err := hand.WrapBusHandle(context.Background(), makeParcelMock(t))
+		reply, err := disp.WrapBusHandle(context.Background(), makeParcelMock(t))
 		require.NoError(t, err)
 		require.Equal(t, testReply, reply)
 		handleProcessed <- struct{}{}
@@ -148,7 +148,7 @@ func TestChangePulse(t *testing.T) {
 
 	<-procedureStarted
 	pulse := pulsar.NewPulse(22, 33, &entropygenerator.StandardEntropyGenerator{})
-	hand.ChangePulse(context.Background(), *pulse)
+	disp.ChangePulse(context.Background(), *pulse)
 	<-handleProcessed
 }
 
@@ -160,7 +160,7 @@ func TestChangePulseAndMigrate(t *testing.T) {
 
 	migrateStarted := make(chan struct{})
 
-	hand := handler.NewHandler(
+	disp := dispatcher.NewDispatcher(
 		func(message bus.Message) flow.Handle {
 			return func(ctx context.Context, f1 flow.Flow) error {
 				longProcedure := LongProcedure{}
@@ -181,11 +181,11 @@ func TestChangePulseAndMigrate(t *testing.T) {
 				})
 				return nil
 			}
-		})
+		}, nil)
 
 	handleProcessed := make(chan struct{})
 	go func() {
-		reply, err := hand.WrapBusHandle(context.Background(), makeParcelMock(t))
+		reply, err := disp.WrapBusHandle(context.Background(), makeParcelMock(t))
 		require.NoError(t, err)
 		require.Equal(t, testReply, reply)
 		handleProcessed <- struct{}{}
@@ -193,9 +193,9 @@ func TestChangePulseAndMigrate(t *testing.T) {
 
 	<-firstProcedureStarted
 	pulse := pulsar.NewPulse(22, 33, &entropygenerator.StandardEntropyGenerator{})
-	hand.ChangePulse(context.Background(), *pulse)
+	disp.ChangePulse(context.Background(), *pulse)
 	<-migrateStarted
 	<-secondProcedureStarted
-	hand.ChangePulse(context.Background(), *pulse)
+	disp.ChangePulse(context.Background(), *pulse)
 	<-handleProcessed
 }

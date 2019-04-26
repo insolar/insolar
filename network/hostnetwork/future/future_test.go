@@ -148,23 +148,14 @@ func TestFuture_Cancel(t *testing.T) {
 func TestFuture_GetResult(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 	m := &packet.Packet{}
-	canceled := make(chan bool)
+	canceled := make(chan bool, 1)
 	cancelCallback := func(f Future) {
 		canceled <- true
 	}
 	f := NewFuture(network.RequestID(1), n, m, cancelCallback)
-	go func() {
-		time.Sleep(time.Millisecond)
-		f.Cancel()
-	}()
-
-	_, err := f.GetResult(10 * time.Millisecond)
+	_, err := f.GetResult(time.Millisecond)
 	require.Error(t, err)
-
-	// Please note that cancelCallback is called asynchronously thus
-	// it's not guaranteed that it is called and finished when f.GetResult returns.
-	// For this reason in this test we have to use a channel, not
-	// an atomic variable or something else.
+	require.Equal(t, ErrTimeout, err)
 	tmp := <-canceled
 	require.Equal(t, true, tmp)
 }
