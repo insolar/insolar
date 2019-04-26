@@ -92,6 +92,14 @@ type DiscoveryNode struct {
 	Node insolar.DiscoveryNode
 }
 
+type Permission struct {
+	JoinerPublicKey    []byte
+	DiscoveryPublicKey []byte
+	Signature          []byte
+	ReconnectTo        string
+	UTC                time.Time
+}
+
 type Bootstrapper interface {
 	component.Initer
 
@@ -103,11 +111,12 @@ type Bootstrapper interface {
 }
 
 type bootstrapper struct {
-	Certificate   insolar.Certificate `inject:""`
-	NodeKeeper    network.NodeKeeper  `inject:""`
-	Network       network.HostNetwork `inject:""`
-	Gatewayer     network.Gatewayer   `inject:""`
-	PulseAccessor pulse.Accessor      `inject:""`
+	Certificate   insolar.Certificate         `inject:""`
+	NodeKeeper    network.NodeKeeper          `inject:""`
+	Network       network.HostNetwork         `inject:""`
+	Gatewayer     network.Gatewayer           `inject:""`
+	PulseAccessor pulse.Accessor              `inject:""`
+	Cryptography  insolar.CryptographyService `inject:""`
 
 	options *common.Options
 	pinger  *pinger.Pinger
@@ -125,6 +134,11 @@ type bootstrapper struct {
 	firstPulseTime time.Time
 
 	reconnectToNewNetwork func(ctx context.Context, address string)
+}
+
+func (p *Permission) RawBytes() []byte {
+	res := make([]byte, 0)
+	return res
 }
 
 func (bc *bootstrapper) GetFirstFakePulseTime() time.Time {
@@ -148,9 +162,11 @@ func (bc *bootstrapper) setRequest(ref insolar.Reference, req *GenesisRequest) {
 type NodeBootstrapRequest struct {
 	// TODO: change to mandate cuz cert not registered for gob
 	// Certificate   insolar.Certificate
-	JoinClaim     packets.NodeJoinClaim
+	JoinClaim packets.NodeJoinClaim
+	// LastNodePulse is a last received pulse number.
 	LastNodePulse insolar.PulseNumber
-	// Permission will be implemented later.
+	// Permission is a information for reconnect to another discovery node.
+	Permission Permission
 }
 
 type NodeBootstrapResponse struct {
@@ -162,10 +178,10 @@ type NodeBootstrapResponse struct {
 	AssignShortID insolar.ShortNodeID
 	// UpdateSincePulse is a pulse number from which origin have to update storage.
 	UpdateSincePulse insolar.PulseNumber
-	// Permission will be implemented later.
-	RedirectHost string
 	// NetworkSize is a size of the network from bootstrap node.
 	NetworkSize int
+	// Permission is a information for reconnect to another discovery node.
+	Permission Permission
 }
 
 type GenesisRequest struct {
@@ -561,9 +577,17 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 	if err != nil {
 		lastPulse = *insolar.GenesisPulse
 	}
+	proc := platformpolicy.NewKeyProcessor()
+	key, err := proc.ExportPublicKeyBinary(bc.Certificate.GetPublicKey())
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to export an origin pub key")
+	}
 	bootstrapReq := &NodeBootstrapRequest{
 		JoinClaim:     *claim,
 		LastNodePulse: lastPulse.PulseNumber,
+		Permission: Permission{
+			JoinerPublicKey: key,
+		},
 	}
 	request := bc.Network.NewRequestBuilder().Type(types.Bootstrap).Data(bootstrapReq).Build()
 	future, err := bc.Network.SendRequestToHost(ctx, request, bootstrapHost)
@@ -579,7 +603,7 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 	case Rejected:
 		return nil, errors.New("Rejected: " + data.RejectReason)
 	case Redirected:
-		return bootstrap(ctx, data.RedirectHost, bc.options, bc.startBootstrap)
+		return bootstrap(ctx, data.Permission.ReconnectTo, bc.options, bc.startBootstrap)
 	}
 	return &network.BootstrapResult{
 		Host:              response.GetSenderHost(),
@@ -651,6 +675,11 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Re
 	if err != nil {
 		lastPulse = *insolar.GenesisPulse
 	}
+
+	if len(bootstrapRequest.Permission.ReconnectTo) == 0 {
+
+	}
+
 	return bc.Network.BuildResponse(ctx, request,
 		&NodeBootstrapResponse{
 			Code:         code,
@@ -703,6 +732,16 @@ func (bc *bootstrapper) getInactivenodes() []insolar.DiscoveryNode {
 		}
 	}
 	return res
+}
+
+func (bc *bootstrapper) checkPermissionSign(permission Permission) (bool, error) {
+	proc := platformpolicy.NewKeyProcessor()
+	key, err := proc.ImportPublicKeyBinary(permission.DiscoveryPublicKey)
+	if err != nil {
+		return false, errors.Wrap(err, "Failed to import a pub key from permission")
+	}
+
+	bc.Cryptography.Verify(key, permission.Signature)
 }
 
 func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(ctx context.Context, address string)) Bootstrapper {
