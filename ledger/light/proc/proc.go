@@ -30,6 +30,7 @@ type Dependencies struct {
 	SendObject   func(*SendObject)
 	GetCode      func(*GetCode)
 	UpdateObject func(*UpdateObject)
+	SetBlob      func(*SetBlob)
 }
 
 type ReturnReply struct {
