@@ -168,13 +168,13 @@ func (*InDBIndex) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, o
 // 	db   store.DB
 // }
 //
-// type indexKey insolar.ID
+// type lifelineKey insolar.ID
 //
-// func (k indexKey) Scope() store.Scope {
-// 	return store.ScopeIndex
+// func (k lifelineKey) Scope() store.Scope {
+// 	return store.ScopeLifeline
 // }
 //
-// func (k indexKey) ID() []byte {
+// func (k lifelineKey) ID() []byte {
 // 	res := insolar.ID(k)
 // 	return (&res).Bytes()
 // }
@@ -205,13 +205,13 @@ func (*InDBIndex) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, o
 // }
 //
 // func (i *LifelineDB) set(id insolar.ID, index Lifeline) error {
-// 	key := indexKey(id)
+// 	key := lifelineKey(id)
 //
 // 	return i.db.Set(key, EncodeIndex(index))
 // }
 //
 // func (i *LifelineDB) get(id insolar.ID) (index Lifeline, err error) {
-// 	buff, err := i.db.Get(indexKey(id))
+// 	buff, err := i.db.Get(lifelineKey(id))
 // 	if err == store.ErrNotFound {
 // 		err = ErrLifelineNotFound
 // 		return
