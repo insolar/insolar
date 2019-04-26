@@ -46,6 +46,14 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 			Message: s.Message,
 		}
 		return f.Handle(ctx, h.Present)
+	case insolar.TypeSetRecord:
+		msg := s.Message.Parcel.Message().(*message.SetRecord)
+		h := NewSetRecord(s.Dep, s.Message.ReplyTo, msg)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeSetBlob:
+		msg := s.Message.Parcel.Message().(*message.SetBlob)
+		h := NewSetBlob(s.Dep, s.Message.ReplyTo, msg)
+		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetCode:
 		msg := s.Message.Parcel.Message().(*message.GetCode)
 		h := NewGetCode(s.Dep, s.Message.ReplyTo, msg.Code)

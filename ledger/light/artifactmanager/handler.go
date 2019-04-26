@@ -114,6 +114,17 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
 		},
+		SetRecord: func(p *proc.SetRecord) {
+			p.Dep.RecentStorageProvider = h.RecentStorageProvider
+			p.Dep.RecordModifier = h.RecordModifier
+			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.PendingRequestsLimit = h.conf.PendingRequestsLimit
+		},
+		SetBlob: func(p *proc.SetBlob) {
+			p.Dep.BlobAccessor = h.BlobAccessor
+			p.Dep.BlobModifier = h.BlobModifier
+			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+		},
 		SendObject: func(p *proc.SendObject) {
 			p.Dep.Jets = h.JetStorage
 			p.Dep.Blobs = h.Blobs
@@ -225,12 +236,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 			m.checkJet,
 			m.waitForHotData))
 
-	h.Bus.MustRegister(insolar.TypeSetRecord,
-		BuildMiddleware(h.handleSetRecord,
-			instrumentHandler("handleSetRecord"),
-			m.addFieldsToLogger,
-			m.checkJet,
-			m.waitForHotData))
+	h.Bus.MustRegister(insolar.TypeSetRecord, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeRegisterChild,
 		BuildMiddleware(h.handleRegisterChild,
@@ -239,12 +245,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 			m.checkJet,
 			m.waitForHotData))
 
-	h.Bus.MustRegister(insolar.TypeSetBlob,
-		BuildMiddleware(h.handleSetBlob,
-			instrumentHandler("handleSetBlob"),
-			m.addFieldsToLogger,
-			m.checkJet,
-			m.waitForHotData))
+	h.Bus.MustRegister(insolar.TypeSetBlob, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeGetPendingRequests,
 		BuildMiddleware(h.handleHasPendingRequests,
@@ -274,69 +275,6 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	)
 
 	h.Bus.MustRegister(insolar.TypeValidateRecord, h.handleValidateRecord)
-}
-
-func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.SetRecord)
-	virtRec, err := object.DecodeVirtual(msg.Record)
-	if err != nil {
-		return nil, errors.Wrap(err, "can't deserialize record")
-	}
-	jetID := jetFromContext(ctx)
-
-	calculatedID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), virtRec)
-
-	switch r := virtRec.(type) {
-	case object.Request:
-		if h.RecentStorageProvider.Count() > h.conf.PendingRequestsLimit {
-			return &reply.Error{ErrType: reply.ErrTooManyPendingRequests}, nil
-		}
-		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		recentStorage.AddPendingRequest(ctx, r.GetObject(), *calculatedID)
-	case *object.ResultRecord:
-		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
-	}
-
-	id := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), virtRec)
-	rec := record.MaterialRecord{
-		Record: virtRec,
-		JetID:  insolar.JetID(jetID),
-	}
-
-	err = h.RecordModifier.Set(ctx, *id, rec)
-
-	if err == object.ErrOverride {
-		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", virtRec)).Warn("set record override")
-		id = calculatedID
-	} else if err != nil {
-		return nil, errors.Wrap(err, "can't save record into storage")
-	}
-
-	return &reply.ID{ID: *id}, nil
-}
-
-func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.SetBlob)
-	jetID := jetFromContext(ctx)
-	calculatedID := object.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
-
-	_, err := h.BlobAccessor.ForID(ctx, *calculatedID)
-	if err == nil {
-		return &reply.ID{ID: *calculatedID}, nil
-	}
-	if err != nil && err != blob.ErrNotFound {
-		return nil, err
-	}
-
-	err = h.BlobModifier.Set(ctx, *calculatedID, blob.Blob{Value: msg.Memory, JetID: insolar.JetID(jetID)})
-	if err == nil {
-		return &reply.ID{ID: *calculatedID}, nil
-	}
-	if err == blob.ErrOverride {
-		return &reply.ID{ID: *calculatedID}, nil
-	}
-	return nil, err
 }
 
 func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
