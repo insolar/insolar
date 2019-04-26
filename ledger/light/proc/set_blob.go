@@ -20,32 +20,59 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
 )
 
 type SetBlob struct {
 	replyTo chan<- bus.Reply
-	code    insolar.Reference
+	msg     *message.SetBlob
+	jet     insolar.JetID
 
 	Dep struct {
-		Bus            insolar.MessageBus
-		RecordAccessor object.RecordAccessor
-		Coordinator    jet.Coordinator
-		BlobAccessor   blob.Accessor
+		BlobAccessor               blob.Accessor
+		BlobModifier               blob.Modifier
+		PlatformCryptographyScheme insolar.PlatformCryptographyScheme
 	}
 }
 
-func NewSetBlob(code insolar.Reference, replyTo chan<- bus.Reply) *SetBlob {
+func NewSetBlob(jetID insolar.JetID, replyTo chan<- bus.Reply, msg *message.SetBlob) *SetBlob {
 	return &SetBlob{
-		code:    code,
+		msg:     msg,
 		replyTo: replyTo,
+		jet:     jetID,
 	}
 }
 
 func (p *SetBlob) Proceed(ctx context.Context) error {
 	p.replyTo <- p.reply(ctx)
 	return nil
+}
+
+func (p *SetBlob) reply(ctx context.Context) bus.Reply {
+	msg := p.msg
+
+	calculatedID := object.CalculateIDForBlob(p.Dep.PlatformCryptographyScheme, flow.Pulse(ctx), msg.Memory)
+
+	_, err := p.Dep.BlobAccessor.ForID(ctx, *calculatedID)
+	if err == nil {
+		return bus.Reply{Reply: &reply.ID{ID: *calculatedID}}
+	}
+	if err != nil && err != blob.ErrNotFound {
+		return bus.Reply{Err: err}
+	}
+
+	err = p.Dep.BlobModifier.Set(ctx, *calculatedID, blob.Blob{Value: msg.Memory, JetID: insolar.JetID(p.jet)})
+	if err == nil {
+		return bus.Reply{Reply: &reply.ID{ID: *calculatedID}}
+	}
+	if err == blob.ErrOverride {
+		return bus.Reply{Reply: &reply.ID{ID: *calculatedID}}
+	}
+
+	return bus.Reply{Err: err}
 }
