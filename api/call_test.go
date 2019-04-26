@@ -112,6 +112,7 @@ func TestTimeoutSuite(t *testing.T) {
 	http.DefaultServeMux = new(http.ServeMux)
 	cfg := configuration.NewAPIRunner()
 	cfg.Address = "localhost:19192"
+	cfg.Timeout = 1
 	timeoutSuite.api, err = NewRunner(&cfg)
 	require.NoError(t, err)
 
