@@ -21,25 +21,26 @@ import (
 
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type SetBlob struct {
 	dep     *proc.Dependencies
-	memory  []byte
+	msg     *message.SetBlob
 	replyTo chan<- bus.Reply
 }
 
-func NewSetBlob(dep *proc.Dependencies, rep chan<- bus.Reply, memory []byte) *SetBlob {
+func NewSetBlob(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.SetBlob) *SetBlob {
 	return &SetBlob{
 		dep:     dep,
-		memory:  memory,
+		msg:     msg,
 		replyTo: rep,
 	}
 }
 
 func (s *SetBlob) Present(ctx context.Context, f flow.Flow) error {
-	jet := proc.NewFetchJet(*s.msg.Object.Record(), flow.Pulse(ctx), s.replyTo)
+	jet := proc.NewFetchJet(*s.msg.TargetRef.Record(), flow.Pulse(ctx), s.replyTo)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		return err
@@ -50,7 +51,7 @@ func (s *SetBlob) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	update := proc.NewUpdateObject(jet.Result.Jet, s.msg, flow.Pulse(ctx), s.replyTo)
-	s.dep.UpdateObject(update)
-	return f.Procedure(ctx, update, false)
+	setBlob := proc.NewSetBlob(jet.Result.Jet, s.replyTo, s.msg)
+	s.dep.SetBlob(setBlob)
+	return f.Procedure(ctx, setBlob, false)
 }
