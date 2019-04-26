@@ -104,6 +104,35 @@ func TestSWitch(t *testing.T) {
 
 	require.Equal(t, "CompleteNetworkState", ge.GetState().String())
 	require.True(t, gilreleased)
+	cref := testutils.RandomRef()
+
+	for _, state := range []insolar.NetworkState{insolar.NoNetworkState,
+		insolar.AuthorizationNetworkState, insolar.JetlessNetworkState, insolar.VoidNetworkState} {
+		ge = ge.NewGateway(state)
+		require.Equal(t, state, ge.GetState())
+		ge.Run(ctx)
+		au := ge.Auther()
+
+		ret := func() (ret interface{}) {
+			defer func() { ret = recover() }()
+			au.GetCert(ctx, &cref)
+			return nil
+		}()
+
+		require.Equal(t, "GetCert() is not useable in this state", ret)
+
+		ret = func() (ret interface{}) {
+			defer func() { ret = recover() }()
+			au.ValidateCert(ctx, &certificate.Certificate{})
+			return nil
+		}()
+
+		require.Equal(t, "ValidateCert()  is not useable in this state", ret)
+
+		ge.OnPulse(ctx, insolar.Pulse{})
+
+	}
+
 }
 
 func TestComplete_GetCert(t *testing.T) {
