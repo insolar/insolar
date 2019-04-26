@@ -22,6 +22,15 @@ package store
 type DB interface {
 	Get(key Key) (value []byte, err error)
 	Set(key Key, value []byte) error
+	NewIterator(scope Scope) Iterator
+}
+
+type Iterator interface {
+	Seek(prefix []byte)
+	Next() bool
+	Close()
+	Key() []byte
+	Value() []byte
 }
 
 // Key represents a key for the key-value store. Scope is required to separate different DB clients and should be

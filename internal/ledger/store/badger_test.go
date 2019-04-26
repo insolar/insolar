@@ -97,3 +97,81 @@ func TestBadgerDB_Set(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, expectedValue, value)
 }
+
+func TestBadgerDB_NewIterator(t *testing.T) {
+	t.Parallel()
+
+	tmpdir, err := ioutil.TempDir("", "bdb-test-")
+	defer os.RemoveAll(tmpdir)
+	assert.NoError(t, err)
+
+	db, err := NewBadgerDB(tmpdir)
+	require.NoError(t, err)
+
+	var (
+		commonScope      Scope
+		commonPrefix     []byte
+		randKeys         []testBadgerKey
+		unexpectedValues [][]byte
+		keys             []testBadgerKey
+		expectedValues   [][]byte
+		expected         map[string][]byte
+	)
+
+	expected = make(map[string][]byte)
+
+	const (
+		ArrayLength = 3
+	)
+
+	fuzz.New().NilChance(0).Fuzz(&commonScope)
+	fuzz.New().NilChance(0).NumElements(ArrayLength, ArrayLength).Fuzz(&commonPrefix)
+
+	ff := fuzz.New().NilChance(0).NumElements(ArrayLength, ArrayLength).Funcs(
+		func(key *testBadgerKey, c fuzz.Continue) {
+			var id []byte
+			c.Fuzz(&id)
+			*key = testBadgerKey{id: id, scope: commonScope}
+		},
+	)
+	ff.Fuzz(&randKeys)
+	ff.Fuzz(&unexpectedValues)
+
+	f := fuzz.New().NilChance(0).NumElements(ArrayLength, ArrayLength).Funcs(
+		func(key *testBadgerKey, c fuzz.Continue) {
+			var id []byte
+			c.Fuzz(&id)
+			*key = testBadgerKey{id: append(commonPrefix, id...), scope: commonScope}
+		},
+	)
+	f.Fuzz(&keys)
+	f.Fuzz(&expectedValues)
+
+	err = db.backend.Update(func(txn *badger.Txn) error {
+		for i := 0; i < ArrayLength; i++ {
+			key := append(randKeys[i].Scope().Bytes(), randKeys[i].ID()...)
+			err = txn.Set(key, unexpectedValues[i])
+			if err != nil {
+				return err
+			}
+		}
+		for i := 0; i < ArrayLength; i++ {
+			key := append(keys[i].Scope().Bytes(), keys[i].ID()...)
+			err = txn.Set(key, expectedValues[i])
+			if err != nil {
+				return err
+			}
+			expected[string(keys[i].ID())] = expectedValues[i]
+		}
+		return nil
+	})
+	require.NoError(t, err)
+
+	// test logic
+	it := db.NewIterator(commonScope)
+	defer it.Close()
+	it.Seek(commonPrefix)
+	for it.Next() {
+		require.ElementsMatch(t, expected[string(it.Key())], it.Value())
+	}
+}

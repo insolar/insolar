@@ -22,6 +22,8 @@ import (
 
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/log"
 )
 
 // BadgerDB is a badger DB implementation.
@@ -94,7 +96,59 @@ func (b *BadgerDB) Set(key Key, value []byte) error {
 	return nil
 }
 
+// NewIterator returns new Iterator over the store.
+func (b *BadgerDB) NewIterator(scope Scope) Iterator {
+	bi := badgerIterator{scope: scope, fullPrefix: scope.Bytes()}
+	opts := badger.DefaultIteratorOptions
+	bi.whenClose = make(chan bool, 1)
+	out := make(chan *badger.Iterator, 1)
+	go func() {
+		err := b.backend.View(func(txn *badger.Txn) error {
+			out <- txn.NewIterator(opts)
+			close(out)
+			<-bi.whenClose
+			return nil
+		})
+		if err != nil {
+			log.Error(errors.Wrap(err, "failed to execute badger View"))
+		}
+	}()
+	bi.it = <-out
+	return &bi
+}
+
 // Stop gracefully stops all disk writes. After calling this, it's safe to kill the process without losing data.
 func (b *BadgerDB) Stop(ctx context.Context) error {
 	return b.backend.Close()
+}
+
+type badgerIterator struct {
+	scope      Scope
+	fullPrefix []byte
+	it         *badger.Iterator
+	whenClose  chan bool
+}
+
+func (bi *badgerIterator) Close() {
+	bi.it.Close()
+	bi.whenClose <- true
+}
+
+func (bi *badgerIterator) Seek(prefix []byte) {
+	bi.fullPrefix = append(bi.scope.Bytes(), prefix...)
+	bi.it.Seek(bi.fullPrefix)
+}
+
+func (bi *badgerIterator) Next() bool {
+	bi.it.Next()
+	return bi.it.ValidForPrefix(bi.fullPrefix)
+}
+
+func (bi *badgerIterator) Key() []byte {
+	return bi.it.Item().Key()[len(bi.scope.Bytes()):]
+}
+
+func (bi *badgerIterator) Value() []byte {
+	value, _ := bi.it.Item().ValueCopy(nil)
+	return value
 }
