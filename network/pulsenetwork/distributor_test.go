@@ -48,61 +48,109 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package host
+package pulsenetwork
 
 import (
-	"fmt"
+	"context"
+	"testing"
 
-	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
+	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"github.com/insolar/insolar/network/transport"
+	mock "github.com/insolar/insolar/testutils/network"
 )
 
-// Host is the over-the-wire representation of a host.
-type Host struct {
-	// NodeID is unique identifier of the node
-	NodeID insolar.Reference
-	// ShortID is shortened unique identifier of the node inside the globe
-	ShortID insolar.ShortNodeID
-	// Address is IP and port.
-	Address *Address
-}
+const (
+	PULSENUMBER = 155
+	ID1         = "4K2V1kpVycZ6qSFsNdz2FtpNxnJs17eBNzf9rdCMcKoe"
+	DOMAIN      = ".4F7BsTMVPKFshM1MwLf6y23cid6fL3xMpazVoF9krzUw"
+)
 
-// NewHost creates a new Host with specified physical address.
-func NewHost(address string) (*Host, error) {
-	addr, err := NewAddress(address)
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to create Host")
-	}
-	return &Host{Address: addr}, nil
-}
+func createHostNetwork(t *testing.T) (network.HostNetwork, error) {
+	m := mock.NewRoutingTableMock(t)
+	m.AddToKnownHostsMock.Set(func(p *host.Host) {
 
-// NewHostN creates a new Host with specified physical address and NodeID.
-func NewHostN(address string, nodeID insolar.Reference) (*Host, error) {
-	h, err := NewHost(address)
+	})
+
+	cm1 := component.NewManager(nil)
+	f1 := transport.NewFactory(configuration.NewHostNetwork().Transport)
+	n1, err := hostnetwork.NewHostNetwork(ID1 + DOMAIN)
 	if err != nil {
 		return nil, err
 	}
-	h.NodeID = nodeID
-	return h, nil
-}
+	cm1.Inject(f1, n1, m)
 
-// NewHostNS creates a new Host with specified physical address, NodeID and ShortID.
-func NewHostNS(address string, nodeID insolar.Reference, shortID insolar.ShortNodeID) (*Host, error) {
-	h, err := NewHostN(address, nodeID)
+	ctx := context.Background()
+
+	err = n1.Init(ctx)
 	if err != nil {
 		return nil, err
 	}
-	h.ShortID = shortID
-	return h, nil
+
+	err = n1.Start(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	return n1, nil
 }
 
-// String representation of Host.
-func (host Host) String() string {
-	return fmt.Sprintf("%s (%s)", host.NodeID.String(), host.Address.String())
-}
+func TestDistributor_Distribute(t *testing.T) {
+	n1, err := createHostNetwork(t)
+	require.NoError(t, err)
+	ctx := context.Background()
 
-// Equal checks if host equals to other host (e.g. hosts' IDs and network addresses match).
-func (host Host) Equal(other Host) bool {
-	return host.NodeID.Equal(other.NodeID) && (other.Address != nil) && host.Address.Equal(*other.Address)
+	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+		if r.GetType() == types.Ping {
+			log.Info("handle Ping")
+			return n1.BuildResponse(ctx, r, nil), nil
+		}
+
+		log.Info("handle Pulse")
+		pulse := r.GetData().(*packet.RequestPulse)
+		assert.Equal(t, insolar.PulseNumber(PULSENUMBER), pulse.Pulse.PulseNumber)
+		return n1.BuildResponse(ctx, r, &packet.ResponsePulse{Success: true}), nil
+	}
+	n1.RegisterRequestHandler(types.Ping, handler)
+	n1.RegisterRequestHandler(types.Pulse, handler)
+
+	err = n1.Start(ctx)
+	require.NoError(t, err)
+	defer func() {
+		err = n1.Stop(ctx)
+		require.NoError(t, err)
+	}()
+
+	pulsarCfg := configuration.NewPulsar()
+	pulsarCfg.DistributionTransport.Address = "127.0.0.1:0"
+	pulsarCfg.PulseDistributor.BootstrapHosts = []string{n1.PublicAddress()}
+
+	d, err := NewDistributor(pulsarCfg.PulseDistributor)
+	require.NoError(t, err)
+	assert.NotNil(t, d)
+
+	cm := component.NewManager(nil)
+	cm.Inject(d, transport.NewFactory(pulsarCfg.DistributionTransport))
+	err = cm.Init(ctx)
+	require.NoError(t, err)
+	err = cm.Start(ctx)
+	require.NoError(t, err)
+	defer func() {
+		err = cm.Stop(ctx)
+		require.NoError(t, err)
+	}()
+
+	d.Distribute(ctx, insolar.Pulse{PulseNumber: PULSENUMBER})
+	d.Distribute(ctx, insolar.Pulse{PulseNumber: PULSENUMBER})
+	d.Distribute(ctx, insolar.Pulse{PulseNumber: PULSENUMBER})
 }
