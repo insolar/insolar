@@ -62,14 +62,13 @@ type Manager interface {
 }
 
 func NewManager() Manager {
-	return newFutureManagerImpl()
+	return newFutureManager()
 }
 
 type PacketHandler interface {
 	Handle(ctx context.Context, msg *packet.Packet)
-	Received() <-chan *packet.Packet
 }
 
 func NewPacketHandler(futureManager Manager) PacketHandler {
-	return newPacketHandlerImpl(futureManager)
+	return newPacketHandler(futureManager)
 }

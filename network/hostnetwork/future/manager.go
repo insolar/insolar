@@ -57,18 +57,18 @@ import (
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 )
 
-type futureManagerImpl struct {
+type futureManager struct {
 	mutex   sync.RWMutex
 	futures map[network.RequestID]Future
 }
 
-func newFutureManagerImpl() *futureManagerImpl {
-	return &futureManagerImpl{
+func newFutureManager() *futureManager {
+	return &futureManager{
 		futures: make(map[network.RequestID]Future),
 	}
 }
 
-func (fm *futureManagerImpl) Create(msg *packet.Packet) Future {
+func (fm *futureManager) Create(msg *packet.Packet) Future {
 	future := NewFuture(msg.RequestID, msg.Receiver, msg, func(f Future) {
 		fm.delete(f.ID())
 	})
@@ -81,14 +81,14 @@ func (fm *futureManagerImpl) Create(msg *packet.Packet) Future {
 	return future
 }
 
-func (fm *futureManagerImpl) Get(msg *packet.Packet) Future {
+func (fm *futureManager) Get(msg *packet.Packet) Future {
 	fm.mutex.RLock()
 	defer fm.mutex.RUnlock()
 
 	return fm.futures[msg.RequestID]
 }
 
-func (fm *futureManagerImpl) delete(id network.RequestID) {
+func (fm *futureManager) delete(id network.RequestID) {
 	fm.mutex.Lock()
 	defer fm.mutex.Unlock()
 
