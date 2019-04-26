@@ -85,8 +85,9 @@ type RPCController interface {
 }
 
 type rpcController struct {
-	Scheme  insolar.PlatformCryptographyScheme `inject:""`
-	Network network.HostNetwork                `inject:""`
+	Scheme      insolar.PlatformCryptographyScheme `inject:""`
+	Network     network.HostNetwork                `inject:""`
+	NodeNetwork insolar.NodeNetwork                `inject:""`
 
 	options     *common.Options
 	methodTable map[string]insolar.RemoteProcedure
@@ -176,7 +177,7 @@ func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data insol
 	var err error
 
 	if findCurrentNode {
-		nodeID := rpc.Network.GetNodeID()
+		nodeID := rpc.NodeNetwork.GetOrigin().ID()
 		nextNodes, err = cascade.CalculateNextNodes(rpc.Scheme, data, &nodeID)
 	} else {
 		nextNodes, err = cascade.CalculateNextNodes(rpc.Scheme, data, nil)

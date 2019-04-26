@@ -197,15 +197,6 @@ func TestNewHostNetwork(t *testing.T) {
 	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
 	require.NoError(t, err)
 
-	ref1, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
-	require.NoError(t, err)
-	require.Equal(t, *ref1, n1.GetNodeID())
-
-	ref2, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
-	require.NoError(t, err)
-	require.Equal(t, *ref2, n2.GetNodeID())
-	require.NoError(t, err)
-
 	count := 10
 	wg := sync.WaitGroup{}
 	wg.Add(count)

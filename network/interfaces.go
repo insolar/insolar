@@ -101,8 +101,6 @@ type HostNetwork interface {
 
 	// PublicAddress returns public address that can be published for all nodes.
 	PublicAddress() string
-	// GetNodeID get current node ID.
-	GetNodeID() insolar.Reference
 
 	// SendRequest send request to a remote node addressed by reference.
 	SendRequest(ctx context.Context, request Request, receiver insolar.Reference) (Future, error)
