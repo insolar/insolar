@@ -36,6 +36,8 @@ type IndexStateModifier interface {
 	SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexCleaner -o ./ -s _mock.go
+
 // IndexCleaner provides an interface for removing backets from a storage.
 type IndexCleaner interface {
 	// DeleteForPN method removes indexes from a storage for a provided
