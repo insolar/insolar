@@ -46,8 +46,8 @@ DISCOVERY_NODES_HEAVY_DATA=${DISCOVERY_NODES_DATA}1/
 NODES_DATA=${LAUNCHNET_BASE_DIR}nodes/
 
 GENESIS_TEMPLATE=${SCRIPTS_DIR}genesis_template.yaml
-GENESIS_CONFIG=${LAUNCHNET_BASE_DIR}genesis.yaml
-INSOLARD_CONFIG=${LAUNCHNET_BASE_DIR}insolard.yaml
+BOOTSTRAP_GENESIS_CONFIG=${LAUNCHNET_BASE_DIR}genesis.yaml
+BOOTSTRAP_INSOLARD_CONFIG=${LAUNCHNET_BASE_DIR}insolard.yaml
 
 PULSEWATCHER_CONFIG=${LAUNCHNET_BASE_DIR}/pulsewatcher.yaml
 
@@ -99,7 +99,7 @@ stop_listening()
         ports="$ports $gorund_ports"
     fi
 
-    transport_ports=$( grep "host:" $GENESIS_CONFIG | grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
+    transport_ports=$( grep "host:" ${BOOTSTRAP_GENESIS_CONFIG} | grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
     ports="$ports $transport_ports"
 
     for port in $ports
@@ -322,7 +322,7 @@ genesis()
     generate_insolard_configs
 
     echo "start genesis ..."
-    CMD="$INSOLARD --config $INSOLARD_CONFIG --genesis $GENESIS_CONFIG --keyout $DISCOVERY_NODES_DATA/certs"
+    CMD="$INSOLARD --config ${BOOTSTRAP_INSOLARD_CONFIG} --genesis ${BOOTSTRAP_GENESIS_CONFIG} --keyout $DISCOVERY_NODES_DATA/certs"
 
     GENESIS_EXIT_CODE=0
     set +e

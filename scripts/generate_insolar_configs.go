@@ -53,11 +53,11 @@ var (
 	prometheusConfigTmpl = "scripts/prom/server.yml.tmpl"
 	prometheusFileName   = "prometheus.yaml"
 
-	genesisConfigTmpl = "scripts/insolard/genesis_template.yaml"
+	genesisConfigTmpl = "scripts/insolard/bootstrap/genesis_template.yaml"
 	genesisFileName   = withBaseDir("genesis.yaml")
 
-	insolardConfigTmpl = "scripts/insolard/insolard_template.yaml"
-	insolardFileName   = withBaseDir("insolard.yaml")
+	bootstrapInsolardConfigTmpl = "scripts/insolard/bootstrap/insolard_template.yaml"
+	bootstrapInsolardFileName   = withBaseDir("insolard.yaml")
 
 	pulsardConfigTmpl = "scripts/insolard/pulsar_template.yaml"
 	pulsardFileName   = withBaseDir("pulsar.yaml")
@@ -114,7 +114,7 @@ func main() {
 	parseInputParams()
 
 	mustMakeDir(outputDir)
-	writeInsloardConfig()
+	writeBootstrapInsolardConfig()
 	writeGenesisConfig()
 
 	genesisConf, err := genesis.ParseGenesisConfig(genesisFileName)
@@ -205,7 +205,6 @@ func main() {
 	writeInsolardConfigs(filepath.Join(outputDir, "/discoverynodes"), discoveryNodesConfigs)
 	writeInsolardConfigs(filepath.Join(outputDir, "/nodes"), nodesConfigs)
 	writeGorundPorts(gorundPorts)
-	writeGenesisConfig()
 
 	pulsarConf := &pulsarConfigVars{}
 	pulsarConf.DataDir = withBaseDir("pulsar_data")
@@ -239,18 +238,16 @@ func writeGenesisConfig() {
 	check("Can't makeFileWithDir: "+genesisFileName, err)
 }
 
-func writeInsloardConfig() {
-	templates, err := template.ParseFiles(insolardConfigTmpl)
-	check("Can't parse template: "+insolardConfigTmpl, err)
+func writeBootstrapInsolardConfig() {
+	templates, err := template.ParseFiles(bootstrapInsolardConfigTmpl)
+	check("Can't parse template: "+bootstrapInsolardConfigTmpl, err)
 
 	var b bytes.Buffer
 	err = templates.Execute(&b, &commonConfigVars{BaseDir: baseDir()})
-	check("Can't process template: "+insolardConfigTmpl, err)
+	check("Can't process template: "+bootstrapInsolardConfigTmpl, err)
 
-	// fmt.Println("insolardFileName:", insolardFileName)
-	// os.Exit(1)
-	err = createFileWithDir(insolardFileName, b.String())
-	check("Can't makeFileWithDir: "+insolardFileName, err)
+	err = createFileWithDir(bootstrapInsolardFileName, b.String())
+	check("Can't makeFileWithDir: "+bootstrapInsolardFileName, err)
 }
 
 type pulsarConfigVars struct {
