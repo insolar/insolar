@@ -33,13 +33,13 @@ type IndexCleaner interface {
 	DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
 }
 
-type IndexReplicaAccessor interface {
+type IndexBucketAccessor interface {
 	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []IndexBucket
 }
 
-type IndexReplicaModifier interface {
-	Clone(ctx context.Context, fromPN insolar.PulseNumber, toPN insolar.PulseNumber, from insolar.JetID, to insolar.JetID)
-}
+// type IndexBucketModifier interface {
+// 	Clone(ctx context.Context, fromPN insolar.PulseNumber, toPN insolar.PulseNumber, from insolar.JetID, to insolar.JetID)
+// }
 
 type LockedIndexBucket struct {
 	lifelineLock sync.RWMutex
@@ -186,6 +186,32 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 
 	return res
 }
+
+// func (i *InMemoryIndex) Clone(ctx context.Context, fromPN insolar.PulseNumber, toPN insolar.PulseNumber, from insolar.JetID, to insolar.JetID) {
+// 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+// 		"from_jet": from.DebugString(),
+// 		"to_jet":   to.DebugString(),
+// 		"from_pn":  fromPN,
+// 		"to_pn":    toPN,
+// 	})
+//
+// 	i.bucketsLock.Lock()
+// 	defer i.bucketsLock.Unlock()
+//
+// 	fromBucks, fromOK := i.buckets[fromPN]
+// 	if !fromOK {
+// 		return
+// 	}
+//
+// 	i.buckets[toPN] = map[insolar.ID]*LockedIndexBucket{}
+//
+// 	for objID, fBuck := range fromBucks {
+// 		i.buckets[toPN][objID] = &LockedIndexBucket{
+// 			bucket: fBuck.bucket.
+// 		}
+// 	}
+//
+// }
 
 func (i *InMemoryIndex) SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
 	b := i.getBucket(ctx, pn, objID)

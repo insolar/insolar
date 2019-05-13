@@ -67,8 +67,8 @@ type PulseManager struct {
 	JetAccessor jet.Accessor `inject:""`
 	JetModifier jet.Modifier `inject:""`
 
-	IndexReplicaModifier object.IndexReplicaModifier
-	IndexReplicaAccessor object.IndexReplicaAccessor
+	IndexReplicaModifier object.IndexBucketModifier
+	IndexReplicaAccessor object.IndexBucketAccessor
 
 	NodeSetter node.Modifier `inject:""`
 	Nodes      node.Accessor `inject:""`
@@ -126,8 +126,8 @@ func NewPulseManager(
 	pulseShifter pulse.Shifter,
 	recCleaner object.RecordCleaner,
 	recSyncAccessor object.RecordCollectionAccessor,
-	idxReplicaModifier object.IndexReplicaModifier,
-	idxReplicaAccessor object.IndexReplicaAccessor,
+	idxReplicaModifier object.IndexBucketModifier,
+	idxReplicaAccessor object.IndexBucketAccessor,
 	lightToHeavySyncer replication.LightReplicator,
 ) *PulseManager {
 	pmconf := conf.PulseManager
@@ -367,7 +367,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse i
 			}
 			if *nextLeftExecutor == me {
 				info.left.mineNext = true
-				m.rewriteHotData(ctx, currentPulse, newPulse, jetID, leftJetID)
+				// m.rewriteHotData(ctx, currentPulse, newPulse, jetID, leftJetID)
 			}
 			nextRightExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(rightJetID), newPulse)
 			if err != nil {
@@ -375,7 +375,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse i
 			}
 			if *nextRightExecutor == me {
 				info.right.mineNext = true
-				m.rewriteHotData(ctx, currentPulse, newPulse, jetID, rightJetID)
+				// m.rewriteHotData(ctx, currentPulse, newPulse, jetID, rightJetID)
 			}
 
 			logger.WithFields(map[string]interface{}{
@@ -399,26 +399,26 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse i
 	return results, nil
 }
 
-func (m *PulseManager) rewriteHotData(ctx context.Context, fromPN insolar.PulseNumber, toPN insolar.PulseNumber, fromJetID, toJetID insolar.JetID) {
-	// logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-	// 	"from_jet": fromJetID.DebugString(),
-	// 	"to_jet":   toJetID.DebugString(),
-	// })
-
-	m.IndexReplicaModifier.Clone(ctx, fromPN, toPN, fromJetID, toJetID)
-
-	// idxs := m.CollectionIndexAccessor.ForJet(ctx, fromJetID)
-	// for id, meta := range idxs {
-	// 	meta.Index.JetID = toJetID
-	// 	err := m.IndexModifier.SetWithMeta(ctx, id, meta.LastUsed, meta.Index)
-	// 	if err == object.ErrLifelineNotFound {
-	// 		logger.WithField("id", id.DebugString()).Error("failed to rewrite index")
-	// 		continue
-	// 	}
-	// }
-
-	m.RecentStorageProvider.ClonePendingStorage(ctx, insolar.ID(fromJetID), insolar.ID(toJetID))
-}
+// func (m *PulseManager) rewriteHotData(ctx context.Context, fromPN insolar.PulseNumber, toPN insolar.PulseNumber, fromJetID, toJetID insolar.JetID) {
+// 	// logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+// 	// 	"from_jet": fromJetID.DebugString(),
+// 	// 	"to_jet":   toJetID.DebugString(),
+// 	// })
+//
+// 	m.IndexReplicaModifier.Clone(ctx, fromPN, toPN, fromJetID, toJetID)
+//
+// 	// idxs := m.CollectionIndexAccessor.ForJet(ctx, fromJetID)
+// 	// for id, meta := range idxs {
+// 	// 	meta.Index.JetID = toJetID
+// 	// 	err := m.IndexModifier.SetWithMeta(ctx, id, meta.LastUsed, meta.Index)
+// 	// 	if err == object.ErrLifelineNotFound {
+// 	// 		logger.WithField("id", id.DebugString()).Error("failed to rewrite index")
+// 	// 		continue
+// 	// 	}
+// 	// }
+//
+// 	m.RecentStorageProvider.ClonePendingStorage(ctx, insolar.ID(fromJetID), insolar.ID(toJetID))
+// }
 
 // Set set's new pulse and closes current jet drop.
 func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist bool) error {
