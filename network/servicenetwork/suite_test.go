@@ -479,7 +479,8 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	GIL.AcquireMock.Return()
 	GIL.ReleaseMock.Return()
 	keyProc := platformpolicy.NewKeyProcessor()
-	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
+	pubMock := &PublisherMock{}
+	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock)
 
 	node.componentManager.Register(&amMock, certManager, cryptographyService, mblocker, GIL)
 	node.componentManager.Inject(serviceNetwork, keyProc, terminationHandler, transport.NewFakeFactory(cfg.Host.Transport),

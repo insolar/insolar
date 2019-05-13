@@ -82,6 +82,11 @@ func (c *Controller) SendMessage(nodeID insolar.Reference, name string, msg inso
 	return c.RPCController.SendMessage(nodeID, name, msg)
 }
 
+// SendBytes send message to nodeID.
+func (c *Controller) SendBytes(ctx context.Context, nodeID insolar.Reference, name string, msgBytes []byte) ([]byte, error) {
+	return c.RPCController.SendBytes(ctx, nodeID, name, msgBytes)
+}
+
 // RemoteProcedureRegister register remote procedure that will be executed when message is received.
 func (c *Controller) RemoteProcedureRegister(name string, method insolar.RemoteProcedure) {
 	c.RPCController.RemoteProcedureRegister(name, method)

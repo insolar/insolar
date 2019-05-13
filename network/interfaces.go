@@ -69,12 +69,16 @@ type BootstrapResult struct {
 	NetworkSize       int
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network.Controller -o ../testutils/network -s _mock.go
+
 // Controller contains network logic.
 type Controller interface {
 	component.Initer
 
 	// SendMessage send message to nodeID.
 	SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error)
+	// SendBytes send bytes to nodeID.
+	SendBytes(ctx context.Context, nodeID insolar.Reference, name string, msgBytes []byte) ([]byte, error)
 	// RemoteProcedureRegister register remote procedure that will be executed when message is received.
 	RemoteProcedureRegister(name string, method insolar.RemoteProcedure)
 	// SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
