@@ -57,7 +57,7 @@ type Sender interface {
 }
 
 type lockedReply struct {
-	mutex    sync.RWMutex
+	wg       sync.WaitGroup
 	messages chan *message.Message
 
 	once sync.Once
@@ -90,11 +90,9 @@ func (b *Bus) removeReplyChannel(ctx context.Context, id string, reply *lockedRe
 		defer b.repliesMutex.Unlock()
 		delete(b.replies, id)
 
-		inslogger.FromContext(ctx).Infof("close reply channel for message with correlationID %s", id)
-
-		reply.mutex.Lock()
+		reply.wg.Wait()
 		close(reply.messages)
-		reply.mutex.Unlock()
+		inslogger.FromContext(ctx).Infof("close reply channel for message with correlationID %s", id)
 	})
 }
 
@@ -102,36 +100,39 @@ func (b *Bus) removeReplyChannel(ctx context.Context, id string, reply *lockedRe
 func (b *Bus) Send(ctx context.Context, msg *message.Message) (<-chan *message.Message, func()) {
 	id := watermill.NewUUID()
 	middleware.SetCorrelationID(id, msg)
+
 	reply := &lockedReply{
 		messages: make(chan *message.Message),
 		done:     make(chan struct{}),
 	}
+
+	done := func() {
+		b.removeReplyChannel(ctx, id, reply)
+	}
+
 	b.repliesMutex.Lock()
-	defer b.repliesMutex.Unlock()
+	b.replies[id] = reply
+	b.repliesMutex.Unlock()
 
 	err := b.pub.Publish(TopicOutgoing, msg)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
+		done()
 		return nil, nil
 	}
 
-	b.replies[id] = reply
-
-	done := func(ctx context.Context, b *Bus, reply *lockedReply) func() {
-		return func() {
-			b.removeReplyChannel(ctx, id, reply)
-		}
-	}(ctx, b, reply)
-
-	go func(done func()) {
+	go func() {
 		select {
 		case <-reply.done:
 			inslogger.FromContext(msg.Context()).Infof("Done waiting replies for message with correlationID %s", id)
 		case <-time.After(b.timeout):
-			inslogger.FromContext(msg.Context()).Infof("Timeout for waiting replies for message with correlationID %s was exceeded", id)
+			inslogger.FromContext(ctx).Error(
+				errors.Errorf(
+					"can't return result for message with correlationID %s: timeout for reading (%s) was exceeded", id, b.timeout),
+			)
 			done()
 		}
-	}(done)
+	}()
 
 	return reply.messages, done
 }
@@ -148,17 +149,16 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 			return h(msg)
 		}
 
-		reply.mutex.RLock()
-		defer reply.mutex.RUnlock()
-
+		reply.wg.Add(1)
 		b.repliesMutex.RUnlock()
 
 		select {
 		case reply.messages <- msg:
 			inslogger.FromContext(msg.Context()).Infof("result for message with correlationID %s was send", id)
-			return nil, nil
 		case <-reply.done:
-			return nil, errors.Errorf("can't return result for message with correlationID %s: timeout for reading (%s) was exceeded", id, b.timeout)
 		}
+		reply.wg.Done()
+
+		return nil, nil
 	}
 }

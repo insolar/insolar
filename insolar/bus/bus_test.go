@@ -231,8 +231,7 @@ func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {
 	close(resChan.done)
 
 	res, err := handler(msg)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "can't return result for message with correlationID")
+	require.NoError(t, err)
 	require.Nil(t, res)
 }
 
@@ -285,8 +284,7 @@ func TestMessageBus_Send_IncomingMessageRouter_ReadAfterTimeout(t *testing.T) {
 	handler := b.IncomingMessageRouter(incomingHandler)
 
 	resHandler, err := handler(msg)
-	require.Error(t, err)
-	require.Contains(t, err.Error(), "can't return result for message with correlationID")
+	require.NoError(t, err)
 	require.Nil(t, resHandler)
 
 	resSend, ok := <-results
@@ -393,6 +391,7 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsgForOneSend(t *testing.T
 	// reply to messages
 	for i := 0; i < count; i++ {
 		go func() {
+			time.Sleep(time.Millisecond * 5)
 			_, _ = handler(msg)
 		}()
 	}
