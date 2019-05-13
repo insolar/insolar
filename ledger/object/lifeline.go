@@ -16,6 +16,10 @@
 
 package object
 
+import (
+	"github.com/insolar/insolar/insolar"
+)
+
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineAccessor -o ./ -s _mock.go
 
 // LifelineAccessor provides info about Index-values from storage.
@@ -98,84 +102,84 @@ package object
 // 	LastUsed insolar.PulseNumber
 // }
 //
-// // EncodeIndex converts lifeline index into binary format.
-// func EncodeIndex(index Lifeline) []byte {
-// 	res, err := index.Marshal()
-// 	if err != nil {
-// 		panic(err)
-// 	}
-//
-// 	return res
-// }
-//
-// // MustDecodeIndex converts byte array into lifeline index struct.
-// func MustDecodeIndex(buff []byte) (index Lifeline) {
-// 	idx, err := DecodeIndex(buff)
-// 	if err != nil {
-// 		panic(err)
-// 	}
-//
-// 	return idx
-// }
-//
-// // DecodeIndex converts byte array into lifeline index struct.
-// func DecodeIndex(buff []byte) (Lifeline, error) {
-// 	lfl := Lifeline{}
-// 	err := lfl.Unmarshal(buff)
-// 	return lfl, err
-// }
-//
-// // CloneIndex returns copy of argument idx value.
-// func CloneIndex(idx Lifeline) Lifeline {
-// 	if idx.LatestState != nil {
-// 		tmp := *idx.LatestState
-// 		idx.LatestState = &tmp
-// 	}
-//
-// 	if idx.LatestStateApproved != nil {
-// 		tmp := *idx.LatestStateApproved
-// 		idx.LatestStateApproved = &tmp
-// 	}
-//
-// 	if idx.ChildPointer != nil {
-// 		tmp := *idx.ChildPointer
-// 		idx.ChildPointer = &tmp
-// 	}
-//
-// 	if idx.Delegates != nil {
-// 		cp := make([]LifelineDelegate, len(idx.Delegates))
-// 		for k, v := range idx.Delegates {
-// 			cp[k] = v
-// 		}
-// 		idx.Delegates = cp
-// 	} else {
-// 		idx.Delegates = []LifelineDelegate{}
-// 	}
-//
-// 	return idx
-// }
-//
-// func (l *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
-// 	for _, d := range l.Delegates {
-// 		if d.Key == key {
-// 			d.Value = value
-// 			return
-// 		}
-// 	}
-//
-// 	l.Delegates = append(l.Delegates, LifelineDelegate{Key: key, Value: value})
-// }
-//
-// func (l *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool) {
-// 	for _, d := range l.Delegates {
-// 		if d.Key == key {
-// 			return d.Value, true
-// 		}
-// 	}
-//
-// 	return [64]byte{}, false
-// }
-//
+// EncodeIndex converts lifeline index into binary format.
+func EncodeIndex(index Lifeline) []byte {
+	res, err := index.Marshal()
+	if err != nil {
+		panic(err)
+	}
+
+	return res
+}
+
+// MustDecodeIndex converts byte array into lifeline index struct.
+func MustDecodeIndex(buff []byte) (index Lifeline) {
+	idx, err := DecodeIndex(buff)
+	if err != nil {
+		panic(err)
+	}
+
+	return idx
+}
+
+// DecodeIndex converts byte array into lifeline index struct.
+func DecodeIndex(buff []byte) (Lifeline, error) {
+	lfl := Lifeline{}
+	err := lfl.Unmarshal(buff)
+	return lfl, err
+}
+
+// CloneIndex returns copy of argument idx value.
+func CloneIndex(idx Lifeline) Lifeline {
+	if idx.LatestState != nil {
+		tmp := *idx.LatestState
+		idx.LatestState = &tmp
+	}
+
+	if idx.LatestStateApproved != nil {
+		tmp := *idx.LatestStateApproved
+		idx.LatestStateApproved = &tmp
+	}
+
+	if idx.ChildPointer != nil {
+		tmp := *idx.ChildPointer
+		idx.ChildPointer = &tmp
+	}
+
+	if idx.Delegates != nil {
+		cp := make([]LifelineDelegate, len(idx.Delegates))
+		for k, v := range idx.Delegates {
+			cp[k] = v
+		}
+		idx.Delegates = cp
+	} else {
+		idx.Delegates = []LifelineDelegate{}
+	}
+
+	return idx
+}
+
+func (l *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
+	for _, d := range l.Delegates {
+		if d.Key == key {
+			d.Value = value
+			return
+		}
+	}
+
+	l.Delegates = append(l.Delegates, LifelineDelegate{Key: key, Value: value})
+}
+
+func (l *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool) {
+	for _, d := range l.Delegates {
+		if d.Key == key {
+			return d.Value, true
+		}
+	}
+
+	return [64]byte{}, false
+}
+
 // // LifelineStorageMemory is an in-indexStorage struct for index-storage.
 // type LifelineStorageMemory struct {
 // 	jetIndexModifier store.JetIndexModifier

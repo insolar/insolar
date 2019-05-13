@@ -324,6 +324,13 @@ func (i *IndexDB) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, o
 	return i.set(pn, objID, buc)
 }
 
+func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+
+	return i.set(pn, bucket.ObjID, &bucket)
+}
+
 func (i *IndexDB) LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
 	buck, err := i.get(pn, objID)
 	if err != nil {
@@ -360,30 +367,3 @@ func (i *IndexDB) get(pn insolar.PulseNumber, objID insolar.ID) (*IndexBucket, e
 	err = bucket.Unmarshal(buff)
 	return &bucket, err
 }
-
-// // ForID returns index for provided id.
-// func (i *LifelineDB) ForID(ctx context.Context, id insolar.ID) (index Lifeline, err error) {
-// 	i.lock.RLock()
-// 	defer i.lock.RUnlock()
-//
-// 	return i.get(id)
-// }
-//
-// func (i *LifelineDB) set(id insolar.ID, index Lifeline) error {
-// 	key := lifelineKey(id)
-//
-// 	return i.db.Set(key, EncodeIndex(index))
-// }
-//
-// func (i *LifelineDB) get(id insolar.ID) (index Lifeline, err error) {
-// 	buff, err := i.db.Get(lifelineKey(id))
-// 	if err == store.ErrNotFound {
-// 		err = ErrLifelineNotFound
-// 		return
-// 	}
-// 	if err != nil {
-// 		return
-// 	}
-// 	index = MustDecodeIndex(buff)
-// 	return
-// }
