@@ -91,6 +91,11 @@ func (g *Complete) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 	return nil
 }
 
+// ValidateCert validates node certificate
+func (g *Complete) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
+	return g.CertificateManager.VerifyAuthorizationCertificate(certificate)
+}
+
 // GetCert method generates cert by requesting signs from discovery nodes
 func (g *Complete) GetCert(ctx context.Context, registeredNodeRef *insolar.Reference) (insolar.Certificate, error) {
 	pKey, role, err := g.getNodeInfo(ctx, registeredNodeRef)
