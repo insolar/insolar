@@ -164,9 +164,25 @@ func (mb *MessageBus) createWatermillMessage(ctx context.Context, parcel insolar
 }
 
 func (mb *MessageBus) getReceiver(ctx context.Context, parcel insolar.Parcel, currentPulse insolar.Pulse, options *insolar.MessageSendOptions) string {
-	var node insolar.Reference
+	nodes, err := mb.getReceiverNodes(ctx, parcel, currentPulse, options)
+	if err != nil {
+		inslogger.FromContext(ctx).Errorf("[ GetReceiver ] can't query role: %s", err.Error())
+		return ""
+	}
+	if len(nodes) > 1 {
+		inslogger.FromContext(ctx).Errorf("[ GetReceiver ] several nodes was queried for %s role: %s, first was chosen", parcel.DefaultRole(), nodes)
+	}
+	node := nodes[0]
+	return node.String()
+}
+
+func (mb *MessageBus) getReceiverNodes(ctx context.Context, parcel insolar.Parcel, currentPulse insolar.Pulse, options *insolar.MessageSendOptions) ([]insolar.Reference, error) {
+	var (
+		nodes []insolar.Reference
+		err   error
+	)
 	if options != nil && options.Receiver != nil {
-		node = *options.Receiver
+		nodes = []insolar.Reference{*options.Receiver}
 	} else {
 		// TODO: send to all actors of the role if nil Target
 		target := parcel.DefaultTarget()
@@ -174,17 +190,12 @@ func (mb *MessageBus) getReceiver(ctx context.Context, parcel insolar.Parcel, cu
 		if target == nil {
 			target = &insolar.Reference{}
 		}
-		nodes, err := mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), *target.Record(), currentPulse.PulseNumber)
+		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), *target.Record(), currentPulse.PulseNumber)
 		if err != nil {
-			inslogger.FromContext(ctx).Errorf("[ GetReceiver ] can't query role: %s", err.Error())
-			return ""
+			return nil, err
 		}
-		if len(nodes) > 1 {
-			inslogger.FromContext(ctx).Errorf("[ GetReceiver ] several nodes was queried for %s role: %s, first was chosen", parcel.DefaultRole(), nodes)
-		}
-		node = nodes[0]
 	}
-	return node.String()
+	return nodes, nil
 }
 
 // Send an `Message` and get a `Value` or error from remote host.
@@ -238,24 +249,7 @@ func (mb *MessageBus) SendParcel(
 
 	readBarrier(ctx, &mb.globalLock)
 
-	var (
-		nodes []insolar.Reference
-		err   error
-	)
-	if options != nil && options.Receiver != nil {
-		nodes = []insolar.Reference{*options.Receiver}
-	} else {
-		// TODO: send to all actors of the role if nil Target
-		target := parcel.DefaultTarget()
-		// FIXME: @andreyromancev. 21.12.18. Temp hack. All messages should have a default target.
-		if target == nil {
-			target = &insolar.Reference{}
-		}
-		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), *target.Record(), currentPulse.PulseNumber)
-		if err != nil {
-			return nil, err
-		}
-	}
+	nodes, err := mb.getReceiverNodes(ctx, parcel, currentPulse, options)
 
 	start := time.Now()
 	defer func() {
