@@ -69,12 +69,16 @@ type BootstrapResult struct {
 	NetworkSize       int
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network.Controller -o ../testutils/network -s _mock.go
+
 // Controller contains network logic.
 type Controller interface {
 	component.Initer
 
 	// SendMessage send message to nodeID.
 	SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error)
+	// SendBytes send bytes to nodeID.
+	SendBytes(ctx context.Context, nodeID insolar.Reference, name string, msgBytes []byte) ([]byte, error)
 	// RemoteProcedureRegister register remote procedure that will be executed when message is received.
 	RemoteProcedureRegister(name string, method insolar.RemoteProcedure)
 	// SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
@@ -179,8 +183,10 @@ type PulseHandler interface {
 type NodeKeeper interface {
 	insolar.NodeNetwork
 
-	// TODO: remove this interface when bootstrap mechanism completed
-	insolar.SwitcherWorkAround
+	// IsBootstrapped method shows that all DiscoveryNodes finds each other
+	IsBootstrapped() bool
+	// SetIsBootstrapped method set is bootstrap completed
+	SetIsBootstrapped(isBootstrap bool)
 
 	// GetCloudHash returns current cloud hash
 	GetCloudHash() []byte
@@ -299,4 +305,13 @@ type Gateway interface {
 	GetState() insolar.NetworkState
 	OnPulse(context.Context, insolar.Pulse) error
 	NewGateway(insolar.NetworkState) Gateway
+	Auther() Auther
+}
+
+type Auther interface {
+	// GetCert returns certificate object by node reference, using discovery nodes for signing
+	GetCert(context.Context, *insolar.Reference) (insolar.Certificate, error)
+	// ValidateCert checks certificate signature
+	// TODO make this cert.validate()
+	ValidateCert(context.Context, insolar.AuthorizationCertificate) (bool, error)
 }

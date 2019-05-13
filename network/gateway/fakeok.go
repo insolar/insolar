@@ -48,30 +48,42 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package networkcoordinator
+// +build networktest
+
+package gateway
 
 import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/network"
 )
 
-type zeroNetworkCoordinator struct {
+type FakeOk struct {
+	Base
+	State insolar.NetworkState
 }
 
-func newZeroNetworkCoordinator() *zeroNetworkCoordinator {
-	return &zeroNetworkCoordinator{}
+func NewFakeOk() network.Gateway {
+	g := &FakeOk{}
+	g.Base.Self = g
+	g.State = insolar.NoNetworkState
+	return g
 }
 
-func (znc *zeroNetworkCoordinator) GetCert(ctx context.Context, nodeRef *insolar.Reference) (insolar.Certificate, error) {
-	return nil, errors.New("GetCert is not allowed in Zero Network")
+func (g *FakeOk) OnPulse(context.Context, insolar.Pulse) error {
+	g.State = insolar.CompleteNetworkState
+	return nil
 }
 
-func (znc *zeroNetworkCoordinator) signCertHandler(ctx context.Context, p insolar.Parcel) (insolar.Reply, error) {
-	return nil, errors.New("signCertHandler is not allowed in Zero Network")
+func (g *FakeOk) Run(context.Context) {
 }
 
-func (znc *zeroNetworkCoordinator) SetPulse(ctx context.Context, pulse insolar.Pulse) error {
-	return errors.New("not implemented")
+func (g *FakeOk) GetState() insolar.NetworkState {
+	return g.State
+}
+
+// ValidateCert overloaded for test purpose
+func (g *FakeOk) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
+	return true, nil
 }

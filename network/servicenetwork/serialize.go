@@ -48,33 +48,43 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-// +build networktest
-
 package servicenetwork
 
 import (
-	"context"
-	"sync/atomic"
+	"bytes"
+	"encoding/gob"
+	"io"
+	"io/ioutil"
 
-	"github.com/insolar/insolar/insolar"
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
 )
 
-type testNetworkSwitcher struct {
-	state int32
+// serializeMessage returns io.Reader on buffer with encoded message.Message (from watermill).
+func serializeMessage(msg *message.Message) (io.Reader, error) {
+	buff := &bytes.Buffer{}
+	enc := gob.NewEncoder(buff)
+	err := enc.Encode(msg)
+	return buff, err
 }
 
-func NewTestNetworkSwitcher() insolar.NetworkSwitcher {
-	state := int32(insolar.VoidNetworkState)
-	return &testNetworkSwitcher{state: state}
+// deserializeMessage returns decoded signed message.
+func deserializeMessage(buff io.Reader) (*message.Message, error) {
+	var signed message.Message
+	enc := gob.NewDecoder(buff)
+	err := enc.Decode(&signed)
+	return &signed, err
 }
 
-func (t *testNetworkSwitcher) GetState() insolar.NetworkState {
-	s := atomic.LoadInt32(&t.state)
-	return insolar.NetworkState(s)
-}
-
-func (t *testNetworkSwitcher) OnPulse(context.Context, insolar.Pulse) error {
-	newState := int32(insolar.CompleteNetworkState)
-	atomic.StoreInt32(&t.state, newState)
-	return nil
+// messageToBytes deserialize a message.Message (from watermill) to bytes.
+func messageToBytes(msg *message.Message) ([]byte, error) {
+	reqBuff, err := serializeMessage(msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to serialize message")
+	}
+	buf, err := ioutil.ReadAll(reqBuff)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read from buffer")
+	}
+	return buf, nil
 }

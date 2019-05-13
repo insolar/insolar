@@ -48,22 +48,48 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package networkcoordinator
+package servicenetwork
 
 import (
-	"context"
+	"bytes"
+	"testing"
 
-	"github.com/insolar/insolar/insolar"
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/stretchr/testify/require"
 )
 
-// Coordinator interface contains NetworkState dependent methods
-type Coordinator interface {
-	// GetCert returns certificate object by node reference, using discovery nodes for signing
-	GetCert(context.Context, *insolar.Reference) (insolar.Certificate, error)
+func TestSerializeDeserialize(t *testing.T) {
+	payload := []byte{1, 2, 3, 4, 5}
+	msg := message.NewMessage(watermill.NewUUID(), payload)
+	msg.Metadata.Set("testKey", "testValue")
 
-	// SetPulse uses PulseManager component for saving pulse info
-	SetPulse(ctx context.Context, pulse insolar.Pulse) error
+	serializedMsg, err := serializeMessage(msg)
 
-	// signCertHandler is used by MsgBus handler for signing certificate
-	signCertHandler(ctx context.Context, p insolar.Parcel) (insolar.Reply, error)
+	require.NoError(t, err)
+	require.NotEmpty(t, serializedMsg)
+
+	msgOut, err := deserializeMessage(serializedMsg)
+	require.NoError(t, err)
+	require.NotEmpty(t, msgOut)
+
+	require.Equal(t, msg.Payload, msgOut.Payload)
+	require.Equal(t, msg.Metadata, msgOut.Metadata)
+}
+
+func TestMessageToBytes(t *testing.T) {
+	payload := []byte{1, 2, 3, 4, 5}
+	msg := message.NewMessage(watermill.NewUUID(), payload)
+	msg.Metadata.Set("testKey", "testValue")
+
+	serializedMsg, err := messageToBytes(msg)
+	require.NoError(t, err)
+	require.NotEmpty(t, serializedMsg)
+
+	msgOut, err := deserializeMessage(bytes.NewBuffer(serializedMsg))
+	require.NoError(t, err)
+	require.NotEmpty(t, msgOut)
+
+	require.Equal(t, msg.Payload, msgOut.Payload)
+	require.Equal(t, msg.Metadata, msgOut.Metadata)
 }

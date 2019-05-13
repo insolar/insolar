@@ -312,7 +312,7 @@ func TestServiceNetworkOneBootstrap(t *testing.T) {
 }
 
 func TestServiceNetworkManyBootstraps(t *testing.T) {
-	s := NewTestSuite(15, 0)
+	s := NewTestSuite(16, 0)
 	suite.Run(t, s)
 }
 
@@ -513,4 +513,37 @@ func (s *testSuite) TestDiscoveryRestartNoWait() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 	activeNodes = s.fixture().bootstrapNodes[1].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
+}
+
+func (s *testSuite) TestJoinerSplitPackets() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+
+	testNode := s.newNetworkNode("testNode")
+	s.SetCommunicationPolicyForNode(testNode.id, SplitCase)
+	s.preInitNode(testNode)
+
+	s.InitNode(testNode)
+	s.StartNode(testNode)
+	defer func(s *testSuite) {
+		s.StopNode(testNode)
+	}(s)
+
+	s.waitForConsensus(1)
+
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+
+	s.waitForConsensus(1)
+
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.Equal(s.getNodesCount(), len(activeNodes))
+
+	s.waitForConsensus(2)
+
+	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
+	activeNodes = testNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
+	s.Equal(s.getNodesCount()+1, len(activeNodes))
 }
