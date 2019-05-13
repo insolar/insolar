@@ -69,19 +69,19 @@ func NewConfiguration() Configuration {
 }
 
 // MustInit wrapper around Init function which panics on error.
-func (c *Holder) MustInit(required bool) *Holder {
-	_, err := c.Init(required)
+func (h *Holder) MustInit(required bool) *Holder {
+	_, err := h.Init(required)
 	if err != nil {
 		panic(err)
 	}
-	return c
+	return h
 }
 
 // Init init all configuration data from config file and environment.
 //
 // Does not fail on not found config file if the 'required' flag set to false.
-func (c *Holder) Init(required bool) (*Holder, error) {
-	err := c.Load()
+func (h *Holder) Init(required bool) (*Holder, error) {
+	err := h.Load()
 	if err != nil {
 		if required {
 			return nil, err
@@ -90,25 +90,25 @@ func (c *Holder) Init(required bool) (*Holder, error) {
 			return nil, err
 		}
 	}
-	return c, nil
+	return h, nil
 }
 
-func (c *Holder) registerDefaultValue(val reflect.Value, parts ...string) {
+func (h *Holder) registerDefaultValue(val reflect.Value, parts ...string) {
 	variablePath := strings.ToLower(strings.Join(parts, "."))
 
-	c.viper.SetDefault(variablePath, val.Interface())
+	h.viper.SetDefault(variablePath, val.Interface())
 }
 
-func (c *Holder) registerDifferentValue(val reflect.Value, parts ...string) {
+func (h *Holder) registerDifferentValue(val reflect.Value, parts ...string) {
 	variablePath := strings.Join(parts, ".")
-	previousValue := c.viper.Get(variablePath)
+	previousValue := h.viper.Get(variablePath)
 
 	if !reflect.DeepEqual(previousValue, val.Interface()) {
-		c.viper.Set(variablePath, val.Interface())
+		h.viper.Set(variablePath, val.Interface())
 	}
 }
 
-func (c *Holder) recurseCallInLeaf(cb func(reflect.Value, ...string), iface interface{}, parts ...string) {
+func (h *Holder) recurseCallInLeaf(cb func(reflect.Value, ...string), iface interface{}, parts ...string) {
 	fldV := reflect.ValueOf(iface)
 	fldT := reflect.TypeOf(iface)
 
@@ -119,7 +119,7 @@ func (c *Holder) recurseCallInLeaf(cb func(reflect.Value, ...string), iface inte
 
 		switch fldValue.Kind() {
 		case reflect.Struct:
-			c.recurseCallInLeaf(cb, fldValue.Interface(), path...)
+			h.recurseCallInLeaf(cb, fldValue.Interface(), path...)
 		default:
 			cb(fldValue, path...)
 		}
@@ -168,31 +168,31 @@ func (h *Holder) defaults() *Holder {
 }
 
 // Load method reads configuration from default file path
-func (c *Holder) Load() error {
-	err := c.viper.ReadInConfig()
+func (h *Holder) Load() error {
+	err := h.viper.ReadInConfig()
 	if err != nil {
 		return err
 	}
 
-	return c.viper.Unmarshal(&c.Configuration)
+	return h.viper.Unmarshal(&h.Configuration)
 }
 
 // LoadFromFile method reads configuration from particular file path
-func (c *Holder) LoadFromFile(path string) error {
-	c.viper.SetConfigFile(path)
-	return c.Load()
+func (h *Holder) LoadFromFile(path string) error {
+	h.viper.SetConfigFile(path)
+	return h.Load()
 }
 
 // Save method writes configuration to default file path
-func (c *Holder) Save() error {
-	c.recurseCallInLeaf(c.registerDifferentValue, c.Configuration)
-	return c.viper.WriteConfig()
+func (h *Holder) Save() error {
+	h.recurseCallInLeaf(h.registerDifferentValue, h.Configuration)
+	return h.viper.WriteConfig()
 }
 
 // SaveAs method writes configuration to particular file path
-func (c *Holder) SaveAs(path string) error {
-	c.recurseCallInLeaf(c.registerDifferentValue, c.Configuration)
-	return c.viper.WriteConfigAs(path)
+func (h *Holder) SaveAs(path string) error {
+	h.recurseCallInLeaf(h.registerDifferentValue, h.Configuration)
+	return h.viper.WriteConfigAs(path)
 }
 
 // ToString converts any configuration struct to yaml string
