@@ -8,14 +8,20 @@ import (
 	"github.com/insolar/insolar/internal/ledger/store"
 )
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.Index -o ./ -s _mock.go
+
 type Index interface {
 	IndexAccessor
 	IndexModifier
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexAccessor -o ./ -s _mock.go
+
 type IndexAccessor interface {
 	LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error)
 }
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexModifier -o ./ -s _mock.go
 
 type IndexModifier interface {
 	SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error
@@ -23,6 +29,8 @@ type IndexModifier interface {
 	SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error
 	SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error
 }
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexStateModifier -o ./ -s _mock.go
 
 type IndexStateModifier interface {
 	SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error

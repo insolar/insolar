@@ -65,7 +65,7 @@ type handlerSuite struct {
 	recordModifier object.RecordModifier
 	recordAccessor object.RecordAccessor
 
-	indexMemoryStor *object.LifelineStorageMemory
+	indexMemoryStor *object.InMemoryIndex
 }
 
 var (
@@ -121,7 +121,7 @@ func (s *handlerSuite) BeforeTest(suiteName, testName string) {
 	s.recordModifier = recordStorage
 	s.recordAccessor = recordStorage
 
-	s.indexMemoryStor = object.NewIndexMemory()
+	s.indexMemoryStor = object.NewInMemoryIndex()
 
 	s.cm.Inject(
 		s.scheme,
@@ -225,7 +225,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 		assert.Equal(t, heavyRef, redirect.GetReceiver())
 
-		idx, err := s.indexMemoryStor.ForID(s.ctx, *msg.Parent.Record())
+		idx, err := s.indexMemoryStor.LifelineForID(s.ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record())
 		require.NoError(t, err)
 		assert.Equal(t, objIndex.LatestState, idx.LatestState)
 	})
@@ -234,7 +234,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 		lightRef := genRandomRef(0)
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(lightRef, nil)
-		err = s.indexMemoryStor.Set(s.ctx, *msg.Parent.Record(), object.Lifeline{
+		err = s.indexMemoryStor.SetLifeline(s.ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record(), object.Lifeline{
 			ChildPointer: genRandomID(insolar.FirstPulseNumber),
 			JetID:        insolar.JetID(jetID),
 		})
@@ -255,7 +255,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 		heavyRef := genRandomRef(0)
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(heavyRef, nil)
-		err = s.indexMemoryStor.Set(s.ctx, *msg.Parent.Record(), object.Lifeline{
+		err = s.indexMemoryStor.SetLifeline(s.ctx, insolar.FirstPulseNumber+2, *msg.Parent.Record(), object.Lifeline{
 			ChildPointer: genRandomID(insolar.FirstPulseNumber),
 			JetID:        insolar.JetID(jetID),
 		})
@@ -304,7 +304,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 
 	delegateType := *genRandomRef(0)
 	delegate := *genRandomRef(0)
-	objIndex := object.Lifeline{Delegates: map[insolar.Reference]insolar.Reference{delegateType: delegate}}
+	objIndex := object.Lifeline{Delegates: []object.LifelineDelegate{{Key: delegateType, Value: delegate}}}
 	msg := message.GetDelegate{
 		Head:   *genRandomRef(0),
 		AsType: delegateType,
@@ -328,14 +328,15 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	heavyRef := genRandomRef(0)
 	jc.HeavyMock.Return(heavyRef, nil)
 	rep, err := h.handleGetDelegate(contextWithJet(s.ctx, jetID), &message.Parcel{
-		Msg: &msg,
+		Msg:         &msg,
+		PulseNumber: insolar.FirstPulseNumber,
 	})
 	require.NoError(s.T(), err)
 	delegateRep, ok := rep.(*reply.Delegate)
 	require.True(s.T(), ok)
 	assert.Equal(s.T(), delegate, delegateRep.Head)
 
-	idx, err := s.indexMemoryStor.ForID(s.ctx, *msg.Head.Record())
+	idx, err := s.indexMemoryStor.LifelineForID(s.ctx, insolar.FirstPulseNumber, *msg.Head.Record())
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), objIndex.Delegates, idx.Delegates)
 }
@@ -414,7 +415,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	objRep, ok := rep.(*reply.Object)
 	require.True(s.T(), ok)
 
-	idx, err := s.indexMemoryStor.ForID(s.ctx, *msg.Object.Record())
+	idx, err := s.indexMemoryStor.LifelineForID(s.ctx, insolar.FirstPulseNumber, *msg.Object.Record())
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), objRep.State, *idx.LatestState)
 }
@@ -469,7 +470,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 		Record: object.EncodeVirtual(&amendRecord),
 		Object: *genRandomRef(0),
 	}
-	err = s.indexMemoryStor.Set(s.ctx, *msg.Object.Record(), objIndex)
+	err = s.indexMemoryStor.SetLifeline(s.ctx, insolar.FirstPulseNumber, *msg.Object.Record(), objIndex)
 	require.NoError(s.T(), err)
 
 	// Act
@@ -482,7 +483,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	require.True(s.T(), ok)
 
 	// Arrange
-	idx, err := s.indexMemoryStor.ForID(s.ctx, *msg.Object.Record())
+	idx, err := s.indexMemoryStor.LifelineForID(s.ctx, insolar.FirstPulseNumber, *msg.Object.Record())
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), insolar.FirstPulseNumber, int(idx.LatestUpdate))
 }
@@ -526,12 +527,13 @@ func (s *handlerSuite) TestMessageHandler_HandleGetObjectIndex() {
 
 	h.RecentStorageProvider = provideMock
 
-	objectIndex := object.Lifeline{LatestState: genRandomID(0), JetID: insolar.JetID(jetID), Delegates: map[insolar.Reference]insolar.Reference{}}
-	err = s.indexMemoryStor.Set(s.ctx, *msg.Object.Record(), objectIndex)
+	objectIndex := object.Lifeline{LatestState: genRandomID(0), JetID: insolar.JetID(jetID), Delegates: []object.LifelineDelegate{}}
+	err = s.indexMemoryStor.SetLifeline(s.ctx, insolar.FirstPulseNumber, *msg.Object.Record(), objectIndex)
 	require.NoError(s.T(), err)
 
 	rep, err := h.handleGetObjectIndex(contextWithJet(s.ctx, jetID), &message.Parcel{
-		Msg: &msg,
+		Msg:         &msg,
+		PulseNumber: insolar.FirstPulseNumber,
 	})
 	require.NoError(s.T(), err)
 	indexRep, ok := rep.(*reply.ObjectIndex)
@@ -647,14 +649,15 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	heavyRef := genRandomRef(0)
 	jc.HeavyMock.Return(heavyRef, nil)
 	rep, err := h.handleRegisterChild(contextWithJet(s.ctx, jetID), &message.Parcel{
-		Msg: &msg,
+		Msg:         &msg,
+		PulseNumber: insolar.FirstPulseNumber,
 	})
 	require.NoError(s.T(), err)
 	objRep, ok := rep.(*reply.ID)
 	require.True(s.T(), ok)
 	assert.Equal(s.T(), *childID, objRep.ID)
 
-	idx, err := s.indexMemoryStor.ForID(s.ctx, *msg.Parent.Record())
+	idx, err := s.indexMemoryStor.LifelineForID(s.ctx, insolar.FirstPulseNumber, *msg.Parent.Record())
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), childID, idx.ChildPointer)
 }
@@ -679,8 +682,8 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
-	h.LifelineStorage = s.indexMemoryStor
-	h.ExtendedLifelineModifier = s.indexMemoryStor
+	h.IndexState = s.indexMemoryStor
+	h.Index = s.indexMemoryStor
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecordModifier = s.recordModifier
@@ -705,7 +708,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 		Parent: *genRandomRef(0),
 	}
 
-	err := s.indexMemoryStor.Set(s.ctx, *msg.Parent.Record(), objIndex)
+	err := s.indexMemoryStor.SetLifeline(s.ctx, insolar.FirstPulseNumber+100, *msg.Parent.Record(), objIndex)
 	require.NoError(s.T(), err)
 
 	// Act
@@ -716,7 +719,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	require.NoError(s.T(), err)
 
 	// Assert
-	idx, err := s.indexMemoryStor.ForID(s.ctx, *msg.Parent.Record())
+	idx, err := s.indexMemoryStor.LifelineForID(s.ctx, insolar.FirstPulseNumber+100, *msg.Parent.Record())
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), int(idx.LatestUpdate), insolar.FirstPulseNumber+100)
 }
@@ -743,7 +746,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	firstIndex := object.EncodeIndex(object.Lifeline{
 		LatestState: firstID,
 	})
-	err := s.indexMemoryStor.Set(s.ctx, *firstID, object.Lifeline{
+	err := s.indexMemoryStor.SetLifeline(s.ctx, insolar.FirstPulseNumber, *firstID, object.Lifeline{
 		LatestState: firstID,
 		JetID:       insolar.JetID(jetID),
 	})
@@ -751,10 +754,11 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	hotIndexes := &message.HotData{
 		Jet:         *insolar.NewReference(insolar.DomainID, insolar.ID(jetID)),
 		PulseNumber: insolar.FirstPulseNumber,
-		HotIndexes: map[insolar.ID]message.HotIndex{
-			*firstID: {
+		HotIndexes: []message.HotIndex{
+			{
 				Index:    firstIndex,
 				LastUsed: insolar.PulseNumber(234),
+				ObjID:    *firstID,
 			},
 		},
 		PendingRequests: map[insolar.ID]recentstorage.PendingObjectContext{
@@ -779,20 +783,21 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		s.T().Fail()
 	}
 
-	extendedModifierMock := object.NewExtendedLifelineModifierMock(s.T())
-	extendedModifierMock.SetWithMetaFunc = func(p context.Context, p1 insolar.ID, p2 insolar.PulseNumber, p3 object.Lifeline) (r error) {
-		require.Equal(s.T(), *firstID, p1)
-		require.Equal(s.T(), insolar.PulseNumber(234), p2)
+	idxStateModifierMock := object.NewIndexStateModifierMock(s.T())
+	idxMock := object.NewIndexMock(s.T())
+
+	idxMock.SetLifelineFunc = func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 object.Lifeline) (r error) {
+		require.Equal(s.T(), *firstID, p2)
+		require.Equal(s.T(), insolar.PulseNumber(234), p1)
 		require.Equal(s.T(), *firstID, *p3.LatestState)
 
 		return nil
 	}
-	idxStor := object.NewLifelineStorageMock(s.T())
 
 	provideMock := recentstorage.NewProviderMock(s.T())
 	provideMock.GetPendingStorageMock.Return(pendingMock)
 
-	h := NewMessageHandler(idxStor, extendedModifierMock, &configuration.Ledger{})
+	h := NewMessageHandler(idxMock, idxStateModifierMock, &configuration.Ledger{})
 	h.JetCoordinator = jc
 	h.RecentStorageProvider = provideMock
 	h.Bus = mb
@@ -803,7 +808,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	err = h.Init(s.ctx)
 	require.NoError(s.T(), err)
 
-	res, err := h.handleHotRecords(s.ctx, &message.Parcel{Msg: hotIndexes})
+	res, err := h.handleHotRecords(s.ctx, &message.Parcel{Msg: hotIndexes, PulseNumber: insolar.PulseNumber(234)})
 
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), res, &reply.OK{})
