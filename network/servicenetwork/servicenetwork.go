@@ -51,11 +51,14 @@
 package servicenetwork
 
 import (
+	"bytes"
 	"context"
 	"strconv"
 	"sync"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -79,6 +82,10 @@ import (
 	"github.com/insolar/insolar/network/utils"
 )
 
+const deliverWatermillMsg = "ServiceNetwork.processIncoming"
+
+var ack = []byte{1}
+
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
 	cfg configuration.Configuration
@@ -92,6 +99,7 @@ type ServiceNetwork struct {
 	NodeKeeper          network.NodeKeeper          `inject:""`
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
 	GIL                 insolar.GlobalInsolarLock   `inject:""`
+	Pub                 message.Publisher           `inject:""`
 	MessageBus          insolar.MessageBus          `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
 
@@ -221,6 +229,8 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
 
+	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
+
 	logger.Info("Service network started")
 	return nil
 }
@@ -341,6 +351,65 @@ func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, node insolar.D
 	}
 }
 
+// SendMessageHandler async sends message with confirmation of delivery.
+func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Message, error) {
+	receiver := msg.Metadata.Get(bus.MetaReceiver)
+	if receiver == "" {
+		return nil, errors.New("Receiver in msg.Metadata not set")
+	}
+	ref, err := insolar.NewReferenceFromBase58(receiver)
+	if err != nil {
+		return nil, errors.Wrap(err, "incorrect Receiver in msg.Metadata")
+	}
+	node := *ref
+	// Short path when sending to self node. Skip serialization
+	origin := n.NodeKeeper.GetOrigin()
+	if node.Equal(origin.ID()) {
+		err := n.Pub.Publish(bus.TopicIncoming, msg)
+		if err != nil {
+			return nil, errors.Wrap(err, "error while publish msg to TopicIncoming")
+		}
+		return nil, nil
+	}
+	msgBytes, err := messageToBytes(msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "error while converting message to bytes")
+	}
+	res, err := n.Controller.SendBytes(msg.Context(), node, deliverWatermillMsg, msgBytes)
+	if err != nil {
+		return nil, errors.Wrap(err, "error while sending watermillMsg to controller")
+	}
+	if !bytes.Equal(res, ack) {
+		return nil, errors.Errorf("reply is not ack: %s", res)
+	}
+	return nil, nil
+}
+
 func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
 	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
+}
+
+func (n *ServiceNetwork) processIncoming(ctx context.Context, args [][]byte) ([]byte, error) {
+	logger := inslogger.FromContext(ctx)
+	if len(args) < 1 {
+		err := errors.New("need exactly one argument when n.processIncoming()")
+		logger.Error(err)
+		return nil, err
+	}
+	msg, err := deserializeMessage(bytes.NewBuffer(args[0]))
+	if err != nil {
+		err = errors.Wrap(err, "error while deserialize msg from buffer")
+		logger.Error(err)
+		return nil, err
+	}
+	// TODO: check pulse here
+
+	err = n.Pub.Publish(bus.TopicIncoming, msg)
+	if err != nil {
+		err = errors.Wrap(err, "error while publish msg to TopicIncoming")
+		logger.Error(err)
+		return nil, err
+	}
+
+	return ack, nil
 }

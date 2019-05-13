@@ -24,6 +24,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill"
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"go.opencensus.io/trace"
 
@@ -43,6 +46,8 @@ import (
 
 const deliverRPCMethodName = "MessageBus.Deliver"
 
+var transferredToWatermill = make(map[insolar.MessageType]struct{})
+
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
 type MessageBus struct {
@@ -54,6 +59,7 @@ type MessageBus struct {
 	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
 	ParcelFactory              message.ParcelFactory              `inject:""`
 	PulseAccessor              pulse.Accessor                     `inject:""`
+	Sender                     bus.Sender                         `inject:""`
 
 	handlers     map[insolar.MessageType]insolar.MessageHandler
 	signmessages bool
@@ -146,6 +152,52 @@ func (mb *MessageBus) MustRegister(p insolar.MessageType, handler insolar.Messag
 	}
 }
 
+func (mb *MessageBus) createWatermillMessage(ctx context.Context, parcel insolar.Parcel, ops *insolar.MessageSendOptions, currentPulse insolar.Pulse) *watermillMsg.Message {
+	payload := message.ParcelToBytes(parcel)
+	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
+
+	wmMsg.Metadata.Set(bus.MetaPulse, fmt.Sprintf("%d", currentPulse.PulseNumber))
+	wmMsg.Metadata.Set(bus.MetaType, parcel.Message().Type().String())
+	wmMsg.Metadata.Set(bus.MetaReceiver, mb.getReceiver(ctx, parcel, currentPulse, ops))
+	wmMsg.Metadata.Set(bus.MetaSender, mb.NodeNetwork.GetOrigin().ID().String())
+	return wmMsg
+}
+
+func (mb *MessageBus) getReceiver(ctx context.Context, parcel insolar.Parcel, currentPulse insolar.Pulse, options *insolar.MessageSendOptions) string {
+	nodes, err := mb.getReceiverNodes(ctx, parcel, currentPulse, options)
+	if err != nil {
+		inslogger.FromContext(ctx).Errorf("[ GetReceiver ] can't query role: %s", err.Error())
+		return ""
+	}
+	if len(nodes) > 1 {
+		inslogger.FromContext(ctx).Errorf("[ GetReceiver ] several nodes was queried for %s role: %s, first was chosen", parcel.DefaultRole(), nodes)
+	}
+	node := nodes[0]
+	return node.String()
+}
+
+func (mb *MessageBus) getReceiverNodes(ctx context.Context, parcel insolar.Parcel, currentPulse insolar.Pulse, options *insolar.MessageSendOptions) ([]insolar.Reference, error) {
+	var (
+		nodes []insolar.Reference
+		err   error
+	)
+	if options != nil && options.Receiver != nil {
+		nodes = []insolar.Reference{*options.Receiver}
+	} else {
+		// TODO: send to all actors of the role if nil Target
+		target := parcel.DefaultTarget()
+		// FIXME: @andreyromancev. 21.12.18. Temp hack. All messages should have a default target.
+		if target == nil {
+			target = &insolar.Reference{}
+		}
+		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), *target.Record(), currentPulse.PulseNumber)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return nodes, nil
+}
+
 // Send an `Message` and get a `Value` or error from remote host.
 func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insolar.MessageSendOptions) (insolar.Reply, error) {
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.Send "+msg.Type().String())
@@ -159,6 +211,19 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 	parcel, err := mb.CreateParcel(ctx, msg, ops.Safe().Token, currentPulse)
 	if err != nil {
 		return nil, err
+	}
+
+	_, ok := transferredToWatermill[msg.Type()]
+	if ok {
+		wmMsg := mb.createWatermillMessage(ctx, parcel, ops, currentPulse)
+		res, done := mb.Sender.Send(ctx, wmMsg)
+		repMsg := <-res
+		done()
+		rep, err := reply.Deserialize(bytes.NewBuffer(repMsg.Payload))
+		if err != nil {
+			return nil, errors.Wrap(err, "can't deserialize payload")
+		}
+		return rep, nil
 	}
 
 	rep, err := mb.SendParcel(ctx, parcel, currentPulse, ops)
@@ -184,23 +249,9 @@ func (mb *MessageBus) SendParcel(
 
 	readBarrier(ctx, &mb.globalLock)
 
-	var (
-		nodes []insolar.Reference
-		err   error
-	)
-	if options != nil && options.Receiver != nil {
-		nodes = []insolar.Reference{*options.Receiver}
-	} else {
-		// TODO: send to all actors of the role if nil Target
-		target := parcel.DefaultTarget()
-		// FIXME: @andreyromancev. 21.12.18. Temp hack. All messages should have a default target.
-		if target == nil {
-			target = &insolar.Reference{}
-		}
-		nodes, err = mb.JetCoordinator.QueryRole(ctx, parcel.DefaultRole(), *target.Record(), currentPulse.PulseNumber)
-		if err != nil {
-			return nil, err
-		}
+	nodes, err := mb.getReceiverNodes(ctx, parcel, currentPulse, options)
+	if err != nil {
+		return nil, err
 	}
 
 	start := time.Now()

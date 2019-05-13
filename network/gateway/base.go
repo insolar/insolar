@@ -52,6 +52,8 @@ package gateway
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/log" // TODO remove before merge
 
 	"github.com/insolar/insolar/insolar"
@@ -109,10 +111,10 @@ func (g *Base) Auther() network.Auther {
 
 // GetCert method returns node certificate by requesting sign from discovery nodes
 func (g *Base) GetCert(ctx context.Context, ref *insolar.Reference) (insolar.Certificate, error) {
-	panic("GetCert() is not useable in this state")
+	return nil, errors.New("GetCert() in non active mode")
 }
 
 // ValidateCert validates node certificate
 func (g *Base) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
-	panic("ValidateCert()  is not useable in this state")
+	return false, errors.New("ValidateCert() in non active mode")
 }

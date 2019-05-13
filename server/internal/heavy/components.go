@@ -19,6 +19,10 @@ package heavy
 import (
 	"context"
 
+	"github.com/ThreeDotsLabs/watermill"
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -27,6 +31,7 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
@@ -150,6 +155,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Tokens  insolar.DelegationTokenFactory
 		Parcels message.ParcelFactory
 		Bus     insolar.MessageBus
+		WmBus   bus.Sender
+		Pub     watermillMsg.Publisher
 	)
 	{
 		var err error
@@ -159,6 +166,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
+		// TODO: use insolar.Logger
+		logger := watermill.NewStdLogger(false, false)
+		Pub = gochannel.NewGoChannel(gochannel.Config{}, logger)
+		WmBus = bus.NewBus(Pub)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -229,6 +240,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	}
 
 	c.cmp.Inject(
+		WmBus,
 		Handler,
 		PulseManager,
 		Jets,
@@ -249,6 +261,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		CertManager,
 		NodeNetwork,
 		NetworkService,
+		Pub,
 	)
 	err = c.cmp.Init(ctx)
 	if err != nil {

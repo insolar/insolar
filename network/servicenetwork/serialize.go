@@ -48,90 +48,43 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package phases
+package servicenetwork
 
 import (
-	"context"
-	"crypto"
-	"testing"
+	"bytes"
+	"encoding/gob"
+	"io"
+	"io/ioutil"
 
-	"github.com/stretchr/testify/suite"
-
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/testutils"
-	networkUtils "github.com/insolar/insolar/testutils/network"
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
 )
 
-type communicatorSuite struct {
-	suite.Suite
-	componentManager component.Manager
-	communicator     Communicator
-	originNode       insolar.NetworkNode
-	participants     []insolar.NetworkNode
-	hostNetworkMock  *networkUtils.HostNetworkMock
-
-	consensusNetworkMock *networkUtils.ConsensusNetworkMock
-	pulseHandlerMock     *networkUtils.PulseHandlerMock
+// serializeMessage returns io.Reader on buffer with encoded message.Message (from watermill).
+func serializeMessage(msg *message.Message) (io.Reader, error) {
+	buff := &bytes.Buffer{}
+	enc := gob.NewEncoder(buff)
+	err := enc.Encode(msg)
+	return buff, err
 }
 
-func NewSuite() *communicatorSuite {
-	return &communicatorSuite{
-		Suite:        suite.Suite{},
-		communicator: NewCommunicator(),
-		participants: nil,
+// deserializeMessage returns decoded signed message.
+func deserializeMessage(buff io.Reader) (*message.Message, error) {
+	var signed message.Message
+	enc := gob.NewDecoder(buff)
+	err := enc.Decode(&signed)
+	return &signed, err
+}
+
+// messageToBytes deserialize a message.Message (from watermill) to bytes.
+func messageToBytes(msg *message.Message) ([]byte, error) {
+	reqBuff, err := serializeMessage(msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to serialize message")
 	}
-}
-
-func (s *communicatorSuite) SetupTest() {
-	s.consensusNetworkMock = networkUtils.NewConsensusNetworkMock(s.T())
-	s.pulseHandlerMock = networkUtils.NewPulseHandlerMock(s.T())
-	s.originNode = makeRandomNode()
-
-	nodeN := networkUtils.NewNodeKeeperMock(s.T())
-	nodeN.GetOriginMock.Return(s.originNode)
-
-	cryptoServ := testutils.NewCryptographyServiceMock(s.T())
-	cryptoServ.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
-		signature := insolar.SignatureFromBytes(nil)
-		return &signature, nil
+	buf, err := ioutil.ReadAll(reqBuff)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to read from buffer")
 	}
-	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
-		return true
-	}
-
-	s.consensusNetworkMock.RegisterPacketHandlerMock.Set(func(p packets.PacketType, p1 network.ConsensusPacketHandler) {
-
-	})
-
-	s.consensusNetworkMock.StartMock.Set(func(context.Context) error { return nil })
-
-	s.pulseHandlerMock.HandlePulseMock.Set(func(p context.Context, p1 insolar.Pulse) {
-
-	})
-
-	s.componentManager.Inject(nodeN, cryptoServ, s.communicator, s.consensusNetworkMock, s.pulseHandlerMock)
-	err := s.componentManager.Start(context.TODO())
-	s.NoError(err)
-}
-
-func makeRandomNode() insolar.NetworkNode {
-	return node.NewNode(testutils.RandomRef(), insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
-}
-
-func (s *communicatorSuite) TestExchangeData() {
-	s.Assert().NotNil(s.communicator)
-	ctx, cancel := context.WithTimeout(context.Background(), 0)
-	defer cancel()
-
-	result, err := s.communicator.ExchangePhase1(ctx, nil, s.participants, &packets.Phase1Packet{})
-	s.Assert().NoError(err)
-	s.NotEqual(0, len(result))
-}
-
-func TestNaiveCommunicator(t *testing.T) {
-	suite.Run(t, NewSuite())
+	return buf, nil
 }

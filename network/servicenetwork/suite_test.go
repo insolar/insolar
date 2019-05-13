@@ -479,7 +479,8 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	GIL.AcquireMock.Return()
 	GIL.ReleaseMock.Return()
 	keyProc := platformpolicy.NewKeyProcessor()
-	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)))
+	pubMock := &PublisherMock{}
+	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock)
 
 	node.componentManager.Register(&amMock, certManager, cryptographyService, mblocker, GIL)
 	node.componentManager.Inject(serviceNetwork, keyProc, terminationHandler, transport.NewFakeFactory(cfg.Host.Transport),
@@ -499,15 +500,20 @@ func (s *testSuite) SetCommunicationPolicy(policy CommunicationPolicy) {
 		return
 	}
 
-	nodes := s.fixture().bootstrapNodes
-	ref := nodes[0].id // TODO: should we declare argument to select this node?
+	ref := s.fixture().bootstrapNodes[0].id // TODO: should we declare argument to select this node?
+	s.SetCommunicationPolicyForNode(ref, policy)
+}
 
+func (s *testSuite) SetCommunicationPolicyForNode(nodeID insolar.Reference, policy CommunicationPolicy) {
+	nodes := s.fixture().bootstrapNodes
 	timedOutNodesCount := 0
 	switch policy {
 	case PartialNegative1Phase, PartialNegative2Phase, PartialNegative3Phase, PartialNegative23Phase:
 		timedOutNodesCount = int(float64(len(nodes)) * 0.6)
 	case PartialPositive1Phase, PartialPositive2Phase, PartialPositive3Phase, PartialPositive23Phase:
 		timedOutNodesCount = int(float64(len(nodes)) * 0.2)
+	case SplitCase:
+		timedOutNodesCount = int(float64(len(nodes)) * 0.5)
 	}
 
 	s.fixture().pulsar.Pause()
@@ -515,7 +521,7 @@ func (s *testSuite) SetCommunicationPolicy(policy CommunicationPolicy) {
 
 	for i := 1; i <= timedOutNodesCount; i++ {
 		comm := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases).FirstPhase.(*phases.FirstPhaseImpl).Communicator
-		wrapper := &CommunicatorMock{communicator: comm, ignoreFrom: ref, policy: policy}
+		wrapper := &CommunicatorMock{communicator: comm, ignoreFrom: nodeID, policy: policy}
 		phasemanager := nodes[i].serviceNetwork.PhaseManager.(*phaseManagerWrapper).original.(*phases.Phases)
 		phasemanager.FirstPhase.(*phases.FirstPhaseImpl).Communicator = wrapper
 		phasemanager.SecondPhase.(*phases.SecondPhaseImpl).Communicator = wrapper

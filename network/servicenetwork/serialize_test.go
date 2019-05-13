@@ -48,90 +48,48 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package phases
+package servicenetwork
 
 import (
-	"context"
-	"crypto"
+	"bytes"
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/testutils"
-	networkUtils "github.com/insolar/insolar/testutils/network"
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/stretchr/testify/require"
 )
 
-type communicatorSuite struct {
-	suite.Suite
-	componentManager component.Manager
-	communicator     Communicator
-	originNode       insolar.NetworkNode
-	participants     []insolar.NetworkNode
-	hostNetworkMock  *networkUtils.HostNetworkMock
+func TestSerializeDeserialize(t *testing.T) {
+	payload := []byte{1, 2, 3, 4, 5}
+	msg := message.NewMessage(watermill.NewUUID(), payload)
+	msg.Metadata.Set("testKey", "testValue")
 
-	consensusNetworkMock *networkUtils.ConsensusNetworkMock
-	pulseHandlerMock     *networkUtils.PulseHandlerMock
+	serializedMsg, err := serializeMessage(msg)
+
+	require.NoError(t, err)
+	require.NotEmpty(t, serializedMsg)
+
+	msgOut, err := deserializeMessage(serializedMsg)
+	require.NoError(t, err)
+	require.NotEmpty(t, msgOut)
+
+	require.Equal(t, msg.Payload, msgOut.Payload)
+	require.Equal(t, msg.Metadata, msgOut.Metadata)
 }
 
-func NewSuite() *communicatorSuite {
-	return &communicatorSuite{
-		Suite:        suite.Suite{},
-		communicator: NewCommunicator(),
-		participants: nil,
-	}
-}
+func TestMessageToBytes(t *testing.T) {
+	payload := []byte{1, 2, 3, 4, 5}
+	msg := message.NewMessage(watermill.NewUUID(), payload)
+	msg.Metadata.Set("testKey", "testValue")
 
-func (s *communicatorSuite) SetupTest() {
-	s.consensusNetworkMock = networkUtils.NewConsensusNetworkMock(s.T())
-	s.pulseHandlerMock = networkUtils.NewPulseHandlerMock(s.T())
-	s.originNode = makeRandomNode()
+	serializedMsg, err := messageToBytes(msg)
+	require.NoError(t, err)
+	require.NotEmpty(t, serializedMsg)
 
-	nodeN := networkUtils.NewNodeKeeperMock(s.T())
-	nodeN.GetOriginMock.Return(s.originNode)
+	msgOut, err := deserializeMessage(bytes.NewBuffer(serializedMsg))
+	require.NoError(t, err)
+	require.NotEmpty(t, msgOut)
 
-	cryptoServ := testutils.NewCryptographyServiceMock(s.T())
-	cryptoServ.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
-		signature := insolar.SignatureFromBytes(nil)
-		return &signature, nil
-	}
-	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
-		return true
-	}
-
-	s.consensusNetworkMock.RegisterPacketHandlerMock.Set(func(p packets.PacketType, p1 network.ConsensusPacketHandler) {
-
-	})
-
-	s.consensusNetworkMock.StartMock.Set(func(context.Context) error { return nil })
-
-	s.pulseHandlerMock.HandlePulseMock.Set(func(p context.Context, p1 insolar.Pulse) {
-
-	})
-
-	s.componentManager.Inject(nodeN, cryptoServ, s.communicator, s.consensusNetworkMock, s.pulseHandlerMock)
-	err := s.componentManager.Start(context.TODO())
-	s.NoError(err)
-}
-
-func makeRandomNode() insolar.NetworkNode {
-	return node.NewNode(testutils.RandomRef(), insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
-}
-
-func (s *communicatorSuite) TestExchangeData() {
-	s.Assert().NotNil(s.communicator)
-	ctx, cancel := context.WithTimeout(context.Background(), 0)
-	defer cancel()
-
-	result, err := s.communicator.ExchangePhase1(ctx, nil, s.participants, &packets.Phase1Packet{})
-	s.Assert().NoError(err)
-	s.NotEqual(0, len(result))
-}
-
-func TestNaiveCommunicator(t *testing.T) {
-	suite.Run(t, NewSuite())
+	require.Equal(t, msg.Payload, msgOut.Payload)
+	require.Equal(t, msg.Metadata, msgOut.Metadata)
 }
