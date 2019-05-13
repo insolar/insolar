@@ -34,79 +34,75 @@ type IndexCleaner interface {
 }
 
 type IndexReplicaAccessor interface {
-	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) ([]IndexBucket, bool)
+	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []IndexBucket
 }
 
-type IndexBucket struct {
-	objID insolar.ID
-
+type LockedIndexBucket struct {
 	lifelineLock sync.RWMutex
-	lifeline     *Lifeline
+	requestLock  sync.RWMutex
+	resultLock   sync.RWMutex
 
-	requestLock sync.RWMutex
-	requests    []insolar.ID
-
-	resultLock sync.RWMutex
-	results    []insolar.ID
+	bucket IndexBucket
 }
 
-func (i *IndexBucket) getLifeline() (*Lifeline, error) {
+func (i *LockedIndexBucket) getLifeline() (*Lifeline, error) {
 	i.lifelineLock.RLock()
 	defer i.lifelineLock.RUnlock()
-	if i.lifeline == nil {
+	if i.bucket.Lifeline == nil {
 		return nil, ErrLifelineNotFound
 	}
 
-	return i.lifeline, nil
+	return i.bucket.Lifeline, nil
 }
 
-func (i *IndexBucket) setLifeline(lifeline *Lifeline) {
+func (i *LockedIndexBucket) setLifeline(lifeline *Lifeline) {
 	i.lifelineLock.Lock()
 	defer i.lifelineLock.Unlock()
 
-	i.lifeline = lifeline
+	i.bucket.Lifeline = lifeline
 }
 
-func (i *IndexBucket) setRequest(reqID insolar.ID) {
+func (i *LockedIndexBucket) setRequest(reqID insolar.ID) {
 	i.requestLock.Lock()
 	defer i.requestLock.Unlock()
 
-	i.requests = append(i.requests, reqID)
+	i.bucket.Requests = append(i.bucket.Requests, reqID)
 }
 
-func (i *IndexBucket) setResult(resID insolar.ID) {
+func (i *LockedIndexBucket) setResult(resID insolar.ID) {
 	i.resultLock.Lock()
 	defer i.resultLock.Unlock()
 
-	i.results = append(i.results, resID)
+	i.bucket.Results = append(i.bucket.Results, resID)
 }
 
 type InMemoryIndex struct {
 	bucketsLock sync.RWMutex
-	buckets     map[insolar.PulseNumber]map[insolar.ID]*IndexBucket
+	buckets     map[insolar.PulseNumber]map[insolar.ID]*LockedIndexBucket
 }
 
 func NewInMemoryIndex() *InMemoryIndex {
-	return &InMemoryIndex{buckets: map[insolar.PulseNumber]map[insolar.ID]*IndexBucket{}}
+	return &InMemoryIndex{buckets: map[insolar.PulseNumber]map[insolar.ID]*LockedIndexBucket{}}
 }
 
-func (i *InMemoryIndex) getBucket(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *IndexBucket {
+func (i *InMemoryIndex) getBucket(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *LockedIndexBucket {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
-	var objsByPn map[insolar.ID]*IndexBucket
+	var objsByPn map[insolar.ID]*LockedIndexBucket
 	objsByPn, ok := i.buckets[pn]
 	if !ok {
-		objsByPn = map[insolar.ID]*IndexBucket{}
+		objsByPn = map[insolar.ID]*LockedIndexBucket{}
 		i.buckets[pn] = objsByPn
 	}
 
 	bucket := objsByPn[objID]
 	if bucket == nil {
-		bucket = &IndexBucket{
-			objID:    objID,
-			requests: []insolar.ID{},
-			results:  []insolar.ID{},
+		bucket = &LockedIndexBucket{
+			bucket: IndexBucket{
+				Results:  []insolar.ID{},
+				Requests: []insolar.ID{},
+			},
 		}
 		objsByPn[objID] = bucket
 	}
@@ -145,46 +141,46 @@ func (i *InMemoryIndex) LifelineForID(ctx context.Context, pn insolar.PulseNumbe
 	return *lfl, nil
 }
 
-func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) ([]IndexBucket, bool) {
+func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []IndexBucket {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
 	bucks, ok := i.buckets[pn]
 	if !ok {
-		return nil, false
+		return nil
 	}
 
 	var res []IndexBucket
 
 	for _, b := range bucks {
-		if b.lifeline == nil {
-			panic("empty interface")
+		if b.bucket.Lifeline == nil {
+			panic("empty lifeline")
 		}
-		if b.lifeline.JetID != jetID {
+		if b.bucket.Lifeline.JetID != jetID {
 			continue
 		}
 
-		clonedLfl := CloneIndex(*b.lifeline)
+		clonedLfl := CloneIndex(*b.bucket.Lifeline)
 		var clonedResults []insolar.ID
 		var clonedRequests []insolar.ID
 
-		for _, r := range b.requests {
+		for _, r := range b.bucket.Requests {
 			clonedRequests = append(clonedRequests, r)
 		}
-		for _, r := range b.results {
+		for _, r := range b.bucket.Results {
 			clonedResults = append(clonedResults, r)
 		}
 
 		res = append(res, IndexBucket{
-			lifeline:         &clonedLfl,
-			lifelineLastUsed: b.lifelineLastUsed,
-			results:          clonedResults,
-			requests:         clonedRequests,
+			Lifeline:         &clonedLfl,
+			LifelineLastUsed: b.bucket.LifelineLastUsed,
+			Results:          clonedResults,
+			Requests:         clonedRequests,
 		})
 
 	}
 
-	return res, true
+	return res
 }
 
 func (i *InMemoryIndex) SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
@@ -197,7 +193,7 @@ func (i *InMemoryIndex) SetLifelineUsage(ctx context.Context, pn insolar.PulseNu
 		return ErrLifelineNotFound
 	}
 
-	b.lifelineLastUsed = pn
+	b.bucket.LifelineLastUsed = pn
 
 	return nil
 }
@@ -236,7 +232,7 @@ func (i *IndexDB) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID
 	defer i.lock.Unlock()
 
 	if lifeline.Delegates == nil {
-		lifeline.Delegates = map[insolar.Reference]insolar.Reference{}
+		lifeline.Delegates = []LifelineDelegate{}
 	}
 
 	buc, err := i.get(pn, objID)
@@ -246,7 +242,7 @@ func (i *IndexDB) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID
 		return err
 	}
 
-	buc.lifeline = &lifeline
+	buc.Lifeline = &lifeline
 	return i.set(pn, objID, buc)
 }
 
@@ -261,7 +257,7 @@ func (i *IndexDB) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID 
 		return err
 	}
 
-	buc.requests = append(buc.requests, reqID)
+	buc.Requests = append(buc.Requests, reqID)
 	return i.set(pn, objID, buc)
 }
 
@@ -276,7 +272,7 @@ func (i *IndexDB) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, o
 		return err
 	}
 
-	buc.results = append(buc.requests, resID)
+	buc.Results = append(buc.Results, resID)
 	return i.set(pn, objID, buc)
 }
 
@@ -285,17 +281,22 @@ func (i *IndexDB) LifelineForID(ctx context.Context, pn insolar.PulseNumber, obj
 	if err != nil {
 		return Lifeline{}, err
 	}
-	if buck.lifeline == nil {
+	if buck.Lifeline == nil {
 		return Lifeline{}, ErrLifelineNotFound
 	}
 
-	return *buck.lifeline, nil
+	return *buck.Lifeline, nil
 }
 
 func (i *IndexDB) set(pn insolar.PulseNumber, objID insolar.ID, bucket *IndexBucket) error {
 	key := indexKey{pn: pn, objID: objID}
 
-	return i.db.Set(key, MustEncodeBucket(bucket))
+	buff, err := bucket.Marshal()
+	if err != nil {
+		return err
+	}
+
+	return i.db.Set(key, buff)
 }
 
 func (i *IndexDB) get(pn insolar.PulseNumber, objID insolar.ID) (*IndexBucket, error) {
@@ -307,54 +308,9 @@ func (i *IndexDB) get(pn insolar.PulseNumber, objID insolar.ID) (*IndexBucket, e
 	if err != nil {
 		return nil, err
 	}
-	bucket := MustDecodeBucket(buff)
-	return bucket, nil
-}
-
-func MustEncodeBucket(buck *IndexBucket) []byte {
-	rawBuck := IndexBucketRaw{}
-	if buck.lifeline != nil {
-		rawBuck.Lifeline = EncodeIndex(*buck.lifeline)
-	}
-
-	rawBuck.Requests = buck.requests
-	rawBuck.Results = buck.results
-
-	res, err := rawBuck.Marshal()
-	if err != nil {
-		panic(err)
-	}
-
-	return res
-}
-
-func DecodeBucket(buff []byte) (*IndexBucket, error) {
-	rawBuck := IndexBucketRaw{}
-	err := rawBuck.Unmarshal(buff)
-	if err != nil {
-		return nil, err
-	}
-	rawLfl := LifelineRaw{}
-	err = rawLfl.Unmarshal(rawBuck.Lifeline)
-	if err != nil {
-		return nil, err
-	}
-	lfl := rawLfl.toLifeline()
-
-	return &IndexBucket{
-		lifeline: &lfl,
-		results:  rawBuck.Results,
-		requests: rawBuck.Requests,
-	}, nil
-}
-
-func MustDecodeBucket(buff []byte) *IndexBucket {
-	buck, err := DecodeBucket(buff)
-	if err != nil {
-		panic(err)
-	}
-
-	return buck
+	bucket := IndexBucket{}
+	err = bucket.Unmarshal(buff)
+	return &bucket, err
 }
 
 // // ForID returns index for provided id.

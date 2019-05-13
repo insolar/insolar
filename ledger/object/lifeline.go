@@ -102,10 +102,10 @@ import (
 // LifelineMeta holds additional info about Lifeline
 // It provides LastUsed pulse number
 // That can be used for placed in a special bucket in processing structs
-type LifelineMeta struct {
-	Index    Lifeline
-	LastUsed insolar.PulseNumber
-}
+// type LifelineMeta struct {
+// 	Index    Lifeline
+// 	LastUsed insolar.PulseNumber
+// }
 
 // EncodeIndex converts lifeline index into binary format.
 func EncodeIndex(index Lifeline) []byte {
@@ -133,25 +133,6 @@ func DecodeIndex(buff []byte) (Lifeline, error) {
 	err := lfl.Unmarshal(buff)
 	return lfl, err
 }
-
-// func (m *LifelineRaw) toLifeline() Lifeline {
-// 	idx := Lifeline{
-// 		LatestState:         m.LatestState,
-// 		LatestStateApproved: m.LatestStateApproved,
-// 		ChildPointer:        m.ChildPointer,
-// 		Parent:              m.Parent,
-// 		State:               m.State,
-// 		Delegates:           map[insolar.Reference]insolar.Reference{},
-// 		LatestUpdate:        m.LatestUpdate,
-// 		JetID:               m.JetID,
-// 		LatestRequest:       m.LatestRequest,
-// 	}
-// 	for _, v := range m.Delegates {
-// 		idx.Delegates[v.Key] = v.Value
-// 	}
-//
-// 	return idx
-// }
 
 // CloneIndex returns copy of argument idx value.
 func CloneIndex(idx Lifeline) Lifeline {
@@ -263,31 +244,31 @@ func (m *LifelineStorageMemory) ForID(ctx context.Context, id insolar.ID) (Lifel
 }
 
 // ForJet returns a collection of lifelines for a provided jetID
-func (m *LifelineStorageMemory) ForJet(ctx context.Context, jetID insolar.JetID) map[insolar.ID]LifelineMeta {
-	m.storageLock.RLock()
-	defer m.storageLock.RUnlock()
-
-	idxByJet := m.jetIndexAccessor.For(jetID)
-
-	res := map[insolar.ID]LifelineMeta{}
-
-	for id := range idxByJet {
-		idx, ok := m.indexStorage[id]
-		if ok {
-			lstPN, lstOk := m.pulseIndex.LastUsage(id)
-			if !lstOk {
-				panic("index isn't in a consistent state")
-			}
-
-			res[id] = LifelineMeta{
-				Index:    CloneIndex(idx),
-				LastUsed: lstPN,
-			}
-		}
-	}
-
-	return res
-}
+// func (m *LifelineStorageMemory) ForJet(ctx context.Context, jetID insolar.JetID) map[insolar.ID]LifelineMeta {
+// 	m.storageLock.RLock()
+// 	defer m.storageLock.RUnlock()
+//
+// 	idxByJet := m.jetIndexAccessor.For(jetID)
+//
+// 	res := map[insolar.ID]LifelineMeta{}
+//
+// 	for id := range idxByJet {
+// 		idx, ok := m.indexStorage[id]
+// 		if ok {
+// 			lstPN, lstOk := m.pulseIndex.LastUsage(id)
+// 			if !lstOk {
+// 				panic("index isn't in a consistent state")
+// 			}
+//
+// 			res[id] = LifelineMeta{
+// 				Index:    CloneIndex(idx),
+// 				LastUsed: lstPN,
+// 			}
+// 		}
+// 	}
+//
+// 	return res
+// }
 
 // ForPulseAndJet returns a collection of lifelines for a provided jetID and a pulse number
 func (m *LifelineStorageMemory) ForPulseAndJet(
