@@ -50,31 +50,40 @@
 
 // +build networktest
 
-package servicenetwork
+package gateway
 
 import (
 	"context"
-	"sync/atomic"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network"
 )
 
-type testNetworkSwitcher struct {
-	state int32
+type FakeOk struct {
+	Base
+	State insolar.NetworkState
 }
 
-func NewTestNetworkSwitcher() insolar.NetworkSwitcher {
-	state := int32(insolar.VoidNetworkState)
-	return &testNetworkSwitcher{state: state}
+func NewFakeOk() network.Gateway {
+	g := &FakeOk{}
+	g.Base.Self = g
+	g.State = insolar.NoNetworkState
+	return g
 }
 
-func (t *testNetworkSwitcher) GetState() insolar.NetworkState {
-	s := atomic.LoadInt32(&t.state)
-	return insolar.NetworkState(s)
-}
-
-func (t *testNetworkSwitcher) OnPulse(context.Context, insolar.Pulse) error {
-	newState := int32(insolar.CompleteNetworkState)
-	atomic.StoreInt32(&t.state, newState)
+func (g *FakeOk) OnPulse(context.Context, insolar.Pulse) error {
+	g.State = insolar.CompleteNetworkState
 	return nil
+}
+
+func (g *FakeOk) Run(context.Context) {
+}
+
+func (g *FakeOk) GetState() insolar.NetworkState {
+	return g.State
+}
+
+// ValidateCert overloaded for test purpose
+func (g *FakeOk) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
+	return true, nil
 }

@@ -66,6 +66,8 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/insolar/insolar/network/gateway"
+
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -167,7 +169,7 @@ func (s *testSuite) SetupTest() {
 	retries := 100
 	for {
 		activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-		if  expectedBootstrapsCount == len(activeNodes) {
+		if expectedBootstrapsCount == len(activeNodes) {
 			break
 		}
 
@@ -176,7 +178,7 @@ func (s *testSuite) SetupTest() {
 			break
 		}
 
-		time.Sleep(100*time.Millisecond)
+		time.Sleep(100 * time.Millisecond)
 	}
 
 	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
@@ -438,6 +440,7 @@ func (m staterMock) State() ([]byte, error) {
 
 // preInitNode inits previously created node with mocks and external dependencies
 func (s *testSuite) preInitNode(node *networkNode) {
+	t := s.T()
 	cfg := configuration.NewConfiguration()
 	cfg.Pulsar.PulseTime = pulseTimeMs // pulse 5 sec for faster tests
 	cfg.Host.Transport.Address = node.host
@@ -453,14 +456,8 @@ func (s *testSuite) preInitNode(node *networkNode) {
 	serviceNetwork, err := NewServiceNetwork(cfg, node.componentManager, false)
 	s.Require().NoError(err)
 
-	netCoordinator := testutils.NewNetworkCoordinatorMock(s.T())
-	netCoordinator.ValidateCertMock.Set(func(p context.Context, p1 insolar.AuthorizationCertificate) (bool, error) {
-		return true, nil
-	})
-
-	netCoordinator.IsStartedMock.Set(func() (r bool) {
-		return true
-	})
+	serviceNetwork.SetGateway(gateway.NewFakeOk())
+	serviceNetwork.Gateway().Run(context.Background())
 
 	amMock := staterMock{
 		stateFunc: func() ([]byte, error) {
@@ -472,21 +469,22 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	realKeeper, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	s.Require().NoError(err)
-	terminationHandler := testutils.NewTerminationHandlerMock(s.T())
+	terminationHandler := testutils.NewTerminationHandlerMock(t)
 	terminationHandler.LeaveFunc = func(p context.Context, p1 insolar.PulseNumber) {}
 	terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {}
 	terminationHandler.AbortFunc = func(reason string) { log.Error(reason) }
 
-	mblocker := testutils.NewMessageBusLockerMock(s.T())
-	GIL := testutils.NewGlobalInsolarLockMock(s.T())
+	mblocker := testutils.NewMessageBusLockerMock(t)
+	GIL := testutils.NewGlobalInsolarLockMock(t)
 	GIL.AcquireMock.Return()
 	GIL.ReleaseMock.Return()
 	keyProc := platformpolicy.NewKeyProcessor()
 	pubMock := &PublisherMock{}
 	node.componentManager.Register(terminationHandler, realKeeper, newPulseManagerMock(realKeeper.(network.NodeKeeper)), pubMock)
 
-	node.componentManager.Register(netCoordinator, &amMock, certManager, cryptographyService, mblocker, GIL)
-	node.componentManager.Inject(serviceNetwork, NewTestNetworkSwitcher(), keyProc, terminationHandler, transport.NewFakeFactory(cfg.Host.Transport))
+	node.componentManager.Register(&amMock, certManager, cryptographyService, mblocker, GIL)
+	node.componentManager.Inject(serviceNetwork, keyProc, terminationHandler, transport.NewFakeFactory(cfg.Host.Transport),
+		testutils.NewMessageBusMock(t), testutils.NewContractRequesterMock(t))
 
 	node.serviceNetwork = serviceNetwork
 }

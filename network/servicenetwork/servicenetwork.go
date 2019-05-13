@@ -96,11 +96,12 @@ type ServiceNetwork struct {
 	PulseManager        insolar.PulseManager        `inject:""`
 	PulseAccessor       pulse.Accessor              `inject:""`
 	CryptographyService insolar.CryptographyService `inject:""`
-	NetworkCoordinator  insolar.NetworkCoordinator  `inject:""`
 	NodeKeeper          network.NodeKeeper          `inject:""`
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
 	GIL                 insolar.GlobalInsolarLock   `inject:""`
 	Pub                 message.Publisher           `inject:""`
+	MessageBus          insolar.MessageBus          `inject:""`
+	ContractRequester   insolar.ContractRequester   `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
@@ -201,8 +202,13 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
 
-	n.gateway = gateway.NewNoNetwork(n, n.GIL, n.NodeKeeper)
-	n.gateway.Run(ctx)
+	if n.Gateway() == nil {
+		n.gateway = gateway.NewNoNetwork(n, n.GIL, n.NodeKeeper, n.ContractRequester,
+			n.CryptographyService, n.MessageBus, n.CertificateManager)
+		n.gateway.Run(ctx)
+		inslogger.FromContext(ctx).Debug("Launch network gateway")
+
+	}
 
 	return nil
 }
