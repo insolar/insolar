@@ -69,7 +69,11 @@ func NewStateMatrix(mapper packets.BitSetMapper) *StateMatrix {
 	for i := 0; i < mapper.Length(); i++ {
 		data[i] = make([]packets.BitSetState, mapper.Length())
 		for j := 0; j < mapper.Length(); j++ {
-			data[i][j] = packets.TimedOut
+			if i == j {
+				data[i][j] = packets.Legit
+			} else {
+				data[i][j] = packets.TimedOut
+			}
 		}
 	}
 	return &StateMatrix{data: data, mapper: mapper}
