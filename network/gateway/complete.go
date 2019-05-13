@@ -54,6 +54,14 @@ import (
 	"context"
 	"time"
 
+	"github.com/insolar/insolar/certificate"
+
+	"github.com/insolar/insolar/insolar/message"
+
+	"github.com/insolar/insolar/application/extractor"
+	"github.com/insolar/insolar/insolar/reply"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/metrics"
 
@@ -70,6 +78,7 @@ type Complete struct {
 
 func (g *Complete) Run(ctx context.Context) {
 	g.GIL.Release(ctx)
+	g.MessageBus.MustRegister(insolar.TypeNodeSignRequest, g.signCertHandler)
 	metrics.NetworkComplete.Set(float64(time.Now().Unix()))
 }
 
@@ -80,4 +89,96 @@ func (g *Complete) GetState() insolar.NetworkState {
 func (g *Complete) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 	inslogger.FromContext(ctx).Debugf("Gateway.Complete: pulse happens %d", pu.PulseNumber)
 	return nil
+}
+
+// GetCert method generates cert by requesting signs from discovery nodes
+func (g *Complete) GetCert(ctx context.Context, registeredNodeRef *insolar.Reference) (insolar.Certificate, error) {
+	pKey, role, err := g.getNodeInfo(ctx, registeredNodeRef)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetCert ] Couldn't get node info")
+	}
+
+	currentNodeCert := g.CertificateManager.GetCertificate()
+	registeredNodeCert, err := g.CertificateManager.NewUnsignedCertificate(pKey, role, registeredNodeRef.String())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ GetCert ] Couldn't create certificate")
+	}
+
+	for i, discoveryNode := range currentNodeCert.GetDiscoveryNodes() {
+		sign, err := g.requestCertSign(ctx, discoveryNode, registeredNodeRef)
+		if err != nil {
+			return nil, errors.Wrap(err, "[ GetCert ] Couldn't request cert sign")
+		}
+		registeredNodeCert.(*certificate.Certificate).BootstrapNodes[i].NodeSign = sign
+	}
+	return registeredNodeCert, nil
+}
+
+// requestCertSign method requests sign from single discovery node
+func (g *Complete) requestCertSign(ctx context.Context, discoveryNode insolar.DiscoveryNode, registeredNodeRef *insolar.Reference) ([]byte, error) {
+	var sign []byte
+	var err error
+
+	currentNodeCert := g.CertificateManager.GetCertificate()
+
+	if *discoveryNode.GetNodeRef() == *currentNodeCert.GetNodeRef() {
+		sign, err = g.signCert(ctx, registeredNodeRef)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		msg := &message.NodeSignPayload{
+			NodeRef: registeredNodeRef,
+		}
+		opts := &insolar.MessageSendOptions{
+			Receiver: discoveryNode.GetNodeRef(),
+		}
+		r, err := g.MessageBus.Send(ctx, msg, opts)
+		if err != nil {
+			return nil, err
+		}
+		sign = r.(reply.NodeSignInt).GetSign()
+	}
+
+	return sign, nil
+}
+
+func (g *Complete) getNodeInfo(ctx context.Context, nodeRef *insolar.Reference) (string, string, error) {
+	res, err := g.ContractRequester.SendRequest(ctx, nodeRef, "GetNodeInfo", []interface{}{})
+	if err != nil {
+		return "", "", errors.Wrap(err, "[ GetCert ] Couldn't call GetNodeInfo")
+	}
+	pKey, role, err := extractor.NodeInfoResponse(res.(*reply.CallMethod).Result)
+	if err != nil {
+		return "", "", errors.Wrap(err, "[ GetCert ] Couldn't extract response")
+	}
+	return pKey, role, nil
+}
+
+// signCert returns certificate sign fore node
+func (g *Complete) signCert(ctx context.Context, registeredNodeRef *insolar.Reference) ([]byte, error) {
+	pKey, role, err := g.getNodeInfo(ctx, registeredNodeRef)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SignCert ] Couldn't extract response")
+	}
+
+	data := []byte(pKey + registeredNodeRef.String() + role)
+	sign, err := g.CryptographyService.Sign(data)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SignCert ] Couldn't sign")
+	}
+
+	return sign.Bytes(), nil
+}
+
+// signCertHandler is MsgBus handler that signs certificate for some node with node own key
+func (g *Complete) signCertHandler(ctx context.Context, p insolar.Parcel) (insolar.Reply, error) {
+	nodeRef := p.Message().(message.NodeSignPayloadInt).GetNodeRef()
+	sign, err := g.signCert(ctx, nodeRef)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ SignCert ] Couldn't extract response")
+	}
+	return &reply.NodeSign{
+		Sign: sign,
+	}, nil
 }
