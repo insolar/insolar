@@ -54,17 +54,16 @@ import (
 	"context"
 	"crypto"
 	"testing"
-	"time"
 
-	"github.com/insolar/insolar/network/node"
+	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/testutils"
 	networkUtils "github.com/insolar/insolar/testutils/network"
-	"github.com/stretchr/testify/suite"
 )
 
 type communicatorSuite struct {
@@ -125,7 +124,7 @@ func makeRandomNode() insolar.NetworkNode {
 
 func (s *communicatorSuite) TestExchangeData() {
 	s.Assert().NotNil(s.communicator)
-	ctx, cancel := context.WithTimeout(context.Background(), time.Second*3)
+	ctx, cancel := context.WithTimeout(context.Background(), 0)
 	defer cancel()
 
 	result, err := s.communicator.ExchangePhase1(ctx, nil, s.participants, &packets.Phase1Packet{})
