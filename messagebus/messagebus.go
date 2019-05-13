@@ -250,6 +250,9 @@ func (mb *MessageBus) SendParcel(
 	readBarrier(ctx, &mb.globalLock)
 
 	nodes, err := mb.getReceiverNodes(ctx, parcel, currentPulse, options)
+	if err != nil {
+		return nil, err
+	}
 
 	start := time.Now()
 	defer func() {
