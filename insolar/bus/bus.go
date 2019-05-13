@@ -52,7 +52,7 @@ const (
 
 // Sender interface sends messages by watermill.
 type Sender interface {
-	// Send an `Message` and get a `Reply` or error from remote host.
+	// Send a watermill's Message and returns channel for replies and function for closing that channel.
 	Send(ctx context.Context, msg *message.Message) (<-chan *message.Message, func())
 }
 
@@ -98,7 +98,7 @@ func (b *Bus) removeReplyChannel(ctx context.Context, id string, reply *lockedRe
 	})
 }
 
-// Send a watermill's Message and return channel for replies.
+// Send a watermill's Message and returns channel for replies and function for closing that channel.
 func (b *Bus) Send(ctx context.Context, msg *message.Message) (<-chan *message.Message, func()) {
 	id := watermill.NewUUID()
 	middleware.SetCorrelationID(id, msg)
@@ -117,25 +117,26 @@ func (b *Bus) Send(ctx context.Context, msg *message.Message) (<-chan *message.M
 
 	b.replies[id] = reply
 
-	c := func(ctx context.Context, b *Bus, reply *lockedReply) func() {
+	done := func(ctx context.Context, b *Bus, reply *lockedReply) func() {
 		return func() {
 			b.removeReplyChannel(ctx, id, reply)
 		}
 	}(ctx, b, reply)
 
-	go func(c func()) {
+	go func(done func()) {
 		select {
 		case <-reply.done:
-			inslogger.FromContext(msg.Context()).Infof("reply channel for message with correlationID %s was closed", id)
+			inslogger.FromContext(msg.Context()).Infof("Done waiting replies for message with correlationID %s", id)
 		case <-time.After(b.timeout):
-			c()
+			inslogger.FromContext(msg.Context()).Infof("Timeout for waiting replies for message with correlationID %s was exceeded", id)
+			done()
 		}
-	}(c)
+	}(done)
 
-	return reply.messages, c
+	return reply.messages, done
 }
 
-// IncomingMessageRouter is watermill middleware for incoming messages - it decides, how to handle it.
+// IncomingMessageRouter is watermill middleware for incoming messages - it decides, how to handle it: as request or as reply.
 func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 	return func(msg *message.Message) ([]*message.Message, error) {
 		id := middleware.MessageCorrelationID(msg)
