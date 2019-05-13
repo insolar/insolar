@@ -312,7 +312,7 @@ func TestServiceNetworkOneBootstrap(t *testing.T) {
 }
 
 func TestServiceNetworkManyBootstraps(t *testing.T) {
-	s := NewTestSuite(16, 0)
+	s := NewTestSuite(8, 0)
 	suite.Run(t, s)
 }
 
