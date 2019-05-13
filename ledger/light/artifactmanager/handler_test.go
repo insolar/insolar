@@ -376,16 +376,16 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	idLockMock.UnlockMock.Return()
 	h.IDLocker = idLockMock
 
-	objIndex := object.Lifeline{LatestState: genRandomID(0), State: object.StateActivation}
-	amendRecord := object.AmendRecord{
+	objIndex := object.Lifeline{LatestState: genRandomID(0), State: record.StateActivation}
+	amendRecord := record.Amend{
 		PrevState: *objIndex.LatestState,
 	}
-	amendHash := s.scheme.ReferenceHasher()
-	_, err := amendRecord.WriteHashData(amendHash)
+	virtAmend := record.VirtualFromRec(amendRecord)
+	data, err := virtAmend.Marshal()
 	require.NoError(s.T(), err)
 
 	msg := message.UpdateObject{
-		Record: object.EncodeVirtual(&amendRecord),
+		Record: data,
 		Object: *genRandomRef(0),
 	}
 
@@ -454,19 +454,19 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 
 	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
-		State:        object.StateActivation,
+		State:        record.StateActivation,
 		LatestUpdate: 0,
 		JetID:        insolar.JetID(jetID),
 	}
-	amendRecord := object.AmendRecord{
+	amendRecord := record.Amend{
 		PrevState: *objIndex.LatestState,
 	}
-	amendHash := s.scheme.ReferenceHasher()
-	_, err := amendRecord.WriteHashData(amendHash)
+	virtAmend := record.VirtualFromRec(amendRecord)
+	data, err := virtAmend.Marshal()
 	require.NoError(s.T(), err)
 
 	msg := message.UpdateObject{
-		Record: object.EncodeVirtual(&amendRecord),
+		Record: data,
 		Object: *genRandomRef(0),
 	}
 	err = s.indexMemoryStor.Set(s.ctx, *msg.Object.Record(), objIndex)
@@ -614,18 +614,20 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	idLockMock.UnlockMock.Return()
 	h.IDLocker = idLockMock
 
-	objIndex := object.Lifeline{LatestState: genRandomID(0), State: object.StateActivation}
-	childRecord := object.ChildRecord{
-		Ref:       *genRandomRef(0),
-		PrevChild: nil,
+	objIndex := object.Lifeline{LatestState: genRandomID(0), State: record.StateActivation}
+	childRecord := record.Child{
+		Ref: *genRandomRef(0),
+		// PrevChild: nil,
 	}
-	amendHash := s.scheme.ReferenceHasher()
-	_, err := childRecord.WriteHashData(amendHash)
+
+	virtChild := record.VirtualFromRec(childRecord)
+	data, err := virtChild.Marshal()
 	require.NoError(s.T(), err)
-	childID := insolar.NewID(0, amendHash.Sum(nil))
+	hash := record.HashVirtual(s.scheme.ReferenceHasher(), virtChild)
+	childID := insolar.NewID(0, hash)
 
 	msg := message.RegisterChild{
-		Record: object.EncodeVirtual(&childRecord),
+		Record: data,
 		Parent: *genRandomRef(0),
 	}
 
@@ -692,20 +694,25 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 
 	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
-		State:        object.StateActivation,
+		State:        record.StateActivation,
 		LatestUpdate: insolar.FirstPulseNumber,
 		JetID:        insolar.JetID(jetID),
 	}
-	childRecord := object.ChildRecord{
-		Ref:       *genRandomRef(0),
-		PrevChild: nil,
+	childRecord := record.Child{
+		Ref: *genRandomRef(0),
+		// PrevChild: nil,
 	}
+
+	virtRec := record.VirtualFromRec(childRecord)
+	data, err := virtRec.Marshal()
+	require.NoError(s.T(), err)
+
 	msg := message.RegisterChild{
-		Record: object.EncodeVirtual(&childRecord),
+		Record: data,
 		Parent: *genRandomRef(0),
 	}
 
-	err := s.indexMemoryStor.Set(s.ctx, *msg.Parent.Record(), objIndex)
+	err = s.indexMemoryStor.Set(s.ctx, *msg.Parent.Record(), objIndex)
 	require.NoError(s.T(), err)
 
 	// Act
@@ -728,8 +735,18 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	jc := jet.NewCoordinatorMock(mc)
 
 	firstID := insolar.NewID(insolar.FirstPulseNumber, []byte{1, 2, 3})
-	secondID := object.NewRecordIDFromRecord(s.scheme, insolar.FirstPulseNumber, &object.CodeRecord{})
-	thirdID := object.NewRecordIDFromRecord(s.scheme, insolar.FirstPulseNumber-1, &object.CodeRecord{})
+
+	codeRec := record.Code{}
+	virtCodeRec := record.VirtualFromRec(codeRec)
+	hash := record.HashVirtual(s.scheme.ReferenceHasher(), virtCodeRec)
+
+	secondID := insolar.NewID(insolar.FirstPulseNumber, hash)
+
+	codeRec = record.Code{}
+	virtCodeRec = record.VirtualFromRec(codeRec)
+	hash = record.HashVirtual(s.scheme.ReferenceHasher(), virtCodeRec)
+
+	thirdID := insolar.NewID(insolar.FirstPulseNumber-1, hash)
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
@@ -823,15 +840,17 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
-	req := object.RequestRecord{
+	req := record.Request{
 		MessageHash: []byte{1, 2, 3},
 		Object:      *genRandomID(0),
 	}
 
-	reqID := object.NewRecordIDFromRecord(s.scheme, insolar.FirstPulseNumber, &req)
-	rec := record.MaterialRecord{
-		Record: &req,
-		JetID:  insolar.JetID(jetID),
+	virtRec := record.VirtualFromRec(req)
+	hash := record.HashVirtual(s.scheme.ReferenceHasher(), virtRec)
+	reqID := insolar.NewID(insolar.FirstPulseNumber, hash)
+	rec := record.Material{
+		Virtual: &virtRec,
+		JetID:   insolar.JetID(jetID),
 	}
 	err := s.recordModifier.Set(s.ctx, *reqID, rec)
 	require.NoError(s.T(), err)
@@ -850,6 +869,8 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	require.NoError(s.T(), err)
 	reqReply, ok := rep.(*reply.Request)
 	require.True(s.T(), ok)
-	vrec, _ := object.DecodeVirtual(reqReply.Record)
-	assert.Equal(s.T(), req, *vrec.(*object.RequestRecord))
+	vRec := record.Virtual{}
+	err = vRec.Unmarshal(reqReply.Record)
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), &req, record.Unwrap(&vRec))
 }

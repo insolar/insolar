@@ -16,39 +16,31 @@
 
 package object
 
-import (
-	"io"
-
-	"github.com/insolar/insolar/insolar/record"
-
-	"github.com/insolar/insolar/insolar"
-)
-
-// Request extends VirtualRecord interface with GetPayload method.
-type Request interface {
-	record.VirtualRecord
-	GetPayload() []byte
-	GetObject() insolar.ID
-}
-
-// RequestRecord is a contract execution request.
-type RequestRecord struct {
-	Parcel      []byte
-	MessageHash []byte
-	Object      insolar.ID
-}
-
-// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-func (r *RequestRecord) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(r.MessageHash)
-}
-
-// GetPayload returns payload. Required for VirtualRecord interface implementation.
-func (r *RequestRecord) GetPayload() []byte {
-	return r.Parcel
-}
-
-// GetObject returns request object.
-func (r *RequestRecord) GetObject() insolar.ID {
-	return r.Object
-}
+// // Request extends VirtualRecord interface with GetPayload method.
+// type Request interface {
+// 	record.VirtualRecord
+// 	GetPayload() []byte
+// 	GetObject() insolar.ID
+// }
+//
+// // RequestRecord is a contract execution request.
+// type RequestRecord struct {
+// 	Parcel      []byte
+// 	MessageHash []byte
+// 	Object      insolar.ID
+// }
+//
+// // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+// func (r *RequestRecord) WriteHashData(w io.Writer) (int, error) {
+// 	return w.Write(r.MessageHash)
+// }
+//
+// // GetPayload returns payload. Required for VirtualRecord interface implementation.
+// func (r *RequestRecord) GetPayload() []byte {
+// 	return r.Parcel
+// }
+//
+// // GetObject returns request object.
+// func (r *RequestRecord) GetObject() insolar.ID {
+// 	return r.Object
+// }

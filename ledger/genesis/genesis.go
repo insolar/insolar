@@ -98,11 +98,11 @@ func (gi *BaseRecord) CreateIfNeeded(ctx context.Context) (bool, error) {
 		}
 
 		genesisID := insolar.GenesisRecord.ID()
-		rec := record.MaterialRecord{
-			Record: &object.GenesisRecord{
-				VirtualRecord: insolar.GenesisRecord,
-			},
-			JetID: insolar.ZeroJetID,
+		genesisRecord := record.Genesis{Hash: insolar.GenesisRecord}
+		virtRec := record.VirtualFromRec(genesisRecord)
+		rec := record.Material{
+			Virtual: &virtRec,
+			JetID:   insolar.ZeroJetID,
 		}
 		err = gi.RecordModifier.Set(ctx, genesisID, rec)
 		if err != nil {

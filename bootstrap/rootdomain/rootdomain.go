@@ -19,7 +19,7 @@ package rootdomain
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/insolar/record"
 )
 
 const Name = "rootdomain"
@@ -41,12 +41,14 @@ func (r Record) ID() insolar.ID {
 			Name: Name,
 		},
 	}
-	rec := &object.RequestRecord{
+	rec := record.Request{
 		Parcel:      message.ParcelToBytes(parcel),
 		MessageHash: hashParcel(r.PCS, parcel),
 		Object:      insolar.GenesisRecord.ID(),
 	}
-	return *object.NewRecordIDFromRecord(r.PCS, genesisPulse, rec)
+	virtRec := record.VirtualFromRec(rec)
+	hash := record.HashVirtual(r.PCS.ReferenceHasher(), virtRec)
+	return *insolar.NewID(genesisPulse, hash)
 }
 
 func hashParcel(PCS insolar.PlatformCryptographyScheme, parcel insolar.Parcel) []byte {

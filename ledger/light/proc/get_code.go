@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
@@ -36,7 +37,7 @@ type GetCode struct {
 	Code    insolar.Reference
 
 	Result struct {
-		CodeRec *object.CodeRecord
+		CodeRec record.Code
 	}
 
 	Dep struct {
@@ -72,19 +73,20 @@ func (p *GetCode) handle(ctx context.Context) (insolar.Reply, error) {
 		return nil, err
 	}
 
-	virtRec := rec.Record
-	codeRec, ok := virtRec.(*object.CodeRecord)
+	virtRec := rec.Virtual
+	concrete := record.Unwrap(virtRec)
+	codeRec, ok := concrete.(*record.Code)
 	if !ok {
 		return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
 	}
 
-	code, err := p.Dep.Accessor.ForID(ctx, *codeRec.Code)
+	code, err := p.Dep.Accessor.ForID(ctx, codeRec.Code)
 	if err == blob.ErrNotFound {
 		hNode, err := p.Dep.Coordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
 			return nil, err
 		}
-		return p.saveCodeFromHeavy(ctx, p.JetID, p.Code, *codeRec.Code, hNode)
+		return p.saveCodeFromHeavy(ctx, p.JetID, p.Code, codeRec.Code, hNode)
 	}
 
 	if err != nil {

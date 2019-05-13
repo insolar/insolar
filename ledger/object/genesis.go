@@ -16,48 +16,45 @@
 
 package object
 
-import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
-)
+// TODO check it for helpful comments (maybe)
 
-// GenesisRecord is the first record created on storage. It's used to link root objects to it.
-// this type is a wrapper for insolar.GenesisRecord, which makes records storage work for it.
-type GenesisRecord struct {
-	record.VirtualRecord
-}
-
-// Init is initialization method for deserialization purpose.
-func (r *GenesisRecord) Init() *GenesisRecord {
-	r.VirtualRecord = insolar.GenesisRecord
-	return r
-}
-
-// methods below implements State interface (required in some places of logic runner code)
-
-var _ State = &GenesisRecord{}
-
-// PrevStateID returns previous state id.
-func (r *GenesisRecord) PrevStateID() *insolar.ID {
-	return nil
-}
-
-// StateID returns state id.
-func (r *GenesisRecord) ID() StateID {
-	return StateActivation
-}
-
-// GetMemory returns state indexStorage.
-func (*GenesisRecord) GetMemory() *insolar.ID {
-	return nil
-}
-
-// GetImage returns state code.
-func (*GenesisRecord) GetImage() *insolar.Reference {
-	return nil
-}
-
-// GetIsPrototype returns state code.
-func (*GenesisRecord) GetIsPrototype() bool {
-	return false
-}
+// // GenesisRecord is the first record created on storage. It's used to link root objects to it.
+// // this type is a wrapper for insolar.GenesisRecord, which makes records storage work for it.
+// type GenesisRecord struct {
+// 	record.VirtualRecord
+// }
+//
+// // Init is initialization method for deserialization purpose.
+// func (r *GenesisRecord) Init() *GenesisRecord {
+// 	r.VirtualRecord = insolar.GenesisRecord
+// 	return r
+// }
+//
+// // methods below implements State interface (required in some places of logic runner code)
+//
+// var _ record.State = &GenesisRecord{}
+//
+// // PrevStateID returns previous state id.
+// func (r *GenesisRecord) PrevStateID() *insolar.ID {
+// 	return nil
+// }
+//
+// // StateID returns state id.
+// func (r *GenesisRecord) ID() record.StateID {
+// 	return record.StateActivation
+// }
+//
+// // GetMemory returns state indexStorage.
+// func (*GenesisRecord) GetMemory() *insolar.ID {
+// 	return nil
+// }
+//
+// // GetImage returns state code.
+// func (*GenesisRecord) GetImage() *insolar.Reference {
+// 	return nil
+// }
+//
+// // GetIsPrototype returns state code.
+// func (*GenesisRecord) GetIsPrototype() bool {
+// 	return false
+// }

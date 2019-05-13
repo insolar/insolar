@@ -16,26 +16,22 @@
 
 package object
 
-import (
-	"github.com/insolar/insolar/insolar/record"
-)
-
-var registry = map[TypeID]record.VirtualRecord{}
-
-// Register makes provided record serializable. Should be called for each record in init().
-func register(id TypeID, r record.VirtualRecord) {
-	if _, ok := registry[id]; ok {
-		panic("duplicate record type")
-	}
-
-	registry[id] = r
-}
-
-// Registered returns records by type.
-func Registered() map[TypeID]record.VirtualRecord {
-	res := map[TypeID]record.VirtualRecord{}
-	for id, rec := range registry {
-		res[id] = rec
-	}
-	return res
-}
+// var registry = map[TypeID]record.VirtualRecord{}
+//
+// // Register makes provided record serializable. Should be called for each record in init().
+// func register(id TypeID, r record.VirtualRecord) {
+// 	if _, ok := registry[id]; ok {
+// 		panic("duplicate record type")
+// 	}
+//
+// 	registry[id] = r
+// }
+//
+// // Registered returns records by type.
+// func Registered() map[TypeID]record.VirtualRecord {
+// 	res := map[TypeID]record.VirtualRecord{}
+// 	for id, rec := range registry {
+// 		res[id] = rec
+// 	}
+// 	return res
+// }

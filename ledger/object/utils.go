@@ -16,18 +16,13 @@
 
 package object
 
-import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
-)
-
-// NewRecordIDFromRecord generates ID from pulse number and record implements record.VirtualRecord.
-// TODO: rename to IDForRecord
-func NewRecordIDFromRecord(scheme insolar.PlatformCryptographyScheme, pulse insolar.PulseNumber, rec record.VirtualRecord) *insolar.ID {
-	hasher := scheme.ReferenceHasher()
-	_, err := rec.WriteHashData(hasher)
-	if err != nil {
-		panic(err)
-	}
-	return insolar.NewID(pulse, hasher.Sum(nil))
-}
+// // NewRecordIDFromRecord generates ID from pulse number and record implements record.VirtualRecord.
+// // TODO: rename to IDForRecord
+// func NewRecordIDFromRecord(scheme insolar.PlatformCryptographyScheme, pulse insolar.PulseNumber, rec record.VirtualRecord) *insolar.ID {
+// 	hasher := scheme.ReferenceHasher()
+// 	_, err := rec.WriteHashData(hasher)
+// 	if err != nil {
+// 		panic(err)
+// 	}
+// 	return insolar.NewID(pulse, hasher.Sum(nil))
+// }

@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
 
 	"github.com/pkg/errors"
@@ -44,7 +45,7 @@ const (
 type client struct {
 	JetStorage                 jet.Storage                        `inject:""`
 	DefaultBus                 insolar.MessageBus                 `inject:""`
-	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""` // TODO rename for PCS
 	PulseAccessor              pulse.Accessor                     `inject:""`
 	JetCoordinator             jet.Coordinator                    `inject:""`
 
@@ -87,19 +88,31 @@ func (m *client) RegisterRequest(
 		return nil, err
 	}
 
-	rec := &object.RequestRecord{
+	rec := record.Request{
 		Parcel:      message.ParcelToBytes(parcel),
 		MessageHash: m.PlatformCryptographyScheme.IntegrityHasher().Hash(message.MustSerializeBytes(parcel.Message())),
 		Object:      *obj.Record(),
 	}
-	recID := object.NewRecordIDFromRecord(
-		m.PlatformCryptographyScheme,
-		currentPN,
-		rec)
+
+	virtRec := record.VirtualFromRec(rec)
+	hash := record.HashVirtual(m.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	recID := insolar.NewID(currentPN, hash)
+
+	ssss := recID.String()
+	_ = ssss
+
+	// recID := object.NewRecordIDFromRecord(
+	// 	m.PlatformCryptographyScheme,
+	// 	currentPN,
+	// 	rec)
 	recRef := insolar.NewReference(*parcel.DefaultTarget().Domain(), *recID)
+
+	rrr := recRef.String()
+	_ = rrr
+
 	id, err := m.setRecord(
 		ctx,
-		rec,
+		virtRec,
 		*recRef,
 	)
 	return id, errors.Wrap(err, "[ RegisterRequest ] ")
@@ -196,6 +209,7 @@ func (m *client) GetObject(
 
 	switch r := genericReact.(type) {
 	case *reply.Object:
+		inslogger.FromContext(ctx).Debug("===== GET-OBJECT MEMORY ===== IS    ", r.Memory) // TODO remove
 		desc = &objectDescriptor{
 			head:         r.Head,
 			state:        r.State,
@@ -278,11 +292,13 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 
 	switch r := genericReply.(type) {
 	case *reply.Request:
-		rec, err := object.DecodeVirtual(r.Record)
+		rec := record.Virtual{}
+		err = rec.Unmarshal(r.Record)
 		if err != nil {
 			return nil, errors.Wrap(err, "GetPendingRequest: can't deserialize record")
 		}
-		castedRecord, ok := rec.(*object.RequestRecord)
+		concrete := record.Unwrap(&rec)
+		castedRecord, ok := concrete.(*record.Request)
 		if !ok {
 			return nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", r)
 		}
@@ -406,15 +422,16 @@ func (m *client) DeclareType(
 		instrumenter.end()
 	}()
 
+	rec := record.Type{
+		Domain:          domain,
+		Request:         request,
+		TypeDeclaration: typeDec,
+	}
+	virtRec := record.VirtualFromRec(rec)
+
 	recid, err := m.setRecord(
 		ctx,
-		&object.TypeRecord{
-			SideEffectRecord: object.SideEffectRecord{
-				Domain:  domain,
-				Request: request,
-			},
-			TypeDeclaration: typeDec,
-		},
+		virtRec,
 		request,
 	)
 	return recid, err
@@ -446,15 +463,15 @@ func (m *client) DeployCode(
 		return nil, err
 	}
 
-	codeRec := &object.CodeRecord{
-		SideEffectRecord: object.SideEffectRecord{
-			Domain:  domain,
-			Request: request,
-		},
-		Code:        object.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPN, code),
+	codeRec := record.Code{
+		Domain:      domain,
+		Request:     request,
+		Code:        *object.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPN, code),
 		MachineType: machineType,
 	}
-	codeID := object.NewRecordIDFromRecord(m.PlatformCryptographyScheme, currentPN, codeRec)
+	virtRec := record.VirtualFromRec(codeRec)
+	hash := record.HashVirtual(m.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	codeID := insolar.NewID(currentPN, hash)
 	codeRef := insolar.NewReference(*domain.Record(), *codeID)
 
 	_, err = m.setBlob(ctx, code, *codeRef)
@@ -463,7 +480,7 @@ func (m *client) DeployCode(
 	}
 	id, err := m.setRecord(
 		ctx,
-		codeRec,
+		virtRec,
 		*codeRef,
 	)
 	if err != nil {
@@ -538,15 +555,16 @@ func (m *client) DeactivateObject(
 		instrumenter.end()
 	}()
 
+	rec := record.Deactivate{
+		Domain:    domain,
+		Request:   request,
+		PrevState: *obj.StateID(),
+	}
+	virtRec := record.VirtualFromRec(rec)
+
 	desc, err := m.sendUpdateObject(
 		ctx,
-		&object.DeactivationRecord{
-			SideEffectRecord: object.SideEffectRecord{
-				Domain:  domain,
-				Request: request,
-			},
-			PrevState: *obj.StateID(),
-		},
+		virtRec,
 		*obj.HeadRef(),
 		nil,
 	)
@@ -667,13 +685,16 @@ func (m *client) RegisterResult(
 		instrumenter.end()
 	}()
 
+	rec := record.Result{
+		Object:  *obj.Record(),
+		Request: request,
+		Payload: payload,
+	}
+	virtRec := record.VirtualFromRec(rec)
+
 	recid, err := m.setRecord(
 		ctx,
-		&object.ResultRecord{
-			Object:  *obj.Record(),
-			Request: request,
-			Payload: payload,
-		},
+		virtRec,
 		request,
 	)
 	return recid, err
@@ -709,21 +730,20 @@ func (m *client) activateObject(
 		return nil, err
 	}
 
+	rec := record.Activate{
+		Domain:      domain,
+		Request:     obj,
+		Memory:      *object.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPN, memory),
+		Image:       prototype,
+		IsPrototype: isPrototype,
+		Parent:      parent,
+		IsDelegate:  asDelegate,
+	}
+	virtRec := record.VirtualFromRec(rec)
+
 	o, err := m.sendUpdateObject(
 		ctx,
-		&object.ActivateRecord{
-			SideEffectRecord: object.SideEffectRecord{
-				Domain:  domain,
-				Request: obj,
-			},
-			StateRecord: object.StateRecord{
-				Memory:      object.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPN, memory),
-				Image:       prototype,
-				IsPrototype: isPrototype,
-			},
-			Parent:     parent,
-			IsDelegate: asDelegate,
-		},
+		virtRec,
 		obj,
 		memory,
 	)
@@ -732,21 +752,20 @@ func (m *client) activateObject(
 	}
 
 	var (
-		prevChild *insolar.ID
-		asType    *insolar.Reference
+		asType *insolar.Reference
 	)
+	child := record.Child{Ref: obj}
 	if parentDesc.ChildPointer() != nil {
-		prevChild = parentDesc.ChildPointer()
+		child.PrevChild = *parentDesc.ChildPointer()
 	}
 	if asDelegate {
 		asType = &prototype
 	}
+	virtChild := record.VirtualFromRec(child)
+
 	_, err = m.registerChild(
 		ctx,
-		&object.ChildRecord{
-			Ref:       obj,
-			PrevChild: prevChild,
-		},
+		virtChild,
 		parent,
 		obj,
 		asType,
@@ -789,19 +808,20 @@ func (m *client) updateObject(
 		return nil, errors.Wrap(err, "failed to update object")
 	}
 
+	rec := record.Amend{
+		Domain:      domain,
+		Request:     request,
+		Image:       *image,
+		IsPrototype: obj.IsPrototype(),
+		PrevState:   *obj.StateID(),
+	}
+	virtRec := record.VirtualFromRec(rec)
+
+	inslogger.FromContext(ctx).Debugf("^^^^^^  %v", rec)
+
 	o, err := m.sendUpdateObject(
 		ctx,
-		&object.AmendRecord{
-			SideEffectRecord: object.SideEffectRecord{
-				Domain:  domain,
-				Request: request,
-			},
-			StateRecord: object.StateRecord{
-				Image:       *image,
-				IsPrototype: obj.IsPrototype(),
-			},
-			PrevState: *obj.StateID(),
-		},
+		virtRec,
 		*obj.HeadRef(),
 		memory,
 	)
@@ -821,12 +841,16 @@ func (m *client) updateObject(
 
 func (m *client) setRecord(
 	ctx context.Context,
-	rec record.VirtualRecord,
+	rec record.Virtual,
 	target insolar.Reference,
 ) (*insolar.ID, error) {
+	data, err := rec.Marshal() // TODO check error
+	if err != nil {
+		panic("ERROR")
+	}
 	sender := messagebus.BuildSender(m.DefaultBus.Send, messagebus.RetryJetSender(m.JetStorage))
 	genericReply, err := sender(ctx, &message.SetRecord{
-		Record:    object.EncodeVirtual(rec),
+		Record:    data,
 		TargetRef: target,
 	}, nil)
 
@@ -872,15 +896,19 @@ func (m *client) setBlob(
 
 func (m *client) sendUpdateObject(
 	ctx context.Context,
-	rec record.VirtualRecord,
+	rec record.Virtual,
 	obj insolar.Reference,
 	memory []byte,
 ) (*reply.Object, error) {
+	data, err := rec.Marshal() // TODO check error
+	if err != nil {
+		panic("ERROR")
+	}
 	sender := messagebus.BuildSender(m.DefaultBus.Send, messagebus.RetryJetSender(m.JetStorage))
 	genericReply, err := sender(
 		ctx,
 		&message.UpdateObject{
-			Record: object.EncodeVirtual(rec),
+			Record: data,
 			Object: obj,
 			Memory: memory,
 		}, nil)
@@ -901,14 +929,18 @@ func (m *client) sendUpdateObject(
 
 func (m *client) registerChild(
 	ctx context.Context,
-	rec record.VirtualRecord,
+	rec record.Virtual,
 	parent insolar.Reference,
 	child insolar.Reference,
 	asType *insolar.Reference,
 ) (*insolar.ID, error) {
+	data, err := rec.Marshal() // TODO check error
+	if err != nil {
+		panic("ERROR")
+	}
 	sender := messagebus.BuildSender(m.DefaultBus.Send, messagebus.RetryJetSender(m.JetStorage))
 	genericReact, err := sender(ctx, &message.RegisterChild{
-		Record: object.EncodeVirtual(rec),
+		Record: data,
 		Parent: parent,
 		Child:  child,
 		AsType: asType,

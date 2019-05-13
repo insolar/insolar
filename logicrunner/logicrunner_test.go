@@ -1522,8 +1522,10 @@ func (r *One) CreateAllowance(member string) (error) {
 	s.NoError(err)
 
 	// Updating root domain with root member
-	_, err = am.UpdateObject(ctx, insolar.Reference{}, insolar.Reference{}, rootDomainDesc, goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}))
+	ss, err := am.UpdateObject(ctx, insolar.Reference{}, insolar.Reference{}, rootDomainDesc, goplugintestutils.CBORMarshal(s.T(), rootdomain.RootDomain{RootMember: *rootMemberRef}))
 	s.NoError(err)
+
+	_ = ss
 
 	cs := cryptography.NewKeyBoundCryptographyService(rootKey)
 	root := Caller{rootMemberRef.String(), lr, cs, s}

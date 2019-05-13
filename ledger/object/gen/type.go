@@ -34,6 +34,8 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 )
 
+// TODO delete generation
+
 type typedRecord struct {
 	TypeID   object.TypeID
 	TypeName string

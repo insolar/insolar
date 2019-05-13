@@ -8,6 +8,7 @@ option (gogoproto.goproto_getters_all) = false;
 
 message Genesis {
     option (gogoproto.face) = true;
+    bytes Hash = 1;
 }
 
 message Child {
@@ -51,7 +52,7 @@ message Code {
 }
 
 message Activate {
-    option (gogoproto.face) = true;
+//    option (gogoproto.face) = true;
     bytes  Domain      = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes  Request     = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes  Memory      = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];
@@ -62,7 +63,7 @@ message Activate {
 }
 
 message Amend {
-    option (gogoproto.face) = true;
+//    option (gogoproto.face) = true;
     bytes  Domain      = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes  Request     = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes  Memory      = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];
@@ -72,7 +73,8 @@ message Amend {
 }
 
 message Deactivate {
-    option (gogoproto.face) = true;
+//    option (gogoproto.face) = true;
+//    int32 polymorph = 16; // TODO for ALL (and start numeration from 20 for other fields)
     bytes  Domain    = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes  Request   = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes  PrevState = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID",        (gogoproto.nullable) = false];

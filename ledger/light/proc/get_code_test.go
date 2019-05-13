@@ -49,9 +49,9 @@ func TestGetCode_handle_RecordAccessorErrNotFound_Error(t *testing.T) {
 		},
 	}
 	ra := object.NewRecordAccessorMock(t)
-	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.MaterialRecord, error) {
+	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
 		require.Equal(t, *gc.Code.Record(), id)
-		return record.MaterialRecord{}, object.ErrNotFound
+		return record.Material{}, object.ErrNotFound
 	}
 	coo := jet.NewCoordinatorMock(t)
 	coo.NodeForJetFunc = func(ctx context.Context, id insolar.ID, rootPN insolar.PulseNumber, targetPN insolar.PulseNumber) (*insolar.Reference, error) {
@@ -89,9 +89,9 @@ func TestGetCode_handle_RecordAccessorErrNotFound(t *testing.T) {
 		},
 	}
 	ra := object.NewRecordAccessorMock(t)
-	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.MaterialRecord, error) {
+	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
 		require.Equal(t, *gc.Code.Record(), id)
-		return record.MaterialRecord{}, object.ErrNotFound
+		return record.Material{}, object.ErrNotFound
 	}
 	nodeRef := gen.Reference()
 	coo := jet.NewCoordinatorMock(t)
@@ -133,9 +133,9 @@ func TestGetCode_handle_RecordAccessorError(t *testing.T) {
 		},
 	}
 	ra := object.NewRecordAccessorMock(t)
-	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.MaterialRecord, error) {
+	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
 		require.Equal(t, *gc.Code.Record(), id)
-		return record.MaterialRecord{}, errors.New("test error")
+		return record.Material{}, errors.New("test error")
 	}
 	gc.Dep.RecordAccessor = ra
 	ctx := context.Background()
@@ -157,9 +157,9 @@ func TestGetCode_handle_CastError(t *testing.T) {
 		},
 	}
 	ra := object.NewRecordAccessorMock(t)
-	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.MaterialRecord, error) {
+	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
 		require.Equal(t, *gc.Code.Record(), id)
-		return record.MaterialRecord{}, nil
+		return record.Material{}, nil
 	}
 	gc.Dep.RecordAccessor = ra
 	ctx := context.Background()
@@ -182,13 +182,19 @@ func TestGetCode_handle_AccessorErrNotFound_Error(t *testing.T) {
 	}
 	codeID := gen.ID()
 	ra := object.NewRecordAccessorMock(t)
-	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.MaterialRecord, error) {
+	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
 		require.Equal(t, *gc.Code.Record(), id)
-		return record.MaterialRecord{
-			Record: &object.CodeRecord{
-				Code: &codeID,
+		// TODO maybe helper for this
+		rec := record.Material{
+			Virtual: &record.Virtual{
+				Union: &record.Virtual_Code{
+					Code: &record.Code{
+						Code: codeID,
+					},
+				},
 			},
-		}, nil
+		}
+		return rec, nil
 	}
 	acc := blob.NewAccessorMock(t)
 	acc.ForIDFunc = func(ctx context.Context, id insolar.ID) (blob.Blob, error) {
@@ -223,13 +229,19 @@ func TestGetCode_handle_AccessorErrNotFound(t *testing.T) {
 	}
 	codeID := gen.ID()
 	ra := object.NewRecordAccessorMock(t)
-	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.MaterialRecord, error) {
+	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
 		require.Equal(t, *gc.Code.Record(), id)
-		return record.MaterialRecord{
-			Record: &object.CodeRecord{
-				Code: &codeID,
+		// TODO maybe helper for this
+		rec := record.Material{
+			Virtual: &record.Virtual{
+				Union: &record.Virtual_Code{
+					Code: &record.Code{
+						Code: codeID,
+					},
+				},
 			},
-		}, nil
+		}
+		return rec, nil
 	}
 	acc := blob.NewAccessorMock(t)
 	acc.ForIDFunc = func(ctx context.Context, id insolar.ID) (blob.Blob, error) {
@@ -270,13 +282,19 @@ func TestGetCode_handle_AccessorError(t *testing.T) {
 	}
 	codeID := gen.ID()
 	ra := object.NewRecordAccessorMock(t)
-	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.MaterialRecord, error) {
+	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
 		require.Equal(t, *gc.Code.Record(), id)
-		return record.MaterialRecord{
-			Record: &object.CodeRecord{
-				Code: &codeID,
+		// TODO maybe helper for this
+		rec := record.Material{
+			Virtual: &record.Virtual{
+				Union: &record.Virtual_Code{
+					Code: &record.Code{
+						Code: codeID,
+					},
+				},
 			},
-		}, nil
+		}
+		return rec, nil
 	}
 	acc := blob.NewAccessorMock(t)
 	acc.ForIDFunc = func(ctx context.Context, id insolar.ID) (blob.Blob, error) {
@@ -305,14 +323,20 @@ func TestGetCode_handle(t *testing.T) {
 	}
 	codeID := gen.ID()
 	ra := object.NewRecordAccessorMock(t)
-	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.MaterialRecord, error) {
+	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
 		require.Equal(t, *gc.Code.Record(), id)
-		return record.MaterialRecord{
-			Record: &object.CodeRecord{
-				Code:        &codeID,
-				MachineType: 42,
+		// TODO maybe helper for this
+		rec := record.Material{
+			Virtual: &record.Virtual{
+				Union: &record.Virtual_Code{
+					Code: &record.Code{
+						Code:        codeID,
+						MachineType: 42,
+					},
+				},
 			},
-		}, nil
+		}
+		return rec, nil
 	}
 	acc := blob.NewAccessorMock(t)
 	acc.ForIDFunc = func(ctx context.Context, id insolar.ID) (blob.Blob, error) {

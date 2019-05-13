@@ -16,20 +16,14 @@
 
 package object
 
-import (
-	"io"
-
-	"github.com/insolar/insolar/insolar"
-)
-
 // ChildRecord is a child activation record. Its used for children iterating.
-type ChildRecord struct {
-	PrevChild *insolar.ID
+// type ChildRecord struct {
+// 	PrevChild *insolar.ID
+//
+// 	Ref insolar.Reference // Reference to the child's head.
+// }
 
-	Ref insolar.Reference // Reference to the child's head.
-}
-
-// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-func (r *ChildRecord) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(EncodeVirtual(r))
-}
+// // WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
+// func (r *ChildRecord) WriteHashData(w io.Writer) (int, error) {
+// 	return w.Write(EncodeVirtual(r))
+// }

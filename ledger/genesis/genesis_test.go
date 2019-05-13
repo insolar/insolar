@@ -20,22 +20,41 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/stretchr/testify/require"
 )
 
+// TODO check it test again
 func TestGenesisRecordEncodeDecode(t *testing.T) {
-	recIn := &object.GenesisRecord{}
-	recIn = recIn.Init()
+	// recIn := &object.GenesisRecord{}
+	// recIn = recIn.Init()
 
-	b := object.EncodeVirtual(recIn)
-	require.Equal(t, "00000064a16d5669727475616c5265636f726441ac", hex.EncodeToString(b),
+	genIn := record.Genesis{
+		Hash: insolar.GenesisRecord,
+	}
+
+	virtGenIn := record.VirtualFromRec(genIn)
+
+	data, err := virtGenIn.Marshal()
+	require.NoError(t, err)
+
+	// b := object.EncodeVirtual(recIn)
+	require.Equal(t, "aa06030a01ac", hex.EncodeToString(data),
 		"genesis binary representation always the same")
 
-	recOut, err := object.DecodeVirtual(b)
+	virtGenOut := record.Virtual{}
+	err = virtGenOut.Unmarshal(data)
 	require.NoError(t, err, "genesis record decode w/o error")
-	require.Equal(t, recIn, recOut, "encode-decode-encode gives the same struct")
 
-	b2 := object.EncodeVirtual(recOut)
-	require.Equal(t, b, b2, "encode-decode-encode gives the same binary result")
+	genOut := record.Unwrap(&virtGenOut)
+
+	require.Equal(t, &genIn, genOut, "encode-decode-encode gives the same struct")
+
+	// recOut, err := object.DecodeVirtual(b)
+	// require.NoError(t, err, "genesis record decode w/o error")
+	// require.Equal(t, recIn, recOut, "encode-decode-encode gives the same struct")
+	//
+	// b2 := object.EncodeVirtual(recOut)
+	// require.Equal(t, b, b2, "encode-decode-encode gives the same binary result")
 }

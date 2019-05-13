@@ -23,6 +23,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/stretchr/testify/assert"
@@ -38,7 +39,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
@@ -268,10 +268,13 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	pulseAccessor.LatestMock.Return(*insolar.GenesisPulse, nil)
 
 	var parcel insolar.Parcel = &message.Parcel{PulseNumber: 123987}
-	resRecord := object.RequestRecord{
+	resRecord := record.Request{
 		Parcel: message.ParcelToBytes(parcel),
 	}
-	finalResponse := &reply.Request{Record: object.EncodeVirtual(&resRecord)}
+	virtRec := record.VirtualFromRec(resRecord)
+	data, err := virtRec.Marshal()
+	require.NoError(s.T(), err)
+	finalResponse := &reply.Request{Record: data}
 
 	mb := testutils.NewMessageBusMock(s.T())
 	mb.SendFunc = func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {

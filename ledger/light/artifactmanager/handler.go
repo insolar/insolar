@@ -51,7 +51,7 @@ import (
 type MessageHandler struct {
 	RecentStorageProvider      recentstorage.Provider             `inject:""`
 	Bus                        insolar.MessageBus                 `inject:""`
-	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
+	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""` // TODO rename to PCS
 	JetCoordinator             jet.Coordinator                    `inject:""`
 	CryptographyService        insolar.CryptographyService        `inject:""`
 	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
@@ -285,30 +285,34 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 
 func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.SetRecord)
-	virtRec, err := object.DecodeVirtual(msg.Record)
+	virtRec := record.Virtual{}
+	err := virtRec.Unmarshal(msg.Record)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't deserialize record")
 	}
 	jetID := jetFromContext(ctx)
 
-	calculatedID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), virtRec)
+	hash := record.HashVirtual(h.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	calculatedID := insolar.NewID(parcel.Pulse(), hash)
 
-	switch r := virtRec.(type) {
-	case object.Request:
+	// TODO refactor this (r.Request.... etc)
+	switch r := virtRec.Union.(type) {
+	case *record.Virtual_Request:
 		if h.RecentStorageProvider.Count() > h.conf.PendingRequestsLimit {
 			return &reply.Error{ErrType: reply.ErrTooManyPendingRequests}, nil
 		}
 		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		recentStorage.AddPendingRequest(ctx, r.GetObject(), *calculatedID)
-	case *object.ResultRecord:
+		recentStorage.AddPendingRequest(ctx, r.Request.GetObject(), *calculatedID)
+	case *record.Virtual_Result:
 		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
+		recentStorage.RemovePendingRequest(ctx, r.Result.Object, *r.Result.Request.Record())
 	}
 
-	id := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), virtRec)
-	rec := record.MaterialRecord{
-		Record: virtRec,
-		JetID:  insolar.JetID(jetID),
+	hash = record.HashVirtual(h.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	id := insolar.NewID(parcel.Pulse(), hash)
+	rec := record.Material{
+		Virtual: &virtRec,
+		JetID:   insolar.JetID(jetID),
 	}
 
 	err = h.RecordModifier.Set(ctx, *id, rec)
@@ -504,12 +508,13 @@ func (h *MessageHandler) handleGetChildren(
 			return nil, errors.New("failed to retrieve children")
 		}
 
-		virtRec := rec.Record
-		childRec, ok := virtRec.(*object.ChildRecord)
+		virtRec := rec.Virtual
+		concrete := record.Unwrap(virtRec)
+		childRec, ok := concrete.(*record.Child)
 		if !ok {
 			return nil, errors.New("failed to retrieve children")
 		}
-		currentChild = childRec.PrevChild
+		currentChild = &childRec.PrevChild
 
 		// Skip records later than specified pulse.
 		recPulse := childRec.Ref.Record().Pulse()
@@ -530,15 +535,21 @@ func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel insolar.Pa
 		return nil, errors.Wrap(err, "failed to fetch request")
 	}
 
-	virtRec := rec.Record
-	req, ok := virtRec.(*object.RequestRecord)
+	virtRec := rec.Virtual
+	concrete := record.Unwrap(virtRec)
+	_, ok := concrete.(*record.Request)
 	if !ok {
 		return nil, errors.New("failed to decode request")
 	}
 
+	data, err := virtRec.Marshal() // TODO check error
+	if err != nil {
+		panic("ERROR")
+	}
+
 	rep := reply.Request{
 		ID:     msg.Request,
-		Record: object.EncodeVirtual(req),
+		Record: data,
 	}
 
 	return &rep, nil
@@ -568,11 +579,13 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 		"pulse":  parcel.Pulse(),
 	})
 
-	virtRec, err := object.DecodeVirtual(msg.Record)
+	virtRec := record.Virtual{}
+	err := virtRec.Unmarshal(msg.Record)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't deserialize record")
 	}
-	state, ok := virtRec.(object.State)
+	concreteRec := record.Unwrap(&virtRec)
+	state, ok := concreteRec.(record.State)
 	if !ok {
 		return nil, errors.New("wrong object state record")
 	}
@@ -588,10 +601,11 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 	}
 
 	switch s := state.(type) {
-	case *object.ActivateRecord:
-		s.Memory = calculatedID
-	case *object.AmendRecord:
-		s.Memory = calculatedID
+	case record.Activate:
+		s.Memory = *calculatedID
+	case record.Amend:
+		s.Memory = *calculatedID
+		inslogger.FromContext(ctx).Debugf("&&&&&&  %v", s)
 	}
 
 	h.IDLocker.Lock(msg.Object.Record())
@@ -600,9 +614,9 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 	idx, err := h.IndexStorage.ForID(ctx, *msg.Object.Record())
 	// No index on our node.
 	if err == object.ErrIndexNotFound {
-		if state.ID() == object.StateActivation {
+		if state.ID() == record.StateActivation {
 			// We are activating the object. There is no index for it anywhere.
-			idx = object.Lifeline{State: object.StateUndefined}
+			idx = object.Lifeline{State: record.StateUndefined}
 		} else {
 			logger.Debug("failed to fetch index (fetching from heavy)")
 			// We are updating object. Index should be on the heavy executor.
@@ -623,7 +637,8 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 	}
 
-	recID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), virtRec)
+	hash := record.HashVirtual(h.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	recID := insolar.NewID(parcel.Pulse(), hash)
 
 	// Index exists and latest record id does not match (preserving chain consistency).
 	// For the case when vm can't save or send result to another vm and it tries to update the same record again
@@ -631,10 +646,11 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 		return nil, errors.New("invalid state record")
 	}
 
-	id := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), virtRec)
-	rec := record.MaterialRecord{
-		Record: virtRec,
-		JetID:  insolar.JetID(jetID),
+	hash = record.HashVirtual(h.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	id := insolar.NewID(parcel.Pulse(), hash)
+	rec := record.Material{
+		Virtual: &virtRec,
+		JetID:   insolar.JetID(jetID),
 	}
 
 	err = h.RecordModifier.Set(ctx, *id, rec)
@@ -647,8 +663,8 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 	}
 	idx.LatestState = id
 	idx.State = state.ID()
-	if state.ID() == object.StateActivation {
-		idx.Parent = state.(*object.ActivateRecord).Parent
+	if state.ID() == record.StateActivation {
+		idx.Parent = state.(*record.Activate).Parent
 	}
 
 	idx.LatestUpdate = parcel.Pulse()
@@ -676,11 +692,14 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 
 	msg := parcel.Message().(*message.RegisterChild)
 	jetID := jetFromContext(ctx)
-	r, err := object.DecodeVirtual(msg.Record)
+
+	virtRec := record.Virtual{}
+	err := virtRec.Unmarshal(msg.Record)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't deserialize record")
 	}
-	childRec, ok := r.(*object.ChildRecord)
+	concreteRec := record.Unwrap(&virtRec)
+	childRec, ok := concreteRec.(*record.Child)
 	if !ok {
 		return nil, errors.New("wrong child record")
 	}
@@ -705,7 +724,8 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 		return nil, err
 	}
 
-	recID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), childRec)
+	hash := record.HashVirtual(h.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	recID := insolar.NewID(parcel.Pulse(), hash)
 
 	// Children exist and pointer does not match (preserving chain consistency).
 	// For the case when vm can't save or send result to another vm and it tries to update the same record again
@@ -713,16 +733,17 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 		return nil, errors.New("invalid child record")
 	}
 
-	child = object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), childRec)
-	rec := record.MaterialRecord{
-		Record: childRec,
-		JetID:  insolar.JetID(jetID),
+	hash = record.HashVirtual(h.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	child = insolar.NewID(parcel.Pulse(), hash)
+	rec := record.Material{
+		Virtual: &virtRec,
+		JetID:   insolar.JetID(jetID),
 	}
 
 	err = h.RecordModifier.Set(ctx, *child, rec)
 
 	if err == object.ErrOverride {
-		logger.WithField("type", fmt.Sprintf("%T", r)).Warn("set record override (#2)")
+		logger.WithField("type", fmt.Sprintf("%T", virtRec)).Warn("set record override (#2)")
 		child = recID
 	} else if err != nil {
 		return nil, errors.Wrap(err, "can't save record into storage")
@@ -762,14 +783,14 @@ func (h *MessageHandler) handleGetObjectIndex(ctx context.Context, parcel insola
 	return &reply.ObjectIndex{Index: buf}, nil
 }
 
-func validateState(old object.StateID, new object.StateID) error {
-	if old == object.StateDeactivation {
+func validateState(old record.StateID, new record.StateID) error {
+	if old == record.StateDeactivation {
 		return ErrObjectDeactivated
 	}
-	if old == object.StateUndefined && new != object.StateActivation {
+	if old == record.StateUndefined && new != record.StateActivation {
 		return errors.New("object is not activated")
 	}
-	if old != object.StateUndefined && new == object.StateActivation {
+	if old != record.StateUndefined && new == record.StateActivation {
 		return errors.New("object is already activated")
 	}
 	return nil

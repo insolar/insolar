@@ -103,10 +103,11 @@ func convertBlobs(blobs []blob.Blob) [][]byte {
 	return res
 }
 
-func convertRecords(records []record.MaterialRecord) [][]byte {
+func convertRecords(records []record.Material) [][]byte {
 	res := make([][]byte, len(records))
 	for i, r := range records {
-		res[i] = object.EncodeMaterial(r)
+		data, _ := r.Marshal() // TODO process err
+		res[i] = data
 	}
 	return res
 }

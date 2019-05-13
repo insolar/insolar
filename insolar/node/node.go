@@ -17,6 +17,7 @@
 package node
 
 import (
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -91,6 +92,7 @@ func (a *Storage) InRole(pulse insolar.PulseNumber, role insolar.StaticRole) ([]
 
 	nodes, ok := a.nodes[pulse]
 	if !ok {
+		fmt.Println("666666") // TODO delete
 		return nil, ErrNoNodes
 	}
 	var inRole []insolar.Node
