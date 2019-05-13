@@ -1,6 +1,9 @@
 host:
   transport:
     address: 127.0.0.1:53837
+# Uncomment this section to disable consensus
+#service:
+#  consensusenabled: false
 ledger:
   storage:
     datadirectory: "{{ .BaseDir }}/data"
