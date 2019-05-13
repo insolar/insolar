@@ -391,6 +391,7 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsgForOneSend(t *testing.T
 	// reply to messages
 	for i := 0; i < count; i++ {
 		go func() {
+			time.Sleep(time.Millisecond * 5)
 			_, _ = handler(msg)
 		}()
 	}
