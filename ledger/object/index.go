@@ -21,6 +21,7 @@ type IndexModifier interface {
 	SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error
 	SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error
 	SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error
+	SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error
 }
 
 type IndexStateModifier interface {
@@ -131,6 +132,23 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 func (i *InMemoryIndex) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error {
 	b := i.getBucket(ctx, pn, objID)
 	b.setResult(resID)
+
+	return nil
+}
+
+func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error {
+	i.bucketsLock.Lock()
+	defer i.bucketsLock.Unlock()
+
+	bucks, ok := i.buckets[pn]
+	if !ok {
+		bucks = map[insolar.ID]*LockedIndexBucket{}
+		i.buckets[pn] = bucks
+	}
+
+	bucks[bucket.ObjID] = &LockedIndexBucket{
+		bucket: bucket,
+	}
 
 	return nil
 }
