@@ -875,14 +875,14 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 		}
 	}()
 
-	for id, meta := range msg.HotIndexes {
+	for _, meta := range msg.HotIndexes {
 		decodedIndex, err := object.DecodeIndex(meta.Index)
 		if err != nil {
 			logger.Error(err)
 			continue
 		}
 
-		err = h.Index.SetLifeline(ctx, parcel.Pulse(), id, decodedIndex)
+		err = h.Index.SetLifeline(ctx, parcel.Pulse(), meta.ObjID, decodedIndex)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to set lifeline")
 		}

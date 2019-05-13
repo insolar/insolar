@@ -342,6 +342,22 @@ type LifelineDB struct {
 	db   store.DB
 }
 
+func (i *LifelineDB) LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
+	panic("implement me")
+}
+
+func (i *LifelineDB) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error {
+	panic("implement me")
+}
+
+func (i *LifelineDB) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error {
+	panic("implement me")
+}
+
+func (i *LifelineDB) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error {
+	panic("implement me")
+}
+
 type lifelineKey insolar.ID
 
 func (k lifelineKey) Scope() store.Scope {

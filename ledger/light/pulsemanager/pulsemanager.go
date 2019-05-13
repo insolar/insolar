@@ -67,7 +67,6 @@ type PulseManager struct {
 	JetAccessor jet.Accessor `inject:""`
 	JetModifier jet.Modifier `inject:""`
 
-	IndexReplicaModifier object.IndexBucketModifier
 	IndexReplicaAccessor object.IndexBucketAccessor
 
 	NodeSetter node.Modifier `inject:""`
@@ -126,7 +125,6 @@ func NewPulseManager(
 	pulseShifter pulse.Shifter,
 	recCleaner object.RecordCleaner,
 	recSyncAccessor object.RecordCollectionAccessor,
-	idxReplicaModifier object.IndexBucketModifier,
 	idxReplicaAccessor object.IndexBucketAccessor,
 	lightToHeavySyncer replication.LightReplicator,
 ) *PulseManager {
@@ -146,7 +144,6 @@ func NewPulseManager(
 		RecCleaner:           recCleaner,
 		RecSyncAccessor:      recSyncAccessor,
 		IndexReplicaAccessor: idxReplicaAccessor,
-		IndexReplicaModifier: idxReplicaModifier,
 		LightReplicator:      lightToHeavySyncer,
 	}
 	return pm
@@ -257,22 +254,32 @@ func (m *PulseManager) createDrop(
 func (m *PulseManager) getExecutorHotData(
 	ctx context.Context,
 	jetID insolar.JetID,
-	pulse insolar.PulseNumber,
+	currentPN insolar.PulseNumber,
 	drop *drop.Drop,
 	dropSerialized []byte,
 ) (*message.HotData, error) {
 	ctx, span := instracer.StartSpan(ctx, "pulse.prepare_hot_data")
 	defer span.End()
 
-	hotIndexes := []message.HotIndex{}
+	var hotIndexes []message.HotIndex
 	pendingRequests := map[insolar.ID]recentstorage.PendingObjectContext{}
 
-	bucks := m.IndexReplicaAccessor.ForPNAndJet(ctx, pulse, jetID)
+	bucks := m.IndexReplicaAccessor.ForPNAndJet(ctx, currentPN, jetID)
+	limitPN, err := m.PulseCalculator.Backwards(ctx, currentPN, m.options.lightChainLimit)
+	if err == pulse.ErrNotFound {
+		limitPN = *insolar.GenesisPulse
+	} else if err != nil {
+		inslogger.FromContext(ctx).Errorf("failed to fetch limit %v", err)
+		return nil, err
+	}
 
 	for _, meta := range bucks {
 		encoded, err := meta.Lifeline.Marshal()
 		if err != nil {
 			inslogger.FromContext(ctx).WithField("id", meta.ObjID.DebugString()).Error("failed to marshal lifeline")
+			continue
+		}
+		if meta.LifelineLastUsed < limitPN.PulseNumber {
 			continue
 		}
 		hotIndexes = append(hotIndexes, message.HotIndex{
@@ -299,7 +306,7 @@ func (m *PulseManager) getExecutorHotData(
 
 	msg := &message.HotData{
 		Drop:            *drop,
-		PulseNumber:     pulse,
+		PulseNumber:     currentPN,
 		HotIndexes:      hotIndexes,
 		PendingRequests: pendingRequests,
 	}

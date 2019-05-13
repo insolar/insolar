@@ -159,7 +159,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) *TMPLedger {
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(networknode.NewNode(insolar.Reference{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
-	handler := artifactmanager.NewMessageHandler(index, &conf)
+	handler := artifactmanager.NewMessageHandler(index, index, &conf)
 	handler.JetStorage = js
 	handler.Nodes = ns
 	handler.Index = index
