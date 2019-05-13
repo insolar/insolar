@@ -161,7 +161,7 @@ func (h *Handler) handleGetDelegate(ctx context.Context, parcel insolar.Parcel) 
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch index for %v", msg.Head.Record()))
 	}
 
-	delegateRef, ok := idx.Delegates[msg.AsType]
+	delegateRef, ok := idx.DelegateByKey(msg.AsType)
 	if !ok {
 		return nil, errors.New("the object has no delegate for this type")
 	}

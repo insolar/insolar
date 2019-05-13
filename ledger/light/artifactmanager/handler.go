@@ -397,7 +397,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 		return nil, errors.Wrapf(err, "can't update lifeline")
 	}
 
-	delegateRef, ok := idx.Delegates[msg.AsType]
+	delegateRef, ok := idx.DelegateByKey(msg.AsType)
 	if !ok {
 		return nil, errors.New("the object has no delegate for this type")
 	}
@@ -748,7 +748,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 
 	idx.ChildPointer = child
 	if msg.AsType != nil {
-		idx.Delegates[*msg.AsType] = msg.Child
+		idx.AddDelegate(*msg.AsType, msg.Child)
 	}
 	idx.LatestUpdate = parcel.Pulse()
 	idx.JetID = insolar.JetID(jetID)

@@ -11,7 +11,7 @@ message IndexBucket {
 
     bytes ObjID = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     Lifeline Lifeline = 2 [(gogoproto.nullable) = true];
-    bytes LifelineLastUsed = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    uint32 LifelineLastUsed = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
     repeated bytes Requests = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
     repeated bytes Results = 5 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
 }

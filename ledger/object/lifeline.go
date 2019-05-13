@@ -164,6 +164,27 @@ func CloneIndex(idx Lifeline) Lifeline {
 	return idx
 }
 
+func (l *Lifeline) AddDelegate(key insolar.Reference, value insolar.Reference) {
+	for _, d := range l.Delegates {
+		if d.Key == key {
+			d.Value = value
+			return
+		}
+	}
+
+	l.Delegates = append(l.Delegates, LifelineDelegate{Key: key, Value: value})
+}
+
+func (l *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool) {
+	for _, d := range l.Delegates {
+		if d.Key == key {
+			return d.Value, true
+		}
+	}
+
+	return [64]byte{}, false
+}
+
 // LifelineStorageMemory is an in-indexStorage struct for index-storage.
 type LifelineStorageMemory struct {
 	jetIndexModifier store.JetIndexModifier

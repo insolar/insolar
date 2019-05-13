@@ -283,7 +283,7 @@ func (m *Scope) registerChild(
 
 	idx.ChildPointer = child
 	if asType != nil {
-		idx.Delegates[*asType] = obj
+		idx.AddDelegate(*asType, obj)
 	}
 	idx.LatestUpdate = m.PulseNumber
 	idx.JetID = insolar.JetID(jetID)
