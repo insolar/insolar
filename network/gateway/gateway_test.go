@@ -113,21 +113,11 @@ func TestSWitch(t *testing.T) {
 		ge.Run(ctx)
 		au := ge.Auther()
 
-		ret := func() (ret interface{}) {
-			defer func() { ret = recover() }()
-			au.GetCert(ctx, &cref)
-			return nil
-		}()
+		_, err := au.GetCert(ctx, &cref)
+		require.Error(t, err)
 
-		require.Equal(t, "GetCert() is not useable in this state", ret)
-
-		ret = func() (ret interface{}) {
-			defer func() { ret = recover() }()
-			au.ValidateCert(ctx, &certificate.Certificate{})
-			return nil
-		}()
-
-		require.Equal(t, "ValidateCert()  is not useable in this state", ret)
+		_, err = au.ValidateCert(ctx, &certificate.Certificate{})
+		require.Error(t, err)
 
 		ge.OnPulse(ctx, insolar.Pulse{})
 
