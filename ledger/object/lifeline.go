@@ -164,7 +164,7 @@ func CloneIndex(idx Lifeline) Lifeline {
 	return idx
 }
 
-func (l *Lifeline) AddDelegate(key insolar.Reference, value insolar.Reference) {
+func (l *Lifeline) SetDelegate(key insolar.Reference, value insolar.Reference) {
 	for _, d := range l.Delegates {
 		if d.Key == key {
 			d.Value = value

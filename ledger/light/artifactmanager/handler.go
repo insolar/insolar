@@ -748,7 +748,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 
 	idx.ChildPointer = child
 	if msg.AsType != nil {
-		idx.AddDelegate(*msg.AsType, msg.Child)
+		idx.SetDelegate(*msg.AsType, msg.Child)
 	}
 	idx.LatestUpdate = parcel.Pulse()
 	idx.JetID = insolar.JetID(jetID)

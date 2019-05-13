@@ -37,6 +37,10 @@ type IndexReplicaAccessor interface {
 	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []IndexBucket
 }
 
+type IndexReplicaModifier interface {
+	Clone(ctx context.Context, fromPN insolar.PulseNumber, toPN insolar.PulseNumber, from insolar.JetID, to insolar.JetID)
+}
+
 type LockedIndexBucket struct {
 	lifelineLock sync.RWMutex
 	requestLock  sync.RWMutex
