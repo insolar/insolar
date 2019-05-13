@@ -18,6 +18,7 @@ package configuration
 
 import (
 	"fmt"
+	"path/filepath"
 	"reflect"
 	"strings"
 
@@ -134,12 +135,36 @@ func NewHolder() *Holder {
 	holder.viper.AddConfigPath(".")
 	holder.viper.SetConfigType("yml")
 
-	holder.recurseCallInLeaf(holder.registerDefaultValue, cfg)
+	return holder.defaults()
+}
 
-	holder.viper.AutomaticEnv()
-	holder.viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
-	holder.viper.SetEnvPrefix("insolar")
-	return holder
+// NewHolderWithFilePaths creates new holder with possible configuration files paths.
+func NewHolderWithFilePaths(files ...string) *Holder {
+	cfg := NewConfiguration()
+	holder := &Holder{Configuration: cfg, viper: viper.New()}
+
+	holder.viper.SetConfigType("yml")
+	for _, f := range files {
+		dir, file := filepath.Split(f)
+		if len(dir) == 0 {
+			dir = "."
+		}
+		file = file[:len(file)-len(filepath.Ext(file))]
+
+		holder.viper.AddConfigPath(dir)
+		holder.viper.SetConfigName(file)
+	}
+
+	return holder.defaults()
+}
+
+func (h *Holder) defaults() *Holder {
+	h.recurseCallInLeaf(h.registerDefaultValue, h.Configuration)
+
+	h.viper.AutomaticEnv()
+	h.viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
+	h.viper.SetEnvPrefix("insolar")
+	return h
 }
 
 // Load method reads configuration from default file path
