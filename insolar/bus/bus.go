@@ -100,11 +100,6 @@ func (b *Bus) removeReplyChannel(ctx context.Context, id string, reply *lockedRe
 func (b *Bus) Send(ctx context.Context, msg *message.Message) (<-chan *message.Message, func()) {
 	id := watermill.NewUUID()
 	middleware.SetCorrelationID(id, msg)
-	err := b.pub.Publish(TopicOutgoing, msg)
-	if err != nil {
-		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
-		return nil, nil
-	}
 
 	reply := &lockedReply{
 		messages: make(chan *message.Message),
@@ -116,9 +111,15 @@ func (b *Bus) Send(ctx context.Context, msg *message.Message) (<-chan *message.M
 	}
 
 	b.repliesMutex.Lock()
-	defer b.repliesMutex.Unlock()
-
 	b.replies[id] = reply
+	b.repliesMutex.Unlock()
+
+	err := b.pub.Publish(TopicOutgoing, msg)
+	if err != nil {
+		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
+		done()
+		return nil, nil
+	}
 
 	go func() {
 		select {
