@@ -65,9 +65,8 @@ type Authorisation struct {
 }
 
 func (g *Authorisation) Run(ctx context.Context) {
-	panic("implement me")
 }
 
 func (g *Authorisation) GetState() insolar.NetworkState {
-	panic("implement me")
+	return insolar.AuthorizationNetworkState
 }
