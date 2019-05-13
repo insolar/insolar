@@ -42,6 +42,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr *LogicRunner) {
+	mb.ReRegister(insolar.TypeCallMethod, lr.FlowDispatcher.WrapBusHandle)
+	mb.ReRegister(insolar.TypeCallConstructor, lr.FlowDispatcher.WrapBusHandle)
+
+	mb.ReRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
+	mb.ReRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
+	mb.ReRegister(insolar.TypeExecutorResults, lr.FlowDispatcher.WrapBusHandle)
+}
+
 func byteRecorRef(b byte) insolar.Reference {
 	var ref insolar.Reference
 	ref[insolar.RecordRefSize-1] = b
