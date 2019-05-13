@@ -82,7 +82,7 @@ import (
 	"github.com/insolar/insolar/network/utils"
 )
 
-const deliverWatermillMsg = "ServiceNetwork.processIncome"
+const deliverWatermillMsg = "ServiceNetwork.processIncoming"
 
 var ack = []byte{1}
 
@@ -229,7 +229,7 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
 
-	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncome)
+	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
 	logger.Info("Service network started")
 	return nil
@@ -366,7 +366,10 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 		}
 		return nil, nil
 	}
-	msgBytes := MessageToBytes(msg)
+	msgBytes, err := messageToBytes(msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "error while converting message to bytes")
+	}
 	res, err := n.Controller.SendBytes(msg.Context(), node, deliverWatermillMsg, msgBytes)
 	if err != nil {
 		return nil, errors.Wrap(err, "error while sending watermillMsg to controller")
@@ -381,19 +384,26 @@ func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
 	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
 }
 
-func (n *ServiceNetwork) processIncome(ctx context.Context, args [][]byte) ([]byte, error) {
+func (n *ServiceNetwork) processIncoming(ctx context.Context, args [][]byte) ([]byte, error) {
+	logger := inslogger.FromContext(ctx)
 	if len(args) < 1 {
-		return nil, errors.New("need exactly one argument when n.processIncome()")
+		err := errors.New("need exactly one argument when n.processIncoming()")
+		logger.Error(err)
+		return nil, err
 	}
-	msg, err := DeserializeMessage(bytes.NewBuffer(args[0]))
+	msg, err := deserializeMessage(bytes.NewBuffer(args[0]))
 	if err != nil {
+		err = errors.Wrap(err, "error while deserialize msg from buffer")
+		logger.Error(err)
 		return nil, err
 	}
 	// TODO: check pulse here
 
 	err = n.Pub.Publish(bus.TopicIncoming, msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "error while publish msg to TopicIncoming")
+		err = errors.Wrap(err, "error while publish msg to TopicIncoming")
+		logger.Error(err)
+		return nil, err
 	}
 
 	return ack, nil

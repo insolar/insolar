@@ -57,33 +57,34 @@ import (
 	"io/ioutil"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
 )
 
-// SerializeMessage returns io.Reader on buffer with encoded message.Message (from watermill).
-func SerializeMessage(msg *message.Message) (io.Reader, error) {
+// serializeMessage returns io.Reader on buffer with encoded message.Message (from watermill).
+func serializeMessage(msg *message.Message) (io.Reader, error) {
 	buff := &bytes.Buffer{}
 	enc := gob.NewEncoder(buff)
 	err := enc.Encode(msg)
 	return buff, err
 }
 
-// DeserializeMessage returns decoded signed message.
-func DeserializeMessage(buff io.Reader) (*message.Message, error) {
+// deserializeMessage returns decoded signed message.
+func deserializeMessage(buff io.Reader) (*message.Message, error) {
 	var signed message.Message
 	enc := gob.NewDecoder(buff)
 	err := enc.Decode(&signed)
 	return &signed, err
 }
 
-// MessageToBytes deserialize a message.Message (from watermill) to bytes.
-func MessageToBytes(msg *message.Message) []byte {
-	reqBuff, err := SerializeMessage(msg)
+// messageToBytes deserialize a message.Message (from watermill) to bytes.
+func messageToBytes(msg *message.Message) ([]byte, error) {
+	reqBuff, err := serializeMessage(msg)
 	if err != nil {
-		panic("failed to serialize message: " + err.Error())
+		return nil, errors.Wrap(err, "failed to serialize message")
 	}
 	buf, err := ioutil.ReadAll(reqBuff)
 	if err != nil {
-		panic("failed to serialize message: " + err.Error())
+		return nil, errors.Wrap(err, "failed to read from buffer")
 	}
-	return buf
+	return buf, nil
 }
