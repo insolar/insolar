@@ -55,6 +55,7 @@ import (
 	"encoding/gob"
 	"fmt"
 	"math"
+	rand2 "math/rand"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -676,8 +677,20 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Re
 		lastPulse = *insolar.GenesisPulse
 	}
 
+	var permission Permission
 	if len(bootstrapRequest.Permission.ReconnectTo) == 0 {
-
+		code = Redirected
+		permission = bootstrapRequest.Permission
+		proc := platformpolicy.NewKeyProcessor()
+		key, err := proc.ExportPublicKeyBinary(bc.NodeKeeper.GetOrigin().PublicKey())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to export a public key")
+		}
+		permission.DiscoveryPublicKey = key
+		permission.ReconnectTo, err = bc.getRandActiveDiscoveryAddress()
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get an active discovery node")
+		}
 	}
 
 	return bc.Network.BuildResponse(ctx, request,
@@ -689,6 +702,7 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Re
 			UpdateSincePulse: lastPulse.PulseNumber,
 			// TODO: implement permissions
 			NetworkSize: len(bc.NodeKeeper.GetAccessor().GetActiveNodes()),
+			Permission:  permission,
 		}), nil
 }
 
@@ -736,12 +750,28 @@ func (bc *bootstrapper) getInactivenodes() []insolar.DiscoveryNode {
 
 func (bc *bootstrapper) checkPermissionSign(permission Permission) (bool, error) {
 	proc := platformpolicy.NewKeyProcessor()
-	key, err := proc.ImportPublicKeyBinary(permission.DiscoveryPublicKey)
+	discoveryKey, err := proc.ImportPublicKeyBinary(permission.DiscoveryPublicKey)
 	if err != nil {
-		return false, errors.Wrap(err, "Failed to import a pub key from permission")
+		return false, errors.Wrap(err, "Failed to import a discovery pub key from permission")
+	}
+	verified := bc.Cryptography.Verify(discoveryKey, insolar.SignatureFromBytes(permission.Signature), permission.RawBytes())
+	return verified, nil
+}
+
+func (bc *bootstrapper) getRandActiveDiscoveryAddress() (string, error) {
+	if len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) <= 1 {
+		return "", errors.New("couldn't find an active discovery")
 	}
 
-	bc.Cryptography.Verify(key, permission.Signature)
+	r := rand2.New(rand2.NewSource(time.Now().UnixNano()))
+
+	for {
+		index := r.Intn(len(bc.Certificate.GetDiscoveryNodes()))
+		node := bc.NodeKeeper.GetAccessor().GetActiveNode(*bc.Certificate.GetDiscoveryNodes()[index].GetNodeRef())
+		if node != nil {
+			return node.Address(), nil
+		}
+	}
 }
 
 func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(ctx context.Context, address string)) Bootstrapper {
