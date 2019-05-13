@@ -27,20 +27,21 @@ import (
 	"github.com/pkg/errors"
 )
 
-func storeIndexes(
+func storeIndexBuckets(
 	ctx context.Context,
 	indexes object.IndexModifier,
-	rawIndexes map[insolar.ID][]byte,
+	rawBuckets [][]byte,
 	pn insolar.PulseNumber,
 ) error {
-	for id, rwi := range rawIndexes {
-		idx, err := object.DecodeIndex(rwi)
+	for _, rwb := range rawBuckets {
+		buck := object.IndexBucket{}
+		err := buck.Unmarshal(rwb)
 		if err != nil {
 			inslogger.FromContext(ctx).Error(err)
 			continue
 		}
 
-		err = indexes.SetLifeline(ctx, pn, id, idx)
+		err = indexes.SetBucket(ctx, pn, buck)
 		if err != nil {
 			return errors.Wrapf(err, "heavyserver: index storing failed")
 		}

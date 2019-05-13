@@ -74,25 +74,31 @@ func (d *LightDataGatherer) ForPulseAndJet(
 	bls := d.blobsAccessor.ForPulse(ctx, jetID, pn)
 	records := d.recsAccessor.ForPulse(ctx, jetID, pn)
 
-	// indexes := d.indexReplicaAccessor.ForPNAndJet(ctx, pn, jetID)
+	indexes := d.indexReplicaAccessor.ForPNAndJet(ctx, pn, jetID)
 
 	return &message.HeavyPayload{
-		JetID:    jetID,
-		PulseNum: pn,
-		// Indexes:  convertIndexes(indexes),
-		Drop:    drop.MustEncode(&dr),
-		Blobs:   convertBlobs(bls),
-		Records: convertRecords(records),
+		JetID:        jetID,
+		PulseNum:     pn,
+		IndexBuckets: convertIndexBuckets(ctx, indexes),
+		Drop:         drop.MustEncode(&dr),
+		Blobs:        convertBlobs(bls),
+		Records:      convertRecords(records),
 	}, nil
 }
 
-// func convertIndexes(indexes map[insolar.ID]object.LifelineMeta) map[insolar.ID][]byte {
-// 	resIdx := map[insolar.ID][]byte{}
-// 	for id, idx := range indexes {
-// 		resIdx[id] = object.EncodeIndex(idx.Index)
-// 	}
-// 	return resIdx
-// }
+func convertIndexBuckets(ctx context.Context, buckets []object.IndexBucket) [][]byte {
+	convertedBucks := make([][]byte, len(buckets))
+	for _, buck := range buckets {
+		buff, err := buck.Marshal()
+		if err != nil {
+			inslogger.FromContext(ctx).Errorf("problems with marshaling bucket - %v", err)
+			continue
+		}
+		convertedBucks = append(convertedBucks, buff)
+	}
+
+	return convertedBucks
+}
 
 func convertBlobs(blobs []blob.Blob) [][]byte {
 	res := make([][]byte, len(blobs))
