@@ -25,29 +25,29 @@ var _ = math.Inf
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
-type LifelineRaw struct {
+type Lifeline struct {
 	LatestState         *github_com_insolar_insolar_insolar.ID         `protobuf:"bytes,1,opt,name=LatestState,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"LatestState,omitempty"`
 	LatestStateApproved *github_com_insolar_insolar_insolar.ID         `protobuf:"bytes,2,opt,name=LatestStateApproved,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"LatestStateApproved,omitempty"`
 	ChildPointer        *github_com_insolar_insolar_insolar.ID         `protobuf:"bytes,3,opt,name=ChildPointer,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ChildPointer,omitempty"`
 	Parent              github_com_insolar_insolar_insolar.Reference   `protobuf:"bytes,4,opt,name=Parent,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Parent"`
-	Delegates           []DelegateKeyValue                             `protobuf:"bytes,5,rep,name=Delegates,proto3" json:"Delegates"`
+	Delegates           []LifelineDelegate                             `protobuf:"bytes,5,rep,name=Delegates,proto3" json:"Delegates"`
 	State               StateID                                        `protobuf:"varint,6,opt,name=State,proto3,customtype=StateID" json:"State"`
 	LatestUpdate        github_com_insolar_insolar_insolar.PulseNumber `protobuf:"varint,7,opt,name=LatestUpdate,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"LatestUpdate"`
 	JetID               github_com_insolar_insolar_insolar.JetID       `protobuf:"bytes,8,opt,name=JetID,proto3,customtype=github.com/insolar/insolar/insolar.JetID" json:"JetID"`
 	LatestRequest       *github_com_insolar_insolar_insolar.ID         `protobuf:"bytes,9,opt,name=LatestRequest,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"LatestRequest,omitempty"`
 }
 
-func (m *LifelineRaw) Reset()      { *m = LifelineRaw{} }
-func (*LifelineRaw) ProtoMessage() {}
-func (*LifelineRaw) Descriptor() ([]byte, []int) {
+func (m *Lifeline) Reset()      { *m = Lifeline{} }
+func (*Lifeline) ProtoMessage() {}
+func (*Lifeline) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4ca0c51acb0e6740, []int{0}
 }
-func (m *LifelineRaw) XXX_Unmarshal(b []byte) error {
+func (m *Lifeline) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *LifelineRaw) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *Lifeline) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_LifelineRaw.Marshal(b, m, deterministic)
+		return xxx_messageInfo_Lifeline.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -57,41 +57,41 @@ func (m *LifelineRaw) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) 
 		return b[:n], nil
 	}
 }
-func (m *LifelineRaw) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_LifelineRaw.Merge(m, src)
+func (m *Lifeline) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Lifeline.Merge(m, src)
 }
-func (m *LifelineRaw) XXX_Size() int {
+func (m *Lifeline) XXX_Size() int {
 	return m.Size()
 }
-func (m *LifelineRaw) XXX_DiscardUnknown() {
-	xxx_messageInfo_LifelineRaw.DiscardUnknown(m)
+func (m *Lifeline) XXX_DiscardUnknown() {
+	xxx_messageInfo_Lifeline.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_LifelineRaw proto.InternalMessageInfo
+var xxx_messageInfo_Lifeline proto.InternalMessageInfo
 
-func (m *LifelineRaw) GetDelegates() []DelegateKeyValue {
+func (m *Lifeline) GetDelegates() []LifelineDelegate {
 	if m != nil {
 		return m.Delegates
 	}
 	return nil
 }
 
-type DelegateKeyValue struct {
+type LifelineDelegate struct {
 	Key   github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,1,opt,name=Key,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Key"`
 	Value github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,2,opt,name=Value,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Value"`
 }
 
-func (m *DelegateKeyValue) Reset()      { *m = DelegateKeyValue{} }
-func (*DelegateKeyValue) ProtoMessage() {}
-func (*DelegateKeyValue) Descriptor() ([]byte, []int) {
+func (m *LifelineDelegate) Reset()      { *m = LifelineDelegate{} }
+func (*LifelineDelegate) ProtoMessage() {}
+func (*LifelineDelegate) Descriptor() ([]byte, []int) {
 	return fileDescriptor_4ca0c51acb0e6740, []int{1}
 }
-func (m *DelegateKeyValue) XXX_Unmarshal(b []byte) error {
+func (m *LifelineDelegate) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *DelegateKeyValue) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *LifelineDelegate) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_DelegateKeyValue.Marshal(b, m, deterministic)
+		return xxx_messageInfo_LifelineDelegate.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -101,67 +101,67 @@ func (m *DelegateKeyValue) XXX_Marshal(b []byte, deterministic bool) ([]byte, er
 		return b[:n], nil
 	}
 }
-func (m *DelegateKeyValue) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DelegateKeyValue.Merge(m, src)
+func (m *LifelineDelegate) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_LifelineDelegate.Merge(m, src)
 }
-func (m *DelegateKeyValue) XXX_Size() int {
+func (m *LifelineDelegate) XXX_Size() int {
 	return m.Size()
 }
-func (m *DelegateKeyValue) XXX_DiscardUnknown() {
-	xxx_messageInfo_DelegateKeyValue.DiscardUnknown(m)
+func (m *LifelineDelegate) XXX_DiscardUnknown() {
+	xxx_messageInfo_LifelineDelegate.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_DelegateKeyValue proto.InternalMessageInfo
+var xxx_messageInfo_LifelineDelegate proto.InternalMessageInfo
 
 func init() {
-	proto.RegisterType((*LifelineRaw)(nil), "object.LifelineRaw")
-	proto.RegisterType((*DelegateKeyValue)(nil), "object.DelegateKeyValue")
+	proto.RegisterType((*Lifeline)(nil), "object.Lifeline")
+	proto.RegisterType((*LifelineDelegate)(nil), "object.LifelineDelegate")
 }
 
 func init() { proto.RegisterFile("ledger/object/lifeline.proto", fileDescriptor_4ca0c51acb0e6740) }
 
 var fileDescriptor_4ca0c51acb0e6740 = []byte{
-	// 468 bytes of a gzipped FileDescriptorProto
+	// 465 bytes of a gzipped FileDescriptorProto
 	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0xd3, 0x31, 0x6f, 0xd3, 0x40,
-	0x14, 0x00, 0x60, 0x1f, 0x89, 0x53, 0x7a, 0x49, 0x05, 0x3a, 0x96, 0x13, 0x42, 0xe7, 0xa8, 0x52,
-	0xa5, 0x0c, 0xd4, 0x41, 0x50, 0x31, 0x20, 0x16, 0x42, 0x54, 0x29, 0x6d, 0x04, 0xe1, 0x2a, 0x18,
-	0x58, 0x90, 0x9d, 0xbc, 0xb8, 0x46, 0x57, 0x5f, 0xb8, 0x9c, 0x41, 0xdd, 0xf8, 0x09, 0xfc, 0x04,
-	0x26, 0xc4, 0x0f, 0x61, 0xc8, 0x98, 0xb1, 0xea, 0x10, 0x11, 0x67, 0xe9, 0xd8, 0x9f, 0x80, 0x72,
-	0x67, 0x44, 0x52, 0x31, 0x44, 0x9e, 0xec, 0xbb, 0x7b, 0xef, 0xf3, 0xd3, 0x7b, 0x67, 0xfc, 0x40,
-	0xc0, 0x20, 0x02, 0xd5, 0x94, 0xe1, 0x47, 0xe8, 0xeb, 0xa6, 0x88, 0x87, 0x20, 0xe2, 0x04, 0xfc,
-	0x91, 0x92, 0x5a, 0x92, 0x8a, 0xdd, 0xbe, 0xbf, 0x1f, 0xc5, 0xfa, 0x34, 0x0d, 0xfd, 0xbe, 0x3c,
-	0x6b, 0x46, 0x32, 0x92, 0x4d, 0x73, 0x1c, 0xa6, 0x43, 0xb3, 0x32, 0x0b, 0xf3, 0x66, 0xd3, 0x76,
-	0x7f, 0xb9, 0xb8, 0xda, 0xcd, 0x25, 0x1e, 0x7c, 0x21, 0xaf, 0x71, 0xb5, 0x1b, 0x68, 0x18, 0xeb,
-	0x13, 0x1d, 0x68, 0xa0, 0xa8, 0x8e, 0x1a, 0xb5, 0xd6, 0xfe, 0x64, 0xe6, 0xa1, 0xcb, 0x99, 0xb7,
-	0xb7, 0x62, 0xc7, 0xc9, 0x58, 0x8a, 0x40, 0xdd, 0x7c, 0xfa, 0x9d, 0x36, 0x5f, 0x15, 0xc8, 0x07,
-	0x7c, 0x6f, 0x65, 0xf9, 0x62, 0x34, 0x52, 0xf2, 0x33, 0x0c, 0xe8, 0xad, 0x22, 0xf0, 0xff, 0x24,
-	0xf2, 0x06, 0xd7, 0x5e, 0x9e, 0xc6, 0x62, 0xd0, 0x93, 0x71, 0xa2, 0x41, 0xd1, 0x52, 0x11, 0x79,
-	0x8d, 0x20, 0x5d, 0x5c, 0xe9, 0x05, 0x0a, 0x12, 0x4d, 0xcb, 0x06, 0x3b, 0x98, 0xcc, 0x3c, 0xe7,
-	0x72, 0xe6, 0x3d, 0xdc, 0x00, 0xe3, 0x30, 0x04, 0x05, 0x49, 0x1f, 0x78, 0x6e, 0x90, 0xe7, 0x78,
-	0xbb, 0x0d, 0x02, 0xa2, 0x65, 0xed, 0xd4, 0xad, 0x97, 0x1a, 0xd5, 0xc7, 0xd4, 0xb7, 0xd3, 0xf2,
-	0xff, 0x1e, 0x1c, 0xc3, 0xf9, 0xbb, 0x40, 0xa4, 0xd0, 0x2a, 0x2f, 0x3f, 0xc5, 0xff, 0x25, 0x90,
-	0x3d, 0xec, 0xda, 0x51, 0x54, 0xea, 0xa8, 0xb1, 0xd3, 0xba, 0x93, 0x97, 0xb2, 0x65, 0x36, 0x3b,
-	0x6d, 0x6e, 0x4f, 0xc9, 0x7b, 0x5c, 0xb3, 0xcd, 0x79, 0x3b, 0x1a, 0x2c, 0xa3, 0xb7, 0x4c, 0xf4,
-	0xd3, 0x3c, 0xda, 0xdf, 0xa0, 0xf0, 0x5e, 0x2a, 0xc6, 0xf0, 0x2a, 0x3d, 0x0b, 0x41, 0xf1, 0x35,
-	0x8b, 0x1c, 0x62, 0xf7, 0x08, 0x74, 0xa7, 0x4d, 0x6f, 0x9b, 0x6e, 0x3c, 0xca, 0xd1, 0xc6, 0x06,
-	0xa8, 0xc9, 0xe3, 0x36, 0x9d, 0x9c, 0xe0, 0x1d, 0xeb, 0x72, 0xf8, 0x94, 0xc2, 0x58, 0xd3, 0xed,
-	0x22, 0xa3, 0x5a, 0x37, 0x9e, 0x95, 0xaf, 0xbe, 0x7b, 0xce, 0xee, 0x0f, 0x84, 0xef, 0xde, 0xec,
-	0x25, 0x39, 0xc4, 0xa5, 0x63, 0x38, 0xcf, 0xef, 0x70, 0xb1, 0x19, 0x2e, 0x01, 0x72, 0x84, 0x5d,
-	0x03, 0xe6, 0x97, 0xb6, 0x98, 0x64, 0x89, 0xd6, 0xc1, 0x74, 0xce, 0x9c, 0x8b, 0x39, 0x73, 0xae,
-	0xe7, 0x0c, 0x7d, 0xcd, 0x18, 0xfa, 0x99, 0x31, 0x34, 0xc9, 0x18, 0x9a, 0x66, 0x0c, 0xfd, 0xce,
-	0x18, 0xba, 0xca, 0x98, 0x73, 0x9d, 0x31, 0xf4, 0x6d, 0xc1, 0x9c, 0xe9, 0x82, 0x39, 0x17, 0x0b,
-	0xe6, 0x84, 0x15, 0xf3, 0xb3, 0x3e, 0xf9, 0x13, 0x00, 0x00, 0xff, 0xff, 0x53, 0xdd, 0x58, 0x58,
-	0x03, 0x04, 0x00, 0x00,
+	0x14, 0x00, 0x60, 0x1f, 0x89, 0xd3, 0xf6, 0x9a, 0x0a, 0x74, 0x2c, 0x27, 0x84, 0xce, 0x51, 0xa5,
+	0x4a, 0x19, 0xa8, 0x83, 0xa0, 0x62, 0x40, 0x2c, 0x84, 0xa8, 0x52, 0x4a, 0x04, 0xe1, 0x2a, 0x18,
+	0x58, 0x90, 0x9d, 0xbc, 0xb8, 0x46, 0x57, 0x5f, 0xb8, 0x9c, 0x91, 0xd8, 0xf8, 0x09, 0xfc, 0x04,
+	0x26, 0xc4, 0xdf, 0x60, 0xcb, 0x98, 0xb1, 0xea, 0x10, 0x11, 0x67, 0xe9, 0xd8, 0x9f, 0x80, 0x72,
+	0xe7, 0x8a, 0x24, 0xea, 0x10, 0x79, 0xb2, 0xef, 0xee, 0xbd, 0xcf, 0x4f, 0xef, 0x9d, 0xf1, 0x43,
+	0x01, 0xfd, 0x08, 0x54, 0x43, 0x86, 0x9f, 0xa1, 0xa7, 0x1b, 0x22, 0x1e, 0x80, 0x88, 0x13, 0xf0,
+	0x87, 0x4a, 0x6a, 0x49, 0x2a, 0x76, 0xfb, 0xc1, 0x61, 0x14, 0xeb, 0xb3, 0x34, 0xf4, 0x7b, 0xf2,
+	0xbc, 0x11, 0xc9, 0x48, 0x36, 0xcc, 0x71, 0x98, 0x0e, 0xcc, 0xca, 0x2c, 0xcc, 0x9b, 0x4d, 0xdb,
+	0xff, 0xe3, 0xe2, 0xed, 0x4e, 0x2e, 0x91, 0xb7, 0x78, 0xb7, 0x13, 0x68, 0x18, 0xe9, 0x53, 0x1d,
+	0x68, 0xa0, 0xa8, 0x86, 0xea, 0xd5, 0xe6, 0xe1, 0x78, 0xea, 0xa1, 0xcb, 0xa9, 0x77, 0xb0, 0x04,
+	0xc7, 0xc9, 0x48, 0x8a, 0x40, 0xad, 0x3f, 0xfd, 0x76, 0x8b, 0x2f, 0x0b, 0xe4, 0x13, 0xbe, 0xbf,
+	0xb4, 0x7c, 0x39, 0x1c, 0x2a, 0xf9, 0x15, 0xfa, 0xf4, 0x4e, 0x11, 0xf8, 0x36, 0x89, 0xbc, 0xc3,
+	0xd5, 0x57, 0x67, 0xb1, 0xe8, 0x77, 0x65, 0x9c, 0x68, 0x50, 0xb4, 0x54, 0x44, 0x5e, 0x21, 0x48,
+	0x07, 0x57, 0xba, 0x81, 0x82, 0x44, 0xd3, 0xb2, 0xc1, 0x8e, 0xc6, 0x53, 0xcf, 0xb9, 0x9c, 0x7a,
+	0x8f, 0x36, 0xc0, 0x38, 0x0c, 0x40, 0x41, 0xd2, 0x03, 0x9e, 0x1b, 0xe4, 0x05, 0xde, 0x69, 0x81,
+	0x80, 0x68, 0x51, 0x3b, 0x75, 0x6b, 0xa5, 0xfa, 0xee, 0x13, 0xea, 0xdb, 0x51, 0xf9, 0x37, 0x7d,
+	0xbf, 0x09, 0x68, 0x96, 0x17, 0x9f, 0xe2, 0xff, 0x13, 0xc8, 0x01, 0x76, 0xed, 0x28, 0x2a, 0x35,
+	0x54, 0xdf, 0x6b, 0xde, 0xcd, 0x4b, 0xd9, 0x32, 0x9b, 0xed, 0x16, 0xb7, 0xa7, 0xe4, 0x23, 0xae,
+	0xda, 0xe6, 0xbc, 0x1f, 0xf6, 0x17, 0xd1, 0x5b, 0x26, 0xfa, 0x59, 0x1e, 0xed, 0x6f, 0x50, 0x78,
+	0x37, 0x15, 0x23, 0x78, 0x93, 0x9e, 0x87, 0xa0, 0xf8, 0x8a, 0x45, 0x8e, 0xb1, 0x7b, 0x02, 0xba,
+	0xdd, 0xa2, 0xdb, 0xa6, 0x1b, 0x8f, 0x73, 0xb4, 0xbe, 0x01, 0x6a, 0xf2, 0xb8, 0x4d, 0x27, 0xa7,
+	0x78, 0xcf, 0xba, 0x1c, 0xbe, 0xa4, 0x30, 0xd2, 0x74, 0xa7, 0xc8, 0xa8, 0x56, 0x8d, 0xe7, 0xe5,
+	0xab, 0x9f, 0x9e, 0xb3, 0xff, 0x0b, 0xe1, 0x7b, 0xeb, 0xbd, 0x24, 0xc7, 0xb8, 0xf4, 0x1a, 0xbe,
+	0xe5, 0x77, 0xb8, 0xd8, 0x0c, 0x17, 0x00, 0x39, 0xc1, 0xee, 0x87, 0x40, 0xa4, 0x90, 0x5f, 0xda,
+	0x62, 0x92, 0x25, 0x9a, 0x47, 0x93, 0x19, 0x73, 0x2e, 0x66, 0xcc, 0xb9, 0x9e, 0x31, 0xf4, 0x3d,
+	0x63, 0xe8, 0x77, 0xc6, 0xd0, 0x38, 0x63, 0x68, 0x92, 0x31, 0xf4, 0x37, 0x63, 0xe8, 0x2a, 0x63,
+	0xce, 0x75, 0xc6, 0xd0, 0x8f, 0x39, 0x73, 0x26, 0x73, 0xe6, 0x5c, 0xcc, 0x99, 0x13, 0x56, 0xcc,
+	0x9f, 0xfa, 0xf4, 0x5f, 0x00, 0x00, 0x00, 0xff, 0xff, 0x9e, 0xeb, 0x1d, 0x23, 0x00, 0x04, 0x00,
+	0x00,
 }
 
-func (this *DelegateKeyValue) Equal(that interface{}) bool {
+func (this *LifelineDelegate) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*DelegateKeyValue)
+	that1, ok := that.(*LifelineDelegate)
 	if !ok {
-		that2, ok := that.(DelegateKeyValue)
+		that2, ok := that.(LifelineDelegate)
 		if ok {
 			that1 = &that2
 		} else {
@@ -181,18 +181,18 @@ func (this *DelegateKeyValue) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *LifelineRaw) GoString() string {
+func (this *Lifeline) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 13)
-	s = append(s, "&object.LifelineRaw{")
+	s = append(s, "&object.Lifeline{")
 	s = append(s, "LatestState: "+fmt.Sprintf("%#v", this.LatestState)+",\n")
 	s = append(s, "LatestStateApproved: "+fmt.Sprintf("%#v", this.LatestStateApproved)+",\n")
 	s = append(s, "ChildPointer: "+fmt.Sprintf("%#v", this.ChildPointer)+",\n")
 	s = append(s, "Parent: "+fmt.Sprintf("%#v", this.Parent)+",\n")
 	if this.Delegates != nil {
-		vs := make([]*DelegateKeyValue, len(this.Delegates))
+		vs := make([]*LifelineDelegate, len(this.Delegates))
 		for i := range vs {
 			vs[i] = &this.Delegates[i]
 		}
@@ -205,12 +205,12 @@ func (this *LifelineRaw) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *DelegateKeyValue) GoString() string {
+func (this *LifelineDelegate) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 6)
-	s = append(s, "&object.DelegateKeyValue{")
+	s = append(s, "&object.LifelineDelegate{")
 	s = append(s, "Key: "+fmt.Sprintf("%#v", this.Key)+",\n")
 	s = append(s, "Value: "+fmt.Sprintf("%#v", this.Value)+",\n")
 	s = append(s, "}")
@@ -224,7 +224,7 @@ func valueToGoStringLifeline(v interface{}, typ string) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("func(v %v) *%v { return &v } ( %#v )", typ, typ, pv)
 }
-func (m *LifelineRaw) Marshal() (dAtA []byte, err error) {
+func (m *Lifeline) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -234,7 +234,7 @@ func (m *LifelineRaw) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *LifelineRaw) MarshalTo(dAtA []byte) (int, error) {
+func (m *Lifeline) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -320,7 +320,7 @@ func (m *LifelineRaw) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *DelegateKeyValue) Marshal() (dAtA []byte, err error) {
+func (m *LifelineDelegate) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -330,7 +330,7 @@ func (m *DelegateKeyValue) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *DelegateKeyValue) MarshalTo(dAtA []byte) (int, error) {
+func (m *LifelineDelegate) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -363,7 +363,7 @@ func encodeVarintLifeline(dAtA []byte, offset int, v uint64) int {
 	dAtA[offset] = uint8(v)
 	return offset + 1
 }
-func (m *LifelineRaw) Size() (n int) {
+func (m *Lifeline) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -404,7 +404,7 @@ func (m *LifelineRaw) Size() (n int) {
 	return n
 }
 
-func (m *DelegateKeyValue) Size() (n int) {
+func (m *LifelineDelegate) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -430,16 +430,16 @@ func sovLifeline(x uint64) (n int) {
 func sozLifeline(x uint64) (n int) {
 	return sovLifeline(uint64((x << 1) ^ uint64((int64(x) >> 63))))
 }
-func (this *LifelineRaw) String() string {
+func (this *Lifeline) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&LifelineRaw{`,
+	s := strings.Join([]string{`&Lifeline{`,
 		`LatestState:` + fmt.Sprintf("%v", this.LatestState) + `,`,
 		`LatestStateApproved:` + fmt.Sprintf("%v", this.LatestStateApproved) + `,`,
 		`ChildPointer:` + fmt.Sprintf("%v", this.ChildPointer) + `,`,
 		`Parent:` + fmt.Sprintf("%v", this.Parent) + `,`,
-		`Delegates:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.Delegates), "DelegateKeyValue", "DelegateKeyValue", 1), `&`, ``, 1) + `,`,
+		`Delegates:` + strings.Replace(strings.Replace(fmt.Sprintf("%v", this.Delegates), "LifelineDelegate", "LifelineDelegate", 1), `&`, ``, 1) + `,`,
 		`State:` + fmt.Sprintf("%v", this.State) + `,`,
 		`LatestUpdate:` + fmt.Sprintf("%v", this.LatestUpdate) + `,`,
 		`JetID:` + fmt.Sprintf("%v", this.JetID) + `,`,
@@ -448,11 +448,11 @@ func (this *LifelineRaw) String() string {
 	}, "")
 	return s
 }
-func (this *DelegateKeyValue) String() string {
+func (this *LifelineDelegate) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&DelegateKeyValue{`,
+	s := strings.Join([]string{`&LifelineDelegate{`,
 		`Key:` + fmt.Sprintf("%v", this.Key) + `,`,
 		`Value:` + fmt.Sprintf("%v", this.Value) + `,`,
 		`}`,
@@ -467,7 +467,7 @@ func valueToStringLifeline(v interface{}) string {
 	pv := reflect.Indirect(rv).Interface()
 	return fmt.Sprintf("*%v", pv)
 }
-func (m *LifelineRaw) Unmarshal(dAtA []byte) error {
+func (m *Lifeline) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -490,10 +490,10 @@ func (m *LifelineRaw) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: LifelineRaw: wiretype end group for non-group")
+			return fmt.Errorf("proto: Lifeline: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: LifelineRaw: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: Lifeline: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -663,7 +663,7 @@ func (m *LifelineRaw) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Delegates = append(m.Delegates, DelegateKeyValue{})
+			m.Delegates = append(m.Delegates, LifelineDelegate{})
 			if err := m.Delegates[len(m.Delegates)-1].Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
@@ -798,7 +798,7 @@ func (m *LifelineRaw) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *DelegateKeyValue) Unmarshal(dAtA []byte) error {
+func (m *LifelineDelegate) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -821,10 +821,10 @@ func (m *DelegateKeyValue) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: DelegateKeyValue: wiretype end group for non-group")
+			return fmt.Errorf("proto: LifelineDelegate: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: DelegateKeyValue: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: LifelineDelegate: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:

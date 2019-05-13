@@ -80,18 +80,24 @@ import (
 // }
 
 // Lifeline represents meta information for record object.
-type Lifeline struct {
-	LatestState         *insolar.ID // Amend or activate record.
-	LatestStateApproved *insolar.ID // State approved by VM.
-	ChildPointer        *insolar.ID // Meta record about child activation.
-	Parent              insolar.Reference
-	Delegates           map[insolar.Reference]insolar.Reference
-	State               StateID
-	LatestUpdate        insolar.PulseNumber
-	JetID               insolar.JetID
-
-	LatestRequest *insolar.ID
-}
+// type Lifeline struct {
+// 	LatestState         *insolar.ID // Amend or activate record.
+// 	LatestStateApproved *insolar.ID // State approved by VM.
+// 	ChildPointer        *insolar.ID // Meta record about child activation.
+// 	Parent              insolar.Reference
+// 	//Delegates           map[insolar.Reference]insolar.Reference
+// 	Delegates    []LifelineDelegate
+// 	State        StateID
+// 	LatestUpdate insolar.PulseNumber
+// 	JetID        insolar.JetID
+//
+// 	LatestRequest *insolar.ID
+// }
+//
+// type LifelineDelegate struct {
+// 	Key   insolar.Reference
+// 	Value insolar.Reference
+// }
 
 // LifelineMeta holds additional info about Lifeline
 // It provides LastUsed pulse number
@@ -103,35 +109,12 @@ type LifelineMeta struct {
 
 // EncodeIndex converts lifeline index into binary format.
 func EncodeIndex(index Lifeline) []byte {
-	rwLfl := index.toRaw()
-	data, err := rwLfl.Marshal()
+	res, err := index.Marshal()
 	if err != nil {
-		panic("can't marshal lifeline")
+		panic(err)
 	}
 
-	return data
-}
-
-func (l *Lifeline) toRaw() LifelineRaw {
-	rawIdx := LifelineRaw{
-		LatestState:         l.LatestState,
-		LatestStateApproved: l.LatestStateApproved,
-		ChildPointer:        l.ChildPointer,
-		Parent:              l.Parent,
-		State:               l.State,
-		Delegates:           []DelegateKeyValue{},
-		LatestUpdate:        l.LatestUpdate,
-		JetID:               l.JetID,
-		LatestRequest:       l.LatestRequest,
-	}
-	for k, d := range l.Delegates {
-		rawIdx.Delegates = append(rawIdx.Delegates, DelegateKeyValue{
-			Key:   k,
-			Value: d,
-		})
-	}
-
-	return rawIdx
+	return res
 }
 
 // MustDecodeIndex converts byte array into lifeline index struct.
@@ -146,33 +129,29 @@ func MustDecodeIndex(buff []byte) (index Lifeline) {
 
 // DecodeIndex converts byte array into lifeline index struct.
 func DecodeIndex(buff []byte) (Lifeline, error) {
-	rawIdx := LifelineRaw{}
-	err := rawIdx.Unmarshal(buff)
-	if err != nil {
-		return Lifeline{}, nil
-	}
-
-	return rawIdx.toLifeline(), nil
+	lfl := Lifeline{}
+	err := lfl.Unmarshal(buff)
+	return lfl, err
 }
 
-func (m *LifelineRaw) toLifeline() Lifeline {
-	idx := Lifeline{
-		LatestState:         m.LatestState,
-		LatestStateApproved: m.LatestStateApproved,
-		ChildPointer:        m.ChildPointer,
-		Parent:              m.Parent,
-		State:               m.State,
-		Delegates:           map[insolar.Reference]insolar.Reference{},
-		LatestUpdate:        m.LatestUpdate,
-		JetID:               m.JetID,
-		LatestRequest:       m.LatestRequest,
-	}
-	for _, v := range m.Delegates {
-		idx.Delegates[v.Key] = v.Value
-	}
-
-	return idx
-}
+// func (m *LifelineRaw) toLifeline() Lifeline {
+// 	idx := Lifeline{
+// 		LatestState:         m.LatestState,
+// 		LatestStateApproved: m.LatestStateApproved,
+// 		ChildPointer:        m.ChildPointer,
+// 		Parent:              m.Parent,
+// 		State:               m.State,
+// 		Delegates:           map[insolar.Reference]insolar.Reference{},
+// 		LatestUpdate:        m.LatestUpdate,
+// 		JetID:               m.JetID,
+// 		LatestRequest:       m.LatestRequest,
+// 	}
+// 	for _, v := range m.Delegates {
+// 		idx.Delegates[v.Key] = v.Value
+// 	}
+//
+// 	return idx
+// }
 
 // CloneIndex returns copy of argument idx value.
 func CloneIndex(idx Lifeline) Lifeline {
@@ -192,13 +171,13 @@ func CloneIndex(idx Lifeline) Lifeline {
 	}
 
 	if idx.Delegates != nil {
-		cp := make(map[insolar.Reference]insolar.Reference)
+		cp := make([]LifelineDelegate, len(idx.Delegates))
 		for k, v := range idx.Delegates {
 			cp[k] = v
 		}
 		idx.Delegates = cp
 	} else {
-		idx.Delegates = map[insolar.Reference]insolar.Reference{}
+		idx.Delegates = []LifelineDelegate{}
 	}
 
 	return idx
@@ -383,7 +362,7 @@ func (i *LifelineDB) Set(ctx context.Context, id insolar.ID, index Lifeline) err
 	defer i.lock.Unlock()
 
 	if index.Delegates == nil {
-		index.Delegates = map[insolar.Reference]insolar.Reference{}
+		index.Delegates = []LifelineDelegate{}
 	}
 
 	return i.set(id, index)
