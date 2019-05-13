@@ -111,7 +111,7 @@ func (g *Base) Auther() network.Auther {
 
 // GetCert method returns node certificate by requesting sign from discovery nodes
 func (g *Base) GetCert(ctx context.Context, ref *insolar.Reference) (insolar.Certificate, error) {
-	return nil, errors.New("ValidateCert() in non active mode")
+	return nil, errors.New("GetCert() in non active mode")
 }
 
 // ValidateCert validates node certificate
