@@ -61,6 +61,8 @@ var (
 
 	pulsardConfigTmpl = "scripts/insolard/pulsar_template.yaml"
 	pulsardFileName   = withBaseDir("pulsar.yaml")
+
+	insolardDefaultsConfig = "scripts/insolard/defaults/insolard.yaml"
 )
 
 var (
@@ -132,7 +134,8 @@ func main() {
 	// process discovery nodes
 	for index, node := range genesisConf.DiscoveryNodes {
 		nodeIndex := index + 1
-		conf := configuration.NewConfiguration()
+
+		conf := newDefaultInsolardConfig()
 
 		conf.Host.Transport.Address = node.Host
 		conf.Host.Transport.Protocol = "TCP"
@@ -171,7 +174,8 @@ func main() {
 	for index, node := range genesisConf.Nodes {
 		nodeIndex := index + 1
 
-		conf := configuration.NewConfiguration()
+		conf := newDefaultInsolardConfig()
+
 		conf.Host.Transport.Address = node.Host
 		conf.Host.Transport.Protocol = "TCP"
 
@@ -248,6 +252,16 @@ func writeBootstrapInsolardConfig() {
 
 	err = createFileWithDir(bootstrapInsolardFileName, b.String())
 	check("Can't makeFileWithDir: "+bootstrapInsolardFileName, err)
+}
+
+var defaultInsloardConf *configuration.Configuration
+
+func newDefaultInsolardConfig() configuration.Configuration {
+	if defaultInsloardConf == nil {
+		holder := configuration.NewHolderWithFilePaths(insolardDefaultsConfig).MustInit(true)
+		defaultInsloardConf = &holder.Configuration
+	}
+	return *defaultInsloardConf
 }
 
 type pulsarConfigVars struct {
