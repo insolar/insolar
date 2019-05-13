@@ -48,112 +48,33 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package networkcoordinator
+package gateway
 
 import (
 	"context"
+	"errors"
 	"testing"
 
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/gateway"
-	testnetwork "github.com/insolar/insolar/testutils/network"
+	"github.com/insolar/insolar/testutils/network"
 
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/testutils"
-	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
-func TestNewNetworkCoordinator(t *testing.T) {
-	certificateManager := testutils.NewCertificateManagerMock(t)
-	contractRequester := testutils.NewContractRequesterMock(t)
-	messageBus := testutils.NewMessageBusMock(t)
+func mockCryptographyService(t *testing.T, ok bool) insolar.CryptographyService {
 	cs := testutils.NewCryptographyServiceMock(t)
-	nc, err := New()
-	require.NoError(t, err)
-	require.Equal(t, &NetworkCoordinator{}, nc)
-
-	cm := &component.Manager{}
-	cm.Inject(certificateManager, contractRequester, messageBus, cs, nc, testnetwork.NewGatewayerMock(t))
-	require.Equal(t, certificateManager, nc.CertificateManager)
-	require.Equal(t, contractRequester, nc.ContractRequester)
-	require.Equal(t, messageBus, nc.MessageBus)
-	require.Equal(t, cs, nc.CS)
-}
-
-func TestNetworkCoordinator_Start(t *testing.T) {
-	nc, err := New()
-	require.NoError(t, err)
-	nc.MessageBus = mockMessageBus(t, true, nil, nil)
-	ctx := context.Background()
-	err = nc.Start(ctx)
-	require.NoError(t, err)
-	require.NotNil(t, nc.realCoordinator)
-	require.NotNil(t, nc.zeroCoordinator)
-}
-
-func TestNetworkCoordinator_GetCoordinator_Zero(t *testing.T) {
-	nc, err := New()
-	require.NoError(t, err)
-	gw := testnetwork.NewGatewayerMock(t)
-	gw.GatewayFunc = func() (r network.Gateway) {
-		return &gateway.NoNetwork{}
-	}
-	nc.Gatewayer = gw
-	nc.MessageBus = mockMessageBus(t, true, nil, nil)
-	ctx := context.Background()
-	nc.Start(ctx)
-	crd := nc.getCoordinator()
-	require.Equal(t, nc.zeroCoordinator, crd)
-}
-
-func TestNetworkCoordinator_GetCoordinator_Real(t *testing.T) {
-	nc, err := New()
-	require.NoError(t, err)
-	gw := testnetwork.NewGatewayerMock(t)
-	gw.GatewayFunc = func() (r network.Gateway) {
-		return &gateway.Complete{}
-	}
-	nc.Gatewayer = gw
-	nc.MessageBus = mockMessageBus(t, true, nil, nil)
-	ctx := context.Background()
-	nc.Start(ctx)
-	crd := nc.getCoordinator()
-	require.Equal(t, nc.realCoordinator, crd)
-}
-
-func mockReply(t *testing.T) []byte {
-	node, err := insolar.MarshalArgs(struct {
-		PublicKey string
-		Role      insolar.StaticRole
-	}{
-		PublicKey: "test_node_public_key",
-		Role:      insolar.StaticRoleVirtual,
-	}, nil)
-	require.NoError(t, err)
-	return []byte(node)
-}
-
-func mockMessageBus(t *testing.T, ok bool, ref *insolar.Reference, discovery *insolar.Reference) *testutils.MessageBusMock {
-	mb := testutils.NewMessageBusMock(t)
-	mb.MustRegisterFunc = func(p insolar.MessageType, handler insolar.MessageHandler) {
-		require.Equal(t, p, insolar.TypeNodeSignRequest)
-	}
-	mb.SendFunc = func(p context.Context, msg insolar.Message, options *insolar.MessageSendOptions) (insolar.Reply, error) {
-		require.Equal(t, ref, msg.(*message.NodeSignPayload).NodeRef)
-		require.Equal(t, discovery, options.Receiver)
+	cs.SignFunc = func(data []byte) (*insolar.Signature, error) {
 		if ok {
-			return &reply.NodeSign{
-				Sign: []byte("test_sig"),
-			}, nil
+			sig := insolar.SignatureFromBytes([]byte("test_sig"))
+			return &sig, nil
 		}
 		return nil, errors.New("test_error")
 	}
-	return mb
+	return cs
 }
 
 func mockCertificateManager(t *testing.T, certNodeRef *insolar.Reference, discoveryNodeRef *insolar.Reference, unsignCertOk bool) *testutils.CertificateManagerMock {
@@ -205,14 +126,107 @@ func mockCertificateManager(t *testing.T, certNodeRef *insolar.Reference, discov
 	return cm
 }
 
-func mockCryptographyService(t *testing.T, ok bool) insolar.CryptographyService {
-	cs := testutils.NewCryptographyServiceMock(t)
-	cs.SignFunc = func(data []byte) (*insolar.Signature, error) {
+func mockMessageBus(t *testing.T, ok bool, ref *insolar.Reference, discovery *insolar.Reference) *testutils.MessageBusMock {
+	mb := testutils.NewMessageBusMock(t)
+	mb.MustRegisterFunc = func(p insolar.MessageType, handler insolar.MessageHandler) {
+		require.Equal(t, p, insolar.TypeNodeSignRequest)
+	}
+	mb.SendFunc = func(p context.Context, msg insolar.Message, options *insolar.MessageSendOptions) (insolar.Reply, error) {
+		require.Equal(t, ref, msg.(*message.NodeSignPayload).NodeRef)
+		require.Equal(t, discovery, options.Receiver)
 		if ok {
-			sig := insolar.SignatureFromBytes([]byte("test_sig"))
-			return &sig, nil
+			return &reply.NodeSign{
+				Sign: []byte("test_sig"),
+			}, nil
 		}
 		return nil, errors.New("test_error")
 	}
-	return cs
+	return mb
+}
+
+func mockReply(t *testing.T) []byte {
+	node, err := insolar.MarshalArgs(struct {
+		PublicKey string
+		Role      insolar.StaticRole
+	}{
+		PublicKey: "test_node_public_key",
+		Role:      insolar.StaticRoleVirtual,
+	}, nil)
+	require.NoError(t, err)
+	return []byte(node)
+}
+
+func mockContractRequester(t *testing.T, nodeRef insolar.Reference, ok bool, r []byte) insolar.ContractRequester {
+	cr := testutils.NewContractRequesterMock(t)
+	cr.SendRequestFunc = func(ctx context.Context, ref *insolar.Reference, method string, args []interface{}) (insolar.Reply, error) {
+		require.Equal(t, nodeRef, *ref)
+		require.Equal(t, "GetNodeInfo", method)
+		require.Equal(t, 0, len(args))
+		if ok {
+			return &reply.CallMethod{
+				Result: r,
+			}, nil
+		}
+		return nil, errors.New("test_error")
+	}
+	return cr
+}
+
+func TestComplete_GetCert(t *testing.T) {
+	nodeRef := testutils.RandomRef()
+	certNodeRef := testutils.RandomRef()
+
+	gatewayer := network.NewGatewayerMock(t)
+	GIL := testutils.NewGlobalInsolarLockMock(t)
+	nodekeeper := network.NewNodeKeeperMock(t)
+
+	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
+	mb := mockMessageBus(t, true, &nodeRef, &certNodeRef)
+	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
+	cs := mockCryptographyService(t, true)
+
+	ge := NewNoNetwork(gatewayer, GIL, nodekeeper, cr, cs, mb, cm)
+	ge = ge.NewGateway(insolar.CompleteNetworkState)
+	ctx := context.Background()
+	result, err := ge.Auther().GetCert(ctx, &nodeRef)
+	require.NoError(t, err)
+
+	cert := result.(*certificate.Certificate)
+	require.Equal(t, "test_node_public_key", cert.PublicKey)
+	require.Equal(t, nodeRef.String(), cert.Reference)
+	require.Equal(t, "virtual", cert.Role)
+	require.Equal(t, 0, cert.MajorityRule)
+	require.Equal(t, uint(0), cert.MinRoles.Virtual)
+	require.Equal(t, uint(0), cert.MinRoles.HeavyMaterial)
+	require.Equal(t, uint(0), cert.MinRoles.LightMaterial)
+	require.Equal(t, []string{}, cert.PulsarPublicKeys)
+	require.Equal(t, "test_root_domain_ref", cert.RootDomainReference)
+	require.Equal(t, 1, len(cert.BootstrapNodes))
+	require.Equal(t, "test_discovery_public_key", cert.BootstrapNodes[0].PublicKey)
+	require.Equal(t, []byte("test_network_sign"), cert.BootstrapNodes[0].NetworkSign)
+	require.Equal(t, "test_discovery_host", cert.BootstrapNodes[0].Host)
+	require.Equal(t, []byte("test_sig"), cert.BootstrapNodes[0].NodeSign)
+	require.Equal(t, certNodeRef.String(), cert.BootstrapNodes[0].NodeRef)
+}
+
+func TestComplete_handler(t *testing.T) {
+	nodeRef := testutils.RandomRef()
+	certNodeRef := testutils.RandomRef()
+
+	gatewayer := network.NewGatewayerMock(t)
+	GIL := testutils.NewGlobalInsolarLockMock(t)
+	nodekeeper := network.NewNodeKeeperMock(t)
+
+	cr := mockContractRequester(t, nodeRef, true, mockReply(t))
+	mb := mockMessageBus(t, true, &nodeRef, &certNodeRef)
+	cm := mockCertificateManager(t, &certNodeRef, &certNodeRef, true)
+	cs := mockCryptographyService(t, true)
+
+	ge := NewNoNetwork(gatewayer, GIL, nodekeeper, cr, cs, mb, cm)
+	ge = ge.NewGateway(insolar.CompleteNetworkState)
+	ctx := context.Background()
+
+	result, err := ge.(*Complete).signCertHandler(ctx, &message.Parcel{Msg: &message.NodeSignPayload{NodeRef: &nodeRef}})
+	require.NoError(t, err)
+	require.Equal(t, []byte("test_sig"), result.(*reply.NodeSign).Sign)
 }
