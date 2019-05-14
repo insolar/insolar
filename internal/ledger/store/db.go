@@ -19,17 +19,29 @@ package store
 //go:generate minimock -i github.com/insolar/insolar/internal/ledger/store.DB -o ./ -s _gen_mock.go
 
 // DB provides a simple key-value store interface for persisting data.
+// But it is internally ordered ( lexicographically by key bytes )
+// so if you want you can iterate over store using Iterator interface.
 type DB interface {
 	Get(key Key) (value []byte, err error)
 	Set(key Key, value []byte) error
 	NewIterator(scope Scope) Iterator
 }
 
+// Iterator provides an interface for walking through the storage record sequence (where records are sorted lexicographically).
 type Iterator interface {
+	// Seek moves the iterator to storage record that starts with prefix bytes.
 	Seek(prefix []byte)
+	// Next moves the iterator to the next storage record.
 	Next() bool
+	// Close frees resources within the iterator and invalidates it.
 	Close()
+	// Key returns only record key (ID) without scope id.
+	// Warning: Key is only valid as long as item is valid (until iterator.Next() called), or transaction is valid.  
+	// If you need to use it outside its validity, please use KeyCopy.
 	Key() []byte
+	// Value returns record.
+	// Warning: Value is only valid as long as item is valid (until iterator.Next() called), or transaction is valid.  
+	// If you need to use it outside its validity, please use ValueCopy.
 	Value() ([]byte, error)
 }
 
