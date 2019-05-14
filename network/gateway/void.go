@@ -66,7 +66,6 @@ type Void struct {
 }
 
 func (g *Void) Run(ctx context.Context) {
-	panic("implement me")
 }
 
 func (g *Void) GetState() insolar.NetworkState {

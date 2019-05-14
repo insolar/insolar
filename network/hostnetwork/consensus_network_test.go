@@ -55,15 +55,19 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	consensus "github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
@@ -75,13 +79,38 @@ type consensusNetworkSuite struct {
 func createTwoConsensusNetworks(id1, id2 insolar.ShortNodeID) (t1, t2 network.ConsensusNetwork, err error) {
 	m := newMockResolver()
 
-	cn1, err := NewConsensusNetwork("127.0.0.1:0", ID1+DOMAIN, id1)
-	cn1.(*networkConsensus).Resolver = m
+	cm1 := component.NewManager(nil)
+	f1 := transport.NewFactory(configuration.NewHostNetwork().Transport)
+	cn1, err := NewConsensusNetwork(ID1+DOMAIN, id1)
 	if err != nil {
 		return nil, nil, err
 	}
-	cn2, err := NewConsensusNetwork("127.0.0.1:0", ID2+DOMAIN, id2)
-	cn2.(*networkConsensus).Resolver = m
+	cm1.Inject(f1, cn1, m)
+
+	cm2 := component.NewManager(nil)
+	f2 := transport.NewFactory(configuration.NewHostNetwork().Transport)
+	cn2, err := NewConsensusNetwork(ID2+DOMAIN, id2)
+	if err != nil {
+		return nil, nil, err
+	}
+	cm2.Inject(f2, cn2, m)
+
+	ctx := context.Background()
+
+	err = cn1.Init(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = cn2.Init(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	err = cn1.Start(ctx)
+	if err != nil {
+		return nil, nil, err
+	}
+	err = cn2.Start(ctx)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -108,7 +137,7 @@ func createTwoConsensusNetworks(id1, id2 insolar.ShortNodeID) (t1, t2 network.Co
 	return cn1, cn2, nil
 }
 
-func (t *consensusNetworkSuite) sendPacket(packet consensus.ConsensusPacket) {
+func (t *consensusNetworkSuite) sendPacket(packet packets.ConsensusPacket) {
 	cn1, cn2, err := createTwoConsensusNetworks(0, 1)
 	t.Require().NoError(err)
 	ctx := context.Background()
@@ -117,7 +146,7 @@ func (t *consensusNetworkSuite) sendPacket(packet consensus.ConsensusPacket) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	handler := func(incomingPacket consensus.ConsensusPacket, sender insolar.Reference) {
+	handler := func(incomingPacket packets.ConsensusPacket, sender insolar.Reference) {
 		log.Info("handler triggered")
 		wg.Done()
 	}
@@ -132,32 +161,35 @@ func (t *consensusNetworkSuite) sendPacket(packet consensus.ConsensusPacket) {
 		cn2.Stop(ctx2)
 	}()
 
-	err = cn1.SignAndSendPacket(packet, cn2.GetNodeID(), t.crypto)
+	ref2, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
+	t.Require().NoError(err)
+
+	err = cn1.SignAndSendPacket(packet, *ref2, t.crypto)
 	t.Require().NoError(err)
 	wg.Wait()
 }
 
-func newPhase1Packet() *consensus.Phase1Packet {
-	return consensus.NewPhase1Packet(insolar.Pulse{})
+func newPhase1Packet() *packets.Phase1Packet {
+	return packets.NewPhase1Packet(insolar.Pulse{})
 }
 
-func newPhase2Packet() (*consensus.Phase2Packet, error) {
-	bitset, err := consensus.NewBitSet(10)
+func newPhase2Packet() (*packets.Phase2Packet, error) {
+	bitset, err := packets.NewBitSet(10)
 	if err != nil {
 		return nil, err
 	}
-	result := consensus.NewPhase2Packet(insolar.PulseNumber(0))
+	result := packets.NewPhase2Packet(insolar.PulseNumber(0))
 	result.SetBitSet(bitset)
 	return result, nil
 }
 
-func newPhase3Packet() (*consensus.Phase3Packet, error) {
-	var ghs consensus.GlobuleHashSignature
-	bitset, err := consensus.NewBitSet(10)
+func newPhase3Packet() (*packets.Phase3Packet, error) {
+	var ghs packets.GlobuleHashSignature
+	bitset, err := packets.NewBitSet(10)
 	if err != nil {
 		return nil, err
 	}
-	return consensus.NewPhase3Packet(insolar.PulseNumber(0), ghs, bitset), nil
+	return packets.NewPhase3Packet(insolar.PulseNumber(0), ghs, bitset), nil
 }
 
 func (t *consensusNetworkSuite) TestSendPacketPhase1() {
@@ -177,7 +209,7 @@ func (t *consensusNetworkSuite) TestSendPacketPhase3() {
 	t.sendPacket(packet)
 }
 
-func (t *consensusNetworkSuite) sendPacketAndVerify(packet consensus.ConsensusPacket) {
+func (t *consensusNetworkSuite) sendPacketAndVerify(packet packets.ConsensusPacket) {
 	cn1, cn2, err := createTwoConsensusNetworks(0, 1)
 	t.Require().NoError(err)
 	ctx := context.Background()
@@ -185,7 +217,7 @@ func (t *consensusNetworkSuite) sendPacketAndVerify(packet consensus.ConsensusPa
 
 	result := make(chan bool, 1)
 
-	handler := func(incomingPacket consensus.ConsensusPacket, sender insolar.Reference) {
+	handler := func(incomingPacket packets.ConsensusPacket, sender insolar.Reference) {
 		log.Info("handler triggered")
 		pk, err := t.crypto.GetPublicKey()
 		if err != nil {
@@ -212,23 +244,12 @@ func (t *consensusNetworkSuite) sendPacketAndVerify(packet consensus.ConsensusPa
 		cn2.Stop(ctx2)
 	}()
 
-	err = cn1.SignAndSendPacket(packet, cn2.GetNodeID(), t.crypto)
+	ref2, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
+	t.Require().NoError(err)
+
+	err = cn1.SignAndSendPacket(packet, *ref2, t.crypto)
 	t.Require().NoError(err)
 	t.True(<-result)
-}
-
-func (t *consensusNetworkSuite) TestStartStop() {
-	cn, err := NewConsensusNetwork("127.0.0.1:0", ID1+DOMAIN, 0)
-	t.Require().NoError(err)
-	ctx := context.Background()
-	err = cn.Start(ctx)
-	t.Require().NoError(err)
-	defer cn.Stop(ctx)
-
-	err = cn.Stop(ctx)
-	t.Require().NoError(err)
-	err = cn.Start(ctx)
-	t.Require().NoError(err)
 }
 
 func (t *consensusNetworkSuite) TestVerifySignPhase1() {
@@ -266,4 +287,12 @@ func TestConsensusNetwork(t *testing.T) {
 	s, err := NewSuite()
 	require.NoError(t, err)
 	suite.Run(t, s)
+}
+
+func TestNetworkConsensus_SignAndSendPacket_NotStarted(t *testing.T) {
+	cn, err := NewConsensusNetwork(ID1+DOMAIN, 1)
+	require.NoError(t, err)
+
+	err = cn.SignAndSendPacket(nil, testutils.RandomRef(), nil)
+	require.EqualError(t, err, "consensus network is not started")
 }

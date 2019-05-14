@@ -80,13 +80,15 @@ type RPCController interface {
 	IAmRPCController()
 
 	SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error)
+	SendBytes(ctx context.Context, nodeID insolar.Reference, name string, msgBytes []byte) ([]byte, error)
 	SendCascadeMessage(data insolar.Cascade, method string, msg insolar.Parcel) error
 	RemoteProcedureRegister(name string, method insolar.RemoteProcedure)
 }
 
 type rpcController struct {
-	Scheme  insolar.PlatformCryptographyScheme `inject:""`
-	Network network.HostNetwork                `inject:""`
+	Scheme      insolar.PlatformCryptographyScheme `inject:""`
+	Network     network.HostNetwork                `inject:""`
+	NodeNetwork insolar.NodeNetwork                `inject:""`
 
 	options     *common.Options
 	methodTable map[string]insolar.RemoteProcedure
@@ -176,7 +178,7 @@ func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data insol
 	var err error
 
 	if findCurrentNode {
-		nodeID := rpc.Network.GetNodeID()
+		nodeID := rpc.NodeNetwork.GetOrigin().ID()
 		nextNodes, err = cascade.CalculateNextNodes(rpc.Scheme, data, &nodeID)
 	} else {
 		nextNodes, err = cascade.CalculateNextNodes(rpc.Scheme, data, nil)
@@ -224,10 +226,10 @@ func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data in
 	}
 
 	go func(ctx context.Context, f network.Future, duration time.Duration) {
-		response, err := f.GetResponse(duration)
+		response, err := f.WaitResponse(duration)
 		if err != nil {
 			inslogger.FromContext(ctx).Warnf("Failed to get response to cascade message request from node %s: %s",
-				future.GetRequest().GetSender(), err.Error())
+				future.Request().GetSender(), err.Error())
 			return
 		}
 		data := response.GetData().(*ResponseCascade)
@@ -239,6 +241,31 @@ func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data in
 	}(ctx, future, rpc.options.PacketTimeout)
 
 	return nil
+}
+
+func (rpc *rpcController) SendBytes(ctx context.Context, nodeID insolar.Reference, name string, msgBytes []byte) ([]byte, error) {
+	request := rpc.Network.NewRequestBuilder().Type(types.RPC).Data(&RequestRPC{
+		Method: name,
+		Data:   [][]byte{msgBytes},
+	}).Build()
+
+	logger := inslogger.FromContext(ctx)
+	logger.Debugf("SendParcel with nodeID = %s method = %s, RequestID = %d", nodeID.String(),
+		name, request.GetRequestID())
+	future, err := rpc.Network.SendRequest(ctx, request, nodeID)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Error sending RPC request to node %s", nodeID.String())
+	}
+	response, err := future.WaitResponse(rpc.options.PacketTimeout)
+	if err != nil {
+		return nil, errors.Wrapf(err, "Error getting RPC response from node %s", nodeID.String())
+	}
+	data := response.GetData().(*ResponseRPC)
+	if !data.Success {
+		return nil, errors.New("RPC call returned error: " + data.Error)
+	}
+	stats.Record(ctx, statParcelsReplySizeBytes.M(int64(len(data.Result))))
+	return data.Result, nil
 }
 
 func (rpc *rpcController) SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error) {
@@ -260,7 +287,7 @@ func (rpc *rpcController) SendMessage(nodeID insolar.Reference, name string, msg
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error sending RPC request to node %s", nodeID.String())
 	}
-	response, err := future.GetResponse(rpc.options.PacketTimeout)
+	response, err := future.WaitResponse(rpc.options.PacketTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error getting RPC response from node %s", nodeID.String())
 	}

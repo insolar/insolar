@@ -59,9 +59,19 @@ import (
 	"github.com/insolar/insolar/network"
 )
 
+// TODO Slightly ugly, decide how to inject anything without exporting Base
+// TODO Remove message bus here and switch communication to network.rpc
 // NewNoNetwork this initial constructor have special signature to be called outside
-func NewNoNetwork(n network.Gatewayer, gil insolar.GlobalInsolarLock, swa insolar.SwitcherWorkAround) *NoNetwork {
-	return &NoNetwork{&Base{Network: n, GIL: gil, SwitcherWorkAround: swa}}
+func NewNoNetwork(n network.Gatewayer, gil insolar.GlobalInsolarLock,
+	nk network.NodeKeeper, cr insolar.ContractRequester,
+	cs insolar.CryptographyService, mb insolar.MessageBus,
+	cm insolar.CertificateManager) network.Gateway {
+	return (&Base{
+		Network: n, GIL: gil,
+		Nodekeeper: nk, ContractRequester: cr,
+		CryptographyService: cs, MessageBus: mb,
+		CertificateManager: cm,
+	}).NewGateway(insolar.NoNetworkState)
 }
 
 // NoNetwork initial state

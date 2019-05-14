@@ -61,16 +61,21 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/metrics"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork"
+	"github.com/insolar/insolar/network/hostnetwork/future"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"github.com/insolar/insolar/network/hostnetwork/pool"
 	"github.com/insolar/insolar/network/sequence"
 	"github.com/insolar/insolar/network/transport"
 )
 
 type distributor struct {
-	Transport   transport.Transport `inject:""`
+	Factory     transport.Factory `inject:""`
+	transport   transport.StreamTransport
 	idGenerator sequence.Generator
 
 	pingRequestTimeout        time.Duration
@@ -78,27 +83,56 @@ type distributor struct {
 	pulseRequestTimeout       time.Duration
 	randomNodesCount          int
 
-	publicAddress  string
-	pulsarHost     *host.Host
-	bootstrapHosts []string
+	publicAddress   string
+	pulsarHost      *host.Host
+	bootstrapHosts  []string
+	futureManager   future.Manager
+	responseHandler future.PacketHandler
+	pool            pool.ConnectionPool
 }
 
 // NewDistributor creates a new distributor object of pulses
-func NewDistributor(conf configuration.PulseDistributor, publicAddress string) (insolar.PulseDistributor, error) {
-	return &distributor{
-		idGenerator: sequence.NewGeneratorImpl(),
+func NewDistributor(conf configuration.PulseDistributor) (insolar.PulseDistributor, error) {
+
+	futureManager := future.NewManager()
+
+	result := &distributor{
+		idGenerator: sequence.NewGenerator(),
 
 		pingRequestTimeout:        time.Duration(conf.PingRequestTimeout) * time.Millisecond,
 		randomHostsRequestTimeout: time.Duration(conf.RandomHostsRequestTimeout) * time.Millisecond,
 		pulseRequestTimeout:       time.Duration(conf.PulseRequestTimeout) * time.Millisecond,
 		randomNodesCount:          conf.RandomNodesCount,
-		publicAddress:             publicAddress,
 
-		bootstrapHosts: conf.BootstrapHosts,
-	}, nil
+		bootstrapHosts:  conf.BootstrapHosts,
+		futureManager:   futureManager,
+		responseHandler: future.NewPacketHandler(futureManager),
+	}
+
+	return result, nil
+}
+
+func (d *distributor) Init(ctx context.Context) error {
+	handler := hostnetwork.NewStreamHandler(func(p *packet.Packet) {}, d.responseHandler)
+
+	var err error
+	d.transport, err = d.Factory.CreateStreamTransport(handler)
+	if err != nil {
+		return errors.Wrap(err, "Failed to create transport")
+	}
+	d.pool = pool.NewConnectionPool(d.transport)
+
+	return nil
 }
 
 func (d *distributor) Start(ctx context.Context) error {
+
+	err := d.transport.Start(ctx)
+	if err != nil {
+		return err
+	}
+	d.publicAddress = d.transport.Address()
+
 	pulsarHost, err := host.NewHost(d.publicAddress)
 	if err != nil {
 		return errors.Wrap(err, "[ NewDistributor ] failed to create pulsar host")
@@ -180,25 +214,20 @@ func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 	defer span.End()
 	builder := packet.NewBuilder(d.pulsarHost)
 	pingPacket := builder.Receiver(host).Type(types.Ping).RequestID(d.generateID()).Build()
-	pingCall, err := d.Transport.SendRequest(ctx, pingPacket)
+	pingCall, err := d.sendRequestToHost(ctx, pingPacket, host)
 	if err != nil {
 		logger.Error(err)
 		return errors.Wrap(err, "[ pingHost ] failed to send ping request")
 	}
 
 	logger.Debugf("before ping request")
-	result, err := pingCall.GetResult(d.pingRequestTimeout)
+	result, err := pingCall.WaitResponse(d.pingRequestTimeout)
 	if err != nil {
 		logger.Error(err)
 		return errors.Wrap(err, "[ pingHost ] failed to get ping result")
 	}
 
-	if result.Error != nil {
-		logger.Error(result.Error)
-		return errors.Wrap(err, "[ pingHost ] ping result returned error")
-	}
-
-	host.NodeID = result.Sender.NodeID
+	host.NodeID = result.GetSender()
 	logger.Debugf("ping request is done")
 
 	return nil
@@ -216,33 +245,46 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *insolar.Pulse,
 	defer span.End()
 	pb := packet.NewBuilder(d.pulsarHost)
 	pulseRequest := pb.Receiver(host).Request(&packet.RequestPulse{Pulse: *pulse}).RequestID(d.generateID()).Type(types.Pulse).Build()
-	call, err := d.Transport.SendRequest(ctx, pulseRequest)
+	call, err := d.sendRequestToHost(ctx, pulseRequest, host)
 	if err != nil {
 		return err
 	}
-	result, err := call.GetResult(d.pulseRequestTimeout)
+	_, err = call.WaitResponse(d.pulseRequestTimeout)
 	if err != nil {
 		return err
-	}
-	if result.Error != nil {
-		return result.Error
 	}
 
 	return nil
 }
 
 func (d *distributor) pause(ctx context.Context) {
-	inslogger.FromContext(ctx).Info("[ Pause ] Pause distribution, stopping transport")
+	logger := inslogger.FromContext(ctx)
+	logger.Info("[ Pause ] Pause distribution, stopping transport")
 	_, span := instracer.StartSpan(ctx, "distributor.pause")
 	defer span.End()
-	go d.Transport.Stop()
-	<-d.Transport.Stopped()
-	d.Transport.Close()
+	d.pool.Reset()
+	err := d.transport.Stop(ctx)
+	if err != nil {
+		logger.Errorf("Failed to stop network: %s", err.Error())
+	}
 }
 
 func (d *distributor) resume(ctx context.Context) error {
 	inslogger.FromContext(ctx).Info("[ Resume ] Resume distribution, starting transport")
 	ctx, span := instracer.StartSpan(ctx, "distributor.resume")
 	defer span.End()
-	return d.Transport.Start(ctx)
+	return d.transport.Start(ctx)
+}
+
+func (d *distributor) sendRequestToHost(ctx context.Context, request network.Request, receiver *host.Host) (network.Future, error) {
+	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d", request.GetType(), receiver.String(), request.GetRequestID())
+
+	f := d.futureManager.Create(request.(*packet.Packet))
+	err := hostnetwork.SendPacket(ctx, d.pool, request.(*packet.Packet))
+	if err != nil {
+		f.Cancel()
+		return nil, errors.Wrap(err, "Failed to send transport packet")
+	}
+	metrics.NetworkPacketSentTotal.WithLabelValues(request.GetType().String()).Inc()
+	return f, nil
 }

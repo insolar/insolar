@@ -21,6 +21,9 @@ import (
 )
 
 // GenesisRequest is used for genesis records generation.
+// this is fake message that never passed to messageBus
+// it implements Message Interface for ability to be converted
+// to Parcel and than be passed to RegisterRequest method
 type GenesisRequest struct {
 	// Name should be unique for each genesis record.
 	Name string
@@ -28,12 +31,12 @@ type GenesisRequest struct {
 
 // AllowedSenderObjectAndRole implements interface method
 func (*GenesisRequest) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
-	return nil, 0
+	panic("never use GenesisRequest as message for messageBus, see comment on type declaration")
 }
 
 // DefaultRole returns role for this event
 func (*GenesisRequest) DefaultRole() insolar.DynamicRole {
-	return insolar.DynamicRoleVirtualExecutor
+	panic("never use GenesisRequest as message for messageBus, see comment on type declaration")
 }
 
 // DefaultTarget returns of target of this event.
@@ -43,10 +46,10 @@ func (gr *GenesisRequest) DefaultTarget() *insolar.Reference {
 
 // Type implementation for genesis request.
 func (*GenesisRequest) Type() insolar.MessageType {
-	return insolar.TypeBootstrapRequest
+	return insolar.TypeGenesisRequest
 }
 
 // GetCaller implementation for genesis request.
 func (*GenesisRequest) GetCaller() *insolar.Reference {
-	return nil
+	panic("never use GenesisRequest as message for messageBus, see comment on type declaration")
 }

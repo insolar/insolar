@@ -32,7 +32,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/flow/handler"
+	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"go.opencensus.io/trace"
 
@@ -134,7 +134,7 @@ func (st *ObjectState) WrapError(err error, message string) error {
 
 func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
-	wmMsg.Metadata.Set("TraceID", inslogger.TraceID(ctx))
+	wmMsg.Metadata.Set(dispatcher.TraceIDField, inslogger.TraceID(ctx))
 	wmMsg.Metadata.Set(MessageTypeField, msgType)
 
 	return wmMsg
@@ -158,7 +158,7 @@ type LogicRunner struct {
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
 	stateMutex sync.RWMutex
 
-	FlowHandler *handler.Handler
+	FlowDispatcher *dispatcher.Dispatcher
 
 	sock net.Listener
 
@@ -196,19 +196,30 @@ func initHandlers(lr *LogicRunner) error {
 		lr:        lr,
 	}
 
-	lr.FlowHandler = handler.NewHandler(func(msg bus.Message) flow.Handle {
-		return (&Init{
+	initHandle := func(msg bus.Message) *Init {
+		return &Init{
 			dep:     dep,
 			Message: msg,
-		}).Present
+		}
+	}
+	lr.FlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
+		return initHandle(msg).Present
+	}, func(msg bus.Message) flow.Handle {
+		return initHandle(msg).Future
 	})
 
-	inHandler := handler.NewHandler(func(msg bus.Message) flow.Handle {
+	innerInitHandle := func(msg bus.Message) *InnerInit {
 		innerMsg := msg.WatermillMsg
-		return (&InnerInit{
+		return &InnerInit{
 			dep:     dep,
 			Message: innerMsg,
-		}).Present
+		}
+	}
+
+	innerDispatcher := dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
+		return innerInitHandle(msg).Present
+	}, func(msg bus.Message) flow.Handle {
+		return innerInitHandle(msg).Present
 	})
 
 	router, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, wmLogger)
@@ -220,7 +231,7 @@ func initHandlers(lr *LogicRunner) error {
 		"InnerMsgHandler",
 		InnerMsgTopic,
 		pubSub,
-		inHandler.InnerSubscriber,
+		innerDispatcher.InnerSubscriber,
 	)
 	go func() {
 		if err := router.Run(); err != nil {
@@ -228,7 +239,7 @@ func initHandlers(lr *LogicRunner) error {
 			inslogger.FromContext(ctx).Error("Error while running router", err)
 		}
 	}()
-	<- router.Running()
+	<-router.Running()
 
 	lr.router = router
 
@@ -266,14 +277,14 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) RegisterHandlers() {
-	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.FlowHandler.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeCallConstructor, lr.FlowHandler.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeExecutorResults, lr.HandleExecutorResultsMessage)
+	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.FlowDispatcher.WrapBusHandle)
+	lr.MessageBus.MustRegister(insolar.TypeCallConstructor, lr.FlowDispatcher.WrapBusHandle)
+	lr.MessageBus.MustRegister(insolar.TypeExecutorResults, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
-	lr.MessageBus.MustRegister(insolar.TypePendingFinished, lr.FlowHandler.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeStillExecuting, lr.FlowHandler.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeAbandonedRequestsNotification, lr.HandleAbandonedRequestsNotificationMessage)
+	lr.MessageBus.MustRegister(insolar.TypePendingFinished, lr.FlowDispatcher.WrapBusHandle)
+	lr.MessageBus.MustRegister(insolar.TypeStillExecuting, lr.FlowDispatcher.WrapBusHandle)
+	lr.MessageBus.MustRegister(insolar.TypeAbandonedRequestsNotification, lr.FlowDispatcher.WrapBusHandle)
 }
 
 // Stop stops logic runner component and its executors
@@ -671,82 +682,6 @@ func init() {
 	gob.Register(&ObjectBody{})
 }
 
-func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.ExecutorResults) error {
-	ref := msg.GetReference()
-	state := lr.UpsertObjectState(ref)
-	state.Lock()
-	if state.ExecutionState == nil {
-		state.ExecutionState = &ExecutionState{
-			Ref:   ref,
-			Queue: make([]ExecutionQueueElement, 0),
-		}
-	}
-	es := state.ExecutionState
-	state.Unlock()
-
-	es.Lock()
-
-	clarifyPending := false
-
-	if es.pending == message.InPending {
-		if es.Current != nil {
-			inslogger.FromContext(ctx).Debug(
-				"execution returned to node that is still executing pending",
-			)
-			es.pending = message.NotPending
-			es.PendingConfirmed = false
-		} else if msg.Pending == message.NotPending {
-			inslogger.FromContext(ctx).Debug(
-				"executor we came to thinks that execution pending, but previous said to continue",
-			)
-
-			es.pending = message.NotPending
-		}
-	} else if es.pending == message.PendingUnknown {
-		es.pending = msg.Pending
-
-		if es.pending == message.PendingUnknown {
-			clarifyPending = true
-		}
-	}
-
-	// set false to true is good, set true to false may be wrong, better make unnecessary call
-	if !es.LedgerHasMoreRequests && msg.LedgerHasMoreRequests {
-		es.LedgerHasMoreRequests = msg.LedgerHasMoreRequests
-	}
-
-	//prepare Queue
-	if msg.Queue != nil {
-		queueFromMessage := make([]ExecutionQueueElement, 0)
-		for _, qe := range msg.Queue {
-			queueFromMessage = append(
-				queueFromMessage,
-				ExecutionQueueElement{
-					ctx:     qe.Parcel.Context(context.Background()),
-					parcel:  qe.Parcel,
-					request: qe.Request,
-				})
-		}
-		es.Queue = append(queueFromMessage, es.Queue...)
-	}
-
-	es.Unlock()
-
-	if clarifyPending {
-		err := lr.ClarifyPendingState(ctx, es, nil)
-		if err != nil {
-			return err
-		}
-	}
-
-	err := lr.StartQueueProcessorIfNeeded(ctx, es)
-	if err != nil {
-		return errors.Wrap(err, "can't start Queue Processor from prepareObjectState")
-	}
-
-	return nil
-}
-
 func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState, m *message.CallMethod) (insolar.Reply, error) {
 	if es.objectbody == nil {
 		objDesc, protoDesc, codeDesc, err := lr.getDescriptorsByObjectRef(ctx, m.ObjectRef)
@@ -909,7 +844,7 @@ func (lr *LogicRunner) executeConstructorCall(
 
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 	lr.stateMutex.Lock()
-	lr.FlowHandler.ChangePulse(ctx, pulse)
+	lr.FlowDispatcher.ChangePulse(ctx, pulse)
 
 	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
 	defer span.End()
@@ -1038,33 +973,7 @@ func (lr *LogicRunner) HandleAbandonedRequestsNotificationMessage(
 ) (
 	insolar.Reply, error,
 ) {
-	ctx = loggerWithTargetID(ctx, parcel)
-	inslogger.FromContext(ctx).Debug("LogicRunner.HandleAbandonedRequestsNotificationMessage starts ...")
-
-	msg := parcel.Message().(*message.AbandonedRequestsNotification)
-	ref := msg.DefaultTarget()
-	os := lr.UpsertObjectState(*ref)
-
-	inslogger.FromContext(ctx).Debug("Got information that ", ref, " has abandoned requests")
-
-	os.Lock()
-	if os.ExecutionState == nil {
-		os.ExecutionState = &ExecutionState{
-			Ref:                   *ref,
-			Queue:                 make([]ExecutionQueueElement, 0),
-			pending:               message.InPending,
-			PendingConfirmed:      false,
-			LedgerHasMoreRequests: true,
-		}
-	} else {
-		es := os.ExecutionState
-		es.Lock()
-		es.LedgerHasMoreRequests = true
-		es.Unlock()
-	}
-	os.Unlock()
-
-	return &reply.OK{}, nil
+	return lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
 }
 
 func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages []insolar.Message) {

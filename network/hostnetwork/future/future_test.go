@@ -86,7 +86,7 @@ func TestFuture_Actor(t *testing.T) {
 	m := &packet.Packet{}
 	f := NewFuture(network.RequestID(1), n, m, cb)
 
-	require.Equal(t, f.Actor(), n)
+	require.Equal(t, f.Receiver(), n)
 }
 
 func TestFuture_Result(t *testing.T) {
@@ -95,7 +95,7 @@ func TestFuture_Result(t *testing.T) {
 	m := &packet.Packet{}
 	f := NewFuture(network.RequestID(1), n, m, cb)
 
-	require.Empty(t, f.Result())
+	require.Empty(t, f.Response())
 }
 
 func TestFuture_Request(t *testing.T) {
@@ -107,22 +107,22 @@ func TestFuture_Request(t *testing.T) {
 	require.Equal(t, f.Request(), m)
 }
 
-func TestFuture_SetResult(t *testing.T) {
+func TestFuture_SetResponse(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
 	m := &packet.Packet{}
 	f := NewFuture(network.RequestID(1), n, m, cb)
 
-	require.Empty(t, f.Result())
+	require.Empty(t, f.Response())
 
-	go f.SetResult(m)
+	go f.SetResponse(m)
 
-	m2 := <-f.Result() // Result() call closes channel
+	m2 := <-f.Response() // Response() call closes channel
 
 	require.Equal(t, m, m2)
 
-	m3, err := f.GetResult(10 * time.Millisecond)
-	// legal behavior, the channel is closed because of the previous f.Result() call finished the Future
+	m3, err := f.WaitResponse(10 * time.Millisecond)
+	// legal behavior, the channel is closed because of the previous f.Response() call finished the Future
 	require.EqualError(t, err, "channel closed")
 	require.Nil(t, m3)
 }
@@ -139,42 +139,18 @@ func TestFuture_Cancel(t *testing.T) {
 
 	f.Cancel()
 
-	_, closed := <-f.Result()
+	_, closed := <-f.Response()
 
 	require.False(t, closed)
 	require.True(t, cbCalled)
 }
 
-func TestFuture_GetResult(t *testing.T) {
+func TestFuture_WaitResponse_Cancel(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
-	m := &packet.Packet{}
-	canceled := make(chan bool)
-	cancelCallback := func(f Future) {
-		canceled <- true
-	}
-	f := NewFuture(network.RequestID(1), n, m, cancelCallback)
-	go func() {
-		time.Sleep(time.Millisecond)
-		f.Cancel()
-	}()
-
-	_, err := f.GetResult(10 * time.Millisecond)
-	require.Error(t, err)
-
-	// Please note that cancelCallback is called asynchronously thus
-	// it's not guaranteed that it is called and finished when f.GetResult returns.
-	// For this reason in this test we have to use a channel, not
-	// an atomic variable or something else.
-	tmp := <-canceled
-	require.Equal(t, true, tmp)
-}
-
-func TestFuture_GetResult2(t *testing.T) {
-	n, _ := host.NewHost("127.0.0.1:8080")
-	c := make(chan *packet.Packet)
+	c := make(chan network.Response)
 	var f Future = &future{
-		result:         c,
-		actor:          n,
+		response:       c,
+		receiver:       n,
 		request:        &packet.Packet{},
 		requestID:      network.RequestID(1),
 		cancelCallback: func(f Future) {},
@@ -183,11 +159,47 @@ func TestFuture_GetResult2(t *testing.T) {
 		time.Sleep(time.Millisecond)
 		f.Cancel()
 	}()
-	_, err := f.GetResult(1000 * time.Millisecond)
+	_, err := f.WaitResponse(1000 * time.Millisecond)
 	require.Error(t, err)
 }
 
-func TestFuture_SetResult_Cancel_Concurrency(t *testing.T) {
+func TestFuture_WaitResponse_Timeout(t *testing.T) {
+	n, _ := host.NewHost("127.0.0.1:8080")
+	c := make(chan network.Response)
+	cancelled := false
+	var f Future = &future{
+		response:       c,
+		receiver:       n,
+		request:        &packet.Packet{},
+		requestID:      network.RequestID(1),
+		cancelCallback: func(f Future) { cancelled = true },
+	}
+	_, err := f.WaitResponse(time.Millisecond)
+	require.Error(t, err)
+	require.Equal(t, err, ErrTimeout)
+	require.True(t, cancelled)
+}
+
+func TestFuture_WaitResponse_Success(t *testing.T) {
+	n, _ := host.NewHost("127.0.0.1:8080")
+	c := make(chan network.Response, 1)
+	var f Future = &future{
+		response:       c,
+		receiver:       n,
+		request:        &packet.Packet{},
+		requestID:      network.RequestID(1),
+		cancelCallback: func(f Future) {},
+	}
+
+	p := &packet.Packet{}
+	c <- p
+
+	res, err := f.WaitResponse(time.Millisecond)
+	require.NoError(t, err)
+	require.Equal(t, res, p)
+}
+
+func TestFuture_SetResponse_Cancel_Concurrency(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 
 	cbCalled := false
@@ -205,12 +217,12 @@ func TestFuture_SetResult_Cancel_Concurrency(t *testing.T) {
 		wg.Done()
 	}()
 	go func() {
-		f.SetResult(&packet.Packet{})
+		f.SetResponse(&packet.Packet{})
 		wg.Done()
 	}()
 
 	wg.Wait()
-	res, ok := <-f.Result()
+	res, ok := <-f.Response()
 
 	cancelDone := res == nil && !ok
 	resultDone := res != nil && ok
