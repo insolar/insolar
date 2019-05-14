@@ -53,14 +53,14 @@ package phases
 import (
 	"context"
 
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/node"
 
-	"github.com/insolar/insolar/consensus"
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"

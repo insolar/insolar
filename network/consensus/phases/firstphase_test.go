@@ -51,87 +51,72 @@
 package phases
 
 import (
-	"sort"
+	"crypto"
+	"testing"
 
-	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/node"
-	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/merkle"
+	"github.com/insolar/insolar/testutils/network"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
-type BitsetMapper struct {
-	length     int
-	refToIndex map[insolar.Reference]int
-	indexToRef map[int]insolar.Reference
-}
+func TestFirstPhase_HandlePulse(t *testing.T) {
+	firstPhase := &FirstPhaseImpl{}
 
-func NewBitsetMapper(activeNodes []insolar.NetworkNode) *BitsetMapper {
-	bm := NewSparseBitsetMapper(len(activeNodes))
-	sort.Slice(activeNodes, func(i, j int) bool {
-		return activeNodes[i].ID().Compare(activeNodes[j].ID()) < 0
-	})
-	for i, node := range activeNodes {
-		bm.AddNode(node, uint16(i))
+	node := node.NewNode(insolar.Reference{}, insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
+	nodeKeeper := nodenetwork.NewNodeKeeper(node)
+	nodeKeeper.SetInitialSnapshot([]insolar.NetworkNode{node})
+
+	pulseCalculatorMock := merkle.NewCalculatorMock(t)
+	communicatorMock := NewCommunicatorMock(t)
+	consensusNetworkMock := network.NewConsensusNetworkMock(t)
+	terminationHandler := testutils.NewTerminationHandlerMock(t)
+	messageBus := testutils.NewMessageBusLockerMock(t)
+	cryptoServ := testutils.NewCryptographyServiceMock(t)
+	cryptoServ.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+		signature := insolar.SignatureFromBytes(nil)
+		return &signature, nil
 	}
-	return bm
-}
-
-func NewSparseBitsetMapper(length int) *BitsetMapper {
-	return &BitsetMapper{
-		length:     length,
-		refToIndex: make(map[insolar.Reference]int),
-		indexToRef: make(map[int]insolar.Reference),
+	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
+		return true
 	}
+
+	cm := component.Manager{}
+	cm.Inject(cryptoServ, nodeKeeper, firstPhase, pulseCalculatorMock, communicatorMock, consensusNetworkMock, terminationHandler, messageBus)
+
+	require.NotNil(t, firstPhase.Calculator)
+	require.NotNil(t, firstPhase.NodeKeeper)
+	activeNodes := firstPhase.NodeKeeper.GetAccessor().GetActiveNodes()
+	assert.Equal(t, 1, len(activeNodes))
 }
 
-func (bm *BitsetMapper) AddNode(node insolar.NetworkNode, bitsetIndex uint16) {
-	index := int(bitsetIndex)
-	bm.indexToRef[index] = node.ID()
-	bm.refToIndex[node.ID()] = index
+func Test_consensusReached(t *testing.T) {
+	assert.True(t, consensusReachedBFT(5, 6))
+	assert.False(t, consensusReachedBFT(4, 6))
+
+	assert.True(t, consensusReachedBFT(201, 300))
+	assert.False(t, consensusReachedBFT(200, 300))
+
+	assert.True(t, consensusReachedMajority(4, 6))
+	assert.False(t, consensusReachedMajority(3, 6))
+
+	assert.True(t, consensusReachedMajority(151, 300))
+	assert.False(t, consensusReachedMajority(150, 300))
 }
 
-func (bm *BitsetMapper) IndexToRef(index int) (insolar.Reference, error) {
-	if index < 0 || index >= bm.length {
-		return insolar.Reference{}, packets.ErrBitSetOutOfRange
-	}
-	result, ok := bm.indexToRef[index]
-	if !ok {
-		return insolar.Reference{}, packets.ErrBitSetNodeIsMissing
-	}
-	return result, nil
-}
-
-func (bm *BitsetMapper) RefToIndex(nodeID insolar.Reference) (int, error) {
-	index, ok := bm.refToIndex[nodeID]
-	if !ok {
-		return 0, packets.ErrBitSetIncorrectNode
-	}
-	return index, nil
-}
-
-func (bm *BitsetMapper) Length() int {
-	return bm.length
-}
-
-func ApplyClaims(state *ConsensusState, origin insolar.NetworkNode, claims []packets.ReferendumClaim) error {
-	var NodeJoinerIndex uint16
-	for _, claim := range claims {
-		c, ok := claim.(*packets.NodeAnnounceClaim)
-		if !ok {
-			continue
-		}
-
-		// TODO: fix version
-		node, err := node.ClaimToNode("", &c.NodeJoinClaim)
-		if err != nil {
-			return errors.Wrap(err, "[ AddClaims ] failed to convert Claim -> Node")
-		}
-		// TODO: check bitset indexes from every announce claim for fraud
-		NodeJoinerIndex = c.NodeJoinerIndex
-		state.BitsetMapper.AddNode(node, c.NodeAnnouncerIndex)
-		state.NodesMutator.AddWorkingNode(node)
-	}
-	state.BitsetMapper.AddNode(origin, NodeJoinerIndex)
-	state.NodesMutator.AddWorkingNode(origin)
-	return nil
+func Test_getNodeState(t *testing.T) {
+	n := node.NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1:0", "")
+	assert.Equal(t, packets.Legit, getNodeState(n, insolar.FirstPulseNumber))
+	n.(node.MutableNode).SetState(insolar.NodeLeaving)
+	n.(node.MutableNode).SetLeavingETA(insolar.FirstPulseNumber + 10)
+	assert.Equal(t, packets.Legit, getNodeState(n, insolar.FirstPulseNumber))
+	n.(node.MutableNode).SetLeavingETA(insolar.FirstPulseNumber - 10)
+	assert.Equal(t, packets.TimedOut, getNodeState(n, insolar.FirstPulseNumber))
 }

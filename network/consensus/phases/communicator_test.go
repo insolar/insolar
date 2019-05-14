@@ -51,35 +51,87 @@
 package phases
 
 import (
-	"github.com/insolar/insolar/consensus/packets"
+	"context"
+	"crypto"
+	"testing"
+
+	"github.com/stretchr/testify/suite"
+
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/testutils"
+	networkUtils "github.com/insolar/insolar/testutils/network"
 )
 
-type HashStorage struct {
-	proofs map[insolar.Reference]*packets.NodePulseProof
-	ghs    map[insolar.Reference]packets.GlobuleHashSignature
+type communicatorSuite struct {
+	suite.Suite
+	componentManager component.Manager
+	communicator     Communicator
+	originNode       insolar.NetworkNode
+	participants     []insolar.NetworkNode
+	hostNetworkMock  *networkUtils.HostNetworkMock
+
+	consensusNetworkMock *networkUtils.ConsensusNetworkMock
+	pulseHandlerMock     *networkUtils.PulseHandlerMock
 }
 
-func NewHashStorage() *HashStorage {
-	return &HashStorage{
-		proofs: make(map[insolar.Reference]*packets.NodePulseProof),
-		ghs:    make(map[insolar.Reference]packets.GlobuleHashSignature),
+func NewSuite() *communicatorSuite {
+	return &communicatorSuite{
+		Suite:        suite.Suite{},
+		communicator: NewCommunicator(),
+		participants: nil,
 	}
 }
 
-func (hs *HashStorage) GetGlobuleHashSignature(ref insolar.Reference) (packets.GlobuleHashSignature, bool) {
-	ghs, ok := hs.ghs[ref]
-	return ghs, ok
+func (s *communicatorSuite) SetupTest() {
+	s.consensusNetworkMock = networkUtils.NewConsensusNetworkMock(s.T())
+	s.pulseHandlerMock = networkUtils.NewPulseHandlerMock(s.T())
+	s.originNode = makeRandomNode()
+
+	nodeN := networkUtils.NewNodeKeeperMock(s.T())
+	nodeN.GetOriginMock.Return(s.originNode)
+
+	cryptoServ := testutils.NewCryptographyServiceMock(s.T())
+	cryptoServ.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+		signature := insolar.SignatureFromBytes(nil)
+		return &signature, nil
+	}
+	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
+		return true
+	}
+
+	s.consensusNetworkMock.RegisterPacketHandlerMock.Set(func(p packets.PacketType, p1 network.ConsensusPacketHandler) {
+
+	})
+
+	s.consensusNetworkMock.StartMock.Set(func(context.Context) error { return nil })
+
+	s.pulseHandlerMock.HandlePulseMock.Set(func(p context.Context, p1 insolar.Pulse) {
+
+	})
+
+	s.componentManager.Inject(nodeN, cryptoServ, s.communicator, s.consensusNetworkMock, s.pulseHandlerMock)
+	err := s.componentManager.Start(context.TODO())
+	s.NoError(err)
 }
 
-func (hs *HashStorage) SetGlobuleHashSignature(ref insolar.Reference, ghs packets.GlobuleHashSignature) {
-	hs.ghs[ref] = ghs
+func makeRandomNode() insolar.NetworkNode {
+	return node.NewNode(testutils.RandomRef(), insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
 }
 
-func (hs *HashStorage) AddProof(nodeID insolar.Reference, proof *packets.NodePulseProof) {
-	hs.proofs[nodeID] = proof
+func (s *communicatorSuite) TestExchangeData() {
+	s.Assert().NotNil(s.communicator)
+	ctx, cancel := context.WithTimeout(context.Background(), 0)
+	defer cancel()
+
+	result, err := s.communicator.ExchangePhase1(ctx, nil, s.participants, &packets.Phase1Packet{})
+	s.Assert().NoError(err)
+	s.NotEqual(0, len(result))
 }
 
-func (hs *HashStorage) GetProof(nodeID insolar.Reference) *packets.NodePulseProof {
-	return hs.proofs[nodeID]
+func TestNaiveCommunicator(t *testing.T) {
+	suite.Run(t, NewSuite())
 }

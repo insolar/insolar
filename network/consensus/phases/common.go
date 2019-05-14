@@ -48,57 +48,48 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package nodenetwork
+package phases
 
 import (
-	"testing"
+	"context"
 
-	"github.com/insolar/insolar/network/consensus/packets"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/merkle"
+	"go.opencensus.io/stats"
 )
 
-func newTestClaim(claimType packets.ClaimType) packets.ReferendumClaim {
-	switch claimType {
-	case packets.TypeNodeJoinClaim:
-		return &packets.NodeJoinClaim{}
-	case packets.TypeCapabilityPollingAndActivation:
-		return &packets.CapabilityPoolingAndActivation{}
-	case packets.TypeNodeViolationBlame:
-		return &packets.NodeViolationBlame{}
-	case packets.TypeNodeBroadcast:
-		return &packets.NodeBroadcast{}
-	case packets.TypeNodeLeaveClaim:
-		return &packets.NodeLeaveClaim{}
+func validateProofs(
+	calculator merkle.Calculator,
+	accessor network.Accessor,
+	pulseHash merkle.OriginHash,
+	proofs map[insolar.Reference]*merkle.PulseProof,
+) (valid map[insolar.NetworkNode]*merkle.PulseProof, fault map[insolar.Reference]*merkle.PulseProof) {
+
+	validProofs := make(map[insolar.NetworkNode]*merkle.PulseProof)
+	faultProofs := make(map[insolar.Reference]*merkle.PulseProof)
+	for nodeID, proof := range proofs {
+		valid := validateProof(calculator, accessor, pulseHash, nodeID, proof)
+		if valid {
+			validProofs[accessor.GetActiveNode(nodeID)] = proof
+		} else {
+			stats.Record(context.Background(), consensus.FailedCheckProof.M(1))
+			faultProofs[nodeID] = proof
+		}
 	}
-	return nil
+	return validProofs, faultProofs
 }
+func validateProof(
+	calculator merkle.Calculator,
+	accessor network.Accessor,
+	pulseHash merkle.OriginHash,
+	nodeID insolar.Reference,
+	proof *merkle.PulseProof) bool {
 
-func TestClaimQueue_Pop(t *testing.T) {
-	cq := newClaimQueue()
-	assert.Equal(t, 0, cq.Length())
-	assert.Nil(t, cq.Front())
-	assert.Nil(t, cq.Pop())
-
-	cq.Push(newTestClaim(packets.TypeNodeJoinClaim))
-	cq.Push(newTestClaim(packets.TypeNodeBroadcast))
-	assert.Equal(t, 2, cq.Length())
-
-	assert.NotNil(t, cq.Front())
-	assert.Equal(t, packets.TypeNodeJoinClaim, cq.Front().Type())
-
-	assert.Equal(t, packets.TypeNodeJoinClaim, cq.Pop().Type())
-	assert.Equal(t, packets.TypeNodeBroadcast, cq.Pop().Type())
-	assert.Nil(t, cq.Front())
-	assert.Nil(t, cq.Pop())
-}
-
-func TestClaimQueue_Clear(t *testing.T) {
-	cq := newClaimQueue()
-	size := 10
-	for i := 0; i < size; i++ {
-		cq.Push(newTestClaim(packets.TypeNodeJoinClaim))
+	node := accessor.GetActiveNode(nodeID)
+	if node == nil {
+		return false
 	}
-	assert.Equal(t, size, cq.Length())
-	cq.Clear()
-	assert.Equal(t, 0, cq.Length())
+	return calculator.IsValid(proof, pulseHash, node.PublicKey())
 }

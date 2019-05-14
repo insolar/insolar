@@ -48,90 +48,68 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package phases
+package claimhandler
 
 import (
-	"context"
-	"crypto"
+	"bytes"
+	"crypto/rand"
 	"testing"
 
-	"github.com/stretchr/testify/suite"
-
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/testutils"
-	networkUtils "github.com/insolar/insolar/testutils/network"
+	"github.com/stretchr/testify/assert"
 )
 
-type communicatorSuite struct {
-	suite.Suite
-	componentManager component.Manager
-	communicator     Communicator
-	originNode       insolar.NetworkNode
-	participants     []insolar.NetworkNode
-	hostNetworkMock  *networkUtils.HostNetworkMock
-
-	consensusNetworkMock *networkUtils.ConsensusNetworkMock
-	pulseHandlerMock     *networkUtils.PulseHandlerMock
+func TestQueue_PushClaim(t *testing.T) {
+	queue := Queue{}
+	elemCount := 20
+	entr := insolar.Entropy{}
+	_, err := rand.Read(entr[:])
+	assert.NoError(t, err)
+	for i := 0; i < elemCount; i++ {
+		claim := getJoinClaim(t, testutils.RandomRef())
+		queue.PushClaim(claim, getPriority(claim.NodeRef, entr))
+	}
+	assert.Equal(t, queue.Len(), elemCount)
 }
 
-func NewSuite() *communicatorSuite {
-	return &communicatorSuite{
-		Suite:        suite.Suite{},
-		communicator: NewCommunicator(),
-		participants: nil,
+func TestQueue_Pop(t *testing.T) {
+	queue := Queue{}
+	elemCount := 20
+	entr := insolar.Entropy{}
+	_, err := rand.Read(entr[:])
+	assert.NoError(t, err)
+	for i := 0; i < elemCount; i++ {
+		claim := getJoinClaim(t, testutils.RandomRef())
+		queue.PushClaim(claim, getPriority(claim.NodeRef, entr))
+	}
+	assert.Equal(t, queue.Len(), elemCount)
+
+	claim := queue.PopClaim().(*packets.NodeJoinClaim)
+	refLen := len(claim.NodeRef.Bytes())
+	prevPriority := make([]byte, refLen)
+	priority := make([]byte, refLen)
+	copy(prevPriority, getPriority(claim.NodeRef, entr))
+	for i := 1; i < elemCount; i++ {
+		claim := queue.PopClaim().(*packets.NodeJoinClaim)
+		copy(priority, getPriority(claim.NodeRef, entr))
+		assert.True(t, bytes.Compare(prevPriority, priority) > 0)
+		copy(prevPriority, priority)
 	}
 }
 
-func (s *communicatorSuite) SetupTest() {
-	s.consensusNetworkMock = networkUtils.NewConsensusNetworkMock(s.T())
-	s.pulseHandlerMock = networkUtils.NewPulseHandlerMock(s.T())
-	s.originNode = makeRandomNode()
+func getJoinClaim(t *testing.T, ref insolar.Reference) *packets.NodeJoinClaim {
+	nodeJoinClaim := &packets.NodeJoinClaim{}
+	nodeJoinClaim.ShortNodeID = insolar.ShortNodeID(77)
+	nodeJoinClaim.RelayNodeID = insolar.ShortNodeID(26)
+	nodeJoinClaim.ProtocolVersionAndFlags = uint32(99)
+	nodeJoinClaim.JoinsAfter = uint32(67)
+	nodeJoinClaim.NodeRoleRecID = 32
+	nodeJoinClaim.NodeRef = ref
+	_, err := rand.Read(nodeJoinClaim.NodePK[:])
+	assert.NoError(t, err)
+	nodeJoinClaim.NodeAddress.Set("127.0.0.1:5566")
 
-	nodeN := networkUtils.NewNodeKeeperMock(s.T())
-	nodeN.GetOriginMock.Return(s.originNode)
-
-	cryptoServ := testutils.NewCryptographyServiceMock(s.T())
-	cryptoServ.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
-		signature := insolar.SignatureFromBytes(nil)
-		return &signature, nil
-	}
-	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
-		return true
-	}
-
-	s.consensusNetworkMock.RegisterPacketHandlerMock.Set(func(p packets.PacketType, p1 network.ConsensusPacketHandler) {
-
-	})
-
-	s.consensusNetworkMock.StartMock.Set(func(context.Context) error { return nil })
-
-	s.pulseHandlerMock.HandlePulseMock.Set(func(p context.Context, p1 insolar.Pulse) {
-
-	})
-
-	s.componentManager.Inject(nodeN, cryptoServ, s.communicator, s.consensusNetworkMock, s.pulseHandlerMock)
-	err := s.componentManager.Start(context.TODO())
-	s.NoError(err)
-}
-
-func makeRandomNode() insolar.NetworkNode {
-	return node.NewNode(testutils.RandomRef(), insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
-}
-
-func (s *communicatorSuite) TestExchangeData() {
-	s.Assert().NotNil(s.communicator)
-	ctx, cancel := context.WithTimeout(context.Background(), 0)
-	defer cancel()
-
-	result, err := s.communicator.ExchangePhase1(ctx, nil, s.participants, &packets.Phase1Packet{})
-	s.Assert().NoError(err)
-	s.NotEqual(0, len(result))
-}
-
-func TestNaiveCommunicator(t *testing.T) {
-	suite.Run(t, NewSuite())
+	return nodeJoinClaim
 }
