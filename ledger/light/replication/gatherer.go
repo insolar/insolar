@@ -88,13 +88,13 @@ func (d *LightDataGatherer) ForPulseAndJet(
 
 func convertIndexBuckets(ctx context.Context, buckets []object.IndexBucket) [][]byte {
 	convertedBucks := make([][]byte, len(buckets))
-	for _, buck := range buckets {
+	for i, buck := range buckets {
 		buff, err := buck.Marshal()
 		if err != nil {
 			inslogger.FromContext(ctx).Errorf("problems with marshaling bucket - %v", err)
 			continue
 		}
-		convertedBucks = append(convertedBucks, buff)
+		convertedBucks[i] = buff
 	}
 
 	return convertedBucks

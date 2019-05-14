@@ -44,6 +44,8 @@ type IndexCleaner interface {
 	DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexBucketAccessor -o ./ -s _mock.go
+
 type IndexBucketAccessor interface {
 	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []IndexBucket
 }
