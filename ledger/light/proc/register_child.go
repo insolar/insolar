@@ -91,7 +91,7 @@ func (p *RegisterChild) process(ctx context.Context) error {
 	child := object.NewRecordIDFromRecord(p.Dep.PlatformCryptographyScheme, p.pulse, childRec)
 	rec := record.MaterialRecord{
 		Record: childRec,
-		JetID:  insolar.JetID(p.jet),
+		JetID:  p.jet,
 	}
 
 	err = p.Dep.RecordModifier.Set(ctx, *child, rec)
@@ -108,7 +108,7 @@ func (p *RegisterChild) process(ctx context.Context) error {
 		p.idx.Delegates[*p.msg.AsType] = p.msg.Child
 	}
 	p.idx.LatestUpdate = p.pulse
-	p.idx.JetID = insolar.JetID(p.jet)
+	p.idx.JetID = p.jet
 	err = p.Dep.IndexStorage.Set(ctx, *p.msg.Parent.Record(), p.idx)
 	if err != nil {
 		return err
