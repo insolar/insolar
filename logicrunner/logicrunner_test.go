@@ -31,6 +31,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
+	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/stretchr/testify/suite"
@@ -126,23 +127,23 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	})
 	s.NoError(err, "Initialize runner")
 
-	mock := testutils.NewCryptographyServiceMock(s.T())
-	mock.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+	cryptoMock := testutils.NewCryptographyServiceMock(s.T())
+	cryptoMock.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
 		signature := insolar.SignatureFromBytes(nil)
 		return &signature, nil
 	}
-	mock.GetPublicKeyFunc = func() (crypto.PublicKey, error) {
+	cryptoMock.GetPublicKeyFunc = func() (crypto.PublicKey, error) {
 		return nil, nil
 	}
 
 	delegationTokenFactory := delegationtoken.NewDelegationTokenFactory()
-	nk := nodekeeper.GetTestNodekeeper(mock)
+	nk := nodekeeper.GetTestNodekeeper(cryptoMock)
 
 	mb := testmessagebus.NewTestMessageBus(s.T())
 
 	nw := testutils.GetTestNetwork(s.T())
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	l, messageHandler := artifacts.TmpLedger(
+	l, messageHandler, indexStor := artifacts.TmpLedger(
 		s.T(),
 		"",
 		insolar.Components{
@@ -164,7 +165,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	pulseAccessor := l.PulseManager.(*pulsemanager.PulseManager).PulseAccessor
 	nth := testutils.NewTerminationHandlerMock(s.T())
 
-	cm.Inject(pulseAccessor, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, nth, mock)
+	cm.Inject(pulseAccessor, nk, providerMock, l, lr, nw, mb, cr, delegationTokenFactory, parcelFactory, nth, cryptoMock)
 	err = cm.Init(ctx)
 	s.NoError(err)
 	err = cm.Start(ctx)
@@ -173,7 +174,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	MessageBusTrivialBehavior(mb, lr)
 	pm := l.GetPulseManager()
 
-	s.incrementPulseHelper(ctx, lr, pm)
+	s.incrementPulseHelper(ctx, lr, pm, indexStor)
 
 	cb := goplugintestutils.NewContractBuilder(am, s.icc)
 
@@ -184,8 +185,14 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	}
 }
 
-func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr insolar.LogicRunner, pm insolar.PulseManager) {
+func (s *LogicRunnerFuncSuite) incrementPulseHelper(
+	ctx context.Context,
+	lr insolar.LogicRunner,
+	pm insolar.PulseManager,
+	index *object.InMemoryIndex,
+) {
 	pulseStorage := pm.(*pulsemanager.PulseManager).PulseAccessor
+
 	currentPulse, _ := pulseStorage.Latest(ctx)
 
 	newPulseNumber := currentPulse.PulseNumber + 1
@@ -196,6 +203,18 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr inso
 	)
 	s.Require().NoError(err)
 
+	var hotIndexes []message.HotIndex
+
+	bucks := index.ForPNAndJet(ctx, insolar.FirstPulseNumber, *insolar.NewJetID(0, nil))
+	for _, meta := range bucks {
+		encoded, _ := meta.Lifeline.Marshal()
+		hotIndexes = append(hotIndexes, message.HotIndex{
+			LastUsed: meta.LifelineLastUsed,
+			ObjID:    meta.ObjID,
+			Index:    encoded,
+		})
+	}
+
 	rootJetId := *insolar.NewJetID(0, nil)
 	_, err = lr.(*LogicRunner).MessageBus.Send(
 		ctx,
@@ -203,6 +222,7 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr inso
 			Jet:             *insolar.NewReference(insolar.DomainID, insolar.ID(rootJetId)),
 			Drop:            drop.Drop{Pulse: 1, JetID: rootJetId},
 			PendingRequests: nil,
+			HotIndexes:      hotIndexes,
 			PulseNumber:     newPulseNumber,
 		}, nil,
 	)

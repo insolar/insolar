@@ -128,6 +128,7 @@ func (i *InMemoryIndex) bucket(ctx context.Context, pn insolar.PulseNumber, objI
 	if bucket == nil {
 		bucket = &LockedIndexBucket{
 			bucket: IndexBucket{
+				ObjID:    objID,
 				Results:  []insolar.ID{},
 				Requests: []insolar.ID{},
 			},
@@ -212,6 +213,7 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 		}
 
 		res = append(res, IndexBucket{
+			ObjID:            b.bucket.ObjID,
 			Lifeline:         &clonedLfl,
 			LifelineLastUsed: b.bucket.LifelineLastUsed,
 			Results:          clonedResults,

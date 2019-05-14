@@ -75,14 +75,14 @@ func (p *GetIndex) process(ctx context.Context) error {
 	idx, err := p.Dep.Index.LifelineForID(ctx, flow.Pulse(ctx), objectID)
 	if err == nil {
 		p.Result.Index = idx
+		err = p.Dep.IndexState.SetLifelineUsage(ctx, flow.Pulse(ctx), objectID)
+		if err != nil {
+			return errors.Wrap(err, "failed to update lifeline usage")
+		}
 		return nil
 	}
 	if err != object.ErrLifelineNotFound {
 		return errors.Wrap(err, "failed to fetch index")
-	}
-	err = p.Dep.IndexState.SetLifelineUsage(ctx, flow.Pulse(ctx), objectID)
-	if err != nil {
-		return errors.Wrap(err, "failed to update lifeline usage")
 	}
 
 	logger.Debug("failed to fetch index (fetching from heavy)")
@@ -112,6 +112,10 @@ func (p *GetIndex) process(ctx context.Context) error {
 	err = p.Dep.Index.SetLifeline(ctx, flow.Pulse(ctx), objectID, p.Result.Index)
 	if err != nil {
 		return errors.Wrap(err, "failed to save lifeline")
+	}
+	err = p.Dep.IndexState.SetLifelineUsage(ctx, flow.Pulse(ctx), objectID)
+	if err != nil {
+		return errors.Wrap(err, "failed to update lifeline usage")
 	}
 
 	return nil

@@ -27,7 +27,7 @@ var (
 	ErrOverride = errors.New("record override is forbidden")
 
 	// ErrLifelineNotFound is returned when an index not found.
-	ErrLifelineNotFound = errors.New("index not found")
+	ErrLifelineNotFound = errors.New("lifeline not found")
 	// ErrIndexBucketNotFound is returned when an index not found.
 	ErrIndexBucketNotFound = errors.New("index bucket not found")
 )

@@ -117,10 +117,6 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	} else if err != nil {
 		return bus.Reply{Err: err}
 	}
-	err = p.Dep.IndexStateModifier.SetLifelineUsage(ctx, p.PulseNumber, *p.Message.Object.Record())
-	if err != nil {
-		return bus.Reply{Err: errors.Wrap(err, "failed to update lifeline usage state")}
-	}
 
 	if err = validateState(idx.State, state.ID()); err != nil {
 		return bus.Reply{Reply: &reply.Error{ErrType: reply.ErrDeactivated}}
@@ -159,6 +155,10 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	err = p.Dep.Index.SetLifeline(ctx, p.PulseNumber, *p.Message.Object.Record(), idx)
 	if err != nil {
 		return bus.Reply{Err: err}
+	}
+	err = p.Dep.IndexStateModifier.SetLifelineUsage(ctx, p.PulseNumber, *p.Message.Object.Record())
+	if err != nil {
+		return bus.Reply{Err: errors.Wrap(err, "failed to update lifeline usage state")}
 	}
 
 	logger.WithField("state", idx.LatestState.DebugString()).Debug("saved object")

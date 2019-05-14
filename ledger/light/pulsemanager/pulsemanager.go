@@ -67,7 +67,7 @@ type PulseManager struct {
 	JetAccessor jet.Accessor `inject:""`
 	JetModifier jet.Modifier `inject:""`
 
-	IndexReplicaAccessor object.IndexBucketAccessor
+	IndexBucketAccessor object.IndexBucketAccessor
 
 	NodeSetter node.Modifier `inject:""`
 	Nodes      node.Accessor `inject:""`
@@ -137,14 +137,14 @@ func NewPulseManager(
 			storeLightPulses: conf.LightChainLimit,
 			lightChainLimit:  conf.LightChainLimit,
 		},
-		DropCleaner:          dropCleaner,
-		BlobCleaner:          blobCleaner,
-		BlobSyncAccessor:     blobSyncAccessor,
-		PulseShifter:         pulseShifter,
-		RecCleaner:           recCleaner,
-		RecSyncAccessor:      recSyncAccessor,
-		IndexReplicaAccessor: idxReplicaAccessor,
-		LightReplicator:      lightToHeavySyncer,
+		DropCleaner:         dropCleaner,
+		BlobCleaner:         blobCleaner,
+		BlobSyncAccessor:    blobSyncAccessor,
+		PulseShifter:        pulseShifter,
+		RecCleaner:          recCleaner,
+		RecSyncAccessor:     recSyncAccessor,
+		IndexBucketAccessor: idxReplicaAccessor,
+		LightReplicator:     lightToHeavySyncer,
 	}
 	return pm
 }
@@ -264,7 +264,7 @@ func (m *PulseManager) getExecutorHotData(
 	var hotIndexes []message.HotIndex
 	pendingRequests := map[insolar.ID]recentstorage.PendingObjectContext{}
 
-	bucks := m.IndexReplicaAccessor.ForPNAndJet(ctx, currentPN, jetID)
+	bucks := m.IndexBucketAccessor.ForPNAndJet(ctx, currentPN, jetID)
 	limitPN, err := m.PulseCalculator.Backwards(ctx, currentPN, m.options.lightChainLimit)
 	if err == pulse.ErrNotFound {
 		limitPN = *insolar.GenesisPulse
