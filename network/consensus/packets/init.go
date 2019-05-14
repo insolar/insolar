@@ -82,7 +82,6 @@ func init() {
 	claimSizeMap[TypeNodeAnnounceClaim] = sizeOf(&NodeAnnounceClaim{})
 	claimSizeMap[TypeCapabilityPollingAndActivation] = sizeOf(&CapabilityPoolingAndActivation{})
 	claimSizeMap[TypeNodeViolationBlame] = sizeOf(&NodeViolationBlame{})
-	claimSizeMap[TypeNodeBroadcast] = sizeOf(&NodeBroadcast{})
 	claimSizeMap[TypeNodeLeaveClaim] = sizeOf(&NodeLeaveClaim{})
 	claimSizeMap[TypeChangeNetworkClaim] = sizeOf(&NodeLeaveClaim{})
 

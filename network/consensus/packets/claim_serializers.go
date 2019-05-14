@@ -61,27 +61,6 @@ import (
 )
 
 // Deserialize implements interface method
-func (nb *NodeBroadcast) Deserialize(data io.Reader) error {
-	err := binary.Read(data, defaultByteOrder, &nb.EmergencyLevel)
-	if err != nil {
-		return errors.Wrap(err, "[ NodeBroadcast.Deserialize ] Can't read EmergencyLevel")
-	}
-
-	return nil
-}
-
-// Serialize implements interface method
-func (nb *NodeBroadcast) Serialize() ([]byte, error) {
-	result := allocateBuffer(64)
-	err := binary.Write(result, defaultByteOrder, nb.EmergencyLevel)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeBroadcast.Serialize ] Can't write EmergencyLevel")
-	}
-
-	return result.Bytes(), nil
-}
-
-// Deserialize implements interface method
 func (cpa *CapabilityPoolingAndActivation) Deserialize(data io.Reader) error {
 	err := binary.Read(data, defaultByteOrder, &cpa.PollingFlags)
 	if err != nil {
@@ -446,8 +425,6 @@ func parseReferendumClaim(data []byte) ([]ReferendumClaim, error) {
 			refClaim = &CapabilityPoolingAndActivation{}
 		case TypeNodeViolationBlame:
 			refClaim = &NodeViolationBlame{}
-		case TypeNodeBroadcast:
-			refClaim = &NodeBroadcast{}
 		case TypeNodeLeaveClaim:
 			refClaim = &NodeLeaveClaim{}
 		case TypeNodeAnnounceClaim:

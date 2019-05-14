@@ -12,14 +12,13 @@ func _() {
 	_ = x[TypeNodeAnnounceClaim-2]
 	_ = x[TypeCapabilityPollingAndActivation-3]
 	_ = x[TypeNodeViolationBlame-4]
-	_ = x[TypeNodeBroadcast-5]
-	_ = x[TypeNodeLeaveClaim-6]
-	_ = x[TypeChangeNetworkClaim-7]
+	_ = x[TypeNodeLeaveClaim-5]
+	_ = x[TypeChangeNetworkClaim-6]
 }
 
-const _ClaimType_name = "TypeNodeJoinClaimTypeNodeAnnounceClaimTypeCapabilityPollingAndActivationTypeNodeViolationBlameTypeNodeBroadcastTypeNodeLeaveClaimTypeChangeNetworkClaim"
+const _ClaimType_name = "TypeNodeJoinClaimTypeNodeAnnounceClaimTypeCapabilityPollingAndActivationTypeNodeViolationBlameTypeNodeLeaveClaimTypeChangeNetworkClaim"
 
-var _ClaimType_index = [...]uint8{0, 17, 38, 72, 94, 111, 129, 151}
+var _ClaimType_index = [...]uint8{0, 17, 38, 72, 94, 112, 134}
 
 func (i ClaimType) String() string {
 	i -= 1

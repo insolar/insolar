@@ -63,13 +63,12 @@ import (
 type ClaimType uint8
 
 const (
-	TypeNodeJoinClaim = ClaimType(iota + 1)
-	TypeNodeAnnounceClaim
-	TypeCapabilityPollingAndActivation
-	TypeNodeViolationBlame
-	TypeNodeBroadcast
-	TypeNodeLeaveClaim
-	TypeChangeNetworkClaim
+	TypeNodeJoinClaim                  = ClaimType(1)
+	TypeNodeAnnounceClaim              = ClaimType(2)
+	TypeCapabilityPollingAndActivation = ClaimType(3)
+	TypeNodeViolationBlame             = ClaimType(4)
+	TypeNodeLeaveClaim                 = ClaimType(5)
+	TypeChangeNetworkClaim             = ClaimType(6)
 )
 
 const claimHeaderSize = 2
@@ -103,15 +102,6 @@ type SignedClaim interface {
 // Type 4.
 type NodeBroadcast struct {
 	EmergencyLevel uint8
-}
-
-func (nb *NodeBroadcast) Clone() ReferendumClaim {
-	result := *nb
-	return &result
-}
-
-func (nb *NodeBroadcast) Type() ClaimType {
-	return TypeNodeBroadcast
 }
 
 // CapabilityPoolingAndActivation is a type 3.

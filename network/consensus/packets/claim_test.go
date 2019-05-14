@@ -57,17 +57,6 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-func makeNodeBroadCast() *NodeBroadcast {
-	nodeBroadcast := &NodeBroadcast{}
-	nodeBroadcast.EmergencyLevel = uint8(4)
-
-	return nodeBroadcast
-}
-
-func TestNodeBroadcast(t *testing.T) {
-	checkSerializationDeserialization(t, makeNodeBroadCast())
-}
-
 func makeCapabilityPoolingAndActivation() *CapabilityPoolingAndActivation {
 	capabilityPoolingAndActivation := &CapabilityPoolingAndActivation{}
 	capabilityPoolingAndActivation.PollingFlags = uint16(10)
