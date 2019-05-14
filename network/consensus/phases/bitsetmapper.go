@@ -48,68 +48,90 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package claimhandler
+package phases
 
 import (
-	"bytes"
-	"crypto/rand"
-	"testing"
+	"sort"
 
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
+	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/node"
+	"github.com/pkg/errors"
 )
 
-func TestQueue_PushClaim(t *testing.T) {
-	queue := Queue{}
-	elemCount := 20
-	entr := insolar.Entropy{}
-	_, err := rand.Read(entr[:])
-	assert.NoError(t, err)
-	for i := 0; i < elemCount; i++ {
-		claim := getJoinClaim(t, testutils.RandomRef())
-		queue.PushClaim(claim, getPriority(claim.NodeRef, entr))
-	}
-	assert.Equal(t, queue.Len(), elemCount)
+type BitsetMapper struct {
+	length     int
+	refToIndex map[insolar.Reference]int
+	indexToRef map[int]insolar.Reference
 }
 
-func TestQueue_Pop(t *testing.T) {
-	queue := Queue{}
-	elemCount := 20
-	entr := insolar.Entropy{}
-	_, err := rand.Read(entr[:])
-	assert.NoError(t, err)
-	for i := 0; i < elemCount; i++ {
-		claim := getJoinClaim(t, testutils.RandomRef())
-		queue.PushClaim(claim, getPriority(claim.NodeRef, entr))
+func NewBitsetMapper(activeNodes []insolar.NetworkNode) *BitsetMapper {
+	bm := NewSparseBitsetMapper(len(activeNodes))
+	sort.Slice(activeNodes, func(i, j int) bool {
+		return activeNodes[i].ID().Compare(activeNodes[j].ID()) < 0
+	})
+	for i, node := range activeNodes {
+		bm.AddNode(node, uint16(i))
 	}
-	assert.Equal(t, queue.Len(), elemCount)
+	return bm
+}
 
-	claim := queue.PopClaim().(*packets.NodeJoinClaim)
-	refLen := len(claim.NodeRef.Bytes())
-	prevPriority := make([]byte, refLen)
-	priority := make([]byte, refLen)
-	copy(prevPriority, getPriority(claim.NodeRef, entr))
-	for i := 1; i < elemCount; i++ {
-		claim := queue.PopClaim().(*packets.NodeJoinClaim)
-		copy(priority, getPriority(claim.NodeRef, entr))
-		assert.True(t, bytes.Compare(prevPriority, priority) > 0)
-		copy(prevPriority, priority)
+func NewSparseBitsetMapper(length int) *BitsetMapper {
+	return &BitsetMapper{
+		length:     length,
+		refToIndex: make(map[insolar.Reference]int),
+		indexToRef: make(map[int]insolar.Reference),
 	}
 }
 
-func getJoinClaim(t *testing.T, ref insolar.Reference) *packets.NodeJoinClaim {
-	nodeJoinClaim := &packets.NodeJoinClaim{}
-	nodeJoinClaim.ShortNodeID = insolar.ShortNodeID(77)
-	nodeJoinClaim.RelayNodeID = insolar.ShortNodeID(26)
-	nodeJoinClaim.ProtocolVersionAndFlags = uint32(99)
-	nodeJoinClaim.JoinsAfter = uint32(67)
-	nodeJoinClaim.NodeRoleRecID = 32
-	nodeJoinClaim.NodeRef = ref
-	_, err := rand.Read(nodeJoinClaim.NodePK[:])
-	assert.NoError(t, err)
-	nodeJoinClaim.NodeAddress.Set("127.0.0.1:5566")
+func (bm *BitsetMapper) AddNode(node insolar.NetworkNode, bitsetIndex uint16) {
+	index := int(bitsetIndex)
+	bm.indexToRef[index] = node.ID()
+	bm.refToIndex[node.ID()] = index
+}
 
-	return nodeJoinClaim
+func (bm *BitsetMapper) IndexToRef(index int) (insolar.Reference, error) {
+	if index < 0 || index >= bm.length {
+		return insolar.Reference{}, packets.ErrBitSetOutOfRange
+	}
+	result, ok := bm.indexToRef[index]
+	if !ok {
+		return insolar.Reference{}, packets.ErrBitSetNodeIsMissing
+	}
+	return result, nil
+}
+
+func (bm *BitsetMapper) RefToIndex(nodeID insolar.Reference) (int, error) {
+	index, ok := bm.refToIndex[nodeID]
+	if !ok {
+		return 0, packets.ErrBitSetIncorrectNode
+	}
+	return index, nil
+}
+
+func (bm *BitsetMapper) Length() int {
+	return bm.length
+}
+
+func ApplyClaims(state *ConsensusState, origin insolar.NetworkNode, claims []packets.ReferendumClaim) error {
+	var NodeJoinerIndex uint16
+	for _, claim := range claims {
+		c, ok := claim.(*packets.NodeAnnounceClaim)
+		if !ok {
+			continue
+		}
+
+		// TODO: fix version
+		node, err := node.ClaimToNode("", &c.NodeJoinClaim)
+		if err != nil {
+			return errors.Wrap(err, "[ AddClaims ] failed to convert Claim -> Node")
+		}
+		// TODO: check bitset indexes from every announce claim for fraud
+		NodeJoinerIndex = c.NodeJoinerIndex
+		state.BitsetMapper.AddNode(node, c.NodeAnnouncerIndex)
+		state.NodesMutator.AddWorkingNode(node)
+	}
+	state.BitsetMapper.AddNode(origin, NodeJoinerIndex)
+	state.NodesMutator.AddWorkingNode(origin)
+	return nil
 }

@@ -48,69 +48,59 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package packets
+package phases
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/claimhandler"
+	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/merkle"
+	"github.com/insolar/insolar/network/node"
 )
 
-// BitSetState is state of the communicating node
-type BitSetState uint8
+type FirstPhaseState struct {
+	*ConsensusState
 
-const (
-	// TimedOut is state indicating that timeout occurred when communicating with node
-	TimedOut BitSetState = iota
-	// Legit is state indicating OK data from node
-	Legit
-	// Fraud is state indicating that the node is malicious (fraud)
-	Fraud
-	// Inconsistent is state indicating that node validation is inconsistent on different nodes
-	Inconsistent
-)
+	PulseEntry *merkle.PulseEntry
 
-// BitSetCell is structure that contains the state of the node
-type BitSetCell struct {
-	NodeID insolar.Reference
-	State  BitSetState
+	PulseHash  merkle.OriginHash
+	PulseProof *merkle.PulseProof
+
+	ValidProofs map[insolar.NetworkNode]*merkle.PulseProof
+	FaultProofs map[insolar.Reference]*merkle.PulseProof
+
+	BitSet packets.BitSet
 }
 
-// Possible errors in BitSetMapper
-var (
-	// ErrBitSetOutOfRange is returned when index passed to IndexToRef function is out of range (ERROR)
-	ErrBitSetOutOfRange = errors.New("index out of range")
-	// ErrBitSetNodeIsMissing is returned in IndexToRef when we have no information about the node on specified index (SPECIAL CASE)
-	ErrBitSetNodeIsMissing = errors.New("no information about node on specified index")
-	// ErrBitSetIncorrectNode is returned when an incorrect node is passed to RefToIndex (ERROR)
-	ErrBitSetIncorrectNode = errors.New("incorrect node ID")
-)
+type SecondPhaseState struct {
+	*FirstPhaseState
 
-//go:generate minimock -i github.com/insolar/insolar/consensus/packets.BitSetMapper -o . -s _mock.go
+	GlobuleHash  merkle.OriginHash
+	GlobuleProof *merkle.GlobuleProof
 
-// BitSetMapper contains the mapping from bitset index to node ID (and vice versa)
-type BitSetMapper interface {
-	// IndexToRef get ID of the node that is stored on the specified internal index
-	IndexToRef(index int) (insolar.Reference, error)
-	// RefToIndex get bitset internal index where the specified node state is stored
-	RefToIndex(nodeID insolar.Reference) (int, error)
-	// Length returns required length of the bitset
-	Length() int
+	MatrixState *Phase2MatrixState
+	Matrix      *StateMatrix
 }
 
-// BitSet is interface
-type BitSet interface {
-	Serialize() ([]byte, error)
-	// GetCells get buckets of bitset
-	GetCells(mapper BitSetMapper) ([]BitSetCell, error)
-	// GetTristateArray get underlying tristate
-	GetTristateArray() ([]BitSetState, error)
-	// ApplyChanges returns copy of the current bitset with changes applied
-	ApplyChanges(changes []BitSetCell, mapper BitSetMapper) error
-	// Clone makes deep copy of bitset
-	Clone() BitSet
+type ThirdPhaseState struct {
+	ActiveNodes    []insolar.NetworkNode
+	GlobuleProof   *merkle.GlobuleProof
+	ApprovedClaims []packets.ReferendumClaim
 }
 
-// NewBitSet creates bitset from a set of buckets and the mapper. Size == cells count.
-func NewBitSet(size int) (BitSet, error) {
-	return NewBitSetImpl(size, false)
+type ConsensusState struct {
+	ConsensusInfo network.ConsensusInfo
+	NodesMutator  network.Mutator
+	HashStorage   *HashStorage
+	BitsetMapper  *BitsetMapper
+	ClaimHandler  *claimhandler.ClaimHandler
+}
+
+func NewConsensusState(consensusInfo network.ConsensusInfo, snapshot *node.Snapshot) *ConsensusState {
+	return &ConsensusState{
+		ConsensusInfo: consensusInfo,
+		NodesMutator:  node.NewMutator(snapshot),
+		HashStorage:   NewHashStorage(),
+	}
 }

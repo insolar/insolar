@@ -60,16 +60,16 @@ import (
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/consensus"
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/consensus/packets"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/consensus/phases.Communicator -o . -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/phases.Communicator -o . -s _mock.go
 
 // Communicator interface provides methods to exchange data between nodes
 type Communicator interface {
