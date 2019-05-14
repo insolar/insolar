@@ -17,8 +17,10 @@
 package store
 
 import (
+	"bytes"
 	"io/ioutil"
 	"os"
+	"sort"
 	"testing"
 
 	"github.com/dgraph-io/badger"
@@ -108,60 +110,76 @@ func TestBadgerDB_NewIterator(t *testing.T) {
 	db, err := NewBadgerDB(tmpdir)
 	require.NoError(t, err)
 
+	type kv struct {
+		k testBadgerKey
+		v []byte
+	}
+
 	var (
-		commonScope      Scope
-		commonPrefix     []byte
-		randKeys         []testBadgerKey
-		unexpectedValues [][]byte
-		keys             []testBadgerKey
-		expectedValues   [][]byte
-		expected         map[string][]byte
+		commonScope  Scope
+		commonPrefix []byte
+
+		expected   []kv
+		unexpected []kv
 	)
 
-	expected = make(map[string][]byte)
-
 	const (
-		ArrayLength = 3
+		ArrayLength = 1000
 	)
 
 	fuzz.New().NilChance(0).Fuzz(&commonScope)
 	fuzz.New().NilChance(0).NumElements(ArrayLength, ArrayLength).Fuzz(&commonPrefix)
 
-	ff := fuzz.New().NilChance(0).NumElements(ArrayLength, ArrayLength).Funcs(
-		func(key *testBadgerKey, c fuzz.Continue) {
-			var id []byte
-			c.Fuzz(&id)
-			*key = testBadgerKey{id: id, scope: commonScope}
-		},
-	)
-	ff.Fuzz(&randKeys)
-	ff.Fuzz(&unexpectedValues)
-
 	f := fuzz.New().NilChance(0).NumElements(ArrayLength, ArrayLength).Funcs(
 		func(key *testBadgerKey, c fuzz.Continue) {
-			var id []byte
-			c.Fuzz(&id)
-			*key = testBadgerKey{id: append(commonPrefix, id...), scope: commonScope}
+			for {
+				c.Fuzz(&key.id)
+				// To ensure that unexpected keys will be started with prefix that less than expected keys
+				if bytes.Compare(key.id, commonPrefix) == -1 {
+					break
+				}
+			}
+			key.scope = commonScope
+		},
+		func(pair *kv, c fuzz.Continue) {
+			c.Fuzz(&pair.k)
+			c.Fuzz(&pair.v)
 		},
 	)
-	f.Fuzz(&keys)
-	f.Fuzz(&expectedValues)
+	f.Fuzz(&unexpected)
+
+	f = fuzz.New().NilChance(0).NumElements(ArrayLength, ArrayLength).Funcs(
+		func(key *testBadgerKey, c fuzz.Continue) {
+			var id []byte
+			c.Fuzz(&id)
+			key.id = append(commonPrefix, id...)
+			key.scope = commonScope
+		},
+		func(pair *kv, c fuzz.Continue) {
+			c.Fuzz(&pair.k)
+			c.Fuzz(&pair.v)
+		},
+	)
+	f.Fuzz(&expected)
+
+	sort.Slice(expected, func(i, j int) bool {
+		return bytes.Compare(expected[i].k.ID(), expected[j].k.ID()) == -1
+	})
 
 	err = db.backend.Update(func(txn *badger.Txn) error {
 		for i := 0; i < ArrayLength; i++ {
-			key := append(randKeys[i].Scope().Bytes(), randKeys[i].ID()...)
-			err = txn.Set(key, unexpectedValues[i])
+			key := append(unexpected[i].k.Scope().Bytes(), unexpected[i].k.ID()...)
+			err = txn.Set(key, unexpected[i].v)
 			if err != nil {
 				return err
 			}
 		}
 		for i := 0; i < ArrayLength; i++ {
-			key := append(keys[i].Scope().Bytes(), keys[i].ID()...)
-			err = txn.Set(key, expectedValues[i])
+			key := append(expected[i].k.Scope().Bytes(), expected[i].k.ID()...)
+			err = txn.Set(key, expected[i].v)
 			if err != nil {
 				return err
 			}
-			expected[string(keys[i].ID())] = expectedValues[i]
 		}
 		return nil
 	})
@@ -171,7 +189,13 @@ func TestBadgerDB_NewIterator(t *testing.T) {
 	it := db.NewIterator(commonScope)
 	defer it.Close()
 	it.Seek(commonPrefix)
-	for it.Next() {
-		require.ElementsMatch(t, expected[string(it.Key())], it.Value())
+	i := 0
+	for it.Next() && i < len(expected) {
+		require.ElementsMatch(t, expected[i].k.ID(), it.Key())
+		val, err := it.Value()
+		require.NoError(t, err)
+		require.ElementsMatch(t, expected[i].v, val)
+		i++
 	}
+	require.Equal(t, len(expected), i)
 }

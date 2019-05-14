@@ -30,7 +30,7 @@ type Iterator interface {
 	Next() bool
 	Close()
 	Key() []byte
-	Value() []byte
+	Value() ([]byte, error)
 }
 
 // Key represents a key for the key-value store. Scope is required to separate different DB clients and should be

@@ -19,6 +19,7 @@ package store
 import (
 	"context"
 	"path/filepath"
+	"sync"
 
 	"github.com/dgraph-io/badger"
 	"github.com/pkg/errors"
@@ -113,6 +114,7 @@ type badgerIterator struct {
 	fullPrefix []byte
 	txn        *badger.Txn
 	it         *badger.Iterator
+	once       sync.Once
 }
 
 func (bi *badgerIterator) Close() {
@@ -126,6 +128,15 @@ func (bi *badgerIterator) Seek(prefix []byte) {
 }
 
 func (bi *badgerIterator) Next() bool {
+	firstTime := false
+	bi.once.Do(func() {
+		bi.it.Seek(bi.fullPrefix)
+		firstTime = true
+	})
+	if firstTime {
+		return bi.it.ValidForPrefix(bi.fullPrefix)
+	}
+
 	bi.it.Next()
 	return bi.it.ValidForPrefix(bi.fullPrefix)
 }
@@ -134,7 +145,6 @@ func (bi *badgerIterator) Key() []byte {
 	return bi.it.Item().Key()[len(bi.scope.Bytes()):]
 }
 
-func (bi *badgerIterator) Value() []byte {
-	value, _ := bi.it.Item().ValueCopy(nil)
-	return value
+func (bi *badgerIterator) Value() ([]byte, error) {
+	return bi.it.Item().Value()
 }
