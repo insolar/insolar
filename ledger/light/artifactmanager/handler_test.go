@@ -459,9 +459,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	assert.Equal(s.T(), childID, idx.ChildPointer)
 }
 
-// TODO fix this test
 func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated() {
-	// Arrange
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
@@ -509,19 +507,22 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	err := s.indexMemoryStor.Set(s.ctx, *msg.Parent.Record(), objIndex)
 	require.NoError(s.T(), err)
 
-	// Act
-	/***
-	_, err = h.handleRegisterChild(contextWithJet(s.ctx, jetID), &message.Parcel{
-		Msg:         &msg,
-		PulseNumber: insolar.FirstPulseNumber + 100,
-	})
+	replyTo := make(chan bus.Reply, 1)
+	pulse := gen.PulseNumber()
+	registerChild := proc.NewRegisterChild(insolar.JetID(jetID), &msg, pulse, objIndex, replyTo)
+	registerChild.Dep.IDLocker = idLockMock
+	registerChild.Dep.IndexStorage = s.indexMemoryStor
+	registerChild.Dep.JetCoordinator = jet.NewCoordinatorMock(mc)
+	registerChild.Dep.RecordModifier = s.recordModifier
+	registerChild.Dep.IndexStateModifier = s.indexMemoryStor
+	registerChild.Dep.PlatformCryptographyScheme = s.scheme
+
+	err = registerChild.Proceed(contextWithJet(s.ctx, jetID))
 	require.NoError(s.T(), err)
 
-	// Assert
 	idx, err := s.indexMemoryStor.ForID(s.ctx, *msg.Parent.Record())
 	require.NoError(s.T(), err)
-	require.Equal(s.T(), int(idx.LatestUpdate), insolar.FirstPulseNumber+100)
-	***/
+	require.Equal(s.T(), idx.LatestUpdate, pulse)
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
