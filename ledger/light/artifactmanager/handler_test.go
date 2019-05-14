@@ -23,9 +23,6 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -34,15 +31,18 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/testutils"
@@ -345,18 +345,22 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
+
 	msg := message.GetPendingRequests{
 		Object: *genRandomRef(0),
 	}
+	fakeParcel := testutils.NewParcelMock(mc)
+	fakeParcel.MessageMock.Return(&msg)
+	fakeParcel.PulseMock.Return(insolar.FirstPulseNumber - 1)
+
 	pendingRequests := []insolar.ID{
-		*genRandomID(insolar.FirstPulseNumber),
-		*genRandomID(insolar.FirstPulseNumber),
+		*genRandomID(insolar.FirstPulseNumber - 2),
+		*genRandomID(insolar.FirstPulseNumber - 2),
 	}
 
 	recentStorageMock := recentstorage.NewPendingStorageMock(s.T())
 	recentStorageMock.GetRequestsForObjectMock.Return(pendingRequests)
 
-	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 	jc := jet.NewCoordinatorMock(mc)
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
@@ -375,10 +379,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 
 	h.RecentStorageProvider = provideMock
 
-	rep, err := h.handleHasPendingRequests(contextWithJet(s.ctx, jetID), &message.Parcel{
-		Msg:         &msg,
-		PulseNumber: insolar.FirstPulseNumber + 1,
-	})
+	rep, err := h.FlowDispatcher.WrapBusHandle(s.ctx, fakeParcel)
 	require.NoError(s.T(), err)
 	has, ok := rep.(*reply.HasPendingRequests)
 	require.True(s.T(), ok)
