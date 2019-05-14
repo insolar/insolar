@@ -61,47 +61,6 @@ import (
 )
 
 // Deserialize implements interface method
-func (cpa *CapabilityPoolingAndActivation) Deserialize(data io.Reader) error {
-	err := binary.Read(data, defaultByteOrder, &cpa.PollingFlags)
-	if err != nil {
-		return errors.Wrap(err, "[ NodeBroadcast.Deserialize ] Can't read PollingFlags")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &cpa.CapabilityType)
-	if err != nil {
-		return errors.Wrap(err, "[ CapabilityPoolingAndActivation.Deserialize ] Can't read CapabilityType")
-	}
-
-	err = binary.Read(data, defaultByteOrder, &cpa.CapabilityRef)
-	if err != nil {
-		return errors.Wrap(err, "[ CapabilityPoolingAndActivation.Deserialize ] Can't read CapabilityRef")
-	}
-
-	return nil
-}
-
-// Serialize implements interface method
-func (cpa *CapabilityPoolingAndActivation) Serialize() ([]byte, error) {
-	result := allocateBuffer(128)
-	err := binary.Write(result, defaultByteOrder, cpa.PollingFlags)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ CapabilityPoolingAndActivation.Serialize ] Can't write PollingFlags")
-	}
-
-	err = binary.Write(result, defaultByteOrder, cpa.CapabilityType)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ CapabilityPoolingAndActivation.Serialize ] Can't write CapabilityType")
-	}
-
-	err = binary.Write(result, defaultByteOrder, cpa.CapabilityRef)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ CapabilityPoolingAndActivation.Serialize ] Can't write CapabilityRef")
-	}
-
-	return result.Bytes(), nil
-}
-
-// Deserialize implements interface method
 func (nvb *NodeViolationBlame) Deserialize(data io.Reader) error {
 	err := binary.Read(data, defaultByteOrder, &nvb.BlameNodeID)
 	if err != nil {
@@ -421,8 +380,6 @@ func parseReferendumClaim(data []byte) ([]ReferendumClaim, error) {
 		switch claimType {
 		case TypeNodeJoinClaim:
 			refClaim = &NodeJoinClaim{}
-		case TypeCapabilityPollingAndActivation:
-			refClaim = &CapabilityPoolingAndActivation{}
 		case TypeNodeViolationBlame:
 			refClaim = &NodeViolationBlame{}
 		case TypeNodeLeaveClaim:

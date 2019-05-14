@@ -57,19 +57,6 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-func makeCapabilityPoolingAndActivation() *CapabilityPoolingAndActivation {
-	capabilityPoolingAndActivation := &CapabilityPoolingAndActivation{}
-	capabilityPoolingAndActivation.PollingFlags = uint16(10)
-	capabilityPoolingAndActivation.CapabilityType = uint16(7)
-	capabilityPoolingAndActivation.CapabilityRef = randomArray64()
-
-	return capabilityPoolingAndActivation
-}
-
-func TestCapabilityPoolingAndActivation(t *testing.T) {
-	checkSerializationDeserialization(t, makeCapabilityPoolingAndActivation())
-}
-
 func makeNodeViolationBlame() *NodeViolationBlame {
 	nodeViolationBlame := &NodeViolationBlame{}
 	nodeViolationBlame.TypeViolation = uint8(4)

@@ -10,15 +10,14 @@ func _() {
 	var x [1]struct{}
 	_ = x[TypeNodeJoinClaim-1]
 	_ = x[TypeNodeAnnounceClaim-2]
-	_ = x[TypeCapabilityPollingAndActivation-3]
-	_ = x[TypeNodeViolationBlame-4]
-	_ = x[TypeNodeLeaveClaim-5]
-	_ = x[TypeChangeNetworkClaim-6]
+	_ = x[TypeNodeViolationBlame-3]
+	_ = x[TypeNodeLeaveClaim-4]
+	_ = x[TypeChangeNetworkClaim-5]
 }
 
-const _ClaimType_name = "TypeNodeJoinClaimTypeNodeAnnounceClaimTypeCapabilityPollingAndActivationTypeNodeViolationBlameTypeNodeLeaveClaimTypeChangeNetworkClaim"
+const _ClaimType_name = "TypeNodeJoinClaimTypeNodeAnnounceClaimTypeNodeViolationBlameTypeNodeLeaveClaimTypeChangeNetworkClaim"
 
-var _ClaimType_index = [...]uint8{0, 17, 38, 72, 94, 112, 134}
+var _ClaimType_index = [...]uint8{0, 17, 38, 60, 78, 100}
 
 func (i ClaimType) String() string {
 	i -= 1

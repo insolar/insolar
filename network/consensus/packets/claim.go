@@ -63,12 +63,11 @@ import (
 type ClaimType uint8
 
 const (
-	TypeNodeJoinClaim                  = ClaimType(1)
-	TypeNodeAnnounceClaim              = ClaimType(2)
-	TypeCapabilityPollingAndActivation = ClaimType(3)
-	TypeNodeViolationBlame             = ClaimType(4)
-	TypeNodeLeaveClaim                 = ClaimType(5)
-	TypeChangeNetworkClaim             = ClaimType(6)
+	TypeNodeJoinClaim      = ClaimType(1)
+	TypeNodeAnnounceClaim  = ClaimType(2)
+	TypeNodeViolationBlame = ClaimType(3)
+	TypeNodeLeaveClaim     = ClaimType(4)
+	TypeChangeNetworkClaim = ClaimType(5)
 )
 
 const claimHeaderSize = 2
@@ -96,28 +95,6 @@ type SignedClaim interface {
 	GetPublicKey() (crypto.PublicKey, error)
 	SerializeRaw() ([]byte, error)
 	GetSignature() []byte
-}
-
-// NodeBroadcast is a broadcast of info. Must be brief and only one entry per node.
-// Type 4.
-type NodeBroadcast struct {
-	EmergencyLevel uint8
-}
-
-// CapabilityPoolingAndActivation is a type 3.
-type CapabilityPoolingAndActivation struct {
-	PollingFlags   uint16
-	CapabilityType uint16
-	CapabilityRef  [ReferenceLength]byte
-}
-
-func (cpa *CapabilityPoolingAndActivation) Clone() ReferendumClaim {
-	result := *cpa
-	return &result
-}
-
-func (cpa *CapabilityPoolingAndActivation) Type() ClaimType {
-	return TypeCapabilityPollingAndActivation
 }
 
 // NodeViolationBlame is a type 2.
