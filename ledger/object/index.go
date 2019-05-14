@@ -111,7 +111,10 @@ type InMemoryIndex struct {
 }
 
 func NewInMemoryIndex() *InMemoryIndex {
-	return &InMemoryIndex{buckets: map[insolar.PulseNumber]map[insolar.ID]*LockedIndexBucket{}}
+	return &InMemoryIndex{
+		buckets:     map[insolar.PulseNumber]map[insolar.ID]*LockedIndexBucket{},
+		lastKnownPN: map[insolar.ID]insolar.PulseNumber{},
+	}
 }
 
 func (i *InMemoryIndex) bucket(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *LockedIndexBucket {
@@ -148,7 +151,7 @@ func (i *InMemoryIndex) updateLastKnown(pn insolar.PulseNumber, objID insolar.ID
 
 func (i *InMemoryIndex) lastKnownLifeline(ctx context.Context, objID insolar.ID) (Lifeline, error) {
 	i.lastKnownLock.RLock()
-	defer i.lastKnownLock.Unlock()
+	defer i.lastKnownLock.RUnlock()
 
 	pn, ok := i.lastKnownPN[objID]
 	if !ok {
