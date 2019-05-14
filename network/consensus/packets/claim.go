@@ -67,18 +67,9 @@ const (
 	TypeNodeAnnounceClaim  = ClaimType(2)
 	TypeNodeViolationBlame = ClaimType(3)
 	TypeNodeLeaveClaim     = ClaimType(4)
-	TypeChangeNetworkClaim = ClaimType(5)
 )
 
 const claimHeaderSize = 2
-
-// ChangeNetworkClaim uses to change network state.
-type ChangeNetworkClaim struct {
-}
-
-func (cnc *ChangeNetworkClaim) Type() ClaimType {
-	return TypeChangeNetworkClaim
-}
 
 type ReferendumClaim interface {
 	Serializer
