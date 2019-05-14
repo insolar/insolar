@@ -80,7 +80,7 @@ func makeDefaultPacketHeader(packetType PacketType) *PacketHeader {
 func serializeData(t *testing.T, serializer Serializer) []byte {
 	data, err := serializer.Serialize()
 	require.NoError(t, err)
-	//TODO: require.NotEmpty(t, data) - need to fix test, coz some claims serializes to empty []byte
+	// TODO: require.NotEmpty(t, data) - need to fix test, coz some claims serializes to empty []byte
 
 	return data
 }
@@ -172,13 +172,6 @@ func randomArray64() [64]byte {
 	return buf
 }
 
-func randomArray32() [32]byte {
-	const n = 32
-	var buf [n]byte
-	copy(buf[:], genRandomSlice(n))
-	return buf
-}
-
 func makeNodePulseProof() *NodePulseProof {
 	nodePulseProof := &NodePulseProof{}
 	nodePulseProof.NodeSignature = randomArray66()
@@ -220,19 +213,19 @@ func TestPhase1Packet_SetPulseProof(t *testing.T) {
 
 func TestParseAndCompactRouteInfo(t *testing.T) {
 	var routInfoTests = []PacketHeader{
-		PacketHeader{
+		{
 			PacketT:    Phase1,
 			HasRouting: true,
 		},
-		PacketHeader{
+		{
 			PacketT:    Phase1,
 			HasRouting: false,
 		},
-		PacketHeader{
+		{
 			PacketT:    Phase2,
 			HasRouting: true,
 		},
-		PacketHeader{
+		{
 			PacketT:    Phase2,
 			HasRouting: false,
 		},
@@ -248,27 +241,27 @@ func TestParseAndCompactRouteInfo(t *testing.T) {
 
 func TestParseAndCompactPulseAndCustomFlags(t *testing.T) {
 	var pulseAndCustomFlagsTests = []PacketHeader{
-		PacketHeader{
+		{
 			f00:   true,
 			f01:   true,
 			Pulse: 0,
 		},
-		PacketHeader{
+		{
 			f00:   false,
 			f01:   true,
 			Pulse: 1,
 		},
-		PacketHeader{
+		{
 			f00:   true,
 			f01:   false,
 			Pulse: 2,
 		},
-		PacketHeader{
+		{
 			f00:   false,
 			f01:   false,
 			Pulse: 2,
 		},
-		PacketHeader{
+		{
 			f00:   false,
 			f01:   false,
 			Pulse: 0,
@@ -310,7 +303,7 @@ func makePhase2Packet() *Phase2Packet {
 	phase2Packet.SignatureHeaderSection2 = randomArray66()
 	phase2Packet.bitSet, _ = NewBitSet(134)
 
-	vote := &MissingNode{NodeIndex: 25}
+	vote := &MissingNodeReqVote{NodeIndex: 25}
 
 	phase2Packet.AddVote(vote)
 

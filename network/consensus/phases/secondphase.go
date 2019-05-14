@@ -201,8 +201,8 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *insolar.Pulse, 
 	logger := inslogger.FromContext(ctx)
 	logger.Infof("[ NET Consensus phase-2.1 ] Additional requests needed: %d", len(additionalRequests))
 
-	results := make(map[uint16]*packets.MissingNodeSupplementaryVote)
-	claims := make(map[uint16]*packets.MissingNodeClaim)
+	results := make(map[uint16]*packets.MissingNodeRespVote)
+	claims := make(map[uint16]*packets.MissingNodeClaimsVote)
 
 	packet := packets.NewPhase2Packet(pulse.PulseNumber)
 	err := packet.SetGlobuleHashSignature(state.GlobuleProof.Signature.Bytes())
@@ -222,9 +222,9 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *insolar.Pulse, 
 
 	for _, vote := range voteAnswers {
 		switch v := vote.(type) {
-		case *packets.MissingNodeSupplementaryVote:
+		case *packets.MissingNodeRespVote:
 			results[v.NodeIndex] = v
-		case *packets.MissingNodeClaim:
+		case *packets.MissingNodeClaimsVote:
 			claims[v.NodeIndex] = v
 		}
 	}
@@ -234,7 +234,7 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *insolar.Pulse, 
 		logger.Warn("[ NET Consensus phase-2.1 ] Failed to record received results metric: " + err.Error())
 	}
 	if len(results) != len(additionalRequests) {
-		return nil, errors.Errorf("[ NET Consensus phase-2.1 ] Failed to receive enough MissingNodeSupplementaryVote responses,"+
+		return nil, errors.Errorf("[ NET Consensus phase-2.1 ] Failed to receive enough MissingNodeRespVote responses,"+
 			" received: %d/%d", len(results), len(additionalRequests))
 	}
 
