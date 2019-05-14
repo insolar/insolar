@@ -54,40 +54,11 @@ import (
 	"testing"
 )
 
-func makeNodeListSupplementaryVote() *NodeListSupplementaryVote {
-	nodeListVote := &NodeListSupplementaryVote{}
-	nodeListVote.NodeListHash = randomArray32()
-	nodeListVote.NodeListCount = uint16(77)
-
-	return nodeListVote
-}
-
-func TestNodeListSupplementaryVote(t *testing.T) {
-	checkSerializationDeserialization(t, makeNodeListSupplementaryVote())
-
-	checkBadDataSerializationDeserialization(t, makeNodeListSupplementaryVote(), "unexpected EOF")
-}
-
-func makeStateFraudNodeSupplementaryVote() *StateFraudNodeSupplementaryVote {
-	result := &StateFraudNodeSupplementaryVote{}
-	result.Node1PulseProof = *makeNodePulseProof()
-	result.Node2PulseProof = *makeNodePulseProof()
-	result.PulseData = PulseData{PulseNumber: 1, Data: makeDefaultPulseDataExt()}
-
-	return result
-}
-
-func TestStateFraudNodeSupplementaryVote(t *testing.T) {
-	checkSerializationDeserialization(t, makeStateFraudNodeSupplementaryVote())
-
-	checkBadDataSerializationDeserialization(t, makeStateFraudNodeSupplementaryVote(), "unexpected EOF")
-}
-
 func TestMissingNodeSupplementaryVote(t *testing.T) {
 	checkSerializationDeserialization(t,
-		&MissingNodeSupplementaryVote{NodePulseProof: *makeNodePulseProof(), NodeClaimUnsigned: *makeNodeJoinClaim(false)})
+		&MissingNodeRespVote{NodePulseProof: *makeNodePulseProof(), NodeClaimUnsigned: *makeNodeJoinClaim(false)})
 
 	checkBadDataSerializationDeserialization(t,
-		&MissingNodeSupplementaryVote{NodePulseProof: *makeNodePulseProof(), NodeClaimUnsigned: *makeNodeJoinClaim(false)},
+		&MissingNodeRespVote{NodePulseProof: *makeNodePulseProof(), NodeClaimUnsigned: *makeNodeJoinClaim(false)},
 		"unexpected EOF")
 }

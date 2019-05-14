@@ -83,7 +83,7 @@ type Communicator interface {
 	// ExchangePhase2 used in second consensus step to exchange data between participants
 	ExchangePhase2(ctx context.Context, state *ConsensusState,
 		participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.Reference]*packets.Phase2Packet, error)
-	// ExchangePhase21 is used between phases 2 and 3 of consensus to send additional MissingNode requests
+	// ExchangePhase21 is used between phases 2 and 3 of consensus to send additional MissingNodeReqVote requests
 	ExchangePhase21(ctx context.Context, state *ConsensusState,
 		packet *packets.Phase2Packet, additionalRequests []*AdditionalRequest) ([]packets.ReferendumVote, error)
 	// ExchangePhase3 used in third consensus step to exchange data between participants
@@ -210,36 +210,36 @@ func (nc *ConsensusCommunicator) generatePhase2Response(ctx context.Context, ori
 	logger := inslogger.FromContext(ctx)
 	answers := make([]packets.ReferendumVote, 0)
 	for _, vote := range req.GetVotes() {
-		if vote.Type() != packets.TypeMissingNode {
+		if vote.Type() != packets.TypeMissingNodeReqVote {
 			continue
 		}
-		v, ok := vote.(*packets.MissingNode)
+		v, ok := vote.(*packets.MissingNodeReqVote)
 		if !ok {
-			logger.Warnf("Phase 2 MissingNode request type mismatch")
+			logger.Warnf("Phase 2 MissingNodeReqVote request type mismatch")
 			continue
 		}
 		ref, err := state.BitsetMapper.IndexToRef(int(v.NodeIndex))
 		if err != nil {
-			logger.Warnf("Phase 2 MissingNode requested index: %d, error: %s", v.NodeIndex, err.Error())
+			logger.Warnf("Phase 2 MissingNodeReqVote requested index: %d, error: %s", v.NodeIndex, err.Error())
 			continue
 		}
 		node := state.NodesMutator.GetActiveNode(ref)
 		if node == nil {
-			logger.Warnf("Phase 2 MissingNode requested index: %d; mapped ref %s not found", v.NodeIndex, ref)
+			logger.Warnf("Phase 2 MissingNodeReqVote requested index: %d; mapped ref %s not found", v.NodeIndex, ref)
 			continue
 		}
 		claim, err := packets.NodeToClaim(node)
 		if err != nil {
-			logger.Warnf("Phase 2 MissingNode requested index: %d, mapped ref: %s, convertation node -> claim error: %s",
+			logger.Warnf("Phase 2 MissingNodeReqVote requested index: %d, mapped ref: %s, convertation node -> claim error: %s",
 				v.NodeIndex, ref, err.Error())
 			continue
 		}
 		proof := state.HashStorage.GetProof(ref)
 		if proof == nil {
-			logger.Warnf("Phase 2 MissingNode requested index: %d, mapped ref: %s, proof not found", v.NodeIndex, ref)
+			logger.Warnf("Phase 2 MissingNodeReqVote requested index: %d, mapped ref: %s, proof not found", v.NodeIndex, ref)
 			continue
 		}
-		answer := packets.MissingNodeSupplementaryVote{
+		answer := packets.MissingNodeRespVote{
 			NodeIndex:         v.NodeIndex,
 			NodePulseProof:    *proof,
 			NodeClaimUnsigned: *claim,
@@ -247,7 +247,7 @@ func (nc *ConsensusCommunicator) generatePhase2Response(ctx context.Context, ori
 		answers = append(answers, &answer)
 		claims := state.ClaimHandler.GetClaimsFromNode(ref)
 		for _, claim := range claims {
-			claimAnswer := packets.MissingNodeClaim{NodeIndex: v.NodeIndex, Claim: claim}
+			claimAnswer := packets.MissingNodeClaimsVote{NodeIndex: v.NodeIndex, Claim: claim}
 			answers = append(answers, &claimAnswer)
 		}
 	}
@@ -437,7 +437,7 @@ func (nc *ConsensusCommunicator) sendAdditionalRequests(ctx context.Context, ori
 	logger := inslogger.FromContext(ctx)
 	for _, req := range additionalRequests {
 		newReq := *origReq
-		newReq.AddVote(&packets.MissingNode{NodeIndex: uint16(req.RequestIndex)})
+		newReq.AddVote(&packets.MissingNodeReqVote{NodeIndex: uint16(req.RequestIndex)})
 		receiver := selectCandidate(req.Candidates)
 		err := nc.ConsensusNetwork.SignAndSendPacket(&newReq, receiver, nc.Cryptography)
 		if err != nil {
@@ -504,9 +504,9 @@ func (nc *ConsensusCommunicator) ExchangePhase21(ctx context.Context, state *Con
 				voteAnswers := res.packet.GetVotes()
 				for _, vote := range voteAnswers {
 					switch v := vote.(type) {
-					case *packets.MissingNodeSupplementaryVote:
+					case *packets.MissingNodeRespVote:
 						appendResult(v.NodeIndex, v)
-					case *packets.MissingNodeClaim:
+					case *packets.MissingNodeClaimsVote:
 						appendResult(v.NodeIndex, v)
 					}
 				}
