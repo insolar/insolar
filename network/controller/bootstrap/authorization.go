@@ -64,12 +64,12 @@ import (
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/platformpolicy"

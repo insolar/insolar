@@ -48,60 +48,69 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package claimhandler
+package packets
 
 import (
-	"bytes"
-	"container/heap"
-
-	"github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/insolar"
+	"github.com/pkg/errors"
 )
 
-// Queue implements heap.Interface.
-type Queue []*Claim
+// BitSetState is state of the communicating node
+type BitSetState uint8
 
-type Claim struct {
-	value    packets.ReferendumClaim
-	priority []byte
-	index    int
+const (
+	// TimedOut is state indicating that timeout occurred when communicating with node
+	TimedOut BitSetState = iota
+	// Legit is state indicating OK data from node
+	Legit
+	// Fraud is state indicating that the node is malicious (fraud)
+	Fraud
+	// Inconsistent is state indicating that node validation is inconsistent on different nodes
+	Inconsistent
+)
+
+// BitSetCell is structure that contains the state of the node
+type BitSetCell struct {
+	NodeID insolar.Reference
+	State  BitSetState
 }
 
-func (q *Queue) PushClaim(claim packets.ReferendumClaim, priority []byte) {
-	item := &Claim{
-		value:    claim,
-		index:    q.Len(),
-		priority: priority,
-	}
-	heap.Push(q, item)
+// Possible errors in BitSetMapper
+var (
+	// ErrBitSetOutOfRange is returned when index passed to IndexToRef function is out of range (ERROR)
+	ErrBitSetOutOfRange = errors.New("index out of range")
+	// ErrBitSetNodeIsMissing is returned in IndexToRef when we have no information about the node on specified index (SPECIAL CASE)
+	ErrBitSetNodeIsMissing = errors.New("no information about node on specified index")
+	// ErrBitSetIncorrectNode is returned when an incorrect node is passed to RefToIndex (ERROR)
+	ErrBitSetIncorrectNode = errors.New("incorrect node ID")
+)
+
+//go:generate minimock -i github.com/insolar/insolar/network/consensus/packets.BitSetMapper -o . -s _mock.go
+
+// BitSetMapper contains the mapping from bitset index to node ID (and vice versa)
+type BitSetMapper interface {
+	// IndexToRef get ID of the node that is stored on the specified internal index
+	IndexToRef(index int) (insolar.Reference, error)
+	// RefToIndex get bitset internal index where the specified node state is stored
+	RefToIndex(nodeID insolar.Reference) (int, error)
+	// Length returns required length of the bitset
+	Length() int
 }
 
-func (q *Queue) Push(x interface{}) {
-	item := x.(*Claim)
-	*q = append(*q, item)
+// BitSet is interface
+type BitSet interface {
+	Serialize() ([]byte, error)
+	// GetCells get buckets of bitset
+	GetCells(mapper BitSetMapper) ([]BitSetCell, error)
+	// GetTristateArray get underlying tristate
+	GetTristateArray() ([]BitSetState, error)
+	// ApplyChanges returns copy of the current bitset with changes applied
+	ApplyChanges(changes []BitSetCell, mapper BitSetMapper) error
+	// Clone makes deep copy of bitset
+	Clone() BitSet
 }
 
-func (q *Queue) PopClaim() packets.ReferendumClaim {
-	return heap.Pop(q).(packets.ReferendumClaim)
-}
-
-func (q *Queue) Pop() interface{} {
-	l := q.Len()
-	item := (*q)[l-1]
-	*q = (*q)[0 : l-1]
-	return item.value
-}
-
-func (q Queue) Swap(i, j int) {
-	q[i], q[j] = q[j], q[i]
-	q[i].index = i
-	q[j].index = j
-}
-
-func (q Queue) Len() int {
-	return len(q)
-}
-
-// Less returns true if i > j cuz we need a greater to pop. Otherwise returns false.
-func (q Queue) Less(i, j int) bool {
-	return bytes.Compare(q[i].priority, q[j].priority) > 0
+// NewBitSet creates bitset from a set of buckets and the mapper. Size == cells count.
+func NewBitSet(size int) (BitSet, error) {
+	return NewBitSetImpl(size, false)
 }

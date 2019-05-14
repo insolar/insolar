@@ -53,9 +53,9 @@ package phases
 import (
 	"fmt"
 
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/pkg/errors"
 )
 

@@ -60,8 +60,8 @@ import (
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
-	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/utils"
 )

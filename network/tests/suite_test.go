@@ -50,7 +50,7 @@
 
 // +build networktest
 
-package servicenetwork
+package tests
 
 import (
 	"context"
@@ -64,20 +64,20 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/stretchr/testify/suite"
-
-	"github.com/insolar/insolar/network/gateway"
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/consensus/phases"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
@@ -322,7 +322,7 @@ type networkNode struct {
 	ctx                 context.Context
 
 	componentManager *component.Manager
-	serviceNetwork   *ServiceNetwork
+	serviceNetwork   *servicenetwork.ServiceNetwork
 	consensusResult  chan error
 }
 
@@ -438,6 +438,16 @@ func (m staterMock) State() ([]byte, error) {
 	return m.stateFunc()
 }
 
+type PublisherMock struct{}
+
+func (p *PublisherMock) Publish(topic string, messages ...*message.Message) error {
+	return nil
+}
+
+func (p *PublisherMock) Close() error {
+	return nil
+}
+
 // preInitNode inits previously created node with mocks and external dependencies
 func (s *testSuite) preInitNode(node *networkNode) {
 	t := s.T()
@@ -453,10 +463,10 @@ func (s *testSuite) preInitNode(node *networkNode) {
 
 	node.componentManager = &component.Manager{}
 	node.componentManager.Register(platformpolicy.NewPlatformCryptographyScheme())
-	serviceNetwork, err := NewServiceNetwork(cfg, node.componentManager, false)
+	serviceNetwork, err := servicenetwork.NewServiceNetwork(cfg, node.componentManager, false)
 	s.Require().NoError(err)
 
-	serviceNetwork.SetGateway(gateway.NewFakeOk())
+	serviceNetwork.SetGateway(NewFakeOk())
 	serviceNetwork.Gateway().Run(context.Background())
 
 	amMock := staterMock{

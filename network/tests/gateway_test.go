@@ -48,90 +48,43 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package phases
+// +build networktest
+
+package tests
 
 import (
 	"context"
-	"crypto"
-	"testing"
 
-	"github.com/stretchr/testify/suite"
-
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/node"
-	"github.com/insolar/insolar/testutils"
-	networkUtils "github.com/insolar/insolar/testutils/network"
+	"github.com/insolar/insolar/network/gateway"
 )
 
-type communicatorSuite struct {
-	suite.Suite
-	componentManager component.Manager
-	communicator     Communicator
-	originNode       insolar.NetworkNode
-	participants     []insolar.NetworkNode
-	hostNetworkMock  *networkUtils.HostNetworkMock
-
-	consensusNetworkMock *networkUtils.ConsensusNetworkMock
-	pulseHandlerMock     *networkUtils.PulseHandlerMock
+type FakeOk struct {
+	gateway.Base
+	State insolar.NetworkState
 }
 
-func NewSuite() *communicatorSuite {
-	return &communicatorSuite{
-		Suite:        suite.Suite{},
-		communicator: NewCommunicator(),
-		participants: nil,
-	}
+func NewFakeOk() network.Gateway {
+	g := &FakeOk{}
+	g.Base.Self = g
+	g.State = insolar.NoNetworkState
+	return g
 }
 
-func (s *communicatorSuite) SetupTest() {
-	s.consensusNetworkMock = networkUtils.NewConsensusNetworkMock(s.T())
-	s.pulseHandlerMock = networkUtils.NewPulseHandlerMock(s.T())
-	s.originNode = makeRandomNode()
-
-	nodeN := networkUtils.NewNodeKeeperMock(s.T())
-	nodeN.GetOriginMock.Return(s.originNode)
-
-	cryptoServ := testutils.NewCryptographyServiceMock(s.T())
-	cryptoServ.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
-		signature := insolar.SignatureFromBytes(nil)
-		return &signature, nil
-	}
-	cryptoServ.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
-		return true
-	}
-
-	s.consensusNetworkMock.RegisterPacketHandlerMock.Set(func(p packets.PacketType, p1 network.ConsensusPacketHandler) {
-
-	})
-
-	s.consensusNetworkMock.StartMock.Set(func(context.Context) error { return nil })
-
-	s.pulseHandlerMock.HandlePulseMock.Set(func(p context.Context, p1 insolar.Pulse) {
-
-	})
-
-	s.componentManager.Inject(nodeN, cryptoServ, s.communicator, s.consensusNetworkMock, s.pulseHandlerMock)
-	err := s.componentManager.Start(context.TODO())
-	s.NoError(err)
+func (g *FakeOk) OnPulse(context.Context, insolar.Pulse) error {
+	g.State = insolar.CompleteNetworkState
+	return nil
 }
 
-func makeRandomNode() insolar.NetworkNode {
-	return node.NewNode(testutils.RandomRef(), insolar.StaticRoleUnknown, nil, "127.0.0.1:5432", "")
+func (g *FakeOk) Run(context.Context) {
 }
 
-func (s *communicatorSuite) TestExchangeData() {
-	s.Assert().NotNil(s.communicator)
-	ctx, cancel := context.WithTimeout(context.Background(), 0)
-	defer cancel()
-
-	result, err := s.communicator.ExchangePhase1(ctx, nil, s.participants, &packets.Phase1Packet{})
-	s.Assert().NoError(err)
-	s.NotEqual(0, len(result))
+func (g *FakeOk) GetState() insolar.NetworkState {
+	return g.State
 }
 
-func TestNaiveCommunicator(t *testing.T) {
-	suite.Run(t, NewSuite())
+// ValidateCert overloaded for test purpose
+func (g *FakeOk) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
+	return true, nil
 }

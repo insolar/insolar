@@ -51,56 +51,35 @@
 package phases
 
 import (
-	"github.com/insolar/insolar/consensus/claimhandler"
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/merkle"
-	"github.com/insolar/insolar/network/node"
+	"github.com/insolar/insolar/network/consensus/packets"
 )
 
-type FirstPhaseState struct {
-	*ConsensusState
-
-	PulseEntry *merkle.PulseEntry
-
-	PulseHash  merkle.OriginHash
-	PulseProof *merkle.PulseProof
-
-	ValidProofs map[insolar.NetworkNode]*merkle.PulseProof
-	FaultProofs map[insolar.Reference]*merkle.PulseProof
-
-	BitSet packets.BitSet
+type HashStorage struct {
+	proofs map[insolar.Reference]*packets.NodePulseProof
+	ghs    map[insolar.Reference]packets.GlobuleHashSignature
 }
 
-type SecondPhaseState struct {
-	*FirstPhaseState
-
-	GlobuleHash  merkle.OriginHash
-	GlobuleProof *merkle.GlobuleProof
-
-	MatrixState *Phase2MatrixState
-	Matrix      *StateMatrix
-}
-
-type ThirdPhaseState struct {
-	ActiveNodes    []insolar.NetworkNode
-	GlobuleProof   *merkle.GlobuleProof
-	ApprovedClaims []packets.ReferendumClaim
-}
-
-type ConsensusState struct {
-	ConsensusInfo network.ConsensusInfo
-	NodesMutator  network.Mutator
-	HashStorage   *HashStorage
-	BitsetMapper  *BitsetMapper
-	ClaimHandler  *claimhandler.ClaimHandler
-}
-
-func NewConsensusState(consensusInfo network.ConsensusInfo, snapshot *node.Snapshot) *ConsensusState {
-	return &ConsensusState{
-		ConsensusInfo: consensusInfo,
-		NodesMutator:  node.NewMutator(snapshot),
-		HashStorage:   NewHashStorage(),
+func NewHashStorage() *HashStorage {
+	return &HashStorage{
+		proofs: make(map[insolar.Reference]*packets.NodePulseProof),
+		ghs:    make(map[insolar.Reference]packets.GlobuleHashSignature),
 	}
+}
+
+func (hs *HashStorage) GetGlobuleHashSignature(ref insolar.Reference) (packets.GlobuleHashSignature, bool) {
+	ghs, ok := hs.ghs[ref]
+	return ghs, ok
+}
+
+func (hs *HashStorage) SetGlobuleHashSignature(ref insolar.Reference, ghs packets.GlobuleHashSignature) {
+	hs.ghs[ref] = ghs
+}
+
+func (hs *HashStorage) AddProof(nodeID insolar.Reference, proof *packets.NodePulseProof) {
+	hs.proofs[nodeID] = proof
+}
+
+func (hs *HashStorage) GetProof(nodeID insolar.Reference) *packets.NodePulseProof {
+	return hs.proofs[nodeID]
 }

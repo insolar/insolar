@@ -3,7 +3,7 @@ package phases
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "Communicator" can be found in github.com/insolar/insolar/consensus/phases
+The original interface "Communicator" can be found in github.com/insolar/insolar/network/consensus/phases
 */
 import (
 	context "context"
@@ -11,13 +11,13 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	packets "github.com/insolar/insolar/consensus/packets"
 	insolar "github.com/insolar/insolar/insolar"
+	packets "github.com/insolar/insolar/network/consensus/packets"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//CommunicatorMock implements github.com/insolar/insolar/consensus/phases.Communicator
+//CommunicatorMock implements github.com/insolar/insolar/network/consensus/phases.Communicator
 type CommunicatorMock struct {
 	t minimock.Tester
 
@@ -47,7 +47,7 @@ type CommunicatorMock struct {
 	InitMock       mCommunicatorMockInit
 }
 
-//NewCommunicatorMock returns a mock for github.com/insolar/insolar/consensus/phases.Communicator
+//NewCommunicatorMock returns a mock for github.com/insolar/insolar/network/consensus/phases.Communicator
 func NewCommunicatorMock(t minimock.Tester) *CommunicatorMock {
 	m := &CommunicatorMock{t: t}
 
@@ -135,7 +135,7 @@ func (m *mCommunicatorMockExchangePhase1) Set(f func(p context.Context, p1 *pack
 	return m.mock
 }
 
-//ExchangePhase1 implements github.com/insolar/insolar/consensus/phases.Communicator interface
+//ExchangePhase1 implements github.com/insolar/insolar/network/consensus/phases.Communicator interface
 func (m *CommunicatorMock) ExchangePhase1(p context.Context, p1 *packets.NodeAnnounceClaim, p2 []insolar.NetworkNode, p3 *packets.Phase1Packet) (r map[insolar.Reference]*packets.Phase1Packet, r1 error) {
 	counter := atomic.AddUint64(&m.ExchangePhase1PreCounter, 1)
 	defer atomic.AddUint64(&m.ExchangePhase1Counter, 1)
@@ -288,7 +288,7 @@ func (m *mCommunicatorMockExchangePhase2) Set(f func(p context.Context, p1 *Cons
 	return m.mock
 }
 
-//ExchangePhase2 implements github.com/insolar/insolar/consensus/phases.Communicator interface
+//ExchangePhase2 implements github.com/insolar/insolar/network/consensus/phases.Communicator interface
 func (m *CommunicatorMock) ExchangePhase2(p context.Context, p1 *ConsensusState, p2 []insolar.NetworkNode, p3 *packets.Phase2Packet) (r map[insolar.Reference]*packets.Phase2Packet, r1 error) {
 	counter := atomic.AddUint64(&m.ExchangePhase2PreCounter, 1)
 	defer atomic.AddUint64(&m.ExchangePhase2Counter, 1)
@@ -441,7 +441,7 @@ func (m *mCommunicatorMockExchangePhase21) Set(f func(p context.Context, p1 *Con
 	return m.mock
 }
 
-//ExchangePhase21 implements github.com/insolar/insolar/consensus/phases.Communicator interface
+//ExchangePhase21 implements github.com/insolar/insolar/network/consensus/phases.Communicator interface
 func (m *CommunicatorMock) ExchangePhase21(p context.Context, p1 *ConsensusState, p2 *packets.Phase2Packet, p3 []*AdditionalRequest) (r []packets.ReferendumVote, r1 error) {
 	counter := atomic.AddUint64(&m.ExchangePhase21PreCounter, 1)
 	defer atomic.AddUint64(&m.ExchangePhase21Counter, 1)
@@ -593,7 +593,7 @@ func (m *mCommunicatorMockExchangePhase3) Set(f func(p context.Context, p1 []ins
 	return m.mock
 }
 
-//ExchangePhase3 implements github.com/insolar/insolar/consensus/phases.Communicator interface
+//ExchangePhase3 implements github.com/insolar/insolar/network/consensus/phases.Communicator interface
 func (m *CommunicatorMock) ExchangePhase3(p context.Context, p1 []insolar.NetworkNode, p2 *packets.Phase3Packet) (r map[insolar.Reference]*packets.Phase3Packet, r1 error) {
 	counter := atomic.AddUint64(&m.ExchangePhase3PreCounter, 1)
 	defer atomic.AddUint64(&m.ExchangePhase3Counter, 1)
@@ -742,7 +742,7 @@ func (m *mCommunicatorMockInit) Set(f func(p context.Context) (r error)) *Commun
 	return m.mock
 }
 
-//Init implements github.com/insolar/insolar/consensus/phases.Communicator interface
+//Init implements github.com/insolar/insolar/network/consensus/phases.Communicator interface
 func (m *CommunicatorMock) Init(p context.Context) (r error) {
 	counter := atomic.AddUint64(&m.InitPreCounter, 1)
 	defer atomic.AddUint64(&m.InitCounter, 1)

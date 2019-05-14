@@ -48,25 +48,68 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-// +build networktest
-
-package servicenetwork
+package claimhandler
 
 import (
-	"context"
-	"time"
+	"bytes"
+	"crypto/rand"
+	"testing"
 
-	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
 )
 
-type phaseManagerWrapper struct {
-	original phases.PhaseManager
-	result   chan error
+func TestQueue_PushClaim(t *testing.T) {
+	queue := Queue{}
+	elemCount := 20
+	entr := insolar.Entropy{}
+	_, err := rand.Read(entr[:])
+	assert.NoError(t, err)
+	for i := 0; i < elemCount; i++ {
+		claim := getJoinClaim(t, testutils.RandomRef())
+		queue.PushClaim(claim, getPriority(claim.NodeRef, entr))
+	}
+	assert.Equal(t, queue.Len(), elemCount)
 }
 
-func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
-	res := p.original.OnPulse(ctx, pulse, pulseStartTime)
-	p.result <- res
-	return res
+func TestQueue_Pop(t *testing.T) {
+	queue := Queue{}
+	elemCount := 20
+	entr := insolar.Entropy{}
+	_, err := rand.Read(entr[:])
+	assert.NoError(t, err)
+	for i := 0; i < elemCount; i++ {
+		claim := getJoinClaim(t, testutils.RandomRef())
+		queue.PushClaim(claim, getPriority(claim.NodeRef, entr))
+	}
+	assert.Equal(t, queue.Len(), elemCount)
+
+	claim := queue.PopClaim().(*packets.NodeJoinClaim)
+	refLen := len(claim.NodeRef.Bytes())
+	prevPriority := make([]byte, refLen)
+	priority := make([]byte, refLen)
+	copy(prevPriority, getPriority(claim.NodeRef, entr))
+	for i := 1; i < elemCount; i++ {
+		claim := queue.PopClaim().(*packets.NodeJoinClaim)
+		copy(priority, getPriority(claim.NodeRef, entr))
+		assert.True(t, bytes.Compare(prevPriority, priority) > 0)
+		copy(prevPriority, priority)
+	}
+}
+
+func getJoinClaim(t *testing.T, ref insolar.Reference) *packets.NodeJoinClaim {
+	nodeJoinClaim := &packets.NodeJoinClaim{}
+	nodeJoinClaim.ShortNodeID = insolar.ShortNodeID(77)
+	nodeJoinClaim.RelayNodeID = insolar.ShortNodeID(26)
+	nodeJoinClaim.ProtocolVersionAndFlags = uint32(99)
+	nodeJoinClaim.JoinsAfter = uint32(67)
+	nodeJoinClaim.NodeRoleRecID = 32
+	nodeJoinClaim.NodeRef = ref
+	_, err := rand.Read(nodeJoinClaim.NodePK[:])
+	assert.NoError(t, err)
+	nodeJoinClaim.NodeAddress.Set("127.0.0.1:5566")
+
+	return nodeJoinClaim
 }
