@@ -19,6 +19,8 @@ package handle
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar/message"
+
 	"github.com/insolar/insolar/ledger/light/proc"
 
 	"github.com/insolar/insolar/insolar/flow"
@@ -26,36 +28,27 @@ import (
 )
 
 type RegisterChild struct {
-	dep *proc.Dependencies
+	dep     *proc.Dependencies
+	replyTo chan<- bus.Reply
+	message *message.RegisterChild
+}
 
-	Message bus.Message
+func NewRegisterChild(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.RegisterChild) *RegisterChild {
+	return &RegisterChild{
+		dep:     dep,
+		replyTo: rep,
+		message: msg,
+	}
 }
 
 func (s *RegisterChild) Present(ctx context.Context, f flow.Flow) error {
-	// TODO actually implement
-	return nil
-	/*jet := &WaitJet{
-			dep:     s.dep,
-			Message: s.Message,
-		}
+	jet := proc.NewFetchJet(*s.message.DefaultTarget().Record() /* TODO is it right? */, flow.Pulse(ctx), s.replyTo)
+	s.dep.FetchJet(jet)
+	if err := f.Procedure(ctx, jet, false); err != nil {
+		return err
 	}
-		if err := f.Handle(ctx, jet.Present); err != nil {
-			return err
-		}
 
-		p := s.dep.GetChildren(&proc.GetChildren{
-			Jet:     insolar.ID(jet.Res.Jet),
-			Message: s.Message,
-		})
-		if err := f.Procedure(ctx, p); err != nil {
-			return err
-			}
-
-			rep := &proc.ReturnReply{
-				ReplyTo: s.Message.ReplyTo,
-				Reply:   p.Result.Reply,
-			}
-
-			return f.Procedure(ctx, rep)
-	*/
+	code := proc.NewRegisterChild(s.message, s.replyTo)
+	s.dep.RegisterChild(code) // TODO: figure out what is that for
+	return f.Procedure(ctx, code, false)
 }

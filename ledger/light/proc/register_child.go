@@ -19,7 +19,8 @@ package proc
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+
 	"github.com/insolar/insolar/insolar/flow/bus"
 )
 
@@ -95,25 +96,19 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 }
 */
 
-// GetChildren Procedure
 type RegisterChild struct {
-	Jet     insolar.ID
-	Message bus.Message
+	replyTo chan<- bus.Reply
+	message *message.RegisterChild
 
 	Dep struct {
-		//RecentStorageProvider  recentstorage.Provider
-		//IDLocker               storage.IDLocker
-		//IndexAccessor          object.IndexAccessor
-		//JetCoordinator         insolar.JetCoordinator
-		//JetStorage             jet.Storage
-		//DelegationTokenFactory insolar.DelegationTokenFactory
-		//RecordAccessor         object.RecordAccessor
-		//TreeUpdater            jet.Fetcher
-		//IndexSaver             object.IndexSaver
+		// RecordAccessor object.RecordAccessor
 	}
+}
 
-	Result struct {
-		Reply insolar.Reply
+func NewRegisterChild(msg *message.RegisterChild, replyTo chan<- bus.Reply) *RegisterChild {
+	return &RegisterChild{
+		message: msg,
+		replyTo: replyTo,
 	}
 }
 

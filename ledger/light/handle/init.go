@@ -67,10 +67,8 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		h := NewUpdateObject(s.Dep, s.Message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeRegisterChild:
-		h := &RegisterChild{
-			dep:     s.Dep,
-			Message: s.Message,
-		}
+		msg := s.Message.Parcel.Message().(*message.RegisterChild)
+		h := NewRegisterChild(s.Dep, s.Message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s", s.Message.Parcel.Message().Type().String())
