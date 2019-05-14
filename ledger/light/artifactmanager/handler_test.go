@@ -451,14 +451,14 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	jc.HeavyMock.Return(heavyRef, nil)
 	rep, err := h.handleRegisterChild(contextWithJet(s.ctx, jetID), &message.Parcel{
 		Msg:         &msg,
-		PulseNumber: insolar.FirstPulseNumber,
+		PulseNumber: 0,
 	})
 	require.NoError(s.T(), err)
 	objRep, ok := rep.(*reply.ID)
 	require.True(s.T(), ok)
 	assert.Equal(s.T(), *childID, objRep.ID)
 
-	idx, err := s.indexMemoryStor.LifelineForID(s.ctx, insolar.FirstPulseNumber, *msg.Parent.Record())
+	idx, err := s.indexMemoryStor.LifelineForID(s.ctx, 0, *msg.Parent.Record())
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), childID, idx.ChildPointer)
 }
