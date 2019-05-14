@@ -32,6 +32,7 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 )
 
+// Handler is a base struct for heavy's methods
 type Handler struct {
 	Bus            insolar.MessageBus
 	JetCoordinator jet.Coordinator
@@ -47,7 +48,7 @@ type Handler struct {
 	jetID insolar.JetID
 }
 
-// NewMessageHandler creates new handler.
+// New creates a new handler.
 func New() *Handler {
 	return &Handler{
 		jetID: *insolar.NewJetID(0, nil),

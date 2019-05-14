@@ -48,8 +48,8 @@ type UpdateObject struct {
 		RecentStorageProvider      recentstorage.Provider
 		PlatformCryptographyScheme insolar.PlatformCryptographyScheme
 		IDLocker                   object.IDLocker
-		IndexStorage               object.IndexStorage
-		IndexStateModifier         object.ExtendedIndexModifier
+		Index                      object.Index
+		IndexStateModifier         object.IndexStateModifier
 	}
 }
 
@@ -96,11 +96,14 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 
 	p.Dep.IDLocker.Lock(p.Message.Object.Record())
 	defer p.Dep.IDLocker.Unlock(p.Message.Object.Record())
-	p.Dep.IndexStateModifier.SetUsageForPulse(ctx, *p.Message.Object.Record(), p.PulseNumber)
+	err = p.Dep.IndexStateModifier.SetLifelineUsage(ctx, p.PulseNumber, *p.Message.Object.Record())
+	if err != nil {
+		return bus.Reply{Err: errors.Wrap(err, "failed to update lifeline usage state")}
+	}
 
-	idx, err := p.Dep.IndexStorage.ForID(ctx, *p.Message.Object.Record())
+	idx, err := p.Dep.Index.LifelineForID(ctx, p.PulseNumber, *p.Message.Object.Record())
 	// No index on our node.
-	if err == object.ErrIndexNotFound {
+	if err == object.ErrLifelineNotFound {
 		if state.ID() == object.StateActivation {
 			// We are activating the object. There is no index for it anywhere.
 			idx = object.Lifeline{State: object.StateUndefined}
@@ -154,7 +157,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 
 	idx.LatestUpdate = p.PulseNumber
 	idx.JetID = p.JetID
-	err = p.Dep.IndexStorage.Set(ctx, *p.Message.Object.Record(), idx)
+	err = p.Dep.Index.SetLifeline(ctx, p.PulseNumber, *p.Message.Object.Record(), idx)
 	if err != nil {
 		return bus.Reply{Err: err}
 	}
@@ -193,7 +196,7 @@ func (p *UpdateObject) saveIndexFromHeavy(
 	}
 
 	idx.JetID = jetID
-	err = p.Dep.IndexModifier.Set(ctx, *obj.Record(), idx)
+	err = p.Dep.IndexModifier.SetLifeline(ctx, p.PulseNumber, *obj.Record(), idx)
 	if err != nil {
 		return object.Lifeline{}, errors.Wrap(err, "failed to save")
 	}
