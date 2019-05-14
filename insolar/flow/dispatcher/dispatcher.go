@@ -108,3 +108,8 @@ func (d *Dispatcher) InnerSubscriber(watermillMsg *message.Message) ([]*message.
 	}()
 	return nil, nil
 }
+
+// Process handles incoming message.
+func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
+	return nil, nil
+}

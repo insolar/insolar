@@ -61,11 +61,11 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
@@ -137,7 +137,7 @@ func createTwoConsensusNetworks(id1, id2 insolar.ShortNodeID) (t1, t2 network.Co
 	return cn1, cn2, nil
 }
 
-func (t *consensusNetworkSuite) sendPacket(packet consensus.ConsensusPacket) {
+func (t *consensusNetworkSuite) sendPacket(packet packets.ConsensusPacket) {
 	cn1, cn2, err := createTwoConsensusNetworks(0, 1)
 	t.Require().NoError(err)
 	ctx := context.Background()
@@ -146,7 +146,7 @@ func (t *consensusNetworkSuite) sendPacket(packet consensus.ConsensusPacket) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	handler := func(incomingPacket consensus.ConsensusPacket, sender insolar.Reference) {
+	handler := func(incomingPacket packets.ConsensusPacket, sender insolar.Reference) {
 		log.Info("handler triggered")
 		wg.Done()
 	}
@@ -169,27 +169,27 @@ func (t *consensusNetworkSuite) sendPacket(packet consensus.ConsensusPacket) {
 	wg.Wait()
 }
 
-func newPhase1Packet() *consensus.Phase1Packet {
-	return consensus.NewPhase1Packet(insolar.Pulse{})
+func newPhase1Packet() *packets.Phase1Packet {
+	return packets.NewPhase1Packet(insolar.Pulse{})
 }
 
-func newPhase2Packet() (*consensus.Phase2Packet, error) {
-	bitset, err := consensus.NewBitSet(10)
+func newPhase2Packet() (*packets.Phase2Packet, error) {
+	bitset, err := packets.NewBitSet(10)
 	if err != nil {
 		return nil, err
 	}
-	result := consensus.NewPhase2Packet(insolar.PulseNumber(0))
+	result := packets.NewPhase2Packet(insolar.PulseNumber(0))
 	result.SetBitSet(bitset)
 	return result, nil
 }
 
-func newPhase3Packet() (*consensus.Phase3Packet, error) {
-	var ghs consensus.GlobuleHashSignature
-	bitset, err := consensus.NewBitSet(10)
+func newPhase3Packet() (*packets.Phase3Packet, error) {
+	var ghs packets.GlobuleHashSignature
+	bitset, err := packets.NewBitSet(10)
 	if err != nil {
 		return nil, err
 	}
-	return consensus.NewPhase3Packet(insolar.PulseNumber(0), ghs, bitset), nil
+	return packets.NewPhase3Packet(insolar.PulseNumber(0), ghs, bitset), nil
 }
 
 func (t *consensusNetworkSuite) TestSendPacketPhase1() {
@@ -209,7 +209,7 @@ func (t *consensusNetworkSuite) TestSendPacketPhase3() {
 	t.sendPacket(packet)
 }
 
-func (t *consensusNetworkSuite) sendPacketAndVerify(packet consensus.ConsensusPacket) {
+func (t *consensusNetworkSuite) sendPacketAndVerify(packet packets.ConsensusPacket) {
 	cn1, cn2, err := createTwoConsensusNetworks(0, 1)
 	t.Require().NoError(err)
 	ctx := context.Background()
@@ -217,7 +217,7 @@ func (t *consensusNetworkSuite) sendPacketAndVerify(packet consensus.ConsensusPa
 
 	result := make(chan bool, 1)
 
-	handler := func(incomingPacket consensus.ConsensusPacket, sender insolar.Reference) {
+	handler := func(incomingPacket packets.ConsensusPacket, sender insolar.Reference) {
 		log.Info("handler triggered")
 		pk, err := t.crypto.GetPublicKey()
 		if err != nil {

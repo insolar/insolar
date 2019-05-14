@@ -60,13 +60,15 @@ import (
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
-	"github.com/insolar/insolar/consensus"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus"
 	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/utils"
 )
 
-const udpMaxPacketSize = 1400
+const (
+	udpMaxPacketSize = 1400
+)
 
 type udpTransport struct {
 	mutex              sync.RWMutex
@@ -86,18 +88,19 @@ func newUDPTransport(listenAddress, fixedPublicAddress string, handler DatagramH
 func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []byte) error {
 	logger := inslogger.FromContext(ctx)
 	if len(data) > udpMaxPacketSize {
-		return errors.New(fmt.Sprintf("udpTransport.send: too big input data. Maximum: %d. Current: %d",
-			udpMaxPacketSize, len(data)))
+		return fmt.Errorf(
+			"udpTransport.send: too big input data. Maximum: %d. Current: %d",
+			udpMaxPacketSize,
+			len(data),
+		)
 	}
 
-	// TODO: may be try to send second time if error
-	// TODO: skip resolving every time by caching result
 	udpAddr, err := net.ResolveUDPAddr("udp", address)
 	if err != nil {
 		return errors.Wrap(err, "Failed to resolve UDP address")
 	}
 
-	logger.Debug("udpTransport.send: len = ", len(data))
+	logger.Debug("[ SendDatagram ] udpTransport.send: len = ", len(data))
 	conn, err := net.DialUDP("udp", nil, udpAddr)
 	if err != nil {
 		return errors.Wrap(err, "Failed to dial UDP")
@@ -105,6 +108,7 @@ func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []
 
 	n, err := conn.Write(data)
 	if err != nil {
+		// TODO: may be try to send second time if error
 		return errors.Wrap(err, "Failed to write data")
 	}
 	stats.Record(ctx, consensus.SentSize.M(int64(n)))
@@ -161,11 +165,11 @@ func (t *udpTransport) loop(ctx context.Context) {
 
 		if err != nil {
 			if utils.IsConnectionClosed(err) {
-				logger.Info("Connection closed, quiting ReadFrom loop")
+				logger.Info("[ loop ] Connection closed, quiting ReadFrom loop")
 				return
 			}
 
-			logger.Error("failed to read UDP: ", err.Error())
+			logger.Error("[ loop ] failed to read UDP: ", err)
 			continue
 		}
 
@@ -179,19 +183,16 @@ func (t *udpTransport) Stop(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
 
 	if atomic.CompareAndSwapUint32(&t.started, 1, 0) {
-		logger.Warn("Stop UDP transport")
+		logger.Info("[ Stop ] Stop UDP transport")
+
 		t.cancel()
 		err := t.conn.Close()
-
 		if err != nil {
-			if utils.IsConnectionClosed(err) {
-				logger.Error("Connection already closed")
-			} else {
+			if !utils.IsConnectionClosed(err) {
 				return err
 			}
+			logger.Error("[ Stop ] Connection already closed")
 		}
-	} else {
-		logger.Warn("Failed to stop transport")
 	}
 	return nil
 }

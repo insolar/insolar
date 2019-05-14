@@ -55,8 +55,8 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/component"
-	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/node"
@@ -69,12 +69,16 @@ type BootstrapResult struct {
 	NetworkSize       int
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network.Controller -o ../testutils/network -s _mock.go
+
 // Controller contains network logic.
 type Controller interface {
 	component.Initer
 
 	// SendMessage send message to nodeID.
 	SendMessage(nodeID insolar.Reference, name string, msg insolar.Parcel) ([]byte, error)
+	// SendBytes send bytes to nodeID.
+	SendBytes(ctx context.Context, nodeID insolar.Reference, name string, msgBytes []byte) ([]byte, error)
 	// RemoteProcedureRegister register remote procedure that will be executed when message is received.
 	RemoteProcedureRegister(name string, method insolar.RemoteProcedure)
 	// SendCascadeMessage sends a message from MessageBus to a cascade of nodes.
@@ -115,7 +119,7 @@ type HostNetwork interface {
 }
 
 // ConsensusPacketHandler callback function for consensus packets handling
-type ConsensusPacketHandler func(incomingPacket consensus.ConsensusPacket, sender insolar.Reference)
+type ConsensusPacketHandler func(incomingPacket packets.ConsensusPacket, sender insolar.Reference)
 
 //go:generate minimock -i github.com/insolar/insolar/network.ConsensusNetwork -o ../testutils/network -s _mock.go
 
@@ -129,9 +133,9 @@ type ConsensusNetwork interface {
 	PublicAddress() string
 
 	// SignAndSendPacket send request to a remote node.
-	SignAndSendPacket(packet consensus.ConsensusPacket, receiver insolar.Reference, service insolar.CryptographyService) error
+	SignAndSendPacket(packet packets.ConsensusPacket, receiver insolar.Reference, service insolar.CryptographyService) error
 	// RegisterPacketHandler register a handler function to process incoming requests of a specific type.
-	RegisterPacketHandler(t consensus.PacketType, handler ConsensusPacketHandler)
+	RegisterPacketHandler(t packets.PacketType, handler ConsensusPacketHandler)
 }
 
 // RequestID is 64 bit unsigned int request id.
@@ -179,8 +183,10 @@ type PulseHandler interface {
 type NodeKeeper interface {
 	insolar.NodeNetwork
 
-	// TODO: remove this interface when bootstrap mechanism completed
-	insolar.SwitcherWorkAround
+	// IsBootstrapped method shows that all DiscoveryNodes finds each other
+	IsBootstrapped() bool
+	// SetIsBootstrapped method set is bootstrap completed
+	SetIsBootstrapped(isBootstrap bool)
 
 	// GetCloudHash returns current cloud hash
 	GetCloudHash() []byte
@@ -192,15 +198,15 @@ type NodeKeeper interface {
 	// TODO: add pulse to the function signature to get data of various pulses
 	GetAccessor() Accessor
 	// GetOriginJoinClaim get origin NodeJoinClaim
-	GetOriginJoinClaim() (*consensus.NodeJoinClaim, error)
+	GetOriginJoinClaim() (*packets.NodeJoinClaim, error)
 	// GetOriginAnnounceClaim get origin NodeAnnounceClaim
-	GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error)
+	GetOriginAnnounceClaim(mapper packets.BitSetMapper) (*packets.NodeAnnounceClaim, error)
 	// GetClaimQueue get the internal queue of claims
 	GetClaimQueue() ClaimQueue
 	// GetSnapshotCopy get copy of the current nodekeeper snapshot
 	GetSnapshotCopy() *node.Snapshot
 	// Sync move unsync -> sync
-	Sync(context.Context, []insolar.NetworkNode, []consensus.ReferendumClaim) error
+	Sync(context.Context, []insolar.NetworkNode, []packets.ReferendumClaim) error
 	// MoveSyncToActive merge sync list with active nodes
 	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
 	// GetConsensusInfo get additional info for the current consensus process
@@ -250,13 +256,13 @@ type RoutingTable interface {
 // ClaimQueue is the queue that contains consensus claims.
 type ClaimQueue interface {
 	// Pop takes claim from the queue.
-	Pop() consensus.ReferendumClaim
+	Pop() packets.ReferendumClaim
 	// Front returns claim from the queue without removing it from the queue.
-	Front() consensus.ReferendumClaim
+	Front() packets.ReferendumClaim
 	// Length returns the length of the queue
 	Length() int
 	// Push adds claim to the queue.
-	Push(claim consensus.ReferendumClaim)
+	Push(claim packets.ReferendumClaim)
 	// Clear removes all claims from queue
 	Clear()
 }
@@ -299,4 +305,13 @@ type Gateway interface {
 	GetState() insolar.NetworkState
 	OnPulse(context.Context, insolar.Pulse) error
 	NewGateway(insolar.NetworkState) Gateway
+	Auther() Auther
+}
+
+type Auther interface {
+	// GetCert returns certificate object by node reference, using discovery nodes for signing
+	GetCert(context.Context, *insolar.Reference) (insolar.Certificate, error)
+	// ValidateCert checks certificate signature
+	// TODO make this cert.validate()
+	ValidateCert(context.Context, insolar.AuthorizationCertificate) (bool, error)
 }

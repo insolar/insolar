@@ -64,12 +64,12 @@ import (
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/platformpolicy"
@@ -87,10 +87,10 @@ type AuthorizationController interface {
 }
 
 type authorizationController struct {
-	NodeKeeper         network.NodeKeeper         `inject:""`
-	NetworkCoordinator insolar.NetworkCoordinator `inject:""`
-	SessionManager     SessionManager             `inject:""`
-	Network            network.HostNetwork        `inject:""`
+	NodeKeeper     network.NodeKeeper  `inject:""`
+	Gatewayer      network.Gatewayer   `inject:""`
+	SessionManager SessionManager      `inject:""`
+	Network        network.HostNetwork `inject:""`
 
 	options *common.Options
 }
@@ -292,7 +292,7 @@ func (ac *authorizationController) processAuthorizeRequest(ctx context.Context, 
 	if err != nil {
 		return ac.Network.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
-	valid, err := ac.NetworkCoordinator.ValidateCert(ctx, cert)
+	valid, err := ac.Gatewayer.Gateway().Auther().ValidateCert(ctx, cert)
 	if !valid {
 		if err == nil {
 			err = errors.New("Certificate validation failed")

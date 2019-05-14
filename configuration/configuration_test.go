@@ -110,6 +110,34 @@ func TestConfiguration_Init(t *testing.T) {
 	require.Panics(t, func() { NewHolder().MustInit(true) })
 }
 
+func TestConfiguration_WithFilePaths(t *testing.T) {
+	okCases := [][]string{
+		{"testdata/changed.yml"},
+		{"testdata/default.yml"},
+		{"testdata/changed.yml", "testdata/default.yml"},
+		{"testdata/changed.yml", "testdata/changed.yml"},
+		{"testdata/default.yml", "testdata/default.yml"},
+		{"notexists", "notexists.yaml", "testdata/default.yml", "testdata/default.yml"},
+	}
+	for _, tCase := range okCases {
+		holder, err := NewHolderWithFilePaths(tCase...).Init(true)
+		require.NoErrorf(t, err, "case: %#v", tCase)
+		require.NotNil(t, holder)
+	}
+
+	failCases := [][]string{
+		{"testdata/invalid.yml"},
+		{"nonexists"},
+		{"notexists", "notexists"},
+		{"testdata/default.yml", "testdata/invalid.yml"},
+	}
+	for _, tCase := range failCases {
+		holder, err := NewHolderWithFilePaths(tCase...).Init(true)
+		require.Errorf(t, err, "case: %#v", tCase)
+		require.Nil(t, holder)
+	}
+}
+
 func TestMain(m *testing.M) {
 	// backup and delete INSOLAR_ env variables, that may interfere with tests
 	variablesBackup := make(map[string]string)
