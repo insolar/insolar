@@ -49,6 +49,12 @@ func (s *RegisterChild) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.replyTo)
+	s.dep.WaitHot(hot)
+	if err := f.Procedure(ctx, hot, false); err != nil {
+		return err
+	}
+
 	getIndex := proc.NewGetIndex(s.message.Parent, jet.Result.Jet, s.replyTo)
 	s.dep.GetIndex(getIndex)
 	err := f.Procedure(ctx, getIndex, false)
