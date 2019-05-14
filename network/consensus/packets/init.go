@@ -80,9 +80,7 @@ func init() {
 	claimSizeMap = make(map[ClaimType]uint16)
 	claimSizeMap[TypeNodeJoinClaim] = sizeOf(&NodeJoinClaim{})
 	claimSizeMap[TypeNodeAnnounceClaim] = sizeOf(&NodeAnnounceClaim{})
-	claimSizeMap[TypeNodeViolationBlame] = sizeOf(&NodeViolationBlame{})
 	claimSizeMap[TypeNodeLeaveClaim] = sizeOf(&NodeLeaveClaim{})
-	claimSizeMap[TypeChangeNetworkClaim] = sizeOf(&NodeLeaveClaim{})
 
 	voteSizeMap = make(map[VoteType]uint16)
 	voteSizeMap[TypeStateFraudNodeSupplementaryVote] = sizeOf(&StateFraudNodeSupplementaryVote{})

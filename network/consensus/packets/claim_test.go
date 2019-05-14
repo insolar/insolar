@@ -57,17 +57,6 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-func makeNodeViolationBlame() *NodeViolationBlame {
-	nodeViolationBlame := &NodeViolationBlame{}
-	nodeViolationBlame.TypeViolation = uint8(4)
-
-	return nodeViolationBlame
-}
-
-func TestNodeViolationBlame(t *testing.T) {
-	checkSerializationDeserialization(t, makeNodeViolationBlame())
-}
-
 func makeNodeJoinClaim(withSignature bool) *NodeJoinClaim {
 	nodeJoinClaim := &NodeJoinClaim{}
 	nodeJoinClaim.ShortNodeID = insolar.ShortNodeID(77)

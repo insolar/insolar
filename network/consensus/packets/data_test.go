@@ -291,7 +291,6 @@ func makePhase1Packet() *Phase1Packet {
 	phase1Packet.proofNodePulse = NodePulseProof{NodeSignature: randomArray66(), NodeStateHash: randomArray64()}
 
 	phase1Packet.AddClaim(makeNodeJoinClaim(true))
-	phase1Packet.AddClaim(makeNodeViolationBlame())
 	phase1Packet.AddClaim(&NodeLeaveClaim{})
 
 	phase1Packet.Signature = randomArray66()

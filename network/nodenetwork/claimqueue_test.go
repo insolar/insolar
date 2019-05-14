@@ -61,8 +61,6 @@ func newTestClaim(claimType packets.ClaimType) packets.ReferendumClaim {
 	switch claimType {
 	case packets.TypeNodeJoinClaim:
 		return &packets.NodeJoinClaim{}
-	case packets.TypeNodeViolationBlame:
-		return &packets.NodeViolationBlame{}
 	case packets.TypeNodeLeaveClaim:
 		return &packets.NodeLeaveClaim{}
 	}

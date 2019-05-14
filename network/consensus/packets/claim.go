@@ -88,21 +88,6 @@ type SignedClaim interface {
 	GetSignature() []byte
 }
 
-// NodeViolationBlame is a type 2.
-type NodeViolationBlame struct {
-	BlameNodeID   uint32
-	TypeViolation uint8
-}
-
-func (nvb *NodeViolationBlame) Clone() ReferendumClaim {
-	result := *nvb
-	return &result
-}
-
-func (nvb *NodeViolationBlame) Type() ClaimType {
-	return TypeNodeViolationBlame
-}
-
 const NodeAddressSize = 20
 
 // TODO: create heterogeneous structure for variuos types of adresses (IPv4, IPv6, etc.)
