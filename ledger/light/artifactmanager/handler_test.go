@@ -431,29 +431,25 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 		Parent: *genRandomRef(0),
 	}
 
-	mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-		if m, ok := gm.(*message.GetObjectIndex); ok {
-			assert.Equal(s.T(), msg.Parent, m.Object)
-			buf := object.EncodeIndex(objIndex)
-			require.NoError(s.T(), err)
-			return &reply.ObjectIndex{Index: buf}, nil
-		}
-
-		panic("unexpected call")
-	}
-
 	h.JetCoordinator = jc
 	h.Bus = mb
 	err = h.Init(s.ctx)
 	require.NoError(s.T(), err)
-	heavyRef := genRandomRef(0)
-	jc.HeavyMock.Return(heavyRef, nil)
-	// TODO: fix this test
-	// TODO: sort imports
-	rep, err := h.handleRegisterChild(contextWithJet(s.ctx, jetID), &message.Parcel{
-		Msg: &msg,
-	})
+
+	replyTo := make(chan bus.Reply, 1)
+	registerChild := proc.NewRegisterChild(insolar.JetID(jetID), &msg, childID.Pulse(), objIndex, replyTo)
+	registerChild.Dep.IDLocker = idLockMock
+	registerChild.Dep.IndexStorage = s.indexMemoryStor
+	registerChild.Dep.JetCoordinator = jc
+	registerChild.Dep.RecordModifier = s.recordModifier
+	registerChild.Dep.IndexStateModifier = s.indexMemoryStor
+	registerChild.Dep.PlatformCryptographyScheme = s.scheme
+
+	err = registerChild.Proceed(contextWithJet(s.ctx, jetID))
 	require.NoError(s.T(), err)
+
+	busRep := <-replyTo
+	rep := busRep.Reply
 	objRep, ok := rep.(*reply.ID)
 	require.True(s.T(), ok)
 	assert.Equal(s.T(), *childID, objRep.ID)
@@ -514,6 +510,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	require.NoError(s.T(), err)
 
 	// Act
+	/***
 	_, err = h.handleRegisterChild(contextWithJet(s.ctx, jetID), &message.Parcel{
 		Msg:         &msg,
 		PulseNumber: insolar.FirstPulseNumber + 100,
@@ -524,6 +521,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	idx, err := s.indexMemoryStor.ForID(s.ctx, *msg.Parent.Record())
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), int(idx.LatestUpdate), insolar.FirstPulseNumber+100)
+	***/
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
