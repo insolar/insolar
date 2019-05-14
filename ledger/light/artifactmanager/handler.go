@@ -153,7 +153,12 @@ func NewMessageHandler(
 			p.Dep.IndexStorage = h.IndexStorage
 		},
 		RegisterChild: func(p *proc.RegisterChild) {
-
+			p.Dep.IDLocker = h.IDLocker
+			p.Dep.IndexStorage = h.IndexStorage
+			p.Dep.JetCoordinator = h.JetCoordinator
+			p.Dep.RecordModifier = h.RecordModifier
+			p.Dep.IndexStateModifier = h.IndexStateModifier
+			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
 		},
 	}
 
@@ -240,14 +245,6 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 
 	h.Bus.MustRegister(insolar.TypeSetRecord, h.FlowDispatcher.WrapBusHandle)
 	h.Bus.MustRegister(insolar.TypeRegisterChild, h.FlowDispatcher.WrapBusHandle)
-
-	//	h.Bus.MustRegister(insolar.TypeRegisterChild,
-	//		BuildMiddleware(h.handleRegisterChild,
-	//			instrumentHandler("handleRegisterChild"),
-	//			m.addFieldsToLogger,
-	//			m.checkJet,
-	//			m.waitForHotData))
-
 	h.Bus.MustRegister(insolar.TypeSetBlob, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeGetPendingRequests,

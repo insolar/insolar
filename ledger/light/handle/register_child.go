@@ -19,6 +19,8 @@ package handle
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
+
 	"github.com/insolar/insolar/insolar/message"
 
 	"github.com/insolar/insolar/ledger/light/proc"
@@ -31,24 +33,33 @@ type RegisterChild struct {
 	dep     *proc.Dependencies
 	replyTo chan<- bus.Reply
 	message *message.RegisterChild
+	pulse   insolar.PulseNumber
 }
 
-func NewRegisterChild(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.RegisterChild) *RegisterChild {
+func NewRegisterChild(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.RegisterChild, pulse insolar.PulseNumber) *RegisterChild {
 	return &RegisterChild{
 		dep:     dep,
 		replyTo: rep,
 		message: msg,
+		pulse:   pulse,
 	}
 }
 
 func (s *RegisterChild) Present(ctx context.Context, f flow.Flow) error {
-	jet := proc.NewFetchJet(*s.message.DefaultTarget().Record() /* TODO is it right? */, flow.Pulse(ctx), s.replyTo)
+	jet := proc.NewFetchJet(*s.message.DefaultTarget().Record() /* TODO is this a right target ? */, flow.Pulse(ctx), s.replyTo)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
 		return err
 	}
 
-	code := proc.NewRegisterChild(s.message, s.replyTo)
-	s.dep.RegisterChild(code) // TODO: figure out what is that for
-	return f.Procedure(ctx, code, false)
+	getIndex := proc.NewGetIndex(s.message.Parent, jet.Result.Jet, s.replyTo)
+	s.dep.GetIndex(getIndex)
+	err := f.Procedure(ctx, getIndex, false)
+	if err != nil {
+		return err
+	}
+
+	registerChild := proc.NewRegisterChild(jet.Result.Jet, s.message, s.pulse, getIndex.Result.Index, s.replyTo)
+	s.dep.RegisterChild(registerChild)
+	return f.Procedure(ctx, registerChild, false)
 }

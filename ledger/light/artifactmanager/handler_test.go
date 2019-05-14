@@ -448,6 +448,8 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	require.NoError(s.T(), err)
 	heavyRef := genRandomRef(0)
 	jc.HeavyMock.Return(heavyRef, nil)
+	// TODO: fix this test
+	// TODO: sort imports
 	rep, err := h.handleRegisterChild(contextWithJet(s.ctx, jetID), &message.Parcel{
 		Msg: &msg,
 	})

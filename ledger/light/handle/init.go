@@ -68,7 +68,7 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeRegisterChild:
 		msg := s.Message.Parcel.Message().(*message.RegisterChild)
-		h := NewRegisterChild(s.Dep, s.Message.ReplyTo, msg)
+		h := NewRegisterChild(s.Dep, s.Message.ReplyTo, msg, s.Message.Parcel.Pulse())
 		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s", s.Message.Parcel.Message().Type().String())
