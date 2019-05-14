@@ -483,8 +483,8 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
-	h.IndexState = s.indexMemoryStor
 	h.Index = s.indexMemoryStor
+	h.IndexStateModifier = s.indexMemoryStor
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecordModifier = s.recordModifier
@@ -586,6 +586,14 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 
 	idxStateModifierMock := object.NewIndexStateModifierMock(s.T())
 	idxMock := object.NewIndexMock(s.T())
+
+	idxMock.SetBucketFunc = func(ctx context.Context, pn insolar.PulseNumber, ib object.IndexBucket) (r error) {
+		require.Equal(s.T(), *firstID, ib.ObjID)
+		require.Equal(s.T(), insolar.PulseNumber(234), pn)
+		require.Equal(s.T(), *firstID, *ib.Lifeline.LatestState)
+
+		return nil
+	}
 
 	idxMock.SetLifelineFunc = func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 object.Lifeline) (r error) {
 		require.Equal(s.T(), *firstID, p2)

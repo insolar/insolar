@@ -41,7 +41,6 @@ type UpdateObject struct {
 
 	Dep struct {
 		RecordModifier             object.RecordModifier
-		IndexModifier              object.IndexModifier
 		Bus                        insolar.MessageBus
 		Coordinator                jet.Coordinator
 		BlobModifier               blob.Modifier
@@ -96,10 +95,6 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 
 	p.Dep.IDLocker.Lock(p.Message.Object.Record())
 	defer p.Dep.IDLocker.Unlock(p.Message.Object.Record())
-	err = p.Dep.IndexStateModifier.SetLifelineUsage(ctx, p.PulseNumber, *p.Message.Object.Record())
-	if err != nil {
-		return bus.Reply{Err: errors.Wrap(err, "failed to update lifeline usage state")}
-	}
 
 	idx, err := p.Dep.Index.LifelineForID(ctx, p.PulseNumber, *p.Message.Object.Record())
 	// No index on our node.
@@ -121,6 +116,10 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 		}
 	} else if err != nil {
 		return bus.Reply{Err: err}
+	}
+	err = p.Dep.IndexStateModifier.SetLifelineUsage(ctx, p.PulseNumber, *p.Message.Object.Record())
+	if err != nil {
+		return bus.Reply{Err: errors.Wrap(err, "failed to update lifeline usage state")}
 	}
 
 	if err = validateState(idx.State, state.ID()); err != nil {
@@ -196,7 +195,7 @@ func (p *UpdateObject) saveIndexFromHeavy(
 	}
 
 	idx.JetID = jetID
-	err = p.Dep.IndexModifier.SetLifeline(ctx, p.PulseNumber, *obj.Record(), idx)
+	err = p.Dep.Index.SetLifeline(ctx, p.PulseNumber, *obj.Record(), idx)
 	if err != nil {
 		return object.Lifeline{}, errors.Wrap(err, "failed to save")
 	}
