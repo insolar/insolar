@@ -461,6 +461,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	assert.Equal(s.T(), childID, idx.ChildPointer)
 }
 
+// TODO fix this test
 func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated() {
 	// Arrange
 	mc := minimock.NewController(s.T())
