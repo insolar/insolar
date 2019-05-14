@@ -43,7 +43,7 @@ func NewRegisterChild(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message
 }
 
 func (s *RegisterChild) Present(ctx context.Context, f flow.Flow) error {
-	jet := proc.NewFetchJet(*s.message.DefaultTarget().Record() /* TODO is this a right target ? */, flow.Pulse(ctx), s.replyTo)
+	jet := proc.NewFetchJet(*s.message.DefaultTarget().Record(), flow.Pulse(ctx), s.replyTo)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
 		return err
