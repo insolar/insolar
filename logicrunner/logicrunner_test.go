@@ -572,7 +572,6 @@ func (r *Two) Hello(s string) (string, error) {
 	s.Equal("Hello you too, ins. 1288 times!", firstMethodRes(s.T(), resp))
 }
 
-// TODO: make this test (and all other) pass
 func (s *LogicRunnerFuncSuite) TestBasicNotificationCallError() {
 	if parallel {
 		s.T().Parallel()

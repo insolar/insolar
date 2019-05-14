@@ -20,19 +20,16 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/insolar/insolar/insolar/jet"
+	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/pkg/errors"
-
-	"github.com/insolar/insolar/insolar"
-
-	"github.com/insolar/insolar/insolar/message"
-
-	"github.com/insolar/insolar/insolar/flow/bus"
 )
 
 type RegisterChild struct {
