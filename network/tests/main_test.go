@@ -50,7 +50,7 @@
 
 // +build networktest
 
-package servicenetwork
+package tests
 
 import (
 	"context"
