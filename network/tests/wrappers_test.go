@@ -50,40 +50,23 @@
 
 // +build networktest
 
-package gateway
+package tests
 
 import (
 	"context"
+	"time"
 
+	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network"
 )
 
-type FakeOk struct {
-	Base
-	State insolar.NetworkState
+type phaseManagerWrapper struct {
+	original phases.PhaseManager
+	result   chan error
 }
 
-func NewFakeOk() network.Gateway {
-	g := &FakeOk{}
-	g.Base.Self = g
-	g.State = insolar.NoNetworkState
-	return g
-}
-
-func (g *FakeOk) OnPulse(context.Context, insolar.Pulse) error {
-	g.State = insolar.CompleteNetworkState
-	return nil
-}
-
-func (g *FakeOk) Run(context.Context) {
-}
-
-func (g *FakeOk) GetState() insolar.NetworkState {
-	return g.State
-}
-
-// ValidateCert overloaded for test purpose
-func (g *FakeOk) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
-	return true, nil
+func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
+	res := p.original.OnPulse(ctx, pulse, pulseStartTime)
+	p.result <- res
+	return res
 }

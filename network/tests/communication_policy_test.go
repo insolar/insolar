@@ -50,23 +50,94 @@
 
 // +build networktest
 
-package servicenetwork
+package tests
 
 import (
 	"context"
 	"time"
 
+	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
 )
 
-type phaseManagerWrapper struct {
-	original phases.PhaseManager
-	result   chan error
+type CommunicationPolicy int
+
+const (
+	PartialPositive1Phase = CommunicationPolicy(iota + 1)
+	PartialNegative1Phase
+	PartialPositive2Phase
+	PartialNegative2Phase
+	PartialPositive3Phase
+	PartialNegative3Phase
+	PartialPositive23Phase
+	PartialNegative23Phase
+	FullTimeout
+	SplitCase
+)
+
+type CommunicatorMock struct {
+	communicator phases.Communicator
+	ignoreFrom   insolar.Reference
+	policy       CommunicationPolicy
 }
 
-func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
-	res := p.original.OnPulse(ctx, pulse, pulseStartTime)
-	p.result <- res
-	return res
+func (cm *CommunicatorMock) ExchangePhase1(
+	ctx context.Context,
+	originClaim *packets.NodeAnnounceClaim,
+	participants []insolar.NetworkNode,
+	packet *packets.Phase1Packet,
+) (map[insolar.Reference]*packets.Phase1Packet, error) {
+	pckts, err := cm.communicator.ExchangePhase1(ctx, originClaim, participants, packet)
+	if err != nil {
+		return nil, err
+	}
+	switch cm.policy {
+	case PartialNegative1Phase, PartialPositive1Phase, SplitCase:
+		delete(pckts, cm.ignoreFrom)
+	}
+	return pckts, nil
+}
+
+func (cm *CommunicatorMock) ExchangePhase2(ctx context.Context, state *phases.ConsensusState,
+	participants []insolar.NetworkNode, packet *packets.Phase2Packet) (map[insolar.Reference]*packets.Phase2Packet, error) {
+
+	pckts, err := cm.communicator.ExchangePhase2(ctx, state, participants, packet)
+	if err != nil {
+		return nil, err
+	}
+	switch cm.policy {
+	case PartialPositive2Phase, PartialNegative2Phase, PartialPositive23Phase, PartialNegative23Phase, SplitCase:
+		delete(pckts, cm.ignoreFrom)
+	}
+	return pckts, nil
+}
+
+func (cm *CommunicatorMock) ExchangePhase21(ctx context.Context, state *phases.ConsensusState,
+	packet *packets.Phase2Packet, additionalRequests []*phases.AdditionalRequest) ([]packets.ReferendumVote, error) {
+
+	return cm.communicator.ExchangePhase21(ctx, state, packet, additionalRequests)
+}
+
+func (cm *CommunicatorMock) ExchangePhase3(ctx context.Context, participants []insolar.NetworkNode, packet *packets.Phase3Packet) (map[insolar.Reference]*packets.Phase3Packet, error) {
+	pckts, err := cm.communicator.ExchangePhase3(ctx, participants, packet)
+	if err != nil {
+		return nil, err
+	}
+	switch cm.policy {
+	case PartialPositive3Phase, PartialNegative3Phase, PartialPositive23Phase, PartialNegative23Phase, SplitCase:
+		delete(pckts, cm.ignoreFrom)
+	}
+	return pckts, nil
+}
+
+func (cm *CommunicatorMock) Init(ctx context.Context) error {
+	return cm.communicator.Init(ctx)
+}
+
+type FullTimeoutPhaseManager struct {
+}
+
+func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
+	return nil
 }
