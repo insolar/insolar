@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "IndexLifelineAccessor" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// IndexLifelineAccessorMock implements github.com/insolar/insolar/ledger/object.IndexLifelineAccessor
+//IndexLifelineAccessorMock implements github.com/insolar/insolar/ledger/object.IndexLifelineAccessor
 type IndexLifelineAccessorMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type IndexLifelineAccessorMock struct {
 	LifelineForIDMock       mIndexLifelineAccessorMockLifelineForID
 }
 
-// NewIndexLifelineAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.IndexLifelineAccessor
+//NewIndexLifelineAccessorMock returns a mock for github.com/insolar/insolar/ledger/object.IndexLifelineAccessor
 func NewIndexLifelineAccessorMock(t minimock.Tester) *IndexLifelineAccessorMock {
 	m := &IndexLifelineAccessorMock{t: t}
 
@@ -61,7 +61,7 @@ type IndexLifelineAccessorMockLifelineForIDResult struct {
 	r1 error
 }
 
-// Expect specifies that invocation of IndexLifelineAccessor.LifelineForID is expected from 1 to Infinity times
+//Expect specifies that invocation of IndexLifelineAccessor.LifelineForID is expected from 1 to Infinity times
 func (m *mIndexLifelineAccessorMockLifelineForID) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *mIndexLifelineAccessorMockLifelineForID {
 	m.mock.LifelineForIDFunc = nil
 	m.expectationSeries = nil
@@ -73,7 +73,7 @@ func (m *mIndexLifelineAccessorMockLifelineForID) Expect(p context.Context, p1 i
 	return m
 }
 
-// Return specifies results of invocation of IndexLifelineAccessor.LifelineForID
+//Return specifies results of invocation of IndexLifelineAccessor.LifelineForID
 func (m *mIndexLifelineAccessorMockLifelineForID) Return(r Lifeline, r1 error) *IndexLifelineAccessorMock {
 	m.mock.LifelineForIDFunc = nil
 	m.expectationSeries = nil
@@ -85,7 +85,7 @@ func (m *mIndexLifelineAccessorMockLifelineForID) Return(r Lifeline, r1 error) *
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of IndexLifelineAccessor.LifelineForID is expected once
+//ExpectOnce specifies that invocation of IndexLifelineAccessor.LifelineForID is expected once
 func (m *mIndexLifelineAccessorMockLifelineForID) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) *IndexLifelineAccessorMockLifelineForIDExpectation {
 	m.mock.LifelineForIDFunc = nil
 	m.mainExpectation = nil
@@ -100,7 +100,7 @@ func (e *IndexLifelineAccessorMockLifelineForIDExpectation) Return(r Lifeline, r
 	e.result = &IndexLifelineAccessorMockLifelineForIDResult{r, r1}
 }
 
-// Set uses given function f as a mock of IndexLifelineAccessor.LifelineForID method
+//Set uses given function f as a mock of IndexLifelineAccessor.LifelineForID method
 func (m *mIndexLifelineAccessorMockLifelineForID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r Lifeline, r1 error)) *IndexLifelineAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -109,7 +109,7 @@ func (m *mIndexLifelineAccessorMockLifelineForID) Set(f func(p context.Context, 
 	return m.mock
 }
 
-// LifelineForID implements github.com/insolar/insolar/ledger/object.IndexLifelineAccessor interface
+//LifelineForID implements github.com/insolar/insolar/ledger/object.IndexLifelineAccessor interface
 func (m *IndexLifelineAccessorMock) LifelineForID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r Lifeline, r1 error) {
 	counter := atomic.AddUint64(&m.LifelineForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.LifelineForIDCounter, 1)
@@ -161,17 +161,17 @@ func (m *IndexLifelineAccessorMock) LifelineForID(p context.Context, p1 insolar.
 	return m.LifelineForIDFunc(p, p1, p2)
 }
 
-// LifelineForIDMinimockCounter returns a count of IndexLifelineAccessorMock.LifelineForIDFunc invocations
+//LifelineForIDMinimockCounter returns a count of IndexLifelineAccessorMock.LifelineForIDFunc invocations
 func (m *IndexLifelineAccessorMock) LifelineForIDMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.LifelineForIDCounter)
 }
 
-// LifelineForIDMinimockPreCounter returns the value of IndexLifelineAccessorMock.LifelineForID invocations
+//LifelineForIDMinimockPreCounter returns the value of IndexLifelineAccessorMock.LifelineForID invocations
 func (m *IndexLifelineAccessorMock) LifelineForIDMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.LifelineForIDPreCounter)
 }
 
-// LifelineForIDFinished returns true if mock invocations count is ok
+//LifelineForIDFinished returns true if mock invocations count is ok
 func (m *IndexLifelineAccessorMock) LifelineForIDFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.LifelineForIDMock.expectationSeries) > 0 {
@@ -191,8 +191,8 @@ func (m *IndexLifelineAccessorMock) LifelineForIDFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexLifelineAccessorMock) ValidateCallCounters() {
 
 	if !m.LifelineForIDFinished() {
@@ -201,19 +201,19 @@ func (m *IndexLifelineAccessorMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexLifelineAccessorMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *IndexLifelineAccessorMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *IndexLifelineAccessorMock) MinimockFinish() {
 
 	if !m.LifelineForIDFinished() {
@@ -222,14 +222,14 @@ func (m *IndexLifelineAccessorMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *IndexLifelineAccessorMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *IndexLifelineAccessorMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -255,8 +255,8 @@ func (m *IndexLifelineAccessorMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *IndexLifelineAccessorMock) AllMocksCalled() bool {
 
 	if !m.LifelineForIDFinished() {

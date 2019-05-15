@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "IndexBucketModifier" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// IndexBucketModifierMock implements github.com/insolar/insolar/ledger/object.IndexBucketModifier
+//IndexBucketModifierMock implements github.com/insolar/insolar/ledger/object.IndexBucketModifier
 type IndexBucketModifierMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type IndexBucketModifierMock struct {
 	SetBucketMock       mIndexBucketModifierMockSetBucket
 }
 
-// NewIndexBucketModifierMock returns a mock for github.com/insolar/insolar/ledger/object.IndexBucketModifier
+//NewIndexBucketModifierMock returns a mock for github.com/insolar/insolar/ledger/object.IndexBucketModifier
 func NewIndexBucketModifierMock(t minimock.Tester) *IndexBucketModifierMock {
 	m := &IndexBucketModifierMock{t: t}
 
@@ -60,7 +60,7 @@ type IndexBucketModifierMockSetBucketResult struct {
 	r error
 }
 
-// Expect specifies that invocation of IndexBucketModifier.SetBucket is expected from 1 to Infinity times
+//Expect specifies that invocation of IndexBucketModifier.SetBucket is expected from 1 to Infinity times
 func (m *mIndexBucketModifierMockSetBucket) Expect(p context.Context, p1 insolar.PulseNumber, p2 IndexBucket) *mIndexBucketModifierMockSetBucket {
 	m.mock.SetBucketFunc = nil
 	m.expectationSeries = nil
@@ -72,7 +72,7 @@ func (m *mIndexBucketModifierMockSetBucket) Expect(p context.Context, p1 insolar
 	return m
 }
 
-// Return specifies results of invocation of IndexBucketModifier.SetBucket
+//Return specifies results of invocation of IndexBucketModifier.SetBucket
 func (m *mIndexBucketModifierMockSetBucket) Return(r error) *IndexBucketModifierMock {
 	m.mock.SetBucketFunc = nil
 	m.expectationSeries = nil
@@ -84,7 +84,7 @@ func (m *mIndexBucketModifierMockSetBucket) Return(r error) *IndexBucketModifier
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of IndexBucketModifier.SetBucket is expected once
+//ExpectOnce specifies that invocation of IndexBucketModifier.SetBucket is expected once
 func (m *mIndexBucketModifierMockSetBucket) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 IndexBucket) *IndexBucketModifierMockSetBucketExpectation {
 	m.mock.SetBucketFunc = nil
 	m.mainExpectation = nil
@@ -99,7 +99,7 @@ func (e *IndexBucketModifierMockSetBucketExpectation) Return(r error) {
 	e.result = &IndexBucketModifierMockSetBucketResult{r}
 }
 
-// Set uses given function f as a mock of IndexBucketModifier.SetBucket method
+//Set uses given function f as a mock of IndexBucketModifier.SetBucket method
 func (m *mIndexBucketModifierMockSetBucket) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 IndexBucket) (r error)) *IndexBucketModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -108,7 +108,7 @@ func (m *mIndexBucketModifierMockSetBucket) Set(f func(p context.Context, p1 ins
 	return m.mock
 }
 
-// SetBucket implements github.com/insolar/insolar/ledger/object.IndexBucketModifier interface
+//SetBucket implements github.com/insolar/insolar/ledger/object.IndexBucketModifier interface
 func (m *IndexBucketModifierMock) SetBucket(p context.Context, p1 insolar.PulseNumber, p2 IndexBucket) (r error) {
 	counter := atomic.AddUint64(&m.SetBucketPreCounter, 1)
 	defer atomic.AddUint64(&m.SetBucketCounter, 1)
@@ -158,17 +158,17 @@ func (m *IndexBucketModifierMock) SetBucket(p context.Context, p1 insolar.PulseN
 	return m.SetBucketFunc(p, p1, p2)
 }
 
-// SetBucketMinimockCounter returns a count of IndexBucketModifierMock.SetBucketFunc invocations
+//SetBucketMinimockCounter returns a count of IndexBucketModifierMock.SetBucketFunc invocations
 func (m *IndexBucketModifierMock) SetBucketMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetBucketCounter)
 }
 
-// SetBucketMinimockPreCounter returns the value of IndexBucketModifierMock.SetBucket invocations
+//SetBucketMinimockPreCounter returns the value of IndexBucketModifierMock.SetBucket invocations
 func (m *IndexBucketModifierMock) SetBucketMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetBucketPreCounter)
 }
 
-// SetBucketFinished returns true if mock invocations count is ok
+//SetBucketFinished returns true if mock invocations count is ok
 func (m *IndexBucketModifierMock) SetBucketFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetBucketMock.expectationSeries) > 0 {
@@ -188,8 +188,8 @@ func (m *IndexBucketModifierMock) SetBucketFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexBucketModifierMock) ValidateCallCounters() {
 
 	if !m.SetBucketFinished() {
@@ -198,19 +198,19 @@ func (m *IndexBucketModifierMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexBucketModifierMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *IndexBucketModifierMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *IndexBucketModifierMock) MinimockFinish() {
 
 	if !m.SetBucketFinished() {
@@ -219,14 +219,14 @@ func (m *IndexBucketModifierMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *IndexBucketModifierMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *IndexBucketModifierMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -252,8 +252,8 @@ func (m *IndexBucketModifierMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *IndexBucketModifierMock) AllMocksCalled() bool {
 
 	if !m.SetBucketFinished() {

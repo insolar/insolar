@@ -6,17 +6,17 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "IndexLifelineModifier" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	"context"
+	context "context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar"
+	insolar "github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-// IndexLifelineModifierMock implements github.com/insolar/insolar/ledger/object.IndexLifelineModifier
+//IndexLifelineModifierMock implements github.com/insolar/insolar/ledger/object.IndexLifelineModifier
 type IndexLifelineModifierMock struct {
 	t minimock.Tester
 
@@ -26,7 +26,7 @@ type IndexLifelineModifierMock struct {
 	SetLifelineMock       mIndexLifelineModifierMockSetLifeline
 }
 
-// NewIndexLifelineModifierMock returns a mock for github.com/insolar/insolar/ledger/object.IndexLifelineModifier
+//NewIndexLifelineModifierMock returns a mock for github.com/insolar/insolar/ledger/object.IndexLifelineModifier
 func NewIndexLifelineModifierMock(t minimock.Tester) *IndexLifelineModifierMock {
 	m := &IndexLifelineModifierMock{t: t}
 
@@ -61,7 +61,7 @@ type IndexLifelineModifierMockSetLifelineResult struct {
 	r error
 }
 
-// Expect specifies that invocation of IndexLifelineModifier.SetLifeline is expected from 1 to Infinity times
+//Expect specifies that invocation of IndexLifelineModifier.SetLifeline is expected from 1 to Infinity times
 func (m *mIndexLifelineModifierMockSetLifeline) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 Lifeline) *mIndexLifelineModifierMockSetLifeline {
 	m.mock.SetLifelineFunc = nil
 	m.expectationSeries = nil
@@ -73,7 +73,7 @@ func (m *mIndexLifelineModifierMockSetLifeline) Expect(p context.Context, p1 ins
 	return m
 }
 
-// Return specifies results of invocation of IndexLifelineModifier.SetLifeline
+//Return specifies results of invocation of IndexLifelineModifier.SetLifeline
 func (m *mIndexLifelineModifierMockSetLifeline) Return(r error) *IndexLifelineModifierMock {
 	m.mock.SetLifelineFunc = nil
 	m.expectationSeries = nil
@@ -85,7 +85,7 @@ func (m *mIndexLifelineModifierMockSetLifeline) Return(r error) *IndexLifelineMo
 	return m.mock
 }
 
-// ExpectOnce specifies that invocation of IndexLifelineModifier.SetLifeline is expected once
+//ExpectOnce specifies that invocation of IndexLifelineModifier.SetLifeline is expected once
 func (m *mIndexLifelineModifierMockSetLifeline) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 Lifeline) *IndexLifelineModifierMockSetLifelineExpectation {
 	m.mock.SetLifelineFunc = nil
 	m.mainExpectation = nil
@@ -100,7 +100,7 @@ func (e *IndexLifelineModifierMockSetLifelineExpectation) Return(r error) {
 	e.result = &IndexLifelineModifierMockSetLifelineResult{r}
 }
 
-// Set uses given function f as a mock of IndexLifelineModifier.SetLifeline method
+//Set uses given function f as a mock of IndexLifelineModifier.SetLifeline method
 func (m *mIndexLifelineModifierMockSetLifeline) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 Lifeline) (r error)) *IndexLifelineModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -109,7 +109,7 @@ func (m *mIndexLifelineModifierMockSetLifeline) Set(f func(p context.Context, p1
 	return m.mock
 }
 
-// SetLifeline implements github.com/insolar/insolar/ledger/object.IndexLifelineModifier interface
+//SetLifeline implements github.com/insolar/insolar/ledger/object.IndexLifelineModifier interface
 func (m *IndexLifelineModifierMock) SetLifeline(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 Lifeline) (r error) {
 	counter := atomic.AddUint64(&m.SetLifelinePreCounter, 1)
 	defer atomic.AddUint64(&m.SetLifelineCounter, 1)
@@ -159,17 +159,17 @@ func (m *IndexLifelineModifierMock) SetLifeline(p context.Context, p1 insolar.Pu
 	return m.SetLifelineFunc(p, p1, p2, p3)
 }
 
-// SetLifelineMinimockCounter returns a count of IndexLifelineModifierMock.SetLifelineFunc invocations
+//SetLifelineMinimockCounter returns a count of IndexLifelineModifierMock.SetLifelineFunc invocations
 func (m *IndexLifelineModifierMock) SetLifelineMinimockCounter() uint64 {
 	return atomic.LoadUint64(&m.SetLifelineCounter)
 }
 
-// SetLifelineMinimockPreCounter returns the value of IndexLifelineModifierMock.SetLifeline invocations
+//SetLifelineMinimockPreCounter returns the value of IndexLifelineModifierMock.SetLifeline invocations
 func (m *IndexLifelineModifierMock) SetLifelineMinimockPreCounter() uint64 {
 	return atomic.LoadUint64(&m.SetLifelinePreCounter)
 }
 
-// SetLifelineFinished returns true if mock invocations count is ok
+//SetLifelineFinished returns true if mock invocations count is ok
 func (m *IndexLifelineModifierMock) SetLifelineFinished() bool {
 	// if expectation series were set then invocations count should be equal to expectations count
 	if len(m.SetLifelineMock.expectationSeries) > 0 {
@@ -189,8 +189,8 @@ func (m *IndexLifelineModifierMock) SetLifelineFinished() bool {
 	return true
 }
 
-// ValidateCallCounters checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//ValidateCallCounters checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexLifelineModifierMock) ValidateCallCounters() {
 
 	if !m.SetLifelineFinished() {
@@ -199,19 +199,19 @@ func (m *IndexLifelineModifierMock) ValidateCallCounters() {
 
 }
 
-// CheckMocksCalled checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
+//CheckMocksCalled checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *IndexLifelineModifierMock) CheckMocksCalled() {
 	m.Finish()
 }
 
-// Finish checks that all mocked methods of the interface have been called at least once
-// Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
+//Finish checks that all mocked methods of the interface have been called at least once
+//Deprecated: please use MinimockFinish or use Finish method of minimock.Controller
 func (m *IndexLifelineModifierMock) Finish() {
 	m.MinimockFinish()
 }
 
-// MinimockFinish checks that all mocked methods of the interface have been called at least once
+//MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *IndexLifelineModifierMock) MinimockFinish() {
 
 	if !m.SetLifelineFinished() {
@@ -220,14 +220,14 @@ func (m *IndexLifelineModifierMock) MinimockFinish() {
 
 }
 
-// Wait waits for all mocked methods to be called at least once
-// Deprecated: please use MinimockWait or use Wait method of minimock.Controller
+//Wait waits for all mocked methods to be called at least once
+//Deprecated: please use MinimockWait or use Wait method of minimock.Controller
 func (m *IndexLifelineModifierMock) Wait(timeout time.Duration) {
 	m.MinimockWait(timeout)
 }
 
-// MinimockWait waits for all mocked methods to be called at least once
-// this method is called by minimock.Controller
+//MinimockWait waits for all mocked methods to be called at least once
+//this method is called by minimock.Controller
 func (m *IndexLifelineModifierMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
@@ -253,8 +253,8 @@ func (m *IndexLifelineModifierMock) MinimockWait(timeout time.Duration) {
 	}
 }
 
-// AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
-// it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
+//AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
+//it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *IndexLifelineModifierMock) AllMocksCalled() bool {
 
 	if !m.SetLifelineFinished() {
