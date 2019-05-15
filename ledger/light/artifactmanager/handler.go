@@ -160,6 +160,9 @@ func NewMessageHandler(
 			p.Dep.IndexStateModifier = h.IndexStateModifier
 			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
 		},
+		GetPendingRequests: func(p *proc.GetPendingRequests) {
+			p.Dep.RecentStorageProvider = h.RecentStorageProvider
+		},
 	}
 
 	initHandle := func(msg bus.Message) *handle.Init {
@@ -246,13 +249,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	h.Bus.MustRegister(insolar.TypeSetRecord, h.FlowDispatcher.WrapBusHandle)
 	h.Bus.MustRegister(insolar.TypeRegisterChild, h.FlowDispatcher.WrapBusHandle)
 	h.Bus.MustRegister(insolar.TypeSetBlob, h.FlowDispatcher.WrapBusHandle)
-
-	h.Bus.MustRegister(insolar.TypeGetPendingRequests,
-		BuildMiddleware(h.handleHasPendingRequests,
-			instrumentHandler("handleHasPendingRequests"),
-			m.addFieldsToLogger,
-			m.checkJet,
-			m.waitForHotData))
+	h.Bus.MustRegister(insolar.TypeGetPendingRequests, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeGetJet,
 		BuildMiddleware(h.handleGetJet,
@@ -275,19 +272,6 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	)
 
 	h.Bus.MustRegister(insolar.TypeValidateRecord, h.handleValidateRecord)
-}
-
-func (h *MessageHandler) handleHasPendingRequests(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetPendingRequests)
-	jetID := jetFromContext(ctx)
-
-	for _, reqID := range h.RecentStorageProvider.GetPendingStorage(ctx, jetID).GetRequestsForObject(*msg.Object.Record()) {
-		if reqID.Pulse() < parcel.Pulse() {
-			return &reply.HasPendingRequests{Has: true}, nil
-		}
-	}
-
-	return &reply.HasPendingRequests{Has: false}, nil
 }
 
 func (h *MessageHandler) handleGetJet(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {

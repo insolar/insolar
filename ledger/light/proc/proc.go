@@ -34,6 +34,7 @@ type Dependencies struct {
 	SetBlob       func(*SetBlob)
 	SetRecord     func(*SetRecord)
 	RegisterChild func(*RegisterChild)
+	GetPendingRequests func(*GetPendingRequests)
 }
 
 type ReturnReply struct {
