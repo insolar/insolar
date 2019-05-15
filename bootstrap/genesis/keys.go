@@ -17,10 +17,12 @@
 package genesis
 
 import (
+	"bytes"
 	"context"
 	"crypto"
 	"encoding/json"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"path/filepath"
 
@@ -34,27 +36,51 @@ func getKeysFromFile(ctx context.Context, file string) (crypto.PrivateKey, strin
 	if err != nil {
 		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't get abs path")
 	}
-	data, err := ioutil.ReadFile(absPath)
+	b, err := ioutil.ReadFile(absPath)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't read keys file "+absPath)
 	}
+	return getKeys(ctx, bytes.NewReader(b))
+}
+
+func getKeys(ctx context.Context, r io.Reader) (crypto.PrivateKey, string, error) {
 	var keys map[string]string
-	err = json.Unmarshal(data, &keys)
+	err := json.NewDecoder(r).Decode(&keys)
 	if err != nil {
-		return nil, "", errors.Wrapf(err, "[ getKeyFromFile ] couldn't unmarshal data from %s", absPath)
+		return nil, "", errors.Wrapf(err, "[ getKeys ] couldn't unmarshal keys data")
 	}
 	if keys["private_key"] == "" {
-		return nil, "", errors.New("[ getKeyFromFile ] empty private key")
+		return nil, "", errors.New("[ getKeys ] empty private key")
 	}
 	if keys["public_key"] == "" {
-		return nil, "", errors.New("[ getKeyFromFile ] empty public key")
+		return nil, "", errors.New("[ getKeys ] empty public key")
 	}
+
 	kp := platformpolicy.NewKeyProcessor()
 	key, err := kp.ImportPrivateKeyPEM([]byte(keys["private_key"]))
 	if err != nil {
-		return nil, "", errors.Wrapf(err, "[ getKeyFromFile ] couldn't import private key")
+		return nil, "", errors.Wrapf(err, "[ getKeys ] couldn't import private key")
 	}
-	return key, keys["public_key"], nil
+
+	return key, mustNormalizePublicKey(keys["public_key"]), nil
+}
+
+func mustNormalizePublicKey(s string) string {
+	ks := platformpolicy.NewKeyProcessor()
+	pubKey, err := ks.ImportPublicKeyPEM([]byte(s))
+	if err != nil {
+		panic(err)
+	}
+	return string(mustPublicKeyToBytes(pubKey))
+}
+
+func mustPublicKeyToBytes(key crypto.PublicKey) []byte {
+	ks := platformpolicy.NewKeyProcessor()
+	b, err := ks.ExportPublicKeyPEM(key)
+	if err != nil {
+		panic(err)
+	}
+	return b
 }
 
 func readKeysFromDir(ctx context.Context, dir string, amount int) ([]nodeInfo, error) {
@@ -127,7 +153,7 @@ func createKeysInDir(
 			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't write keys to file")
 		}
 
-		nodes[i].publicKey = pubKey
+		nodes[i].publicKey = string(mustPublicKeyToBytes(pubKey))
 		nodes[i].privateKey = privKey
 	}
 

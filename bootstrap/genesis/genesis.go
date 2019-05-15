@@ -35,7 +35,6 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -52,21 +51,11 @@ var contractNames = []string{walletContract, memberContract, allowanceContract, 
 
 type nodeInfo struct {
 	privateKey crypto.PrivateKey
-	publicKey  crypto.PublicKey
-}
-
-func (ni nodeInfo) publicKeyString() string {
-	ks := platformpolicy.NewKeyProcessor()
-
-	pubKeyStr, err := ks.ExportPublicKeyPEM(ni.publicKey)
-	if err != nil {
-		panic(err)
-	}
-	return string(pubKeyStr)
+	publicKey  string
 }
 
 func (ni nodeInfo) reference() insolar.Reference {
-	return refByName(ni.publicKeyString())
+	return refByName(ni.publicKey)
 }
 
 // Generator is a component for generating RootDomain instance and genesis contracts.
@@ -425,7 +414,7 @@ func (g *Generator) activateDiscoveryNodes(
 	}
 
 	for i, discoverNode := range g.config.DiscoveryNodes {
-		nodePubKey := nodesInfo[i].publicKeyString()
+		nodePubKey := nodesInfo[i].publicKey
 
 		nodeState := &noderecord.NodeRecord{
 			Record: noderecord.RecordInfo{
@@ -457,7 +446,7 @@ func (g *Generator) activateNodeRecord(
 		ctx,
 		*g.rootDomainContract,
 		&message.Parcel{
-			Msg: &message.GenesisRequest{Name: node.publicKeyString()},
+			Msg: &message.GenesisRequest{Name: node.publicKey},
 		},
 	)
 	if err != nil {
@@ -486,7 +475,7 @@ func (g *Generator) activateNodeRecord(
 func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeInfo) error {
 	var certs []certificate.Certificate
 	for i, node := range g.config.DiscoveryNodes {
-		pubKey := discoveryNodes[i].publicKeyString()
+		pubKey := discoveryNodes[i].publicKey
 		ref := discoveryNodes[i].reference()
 
 		c := certificate.Certificate{
@@ -505,7 +494,7 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 		c.BootstrapNodes = []certificate.BootstrapNode{}
 
 		for j, n2 := range g.config.DiscoveryNodes {
-			pk := discoveryNodes[j].publicKeyString()
+			pk := discoveryNodes[j].publicKey
 			ref := discoveryNodes[j].reference()
 			c.BootstrapNodes = append(c.BootstrapNodes, certificate.BootstrapNode{
 				PublicKey: pk,
@@ -563,7 +552,7 @@ func (g *Generator) updateNodeDomainIndex(ctx context.Context, discoveryNodes []
 
 	indexMap := map[string]string{}
 	for _, node := range discoveryNodes {
-		indexMap[node.publicKeyString()] = node.reference().String()
+		indexMap[node.publicKey] = node.reference().String()
 	}
 
 	updateData, err := insolar.Serialize(
