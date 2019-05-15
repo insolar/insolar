@@ -82,7 +82,7 @@ func NewNodeAddress(address string) (NodeAddress, error) {
 	}
 
 	portNumber, err := strconv.Atoi(port)
-	if err != nil || portNumber > int(maxPortNumber) {
+	if err != nil || portNumber > int(maxPortNumber) || portNumber <= 0 {
 		return addr, errors.Errorf("invalid port: %s", port)
 	}
 
