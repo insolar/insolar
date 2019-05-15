@@ -443,7 +443,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	registerChild.Dep.JetCoordinator = jc
 	registerChild.Dep.RecordModifier = s.recordModifier
 	registerChild.Dep.IndexStateModifier = s.indexMemoryStor
-	registerChild.Dep.PlatformCryptographyScheme = s.scheme
+	registerChild.Dep.PCS = s.scheme
 
 	err = registerChild.Proceed(contextWithJet(s.ctx, jetID))
 	require.NoError(s.T(), err)
@@ -519,7 +519,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	registerChild.Dep.JetCoordinator = jet.NewCoordinatorMock(mc)
 	registerChild.Dep.RecordModifier = s.recordModifier
 	registerChild.Dep.IndexStateModifier = s.indexMemoryStor
-	registerChild.Dep.PlatformCryptographyScheme = s.scheme
+	registerChild.Dep.PCS = s.scheme
 
 	err = registerChild.Proceed(contextWithJet(s.ctx, jetID))
 	require.NoError(s.T(), err)

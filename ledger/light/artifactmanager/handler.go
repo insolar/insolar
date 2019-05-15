@@ -159,7 +159,7 @@ func NewMessageHandler(
 			p.Dep.JetCoordinator = h.JetCoordinator
 			p.Dep.RecordModifier = h.RecordModifier
 			p.Dep.IndexStateModifier = h.IndexStateModifier
-			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.PCS = h.PCS
 		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
