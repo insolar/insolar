@@ -400,5 +400,5 @@ func (m *Scope) updateStateObject(
 }
 
 func (m *Scope) hashParcel(parcel insolar.Parcel) []byte {
-	return m.PlatformCryptographyScheme.IntegrityHasher().Hash(message.MustSerializeBytes(parcel.Message()))
+	return message.HashParcel(m.PlatformCryptographyScheme, parcel)
 }
