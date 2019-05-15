@@ -63,10 +63,9 @@ import (
 type ClaimType uint8
 
 const (
-	TypeNodeJoinClaim      = ClaimType(1)
-	TypeNodeAnnounceClaim  = ClaimType(2)
-	TypeNodeViolationBlame = ClaimType(3)
-	TypeNodeLeaveClaim     = ClaimType(4)
+	TypeNodeJoinClaim     = ClaimType(1)
+	TypeNodeAnnounceClaim = ClaimType(2)
+	TypeNodeLeaveClaim    = ClaimType(3)
 )
 
 const claimHeaderSize = 2
