@@ -108,8 +108,9 @@ func (s *Initializer) Run() {
 			PulseNumber: insolar.FirstPulseNumber,
 
 			PlatformCryptographyScheme: bc.PlatformCryptographyScheme,
-			BlobModifier:               sc.blobDB,
-			RecordsModifier:            sc.recordDB,
+			BlobStorage:                sc.blobDB,
+			RecordAccessor:             sc.recordDB,
+			RecordModifier:             sc.recordDB,
 
 			IndexModifier: sc.indexDB,
 			IndexAccessor: sc.indexDB,
