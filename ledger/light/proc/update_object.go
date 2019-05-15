@@ -68,7 +68,7 @@ func (p *UpdateObject) Proceed(ctx context.Context) error {
 
 func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	virtRec, err := object.DecodeVirtual(p.Message.Record)
-	logger := inslogger.FromContext(ctx)
+	ctx, logger := inslogger.WithField(ctx, "object", p.Message.Object.Record().DebugString())
 
 	if err != nil {
 		return bus.Reply{Err: errors.Wrap(err, "can't deserialize record")}
@@ -102,6 +102,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 		if state.ID() == object.StateActivation {
 			// We are activating the object. There is no index for it anywhere.
 			idx = object.Lifeline{State: object.StateUndefined}
+			logger.Debugf("new lifeline created")
 		} else {
 			logger.Debug("failed to fetch index (fetching from heavy)")
 			// We are updating object. LifelineIndex should be on the heavy executor.
@@ -111,7 +112,8 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 			}
 			idx, err = p.saveIndexFromHeavy(ctx, p.JetID, p.Message.Object, heavy)
 			if err != nil {
-				return bus.Reply{Err: errors.Wrap(err, "failed to fetch index from heavy")}
+				logger.Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", p.Message.Object.Record().DebugString()))
+				return bus.Reply{Err: errors.Wrapf(err, "failed to fetch index from heavy")}
 			}
 		}
 	} else if err != nil {

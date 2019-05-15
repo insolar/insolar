@@ -10,6 +10,7 @@ import (
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineIndex -o ./ -s _mock.go
 
+// LifelineIndex is a base storage for lifelines
 type LifelineIndex interface {
 	IndexLifelineAccessor
 	IndexLifelineModifier
@@ -17,12 +18,14 @@ type LifelineIndex interface {
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexLifelineAccessor -o ./ -s _mock.go
 
+// IndexLifelineAccessor provides methods for fetching lifelines
 type IndexLifelineAccessor interface {
 	LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexLifelineModifier -o ./ -s _mock.go
 
+// IndexLifelineModifier provides methods for modifying lifelines
 type IndexLifelineModifier interface {
 	SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error
 }
@@ -122,32 +125,6 @@ func NewInMemoryIndex() *InMemoryIndex {
 		buckets: map[insolar.PulseNumber]map[insolar.ID]*LockedIndexBucket{},
 	}
 }
-
-// func (i *InMemoryIndex) bucket(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *LockedIndexBucket {
-// 	i.bucketsLock.Lock()
-// 	defer i.bucketsLock.Unlock()
-//
-// 	var objsByPn map[insolar.ID]*LockedIndexBucket
-// 	objsByPn, ok := i.buckets[pn]
-// 	if !ok {
-// 		objsByPn = map[insolar.ID]*LockedIndexBucket{}
-// 		i.buckets[pn] = objsByPn
-// 	}
-//
-// 	bucket := objsByPn[objID]
-// 	if bucket == nil {
-// 		bucket = &LockedIndexBucket{
-// 			bucket: IndexBucket{
-// 				ObjID:    objID,
-// 				Results:  []insolar.ID{},
-// 				Requests: []insolar.ID{},
-// 			},
-// 		}
-// 		objsByPn[objID] = bucket
-// 	}
-//
-// 	return bucket
-// }
 
 func (i *InMemoryIndex) createBucket(pn insolar.PulseNumber, objID insolar.ID) *LockedIndexBucket {
 	i.bucketsLock.Lock()
@@ -356,38 +333,9 @@ func (i *IndexDB) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID
 	if err != nil {
 		return err
 	}
+
 	return i.setLastKnownPN(ctx, pn, objID)
 }
-
-// func (i *IndexDB) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error {
-// 	i.lock.Lock()
-// 	defer i.lock.Unlock()
-//
-// 	buc, err := i.get(pn, objID)
-// 	if err == store.ErrNotFound {
-// 		buc = &IndexBucket{}
-// 	} else if err != nil {
-// 		return err
-// 	}
-//
-// 	buc.Requests = append(buc.Requests, reqID)
-// 	return i.set(pn, objID, buc)
-// }
-//
-// func (i *IndexDB) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error {
-// 	i.lock.Lock()
-// 	defer i.lock.Unlock()
-//
-// 	buc, err := i.get(pn, objID)
-// 	if err == store.ErrNotFound {
-// 		buc = &IndexBucket{}
-// 	} else if err != nil {
-// 		return err
-// 	}
-//
-// 	buc.Results = append(buc.Results, resID)
-// 	return i.set(pn, objID, buc)
-// }
 
 func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error {
 	i.lock.Lock()

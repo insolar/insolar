@@ -302,7 +302,8 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 		}
 		idx, err = h.saveIndexFromHeavy(ctx, parcel.Pulse(), jetID, msg.Head, heavy)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch index from heavy")
+			inslogger.FromContext(ctx).Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", *msg.Head.Record()))
+			return nil, errors.Wrapf(err, "failed to fetch index from heavy")
 		}
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
@@ -341,6 +342,7 @@ func (h *MessageHandler) handleGetChildren(
 		}
 		idx, err = h.saveIndexFromHeavy(ctx, parcel.Pulse(), jetID, msg.Parent, heavy)
 		if err != nil {
+			inslogger.FromContext(ctx).Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", msg.Parent.Record().DebugString()))
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
 		if idx.ChildPointer == nil {

@@ -96,7 +96,8 @@ func (p *GetIndex) process(ctx context.Context) error {
 		Receiver: heavy,
 	})
 	if err != nil {
-		return errors.Wrap(err, "failed to fetch index from heavy")
+		logger.Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", p.object.Record().DebugString()))
+		return errors.Wrapf(err, "failed to fetch index from heavy")
 	}
 	rep, ok := genericReply.(*reply.ObjectIndex)
 	if !ok {
