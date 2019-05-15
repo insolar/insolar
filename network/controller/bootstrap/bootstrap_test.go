@@ -57,14 +57,23 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/certificate"
+	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/controller/common"
+	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
+	"github.com/insolar/insolar/network/routing"
+	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
+	"github.com/insolar/insolar/testutils"
+	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -106,11 +115,11 @@ var BootstrapError = errors.New("bootstrap without repeat")
 var InfinityBootstrapError = errors.New("infinity bootstrap")
 var bootstrapRetries = 0
 
-func mockBootstrap(context.Context, string) (*network.BootstrapResult, error) {
+func mockBootstrap(context.Context, string, *Permission) (*network.BootstrapResult, error) {
 	return nil, BootstrapError
 }
 
-func mockInfinityBootstrap(context.Context, string) (*network.BootstrapResult, error) {
+func mockInfinityBootstrap(context.Context, string, *Permission) (*network.BootstrapResult, error) {
 	bootstrapRetries++
 	if bootstrapRetries >= 5 {
 		return nil, nil
@@ -121,12 +130,12 @@ func mockInfinityBootstrap(context.Context, string) (*network.BootstrapResult, e
 func TestBootstrap(t *testing.T) {
 	t.Skip("flaky test")
 	ctx := context.Background()
-	_, err := bootstrap(ctx, "192.180.0.1:1234", getOptions(false), mockBootstrap)
+	_, err := bootstrap(ctx, "192.180.0.1:1234", getOptions(false), mockBootstrap, nil)
 	assert.Error(t, err, BootstrapError)
 
 	startTime := time.Now()
 	expectedTime := startTime.Add(time.Millisecond * 700) // 100ms, 200ms, 200ms, 200ms, return nil error
-	_, err = bootstrap(ctx, "192.180.0.1:1234", getOptions(true), mockInfinityBootstrap)
+	_, err = bootstrap(ctx, "192.180.0.1:1234", getOptions(true), mockInfinityBootstrap, nil)
 	endTime := time.Now()
 	assert.NoError(t, err)
 	assert.WithinDuration(t, expectedTime.Round(time.Millisecond), endTime.Round(time.Millisecond), time.Millisecond*100)
@@ -168,4 +177,52 @@ func TestCyclicBootstrap(t *testing.T) {
 		reconnectRequired = true
 	}
 	assert.True(t, reconnectRequired)
+}
+
+func TestPermissions(t *testing.T) {
+	ctx := context.Background()
+
+	cs, err := cryptography.NewStorageBoundCryptographyService(TestKeys)
+	assert.NoError(t, err)
+	kp := platformpolicy.NewKeyProcessor()
+	pk, err := cs.GetPublicKey()
+	assert.NoError(t, err)
+	cert, err := certificate.ReadCertificate(pk, kp, TestCert)
+	require.NoError(t, err)
+	require.NotEmpty(t, cert.PublicKey)
+
+	nk := nodekeeper.GetTestNodekeeper(cs)
+
+	origin := bootstrapper{
+		options:                 getOptions(false),
+		bootstrapLock:           make(chan struct{}),
+		genesisRequestsReceived: make(map[insolar.Reference]*GenesisRequest),
+		Certificate:             cert,
+		NodeKeeper:              nk,
+	}
+
+	hn, err := hostnetwork.NewHostNetwork(testutils.RandomRef().String())
+	assert.NoError(t, err)
+
+	cfg := configuration.NewConfiguration()
+
+	cm := component.NewManager(nil)
+	cm.Register(hn, nk, &routing.Table{}, transport.NewFactory(cfg.Host.Transport), cs)
+	cm.Inject()
+
+	bootstrapReq := &NodeBootstrapRequest{
+		JoinClaim:     packets.NodeJoinClaim{},
+		LastNodePulse: 123,
+		Permission: Permission{
+			JoinerPublicKey: []byte(cert.PublicKey),
+		},
+	}
+
+	request := origin.Network.NewRequestBuilder().Type(types.Bootstrap).Data(bootstrapReq).Build()
+
+	resp, err := origin.processBootstrap(ctx, request)
+	require.NoError(t, err)
+
+	response := resp.GetData().(*NodeBootstrapResponse)
+	require.Equal(t, response.Code, Redirected)
 }
