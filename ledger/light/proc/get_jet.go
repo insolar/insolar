@@ -27,12 +27,7 @@ func NewGetJet(msg *message.GetJet, rep chan<- bus.Reply) *GetJet {
 }
 
 func (p *GetJet) Proceed(ctx context.Context) error {
-	p.replyTo <- p.reply(ctx)
-	return nil
-}
-
-func (p *GetJet) reply(ctx context.Context) bus.Reply {
 	jetID, actual := p.Dep.Jets.ForID(ctx, p.msg.Pulse, p.msg.Object)
-
-	return bus.Reply{Reply: &reply.Jet{ID: insolar.ID(jetID), Actual: actual}, Err: nil}
+	p.replyTo <- bus.Reply{Reply: &reply.Jet{ID: insolar.ID(jetID), Actual: actual}, Err: nil}
+	return nil
 }
