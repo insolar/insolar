@@ -224,8 +224,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		h.RecordAccessor = records
 		h.RecordModifier = records
 		h.JetCoordinator = Coordinator
-		h.IndexAccessor = indexes
-		h.IndexModifier = indexes
+		h.IndexLifelineAccessor = indexes
+		h.IndexBucketModifier = indexes
 		h.Bus = Bus
 		h.BlobAccessor = blobs
 		h.BlobModifier = blobs

@@ -22,9 +22,9 @@ import (
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineAccessor -o ./ -s _mock.go
 
-// LifelineAccessor provides info about Index-values from storage.
+// LifelineAccessor provides info about LifelineIndex-values from storage.
 // type LifelineAccessor interface {
-// 	// ForID returns Index for provided id.
+// 	// ForID returns LifelineIndex for provided id.
 // 	ForID(ctx context.Context, id insolar.ID) (Lifeline, error)
 // }
 
@@ -40,15 +40,15 @@ import (
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineModifier -o ./ -s _mock.go
 
-// LifelineModifier provides methods for setting Index-values to storage.
+// LifelineModifier provides methods for setting LifelineIndex-values to storage.
 // type LifelineModifier interface {
-// 	// Set saves new Index-value in storage.
+// 	// Set saves new LifelineIndex-value in storage.
 // 	Set(ctx context.Context, id insolar.ID, index Lifeline) error
 // }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.ExtendedLifelineModifier -o ./ -s _mock.go
 
-// ExtendedLifelineModifier provides methods for setting Index-values to storage.
+// ExtendedLifelineModifier provides methods for setting LifelineIndex-values to storage.
 // The main difference with LifelineModifier is an opportunity to modify a state of an internal pulse-index
 // type ExtendedLifelineModifier interface {
 // 	// SetWithMeta saves index to the storage and sets its index and pulse number in internal indexes
@@ -98,7 +98,7 @@ import (
 // It provides LastUsed pulse number
 // That can be used for placed in a special bucket in processing structs
 // type LifelineMeta struct {
-// 	Index    Lifeline
+// 	LifelineIndex    Lifeline
 // 	LastUsed insolar.PulseNumber
 // }
 //
@@ -201,7 +201,7 @@ func (l *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool
 // 	}
 // }
 //
-// // Set saves new Index-value in storage.
+// // Set saves new LifelineIndex-value in storage.
 // func (m *LifelineStorageMemory) Set(ctx context.Context, id insolar.ID, index Lifeline) error {
 // 	m.storageLock.Lock()
 // 	defer m.storageLock.Unlock()
@@ -242,7 +242,7 @@ func (l *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool
 // 	m.pulseIndex.Add(id, pn)
 // }
 //
-// // ForID returns Index for provided id.
+// // ForID returns LifelineIndex for provided id.
 // func (m *LifelineStorageMemory) ForID(ctx context.Context, id insolar.ID) (Lifeline, error) {
 // 	m.storageLock.RLock()
 // 	defer m.storageLock.RUnlock()
@@ -277,7 +277,7 @@ func (l *Lifeline) DelegateByKey(key insolar.Reference) (insolar.Reference, bool
 // // 			}
 // //
 // // 			res[id] = LifelineMeta{
-// // 				Index:    CloneIndex(idx),
+// // 				LifelineIndex:    CloneIndex(idx),
 // // 				LastUsed: lstPN,
 // // 			}
 // // 		}

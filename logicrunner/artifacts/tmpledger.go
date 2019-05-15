@@ -114,12 +114,12 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	bs := blob.NewDB(memoryMockDB)
 
 	genesisBaseRecord := &genesis.BaseRecord{
-		DB:             memoryMockDB,
-		DropModifier:   ds,
-		PulseAppender:  ps,
-		PulseAccessor:  ps,
-		RecordModifier: recordStorage,
-		IndexModifier:  index,
+		DB:                    memoryMockDB,
+		DropModifier:          ds,
+		PulseAppender:         ps,
+		PulseAccessor:         ps,
+		RecordModifier:        recordStorage,
+		IndexLifelineModifier: index,
 	}
 	_, err := genesisBaseRecord.CreateIfNeeded(ctx)
 	if err != nil {
@@ -159,10 +159,10 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(networknode.NewNode(insolar.Reference{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
-	handler := artifactmanager.NewMessageHandler(index, index, &conf)
+	handler := artifactmanager.NewMessageHandler(index, index, index, &conf)
 	handler.JetStorage = js
 	handler.Nodes = ns
-	handler.Index = index
+	handler.LifelineIndex = index
 	handler.DropModifier = ds
 	handler.BlobModifier = bs
 	handler.BlobAccessor = bs

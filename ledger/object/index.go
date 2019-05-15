@@ -8,31 +8,41 @@ import (
 	"github.com/insolar/insolar/internal/ledger/store"
 )
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.Index -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineIndex -o ./ -s _mock.go
 
-type Index interface {
-	IndexAccessor
-	IndexModifier
+type LifelineIndex interface {
+	IndexLifelineAccessor
+	IndexLifelineModifier
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexAccessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexLifelineAccessor -o ./ -s _mock.go
 
-type IndexAccessor interface {
+type IndexLifelineAccessor interface {
 	LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexModifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexLifelineModifier -o ./ -s _mock.go
 
-type IndexModifier interface {
+type IndexLifelineModifier interface {
 	SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexPendingModifier -o ./ -s _mock.go
+
+type IndexPendingModifier interface {
 	SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error
 	SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error
+}
+
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexBucketModifier -o ./ -s _mock.go
+
+type IndexBucketModifier interface {
 	SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexStateModifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexLifelineStateModifier -o ./ -s _mock.go
 
-type IndexStateModifier interface {
+type IndexLifelineStateModifier interface {
 	SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
 }
 
@@ -224,32 +234,6 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 
 	return res
 }
-
-// func (i *InMemoryIndex) Clone(ctx context.Context, fromPN insolar.PulseNumber, toPN insolar.PulseNumber, from insolar.JetID, to insolar.JetID) {
-// 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-// 		"from_jet": from.DebugString(),
-// 		"to_jet":   to.DebugString(),
-// 		"from_pn":  fromPN,
-// 		"to_pn":    toPN,
-// 	})
-//
-// 	i.bucketsLock.Lock()
-// 	defer i.bucketsLock.Unlock()
-//
-// 	fromBucks, fromOK := i.buckets[fromPN]
-// 	if !fromOK {
-// 		return
-// 	}
-//
-// 	i.buckets[toPN] = map[insolar.ID]*LockedIndexBucket{}
-//
-// 	for objID, fBuck := range fromBucks {
-// 		i.buckets[toPN][objID] = &LockedIndexBucket{
-// 			bucket: fBuck.bucket.
-// 		}
-// 	}
-//
-// }
 
 func (i *InMemoryIndex) SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
 	b := i.bucket(ctx, pn, objID)

@@ -41,8 +41,8 @@ type GetIndex struct {
 	}
 
 	Dep struct {
-		Index       object.Index
-		IndexState  object.IndexStateModifier
+		Index       object.LifelineIndex
+		IndexState  object.IndexLifelineStateModifier
 		Locker      object.IDLocker
 		Coordinator jet.Coordinator
 		Bus         insolar.MessageBus

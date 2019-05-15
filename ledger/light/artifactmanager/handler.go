@@ -72,8 +72,9 @@ type MessageHandler struct {
 	HotDataWaiter hot.JetWaiter   `inject:""`
 	JetReleaser   hot.JetReleaser `inject:""`
 
-	Index              object.Index
-	IndexStateModifier object.IndexStateModifier
+	LifelineIndex       object.LifelineIndex
+	IndexBucketModifier object.IndexBucketModifier
+	IndexStateModifier  object.IndexLifelineStateModifier
 
 	conf           *configuration.Ledger
 	middleware     *middleware
@@ -85,16 +86,18 @@ type MessageHandler struct {
 
 // NewMessageHandler creates new handler.
 func NewMessageHandler(
-	index object.Index,
-	indexStateModifier object.IndexStateModifier,
+	index object.LifelineIndex,
+	indexBucketModifier object.IndexBucketModifier,
+	indexStateModifier object.IndexLifelineStateModifier,
 	conf *configuration.Ledger,
 ) *MessageHandler {
 
 	h := &MessageHandler{
-		handlers:           map[insolar.MessageType]insolar.MessageHandler{},
-		conf:               conf,
-		Index:              index,
-		IndexStateModifier: indexStateModifier,
+		handlers:            map[insolar.MessageType]insolar.MessageHandler{},
+		conf:                conf,
+		LifelineIndex:       index,
+		IndexBucketModifier: indexBucketModifier,
+		IndexStateModifier:  indexStateModifier,
 	}
 
 	dep := &proc.Dependencies{
@@ -110,7 +113,7 @@ func NewMessageHandler(
 		GetIndex: func(p *proc.GetIndex) {
 			p.Dep.IndexState = h.IndexStateModifier
 			p.Dep.Locker = h.IDLocker
-			p.Dep.Index = h.Index
+			p.Dep.Index = h.LifelineIndex
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
 		},
@@ -151,7 +154,7 @@ func NewMessageHandler(
 			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
 			p.Dep.IDLocker = h.IDLocker
 			p.Dep.IndexStateModifier = h.IndexStateModifier
-			p.Dep.Index = h.Index
+			p.Dep.Index = h.LifelineIndex
 		},
 	}
 
@@ -307,7 +310,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	h.IDLocker.Lock(msg.Head.Record())
 	defer h.IDLocker.Unlock(msg.Head.Record())
 
-	idx, err := h.Index.LifelineForID(ctx, parcel.Pulse(), *msg.Head.Record())
+	idx, err := h.LifelineIndex.LifelineForID(ctx, parcel.Pulse(), *msg.Head.Record())
 	if err == object.ErrLifelineNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -346,7 +349,7 @@ func (h *MessageHandler) handleGetChildren(
 	h.IDLocker.Lock(msg.Parent.Record())
 	defer h.IDLocker.Unlock(msg.Parent.Record())
 
-	idx, err := h.Index.LifelineForID(ctx, parcel.Pulse(), *msg.Parent.Record())
+	idx, err := h.LifelineIndex.LifelineForID(ctx, parcel.Pulse(), *msg.Parent.Record())
 	if err == object.ErrLifelineNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -493,7 +496,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 	defer h.IDLocker.Unlock(msg.Parent.Record())
 
 	var child *insolar.ID
-	idx, err := h.Index.LifelineForID(ctx, parcel.Pulse(), *msg.Parent.Record())
+	idx, err := h.LifelineIndex.LifelineForID(ctx, parcel.Pulse(), *msg.Parent.Record())
 	if err == object.ErrLifelineNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -540,7 +543,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 	}
 	idx.LatestUpdate = parcel.Pulse()
 	idx.JetID = insolar.JetID(jetID)
-	err = h.Index.SetLifeline(ctx, parcel.Pulse(), *msg.Parent.Record(), idx)
+	err = h.LifelineIndex.SetLifeline(ctx, parcel.Pulse(), *msg.Parent.Record(), idx)
 	if err != nil {
 		return nil, err
 	}
@@ -573,7 +576,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	}
 
 	idx.JetID = insolar.JetID(jetID)
-	err = h.Index.SetLifeline(ctx, parcelPN, *obj.Record(), idx)
+	err = h.LifelineIndex.SetLifeline(ctx, parcelPN, *obj.Record(), idx)
 	if err != nil {
 		return object.Lifeline{}, errors.Wrap(err, "failed to save")
 	}
@@ -636,7 +639,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 			continue
 		}
 
-		err = h.Index.SetBucket(
+		err = h.IndexBucketModifier.SetBucket(
 			ctx,
 			parcel.Pulse(),
 			object.IndexBucket{

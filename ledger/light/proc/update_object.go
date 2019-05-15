@@ -47,8 +47,8 @@ type UpdateObject struct {
 		RecentStorageProvider      recentstorage.Provider
 		PlatformCryptographyScheme insolar.PlatformCryptographyScheme
 		IDLocker                   object.IDLocker
-		Index                      object.Index
-		IndexStateModifier         object.IndexStateModifier
+		Index                      object.LifelineIndex
+		IndexStateModifier         object.IndexLifelineStateModifier
 	}
 }
 
@@ -104,7 +104,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 			idx = object.Lifeline{State: object.StateUndefined}
 		} else {
 			logger.Debug("failed to fetch index (fetching from heavy)")
-			// We are updating object. Index should be on the heavy executor.
+			// We are updating object. LifelineIndex should be on the heavy executor.
 			heavy, err := p.Dep.Coordinator.Heavy(ctx, p.PulseNumber)
 			if err != nil {
 				return bus.Reply{Err: err}
@@ -124,7 +124,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 
 	recID := object.NewRecordIDFromRecord(p.Dep.PlatformCryptographyScheme, p.PulseNumber, virtRec)
 
-	// Index exists and latest record id does not match (preserving chain consistency).
+	// LifelineIndex exists and latest record id does not match (preserving chain consistency).
 	// For the case when vm can't save or send result to another vm and it tries to update the same record again
 	if idx.LatestState != nil && !state.PrevStateID().Equal(*idx.LatestState) && idx.LatestState != recID {
 		return bus.Reply{Err: errors.New("invalid state record")}
