@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/application/extractor"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
 
@@ -68,7 +67,6 @@ func (gdp *GenesisDataProvider) setInfo(ctx context.Context) error {
 
 // GetRootDomain returns reference to RootDomain
 func (gdp *GenesisDataProvider) GetRootDomain(ctx context.Context) *insolar.Reference {
-	inslogger.FromContext(ctx).Debug(")))))))))))))))))))  ", gdp.CertificateManager.GetCertificate().GetRootDomainReference())
 	return gdp.CertificateManager.GetCertificate().GetRootDomainReference()
 }
 

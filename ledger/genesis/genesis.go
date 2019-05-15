@@ -99,7 +99,7 @@ func (gi *BaseRecord) CreateIfNeeded(ctx context.Context) (bool, error) {
 
 		genesisID := insolar.GenesisRecord.ID()
 		genesisRecord := record.Genesis{Hash: insolar.GenesisRecord}
-		virtRec := record.VirtualFromRec(genesisRecord)
+		virtRec := record.Wrap(genesisRecord)
 		rec := record.Material{
 			Virtual: &virtRec,
 			JetID:   insolar.ZeroJetID,

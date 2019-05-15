@@ -34,13 +34,13 @@ func TestGenesisRecordEncodeDecode(t *testing.T) {
 		Hash: insolar.GenesisRecord,
 	}
 
-	virtGenIn := record.VirtualFromRec(genIn)
+	virtGenIn := record.Wrap(genIn)
 
 	data, err := virtGenIn.Marshal()
 	require.NoError(t, err)
 
 	// b := object.EncodeVirtual(recIn)
-	require.Equal(t, "aa06030a01ac", hex.EncodeToString(data),
+	require.Equal(t, "aa0604a20101ac", hex.EncodeToString(data),
 		"genesis binary representation always the same")
 
 	virtGenOut := record.Virtual{}

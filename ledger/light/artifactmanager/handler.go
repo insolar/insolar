@@ -49,13 +49,13 @@ import (
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
-	RecentStorageProvider      recentstorage.Provider             `inject:""`
-	Bus                        insolar.MessageBus                 `inject:""`
-	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""` // TODO rename to PCS
-	JetCoordinator             jet.Coordinator                    `inject:""`
-	CryptographyService        insolar.CryptographyService        `inject:""`
-	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
-	JetStorage                 jet.Storage                        `inject:""`
+	RecentStorageProvider  recentstorage.Provider             `inject:""`
+	Bus                    insolar.MessageBus                 `inject:""`
+	PCS                    insolar.PlatformCryptographyScheme `inject:""`
+	JetCoordinator         jet.Coordinator                    `inject:""`
+	CryptographyService    insolar.CryptographyService        `inject:""`
+	DelegationTokenFactory insolar.DelegationTokenFactory     `inject:""`
+	JetStorage             jet.Storage                        `inject:""`
 
 	DropModifier drop.Modifier `inject:""`
 
@@ -292,23 +292,23 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Par
 	}
 	jetID := jetFromContext(ctx)
 
-	hash := record.HashVirtual(h.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	hash := record.HashVirtual(h.PCS.ReferenceHasher(), virtRec)
 	calculatedID := insolar.NewID(parcel.Pulse(), hash)
 
-	// TODO refactor this (r.Request.... etc)
-	switch r := virtRec.Union.(type) {
-	case *record.Virtual_Request:
+	concrete := record.Unwrap(&virtRec)
+	switch r := concrete.(type) {
+	case *record.Request:
 		if h.RecentStorageProvider.Count() > h.conf.PendingRequestsLimit {
 			return &reply.Error{ErrType: reply.ErrTooManyPendingRequests}, nil
 		}
 		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		recentStorage.AddPendingRequest(ctx, r.Request.GetObject(), *calculatedID)
-	case *record.Virtual_Result:
+		recentStorage.AddPendingRequest(ctx, r.GetObject(), *calculatedID)
+	case *record.Result:
 		recentStorage := h.RecentStorageProvider.GetPendingStorage(ctx, jetID)
-		recentStorage.RemovePendingRequest(ctx, r.Result.Object, *r.Result.Request.Record())
+		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 	}
 
-	hash = record.HashVirtual(h.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	hash = record.HashVirtual(h.PCS.ReferenceHasher(), virtRec)
 	id := insolar.NewID(parcel.Pulse(), hash)
 	rec := record.Material{
 		Virtual: &virtRec,
@@ -330,13 +330,13 @@ func (h *MessageHandler) handleSetRecord(ctx context.Context, parcel insolar.Par
 func (h *MessageHandler) handleSetBlob(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.SetBlob)
 	jetID := jetFromContext(ctx)
-	calculatedID := object.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
+	calculatedID := object.CalculateIDForBlob(h.PCS, parcel.Pulse(), msg.Memory)
 
 	_, err := h.BlobAccessor.ForID(ctx, *calculatedID)
 	if err == nil {
 		return &reply.ID{ID: *calculatedID}, nil
 	}
-	if err != nil && err != blob.ErrNotFound {
+	if err != blob.ErrNotFound {
 		return nil, err
 	}
 
@@ -539,12 +539,12 @@ func (h *MessageHandler) handleGetRequest(ctx context.Context, parcel insolar.Pa
 	concrete := record.Unwrap(virtRec)
 	_, ok := concrete.(*record.Request)
 	if !ok {
-		return nil, errors.New("failed to decode request")
+		return nil, errors.New("failed to unwrap concrete virtual type of request")
 	}
 
-	data, err := virtRec.Marshal() // TODO check error
+	data, err := virtRec.Marshal()
 	if err != nil {
-		panic("ERROR")
+		return nil, errors.New("failed to serialize request")
 	}
 
 	rep := reply.Request{
@@ -592,7 +592,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 
 	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Object.Record(), parcel.Pulse())
 
-	calculatedID := object.CalculateIDForBlob(h.PlatformCryptographyScheme, parcel.Pulse(), msg.Memory)
+	calculatedID := object.CalculateIDForBlob(h.PCS, parcel.Pulse(), msg.Memory)
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
 	//  id will not match the one calculated on the server.
 	err = h.BlobModifier.Set(ctx, *calculatedID, blob.Blob{JetID: insolar.JetID(jetID), Value: msg.Memory})
@@ -601,11 +601,10 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 	}
 
 	switch s := state.(type) {
-	case record.Activate:
+	case *record.Activate:
 		s.Memory = *calculatedID
-	case record.Amend:
+	case *record.Amend:
 		s.Memory = *calculatedID
-		inslogger.FromContext(ctx).Debugf("&&&&&&  %v", s)
 	}
 
 	h.IDLocker.Lock(msg.Object.Record())
@@ -637,7 +636,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 	}
 
-	hash := record.HashVirtual(h.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	hash := record.HashVirtual(h.PCS.ReferenceHasher(), virtRec)
 	recID := insolar.NewID(parcel.Pulse(), hash)
 
 	// Index exists and latest record id does not match (preserving chain consistency).
@@ -646,7 +645,7 @@ func (h *MessageHandler) handleUpdateObject(ctx context.Context, parcel insolar.
 		return nil, errors.New("invalid state record")
 	}
 
-	hash = record.HashVirtual(h.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	hash = record.HashVirtual(h.PCS.ReferenceHasher(), virtRec)
 	id := insolar.NewID(parcel.Pulse(), hash)
 	rec := record.Material{
 		Virtual: &virtRec,
@@ -724,7 +723,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 		return nil, err
 	}
 
-	hash := record.HashVirtual(h.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	hash := record.HashVirtual(h.PCS.ReferenceHasher(), virtRec)
 	recID := insolar.NewID(parcel.Pulse(), hash)
 
 	// Children exist and pointer does not match (preserving chain consistency).
@@ -733,7 +732,7 @@ func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar
 		return nil, errors.New("invalid child record")
 	}
 
-	hash = record.HashVirtual(h.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	hash = record.HashVirtual(h.PCS.ReferenceHasher(), virtRec)
 	child = insolar.NewID(parcel.Pulse(), hash)
 	rec := record.Material{
 		Virtual: &virtRec,
@@ -823,41 +822,6 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	}
 	return idx, nil
 }
-
-//
-// func (h *MessageHandler) fetchObject(
-// 	ctx context.Context, obj insolar.Reference, node insolar.Reference, stateID *insolar.ID,
-// ) (*reply.Object, error) {
-// 	sender := BuildSender(
-// 		h.Bus.Send,
-// 		followRedirectSender(h.Bus),
-// 		retryJetSender(h.JetStorage),
-// 	)
-// 	genericReply, err := sender(
-// 		ctx,
-// 		&message.GetObject{
-// 			Head:     obj,
-// 			Approved: false,
-// 			State:    stateID,
-// 		},
-// 		&insolar.MessageSendOptions{
-// 			Receiver: &node,
-// 			Token:    &delegationtoken.GetObjectRedirectToken{},
-// 		},
-// 	)
-// 	if err != nil {
-// 		return nil, errors.Wrap(err, "failed to fetch object state")
-// 	}
-// 	if rep, ok := genericReply.(*reply.Error); ok {
-// 		return nil, rep.Error()
-// 	}
-//
-// 	rep, ok := genericReply.(*reply.Object)
-// 	if !ok {
-// 		return nil, fmt.Errorf("failed to fetch object state: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
-// 	}
-// 	return rep, nil
-// }
 
 func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	logger := inslogger.FromContext(ctx)

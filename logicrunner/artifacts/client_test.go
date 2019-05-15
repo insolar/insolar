@@ -49,9 +49,9 @@ type amSuite struct {
 	cm  *component.Manager
 	ctx context.Context
 
-	scheme      insolar.PlatformCryptographyScheme
-	nodeStorage node.Accessor
+	scheme insolar.PlatformCryptographyScheme
 
+	nodeStorage  node.Accessor
 	jetStorage   jet.Storage
 	dropModifier drop.Modifier
 	dropAccessor drop.Accessor
@@ -148,11 +148,11 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 	pa.LatestMock.Return(*insolar.GenesisPulse, nil)
 
 	am := client{
-		DefaultBus:                 mb,
-		PulseAccessor:              pa,
-		JetCoordinator:             jc,
-		PlatformCryptographyScheme: s.scheme,
-		senders:                    messagebus.NewSenders(),
+		DefaultBus:     mb,
+		PulseAccessor:  pa,
+		JetCoordinator: jc,
+		PCS:            s.scheme,
+		senders:        messagebus.NewSenders(),
 	}
 
 	desc, err := am.GetCode(s.ctx, codeRef)
@@ -210,7 +210,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 
 	cs := platformpolicy.NewPlatformCryptographyScheme()
 	am := NewClient()
-	am.PlatformCryptographyScheme = cs
+	am.PCS = cs
 	pa := pulse.NewAccessorMock(s.T())
 	pa.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, nil)
 
@@ -268,10 +268,10 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	pulseAccessor.LatestMock.Return(*insolar.GenesisPulse, nil)
 
 	var parcel insolar.Parcel = &message.Parcel{PulseNumber: 123987}
-	resRecord := record.Request{
+	req := record.Request{
 		Parcel: message.ParcelToBytes(parcel),
 	}
-	virtRec := record.VirtualFromRec(resRecord)
+	virtRec := record.Wrap(req)
 	data, err := virtRec.Marshal()
 	require.NoError(s.T(), err)
 	finalResponse := &reply.Request{Record: data}

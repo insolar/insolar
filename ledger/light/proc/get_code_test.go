@@ -184,16 +184,7 @@ func TestGetCode_handle_AccessorErrNotFound_Error(t *testing.T) {
 	ra := object.NewRecordAccessorMock(t)
 	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
 		require.Equal(t, *gc.Code.Record(), id)
-		// TODO maybe helper for this
-		rec := record.Material{
-			Virtual: &record.Virtual{
-				Union: &record.Virtual_Code{
-					Code: &record.Code{
-						Code: codeID,
-					},
-				},
-			},
-		}
+		rec := codeRecord(codeID)
 		return rec, nil
 	}
 	acc := blob.NewAccessorMock(t)
@@ -231,16 +222,7 @@ func TestGetCode_handle_AccessorErrNotFound(t *testing.T) {
 	ra := object.NewRecordAccessorMock(t)
 	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
 		require.Equal(t, *gc.Code.Record(), id)
-		// TODO maybe helper for this
-		rec := record.Material{
-			Virtual: &record.Virtual{
-				Union: &record.Virtual_Code{
-					Code: &record.Code{
-						Code: codeID,
-					},
-				},
-			},
-		}
+		rec := codeRecord(codeID)
 		return rec, nil
 	}
 	acc := blob.NewAccessorMock(t)
@@ -284,16 +266,7 @@ func TestGetCode_handle_AccessorError(t *testing.T) {
 	ra := object.NewRecordAccessorMock(t)
 	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
 		require.Equal(t, *gc.Code.Record(), id)
-		// TODO maybe helper for this
-		rec := record.Material{
-			Virtual: &record.Virtual{
-				Union: &record.Virtual_Code{
-					Code: &record.Code{
-						Code: codeID,
-					},
-				},
-			},
-		}
+		rec := codeRecord(codeID)
 		return rec, nil
 	}
 	acc := blob.NewAccessorMock(t)
@@ -325,17 +298,7 @@ func TestGetCode_handle(t *testing.T) {
 	ra := object.NewRecordAccessorMock(t)
 	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
 		require.Equal(t, *gc.Code.Record(), id)
-		// TODO maybe helper for this
-		rec := record.Material{
-			Virtual: &record.Virtual{
-				Union: &record.Virtual_Code{
-					Code: &record.Code{
-						Code:        codeID,
-						MachineType: 42,
-					},
-				},
-			},
-		}
+		rec := codeRecord(codeID)
 		return rec, nil
 	}
 	acc := blob.NewAccessorMock(t)
@@ -457,4 +420,17 @@ func TestGetCode_saveCodeFromHeavy(t *testing.T) {
 
 	_, err := gc.saveCodeFromHeavy(ctx, jetID, codeRef, blobID, &heavyRef)
 	require.EqualError(t, err, "failed to save: test error")
+}
+
+func codeRecord(codeID insolar.ID) record.Material {
+	return record.Material{
+		Virtual: &record.Virtual{
+			Union: &record.Virtual_Code{
+				Code: &record.Code{
+					Code:        codeID,
+					MachineType: 42, // hardcoded value used for one test
+				},
+			},
+		},
+	}
 }

@@ -189,12 +189,7 @@ func (p *SendObject) handle(
 		Parent:       p.Index.Parent,
 	}
 
-	if state.GetMemory() != nil && !state.GetMemory().Equal(insolar.ID{}) { // TODO do it with method
-		// if state.GetMemory() != nil {
-		fmt.Printf("============    %T", state)
-		fmt.Println()
-		fmt.Printf("============    %v", state.GetMemory())
-		fmt.Println()
+	if state.GetMemory() != nil && state.GetMemory().NotEmpty() {
 		b, err := p.Dep.Blobs.ForID(ctx, *state.GetMemory())
 		if err == blob.ErrNotFound {
 			hNode, err := p.Dep.Coordinator.Heavy(ctx, parcel.Pulse())

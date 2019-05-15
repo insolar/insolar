@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/pkg/errors"
@@ -124,8 +123,6 @@ func (h *Handler) handleGetObject(
 
 	virtRec := rec.Virtual
 	concrete := record.Unwrap(virtRec)
-	inslogger.FromContext(ctx).Debugf("=============  %T", concrete)
-	inslogger.FromContext(ctx).Debugf("=============  %v", concrete)
 	state, ok := concrete.(record.State)
 	if !ok {
 		return nil, errors.New("invalid object record")
@@ -147,8 +144,7 @@ func (h *Handler) handleGetObject(
 		Parent:       idx.Parent,
 	}
 
-	if !state.GetMemory().Equal(insolar.ID{}) { // TODO method isEmpty for ID
-		inslogger.FromContext(ctx).Debug("=============  ", *state.GetMemory())
+	if state.GetMemory() != nil && state.GetMemory().NotEmpty() {
 		b, err := h.BlobAccessor.ForID(ctx, *state.GetMemory())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch blob")
@@ -240,6 +236,7 @@ func (h *Handler) handleGetChildren(
 		if !ok {
 			return nil, errors.New("failed to retrieve children")
 		}
+
 		currentChild = &childRec.PrevChild
 
 		// Skip records later than specified pulse.
@@ -268,9 +265,9 @@ func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (
 		return nil, errors.New("failed to decode request")
 	}
 
-	data, err := virtRec.Marshal() // TODO check error
+	data, err := virtRec.Marshal()
 	if err != nil {
-		panic("ERROR")
+		return nil, errors.New("failed to serialize request")
 	}
 
 	rep := reply.Request{

@@ -23,7 +23,6 @@ import (
 
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/messagebus"
 
 	"github.com/pkg/errors"
@@ -43,11 +42,11 @@ const (
 
 // Client provides concrete API to storage for processing module.
 type client struct {
-	JetStorage                 jet.Storage                        `inject:""`
-	DefaultBus                 insolar.MessageBus                 `inject:""`
-	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""` // TODO rename for PCS
-	PulseAccessor              pulse.Accessor                     `inject:""`
-	JetCoordinator             jet.Coordinator                    `inject:""`
+	JetStorage     jet.Storage                        `inject:""`
+	DefaultBus     insolar.MessageBus                 `inject:""`
+	PCS            insolar.PlatformCryptographyScheme `inject:""`
+	PulseAccessor  pulse.Accessor                     `inject:""`
+	JetCoordinator jet.Coordinator                    `inject:""`
 
 	getChildrenChunkSize int
 	senders              *messagebus.Senders
@@ -56,7 +55,7 @@ type client struct {
 // State returns hash state for artifact manager.
 func (m *client) State() ([]byte, error) {
 	// This is a temporary stab to simulate real hash.
-	return m.PlatformCryptographyScheme.IntegrityHasher().Hash([]byte{1, 2, 3}), nil
+	return m.PCS.IntegrityHasher().Hash([]byte{1, 2, 3}), nil
 }
 
 // NewClient creates new client instance.
@@ -88,33 +87,23 @@ func (m *client) RegisterRequest(
 		return nil, err
 	}
 
-	rec := record.Request{
+	req := record.Request{
 		Parcel:      message.ParcelToBytes(parcel),
-		MessageHash: m.PlatformCryptographyScheme.IntegrityHasher().Hash(message.MustSerializeBytes(parcel.Message())),
+		MessageHash: m.PCS.IntegrityHasher().Hash(message.MustSerializeBytes(parcel.Message())),
 		Object:      *obj.Record(),
 	}
 
-	virtRec := record.VirtualFromRec(rec)
-	hash := record.HashVirtual(m.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	virtRec := record.Wrap(req)
+	hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
 	recID := insolar.NewID(currentPN, hash)
-
-	ssss := recID.String()
-	_ = ssss
-
-	// recID := object.NewRecordIDFromRecord(
-	// 	m.PlatformCryptographyScheme,
-	// 	currentPN,
-	// 	rec)
 	recRef := insolar.NewReference(*parcel.DefaultTarget().Domain(), *recID)
-
-	rrr := recRef.String()
-	_ = rrr
 
 	id, err := m.setRecord(
 		ctx,
 		virtRec,
 		*recRef,
 	)
+
 	return id, errors.Wrap(err, "[ RegisterRequest ] ")
 }
 
@@ -137,7 +126,7 @@ func (m *client) GetCode(
 
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		m.senders.CachedSender(m.PlatformCryptographyScheme),
+		m.senders.CachedSender(m.PCS),
 		messagebus.FollowRedirectSender(m.DefaultBus),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
@@ -209,7 +198,6 @@ func (m *client) GetObject(
 
 	switch r := genericReact.(type) {
 	case *reply.Object:
-		inslogger.FromContext(ctx).Debug("===== GET-OBJECT MEMORY ===== IS    ", r.Memory) // TODO remove
 		desc = &objectDescriptor{
 			head:         r.Head,
 			state:        r.State,
@@ -422,18 +410,19 @@ func (m *client) DeclareType(
 		instrumenter.end()
 	}()
 
-	rec := record.Type{
+	typeRec := record.Type{
 		Domain:          domain,
 		Request:         request,
 		TypeDeclaration: typeDec,
 	}
-	virtRec := record.VirtualFromRec(rec)
+	virtRec := record.Wrap(typeRec)
 
 	recid, err := m.setRecord(
 		ctx,
 		virtRec,
 		request,
 	)
+
 	return recid, err
 }
 
@@ -466,11 +455,11 @@ func (m *client) DeployCode(
 	codeRec := record.Code{
 		Domain:      domain,
 		Request:     request,
-		Code:        *object.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPN, code),
+		Code:        *object.CalculateIDForBlob(m.PCS, currentPN, code),
 		MachineType: machineType,
 	}
-	virtRec := record.VirtualFromRec(codeRec)
-	hash := record.HashVirtual(m.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	virtRec := record.Wrap(codeRec)
+	hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
 	codeID := insolar.NewID(currentPN, hash)
 	codeRef := insolar.NewReference(*domain.Record(), *codeID)
 
@@ -555,12 +544,12 @@ func (m *client) DeactivateObject(
 		instrumenter.end()
 	}()
 
-	rec := record.Deactivate{
+	deactivate := record.Deactivate{
 		Domain:    domain,
 		Request:   request,
 		PrevState: *obj.StateID(),
 	}
-	virtRec := record.VirtualFromRec(rec)
+	virtRec := record.Wrap(deactivate)
 
 	desc, err := m.sendUpdateObject(
 		ctx,
@@ -685,12 +674,12 @@ func (m *client) RegisterResult(
 		instrumenter.end()
 	}()
 
-	rec := record.Result{
+	res := record.Result{
 		Object:  *obj.Record(),
 		Request: request,
 		Payload: payload,
 	}
-	virtRec := record.VirtualFromRec(rec)
+	virtRec := record.Wrap(res)
 
 	recid, err := m.setRecord(
 		ctx,
@@ -730,16 +719,16 @@ func (m *client) activateObject(
 		return nil, err
 	}
 
-	rec := record.Activate{
+	activate := record.Activate{
 		Domain:      domain,
 		Request:     obj,
-		Memory:      *object.CalculateIDForBlob(m.PlatformCryptographyScheme, currentPN, memory),
+		Memory:      *object.CalculateIDForBlob(m.PCS, currentPN, memory),
 		Image:       prototype,
 		IsPrototype: isPrototype,
 		Parent:      parent,
 		IsDelegate:  asDelegate,
 	}
-	virtRec := record.VirtualFromRec(rec)
+	virtRec := record.Wrap(activate)
 
 	o, err := m.sendUpdateObject(
 		ctx,
@@ -761,7 +750,7 @@ func (m *client) activateObject(
 	if asDelegate {
 		asType = &prototype
 	}
-	virtChild := record.VirtualFromRec(child)
+	virtChild := record.Wrap(child)
 
 	_, err = m.registerChild(
 		ctx,
@@ -808,16 +797,14 @@ func (m *client) updateObject(
 		return nil, errors.Wrap(err, "failed to update object")
 	}
 
-	rec := record.Amend{
+	amend := record.Amend{
 		Domain:      domain,
 		Request:     request,
 		Image:       *image,
 		IsPrototype: obj.IsPrototype(),
 		PrevState:   *obj.StateID(),
 	}
-	virtRec := record.VirtualFromRec(rec)
-
-	inslogger.FromContext(ctx).Debugf("^^^^^^  %v", rec)
+	virtRec := record.Wrap(amend)
 
 	o, err := m.sendUpdateObject(
 		ctx,
@@ -844,9 +831,9 @@ func (m *client) setRecord(
 	rec record.Virtual,
 	target insolar.Reference,
 ) (*insolar.ID, error) {
-	data, err := rec.Marshal() // TODO check error
+	data, err := rec.Marshal()
 	if err != nil {
-		panic("ERROR")
+		return nil, errors.Wrap(err, "setRecord: can't serialize record")
 	}
 	sender := messagebus.BuildSender(m.DefaultBus.Send, messagebus.RetryJetSender(m.JetStorage))
 	genericReply, err := sender(ctx, &message.SetRecord{
@@ -900,9 +887,9 @@ func (m *client) sendUpdateObject(
 	obj insolar.Reference,
 	memory []byte,
 ) (*reply.Object, error) {
-	data, err := rec.Marshal() // TODO check error
+	data, err := rec.Marshal()
 	if err != nil {
-		panic("ERROR")
+		return nil, errors.Wrap(err, "setRecord: can't serialize record")
 	}
 	sender := messagebus.BuildSender(m.DefaultBus.Send, messagebus.RetryJetSender(m.JetStorage))
 	genericReply, err := sender(
@@ -934,9 +921,9 @@ func (m *client) registerChild(
 	child insolar.Reference,
 	asType *insolar.Reference,
 ) (*insolar.ID, error) {
-	data, err := rec.Marshal() // TODO check error
+	data, err := rec.Marshal()
 	if err != nil {
-		panic("ERROR")
+		return nil, errors.Wrap(err, "setRecord: can't serialize record")
 	}
 	sender := messagebus.BuildSender(m.DefaultBus.Send, messagebus.RetryJetSender(m.JetStorage))
 	genericReact, err := sender(ctx, &message.RegisterChild{

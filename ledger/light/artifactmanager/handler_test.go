@@ -363,7 +363,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	})
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
-	h.PlatformCryptographyScheme = s.scheme
+	h.PCS = s.scheme
 	h.RecentStorageProvider = provideMock
 	h.RecordModifier = s.recordModifier
 
@@ -380,7 +380,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_FetchesIndexFromHea
 	amendRecord := record.Amend{
 		PrevState: *objIndex.LatestState,
 	}
-	virtAmend := record.VirtualFromRec(amendRecord)
+	virtAmend := record.Wrap(amendRecord)
 	data, err := virtAmend.Marshal()
 	require.NoError(s.T(), err)
 
@@ -440,7 +440,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.RecentStorageProvider = provideMock
-	h.PlatformCryptographyScheme = s.scheme
+	h.PCS = s.scheme
 	h.RecordModifier = s.recordModifier
 
 	blobStorage := blob.NewStorageMemory()
@@ -461,7 +461,7 @@ func (s *handlerSuite) TestMessageHandler_HandleUpdateObject_UpdateIndexState() 
 	amendRecord := record.Amend{
 		PrevState: *objIndex.LatestState,
 	}
-	virtAmend := record.VirtualFromRec(amendRecord)
+	virtAmend := record.Wrap(amendRecord)
 	data, err := virtAmend.Marshal()
 	require.NoError(s.T(), err)
 
@@ -606,7 +606,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.RecentStorageProvider = provideMock
-	h.PlatformCryptographyScheme = s.scheme
+	h.PCS = s.scheme
 	h.RecordModifier = s.recordModifier
 
 	idLockMock := object.NewIDLockerMock(s.T())
@@ -617,10 +617,9 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	objIndex := object.Lifeline{LatestState: genRandomID(0), State: record.StateActivation}
 	childRecord := record.Child{
 		Ref: *genRandomRef(0),
-		// PrevChild: nil,
 	}
 
-	virtChild := record.VirtualFromRec(childRecord)
+	virtChild := record.Wrap(childRecord)
 	data, err := virtChild.Marshal()
 	require.NoError(s.T(), err)
 	hash := record.HashVirtual(s.scheme.ReferenceHasher(), virtChild)
@@ -684,7 +683,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.IndexStorage = s.indexMemoryStor
 	h.IndexStateModifier = s.indexMemoryStor
 	h.RecentStorageProvider = provideMock
-	h.PlatformCryptographyScheme = s.scheme
+	h.PCS = s.scheme
 	h.RecordModifier = s.recordModifier
 
 	idLockMock := object.NewIDLockerMock(s.T())
@@ -700,10 +699,9 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	}
 	childRecord := record.Child{
 		Ref: *genRandomRef(0),
-		// PrevChild: nil,
 	}
 
-	virtRec := record.VirtualFromRec(childRecord)
+	virtRec := record.Wrap(childRecord)
 	data, err := virtRec.Marshal()
 	require.NoError(s.T(), err)
 
@@ -737,13 +735,13 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	firstID := insolar.NewID(insolar.FirstPulseNumber, []byte{1, 2, 3})
 
 	codeRec := record.Code{}
-	virtCodeRec := record.VirtualFromRec(codeRec)
+	virtCodeRec := record.Wrap(codeRec)
 	hash := record.HashVirtual(s.scheme.ReferenceHasher(), virtCodeRec)
 
 	secondID := insolar.NewID(insolar.FirstPulseNumber, hash)
 
 	codeRec = record.Code{}
-	virtCodeRec = record.VirtualFromRec(codeRec)
+	virtCodeRec = record.Wrap(codeRec)
 	hash = record.HashVirtual(s.scheme.ReferenceHasher(), virtCodeRec)
 
 	thirdID := insolar.NewID(insolar.FirstPulseNumber-1, hash)
@@ -845,7 +843,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 		Object:      *genRandomID(0),
 	}
 
-	virtRec := record.VirtualFromRec(req)
+	virtRec := record.Wrap(req)
 	hash := record.HashVirtual(s.scheme.ReferenceHasher(), virtRec)
 	reqID := insolar.NewID(insolar.FirstPulseNumber, hash)
 	rec := record.Material{

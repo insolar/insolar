@@ -27,29 +27,11 @@ import (
 	"github.com/insolar/insolar/internal/ledger/store"
 )
 
-//go:generate go run gen/type.go
-
 // TypeID encodes a record object type.
 type TypeID uint32
 
 // TypeIDSize is a size of TypeID type.
 const TypeIDSize = 4
-
-// func init() {
-// 	// ID can be any unique int value.
-// 	// Never change id constants. They are used for serialization.
-// 	register(100, new(GenesisRecord))
-// 	register(101, new(ChildRecord))
-//
-// 	register(200, new(RequestRecord))
-//
-// 	register(300, new(ResultRecord))
-// 	register(301, new(TypeRecord))
-// 	register(302, new(CodeRecord))
-// 	register(303, new(ActivateRecord))
-// 	register(304, new(AmendRecord))
-// 	register(305, new(DeactivationRecord))
-// }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.RecordAccessor -o ./ -s _mock.go
 
@@ -222,46 +204,24 @@ func (r *RecordDB) set(id insolar.ID, rec record.Material) error {
 
 	data, err := rec.Marshal()
 	if err != nil {
-		panic("IMPLEMENT ME") // TODO
+		return err
 	}
 
 	return r.db.Set(key, data)
 }
 
-func (r *RecordDB) get(id insolar.ID) (rec record.Material, err error) {
+func (r *RecordDB) get(id insolar.ID) (record.Material, error) {
 	buff, err := r.db.Get(recordKey(id))
 	if err == store.ErrNotFound {
 		err = ErrNotFound
-		return
+		return record.Material{}, err
 	}
 	if err != nil {
-		return
+		return record.Material{}, err
 	}
 
-	rec = record.Material{} // TODO naming parameters - OFF
+	rec := record.Material{}
+	err = rec.Unmarshal(buff)
 
-	err = rec.Unmarshal(buff) // TODO catch it (maybe)
-	return
+	return rec, err
 }
-
-// func EncodeMaterial(rec record.Material) []byte {
-// 	buff := EncodeVirtual(rec.Record)
-// 	result := append(buff[:], rec.JetID[:]...)
-//
-// 	return result
-// }
-
-// func DecodeMaterial(buff []byte) (rec record.Material, err error) {
-// 	recBuff := buff[:len(buff)-insolar.RecordIDSize]
-// 	jetIDBuff := buff[len(buff)-insolar.RecordIDSize:]
-//
-// 	r, err := DecodeVirtual(recBuff)
-// 	if err != nil {
-// 		return rec, err
-// 	}
-//
-// 	var jetID insolar.JetID
-// 	copy(jetID[:], jetIDBuff)
-//
-// 	return record.Material{Record: r, JetID: jetID}, nil
-// }

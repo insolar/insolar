@@ -22,17 +22,6 @@ import (
 
 type Record interface{}
 
-// type VirtualRecord interface {
-// 	// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-// 	WriteHashData(w io.Writer) (int, error)
-// }
-
-// type MaterialRecord struct {
-// 	Record VirtualRecord
-//
-// 	JetID insolar.JetID
-// }
-
 // StateID is a state of lifeline records.
 type StateID int
 
@@ -62,7 +51,6 @@ type State interface {
 	PrevStateID() *insolar.ID
 }
 
-// TODO it's a hack for object.State interface compatibility
 func (Activate) ID() StateID {
 	return StateActivation
 }
@@ -83,7 +71,6 @@ func (Activate) PrevStateID() *insolar.ID {
 	return nil
 }
 
-// TODO it's a hack for object.State interface compatibility
 func (Amend) ID() StateID {
 	return StateAmend
 }
@@ -104,20 +91,19 @@ func (p Amend) PrevStateID() *insolar.ID {
 	return &p.PrevState
 }
 
-// TODO it's a hack for object.State interface compatibility
 func (Deactivate) ID() StateID {
 	return StateDeactivation
 }
 
-func (p Deactivate) GetImage() *insolar.Reference {
+func (Deactivate) GetImage() *insolar.Reference {
 	return nil
 }
 
-func (p Deactivate) GetIsPrototype() bool {
+func (Deactivate) GetIsPrototype() bool {
 	return false
 }
 
-func (p Deactivate) GetMemory() *insolar.ID {
+func (Deactivate) GetMemory() *insolar.ID {
 	return nil
 }
 
@@ -125,7 +111,6 @@ func (p Deactivate) PrevStateID() *insolar.ID {
 	return &p.PrevState
 }
 
-// TODO it's a hack for object.State interface compatibility
 func (Genesis) PrevStateID() *insolar.ID {
 	return nil
 }

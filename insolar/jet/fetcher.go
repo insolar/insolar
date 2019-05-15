@@ -18,7 +18,6 @@ package jet
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -290,7 +289,6 @@ func (tu *fetcher) nodesForPulse(ctx context.Context, pulse insolar.PulseNumber)
 	ctx, span := instracer.StartSpan(ctx, "jet_tree_updater.other_nodes_for_pulse")
 	defer span.End()
 
-	fmt.Println("1111111") // TODO delete
 	res, err := tu.Nodes.InRole(pulse, insolar.StaticRoleLightMaterial)
 	if err != nil {
 		return nil, err

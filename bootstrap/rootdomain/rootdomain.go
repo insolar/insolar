@@ -41,12 +41,12 @@ func (r Record) ID() insolar.ID {
 			Name: Name,
 		},
 	}
-	rec := record.Request{
+	req := record.Request{
 		Parcel:      message.ParcelToBytes(parcel),
 		MessageHash: hashParcel(r.PCS, parcel),
 		Object:      insolar.GenesisRecord.ID(),
 	}
-	virtRec := record.VirtualFromRec(rec)
+	virtRec := record.Wrap(req)
 	hash := record.HashVirtual(r.PCS.ReferenceHasher(), virtRec)
 	return *insolar.NewID(genesisPulse, hash)
 }

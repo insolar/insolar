@@ -41,14 +41,7 @@ func TestRecordStorage_ForID(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 
-	// jetID := gen.JetID()
 	id := gen.ID()
-	// virtRec := record.VirtualFromRec(record.Result{})
-	// rec := record.Material{
-	// 	Virtual: &virtRec,
-	// 	JetID:   jetID,
-	// }
-
 	rec := getMaterialRecord()
 
 	t.Run("returns correct record-value", func(t *testing.T) {
@@ -60,7 +53,6 @@ func TestRecordStorage_ForID(t *testing.T) {
 		resultRec, err := recordStorage.ForID(ctx, id)
 		require.NoError(t, err)
 		assert.Equal(t, rec, resultRec)
-		// assert.Equal(t, jetID, resultRec.JetID) // TODO useless, because test above check all fields too
 	})
 
 	t.Run("returns error when no record-value for id", func(t *testing.T) {
@@ -80,14 +72,7 @@ func TestRecordStorage_Set(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 
-	// jetID := gen.JetID()
 	id := gen.ID()
-	// virtRec := record.VirtualFromRec(record.Result{})
-	// rec := record.Material{
-	// 	Virtual: &virtRec,
-	// 	JetID:   jetID,
-	// }
-
 	rec := getMaterialRecord()
 
 	t.Run("saves correct record-value", func(t *testing.T) {
@@ -99,7 +84,6 @@ func TestRecordStorage_Set(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(recordStorage.recsStor))
 		assert.Equal(t, rec, recordStorage.recsStor[id])
-		// assert.Equal(t, jetID, recordStorage.recsStor[id].JetID) // TODO useless
 	})
 
 	t.Run("returns override error when saving with the same id", func(t *testing.T) {
@@ -163,16 +147,6 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 
 	searchRecs := map[insolar.ID]struct{}{}
 	for i := int32(0); i < rand.Int31n(256); i++ {
-		// virtRec := ResultRecord{}
-		// fuzz.New().NilChance(0).Fuzz(&virtRec)
-
-		// rec := record.MaterialRecord{
-		// 	Record: &virtRec,
-		// 	JetID:  searchJetID,
-		// }
-
-		// id := insolar.NewID(searchPN, EncodeVirtual(rec.Record))
-
 		rec := getMaterialRecord()
 		rec.JetID = searchJetID
 

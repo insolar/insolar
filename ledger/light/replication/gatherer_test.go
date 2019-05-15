@@ -70,10 +70,7 @@ func TestDataGatherer_ForPulseAndJet(t *testing.T) {
 		idxID: idx,
 	})
 
-	recData, err := rec.Marshal() // TODO check err
-	if err != nil {
-		panic("ERROR")
-	}
+	recData, _ := rec.Marshal()
 
 	expectedMsg := &message.HeavyPayload{
 		JetID:    jetID,
@@ -141,6 +138,7 @@ func TestDataGatherer_convertBlobs(t *testing.T) {
 }
 
 func TestDataGatherer_convertRecords(t *testing.T) {
+	ctx := inslogger.TestContext(t)
 	var recs []record.Material
 	fuzz.New().NilChance(0).NumElements(500, 1000).Funcs(func(elem *record.Material, c fuzz.Continue) {
 		elem.JetID = gen.JetID()
@@ -150,14 +148,11 @@ func TestDataGatherer_convertRecords(t *testing.T) {
 
 	var expected [][]byte
 	for _, r := range recs {
-		data, err := r.Marshal() // TODO check err
-		if err != nil {
-			panic("ERROR")
-		}
+		data, _ := r.Marshal()
 		expected = append(expected, data)
 	}
 
-	resp := convertRecords(recs)
+	resp := convertRecords(ctx, recs)
 
 	require.Equal(t, resp, expected)
 }

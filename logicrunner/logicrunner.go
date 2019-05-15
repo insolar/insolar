@@ -747,7 +747,6 @@ func (lr *LogicRunner) prepareObjectState(ctx context.Context, msg *message.Exec
 
 func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState, m *message.CallMethod) (insolar.Reply, error) {
 	if es.objectbody == nil {
-		inslogger.FromContext(ctx).Debug("===== EXECUTION STATE OBJECT BODY IS NIL ===== TRYING TO FILL IT...") // TODO remove
 		objDesc, protoDesc, codeDesc, err := lr.getDescriptorsByObjectRef(ctx, m.ObjectRef)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get descriptors by object reference")
@@ -776,9 +775,6 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	if err != nil {
 		return nil, es.WrapError(err, "no executor registered")
 	}
-
-	// TODO remove it
-	inslogger.FromContext(ctx).Debug("==== OBJECT BODY ==== is    ", es.objectbody.Object)
 
 	newData, result, err := executor.CallMethod(
 		ctx, current.LogicContext, *es.objectbody.CodeRef, es.objectbody.Object, m.Method, m.Arguments,

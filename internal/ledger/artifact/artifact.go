@@ -19,7 +19,6 @@ package artifact
 import (
 	"context"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -68,33 +67,36 @@ type Manager interface {
 type Scope struct {
 	PulseNumber insolar.PulseNumber
 
-	PlatformCryptographyScheme insolar.PlatformCryptographyScheme // TODO rename for PCS
-	BlobModifier               blob.Modifier
-	RecordsModifier            object.RecordModifier
+	PCS             insolar.PlatformCryptographyScheme
+	BlobModifier    blob.Modifier
+	RecordsModifier object.RecordModifier
 
 	IndexModifier object.IndexModifier
 	IndexAccessor object.IndexAccessor
 }
 
 func (m *Scope) RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error) {
-	rec := record.Request{
+	req := record.Request{
 		Parcel:      message.ParcelToBytes(parcel),
 		MessageHash: m.hashParcel(parcel),
 		Object:      *objectRef.Record(),
 	}
+	virtRec := record.Wrap(req)
 
-	return m.setRecord(ctx, record.VirtualFromRec(rec))
+	return m.setRecord(ctx, virtRec)
 }
 
 func (m *Scope) RegisterResult(
 	ctx context.Context, obj, request insolar.Reference, payload []byte,
 ) (*insolar.ID, error) {
-	rec := record.Result{
+	res := record.Result{
 		Object:  *obj.Record(),
 		Request: request,
 		Payload: payload,
 	}
-	return m.setRecord(ctx, record.VirtualFromRec(rec))
+	virtRec := record.Wrap(res)
+
+	return m.setRecord(ctx, virtRec)
 }
 
 func (m *Scope) ActivateObject(
@@ -191,7 +193,6 @@ func (m *Scope) UpdateObject(
 		PrevState:   *objDesc.StateID(),
 	}
 
-	inslogger.FromContext(ctx).Debugf("@@@@@@  %v", amendRecord)
 	return m.updateStateObject(ctx, *objDesc.HeadRef(), amendRecord, memory)
 }
 
@@ -216,12 +217,12 @@ func (m *Scope) DeployCode(
 
 	return m.setRecord(
 		ctx,
-		record.VirtualFromRec(codeRec),
+		record.Wrap(codeRec),
 	)
 }
 
 func (m *Scope) setRecord(ctx context.Context, rec record.Virtual) (*insolar.ID, error) {
-	hash := record.HashVirtual(m.PlatformCryptographyScheme.ReferenceHasher(), rec)
+	hash := record.HashVirtual(m.PCS.ReferenceHasher(), rec)
 	id := insolar.NewID(m.PulseNumber, hash)
 
 	matRec := record.Material{
@@ -232,7 +233,7 @@ func (m *Scope) setRecord(ctx context.Context, rec record.Virtual) (*insolar.ID,
 }
 
 func (m *Scope) setBlob(ctx context.Context, memory []byte) (*insolar.ID, error) {
-	blobID := object.CalculateIDForBlob(m.PlatformCryptographyScheme, m.PulseNumber, memory)
+	blobID := object.CalculateIDForBlob(m.PCS, m.PulseNumber, memory)
 	err := m.BlobModifier.Set(
 		ctx,
 		*blobID,
@@ -261,11 +262,11 @@ func (m *Scope) registerChild(
 	}
 
 	childRec := record.Child{Ref: obj}
-	if prevChild != nil {
+	if prevChild != nil && prevChild.NotEmpty() {
 		childRec.PrevChild = *prevChild
 	}
 
-	hash := record.HashVirtual(m.PlatformCryptographyScheme.ReferenceHasher(), record.VirtualFromRec(childRec))
+	hash := record.HashVirtual(m.PCS.ReferenceHasher(), record.Wrap(childRec))
 	recID := insolar.NewID(m.PulseNumber, hash)
 
 	// Children exist and pointer does not match (preserving chain consistency).
@@ -274,7 +275,7 @@ func (m *Scope) registerChild(
 		return errors.New("invalid child record")
 	}
 
-	child, err := m.setRecord(ctx, record.VirtualFromRec(childRec))
+	child, err := m.setRecord(ctx, record.Wrap(childRec))
 	if err != nil {
 		return err
 	}
@@ -296,7 +297,6 @@ func (m *Scope) updateStateObject(
 ) (ObjectDescriptor, error) {
 	var jetID = insolar.ID(insolar.ZeroJetID)
 	blobID, err := m.setBlob(ctx, memory)
-	inslogger.FromContext(ctx).Debugf("++++++++++++  %v", blobID)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to update blob")
 	}
@@ -305,12 +305,10 @@ func (m *Scope) updateStateObject(
 	switch so := stateObject.(type) {
 	case record.Activate:
 		so.Memory = *blobID
-		virtRecord = record.VirtualFromRec(so)
-		inslogger.FromContext(ctx).Debugf("___________  %v", virtRecord)
+		virtRecord = record.Wrap(so)
 	case record.Amend:
-		virtRecord = record.VirtualFromRec(so)
 		so.Memory = *blobID
-		inslogger.FromContext(ctx).Debugf("########  %v", virtRecord)
+		virtRecord = record.Wrap(so)
 	default:
 		panic("unknown state object type")
 	}
@@ -359,5 +357,5 @@ func (m *Scope) updateStateObject(
 }
 
 func (m *Scope) hashParcel(parcel insolar.Parcel) []byte {
-	return m.PlatformCryptographyScheme.IntegrityHasher().Hash(message.MustSerializeBytes(parcel.Message()))
+	return m.PCS.IntegrityHasher().Hash(message.MustSerializeBytes(parcel.Message()))
 }
