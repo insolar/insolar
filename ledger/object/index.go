@@ -272,6 +272,19 @@ func (k indexKey) ID() []byte {
 	return append(k.pn.Bytes(), k.objID.Bytes()...)
 }
 
+type lastKnownIndexPNKey struct {
+	pn    insolar.PulseNumber
+	objID insolar.ID
+}
+
+func (k lastKnownIndexPNKey) Scope() store.Scope {
+	return store.ScopeLastKnownIndexPN
+}
+
+func (k lastKnownIndexPNKey) ID() []byte {
+	return append(k.pn.Bytes(), k.objID.Bytes()...)
+}
+
 func NewIndexDB(db store.DB) *IndexDB {
 	return &IndexDB{db: db}
 }
@@ -284,7 +297,7 @@ func (i *IndexDB) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID
 		lifeline.Delegates = []LifelineDelegate{}
 	}
 
-	buc, err := i.get(pn, objID)
+	buc, err := i.getBucket(pn, objID)
 	if err == store.ErrNotFound {
 		buc = &IndexBucket{}
 	} else if err != nil {
@@ -292,48 +305,63 @@ func (i *IndexDB) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID
 	}
 
 	buc.Lifeline = &lifeline
-	return i.set(pn, objID, buc)
-}
-
-func (i *IndexDB) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error {
-	i.lock.Lock()
-	defer i.lock.Unlock()
-
-	buc, err := i.get(pn, objID)
-	if err == store.ErrNotFound {
-		buc = &IndexBucket{}
-	} else if err != nil {
+	err = i.setBucket(pn, objID, buc)
+	if err != nil {
 		return err
 	}
-
-	buc.Requests = append(buc.Requests, reqID)
-	return i.set(pn, objID, buc)
-}
-
-func (i *IndexDB) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error {
-	i.lock.Lock()
-	defer i.lock.Unlock()
-
-	buc, err := i.get(pn, objID)
-	if err == store.ErrNotFound {
-		buc = &IndexBucket{}
-	} else if err != nil {
+	err = i.setLastKnownPN(ctx, pn, objID)
+	if err != nil {
 		return err
 	}
-
-	buc.Results = append(buc.Results, resID)
-	return i.set(pn, objID, buc)
+	return nil
 }
+
+// func (i *IndexDB) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error {
+// 	i.lock.Lock()
+// 	defer i.lock.Unlock()
+//
+// 	buc, err := i.get(pn, objID)
+// 	if err == store.ErrNotFound {
+// 		buc = &IndexBucket{}
+// 	} else if err != nil {
+// 		return err
+// 	}
+//
+// 	buc.Requests = append(buc.Requests, reqID)
+// 	return i.set(pn, objID, buc)
+// }
+//
+// func (i *IndexDB) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error {
+// 	i.lock.Lock()
+// 	defer i.lock.Unlock()
+//
+// 	buc, err := i.get(pn, objID)
+// 	if err == store.ErrNotFound {
+// 		buc = &IndexBucket{}
+// 	} else if err != nil {
+// 		return err
+// 	}
+//
+// 	buc.Results = append(buc.Results, resID)
+// 	return i.set(pn, objID, buc)
+// }
 
 func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
-	return i.set(pn, bucket.ObjID, &bucket)
+	return i.setBucket(pn, bucket.ObjID, &bucket)
 }
 
 func (i *IndexDB) LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
-	buck, err := i.get(pn, objID)
+	buck, err := i.getBucket(pn, objID)
+	if err == ErrIndexBucketNotFound {
+		lastPN, err := i.getLastKnownPN(pn, objID)
+		if err != nil {
+			return Lifeline{}, ErrLifelineNotFound
+		}
+		buck, err = i.getBucket(lastPN, objID)
+	}
 	if err != nil {
 		return Lifeline{}, err
 	}
@@ -344,7 +372,7 @@ func (i *IndexDB) LifelineForID(ctx context.Context, pn insolar.PulseNumber, obj
 	return *buck.Lifeline, nil
 }
 
-func (i *IndexDB) set(pn insolar.PulseNumber, objID insolar.ID, bucket *IndexBucket) error {
+func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *IndexBucket) error {
 	key := indexKey{pn: pn, objID: objID}
 
 	buff, err := bucket.Marshal()
@@ -355,7 +383,7 @@ func (i *IndexDB) set(pn insolar.PulseNumber, objID insolar.ID, bucket *IndexBuc
 	return i.db.Set(key, buff)
 }
 
-func (i *IndexDB) get(pn insolar.PulseNumber, objID insolar.ID) (*IndexBucket, error) {
+func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*IndexBucket, error) {
 	buff, err := i.db.Get(indexKey{pn: pn, objID: objID})
 	if err == store.ErrNotFound {
 		return nil, ErrIndexBucketNotFound
@@ -367,4 +395,17 @@ func (i *IndexDB) get(pn insolar.PulseNumber, objID insolar.ID) (*IndexBucket, e
 	bucket := IndexBucket{}
 	err = bucket.Unmarshal(buff)
 	return &bucket, err
+}
+
+func (i *IndexDB) setLastKnownPN(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
+	key := lastKnownIndexPNKey{pn: pn, objID: objID}
+	return i.db.Set(key, pn.Bytes())
+}
+
+func (i *IndexDB) getLastKnownPN(pn insolar.PulseNumber, objID insolar.ID) (insolar.PulseNumber, error) {
+	buff, err := i.db.Get(lastKnownIndexPNKey{pn: pn, objID: objID})
+	if err != nil {
+		return insolar.FirstPulseNumber, err
+	}
+	return insolar.NewPulseNumber(buff), err
 }

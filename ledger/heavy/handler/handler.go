@@ -56,7 +56,6 @@ func New() *Handler {
 }
 
 func (h *Handler) Init(ctx context.Context) error {
-	// h.Bus.MustRegister(insolar.TypeHeavyStartStop, h.handleHeavyStartStop)
 	h.Bus.MustRegister(insolar.TypeHeavyPayload, h.handleHeavyPayload)
 
 	h.Bus.MustRegister(insolar.TypeGetCode, h.handleGetCode)
