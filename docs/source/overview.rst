@@ -1,9 +1,6 @@
-------------
-Introduction
-------------
-
-About
-=====
+--------
+Overview
+--------
 
 Insolar outlines a new vision for blockchain, in which key features such as network capacity and consensus are addressed in a way that will enable shared business processes and optimize contractual transactions for enterprise operations.
 

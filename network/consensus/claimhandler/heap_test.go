@@ -59,6 +59,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestQueue_PushClaim(t *testing.T) {
@@ -108,8 +109,10 @@ func getJoinClaim(t *testing.T, ref insolar.Reference) *packets.NodeJoinClaim {
 	nodeJoinClaim.NodeRoleRecID = 32
 	nodeJoinClaim.NodeRef = ref
 	_, err := rand.Read(nodeJoinClaim.NodePK[:])
-	assert.NoError(t, err)
-	nodeJoinClaim.NodeAddress.Set("127.0.0.1:5566")
+	require.NoError(t, err)
+	addr, err := packets.NewNodeAddress("127.0.0.1:5566")
+	require.NoError(t, err)
+	nodeJoinClaim.NodeAddress = addr
 
 	return nodeJoinClaim
 }
