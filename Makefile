@@ -130,7 +130,7 @@ $(HEALTHCHECK):
 
 .PHONY: test_unit
 test_unit:
-	go test $(TEST_ARGS) $(ALL_PACKAGES)
+	CGO_ENABLED=1 go test $(TEST_ARGS) $(ALL_PACKAGES)
 
 .PHONY: functest
 functest:
