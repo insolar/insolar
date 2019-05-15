@@ -720,8 +720,8 @@ func (bc *bootstrapper) getCodeFromPermission(permission Permission) (Code, erro
 		return Rejected, errors.New("failed to verify a permission sign")
 	}
 
-	etaDiff := time.Now().Sub(permission.UTC)
-	if etaDiff > time.Duration(time.Minute) {
+	etaDiff := time.Since(permission.UTC)
+	if etaDiff > updateScheduleETA {
 		return UpdateSchedule, nil
 	}
 
