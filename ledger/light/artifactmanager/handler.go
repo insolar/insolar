@@ -71,9 +71,9 @@ type MessageHandler struct {
 	HotDataWaiter hot.JetWaiter   `inject:""`
 	JetReleaser   hot.JetReleaser `inject:""`
 
-	LifelineIndex       object.LifelineIndex
-	IndexBucketModifier object.IndexBucketModifier
-	IndexStateModifier  object.IndexLifelineStateModifier
+	LifelineIndex         object.LifelineIndex
+	IndexBucketModifier   object.IndexBucketModifier
+	LifelineStateModifier object.LifelineStateModifier
 
 	conf           *configuration.Ledger
 	middleware     *middleware
@@ -87,16 +87,16 @@ type MessageHandler struct {
 func NewMessageHandler(
 	index object.LifelineIndex,
 	indexBucketModifier object.IndexBucketModifier,
-	indexStateModifier object.IndexLifelineStateModifier,
+	indexStateModifier object.LifelineStateModifier,
 	conf *configuration.Ledger,
 ) *MessageHandler {
 
 	h := &MessageHandler{
-		handlers:            map[insolar.MessageType]insolar.MessageHandler{},
-		conf:                conf,
-		LifelineIndex:       index,
-		IndexBucketModifier: indexBucketModifier,
-		IndexStateModifier:  indexStateModifier,
+		handlers:              map[insolar.MessageType]insolar.MessageHandler{},
+		conf:                  conf,
+		LifelineIndex:         index,
+		IndexBucketModifier:   indexBucketModifier,
+		LifelineStateModifier: indexStateModifier,
 	}
 
 	dep := &proc.Dependencies{
@@ -110,7 +110,7 @@ func NewMessageHandler(
 			p.Dep.Waiter = h.HotDataWaiter
 		},
 		GetIndex: func(p *proc.GetIndex) {
-			p.Dep.IndexState = h.IndexStateModifier
+			p.Dep.IndexState = h.LifelineStateModifier
 			p.Dep.Locker = h.IDLocker
 			p.Dep.Index = h.LifelineIndex
 			p.Dep.Coordinator = h.JetCoordinator
@@ -152,15 +152,15 @@ func NewMessageHandler(
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
 			p.Dep.IDLocker = h.IDLocker
-			p.Dep.IndexStateModifier = h.IndexStateModifier
+			p.Dep.IndexStateModifier = h.LifelineStateModifier
 			p.Dep.Index = h.LifelineIndex
 		},
 		RegisterChild: func(p *proc.RegisterChild) {
 			p.Dep.IDLocker = h.IDLocker
-			p.Dep.Index = h.LifelineIndex
+			p.Dep.LifelineIndex = h.LifelineIndex
 			p.Dep.JetCoordinator = h.JetCoordinator
 			p.Dep.RecordModifier = h.RecordModifier
-			p.Dep.IndexStateModifier = h.IndexStateModifier
+			p.Dep.LifelineStateModifier = h.LifelineStateModifier
 			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
 		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
@@ -289,7 +289,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	msg := parcel.Message().(*message.GetDelegate)
 	jetID := jetFromContext(ctx)
 
-	err := h.IndexStateModifier.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Head.Record())
+	err := h.LifelineStateModifier.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Head.Record())
 
 	h.IDLocker.Lock(msg.Head.Record())
 	defer h.IDLocker.Unlock(msg.Head.Record())
@@ -307,7 +307,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	err = h.IndexStateModifier.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Head.Record())
+	err = h.LifelineStateModifier.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Head.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
@@ -349,7 +349,7 @@ func (h *MessageHandler) handleGetChildren(
 	} else if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
-	err = h.IndexStateModifier.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Parent.Record())
+	err = h.LifelineStateModifier.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Parent.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}

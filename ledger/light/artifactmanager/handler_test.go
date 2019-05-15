@@ -439,10 +439,10 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	replyTo := make(chan bus.Reply, 1)
 	registerChild := proc.NewRegisterChild(insolar.JetID(jetID), &msg, childID.Pulse(), objIndex, replyTo)
 	registerChild.Dep.IDLocker = idLockMock
-	registerChild.Dep.IndexStorage = s.indexMemoryStor
+	registerChild.Dep.LifelineIndex = s.indexMemoryStor
 	registerChild.Dep.JetCoordinator = jc
 	registerChild.Dep.RecordModifier = s.recordModifier
-	registerChild.Dep.IndexStateModifier = s.indexMemoryStor
+	registerChild.Dep.LifelineStateModifier = s.indexMemoryStor
 	registerChild.Dep.PlatformCryptographyScheme = s.scheme
 
 	err = registerChild.Proceed(contextWithJet(s.ctx, jetID))
@@ -479,7 +479,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.LifelineIndex = s.indexMemoryStor
-	h.IndexStateModifier = s.indexMemoryStor
+	h.LifelineStateModifier = s.indexMemoryStor
 	h.RecentStorageProvider = provideMock
 	h.PlatformCryptographyScheme = s.scheme
 	h.RecordModifier = s.recordModifier
@@ -504,23 +504,24 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 		Parent: *genRandomRef(0),
 	}
 
-	err := s.indexMemoryStor.SetLifeline(s.ctx, insolar.FirstPulseNumber+100, *msg.Parent.Record(), objIndex)
+	pulse := gen.PulseNumber()
+	err := s.indexMemoryStor.SetLifeline(s.ctx, pulse, *msg.Parent.Record(), objIndex)
 	require.NoError(s.T(), err)
 
 	replyTo := make(chan bus.Reply, 1)
-	pulse := gen.PulseNumber()
+
 	registerChild := proc.NewRegisterChild(insolar.JetID(jetID), &msg, pulse, objIndex, replyTo)
 	registerChild.Dep.IDLocker = idLockMock
-	registerChild.Dep.IndexStorage = s.indexMemoryStor
+	registerChild.Dep.LifelineIndex = s.indexMemoryStor
 	registerChild.Dep.JetCoordinator = jet.NewCoordinatorMock(mc)
 	registerChild.Dep.RecordModifier = s.recordModifier
-	registerChild.Dep.IndexStateModifier = s.indexMemoryStor
+	registerChild.Dep.LifelineStateModifier = s.indexMemoryStor
 	registerChild.Dep.PlatformCryptographyScheme = s.scheme
 
 	err = registerChild.Proceed(contextWithJet(s.ctx, jetID))
 	require.NoError(s.T(), err)
 
-	idx, err := s.indexMemoryStor.LifelineForID(s.ctx, insolar.FirstPulseNumber+100, *msg.Parent.Record())
+	idx, err := s.indexMemoryStor.LifelineForID(s.ctx, pulse, *msg.Parent.Record())
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), idx.LatestUpdate, pulse)
 }
@@ -584,7 +585,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		s.T().Fail()
 	}
 
-	idxStateModifierMock := object.NewIndexLifelineStateModifierMock(s.T())
+	idxStateModifierMock := object.NewLifelineStateModifierMock(s.T())
 	bucketMock := object.NewIndexBucketModifierMock(s.T())
 	idxMock := object.NewLifelineIndexMock(s.T())
 

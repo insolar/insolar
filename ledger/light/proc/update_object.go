@@ -48,7 +48,7 @@ type UpdateObject struct {
 		PlatformCryptographyScheme insolar.PlatformCryptographyScheme
 		IDLocker                   object.IDLocker
 		Index                      object.LifelineIndex
-		IndexStateModifier         object.IndexLifelineStateModifier
+		IndexStateModifier         object.LifelineStateModifier
 	}
 }
 

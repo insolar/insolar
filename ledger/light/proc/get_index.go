@@ -42,7 +42,7 @@ type GetIndex struct {
 
 	Dep struct {
 		Index       object.LifelineIndex
-		IndexState  object.IndexLifelineStateModifier
+		IndexState  object.LifelineStateModifier
 		Locker      object.IDLocker
 		Coordinator jet.Coordinator
 		Bus         insolar.MessageBus

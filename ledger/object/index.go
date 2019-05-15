@@ -40,9 +40,9 @@ type IndexBucketModifier interface {
 	SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexLifelineStateModifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineStateModifier -o ./ -s _mock.go
 
-type IndexLifelineStateModifier interface {
+type LifelineStateModifier interface {
 	SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
 }
 
