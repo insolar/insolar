@@ -155,6 +155,7 @@ func (suite *LogicRunnerTestSuite) TestStartQueueProcessorIfNeeded_DontStartQueu
 	err := suite.lr.StartQueueProcessorIfNeeded(
 		suite.ctx, es,
 	)
+
 	suite.Require().NoError(err)
 	suite.Require().Equal(message.InPending, es.pending)
 }
