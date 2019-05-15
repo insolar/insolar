@@ -97,7 +97,7 @@ func NewNodeAddress(address string) (NodeAddress, error) {
 	return addr, nil
 }
 
-func (address NodeAddress) Get() string {
+func (address NodeAddress) String() string {
 	r := bytes.NewReader(address[:])
 
 	ipBytes := make([]byte, ipSize)

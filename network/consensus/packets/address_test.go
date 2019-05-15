@@ -115,7 +115,7 @@ func TestNodeAddress_Get(t *testing.T) {
 			address, err := NewNodeAddress(test.addr)
 			require.NoError(t, err)
 
-			actual, err := net.ResolveTCPAddr("tcp", address.Get())
+			actual, err := net.ResolveTCPAddr("tcp", address.String())
 			require.NoError(t, err)
 
 			require.Equal(t, expected, actual)

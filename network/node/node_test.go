@@ -119,5 +119,5 @@ func TestClaimToNode(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, claim.NodeRef, n.ID())
 	assert.EqualValues(t, 10, n.ShortID())
-	assert.Equal(t, claim.NodeAddress.Get(), n.Address())
+	assert.Equal(t, claim.NodeAddress.String(), n.Address())
 }
