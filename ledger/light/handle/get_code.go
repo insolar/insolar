@@ -40,12 +40,6 @@ func NewGetCode(dep *proc.Dependencies, rep chan<- bus.Reply, code insolar.Refer
 }
 
 func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
-	jet := proc.NewFetchJet(*s.code.Record(), flow.Pulse(ctx), s.replyTo)
-	s.dep.FetchJet(jet)
-	if err := f.Procedure(ctx, jet, false); err != nil {
-		return err
-	}
-
 	code := proc.NewGetCode(s.code, s.replyTo)
 	s.dep.GetCode(code)
 	return f.Procedure(ctx, code, false)
