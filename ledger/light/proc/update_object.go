@@ -40,16 +40,16 @@ type UpdateObject struct {
 	PulseNumber insolar.PulseNumber
 
 	Dep struct {
-		RecordModifier             object.RecordModifier
-		IndexModifier              object.IndexModifier
-		Bus                        insolar.MessageBus
-		Coordinator                jet.Coordinator
-		BlobModifier               blob.Modifier
-		RecentStorageProvider      recentstorage.Provider
-		PlatformCryptographyScheme insolar.PlatformCryptographyScheme
-		IDLocker                   object.IDLocker
-		IndexStorage               object.IndexStorage
-		IndexStateModifier         object.ExtendedIndexModifier
+		RecordModifier        object.RecordModifier
+		IndexModifier         object.IndexModifier
+		Bus                   insolar.MessageBus
+		Coordinator           jet.Coordinator
+		BlobModifier          blob.Modifier
+		RecentStorageProvider recentstorage.Provider
+		PCS                   insolar.PlatformCryptographyScheme
+		IDLocker              object.IDLocker
+		IndexStorage          object.IndexStorage
+		IndexStateModifier    object.ExtendedIndexModifier
 	}
 }
 
@@ -81,7 +81,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 		return bus.Reply{Err: errors.New("wrong object state record")}
 	}
 
-	calculatedID := object.CalculateIDForBlob(p.Dep.PlatformCryptographyScheme, p.PulseNumber, p.Message.Memory)
+	calculatedID := object.CalculateIDForBlob(p.Dep.PCS, p.PulseNumber, p.Message.Memory)
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
 	//  id will not match the one calculated on the server.
 	err = p.Dep.BlobModifier.Set(ctx, *calculatedID, blob.Blob{JetID: p.JetID, Value: p.Message.Memory})
@@ -126,7 +126,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 		return bus.Reply{Reply: &reply.Error{ErrType: reply.ErrDeactivated}}
 	}
 
-	hash := record.HashVirtual(p.Dep.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	hash := record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
 	recID := insolar.NewID(p.PulseNumber, hash)
 
 	// Index exists and latest record id does not match (preserving chain consistency).
@@ -135,7 +135,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 		return bus.Reply{Err: errors.New("invalid state record")}
 	}
 
-	hash = record.HashVirtual(p.Dep.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	hash = record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
 	id := insolar.NewID(p.PulseNumber, hash)
 	rec := record.Material{
 		Virtual: &virtRec,

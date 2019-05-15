@@ -37,10 +37,10 @@ type SetRecord struct {
 	jet     insolar.JetID
 
 	Dep struct {
-		RecentStorageProvider      recentstorage.Provider
-		PlatformCryptographyScheme insolar.PlatformCryptographyScheme
-		RecordModifier             object.RecordModifier
-		PendingRequestsLimit       int
+		RecentStorageProvider recentstorage.Provider
+		PCS                   insolar.PlatformCryptographyScheme
+		RecordModifier        object.RecordModifier
+		PendingRequestsLimit  int
 	}
 }
 
@@ -64,7 +64,7 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 		return bus.Reply{Err: errors.Wrap(err, "can't deserialize record")}
 	}
 
-	hash := record.HashVirtual(p.Dep.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	hash := record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
 	calculatedID := insolar.NewID(flow.Pulse(ctx), hash)
 
 	concrete := record.Unwrap(&virtRec)
@@ -80,7 +80,7 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 	}
 
-	hash = record.HashVirtual(p.Dep.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	hash = record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
 	id := insolar.NewID(flow.Pulse(ctx), hash)
 	rec := record.Material{
 		Virtual: &virtRec,

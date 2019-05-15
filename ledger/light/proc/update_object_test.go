@@ -119,7 +119,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	updateObject.Dep.IDLocker = idLockMock
 	updateObject.Dep.Coordinator = jc
 	updateObject.Dep.IndexStorage = indexMemoryStor
-	updateObject.Dep.PlatformCryptographyScheme = scheme
+	updateObject.Dep.PCS = scheme
 	updateObject.Dep.RecordModifier = recordStorage
 	updateObject.Dep.IndexModifier = indexMemoryStor
 	updateObject.Dep.IndexStateModifier = object.NewIndexMemory()
@@ -184,7 +184,7 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	updateObject.Dep.BlobModifier = blob.NewStorageMemory()
 	updateObject.Dep.IDLocker = idLockMock
 	updateObject.Dep.IndexStorage = indexMemoryStor
-	updateObject.Dep.PlatformCryptographyScheme = scheme
+	updateObject.Dep.PCS = scheme
 	updateObject.Dep.RecordModifier = recordStorage
 	updateObject.Dep.IndexModifier = indexMemoryStor
 	updateObject.Dep.IndexStateModifier = object.NewIndexMemory()
