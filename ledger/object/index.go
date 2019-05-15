@@ -2,7 +2,6 @@ package object
 
 import (
 	"context"
-	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -309,11 +308,7 @@ func (i *IndexDB) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID
 	if err != nil {
 		return err
 	}
-	err = i.setLastKnownPN(ctx, pn, objID)
-	if err != nil {
-		return err
-	}
-	return nil
+	return i.setLastKnownPN(ctx, pn, objID)
 }
 
 // func (i *IndexDB) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error {
