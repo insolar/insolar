@@ -125,7 +125,7 @@ func (g *Generator) Run(ctx context.Context) error {
 		return errors.Wrapf(err, "[ Genesis ] create keys step failed")
 	}
 
-	err = g.activateSmartContracts(ctx, cb, rootPubKey, discoveryNodes, &rootDomainID, prototypes)
+	err = g.activateSmartContracts(ctx, cb, rootPubKey, &rootDomainID, prototypes)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
 	}
@@ -370,7 +370,6 @@ func (g *Generator) activateSmartContracts(
 	ctx context.Context,
 	cb *contractsBuilder,
 	rootPubKey string,
-	discoveryNodes []nodeInfo,
 	rootDomainID *insolar.ID,
 	prototypes prototypes,
 ) error {
@@ -473,7 +472,7 @@ func (g *Generator) activateNodeRecord(
 }
 
 func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeInfo) error {
-	var certs []certificate.Certificate
+	certs := make([]certificate.Certificate, 0, len(g.config.DiscoveryNodes))
 	for i, node := range g.config.DiscoveryNodes {
 		pubKey := discoveryNodes[i].publicKey
 		ref := discoveryNodes[i].reference()
@@ -539,6 +538,8 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 		if err != nil {
 			return errors.Wrapf(err, "[ makeCertificates ] filed create ceritificate: %v", certFile)
 		}
+
+		inslogger.FromContext(ctx).Debugf("[makeCertificates] write cert file to %v", certFile)
 	}
 	return nil
 }

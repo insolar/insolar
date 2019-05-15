@@ -40,10 +40,10 @@ func getKeysFromFile(ctx context.Context, file string) (crypto.PrivateKey, strin
 	if err != nil {
 		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't read keys file "+absPath)
 	}
-	return getKeys(ctx, bytes.NewReader(b))
+	return getKeys(bytes.NewReader(b))
 }
 
-func getKeys(ctx context.Context, r io.Reader) (crypto.PrivateKey, string, error) {
+func getKeys(r io.Reader) (crypto.PrivateKey, string, error) {
 	var keys map[string]string
 	err := json.NewDecoder(r).Decode(&keys)
 	if err != nil {
