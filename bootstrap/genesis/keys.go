@@ -31,7 +31,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func getKeysFromFile(ctx context.Context, file string) (crypto.PrivateKey, string, error) {
+func getKeysFromFile(file string) (crypto.PrivateKey, string, error) {
 	absPath, err := filepath.Abs(file)
 	if err != nil {
 		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't get abs path")
@@ -83,7 +83,7 @@ func mustPublicKeyToBytes(key crypto.PublicKey) []byte {
 	return b
 }
 
-func readKeysFromDir(ctx context.Context, dir string, amount int) ([]nodeInfo, error) {
+func readKeysFromDir(dir string, amount int) ([]nodeInfo, error) {
 	files, err := ioutil.ReadDir(dir)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ uploadKeys ] can't read dir")
@@ -95,7 +95,7 @@ func readKeysFromDir(ctx context.Context, dir string, amount int) ([]nodeInfo, e
 	}
 
 	for i, f := range files {
-		privKey, nodePubKey, err := getKeysFromFile(ctx, filepath.Join(dir, f.Name()))
+		privKey, nodePubKey, err := getKeysFromFile(filepath.Join(dir, f.Name()))
 		if err != nil {
 			return nil, errors.Wrap(err, "[ uploadKeys ] can't get keys from file")
 		}
@@ -115,7 +115,7 @@ func createKeysInDir(
 	reuse bool,
 ) ([]nodeInfo, error) {
 	if reuse {
-		return readKeysFromDir(ctx, dir, amount)
+		return readKeysFromDir(dir, amount)
 	}
 
 	nodes := make([]nodeInfo, amount)

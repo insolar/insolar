@@ -20,15 +20,12 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/magiconair/properties/assert"
 	"github.com/stretchr/testify/require"
 )
 
 func TestKeys_getKeysFromFile(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-
-	priv, pub, err := getKeysFromFile(ctx, "testdata/keypair.json")
+	priv, pub, err := getKeysFromFile("testdata/keypair.json")
 	require.NoError(t, err, "read keys from json")
 	assert.Equal(t, fmt.Sprintf("%T", priv), "*ecdsa.PrivateKey", "private key has proper type")
 	assert.Equal(t, fmt.Sprintf("%T", pub), "string", "public key has proper type")
