@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 )
 
@@ -32,6 +33,7 @@ type IndexLifelineModifier interface {
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexPendingModifier -o ./ -s _mock.go
 
+// IndexPendingModifier provides methods for modifying pending requests
 type IndexPendingModifier interface {
 	SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error
 	SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error
@@ -39,6 +41,9 @@ type IndexPendingModifier interface {
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexBucketModifier -o ./ -s _mock.go
 
+// IndexBucketModifier provides methods for modifying buckets of index.
+// Index contains buckets with pn-objID-meta hierarchy
+// With using of IndexBucketModifier there is a possibility to set buckets from outside of an index
 type IndexBucketModifier interface {
 	SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error
 }
@@ -62,10 +67,6 @@ type IndexCleaner interface {
 type IndexBucketAccessor interface {
 	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []IndexBucket
 }
-
-// type IndexBucketModifier interface {
-// 	Clone(ctx context.Context, fromPN insolar.PulseNumber, toPN insolar.PulseNumber, from insolar.JetID, to insolar.JetID)
-// }
 
 type LockedIndexBucket struct {
 	lifelineLock         sync.RWMutex
@@ -126,7 +127,7 @@ func NewInMemoryIndex() *InMemoryIndex {
 	}
 }
 
-func (i *InMemoryIndex) createBucket(pn insolar.PulseNumber, objID insolar.ID) *LockedIndexBucket {
+func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *LockedIndexBucket {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
@@ -145,6 +146,7 @@ func (i *InMemoryIndex) createBucket(pn insolar.PulseNumber, objID insolar.ID) *
 	}
 	objsByPn[objID] = bucket
 
+	inslogger.FromContext(ctx).Debugf("[createBucket] create bucket for obj - %v was created successfully", objID.DebugString())
 	return bucket
 }
 
@@ -163,17 +165,18 @@ func (i *InMemoryIndex) bucket(ctx context.Context, pn insolar.PulseNumber, objI
 func (i *InMemoryIndex) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error {
 	b := i.bucket(ctx, pn, objID)
 	if b == nil {
-		b = i.createBucket(pn, objID)
+		b = i.createBucket(ctx, pn, objID)
 	}
 	b.setLifeline(&lifeline, pn)
 
+	inslogger.FromContext(ctx).Debugf("[SetLifeline] lifeline for obj - %v was set successfully", objID.DebugString())
 	return nil
 }
 
 func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error {
 	b := i.bucket(ctx, pn, objID)
 	if b == nil {
-		b = i.createBucket(pn, objID)
+		b = i.createBucket(ctx, pn, objID)
 	}
 	b.setRequest(reqID)
 
@@ -183,7 +186,7 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 func (i *InMemoryIndex) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error {
 	b := i.bucket(ctx, pn, objID)
 	if b == nil {
-		b = i.createBucket(pn, objID)
+		b = i.createBucket(ctx, pn, objID)
 	}
 	b.setResult(resID)
 
