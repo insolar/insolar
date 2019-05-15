@@ -249,7 +249,8 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 		return nil
 	}
 
-	var res []IndexBucket
+	res := make([]IndexBucket, len(bucks))
+	resI := 0
 
 	for _, b := range bucks {
 		if b.bucket.Lifeline == nil {
@@ -263,21 +264,17 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 		var clonedResults []insolar.ID
 		var clonedRequests []insolar.ID
 
-		for _, r := range b.bucket.Requests {
-			clonedRequests = append(clonedRequests, r)
-		}
-		for _, r := range b.bucket.Results {
-			clonedResults = append(clonedResults, r)
-		}
+		clonedRequests = append(clonedRequests, b.bucket.Requests...)
+		clonedResults = append(clonedResults, b.bucket.Results...)
 
-		res = append(res, IndexBucket{
+		res[resI] = IndexBucket{
 			ObjID:            b.bucket.ObjID,
 			Lifeline:         &clonedLfl,
 			LifelineLastUsed: b.bucket.LifelineLastUsed,
 			Results:          clonedResults,
 			Requests:         clonedRequests,
-		})
-
+		}
+		resI++
 	}
 
 	return res
@@ -364,7 +361,7 @@ func (i *IndexDB) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID
 		return err
 	}
 	inslogger.FromContext(ctx).Debugf("[SetLifeline] lifeline for obj - %v was set successfully", objID.DebugString())
-	return i.setLastKnownPN(ctx, pn, objID)
+	return i.setLastKnownPN(pn, objID)
 }
 
 // SetBucket adds a bucket with provided pulseNumber and ID
@@ -378,8 +375,7 @@ func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket 
 // LifelineForID returns a lifeline from a bucket with provided PN and ObjID
 func (i *IndexDB) LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
 	var buck *IndexBucket
-	var err error
-	buck, err = i.getBucket(pn, objID)
+	buck, err := i.getBucket(pn, objID)
 	if err == ErrIndexBucketNotFound {
 		var lastPN insolar.PulseNumber
 		lastPN, err = i.getLastKnownPN(objID)
@@ -388,8 +384,10 @@ func (i *IndexDB) LifelineForID(ctx context.Context, pn insolar.PulseNumber, obj
 		}
 
 		buck, err = i.getBucket(lastPN, objID)
-	}
-	if err != nil {
+		if err != nil {
+			return Lifeline{}, err
+		}
+	} else if err != nil {
 		panic(err)
 		return Lifeline{}, err
 	}
@@ -425,7 +423,7 @@ func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*IndexBuc
 	return &bucket, err
 }
 
-func (i *IndexDB) setLastKnownPN(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
+func (i *IndexDB) setLastKnownPN(pn insolar.PulseNumber, objID insolar.ID) error {
 	key := lastKnownIndexPNKey{objID: objID}
 	return i.db.Set(key, pn.Bytes())
 }

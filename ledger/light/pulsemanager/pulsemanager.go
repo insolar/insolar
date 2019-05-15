@@ -261,7 +261,6 @@ func (m *PulseManager) getExecutorHotData(
 	ctx, span := instracer.StartSpan(ctx, "pulse.prepare_hot_data")
 	defer span.End()
 
-	var hotIndexes []message.HotIndex
 	pendingRequests := map[insolar.ID]recentstorage.PendingObjectContext{}
 
 	bucks := m.IndexBucketAccessor.ForPNAndJet(ctx, currentPN, jetID)
@@ -273,6 +272,7 @@ func (m *PulseManager) getExecutorHotData(
 		return nil, err
 	}
 
+	hotIndexes := make([]message.HotIndex, len(bucks))
 	for _, meta := range bucks {
 		encoded, err := meta.Lifeline.Marshal()
 		if err != nil {
