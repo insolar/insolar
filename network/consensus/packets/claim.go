@@ -63,24 +63,12 @@ import (
 type ClaimType uint8
 
 const (
-	TypeNodeJoinClaim = ClaimType(iota + 1)
-	TypeNodeAnnounceClaim
-	TypeCapabilityPollingAndActivation
-	TypeNodeViolationBlame
-	TypeNodeBroadcast
-	TypeNodeLeaveClaim
-	TypeChangeNetworkClaim
+	TypeNodeJoinClaim     = ClaimType(1)
+	TypeNodeAnnounceClaim = ClaimType(2)
+	TypeNodeLeaveClaim    = ClaimType(3)
 )
 
 const claimHeaderSize = 2
-
-// ChangeNetworkClaim uses to change network state.
-type ChangeNetworkClaim struct {
-}
-
-func (cnc *ChangeNetworkClaim) Type() ClaimType {
-	return TypeChangeNetworkClaim
-}
 
 type ReferendumClaim interface {
 	Serializer
@@ -97,52 +85,6 @@ type SignedClaim interface {
 	GetPublicKey() (crypto.PublicKey, error)
 	SerializeRaw() ([]byte, error)
 	GetSignature() []byte
-}
-
-// NodeBroadcast is a broadcast of info. Must be brief and only one entry per node.
-// Type 4.
-type NodeBroadcast struct {
-	EmergencyLevel uint8
-}
-
-func (nb *NodeBroadcast) Clone() ReferendumClaim {
-	result := *nb
-	return &result
-}
-
-func (nb *NodeBroadcast) Type() ClaimType {
-	return TypeNodeBroadcast
-}
-
-// CapabilityPoolingAndActivation is a type 3.
-type CapabilityPoolingAndActivation struct {
-	PollingFlags   uint16
-	CapabilityType uint16
-	CapabilityRef  [ReferenceLength]byte
-}
-
-func (cpa *CapabilityPoolingAndActivation) Clone() ReferendumClaim {
-	result := *cpa
-	return &result
-}
-
-func (cpa *CapabilityPoolingAndActivation) Type() ClaimType {
-	return TypeCapabilityPollingAndActivation
-}
-
-// NodeViolationBlame is a type 2.
-type NodeViolationBlame struct {
-	BlameNodeID   uint32
-	TypeViolation uint8
-}
-
-func (nvb *NodeViolationBlame) Clone() ReferendumClaim {
-	result := *nvb
-	return &result
-}
-
-func (nvb *NodeViolationBlame) Type() ClaimType {
-	return TypeNodeViolationBlame
 }
 
 const NodeAddressSize = 20
