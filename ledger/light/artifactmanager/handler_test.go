@@ -608,6 +608,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	err = h.Init(s.ctx)
 	require.NoError(s.T(), err)
 
+	// TODO fix this test
 	res, err := h.handleHotRecords(s.ctx, &message.Parcel{Msg: hotIndexes})
 
 	require.NoError(s.T(), err)
