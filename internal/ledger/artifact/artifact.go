@@ -28,13 +28,6 @@ import (
 	"github.com/insolar/insolar/ledger/object"
 )
 
-type Contract struct {
-	Name        string // ???
-	Domain      insolar.Reference
-	MachineType insolar.MachineType
-	Binary      []byte
-}
-
 //go:generate minimock -i github.com/insolar/insolar/internal/ledger/artifact.Manager -o ./ -s _gen_mock.go
 
 // Manager implements subset of methods from artifacts client required for genesis.
