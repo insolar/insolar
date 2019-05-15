@@ -54,7 +54,6 @@ package tests
 
 import (
 	"context"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/packets"
@@ -133,11 +132,4 @@ func (cm *CommunicatorMock) ExchangePhase3(ctx context.Context, participants []i
 
 func (cm *CommunicatorMock) Init(ctx context.Context) error {
 	return cm.communicator.Init(ctx)
-}
-
-type FullTimeoutPhaseManager struct {
-}
-
-func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
-	return nil
 }

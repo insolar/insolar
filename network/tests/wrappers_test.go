@@ -65,8 +65,8 @@ type phaseManagerWrapper struct {
 	result   chan error
 }
 
-func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
-	res := p.original.OnPulse(ctx, pulse, pulseStartTime)
+func (p *phaseManagerWrapper) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time, connectToNewNetwork func(ctx context.Context, address string)) error {
+	res := p.original.OnPulse(ctx, pulse, pulseStartTime, connectToNewNetwork)
 	p.result <- res
 	return res
 }

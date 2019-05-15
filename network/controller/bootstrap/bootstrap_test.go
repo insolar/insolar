@@ -57,23 +57,17 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/certificate"
-	"github.com/insolar/insolar/component"
-	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/controller/common"
-	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
-	"github.com/insolar/insolar/network/routing"
-	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
-	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -82,6 +76,34 @@ import (
 const TestCert = "../../../certificate/testdata/cert.json"
 const TestKeys = "../../../certificate/testdata/keys.json"
 const activeNodesCount = 5
+
+type requestMock struct {
+	perm Permission
+}
+
+func (rm *requestMock) GetSender() insolar.Reference {
+	return testutils.RandomRef()
+}
+
+func (rm *requestMock) GetSenderHost() *host.Host {
+	return nil
+}
+
+func (rm *requestMock) GetType() types.PacketType {
+	return types.Bootstrap
+}
+
+func (rm *requestMock) GetData() interface{} {
+	return &NodeBootstrapRequest{
+		JoinClaim:     packets.NodeJoinClaim{},
+		LastNodePulse: 123,
+		Permission:    rm.perm,
+	}
+}
+
+func (rm *requestMock) GetRequestID() network.RequestID {
+	return 1
+}
 
 func getBootstrapResults(t *testing.T, ips []string) []*network.BootstrapResult {
 	results := make([]*network.BootstrapResult, activeNodesCount)
@@ -101,13 +123,14 @@ func getBootstrapResults(t *testing.T, ips []string) []*network.BootstrapResult 
 
 func getOptions(infinity bool) *common.Options {
 	return &common.Options{
-		TimeoutMult:       2 * time.Millisecond,
-		InfinityBootstrap: infinity,
-		MinTimeout:        100 * time.Millisecond,
-		MaxTimeout:        200 * time.Millisecond,
-		PingTimeout:       1 * time.Second,
-		PacketTimeout:     10 * time.Second,
-		BootstrapTimeout:  10 * time.Second,
+		TimeoutMult:            2 * time.Millisecond,
+		InfinityBootstrap:      infinity,
+		MinTimeout:             100 * time.Millisecond,
+		MaxTimeout:             200 * time.Millisecond,
+		PingTimeout:            1 * time.Second,
+		PacketTimeout:          10 * time.Second,
+		BootstrapTimeout:       10 * time.Second,
+		CyclicBootstrapEnabled: false,
 	}
 }
 
@@ -177,52 +200,4 @@ func TestCyclicBootstrap(t *testing.T) {
 		reconnectRequired = true
 	}
 	assert.True(t, reconnectRequired)
-}
-
-func TestPermissions(t *testing.T) {
-	ctx := context.Background()
-
-	cs, err := cryptography.NewStorageBoundCryptographyService(TestKeys)
-	assert.NoError(t, err)
-	kp := platformpolicy.NewKeyProcessor()
-	pk, err := cs.GetPublicKey()
-	assert.NoError(t, err)
-	cert, err := certificate.ReadCertificate(pk, kp, TestCert)
-	require.NoError(t, err)
-	require.NotEmpty(t, cert.PublicKey)
-
-	nk := nodekeeper.GetTestNodekeeper(cs)
-
-	origin := bootstrapper{
-		options:                 getOptions(false),
-		bootstrapLock:           make(chan struct{}),
-		genesisRequestsReceived: make(map[insolar.Reference]*GenesisRequest),
-		Certificate:             cert,
-		NodeKeeper:              nk,
-	}
-
-	hn, err := hostnetwork.NewHostNetwork(testutils.RandomRef().String())
-	assert.NoError(t, err)
-
-	cfg := configuration.NewConfiguration()
-
-	cm := component.NewManager(nil)
-	cm.Register(hn, nk, &routing.Table{}, transport.NewFactory(cfg.Host.Transport), cs)
-	cm.Inject()
-
-	bootstrapReq := &NodeBootstrapRequest{
-		JoinClaim:     packets.NodeJoinClaim{},
-		LastNodePulse: 123,
-		Permission: Permission{
-			JoinerPublicKey: []byte(cert.PublicKey),
-		},
-	}
-
-	request := origin.Network.NewRequestBuilder().Type(types.Bootstrap).Data(bootstrapReq).Build()
-
-	resp, err := origin.processBootstrap(ctx, request)
-	require.NoError(t, err)
-
-	response := resp.GetData().(*NodeBootstrapResponse)
-	require.Equal(t, response.Code, Redirected)
 }
