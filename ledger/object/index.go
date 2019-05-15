@@ -166,7 +166,7 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 	return bucket
 }
 
-func (i *InMemoryIndex) bucket(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *LockedIndexBucket {
+func (i *InMemoryIndex) bucket(pn insolar.PulseNumber, objID insolar.ID) *LockedIndexBucket {
 	i.bucketsLock.RLock()
 	defer i.bucketsLock.RUnlock()
 
@@ -180,7 +180,7 @@ func (i *InMemoryIndex) bucket(ctx context.Context, pn insolar.PulseNumber, objI
 
 // SetLifeline sets a lifeline to a bucket with provided pulseNumber and ID
 func (i *InMemoryIndex) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error {
-	b := i.bucket(ctx, pn, objID)
+	b := i.bucket(pn, objID)
 	if b == nil {
 		b = i.createBucket(ctx, pn, objID)
 	}
@@ -192,7 +192,7 @@ func (i *InMemoryIndex) SetLifeline(ctx context.Context, pn insolar.PulseNumber,
 
 // SetRequest adds a request to a bucket with provided pulseNumber and ID
 func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error {
-	b := i.bucket(ctx, pn, objID)
+	b := i.bucket(pn, objID)
 	if b == nil {
 		b = i.createBucket(ctx, pn, objID)
 	}
@@ -203,7 +203,7 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 
 // SetResultRecord adds a result record to a bucket with provided pulseNumber and ID
 func (i *InMemoryIndex) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error {
-	b := i.bucket(ctx, pn, objID)
+	b := i.bucket(pn, objID)
 	if b == nil {
 		b = i.createBucket(ctx, pn, objID)
 	}
@@ -232,7 +232,7 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 
 // LifelineForID returns a lifeline from a bucket with provided PN and ObjID
 func (i *InMemoryIndex) LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
-	b := i.bucket(ctx, pn, objID)
+	b := i.bucket(pn, objID)
 	if b == nil {
 		return Lifeline{}, ErrLifelineNotFound
 	}
@@ -282,7 +282,7 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 
 // SetLifelineUsage updates a last usage fields of a bucket for a provided pulseNumber and an object id
 func (i *InMemoryIndex) SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
-	b := i.bucket(ctx, pn, objID)
+	b := i.bucket(pn, objID)
 	if b == nil {
 		return ErrLifelineNotFound
 	}
