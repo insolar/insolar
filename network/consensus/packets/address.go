@@ -48,76 +48,66 @@
 //    whether it competes with the products or services of Insolar Technologies GmbH.
 //
 
-package node
+package packets
 
 import (
-	"testing"
+	"bytes"
+	"net"
+	"strconv"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/consensus/packets"
-	"github.com/insolar/insolar/network/utils"
-	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"github.com/pkg/errors"
 )
 
-func TestNode_Version(t *testing.T) {
-	n := NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1", "123")
-	assert.Equal(t, "123", n.Version())
-	n.(MutableNode).SetVersion("234")
-	assert.Equal(t, "234", n.Version())
-}
+const (
+	ipSize          = net.IPv6len
+	portSize        = 2
+	nodeAddressSize = ipSize + portSize
 
-func TestNode_GetState(t *testing.T) {
-	n := NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1", "123")
-	assert.Equal(t, insolar.NodeReady, n.GetState())
-	n.(MutableNode).SetState(insolar.NodeUndefined)
-	assert.Equal(t, insolar.NodeUndefined, n.GetState())
-	n.(MutableNode).ChangeState()
-	assert.Equal(t, insolar.NodePending, n.GetState())
-	n.(MutableNode).ChangeState()
-	assert.Equal(t, insolar.NodeReady, n.GetState())
-	n.(MutableNode).ChangeState()
-	assert.Equal(t, insolar.NodeReady, n.GetState())
-}
+	maxPortNumber = ^uint16(0)
+)
 
-func TestNode_GetGlobuleID(t *testing.T) {
-	n := NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1", "123")
-	assert.EqualValues(t, 0, n.GetGlobuleID())
-}
+type NodeAddress [nodeAddressSize]byte
 
-func TestNode_LeavingETA(t *testing.T) {
-	n := NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1", "123")
-	assert.Equal(t, insolar.NodeReady, n.GetState())
-	n.(MutableNode).SetLeavingETA(25)
-	assert.Equal(t, insolar.NodeLeaving, n.GetState())
-	assert.EqualValues(t, 25, n.LeavingETA())
-}
+func NewNodeAddress(address string) (NodeAddress, error) {
+	var addr NodeAddress
 
-func TestNode_ShortID(t *testing.T) {
-	n := NewNode(testutils.RandomRef(), insolar.StaticRoleVirtual, nil, "127.0.0.1", "123")
-	assert.EqualValues(t, utils.GenerateUintShortID(n.ID()), n.ShortID())
-	n.(MutableNode).SetShortID(11)
-	assert.EqualValues(t, 11, n.ShortID())
-}
-
-func TestClaimToNode(t *testing.T) {
-	address, err := packets.NewNodeAddress("123.234.55.66:12345")
-	require.NoError(t, err)
-
-	claim := packets.NodeJoinClaim{
-		NodeRef:     testutils.RandomRef(),
-		NodePK:      testutils.BrokenPK(),
-		ShortNodeID: 10,
-		NodeAddress: address,
+	host, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return addr, errors.Errorf("invalid address: %s", address)
 	}
 
-	_, err = ClaimToNode("", &claim)
-	assert.Error(t, err)
-	claim.NodePK = [packets.PublicKeyLength]byte{}
-	n, err := ClaimToNode("", &claim)
-	assert.NoError(t, err)
-	assert.Equal(t, claim.NodeRef, n.ID())
-	assert.EqualValues(t, 10, n.ShortID())
-	assert.Equal(t, claim.NodeAddress.String(), n.Address())
+	ip := net.ParseIP(host)
+	if ip == nil {
+		return addr, errors.Errorf("invalid ip: %s", host)
+	}
+
+	portNumber, err := strconv.Atoi(port)
+	if err != nil || portNumber > int(maxPortNumber) || portNumber <= 0 {
+		return addr, errors.Errorf("invalid port: %s", port)
+	}
+
+	portBytes := make([]byte, portSize)
+	defaultByteOrder.PutUint16(portBytes, uint16(portNumber))
+
+	copy(addr[:], ip)
+	copy(addr[ipSize:], portBytes)
+	return addr, nil
+}
+
+func (address NodeAddress) String() string {
+	r := bytes.NewReader(address[:])
+
+	ipBytes := make([]byte, ipSize)
+	_, _ = r.Read(ipBytes)
+
+	portBytes := make([]byte, portSize)
+	_, _ = r.Read(portBytes)
+
+	ip := net.IP(ipBytes)
+	portNumber := defaultByteOrder.Uint16(portBytes)
+
+	host := ip.String()
+	port := strconv.Itoa(int(portNumber))
+
+	return net.JoinHostPort(host, port)
 }
