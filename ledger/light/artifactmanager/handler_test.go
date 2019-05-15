@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/rand"
 	"testing"
+	"time"
 
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/assert"
@@ -617,6 +618,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), drop.Drop{Pulse: insolar.FirstPulseNumber, Hash: []byte{88}, JetID: jetID}, savedDrop)
 
+	mc.Wait(1*time.Minute)
 	pendingMock.MinimockFinish()
 }
 
