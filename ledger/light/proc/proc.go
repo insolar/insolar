@@ -35,6 +35,7 @@ type Dependencies struct {
 	SetRecord     func(*SetRecord)
 	RegisterChild func(*RegisterChild)
 	GetPendingRequests func(*GetPendingRequests)
+	GetJet             func(*GetJet)
 }
 
 type ReturnReply struct {

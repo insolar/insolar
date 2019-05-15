@@ -163,6 +163,9 @@ func NewMessageHandler(
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 		},
+		GetJet: func(p *proc.GetJet) {
+			p.Dep.Jets = h.JetStorage
+		},
 	}
 
 	initHandle := func(msg bus.Message) *handle.Init {
@@ -250,10 +253,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	h.Bus.MustRegister(insolar.TypeRegisterChild, h.FlowDispatcher.WrapBusHandle)
 	h.Bus.MustRegister(insolar.TypeSetBlob, h.FlowDispatcher.WrapBusHandle)
 	h.Bus.MustRegister(insolar.TypeGetPendingRequests, h.FlowDispatcher.WrapBusHandle)
-
-	h.Bus.MustRegister(insolar.TypeGetJet,
-		BuildMiddleware(h.handleGetJet,
-			instrumentHandler("handleGetJet")))
+	h.Bus.MustRegister(insolar.TypeGetJet, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeHotRecords,
 		BuildMiddleware(h.handleHotRecords,
@@ -272,14 +272,6 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	)
 
 	h.Bus.MustRegister(insolar.TypeValidateRecord, h.handleValidateRecord)
-}
-
-func (h *MessageHandler) handleGetJet(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetJet)
-
-	jetID, actual := h.JetStorage.ForID(ctx, msg.Pulse, msg.Object)
-
-	return &reply.Jet{ID: insolar.ID(jetID), Actual: actual}, nil
 }
 
 func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
