@@ -65,7 +65,6 @@ type ClaimType uint8
 const (
 	TypeNodeJoinClaim      = ClaimType(1)
 	TypeNodeAnnounceClaim  = ClaimType(2)
-	TypeNodeViolationBlame = ClaimType(3)
 	TypeNodeLeaveClaim     = ClaimType(4)
 	TypeChangeNetworkClaim = ClaimType(5)
 )
