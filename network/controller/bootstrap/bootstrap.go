@@ -248,6 +248,7 @@ const (
 	Rejected
 	Redirected
 	ReconnectRequired
+	UpdateSchedule
 )
 
 func init() {
@@ -692,7 +693,10 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Re
 			return nil, errors.Wrap(err, "failed to update a permission on request")
 		}
 	} else {
-
+		code, err = bc.getCodeFromPermission(bootstrapRequest.Permission)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to get a code from permission")
+		}
 	}
 
 	return bc.Network.BuildResponse(ctx, request,
@@ -707,16 +711,21 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Re
 		}), nil
 }
 
-func (bc *bootstrapper) isPermissionValid(permission Permission) (bool, error) {
+func (bc *bootstrapper) getCodeFromPermission(permission Permission) (Code, error) {
 	verified, err := bc.checkPermissionSign(permission)
 	if err != nil {
-		return false, errors.Wrap(err, "failed to check a permission sign")
+		return Rejected, errors.Wrap(err, "failed to check a permission sign")
 	}
 	if !verified {
-		return false, errors.New("failed to verify a permission sign")
+		return Rejected, errors.New("failed to verify a permission sign")
 	}
-	etaDiff := time.Now().Sub()
-	return true, nil
+
+	etaDiff := time.Now().Sub(permission.UTC)
+	if etaDiff > time.Duration(time.Minute) {
+		return UpdateSchedule, nil
+	}
+
+	return Accepted, nil
 }
 
 func (bc *bootstrapper) updatePermissionsOnRequest(request *NodeBootstrapRequest) error {
