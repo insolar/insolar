@@ -29,44 +29,18 @@ type HotData struct {
 	dep     *proc.Dependencies
 	replyTo chan<- bus.Reply
 	message *message.HotData
-	//pulse   insolar.PulseNumber
 }
 
-func NewHotData(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.HotData /*, pulse insolar.PulseNumber*/) *HotData {
+func NewHotData(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.HotData) *HotData {
 	return &HotData{
 		dep:     dep,
 		replyTo: rep,
 		message: msg,
-		// pulse:   pulse,
 	}
 }
 
 func (s *HotData) Present(ctx context.Context, f flow.Flow) error {
-	// TODO implement
-	return nil
-	/***
-	jet := proc.NewFetchJet(*s.message.DefaultTarget().Record(), flow.Pulse(ctx), s.replyTo)
-	s.dep.FetchJet(jet)
-	if err := f.Procedure(ctx, jet, false); err != nil {
-		return err
-	}
-
-	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.replyTo)
-	s.dep.WaitHot(hot)
-	if err := f.Procedure(ctx, hot, false); err != nil {
-
-		return err
-	}
-
-	getIndex := proc.NewGetIndex(s.message.Parent, jet.Result.Jet, s.replyTo)
-	s.dep.GetIndex(getIndex)
-	err := f.Procedure(ctx, getIndex, false)
-	if err != nil {
-		return err
-	}
-
-	registerChild := proc.NewRegisterChild(jet.Result.Jet, s.message, s.pulse, getIndex.Result.Index, s.replyTo)
-	s.dep.RegisterChild(registerChild)
-	return f.Procedure(ctx, registerChild, false)
-	 ***/
+	proc := proc.NewHotData(s.message, s.replyTo)
+	s.dep.HotData(proc)
+	return f.Procedure(ctx, proc, false)
 }

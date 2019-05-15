@@ -167,7 +167,13 @@ func NewMessageHandler(
 			p.Dep.Jets = h.JetStorage
 		},
 		HotData: func(p *proc.HotData) {
-			// TODO fill dependencies
+			p.Dep.DropModifier = h.DropModifier
+			p.Dep.RecentStorageProvider = h.RecentStorageProvider
+			p.Dep.MessageBus = h.Bus
+			p.Dep.IndexStateModifier = h.IndexStateModifier
+			p.Dep.JetStorage = h.JetStorage
+			p.Dep.JetFetcher = h.jetTreeUpdater
+			p.Dep.JetReleaser = h.JetReleaser
 		},
 	}
 

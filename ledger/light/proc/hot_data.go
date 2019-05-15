@@ -19,33 +19,36 @@ package proc
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/light/hot"
+	"github.com/insolar/insolar/ledger/light/recentstorage"
+	"github.com/insolar/insolar/ledger/object"
 )
 
 type HotData struct {
 	replyTo chan<- bus.Reply
 	msg     *message.HotData
-	/*
-		jet     insolar.JetID
-
-		pulse   insolar.PulseNumber
-		idx     object.Lifeline
-	*/
 
 	Dep struct {
-		/*
-			IDLocker                   object.IDLocker
-			IndexStorage               object.IndexStorage
-			JetCoordinator             jet.Coordinator
-			RecordModifier             object.RecordModifier
-			IndexStateModifier         object.ExtendedIndexModifier
-			PlatformCryptographyScheme insolar.PlatformCryptographyScheme
-		*/
+		DropModifier          drop.Modifier
+		RecentStorageProvider recentstorage.Provider
+		MessageBus            insolar.MessageBus
+		IndexStateModifier    object.ExtendedIndexModifier
+		JetStorage            jet.Storage
+		JetFetcher            jet.Fetcher
+		JetReleaser           hot.JetReleaser
 	}
 }
 
-func NewHotRecords(msg *message.HotData, replyTo chan<- bus.Reply) *HotData {
+func NewHotData(msg *message.HotData, replyTo chan<- bus.Reply) *HotData {
 	return &HotData{
 		msg:     msg,
 		replyTo: replyTo,
@@ -60,30 +63,27 @@ func (p *HotData) Proceed(ctx context.Context) error {
 	return err
 }
 
-/***
-func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
+func (p *HotData) process(ctx context.Context) error {
 	logger := inslogger.FromContext(ctx)
-
-	msg := parcel.Message().(*message.HotData)
-	jetID := insolar.JetID(*msg.Jet.Record())
+	jetID := insolar.JetID(*p.msg.Jet.Record())
 
 	logger.WithFields(map[string]interface{}{
 		"jet": jetID.DebugString(),
 	}).Info("received hot data")
 
-	err := h.DropModifier.Set(ctx, msg.Drop)
+	err := p.Dep.DropModifier.Set(ctx, p.msg.Drop)
 	if err == drop.ErrOverride {
 		err = nil
 	}
 	if err != nil {
-		return nil, errors.Wrapf(err, "[jet]: drop error (pulse: %v)", msg.Drop.Pulse)
+		return errors.Wrapf(err, "[jet]: drop error (pulse: %v)", p.msg.Drop.Pulse)
 	}
 
-	pendingStorage := h.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(jetID))
-	logger.Debugf("received %d pending requests", len(msg.PendingRequests))
+	pendingStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(jetID))
+	logger.Debugf("received %d pending requests", len(p.msg.PendingRequests))
 
 	var notificationList []insolar.ID
-	for objID, objContext := range msg.PendingRequests {
+	for objID, objContext := range p.msg.PendingRequests {
 		if !objContext.Active {
 			notificationList = append(notificationList, objID)
 		}
@@ -95,7 +95,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 	go func() {
 		for _, objID := range notificationList {
 			go func(objID insolar.ID) {
-				rep, err := h.Bus.Send(ctx, &message.AbandonedRequestsNotification{
+				rep, err := p.Dep.MessageBus.Send(ctx, &message.AbandonedRequestsNotification{
 					Object: objID,
 				}, nil)
 
@@ -110,81 +110,36 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 		}
 	}()
 
-	for id, meta := range msg.HotIndexes {
+	for id, meta := range p.msg.HotIndexes {
 		decodedIndex, err := object.DecodeIndex(meta.Index)
 		if err != nil {
 			logger.Error(err)
 			continue
 		}
 
-		err = h.IndexStateModifier.SetWithMeta(ctx, id, meta.LastUsed, decodedIndex)
+		err = p.Dep.IndexStateModifier.SetWithMeta(ctx, id, meta.LastUsed, decodedIndex)
 		if err != nil {
 			logger.Error(err)
 			continue
 		}
 	}
 
-	h.JetStorage.Update(
-		ctx, msg.PulseNumber, true, insolar.JetID(jetID),
+	p.Dep.JetStorage.Update(
+		ctx, p.msg.PulseNumber, true, insolar.JetID(jetID),
 	)
 
-	h.jetTreeUpdater.Release(ctx, jetID, msg.PulseNumber)
+	p.Dep.JetFetcher.Release(ctx, jetID, p.msg.PulseNumber)
 
-	return &reply.OK{}, nil
+	p.replyTo <- bus.Reply{Reply: &reply.OK{}}
+
+	p.releaseHotDataWaiters(ctx)
+	return nil
 }
 
-***/
-
-func (p *HotData) process(ctx context.Context) error {
-	return nil
-	// TODO
-	/*
-		r, err := object.DecodeVirtual(p.msg.Record)
-		if err != nil {
-			return errors.Wrap(err, "can't deserialize record")
-		}
-		childRec, ok := r.(*object.ChildRecord)
-		if !ok {
-			return errors.New("wrong child record")
-		}
-
-		p.Dep.IDLocker.Lock(p.msg.Parent.Record())
-		defer p.Dep.IDLocker.Unlock(p.msg.Parent.Record())
-		p.Dep.IndexStateModifier.SetUsageForPulse(ctx, *p.msg.Parent.Record(), p.pulse)
-		recID := object.NewRecordIDFromRecord(p.Dep.PlatformCryptographyScheme, p.pulse, childRec)
-
-		// Children exist and pointer does not match (preserving chain consistency).
-		// For the case when vm can't save or send result to another vm and it tries to update the same record again
-		if p.idx.ChildPointer != nil && !childRec.PrevChild.Equal(*p.idx.ChildPointer) && p.idx.ChildPointer != recID {
-			return errors.New("invalid child record")
-		}
-
-		child := object.NewRecordIDFromRecord(p.Dep.PlatformCryptographyScheme, p.pulse, childRec)
-		rec := record.MaterialRecord{
-			Record: childRec,
-			JetID:  p.jet,
-		}
-
-		err = p.Dep.RecordModifier.Set(ctx, *child, rec)
-
-		if err == object.ErrOverride {
-			inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", r)).Warn("set record override (#2)")
-			child = recID
-		} else if err != nil {
-			return errors.Wrap(err, "can't save record into storage")
-		}
-
-		p.idx.ChildPointer = child
-		if p.msg.AsType != nil {
-			p.idx.Delegates[*p.msg.AsType] = p.msg.Child
-		}
-		p.idx.LatestUpdate = p.pulse
-		p.idx.JetID = p.jet
-		err = p.Dep.IndexStorage.Set(ctx, *p.msg.Parent.Record(), p.idx)
-		if err != nil {
-			return err
-		}
-
-		p.replyTo <- bus.Reply{Reply: &reply.ID{ID: *child}}
-		return nil*/
+func (p *HotData) releaseHotDataWaiters(ctx context.Context) {
+	jetID := p.msg.Jet.Record()
+	err := p.Dep.JetReleaser.Unlock(ctx, *jetID)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(err)
+	}
 }

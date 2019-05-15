@@ -78,8 +78,9 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		h := NewGetJet(s.Dep, s.Message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeHotRecords:
-		// TODO fill this with actual code!
-		return nil
+		msg := s.Message.Parcel.Message().(*message.HotData)
+		h := NewHotData(s.Dep, s.Message.ReplyTo, msg)
+		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s", s.Message.Parcel.Message().Type().String())
 	}
