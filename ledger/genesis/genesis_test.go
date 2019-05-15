@@ -25,11 +25,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// TODO check it test again
-func TestGenesisRecordEncodeDecode(t *testing.T) {
-	// recIn := &object.GenesisRecord{}
-	// recIn = recIn.Init()
-
+func TestGenesisRecordMarshalUnmarshal(t *testing.T) {
 	genIn := record.Genesis{
 		Hash: insolar.GenesisRecord,
 	}
@@ -39,22 +35,18 @@ func TestGenesisRecordEncodeDecode(t *testing.T) {
 	data, err := virtGenIn.Marshal()
 	require.NoError(t, err)
 
-	// b := object.EncodeVirtual(recIn)
 	require.Equal(t, "aa0604a20101ac", hex.EncodeToString(data),
 		"genesis binary representation always the same")
 
 	virtGenOut := record.Virtual{}
 	err = virtGenOut.Unmarshal(data)
-	require.NoError(t, err, "genesis record decode w/o error")
+	require.NoError(t, err, "genesis record unmarshal w/o error")
 
 	genOut := record.Unwrap(&virtGenOut)
 
-	require.Equal(t, &genIn, genOut, "encode-decode-encode gives the same struct")
+	require.Equal(t, &genIn, genOut, "marshal-unmarshal-marshal gives the same struct")
 
-	// recOut, err := object.DecodeVirtual(b)
-	// require.NoError(t, err, "genesis record decode w/o error")
-	// require.Equal(t, recIn, recOut, "encode-decode-encode gives the same struct")
-	//
-	// b2 := object.EncodeVirtual(recOut)
-	// require.Equal(t, b, b2, "encode-decode-encode gives the same binary result")
+	data2, err := virtGenOut.Marshal()
+	require.NoError(t, err)
+	require.Equal(t, data, data2, "marshal-unmarshal-marshal gives the same binary result")
 }
