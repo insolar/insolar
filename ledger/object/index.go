@@ -123,34 +123,71 @@ func NewInMemoryIndex() *InMemoryIndex {
 	}
 }
 
-func (i *InMemoryIndex) bucket(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *LockedIndexBucket {
+// func (i *InMemoryIndex) bucket(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *LockedIndexBucket {
+// 	i.bucketsLock.Lock()
+// 	defer i.bucketsLock.Unlock()
+//
+// 	var objsByPn map[insolar.ID]*LockedIndexBucket
+// 	objsByPn, ok := i.buckets[pn]
+// 	if !ok {
+// 		objsByPn = map[insolar.ID]*LockedIndexBucket{}
+// 		i.buckets[pn] = objsByPn
+// 	}
+//
+// 	bucket := objsByPn[objID]
+// 	if bucket == nil {
+// 		bucket = &LockedIndexBucket{
+// 			bucket: IndexBucket{
+// 				ObjID:    objID,
+// 				Results:  []insolar.ID{},
+// 				Requests: []insolar.ID{},
+// 			},
+// 		}
+// 		objsByPn[objID] = bucket
+// 	}
+//
+// 	return bucket
+// }
+
+func (i *InMemoryIndex) createBucket(pn insolar.PulseNumber, objID insolar.ID) *LockedIndexBucket {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
-	var objsByPn map[insolar.ID]*LockedIndexBucket
+	bucket := &LockedIndexBucket{
+		bucket: IndexBucket{
+			ObjID:    objID,
+			Results:  []insolar.ID{},
+			Requests: []insolar.ID{},
+		},
+	}
+
 	objsByPn, ok := i.buckets[pn]
 	if !ok {
 		objsByPn = map[insolar.ID]*LockedIndexBucket{}
 		i.buckets[pn] = objsByPn
 	}
-
-	bucket := objsByPn[objID]
-	if bucket == nil {
-		bucket = &LockedIndexBucket{
-			bucket: IndexBucket{
-				ObjID:    objID,
-				Results:  []insolar.ID{},
-				Requests: []insolar.ID{},
-			},
-		}
-		objsByPn[objID] = bucket
-	}
+	objsByPn[objID] = bucket
 
 	return bucket
 }
 
+func (i *InMemoryIndex) bucket(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *LockedIndexBucket {
+	i.bucketsLock.RLock()
+	defer i.bucketsLock.RUnlock()
+
+	objsByPn, ok := i.buckets[pn]
+	if !ok {
+		return nil
+	}
+
+	return objsByPn[objID]
+}
+
 func (i *InMemoryIndex) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error {
 	b := i.bucket(ctx, pn, objID)
+	if b == nil {
+		b = i.createBucket(pn, objID)
+	}
 	b.setLifeline(&lifeline, pn)
 
 	return nil
@@ -158,6 +195,9 @@ func (i *InMemoryIndex) SetLifeline(ctx context.Context, pn insolar.PulseNumber,
 
 func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error {
 	b := i.bucket(ctx, pn, objID)
+	if b == nil {
+		b = i.createBucket(pn, objID)
+	}
 	b.setRequest(reqID)
 
 	return nil
@@ -165,6 +205,9 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 
 func (i *InMemoryIndex) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error {
 	b := i.bucket(ctx, pn, objID)
+	if b == nil {
+		b = i.createBucket(pn, objID)
+	}
 	b.setResult(resID)
 
 	return nil
@@ -189,6 +232,9 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 
 func (i *InMemoryIndex) LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
 	b := i.bucket(ctx, pn, objID)
+	if b == nil {
+		return Lifeline{}, ErrLifelineNotFound
+	}
 	return b.lifeline()
 }
 
@@ -237,9 +283,11 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 
 func (i *InMemoryIndex) SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
 	b := i.bucket(ctx, pn, objID)
-	_, err := b.lifeline()
-	if err != nil {
-		return err
+	if b == nil {
+		return ErrLifelineNotFound
+	}
+	if b.bucket.Lifeline == nil {
+		return ErrLifelineNotFound
 	}
 
 	b.setLifelineLastUsed(pn)
