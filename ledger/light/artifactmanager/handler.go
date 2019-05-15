@@ -289,8 +289,6 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	msg := parcel.Message().(*message.GetDelegate)
 	jetID := jetFromContext(ctx)
 
-	err := h.LifelineStateModifier.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Head.Record())
-
 	h.IDLocker.Lock(msg.Head.Record())
 	defer h.IDLocker.Unlock(msg.Head.Record())
 
@@ -306,6 +304,10 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 			return nil, errors.Wrapf(err, "failed to fetch index from heavy")
 		}
 	} else if err != nil {
+		return nil, errors.Wrap(err, "failed to fetch object index")
+	}
+	err = h.LifelineStateModifier.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Head.Record())
+	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}
 	err = h.LifelineStateModifier.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Head.Record())

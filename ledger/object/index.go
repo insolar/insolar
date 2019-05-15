@@ -377,8 +377,7 @@ func (i *IndexDB) LifelineForID(ctx context.Context, pn insolar.PulseNumber, obj
 	var buck *IndexBucket
 	buck, err := i.getBucket(pn, objID)
 	if err == ErrIndexBucketNotFound {
-		var lastPN insolar.PulseNumber
-		lastPN, err = i.getLastKnownPN(objID)
+		lastPN, err := i.getLastKnownPN(objID)
 		if err != nil {
 			return Lifeline{}, ErrLifelineNotFound
 		}
@@ -388,7 +387,6 @@ func (i *IndexDB) LifelineForID(ctx context.Context, pn insolar.PulseNumber, obj
 			return Lifeline{}, err
 		}
 	} else if err != nil {
-		panic(err)
 		return Lifeline{}, err
 	}
 	if buck.Lifeline == nil {
