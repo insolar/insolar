@@ -91,11 +91,15 @@ func TestNodeAddress_Get(t *testing.T) {
 		addr string
 	}{
 		{
-			name: "ip4",
+			name: "ip4_1",
 			addr: "127.0.0.1:65534",
 		},
 		{
-			name: "ip4map",
+			name: "ip4_2",
+			addr: "182.30.233.10:65534",
+		},
+		{
+			name: "ip4_map",
 			addr: "[::ffff:192.0.2.128]:80",
 		},
 		{
@@ -103,8 +107,16 @@ func TestNodeAddress_Get(t *testing.T) {
 			addr: "[2001:0db8:85a3:0000:0000:8a2e:0370:7334]:80",
 		},
 		{
-			name: "ip6loopback",
+			name: "ip6_omitzeros",
+			addr: "[2001:0db8:85a3:0:0:8a2e:0370:7334]:80",
+		},
+		{
+			name: "ip6_loopback",
 			addr: "[::1]:80",
+		},
+		{
+			name: "ip6_scope",
+			addr: "[fe80::1ff:fe23:4567:890a]:80",
 		},
 	}
 	for _, test := range tests {

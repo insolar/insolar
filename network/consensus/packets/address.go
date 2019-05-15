@@ -89,11 +89,8 @@ func NewNodeAddress(address string) (NodeAddress, error) {
 	portBytes := make([]byte, portSize)
 	defaultByteOrder.PutUint16(portBytes, uint16(portNumber))
 
-	buf := bytes.NewBuffer(nil)
-	buf.Write(ip)
-	buf.Write(portBytes)
-
-	copy(addr[:], buf.Bytes())
+	copy(addr[:], ip)
+	copy(addr[ipSize:], portBytes)
 	return addr, nil
 }
 
