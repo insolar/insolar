@@ -605,6 +605,10 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	h.Nodes = s.nodeStorage
 	h.DropModifier = s.dropModifier
 
+	jr := testutils.NewJetReleaserMock(s.T())
+	jr.UnlockMock.Return(nil)
+	h.JetReleaser = jr
+
 	err = h.Init(s.ctx)
 	require.NoError(s.T(), err)
 
