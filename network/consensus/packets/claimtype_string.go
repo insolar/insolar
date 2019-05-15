@@ -10,13 +10,12 @@ func _() {
 	var x [1]struct{}
 	_ = x[TypeNodeJoinClaim-1]
 	_ = x[TypeNodeAnnounceClaim-2]
-	_ = x[TypeNodeViolationBlame-3]
-	_ = x[TypeNodeLeaveClaim-4]
+	_ = x[TypeNodeLeaveClaim-3]
 }
 
-const _ClaimType_name = "TypeNodeJoinClaimTypeNodeAnnounceClaimTypeNodeViolationBlameTypeNodeLeaveClaim"
+const _ClaimType_name = "TypeNodeJoinClaimTypeNodeAnnounceClaimTypeNodeLeaveClaim"
 
-var _ClaimType_index = [...]uint8{0, 17, 38, 60, 78}
+var _ClaimType_index = [...]uint8{0, 17, 38, 56}
 
 func (i ClaimType) String() string {
 	i -= 1
