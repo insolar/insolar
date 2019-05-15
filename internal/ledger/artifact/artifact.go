@@ -41,6 +41,8 @@ type Contract struct {
 // works
 // TODO: move common interface to insolar package
 type Manager interface {
+	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
+
 	RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error)
 	RegisterResult(ctx context.Context, obj, request insolar.Reference, payload []byte) (*insolar.ID, error)
 	ActivateObject(
@@ -68,11 +70,51 @@ type Scope struct {
 	PulseNumber insolar.PulseNumber
 
 	PlatformCryptographyScheme insolar.PlatformCryptographyScheme
-	BlobModifier               blob.Modifier
-	RecordsModifier            object.RecordModifier
+
+	BlobStorage blob.Storage
+
+	RecordModifier object.RecordModifier
+	RecordAccessor object.RecordAccessor
 
 	IndexModifier object.IndexModifier
 	IndexAccessor object.IndexAccessor
+}
+
+func (m *Scope) GetObject(
+	ctx context.Context,
+	head insolar.Reference,
+) (ObjectDescriptor, error) {
+	idx, err := m.IndexAccessor.ForID(ctx, *head.Record())
+	if err != nil {
+		return nil, err
+	}
+
+	rec, err := m.RecordAccessor.ForID(ctx, *idx.LatestState)
+	if err != nil {
+		return nil, err
+	}
+
+	state, ok := rec.Record.(object.State)
+	if !ok {
+		return nil, errors.New("invalid object record")
+	}
+
+	desc := &objectDescriptor{
+		head:         head,
+		state:        *idx.LatestState,
+		prototype:    state.GetImage(),
+		isPrototype:  state.GetIsPrototype(),
+		childPointer: idx.ChildPointer,
+		parent:       idx.Parent,
+	}
+	if state.GetMemory() != nil {
+		b, err := m.BlobStorage.ForID(ctx, *state.GetMemory())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to fetch blob")
+		}
+		desc.memory = b.Value
+	}
+	return desc, nil
 }
 
 func (m *Scope) RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error) {
@@ -231,12 +273,12 @@ func (m *Scope) setRecord(ctx context.Context, rec record.VirtualRecord) (*insol
 		Record: rec,
 		JetID:  insolar.ZeroJetID,
 	}
-	return id, m.RecordsModifier.Set(ctx, *id, matRec)
+	return id, m.RecordModifier.Set(ctx, *id, matRec)
 }
 
 func (m *Scope) setBlob(ctx context.Context, memory []byte) (*insolar.ID, error) {
 	blobID := object.CalculateIDForBlob(m.PlatformCryptographyScheme, m.PulseNumber, memory)
-	err := m.BlobModifier.Set(
+	err := m.BlobStorage.Set(
 		ctx,
 		*blobID,
 		blob.Blob{
