@@ -16,8 +16,13 @@
 
 package thread
 
+import (
+	"sync"
+)
+
 type Controller struct {
-	cancel chan struct{}
+	cancelMu sync.Mutex
+	cancel   chan struct{}
 }
 
 func NewController() *Controller {
@@ -29,6 +34,9 @@ func (c *Controller) Cancel() <-chan struct{} {
 }
 
 func (c *Controller) Pulse() {
+	c.cancelMu.Lock()
+	defer c.cancelMu.Unlock()
+
 	toClose := c.cancel
 	c.cancel = make(chan struct{})
 	close(toClose)

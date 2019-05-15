@@ -51,32 +51,40 @@
 package servicenetwork
 
 import (
+	"bytes"
 	"context"
 	"strconv"
 	"sync"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/consensus/phases"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/hostnetwork"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/network/routing"
+	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/utils"
 )
+
+const deliverWatermillMsg = "ServiceNetwork.processIncoming"
+
+var ack = []byte{1}
 
 // ServiceNetwork is facade for network.
 type ServiceNetwork struct {
@@ -88,10 +96,12 @@ type ServiceNetwork struct {
 	PulseManager        insolar.PulseManager        `inject:""`
 	PulseAccessor       pulse.Accessor              `inject:""`
 	CryptographyService insolar.CryptographyService `inject:""`
-	NetworkCoordinator  insolar.NetworkCoordinator  `inject:""`
 	NodeKeeper          network.NodeKeeper          `inject:""`
 	TerminationHandler  insolar.TerminationHandler  `inject:""`
 	GIL                 insolar.GlobalInsolarLock   `inject:""`
+	Pub                 message.Publisher           `inject:""`
+	MessageBus          insolar.MessageBus          `inject:""`
+	ContractRequester   insolar.ContractRequester   `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
@@ -125,8 +135,8 @@ func (n *ServiceNetwork) SetGateway(g network.Gateway) {
 	n.gateway = g
 }
 
-func (nk *ServiceNetwork) GetState() insolar.NetworkState {
-	return nk.Gateway().GetState()
+func (n *ServiceNetwork) GetState() insolar.NetworkState {
+	return n.Gateway().GetState()
 }
 
 // SendMessage sends a message from MessageBus.
@@ -144,20 +154,14 @@ func (n *ServiceNetwork) RemoteProcedureRegister(name string, method insolar.Rem
 	n.Controller.RemoteProcedureRegister(name, method)
 }
 
-// Start implements component.Initer
+// Init implements component.Initer
 func (n *ServiceNetwork) Init(ctx context.Context) error {
-	hostNetwork, err := hostnetwork.NewHostNetwork(n.cfg, n.CertificateManager.GetCertificate().GetNodeRef().String())
+	hostNetwork, err := hostnetwork.NewHostNetwork(n.CertificateManager.GetCertificate().GetNodeRef().String())
 	if err != nil {
-		return errors.Wrap(err, "Failed to create internal transport")
-	}
-
-	consensusAddress := n.cfg.Host.Transport.Address
-	if n.cfg.Host.Transport.FixedPublicAddress == "" {
-		consensusAddress = n.NodeKeeper.GetOrigin().Address()
+		return errors.Wrap(err, "Failed to create hostnetwork")
 	}
 
 	consensusNetwork, err := hostnetwork.NewConsensusNetwork(
-		consensusAddress,
 		n.CertificateManager.GetCertificate().GetNodeRef().String(),
 		n.NodeKeeper.GetOrigin().ShortID(),
 	)
@@ -173,6 +177,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 	n.cm.Inject(n,
 		&routing.Table{},
 		cert,
+		transport.NewFactory(n.cfg.Host.Transport),
 		hostNetwork,
 		// use flaky network instead of hostNetwork to imitate network delays
 		// NewFlakyNetwork(hostNetwork),
@@ -182,7 +187,7 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		phases.NewFirstPhase(),
 		phases.NewSecondPhase(),
 		phases.NewThirdPhase(),
-		phases.NewPhaseManager(),
+		phases.NewPhaseManager(n.cfg.Service.Consensus),
 		bootstrap.NewSessionManager(),
 		controller.NewNetworkController(),
 		controller.NewRPCController(options),
@@ -197,8 +202,13 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		return errors.Wrap(err, "Failed to init internal components")
 	}
 
-	n.gateway = gateway.NewNoNetwork(n, n.GIL, n.NodeKeeper)
-	n.gateway.Run(ctx)
+	if n.Gateway() == nil {
+		n.gateway = gateway.NewNoNetwork(n, n.GIL, n.NodeKeeper, n.ContractRequester,
+			n.CryptographyService, n.MessageBus, n.CertificateManager)
+		n.gateway.Run(ctx)
+		inslogger.FromContext(ctx).Debug("Launch network gateway")
+
+	}
 
 	return nil
 }
@@ -218,6 +228,8 @@ func (n *ServiceNetwork) Start(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "Failed to bootstrap network")
 	}
+
+	n.RemoteProcedureRegister(deliverWatermillMsg, n.processIncoming)
 
 	logger.Info("Service network started")
 	return nil
@@ -250,7 +262,7 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 }
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse) {
-	currentTime := time.Now()
+	pulseTime := time.Unix(0, newPulse.PulseTimestamp)
 
 	n.lock.Lock()
 	defer n.lock.Unlock()
@@ -279,7 +291,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	if n.NodeKeeper.GetConsensusInfo().IsJoiner() {
 		// do not set pulse because otherwise we will set invalid active list
 		// pass consensus, prepare valid active list and set it on next pulse
-		go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
+		go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
 		return
 	}
 
@@ -308,7 +320,7 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	}
 	logger.Infof("Set new current pulse number: %d", newPulse.PulseNumber)
 
-	go n.phaseManagerOnPulse(ctx, newPulse, currentTime)
+	go n.phaseManagerOnPulse(ctx, newPulse, pulseTime)
 }
 
 func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {
@@ -318,6 +330,11 @@ func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {
 
 func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insolar.Pulse, pulseStartTime time.Time) {
 	logger := inslogger.FromContext(ctx)
+
+	if !n.cfg.Service.ConsensusEnabled {
+		logger.Warn("Consensus is disabled")
+		return
+	}
 
 	if err := n.PhaseManager.OnPulse(ctx, &newPulse, pulseStartTime, n.connectToNewNetwork); err != nil {
 		errMsg := "Failed to pass consensus: " + err.Error()
@@ -341,6 +358,40 @@ func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, address string
 	}
 }
 
+// SendMessageHandler async sends message with confirmation of delivery.
+func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Message, error) {
+	receiver := msg.Metadata.Get(bus.MetaReceiver)
+	if receiver == "" {
+		return nil, errors.New("Receiver in msg.Metadata not set")
+	}
+	ref, err := insolar.NewReferenceFromBase58(receiver)
+	if err != nil {
+		return nil, errors.Wrap(err, "incorrect Receiver in msg.Metadata")
+	}
+	node := *ref
+	// Short path when sending to self node. Skip serialization
+	origin := n.NodeKeeper.GetOrigin()
+	if node.Equal(origin.ID()) {
+		err := n.Pub.Publish(bus.TopicIncoming, msg)
+		if err != nil {
+			return nil, errors.Wrap(err, "error while publish msg to TopicIncoming")
+		}
+		return nil, nil
+	}
+	msgBytes, err := messageToBytes(msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "error while converting message to bytes")
+	}
+	res, err := n.Controller.SendBytes(msg.Context(), node, deliverWatermillMsg, msgBytes)
+	if err != nil {
+		return nil, errors.Wrap(err, "error while sending watermillMsg to controller")
+	}
+	if !bytes.Equal(res, ack) {
+		return nil, errors.Errorf("reply is not ack: %s", res)
+	}
+	return nil, nil
+}
+
 func getNode(address string, nodes []insolar.DiscoveryNode) (insolar.DiscoveryNode, error) {
 	for _, node := range nodes {
 		if node.GetHost() == address {
@@ -352,4 +403,29 @@ func getNode(address string, nodes []insolar.DiscoveryNode) (insolar.DiscoveryNo
 
 func isNextPulse(currentPulse, newPulse *insolar.Pulse) bool {
 	return newPulse.PulseNumber > currentPulse.PulseNumber && newPulse.PulseNumber >= currentPulse.NextPulseNumber
+}
+
+func (n *ServiceNetwork) processIncoming(ctx context.Context, args [][]byte) ([]byte, error) {
+	logger := inslogger.FromContext(ctx)
+	if len(args) < 1 {
+		err := errors.New("need exactly one argument when n.processIncoming()")
+		logger.Error(err)
+		return nil, err
+	}
+	msg, err := deserializeMessage(bytes.NewBuffer(args[0]))
+	if err != nil {
+		err = errors.Wrap(err, "error while deserialize msg from buffer")
+		logger.Error(err)
+		return nil, err
+	}
+	// TODO: check pulse here
+
+	err = n.Pub.Publish(bus.TopicIncoming, msg)
+	if err != nil {
+		err = errors.Wrap(err, "error while publish msg to TopicIncoming")
+		logger.Error(err)
+		return nil, err
+	}
+
+	return ack, nil
 }

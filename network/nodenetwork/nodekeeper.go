@@ -56,21 +56,22 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/insolar/insolar/network/consensus"
+	"github.com/insolar/insolar/network/hostnetwork/resolver"
 	"github.com/insolar/insolar/network/node"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+
 	"github.com/insolar/insolar/configuration"
-	consensusMetrics "github.com/insolar/insolar/consensus"
-	consensus "github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
-	"github.com/insolar/insolar/network/transport"
+	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/version"
-	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
 )
 
 // NewNodeNetwork create active node component
@@ -112,7 +113,7 @@ func resolveAddress(configuration configuration.Transport) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	address, err := transport.Resolve(configuration.FixedPublicAddress, addr.String())
+	address, err := resolver.Resolve(configuration.FixedPublicAddress, addr.String())
 	if err != nil {
 		return "", err
 	}
@@ -126,7 +127,7 @@ func NewNodeKeeper(origin insolar.NetworkNode) network.NodeKeeper {
 		claimQueue:    newClaimQueue(),
 		consensusInfo: newConsensusInfo(),
 		syncNodes:     make([]insolar.NetworkNode, 0),
-		syncClaims:    make([]consensus.ReferendumClaim, 0),
+		syncClaims:    make([]packets.ReferendumClaim, 0),
 	}
 	nk.SetInitialSnapshot([]insolar.NetworkNode{})
 	return nk
@@ -146,7 +147,7 @@ type nodekeeper struct {
 
 	syncLock   sync.Mutex
 	syncNodes  []insolar.NetworkNode
-	syncClaims []consensus.ReferendumClaim
+	syncClaims []packets.ReferendumClaim
 
 	bootstrapped uint32
 
@@ -174,7 +175,7 @@ func (nk *nodekeeper) SetInitialSnapshot(nodes []insolar.NetworkNode) {
 
 	nk.syncLock.Lock()
 	nk.syncNodes = nk.accessor.GetActiveNodes()
-	nk.syncClaims = make([]consensus.ReferendumClaim, 0)
+	nk.syncClaims = make([]packets.ReferendumClaim, 0)
 	nk.syncLock.Unlock()
 }
 
@@ -235,11 +236,11 @@ func (nk *nodekeeper) GetWorkingNodes() []insolar.NetworkNode {
 	return nk.GetAccessor().GetWorkingNodes()
 }
 
-func (nk *nodekeeper) GetOriginJoinClaim() (*consensus.NodeJoinClaim, error) {
+func (nk *nodekeeper) GetOriginJoinClaim() (*packets.NodeJoinClaim, error) {
 	return nk.nodeToSignedClaim()
 }
 
-func (nk *nodekeeper) GetOriginAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error) {
+func (nk *nodekeeper) GetOriginAnnounceClaim(mapper packets.BitSetMapper) (*packets.NodeAnnounceClaim, error) {
 	return nk.nodeToAnnounceClaim(mapper)
 }
 
@@ -247,7 +248,7 @@ func (nk *nodekeeper) GetClaimQueue() network.ClaimQueue {
 	return nk.claimQueue
 }
 
-func (nk *nodekeeper) Sync(ctx context.Context, nodes []insolar.NetworkNode, claims []consensus.ReferendumClaim) error {
+func (nk *nodekeeper) Sync(ctx context.Context, nodes []insolar.NetworkNode, claims []packets.ReferendumClaim) error {
 	nk.syncLock.Lock()
 	defer nk.syncLock.Unlock()
 
@@ -301,7 +302,7 @@ func (nk *nodekeeper) MoveSyncToActive(ctx context.Context, number insolar.Pulse
 
 	nk.snapshot = node.NewSnapshot(number, mergeResult.ActiveList)
 	nk.accessor = node.NewAccessor(nk.snapshot)
-	stats.Record(ctx, consensusMetrics.ActiveNodes.M(int64(len(nk.accessor.GetActiveNodes()))))
+	stats.Record(ctx, consensus.ActiveNodes.M(int64(len(nk.accessor.GetActiveNodes()))))
 	nk.consensusInfo.Flush(mergeResult.NodesJoinedDuringPrevPulse)
 	nk.gracefulStopIfNeeded(ctx)
 	return nil
@@ -317,8 +318,8 @@ func (nk *nodekeeper) shouldExit(foundOrigin bool) bool {
 	return !foundOrigin && nk.origin.GetState() == insolar.NodeReady && len(nk.GetAccessor().GetActiveNodes()) != 0
 }
 
-func (nk *nodekeeper) nodeToSignedClaim() (*consensus.NodeJoinClaim, error) {
-	claim, err := consensus.NodeToClaim(nk.origin)
+func (nk *nodekeeper) nodeToSignedClaim() (*packets.NodeJoinClaim, error) {
+	claim, err := packets.NodeToClaim(nk.origin)
 	if err != nil {
 		return nil, err
 	}
@@ -332,13 +333,13 @@ func (nk *nodekeeper) nodeToSignedClaim() (*consensus.NodeJoinClaim, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ nodeToSignedClaim ] failed to sign a claim")
 	}
-	copy(claim.Signature[:], sign[:consensus.SignatureLength])
+	copy(claim.Signature[:], sign[:packets.SignatureLength])
 	return claim, nil
 }
 
-func (nk *nodekeeper) nodeToAnnounceClaim(mapper consensus.BitSetMapper) (*consensus.NodeAnnounceClaim, error) {
-	claim := consensus.NodeAnnounceClaim{}
-	joinClaim, err := consensus.NodeToClaim(nk.origin)
+func (nk *nodekeeper) nodeToAnnounceClaim(mapper packets.BitSetMapper) (*packets.NodeAnnounceClaim, error) {
+	claim := packets.NodeAnnounceClaim{}
+	joinClaim, err := packets.NodeToClaim(nk.origin)
 	if err != nil {
 		return nil, err
 	}
@@ -352,7 +353,7 @@ func (nk *nodekeeper) nodeToAnnounceClaim(mapper consensus.BitSetMapper) (*conse
 	claim.BitSetMapper = mapper
 	hash := nk.GetCloudHash()
 	if hash == nil {
-		hash = make([]byte, consensus.HashLength)
+		hash = make([]byte, packets.HashLength)
 	}
 	claim.SetCloudHash(hash)
 	return &claim, nil

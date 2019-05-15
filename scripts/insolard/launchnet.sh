@@ -9,11 +9,14 @@ LAUNCHNET_BASE_DIR=${LAUNCHNET_BASE_DIR:-"${INSOLAR_ARTIFACTS_DIR}launchnet"}/
 INSOLAR_LOG_FORMATTER=${INSOLAR_LOG_FORMATTER:-"text"}
 INSOLAR_LOG_LEVEL=${INSOLAR_LOG_LEVEL:-"debug"}
 GORUND_LOG_LEVEL=${GORUND_LOG_LEVEL:-${INSOLAR_LOG_LEVEL}}
+# we can skip build binaries (by default in CI environment they skips)
+SKIP_BUILD=${SKIP_BUILD:-${CI_ENV}}
 
 # predefined/dependent environment variables
 
 LAUNCHNET_LOGS_DIR=${LAUNCHNET_BASE_DIR}logs/
 DISCOVERY_NODE_LOGS=${LAUNCHNET_LOGS_DIR}discoverynodes/
+INSGORUND_LOGS=${LAUNCHNET_LOGS_DIR}insgorund/
 
 BIN_DIR=bin
 INSOLARD=$BIN_DIR/insolard
@@ -33,26 +36,25 @@ SCRIPTS_DIR=scripts/insolard/
 CONFIGS_DIR=${LAUNCHNET_BASE_DIR}configs
 
 KEYS_FILE=$CONFIGS_DIR/bootstrap_keys.json
-ROOT_MEMBER_KEYS_FILE=$CONFIGS_DIR/root_member_keys.json
+ROOT_MEMBER_KEYS_FILE=${CONFIGS_DIR}/root_member_keys.json
 
 # TODO: use only heavy matereal data dir
 DISCOVERY_NODES_DATA=${LAUNCHNET_BASE_DIR}discoverynodes/
 
 DISCOVERY_NODES_HEAVY_DATA=${DISCOVERY_NODES_DATA}1/
 
-NODES_DATA=${LAUNCHNET_BASE_DIR}nodes/
-INSGORUND_DATA=${LAUNCHNET_BASE_DIR}insgorund/
+GENESIS_TEMPLATE=${SCRIPTS_DIR}bootstrap/genesis_template.yaml
+BOOTSTRAP_GENESIS_CONFIG=${LAUNCHNET_BASE_DIR}genesis.yaml
+BOOTSTRAP_INSOLARD_CONFIG=${LAUNCHNET_BASE_DIR}insolard.yaml
 
-GENESIS_TEMPLATE=${SCRIPTS_DIR}genesis_template.yaml
-GENESIS_CONFIG=${LAUNCHNET_BASE_DIR}genesis.yaml
-INSOLARD_CONFIG=${LAUNCHNET_BASE_DIR}insolard.yaml
-
-PULSEWATCHER_CONFIG=${LAUNCHNET_BASE_DIR}/pulsewatcher.yaml
+PULSEWATCHER_CONFIG=${LAUNCHNET_BASE_DIR}pulsewatcher.yaml
 
 INSGORUND_PORT_FILE=$CONFIGS_DIR/insgorund_ports.txt
 
-export INSOLAR_LOG_FORMATTER
-export INSOLAR_LOG_LEVEL
+set -x
+export INSOLAR_LOG_FORMATTER=${INSOLAR_LOG_FORMATTER}
+export INSOLAR_LOG_LEVEL=${INSOLAR_LOG_LEVEL}
+{ set +x; } 2>/dev/null
 
 NUM_DISCOVERY_NODES=$(sed '/^nodes:/ q' $GENESIS_TEMPLATE | grep "host:" | grep -v "#" | wc -l | tr -d '[:space:]')
 NUM_NODES=$(sed -n '/^nodes:/,$p' $GENESIS_TEMPLATE | grep "host:" | grep -v "#" | wc -l | tr -d '[:space:]')
@@ -60,7 +62,7 @@ echo "discovery+other nodes: ${NUM_DISCOVERY_NODES}+${NUM_NODES}"
 
 for i in `seq 1 $NUM_DISCOVERY_NODES`
 do
-    DISCOVERY_NODE_DIRS+=($DISCOVERY_NODES_DATA/$i)
+    DISCOVERY_NODE_DIRS+=(${DISCOVERY_NODES_DATA}${i})
 done
 
 
@@ -77,7 +79,6 @@ kill_port()
 
 stop_listening()
 {
-#    set -x
     echo "stop_listening(): starts ..."
     stop_insgorund=$1
     ports="$ports 58090" # Pulsar
@@ -96,15 +97,15 @@ stop_listening()
         ports="$ports $gorund_ports"
     fi
 
-    transport_ports=$( grep "host:" $GENESIS_CONFIG | grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
+    transport_ports=$( grep "host:" ${BOOTSTRAP_GENESIS_CONFIG} | grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
     ports="$ports $transport_ports"
 
     for port in $ports
     do
-        echo "kill port '$port' owner"
-        kill_port $port &
+        echo "killing process using port '$port'"
+        kill_port $port
     done
-    wait
+
     echo "stop_listening() end."
 }
 
@@ -114,8 +115,6 @@ clear_dirs()
     set -x
     rm -rfv ${LEDGER_DIR}
     rm -rfv ${DISCOVERY_NODES_DATA}
-    rm -rfv ${INSGORUND_DATA}
-    rm -rfv ${NODES_DATA}
     rm -rfv ${LAUNCHNET_LOGS_DIR}
     { set +x; } 2>/dev/null
 
@@ -132,10 +131,10 @@ create_required_dirs()
     echo "create_required_dirs() starts ..."
     set -x
     mkdir -p $LEDGER_DIR
-    mkdir -p $DISCOVERY_NODES_DATA/certs
-    mkdir -p $INSGORUND_DATA
+    mkdir -p ${DISCOVERY_NODES_DATA}certs
     mkdir -p $CONFIGS_DIR
 
+    mkdir -p ${INSGORUND_LOGS}
     touch $INSGORUND_PORT_FILE
     { set +x; } 2>/dev/null
 
@@ -233,7 +232,6 @@ process_input_params()
         G)
             NO_GENESIS_LOG_REDIRECT=1
             NO_STOP_LISTENING_ON_PREPARE=${NO_STOP_LISTENING_ON_PREPARE:-"1"}
-            SKIP_BUILD=${SKIP_BUILD:-"1"}
             genesis
             exit 0
             ;;
@@ -261,16 +259,21 @@ launch_insgorund()
         listen_port=$( echo "$line" | awk '{print $1}' )
         rpc_port=$( echo "$line" | awk '{print $2}' )
 
-        $INSGORUND -l $host:$listen_port --rpc $host:$rpc_port --log-level=$GORUND_LOG_LEVEL --metrics :$metrics_port &> $INSGORUND_DATA$rpc_port.log &
+        ${INSGORUND} \
+            -l ${host}:${listen_port} \
+            --rpc ${host}:${rpc_port} \
+            --log-level=${GORUND_LOG_LEVEL} \
+            --metrics :${metrics_port} \
+            &> ${INSGORUND_LOGS}${rpc_port}.log &
 
-    done < "$INSGORUND_PORT_FILE"
+    done < "${INSGORUND_PORT_FILE}"
 }
 
 copy_data()
 {
     echo "copy data dir to heavy"
     set -x
-    mv ${LEDGER_DIR}/ ${DISCOVERY_NODES_HEAVY_DATA}/data
+    mv ${LEDGER_DIR}/ ${DISCOVERY_NODES_HEAVY_DATA}data
     { set +x; } 2>/dev/null
 }
 
@@ -282,7 +285,7 @@ copy_discovery_certs()
     do
         i=$((i + 1))
         set -x
-        cp -v $DISCOVERY_NODES_DATA/certs/discovery_cert_$i.json $node/cert.json
+        cp -v ${DISCOVERY_NODES_DATA}certs/discovery_cert_$i.json ${node}/cert.json
         { set +x; } 2>/dev/null
     done
     echo "copy_certs() end."
@@ -309,14 +312,14 @@ genesis()
         echo "build binaries"
         build_binaries
     else
-        echo "SKIP: build binaries"
+        echo "SKIP: build binaries (SKIP_BUILD=$SKIP_BUILD)"
     fi
     generate_bootstrap_keys
     generate_root_member_keys
     generate_insolard_configs
 
     echo "start genesis ..."
-    CMD="$INSOLARD --config $INSOLARD_CONFIG --genesis $GENESIS_CONFIG --keyout $DISCOVERY_NODES_DATA/certs"
+    CMD="$INSOLARD --config ${BOOTSTRAP_INSOLARD_CONFIG} --genesis ${BOOTSTRAP_GENESIS_CONFIG} --keyout ${DISCOVERY_NODES_DATA}certs"
 
     GENESIS_EXIT_CODE=0
     set +e
@@ -372,7 +375,7 @@ echo "start discovery nodes ..."
 for i in `seq 1 $NUM_DISCOVERY_NODES`
 do
     set -x
-    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD \
+    $INSOLARD \
         --config ${DISCOVERY_NODES_DATA}${i}/insolard.yaml \
         --trace &> ${DISCOVERY_NODE_LOGS}${i}/output.log &
     { set +x; } 2>/dev/null

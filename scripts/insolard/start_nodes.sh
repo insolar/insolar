@@ -22,10 +22,8 @@ GENESIS_CONFIG=${LAUNCHNET_BASE_DIR}genesis.yaml
 ROOT_MEMBER_KEYS_FILE=${LAUNCHNET_BASE_DIR}configs/root_member_keys.json
 #GENERATED_CONFIGS_DIR=${LAUNCHNET_BASE_DIR}/configs/generated_configs/nodes
 
-insolar_log_level=Debug
-
 NUM_NODES=$(sed -n '/^nodes:/,$p' $GENESIS_CONFIG | grep "host:" | grep -cv "#" )
-ROLES=($(sed -n '/^nodes:/,$p' ./scripts/insolard/genesis_template.yaml | grep "role" | cut -d: -f2))
+ROLES=($(sed -n '/^nodes:/,$p' ./scripts/insolard/bootstrap/genesis_template.yaml | grep "role" | cut -d: -f2))
 (>&2 echo "ROLES=$ROLES")
 (>&2 echo "NUM_NODES=$NUM_NODES")
 #exit
@@ -44,7 +42,9 @@ create_nodes_dir()
 
 clear_dirs()
 {
-    echo "clear nodes dir"
+    echo "clear nodes dirs"
+    rm -rf $NODES_DATA/certs/
+
     for i in `seq 1 $NUM_NODES`
     do
         set -x
@@ -56,7 +56,7 @@ clear_dirs()
 generate_nodes_certs()
 {
     echo "generate_nodes_certs() starts ..."
-    mkdir $NODES_DATA/certs/
+    mkdir -p $NODES_DATA/certs/
     for i in `seq 1 $NUM_NODES`
     do
         role="${ROLES[$i]//\"}"
@@ -79,11 +79,11 @@ generate_nodes_certs
 for i in `seq 1 $NUM_NODES`
 do
     set -x
-    INSOLAR_LOG_LEVEL=$insolar_log_level $INSOLARD_CMD \
+    $INSOLARD_CMD \
         --config ${NODES_DATA}${i}/insolard.yaml \
         --trace &> ${NODES_LOGS}${i}/output.log &
     { set +x; } 2>/dev/null
     echo "NODE $i STARTED in background"
 done
 
-printf "nodes started ... \n"
+echo "nodes started ..."

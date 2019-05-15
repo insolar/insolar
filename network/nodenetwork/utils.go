@@ -51,10 +51,11 @@
 package nodenetwork
 
 import (
-	consensus "github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/network/node"
 	"github.com/pkg/errors"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/node"
 )
 
 type MergedListCopy struct {
@@ -71,7 +72,7 @@ func copyActiveNodes(nodes []insolar.NetworkNode) map[insolar.Reference]insolar.
 	return result
 }
 
-func GetMergedCopy(nodes []insolar.NetworkNode, claims []consensus.ReferendumClaim) (*MergedListCopy, error) {
+func GetMergedCopy(nodes []insolar.NetworkNode, claims []packets.ReferendumClaim) (*MergedListCopy, error) {
 	nodesMap := copyActiveNodes(nodes)
 
 	var nodesJoinedDuringPrevPulse bool
@@ -89,11 +90,11 @@ func GetMergedCopy(nodes []insolar.NetworkNode, claims []consensus.ReferendumCla
 	}, nil
 }
 
-func mergeClaim(nodes map[insolar.Reference]insolar.NetworkNode, claim consensus.ReferendumClaim) (bool, error) {
+func mergeClaim(nodes map[insolar.Reference]insolar.NetworkNode, claim packets.ReferendumClaim) (bool, error) {
 	isJoinClaim := false
 
 	switch t := claim.(type) {
-	case *consensus.NodeJoinClaim:
+	case *packets.NodeJoinClaim:
 		isJoinClaim = true
 		// TODO: fix version
 		n, err := node.ClaimToNode("", t)
@@ -102,7 +103,7 @@ func mergeClaim(nodes map[insolar.Reference]insolar.NetworkNode, claim consensus
 		}
 		n.(node.MutableNode).SetState(insolar.NodePending)
 		nodes[n.ID()] = n
-	case *consensus.NodeLeaveClaim:
+	case *packets.NodeLeaveClaim:
 		if nodes[t.NodeID] == nil {
 			break
 		}

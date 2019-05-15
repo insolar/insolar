@@ -27,19 +27,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/insolar/insolar/log"
-
 	"github.com/insolar/insolar/bootstrap/genesis"
 	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar/defaults"
+	"github.com/insolar/insolar/log"
 	"github.com/spf13/cobra"
 	yaml "gopkg.in/yaml.v2"
 )
 
 func baseDir() string {
-	artifactsDir := envVarWithDefault("INSOLAR_ARTIFACTS_DIR", ".artifacts")
-	launchnedArtifactsDir := filepath.Join(artifactsDir, "launchnet")
-	return envVarWithDefault("LAUNCHNET_BASE_DIR", launchnedArtifactsDir)
+	return defaults.LaunchnetDir()
 }
 
 var (
@@ -55,14 +53,16 @@ var (
 	prometheusConfigTmpl = "scripts/prom/server.yml.tmpl"
 	prometheusFileName   = "prometheus.yaml"
 
-	genesisConfigTmpl = "scripts/insolard/genesis_template.yaml"
+	genesisConfigTmpl = "scripts/insolard/bootstrap/genesis_template.yaml"
 	genesisFileName   = withBaseDir("genesis.yaml")
 
-	insolardConfigTmpl = "scripts/insolard/insolard_template.yaml"
-	insolardFileName   = withBaseDir("insolard.yaml")
+	bootstrapInsolardConfigTmpl = "scripts/insolard/bootstrap/insolard_template.yaml"
+	bootstrapInsolardFileName   = withBaseDir("insolard.yaml")
 
 	pulsardConfigTmpl = "scripts/insolard/pulsar_template.yaml"
 	pulsardFileName   = withBaseDir("pulsar.yaml")
+
+	insolardDefaultsConfig = "scripts/insolard/defaults/insolard.yaml"
 )
 
 var (
@@ -116,7 +116,7 @@ func main() {
 	parseInputParams()
 
 	mustMakeDir(outputDir)
-	writeInsloardConfig()
+	writeBootstrapInsolardConfig()
 	writeGenesisConfig()
 
 	genesisConf, err := genesis.ParseGenesisConfig(genesisFileName)
@@ -134,7 +134,8 @@ func main() {
 	// process discovery nodes
 	for index, node := range genesisConf.DiscoveryNodes {
 		nodeIndex := index + 1
-		conf := configuration.NewConfiguration()
+
+		conf := newDefaultInsolardConfig()
 
 		conf.Host.Transport.Address = node.Host
 		conf.Host.Transport.Protocol = "TCP"
@@ -173,7 +174,8 @@ func main() {
 	for index, node := range genesisConf.Nodes {
 		nodeIndex := index + 1
 
-		conf := configuration.NewConfiguration()
+		conf := newDefaultInsolardConfig()
+
 		conf.Host.Transport.Address = node.Host
 		conf.Host.Transport.Protocol = "TCP"
 
@@ -207,7 +209,6 @@ func main() {
 	writeInsolardConfigs(filepath.Join(outputDir, "/discoverynodes"), discoveryNodesConfigs)
 	writeInsolardConfigs(filepath.Join(outputDir, "/nodes"), nodesConfigs)
 	writeGorundPorts(gorundPorts)
-	writeGenesisConfig()
 
 	pulsarConf := &pulsarConfigVars{}
 	pulsarConf.DataDir = withBaseDir("pulsar_data")
@@ -241,18 +242,26 @@ func writeGenesisConfig() {
 	check("Can't makeFileWithDir: "+genesisFileName, err)
 }
 
-func writeInsloardConfig() {
-	templates, err := template.ParseFiles(insolardConfigTmpl)
-	check("Can't parse template: "+insolardConfigTmpl, err)
+func writeBootstrapInsolardConfig() {
+	templates, err := template.ParseFiles(bootstrapInsolardConfigTmpl)
+	check("Can't parse template: "+bootstrapInsolardConfigTmpl, err)
 
 	var b bytes.Buffer
 	err = templates.Execute(&b, &commonConfigVars{BaseDir: baseDir()})
-	check("Can't process template: "+insolardConfigTmpl, err)
+	check("Can't process template: "+bootstrapInsolardConfigTmpl, err)
 
-	// fmt.Println("insolardFileName:", insolardFileName)
-	// os.Exit(1)
-	err = createFileWithDir(insolardFileName, b.String())
-	check("Can't makeFileWithDir: "+insolardFileName, err)
+	err = createFileWithDir(bootstrapInsolardFileName, b.String())
+	check("Can't makeFileWithDir: "+bootstrapInsolardFileName, err)
+}
+
+var defaultInsloardConf *configuration.Configuration
+
+func newDefaultInsolardConfig() configuration.Configuration {
+	if defaultInsloardConf == nil {
+		holder := configuration.NewHolderWithFilePaths(insolardDefaultsConfig).MustInit(true)
+		defaultInsloardConf = &holder.Configuration
+	}
+	return *defaultInsloardConf
 }
 
 type pulsarConfigVars struct {
@@ -321,14 +330,6 @@ func mustMakeDir(dir string) {
 	err := os.MkdirAll(dir, 0775)
 	check("couldn't create directory "+dir, err)
 	fmt.Println("generate_insolar_configs.go: creates dir", dir)
-}
-
-func envVarWithDefault(name string, defaultValue string) string {
-	value := os.Getenv(name)
-	if value != "" {
-		return value
-	}
-	return defaultValue
 }
 
 func withBaseDir(subpath string) string {

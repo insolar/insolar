@@ -72,7 +72,7 @@ Usage:
 	}
 
 	select {
-	case response := <-future.Result():
+	case response := <-future.Response():
 		// Channel was closed
 		if response == nil {
 			panic("chanel closed unexpectedly")
