@@ -65,8 +65,8 @@ type ClaimType uint8
 const (
 	TypeNodeJoinClaim      = ClaimType(1)
 	TypeNodeAnnounceClaim  = ClaimType(2)
-	TypeNodeLeaveClaim     = ClaimType(4)
-	TypeChangeNetworkClaim = ClaimType(5)
+	TypeNodeLeaveClaim     = ClaimType(3)
+	TypeChangeNetworkClaim = ClaimType(4)
 )
 
 const claimHeaderSize = 2
