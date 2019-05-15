@@ -117,13 +117,13 @@ func NewMessageHandler(
 		SetRecord: func(p *proc.SetRecord) {
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 			p.Dep.RecordModifier = h.RecordModifier
-			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.PlatformCryptographyScheme = h.PCS
 			p.Dep.PendingRequestsLimit = h.conf.PendingRequestsLimit
 		},
 		SetBlob: func(p *proc.SetBlob) {
 			p.Dep.BlobAccessor = h.BlobAccessor
 			p.Dep.BlobModifier = h.BlobModifier
-			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.PlatformCryptographyScheme = h.PCS
 		},
 		SendObject: func(p *proc.SendObject) {
 			p.Dep.Jets = h.JetStorage
@@ -148,7 +148,7 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.BlobModifier = h.BlobModifier
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
-			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.PlatformCryptographyScheme = h.PCS
 			p.Dep.IDLocker = h.IDLocker
 			p.Dep.IndexStateModifier = h.IndexStateModifier
 			p.Dep.IndexStorage = h.IndexStorage

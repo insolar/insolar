@@ -58,29 +58,33 @@ func (p *SetRecord) Proceed(ctx context.Context) error {
 }
 
 func (p *SetRecord) reply(ctx context.Context) bus.Reply {
-	virtRec, err := object.DecodeVirtual(p.record)
+	virtRec := record.Virtual{}
+	err := virtRec.Unmarshal(p.record)
 	if err != nil {
 		return bus.Reply{Err: errors.Wrap(err, "can't deserialize record")}
 	}
 
-	calculatedID := object.NewRecordIDFromRecord(p.Dep.PlatformCryptographyScheme, flow.Pulse(ctx), virtRec)
+	hash := record.HashVirtual(p.Dep.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	calculatedID := insolar.NewID(flow.Pulse(ctx), hash)
 
-	switch r := virtRec.(type) {
-	case object.Request:
+	concrete := record.Unwrap(&virtRec)
+	switch r := concrete.(type) {
+	case *record.Request:
 		if p.Dep.RecentStorageProvider.Count() > p.Dep.PendingRequestsLimit {
 			return bus.Reply{Reply: &reply.Error{ErrType: reply.ErrTooManyPendingRequests}}
 		}
 		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
 		recentStorage.AddPendingRequest(ctx, r.GetObject(), *calculatedID)
-	case *object.ResultRecord:
+	case *record.Result:
 		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 	}
 
-	id := object.NewRecordIDFromRecord(p.Dep.PlatformCryptographyScheme, flow.Pulse(ctx), virtRec)
-	rec := record.MaterialRecord{
-		Record: virtRec,
-		JetID:  p.jet,
+	hash = record.HashVirtual(p.Dep.PlatformCryptographyScheme.ReferenceHasher(), virtRec)
+	id := insolar.NewID(flow.Pulse(ctx), hash)
+	rec := record.Material{
+		Virtual: &virtRec,
+		JetID:   p.jet,
 	}
 
 	err = p.Dep.RecordModifier.Set(ctx, *id, rec)

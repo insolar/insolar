@@ -648,6 +648,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	virtRec := record.Wrap(req)
 	hash := record.HashVirtual(s.scheme.ReferenceHasher(), virtRec)
 	reqID := insolar.NewID(insolar.FirstPulseNumber, hash)
+
 	rec := record.Material{
 		Virtual: &virtRec,
 		JetID:   insolar.JetID(jetID),
@@ -668,6 +669,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	res := <-replyTo
 	reqReply, ok := (res.Reply).(*reply.Request)
 	require.True(s.T(), ok)
+
 	vRec := record.Virtual{}
 	err = vRec.Unmarshal(reqReply.Record)
 	require.NoError(s.T(), err)

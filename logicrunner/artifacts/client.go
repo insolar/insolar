@@ -845,7 +845,7 @@ func (m *client) setRecord(
 		m.DefaultBus.Send,
 		messagebus.RetryIncorrectPulse(),
 		messagebus.RetryJetSender(m.JetStorage),
-		)
+	)
 	genericReply, err := sender(ctx, &message.SetRecord{
 		Record:    data,
 		TargetRef: target,
@@ -905,7 +905,7 @@ func (m *client) sendUpdateObject(
 		m.DefaultBus.Send,
 		messagebus.RetryIncorrectPulse(),
 		messagebus.RetryJetSender(m.JetStorage),
-		)
+	)
 	genericReply, err := sender(
 		ctx,
 		&message.UpdateObject{
@@ -943,7 +943,7 @@ func (m *client) registerChild(
 		m.DefaultBus.Send,
 		messagebus.RetryIncorrectPulse(),
 		messagebus.RetryJetSender(m.JetStorage),
-		)
+	)
 	genericReact, err := sender(ctx, &message.RegisterChild{
 		Record: data,
 		Parent: parent,
