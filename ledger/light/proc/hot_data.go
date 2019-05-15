@@ -125,7 +125,7 @@ func (p *HotData) process(ctx context.Context) error {
 	}
 
 	p.Dep.JetStorage.Update(
-		ctx, p.msg.PulseNumber, true, insolar.JetID(jetID),
+		ctx, p.msg.PulseNumber, true, jetID,
 	)
 
 	p.Dep.JetFetcher.Release(ctx, jetID, p.msg.PulseNumber)
