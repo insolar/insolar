@@ -45,11 +45,11 @@ func NewGetPendingRequests(dep *proc.Dependencies, rep chan<- bus.Reply, parcel 
 func (s *GetPendingRequests) Present(ctx context.Context, f flow.Flow) error {
 	jet := proc.NewFetchJet(*s.msg.DefaultTarget().Record(), flow.Pulse(ctx), s.replyTo)
 	s.dep.FetchJet(jet)
-	if err := f.Procedure(ctx, jet, true); err != nil {
+	if err := f.Procedure(ctx, jet, false); err != nil {
 		return err
 	}
 
 	getPendingRequests := proc.NewGetPendingRequests(jet.Result.Jet, s.replyTo, s.msg, s.reqPulse)
 	s.dep.GetPendingRequests(getPendingRequests)
-	return f.Procedure(ctx, getPendingRequests, true)
+	return f.Procedure(ctx, getPendingRequests, false)
 }

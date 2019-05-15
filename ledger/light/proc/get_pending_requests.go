@@ -47,11 +47,6 @@ func NewGetPendingRequests(jetID insolar.JetID, replyTo chan<- bus.Reply, msg *m
 }
 
 func (p *GetPendingRequests) Proceed(ctx context.Context) error {
-	p.replyTo <- p.reply(ctx)
-	return nil
-}
-
-func (p *GetPendingRequests) reply(ctx context.Context) bus.Reply {
 	msg := p.msg
 	jetID := insolar.ID(p.jet)
 
@@ -60,7 +55,9 @@ func (p *GetPendingRequests) reply(ctx context.Context) bus.Reply {
 	for _, reqID := range pendingStorage.GetRequestsForObject(*msg.Object.Record()) {
 		if reqID.Pulse() < p.reqPulse {
 			hasPendingRequests = true
+			break
 		}
 	}
-	return bus.Reply{Reply: &reply.HasPendingRequests{Has: hasPendingRequests}}
+	p.replyTo <- bus.Reply{Reply: &reply.HasPendingRequests{Has: hasPendingRequests}}
+	return nil
 }
