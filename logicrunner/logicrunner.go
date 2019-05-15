@@ -158,15 +158,16 @@ type LogicRunner struct {
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
 	stateMutex sync.RWMutex
 
-	FlowDispatcher *dispatcher.Dispatcher
-
 	sock net.Listener
 
 	stopLock   sync.Mutex
 	isStopping bool
 	stopChan   chan struct{}
 
-	router *watermillMsg.Router
+	FlowDispatcher  *dispatcher.Dispatcher
+	innerDispatcher *dispatcher.Dispatcher
+	publisher       watermillMsg.Publisher
+	router          *watermillMsg.Router
 }
 
 // NewLogicRunner is constructor for LogicRunner
@@ -216,7 +217,7 @@ func initHandlers(lr *LogicRunner) error {
 		}
 	}
 
-	innerDispatcher := dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
+	lr.innerDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
 		return innerInitHandle(msg).Present
 	}, func(msg bus.Message) flow.Handle {
 		return innerInitHandle(msg).Present
@@ -231,7 +232,7 @@ func initHandlers(lr *LogicRunner) error {
 		"InnerMsgHandler",
 		InnerMsgTopic,
 		pubSub,
-		innerDispatcher.InnerSubscriber,
+		lr.innerDispatcher.InnerSubscriber,
 	)
 	go func() {
 		if err := router.Run(); err != nil {
@@ -242,6 +243,7 @@ func initHandlers(lr *LogicRunner) error {
 	<-router.Running()
 
 	lr.router = router
+	lr.publisher = pubSub
 
 	return nil
 }
@@ -418,7 +420,7 @@ func (lr *LogicRunner) StartQueueProcessorIfNeeded(
 	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
 	es.QueueProcessorActive = true
 	go lr.ProcessExecutionQueue(ctx, es)
-	go lr.getLedgerPendingRequest(ctx, es)
+	lr.startGetLedgerPendingRequest(ctx, es)
 
 	return nil
 }
@@ -462,7 +464,7 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 		lr.executeOrValidate(current.Context, es, qe.parcel)
 
 		if qe.fromLedger {
-			go lr.getLedgerPendingRequest(ctx, es)
+			lr.startGetLedgerPendingRequest(ctx, es)
 		}
 
 		lr.finishPendingIfNeeded(ctx, es)
@@ -587,25 +589,6 @@ func (lr *LogicRunner) getExecStateFromRef(ctx context.Context, rawRef []byte) *
 	es := os.ExecutionState
 
 	return es
-}
-
-// never call this under es.Lock(), this leads to deadlock
-func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *ExecutionState) {
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getLedgerPendingRequest")
-	defer span.End()
-
-	es.getLedgerPendingMutex.Lock()
-	defer es.getLedgerPendingMutex.Unlock()
-
-	ref := lr.unsafeGetLedgerPendingRequest(ctx, es)
-	if ref == nil {
-		return
-	}
-
-	err := lr.StartQueueProcessorIfNeeded(ctx, es)
-	if err != nil {
-		inslogger.FromContext(ctx).Error("Couldn't start queue: ", err)
-	}
 }
 
 func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *ExecutionState) *insolar.Reference {
@@ -842,6 +825,13 @@ func (lr *LogicRunner) executeConstructorCall(
 	}
 }
 
+func (lr *LogicRunner) startGetLedgerPendingRequest(ctx context.Context, es *ExecutionState) {
+	err := lr.publisher.Publish(InnerMsgTopic, makeWMMessage(ctx, es.Ref.Bytes(), getLedgerPendingRequestMsg))
+	if err != nil {
+		inslogger.FromContext(ctx).Warnf("can't send getLedgerPendingRequestMsg: ", err)
+	}
+}
+
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 	lr.stateMutex.Lock()
 	lr.FlowDispatcher.ChangePulse(ctx, pulse)
@@ -930,7 +920,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 					es.pending = message.NotPending
 					es.objectbody = nil
 					es.LedgerHasMoreRequests = true
-					go lr.getLedgerPendingRequest(ctx, es)
+					lr.startGetLedgerPendingRequest(ctx, es)
 				}
 				es.PendingConfirmed = false
 			}
