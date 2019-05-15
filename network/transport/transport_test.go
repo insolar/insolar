@@ -52,161 +52,154 @@ package transport
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/gob"
+	"io"
+	"log"
 	"testing"
 
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/insolar/insolar/network/hostnetwork/packet"
-	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/network/hostnetwork/resolver"
-
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
+
+	"github.com/insolar/insolar/component"
+	"github.com/insolar/insolar/configuration"
 )
 
-type node struct {
-	config    configuration.Transport
-	transport Transport
-	host      *host.Host
-}
-
-type transportSuite struct {
+type suiteTest struct {
 	suite.Suite
-	node1 node
-	node2 node
+
+	factory1 Factory
+	factory2 Factory
 }
 
-func NewSuite(cfg1 configuration.Transport, cfg2 configuration.Transport) *transportSuite {
-	return &transportSuite{
-		Suite: suite.Suite{},
-		node1: node{config: cfg1},
-		node2: node{config: cfg2},
-	}
+type fakeNode struct {
+	component.Starter
+	component.Stopper
+
+	tcp    StreamTransport
+	udp    DatagramTransport
+	udpBuf chan []byte
+	tcpBuf chan []byte
 }
 
-func setupNode(t *transportSuite, n *node) {
-	var err error
-	n.host, err = host.NewHost(n.config.Address)
-	t.Assert().NoError(err)
+func (f *fakeNode) HandleStream(address string, stream io.ReadWriteCloser) {
+	log.Printf("HandleStream from %s", address)
 
-	n.transport, _, err = NewTransport(n.config)
-	t.Require().NoError(err)
-	t.Require().NotNil(n.transport)
-	t.Require().Implements((*Transport)(nil), n.transport)
-}
-
-func (t *transportSuite) SetupTest() {
-	gob.Register(&packet.RequestTest{})
-	setupNode(t, &t.node1)
-	setupNode(t, &t.node2)
-}
-
-func (t *transportSuite) BeforeTest(suiteName, testName string) {
-	ctx := context.Background()
-	t.node1.transport.Start(ctx)
-	t.node2.transport.Start(ctx)
-}
-
-func (t *transportSuite) AfterTest(suiteName, testName string) {
-	go t.node1.transport.Stop()
-	<-t.node1.transport.Stopped()
-	t.node1.transport.Close()
-
-	go t.node2.transport.Stop()
-	<-t.node2.transport.Stopped()
-	t.node2.transport.Close()
-}
-
-func generateRandomBytes(n int) ([]byte, error) {
-	b := make([]byte, n)
-	_, err := rand.Read(b)
+	b := make([]byte, 3)
+	_, err := stream.Read(b)
 	if err != nil {
-		return nil, err
+		log.Printf("Failed to read from connection")
 	}
-	return b, nil
+
+	f.tcpBuf <- b
 }
 
-func (t *transportSuite) TestPingPong() {
-	if t.node1.config.Protocol == "PURE_UDP" {
-		t.T().Skip("Skipping TestPingPong for PURE_UDP")
+func (f *fakeNode) HandleDatagram(address string, buf []byte) {
+	log.Printf("HandleDatagram from %s: %v", address, buf)
+	f.udpBuf <- buf
+}
+
+func (f *fakeNode) Start(ctx context.Context) error {
+	err1 := f.udp.Start(ctx)
+	err2 := f.tcp.Start(ctx)
+	if err1 != nil || err2 != nil {
+		return err1
+	} else {
+		return nil
 	}
+}
+
+func (f *fakeNode) Stop(ctx context.Context) error {
+	err1 := f.udp.Stop(ctx)
+	err2 := f.tcp.Stop(ctx)
+	if err1 != nil || err2 != nil {
+		return err1
+	} else {
+		return nil
+	}
+}
+
+func newFakeNode(f Factory) *fakeNode {
+	n := &fakeNode{}
+	n.udp, _ = f.CreateDatagramTransport(n)
+	n.tcp, _ = f.CreateStreamTransport(n)
+
+	n.udpBuf = make(chan []byte, 1)
+	n.tcpBuf = make(chan []byte, 1)
+	return n
+}
+
+func (s *suiteTest) TestStreamTransport() {
 	ctx := context.Background()
-	p := packet.NewBuilder(t.node1.host).Type(types.Ping).Receiver(t.node2.host).Build()
-	future, err := t.node1.transport.SendRequest(ctx, p)
-	t.Assert().NoError(err)
+	n1 := newFakeNode(s.factory1)
+	n2 := newFakeNode(s.factory2)
+	s.NotNil(n2)
 
-	requestMsg := <-t.node2.transport.Packets()
-	t.Assert().Equal(types.Ping, requestMsg.Type)
-	t.Assert().Equal(t.node2.host, future.Actor())
-	t.Assert().False(requestMsg.IsResponse)
+	s.NoError(n1.Start(ctx))
+	s.NoError(n2.Start(ctx))
 
-	builder := packet.NewBuilder(t.node2.host).Receiver(requestMsg.Sender).Type(types.Ping)
-	err = t.node2.transport.SendResponse(ctx, requestMsg.RequestID, builder.Response(nil).Build())
-	t.Assert().NoError(err)
+	_, err := n2.tcp.Dial(ctx, "127.0.0.1:5555")
+	s.Error(err)
 
-	responseMsg := <-future.Result()
-	t.Assert().Equal(types.Ping, responseMsg.Type)
-	t.Assert().True(responseMsg.IsResponse)
+	_, err = n2.tcp.Dial(ctx, "invalid address")
+	s.Error(err)
+
+	conn, err := n1.tcp.Dial(ctx, n2.tcp.Address())
+	s.NoError(err)
+
+	count, err := conn.Write([]byte{1, 2, 3})
+	s.Equal(3, count)
+	s.NoError(err)
+	s.NoError(conn.Close())
+
+	s.Equal([]byte{1, 2, 3}, <-n2.tcpBuf)
+
+	s.NoError(n1.Stop(ctx))
+	s.NoError(n2.Stop(ctx))
 }
 
-func (t *transportSuite) TestSendBigPacket() {
-	if testing.Short() {
-		t.T().Skip("Skipping TestSendBigPacket in short mode")
-	}
-	if t.node1.config.Protocol == "PURE_UDP" {
-		t.T().Skip("Skipping TestSendBigPacket for PURE_UDP")
-	}
+func (s *suiteTest) TestDatagramTransport() {
 	ctx := context.Background()
-	data, _ := generateRandomBytes(1024 * 1024 * 2)
-	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(packet.TestPacket)
-	requestMsg := builder.Request(&packet.RequestTest{Data: data}).Build()
+	n1 := newFakeNode(s.factory1)
+	n2 := newFakeNode(s.factory2)
+	s.NotNil(n2)
 
-	_, err := t.node1.transport.SendRequest(ctx, requestMsg)
-	t.Assert().NoError(err)
+	s.NoError(n1.Start(ctx))
+	s.NoError(n2.Start(ctx))
 
-	msg := <-t.node2.transport.Packets()
-	t.Assert().Equal(packet.TestPacket, msg.Type)
-	receivedData := msg.Data.(*packet.RequestTest).Data
-	t.Assert().Equal(data, receivedData)
+	err := n1.udp.SendDatagram(ctx, n2.udp.Address(), []byte{1, 2, 3})
+	s.NoError(err)
+
+	err = n2.udp.SendDatagram(ctx, n1.udp.Address(), []byte{5, 4, 3})
+	s.NoError(err)
+
+	err = n2.udp.SendDatagram(ctx, "invalid address", []byte{9, 9, 9})
+	s.Error(err)
+
+	bigBuff := make([]byte, udpMaxPacketSize+1)
+	err = n2.udp.SendDatagram(ctx, n1.udp.Address(), bigBuff)
+	s.Error(err)
+
+	s.Equal([]byte{1, 2, 3}, <-n2.udpBuf)
+	s.Equal([]byte{5, 4, 3}, <-n1.udpBuf)
+
+	s.NoError(n1.Stop(ctx))
+	s.NoError(n2.Stop(ctx))
 }
 
-// func (t *consensusSuite) TestSendPacketConsensus() {
-// 	t.T().Skip("fix tests for consensus udp transport")
-// 	ctx := context.Background()
-// 	builder := packet.NewBuilder(t.node1.host).Receiver(t.node2.host).Type(types.Phase1)
-// 	requestMsg := builder.Request(consensus.NewPhase1Packet()).Build()
-// 	_, err := t.node1.transport.SendRequest(ctx, requestMsg)
-// 	t.Assert().NoError(err)
-//
-// 	<-t.node2.transport.Packets()
-// }
+func TestFakeTransport(t *testing.T) {
 
-// func TestUDPTransport(t *testing.T) {
-// 	cfg1 := configuration.Network{Protocol: "PURE_UDP", Address: "127.0.0.1:17014"}
-// 	cfg2 := configuration.Network{Protocol: "PURE_UDP", Address: "127.0.0.1:17015"}
-//
-// 	suite.Run(t, NewConsensusSuite(cfg1, cfg2))
-// }
+	cfg1 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:8080"}
+	cfg2 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:4200"}
 
-func TestTCPTransport(t *testing.T) {
-	cfg1 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17016"}
-	cfg2 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17017"}
+	f1 := NewFakeFactory(cfg1)
+	f2 := NewFakeFactory(cfg2)
 
-	suite.Run(t, NewSuite(cfg1, cfg2))
+	suite.Run(t, &suiteTest{factory1: f1, factory2: f2})
 }
 
-func Test_createResolver(t *testing.T) {
-	a := assert.New(t)
+func TestTransport(t *testing.T) {
+	cfg1 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:0"}
+	cfg2 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:0"}
 
-	cfg1 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17018", FixedPublicAddress: "192.168.0.1"}
-	r, err := createResolver(cfg1.FixedPublicAddress)
-	a.NoError(err)
-	a.IsType(resolver.NewFixedAddressResolver(""), r)
-
-	cfg3 := configuration.Transport{Protocol: "TCP", Address: "127.0.0.1:17018", FixedPublicAddress: ""}
-	r, err = createResolver(cfg3.FixedPublicAddress)
-	a.NoError(err)
-	a.IsType(resolver.NewExactResolver(), r)
+	f1 := NewFactory(cfg1)
+	f2 := NewFactory(cfg2)
+	suite.Run(t, &suiteTest{factory1: f1, factory2: f2})
 }

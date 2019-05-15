@@ -133,14 +133,14 @@ func (s *Initializer) Run() {
 
 func initLogger(ctx context.Context, cfg configuration.Log) (context.Context, insolar.Logger) {
 	inslog, err := log.NewLog(cfg)
+
 	if err != nil {
 		panic(err)
 	}
 
-	if newInslog, err := inslog.WithLevel(cfg.Level); err != nil {
-		inslog.Error(err.Error())
-	} else {
-		inslog = newInslog
+	inslog, err = inslog.WithLevel(cfg.Level)
+	if err != nil {
+		panic(err.Error())
 	}
 
 	ctx = inslogger.SetLogger(ctx, inslog)

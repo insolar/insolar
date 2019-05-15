@@ -53,8 +53,8 @@ package node
 import (
 	"testing"
 
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"

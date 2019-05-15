@@ -19,7 +19,7 @@
   revision = "343706a395b76e5ca5c7dca46a5d937b48febc74"
 
 [[projects]]
-  digest = "1:c9ae073450893c4313b42c03e6c440ba65bda6c41c19570cf5b54f49a7ab3df1"
+  digest = "1:742ea97411291dbc55b805043493f6beece4882523f69213d3a4629630ee9500"
   name = "github.com/ThreeDotsLabs/watermill"
   packages = [
     ".",
@@ -27,6 +27,7 @@
     "internal/sync",
     "message",
     "message/infrastructure/gochannel",
+    "message/router/middleware",
   ]
   pruneopts = "UT"
   revision = "fa394272631757fe84b31989cc935122a5fbcb20"
@@ -360,7 +361,7 @@
   version = "v3.0.3"
 
 [[projects]]
-  digest = "1:9be615b2a72fc4a99e623c6776cce3afe3451741c34ea1805ea4a9b58604b9df"
+  digest = "1:2ac83274ed1a4c6faa46983a9199d9def820df889d7e7619f6849991cddc2d2a"
   name = "github.com/rs/zerolog"
   packages = [
     ".",
@@ -368,8 +369,8 @@
     "internal/json",
   ]
   pruneopts = "UT"
-  revision = "6d6350a51143b5c0d0a6a3b736ee2b41315f7269"
-  version = "v1.12.0"
+  revision = "3e85c4b21c1adb254dd43a93d93263fbe7d9dc13"
+  version = "v1.14.0"
 
 [[projects]]
   branch = "master"
@@ -592,6 +593,7 @@
     "github.com/ThreeDotsLabs/watermill",
     "github.com/ThreeDotsLabs/watermill/message",
     "github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel",
+    "github.com/ThreeDotsLabs/watermill/message/router/middleware",
     "github.com/blang/semver",
     "github.com/dgraph-io/badger",
     "github.com/gogo/protobuf/gogoproto",

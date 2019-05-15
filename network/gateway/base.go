@@ -46,11 +46,14 @@
 //    including, without limitation, any software-as-a-service, platform-as-a-service,
 //    infrastructure-as-a-service or other similar online service, irrespective of
 //    whether it competes with the products or services of Insolar Technologies GmbH.
+//
 
 package gateway
 
 import (
 	"context"
+
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/log" // TODO remove before merge
 
@@ -61,33 +64,58 @@ import (
 // Base is abstract class for gateways
 
 type Base struct {
-	Network            network.Gatewayer
-	GIL                insolar.GlobalInsolarLock
-	SwitcherWorkAround insolar.SwitcherWorkAround // nodekeeper
+	Self                network.Gateway
+	Network             network.Gatewayer
+	Nodekeeper          network.NodeKeeper
+	ContractRequester   insolar.ContractRequester
+	CryptographyService insolar.CryptographyService
+	CertificateManager  insolar.CertificateManager
+	GIL                 insolar.GlobalInsolarLock
+	MessageBus          insolar.MessageBus
 }
 
 // NewGateway creates new gateway on top of existing
 func (g *Base) NewGateway(state insolar.NetworkState) network.Gateway {
-	log.Warnf("NewGateway %s", state.String())
+	log.Infof("NewGateway %s", state.String())
 	switch state {
 	case insolar.NoNetworkState:
-		panic("Do not reinit network with alive gateway")
+		g.Self = &NoNetwork{g}
 	case insolar.VoidNetworkState:
-		return NewVoid(g)
+		g.Self = NewVoid(g)
 	case insolar.JetlessNetworkState:
-		return NewJetless(g)
+		g.Self = NewJetless(g)
 	case insolar.AuthorizationNetworkState:
-		return NewAuthorisation(g)
+		g.Self = NewAuthorisation(g)
 	case insolar.CompleteNetworkState:
-		return NewComplete(g)
+		g.Self = NewComplete(g)
+	default:
+		panic("Try to switch network to unknown state. Memory of process is inconsistent.")
 	}
-	panic("Try to switch network to unknown state. Memory of process is inconsistent.")
+	return g.Self
 }
 
 func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {
-	if g.SwitcherWorkAround.IsBootstrapped() {
+	if g.Nodekeeper.IsBootstrapped() {
 		g.Network.SetGateway(g.Network.Gateway().NewGateway(insolar.CompleteNetworkState))
 		g.Network.Gateway().Run(ctx)
 	}
 	return nil
+}
+
+// Auther casts us to Auther or obtain it in another way
+func (g *Base) Auther() network.Auther {
+	if ret, ok := g.Self.(network.Auther); ok {
+		return ret
+	}
+	panic("Our network gateway suddenly is not an Auther")
+}
+
+// GetCert method returns node certificate by requesting sign from discovery nodes
+func (g *Base) GetCert(ctx context.Context, ref *insolar.Reference) (insolar.Certificate, error) {
+	return nil, errors.New("GetCert() in non active mode")
+}
+
+// ValidateCert validates node certificate
+func (g *Base) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
+	return false, errors.New("ValidateCert() in non active mode")
 }

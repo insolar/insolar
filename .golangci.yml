@@ -22,7 +22,6 @@ linters:
     - interfacer
     - unconvert
     - goconst
-    - misspell
     - unparam
     - nakedret
     - prealloc

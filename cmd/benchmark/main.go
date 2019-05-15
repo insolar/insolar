@@ -33,6 +33,7 @@ import (
 
 	"github.com/insolar/insolar/api/sdk"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/defaults"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/utils/backoff"
 	"github.com/pkg/errors"
@@ -40,12 +41,14 @@ import (
 )
 
 const defaultStdoutPath = "-"
-const defaultMemberFileDir = "scripts/insolard/benchmark"
 const defaultMemberFileName = "members.txt"
 
 const backoffAttemptsCount = 20
 
 var (
+	defaultMemberFileDir = filepath.Join(defaults.ArtifactsDir(), "bench-members")
+
+	memberFilesDir     string
 	output             string
 	concurrent         int
 	repetitions        int
@@ -68,6 +71,7 @@ func parseInputParams() {
 	pflag.StringVarP(&logLevelServer, "loglevelserver", "L", "", "server log level")
 	pflag.BoolVarP(&saveMembersToFile, "savemembers", "s", false, "save members to file")
 	pflag.BoolVarP(&useMembersFromFile, "usemembers", "m", false, "use members from file")
+	pflag.StringVarP(&memberFilesDir, "members-dir", "", defaultMemberFileDir, "dir for saving memebers data")
 	pflag.BoolVarP(&noCheckBalance, "nocheckbalance", "b", false, "don't check balance at the end")
 	pflag.Parse()
 }

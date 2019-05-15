@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
 )
@@ -45,11 +46,25 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 			Message: s.Message,
 		}
 		return f.Handle(ctx, h.Present)
+	case insolar.TypeSetRecord:
+		msg := s.Message.Parcel.Message().(*message.SetRecord)
+		h := NewSetRecord(s.Dep, s.Message.ReplyTo, msg)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeSetBlob:
+		msg := s.Message.Parcel.Message().(*message.SetBlob)
+		h := NewSetBlob(s.Dep, s.Message.ReplyTo, msg)
+		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetCode:
-		h := &GetCode{
-			dep:     s.Dep,
-			Message: s.Message,
-		}
+		msg := s.Message.Parcel.Message().(*message.GetCode)
+		h := NewGetCode(s.Dep, s.Message.ReplyTo, msg.Code)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetRequest:
+		msg := s.Message.Parcel.Message().(*message.GetRequest)
+		h := NewGetRequest(s.Dep, s.Message.ReplyTo, msg.Request)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeUpdateObject:
+		msg := s.Message.Parcel.Message().(*message.UpdateObject)
+		h := NewUpdateObject(s.Dep, s.Message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s", s.Message.Parcel.Message().Type().String())
@@ -60,5 +75,5 @@ func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 	return f.Procedure(ctx, &proc.ReturnReply{
 		ReplyTo: s.Message.ReplyTo,
 		Err:     errors.New("no past handler"),
-	})
+	}, false)
 }

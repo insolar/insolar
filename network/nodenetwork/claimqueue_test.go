@@ -53,7 +53,7 @@ package nodenetwork
 import (
 	"testing"
 
-	"github.com/insolar/insolar/consensus/packets"
+	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -61,12 +61,6 @@ func newTestClaim(claimType packets.ClaimType) packets.ReferendumClaim {
 	switch claimType {
 	case packets.TypeNodeJoinClaim:
 		return &packets.NodeJoinClaim{}
-	case packets.TypeCapabilityPollingAndActivation:
-		return &packets.CapabilityPoolingAndActivation{}
-	case packets.TypeNodeViolationBlame:
-		return &packets.NodeViolationBlame{}
-	case packets.TypeNodeBroadcast:
-		return &packets.NodeBroadcast{}
 	case packets.TypeNodeLeaveClaim:
 		return &packets.NodeLeaveClaim{}
 	}
@@ -80,14 +74,18 @@ func TestClaimQueue_Pop(t *testing.T) {
 	assert.Nil(t, cq.Pop())
 
 	cq.Push(newTestClaim(packets.TypeNodeJoinClaim))
-	cq.Push(newTestClaim(packets.TypeNodeBroadcast))
-	assert.Equal(t, 2, cq.Length())
+	assert.Equal(t, 1, cq.Length())
 
-	assert.NotNil(t, cq.Front())
-	assert.Equal(t, packets.TypeNodeJoinClaim, cq.Front().Type())
+	c1 := cq.Front()
+	assert.NotNil(t, c1)
+	assert.Equal(t, packets.TypeNodeJoinClaim, c1.Type())
+	assert.Equal(t, 1, cq.Length())
 
-	assert.Equal(t, packets.TypeNodeJoinClaim, cq.Pop().Type())
-	assert.Equal(t, packets.TypeNodeBroadcast, cq.Pop().Type())
+	c2 := cq.Pop()
+	assert.NotNil(t, c2)
+	assert.Equal(t, packets.TypeNodeJoinClaim, c2.Type())
+	assert.Equal(t, 0, cq.Length())
+
 	assert.Nil(t, cq.Front())
 	assert.Nil(t, cq.Pop())
 }

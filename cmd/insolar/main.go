@@ -90,8 +90,9 @@ func main() {
 	}
 	rootCmd.AddCommand(genKeysPairCmd)
 
+	var rootKeysFile string
+
 	var (
-		configPath   string
 		paramsPath   string
 		rootAsCaller bool
 	)
@@ -99,12 +100,12 @@ func main() {
 		Use:   "send-request",
 		Short: "sends request",
 		Run: func(cmd *cobra.Command, args []string) {
-			sendRequest(sendURL, configPath, paramsPath, rootAsCaller)
+			sendRequest(sendURL, rootKeysFile, paramsPath, rootAsCaller)
 		},
 	}
 	addURLFlag(sendRequestCmd.Flags())
 	sendRequestCmd.Flags().StringVarP(
-		&configPath, "config", "g", "config.json", "path to configuration file")
+		&rootKeysFile, "root-keys", "k", "config.json", "path to json with root key pair")
 	sendRequestCmd.Flags().StringVarP(
 		&paramsPath, "params", "p", "", "path to params file (default params.json)")
 	sendRequestCmd.Flags().BoolVarP(
@@ -112,35 +113,34 @@ func main() {
 	rootCmd.AddCommand(sendRequestCmd)
 
 	var (
-		rootConfig string
-		role       string
-		reuseKeys  bool
-		keysFile   string
-		certFile   string
+		role      string
+		reuseKeys bool
+		keysFile  string
+		certFile  string
 	)
 	var certgenCmd = &cobra.Command{
 		Use:   "certgen",
 		Short: "generates keys and cerificate by root config",
 		Run: func(cmd *cobra.Command, args []string) {
-			genCertificate(rootConfig, role, sendURL, keysFile, certFile, reuseKeys)
+			genCertificate(rootKeysFile, role, sendURL, keysFile, certFile, reuseKeys)
 		},
 	}
 	addURLFlag(certgenCmd.Flags())
 	certgenCmd.Flags().StringVarP(
-		&rootConfig, "root-conf", "t", "", "Config that contains public/private keys of root member")
+		&rootKeysFile, "root-keys", "k", "", "Config that contains public/private keys of root member")
 	certgenCmd.Flags().StringVarP(
 		&role, "role", "r", "virtual", "The role of the new node")
 	certgenCmd.Flags().BoolVarP(
 		&reuseKeys, "reuse-keys", "", false, "Read keys from file instead og generating of new ones")
 	certgenCmd.Flags().StringVarP(
 		&keysFile,
-		"keys-file",
-		"k",
+		"node-keys",
+		"",
 		"keys.json",
 		"The OUT/IN ( depends on 'reuse-keys' ) file for public/private keys of the node",
 	)
 	certgenCmd.Flags().StringVarP(
-		&certFile, "cert-file", "c", "cert.json", "The OUT file the node certificate")
+		&certFile, "node-cert", "c", "cert.json", "The OUT file the node certificate")
 	rootCmd.AddCommand(certgenCmd)
 
 	if err := rootCmd.Execute(); err != nil {
@@ -242,10 +242,10 @@ func generateKeysPair() {
 	mustWrite(os.Stdout, string(result))
 }
 
-func sendRequest(sendURL string, configPath string, paramsPath string, rootAsCaller bool) {
+func sendRequest(sendURL string, rootKeysFile string, paramsPath string, rootAsCaller bool) {
 	requester.SetVerbose(verbose)
 
-	userCfg, err := requester.ReadUserConfigFromFile(configPath)
+	userCfg, err := requester.ReadUserConfigFromFile(rootKeysFile)
 	check("[ sendRequest ]", err)
 
 	if rootAsCaller || userCfg.Caller == "" {
@@ -256,7 +256,7 @@ func sendRequest(sendURL string, configPath string, paramsPath string, rootAsCal
 
 	pPath := paramsPath
 	if len(pPath) == 0 {
-		pPath = configPath
+		pPath = rootKeysFile
 	}
 	reqCfg, err := requester.ReadRequestConfigFromFile(pPath)
 	check("[ sendRequest ]", err)

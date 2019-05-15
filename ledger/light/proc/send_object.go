@@ -36,9 +36,9 @@ import (
 )
 
 type SendObject struct {
-	Message bus.Message
-	Jet     insolar.JetID
-	Index   object.Lifeline
+	message bus.Message
+	jet     insolar.JetID
+	index   object.Lifeline
 
 	Dep struct {
 		Coordinator    jet.Coordinator
@@ -50,15 +50,19 @@ type SendObject struct {
 	}
 }
 
+func NewSendObject(msg bus.Message, jet insolar.JetID, idx object.Lifeline) *SendObject {
+	return &SendObject{
+		message: msg,
+		jet:     jet,
+		index:   idx,
+	}
+}
+
 func (p *SendObject) Proceed(ctx context.Context) error {
 	r := bus.Reply{}
-	r.Reply, r.Err = p.handle(ctx, p.Message.Parcel)
-
-	select {
-	case p.Message.ReplyTo <- r:
-	case <-ctx.Done():
-	}
-	return nil
+	r.Reply, r.Err = p.handle(ctx, p.message.Parcel)
+	p.message.ReplyTo <- r
+	return r.Err
 }
 
 func (p *SendObject) handle(
@@ -72,9 +76,9 @@ func (p *SendObject) handle(
 		stateID = msg.State
 	} else {
 		if msg.Approved {
-			stateID = p.Index.LatestStateApproved
+			stateID = p.index.LatestStateApproved
 		} else {
-			stateID = p.Index.LatestState
+			stateID = p.index.LatestState
 		}
 	}
 	if stateID == nil {
@@ -111,8 +115,8 @@ func (p *SendObject) handle(
 			State:        *stateID,
 			Prototype:    obj.Prototype,
 			IsPrototype:  obj.IsPrototype,
-			ChildPointer: p.Index.ChildPointer,
-			Parent:       p.Index.Parent,
+			ChildPointer: p.index.ChildPointer,
+			Parent:       p.index.Parent,
 			Memory:       obj.Memory,
 		}, nil
 	}
@@ -156,8 +160,8 @@ func (p *SendObject) handle(
 			State:        *stateID,
 			Prototype:    obj.Prototype,
 			IsPrototype:  obj.IsPrototype,
-			ChildPointer: p.Index.ChildPointer,
-			Parent:       p.Index.Parent,
+			ChildPointer: p.index.ChildPointer,
+			Parent:       p.index.Parent,
 			Memory:       obj.Memory,
 		}, nil
 	}
@@ -177,8 +181,8 @@ func (p *SendObject) handle(
 	}
 
 	var childPointer *insolar.ID
-	if p.Index.ChildPointer != nil {
-		childPointer = p.Index.ChildPointer
+	if p.index.ChildPointer != nil {
+		childPointer = p.index.ChildPointer
 	}
 	rep := reply.Object{
 		Head:         msg.Head,
@@ -186,7 +190,7 @@ func (p *SendObject) handle(
 		Prototype:    state.GetImage(),
 		IsPrototype:  state.GetIsPrototype(),
 		ChildPointer: childPointer,
-		Parent:       p.Index.Parent,
+		Parent:       p.index.Parent,
 	}
 
 	if state.GetMemory() != nil && state.GetMemory().NotEmpty() {
@@ -201,7 +205,7 @@ func (p *SendObject) handle(
 				return nil, err
 			}
 			err = p.Dep.Blobs.Set(ctx, *state.GetMemory(), blob.Blob{
-				JetID: insolar.JetID(p.Jet),
+				JetID: p.jet,
 				Value: obj.Memory},
 			)
 			if err != nil {

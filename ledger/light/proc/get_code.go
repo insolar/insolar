@@ -21,10 +21,10 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
@@ -32,94 +32,72 @@ import (
 )
 
 type GetCode struct {
-	JetID   insolar.JetID
-	Message bus.Message
-	Code    insolar.Reference
-
-	Result struct {
-		CodeRec record.Code
-	}
+	replyTo chan<- bus.Reply
+	code    insolar.Reference
 
 	Dep struct {
-		Bus                    insolar.MessageBus
-		DelegationTokenFactory insolar.DelegationTokenFactory
-		RecordAccessor         object.RecordAccessor
-		Coordinator            jet.Coordinator
-		Accessor               blob.Accessor
-		BlobModifier           blob.Modifier
+		Bus            insolar.MessageBus
+		RecordAccessor object.RecordAccessor
+		Coordinator    jet.Coordinator
+		BlobAccessor   blob.Accessor
+	}
+}
+
+func NewGetCode(code insolar.Reference, replyTo chan<- bus.Reply) *GetCode {
+	return &GetCode{
+		code:    code,
+		replyTo: replyTo,
 	}
 }
 
 func (p *GetCode) Proceed(ctx context.Context) error {
-	// ctx = contextWithJet(ctx, insolar.ID(p.JetID))
-	r := bus.Reply{}
-	r.Reply, r.Err = p.handle(ctx)
-	p.Message.ReplyTo <- r
+	p.replyTo <- p.reply(ctx)
 	return nil
 }
 
-func (p *GetCode) handle(ctx context.Context) (insolar.Reply, error) {
-	parcel := p.Message.Parcel
-	rec, err := p.Dep.RecordAccessor.ForID(ctx, *p.Code.Record())
+func (p *GetCode) reply(ctx context.Context) bus.Reply {
+	codeID := *p.code.Record()
+	rec, err := p.Dep.RecordAccessor.ForID(ctx, codeID)
 	if err == object.ErrNotFound {
-		// We don't have code record. Must be on another node.
-		node, err := p.Dep.Coordinator.NodeForJet(ctx, insolar.ID(p.JetID), parcel.Pulse(), p.Code.Record().Pulse())
+		heavy, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
 		if err != nil {
-			return nil, err
+			return bus.Reply{Err: errors.Wrap(err, "failed to calculate heavy")}
 		}
-		return reply.NewGetCodeRedirect(p.Dep.DelegationTokenFactory, parcel, node)
+		genericReply, err := p.Dep.Bus.Send(ctx, &message.GetCode{
+			Code: p.code,
+		}, &insolar.MessageSendOptions{
+			Receiver: heavy,
+		})
+		if err != nil {
+			return bus.Reply{Err: errors.Wrap(err, "failed to fetch code from heavy")}
+		}
+		rep, ok := genericReply.(*reply.Code)
+		if !ok {
+			err := fmt.Errorf(
+				"failed to fetch code from heavy: unexpected reply type %T",
+				genericReply,
+			)
+			return bus.Reply{Err: err}
+		}
+		return bus.Reply{Reply: rep}
 	}
 	if err != nil {
-		return nil, err
+		return bus.Reply{Err: errors.Wrap(err, "failed to fetch code")}
 	}
 
-	virtRec := rec.Virtual
-	concrete := record.Unwrap(virtRec)
-	codeRec, ok := concrete.(*record.Code)
+	codeRec, ok := rec.Record.(*object.CodeRecord)
 	if !ok {
-		return nil, errors.Wrap(ErrInvalidRef, "failed to retrieve code record")
+		return bus.Reply{Err: errors.Wrap(ErrInvalidRef, "failed to retrieve code record")}
 	}
 
-	code, err := p.Dep.Accessor.ForID(ctx, codeRec.Code)
-	if err == blob.ErrNotFound {
-		hNode, err := p.Dep.Coordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		return p.saveCodeFromHeavy(ctx, p.JetID, p.Code, codeRec.Code, hNode)
-	}
-
+	code, err := p.Dep.BlobAccessor.ForID(ctx, *codeRec.Code)
 	if err != nil {
-		return nil, err
+		return bus.Reply{Err: errors.Wrap(err, "failed to fetch code blob")}
 	}
 
-	rep := reply.Code{
+	rep := &reply.Code{
 		Code:        code.Value,
 		MachineType: codeRec.MachineType,
 	}
-
-	return &rep, nil
-}
-
-func (p *GetCode) saveCodeFromHeavy(
-	ctx context.Context, jetID insolar.JetID, code insolar.Reference, blobID insolar.ID, heavy *insolar.Reference,
-) (*reply.Code, error) {
-	genericReply, err := p.Dep.Bus.Send(ctx, &message.GetCode{
-		Code: code,
-	}, &insolar.MessageSendOptions{
-		Receiver: heavy,
-	})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to send")
-	}
-	rep, ok := genericReply.(*reply.Code)
-	if !ok {
-		return nil, fmt.Errorf("failed to fetch code: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
-	}
-
-	err = p.Dep.BlobModifier.Set(ctx, blobID, blob.Blob{JetID: jetID, Value: rep.Code})
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to save")
-	}
-	return rep, nil
+	return bus.Reply{Reply: rep}
 }

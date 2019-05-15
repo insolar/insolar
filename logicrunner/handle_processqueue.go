@@ -78,7 +78,9 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 		lr.executeOrValidate(current.Context, es, qe.parcel)
 
 		if qe.fromLedger {
-			go lr.getLedgerPendingRequest(ctx, es)
+			pub := p.dep.Publisher
+			err := pub.Publish(InnerMsgTopic, makeWMMessage(ctx, p.Message.Payload, getLedgerPendingRequestMsg))
+			inslogger.FromContext(ctx).Warnf("can't send processExecutionQueueMsg: ", err)
 		}
 
 		lr.finishPendingIfNeeded(ctx, es)
@@ -119,13 +121,13 @@ func (s *StartQueueProcessorIfNeeded) Present(ctx context.Context, f flow.Flow) 
 
 	pub := s.dep.Publisher
 	rawRef := s.ref.Bytes()
-	err := pub.Publish(InnerMsgTopic, makeWMMessage(ctx, rawRef, "ProcessExecutionQueue"))
+	err := pub.Publish(InnerMsgTopic, makeWMMessage(ctx, rawRef, processExecutionQueueMsg))
 	if err != nil {
-		return errors.Wrap(err, "can't send ProcessExecutionQueue msg")
+		return errors.Wrap(err, "can't send processExecutionQueueMsg")
 	}
-	err = pub.Publish(InnerMsgTopic, makeWMMessage(ctx, rawRef, "getLedgerPendingRequest"))
+	err = pub.Publish(InnerMsgTopic, makeWMMessage(ctx, rawRef, getLedgerPendingRequestMsg))
 	if err != nil {
-		return errors.Wrap(err, "can't send getLedgerPendingRequest msg")
+		return errors.Wrap(err, "can't send getLedgerPendingRequestMsg")
 	}
 
 	return nil

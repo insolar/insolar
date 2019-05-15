@@ -18,10 +18,13 @@ package messagebus
 
 import (
 	"context"
+	"fmt"
+	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/stretchr/testify/require"
@@ -48,12 +51,17 @@ func testHandler(_ context.Context, _ insolar.Parcel) (insolar.Reply, error) {
 	return testReply, nil
 }
 
-func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) (*MessageBus, *pulse.AccessorMock, insolar.Parcel) {
+func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) (*MessageBus, *pulse.AccessorMock, insolar.Parcel, insolar.Reference) {
 	mb, err := NewMessageBus(configuration.Configuration{})
 	require.NoError(t, err)
 
 	net := testutils.GetTestNetwork(t)
 	jc := jet.NewCoordinatorMock(t)
+	expectedRef := testutils.RandomRef()
+	jc.QueryRoleFunc = func(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber) (r []insolar.Reference, r1 error) {
+		return []insolar.Reference{expectedRef}, nil
+	}
+
 	nn := network.NewNodeNetworkMock(t)
 	nn.GetOriginFunc = func() (r insolar.NetworkNode) {
 		n := network.NewNetworkNodeMock(t)
@@ -63,11 +71,17 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 
 	pcs := testutils.NewPlatformCryptographyScheme()
 	cs := testutils.NewCryptographyServiceMock(t)
+	cs.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+		return &insolar.Signature{}, nil
+	}
+
 	dtf := testutils.NewDelegationTokenFactoryMock(t)
 	pf := NewParcelFactory()
 	ps := pulse.NewAccessorMock(t)
 
-	(&component.Manager{}).Inject(net, jc, nn, pcs, cs, dtf, pf, ps, mb)
+	b := bus.NewSenderMock(t)
+
+	(&component.Manager{}).Inject(net, jc, nn, pcs, cs, dtf, pf, ps, mb, b)
 
 	ps.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
 		return insolar.Pulse{
@@ -94,12 +108,12 @@ func prepare(t *testing.T, ctx context.Context, currentPulse int, msgPulse int) 
 
 	mb.Unlock(ctx)
 
-	return mb, ps, parcel
+	return mb, ps, parcel, expectedRef
 }
 
 func TestMessageBus_doDeliver_PrevPulse(t *testing.T) {
 	ctx := context.Background()
-	mb, _, parcel := prepare(t, ctx, 100, 99)
+	mb, _, parcel, _ := prepare(t, ctx, 100, 99)
 
 	result, err := mb.doDeliver(ctx, parcel)
 	require.Error(t, err)
@@ -108,7 +122,7 @@ func TestMessageBus_doDeliver_PrevPulse(t *testing.T) {
 
 func TestMessageBus_doDeliver_SamePulse(t *testing.T) {
 	ctx := context.Background()
-	mb, _, parcel := prepare(t, ctx, 100, 100)
+	mb, _, parcel, _ := prepare(t, ctx, 100, 100)
 
 	result, err := mb.doDeliver(ctx, parcel)
 	require.NoError(t, err)
@@ -117,7 +131,7 @@ func TestMessageBus_doDeliver_SamePulse(t *testing.T) {
 
 func TestMessageBus_doDeliver_NextPulse(t *testing.T) {
 	ctx := context.Background()
-	mb, ps, parcel := prepare(t, ctx, 100, 101)
+	mb, ps, parcel, _ := prepare(t, ctx, 100, 101)
 
 	pulseUpdated := false
 
@@ -151,21 +165,27 @@ func TestMessageBus_doDeliver_NextPulse(t *testing.T) {
 
 func TestMessageBus_doDeliver_TwoAheadPulses(t *testing.T) {
 	ctx := context.Background()
-	mb, ps, parcel := prepare(t, ctx, 100, 102)
+	mb, ps, parcel, _ := prepare(t, ctx, 100, 102)
 
+	var mu sync.Mutex
 	pulse := &insolar.Pulse{
 		PulseNumber:     100,
 		NextPulseNumber: 101,
 	}
 	ps.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
+		mu.Lock()
+		defer mu.Unlock()
+
 		return *pulse, nil
 	}
 	go func() {
 		for i := 1; i <= 2; i++ {
+			mu.Lock()
 			pulse = &insolar.Pulse{
 				PulseNumber:     insolar.PulseNumber(100 + i),
 				NextPulseNumber: insolar.PulseNumber(100 + i + 1),
 			}
+			mu.Unlock()
 			err := mb.OnPulse(ctx, *pulse)
 			require.NoError(t, err)
 		}
@@ -174,4 +194,47 @@ func TestMessageBus_doDeliver_TwoAheadPulses(t *testing.T) {
 	_, err := mb.doDeliver(ctx, parcel)
 	require.NoError(t, err)
 	require.Equal(t, insolar.PulseNumber(102), pulse.PulseNumber)
+}
+
+func TestMessageBus_createWatermillMessage(t *testing.T) {
+	ctx := context.Background()
+	mb, _, _, expectedRef := prepare(t, ctx, 100, 100)
+
+	pulse := insolar.Pulse{
+		PulseNumber: insolar.PulseNumber(100),
+	}
+	parcel := &message.Parcel{
+		Msg: &message.GetObject{},
+	}
+
+	msg := mb.createWatermillMessage(ctx, parcel, nil, pulse)
+
+	require.NotNil(t, msg)
+	require.NotNil(t, msg.Payload)
+	require.Equal(t, fmt.Sprintf("%d", pulse.PulseNumber), msg.Metadata.Get(bus.MetaPulse))
+	require.Equal(t, parcel.Msg.Type().String(), msg.Metadata.Get(bus.MetaType))
+	require.Equal(t, expectedRef.String(), msg.Metadata.Get(bus.MetaReceiver))
+	require.Equal(t, insolar.Reference{}.String(), msg.Metadata.Get(bus.MetaSender))
+}
+
+func TestMessageBus_getReceiver(t *testing.T) {
+	ctx := context.Background()
+	mb, err := NewMessageBus(configuration.Configuration{})
+	require.NoError(t, err)
+	expectedRef := testutils.RandomRef()
+	jc := jet.NewCoordinatorMock(t)
+	jc.QueryRoleFunc = func(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber) (r []insolar.Reference, r1 error) {
+		return []insolar.Reference{expectedRef}, nil
+	}
+	mb.JetCoordinator = jc
+	pulse := insolar.Pulse{
+		PulseNumber: insolar.PulseNumber(100),
+	}
+	parcel := &message.Parcel{
+		Msg: &message.GetObject{},
+	}
+
+	r := mb.getReceiver(ctx, parcel, pulse, nil)
+
+	require.Equal(t, expectedRef.String(), r)
 }

@@ -19,6 +19,9 @@ package light
 import (
 	"context"
 
+	"github.com/ThreeDotsLabs/watermill"
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -27,6 +30,7 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
@@ -48,7 +52,6 @@ import (
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
-	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
@@ -102,10 +105,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 	// Network.
 	var (
-		NetworkService     insolar.Network
-		NetworkCoordinator insolar.NetworkCoordinator
-		NodeNetwork        insolar.NodeNetwork
-		Termination        insolar.TerminationHandler
+		NetworkService insolar.Network
+		NodeNetwork    insolar.NodeNetwork
+		Termination    insolar.TerminationHandler
 	)
 	{
 		var err error
@@ -123,10 +125,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			return nil, errors.Wrap(err, "failed to start NodeNetwork")
 		}
 
-		NetworkCoordinator, err = networkcoordinator.New()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to start NetworkCoordinator")
-		}
 	}
 
 	// API.
@@ -158,6 +156,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Tokens  insolar.DelegationTokenFactory
 		Parcels message.ParcelFactory
 		Bus     insolar.MessageBus
+		WmBus   bus.Sender
+		Pub     watermillMsg.Publisher
 	)
 	{
 		var err error
@@ -167,6 +167,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
+		// TODO: use insolar.Logger
+		logger := watermill.NewStdLogger(false, false)
+		Pub = gochannel.NewGoChannel(gochannel.Config{}, logger)
+		WmBus = bus.NewBus(Pub)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -297,6 +301,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	}
 
 	c.cmp.Inject(
+		WmBus,
 		Handler,
 		Jets,
 		Pulses,
@@ -310,7 +315,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		artifacts.NewClient(),
 		Genesis,
 		API,
-		NetworkCoordinator,
 		KeyProcessor,
 		Termination,
 		CryptoScheme,
@@ -318,6 +322,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		CertManager,
 		NodeNetwork,
 		NetworkService,
+		Pub,
 	)
 
 	err = c.cmp.Init(ctx)

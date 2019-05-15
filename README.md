@@ -4,7 +4,6 @@ Enterprise-ready blockchain platform
 
 [![CII Best Practices](https://bestpractices.coreinfrastructure.org/projects/2150/badge)](https://bestpractices.coreinfrastructure.org/projects/2150)
 
-[![Build Status](https://travis-ci.org/insolar/insolar.svg?branch=master)](https://travis-ci.org/insolar/insolar)
 [![GolangCI](https://golangci.com/badges/github.com/insolar/insolar.svg)](https://golangci.com/r/github.com/insolar/insolar/)
 [![Go Report Card](https://goreportcard.com/badge/github.com/insolar/insolar)](https://goreportcard.com/report/github.com/insolar/insolar)
 [![GoDoc](https://godoc.org/github.com/insolar/insolar?status.svg)](https://godoc.org/github.com/insolar/insolar)
@@ -27,8 +26,6 @@ Blockchain network layer.
 * Support of heterogeneous network topology.
 * Network routing with a host or host group becoming relays for others hosts.
 * Ability to limit number of gateways to corporate host group via relays to keep the host group secure.
-
-See [package readme](network/dhtnetwork) for more details.
 
 ### [Ledger](ledger)
 
@@ -107,4 +104,4 @@ See [Contributing Guidelines](.github/CONTRIBUTING.md).
 
 ## License
 
-This project is licensed under the terms of the [Apache license 2.0](LICENSE), except for the [Network](network), [NetworkCoordinator](networkcoordinator) and [Consensus](consensus)  subdirectories, which are licensed under the terms of the [Modified BSD 3-Clause Clear License](network/LICENSE.md).
+This project is licensed under the terms of the [Apache license 2.0](LICENSE), except for the [Network](network) subdirectory, which is licensed under the terms of the [Modified BSD 3-Clause Clear License](network/LICENSE.md).

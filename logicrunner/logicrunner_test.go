@@ -30,6 +30,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/ledger/light/artifactmanager"
+	"github.com/insolar/insolar/pulsar"
+	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/stretchr/testify/suite"
 	"github.com/ugorji/go/codec"
 
@@ -97,15 +100,15 @@ func (s *LogicRunnerFuncSuite) SetupSuite() {
 }
 
 func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr *LogicRunner) {
-	mb.ReRegister(insolar.TypeCallMethod, lr.FlowHandler.WrapBusHandle)
-	mb.ReRegister(insolar.TypeCallConstructor, lr.FlowHandler.WrapBusHandle)
+	mb.ReRegister(insolar.TypeCallMethod, lr.FlowDispatcher.WrapBusHandle)
+	mb.ReRegister(insolar.TypeCallConstructor, lr.FlowDispatcher.WrapBusHandle)
 
 	mb.ReRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	mb.ReRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
-	mb.ReRegister(insolar.TypeExecutorResults, lr.HandleExecutorResultsMessage)
+	mb.ReRegister(insolar.TypeExecutorResults, lr.FlowDispatcher.WrapBusHandle)
 }
 
-func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts.Client, *goplugintestutils.ContractsBuilder, insolar.PulseManager, func()) {
+func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts.Client, *goplugintestutils.ContractsBuilder, insolar.PulseManager, *artifactmanager.MessageHandler, func()) {
 	ctx := context.TODO()
 	lrSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 	rundSock := os.TempDir() + "/" + testutils.RandomString() + ".sock"
@@ -139,7 +142,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 
 	nw := testutils.GetTestNetwork(s.T())
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	l := artifacts.TmpLedger(
+	l, messageHandler := artifacts.TmpLedger(
 		s.T(),
 		"",
 		insolar.Components{
@@ -174,7 +177,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 
 	cb := goplugintestutils.NewContractBuilder(am, s.icc)
 
-	return lr, am, cb, pm, func() {
+	return lr, am, cb, pm, messageHandler, func() {
 		cb.Clean()
 		lr.Stop(ctx)
 		rundCleaner()
@@ -293,8 +296,10 @@ func (c *One) Dec() (int, error) {
 `
 	ctx := context.Background()
 
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+
+	changePulse(ctx, lr, msgHandler)
 
 	err := cb.Build(map[string]string{"one": contractOneCode})
 	s.NoError(err)
@@ -322,6 +327,12 @@ func (c *One) Dec() (int, error) {
 	s.Equal(uint64(0), firstMethodRes(s.T(), resp))
 
 	ValidateAllResults(s.T(), ctx, lr)
+}
+
+func changePulse(ctx context.Context, lr insolar.LogicRunner, msgHandler *artifactmanager.MessageHandler) {
+	pulse := pulsar.NewPulse(1, insolar.FirstPulseNumber, &entropygenerator.StandardEntropyGenerator{})
+	lr.(*LogicRunner).FlowDispatcher.ChangePulse(ctx, *pulse)
+	msgHandler.OnPulse(ctx, *pulse)
 }
 
 func (s *LogicRunnerFuncSuite) TestContractCallingContractError() {
@@ -433,8 +444,10 @@ func (r *Two) GetPayloadString() (string, error) {
 `
 	ctx := context.Background()
 
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+
+	changePulse(ctx, lr, msgHandler)
 
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	s.NoError(err)
@@ -540,8 +553,10 @@ func (r *Two) Hello(s string) (string, error) {
 }
 `
 	ctx := context.TODO()
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+
+	changePulse(ctx, lr, msgHandler)
 
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	s.NoError(err)
@@ -626,9 +641,10 @@ func (r *Two) Value() (int, error) {
 `
 	ctx := context.TODO()
 	// TODO: use am := testutil.NewTestArtifactManager() here
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
 
+	changePulse(ctx, lr, msgHandler)
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	s.NoError(err)
 
@@ -660,8 +676,10 @@ func (r *One) Hello() (string, error) {
 }
 `
 	ctx := context.TODO()
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+
+	changePulse(ctx, lr, msgHandler)
 
 	err := cb.Build(map[string]string{"one": code})
 	s.NoError(err)
@@ -694,8 +712,10 @@ func (r *One) Kill() error {
 }
 `
 	ctx := context.TODO()
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+
+	changePulse(ctx, lr, msgHandler)
 
 	err := cb.Build(map[string]string{"one": code})
 	s.NoError(err)
@@ -728,8 +748,10 @@ func (r *One) NotPanic() error {
 }
 `
 	ctx := context.TODO()
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+
+	changePulse(ctx, lr, msgHandler)
 
 	err := cb.Build(map[string]string{"one": code})
 	s.NoError(err)
@@ -811,8 +833,10 @@ func New(n int) (*Child, error) {
 }
 `
 	ctx := context.TODO()
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+
+	changePulse(ctx, lr, msgHandler)
 
 	err := cb.Build(map[string]string{"child": goChild})
 	s.NoError(err)
@@ -860,9 +884,10 @@ func (c *Contract) Rand() (int, error) {
 }
 `
 	ctx := context.TODO()
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
 
+	changePulse(ctx, lr, msgHandler)
 	err := cb.Build(map[string]string{"contract": goContract})
 	s.NoError(err)
 
@@ -936,8 +961,9 @@ func (r *Two) NoError() error {
 }
 `
 	ctx := context.TODO()
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+	changePulse(ctx, lr, msgHandler)
 
 	err := cb.Build(map[string]string{
 		"one": contractOneCode,
@@ -1007,8 +1033,9 @@ func (r *Two) Hello() (*string, error) {
 }
 `
 	ctx := context.TODO()
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+	changePulse(ctx, lr, msgHandler)
 
 	err := cb.Build(map[string]string{
 		"one": contractOneCode,
@@ -1088,8 +1115,9 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	contractCode := s.LoadBasicContracts(contracts)
 	ctx := context.TODO()
 	// TODO need use pulseManager to sync all refs
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+	changePulse(ctx, lr, msgHandler)
 	err := cb.Build(contractCode)
 	s.NoError(err)
 
@@ -1267,8 +1295,9 @@ func New(n int) (*Child, error) {
 }
 `
 	ctx := context.TODO()
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+	changePulse(ctx, lr, msgHandler)
 
 	err := cb.Build(map[string]string{"child": goChild, "contract": goContract})
 	s.NoError(err)
@@ -1358,8 +1387,10 @@ func New() (*Two, error) {
 }
 `
 	ctx := context.TODO()
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+
+	changePulse(ctx, lr, msgHandler)
 
 	err := cb.Build(map[string]string{
 		"one": contractOneCode,
@@ -1410,8 +1441,9 @@ func (r *One) Recursive() (error) {
 `
 
 	ctx := inslogger.ContextWithTrace(context.Background(), utils.RandTraceID())
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+	changePulse(ctx, lr, msgHandler)
 
 	err := cb.Build(map[string]string{
 		"recursive": recursiveContractCode,
@@ -1466,8 +1498,9 @@ func (r *One) CreateAllowance(member string) (error) {
 	contractCode["one"] = contractOneCode
 
 	ctx := context.TODO()
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+	changePulse(ctx, lr, msgHandler)
 	err := cb.Build(contractCode)
 	s.NoError(err)
 
@@ -1610,8 +1643,9 @@ package main
 }
  `
 	ctx := context.Background()
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+	changePulse(ctx, lr, msgHandler)
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	s.NoError(err)
 
@@ -1659,8 +1693,9 @@ func (r *One) ShortSleep() (error) {
 
 `
 	ctx := inslogger.ContextWithTrace(context.Background(), utils.RandTraceID())
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+	changePulse(ctx, lr, msgHandler)
 
 	err := cb.Build(map[string]string{
 		"one": sleepContract,
@@ -1746,8 +1781,9 @@ func (r *One) EmptyMethod() (error) {
 
 `
 	ctx := inslogger.ContextWithTrace(context.Background(), utils.RandTraceID())
-	lr, am, cb, _, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, _, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+	changePulse(ctx, lr, msgHandler)
 
 	err := cb.Build(map[string]string{
 		"one": emptyMethodContract,
@@ -1851,8 +1887,9 @@ package main
  }
  `
 	ctx := context.Background()
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+	changePulse(ctx, lr, msgHandler)
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	s.NoError(err)
 
@@ -1918,8 +1955,9 @@ package main
 `
 
 	ctx := context.Background()
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+	changePulse(ctx, lr, msgHandler)
 	err := cb.Build(map[string]string{"one": contractOneCode, "two": contractTwoCode})
 	s.NoError(err)
 
@@ -1985,8 +2023,9 @@ func (c *First) GetName() (string, error) {
 }
 `
 	ctx := context.TODO()
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+	changePulse(ctx, lr, msgHandler)
 
 	err := cb.Build(map[string]string{"test": testContract, "first": firstContract, "second": secondContract})
 	s.NoError(err)
@@ -2124,8 +2163,9 @@ func (r *Three) DoNothing() (error) {
 `
 
 	ctx := context.TODO()
-	lr, am, cb, pm, cleaner := s.PrepareLrAmCbPm()
+	lr, am, cb, pm, msgHandler, cleaner := s.PrepareLrAmCbPm()
 	defer cleaner()
+	changePulse(ctx, lr, msgHandler)
 
 	err := cb.Build(map[string]string{"one": codeOne, "two": codeTwo, "three": codeThree})
 	s.NoError(err)

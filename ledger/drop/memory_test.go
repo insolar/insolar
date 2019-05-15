@@ -106,7 +106,7 @@ func TestDropStorageMemory_Set_Concurrent(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	var ms Modifier = NewStorageMemory()
 
-	gonum := 10000
+	gonum := 50
 	startChannel := make(chan struct{})
 
 	wg := sync.WaitGroup{}

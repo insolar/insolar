@@ -243,7 +243,7 @@ func (cr *challengeResponseController) sendRequest1(ctx context.Context, discove
 	if err != nil {
 		return nil, errors.Wrap(err, "Error sending challenge request")
 	}
-	response, err := future.GetResponse(cr.options.PacketTimeout)
+	response, err := future.WaitResponse(cr.options.PacketTimeout)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error getting response for challenge request")
 	}
@@ -265,7 +265,7 @@ func (cr *challengeResponseController) sendRequest2(ctx context.Context, discove
 	if err != nil {
 		return nil, errors.Wrap(err, "Error sending challenge request")
 	}
-	response, err := future.GetResponse(cr.options.PacketTimeout)
+	response, err := future.WaitResponse(cr.options.PacketTimeout)
 	if err != nil {
 		return nil, errors.Wrap(err, "Error getting response for challenge request")
 	}

@@ -19,6 +19,8 @@ package virtual
 import (
 	"context"
 
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -27,6 +29,7 @@ import (
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/genesisdataprovider"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/jetcoordinator"
@@ -41,7 +44,6 @@ import (
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/network/servicenetwork"
 	"github.com/insolar/insolar/network/termination"
-	"github.com/insolar/insolar/networkcoordinator"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
@@ -114,6 +116,12 @@ func initComponents(
 ) (*component.Manager, insolar.TerminationHandler, error) {
 	cm := component.Manager{}
 
+	// TODO: use insolar.Logger
+	logger := watermill.NewStdLogger(false, false)
+	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+
+	b := bus.NewBus(pubsub)
+
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
 
@@ -143,9 +151,6 @@ func initComponents(
 	metricsHandler, err := metrics.NewMetrics(ctx, cfg.Metrics, metrics.GetInsolarRegistry("virtual"), "virtual")
 	checkError(ctx, err, "failed to start Metrics")
 
-	networkCoordinator, err := networkcoordinator.New()
-	checkError(ctx, err, "failed to start NetworkCoordinator")
-
 	_, err = manager.NewVersionManager(cfg.VersionManager)
 	checkError(ctx, err, "failed to load VersionManager: ")
 
@@ -160,15 +165,17 @@ func initComponents(
 		cryptographyService,
 		keyProcessor,
 		certManager,
+		logicRunner,
 		nodeNetwork,
 		nw,
 		pulsemanager.NewPulseManager(),
 	)
 
 	components := []interface{}{
+		b,
+		pubsub,
 		messageBus,
 		contractRequester,
-		logicRunner,
 		artifacts.NewClient(),
 		pulse.NewStorageMem(),
 		jet.NewStore(),
@@ -181,7 +188,6 @@ func initComponents(
 		genesisDataProvider,
 		apiRunner,
 		metricsHandler,
-		networkCoordinator,
 		cryptographyService,
 		keyProcessor,
 	}...)

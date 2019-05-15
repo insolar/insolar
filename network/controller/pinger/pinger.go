@@ -80,7 +80,7 @@ func (p *Pinger) Ping(ctx context.Context, address string, timeout time.Duration
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to ping address %s", address)
 	}
-	result, err := future.GetResponse(timeout)
+	result, err := future.WaitResponse(timeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to receive ping response from address %s", address)
 	}

@@ -65,9 +65,8 @@ type Jetless struct {
 }
 
 func (g *Jetless) Run(ctx context.Context) {
-	panic("implement me")
 }
 
 func (g *Jetless) GetState() insolar.NetworkState {
-	panic("implement me")
+	return insolar.JetlessNetworkState
 }

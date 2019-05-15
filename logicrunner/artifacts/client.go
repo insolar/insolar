@@ -126,6 +126,7 @@ func (m *client) GetCode(
 
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
+		messagebus.RetryIncorrectPulse(),
 		m.senders.CachedSender(m.PCS),
 		messagebus.FollowRedirectSender(m.DefaultBus),
 		messagebus.RetryJetSender(m.JetStorage),
@@ -187,6 +188,7 @@ func (m *client) GetObject(
 
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
+		messagebus.RetryIncorrectPulse(),
 		messagebus.FollowRedirectSender(m.DefaultBus),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
@@ -232,6 +234,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
+		messagebus.RetryIncorrectPulse(),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
 
@@ -306,6 +309,7 @@ func (m *client) HasPendingRequests(
 ) (bool, error) {
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
+		messagebus.RetryIncorrectPulse(),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
 
@@ -345,6 +349,7 @@ func (m *client) GetDelegate(
 
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
+		messagebus.RetryIncorrectPulse(),
 		messagebus.FollowRedirectSender(m.DefaultBus),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
@@ -386,6 +391,7 @@ func (m *client) GetChildren(
 
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
+		messagebus.RetryIncorrectPulse(),
 		messagebus.FollowRedirectSender(m.DefaultBus),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
@@ -835,7 +841,11 @@ func (m *client) setRecord(
 	if err != nil {
 		return nil, errors.Wrap(err, "setRecord: can't serialize record")
 	}
-	sender := messagebus.BuildSender(m.DefaultBus.Send, messagebus.RetryJetSender(m.JetStorage))
+	sender := messagebus.BuildSender(
+		m.DefaultBus.Send,
+		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryJetSender(m.JetStorage),
+		)
 	genericReply, err := sender(ctx, &message.SetRecord{
 		Record:    data,
 		TargetRef: target,
@@ -891,7 +901,11 @@ func (m *client) sendUpdateObject(
 	if err != nil {
 		return nil, errors.Wrap(err, "setRecord: can't serialize record")
 	}
-	sender := messagebus.BuildSender(m.DefaultBus.Send, messagebus.RetryJetSender(m.JetStorage))
+	sender := messagebus.BuildSender(
+		m.DefaultBus.Send,
+		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryJetSender(m.JetStorage),
+		)
 	genericReply, err := sender(
 		ctx,
 		&message.UpdateObject{
@@ -925,7 +939,11 @@ func (m *client) registerChild(
 	if err != nil {
 		return nil, errors.Wrap(err, "setRecord: can't serialize record")
 	}
-	sender := messagebus.BuildSender(m.DefaultBus.Send, messagebus.RetryJetSender(m.JetStorage))
+	sender := messagebus.BuildSender(
+		m.DefaultBus.Send,
+		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryJetSender(m.JetStorage),
+		)
 	genericReact, err := sender(ctx, &message.RegisterChild{
 		Record: data,
 		Parent: parent,

@@ -35,10 +35,14 @@ func FuzzRandomReference(t *insolar.Reference, _ fuzz.Continue) {
 	*t = gen.Reference()
 }
 
+func fuzzer() *fuzz.Fuzzer {
+	return fuzz.New().Funcs(FuzzRandomID, FuzzRandomReference).NumElements(50, 100).NilChance(0)
+}
+
 func TestMarshalUnmarshalRecord(t *testing.T) {
-	f := fuzz.New().Funcs(FuzzRandomID, FuzzRandomReference).NumElements(50, 100).NilChance(0)
 
 	t.Run("GenesisRecordTest", func(t *testing.T) {
+		f := fuzzer()
 		a := assert.New(t)
 		t.Parallel()
 		var record Genesis
@@ -63,6 +67,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 	})
 
 	t.Run("ChildRecordTest", func(t *testing.T) {
+		f := fuzzer()
 		a := assert.New(t)
 		t.Parallel()
 		var record Child
@@ -87,6 +92,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 	})
 
 	t.Run("JetRecordTest", func(t *testing.T) {
+		f := fuzzer()
 		a := assert.New(t)
 		t.Parallel()
 		var record Jet
@@ -111,6 +117,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 	})
 
 	t.Run("RequestRecordTest", func(t *testing.T) {
+		f := fuzzer()
 		a := assert.New(t)
 		t.Parallel()
 		var record Request
@@ -135,6 +142,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 	})
 
 	t.Run("ResultRecordTest", func(t *testing.T) {
+		f := fuzzer()
 		a := assert.New(t)
 		t.Parallel()
 		var record Result
@@ -159,6 +167,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 	})
 
 	t.Run("TypeRecordTest", func(t *testing.T) {
+		f := fuzzer()
 		a := assert.New(t)
 		t.Parallel()
 		var record Type
@@ -183,6 +192,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 	})
 
 	t.Run("CodeRecordTest", func(t *testing.T) {
+		f := fuzzer()
 		a := assert.New(t)
 		t.Parallel()
 		var record Code
@@ -207,6 +217,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 	})
 
 	t.Run("ActivateRecordTest", func(t *testing.T) {
+		f := fuzzer()
 		a := assert.New(t)
 		t.Parallel()
 		var record Activate
@@ -231,6 +242,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 	})
 
 	t.Run("AmendRecordTest", func(t *testing.T) {
+		f := fuzzer()
 		a := assert.New(t)
 		t.Parallel()
 		var record Amend
@@ -255,6 +267,7 @@ func TestMarshalUnmarshalRecord(t *testing.T) {
 	})
 
 	t.Run("DeactivateRecordTest", func(t *testing.T) {
+		f := fuzzer()
 		a := assert.New(t)
 		t.Parallel()
 		var record Deactivate

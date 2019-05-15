@@ -191,8 +191,12 @@ func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg 
 		return nil, errors.New("Execute( ! message.ValidateCaseBindInterface )")
 	}
 
-	err := lr.CheckOurRole(ctx, msg, insolar.DynamicRoleVirtualValidator)
-	if err != nil {
+	procCheckRole := CheckOurRole{
+		msg:  msg,
+		role: insolar.DynamicRoleVirtualValidator,
+		lr:   lr,
+	}
+	if err := procCheckRole.Proceed(ctx); err != nil {
 		return nil, errors.Wrap(err, "[ HandleValidateCaseBindMessage ] can't play role")
 	}
 
@@ -204,7 +208,7 @@ func (lr *LogicRunner) HandleValidateCaseBindMessage(ctx context.Context, inmsg 
 		errstr = validationError.Error()
 	}
 
-	_, err = lr.MessageBus.Send(ctx, &message.ValidationResults{
+	_, err := lr.MessageBus.Send(ctx, &message.ValidationResults{
 		RecordRef:        msg.GetReference(),
 		PassedStepsCount: passedStepsCount,
 		Error:            errstr,
@@ -229,29 +233,7 @@ func (lr *LogicRunner) HandleValidationResultsMessage(ctx context.Context, inmsg
 }
 
 func (lr *LogicRunner) HandleExecutorResultsMessage(ctx context.Context, inmsg insolar.Parcel) (insolar.Reply, error) {
-	ctx = loggerWithTargetID(ctx, inmsg)
-	inslogger.FromContext(ctx).Debug("LogicRunner.HandleExecutorResultsMessage starts ...")
-	msg, ok := inmsg.Message().(*message.ExecutorResults)
-	if !ok {
-		return nil, errors.Errorf("HandleValidationResultsMessage got argument typed %t", inmsg)
-	}
-
-	// now we have 2 different types of data in message.HandleExecutorResultsMessage
-	// one part of it is about consensus
-	// another one is about prepare state on new executor after pulse
-	// TODO make it in different goroutines
-
-	// prepare state after previous executor
-	err := lr.prepareObjectState(ctx, msg)
-	if err != nil {
-		return &reply.Error{}, err
-	}
-
-	// validation things
-	// c := lr.GetConsensus(ctx, msg.Reference)
-	// c.AddExecutor(ctx, inmsg, msg)
-
-	return &reply.OK{}, nil
+	return lr.FlowDispatcher.WrapBusHandle(ctx, inmsg)
 }
 
 func init() {
