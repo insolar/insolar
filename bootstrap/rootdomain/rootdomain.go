@@ -20,14 +20,20 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
+// Name is the constant name of root domain.
 const Name = "rootdomain"
 
 var genesisPulse = insolar.GenesisPulse.PulseNumber
 
 type Record struct {
 	PCS insolar.PlatformCryptographyScheme
+}
+
+var RootDomain = &Record{
+	PCS: platformpolicy.NewPlatformCryptographyScheme(),
 }
 
 func (r Record) Ref() insolar.Reference {
