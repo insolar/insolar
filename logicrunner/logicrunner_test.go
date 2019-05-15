@@ -565,7 +565,6 @@ func (r *Two) Hello(s string) (string, error) {
 	s.Equal("Hello you too, ins. 1288 times!", firstMethodRes(s.T(), resp))
 }
 
-// TODO: why this test hangs?
 func (s *LogicRunnerFuncSuite) TestBasicNotificationCallError() {
 	if parallel {
 		s.T().Parallel()
