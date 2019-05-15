@@ -43,12 +43,8 @@ func (r Record) ID() insolar.ID {
 	}
 	rec := &object.RequestRecord{
 		Parcel:      message.ParcelToBytes(parcel),
-		MessageHash: hashParcel(r.PCS, parcel),
+		MessageHash: message.ParcelHash(r.PCS, parcel),
 		Object:      insolar.GenesisRecord.ID(),
 	}
 	return *object.NewRecordIDFromRecord(r.PCS, genesisPulse, rec)
-}
-
-func hashParcel(PCS insolar.PlatformCryptographyScheme, parcel insolar.Parcel) []byte {
-	return PCS.IntegrityHasher().Hash(message.MustSerializeBytes(parcel.Message()))
 }

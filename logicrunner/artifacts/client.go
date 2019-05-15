@@ -89,7 +89,7 @@ func (m *client) RegisterRequest(
 
 	rec := &object.RequestRecord{
 		Parcel:      message.ParcelToBytes(parcel),
-		MessageHash: m.PlatformCryptographyScheme.IntegrityHasher().Hash(message.MustSerializeBytes(parcel.Message())),
+		MessageHash: message.ParcelHash(m.PlatformCryptographyScheme, parcel),
 		Object:      *obj.Record(),
 	}
 	recID := object.NewRecordIDFromRecord(

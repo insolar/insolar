@@ -182,6 +182,11 @@ func ParcelToBytes(msg insolar.Parcel) []byte {
 	return buf
 }
 
+// ParcelHash returns hash of parcel calculated with provided cryptography scheme.
+func ParcelHash(pcs insolar.PlatformCryptographyScheme, parcel insolar.Parcel) []byte {
+	return pcs.IntegrityHasher().Hash(MustSerializeBytes(parcel.Message()))
+}
+
 func init() {
 	// Bootstrap
 	gob.Register(&NodeSignPayload{})

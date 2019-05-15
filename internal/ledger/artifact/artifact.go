@@ -120,7 +120,7 @@ func (m *Scope) GetObject(
 func (m *Scope) RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error) {
 	rec := &object.RequestRecord{
 		Parcel:      message.ParcelToBytes(parcel),
-		MessageHash: m.hashParcel(parcel),
+		MessageHash: message.ParcelHash(m.PlatformCryptographyScheme, parcel),
 		Object:      *objectRef.Record(),
 	}
 	return m.setRecord(ctx, rec)
@@ -397,8 +397,4 @@ func (m *Scope) updateStateObject(
 		childPointer: idx.ChildPointer,
 		parent:       idx.Parent,
 	}, nil
-}
-
-func (m *Scope) hashParcel(parcel insolar.Parcel) []byte {
-	return message.HashParcel(m.PlatformCryptographyScheme, parcel)
 }
