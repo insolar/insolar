@@ -2,6 +2,7 @@ package object
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
@@ -273,7 +274,6 @@ func (k indexKey) ID() []byte {
 }
 
 type lastKnownIndexPNKey struct {
-	pn    insolar.PulseNumber
 	objID insolar.ID
 }
 
@@ -282,7 +282,7 @@ func (k lastKnownIndexPNKey) Scope() store.Scope {
 }
 
 func (k lastKnownIndexPNKey) ID() []byte {
-	return append(k.pn.Bytes(), k.objID.Bytes()...)
+	return k.objID.Bytes()
 }
 
 func NewIndexDB(db store.DB) *IndexDB {
@@ -298,7 +298,7 @@ func (i *IndexDB) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID
 	}
 
 	buc, err := i.getBucket(pn, objID)
-	if err == store.ErrNotFound {
+	if err == ErrIndexBucketNotFound {
 		buc = &IndexBucket{}
 	} else if err != nil {
 		return err
@@ -354,15 +354,20 @@ func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket 
 }
 
 func (i *IndexDB) LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
-	buck, err := i.getBucket(pn, objID)
+	var buck *IndexBucket
+	var err error
+	buck, err = i.getBucket(pn, objID)
 	if err == ErrIndexBucketNotFound {
-		lastPN, err := i.getLastKnownPN(pn, objID)
+		var lastPN insolar.PulseNumber
+		lastPN, err = i.getLastKnownPN(objID)
 		if err != nil {
 			return Lifeline{}, ErrLifelineNotFound
 		}
+
 		buck, err = i.getBucket(lastPN, objID)
 	}
 	if err != nil {
+		panic(err)
 		return Lifeline{}, err
 	}
 	if buck.Lifeline == nil {
@@ -398,12 +403,12 @@ func (i *IndexDB) getBucket(pn insolar.PulseNumber, objID insolar.ID) (*IndexBuc
 }
 
 func (i *IndexDB) setLastKnownPN(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
-	key := lastKnownIndexPNKey{pn: pn, objID: objID}
+	key := lastKnownIndexPNKey{objID: objID}
 	return i.db.Set(key, pn.Bytes())
 }
 
-func (i *IndexDB) getLastKnownPN(pn insolar.PulseNumber, objID insolar.ID) (insolar.PulseNumber, error) {
-	buff, err := i.db.Get(lastKnownIndexPNKey{pn: pn, objID: objID})
+func (i *IndexDB) getLastKnownPN(objID insolar.ID) (insolar.PulseNumber, error) {
+	buff, err := i.db.Get(lastKnownIndexPNKey{objID: objID})
 	if err != nil {
 		return insolar.FirstPulseNumber, err
 	}
