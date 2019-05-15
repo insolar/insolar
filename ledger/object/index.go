@@ -11,46 +11,55 @@ import (
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineIndex -o ./ -s _mock.go
 
-// LifelineIndex is a base storage for lifelines
+// LifelineIndex is a base storage for lifelines.
 type LifelineIndex interface {
+	// IndexLifelineAccessor provides methods for fetching lifelines.
 	IndexLifelineAccessor
+	// IndexLifelineModifier provides methods for modifying lifelines.
 	IndexLifelineModifier
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexLifelineAccessor -o ./ -s _mock.go
 
-// IndexLifelineAccessor provides methods for fetching lifelines
+// IndexLifelineAccessor provides methods for fetching lifelines.
 type IndexLifelineAccessor interface {
+	// LifelineForID returns a lifeline from a bucket with provided PN and ObjID
 	LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexLifelineModifier -o ./ -s _mock.go
 
-// IndexLifelineModifier provides methods for modifying lifelines
+// IndexLifelineModifier provides methods for modifying lifelines.
 type IndexLifelineModifier interface {
+	// SetLifeline set a lifeline to a bucket with provided pulseNumber and ID
 	SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexPendingModifier -o ./ -s _mock.go
 
-// IndexPendingModifier provides methods for modifying pending requests
+// IndexPendingModifier provides methods for modifying pending requests.
 type IndexPendingModifier interface {
+	// SetRequest adds a request to a bucket with provided pulseNumber and ID
 	SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error
+	// SetResultRecord adds a result record to a bucket with provided pulseNumber and ID
 	SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexBucketModifier -o ./ -s _mock.go
 
 // IndexBucketModifier provides methods for modifying buckets of index.
-// Index contains buckets with pn-objID-meta hierarchy
-// With using of IndexBucketModifier there is a possibility to set buckets from outside of an index
+// Index contains buckets with pn->objID->Bucket hierarchy.
+// With using of IndexBucketModifier there is a possibility to set buckets from outside of an index.
 type IndexBucketModifier interface {
+	// SetBucket adds a bucket with provided pulseNumber and ID
 	SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineStateModifier -o ./ -s _mock.go
 
+// LifelineStateModifier provides an interface for changing a state of lifeline.
 type LifelineStateModifier interface {
+	// SetLifelineUsage updates a last usage fields of a bucket for a provided pulseNumber and an object id
 	SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
 }
 
@@ -64,10 +73,15 @@ type IndexCleaner interface {
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexBucketAccessor -o ./ -s _mock.go
 
+// IndexBucketAccessor provides an interface for fetching buckets from an index.
 type IndexBucketAccessor interface {
+	// ForPNAndJet returns a collection of buckets for a provided pn and jetID
 	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []IndexBucket
 }
 
+// LockedIndexBucket is a thread-safe wrapper around IndexBucket struct.
+// Due to IndexBucket is a protobuf-generated struct,
+// LockedIndexBucket was created for creating an opportunity for using of IndexBucket struct  in a thread-safe way.
 type LockedIndexBucket struct {
 	lifelineLock         sync.RWMutex
 	lifelineLastUsedLock sync.RWMutex
@@ -116,11 +130,13 @@ func (i *LockedIndexBucket) setResult(resID insolar.ID) {
 	i.bucket.Results = append(i.bucket.Results, resID)
 }
 
+// InMemoryIndex is a in-memory storage, that stores a collection of IndexBuckets
 type InMemoryIndex struct {
 	bucketsLock sync.RWMutex
 	buckets     map[insolar.PulseNumber]map[insolar.ID]*LockedIndexBucket
 }
 
+// NewInMemoryIndex creates a new InMemoryIndex
 func NewInMemoryIndex() *InMemoryIndex {
 	return &InMemoryIndex{
 		buckets: map[insolar.PulseNumber]map[insolar.ID]*LockedIndexBucket{},
@@ -162,6 +178,7 @@ func (i *InMemoryIndex) bucket(ctx context.Context, pn insolar.PulseNumber, objI
 	return objsByPn[objID]
 }
 
+// SetLifeline sets a lifeline to a bucket with provided pulseNumber and ID
 func (i *InMemoryIndex) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error {
 	b := i.bucket(ctx, pn, objID)
 	if b == nil {
@@ -173,6 +190,7 @@ func (i *InMemoryIndex) SetLifeline(ctx context.Context, pn insolar.PulseNumber,
 	return nil
 }
 
+// SetRequest adds a request to a bucket with provided pulseNumber and ID
 func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error {
 	b := i.bucket(ctx, pn, objID)
 	if b == nil {
@@ -183,6 +201,7 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	return nil
 }
 
+// SetResultRecord adds a result record to a bucket with provided pulseNumber and ID
 func (i *InMemoryIndex) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error {
 	b := i.bucket(ctx, pn, objID)
 	if b == nil {
@@ -193,6 +212,7 @@ func (i *InMemoryIndex) SetResultRecord(ctx context.Context, pn insolar.PulseNum
 	return nil
 }
 
+// SetBucket adds a bucket with provided pulseNumber and ID
 func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
@@ -210,6 +230,7 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 	return nil
 }
 
+// LifelineForID returns a lifeline from a bucket with provided PN and ObjID
 func (i *InMemoryIndex) LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
 	b := i.bucket(ctx, pn, objID)
 	if b == nil {
@@ -218,6 +239,7 @@ func (i *InMemoryIndex) LifelineForID(ctx context.Context, pn insolar.PulseNumbe
 	return b.lifeline()
 }
 
+// ForPNAndJet returns a collection of buckets for a provided pn and jetID
 func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []IndexBucket {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
@@ -261,6 +283,7 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 	return res
 }
 
+// SetLifelineUsage updates a last usage fields of a bucket for a provided pulseNumber and an object id
 func (i *InMemoryIndex) SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
 	b := i.bucket(ctx, pn, objID)
 	if b == nil {
@@ -275,6 +298,7 @@ func (i *InMemoryIndex) SetLifelineUsage(ctx context.Context, pn insolar.PulseNu
 	return nil
 }
 
+// DeleteForPN deletes all buckets for a provided pulse number
 func (i *InMemoryIndex) DeleteForPN(ctx context.Context, pn insolar.PulseNumber) {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
@@ -282,6 +306,7 @@ func (i *InMemoryIndex) DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
 	delete(i.buckets, pn)
 }
 
+// IndexDB is a db-based storage, that stores a collection of IndexBuckets
 type IndexDB struct {
 	lock sync.RWMutex
 	db   store.DB
@@ -312,10 +337,12 @@ func (k lastKnownIndexPNKey) ID() []byte {
 	return k.objID.Bytes()
 }
 
+// NewIndexDB creates a new instance of IndexDB
 func NewIndexDB(db store.DB) *IndexDB {
 	return &IndexDB{db: db}
 }
 
+// SetLifeline sets a lifeline to a bucket with provided pulseNumber and ID
 func (i *IndexDB) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
@@ -336,10 +363,11 @@ func (i *IndexDB) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID
 	if err != nil {
 		return err
 	}
-
+	inslogger.FromContext(ctx).Debugf("[SetLifeline] lifeline for obj - %v was set successfully", objID.DebugString())
 	return i.setLastKnownPN(ctx, pn, objID)
 }
 
+// SetBucket adds a bucket with provided pulseNumber and ID
 func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
@@ -347,6 +375,7 @@ func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket 
 	return i.setBucket(pn, bucket.ObjID, &bucket)
 }
 
+// LifelineForID returns a lifeline from a bucket with provided PN and ObjID
 func (i *IndexDB) LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
 	var buck *IndexBucket
 	var err error
