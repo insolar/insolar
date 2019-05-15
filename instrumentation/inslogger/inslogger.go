@@ -80,7 +80,7 @@ func ContextWithTrace(ctx context.Context, traceid string) context.Context {
 func getLogger(ctx context.Context) insolar.Logger {
 	val := ctx.Value(loggerKey{})
 	if val == nil {
-		return logger.GlobalLogger.ChangeSkipFrameCount(1).WithField("loginstance", "global_inslog")
+		return logger.GlobalLogger.WithSkipFrameCount(1)
 	}
 	l := val.(insolar.Logger)
 	ln := GetLoggerLevel(ctx)

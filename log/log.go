@@ -69,7 +69,7 @@ var GlobalLogger = func() insolar.Logger {
 	if err != nil {
 		stdlog.Println("warning:", err.Error())
 	}
-	return logger.WithCaller(true).ChangeSkipFrameCount(1)
+	return logger.WithCaller(true).WithSkipFrameCount(1)
 }()
 
 func SetGlobalLogger(logger insolar.Logger) {

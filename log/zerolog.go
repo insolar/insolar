@@ -253,8 +253,8 @@ func (z *zerologAdapter) WithCaller(flag bool) insolar.Logger {
 	return &zCopy
 }
 
-// ChangeSkipFrameCount changes skipFrameCount by delta value.
-func (z *zerologAdapter) ChangeSkipFrameCount(delta int) insolar.Logger {
+// WithSkipFrameCount changes skipFrameCount by delta value (it can be negative).
+func (z *zerologAdapter) WithSkipFrameCount(delta int) insolar.Logger {
 	zCopy := *z
 	zCopy.callerConfig.skipFrameCount += delta
 	return &zCopy

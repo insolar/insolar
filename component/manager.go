@@ -204,5 +204,5 @@ func (m *Manager) Stop(ctx context.Context) error {
 }
 
 func glog() insolar.Logger {
-	return log.GlobalLogger.ChangeSkipFrameCount(1)
+	return log.GlobalLogger.WithSkipFrameCount(1)
 }

@@ -54,7 +54,7 @@ func logFields(t *testing.T, b []byte) loggerField {
 
 func logFromContextWithSkip(ctx context.Context) insolar.Logger {
 	// skip testing.go & runtime wrappers
-	return inslogger.FromContext(ctx).ChangeSkipFrameCount(-2)
+	return inslogger.FromContext(ctx).WithSkipFrameCount(-2)
 }
 
 func TestExt_Global(t *testing.T) {
@@ -161,7 +161,7 @@ func TestExt_Global_SubCall(t *testing.T) {
 }
 
 func logCallerGlobal(ctx context.Context, t *testing.T) (loggerField, string) {
-	l := inslogger.FromContext(ctx).ChangeSkipFrameCount(-2)
+	l := inslogger.FromContext(ctx).WithSkipFrameCount(-2)
 	var b bytes.Buffer
 	l = l.WithOutput(&b)
 

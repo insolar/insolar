@@ -32,7 +32,7 @@ func Logger(
 	ctx, inslog = inslogger.WithField(ctx, "role", nodeRole)
 
 	ctx = inslogger.SetLogger(ctx, inslog.WithField("loginstance", "inslog"))
-	log.SetGlobalLogger(inslog.ChangeSkipFrameCount(1).WithField("loginstance", "global"))
+	log.SetGlobalLogger(inslog.WithSkipFrameCount(1))
 
 	return ctx, inslog.WithField("loginstance", "Logger")
 }
