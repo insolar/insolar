@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
@@ -48,13 +49,13 @@ import (
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
-	RecentStorageProvider      recentstorage.Provider             `inject:""`
-	Bus                        insolar.MessageBus                 `inject:""`
-	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
-	JetCoordinator             jet.Coordinator                    `inject:""`
-	CryptographyService        insolar.CryptographyService        `inject:""`
-	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
-	JetStorage                 jet.Storage                        `inject:""`
+	RecentStorageProvider  recentstorage.Provider             `inject:""`
+	Bus                    insolar.MessageBus                 `inject:""`
+	PCS                    insolar.PlatformCryptographyScheme `inject:""`
+	JetCoordinator         jet.Coordinator                    `inject:""`
+	CryptographyService    insolar.CryptographyService        `inject:""`
+	DelegationTokenFactory insolar.DelegationTokenFactory     `inject:""`
+	JetStorage             jet.Storage                        `inject:""`
 
 	DropModifier drop.Modifier `inject:""`
 
@@ -116,13 +117,13 @@ func NewMessageHandler(
 		SetRecord: func(p *proc.SetRecord) {
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 			p.Dep.RecordModifier = h.RecordModifier
-			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.PCS = h.PCS
 			p.Dep.PendingRequestsLimit = h.conf.PendingRequestsLimit
 		},
 		SetBlob: func(p *proc.SetBlob) {
 			p.Dep.BlobAccessor = h.BlobAccessor
 			p.Dep.BlobModifier = h.BlobModifier
-			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.PlatformCryptographyScheme = h.PCS
 		},
 		SendObject: func(p *proc.SendObject) {
 			p.Dep.Jets = h.JetStorage
@@ -147,7 +148,7 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.BlobModifier = h.BlobModifier
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
-			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.PCS = h.PCS
 			p.Dep.IDLocker = h.IDLocker
 			p.Dep.IndexStateModifier = h.IndexStateModifier
 			p.Dep.IndexStorage = h.IndexStorage
@@ -158,7 +159,7 @@ func NewMessageHandler(
 			p.Dep.JetCoordinator = h.JetCoordinator
 			p.Dep.RecordModifier = h.RecordModifier
 			p.Dep.IndexStateModifier = h.IndexStateModifier
-			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.PCS = h.PCS
 		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
@@ -411,12 +412,13 @@ func (h *MessageHandler) handleGetChildren(
 			return nil, errors.New("failed to retrieve children")
 		}
 
-		virtRec := rec.Record
-		childRec, ok := virtRec.(*object.ChildRecord)
+		virtRec := rec.Virtual
+		concrete := record.Unwrap(virtRec)
+		childRec, ok := concrete.(*record.Child)
 		if !ok {
 			return nil, errors.New("failed to retrieve children")
 		}
-		currentChild = childRec.PrevChild
+		currentChild = &childRec.PrevChild
 
 		// Skip records later than specified pulse.
 		recPulse := childRec.Ref.Record().Pulse()

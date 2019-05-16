@@ -62,7 +62,7 @@ type Manager interface {
 type Scope struct {
 	PulseNumber insolar.PulseNumber
 
-	PlatformCryptographyScheme insolar.PlatformCryptographyScheme
+	PCS insolar.PlatformCryptographyScheme
 
 	BlobStorage blob.Storage
 
@@ -111,23 +111,27 @@ func (m *Scope) GetObject(
 }
 
 func (m *Scope) RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error) {
-	rec := &object.RequestRecord{
+	req := record.Request{
 		Parcel:      message.ParcelToBytes(parcel),
 		MessageHash: message.ParcelHash(m.PlatformCryptographyScheme, parcel),
 		Object:      *objectRef.Record(),
 	}
-	return m.setRecord(ctx, rec)
+	virtRec := record.Wrap(req)
+
+	return m.setRecord(ctx, virtRec)
 }
 
 func (m *Scope) RegisterResult(
 	ctx context.Context, obj, request insolar.Reference, payload []byte,
 ) (*insolar.ID, error) {
-	rec := &object.ResultRecord{
+	res := record.Result{
 		Object:  *obj.Record(),
 		Request: request,
 		Payload: payload,
 	}
-	return m.setRecord(ctx, rec)
+	virtRec := record.Wrap(res)
+
+	return m.setRecord(ctx, virtRec)
 }
 
 func (m *Scope) ActivateObject(
@@ -162,17 +166,13 @@ func (m *Scope) activateObject(
 		return nil, errors.Wrap(err, "not found parent index for activated object")
 	}
 
-	stateRecord := &object.ActivateRecord{
-		SideEffectRecord: object.SideEffectRecord{
-			Domain:  domain,
-			Request: obj,
-		},
-		StateRecord: object.StateRecord{
-			Image:       prototype,
-			IsPrototype: isPrototype,
-		},
-		Parent:     parent,
-		IsDelegate: asDelegate,
+	stateRecord := record.Activate{
+		Domain:      domain,
+		Request:     obj,
+		Image:       prototype,
+		IsPrototype: isPrototype,
+		Parent:      parent,
+		IsDelegate:  asDelegate,
 	}
 	stateObj, err := m.updateStateObject(ctx, obj, stateRecord, memory)
 	if err != nil {
@@ -220,17 +220,14 @@ func (m *Scope) UpdateObject(
 		return nil, errors.Wrap(err, "failed to update object")
 	}
 
-	amendRecord := &object.AmendRecord{
-		SideEffectRecord: object.SideEffectRecord{
-			Domain:  domain,
-			Request: request,
-		},
-		StateRecord: object.StateRecord{
-			Image:       *image,
-			IsPrototype: objDesc.IsPrototype(),
-		},
-		PrevState: *objDesc.StateID(),
+	amendRecord := record.Amend{
+		Domain:      domain,
+		Request:     request,
+		Image:       *image,
+		IsPrototype: objDesc.IsPrototype(),
+		PrevState:   *objDesc.StateID(),
 	}
+
 	return m.updateStateObject(ctx, *objDesc.HeadRef(), amendRecord, memory)
 }
 
@@ -246,31 +243,32 @@ func (m *Scope) DeployCode(
 		return nil, err
 	}
 
-	codeRec := &object.CodeRecord{
-		SideEffectRecord: object.SideEffectRecord{
-			Domain:  domain,
-			Request: request,
-		},
-		Code:        blobID,
+	codeRec := record.Code{
+		Domain:      domain,
+		Request:     request,
+		Code:        *blobID,
 		MachineType: machineType,
 	}
+
 	return m.setRecord(
 		ctx,
-		codeRec,
+		record.Wrap(codeRec),
 	)
 }
 
-func (m *Scope) setRecord(ctx context.Context, rec record.VirtualRecord) (*insolar.ID, error) {
-	id := object.NewRecordIDFromRecord(m.PlatformCryptographyScheme, m.PulseNumber, rec)
-	matRec := record.MaterialRecord{
-		Record: rec,
-		JetID:  insolar.ZeroJetID,
+func (m *Scope) setRecord(ctx context.Context, rec record.Virtual) (*insolar.ID, error) {
+	hash := record.HashVirtual(m.PCS.ReferenceHasher(), rec)
+	id := insolar.NewID(m.PulseNumber, hash)
+
+	matRec := record.Material{
+		Virtual: &rec,
+		JetID:   insolar.ZeroJetID,
 	}
 	return id, m.RecordModifier.Set(ctx, *id, matRec)
 }
 
 func (m *Scope) setBlob(ctx context.Context, memory []byte) (*insolar.ID, error) {
-	blobID := object.CalculateIDForBlob(m.PlatformCryptographyScheme, m.PulseNumber, memory)
+	blobID := object.CalculateIDForBlob(m.PCS, m.PulseNumber, memory)
 	err := m.BlobStorage.Set(
 		ctx,
 		*blobID,
@@ -298,12 +296,13 @@ func (m *Scope) registerChild(
 		return err
 	}
 
-	childRec := &object.ChildRecord{
-		PrevChild: prevChild,
-		Ref:       obj,
+	childRec := record.Child{Ref: obj}
+	if prevChild != nil && prevChild.NotEmpty() {
+		childRec.PrevChild = *prevChild
 	}
 
-	recID := object.NewRecordIDFromRecord(m.PlatformCryptographyScheme, m.PulseNumber, childRec)
+	hash := record.HashVirtual(m.PCS.ReferenceHasher(), record.Wrap(childRec))
+	recID := insolar.NewID(m.PulseNumber, hash)
 
 	// Children exist and pointer does not match (preserving chain consistency).
 	// For the case when vm can't save or send result to another vm and it tries to update the same record again
@@ -311,7 +310,7 @@ func (m *Scope) registerChild(
 		return errors.New("invalid child record")
 	}
 
-	child, err := m.setRecord(ctx, childRec)
+	child, err := m.setRecord(ctx, record.Wrap(childRec))
 	if err != nil {
 		return err
 	}
@@ -328,7 +327,7 @@ func (m *Scope) registerChild(
 func (m *Scope) updateStateObject(
 	ctx context.Context,
 	objRef insolar.Reference,
-	stateObject object.State,
+	stateObject record.State,
 	memory []byte,
 ) (ObjectDescriptor, error) {
 	var jetID = insolar.ID(insolar.ZeroJetID)
@@ -337,14 +336,14 @@ func (m *Scope) updateStateObject(
 		return nil, errors.Wrap(err, "failed to update blob")
 	}
 
-	var virtRecord record.VirtualRecord
+	var virtRecord record.Virtual
 	switch so := stateObject.(type) {
-	case *object.ActivateRecord:
-		so.Memory = blobID
-		virtRecord = so
-	case *object.AmendRecord:
-		virtRecord = so
-		so.Memory = blobID
+	case record.Activate:
+		so.Memory = *blobID
+		virtRecord = record.Wrap(so)
+	case record.Amend:
+		so.Memory = *blobID
+		virtRecord = record.Wrap(so)
 	default:
 		panic("unknown state object type")
 	}
@@ -355,11 +354,11 @@ func (m *Scope) updateStateObject(
 		if err != object.ErrIndexNotFound {
 			return nil, errors.Wrap(err, "failed get index for updating state object")
 		}
-		if stateObject.ID() != object.StateActivation {
+		if stateObject.ID() != record.StateActivation {
 			return nil, errors.Wrap(err, "index not found for updating non Activation state object")
 		}
 		// We are activating the object. There is no index for it yet.
-		idx = object.Lifeline{State: object.StateUndefined}
+		idx = object.Lifeline{State: record.StateUndefined}
 	}
 	// TODO: validateState
 
@@ -373,8 +372,8 @@ func (m *Scope) updateStateObject(
 	idx.State = stateObject.ID()
 	idx.LatestState = id
 	idx.LatestUpdate = m.PulseNumber
-	if stateObject.ID() == object.StateActivation {
-		idx.Parent = stateObject.(*object.ActivateRecord).Parent
+	if stateObject.ID() == record.StateActivation {
+		idx.Parent = stateObject.(record.Activate).Parent
 	}
 	idx.JetID = insolar.JetID(jetID)
 	err = m.IndexModifier.Set(ctx, *objRef.Record(), idx)

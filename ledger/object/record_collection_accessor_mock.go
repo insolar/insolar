@@ -21,7 +21,7 @@ import (
 type RecordCollectionAccessorMock struct {
 	t minimock.Tester
 
-	ForPulseFunc       func(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) (r []record.MaterialRecord)
+	ForPulseFunc       func(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) (r []record.Material)
 	ForPulseCounter    uint64
 	ForPulsePreCounter uint64
 	ForPulseMock       mRecordCollectionAccessorMockForPulse
@@ -58,7 +58,7 @@ type RecordCollectionAccessorMockForPulseInput struct {
 }
 
 type RecordCollectionAccessorMockForPulseResult struct {
-	r []record.MaterialRecord
+	r []record.Material
 }
 
 //Expect specifies that invocation of RecordCollectionAccessor.ForPulse is expected from 1 to Infinity times
@@ -74,7 +74,7 @@ func (m *mRecordCollectionAccessorMockForPulse) Expect(p context.Context, p1 ins
 }
 
 //Return specifies results of invocation of RecordCollectionAccessor.ForPulse
-func (m *mRecordCollectionAccessorMockForPulse) Return(r []record.MaterialRecord) *RecordCollectionAccessorMock {
+func (m *mRecordCollectionAccessorMockForPulse) Return(r []record.Material) *RecordCollectionAccessorMock {
 	m.mock.ForPulseFunc = nil
 	m.expectationSeries = nil
 
@@ -96,12 +96,12 @@ func (m *mRecordCollectionAccessorMockForPulse) ExpectOnce(p context.Context, p1
 	return expectation
 }
 
-func (e *RecordCollectionAccessorMockForPulseExpectation) Return(r []record.MaterialRecord) {
+func (e *RecordCollectionAccessorMockForPulseExpectation) Return(r []record.Material) {
 	e.result = &RecordCollectionAccessorMockForPulseResult{r}
 }
 
 //Set uses given function f as a mock of RecordCollectionAccessor.ForPulse method
-func (m *mRecordCollectionAccessorMockForPulse) Set(f func(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) (r []record.MaterialRecord)) *RecordCollectionAccessorMock {
+func (m *mRecordCollectionAccessorMockForPulse) Set(f func(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) (r []record.Material)) *RecordCollectionAccessorMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -110,7 +110,7 @@ func (m *mRecordCollectionAccessorMockForPulse) Set(f func(p context.Context, p1
 }
 
 //ForPulse implements github.com/insolar/insolar/ledger/object.RecordCollectionAccessor interface
-func (m *RecordCollectionAccessorMock) ForPulse(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) (r []record.MaterialRecord) {
+func (m *RecordCollectionAccessorMock) ForPulse(p context.Context, p1 insolar.JetID, p2 insolar.PulseNumber) (r []record.Material) {
 	counter := atomic.AddUint64(&m.ForPulsePreCounter, 1)
 	defer atomic.AddUint64(&m.ForPulseCounter, 1)
 

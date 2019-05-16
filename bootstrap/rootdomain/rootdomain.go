@@ -19,7 +19,7 @@ package rootdomain
 import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
@@ -47,10 +47,12 @@ func (r Record) ID() insolar.ID {
 			Name: Name,
 		},
 	}
-	rec := &object.RequestRecord{
+	req := record.Request{
 		Parcel:      message.ParcelToBytes(parcel),
 		MessageHash: message.ParcelHash(r.PCS, parcel),
 		Object:      insolar.GenesisRecord.ID(),
 	}
-	return *object.NewRecordIDFromRecord(r.PCS, genesisPulse, rec)
+	virtRec := record.Wrap(req)
+	hash := record.HashVirtual(r.PCS.ReferenceHasher(), virtRec)
+	return *insolar.NewID(genesisPulse, hash)
 }
