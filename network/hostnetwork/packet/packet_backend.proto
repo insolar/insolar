@@ -68,11 +68,20 @@ message Ping {
 }
 
 message RPCRequest {
+    bytes Method = 1;
+    bytes Data = 2;
+}
 
+message Cascade {
+    repeated bytes NodeIds = 1;
+    bytes Entropy = 2;
+    uint32 ReplicationFactor = 3;
 }
 
 message CascadeRequest {
-
+    bytes TraceID = 1;
+    RPCRequest RPC = 2;
+    Cascade Cascade = 3;
 }
 
 message PulseRequest {
@@ -108,11 +117,17 @@ message DisconnectRequest {
 }
 
 message RPCResponse {
-
+    oneof response {
+        bytes Result = 1;
+        bytes Error = 2;
+    }
 }
 
 message CascadeResponse {
-
+    oneof response {
+        bool Success = 1;
+        bytes Error = 2;
+    }
 }
 
 message PulseResponse {
