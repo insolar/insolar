@@ -121,7 +121,7 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	}
 	p, err := pulseFromString(msg.Metadata.Get(wmBus.MetaPulse))
 	if err != nil {
-		return nil, nil
+		return nil, errors.Wrap(err, "can't get pulse from string")
 	}
 	ctx, logger := inslogger.WithField(ctx, "pulse", msg.Metadata.Get(wmBus.MetaPulse))
 	ctx = pulse.ContextWith(ctx, p)
