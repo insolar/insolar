@@ -20,7 +20,7 @@ import (
 	"fmt"
 )
 
-func Wrap(record interface{}) Virtual {
+func Wrap(record Record) Virtual {
 	switch generic := record.(type) {
 	case Genesis:
 		return Virtual{

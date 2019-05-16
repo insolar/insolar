@@ -38,8 +38,7 @@ const (
 
 // State is common object state record.
 type State interface {
-	// StateID returns state id.
-	// TODO: rename to StateID()
+	// ID returns state id.
 	ID() StateID
 	// GetImage returns state code.
 	GetImage() *insolar.Reference

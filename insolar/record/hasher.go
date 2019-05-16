@@ -37,7 +37,7 @@ func HashVirtual(h hash.Hash, rec Virtual) []byte {
 	return h.Sum(nil)
 }
 
-// HashVirtual returns hash for material record.
+// HashMaterial returns hash for material record.
 func HashMaterial(h hash.Hash, rec Material) ([]byte, error) {
 	if rec.Virtual == nil {
 		return nil, errors.New("virtual record is nil")
