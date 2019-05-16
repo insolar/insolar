@@ -19,6 +19,8 @@ package log
 import (
 	"bytes"
 	"encoding/json"
+	"runtime"
+	"strconv"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -51,11 +53,13 @@ func TestLog_ZerologCaller(t *testing.T) {
 	var b bytes.Buffer
 	l = l.WithOutput(&b)
 
+	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
 
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, "^log/caller_test.go:", lf.Caller, "log contains call place")
+	assert.Regexp(t, "^log/caller_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains call place")
 	assert.NotContains(t, "github.com/insolar/insolar", lf.Caller, "log not contains package name")
+	assert.Equal(t, "", lf.Func, "log not contains func name")
 }
 
 // this test result depends on test name!
@@ -71,12 +75,13 @@ func TestLog_ZerologCallerWithFunc(t *testing.T) {
 	l = l.WithFuncName(true)
 	l = l.WithOutput(&b)
 
+	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
 
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, "^log/caller_test.go:", lf.Caller, "log contains call place")
+	assert.Regexp(t, "^log/caller_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper caller place")
 	assert.NotContains(t, "github.com/insolar/insolar", lf.Caller, "log not contains package name")
-	assert.Equal(t, "TestLog_ZerologCallerWithFunc", lf.Func, "log contains call place")
+	assert.Equal(t, "TestLog_ZerologCallerWithFunc", lf.Func, "log contains func name")
 }
 
 func TestLog_GlobalCaller(t *testing.T) {
@@ -85,12 +90,14 @@ func TestLog_GlobalCaller(t *testing.T) {
 
 	var b bytes.Buffer
 	GlobalLogger = GlobalLogger.WithOutput(&b)
-
 	SetLevel("info")
+
+	_, _, line, _ := runtime.Caller(0)
 	Info("test")
 
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, "^log/caller_test.go:", lf.Caller, "log contains call place")
+	assert.Regexp(t, "^log/caller_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper call place")
+	assert.Equal(t, "", lf.Func, "log not contains func name")
 }
 
 // this test result depends on test name!
@@ -101,11 +108,12 @@ func TestLog_GlobalCallerWithFunc(t *testing.T) {
 	var b bytes.Buffer
 	GlobalLogger = GlobalLogger.WithOutput(&b)
 	GlobalLogger = GlobalLogger.WithFuncName(true)
-
 	SetLevel("info")
+
+	_, _, line, _ := runtime.Caller(0)
 	Info("test")
 
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, "^log/caller_test.go:", lf.Caller, "log contains call place")
+	assert.Regexp(t, "^log/caller_test.go:", lf.Caller+strconv.Itoa(line+1), "log contains call place")
 	assert.Equal(t, "TestLog_GlobalCallerWithFunc", lf.Func, "log contains call place")
 }

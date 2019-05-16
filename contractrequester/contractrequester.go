@@ -169,7 +169,6 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base insolar.Messag
 	if async {
 		return res, nil
 	}
-
 	ctx, cancel := context.WithTimeout(ctx, time.Duration(configuration.NewAPIRunner().Timeout)*time.Second)
 	defer cancel()
 	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request)

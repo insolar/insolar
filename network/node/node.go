@@ -56,8 +56,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
@@ -198,7 +198,7 @@ func ClaimToNode(version string, claim *packets.NodeJoinClaim) (insolar.NetworkN
 		claim.NodeRoleRecID,
 		key,
 		insolar.NodeReady,
-		claim.NodeAddress.Get(),
+		claim.NodeAddress.String(),
 		version)
 	node.SetShortID(claim.ShortNodeID)
 	return node, nil

@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
@@ -168,13 +169,14 @@ func (p *SendObject) handle(
 		return nil, errors.Wrap(err, "can't fetch record from storage")
 	}
 
-	virtRec := rec.Record
-	state, ok := virtRec.(object.State)
+	virtRec := rec.Virtual
+	concrete := record.Unwrap(virtRec)
+	state, ok := concrete.(record.State)
 	if !ok {
 		return nil, fmt.Errorf("invalid object record %#v", virtRec)
 	}
 
-	if state.ID() == object.StateDeactivation {
+	if state.ID() == record.StateDeactivation {
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 	}
 
@@ -191,7 +193,7 @@ func (p *SendObject) handle(
 		Parent:       p.index.Parent,
 	}
 
-	if state.GetMemory() != nil {
+	if state.GetMemory() != nil && state.GetMemory().NotEmpty() {
 		b, err := p.Dep.Blobs.ForID(ctx, *state.GetMemory())
 		if err == blob.ErrNotFound {
 			hNode, err := p.Dep.Coordinator.Heavy(ctx, parcel.Pulse())

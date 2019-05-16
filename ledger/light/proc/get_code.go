@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
@@ -85,12 +86,14 @@ func (p *GetCode) reply(ctx context.Context) bus.Reply {
 		return bus.Reply{Err: errors.Wrap(err, "failed to fetch code")}
 	}
 
-	codeRec, ok := rec.Record.(*object.CodeRecord)
+	virtRec := rec.Virtual
+	concrete := record.Unwrap(virtRec)
+	codeRec, ok := concrete.(*record.Code)
 	if !ok {
 		return bus.Reply{Err: errors.Wrap(ErrInvalidRef, "failed to retrieve code record")}
 	}
 
-	code, err := p.Dep.BlobAccessor.ForID(ctx, *codeRec.Code)
+	code, err := p.Dep.BlobAccessor.ForID(ctx, codeRec.Code)
 	if err != nil {
 		return bus.Reply{Err: errors.Wrap(err, "failed to fetch code blob")}
 	}

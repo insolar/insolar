@@ -56,8 +56,8 @@ import (
 	"context"
 	"time"
 
-	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/phases"
 )
 
 type phaseManagerWrapper struct {

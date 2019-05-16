@@ -25,6 +25,7 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -127,12 +128,13 @@ func (p *GetChildren) reply(ctx context.Context) bus.Reply {
 			return bus.Reply{Err: errors.New("failed to retrieve children")}
 		}
 
-		virtRec := rec.Record
-		childRec, ok := virtRec.(*object.ChildRecord)
+		virtRec := rec.Virtual
+		concrete := record.Unwrap(virtRec)
+		childRec, ok := concrete.(*record.Child)
 		if !ok {
 			return bus.Reply{Err: errors.New("failed to retrieve children")}
 		}
-		p.currentChild = childRec.PrevChild
+		p.currentChild = &childRec.PrevChild
 
 		// Skip records later than specified pulse.
 		recPulse := childRec.Ref.Record().Pulse()
