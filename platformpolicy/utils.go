@@ -14,19 +14,26 @@
 // limitations under the License.
 //
 
-package genesis
+package platformpolicy
 
 import (
-	"testing"
-
-	"github.com/stretchr/testify/require"
+	"crypto"
 )
 
-func TestTools_refByName(t *testing.T) {
-	var (
-		pubKey    = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n-----END PUBLIC KEY-----\n"
-		pubKeyRef = "1tJD1S1GS9MH9CiecZ6rgrRiNEVxUxWffkmhT4F61e.1tJEEHUZYWYXXEa1KCTKKR8G6MrteZqCFPdcejHinR"
-	)
-	genesisRef := genesisRefOnRootDomain(pubKey)
-	require.Equal(t, pubKeyRef, genesisRef.String(), "reference by name always the same")
+func MustNormalizePublicKey(b []byte) string {
+	ks := NewKeyProcessor()
+	pubKey, err := ks.ImportPublicKeyPEM(b)
+	if err != nil {
+		panic(err)
+	}
+	return string(MustPublicKeyToBytes(pubKey))
+}
+
+func MustPublicKeyToBytes(key crypto.PublicKey) []byte {
+	ks := NewKeyProcessor()
+	b, err := ks.ExportPublicKeyPEM(key)
+	if err != nil {
+		panic(err)
+	}
+	return b
 }

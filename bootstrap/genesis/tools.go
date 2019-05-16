@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 )
 
-func refByName(name string) insolar.Reference {
+func genesisRefOnRootDomain(name string) insolar.Reference {
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 	parcel := &message.Parcel{
 		Msg: &message.GenesisRequest{

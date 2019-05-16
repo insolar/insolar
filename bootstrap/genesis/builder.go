@@ -24,6 +24,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
+	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -73,16 +74,16 @@ func (cb *contractsBuilder) clean() {
 	}
 }
 
-func (cb *contractsBuilder) buildPrototypes(ctx context.Context, rootDomainID *insolar.ID) (prototypes, error) {
+func (cb *contractsBuilder) buildPrototypes(ctx context.Context, contractNames []string) (prototypes, error) {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ buildSmartContracts ] building contracts:", contractNames)
-	contracts, err := parseContracts()
+	contracts, err := parseContracts(contractNames)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ buildSmartContracts ] failed to get contracts map")
 	}
 
 	inslog.Info("[ buildSmartContracts ] Start building contracts ...")
-	err = cb.build(ctx, contracts, rootDomainID)
+	err = cb.build(ctx, contracts)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ buildSmartContracts ] couldn't build contracts")
 	}
@@ -91,14 +92,14 @@ func (cb *contractsBuilder) buildPrototypes(ctx context.Context, rootDomainID *i
 	return cb.prototypes, nil
 }
 
-func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*preprocessor.ParsedFile, domain *insolar.ID) error {
+func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*preprocessor.ParsedFile) error {
 
-	domainRef := insolar.NewReference(*domain, *domain)
+	rd := rootdomain.RootDomain
 
 	for name := range contracts {
 		protoID, err := cb.artifactManager.RegisterRequest(
 			ctx,
-			*domainRef,
+			rd.Ref(),
 			&message.Parcel{
 				Msg: &message.GenesisRequest{
 					Name: name + "_proto",
@@ -107,7 +108,7 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 		if err != nil {
 			return errors.Wrap(err, "[ buildPrototypes ] Can't RegisterRequest for contract")
 		}
-		cb.prototypes[name] = insolar.NewReference(*domain, *protoID)
+		cb.prototypes[name] = insolar.NewReference(rd.ID(), *protoID)
 
 		inslogger.FromContext(ctx).Debugf("%v proto Ref=%v", name, cb.prototypes[name])
 	}
@@ -160,7 +161,7 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 		}
 		codeReq, err := cb.artifactManager.RegisterRequest(
 			ctx,
-			*domainRef,
+			rd.Ref(),
 			&message.Parcel{
 				Msg: &message.GenesisRequest{Name: name + "_code"},
 			},
@@ -173,15 +174,17 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 		log.Debugf("Deploying code for contract %q", name)
 		codeID, err := cb.artifactManager.DeployCode(
 			ctx,
-			*domainRef, *insolar.NewReference(*domain, *codeReq),
-			pluginBinary, insolar.MachineTypeGoPlugin,
+			rd.Ref(),
+			*insolar.NewReference(rd.ID(), *codeReq),
+			pluginBinary,
+			insolar.MachineTypeGoPlugin,
 		)
 		if err != nil {
 			return errors.Wrapf(err, "[ buildPrototypes ] Can't DeployCode for code '%v", name)
 		}
 
-		codeRef := insolar.NewReference(*domain, *codeID)
-		_, err = cb.artifactManager.RegisterResult(ctx, *domainRef, *codeRef, nil)
+		codeRef := insolar.NewReference(rd.ID(), *codeID)
+		_, err = cb.artifactManager.RegisterResult(ctx, rd.Ref(), *codeRef, nil)
 		if err != nil {
 			return errors.Wrapf(err, "[ buildPrototypes ] Can't SetRecord for code '%v'", name)
 		}
@@ -190,7 +193,7 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 
 		_, err = cb.artifactManager.ActivatePrototype(
 			ctx,
-			*domainRef,
+			rd.Ref(),
 			*cb.prototypes[name],
 			insolar.GenesisRecord.Ref(),
 			*codeRef,
@@ -200,7 +203,7 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 			return errors.Wrapf(err, "[ buildPrototypes ] Can't ActivatePrototypef for code '%v'", name)
 		}
 
-		resID, err := cb.artifactManager.RegisterResult(ctx, *domainRef, *cb.prototypes[name], nil)
+		resID, err := cb.artifactManager.RegisterResult(ctx, rd.Ref(), *cb.prototypes[name], nil)
 		if err != nil {
 			return errors.Wrapf(err, "[ buildPrototypes ] Can't RegisterResult of prototype for code '%v'", name)
 		}
@@ -248,7 +251,7 @@ func getContractPath(name string) (string, error) {
 	return filepath.Join(contractDir, name, contractFile), nil
 }
 
-func parseContracts() (map[string]*preprocessor.ParsedFile, error) {
+func parseContracts(contractNames []string) (map[string]*preprocessor.ParsedFile, error) {
 	contracts := make(map[string]*preprocessor.ParsedFile)
 	for _, name := range contractNames {
 		contractPath, err := getContractPath(name)

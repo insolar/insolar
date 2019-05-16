@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/application/contract/nodedomain"
 	"github.com/insolar/insolar/application/contract/noderecord"
 	rootdomaincontract "github.com/insolar/insolar/application/contract/rootdomain"
-	"github.com/insolar/insolar/application/contract/wallet"
+	walletcontract "github.com/insolar/insolar/application/contract/wallet"
 	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
@@ -39,15 +39,21 @@ import (
 )
 
 const (
-	nodeDomain        = "nodedomain"
-	nodeRecord        = "noderecord"
-	rootDomain        = rootdomain.Name
-	walletContract    = "wallet"
-	memberContract    = "member"
-	allowanceContract = "allowance"
+	rootDomain = rootdomain.Name
+	nodeDomain = "nodedomain"
+	nodeRecord = "noderecord"
+	rootMember = "member"
+	wallet     = "wallet"
+	allowance  = "allowance"
 )
 
-var contractNames = []string{walletContract, memberContract, allowanceContract, rootDomain, nodeDomain, nodeRecord}
+var contractNames = []string{rootDomain, nodeDomain, nodeRecord, rootMember, wallet, allowance}
+
+var (
+	rootDomainContract = rootdomain.RootDomain.Ref()
+	nodeDomainContract = genesisRefOnRootDomain(nodeDomain)
+	rootMemberContract = genesisRefOnRootDomain(rootMember)
+)
 
 type nodeInfo struct {
 	privateKey crypto.PrivateKey
@@ -55,18 +61,13 @@ type nodeInfo struct {
 }
 
 func (ni nodeInfo) reference() insolar.Reference {
-	return refByName(ni.publicKey)
+	return genesisRefOnRootDomain(ni.publicKey)
 }
 
 // Generator is a component for generating RootDomain instance and genesis contracts.
 type Generator struct {
 	config          *Config
 	artifactManager artifact.Manager
-
-	rootRecord         *rootdomain.Record
-	rootDomainContract *insolar.Reference
-	nodeDomainContract *insolar.Reference
-	rootMemberContract *insolar.Reference
 
 	keyOut string
 }
@@ -75,14 +76,11 @@ type Generator struct {
 func NewGenerator(
 	config *Config,
 	am artifact.Manager,
-	rootRecord *rootdomain.Record,
 	genesisKeyOut string,
 ) *Generator {
 	return &Generator{
 		config:          config,
 		artifactManager: am,
-
-		rootRecord: rootRecord,
 
 		keyOut: genesisKeyOut,
 	}
@@ -92,17 +90,13 @@ func NewGenerator(
 func (g *Generator) Run(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting  ...")
-	defer inslog.Info("[ Genesis ] Finished.")
-
-	rootDomainID := g.rootRecord.ID()
 
 	inslog.Info("[ Genesis ] newContractBuilder ...")
 	cb := newContractBuilder(g.artifactManager)
 	defer cb.clean()
 
-	// TODO: don't build prototypes, just get they references from builtins
 	inslog.Info("[ Genesis ] buildSmartContracts ...")
-	prototypes, err := cb.buildPrototypes(ctx, &rootDomainID)
+	prototypes, err := cb.buildPrototypes(ctx, contractNames)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] couldn't build contracts"))
 	}
@@ -125,19 +119,14 @@ func (g *Generator) Run(ctx context.Context) error {
 		return errors.Wrapf(err, "[ Genesis ] create keys step failed")
 	}
 
-	err = g.activateSmartContracts(ctx, cb, rootPubKey, &rootDomainID, prototypes)
+	err = g.activateSmartContracts(ctx, rootPubKey, prototypes)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
 	}
 
-	err = g.activateDiscoveryNodes(ctx, *cb.prototypes[nodeRecord], discoveryNodes)
+	err = g.saveDiscoveryNodes(ctx, *cb.prototypes[nodeRecord], discoveryNodes)
 	if err != nil {
-		return errors.Wrap(err, "failed on adding discovery index")
-	}
-
-	err = g.updateNodeDomainIndex(ctx, discoveryNodes)
-	if err != nil {
-		return errors.Wrap(err, "failed update nodedomai ")
+		panic(errors.Wrap(err, "[ Genesis ] could't save discovery nodes data"))
 	}
 
 	inslog.Info("[ Genesis ] makeCertificates ...")
@@ -145,26 +134,38 @@ func (g *Generator) Run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] Couldn't generate discovery certificates")
 	}
+	_ = discoveryNodes
 
+	inslog.Info("[ Genesis ] Finished.")
 	return nil
+}
+
+func (g *Generator) saveDiscoveryNodes(ctx context.Context, nodeRecordProto insolar.Reference, discoveryNodes []nodeInfo) error {
+	err := g.activateDiscoveryNodes(ctx, nodeRecordProto, discoveryNodes)
+	if err != nil {
+		return errors.Wrap(err, "failed on adding discovery index")
+	}
+
+	err = g.updateNodeDomainIndex(ctx, discoveryNodes)
+	return errors.Wrap(err, "failed update node domain index")
 }
 
 func (g *Generator) activateRootDomain(
 	ctx context.Context,
-	cb *contractsBuilder,
-	id *insolar.ID,
-) (artifact.ObjectDescriptor, error) {
-	rdContract, err := rootdomaincontract.NewRootDomain()
+	rootDomainProto insolar.Reference,
+) error {
+	inslog := inslogger.FromContext(ctx)
+	inslog.Info("[ activateRootDomain ] createKeysInDir ...")
+
+	data, err := insolar.Serialize(&rootdomaincontract.RootDomain{
+		RootMember:    rootMemberContract,
+		NodeDomainRef: nodeDomainContract,
+	})
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ActivateRootDomain ]")
+		return errors.Wrap(err, "[ updateRootDomain ]")
 	}
 
-	instanceData, err := insolar.Serialize(rdContract)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ActivateRootDomain ]")
-	}
-
-	_, err = g.artifactManager.RegisterRequest(
+	regID, err := g.artifactManager.RegisterRequest(
 		ctx,
 		insolar.GenesisRecord.Ref(),
 		&message.Parcel{
@@ -176,80 +177,79 @@ func (g *Generator) activateRootDomain(
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] Couldn't create rootdomain instance"))
 	}
+	inslog.Debugf("[ ActivateRootDomain ] register id=%v", regID.String())
 
-	rootDomainRef := g.rootRecord.Ref()
-	desc, err := g.artifactManager.ActivateObject(
+	rootDomainRef := rootdomain.RootDomain.Ref()
+	_, err = g.artifactManager.ActivateObject(
 		ctx,
 		insolar.Reference{},
 		rootDomainRef,
 		insolar.GenesisRecord.Ref(),
-		*cb.prototypes[rootDomain],
+		rootDomainProto,
 		false,
-		instanceData,
+		data,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
+		return errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
+
 	_, err = g.artifactManager.RegisterResult(ctx, insolar.GenesisRecord.Ref(), rootDomainRef, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
+		return errors.Wrap(err, "[ ActivateRootDomain ] Couldn't create rootdomain instance")
 	}
-	g.rootDomainContract = &rootDomainRef
 
-	return desc, nil
+	return nil
 }
 
 func (g *Generator) activateNodeDomain(
-	ctx context.Context, domain *insolar.ID, nodeDomainProto insolar.Reference,
-) (artifact.ObjectDescriptor, error) {
+	ctx context.Context, nodeDomainProto insolar.Reference,
+) error {
 	nd, _ := nodedomain.NewNodeDomain()
 
 	instanceData, err := insolar.Serialize(nd)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ActivateNodeDomain ] node domain serialization")
+		return errors.Wrap(err, "[ ActivateNodeDomain ] node domain serialization")
 	}
 
 	contractID, err := g.artifactManager.RegisterRequest(
 		ctx,
-		*g.rootDomainContract,
+		rootDomainContract,
 		&message.Parcel{
-			Msg: &message.GenesisRequest{Name: "NodeDomain"},
+			Msg: &message.GenesisRequest{Name: nodeDomain},
 		},
 	)
 
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
+		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
-	contract := insolar.NewReference(*domain, *contractID)
+	contract := insolar.NewReference(rootdomain.RootDomain.ID(), *contractID)
 
 	inslogger.FromContext(ctx).Debugf("[activateNodeDomain] Ref: %v", contract)
 
-	desc, err := g.artifactManager.ActivateObject(
+	_, err = g.artifactManager.ActivateObject(
 		ctx,
 		insolar.Reference{},
 		*contract,
-		*g.rootDomainContract,
+		rootDomainContract,
 		nodeDomainProto,
 		false,
 		instanceData,
 	)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
+		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
-	_, err = g.artifactManager.RegisterResult(ctx, *g.rootDomainContract, *contract, nil)
+	_, err = g.artifactManager.RegisterResult(ctx, rootDomainContract, *contract, nil)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
+		return errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
 
-	g.nodeDomainContract = contract
-	inslogger.FromContext(ctx).Debugf("%v contract ref=%v", "NodeDomain", contract)
+	inslogger.FromContext(ctx).Debugf("%v contract ref=%v", nodeDomainContract, contract)
 
-	return desc, nil
+	return nil
 }
 
 func (g *Generator) activateRootMember(
 	ctx context.Context,
-	domain *insolar.ID,
 	rootPubKey string,
 	memberContractProto insolar.Reference,
 ) error {
@@ -266,65 +266,40 @@ func (g *Generator) activateRootMember(
 
 	contractID, err := g.artifactManager.RegisterRequest(
 		ctx,
-		*g.rootDomainContract,
+		rootDomainContract,
 		&message.Parcel{
-			Msg: &message.GenesisRequest{Name: "RootMember"},
+			Msg: &message.GenesisRequest{Name: rootMember},
 		},
 	)
 
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
+		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root rootMember instance")
 	}
-	contract := insolar.NewReference(*domain, *contractID)
+	contract := insolar.NewReference(rootdomain.RootDomain.ID(), *contractID)
 	_, err = g.artifactManager.ActivateObject(
 		ctx,
 		insolar.Reference{},
 		*contract,
-		*g.rootDomainContract,
+		rootDomainContract,
 		memberContractProto,
 		false,
 		instanceData,
 	)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
+		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root rootMember instance")
 	}
-	_, err = g.artifactManager.RegisterResult(ctx, *g.rootDomainContract, *contract, nil)
+	_, err = g.artifactManager.RegisterResult(ctx, rootDomainContract, *contract, nil)
 	if err != nil {
-		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root member instance")
+		return errors.Wrap(err, "[ ActivateRootMember ] couldn't create root rootMember instance")
 	}
-	g.rootMemberContract = contract
-	return nil
-}
-
-func (g *Generator) updateRootDomain(
-	ctx context.Context, domainDesc artifact.ObjectDescriptor,
-) error {
-	updateData, err := insolar.Serialize(&rootdomaincontract.RootDomain{
-		RootMember:    *g.rootMemberContract,
-		NodeDomainRef: *g.nodeDomainContract,
-	})
-	if err != nil {
-		return errors.Wrap(err, "[ updateRootDomain ]")
-	}
-	_, err = g.artifactManager.UpdateObject(
-		ctx,
-		insolar.Reference{},
-		insolar.Reference{},
-		domainDesc,
-		updateData,
-	)
-	if err != nil {
-		return errors.Wrap(err, "[ updateRootDomain ]")
-	}
-
 	return nil
 }
 
 func (g *Generator) activateRootMemberWallet(
-	ctx context.Context, domain *insolar.ID, walletContractProto insolar.Reference,
+	ctx context.Context, walletContractProto insolar.Reference,
 ) error {
 
-	w, err := wallet.New(g.config.RootBalance)
+	w, err := walletcontract.New(g.config.RootBalance)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}
@@ -336,7 +311,7 @@ func (g *Generator) activateRootMemberWallet(
 
 	contractID, err := g.artifactManager.RegisterRequest(
 		ctx,
-		*g.rootDomainContract,
+		rootDomainContract,
 		&message.Parcel{
 			Msg: &message.GenesisRequest{Name: "RootWallet"},
 		},
@@ -345,12 +320,12 @@ func (g *Generator) activateRootMemberWallet(
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}
-	contract := insolar.NewReference(*domain, *contractID)
+	contract := insolar.NewReference(rootdomain.RootDomain.ID(), *contractID)
 	_, err = g.artifactManager.ActivateObject(
 		ctx,
 		insolar.Reference{},
 		*contract,
-		*g.rootMemberContract,
+		rootMemberContract,
 		walletContractProto,
 		true,
 		instanceData,
@@ -358,7 +333,7 @@ func (g *Generator) activateRootMemberWallet(
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}
-	_, err = g.artifactManager.RegisterResult(ctx, *g.rootDomainContract, *contract, nil)
+	_, err = g.artifactManager.RegisterResult(ctx, rootDomainContract, *contract, nil)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't create root wallet")
 	}
@@ -368,33 +343,30 @@ func (g *Generator) activateRootMemberWallet(
 
 func (g *Generator) activateSmartContracts(
 	ctx context.Context,
-	cb *contractsBuilder,
 	rootPubKey string,
-	rootDomainID *insolar.ID,
 	prototypes prototypes,
 ) error {
-	// TODO: merge root domain activation with update (no need two-phase here)
-	rootDomainDesc, err := g.activateRootDomain(ctx, cb, rootDomainID)
-	errMsg := "[ ActivateSmartContracts ]"
+	var err error
+
+	err = g.activateRootDomain(ctx, *prototypes[rootDomain])
+	// errMsg := "[ ActivateSmartContracts ]"
 	if err != nil {
-		return errors.Wrap(err, errMsg)
+		return errors.Wrap(err, "failed to store root domain contract")
 	}
-	_, err = g.activateNodeDomain(ctx, rootDomainID, *prototypes[nodeDomain])
+
+	err = g.activateNodeDomain(ctx, *prototypes[nodeDomain])
 	if err != nil {
-		return errors.Wrap(err, errMsg)
+		return errors.Wrap(err, "failed to store node domain contract")
 	}
-	err = g.activateRootMember(ctx, rootDomainID, rootPubKey, *cb.prototypes[memberContract])
+
+	err = g.activateRootMember(ctx, rootPubKey, *prototypes[rootMember])
 	if err != nil {
-		return errors.Wrap(err, errMsg)
+		return errors.Wrap(err, "failed to store root rootMember contract")
 	}
-	// TODO: this is not required since we refer by request id.
-	err = g.updateRootDomain(ctx, rootDomainDesc)
+
+	err = g.activateRootMemberWallet(ctx, *prototypes[wallet])
 	if err != nil {
-		return errors.Wrap(err, errMsg)
-	}
-	err = g.activateRootMemberWallet(ctx, rootDomainID, *cb.prototypes[walletContract])
-	if err != nil {
-		return errors.Wrap(err, errMsg)
+		return errors.Wrap(err, "failed to store root rootMemberWallet contract")
 	}
 
 	return nil
@@ -406,14 +378,14 @@ func (g *Generator) activateSmartContracts(
 func (g *Generator) activateDiscoveryNodes(
 	ctx context.Context,
 	nodeRecordProto insolar.Reference,
-	nodesInfo []nodeInfo,
+	discoveryNodes []nodeInfo,
 ) error {
-	if len(nodesInfo) != len(g.config.DiscoveryNodes) {
-		return errors.New("[ activateDiscoveryNodes ] len of nodesInfo param must be equal to len of DiscoveryNodes in genesis config")
+	if len(discoveryNodes) != len(g.config.DiscoveryNodes) {
+		return errors.New("[ activateDiscoveryNodes ] len of discoveryNodes param must be equal to len of DiscoveryNodes in genesis config")
 	}
 
 	for i, discoverNode := range g.config.DiscoveryNodes {
-		nodePubKey := nodesInfo[i].publicKey
+		nodePubKey := discoveryNodes[i].publicKey
 
 		nodeState := &noderecord.NodeRecord{
 			Record: noderecord.RecordInfo{
@@ -422,7 +394,7 @@ func (g *Generator) activateDiscoveryNodes(
 			},
 		}
 
-		_, err := g.activateNodeRecord(ctx, nodeState, nodesInfo[i], nodeRecordProto)
+		_, err := g.activateNodeRecord(ctx, nodeState, discoveryNodes[i], nodeRecordProto)
 		if err != nil {
 			return errors.Wrap(err, "[ activateDiscoveryNodes ] Couldn't activateNodeRecord node instance")
 		}
@@ -443,7 +415,7 @@ func (g *Generator) activateNodeRecord(
 
 	nodeID, err := g.artifactManager.RegisterRequest(
 		ctx,
-		*g.rootDomainContract,
+		rootDomainContract,
 		&message.Parcel{
 			Msg: &message.GenesisRequest{Name: node.publicKey},
 		},
@@ -451,12 +423,12 @@ func (g *Generator) activateNodeRecord(
 	if err != nil {
 		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't register request")
 	}
-	contract := insolar.NewReference(*g.rootDomainContract.Record(), *nodeID)
+	contract := insolar.NewReference(*rootDomainContract.Record(), *nodeID)
 	_, err = g.artifactManager.ActivateObject(
 		ctx,
 		insolar.Reference{},
 		*contract,
-		*g.nodeDomainContract,
+		nodeDomainContract,
 		nodeRecordProto,
 		false,
 		nodeData,
@@ -464,7 +436,7 @@ func (g *Generator) activateNodeRecord(
 	if err != nil {
 		return nil, errors.Wrap(err, "[ activateNodeRecord ] Could'n activateNodeRecord node object")
 	}
-	_, err = g.artifactManager.RegisterResult(ctx, *g.rootDomainContract, *contract, nil)
+	_, err = g.artifactManager.RegisterResult(ctx, rootDomainContract, *contract, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't register result")
 	}
@@ -485,7 +457,7 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 			},
 			MajorityRule: g.config.MajorityRule,
 
-			RootDomainReference: g.rootDomainContract.String(),
+			RootDomainReference: rootDomainContract.String(),
 		}
 		c.MinRoles.Virtual = g.config.MinRoles.Virtual
 		c.MinRoles.HeavyMaterial = g.config.MinRoles.HeavyMaterial
@@ -546,7 +518,7 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 
 // updateNodeDomainIndex saves in node domain contract's object discovery nodes map.
 func (g *Generator) updateNodeDomainIndex(ctx context.Context, discoveryNodes []nodeInfo) error {
-	nodeDomainDesc, err := g.artifactManager.GetObject(ctx, *g.nodeDomainContract)
+	nodeDomainDesc, err := g.artifactManager.GetObject(ctx, nodeDomainContract)
 	if err != nil {
 		return errors.Wrap(err, "failed to get domain contract")
 	}
@@ -567,8 +539,8 @@ func (g *Generator) updateNodeDomainIndex(ctx context.Context, discoveryNodes []
 
 	_, err = g.artifactManager.UpdateObject(
 		ctx,
-		*g.rootDomainContract,
-		*g.nodeDomainContract,
+		rootDomainContract,
+		nodeDomainContract,
 		nodeDomainDesc,
 		updateData,
 	)

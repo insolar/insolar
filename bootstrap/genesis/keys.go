@@ -66,21 +66,7 @@ func getKeys(r io.Reader) (crypto.PrivateKey, string, error) {
 }
 
 func mustNormalizePublicKey(s string) string {
-	ks := platformpolicy.NewKeyProcessor()
-	pubKey, err := ks.ImportPublicKeyPEM([]byte(s))
-	if err != nil {
-		panic(err)
-	}
-	return string(mustPublicKeyToBytes(pubKey))
-}
-
-func mustPublicKeyToBytes(key crypto.PublicKey) []byte {
-	ks := platformpolicy.NewKeyProcessor()
-	b, err := ks.ExportPublicKeyPEM(key)
-	if err != nil {
-		panic(err)
-	}
-	return b
+	return platformpolicy.MustNormalizePublicKey([]byte(s))
 }
 
 func readKeysFromDir(dir string, amount int) ([]nodeInfo, error) {
@@ -153,7 +139,7 @@ func createKeysInDir(
 			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't write keys to file")
 		}
 
-		nodes[i].publicKey = string(mustPublicKeyToBytes(pubKey))
+		nodes[i].publicKey = string(platformpolicy.MustPublicKeyToBytes(pubKey))
 		nodes[i].privateKey = privKey
 	}
 
