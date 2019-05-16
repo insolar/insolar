@@ -96,7 +96,10 @@ func (p *GetIndex) process(ctx context.Context) error {
 		Receiver: heavy,
 	})
 	if err != nil {
-		logger.Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", p.object.Record().DebugString()))
+		logger.WithFields(map[string]interface{}{
+			"jet": p.jet.DebugString(),
+			"pn":  flow.Pulse(ctx),
+		}).Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", p.object.Record().DebugString()))
 		return errors.Wrapf(err, "failed to fetch index from heavy")
 	}
 	rep, ok := genericReply.(*reply.ObjectIndex)

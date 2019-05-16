@@ -300,7 +300,10 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 		}
 		idx, err = h.saveIndexFromHeavy(ctx, parcel.Pulse(), jetID, msg.Head, heavy)
 		if err != nil {
-			inslogger.FromContext(ctx).Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", *msg.Head.Record()))
+			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+				"jet": jetID.DebugString(),
+				"pn":  parcel.Pulse(),
+			}).Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", *msg.Head.Record()))
 			return nil, errors.Wrapf(err, "failed to fetch index from heavy")
 		}
 	} else if err != nil {
@@ -344,7 +347,10 @@ func (h *MessageHandler) handleGetChildren(
 		}
 		idx, err = h.saveIndexFromHeavy(ctx, parcel.Pulse(), jetID, msg.Parent, heavy)
 		if err != nil {
-			inslogger.FromContext(ctx).Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", msg.Parent.Record().DebugString()))
+			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
+				"jet": jetID.DebugString(),
+				"pn":  flow.Pulse(ctx),
+			}).Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", msg.Parent.Record().DebugString()))
 			return nil, errors.Wrap(err, "failed to fetch index from heavy")
 		}
 		if idx.ChildPointer == nil {
@@ -499,14 +505,15 @@ func (h *MessageHandler) saveIndexFromHeavy(
 }
 
 func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	logger := inslogger.FromContext(ctx)
-
 	msg := parcel.Message().(*message.HotData)
 	jetID := insolar.JetID(*msg.Jet.Record())
 
-	logger.WithFields(map[string]interface{}{
+	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 		"jet": jetID.DebugString(),
-	}).Info("received hot data")
+		"pn":  parcel.Pulse(),
+	})
+
+	logger.Info("received hot data")
 
 	err := h.DropModifier.Set(ctx, msg.Drop)
 	if err == drop.ErrOverride {
@@ -517,7 +524,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 	}
 
 	pendingStorage := h.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(jetID))
-	logger.Debugf("received %d pending requests", len(msg.PendingRequests))
+	logger.Debugf("[handleHotRecords] received %d pending requests", len(msg.PendingRequests))
 
 	var notificationList []insolar.ID
 	for objID, objContext := range msg.PendingRequests {
@@ -537,16 +544,17 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 				}, nil)
 
 				if err != nil {
-					logger.Error("failed to notify about pending requests")
+					logger.Error("[handleHotRecords] failed to notify about pending requests")
 					return
 				}
 				if _, ok := rep.(*reply.OK); !ok {
-					logger.Error("received unexpected reply on pending notification")
+					logger.Error("[handleHotRecords] received unexpected reply on pending notification")
 				}
 			}(objID)
 		}
 	}()
 
+	logger.Debugf("[handleHotRecords] received %v hot indexes", len(msg.HotIndexes))
 	for _, meta := range msg.HotIndexes {
 		decodedIndex, err := object.DecodeIndex(meta.Index)
 		if err != nil {
@@ -565,9 +573,10 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 				Requests:         []insolar.ID{}},
 		)
 		if err != nil {
-			logger.Error(err)
+			logger.Error(errors.Wrapf(err, "[handleHotRecords] failed to save index - %v", meta.ObjID.DebugString()))
 			continue
 		}
+		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", meta.ObjID.DebugString())
 	}
 
 	h.JetStorage.Update(

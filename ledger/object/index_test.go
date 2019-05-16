@@ -158,6 +158,58 @@ func TestIndexStorage_ForID(t *testing.T) {
 	})
 }
 
+func TestInMemoryIndex_ForPNAndJet(t *testing.T) {
+	t.Parallel()
+
+	ctx := inslogger.TestContext(t)
+
+	fJetId := insolar.NewJetID(1, []byte{1})
+	sJetId := insolar.NewJetID(1, []byte{2})
+	tJetId := insolar.NewJetID(1, []byte{3})
+
+	fId := insolar.NewID(123, []byte{})
+	sId := insolar.NewID(124, []byte{})
+	tId := insolar.NewID(125, []byte{})
+
+	fPn := insolar.PulseNumber(1)
+	sPn := insolar.PulseNumber(2)
+
+	fIdx := Lifeline{
+		LatestState: insolar.NewID(123, []byte{}),
+		JetID:       *fJetId,
+		Delegates:   []LifelineDelegate{},
+	}
+	sIdx := Lifeline{
+		LatestState: insolar.NewID(124, []byte{}),
+		JetID:       *sJetId,
+		Delegates:   []LifelineDelegate{},
+	}
+	tIdx := Lifeline{
+		LatestState: insolar.NewID(125, []byte{}),
+		JetID:       *tJetId,
+		Delegates:   []LifelineDelegate{},
+	}
+
+	index := NewInMemoryIndex()
+
+	_ = index.SetLifeline(ctx, fPn, *fId, fIdx)
+	_ = index.SetLifeline(ctx, fPn, *sId, sIdx)
+	_ = index.SetLifeline(ctx, sPn, *tId, tIdx)
+
+	res := index.ForPNAndJet(ctx, fPn, *fJetId)
+	require.Equal(t, 1, len(res))
+	require.NotNil(t, res[0].Lifeline)
+	require.Equal(t, *fId, res[0].ObjID)
+	require.Equal(t, fIdx.LatestState, res[0].Lifeline.LatestState)
+
+	res = index.ForPNAndJet(ctx, fPn, *sJetId)
+	require.Equal(t, 1, len(res))
+	require.NotNil(t, res[0].Lifeline)
+	require.Equal(t, *sId, res[0].ObjID)
+	require.Equal(t, sIdx.LatestState, res[0].Lifeline.LatestState)
+
+}
+
 func TestInMemoryIndex_SetBucket(t *testing.T) {
 	t.Parallel()
 

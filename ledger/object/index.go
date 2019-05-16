@@ -192,26 +192,26 @@ func (i *InMemoryIndex) SetLifeline(ctx context.Context, pn insolar.PulseNumber,
 }
 
 // SetRequest adds a request to a bucket with provided pulseNumber and ID
-func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error {
-	b := i.bucket(pn, objID)
-	if b == nil {
-		b = i.createBucket(ctx, pn, objID)
-	}
-	b.setRequest(reqID)
-
-	return nil
-}
+// func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error {
+// 	b := i.bucket(pn, objID)
+// 	if b == nil {
+// 		b = i.createBucket(ctx, pn, objID)
+// 	}
+// 	b.setRequest(reqID)
+//
+// 	return nil
+// }
 
 // SetResultRecord adds a result record to a bucket with provided pulseNumber and ID
-func (i *InMemoryIndex) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error {
-	b := i.bucket(pn, objID)
-	if b == nil {
-		b = i.createBucket(ctx, pn, objID)
-	}
-	b.setResult(resID)
-
-	return nil
-}
+// func (i *InMemoryIndex) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error {
+// 	b := i.bucket(pn, objID)
+// 	if b == nil {
+// 		b = i.createBucket(ctx, pn, objID)
+// 	}
+// 	b.setResult(resID)
+//
+// 	return nil
+// }
 
 // SetBucket adds a bucket with provided pulseNumber and ID
 func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error {
@@ -250,8 +250,7 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 		return nil
 	}
 
-	res := make([]IndexBucket, len(bucks))
-	resI := 0
+	res := []IndexBucket{}
 
 	for _, b := range bucks {
 		if b.bucket.Lifeline == nil {
@@ -268,14 +267,13 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 		clonedRequests = append(clonedRequests, b.bucket.Requests...)
 		clonedResults = append(clonedResults, b.bucket.Results...)
 
-		res[resI] = IndexBucket{
+		res = append(res, IndexBucket{
 			ObjID:            b.bucket.ObjID,
 			Lifeline:         &clonedLfl,
 			LifelineLastUsed: b.bucket.LifelineLastUsed,
 			Results:          clonedResults,
 			Requests:         clonedRequests,
-		}
-		resI++
+		})
 	}
 
 	return res

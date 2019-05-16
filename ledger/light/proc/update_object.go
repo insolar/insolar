@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
@@ -112,7 +113,10 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 			}
 			idx, err = p.saveIndexFromHeavy(ctx, p.JetID, p.Message.Object, heavy)
 			if err != nil {
-				logger.Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", p.Message.Object.Record().DebugString()))
+				logger.WithFields(map[string]interface{}{
+					"jet": p.JetID.DebugString(),
+					"pn":  flow.Pulse(ctx),
+				}).Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", p.Message.Object.Record().DebugString()))
 				return bus.Reply{Err: errors.Wrapf(err, "failed to fetch index from heavy")}
 			}
 		}

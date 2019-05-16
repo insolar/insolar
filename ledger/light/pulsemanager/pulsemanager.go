@@ -189,7 +189,7 @@ func (m *PulseManager) processEndPulse(
 
 			if info.left == nil && info.right == nil {
 				msg, err := m.getExecutorHotData(
-					ctx, info.id, newPulse.PulseNumber, drop, dropSerialized,
+					ctx, info.id, currentPulse.PulseNumber, newPulse.PulseNumber, drop, dropSerialized,
 				)
 				if err != nil {
 					return errors.Wrapf(err, "getExecutorData failed for jet id %v", info.id)
@@ -201,7 +201,7 @@ func (m *PulseManager) processEndPulse(
 				// }
 			} else {
 				msg, err := m.getExecutorHotData(
-					ctx, info.id, newPulse.PulseNumber, drop, dropSerialized,
+					ctx, info.id, currentPulse.PulseNumber, newPulse.PulseNumber, drop, dropSerialized,
 				)
 				if err != nil {
 					return errors.Wrapf(err, "getExecutorData failed for jet id %v", info.id)
@@ -258,6 +258,7 @@ func (m *PulseManager) getExecutorHotData(
 	ctx context.Context,
 	jetID insolar.JetID,
 	currentPN insolar.PulseNumber,
+	newPulsePN insolar.PulseNumber,
 	drop *drop.Drop,
 	dropSerialized []byte,
 ) (*message.HotData, error) {
@@ -309,7 +310,7 @@ func (m *PulseManager) getExecutorHotData(
 
 	msg := &message.HotData{
 		Drop:            *drop,
-		PulseNumber:     currentPN,
+		PulseNumber:     newPulsePN,
 		HotIndexes:      hotIndexes,
 		PendingRequests: pendingRequests,
 	}
