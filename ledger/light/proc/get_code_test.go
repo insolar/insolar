@@ -41,16 +41,13 @@ func TestGetCode_Proceed(t *testing.T) {
 	replyTo := make(chan bus.Reply, 1)
 	blobValue := blob.Blob{Value: []byte{1, 2, 3}}
 	blobID := gen.ID()
-	codeRec := object.CodeRecord{
-		Code:        &blobID,
-		MachineType: insolar.MachineTypeBuiltin,
-	}
+	codeRec := codeRecord(blobID)
 	codeRef := gen.Reference()
 	getCode := proc.NewGetCode(codeRef, replyTo)
 	records := object.NewRecordAccessorMock(mc)
-	records.ForIDFunc = func(c context.Context, id insolar.ID) (record.MaterialRecord, error) {
+	records.ForIDFunc = func(c context.Context, id insolar.ID) (record.Material, error) {
 		a.Equal(*codeRef.Record(), id)
-		return record.MaterialRecord{Record: &codeRec}, nil
+		return codeRec, nil
 	}
 	blobs := blob.NewAccessorMock(mc)
 	blobs.ForIDFunc = func(c context.Context, id insolar.ID) (blob.Blob, error) {
@@ -63,9 +60,24 @@ func TestGetCode_Proceed(t *testing.T) {
 	err := getCode.Proceed(ctx)
 	a.NoError(err)
 
+	unwrappedCodeRec := record.Unwrap(codeRec.Virtual)
+
 	rep := <-replyTo
 	a.Equal(bus.Reply{Reply: &reply.Code{
 		Code:        blobValue.Value,
-		MachineType: codeRec.MachineType,
+		MachineType: unwrappedCodeRec.(*record.Code).MachineType,
 	}}, rep)
+}
+
+func codeRecord(codeID insolar.ID) record.Material {
+	return record.Material{
+		Virtual: &record.Virtual{
+			Union: &record.Virtual_Code{
+				Code: &record.Code{
+					Code:        codeID,
+					MachineType: insolar.MachineTypeBuiltin,
+				},
+			},
+		},
+	}
 }

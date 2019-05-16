@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package log
+package log_test
 
 import (
 	"bytes"
@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -42,8 +43,8 @@ func logFields(t *testing.T, b []byte) loggerField {
 	return lf
 }
 
-func TestLog_ZerologCaller(t *testing.T) {
-	l, err := NewLog(configuration.Log{
+func TestExtLog_ZerologCaller(t *testing.T) {
+	l, err := log.NewLog(configuration.Log{
 		Level:     "info",
 		Adapter:   "zerolog",
 		Formatter: "json",
@@ -57,14 +58,14 @@ func TestLog_ZerologCaller(t *testing.T) {
 	l.Info("test")
 
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, "^log/caller_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains call place")
+	assert.Regexp(t, "^log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains call place")
 	assert.NotContains(t, "github.com/insolar/insolar", lf.Caller, "log not contains package name")
 	assert.Equal(t, "", lf.Func, "log not contains func name")
 }
 
 // this test result depends on test name!
-func TestLog_ZerologCallerWithFunc(t *testing.T) {
-	l, err := NewLog(configuration.Log{
+func TestExtLog_ZerologCallerWithFunc(t *testing.T) {
+	l, err := log.NewLog(configuration.Log{
 		Level:     "info",
 		Adapter:   "zerolog",
 		Formatter: "json",
@@ -79,41 +80,41 @@ func TestLog_ZerologCallerWithFunc(t *testing.T) {
 	l.Info("test")
 
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, "^log/caller_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper caller place")
+	assert.Regexp(t, "^log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper caller place")
 	assert.NotContains(t, "github.com/insolar/insolar", lf.Caller, "log not contains package name")
-	assert.Equal(t, "TestLog_ZerologCallerWithFunc", lf.Func, "log contains func name")
+	assert.Equal(t, "TestExtLog_ZerologCallerWithFunc", lf.Func, "log contains func name")
 }
 
-func TestLog_GlobalCaller(t *testing.T) {
-	gl := GlobalLogger
-	defer func() { GlobalLogger = gl }()
+func TestExtLog_GlobalCaller(t *testing.T) {
+	gl := log.GlobalLogger
+	defer func() { log.GlobalLogger = gl }()
 
 	var b bytes.Buffer
-	GlobalLogger = GlobalLogger.WithOutput(&b)
-	SetLevel("info")
+	log.GlobalLogger = log.GlobalLogger.WithOutput(&b)
+	log.SetLevel("info")
 
 	_, _, line, _ := runtime.Caller(0)
-	Info("test")
+	log.Info("test")
 
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, "^log/caller_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper call place")
+	assert.Regexp(t, "^log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains proper call place")
 	assert.Equal(t, "", lf.Func, "log not contains func name")
 }
 
 // this test result depends on test name!
-func TestLog_GlobalCallerWithFunc(t *testing.T) {
-	gl := GlobalLogger
-	defer func() { GlobalLogger = gl }()
+func TestExtLog_GlobalCallerWithFunc(t *testing.T) {
+	gl := log.GlobalLogger
+	defer func() { log.GlobalLogger = gl }()
 
 	var b bytes.Buffer
-	GlobalLogger = GlobalLogger.WithOutput(&b)
-	GlobalLogger = GlobalLogger.WithFuncName(true)
-	SetLevel("info")
+	log.GlobalLogger = log.GlobalLogger.WithOutput(&b)
+	log.GlobalLogger = log.GlobalLogger.WithFuncName(true)
+	log.SetLevel("info")
 
 	_, _, line, _ := runtime.Caller(0)
-	Info("test")
+	log.Info("test")
 
 	lf := logFields(t, b.Bytes())
-	assert.Regexp(t, "^log/caller_test.go:", lf.Caller+strconv.Itoa(line+1), "log contains call place")
-	assert.Equal(t, "TestLog_GlobalCallerWithFunc", lf.Func, "log contains call place")
+	assert.Regexp(t, "^log/caller_ext_test.go:"+strconv.Itoa(line+1), lf.Caller, "log contains call place")
+	assert.Equal(t, "TestExtLog_GlobalCallerWithFunc", lf.Func, "log contains call place")
 }
