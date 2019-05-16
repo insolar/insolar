@@ -87,7 +87,8 @@ func (m *Scope) GetObject(
 		return nil, err
 	}
 
-	state, ok := rec.Record.(object.State)
+	concrete := record.Unwrap(rec.Virtual)
+	state, ok := concrete.(record.State)
 	if !ok {
 		return nil, errors.New("invalid object record")
 	}
@@ -113,7 +114,7 @@ func (m *Scope) GetObject(
 func (m *Scope) RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error) {
 	req := record.Request{
 		Parcel:      message.ParcelToBytes(parcel),
-		MessageHash: message.ParcelHash(m.PlatformCryptographyScheme, parcel),
+		MessageHash: message.ParcelHash(m.PCS, parcel),
 		Object:      *objectRef.Record(),
 	}
 	virtRec := record.Wrap(req)

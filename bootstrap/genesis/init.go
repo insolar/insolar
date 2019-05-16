@@ -107,10 +107,10 @@ func (s *Initializer) Run() {
 		artifactManager := &artifact.Scope{
 			PulseNumber: insolar.FirstPulseNumber,
 
-			PCS:             bc.PlatformCryptographyScheme,
-			BlobStorage:                sc.blobDB,
-			RecordAccessor:             sc.recordDB,
-			RecordModifier:             sc.recordDB,
+			PCS:            bc.PlatformCryptographyScheme,
+			BlobStorage:    sc.blobDB,
+			RecordAccessor: sc.recordDB,
+			RecordModifier: sc.recordDB,
 
 			IndexModifier: sc.indexDB,
 			IndexAccessor: sc.indexDB,

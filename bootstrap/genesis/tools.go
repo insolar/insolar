@@ -20,7 +20,7 @@ import (
 	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
@@ -31,11 +31,11 @@ func refByName(name string) insolar.Reference {
 			Name: name,
 		},
 	}
-	rec := &object.RequestRecord{
+	vrec := record.Wrap(record.Request{
 		Parcel:      message.ParcelToBytes(parcel),
 		MessageHash: message.ParcelHash(pcs, parcel),
 		Object:      rootdomain.RootDomain.ID(),
-	}
-	id := object.NewRecordIDFromRecord(pcs, insolar.FirstPulseNumber, rec)
+	})
+	id := insolar.NewID(insolar.FirstPulseNumber, record.HashVirtual(pcs.ReferenceHasher(), vrec))
 	return *insolar.NewReference(rootdomain.RootDomain.ID(), *id)
 }
