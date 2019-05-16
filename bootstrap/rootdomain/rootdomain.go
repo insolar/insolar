@@ -49,7 +49,7 @@ func (r Record) ID() insolar.ID {
 	}
 	req := record.Request{
 		Parcel:      message.ParcelToBytes(parcel),
-		MessageHash: message.ParcelHash(r.PCS, parcel),
+		MessageHash: message.ParcelMessageHash(r.PCS, parcel),
 		Object:      insolar.GenesisRecord.ID(),
 	}
 	virtRec := record.Wrap(req)

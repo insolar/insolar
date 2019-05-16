@@ -33,7 +33,7 @@ func refByName(name string) insolar.Reference {
 	}
 	vrec := record.Wrap(record.Request{
 		Parcel:      message.ParcelToBytes(parcel),
-		MessageHash: message.ParcelHash(pcs, parcel),
+		MessageHash: message.ParcelMessageHash(pcs, parcel),
 		Object:      rootdomain.RootDomain.ID(),
 	})
 	id := insolar.NewID(insolar.FirstPulseNumber, record.HashVirtual(pcs.ReferenceHasher(), vrec))

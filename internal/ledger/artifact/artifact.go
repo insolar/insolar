@@ -114,7 +114,7 @@ func (m *Scope) GetObject(
 func (m *Scope) RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error) {
 	req := record.Request{
 		Parcel:      message.ParcelToBytes(parcel),
-		MessageHash: message.ParcelHash(m.PCS, parcel),
+		MessageHash: message.ParcelMessageHash(m.PCS, parcel),
 		Object:      *objectRef.Record(),
 	}
 	virtRec := record.Wrap(req)
