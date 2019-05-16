@@ -183,7 +183,7 @@ func RetryIncorrectPulse() PreSender {
 				}
 				retries--
 
-				time.Sleep(100*time.Millisecond)
+				time.Sleep(100 * time.Millisecond)
 			}
 		}
 	}

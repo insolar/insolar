@@ -36,11 +36,11 @@ type Iterator interface {
 	// Close frees resources within the iterator and invalidates it.
 	Close()
 	// Key returns only record key (ID) without scope id.
-	// Warning: Key is only valid as long as item is valid (until iterator.Next() called), or transaction is valid.  
+	// Warning: Key is only valid as long as item is valid (until iterator.Next() called), or transaction is valid.
 	// If you need to use it outside its validity, please use KeyCopy.
 	Key() []byte
 	// Value returns record.
-	// Warning: Value is only valid as long as item is valid (until iterator.Next() called), or transaction is valid.  
+	// Warning: Value is only valid as long as item is valid (until iterator.Next() called), or transaction is valid.
 	// If you need to use it outside its validity, please use ValueCopy.
 	Value() ([]byte, error)
 }
