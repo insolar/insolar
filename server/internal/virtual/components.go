@@ -18,8 +18,10 @@ package virtual
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ThreeDotsLabs/watermill"
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
@@ -35,6 +37,7 @@ import (
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -158,6 +161,15 @@ func initComponents(
 	err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError(ctx, err, "failed init pulse for LogicRunner")
 
+	inRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
+	if err != nil {
+		panic(err)
+	}
+	outRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
+	if err != nil {
+		panic(err)
+	}
+
 	cm.Register(
 		terminationHandler,
 		platformCryptographyScheme,
@@ -194,5 +206,44 @@ func initComponents(
 
 	cm.Inject(components...)
 
+	outRouter.AddNoPublisherHandler(
+		"SendMessageHandler",
+		bus.TopicOutgoing,
+		pubsub,
+		nw.SendMessageHandler,
+	)
+
+	inRouter.AddMiddleware(
+		b.IncomingMessageRouter,
+	)
+	inRouter.AddHandler(
+		"SendMessageHandler",
+		bus.TopicIncoming,
+		pubsub,
+		bus.TopicOutgoing,
+		pubsub,
+		notFound,
+	)
+
+	go func() {
+		if err := inRouter.Run(); err != nil {
+			ctx := context.Background()
+			inslogger.FromContext(ctx).Error("Error while running inRouter", err)
+		}
+	}()
+	<-inRouter.Running()
+
+	go func() {
+		if err := outRouter.Run(); err != nil {
+			ctx := context.Background()
+			inslogger.FromContext(ctx).Error("Error while running outRouter", err)
+		}
+	}()
+	<-outRouter.Running()
+
 	return &cm, terminationHandler, nil
+}
+
+func notFound(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
+	return nil, errors.New("reply channel for this msg doesn't exist")
 }
