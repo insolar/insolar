@@ -17,10 +17,10 @@
 package object
 
 import (
+	"crypto/sha256"
 	"math/rand"
 	"testing"
 
-	fuzz "github.com/google/gofuzz"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
@@ -41,12 +41,8 @@ func TestRecordStorage_ForID(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 
-	jetID := gen.JetID()
 	id := gen.ID()
-	rec := record.MaterialRecord{
-		Record: &ResultRecord{},
-		JetID:  jetID,
-	}
+	rec := getMaterialRecord()
 
 	t.Run("returns correct record-value", func(t *testing.T) {
 		t.Parallel()
@@ -57,7 +53,6 @@ func TestRecordStorage_ForID(t *testing.T) {
 		resultRec, err := recordStorage.ForID(ctx, id)
 		require.NoError(t, err)
 		assert.Equal(t, rec, resultRec)
-		assert.Equal(t, jetID, resultRec.JetID)
 	})
 
 	t.Run("returns error when no record-value for id", func(t *testing.T) {
@@ -77,12 +72,8 @@ func TestRecordStorage_Set(t *testing.T) {
 
 	ctx := inslogger.TestContext(t)
 
-	jetID := gen.JetID()
 	id := gen.ID()
-	rec := record.MaterialRecord{
-		Record: &ResultRecord{},
-		JetID:  jetID,
-	}
+	rec := getMaterialRecord()
 
 	t.Run("saves correct record-value", func(t *testing.T) {
 		t.Parallel()
@@ -93,7 +84,6 @@ func TestRecordStorage_Set(t *testing.T) {
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(recordStorage.recsStor))
 		assert.Equal(t, rec, recordStorage.recsStor[id])
-		assert.Equal(t, jetID, recordStorage.recsStor[id].JetID)
 	})
 
 	t.Run("returns override error when saving with the same id", func(t *testing.T) {
@@ -129,14 +119,14 @@ func TestRecordStorage_Delete(t *testing.T) {
 		for i := int32(0); i < countFirstPulse; i++ {
 			randID := gen.ID()
 			id := insolar.NewID(firstPulse, randID.Hash())
-			err := recordStorage.Set(ctx, *id, record.MaterialRecord{})
+			err := recordStorage.Set(ctx, *id, record.Material{})
 			require.NoError(t, err)
 		}
 
 		for i := int32(0); i < countSecondPulse; i++ {
 			randID := gen.ID()
 			id := insolar.NewID(secondPulse, randID.Hash())
-			err := recordStorage.Set(ctx, *id, record.MaterialRecord{})
+			err := recordStorage.Set(ctx, *id, record.Material{})
 			require.NoError(t, err)
 		}
 		assert.Equal(t, countFirstPulse+countSecondPulse, int32(len(recordStorage.recsStor)))
@@ -157,15 +147,13 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 
 	searchRecs := map[insolar.ID]struct{}{}
 	for i := int32(0); i < rand.Int31n(256); i++ {
-		virtRec := ResultRecord{}
-		fuzz.New().NilChance(0).Fuzz(&virtRec)
+		rec := getMaterialRecord()
+		rec.JetID = searchJetID
 
-		rec := record.MaterialRecord{
-			Record: &virtRec,
-			JetID:  searchJetID,
-		}
+		h := sha256.New()
+		hash := record.HashVirtual(h, *rec.Virtual)
 
-		id := insolar.NewID(searchPN, EncodeVirtual(rec.Record))
+		id := insolar.NewID(searchPN, hash)
 
 		searchRecs[*id] = struct{}{}
 		err := recordMemory.Set(ctx, *id, rec)
@@ -173,9 +161,7 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 	}
 
 	for i := int32(0); i < rand.Int31n(512); i++ {
-		rec := record.MaterialRecord{
-			Record: &ResultRecord{},
-		}
+		rec := getMaterialRecord()
 
 		randID := gen.ID()
 		rID := insolar.NewID(gen.PulseNumber(), randID.Hash())
@@ -187,8 +173,52 @@ func TestRecordStorage_ForPulse(t *testing.T) {
 	require.Equal(t, len(searchRecs), len(res))
 
 	for _, r := range res {
-		rID := insolar.NewID(searchPN, EncodeVirtual(r.Record))
+		h := sha256.New()
+		hash := record.HashVirtual(h, *r.Virtual)
+
+		rID := insolar.NewID(searchPN, hash)
 		_, ok := searchRecs[*rID]
 		require.Equal(t, true, ok)
 	}
+}
+
+// getVirtualRecord generates random Virtual record
+func getVirtualRecord() record.Virtual {
+	var requestRecord record.Request
+
+	requestRecord.Object = gen.ID()
+	requestRecord.Parcel = slice()
+
+	virtualRecord := record.Virtual{
+		Union: &record.Virtual_Request{
+			Request: &requestRecord,
+		},
+	}
+
+	return virtualRecord
+}
+
+// getMaterialRecord generates random Material record
+func getMaterialRecord() record.Material {
+	virtRec := getVirtualRecord()
+
+	materialRecord := record.Material{
+		Virtual: &virtRec,
+		JetID:   gen.JetID(),
+	}
+
+	return materialRecord
+}
+
+// sizedSlice generates random byte slice fixed size.
+func sizedSlice(size int32) (blob []byte) {
+	blob = make([]byte, size)
+	rand.Read(blob)
+	return
+}
+
+// slice generates random byte slice with random size between 0 and 1024.
+func slice() []byte {
+	size := rand.Int31n(1024)
+	return sizedSlice(size)
 }

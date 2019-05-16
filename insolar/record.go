@@ -83,6 +83,16 @@ func (id *ID) Equal(other ID) bool {
 	return *id == other
 }
 
+// IsEmpty - check for void
+func (id ID) IsEmpty() bool {
+	return id.Equal(ID{})
+}
+
+// IsEmpty - check for void
+func (id ID) NotEmpty() bool {
+	return !id.IsEmpty()
+}
+
 // NewIDFromBase58 deserializes ID from base58 encoded string.
 func NewIDFromBase58(str string) (*ID, error) {
 	decoded := base58.Decode(str)
