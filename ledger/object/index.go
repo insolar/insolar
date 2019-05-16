@@ -94,6 +94,7 @@ type LockedIndexBucket struct {
 func (i *LockedIndexBucket) lifeline() (Lifeline, error) {
 	i.lifelineLock.RLock()
 	defer i.lifelineLock.RUnlock()
+
 	if i.bucket.Lifeline == nil {
 		return Lifeline{}, ErrLifelineNotFound
 	}
