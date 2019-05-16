@@ -46,6 +46,9 @@ const (
 
 	// MetaSender is key for Sender
 	MetaSender = "sender"
+
+	// TypeError is Type for messages with error in Payload
+	TypeError = "error"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock.go
