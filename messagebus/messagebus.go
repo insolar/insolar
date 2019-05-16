@@ -372,7 +372,6 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel insolar.Parcel, loc
 			*message.UpdateObject,
 			*message.RegisterChild,
 			*message.SetBlob,
-			*message.GetObjectIndex,
 			*message.GetPendingRequests,
 			*message.ValidateRecord,
 			*message.CallConstructor,
