@@ -23,8 +23,11 @@ import (
 
 // Node contains info about discovery nodes
 type Node struct {
-	Host     string `mapstructure:"host"`
-	Role     string `mapstructure:"role"`
+	Host string `mapstructure:"host"`
+	Role string `mapstructure:"role"`
+	// KeyName used for generating keys file for discovery nodes
+	KeyName string `mapstructure:"key_name"`
+	// KeysFile used for setting insolard config
 	KeysFile string `mapstructure:"keys_file"`
 	CertName string `mapstructure:"cert_name"`
 }

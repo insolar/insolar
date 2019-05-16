@@ -111,15 +111,24 @@ func createKeysInDir(
 	ctx context.Context,
 	dir string,
 	keyFilenameFormat string,
-	amount int,
+	discoveryNodes []Node,
 	reuse bool,
 ) ([]nodeInfo, error) {
+	amount := len(discoveryNodes)
+
+	// XXX: Hack: works only for generated files by keyFilenameFormat
+	// TODO: reconsider this option implementation - (INS-2473) - @nordicdyno 16.May.2019
 	if reuse {
 		return readKeysFromDir(dir, amount)
 	}
 
 	nodes := make([]nodeInfo, amount)
-	for i := range nodes {
+	for i, dn := range discoveryNodes {
+		name := fmt.Sprintf(keyFilenameFormat, i+1)
+		if len(dn.KeyName) > 0 {
+			name = dn.KeyName
+		}
+
 		ks := platformpolicy.NewKeyProcessor()
 
 		privKey, err := ks.GeneratePrivateKey()
@@ -146,7 +155,6 @@ func createKeysInDir(
 			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't marshal keys")
 		}
 
-		name := fmt.Sprintf(keyFilenameFormat, i+1)
 		inslogger.FromContext(ctx).Info("Genesis write key " + filepath.Join(dir, name))
 		err = makeFileWithDir(dir, name, result)
 		if err != nil {
