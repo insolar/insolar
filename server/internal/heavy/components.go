@@ -107,14 +107,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	// TODO: use insolar.Logger
 	logger := watermill.NewStdLogger(false, false)
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-	inRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
-	if err != nil {
-		panic(err)
-	}
-	outRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
-	if err != nil {
-		panic(err)
-	}
 
 	// Network.
 	var (
@@ -278,43 +270,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		return nil, errors.Wrap(err, "failed to init components")
 	}
 
-	outRouter.AddNoPublisherHandler(
-		"SendMessageHandler",
-		bus.TopicOutgoing,
-		pubSub,
-		NetworkService.SendMessageHandler,
-	)
-
-	inRouter.AddMiddleware(
-		middleware.InstantAck,
-		WmBus.IncomingMessageRouter,
-		middleware.CorrelationID,
-	)
-
-	inRouter.AddHandler(
-		"Process",
-		bus.TopicIncoming,
-		pubSub,
-		bus.TopicOutgoing,
-		pubSub,
-		Handler.Process,
-	)
-
-	go func() {
-		if err := inRouter.Run(); err != nil {
-			ctx := context.Background()
-			inslogger.FromContext(ctx).Error("Error while running inRouter", err)
-		}
-	}()
-	<-inRouter.Running()
-
-	go func() {
-		if err := outRouter.Run(); err != nil {
-			ctx := context.Background()
-			inslogger.FromContext(ctx).Error("Error while running outRouter", err)
-		}
-	}()
-	<-outRouter.Running()
+	startWatermill(ctx, logger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.Process)
 
 	return c, nil
 }
@@ -325,4 +281,55 @@ func (c *components) Start(ctx context.Context) error {
 
 func (c *components) Stop(ctx context.Context) error {
 	return c.cmp.Stop(ctx)
+}
+
+func startWatermill(
+	ctx context.Context,
+	logger watermill.LoggerAdapter,
+	pubSub watermillMsg.PubSub,
+	b *bus.Bus,
+	outHandler, inHandler watermillMsg.HandlerFunc,
+) {
+	inRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
+	if err != nil {
+		panic(err)
+	}
+	outRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
+	if err != nil {
+		panic(err)
+	}
+
+	outRouter.AddNoPublisherHandler(
+		"OutgoingHandler",
+		bus.TopicOutgoing,
+		pubSub,
+		outHandler,
+	)
+
+	inRouter.AddMiddleware(
+		middleware.InstantAck,
+		b.IncomingMessageRouter,
+		middleware.CorrelationID,
+	)
+
+	inRouter.AddHandler(
+		"IncomingHandler",
+		bus.TopicIncoming,
+		pubSub,
+		bus.TopicOutgoing,
+		pubSub,
+		inHandler,
+	)
+
+	startRouter(ctx, inRouter)
+	startRouter(ctx, outRouter)
+}
+
+func startRouter(ctx context.Context, router *watermillMsg.Router) {
+	go func() {
+		if err := router.Run(); err != nil {
+			inslogger.FromContext(ctx).Error("Error while running router", err)
+		}
+	}()
+	<-router.Running()
 }
