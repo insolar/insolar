@@ -272,3 +272,29 @@ func Status(url string) (*StatusResponse, error) {
 
 	return res, nil
 }
+
+// Status makes rpc request to info.Status method and extracts it
+func LogOff(url string) (*StatusResponse, error) {
+	params := getDefaultRPCParams("status.LogOff")
+
+	body, err := GetResponseBody(url+"/rpc", params)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Status ]")
+	}
+
+	statusResp := rpcStatusResponse{}
+
+	err = json.Unmarshal(body, &statusResp)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Status ] Can't unmarshal")
+	}
+	if statusResp.Error != nil {
+		return nil, errors.New("[ Status ] Field 'error' is not nil: " + fmt.Sprint(statusResp.Error))
+	}
+	res := &statusResp.Result
+	if res == nil {
+		return nil, errors.New("[ Status ] Field 'result' is nil")
+	}
+
+	return res, nil
+}
