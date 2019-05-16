@@ -76,9 +76,8 @@ func (ph *packetHandler) Handle(ctx context.Context, response *packet.Packet) {
 	}
 
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"type":           response.Type,
-		"remote_address": response.RemoteAddress,
-		"request_id":     response.RequestID,
+		"type":       response.Type,
+		"request_id": response.RequestID,
 	})
 	logger.Debug("[ processResponse ] Processing response")
 

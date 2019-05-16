@@ -67,11 +67,10 @@ import (
 
 // Packet is network packet object for requests and responses.
 type Packet struct {
-	Sender        *host.Host
-	Receiver      *host.Host
-	Type          types.PacketType
-	RequestID     network.RequestID
-	RemoteAddress string
+	Sender    *host.Host
+	Receiver  *host.Host
+	Type      types.PacketType
+	RequestID network.RequestID
 
 	TraceID    string
 	Data       interface{}

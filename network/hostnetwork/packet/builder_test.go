@@ -73,14 +73,13 @@ func TestBuilder_Build_RequestPacket(t *testing.T) {
 		Build()
 
 	expectedPacket := &Packet{
-		Sender:        sender,
-		RemoteAddress: sender.Address.String(),
-		Receiver:      receiver,
-		Type:          TestPacket,
-		Data:          &RequestTest{[]byte{0, 1, 2, 3}},
-		IsResponse:    false,
-		RequestID:     network.RequestID(123),
-		TraceID:       "trace_id",
+		Sender:     sender,
+		Receiver:   receiver,
+		Type:       TestPacket,
+		Data:       &RequestTest{[]byte{0, 1, 2, 3}},
+		IsResponse: false,
+		RequestID:  network.RequestID(123),
+		TraceID:    "trace_id",
 	}
 	require.Equal(t, expectedPacket, m)
 }
@@ -98,14 +97,13 @@ func TestBuilder_Build_ResponsePacket(t *testing.T) {
 		Build()
 
 	expectedPacket := &Packet{
-		Sender:        sender,
-		RemoteAddress: sender.Address.String(),
-		Receiver:      receiver,
-		Type:          TestPacket,
-		Data:          &ResponseTest{42},
-		IsResponse:    true,
-		RequestID:     network.RequestID(123),
-		TraceID:       "trace_id",
+		Sender:     sender,
+		Receiver:   receiver,
+		Type:       TestPacket,
+		Data:       &ResponseTest{42},
+		IsResponse: true,
+		RequestID:  network.RequestID(123),
+		TraceID:    "trace_id",
 	}
 	require.Equal(t, expectedPacket, m)
 }
