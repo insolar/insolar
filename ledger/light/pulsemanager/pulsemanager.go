@@ -206,12 +206,14 @@ func (m *PulseManager) processEndPulse(
 					return errors.Wrapf(err, "getExecutorData failed for jet id %v", info.id)
 				}
 				// Split happened.
-				if !info.left.mineNext {
-					go sender(*msg, info.left.id)
-				}
-				if !info.right.mineNext {
-					go sender(*msg, info.right.id)
-				}
+				go sender(*msg, info.left.id)
+				go sender(*msg, info.right.id)
+				// if !info.left.mineNext {
+				// 	go sender(*msg, info.left.id)
+				// }
+				// if !info.right.mineNext {
+				// 	go sender(*msg, info.right.id)
+				// }
 			}
 
 			m.RecentStorageProvider.RemovePendingStorage(ctx, insolar.ID(info.id))
@@ -374,6 +376,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse i
 			}
 			if *nextLeftExecutor == me {
 				info.left.mineNext = true
+				m.RecentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jetID), insolar.ID(leftJetID))
 				// m.rewriteHotData(ctx, currentPulse, newPulse, jetID, leftJetID)
 			}
 			nextRightExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(rightJetID), newPulse)
@@ -382,6 +385,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse i
 			}
 			if *nextRightExecutor == me {
 				info.right.mineNext = true
+				m.RecentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jetID), insolar.ID(rightJetID))
 				// m.rewriteHotData(ctx, currentPulse, newPulse, jetID, rightJetID)
 			}
 
@@ -601,32 +605,32 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 
 	m.JetReleaser.ThrowTimeout(ctx)
 
-	logger := inslogger.FromContext(ctx)
-	for _, jetInfo := range jets {
-		if jetInfo.left == nil && jetInfo.right == nil {
-			// No split happened.
-			if jetInfo.mineNext {
-				err := m.JetReleaser.Unlock(ctx, insolar.ID(jetInfo.id))
-				if err != nil {
-					logger.Error(err)
-				}
-			}
-		} else {
-			// Split happened.
-			if jetInfo.left.mineNext {
-				err := m.JetReleaser.Unlock(ctx, insolar.ID(jetInfo.left.id))
-				if err != nil {
-					logger.Error(err)
-				}
-			}
-			if jetInfo.right.mineNext {
-				err := m.JetReleaser.Unlock(ctx, insolar.ID(jetInfo.right.id))
-				if err != nil {
-					logger.Error(err)
-				}
-			}
-		}
-	}
+	// logger := inslogger.FromContext(ctx)
+	// for _, jetInfo := range jets {
+	// 	if jetInfo.left == nil && jetInfo.right == nil {
+	// 		// No split happened.
+	// 		if jetInfo.mineNext {
+	// 			err := m.JetReleaser.Unlock(ctx, insolar.ID(jetInfo.id))
+	// 			if err != nil {
+	// 				logger.Error(err)
+	// 			}
+	// 		}
+	// 	} else {
+	// 		// Split happened.
+	// 		if jetInfo.left.mineNext {
+	// 			err := m.JetReleaser.Unlock(ctx, insolar.ID(jetInfo.left.id))
+	// 			if err != nil {
+	// 				logger.Error(err)
+	// 			}
+	// 		}
+	// 		if jetInfo.right.mineNext {
+	// 			err := m.JetReleaser.Unlock(ctx, insolar.ID(jetInfo.right.id))
+	// 			if err != nil {
+	// 				logger.Error(err)
+	// 			}
+	// 		}
+	// 	}
+	// }
 }
 
 // Start starts pulse manager
