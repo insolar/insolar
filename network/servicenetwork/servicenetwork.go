@@ -53,6 +53,7 @@ package servicenetwork
 import (
 	"bytes"
 	"context"
+	"runtime"
 	"strconv"
 	"sync"
 	"time"
@@ -329,6 +330,7 @@ func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {
 }
 
 func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insolar.Pulse, pulseStartTime time.Time) {
+	runtime.LockOSThread() // Attention, this is a priveleged thread
 	logger := inslogger.FromContext(ctx)
 
 	if !n.cfg.Service.ConsensusEnabled {
