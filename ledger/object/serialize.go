@@ -17,47 +17,8 @@
 package object
 
 import (
-	"bytes"
-	"encoding/binary"
-
-	"github.com/insolar/insolar/insolar/record"
-
 	"github.com/insolar/insolar/insolar"
-	"github.com/ugorji/go/codec"
 )
-
-// SerializeType returns binary representation of provided type.
-func SerializeType(id TypeID) []byte {
-	buf := make([]byte, TypeIDSize)
-	binary.BigEndian.PutUint32(buf, uint32(id))
-	return buf
-}
-
-// DeserializeType returns type from provided binary representation.
-func DeserializeType(buf []byte) TypeID {
-	return TypeID(binary.BigEndian.Uint32(buf))
-}
-
-// EncodeVirtual returns binary representation of provided record.
-func EncodeVirtual(rec record.VirtualRecord) []byte {
-	typeBytes := SerializeType(TypeFromRecord(rec))
-	buff := bytes.NewBuffer(typeBytes)
-	enc := codec.NewEncoder(buff, &codec.CborHandle{})
-	enc.MustEncode(rec)
-	return buff.Bytes()
-}
-
-// DecodeVirtual returns record decoded from bytes.
-func DecodeVirtual(buf []byte) (record.VirtualRecord, error) {
-	t := DeserializeType(buf[:TypeIDSize])
-	dec := codec.NewDecoderBytes(buf[TypeIDSize:], &codec.CborHandle{})
-	rec := RecordFromType(t)
-	err := dec.Decode(&rec)
-	if err != nil {
-		return nil, err
-	}
-	return rec, nil
-}
 
 // CalculateIDForBlob calculate id for blob with using current pulse number
 func CalculateIDForBlob(scheme insolar.PlatformCryptographyScheme, pulseNumber insolar.PulseNumber, blob []byte) *insolar.ID {

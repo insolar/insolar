@@ -40,13 +40,6 @@ func NewGetRequest(dep *proc.Dependencies, rep chan<- bus.Reply, request insolar
 }
 
 func (s *GetRequest) Present(ctx context.Context, f flow.Flow) error {
-
-	jet := proc.NewFetchJet(s.request, flow.Pulse(ctx), s.replyTo)
-	s.dep.FetchJet(jet)
-	if err := f.Procedure(ctx, jet, false); err != nil {
-		return err
-	}
-
 	code := proc.NewGetRequest(s.request, s.replyTo)
 	s.dep.GetRequest(code)
 	return f.Procedure(ctx, code, false)

@@ -82,7 +82,7 @@ func (d *LightDataGatherer) ForPulseAndJet(
 		Indexes:  convertIndexes(indexes),
 		Drop:     drop.MustEncode(&dr),
 		Blobs:    convertBlobs(bls),
-		Records:  convertRecords(records),
+		Records:  convertRecords(ctx, records),
 	}, nil
 }
 
@@ -103,10 +103,14 @@ func convertBlobs(blobs []blob.Blob) [][]byte {
 	return res
 }
 
-func convertRecords(records []record.MaterialRecord) [][]byte {
+func convertRecords(ctx context.Context, records []record.Material) [][]byte {
 	res := make([][]byte, len(records))
 	for i, r := range records {
-		res[i] = object.EncodeMaterial(r)
+		data, err := r.Marshal()
+		if err != nil {
+			inslogger.FromContext(ctx).Error("Can't serialize record", r)
+		}
+		res[i] = data
 	}
 	return res
 }

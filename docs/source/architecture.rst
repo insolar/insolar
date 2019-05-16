@@ -2,9 +2,6 @@
 Architecture
 ------------
 
-Introduction
-============
-
 The architecture of the Insolar platform is multilayer with multiple components and consensuses to address complexity and a variety of requirements. The use of multilayer architecture makes platform design a challenging task, but with proper use it enables building complex solutions with better control of development risks and (later) of ownership costs.
 
 .. figure:: imgs/architecture.png

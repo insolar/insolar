@@ -14,20 +14,19 @@
 // limitations under the License.
 //
 
-package object
+package genesis
 
 import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/record"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-// NewRecordIDFromRecord generates ID from pulse number and record implements record.VirtualRecord.
-// TODO: rename to IDForRecord
-func NewRecordIDFromRecord(scheme insolar.PlatformCryptographyScheme, pulse insolar.PulseNumber, rec record.VirtualRecord) *insolar.ID {
-	hasher := scheme.ReferenceHasher()
-	_, err := rec.WriteHashData(hasher)
-	if err != nil {
-		panic(err)
-	}
-	return insolar.NewID(pulse, hasher.Sum(nil))
+func TestTools_refByName(t *testing.T) {
+	var (
+		pubKey    = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n-----END PUBLIC KEY-----\n"
+		pubKeyRef = "1tJD1S1GS9MH9CiecZ6rgrRiNEVxUxWffkmhT4F61e.1tJEEHUZYWYXXEa1KCTKKR8G6MrteZqCFPdcejHinR"
+	)
+	genesisRef := refByName(pubKey)
+	require.Equal(t, pubKeyRef, genesisRef.String(), "reference by name always the same")
 }

@@ -121,13 +121,12 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 		return nil, errors.New("unknown formatter " + cfg.Formatter)
 	}
 
-	zerolog.CallerSkipFrameCount = 3
 	logger := zerolog.New(output).Level(zerolog.InfoLevel).With().Timestamp().Logger()
 	za := &zerologAdapter{
 		logger: logger,
 		callerConfig: callerHookConfig{
 			enabled:        true,
-			skipFrameCount: 3,
+			skipFrameCount: defaultCallerSkipFrameCount,
 		},
 	}
 	return za, nil
@@ -135,12 +134,12 @@ func newZerologAdapter(cfg configuration.Log) (*zerologAdapter, error) {
 
 // WithFields return copy of adapter with predefined fields.
 func (z *zerologAdapter) WithFields(fields map[string]interface{}) insolar.Logger {
-	w := z.logger.With()
+	zCtx := z.logger.With()
 	for key, value := range fields {
-		w = w.Interface(key, value)
+		zCtx = zCtx.Interface(key, value)
 	}
 	return &zerologAdapter{
-		logger:       w.Logger(),
+		logger:       zCtx.Logger(),
 		callerConfig: z.callerConfig,
 	}
 }
@@ -248,14 +247,16 @@ func (z *zerologAdapter) WithCaller(flag bool) insolar.Logger {
 	zCopy := *z
 	zCopy.callerConfig.enabled = flag
 	// if caller disabled, probably we should avoid cost of call runtime.Caller, so disable func field
-	zCopy.callerConfig.funcname = flag
+	if !flag {
+		zCopy.callerConfig.funcname = flag
+	}
 	return &zCopy
 }
 
-// WithSkipFrameCount configures skipFrameCount for 'caller' field computation.
-func (z *zerologAdapter) WithSkipFrameCount(skipFrameCount int) insolar.Logger {
+// WithSkipFrameCount changes skipFrameCount by delta value (it can be negative).
+func (z *zerologAdapter) WithSkipFrameCount(delta int) insolar.Logger {
 	zCopy := *z
-	zCopy.callerConfig.skipFrameCount = skipFrameCount
+	zCopy.callerConfig.skipFrameCount += delta
 	return &zCopy
 }
 

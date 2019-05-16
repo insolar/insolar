@@ -198,7 +198,7 @@ func ClaimToNode(version string, claim *packets.NodeJoinClaim) (insolar.NetworkN
 		claim.NodeRoleRecID,
 		key,
 		insolar.NodeReady,
-		claim.NodeAddress.Get(),
+		claim.NodeAddress.String(),
 		version)
 	node.SetShortID(claim.ShortNodeID)
 	return node, nil

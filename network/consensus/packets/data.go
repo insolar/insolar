@@ -66,18 +66,17 @@ const (
 const HashLength = 64
 const SignatureLength = 66
 const PublicKeyLength = 66
-const ReferenceLength = 64
 
 // ------------------------------PACKET HEADER------------------------------
 
 type PacketHeader struct {
 	PacketT    PacketType
 	HasRouting bool
-	//-----------------
+	// -----------------
 	f01   bool
 	f00   bool
 	Pulse uint32
-	//-----------------
+	// -----------------
 	OriginNodeID insolar.ShortNodeID
 	TargetNodeID insolar.ShortNodeID
 }

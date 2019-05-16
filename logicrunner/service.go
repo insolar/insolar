@@ -108,7 +108,6 @@ func MakeBaseMessage(req rpctypes.UpBaseReq, es *ExecutionState) message.BaseLog
 	return message.BaseLogicMessage{
 		Caller:          req.Callee,
 		CallerPrototype: req.Prototype,
-		Request:         req.Request,
 		Nonce:           es.nonce,
 	}
 }

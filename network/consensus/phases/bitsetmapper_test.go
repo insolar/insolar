@@ -132,7 +132,7 @@ func newTestAnnounceClaim(announcerIndex, joinerIndex, count uint16, announcer i
 	result.NodeAnnouncerIndex = announcerIndex
 	result.NodeJoinerIndex = joinerIndex
 	result.NodeCount = count
-	result.NodeAddress = packets.NewNodeAddress("127.0.0.1:0")
+	result.NodeAddress, _ = packets.NewNodeAddress("127.0.0.1:0")
 	return result
 }
 
@@ -145,7 +145,7 @@ func TestApplyClaims(t *testing.T) {
 	announce3 := newTestAnnounceClaim(9, 5, uint16(count), insolar.Reference{99})
 	cs := ConsensusState{NodesMutator: mutator, BitsetMapper: bm}
 	origin := node.NewNode(insolar.Reference{55}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:0", "")
-	claims := []packets.ReferendumClaim{announce1, announce2, announce3, &packets.NodeBroadcast{}}
+	claims := []packets.ReferendumClaim{announce1, announce2, announce3}
 	err := ApplyClaims(&cs, origin, claims)
 	assert.NoError(t, err)
 

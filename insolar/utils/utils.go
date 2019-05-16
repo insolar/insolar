@@ -19,7 +19,6 @@ package utils
 import (
 	"context"
 	"encoding/binary"
-	"os"
 
 	"github.com/pkg/errors"
 	uuid "github.com/satori/go.uuid"
@@ -57,14 +56,6 @@ func UInt32ToBytes(n uint32) []byte {
 	buff := make([]byte, 4)
 	binary.BigEndian.PutUint32(buff, n)
 	return buff
-}
-
-func SendGracefulStopSignal() error {
-	p, err := os.FindProcess(os.Getpid())
-	if err != nil {
-		return err
-	}
-	return p.Signal(os.Interrupt)
 }
 
 // CircleXOR performs XOR for 'value' and 'src'. The result is returned as new byte slice.

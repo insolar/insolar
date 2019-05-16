@@ -196,7 +196,7 @@ func (p2p *Phase2Packet) SetBitSet(bitset BitSet) {
 
 func (p2p *Phase2Packet) ContainsRequests() bool {
 	for _, vote := range p2p.votesAndAnswers {
-		if vote.Type() == TypeMissingNode {
+		if vote.Type() == TypeMissingNodeReqVote {
 			return true
 		}
 	}
@@ -205,7 +205,7 @@ func (p2p *Phase2Packet) ContainsRequests() bool {
 
 func (p2p *Phase2Packet) ContainsResponses() bool {
 	for _, vote := range p2p.votesAndAnswers {
-		if vote.Type() == TypeMissingNodeSupplementaryVote || vote.Type() == TypeMissingNodeClaim {
+		if vote.Type() == TypeMissingNodeRespVote || vote.Type() == TypeMissingNodeClaimsVote {
 			return true
 		}
 	}

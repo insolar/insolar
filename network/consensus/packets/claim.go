@@ -63,24 +63,12 @@ import (
 type ClaimType uint8
 
 const (
-	TypeNodeJoinClaim = ClaimType(iota + 1)
-	TypeNodeAnnounceClaim
-	TypeCapabilityPollingAndActivation
-	TypeNodeViolationBlame
-	TypeNodeBroadcast
-	TypeNodeLeaveClaim
-	TypeChangeNetworkClaim
+	TypeNodeJoinClaim     = ClaimType(1)
+	TypeNodeAnnounceClaim = ClaimType(2)
+	TypeNodeLeaveClaim    = ClaimType(3)
 )
 
 const claimHeaderSize = 2
-
-// ChangeNetworkClaim uses to change network state.
-type ChangeNetworkClaim struct {
-}
-
-func (cnc *ChangeNetworkClaim) Type() ClaimType {
-	return TypeChangeNetworkClaim
-}
 
 type ReferendumClaim interface {
 	Serializer
@@ -97,77 +85,6 @@ type SignedClaim interface {
 	GetPublicKey() (crypto.PublicKey, error)
 	SerializeRaw() ([]byte, error)
 	GetSignature() []byte
-}
-
-// NodeBroadcast is a broadcast of info. Must be brief and only one entry per node.
-// Type 4.
-type NodeBroadcast struct {
-	EmergencyLevel uint8
-}
-
-func (nb *NodeBroadcast) Clone() ReferendumClaim {
-	result := *nb
-	return &result
-}
-
-func (nb *NodeBroadcast) Type() ClaimType {
-	return TypeNodeBroadcast
-}
-
-// CapabilityPoolingAndActivation is a type 3.
-type CapabilityPoolingAndActivation struct {
-	PollingFlags   uint16
-	CapabilityType uint16
-	CapabilityRef  [ReferenceLength]byte
-}
-
-func (cpa *CapabilityPoolingAndActivation) Clone() ReferendumClaim {
-	result := *cpa
-	return &result
-}
-
-func (cpa *CapabilityPoolingAndActivation) Type() ClaimType {
-	return TypeCapabilityPollingAndActivation
-}
-
-// NodeViolationBlame is a type 2.
-type NodeViolationBlame struct {
-	BlameNodeID   uint32
-	TypeViolation uint8
-}
-
-func (nvb *NodeViolationBlame) Clone() ReferendumClaim {
-	result := *nvb
-	return &result
-}
-
-func (nvb *NodeViolationBlame) Type() ClaimType {
-	return TypeNodeViolationBlame
-}
-
-const NodeAddressSize = 20
-
-// TODO: create heterogeneous structure for variuos types of adresses (IPv4, IPv6, etc.)
-type NodeAddress [NodeAddressSize]byte
-
-func NewNodeAddress(address string) NodeAddress {
-	var result NodeAddress
-	result.Set(address)
-	return result
-}
-
-func (address *NodeAddress) Set(s string) {
-	copy(address[:], []byte(s)[:NodeAddressSize])
-}
-
-func (address NodeAddress) Get() string {
-	var i int
-	for i = 1; i < len(address); i++ {
-		if address[i] == 0 {
-			break
-		}
-	}
-	return string(address[:i])
 }
 
 // NodeJoinClaim is a type 1, len == 272.
@@ -267,10 +184,17 @@ func NodeToClaim(node insolar.NetworkNode) (*NodeJoinClaim, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeToClaim ] failed to export a public key")
 	}
+
+	address, err := NewNodeAddress(node.Address())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeToClaim ] failed to convert node address")
+	}
+
 	var keyData [PublicKeyLength]byte
 	copy(keyData[:], exportedKey[:PublicKeyLength])
 
 	var s [SignatureLength]byte
+
 	return &NodeJoinClaim{
 		ShortNodeID:             node.ShortID(),
 		RelayNodeID:             node.ShortID(),
@@ -279,7 +203,7 @@ func NodeToClaim(node insolar.NetworkNode) (*NodeJoinClaim, error) {
 		NodeRoleRecID:           node.Role(),
 		NodeRef:                 node.ID(),
 		NodePK:                  keyData,
-		NodeAddress:             NewNodeAddress(node.Address()),
+		NodeAddress:             address,
 		Signature:               s,
 	}, nil
 }

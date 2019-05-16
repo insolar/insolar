@@ -56,7 +56,7 @@ func TestDumpUser(t *testing.T) {
 
 func TestDumpUserWrongRef(t *testing.T) {
 	_, err := signedRequest(&root, "DumpUserInfo", testutils.RandomRef().String())
-	require.Contains(t, err.Error(), "[ DumpUserInfo ] Problem with making request: [ getUserInfoMap ] Can't get implementation")
+	require.Contains(t, err.Error(), "[ DumpUserInfo ] Problem with making request: [ getUserInfoMap ]")
 }
 
 func TestDumpAllUsersNoRoot(t *testing.T) {

@@ -57,41 +57,6 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-func makeNodeBroadCast() *NodeBroadcast {
-	nodeBroadcast := &NodeBroadcast{}
-	nodeBroadcast.EmergencyLevel = uint8(4)
-
-	return nodeBroadcast
-}
-
-func TestNodeBroadcast(t *testing.T) {
-	checkSerializationDeserialization(t, makeNodeBroadCast())
-}
-
-func makeCapabilityPoolingAndActivation() *CapabilityPoolingAndActivation {
-	capabilityPoolingAndActivation := &CapabilityPoolingAndActivation{}
-	capabilityPoolingAndActivation.PollingFlags = uint16(10)
-	capabilityPoolingAndActivation.CapabilityType = uint16(7)
-	capabilityPoolingAndActivation.CapabilityRef = randomArray64()
-
-	return capabilityPoolingAndActivation
-}
-
-func TestCapabilityPoolingAndActivation(t *testing.T) {
-	checkSerializationDeserialization(t, makeCapabilityPoolingAndActivation())
-}
-
-func makeNodeViolationBlame() *NodeViolationBlame {
-	nodeViolationBlame := &NodeViolationBlame{}
-	nodeViolationBlame.TypeViolation = uint8(4)
-
-	return nodeViolationBlame
-}
-
-func TestNodeViolationBlame(t *testing.T) {
-	checkSerializationDeserialization(t, makeNodeViolationBlame())
-}
-
 func makeNodeJoinClaim(withSignature bool) *NodeJoinClaim {
 	nodeJoinClaim := &NodeJoinClaim{}
 	nodeJoinClaim.ShortNodeID = insolar.ShortNodeID(77)
@@ -104,7 +69,7 @@ func makeNodeJoinClaim(withSignature bool) *NodeJoinClaim {
 	if withSignature {
 		nodeJoinClaim.Signature = randomArray66()
 	}
-	nodeJoinClaim.NodeAddress.Set("127.0.0.1:5566")
+	nodeJoinClaim.NodeAddress, _ = NewNodeAddress("127.0.0.1:5566")
 
 	return nodeJoinClaim
 }
