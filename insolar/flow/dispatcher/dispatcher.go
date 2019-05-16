@@ -36,8 +36,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow/internal/thread"
 )
 
-const TraceIDField = "TraceID"
-
 type Dispatcher struct {
 	handles struct {
 		present flow.MakeHandle
@@ -102,7 +100,7 @@ func (d *Dispatcher) InnerSubscriber(watermillMsg *message.Message) ([]*message.
 	}
 
 	ctx := context.Background()
-	ctx = inslogger.ContextWithTrace(ctx, watermillMsg.Metadata.Get(TraceIDField))
+	ctx = inslogger.ContextWithTrace(ctx, watermillMsg.Metadata.Get(wmBus.MetaTraceID))
 	logger := inslogger.FromContext(ctx)
 	go func() {
 		f := thread.NewThread(msg, d.controller)
