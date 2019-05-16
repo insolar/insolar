@@ -51,7 +51,6 @@
 package packet
 
 import (
-	"errors"
 	"testing"
 
 	"github.com/insolar/insolar/network"
@@ -80,7 +79,6 @@ func TestBuilder_Build_RequestPacket(t *testing.T) {
 		Type:          TestPacket,
 		Data:          &RequestTest{[]byte{0, 1, 2, 3}},
 		IsResponse:    false,
-		Error:         nil,
 		RequestID:     network.RequestID(123),
 		TraceID:       "trace_id",
 	}
@@ -106,34 +104,6 @@ func TestBuilder_Build_ResponsePacket(t *testing.T) {
 		Type:          TestPacket,
 		Data:          &ResponseTest{42},
 		IsResponse:    true,
-		Error:         nil,
-		RequestID:     network.RequestID(123),
-		TraceID:       "trace_id",
-	}
-	require.Equal(t, expectedPacket, m)
-}
-
-func TestBuilder_Build_ErrorPacket(t *testing.T) {
-	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
-	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
-	builder := NewBuilder(sender)
-	m := builder.
-		Receiver(receiver).
-		Type(TestPacket).
-		Response(&ResponseTest{}).
-		Error(errors.New("test error")).
-		RequestID(network.RequestID(123)).
-		TraceID("trace_id").
-		Build()
-
-	expectedPacket := &Packet{
-		Sender:        sender,
-		RemoteAddress: sender.Address.String(),
-		Receiver:      receiver,
-		Type:          TestPacket,
-		Data:          &ResponseTest{},
-		IsResponse:    true,
-		Error:         errors.New("test error"),
 		RequestID:     network.RequestID(123),
 		TraceID:       "trace_id",
 	}

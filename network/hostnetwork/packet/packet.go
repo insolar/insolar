@@ -75,7 +75,6 @@ type Packet struct {
 
 	TraceID    string
 	Data       interface{}
-	Error      error
 	IsResponse bool
 }
 

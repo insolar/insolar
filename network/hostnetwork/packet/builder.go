@@ -127,11 +127,3 @@ func (cb Builder) Response(response interface{}) Builder {
 	})
 	return cb
 }
-
-// Error adds error description to packet.
-func (cb Builder) Error(err error) Builder {
-	cb.actions = append(cb.actions, func(packet *Packet) {
-		packet.Error = err
-	})
-	return cb
-}
