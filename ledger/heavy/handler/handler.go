@@ -17,11 +17,16 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
+	"github.com/ThreeDotsLabs/watermill"
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/pkg/errors"
@@ -34,6 +39,7 @@ import (
 )
 
 type Handler struct {
+	WmBus          bus.Bus
 	Bus            insolar.MessageBus
 	JetCoordinator jet.Coordinator
 	PCS            insolar.PlatformCryptographyScheme
@@ -55,12 +61,49 @@ func New() *Handler {
 	}
 }
 
+func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
+	ctx, _ := inslogger.WithField(msg.Context(), "pulse", msg.Metadata.Get(bus.MetaPulse))
+
+	rep, err := h.handle(ctx, msg)
+
+	var resInBytes []byte
+	var replyType string
+	if err != nil {
+		resInBytes, err = bus.ErrorToBytes(err)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't convert error to bytes")
+		}
+		replyType = bus.TypeError
+	} else {
+		resInBytes = reply.ToBytes(rep)
+		replyType = string(rep.Type())
+	}
+	resAsMsg := watermillMsg.NewMessage(watermill.NewUUID(), resInBytes)
+	resAsMsg.Metadata.Set(bus.MetaType, replyType)
+	receiver := msg.Metadata.Get(bus.MetaSender)
+	resAsMsg.Metadata.Set(bus.MetaReceiver, receiver)
+	return []*watermillMsg.Message{resAsMsg}, nil
+}
+
+func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) (insolar.Reply, error) {
+	switch msg.Metadata.Get(bus.MetaType) {
+	case insolar.TypeGetObject.String():
+		parcel, err := message.DeserializeParcel(bytes.NewBuffer(msg.Payload))
+		if err != nil {
+			return nil, errors.Wrap(err, "can't deserialize payload")
+		}
+		return h.handleGetObject(ctx, parcel)
+
+	default:
+		return nil, fmt.Errorf("no handler for message type %s", msg.Metadata.Get(bus.MetaType))
+	}
+}
+
 func (h *Handler) Init(ctx context.Context) error {
 	// h.Bus.MustRegister(insolar.TypeHeavyStartStop, h.handleHeavyStartStop)
 	h.Bus.MustRegister(insolar.TypeHeavyPayload, h.handleHeavyPayload)
 
 	h.Bus.MustRegister(insolar.TypeGetCode, h.handleGetCode)
-	h.Bus.MustRegister(insolar.TypeGetObject, h.handleGetObject)
 	h.Bus.MustRegister(insolar.TypeGetDelegate, h.handleGetDelegate)
 	h.Bus.MustRegister(insolar.TypeGetChildren, h.handleGetChildren)
 	h.Bus.MustRegister(insolar.TypeGetObjectIndex, h.handleGetObjectIndex)

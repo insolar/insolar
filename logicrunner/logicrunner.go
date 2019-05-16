@@ -30,6 +30,8 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+
+	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
@@ -134,7 +136,7 @@ func (st *ObjectState) WrapError(err error, message string) error {
 
 func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
-	wmMsg.Metadata.Set(dispatcher.TraceIDField, inslogger.TraceID(ctx))
+	wmMsg.Metadata.Set(wmBus.MetaTraceID, inslogger.TraceID(ctx))
 	wmMsg.Metadata.Set(MessageTypeField, msgType)
 
 	return wmMsg
