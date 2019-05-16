@@ -14,20 +14,19 @@
 // limitations under the License.
 //
 
-package insolar
+package genesis
 
-type genesisBinary []byte
+import (
+	"testing"
 
-// GenesisRecord is initial chain record.
-var GenesisRecord genesisBinary = []byte{0xAC}
+	"github.com/stretchr/testify/require"
+)
 
-// ID returns genesis record id.
-func (r genesisBinary) ID() ID {
-	return *NewID(GenesisPulse.PulseNumber, r)
-}
-
-// Ref returns genesis record reference.
-func (r genesisBinary) Ref() Reference {
-	id := r.ID()
-	return *NewReference(id, id)
+func TestTools_refByName(t *testing.T) {
+	var (
+		pubKey    = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n-----END PUBLIC KEY-----\n"
+		pubKeyRef = "1tJD1S1GS9MH9CiecZ6rgrRiNEVxUxWffkmhT4F61e.1tJEEHUZYWYXXEa1KCTKKR8G6MrteZqCFPdcejHinR"
+	)
+	genesisRef := refByName(pubKey)
+	require.Equal(t, pubKeyRef, genesisRef.String(), "reference by name always the same")
 }

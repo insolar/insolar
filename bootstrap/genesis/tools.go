@@ -14,14 +14,28 @@
 // limitations under the License.
 //
 
-package messagebus
+package genesis
 
 import (
+	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
-// GetMessageHash calculates message hash.
-func GetMessageHash(scheme insolar.PlatformCryptographyScheme, msg insolar.Parcel) []byte {
-	return scheme.IntegrityHasher().Hash(message.ParcelToBytes(msg))
+func refByName(name string) insolar.Reference {
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+	parcel := &message.Parcel{
+		Msg: &message.GenesisRequest{
+			Name: name,
+		},
+	}
+	vrec := record.Wrap(record.Request{
+		Parcel:      message.ParcelToBytes(parcel),
+		MessageHash: message.ParcelMessageHash(pcs, parcel),
+		Object:      rootdomain.RootDomain.ID(),
+	})
+	id := insolar.NewID(insolar.FirstPulseNumber, record.HashVirtual(pcs.ReferenceHasher(), vrec))
+	return *insolar.NewReference(rootdomain.RootDomain.ID(), *id)
 }

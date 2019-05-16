@@ -91,7 +91,6 @@ func (cb *contractsBuilder) buildPrototypes(ctx context.Context, rootDomainID *i
 	return cb.prototypes, nil
 }
 
-// buildPrototypes ...
 func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*preprocessor.ParsedFile, domain *insolar.ID) error {
 
 	domainRef := insolar.NewReference(*domain, *domain)
@@ -109,6 +108,8 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 			return errors.Wrap(err, "[ buildPrototypes ] Can't RegisterRequest for contract")
 		}
 		cb.prototypes[name] = insolar.NewReference(*domain, *protoID)
+
+		inslogger.FromContext(ctx).Debugf("%v proto Ref=%v", name, cb.prototypes[name])
 	}
 
 	for name, code := range contracts {
@@ -167,6 +168,7 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 		if err != nil {
 			return errors.Wrapf(err, "[ buildPrototypes ] Can't RegisterRequest for code '%v'", name)
 		}
+		inslogger.FromContext(ctx).Debugf("%v code ID=%v\n", name, codeReq)
 
 		log.Debugf("Deploying code for contract %q", name)
 		codeID, err := cb.artifactManager.DeployCode(
@@ -198,10 +200,11 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 			return errors.Wrapf(err, "[ buildPrototypes ] Can't ActivatePrototypef for code '%v'", name)
 		}
 
-		_, err = cb.artifactManager.RegisterResult(ctx, *domainRef, *cb.prototypes[name], nil)
+		resID, err := cb.artifactManager.RegisterResult(ctx, *domainRef, *cb.prototypes[name], nil)
 		if err != nil {
 			return errors.Wrapf(err, "[ buildPrototypes ] Can't RegisterResult of prototype for code '%v'", name)
 		}
+		inslogger.FromContext(ctx).Debugf("%v register result ID=%v", name, resID)
 	}
 
 	return nil

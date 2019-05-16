@@ -36,6 +36,14 @@ func Deserialize(data []byte, to interface{}) error {
 	return errors.Wrap(err, "[ Deserialize ]")
 }
 
+// MustDeserialize deserializes data to specific interface, panics on error.
+func MustDeserialize(data []byte, to interface{}) {
+	ch := new(codec.CborHandle)
+	if err := codec.NewDecoderBytes(data, ch).Decode(&to); err != nil {
+		panic(err)
+	}
+}
+
 // MarshalArgs marshals arguments by cbor
 func MarshalArgs(args ...interface{}) (Arguments, error) {
 	var argsSerialized []byte

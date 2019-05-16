@@ -89,7 +89,7 @@ func (m *client) RegisterRequest(
 
 	req := record.Request{
 		Parcel:      message.ParcelToBytes(parcel),
-		MessageHash: m.PCS.IntegrityHasher().Hash(message.MustSerializeBytes(parcel.Message())),
+		MessageHash: message.ParcelMessageHash(m.PCS, parcel),
 		Object:      *obj.Record(),
 	}
 
