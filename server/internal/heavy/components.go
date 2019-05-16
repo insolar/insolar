@@ -22,6 +22,8 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
@@ -102,9 +104,21 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	c.NodeRef = CertManager.GetCertificate().GetNodeRef().String()
 	c.NodeRole = CertManager.GetCertificate().GetRole().String()
 
+	// TODO: use insolar.Logger
+	logger := watermill.NewStdLogger(false, false)
+	pubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
+	inRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
+	if err != nil {
+		panic(err)
+	}
+	outRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
+	if err != nil {
+		panic(err)
+	}
+
 	// Network.
 	var (
-		NetworkService insolar.Network
+		NetworkService *servicenetwork.ServiceNetwork
 		NodeNetwork    insolar.NodeNetwork
 		Termination    insolar.TerminationHandler
 	)
@@ -155,8 +169,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Tokens  insolar.DelegationTokenFactory
 		Parcels message.ParcelFactory
 		Bus     insolar.MessageBus
-		WmBus   bus.Sender
-		Pub     watermillMsg.Publisher
+		WmBus   *bus.Bus
 	)
 	{
 		var err error
@@ -166,10 +179,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
-		// TODO: use insolar.Logger
-		logger := watermill.NewStdLogger(false, false)
-		Pub = gochannel.NewGoChannel(gochannel.Config{}, logger)
-		WmBus = bus.NewBus(Pub)
+		WmBus = bus.NewBus(pubSub)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -261,12 +271,50 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		CertManager,
 		NodeNetwork,
 		NetworkService,
-		Pub,
+		pubSub,
 	)
 	err = c.cmp.Init(ctx)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init components")
 	}
+
+	outRouter.AddNoPublisherHandler(
+		"SendMessageHandler",
+		bus.TopicOutgoing,
+		pubSub,
+		NetworkService.SendMessageHandler,
+	)
+
+	inRouter.AddMiddleware(
+		middleware.InstantAck,
+		WmBus.IncomingMessageRouter,
+		middleware.CorrelationID,
+	)
+
+	inRouter.AddHandler(
+		"Process",
+		bus.TopicIncoming,
+		pubSub,
+		bus.TopicOutgoing,
+		pubSub,
+		Handler.Process,
+	)
+
+	go func() {
+		if err := inRouter.Run(); err != nil {
+			ctx := context.Background()
+			inslogger.FromContext(ctx).Error("Error while running inRouter", err)
+		}
+	}()
+	<-inRouter.Running()
+
+	go func() {
+		if err := outRouter.Run(); err != nil {
+			ctx := context.Background()
+			inslogger.FromContext(ctx).Error("Error while running outRouter", err)
+		}
+	}()
+	<-outRouter.Running()
 
 	return c, nil
 }
