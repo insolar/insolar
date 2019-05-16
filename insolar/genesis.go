@@ -16,19 +16,10 @@
 
 package insolar
 
-import (
-	"io"
-)
-
 type genesisBinary []byte
 
 // GenesisRecord is initial chain record.
 var GenesisRecord genesisBinary = []byte{0xAC}
-
-// WriteHashData implements record.VirtualRecord.
-func (r genesisBinary) WriteHashData(w io.Writer) (int, error) {
-	return w.Write(r)
-}
 
 // ID returns genesis record id.
 func (r genesisBinary) ID() ID {

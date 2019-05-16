@@ -22,6 +22,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/ugorji/go/codec"
 	"go.opencensus.io/stats"
@@ -88,7 +89,7 @@ type Lifeline struct {
 	ChildPointer        *insolar.ID // Meta record about child activation.
 	Parent              insolar.Reference
 	Delegates           map[insolar.Reference]insolar.Reference
-	State               StateID
+	State               record.StateID
 	LatestUpdate        insolar.PulseNumber
 	JetID               insolar.JetID
 }

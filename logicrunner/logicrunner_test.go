@@ -14,6 +14,8 @@
 // limitations under the License.
 //
 
+// +build slowtest
+
 package logicrunner
 
 import (
@@ -97,15 +99,6 @@ func (s *LogicRunnerFuncSuite) SetupSuite() {
 		s.contractsDir = ""
 		log.Error("Failed to find contracts dir: ", err.Error())
 	}
-}
-
-func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr *LogicRunner) {
-	mb.ReRegister(insolar.TypeCallMethod, lr.FlowDispatcher.WrapBusHandle)
-	mb.ReRegister(insolar.TypeCallConstructor, lr.FlowDispatcher.WrapBusHandle)
-
-	mb.ReRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
-	mb.ReRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
-	mb.ReRegister(insolar.TypeExecutorResults, lr.FlowDispatcher.WrapBusHandle)
 }
 
 func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts.Client, *goplugintestutils.ContractsBuilder, insolar.PulseManager, *artifactmanager.MessageHandler, func()) {
@@ -207,18 +200,6 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr inso
 		}, nil,
 	)
 	s.Require().NoError(err)
-}
-
-func mockCryptographyService(t *testing.T) insolar.CryptographyService {
-	mock := testutils.NewCryptographyServiceMock(t)
-	mock.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
-		signature := insolar.SignatureFromBytes(nil)
-		return &signature, nil
-	}
-	mock.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
-		return true
-	}
-	return mock
 }
 
 func ValidateAllResults(t testing.TB, ctx context.Context, lr insolar.LogicRunner, mustfail ...insolar.Reference) {

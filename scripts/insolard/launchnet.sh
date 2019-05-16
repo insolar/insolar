@@ -36,20 +36,18 @@ SCRIPTS_DIR=scripts/insolard/
 CONFIGS_DIR=${LAUNCHNET_BASE_DIR}configs
 
 KEYS_FILE=$CONFIGS_DIR/bootstrap_keys.json
-ROOT_MEMBER_KEYS_FILE=$CONFIGS_DIR/root_member_keys.json
+ROOT_MEMBER_KEYS_FILE=${CONFIGS_DIR}/root_member_keys.json
 
 # TODO: use only heavy matereal data dir
 DISCOVERY_NODES_DATA=${LAUNCHNET_BASE_DIR}discoverynodes/
 
 DISCOVERY_NODES_HEAVY_DATA=${DISCOVERY_NODES_DATA}1/
 
-NODES_DATA=${LAUNCHNET_BASE_DIR}nodes/
+GENESIS_TEMPLATE=${SCRIPTS_DIR}bootstrap/genesis_template.yaml
+BOOTSTRAP_GENESIS_CONFIG=${LAUNCHNET_BASE_DIR}genesis.yaml
+BOOTSTRAP_INSOLARD_CONFIG=${LAUNCHNET_BASE_DIR}insolard.yaml
 
-GENESIS_TEMPLATE=${SCRIPTS_DIR}genesis_template.yaml
-GENESIS_CONFIG=${LAUNCHNET_BASE_DIR}genesis.yaml
-INSOLARD_CONFIG=${LAUNCHNET_BASE_DIR}insolard.yaml
-
-PULSEWATCHER_CONFIG=${LAUNCHNET_BASE_DIR}/pulsewatcher.yaml
+PULSEWATCHER_CONFIG=${LAUNCHNET_BASE_DIR}pulsewatcher.yaml
 
 INSGORUND_PORT_FILE=$CONFIGS_DIR/insgorund_ports.txt
 
@@ -64,7 +62,7 @@ echo "discovery+other nodes: ${NUM_DISCOVERY_NODES}+${NUM_NODES}"
 
 for i in `seq 1 $NUM_DISCOVERY_NODES`
 do
-    DISCOVERY_NODE_DIRS+=($DISCOVERY_NODES_DATA/$i)
+    DISCOVERY_NODE_DIRS+=(${DISCOVERY_NODES_DATA}${i})
 done
 
 
@@ -99,7 +97,7 @@ stop_listening()
         ports="$ports $gorund_ports"
     fi
 
-    transport_ports=$( grep "host:" $GENESIS_CONFIG | grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
+    transport_ports=$( grep "host:" ${BOOTSTRAP_GENESIS_CONFIG} | grep -o ":\d\+" | grep -o "\d\+" | tr '\n' ' ' )
     ports="$ports $transport_ports"
 
     for port in $ports
@@ -117,7 +115,6 @@ clear_dirs()
     set -x
     rm -rfv ${LEDGER_DIR}
     rm -rfv ${DISCOVERY_NODES_DATA}
-    rm -rfv ${NODES_DATA}
     rm -rfv ${LAUNCHNET_LOGS_DIR}
     { set +x; } 2>/dev/null
 
@@ -134,7 +131,7 @@ create_required_dirs()
     echo "create_required_dirs() starts ..."
     set -x
     mkdir -p $LEDGER_DIR
-    mkdir -p $DISCOVERY_NODES_DATA/certs
+    mkdir -p ${DISCOVERY_NODES_DATA}certs
     mkdir -p $CONFIGS_DIR
 
     mkdir -p ${INSGORUND_LOGS}
@@ -276,7 +273,7 @@ copy_data()
 {
     echo "copy data dir to heavy"
     set -x
-    mv ${LEDGER_DIR}/ ${DISCOVERY_NODES_HEAVY_DATA}/data
+    mv ${LEDGER_DIR}/ ${DISCOVERY_NODES_HEAVY_DATA}data
     { set +x; } 2>/dev/null
 }
 
@@ -288,7 +285,7 @@ copy_discovery_certs()
     do
         i=$((i + 1))
         set -x
-        cp -v $DISCOVERY_NODES_DATA/certs/discovery_cert_$i.json $node/cert.json
+        cp -v ${DISCOVERY_NODES_DATA}certs/discovery_cert_$i.json ${node}/cert.json
         { set +x; } 2>/dev/null
     done
     echo "copy_certs() end."
@@ -322,7 +319,7 @@ genesis()
     generate_insolard_configs
 
     echo "start genesis ..."
-    CMD="$INSOLARD --config $INSOLARD_CONFIG --genesis $GENESIS_CONFIG --keyout $DISCOVERY_NODES_DATA/certs"
+    CMD="$INSOLARD --config ${BOOTSTRAP_INSOLARD_CONFIG} --genesis ${BOOTSTRAP_GENESIS_CONFIG} --keyout ${DISCOVERY_NODES_DATA}certs"
 
     GENESIS_EXIT_CODE=0
     set +e
@@ -331,6 +328,7 @@ genesis()
         ${CMD} &> ${LAUNCHNET_LOGS_DIR}genesis_output.log
         GENESIS_EXIT_CODE=$?
         { set +x; } 2>/dev/null
+        echo "genesis log: ${LAUNCHNET_LOGS_DIR}genesis_output.log"
     else
         set -x
         ${CMD}
@@ -364,6 +362,7 @@ set -x
 mkdir -p $PULSAR_DATA_DIR
 ${PULSARD} -c ${PULSAR_CONFIG} --trace &> ${LAUNCHNET_LOGS_DIR}pulsar_output.log &
 { set +x; } 2>/dev/null
+echo "pulsar log: ${LAUNCHNET_LOGS_DIR}pulsar_output.log"
 
 if [[ "$run_insgorund" == "true" ]]
 then
@@ -383,6 +382,7 @@ do
         --trace &> ${DISCOVERY_NODE_LOGS}${i}/output.log &
     { set +x; } 2>/dev/null
     echo "discovery node $i started in background"
+    echo "log: ${DISCOVERY_NODE_LOGS}${i}/output.log"
 done
 
 echo "discovery nodes started ..."

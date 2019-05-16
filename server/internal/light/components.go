@@ -229,7 +229,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler := artifactmanager.NewMessageHandler(indexes, indexes, &conf)
 		handler.RecentStorageProvider = hots
 		handler.Bus = Bus
-		handler.PlatformCryptographyScheme = CryptoScheme
+		handler.PCS = CryptoScheme
 		handler.JetCoordinator = Coordinator
 		handler.CryptographyService = CryptoService
 		handler.DelegationTokenFactory = Tokens

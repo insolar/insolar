@@ -64,14 +64,14 @@ import (
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/consensus/packets"
-	"github.com/insolar/insolar/consensus/phases"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/packets"
+	"github.com/insolar/insolar/network/consensus/phases"
 	"github.com/insolar/insolar/network/controller"
 	"github.com/insolar/insolar/network/controller/bootstrap"
 	"github.com/insolar/insolar/network/gateway"
@@ -330,6 +330,11 @@ func (n *ServiceNetwork) shoudIgnorePulse(newPulse insolar.Pulse) bool {
 
 func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insolar.Pulse, pulseStartTime time.Time) {
 	logger := inslogger.FromContext(ctx)
+
+	if !n.cfg.Service.ConsensusEnabled {
+		logger.Warn("Consensus is disabled")
+		return
+	}
 
 	if err := n.PhaseManager.OnPulse(ctx, &newPulse, pulseStartTime); err != nil {
 		errMsg := "Failed to pass consensus: " + err.Error()

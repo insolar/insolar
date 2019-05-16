@@ -11,9 +11,9 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	packets "github.com/insolar/insolar/consensus/packets"
 	insolar "github.com/insolar/insolar/insolar"
 	network "github.com/insolar/insolar/network"
+	packets "github.com/insolar/insolar/network/consensus/packets"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )

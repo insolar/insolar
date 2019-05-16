@@ -86,8 +86,8 @@ type Logger interface {
 
 	// WithCaller switch on/off 'caller' field computation.
 	WithCaller(flag bool) Logger
-	// WithSkipFrameCount configures skipFrameCount for 'caller' field computation.
-	WithSkipFrameCount(skipFrameCount int) Logger
+	// WithSkipFrameCount changes skipFrameCount by delta value (it can be negative).
+	WithSkipFrameCount(delta int) Logger
 	// WithFuncName switch on/off 'func' field computation.
 	WithFuncName(flag bool) Logger
 

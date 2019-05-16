@@ -53,8 +53,8 @@ package nodenetwork
 import (
 	"testing"
 
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/node"
 	"github.com/stretchr/testify/assert"
 )
@@ -123,7 +123,6 @@ func TestGetMergedCopy_JoinClaims(t *testing.T) {
 	claims := []packets.ReferendumClaim{
 		newTestJoinClaim(insolar.Reference{4}),
 		newTestJoinClaim(insolar.Reference{5}),
-		&packets.NodeBroadcast{},
 	}
 	result, err := GetMergedCopy(nodes, claims)
 	assert.NoError(t, err)
@@ -145,8 +144,6 @@ func TestGetMergedCopy_LeaveClaims(t *testing.T) {
 	claims := []packets.ReferendumClaim{
 		newTestJoinClaim(insolar.Reference{4}),
 		newTestLeaveClaim(insolar.Reference{2}, insolar.PulseNumber(50)),
-		&packets.NodeBroadcast{},
-		&packets.NodeBroadcast{},
 	}
 	result, err := GetMergedCopy(nodes, claims)
 	assert.NoError(t, err)
