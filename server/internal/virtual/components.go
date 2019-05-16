@@ -209,7 +209,7 @@ func notFound(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
 func startWatermill(
 	ctx context.Context,
 	logger watermill.LoggerAdapter,
-	pubSub watermillMsg.PubSub,
+	pubSub watermillMsg.Subscriber,
 	b *bus.Bus,
 	outHandler, inHandler watermillMsg.HandlerFunc,
 ) {
