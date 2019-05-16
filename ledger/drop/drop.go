@@ -1,4 +1,4 @@
-//
+///
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-//
+///
 
 package drop
 
@@ -63,6 +63,9 @@ type Drop struct {
 
 	// JetID represents data about JetID of the current jet.Drop.
 	JetID insolar.JetID
+
+	// Split indicates that current jet was split.
+	Split bool
 }
 
 // MustEncode serializes jet drop.
