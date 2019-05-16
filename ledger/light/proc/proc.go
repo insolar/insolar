@@ -33,6 +33,7 @@ type Dependencies struct {
 	UpdateObject func(*UpdateObject)
 	SetBlob      func(*SetBlob)
 	SetRecord    func(*SetRecord)
+	GetChildren  func(*GetChildren)
 }
 
 type ReturnReply struct {

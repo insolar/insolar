@@ -153,6 +153,13 @@ func NewMessageHandler(
 			p.Dep.IndexStateModifier = h.IndexStateModifier
 			p.Dep.IndexStorage = h.IndexStorage
 		},
+		GetChildren: func(p *proc.GetChildren) {
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.DelegationTokenFactory = h.DelegationTokenFactory
+			p.Dep.RecordAccessor = h.RecordAccessor
+			p.Dep.JetStorage = h.JetStorage
+			p.Dep.JetTreeUpdater = h.jetTreeUpdater
+		},
 	}
 
 	initHandle := func(msg bus.Message) *handle.Init {
@@ -229,12 +236,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 			m.checkJet,
 			m.waitForHotData))
 
-	h.Bus.MustRegister(insolar.TypeGetChildren,
-		BuildMiddleware(h.handleGetChildren,
-			instrumentHandler("handleGetChildren"),
-			m.addFieldsToLogger,
-			m.checkJet,
-			m.waitForHotData))
+	h.Bus.MustRegister(insolar.TypeGetChildren, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeSetRecord, h.FlowDispatcher.WrapBusHandle)
 
