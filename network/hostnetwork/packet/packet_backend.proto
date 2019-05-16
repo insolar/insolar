@@ -1,0 +1,148 @@
+syntax = "proto3";
+
+package types;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.populate_all)        = false;
+
+message Address {
+    bytes IP = 1;
+    uint32 port = 2;
+    bytes Zone = 3;
+}
+
+message Host {
+    bytes NodeID = 1;
+    uint32 ShortID = 2;
+    Address Address = 3;
+}
+
+message PacketBackend {
+    Host Sender = 1;
+    Host Receiver = 2;
+    uint32 RequestID = 3;
+    bytes TraceID = 4;
+
+    oneof payload {
+        Request Request = 5;
+        Response Response = 6;
+    }
+}
+
+message Request {
+    oneof request {
+        Ping Ping = 1;
+        RPCRequest RPC = 2;
+        CascadeRequest Cascade = 3;
+        PulseRequest Pulse = 4;
+        BootstrapRequest Bootstrap = 5;
+        AuthorizeRequest Authorize = 6;
+        RegisterRequest Register = 7;
+        GenesisRequest Genesis = 8;
+        Challenge1Request Challenge1 = 9;
+        Challenge2Request Challenge2 = 10;
+        DisconnectRequest Disconnect = 11;
+    }
+}
+
+message Response {
+    oneof response {
+        Ping Ping = 1;
+        RPCResponse RPC = 2;
+        CascadeResponse Cascade = 3;
+        PulseResponse Pulse = 4;
+        BootstrapResponse Bootstrap = 5;
+        AuthorizeResponse Authorize = 6;
+        RegisterResponse Register = 7;
+        GenesisResponse Genesis = 8;
+        Challenge1Response Challenge1 = 9;
+        Challenge2Response Challenge2 = 10;
+        DisconnectResponse Disconnect = 11;
+    }
+}
+
+message Ping {
+    // nuff said
+}
+
+message RPCRequest {
+
+}
+
+message CascadeRequest {
+
+}
+
+message PulseRequest {
+
+}
+
+message BootstrapRequest {
+
+}
+
+message AuthorizeRequest {
+
+}
+
+message RegisterRequest {
+
+}
+
+message GenesisRequest {
+
+}
+
+message Challenge1Request {
+
+}
+
+message Challenge2Request {
+
+}
+
+message DisconnectRequest {
+
+}
+
+message RPCResponse {
+
+}
+
+message CascadeResponse {
+
+}
+
+message PulseResponse {
+
+}
+
+message BootstrapResponse {
+
+}
+
+message AuthorizeResponse {
+
+}
+
+message RegisterResponse {
+
+}
+
+message GenesisResponse {
+
+}
+
+message Challenge1Response {
+
+}
+
+message Challenge2Response {
+
+}
+
+message DisconnectResponse {
+
+}
