@@ -49,13 +49,13 @@ import (
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
-	RecentStorageProvider      recentstorage.Provider             `inject:""`
-	Bus                        insolar.MessageBus                 `inject:""`
-	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
-	JetCoordinator             jet.Coordinator                    `inject:""`
-	CryptographyService        insolar.CryptographyService        `inject:""`
-	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
-	JetStorage                 jet.Storage                        `inject:""`
+	RecentStorageProvider  recentstorage.Provider             `inject:""`
+	Bus                    insolar.MessageBus                 `inject:""`
+	PCS                    insolar.PlatformCryptographyScheme `inject:""`
+	JetCoordinator         jet.Coordinator                    `inject:""`
+	CryptographyService    insolar.CryptographyService        `inject:""`
+	DelegationTokenFactory insolar.DelegationTokenFactory     `inject:""`
+	JetStorage             jet.Storage                        `inject:""`
 
 	DropModifier drop.Modifier `inject:""`
 
@@ -117,13 +117,13 @@ func NewMessageHandler(
 		SetRecord: func(p *proc.SetRecord) {
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 			p.Dep.RecordModifier = h.RecordModifier
-			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.PCS = h.PCS
 			p.Dep.PendingRequestsLimit = h.conf.PendingRequestsLimit
 		},
 		SetBlob: func(p *proc.SetBlob) {
 			p.Dep.BlobAccessor = h.BlobAccessor
 			p.Dep.BlobModifier = h.BlobModifier
-			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.PlatformCryptographyScheme = h.PCS
 		},
 		SendObject: func(p *proc.SendObject) {
 			p.Dep.Jets = h.JetStorage
@@ -148,13 +148,24 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.BlobModifier = h.BlobModifier
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
-			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.PCS = h.PCS
 			p.Dep.IDLocker = h.IDLocker
 			p.Dep.IndexStateModifier = h.IndexStateModifier
 			p.Dep.IndexStorage = h.IndexStorage
 		},
+		RegisterChild: func(p *proc.RegisterChild) {
+			p.Dep.IDLocker = h.IDLocker
+			p.Dep.IndexStorage = h.IndexStorage
+			p.Dep.JetCoordinator = h.JetCoordinator
+			p.Dep.RecordModifier = h.RecordModifier
+			p.Dep.IndexStateModifier = h.IndexStateModifier
+			p.Dep.PCS = h.PCS
+		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
+		},
+		GetJet: func(p *proc.GetJet) {
+			p.Dep.Jets = h.JetStorage
 		},
 	}
 
@@ -240,20 +251,10 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 			m.waitForHotData))
 
 	h.Bus.MustRegister(insolar.TypeSetRecord, h.FlowDispatcher.WrapBusHandle)
-
-	h.Bus.MustRegister(insolar.TypeRegisterChild,
-		BuildMiddleware(h.handleRegisterChild,
-			instrumentHandler("handleRegisterChild"),
-			m.addFieldsToLogger,
-			m.checkJet,
-			m.waitForHotData))
-
+	h.Bus.MustRegister(insolar.TypeRegisterChild, h.FlowDispatcher.WrapBusHandle)
 	h.Bus.MustRegister(insolar.TypeSetBlob, h.FlowDispatcher.WrapBusHandle)
 	h.Bus.MustRegister(insolar.TypeGetPendingRequests, h.FlowDispatcher.WrapBusHandle)
-
-	h.Bus.MustRegister(insolar.TypeGetJet,
-		BuildMiddleware(h.handleGetJet,
-			instrumentHandler("handleGetJet")))
+	h.Bus.MustRegister(insolar.TypeGetJet, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeHotRecords,
 		BuildMiddleware(h.handleHotRecords,
@@ -272,14 +273,6 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	)
 
 	h.Bus.MustRegister(insolar.TypeValidateRecord, h.handleValidateRecord)
-}
-
-func (h *MessageHandler) handleGetJet(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetJet)
-
-	jetID, actual := h.JetStorage.ForID(ctx, msg.Pulse, msg.Object)
-
-	return &reply.Jet{ID: insolar.ID(jetID), Actual: actual}, nil
 }
 
 func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
@@ -419,12 +412,13 @@ func (h *MessageHandler) handleGetChildren(
 			return nil, errors.New("failed to retrieve children")
 		}
 
-		virtRec := rec.Record
-		childRec, ok := virtRec.(*object.ChildRecord)
+		virtRec := rec.Virtual
+		concrete := record.Unwrap(virtRec)
+		childRec, ok := concrete.(*record.Child)
 		if !ok {
 			return nil, errors.New("failed to retrieve children")
 		}
-		currentChild = childRec.PrevChild
+		currentChild = &childRec.PrevChild
 
 		// Skip records later than specified pulse.
 		recPulse := childRec.Ref.Record().Pulse()
@@ -451,76 +445,6 @@ func (h *MessageHandler) handleGetPendingRequestID(ctx context.Context, parcel i
 	}
 
 	return &rep, nil
-}
-
-func (h *MessageHandler) handleRegisterChild(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	logger := inslogger.FromContext(ctx)
-
-	msg := parcel.Message().(*message.RegisterChild)
-	jetID := jetFromContext(ctx)
-	r, err := object.DecodeVirtual(msg.Record)
-	if err != nil {
-		return nil, errors.Wrap(err, "can't deserialize record")
-	}
-	childRec, ok := r.(*object.ChildRecord)
-	if !ok {
-		return nil, errors.New("wrong child record")
-	}
-
-	h.IDLocker.Lock(msg.Parent.Record())
-	defer h.IDLocker.Unlock(msg.Parent.Record())
-
-	var child *insolar.ID
-	idx, err := h.IndexStorage.ForID(ctx, *msg.Parent.Record())
-	if err == object.ErrIndexNotFound {
-		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch index from heavy")
-		}
-	} else if err != nil {
-		return nil, err
-	}
-	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
-
-	recID := object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), childRec)
-
-	// Children exist and pointer does not match (preserving chain consistency).
-	// For the case when vm can't save or send result to another vm and it tries to update the same record again
-	if idx.ChildPointer != nil && !childRec.PrevChild.Equal(*idx.ChildPointer) && idx.ChildPointer != recID {
-		return nil, errors.New("invalid child record")
-	}
-
-	child = object.NewRecordIDFromRecord(h.PlatformCryptographyScheme, parcel.Pulse(), childRec)
-	rec := record.MaterialRecord{
-		Record: childRec,
-		JetID:  insolar.JetID(jetID),
-	}
-
-	err = h.RecordModifier.Set(ctx, *child, rec)
-
-	if err == object.ErrOverride {
-		logger.WithField("type", fmt.Sprintf("%T", r)).Warn("set record override (#2)")
-		child = recID
-	} else if err != nil {
-		return nil, errors.Wrap(err, "can't save record into storage")
-	}
-
-	idx.ChildPointer = child
-	if msg.AsType != nil {
-		idx.Delegates[*msg.AsType] = msg.Child
-	}
-	idx.LatestUpdate = parcel.Pulse()
-	idx.JetID = insolar.JetID(jetID)
-	err = h.IndexStorage.Set(ctx, *msg.Parent.Record(), idx)
-	if err != nil {
-		return nil, err
-	}
-
-	return &reply.ID{ID: *child}, nil
 }
 
 func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {

@@ -132,7 +132,7 @@ func newTestAnnounceClaim(announcerIndex, joinerIndex, count uint16, announcer i
 	result.NodeAnnouncerIndex = announcerIndex
 	result.NodeJoinerIndex = joinerIndex
 	result.NodeCount = count
-	result.NodeAddress = packets.NewNodeAddress("127.0.0.1:0")
+	result.NodeAddress, _ = packets.NewNodeAddress("127.0.0.1:0")
 	return result
 }
 

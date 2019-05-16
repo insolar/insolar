@@ -23,6 +23,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/stretchr/testify/assert"
@@ -38,7 +39,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/drop"
-	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 )
@@ -49,9 +49,9 @@ type amSuite struct {
 	cm  *component.Manager
 	ctx context.Context
 
-	scheme      insolar.PlatformCryptographyScheme
-	nodeStorage node.Accessor
+	scheme insolar.PlatformCryptographyScheme
 
+	nodeStorage  node.Accessor
 	jetStorage   jet.Storage
 	dropModifier drop.Modifier
 	dropAccessor drop.Accessor
@@ -148,11 +148,11 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 	pa.LatestMock.Return(*insolar.GenesisPulse, nil)
 
 	am := client{
-		DefaultBus:                 mb,
-		PulseAccessor:              pa,
-		JetCoordinator:             jc,
-		PlatformCryptographyScheme: s.scheme,
-		senders:                    messagebus.NewSenders(),
+		DefaultBus:     mb,
+		PulseAccessor:  pa,
+		JetCoordinator: jc,
+		PCS:            s.scheme,
+		senders:        messagebus.NewSenders(),
 	}
 
 	desc, err := am.GetCode(s.ctx, codeRef)
@@ -210,7 +210,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 
 	cs := platformpolicy.NewPlatformCryptographyScheme()
 	am := NewClient()
-	am.PlatformCryptographyScheme = cs
+	am.PCS = cs
 	pa := pulse.NewAccessorMock(s.T())
 	pa.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, nil)
 
@@ -268,10 +268,13 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	pulseAccessor.LatestMock.Return(*insolar.GenesisPulse, nil)
 
 	var parcel insolar.Parcel = &message.Parcel{PulseNumber: 123987}
-	resRecord := object.RequestRecord{
+	req := record.Request{
 		Parcel: message.ParcelToBytes(parcel),
 	}
-	finalResponse := &reply.Request{Record: object.EncodeVirtual(&resRecord)}
+	virtRec := record.Wrap(req)
+	data, err := virtRec.Marshal()
+	require.NoError(s.T(), err)
+	finalResponse := &reply.Request{Record: data}
 
 	mb := testutils.NewMessageBusMock(s.T())
 	mb.SendFunc = func(p context.Context, p1 insolar.Message, p2 *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {

@@ -21,6 +21,7 @@ import (
 	"context"
 	"crypto/rand"
 	"testing"
+	"time"
 
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/assert"
@@ -70,9 +71,7 @@ type handlerSuite struct {
 	indexMemoryStor *object.IndexMemory
 }
 
-var (
-	domainID = *genRandomID(0)
-)
+var domainID = *genRandomID(0)
 
 func genRandomID(pulse insolar.PulseNumber) *insolar.ID {
 	buff := [insolar.RecordIDSize - insolar.PulseNumberSize]byte{}
@@ -409,7 +408,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.JetStorage = s.jetStorage
 	h.Nodes = s.nodeStorage
 	h.RecentStorageProvider = provideMock
-	h.PlatformCryptographyScheme = s.scheme
+	h.PCS = s.scheme
 	h.RecordModifier = s.recordModifier
 
 	idLockMock := object.NewIDLockerMock(s.T())
@@ -417,42 +416,41 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	idLockMock.UnlockMock.Return()
 	h.IDLocker = idLockMock
 
-	objIndex := object.Lifeline{LatestState: genRandomID(0), State: object.StateActivation}
-	childRecord := object.ChildRecord{
-		Ref:       *genRandomRef(0),
-		PrevChild: nil,
+	objIndex := object.Lifeline{LatestState: genRandomID(0), State: record.StateActivation}
+	childRecord := record.Child{
+		Ref: *genRandomRef(0),
 	}
-	amendHash := s.scheme.ReferenceHasher()
-	_, err := childRecord.WriteHashData(amendHash)
+
+	virtChild := record.Wrap(childRecord)
+	data, err := virtChild.Marshal()
 	require.NoError(s.T(), err)
-	childID := insolar.NewID(0, amendHash.Sum(nil))
+	hash := record.HashVirtual(s.scheme.ReferenceHasher(), virtChild)
+	childID := insolar.NewID(0, hash)
 
 	msg := message.RegisterChild{
-		Record: object.EncodeVirtual(&childRecord),
+		Record: data,
 		Parent: *genRandomRef(0),
-	}
-
-	mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-		if m, ok := gm.(*message.GetObjectIndex); ok {
-			assert.Equal(s.T(), msg.Parent, m.Object)
-			buf := object.EncodeIndex(objIndex)
-			require.NoError(s.T(), err)
-			return &reply.ObjectIndex{Index: buf}, nil
-		}
-
-		panic("unexpected call")
 	}
 
 	h.JetCoordinator = jc
 	h.Bus = mb
 	err = h.Init(s.ctx)
 	require.NoError(s.T(), err)
-	heavyRef := genRandomRef(0)
-	jc.HeavyMock.Return(heavyRef, nil)
-	rep, err := h.handleRegisterChild(contextWithJet(s.ctx, jetID), &message.Parcel{
-		Msg: &msg,
-	})
+
+	replyTo := make(chan bus.Reply, 1)
+	registerChild := proc.NewRegisterChild(insolar.JetID(jetID), &msg, childID.Pulse(), objIndex, replyTo)
+	registerChild.Dep.IDLocker = idLockMock
+	registerChild.Dep.IndexStorage = s.indexMemoryStor
+	registerChild.Dep.JetCoordinator = jc
+	registerChild.Dep.RecordModifier = s.recordModifier
+	registerChild.Dep.IndexStateModifier = s.indexMemoryStor
+	registerChild.Dep.PCS = s.scheme
+
+	err = registerChild.Proceed(contextWithJet(s.ctx, jetID))
 	require.NoError(s.T(), err)
+
+	busRep := <-replyTo
+	rep := busRep.Reply
 	objRep, ok := rep.(*reply.ID)
 	require.True(s.T(), ok)
 	assert.Equal(s.T(), *childID, objRep.ID)
@@ -463,7 +461,6 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated() {
-	// Arrange
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
@@ -485,7 +482,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.IndexStorage = s.indexMemoryStor
 	h.IndexStateModifier = s.indexMemoryStor
 	h.RecentStorageProvider = provideMock
-	h.PlatformCryptographyScheme = s.scheme
+	h.PCS = s.scheme
 	h.RecordModifier = s.recordModifier
 
 	idLockMock := object.NewIDLockerMock(s.T())
@@ -495,33 +492,42 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 
 	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
-		State:        object.StateActivation,
+		State:        record.StateActivation,
 		LatestUpdate: insolar.FirstPulseNumber,
 		JetID:        insolar.JetID(jetID),
 	}
-	childRecord := object.ChildRecord{
-		Ref:       *genRandomRef(0),
-		PrevChild: nil,
+	childRecord := record.Child{
+		Ref: *genRandomRef(0),
 	}
+
+	virtRec := record.Wrap(childRecord)
+	data, err := virtRec.Marshal()
+	require.NoError(s.T(), err)
+
 	msg := message.RegisterChild{
-		Record: object.EncodeVirtual(&childRecord),
+		Record: data,
 		Parent: *genRandomRef(0),
 	}
 
-	err := s.indexMemoryStor.Set(s.ctx, *msg.Parent.Record(), objIndex)
+	err = s.indexMemoryStor.Set(s.ctx, *msg.Parent.Record(), objIndex)
 	require.NoError(s.T(), err)
 
-	// Act
-	_, err = h.handleRegisterChild(contextWithJet(s.ctx, jetID), &message.Parcel{
-		Msg:         &msg,
-		PulseNumber: insolar.FirstPulseNumber + 100,
-	})
+	replyTo := make(chan bus.Reply, 1)
+	pulse := gen.PulseNumber()
+	registerChild := proc.NewRegisterChild(insolar.JetID(jetID), &msg, pulse, objIndex, replyTo)
+	registerChild.Dep.IDLocker = idLockMock
+	registerChild.Dep.IndexStorage = s.indexMemoryStor
+	registerChild.Dep.JetCoordinator = jet.NewCoordinatorMock(mc)
+	registerChild.Dep.RecordModifier = s.recordModifier
+	registerChild.Dep.IndexStateModifier = s.indexMemoryStor
+	registerChild.Dep.PCS = s.scheme
+
+	err = registerChild.Proceed(contextWithJet(s.ctx, jetID))
 	require.NoError(s.T(), err)
 
-	// Assert
 	idx, err := s.indexMemoryStor.ForID(s.ctx, *msg.Parent.Record())
 	require.NoError(s.T(), err)
-	require.Equal(s.T(), int(idx.LatestUpdate), insolar.FirstPulseNumber+100)
+	require.Equal(s.T(), idx.LatestUpdate, pulse)
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
@@ -531,8 +537,18 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	jc := jet.NewCoordinatorMock(mc)
 
 	firstID := insolar.NewID(insolar.FirstPulseNumber, []byte{1, 2, 3})
-	secondID := object.NewRecordIDFromRecord(s.scheme, insolar.FirstPulseNumber, &object.CodeRecord{})
-	thirdID := object.NewRecordIDFromRecord(s.scheme, insolar.FirstPulseNumber-1, &object.CodeRecord{})
+
+	codeRec := record.Code{}
+	virtCodeRec := record.Wrap(codeRec)
+	hash := record.HashVirtual(s.scheme.ReferenceHasher(), virtCodeRec)
+
+	secondID := insolar.NewID(insolar.FirstPulseNumber, hash)
+
+	codeRec = record.Code{}
+	virtCodeRec = record.Wrap(codeRec)
+	hash = record.HashVirtual(s.scheme.ReferenceHasher(), virtCodeRec)
+
+	thirdID := insolar.NewID(insolar.FirstPulseNumber-1, hash)
 
 	mb := testutils.NewMessageBusMock(mc)
 	mb.MustRegisterMock.Return()
@@ -617,6 +633,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), drop.Drop{Pulse: insolar.FirstPulseNumber, Hash: []byte{88}, JetID: jetID}, savedDrop)
 
+	mc.Wait(1*time.Minute)
 	pendingMock.MinimockFinish()
 }
 
@@ -626,15 +643,18 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
-	req := object.RequestRecord{
+	req := record.Request{
 		MessageHash: []byte{1, 2, 3},
 		Object:      *genRandomID(0),
 	}
 
-	reqID := object.NewRecordIDFromRecord(s.scheme, insolar.FirstPulseNumber, &req)
-	rec := record.MaterialRecord{
-		Record: &req,
-		JetID:  insolar.JetID(jetID),
+	virtRec := record.Wrap(req)
+	hash := record.HashVirtual(s.scheme.ReferenceHasher(), virtRec)
+	reqID := insolar.NewID(insolar.FirstPulseNumber, hash)
+
+	rec := record.Material{
+		Virtual: &virtRec,
+		JetID:   insolar.JetID(jetID),
 	}
 	err := s.recordModifier.Set(s.ctx, *reqID, rec)
 	require.NoError(s.T(), err)
@@ -652,6 +672,9 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	res := <-replyTo
 	reqReply, ok := (res.Reply).(*reply.Request)
 	require.True(s.T(), ok)
-	vrec, _ := object.DecodeVirtual(reqReply.Record)
-	assert.Equal(s.T(), req, *vrec.(*object.RequestRecord))
+
+	vRec := record.Virtual{}
+	err = vRec.Unmarshal(reqReply.Record)
+	require.NoError(s.T(), err)
+	assert.Equal(s.T(), &req, record.Unwrap(&vRec))
 }

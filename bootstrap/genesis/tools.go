@@ -14,31 +14,28 @@
 // limitations under the License.
 //
 
-package object
+package genesis
 
 import (
-	"testing"
-
+	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
-func Test_RecordByTypeIDPanic(t *testing.T) {
-	assert.Panics(t, func() { RecordFromType(0) })
-}
-
-func TestSerializeDeserializeRecord(t *testing.T) {
-	cs := platformpolicy.NewPlatformCryptographyScheme()
-
-	rec := ActivateRecord{
-		StateRecord: StateRecord{
-			Memory: CalculateIDForBlob(cs, insolar.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
+func refByName(name string) insolar.Reference {
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+	parcel := &message.Parcel{
+		Msg: &message.GenesisRequest{
+			Name: name,
 		},
 	}
-	serialized := EncodeVirtual(&rec)
-	deserialized, err := DecodeVirtual(serialized)
-	require.NoError(t, err)
-	assert.Equal(t, rec, *deserialized.(*ActivateRecord))
+	vrec := record.Wrap(record.Request{
+		Parcel:      message.ParcelToBytes(parcel),
+		MessageHash: message.ParcelMessageHash(pcs, parcel),
+		Object:      rootdomain.RootDomain.ID(),
+	})
+	id := insolar.NewID(insolar.FirstPulseNumber, record.HashVirtual(pcs.ReferenceHasher(), vrec))
+	return *insolar.NewReference(rootdomain.RootDomain.ID(), *id)
 }

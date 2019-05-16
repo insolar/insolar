@@ -17,20 +17,115 @@
 package record
 
 import (
-	"io"
-
 	"github.com/insolar/insolar/insolar"
 )
 
 type Record interface{}
 
-type VirtualRecord interface {
-	// WriteHashData writes record data to provided writer. This data is used to calculate record's hash.
-	WriteHashData(w io.Writer) (int, error)
+// StateID is a state of lifeline records.
+type StateID int
+
+const (
+	// StateUndefined is used for special cases.
+	StateUndefined = StateID(iota)
+	// StateActivation means it's an activation record.
+	StateActivation
+	// StateAmend means it's an amend record.
+	StateAmend
+	// StateDeactivation means it's a deactivation record.
+	StateDeactivation
+)
+
+// State is common object state record.
+type State interface {
+	// ID returns state id.
+	ID() StateID
+	// GetImage returns state code.
+	GetImage() *insolar.Reference
+	// GetIsPrototype returns state code.
+	GetIsPrototype() bool
+	// GetMemory returns state indexStorage.
+	GetMemory() *insolar.ID
+	// PrevStateID returns previous state id.
+	PrevStateID() *insolar.ID
 }
 
-type MaterialRecord struct {
-	Record VirtualRecord
+func (Activate) ID() StateID {
+	return StateActivation
+}
 
-	JetID insolar.JetID
+func (p Activate) GetImage() *insolar.Reference {
+	return &p.Image
+}
+
+func (p Activate) GetIsPrototype() bool {
+	return p.IsPrototype
+}
+
+func (p Activate) GetMemory() *insolar.ID {
+	return &p.Memory
+}
+
+func (Activate) PrevStateID() *insolar.ID {
+	return nil
+}
+
+func (Amend) ID() StateID {
+	return StateAmend
+}
+
+func (p Amend) GetImage() *insolar.Reference {
+	return &p.Image
+}
+
+func (p Amend) GetIsPrototype() bool {
+	return p.IsPrototype
+}
+
+func (p Amend) GetMemory() *insolar.ID {
+	return &p.Memory
+}
+
+func (p Amend) PrevStateID() *insolar.ID {
+	return &p.PrevState
+}
+
+func (Deactivate) ID() StateID {
+	return StateDeactivation
+}
+
+func (Deactivate) GetImage() *insolar.Reference {
+	return nil
+}
+
+func (Deactivate) GetIsPrototype() bool {
+	return false
+}
+
+func (Deactivate) GetMemory() *insolar.ID {
+	return nil
+}
+
+func (p Deactivate) PrevStateID() *insolar.ID {
+	return &p.PrevState
+}
+
+func (Genesis) PrevStateID() *insolar.ID {
+	return nil
+}
+
+func (Genesis) ID() StateID {
+	return StateActivation
+}
+
+func (Genesis) GetMemory() *insolar.ID {
+	return nil
+}
+
+func (Genesis) GetImage() *insolar.Reference {
+	return nil
+}
+
+func (Genesis) GetIsPrototype() bool {
+	return false
 }

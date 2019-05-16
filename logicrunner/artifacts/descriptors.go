@@ -218,7 +218,7 @@ func (i *ChildIterator) fetch() error {
 		return fmt.Errorf("unexpected reply: %#v", genericReply)
 	}
 
-	if rep.NextFrom == nil {
+	if rep.NextFrom == nil || rep.NextFrom.IsEmpty() {
 		i.canFetch = false
 	}
 	i.buff = rep.Refs

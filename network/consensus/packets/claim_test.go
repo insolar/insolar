@@ -69,7 +69,7 @@ func makeNodeJoinClaim(withSignature bool) *NodeJoinClaim {
 	if withSignature {
 		nodeJoinClaim.Signature = randomArray66()
 	}
-	nodeJoinClaim.NodeAddress.Set("127.0.0.1:5566")
+	nodeJoinClaim.NodeAddress, _ = NewNodeAddress("127.0.0.1:5566")
 
 	return nodeJoinClaim
 }
