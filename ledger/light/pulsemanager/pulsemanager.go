@@ -195,9 +195,10 @@ func (m *PulseManager) processEndPulse(
 					return errors.Wrapf(err, "getExecutorData failed for jet id %v", info.id)
 				}
 				// No split happened.
-				if !info.mineNext {
-					go sender(*msg, info.id)
-				}
+				go sender(*msg, info.id)
+				// if !info.mineNext {
+				// 	go sender(*msg, info.id)
+				// }
 			} else {
 				msg, err := m.getExecutorHotData(
 					ctx, info.id, newPulse.PulseNumber, drop, dropSerialized,
