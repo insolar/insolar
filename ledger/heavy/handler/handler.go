@@ -79,7 +79,7 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 		replyType = string(rep.Type())
 	}
 	resAsMsg := watermillMsg.NewMessage(watermill.NewUUID(), resInBytes)
-	resAsMsg.Metadata.Set(bus.MetaType, string(replyType))
+	resAsMsg.Metadata.Set(bus.MetaType, replyType)
 	receiver := msg.Metadata.Get(bus.MetaSender)
 	resAsMsg.Metadata.Set(bus.MetaReceiver, receiver)
 	return []*watermillMsg.Message{resAsMsg}, nil

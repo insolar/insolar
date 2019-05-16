@@ -235,13 +235,13 @@ func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
 			return nil, errors.Wrap(err, "can't deserialize payload to error")
 		}
 		return nil, errReply
-	} else {
-		rep, err := reply.Deserialize(bytes.NewBuffer(msg.Payload))
-		if err != nil {
-			return nil, errors.Wrap(err, "can't deserialize payload to reply")
-		}
-		return rep, nil
 	}
+
+	rep, err := reply.Deserialize(bytes.NewBuffer(msg.Payload))
+	if err != nil {
+		return nil, errors.Wrap(err, "can't deserialize payload to reply")
+	}
+	return rep, nil
 }
 
 // CreateParcel creates signed message from provided message.
