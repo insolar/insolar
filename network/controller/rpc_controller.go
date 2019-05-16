@@ -96,7 +96,7 @@ type rpcController struct {
 
 type RequestRPC struct {
 	Method string
-	Data   [][]byte
+	Data   []byte
 }
 
 type ResponseRPC struct {
@@ -136,7 +136,7 @@ func (rpc *rpcController) RemoteProcedureRegister(name string, method insolar.Re
 	rpc.methodTable[name] = method
 }
 
-func (rpc *rpcController) invoke(ctx context.Context, name string, data [][]byte) ([]byte, error) {
+func (rpc *rpcController) invoke(ctx context.Context, name string, data []byte) ([]byte, error) {
 	method, exists := rpc.methodTable[name]
 	if !exists {
 		return nil, errors.New(fmt.Sprintf("RPC with name %s is not registered", name))
@@ -156,11 +156,11 @@ func (rpc *rpcController) SendCascadeMessage(data insolar.Cascade, method string
 	)
 	defer span.End()
 	ctx = msg.Context(ctx)
-	return rpc.initCascadeSendMessage(ctx, data, false, method, [][]byte{message.ParcelToBytes(msg)})
+	return rpc.initCascadeSendMessage(ctx, data, false, method, message.ParcelToBytes(msg))
 }
 
 func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data insolar.Cascade,
-	findCurrentNode bool, method string, args [][]byte) error {
+	findCurrentNode bool, method string, args []byte) error {
 
 	_, span := instracer.StartSpan(context.Background(), "RPCController.initCascadeSendMessage")
 	span.AddAttributes(
@@ -207,7 +207,7 @@ func (rpc *rpcController) initCascadeSendMessage(ctx context.Context, data insol
 }
 
 func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data insolar.Cascade, nodeID insolar.Reference,
-	method string, args [][]byte) error {
+	method string, args []byte) error {
 
 	_, span := instracer.StartSpan(context.Background(), "RPCController.requestCascadeSendMessage")
 	defer span.End()
@@ -246,7 +246,7 @@ func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data in
 func (rpc *rpcController) SendBytes(ctx context.Context, nodeID insolar.Reference, name string, msgBytes []byte) ([]byte, error) {
 	request := rpc.Network.NewRequestBuilder().Type(types.RPC).Data(&RequestRPC{
 		Method: name,
-		Data:   [][]byte{msgBytes},
+		Data:   msgBytes,
 	}).Build()
 
 	logger := inslogger.FromContext(ctx)
@@ -275,7 +275,7 @@ func (rpc *rpcController) SendMessage(nodeID insolar.Reference, name string, msg
 	stats.Record(ctx, statParcelsSentSizeBytes.M(int64(len(msgBytes))))
 	request := rpc.Network.NewRequestBuilder().Type(types.RPC).Data(&RequestRPC{
 		Method: name,
-		Data:   [][]byte{msgBytes},
+		Data:   msgBytes,
 	}).Build()
 
 	start := time.Now()

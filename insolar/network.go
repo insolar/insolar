@@ -31,7 +31,7 @@ type Cascade struct {
 }
 
 // RemoteProcedure is remote procedure call function.
-type RemoteProcedure func(ctx context.Context, args [][]byte) ([]byte, error)
+type RemoteProcedure func(ctx context.Context, args []byte) ([]byte, error)
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.Network -o ../testutils -s _mock.go
 
