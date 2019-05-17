@@ -106,7 +106,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	c.NodeRole = CertManager.GetCertificate().GetRole().String()
 
 	// TODO: use insolar.Logger
-	logger := watermill.NewStdLogger(true, true)
+	logger := watermill.NewStdLogger(false, false)
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 
 	// Network.
