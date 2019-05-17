@@ -202,18 +202,6 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr inso
 	s.Require().NoError(err)
 }
 
-func mockCryptographyService(t *testing.T) insolar.CryptographyService {
-	mock := testutils.NewCryptographyServiceMock(t)
-	mock.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
-		signature := insolar.SignatureFromBytes(nil)
-		return &signature, nil
-	}
-	mock.VerifyFunc = func(p crypto.PublicKey, p1 insolar.Signature, p2 []byte) (r bool) {
-		return true
-	}
-	return mock
-}
-
 func ValidateAllResults(t testing.TB, ctx context.Context, lr insolar.LogicRunner, mustfail ...insolar.Reference) {
 	return // TODO REMOVE
 }

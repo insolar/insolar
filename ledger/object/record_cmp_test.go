@@ -115,7 +115,10 @@ func getVirtualRecord() record.Virtual {
 	var requestRecord record.Request
 
 	requestRecord.Object = gen.ID()
-	requestRecord.Parcel = slice()
+	blob := slice()
+	if len(blob) != 0 {
+		requestRecord.Parcel = blob
+	}
 
 	virtualRecord := record.Virtual{
 		Union: &record.Virtual_Request{

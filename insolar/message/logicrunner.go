@@ -45,14 +45,12 @@ type IBaseLogicMessage interface {
 	insolar.Message
 	GetBaseLogicMessage() *BaseLogicMessage
 	GetReference() insolar.Reference
-	GetRequest() insolar.Reference
 	GetCallerPrototype() *insolar.Reference
 }
 
 // BaseLogicMessage base of event class family, do not use it standalone
 type BaseLogicMessage struct {
 	Caller          insolar.Reference
-	Request         insolar.Reference
 	CallerPrototype insolar.Reference
 	Nonce           uint64
 	Sequence        uint64
@@ -88,11 +86,6 @@ func (m *BaseLogicMessage) GetCaller() *insolar.Reference {
 
 func (m *BaseLogicMessage) GetCallerPrototype() *insolar.Reference {
 	return &m.CallerPrototype
-}
-
-// GetRequest returns DynamicRoleVirtualExecutor as routing target role.
-func (m *BaseLogicMessage) GetRequest() insolar.Reference {
-	return m.Request
 }
 
 // ReturnResults - push results of methods
@@ -200,11 +193,11 @@ func (cc *CallConstructor) DefaultTarget() *insolar.Reference {
 	if cc.SaveAs == Delegate {
 		return &cc.ParentRef
 	}
-	return genRequest(cc.PulseNum, MustSerializeBytes(cc), cc.Request.Domain())
+	return genRequest(cc.PulseNum, MustSerializeBytes(cc), &insolar.DomainID)
 }
 
 func (cc *CallConstructor) GetReference() insolar.Reference {
-	return *genRequest(cc.PulseNum, MustSerializeBytes(cc), cc.Request.Domain())
+	return *genRequest(cc.PulseNum, MustSerializeBytes(cc), &insolar.DomainID)
 }
 
 // Type returns TypeCallConstructor.
