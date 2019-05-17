@@ -129,16 +129,3 @@ func FindDiscovery(cert insolar.Certificate, ref insolar.Reference) insolar.Disc
 	}
 	return nil
 }
-
-func Xor(first, second []byte) []byte {
-	if len(second) < len(first) {
-		temp := second
-		second = first
-		first = temp
-	}
-	result := make([]byte, len(second))
-	for i, d := range second {
-		result[i] = first[i%len(first)] ^ d
-	}
-	return result
-}
