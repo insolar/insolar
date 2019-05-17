@@ -316,6 +316,7 @@ func (c *One) Dec() (int, error) {
 func changePulse(ctx context.Context, lr insolar.LogicRunner, msgHandler *artifactmanager.MessageHandler) {
 	pulse := pulsar.NewPulse(1, insolar.FirstPulseNumber, &entropygenerator.StandardEntropyGenerator{})
 	lr.(*LogicRunner).FlowDispatcher.ChangePulse(ctx, *pulse)
+	lr.(*LogicRunner).InnerFlowDispatcher.ChangePulse(ctx, *pulse)
 	msgHandler.OnPulse(ctx, *pulse)
 }
 

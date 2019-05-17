@@ -1106,6 +1106,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 
 			pulse := pulsar.NewPulse(1, parcel.Pulse(), &entropygenerator.StandardEntropyGenerator{})
 			suite.lr.FlowDispatcher.ChangePulse(ctx, *pulse)
+			suite.lr.InnerFlowDispatcher.ChangePulse(ctx, *pulse)
 			_, err := suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
 			if test.errorExpected {
 				suite.Require().Error(err)
@@ -1513,7 +1514,7 @@ func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequ
 
 	parcel := &message.Parcel{
 		PulseNumber: s.oldRequestPulseNumber,
-		Msg:         &message.CallMethod{ Object: &s.ref},
+		Msg:         &message.CallMethod{Object: &s.ref},
 	}
 	s.am.GetPendingRequestMock.Return(parcel, nil)
 
