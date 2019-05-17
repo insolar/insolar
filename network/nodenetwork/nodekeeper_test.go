@@ -58,10 +58,10 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/consensus/packets"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
@@ -208,7 +208,7 @@ func TestNodekeeper_GetOriginJoinClaim(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, claim.NodeRef, nk.GetOrigin().ID())
 	assert.Equal(t, claim.ShortNodeID, nk.GetOrigin().ShortID())
-	assert.Equal(t, claim.NodeAddress.Get(), nk.GetOrigin().Address())
+	assert.Equal(t, claim.NodeAddress.String(), nk.GetOrigin().Address())
 }
 
 func TestNodekeeper_GetOriginJoinClaimError(t *testing.T) {
@@ -231,7 +231,7 @@ func TestNodekeeper_GetOriginAnnounceClaim(t *testing.T) {
 	check := func(claim *packets.NodeAnnounceClaim) {
 		assert.Equal(t, claim.NodeRef, nk.GetOrigin().ID())
 		assert.Equal(t, claim.ShortNodeID, nk.GetOrigin().ShortID())
-		assert.Equal(t, claim.NodeAddress.Get(), nk.GetOrigin().Address())
+		assert.Equal(t, claim.NodeAddress.String(), nk.GetOrigin().Address())
 		assert.EqualValues(t, 0, claim.NodeAnnouncerIndex)
 		assert.EqualValues(t, 2, claim.NodeCount)
 		assert.Equal(t, cloudHash, claim.CloudHash[:])

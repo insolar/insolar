@@ -58,19 +58,21 @@ func (rd *RootDomain) GetRootMemberRef() (*insolar.Reference, error) {
 }
 
 func (rd *RootDomain) getUserInfoMap(m *member.Member) (map[string]interface{}, error) {
-	w, err := wallet.GetImplementationFrom(m.GetReference())
-	if err != nil {
-		return nil, fmt.Errorf("[ getUserInfoMap ] Can't get implementation: %s", err.Error())
-	}
-
 	name, err := m.GetName()
 	if err != nil {
 		return nil, fmt.Errorf("[ getUserInfoMap ] Can't get name: %s", err.Error())
 	}
 
+	w, err := wallet.GetImplementationFrom(m.GetReference())
+	if err != nil {
+		return map[string]interface{}{"member": name},
+			fmt.Errorf("[ getUserInfoMap ] Can't get implementation: %s", err.Error())
+	}
+
 	balance, err := w.GetBalance()
 	if err != nil {
-		return nil, fmt.Errorf("[ getUserInfoMap ] Can't get total balance: %s", err.Error())
+		return map[string]interface{}{"member": name},
+			fmt.Errorf("[ getUserInfoMap ] Can't get total balance: %s", err.Error())
 	}
 	return map[string]interface{}{
 		"member": name,
@@ -119,11 +121,11 @@ func (rd *RootDomain) DumpAllUsers() ([]byte, error) {
 			continue
 		}
 		m := member.GetObject(cref)
-		userInfo, err := rd.getUserInfoMap(m)
-		if err != nil {
-			return nil, fmt.Errorf("[ DumpAllUsers ] Problem with making request: %s", err.Error())
+		userInfo, _ := rd.getUserInfoMap(m)
+		// XXX: we ignore error here as some users may miss wallet for now
+		if userInfo != nil {
+			res = append(res, userInfo)
 		}
-		res = append(res, userInfo)
 	}
 	resJSON, _ := json.Marshal(res)
 	return resJSON, nil

@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
 
 package proc
 
@@ -21,6 +21,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/pkg/errors"
@@ -48,15 +49,21 @@ func (p *GetRequest) Proceed(ctx context.Context) error {
 		return errors.Wrap(err, "failed to fetch request")
 	}
 
-	virtRec := rec.Record
-	req, ok := virtRec.(*object.RequestRecord)
+	virtRec := rec.Virtual
+	concrete := record.Unwrap(virtRec)
+	_, ok := concrete.(*record.Request)
 	if !ok {
 		return errors.New("failed to decode request")
 	}
 
+	data, err := virtRec.Marshal()
+	if err != nil {
+		return errors.Wrap(err, "can't serialize record")
+	}
+
 	rep := &reply.Request{
 		ID:     p.request,
-		Record: object.EncodeVirtual(req),
+		Record: data,
 	}
 
 	p.replyTo <- bus.Reply{Reply: rep}

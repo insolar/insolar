@@ -17,10 +17,12 @@
 package handle
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
+	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
@@ -39,6 +41,25 @@ func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
+	if s.Message.WatermillMsg != nil {
+		msgType := s.Message.WatermillMsg.Metadata.Get(wmBus.MetaType)
+		switch msgType {
+		case insolar.TypeGetObject.String():
+			parcel, err := message.DeserializeParcel(bytes.NewBuffer(s.Message.WatermillMsg.Payload))
+			if err != nil {
+				return errors.Wrap(err, "can't deserialize payload")
+			}
+			s.Message.Parcel = parcel
+			h := &GetObject{
+				dep:     s.Dep,
+				Message: s.Message,
+			}
+			return f.Handle(ctx, h.Present)
+		default:
+			return fmt.Errorf("no handler for message type %s", msgType)
+		}
+	}
+
 	switch s.Message.Parcel.Message().Type() {
 	case insolar.TypeGetObject:
 		h := &GetObject{
@@ -65,6 +86,21 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	case insolar.TypeUpdateObject:
 		msg := s.Message.Parcel.Message().(*message.UpdateObject)
 		h := NewUpdateObject(s.Dep, s.Message.ReplyTo, msg)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetPendingRequests:
+		h := NewGetPendingRequests(s.Dep, s.Message.ReplyTo, s.Message.Parcel)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeRegisterChild:
+		msg := s.Message.Parcel.Message().(*message.RegisterChild)
+		h := NewRegisterChild(s.Dep, s.Message.ReplyTo, msg, s.Message.Parcel.Pulse())
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetJet:
+		msg := s.Message.Parcel.Message().(*message.GetJet)
+		h := NewGetJet(s.Dep, s.Message.ReplyTo, msg)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeHotRecords:
+		msg := s.Message.Parcel.Message().(*message.HotData)
+		h := NewHotData(s.Dep, s.Message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s", s.Message.Parcel.Message().Type().String())

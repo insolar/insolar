@@ -35,6 +35,11 @@ type ManagerMock struct {
 	DeployCodePreCounter uint64
 	DeployCodeMock       mManagerMockDeployCode
 
+	GetObjectFunc       func(p context.Context, p1 insolar.Reference) (r ObjectDescriptor, r1 error)
+	GetObjectCounter    uint64
+	GetObjectPreCounter uint64
+	GetObjectMock       mManagerMockGetObject
+
 	RegisterRequestFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error)
 	RegisterRequestCounter    uint64
 	RegisterRequestPreCounter uint64
@@ -62,6 +67,7 @@ func NewManagerMock(t minimock.Tester) *ManagerMock {
 	m.ActivateObjectMock = mManagerMockActivateObject{mock: m}
 	m.ActivatePrototypeMock = mManagerMockActivatePrototype{mock: m}
 	m.DeployCodeMock = mManagerMockDeployCode{mock: m}
+	m.GetObjectMock = mManagerMockGetObject{mock: m}
 	m.RegisterRequestMock = mManagerMockRegisterRequest{mock: m}
 	m.RegisterResultMock = mManagerMockRegisterResult{mock: m}
 	m.UpdateObjectMock = mManagerMockUpdateObject{mock: m}
@@ -529,6 +535,157 @@ func (m *ManagerMock) DeployCodeFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.DeployCodeFunc != nil {
 		return atomic.LoadUint64(&m.DeployCodeCounter) > 0
+	}
+
+	return true
+}
+
+type mManagerMockGetObject struct {
+	mock              *ManagerMock
+	mainExpectation   *ManagerMockGetObjectExpectation
+	expectationSeries []*ManagerMockGetObjectExpectation
+}
+
+type ManagerMockGetObjectExpectation struct {
+	input  *ManagerMockGetObjectInput
+	result *ManagerMockGetObjectResult
+}
+
+type ManagerMockGetObjectInput struct {
+	p  context.Context
+	p1 insolar.Reference
+}
+
+type ManagerMockGetObjectResult struct {
+	r  ObjectDescriptor
+	r1 error
+}
+
+//Expect specifies that invocation of Manager.GetObject is expected from 1 to Infinity times
+func (m *mManagerMockGetObject) Expect(p context.Context, p1 insolar.Reference) *mManagerMockGetObject {
+	m.mock.GetObjectFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ManagerMockGetObjectExpectation{}
+	}
+	m.mainExpectation.input = &ManagerMockGetObjectInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of Manager.GetObject
+func (m *mManagerMockGetObject) Return(r ObjectDescriptor, r1 error) *ManagerMock {
+	m.mock.GetObjectFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ManagerMockGetObjectExpectation{}
+	}
+	m.mainExpectation.result = &ManagerMockGetObjectResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Manager.GetObject is expected once
+func (m *mManagerMockGetObject) ExpectOnce(p context.Context, p1 insolar.Reference) *ManagerMockGetObjectExpectation {
+	m.mock.GetObjectFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ManagerMockGetObjectExpectation{}
+	expectation.input = &ManagerMockGetObjectInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *ManagerMockGetObjectExpectation) Return(r ObjectDescriptor, r1 error) {
+	e.result = &ManagerMockGetObjectResult{r, r1}
+}
+
+//Set uses given function f as a mock of Manager.GetObject method
+func (m *mManagerMockGetObject) Set(f func(p context.Context, p1 insolar.Reference) (r ObjectDescriptor, r1 error)) *ManagerMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.GetObjectFunc = f
+	return m.mock
+}
+
+//GetObject implements github.com/insolar/insolar/internal/ledger/artifact.Manager interface
+func (m *ManagerMock) GetObject(p context.Context, p1 insolar.Reference) (r ObjectDescriptor, r1 error) {
+	counter := atomic.AddUint64(&m.GetObjectPreCounter, 1)
+	defer atomic.AddUint64(&m.GetObjectCounter, 1)
+
+	if len(m.GetObjectMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.GetObjectMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ManagerMock.GetObject. %v %v", p, p1)
+			return
+		}
+
+		input := m.GetObjectMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ManagerMockGetObjectInput{p, p1}, "Manager.GetObject got unexpected parameters")
+
+		result := m.GetObjectMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the ManagerMock.GetObject")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.GetObjectMock.mainExpectation != nil {
+
+		input := m.GetObjectMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ManagerMockGetObjectInput{p, p1}, "Manager.GetObject got unexpected parameters")
+		}
+
+		result := m.GetObjectMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the ManagerMock.GetObject")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.GetObjectFunc == nil {
+		m.t.Fatalf("Unexpected call to ManagerMock.GetObject. %v %v", p, p1)
+		return
+	}
+
+	return m.GetObjectFunc(p, p1)
+}
+
+//GetObjectMinimockCounter returns a count of ManagerMock.GetObjectFunc invocations
+func (m *ManagerMock) GetObjectMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.GetObjectCounter)
+}
+
+//GetObjectMinimockPreCounter returns the value of ManagerMock.GetObject invocations
+func (m *ManagerMock) GetObjectMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.GetObjectPreCounter)
+}
+
+//GetObjectFinished returns true if mock invocations count is ok
+func (m *ManagerMock) GetObjectFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.GetObjectMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.GetObjectCounter) == uint64(len(m.GetObjectMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.GetObjectMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.GetObjectCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.GetObjectFunc != nil {
+		return atomic.LoadUint64(&m.GetObjectCounter) > 0
 	}
 
 	return true
@@ -1009,6 +1166,10 @@ func (m *ManagerMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ManagerMock.DeployCode")
 	}
 
+	if !m.GetObjectFinished() {
+		m.t.Fatal("Expected call to ManagerMock.GetObject")
+	}
+
 	if !m.RegisterRequestFinished() {
 		m.t.Fatal("Expected call to ManagerMock.RegisterRequest")
 	}
@@ -1050,6 +1211,10 @@ func (m *ManagerMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ManagerMock.DeployCode")
 	}
 
+	if !m.GetObjectFinished() {
+		m.t.Fatal("Expected call to ManagerMock.GetObject")
+	}
+
 	if !m.RegisterRequestFinished() {
 		m.t.Fatal("Expected call to ManagerMock.RegisterRequest")
 	}
@@ -1079,6 +1244,7 @@ func (m *ManagerMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.ActivateObjectFinished()
 		ok = ok && m.ActivatePrototypeFinished()
 		ok = ok && m.DeployCodeFinished()
+		ok = ok && m.GetObjectFinished()
 		ok = ok && m.RegisterRequestFinished()
 		ok = ok && m.RegisterResultFinished()
 		ok = ok && m.UpdateObjectFinished()
@@ -1100,6 +1266,10 @@ func (m *ManagerMock) MinimockWait(timeout time.Duration) {
 
 			if !m.DeployCodeFinished() {
 				m.t.Error("Expected call to ManagerMock.DeployCode")
+			}
+
+			if !m.GetObjectFinished() {
+				m.t.Error("Expected call to ManagerMock.GetObject")
 			}
 
 			if !m.RegisterRequestFinished() {
@@ -1135,6 +1305,10 @@ func (m *ManagerMock) AllMocksCalled() bool {
 	}
 
 	if !m.DeployCodeFinished() {
+		return false
+	}
+
+	if !m.GetObjectFinished() {
 		return false
 	}
 

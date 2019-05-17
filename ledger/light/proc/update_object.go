@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,7 +12,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
 
 package proc
 
@@ -40,15 +40,15 @@ type UpdateObject struct {
 	PulseNumber insolar.PulseNumber
 
 	Dep struct {
-		RecordModifier             object.RecordModifier
-		Bus                        insolar.MessageBus
-		Coordinator                jet.Coordinator
-		BlobModifier               blob.Modifier
-		RecentStorageProvider      recentstorage.Provider
-		PlatformCryptographyScheme insolar.PlatformCryptographyScheme
-		IDLocker                   object.IDLocker
-		IndexStorage               object.IndexStorage
-		IndexStateModifier         object.ExtendedIndexModifier
+		RecordModifier        object.RecordModifier
+		Bus                   insolar.MessageBus
+		Coordinator           jet.Coordinator
+		BlobModifier          blob.Modifier
+		RecentStorageProvider recentstorage.Provider
+		PCS                   insolar.PlatformCryptographyScheme
+		IDLocker              object.IDLocker
+		IndexStorage          object.IndexStorage
+		IndexStateModifier    object.ExtendedIndexModifier
 	}
 }
 
@@ -67,23 +67,25 @@ func (p *UpdateObject) Proceed(ctx context.Context) error {
 }
 
 func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
+	logger := inslogger.FromContext(ctx)
 	if p.Message.Object.Record() == nil {
 		return bus.Reply{
 			Err: errors.New("updateObject message object is nil"),
 		}
 	}
-	virtRec, err := object.DecodeVirtual(p.Message.Record)
-	logger := inslogger.FromContext(ctx)
 
+	virtRec := record.Virtual{}
+	err := virtRec.Unmarshal(p.Message.Record)
 	if err != nil {
 		return bus.Reply{Err: errors.Wrap(err, "can't deserialize record")}
 	}
-	state, ok := virtRec.(object.State)
+	concreteRec := record.Unwrap(&virtRec)
+	state, ok := concreteRec.(record.State)
 	if !ok {
 		return bus.Reply{Err: errors.New("wrong object state record")}
 	}
 
-	calculatedID := object.CalculateIDForBlob(p.Dep.PlatformCryptographyScheme, p.PulseNumber, p.Message.Memory)
+	calculatedID := object.CalculateIDForBlob(p.Dep.PCS, p.PulseNumber, p.Message.Memory)
 	// FIXME: temporary fix. If we calculate blob id on the client, pulse can change before message sending and this
 	//  id will not match the one calculated on the server.
 	err = p.Dep.BlobModifier.Set(ctx, *calculatedID, blob.Blob{JetID: p.JetID, Value: p.Message.Memory})
@@ -92,10 +94,10 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	}
 
 	switch s := state.(type) {
-	case *object.ActivateRecord:
-		s.Memory = calculatedID
-	case *object.AmendRecord:
-		s.Memory = calculatedID
+	case *record.Activate:
+		s.Memory = *calculatedID
+	case *record.Amend:
+		s.Memory = *calculatedID
 	}
 
 	p.Dep.IDLocker.Lock(p.Message.Object.Record())
@@ -105,9 +107,9 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	idx, err := p.Dep.IndexStorage.ForID(ctx, *p.Message.Object.Record())
 	// No index on our node.
 	if err == object.ErrIndexNotFound {
-		if state.ID() == object.StateActivation {
+		if state.ID() == record.StateActivation {
 			// We are activating the object. There is no index for it anywhere.
-			idx = object.Lifeline{State: object.StateUndefined}
+			idx = object.Lifeline{State: record.StateUndefined}
 		} else {
 			logger.Debug("failed to fetch index (fetching from heavy)")
 			// We are updating object. Index should be on the heavy executor.
@@ -128,7 +130,8 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 		return bus.Reply{Reply: &reply.Error{ErrType: reply.ErrDeactivated}}
 	}
 
-	recID := object.NewRecordIDFromRecord(p.Dep.PlatformCryptographyScheme, p.PulseNumber, virtRec)
+	hash := record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
+	recID := insolar.NewID(p.PulseNumber, hash)
 
 	// Index exists and latest record id does not match (preserving chain consistency).
 	// For the case when vm can't save or send result to another vm and it tries to update the same record again
@@ -136,10 +139,11 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 		return bus.Reply{Err: errors.New("invalid state record")}
 	}
 
-	id := object.NewRecordIDFromRecord(p.Dep.PlatformCryptographyScheme, p.PulseNumber, virtRec)
-	rec := record.MaterialRecord{
-		Record: virtRec,
-		JetID:  p.JetID,
+	hash = record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
+	id := insolar.NewID(p.PulseNumber, hash)
+	rec := record.Material{
+		Virtual: &virtRec,
+		JetID:   p.JetID,
 	}
 
 	err = p.Dep.RecordModifier.Set(ctx, *id, rec)
@@ -152,8 +156,8 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	}
 	idx.LatestState = id
 	idx.State = state.ID()
-	if state.ID() == object.StateActivation {
-		idx.Parent = state.(*object.ActivateRecord).Parent
+	if state.ID() == record.StateActivation {
+		idx.Parent = state.(*record.Activate).Parent
 	}
 
 	idx.LatestUpdate = p.PulseNumber
@@ -162,6 +166,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	if err != nil {
 		return bus.Reply{Err: err}
 	}
+	p.Dep.IndexStateModifier.SetUsageForPulse(ctx, *p.Message.Object.Record(), p.PulseNumber)
 
 	logger.WithField("state", idx.LatestState.DebugString()).Debug("saved object")
 
@@ -204,14 +209,14 @@ func (p *UpdateObject) saveIndexFromHeavy(
 	return idx, nil
 }
 
-func validateState(old object.StateID, new object.StateID) error {
-	if old == object.StateDeactivation {
+func validateState(old record.StateID, new record.StateID) error {
+	if old == record.StateDeactivation {
 		return ErrObjectDeactivated
 	}
-	if old == object.StateUndefined && new != object.StateActivation {
+	if old == record.StateUndefined && new != record.StateActivation {
 		return errors.New("object is not activated")
 	}
-	if old != object.StateUndefined && new == object.StateActivation {
+	if old != record.StateUndefined && new == record.StateActivation {
 		return errors.New("object is already activated")
 	}
 	return nil

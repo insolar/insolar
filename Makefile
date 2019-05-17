@@ -9,7 +9,6 @@ BENCHMARK = benchmark
 PULSEWATCHER = pulsewatcher
 APIREQUESTER = apirequester
 HEALTHCHECK = healthcheck
-RECORDBUILDER = protoc-gen-gorecord
 
 ALL_PACKAGES = ./...
 MOCKS_PACKAGE = github.com/insolar/insolar/testutils
@@ -128,20 +127,30 @@ $(APIREQUESTER):
 $(HEALTHCHECK):
 	go build -o $(BIN_DIR)/$(HEALTHCHECK) -ldflags "${LDFLAGS}" cmd/healthcheck/*.go
 
+.PHONY: test_unit
+test_unit:
+	CGO_ENABLED=1 go test $(TEST_ARGS) $(ALL_PACKAGES)
+
 .PHONY: functest
 functest:
 	CGO_ENABLED=1 go test $(TEST_ARGS) -tags functest ./functest -count=1
 
+.PHONY: test_func
+test_func: functest
+
+.PHONY: test_network_integration
+test_network_integration:
+	CGO_ENABLED=1 go test -tags networktest $(TEST_ARGS) ./network/servicenetwork/
+
+.PHONY: test_slow
+test_slow:
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./logicrunner/
+
 .PHONY: test
-test:
-	CGO_ENABLED=1 go test $(TEST_ARGS) $(ALL_PACKAGES)
+test: test_unit
 
-.PHONY: test_fast
-test_fast:
-	go test $(TEST_ARGS) -count 1 -v $(ALL_PACKAGES)
-
-$(ARTIFACTS_DIR):
-	mkdir -p $(ARTIFACTS_DIR)
+.PHONY: test_all
+test_all: test_unit test_func test_network_integration test_slow
 
 .PHONY: test_with_coverage
 test_with_coverage: $(ARTIFACTS_DIR)
@@ -152,18 +161,28 @@ test_with_coverage: $(ARTIFACTS_DIR)
 test_with_coverage_fast:
 	CGO_ENABLED=1 go test $(TEST_ARGS) -count 1 --coverprofile=$(COVERPROFILE) --covermode=atomic $(ALL_PACKAGES)
 
+$(ARTIFACTS_DIR):
+	mkdir -p $(ARTIFACTS_DIR)
+
 .PHONY: ci_test_with_coverage
 ci_test_with_coverage:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -count 1 -parallel 4 --coverprofile=$(COVERPROFILE) --covermode=atomic -v $(ALL_PACKAGES) | tee unit.file
+	CGO_ENABLED=1 go test $(TEST_ARGS) -v -count 1 -parallel 4 --coverprofile=$(COVERPROFILE) --covermode=atomic  -tags slowtest $(ALL_PACKAGES)
+
+.PHONY: ci_test_unit
+ci_test_unit:
+	CGO_ENABLED=1 go test $(TEST_ARGS) -v $(ALL_PACKAGES) -race -count 1 | tee unit.file
+
+.PHONY: ci_test_slow
+ci_test_slow:
+	CGO_ENABLED=1 go test $(TEST_ARGS) -v -tags slowtest ./logicrunner/ -count 1 | tee -a unit.file
 
 .PHONY: ci_test_func
 ci_test_func:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags functest -v ./functest -count=1 | tee func.file
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags functest -v ./functest -count 3 | tee func.file
 
 .PHONY: ci_test_integrtest
 ci_test_integrtest:
 	CGO_ENABLED=1 go test $(TEST_ARGS) -tags networktest -v ./network/tests -count=1 | tee integr.file
-
 
 .PHONY: regen-proxies
 CONTRACTS = $(wildcard application/contract/*)
@@ -189,12 +208,9 @@ docker-insgorund:
 .PHONY: docker
 docker: docker-insolard docker-genesis docker-insgorund
 
-$(RECORDBUILDER):
-	go build -o $(BIN_DIR)/$(RECORDBUILDER) -ldflags "${LDFLAGS}" cmd/protobuf-record-gen/*.go
-
 generate-protobuf:
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
-	PATH="$(BIN_DIR):$(PATH)" protoc -I./vendor -I./ --gorecord_out=./ insolar/record/record.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
 
 regen-builtin: $(BININSGOCC)
 	$(BININSGOCC) regen-builtin

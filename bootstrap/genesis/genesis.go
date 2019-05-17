@@ -20,10 +20,8 @@ import (
 	"context"
 	"crypto"
 	"encoding/json"
-	"fmt"
 	"io/ioutil"
 	"path"
-	"path/filepath"
 	"strconv"
 
 	"github.com/insolar/insolar/application/contract/member"
@@ -37,7 +35,6 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -57,10 +54,14 @@ type nodeInfo struct {
 	publicKey  string
 }
 
+func (ni nodeInfo) reference() insolar.Reference {
+	return refByName(ni.publicKey)
+}
+
 // Generator is a component for generating RootDomain instance and genesis contracts.
 type Generator struct {
-	artifactManager artifact.Manager
 	config          *Config
+	artifactManager artifact.Manager
 
 	rootRecord         *rootdomain.Record
 	rootDomainContract *insolar.Reference
@@ -78,8 +79,8 @@ func NewGenerator(
 	genesisKeyOut string,
 ) *Generator {
 	return &Generator{
-		artifactManager: am,
 		config:          config,
+		artifactManager: am,
 
 		rootRecord: rootRecord,
 
@@ -107,19 +108,40 @@ func (g *Generator) Run(ctx context.Context) error {
 	}
 
 	inslog.Info("[ Genesis ] getKeysFromFile ...")
-	_, rootPubKey, err := getKeysFromFile(ctx, g.config.RootKeysFile)
+	_, rootPubKey, err := getKeysFromFile(g.config.RootKeysFile)
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
 	}
 
-	inslog.Info("[ Genesis ] activateSmartContracts ...")
-	nodes, err := g.activateSmartContracts(ctx, cb, rootPubKey, &rootDomainID, prototypes)
+	inslog.Info("[ Genesis ] createKeysInDir ...")
+	discoveryNodes, err := createKeysInDir(
+		ctx,
+		g.config.DiscoveryKeysDir,
+		g.config.KeysNameFormat,
+		g.config.DiscoveryNodes,
+		g.config.ReuseKeys,
+	)
+	if err != nil {
+		return errors.Wrapf(err, "[ Genesis ] create keys step failed")
+	}
+
+	err = g.activateSmartContracts(ctx, cb, rootPubKey, &rootDomainID, prototypes)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
 	}
 
+	err = g.activateDiscoveryNodes(ctx, *cb.prototypes[nodeRecord], discoveryNodes)
+	if err != nil {
+		return errors.Wrap(err, "failed on adding discovery index")
+	}
+
+	err = g.updateNodeDomainIndex(ctx, discoveryNodes)
+	if err != nil {
+		return errors.Wrap(err, "failed update nodedomai ")
+	}
+
 	inslog.Info("[ Genesis ] makeCertificates ...")
-	err = g.makeCertificates(ctx, nodes)
+	err = g.makeCertificates(ctx, discoveryNodes)
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] Couldn't generate discovery certificates")
 	}
@@ -199,6 +221,9 @@ func (g *Generator) activateNodeDomain(
 		return nil, errors.Wrap(err, "[ ActivateNodeDomain ] couldn't create nodedomain instance")
 	}
 	contract := insolar.NewReference(*domain, *contractID)
+
+	inslogger.FromContext(ctx).Debugf("[activateNodeDomain] Ref: %v", contract)
+
 	desc, err := g.artifactManager.ActivateObject(
 		ctx,
 		insolar.Reference{},
@@ -217,6 +242,7 @@ func (g *Generator) activateNodeDomain(
 	}
 
 	g.nodeDomainContract = contract
+	inslogger.FromContext(ctx).Debugf("%v contract ref=%v", "NodeDomain", contract)
 
 	return desc, nil
 }
@@ -270,7 +296,6 @@ func (g *Generator) activateRootMember(
 	return nil
 }
 
-// TODO: this is not required since we refer by request id.
 func (g *Generator) updateRootDomain(
 	ctx context.Context, domainDesc artifact.ObjectDescriptor,
 ) error {
@@ -347,65 +372,47 @@ func (g *Generator) activateSmartContracts(
 	rootPubKey string,
 	rootDomainID *insolar.ID,
 	prototypes prototypes,
-) ([]genesisNode, error) {
-
+) error {
+	// TODO: merge root domain activation with update (no need two-phase here)
 	rootDomainDesc, err := g.activateRootDomain(ctx, cb, rootDomainID)
 	errMsg := "[ ActivateSmartContracts ]"
 	if err != nil {
-		return nil, errors.Wrap(err, errMsg)
+		return errors.Wrap(err, errMsg)
 	}
-	nodeDomainDesc, err := g.activateNodeDomain(ctx, rootDomainID, *prototypes[nodeDomain])
+	_, err = g.activateNodeDomain(ctx, rootDomainID, *prototypes[nodeDomain])
 	if err != nil {
-		return nil, errors.Wrap(err, errMsg)
+		return errors.Wrap(err, errMsg)
 	}
 	err = g.activateRootMember(ctx, rootDomainID, rootPubKey, *cb.prototypes[memberContract])
 	if err != nil {
-		return nil, errors.Wrap(err, errMsg)
+		return errors.Wrap(err, errMsg)
 	}
 	// TODO: this is not required since we refer by request id.
 	err = g.updateRootDomain(ctx, rootDomainDesc)
 	if err != nil {
-		return nil, errors.Wrap(err, errMsg)
+		return errors.Wrap(err, errMsg)
 	}
 	err = g.activateRootMemberWallet(ctx, rootDomainID, *cb.prototypes[walletContract])
 	if err != nil {
-		return nil, errors.Wrap(err, errMsg)
-	}
-	indexMap := make(map[string]string)
-
-	discoveryNodes, indexMap, err := g.addDiscoveryIndex(ctx, indexMap, *cb.prototypes[nodeRecord])
-	if err != nil {
-		return nil, errors.Wrap(err, errMsg)
+		return errors.Wrap(err, errMsg)
 	}
 
-	err = g.updateNodeDomainIndex(ctx, nodeDomainDesc, indexMap)
-	if err != nil {
-		return nil, errors.Wrap(err, errMsg)
-	}
-
-	return discoveryNodes, nil
+	return nil
 }
 
-type genesisNode struct {
-	node    certificate.BootstrapNode
-	privKey crypto.PrivateKey
-	ref     *insolar.Reference
-	role    string
-}
-
+// activateDiscoveryNodes activates discoverynoderecord_{N} objects.
+//
+// It returns list of genesisNode structures (for node domain save and certificates generation at the end of genesis).
 func (g *Generator) activateDiscoveryNodes(
 	ctx context.Context,
 	nodeRecordProto insolar.Reference,
 	nodesInfo []nodeInfo,
-) ([]genesisNode, error) {
+) error {
 	if len(nodesInfo) != len(g.config.DiscoveryNodes) {
-		return nil, errors.New("[ activateDiscoveryNodes ] len of nodesInfo param must be equal to len of DiscoveryNodes in genesis config")
+		return errors.New("[ activateDiscoveryNodes ] len of nodesInfo param must be equal to len of DiscoveryNodes in genesis config")
 	}
 
-	nodes := make([]genesisNode, len(g.config.DiscoveryNodes))
-
 	for i, discoverNode := range g.config.DiscoveryNodes {
-		privKey := nodesInfo[i].privateKey
 		nodePubKey := nodesInfo[i].publicKey
 
 		nodeState := &noderecord.NodeRecord{
@@ -414,29 +421,19 @@ func (g *Generator) activateDiscoveryNodes(
 				Role:      insolar.GetStaticRoleFromString(discoverNode.Role),
 			},
 		}
-		contract, err := g.activateNodeRecord(ctx, nodeState, "discoverynoderecord_"+strconv.Itoa(i), nodeRecordProto)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ activateDiscoveryNodes ] Couldn't activateNodeRecord node instance")
-		}
 
-		nodes[i] = genesisNode{
-			node: certificate.BootstrapNode{
-				PublicKey: nodePubKey,
-				Host:      discoverNode.Host,
-				NodeRef:   contract.String(),
-			},
-			privKey: privKey,
-			ref:     contract,
-			role:    discoverNode.Role,
+		_, err := g.activateNodeRecord(ctx, nodeState, nodesInfo[i], nodeRecordProto)
+		if err != nil {
+			return errors.Wrap(err, "[ activateDiscoveryNodes ] Couldn't activateNodeRecord node instance")
 		}
 	}
-	return nodes, nil
+	return nil
 }
 
 func (g *Generator) activateNodeRecord(
 	ctx context.Context,
 	record *noderecord.NodeRecord,
-	name string,
+	node nodeInfo,
 	nodeRecordProto insolar.Reference,
 ) (*insolar.Reference, error) {
 	nodeData, err := insolar.Serialize(record)
@@ -448,7 +445,7 @@ func (g *Generator) activateNodeRecord(
 		ctx,
 		*g.rootDomainContract,
 		&message.Parcel{
-			Msg: &message.GenesisRequest{Name: name},
+			Msg: &message.GenesisRequest{Name: node.publicKey},
 		},
 	)
 	if err != nil {
@@ -474,139 +471,55 @@ func (g *Generator) activateNodeRecord(
 	return contract, nil
 }
 
-func (g *Generator) addDiscoveryIndex(
-	ctx context.Context,
-	indexMap map[string]string,
-	nodeRecordProto insolar.Reference,
-) ([]genesisNode, map[string]string, error) {
-	errMsg := "[ addDiscoveryIndex ]"
-	discoveryKeysPath, err := filepath.Abs(g.config.DiscoveryKeysDir)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, errMsg)
-	}
+func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeInfo) error {
+	certs := make([]certificate.Certificate, 0, len(g.config.DiscoveryNodes))
+	for i, node := range g.config.DiscoveryNodes {
+		pubKey := discoveryNodes[i].publicKey
+		ref := discoveryNodes[i].reference()
 
-	discoveryKeys, err := g.uploadKeys(ctx, discoveryKeysPath, len(g.config.DiscoveryNodes))
-	if err != nil {
-		return nil, nil, errors.Wrap(err, errMsg)
-	}
+		c := certificate.Certificate{
+			AuthorizationCertificate: certificate.AuthorizationCertificate{
+				PublicKey: pubKey,
+				Role:      node.Role,
+				Reference: ref.String(),
+			},
+			MajorityRule: g.config.MajorityRule,
 
-	discoveryNodes, err := g.activateDiscoveryNodes(ctx, nodeRecordProto, discoveryKeys)
-	if err != nil {
-		return nil, nil, errors.Wrap(err, errMsg)
-	}
+			RootDomainReference: g.rootDomainContract.String(),
+		}
+		c.MinRoles.Virtual = g.config.MinRoles.Virtual
+		c.MinRoles.HeavyMaterial = g.config.MinRoles.HeavyMaterial
+		c.MinRoles.LightMaterial = g.config.MinRoles.LightMaterial
+		c.BootstrapNodes = []certificate.BootstrapNode{}
 
-	for _, node := range discoveryNodes {
-		indexMap[node.node.PublicKey] = node.ref.String()
-	}
-	return discoveryNodes, indexMap, nil
-}
-
-func (g *Generator) createKeys(ctx context.Context, dir string, amount int) error {
-	fmt.Println("createKeys, skip RemoveAll of", dir)
-	// err := os.RemoveAll(dir)
-	// if err != nil {
-	// 	return errors.Wrap(err, "[ createKeys ] couldn't remove old dir")
-	// }
-
-	for i := 0; i < amount; i++ {
-		ks := platformpolicy.NewKeyProcessor()
-
-		privKey, err := ks.GeneratePrivateKey()
-		if err != nil {
-			return errors.Wrap(err, "[ createKeys ] couldn't generate private key")
+		for j, n2 := range g.config.DiscoveryNodes {
+			pk := discoveryNodes[j].publicKey
+			ref := discoveryNodes[j].reference()
+			c.BootstrapNodes = append(c.BootstrapNodes, certificate.BootstrapNode{
+				PublicKey: pk,
+				Host:      n2.Host,
+				NodeRef:   ref.String(),
+			})
 		}
 
-		privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
-		if err != nil {
-			return errors.Wrap(err, "[ createKeys ] couldn't export private key")
-		}
-
-		pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
-		if err != nil {
-			return errors.Wrap(err, "[ createKeys ] couldn't export public key")
-		}
-
-		result, err := json.MarshalIndent(map[string]interface{}{
-			"private_key": string(privKeyStr),
-			"public_key":  string(pubKeyStr),
-		}, "", "    ")
-		if err != nil {
-			return errors.Wrap(err, "[ createKeys ] couldn't marshal keys")
-		}
-
-		name := fmt.Sprintf(g.config.KeysNameFormat, i+1)
-		inslogger.FromContext(ctx).Info("Genesis write key " + filepath.Join(dir, name))
-		err = makeFileWithDir(dir, name, result)
-		if err != nil {
-			return errors.Wrap(err, "[ createKeys ] couldn't write keys to file")
-		}
-	}
-
-	return nil
-}
-
-func (g *Generator) uploadKeys(ctx context.Context, dir string, amount int) ([]nodeInfo, error) {
-	var err error
-	if !g.config.ReuseKeys {
-		err = g.createKeys(ctx, dir, amount)
-		if err != nil {
-			return nil, errors.Wrap(err, "[ uploadKeys ]")
-		}
-	}
-
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ uploadKeys ] can't read dir")
-	}
-	if len(files) != amount {
-		return nil, errors.New(fmt.Sprintf("[ uploadKeys ] amount of nodes != amount of files in directory: %d != %d", len(files), amount))
-	}
-
-	var keys []nodeInfo
-	for _, f := range files {
-		privKey, nodePubKey, err := getKeysFromFile(ctx, filepath.Join(dir, f.Name()))
-		if err != nil {
-			return nil, errors.Wrap(err, "[ uploadKeys ] can't get keys from file")
-		}
-
-		key := nodeInfo{
-			publicKey:  nodePubKey,
-			privateKey: privKey,
-		}
-		keys = append(keys, key)
-	}
-
-	return keys, nil
-}
-
-func (g *Generator) makeCertificates(ctx context.Context, nodes []genesisNode) error {
-	certs := make([]certificate.Certificate, len(nodes))
-	for i, node := range nodes {
-		certs[i].Role = node.role
-		certs[i].Reference = node.ref.String()
-		certs[i].PublicKey = node.node.PublicKey
-		certs[i].RootDomainReference = g.rootDomainContract.String()
-		certs[i].MajorityRule = g.config.MajorityRule
-		certs[i].MinRoles.Virtual = g.config.MinRoles.Virtual
-		certs[i].MinRoles.HeavyMaterial = g.config.MinRoles.HeavyMaterial
-		certs[i].MinRoles.LightMaterial = g.config.MinRoles.LightMaterial
-		certs[i].BootstrapNodes = make([]certificate.BootstrapNode, len(nodes))
-		for j, node := range nodes {
-			certs[i].BootstrapNodes[j] = node.node
-		}
+		certs = append(certs, c)
 	}
 
 	var err error
-	for i := range nodes {
-		for j, node := range nodes {
-			certs[i].BootstrapNodes[j].NetworkSign, err = certs[i].SignNetworkPart(node.privKey)
+	for i, node := range g.config.DiscoveryNodes {
+		for j := range g.config.DiscoveryNodes {
+			dn := discoveryNodes[j]
+
+			certs[i].BootstrapNodes[j].NetworkSign, err = certs[i].SignNetworkPart(dn.privateKey)
 			if err != nil {
-				return errors.Wrapf(err, "[ makeCertificates ] Can't SignNetworkPart for %s", node.ref.String())
+				return errors.Wrapf(err, "[ makeCertificates ] Can't SignNetworkPart for %s",
+					dn.reference())
 			}
 
-			certs[i].BootstrapNodes[j].NodeSign, err = certs[i].SignNodePart(node.privKey)
+			certs[i].BootstrapNodes[j].NodeSign, err = certs[i].SignNodePart(dn.privateKey)
 			if err != nil {
-				return errors.Wrapf(err, "[ makeCertificates ] Can't SignNodePart for %s", node.ref.String())
+				return errors.Wrapf(err, "[ makeCertificates ] Can't SignNodePart for %s",
+					dn.reference())
 			}
 		}
 
@@ -616,20 +529,33 @@ func (g *Generator) makeCertificates(ctx context.Context, nodes []genesisNode) e
 			return errors.Wrapf(err, "[ makeCertificates ] Can't MarshalIndent")
 		}
 
-		if len(g.config.DiscoveryNodes[i].CertName) == 0 {
-			return errors.New("[ makeCertificates ] cert_name must not be empty for node " + strconv.Itoa(i+1))
+		if len(node.CertName) == 0 {
+			return errors.New("[ makeCertificates ] cert_name must not be empty for node number " + strconv.Itoa(i+1))
 		}
 
-		certFile := path.Join(g.keyOut, g.config.DiscoveryNodes[i].CertName)
+		certFile := path.Join(g.keyOut, node.CertName)
 		err = ioutil.WriteFile(certFile, cert, 0644)
 		if err != nil {
-			return errors.Wrap(err, "[ makeCertificates ] makeFileWithDir")
+			return errors.Wrapf(err, "[ makeCertificates ] filed create ceritificate: %v", certFile)
 		}
+
+		inslogger.FromContext(ctx).Debugf("[makeCertificates] write cert file to %v", certFile)
 	}
 	return nil
 }
 
-func (g *Generator) updateNodeDomainIndex(ctx context.Context, nodeDomainDesc artifact.ObjectDescriptor, indexMap map[string]string) error {
+// updateNodeDomainIndex saves in node domain contract's object discovery nodes map.
+func (g *Generator) updateNodeDomainIndex(ctx context.Context, discoveryNodes []nodeInfo) error {
+	nodeDomainDesc, err := g.artifactManager.GetObject(ctx, *g.nodeDomainContract)
+	if err != nil {
+		return errors.Wrap(err, "failed to get domain contract")
+	}
+
+	indexMap := map[string]string{}
+	for _, node := range discoveryNodes {
+		indexMap[node.publicKey] = node.reference().String()
+	}
+
 	updateData, err := insolar.Serialize(
 		&nodedomain.NodeDomain{
 			NodeIndexPK: indexMap,
@@ -651,32 +577,4 @@ func (g *Generator) updateNodeDomainIndex(ctx context.Context, nodeDomainDesc ar
 	}
 
 	return nil
-}
-
-func getKeysFromFile(ctx context.Context, file string) (crypto.PrivateKey, string, error) {
-	absPath, err := filepath.Abs(file)
-	if err != nil {
-		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't get abs path")
-	}
-	data, err := ioutil.ReadFile(absPath)
-	if err != nil {
-		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't read keys file "+absPath)
-	}
-	var keys map[string]string
-	err = json.Unmarshal(data, &keys)
-	if err != nil {
-		return nil, "", errors.Wrapf(err, "[ getKeyFromFile ] couldn't unmarshal data from %s", absPath)
-	}
-	if keys["private_key"] == "" {
-		return nil, "", errors.New("[ getKeyFromFile ] empty private key")
-	}
-	if keys["public_key"] == "" {
-		return nil, "", errors.New("[ getKeyFromFile ] empty public key")
-	}
-	kp := platformpolicy.NewKeyProcessor()
-	key, err := kp.ImportPrivateKeyPEM([]byte(keys["private_key"]))
-	if err != nil {
-		return nil, "", errors.Wrapf(err, "[ getKeyFromFile ] couldn't import private key")
-	}
-	return key, keys["public_key"], nil
 }
