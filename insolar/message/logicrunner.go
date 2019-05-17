@@ -18,19 +18,8 @@ package message
 
 import (
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/platformpolicy"
-)
-
-// MethodReturnMode ENUM to set when method returns its result
-type MethodReturnMode int
-
-const (
-	// ReturnResult - return result as soon as it is ready
-	ReturnResult MethodReturnMode = iota
-	// ReturnNoWait - call method and return without results
-	ReturnNoWait
-	// ReturnValidated (not yet) - return result only when it's validated
-	// ReturnValidated
 )
 
 type PendingState int
@@ -70,32 +59,9 @@ func (rr *ReturnResults) AllowedSenderObjectAndRole() (*insolar.Reference, insol
 	return nil, insolar.DynamicRoleVirtualExecutor
 }
 
-type MethodCallType int
-
-const (
-	CTMethod MethodCallType = iota
-	CTSaveAsChild
-	CTSaveAsDelegate
-)
-
 // CallMethod - Simply call method and return result
 type CallMethod struct {
-	CallType MethodCallType
-
-	Caller          insolar.Reference
-	CallerPrototype insolar.Reference
-	Nonce           uint64
-	Sequence        uint64
-
-	ReturnMode MethodReturnMode
-	Immutable  bool
-
-	Base      *insolar.Reference
-	Object    *insolar.Reference
-	Prototype *insolar.Reference
-
-	Method    string
-	Arguments insolar.Arguments
+	record.Request
 
 	PulseNum insolar.PulseNumber // DIRTY: EVIL: HACK
 }
@@ -121,9 +87,9 @@ func (*CallMethod) DefaultRole() insolar.DynamicRole {
 // DefaultTarget returns of target of this event.
 func (cm *CallMethod) DefaultTarget() *insolar.Reference {
 	switch cm.CallType {
-	case CTSaveAsChild:
+	case record.CTSaveAsChild:
 		return genRequest(cm.PulseNum, MustSerializeBytes(cm), &insolar.DomainID)
-	case CTSaveAsDelegate:
+	case record.CTSaveAsDelegate:
 		return cm.Base
 	default:
 		return cm.Object
@@ -131,7 +97,7 @@ func (cm *CallMethod) DefaultTarget() *insolar.Reference {
 }
 
 func (cm *CallMethod) GetReference() insolar.Reference {
-	if cm.CallType != CTMethod {
+	if cm.CallType != record.CTMethod {
 		return *genRequest(cm.PulseNum, MustSerializeBytes(cm), &insolar.DomainID)
 	}
 	return *cm.Object
