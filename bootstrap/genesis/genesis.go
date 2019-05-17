@@ -39,7 +39,7 @@ import (
 )
 
 var contractNames = []string{
-	insolar.GenesisRootDomainName,
+	insolar.GenesisNameRootDomain,
 	insolar.GenesisNameNodeDomain,
 	insolar.GenesisNameNodeRecord,
 	insolar.GenesisNameRootMember,
@@ -168,7 +168,7 @@ func (g *Generator) activateRootDomain(
 		insolar.GenesisRecord.Ref(),
 		&message.Parcel{
 			Msg: &message.GenesisRequest{
-				Name: insolar.GenesisRootDomainName,
+				Name: insolar.GenesisNameRootDomain,
 			},
 		},
 	)
@@ -346,7 +346,7 @@ func (g *Generator) activateSmartContracts(
 ) error {
 	var err error
 
-	err = g.activateRootDomain(ctx, *prototypes[insolar.GenesisRootDomainName])
+	err = g.activateRootDomain(ctx, *prototypes[insolar.GenesisNameRootDomain])
 	// errMsg := "[ ActivateSmartContracts ]"
 	if err != nil {
 		return errors.Wrap(err, "failed to store root domain contract")

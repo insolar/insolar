@@ -41,7 +41,7 @@ func (r Record) Ref() insolar.Reference {
 func (r Record) ID() insolar.ID {
 	parcel := &message.Parcel{
 		Msg: &message.GenesisRequest{
-			Name: insolar.GenesisRootDomainName,
+			Name: insolar.GenesisNameRootDomain,
 		},
 	}
 	req := record.Request{

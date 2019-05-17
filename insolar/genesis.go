@@ -17,8 +17,8 @@
 package insolar
 
 const (
-	// GenesisRootDomainName is the name of root domain contract for genesis record.
-	GenesisRootDomainName = "rootdomain"
+	// GenesisNameRootDomain is the name of root domain contract for genesis record.
+	GenesisNameRootDomain = "rootdomain"
 	// GenesisNameNodeDomain is the name of node domain contract for genesis record.
 	GenesisNameNodeDomain = "nodedomain"
 	// GenesisNameNodeRecord is the name of node contract for genesis record.
