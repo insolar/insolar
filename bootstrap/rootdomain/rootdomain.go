@@ -53,3 +53,20 @@ func (r Record) ID() insolar.ID {
 	hash := record.HashVirtual(r.PCS.ReferenceHasher(), virtRec)
 	return *insolar.NewID(genesisPulse, hash)
 }
+
+// GenesisRef returns reference for genesis records based on rootdomain.
+func GenesisRef(name string) insolar.Reference {
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+	parcel := &message.Parcel{
+		Msg: &message.GenesisRequest{
+			Name: name,
+		},
+	}
+	vrec := record.Wrap(record.Request{
+		Parcel:      message.ParcelToBytes(parcel),
+		MessageHash: message.ParcelMessageHash(pcs, parcel),
+		Object:      RootDomain.ID(),
+	})
+	id := insolar.NewID(insolar.FirstPulseNumber, record.HashVirtual(pcs.ReferenceHasher(), vrec))
+	return *insolar.NewReference(RootDomain.ID(), *id)
+}

@@ -49,8 +49,8 @@ var contractNames = []string{
 
 var (
 	rootDomainContract = rootdomain.RootDomain.Ref()
-	nodeDomainContract = genesisRefOnRootDomain(insolar.GenesisNameNodeDomain)
-	rootMemberContract = genesisRefOnRootDomain(insolar.GenesisNameRootMember)
+	nodeDomainContract = rootdomain.GenesisRef(insolar.GenesisNameNodeDomain)
+	rootMemberContract = rootdomain.GenesisRef(insolar.GenesisNameRootMember)
 )
 
 type nodeInfo struct {
@@ -59,7 +59,7 @@ type nodeInfo struct {
 }
 
 func (ni nodeInfo) reference() insolar.Reference {
-	return genesisRefOnRootDomain(ni.publicKey)
+	return rootdomain.GenesisRef(ni.publicKey)
 }
 
 // Generator is a component for generating RootDomain instance and genesis contracts.

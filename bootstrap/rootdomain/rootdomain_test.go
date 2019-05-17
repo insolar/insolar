@@ -45,6 +45,15 @@ func TestReference(t *testing.T) {
 
 }
 
+func TestGenesisRef(t *testing.T) {
+	var (
+		pubKey    = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n-----END PUBLIC KEY-----\n"
+		pubKeyRef = "1tJD1S1GS9MH9CiecZ6rgrRiNEVxUxWffkmhT4F61e.1tJEEHUZYWYXXEa1KCTKKR8G6MrteZqCFPdcejHinR"
+	)
+	genesisRef := GenesisRef(pubKey)
+	require.Equal(t, pubKeyRef, genesisRef.String(), "reference by name always the same")
+}
+
 func initPCS() insolar.PlatformCryptographyScheme {
 	return platformpolicy.NewPlatformCryptographyScheme()
 }
