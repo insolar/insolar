@@ -73,6 +73,8 @@ const (
 	stateIdle
 )
 
+type Nonce []byte
+
 type Session struct {
 	NodeID insolar.Reference
 	Cert   insolar.AuthorizationCertificate
