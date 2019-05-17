@@ -125,12 +125,12 @@ func (nb *networkBootstrapper) bootstrapJoiner(ctx context.Context) (*network.Bo
 }
 
 func (nb *networkBootstrapper) AuthenticateToDiscoveryNode(ctx context.Context, discovery *DiscoveryNode) error {
-	sessionID, err := nb.AuthController.Authorize(ctx, discovery, nb.Certificate)
+	data, err := nb.AuthController.Authorize(ctx, discovery, nb.Certificate)
 	if err != nil {
 		return errors.Wrap(err, "Error authorizing on discovery node")
 	}
 
-	_, err = nb.ChallengeController.Execute(ctx, discovery, sessionID)
+	_, err = nb.ChallengeController.Execute(ctx, discovery, data.SessionID)
 	if err != nil {
 		return errors.Wrap(err, "Error executing double challenge response")
 	}
@@ -138,7 +138,7 @@ func (nb *networkBootstrapper) AuthenticateToDiscoveryNode(ctx context.Context, 
 	// origin := nb.NodeKeeper.GetOrigin()
 	// mutableOrigin := origin.(nodenetwork.MutableNode)
 	// mutableOrigin.SetShortID(data.AssignShortID)
-	return nb.AuthController.Register(ctx, discovery, sessionID)
+	return nb.AuthController.Register(ctx, discovery, data.SessionID)
 }
 
 func (nb *networkBootstrapper) bootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
