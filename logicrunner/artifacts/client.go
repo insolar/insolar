@@ -21,6 +21,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/messagebus"
@@ -48,6 +50,7 @@ type client struct {
 	PulseAccessor  pulse.Accessor                     `inject:""`
 	JetCoordinator jet.Coordinator                    `inject:""`
 
+	Sender               bus.Sender
 	getChildrenChunkSize int
 	senders              *messagebus.Senders
 }
@@ -163,6 +166,12 @@ func (m *client) GetObject(
 	state *insolar.ID,
 	approved bool,
 ) (ObjectDescriptor, error) {
+	if state != nil {
+		panic("state parameter is deprecated")
+	}
+	if approved == true {
+		panic("approved parameter is deprecated")
+	}
 	var (
 		desc ObjectDescriptor
 		err  error
@@ -180,6 +189,10 @@ func (m *client) GetObject(
 		instrumenter.end()
 	}()
 
+	pl := payload.GetObject{
+		ObjectID: *head.Record(),
+	}
+
 	getObjectMsg := &message.GetObject{
 		Head:     head,
 		State:    state,
@@ -189,7 +202,6 @@ func (m *client) GetObject(
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
 		messagebus.RetryIncorrectPulse(),
-		messagebus.FollowRedirectSender(m.DefaultBus),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
 
