@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
@@ -51,7 +52,7 @@ func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	switch s.Message.Parcel.Message().Type() {
-	case insolar.TypeCallMethod, insolar.TypeCallConstructor:
+	case insolar.TypeCallMethod:
 		h := &HandleCall{
 			dep:     s.dep,
 			Message: s.Message,

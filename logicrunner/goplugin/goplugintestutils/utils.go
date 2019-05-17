@@ -26,13 +26,14 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/testutils"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
 )
 
 // PrependGoPath prepends `path` to GOPATH environment variable
@@ -391,7 +392,10 @@ func AMPublishCode(
 	codeRef.SetRecord(*codeID)
 
 	nonce := testutils.RandomRef()
-	protoID, err := am.RegisterRequest(ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}})
+	protoID, err := am.RegisterRequest(
+		ctx, insolar.GenesisRecord.Ref(),
+		&message.Parcel{Msg: &message.CallMethod{CallType: message.CTSaveAsChild, Prototype: &nonce}},
+	)
 	assert.NoError(t, err)
 	protoRef = &insolar.Reference{}
 	protoRef.SetRecord(*protoID)
@@ -444,7 +448,11 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 	for name := range contracts {
 		nonce := testutils.RandomRef()
 		protoID, err := cb.ArtifactManager.RegisterRequest(
-			ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
+			ctx, insolar.GenesisRecord.Ref(),
+			&message.Parcel{Msg: &message.CallMethod{
+				CallType:  message.CTSaveAsChild,
+				Prototype: &nonce,
+			}},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
@@ -487,7 +495,11 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		}
 		nonce := testutils.RandomRef()
 		codeReq, err := cb.ArtifactManager.RegisterRequest(
-			ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.CallConstructor{PrototypeRef: nonce}},
+			ctx, insolar.GenesisRecord.Ref(),
+			&message.Parcel{Msg: &message.CallMethod{
+				CallType:  message.CTSaveAsChild,
+				Prototype: &nonce,
+			}},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")

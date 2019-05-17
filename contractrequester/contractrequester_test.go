@@ -141,9 +141,6 @@ func TestCallMethodCanceled(t *testing.T) {
 	mb := testutils.NewMessageBusMock(mc)
 	cr.MessageBus = mb
 
-	msg := &message.BaseLogicMessage{
-		Nonce: randomUint64(),
-	}
 	ref := testutils.RandomRef()
 	prototypeRef := testutils.RandomRef()
 	method := testutils.RandomString()
@@ -152,7 +149,13 @@ func TestCallMethodCanceled(t *testing.T) {
 		return &reply.RegisterRequest{}, nil
 	}
 
-	_, err = cr.CallMethod(ctx, msg, false, false, &ref, method, insolar.Arguments{}, &prototypeRef)
+	msg := &message.CallMethod{
+		Object: &ref,
+		Prototype: &prototypeRef,
+		Method: method,
+		Arguments: insolar.Arguments{},
+	}
+	_, err = cr.CallMethod(ctx, msg)
 	require.Error(t, err)
 	assert.Contains(t, "canceled", err.Error())
 
@@ -174,9 +177,6 @@ func TestCallMethodWaitResults(t *testing.T) {
 	mb := testutils.NewMessageBusMock(mc)
 	cr.MessageBus = mb
 
-	msg := &message.BaseLogicMessage{
-		Nonce: randomUint64(),
-	}
 	ref := testutils.RandomRef()
 	prototypeRef := testutils.RandomRef()
 	method := testutils.RandomString()
@@ -195,7 +195,15 @@ func TestCallMethodWaitResults(t *testing.T) {
 		}()
 		return &reply.RegisterRequest{}, nil
 	}
-	_, err = cr.CallMethod(ctx, msg, false, false, &ref, method, insolar.Arguments{}, &prototypeRef)
+
+	msg := &message.CallMethod{
+		Object: &ref,
+		Prototype: &prototypeRef,
+		Method: method,
+		Arguments: insolar.Arguments{},
+	}
+
+	_, err = cr.CallMethod(ctx, msg)
 	require.NoError(t, err)
 }
 

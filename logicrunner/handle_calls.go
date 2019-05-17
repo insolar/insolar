@@ -39,7 +39,7 @@ type HandleCall struct {
 func (h *HandleCall) executeActual(
 	ctx context.Context,
 	parcel insolar.Parcel,
-	msg message.IBaseLogicMessage,
+	msg *message.CallMethod,
 	f flow.Flow,
 ) (insolar.Reply, error) {
 
@@ -132,9 +132,9 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 	ctx = loggerWithTargetID(ctx, parcel)
 	inslogger.FromContext(ctx).Debug("HandleCall.Present starts ...")
 
-	msg, ok := parcel.Message().(message.IBaseLogicMessage)
+	msg, ok := parcel.Message().(*message.CallMethod)
 	if !ok {
-		return errors.New("HandleCall( ! message.IBaseLogicMessage )")
+		return errors.New("is not CallMethod message")
 	}
 
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.Execute")

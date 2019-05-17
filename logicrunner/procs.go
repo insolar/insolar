@@ -83,7 +83,7 @@ func (r *RegisterRequest) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, "RegisterRequest.Proceed")
 	defer span.End()
 
-	obj := r.parcel.Message().(message.IBaseLogicMessage).GetReference()
+	obj := r.parcel.Message().(*message.CallMethod).GetReference()
 	id, err := r.ArtifactManager.RegisterRequest(ctx, obj, r.parcel)
 	if err != nil {
 		return err
