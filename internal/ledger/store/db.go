@@ -31,17 +31,17 @@ type DB interface {
 type Iterator interface {
 	// Seek moves the iterator to storage record that starts with prefix bytes.
 	Seek(prefix []byte)
-	// Next moves the iterator to the next storage record.
+	// Next moves the iterator to the next key-value pair.
 	Next() bool
 	// Close frees resources within the iterator and invalidates it.
 	Close()
-	// Key returns only record key (ID) without scope id.
+	// Key returns only the second part of the composite key - (ID) without scope id.
 	// Warning: Key is only valid as long as item is valid (until iterator.Next() called), or transaction is valid.
-	// If you need to use it outside its validity, please use KeyCopy.
+	// If you need to use it outside its validity, please copy the key.
 	Key() []byte
-	// Value returns record.
+	// Value returns value itself (ex: record, drop, blob, etc).
 	// Warning: Value is only valid as long as item is valid (until iterator.Next() called), or transaction is valid.
-	// If you need to use it outside its validity, please use ValueCopy.
+	// If you need to use it outside its validity, please copy the value.
 	Value() ([]byte, error)
 }
 

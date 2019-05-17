@@ -101,6 +101,7 @@ func (b *BadgerDB) NewIterator(scope Scope) Iterator {
 	bi.txn = b.backend.NewTransaction(false)
 	opts := badger.DefaultIteratorOptions
 	bi.it = bi.txn.NewIterator(opts)
+	bi.it.Seek(bi.fullPrefix)
 	return &bi
 }
 
@@ -130,7 +131,6 @@ func (bi *badgerIterator) Seek(prefix []byte) {
 func (bi *badgerIterator) Next() bool {
 	firstTime := false
 	bi.once.Do(func() {
-		bi.it.Seek(bi.fullPrefix)
 		firstTime = true
 	})
 	if firstTime {

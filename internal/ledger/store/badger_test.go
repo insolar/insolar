@@ -132,13 +132,8 @@ func TestBadgerDB_NewIterator(t *testing.T) {
 
 	f := fuzz.New().NilChance(0).NumElements(ArrayLength, ArrayLength).Funcs(
 		func(key *testBadgerKey, c fuzz.Continue) {
-			for {
-				c.Fuzz(&key.id)
-				// To ensure that unexpected keys will be started with prefix that less than expected keys
-				if bytes.Compare(key.id, commonPrefix) == -1 {
-					break
-				}
-			}
+			c.Fuzz(&key.id)
+			key.id[0] = commonPrefix[0] + 1
 			key.scope = commonScope
 		},
 		func(pair *kv, c fuzz.Continue) {
