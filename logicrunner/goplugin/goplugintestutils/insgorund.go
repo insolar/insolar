@@ -21,6 +21,7 @@ import (
 	"os"
 	"os/exec"
 	"runtime/debug"
+	"strings"
 	"syscall"
 	"time"
 
@@ -28,6 +29,8 @@ import (
 	"github.com/insolar/insolar/testutils"
 	"github.com/pkg/errors"
 )
+
+const insolarLogLevel = "INSOLAR_LOG_LEVEL"
 
 // StartInsgorund starts `insgorund` process
 func StartInsgorund(cmdPath, lProto, listen, upstreamProto, upstreamAddr string) (func(), error) {
@@ -64,6 +67,11 @@ func StartInsgorund(cmdPath, lProto, listen, upstreamProto, upstreamAddr string)
 
 	if cmdPath == "" {
 		return nil, errors.New("command's path is required to start `insgorund`")
+	}
+
+	gorundLoglLevel := getGorundLogLevel()
+	if gorundLoglLevel != "" {
+		args = append(args, "--log-level", gorundLoglLevel)
 	}
 
 	runner := exec.Command(cmdPath, args...)
@@ -107,4 +115,14 @@ func StartInsgorund(cmdPath, lProto, listen, upstreamProto, upstreamAddr string)
 			}
 		}
 	}, nil
+}
+
+func getGorundLogLevel() string {
+	for _, e := range os.Environ() {
+		pair := strings.Split(e, "=")
+		if pair[0] == insolarLogLevel {
+			return pair[1]
+		}
+	}
+	return ""
 }
