@@ -70,13 +70,12 @@ type NetworkBootstrapper interface {
 }
 
 type networkBootstrapper struct {
-	Certificate         insolar.Certificate         `inject:""`
-	Bootstrapper        Bootstrapper                `inject:""`
-	NodeKeeper          network.NodeKeeper          `inject:""`
-	SessionManager      SessionManager              `inject:""`
-	AuthController      AuthorizationController     `inject:""`
-	ChallengeController ChallengeResponseController `inject:""`
-	Gatewayer           network.Gatewayer           `inject:""`
+	Certificate    insolar.Certificate     `inject:""`
+	Bootstrapper   Bootstrapper            `inject:""`
+	NodeKeeper     network.NodeKeeper      `inject:""`
+	SessionManager SessionManager          `inject:""`
+	AuthController AuthorizationController `inject:""`
+	Gatewayer      network.Gatewayer       `inject:""`
 }
 
 func (nb *networkBootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult, error) {
@@ -128,11 +127,6 @@ func (nb *networkBootstrapper) AuthenticateToDiscoveryNode(ctx context.Context, 
 	data, err := nb.AuthController.Authorize(ctx, discovery, nb.Certificate)
 	if err != nil {
 		return errors.Wrap(err, "Error authorizing on discovery node")
-	}
-
-	_, err = nb.ChallengeController.Execute(ctx, discovery, data.SessionID)
-	if err != nil {
-		return errors.Wrap(err, "Error executing double challenge response")
 	}
 	// TODO: fix Short ID assignment logic
 	// origin := nb.NodeKeeper.GetOrigin()
