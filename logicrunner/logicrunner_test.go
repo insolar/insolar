@@ -167,7 +167,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	MessageBusTrivialBehavior(mb, lr)
 	pm := l.GetPulseManager()
 
-	s.incrementPulseHelper(ctx, lr, pm)
+	s.incrementPulseHelper(ctx, lr, pm, messageHandler)
 
 	cb := goplugintestutils.NewContractBuilder(am, s.icc)
 
@@ -178,17 +178,16 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	}
 }
 
-func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr insolar.LogicRunner, pm insolar.PulseManager) {
+func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr insolar.LogicRunner, pm insolar.PulseManager, messageHandler *artifactmanager.MessageHandler) {
 	pulseStorage := pm.(*pulsemanager.PulseManager).PulseAccessor
 	currentPulse, _ := pulseStorage.Latest(ctx)
 
 	newPulseNumber := currentPulse.PulseNumber + 1
-	err := pm.Set(
-		ctx,
-		insolar.Pulse{PulseNumber: newPulseNumber, Entropy: insolar.Entropy{}},
-		true,
-	)
+	newPulse := insolar.Pulse{PulseNumber: newPulseNumber, Entropy: insolar.Entropy{}}
+	err := pm.Set(ctx, newPulse, true)
 	s.Require().NoError(err)
+
+	messageHandler.FlowDispatcher.ChangePulse(ctx, newPulse)
 
 	rootJetId := *insolar.NewJetID(0, nil)
 	_, err = lr.(*LogicRunner).MessageBus.Send(

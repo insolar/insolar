@@ -621,12 +621,27 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	h.Nodes = s.nodeStorage
 	h.DropModifier = s.dropModifier
 
+	jr := testutils.NewJetReleaserMock(s.T())
+	jr.UnlockMock.Return(nil)
+	h.JetReleaser = jr
+
 	err = h.Init(s.ctx)
 	require.NoError(s.T(), err)
 
-	res, err := h.handleHotRecords(s.ctx, &message.Parcel{Msg: hotIndexes})
-
+	replyTo := make(chan bus.Reply, 1)
+	p := proc.NewHotData(hotIndexes, replyTo)
+	p.Dep.DropModifier = h.DropModifier
+	p.Dep.RecentStorageProvider = h.RecentStorageProvider
+	p.Dep.MessageBus = h.Bus
+	p.Dep.IndexStateModifier = h.IndexStateModifier
+	p.Dep.JetStorage = h.JetStorage
+	p.Dep.JetFetcher = h.jetTreeUpdater
+	p.Dep.JetReleaser = h.JetReleaser
+	err = p.Proceed(s.ctx)
 	require.NoError(s.T(), err)
+
+	resWrapper := <-replyTo
+	res := resWrapper.Reply
 	require.Equal(s.T(), res, &reply.OK{})
 
 	savedDrop, err := s.dropAccessor.ForPulse(s.ctx, jetID, insolar.FirstPulseNumber)
