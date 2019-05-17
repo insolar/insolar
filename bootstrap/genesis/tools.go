@@ -14,37 +14,28 @@
 // limitations under the License.
 //
 
-package rootdomain
+package genesis
 
 import (
-	"encoding/hex"
-	"testing"
-
+	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/stretchr/testify/require"
 )
 
-var (
-	idHex  = "000100010055c029a876933e75efc3ed8547942cd32ba9947ee4dc13d2c06b0b"
-	refHex = idHex + idHex
-)
-
-func TestID(t *testing.T) {
-	rootRecord := &Record{
-		PCS: initPCS(),
+func refByName(name string) insolar.Reference {
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+	parcel := &message.Parcel{
+		Msg: &message.GenesisRequest{
+			Name: name,
+		},
 	}
-	require.Equal(t, idHex, hex.EncodeToString(rootRecord.ID().Bytes()), "root domain ID should always be the same")
-}
-
-func TestReference(t *testing.T) {
-	rootRecord := &Record{
-		PCS: initPCS(),
-	}
-	require.Equal(t, refHex, hex.EncodeToString(rootRecord.Ref().Bytes()), "root domain Ref should always be the same")
-
-}
-
-func initPCS() insolar.PlatformCryptographyScheme {
-	return platformpolicy.NewPlatformCryptographyScheme()
+	vrec := record.Wrap(record.Request{
+		Parcel:      message.ParcelToBytes(parcel),
+		MessageHash: message.ParcelMessageHash(pcs, parcel),
+		Object:      rootdomain.RootDomain.ID(),
+	})
+	id := insolar.NewID(insolar.FirstPulseNumber, record.HashVirtual(pcs.ReferenceHasher(), vrec))
+	return *insolar.NewReference(rootdomain.RootDomain.ID(), *id)
 }

@@ -14,14 +14,19 @@
 // limitations under the License.
 //
 
-package messagebus
+package genesis
 
 import (
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
+	"testing"
+
+	"github.com/stretchr/testify/require"
 )
 
-// GetMessageHash calculates message hash.
-func GetMessageHash(scheme insolar.PlatformCryptographyScheme, msg insolar.Parcel) []byte {
-	return scheme.IntegrityHasher().Hash(message.ParcelToBytes(msg))
+func TestTools_refByName(t *testing.T) {
+	var (
+		pubKey    = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n-----END PUBLIC KEY-----\n"
+		pubKeyRef = "1tJDHL2xCP6cLvVN54a9pz3fCHyVVFSPBZkwF2ak66.1tJBgM2tkggjcM6H8MVmjmCxk4abB9CErbwK8RmBe2"
+	)
+	genesisRef := refByName(pubKey)
+	require.Equal(t, pubKeyRef, genesisRef.String(), "reference by name always the same")
 }
