@@ -15,7 +15,7 @@ Usage
 
     ./bin/benchmark -c=4 -r=25 -k=.artifacts/launchnet/configs/root_member_keys.json
 
-or you can ran benchmark with
+or you can run benchmark with
 
     ./scripts/bench.sh
 
