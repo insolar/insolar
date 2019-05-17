@@ -368,7 +368,13 @@ func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket 
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
-	return i.setBucket(pn, bucket.ObjID, &bucket)
+	err := i.setBucket(pn, bucket.ObjID, &bucket)
+	if err != nil {
+		return err
+	}
+
+	inslogger.FromContext(ctx).Debugf("[SetBucket] bucket for obj - %v was set successfully", bucket.ObjID.DebugString())
+	return i.setLastKnownPN(pn, bucket.ObjID)
 }
 
 // LifelineForID returns a lifeline from a bucket with provided PN and ObjID
