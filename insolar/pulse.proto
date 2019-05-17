@@ -1,0 +1,28 @@
+syntax = "proto3";
+
+package insolar;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.populate_all) = false;
+
+message PulseProto {
+    uint32 PulseNumber = 1;
+    uint32 PrevPulseNumber = 2;
+    uint32 NextPulseNumber = 3;
+
+    int64 PulseTimestamp = 4;
+    int32 EpochPulseNumber = 5;
+    bytes OriginID = 6;
+
+    bytes Entropy = 7 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Entropy", (gogoproto.nullable) = false];
+    repeated PulseSenderConfirmationProto Signs = 8;
+}
+
+message PulseSenderConfirmationProto {
+    uint32 PulseNumber = 1;
+    bytes ChosenPublicKey = 2;
+    bytes Entropy = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Entropy", (gogoproto.nullable) = false];
+    bytes Signature = 4;
+}
