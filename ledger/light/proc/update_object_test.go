@@ -121,7 +121,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	updateObject.Dep.Index = indexMemoryStor
 	updateObject.Dep.PCS = scheme
 	updateObject.Dep.RecordModifier = recordStorage
-	updateObject.Dep.IndexStateModifier = indexMemoryStor
+	updateObject.Dep.LifelineStateModifier = indexMemoryStor
 
 	rep := updateObject.handle(ctx)
 	require.NoError(t, rep.Err)
@@ -185,7 +185,7 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	updateObject.Dep.Index = indexMemoryStor
 	updateObject.Dep.PCS = scheme
 	updateObject.Dep.RecordModifier = recordStorage
-	updateObject.Dep.IndexStateModifier = indexMemoryStor
+	updateObject.Dep.LifelineStateModifier = indexMemoryStor
 
 	rep := updateObject.handle(ctx)
 	require.NoError(t, rep.Err)

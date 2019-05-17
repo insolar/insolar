@@ -112,8 +112,8 @@ func (s *Initializer) Run() {
 			RecordAccessor: sc.recordDB,
 			RecordModifier: sc.recordDB,
 
-			IndexLifelineModifier: sc.indexDB,
-			IndexLifelineAccessor: sc.indexDB,
+			LifelineModifier: sc.indexDB,
+			LifelineAccessor: sc.indexDB,
 		}
 
 		genesisGenerator := NewGenerator(

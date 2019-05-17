@@ -40,7 +40,7 @@ import (
 
 // Handler is a base struct for heavy's methods
 type Handler struct {
-	WmBus          bus.Bus
+	WmBus                 bus.Bus
 	Bus                   insolar.MessageBus
 	JetCoordinator        jet.Coordinator
 	PCS                   insolar.PlatformCryptographyScheme

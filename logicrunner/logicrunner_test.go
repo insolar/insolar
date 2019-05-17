@@ -168,7 +168,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	MessageBusTrivialBehavior(mb, lr)
 	pm := l.GetPulseManager()
 
-	s.incrementPulseHelper(ctx, lr, pm, messageHandler,indexStor)
+	s.incrementPulseHelper(ctx, lr, pm, messageHandler, indexStor)
 	s.incrementPulseHelper(ctx, lr, pm, indexStor)
 
 	cb := goplugintestutils.NewContractBuilder(am, s.icc)

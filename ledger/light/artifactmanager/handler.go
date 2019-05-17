@@ -153,9 +153,8 @@ func NewMessageHandler(
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 			p.Dep.PCS = h.PCS
 			p.Dep.IDLocker = h.IDLocker
-			p.Dep.IndexStateModifier = h.IndexStateModifier
-			p.Dep.IndexStorage = h.IndexStorage
-			p.Dep.IndexModifier = h.IndexStorage
+			p.Dep.LifelineStateModifier = h.LifelineStateModifier
+			p.Dep.LifelineIndex = h.LifelineIndex
 		},
 		RegisterChild: func(p *proc.RegisterChild) {
 			p.Dep.IDLocker = h.IDLocker
@@ -175,7 +174,7 @@ func NewMessageHandler(
 			p.Dep.DropModifier = h.DropModifier
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 			p.Dep.MessageBus = h.Bus
-			p.Dep.IndexStateModifier = h.IndexStateModifier
+			p.Dep.IndexBucketModifier = h.IndexBucketModifier
 			p.Dep.JetStorage = h.JetStorage
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.JetReleaser = h.JetReleaser

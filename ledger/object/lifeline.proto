@@ -12,7 +12,7 @@ message Lifeline {
     bytes ChildPointer = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
     bytes Parent = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     repeated LifelineDelegate Delegates = 5 [(gogoproto.nullable) = false];
-    uint32 State = 6 [(gogoproto.customtype) = "StateID", (gogoproto.nullable) = false];
+    uint32 StateID = 6 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar/record.StateID", (gogoproto.nullable) = false];
     uint32 LatestUpdate = 7 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
     bytes JetID = 8 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
 

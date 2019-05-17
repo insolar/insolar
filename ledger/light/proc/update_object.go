@@ -42,14 +42,14 @@ type UpdateObject struct {
 
 	Dep struct {
 		RecordModifier        object.RecordModifier
-		Bus                        insolar.MessageBus
-		Coordinator                jet.Coordinator
-		BlobModifier               blob.Modifier
-		RecentStorageProvider      recentstorage.Provider
+		Bus                   insolar.MessageBus
+		Coordinator           jet.Coordinator
+		BlobModifier          blob.Modifier
+		RecentStorageProvider recentstorage.Provider
 		PCS                   insolar.PlatformCryptographyScheme
 		IDLocker              object.IDLocker
-		Index                      object.LifelineIndex
-		IndexStateModifier    object.LifelineStateModifier
+		LifelineIndex         object.LifelineIndex
+		LifelineStateModifier object.LifelineStateModifier
 	}
 }
 
@@ -99,12 +99,12 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	p.Dep.IDLocker.Lock(p.Message.Object.Record())
 	defer p.Dep.IDLocker.Unlock(p.Message.Object.Record())
 
-	idx, err := p.Dep.Index.LifelineForID(ctx, p.PulseNumber, *p.Message.Object.Record())
+	idx, err := p.Dep.LifelineIndex.LifelineForID(ctx, p.PulseNumber, *p.Message.Object.Record())
 	// No index on our node.
 	if err == object.ErrLifelineNotFound {
 		if state.ID() == record.StateActivation {
 			// We are activating the object. There is no index for it anywhere.
-			idx = object.Lifeline{State: record.StateUndefined}
+			idx = object.Lifeline{StateID: record.StateUndefined}
 			logger.Debugf("new lifeline created")
 		} else {
 			logger.Debug("failed to fetch index (fetching from heavy)")
@@ -126,7 +126,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 		return bus.Reply{Err: err}
 	}
 
-	if err = validateState(idx.State, state.ID()); err != nil {
+	if err = validateState(idx.StateID, state.ID()); err != nil {
 		return bus.Reply{Reply: &reply.Error{ErrType: reply.ErrDeactivated}}
 	}
 
@@ -155,18 +155,18 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 		return bus.Reply{Err: errors.Wrap(err, "can't save record into storage")}
 	}
 	idx.LatestState = id
-	idx.State = state.ID()
+	idx.StateID = state.ID()
 	if state.ID() == record.StateActivation {
 		idx.Parent = state.(*record.Activate).Parent
 	}
 
 	idx.LatestUpdate = p.PulseNumber
 	idx.JetID = p.JetID
-	err = p.Dep.Index.SetLifeline(ctx, p.PulseNumber, *p.Message.Object.Record(), idx)
+	err = p.Dep.LifelineIndex.SetLifeline(ctx, p.PulseNumber, *p.Message.Object.Record(), idx)
 	if err != nil {
 		return bus.Reply{Err: err}
 	}
-	err = p.Dep.IndexStateModifier.SetLifelineUsage(ctx, p.PulseNumber, *p.Message.Object.Record())
+	err = p.Dep.LifelineStateModifier.SetLifelineUsage(ctx, p.PulseNumber, *p.Message.Object.Record())
 	if err != nil {
 		return bus.Reply{Err: errors.Wrap(err, "failed to update lifeline usage state")}
 	}
@@ -205,7 +205,7 @@ func (p *UpdateObject) saveIndexFromHeavy(
 	}
 
 	idx.JetID = jetID
-	err = p.Dep.Index.SetLifeline(ctx, p.PulseNumber, *obj.Record(), idx)
+	err = p.Dep.LifelineIndex.SetLifeline(ctx, p.PulseNumber, *obj.Record(), idx)
 	if err != nil {
 		return object.Lifeline{}, errors.Wrap(err, "failed to save")
 	}

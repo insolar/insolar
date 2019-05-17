@@ -40,12 +40,12 @@ type RegisterChild struct {
 	replyTo chan<- bus.Reply
 
 	Dep struct {
-		IDLocker           object.IDLocker
-		LifelineIndex              object.LifelineIndex
-		JetCoordinator     jet.Coordinator
-		RecordModifier     object.RecordModifier
-		LifelineStateModifier      object.LifelineStateModifier
-		PCS                insolar.PlatformCryptographyScheme
+		IDLocker              object.IDLocker
+		LifelineIndex         object.LifelineIndex
+		JetCoordinator        jet.Coordinator
+		RecordModifier        object.RecordModifier
+		LifelineStateModifier object.LifelineStateModifier
+		PCS                   insolar.PlatformCryptographyScheme
 	}
 }
 
@@ -81,8 +81,6 @@ func (p *RegisterChild) process(ctx context.Context) error {
 
 	p.Dep.IDLocker.Lock(p.msg.Parent.Record())
 	defer p.Dep.IDLocker.Unlock(p.msg.Parent.Record())
-
-	p.Dep.IndexStateModifier.SetUsageForPulse(ctx, *p.msg.Parent.Record(), p.pulse)
 
 	hash := record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
 	recID := insolar.NewID(p.pulse, hash)
