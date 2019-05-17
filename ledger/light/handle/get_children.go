@@ -39,19 +39,19 @@ func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
 
 	jet := proc.NewFetchJet(*msg.DefaultTarget().Record(), flow.Pulse(ctx), s.replyTo)
 	s.dep.FetchJet(jet)
-	if err := f.Procedure(ctx, jet, false); err != nil {
+	if err := f.Procedure(ctx, jet, true); err != nil {
 		return err
 	}
 
 	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.replyTo)
 	s.dep.WaitHot(hot)
-	if err := f.Procedure(ctx, hot, false); err != nil {
+	if err := f.Procedure(ctx, hot, true); err != nil {
 		return err
 	}
 
 	getIndex := proc.NewGetIndex(msg.Parent, jet.Result.Jet, s.replyTo)
 	s.dep.GetIndex(getIndex)
-	if err := f.Procedure(ctx, getIndex, false); err != nil {
+	if err := f.Procedure(ctx, getIndex, true); err != nil {
 		return err
 	}
 	// The object has no children.
@@ -81,7 +81,7 @@ func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
 
 	getChildren := proc.NewGetChildren(currentChild, msg, s.Message.Parcel, s.replyTo)
 	s.dep.GetChildren(getChildren)
-	if err := f.Procedure(ctx, getChildren, false); err != nil {
+	if err := f.Procedure(ctx, getChildren, true); err != nil {
 		return err
 	}
 

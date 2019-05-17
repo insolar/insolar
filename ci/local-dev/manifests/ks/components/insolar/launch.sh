@@ -39,5 +39,5 @@ else
     cp -vR $CONFIG_DIR/data /opt/work/
     mkdir -vp /opt/work/config
     cp -v $CERTS_KEYS/$(hostname | awk -F'-' '{ printf "seed-%d-cert.json", $2 }')  /opt/work/config/node-cert.json
-    cp -v $DISCOVERY_KEYS/$(hostname | awk -F'-' '{ printf "key-%02d.json", $2 }')  /opt/work/config/node-keys.json
+    cp -v $DISCOVERY_KEYS/$(hostname | awk -F'-' '{ printf "seed-%d-key.json", $2 }')  /opt/work/config/node-keys.json
 fi
