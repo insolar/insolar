@@ -73,13 +73,9 @@ const (
 	stateIdle
 )
 
-type Nonce []byte
-
 type Session struct {
 	NodeID insolar.Reference
 	Cert   insolar.AuthorizationCertificate
-
-	DiscoveryNonce Nonce
 
 	Time time.Time
 	TTL  time.Duration
@@ -101,9 +97,6 @@ type SessionManager interface {
 	component.Stopper
 
 	NewSession(ref insolar.Reference, cert insolar.AuthorizationCertificate, ttl time.Duration) SessionID
-	SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) error
-	GetChallengeData(id SessionID) (insolar.AuthorizationCertificate, Nonce, error)
-	ChallengePassed(id SessionID) error
 	ReleaseSession(id SessionID) (*Session, error)
 	ProlongateSession(id SessionID, session *Session)
 }
@@ -176,55 +169,13 @@ func (sm *sessionManager) addSession(id SessionID, session *Session) {
 	sm.sessionsChangeNotification <- notification{}
 }
 
-func (sm *sessionManager) checkSession(id SessionID) (*Session, error) {
-	session := sm.sessions[id]
-	if session == nil {
-		return nil, errors.New(fmt.Sprintf("no such session ID: %d", id))
-	}
-	return session, nil
-}
-
-func (sm *sessionManager) SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) error {
-	sm.lock.Lock()
-	defer sm.lock.Unlock()
-
-	session, err := sm.checkSession(id)
-	if err != nil {
-		return err
-	}
-	session.DiscoveryNonce = discoveryNonce
-	return nil
-}
-
-func (sm *sessionManager) GetChallengeData(id SessionID) (insolar.AuthorizationCertificate, Nonce, error) {
-	sm.lock.Lock()
-	defer sm.lock.Unlock()
-
-	session, err := sm.checkSession(id)
-	if err != nil {
-		return nil, nil, err
-	}
-	return session.Cert, session.DiscoveryNonce, nil
-}
-
-func (sm *sessionManager) ChallengePassed(id SessionID) error {
-	sm.lock.Lock()
-	defer sm.lock.Unlock()
-
-	_, err := sm.checkSession(id)
-	if err != nil {
-		return err
-	}
-	return nil
-}
-
 func (sm *sessionManager) ReleaseSession(id SessionID) (*Session, error) {
 	sm.lock.Lock()
 
-	session, err := sm.checkSession(id)
-	if err != nil {
+	session := sm.sessions[id]
+	if session == nil {
 		sm.lock.Unlock()
-		return nil, err
+		return nil, errors.New(fmt.Sprintf("no such session ID: %d", id))
 	}
 	delete(sm.sessions, id)
 	sm.lock.Unlock()
