@@ -192,7 +192,7 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 		return nil, err
 	}
 	var resp response
-	for i := 1; i <= sendRetryCount; i-- {
+	for i := 1; i <= sendRetryCount; i++ {
 		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.RequestConfigJSON{
 			Method: method,
 			Params: params,
