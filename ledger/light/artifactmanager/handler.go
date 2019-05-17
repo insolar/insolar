@@ -562,6 +562,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 			continue
 		}
 
+		decodedIndex.JetID = jetID
 		err = h.IndexBucketModifier.SetBucket(
 			ctx,
 			parcel.Pulse(),
