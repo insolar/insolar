@@ -267,9 +267,6 @@ type Request struct {
 	//	*Request_Authorize
 	//	*Request_Register
 	//	*Request_Genesis
-	//	*Request_Challenge1
-	//	*Request_Challenge2
-	//	*Request_Disconnect
 	Request isRequest_Request `protobuf_oneof:"request"`
 }
 
@@ -336,27 +333,15 @@ type Request_Register struct {
 type Request_Genesis struct {
 	Genesis *GenesisRequest `protobuf:"bytes,8,opt,name=Genesis,proto3,oneof"`
 }
-type Request_Challenge1 struct {
-	Challenge1 *Challenge1Request `protobuf:"bytes,9,opt,name=Challenge1,proto3,oneof"`
-}
-type Request_Challenge2 struct {
-	Challenge2 *Challenge2Request `protobuf:"bytes,10,opt,name=Challenge2,proto3,oneof"`
-}
-type Request_Disconnect struct {
-	Disconnect *DisconnectRequest `protobuf:"bytes,11,opt,name=Disconnect,proto3,oneof"`
-}
 
-func (*Request_Ping) isRequest_Request()       {}
-func (*Request_RPC) isRequest_Request()        {}
-func (*Request_Cascade) isRequest_Request()    {}
-func (*Request_Pulse) isRequest_Request()      {}
-func (*Request_Bootstrap) isRequest_Request()  {}
-func (*Request_Authorize) isRequest_Request()  {}
-func (*Request_Register) isRequest_Request()   {}
-func (*Request_Genesis) isRequest_Request()    {}
-func (*Request_Challenge1) isRequest_Request() {}
-func (*Request_Challenge2) isRequest_Request() {}
-func (*Request_Disconnect) isRequest_Request() {}
+func (*Request_Ping) isRequest_Request()      {}
+func (*Request_RPC) isRequest_Request()       {}
+func (*Request_Cascade) isRequest_Request()   {}
+func (*Request_Pulse) isRequest_Request()     {}
+func (*Request_Bootstrap) isRequest_Request() {}
+func (*Request_Authorize) isRequest_Request() {}
+func (*Request_Register) isRequest_Request()  {}
+func (*Request_Genesis) isRequest_Request()   {}
 
 func (m *Request) GetRequest() isRequest_Request {
 	if m != nil {
@@ -421,27 +406,6 @@ func (m *Request) GetGenesis() *GenesisRequest {
 	return nil
 }
 
-func (m *Request) GetChallenge1() *Challenge1Request {
-	if x, ok := m.GetRequest().(*Request_Challenge1); ok {
-		return x.Challenge1
-	}
-	return nil
-}
-
-func (m *Request) GetChallenge2() *Challenge2Request {
-	if x, ok := m.GetRequest().(*Request_Challenge2); ok {
-		return x.Challenge2
-	}
-	return nil
-}
-
-func (m *Request) GetDisconnect() *DisconnectRequest {
-	if x, ok := m.GetRequest().(*Request_Disconnect); ok {
-		return x.Disconnect
-	}
-	return nil
-}
-
 // XXX_OneofFuncs is for the internal use of the proto package.
 func (*Request) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
 	return _Request_OneofMarshaler, _Request_OneofUnmarshaler, _Request_OneofSizer, []interface{}{
@@ -453,9 +417,6 @@ func (*Request) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error
 		(*Request_Authorize)(nil),
 		(*Request_Register)(nil),
 		(*Request_Genesis)(nil),
-		(*Request_Challenge1)(nil),
-		(*Request_Challenge2)(nil),
-		(*Request_Disconnect)(nil),
 	}
 }
 
@@ -501,21 +462,6 @@ func _Request_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 	case *Request_Genesis:
 		_ = b.EncodeVarint(8<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Genesis); err != nil {
-			return err
-		}
-	case *Request_Challenge1:
-		_ = b.EncodeVarint(9<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Challenge1); err != nil {
-			return err
-		}
-	case *Request_Challenge2:
-		_ = b.EncodeVarint(10<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Challenge2); err != nil {
-			return err
-		}
-	case *Request_Disconnect:
-		_ = b.EncodeVarint(11<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Disconnect); err != nil {
 			return err
 		}
 	case nil:
@@ -592,30 +538,6 @@ func _Request_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer
 		err := b.DecodeMessage(msg)
 		m.Request = &Request_Genesis{msg}
 		return true, err
-	case 9: // request.Challenge1
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Challenge1Request)
-		err := b.DecodeMessage(msg)
-		m.Request = &Request_Challenge1{msg}
-		return true, err
-	case 10: // request.Challenge2
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Challenge2Request)
-		err := b.DecodeMessage(msg)
-		m.Request = &Request_Challenge2{msg}
-		return true, err
-	case 11: // request.Disconnect
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(DisconnectRequest)
-		err := b.DecodeMessage(msg)
-		m.Request = &Request_Disconnect{msg}
-		return true, err
 	default:
 		return false, nil
 	}
@@ -665,21 +587,6 @@ func _Request_OneofSizer(msg proto.Message) (n int) {
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *Request_Challenge1:
-		s := proto.Size(x.Challenge1)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Request_Challenge2:
-		s := proto.Size(x.Challenge2)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Request_Disconnect:
-		s := proto.Size(x.Disconnect)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
 	case nil:
 	default:
 		panic(fmt.Sprintf("proto: unexpected type %T in oneof", x))
@@ -691,15 +598,11 @@ type Response struct {
 	// Types that are valid to be assigned to Response:
 	//	*Response_Ping
 	//	*Response_RPC
-	//	*Response_Cascade
-	//	*Response_Pulse
+	//	*Response_Basic
 	//	*Response_Bootstrap
 	//	*Response_Authorize
 	//	*Response_Register
 	//	*Response_Genesis
-	//	*Response_Challenge1
-	//	*Response_Challenge2
-	//	*Response_Disconnect
 	Response isResponse_Response `protobuf_oneof:"response"`
 }
 
@@ -748,45 +651,29 @@ type Response_Ping struct {
 type Response_RPC struct {
 	RPC *RPCResponse `protobuf:"bytes,2,opt,name=RPC,proto3,oneof"`
 }
-type Response_Cascade struct {
-	Cascade *CascadeResponse `protobuf:"bytes,3,opt,name=Cascade,proto3,oneof"`
-}
-type Response_Pulse struct {
-	Pulse *PulseResponse `protobuf:"bytes,4,opt,name=Pulse,proto3,oneof"`
+type Response_Basic struct {
+	Basic *BasicResponse `protobuf:"bytes,3,opt,name=Basic,proto3,oneof"`
 }
 type Response_Bootstrap struct {
-	Bootstrap *BootstrapResponse `protobuf:"bytes,5,opt,name=Bootstrap,proto3,oneof"`
+	Bootstrap *BootstrapResponse `protobuf:"bytes,4,opt,name=Bootstrap,proto3,oneof"`
 }
 type Response_Authorize struct {
-	Authorize *AuthorizeResponse `protobuf:"bytes,6,opt,name=Authorize,proto3,oneof"`
+	Authorize *AuthorizeResponse `protobuf:"bytes,5,opt,name=Authorize,proto3,oneof"`
 }
 type Response_Register struct {
-	Register *RegisterResponse `protobuf:"bytes,7,opt,name=Register,proto3,oneof"`
+	Register *RegisterResponse `protobuf:"bytes,6,opt,name=Register,proto3,oneof"`
 }
 type Response_Genesis struct {
-	Genesis *GenesisResponse `protobuf:"bytes,8,opt,name=Genesis,proto3,oneof"`
-}
-type Response_Challenge1 struct {
-	Challenge1 *Challenge1Response `protobuf:"bytes,9,opt,name=Challenge1,proto3,oneof"`
-}
-type Response_Challenge2 struct {
-	Challenge2 *Challenge2Response `protobuf:"bytes,10,opt,name=Challenge2,proto3,oneof"`
-}
-type Response_Disconnect struct {
-	Disconnect *DisconnectResponse `protobuf:"bytes,11,opt,name=Disconnect,proto3,oneof"`
+	Genesis *GenesisResponse `protobuf:"bytes,7,opt,name=Genesis,proto3,oneof"`
 }
 
-func (*Response_Ping) isResponse_Response()       {}
-func (*Response_RPC) isResponse_Response()        {}
-func (*Response_Cascade) isResponse_Response()    {}
-func (*Response_Pulse) isResponse_Response()      {}
-func (*Response_Bootstrap) isResponse_Response()  {}
-func (*Response_Authorize) isResponse_Response()  {}
-func (*Response_Register) isResponse_Response()   {}
-func (*Response_Genesis) isResponse_Response()    {}
-func (*Response_Challenge1) isResponse_Response() {}
-func (*Response_Challenge2) isResponse_Response() {}
-func (*Response_Disconnect) isResponse_Response() {}
+func (*Response_Ping) isResponse_Response()      {}
+func (*Response_RPC) isResponse_Response()       {}
+func (*Response_Basic) isResponse_Response()     {}
+func (*Response_Bootstrap) isResponse_Response() {}
+func (*Response_Authorize) isResponse_Response() {}
+func (*Response_Register) isResponse_Response()  {}
+func (*Response_Genesis) isResponse_Response()   {}
 
 func (m *Response) GetResponse() isResponse_Response {
 	if m != nil {
@@ -809,16 +696,9 @@ func (m *Response) GetRPC() *RPCResponse {
 	return nil
 }
 
-func (m *Response) GetCascade() *CascadeResponse {
-	if x, ok := m.GetResponse().(*Response_Cascade); ok {
-		return x.Cascade
-	}
-	return nil
-}
-
-func (m *Response) GetPulse() *PulseResponse {
-	if x, ok := m.GetResponse().(*Response_Pulse); ok {
-		return x.Pulse
+func (m *Response) GetBasic() *BasicResponse {
+	if x, ok := m.GetResponse().(*Response_Basic); ok {
+		return x.Basic
 	}
 	return nil
 }
@@ -851,41 +731,16 @@ func (m *Response) GetGenesis() *GenesisResponse {
 	return nil
 }
 
-func (m *Response) GetChallenge1() *Challenge1Response {
-	if x, ok := m.GetResponse().(*Response_Challenge1); ok {
-		return x.Challenge1
-	}
-	return nil
-}
-
-func (m *Response) GetChallenge2() *Challenge2Response {
-	if x, ok := m.GetResponse().(*Response_Challenge2); ok {
-		return x.Challenge2
-	}
-	return nil
-}
-
-func (m *Response) GetDisconnect() *DisconnectResponse {
-	if x, ok := m.GetResponse().(*Response_Disconnect); ok {
-		return x.Disconnect
-	}
-	return nil
-}
-
 // XXX_OneofFuncs is for the internal use of the proto package.
 func (*Response) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
 	return _Response_OneofMarshaler, _Response_OneofUnmarshaler, _Response_OneofSizer, []interface{}{
 		(*Response_Ping)(nil),
 		(*Response_RPC)(nil),
-		(*Response_Cascade)(nil),
-		(*Response_Pulse)(nil),
+		(*Response_Basic)(nil),
 		(*Response_Bootstrap)(nil),
 		(*Response_Authorize)(nil),
 		(*Response_Register)(nil),
 		(*Response_Genesis)(nil),
-		(*Response_Challenge1)(nil),
-		(*Response_Challenge2)(nil),
-		(*Response_Disconnect)(nil),
 	}
 }
 
@@ -903,49 +758,29 @@ func _Response_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
 		if err := b.EncodeMessage(x.RPC); err != nil {
 			return err
 		}
-	case *Response_Cascade:
+	case *Response_Basic:
 		_ = b.EncodeVarint(3<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Cascade); err != nil {
-			return err
-		}
-	case *Response_Pulse:
-		_ = b.EncodeVarint(4<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Pulse); err != nil {
+		if err := b.EncodeMessage(x.Basic); err != nil {
 			return err
 		}
 	case *Response_Bootstrap:
-		_ = b.EncodeVarint(5<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(4<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Bootstrap); err != nil {
 			return err
 		}
 	case *Response_Authorize:
-		_ = b.EncodeVarint(6<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(5<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Authorize); err != nil {
 			return err
 		}
 	case *Response_Register:
-		_ = b.EncodeVarint(7<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(6<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Register); err != nil {
 			return err
 		}
 	case *Response_Genesis:
-		_ = b.EncodeVarint(8<<3 | proto.WireBytes)
+		_ = b.EncodeVarint(7<<3 | proto.WireBytes)
 		if err := b.EncodeMessage(x.Genesis); err != nil {
-			return err
-		}
-	case *Response_Challenge1:
-		_ = b.EncodeVarint(9<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Challenge1); err != nil {
-			return err
-		}
-	case *Response_Challenge2:
-		_ = b.EncodeVarint(10<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Challenge2); err != nil {
-			return err
-		}
-	case *Response_Disconnect:
-		_ = b.EncodeVarint(11<<3 | proto.WireBytes)
-		if err := b.EncodeMessage(x.Disconnect); err != nil {
 			return err
 		}
 	case nil:
@@ -974,23 +809,15 @@ func _Response_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffe
 		err := b.DecodeMessage(msg)
 		m.Response = &Response_RPC{msg}
 		return true, err
-	case 3: // response.Cascade
+	case 3: // response.Basic
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
-		msg := new(CascadeResponse)
+		msg := new(BasicResponse)
 		err := b.DecodeMessage(msg)
-		m.Response = &Response_Cascade{msg}
+		m.Response = &Response_Basic{msg}
 		return true, err
-	case 4: // response.Pulse
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(PulseResponse)
-		err := b.DecodeMessage(msg)
-		m.Response = &Response_Pulse{msg}
-		return true, err
-	case 5: // response.Bootstrap
+	case 4: // response.Bootstrap
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -998,7 +825,7 @@ func _Response_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffe
 		err := b.DecodeMessage(msg)
 		m.Response = &Response_Bootstrap{msg}
 		return true, err
-	case 6: // response.Authorize
+	case 5: // response.Authorize
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -1006,7 +833,7 @@ func _Response_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffe
 		err := b.DecodeMessage(msg)
 		m.Response = &Response_Authorize{msg}
 		return true, err
-	case 7: // response.Register
+	case 6: // response.Register
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
@@ -1014,37 +841,13 @@ func _Response_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffe
 		err := b.DecodeMessage(msg)
 		m.Response = &Response_Register{msg}
 		return true, err
-	case 8: // response.Genesis
+	case 7: // response.Genesis
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
 		msg := new(GenesisResponse)
 		err := b.DecodeMessage(msg)
 		m.Response = &Response_Genesis{msg}
-		return true, err
-	case 9: // response.Challenge1
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Challenge1Response)
-		err := b.DecodeMessage(msg)
-		m.Response = &Response_Challenge1{msg}
-		return true, err
-	case 10: // response.Challenge2
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(Challenge2Response)
-		err := b.DecodeMessage(msg)
-		m.Response = &Response_Challenge2{msg}
-		return true, err
-	case 11: // response.Disconnect
-		if wire != proto.WireBytes {
-			return true, proto.ErrInternalBadWireType
-		}
-		msg := new(DisconnectResponse)
-		err := b.DecodeMessage(msg)
-		m.Response = &Response_Disconnect{msg}
 		return true, err
 	default:
 		return false, nil
@@ -1065,13 +868,8 @@ func _Response_OneofSizer(msg proto.Message) (n int) {
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
-	case *Response_Cascade:
-		s := proto.Size(x.Cascade)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Response_Pulse:
-		s := proto.Size(x.Pulse)
+	case *Response_Basic:
+		s := proto.Size(x.Basic)
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
@@ -1092,21 +890,6 @@ func _Response_OneofSizer(msg proto.Message) (n int) {
 		n += s
 	case *Response_Genesis:
 		s := proto.Size(x.Genesis)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Response_Challenge1:
-		s := proto.Size(x.Challenge1)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Response_Challenge2:
-		s := proto.Size(x.Challenge2)
-		n += 1 // tag and wire
-		n += proto.SizeVarint(uint64(s))
-		n += s
-	case *Response_Disconnect:
-		s := proto.Size(x.Disconnect)
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(s))
 		n += s
@@ -1441,111 +1224,6 @@ func (m *GenesisRequest) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GenesisRequest proto.InternalMessageInfo
 
-type Challenge1Request struct {
-}
-
-func (m *Challenge1Request) Reset()      { *m = Challenge1Request{} }
-func (*Challenge1Request) ProtoMessage() {}
-func (*Challenge1Request) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c34e17d86647303e, []int{14}
-}
-func (m *Challenge1Request) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Challenge1Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Challenge1Request.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Challenge1Request) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Challenge1Request.Merge(m, src)
-}
-func (m *Challenge1Request) XXX_Size() int {
-	return m.Size()
-}
-func (m *Challenge1Request) XXX_DiscardUnknown() {
-	xxx_messageInfo_Challenge1Request.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Challenge1Request proto.InternalMessageInfo
-
-type Challenge2Request struct {
-}
-
-func (m *Challenge2Request) Reset()      { *m = Challenge2Request{} }
-func (*Challenge2Request) ProtoMessage() {}
-func (*Challenge2Request) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c34e17d86647303e, []int{15}
-}
-func (m *Challenge2Request) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Challenge2Request) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Challenge2Request.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Challenge2Request) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Challenge2Request.Merge(m, src)
-}
-func (m *Challenge2Request) XXX_Size() int {
-	return m.Size()
-}
-func (m *Challenge2Request) XXX_DiscardUnknown() {
-	xxx_messageInfo_Challenge2Request.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Challenge2Request proto.InternalMessageInfo
-
-type DisconnectRequest struct {
-}
-
-func (m *DisconnectRequest) Reset()      { *m = DisconnectRequest{} }
-func (*DisconnectRequest) ProtoMessage() {}
-func (*DisconnectRequest) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c34e17d86647303e, []int{16}
-}
-func (m *DisconnectRequest) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *DisconnectRequest) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_DisconnectRequest.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *DisconnectRequest) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DisconnectRequest.Merge(m, src)
-}
-func (m *DisconnectRequest) XXX_Size() int {
-	return m.Size()
-}
-func (m *DisconnectRequest) XXX_DiscardUnknown() {
-	xxx_messageInfo_DisconnectRequest.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_DisconnectRequest proto.InternalMessageInfo
-
 type RPCResponse struct {
 	// Types that are valid to be assigned to Response:
 	//	*RPCResponse_Result
@@ -1556,7 +1234,7 @@ type RPCResponse struct {
 func (m *RPCResponse) Reset()      { *m = RPCResponse{} }
 func (*RPCResponse) ProtoMessage() {}
 func (*RPCResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c34e17d86647303e, []int{17}
+	return fileDescriptor_c34e17d86647303e, []int{14}
 }
 func (m *RPCResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1689,24 +1367,24 @@ func _RPCResponse_OneofSizer(msg proto.Message) (n int) {
 	return n
 }
 
-type CascadeResponse struct {
+type BasicResponse struct {
 	// Types that are valid to be assigned to Response:
-	//	*CascadeResponse_Success
-	//	*CascadeResponse_Error
-	Response isCascadeResponse_Response `protobuf_oneof:"response"`
+	//	*BasicResponse_Success
+	//	*BasicResponse_Error
+	Response isBasicResponse_Response `protobuf_oneof:"response"`
 }
 
-func (m *CascadeResponse) Reset()      { *m = CascadeResponse{} }
-func (*CascadeResponse) ProtoMessage() {}
-func (*CascadeResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c34e17d86647303e, []int{18}
+func (m *BasicResponse) Reset()      { *m = BasicResponse{} }
+func (*BasicResponse) ProtoMessage() {}
+func (*BasicResponse) Descriptor() ([]byte, []int) {
+	return fileDescriptor_c34e17d86647303e, []int{15}
 }
-func (m *CascadeResponse) XXX_Unmarshal(b []byte) error {
+func (m *BasicResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
 }
-func (m *CascadeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+func (m *BasicResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
 	if deterministic {
-		return xxx_messageInfo_CascadeResponse.Marshal(b, m, deterministic)
+		return xxx_messageInfo_BasicResponse.Marshal(b, m, deterministic)
 	} else {
 		b = b[:cap(b)]
 		n, err := m.MarshalTo(b)
@@ -1716,115 +1394,115 @@ func (m *CascadeResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, err
 		return b[:n], nil
 	}
 }
-func (m *CascadeResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_CascadeResponse.Merge(m, src)
+func (m *BasicResponse) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_BasicResponse.Merge(m, src)
 }
-func (m *CascadeResponse) XXX_Size() int {
+func (m *BasicResponse) XXX_Size() int {
 	return m.Size()
 }
-func (m *CascadeResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_CascadeResponse.DiscardUnknown(m)
+func (m *BasicResponse) XXX_DiscardUnknown() {
+	xxx_messageInfo_BasicResponse.DiscardUnknown(m)
 }
 
-var xxx_messageInfo_CascadeResponse proto.InternalMessageInfo
+var xxx_messageInfo_BasicResponse proto.InternalMessageInfo
 
-type isCascadeResponse_Response interface {
-	isCascadeResponse_Response()
+type isBasicResponse_Response interface {
+	isBasicResponse_Response()
 	Equal(interface{}) bool
 	MarshalTo([]byte) (int, error)
 	Size() int
 }
 
-type CascadeResponse_Success struct {
+type BasicResponse_Success struct {
 	Success bool `protobuf:"varint,1,opt,name=Success,proto3,oneof"`
 }
-type CascadeResponse_Error struct {
+type BasicResponse_Error struct {
 	Error []byte `protobuf:"bytes,2,opt,name=Error,proto3,oneof"`
 }
 
-func (*CascadeResponse_Success) isCascadeResponse_Response() {}
-func (*CascadeResponse_Error) isCascadeResponse_Response()   {}
+func (*BasicResponse_Success) isBasicResponse_Response() {}
+func (*BasicResponse_Error) isBasicResponse_Response()   {}
 
-func (m *CascadeResponse) GetResponse() isCascadeResponse_Response {
+func (m *BasicResponse) GetResponse() isBasicResponse_Response {
 	if m != nil {
 		return m.Response
 	}
 	return nil
 }
 
-func (m *CascadeResponse) GetSuccess() bool {
-	if x, ok := m.GetResponse().(*CascadeResponse_Success); ok {
+func (m *BasicResponse) GetSuccess() bool {
+	if x, ok := m.GetResponse().(*BasicResponse_Success); ok {
 		return x.Success
 	}
 	return false
 }
 
-func (m *CascadeResponse) GetError() []byte {
-	if x, ok := m.GetResponse().(*CascadeResponse_Error); ok {
+func (m *BasicResponse) GetError() []byte {
+	if x, ok := m.GetResponse().(*BasicResponse_Error); ok {
 		return x.Error
 	}
 	return nil
 }
 
 // XXX_OneofFuncs is for the internal use of the proto package.
-func (*CascadeResponse) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
-	return _CascadeResponse_OneofMarshaler, _CascadeResponse_OneofUnmarshaler, _CascadeResponse_OneofSizer, []interface{}{
-		(*CascadeResponse_Success)(nil),
-		(*CascadeResponse_Error)(nil),
+func (*BasicResponse) XXX_OneofFuncs() (func(msg proto.Message, b *proto.Buffer) error, func(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error), func(msg proto.Message) (n int), []interface{}) {
+	return _BasicResponse_OneofMarshaler, _BasicResponse_OneofUnmarshaler, _BasicResponse_OneofSizer, []interface{}{
+		(*BasicResponse_Success)(nil),
+		(*BasicResponse_Error)(nil),
 	}
 }
 
-func _CascadeResponse_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
-	m := msg.(*CascadeResponse)
+func _BasicResponse_OneofMarshaler(msg proto.Message, b *proto.Buffer) error {
+	m := msg.(*BasicResponse)
 	// response
 	switch x := m.Response.(type) {
-	case *CascadeResponse_Success:
+	case *BasicResponse_Success:
 		t := uint64(0)
 		if x.Success {
 			t = 1
 		}
 		_ = b.EncodeVarint(1<<3 | proto.WireVarint)
 		_ = b.EncodeVarint(t)
-	case *CascadeResponse_Error:
+	case *BasicResponse_Error:
 		_ = b.EncodeVarint(2<<3 | proto.WireBytes)
 		_ = b.EncodeRawBytes(x.Error)
 	case nil:
 	default:
-		return fmt.Errorf("CascadeResponse.Response has unexpected type %T", x)
+		return fmt.Errorf("BasicResponse.Response has unexpected type %T", x)
 	}
 	return nil
 }
 
-func _CascadeResponse_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
-	m := msg.(*CascadeResponse)
+func _BasicResponse_OneofUnmarshaler(msg proto.Message, tag, wire int, b *proto.Buffer) (bool, error) {
+	m := msg.(*BasicResponse)
 	switch tag {
 	case 1: // response.Success
 		if wire != proto.WireVarint {
 			return true, proto.ErrInternalBadWireType
 		}
 		x, err := b.DecodeVarint()
-		m.Response = &CascadeResponse_Success{x != 0}
+		m.Response = &BasicResponse_Success{x != 0}
 		return true, err
 	case 2: // response.Error
 		if wire != proto.WireBytes {
 			return true, proto.ErrInternalBadWireType
 		}
 		x, err := b.DecodeRawBytes(true)
-		m.Response = &CascadeResponse_Error{x}
+		m.Response = &BasicResponse_Error{x}
 		return true, err
 	default:
 		return false, nil
 	}
 }
 
-func _CascadeResponse_OneofSizer(msg proto.Message) (n int) {
-	m := msg.(*CascadeResponse)
+func _BasicResponse_OneofSizer(msg proto.Message) (n int) {
+	m := msg.(*BasicResponse)
 	// response
 	switch x := m.Response.(type) {
-	case *CascadeResponse_Success:
+	case *BasicResponse_Success:
 		n += 1 // tag and wire
 		n += 1
-	case *CascadeResponse_Error:
+	case *BasicResponse_Error:
 		n += 1 // tag and wire
 		n += proto.SizeVarint(uint64(len(x.Error)))
 		n += len(x.Error)
@@ -1835,48 +1513,13 @@ func _CascadeResponse_OneofSizer(msg proto.Message) (n int) {
 	return n
 }
 
-type PulseResponse struct {
-}
-
-func (m *PulseResponse) Reset()      { *m = PulseResponse{} }
-func (*PulseResponse) ProtoMessage() {}
-func (*PulseResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c34e17d86647303e, []int{19}
-}
-func (m *PulseResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *PulseResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_PulseResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *PulseResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_PulseResponse.Merge(m, src)
-}
-func (m *PulseResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *PulseResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_PulseResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_PulseResponse proto.InternalMessageInfo
-
 type BootstrapResponse struct {
 }
 
 func (m *BootstrapResponse) Reset()      { *m = BootstrapResponse{} }
 func (*BootstrapResponse) ProtoMessage() {}
 func (*BootstrapResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c34e17d86647303e, []int{20}
+	return fileDescriptor_c34e17d86647303e, []int{16}
 }
 func (m *BootstrapResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1911,7 +1554,7 @@ type AuthorizeResponse struct {
 func (m *AuthorizeResponse) Reset()      { *m = AuthorizeResponse{} }
 func (*AuthorizeResponse) ProtoMessage() {}
 func (*AuthorizeResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c34e17d86647303e, []int{21}
+	return fileDescriptor_c34e17d86647303e, []int{17}
 }
 func (m *AuthorizeResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1946,7 +1589,7 @@ type RegisterResponse struct {
 func (m *RegisterResponse) Reset()      { *m = RegisterResponse{} }
 func (*RegisterResponse) ProtoMessage() {}
 func (*RegisterResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c34e17d86647303e, []int{22}
+	return fileDescriptor_c34e17d86647303e, []int{18}
 }
 func (m *RegisterResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -1981,7 +1624,7 @@ type GenesisResponse struct {
 func (m *GenesisResponse) Reset()      { *m = GenesisResponse{} }
 func (*GenesisResponse) ProtoMessage() {}
 func (*GenesisResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c34e17d86647303e, []int{23}
+	return fileDescriptor_c34e17d86647303e, []int{19}
 }
 func (m *GenesisResponse) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -2010,111 +1653,6 @@ func (m *GenesisResponse) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_GenesisResponse proto.InternalMessageInfo
 
-type Challenge1Response struct {
-}
-
-func (m *Challenge1Response) Reset()      { *m = Challenge1Response{} }
-func (*Challenge1Response) ProtoMessage() {}
-func (*Challenge1Response) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c34e17d86647303e, []int{24}
-}
-func (m *Challenge1Response) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Challenge1Response) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Challenge1Response.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Challenge1Response) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Challenge1Response.Merge(m, src)
-}
-func (m *Challenge1Response) XXX_Size() int {
-	return m.Size()
-}
-func (m *Challenge1Response) XXX_DiscardUnknown() {
-	xxx_messageInfo_Challenge1Response.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Challenge1Response proto.InternalMessageInfo
-
-type Challenge2Response struct {
-}
-
-func (m *Challenge2Response) Reset()      { *m = Challenge2Response{} }
-func (*Challenge2Response) ProtoMessage() {}
-func (*Challenge2Response) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c34e17d86647303e, []int{25}
-}
-func (m *Challenge2Response) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *Challenge2Response) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_Challenge2Response.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *Challenge2Response) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_Challenge2Response.Merge(m, src)
-}
-func (m *Challenge2Response) XXX_Size() int {
-	return m.Size()
-}
-func (m *Challenge2Response) XXX_DiscardUnknown() {
-	xxx_messageInfo_Challenge2Response.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_Challenge2Response proto.InternalMessageInfo
-
-type DisconnectResponse struct {
-}
-
-func (m *DisconnectResponse) Reset()      { *m = DisconnectResponse{} }
-func (*DisconnectResponse) ProtoMessage() {}
-func (*DisconnectResponse) Descriptor() ([]byte, []int) {
-	return fileDescriptor_c34e17d86647303e, []int{26}
-}
-func (m *DisconnectResponse) XXX_Unmarshal(b []byte) error {
-	return m.Unmarshal(b)
-}
-func (m *DisconnectResponse) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
-	if deterministic {
-		return xxx_messageInfo_DisconnectResponse.Marshal(b, m, deterministic)
-	} else {
-		b = b[:cap(b)]
-		n, err := m.MarshalTo(b)
-		if err != nil {
-			return nil, err
-		}
-		return b[:n], nil
-	}
-}
-func (m *DisconnectResponse) XXX_Merge(src proto.Message) {
-	xxx_messageInfo_DisconnectResponse.Merge(m, src)
-}
-func (m *DisconnectResponse) XXX_Size() int {
-	return m.Size()
-}
-func (m *DisconnectResponse) XXX_DiscardUnknown() {
-	xxx_messageInfo_DisconnectResponse.DiscardUnknown(m)
-}
-
-var xxx_messageInfo_DisconnectResponse proto.InternalMessageInfo
-
 func init() {
 	proto.RegisterType((*Address)(nil), "packet.Address")
 	proto.RegisterType((*Host)(nil), "packet.Host")
@@ -2130,19 +1668,12 @@ func init() {
 	proto.RegisterType((*AuthorizeRequest)(nil), "packet.AuthorizeRequest")
 	proto.RegisterType((*RegisterRequest)(nil), "packet.RegisterRequest")
 	proto.RegisterType((*GenesisRequest)(nil), "packet.GenesisRequest")
-	proto.RegisterType((*Challenge1Request)(nil), "packet.Challenge1Request")
-	proto.RegisterType((*Challenge2Request)(nil), "packet.Challenge2Request")
-	proto.RegisterType((*DisconnectRequest)(nil), "packet.DisconnectRequest")
 	proto.RegisterType((*RPCResponse)(nil), "packet.RPCResponse")
-	proto.RegisterType((*CascadeResponse)(nil), "packet.CascadeResponse")
-	proto.RegisterType((*PulseResponse)(nil), "packet.PulseResponse")
+	proto.RegisterType((*BasicResponse)(nil), "packet.BasicResponse")
 	proto.RegisterType((*BootstrapResponse)(nil), "packet.BootstrapResponse")
 	proto.RegisterType((*AuthorizeResponse)(nil), "packet.AuthorizeResponse")
 	proto.RegisterType((*RegisterResponse)(nil), "packet.RegisterResponse")
 	proto.RegisterType((*GenesisResponse)(nil), "packet.GenesisResponse")
-	proto.RegisterType((*Challenge1Response)(nil), "packet.Challenge1Response")
-	proto.RegisterType((*Challenge2Response)(nil), "packet.Challenge2Response")
-	proto.RegisterType((*DisconnectResponse)(nil), "packet.DisconnectResponse")
 }
 
 func init() {
@@ -2150,70 +1681,63 @@ func init() {
 }
 
 var fileDescriptor_c34e17d86647303e = []byte{
-	// 1003 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x56, 0x4b, 0x6f, 0xe4, 0x44,
-	0x10, 0xb6, 0x93, 0xc9, 0x4c, 0x52, 0x93, 0x64, 0x92, 0xde, 0x25, 0x71, 0x46, 0xc8, 0x8a, 0xac,
-	0x15, 0x9b, 0x15, 0xbb, 0x13, 0xe1, 0xf0, 0xd8, 0x15, 0xb9, 0xe4, 0xb1, 0x30, 0x11, 0x02, 0x0d,
-	0x0e, 0x27, 0x2e, 0xc8, 0xb1, 0x9b, 0x19, 0x2b, 0x83, 0xdb, 0xb4, 0x7b, 0x40, 0x0b, 0x17, 0x7e,
-	0x02, 0x3f, 0x83, 0x9f, 0xb2, 0xc7, 0x1c, 0x73, 0x64, 0x26, 0x1c, 0x38, 0xee, 0x91, 0x1b, 0xa8,
-	0x1f, 0x6e, 0x3f, 0xd1, 0xe6, 0x12, 0x77, 0x7d, 0x55, 0x5f, 0x3f, 0x2a, 0x5f, 0x55, 0x0d, 0x1c,
-	0xc6, 0x98, 0xfd, 0x4c, 0xe8, 0xf5, 0xe1, 0x84, 0xa4, 0x2c, 0x5b, 0x27, 0x7e, 0x70, 0x8d, 0x99,
-	0xfa, 0x7c, 0x77, 0xc5, 0x3f, 0x71, 0x38, 0x48, 0x28, 0x61, 0x04, 0xb5, 0x25, 0xda, 0x7f, 0x36,
-	0x8e, 0xd8, 0x64, 0x76, 0x35, 0x08, 0xc8, 0x0f, 0x87, 0x63, 0x32, 0x26, 0x87, 0xc2, 0x7d, 0x35,
-	0xfb, 0x5e, 0x58, 0xc2, 0x10, 0x2b, 0x49, 0xeb, 0x7f, 0x58, 0x08, 0x8f, 0xe2, 0x94, 0x4c, 0x7d,
-	0x5a, 0xfb, 0x26, 0xb3, 0x69, 0x8a, 0xe5, 0x5f, 0xc9, 0x72, 0x4e, 0xa0, 0x73, 0x12, 0x86, 0x14,
-	0xa7, 0x29, 0xda, 0x84, 0xa5, 0x8b, 0x91, 0x65, 0xee, 0x9b, 0x07, 0xeb, 0xde, 0xd2, 0xc5, 0x08,
-	0x21, 0x68, 0x25, 0x84, 0x32, 0x6b, 0x69, 0xdf, 0x3c, 0xd8, 0xf0, 0xc4, 0x9a, 0x63, 0xdf, 0x92,
-	0x18, 0x5b, 0xcb, 0x22, 0x4a, 0xac, 0x9d, 0x00, 0x5a, 0x43, 0x92, 0x32, 0xb4, 0x03, 0xed, 0xaf,
-	0x48, 0x88, 0x2f, 0xce, 0xd5, 0x1e, 0xca, 0x42, 0x16, 0x74, 0x2e, 0x27, 0x84, 0xb2, 0x8b, 0x73,
-	0xb5, 0x55, 0x66, 0xa2, 0x27, 0xfa, 0x70, 0xb1, 0x61, 0xd7, 0xed, 0x0d, 0xe4, 0xdb, 0x07, 0x0a,
-	0xf6, 0x32, 0xbf, 0xf3, 0xaf, 0x09, 0x1b, 0x23, 0xe1, 0x3b, 0x95, 0xc9, 0x42, 0x8f, 0xa0, 0x7d,
-	0x89, 0xe3, 0x10, 0x53, 0x71, 0x5c, 0xd7, 0x5d, 0xcf, 0xb8, 0xfc, 0x32, 0x9e, 0xf2, 0xa1, 0x03,
-	0x58, 0xf5, 0x70, 0x80, 0xa3, 0x9f, 0x30, 0x15, 0xa7, 0x57, 0xe3, 0xb4, 0x17, 0xbd, 0x0b, 0x6b,
-	0x1e, 0xfe, 0x71, 0x86, 0x53, 0x7e, 0xd1, 0x65, 0x71, 0xd1, 0x1c, 0xe0, 0x8f, 0xf8, 0x86, 0xfa,
-	0x01, 0x7f, 0x5d, 0x4b, 0xbc, 0x2e, 0x33, 0xd1, 0xfb, 0xd0, 0x51, 0x61, 0xd6, 0x4a, 0xf9, 0x11,
-	0x0a, 0x1e, 0x1a, 0x5e, 0x16, 0x81, 0x06, 0xfc, 0x3a, 0x69, 0x42, 0xe2, 0x14, 0x5b, 0x6d, 0x11,
-	0xbd, 0x95, 0x47, 0x4b, 0x7c, 0x68, 0x78, 0x3a, 0xe6, 0x74, 0x0d, 0x3a, 0x89, 0xff, 0x6a, 0x4a,
-	0xfc, 0xd0, 0xb9, 0x6d, 0xe9, 0x83, 0x90, 0x03, 0xad, 0x51, 0x14, 0x8f, 0xab, 0x2f, 0xe7, 0xd8,
-	0xd0, 0xf0, 0x84, 0x0f, 0xbd, 0x07, 0xcb, 0xde, 0xe8, 0x4c, 0x3d, 0x1a, 0xe9, 0x53, 0x46, 0x67,
-	0xf9, 0xb5, 0x78, 0x00, 0x72, 0xa1, 0x73, 0xe6, 0xa7, 0x81, 0x1f, 0x62, 0xf5, 0x4f, 0xd8, 0xc9,
-	0x62, 0x15, 0x5c, 0x78, 0x86, 0x42, 0xd0, 0x53, 0x58, 0x19, 0x71, 0x11, 0x89, 0x5c, 0x74, 0xdd,
-	0x87, 0xfa, 0x02, 0x1c, 0xcc, 0xe3, 0x65, 0x10, 0x7a, 0x0e, 0x6b, 0xa7, 0x84, 0xb0, 0x94, 0x51,
-	0x3f, 0x51, 0x39, 0xb2, 0x32, 0x86, 0x76, 0xe4, 0xac, 0x3c, 0x98, 0x33, 0x4f, 0x66, 0x6c, 0x42,
-	0x68, 0xf4, 0x4b, 0x96, 0x2f, 0xcd, 0xd4, 0x8e, 0x02, 0x53, 0x63, 0xe8, 0x23, 0x9e, 0xe8, 0x71,
-	0x94, 0x32, 0x4c, 0xad, 0x8e, 0x20, 0xee, 0xe6, 0x89, 0x96, 0x78, 0xce, 0xd3, 0xa1, 0x3c, 0x19,
-	0x9f, 0xe3, 0x18, 0xa7, 0x51, 0x6a, 0xad, 0x96, 0x93, 0xa1, 0xe0, 0x42, 0x32, 0x14, 0x82, 0x3e,
-	0x05, 0x38, 0x9b, 0xf8, 0xd3, 0x29, 0x8e, 0xc7, 0xf8, 0x03, 0x6b, 0x4d, 0xd0, 0xf6, 0x74, 0x0e,
-	0xb5, 0x27, 0x67, 0x16, 0xc2, 0x4b, 0x64, 0xd7, 0x82, 0xff, 0x21, 0xbb, 0x4d, 0x64, 0x97, 0x93,
-	0xcf, 0xa3, 0x34, 0x20, 0x71, 0x8c, 0x03, 0x66, 0x75, 0xcb, 0xe4, 0xdc, 0x53, 0x20, 0xe7, 0x20,
-	0x97, 0x16, 0x95, 0x0e, 0xe7, 0xaf, 0x56, 0x2e, 0xcb, 0x7b, 0x69, 0xeb, 0x71, 0x51, 0x5b, 0x0f,
-	0x4a, 0xda, 0xd2, 0x22, 0x16, 0xe2, 0x3a, 0xaa, 0x8a, 0x6b, 0xb7, 0x26, 0x2e, 0x4d, 0xd0, 0xea,
-	0x7a, 0x56, 0x56, 0xd7, 0x3b, 0x15, 0x75, 0x69, 0x82, 0x92, 0xd7, 0x8b, 0xba, 0xbc, 0xf6, 0x1a,
-	0xe4, 0xa5, 0x69, 0x05, 0x7d, 0xbd, 0xa8, 0xeb, 0x6b, 0xaf, 0x41, 0x5f, 0x39, 0x35, 0x17, 0xd8,
-	0xc7, 0x35, 0x81, 0x59, 0x75, 0x81, 0x15, 0x2b, 0x5a, 0x29, 0xec, 0xa8, 0xaa, 0xb0, 0xdd, 0x9a,
-	0xc2, 0xf2, 0x8c, 0x64, 0x12, 0x3b, 0x6e, 0x90, 0x58, 0xbf, 0x49, 0x62, 0x9a, 0x5a, 0xd4, 0xd8,
-	0x71, 0x83, 0xc6, 0xfa, 0x4d, 0x1a, 0x6b, 0x60, 0xbb, 0x9c, 0x5d, 0x13, 0x59, 0xbf, 0x49, 0x64,
-	0x39, 0xbb, 0xa0, 0x32, 0x80, 0x55, 0xaa, 0x3c, 0x4e, 0x5b, 0x2a, 0xcb, 0x79, 0x0e, 0x90, 0xb7,
-	0x21, 0x3e, 0x36, 0xbe, 0xc4, 0x6c, 0x42, 0xc2, 0x6c, 0x6c, 0x48, 0x8b, 0x8f, 0x9a, 0x73, 0x9f,
-	0xf9, 0x42, 0x64, 0xeb, 0x9e, 0x58, 0x3b, 0xd7, 0x5a, 0x4e, 0xbc, 0x21, 0x8b, 0xf9, 0x12, 0xa6,
-	0x96, 0xb9, 0xbf, 0xcc, 0x1b, 0xb2, 0x32, 0xb9, 0xe7, 0x65, 0xcc, 0x28, 0x49, 0x5e, 0x29, 0x6e,
-	0x66, 0xa2, 0xa7, 0xb0, 0xed, 0xe1, 0x64, 0x1a, 0x05, 0x3e, 0x8b, 0x48, 0xfc, 0x99, 0x1f, 0x30,
-	0x42, 0x55, 0xab, 0xaf, 0x3b, 0x9c, 0x5f, 0x61, 0xb3, 0xdc, 0x01, 0x8b, 0x43, 0xc0, 0x2c, 0x0f,
-	0x81, 0x47, 0x6f, 0x69, 0xb6, 0xb2, 0x1a, 0x9e, 0x54, 0xab, 0xa1, 0x57, 0xad, 0x86, 0xcc, 0xef,
-	0x7c, 0x02, 0xeb, 0xc5, 0x66, 0x8a, 0x1e, 0x67, 0x35, 0x21, 0xcb, 0x72, 0x7b, 0x20, 0x87, 0xb8,
-	0xc0, 0x46, 0x7c, 0x92, 0xab, 0x6a, 0x70, 0x10, 0x6c, 0x55, 0x7b, 0x2a, 0xc7, 0xaa, 0xdd, 0xd2,
-	0xd9, 0x86, 0x5e, 0xa5, 0x11, 0x3a, 0x5b, 0xb0, 0x59, 0xee, 0x72, 0xce, 0x03, 0xd8, 0xae, 0x35,
-	0xb0, 0x12, 0xe8, 0x16, 0xc0, 0x5a, 0xc3, 0x71, 0xbe, 0x80, 0x6e, 0xa1, 0x27, 0x20, 0x0b, 0xda,
-	0x1e, 0x4e, 0x67, 0x53, 0x26, 0xb3, 0x37, 0x34, 0x3c, 0x65, 0xa3, 0x1d, 0x58, 0x79, 0x49, 0x29,
-	0x91, 0x23, 0x9a, 0x3b, 0xa4, 0x59, 0x52, 0xcf, 0xd7, 0xd0, 0xab, 0xf4, 0x0c, 0xd4, 0x87, 0xce,
-	0xe5, 0x2c, 0x08, 0xf8, 0xef, 0x07, 0xbe, 0xe3, 0x2a, 0x2f, 0x19, 0x05, 0xdc, 0x6b, 0xcb, 0x1e,
-	0x6c, 0x94, 0x7a, 0x0a, 0x7f, 0x45, 0xad, 0x63, 0x70, 0xb0, 0xd6, 0x0b, 0x78, 0x4a, 0xab, 0x65,
-	0xce, 0x53, 0x5a, 0xa9, 0x61, 0xe7, 0x21, 0xa0, 0x7a, 0x79, 0x96, 0x50, 0xb7, 0x88, 0xd6, 0xcb,
-	0xe9, 0xf4, 0xf8, 0xf5, 0xdc, 0x36, 0x6e, 0xe6, 0xb6, 0x71, 0x3b, 0xb7, 0x8d, 0x37, 0x73, 0xdb,
-	0xfc, 0x67, 0x6e, 0x1b, 0xbf, 0x2d, 0x6c, 0xf3, 0x8f, 0x85, 0x6d, 0xbe, 0x5e, 0xd8, 0xe6, 0xcd,
-	0xc2, 0x36, 0xff, 0x5c, 0xd8, 0xe6, 0xdf, 0x0b, 0xdb, 0x78, 0xb3, 0xb0, 0xcd, 0xdf, 0xef, 0x6c,
-	0xe3, 0xe6, 0xce, 0x36, 0x6e, 0xef, 0x6c, 0xe3, 0xaa, 0x2d, 0x7e, 0xe5, 0x1d, 0xfd, 0x17, 0x00,
-	0x00, 0xff, 0xff, 0xf3, 0xdb, 0x50, 0x2f, 0x85, 0x0a, 0x00, 0x00,
+	// 891 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x8c, 0x55, 0x4b, 0x6f, 0x23, 0x45,
+	0x10, 0x9e, 0x89, 0xe3, 0x47, 0xca, 0xce, 0xc3, 0xbd, 0x10, 0x86, 0x08, 0x8d, 0xa2, 0xd1, 0x8a,
+	0xcd, 0x8a, 0x5d, 0x5b, 0xf2, 0xf2, 0xd8, 0x95, 0xb8, 0xc4, 0xc9, 0x82, 0x2d, 0x04, 0x8c, 0x26,
+	0x9c, 0xb8, 0xa0, 0xf1, 0x4c, 0x63, 0x8f, 0x62, 0xa6, 0x87, 0xee, 0x36, 0x68, 0xe1, 0xc2, 0x4f,
+	0xe0, 0x2f, 0x70, 0xe3, 0xa7, 0xec, 0x31, 0xc7, 0x3d, 0x62, 0xe7, 0xc2, 0x71, 0x2f, 0x48, 0xdc,
+	0x40, 0xfd, 0x98, 0x9e, 0x87, 0x91, 0xc8, 0xc5, 0xee, 0xfa, 0xaa, 0xaa, 0xbb, 0xeb, 0xab, 0xfa,
+	0x7a, 0x60, 0x98, 0x62, 0xfe, 0x23, 0xa1, 0xd7, 0xc3, 0x05, 0x61, 0x3c, 0x5f, 0x67, 0x61, 0x74,
+	0x8d, 0xb9, 0xfe, 0xfb, 0x66, 0x26, 0xfe, 0xd2, 0x78, 0x90, 0x51, 0xc2, 0x09, 0x6a, 0x29, 0xf4,
+	0xe4, 0xf1, 0x3c, 0xe1, 0x8b, 0xd5, 0x6c, 0x10, 0x91, 0xef, 0x86, 0x73, 0x32, 0x27, 0x43, 0xe9,
+	0x9e, 0xad, 0xbe, 0x95, 0x96, 0x34, 0xe4, 0x4a, 0xa5, 0x9d, 0xbc, 0x5f, 0x0a, 0x4f, 0x52, 0x46,
+	0x96, 0x21, 0xdd, 0xfa, 0xcf, 0x56, 0x4b, 0x86, 0xd5, 0xaf, 0xca, 0xf2, 0xce, 0xa1, 0x7d, 0x1e,
+	0xc7, 0x14, 0x33, 0x86, 0x0e, 0x60, 0x67, 0xea, 0x3b, 0xf6, 0xa9, 0x7d, 0xd6, 0x0b, 0x76, 0xa6,
+	0x3e, 0x42, 0xb0, 0x9b, 0x11, 0xca, 0x9d, 0x9d, 0x53, 0xfb, 0x6c, 0x3f, 0x90, 0x6b, 0x81, 0x7d,
+	0x4d, 0x52, 0xec, 0x34, 0x64, 0x94, 0x5c, 0x7b, 0x11, 0xec, 0x4e, 0x08, 0xe3, 0xe8, 0x18, 0x5a,
+	0x5f, 0x90, 0x18, 0x4f, 0x2f, 0xf5, 0x1e, 0xda, 0x42, 0x0e, 0xb4, 0xaf, 0x16, 0x84, 0xf2, 0xe9,
+	0xa5, 0xde, 0x2a, 0x37, 0xd1, 0x43, 0x73, 0xb8, 0xdc, 0xb0, 0x3b, 0x3a, 0x1c, 0xa8, 0xda, 0x07,
+	0x1a, 0x0e, 0x72, 0xbf, 0xf7, 0x8f, 0x0d, 0xfb, 0xbe, 0xf4, 0x8d, 0x15, 0x59, 0xe8, 0x3e, 0xb4,
+	0xae, 0x70, 0x1a, 0x63, 0x2a, 0x8f, 0xeb, 0x8e, 0x7a, 0x79, 0xae, 0xb8, 0x4c, 0xa0, 0x7d, 0xe8,
+	0x0c, 0x3a, 0x01, 0x8e, 0x70, 0xf2, 0x03, 0xa6, 0xf2, 0xf4, 0x7a, 0x9c, 0xf1, 0xa2, 0x77, 0x60,
+	0x2f, 0xc0, 0xdf, 0xaf, 0x30, 0x13, 0x17, 0x6d, 0xc8, 0x8b, 0x16, 0x80, 0x28, 0xe2, 0x2b, 0x1a,
+	0x46, 0xa2, 0xba, 0x5d, 0x59, 0x5d, 0x6e, 0xa2, 0xf7, 0xa0, 0xad, 0xc3, 0x9c, 0x66, 0xb5, 0x08,
+	0x0d, 0x4f, 0xac, 0x20, 0x8f, 0x40, 0x03, 0x71, 0x1d, 0x96, 0x91, 0x94, 0x61, 0xa7, 0x25, 0xa3,
+	0x8f, 0x8a, 0x68, 0x85, 0x4f, 0xac, 0xc0, 0xc4, 0x8c, 0xf7, 0xa0, 0x9d, 0x85, 0x2f, 0x96, 0x24,
+	0x8c, 0xbd, 0xdf, 0x1a, 0xe6, 0x20, 0xe4, 0xc1, 0xae, 0x9f, 0xa4, 0xf3, 0x7a, 0xe5, 0x02, 0x9b,
+	0x58, 0x81, 0xf4, 0xa1, 0x77, 0xa1, 0x11, 0xf8, 0x17, 0xba, 0x68, 0x64, 0x4e, 0xf1, 0x2f, 0x8a,
+	0x6b, 0x89, 0x00, 0x34, 0x82, 0xf6, 0x45, 0xc8, 0xa2, 0x30, 0xc6, 0xba, 0x09, 0xc7, 0x79, 0xac,
+	0x86, 0x4b, 0x65, 0x68, 0x04, 0x3d, 0x82, 0xa6, 0x2f, 0x86, 0x48, 0x72, 0xd1, 0x1d, 0xbd, 0x61,
+	0x2e, 0x20, 0xc0, 0x22, 0x5e, 0x05, 0xa1, 0xa7, 0xb0, 0x37, 0x26, 0x84, 0x33, 0x4e, 0xc3, 0x4c,
+	0x73, 0xe4, 0xe4, 0x19, 0xc6, 0x51, 0x64, 0x15, 0xc1, 0x22, 0xf3, 0x7c, 0xc5, 0x17, 0x84, 0x26,
+	0x3f, 0xe5, 0x7c, 0x99, 0x4c, 0xe3, 0x28, 0x65, 0x1a, 0x0c, 0x7d, 0x20, 0x88, 0x9e, 0x27, 0x8c,
+	0x63, 0xea, 0xb4, 0x65, 0xe2, 0x5b, 0x05, 0xd1, 0x0a, 0x2f, 0xf2, 0x4c, 0xa8, 0x20, 0xe3, 0x53,
+	0x9c, 0x62, 0x96, 0x30, 0xa7, 0x53, 0x25, 0x43, 0xc3, 0x25, 0x32, 0x34, 0x22, 0x7a, 0x44, 0x15,
+	0xea, 0xfd, 0xb5, 0x53, 0xf4, 0xf7, 0x4e, 0x4d, 0x7a, 0x50, 0x6e, 0xd2, 0xbd, 0x4a, 0x93, 0xcc,
+	0x34, 0xc8, 0x2e, 0x3d, 0x86, 0xe6, 0x38, 0x64, 0x49, 0xa4, 0x7b, 0xf4, 0xa6, 0xe1, 0x4f, 0x80,
+	0xa5, 0x60, 0x15, 0x85, 0x9e, 0x95, 0x29, 0x57, 0x4d, 0x7a, 0xfb, 0x3f, 0x28, 0x37, 0x69, 0x25,
+	0xce, 0x9f, 0x95, 0x39, 0x6f, 0x56, 0x53, 0x4b, 0x9c, 0x17, 0xa9, 0x05, 0xe9, 0x1f, 0x96, 0x48,
+	0xaf, 0x75, 0xab, 0x20, 0xbd, 0x3c, 0xe5, 0x9a, 0xf5, 0x27, 0x05, 0xeb, 0xb5, 0x5e, 0x19, 0xd6,
+	0x4d, 0x96, 0xa1, 0x1d, 0xa0, 0x43, 0x35, 0xec, 0xb5, 0x14, 0xd5, 0xde, 0x53, 0x80, 0x62, 0xc0,
+	0xc5, 0x83, 0xf4, 0x39, 0xe6, 0x0b, 0x12, 0xe7, 0x0f, 0x92, 0xb2, 0xc4, 0x23, 0x76, 0x19, 0xf2,
+	0x50, 0xb2, 0xde, 0x0b, 0xe4, 0xda, 0xbb, 0x36, 0x2a, 0x10, 0x52, 0x97, 0x2f, 0x57, 0xcc, 0x1c,
+	0xfb, 0xb4, 0x21, 0xa4, 0xae, 0x4d, 0xe1, 0x79, 0x9e, 0x72, 0x4a, 0xb2, 0x17, 0x3a, 0x37, 0x37,
+	0xd1, 0x23, 0xe8, 0x07, 0x38, 0x5b, 0x26, 0x51, 0xc8, 0x13, 0x92, 0x7e, 0x12, 0x46, 0x9c, 0x50,
+	0xfd, 0x88, 0x6c, 0x3b, 0xbc, 0x9f, 0xe1, 0xa0, 0xaa, 0xad, 0xf2, 0xf3, 0x62, 0x57, 0x9f, 0x97,
+	0xfb, 0xff, 0x23, 0x63, 0x35, 0x1e, 0x0f, 0xeb, 0x22, 0x3e, 0xac, 0x8b, 0x38, 0xf7, 0x7b, 0x1f,
+	0x41, 0xaf, 0x2c, 0x53, 0xf4, 0x20, 0xd7, 0xb2, 0x9a, 0xd3, 0xfe, 0x40, 0x7d, 0x1e, 0x24, 0xe6,
+	0x8b, 0x6f, 0x84, 0x96, 0xb1, 0x87, 0xe0, 0xa8, 0xae, 0x56, 0x81, 0xd5, 0x75, 0xe8, 0xf5, 0xe1,
+	0xb0, 0x26, 0x31, 0xef, 0x08, 0x0e, 0xaa, 0xfa, 0xf1, 0x3e, 0x83, 0x6e, 0x69, 0xca, 0x91, 0x03,
+	0xad, 0x00, 0xb3, 0xd5, 0x92, 0xab, 0xf2, 0x27, 0x56, 0xa0, 0x6d, 0x74, 0x0c, 0xcd, 0xe7, 0x94,
+	0x12, 0xf5, 0x7a, 0x0b, 0x87, 0x32, 0x2b, 0xed, 0xff, 0x12, 0xf6, 0x2b, 0x3a, 0x40, 0x27, 0xd0,
+	0xbe, 0x5a, 0x45, 0x91, 0xf8, 0xb0, 0x88, 0xfd, 0x3a, 0x62, 0x6e, 0x34, 0x70, 0xa7, 0x0d, 0xef,
+	0x41, 0x7f, 0x4b, 0x25, 0x02, 0xdc, 0x9a, 0x7f, 0x41, 0x40, 0x7d, 0xb4, 0x05, 0x01, 0xb5, 0xb9,
+	0x1d, 0x7f, 0xfc, 0x72, 0xed, 0x5a, 0x37, 0x6b, 0xd7, 0x7a, 0xb5, 0x76, 0xad, 0xd7, 0x6b, 0xd7,
+	0xfe, 0x7b, 0xed, 0x5a, 0xbf, 0x6c, 0x5c, 0xfb, 0xf7, 0x8d, 0x6b, 0xbf, 0xdc, 0xb8, 0xf6, 0xcd,
+	0xc6, 0xb5, 0xff, 0xd8, 0xb8, 0xf6, 0x9f, 0x1b, 0xd7, 0x7a, 0xbd, 0x71, 0xed, 0x5f, 0x6f, 0x5d,
+	0xeb, 0xe6, 0xd6, 0xb5, 0x5e, 0xdd, 0xba, 0xd6, 0xac, 0x25, 0xbf, 0xd5, 0x4f, 0xfe, 0x0d, 0x00,
+	0x00, 0xff, 0xff, 0x06, 0x18, 0x53, 0x16, 0x4b, 0x08, 0x00, 0x00,
 }
 
 func (this *Address) Equal(that interface{}) bool {
@@ -2588,78 +2112,6 @@ func (this *Request_Genesis) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Request_Challenge1) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Request_Challenge1)
-	if !ok {
-		that2, ok := that.(Request_Challenge1)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Challenge1.Equal(that1.Challenge1) {
-		return false
-	}
-	return true
-}
-func (this *Request_Challenge2) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Request_Challenge2)
-	if !ok {
-		that2, ok := that.(Request_Challenge2)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Challenge2.Equal(that1.Challenge2) {
-		return false
-	}
-	return true
-}
-func (this *Request_Disconnect) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Request_Disconnect)
-	if !ok {
-		that2, ok := that.(Request_Disconnect)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Disconnect.Equal(that1.Disconnect) {
-		return false
-	}
-	return true
-}
 func (this *Response) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -2738,14 +2190,14 @@ func (this *Response_RPC) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Response_Cascade) Equal(that interface{}) bool {
+func (this *Response_Basic) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*Response_Cascade)
+	that1, ok := that.(*Response_Basic)
 	if !ok {
-		that2, ok := that.(Response_Cascade)
+		that2, ok := that.(Response_Basic)
 		if ok {
 			that1 = &that2
 		} else {
@@ -2757,31 +2209,7 @@ func (this *Response_Cascade) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
-	if !this.Cascade.Equal(that1.Cascade) {
-		return false
-	}
-	return true
-}
-func (this *Response_Pulse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Response_Pulse)
-	if !ok {
-		that2, ok := that.(Response_Pulse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Pulse.Equal(that1.Pulse) {
+	if !this.Basic.Equal(that1.Basic) {
 		return false
 	}
 	return true
@@ -2878,78 +2306,6 @@ func (this *Response_Genesis) Equal(that interface{}) bool {
 		return false
 	}
 	if !this.Genesis.Equal(that1.Genesis) {
-		return false
-	}
-	return true
-}
-func (this *Response_Challenge1) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Response_Challenge1)
-	if !ok {
-		that2, ok := that.(Response_Challenge1)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Challenge1.Equal(that1.Challenge1) {
-		return false
-	}
-	return true
-}
-func (this *Response_Challenge2) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Response_Challenge2)
-	if !ok {
-		that2, ok := that.(Response_Challenge2)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Challenge2.Equal(that1.Challenge2) {
-		return false
-	}
-	return true
-}
-func (this *Response_Disconnect) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Response_Disconnect)
-	if !ok {
-		that2, ok := that.(Response_Disconnect)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	if !this.Disconnect.Equal(that1.Disconnect) {
 		return false
 	}
 	return true
@@ -3175,69 +2531,6 @@ func (this *GenesisRequest) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Challenge1Request) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Challenge1Request)
-	if !ok {
-		that2, ok := that.(Challenge1Request)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *Challenge2Request) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Challenge2Request)
-	if !ok {
-		that2, ok := that.(Challenge2Request)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *DisconnectRequest) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DisconnectRequest)
-	if !ok {
-		that2, ok := that.(DisconnectRequest)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
 func (this *RPCResponse) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -3316,14 +2609,14 @@ func (this *RPCResponse_Error) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *CascadeResponse) Equal(that interface{}) bool {
+func (this *BasicResponse) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*CascadeResponse)
+	that1, ok := that.(*BasicResponse)
 	if !ok {
-		that2, ok := that.(CascadeResponse)
+		that2, ok := that.(BasicResponse)
 		if ok {
 			that1 = &that2
 		} else {
@@ -3346,14 +2639,14 @@ func (this *CascadeResponse) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *CascadeResponse_Success) Equal(that interface{}) bool {
+func (this *BasicResponse_Success) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*CascadeResponse_Success)
+	that1, ok := that.(*BasicResponse_Success)
 	if !ok {
-		that2, ok := that.(CascadeResponse_Success)
+		that2, ok := that.(BasicResponse_Success)
 		if ok {
 			that1 = &that2
 		} else {
@@ -3370,14 +2663,14 @@ func (this *CascadeResponse_Success) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *CascadeResponse_Error) Equal(that interface{}) bool {
+func (this *BasicResponse_Error) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
 	}
 
-	that1, ok := that.(*CascadeResponse_Error)
+	that1, ok := that.(*BasicResponse_Error)
 	if !ok {
-		that2, ok := that.(CascadeResponse_Error)
+		that2, ok := that.(BasicResponse_Error)
 		if ok {
 			that1 = &that2
 		} else {
@@ -3390,27 +2683,6 @@ func (this *CascadeResponse_Error) Equal(that interface{}) bool {
 		return false
 	}
 	if !bytes.Equal(this.Error, that1.Error) {
-		return false
-	}
-	return true
-}
-func (this *PulseResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*PulseResponse)
-	if !ok {
-		that2, ok := that.(PulseResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
 		return false
 	}
 	return true
@@ -3499,69 +2771,6 @@ func (this *GenesisResponse) Equal(that interface{}) bool {
 	}
 	return true
 }
-func (this *Challenge1Response) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Challenge1Response)
-	if !ok {
-		that2, ok := that.(Challenge1Response)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *Challenge2Response) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*Challenge2Response)
-	if !ok {
-		that2, ok := that.(Challenge2Response)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
-func (this *DisconnectResponse) Equal(that interface{}) bool {
-	if that == nil {
-		return this == nil
-	}
-
-	that1, ok := that.(*DisconnectResponse)
-	if !ok {
-		that2, ok := that.(DisconnectResponse)
-		if ok {
-			that1 = &that2
-		} else {
-			return false
-		}
-	}
-	if that1 == nil {
-		return this == nil
-	} else if this == nil {
-		return false
-	}
-	return true
-}
 func (this *Address) GoString() string {
 	if this == nil {
 		return "nil"
@@ -3628,7 +2837,7 @@ func (this *Request) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 15)
+	s := make([]string, 0, 12)
 	s = append(s, "&packet.Request{")
 	if this.Request != nil {
 		s = append(s, "Request: "+fmt.Sprintf("%#v", this.Request)+",\n")
@@ -3700,35 +2909,11 @@ func (this *Request_Genesis) GoString() string {
 		`Genesis:` + fmt.Sprintf("%#v", this.Genesis) + `}`}, ", ")
 	return s
 }
-func (this *Request_Challenge1) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&packet.Request_Challenge1{` +
-		`Challenge1:` + fmt.Sprintf("%#v", this.Challenge1) + `}`}, ", ")
-	return s
-}
-func (this *Request_Challenge2) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&packet.Request_Challenge2{` +
-		`Challenge2:` + fmt.Sprintf("%#v", this.Challenge2) + `}`}, ", ")
-	return s
-}
-func (this *Request_Disconnect) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&packet.Request_Disconnect{` +
-		`Disconnect:` + fmt.Sprintf("%#v", this.Disconnect) + `}`}, ", ")
-	return s
-}
 func (this *Response) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 15)
+	s := make([]string, 0, 11)
 	s = append(s, "&packet.Response{")
 	if this.Response != nil {
 		s = append(s, "Response: "+fmt.Sprintf("%#v", this.Response)+",\n")
@@ -3752,20 +2937,12 @@ func (this *Response_RPC) GoString() string {
 		`RPC:` + fmt.Sprintf("%#v", this.RPC) + `}`}, ", ")
 	return s
 }
-func (this *Response_Cascade) GoString() string {
+func (this *Response_Basic) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&packet.Response_Cascade{` +
-		`Cascade:` + fmt.Sprintf("%#v", this.Cascade) + `}`}, ", ")
-	return s
-}
-func (this *Response_Pulse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&packet.Response_Pulse{` +
-		`Pulse:` + fmt.Sprintf("%#v", this.Pulse) + `}`}, ", ")
+	s := strings.Join([]string{`&packet.Response_Basic{` +
+		`Basic:` + fmt.Sprintf("%#v", this.Basic) + `}`}, ", ")
 	return s
 }
 func (this *Response_Bootstrap) GoString() string {
@@ -3798,30 +2975,6 @@ func (this *Response_Genesis) GoString() string {
 	}
 	s := strings.Join([]string{`&packet.Response_Genesis{` +
 		`Genesis:` + fmt.Sprintf("%#v", this.Genesis) + `}`}, ", ")
-	return s
-}
-func (this *Response_Challenge1) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&packet.Response_Challenge1{` +
-		`Challenge1:` + fmt.Sprintf("%#v", this.Challenge1) + `}`}, ", ")
-	return s
-}
-func (this *Response_Challenge2) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&packet.Response_Challenge2{` +
-		`Challenge2:` + fmt.Sprintf("%#v", this.Challenge2) + `}`}, ", ")
-	return s
-}
-func (this *Response_Disconnect) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&packet.Response_Disconnect{` +
-		`Disconnect:` + fmt.Sprintf("%#v", this.Disconnect) + `}`}, ", ")
 	return s
 }
 func (this *Ping) GoString() string {
@@ -3920,33 +3073,6 @@ func (this *GenesisRequest) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *Challenge1Request) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&packet.Challenge1Request{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *Challenge2Request) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&packet.Challenge2Request{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DisconnectRequest) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&packet.DisconnectRequest{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
 func (this *RPCResponse) GoString() string {
 	if this == nil {
 		return "nil"
@@ -3975,42 +3101,33 @@ func (this *RPCResponse_Error) GoString() string {
 		`Error:` + fmt.Sprintf("%#v", this.Error) + `}`}, ", ")
 	return s
 }
-func (this *CascadeResponse) GoString() string {
+func (this *BasicResponse) GoString() string {
 	if this == nil {
 		return "nil"
 	}
 	s := make([]string, 0, 6)
-	s = append(s, "&packet.CascadeResponse{")
+	s = append(s, "&packet.BasicResponse{")
 	if this.Response != nil {
 		s = append(s, "Response: "+fmt.Sprintf("%#v", this.Response)+",\n")
 	}
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
-func (this *CascadeResponse_Success) GoString() string {
+func (this *BasicResponse_Success) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&packet.CascadeResponse_Success{` +
+	s := strings.Join([]string{`&packet.BasicResponse_Success{` +
 		`Success:` + fmt.Sprintf("%#v", this.Success) + `}`}, ", ")
 	return s
 }
-func (this *CascadeResponse_Error) GoString() string {
+func (this *BasicResponse_Error) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&packet.CascadeResponse_Error{` +
+	s := strings.Join([]string{`&packet.BasicResponse_Error{` +
 		`Error:` + fmt.Sprintf("%#v", this.Error) + `}`}, ", ")
 	return s
-}
-func (this *PulseResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&packet.PulseResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
 }
 func (this *BootstrapResponse) GoString() string {
 	if this == nil {
@@ -4045,33 +3162,6 @@ func (this *GenesisResponse) GoString() string {
 	}
 	s := make([]string, 0, 4)
 	s = append(s, "&packet.GenesisResponse{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *Challenge1Response) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&packet.Challenge1Response{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *Challenge2Response) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&packet.Challenge2Response{")
-	s = append(s, "}")
-	return strings.Join(s, "")
-}
-func (this *DisconnectResponse) GoString() string {
-	if this == nil {
-		return "nil"
-	}
-	s := make([]string, 0, 4)
-	s = append(s, "&packet.DisconnectResponse{")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -4378,48 +3468,6 @@ func (m *Request_Genesis) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Request_Challenge1) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.Challenge1 != nil {
-		dAtA[i] = 0x4a
-		i++
-		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Challenge1.Size()))
-		n16, err := m.Challenge1.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n16
-	}
-	return i, nil
-}
-func (m *Request_Challenge2) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.Challenge2 != nil {
-		dAtA[i] = 0x52
-		i++
-		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Challenge2.Size()))
-		n17, err := m.Challenge2.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n17
-	}
-	return i, nil
-}
-func (m *Request_Disconnect) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.Disconnect != nil {
-		dAtA[i] = 0x5a
-		i++
-		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Disconnect.Size()))
-		n18, err := m.Disconnect.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n18
-	}
-	return i, nil
-}
 func (m *Response) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -4436,11 +3484,11 @@ func (m *Response) MarshalTo(dAtA []byte) (int, error) {
 	var l int
 	_ = l
 	if m.Response != nil {
-		nn19, err := m.Response.MarshalTo(dAtA[i:])
+		nn16, err := m.Response.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += nn19
+		i += nn16
 	}
 	return i, nil
 }
@@ -4451,11 +3499,11 @@ func (m *Response_Ping) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Ping.Size()))
-		n20, err := m.Ping.MarshalTo(dAtA[i:])
+		n17, err := m.Ping.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n20
+		i += n17
 	}
 	return i, nil
 }
@@ -4465,7 +3513,49 @@ func (m *Response_RPC) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintPacketBackend(dAtA, i, uint64(m.RPC.Size()))
-		n21, err := m.RPC.MarshalTo(dAtA[i:])
+		n18, err := m.RPC.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n18
+	}
+	return i, nil
+}
+func (m *Response_Basic) MarshalTo(dAtA []byte) (int, error) {
+	i := 0
+	if m.Basic != nil {
+		dAtA[i] = 0x1a
+		i++
+		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Basic.Size()))
+		n19, err := m.Basic.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n19
+	}
+	return i, nil
+}
+func (m *Response_Bootstrap) MarshalTo(dAtA []byte) (int, error) {
+	i := 0
+	if m.Bootstrap != nil {
+		dAtA[i] = 0x22
+		i++
+		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Bootstrap.Size()))
+		n20, err := m.Bootstrap.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n20
+	}
+	return i, nil
+}
+func (m *Response_Authorize) MarshalTo(dAtA []byte) (int, error) {
+	i := 0
+	if m.Authorize != nil {
+		dAtA[i] = 0x2a
+		i++
+		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Authorize.Size()))
+		n21, err := m.Authorize.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -4473,13 +3563,13 @@ func (m *Response_RPC) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Response_Cascade) MarshalTo(dAtA []byte) (int, error) {
+func (m *Response_Register) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.Cascade != nil {
-		dAtA[i] = 0x1a
+	if m.Register != nil {
+		dAtA[i] = 0x32
 		i++
-		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Cascade.Size()))
-		n22, err := m.Cascade.MarshalTo(dAtA[i:])
+		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Register.Size()))
+		n22, err := m.Register.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
@@ -4487,115 +3577,17 @@ func (m *Response_Cascade) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *Response_Pulse) MarshalTo(dAtA []byte) (int, error) {
+func (m *Response_Genesis) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
-	if m.Pulse != nil {
-		dAtA[i] = 0x22
+	if m.Genesis != nil {
+		dAtA[i] = 0x3a
 		i++
-		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Pulse.Size()))
-		n23, err := m.Pulse.MarshalTo(dAtA[i:])
+		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Genesis.Size()))
+		n23, err := m.Genesis.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
 		i += n23
-	}
-	return i, nil
-}
-func (m *Response_Bootstrap) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.Bootstrap != nil {
-		dAtA[i] = 0x2a
-		i++
-		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Bootstrap.Size()))
-		n24, err := m.Bootstrap.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n24
-	}
-	return i, nil
-}
-func (m *Response_Authorize) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.Authorize != nil {
-		dAtA[i] = 0x32
-		i++
-		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Authorize.Size()))
-		n25, err := m.Authorize.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n25
-	}
-	return i, nil
-}
-func (m *Response_Register) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.Register != nil {
-		dAtA[i] = 0x3a
-		i++
-		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Register.Size()))
-		n26, err := m.Register.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n26
-	}
-	return i, nil
-}
-func (m *Response_Genesis) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.Genesis != nil {
-		dAtA[i] = 0x42
-		i++
-		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Genesis.Size()))
-		n27, err := m.Genesis.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n27
-	}
-	return i, nil
-}
-func (m *Response_Challenge1) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.Challenge1 != nil {
-		dAtA[i] = 0x4a
-		i++
-		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Challenge1.Size()))
-		n28, err := m.Challenge1.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n28
-	}
-	return i, nil
-}
-func (m *Response_Challenge2) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.Challenge2 != nil {
-		dAtA[i] = 0x52
-		i++
-		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Challenge2.Size()))
-		n29, err := m.Challenge2.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n29
-	}
-	return i, nil
-}
-func (m *Response_Disconnect) MarshalTo(dAtA []byte) (int, error) {
-	i := 0
-	if m.Disconnect != nil {
-		dAtA[i] = 0x5a
-		i++
-		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Disconnect.Size()))
-		n30, err := m.Disconnect.MarshalTo(dAtA[i:])
-		if err != nil {
-			return 0, err
-		}
-		i += n30
 	}
 	return i, nil
 }
@@ -4709,21 +3701,21 @@ func (m *CascadeRequest) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x12
 		i++
 		i = encodeVarintPacketBackend(dAtA, i, uint64(m.RPC.Size()))
-		n31, err := m.RPC.MarshalTo(dAtA[i:])
+		n24, err := m.RPC.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n31
+		i += n24
 	}
 	if m.Cascade != nil {
 		dAtA[i] = 0x1a
 		i++
 		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Cascade.Size()))
-		n32, err := m.Cascade.MarshalTo(dAtA[i:])
+		n25, err := m.Cascade.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n32
+		i += n25
 	}
 	return i, nil
 }
@@ -4747,11 +3739,11 @@ func (m *PulseRequest) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0xa
 		i++
 		i = encodeVarintPacketBackend(dAtA, i, uint64(m.Pulse.Size()))
-		n33, err := m.Pulse.MarshalTo(dAtA[i:])
+		n26, err := m.Pulse.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n33
+		i += n26
 	}
 	return i, nil
 }
@@ -4828,60 +3820,6 @@ func (m *GenesisRequest) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
-func (m *Challenge1Request) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Challenge1Request) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	return i, nil
-}
-
-func (m *Challenge2Request) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Challenge2Request) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	return i, nil
-}
-
-func (m *DisconnectRequest) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *DisconnectRequest) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	return i, nil
-}
-
 func (m *RPCResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -4898,11 +3836,11 @@ func (m *RPCResponse) MarshalTo(dAtA []byte) (int, error) {
 	var l int
 	_ = l
 	if m.Response != nil {
-		nn34, err := m.Response.MarshalTo(dAtA[i:])
+		nn27, err := m.Response.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += nn34
+		i += nn27
 	}
 	return i, nil
 }
@@ -4927,7 +3865,7 @@ func (m *RPCResponse_Error) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *CascadeResponse) Marshal() (dAtA []byte, err error) {
+func (m *BasicResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
 	n, err := m.MarshalTo(dAtA)
@@ -4937,22 +3875,22 @@ func (m *CascadeResponse) Marshal() (dAtA []byte, err error) {
 	return dAtA[:n], nil
 }
 
-func (m *CascadeResponse) MarshalTo(dAtA []byte) (int, error) {
+func (m *BasicResponse) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
 	_ = l
 	if m.Response != nil {
-		nn35, err := m.Response.MarshalTo(dAtA[i:])
+		nn28, err := m.Response.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += nn35
+		i += nn28
 	}
 	return i, nil
 }
 
-func (m *CascadeResponse_Success) MarshalTo(dAtA []byte) (int, error) {
+func (m *BasicResponse_Success) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	dAtA[i] = 0x8
 	i++
@@ -4964,7 +3902,7 @@ func (m *CascadeResponse_Success) MarshalTo(dAtA []byte) (int, error) {
 	i++
 	return i, nil
 }
-func (m *CascadeResponse_Error) MarshalTo(dAtA []byte) (int, error) {
+func (m *BasicResponse_Error) MarshalTo(dAtA []byte) (int, error) {
 	i := 0
 	if m.Error != nil {
 		dAtA[i] = 0x12
@@ -4974,24 +3912,6 @@ func (m *CascadeResponse_Error) MarshalTo(dAtA []byte) (int, error) {
 	}
 	return i, nil
 }
-func (m *PulseResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *PulseResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	return i, nil
-}
-
 func (m *BootstrapResponse) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -5057,60 +3977,6 @@ func (m *GenesisResponse) Marshal() (dAtA []byte, err error) {
 }
 
 func (m *GenesisResponse) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	return i, nil
-}
-
-func (m *Challenge1Response) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Challenge1Response) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	return i, nil
-}
-
-func (m *Challenge2Response) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *Challenge2Response) MarshalTo(dAtA []byte) (int, error) {
-	var i int
-	_ = i
-	var l int
-	_ = l
-	return i, nil
-}
-
-func (m *DisconnectResponse) Marshal() (dAtA []byte, err error) {
-	size := m.Size()
-	dAtA = make([]byte, size)
-	n, err := m.MarshalTo(dAtA)
-	if err != nil {
-		return nil, err
-	}
-	return dAtA[:n], nil
-}
-
-func (m *DisconnectResponse) MarshalTo(dAtA []byte) (int, error) {
 	var i int
 	_ = i
 	var l int
@@ -5326,42 +4192,6 @@ func (m *Request_Genesis) Size() (n int) {
 	}
 	return n
 }
-func (m *Request_Challenge1) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Challenge1 != nil {
-		l = m.Challenge1.Size()
-		n += 1 + l + sovPacketBackend(uint64(l))
-	}
-	return n
-}
-func (m *Request_Challenge2) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Challenge2 != nil {
-		l = m.Challenge2.Size()
-		n += 1 + l + sovPacketBackend(uint64(l))
-	}
-	return n
-}
-func (m *Request_Disconnect) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Disconnect != nil {
-		l = m.Disconnect.Size()
-		n += 1 + l + sovPacketBackend(uint64(l))
-	}
-	return n
-}
 func (m *Response) Size() (n int) {
 	if m == nil {
 		return 0
@@ -5398,26 +4228,14 @@ func (m *Response_RPC) Size() (n int) {
 	}
 	return n
 }
-func (m *Response_Cascade) Size() (n int) {
+func (m *Response_Basic) Size() (n int) {
 	if m == nil {
 		return 0
 	}
 	var l int
 	_ = l
-	if m.Cascade != nil {
-		l = m.Cascade.Size()
-		n += 1 + l + sovPacketBackend(uint64(l))
-	}
-	return n
-}
-func (m *Response_Pulse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Pulse != nil {
-		l = m.Pulse.Size()
+	if m.Basic != nil {
+		l = m.Basic.Size()
 		n += 1 + l + sovPacketBackend(uint64(l))
 	}
 	return n
@@ -5466,42 +4284,6 @@ func (m *Response_Genesis) Size() (n int) {
 	_ = l
 	if m.Genesis != nil {
 		l = m.Genesis.Size()
-		n += 1 + l + sovPacketBackend(uint64(l))
-	}
-	return n
-}
-func (m *Response_Challenge1) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Challenge1 != nil {
-		l = m.Challenge1.Size()
-		n += 1 + l + sovPacketBackend(uint64(l))
-	}
-	return n
-}
-func (m *Response_Challenge2) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Challenge2 != nil {
-		l = m.Challenge2.Size()
-		n += 1 + l + sovPacketBackend(uint64(l))
-	}
-	return n
-}
-func (m *Response_Disconnect) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	if m.Disconnect != nil {
-		l = m.Disconnect.Size()
 		n += 1 + l + sovPacketBackend(uint64(l))
 	}
 	return n
@@ -5624,33 +4406,6 @@ func (m *GenesisRequest) Size() (n int) {
 	return n
 }
 
-func (m *Challenge1Request) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	return n
-}
-
-func (m *Challenge2Request) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	return n
-}
-
-func (m *DisconnectRequest) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	return n
-}
-
 func (m *RPCResponse) Size() (n int) {
 	if m == nil {
 		return 0
@@ -5687,7 +4442,7 @@ func (m *RPCResponse_Error) Size() (n int) {
 	}
 	return n
 }
-func (m *CascadeResponse) Size() (n int) {
+func (m *BasicResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -5699,7 +4454,7 @@ func (m *CascadeResponse) Size() (n int) {
 	return n
 }
 
-func (m *CascadeResponse_Success) Size() (n int) {
+func (m *BasicResponse_Success) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -5708,7 +4463,7 @@ func (m *CascadeResponse_Success) Size() (n int) {
 	n += 2
 	return n
 }
-func (m *CascadeResponse_Error) Size() (n int) {
+func (m *BasicResponse_Error) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -5720,15 +4475,6 @@ func (m *CascadeResponse_Error) Size() (n int) {
 	}
 	return n
 }
-func (m *PulseResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	return n
-}
-
 func (m *BootstrapResponse) Size() (n int) {
 	if m == nil {
 		return 0
@@ -5757,33 +4503,6 @@ func (m *RegisterResponse) Size() (n int) {
 }
 
 func (m *GenesisResponse) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	return n
-}
-
-func (m *Challenge1Response) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	return n
-}
-
-func (m *Challenge2Response) Size() (n int) {
-	if m == nil {
-		return 0
-	}
-	var l int
-	_ = l
-	return n
-}
-
-func (m *DisconnectResponse) Size() (n int) {
 	if m == nil {
 		return 0
 	}
@@ -5953,36 +4672,6 @@ func (this *Request_Genesis) String() string {
 	}, "")
 	return s
 }
-func (this *Request_Challenge1) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Request_Challenge1{`,
-		`Challenge1:` + strings.Replace(fmt.Sprintf("%v", this.Challenge1), "Challenge1Request", "Challenge1Request", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Request_Challenge2) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Request_Challenge2{`,
-		`Challenge2:` + strings.Replace(fmt.Sprintf("%v", this.Challenge2), "Challenge2Request", "Challenge2Request", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Request_Disconnect) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Request_Disconnect{`,
-		`Disconnect:` + strings.Replace(fmt.Sprintf("%v", this.Disconnect), "DisconnectRequest", "DisconnectRequest", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
 func (this *Response) String() string {
 	if this == nil {
 		return "nil"
@@ -6013,22 +4702,12 @@ func (this *Response_RPC) String() string {
 	}, "")
 	return s
 }
-func (this *Response_Cascade) String() string {
+func (this *Response_Basic) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&Response_Cascade{`,
-		`Cascade:` + strings.Replace(fmt.Sprintf("%v", this.Cascade), "CascadeResponse", "CascadeResponse", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Response_Pulse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Response_Pulse{`,
-		`Pulse:` + strings.Replace(fmt.Sprintf("%v", this.Pulse), "PulseResponse", "PulseResponse", 1) + `,`,
+	s := strings.Join([]string{`&Response_Basic{`,
+		`Basic:` + strings.Replace(fmt.Sprintf("%v", this.Basic), "BasicResponse", "BasicResponse", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -6069,36 +4748,6 @@ func (this *Response_Genesis) String() string {
 	}
 	s := strings.Join([]string{`&Response_Genesis{`,
 		`Genesis:` + strings.Replace(fmt.Sprintf("%v", this.Genesis), "GenesisResponse", "GenesisResponse", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Response_Challenge1) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Response_Challenge1{`,
-		`Challenge1:` + strings.Replace(fmt.Sprintf("%v", this.Challenge1), "Challenge1Response", "Challenge1Response", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Response_Challenge2) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Response_Challenge2{`,
-		`Challenge2:` + strings.Replace(fmt.Sprintf("%v", this.Challenge2), "Challenge2Response", "Challenge2Response", 1) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Response_Disconnect) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Response_Disconnect{`,
-		`Disconnect:` + strings.Replace(fmt.Sprintf("%v", this.Disconnect), "DisconnectResponse", "DisconnectResponse", 1) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -6193,33 +4842,6 @@ func (this *GenesisRequest) String() string {
 	}, "")
 	return s
 }
-func (this *Challenge1Request) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Challenge1Request{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Challenge2Request) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Challenge2Request{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DisconnectRequest) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DisconnectRequest{`,
-		`}`,
-	}, "")
-	return s
-}
 func (this *RPCResponse) String() string {
 	if this == nil {
 		return "nil"
@@ -6250,41 +4872,32 @@ func (this *RPCResponse_Error) String() string {
 	}, "")
 	return s
 }
-func (this *CascadeResponse) String() string {
+func (this *BasicResponse) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&CascadeResponse{`,
+	s := strings.Join([]string{`&BasicResponse{`,
 		`Response:` + fmt.Sprintf("%v", this.Response) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *CascadeResponse_Success) String() string {
+func (this *BasicResponse_Success) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&CascadeResponse_Success{`,
+	s := strings.Join([]string{`&BasicResponse_Success{`,
 		`Success:` + fmt.Sprintf("%v", this.Success) + `,`,
 		`}`,
 	}, "")
 	return s
 }
-func (this *CascadeResponse_Error) String() string {
+func (this *BasicResponse_Error) String() string {
 	if this == nil {
 		return "nil"
 	}
-	s := strings.Join([]string{`&CascadeResponse_Error{`,
+	s := strings.Join([]string{`&BasicResponse_Error{`,
 		`Error:` + fmt.Sprintf("%v", this.Error) + `,`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *PulseResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&PulseResponse{`,
 		`}`,
 	}, "")
 	return s
@@ -6321,33 +4934,6 @@ func (this *GenesisResponse) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&GenesisResponse{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Challenge1Response) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Challenge1Response{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *Challenge2Response) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&Challenge2Response{`,
-		`}`,
-	}, "")
-	return s
-}
-func (this *DisconnectResponse) String() string {
-	if this == nil {
-		return "nil"
-	}
-	s := strings.Join([]string{`&DisconnectResponse{`,
 		`}`,
 	}, "")
 	return s
@@ -7199,111 +5785,6 @@ func (m *Request) Unmarshal(dAtA []byte) error {
 			}
 			m.Request = &Request_Genesis{v}
 			iNdEx = postIndex
-		case 9:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Challenge1", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacketBackend
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &Challenge1Request{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Request = &Request_Challenge1{v}
-			iNdEx = postIndex
-		case 10:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Challenge2", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacketBackend
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &Challenge2Request{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Request = &Request_Challenge2{v}
-			iNdEx = postIndex
-		case 11:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Disconnect", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacketBackend
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &DisconnectRequest{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Request = &Request_Disconnect{v}
-			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
 			skippy, err := skipPacketBackend(dAtA[iNdEx:])
@@ -7429,7 +5910,7 @@ func (m *Response) Unmarshal(dAtA []byte) error {
 			iNdEx = postIndex
 		case 3:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Cascade", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Basic", wireType)
 			}
 			var msglen int
 			for shift := uint(0); ; shift += 7 {
@@ -7456,48 +5937,13 @@ func (m *Response) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			v := &CascadeResponse{}
+			v := &BasicResponse{}
 			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
-			m.Response = &Response_Cascade{v}
+			m.Response = &Response_Basic{v}
 			iNdEx = postIndex
 		case 4:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Pulse", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacketBackend
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &PulseResponse{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Response = &Response_Pulse{v}
-			iNdEx = postIndex
-		case 5:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Bootstrap", wireType)
 			}
@@ -7532,7 +5978,7 @@ func (m *Response) Unmarshal(dAtA []byte) error {
 			}
 			m.Response = &Response_Bootstrap{v}
 			iNdEx = postIndex
-		case 6:
+		case 5:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Authorize", wireType)
 			}
@@ -7567,7 +6013,7 @@ func (m *Response) Unmarshal(dAtA []byte) error {
 			}
 			m.Response = &Response_Authorize{v}
 			iNdEx = postIndex
-		case 7:
+		case 6:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Register", wireType)
 			}
@@ -7602,7 +6048,7 @@ func (m *Response) Unmarshal(dAtA []byte) error {
 			}
 			m.Response = &Response_Register{v}
 			iNdEx = postIndex
-		case 8:
+		case 7:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Genesis", wireType)
 			}
@@ -7636,111 +6082,6 @@ func (m *Response) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			m.Response = &Response_Genesis{v}
-			iNdEx = postIndex
-		case 9:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Challenge1", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacketBackend
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &Challenge1Response{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Response = &Response_Challenge1{v}
-			iNdEx = postIndex
-		case 10:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Challenge2", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacketBackend
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &Challenge2Response{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Response = &Response_Challenge2{v}
-			iNdEx = postIndex
-		case 11:
-			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Disconnect", wireType)
-			}
-			var msglen int
-			for shift := uint(0); ; shift += 7 {
-				if shift >= 64 {
-					return ErrIntOverflowPacketBackend
-				}
-				if iNdEx >= l {
-					return io.ErrUnexpectedEOF
-				}
-				b := dAtA[iNdEx]
-				iNdEx++
-				msglen |= int(b&0x7F) << shift
-				if b < 0x80 {
-					break
-				}
-			}
-			if msglen < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			postIndex := iNdEx + msglen
-			if postIndex < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if postIndex > l {
-				return io.ErrUnexpectedEOF
-			}
-			v := &DisconnectResponse{}
-			if err := v.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
-				return err
-			}
-			m.Response = &Response_Disconnect{v}
 			iNdEx = postIndex
 		default:
 			iNdEx = preIndex
@@ -8538,165 +6879,6 @@ func (m *GenesisRequest) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *Challenge1Request) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPacketBackend
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Challenge1Request: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Challenge1Request: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPacketBackend(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Challenge2Request) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPacketBackend
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Challenge2Request: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Challenge2Request: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPacketBackend(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *DisconnectRequest) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPacketBackend
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: DisconnectRequest: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: DisconnectRequest: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPacketBackend(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
 func (m *RPCResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -8816,7 +6998,7 @@ func (m *RPCResponse) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
-func (m *CascadeResponse) Unmarshal(dAtA []byte) error {
+func (m *BasicResponse) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
 	for iNdEx < l {
@@ -8839,10 +7021,10 @@ func (m *CascadeResponse) Unmarshal(dAtA []byte) error {
 		fieldNum := int32(wire >> 3)
 		wireType := int(wire & 0x7)
 		if wireType == 4 {
-			return fmt.Errorf("proto: CascadeResponse: wiretype end group for non-group")
+			return fmt.Errorf("proto: BasicResponse: wiretype end group for non-group")
 		}
 		if fieldNum <= 0 {
-			return fmt.Errorf("proto: CascadeResponse: illegal tag %d (wire type %d)", fieldNum, wire)
+			return fmt.Errorf("proto: BasicResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		case 1:
@@ -8865,7 +7047,7 @@ func (m *CascadeResponse) Unmarshal(dAtA []byte) error {
 				}
 			}
 			b := bool(v != 0)
-			m.Response = &CascadeResponse_Success{b}
+			m.Response = &BasicResponse_Success{b}
 		case 2:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Error", wireType)
@@ -8897,61 +7079,8 @@ func (m *CascadeResponse) Unmarshal(dAtA []byte) error {
 			}
 			v := make([]byte, postIndex-iNdEx)
 			copy(v, dAtA[iNdEx:postIndex])
-			m.Response = &CascadeResponse_Error{v}
+			m.Response = &BasicResponse_Error{v}
 			iNdEx = postIndex
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPacketBackend(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *PulseResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPacketBackend
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: PulseResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: PulseResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
 		default:
 			iNdEx = preIndex
 			skippy, err := skipPacketBackend(dAtA[iNdEx:])
@@ -9162,165 +7291,6 @@ func (m *GenesisResponse) Unmarshal(dAtA []byte) error {
 		}
 		if fieldNum <= 0 {
 			return fmt.Errorf("proto: GenesisResponse: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPacketBackend(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Challenge1Response) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPacketBackend
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Challenge1Response: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Challenge1Response: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPacketBackend(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *Challenge2Response) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPacketBackend
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: Challenge2Response: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: Challenge2Response: illegal tag %d (wire type %d)", fieldNum, wire)
-		}
-		switch fieldNum {
-		default:
-			iNdEx = preIndex
-			skippy, err := skipPacketBackend(dAtA[iNdEx:])
-			if err != nil {
-				return err
-			}
-			if skippy < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if (iNdEx + skippy) < 0 {
-				return ErrInvalidLengthPacketBackend
-			}
-			if (iNdEx + skippy) > l {
-				return io.ErrUnexpectedEOF
-			}
-			iNdEx += skippy
-		}
-	}
-
-	if iNdEx > l {
-		return io.ErrUnexpectedEOF
-	}
-	return nil
-}
-func (m *DisconnectResponse) Unmarshal(dAtA []byte) error {
-	l := len(dAtA)
-	iNdEx := 0
-	for iNdEx < l {
-		preIndex := iNdEx
-		var wire uint64
-		for shift := uint(0); ; shift += 7 {
-			if shift >= 64 {
-				return ErrIntOverflowPacketBackend
-			}
-			if iNdEx >= l {
-				return io.ErrUnexpectedEOF
-			}
-			b := dAtA[iNdEx]
-			iNdEx++
-			wire |= uint64(b&0x7F) << shift
-			if b < 0x80 {
-				break
-			}
-		}
-		fieldNum := int32(wire >> 3)
-		wireType := int(wire & 0x7)
-		if wireType == 4 {
-			return fmt.Errorf("proto: DisconnectResponse: wiretype end group for non-group")
-		}
-		if fieldNum <= 0 {
-			return fmt.Errorf("proto: DisconnectResponse: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
 		default:
