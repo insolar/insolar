@@ -85,7 +85,6 @@ const (
 type Session struct {
 	NodeID insolar.Reference
 	Cert   insolar.AuthorizationCertificate
-	State  SessionState
 
 	DiscoveryNonce Nonce
 
@@ -168,7 +167,6 @@ func (sm *sessionManager) NewSession(ref insolar.Reference, cert insolar.Authori
 	id := sm.sequence.Generate()
 	session := &Session{
 		NodeID: ref,
-		State:  Authorized,
 		Cert:   cert,
 		Time:   time.Now(),
 		TTL:    ttl,
@@ -199,9 +197,6 @@ func (sm *sessionManager) checkSession(id SessionID, expected SessionState) (*Se
 	if session == nil {
 		return nil, errors.New(fmt.Sprintf("no such session ID: %d", id))
 	}
-	if session.State != expected {
-		return nil, errors.New(fmt.Sprintf("session %d should have state %s but has %s", id, expected, session.State))
-	}
 	return session, nil
 }
 
@@ -214,7 +209,6 @@ func (sm *sessionManager) SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) 
 		return err
 	}
 	session.DiscoveryNonce = discoveryNonce
-	session.State = Challenge1
 	return nil
 }
 
@@ -233,11 +227,10 @@ func (sm *sessionManager) ChallengePassed(id SessionID) error {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
-	session, err := sm.checkSession(id, Challenge1)
+	_, err := sm.checkSession(id, Challenge1)
 	if err != nil {
 		return err
 	}
-	session.State = Challenge2
 	return nil
 }
 
