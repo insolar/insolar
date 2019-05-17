@@ -19,7 +19,7 @@
   revision = "343706a395b76e5ca5c7dca46a5d937b48febc74"
 
 [[projects]]
-  digest = "1:742ea97411291dbc55b805043493f6beece4882523f69213d3a4629630ee9500"
+  digest = "1:60ddeb8548faba8198ced684ac98020a91c60fbe9e944341afed82a4d7c3b7c6"
   name = "github.com/ThreeDotsLabs/watermill"
   packages = [
     ".",
@@ -30,8 +30,8 @@
     "message/router/middleware",
   ]
   pruneopts = "UT"
-  revision = "fa394272631757fe84b31989cc935122a5fbcb20"
-  version = "v0.3.0"
+  revision = "b39a48a1c9edad83d74898f3bf96adedd18ece81"
+  version = "v0.4.0"
 
 [[projects]]
   branch = "master"
