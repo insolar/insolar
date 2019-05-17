@@ -21,7 +21,6 @@ import (
 	"os"
 	"os/exec"
 	"runtime/debug"
-	"strings"
 	"syscall"
 	"time"
 
@@ -69,7 +68,7 @@ func StartInsgorund(cmdPath, lProto, listen, upstreamProto, upstreamAddr string)
 		return nil, errors.New("command's path is required to start `insgorund`")
 	}
 
-	gorundLoglLevel := getGorundLogLevel()
+	gorundLoglLevel := os.Getenv(insolarLogLevel)
 	if gorundLoglLevel != "" {
 		args = append(args, "--log-level", gorundLoglLevel)
 	}
@@ -115,14 +114,4 @@ func StartInsgorund(cmdPath, lProto, listen, upstreamProto, upstreamAddr string)
 			}
 		}
 	}, nil
-}
-
-func getGorundLogLevel() string {
-	for _, e := range os.Environ() {
-		pair := strings.Split(e, "=")
-		if pair[0] == insolarLogLevel {
-			return pair[1]
-		}
-	}
-	return ""
 }
