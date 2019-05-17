@@ -144,11 +144,6 @@ func (cr *challengeResponseController) processChallenge1(ctx context.Context, re
 	ctx, span := instracer.StartSpan(ctx, "ChallengeResponseController.processChallenge1")
 	defer span.End()
 	data := request.GetData().(*ChallengeRequest)
-	// CheckSession is performed in SetDiscoveryNonce too, but we want to return early if the request is invalid
-	err := cr.SessionManager.CheckSession(data.SessionID, Authorized)
-	if err != nil {
-		return cr.buildChallenge1ErrorResponse(ctx, request, err.Error()), nil
-	}
 	xorNonce, err := GenerateNonce()
 	if err != nil {
 		return cr.buildChallenge1ErrorResponse(ctx, request, "error generating discovery xor nonce: "+err.Error()), nil

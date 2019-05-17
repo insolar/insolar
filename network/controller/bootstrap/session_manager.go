@@ -68,15 +68,6 @@ import (
 
 type SessionID uint64
 
-//go:generate stringer -type=SessionState
-type SessionState uint8
-
-const (
-	Authorized SessionState = iota + 1
-	Challenge1
-	Challenge2
-)
-
 const (
 	stateRunning = uint32(iota + 1)
 	stateIdle
@@ -108,7 +99,6 @@ type SessionManager interface {
 	component.Stopper
 
 	NewSession(ref insolar.Reference, cert insolar.AuthorizationCertificate, ttl time.Duration) SessionID
-	CheckSession(id SessionID, expected SessionState) error
 	SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) error
 	GetChallengeData(id SessionID) (insolar.AuthorizationCertificate, Nonce, error)
 	ChallengePassed(id SessionID) error
@@ -184,15 +174,7 @@ func (sm *sessionManager) addSession(id SessionID, session *Session) {
 	sm.sessionsChangeNotification <- notification{}
 }
 
-func (sm *sessionManager) CheckSession(id SessionID, expected SessionState) error {
-	sm.lock.RLock()
-	defer sm.lock.RUnlock()
-
-	_, err := sm.checkSession(id, expected)
-	return err
-}
-
-func (sm *sessionManager) checkSession(id SessionID, expected SessionState) (*Session, error) {
+func (sm *sessionManager) checkSession(id SessionID) (*Session, error) {
 	session := sm.sessions[id]
 	if session == nil {
 		return nil, errors.New(fmt.Sprintf("no such session ID: %d", id))
@@ -204,7 +186,7 @@ func (sm *sessionManager) SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) 
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
-	session, err := sm.checkSession(id, Authorized)
+	session, err := sm.checkSession(id)
 	if err != nil {
 		return err
 	}
@@ -216,7 +198,7 @@ func (sm *sessionManager) GetChallengeData(id SessionID) (insolar.AuthorizationC
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
-	session, err := sm.checkSession(id, Challenge1)
+	session, err := sm.checkSession(id)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -227,7 +209,7 @@ func (sm *sessionManager) ChallengePassed(id SessionID) error {
 	sm.lock.Lock()
 	defer sm.lock.Unlock()
 
-	_, err := sm.checkSession(id, Challenge1)
+	_, err := sm.checkSession(id)
 	if err != nil {
 		return err
 	}
@@ -237,7 +219,7 @@ func (sm *sessionManager) ChallengePassed(id SessionID) error {
 func (sm *sessionManager) ReleaseSession(id SessionID) (*Session, error) {
 	sm.lock.Lock()
 
-	session, err := sm.checkSession(id, Challenge2)
+	session, err := sm.checkSession(id)
 	if err != nil {
 		sm.lock.Unlock()
 		return nil, err
