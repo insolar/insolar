@@ -34,8 +34,6 @@ import (
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
-	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
@@ -311,126 +309,6 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	}
 
 	return &rep, nil
-}
-
-func (h *MessageHandler) handleGetChildren(
-	ctx context.Context, parcel insolar.Parcel,
-) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetChildren)
-	jetID := jetFromContext(ctx)
-
-	h.IDLocker.Lock(msg.Parent.Record())
-	defer h.IDLocker.Unlock(msg.Parent.Record())
-
-	idx, err := h.IndexStorage.ForID(ctx, *msg.Parent.Record())
-	if err == object.ErrIndexNotFound {
-		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		idx, err = h.saveIndexFromHeavy(ctx, jetID, msg.Parent, heavy)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch index from heavy")
-		}
-		if idx.ChildPointer == nil {
-			return &reply.Children{Refs: nil, NextFrom: nil}, nil
-		}
-	} else if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch object index")
-	}
-	h.IndexStateModifier.SetUsageForPulse(ctx, *msg.Parent.Record(), parcel.Pulse())
-
-	var (
-		refs         []insolar.Reference
-		currentChild *insolar.ID
-	)
-
-	// Counting from specified child or the latest.
-	if msg.FromChild != nil {
-		currentChild = msg.FromChild
-	} else {
-		currentChild = idx.ChildPointer
-	}
-
-	// The object has no children.
-	if currentChild == nil {
-		return &reply.Children{Refs: nil, NextFrom: nil}, nil
-	}
-
-	var childJet *insolar.ID
-	onHeavy, err := h.JetCoordinator.IsBeyondLimit(ctx, parcel.Pulse(), currentChild.Pulse())
-	if err != nil && err != pulse.ErrNotFound {
-		return nil, err
-	}
-	if onHeavy {
-		node, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *currentChild)
-	}
-
-	childJetID, actual := h.JetStorage.ForID(ctx, currentChild.Pulse(), *msg.Parent.Record())
-	childJet = (*insolar.ID)(&childJetID)
-
-	if !actual {
-		actualJet, err := h.jetTreeUpdater.Fetch(ctx, *msg.Parent.Record(), currentChild.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		childJet = actualJet
-	}
-
-	// Try to fetch the first child.
-	_, err = h.RecordAccessor.ForID(ctx, *currentChild)
-
-	if err == object.ErrNotFound {
-		node, err := h.JetCoordinator.NodeForJet(ctx, *childJet, parcel.Pulse(), currentChild.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		return reply.NewGetChildrenRedirect(h.DelegationTokenFactory, parcel, node, *currentChild)
-	}
-
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch child")
-	}
-
-	counter := 0
-	for currentChild != nil {
-		// We have enough results.
-		if counter >= msg.Amount {
-			return &reply.Children{Refs: refs, NextFrom: currentChild}, nil
-		}
-		counter++
-
-		rec, err := h.RecordAccessor.ForID(ctx, *currentChild)
-
-		// We don't have this child reference. Return what was collected.
-		if err == object.ErrNotFound {
-			return &reply.Children{Refs: refs, NextFrom: currentChild}, nil
-		}
-		if err != nil {
-			return nil, errors.New("failed to retrieve children")
-		}
-
-		virtRec := rec.Virtual
-		concrete := record.Unwrap(virtRec)
-		childRec, ok := concrete.(*record.Child)
-		if !ok {
-			return nil, errors.New("failed to retrieve children")
-		}
-		currentChild = &childRec.PrevChild
-
-		// Skip records later than specified pulse.
-		recPulse := childRec.Ref.Record().Pulse()
-		if msg.FromPulse != nil && recPulse > *msg.FromPulse {
-			continue
-		}
-		refs = append(refs, childRec.Ref)
-	}
-
-	return &reply.Children{Refs: refs, NextFrom: nil}, nil
 }
 
 func (h *MessageHandler) handleGetPendingRequestID(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {

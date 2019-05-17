@@ -20,7 +20,6 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
@@ -62,12 +61,12 @@ func (p *GetChildren) Proceed(ctx context.Context) error {
 
 func (p *GetChildren) reply(ctx context.Context) bus.Reply {
 	var childJet *insolar.ID
-	onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, flow.Pulse(ctx), p.currentChild.Pulse())
+	onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, p.parcel.Pulse(), p.currentChild.Pulse())
 	if err != nil && err != pulse.ErrNotFound {
 		return bus.Reply{Err: err}
 	}
 	if onHeavy {
-		node, err := p.Dep.Coordinator.Heavy(ctx, flow.Pulse(ctx))
+		node, err := p.Dep.Coordinator.Heavy(ctx, p.parcel.Pulse())
 		if err != nil {
 			return bus.Reply{Err: err}
 		}
@@ -94,7 +93,7 @@ func (p *GetChildren) reply(ctx context.Context) bus.Reply {
 	_, err = p.Dep.RecordAccessor.ForID(ctx, *p.currentChild)
 
 	if err == object.ErrNotFound {
-		node, err := p.Dep.Coordinator.NodeForJet(ctx, *childJet, flow.Pulse(ctx), p.currentChild.Pulse())
+		node, err := p.Dep.Coordinator.NodeForJet(ctx, *childJet, p.parcel.Pulse(), p.currentChild.Pulse())
 		if err != nil {
 			return bus.Reply{Err: err}
 		}
