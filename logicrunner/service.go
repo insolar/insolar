@@ -102,16 +102,6 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 	return nil
 }
 
-// MakeBaseMessage makes base of logicrunner event from base of up request
-func MakeBaseMessage(req rpctypes.UpBaseReq, es *ExecutionState) message.BaseLogicMessage {
-	es.nonce++
-	return message.BaseLogicMessage{
-		Caller:          req.Callee,
-		CallerPrototype: req.Prototype,
-		Nonce:           es.nonce,
-	}
-}
-
 // RouteCall routes call from a contract to a contract through event bus.
 func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (err error) {
 	defer recoverRPC(&err)
@@ -127,16 +117,26 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (e
 
 	// TODO: delegation token
 
-	bm := MakeBaseMessage(req.UpBaseReq, es)
-	res, err := gpr.lr.ContractRequester.CallMethod(ctx,
-		&bm,
-		!req.Wait,
-		req.Immutable,
-		&req.Object,
-		req.Method,
-		req.Arguments,
-		&req.ProxyPrototype,
-	)
+	es.nonce++
+
+	msg := &message.CallMethod{
+		Caller:          req.Callee,
+		CallerPrototype: req.CalleePrototype,
+		Nonce:           es.nonce,
+
+		Immutable: req.Immutable,
+
+		Object:    &req.Object,
+		Prototype: &req.Prototype,
+		Method:    req.Method,
+		Arguments: req.Arguments,
+	}
+
+	if !req.Wait {
+		msg.ReturnMode = message.ReturnNoWait
+	}
+
+	res, err := gpr.lr.ContractRequester.CallMethod(ctx, msg)
 	if err != nil {
 		return err
 	}
@@ -156,8 +156,21 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
-	bm := MakeBaseMessage(req.UpBaseReq, es)
-	ref, err := gpr.lr.ContractRequester.CallConstructor(ctx, &bm, false, &req.Prototype, &req.Parent, req.ConstructorName, req.ArgsSerialized, int(message.Child))
+	es.nonce++
+
+	msg := &message.CallMethod{
+		Caller:          req.Callee,
+		CallerPrototype: req.CalleePrototype,
+		Nonce:           es.nonce,
+
+		CallType:  message.CTSaveAsChild,
+		Base:      &req.Parent,
+		Prototype: &req.Prototype,
+		Method:    req.ConstructorName,
+		Arguments: req.ArgsSerialized,
+	}
+
+	ref, err := gpr.lr.ContractRequester.CallConstructor(ctx, msg)
 
 	rep.Reference = ref
 
@@ -172,8 +185,21 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	es := os.MustModeState(req.Mode)
 	ctx := es.Current.Context
 
-	bm := MakeBaseMessage(req.UpBaseReq, es)
-	ref, err := gpr.lr.ContractRequester.CallConstructor(ctx, &bm, false, &req.Prototype, &req.Into, req.ConstructorName, req.ArgsSerialized, int(message.Delegate))
+	es.nonce++
+
+	msg := &message.CallMethod{
+		Caller:          req.Callee,
+		CallerPrototype: req.CalleePrototype,
+		Nonce:           es.nonce,
+
+		CallType:  message.CTSaveAsDelegate,
+		Base:      &req.Into,
+		Prototype: &req.Prototype,
+		Method:    req.ConstructorName,
+		Arguments: req.ArgsSerialized,
+	}
+
+	ref, err := gpr.lr.ContractRequester.CallConstructor(ctx, msg)
 
 	rep.Reference = ref
 	return err
@@ -204,7 +230,7 @@ func (gpr *RPC) GetObjChildrenIterator(
 	iteratorMapLock.RUnlock()
 
 	if !ok {
-		newIterator, err := am.GetChildren(ctx, req.Obj, nil)
+		newIterator, err := am.GetChildren(ctx, req.Object, nil)
 		if err != nil {
 			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't get children")
 		}
