@@ -40,11 +40,11 @@ or you can ran benchmark with
                 Log level (default - info).
 
         -s savemembers
-                Saves members to file scripts/insolard/benchmark/members.txt.
+                Saves members to file .artifacts/bench-members/members.txt.
                 If false, file wont be updated. Default is false.
 
         -m usemembers
-                Use members from file scripts/insolard/benchmark/members.txt.
+                Use members from file .artifacts/bench-members/members.txt.
                 If false, wright info about created members in this file. Default is false. 
 
         -b nocheckbalance
