@@ -118,7 +118,7 @@ func (g *Generator) Run(ctx context.Context) error {
 		ctx,
 		g.config.DiscoveryKeysDir,
 		g.config.KeysNameFormat,
-		len(g.config.DiscoveryNodes),
+		g.config.DiscoveryNodes,
 		g.config.ReuseKeys,
 	)
 	if err != nil {
