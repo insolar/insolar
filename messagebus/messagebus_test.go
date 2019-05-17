@@ -24,6 +24,11 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ThreeDotsLabs/watermill"
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/reply"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -237,4 +242,56 @@ func TestMessageBus_getReceiver(t *testing.T) {
 	r := mb.getReceiver(ctx, parcel, pulse, nil)
 
 	require.Equal(t, expectedRef.String(), r)
+}
+
+func TestMessageBus_deserializePayload_GetReply(t *testing.T) {
+	rep := &reply.OK{}
+	payload := reply.ToBytes(rep)
+	msg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
+	msg.Metadata.Set(bus.MetaType, string(rep.Type()))
+
+	r, err := deserializePayload(msg)
+
+	require.NoError(t, err)
+	require.Equal(t, rep, r)
+}
+
+func TestMessageBus_deserializePayload_GetError(t *testing.T) {
+	rep := errors.New("test error for deserializePayload")
+	payload, err := bus.ErrorToBytes(rep)
+	require.NoError(t, err)
+	msg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
+	msg.Metadata.Set(bus.MetaType, bus.TypeError)
+
+	r, err := deserializePayload(msg)
+
+	require.Equal(t, rep.Error(), err.Error())
+	require.Nil(t, r)
+}
+
+func TestMessageBus_deserializePayload_GetReply_WrongBytes(t *testing.T) {
+	rep := errors.New("test error for deserializePayload")
+	payload, err := bus.ErrorToBytes(rep)
+	require.NoError(t, err)
+	msg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
+	msg.Metadata.Set(bus.MetaType, string(testReply.Type()))
+
+	r, err := deserializePayload(msg)
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "can't deserialize payload to reply")
+	require.Nil(t, r)
+}
+
+func TestMessageBus_deserializePayload_GetError_WrongBytes(t *testing.T) {
+	rep := &reply.OK{}
+	payload := reply.ToBytes(rep)
+	msg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
+	msg.Metadata.Set(bus.MetaType, bus.TypeError)
+
+	r, err := deserializePayload(msg)
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "can't deserialize payload to error")
+	require.Nil(t, r)
 }
