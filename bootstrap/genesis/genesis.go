@@ -38,21 +38,19 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	rootDomain = rootdomain.Name
-	nodeDomain = "nodedomain"
-	nodeRecord = "noderecord"
-	rootMember = "member"
-	wallet     = "wallet"
-	allowance  = "allowance"
-)
-
-var contractNames = []string{rootDomain, nodeDomain, nodeRecord, rootMember, wallet, allowance}
+var contractNames = []string{
+	insolar.GenesisRootDomainName,
+	insolar.GenesisNameNodeDomain,
+	insolar.GenesisNameNodeRecord,
+	insolar.GenesisNameRootMember,
+	insolar.GenesisNameWallet,
+	insolar.GenesisNameAllowance,
+}
 
 var (
 	rootDomainContract = rootdomain.RootDomain.Ref()
-	nodeDomainContract = genesisRefOnRootDomain(nodeDomain)
-	rootMemberContract = genesisRefOnRootDomain(rootMember)
+	nodeDomainContract = genesisRefOnRootDomain(insolar.GenesisNameNodeDomain)
+	rootMemberContract = genesisRefOnRootDomain(insolar.GenesisNameRootMember)
 )
 
 type nodeInfo struct {
@@ -124,7 +122,7 @@ func (g *Generator) Run(ctx context.Context) error {
 		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
 	}
 
-	err = g.saveDiscoveryNodes(ctx, *cb.prototypes[nodeRecord], discoveryNodes)
+	err = g.saveDiscoveryNodes(ctx, *cb.prototypes[insolar.GenesisNameNodeRecord], discoveryNodes)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] could't save discovery nodes data"))
 	}
@@ -170,7 +168,7 @@ func (g *Generator) activateRootDomain(
 		insolar.GenesisRecord.Ref(),
 		&message.Parcel{
 			Msg: &message.GenesisRequest{
-				Name: rootDomain,
+				Name: insolar.GenesisRootDomainName,
 			},
 		},
 	)
@@ -215,7 +213,7 @@ func (g *Generator) activateNodeDomain(
 		ctx,
 		rootDomainContract,
 		&message.Parcel{
-			Msg: &message.GenesisRequest{Name: nodeDomain},
+			Msg: &message.GenesisRequest{Name: insolar.GenesisNameNodeDomain},
 		},
 	)
 
@@ -268,7 +266,7 @@ func (g *Generator) activateRootMember(
 		ctx,
 		rootDomainContract,
 		&message.Parcel{
-			Msg: &message.GenesisRequest{Name: rootMember},
+			Msg: &message.GenesisRequest{Name: insolar.GenesisNameRootMember},
 		},
 	)
 
@@ -348,23 +346,23 @@ func (g *Generator) activateSmartContracts(
 ) error {
 	var err error
 
-	err = g.activateRootDomain(ctx, *prototypes[rootDomain])
+	err = g.activateRootDomain(ctx, *prototypes[insolar.GenesisRootDomainName])
 	// errMsg := "[ ActivateSmartContracts ]"
 	if err != nil {
 		return errors.Wrap(err, "failed to store root domain contract")
 	}
 
-	err = g.activateNodeDomain(ctx, *prototypes[nodeDomain])
+	err = g.activateNodeDomain(ctx, *prototypes[insolar.GenesisNameNodeDomain])
 	if err != nil {
 		return errors.Wrap(err, "failed to store node domain contract")
 	}
 
-	err = g.activateRootMember(ctx, rootPubKey, *prototypes[rootMember])
+	err = g.activateRootMember(ctx, rootPubKey, *prototypes[insolar.GenesisNameRootMember])
 	if err != nil {
-		return errors.Wrap(err, "failed to store root rootMember contract")
+		return errors.Wrap(err, "failed to store root GenesisNameRootMember contract")
 	}
 
-	err = g.activateRootMemberWallet(ctx, *prototypes[wallet])
+	err = g.activateRootMemberWallet(ctx, *prototypes[insolar.GenesisNameWallet])
 	if err != nil {
 		return errors.Wrap(err, "failed to store root rootMemberWallet contract")
 	}

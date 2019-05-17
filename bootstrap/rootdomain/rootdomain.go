@@ -23,9 +23,6 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 )
 
-// Name is the constant name of root domain.
-const Name = "rootdomain"
-
 var genesisPulse = insolar.GenesisPulse.PulseNumber
 
 type Record struct {
@@ -44,7 +41,7 @@ func (r Record) Ref() insolar.Reference {
 func (r Record) ID() insolar.ID {
 	parcel := &message.Parcel{
 		Msg: &message.GenesisRequest{
-			Name: Name,
+			Name: insolar.GenesisRootDomainName,
 		},
 	}
 	req := record.Request{

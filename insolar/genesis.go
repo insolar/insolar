@@ -16,6 +16,21 @@
 
 package insolar
 
+const (
+	// GenesisRootDomainName is the name of root domain contract for genesis record.
+	GenesisRootDomainName = "rootdomain"
+	// GenesisNameNodeDomain is the name of node domain contract for genesis record.
+	GenesisNameNodeDomain = "nodedomain"
+	// GenesisNameNodeRecord is the name of node contract for genesis record.
+	GenesisNameNodeRecord = "noderecord"
+	// GenesisNameRootMember is the name of root member contract for genesis record.
+	GenesisNameRootMember = "member"
+	// GenesisNameWallet is the name of wallet contract for genesis record.
+	GenesisNameWallet = "wallet"
+	// GenesisNameAllowance is the name of allowance contract for genesis record.
+	GenesisNameAllowance = "allowance"
+)
+
 type genesisBinary []byte
 
 // GenesisRecord is initial chain record.
