@@ -41,7 +41,6 @@ type UpdateObject struct {
 
 	Dep struct {
 		RecordModifier             object.RecordModifier
-		IndexModifier              object.IndexModifier
 		Bus                        insolar.MessageBus
 		Coordinator                jet.Coordinator
 		BlobModifier               blob.Modifier
@@ -68,6 +67,11 @@ func (p *UpdateObject) Proceed(ctx context.Context) error {
 }
 
 func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
+	if p.Message.Object.Record() == nil {
+		return bus.Reply{
+			Err: errors.New("updateObject message object is nil"),
+		}
+	}
 	virtRec, err := object.DecodeVirtual(p.Message.Record)
 	logger := inslogger.FromContext(ctx)
 
@@ -193,7 +197,7 @@ func (p *UpdateObject) saveIndexFromHeavy(
 	}
 
 	idx.JetID = jetID
-	err = p.Dep.IndexModifier.Set(ctx, *obj.Record(), idx)
+	err = p.Dep.IndexStorage.Set(ctx, *obj.Record(), idx)
 	if err != nil {
 		return object.Lifeline{}, errors.Wrap(err, "failed to save")
 	}
