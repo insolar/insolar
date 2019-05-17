@@ -14,22 +14,13 @@
 // limitations under the License.
 //
 
-package genesis
+package platformpolicy
 
 import (
-	"fmt"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
 	"github.com/stretchr/testify/require"
 )
-
-func TestKeys_getKeysFromFile(t *testing.T) {
-	priv, pub, err := getKeysFromFile("testdata/keypair.json")
-	require.NoError(t, err, "read keys from json")
-	assert.Equal(t, fmt.Sprintf("%T", priv), "*ecdsa.PrivateKey", "private key has proper type")
-	assert.Equal(t, fmt.Sprintf("%T", pub), "string", "public key has proper type")
-}
 
 func TestKeys_publicKeyNormalize(t *testing.T) {
 	var (
@@ -39,7 +30,7 @@ func TestKeys_publicKeyNormalize(t *testing.T) {
 		pubKey2 = begin + "\n" + "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n" + end
 	)
 
-	s1 := mustNormalizePublicKey(pubKey1)
-	s2 := mustNormalizePublicKey(pubKey2)
+	s1 := MustNormalizePublicKey([]byte(pubKey1))
+	s2 := MustNormalizePublicKey([]byte(pubKey2))
 	require.Equal(t, s1, s2, "the same result for the same public key")
 }

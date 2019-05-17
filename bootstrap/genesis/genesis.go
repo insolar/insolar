@@ -34,8 +34,10 @@ import (
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -94,8 +96,8 @@ func (g *Generator) Run(ctx context.Context) error {
 		panic(errors.Wrap(err, "[ Genesis ] couldn't build contracts"))
 	}
 
-	inslog.Info("[ Genesis ] getKeysFromFile ...")
-	_, rootPubKey, err := getKeysFromFile(g.config.RootKeysFile)
+	inslog.Info("[ Genesis ] ReadKeysFile ...")
+	pair, err := secrets.ReadKeysFile(g.config.RootKeysFile)
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
 	}
@@ -112,7 +114,7 @@ func (g *Generator) Run(ctx context.Context) error {
 		return errors.Wrapf(err, "[ Genesis ] create keys step failed")
 	}
 
-	err = g.activateSmartContracts(ctx, rootPubKey, prototypes)
+	err = g.activateSmartContracts(ctx, platformpolicy.MustPublicKeyToString(pair.Public), prototypes)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
 	}
@@ -127,7 +129,6 @@ func (g *Generator) Run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] Couldn't generate discovery certificates")
 	}
-	_ = discoveryNodes
 
 	inslog.Info("[ Genesis ] Finished.")
 	return nil
@@ -374,7 +375,9 @@ func (g *Generator) activateDiscoveryNodes(
 	discoveryNodes []nodeInfo,
 ) error {
 	if len(discoveryNodes) != len(g.config.DiscoveryNodes) {
-		return errors.New("[ activateDiscoveryNodes ] len of discoveryNodes param must be equal to len of DiscoveryNodes in genesis config")
+		return errors.Errorf(
+			"[ activateDiscoveryNodes ] len of discoveryNodes (%v) must be equal to len of DiscoveryNodes (%v) in genesis config",
+			len(discoveryNodes), len(g.config.DiscoveryNodes))
 	}
 
 	for i, discoverNode := range g.config.DiscoveryNodes {
