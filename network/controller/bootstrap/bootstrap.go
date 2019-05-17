@@ -178,12 +178,6 @@ type GenesisResponse struct {
 	Error    string
 }
 
-type StartSessionRequest struct{}
-
-type StartSessionResponse struct {
-	SessionID SessionID
-}
-
 type NodeStruct struct {
 	ID      insolar.Reference
 	SID     insolar.ShortNodeID
@@ -233,8 +227,6 @@ const (
 func init() {
 	gob.Register(&NodeBootstrapRequest{})
 	gob.Register(&NodeBootstrapResponse{})
-	gob.Register(&StartSessionRequest{})
-	gob.Register(&StartSessionResponse{})
 	gob.Register(&GenesisRequest{})
 	gob.Register(&GenesisResponse{})
 }
