@@ -851,6 +851,7 @@ func (lr *LogicRunner) executeConstructorCall(
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 	lr.stateMutex.Lock()
 	lr.FlowDispatcher.ChangePulse(ctx, pulse)
+	lr.InnerFlowDispatcher.ChangePulse(ctx, pulse)
 
 	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
 	defer span.End()
