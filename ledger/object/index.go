@@ -85,8 +85,8 @@ type IndexBucketAccessor interface {
 type LockedIndexBucket struct {
 	lifelineLock         sync.RWMutex
 	lifelineLastUsedLock sync.RWMutex
-	requestLock          sync.RWMutex
-	resultLock           sync.RWMutex
+	// requestLock          sync.RWMutex
+	// resultLock           sync.RWMutex
 
 	bucket IndexBucket
 }
@@ -117,19 +117,19 @@ func (i *LockedIndexBucket) setLifelineLastUsed(pn insolar.PulseNumber) {
 	i.bucket.LifelineLastUsed = pn
 }
 
-func (i *LockedIndexBucket) setRequest(reqID insolar.ID) {
-	i.requestLock.Lock()
-	defer i.requestLock.Unlock()
-
-	i.bucket.Requests = append(i.bucket.Requests, reqID)
-}
-
-func (i *LockedIndexBucket) setResult(resID insolar.ID) {
-	i.resultLock.Lock()
-	defer i.resultLock.Unlock()
-
-	i.bucket.Results = append(i.bucket.Results, resID)
-}
+// func (i *LockedIndexBucket) setRequest(reqID insolar.ID) {
+// 	i.requestLock.Lock()
+// 	defer i.requestLock.Unlock()
+//
+// 	i.bucket.Requests = append(i.bucket.Requests, reqID)
+// }
+//
+// func (i *LockedIndexBucket) setResult(resID insolar.ID) {
+// 	i.resultLock.Lock()
+// 	defer i.resultLock.Unlock()
+//
+// 	i.bucket.Results = append(i.bucket.Results, resID)
+// }
 
 // InMemoryIndex is a in-memory storage, that stores a collection of IndexBuckets
 type InMemoryIndex struct {
