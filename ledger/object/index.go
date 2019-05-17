@@ -7,6 +7,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
+	"go.opencensus.io/stats"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineIndex -o ./ -s _mock.go
@@ -187,6 +188,10 @@ func (i *InMemoryIndex) SetLifeline(ctx context.Context, pn insolar.PulseNumber,
 	}
 	b.setLifeline(&lifeline, pn)
 
+	stats.Record(ctx,
+		statIndexInMemoryAddedCount.M(1),
+	)
+
 	inslogger.FromContext(ctx).Debugf("[SetLifeline] lifeline for obj - %v was set successfully", objID.DebugString())
 	return nil
 }
@@ -227,6 +232,10 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 	bucks[bucket.ObjID] = &LockedIndexBucket{
 		bucket: bucket,
 	}
+
+	stats.Record(ctx,
+		statIndexInMemoryAddedCount.M(1),
+	)
 
 	return nil
 }
@@ -299,7 +308,14 @@ func (i *InMemoryIndex) DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
-	delete(i.buckets, pn)
+	buck, ok := i.buckets[pn]
+	if ok {
+		stats.Record(ctx,
+			statIndexInMemoryRemovedCount.M(int64(len(buck))),
+		)
+
+		delete(i.buckets, pn)
+	}
 }
 
 // IndexDB is a db-based storage, that stores a collection of IndexBuckets
@@ -359,8 +375,19 @@ func (i *IndexDB) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID
 	if err != nil {
 		return err
 	}
+
+	err = i.setLastKnownPN(pn, objID)
+	if err != nil {
+		return err
+	}
+
+	stats.Record(ctx,
+		statIndexDBAddedCount.M(1),
+	)
+
 	inslogger.FromContext(ctx).Debugf("[SetLifeline] lifeline for obj - %v was set successfully", objID.DebugString())
-	return i.setLastKnownPN(pn, objID)
+
+	return nil
 }
 
 // SetBucket adds a bucket with provided pulseNumber and ID
@@ -372,6 +399,10 @@ func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket 
 	if err != nil {
 		return err
 	}
+
+	stats.Record(ctx,
+		statIndexDBAddedCount.M(1),
+	)
 
 	inslogger.FromContext(ctx).Debugf("[SetBucket] bucket for obj - %v was set successfully", bucket.ObjID.DebugString())
 	return i.setLastKnownPN(pn, bucket.ObjID)
