@@ -80,7 +80,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 
-	objIndex := object.Lifeline{LatestState: genRandomID(0), State: record.StateActivation}
+	objIndex := object.Lifeline{LatestState: genRandomID(0), StateID: record.StateActivation}
 	amendRecord := record.Amend{
 		PrevState: *objIndex.LatestState,
 	}
@@ -118,7 +118,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	updateObject.Dep.BlobModifier = blob.NewStorageMemory()
 	updateObject.Dep.IDLocker = idLockMock
 	updateObject.Dep.Coordinator = jc
-	updateObject.Dep.Index = indexMemoryStor
+	updateObject.Dep.LifelineIndex = indexMemoryStor
 	updateObject.Dep.PCS = scheme
 	updateObject.Dep.RecordModifier = recordStorage
 	updateObject.Dep.LifelineStateModifier = indexMemoryStor
@@ -155,7 +155,7 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 
 	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
-		State:        record.StateActivation,
+		StateID:      record.StateActivation,
 		LatestUpdate: 0,
 		JetID:        insolar.JetID(jetID),
 	}
@@ -182,7 +182,7 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	}
 	updateObject.Dep.BlobModifier = blob.NewStorageMemory()
 	updateObject.Dep.IDLocker = idLockMock
-	updateObject.Dep.Index = indexMemoryStor
+	updateObject.Dep.LifelineIndex = indexMemoryStor
 	updateObject.Dep.PCS = scheme
 	updateObject.Dep.RecordModifier = recordStorage
 	updateObject.Dep.LifelineStateModifier = indexMemoryStor

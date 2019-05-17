@@ -417,7 +417,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	idLockMock.UnlockMock.Return()
 	h.IDLocker = idLockMock
 
-	objIndex := object.Lifeline{LatestState: genRandomID(0), State: record.StateActivation}
+	objIndex := object.Lifeline{LatestState: genRandomID(0), StateID: record.StateActivation}
 	childRecord := record.Child{
 		Ref: *genRandomRef(0),
 	}
@@ -493,7 +493,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 
 	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
-		State:        record.StateActivation,
+		StateID:      record.StateActivation,
 		LatestUpdate: insolar.FirstPulseNumber,
 		JetID:        insolar.JetID(jetID),
 	}
@@ -607,7 +607,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 
 	bucketMock.SetBucketFunc = func(ctx context.Context, pn insolar.PulseNumber, ib object.IndexBucket) (r error) {
 		require.Equal(s.T(), *firstID, ib.ObjID)
-		require.Equal(s.T(), insolar.PulseNumber(234), pn)
+		require.Equal(s.T(), insolar.FirstPulseNumber, int(pn))
 		require.Equal(s.T(), *firstID, *ib.Lifeline.LatestState)
 
 		return nil
@@ -615,7 +615,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 
 	idxMock.SetLifelineFunc = func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 object.Lifeline) (r error) {
 		require.Equal(s.T(), *firstID, p2)
-		require.Equal(s.T(), insolar.PulseNumber(234), p1)
+		require.Equal(s.T(), insolar.FirstPulseNumber, int(p1))
 		require.Equal(s.T(), *firstID, *p3.LatestState)
 
 		return nil
@@ -644,7 +644,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	p.Dep.DropModifier = h.DropModifier
 	p.Dep.RecentStorageProvider = h.RecentStorageProvider
 	p.Dep.MessageBus = h.Bus
-	p.Dep.LifelineStateModifier = h.IndexStateModifier
+	p.Dep.IndexBucketModifier = h.IndexBucketModifier
 	p.Dep.JetStorage = h.JetStorage
 	p.Dep.JetFetcher = h.jetTreeUpdater
 	p.Dep.JetReleaser = h.JetReleaser

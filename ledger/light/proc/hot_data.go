@@ -19,7 +19,6 @@ package proc
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar/flow"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -122,7 +121,7 @@ func (p *HotData) process(ctx context.Context) error {
 		decodedIndex.JetID = jetID
 		err = p.Dep.IndexBucketModifier.SetBucket(
 			ctx,
-			flow.Pulse(ctx),
+			p.msg.PulseNumber,
 			object.IndexBucket{
 				ObjID:            meta.ObjID,
 				Lifeline:         &decodedIndex,
