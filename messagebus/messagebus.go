@@ -229,6 +229,9 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 }
 
 func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
+	if msg == nil {
+		return nil, errors.New("provided message is nil")
+	}
 	if msg.Metadata.Get(bus.MetaType) == bus.TypeError {
 		errReply, err := bus.DeserializeError(bytes.NewBuffer(msg.Payload))
 		if err != nil {

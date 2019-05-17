@@ -295,3 +295,10 @@ func TestMessageBus_deserializePayload_GetError_WrongBytes(t *testing.T) {
 	require.Contains(t, err.Error(), "can't deserialize payload to error")
 	require.Nil(t, r)
 }
+func TestMessageBus_deserializePayload_Nil(t *testing.T) {
+	r, err := deserializePayload(nil)
+
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "provided message is nil")
+	require.Nil(t, r)
+}
