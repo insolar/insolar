@@ -56,8 +56,11 @@ func (entropy Entropy) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, entropy)
 }
 func (entropy Entropy) Size() int { return EntropySize }
-func (entropy Entropy) Compare(other ID) int {
+func (entropy Entropy) Compare(other Entropy) int {
 	return bytes.Compare(entropy[:], other[:])
+}
+func (entropy Entropy) Equal(other Entropy) bool {
+	return entropy.Compare(other) == 0
 }
 
 // PulseNumber is a sequential number of Pulse.
