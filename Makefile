@@ -213,7 +213,7 @@ generate-protobuf:
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/pulse/pulse.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/pulse/pulse.proto
-	protoc -I./vendor -I./ --gogoslick_out=./ network/hostnetwork/packet/packet_backend.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ --proto_path=${GOPATH}/src network/hostnetwork/packet/packet_backend.proto
 
 regen-builtin: $(BININSGOCC)
 	$(BININSGOCC) regen-builtin

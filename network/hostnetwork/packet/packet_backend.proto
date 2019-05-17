@@ -1,9 +1,9 @@
 syntax = "proto3";
 
-package types;
+package packet;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
-import "insolar/pulse/pulse.proto";
+import "github.com/insolar/insolar/insolar/pulse/pulse.proto";
 
 option (gogoproto.goproto_getters_all) = false;
 option (gogoproto.populate_all)        = false;
