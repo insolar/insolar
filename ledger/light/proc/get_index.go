@@ -35,6 +35,7 @@ type GetIndex struct {
 	object  insolar.Reference
 	jet     insolar.JetID
 	replyTo chan<- bus.Reply
+	pn      insolar.PulseNumber
 
 	Result struct {
 		Index object.Lifeline
@@ -49,11 +50,12 @@ type GetIndex struct {
 	}
 }
 
-func NewGetIndex(obj insolar.Reference, jetID insolar.JetID, rep chan<- bus.Reply) *GetIndex {
+func NewGetIndex(obj insolar.Reference, jetID insolar.JetID, rep chan<- bus.Reply, pn insolar.PulseNumber) *GetIndex {
 	return &GetIndex{
 		object:  obj,
 		jet:     jetID,
 		replyTo: rep,
+		pn:      pn,
 	}
 }
 
@@ -72,12 +74,14 @@ func (p *GetIndex) process(ctx context.Context) error {
 	p.Dep.Locker.Lock(&objectID)
 	defer p.Dep.Locker.Unlock(&objectID)
 
-	idx, err := p.Dep.Index.LifelineForID(ctx, flow.Pulse(ctx), objectID)
+	idx, err := p.Dep.Index.LifelineForID(ctx, p.pn, objectID)
 	if err == nil {
 		p.Result.Index = idx
-		err = p.Dep.IndexState.SetLifelineUsage(ctx, flow.Pulse(ctx), objectID)
-		if err != nil {
-			return errors.Wrap(err, "failed to update lifeline usage")
+		if flow.Pulse(ctx) == p.pn {
+			err = p.Dep.IndexState.SetLifelineUsage(ctx, p.pn, objectID)
+			if err != nil {
+				return errors.Wrap(err, "failed to update lifeline usage")
+			}
 		}
 		return nil
 	}
