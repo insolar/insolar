@@ -130,7 +130,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	recordModifier := recordStorage
 
 	am := NewClient()
-	am.PlatformCryptographyScheme = testutils.NewPlatformCryptographyScheme()
+	am.PCS = testutils.NewPlatformCryptographyScheme()
 
 	pm := pulsemanager.NewPulseManager()
 	jc := jet.NewCoordinatorMock(mc)
@@ -176,7 +176,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 
 	handler.IDLocker = idLockerMock
 
-	handler.PlatformCryptographyScheme = pcs
+	handler.PCS = pcs
 	handler.JetCoordinator = jc
 
 	am.DefaultBus = c.MessageBus

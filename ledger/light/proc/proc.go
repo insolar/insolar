@@ -24,17 +24,19 @@ import (
 )
 
 type Dependencies struct {
-	FetchJet      func(*FetchJet)
-	WaitHot       func(*WaitHot)
-	GetIndex      func(*GetIndex)
-	SendObject    func(*SendObject)
-	GetCode       func(*GetCode)
-	GetRequest    func(*GetRequest)
-	UpdateObject  func(*UpdateObject)
-	SetBlob       func(*SetBlob)
-	SetRecord     func(*SetRecord)
-	RegisterChild func(*RegisterChild)
+	FetchJet           func(*FetchJet)
+	WaitHot            func(*WaitHot)
+	GetIndex           func(*GetIndex)
+	SendObject         func(*SendObject)
+	GetCode            func(*GetCode)
+	GetRequest         func(*GetRequest)
+	UpdateObject       func(*UpdateObject)
+	SetBlob            func(*SetBlob)
+	SetRecord          func(*SetRecord)
+	RegisterChild      func(*RegisterChild)
 	GetPendingRequests func(*GetPendingRequests)
+	GetJet             func(*GetJet)
+	HotData            func(*HotData)
 }
 
 type ReturnReply struct {

@@ -40,12 +40,12 @@ type RegisterChild struct {
 	replyTo chan<- bus.Reply
 
 	Dep struct {
-		IDLocker                   object.IDLocker
+		IDLocker           object.IDLocker
 		LifelineIndex              object.LifelineIndex
-		JetCoordinator             jet.Coordinator
-		RecordModifier             object.RecordModifier
+		JetCoordinator     jet.Coordinator
+		RecordModifier     object.RecordModifier
 		LifelineStateModifier      object.LifelineStateModifier
-		PlatformCryptographyScheme insolar.PlatformCryptographyScheme
+		PCS                insolar.PlatformCryptographyScheme
 	}
 }
 
@@ -68,18 +68,24 @@ func (p *RegisterChild) Proceed(ctx context.Context) error {
 }
 
 func (p *RegisterChild) process(ctx context.Context) error {
-	r, err := object.DecodeVirtual(p.msg.Record)
+	virtRec := record.Virtual{}
+	err := virtRec.Unmarshal(p.msg.Record)
 	if err != nil {
 		return errors.Wrap(err, "can't deserialize record")
 	}
-	childRec, ok := r.(*object.ChildRecord)
+	concreteRec := record.Unwrap(&virtRec)
+	childRec, ok := concreteRec.(*record.Child)
 	if !ok {
 		return errors.New("wrong child record")
 	}
 
 	p.Dep.IDLocker.Lock(p.msg.Parent.Record())
 	defer p.Dep.IDLocker.Unlock(p.msg.Parent.Record())
-	recID := object.NewRecordIDFromRecord(p.Dep.PlatformCryptographyScheme, p.pulse, childRec)
+
+	p.Dep.IndexStateModifier.SetUsageForPulse(ctx, *p.msg.Parent.Record(), p.pulse)
+
+	hash := record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
+	recID := insolar.NewID(p.pulse, hash)
 
 	// Children exist and pointer does not match (preserving chain consistency).
 	// For the case when vm can't save or send result to another vm and it tries to update the same record again
@@ -87,16 +93,17 @@ func (p *RegisterChild) process(ctx context.Context) error {
 		return errors.New("invalid child record")
 	}
 
-	child := object.NewRecordIDFromRecord(p.Dep.PlatformCryptographyScheme, p.pulse, childRec)
-	rec := record.MaterialRecord{
-		Record: childRec,
-		JetID:  p.jet,
+	hash = record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
+	child := insolar.NewID(p.pulse, hash)
+	rec := record.Material{
+		Virtual: &virtRec,
+		JetID:   p.jet,
 	}
 
 	err = p.Dep.RecordModifier.Set(ctx, *child, rec)
 
 	if err == object.ErrOverride {
-		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", r)).Warn("set record override (#2)")
+		inslogger.FromContext(ctx).WithField("type", fmt.Sprintf("%T", virtRec)).Warn("set record override (#2)")
 		child = recID
 	} else if err != nil {
 		return errors.Wrap(err, "can't save record into storage")

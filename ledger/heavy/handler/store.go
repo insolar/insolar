@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
@@ -103,15 +104,16 @@ func storeRecords(
 	inslog := inslogger.FromContext(ctx)
 
 	for _, rawRec := range rawRecords {
-		rec, err := object.DecodeMaterial(rawRec)
+		rec := record.Material{}
+		err := rec.Unmarshal(rawRec)
 		if err != nil {
 			inslog.Error(err, "heavyserver: deserialize record failed")
 			continue
 		}
 
-		virtRec := rec.Record
-
-		id := object.NewRecordIDFromRecord(pcs, pn, virtRec)
+		virtRec := *rec.Virtual
+		hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
+		id := insolar.NewID(pn, hash)
 		err = records.Set(ctx, *id, rec)
 		if err != nil {
 			inslog.Error(err, "heavyserver: store record failed")

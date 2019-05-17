@@ -17,10 +17,16 @@
 package handler
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
+	"github.com/ThreeDotsLabs/watermill"
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
 	"github.com/pkg/errors"
@@ -34,6 +40,7 @@ import (
 
 // Handler is a base struct for heavy's methods
 type Handler struct {
+	WmBus          bus.Bus
 	Bus                   insolar.MessageBus
 	JetCoordinator        jet.Coordinator
 	PCS                   insolar.PlatformCryptographyScheme
@@ -55,11 +62,48 @@ func New() *Handler {
 	}
 }
 
+func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
+	ctx, _ := inslogger.WithField(msg.Context(), "pulse", msg.Metadata.Get(bus.MetaPulse))
+
+	rep, err := h.handle(ctx, msg)
+
+	var resInBytes []byte
+	var replyType string
+	if err != nil {
+		resInBytes, err = bus.ErrorToBytes(err)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't convert error to bytes")
+		}
+		replyType = bus.TypeError
+	} else {
+		resInBytes = reply.ToBytes(rep)
+		replyType = string(rep.Type())
+	}
+	resAsMsg := watermillMsg.NewMessage(watermill.NewUUID(), resInBytes)
+	resAsMsg.Metadata.Set(bus.MetaType, replyType)
+	receiver := msg.Metadata.Get(bus.MetaSender)
+	resAsMsg.Metadata.Set(bus.MetaReceiver, receiver)
+	return []*watermillMsg.Message{resAsMsg}, nil
+}
+
+func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) (insolar.Reply, error) {
+	switch msg.Metadata.Get(bus.MetaType) {
+	case insolar.TypeGetObject.String():
+		parcel, err := message.DeserializeParcel(bytes.NewBuffer(msg.Payload))
+		if err != nil {
+			return nil, errors.Wrap(err, "can't deserialize payload")
+		}
+		return h.handleGetObject(ctx, parcel)
+
+	default:
+		return nil, fmt.Errorf("no handler for message type %s", msg.Metadata.Get(bus.MetaType))
+	}
+}
+
 func (h *Handler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(insolar.TypeHeavyPayload, h.handleHeavyPayload)
 
 	h.Bus.MustRegister(insolar.TypeGetCode, h.handleGetCode)
-	h.Bus.MustRegister(insolar.TypeGetObject, h.handleGetObject)
 	h.Bus.MustRegister(insolar.TypeGetDelegate, h.handleGetDelegate)
 	h.Bus.MustRegister(insolar.TypeGetChildren, h.handleGetChildren)
 	h.Bus.MustRegister(insolar.TypeGetObjectIndex, h.handleGetObjectIndex)
@@ -75,7 +119,7 @@ func (h *Handler) handleGetCode(ctx context.Context, parcel insolar.Parcel) (ins
 		return nil, err
 	}
 
-	code, err := h.BlobAccessor.ForID(ctx, *codeRec.Code)
+	code, err := h.BlobAccessor.ForID(ctx, codeRec.Code)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch code blob")
 	}
@@ -120,12 +164,13 @@ func (h *Handler) handleGetObject(
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch state %s for %s", stateID.DebugString(), msg.Head.Record()))
 	}
 
-	virtRec := rec.Record
-	state, ok := virtRec.(object.State)
+	virtRec := rec.Virtual
+	concrete := record.Unwrap(virtRec)
+	state, ok := concrete.(record.State)
 	if !ok {
 		return nil, errors.New("invalid object record")
 	}
-	if state.ID() == object.StateDeactivation {
+	if state.ID() == record.StateDeactivation {
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 	}
 
@@ -142,7 +187,7 @@ func (h *Handler) handleGetObject(
 		Parent:       idx.Parent,
 	}
 
-	if state.GetMemory() != nil {
+	if state.GetMemory() != nil && state.GetMemory().NotEmpty() {
 		b, err := h.BlobAccessor.ForID(ctx, *state.GetMemory())
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to fetch blob")
@@ -228,12 +273,14 @@ func (h *Handler) handleGetChildren(
 			return nil, errors.New("failed to retrieve children")
 		}
 
-		virtRec := rec.Record
-		childRec, ok := virtRec.(*object.ChildRecord)
+		virtRec := rec.Virtual
+		concrete := record.Unwrap(virtRec)
+		childRec, ok := concrete.(*record.Child)
 		if !ok {
 			return nil, errors.New("failed to retrieve children")
 		}
-		currentChild = childRec.PrevChild
+
+		currentChild = &childRec.PrevChild
 
 		// Skip records later than specified pulse.
 		recPulse := childRec.Ref.Record().Pulse()
@@ -254,15 +301,21 @@ func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (
 		return nil, errors.New("failed to fetch request")
 	}
 
-	virtRec := rec.Record
-	req, ok := virtRec.(*object.RequestRecord)
+	virtRec := rec.Virtual
+	concrete := record.Unwrap(virtRec)
+	_, ok := concrete.(*record.Request)
 	if !ok {
 		return nil, errors.New("failed to decode request")
 	}
 
+	data, err := virtRec.Marshal()
+	if err != nil {
+		return nil, errors.New("failed to serialize request")
+	}
+
 	rep := reply.Request{
 		ID:     msg.Request,
-		Record: object.EncodeVirtual(req),
+		Record: data,
 	}
 
 	return &rep, nil
@@ -281,19 +334,20 @@ func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parce
 	return &reply.ObjectIndex{Index: buf}, nil
 }
 
-func (h *Handler) getCode(ctx context.Context, id *insolar.ID) (*object.CodeRecord, error) {
+func (h *Handler) getCode(ctx context.Context, id *insolar.ID) (record.Code, error) {
 	rec, err := h.RecordAccessor.ForID(ctx, *id)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't get record from storage")
+		return record.Code{}, errors.Wrap(err, "can't get record from storage")
 	}
 
-	virtRec := rec.Record
-	codeRec, ok := virtRec.(*object.CodeRecord)
+	virtRec := rec.Virtual
+	concrete := record.Unwrap(virtRec)
+	codeRec, ok := concrete.(*record.Code)
 	if !ok {
-		return nil, errors.New("failed to retrieve code record")
+		return record.Code{}, errors.New("failed to retrieve code record")
 	}
 
-	return codeRec, nil
+	return *codeRec, nil
 }
 
 func (h *Handler) handleHeavyPayload(ctx context.Context, genericMsg insolar.Parcel) (insolar.Reply, error) {

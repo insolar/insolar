@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"reflect"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/log"
@@ -52,7 +53,7 @@ func (m *Manager) Inject(components ...interface{}) {
 	for _, componentMeta := range m.components {
 		component := reflect.ValueOf(componentMeta).Elem()
 		componentType := component.Type()
-		log.Debugf("ComponentManager: Inject component: %s", componentType.String())
+		glog().Debugf("ComponentManager: Inject component: %s", componentType.String())
 
 		for i := 0; i < componentType.NumField(); i++ {
 			fieldMeta := componentType.Field(i)
@@ -60,7 +61,7 @@ func (m *Manager) Inject(components ...interface{}) {
 				if value == "subcomponent" && m.parent == nil {
 					continue
 				}
-				log.Debugf("ComponentManager: Component %s need inject: %s", componentType.String(), fieldMeta.Name)
+				glog().Debugf("ComponentManager: Component %s need inject: %s", componentType.String(), fieldMeta.Name)
 				m.mustInject(component, fieldMeta)
 			}
 		}
@@ -93,7 +94,7 @@ func injectDependency(component reflect.Value, dependencyMeta reflect.StructFiel
 			field := component.FieldByName(dependencyMeta.Name)
 			field.Set(reflect.ValueOf(componentMeta))
 
-			log.Debugf(
+			glog().Debugf(
 				"ComponentManager: Inject interface %s with %s: ",
 				field.Type().String(),
 				componentType.String(),
@@ -125,14 +126,14 @@ func (m *Manager) Start(ctx context.Context) error {
 		}
 		name := reflect.TypeOf(c).Elem().String()
 		if s, ok := c.(Starter); ok {
-			log.Debug("ComponentManager: Start component: ", name)
+			glog().Debug("ComponentManager: Start component: ", name)
 			err := s.Start(ctx)
 			if err != nil {
 				return errors.Wrap(err, "Failed to start components.")
 			}
-			log.Debugf("ComponentManager: Component %s started ", name)
+			glog().Debugf("ComponentManager: Component %s started ", name)
 		} else {
-			log.Debugf("ComponentManager: Component %s has no Start method", name)
+			glog().Debugf("ComponentManager: Component %s has no Start method", name)
 		}
 	}
 	return nil
@@ -147,10 +148,10 @@ func (m *Manager) Init(ctx context.Context) error {
 		name := reflect.TypeOf(c).Elem().String()
 		s, ok := c.(Initer)
 		if !ok {
-			log.Debugf("ComponentManager: Component %s has no Init method", name)
+			glog().Debugf("ComponentManager: Component %s has no Init method", name)
 			continue
 		}
-		log.Debug("ComponentManager: Init component: ", name)
+		glog().Debug("ComponentManager: Init component: ", name)
 		err := s.Init(ctx)
 		if err != nil {
 			return errors.Wrap(err, "Failed to init components.")
@@ -167,14 +168,14 @@ func (m *Manager) GracefulStop(ctx context.Context) error {
 		}
 		name := reflect.TypeOf(m.components[i]).Elem().String()
 		if s, ok := m.components[i].(GracefulStopper); ok {
-			log.Debug("ComponentManager: GracefulStop component: ", name)
+			glog().Debug("ComponentManager: GracefulStop component: ", name)
 
 			err := s.GracefulStop(ctx)
 			if err != nil {
 				return errors.Wrap(err, "Failed to gracefully stop components.")
 			}
 		} else {
-			log.Debugf("ComponentManager: Component %s has no GracefulStop method", name)
+			glog().Debugf("ComponentManager: Component %s has no GracefulStop method", name)
 		}
 	}
 	return nil
@@ -189,15 +190,19 @@ func (m *Manager) Stop(ctx context.Context) error {
 		}
 		name := reflect.TypeOf(m.components[i]).Elem().String()
 		if s, ok := m.components[i].(Stopper); ok {
-			log.Debug("ComponentManager: Stop component: ", name)
+			glog().Debug("ComponentManager: Stop component: ", name)
 
 			err := s.Stop(ctx)
 			if err != nil {
 				return errors.Wrap(err, "Failed to stop components.")
 			}
 		} else {
-			log.Debugf("ComponentManager: Component %s has no Stop method", name)
+			glog().Debugf("ComponentManager: Component %s has no Stop method", name)
 		}
 	}
 	return nil
+}
+
+func glog() insolar.Logger {
+	return log.GlobalLogger.WithSkipFrameCount(1)
 }

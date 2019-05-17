@@ -17,6 +17,7 @@
 package replication
 
 import (
+	"math/rand"
 	"testing"
 
 	fuzz "github.com/google/gofuzz"
@@ -53,11 +54,8 @@ func TestDataGatherer_ForPulseAndJet(t *testing.T) {
 	ba.ForPulseMock.Expect(ctx, jetID, pn).Return([]blob.Blob{b})
 
 	ra := object.NewRecordCollectionAccessorMock(t)
-	rec := record.MaterialRecord{
-		Record: &object.ResultRecord{},
-		JetID:  gen.JetID(),
-	}
-	ra.ForPulseMock.Expect(ctx, jetID, pn).Return([]record.MaterialRecord{
+	rec := getMaterialRecord()
+	ra.ForPulseMock.Expect(ctx, jetID, pn).Return([]record.Material{
 		rec,
 	})
 
@@ -76,13 +74,15 @@ func TestDataGatherer_ForPulseAndJet(t *testing.T) {
 	}
 	ia.ForPNAndJetMock.Return(bucks)
 
+	recData, _ := rec.Marshal()
+
 	expectedMsg := &message.HeavyPayload{
 		JetID:        jetID,
 		PulseNum:     pn,
 		IndexBuckets: convertIndexBuckets(ctx, bucks),
 		Drop:         drop.MustEncode(&d),
 		Blobs:        [][]byte{blob.MustEncode(&b)},
-		Records:      [][]byte{object.EncodeMaterial(rec)},
+		Records:      [][]byte{recData},
 	}
 
 	dataGatherer := NewDataGatherer(da, ba, ra, ia)
@@ -142,18 +142,62 @@ func TestDataGatherer_convertBlobs(t *testing.T) {
 }
 
 func TestDataGatherer_convertRecords(t *testing.T) {
-	var recs []record.MaterialRecord
-	fuzz.New().NilChance(0).NumElements(500, 1000).Funcs(func(elem *record.MaterialRecord, c fuzz.Continue) {
+	ctx := inslogger.TestContext(t)
+	var recs []record.Material
+	fuzz.New().NilChance(0).NumElements(500, 1000).Funcs(func(elem *record.Material, c fuzz.Continue) {
 		elem.JetID = gen.JetID()
-		elem.Record = &object.CodeRecord{Code: insolar.NewID(gen.PulseNumber(), nil)}
+		virtRec := getVirtualRecord()
+		elem.Virtual = &virtRec
 	}).Fuzz(&recs)
 
 	var expected [][]byte
 	for _, r := range recs {
-		expected = append(expected, object.EncodeMaterial(r))
+		data, _ := r.Marshal()
+		expected = append(expected, data)
 	}
 
-	resp := convertRecords(recs)
+	resp := convertRecords(ctx, recs)
 
 	require.Equal(t, resp, expected)
+}
+
+// getVirtualRecord generates random Virtual record
+func getVirtualRecord() record.Virtual {
+	var requestRecord record.Request
+
+	requestRecord.Object = gen.ID()
+	requestRecord.Parcel = slice()
+
+	virtualRecord := record.Virtual{
+		Union: &record.Virtual_Request{
+			Request: &requestRecord,
+		},
+	}
+
+	return virtualRecord
+}
+
+// getMaterialRecord generates random Material record
+func getMaterialRecord() record.Material {
+	virtRec := getVirtualRecord()
+
+	materialRecord := record.Material{
+		Virtual: &virtRec,
+		JetID:   gen.JetID(),
+	}
+
+	return materialRecord
+}
+
+// sizedSlice generates random byte slice fixed size.
+func sizedSlice(size int32) (blob []byte) {
+	blob = make([]byte, size)
+	rand.Read(blob)
+	return
+}
+
+// slice generates random byte slice with random size between 0 and 1024.
+func slice() []byte {
+	size := rand.Int31n(1024)
+	return sizedSlice(size)
 }

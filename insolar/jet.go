@@ -121,3 +121,28 @@ ScanPrefix:
 
 	return res.String()
 }
+
+func (id JetID) Marshal() ([]byte, error) {
+	return id[:], nil
+}
+
+func (id *JetID) MarshalTo(data []byte) (n int, err error) {
+	copy(data, id[:])
+	return RecordIDSize, nil
+}
+
+func (id *JetID) Unmarshal(data []byte) error {
+	if len(data) != RecordIDSize {
+		return errors.New("not enough bytes to unpack JetID")
+	}
+	copy(id[:], data)
+	return nil
+}
+
+func (id *JetID) Size() int {
+	return RecordIDSize
+}
+
+func (id JetID) Equal(other JetID) bool {
+	return id == other
+}
