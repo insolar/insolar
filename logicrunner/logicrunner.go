@@ -160,7 +160,10 @@ type LogicRunner struct {
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
 	stateMutex sync.RWMutex
 
-	FlowDispatcher *dispatcher.Dispatcher
+	// Inner dispatcher will be merged with FlowDispatcher after
+	// complete migration to watermill.
+	FlowDispatcher      *dispatcher.Dispatcher
+	InnerFlowDispatcher *dispatcher.Dispatcher
 
 	sock net.Listener
 
@@ -218,7 +221,7 @@ func initHandlers(lr *LogicRunner) error {
 		}
 	}
 
-	innerDispatcher := dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
+	lr.InnerFlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
 		return innerInitHandle(msg).Present
 	}, func(msg bus.Message) flow.Handle {
 		return innerInitHandle(msg).Present
@@ -233,7 +236,7 @@ func initHandlers(lr *LogicRunner) error {
 		"InnerMsgHandler",
 		InnerMsgTopic,
 		pubSub,
-		innerDispatcher.InnerSubscriber,
+		lr.InnerFlowDispatcher.InnerSubscriber,
 	)
 	go func() {
 		if err := router.Run(); err != nil {
