@@ -14,26 +14,26 @@ import (
 
 // LifelineIndex is a base storage for lifelines.
 type LifelineIndex interface {
-	// IndexLifelineAccessor provides methods for fetching lifelines.
-	IndexLifelineAccessor
-	// IndexLifelineModifier provides methods for modifying lifelines.
-	IndexLifelineModifier
+	// LifelineAccessor provides methods for fetching lifelines.
+	LifelineAccessor
+	// LifelineModifier provides methods for modifying lifelines.
+	LifelineModifier
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexLifelineAccessor -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineAccessor -o ./ -s _mock.go
 
-// IndexLifelineAccessor provides methods for fetching lifelines.
-type IndexLifelineAccessor interface {
-	// LifelineForID returns a lifeline from a bucket with provided PN and ObjID
-	LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error)
+// LifelineAccessor provides methods for fetching lifelines.
+type LifelineAccessor interface {
+	// ForID returns a lifeline from a bucket with provided PN and ObjID
+	ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error)
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexLifelineModifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.LifelineModifier -o ./ -s _mock.go
 
-// IndexLifelineModifier provides methods for modifying lifelines.
-type IndexLifelineModifier interface {
-	// SetLifeline set a lifeline to a bucket with provided pulseNumber and ID
-	SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error
+// LifelineModifier provides methods for modifying lifelines.
+type LifelineModifier interface {
+	// Set set a lifeline to a bucket with provided pulseNumber and ID
+	Set(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexPendingModifier -o ./ -s _mock.go
@@ -176,8 +176,8 @@ func (i *InMemoryIndex) bucket(pn insolar.PulseNumber, objID insolar.ID) *Locked
 	return objsByPn[objID]
 }
 
-// SetLifeline sets a lifeline to a bucket with provided pulseNumber and ID
-func (i *InMemoryIndex) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error {
+// Set sets a lifeline to a bucket with provided pulseNumber and ID
+func (i *InMemoryIndex) Set(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error {
 	b := i.bucket(pn, objID)
 	if b == nil {
 		b = i.createBucket(ctx, pn, objID)
@@ -188,7 +188,7 @@ func (i *InMemoryIndex) SetLifeline(ctx context.Context, pn insolar.PulseNumber,
 		statIndexInMemoryAddedCount.M(1),
 	)
 
-	inslogger.FromContext(ctx).Debugf("[SetLifeline] lifeline for obj - %v was set successfully", objID.DebugString())
+	inslogger.FromContext(ctx).Debugf("[Set] lifeline for obj - %v was set successfully", objID.DebugString())
 	return nil
 }
 
@@ -236,8 +236,8 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 	return nil
 }
 
-// LifelineForID returns a lifeline from a bucket with provided PN and ObjID
-func (i *InMemoryIndex) LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
+// ForID returns a lifeline from a bucket with provided PN and ObjID
+func (i *InMemoryIndex) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
 	b := i.bucket(pn, objID)
 	if b == nil {
 		return Lifeline{}, ErrLifelineNotFound
@@ -344,8 +344,8 @@ func NewIndexDB(db store.DB) *IndexDB {
 	return &IndexDB{db: db}
 }
 
-// SetLifeline sets a lifeline to a bucket with provided pulseNumber and ID
-func (i *IndexDB) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error {
+// Set sets a lifeline to a bucket with provided pulseNumber and ID
+func (i *IndexDB) Set(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error {
 	i.lock.Lock()
 	defer i.lock.Unlock()
 
@@ -375,7 +375,7 @@ func (i *IndexDB) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID
 		statIndexDBAddedCount.M(1),
 	)
 
-	inslogger.FromContext(ctx).Debugf("[SetLifeline] lifeline for obj - %v was set successfully", objID.DebugString())
+	inslogger.FromContext(ctx).Debugf("[Set] lifeline for obj - %v was set successfully", objID.DebugString())
 
 	return nil
 }
@@ -398,8 +398,8 @@ func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket 
 	return i.setLastKnownPN(pn, bucket.ObjID)
 }
 
-// LifelineForID returns a lifeline from a bucket with provided PN and ObjID
-func (i *IndexDB) LifelineForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
+// ForID returns a lifeline from a bucket with provided PN and ObjID
+func (i *IndexDB) ForID(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (Lifeline, error) {
 	var buck *IndexBucket
 	buck, err := i.getBucket(pn, objID)
 	if err == ErrIndexBucketNotFound {

@@ -104,7 +104,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	p.Dep.IDLocker.Lock(p.Message.Object.Record())
 	defer p.Dep.IDLocker.Unlock(p.Message.Object.Record())
 
-	idx, err := p.Dep.LifelineIndex.LifelineForID(ctx, p.PulseNumber, *p.Message.Object.Record())
+	idx, err := p.Dep.LifelineIndex.ForID(ctx, p.PulseNumber, *p.Message.Object.Record())
 	// No index on our node.
 	if err == object.ErrLifelineNotFound {
 		if state.ID() == record.StateActivation {
@@ -167,7 +167,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 
 	idx.LatestUpdate = p.PulseNumber
 	idx.JetID = p.JetID
-	err = p.Dep.LifelineIndex.SetLifeline(ctx, p.PulseNumber, *p.Message.Object.Record(), idx)
+	err = p.Dep.LifelineIndex.Set(ctx, p.PulseNumber, *p.Message.Object.Record(), idx)
 	if err != nil {
 		return bus.Reply{Err: err}
 	}
@@ -210,7 +210,7 @@ func (p *UpdateObject) saveIndexFromHeavy(
 	}
 
 	idx.JetID = jetID
-	err = p.Dep.LifelineIndex.SetLifeline(ctx, p.PulseNumber, *obj.Record(), idx)
+	err = p.Dep.LifelineIndex.Set(ctx, p.PulseNumber, *obj.Record(), idx)
 	if err != nil {
 		return object.Lifeline{}, errors.Wrap(err, "failed to save")
 	}

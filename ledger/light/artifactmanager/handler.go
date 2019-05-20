@@ -289,7 +289,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 	h.IDLocker.Lock(msg.Head.Record())
 	defer h.IDLocker.Unlock(msg.Head.Record())
 
-	idx, err := h.LifelineIndex.LifelineForID(ctx, parcel.Pulse(), *msg.Head.Record())
+	idx, err := h.LifelineIndex.ForID(ctx, parcel.Pulse(), *msg.Head.Record())
 	if err == object.ErrLifelineNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -336,7 +336,7 @@ func (h *MessageHandler) handleGetChildren(
 	h.IDLocker.Lock(msg.Parent.Record())
 	defer h.IDLocker.Unlock(msg.Parent.Record())
 
-	idx, err := h.LifelineIndex.LifelineForID(ctx, parcel.Pulse(), *msg.Parent.Record())
+	idx, err := h.LifelineIndex.ForID(ctx, parcel.Pulse(), *msg.Parent.Record())
 	if err == object.ErrLifelineNotFound {
 		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
 		if err != nil {
@@ -495,7 +495,7 @@ func (h *MessageHandler) saveIndexFromHeavy(
 	}
 
 	idx.JetID = insolar.JetID(jetID)
-	err = h.LifelineIndex.SetLifeline(ctx, parcelPN, *obj.Record(), idx)
+	err = h.LifelineIndex.Set(ctx, parcelPN, *obj.Record(), idx)
 	if err != nil {
 		return object.Lifeline{}, errors.Wrap(err, "failed to save")
 	}

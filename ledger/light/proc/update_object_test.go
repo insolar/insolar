@@ -128,7 +128,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	objRep, ok := rep.Reply.(*reply.Object)
 	require.True(t, ok)
 
-	idx, err := indexMemoryStor.LifelineForID(ctx, insolar.FirstPulseNumber, *msg.Object.Record())
+	idx, err := indexMemoryStor.ForID(ctx, insolar.FirstPulseNumber, *msg.Object.Record())
 	require.NoError(t, err)
 	assert.Equal(t, objRep.State, *idx.LatestState)
 }
@@ -171,7 +171,7 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 		Object: *genRandomRef(0),
 	}
 	ctx := context.Background()
-	err = indexMemoryStor.SetLifeline(ctx, insolar.FirstPulseNumber, *msg.Object.Record(), objIndex)
+	err = indexMemoryStor.Set(ctx, insolar.FirstPulseNumber, *msg.Object.Record(), objIndex)
 	require.NoError(t, err)
 
 	// Act
@@ -193,7 +193,7 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	require.True(t, ok)
 
 	// Arrange
-	idx, err := indexMemoryStor.LifelineForID(ctx, insolar.FirstPulseNumber, *msg.Object.Record())
+	idx, err := indexMemoryStor.ForID(ctx, insolar.FirstPulseNumber, *msg.Object.Record())
 	require.NoError(t, err)
 	require.Equal(t, insolar.FirstPulseNumber, int(idx.LatestUpdate))
 }

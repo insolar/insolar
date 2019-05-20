@@ -226,7 +226,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
 		assert.Equal(t, heavyRef, redirect.GetReceiver())
 
-		idx, err := s.indexMemoryStor.LifelineForID(s.ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record())
+		idx, err := s.indexMemoryStor.ForID(s.ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record())
 		require.NoError(t, err)
 		assert.Equal(t, objIndex.LatestState, idx.LatestState)
 	})
@@ -235,7 +235,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 		lightRef := genRandomRef(0)
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(lightRef, nil)
-		err = s.indexMemoryStor.SetLifeline(s.ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record(), object.Lifeline{
+		err = s.indexMemoryStor.Set(s.ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record(), object.Lifeline{
 			ChildPointer: genRandomID(insolar.FirstPulseNumber),
 			JetID:        insolar.JetID(jetID),
 		})
@@ -256,7 +256,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
 		heavyRef := genRandomRef(0)
 		jc.IsBeyondLimitMock.Return(false, nil)
 		jc.NodeForJetMock.Return(heavyRef, nil)
-		err = s.indexMemoryStor.SetLifeline(s.ctx, insolar.FirstPulseNumber+2, *msg.Parent.Record(), object.Lifeline{
+		err = s.indexMemoryStor.Set(s.ctx, insolar.FirstPulseNumber+2, *msg.Parent.Record(), object.Lifeline{
 			ChildPointer: genRandomID(insolar.FirstPulseNumber),
 			JetID:        insolar.JetID(jetID),
 		})
@@ -337,7 +337,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	require.True(s.T(), ok)
 	assert.Equal(s.T(), delegate, delegateRep.Head)
 
-	idx, err := s.indexMemoryStor.LifelineForID(s.ctx, insolar.FirstPulseNumber, *msg.Head.Record())
+	idx, err := s.indexMemoryStor.ForID(s.ctx, insolar.FirstPulseNumber, *msg.Head.Record())
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), objIndex.Delegates, idx.Delegates)
 }
@@ -456,7 +456,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	require.True(s.T(), ok)
 	assert.Equal(s.T(), *childID, objRep.ID)
 
-	idx, err := s.indexMemoryStor.LifelineForID(s.ctx, 0, *msg.Parent.Record())
+	idx, err := s.indexMemoryStor.ForID(s.ctx, 0, *msg.Parent.Record())
 	require.NoError(s.T(), err)
 	assert.Equal(s.T(), childID, idx.ChildPointer)
 }
@@ -511,7 +511,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	}
 
 	pulse := gen.PulseNumber()
-	err = s.indexMemoryStor.SetLifeline(s.ctx, pulse, *msg.Parent.Record(), objIndex)
+	err = s.indexMemoryStor.Set(s.ctx, pulse, *msg.Parent.Record(), objIndex)
 	require.NoError(s.T(), err)
 
 	replyTo := make(chan bus.Reply, 1)
@@ -527,7 +527,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	err = registerChild.Proceed(contextWithJet(s.ctx, jetID))
 	require.NoError(s.T(), err)
 
-	idx, err := s.indexMemoryStor.LifelineForID(s.ctx, pulse, *msg.Parent.Record())
+	idx, err := s.indexMemoryStor.ForID(s.ctx, pulse, *msg.Parent.Record())
 	require.NoError(s.T(), err)
 	require.Equal(s.T(), idx.LatestUpdate, pulse)
 }
@@ -564,7 +564,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 	firstIndex := object.EncodeIndex(object.Lifeline{
 		LatestState: firstID,
 	})
-	err := s.indexMemoryStor.SetLifeline(s.ctx, insolar.FirstPulseNumber, *firstID, object.Lifeline{
+	err := s.indexMemoryStor.Set(s.ctx, insolar.FirstPulseNumber, *firstID, object.Lifeline{
 		LatestState: firstID,
 		JetID:       insolar.JetID(jetID),
 	})

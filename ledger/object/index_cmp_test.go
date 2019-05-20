@@ -61,15 +61,15 @@ func TestIndex_Components(t *testing.T) {
 
 	t.Run("saves correct index-value", func(t *testing.T) {
 		for _, i := range indices {
-			memErr := indexMemory.SetLifeline(ctx, pn, i.id, i.idx)
-			dbErr := indexDB.SetLifeline(ctx, pn, i.id, i.idx)
+			memErr := indexMemory.Set(ctx, pn, i.id, i.idx)
+			dbErr := indexDB.Set(ctx, pn, i.id, i.idx)
 			require.NoError(t, memErr)
 			require.NoError(t, dbErr)
 		}
 
 		for _, i := range indices {
-			resIndexMem, memErr := indexMemory.LifelineForID(ctx, pn, i.id)
-			resIndexDB, dbErr := indexDB.LifelineForID(ctx, pn, i.id)
+			resIndexMem, memErr := indexMemory.ForID(ctx, pn, i.id)
+			resIndexDB, dbErr := indexDB.ForID(ctx, pn, i.id)
 			require.NoError(t, memErr)
 			require.NoError(t, dbErr)
 
@@ -93,8 +93,8 @@ func TestIndex_Components(t *testing.T) {
 		t.Parallel()
 
 		for i := int32(0); i < rand.Int31n(10); i++ {
-			_, memErr := indexMemory.LifelineForID(ctx, pn, gen.ID())
-			_, dbErr := indexDB.LifelineForID(ctx, pn, gen.ID())
+			_, memErr := indexMemory.ForID(ctx, pn, gen.ID())
+			_, dbErr := indexDB.ForID(ctx, pn, gen.ID())
 			require.Error(t, memErr)
 			require.Error(t, dbErr)
 			assert.Equal(t, object.ErrLifelineNotFound, memErr)
@@ -109,15 +109,15 @@ func TestIndex_Components(t *testing.T) {
 		indexDB := object.NewIndexDB(store.NewMemoryMockDB())
 
 		for _, i := range indices {
-			memErr := indexMemory.SetLifeline(ctx, pn, i.id, i.idx)
-			dbErr := indexDB.SetLifeline(ctx, pn, i.id, i.idx)
+			memErr := indexMemory.Set(ctx, pn, i.id, i.idx)
+			dbErr := indexDB.Set(ctx, pn, i.id, i.idx)
 			require.NoError(t, memErr)
 			require.NoError(t, dbErr)
 		}
 
 		for _, i := range indices {
-			memErr := indexMemory.SetLifeline(ctx, pn, i.id, i.idx)
-			dbErr := indexDB.SetLifeline(ctx, pn, i.id, i.idx)
+			memErr := indexMemory.Set(ctx, pn, i.id, i.idx)
+			dbErr := indexDB.Set(ctx, pn, i.id, i.idx)
 			assert.NoError(t, memErr)
 			assert.NoError(t, dbErr)
 		}

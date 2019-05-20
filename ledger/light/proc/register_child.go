@@ -114,7 +114,7 @@ func (p *RegisterChild) process(ctx context.Context) error {
 	p.idx.LatestUpdate = p.pulse
 	p.idx.JetID = p.jet
 
-	err = p.Dep.LifelineIndex.SetLifeline(ctx, p.pulse, *p.msg.Parent.Record(), p.idx)
+	err = p.Dep.LifelineIndex.Set(ctx, p.pulse, *p.msg.Parent.Record(), p.idx)
 	if err != nil {
 		return err
 	}

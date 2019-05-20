@@ -48,7 +48,7 @@ type Handler struct {
 	BlobModifier          blob.Modifier
 	RecordAccessor        object.RecordAccessor
 	RecordModifier        object.RecordModifier
-	IndexLifelineAccessor object.IndexLifelineAccessor
+	IndexLifelineAccessor object.LifelineAccessor
 	IndexBucketModifier   object.IndexBucketModifier
 	DropModifier          drop.Modifier
 
@@ -138,7 +138,7 @@ func (h *Handler) handleGetObject(
 	msg := parcel.Message().(*message.GetObject)
 
 	// Fetch object index. If not found redirect.
-	idx, err := h.IndexLifelineAccessor.LifelineForID(ctx, parcel.Pulse(), *msg.Head.Record())
+	idx, err := h.IndexLifelineAccessor.ForID(ctx, parcel.Pulse(), *msg.Head.Record())
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to fetch object index for %s", msg.Head.Record().DebugString())
 	}
@@ -201,7 +201,7 @@ func (h *Handler) handleGetObject(
 func (h *Handler) handleGetDelegate(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetDelegate)
 
-	idx, err := h.IndexLifelineAccessor.LifelineForID(ctx, parcel.Pulse(), *msg.Head.Record())
+	idx, err := h.IndexLifelineAccessor.ForID(ctx, parcel.Pulse(), *msg.Head.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch index for %v", msg.Head.Record()))
 	}
@@ -222,7 +222,7 @@ func (h *Handler) handleGetChildren(
 ) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetChildren)
 
-	idx, err := h.IndexLifelineAccessor.LifelineForID(ctx, parcel.Pulse(), *msg.Parent.Record())
+	idx, err := h.IndexLifelineAccessor.ForID(ctx, parcel.Pulse(), *msg.Parent.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch index for %v", msg.Parent.Record()))
 	}
@@ -324,7 +324,7 @@ func (h *Handler) handleGetRequest(ctx context.Context, parcel insolar.Parcel) (
 func (h *Handler) handleGetObjectIndex(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	msg := parcel.Message().(*message.GetObjectIndex)
 
-	idx, err := h.IndexLifelineAccessor.LifelineForID(ctx, parcel.Pulse(), *msg.Object.Record())
+	idx, err := h.IndexLifelineAccessor.ForID(ctx, parcel.Pulse(), *msg.Object.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to fetch object index")
 	}

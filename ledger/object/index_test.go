@@ -46,7 +46,7 @@ func TestInMemoryIndex_SetLifeline(t *testing.T) {
 		storage := NewInMemoryIndex()
 		pn := gen.PulseNumber()
 
-		err := storage.SetLifeline(ctx, pn, id, idx)
+		err := storage.Set(ctx, pn, id, idx)
 
 		require.NoError(t, err)
 		assert.Equal(t, 1, len(storage.buckets))
@@ -72,13 +72,13 @@ func TestInMemoryIndex_SetLifeline(t *testing.T) {
 		fthID := insolar.NewID(4, nil)
 
 		storage := NewInMemoryIndex()
-		err := storage.SetLifeline(ctx, 1, *fID, idx)
+		err := storage.Set(ctx, 1, *fID, idx)
 		require.NoError(t, err)
-		err = storage.SetLifeline(ctx, 1, *sID, idx)
+		err = storage.Set(ctx, 1, *sID, idx)
 		require.NoError(t, err)
-		err = storage.SetLifeline(ctx, 2, *tID, idx)
+		err = storage.Set(ctx, 2, *tID, idx)
 		require.NoError(t, err)
-		err = storage.SetLifeline(ctx, 2, *fthID, idx)
+		err = storage.Set(ctx, 2, *fthID, idx)
 		require.NoError(t, err)
 
 		require.Equal(t, 2, len(storage.buckets))
@@ -96,10 +96,10 @@ func TestInMemoryIndex_SetLifeline(t *testing.T) {
 		storage := NewInMemoryIndex()
 		pn := gen.PulseNumber()
 
-		err := storage.SetLifeline(ctx, pn, id, idx)
+		err := storage.Set(ctx, pn, id, idx)
 		require.NoError(t, err)
 
-		err = storage.SetLifeline(ctx, pn, id, idx)
+		err = storage.Set(ctx, pn, id, idx)
 		require.NoError(t, err)
 	})
 }
@@ -123,10 +123,10 @@ func TestIndexStorage_ForID(t *testing.T) {
 		storage := NewInMemoryIndex()
 		pn := gen.PulseNumber()
 
-		err := storage.SetLifeline(ctx, pn, id, idx)
+		err := storage.Set(ctx, pn, id, idx)
 		require.NoError(t, err)
 
-		res, err := storage.LifelineForID(ctx, pn, id)
+		res, err := storage.ForID(ctx, pn, id)
 
 		require.NoError(t, err)
 		assert.Equal(t, idx, res)
@@ -138,7 +138,7 @@ func TestIndexStorage_ForID(t *testing.T) {
 		storage := NewInMemoryIndex()
 		pn := gen.PulseNumber()
 
-		_, err := storage.LifelineForID(ctx, pn, id)
+		_, err := storage.ForID(ctx, pn, id)
 
 		assert.Equal(t, ErrLifelineNotFound, err)
 	})
@@ -178,9 +178,9 @@ func TestInMemoryIndex_ForPNAndJet(t *testing.T) {
 
 	index := NewInMemoryIndex()
 
-	_ = index.SetLifeline(ctx, fPn, *fId, fIdx)
-	_ = index.SetLifeline(ctx, fPn, *sId, sIdx)
-	_ = index.SetLifeline(ctx, sPn, *tId, tIdx)
+	_ = index.Set(ctx, fPn, *fId, fIdx)
+	_ = index.Set(ctx, fPn, *sId, sIdx)
+	_ = index.Set(ctx, sPn, *tId, tIdx)
 
 	res := index.ForPNAndJet(ctx, fPn, *fJetId)
 	require.Equal(t, 1, len(res))
@@ -280,7 +280,7 @@ func TestInMemoryIndex_SetLifelineUsage(t *testing.T) {
 
 		index := NewInMemoryIndex()
 
-		_ = index.SetLifeline(ctx, pn, id, idx)
+		_ = index.Set(ctx, pn, id, idx)
 
 		require.Equal(t, pn, index.buckets[pn][id].bucket.LifelineLastUsed)
 
@@ -345,7 +345,7 @@ func TestDBIndex_SetLifeline(t *testing.T) {
 		storage := NewIndexDB(store.NewMemoryMockDB())
 		pn := gen.PulseNumber()
 
-		err := storage.SetLifeline(ctx, pn, id, idx)
+		err := storage.Set(ctx, pn, id, idx)
 
 		require.NoError(t, err)
 	})
@@ -356,10 +356,10 @@ func TestDBIndex_SetLifeline(t *testing.T) {
 		storage := NewInMemoryIndex()
 		pn := gen.PulseNumber()
 
-		err := storage.SetLifeline(ctx, pn, id, idx)
+		err := storage.Set(ctx, pn, id, idx)
 		require.NoError(t, err)
 
-		err = storage.SetLifeline(ctx, pn, id, idx)
+		err = storage.Set(ctx, pn, id, idx)
 		require.NoError(t, err)
 	})
 }
@@ -383,10 +383,10 @@ func TestDBIndexStorage_ForID(t *testing.T) {
 		storage := NewIndexDB(store.NewMemoryMockDB())
 		pn := gen.PulseNumber()
 
-		err := storage.SetLifeline(ctx, pn, id, idx)
+		err := storage.Set(ctx, pn, id, idx)
 		require.NoError(t, err)
 
-		res, err := storage.LifelineForID(ctx, pn, id)
+		res, err := storage.ForID(ctx, pn, id)
 		require.NoError(t, err)
 
 		idxBuf, _ := idx.Marshal()
@@ -401,7 +401,7 @@ func TestDBIndexStorage_ForID(t *testing.T) {
 		storage := NewIndexDB(store.NewMemoryMockDB())
 		pn := gen.PulseNumber()
 
-		_, err := storage.LifelineForID(ctx, pn, id)
+		_, err := storage.ForID(ctx, pn, id)
 
 		assert.Equal(t, ErrLifelineNotFound, err)
 	})
@@ -430,7 +430,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		err := index.SetBucket(ctx, pn, buck)
 		require.NoError(t, err)
 
-		res, err := index.LifelineForID(ctx, pn, objID)
+		res, err := index.ForID(ctx, pn, objID)
 		require.NoError(t, err)
 
 		idxBuf, _ := buck.Lifeline.Marshal()
@@ -460,7 +460,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		err = index.SetBucket(ctx, pn, sBuck)
 		require.NoError(t, err)
 
-		res, err := index.LifelineForID(ctx, pn, objID)
+		res, err := index.ForID(ctx, pn, objID)
 		require.NoError(t, err)
 
 		idxBuf, _ := sBuck.Lifeline.Marshal()

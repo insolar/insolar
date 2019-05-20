@@ -423,7 +423,7 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse i
 // 	// idxs := m.CollectionIndexAccessor.ForJet(ctx, fromJetID)
 // 	// for id, meta := range idxs {
 // 	// 	meta.LifelineIndex.JetID = toJetID
-// 	// 	err := m.IndexLifelineModifier.SetWithMeta(ctx, id, meta.LastUsed, meta.LifelineIndex)
+// 	// 	err := m.LifelineModifier.SetWithMeta(ctx, id, meta.LastUsed, meta.LifelineIndex)
 // 	// 	if err == object.ErrLifelineNotFound {
 // 	// 		logger.WithField("id", id.DebugString()).Error("failed to rewrite index")
 // 	// 		continue

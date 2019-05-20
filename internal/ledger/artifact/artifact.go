@@ -69,15 +69,15 @@ type Scope struct {
 	RecordModifier object.RecordModifier
 	RecordAccessor object.RecordAccessor
 
-	LifelineModifier object.IndexLifelineModifier
-	LifelineAccessor object.IndexLifelineAccessor
+	LifelineModifier object.LifelineModifier
+	LifelineAccessor object.LifelineAccessor
 }
 
 func (m *Scope) GetObject(
 	ctx context.Context,
 	head insolar.Reference,
 ) (ObjectDescriptor, error) {
-	idx, err := m.LifelineAccessor.LifelineForID(ctx, m.PulseNumber, *head.Record())
+	idx, err := m.LifelineAccessor.ForID(ctx, m.PulseNumber, *head.Record())
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func (m *Scope) activateObject(
 	asDelegate bool,
 	memory []byte,
 ) (ObjectDescriptor, error) {
-	parentIdx, err := m.LifelineAccessor.LifelineForID(ctx, m.PulseNumber, *parent.Record())
+	parentIdx, err := m.LifelineAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, "not found parent index for activated object")
 	}
@@ -292,7 +292,7 @@ func (m *Scope) registerChild(
 	asType *insolar.Reference,
 ) error {
 	var jetID = insolar.ID(insolar.ZeroJetID)
-	idx, err := m.LifelineAccessor.LifelineForID(ctx, m.PulseNumber, *parent.Record())
+	idx, err := m.LifelineAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
 	if err != nil {
 		return err
 	}
@@ -322,7 +322,7 @@ func (m *Scope) registerChild(
 	}
 	idx.LatestUpdate = m.PulseNumber
 	idx.JetID = insolar.JetID(jetID)
-	return m.LifelineModifier.SetLifeline(ctx, m.PulseNumber, *parent.Record(), idx)
+	return m.LifelineModifier.Set(ctx, m.PulseNumber, *parent.Record(), idx)
 }
 
 func (m *Scope) updateStateObject(
@@ -349,7 +349,7 @@ func (m *Scope) updateStateObject(
 		panic("unknown state object type")
 	}
 
-	idx, err := m.LifelineAccessor.LifelineForID(ctx, m.PulseNumber, *objRef.Record())
+	idx, err := m.LifelineAccessor.ForID(ctx, m.PulseNumber, *objRef.Record())
 	// No index on our node.
 	if err != nil {
 		if err != object.ErrLifelineNotFound {
@@ -377,7 +377,7 @@ func (m *Scope) updateStateObject(
 		idx.Parent = stateObject.(record.Activate).Parent
 	}
 	idx.JetID = insolar.JetID(jetID)
-	err = m.LifelineModifier.SetLifeline(ctx, m.PulseNumber, *objRef.Record(), idx)
+	err = m.LifelineModifier.Set(ctx, m.PulseNumber, *objRef.Record(), idx)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail set index for state object")
 	}

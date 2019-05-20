@@ -74,7 +74,7 @@ func (p *GetIndex) process(ctx context.Context) error {
 	p.Dep.Locker.Lock(&objectID)
 	defer p.Dep.Locker.Unlock(&objectID)
 
-	idx, err := p.Dep.Index.LifelineForID(ctx, p.pn, objectID)
+	idx, err := p.Dep.Index.ForID(ctx, p.pn, objectID)
 	if err == nil {
 		p.Result.Index = idx
 		if flow.Pulse(ctx) == p.pn {
@@ -117,7 +117,7 @@ func (p *GetIndex) process(ctx context.Context) error {
 	}
 
 	p.Result.Index.JetID = p.jet
-	err = p.Dep.Index.SetLifeline(ctx, flow.Pulse(ctx), objectID, p.Result.Index)
+	err = p.Dep.Index.Set(ctx, flow.Pulse(ctx), objectID, p.Result.Index)
 	if err != nil {
 		return errors.Wrap(err, "failed to save lifeline")
 	}
