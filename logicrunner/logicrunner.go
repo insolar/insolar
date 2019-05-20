@@ -394,83 +394,6 @@ func (lr *LogicRunner) CheckExecutionLoop(
 	return true
 }
 
-func (lr *LogicRunner) StartQueueProcessorIfNeeded(
-	ctx context.Context, es *ExecutionState,
-) error {
-	es.Lock()
-	defer es.Unlock()
-
-	if !es.haveSomeToProcess() {
-		inslogger.FromContext(ctx).Debug("queue is empty. processor is not needed")
-		return nil
-	}
-
-	if es.QueueProcessorActive {
-		inslogger.FromContext(ctx).Debug("queue processor is already active. processor is not needed")
-		return nil
-	}
-
-	if es.pending == message.PendingUnknown {
-		return errors.New("shouldn't start queue processor with unknown pending state")
-	} else if es.pending == message.InPending {
-		inslogger.FromContext(ctx).Debug("object in pending. not starting queue processor")
-		return nil
-	}
-
-	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
-	es.QueueProcessorActive = true
-	go lr.ProcessExecutionQueue(ctx, es)
-	lr.startGetLedgerPendingRequest(ctx, es)
-
-	return nil
-}
-
-func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionState) {
-	for {
-		es.Lock()
-		if len(es.Queue) == 0 && es.LedgerQueueElement == nil {
-			inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
-			es.QueueProcessorActive = false
-			es.Current = nil
-			es.Unlock()
-			return
-		}
-
-		var qe ExecutionQueueElement
-		if es.LedgerQueueElement != nil {
-			qe = *es.LedgerQueueElement
-			es.LedgerQueueElement = nil
-		} else {
-			qe, es.Queue = es.Queue[0], es.Queue[1:]
-		}
-
-		sender := qe.parcel.GetSender()
-		current := CurrentExecution{
-			Request:       qe.request,
-			RequesterNode: &sender,
-			Context:       qe.ctx,
-		}
-		es.Current = &current
-
-		if msg, ok := qe.parcel.Message().(*message.CallMethod); ok {
-			current.ReturnMode = msg.ReturnMode
-		}
-		if msg, ok := qe.parcel.Message().(message.IBaseLogicMessage); ok {
-			current.Sequence = msg.GetBaseLogicMessage().Sequence
-		}
-
-		es.Unlock()
-
-		lr.executeOrValidate(current.Context, es, qe.parcel)
-
-		if qe.fromLedger {
-			lr.startGetLedgerPendingRequest(ctx, es)
-		}
-
-		lr.finishPendingIfNeeded(ctx, es)
-	}
-}
-
 // finishPendingIfNeeded checks whether last execution was a pending one.
 // If this is true as a side effect the function sends a PendingFinished
 // message to the current executor
@@ -667,10 +590,12 @@ func init() {
 
 func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState, m *message.CallMethod) (insolar.Reply, error) {
 	if es.objectbody == nil {
+
 		objDesc, protoDesc, codeDesc, err := lr.getDescriptorsByObjectRef(ctx, m.ObjectRef)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get descriptors by object reference")
 		}
+
 		es.objectbody = &ObjectBody{
 			objDescriptor:   objDesc,
 			Object:          objDesc.Memory(),
@@ -792,6 +717,7 @@ func (lr *LogicRunner) executeConstructorCall(
 	if err != nil {
 		return nil, es.WrapError(err, "couldn't descriptors")
 	}
+
 	current.LogicContext.Prototype = protoDesc.HeadRef()
 	current.LogicContext.Code = codeDesc.Ref()
 
@@ -999,48 +925,4 @@ func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.Executi
 	}
 
 	return mq
-}
-
-func (lr *LogicRunner) ClarifyPendingState(
-	ctx context.Context, es *ExecutionState, parcel insolar.Parcel,
-) error {
-	es.Lock()
-	if es.pending != message.PendingUnknown {
-		es.Unlock()
-		return nil
-	}
-
-	if parcel != nil && parcel.Type() != insolar.TypeCallMethod {
-		es.Unlock()
-		es.pending = message.NotPending
-		return nil
-	}
-	es.Unlock()
-
-	es.HasPendingCheckMutex.Lock()
-	defer es.HasPendingCheckMutex.Unlock()
-
-	es.Lock()
-	if es.pending != message.PendingUnknown {
-		es.Unlock()
-		return nil
-	}
-	es.Unlock()
-
-	has, err := lr.ArtifactManager.HasPendingRequests(ctx, es.Ref)
-	if err != nil {
-		return err
-	}
-
-	es.Lock()
-	if es.pending == message.PendingUnknown {
-		if has {
-			es.pending = message.InPending
-		} else {
-			es.pending = message.NotPending
-		}
-	}
-	es.Unlock()
-
-	return nil
 }
