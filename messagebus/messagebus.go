@@ -377,8 +377,8 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel insolar.Parcel, loc
 			*message.CallConstructor,
 			*message.HotData,
 			*message.CallMethod:
-			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", ppn, pulse.PulseNumber)
-			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", ppn, pulse.PulseNumber)
+			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d) Msg: ", ppn, pulse.PulseNumber, parcel.Message().Type().String())
+			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)  Msg: ", ppn, pulse.PulseNumber, parcel.Message().Type().String())
 		}
 	}
 
