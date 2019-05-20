@@ -23,13 +23,14 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
@@ -169,10 +170,12 @@ func TestCallMethodCanceled(t *testing.T) {
 	}
 
 	msg := &message.CallMethod{
-		Object:    &ref,
-		Prototype: &prototypeRef,
-		Method:    method,
-		Arguments: insolar.Arguments{},
+		Request: record.Request{
+			Object:    &ref,
+			Prototype: &prototypeRef,
+			Method:    method,
+			Arguments: insolar.Arguments{},
+		},
 	}
 	_, err = cr.CallMethod(ctx, msg)
 	require.Error(t, err)
@@ -217,10 +220,12 @@ func TestCallMethodWaitResults(t *testing.T) {
 	}
 
 	msg := &message.CallMethod{
-		Object:    &ref,
-		Prototype: &prototypeRef,
-		Method:    method,
-		Arguments: insolar.Arguments{},
+		Request: record.Request{
+			Object:    &ref,
+			Prototype: &prototypeRef,
+			Method:    method,
+			Arguments: insolar.Arguments{},
+		},
 	}
 
 	_, err = cr.CallMethod(ctx, msg)

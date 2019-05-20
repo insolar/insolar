@@ -13,6 +13,7 @@ import (
 	io "io"
 	math "math"
 	reflect "reflect"
+	strconv "strconv"
 	strings "strings"
 )
 
@@ -26,6 +27,56 @@ var _ = math.Inf
 // A compilation error at this line likely means your copy of the
 // proto package needs to be updated.
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
+
+type Request_CT int32
+
+const (
+	CTMethod         Request_CT = 0
+	CTSaveAsChild    Request_CT = 1
+	CTSaveAsDelegate Request_CT = 2
+	CTGenesis        Request_CT = 3
+)
+
+var Request_CT_name = map[int32]string{
+	0: "CTMethod",
+	1: "CTSaveAsChild",
+	2: "CTSaveAsDelegate",
+	3: "CTGenesis",
+}
+
+var Request_CT_value = map[string]int32{
+	"CTMethod":         0,
+	"CTSaveAsChild":    1,
+	"CTSaveAsDelegate": 2,
+	"CTGenesis":        3,
+}
+
+func (Request_CT) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_0c86cc3f6f53fe45, []int{3, 0}
+}
+
+type Request_RM int32
+
+const (
+	// ReturnResult - return result as soon as it is ready
+	ReturnResult Request_RM = 0
+	// ReturnNoWait - call method and return without results
+	ReturnNoWait Request_RM = 1
+)
+
+var Request_RM_name = map[int32]string{
+	0: "ReturnResult",
+	1: "ReturnNoWait",
+}
+
+var Request_RM_value = map[string]int32{
+	"ReturnResult": 0,
+	"ReturnNoWait": 1,
+}
+
+func (Request_RM) EnumDescriptor() ([]byte, []int) {
+	return fileDescriptor_0c86cc3f6f53fe45, []int{3, 1}
+}
 
 type Genesis struct {
 	Polymorph int32  `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
@@ -139,10 +190,19 @@ func (m *Jet) XXX_DiscardUnknown() {
 var xxx_messageInfo_Jet proto.InternalMessageInfo
 
 type Request struct {
-	Polymorph   int32                                 `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
-	Object      github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=Object,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"Object"`
-	Parcel      []byte                                `protobuf:"bytes,21,opt,name=Parcel,proto3" json:"Parcel,omitempty"`
-	MessageHash []byte                                `protobuf:"bytes,22,opt,name=MessageHash,proto3" json:"MessageHash,omitempty"`
+	Polymorph       int32                                         `protobuf:"varint,16,opt,name=polymorph,proto3" json:"polymorph,omitempty"`
+	CallType        Request_CT                                    `protobuf:"varint,20,opt,name=CallType,proto3,enum=record.Request_CT" json:"CallType,omitempty"`
+	Caller          github_com_insolar_insolar_insolar.Reference  `protobuf:"bytes,21,opt,name=Caller,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Caller"`
+	CallerPrototype github_com_insolar_insolar_insolar.Reference  `protobuf:"bytes,22,opt,name=CallerPrototype,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"CallerPrototype"`
+	Nonce           uint64                                        `protobuf:"varint,23,opt,name=Nonce,proto3" json:"Nonce,omitempty"`
+	Sequence        uint64                                        `protobuf:"varint,24,opt,name=Sequence,proto3" json:"Sequence,omitempty"`
+	ReturnMode      Request_RM                                    `protobuf:"varint,25,opt,name=ReturnMode,proto3,enum=record.Request_RM" json:"ReturnMode,omitempty"`
+	Immutable       bool                                          `protobuf:"varint,26,opt,name=Immutable,proto3" json:"Immutable,omitempty"`
+	Base            *github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,27,opt,name=Base,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Base,omitempty"`
+	Object          *github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,28,opt,name=Object,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Object,omitempty"`
+	Prototype       *github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,29,opt,name=Prototype,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Prototype,omitempty"`
+	Method          string                                        `protobuf:"bytes,30,opt,name=Method,proto3" json:"Method,omitempty"`
+	Arguments       []byte                                        `protobuf:"bytes,31,opt,name=Arguments,proto3" json:"Arguments,omitempty"`
 }
 
 func (m *Request) Reset()      { *m = Request{} }
@@ -860,6 +920,8 @@ func (m *Material) XXX_DiscardUnknown() {
 var xxx_messageInfo_Material proto.InternalMessageInfo
 
 func init() {
+	proto.RegisterEnum("record.Request_CT", Request_CT_name, Request_CT_value)
+	proto.RegisterEnum("record.Request_RM", Request_RM_name, Request_RM_value)
 	proto.RegisterType((*Genesis)(nil), "record.Genesis")
 	proto.RegisterType((*Child)(nil), "record.Child")
 	proto.RegisterType((*Jet)(nil), "record.Jet")
@@ -877,63 +939,91 @@ func init() {
 func init() { proto.RegisterFile("insolar/record/record.proto", fileDescriptor_0c86cc3f6f53fe45) }
 
 var fileDescriptor_0c86cc3f6f53fe45 = []byte{
-	// 862 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x57, 0xcf, 0x8f, 0xdb, 0x44,
-	0x14, 0xf6, 0x34, 0xbf, 0x76, 0x5f, 0x5a, 0x5a, 0x59, 0xb0, 0x4c, 0x0b, 0x38, 0x51, 0xa4, 0x95,
-	0x52, 0x95, 0x66, 0x11, 0x54, 0x08, 0x71, 0xcb, 0x36, 0x2d, 0x4e, 0x20, 0x10, 0x4d, 0x11, 0xe2,
-	0x3a, 0x71, 0x5e, 0x1c, 0x17, 0xc7, 0x0e, 0xf6, 0xa4, 0x52, 0x6e, 0xfc, 0x09, 0x5c, 0xb8, 0x73,
-	0xec, 0x89, 0x3f, 0x80, 0x13, 0x17, 0xa4, 0x1c, 0xf7, 0x58, 0x21, 0xb1, 0x22, 0x59, 0x21, 0xc1,
-	0x6d, 0xc5, 0x5f, 0x80, 0x3c, 0x1e, 0xc7, 0xce, 0x1e, 0xc8, 0x92, 0x45, 0x2b, 0x2d, 0xea, 0x29,
-	0x9e, 0xcf, 0xdf, 0x7b, 0x9e, 0xef, 0x7b, 0xcf, 0x9e, 0x17, 0x78, 0xc3, 0xf1, 0x42, 0xdf, 0xe5,
-	0xc1, 0x41, 0x80, 0x96, 0x1f, 0x0c, 0xd4, 0x4f, 0x63, 0x12, 0xf8, 0xc2, 0xd7, 0x8b, 0xf1, 0xea,
-	0xce, 0x7d, 0xdb, 0x11, 0xa3, 0x69, 0xbf, 0x61, 0xf9, 0xe3, 0x03, 0xdb, 0xb7, 0xfd, 0x03, 0x79,
-	0xbb, 0x3f, 0x1d, 0xca, 0x95, 0x5c, 0xc8, 0xab, 0x38, 0xac, 0xd6, 0x84, 0xd2, 0x47, 0xe8, 0x61,
-	0xe8, 0x84, 0xfa, 0x9b, 0xb0, 0x3b, 0xf1, 0xdd, 0xd9, 0xd8, 0x0f, 0x26, 0x23, 0x7a, 0xab, 0x4a,
-	0xea, 0x05, 0x96, 0x02, 0xba, 0x0e, 0x79, 0x93, 0x87, 0x23, 0xfa, 0x6a, 0x95, 0xd4, 0xaf, 0x33,
-	0x79, 0xfd, 0x61, 0xfe, 0xf9, 0xf7, 0x15, 0x52, 0xfb, 0x89, 0x40, 0xe1, 0xe1, 0xc8, 0x71, 0x07,
-	0x1b, 0x32, 0x7c, 0x0c, 0xbb, 0xbd, 0x00, 0x9f, 0x49, 0x6a, 0x9c, 0xe6, 0xf0, 0xfe, 0xfc, 0xb8,
-	0xa2, 0xfd, 0x72, 0x5c, 0xd9, 0xcf, 0x6c, 0x3a, 0x11, 0x79, 0xe6, 0xb7, 0xd1, 0x6e, 0xb1, 0x34,
-	0x5e, 0x7f, 0x0c, 0x39, 0x86, 0x43, 0xfa, 0x9a, 0x4c, 0xf3, 0x40, 0xa5, 0x79, 0xfb, 0x1c, 0x69,
-	0x18, 0x0e, 0x31, 0x40, 0xcf, 0x42, 0x16, 0x25, 0x50, 0x12, 0xee, 0x42, 0xae, 0x83, 0xe2, 0x9f,
-	0xf7, 0xaf, 0xa8, 0x3f, 0x10, 0x28, 0x31, 0xfc, 0x7a, 0x8a, 0xe1, 0x06, 0xbe, 0xfe, 0x08, 0x8a,
-	0x9f, 0xf5, 0x9f, 0xa2, 0x25, 0xb6, 0x13, 0xab, 0x82, 0xf5, 0x3d, 0x28, 0xf6, 0x78, 0x60, 0xa1,
-	0x1b, 0x8b, 0x65, 0x6a, 0xa5, 0x57, 0xa1, 0xdc, 0xc5, 0x30, 0xe4, 0x36, 0xca, 0xba, 0xec, 0xc9,
-	0x9b, 0x59, 0x48, 0x6d, 0xf8, 0x57, 0x02, 0x45, 0x86, 0xe1, 0xd4, 0xbd, 0xa4, 0xfd, 0x7e, 0xba,
-	0xf2, 0xe7, 0x42, 0xd5, 0x59, 0x99, 0x4c, 0xa1, 0xd4, 0xe3, 0x33, 0xd7, 0xe7, 0x03, 0xa5, 0x31,
-	0x59, 0x2a, 0x7d, 0x7f, 0x11, 0xc8, 0x7f, 0x3e, 0x9b, 0xe0, 0x06, 0x75, 0x9f, 0x40, 0xb1, 0xe5,
-	0x8f, 0xb9, 0xe3, 0x29, 0x75, 0xdb, 0xed, 0x4a, 0xe5, 0xf8, 0xcf, 0x45, 0xd6, 0xe1, 0x66, 0xa4,
-	0xa1, 0x85, 0x96, 0xcb, 0x03, 0x2e, 0x1c, 0xdf, 0x53, 0x62, 0xcf, 0xc2, 0x4a, 0xf4, 0xef, 0xd7,
-	0x20, 0xff, 0xd0, 0x1f, 0x5c, 0x6d, 0xd1, 0xcd, 0x58, 0x43, 0xac, 0xf4, 0xdf, 0xb6, 0x5b, 0x2c,
-	0xff, 0x4b, 0x28, 0x77, 0xb9, 0x35, 0x72, 0x3c, 0x8c, 0x7c, 0xa2, 0xaf, 0x57, 0x49, 0xfd, 0xc6,
-	0xe1, 0xfb, 0x2a, 0x53, 0xe3, 0x1c, 0x99, 0x32, 0xd1, 0x2c, 0x9b, 0x4a, 0xf9, 0xfc, 0x67, 0x0e,
-	0x76, 0x9a, 0x96, 0x70, 0x9e, 0x71, 0x71, 0xb5, 0xbd, 0x7e, 0x04, 0xc5, 0x2e, 0x8e, 0xfd, 0x60,
-	0xb6, 0x9d, 0xdb, 0x2a, 0x58, 0xef, 0x40, 0xa1, 0x3d, 0xe6, 0x76, 0xec, 0xf4, 0xb6, 0x9b, 0x8a,
-	0x53, 0x44, 0x1f, 0xb0, 0x76, 0xd8, 0x8b, 0x4e, 0x21, 0x11, 0xd5, 0x8e, 0x56, 0x49, 0x7d, 0x87,
-	0x65, 0xa1, 0xc8, 0xd2, 0x1e, 0x0f, 0xd0, 0x13, 0xf4, 0xf6, 0x45, 0x2c, 0x8d, 0x73, 0xe8, 0x06,
-	0x40, 0x3b, 0x6c, 0xa1, 0x8b, 0x36, 0x17, 0x48, 0xef, 0xc8, 0xc7, 0x65, 0x90, 0xda, 0xcf, 0x39,
-	0x28, 0x34, 0xc7, 0xe8, 0x0d, 0x5e, 0x16, 0xfa, 0xb2, 0x0b, 0xad, 0x46, 0x83, 0x27, 0x22, 0xaa,
-	0xcc, 0xed, 0xad, 0x47, 0x03, 0x19, 0x5f, 0xfb, 0xee, 0x1a, 0x40, 0x0b, 0xf9, 0xff, 0xe1, 0xad,
-	0x5d, 0xf3, 0x65, 0xef, 0x82, 0xbe, 0x9c, 0xe6, 0xa0, 0xf4, 0x85, 0x13, 0x88, 0x29, 0x77, 0x37,
-	0x98, 0x72, 0x6f, 0x35, 0x14, 0x52, 0xac, 0x92, 0x7a, 0xf9, 0xdd, 0x9b, 0x0d, 0x35, 0x6b, 0x2a,
-	0xd8, 0xd4, 0xd8, 0x6a, 0x6c, 0xdc, 0x57, 0xd3, 0x1f, 0x1d, 0x4a, 0xea, 0x8d, 0x84, 0x2a, 0x41,
-	0x53, 0x63, 0x6a, 0x36, 0xac, 0xc8, 0x11, 0x8b, 0xda, 0x92, 0x54, 0x4e, 0x48, 0x1d, 0x14, 0xa6,
-	0xc6, 0xe4, 0xf0, 0x75, 0x2f, 0xf5, 0x6e, 0xb4, 0xfe, 0x50, 0x05, 0x47, 0x0f, 0x4d, 0xcf, 0x4b,
-	0x35, 0xd3, 0x50, 0x47, 0x72, 0x5f, 0x49, 0xb9, 0x11, 0x6a, 0x6a, 0x2c, 0x99, 0x79, 0x6a, 0xf1,
-	0x74, 0x40, 0x9f, 0x4a, 0xde, 0xf5, 0x84, 0x17, 0x61, 0xa6, 0xc6, 0xe2, 0xc9, 0xa1, 0xa6, 0x0e,
-	0xa2, 0xaf, 0xd6, 0x39, 0x11, 0x16, 0x71, 0xe4, 0x49, 0xd3, 0x48, 0x0f, 0x02, 0xea, 0x4a, 0xde,
-	0xad, 0x84, 0x97, 0xe0, 0xa6, 0xc6, 0xd2, 0xc3, 0x62, 0x5f, 0x7d, 0x4c, 0xe8, 0x78, 0xdd, 0x16,
-	0x09, 0x46, 0xb6, 0xc4, 0x9f, 0x9a, 0x07, 0xd9, 0x5e, 0xa5, 0x9e, 0xe4, 0xea, 0x09, 0x37, 0xbd,
-	0x63, 0x6a, 0x2c, 0xdb, 0xd3, 0x6f, 0xc1, 0xee, 0x13, 0xc7, 0xf6, 0xb8, 0x98, 0x06, 0x48, 0xe7,
-	0x44, 0x4e, 0x0a, 0x29, 0x72, 0x58, 0x82, 0xc2, 0xd4, 0x73, 0x7c, 0xaf, 0xf6, 0x23, 0x81, 0x9d,
-	0x2e, 0x17, 0x18, 0x38, 0x1b, 0x6b, 0x7e, 0x77, 0xd5, 0x1c, 0xf2, 0x4d, 0xc8, 0xd8, 0xaf, 0x60,
-	0xb6, 0x6a, 0x9e, 0xc7, 0x50, 0xe8, 0xa0, 0x68, 0xb7, 0x54, 0x8f, 0xbf, 0xa3, 0x3a, 0xb2, 0x7e,
-	0x8e, 0x8e, 0x94, 0x71, 0x2c, 0x0e, 0xdf, 0xa4, 0xe2, 0x83, 0xf9, 0xc2, 0xd0, 0x8e, 0x16, 0x86,
-	0xf6, 0x62, 0x61, 0x68, 0xa7, 0x0b, 0x83, 0x7c, 0xb3, 0x34, 0xc8, 0xf3, 0xa5, 0x41, 0xe6, 0x4b,
-	0x83, 0x1c, 0x2d, 0x0d, 0xf2, 0xdb, 0xd2, 0x20, 0x7f, 0x2c, 0x0d, 0xed, 0x74, 0x69, 0x90, 0x6f,
-	0x4f, 0x0c, 0xed, 0xe8, 0xc4, 0xd0, 0x5e, 0x9c, 0x18, 0x5a, 0xbf, 0x28, 0xff, 0xdb, 0xbc, 0xf7,
-	0x77, 0x00, 0x00, 0x00, 0xff, 0xff, 0x67, 0xe8, 0x3d, 0xd8, 0x31, 0x0d, 0x00, 0x00,
+	// 1076 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xec, 0x57, 0xcf, 0x6f, 0x1b, 0x45,
+	0x14, 0xde, 0x89, 0x7f, 0xc4, 0x79, 0x49, 0x5a, 0x33, 0x0a, 0x61, 0x9a, 0xb6, 0x1b, 0xcb, 0x52,
+	0x24, 0x57, 0xa5, 0x4e, 0x15, 0x2a, 0x84, 0xb8, 0x39, 0x76, 0x8b, 0x1d, 0xea, 0x10, 0x4d, 0x2c,
+	0xe0, 0x84, 0x34, 0xb1, 0x27, 0xf6, 0x96, 0xf5, 0x6e, 0xd8, 0x9d, 0x8d, 0x94, 0x1b, 0x7f, 0x02,
+	0x17, 0x4e, 0x5c, 0x38, 0xf6, 0x6f, 0xe0, 0xc4, 0x05, 0x29, 0xc7, 0x1c, 0x2b, 0x24, 0x2a, 0xe2,
+	0x08, 0x09, 0x6e, 0x11, 0x7f, 0x01, 0x9a, 0x1f, 0xbb, 0xeb, 0x44, 0xa8, 0x4e, 0x1d, 0x84, 0x54,
+	0xc4, 0xc9, 0x3b, 0x6f, 0xbf, 0xf9, 0xbc, 0xdf, 0x37, 0xf3, 0xde, 0xbc, 0x81, 0xdb, 0x8e, 0x17,
+	0xfa, 0x2e, 0x0b, 0xd6, 0x03, 0xde, 0xf5, 0x83, 0x9e, 0xf9, 0xa9, 0x1e, 0x04, 0xbe, 0xf0, 0x71,
+	0x5e, 0x8f, 0x56, 0x1e, 0xf4, 0x1d, 0x31, 0x88, 0xf6, 0xaa, 0x5d, 0x7f, 0xb8, 0xde, 0xf7, 0xfb,
+	0xfe, 0xba, 0x7a, 0xbd, 0x17, 0xed, 0xab, 0x91, 0x1a, 0xa8, 0x27, 0x3d, 0xad, 0x5c, 0x83, 0xd9,
+	0x8f, 0xb8, 0xc7, 0x43, 0x27, 0xc4, 0x77, 0x60, 0xee, 0xc0, 0x77, 0x8f, 0x86, 0x7e, 0x70, 0x30,
+	0x20, 0xc5, 0x12, 0xaa, 0xe4, 0x68, 0x1a, 0xc0, 0x18, 0xb2, 0x4d, 0x16, 0x0e, 0xc8, 0x52, 0x09,
+	0x55, 0x16, 0xa8, 0x7a, 0xfe, 0x30, 0xfb, 0xfc, 0xfb, 0x55, 0x54, 0xfe, 0x11, 0x41, 0xae, 0x3e,
+	0x70, 0xdc, 0xde, 0x04, 0x86, 0x8f, 0x61, 0x6e, 0x27, 0xe0, 0x87, 0x0a, 0xaa, 0x69, 0x36, 0x1f,
+	0x1c, 0xbf, 0x5c, 0xb5, 0x7e, 0x7e, 0xb9, 0xba, 0x36, 0xf6, 0xd1, 0xb1, 0xc8, 0x4b, 0xbf, 0xd5,
+	0x56, 0x83, 0xa6, 0xf3, 0xf1, 0x13, 0xc8, 0x50, 0xbe, 0x4f, 0xde, 0x56, 0x34, 0x8f, 0x0c, 0xcd,
+	0xbb, 0x57, 0xa0, 0xa1, 0x7c, 0x9f, 0x07, 0xdc, 0xeb, 0x72, 0x2a, 0x09, 0x8c, 0x84, 0x7b, 0x90,
+	0xd9, 0xe2, 0xe2, 0xd5, 0xdf, 0x6f, 0xa0, 0xdf, 0xe5, 0x61, 0x96, 0xf2, 0xaf, 0x22, 0x1e, 0x4e,
+	0xc0, 0xe3, 0x2a, 0x14, 0xea, 0xcc, 0x75, 0x3b, 0x47, 0x07, 0x5c, 0xc9, 0xbd, 0xb1, 0x81, 0xab,
+	0x66, 0xc9, 0x0c, 0x41, 0xb5, 0xde, 0xa1, 0x09, 0x06, 0x3f, 0x85, 0xbc, 0x7c, 0xe6, 0xc1, 0xb5,
+	0x54, 0x19, 0x0e, 0xfc, 0x05, 0xdc, 0xd4, 0x4f, 0x3b, 0x72, 0x9d, 0x85, 0xfc, 0x88, 0xe5, 0x6b,
+	0xd0, 0x5e, 0x26, 0xc3, 0x4b, 0x90, 0xdb, 0xf6, 0xbd, 0x2e, 0x27, 0xef, 0x94, 0x50, 0x25, 0x4b,
+	0xf5, 0x00, 0xaf, 0x40, 0x61, 0x57, 0x6a, 0x93, 0x2f, 0x88, 0x7a, 0x91, 0x8c, 0xf1, 0x06, 0x00,
+	0xe5, 0x22, 0x0a, 0xbc, 0xb6, 0xdf, 0xe3, 0xe4, 0xd6, 0xdf, 0x3b, 0x42, 0xdb, 0x74, 0x0c, 0x25,
+	0x1d, 0x6e, 0x0d, 0x87, 0x91, 0x60, 0x7b, 0x2e, 0x27, 0x2b, 0x25, 0x54, 0x29, 0xd0, 0x34, 0x80,
+	0x1b, 0x90, 0xdd, 0x64, 0x21, 0x27, 0xb7, 0x95, 0xb0, 0x87, 0xaf, 0x2d, 0x4a, 0xcd, 0xc6, 0x4d,
+	0xc8, 0x7f, 0xb2, 0xf7, 0x8c, 0x77, 0x05, 0xb9, 0x33, 0x25, 0x8f, 0x99, 0x8f, 0xb7, 0xe5, 0x0e,
+	0x8f, 0xdd, 0xbe, 0x3b, 0x25, 0x59, 0x4a, 0x81, 0x97, 0x21, 0xdf, 0xe6, 0x62, 0xe0, 0xf7, 0x88,
+	0x5d, 0x42, 0x95, 0x39, 0x6a, 0x46, 0xd2, 0x95, 0x5a, 0xd0, 0x8f, 0x86, 0xdc, 0x13, 0x21, 0x59,
+	0x55, 0x09, 0x99, 0x06, 0xca, 0x5b, 0x30, 0x53, 0xef, 0xe0, 0x05, 0x28, 0xd4, 0x3b, 0x1a, 0x5f,
+	0xb4, 0xf0, 0x5b, 0xb0, 0x58, 0xef, 0xec, 0xb2, 0x43, 0x5e, 0x0b, 0x55, 0xfe, 0x14, 0x11, 0x5e,
+	0x82, 0x62, 0x1c, 0x6a, 0x70, 0x97, 0xf7, 0x99, 0xe0, 0xc5, 0x19, 0xbc, 0x08, 0x73, 0xf5, 0x8e,
+	0xa9, 0x08, 0xc5, 0x4c, 0xb9, 0x02, 0x33, 0xb4, 0x8d, 0x8b, 0xb0, 0xa0, 0xd7, 0x84, 0xf2, 0x30,
+	0x72, 0x45, 0xd1, 0x4a, 0x23, 0xdb, 0xfe, 0x67, 0xcc, 0x11, 0x45, 0x64, 0xb2, 0xe3, 0x17, 0x04,
+	0x79, 0x0d, 0x9a, 0x90, 0x1c, 0x8f, 0x13, 0xd3, 0xa7, 0xaa, 0x04, 0xa9, 0xe3, 0x71, 0x32, 0x5e,
+	0x2b, 0x69, 0x92, 0x8c, 0x26, 0x30, 0xbb, 0xc3, 0x8e, 0x5c, 0x9f, 0xf5, 0x74, 0xb6, 0xd0, 0x78,
+	0x68, 0xf4, 0xfd, 0x89, 0x20, 0xab, 0x92, 0xf5, 0xd5, 0xea, 0x9e, 0x42, 0xbe, 0xe1, 0x0f, 0x99,
+	0xe3, 0x19, 0x75, 0x53, 0xa6, 0xb2, 0xe6, 0xf8, 0xc7, 0x45, 0x56, 0xe0, 0xa6, 0xd4, 0xd0, 0xe0,
+	0x5d, 0x97, 0x05, 0x4c, 0x38, 0xbe, 0x67, 0xc4, 0x5e, 0x0e, 0x1b, 0xd1, 0xbf, 0xcd, 0x40, 0xb6,
+	0x6e, 0xb2, 0xf1, 0x8d, 0x15, 0x5d, 0xd3, 0x1a, 0x4c, 0x11, 0x7c, 0xcd, 0xed, 0xa6, 0xe5, 0x7f,
+	0x0e, 0xf3, 0x6d, 0xd6, 0x1d, 0x38, 0x1e, 0x57, 0x35, 0x5d, 0x16, 0xbe, 0xc5, 0xcd, 0xf7, 0x0d,
+	0x53, 0xf5, 0x0a, 0x4c, 0x63, 0xb3, 0xe9, 0x38, 0x95, 0xf1, 0xf9, 0x8f, 0x0c, 0x14, 0x6a, 0x5d,
+	0xe1, 0x1c, 0x32, 0xf1, 0x66, 0x7b, 0xfd, 0x58, 0xd6, 0xad, 0xa1, 0x1f, 0x1c, 0x4d, 0xe7, 0xb6,
+	0x99, 0x8c, 0xb7, 0x20, 0xd7, 0x1a, 0xb2, 0xbe, 0x76, 0x7a, 0xda, 0x8f, 0xd2, 0x14, 0xb8, 0x04,
+	0xf3, 0xad, 0x30, 0x2d, 0xce, 0x44, 0x1d, 0x25, 0xe3, 0x21, 0x69, 0xe9, 0x0e, 0x0b, 0xb8, 0x27,
+	0xd4, 0xd1, 0x34, 0xb5, 0xa5, 0x9a, 0x03, 0xdb, 0x00, 0xad, 0xa4, 0xae, 0x9a, 0x93, 0x6b, 0x2c,
+	0x52, 0xfe, 0x29, 0x03, 0xb9, 0xda, 0x90, 0x7b, 0xbd, 0xff, 0x17, 0xfa, 0xdf, 0x5e, 0x68, 0xd3,
+	0x87, 0xee, 0x0a, 0xb9, 0x32, 0xb7, 0xa6, 0xee, 0x43, 0xd5, 0xfc, 0xf2, 0xb7, 0x33, 0x00, 0x0d,
+	0xce, 0xfe, 0x0b, 0x59, 0x7b, 0xc1, 0x97, 0xe5, 0x6b, 0xfa, 0x72, 0x9e, 0x81, 0xd9, 0x4f, 0x9d,
+	0x40, 0x44, 0xcc, 0x9d, 0x60, 0xca, 0xfd, 0xe4, 0x06, 0x42, 0x78, 0x09, 0x55, 0xe6, 0x37, 0x6e,
+	0xc6, 0x3d, 0xa1, 0x09, 0x37, 0x2d, 0x9a, 0xdc, 0x51, 0xd6, 0xcc, 0x55, 0x83, 0xec, 0x2b, 0xe8,
+	0x62, 0x0c, 0x55, 0xc1, 0xa6, 0x45, 0xcd, 0x45, 0x64, 0x55, 0xf5, 0xf3, 0xa4, 0xaf, 0x40, 0xf3,
+	0x31, 0x68, 0x8b, 0x8b, 0xa6, 0x45, 0x55, 0xa7, 0x7f, 0x3f, 0xf5, 0x6e, 0x70, 0xf1, 0x4f, 0x4d,
+	0x58, 0xfe, 0x69, 0x7a, 0x5e, 0x9a, 0x9e, 0x86, 0x38, 0x0a, 0x7b, 0x23, 0xc5, 0xca, 0x68, 0xd3,
+	0xa2, 0x71, 0xcf, 0x53, 0xd6, 0xdd, 0x01, 0x79, 0xa6, 0x70, 0x0b, 0x31, 0x4e, 0xc6, 0x9a, 0x16,
+	0xd5, 0x9d, 0x43, 0xd9, 0x1c, 0x44, 0x5f, 0x5e, 0xc4, 0xc8, 0x98, 0xc4, 0xa8, 0x93, 0xa6, 0x9a,
+	0x1e, 0x04, 0xc4, 0x55, 0xb8, 0x62, 0x8c, 0x8b, 0xe3, 0x4d, 0x8b, 0xa6, 0x87, 0xc5, 0x9a, 0x29,
+	0x26, 0x64, 0x78, 0xd1, 0x16, 0x15, 0x94, 0xb6, 0xe8, 0x52, 0xf3, 0x68, 0x7c, 0xaf, 0x12, 0x4f,
+	0x61, 0x93, 0x0e, 0x3c, 0x7d, 0xd3, 0xb4, 0xe8, 0xf8, 0x9e, 0xbe, 0x0b, 0x73, 0xbb, 0x4e, 0xdf,
+	0x63, 0x22, 0x0a, 0x38, 0x39, 0x46, 0xba, 0xdd, 0x4c, 0x22, 0x9b, 0xb3, 0x90, 0x8b, 0x3c, 0xc7,
+	0xf7, 0xca, 0x3f, 0x20, 0x28, 0xb4, 0x99, 0xe0, 0x81, 0x33, 0x71, 0xcd, 0xef, 0x25, 0x9b, 0x43,
+	0x65, 0xc2, 0x98, 0xfd, 0x26, 0x4c, 0x93, 0xcd, 0xf3, 0x04, 0x72, 0x5b, 0x5c, 0xb4, 0x1a, 0x66,
+	0x8f, 0x3f, 0x34, 0x3b, 0xb2, 0x72, 0x85, 0x1d, 0xa9, 0xe6, 0x51, 0x3d, 0x7d, 0x92, 0x8a, 0x0f,
+	0x8e, 0x4f, 0x6d, 0xeb, 0xe4, 0xd4, 0xb6, 0x5e, 0x9c, 0xda, 0xd6, 0xf9, 0xa9, 0x8d, 0xbe, 0x1e,
+	0xd9, 0xe8, 0xf9, 0xc8, 0x46, 0xc7, 0x23, 0x1b, 0x9d, 0x8c, 0x6c, 0xf4, 0xeb, 0xc8, 0x46, 0xbf,
+	0x8f, 0x6c, 0xeb, 0x7c, 0x64, 0xa3, 0x6f, 0xce, 0x6c, 0xeb, 0xe4, 0xcc, 0xb6, 0x5e, 0x9c, 0xd9,
+	0xd6, 0x5e, 0x5e, 0x5d, 0xa4, 0xdf, 0xfb, 0x2b, 0x00, 0x00, 0xff, 0xff, 0x75, 0x52, 0x0c, 0x3f,
+	0x9e, 0x0f, 0x00, 0x00,
 }
 
+func (x Request_CT) String() string {
+	s, ok := Request_CT_name[int32(x)]
+	if ok {
+		return s
+	}
+	return strconv.Itoa(int(x))
+}
+func (x Request_RM) String() string {
+	s, ok := Request_RM_name[int32(x)]
+	if ok {
+		return s
+	}
+	return strconv.Itoa(int(x))
+}
 func (this *Genesis) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -1037,13 +1127,52 @@ func (this *Request) Equal(that interface{}) bool {
 	if this.Polymorph != that1.Polymorph {
 		return false
 	}
-	if !this.Object.Equal(that1.Object) {
+	if this.CallType != that1.CallType {
 		return false
 	}
-	if !bytes.Equal(this.Parcel, that1.Parcel) {
+	if !this.Caller.Equal(that1.Caller) {
 		return false
 	}
-	if !bytes.Equal(this.MessageHash, that1.MessageHash) {
+	if !this.CallerPrototype.Equal(that1.CallerPrototype) {
+		return false
+	}
+	if this.Nonce != that1.Nonce {
+		return false
+	}
+	if this.Sequence != that1.Sequence {
+		return false
+	}
+	if this.ReturnMode != that1.ReturnMode {
+		return false
+	}
+	if this.Immutable != that1.Immutable {
+		return false
+	}
+	if that1.Base == nil {
+		if this.Base != nil {
+			return false
+		}
+	} else if !this.Base.Equal(*that1.Base) {
+		return false
+	}
+	if that1.Object == nil {
+		if this.Object != nil {
+			return false
+		}
+	} else if !this.Object.Equal(*that1.Object) {
+		return false
+	}
+	if that1.Prototype == nil {
+		if this.Prototype != nil {
+			return false
+		}
+	} else if !this.Prototype.Equal(*that1.Prototype) {
+		return false
+	}
+	if this.Method != that1.Method {
+		return false
+	}
+	if !bytes.Equal(this.Arguments, that1.Arguments) {
 		return false
 	}
 	return true
@@ -1670,9 +1799,18 @@ func NewJetFromFace(that JetFace) *Jet {
 type RequestFace interface {
 	Proto() github_com_gogo_protobuf_proto.Message
 	GetPolymorph() int32
-	GetObject() github_com_insolar_insolar_insolar.ID
-	GetParcel() []byte
-	GetMessageHash() []byte
+	GetCallType() Request_CT
+	GetCaller() github_com_insolar_insolar_insolar.Reference
+	GetCallerPrototype() github_com_insolar_insolar_insolar.Reference
+	GetNonce() uint64
+	GetSequence() uint64
+	GetReturnMode() Request_RM
+	GetImmutable() bool
+	GetBase() *github_com_insolar_insolar_insolar.Reference
+	GetObject() *github_com_insolar_insolar_insolar.Reference
+	GetPrototype() *github_com_insolar_insolar_insolar.Reference
+	GetMethod() string
+	GetArguments() []byte
 }
 
 func (this *Request) Proto() github_com_gogo_protobuf_proto.Message {
@@ -1687,24 +1825,69 @@ func (this *Request) GetPolymorph() int32 {
 	return this.Polymorph
 }
 
-func (this *Request) GetObject() github_com_insolar_insolar_insolar.ID {
+func (this *Request) GetCallType() Request_CT {
+	return this.CallType
+}
+
+func (this *Request) GetCaller() github_com_insolar_insolar_insolar.Reference {
+	return this.Caller
+}
+
+func (this *Request) GetCallerPrototype() github_com_insolar_insolar_insolar.Reference {
+	return this.CallerPrototype
+}
+
+func (this *Request) GetNonce() uint64 {
+	return this.Nonce
+}
+
+func (this *Request) GetSequence() uint64 {
+	return this.Sequence
+}
+
+func (this *Request) GetReturnMode() Request_RM {
+	return this.ReturnMode
+}
+
+func (this *Request) GetImmutable() bool {
+	return this.Immutable
+}
+
+func (this *Request) GetBase() *github_com_insolar_insolar_insolar.Reference {
+	return this.Base
+}
+
+func (this *Request) GetObject() *github_com_insolar_insolar_insolar.Reference {
 	return this.Object
 }
 
-func (this *Request) GetParcel() []byte {
-	return this.Parcel
+func (this *Request) GetPrototype() *github_com_insolar_insolar_insolar.Reference {
+	return this.Prototype
 }
 
-func (this *Request) GetMessageHash() []byte {
-	return this.MessageHash
+func (this *Request) GetMethod() string {
+	return this.Method
+}
+
+func (this *Request) GetArguments() []byte {
+	return this.Arguments
 }
 
 func NewRequestFromFace(that RequestFace) *Request {
 	this := &Request{}
 	this.Polymorph = that.GetPolymorph()
+	this.CallType = that.GetCallType()
+	this.Caller = that.GetCaller()
+	this.CallerPrototype = that.GetCallerPrototype()
+	this.Nonce = that.GetNonce()
+	this.Sequence = that.GetSequence()
+	this.ReturnMode = that.GetReturnMode()
+	this.Immutable = that.GetImmutable()
+	this.Base = that.GetBase()
 	this.Object = that.GetObject()
-	this.Parcel = that.GetParcel()
-	this.MessageHash = that.GetMessageHash()
+	this.Prototype = that.GetPrototype()
+	this.Method = that.GetMethod()
+	this.Arguments = that.GetArguments()
 	return this
 }
 
@@ -1874,12 +2057,21 @@ func (this *Request) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 8)
+	s := make([]string, 0, 17)
 	s = append(s, "&record.Request{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
+	s = append(s, "CallType: "+fmt.Sprintf("%#v", this.CallType)+",\n")
+	s = append(s, "Caller: "+fmt.Sprintf("%#v", this.Caller)+",\n")
+	s = append(s, "CallerPrototype: "+fmt.Sprintf("%#v", this.CallerPrototype)+",\n")
+	s = append(s, "Nonce: "+fmt.Sprintf("%#v", this.Nonce)+",\n")
+	s = append(s, "Sequence: "+fmt.Sprintf("%#v", this.Sequence)+",\n")
+	s = append(s, "ReturnMode: "+fmt.Sprintf("%#v", this.ReturnMode)+",\n")
+	s = append(s, "Immutable: "+fmt.Sprintf("%#v", this.Immutable)+",\n")
+	s = append(s, "Base: "+fmt.Sprintf("%#v", this.Base)+",\n")
 	s = append(s, "Object: "+fmt.Sprintf("%#v", this.Object)+",\n")
-	s = append(s, "Parcel: "+fmt.Sprintf("%#v", this.Parcel)+",\n")
-	s = append(s, "MessageHash: "+fmt.Sprintf("%#v", this.MessageHash)+",\n")
+	s = append(s, "Prototype: "+fmt.Sprintf("%#v", this.Prototype)+",\n")
+	s = append(s, "Method: "+fmt.Sprintf("%#v", this.Method)+",\n")
+	s = append(s, "Arguments: "+fmt.Sprintf("%#v", this.Arguments)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -2211,31 +2403,117 @@ func (m *Request) MarshalTo(dAtA []byte) (int, error) {
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Polymorph))
 	}
-	dAtA[i] = 0xa2
+	if m.CallType != 0 {
+		dAtA[i] = 0xa0
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintRecord(dAtA, i, uint64(m.CallType))
+	}
+	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
-	i = encodeVarintRecord(dAtA, i, uint64(m.Object.Size()))
-	n3, err := m.Object.MarshalTo(dAtA[i:])
+	i = encodeVarintRecord(dAtA, i, uint64(m.Caller.Size()))
+	n3, err := m.Caller.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
 	i += n3
-	if len(m.Parcel) > 0 {
-		dAtA[i] = 0xaa
-		i++
-		dAtA[i] = 0x1
-		i++
-		i = encodeVarintRecord(dAtA, i, uint64(len(m.Parcel)))
-		i += copy(dAtA[i:], m.Parcel)
+	dAtA[i] = 0xb2
+	i++
+	dAtA[i] = 0x1
+	i++
+	i = encodeVarintRecord(dAtA, i, uint64(m.CallerPrototype.Size()))
+	n4, err := m.CallerPrototype.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
 	}
-	if len(m.MessageHash) > 0 {
-		dAtA[i] = 0xb2
+	i += n4
+	if m.Nonce != 0 {
+		dAtA[i] = 0xb8
 		i++
 		dAtA[i] = 0x1
 		i++
-		i = encodeVarintRecord(dAtA, i, uint64(len(m.MessageHash)))
-		i += copy(dAtA[i:], m.MessageHash)
+		i = encodeVarintRecord(dAtA, i, uint64(m.Nonce))
+	}
+	if m.Sequence != 0 {
+		dAtA[i] = 0xc0
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintRecord(dAtA, i, uint64(m.Sequence))
+	}
+	if m.ReturnMode != 0 {
+		dAtA[i] = 0xc8
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintRecord(dAtA, i, uint64(m.ReturnMode))
+	}
+	if m.Immutable {
+		dAtA[i] = 0xd0
+		i++
+		dAtA[i] = 0x1
+		i++
+		if m.Immutable {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i++
+	}
+	if m.Base != nil {
+		dAtA[i] = 0xda
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintRecord(dAtA, i, uint64(m.Base.Size()))
+		n5, err := m.Base.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n5
+	}
+	if m.Object != nil {
+		dAtA[i] = 0xe2
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintRecord(dAtA, i, uint64(m.Object.Size()))
+		n6, err := m.Object.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n6
+	}
+	if m.Prototype != nil {
+		dAtA[i] = 0xea
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintRecord(dAtA, i, uint64(m.Prototype.Size()))
+		n7, err := m.Prototype.MarshalTo(dAtA[i:])
+		if err != nil {
+			return 0, err
+		}
+		i += n7
+	}
+	if len(m.Method) > 0 {
+		dAtA[i] = 0xf2
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintRecord(dAtA, i, uint64(len(m.Method)))
+		i += copy(dAtA[i:], m.Method)
+	}
+	if len(m.Arguments) > 0 {
+		dAtA[i] = 0xfa
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintRecord(dAtA, i, uint64(len(m.Arguments)))
+		i += copy(dAtA[i:], m.Arguments)
 	}
 	return i, nil
 }
@@ -2267,21 +2545,21 @@ func (m *Result) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Object.Size()))
-	n4, err := m.Object.MarshalTo(dAtA[i:])
+	n8, err := m.Object.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n4
+	i += n8
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Request.Size()))
-	n5, err := m.Request.MarshalTo(dAtA[i:])
+	n9, err := m.Request.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n5
+	i += n9
 	if len(m.Payload) > 0 {
 		dAtA[i] = 0xb2
 		i++
@@ -2320,21 +2598,21 @@ func (m *Type) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Domain.Size()))
-	n6, err := m.Domain.MarshalTo(dAtA[i:])
+	n10, err := m.Domain.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n6
+	i += n10
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Request.Size()))
-	n7, err := m.Request.MarshalTo(dAtA[i:])
+	n11, err := m.Request.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n7
+	i += n11
 	if len(m.TypeDeclaration) > 0 {
 		dAtA[i] = 0xb2
 		i++
@@ -2373,31 +2651,31 @@ func (m *Code) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Domain.Size()))
-	n8, err := m.Domain.MarshalTo(dAtA[i:])
+	n12, err := m.Domain.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n8
+	i += n12
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Request.Size()))
-	n9, err := m.Request.MarshalTo(dAtA[i:])
+	n13, err := m.Request.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n9
+	i += n13
 	dAtA[i] = 0xb2
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Code.Size()))
-	n10, err := m.Code.MarshalTo(dAtA[i:])
+	n14, err := m.Code.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n10
+	i += n14
 	if m.MachineType != 0 {
 		dAtA[i] = 0xb8
 		i++
@@ -2435,41 +2713,41 @@ func (m *Activate) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Domain.Size()))
-	n11, err := m.Domain.MarshalTo(dAtA[i:])
+	n15, err := m.Domain.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n11
+	i += n15
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Request.Size()))
-	n12, err := m.Request.MarshalTo(dAtA[i:])
+	n16, err := m.Request.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n12
+	i += n16
 	dAtA[i] = 0xb2
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Memory.Size()))
-	n13, err := m.Memory.MarshalTo(dAtA[i:])
+	n17, err := m.Memory.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n13
+	i += n17
 	dAtA[i] = 0xba
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Image.Size()))
-	n14, err := m.Image.MarshalTo(dAtA[i:])
+	n18, err := m.Image.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n14
+	i += n18
 	if m.IsPrototype {
 		dAtA[i] = 0xc0
 		i++
@@ -2487,11 +2765,11 @@ func (m *Activate) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Parent.Size()))
-	n15, err := m.Parent.MarshalTo(dAtA[i:])
+	n19, err := m.Parent.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n15
+	i += n19
 	if m.IsDelegate {
 		dAtA[i] = 0xd0
 		i++
@@ -2534,41 +2812,41 @@ func (m *Amend) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Domain.Size()))
-	n16, err := m.Domain.MarshalTo(dAtA[i:])
+	n20, err := m.Domain.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n16
+	i += n20
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Request.Size()))
-	n17, err := m.Request.MarshalTo(dAtA[i:])
+	n21, err := m.Request.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n17
+	i += n21
 	dAtA[i] = 0xb2
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Memory.Size()))
-	n18, err := m.Memory.MarshalTo(dAtA[i:])
+	n22, err := m.Memory.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n18
+	i += n22
 	dAtA[i] = 0xba
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Image.Size()))
-	n19, err := m.Image.MarshalTo(dAtA[i:])
+	n23, err := m.Image.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n19
+	i += n23
 	if m.IsPrototype {
 		dAtA[i] = 0xc0
 		i++
@@ -2586,11 +2864,11 @@ func (m *Amend) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.PrevState.Size()))
-	n20, err := m.PrevState.MarshalTo(dAtA[i:])
+	n24, err := m.PrevState.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n20
+	i += n24
 	return i, nil
 }
 
@@ -2621,31 +2899,31 @@ func (m *Deactivate) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Domain.Size()))
-	n21, err := m.Domain.MarshalTo(dAtA[i:])
+	n25, err := m.Domain.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n21
+	i += n25
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.Request.Size()))
-	n22, err := m.Request.MarshalTo(dAtA[i:])
+	n26, err := m.Request.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n22
+	i += n26
 	dAtA[i] = 0xb2
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.PrevState.Size()))
-	n23, err := m.PrevState.MarshalTo(dAtA[i:])
+	n27, err := m.PrevState.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n23
+	i += n27
 	return i, nil
 }
 
@@ -2672,11 +2950,11 @@ func (m *Virtual) MarshalTo(dAtA []byte) (int, error) {
 		i = encodeVarintRecord(dAtA, i, uint64(m.Polymorph))
 	}
 	if m.Union != nil {
-		nn24, err := m.Union.MarshalTo(dAtA[i:])
+		nn28, err := m.Union.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += nn24
+		i += nn28
 	}
 	if len(m.Signature) > 0 {
 		dAtA[i] = 0xc2
@@ -2697,11 +2975,11 @@ func (m *Virtual_Genesis) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Genesis.Size()))
-		n25, err := m.Genesis.MarshalTo(dAtA[i:])
+		n29, err := m.Genesis.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n25
+		i += n29
 	}
 	return i, nil
 }
@@ -2713,11 +2991,11 @@ func (m *Virtual_Child) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Child.Size()))
-		n26, err := m.Child.MarshalTo(dAtA[i:])
+		n30, err := m.Child.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n26
+		i += n30
 	}
 	return i, nil
 }
@@ -2729,11 +3007,11 @@ func (m *Virtual_Jet) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Jet.Size()))
-		n27, err := m.Jet.MarshalTo(dAtA[i:])
+		n31, err := m.Jet.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n27
+		i += n31
 	}
 	return i, nil
 }
@@ -2745,11 +3023,11 @@ func (m *Virtual_Request) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Request.Size()))
-		n28, err := m.Request.MarshalTo(dAtA[i:])
+		n32, err := m.Request.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n28
+		i += n32
 	}
 	return i, nil
 }
@@ -2761,11 +3039,11 @@ func (m *Virtual_Result) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Result.Size()))
-		n29, err := m.Result.MarshalTo(dAtA[i:])
+		n33, err := m.Result.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n29
+		i += n33
 	}
 	return i, nil
 }
@@ -2777,11 +3055,11 @@ func (m *Virtual_Type) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Type.Size()))
-		n30, err := m.Type.MarshalTo(dAtA[i:])
+		n34, err := m.Type.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n30
+		i += n34
 	}
 	return i, nil
 }
@@ -2793,11 +3071,11 @@ func (m *Virtual_Code) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Code.Size()))
-		n31, err := m.Code.MarshalTo(dAtA[i:])
+		n35, err := m.Code.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n31
+		i += n35
 	}
 	return i, nil
 }
@@ -2809,11 +3087,11 @@ func (m *Virtual_Activate) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Activate.Size()))
-		n32, err := m.Activate.MarshalTo(dAtA[i:])
+		n36, err := m.Activate.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n32
+		i += n36
 	}
 	return i, nil
 }
@@ -2825,11 +3103,11 @@ func (m *Virtual_Amend) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Amend.Size()))
-		n33, err := m.Amend.MarshalTo(dAtA[i:])
+		n37, err := m.Amend.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n33
+		i += n37
 	}
 	return i, nil
 }
@@ -2841,11 +3119,11 @@ func (m *Virtual_Deactivate) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x6
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Deactivate.Size()))
-		n34, err := m.Deactivate.MarshalTo(dAtA[i:])
+		n38, err := m.Deactivate.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n34
+		i += n38
 	}
 	return i, nil
 }
@@ -2877,22 +3155,22 @@ func (m *Material) MarshalTo(dAtA []byte) (int, error) {
 		dAtA[i] = 0x1
 		i++
 		i = encodeVarintRecord(dAtA, i, uint64(m.Virtual.Size()))
-		n35, err := m.Virtual.MarshalTo(dAtA[i:])
+		n39, err := m.Virtual.MarshalTo(dAtA[i:])
 		if err != nil {
 			return 0, err
 		}
-		i += n35
+		i += n39
 	}
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintRecord(dAtA, i, uint64(m.JetID.Size()))
-	n36, err := m.JetID.MarshalTo(dAtA[i:])
+	n40, err := m.JetID.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n36
+	i += n40
 	if len(m.Signature) > 0 {
 		dAtA[i] = 0xc2
 		i++
@@ -2966,13 +3244,42 @@ func (m *Request) Size() (n int) {
 	if m.Polymorph != 0 {
 		n += 2 + sovRecord(uint64(m.Polymorph))
 	}
-	l = m.Object.Size()
+	if m.CallType != 0 {
+		n += 2 + sovRecord(uint64(m.CallType))
+	}
+	l = m.Caller.Size()
 	n += 2 + l + sovRecord(uint64(l))
-	l = len(m.Parcel)
+	l = m.CallerPrototype.Size()
+	n += 2 + l + sovRecord(uint64(l))
+	if m.Nonce != 0 {
+		n += 2 + sovRecord(uint64(m.Nonce))
+	}
+	if m.Sequence != 0 {
+		n += 2 + sovRecord(uint64(m.Sequence))
+	}
+	if m.ReturnMode != 0 {
+		n += 2 + sovRecord(uint64(m.ReturnMode))
+	}
+	if m.Immutable {
+		n += 3
+	}
+	if m.Base != nil {
+		l = m.Base.Size()
+		n += 2 + l + sovRecord(uint64(l))
+	}
+	if m.Object != nil {
+		l = m.Object.Size()
+		n += 2 + l + sovRecord(uint64(l))
+	}
+	if m.Prototype != nil {
+		l = m.Prototype.Size()
+		n += 2 + l + sovRecord(uint64(l))
+	}
+	l = len(m.Method)
 	if l > 0 {
 		n += 2 + l + sovRecord(uint64(l))
 	}
-	l = len(m.MessageHash)
+	l = len(m.Arguments)
 	if l > 0 {
 		n += 2 + l + sovRecord(uint64(l))
 	}
@@ -3324,9 +3631,18 @@ func (this *Request) String() string {
 	}
 	s := strings.Join([]string{`&Request{`,
 		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
+		`CallType:` + fmt.Sprintf("%v", this.CallType) + `,`,
+		`Caller:` + fmt.Sprintf("%v", this.Caller) + `,`,
+		`CallerPrototype:` + fmt.Sprintf("%v", this.CallerPrototype) + `,`,
+		`Nonce:` + fmt.Sprintf("%v", this.Nonce) + `,`,
+		`Sequence:` + fmt.Sprintf("%v", this.Sequence) + `,`,
+		`ReturnMode:` + fmt.Sprintf("%v", this.ReturnMode) + `,`,
+		`Immutable:` + fmt.Sprintf("%v", this.Immutable) + `,`,
+		`Base:` + fmt.Sprintf("%v", this.Base) + `,`,
 		`Object:` + fmt.Sprintf("%v", this.Object) + `,`,
-		`Parcel:` + fmt.Sprintf("%v", this.Parcel) + `,`,
-		`MessageHash:` + fmt.Sprintf("%v", this.MessageHash) + `,`,
+		`Prototype:` + fmt.Sprintf("%v", this.Prototype) + `,`,
+		`Method:` + fmt.Sprintf("%v", this.Method) + `,`,
+		`Arguments:` + fmt.Sprintf("%v", this.Arguments) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -3915,6 +4231,203 @@ func (m *Request) Unmarshal(dAtA []byte) error {
 				}
 			}
 		case 20:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CallType", wireType)
+			}
+			m.CallType = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.CallType |= Request_CT(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 21:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Caller", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthRecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Caller.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 22:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field CallerPrototype", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthRecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.CallerPrototype.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 23:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Nonce", wireType)
+			}
+			m.Nonce = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Nonce |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 24:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Sequence", wireType)
+			}
+			m.Sequence = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Sequence |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 25:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ReturnMode", wireType)
+			}
+			m.ReturnMode = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.ReturnMode |= Request_RM(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 26:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Immutable", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.Immutable = bool(v != 0)
+		case 27:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Base", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthRecord
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			var v github_com_insolar_insolar_insolar.Reference
+			m.Base = &v
+			if err := m.Base.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 28:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Object", wireType)
 			}
@@ -3943,13 +4456,15 @@ func (m *Request) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
+			var v github_com_insolar_insolar_insolar.Reference
+			m.Object = &v
 			if err := m.Object.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
 				return err
 			}
 			iNdEx = postIndex
-		case 21:
+		case 29:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field Parcel", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Prototype", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -3976,14 +4491,47 @@ func (m *Request) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.Parcel = append(m.Parcel[:0], dAtA[iNdEx:postIndex]...)
-			if m.Parcel == nil {
-				m.Parcel = []byte{}
+			var v github_com_insolar_insolar_insolar.Reference
+			m.Prototype = &v
+			if err := m.Prototype.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
 			}
 			iNdEx = postIndex
-		case 22:
+		case 30:
 			if wireType != 2 {
-				return fmt.Errorf("proto: wrong wireType = %d for field MessageHash", wireType)
+				return fmt.Errorf("proto: wrong wireType = %d for field Method", wireType)
+			}
+			var stringLen uint64
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowRecord
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				stringLen |= uint64(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			intStringLen := int(stringLen)
+			if intStringLen < 0 {
+				return ErrInvalidLengthRecord
+			}
+			postIndex := iNdEx + intStringLen
+			if postIndex < 0 {
+				return ErrInvalidLengthRecord
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Method = string(dAtA[iNdEx:postIndex])
+			iNdEx = postIndex
+		case 31:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Arguments", wireType)
 			}
 			var byteLen int
 			for shift := uint(0); ; shift += 7 {
@@ -4010,9 +4558,9 @@ func (m *Request) Unmarshal(dAtA []byte) error {
 			if postIndex > l {
 				return io.ErrUnexpectedEOF
 			}
-			m.MessageHash = append(m.MessageHash[:0], dAtA[iNdEx:postIndex]...)
-			if m.MessageHash == nil {
-				m.MessageHash = []byte{}
+			m.Arguments = append(m.Arguments[:0], dAtA[iNdEx:postIndex]...)
+			if m.Arguments == nil {
+				m.Arguments = []byte{}
 			}
 			iNdEx = postIndex
 		default:
