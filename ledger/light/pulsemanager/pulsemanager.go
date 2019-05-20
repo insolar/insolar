@@ -196,9 +196,6 @@ func (m *PulseManager) processEndPulse(
 				}
 				// No split happened.
 				go sender(*msg, info.id)
-				// if !info.mineNext {
-				// 	go sender(*msg, info.id)
-				// }
 			} else {
 				msg, err := m.getExecutorHotData(
 					ctx, info.id, currentPulse.PulseNumber, newPulse.PulseNumber, drop, dropSerialized,
@@ -209,12 +206,6 @@ func (m *PulseManager) processEndPulse(
 				// Split happened.
 				go sender(*msg, info.left.id)
 				go sender(*msg, info.right.id)
-				// if !info.left.mineNext {
-				// 	go sender(*msg, info.left.id)
-				// }
-				// if !info.right.mineNext {
-				// 	go sender(*msg, info.right.id)
-				// }
 			}
 
 			m.RecentStorageProvider.RemovePendingStorage(ctx, insolar.ID(info.id))
@@ -379,7 +370,6 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse i
 			if *nextLeftExecutor == me {
 				info.left.mineNext = true
 				m.RecentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jetID), insolar.ID(leftJetID))
-				// m.rewriteHotData(ctx, currentPulse, newPulse, jetID, leftJetID)
 			}
 			nextRightExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(rightJetID), newPulse)
 			if err != nil {
@@ -388,7 +378,6 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse i
 			if *nextRightExecutor == me {
 				info.right.mineNext = true
 				m.RecentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jetID), insolar.ID(rightJetID))
-				// m.rewriteHotData(ctx, currentPulse, newPulse, jetID, rightJetID)
 			}
 
 			logger.WithFields(map[string]interface{}{
@@ -411,27 +400,6 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse i
 
 	return results, nil
 }
-
-// func (m *PulseManager) rewriteHotData(ctx context.Context, fromPN insolar.PulseNumber, toPN insolar.PulseNumber, fromJetID, toJetID insolar.JetID) {
-// 	// logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-// 	// 	"from_jet": fromJetID.DebugString(),
-// 	// 	"to_jet":   toJetID.DebugString(),
-// 	// })
-//
-// 	m.IndexReplicaModifier.Clone(ctx, fromPN, toPN, fromJetID, toJetID)
-//
-// 	// idxs := m.CollectionIndexAccessor.ForJet(ctx, fromJetID)
-// 	// for id, meta := range idxs {
-// 	// 	meta.LifelineIndex.JetID = toJetID
-// 	// 	err := m.LifelineModifier.SetWithMeta(ctx, id, meta.LastUsed, meta.LifelineIndex)
-// 	// 	if err == object.ErrLifelineNotFound {
-// 	// 		logger.WithField("id", id.DebugString()).Error("failed to rewrite index")
-// 	// 		continue
-// 	// 	}
-// 	// }
-//
-// 	m.RecentStorageProvider.ClonePendingStorage(ctx, insolar.ID(fromJetID), insolar.ID(toJetID))
-// }
 
 // Set set's new pulse and closes current jet drop.
 func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist bool) error {
@@ -466,8 +434,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 			return err
 		}
 		m.postProcessJets(ctx, newPulse, jets)
-		// m.addSync(ctx, jets, oldPulse.PulseNumber)
-		// go m.cleanLightData(ctx, newPulse, jetIndexesRemoved)
 		go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
 	}
 
@@ -606,33 +572,6 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 	defer span.End()
 
 	m.JetReleaser.ThrowTimeout(ctx)
-
-	// logger := inslogger.FromContext(ctx)
-	// for _, jetInfo := range jets {
-	// 	if jetInfo.left == nil && jetInfo.right == nil {
-	// 		// No split happened.
-	// 		if jetInfo.mineNext {
-	// 			err := m.JetReleaser.Unlock(ctx, insolar.ID(jetInfo.id))
-	// 			if err != nil {
-	// 				logger.Error(err)
-	// 			}
-	// 		}
-	// 	} else {
-	// 		// Split happened.
-	// 		if jetInfo.left.mineNext {
-	// 			err := m.JetReleaser.Unlock(ctx, insolar.ID(jetInfo.left.id))
-	// 			if err != nil {
-	// 				logger.Error(err)
-	// 			}
-	// 		}
-	// 		if jetInfo.right.mineNext {
-	// 			err := m.JetReleaser.Unlock(ctx, insolar.ID(jetInfo.right.id))
-	// 			if err != nil {
-	// 				logger.Error(err)
-	// 			}
-	// 		}
-	// 	}
-	// }
 }
 
 // Start starts pulse manager
