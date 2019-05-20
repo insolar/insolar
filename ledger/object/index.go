@@ -84,32 +84,29 @@ type IndexBucketAccessor interface {
 // Due to IndexBucket is a protobuf-generated struct,
 // lockedIndexBucket was created for creating an opportunity for using of IndexBucket struct  in a thread-safe way.
 type lockedIndexBucket struct {
-	lifelineLock         sync.RWMutex
-	lifelineLastUsedLock sync.RWMutex
-	// requestLock          sync.RWMutex
-	// resultLock           sync.RWMutex
+	sync.RWMutex
 
 	bucket IndexBucket
 }
 
 func (i *lockedIndexBucket) lifeline() (Lifeline, error) {
-	i.lifelineLock.RLock()
-	defer i.lifelineLock.RUnlock()
+	i.RLock()
+	defer i.RUnlock()
 
 	return CloneIndex(i.bucket.Lifeline), nil
 }
 
 func (i *lockedIndexBucket) setLifeline(lifeline Lifeline, pn insolar.PulseNumber) {
-	i.lifelineLock.Lock()
-	defer i.lifelineLock.Unlock()
+	i.Lock()
+	defer i.Unlock()
 
 	i.bucket.Lifeline = lifeline
 	i.bucket.LifelineLastUsed = pn
 }
 
 func (i *lockedIndexBucket) setLifelineLastUsed(pn insolar.PulseNumber) {
-	i.lifelineLastUsedLock.Lock()
-	defer i.lifelineLastUsedLock.Unlock()
+	i.Lock()
+	defer i.Unlock()
 
 	i.bucket.LifelineLastUsed = pn
 }
