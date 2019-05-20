@@ -1120,7 +1120,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 
 			pulse := pulsar.NewPulse(1, parcel.Pulse(), &entropygenerator.StandardEntropyGenerator{})
 			suite.lr.FlowDispatcher.ChangePulse(ctx, *pulse)
-			suite.lr.InnerFlowDispatcher.ChangePulse(ctx, *pulse)
+			suite.lr.innerFlowDispatcher.ChangePulse(ctx, *pulse)
 			_, err := suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
 			if test.errorExpected {
 				suite.Require().Error(err)
@@ -1415,8 +1415,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef:             s.objectRef,
-				Queue:                 messagesQueue,
+				RecordRef: s.objectRef,
+				Queue:     messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 
@@ -1489,7 +1489,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecutionState() {
 	es := &ExecutionState{
-		Ref:                   s.ref,
+		Ref: s.ref,
 		LedgerHasMoreRequests: false,
 	}
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
