@@ -694,7 +694,7 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Re
 		lastPulse = *insolar.GenesisPulse
 	}
 
-	if permissionIsEmpty(&bootstrapRequest.Permission) {
+	if permissionIsEmpty(bootstrapRequest.Permission) {
 		code = Redirected
 		err := bc.updatePermissionsOnRequest(bootstrapRequest)
 		if err != nil {
@@ -834,7 +834,7 @@ func (bc *bootstrapper) getPermissionSign(perm Permission) ([]byte, error) {
 	return sign.Bytes(), nil
 }
 
-func permissionIsEmpty(perm *Permission) bool {
+func permissionIsEmpty(perm Permission) bool {
 	empty := false
 	if len(perm.ReconnectTo) == 0 {
 		empty = true
