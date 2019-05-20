@@ -34,7 +34,8 @@ version = 'latest'
 extensions = [
 	'sphinxcontrib.golangdomain',
 	'sphinx_tabs.tabs',
-	'sphinxcontrib.plantuml'
+	'sphinxcontrib.plantuml',
+    'sphinx_copybutton'
 ]
 
 master_doc = 'index'
