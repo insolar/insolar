@@ -21,9 +21,11 @@ import (
 	"fmt"
 	"net"
 	"net/rpc"
+	"runtime/debug"
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 
 	"github.com/pkg/errors"
@@ -68,6 +70,8 @@ type RPC struct {
 
 func recoverRPC(err *error) {
 	if r := recover(); r != nil {
+		// Global logger is used because there is no access to context here
+		log.Errorf("Recovered panic:\n%s", string(debug.Stack()))
 		if err != nil {
 			if *err == nil {
 				*err = errors.New(fmt.Sprint(r))

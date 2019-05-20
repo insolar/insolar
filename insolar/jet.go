@@ -38,6 +38,24 @@ const (
 // JetID should be used, when id is a jetID
 type JetID ID
 
+// Size is a protobuf required method. It returns size of JetID
+func (j *JetID) Size() int { return RecordIDSize }
+
+// MarshalTo is a protobuf required method. It marshals data
+func (j *JetID) MarshalTo(data []byte) (n int, err error) {
+	copy(data, j[:])
+	return RecordIDSize, nil
+}
+
+// Unmarshal is a protobuf required method. It unmarshals data
+func (j *JetID) Unmarshal(data []byte) error {
+	if len(data) != RecordIDSize {
+		return errors.New("Not enough bytes to unpack JetID")
+	}
+	copy(j[:], data)
+	return nil
+}
+
 // ZeroJetID is value of an empty Jet ID
 var ZeroJetID = *NewJetID(0, nil)
 
@@ -106,23 +124,6 @@ ScanPrefix:
 
 func (id JetID) Marshal() ([]byte, error) {
 	return id[:], nil
-}
-
-func (id *JetID) MarshalTo(data []byte) (n int, err error) {
-	copy(data, id[:])
-	return RecordIDSize, nil
-}
-
-func (id *JetID) Unmarshal(data []byte) error {
-	if len(data) != RecordIDSize {
-		return errors.New("not enough bytes to unpack JetID")
-	}
-	copy(id[:], data)
-	return nil
-}
-
-func (id *JetID) Size() int {
-	return RecordIDSize
 }
 
 func (id JetID) Equal(other JetID) bool {

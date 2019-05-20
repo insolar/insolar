@@ -93,13 +93,13 @@ func NewTestLedger(
 // TmpLedger creates ledger on top of temporary database.
 // Returns *ledger.Ledger and cleanup function.
 // DEPRECATED
-func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *artifactmanager.MessageHandler) {
+func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *artifactmanager.MessageHandler, *object.InMemoryIndex) {
 	log.Warn("TmpLedger is deprecated. Use mocks.")
 
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 	mc := minimock.NewController(t)
 	ps := pulse.NewStorageMem()
-	is := object.NewIndexMemory()
+	index := object.NewInMemoryIndex()
 
 	// Init subcomponents.
 	ctx := inslogger.TestContext(t)
@@ -114,12 +114,12 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	bs := blob.NewDB(memoryMockDB)
 
 	genesisBaseRecord := &genesis.BaseRecord{
-		DB:             memoryMockDB,
-		DropModifier:   ds,
-		PulseAppender:  ps,
-		PulseAccessor:  ps,
-		RecordModifier: recordStorage,
-		IndexModifier:  is,
+		DB:                    memoryMockDB,
+		DropModifier:          ds,
+		PulseAppender:         ps,
+		PulseAccessor:         ps,
+		RecordModifier:        recordStorage,
+		IndexLifelineModifier: index,
 	}
 	_, err := genesisBaseRecord.CreateIfNeeded(ctx)
 	if err != nil {
@@ -159,10 +159,10 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 		c.NodeNetwork = nodenetwork.NewNodeKeeper(networknode.NewNode(insolar.Reference{}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:5432", ""))
 	}
 
-	handler := artifactmanager.NewMessageHandler(is, is, &conf)
+	handler := artifactmanager.NewMessageHandler(index, index, index, &conf)
 	handler.JetStorage = js
 	handler.Nodes = ns
-	handler.IndexStorage = is
+	handler.LifelineIndex = index
 	handler.DropModifier = ds
 	handler.BlobModifier = bs
 	handler.BlobAccessor = bs
@@ -187,7 +187,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 		memoryMockDB,
 		js,
 		ns,
-		is,
+		index,
 		ps,
 		ps,
 		ds,
@@ -252,5 +252,5 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	// Create ledger.
 	l := NewTestLedger(am, pm, jc)
 
-	return l, handler
+	return l, handler, index
 }
