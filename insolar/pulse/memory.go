@@ -26,11 +26,10 @@ import (
 
 // StorageMem is a memory storage implementation. It saves pulses to memory and allows removal.
 type StorageMem struct {
-	lock               sync.RWMutex
-	storage            map[insolar.PulseNumber]*memNode
-	head               *memNode
-	tail               *memNode
-	pulseChangeWaiters []chan struct{}
+	lock    sync.RWMutex
+	storage map[insolar.PulseNumber]*memNode
+	head    *memNode
+	tail    *memNode
 }
 
 type memNode struct {
