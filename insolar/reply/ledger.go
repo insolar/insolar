@@ -109,6 +109,17 @@ func (e *HasPendingRequests) Type() insolar.ReplyType {
 	return TypePendingRequests
 }
 
+// HasPendingRequests contains unclosed requests for an object.
+type PendingRequest struct {
+	ID  insolar.ID
+	Err Error
+}
+
+// Type implementation of Reply interface.
+func (PendingRequest) Type() insolar.ReplyType {
+	return TypePendingRequestID
+}
+
 // Jet contains jet.
 type Jet struct {
 	ID     insolar.ID
