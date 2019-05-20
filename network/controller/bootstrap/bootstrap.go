@@ -64,6 +64,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/utils"
+	"github.com/insolar/insolar/version"
 
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
@@ -78,7 +79,6 @@ import (
 	"github.com/insolar/insolar/network/controller/pinger"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/platformpolicy"
 )
 
 const bootstrapTimeout time.Duration = 2 // seconds
@@ -170,49 +170,12 @@ type NodeBootstrapResponse struct {
 
 type GenesisRequest struct {
 	LastPulse insolar.PulseNumber
-	Discovery *NodeStruct
+	Discovery *packets.NodeJoinClaim
 }
 
 type GenesisResponse struct {
 	Response GenesisRequest
 	Error    string
-}
-
-type NodeStruct struct {
-	ID      insolar.Reference
-	SID     insolar.ShortNodeID
-	Role    insolar.StaticRole
-	PK      []byte
-	Address string
-	Version string
-}
-
-func newNode(n *NodeStruct) (insolar.NetworkNode, error) {
-	pk, err := platformpolicy.NewKeyProcessor().ImportPublicKeyBinary(n.PK)
-	if err != nil {
-		return nil, errors.Wrap(err, "error deserializing node public key")
-	}
-
-	result := node.NewNode(n.ID, n.Role, pk, n.Address, n.Version)
-	mNode := result.(node.MutableNode)
-	mNode.SetShortID(n.SID)
-	return mNode, nil
-}
-
-func newNodeStruct(node insolar.NetworkNode) (*NodeStruct, error) {
-	pk, err := platformpolicy.NewKeyProcessor().ExportPublicKeyBinary(node.PublicKey())
-	if err != nil {
-		return nil, errors.Wrap(err, "error serializing node public key")
-	}
-
-	return &NodeStruct{
-		ID:      node.ID(),
-		SID:     node.ShortID(),
-		Role:    node.Role(),
-		PK:      pk,
-		Address: node.Address(),
-		Version: node.Version(),
-	}, nil
 }
 
 type Code uint8
@@ -393,7 +356,7 @@ func (bc *bootstrapper) calculateLastIgnoredPulse(ctx context.Context, lastPulse
 func (bc *bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (*GenesisResponse, error) {
 	ctx, span := instracer.StartSpan(ctx, "Bootstrapper.sendGenesisRequest")
 	defer span.End()
-	discovery, err := newNodeStruct(bc.NodeKeeper.GetOrigin())
+	discovery, err := bc.NodeKeeper.GetOriginJoinClaim()
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to prepare genesis request to address %s", h)
 	}
@@ -504,7 +467,7 @@ func (bc *bootstrapper) waitGenesisResults(ctx context.Context, ch <-chan *Genes
 	for {
 		select {
 		case res := <-ch:
-			discovery, err := newNode(res.Response.Discovery)
+			discovery, err := node.ClaimToNode(version.Version, res.Response.Discovery)
 			if err != nil {
 				return nil, nil, errors.Wrap(err, "Error deserializing node from discovery node")
 			}
@@ -657,7 +620,7 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Re
 
 func (bc *bootstrapper) processGenesis(ctx context.Context, request network.Request) (network.Response, error) {
 	data := request.GetData().(*GenesisRequest)
-	discovery, err := newNodeStruct(bc.NodeKeeper.GetOrigin())
+	discovery, err := bc.NodeKeeper.GetOriginJoinClaim()
 	if err != nil {
 		return bc.Network.BuildResponse(ctx, request, &GenesisResponse{Error: err.Error()}), nil
 	}
