@@ -80,10 +80,10 @@ type IndexBucketAccessor interface {
 	ForPNAndJet(ctx context.Context, pn insolar.PulseNumber, jetID insolar.JetID) []IndexBucket
 }
 
-// LockedIndexBucket is a thread-safe wrapper around IndexBucket struct.
+// lockedIndexBucket is a thread-safe wrapper around IndexBucket struct.
 // Due to IndexBucket is a protobuf-generated struct,
-// LockedIndexBucket was created for creating an opportunity for using of IndexBucket struct  in a thread-safe way.
-type LockedIndexBucket struct {
+// lockedIndexBucket was created for creating an opportunity for using of IndexBucket struct  in a thread-safe way.
+type lockedIndexBucket struct {
 	lifelineLock         sync.RWMutex
 	lifelineLastUsedLock sync.RWMutex
 	// requestLock          sync.RWMutex
@@ -92,14 +92,14 @@ type LockedIndexBucket struct {
 	bucket IndexBucket
 }
 
-func (i *LockedIndexBucket) lifeline() (Lifeline, error) {
+func (i *lockedIndexBucket) lifeline() (Lifeline, error) {
 	i.lifelineLock.RLock()
 	defer i.lifelineLock.RUnlock()
 
 	return CloneIndex(i.bucket.Lifeline), nil
 }
 
-func (i *LockedIndexBucket) setLifeline(lifeline Lifeline, pn insolar.PulseNumber) {
+func (i *lockedIndexBucket) setLifeline(lifeline Lifeline, pn insolar.PulseNumber) {
 	i.lifelineLock.Lock()
 	defer i.lifelineLock.Unlock()
 
@@ -107,21 +107,21 @@ func (i *LockedIndexBucket) setLifeline(lifeline Lifeline, pn insolar.PulseNumbe
 	i.bucket.LifelineLastUsed = pn
 }
 
-func (i *LockedIndexBucket) setLifelineLastUsed(pn insolar.PulseNumber) {
+func (i *lockedIndexBucket) setLifelineLastUsed(pn insolar.PulseNumber) {
 	i.lifelineLastUsedLock.Lock()
 	defer i.lifelineLastUsedLock.Unlock()
 
 	i.bucket.LifelineLastUsed = pn
 }
 
-// func (i *LockedIndexBucket) setRequest(reqID insolar.ID) {
+// func (i *lockedIndexBucket) setRequest(reqID insolar.ID) {
 // 	i.requestLock.Lock()
 // 	defer i.requestLock.Unlock()
 //
 // 	i.bucket.Requests = append(i.bucket.Requests, reqID)
 // }
 //
-// func (i *LockedIndexBucket) setResult(resID insolar.ID) {
+// func (i *lockedIndexBucket) setResult(resID insolar.ID) {
 // 	i.resultLock.Lock()
 // 	defer i.resultLock.Unlock()
 //
@@ -131,21 +131,21 @@ func (i *LockedIndexBucket) setLifelineLastUsed(pn insolar.PulseNumber) {
 // InMemoryIndex is a in-memory storage, that stores a collection of IndexBuckets
 type InMemoryIndex struct {
 	bucketsLock sync.RWMutex
-	buckets     map[insolar.PulseNumber]map[insolar.ID]*LockedIndexBucket
+	buckets     map[insolar.PulseNumber]map[insolar.ID]*lockedIndexBucket
 }
 
 // NewInMemoryIndex creates a new InMemoryIndex
 func NewInMemoryIndex() *InMemoryIndex {
 	return &InMemoryIndex{
-		buckets: map[insolar.PulseNumber]map[insolar.ID]*LockedIndexBucket{},
+		buckets: map[insolar.PulseNumber]map[insolar.ID]*lockedIndexBucket{},
 	}
 }
 
-func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *LockedIndexBucket {
+func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) *lockedIndexBucket {
 	i.bucketsLock.Lock()
 	defer i.bucketsLock.Unlock()
 
-	bucket := &LockedIndexBucket{
+	bucket := &lockedIndexBucket{
 		bucket: IndexBucket{
 			ObjID:    objID,
 			Results:  []insolar.ID{},
@@ -155,7 +155,7 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 
 	objsByPn, ok := i.buckets[pn]
 	if !ok {
-		objsByPn = map[insolar.ID]*LockedIndexBucket{}
+		objsByPn = map[insolar.ID]*lockedIndexBucket{}
 		i.buckets[pn] = objsByPn
 	}
 	objsByPn[objID] = bucket
@@ -164,7 +164,7 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 	return bucket
 }
 
-func (i *InMemoryIndex) bucket(pn insolar.PulseNumber, objID insolar.ID) *LockedIndexBucket {
+func (i *InMemoryIndex) bucket(pn insolar.PulseNumber, objID insolar.ID) *lockedIndexBucket {
 	i.bucketsLock.RLock()
 	defer i.bucketsLock.RUnlock()
 
@@ -221,11 +221,11 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 
 	bucks, ok := i.buckets[pn]
 	if !ok {
-		bucks = map[insolar.ID]*LockedIndexBucket{}
+		bucks = map[insolar.ID]*lockedIndexBucket{}
 		i.buckets[pn] = bucks
 	}
 
-	bucks[bucket.ObjID] = &LockedIndexBucket{
+	bucks[bucket.ObjID] = &lockedIndexBucket{
 		bucket: bucket,
 	}
 
