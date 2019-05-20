@@ -582,20 +582,20 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string, perm
 	if err != nil {
 		lastPulse = *insolar.GenesisPulse
 	}
-	proc := platformpolicy.NewKeyProcessor()
-	key, err := proc.ExportPublicKeyBinary(bc.Certificate.GetPublicKey())
-	if err != nil {
-		return nil, errors.Wrap(err, "Failed to export an origin pub key")
-	}
+
 	bootstrapReq := &NodeBootstrapRequest{
 		JoinClaim:     *claim,
 		LastNodePulse: lastPulse.PulseNumber,
-		Permission: Permission{
-			JoinerPublicKey: key,
-		},
 	}
 
-	if perm != nil {
+	if perm == nil {
+		proc := platformpolicy.NewKeyProcessor()
+		key, err := proc.ExportPublicKeyBinary(bc.Certificate.GetPublicKey())
+		if err != nil {
+			return nil, errors.Wrap(err, "Failed to export an origin pub key")
+		}
+		bootstrapReq.Permission.JoinerPublicKey = key
+	} else {
 		bootstrapReq.Permission = *perm
 	}
 
@@ -604,17 +604,25 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string, perm
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to send bootstrap request to address %s", address)
 	}
+
 	response, err := future.WaitResponse(bc.options.BootstrapTimeout)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to get response to bootstrap request from address %s", address)
 	}
+
 	data := response.GetData().(*NodeBootstrapResponse)
+	logger := inslogger.FromContext(ctx)
+
 	switch data.Code {
 	case Rejected:
 		return nil, errors.New("Rejected: " + data.RejectReason)
 	case Redirected:
+		logger.Infof("bootstrap redirected from %s to %s", bc.NodeKeeper.GetOrigin().Address(), data.Permission.ReconnectTo)
 		return bootstrap(ctx, data.Permission.ReconnectTo, bc.options, bc.startBootstrap, &data.Permission)
+	case UpdateSchedule:
+		// TODO: INS-1960
 	}
+
 	return &network.BootstrapResult{
 		Host:              response.GetSenderHost(),
 		ReconnectRequired: data.Code == ReconnectRequired,
@@ -686,7 +694,7 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Re
 		lastPulse = *insolar.GenesisPulse
 	}
 
-	if len(bootstrapRequest.Permission.ReconnectTo) == 0 {
+	if permissionIsEmpty(&bootstrapRequest.Permission) {
 		code = Redirected
 		err := bc.updatePermissionsOnRequest(bootstrapRequest)
 		if err != nil {
@@ -720,10 +728,11 @@ func (bc *bootstrapper) getCodeFromPermission(permission Permission) (Code, erro
 		return Rejected, errors.New("failed to verify a permission sign")
 	}
 
-	etaDiff := time.Since(permission.UTC)
-	if etaDiff > updateScheduleETA {
-		return UpdateSchedule, nil
-	}
+	// TODO: INS-1960
+	// etaDiff := time.Since(permission.UTC)
+	// if etaDiff > updateScheduleETA {
+	// 	return UpdateSchedule, nil
+	// }
 
 	return Accepted, nil
 }
@@ -823,6 +832,20 @@ func (bc *bootstrapper) getPermissionSign(perm Permission) ([]byte, error) {
 		return nil, errors.Wrap(err, "failed to sign a permission")
 	}
 	return sign.Bytes(), nil
+}
+
+func permissionIsEmpty(perm *Permission) bool {
+	empty := true
+	if len(perm.ReconnectTo) != 0 {
+		empty = false
+	}
+	if !perm.DiscoveryRef.IsEmpty() {
+		empty = false
+	}
+	if len(perm.Signature) != 0 {
+		empty = false
+	}
+	return empty
 }
 
 func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(ctx context.Context, address string)) Bootstrapper {
