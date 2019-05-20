@@ -835,15 +835,15 @@ func (bc *bootstrapper) getPermissionSign(perm Permission) ([]byte, error) {
 }
 
 func permissionIsEmpty(perm *Permission) bool {
-	empty := true
-	if len(perm.ReconnectTo) != 0 {
-		empty = false
+	empty := false
+	if len(perm.ReconnectTo) == 0 {
+		empty = true
 	}
-	if !perm.DiscoveryRef.IsEmpty() {
-		empty = false
+	if perm.DiscoveryRef.IsEmpty() {
+		empty = true
 	}
-	if len(perm.Signature) != 0 {
-		empty = false
+	if len(perm.Signature) == 0 {
+		empty = true
 	}
 	return empty
 }
