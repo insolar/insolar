@@ -150,9 +150,9 @@ func TestCallMethodCanceled(t *testing.T) {
 	}
 
 	msg := &message.CallMethod{
-		Object: &ref,
+		Object:    &ref,
 		Prototype: &prototypeRef,
-		Method: method,
+		Method:    method,
 		Arguments: insolar.Arguments{},
 	}
 	_, err = cr.CallMethod(ctx, msg)
@@ -197,9 +197,9 @@ func TestCallMethodWaitResults(t *testing.T) {
 	}
 
 	msg := &message.CallMethod{
-		Object: &ref,
+		Object:    &ref,
 		Prototype: &prototypeRef,
-		Method: method,
+		Method:    method,
 		Arguments: insolar.Arguments{},
 	}
 
@@ -207,6 +207,7 @@ func TestCallMethodWaitResults(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// TODO: rewrite this test
 func TestReceiveResult(t *testing.T) {
 	ctx := context.Background()
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*10)
@@ -226,7 +227,7 @@ func TestReceiveResult(t *testing.T) {
 	parcel.PulseFunc = func() insolar.PulseNumber { return insolar.PulseNumber(100) }
 
 	// unexpected result
-	rep, err := cr.FlowDispatcher.WrapBusHandle(ctx, parcel)
+	rep, err := cr.FlowDispatcher.WrapBusHandle(ctx, parcel) // TODO: use cr.ReceiveResult
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, rep)
 
@@ -239,7 +240,7 @@ func TestReceiveResult(t *testing.T) {
 		chanResult <- <-cr.ResultMap[sequence]
 	}()
 
-	rep, err = cr.FlowDispatcher.WrapBusHandle(ctx, parcel)
+	rep, err = cr.FlowDispatcher.WrapBusHandle(ctx, parcel) // TODO: use cr.ReceiveResult
 
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, rep)
