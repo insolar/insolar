@@ -13,7 +13,11 @@ Usage
    
 #### Start benchmark
 
-    ./bin/benchmark -c=4 -r=25 -k=scripts/insolard/configs/root_member_keys.json
+    ./bin/benchmark -c=4 -r=25 -k=.artifacts/launchnet/configs/root_member_keys.json
+
+or you can run benchmark with
+
+    ./scripts/bench.sh
 
 ### Options
 
@@ -36,11 +40,11 @@ Usage
                 Log level (default - info).
 
         -s savemembers
-                Saves members to file scripts/insolard/benchmark/members.txt.
+                Saves members to file .artifacts/bench-members/members.txt.
                 If false, file wont be updated. Default is false.
 
         -m usemembers
-                Use members from file scripts/insolard/benchmark/members.txt.
+                Use members from file .artifacts/bench-members/members.txt.
                 If false, wright info about created members in this file. Default is false. 
 
         -b nocheckbalance

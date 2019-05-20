@@ -30,6 +30,8 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+
+	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
@@ -134,7 +136,7 @@ func (st *ObjectState) WrapError(err error, message string) error {
 
 func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
-	wmMsg.Metadata.Set(dispatcher.TraceIDField, inslogger.TraceID(ctx))
+	wmMsg.Metadata.Set(wmBus.MetaTraceID, inslogger.TraceID(ctx))
 	wmMsg.Metadata.Set(MessageTypeField, msgType)
 
 	return wmMsg
@@ -158,7 +160,10 @@ type LogicRunner struct {
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
 	stateMutex sync.RWMutex
 
-	FlowDispatcher *dispatcher.Dispatcher
+	// Inner dispatcher will be merged with FlowDispatcher after
+	// complete migration to watermill.
+	FlowDispatcher      *dispatcher.Dispatcher
+	InnerFlowDispatcher *dispatcher.Dispatcher
 
 	sock net.Listener
 
@@ -216,7 +221,7 @@ func initHandlers(lr *LogicRunner) error {
 		}
 	}
 
-	innerDispatcher := dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
+	lr.InnerFlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
 		return innerInitHandle(msg).Present
 	}, func(msg bus.Message) flow.Handle {
 		return innerInitHandle(msg).Present
@@ -231,7 +236,7 @@ func initHandlers(lr *LogicRunner) error {
 		"InnerMsgHandler",
 		InnerMsgTopic,
 		pubSub,
-		innerDispatcher.InnerSubscriber,
+		lr.InnerFlowDispatcher.InnerSubscriber,
 	)
 	go func() {
 		if err := router.Run(); err != nil {
@@ -278,7 +283,6 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 
 func (lr *LogicRunner) RegisterHandlers() {
 	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.FlowDispatcher.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeCallConstructor, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeExecutorResults, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
@@ -346,7 +350,7 @@ func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel insolar.Parce
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.RegisterRequest")
 	defer span.End()
 
-	obj := parcel.Message().(message.IBaseLogicMessage).GetReference()
+	obj := parcel.Message().(*message.CallMethod).GetReference()
 	id, err := lr.ArtifactManager.RegisterRequest(ctx, obj, parcel)
 	if err != nil {
 		return nil, err
@@ -452,9 +456,7 @@ func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionS
 
 		if msg, ok := qe.parcel.Message().(*message.CallMethod); ok {
 			current.ReturnMode = msg.ReturnMode
-		}
-		if msg, ok := qe.parcel.Message().(message.IBaseLogicMessage); ok {
-			current.Sequence = msg.GetBaseLogicMessage().Sequence
+			current.Sequence = msg.Sequence
 		}
 
 		es.Unlock()
@@ -505,7 +507,7 @@ func (lr *LogicRunner) executeOrValidate(
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.ExecuteOrValidate")
 	defer span.End()
 
-	msg := parcel.Message().(message.IBaseLogicMessage)
+	msg := parcel.Message().(*message.CallMethod)
 	ref := msg.GetReference()
 
 	es.Current.LogicContext = &insolar.LogicCallContext{
@@ -516,18 +518,18 @@ func (lr *LogicRunner) executeOrValidate(
 		Time:            time.Now(), // TODO: probably we should take it earlier
 		Pulse:           *lr.pulse(ctx),
 		TraceID:         inslogger.TraceID(ctx),
-		CallerPrototype: msg.GetCallerPrototype(),
+		CallerPrototype: &msg.CallerPrototype,
 	}
 
 	var re insolar.Reply
 	var err error
-	switch m := msg.(type) {
-	case *message.CallMethod:
-		es.Current.LogicContext.Immutable = m.Immutable
-		re, err = lr.executeMethodCall(ctx, es, m)
+	switch msg.CallType {
+	case message.CTMethod:
+		es.Current.LogicContext.Immutable = msg.Immutable
+		re, err = lr.executeMethodCall(ctx, es, msg)
 
-	case *message.CallConstructor:
-		re, err = lr.executeConstructorCall(ctx, es, m)
+	case message.CTSaveAsChild, message.CTSaveAsDelegate:
+		re, err = lr.executeConstructorCall(ctx, es, msg)
 
 	default:
 		panic("Unknown e type")
@@ -637,7 +639,7 @@ func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *Ex
 		return nil
 	}
 
-	msg := parcel.Message().(message.IBaseLogicMessage)
+	msg := parcel.Message().(*message.CallMethod)
 
 	pulse := lr.pulse(ctx).PulseNumber
 	authorized, err := lr.JetCoordinator.IsAuthorized(
@@ -684,7 +686,7 @@ func init() {
 
 func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState, m *message.CallMethod) (insolar.Reply, error) {
 	if es.objectbody == nil {
-		objDesc, protoDesc, codeDesc, err := lr.getDescriptorsByObjectRef(ctx, m.ObjectRef)
+		objDesc, protoDesc, codeDesc, err := lr.getDescriptorsByObjectRef(ctx, *m.Object)
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get descriptors by object reference")
 		}
@@ -704,7 +706,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	current.LogicContext.Code = es.objectbody.CodeRef
 	current.LogicContext.Parent = es.objectbody.Parent
 	// it's needed to assure that we call method on ref, that has same prototype as proxy, that we import in contract code
-	if !m.ProxyPrototype.IsEmpty() && !m.ProxyPrototype.Equal(*es.objectbody.Prototype) {
+	if m.Prototype != nil && !m.Prototype.Equal(*es.objectbody.Prototype) {
 		return nil, errors.New("proxy call error: try to call method of prototype as method of another prototype")
 	}
 
@@ -738,14 +740,14 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 		}
 		es.objectbody.objDescriptor = od
 	}
-	_, err = am.RegisterResult(ctx, m.ObjectRef, *current.Request, result)
+	_, err = am.RegisterResult(ctx, *m.Object, *current.Request, result)
 	if err != nil {
 		return nil, es.WrapError(err, "couldn't save results")
 	}
 
 	es.objectbody.Object = newData
 
-	return &reply.CallMethod{Result: result, Request: *current.Request}, nil
+	return &reply.CallMethod{Result: result}, nil
 }
 
 func (lr *LogicRunner) getDescriptorsByPrototypeRef(
@@ -796,7 +798,7 @@ func (lr *LogicRunner) getDescriptorsByObjectRef(
 }
 
 func (lr *LogicRunner) executeConstructorCall(
-	ctx context.Context, es *ExecutionState, m *message.CallConstructor,
+	ctx context.Context, es *ExecutionState, m *message.CallMethod,
 ) (
 	insolar.Reply, error,
 ) {
@@ -805,7 +807,11 @@ func (lr *LogicRunner) executeConstructorCall(
 		return nil, es.WrapError(nil, "Call constructor from nowhere")
 	}
 
-	protoDesc, codeDesc, err := lr.getDescriptorsByPrototypeRef(ctx, m.PrototypeRef)
+	if m.Prototype == nil {
+		return nil, es.WrapError(nil, "prototype reference is required")
+	}
+
+	protoDesc, codeDesc, err := lr.getDescriptorsByPrototypeRef(ctx, *m.Prototype)
 	if err != nil {
 		return nil, es.WrapError(err, "couldn't descriptors")
 	}
@@ -822,11 +828,11 @@ func (lr *LogicRunner) executeConstructorCall(
 		return nil, es.WrapError(err, "executer error")
 	}
 
-	switch m.SaveAs {
-	case message.Child, message.Delegate:
+	switch m.CallType {
+	case message.CTSaveAsChild, message.CTSaveAsDelegate:
 		_, err = lr.ArtifactManager.ActivateObject(
 			ctx,
-			Ref{}, *current.Request, m.ParentRef, m.PrototypeRef, m.SaveAs == message.Delegate, newData,
+			Ref{}, *current.Request, *m.Base, *m.Prototype, m.CallType == message.CTSaveAsDelegate, newData,
 		)
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't activate object")
@@ -845,6 +851,7 @@ func (lr *LogicRunner) executeConstructorCall(
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 	lr.stateMutex.Lock()
 	lr.FlowDispatcher.ChangePulse(ctx, pulse)
+	lr.InnerFlowDispatcher.ChangePulse(ctx, pulse)
 
 	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
 	defer span.End()
@@ -1020,11 +1027,21 @@ func (lr *LogicRunner) ClarifyPendingState(
 		return nil
 	}
 
-	if parcel != nil && parcel.Type() != insolar.TypeCallMethod {
-		es.Unlock()
-		es.pending = message.NotPending
-		return nil
+	if parcel != nil {
+		if parcel.Type() != insolar.TypeCallMethod {
+			es.Unlock()
+			es.pending = message.NotPending
+			return nil
+		}
+
+		msg := parcel.Message().(*message.CallMethod)
+		if msg.CallType != message.CTMethod {
+			es.Unlock()
+			es.pending = message.NotPending
+			return nil
+		}
 	}
+
 	es.Unlock()
 
 	es.HasPendingCheckMutex.Lock()

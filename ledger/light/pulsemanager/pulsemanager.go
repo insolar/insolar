@@ -67,10 +67,7 @@ type PulseManager struct {
 	JetAccessor jet.Accessor `inject:""`
 	JetModifier jet.Modifier `inject:""`
 
-	IndexAccessor           object.IndexAccessor `inject:""`
-	IndexModifier           object.ExtendedIndexModifier
-	CollectionIndexAccessor object.IndexCollectionAccessor
-	IndexCleaner            object.IndexCleaner
+	IndexBucketAccessor object.IndexBucketAccessor
 
 	NodeSetter node.Modifier `inject:""`
 	Nodes      node.Accessor `inject:""`
@@ -129,8 +126,7 @@ func NewPulseManager(
 	pulseShifter pulse.Shifter,
 	recCleaner object.RecordCleaner,
 	recSyncAccessor object.RecordCollectionAccessor,
-	idxCollectionAccessor object.IndexCollectionAccessor,
-	indexCleaner object.IndexCleaner,
+	idxReplicaAccessor object.IndexBucketAccessor,
 	lightToHeavySyncer replication.LightReplicator,
 ) *PulseManager {
 	pmconf := conf.PulseManager
@@ -142,15 +138,14 @@ func NewPulseManager(
 			storeLightPulses: conf.LightChainLimit,
 			lightChainLimit:  conf.LightChainLimit,
 		},
-		DropCleaner:             dropCleaner,
-		BlobCleaner:             blobCleaner,
-		BlobSyncAccessor:        blobSyncAccessor,
-		PulseShifter:            pulseShifter,
-		RecCleaner:              recCleaner,
-		RecSyncAccessor:         recSyncAccessor,
-		CollectionIndexAccessor: idxCollectionAccessor,
-		IndexCleaner:            indexCleaner,
-		LightReplicator:         lightToHeavySyncer,
+		DropCleaner:         dropCleaner,
+		BlobCleaner:         blobCleaner,
+		BlobSyncAccessor:    blobSyncAccessor,
+		PulseShifter:        pulseShifter,
+		RecCleaner:          recCleaner,
+		RecSyncAccessor:     recSyncAccessor,
+		IndexBucketAccessor: idxReplicaAccessor,
+		LightReplicator:     lightToHeavySyncer,
 	}
 	return pm
 }
@@ -195,29 +190,23 @@ func (m *PulseManager) processEndPulse(
 
 			if info.left == nil && info.right == nil {
 				msg, err := m.getExecutorHotData(
-					ctx, insolar.ID(info.id), newPulse.PulseNumber, drop, dropSerialized,
+					ctx, info.id, currentPulse.PulseNumber, newPulse.PulseNumber, drop, dropSerialized,
 				)
 				if err != nil {
 					return errors.Wrapf(err, "getExecutorData failed for jet id %v", info.id)
 				}
 				// No split happened.
-				if !info.mineNext {
-					go sender(*msg, info.id)
-				}
+				go sender(*msg, info.id)
 			} else {
 				msg, err := m.getExecutorHotData(
-					ctx, insolar.ID(info.id), newPulse.PulseNumber, drop, dropSerialized,
+					ctx, info.id, currentPulse.PulseNumber, newPulse.PulseNumber, drop, dropSerialized,
 				)
 				if err != nil {
 					return errors.Wrapf(err, "getExecutorData failed for jet id %v", info.id)
 				}
 				// Split happened.
-				if !info.left.mineNext {
-					go sender(*msg, info.left.id)
-				}
-				if !info.right.mineNext {
-					go sender(*msg, info.right.id)
-				}
+				go sender(*msg, info.left.id)
+				go sender(*msg, info.right.id)
 			}
 
 			m.RecentStorageProvider.RemovePendingStorage(ctx, insolar.ID(info.id))
@@ -260,28 +249,44 @@ func (m *PulseManager) createDrop(
 
 func (m *PulseManager) getExecutorHotData(
 	ctx context.Context,
-	jetID insolar.ID,
-	pulse insolar.PulseNumber,
+	jetID insolar.JetID,
+	currentPN insolar.PulseNumber,
+	newPulsePN insolar.PulseNumber,
 	drop *drop.Drop,
 	dropSerialized []byte,
 ) (*message.HotData, error) {
 	ctx, span := instracer.StartSpan(ctx, "pulse.prepare_hot_data")
 	defer span.End()
 
-	hotIndexes := map[insolar.ID]message.HotIndex{}
 	pendingRequests := map[insolar.ID]recentstorage.PendingObjectContext{}
 
-	idxs := m.CollectionIndexAccessor.ForJet(ctx, insolar.JetID(jetID))
-
-	for id, meta := range idxs {
-		encoded := object.EncodeIndex(meta.Index)
-		hotIndexes[id] = message.HotIndex{
-			LastUsed: meta.LastUsed,
-			Index:    encoded,
-		}
+	bucks := m.IndexBucketAccessor.ForPNAndJet(ctx, currentPN, jetID)
+	limitPN, err := m.PulseCalculator.Backwards(ctx, currentPN, m.options.lightChainLimit)
+	if err == pulse.ErrNotFound {
+		limitPN = *insolar.GenesisPulse
+	} else if err != nil {
+		inslogger.FromContext(ctx).Errorf("failed to fetch limit %v", err)
+		return nil, err
 	}
 
-	pendingStorage := m.RecentStorageProvider.GetPendingStorage(ctx, jetID)
+	hotIndexes := make([]message.HotIndex, len(bucks))
+	for _, meta := range bucks {
+		encoded, err := meta.Lifeline.Marshal()
+		if err != nil {
+			inslogger.FromContext(ctx).WithField("id", meta.ObjID.DebugString()).Error("failed to marshal lifeline")
+			continue
+		}
+		if meta.LifelineLastUsed < limitPN.PulseNumber {
+			continue
+		}
+		hotIndexes = append(hotIndexes, message.HotIndex{
+			LastUsed: meta.LifelineLastUsed,
+			ObjID:    meta.ObjID,
+			Index:    encoded,
+		})
+	}
+
+	pendingStorage := m.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(jetID))
 	requestCount := 0
 	for objID, objContext := range pendingStorage.GetRequests() {
 		if len(objContext.Requests) > 0 {
@@ -298,7 +303,7 @@ func (m *PulseManager) getExecutorHotData(
 
 	msg := &message.HotData{
 		Drop:            *drop,
-		PulseNumber:     pulse,
+		PulseNumber:     newPulsePN,
 		HotIndexes:      hotIndexes,
 		PendingRequests: pendingRequests,
 	}
@@ -364,25 +369,6 @@ func (m *PulseManager) processJets(ctx context.Context, currentPulse, newPulse i
 	return results, nil
 }
 
-func (m *PulseManager) rewriteHotData(ctx context.Context, fromJetID, toJetID insolar.JetID) {
-	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"from_jet": fromJetID.DebugString(),
-		"to_jet":   toJetID.DebugString(),
-	})
-
-	idxs := m.CollectionIndexAccessor.ForJet(ctx, fromJetID)
-	for id, meta := range idxs {
-		meta.Index.JetID = toJetID
-		err := m.IndexModifier.SetWithMeta(ctx, id, meta.LastUsed, meta.Index)
-		if err == object.ErrIndexNotFound {
-			logger.WithField("id", id.DebugString()).Error("failed to rewrite index")
-			continue
-		}
-	}
-
-	m.RecentStorageProvider.ClonePendingStorage(ctx, insolar.ID(fromJetID), insolar.ID(toJetID))
-}
-
 // Set set's new pulse and closes current jet drop.
 func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist bool) error {
 	m.setLock.Lock()
@@ -416,8 +402,6 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 			return err
 		}
 		m.postProcessJets(ctx, newPulse, jets)
-		// m.addSync(ctx, jets, oldPulse.PulseNumber)
-		// go m.cleanLightData(ctx, newPulse, jetIndexesRemoved)
 		go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
 	}
 
@@ -509,7 +493,7 @@ func (m *PulseManager) setUnderGilSection(
 			return nil, nil, nil, errors.Wrap(err, "failed to process jets")
 		}
 
-		jets, err = m.splitJets(ctx, jets, oldPulse.PulseNumber, newPulse.PulseNumber)
+		jets, err = m.splitJets(ctx, jets, *prevPN, oldPulse.PulseNumber, newPulse.PulseNumber)
 		if err != nil {
 			return nil, nil, nil, errors.Wrap(err, "failed to split jets")
 		}
@@ -545,18 +529,17 @@ func (m *PulseManager) setUnderGilSection(
 	return jets, oldPulse, prevPN, nil
 }
 
-func (m *PulseManager) splitJets(ctx context.Context, jets []jetInfo, old insolar.PulseNumber, new insolar.PulseNumber) ([]jetInfo, error) {
+func (m *PulseManager) splitJets(ctx context.Context, jets []jetInfo, previous, current, new insolar.PulseNumber) ([]jetInfo, error) {
 	me := m.JetCoordinator.Me()
 	logger := inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-		"current_pulse": old,
+		"current_pulse": current,
 		"new_pulse":     new,
 	})
 
-	results := make([]jetInfo, len(jets))
-	for _, jet := range jets {
-		drop, err := m.DropAccessor.ForPulse(ctx, jet.id, old)
+	for i, jet := range jets {
+		drop, err := m.DropAccessor.ForPulse(ctx, jet.id, previous)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to get drop by jet.id: %v and pulse number: %v", jet.id, old)
+			continue
 		}
 
 		info := jetInfo{id: jet.id}
@@ -582,7 +565,7 @@ func (m *PulseManager) splitJets(ctx context.Context, jets []jetInfo, old insola
 			}
 			if *nextLeftExecutor == me {
 				info.left.mineNext = true
-				m.rewriteHotData(ctx, jet.id, leftJetID)
+				m.RecentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jet.id), insolar.ID(leftJetID))
 			}
 			nextRightExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(rightJetID), new)
 			if err != nil {
@@ -590,38 +573,17 @@ func (m *PulseManager) splitJets(ctx context.Context, jets []jetInfo, old insola
 			}
 			if *nextRightExecutor == me {
 				info.right.mineNext = true
-				m.rewriteHotData(ctx, jet.id, rightJetID)
+				m.RecentStorageProvider.ClonePendingStorage(ctx, insolar.ID(jet.id), insolar.ID(rightJetID))
 			}
 
-			wasExecutor := false
-			executor, err := m.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(jet.id), old)
-			if err != nil && err != node.ErrNoNodes {
-				return nil, err
-			}
-			if err == nil {
-				wasExecutor = *executor == me
-			}
-			logger = logger.WithField("jetid", jet.id.DebugString())
-			inslogger.SetLogger(ctx, logger)
-			logger.WithField("i_was_executor", wasExecutor).Debug("process jet")
 			logger.WithFields(map[string]interface{}{
 				"left_child":  leftJetID.DebugString(),
 				"right_child": rightJetID.DebugString(),
 			}).Info("jet split performed")
-		} else {
-			// Set actual because we are the last executor for jet.
-			m.JetModifier.Update(ctx, new, true, jet.id)
-			nextExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(jet.id), new)
-			if err != nil {
-				return nil, err
-			}
-			if *nextExecutor == me {
-				info.mineNext = true
-			}
 		}
-		results = append(results, info)
+		jets[i] = info
 	}
-	return results, nil
+	return jets, nil
 }
 
 func (m *PulseManager) postProcessJets(ctx context.Context, newPulse insolar.Pulse, jets []jetInfo) {
@@ -640,33 +602,6 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 	defer span.End()
 
 	m.JetReleaser.ThrowTimeout(ctx)
-
-	logger := inslogger.FromContext(ctx)
-	for _, jetInfo := range jets {
-		if jetInfo.left == nil && jetInfo.right == nil {
-			// No split happened.
-			if jetInfo.mineNext {
-				err := m.JetReleaser.Unlock(ctx, insolar.ID(jetInfo.id))
-				if err != nil {
-					logger.Error(err)
-				}
-			}
-		} else {
-			// Split happened.
-			if jetInfo.left.mineNext {
-				err := m.JetReleaser.Unlock(ctx, insolar.ID(jetInfo.left.id))
-				if err != nil {
-					logger.Error(err)
-				}
-			}
-			if jetInfo.right.mineNext {
-				err := m.JetReleaser.Unlock(ctx, insolar.ID(jetInfo.right.id))
-				if err != nil {
-					logger.Error(err)
-				}
-			}
-		}
-	}
 }
 
 // Start starts pulse manager
