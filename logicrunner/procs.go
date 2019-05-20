@@ -106,55 +106,53 @@ type ClarifyPendingState struct {
 }
 
 func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
-	es := c.es
-	parcel := c.parcel
-	es.Lock()
-	if es.pending != message.PendingUnknown {
-		es.Unlock()
+	c.es.Lock()
+	if c.es.pending != message.PendingUnknown {
+		c.es.Unlock()
 		return nil
 	}
 
-	if parcel != nil {
-		if parcel.Type() != insolar.TypeCallMethod {
-			es.Unlock()
-			es.pending = message.NotPending
+	if c.parcel != nil {
+		if c.parcel.Type() != insolar.TypeCallMethod {
+			c.es.Unlock()
+			c.es.pending = message.NotPending
 			return nil
 		}
 
-		msg := parcel.Message().(*message.CallMethod)
+		msg := c.parcel.Message().(*message.CallMethod)
 		if msg.CallType != message.CTMethod {
-			es.Unlock()
-			es.pending = message.NotPending
+			c.es.Unlock()
+			c.es.pending = message.NotPending
 			return nil
 		}
 	}
 
-	es.Unlock()
+	c.es.Unlock()
 
-	es.HasPendingCheckMutex.Lock()
-	defer es.HasPendingCheckMutex.Unlock()
+	c.es.HasPendingCheckMutex.Lock()
+	defer c.es.HasPendingCheckMutex.Unlock()
 
-	es.Lock()
-	if es.pending != message.PendingUnknown {
-		es.Unlock()
+	c.es.Lock()
+	if c.es.pending != message.PendingUnknown {
+		c.es.Unlock()
 		return nil
 	}
-	es.Unlock()
+	c.es.Unlock()
 
-	has, err := c.ArtifactManager.HasPendingRequests(ctx, es.Ref)
+	has, err := c.ArtifactManager.HasPendingRequests(ctx, c.es.Ref)
 	if err != nil {
 		return err
 	}
 
-	es.Lock()
-	if es.pending == message.PendingUnknown {
+	c.es.Lock()
+	if c.es.pending == message.PendingUnknown {
 		if has {
-			es.pending = message.InPending
+			c.es.pending = message.InPending
 		} else {
-			es.pending = message.NotPending
+			c.es.pending = message.NotPending
 		}
 	}
-	es.Unlock()
+	c.es.Unlock()
 
 	return nil
 }
