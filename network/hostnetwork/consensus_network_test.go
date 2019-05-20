@@ -173,23 +173,15 @@ func newPhase1Packet() *packets.Phase1Packet {
 	return packets.NewPhase1Packet(insolar.Pulse{})
 }
 
-func newPhase2Packet() (*packets.Phase2Packet, error) {
-	bitset, err := packets.NewBitSet(10)
-	if err != nil {
-		return nil, err
-	}
+func newPhase2Packet() *packets.Phase2Packet {
 	result := packets.NewPhase2Packet(insolar.PulseNumber(0))
-	result.SetBitSet(bitset)
-	return result, nil
+	result.SetBitSet(packets.NewBitSet(10))
+	return result
 }
 
-func newPhase3Packet() (*packets.Phase3Packet, error) {
+func newPhase3Packet() *packets.Phase3Packet {
 	var ghs packets.GlobuleHashSignature
-	bitset, err := packets.NewBitSet(10)
-	if err != nil {
-		return nil, err
-	}
-	return packets.NewPhase3Packet(insolar.PulseNumber(0), ghs, bitset), nil
+	return packets.NewPhase3Packet(insolar.PulseNumber(0), ghs, packets.NewBitSet(10))
 }
 
 func (t *consensusNetworkSuite) TestSendPacketPhase1() {
@@ -198,14 +190,12 @@ func (t *consensusNetworkSuite) TestSendPacketPhase1() {
 }
 
 func (t *consensusNetworkSuite) TestSendPacketPhase2() {
-	packet, err := newPhase2Packet()
-	require.NoError(t.T(), err)
+	packet := newPhase2Packet()
 	t.sendPacket(packet)
 }
 
 func (t *consensusNetworkSuite) TestSendPacketPhase3() {
-	packet, err := newPhase3Packet()
-	require.NoError(t.T(), err)
+	packet := newPhase3Packet()
 	t.sendPacket(packet)
 }
 
@@ -258,15 +248,11 @@ func (t *consensusNetworkSuite) TestVerifySignPhase1() {
 }
 
 func (t *consensusNetworkSuite) TestVerifySignPhase2() {
-	packet, err := newPhase2Packet()
-	require.NoError(t.T(), err)
-	t.sendPacketAndVerify(packet)
+	t.sendPacketAndVerify(newPhase2Packet())
 }
 
 func (t *consensusNetworkSuite) TestVerifySignPhase3() {
-	packet, err := newPhase3Packet()
-	require.NoError(t.T(), err)
-	t.sendPacketAndVerify(packet)
+	t.sendPacketAndVerify(newPhase3Packet())
 }
 
 func NewSuite() (*consensusNetworkSuite, error) {
