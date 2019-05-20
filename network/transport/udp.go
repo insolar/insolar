@@ -106,11 +106,7 @@ func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []
 		return errors.Wrap(err, "failed to dial UDP")
 	}
 
-	defer func() {
-		if err := conn.Close(); err != nil {
-			logger.Error(err)
-		}
-	}()
+	defer utils.CloseVerbose(conn)
 
 	n, err := conn.Write(data)
 	if err != nil {
