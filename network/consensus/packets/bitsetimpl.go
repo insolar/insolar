@@ -90,7 +90,7 @@ func (dbs *bitsetImpl) GetCells(mapper BitSetMapper) ([]BitSetCell, error) {
 }
 
 // NewBitSetImpl creates and returns a bitset implementation
-func NewBitSetImpl(size int, compressed bool) (BitSet, error) {
+func NewBitSetImpl(size int, compressed bool) BitSet {
 	bitset := &bitsetImpl{
 		compressed: compressed,
 		array:      make(bitArray, size),
@@ -98,7 +98,7 @@ func NewBitSetImpl(size int, compressed bool) (BitSet, error) {
 	for i := 0; i < size; i++ {
 		bitset.array[i] = TimedOut
 	}
-	return bitset, nil
+	return bitset
 }
 
 func (dbs *bitsetImpl) GetTristateArray() ([]BitSetState, error) {

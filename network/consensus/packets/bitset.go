@@ -111,6 +111,6 @@ type BitSet interface {
 }
 
 // NewBitSet creates bitset from a set of buckets and the mapper. Size == cells count.
-func NewBitSet(size int) (BitSet, error) {
+func NewBitSet(size int) BitSet {
 	return NewBitSetImpl(size, false)
 }

@@ -116,7 +116,7 @@ func TestBitSet_GetBuckets(t *testing.T) {
 	cells := initBitCells(refs)
 
 	mapper := &mapperMock{refs: refs}
-	bitset, _ := NewBitSet(len(cells))
+	bitset := NewBitSet(len(cells))
 	err := bitset.ApplyChanges(cells, mapper)
 	assert.NoError(t, err)
 	newCells, err := bitset.GetCells(mapper)
@@ -129,7 +129,7 @@ func TestBitSet_ApplyChanges(t *testing.T) {
 	refs := initRefs(count)
 	cells := initBitCells(refs)
 
-	bitset, _ := NewBitSet(len(cells))
+	bitset := NewBitSet(len(cells))
 
 	mapper := &mapperMock{refs: refs}
 	cells[count-3].State = Fraud
@@ -248,7 +248,7 @@ func TestBitSet_ThousandDiffStates(t *testing.T) {
 func testSerializeDeserialize(t *testing.T, refs []insolar.Reference, cells []BitSetCell, compressed bool) {
 	mapper := &mapperMock{refs: refs}
 
-	bitset, _ := NewBitSetImpl(len(cells), compressed)
+	bitset := NewBitSetImpl(len(cells), compressed)
 	err := bitset.ApplyChanges(cells, mapper)
 	assert.NoError(t, err)
 	data, err := bitset.Serialize()

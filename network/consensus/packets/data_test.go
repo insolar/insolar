@@ -301,7 +301,7 @@ func makePhase2Packet() *Phase2Packet {
 	phase2Packet.globuleHashSignature = randomArray66()
 	phase2Packet.SignatureHeaderSection1 = randomArray66()
 	phase2Packet.SignatureHeaderSection2 = randomArray66()
-	phase2Packet.bitSet, _ = NewBitSet(134)
+	phase2Packet.bitSet = NewBitSet(134)
 
 	vote := &MissingNodeReqVote{NodeIndex: 25}
 
@@ -389,17 +389,11 @@ func getPhase3Packet(t *testing.T) *Phase3Packet {
 	packet.packetHeader = *makeDefaultPacketHeader(Phase3)
 	packet.globuleHashSignature = randomArray66()
 	packet.SignatureHeaderSection1 = randomArray66()
-	var err error
-	packet.bitset, err = NewBitSet(100)
-	assert.NoError(t, err)
 
 	count := 70
 	refs := initRefs(count)
 	cells := initBitCells(refs)
-	bitset, err := NewBitSet(len(cells))
-	assert.NoError(t, err)
-
-	packet.bitset = bitset
+	packet.bitset = NewBitSet(len(cells))
 
 	return packet
 }
