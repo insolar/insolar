@@ -38,6 +38,7 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 	ctx, _ = inslogger.WithField(ctx, "object", msg.Head.Record().DebugString())
 
 	var jetID insolar.JetID
+	var pn insolar.PulseNumber
 	if s.Message.Parcel.DelegationToken() == nil {
 		jet := proc.NewFetchJet(*msg.Head.Record(), flow.Pulse(ctx), s.Message.ReplyTo)
 		s.dep.FetchJet(jet)
@@ -51,6 +52,7 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 		}
 
 		jetID = jet.Result.Jet
+		pn = flow.Pulse(ctx)
 	} else {
 		// Workaround to fetch object states.
 		jet := proc.NewFetchJet(*msg.Head.Record(), msg.State.Pulse(), s.Message.ReplyTo)
@@ -59,9 +61,10 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 			return err
 		}
 		jetID = jet.Result.Jet
+		pn = msg.State.Pulse()
 	}
 
-	idx := proc.NewGetIndex(msg.Head, jetID, s.Message.ReplyTo)
+	idx := proc.NewGetIndex(msg.Head, jetID, s.Message.ReplyTo, pn)
 	s.dep.GetIndex(idx)
 	if err := f.Procedure(ctx, idx, false); err != nil {
 		return err

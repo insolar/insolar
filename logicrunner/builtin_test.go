@@ -78,7 +78,7 @@ func TestBareHelloworld(t *testing.T) {
 	mb := testmessagebus.NewTestMessageBus(t)
 
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	l, _ := artifacts.TmpLedger(
+	l, _, _ := artifacts.TmpLedger(
 		t,
 		"",
 		insolar.Components{
@@ -143,7 +143,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, true, contract != nil, "contract created")
 
 	msg := &message.CallMethod{
-		Object: &reqref,
+		Object:    &reqref,
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
 	}
@@ -161,7 +161,7 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, []interface{}([]interface{}{"Hello Vany's world"}), r)
 
 	msg = &message.CallMethod{
-		Object: &reqref,
+		Object:    &reqref,
 		Method:    "Greet",
 		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
 	}
