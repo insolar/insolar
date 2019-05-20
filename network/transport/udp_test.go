@@ -57,6 +57,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/configuration"
 )
@@ -120,4 +121,23 @@ func TestUdpTransport_SendDatagram(t *testing.T) {
 	assert.NoError(t, err)
 	err = node2.udp.Stop(ctx)
 	assert.NoError(t, err)
+}
+
+func TestUdpTransport_SendDatagram_Error(t *testing.T) {
+	cfg := configuration.NewHostNetwork().Transport
+	cfg.Address = fmt.Sprintf("127.0.0.1:%d", 0)
+
+	node := &testNode{}
+	udp, err := NewFactory(cfg).CreateDatagramTransport(node)
+	require.NoError(t, err)
+
+	ctx := context.Background()
+	err = udp.SendDatagram(ctx, udp.Address(), []byte{1, 2, 3})
+	require.EqualError(t, err, "failed to send datagram: transport is not started")
+
+	err = udp.Start(ctx)
+	require.NoError(t, err)
+
+	err = udp.SendDatagram(ctx, udp.Address(), []byte{1, 2, 3})
+	require.NoError(t, err)
 }
