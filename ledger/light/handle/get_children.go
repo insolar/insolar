@@ -61,9 +61,9 @@ func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
 		jetID = jet.Result.Jet
 	}
 
-	getIndex := proc.NewGetIndex(msg.Parent, jetID, s.replyTo)
+	getIndex := proc.NewGetIndex(msg.Parent, jetID, s.replyTo, flow.Pulse(ctx))
 	s.dep.GetIndex(getIndex)
-	if err := f.Procedure(ctx, getIndex, true); err != nil {
+	if err := f.Procedure(ctx, getIndex, false); err != nil {
 		return err
 	}
 	// The object has no children.
@@ -93,7 +93,7 @@ func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
 
 	getChildren := proc.NewGetChildren(currentChild, msg, s.Message.Parcel, s.replyTo)
 	s.dep.GetChildren(getChildren)
-	if err := f.Procedure(ctx, getChildren, true); err != nil {
+	if err := f.Procedure(ctx, getChildren, false); err != nil {
 		return err
 	}
 
