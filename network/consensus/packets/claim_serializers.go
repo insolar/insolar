@@ -194,6 +194,10 @@ func (nac *NodeAnnounceClaim) SerializeRaw() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write NodeJoinClaim part")
 	}
+	err = binary.Write(result, defaultByteOrder, nac.ETA)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write ETA")
+	}
 	err = binary.Write(result, defaultByteOrder, nac.NodeAnnouncerIndex)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write NodeAnnouncerIndex")
@@ -240,6 +244,10 @@ func (nac *NodeAnnounceClaim) Deserialize(data io.Reader) error {
 	err := nac.deserializeRaw(data)
 	if err != nil {
 		return err
+	}
+	err = binary.Read(data, defaultByteOrder, &nac.ETA)
+	if err != nil {
+		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read ETA")
 	}
 	err = binary.Read(data, defaultByteOrder, &nac.NodeAnnouncerIndex)
 	if err != nil {

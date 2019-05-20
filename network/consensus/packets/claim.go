@@ -126,6 +126,7 @@ func (njc *NodeJoinClaim) Type() ClaimType {
 type NodeAnnounceClaim struct {
 	NodeJoinClaim
 
+	ETA                uint32
 	NodeAnnouncerIndex uint16
 	NodeJoinerIndex    uint16
 	NodeCount          uint16

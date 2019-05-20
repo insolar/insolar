@@ -94,6 +94,7 @@ func TestMakeClaimHeader(t *testing.T) {
 func makeNodeAnnounceClaim() *NodeAnnounceClaim {
 	nodeAnnounceClaim := &NodeAnnounceClaim{}
 	nodeAnnounceClaim.NodeJoinClaim = *makeNodeJoinClaim(true)
+	nodeAnnounceClaim.ETA = 22648934
 	nodeAnnounceClaim.NodeCount = 266
 	nodeAnnounceClaim.NodeAnnouncerIndex = 37
 	nodeAnnounceClaim.NodeJoinerIndex = 38
