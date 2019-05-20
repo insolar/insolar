@@ -37,19 +37,31 @@ type GetChildren struct {
 func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
 	msg := s.Message.Parcel.Message().(*message.GetChildren)
 
-	jet := proc.NewFetchJet(*msg.DefaultTarget().Record(), flow.Pulse(ctx), s.replyTo)
-	s.dep.FetchJet(jet)
-	if err := f.Procedure(ctx, jet, true); err != nil {
-		return err
+	var jetID insolar.JetID
+	if s.Message.Parcel.DelegationToken() == nil {
+		jet := proc.NewFetchJet(*msg.DefaultTarget().Record(), flow.Pulse(ctx), s.Message.ReplyTo)
+		s.dep.FetchJet(jet)
+		if err := f.Procedure(ctx, jet, false); err != nil {
+			return err
+		}
+		hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.Message.ReplyTo)
+		s.dep.WaitHot(hot)
+		if err := f.Procedure(ctx, hot, false); err != nil {
+			return err
+		}
+
+		jetID = jet.Result.Jet
+	} else {
+		// Workaround to fetch object states.
+		jet := proc.NewFetchJet(*msg.DefaultTarget().Record(), msg.FromChild.Pulse(), s.Message.ReplyTo)
+		s.dep.FetchJet(jet)
+		if err := f.Procedure(ctx, jet, false); err != nil {
+			return err
+		}
+		jetID = jet.Result.Jet
 	}
 
-	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.replyTo)
-	s.dep.WaitHot(hot)
-	if err := f.Procedure(ctx, hot, true); err != nil {
-		return err
-	}
-
-	getIndex := proc.NewGetIndex(msg.Parent, jet.Result.Jet, s.replyTo)
+	getIndex := proc.NewGetIndex(msg.Parent, jetID, s.replyTo)
 	s.dep.GetIndex(getIndex)
 	if err := f.Procedure(ctx, getIndex, true); err != nil {
 		return err
