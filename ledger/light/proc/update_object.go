@@ -68,6 +68,11 @@ func (p *UpdateObject) Proceed(ctx context.Context) error {
 
 func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	logger := inslogger.FromContext(ctx)
+	if p.Message.Object.Record() == nil {
+		return bus.Reply{
+			Err: errors.New("updateObject message object is nil"),
+		}
+	}
 
 	virtRec := record.Virtual{}
 	err := virtRec.Unmarshal(p.Message.Record)
@@ -161,6 +166,7 @@ func (p *UpdateObject) handle(ctx context.Context) bus.Reply {
 	if err != nil {
 		return bus.Reply{Err: err}
 	}
+	p.Dep.IndexStateModifier.SetUsageForPulse(ctx, *p.Message.Object.Record(), p.PulseNumber)
 
 	logger.WithField("state", idx.LatestState.DebugString()).Debug("saved object")
 
