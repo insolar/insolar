@@ -11,7 +11,7 @@ option (gogoproto.populate_all)        = false;
 message Address {
     bytes IP = 1;
     uint32 port = 2;
-    bytes Zone = 3;
+    string Zone = 3;
 }
 
 message Host {
@@ -24,7 +24,7 @@ message PacketBackend {
     Host Sender = 1;
     Host Receiver = 2;
     uint32 RequestID = 3;
-    bytes TraceID = 4;
+    string TraceID = 4;
 
     oneof payload {
         Request Request = 5;
@@ -62,7 +62,7 @@ message Ping {
 }
 
 message RPCRequest {
-    bytes Method = 1;
+    string Method = 1;
     bytes Data = 2;
 }
 
@@ -73,7 +73,7 @@ message Cascade {
 }
 
 message CascadeRequest {
-    bytes TraceID = 1;
+    string TraceID = 1;
     RPCRequest RPC = 2;
     Cascade Cascade = 3;
 }
@@ -93,7 +93,7 @@ message AuthorizeRequest {
 
 message RegisterRequest {
     uint64 SessionID = 1;
-    bytes Version = 2;
+    string Version = 2;
     bytes JoinClaim = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim"];
 }
 
@@ -105,14 +105,14 @@ message GenesisRequest {
 message RPCResponse {
     oneof response {
         bytes Result = 1;
-        bytes Error = 2;
+        string Error = 2;
     }
 }
 
 message BasicResponse {
     oneof response {
         bool Success = 1;
-        bytes Error = 2;
+        string Error = 2;
     }
 }
 
@@ -124,11 +124,11 @@ message BootstrapResponse {
         ReconnectRequired = 3;
     }
     ResponseCode Code = 1;
-    bytes RejectReason = 2;
+    string RejectReason = 2;
     uint32 ETA = 3;
     uint32 AssignShortID = 4;
     uint32 UpdateSincePulse = 5;
-    bytes RedirectHost = 6;
+    string RedirectHost = 6;
     uint32 NetworkSize = 7;
 }
 
@@ -140,7 +140,7 @@ enum BasicResponseCode {
 
 message AuthorizeResponse {
     BasicResponseCode Code = 1;
-    bytes Error = 2;
+    string Error = 2;
     AuthorizationData Data = 3;
 }
 
@@ -152,10 +152,10 @@ message AuthorizationData {
 message RegisterResponse {
     BasicResponseCode Code = 1;
     int64 RetryIn = 2;
-    bytes Error = 3;
+    string Error = 3;
 }
 
 message GenesisResponse {
     GenesisRequest Response = 1;
-    bytes Error = 2;
+    string Error = 2;
 }
