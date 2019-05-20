@@ -106,15 +106,18 @@ func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []
 		return errors.Wrap(err, "failed to dial UDP")
 	}
 
+	defer func() {
+		if err := conn.Close(); err != nil {
+			logger.Error(err)
+		}
+	}()
+
 	n, err := conn.Write(data)
 	if err != nil {
 		// TODO: may be try to send second time if error
 		return errors.Wrap(err, "failed to write data")
 	}
 	stats.Record(ctx, consensus.SentSize.M(int64(n)))
-	if err := conn.Close(); err != nil {
-		return errors.Wrap(err, "failed to close conn")
-	}
 	return nil
 }
 
