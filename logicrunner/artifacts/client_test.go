@@ -148,11 +148,6 @@ func (s *amSuite) TestLedgerArtifactManager_GetCodeWithCache() {
 
 	pa := pulse.NewAccessorMock(s.T())
 	pa.LatestMock.Return(*insolar.GenesisPulse, nil)
-	pa.GetLatestAndWakeUpChannelFunc = func(p context.Context) (r <-chan struct{}, r1 insolar.Pulse, r2 error) {
-		ch := make(chan struct{})
-		close(ch)
-		return ch, *insolar.GenesisPulse, nil
-	}
 
 	am := client{
 		DefaultBus:     mb,
@@ -205,11 +200,6 @@ func (s *amSuite) TestLedgerArtifactManager_GetChildren_FollowsRedirect() {
 
 	pa := pulse.NewAccessorMock(s.T())
 	pa.LatestMock.Return(*insolar.GenesisPulse, nil)
-	pa.GetLatestAndWakeUpChannelFunc = func(p context.Context) (r <-chan struct{}, r1 insolar.Pulse, r2 error) {
-		ch := make(chan struct{})
-		close(ch)
-		return ch, *insolar.GenesisPulse, nil
-	}
 	am.PulseAccessor = pa
 
 	_, err := am.GetChildren(s.ctx, *objRef, nil)
@@ -225,11 +215,6 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 	am.PCS = cs
 	pa := pulse.NewAccessorMock(s.T())
 	pa.LatestMock.Return(insolar.Pulse{PulseNumber: insolar.FirstPulseNumber}, nil)
-	pa.GetLatestAndWakeUpChannelFunc = func(p context.Context) (r <-chan struct{}, r1 insolar.Pulse, r2 error) {
-		ch := make(chan struct{})
-		close(ch)
-		return ch, *insolar.GenesisPulse, nil
-	}
 
 	am.PulseAccessor = pa
 	am.JetStorage = s.jetStorage
@@ -291,11 +276,6 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 
 	pulseAccessor := pulse.NewAccessorMock(s.T())
 	pulseAccessor.LatestMock.Return(*insolar.GenesisPulse, nil)
-	pulseAccessor.GetLatestAndWakeUpChannelFunc = func(p context.Context) (r <-chan struct{}, r1 insolar.Pulse, r2 error) {
-		ch := make(chan struct{})
-		close(ch)
-		return ch, *insolar.GenesisPulse, nil
-	}
 
 	var parcel insolar.Parcel = &message.Parcel{PulseNumber: 123987}
 	req := record.Request{
