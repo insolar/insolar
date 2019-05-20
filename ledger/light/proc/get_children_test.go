@@ -66,9 +66,9 @@ func TestGetChildren_RedirectToLight(t *testing.T) {
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 	childPointer := genRandomID(insolar.FirstPulseNumber)
 
-	indexMemoryStor := object.NewIndexMemory()
+	indexMemoryStor := object.NewInMemoryIndex()
 	ctx := context.TODO()
-	err := indexMemoryStor.Set(ctx, *msg.Parent.Record(), object.Lifeline{
+	err := indexMemoryStor.Set(ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record(), object.Lifeline{
 		ChildPointer: genRandomID(insolar.FirstPulseNumber),
 		JetID:        insolar.JetID(jetID),
 	})
@@ -119,9 +119,9 @@ func TestGetChildren_RedirectToHeavy(t *testing.T) {
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 	childPointer := genRandomID(insolar.FirstPulseNumber)
 
-	indexMemoryStor := object.NewIndexMemory()
+	indexMemoryStor := object.NewInMemoryIndex()
 	ctx := context.TODO()
-	err := indexMemoryStor.Set(ctx, *msg.Parent.Record(), object.Lifeline{
+	err := indexMemoryStor.Set(ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record(), object.Lifeline{
 		ChildPointer: genRandomID(insolar.FirstPulseNumber),
 		JetID:        insolar.JetID(jetID),
 	})
