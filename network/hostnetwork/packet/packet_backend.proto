@@ -88,11 +88,13 @@ message BootstrapRequest {
 }
 
 message AuthorizeRequest {
-
+    bytes Certificate = 1;
 }
 
 message RegisterRequest {
-
+    uint64 SessionID = 1;
+    bytes Version = 2;
+    bytes JoinClaim = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim"];
 }
 
 message GenesisRequest {
@@ -129,12 +131,27 @@ message BootstrapResponse {
     uint32 NetworkSize = 7;
 }
 
-message AuthorizeResponse {
+enum BasicResponseCode {
+    Confirmed = 0;
+    Denied = 1;
+    Retry = 2;
+}
 
+message AuthorizeResponse {
+    BasicResponseCode Code = 1;
+    bytes Error = 2;
+    AuthorizationData Data = 3;
+}
+
+message AuthorizationData {
+    uint64 SessionID = 1;
+    uint32 AssignShortID = 2;
 }
 
 message RegisterResponse {
-
+    BasicResponseCode Code = 1;
+    int64 RetryIn = 2;
+    bytes Error = 3;
 }
 
 message GenesisResponse {
