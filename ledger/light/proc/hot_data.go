@@ -124,7 +124,7 @@ func (p *HotData) process(ctx context.Context) error {
 			p.msg.PulseNumber,
 			object.IndexBucket{
 				ObjID:            meta.ObjID,
-				Lifeline:         &decodedIndex,
+				Lifeline:         decodedIndex,
 				LifelineLastUsed: meta.LastUsed,
 				Results:          []insolar.ID{},
 				Requests:         []insolar.ID{}},

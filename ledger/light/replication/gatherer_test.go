@@ -69,7 +69,7 @@ func TestDataGatherer_ForPulseAndJet(t *testing.T) {
 	bucks := []object.IndexBucket{
 		{
 			ObjID:    idxID,
-			Lifeline: &idx,
+			Lifeline: idx,
 		},
 	}
 	ia.ForPNAndJetMock.Return(bucks)
@@ -106,7 +106,7 @@ func TestDataGatherer_ForPulseAndJet_DropFetchingFailed(t *testing.T) {
 func TestLightDataGatherer_convertIndexBuckets(t *testing.T) {
 	var idxs []object.IndexBucket
 	fuzz.New().NilChance(0).NumElements(500, 1000).Funcs(func(elem *object.IndexBucket, c fuzz.Continue) {
-		elem.Lifeline = &object.Lifeline{
+		elem.Lifeline = object.Lifeline{
 			JetID:        gen.JetID(),
 			LatestUpdate: gen.PulseNumber(),
 		}

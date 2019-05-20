@@ -96,14 +96,10 @@ func (i *LockedIndexBucket) lifeline() (Lifeline, error) {
 	i.lifelineLock.RLock()
 	defer i.lifelineLock.RUnlock()
 
-	if i.bucket.Lifeline == nil {
-		return Lifeline{}, ErrLifelineNotFound
-	}
-
-	return CloneIndex(*i.bucket.Lifeline), nil
+	return CloneIndex(i.bucket.Lifeline), nil
 }
 
-func (i *LockedIndexBucket) setLifeline(lifeline *Lifeline, pn insolar.PulseNumber) {
+func (i *LockedIndexBucket) setLifeline(lifeline Lifeline, pn insolar.PulseNumber) {
 	i.lifelineLock.Lock()
 	defer i.lifelineLock.Unlock()
 
@@ -186,7 +182,7 @@ func (i *InMemoryIndex) SetLifeline(ctx context.Context, pn insolar.PulseNumber,
 	if b == nil {
 		b = i.createBucket(ctx, pn, objID)
 	}
-	b.setLifeline(&lifeline, pn)
+	b.setLifeline(lifeline, pn)
 
 	stats.Record(ctx,
 		statIndexInMemoryAddedCount.M(1),
@@ -262,14 +258,11 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 	res := []IndexBucket{}
 
 	for _, b := range bucks {
-		if b.bucket.Lifeline == nil {
-			panic("empty lifeline")
-		}
 		if b.bucket.Lifeline.JetID != jetID {
 			continue
 		}
 
-		clonedLfl := CloneIndex(*b.bucket.Lifeline)
+		clonedLfl := CloneIndex(b.bucket.Lifeline)
 		var clonedResults []insolar.ID
 		var clonedRequests []insolar.ID
 
@@ -278,7 +271,7 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 
 		res = append(res, IndexBucket{
 			ObjID:            b.bucket.ObjID,
-			Lifeline:         &clonedLfl,
+			Lifeline:         clonedLfl,
 			LifelineLastUsed: b.bucket.LifelineLastUsed,
 			Results:          clonedResults,
 			Requests:         clonedRequests,
@@ -292,9 +285,6 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 func (i *InMemoryIndex) SetLifelineUsage(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error {
 	b := i.bucket(pn, objID)
 	if b == nil {
-		return ErrLifelineNotFound
-	}
-	if b.bucket.Lifeline == nil {
 		return ErrLifelineNotFound
 	}
 
@@ -370,7 +360,7 @@ func (i *IndexDB) SetLifeline(ctx context.Context, pn insolar.PulseNumber, objID
 		return err
 	}
 
-	buc.Lifeline = &lifeline
+	buc.Lifeline = lifeline
 	err = i.setBucket(pn, objID, buc)
 	if err != nil {
 		return err
@@ -425,11 +415,8 @@ func (i *IndexDB) LifelineForID(ctx context.Context, pn insolar.PulseNumber, obj
 	} else if err != nil {
 		return Lifeline{}, err
 	}
-	if buck.Lifeline == nil {
-		return Lifeline{}, ErrLifelineNotFound
-	}
 
-	return *buck.Lifeline, nil
+	return buck.Lifeline, nil
 }
 
 func (i *IndexDB) setBucket(pn insolar.PulseNumber, objID insolar.ID, bucket *IndexBucket) error {

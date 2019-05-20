@@ -60,7 +60,7 @@ func TestInMemoryIndex_SetLifeline(t *testing.T) {
 		require.NotNil(t, meta)
 		require.NotNil(t, meta.bucket)
 
-		require.Equal(t, *meta.bucket.Lifeline, idx)
+		require.Equal(t, meta.bucket.Lifeline, idx)
 		require.Equal(t, meta.bucket.LifelineLastUsed, pn)
 		require.Equal(t, meta.bucket.ObjID, id)
 	})
@@ -142,20 +142,6 @@ func TestIndexStorage_ForID(t *testing.T) {
 
 		assert.Equal(t, ErrLifelineNotFound, err)
 	})
-
-	t.Run("returns error when bucket contains no lifeline", func(t *testing.T) {
-		t.Parallel()
-
-		storage := NewInMemoryIndex()
-		pn := gen.PulseNumber()
-
-		_ = storage.SetLifeline(ctx, pn, id, idx)
-		storage.buckets[pn][id].bucket.Lifeline = nil
-
-		_, err := storage.LifelineForID(ctx, pn, id)
-
-		assert.Equal(t, ErrLifelineNotFound, err)
-	})
 }
 
 func TestInMemoryIndex_ForPNAndJet(t *testing.T) {
@@ -219,7 +205,7 @@ func TestInMemoryIndex_SetBucket(t *testing.T) {
 	jetID := gen.JetID()
 	buck := IndexBucket{
 		ObjID: objID,
-		Lifeline: &Lifeline{
+		Lifeline: Lifeline{
 			LatestState: &lflID,
 			JetID:       jetID,
 			Delegates:   []LifelineDelegate{},
@@ -253,7 +239,7 @@ func TestInMemoryIndex_SetBucket(t *testing.T) {
 		sJetID := gen.JetID()
 		sBuck := IndexBucket{
 			ObjID: objID,
-			Lifeline: &Lifeline{
+			Lifeline: Lifeline{
 				LatestState: &sLlflID,
 				JetID:       sJetID,
 				Delegates:   []LifelineDelegate{},
@@ -310,16 +296,6 @@ func TestInMemoryIndex_SetLifelineUsage(t *testing.T) {
 		t.Parallel()
 
 		index := NewInMemoryIndex()
-		err := index.SetLifelineUsage(ctx, pn, id)
-		require.Error(t, ErrLifelineNotFound, err)
-	})
-	t.Run("returns ErrLifelineNotFound if no lifeline", func(t *testing.T) {
-		t.Parallel()
-
-		index := NewInMemoryIndex()
-		_ = index.SetLifeline(ctx, pn, id, idx)
-		index.buckets[pn][id].bucket.Lifeline = nil
-
 		err := index.SetLifelineUsage(ctx, pn, id)
 		require.Error(t, ErrLifelineNotFound, err)
 	})
@@ -440,7 +416,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 	jetID := gen.JetID()
 	buck := IndexBucket{
 		ObjID: objID,
-		Lifeline: &Lifeline{
+		Lifeline: Lifeline{
 			LatestState: &lflID,
 			JetID:       jetID,
 			Delegates:   []LifelineDelegate{},
@@ -474,7 +450,7 @@ func TestDBIndex_SetBucket(t *testing.T) {
 		sJetID := gen.JetID()
 		sBuck := IndexBucket{
 			ObjID: objID,
-			Lifeline: &Lifeline{
+			Lifeline: Lifeline{
 				LatestState: &sLlflID,
 				JetID:       sJetID,
 				Delegates:   []LifelineDelegate{},

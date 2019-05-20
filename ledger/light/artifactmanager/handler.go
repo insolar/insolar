@@ -566,7 +566,7 @@ func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Pa
 			parcel.Pulse(),
 			object.IndexBucket{
 				ObjID:            meta.ObjID,
-				Lifeline:         &decodedIndex,
+				Lifeline:         decodedIndex,
 				LifelineLastUsed: meta.LastUsed,
 				Results:          []insolar.ID{},
 				Requests:         []insolar.ID{}},
