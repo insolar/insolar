@@ -9,9 +9,11 @@ import "ledger/object/lifeline.proto";
 message IndexBucket {
     option (gogoproto.equal) = false;
 
-    bytes ObjID = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
-    Lifeline Lifeline = 2 [(gogoproto.nullable) = true];
-    uint32 LifelineLastUsed = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    repeated bytes Requests = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
-    repeated bytes Results = 5 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
+    int32  __polymorph  = 16;
+
+    bytes ObjID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    Lifeline Lifeline = 21 [(gogoproto.nullable) = true];
+    uint32 LifelineLastUsed = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    repeated bytes Requests = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
+    repeated bytes Results = 24 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
 }

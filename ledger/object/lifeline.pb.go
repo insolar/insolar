@@ -27,15 +27,16 @@ var _ = math.Inf
 const _ = proto.GoGoProtoPackageIsVersion2 // please upgrade the proto package
 
 type Lifeline struct {
-	LatestState         *github_com_insolar_insolar_insolar.ID            `protobuf:"bytes,1,opt,name=LatestState,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"LatestState,omitempty"`
-	LatestStateApproved *github_com_insolar_insolar_insolar.ID            `protobuf:"bytes,2,opt,name=LatestStateApproved,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"LatestStateApproved,omitempty"`
-	ChildPointer        *github_com_insolar_insolar_insolar.ID            `protobuf:"bytes,3,opt,name=ChildPointer,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ChildPointer,omitempty"`
-	Parent              github_com_insolar_insolar_insolar.Reference      `protobuf:"bytes,4,opt,name=Parent,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Parent"`
-	Delegates           []LifelineDelegate                                `protobuf:"bytes,5,rep,name=Delegates,proto3" json:"Delegates"`
-	StateID             github_com_insolar_insolar_insolar_record.StateID `protobuf:"varint,6,opt,name=StateID,proto3,customtype=github.com/insolar/insolar/insolar/record.StateID" json:"StateID"`
-	LatestUpdate        github_com_insolar_insolar_insolar.PulseNumber    `protobuf:"varint,7,opt,name=LatestUpdate,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"LatestUpdate"`
-	JetID               github_com_insolar_insolar_insolar.JetID          `protobuf:"bytes,8,opt,name=JetID,proto3,customtype=github.com/insolar/insolar/insolar.JetID" json:"JetID"`
-	LatestRequest       *github_com_insolar_insolar_insolar.ID            `protobuf:"bytes,9,opt,name=LatestRequest,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"LatestRequest,omitempty"`
+	XPolymorph          int32                                             `protobuf:"varint,16,opt,name=__polymorph,json=Polymorph,proto3" json:"__polymorph,omitempty"`
+	LatestState         *github_com_insolar_insolar_insolar.ID            `protobuf:"bytes,20,opt,name=LatestState,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"LatestState,omitempty"`
+	LatestStateApproved *github_com_insolar_insolar_insolar.ID            `protobuf:"bytes,21,opt,name=LatestStateApproved,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"LatestStateApproved,omitempty"`
+	ChildPointer        *github_com_insolar_insolar_insolar.ID            `protobuf:"bytes,22,opt,name=ChildPointer,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ChildPointer,omitempty"`
+	Parent              github_com_insolar_insolar_insolar.Reference      `protobuf:"bytes,23,opt,name=Parent,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Parent"`
+	Delegates           []LifelineDelegate                                `protobuf:"bytes,24,rep,name=Delegates,proto3" json:"Delegates"`
+	StateID             github_com_insolar_insolar_insolar_record.StateID `protobuf:"varint,25,opt,name=StateID,proto3,customtype=github.com/insolar/insolar/insolar/record.StateID" json:"StateID"`
+	LatestUpdate        github_com_insolar_insolar_insolar.PulseNumber    `protobuf:"varint,26,opt,name=LatestUpdate,proto3,customtype=github.com/insolar/insolar/insolar.PulseNumber" json:"LatestUpdate"`
+	JetID               github_com_insolar_insolar_insolar.JetID          `protobuf:"bytes,27,opt,name=JetID,proto3,customtype=github.com/insolar/insolar/insolar.JetID" json:"JetID"`
+	LatestRequest       *github_com_insolar_insolar_insolar.ID            `protobuf:"bytes,28,opt,name=LatestRequest,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"LatestRequest,omitempty"`
 }
 
 func (m *Lifeline) Reset()      { *m = Lifeline{} }
@@ -70,6 +71,13 @@ func (m *Lifeline) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_Lifeline proto.InternalMessageInfo
 
+func (m *Lifeline) GetXPolymorph() int32 {
+	if m != nil {
+		return m.XPolymorph
+	}
+	return 0
+}
+
 func (m *Lifeline) GetDelegates() []LifelineDelegate {
 	if m != nil {
 		return m.Delegates
@@ -78,8 +86,9 @@ func (m *Lifeline) GetDelegates() []LifelineDelegate {
 }
 
 type LifelineDelegate struct {
-	Key   github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,1,opt,name=Key,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Key"`
-	Value github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,2,opt,name=Value,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Value"`
+	XPolymorph int32                                        `protobuf:"varint,16,opt,name=__polymorph,json=Polymorph,proto3" json:"__polymorph,omitempty"`
+	Key        github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,20,opt,name=Key,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Key"`
+	Value      github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,21,opt,name=Value,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Value"`
 }
 
 func (m *LifelineDelegate) Reset()      { *m = LifelineDelegate{} }
@@ -114,6 +123,13 @@ func (m *LifelineDelegate) XXX_DiscardUnknown() {
 
 var xxx_messageInfo_LifelineDelegate proto.InternalMessageInfo
 
+func (m *LifelineDelegate) GetXPolymorph() int32 {
+	if m != nil {
+		return m.XPolymorph
+	}
+	return 0
+}
+
 func init() {
 	proto.RegisterType((*Lifeline)(nil), "object.Lifeline")
 	proto.RegisterType((*LifelineDelegate)(nil), "object.LifelineDelegate")
@@ -122,37 +138,39 @@ func init() {
 func init() { proto.RegisterFile("ledger/object/lifeline.proto", fileDescriptor_4ca0c51acb0e6740) }
 
 var fileDescriptor_4ca0c51acb0e6740 = []byte{
-	// 473 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0xd3, 0x4f, 0x8b, 0xd3, 0x40,
-	0x14, 0x00, 0xf0, 0x8c, 0xfd, 0xb3, 0xbb, 0xb3, 0x5d, 0x90, 0xf1, 0x32, 0x88, 0x4c, 0xca, 0x82,
-	0xd0, 0x83, 0x9b, 0xf8, 0x67, 0x11, 0x14, 0x2f, 0xd6, 0xb2, 0xd0, 0xb5, 0x68, 0x4d, 0xd1, 0x83,
-	0x17, 0x49, 0x9a, 0xd7, 0x6c, 0x64, 0x36, 0x53, 0xa7, 0x13, 0xc1, 0x9b, 0x1f, 0xc1, 0x8f, 0xe0,
-	0x49, 0xfc, 0x28, 0x3d, 0xf6, 0xb8, 0xec, 0xa1, 0xd8, 0xf4, 0xb2, 0x37, 0xf7, 0x23, 0x48, 0x27,
-	0x53, 0x6c, 0x8b, 0x60, 0xc9, 0x29, 0x79, 0x49, 0xde, 0x2f, 0x6f, 0xde, 0x9b, 0xc1, 0x77, 0x38,
-	0x84, 0x11, 0x48, 0x57, 0x04, 0x1f, 0xa1, 0xaf, 0x5c, 0x1e, 0x0f, 0x80, 0xc7, 0x09, 0x38, 0x43,
-	0x29, 0x94, 0x20, 0xd5, 0xfc, 0xf1, 0xed, 0xa3, 0x28, 0x56, 0x67, 0x69, 0xe0, 0xf4, 0xc5, 0xb9,
-	0x1b, 0x89, 0x48, 0xb8, 0xfa, 0x75, 0x90, 0x0e, 0x74, 0xa4, 0x03, 0x7d, 0x97, 0xa7, 0x1d, 0xfe,
-	0xae, 0xe0, 0xdd, 0x8e, 0x91, 0xc8, 0x6b, 0xbc, 0xdf, 0xf1, 0x15, 0x8c, 0x54, 0x4f, 0xf9, 0x0a,
-	0x28, 0xaa, 0xa3, 0x46, 0xad, 0x79, 0x34, 0x9e, 0xda, 0xe8, 0x72, 0x6a, 0xdf, 0x5d, 0x81, 0xe3,
-	0x64, 0x24, 0xb8, 0x2f, 0x37, 0xaf, 0x4e, 0xbb, 0xe5, 0xad, 0x0a, 0xe4, 0x03, 0xbe, 0xb5, 0x12,
-	0x3e, 0x1f, 0x0e, 0xa5, 0xf8, 0x0c, 0x21, 0xbd, 0x51, 0x04, 0xfe, 0x97, 0x44, 0xde, 0xe0, 0xda,
-	0x8b, 0xb3, 0x98, 0x87, 0x5d, 0x11, 0x27, 0x0a, 0x24, 0x2d, 0x15, 0x91, 0xd7, 0x08, 0xd2, 0xc1,
-	0xd5, 0xae, 0x2f, 0x21, 0x51, 0xb4, 0xac, 0xb1, 0xe3, 0xf1, 0xd4, 0xb6, 0x2e, 0xa7, 0xf6, 0xbd,
-	0x2d, 0x30, 0x0f, 0x06, 0x20, 0x21, 0xe9, 0x83, 0x67, 0x0c, 0xf2, 0x0c, 0xef, 0xb5, 0x80, 0x43,
-	0xb4, 0xa8, 0x9d, 0x56, 0xea, 0xa5, 0xc6, 0xfe, 0x43, 0xea, 0xe4, 0xa3, 0x72, 0x96, 0x7d, 0x5f,
-	0x7e, 0xd0, 0x2c, 0x2f, 0x7e, 0xe5, 0xfd, 0x4d, 0x20, 0x3d, 0xbc, 0xa3, 0xd7, 0xdb, 0x6e, 0xd1,
-	0x6a, 0x1d, 0x35, 0x0e, 0x9a, 0x4f, 0x4c, 0x31, 0x0f, 0xfe, 0x5f, 0x8c, 0x2b, 0xa1, 0x2f, 0x64,
-	0xe8, 0x18, 0xc0, 0x5b, 0x4a, 0xe4, 0x3d, 0xae, 0xe5, 0xad, 0x7c, 0x3b, 0x0c, 0x17, 0x63, 0xde,
-	0xd1, 0xf2, 0x63, 0x23, 0x3b, 0x5b, 0x2c, 0xb3, 0x9b, 0xf2, 0x11, 0xbc, 0x4a, 0xcf, 0x03, 0x90,
-	0xde, 0x9a, 0x45, 0x4e, 0x70, 0xe5, 0x14, 0x54, 0xbb, 0x45, 0x77, 0x75, 0xef, 0xee, 0x1b, 0xb4,
-	0xb1, 0x05, 0xaa, 0xf3, 0xbc, 0x3c, 0x9d, 0xf4, 0xf0, 0x41, 0xee, 0x7a, 0xf0, 0x29, 0x85, 0x91,
-	0xa2, 0x7b, 0x45, 0x06, 0xbb, 0x6e, 0x3c, 0x2d, 0x5f, 0x7d, 0xb7, 0xad, 0xc3, 0x1f, 0x08, 0xdf,
-	0xdc, 0xec, 0x3c, 0x39, 0xc1, 0xa5, 0x97, 0xf0, 0xc5, 0xec, 0xf8, 0x62, 0x13, 0x5f, 0x00, 0xe4,
-	0x14, 0x57, 0xde, 0xf9, 0x3c, 0x05, 0xb3, 0xc5, 0x8b, 0x49, 0x39, 0xd1, 0x3c, 0x9e, 0xcc, 0x98,
-	0x75, 0x31, 0x63, 0xd6, 0xf5, 0x8c, 0xa1, 0xaf, 0x19, 0x43, 0x3f, 0x33, 0x86, 0xc6, 0x19, 0x43,
-	0x93, 0x8c, 0xa1, 0x5f, 0x19, 0x43, 0x57, 0x19, 0xb3, 0xae, 0x33, 0x86, 0xbe, 0xcd, 0x99, 0x35,
-	0x99, 0x33, 0xeb, 0x62, 0xce, 0xac, 0xa0, 0xaa, 0xcf, 0xf5, 0xa3, 0x3f, 0x01, 0x00, 0x00, 0xff,
-	0xff, 0x4d, 0xba, 0x8d, 0x90, 0x2e, 0x04, 0x00, 0x00,
+	// 500 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0x9c, 0xd4, 0x4f, 0x6f, 0xd3, 0x30,
+	0x14, 0x00, 0xf0, 0x58, 0x5b, 0x0b, 0x73, 0x3b, 0x69, 0x32, 0xff, 0xcc, 0x98, 0xdc, 0x6a, 0x12,
+	0x52, 0x0e, 0x2c, 0xe1, 0xcf, 0x84, 0x04, 0xe2, 0x42, 0xa9, 0x26, 0x75, 0x54, 0x50, 0x52, 0xc1,
+	0x81, 0x4b, 0x95, 0x34, 0xaf, 0x69, 0x50, 0x1a, 0x07, 0xd7, 0x41, 0xda, 0x8d, 0x6f, 0x00, 0x1f,
+	0x81, 0x23, 0x9f, 0x04, 0xf5, 0xd8, 0xe3, 0xb4, 0x43, 0x45, 0xd3, 0xcb, 0x8e, 0xfb, 0x08, 0xa8,
+	0x4e, 0x2a, 0xda, 0x69, 0xd2, 0xaa, 0x9c, 0x12, 0x3b, 0x79, 0x3f, 0xdb, 0xef, 0xe5, 0x05, 0xef,
+	0x05, 0xe0, 0x7a, 0x20, 0x4c, 0xee, 0x7c, 0x81, 0xae, 0x34, 0x03, 0xbf, 0x07, 0x81, 0x1f, 0x82,
+	0x11, 0x09, 0x2e, 0x39, 0x29, 0xa6, 0xd3, 0xbb, 0x07, 0x9e, 0x2f, 0xfb, 0xb1, 0x63, 0x74, 0xf9,
+	0xc0, 0xf4, 0xb8, 0xc7, 0x4d, 0xf5, 0xd8, 0x89, 0x7b, 0x6a, 0xa4, 0x06, 0xea, 0x2e, 0x0d, 0xdb,
+	0xff, 0x51, 0xc4, 0x37, 0x9b, 0x99, 0x44, 0x18, 0x2e, 0x75, 0x3a, 0x11, 0x0f, 0x4e, 0x06, 0x5c,
+	0x44, 0x7d, 0xba, 0x53, 0x45, 0x7a, 0xc1, 0xda, 0x6a, 0x2d, 0x26, 0xc8, 0x7b, 0x5c, 0x6a, 0xda,
+	0x12, 0x86, 0xb2, 0x2d, 0x6d, 0x09, 0xf4, 0x76, 0x15, 0xe9, 0xe5, 0xda, 0xc1, 0x68, 0x52, 0x41,
+	0x67, 0x93, 0xca, 0xc3, 0xa5, 0x85, 0xfd, 0x70, 0xc8, 0x03, 0x5b, 0x5c, 0xbe, 0x1a, 0x8d, 0xba,
+	0xb5, 0x2c, 0x90, 0x0e, 0xbe, 0xb5, 0x34, 0x7c, 0x1d, 0x45, 0x82, 0x7f, 0x03, 0x97, 0xde, 0xc9,
+	0x03, 0x5f, 0x25, 0x91, 0x0f, 0xb8, 0xfc, 0xa6, 0xef, 0x07, 0x6e, 0x8b, 0xfb, 0xa1, 0x04, 0x41,
+	0xef, 0xe6, 0x91, 0x57, 0x08, 0xd2, 0xc4, 0xc5, 0x96, 0x2d, 0x20, 0x94, 0xf4, 0x9e, 0xc2, 0x0e,
+	0x47, 0x93, 0x8a, 0x76, 0x36, 0xa9, 0x3c, 0x5a, 0x03, 0xb3, 0xa0, 0x07, 0x02, 0xc2, 0x2e, 0x58,
+	0x99, 0x41, 0x5e, 0xe1, 0xad, 0x3a, 0x04, 0xe0, 0xcd, 0xf7, 0x4e, 0x69, 0x75, 0x43, 0x2f, 0x3d,
+	0xa5, 0x46, 0x5a, 0x4a, 0x63, 0x51, 0x97, 0xc5, 0x0b, 0xb5, 0xcd, 0xf9, 0x52, 0xd6, 0xff, 0x00,
+	0xd2, 0xc6, 0x37, 0xd4, 0x79, 0x1b, 0x75, 0x7a, 0xbf, 0x8a, 0xf4, 0xed, 0xda, 0x8b, 0x6c, 0x33,
+	0x4f, 0xae, 0xdf, 0x8c, 0x29, 0xa0, 0xcb, 0x85, 0x6b, 0x64, 0x80, 0xb5, 0x90, 0xc8, 0x67, 0x5c,
+	0x4e, 0x53, 0xf9, 0x31, 0x72, 0xe7, 0x65, 0xde, 0x55, 0xf2, 0xf3, 0x4c, 0x36, 0xd6, 0x38, 0x66,
+	0x2b, 0x0e, 0x86, 0xf0, 0x2e, 0x1e, 0x38, 0x20, 0xac, 0x15, 0x8b, 0x1c, 0xe1, 0xc2, 0x31, 0xc8,
+	0x46, 0x9d, 0x3e, 0x50, 0xb9, 0x7b, 0x9c, 0xa1, 0xfa, 0x1a, 0xa8, 0x8a, 0xb3, 0xd2, 0x70, 0xd2,
+	0xc6, 0xdb, 0xa9, 0x6b, 0xc1, 0xd7, 0x18, 0x86, 0x92, 0xee, 0xe5, 0x29, 0xec, 0xaa, 0xf1, 0x72,
+	0xf3, 0xfc, 0x57, 0x45, 0xdb, 0xff, 0x83, 0xf0, 0xce, 0xe5, 0xcc, 0x5f, 0xdb, 0x19, 0x47, 0x78,
+	0xe3, 0x2d, 0x9c, 0x64, 0x1d, 0x91, 0xef, 0x8b, 0x98, 0x03, 0xe4, 0x18, 0x17, 0x3e, 0xd9, 0x41,
+	0x0c, 0x59, 0x0b, 0xe4, 0x93, 0x52, 0xa2, 0x76, 0x38, 0x9e, 0x32, 0xed, 0x74, 0xca, 0xb4, 0x8b,
+	0x29, 0x43, 0xdf, 0x13, 0x86, 0x7e, 0x27, 0x0c, 0x8d, 0x12, 0x86, 0xc6, 0x09, 0x43, 0x7f, 0x13,
+	0x86, 0xce, 0x13, 0xa6, 0x5d, 0x24, 0x0c, 0xfd, 0x9c, 0x31, 0x6d, 0x3c, 0x63, 0xda, 0xe9, 0x8c,
+	0x69, 0x4e, 0x51, 0xfd, 0x17, 0x9e, 0xfd, 0x0b, 0x00, 0x00, 0xff, 0xff, 0xcb, 0x11, 0xa7, 0x96,
+	0x6e, 0x04, 0x00, 0x00,
 }
 
 func (this *LifelineDelegate) Equal(that interface{}) bool {
@@ -174,6 +192,9 @@ func (this *LifelineDelegate) Equal(that interface{}) bool {
 	} else if this == nil {
 		return false
 	}
+	if this.XPolymorph != that1.XPolymorph {
+		return false
+	}
 	if !this.Key.Equal(that1.Key) {
 		return false
 	}
@@ -186,8 +207,9 @@ func (this *Lifeline) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 13)
+	s := make([]string, 0, 14)
 	s = append(s, "&object.Lifeline{")
+	s = append(s, "XPolymorph: "+fmt.Sprintf("%#v", this.XPolymorph)+",\n")
 	s = append(s, "LatestState: "+fmt.Sprintf("%#v", this.LatestState)+",\n")
 	s = append(s, "LatestStateApproved: "+fmt.Sprintf("%#v", this.LatestStateApproved)+",\n")
 	s = append(s, "ChildPointer: "+fmt.Sprintf("%#v", this.ChildPointer)+",\n")
@@ -210,8 +232,9 @@ func (this *LifelineDelegate) GoString() string {
 	if this == nil {
 		return "nil"
 	}
-	s := make([]string, 0, 6)
+	s := make([]string, 0, 7)
 	s = append(s, "&object.LifelineDelegate{")
+	s = append(s, "XPolymorph: "+fmt.Sprintf("%#v", this.XPolymorph)+",\n")
 	s = append(s, "Key: "+fmt.Sprintf("%#v", this.Key)+",\n")
 	s = append(s, "Value: "+fmt.Sprintf("%#v", this.Value)+",\n")
 	s = append(s, "}")
@@ -240,8 +263,17 @@ func (m *Lifeline) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
+	if m.XPolymorph != 0 {
+		dAtA[i] = 0x80
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintLifeline(dAtA, i, uint64(m.XPolymorph))
+	}
 	if m.LatestState != nil {
-		dAtA[i] = 0xa
+		dAtA[i] = 0xa2
+		i++
+		dAtA[i] = 0x1
 		i++
 		i = encodeVarintLifeline(dAtA, i, uint64(m.LatestState.Size()))
 		n1, err := m.LatestState.MarshalTo(dAtA[i:])
@@ -251,7 +283,9 @@ func (m *Lifeline) MarshalTo(dAtA []byte) (int, error) {
 		i += n1
 	}
 	if m.LatestStateApproved != nil {
-		dAtA[i] = 0x12
+		dAtA[i] = 0xaa
+		i++
+		dAtA[i] = 0x1
 		i++
 		i = encodeVarintLifeline(dAtA, i, uint64(m.LatestStateApproved.Size()))
 		n2, err := m.LatestStateApproved.MarshalTo(dAtA[i:])
@@ -261,7 +295,9 @@ func (m *Lifeline) MarshalTo(dAtA []byte) (int, error) {
 		i += n2
 	}
 	if m.ChildPointer != nil {
-		dAtA[i] = 0x1a
+		dAtA[i] = 0xb2
+		i++
+		dAtA[i] = 0x1
 		i++
 		i = encodeVarintLifeline(dAtA, i, uint64(m.ChildPointer.Size()))
 		n3, err := m.ChildPointer.MarshalTo(dAtA[i:])
@@ -270,7 +306,9 @@ func (m *Lifeline) MarshalTo(dAtA []byte) (int, error) {
 		}
 		i += n3
 	}
-	dAtA[i] = 0x22
+	dAtA[i] = 0xba
+	i++
+	dAtA[i] = 0x1
 	i++
 	i = encodeVarintLifeline(dAtA, i, uint64(m.Parent.Size()))
 	n4, err := m.Parent.MarshalTo(dAtA[i:])
@@ -280,7 +318,9 @@ func (m *Lifeline) MarshalTo(dAtA []byte) (int, error) {
 	i += n4
 	if len(m.Delegates) > 0 {
 		for _, msg := range m.Delegates {
-			dAtA[i] = 0x2a
+			dAtA[i] = 0xc2
+			i++
+			dAtA[i] = 0x1
 			i++
 			i = encodeVarintLifeline(dAtA, i, uint64(msg.Size()))
 			n, err := msg.MarshalTo(dAtA[i:])
@@ -291,16 +331,22 @@ func (m *Lifeline) MarshalTo(dAtA []byte) (int, error) {
 		}
 	}
 	if m.StateID != 0 {
-		dAtA[i] = 0x30
+		dAtA[i] = 0xc8
+		i++
+		dAtA[i] = 0x1
 		i++
 		i = encodeVarintLifeline(dAtA, i, uint64(m.StateID))
 	}
 	if m.LatestUpdate != 0 {
-		dAtA[i] = 0x38
+		dAtA[i] = 0xd0
+		i++
+		dAtA[i] = 0x1
 		i++
 		i = encodeVarintLifeline(dAtA, i, uint64(m.LatestUpdate))
 	}
-	dAtA[i] = 0x42
+	dAtA[i] = 0xda
+	i++
+	dAtA[i] = 0x1
 	i++
 	i = encodeVarintLifeline(dAtA, i, uint64(m.JetID.Size()))
 	n5, err := m.JetID.MarshalTo(dAtA[i:])
@@ -309,7 +355,9 @@ func (m *Lifeline) MarshalTo(dAtA []byte) (int, error) {
 	}
 	i += n5
 	if m.LatestRequest != nil {
-		dAtA[i] = 0x4a
+		dAtA[i] = 0xe2
+		i++
+		dAtA[i] = 0x1
 		i++
 		i = encodeVarintLifeline(dAtA, i, uint64(m.LatestRequest.Size()))
 		n6, err := m.LatestRequest.MarshalTo(dAtA[i:])
@@ -336,7 +384,16 @@ func (m *LifelineDelegate) MarshalTo(dAtA []byte) (int, error) {
 	_ = i
 	var l int
 	_ = l
-	dAtA[i] = 0xa
+	if m.XPolymorph != 0 {
+		dAtA[i] = 0x80
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintLifeline(dAtA, i, uint64(m.XPolymorph))
+	}
+	dAtA[i] = 0xa2
+	i++
+	dAtA[i] = 0x1
 	i++
 	i = encodeVarintLifeline(dAtA, i, uint64(m.Key.Size()))
 	n7, err := m.Key.MarshalTo(dAtA[i:])
@@ -344,7 +401,9 @@ func (m *LifelineDelegate) MarshalTo(dAtA []byte) (int, error) {
 		return 0, err
 	}
 	i += n7
-	dAtA[i] = 0x12
+	dAtA[i] = 0xaa
+	i++
+	dAtA[i] = 0x1
 	i++
 	i = encodeVarintLifeline(dAtA, i, uint64(m.Value.Size()))
 	n8, err := m.Value.MarshalTo(dAtA[i:])
@@ -370,37 +429,40 @@ func (m *Lifeline) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XPolymorph != 0 {
+		n += 2 + sovLifeline(uint64(m.XPolymorph))
+	}
 	if m.LatestState != nil {
 		l = m.LatestState.Size()
-		n += 1 + l + sovLifeline(uint64(l))
+		n += 2 + l + sovLifeline(uint64(l))
 	}
 	if m.LatestStateApproved != nil {
 		l = m.LatestStateApproved.Size()
-		n += 1 + l + sovLifeline(uint64(l))
+		n += 2 + l + sovLifeline(uint64(l))
 	}
 	if m.ChildPointer != nil {
 		l = m.ChildPointer.Size()
-		n += 1 + l + sovLifeline(uint64(l))
+		n += 2 + l + sovLifeline(uint64(l))
 	}
 	l = m.Parent.Size()
-	n += 1 + l + sovLifeline(uint64(l))
+	n += 2 + l + sovLifeline(uint64(l))
 	if len(m.Delegates) > 0 {
 		for _, e := range m.Delegates {
 			l = e.Size()
-			n += 1 + l + sovLifeline(uint64(l))
+			n += 2 + l + sovLifeline(uint64(l))
 		}
 	}
 	if m.StateID != 0 {
-		n += 1 + sovLifeline(uint64(m.StateID))
+		n += 2 + sovLifeline(uint64(m.StateID))
 	}
 	if m.LatestUpdate != 0 {
-		n += 1 + sovLifeline(uint64(m.LatestUpdate))
+		n += 2 + sovLifeline(uint64(m.LatestUpdate))
 	}
 	l = m.JetID.Size()
-	n += 1 + l + sovLifeline(uint64(l))
+	n += 2 + l + sovLifeline(uint64(l))
 	if m.LatestRequest != nil {
 		l = m.LatestRequest.Size()
-		n += 1 + l + sovLifeline(uint64(l))
+		n += 2 + l + sovLifeline(uint64(l))
 	}
 	return n
 }
@@ -411,10 +473,13 @@ func (m *LifelineDelegate) Size() (n int) {
 	}
 	var l int
 	_ = l
+	if m.XPolymorph != 0 {
+		n += 2 + sovLifeline(uint64(m.XPolymorph))
+	}
 	l = m.Key.Size()
-	n += 1 + l + sovLifeline(uint64(l))
+	n += 2 + l + sovLifeline(uint64(l))
 	l = m.Value.Size()
-	n += 1 + l + sovLifeline(uint64(l))
+	n += 2 + l + sovLifeline(uint64(l))
 	return n
 }
 
@@ -436,6 +501,7 @@ func (this *Lifeline) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&Lifeline{`,
+		`XPolymorph:` + fmt.Sprintf("%v", this.XPolymorph) + `,`,
 		`LatestState:` + fmt.Sprintf("%v", this.LatestState) + `,`,
 		`LatestStateApproved:` + fmt.Sprintf("%v", this.LatestStateApproved) + `,`,
 		`ChildPointer:` + fmt.Sprintf("%v", this.ChildPointer) + `,`,
@@ -454,6 +520,7 @@ func (this *LifelineDelegate) String() string {
 		return "nil"
 	}
 	s := strings.Join([]string{`&LifelineDelegate{`,
+		`XPolymorph:` + fmt.Sprintf("%v", this.XPolymorph) + `,`,
 		`Key:` + fmt.Sprintf("%v", this.Key) + `,`,
 		`Value:` + fmt.Sprintf("%v", this.Value) + `,`,
 		`}`,
@@ -497,7 +564,26 @@ func (m *Lifeline) Unmarshal(dAtA []byte) error {
 			return fmt.Errorf("proto: Lifeline: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
-		case 1:
+		case 16:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field XPolymorph", wireType)
+			}
+			m.XPolymorph = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowLifeline
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.XPolymorph |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 20:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field LatestState", wireType)
 			}
@@ -532,7 +618,7 @@ func (m *Lifeline) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 2:
+		case 21:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field LatestStateApproved", wireType)
 			}
@@ -567,7 +653,7 @@ func (m *Lifeline) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 3:
+		case 22:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field ChildPointer", wireType)
 			}
@@ -602,7 +688,7 @@ func (m *Lifeline) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 4:
+		case 23:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Parent", wireType)
 			}
@@ -635,7 +721,7 @@ func (m *Lifeline) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 5:
+		case 24:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Delegates", wireType)
 			}
@@ -669,7 +755,7 @@ func (m *Lifeline) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 6:
+		case 25:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field StateID", wireType)
 			}
@@ -688,7 +774,7 @@ func (m *Lifeline) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 7:
+		case 26:
 			if wireType != 0 {
 				return fmt.Errorf("proto: wrong wireType = %d for field LatestUpdate", wireType)
 			}
@@ -707,7 +793,7 @@ func (m *Lifeline) Unmarshal(dAtA []byte) error {
 					break
 				}
 			}
-		case 8:
+		case 27:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field JetID", wireType)
 			}
@@ -740,7 +826,7 @@ func (m *Lifeline) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 9:
+		case 28:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field LatestRequest", wireType)
 			}
@@ -828,7 +914,26 @@ func (m *LifelineDelegate) Unmarshal(dAtA []byte) error {
 			return fmt.Errorf("proto: LifelineDelegate: illegal tag %d (wire type %d)", fieldNum, wire)
 		}
 		switch fieldNum {
-		case 1:
+		case 16:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field XPolymorph", wireType)
+			}
+			m.XPolymorph = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowLifeline
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.XPolymorph |= int32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 20:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Key", wireType)
 			}
@@ -861,7 +966,7 @@ func (m *LifelineDelegate) Unmarshal(dAtA []byte) error {
 				return err
 			}
 			iNdEx = postIndex
-		case 2:
+		case 21:
 			if wireType != 2 {
 				return fmt.Errorf("proto: wrong wireType = %d for field Value", wireType)
 			}
