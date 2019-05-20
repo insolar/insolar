@@ -169,7 +169,6 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	pm := l.GetPulseManager()
 
 	s.incrementPulseHelper(ctx, lr, pm, messageHandler, indexStor)
-	s.incrementPulseHelper(ctx, lr, pm, indexStor)
 
 	cb := goplugintestutils.NewContractBuilder(am, s.icc)
 
