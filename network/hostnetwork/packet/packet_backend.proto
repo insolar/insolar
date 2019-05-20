@@ -83,7 +83,8 @@ message PulseRequest {
 }
 
 message BootstrapRequest {
-
+    bytes JoinClaim = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim"];
+    uint32 LastNodePulse = 2;
 }
 
 message AuthorizeRequest {
@@ -113,7 +114,19 @@ message BasicResponse {
 }
 
 message BootstrapResponse {
-
+    enum ResponseCode {
+        Accepted = 0;
+        Rejected = 1;
+        Redirected = 2;
+        ReconnectRequired = 3;
+    }
+    ResponseCode Code = 1;
+    bytes RejectReason = 2;
+    uint32 ETA = 3;
+    uint32 AssignShortID = 4;
+    uint32 UpdateSincePulse = 5;
+    bytes RedirectHost = 6;
+    uint32 NetworkSize = 7;
 }
 
 message AuthorizeResponse {
