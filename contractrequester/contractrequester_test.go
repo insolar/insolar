@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -44,11 +45,12 @@ func mockMessageBus(t *testing.T, result insolar.Reply) *testutils.MessageBusMoc
 
 func TestNew(t *testing.T) {
 	messageBus := mockMessageBus(t, nil)
+	pulseAccessor := pulse.NewAccessorMock(t)
 
 	contractRequester, err := New()
 
 	cm := &component.Manager{}
-	cm.Inject(messageBus, contractRequester)
+	cm.Inject(messageBus, contractRequester, pulseAccessor)
 
 	require.NoError(t, err)
 	require.Equal(t, messageBus, contractRequester.MessageBus)
@@ -62,6 +64,16 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	cReq, err := New()
 	assert.NoError(t, err)
 	cReq.MessageBus = mbm
+
+	pulseAccessor := pulse.NewAccessorMock(t)
+	currentPulse := insolar.FirstPulseNumber
+	pulseAccessor.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
+		return insolar.Pulse{
+			PulseNumber:     insolar.PulseNumber(currentPulse),
+			NextPulseNumber: insolar.PulseNumber(currentPulse + 1),
+		}, nil
+	}
+	cReq.PulseAccessor = pulseAccessor
 
 	mbm.MustRegisterMock.Return()
 	cReq.Start(ctx)
