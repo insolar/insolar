@@ -328,6 +328,7 @@ genesis()
         ${CMD} &> ${LAUNCHNET_LOGS_DIR}genesis_output.log
         GENESIS_EXIT_CODE=$?
         { set +x; } 2>/dev/null
+        echo "genesis log: ${LAUNCHNET_LOGS_DIR}genesis_output.log"
     else
         set -x
         ${CMD}
@@ -361,6 +362,7 @@ set -x
 mkdir -p $PULSAR_DATA_DIR
 ${PULSARD} -c ${PULSAR_CONFIG} --trace &> ${LAUNCHNET_LOGS_DIR}pulsar_output.log &
 { set +x; } 2>/dev/null
+echo "pulsar log: ${LAUNCHNET_LOGS_DIR}pulsar_output.log"
 
 if [[ "$run_insgorund" == "true" ]]
 then
@@ -380,6 +382,7 @@ do
         --trace &> ${DISCOVERY_NODE_LOGS}${i}/output.log &
     { set +x; } 2>/dev/null
     echo "discovery node $i started in background"
+    echo "log: ${DISCOVERY_NODE_LOGS}${i}/output.log"
 done
 
 echo "discovery nodes started ..."

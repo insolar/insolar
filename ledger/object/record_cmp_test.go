@@ -39,17 +39,14 @@ func TestRecord_Components(t *testing.T) {
 
 	type tempRecord struct {
 		id  insolar.ID
-		rec record.MaterialRecord
+		rec record.Material
 	}
 
 	var records []tempRecord
 
 	f := fuzz.New().Funcs(func(t *tempRecord, c fuzz.Continue) {
 		t.id = gen.ID()
-		t.rec = record.MaterialRecord{
-			Record: &object.ResultRecord{},
-			JetID:  gen.JetID(),
-		}
+		t.rec = getMaterialRecord()
 	})
 	f.NilChance(0)
 	f.NumElements(10, 20)
@@ -111,4 +108,48 @@ func TestRecord_Components(t *testing.T) {
 			assert.Equal(t, object.ErrOverride, dbErr)
 		}
 	})
+}
+
+// getVirtualRecord generates random Virtual record
+func getVirtualRecord() record.Virtual {
+	var requestRecord record.Request
+
+	requestRecord.Object = gen.ID()
+	blob := slice()
+	if len(blob) != 0 {
+		requestRecord.Parcel = blob
+	}
+
+	virtualRecord := record.Virtual{
+		Union: &record.Virtual_Request{
+			Request: &requestRecord,
+		},
+	}
+
+	return virtualRecord
+}
+
+// getMaterialRecord generates random Material record
+func getMaterialRecord() record.Material {
+	virtRec := getVirtualRecord()
+
+	materialRecord := record.Material{
+		Virtual: &virtRec,
+		JetID:   gen.JetID(),
+	}
+
+	return materialRecord
+}
+
+// sizedSlice generates random byte slice fixed size.
+func sizedSlice(size int32) (blob []byte) {
+	blob = make([]byte, size)
+	rand.Read(blob)
+	return
+}
+
+// slice generates random byte slice with random size between 0 and 1024.
+func slice() []byte {
+	size := rand.Int31n(1024)
+	return sizedSlice(size)
 }

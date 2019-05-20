@@ -14,20 +14,28 @@
 // limitations under the License.
 //
 
-package object
+package genesis
 
 import (
+	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/platformpolicy"
 )
 
-// NewRecordIDFromRecord generates ID from pulse number and record implements record.VirtualRecord.
-// TODO: rename to IDForRecord
-func NewRecordIDFromRecord(scheme insolar.PlatformCryptographyScheme, pulse insolar.PulseNumber, rec record.VirtualRecord) *insolar.ID {
-	hasher := scheme.ReferenceHasher()
-	_, err := rec.WriteHashData(hasher)
-	if err != nil {
-		panic(err)
+func refByName(name string) insolar.Reference {
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+	parcel := &message.Parcel{
+		Msg: &message.GenesisRequest{
+			Name: name,
+		},
 	}
-	return insolar.NewID(pulse, hasher.Sum(nil))
+	vrec := record.Wrap(record.Request{
+		Parcel:      message.ParcelToBytes(parcel),
+		MessageHash: message.ParcelMessageHash(pcs, parcel),
+		Object:      rootdomain.RootDomain.ID(),
+	})
+	id := insolar.NewID(insolar.FirstPulseNumber, record.HashVirtual(pcs.ReferenceHasher(), vrec))
+	return *insolar.NewReference(rootdomain.RootDomain.ID(), *id)
 }

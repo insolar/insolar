@@ -58,6 +58,7 @@ import (
 	"github.com/insolar/insolar/network/utils"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestNode_Version(t *testing.T) {
@@ -101,18 +102,22 @@ func TestNode_ShortID(t *testing.T) {
 }
 
 func TestClaimToNode(t *testing.T) {
+	address, err := packets.NewNodeAddress("123.234.55.66:12345")
+	require.NoError(t, err)
+
 	claim := packets.NodeJoinClaim{
 		NodeRef:     testutils.RandomRef(),
 		NodePK:      testutils.BrokenPK(),
 		ShortNodeID: 10,
-		NodeAddress: packets.NewNodeAddress("123.234.55.66:12345"),
+		NodeAddress: address,
 	}
-	_, err := ClaimToNode("", &claim)
+
+	_, err = ClaimToNode("", &claim)
 	assert.Error(t, err)
 	claim.NodePK = [packets.PublicKeyLength]byte{}
 	n, err := ClaimToNode("", &claim)
 	assert.NoError(t, err)
 	assert.Equal(t, claim.NodeRef, n.ID())
 	assert.EqualValues(t, 10, n.ShortID())
-	assert.Equal(t, claim.NodeAddress.Get(), n.Address())
+	assert.Equal(t, claim.NodeAddress.String(), n.Address())
 }

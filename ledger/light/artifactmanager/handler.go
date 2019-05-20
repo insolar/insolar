@@ -35,6 +35,7 @@ import (
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/insmetrics"
@@ -48,13 +49,13 @@ import (
 
 // MessageHandler processes messages for local storage interaction.
 type MessageHandler struct {
-	RecentStorageProvider      recentstorage.Provider             `inject:""`
-	Bus                        insolar.MessageBus                 `inject:""`
-	PlatformCryptographyScheme insolar.PlatformCryptographyScheme `inject:""`
-	JetCoordinator             jet.Coordinator                    `inject:""`
-	CryptographyService        insolar.CryptographyService        `inject:""`
-	DelegationTokenFactory     insolar.DelegationTokenFactory     `inject:""`
-	JetStorage                 jet.Storage                        `inject:""`
+	RecentStorageProvider  recentstorage.Provider             `inject:""`
+	Bus                    insolar.MessageBus                 `inject:""`
+	PCS                    insolar.PlatformCryptographyScheme `inject:""`
+	JetCoordinator         jet.Coordinator                    `inject:""`
+	CryptographyService    insolar.CryptographyService        `inject:""`
+	DelegationTokenFactory insolar.DelegationTokenFactory     `inject:""`
+	JetStorage             jet.Storage                        `inject:""`
 
 	DropModifier drop.Modifier `inject:""`
 
@@ -116,13 +117,13 @@ func NewMessageHandler(
 		SetRecord: func(p *proc.SetRecord) {
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 			p.Dep.RecordModifier = h.RecordModifier
-			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.PCS = h.PCS
 			p.Dep.PendingRequestsLimit = h.conf.PendingRequestsLimit
 		},
 		SetBlob: func(p *proc.SetBlob) {
 			p.Dep.BlobAccessor = h.BlobAccessor
 			p.Dep.BlobModifier = h.BlobModifier
-			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.PlatformCryptographyScheme = h.PCS
 		},
 		SendObject: func(p *proc.SendObject) {
 			p.Dep.Jets = h.JetStorage
@@ -147,7 +148,7 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.BlobModifier = h.BlobModifier
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
-			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.PCS = h.PCS
 			p.Dep.IDLocker = h.IDLocker
 			p.Dep.IndexStateModifier = h.IndexStateModifier
 			p.Dep.IndexStorage = h.IndexStorage
@@ -158,13 +159,22 @@ func NewMessageHandler(
 			p.Dep.JetCoordinator = h.JetCoordinator
 			p.Dep.RecordModifier = h.RecordModifier
 			p.Dep.IndexStateModifier = h.IndexStateModifier
-			p.Dep.PlatformCryptographyScheme = h.PlatformCryptographyScheme
+			p.Dep.PCS = h.PCS
 		},
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 		},
 		GetJet: func(p *proc.GetJet) {
 			p.Dep.Jets = h.JetStorage
+		},
+		HotData: func(p *proc.HotData) {
+			p.Dep.DropModifier = h.DropModifier
+			p.Dep.RecentStorageProvider = h.RecentStorageProvider
+			p.Dep.MessageBus = h.Bus
+			p.Dep.IndexStateModifier = h.IndexStateModifier
+			p.Dep.JetStorage = h.JetStorage
+			p.Dep.JetFetcher = h.jetTreeUpdater
+			p.Dep.JetReleaser = h.JetReleaser
 		},
 	}
 
@@ -254,12 +264,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	h.Bus.MustRegister(insolar.TypeSetBlob, h.FlowDispatcher.WrapBusHandle)
 	h.Bus.MustRegister(insolar.TypeGetPendingRequests, h.FlowDispatcher.WrapBusHandle)
 	h.Bus.MustRegister(insolar.TypeGetJet, h.FlowDispatcher.WrapBusHandle)
-
-	h.Bus.MustRegister(insolar.TypeHotRecords,
-		BuildMiddleware(h.handleHotRecords,
-			instrumentHandler("handleHotRecords"),
-			m.releaseHotDataWaiters))
-
+	h.Bus.MustRegister(insolar.TypeHotRecords, h.FlowDispatcher.WrapBusHandle)
 	h.Bus.MustRegister(insolar.TypeGetRequest, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(
@@ -411,12 +416,13 @@ func (h *MessageHandler) handleGetChildren(
 			return nil, errors.New("failed to retrieve children")
 		}
 
-		virtRec := rec.Record
-		childRec, ok := virtRec.(*object.ChildRecord)
+		virtRec := rec.Virtual
+		concrete := record.Unwrap(virtRec)
+		childRec, ok := concrete.(*record.Child)
 		if !ok {
 			return nil, errors.New("failed to retrieve children")
 		}
-		currentChild = childRec.PrevChild
+		currentChild = &childRec.PrevChild
 
 		// Skip records later than specified pulse.
 		recPulse := childRec.Ref.Record().Pulse()
@@ -475,76 +481,4 @@ func (h *MessageHandler) saveIndexFromHeavy(
 		return object.Lifeline{}, errors.Wrap(err, "failed to save")
 	}
 	return idx, nil
-}
-
-func (h *MessageHandler) handleHotRecords(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	logger := inslogger.FromContext(ctx)
-
-	msg := parcel.Message().(*message.HotData)
-	jetID := insolar.JetID(*msg.Jet.Record())
-
-	logger.WithFields(map[string]interface{}{
-		"jet": jetID.DebugString(),
-	}).Info("received hot data")
-
-	err := h.DropModifier.Set(ctx, msg.Drop)
-	if err == drop.ErrOverride {
-		err = nil
-	}
-	if err != nil {
-		return nil, errors.Wrapf(err, "[jet]: drop error (pulse: %v)", msg.Drop.Pulse)
-	}
-
-	pendingStorage := h.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(jetID))
-	logger.Debugf("received %d pending requests", len(msg.PendingRequests))
-
-	var notificationList []insolar.ID
-	for objID, objContext := range msg.PendingRequests {
-		if !objContext.Active {
-			notificationList = append(notificationList, objID)
-		}
-
-		objContext.Active = false
-		pendingStorage.SetContextToObject(ctx, objID, objContext)
-	}
-
-	go func() {
-		for _, objID := range notificationList {
-			go func(objID insolar.ID) {
-				rep, err := h.Bus.Send(ctx, &message.AbandonedRequestsNotification{
-					Object: objID,
-				}, nil)
-
-				if err != nil {
-					logger.Error("failed to notify about pending requests")
-					return
-				}
-				if _, ok := rep.(*reply.OK); !ok {
-					logger.Error("received unexpected reply on pending notification")
-				}
-			}(objID)
-		}
-	}()
-
-	for id, meta := range msg.HotIndexes {
-		decodedIndex, err := object.DecodeIndex(meta.Index)
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
-
-		err = h.IndexStateModifier.SetWithMeta(ctx, id, meta.LastUsed, decodedIndex)
-		if err != nil {
-			logger.Error(err)
-			continue
-		}
-	}
-
-	h.JetStorage.Update(
-		ctx, msg.PulseNumber, true, insolar.JetID(jetID),
-	)
-
-	h.jetTreeUpdater.Release(ctx, jetID, msg.PulseNumber)
-
-	return &reply.OK{}, nil
 }

@@ -41,60 +41,6 @@ const (
 	InPending
 )
 
-type IBaseLogicMessage interface {
-	insolar.Message
-	GetBaseLogicMessage() *BaseLogicMessage
-	GetReference() insolar.Reference
-	GetRequest() insolar.Reference
-	GetCallerPrototype() *insolar.Reference
-}
-
-// BaseLogicMessage base of event class family, do not use it standalone
-type BaseLogicMessage struct {
-	Caller          insolar.Reference
-	Request         insolar.Reference
-	CallerPrototype insolar.Reference
-	Nonce           uint64
-	Sequence        uint64
-}
-
-func (m *BaseLogicMessage) GetBaseLogicMessage() *BaseLogicMessage {
-	return m
-}
-
-func (m *BaseLogicMessage) Type() insolar.MessageType {
-	panic("Virtual")
-}
-
-func (m *BaseLogicMessage) DefaultTarget() *insolar.Reference {
-	panic("Virtual")
-}
-
-func (m *BaseLogicMessage) DefaultRole() insolar.DynamicRole {
-	panic("implement me")
-}
-
-func (m *BaseLogicMessage) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
-	panic("implement me")
-}
-
-func (m *BaseLogicMessage) GetReference() insolar.Reference {
-	panic("implement me")
-}
-
-func (m *BaseLogicMessage) GetCaller() *insolar.Reference {
-	return &m.Caller
-}
-
-func (m *BaseLogicMessage) GetCallerPrototype() *insolar.Reference {
-	return &m.CallerPrototype
-}
-
-// GetRequest returns DynamicRoleVirtualExecutor as routing target role.
-func (m *BaseLogicMessage) GetRequest() insolar.Reference {
-	return m.Request
-}
-
 // ReturnResults - push results of methods
 type ReturnResults struct {
 	Target   insolar.Reference
@@ -124,24 +70,47 @@ func (rr *ReturnResults) AllowedSenderObjectAndRole() (*insolar.Reference, insol
 	return nil, insolar.DynamicRoleVirtualExecutor
 }
 
+type MethodCallType int
+
+const (
+	CTMethod MethodCallType = iota
+	CTSaveAsChild
+	CTSaveAsDelegate
+)
+
 // CallMethod - Simply call method and return result
 type CallMethod struct {
-	BaseLogicMessage
-	ReturnMode     MethodReturnMode
-	Immutable      bool
-	ObjectRef      insolar.Reference
-	Method         string
-	Arguments      insolar.Arguments
-	ProxyPrototype insolar.Reference
+	CallType MethodCallType
+
+	Caller          insolar.Reference
+	CallerPrototype insolar.Reference
+	Nonce           uint64
+	Sequence        uint64
+
+	ReturnMode MethodReturnMode
+	Immutable  bool
+
+	Base      *insolar.Reference
+	Object    *insolar.Reference
+	Prototype *insolar.Reference
+
+	Method    string
+	Arguments insolar.Arguments
+
+	PulseNum insolar.PulseNumber // DIRTY: EVIL: HACK
+}
+
+func (cm *CallMethod) GetCaller() *insolar.Reference {
+	return &cm.Caller
 }
 
 // AllowedSenderObjectAndRole implements interface method
 func (cm *CallMethod) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
-	c := cm.GetCaller()
+	c := cm.Caller
 	if c.IsEmpty() {
 		return nil, 0
 	}
-	return c, insolar.DynamicRoleVirtualExecutor
+	return &c, insolar.DynamicRoleVirtualExecutor
 }
 
 // DefaultRole returns role for this event
@@ -151,65 +120,26 @@ func (*CallMethod) DefaultRole() insolar.DynamicRole {
 
 // DefaultTarget returns of target of this event.
 func (cm *CallMethod) DefaultTarget() *insolar.Reference {
-	return &cm.ObjectRef
+	switch cm.CallType {
+	case CTSaveAsChild:
+		return genRequest(cm.PulseNum, MustSerializeBytes(cm), &insolar.DomainID)
+	case CTSaveAsDelegate:
+		return cm.Base
+	default:
+		return cm.Object
+	}
 }
 
 func (cm *CallMethod) GetReference() insolar.Reference {
-	return cm.ObjectRef
+	if cm.CallType != CTMethod {
+		return *genRequest(cm.PulseNum, MustSerializeBytes(cm), &insolar.DomainID)
+	}
+	return *cm.Object
 }
 
 // Type returns TypeCallMethod.
 func (cm *CallMethod) Type() insolar.MessageType {
 	return insolar.TypeCallMethod
-}
-
-type SaveAs int
-
-const (
-	Child SaveAs = iota
-	Delegate
-)
-
-// CallConstructor is a message for calling constructor and obtain its reply
-type CallConstructor struct {
-	BaseLogicMessage
-	ParentRef    insolar.Reference
-	SaveAs       SaveAs
-	PrototypeRef insolar.Reference
-	Method       string
-	Arguments    insolar.Arguments
-	PulseNum     insolar.PulseNumber
-}
-
-//
-func (cc *CallConstructor) AllowedSenderObjectAndRole() (*insolar.Reference, insolar.DynamicRole) {
-	c := cc.GetCaller()
-	if c.IsEmpty() {
-		return nil, 0
-	}
-	return c, insolar.DynamicRoleVirtualExecutor
-}
-
-// DefaultRole returns role for this event
-func (*CallConstructor) DefaultRole() insolar.DynamicRole {
-	return insolar.DynamicRoleVirtualExecutor
-}
-
-// DefaultTarget returns of target of this event.
-func (cc *CallConstructor) DefaultTarget() *insolar.Reference {
-	if cc.SaveAs == Delegate {
-		return &cc.ParentRef
-	}
-	return genRequest(cc.PulseNum, MustSerializeBytes(cc), cc.Request.Domain())
-}
-
-func (cc *CallConstructor) GetReference() insolar.Reference {
-	return *genRequest(cc.PulseNum, MustSerializeBytes(cc), cc.Request.Domain())
-}
-
-// Type returns TypeCallConstructor.
-func (cc *CallConstructor) Type() insolar.MessageType {
-	return insolar.TypeCallConstructor
 }
 
 // TODO rename to executorObjectResult (results?)

@@ -14,31 +14,19 @@
 // limitations under the License.
 //
 
-package object
+package genesis
 
 import (
 	"testing"
 
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func Test_RecordByTypeIDPanic(t *testing.T) {
-	assert.Panics(t, func() { RecordFromType(0) })
-}
-
-func TestSerializeDeserializeRecord(t *testing.T) {
-	cs := platformpolicy.NewPlatformCryptographyScheme()
-
-	rec := ActivateRecord{
-		StateRecord: StateRecord{
-			Memory: CalculateIDForBlob(cs, insolar.GenesisPulse.PulseNumber, []byte{1, 2, 3}),
-		},
-	}
-	serialized := EncodeVirtual(&rec)
-	deserialized, err := DecodeVirtual(serialized)
-	require.NoError(t, err)
-	assert.Equal(t, rec, *deserialized.(*ActivateRecord))
+func TestTools_refByName(t *testing.T) {
+	var (
+		pubKey    = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n-----END PUBLIC KEY-----\n"
+		pubKeyRef = "1tJDHL2xCP6cLvVN54a9pz3fCHyVVFSPBZkwF2ak66.1tJBgM2tkggjcM6H8MVmjmCxk4abB9CErbwK8RmBe2"
+	)
+	genesisRef := refByName(pubKey)
+	require.Equal(t, pubKeyRef, genesisRef.String(), "reference by name always the same")
 }

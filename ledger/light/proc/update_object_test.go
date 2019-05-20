@@ -21,6 +21,7 @@ import (
 	"crypto/rand"
 	"testing"
 
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
 	"github.com/insolar/insolar/insolar"
@@ -79,16 +80,16 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 
-	objIndex := object.Lifeline{LatestState: genRandomID(0), State: object.StateActivation}
-	amendRecord := object.AmendRecord{
+	objIndex := object.Lifeline{LatestState: genRandomID(0), State: record.StateActivation}
+	amendRecord := record.Amend{
 		PrevState: *objIndex.LatestState,
 	}
-	amendHash := scheme.ReferenceHasher()
-	_, err := amendRecord.WriteHashData(amendHash)
+	virtAmend := record.Wrap(amendRecord)
+	data, err := virtAmend.Marshal()
 	require.NoError(t, err)
 
 	msg := message.UpdateObject{
-		Record: object.EncodeVirtual(&amendRecord),
+		Record: data,
 		Object: *genRandomRef(0),
 	}
 
@@ -118,9 +119,8 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	updateObject.Dep.IDLocker = idLockMock
 	updateObject.Dep.Coordinator = jc
 	updateObject.Dep.IndexStorage = indexMemoryStor
-	updateObject.Dep.PlatformCryptographyScheme = scheme
+	updateObject.Dep.PCS = scheme
 	updateObject.Dep.RecordModifier = recordStorage
-	updateObject.Dep.IndexModifier = indexMemoryStor
 	updateObject.Dep.IndexStateModifier = object.NewIndexMemory()
 
 	rep := updateObject.handle(ctx)
@@ -155,19 +155,19 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 
 	objIndex := object.Lifeline{
 		LatestState:  genRandomID(0),
-		State:        object.StateActivation,
+		State:        record.StateActivation,
 		LatestUpdate: 0,
 		JetID:        insolar.JetID(jetID),
 	}
-	amendRecord := object.AmendRecord{
+	amendRecord := record.Amend{
 		PrevState: *objIndex.LatestState,
 	}
-	amendHash := scheme.ReferenceHasher()
-	_, err := amendRecord.WriteHashData(amendHash)
+	virtAmend := record.Wrap(amendRecord)
+	data, err := virtAmend.Marshal()
 	require.NoError(t, err)
 
 	msg := message.UpdateObject{
-		Record: object.EncodeVirtual(&amendRecord),
+		Record: data,
 		Object: *genRandomRef(0),
 	}
 	ctx := context.Background()
@@ -183,9 +183,8 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	updateObject.Dep.BlobModifier = blob.NewStorageMemory()
 	updateObject.Dep.IDLocker = idLockMock
 	updateObject.Dep.IndexStorage = indexMemoryStor
-	updateObject.Dep.PlatformCryptographyScheme = scheme
+	updateObject.Dep.PCS = scheme
 	updateObject.Dep.RecordModifier = recordStorage
-	updateObject.Dep.IndexModifier = indexMemoryStor
 	updateObject.Dep.IndexStateModifier = object.NewIndexMemory()
 
 	rep := updateObject.handle(ctx)

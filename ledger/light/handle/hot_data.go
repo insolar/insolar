@@ -14,14 +14,33 @@
 // limitations under the License.
 //
 
-package messagebus
+package handle
 
 import (
-	"github.com/insolar/insolar/insolar"
+	"context"
+
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/ledger/light/proc"
 )
 
-// GetMessageHash calculates message hash.
-func GetMessageHash(scheme insolar.PlatformCryptographyScheme, msg insolar.Parcel) []byte {
-	return scheme.IntegrityHasher().Hash(message.ParcelToBytes(msg))
+type HotData struct {
+	dep     *proc.Dependencies
+	replyTo chan<- bus.Reply
+	message *message.HotData
+}
+
+func NewHotData(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.HotData) *HotData {
+	return &HotData{
+		dep:     dep,
+		replyTo: rep,
+		message: msg,
+	}
+}
+
+func (s *HotData) Present(ctx context.Context, f flow.Flow) error {
+	proc := proc.NewHotData(s.message, s.replyTo)
+	s.dep.HotData(proc)
+	return f.Procedure(ctx, proc, false)
 }

@@ -102,31 +102,6 @@ type SignedClaim interface {
 	GetSignature() []byte
 }
 
-const NodeAddressSize = 20
-
-// TODO: create heterogeneous structure for variuos types of adresses (IPv4, IPv6, etc.)
-type NodeAddress [NodeAddressSize]byte
-
-func NewNodeAddress(address string) NodeAddress {
-	var result NodeAddress
-	result.Set(address)
-	return result
-}
-
-func (address *NodeAddress) Set(s string) {
-	copy(address[:], []byte(s)[:NodeAddressSize])
-}
-
-func (address NodeAddress) Get() string {
-	var i int
-	for i = 1; i < len(address); i++ {
-		if address[i] == 0 {
-			break
-		}
-	}
-	return string(address[:i])
-}
-
 // NodeJoinClaim is a type 1, len == 272.
 type NodeJoinClaim struct {
 	ShortNodeID             insolar.ShortNodeID
@@ -224,10 +199,17 @@ func NodeToClaim(node insolar.NetworkNode) (*NodeJoinClaim, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeToClaim ] failed to export a public key")
 	}
+
+	address, err := NewNodeAddress(node.Address())
+	if err != nil {
+		return nil, errors.Wrap(err, "[ NodeToClaim ] failed to convert node address")
+	}
+
 	var keyData [PublicKeyLength]byte
 	copy(keyData[:], exportedKey[:PublicKeyLength])
 
 	var s [SignatureLength]byte
+
 	return &NodeJoinClaim{
 		ShortNodeID:             node.ShortID(),
 		RelayNodeID:             node.ShortID(),
@@ -236,7 +218,7 @@ func NodeToClaim(node insolar.NetworkNode) (*NodeJoinClaim, error) {
 		NodeRoleRecID:           node.Role(),
 		NodeRef:                 node.ID(),
 		NodePK:                  keyData,
-		NodeAddress:             NewNodeAddress(node.Address()),
+		NodeAddress:             address,
 		Signature:               s,
 	}, nil
 }
