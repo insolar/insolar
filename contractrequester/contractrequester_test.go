@@ -56,6 +56,19 @@ func TestNew(t *testing.T) {
 	require.Equal(t, messageBus, contractRequester.MessageBus)
 }
 
+func mockPulseAccessor(t *testing.T) pulse.Accessor {
+	pulseAccessor := pulse.NewAccessorMock(t)
+	currentPulse := insolar.FirstPulseNumber
+	pulseAccessor.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
+		return insolar.Pulse{
+			PulseNumber:     insolar.PulseNumber(currentPulse),
+			NextPulseNumber: insolar.PulseNumber(currentPulse + 1),
+		}, nil
+	}
+
+	return pulseAccessor
+}
+
 func TestContractRequester_SendRequest(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	ref := testutils.RandomRef()
@@ -65,15 +78,7 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	assert.NoError(t, err)
 	cReq.MessageBus = mbm
 
-	pulseAccessor := pulse.NewAccessorMock(t)
-	currentPulse := insolar.FirstPulseNumber
-	pulseAccessor.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
-		return insolar.Pulse{
-			PulseNumber:     insolar.PulseNumber(currentPulse),
-			NextPulseNumber: insolar.PulseNumber(currentPulse + 1),
-		}, nil
-	}
-	cReq.PulseAccessor = pulseAccessor
+	cReq.PulseAccessor = mockPulseAccessor(t)
 
 	mbm.MustRegisterMock.Return()
 	cReq.Start(ctx)
@@ -110,6 +115,7 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 	cReq, err := New()
 	assert.NoError(t, err)
 	cReq.MessageBus = mbm
+	cReq.PulseAccessor = mockPulseAccessor(t)
 
 	mbm.MustRegisterMock.Return()
 	err = cReq.Start(ctx)
@@ -152,6 +158,7 @@ func TestCallMethodCanceled(t *testing.T) {
 
 	mb := testutils.NewMessageBusMock(mc)
 	cr.MessageBus = mb
+	cr.PulseAccessor = mockPulseAccessor(t)
 
 	ref := testutils.RandomRef()
 	prototypeRef := testutils.RandomRef()
@@ -188,6 +195,7 @@ func TestCallMethodWaitResults(t *testing.T) {
 
 	mb := testutils.NewMessageBusMock(mc)
 	cr.MessageBus = mb
+	cr.PulseAccessor = mockPulseAccessor(t)
 
 	ref := testutils.RandomRef()
 	prototypeRef := testutils.RandomRef()
