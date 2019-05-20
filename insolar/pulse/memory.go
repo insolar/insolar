@@ -59,7 +59,11 @@ func (s *StorageMem) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber)
 	return node.pulse, nil
 }
 
-func (s *StorageMem) unsafeLatest(ctx context.Context) (pulse insolar.Pulse, err error) {
+// Latest returns a latest pulse saved in memory. If not found, ErrNotFound will be returned.
+func (s *StorageMem) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
 	if s.tail == nil {
 		err = ErrNotFound
 		return
@@ -68,30 +72,12 @@ func (s *StorageMem) unsafeLatest(ctx context.Context) (pulse insolar.Pulse, err
 	return s.tail.pulse, nil
 }
 
-// Latest returns a latest pulse saved in memory. If not found, ErrNotFound will be returned.
-func (s *StorageMem) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
-	return s.unsafeLatest(ctx)
-}
-
-func (s *StorageMem) GetLatestAndWakeUpChannel(ctx context.Context) (<-chan struct{}, insolar.Pulse, error) {
+// Append appends provided a pulse to current storage. Pulse number should be greater than currently saved for preserving
+// pulse consistency. If provided Pulse does not meet the requirements, ErrBadPulse will be returned.
+func (s *StorageMem) Append(ctx context.Context, pulse insolar.Pulse) error {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
-	pulse, err := s.unsafeLatest(ctx)
-	if err != nil {
-		return nil, pulse, err
-	}
-
-	wakeUp := make(chan struct{})
-	s.pulseChangeWaiters = append(s.pulseChangeWaiters, wakeUp)
-
-	return wakeUp, pulse, err
-}
-
-func (s *StorageMem) unsafeAppend(ctx context.Context, pulse insolar.Pulse) error {
 	var appendTail = func() {
 		oldTail := s.tail
 		newTail := &memNode{
@@ -120,30 +106,6 @@ func (s *StorageMem) unsafeAppend(ctx context.Context, pulse insolar.Pulse) erro
 		return ErrBadPulse
 	}
 	appendTail()
-
-	return nil
-}
-
-func (s *StorageMem) unsafeWakeUpPulseWaiters() {
-	for _, ch := range s.pulseChangeWaiters {
-		close(ch)
-	}
-
-	s.pulseChangeWaiters = []chan struct{}{}
-}
-
-// Append appends provided a pulse to current storage. Pulse number should be greater than currently saved for preserving
-// pulse consistency. If provided Pulse does not meet the requirements, ErrBadPulse will be returned.
-func (s *StorageMem) Append(ctx context.Context, pulse insolar.Pulse) error {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-
-	err := s.unsafeAppend(ctx, pulse)
-	if err != nil {
-		return err
-	}
-
-	s.unsafeWakeUpPulseWaiters()
 
 	return nil
 }
