@@ -98,7 +98,8 @@ message RegisterRequest {
 }
 
 message GenesisRequest {
-
+    uint32 LastPulse = 1;
+    bytes Discovery = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim"];
 }
 
 message RPCResponse {
@@ -155,5 +156,6 @@ message RegisterResponse {
 }
 
 message GenesisResponse {
-
+    GenesisRequest Response = 1;
+    bytes Error = 2;
 }
