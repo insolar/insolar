@@ -152,9 +152,12 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 func (suite *LogicRunnerTestSuite) TestStartQueueProcessorIfNeeded_DontStartQueueProcessorWhenPending() {
 	es := &ExecutionState{Queue: make([]ExecutionQueueElement, 0), pending: message.InPending}
 	es.Queue = append(es.Queue, ExecutionQueueElement{})
-	err := suite.lr.StartQueueProcessorIfNeeded(
-		suite.ctx, es,
-	)
+
+	s := StartQueueProcessorIfNeeded{
+		es: es,
+	}
+
+	err := s.Present(suite.ctx, nil)
 
 	suite.Require().NoError(err)
 	suite.Require().Equal(message.InPending, es.pending)
@@ -238,7 +241,12 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 			if test.amReply != nil {
 				suite.am.HasPendingRequestsMock.Return(test.amReply.has, test.amReply.err)
 			}
-			err := suite.lr.ClarifyPendingState(suite.ctx, es, parcel)
+			proc := ClarifyPendingState{
+				es:              es,
+				parcel:          parcel,
+				ArtifactManager: suite.lr.ArtifactManager,
+			}
+			err := proc.Proceed(suite.ctx)
 			if test.isError {
 				require.Error(t, err)
 			} else {
@@ -253,7 +261,12 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 		parcel.TypeMock.Expect().Return(insolar.TypeCallMethod)
 		es := &ExecutionState{Ref: objectRef, pending: message.PendingUnknown}
 		suite.am.HasPendingRequestsMock.Return(false, errors.New("some"))
-		err := suite.lr.ClarifyPendingState(suite.ctx, es, parcel)
+		proc := ClarifyPendingState{
+			es:              es,
+			parcel:          parcel,
+			ArtifactManager: suite.lr.ArtifactManager,
+		}
+		err := proc.Proceed(suite.ctx)
 		require.Error(t, err)
 		require.Equal(t, message.PendingUnknown, es.pending)
 	})
@@ -1401,8 +1414,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef: s.objectRef,
-				Queue:     messagesQueue,
+				RecordRef:             s.objectRef,
+				Queue:                 messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 
@@ -1475,7 +1488,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecutionState() {
 	es := &ExecutionState{
-		Ref: s.ref,
+		Ref:                   s.ref,
 		LedgerHasMoreRequests: false,
 	}
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
