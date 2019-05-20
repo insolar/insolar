@@ -112,23 +112,31 @@ func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
 		return nil
 	}
 
-	if c.parcel != nil && c.parcel.Type() != insolar.TypeCallMethod {
-		c.es.Unlock()
-		c.es.pending = message.NotPending
-		return nil
+	if c.parcel != nil {
+		if c.parcel.Type() != insolar.TypeCallMethod {
+			c.es.Unlock()
+			c.es.pending = message.NotPending
+			return nil
+		}
+
+		msg := c.parcel.Message().(*message.CallMethod)
+		if msg.CallType != message.CTMethod {
+			c.es.Unlock()
+			c.es.pending = message.NotPending
+			return nil
+		}
 	}
+
 	c.es.Unlock()
 
 	c.es.HasPendingCheckMutex.Lock()
 	defer c.es.HasPendingCheckMutex.Unlock()
 
 	c.es.Lock()
-
 	if c.es.pending != message.PendingUnknown {
 		c.es.Unlock()
 		return nil
 	}
-
 	c.es.Unlock()
 
 	has, err := c.ArtifactManager.HasPendingRequests(ctx, c.es.Ref)

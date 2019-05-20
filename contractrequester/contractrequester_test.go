@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
@@ -44,14 +45,28 @@ func mockMessageBus(t *testing.T, result insolar.Reply) *testutils.MessageBusMoc
 
 func TestNew(t *testing.T) {
 	messageBus := mockMessageBus(t, nil)
+	pulseAccessor := pulse.NewAccessorMock(t)
 
 	contractRequester, err := New()
 
 	cm := &component.Manager{}
-	cm.Inject(messageBus, contractRequester)
+	cm.Inject(messageBus, contractRequester, pulseAccessor)
 
 	require.NoError(t, err)
 	require.Equal(t, messageBus, contractRequester.MessageBus)
+}
+
+func mockPulseAccessor(t *testing.T) pulse.Accessor {
+	pulseAccessor := pulse.NewAccessorMock(t)
+	currentPulse := insolar.FirstPulseNumber
+	pulseAccessor.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
+		return insolar.Pulse{
+			PulseNumber:     insolar.PulseNumber(currentPulse),
+			NextPulseNumber: insolar.PulseNumber(currentPulse + 1),
+		}, nil
+	}
+
+	return pulseAccessor
 }
 
 func TestContractRequester_SendRequest(t *testing.T) {
@@ -62,6 +77,8 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	cReq, err := New()
 	assert.NoError(t, err)
 	cReq.MessageBus = mbm
+
+	cReq.PulseAccessor = mockPulseAccessor(t)
 
 	mbm.MustRegisterMock.Return()
 	cReq.Start(ctx)
@@ -98,6 +115,7 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 	cReq, err := New()
 	assert.NoError(t, err)
 	cReq.MessageBus = mbm
+	cReq.PulseAccessor = mockPulseAccessor(t)
 
 	mbm.MustRegisterMock.Return()
 	err = cReq.Start(ctx)
@@ -140,6 +158,7 @@ func TestCallMethodCanceled(t *testing.T) {
 
 	mb := testutils.NewMessageBusMock(mc)
 	cr.MessageBus = mb
+	cr.PulseAccessor = mockPulseAccessor(t)
 
 	ref := testutils.RandomRef()
 	prototypeRef := testutils.RandomRef()
@@ -176,6 +195,7 @@ func TestCallMethodWaitResults(t *testing.T) {
 
 	mb := testutils.NewMessageBusMock(mc)
 	cr.MessageBus = mb
+	cr.PulseAccessor = mockPulseAccessor(t)
 
 	ref := testutils.RandomRef()
 	prototypeRef := testutils.RandomRef()

@@ -23,6 +23,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/messagebus"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -35,10 +38,11 @@ import (
 
 // ContractRequester helps to call contracts
 type ContractRequester struct {
-	MessageBus  insolar.MessageBus `inject:""`
-	ResultMutex sync.Mutex
-	ResultMap   map[uint64]chan *message.ReturnResults
-	Sequence    uint64
+	MessageBus    insolar.MessageBus `inject:""`
+	ResultMutex   sync.Mutex
+	ResultMap     map[uint64]chan *message.ReturnResults
+	Sequence      uint64
+	PulseAccessor pulse.Accessor `inject:""`
 }
 
 // New creates new ContractRequester
@@ -113,7 +117,9 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		cr.ResultMutex.Unlock()
 	}
 
-	res, err := cr.MessageBus.Send(ctx, msg, nil)
+	sender := messagebus.BuildSender(cr.MessageBus.Send, messagebus.RetryIncorrectPulse(cr.PulseAccessor))
+	res, err := sender(ctx, msg, nil)
+
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't dispatch event")
 	}
