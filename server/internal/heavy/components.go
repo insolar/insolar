@@ -22,7 +22,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
-
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"

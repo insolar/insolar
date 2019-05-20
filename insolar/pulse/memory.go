@@ -26,10 +26,11 @@ import (
 
 // StorageMem is a memory storage implementation. It saves pulses to memory and allows removal.
 type StorageMem struct {
-	lock    sync.RWMutex
-	storage map[insolar.PulseNumber]*memNode
-	head    *memNode
-	tail    *memNode
+	lock               sync.RWMutex
+	storage            map[insolar.PulseNumber]*memNode
+	head               *memNode
+	tail               *memNode
+	pulseChangeWaiters []chan struct{}
 }
 
 type memNode struct {
@@ -58,11 +59,7 @@ func (s *StorageMem) ForPulseNumber(ctx context.Context, pn insolar.PulseNumber)
 	return node.pulse, nil
 }
 
-// Latest returns a latest pulse saved in memory. If not found, ErrNotFound will be returned.
-func (s *StorageMem) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
-	s.lock.RLock()
-	defer s.lock.RUnlock()
-
+func (s *StorageMem) unsafeLatest(ctx context.Context) (pulse insolar.Pulse, err error) {
 	if s.tail == nil {
 		err = ErrNotFound
 		return
@@ -71,12 +68,30 @@ func (s *StorageMem) Latest(ctx context.Context) (pulse insolar.Pulse, err error
 	return s.tail.pulse, nil
 }
 
-// Append appends provided a pulse to current storage. Pulse number should be greater than currently saved for preserving
-// pulse consistency. If provided Pulse does not meet the requirements, ErrBadPulse will be returned.
-func (s *StorageMem) Append(ctx context.Context, pulse insolar.Pulse) error {
+// Latest returns a latest pulse saved in memory. If not found, ErrNotFound will be returned.
+func (s *StorageMem) Latest(ctx context.Context) (pulse insolar.Pulse, err error) {
+	s.lock.RLock()
+	defer s.lock.RUnlock()
+
+	return s.unsafeLatest(ctx)
+}
+
+func (s *StorageMem) GetLatestAndWakeUpChannel(ctx context.Context) (<-chan struct{}, insolar.Pulse, error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()
 
+	pulse, err := s.unsafeLatest(ctx)
+	if err != nil {
+		return nil, pulse, err
+	}
+
+	wakeUp := make(chan struct{})
+	s.pulseChangeWaiters = append(s.pulseChangeWaiters, wakeUp)
+
+	return wakeUp, pulse, err
+}
+
+func (s *StorageMem) unsafeAppend(ctx context.Context, pulse insolar.Pulse) error {
 	var appendTail = func() {
 		oldTail := s.tail
 		newTail := &memNode{
@@ -109,7 +124,31 @@ func (s *StorageMem) Append(ctx context.Context, pulse insolar.Pulse) error {
 	return nil
 }
 
-// Shift removes youngest pulse from storage. If the storage is empty, an error will be returned.
+func (s *StorageMem) unsafeWakeUpPulseWaiters() {
+	for _, ch := range s.pulseChangeWaiters {
+		close(ch)
+	}
+
+	s.pulseChangeWaiters = []chan struct{}{}
+}
+
+// Append appends provided a pulse to current storage. Pulse number should be greater than currently saved for preserving
+// pulse consistency. If provided Pulse does not meet the requirements, ErrBadPulse will be returned.
+func (s *StorageMem) Append(ctx context.Context, pulse insolar.Pulse) error {
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	err := s.unsafeAppend(ctx, pulse)
+	if err != nil {
+		return err
+	}
+
+	s.unsafeWakeUpPulseWaiters()
+
+	return nil
+}
+
+// Shift removes oldest pulse from storage. If the storage is empty, an error will be returned.
 func (s *StorageMem) Shift(ctx context.Context, pn insolar.PulseNumber) (err error) {
 	s.lock.Lock()
 	defer s.lock.Unlock()

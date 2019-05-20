@@ -1,4 +1,4 @@
-///
+//
 // Copyright 2019 Insolar Technologies GmbH
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
@@ -12,15 +12,16 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-///
+//
 
-package artifacts
+package logicrunner
 
 import (
 	"context"
 	"strings"
 
 	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type StackingHandle interface {
@@ -45,7 +46,8 @@ func BuildHandles(procedure flow.Procedure, subHandles ...StackingHandle) flow.H
 }
 
 type HandleIncorrectMessagePulse struct {
-	next flow.Handle
+	numRepeats int
+	next       flow.Handle
 }
 
 func (h *HandleIncorrectMessagePulse) SetNext(next StackingHandle) {
@@ -57,15 +59,21 @@ func (h *HandleIncorrectMessagePulse) GetPresent() flow.Handle {
 }
 
 func (h *HandleIncorrectMessagePulse) Present(ctx context.Context, f flow.Flow) error {
-	for {
-		err := f.Handle(ctx, h.next)
-		if err != nil {
-			if strings.Contains(err.Error(), "Incorrect message pulse") || err == flow.ErrCancelled {
+	err := f.Handle(ctx, h.next)
+	inslogger.FromContext(ctx).Infof(">>>>>>>>>> 1")
+	if err != nil {
+		inslogger.FromContext(ctx).Infof(">>>>>>>>>> 2 , %s. Left Repeats: %d", err, h.numRepeats)
+		if strings.Contains(err.Error(), "Incorrect message pulse") || err == flow.ErrCancelled {
+			h.numRepeats--
+			inslogger.FromContext(ctx).Infof(">>>>>>>>>> 3 , %s. Left Repeats: %d", err, h.numRepeats)
+			if h.numRepeats > 0 {
+				inslogger.FromContext(ctx).Infof("[ HandleIncorrectMessagePulse ] Got '%s'. Try one more time.", err.Error())
 				return f.Migrate(ctx, h.Present)
 			}
+
 		}
-		return err
 	}
+	return err
 }
 
 type HandleAsProcedure struct {
@@ -81,5 +89,5 @@ func (h *HandleAsProcedure) GetPresent() flow.Handle {
 }
 
 func (h *HandleAsProcedure) Present(ctx context.Context, f flow.Flow) error {
-	return f.Procedure(ctx, h.procedure, true)
+	return f.Procedure(ctx, h.procedure, h.cancelable)
 }

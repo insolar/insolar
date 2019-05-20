@@ -126,7 +126,7 @@ func (m *client) GetCode(
 
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		m.senders.CachedSender(m.PCS),
 		messagebus.FollowRedirectSender(m.DefaultBus),
 		messagebus.RetryJetSender(m.JetStorage),
@@ -188,7 +188,7 @@ func (m *client) GetObject(
 
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.FollowRedirectSender(m.DefaultBus),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
@@ -234,7 +234,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
 
@@ -309,7 +309,7 @@ func (m *client) HasPendingRequests(
 ) (bool, error) {
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
 
@@ -349,7 +349,7 @@ func (m *client) GetDelegate(
 
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.FollowRedirectSender(m.DefaultBus),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
@@ -391,7 +391,7 @@ func (m *client) GetChildren(
 
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.FollowRedirectSender(m.DefaultBus),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
@@ -843,7 +843,7 @@ func (m *client) setRecord(
 	}
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
 	genericReply, err := sender(ctx, &message.SetRecord{
@@ -903,7 +903,7 @@ func (m *client) sendUpdateObject(
 	}
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
 	genericReply, err := sender(
@@ -941,7 +941,7 @@ func (m *client) registerChild(
 	}
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
 	genericReact, err := sender(ctx, &message.RegisterChild{

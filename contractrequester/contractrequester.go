@@ -26,6 +26,8 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/messagebus"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/configuration"
@@ -45,6 +47,7 @@ type ContractRequester struct {
 	ResultMap      map[uint64]chan *message.ReturnResults
 	Sequence       uint64
 	FlowDispatcher *dispatcher.Dispatcher
+	PulseAccessor  pulse.Accessor `inject:""`
 }
 
 // New creates new ContractRequester
@@ -155,7 +158,8 @@ func (cr *ContractRequester) CallMethod(ctx context.Context, base insolar.Messag
 		cr.ResultMutex.Unlock()
 	}
 
-	res, err := cr.MessageBus.Send(ctx, msg, nil)
+	sender := messagebus.BuildSender(cr.MessageBus.Send, messagebus.RetryIncorrectPulse(cr.PulseAccessor))
+	res, err := sender(ctx, msg, nil)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't dispatch event")
@@ -230,7 +234,8 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, base insolar.M
 		cr.ResultMutex.Unlock()
 	}
 
-	res, err := cr.MessageBus.Send(ctx, msg, nil)
+	sender := messagebus.BuildSender(cr.MessageBus.Send, messagebus.RetryIncorrectPulse(cr.PulseAccessor))
+	res, err := sender(ctx, msg, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't save new object as delegate")
 	}
