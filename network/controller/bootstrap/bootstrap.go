@@ -83,8 +83,8 @@ import (
 	"github.com/insolar/insolar/platformpolicy"
 )
 
-const bootstrapTimeout time.Duration = 2   // seconds
-const updateScheduleETA time.Duration = 60 // seconds
+const bootstrapTimeout time.Duration = 2 // seconds
+// const updateScheduleETA time.Duration = 60 // seconds
 
 var (
 	ErrReconnectRequired = errors.New("NetworkNode should connect via consensus bootstrap")
