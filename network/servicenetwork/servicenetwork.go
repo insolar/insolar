@@ -195,7 +195,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		controller.NewPulseController(),
 		bootstrap.NewBootstrapper(options, n.connectToNewNetwork),
 		bootstrap.NewAuthorizationController(options),
-		bootstrap.NewChallengeResponseController(options),
 		bootstrap.NewNetworkBootstrapper(),
 	)
 	err = n.cm.Init(ctx)

@@ -152,7 +152,6 @@ func NewMessageHandler(
 			p.Dep.IDLocker = h.IDLocker
 			p.Dep.IndexStateModifier = h.IndexStateModifier
 			p.Dep.IndexStorage = h.IndexStorage
-			p.Dep.IndexModifier = h.IndexStorage
 		},
 		RegisterChild: func(p *proc.RegisterChild) {
 			p.Dep.IDLocker = h.IDLocker

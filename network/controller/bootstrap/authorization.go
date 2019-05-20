@@ -82,7 +82,7 @@ const (
 type AuthorizationController interface {
 	component.Initer
 
-	Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert insolar.AuthorizationCertificate) (SessionID, error)
+	Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert insolar.AuthorizationCertificate) (*AuthorizationData, error)
 	Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error
 }
 
@@ -110,9 +110,14 @@ type AuthorizationRequest struct {
 
 // AuthorizationResponse
 type AuthorizationResponse struct {
-	Code      OperationCode
-	Error     string
-	SessionID SessionID
+	Code  OperationCode
+	Error string
+	Data  *AuthorizationData
+}
+
+type AuthorizationData struct {
+	SessionID     SessionID
+	AssignShortID insolar.ShortNodeID
 }
 
 // RegistrationRequest
@@ -137,7 +142,7 @@ func init() {
 }
 
 // Authorize node on the discovery node (step 2 of the bootstrap process)
-func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert insolar.AuthorizationCertificate) (SessionID, error) {
+func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert insolar.AuthorizationCertificate) (*AuthorizationData, error) {
 	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discoveryNode.Host)
 	inslogger.FromContext(ctx).Infof("cert: %s", cert)
 
@@ -148,7 +153,7 @@ func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode 
 	defer span.End()
 	serializedCert, err := certificate.Serialize(cert)
 	if err != nil {
-		return 0, errors.Wrap(err, "Error serializing certificate")
+		return nil, errors.Wrap(err, "Error serializing certificate")
 	}
 
 	request := ac.Network.NewRequestBuilder().Type(types.Authorize).Data(&AuthorizationRequest{
@@ -156,17 +161,17 @@ func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode 
 	}).Build()
 	future, err := ac.Network.SendRequestToHost(ctx, request, discoveryNode.Host)
 	if err != nil {
-		return 0, errors.Wrapf(err, "Error sending authorize request")
+		return nil, errors.Wrapf(err, "Error sending authorize request")
 	}
 	response, err := future.WaitResponse(ac.options.PacketTimeout)
 	if err != nil {
-		return 0, errors.Wrapf(err, "Error getting response for authorize request")
+		return nil, errors.Wrapf(err, "Error getting response for authorize request")
 	}
 	data := response.GetData().(*AuthorizationResponse)
 	if data.Code == OpRejected {
-		return 0, errors.New("Authorize rejected: " + data.Error)
+		return nil, errors.New("Authorize rejected: " + data.Error)
 	}
-	return data.SessionID, nil
+	return data.Data, nil
 }
 
 // Register node on the discovery node (step 4 of the bootstrap process)
@@ -300,7 +305,13 @@ func (ac *authorizationController) processAuthorizeRequest(ctx context.Context, 
 		return ac.Network.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
 	}
 	session := ac.SessionManager.NewSession(request.GetSender(), cert, ac.options.HandshakeSessionTTL)
-	return ac.Network.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpConfirmed, SessionID: session}), nil
+	return ac.Network.BuildResponse(ctx, request, &AuthorizationResponse{
+		Code: OpConfirmed,
+		Data: &AuthorizationData{
+			SessionID:     session,
+			AssignShortID: GenerateShortID(ac.NodeKeeper, *cert.GetNodeRef()),
+		},
+	}), nil
 }
 
 func (ac *authorizationController) Init(ctx context.Context) error {
