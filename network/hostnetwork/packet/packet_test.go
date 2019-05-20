@@ -59,6 +59,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -159,4 +160,59 @@ func TestPacketMethods(t *testing.T) {
 		sender: sender,
 		packet: p,
 	})
+}
+
+func marshalUnmarshalPacketRequest(t *testing.T, request interface{}) (p1, p2 *PacketBackend) {
+	p1, p2 = &PacketBackend{}, &PacketBackend{}
+	p1.SetRequest(request)
+	data, err := p1.Marshal()
+	require.NoError(t, err)
+	err = p2.Unmarshal(data)
+	require.NoError(t, err)
+	require.NotNil(t, p2.GetRequest())
+	return p1, p2
+}
+
+func TestPacketBackend_SetRequest(t *testing.T) {
+	type SomeData struct {
+		someField int
+	}
+	p := PacketBackend{}
+	f := func() {
+		p.SetRequest(&SomeData{})
+	}
+	assert.Panics(t, f)
+}
+
+func TestPacketBackend_SetResponse(t *testing.T) {
+	type SomeData struct {
+		someField int
+	}
+	p := PacketBackend{}
+	f := func() {
+		p.SetResponse(&SomeData{})
+	}
+	assert.Panics(t, f)
+}
+
+func TestPacketBackend_GetRequest_GetPing(t *testing.T) {
+	ping := Ping{}
+	_, p2 := marshalUnmarshalPacketRequest(t, &ping)
+	assert.NotNil(t, p2.GetRequest().GetPing())
+}
+
+func TestPacketBackend_GetRequest_GetRPC(t *testing.T) {
+	rpc := RPCRequest{Method: "meth", Data: []byte("123")}
+	p1, p2 := marshalUnmarshalPacketRequest(t, &rpc)
+	require.NotNil(t, p2.GetRequest().GetRPC())
+	assert.Equal(t, p1.GetRequest().GetRPC().Method, p2.GetRequest().GetRPC().Method)
+	assert.Equal(t, p1.GetRequest().GetRPC().Data, p2.GetRequest().GetRPC().Data)
+}
+
+func TestPacketBackend_GetRequest_GetAuthorize(t *testing.T) {
+	ss := []byte("onetwothree")
+	auth := AuthorizeRequest{Certificate: ss}
+	_, p2 := marshalUnmarshalPacketRequest(t, &auth)
+	require.NotNil(t, p2.GetRequest().GetAuthorize())
+	assert.Equal(t, ss, p2.GetRequest().GetAuthorize().Certificate)
 }

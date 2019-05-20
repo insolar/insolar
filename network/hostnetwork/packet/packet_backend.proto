@@ -26,14 +26,14 @@ message PacketBackend {
     uint32 RequestID = 3;
     string TraceID = 4;
 
-    oneof payload {
+    oneof Payload {
         Request Request = 5;
         Response Response = 6;
     }
 }
 
 message Request {
-    oneof request {
+    oneof Request {
         Ping Ping = 1;
         RPCRequest RPC = 2;
         CascadeRequest Cascade = 3;
@@ -46,7 +46,7 @@ message Request {
 }
 
 message Response {
-    oneof response {
+    oneof Response {
         Ping Ping = 1;
         RPCResponse RPC = 2;
         BasicResponse Basic = 3; // response for Cascade, Pulse
