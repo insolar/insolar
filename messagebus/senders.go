@@ -178,7 +178,7 @@ func RetryIncorrectPulse(accessor pulse.Accessor) PreSender {
 				}
 
 				if currentPulse.PulseNumber == lastPulse {
-					inslogger.FromContext(ctx).Warn("wait for pulse change ...")
+					inslogger.FromContext(ctx).Debug("[ RetryIncorrectPulse ]  wait for pulse change")
 					time.Sleep(100 * time.Millisecond)
 					continue
 				}
