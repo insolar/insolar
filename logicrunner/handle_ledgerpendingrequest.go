@@ -25,13 +25,6 @@ import (
 	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
-type ProcedureGetPendingRequest struct {
-}
-
-func (p *ProcedureGetPendingRequest) Proceed(ctx context.Context) error {
-	return nil
-}
-
 type GetLedgerPendingRequest struct {
 	dep *Dependencies
 
