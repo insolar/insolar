@@ -25,12 +25,6 @@ type AccessorMock struct {
 	ForPulseNumberPreCounter uint64
 	ForPulseNumberMock       mAccessorMockForPulseNumber
 
-	GetLatestAndWakeUpChannelFunc func(p context.Context) (r <-chan struct {
-	}, r1 insolar.Pulse, r2 error)
-	GetLatestAndWakeUpChannelCounter    uint64
-	GetLatestAndWakeUpChannelPreCounter uint64
-	GetLatestAndWakeUpChannelMock       mAccessorMockGetLatestAndWakeUpChannel
-
 	LatestFunc       func(p context.Context) (r insolar.Pulse, r1 error)
 	LatestCounter    uint64
 	LatestPreCounter uint64
@@ -46,7 +40,6 @@ func NewAccessorMock(t minimock.Tester) *AccessorMock {
 	}
 
 	m.ForPulseNumberMock = mAccessorMockForPulseNumber{mock: m}
-	m.GetLatestAndWakeUpChannelMock = mAccessorMockGetLatestAndWakeUpChannel{mock: m}
 	m.LatestMock = mAccessorMockLatest{mock: m}
 
 	return m
@@ -198,164 +191,6 @@ func (m *AccessorMock) ForPulseNumberFinished() bool {
 	// if func was set then invocations count should be greater than zero
 	if m.ForPulseNumberFunc != nil {
 		return atomic.LoadUint64(&m.ForPulseNumberCounter) > 0
-	}
-
-	return true
-}
-
-type mAccessorMockGetLatestAndWakeUpChannel struct {
-	mock              *AccessorMock
-	mainExpectation   *AccessorMockGetLatestAndWakeUpChannelExpectation
-	expectationSeries []*AccessorMockGetLatestAndWakeUpChannelExpectation
-}
-
-type AccessorMockGetLatestAndWakeUpChannelExpectation struct {
-	input  *AccessorMockGetLatestAndWakeUpChannelInput
-	result *AccessorMockGetLatestAndWakeUpChannelResult
-}
-
-type AccessorMockGetLatestAndWakeUpChannelInput struct {
-	p context.Context
-}
-
-type AccessorMockGetLatestAndWakeUpChannelResult struct {
-	r <-chan struct {
-	}
-	r1 insolar.Pulse
-	r2 error
-}
-
-//Expect specifies that invocation of Accessor.GetLatestAndWakeUpChannel is expected from 1 to Infinity times
-func (m *mAccessorMockGetLatestAndWakeUpChannel) Expect(p context.Context) *mAccessorMockGetLatestAndWakeUpChannel {
-	m.mock.GetLatestAndWakeUpChannelFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &AccessorMockGetLatestAndWakeUpChannelExpectation{}
-	}
-	m.mainExpectation.input = &AccessorMockGetLatestAndWakeUpChannelInput{p}
-	return m
-}
-
-//Return specifies results of invocation of Accessor.GetLatestAndWakeUpChannel
-func (m *mAccessorMockGetLatestAndWakeUpChannel) Return(r <-chan struct {
-}, r1 insolar.Pulse, r2 error) *AccessorMock {
-	m.mock.GetLatestAndWakeUpChannelFunc = nil
-	m.expectationSeries = nil
-
-	if m.mainExpectation == nil {
-		m.mainExpectation = &AccessorMockGetLatestAndWakeUpChannelExpectation{}
-	}
-	m.mainExpectation.result = &AccessorMockGetLatestAndWakeUpChannelResult{r, r1, r2}
-	return m.mock
-}
-
-//ExpectOnce specifies that invocation of Accessor.GetLatestAndWakeUpChannel is expected once
-func (m *mAccessorMockGetLatestAndWakeUpChannel) ExpectOnce(p context.Context) *AccessorMockGetLatestAndWakeUpChannelExpectation {
-	m.mock.GetLatestAndWakeUpChannelFunc = nil
-	m.mainExpectation = nil
-
-	expectation := &AccessorMockGetLatestAndWakeUpChannelExpectation{}
-	expectation.input = &AccessorMockGetLatestAndWakeUpChannelInput{p}
-	m.expectationSeries = append(m.expectationSeries, expectation)
-	return expectation
-}
-
-func (e *AccessorMockGetLatestAndWakeUpChannelExpectation) Return(r <-chan struct {
-}, r1 insolar.Pulse, r2 error) {
-	e.result = &AccessorMockGetLatestAndWakeUpChannelResult{r, r1, r2}
-}
-
-//Set uses given function f as a mock of Accessor.GetLatestAndWakeUpChannel method
-func (m *mAccessorMockGetLatestAndWakeUpChannel) Set(f func(p context.Context) (r <-chan struct {
-}, r1 insolar.Pulse, r2 error)) *AccessorMock {
-	m.mainExpectation = nil
-	m.expectationSeries = nil
-
-	m.mock.GetLatestAndWakeUpChannelFunc = f
-	return m.mock
-}
-
-//GetLatestAndWakeUpChannel implements github.com/insolar/insolar/insolar/pulse.Accessor interface
-func (m *AccessorMock) GetLatestAndWakeUpChannel(p context.Context) (r <-chan struct {
-}, r1 insolar.Pulse, r2 error) {
-	counter := atomic.AddUint64(&m.GetLatestAndWakeUpChannelPreCounter, 1)
-	defer atomic.AddUint64(&m.GetLatestAndWakeUpChannelCounter, 1)
-
-	if len(m.GetLatestAndWakeUpChannelMock.expectationSeries) > 0 {
-		if counter > uint64(len(m.GetLatestAndWakeUpChannelMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to AccessorMock.GetLatestAndWakeUpChannel. %v", p)
-			return
-		}
-
-		input := m.GetLatestAndWakeUpChannelMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, AccessorMockGetLatestAndWakeUpChannelInput{p}, "Accessor.GetLatestAndWakeUpChannel got unexpected parameters")
-
-		result := m.GetLatestAndWakeUpChannelMock.expectationSeries[counter-1].result
-		if result == nil {
-			m.t.Fatal("No results are set for the AccessorMock.GetLatestAndWakeUpChannel")
-			return
-		}
-
-		r = result.r
-		r1 = result.r1
-		r2 = result.r2
-
-		return
-	}
-
-	if m.GetLatestAndWakeUpChannelMock.mainExpectation != nil {
-
-		input := m.GetLatestAndWakeUpChannelMock.mainExpectation.input
-		if input != nil {
-			testify_assert.Equal(m.t, *input, AccessorMockGetLatestAndWakeUpChannelInput{p}, "Accessor.GetLatestAndWakeUpChannel got unexpected parameters")
-		}
-
-		result := m.GetLatestAndWakeUpChannelMock.mainExpectation.result
-		if result == nil {
-			m.t.Fatal("No results are set for the AccessorMock.GetLatestAndWakeUpChannel")
-		}
-
-		r = result.r
-		r1 = result.r1
-		r2 = result.r2
-
-		return
-	}
-
-	if m.GetLatestAndWakeUpChannelFunc == nil {
-		m.t.Fatalf("Unexpected call to AccessorMock.GetLatestAndWakeUpChannel. %v", p)
-		return
-	}
-
-	return m.GetLatestAndWakeUpChannelFunc(p)
-}
-
-//GetLatestAndWakeUpChannelMinimockCounter returns a count of AccessorMock.GetLatestAndWakeUpChannelFunc invocations
-func (m *AccessorMock) GetLatestAndWakeUpChannelMinimockCounter() uint64 {
-	return atomic.LoadUint64(&m.GetLatestAndWakeUpChannelCounter)
-}
-
-//GetLatestAndWakeUpChannelMinimockPreCounter returns the value of AccessorMock.GetLatestAndWakeUpChannel invocations
-func (m *AccessorMock) GetLatestAndWakeUpChannelMinimockPreCounter() uint64 {
-	return atomic.LoadUint64(&m.GetLatestAndWakeUpChannelPreCounter)
-}
-
-//GetLatestAndWakeUpChannelFinished returns true if mock invocations count is ok
-func (m *AccessorMock) GetLatestAndWakeUpChannelFinished() bool {
-	// if expectation series were set then invocations count should be equal to expectations count
-	if len(m.GetLatestAndWakeUpChannelMock.expectationSeries) > 0 {
-		return atomic.LoadUint64(&m.GetLatestAndWakeUpChannelCounter) == uint64(len(m.GetLatestAndWakeUpChannelMock.expectationSeries))
-	}
-
-	// if main expectation was set then invocations count should be greater than zero
-	if m.GetLatestAndWakeUpChannelMock.mainExpectation != nil {
-		return atomic.LoadUint64(&m.GetLatestAndWakeUpChannelCounter) > 0
-	}
-
-	// if func was set then invocations count should be greater than zero
-	if m.GetLatestAndWakeUpChannelFunc != nil {
-		return atomic.LoadUint64(&m.GetLatestAndWakeUpChannelCounter) > 0
 	}
 
 	return true
@@ -519,10 +354,6 @@ func (m *AccessorMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to AccessorMock.ForPulseNumber")
 	}
 
-	if !m.GetLatestAndWakeUpChannelFinished() {
-		m.t.Fatal("Expected call to AccessorMock.GetLatestAndWakeUpChannel")
-	}
-
 	if !m.LatestFinished() {
 		m.t.Fatal("Expected call to AccessorMock.Latest")
 	}
@@ -548,10 +379,6 @@ func (m *AccessorMock) MinimockFinish() {
 		m.t.Fatal("Expected call to AccessorMock.ForPulseNumber")
 	}
 
-	if !m.GetLatestAndWakeUpChannelFinished() {
-		m.t.Fatal("Expected call to AccessorMock.GetLatestAndWakeUpChannel")
-	}
-
 	if !m.LatestFinished() {
 		m.t.Fatal("Expected call to AccessorMock.Latest")
 	}
@@ -571,7 +398,6 @@ func (m *AccessorMock) MinimockWait(timeout time.Duration) {
 	for {
 		ok := true
 		ok = ok && m.ForPulseNumberFinished()
-		ok = ok && m.GetLatestAndWakeUpChannelFinished()
 		ok = ok && m.LatestFinished()
 
 		if ok {
@@ -583,10 +409,6 @@ func (m *AccessorMock) MinimockWait(timeout time.Duration) {
 
 			if !m.ForPulseNumberFinished() {
 				m.t.Error("Expected call to AccessorMock.ForPulseNumber")
-			}
-
-			if !m.GetLatestAndWakeUpChannelFinished() {
-				m.t.Error("Expected call to AccessorMock.GetLatestAndWakeUpChannel")
 			}
 
 			if !m.LatestFinished() {
@@ -606,10 +428,6 @@ func (m *AccessorMock) MinimockWait(timeout time.Duration) {
 func (m *AccessorMock) AllMocksCalled() bool {
 
 	if !m.ForPulseNumberFinished() {
-		return false
-	}
-
-	if !m.GetLatestAndWakeUpChannelFinished() {
 		return false
 	}
 
