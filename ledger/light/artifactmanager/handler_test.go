@@ -613,7 +613,7 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		return nil
 	}
 
-	idxMock.SetLifelineFunc = func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 object.Lifeline) (r error) {
+	idxMock.SetFunc = func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 object.Lifeline) (r error) {
 		require.Equal(s.T(), *firstID, p2)
 		require.Equal(s.T(), insolar.FirstPulseNumber, int(p1))
 		require.Equal(s.T(), *firstID, *p3.LatestState)
