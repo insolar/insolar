@@ -28,6 +28,7 @@ import (
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/payload"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar/pulse"
@@ -235,6 +236,14 @@ func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
 			return nil, errors.Wrap(err, "can't deserialize payload to error")
 		}
 		return nil, errReply
+	}
+	if msg.Metadata.Get(bus.MetaType) == payload.TypeError {
+		pl := payload.Error{}
+		err := pl.Unmarshal(msg.Payload)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to decode error")
+		}
+		return nil, errors.New(pl.Text)
 	}
 
 	rep, err := reply.Deserialize(bytes.NewBuffer(msg.Payload))

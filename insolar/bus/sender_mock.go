@@ -20,6 +20,11 @@ import (
 type SenderMock struct {
 	t minimock.Tester
 
+	ReplyFunc       func(p context.Context, p1 *message.Message, p2 *message.Message)
+	ReplyCounter    uint64
+	ReplyPreCounter uint64
+	ReplyMock       mSenderMockReply
+
 	SendFunc       func(p context.Context, p1 *message.Message) (r <-chan *message.Message, r1 func())
 	SendCounter    uint64
 	SendPreCounter uint64
@@ -34,9 +39,135 @@ func NewSenderMock(t minimock.Tester) *SenderMock {
 		controller.RegisterMocker(m)
 	}
 
+	m.ReplyMock = mSenderMockReply{mock: m}
 	m.SendMock = mSenderMockSend{mock: m}
 
 	return m
+}
+
+type mSenderMockReply struct {
+	mock              *SenderMock
+	mainExpectation   *SenderMockReplyExpectation
+	expectationSeries []*SenderMockReplyExpectation
+}
+
+type SenderMockReplyExpectation struct {
+	input *SenderMockReplyInput
+}
+
+type SenderMockReplyInput struct {
+	p  context.Context
+	p1 *message.Message
+	p2 *message.Message
+}
+
+//Expect specifies that invocation of Sender.Reply is expected from 1 to Infinity times
+func (m *mSenderMockReply) Expect(p context.Context, p1 *message.Message, p2 *message.Message) *mSenderMockReply {
+	m.mock.ReplyFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SenderMockReplyExpectation{}
+	}
+	m.mainExpectation.input = &SenderMockReplyInput{p, p1, p2}
+	return m
+}
+
+//Return specifies results of invocation of Sender.Reply
+func (m *mSenderMockReply) Return() *SenderMock {
+	m.mock.ReplyFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &SenderMockReplyExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Sender.Reply is expected once
+func (m *mSenderMockReply) ExpectOnce(p context.Context, p1 *message.Message, p2 *message.Message) *SenderMockReplyExpectation {
+	m.mock.ReplyFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &SenderMockReplyExpectation{}
+	expectation.input = &SenderMockReplyInput{p, p1, p2}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of Sender.Reply method
+func (m *mSenderMockReply) Set(f func(p context.Context, p1 *message.Message, p2 *message.Message)) *SenderMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.ReplyFunc = f
+	return m.mock
+}
+
+//Reply implements github.com/insolar/insolar/insolar/bus.Sender interface
+func (m *SenderMock) Reply(p context.Context, p1 *message.Message, p2 *message.Message) {
+	counter := atomic.AddUint64(&m.ReplyPreCounter, 1)
+	defer atomic.AddUint64(&m.ReplyCounter, 1)
+
+	if len(m.ReplyMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.ReplyMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to SenderMock.Reply. %v %v %v", p, p1, p2)
+			return
+		}
+
+		input := m.ReplyMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, SenderMockReplyInput{p, p1, p2}, "Sender.Reply got unexpected parameters")
+
+		return
+	}
+
+	if m.ReplyMock.mainExpectation != nil {
+
+		input := m.ReplyMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, SenderMockReplyInput{p, p1, p2}, "Sender.Reply got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.ReplyFunc == nil {
+		m.t.Fatalf("Unexpected call to SenderMock.Reply. %v %v %v", p, p1, p2)
+		return
+	}
+
+	m.ReplyFunc(p, p1, p2)
+}
+
+//ReplyMinimockCounter returns a count of SenderMock.ReplyFunc invocations
+func (m *SenderMock) ReplyMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.ReplyCounter)
+}
+
+//ReplyMinimockPreCounter returns the value of SenderMock.Reply invocations
+func (m *SenderMock) ReplyMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.ReplyPreCounter)
+}
+
+//ReplyFinished returns true if mock invocations count is ok
+func (m *SenderMock) ReplyFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.ReplyMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.ReplyCounter) == uint64(len(m.ReplyMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.ReplyMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.ReplyCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.ReplyFunc != nil {
+		return atomic.LoadUint64(&m.ReplyCounter) > 0
+	}
+
+	return true
 }
 
 type mSenderMockSend struct {
@@ -194,6 +325,10 @@ func (m *SenderMock) SendFinished() bool {
 //Deprecated: please use MinimockFinish method or use Finish method of minimock.Controller
 func (m *SenderMock) ValidateCallCounters() {
 
+	if !m.ReplyFinished() {
+		m.t.Fatal("Expected call to SenderMock.Reply")
+	}
+
 	if !m.SendFinished() {
 		m.t.Fatal("Expected call to SenderMock.Send")
 	}
@@ -215,6 +350,10 @@ func (m *SenderMock) Finish() {
 //MinimockFinish checks that all mocked methods of the interface have been called at least once
 func (m *SenderMock) MinimockFinish() {
 
+	if !m.ReplyFinished() {
+		m.t.Fatal("Expected call to SenderMock.Reply")
+	}
+
 	if !m.SendFinished() {
 		m.t.Fatal("Expected call to SenderMock.Send")
 	}
@@ -233,6 +372,7 @@ func (m *SenderMock) MinimockWait(timeout time.Duration) {
 	timeoutCh := time.After(timeout)
 	for {
 		ok := true
+		ok = ok && m.ReplyFinished()
 		ok = ok && m.SendFinished()
 
 		if ok {
@@ -241,6 +381,10 @@ func (m *SenderMock) MinimockWait(timeout time.Duration) {
 
 		select {
 		case <-timeoutCh:
+
+			if !m.ReplyFinished() {
+				m.t.Error("Expected call to SenderMock.Reply")
+			}
 
 			if !m.SendFinished() {
 				m.t.Error("Expected call to SenderMock.Send")
@@ -257,6 +401,10 @@ func (m *SenderMock) MinimockWait(timeout time.Duration) {
 //AllMocksCalled returns true if all mocked methods were called before the execution of AllMocksCalled,
 //it can be used with assert/require, i.e. assert.True(mock.AllMocksCalled())
 func (m *SenderMock) AllMocksCalled() bool {
+
+	if !m.ReplyFinished() {
+		return false
+	}
 
 	if !m.SendFinished() {
 		return false

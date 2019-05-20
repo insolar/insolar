@@ -26,32 +26,32 @@ import (
 )
 
 type SetRecord struct {
-	dep     *proc.Dependencies
-	msg     *message.SetRecord
-	replyTo chan<- bus.Reply
+	dep        *proc.Dependencies
+	msg        *message.SetRecord
+	busMessage bus.Message
 }
 
-func NewSetRecord(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.SetRecord) *SetRecord {
+func NewSetRecord(dep *proc.Dependencies, busMessage bus.Message, msg *message.SetRecord) *SetRecord {
 	return &SetRecord{
-		dep:     dep,
-		msg:     msg,
-		replyTo: rep,
+		dep:        dep,
+		msg:        msg,
+		busMessage: busMessage,
 	}
 }
 
 func (s *SetRecord) Present(ctx context.Context, f flow.Flow) error {
-	jet := proc.NewFetchJet(*s.msg.TargetRef.Record(), flow.Pulse(ctx), s.replyTo)
+	jet := proc.NewFetchJet(*s.msg.TargetRef.Record(), flow.Pulse(ctx), s.busMessage.WatermillMsg)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		return err
 	}
-	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.replyTo)
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.busMessage.WatermillMsg)
 	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, true); err != nil {
 		return err
 	}
 
-	setRecord := proc.NewSetRecord(jet.Result.Jet, s.replyTo, s.msg.Record)
+	setRecord := proc.NewSetRecord(jet.Result.Jet, s.busMessage.ReplyTo, s.msg.Record)
 	s.dep.SetRecord(setRecord)
 	return f.Procedure(ctx, setRecord, false)
 }

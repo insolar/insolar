@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/messagebus"
@@ -188,10 +187,6 @@ func (m *client) GetObject(
 		}
 		instrumenter.end()
 	}()
-
-	pl := payload.GetObject{
-		ObjectID: *head.Record(),
-	}
 
 	getObjectMsg := &message.GetObject{
 		Head:     head,

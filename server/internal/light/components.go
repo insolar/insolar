@@ -239,6 +239,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.IndexStorage = indexes
 		handler.IndexStateModifier = indexes
 		handler.IndexStorage = indexes
+		handler.Sender = WmBus
 
 		jetCalculator := jet.NewCalculator(Coordinator, jets)
 		var lightCleaner = replication.NewCleaner(

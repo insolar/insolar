@@ -27,42 +27,42 @@ import (
 )
 
 type RegisterChild struct {
-	dep     *proc.Dependencies
-	replyTo chan<- bus.Reply
-	message *message.RegisterChild
-	pulse   insolar.PulseNumber
+	dep        *proc.Dependencies
+	busMessage bus.Message
+	message    *message.RegisterChild
+	pulse      insolar.PulseNumber
 }
 
-func NewRegisterChild(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.RegisterChild, pulse insolar.PulseNumber) *RegisterChild {
+func NewRegisterChild(dep *proc.Dependencies, busMessage bus.Message, msg *message.RegisterChild, pulse insolar.PulseNumber) *RegisterChild {
 	return &RegisterChild{
-		dep:     dep,
-		replyTo: rep,
-		message: msg,
-		pulse:   pulse,
+		dep:        dep,
+		busMessage: busMessage,
+		message:    msg,
+		pulse:      pulse,
 	}
 }
 
 func (s *RegisterChild) Present(ctx context.Context, f flow.Flow) error {
-	jet := proc.NewFetchJet(*s.message.DefaultTarget().Record(), flow.Pulse(ctx), s.replyTo)
+	jet := proc.NewFetchJet(*s.message.DefaultTarget().Record(), flow.Pulse(ctx), s.busMessage.WatermillMsg)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
 		return err
 	}
 
-	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.replyTo)
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.busMessage.WatermillMsg)
 	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, false); err != nil {
 		return err
 	}
 
-	getIndex := proc.NewGetIndex(s.message.Parent, jet.Result.Jet, s.replyTo)
+	getIndex := proc.NewGetIndex(s.message.Parent, jet.Result.Jet, s.busMessage.ReplyTo)
 	s.dep.GetIndex(getIndex)
 	err := f.Procedure(ctx, getIndex, false)
 	if err != nil {
 		return err
 	}
 
-	registerChild := proc.NewRegisterChild(jet.Result.Jet, s.message, s.pulse, getIndex.Result.Index, s.replyTo)
+	registerChild := proc.NewRegisterChild(jet.Result.Jet, s.message, s.pulse, getIndex.Result.Index, s.busMessage.ReplyTo)
 	s.dep.RegisterChild(registerChild)
 	return f.Procedure(ctx, registerChild, false)
 }

@@ -4,6 +4,13 @@ package payload;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 
+message Error {
+    int32 _polymorph = 16;
+
+    uint32 Code = 20;
+    string Text = 21;
+}
+
 message GetObject {
     int32 _polymorph = 16;
 

@@ -19,18 +19,21 @@ package proc
 import (
 	"context"
 
+	"github.com/ThreeDotsLabs/watermill"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/pkg/errors"
 )
 
 type FetchJet struct {
+	message *message.Message
 	target  insolar.ID
 	pulse   insolar.PulseNumber
-	replyTo chan<- bus.Reply
 
 	Result struct {
 		Jet insolar.JetID
@@ -41,18 +44,36 @@ type FetchJet struct {
 		Coordinator jet.Coordinator
 		JetUpdater  jet.Fetcher
 		JetFetcher  jet.Fetcher
+		Sender      bus.Sender
 	}
 }
 
-func NewFetchJet(target insolar.ID, pn insolar.PulseNumber, rep chan<- bus.Reply) *FetchJet {
+func NewFetchJet(target insolar.ID, pn insolar.PulseNumber, msg *message.Message) *FetchJet {
 	return &FetchJet{
 		target:  target,
 		pulse:   pn,
-		replyTo: rep,
+		message: msg,
 	}
 }
 
 func (p *FetchJet) Proceed(ctx context.Context) error {
+	err := p.proceed(ctx)
+	if err != nil {
+		go func() {
+			pl := payload.Error{
+				Text: err.Error(),
+			}
+			buf, err := pl.Marshal()
+			if err != nil {
+				inslogger.FromContext(ctx).Error("failed to encode payload")
+			}
+			p.Dep.Sender.Reply(ctx, p.message, message.NewMessage(watermill.NewUUID(), buf))
+		}()
+	}
+	return err
+}
+
+func (p *FetchJet) proceed(ctx context.Context) error {
 	// Special case for genesis pulse. No one was executor at that time, so anyone can fetch data from it.
 	if p.pulse <= insolar.FirstPulseNumber {
 		p.Result.Jet = *insolar.NewJetID(0, nil)
@@ -62,17 +83,14 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 	jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.target, p.pulse)
 	if err != nil {
 		err := errors.Wrap(err, "failed to fetch jet")
-		p.replyTo <- bus.Reply{Err: err}
 		return err
 	}
 	executor, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, p.pulse)
 	if err != nil {
 		err := errors.Wrap(err, "failed to calculate executor for jet")
-		p.replyTo <- bus.Reply{Err: err}
 		return err
 	}
 	if *executor != p.Dep.Coordinator.Me() {
-		p.replyTo <- bus.Reply{Reply: &reply.JetMiss{JetID: *jetID, Pulse: p.pulse}}
 		return errors.New("jet miss")
 	}
 
@@ -83,27 +101,36 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 type WaitHot struct {
 	jetID   insolar.JetID
 	pulse   insolar.PulseNumber
-	replyTo chan<- bus.Reply
+	message *message.Message
 
 	Dep struct {
 		Waiter hot.JetWaiter
+		Sender bus.Sender
 	}
 }
 
-func NewWaitHot(j insolar.JetID, pn insolar.PulseNumber, rep chan<- bus.Reply) *WaitHot {
+func NewWaitHot(j insolar.JetID, pn insolar.PulseNumber, msg *message.Message) *WaitHot {
 	return &WaitHot{
 		jetID:   j,
 		pulse:   pn,
-		replyTo: rep,
+		message: msg,
 	}
 }
 
 func (p *WaitHot) Proceed(ctx context.Context) error {
 	err := p.Dep.Waiter.Wait(ctx, insolar.ID(p.jetID))
 	if err != nil {
-		p.replyTo <- bus.Reply{Reply: &reply.Error{ErrType: reply.ErrHotDataTimeout}}
-		return err
+		go func() {
+			pl := payload.Error{
+				Text: err.Error(),
+			}
+			buf, err := pl.Marshal()
+			if err != nil {
+				inslogger.FromContext(ctx).Error("failed to encode payload")
+			}
+			p.Dep.Sender.Reply(ctx, p.message, message.NewMessage(watermill.NewUUID(), buf))
+		}()
 	}
 
-	return nil
+	return err
 }

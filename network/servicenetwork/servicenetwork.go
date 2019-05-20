@@ -362,6 +362,9 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 		return nil, errors.Wrap(err, "incorrect Receiver in msg.Metadata")
 	}
 	node := *ref
+
+	msg.Metadata.Set(bus.MetaSender, n.NodeKeeper.GetOrigin().ID().String())
+
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
 	if node.Equal(origin.ID()) {

@@ -29,6 +29,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	WMBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
@@ -79,6 +80,8 @@ type MessageHandler struct {
 	middleware     *middleware
 	jetTreeUpdater jet.Fetcher
 
+	Sender WMBus.Sender
+
 	FlowDispatcher *dispatcher.Dispatcher
 	handlers       map[insolar.MessageType]insolar.MessageHandler
 }
@@ -103,9 +106,11 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.JetUpdater = h.jetTreeUpdater
 			p.Dep.JetFetcher = h.jetTreeUpdater
+			p.Dep.Sender = h.Sender
 		},
 		WaitHot: func(p *proc.WaitHot) {
 			p.Dep.Waiter = h.HotDataWaiter
+			p.Dep.Sender = h.Sender
 		},
 		GetIndex: func(p *proc.GetIndex) {
 			p.Dep.IndexState = h.IndexStateModifier

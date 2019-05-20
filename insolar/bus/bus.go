@@ -55,7 +55,7 @@ const (
 
 const (
 	// TypeError is Type for messages with error in Payload
-	TypeError = "error"
+	TypeError = "bus_error"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock.go
@@ -64,6 +64,7 @@ const (
 type Sender interface {
 	// Send a watermill's Message and returns channel for replies and function for closing that channel.
 	Send(ctx context.Context, msg *message.Message) (<-chan *message.Message, func())
+	Reply(ctx context.Context, origin, reply *message.Message)
 }
 
 type lockedReply struct {
@@ -145,6 +146,22 @@ func (b *Bus) Send(ctx context.Context, msg *message.Message) (<-chan *message.M
 	}()
 
 	return reply.messages, done
+}
+
+func (b *Bus) Reply(ctx context.Context, origin, reply *message.Message) {
+	id := middleware.MessageCorrelationID(origin)
+	middleware.SetCorrelationID(id, reply)
+
+	originSender := origin.Metadata.Get(MetaSender)
+	if originSender == "" {
+		inslogger.FromContext(ctx).Error("failed to send reply (no sender)")
+	}
+	reply.Metadata.Set(MetaReceiver, originSender)
+
+	err := b.pub.Publish(TopicOutgoing, reply)
+	if err != nil {
+		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
+	}
 }
 
 // IncomingMessageRouter is watermill middleware for incoming messages - it decides, how to handle it: as request or as reply.
