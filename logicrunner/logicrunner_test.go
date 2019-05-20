@@ -32,11 +32,12 @@ import (
 	"testing"
 	"time"
 
+	"github.com/stretchr/testify/suite"
+	"github.com/ugorji/go/codec"
+
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
-	"github.com/stretchr/testify/suite"
-	"github.com/ugorji/go/codec"
 
 	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/member/signer"
@@ -166,7 +167,7 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	MessageBusTrivialBehavior(mb, lr)
 	pm := l.GetPulseManager()
 
-	s.incrementPulseHelper(ctx, lr, pm)
+	s.incrementPulseHelper(ctx, lr, pm, messageHandler)
 
 	cb := goplugintestutils.NewContractBuilder(am, s.icc)
 
@@ -177,17 +178,16 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	}
 }
 
-func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr insolar.LogicRunner, pm insolar.PulseManager) {
+func (s *LogicRunnerFuncSuite) incrementPulseHelper(ctx context.Context, lr insolar.LogicRunner, pm insolar.PulseManager, messageHandler *artifactmanager.MessageHandler) {
 	pulseStorage := pm.(*pulsemanager.PulseManager).PulseAccessor
 	currentPulse, _ := pulseStorage.Latest(ctx)
 
 	newPulseNumber := currentPulse.PulseNumber + 1
-	err := pm.Set(
-		ctx,
-		insolar.Pulse{PulseNumber: newPulseNumber, Entropy: insolar.Entropy{}},
-		true,
-	)
+	newPulse := insolar.Pulse{PulseNumber: newPulseNumber, Entropy: insolar.Entropy{}}
+	err := pm.Set(ctx, newPulse, true)
 	s.Require().NoError(err)
+
+	messageHandler.FlowDispatcher.ChangePulse(ctx, newPulse)
 
 	rootJetId := *insolar.NewJetID(0, nil)
 	_, err = lr.(*LogicRunner).MessageBus.Send(
@@ -223,13 +223,16 @@ func executeMethod(
 
 	rlr := lr.(*LogicRunner)
 
-	bm := message.BaseLogicMessage{
-		Caller: testutils.RandomRef(),
-		Nonce:  nonce,
+	msg := &message.CallMethod{
+		Caller:    testutils.RandomRef(),
+		Nonce:     nonce,
+		Object:    &objRef,
+		Prototype: &proxyPrototype,
+		Method:    method,
+		Arguments: argsSerialized,
 	}
 
-	rep, err := rlr.ContractRequester.CallMethod(ctx, &bm, false, false, &objRef, method, argsSerialized, &proxyPrototype)
-	return rep, err
+	return rlr.ContractRequester.CallMethod(ctx, msg)
 }
 
 func firstMethodRes(t *testing.T, resp insolar.Reply) interface{} {
@@ -313,6 +316,7 @@ func (c *One) Dec() (int, error) {
 func changePulse(ctx context.Context, lr insolar.LogicRunner, msgHandler *artifactmanager.MessageHandler) {
 	pulse := pulsar.NewPulse(1, insolar.FirstPulseNumber, &entropygenerator.StandardEntropyGenerator{})
 	lr.(*LogicRunner).FlowDispatcher.ChangePulse(ctx, *pulse)
+	lr.(*LogicRunner).InnerFlowDispatcher.ChangePulse(ctx, *pulse)
 	msgHandler.OnPulse(ctx, *pulse)
 }
 
@@ -1555,7 +1559,10 @@ func (r *One) CreateAllowance(member string) (error) {
 	// Call CreateAllowance method in custom contract
 	domain, err := insolar.NewReferenceFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
 	s.Require().NoError(err)
-	contractID, err := am.RegisterRequest(ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.CallConstructor{}})
+	contractID, err := am.RegisterRequest(
+		ctx, insolar.GenesisRecord.Ref(),
+		&message.Parcel{Msg: &message.CallMethod{CallType: message.CTSaveAsChild}},
+	)
 	s.NoError(err)
 	contract := getRefFromID(contractID)
 	_, err = am.ActivateObject(
@@ -2029,10 +2036,13 @@ func (c *First) GetName() (string, error) {
 func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am artifacts.Client, cb *goplugintestutils.ContractsBuilder, contractName string) (*insolar.Reference, *insolar.Reference) {
 	domain, err := insolar.NewReferenceFromBase58("4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
 	s.Require().NoError(err)
+
+	proto := testutils.RandomRef()
+
 	contractID, err := am.RegisterRequest(
 		ctx,
 		insolar.GenesisRecord.Ref(),
-		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: testutils.RandomRef()}},
+		&message.Parcel{Msg: &message.CallMethod{CallType: message.CTSaveAsChild, Prototype: &proto}},
 	)
 	s.NoError(err)
 	objectRef := getRefFromID(contractID)

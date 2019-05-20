@@ -155,6 +155,7 @@ func main() {
 		conf.Log.Level = debugLevel
 		conf.Log.Adapter = "zerolog"
 		conf.Log.Formatter = "json"
+
 		conf.KeysPath = genesisConf.DiscoveryKeysDir + fmt.Sprintf(genesisConf.KeysNameFormat, nodeIndex)
 		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(discoveryDataDirectoryTemplate, nodeIndex)
 		conf.CertificatePath = fmt.Sprintf(discoveryCertificatePathTemplate, nodeIndex)
@@ -194,6 +195,7 @@ func main() {
 		conf.Log.Level = debugLevel
 		conf.Log.Adapter = "zerolog"
 		conf.Log.Formatter = "json"
+
 		conf.KeysPath = node.KeysFile
 		conf.Ledger.Storage.DataDirectory = fmt.Sprintf(nodeDataDirectoryTemplate, nodeIndex)
 		conf.CertificatePath = fmt.Sprintf(nodeCertificatePathTemplate, nodeIndex)

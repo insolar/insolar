@@ -24,6 +24,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
@@ -31,7 +32,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func mockMessageBus(t *testing.T, result insolar.Reply) *testutils.MessageBusMock {
@@ -141,9 +141,6 @@ func TestCallMethodCanceled(t *testing.T) {
 	mb := testutils.NewMessageBusMock(mc)
 	cr.MessageBus = mb
 
-	msg := &message.BaseLogicMessage{
-		Nonce: randomUint64(),
-	}
 	ref := testutils.RandomRef()
 	prototypeRef := testutils.RandomRef()
 	method := testutils.RandomString()
@@ -152,7 +149,13 @@ func TestCallMethodCanceled(t *testing.T) {
 		return &reply.RegisterRequest{}, nil
 	}
 
-	_, err = cr.CallMethod(ctx, msg, false, false, &ref, method, insolar.Arguments{}, &prototypeRef)
+	msg := &message.CallMethod{
+		Object:    &ref,
+		Prototype: &prototypeRef,
+		Method:    method,
+		Arguments: insolar.Arguments{},
+	}
+	_, err = cr.CallMethod(ctx, msg)
 	require.Error(t, err)
 	assert.Contains(t, "canceled", err.Error())
 
@@ -174,9 +177,6 @@ func TestCallMethodWaitResults(t *testing.T) {
 	mb := testutils.NewMessageBusMock(mc)
 	cr.MessageBus = mb
 
-	msg := &message.BaseLogicMessage{
-		Nonce: randomUint64(),
-	}
 	ref := testutils.RandomRef()
 	prototypeRef := testutils.RandomRef()
 	method := testutils.RandomString()
@@ -195,7 +195,15 @@ func TestCallMethodWaitResults(t *testing.T) {
 		}()
 		return &reply.RegisterRequest{}, nil
 	}
-	_, err = cr.CallMethod(ctx, msg, false, false, &ref, method, insolar.Arguments{}, &prototypeRef)
+
+	msg := &message.CallMethod{
+		Object:    &ref,
+		Prototype: &prototypeRef,
+		Method:    method,
+		Arguments: insolar.Arguments{},
+	}
+
+	_, err = cr.CallMethod(ctx, msg)
 	require.NoError(t, err)
 }
 
@@ -215,10 +223,9 @@ func TestReceiveResult(t *testing.T) {
 	parcel := testutils.NewParcelMock(mc).MessageMock.Return(
 		msg,
 	)
-	parcel.PulseFunc = func() insolar.PulseNumber { return insolar.PulseNumber(100) }
 
 	// unexpected result
-	rep, err := cr.FlowDispatcher.WrapBusHandle(ctx, parcel)
+	rep, err := cr.ReceiveResult(ctx, parcel)
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, rep)
 
@@ -231,7 +238,7 @@ func TestReceiveResult(t *testing.T) {
 		chanResult <- <-cr.ResultMap[sequence]
 	}()
 
-	rep, err = cr.FlowDispatcher.WrapBusHandle(ctx, parcel)
+	rep, err = cr.ReceiveResult(ctx, parcel)
 
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, rep)

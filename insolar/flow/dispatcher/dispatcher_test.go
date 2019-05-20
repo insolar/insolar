@@ -18,6 +18,7 @@ package dispatcher
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -243,4 +244,18 @@ func TestDispatcher_InnerSubscriber_Error(t *testing.T) {
 	_, err := d.InnerSubscriber(makeWMMessage(context.Background(), nil))
 	require.NoError(t, err)
 	require.Equal(t, testResult, <-result)
+}
+
+func TestDispatcher_pulseFromString(t *testing.T) {
+	expectedPulse := insolar.PulseNumber(666)
+	pulse, err := pulseFromString(fmt.Sprintf("%d", expectedPulse))
+	require.NoError(t, err)
+	require.Equal(t, expectedPulse, pulse)
+}
+
+func TestDispatcher_pulseFromString_Err(t *testing.T) {
+	pulse, err := pulseFromString("test_string")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "can't convert string value to pulse")
+	require.Equal(t, insolar.PulseNumber(0), pulse)
 }

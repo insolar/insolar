@@ -28,6 +28,11 @@ import (
 	message2 "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/gojuno/minimock"
+	"github.com/pkg/errors"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
@@ -38,10 +43,6 @@ import (
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
-	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -171,7 +172,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 		inState     message.PendingState
 		outState    message.PendingState
 		message     bool
-		messageType insolar.MessageType
+		messageType message.MethodCallType
 		amReply     *struct {
 			has bool
 			err error
@@ -192,14 +193,13 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 			name:        "constructor call",
 			inState:     message.PendingUnknown,
 			message:     true,
-			messageType: insolar.TypeCallConstructor,
+			messageType: message.CTSaveAsChild,
 			outState:    message.NotPending,
 		},
 		{
-			name:        "method call, not pending",
-			inState:     message.PendingUnknown,
-			message:     true,
-			messageType: insolar.TypeCallMethod,
+			name:    "method call, not pending",
+			inState: message.PendingUnknown,
+			message: true,
 			amReply: &struct {
 				has bool
 				err error
@@ -207,10 +207,9 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 			outState: message.NotPending,
 		},
 		{
-			name:        "method call, in pending",
-			inState:     message.PendingUnknown,
-			message:     true,
-			messageType: insolar.TypeCallMethod,
+			name:    "method call, in pending",
+			inState: message.PendingUnknown,
+			message: true,
 			amReply: &struct {
 				has bool
 				err error
@@ -218,10 +217,9 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 			outState: message.InPending,
 		},
 		{
-			name:        "method call, in pending",
-			inState:     message.PendingUnknown,
-			message:     true,
-			messageType: insolar.TypeCallMethod,
+			name:    "method call, in pending",
+			inState: message.PendingUnknown,
+			message: true,
 			amReply: &struct {
 				has bool
 				err error
@@ -235,7 +233,8 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 		suite.T().Run(test.name, func(t *testing.T) {
 			parcel := testutils.NewParcelMock(t)
 			if test.message {
-				parcel.TypeMock.ExpectOnce().Return(test.messageType)
+				parcel.TypeMock.ExpectOnce().Return(insolar.TypeCallMethod)
+				parcel.MessageMock.ExpectOnce().Return(&message.CallMethod{CallType: test.messageType})
 			}
 			es := &ExecutionState{Ref: objectRef, pending: test.inState}
 			if test.amReply != nil {
@@ -259,6 +258,7 @@ func (suite *LogicRunnerTestSuite) TestCheckPendingRequests() {
 	suite.T().Run("method call, AM error", func(t *testing.T) {
 		parcel := testutils.NewParcelMock(t)
 		parcel.TypeMock.Expect().Return(insolar.TypeCallMethod)
+		parcel.MessageMock.ExpectOnce().Return(&message.CallMethod{CallType: message.CTMethod})
 		es := &ExecutionState{Ref: objectRef, pending: message.PendingUnknown}
 		suite.am.HasPendingRequestsMock.Return(false, errors.New("some"))
 		proc := ClarifyPendingState{
@@ -624,8 +624,8 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 	mle.CallMethodMock.Return(data, nil, nil)
 
 	msg := &message.CallMethod{
-		ObjectRef: randRef,
-		Method:    "some",
+		Object: &randRef,
+		Method: "some",
 	}
 
 	// In this case Update isn't send to ledger (objects data/newData are the same)
@@ -869,9 +869,9 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	for i := 0; i < num; i++ {
 		go func(i int) {
 			msg := &message.CallMethod{
-				ObjectRef:      objectRef,
-				Method:         "some",
-				ProxyPrototype: protoRef,
+				Prototype: &protoRef,
+				Object:    &objectRef,
+				Method:    "some",
 			}
 
 			parcel := testutils.NewParcelMock(suite.T())
@@ -1104,9 +1104,9 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			}
 
 			msg := &message.CallMethod{
-				ObjectRef:      objectRef,
-				Method:         "some",
-				ProxyPrototype: protoRef,
+				Prototype: &protoRef,
+				Object:    &objectRef,
+				Method:    "some",
 			}
 
 			parcel := testutils.NewParcelMock(suite.T())
@@ -1120,6 +1120,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 
 			pulse := pulsar.NewPulse(1, parcel.Pulse(), &entropygenerator.StandardEntropyGenerator{})
 			suite.lr.FlowDispatcher.ChangePulse(ctx, *pulse)
+			suite.lr.InnerFlowDispatcher.ChangePulse(ctx, *pulse)
 			_, err := suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
 			if test.errorExpected {
 				suite.Require().Error(err)
@@ -1528,7 +1529,7 @@ func (s LRUnsafeGetLedgerPendingRequestTestSuite) TestUnsafeGetLedgerPendingRequ
 
 	parcel := &message.Parcel{
 		PulseNumber: s.oldRequestPulseNumber,
-		Msg:         &message.CallMethod{}, // todo add ref
+		Msg:         &message.CallMethod{Object: &s.ref},
 	}
 	s.am.GetPendingRequestMock.Return(parcel, nil)
 

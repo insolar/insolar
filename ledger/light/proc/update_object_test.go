@@ -121,7 +121,6 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	updateObject.Dep.IndexStorage = indexMemoryStor
 	updateObject.Dep.PCS = scheme
 	updateObject.Dep.RecordModifier = recordStorage
-	updateObject.Dep.IndexModifier = indexMemoryStor
 	updateObject.Dep.IndexStateModifier = object.NewIndexMemory()
 
 	rep := updateObject.handle(ctx)
@@ -186,7 +185,6 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	updateObject.Dep.IndexStorage = indexMemoryStor
 	updateObject.Dep.PCS = scheme
 	updateObject.Dep.RecordModifier = recordStorage
-	updateObject.Dep.IndexModifier = indexMemoryStor
 	updateObject.Dep.IndexStateModifier = object.NewIndexMemory()
 
 	rep := updateObject.handle(ctx)
