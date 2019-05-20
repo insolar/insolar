@@ -36,6 +36,8 @@ import (
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/record"
+
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar/pulse"
@@ -73,7 +75,7 @@ type CurrentExecution struct {
 	Request       *Ref
 	Sequence      uint64
 	RequesterNode *Ref
-	ReturnMode    message.MethodReturnMode
+	ReturnMode    record.Request_RM
 	SentResult    bool
 }
 
@@ -351,16 +353,13 @@ func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel insolar.Parce
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.RegisterRequest")
 	defer span.End()
 
-	obj := parcel.Message().(*message.CallMethod).GetReference()
-	id, err := lr.ArtifactManager.RegisterRequest(ctx, obj, parcel)
+	msg := parcel.Message().(*message.CallMethod)
+	id, err := lr.ArtifactManager.RegisterRequest(ctx, msg.Request)
 	if err != nil {
 		return nil, err
 	}
 
-	res := obj
-	res.SetRecord(*id)
-
-	return &res, nil
+	return insolar.NewReference(insolar.DomainID, *id), nil
 }
 
 func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context {
@@ -379,12 +378,12 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	if es.Current.ReturnMode == message.ReturnNoWait {
+	if es.Current.ReturnMode == record.ReturnNoWait {
 		return false
 	}
 
 	msg, ok := parcel.Message().(*message.CallMethod)
-	if ok && msg.ReturnMode == message.ReturnNoWait {
+	if ok && msg.ReturnMode == record.ReturnNoWait {
 		return false
 	}
 
@@ -450,11 +449,11 @@ func (lr *LogicRunner) executeOrValidate(
 	var re insolar.Reply
 	var err error
 	switch msg.CallType {
-	case message.CTMethod:
+	case record.CTMethod:
 		es.Current.LogicContext.Immutable = msg.Immutable
 		re, err = lr.executeMethodCall(ctx, es, msg)
 
-	case message.CTSaveAsChild, message.CTSaveAsDelegate:
+	case record.CTSaveAsChild, record.CTSaveAsDelegate:
 		re, err = lr.executeConstructorCall(ctx, es, msg)
 
 	default:
@@ -470,7 +469,7 @@ func (lr *LogicRunner) executeOrValidate(
 	defer es.Unlock()
 
 	es.Current.SentResult = true
-	if es.Current.ReturnMode != message.ReturnResult {
+	if es.Current.ReturnMode != record.ReturnResult {
 		return
 	}
 
@@ -739,10 +738,10 @@ func (lr *LogicRunner) executeConstructorCall(
 	}
 
 	switch m.CallType {
-	case message.CTSaveAsChild, message.CTSaveAsDelegate:
+	case record.CTSaveAsChild, record.CTSaveAsDelegate:
 		_, err = lr.ArtifactManager.ActivateObject(
 			ctx,
-			Ref{}, *current.Request, *m.Base, *m.Prototype, m.CallType == message.CTSaveAsDelegate, newData,
+			Ref{}, *current.Request, *m.Base, *m.Prototype, m.CallType == record.CTSaveAsDelegate, newData,
 		)
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't activate object")

@@ -670,8 +670,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	req := record.Request{
-		MessageHash: []byte{1, 2, 3},
-		Object:      *genRandomID(0),
+		Object:      genRandomRef(0),
 	}
 
 	virtRec := record.Wrap(req)

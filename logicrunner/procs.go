@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
@@ -83,16 +84,13 @@ func (r *RegisterRequest) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, "RegisterRequest.Proceed")
 	defer span.End()
 
-	obj := r.parcel.Message().(*message.CallMethod).GetReference()
-	id, err := r.ArtifactManager.RegisterRequest(ctx, obj, r.parcel)
+	msg := r.parcel.Message().(*message.CallMethod)
+	id, err := r.ArtifactManager.RegisterRequest(ctx, msg.Request)
 	if err != nil {
 		return err
 	}
 
-	res := obj
-	res.SetRecord(*id)
-
-	r.setResult(&res)
+	r.setResult(insolar.NewReference(insolar.DomainID, *id))
 	return nil
 }
 
@@ -120,7 +118,7 @@ func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
 		}
 
 		msg := c.parcel.Message().(*message.CallMethod)
-		if msg.CallType != message.CTMethod {
+		if msg.CallType != record.CTMethod {
 			c.es.Unlock()
 			c.es.pending = message.NotPending
 			return nil

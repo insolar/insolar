@@ -24,6 +24,7 @@ import (
 	"runtime/debug"
 	"sync"
 
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
@@ -124,20 +125,22 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (e
 	es.nonce++
 
 	msg := &message.CallMethod{
-		Caller:          req.Callee,
-		CallerPrototype: req.CalleePrototype,
-		Nonce:           es.nonce,
+		Request: record.Request{
+			Caller:          req.Callee,
+			CallerPrototype: req.CalleePrototype,
+			Nonce:           es.nonce,
 
-		Immutable: req.Immutable,
+			Immutable: req.Immutable,
 
-		Object:    &req.Object,
-		Prototype: &req.Prototype,
-		Method:    req.Method,
-		Arguments: req.Arguments,
+			Object:    &req.Object,
+			Prototype: &req.Prototype,
+			Method:    req.Method,
+			Arguments: req.Arguments,
+		},
 	}
 
 	if !req.Wait {
-		msg.ReturnMode = message.ReturnNoWait
+		msg.ReturnMode = record.ReturnNoWait
 	}
 
 	res, err := gpr.lr.ContractRequester.CallMethod(ctx, msg)
@@ -163,15 +166,17 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 	es.nonce++
 
 	msg := &message.CallMethod{
-		Caller:          req.Callee,
-		CallerPrototype: req.CalleePrototype,
-		Nonce:           es.nonce,
+		Request: record.Request{
+			Caller:          req.Callee,
+			CallerPrototype: req.CalleePrototype,
+			Nonce:           es.nonce,
 
-		CallType:  message.CTSaveAsChild,
-		Base:      &req.Parent,
-		Prototype: &req.Prototype,
-		Method:    req.ConstructorName,
-		Arguments: req.ArgsSerialized,
+			CallType:  record.CTSaveAsChild,
+			Base:      &req.Parent,
+			Prototype: &req.Prototype,
+			Method:    req.ConstructorName,
+			Arguments: req.ArgsSerialized,
+		},
 	}
 
 	ref, err := gpr.lr.ContractRequester.CallConstructor(ctx, msg)
@@ -192,15 +197,17 @@ func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.U
 	es.nonce++
 
 	msg := &message.CallMethod{
-		Caller:          req.Callee,
-		CallerPrototype: req.CalleePrototype,
-		Nonce:           es.nonce,
+		Request: record.Request{
+			Caller:          req.Callee,
+			CallerPrototype: req.CalleePrototype,
+			Nonce:           es.nonce,
 
-		CallType:  message.CTSaveAsDelegate,
-		Base:      &req.Into,
-		Prototype: &req.Prototype,
-		Method:    req.ConstructorName,
-		Arguments: req.ArgsSerialized,
+			CallType:  record.CTSaveAsDelegate,
+			Base:      &req.Into,
+			Prototype: &req.Prototype,
+			Method:    req.ConstructorName,
+			Arguments: req.ArgsSerialized,
+		},
 	}
 
 	ref, err := gpr.lr.ContractRequester.CallConstructor(ctx, msg)
