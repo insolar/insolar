@@ -24,6 +24,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
@@ -31,7 +32,6 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func mockMessageBus(t *testing.T, result insolar.Reply) *testutils.MessageBusMock {
@@ -207,7 +207,6 @@ func TestCallMethodWaitResults(t *testing.T) {
 	require.NoError(t, err)
 }
 
-// TODO: rewrite this test
 func TestReceiveResult(t *testing.T) {
 	ctx := context.Background()
 	ctx, cancelFunc := context.WithTimeout(ctx, time.Second*10)
@@ -224,10 +223,9 @@ func TestReceiveResult(t *testing.T) {
 	parcel := testutils.NewParcelMock(mc).MessageMock.Return(
 		msg,
 	)
-	parcel.PulseFunc = func() insolar.PulseNumber { return insolar.PulseNumber(100) }
 
 	// unexpected result
-	rep, err := cr.FlowDispatcher.WrapBusHandle(ctx, parcel) // TODO: use cr.ReceiveResult
+	rep, err := cr.ReceiveResult(ctx, parcel)
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, rep)
 
@@ -240,7 +238,7 @@ func TestReceiveResult(t *testing.T) {
 		chanResult <- <-cr.ResultMap[sequence]
 	}()
 
-	rep, err = cr.FlowDispatcher.WrapBusHandle(ctx, parcel) // TODO: use cr.ReceiveResult
+	rep, err = cr.ReceiveResult(ctx, parcel)
 
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, rep)

@@ -46,42 +46,10 @@ func New() (*ContractRequester, error) {
 	return &ContractRequester{
 		ResultMap: make(map[uint64]chan *message.ReturnResults),
 	}, nil
-
-	/***
-	res := &ContractRequester{
-		ResultMap: make(map[uint64]chan *message.ReturnResults),
-	}
-
-	wmLogger := watermill.NewStdLogger(false, false)
-	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
-
-	dep := &Dependencies{
-		Publisher: pubSub,
-		cr:        res,
-	}
-
-	initHandle := func(msg bus.Message) *Init {
-		return &Init{
-			dep:     dep,
-			Message: msg,
-		}
-	}
-
-	res.FlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
-		return initHandle(msg).Present
-	}, func(msg bus.Message) flow.Handle {
-		return initHandle(msg).Present
-	})
-
-	return res, nil
-	***/
 }
 
 func (cr *ContractRequester) Start(ctx context.Context) error {
 	cr.MessageBus.MustRegister(insolar.TypeReturnResults, cr.ReceiveResult)
-	/***
-	cr.MessageBus.MustRegister(insolar.TypeReturnResults, cr.FlowDispatcher.WrapBusHandle)
-	 ***/
 	return nil
 }
 
