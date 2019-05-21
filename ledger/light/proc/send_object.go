@@ -75,11 +75,7 @@ func (p *SendObject) handle(
 	if msg.State != nil {
 		stateID = msg.State
 	} else {
-		if msg.Approved {
-			stateID = p.index.LatestStateApproved
-		} else {
-			stateID = p.index.LatestState
-		}
+		stateID = p.index.LatestState
 	}
 	if stateID == nil {
 		return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
@@ -231,7 +227,6 @@ func (p *SendObject) fetchObject(
 		ctx,
 		&message.GetObject{
 			Head:     obj,
-			Approved: false,
 			State:    stateID,
 		},
 		&insolar.MessageSendOptions{
