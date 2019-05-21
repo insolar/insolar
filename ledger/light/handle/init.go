@@ -41,65 +41,58 @@ func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
-	if s.Message.WatermillMsg != nil {
-		msgType := s.Message.WatermillMsg.Metadata.Get(wmBus.MetaType)
-		switch msgType {
-		case insolar.TypeGetObject.String():
-			parcel, err := message.DeserializeParcel(bytes.NewBuffer(s.Message.WatermillMsg.Payload))
-			if err != nil {
-				return errors.Wrap(err, "can't deserialize payload")
-			}
-			s.Message.Parcel = parcel
-			h := &GetObject{
-				dep:     s.Dep,
-				Message: s.Message,
-			}
-			return f.Handle(ctx, h.Present)
-		default:
-			return fmt.Errorf("no handler for message type %s", msgType)
-		}
+	if s.Message.WatermillMsg == nil {
+		// TODO: update error msg
+		return fmt.Errorf("no handler for not wm message, parcel type is %s", s.Message.Parcel.Message().Type())
 	}
+	msgType := s.Message.WatermillMsg.Metadata.Get(wmBus.MetaType)
 
-	switch s.Message.Parcel.Message().Type() {
-	case insolar.TypeGetObject:
+	parcel, err := message.DeserializeParcel(bytes.NewBuffer(s.Message.WatermillMsg.Payload))
+	if err != nil {
+		return errors.Wrap(err, "can't deserialize payload")
+	}
+	s.Message.Parcel = parcel
+
+	switch msgType {
+	case insolar.TypeGetObject.String():
 		h := &GetObject{
 			dep:     s.Dep,
 			Message: s.Message,
 		}
 		return f.Handle(ctx, h.Present)
-	case insolar.TypeSetRecord:
+	case insolar.TypeSetRecord.String():
 		msg := s.Message.Parcel.Message().(*message.SetRecord)
 		h := NewSetRecord(s.Dep, s.Message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
-	case insolar.TypeSetBlob:
+	case insolar.TypeSetBlob.String():
 		msg := s.Message.Parcel.Message().(*message.SetBlob)
 		h := NewSetBlob(s.Dep, s.Message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetCode:
+	case insolar.TypeGetCode.String():
 		msg := s.Message.Parcel.Message().(*message.GetCode)
 		h := NewGetCode(s.Dep, s.Message.ReplyTo, msg.Code)
 		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetRequest:
+	case insolar.TypeGetRequest.String():
 		msg := s.Message.Parcel.Message().(*message.GetRequest)
 		h := NewGetRequest(s.Dep, s.Message.ReplyTo, msg.Request)
 		return f.Handle(ctx, h.Present)
-	case insolar.TypeUpdateObject:
+	case insolar.TypeUpdateObject.String():
 		msg := s.Message.Parcel.Message().(*message.UpdateObject)
 		h := NewUpdateObject(s.Dep, s.Message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetPendingRequests:
+	case insolar.TypeGetPendingRequests.String():
 		h := NewGetPendingRequests(s.Dep, s.Message.ReplyTo, s.Message.Parcel)
 		return f.Handle(ctx, h.Present)
-	case insolar.TypeRegisterChild:
+	case insolar.TypeRegisterChild.String():
 		msg := s.Message.Parcel.Message().(*message.RegisterChild)
 		h := NewRegisterChild(s.Dep, s.Message.ReplyTo, msg, s.Message.Parcel.Pulse())
 		return f.Handle(ctx, h.Present)
-	case insolar.TypeGetJet:
+	case insolar.TypeGetJet.String():
 		msg := s.Message.Parcel.Message().(*message.GetJet)
 		h := NewGetJet(s.Dep, s.Message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
 	default:
-		return fmt.Errorf("no handler for message type %s", s.Message.Parcel.Message().Type().String())
+		return fmt.Errorf("no handler for message type %s", msgType)
 	}
 }
 
