@@ -62,8 +62,6 @@ func extractReference(response []byte, requestTypeMsg string) insolar.Reference 
 	if verbose {
 		fmt.Println("Response:", string(response))
 	}
-	fmt.Println("Result:", string(r.Result))
-	fmt.Println("TraceID:", string(r.TraceID))
 
 	ref, err := insolar.NewReferenceFromBase58(r.Result)
 	checkError(fmt.Sprintf("Failed to construct ref from '%s' node response", requestTypeMsg), err)
