@@ -143,8 +143,7 @@ func TestHost_Equal(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			h := &Host{NodeID: test.id1, Address: test.addr1}
-			require.Equal(t, test.equal, h.Equal(&Host{NodeID: test.id2, Address: test.addr2}))
+			require.Equal(t, test.equal, Host{NodeID: test.id1, Address: test.addr1}.Equal(Host{NodeID: test.id2, Address: test.addr2}))
 		})
 	}
 }
