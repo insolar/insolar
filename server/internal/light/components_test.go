@@ -24,7 +24,16 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var testPassed = false
+
 func TestComponents(t *testing.T) {
+	if testPassed {
+		// Dirty hack. This test doesn't work properly with -count 10
+		// because it registers HTTP handlers. Sadly there is no way
+		// to unregister HTTP handlers in net/http package.
+		return
+	}
+
 	ctx := context.Background()
 	cfg := configuration.NewConfiguration()
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
@@ -36,4 +45,6 @@ func TestComponents(t *testing.T) {
 	require.NoError(t, err)
 	err = c.Stop(ctx)
 	require.NoError(t, err)
+
+	testPassed = true
 }

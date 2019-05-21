@@ -12,6 +12,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -40,7 +41,7 @@ type ManagerMock struct {
 	GetObjectPreCounter uint64
 	GetObjectMock       mManagerMockGetObject
 
-	RegisterRequestFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error)
+	RegisterRequestFunc       func(p context.Context, p1 record.Request) (r *insolar.ID, r1 error)
 	RegisterRequestCounter    uint64
 	RegisterRequestPreCounter uint64
 	RegisterRequestMock       mManagerMockRegisterRequest
@@ -704,8 +705,7 @@ type ManagerMockRegisterRequestExpectation struct {
 
 type ManagerMockRegisterRequestInput struct {
 	p  context.Context
-	p1 insolar.Reference
-	p2 insolar.Parcel
+	p1 record.Request
 }
 
 type ManagerMockRegisterRequestResult struct {
@@ -714,14 +714,14 @@ type ManagerMockRegisterRequestResult struct {
 }
 
 //Expect specifies that invocation of Manager.RegisterRequest is expected from 1 to Infinity times
-func (m *mManagerMockRegisterRequest) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) *mManagerMockRegisterRequest {
+func (m *mManagerMockRegisterRequest) Expect(p context.Context, p1 record.Request) *mManagerMockRegisterRequest {
 	m.mock.RegisterRequestFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ManagerMockRegisterRequestExpectation{}
 	}
-	m.mainExpectation.input = &ManagerMockRegisterRequestInput{p, p1, p2}
+	m.mainExpectation.input = &ManagerMockRegisterRequestInput{p, p1}
 	return m
 }
 
@@ -738,12 +738,12 @@ func (m *mManagerMockRegisterRequest) Return(r *insolar.ID, r1 error) *ManagerMo
 }
 
 //ExpectOnce specifies that invocation of Manager.RegisterRequest is expected once
-func (m *mManagerMockRegisterRequest) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) *ManagerMockRegisterRequestExpectation {
+func (m *mManagerMockRegisterRequest) ExpectOnce(p context.Context, p1 record.Request) *ManagerMockRegisterRequestExpectation {
 	m.mock.RegisterRequestFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &ManagerMockRegisterRequestExpectation{}
-	expectation.input = &ManagerMockRegisterRequestInput{p, p1, p2}
+	expectation.input = &ManagerMockRegisterRequestInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -753,7 +753,7 @@ func (e *ManagerMockRegisterRequestExpectation) Return(r *insolar.ID, r1 error) 
 }
 
 //Set uses given function f as a mock of Manager.RegisterRequest method
-func (m *mManagerMockRegisterRequest) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error)) *ManagerMock {
+func (m *mManagerMockRegisterRequest) Set(f func(p context.Context, p1 record.Request) (r *insolar.ID, r1 error)) *ManagerMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -762,18 +762,18 @@ func (m *mManagerMockRegisterRequest) Set(f func(p context.Context, p1 insolar.R
 }
 
 //RegisterRequest implements github.com/insolar/insolar/internal/ledger/artifact.Manager interface
-func (m *ManagerMock) RegisterRequest(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
+func (m *ManagerMock) RegisterRequest(p context.Context, p1 record.Request) (r *insolar.ID, r1 error) {
 	counter := atomic.AddUint64(&m.RegisterRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.RegisterRequestCounter, 1)
 
 	if len(m.RegisterRequestMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.RegisterRequestMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ManagerMock.RegisterRequest. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to ManagerMock.RegisterRequest. %v %v", p, p1)
 			return
 		}
 
 		input := m.RegisterRequestMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ManagerMockRegisterRequestInput{p, p1, p2}, "Manager.RegisterRequest got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ManagerMockRegisterRequestInput{p, p1}, "Manager.RegisterRequest got unexpected parameters")
 
 		result := m.RegisterRequestMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -791,7 +791,7 @@ func (m *ManagerMock) RegisterRequest(p context.Context, p1 insolar.Reference, p
 
 		input := m.RegisterRequestMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ManagerMockRegisterRequestInput{p, p1, p2}, "Manager.RegisterRequest got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ManagerMockRegisterRequestInput{p, p1}, "Manager.RegisterRequest got unexpected parameters")
 		}
 
 		result := m.RegisterRequestMock.mainExpectation.result
@@ -806,11 +806,11 @@ func (m *ManagerMock) RegisterRequest(p context.Context, p1 insolar.Reference, p
 	}
 
 	if m.RegisterRequestFunc == nil {
-		m.t.Fatalf("Unexpected call to ManagerMock.RegisterRequest. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to ManagerMock.RegisterRequest. %v %v", p, p1)
 		return
 	}
 
-	return m.RegisterRequestFunc(p, p1, p2)
+	return m.RegisterRequestFunc(p, p1)
 }
 
 //RegisterRequestMinimockCounter returns a count of ManagerMock.RegisterRequestFunc invocations
