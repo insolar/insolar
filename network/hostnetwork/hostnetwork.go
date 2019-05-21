@@ -172,7 +172,7 @@ func (hn *hostNetwork) PublicAddress() string {
 
 // NewRequestBuilder create packet Builder for an outgoing request with sender set to current node.
 func (hn *hostNetwork) NewRequestBuilder() network.RequestBuilder {
-	return &Builder{sender: hn.getOrigin(), id: network.RequestID(hn.sequenceGenerator.Generate())}
+	return &Builder{sender: hn.getOrigin(), id: types.RequestID(hn.sequenceGenerator.Generate())}
 }
 
 func (hn *hostNetwork) handleRequest(p *packet.Packet) {

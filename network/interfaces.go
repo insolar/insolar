@@ -138,16 +138,13 @@ type ConsensusNetwork interface {
 	RegisterPacketHandler(t packets.PacketType, handler ConsensusPacketHandler)
 }
 
-// RequestID is 64 bit unsigned int request id.
-type RequestID uint64
-
 // Packet is a packet that is transported via network by HostNetwork.
 type Packet interface {
 	GetSender() insolar.Reference
 	GetSenderHost() *host.Host
 	GetType() types.PacketType
 	GetData() interface{}
-	GetRequestID() RequestID
+	GetRequestID() types.RequestID
 }
 
 // Request is a packet that is sent from the current node.

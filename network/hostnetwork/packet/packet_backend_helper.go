@@ -57,7 +57,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/pkg/errors"
@@ -129,8 +128,8 @@ func (p *PacketBackend) GetData() interface{} {
 	return p.GetPayload()
 }
 
-func (p *PacketBackend) GetRequestID() network.RequestID {
-	return network.RequestID(p.RequestID)
+func (p *PacketBackend) GetRequestID() types.RequestID {
+	return types.RequestID(p.RequestID)
 }
 
 func (p *PacketBackend) IsResponse() bool {

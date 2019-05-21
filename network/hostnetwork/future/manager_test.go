@@ -53,9 +53,9 @@ package future
 import (
 	"testing"
 
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/require"
 )
@@ -76,7 +76,7 @@ func TestFutureManager_Create(t *testing.T) {
 		Receiver(receiver).
 		Type(packet.TestPacket).
 		Request(&packet.RequestTest{[]byte{0, 1, 2, 3}}).
-		RequestID(network.RequestID(123)).
+		RequestID(types.RequestID(123)).
 		Build()
 
 	future := m.Create(p)
@@ -97,7 +97,7 @@ func TestFutureManager_Get(t *testing.T) {
 		Receiver(receiver).
 		Type(packet.TestPacket).
 		Request(&packet.RequestTest{[]byte{0, 1, 2, 3}}).
-		RequestID(network.RequestID(123)).
+		RequestID(types.RequestID(123)).
 		Build()
 
 	require.Nil(t, m.Get(p))
@@ -118,7 +118,7 @@ func TestFutureManager_Canceler(t *testing.T) {
 		Receiver(receiver).
 		Type(packet.TestPacket).
 		Request(&packet.RequestTest{[]byte{0, 1, 2, 3}}).
-		RequestID(network.RequestID(123)).
+		RequestID(types.RequestID(123)).
 		Build()
 
 	future := m.Create(p)

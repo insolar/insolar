@@ -51,7 +51,6 @@
 package packet
 
 import (
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
@@ -104,7 +103,7 @@ func (cb Builder) Request(request interface{}) Builder {
 	return cb
 }
 
-func (cb Builder) RequestID(id network.RequestID) Builder {
+func (cb Builder) RequestID(id types.RequestID) Builder {
 	cb.actions = append(cb.actions, func(packet *Packet) {
 		packet.RequestID = id
 	})

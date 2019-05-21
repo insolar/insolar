@@ -78,3 +78,6 @@ const (
 	// Disconnect is packet type to gracefully disconnect from network.
 	Disconnect
 )
+
+// RequestID is 64 bit unsigned int request id.
+type RequestID uint64

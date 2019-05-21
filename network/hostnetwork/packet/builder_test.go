@@ -53,10 +53,10 @@ package packet
 import (
 	"testing"
 
-	"github.com/insolar/insolar/network"
 	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/testutils"
 )
 
@@ -68,7 +68,7 @@ func TestBuilder_Build_RequestPacket(t *testing.T) {
 		Receiver(receiver).
 		Type(TestPacket).
 		Request(&RequestTest{[]byte{0, 1, 2, 3}}).
-		RequestID(network.RequestID(123)).
+		RequestID(types.RequestID(123)).
 		TraceID("trace_id").
 		Build()
 
@@ -78,7 +78,7 @@ func TestBuilder_Build_RequestPacket(t *testing.T) {
 		Type:       TestPacket,
 		Data:       &RequestTest{[]byte{0, 1, 2, 3}},
 		IsResponse: false,
-		RequestID:  network.RequestID(123),
+		RequestID:  types.RequestID(123),
 		TraceID:    "trace_id",
 	}
 	require.Equal(t, expectedPacket, m)
@@ -92,7 +92,7 @@ func TestBuilder_Build_ResponsePacket(t *testing.T) {
 		Receiver(receiver).
 		Type(TestPacket).
 		Response(&ResponseTest{42}).
-		RequestID(network.RequestID(123)).
+		RequestID(types.RequestID(123)).
 		TraceID("trace_id").
 		Build()
 
@@ -102,7 +102,7 @@ func TestBuilder_Build_ResponsePacket(t *testing.T) {
 		Type:       TestPacket,
 		Data:       &ResponseTest{42},
 		IsResponse: true,
-		RequestID:  network.RequestID(123),
+		RequestID:  types.RequestID(123),
 		TraceID:    "trace_id",
 	}
 	require.Equal(t, expectedPacket, m)

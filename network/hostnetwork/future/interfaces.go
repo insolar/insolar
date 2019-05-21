@@ -58,6 +58,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
 var (
@@ -71,7 +72,7 @@ var (
 type Future interface {
 
 	// ID returns packet sequence number.
-	ID() network.RequestID
+	ID() types.RequestID
 
 	// Receiver returns the initiator of the packet.
 	Receiver() *host.Host

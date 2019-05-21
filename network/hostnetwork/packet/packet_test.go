@@ -56,8 +56,8 @@ import (
 	"encoding/gob"
 	"testing"
 
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -142,7 +142,7 @@ func (s *PacketSuite) TestGetData() {
 }
 
 func (s *PacketSuite) TestGetRequestID() {
-	s.Equal(s.packet.GetRequestID(), network.RequestID(123))
+	s.Equal(s.packet.GetRequestID(), types.RequestID(123))
 }
 
 func TestPacketMethods(t *testing.T) {
@@ -153,7 +153,7 @@ func TestPacketMethods(t *testing.T) {
 		Receiver(receiver).
 		Type(TestPacket).
 		Request(&RequestTest{[]byte{0, 1, 2, 3}}).
-		RequestID(network.RequestID(123)).
+		RequestID(types.RequestID(123)).
 		Build()
 
 	suite.Run(t, &PacketSuite{

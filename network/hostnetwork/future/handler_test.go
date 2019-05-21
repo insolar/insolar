@@ -55,7 +55,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
@@ -71,7 +70,7 @@ func newPacket() *packet.Packet {
 		Receiver(receiver).
 		Type(packet.TestPacket).
 		Request(&packet.RequestTest{[]byte{0, 1, 2, 3}}).
-		RequestID(network.RequestID(123)).
+		RequestID(types.RequestID(123)).
 		Build()
 	return p
 }

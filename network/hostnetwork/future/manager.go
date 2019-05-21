@@ -53,18 +53,18 @@ package future
 import (
 	"sync"
 
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
 type futureManager struct {
 	mutex   sync.RWMutex
-	futures map[network.RequestID]Future
+	futures map[types.RequestID]Future
 }
 
 func NewManager() Manager {
 	return &futureManager{
-		futures: make(map[network.RequestID]Future),
+		futures: make(map[types.RequestID]Future),
 	}
 }
 

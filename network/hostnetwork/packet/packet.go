@@ -60,7 +60,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
-	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
@@ -70,7 +69,7 @@ type Packet struct {
 	Sender    *host.Host
 	Receiver  *host.Host
 	Type      types.PacketType
-	RequestID network.RequestID
+	RequestID types.RequestID
 
 	TraceID    string
 	Data       interface{}
@@ -93,7 +92,7 @@ func (p *Packet) GetData() interface{} {
 	return p.Data
 }
 
-func (p *Packet) GetRequestID() network.RequestID {
+func (p *Packet) GetRequestID() types.RequestID {
 	return p.RequestID
 }
 

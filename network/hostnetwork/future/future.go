@@ -58,19 +58,20 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
 	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 )
 
 type future struct {
 	response       chan network.Response
 	receiver       *host.Host
 	request        *packet.Packet
-	requestID      network.RequestID
+	requestID      types.RequestID
 	cancelCallback CancelCallback
 	finished       uint32
 }
 
 // NewFuture creates a new Future.
-func NewFuture(requestID network.RequestID, receiver *host.Host, packet *packet.Packet, cancelCallback CancelCallback) Future {
+func NewFuture(requestID types.RequestID, receiver *host.Host, packet *packet.Packet, cancelCallback CancelCallback) Future {
 	metrics.NetworkFutures.WithLabelValues(packet.Type.String()).Inc()
 	return &future{
 		response:       make(chan network.Response, 1),
@@ -82,7 +83,7 @@ func NewFuture(requestID network.RequestID, receiver *host.Host, packet *packet.
 }
 
 // ID returns RequestID of packet.
-func (f *future) ID() network.RequestID {
+func (f *future) ID() types.RequestID {
 	return f.requestID
 }
 

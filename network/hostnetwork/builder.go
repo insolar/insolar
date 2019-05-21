@@ -62,7 +62,7 @@ type Builder struct {
 	sender *host.Host
 	t      types.PacketType
 	data   interface{}
-	id     network.RequestID
+	id     types.RequestID
 }
 
 func (b *Builder) Type(packetType types.PacketType) network.RequestBuilder {
@@ -91,7 +91,7 @@ func (b *Builder) GetData() interface{} {
 	return b.data
 }
 
-func (b *Builder) GetRequestID() network.RequestID {
+func (b *Builder) GetRequestID() types.RequestID {
 	return b.id
 }
 

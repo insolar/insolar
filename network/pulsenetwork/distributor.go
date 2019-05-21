@@ -203,8 +203,8 @@ func (d *distributor) Distribute(ctx context.Context, pulse insolar.Pulse) {
 	wg.Wait()
 }
 
-func (d *distributor) generateID() network.RequestID {
-	return network.RequestID(d.idGenerator.Generate())
+func (d *distributor) generateID() types.RequestID {
+	return types.RequestID(d.idGenerator.Generate())
 }
 
 func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
