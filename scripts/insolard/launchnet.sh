@@ -38,6 +38,18 @@ CONFIGS_DIR=${LAUNCHNET_BASE_DIR}configs
 KEYS_FILE=$CONFIGS_DIR/bootstrap_keys.json
 ROOT_MEMBER_KEYS_FILE=${CONFIGS_DIR}/root_member_keys.json
 
+MD_ADMIN_MEMBER_KEYS_FILE=$CONFIGS_DIR/md_admin_member_keys.json
+ORACLE0_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle0_member_keys.json
+ORACLE1_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle1_member_keys.json
+ORACLE2_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle2_member_keys.json
+ORACLE3_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle3_member_keys.json
+ORACLE4_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle4_member_keys.json
+ORACLE5_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle5_member_keys.json
+ORACLE6_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle6_member_keys.json
+ORACLE7_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle7_member_keys.json
+ORACLE8_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle8_member_keys.json
+ORACLE9_MEMBER_KEYS_FILE=$CONFIGS_DIR/oracle9_member_keys.json
+
 # TODO: use only heavy matereal data dir
 DISCOVERY_NODES_DATA=${LAUNCHNET_BASE_DIR}discoverynodes/
 
@@ -189,6 +201,21 @@ generate_root_member_keys()
 {
     echo "generate root member_keys: $ROOT_MEMBER_KEYS_FILE"
     bin/insolar gen-key-pair > $ROOT_MEMBER_KEYS_FILE
+
+    echo "generate admin member_keys: $MD_ADMIN_MEMBER_KEYS_FILE"
+    bin/insolar gen-key-pair > $MD_ADMIN_MEMBER_KEYS_FILE
+
+    echo "generate oracles member_keys"
+    bin/insolar gen-key-pair > $ORACLE0_MEMBER_KEYS_FILE
+    bin/insolar gen-key-pair > $ORACLE1_MEMBER_KEYS_FILE
+    bin/insolar gen-key-pair > $ORACLE2_MEMBER_KEYS_FILE
+    bin/insolar gen-key-pair > $ORACLE3_MEMBER_KEYS_FILE
+    bin/insolar gen-key-pair > $ORACLE4_MEMBER_KEYS_FILE
+    bin/insolar gen-key-pair > $ORACLE5_MEMBER_KEYS_FILE
+    bin/insolar gen-key-pair > $ORACLE6_MEMBER_KEYS_FILE
+    bin/insolar gen-key-pair > $ORACLE7_MEMBER_KEYS_FILE
+    bin/insolar gen-key-pair > $ORACLE8_MEMBER_KEYS_FILE
+    bin/insolar gen-key-pair > $ORACLE9_MEMBER_KEYS_FILE
 }
 
 check_working_dir()

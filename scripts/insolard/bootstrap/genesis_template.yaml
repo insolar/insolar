@@ -1,8 +1,42 @@
 root_keys_file: "{{ .BaseDir }}/configs/root_member_keys.json"
+md_admin_keys_file: "{{ .BaseDir }}/configs/md_admin_member_keys.json"
+oracle_keys_file:
+  -
+    name: "oracle0"
+    keys_file: "{{ .BaseDir }}/configs/oracle0_member_keys.json"
+#  -
+#    name: "oracle1"
+#    keys_file: "{{ .BaseDir }}/configs/oracle1_member_keys.json"
+#  -
+#    name: "oracle2"
+#    keys_file: "{{ .BaseDir }}/configs/oracle2_member_keys.json"
+#  -
+#    name: "oracle3"
+#    keys_file: "{{ .BaseDir }}/configs/oracle3_member_keys.json"
+#  -
+#    name: "oracle4"
+#    keys_file: "{{ .BaseDir }}/configs/oracle4_member_keys.json"
+#  -
+#    name: "oracle5"
+#    keys_file: "{{ .BaseDir }}/configs/oracle5_member_keys.json"
+#  -
+#    name: "oracle6"
+#    keys_file: "{{ .BaseDir }}/configs/oracle6_member_keys.json"
+#  -
+#    name: "oracle7"
+#    keys_file: "{{ .BaseDir }}/configs/oracle7_member_keys.json"
+#  -
+#    name: "oracle8"
+#    keys_file: "{{ .BaseDir }}/configs/oracle8_member_keys.json"
+#  -
+#    name: "oracle9"
+#    keys_file: "{{ .BaseDir }}/configs/oracle9_member_keys.json"
+
 discovery_keys_dir: "{{ .BaseDir }}/reusekeys/discovery"
 keys_name_format: "/node_%02d.json"
 reuse_keys: false
 root_balance: 1000000000
+md_balance: 1000000000
 majority_rule: 0
 min_roles:
   virtual:  1

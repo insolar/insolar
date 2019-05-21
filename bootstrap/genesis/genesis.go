@@ -40,15 +40,15 @@ import (
 )
 
 const (
-	nodeDomain        = "nodedomain"
-	nodeRecord        = "noderecord"
-	rootDomain        = rootdomain.Name
-	walletContract    = "wallet"
-	memberContract    = "member"
-	allowanceContract = "allowance"
+	nodeDomain      = "nodedomain"
+	nodeRecord      = "noderecord"
+	rootDomain      = rootdomain.Name
+	walletContract  = "wallet"
+	memberContract  = "member"
+	depositContract = "deposit"
 )
 
-var contractNames = []string{walletContract, memberContract, allowanceContract, rootDomain, nodeDomain, nodeRecord}
+var contractNames = []string{walletContract, memberContract, depositContract, rootDomain, nodeDomain, nodeRecord}
 
 type nodeInfo struct {
 	privateKey crypto.PrivateKey
@@ -64,10 +64,14 @@ type Generator struct {
 	config          *Config
 	artifactManager artifact.Manager
 
-	rootRecord         *rootdomain.Record
-	rootDomainContract *insolar.Reference
-	nodeDomainContract *insolar.Reference
-	rootMemberContract *insolar.Reference
+	rootRecord            *rootdomain.Record
+	rootDomainContract    *insolar.Reference
+	nodeDomainContract    *insolar.Reference
+	rootMemberContract    *insolar.Reference
+	oracleMemberContracts map[string]insolar.Reference
+	oracleConfirms        map[string]bool
+	mdAdminMemberContract *insolar.Reference
+	mdWalletContract      *insolar.Reference
 
 	keyOut string
 }
@@ -114,6 +118,22 @@ func (g *Generator) Run(ctx context.Context) error {
 		return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
 	}
 
+	inslog.Info("[ Genesis ] getKeysFromFil for mdAdmine ...")
+	_, mdAdminPubKey, err := getKeysFromFile(g.config.MDAdminKeysFile)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
+	}
+
+	inslog.Info("[ Genesis ] getKeysFromFile for oracles ...")
+	oracleMap := map[string]string{}
+	for _, o := range g.config.OracleKeysFiles {
+		_, oraclePubKey, err := getKeysFromFile(o.KeysFile)
+		if err != nil {
+			return errors.Wrap(err, "[ Genesis ] couldn't get oracle keys for oracle: "+o.Name)
+		}
+		oracleMap[o.Name] = oraclePubKey
+	}
+
 	inslog.Info("[ Genesis ] createKeysInDir ...")
 	discoveryNodes, err := createKeysInDir(
 		ctx,
@@ -126,7 +146,7 @@ func (g *Generator) Run(ctx context.Context) error {
 		return errors.Wrapf(err, "[ Genesis ] create keys step failed")
 	}
 
-	err = g.activateSmartContracts(ctx, cb, rootPubKey, &rootDomainID, prototypes)
+	err = g.activateSmartContracts(ctx, cb, rootPubKey, mdAdminPubKey, oracleMap, &rootDomainID, prototypes)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
 	}
@@ -169,7 +189,7 @@ func (g *Generator) activateRootDomain(
 		ctx,
 		record.Request{
 			CallType: record.CTGenesis,
-			Method: rootDomain,
+			Method:   rootDomain,
 		},
 	)
 	if err != nil {
@@ -212,7 +232,7 @@ func (g *Generator) activateNodeDomain(
 		ctx,
 		record.Request{
 			CallType: record.CTGenesis,
-			Method: "NodeDomain",
+			Method:   "NodeDomain",
 		},
 	)
 
@@ -267,7 +287,7 @@ func (g *Generator) activateRootMember(
 		ctx,
 		record.Request{
 			CallType: record.CTGenesis,
-			Method: "RootMember",
+			Method:   "RootMember",
 		},
 	)
 
@@ -295,12 +315,123 @@ func (g *Generator) activateRootMember(
 	return nil
 }
 
+func (g *Generator) activateMDAdminMember(
+	ctx context.Context,
+	domain *insolar.ID,
+	mdAdminPubKey string,
+	memberContractProto insolar.Reference,
+) error {
+
+	m, err := member.New("MDAdminMember", mdAdminPubKey)
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateMDAdminMember ]")
+	}
+
+	instanceData, err := insolar.Serialize(m)
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateMDAdminMember ]")
+	}
+
+	contractID, err := g.artifactManager.RegisterRequest(
+		ctx,
+		record.Request{
+			CallType: record.CTGenesis,
+			Method:   "MDAdminMember",
+		},
+	)
+
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateMDAdminMember ] couldn't create mdAdmin member instance")
+	}
+	contract := insolar.NewReference(*domain, *contractID)
+	_, err = g.artifactManager.ActivateObject(
+		ctx,
+		insolar.Reference{},
+		*contract,
+		*g.rootDomainContract,
+		memberContractProto,
+		false,
+		instanceData,
+	)
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateMDAdminMember ] couldn't create mdAdmin member instance")
+	}
+	_, err = g.artifactManager.RegisterResult(ctx, *g.rootDomainContract, *contract, nil)
+	if err != nil {
+		return errors.Wrap(err, "[ ActivateMDAdminMember ] couldn't create mdAdmin member instance")
+	}
+	g.mdAdminMemberContract = contract
+	return nil
+}
+
+func (g *Generator) activateOracleMembers(
+	ctx context.Context,
+	domain *insolar.ID,
+	oraclePubKeys map[string]string,
+	memberContractProto insolar.Reference,
+) error {
+
+	g.oracleMemberContracts = map[string]insolar.Reference{}
+	g.oracleConfirms = map[string]bool{}
+	for name, _ := range oraclePubKeys {
+		g.oracleConfirms[name] = false
+	}
+
+	for name, key := range oraclePubKeys {
+		m, err := member.NewOracleMember(name, key)
+		if err != nil {
+			return errors.Wrap(err, "[ ActivateOracleMember ]")
+		}
+
+		instanceData, err := insolar.Serialize(m)
+		if err != nil {
+			return errors.Wrap(err, "[ ActivateOracleMember ]")
+		}
+
+		contractID, err := g.artifactManager.RegisterRequest(
+			ctx,
+			record.Request{
+				CallType: record.CTGenesis,
+				Method:   "OracleMember",
+			},
+		)
+
+		if err != nil {
+			return errors.Wrap(err, "[ ActivateOracleMember ] couldn't create oracle member instance")
+		}
+		contract := insolar.NewReference(*domain, *contractID)
+		_, err = g.artifactManager.ActivateObject(
+			ctx,
+			insolar.Reference{},
+			*contract,
+			*g.rootDomainContract,
+			memberContractProto,
+			false,
+			instanceData,
+		)
+		if err != nil {
+			return errors.Wrap(err, "[ ActivateOracleMember ] couldn't create oracle member instance")
+		}
+		_, err = g.artifactManager.RegisterResult(ctx, *g.rootDomainContract, *contract, nil)
+		if err != nil {
+			return errors.Wrap(err, "[ ActivateOracleMember ] couldn't create oracle member instance")
+		}
+
+		g.oracleMemberContracts[name] = *contract
+	}
+
+	return nil
+}
+
 func (g *Generator) updateRootDomain(
 	ctx context.Context, domainDesc artifact.ObjectDescriptor,
 ) error {
 	updateData, err := insolar.Serialize(&rootdomaincontract.RootDomain{
 		RootMember:    *g.rootMemberContract,
-		NodeDomainRef: *g.nodeDomainContract,
+		OracleMembers: g.oracleMemberContracts,
+		MDAdminMember: *g.mdAdminMemberContract,
+		MDWallet:      *g.mdWalletContract,
+		NodeDomain:    *g.nodeDomainContract,
 	})
 	if err != nil {
 		return errors.Wrap(err, "[ updateRootDomain ]")
@@ -319,7 +450,7 @@ func (g *Generator) updateRootDomain(
 	return nil
 }
 
-func (g *Generator) activateRootMemberWallet(
+func (g *Generator) activateRootWallet(
 	ctx context.Context, domain *insolar.ID, walletContractProto insolar.Reference,
 ) error {
 
@@ -337,7 +468,7 @@ func (g *Generator) activateRootMemberWallet(
 		ctx,
 		record.Request{
 			CallType: record.CTGenesis,
-			Method: "RootWallet",
+			Method:   "RootWallet",
 		},
 	)
 
@@ -365,10 +496,59 @@ func (g *Generator) activateRootMemberWallet(
 	return nil
 }
 
+func (g *Generator) activateMDWallet(
+	ctx context.Context, domain *insolar.ID, walletContractProto insolar.Reference,
+) error {
+
+	w, err := wallet.New(g.config.MDBalance)
+	if err != nil {
+		return errors.Wrap(err, "[ activateMDWallet ]")
+	}
+
+	instanceData, err := insolar.Serialize(w)
+	if err != nil {
+		return errors.Wrap(err, "[ activateMDWallet ]")
+	}
+
+	contractID, err := g.artifactManager.RegisterRequest(
+		ctx,
+		record.Request{
+			CallType: record.CTGenesis,
+			Method:   "MDWallet",
+		},
+	)
+
+	if err != nil {
+		return errors.Wrap(err, "[ activateMDWallet ] couldn't create root wallet")
+	}
+	contract := insolar.NewReference(*domain, *contractID)
+	_, err = g.artifactManager.ActivateObject(
+		ctx,
+		insolar.Reference{},
+		*contract,
+		*g.mdAdminMemberContract,
+		walletContractProto,
+		true,
+		instanceData,
+	)
+	if err != nil {
+		return errors.Wrap(err, "[ activateMDWallet ] couldn't create root wallet")
+	}
+	_, err = g.artifactManager.RegisterResult(ctx, *g.rootDomainContract, *contract, nil)
+	if err != nil {
+		return errors.Wrap(err, "[ activateMDWallet ] couldn't create root wallet")
+	}
+
+	g.mdWalletContract = contract
+	return nil
+}
+
 func (g *Generator) activateSmartContracts(
 	ctx context.Context,
 	cb *contractsBuilder,
 	rootPubKey string,
+	mdAdminPubKey string,
+	oracleMap map[string]string,
 	rootDomainID *insolar.ID,
 	prototypes prototypes,
 ) error {
@@ -386,12 +566,24 @@ func (g *Generator) activateSmartContracts(
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	// TODO: this is not required since we refer by request id.
-	err = g.updateRootDomain(ctx, rootDomainDesc)
+	err = g.activateRootWallet(ctx, rootDomainID, *cb.prototypes[walletContract])
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
-	err = g.activateRootMemberWallet(ctx, rootDomainID, *cb.prototypes[walletContract])
+	err = g.activateMDAdminMember(ctx, rootDomainID, mdAdminPubKey, *cb.prototypes[memberContract])
+	if err != nil {
+		return errors.Wrap(err, errMsg)
+	}
+	err = g.activateMDWallet(ctx, rootDomainID, *cb.prototypes[walletContract])
+	if err != nil {
+		return errors.Wrap(err, errMsg)
+	}
+	err = g.activateOracleMembers(ctx, rootDomainID, oracleMap, *cb.prototypes[memberContract])
+	if err != nil {
+		return errors.Wrap(err, errMsg)
+	}
+	// TODO: this is not required since we refer by request id.
+	err = g.updateRootDomain(ctx, rootDomainDesc)
 	if err != nil {
 		return errors.Wrap(err, errMsg)
 	}
@@ -444,7 +636,7 @@ func (g *Generator) activateNodeRecord(
 		ctx,
 		record.Request{
 			CallType: record.CTGenesis,
-			Method: node.publicKey,
+			Method:   node.publicKey,
 		},
 	)
 	if err != nil {

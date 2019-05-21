@@ -32,14 +32,22 @@ type Node struct {
 	CertName string `mapstructure:"cert_name"`
 }
 
+type Oracle struct {
+	Name     string `mapstructure:"name"`
+	KeysFile string `mapstructure:"keys_file"`
+}
+
 // Config contains all genesis config
 type Config struct {
-	RootKeysFile     string `mapstructure:"root_keys_file"`
-	DiscoveryKeysDir string `mapstructure:"discovery_keys_dir"`
-	KeysNameFormat   string `mapstructure:"keys_name_format"`
-	ReuseKeys        bool   `mapstructure:"reuse_keys"`
-	RootBalance      uint   `mapstructure:"root_balance"`
-	MajorityRule     int    `mapstructure:"majority_rule"`
+	RootKeysFile     string   `mapstructure:"root_keys_file"`
+	MDAdminKeysFile  string   `mapstructure:"md_admin_keys_file"`
+	OracleKeysFiles  []Oracle `mapstructure:"oracle_keys_file"`
+	DiscoveryKeysDir string   `mapstructure:"discovery_keys_dir"`
+	KeysNameFormat   string   `mapstructure:"keys_name_format"`
+	ReuseKeys        bool     `mapstructure:"reuse_keys"`
+	RootBalance      uint     `mapstructure:"root_balance"`
+	MDBalance        uint     `mapstructure:"md_balance"`
+	MajorityRule     int      `mapstructure:"majority_rule"`
 	MinRoles         struct {
 		Virtual       uint `mapstructure:"virtual"`
 		HeavyMaterial uint `mapstructure:"heavy_material"`
