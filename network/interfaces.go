@@ -314,4 +314,7 @@ type Auther interface {
 	// ValidateCert checks certificate signature
 	// TODO make this cert.validate()
 	ValidateCert(context.Context, insolar.AuthorizationCertificate) (bool, error)
+
+	// CanNodeJoin answers this question
+	CanNodeJoin(certificate insolar.Certificate, nodeKeeper NodeKeeper) bool
 }

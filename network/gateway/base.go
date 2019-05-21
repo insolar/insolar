@@ -119,3 +119,7 @@ func (g *Base) GetCert(ctx context.Context, ref *insolar.Reference) (insolar.Cer
 func (g *Base) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
 	return false, errors.New("ValidateCert() in non active mode")
 }
+
+func (g *Base) CanNodeJoin(certificate insolar.Certificate, nodeKeeper network.NodeKeeper) bool {
+	return false
+}
