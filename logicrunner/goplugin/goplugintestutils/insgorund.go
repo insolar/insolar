@@ -29,6 +29,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+const insolarLogLevel = "INSOLAR_LOG_LEVEL"
+
 // StartInsgorund starts `insgorund` process
 func StartInsgorund(cmdPath, lProto, listen, upstreamProto, upstreamAddr string) (func(), error) {
 	id := testutils.RandomString()
@@ -64,6 +66,11 @@ func StartInsgorund(cmdPath, lProto, listen, upstreamProto, upstreamAddr string)
 
 	if cmdPath == "" {
 		return nil, errors.New("command's path is required to start `insgorund`")
+	}
+
+	gorundLoglLevel := os.Getenv(insolarLogLevel)
+	if gorundLoglLevel != "" {
+		args = append(args, "--log-level", gorundLoglLevel)
 	}
 
 	runner := exec.Command(cmdPath, args...)

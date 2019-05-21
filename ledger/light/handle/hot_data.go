@@ -14,38 +14,33 @@
 // limitations under the License.
 //
 
-package contractrequester
+package handle
 
 import (
 	"context"
-	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill/message"
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/ledger/light/proc"
 )
 
-type Dependencies struct {
-	Publisher message.Publisher
-	cr        *ContractRequester
+type HotData struct {
+	dep     *proc.Dependencies
+	replyTo chan<- bus.Reply
+	message *message.HotData
 }
 
-type Init struct {
-	dep *Dependencies
-
-	Message bus.Message
-}
-
-func (s *Init) Present(ctx context.Context, f flow.Flow) error {
-	switch s.Message.Parcel.Message().Type() {
-	case insolar.TypeReturnResults:
-		h := &HandleReturnResults{
-			dep:     s.dep,
-			Message: s.Message,
-		}
-		return f.Handle(ctx, h.Present)
-	default:
-		return fmt.Errorf("[ Init.Present ] no handler for message type %s", s.Message.Parcel.Message().Type().String())
+func NewHotData(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.HotData) *HotData {
+	return &HotData{
+		dep:     dep,
+		replyTo: rep,
+		message: msg,
 	}
+}
+
+func (s *HotData) Present(ctx context.Context, f flow.Flow) error {
+	proc := proc.NewHotData(s.message, s.replyTo)
+	s.dep.HotData(proc)
+	return f.Procedure(ctx, proc, false)
 }

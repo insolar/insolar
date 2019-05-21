@@ -163,8 +163,8 @@ func TestHashMaterial(t *testing.T) {
 func getVirtualRecord() record.Virtual {
 	var requestRecord record.Request
 
-	requestRecord.Object = gen.ID()
-	requestRecord.Parcel = slice()
+	obj := gen.Reference()
+	requestRecord.Object = &obj
 
 	virtualRecord := record.Virtual{
 		Union: &record.Virtual_Request{

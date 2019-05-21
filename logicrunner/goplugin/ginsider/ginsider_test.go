@@ -35,13 +35,21 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-var binaryPath string
-
 type HealthCheckSuite struct {
 	suite.Suite
 }
 
+var binaryPath string
+var testHealthCheckPassed = false
+
 func (s *HealthCheckSuite) TestHealthCheck() {
+	if testHealthCheckPassed {
+		// Dirty hack. This test doesn't work properly with -count 10
+		// because it registers RPC handlers. Sadly there is no way
+		// to unregister RPC handlers in net/rpc package.
+		return
+	}
+
 	protocol := "unix"
 	socket := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 
@@ -86,6 +94,8 @@ func (s *HealthCheckSuite) TestHealthCheck() {
 	log.Warnf("%+v", output)
 
 	s.NoError(err)
+
+	testHealthCheckPassed = true
 }
 
 func (s *HealthCheckSuite) prepareGoInsider(gi *GoInsider, protocol, socket string) {

@@ -68,15 +68,6 @@ import (
 
 type SessionID uint64
 
-//go:generate stringer -type=SessionState
-type SessionState uint8
-
-const (
-	Authorized SessionState = iota + 1
-	Challenge1
-	Challenge2
-)
-
 const (
 	stateRunning = uint32(iota + 1)
 	stateIdle
@@ -85,9 +76,6 @@ const (
 type Session struct {
 	NodeID insolar.Reference
 	Cert   insolar.AuthorizationCertificate
-	State  SessionState
-
-	DiscoveryNonce Nonce
 
 	Time time.Time
 	TTL  time.Duration
@@ -109,10 +97,6 @@ type SessionManager interface {
 	component.Stopper
 
 	NewSession(ref insolar.Reference, cert insolar.AuthorizationCertificate, ttl time.Duration) SessionID
-	CheckSession(id SessionID, expected SessionState) error
-	SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) error
-	GetChallengeData(id SessionID) (insolar.AuthorizationCertificate, Nonce, error)
-	ChallengePassed(id SessionID) error
 	ReleaseSession(id SessionID) (*Session, error)
 	ProlongateSession(id SessionID, session *Session)
 }
@@ -168,7 +152,6 @@ func (sm *sessionManager) NewSession(ref insolar.Reference, cert insolar.Authori
 	id := sm.sequence.Generate()
 	session := &Session{
 		NodeID: ref,
-		State:  Authorized,
 		Cert:   cert,
 		Time:   time.Now(),
 		TTL:    ttl,
@@ -186,68 +169,13 @@ func (sm *sessionManager) addSession(id SessionID, session *Session) {
 	sm.sessionsChangeNotification <- notification{}
 }
 
-func (sm *sessionManager) CheckSession(id SessionID, expected SessionState) error {
-	sm.lock.RLock()
-	defer sm.lock.RUnlock()
-
-	_, err := sm.checkSession(id, expected)
-	return err
-}
-
-func (sm *sessionManager) checkSession(id SessionID, expected SessionState) (*Session, error) {
-	session := sm.sessions[id]
-	if session == nil {
-		return nil, errors.New(fmt.Sprintf("no such session ID: %d", id))
-	}
-	if session.State != expected {
-		return nil, errors.New(fmt.Sprintf("session %d should have state %s but has %s", id, expected, session.State))
-	}
-	return session, nil
-}
-
-func (sm *sessionManager) SetDiscoveryNonce(id SessionID, discoveryNonce Nonce) error {
-	sm.lock.Lock()
-	defer sm.lock.Unlock()
-
-	session, err := sm.checkSession(id, Authorized)
-	if err != nil {
-		return err
-	}
-	session.DiscoveryNonce = discoveryNonce
-	session.State = Challenge1
-	return nil
-}
-
-func (sm *sessionManager) GetChallengeData(id SessionID) (insolar.AuthorizationCertificate, Nonce, error) {
-	sm.lock.Lock()
-	defer sm.lock.Unlock()
-
-	session, err := sm.checkSession(id, Challenge1)
-	if err != nil {
-		return nil, nil, err
-	}
-	return session.Cert, session.DiscoveryNonce, nil
-}
-
-func (sm *sessionManager) ChallengePassed(id SessionID) error {
-	sm.lock.Lock()
-	defer sm.lock.Unlock()
-
-	session, err := sm.checkSession(id, Challenge1)
-	if err != nil {
-		return err
-	}
-	session.State = Challenge2
-	return nil
-}
-
 func (sm *sessionManager) ReleaseSession(id SessionID) (*Session, error) {
 	sm.lock.Lock()
 
-	session, err := sm.checkSession(id, Challenge2)
-	if err != nil {
+	session := sm.sessions[id]
+	if session == nil {
 		sm.lock.Unlock()
-		return nil, err
+		return nil, errors.New(fmt.Sprintf("no such session ID: %d", id))
 	}
 	delete(sm.sessions, id)
 	sm.lock.Unlock()

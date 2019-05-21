@@ -47,9 +47,13 @@ func createKeysInDir(
 	ctx context.Context,
 	dir string,
 	keyFilenameFormat string,
-	amount int,
+	discoveryNodes []Node,
 	reuse bool,
 ) ([]nodeInfo, error) {
+	amount := len(discoveryNodes)
+
+	// XXX: Hack: works only for generated files by keyFilenameFormat
+	// TODO: reconsider this option implementation - (INS-2473) - @nordicdyno 16.May.2019
 	if reuse {
 		pairs, err := secrets.ReadKeysFromDir(dir)
 		if err != nil {
@@ -61,9 +65,17 @@ func createKeysInDir(
 		return keyPairsToNodeInfo(pairs...), nil
 	}
 
+	// <<<<<<< HEAD
 	nodes := make([]nodeInfo, 0, amount)
 	for i := 0; i < amount; i++ {
+		dn := discoveryNodes[i]
+		keyname := fmt.Sprintf(keyFilenameFormat, i+1)
+		if len(dn.KeyName) > 0 {
+			keyname = dn.KeyName
+		}
+
 		pair, err := secrets.GenerateKeyPair()
+
 		if err != nil {
 			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't generate keys")
 		}
@@ -87,9 +99,8 @@ func createKeysInDir(
 			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't marshal keys")
 		}
 
-		name := fmt.Sprintf(keyFilenameFormat, i+1)
-		inslogger.FromContext(ctx).Info("Genesis write key " + filepath.Join(dir, name))
-		err = makeFileWithDir(dir, name, result)
+		inslogger.FromContext(ctx).Info("Genesis write key " + filepath.Join(dir, keyname))
+		err = makeFileWithDir(dir, keyname, result)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't write keys to file")
 		}

@@ -18,7 +18,6 @@ package rootdomain
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/platformpolicy"
 )
@@ -39,15 +38,9 @@ func (r Record) Ref() insolar.Reference {
 }
 
 func (r Record) ID() insolar.ID {
-	parcel := &message.Parcel{
-		Msg: &message.GenesisRequest{
-			Name: insolar.GenesisNameRootDomain,
-		},
-	}
 	req := record.Request{
-		Parcel:      message.ParcelToBytes(parcel),
-		MessageHash: message.ParcelMessageHash(r.PCS, parcel),
-		Object:      insolar.GenesisRecord.ID(),
+		CallType: record.CTGenesis,
+		Method: Name,
 	}
 	virtRec := record.Wrap(req)
 	hash := record.HashVirtual(r.PCS.ReferenceHasher(), virtRec)

@@ -201,7 +201,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		drops := drop.NewStorageMemory()
 		blobs := blob.NewStorageMemory()
 		records := object.NewRecordMemory()
-		indexes := object.NewIndexMemory()
+		indexes := object.NewInMemoryIndex()
 		jets := jet.NewStore()
 		nodes := node.NewStorage()
 
@@ -219,7 +219,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		cord.Nodes = nodes
 		Coordinator = cord
 
-		handler := artifactmanager.NewMessageHandler(indexes, indexes, &conf)
+		handler := artifactmanager.NewMessageHandler(indexes, indexes, indexes, &conf)
 		handler.RecentStorageProvider = hots
 		handler.Bus = Bus
 		handler.PCS = CryptoScheme
@@ -237,9 +237,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.Nodes = nodes
 		handler.HotDataWaiter = waiter
 		handler.JetReleaser = waiter
-		handler.IndexStorage = indexes
-		handler.IndexStateModifier = indexes
-		handler.IndexStorage = indexes
 
 		jetCalculator := jet.NewCalculator(Coordinator, jets)
 		var lightCleaner = replication.NewCleaner(
@@ -271,7 +268,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			records,
 			records,
 			indexes,
-			indexes,
 			lthSyncer,
 		)
 		pm.MessageHandler = handler
@@ -284,10 +280,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		pm.JetReleaser = waiter
 		pm.JetAccessor = jets
 		pm.JetModifier = jets
-		pm.IndexAccessor = indexes
-		pm.IndexModifier = indexes
-		pm.CollectionIndexAccessor = indexes
-		pm.IndexCleaner = indexes
 		pm.NodeSetter = nodes
 		pm.Nodes = nodes
 		pm.DropModifier = drops

@@ -26,7 +26,7 @@ import (
 
 	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/log"
@@ -99,12 +99,11 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 	for name := range contracts {
 		protoID, err := cb.artifactManager.RegisterRequest(
 			ctx,
-			rd.Ref(),
-			&message.Parcel{
-				Msg: &message.GenesisRequest{
-					Name: name + "_proto",
-				},
-			})
+			record.Request{
+				CallType: record.CTGenesis,
+				Method:   name + "_proto",
+			},
+		)
 		if err != nil {
 			return errors.Wrap(err, "[ buildPrototypes ] Can't RegisterRequest for contract")
 		}
@@ -161,9 +160,9 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 		}
 		codeReq, err := cb.artifactManager.RegisterRequest(
 			ctx,
-			rd.Ref(),
-			&message.Parcel{
-				Msg: &message.GenesisRequest{Name: name + "_code"},
+			record.Request{
+				CallType: record.CTGenesis,
+				Method:   name + "_code",
 			},
 		)
 		if err != nil {

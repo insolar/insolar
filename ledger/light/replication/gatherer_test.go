@@ -59,30 +59,30 @@ func TestDataGatherer_ForPulseAndJet(t *testing.T) {
 		rec,
 	})
 
-	ia := object.NewIndexCollectionAccessorMock(t)
+	ia := object.NewIndexBucketAccessorMock(t)
 	idx := object.Lifeline{
 		JetID:        gen.JetID(),
 		ChildPointer: insolar.NewID(gen.PulseNumber(), nil),
 		LatestState:  insolar.NewID(gen.PulseNumber(), nil),
 	}
 	idxID := gen.ID()
-	ia.ForJetMock.Expect(ctx, jetID).Return(map[insolar.ID]object.LifelineMeta{
-		idxID: {
-			Index: idx,
+	bucks := []object.IndexBucket{
+		{
+			ObjID:    idxID,
+			Lifeline: idx,
 		},
-	})
+	}
+	ia.ForPNAndJetMock.Return(bucks)
 
 	recData, _ := rec.Marshal()
 
 	expectedMsg := &message.HeavyPayload{
-		JetID:    jetID,
-		PulseNum: pn,
-		Indexes: map[insolar.ID][]byte{
-			idxID: object.EncodeIndex(idx),
-		},
-		Drop:    drop.MustEncode(&d),
-		Blobs:   [][]byte{blob.MustEncode(&b)},
-		Records: [][]byte{recData},
+		JetID:        jetID,
+		PulseNum:     pn,
+		IndexBuckets: convertIndexBuckets(ctx, bucks),
+		Drop:         drop.MustEncode(&d),
+		Blobs:        [][]byte{blob.MustEncode(&b)},
+		Records:      [][]byte{recData},
 	}
 
 	dataGatherer := NewDataGatherer(da, ba, ra, ia)
@@ -103,26 +103,25 @@ func TestDataGatherer_ForPulseAndJet_DropFetchingFailed(t *testing.T) {
 	require.Error(t, err, errors.New("everything is broken"))
 }
 
-func TestLightDataGatherer_convertIndexes(t *testing.T) {
-	var idxs []object.LifelineMeta
-	fuzz.New().NilChance(0).NumElements(500, 1000).Funcs(func(elem *object.LifelineMeta, c fuzz.Continue) {
-		elem.Index = object.Lifeline{
+func TestLightDataGatherer_convertIndexBuckets(t *testing.T) {
+	var idxs []object.IndexBucket
+	fuzz.New().NilChance(0).NumElements(500, 1000).Funcs(func(elem *object.IndexBucket, c fuzz.Continue) {
+		elem.Lifeline = object.Lifeline{
 			JetID:        gen.JetID(),
 			LatestUpdate: gen.PulseNumber(),
 		}
-		elem.LastUsed = gen.PulseNumber()
+		elem.LifelineLastUsed = gen.PulseNumber()
 	}).Fuzz(&idxs)
 
-	expected := map[insolar.ID][]byte{}
-	input := map[insolar.ID]object.LifelineMeta{}
+	var expected [][]byte
 
 	for _, idx := range idxs {
-		id := gen.ID()
-		expected[id] = object.EncodeIndex(idx.Index)
-		input[id] = idx
+		buff, err := idx.Marshal()
+		require.NoError(t, err)
+		expected = append(expected, buff)
 	}
 
-	resp := convertIndexes(input)
+	resp := convertIndexBuckets(inslogger.TestContext(t), idxs)
 
 	require.Equal(t, resp, expected)
 
@@ -166,8 +165,8 @@ func TestDataGatherer_convertRecords(t *testing.T) {
 func getVirtualRecord() record.Virtual {
 	var requestRecord record.Request
 
-	requestRecord.Object = gen.ID()
-	requestRecord.Parcel = slice()
+	obj := gen.Reference()
+	requestRecord.Object = &obj
 
 	virtualRecord := record.Virtual{
 		Union: &record.Virtual_Request{
