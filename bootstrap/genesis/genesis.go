@@ -81,7 +81,17 @@ func NewGenerator(
 	}
 }
 
-// Run generates genesis data.
+// Run generates genesis data via headless bootstrap step.
+//
+// 1. builds genesis Go-contracts
+// 2. stores smart contracts objects on ledger
+// 3. read root keys file and generates keys for discovery nodes
+//    generates and saves certificates to files for all discovery nodes
+//
+// when built-in contracts (INS-2308) would be implemented:
+// * step 1 should be gone
+// * step 2 should be moved to heavy (INS-2265)
+//
 func (g *Generator) Run(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting  ...")
@@ -102,6 +112,11 @@ func (g *Generator) Run(ctx context.Context) error {
 		return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
 	}
 
+	err = g.activateSmartContracts(ctx, platformpolicy.MustPublicKeyToString(pair.Public), prototypes)
+	if err != nil {
+		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
+	}
+
 	inslog.Info("[ Genesis ] createKeysInDir ...")
 	discoveryNodes, err := createKeysInDir(
 		ctx,
@@ -114,16 +129,6 @@ func (g *Generator) Run(ctx context.Context) error {
 		return errors.Wrapf(err, "[ Genesis ] create keys step failed")
 	}
 
-	err = g.activateSmartContracts(ctx, platformpolicy.MustPublicKeyToString(pair.Public), prototypes)
-	if err != nil {
-		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
-	}
-
-	err = g.saveDiscoveryNodes(ctx, *cb.prototypes[insolar.GenesisNameNodeRecord], discoveryNodes)
-	if err != nil {
-		panic(errors.Wrap(err, "[ Genesis ] could't save discovery nodes data"))
-	}
-
 	inslog.Info("[ Genesis ] makeCertificates ...")
 	err = g.makeCertificates(ctx, discoveryNodes)
 	if err != nil {
@@ -132,16 +137,6 @@ func (g *Generator) Run(ctx context.Context) error {
 
 	inslog.Info("[ Genesis ] Finished.")
 	return nil
-}
-
-func (g *Generator) saveDiscoveryNodes(ctx context.Context, nodeRecordProto insolar.Reference, discoveryNodes []nodeInfo) error {
-	err := g.activateDiscoveryNodes(ctx, nodeRecordProto, discoveryNodes)
-	if err != nil {
-		return errors.Wrap(err, "failed on adding discovery index")
-	}
-
-	err = g.updateNodeDomainIndex(ctx, discoveryNodes)
-	return errors.Wrap(err, "failed update node domain index")
 }
 
 func (g *Generator) activateRootDomain(
@@ -343,7 +338,6 @@ func (g *Generator) activateSmartContracts(
 	var err error
 
 	err = g.activateRootDomain(ctx, *prototypes[insolar.GenesisNameRootDomain])
-	// errMsg := "[ ActivateSmartContracts ]"
 	if err != nil {
 		return errors.Wrap(err, "failed to store root domain contract")
 	}
@@ -363,38 +357,6 @@ func (g *Generator) activateSmartContracts(
 		return errors.Wrap(err, "failed to store root rootMemberWallet contract")
 	}
 
-	return nil
-}
-
-// activateDiscoveryNodes activates discoverynoderecord_{N} objects.
-//
-// It returns list of genesisNode structures (for node domain save and certificates generation at the end of genesis).
-func (g *Generator) activateDiscoveryNodes(
-	ctx context.Context,
-	nodeRecordProto insolar.Reference,
-	discoveryNodes []nodeInfo,
-) error {
-	if len(discoveryNodes) != len(g.config.DiscoveryNodes) {
-		return errors.Errorf(
-			"[ activateDiscoveryNodes ] len of discoveryNodes (%v) must be equal to len of DiscoveryNodes (%v) in genesis config",
-			len(discoveryNodes), len(g.config.DiscoveryNodes))
-	}
-
-	for i, discoverNode := range g.config.DiscoveryNodes {
-		nodePubKey := discoveryNodes[i].publicKey
-
-		nodeState := &noderecord.NodeRecord{
-			Record: noderecord.RecordInfo{
-				PublicKey: nodePubKey,
-				Role:      insolar.GetStaticRoleFromString(discoverNode.Role),
-			},
-		}
-
-		_, err := g.activateNodeRecord(ctx, nodeState, discoveryNodes[i], nodeRecordProto)
-		if err != nil {
-			return errors.Wrap(err, "[ activateDiscoveryNodes ] Couldn't activateNodeRecord node instance")
-		}
-	}
 	return nil
 }
 
@@ -509,40 +471,5 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 
 		inslogger.FromContext(ctx).Debugf("[makeCertificates] write cert file to %v", certFile)
 	}
-	return nil
-}
-
-// updateNodeDomainIndex saves in node domain contract's object discovery nodes map.
-func (g *Generator) updateNodeDomainIndex(ctx context.Context, discoveryNodes []nodeInfo) error {
-	nodeDomainDesc, err := g.artifactManager.GetObject(ctx, bootstrap.ContractNodeDomain)
-	if err != nil {
-		return errors.Wrap(err, "failed to get domain contract")
-	}
-
-	indexMap := map[string]string{}
-	for _, node := range discoveryNodes {
-		indexMap[node.publicKey] = node.reference().String()
-	}
-
-	updateData, err := insolar.Serialize(
-		&nodedomain.NodeDomain{
-			NodeIndexPK: indexMap,
-		},
-	)
-	if err != nil {
-		return errors.Wrap(err, "[ updateNodeDomainIndex ]  Couldn't serialize NodeDomain")
-	}
-
-	_, err = g.artifactManager.UpdateObject(
-		ctx,
-		bootstrap.ContractRootDomain,
-		bootstrap.ContractNodeDomain,
-		nodeDomainDesc,
-		updateData,
-	)
-	if err != nil {
-		return errors.Wrap(err, "[ updateNodeDomainIndex ]  Couldn't update NodeDomain")
-	}
-
 	return nil
 }
