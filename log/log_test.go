@@ -18,9 +18,12 @@ package log
 
 import (
 	"bytes"
+	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -37,6 +40,71 @@ func capture(f func()) string {
 
 	f()
 	return buf.String()
+}
+
+var logLevelEnvVarName = "INSOLAR_LOG_LEVEL"
+
+func testWithEnvVar(t *testing.T) {
+	val := strings.ToLower(os.Getenv(logLevelEnvVarName))
+	fmt.Printf("testWithEnvVar: %v=%v\n", logLevelEnvVarName, val)
+
+	assert.Containsf(t,
+		capture(func() { Warn("HelloWorld") }),
+		"HelloWorld", "Warn on level=%v by is set", val)
+	assert.Containsf(t,
+		capture(func() { Info("HelloWorld") }),
+		"HelloWorld", "Info on level=%v is set", val)
+
+	if val == "debug" {
+		assert.Containsf(t,
+			capture(func() { Debug("HelloWorld") }),
+			"HelloWorld", "Debug should work on level %v", val)
+	} else {
+		assert.NotContainsf(t, capture(func() { Debug("HelloWorld") }),
+			"HelloWorld", "Debug should not work on level %v", val)
+	}
+	// assert.NotContains(t, capture(func() { Debug("HelloWorld") }),
+	// 	"HelloWorld", "Debug by default not set")
+
+}
+
+func TestLog_GlobalLogger_Env(t *testing.T) {
+	if os.Getenv("__TestLoggerEnv__") == "1" {
+		testWithEnvVar(t)
+		return
+	}
+
+	levels := []string{"", "debug"}
+	for _, val := range levels {
+		name := val
+		if name == "" {
+			name = "empty"
+		}
+		t.Run(name, func(t *testing.T) {
+			cmd := exec.Command(os.Args[0], "-test.run=TestLog_GlobalLogger_Env")
+			env := []string{"__TestLoggerEnv__=1"}
+			for _, e := range cmd.Env {
+				if e == logLevelEnvVarName {
+					continue
+				}
+				env = append(env, e)
+			}
+			if val != "" {
+				env = append(env, logLevelEnvVarName+"="+val)
+			}
+
+			cmd.Env = env
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+
+			fmt.Println("Run with env:", env)
+			err := cmd.Run()
+
+			if e, ok := err.(*exec.ExitError); ok && !e.Success() {
+				t.Fatalf("test with log level %v=%v failed", logLevelEnvVarName, val)
+			}
+		})
+	}
 }
 
 func assertHelloWorld(t *testing.T, out string) {

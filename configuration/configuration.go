@@ -89,6 +89,9 @@ func (h *Holder) Init(required bool) (*Holder, error) {
 		if _, ok := err.(viper.ConfigFileNotFoundError); !ok {
 			return nil, err
 		}
+		// read env vars if config file is not required and viper failed to load it.
+		h.viper.AutomaticEnv()
+		h.viper.Unmarshal(&h.Configuration)
 	}
 	return h, nil
 }
