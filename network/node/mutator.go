@@ -62,6 +62,7 @@ type Mutator struct {
 	*Accessor
 }
 
+// DEPRECATED
 func (m *Mutator) AddWorkingNode(n insolar.NetworkNode) {
 	if _, ok := m.refIndex[n.ID()]; ok {
 		return
@@ -69,4 +70,15 @@ func (m *Mutator) AddWorkingNode(n insolar.NetworkNode) {
 	m.addToIndex(n)
 	m.snapshot.nodeList[ListWorking] = append(m.snapshot.nodeList[ListWorking], n)
 	m.active = append(m.active, n)
+}
+
+func (m *Mutator) AddNode(n insolar.NetworkNode, t ListType) {
+	if _, ok := m.refIndex[n.ID()]; ok {
+		return
+	}
+	m.addToIndex(n)
+	m.snapshot.nodeList[t] = append(m.snapshot.nodeList[t], n)
+	if t == ListWorking {
+		m.active = append(m.active, n)
+	}
 }

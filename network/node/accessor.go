@@ -97,6 +97,26 @@ func (a *Accessor) GetWorkingNodes() []insolar.NetworkNode {
 	return result
 }
 
+func (a *Accessor) GetJoinerNodes() []insolar.NetworkNode {
+	joinerList := a.snapshot.nodeList[ListJoiner]
+	result := make([]insolar.NetworkNode, len(joinerList))
+	copy(result, joinerList)
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].ID().Compare(result[j].ID()) < 0
+	})
+	return result
+}
+
+func (a *Accessor) GetLeavingNodes() []insolar.NetworkNode {
+	leavingList := a.snapshot.nodeList[ListLeaving]
+	result := make([]insolar.NetworkNode, len(leavingList))
+	copy(result, leavingList)
+	sort.Slice(result, func(i, j int) bool {
+		return result[i].ID().Compare(result[j].ID()) < 0
+	})
+	return result
+}
+
 func (a *Accessor) GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference {
 	staticRole := dynamicToStaticRole(role)
 	nodes := a.roleIndex[staticRole]
