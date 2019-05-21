@@ -114,11 +114,8 @@ func TestRecord_Components(t *testing.T) {
 func getVirtualRecord() record.Virtual {
 	var requestRecord record.Request
 
-	requestRecord.Object = gen.ID()
-	blob := slice()
-	if len(blob) != 0 {
-		requestRecord.Parcel = blob
-	}
+	obj := gen.Reference()
+	requestRecord.Object = &obj
 
 	virtualRecord := record.Virtual{
 		Union: &record.Virtual_Request{

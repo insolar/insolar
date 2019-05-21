@@ -79,7 +79,10 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 		if qe.fromLedger {
 			pub := p.dep.Publisher
 			err := pub.Publish(InnerMsgTopic, makeWMMessage(ctx, p.Message.Payload, getLedgerPendingRequestMsg))
-			inslogger.FromContext(ctx).Warnf("can't send processExecutionQueueMsg: ", err)
+			if err != nil {
+				inslogger.FromContext(ctx).Warnf("can't send processExecutionQueueMsg: ", err)
+			}
+
 		}
 
 		lr.finishPendingIfNeeded(ctx, es)
