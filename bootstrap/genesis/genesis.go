@@ -139,7 +139,7 @@ func (g *Generator) Run(ctx context.Context) error {
 	}
 
 	inslog.Info("[ Genesis ] create heavy genesis config ...")
-	err = g.makeHeavyGenesisConfig(ctx, discoveryNodes)
+	err = g.makeHeavyGenesisConfig(discoveryNodes)
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] generate heavy genesis config failed")
 	}
@@ -437,7 +437,7 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 	return nil
 }
 
-func (g *Generator) makeHeavyGenesisConfig(ctx context.Context, discoveryNodes []nodeInfo) error {
+func (g *Generator) makeHeavyGenesisConfig(discoveryNodes []nodeInfo) error {
 	items := make([]insolar.DiscoveryNodeRegister, 0, len(g.config.DiscoveryNodes))
 	for _, node := range discoveryNodes {
 		items = append(items, insolar.DiscoveryNodeRegister{
