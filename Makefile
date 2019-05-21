@@ -170,7 +170,7 @@ ci_test_with_coverage:
 
 .PHONY: ci_test_unit
 ci_test_unit:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -v $(ALL_PACKAGES) -race -parallel 1 -count 2 | tee unit.file
+	CGO_ENABLED=1 go test $(TEST_ARGS) -v $(ALL_PACKAGES) -race -parallel 1 -count 3 | tee unit.file
 
 .PHONY: ci_test_slow
 ci_test_slow:
