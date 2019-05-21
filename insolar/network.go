@@ -83,13 +83,3 @@ type GlobalInsolarLock interface {
 	Acquire(ctx context.Context)
 	Release(ctx context.Context)
 }
-
-//go:generate minimock -i github.com/insolar/insolar/insolar.DiscoveryNodesStore -o ../testutils -s _mock.go
-
-// DiscoveryNodesStore provides interface for persisting discovery nodes.
-type DiscoveryNodesStore interface {
-	// StoreDiscoveryNodes saves discovery nodes on ledger, adds index with them to Node Domain object.
-	//
-	// If Node Domain object already has index - skip all saves.
-	StoreDiscoveryNodes(context.Context, []NetworkNode) error
-}

@@ -29,12 +29,10 @@ import (
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
-	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -45,19 +43,16 @@ func TestData_WriteNodeDomainData(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	am := initArtifactManager(t)
-	dCerts := NewDiscoveryCerts(am)
+	dCerts := NewDiscoveryNodeManager(am)
 	nodes, err := publicKeysFromDir("testdata/keys", "testdata/keys_meta.json")
 	require.NoError(t, err, "can't load keys")
 
-	var networkNodes []insolar.NetworkNode
+	var networkNodes []insolar.DiscoveryNodeRegister
 	for _, n := range nodes {
-		networkNodes = append(networkNodes, node.NewNode(
-			gen.Reference(),
-			n.role,
-			n.key,
-			"",
-			"",
-		))
+		networkNodes = append(networkNodes, insolar.DiscoveryNodeRegister{
+			Role:      n.role.String(),
+			PublicKey: platformpolicy.MustPublicKeyToString(n.key),
+		})
 	}
 	err = dCerts.StoreDiscoveryNodes(ctx, networkNodes)
 	require.NoError(t, err, "StoreDiscoveryNodes failed")

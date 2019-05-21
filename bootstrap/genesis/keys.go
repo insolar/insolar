@@ -52,7 +52,7 @@ func createKeysInDir(
 ) ([]nodeInfo, error) {
 	amount := len(discoveryNodes)
 
-	// XXX: Hack: works only for generated files by keyFilenameFormat
+	// XXX: Hack: works only for generated files with keyFilenameFormat
 	// TODO: reconsider this option implementation - (INS-2473) - @nordicdyno 16.May.2019
 	if reuse {
 		pairs, err := secrets.ReadKeysFromDir(dir)
@@ -65,7 +65,6 @@ func createKeysInDir(
 		return keyPairsToNodeInfo(pairs...), nil
 	}
 
-	// <<<<<<< HEAD
 	nodes := make([]nodeInfo, 0, amount)
 	for i := 0; i < amount; i++ {
 		dn := discoveryNodes[i]
@@ -105,7 +104,9 @@ func createKeysInDir(
 			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't write keys to file")
 		}
 
-		nodes = append(nodes, keysToNodeInfo(pair))
+		p := keysToNodeInfo(pair)
+		p.role = dn.Role
+		nodes = append(nodes, p)
 	}
 
 	return nodes, nil

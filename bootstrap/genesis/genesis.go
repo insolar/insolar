@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"path"
 	"strconv"
@@ -53,6 +54,7 @@ var contractNames = []string{
 type nodeInfo struct {
 	privateKey crypto.PrivateKey
 	publicKey  string
+	role       string
 }
 
 func (ni nodeInfo) reference() insolar.Reference {
@@ -93,9 +95,12 @@ func NewGenerator(
 // * step 2 should be moved to heavy (INS-2265)
 //
 func (g *Generator) Run(ctx context.Context) error {
+	fmt.Printf("[ Genesis] config:\n%v\n", dumpAsJSON(g.config))
+
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting  ...")
 
+	// TODO: join with buildPrototypes
 	inslog.Info("[ Genesis ] newContractBuilder ...")
 	cb := newContractBuilder(g.artifactManager)
 	defer cb.clean()
@@ -117,7 +122,7 @@ func (g *Generator) Run(ctx context.Context) error {
 		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
 	}
 
-	inslog.Info("[ Genesis ] createKeysInDir ...")
+	inslog.Info("[ Genesis ] create keys ...")
 	discoveryNodes, err := createKeysInDir(
 		ctx,
 		g.config.DiscoveryKeysDir,
@@ -129,10 +134,16 @@ func (g *Generator) Run(ctx context.Context) error {
 		return errors.Wrapf(err, "[ Genesis ] create keys step failed")
 	}
 
-	inslog.Info("[ Genesis ] makeCertificates ...")
+	inslog.Info("[ Genesis ] create certificates ...")
 	err = g.makeCertificates(ctx, discoveryNodes)
 	if err != nil {
-		return errors.Wrap(err, "[ Genesis ] Couldn't generate discovery certificates")
+		return errors.Wrap(err, "[ Genesis ] generate discovery certificates failed")
+	}
+
+	inslog.Info("[ Genesis ] create heavy genesis config ...")
+	err = g.makeHeavyGenesisConfig(ctx, discoveryNodes)
+	if err != nil {
+		return errors.Wrap(err, "[ Genesis ] generate heavy genesis config failed")
 	}
 
 	inslog.Info("[ Genesis ] Finished.")
@@ -359,6 +370,7 @@ func (g *Generator) activateSmartContracts(
 	return nil
 }
 
+// TODO: remove unused method
 func (g *Generator) activateNodeRecord(
 	ctx context.Context,
 	nRecord *noderecord.NodeRecord,
@@ -402,15 +414,12 @@ func (g *Generator) activateNodeRecord(
 
 func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeInfo) error {
 	certs := make([]certificate.Certificate, 0, len(g.config.DiscoveryNodes))
-	for i, node := range g.config.DiscoveryNodes {
-		pubKey := discoveryNodes[i].publicKey
-		ref := discoveryNodes[i].reference()
-
+	for _, node := range discoveryNodes {
 		c := certificate.Certificate{
 			AuthorizationCertificate: certificate.AuthorizationCertificate{
-				PublicKey: pubKey,
-				Role:      node.Role,
-				Reference: ref.String(),
+				PublicKey: node.publicKey,
+				Role:      node.role,
+				Reference: node.reference().String(),
 			},
 			MajorityRule: g.config.MajorityRule,
 
@@ -421,13 +430,12 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 		c.MinRoles.LightMaterial = g.config.MinRoles.LightMaterial
 		c.BootstrapNodes = []certificate.BootstrapNode{}
 
-		for j, n2 := range g.config.DiscoveryNodes {
-			pk := discoveryNodes[j].publicKey
-			ref := discoveryNodes[j].reference()
+		for j, n2 := range discoveryNodes {
+			host := g.config.DiscoveryNodes[j].Host
 			c.BootstrapNodes = append(c.BootstrapNodes, certificate.BootstrapNode{
-				PublicKey: pk,
-				Host:      n2.Host,
-				NodeRef:   ref.String(),
+				PublicKey: n2.publicKey,
+				Host:      host,
+				NodeRef:   n2.reference().String(),
 			})
 		}
 
@@ -471,4 +479,32 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 		inslogger.FromContext(ctx).Debugf("[makeCertificates] write cert file to %v", certFile)
 	}
 	return nil
+}
+
+func (g *Generator) makeHeavyGenesisConfig(ctx context.Context, discoveryNodes []nodeInfo) error {
+	items := make([]insolar.DiscoveryNodeRegister, 0, len(g.config.DiscoveryNodes))
+	for _, node := range discoveryNodes {
+		items = append(items, insolar.DiscoveryNodeRegister{
+			Role:      node.role,
+			PublicKey: node.publicKey,
+		})
+	}
+	cfg := &insolar.GenesisHeavyConfig{
+		DiscoveryNodes: items,
+	}
+	b, err := json.MarshalIndent(cfg, "", "    ")
+	if err != nil {
+		return errors.Wrapf(err, "[ makeHeavyGenesisConfig ] failed to decode heavy config to json")
+	}
+
+	err = ioutil.WriteFile(g.config.HeavyGeneisConfigFile, b, 0640)
+	return errors.Wrapf(err, "[ makeHeavyGenesisConfig ] failed to write heavy config "+g.config.HeavyGeneisConfigFile)
+}
+
+func dumpAsJSON(data interface{}) string {
+	b, err := json.MarshalIndent(data, "", "    ")
+	if err != nil {
+		panic(err)
+	}
+	return string(b)
 }

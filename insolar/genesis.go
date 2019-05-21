@@ -46,3 +46,14 @@ func (r genesisBinary) Ref() Reference {
 	id := r.ID()
 	return *NewReference(id, id)
 }
+
+// DiscoveryNodeRegister carries data required for registering discovery node on genesis phase.
+type DiscoveryNodeRegister struct {
+	Role      string
+	PublicKey string
+}
+
+// GenesisHeavyConfig carries data required for initial genesis on heavy node.
+type GenesisHeavyConfig struct {
+	DiscoveryNodes []DiscoveryNodeRegister
+}

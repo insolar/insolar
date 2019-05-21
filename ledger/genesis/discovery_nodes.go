@@ -36,8 +36,8 @@ type DiscoveryNodeManager struct {
 	artifactManager artifact.Manager
 }
 
-// NewDiscoveryCerts creates new DiscoveryNodeManager instance.
-func NewDiscoveryCerts(
+// NewDiscoveryNodeManager creates new DiscoveryNodeManager instance.
+func NewDiscoveryNodeManager(
 	am artifact.Manager,
 ) *DiscoveryNodeManager {
 	return &DiscoveryNodeManager{
@@ -45,13 +45,9 @@ func NewDiscoveryCerts(
 	}
 }
 
-// StoreDiscoveryNodes is a no-op stub.
-func (g *DiscoveryNodeManagerStub) StoreDiscoveryNodes(ctx context.Context, nodes []insolar.NetworkNode) error {
-	return nil
-}
-
-// StoreDiscoveryNodes saves discovery nodes. If
-func (g *DiscoveryNodeManager) StoreDiscoveryNodes(ctx context.Context, discoveryNodes []insolar.NetworkNode) error {
+// StoreDiscoveryNodes saves discovery nodes objects and saves discovery nodes index in node domain index.
+// If node domain index not empty this method does nothing.
+func (g *DiscoveryNodeManager) StoreDiscoveryNodes(ctx context.Context, discoveryNodes []insolar.DiscoveryNodeRegister) error {
 	nodeDomainDesc, err := g.artifactManager.GetObject(ctx, bootstrap.ContractNodeDomain)
 	if err != nil {
 		inslogger.FromContext(ctx).Error("got err: ", err)
@@ -70,8 +66,8 @@ func (g *DiscoveryNodeManager) StoreDiscoveryNodes(ctx context.Context, discover
 	nodesInfo := make([]nodeInfo, 0, len(discoveryNodes))
 	for _, n := range discoveryNodes {
 		nodesInfo = append(nodesInfo, nodeInfo{
-			role: n.Role(),
-			key:  platformpolicy.MustPublicKeyToString(n.PublicKey()),
+			role: insolar.GetStaticRoleFromString(n.Role),
+			key:  platformpolicy.MustNormalizePublicKey([]byte(n.PublicKey)),
 		})
 	}
 	return g.updateDiscoveryData(ctx, nodesInfo)
@@ -190,12 +186,4 @@ func (g *DiscoveryNodeManager) updateNodeDomainIndex(
 		updateData,
 	)
 	return errors.Wrap(err, "[ updateNodeDomainIndex ]  Couldn't update NodeDomain")
-}
-
-// DiscoveryNodeManagerStub is a stub for insolar.DiscoveryNodesStore,
-type DiscoveryNodeManagerStub struct{}
-
-// NewDiscoveryCerts creates new DiscoveryNodeManager instance.
-func NewDiscoveryCertsZero() *DiscoveryNodeManagerStub {
-	return &DiscoveryNodeManagerStub{}
 }

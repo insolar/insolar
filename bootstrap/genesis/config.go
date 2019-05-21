@@ -45,6 +45,8 @@ type Config struct {
 	// ReuseKeys is a flag to reuse discovery nodes keys (don't use if your not understand how it works)
 	ReuseKeys bool `mapstructure:"reuse_keys"`
 
+	HeavyGeneisConfigFile string `mapstructure:"heavy_genesis_config_file"`
+
 	// RootBalance is a start balance for the root member's wallet.
 	RootBalance uint `mapstructure:"root_balance"`
 

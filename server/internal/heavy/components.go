@@ -61,11 +61,12 @@ import (
 )
 
 type components struct {
-	cmp               component.Manager
-	NodeRef, NodeRole string
+	cmp      component.Manager
+	NodeRef  string
+	NodeRole string
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration) (*components, error) {
+func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg insolar.GenesisHeavyConfig) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -193,7 +194,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Jets                jet.Storage
 		PulseManager        insolar.PulseManager
 		Handler             *handler.Handler
-		DiscoveryNodesStore insolar.DiscoveryNodesStore
+		DiscoveryNodesStore *genesis.Genesis
 	)
 	{
 		conf := cfg.Ledger
@@ -253,7 +254,10 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			LifelineModifier: indexes,
 			LifelineAccessor: indexes,
 		}
-		DiscoveryNodesStore = genesis.NewDiscoveryCerts(artifactManager)
+		DiscoveryNodesStore = &genesis.Genesis{
+			DiscoveryNodeManager: genesis.NewDiscoveryNodeManager(artifactManager),
+			DiscoveryNodes:       genesisCfg.DiscoveryNodes,
+		}
 	}
 
 	c.cmp.Inject(
