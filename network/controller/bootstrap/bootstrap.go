@@ -98,8 +98,8 @@ type DiscoveryNode struct {
 type Permission struct {
 	JoinerPublicKey []byte
 	Signature       []byte
+	UTC             []byte
 	ReconnectTo     string
-	UTC             time.Time
 	DiscoveryRef    insolar.Reference
 }
 
@@ -141,7 +141,10 @@ type bootstrapper struct {
 
 func (p *Permission) RawBytes() []byte {
 	res := make([]byte, 0)
-
+	res = append(res, p.JoinerPublicKey...)
+	res = append(res, p.DiscoveryRef.Bytes()...)
+	res = append(res, []byte(p.ReconnectTo)...)
+	res = append(res, p.UTC...)
 	return res
 }
 
@@ -739,7 +742,11 @@ func (bc *bootstrapper) getCodeFromPermission(permission Permission) (Code, erro
 
 func (bc *bootstrapper) updatePermissionsOnRequest(request *NodeBootstrapRequest) error {
 	request.Permission.DiscoveryRef = bc.NodeKeeper.GetOrigin().ID()
-	request.Permission.UTC = time.Now()
+	t, err := time.Now().GobEncode()
+	if err != nil {
+		return errors.Wrap(err, "failed to encode a time")
+	}
+	request.Permission.UTC = t
 	request.Permission.ReconnectTo = bc.getRandActiveDiscoveryAddress(request.JoinClaim.NodeAddress.String())
 
 	sign, err := bc.getPermissionSign(request.Permission)
