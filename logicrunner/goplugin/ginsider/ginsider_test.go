@@ -26,6 +26,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -35,13 +36,25 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-var binaryPath string
-
 type HealthCheckSuite struct {
 	suite.Suite
 }
 
+var binaryPath string
+var testHealthCheckPassed = false
+var testLock sync.Mutex
+
 func (s *HealthCheckSuite) TestHealthCheck() {
+	// make sure test is not executed multiple times in parallel
+	testLock.Lock()
+	defer testLock.Unlock()
+	if testHealthCheckPassed {
+		// Dirty hack. This test doesn't work properly with -count 10
+		// because it registers RPC handlers. Sadly there is no way
+		// to unregister RPC handlers in net/rpc package.
+		return
+	}
+
 	protocol := "unix"
 	socket := os.TempDir() + "/" + testutils.RandomString() + ".sock"
 
@@ -86,6 +99,8 @@ func (s *HealthCheckSuite) TestHealthCheck() {
 	log.Warnf("%+v", output)
 
 	s.NoError(err)
+
+	testHealthCheckPassed = true
 }
 
 func (s *HealthCheckSuite) prepareGoInsider(gi *GoInsider, protocol, socket string) {
