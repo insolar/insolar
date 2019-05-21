@@ -189,7 +189,7 @@ func (m *Scope) activateObject(
 ) (ObjectDescriptor, error) {
 	parentIdx, err := m.LifelineAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
 	if err != nil {
-		return nil, errors.Wrap(err, "not found parent index for activated object")
+		return nil, errors.Wrapf(err, "not found parent index for activated object: %v", parent.String())
 	}
 
 	stateRecord := record.Activate{

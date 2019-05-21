@@ -109,7 +109,7 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 		}
 		cb.prototypes[name] = insolar.NewReference(rd.ID(), *protoID)
 
-		inslogger.FromContext(ctx).Debugf("%v proto Ref=%v", name, cb.prototypes[name])
+		inslogger.FromContext(ctx).Infof("Register %v_proto reference: %v", name, cb.prototypes[name])
 	}
 
 	for name, code := range contracts {
@@ -188,7 +188,7 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 			return errors.Wrapf(err, "[ buildPrototypes ] Can't SetRecord for code '%v'", name)
 		}
 
-		log.Debugf("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
+		log.Infof("Deployed code %q for contract %q in %q", codeRef.String(), name, cb.root)
 
 		_, err = cb.artifactManager.ActivatePrototype(
 			ctx,
@@ -202,11 +202,11 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 			return errors.Wrapf(err, "[ buildPrototypes ] Can't ActivatePrototypef for code '%v'", name)
 		}
 
-		resID, err := cb.artifactManager.RegisterResult(ctx, rd.Ref(), *cb.prototypes[name], nil)
+		_, err = cb.artifactManager.RegisterResult(ctx, rd.Ref(), *cb.prototypes[name], nil)
 		if err != nil {
 			return errors.Wrapf(err, "[ buildPrototypes ] Can't RegisterResult of prototype for code '%v'", name)
 		}
-		inslogger.FromContext(ctx).Debugf("%v register result ID=%v", name, resID)
+		inslogger.FromContext(ctx).Debugf("%v registered result. ref=", name, *cb.prototypes[name])
 	}
 
 	return nil
