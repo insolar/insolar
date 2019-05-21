@@ -19,6 +19,7 @@ package proc
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -126,8 +127,8 @@ func (p *HotData) process(ctx context.Context) error {
 				ObjID:            meta.ObjID,
 				Lifeline:         decodedIndex,
 				LifelineLastUsed: meta.LastUsed,
-				Results:          []insolar.ID{},
-				Requests:         []insolar.ID{}},
+				Records:          []record.Virtual{},
+			},
 		)
 		if err != nil {
 			logger.Error(errors.Wrapf(err, "[handleHotRecords] failed to save index - %v", meta.ObjID.DebugString()))
