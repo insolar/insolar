@@ -57,12 +57,15 @@ func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byt
 	if err != nil {
 		return fmt.Errorf("[ verifySig ] Can't MarshalArgs: %s", err.Error())
 	}
+
+	// public in hex string
 	key, err := m.GetPublicKey()
 	if err != nil {
 		return fmt.Errorf("[ verifySig ]: %s", err.Error())
 	}
 
-	publicKey, err := foundation.ImportPublicKey(key)
+	// jwk to hex public and compare
+	publicKey, err := foundation.ExportPublicKey(key)
 	if err != nil {
 		return fmt.Errorf("[ verifySig ] Invalid public key")
 	}

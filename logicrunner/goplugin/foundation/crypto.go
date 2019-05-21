@@ -17,44 +17,48 @@
 package foundation
 
 import (
-	"crypto"
-
-	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/platformpolicy"
+	"crypto/ecdsa"
+	"github.com/go-jose"
+	"github.com/insolar/x-crypto/x509"
 )
 
 // TODO: this file should be removed
 
-var platformCryptographyScheme = platformpolicy.NewPlatformCryptographyScheme()
-var keyProcessor = platformpolicy.NewKeyProcessor()
-
-// Sign signs given seed.
-func Sign(data []byte, key crypto.PrivateKey) ([]byte, error) {
-	signature, err := platformCryptographyScheme.Signer(key).Sign(data)
-	if err != nil {
-		return nil, err
-	}
-	return signature.Bytes(), nil
-}
-
 // Verify verifies signature.
-func Verify(data []byte, signatureRaw []byte, publicKey crypto.PublicKey) bool {
-	return platformCryptographyScheme.Verifier(publicKey).Verify(insolar.SignatureFromBytes(signatureRaw), data)
+// TODO jose verify
+func Verify(jwsraw string, publicKey []byte) (bool, error) {
+
+	var jwk jose.JSONWebKey
+	err := jwk.UnmarshalJSON([]byte(publicKey))
+	if err != nil {
+		return false, err
+	}
+
+	obj, err := jose.ParseSigned(jwsraw)
+	if err != nil {
+		return false, err
+	}
+
+	_, err = obj.Verify(jwk)
+
+	if err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
-func GeneratePrivateKey() (crypto.PrivateKey, error) {
-	return keyProcessor.GeneratePrivateKey()
-}
+// JWK format to der
+func ExportPublicKey(publicKey []byte) (string, error) {
+	var jwk jose.JSONWebKey
+	err := jwk.UnmarshalJSON([]byte(publicKey))
+	if err != nil || !jwk.Valid() {
+		return "", err
+	}
+	//pk, _ := jwk.Key.(*jose.RawJSONWebKey).EcPublicKey()
+	pk, _ := jwk.Key.(*ecdsa.PublicKey)
 
-func ImportPublicKey(publicKey string) (crypto.PublicKey, error) {
-	return keyProcessor.ImportPublicKeyPEM([]byte(publicKey))
-}
+	pkder, _ := x509.MarshalPKIXPublicKey(pk)
 
-func ExportPublicKey(publicKey crypto.PublicKey) (string, error) {
-	key, err := keyProcessor.ExportPublicKeyPEM(publicKey)
-	return string(key), err
-}
-
-func ExtractPublicKey(privateKey crypto.PrivateKey) crypto.PublicKey {
-	return keyProcessor.ExtractPublicKey(privateKey)
+	return string(pkder), nil
 }
