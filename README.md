@@ -65,7 +65,7 @@ Go to the package directory:
 
 Install dependencies and build binaries:
 
-    make install-deps pre-build build
+    make
 
 ### Example
 

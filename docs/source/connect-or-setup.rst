@@ -11,7 +11,7 @@ Connecting or Setting Up Insolar Network
 Join or set up the Insolar network:
 
 * :ref:`Connect to TestNet 1.1 <connecting_to_testnet>`. Participation in this network is permissioned, with participants invited by the Insolar Core Development Team based on their ability to fulfill the respective SLA.
-* :ref:`Set up a network <setting_up_devnet>` locally for development and test purposes. The local setup is done on one computer with no particular system requirements, and the 'network nodes' are simply services listening to different ports.
+* :ref:`Set up a network <setting_up_devnet>` locally for development and test purposes. The local setup is done on one computer with no particular system requirements, and the 'network nodes' are simply services listening on different ports.
 
 .. _connecting_to_testnet:
 
@@ -103,6 +103,32 @@ Enjoy being a part of the Insolar Network!
 
 .. note:: The Insolar's API is under development and not yet finalized but you can try to run some `test scenarios <https://github.com/insolar/insolar/wiki/Test-scenarios>`_ that use the current API version.
 
+In addition to the Insolar node, the Docker Compose starts Kibana and Grafana services to take care of :ref:`logging and monitoring <logs_and_monitor>`.
+
+.. _ports_used:
+
+Ports Used
+~~~~~~~~~~
+
+Insolar uses the following ports:
+
++--------------+----------+-----------------------------------------------------+
+| Port         | Protocol | Description                                         |
++--------------+----------+-----------------------------------------------------+
+| 7900, 7901   | TCP, UDP | Nodes intercommunication.                           |
+|              |          | The node must be publicly available on these ports. |
++--------------+----------+-----------------------------------------------------+
+| 8090         | TCP      | Node-pulsar communication.                          |
+|              |          | The node must be publicly available on this port.   |
++--------------+----------+-----------------------------------------------------+
+| 18181, 18182 | TCP      | Communication between the main node daemon and the  |
+|              |          | smart contract executor daemon.                     |
++--------------+----------+-----------------------------------------------------+
+| 19191        | TCP      | Node's JSON-RPC API.                                |
++--------------+----------+-----------------------------------------------------+
+| 8080         | TCP      | Prometheus metrics endpoint.                        |
++--------------+----------+-----------------------------------------------------+
+
 .. _setting_up_devnet:
 
 Setting Up Network Locally
@@ -128,7 +154,7 @@ To set up the network locally, do the following:
 
 #. Install dependencies and build binaries: simply run ``make``.
 
-#. Take a look at the ``scripts/insolard/bootstrap/genesis_template.yaml`` file. Here, you can find a list of nodes to be launched. In local setup, the 'nodes' are simply services listening to different ports.
+#. Take a look at the ``scripts/insolard/bootstrap/genesis_template.yaml`` file. Here, you can find a list of nodes to be launched. In local setup, the 'nodes' are simply services listening on different ports.
 
    To add more nodes to the 'network', uncomment some.
 
@@ -141,3 +167,14 @@ To set up the network locally, do the following:
    The launcher generates genesis data, starts the nodes and a pulse watcher, and logs events to ``.artifacts/launchnet/logs``.
 
 When the pulse watcher says ``INSOLAR STATE: READY``, the network is up and has achieved consensus. You can start running test scripts and `benchmarks <https://github.com/insolar/insolar/blob/master/cmd/benchmark/README.md>`_.
+
+Also, you can manually bring up :ref:`logging and monitoring <logs_and_monitor>` by running ``scripts/monitor.sh``.
+
+.. _logs_and_monitor:
+
+Logging and Monitoring
+----------------------
+
+To see the node’s logs, open Kibana in a web browser (``http://<your_server_IP>:5601/``) and click :guilabel:`Discover` in the menu.
+
+To see the monitoring dashboard, open ``http://<your_server_IP>:3000/``, log in to Grafana (login: ``admin``, password: ``pass``), click :guilabel:`Home`, and open the :guilabel:`Insolar Dashboard`.
