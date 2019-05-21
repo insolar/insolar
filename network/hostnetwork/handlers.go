@@ -65,7 +65,7 @@ import (
 )
 
 // RequestHandler is callback function for request handling
-type RequestHandler func(p *packet.Packet)
+type RequestHandler func(p *packet.PacketBackend)
 
 // StreamHandler parses packets from data stream and calls request handler or response handler
 type StreamHandler struct {
@@ -83,7 +83,7 @@ func NewStreamHandler(requestHandler RequestHandler, responseHandler future.Pack
 
 func (s *StreamHandler) HandleStream(address string, reader io.ReadWriteCloser) {
 	for {
-		p, err := packet.DeserializePacket(reader)
+		p, err := packet.DeserializePacketBackend(reader)
 
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
@@ -96,7 +96,7 @@ func (s *StreamHandler) HandleStream(address string, reader io.ReadWriteCloser) 
 			ctx, logger := inslogger.WithTraceField(context.Background(), p.TraceID)
 			logger.Debug("[ HandleStream ] Handling packet RequestID = ", p.RequestID)
 
-			if p.IsResponse {
+			if p.IsResponse() {
 				go s.responseHandler.Handle(ctx, p)
 			} else {
 				go s.requestHandler(p)
@@ -106,8 +106,8 @@ func (s *StreamHandler) HandleStream(address string, reader io.ReadWriteCloser) 
 }
 
 // SendPacket sends packet using connection from pool
-func SendPacket(ctx context.Context, pool pool.ConnectionPool, p *packet.Packet) error {
-	data, err := packet.SerializePacket(p)
+func SendPacket(ctx context.Context, pool pool.ConnectionPool, p *packet.PacketBackend) error {
+	data, err := packet.SerializePacketBackend(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize packet")
 	}

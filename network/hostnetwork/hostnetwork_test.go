@@ -215,7 +215,7 @@ func TestNewHostNetwork(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(count)
 
-	handler := func(ctx context.Context, request network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, request network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
 		wg.Done()
 		return n2.BuildResponse(ctx, request, nil), nil
@@ -296,7 +296,7 @@ func TestHostNetwork_SendRequestPacket2(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
 		ref, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
 		require.NoError(t, err)
@@ -340,7 +340,7 @@ func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 	}
 	gob.Register(&Data{})
 
-	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
 		d := r.GetData().(*Data)
 		return n2.BuildResponse(ctx, r, &Data{Number: d.Number + 1}), nil
@@ -384,7 +384,7 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 	ctx := context.Background()
 	ctx2 := context.Background()
 
-	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
 		time.Sleep(time.Second)
 		return n2.BuildResponse(ctx, r, nil), nil
@@ -431,7 +431,7 @@ func TestHostNetwork_WrongHandler(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
 		wg.Done()
 		return n2.BuildResponse(ctx, r, nil), nil
@@ -469,7 +469,7 @@ func TestStartStopSend(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
-	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
 		wg.Done()
 		return t2.BuildResponse(ctx, r, nil), nil

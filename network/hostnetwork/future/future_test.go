@@ -66,7 +66,7 @@ import (
 func TestNewFuture(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
-	m := &packet.Packet{}
+	m := &packet.PacketBackend{}
 	f := NewFuture(types.RequestID(1), n, m, cb)
 
 	require.Implements(t, (*Future)(nil), f)
@@ -75,7 +75,7 @@ func TestNewFuture(t *testing.T) {
 func TestFuture_ID(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
-	m := &packet.Packet{}
+	m := &packet.PacketBackend{}
 	f := NewFuture(types.RequestID(1), n, m, cb)
 
 	require.Equal(t, f.ID(), types.RequestID(1))
@@ -84,7 +84,7 @@ func TestFuture_ID(t *testing.T) {
 func TestFuture_Actor(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
-	m := &packet.Packet{}
+	m := &packet.PacketBackend{}
 	f := NewFuture(types.RequestID(1), n, m, cb)
 
 	require.Equal(t, f.Receiver(), n)
@@ -93,7 +93,7 @@ func TestFuture_Actor(t *testing.T) {
 func TestFuture_Result(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
-	m := &packet.Packet{}
+	m := &packet.PacketBackend{}
 	f := NewFuture(types.RequestID(1), n, m, cb)
 
 	require.Empty(t, f.Response())
@@ -102,7 +102,7 @@ func TestFuture_Result(t *testing.T) {
 func TestFuture_Request(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
-	m := &packet.Packet{}
+	m := &packet.PacketBackend{}
 	f := NewFuture(types.RequestID(1), n, m, cb)
 
 	require.Equal(t, f.Request(), m)
@@ -111,7 +111,7 @@ func TestFuture_Request(t *testing.T) {
 func TestFuture_SetResponse(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
 	cb := func(f Future) {}
-	m := &packet.Packet{}
+	m := &packet.PacketBackend{}
 	f := NewFuture(types.RequestID(1), n, m, cb)
 
 	require.Empty(t, f.Response())
@@ -135,7 +135,7 @@ func TestFuture_Cancel(t *testing.T) {
 
 	cb := func(f Future) { cbCalled = true }
 
-	m := &packet.Packet{}
+	m := &packet.PacketBackend{}
 	f := NewFuture(types.RequestID(1), n, m, cb)
 
 	f.Cancel()
@@ -148,11 +148,11 @@ func TestFuture_Cancel(t *testing.T) {
 
 func TestFuture_WaitResponse_Cancel(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
-	c := make(chan network.Response)
+	c := make(chan network.Packet)
 	var f Future = &future{
 		response:       c,
 		receiver:       n,
-		request:        &packet.Packet{},
+		request:        &packet.PacketBackend{},
 		requestID:      types.RequestID(1),
 		cancelCallback: func(f Future) {},
 	}
@@ -166,12 +166,12 @@ func TestFuture_WaitResponse_Cancel(t *testing.T) {
 
 func TestFuture_WaitResponse_Timeout(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
-	c := make(chan network.Response)
+	c := make(chan network.Packet)
 	cancelled := false
 	var f Future = &future{
 		response:       c,
 		receiver:       n,
-		request:        &packet.Packet{},
+		request:        &packet.PacketBackend{},
 		requestID:      types.RequestID(1),
 		cancelCallback: func(f Future) { cancelled = true },
 	}
@@ -183,16 +183,16 @@ func TestFuture_WaitResponse_Timeout(t *testing.T) {
 
 func TestFuture_WaitResponse_Success(t *testing.T) {
 	n, _ := host.NewHost("127.0.0.1:8080")
-	c := make(chan network.Response, 1)
+	c := make(chan network.Packet, 1)
 	var f Future = &future{
 		response:       c,
 		receiver:       n,
-		request:        &packet.Packet{},
+		request:        &packet.PacketBackend{},
 		requestID:      types.RequestID(1),
 		cancelCallback: func(f Future) {},
 	}
 
-	p := &packet.Packet{}
+	p := &packet.PacketBackend{}
 	c <- p
 
 	res, err := f.WaitResponse(time.Millisecond)
@@ -207,7 +207,7 @@ func TestFuture_SetResponse_Cancel_Concurrency(t *testing.T) {
 
 	cb := func(f Future) { cbCalled = true }
 
-	m := &packet.Packet{}
+	m := &packet.PacketBackend{}
 	f := NewFuture(types.RequestID(1), n, m, cb)
 
 	wg := &sync.WaitGroup{}
@@ -218,7 +218,7 @@ func TestFuture_SetResponse_Cancel_Concurrency(t *testing.T) {
 		wg.Done()
 	}()
 	go func() {
-		f.SetResponse(&packet.Packet{})
+		f.SetResponse(&packet.PacketBackend{})
 		wg.Done()
 	}()
 

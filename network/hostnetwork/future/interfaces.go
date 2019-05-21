@@ -78,16 +78,16 @@ type Future interface {
 	Receiver() *host.Host
 
 	// Request returns origin request.
-	Request() network.Request
+	Request() network.Packet
 
 	// Response is a channel to listen for future response.
-	Response() <-chan network.Response
+	Response() <-chan network.Packet
 
 	// SetResponse makes packet to appear in response channel.
-	SetResponse(network.Response)
+	SetResponse(network.Packet)
 
 	// WaitResponse gets the future response from Response() channel with a timeout set to `duration`.
-	WaitResponse(duration time.Duration) (network.Response, error)
+	WaitResponse(duration time.Duration) (network.Packet, error)
 
 	// Cancel closes all channels and cleans up underlying structures.
 	Cancel()
@@ -97,10 +97,10 @@ type Future interface {
 type CancelCallback func(Future)
 
 type Manager interface {
-	Get(packet *packet.Packet) Future
-	Create(packet *packet.Packet) Future
+	Get(packet *packet.PacketBackend) Future
+	Create(packet *packet.PacketBackend) Future
 }
 
 type PacketHandler interface {
-	Handle(ctx context.Context, msg *packet.Packet)
+	Handle(ctx context.Context, msg *packet.PacketBackend)
 }

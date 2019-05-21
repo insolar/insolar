@@ -160,9 +160,18 @@ func (hn *hostNetwork) Stop(ctx context.Context) error {
 	return nil
 }
 
-func (hn *hostNetwork) buildRequest(ctx context.Context, request network.Request, receiver *host.Host) *packet.Packet {
-	return packet.NewBuilder(hn.getOrigin()).Receiver(receiver).Type(request.GetType()).RequestID(request.GetRequestID()).
-		Request(request.GetData()).TraceID(inslogger.TraceID(ctx)).Build()
+func (hn *hostNetwork) buildRequest(ctx context.Context, packetType types.PacketType,
+	requestData interface{}, receiver *host.Host) *packet.PacketBackend {
+	result := &packet.PacketBackend{
+		Sender:   hn.getOrigin(),
+		Receiver: receiver,
+		// TODO: replace in protobuf with our type
+		RequestID: uint64(hn.sequenceGenerator.Generate()),
+		TraceID:   inslogger.TraceID(ctx),
+		Type:      uint32(packetType),
+	}
+	result.SetRequest(requestData)
+	return result
 }
 
 // PublicAddress returns public address that can be published for all nodes.
@@ -170,35 +179,28 @@ func (hn *hostNetwork) PublicAddress() string {
 	return hn.getOrigin().Address.String()
 }
 
-// NewRequestBuilder create packet Builder for an outgoing request with sender set to current node.
-func (hn *hostNetwork) NewRequestBuilder() network.RequestBuilder {
-	return &Builder{sender: hn.getOrigin(), id: types.RequestID(hn.sequenceGenerator.Generate())}
-}
-
-func (hn *hostNetwork) handleRequest(p *packet.Packet) {
+func (hn *hostNetwork) handleRequest(p *packet.PacketBackend) {
 	ctx, logger := inslogger.WithTraceField(context.Background(), p.TraceID)
-	logger.Debugf("Got %s request from host %s; RequestID: %d", p.Type.String(), p.Sender.String(), p.RequestID)
-	handler, exist := hn.handlers[p.Type]
+	logger.Debugf("Got %s request from host %s; RequestID: %d", p.Type, p.Sender, p.RequestID)
+	handler, exist := hn.handlers[p.GetType()]
 	if !exist {
-		logger.Errorf("No handler set for packet type %s from node %s",
-			p.Type.String(), p.Sender.NodeID.String())
+		logger.Errorf("No handler set for packet type %s from node %s", p.Type, p.Sender.NodeID)
 		return
 	}
 	ctx, span := instracer.StartSpan(ctx, "hostTransport.processMessage")
 	span.AddAttributes(
 		trace.StringAttribute("msg receiver", p.Receiver.Address.String()),
 		trace.StringAttribute("msg trace", p.TraceID),
-		trace.StringAttribute("msg type", p.Type.String()),
+		trace.StringAttribute("msg type", p.GetType().String()),
 	)
 	defer span.End()
 	response, err := handler(ctx, p)
 	if err != nil {
-		logger.Errorf("Error handling request %s from node %s: %s",
-			p.Type.String(), p.Sender.NodeID.String(), err)
+		logger.Errorf("Error handling request %s from node %s: %s", p.Type, p.Sender.NodeID, err)
 		return
 	}
 
-	responsePacket := response.(*packet.Packet)
+	responsePacket := response.(*packet.PacketBackend)
 	responsePacket.RequestID = p.RequestID
 	err = SendPacket(ctx, hn.pool, responsePacket)
 	if err != nil {
@@ -207,14 +209,16 @@ func (hn *hostNetwork) handleRequest(p *packet.Packet) {
 }
 
 // SendRequestToHost send request packet to a remote node.
-func (hn *hostNetwork) SendRequestToHost(ctx context.Context, request network.Request, receiver *host.Host) (network.Future, error) {
+func (hn *hostNetwork) SendRequestToHost(ctx context.Context, packetType types.PacketType,
+	requestData interface{}, receiver *host.Host) (network.Future, error) {
+
 	if atomic.LoadUint32(&hn.started) == 0 {
 		return nil, errors.New("host network is not started")
 	}
 
-	p := hn.buildRequest(ctx, request, receiver)
+	p := hn.buildRequest(ctx, packetType, requestData, receiver)
 
-	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d", p.Type, p.Receiver.String(), p.RequestID)
+	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d", p.Type, p.Receiver, p.RequestID)
 
 	f := hn.futureManager.Create(p)
 	err := SendPacket(ctx, hn.pool, p)
@@ -222,7 +226,7 @@ func (hn *hostNetwork) SendRequestToHost(ctx context.Context, request network.Re
 		f.Cancel()
 		return nil, errors.Wrap(err, "Failed to send transport packet")
 	}
-	metrics.NetworkPacketSentTotal.WithLabelValues(p.Type.String()).Inc()
+	metrics.NetworkPacketSentTotal.WithLabelValues(p.GetType().String()).Inc()
 	return f, nil
 }
 
@@ -236,26 +240,32 @@ func (hn *hostNetwork) RegisterPacketHandler(t types.PacketType, handler network
 }
 
 // BuildResponse create response to an incoming request with Data set to responseData.
-func (hn *hostNetwork) BuildResponse(ctx context.Context, request network.Request, responseData interface{}) network.Response {
-
-	sender := request.GetSenderHost()
-	p := packet.NewBuilder(hn.getOrigin()).Type(request.GetType()).Receiver(sender).RequestID(request.GetRequestID()).
-		Response(responseData).TraceID(inslogger.TraceID(ctx)).Build()
-	return p
+func (hn *hostNetwork) BuildResponse(ctx context.Context, request network.Packet, responseData interface{}) network.Packet {
+	result := &packet.PacketBackend{
+		Sender:   hn.getOrigin(),
+		Receiver: request.GetSenderHost(),
+		// TODO: replace in protobuf with our type
+		RequestID: uint64(request.GetRequestID()),
+		TraceID:   inslogger.TraceID(ctx),
+	}
+	result.SetResponse(responseData)
+	return result
 }
 
 // SendRequest send request to a remote node.
-func (hn *hostNetwork) SendRequest(ctx context.Context, request network.Request, receiver insolar.Reference) (network.Future, error) {
+func (hn *hostNetwork) SendRequest(ctx context.Context, packetType types.PacketType,
+	requestData interface{}, receiver insolar.Reference) (network.Future, error) {
+
 	h, err := hn.Resolver.Resolve(receiver)
 	if err != nil {
 		return nil, errors.Wrap(err, "error resolving NodeID -> Address")
 	}
-	return hn.SendRequestToHost(ctx, request, h)
+	return hn.SendRequestToHost(ctx, packetType, requestData, h)
 }
 
 // RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 func (hn *hostNetwork) RegisterRequestHandler(t types.PacketType, handler network.RequestHandler) {
-	f := func(ctx context.Context, request network.Request) (network.Response, error) {
+	f := func(ctx context.Context, request network.Packet) (network.Packet, error) {
 		hn.Resolver.AddToKnownHosts(request.GetSenderHost())
 		return handler(ctx, request)
 	}

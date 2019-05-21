@@ -123,11 +123,6 @@ func (p *PacketBackend) GetSenderHost() *host.Host {
 	return p.Sender
 }
 
-func (p *PacketBackend) GetData() interface{} {
-	// TODO: replace with GetRequest/GetResponse
-	return p.GetPayload()
-}
-
 func (p *PacketBackend) GetRequestID() types.RequestID {
 	return types.RequestID(p.RequestID)
 }

@@ -68,22 +68,24 @@ func NewManager() Manager {
 	}
 }
 
-func (fm *futureManager) Create(packet *packet.Packet) Future {
-	future := NewFuture(packet.RequestID, packet.Receiver, packet, fm.canceler)
+func (fm *futureManager) Create(packet *packet.PacketBackend) Future {
+	// TODO: replace wrapping with own types in protobuf
+	future := NewFuture(types.RequestID(packet.RequestID), packet.Receiver, packet, fm.canceler)
 
 	fm.mutex.Lock()
 	defer fm.mutex.Unlock()
 
-	fm.futures[packet.RequestID] = future
+	fm.futures[types.RequestID(packet.RequestID)] = future
 
 	return future
 }
 
-func (fm *futureManager) Get(packet *packet.Packet) Future {
+func (fm *futureManager) Get(packet *packet.PacketBackend) Future {
+	// TODO: replace wrapping with own types in protobuf
 	fm.mutex.RLock()
 	defer fm.mutex.RUnlock()
 
-	return fm.futures[packet.RequestID]
+	return fm.futures[types.RequestID(packet.RequestID)]
 }
 
 func (fm *futureManager) canceler(f Future) {

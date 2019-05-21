@@ -11,7 +11,7 @@ option (gogoproto.populate_all) = false;
 message PacketBackend {
     bytes Sender = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
     bytes Receiver = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
-    uint32 RequestID = 3;
+    uint64 RequestID = 3;
     string TraceID = 4;
     uint32 Type = 5;
 
@@ -96,18 +96,14 @@ message RPCResponse {
     string Error = 2;
 }
 
-message BasicResponse {
-    bool Success = 1;
-    string Error = 2;
+enum ResponseCode {
+    Accepted = 0;
+    Rejected = 1;
+    Redirected = 2;
+    ReconnectRequired = 3;
 }
 
 message BootstrapResponse {
-    enum ResponseCode {
-        Accepted = 0;
-        Rejected = 1;
-        Redirected = 2;
-        ReconnectRequired = 3;
-    }
     ResponseCode Code = 1;
     string RejectReason = 2;
     uint32 ETA = 3;
@@ -115,6 +111,11 @@ message BootstrapResponse {
     uint32 UpdateSincePulse = 5;
     string RedirectHost = 6;
     uint32 NetworkSize = 7;
+}
+
+message BasicResponse {
+    bool Success = 1;
+    string Error = 2;
 }
 
 enum BasicResponseCode {

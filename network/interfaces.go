@@ -58,6 +58,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/node"
 )
@@ -92,8 +93,8 @@ type Controller interface {
 	AuthenticateToDiscoveryNode(ctx context.Context, discovery insolar.DiscoveryNode) error
 }
 
-// RequestHandler handler function to process incoming requests from network.
-type RequestHandler func(context.Context, Request) (Response, error)
+// RequestHandler handler function to process incoming requests from network and return responses to these requests.
+type RequestHandler func(ctx context.Context, request Packet) (response Packet, err error)
 
 //go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock.go
 
@@ -107,15 +108,13 @@ type HostNetwork interface {
 	PublicAddress() string
 
 	// SendRequest send request to a remote node addressed by reference.
-	SendRequest(ctx context.Context, request Request, receiver insolar.Reference) (Future, error)
+	SendRequest(ctx context.Context, t types.PacketType, requestData interface{}, receiver insolar.Reference) (Future, error)
 	// SendRequestToHost send request packet to a remote host.
-	SendRequestToHost(ctx context.Context, request Request, receiver *host.Host) (Future, error)
+	SendRequestToHost(ctx context.Context, t types.PacketType, requestData interface{}, receiver *host.Host) (Future, error)
 	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 	RegisterRequestHandler(t types.PacketType, handler RequestHandler)
-	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
-	NewRequestBuilder() RequestBuilder
 	// BuildResponse create response to an incoming request with Data set to responseData.
-	BuildResponse(ctx context.Context, request Request, responseData interface{}) Response
+	BuildResponse(ctx context.Context, request Packet, responseData interface{}) Packet
 }
 
 // ConsensusPacketHandler callback function for consensus packets handling
@@ -143,28 +142,17 @@ type Packet interface {
 	GetSender() insolar.Reference
 	GetSenderHost() *host.Host
 	GetType() types.PacketType
-	GetData() interface{}
+	GetRequest() *packet.Request
+	GetResponse() *packet.Response
 	GetRequestID() types.RequestID
+	String() string
 }
-
-// Request is a packet that is sent from the current node.
-type Request Packet
-
-// Response is a packet that is received in response to a previously sent Request.
-type Response Packet
 
 // Future allows to handle responses to a previously sent request.
 type Future interface {
-	Request() Request
-	Response() <-chan Response
-	WaitResponse(duration time.Duration) (Response, error)
-}
-
-// RequestBuilder allows to build a Request.
-type RequestBuilder interface {
-	Type(packetType types.PacketType) RequestBuilder
-	Data(data interface{}) RequestBuilder
-	Build() Request
+	Request() Packet
+	Response() <-chan Packet
+	WaitResponse(duration time.Duration) (Packet, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network.PulseHandler -o ../testutils/network -s _mock.go

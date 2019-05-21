@@ -113,7 +113,7 @@ func NewDistributor(conf configuration.PulseDistributor) (insolar.PulseDistribut
 }
 
 func (d *distributor) Init(ctx context.Context) error {
-	handler := hostnetwork.NewStreamHandler(func(p *packet.Packet) {}, d.responseHandler)
+	handler := hostnetwork.NewStreamHandler(func(p *packet.PacketBackend) {}, d.responseHandler)
 
 	var err error
 	d.transport, err = d.Factory.CreateStreamTransport(handler)
@@ -212,8 +212,14 @@ func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 
 	ctx, span := instracer.StartSpan(ctx, "distributor.pingHost")
 	defer span.End()
-	builder := packet.NewBuilder(d.pulsarHost)
-	pingPacket := builder.Receiver(host).Type(types.Ping).RequestID(d.generateID()).Build()
+
+	pingPacket := &packet.PacketBackend{
+		Sender:   d.pulsarHost,
+		Receiver: host,
+		// TODO: replace in protobuf with our type
+		RequestID: uint64(d.generateID()),
+	}
+	pingPacket.SetRequest(&packet.Ping{})
 	pingCall, err := d.sendRequestToHost(ctx, pingPacket, host)
 	if err != nil {
 		logger.Error(err)
@@ -243,8 +249,15 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *insolar.Pulse,
 
 	ctx, span := instracer.StartSpan(ctx, "distributor.sendPulseToHosts")
 	defer span.End()
-	pb := packet.NewBuilder(d.pulsarHost)
-	pulseRequest := pb.Receiver(host).Request(&packet.RequestPulse{Pulse: *pulse}).RequestID(d.generateID()).Type(types.Pulse).Build()
+
+	pulseRequest := &packet.PacketBackend{
+		Sender:   d.pulsarHost,
+		Receiver: host,
+		// TODO: replace in protobuf with our type
+		RequestID: uint64(d.generateID()),
+	}
+	// TODO: add real pulse
+	pulseRequest.SetRequest(&packet.PulseRequest{})
 	call, err := d.sendRequestToHost(ctx, pulseRequest, host)
 	if err != nil {
 		return err
@@ -276,15 +289,16 @@ func (d *distributor) resume(ctx context.Context) error {
 	return d.transport.Start(ctx)
 }
 
-func (d *distributor) sendRequestToHost(ctx context.Context, request network.Request, receiver *host.Host) (network.Future, error) {
-	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d", request.GetType(), receiver.String(), request.GetRequestID())
+func (d *distributor) sendRequestToHost(ctx context.Context, packet *packet.PacketBackend, receiver *host.Host) (network.Future, error) {
+	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d",
+		packet.GetType(), receiver.String(), packet.GetRequestID())
 
-	f := d.futureManager.Create(request.(*packet.Packet))
-	err := hostnetwork.SendPacket(ctx, d.pool, request.(*packet.Packet))
+	f := d.futureManager.Create(packet)
+	err := hostnetwork.SendPacket(ctx, d.pool, packet)
 	if err != nil {
 		f.Cancel()
 		return nil, errors.Wrap(err, "Failed to send transport packet")
 	}
-	metrics.NetworkPacketSentTotal.WithLabelValues(request.GetType().String()).Inc()
+	metrics.NetworkPacketSentTotal.WithLabelValues(packet.GetType().String()).Inc()
 	return f, nil
 }

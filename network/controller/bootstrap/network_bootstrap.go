@@ -132,7 +132,7 @@ func (nb *networkBootstrapper) AuthenticateToDiscoveryNode(ctx context.Context, 
 	// origin := nb.NodeKeeper.GetOrigin()
 	// mutableOrigin := origin.(nodenetwork.MutableNode)
 	// mutableOrigin.SetShortID(data.AssignShortID)
-	return nb.AuthController.Register(ctx, discovery, data.SessionID)
+	return nb.AuthController.Register(ctx, discovery, SessionID(data.SessionID))
 }
 
 func (nb *networkBootstrapper) bootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {

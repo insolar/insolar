@@ -179,8 +179,6 @@ func (n *ServiceNetwork) Init(ctx context.Context) error {
 		cert,
 		transport.NewFactory(n.cfg.Host.Transport),
 		hostNetwork,
-		// use flaky network instead of hostNetwork to imitate network delays
-		// NewFlakyNetwork(hostNetwork),
 		merkle.NewCalculator(),
 		consensusNetwork,
 		phases.NewCommunicator(),

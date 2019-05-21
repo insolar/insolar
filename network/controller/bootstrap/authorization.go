@@ -52,10 +52,10 @@ package bootstrap
 
 import (
 	"context"
-	"encoding/gob"
 	"fmt"
 	"time"
 
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
@@ -82,7 +82,7 @@ const (
 type AuthorizationController interface {
 	component.Initer
 
-	Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert insolar.AuthorizationCertificate) (*AuthorizationData, error)
+	Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert insolar.AuthorizationCertificate) (*packet.AuthorizationData, error)
 	Register(ctx context.Context, discoveryNode *DiscoveryNode, sessionID SessionID) error
 }
 
@@ -95,54 +95,8 @@ type authorizationController struct {
 	options *common.Options
 }
 
-type OperationCode uint8
-
-const (
-	OpConfirmed OperationCode = iota + 1
-	OpRejected
-	OpRetry
-)
-
-// AuthorizationRequest
-type AuthorizationRequest struct {
-	Certificate []byte
-}
-
-// AuthorizationResponse
-type AuthorizationResponse struct {
-	Code  OperationCode
-	Error string
-	Data  *AuthorizationData
-}
-
-type AuthorizationData struct {
-	SessionID     SessionID
-	AssignShortID insolar.ShortNodeID
-}
-
-// RegistrationRequest
-type RegistrationRequest struct {
-	SessionID SessionID
-	Version   string
-	JoinClaim *packets.NodeJoinClaim
-}
-
-// RegistrationResponse
-type RegistrationResponse struct {
-	Code    OperationCode
-	RetryIn time.Duration
-	Error   string
-}
-
-func init() {
-	gob.Register(&AuthorizationRequest{})
-	gob.Register(&AuthorizationResponse{})
-	gob.Register(&RegistrationRequest{})
-	gob.Register(&RegistrationResponse{})
-}
-
 // Authorize node on the discovery node (step 2 of the bootstrap process)
-func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert insolar.AuthorizationCertificate) (*AuthorizationData, error) {
+func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode *DiscoveryNode, cert insolar.AuthorizationCertificate) (*packet.AuthorizationData, error) {
 	inslogger.FromContext(ctx).Infof("Authorizing on host: %s", discoveryNode.Host)
 	inslogger.FromContext(ctx).Infof("cert: %s", cert)
 
@@ -156,10 +110,8 @@ func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode 
 		return nil, errors.Wrap(err, "Error serializing certificate")
 	}
 
-	request := ac.Network.NewRequestBuilder().Type(types.Authorize).Data(&AuthorizationRequest{
-		Certificate: serializedCert,
-	}).Build()
-	future, err := ac.Network.SendRequestToHost(ctx, request, discoveryNode.Host)
+	auth := &packet.AuthorizeRequest{Certificate: serializedCert}
+	future, err := ac.Network.SendRequestToHost(ctx, types.Authorize, auth, discoveryNode.Host)
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error sending authorize request")
 	}
@@ -167,8 +119,11 @@ func (ac *authorizationController) Authorize(ctx context.Context, discoveryNode 
 	if err != nil {
 		return nil, errors.Wrapf(err, "Error getting response for authorize request")
 	}
-	data := response.GetData().(*AuthorizationResponse)
-	if data.Code == OpRejected {
+	if response.GetResponse() == nil || response.GetResponse().GetAuthorize() == nil {
+		return nil, errors.Errorf("Authorize failed: got incorrect response: %s", response)
+	}
+	data := response.GetResponse().GetAuthorize()
+	if data.Code == packet.Denied {
 		return nil, errors.New("Authorize rejected: " + data.Error)
 	}
 	return data.Data, nil
@@ -197,12 +152,12 @@ func (ac *authorizationController) register(ctx context.Context, discoveryNode *
 	if err != nil {
 		return errors.Wrap(err, "Failed to get origin claim")
 	}
-	request := ac.Network.NewRequestBuilder().Type(types.Register).Data(&RegistrationRequest{
+	request := &packet.RegisterRequest{
 		Version:   ac.NodeKeeper.GetOrigin().Version(),
-		SessionID: sessionID,
+		SessionID: uint64(sessionID),
 		JoinClaim: originClaim,
-	}).Build()
-	future, err := ac.Network.SendRequestToHost(ctx, request, discoveryNode.Host)
+	}
+	future, err := ac.Network.SendRequestToHost(ctx, types.Register, request, discoveryNode.Host)
 	if err != nil {
 		return errors.Wrapf(err, "Error sending register request")
 	}
@@ -210,26 +165,29 @@ func (ac *authorizationController) register(ctx context.Context, discoveryNode *
 	if err != nil {
 		return errors.Wrapf(err, "Error getting response for register request")
 	}
-	data := response.GetData().(*RegistrationResponse)
-	if data.Code == OpRejected {
+	if response.GetResponse() == nil || response.GetResponse().GetRegister() == nil {
+		return errors.Errorf("Register failed: got incorrect response: %s", response)
+	}
+	data := response.GetResponse().GetRegister()
+	if data.Code == packet.Denied {
 		return errors.New("Register rejected: " + data.Error)
 	}
-	if data.Code == OpRetry {
+	if data.Code == packet.Retry {
 		if attempt >= registrationRetries {
 			return errors.Errorf("Exceeded maximum number of registration retries (%d)", registrationRetries)
 		}
 		log.Warnf("Failed to register on discovery node %s. Reason: node %s is already in network active list. "+
 			"Retrying registration in %v", discoveryNode.Host, ac.NodeKeeper.GetOrigin().ID(), data.RetryIn)
-		time.Sleep(data.RetryIn)
+		time.Sleep(time.Duration(data.RetryIn))
 		return ac.register(ctx, discoveryNode, sessionID, attempt+1)
 	}
 	return nil
 }
 
-func (ac *authorizationController) buildRegistrationResponse(sessionID SessionID, claim *packets.NodeJoinClaim) *RegistrationResponse {
+func (ac *authorizationController) buildRegistrationResponse(sessionID SessionID, claim *packets.NodeJoinClaim) *packet.RegisterResponse {
 	session, err := ac.getSession(sessionID, claim)
 	if err != nil {
-		return &RegistrationResponse{Code: OpRejected, Error: err.Error()}
+		return &packet.RegisterResponse{Code: packet.Denied, Error: err.Error()}
 	}
 	if node := ac.NodeKeeper.GetAccessor().GetActiveNode(claim.NodeRef); node != nil {
 		retryIn := session.TTL / 2
@@ -249,9 +207,9 @@ func (ac *authorizationController) buildRegistrationResponse(sessionID SessionID
 		}
 
 		ac.SessionManager.ProlongateSession(sessionID, session)
-		return &RegistrationResponse{Code: OpRetry, RetryIn: retryIn}
+		return &packet.RegisterResponse{Code: packet.Retry, RetryIn: int64(retryIn)}
 	}
-	return &RegistrationResponse{Code: OpConfirmed}
+	return &packet.RegisterResponse{Code: packet.Confirmed}
 }
 
 func (ac *authorizationController) getSession(sessionID SessionID, claim *packets.NodeJoinClaim) (*Session, error) {
@@ -266,22 +224,26 @@ func (ac *authorizationController) getSession(sessionID SessionID, claim *packet
 	return session, nil
 }
 
-func (ac *authorizationController) processRegisterRequest(ctx context.Context, request network.Request) (network.Response, error) {
-	data := request.GetData().(*RegistrationRequest)
+func (ac *authorizationController) processRegisterRequest(ctx context.Context, request network.Packet) (network.Packet, error) {
+	if request.GetRequest() == nil || request.GetRequest().GetRegister() == nil {
+		return nil, errors.Errorf("process register: got invalid protobuf request message: %s", request)
+	}
+	data := request.GetRequest().GetRegister()
 	if data.Version != ac.NodeKeeper.GetOrigin().Version() {
-		response := &RegistrationResponse{Code: OpRejected,
+		response := &packet.RegisterResponse{Code: packet.Denied,
 			Error: fmt.Sprintf("Joiner version %s does not match discovery version %s",
 				data.Version, ac.NodeKeeper.GetOrigin().Version())}
 		return ac.Network.BuildResponse(ctx, request, response), nil
 	}
-	response := ac.buildRegistrationResponse(data.SessionID, data.JoinClaim)
-	if response.Code != OpConfirmed {
+	// TODO: remove SessionID convertions
+	response := ac.buildRegistrationResponse(SessionID(data.SessionID), data.JoinClaim)
+	if response.Code != packet.Confirmed {
 		return ac.Network.BuildResponse(ctx, request, response), nil
 	}
 
 	// TODO: fix Short ID assignment logic
 	if CheckShortIDCollision(ac.NodeKeeper, data.JoinClaim.ShortNodeID) {
-		response = &RegistrationResponse{Code: OpRejected,
+		response = &packet.RegisterResponse{Code: packet.Denied,
 			Error: "Short ID of the joiner node conflicts with active node short ID"}
 		return ac.Network.BuildResponse(ctx, request, response), nil
 	}
@@ -291,25 +253,28 @@ func (ac *authorizationController) processRegisterRequest(ctx context.Context, r
 	return ac.Network.BuildResponse(ctx, request, response), nil
 }
 
-func (ac *authorizationController) processAuthorizeRequest(ctx context.Context, request network.Request) (network.Response, error) {
-	data := request.GetData().(*AuthorizationRequest)
+func (ac *authorizationController) processAuthorizeRequest(ctx context.Context, request network.Packet) (network.Packet, error) {
+	if request.GetRequest() == nil || request.GetRequest().GetAuthorize() == nil {
+		return nil, errors.Errorf("process authorize: got invalid protobuf request message: %s", request)
+	}
+	data := request.GetRequest().GetAuthorize()
 	cert, err := certificate.Deserialize(data.Certificate, platformpolicy.NewKeyProcessor())
 	if err != nil {
-		return ac.Network.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
+		return ac.Network.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.Denied, Error: err.Error()}), nil
 	}
 	valid, err := ac.Gatewayer.Gateway().Auther().ValidateCert(ctx, cert)
 	if !valid {
 		if err == nil {
 			err = errors.New("Certificate validation failed")
 		}
-		return ac.Network.BuildResponse(ctx, request, &AuthorizationResponse{Code: OpRejected, Error: err.Error()}), nil
+		return ac.Network.BuildResponse(ctx, request, &packet.AuthorizeResponse{Code: packet.Denied, Error: err.Error()}), nil
 	}
 	session := ac.SessionManager.NewSession(request.GetSender(), cert, ac.options.HandshakeSessionTTL)
-	return ac.Network.BuildResponse(ctx, request, &AuthorizationResponse{
-		Code: OpConfirmed,
-		Data: &AuthorizationData{
-			SessionID:     session,
-			AssignShortID: GenerateShortID(ac.NodeKeeper, *cert.GetNodeRef()),
+	return ac.Network.BuildResponse(ctx, request, &packet.AuthorizeResponse{
+		Code: packet.Confirmed,
+		Data: &packet.AuthorizationData{
+			SessionID:     uint64(session),
+			AssignShortID: uint32(GenerateShortID(ac.NodeKeeper, *cert.GetNodeRef())),
 		},
 	}), nil
 }

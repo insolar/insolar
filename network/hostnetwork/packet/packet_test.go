@@ -51,125 +51,131 @@
 package packet
 
 import (
-	"bytes"
-	"crypto/rand"
 	"encoding/gob"
 	"testing"
 
-	"github.com/insolar/insolar/network/hostnetwork/host"
-	"github.com/insolar/insolar/network/hostnetwork/packet/types"
-	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 )
 
 func init() {
 	gob.Register(&RequestTest{})
 }
 
-func TestSerializePacket(t *testing.T) {
-	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
-	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
-	builder := NewBuilder(sender)
-	msg := builder.Receiver(receiver).Type(TestPacket).Request(&RequestTest{[]byte{0, 1, 2, 3}}).Build()
+// func TestSerializePacket(t *testing.T) {
+// 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+// 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
+// 	builder := NewBuilder(sender)
+// 	msg := builder.Receiver(receiver).Type(TestPacket).Request(&RequestTest{[]byte{0, 1, 2, 3}}).Build()
+//
+// 	_, err := SerializePacket(msg)
+//
+// 	require.NoError(t, err)
+// }
+//
+// func TestDeserializePacket(t *testing.T) {
+// 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+// 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
+// 	builder := NewBuilder(sender)
+// 	msg := builder.Receiver(receiver).Type(TestPacket).Request(&RequestTest{[]byte{0, 1, 2, 3}}).Build()
+//
+// 	serialized, _ := SerializePacket(msg)
+//
+// 	var buffer bytes.Buffer
+//
+// 	buffer.Write(serialized)
+//
+// 	deserialized, err := DeserializePacket(&buffer)
+//
+// 	require.NoError(t, err)
+// 	require.Equal(t, deserialized, msg)
+// }
+//
+// func TestDeserializeBigPacket(t *testing.T) {
+// 	hostOne, _ := host.NewHost("127.0.0.1:31337")
+//
+// 	data := make([]byte, 1024*1024*10)
+// 	rand.Read(data)
+//
+// 	builder := NewBuilder(hostOne)
+// 	msg := builder.Receiver(hostOne).Type(TestPacket).Request(&RequestTest{data}).Build()
+//
+// 	serialized, err := SerializePacket(msg)
+// 	require.NoError(t, err)
+//
+// 	var buffer bytes.Buffer
+// 	buffer.Write(serialized)
+//
+// 	deserializedMsg, err := DeserializePacket(&buffer)
+// 	require.NoError(t, err)
+//
+// 	deserializedData := deserializedMsg.Data.(*RequestTest).Data
+// 	require.Equal(t, data, deserializedData)
+// }
+//
+// type PacketSuite struct {
+// 	suite.Suite
+// 	sender *host.Host
+// 	packet *Packet
+// }
+//
+// func (s *PacketSuite) TestGetSender() {
+// 	s.Equal(s.packet.GetSender(), s.sender.NodeID)
+// }
+//
+// func (s *PacketSuite) TestGetSenderHost() {
+// 	s.Equal(s.packet.GetSenderHost(), s.sender)
+// }
+//
+// func (s *PacketSuite) TestGetType() {
+// 	s.Equal(s.packet.GetType(), TestPacket)
+// }
+//
+// func (s *PacketSuite) TestGetData() {
+// 	s.Equal(s.packet.GetData(), &RequestTest{[]byte{0, 1, 2, 3}})
+// }
+//
+// func (s *PacketSuite) TestGetRequestID() {
+// 	s.Equal(s.packet.GetRequestID(), types.RequestID(123))
+// }
+//
+// func TestPacketMethods(t *testing.T) {
+// 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+// 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
+// 	builder := NewBuilder(sender)
+// 	p := builder.
+// 		Receiver(receiver).
+// 		Type(TestPacket).
+// 		Request(&RequestTest{[]byte{0, 1, 2, 3}}).
+// 		RequestID(types.RequestID(123)).
+// 		Build()
+//
+// 	suite.Run(t, &PacketSuite{
+// 		sender: sender,
+// 		packet: p,
+// 	})
+// }
 
-	_, err := SerializePacket(msg)
-
+func marshalUnmarshal(t *testing.T, p1, p2 *PacketBackend) {
+	data, err := p1.Marshal()
 	require.NoError(t, err)
-}
-
-func TestDeserializePacket(t *testing.T) {
-	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
-	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
-	builder := NewBuilder(sender)
-	msg := builder.Receiver(receiver).Type(TestPacket).Request(&RequestTest{[]byte{0, 1, 2, 3}}).Build()
-
-	serialized, _ := SerializePacket(msg)
-
-	var buffer bytes.Buffer
-
-	buffer.Write(serialized)
-
-	deserialized, err := DeserializePacket(&buffer)
-
+	err = p2.Unmarshal(data)
 	require.NoError(t, err)
-	require.Equal(t, deserialized, msg)
-}
-
-func TestDeserializeBigPacket(t *testing.T) {
-	hostOne, _ := host.NewHost("127.0.0.1:31337")
-
-	data := make([]byte, 1024*1024*10)
-	rand.Read(data)
-
-	builder := NewBuilder(hostOne)
-	msg := builder.Receiver(hostOne).Type(TestPacket).Request(&RequestTest{data}).Build()
-
-	serialized, err := SerializePacket(msg)
-	require.NoError(t, err)
-
-	var buffer bytes.Buffer
-	buffer.Write(serialized)
-
-	deserializedMsg, err := DeserializePacket(&buffer)
-	require.NoError(t, err)
-
-	deserializedData := deserializedMsg.Data.(*RequestTest).Data
-	require.Equal(t, data, deserializedData)
-}
-
-type PacketSuite struct {
-	suite.Suite
-	sender *host.Host
-	packet *Packet
-}
-
-func (s *PacketSuite) TestGetSender() {
-	s.Equal(s.packet.GetSender(), s.sender.NodeID)
-}
-
-func (s *PacketSuite) TestGetSenderHost() {
-	s.Equal(s.packet.GetSenderHost(), s.sender)
-}
-
-func (s *PacketSuite) TestGetType() {
-	s.Equal(s.packet.GetType(), TestPacket)
-}
-
-func (s *PacketSuite) TestGetData() {
-	s.Equal(s.packet.GetData(), &RequestTest{[]byte{0, 1, 2, 3}})
-}
-
-func (s *PacketSuite) TestGetRequestID() {
-	s.Equal(s.packet.GetRequestID(), types.RequestID(123))
-}
-
-func TestPacketMethods(t *testing.T) {
-	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
-	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
-	builder := NewBuilder(sender)
-	p := builder.
-		Receiver(receiver).
-		Type(TestPacket).
-		Request(&RequestTest{[]byte{0, 1, 2, 3}}).
-		RequestID(types.RequestID(123)).
-		Build()
-
-	suite.Run(t, &PacketSuite{
-		sender: sender,
-		packet: p,
-	})
 }
 
 func marshalUnmarshalPacketRequest(t *testing.T, request interface{}) (p1, p2 *PacketBackend) {
 	p1, p2 = &PacketBackend{}, &PacketBackend{}
 	p1.SetRequest(request)
-	data, err := p1.Marshal()
-	require.NoError(t, err)
-	err = p2.Unmarshal(data)
-	require.NoError(t, err)
+	marshalUnmarshal(t, p1, p2)
 	require.NotNil(t, p2.GetRequest())
+	return p1, p2
+}
+
+func marshalUnmarshalPacketResponse(t *testing.T, response interface{}) (p1, p2 *PacketBackend) {
+	p1, p2 = &PacketBackend{}, &PacketBackend{}
+	p1.SetResponse(response)
+	marshalUnmarshal(t, p1, p2)
+	require.NotNil(t, p2.GetResponse())
 	return p1, p2
 }
 
@@ -215,4 +221,10 @@ func TestPacketBackend_GetRequest_GetAuthorize(t *testing.T) {
 	_, p2 := marshalUnmarshalPacketRequest(t, &auth)
 	require.NotNil(t, p2.GetRequest().GetAuthorize())
 	assert.Equal(t, ss, p2.GetRequest().GetAuthorize().Certificate)
+}
+
+func TestPacketBackend_GetResponse(t *testing.T) {
+	cascade := BasicResponse{}
+	_, p2 := marshalUnmarshalPacketResponse(t, &cascade)
+	assert.NotNil(t, p2.GetResponse().GetBasic())
 }

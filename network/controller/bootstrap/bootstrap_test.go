@@ -62,6 +62,7 @@ import (
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/controller/common"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
@@ -157,7 +158,7 @@ func TestCyclicBootstrap(t *testing.T) {
 	origin := bootstrapper{
 		options:                 getOptions(false),
 		bootstrapLock:           make(chan struct{}),
-		genesisRequestsReceived: make(map[insolar.Reference]*GenesisRequest),
+		genesisRequestsReceived: make(map[insolar.Reference]*packet.GenesisRequest),
 		Certificate:             cert,
 		NodeKeeper:              nodekeeper,
 	}

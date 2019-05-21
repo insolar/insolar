@@ -69,9 +69,9 @@ func NewPacketHandler(futureManager Manager) PacketHandler {
 	}
 }
 
-func (ph *packetHandler) Handle(ctx context.Context, response *packet.Packet) {
-	metrics.NetworkPacketReceivedTotal.WithLabelValues(response.Type.String()).Inc()
-	if !response.IsResponse {
+func (ph *packetHandler) Handle(ctx context.Context, response *packet.PacketBackend) {
+	metrics.NetworkPacketReceivedTotal.WithLabelValues(response.GetType().String()).Inc()
+	if !response.IsResponse() {
 		return
 	}
 
@@ -93,9 +93,9 @@ func (ph *packetHandler) Handle(ctx context.Context, response *packet.Packet) {
 	}
 }
 
-func shouldProcessPacket(future Future, p *packet.Packet) bool {
-	typesShouldBeEqual := p.Type == future.Request().GetType()
+func shouldProcessPacket(future Future, p *packet.PacketBackend) bool {
+	typesShouldBeEqual := p.GetType() == future.Request().GetType()
 	responseIsForRightSender := future.Receiver().Equal(*p.Sender)
 
-	return typesShouldBeEqual && (responseIsForRightSender || p.Type == types.Ping)
+	return typesShouldBeEqual && (responseIsForRightSender || p.GetType() == types.Ping)
 }
