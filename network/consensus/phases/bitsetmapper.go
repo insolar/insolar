@@ -122,16 +122,21 @@ func ApplyClaims(state *ConsensusState, origin insolar.NetworkNode, claims []pac
 		}
 
 		// TODO: fix version
-		node, err := node.ClaimToNode("", &c.NodeJoinClaim)
+		n, err := node.ClaimToNode("", &c.NodeJoinClaim)
 		if err != nil {
 			return errors.Wrap(err, "[ AddClaims ] failed to convert Claim -> Node")
 		}
 		// TODO: check bitset indexes from every announce claim for fraud
 		NodeJoinerIndex = c.NodeJoinerIndex
-		state.BitsetMapper.AddNode(node, c.NodeAnnouncerIndex)
-		state.NodesMutator.AddWorkingNode(node)
+		state.BitsetMapper.AddNode(n, c.NodeAnnouncerIndex)
+		if c.LeavingETA > 0 {
+			state.NodesMutator.AddNode(n, node.ListLeaving)
+		} else {
+			state.NodesMutator.AddNode(n, node.ListWorking)
+		}
 	}
 	state.BitsetMapper.AddNode(origin, NodeJoinerIndex)
-	state.NodesMutator.AddWorkingNode(origin)
+	state.NodesMutator.AddNode(origin, node.ListWorking)
+
 	return nil
 }

@@ -196,13 +196,11 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *insolar.Pulse, 
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(state.PulseEntry.Pulse.PulseNumber)))
 	defer span.End()
 	stats.Record(ctx, consensus.Phase21Exec.M(1))
+
 	additionalRequests := state.MatrixState.AdditionalRequestsPhase2
 
 	logger := inslogger.FromContext(ctx)
 	logger.Infof("[ NET Consensus phase-2.1 ] Additional requests needed: %d", len(additionalRequests))
-
-	results := make(map[uint16]*packets.MissingNodeRespVote)
-	claims := make(map[uint16]*packets.MissingNodeClaimsVote)
 
 	packet := packets.NewPhase2Packet(pulse.PulseNumber)
 	err := packet.SetGlobuleHashSignature(state.GlobuleProof.Signature.Bytes())
@@ -219,6 +217,9 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *insolar.Pulse, 
 	if len(additionalRequests) == 0 {
 		return state, nil
 	}
+
+	results := make(map[uint16]*packets.MissingNodeRespVote)
+	claims := make(map[uint16]*packets.MissingNodeClaimsVote)
 
 	for _, vote := range voteAnswers {
 		switch v := vote.(type) {
@@ -242,9 +243,9 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *insolar.Pulse, 
 	bitsetChanges := make([]packets.BitSetCell, 0)
 	for index, result := range results {
 		claim := result.NodeClaimUnsigned
-		node, err := node.ClaimToNode("", &claim)
+		n, err := node.ClaimToNode("", &claim)
 		if err != nil {
-			return nil, errors.Wrapf(err, "[ NET Consensus phase-2.1 ] Failed to convert claim to node, "+
+			return nil, errors.Wrapf(err, "[ NET Consensus phase-2.1 ] Failed to convert claim to n, "+
 				"ref: %s", claim.NodeRef)
 		}
 
@@ -255,26 +256,26 @@ func (sp *SecondPhaseImpl) Execute21(ctx context.Context, pulse *insolar.Pulse, 
 			StateHash: result.NodePulseProof.StateHash(),
 		}
 
-		state.NodesMutator.AddWorkingNode(node)
-		state.BitsetMapper.AddNode(node, index)
+		state.NodesMutator.AddNode(n, node.ListWorking)
+		state.BitsetMapper.AddNode(n, index)
 		err = state.ConsensusInfo.AddTemporaryMapping(claim.NodeRef, claim.ShortNodeID, claim.NodeAddress.String())
 		if err != nil {
 			logger.Warn("Error adding temporary mapping: " + err.Error())
 		}
-		valid := validateProof(sp.Calculator, state.NodesMutator, state.PulseHash, node.ID(), merkleProof)
+		valid := validateProof(sp.Calculator, state.NodesMutator, state.PulseHash, n.ID(), merkleProof)
 		if !valid {
-			logger.Warnf("[ NET Consensus phase-2.1 ] Failed to validate proof from %s", node.ID())
+			logger.Warnf("[ NET Consensus phase-2.1 ] Failed to validate proof from %s", n.ID())
 			continue
 		}
 
-		err = state.Matrix.ReceivedProofFromNode(origin, node.ID())
+		err = state.Matrix.ReceivedProofFromNode(origin, n.ID())
 		if err != nil {
-			return nil, errors.Wrapf(err, "[ NET Consensus phase-2.1 ] Failed to assign proof from node %s "+
+			return nil, errors.Wrapf(err, "[ NET Consensus phase-2.1 ] Failed to assign proof from n %s "+
 				"to state matrix", claim.NodeRef)
 		}
-		state.HashStorage.AddProof(node.ID(), &result.NodePulseProof)
-		state.ValidProofs[node] = merkleProof
-		bitsetChanges = append(bitsetChanges, packets.BitSetCell{NodeID: node.ID(), State: packets.Legit})
+		state.HashStorage.AddProof(n.ID(), &result.NodePulseProof)
+		state.ValidProofs[n] = merkleProof
+		bitsetChanges = append(bitsetChanges, packets.BitSetCell{NodeID: n.ID(), State: packets.Legit})
 	}
 
 	err = state.BitSet.ApplyChanges(bitsetChanges, state.BitsetMapper)

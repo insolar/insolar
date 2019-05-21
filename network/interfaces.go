@@ -273,6 +273,9 @@ type Accessor interface {
 	GetWorkingNode(ref insolar.Reference) insolar.NetworkNode
 	// GetWorkingNodes returns sorted list of all working nodes.
 	GetWorkingNodes() []insolar.NetworkNode
+	GetJoinerNodes() []insolar.NetworkNode
+	GetLeavingNodes() []insolar.NetworkNode
+
 	// GetWorkingNodesByRole get working nodes by role.
 	GetWorkingNodesByRole(role insolar.DynamicRole) []insolar.Reference
 
@@ -288,7 +291,8 @@ type Accessor interface {
 type Mutator interface {
 	Accessor
 	// AddWorkingNode adds active node to index and underlying snapshot so it is accessible via GetActiveNode(s).
-	AddWorkingNode(n insolar.NetworkNode)
+	// AddWorkingNode(n insolar.NetworkNode)
+	AddNode(n insolar.NetworkNode, t node.ListType)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network.Gatewayer -o ../testutils/network -s _mock.go

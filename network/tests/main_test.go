@@ -170,22 +170,24 @@ func (s *testSuite) TestNodeLeave() {
 		s.StopNode(testNode)
 	}(s)
 
-	s.waitForConsensus(2)
+	s.waitForConsensus(3)
 
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
-
-	s.waitForConsensus(1)
-
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
+	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetWorkingNodes()
+	s.Equal(s.getNodesCount()+1, len(workingNodes))
 
 	testNode.serviceNetwork.Leave(context.Background(), 0)
 
-	s.waitForConsensus(2)
+	s.waitForConsensus(1)
+
+	s.waitForConsensus(1)
+
+	leavingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetLeavingNodes()
+	s.Equal(1, len(leavingNodes))
 
 	// one active node becomes "not working"
-	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
+	workingNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(workingNodes))
 
 	// but all nodes are active
@@ -218,7 +220,7 @@ func (s *testSuite) TestNodeLeaveAtETA() {
 	// next pulse will be last for this node
 	// leaving in 3 pulses
 	pulseDelta := pulse.NextPulseNumber - pulse.PulseNumber
-	testNode.serviceNetwork.Leave(s.fixture().ctx, pulse.PulseNumber+4*pulseDelta)
+	testNode.serviceNetwork.Leave(s.fixture().ctx, pulse.PulseNumber+3*pulseDelta)
 
 	// node still active and working
 	s.waitForConsensus(1)
@@ -260,7 +262,6 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 
 	// leaving in 3 pulses
 	pulseDelta := pulse.NextPulseNumber - pulse.PulseNumber
-	leavingNode.serviceNetwork.Leave(s.fixture().ctx, pulse.PulseNumber+3*pulseDelta)
 
 	// wait for leavingNode will be marked as leaving
 	s.waitForConsensus(1)
@@ -275,7 +276,8 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 	}(s)
 
 	// wait for newNode will be added at active list, its a last pulse for leavingNode
-	s.waitForConsensus(2)
+	s.waitForConsensus(3)
+	leavingNode.serviceNetwork.Leave(s.fixture().ctx, pulse.PulseNumber+4*pulseDelta)
 
 	// newNode doesn't have workingNodes
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
