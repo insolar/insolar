@@ -24,10 +24,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ThreeDotsLabs/watermill"
 	message2 "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -282,8 +282,8 @@ func prepareParcel(t minimock.Tester, msg insolar.Message, needType bool) insola
 	return parcel
 }
 
-func prepareWatermill(t minimock.Tester) (flow.Flow, message2.PubSub) {
-	flowMock := flow.NewFlowMock(t)
+func prepareWatermill(suite *LogicRunnerTestSuite) (flow.Flow, message2.PubSub) {
+	flowMock := flow.NewFlowMock(suite.mc)
 	flowMock.ProcedureMock.Set(func(p context.Context, p1 flow.Procedure, p2 bool) (r error) {
 		return p1.Proceed(p)
 	})
@@ -291,7 +291,7 @@ func prepareWatermill(t minimock.Tester) (flow.Flow, message2.PubSub) {
 		return p1(p, flowMock)
 	})
 
-	wmLogger := watermill.NewStdLogger(false, false)
+	wmLogger := log.NewWatermillLogAdapter(inslogger.FromContext(suite.ctx))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
 
 	return flowMock, pubSub
@@ -431,7 +431,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareState() {
 				suite.am.HasPendingRequestsMock.Return(true, nil)
 			}
 
-			flowMock, pubSub := prepareWatermill(suite.mc)
+			flowMock, pubSub := prepareWatermill(suite)
 			fakeParcel := prepareParcel(suite.mc, msg, false)
 
 			h := HandleExecutorResults{
@@ -676,7 +676,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {
 	ref := testutils.RandomRef()
 
-	flowMock, pubSub := prepareWatermill(suite.mc)
+	flowMock, pubSub := prepareWatermill(suite)
 	var fakeParcel insolar.Parcel
 	var h HandleExecutorResults
 	var err error
@@ -735,7 +735,7 @@ func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangeLedgerHasMoreRequ
 			Pending:               message.NotPending,
 		}
 
-		flowMock, pubSub := prepareWatermill(suite.mc)
+		flowMock, pubSub := prepareWatermill(suite)
 		fakeParcel := prepareParcel(suite.mc, msg, false)
 
 		h := HandleExecutorResults{
@@ -1422,8 +1422,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef: s.objectRef,
-				Queue:     messagesQueue,
+				RecordRef:             s.objectRef,
+				Queue:                 messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 
@@ -1496,7 +1496,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecutionState() {
 	es := &ExecutionState{
-		Ref: s.ref,
+		Ref:                   s.ref,
 		LedgerHasMoreRequests: false,
 	}
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
