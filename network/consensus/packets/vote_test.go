@@ -56,9 +56,9 @@ import (
 
 func TestMissingNodeSupplementaryVote(t *testing.T) {
 	checkSerializationDeserialization(t,
-		&MissingNodeRespVote{NodePulseProof: *makeNodePulseProof(), NodeClaimUnsigned: *makeNodeJoinClaim(false)})
+		&MissingNodeRespVote{NodePulseProof: *makeNodePulseProof(), NodeClaimUnsigned: *makeNodeAnnounceClaim(false)})
 
 	checkBadDataSerializationDeserialization(t,
-		&MissingNodeRespVote{NodePulseProof: *makeNodePulseProof(), NodeClaimUnsigned: *makeNodeJoinClaim(false)},
+		&MissingNodeRespVote{NodePulseProof: *makeNodePulseProof(), NodeClaimUnsigned: *makeNodeAnnounceClaim(false)},
 		"unexpected EOF")
 }

@@ -96,7 +96,7 @@ type MissingNodeRespVote struct {
 
 	NodePulseProof NodePulseProof
 	// TODO: make it signed
-	NodeClaimUnsigned NodeJoinClaim
+	NodeClaimUnsigned NodeAnnounceClaim
 }
 
 func (v *MissingNodeRespVote) Clone() ReferendumVote {
@@ -191,7 +191,7 @@ func (v *MissingNodeRespVote) Deserialize(data io.Reader) error {
 	if err != nil {
 		return errors.Wrap(err, "[ MissingNodeRespVote.Deserialize ] Can't read NodePulseProof")
 	}
-	err = v.NodeClaimUnsigned.deserializeRaw(data)
+	err = v.NodeClaimUnsigned.Deserialize(data)
 	if err != nil {
 		return errors.Wrap(err, "[ MissingNodeRespVote.Deserialize ] Can't read NodeClaimUnsigned")
 	}
@@ -217,7 +217,7 @@ func (v *MissingNodeRespVote) Serialize() ([]byte, error) {
 		return nil, errors.Wrap(err, "[ MissingNodeRespVote.Serialize ] Can't append NodePulseProof")
 	}
 
-	joinClaim, err := v.NodeClaimUnsigned.SerializeRaw()
+	joinClaim, err := v.NodeClaimUnsigned.Serialize()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ MissingNodeRespVote.Serialize ] Can't serialize join claim")
 	}

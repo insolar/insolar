@@ -91,9 +91,9 @@ func TestMakeClaimHeader(t *testing.T) {
 
 }
 
-func makeNodeAnnounceClaim() *NodeAnnounceClaim {
+func makeNodeAnnounceClaim(withSignature bool) *NodeAnnounceClaim {
 	nodeAnnounceClaim := &NodeAnnounceClaim{}
-	nodeAnnounceClaim.NodeJoinClaim = *makeNodeJoinClaim(true)
+	nodeAnnounceClaim.NodeJoinClaim = *makeNodeJoinClaim(withSignature)
 	nodeAnnounceClaim.LeavingETA = 22648934
 	nodeAnnounceClaim.NodeCount = 266
 	nodeAnnounceClaim.NodeAnnouncerIndex = 37
@@ -102,5 +102,5 @@ func makeNodeAnnounceClaim() *NodeAnnounceClaim {
 }
 
 func TestNodeAnnounceClaim(t *testing.T) {
-	checkSerializationDeserialization(t, makeNodeAnnounceClaim())
+	checkSerializationDeserialization(t, makeNodeAnnounceClaim(true))
 }
