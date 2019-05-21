@@ -181,10 +181,13 @@ func (s *testSuite) TestNodeLeave() {
 
 	s.waitForConsensus(1)
 
-	s.waitForConsensus(1)
-
 	leavingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetLeavingNodes()
 	s.Equal(1, len(leavingNodes))
+
+	s.waitForConsensus(1)
+
+	// leavingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetLeavingNodes()
+	// s.Equal(1, len(leavingNodes))
 
 	// one active node becomes "not working"
 	workingNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()

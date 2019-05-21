@@ -187,19 +187,42 @@ func init() {
 	gob.Register(&node{})
 }
 
-func ClaimToNode(version string, claim *packets.NodeJoinClaim) (insolar.NetworkNode, error) {
-	keyProc := platformpolicy.NewKeyProcessor()
-	key, err := keyProc.ImportPublicKeyBinary(claim.NodePK[:])
-	if err != nil {
-		return nil, errors.Wrap(err, "[ ClaimToNode ] failed to import a public key")
+func ClaimToNode(version string, c packets.ReferendumClaim) (insolar.NetworkNode, error) {
+
+	if claim, ok := c.(*packets.NodeJoinClaim); ok {
+		keyProc := platformpolicy.NewKeyProcessor()
+		key, err := keyProc.ImportPublicKeyBinary(claim.NodePK[:])
+		if err != nil {
+			return nil, errors.Wrap(err, "[ ClaimToNode ] failed to import a public key")
+		}
+		node := newMutableNode(
+			claim.NodeRef,
+			claim.NodeRoleRecID,
+			key,
+			insolar.NodeReady,
+			claim.NodeAddress.String(),
+			version)
+		node.SetShortID(claim.ShortNodeID)
+		return node, nil
 	}
-	node := newMutableNode(
-		claim.NodeRef,
-		claim.NodeRoleRecID,
-		key,
-		insolar.NodeReady,
-		claim.NodeAddress.String(),
-		version)
-	node.SetShortID(claim.ShortNodeID)
-	return node, nil
+
+	if claim, ok := c.(*packets.NodeAnnounceClaim); ok {
+		keyProc := platformpolicy.NewKeyProcessor()
+		key, err := keyProc.ImportPublicKeyBinary(claim.NodePK[:])
+		if err != nil {
+			return nil, errors.Wrap(err, "[ ClaimToNode ] failed to import a public key")
+		}
+		node := newMutableNode(
+			claim.NodeRef,
+			claim.NodeRoleRecID,
+			key,
+			insolar.NodeReady,
+			claim.NodeAddress.String(),
+			version)
+		node.SetShortID(claim.ShortNodeID)
+		node.SetLeavingETA(insolar.PulseNumber(claim.LeavingETA))
+		return node, nil
+	}
+
+	return nil, errors.New("unsupported claim")
 }

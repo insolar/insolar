@@ -52,6 +52,7 @@ package phases
 
 import (
 	"context"
+	"fmt"
 	"math"
 
 	"github.com/insolar/insolar/insolar"
@@ -228,6 +229,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 	}
 	logger.Infof("[ NET Consensus phase-1 ] Valid proofs after phase: %d/%d", len(valid), state.BitsetMapper.Length())
 
+	// TODO: timeout for LeavingETA here
 	bitset, err := fp.generatePhase2Bitset(state.BitsetMapper, valid, pulse.PulseNumber)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to generate bitset for phase 2")
@@ -245,12 +247,12 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 }
 
 func (fp *FirstPhaseImpl) generatePhase2Bitset(list packets.BitSetMapper, proofs map[insolar.NetworkNode]*merkle.PulseProof, pulseNumber insolar.PulseNumber) (packets.BitSet, error) {
-	bitset, err := packets.NewBitSet(list.Length())
-	if err != nil {
-		return nil, err
-	}
+	bitset := packets.NewBitSet(list.Length())
+
 	cells := make([]packets.BitSetCell, 0)
 	for node := range proofs {
+		fmt.Printf("!!!! ---- state: %s, ID: %s", node.GetState().String(), node.ID().String())
+		fmt.Println()
 		cells = append(cells, packets.BitSetCell{
 			NodeID: node.ID(),
 			State:  getNodeState(node, pulseNumber),
@@ -260,7 +262,7 @@ func (fp *FirstPhaseImpl) generatePhase2Bitset(list packets.BitSetMapper, proofs
 		NodeID: fp.NodeKeeper.GetOrigin().ID(),
 		State:  getNodeState(fp.NodeKeeper.GetOrigin(), pulseNumber),
 	})
-	err = bitset.ApplyChanges(cells, list)
+	err := bitset.ApplyChanges(cells, list)
 	if err != nil {
 		return nil, err
 	}
@@ -269,6 +271,7 @@ func (fp *FirstPhaseImpl) generatePhase2Bitset(list packets.BitSetMapper, proofs
 
 func getNodeState(node insolar.NetworkNode, pulseNumber insolar.PulseNumber) packets.BitSetState {
 	state := packets.Legit
+	// TODO: ???
 	if node.GetState() == insolar.NodeLeaving && node.LeavingETA() < pulseNumber {
 		state = packets.TimedOut
 	}
@@ -301,6 +304,7 @@ func (fp *FirstPhaseImpl) checkPacketSignatureFromClaim(packet *packets.Phase1Pa
 	return packet.Verify(fp.Cryptography, pk)
 }
 
+// TODO: ???
 func detectSparseBitsetLength(claims map[insolar.Reference][]packets.ReferendumClaim, nk network.NodeKeeper) (int, error) {
 	// TODO: NETD18-47
 	for _, claimList := range claims {

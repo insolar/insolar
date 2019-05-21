@@ -228,7 +228,7 @@ func (nc *ConsensusCommunicator) generatePhase2Response(ctx context.Context, ori
 			logger.Warnf("Phase 2 MissingNodeReqVote requested index: %d; mapped ref %s not found", v.NodeIndex, ref)
 			continue
 		}
-		claim, err := nc.NodeKeeper.NodeToAnnounceClaim(node, nil)
+		claim, err := nc.NodeKeeper.NodeToAnnounceClaim(node, NewBitsetMapper(nc.NodeKeeper.GetAccessor().GetActiveNodes()))
 		if err != nil {
 			logger.Warnf("Phase 2 MissingNodeReqVote requested index: %d, mapped ref: %s, convertation node -> claim error: %s",
 				v.NodeIndex, ref, err.Error())

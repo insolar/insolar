@@ -122,7 +122,7 @@ func ApplyClaims(state *ConsensusState, origin insolar.NetworkNode, claims []pac
 		}
 
 		// TODO: fix version
-		n, err := node.ClaimToNode("", &c.NodeJoinClaim)
+		n, err := node.ClaimToNode("", c)
 		if err != nil {
 			return errors.Wrap(err, "[ AddClaims ] failed to convert Claim -> Node")
 		}

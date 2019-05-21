@@ -108,6 +108,7 @@ func mergeClaim(nodes map[insolar.Reference]insolar.NetworkNode, claim packets.R
 			break
 		}
 		n := nodes[t.NodeID].(node.MutableNode)
+		// TODO: Bronin check process Leave claim
 		if t.ETA == 0 || n.GetState() != insolar.NodeLeaving {
 			n.SetLeavingETA(t.ETA)
 		}
