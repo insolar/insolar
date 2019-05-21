@@ -54,6 +54,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/insolar/insolar/network"
+
 	"github.com/insolar/insolar/certificate"
 
 	"github.com/insolar/insolar/insolar/message"
@@ -89,6 +91,10 @@ func (g *Complete) GetState() insolar.NetworkState {
 func (g *Complete) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 	inslogger.FromContext(ctx).Debugf("Gateway.Complete: pulse happens %d", pu.PulseNumber)
 	return nil
+}
+
+func (g *Complete) CanNodeJoin(certificate insolar.Certificate, nodeKeeper network.NodeKeeper) bool {
+	return false
 }
 
 // ValidateCert validates node certificate

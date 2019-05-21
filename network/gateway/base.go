@@ -53,6 +53,8 @@ package gateway
 import (
 	"context"
 
+	"github.com/insolar/insolar/network/utils"
+
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/log" // TODO remove before merge
@@ -121,5 +123,5 @@ func (g *Base) ValidateCert(ctx context.Context, certificate insolar.Authorizati
 }
 
 func (g *Base) CanNodeJoin(certificate insolar.Certificate, nodeKeeper network.NodeKeeper) bool {
-	return false
+	return utils.OriginIsDiscovery(certificate)
 }
