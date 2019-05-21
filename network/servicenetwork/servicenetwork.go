@@ -343,7 +343,25 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 		n.TerminationHandler.Abort(errMsg)
 	}
 
-	if err := n.DiscoveryNodesStore.StoreDiscoveryNodes(ctx, n.NodeKeeper.GetWorkingNodes()); err != nil {
+	n.registerDiscoveryNodes(ctx)
+}
+
+func (n *ServiceNetwork) registerDiscoveryNodes(ctx context.Context) {
+	logger := inslogger.FromContext(ctx)
+
+	filter := map[insolar.Reference]struct{}{}
+	certDiscoveryNodes := n.CertificateManager.GetCertificate().GetDiscoveryNodes()
+	for _, node := range certDiscoveryNodes {
+		filter[*node.GetNodeRef()] = struct{}{}
+	}
+	discoveryNodes := make([]insolar.NetworkNode, 0, len(certDiscoveryNodes))
+	for _, node := range n.NodeKeeper.GetWorkingNodes() {
+		if _, ok := filter[node.ID()]; ok {
+			discoveryNodes = append(discoveryNodes, node)
+		}
+	}
+
+	if err := n.DiscoveryNodesStore.StoreDiscoveryNodes(ctx, discoveryNodes); err != nil {
 		errMsg := "Failed to save discovery nodes on heavy: " + err.Error()
 		logger.Error(errMsg)
 		n.TerminationHandler.Abort(errMsg)
