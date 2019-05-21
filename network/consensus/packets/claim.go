@@ -179,16 +179,16 @@ func getClaimWithHeaderSize(claim ReferendumClaim) uint16 {
 }
 
 // If you need a signed join claim use NodeKeeper.GetOriginJoinClaim()
-func NodeToClaim(node insolar.NetworkNode) (*NodeJoinClaim, error) {
+func NodeToJoinClaim(node insolar.NetworkNode) (*NodeJoinClaim, error) {
 	keyProc := platformpolicy.NewKeyProcessor()
 	exportedKey, err := keyProc.ExportPublicKeyBinary(node.PublicKey())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeToClaim ] failed to export a public key")
+		return nil, errors.Wrap(err, "[ NodeToJoinClaim ] failed to export a public key")
 	}
 
 	address, err := NewNodeAddress(node.Address())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeToClaim ] failed to convert node address")
+		return nil, errors.Wrap(err, "[ NodeToJoinClaim ] failed to convert node address")
 	}
 
 	var keyData [PublicKeyLength]byte

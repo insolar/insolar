@@ -211,6 +211,8 @@ type NodeKeeper interface {
 	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
 	// GetConsensusInfo get additional info for the current consensus process
 	GetConsensusInfo() ConsensusInfo
+
+	NodeToAnnounceClaim(n insolar.NetworkNode, mapper packets.BitSetMapper) (*packets.NodeAnnounceClaim, error)
 }
 
 // ConsensusInfo additional info for the current consensus process

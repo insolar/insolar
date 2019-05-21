@@ -241,7 +241,7 @@ func (nk *nodekeeper) GetOriginJoinClaim() (*packets.NodeJoinClaim, error) {
 }
 
 func (nk *nodekeeper) GetOriginAnnounceClaim(mapper packets.BitSetMapper) (*packets.NodeAnnounceClaim, error) {
-	return nk.nodeToAnnounceClaim(mapper)
+	return nk.NodeToAnnounceClaim(nk.origin, mapper)
 }
 
 func (nk *nodekeeper) GetClaimQueue() network.ClaimQueue {
@@ -319,7 +319,7 @@ func (nk *nodekeeper) shouldExit(foundOrigin bool) bool {
 }
 
 func (nk *nodekeeper) nodeToSignedClaim() (*packets.NodeJoinClaim, error) {
-	claim, err := packets.NodeToClaim(nk.origin)
+	claim, err := packets.NodeToJoinClaim(nk.origin)
 	if err != nil {
 		return nil, err
 	}
@@ -337,9 +337,9 @@ func (nk *nodekeeper) nodeToSignedClaim() (*packets.NodeJoinClaim, error) {
 	return claim, nil
 }
 
-func (nk *nodekeeper) nodeToAnnounceClaim(mapper packets.BitSetMapper) (*packets.NodeAnnounceClaim, error) {
+func (nk *nodekeeper) NodeToAnnounceClaim(n insolar.NetworkNode, mapper packets.BitSetMapper) (*packets.NodeAnnounceClaim, error) {
 	claim := packets.NodeAnnounceClaim{}
-	joinClaim, err := packets.NodeToClaim(nk.origin)
+	joinClaim, err := packets.NodeToJoinClaim(n)
 	if err != nil {
 		return nil, err
 	}
@@ -348,7 +348,7 @@ func (nk *nodekeeper) nodeToAnnounceClaim(mapper packets.BitSetMapper) (*packets
 	claim.NodeCount = uint16(mapper.Length())
 	announcerIndex, err := mapper.RefToIndex(nk.origin.ID())
 	if err != nil {
-		return nil, errors.Wrap(err, "[ nodeToAnnounceClaim ] failed to map origin node ID to bitset index")
+		return nil, errors.Wrap(err, "[ NodeToAnnounceClaim ] failed to map origin node ID to bitset index")
 	}
 	claim.NodeAnnouncerIndex = uint16(announcerIndex)
 	claim.BitSetMapper = mapper
