@@ -51,6 +51,14 @@ func (s *SetRecord) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
+	// To ensure, that we have the index. Because index can be on a heavy node.
+	// If we don't have it and heavy does, SetRecord fails because it should update light's index state
+	idx := proc.NewGetIndex(s.msg.TargetRef, jet.Result.Jet, s.replyTo, flow.Pulse(ctx))
+	s.dep.GetIndex(idx)
+	if err := f.Procedure(ctx, idx, false); err != nil {
+		return err
+	}
+
 	setRecord := proc.NewSetRecord(jet.Result.Jet, s.replyTo, s.msg.Record)
 	s.dep.SetRecord(setRecord)
 	return f.Procedure(ctx, setRecord, false)
