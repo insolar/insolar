@@ -23,6 +23,7 @@ import (
 	"net/http"
 
 	"github.com/insolar/insolar/application/extractor"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 
 	"github.com/pkg/errors"
@@ -123,8 +124,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 
 	contractID, err := s.runner.ArtifactManager.RegisterRequest(
 		ctx,
-		insolar.GenesisRecord.Ref(),
-		&message.Parcel{Msg: &message.CallMethod{CallType: message.CTSaveAsChild, Prototype: &base}},
+		record.Request{CallType: record.CTSaveAsChild, Prototype: &base},
 	)
 
 	if err != nil {
@@ -186,10 +186,12 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 	argsSerialized, _ := insolar.Serialize(args.MethodArgs)
 
 	msg := &message.CallMethod{
-		Caller:    testutils.RandomRef(),
-		Object:    objectRef,
-		Method:    args.Method,
-		Arguments: argsSerialized,
+		Request: record.Request{
+			Caller: testutils.RandomRef(),
+			Object:    objectRef,
+			Method:    args.Method,
+			Arguments: argsSerialized,
+		},
 	}
 
 	callMethodReply, err := s.runner.ContractRequester.Call(ctx, msg)
