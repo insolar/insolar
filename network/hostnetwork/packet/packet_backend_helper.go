@@ -50,6 +50,19 @@
 
 package packet
 
+import (
+	"bytes"
+	"encoding/binary"
+	"io"
+
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"github.com/pkg/errors"
+)
+
 func (p *PacketBackend) SetRequest(request interface{}) {
 	var r isRequest_Request
 	switch t := request.(type) {
@@ -96,4 +109,79 @@ func (p *PacketBackend) SetResponse(response interface{}) {
 		panic("Response payload is not a valid protobuf struct!")
 	}
 	p.Payload = &PacketBackend_Response{Response: &Response{Response: r}}
+}
+
+func (p *PacketBackend) GetType() types.PacketType {
+	// TODO: make p.Type of type PacketType instead of uint32
+	return types.PacketType(p.Type)
+}
+
+func (p *PacketBackend) GetSender() insolar.Reference {
+	return p.Sender.NodeID
+}
+
+func (p *PacketBackend) GetSenderHost() *host.Host {
+	return p.Sender
+}
+
+func (p *PacketBackend) GetData() interface{} {
+	// TODO: replace with GetRequest/GetResponse
+	return p.GetPayload()
+}
+
+func (p *PacketBackend) GetRequestID() network.RequestID {
+	return network.RequestID(p.RequestID)
+}
+
+func (p *PacketBackend) IsResponse() bool {
+	return p.GetResponse() != nil
+}
+
+// SerializePacketBackend converts packet to byte slice.
+func SerializePacketBackend(p *PacketBackend) ([]byte, error) {
+	data, err := p.Marshal()
+	if err != nil {
+		return nil, errors.Wrap(err, "Failed to serialize packet")
+	}
+
+	var lengthBytes [8]byte
+	binary.PutUvarint(lengthBytes[:], uint64(p.Size()))
+
+	var result []byte
+	result = append(result, lengthBytes[:]...)
+	result = append(result, data...)
+
+	return result, nil
+}
+
+// DeserializePacketBackend reads packet from io.Reader.
+func DeserializePacketBackend(conn io.Reader) (*PacketBackend, error) {
+	lengthBytes := make([]byte, 8)
+	if _, err := io.ReadFull(conn, lengthBytes); err != nil {
+		return nil, err
+	}
+	lengthReader := bytes.NewBuffer(lengthBytes)
+	length, err := binary.ReadUvarint(lengthReader)
+	if err != nil {
+		return nil, io.ErrUnexpectedEOF
+	}
+
+	log.Debugf("[ DeserializePacket ] packet length %d", length)
+	buf := make([]byte, length)
+	if _, err := io.ReadFull(conn, buf); err != nil {
+		log.Error("[ DeserializePacket ] couldn't read packet: ", err)
+		return nil, err
+	}
+	log.Debugf("[ DeserializePacket ] read packet")
+
+	msg := &PacketBackend{}
+	err = msg.Unmarshal(buf)
+	if err != nil {
+		log.Error("[ DeserializePacket ] couldn't decode packet: ", err)
+		return nil, err
+	}
+
+	log.Debugf("[ DeserializePacket ] decoded packet to %#v", msg)
+
+	return msg, nil
 }

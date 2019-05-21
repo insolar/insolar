@@ -6,17 +6,18 @@ import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "github.com/insolar/insolar/insolar/pulse/pulse.proto";
 
 option (gogoproto.goproto_getters_all) = false;
-option (gogoproto.populate_all)        = false;
+option (gogoproto.populate_all) = false;
 
 message PacketBackend {
     bytes Sender = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
     bytes Receiver = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
     uint32 RequestID = 3;
     string TraceID = 4;
+    uint32 Type = 5;
 
     oneof Payload {
-        Request Request = 5;
-        Response Response = 6;
+        Request Request = 6;
+        Response Response = 7;
     }
 }
 
@@ -37,7 +38,7 @@ message Response {
     oneof Response {
         Ping Ping = 1;
         RPCResponse RPC = 2;
-        BasicResponse Basic = 3; // response for Cascade, Pulse
+        BasicResponse Basic = 3; // response for Cascade and Pulse requests
         BootstrapResponse Bootstrap = 4;
         AuthorizeResponse Authorize = 5;
         RegisterResponse Register = 6;
@@ -91,17 +92,13 @@ message GenesisRequest {
 }
 
 message RPCResponse {
-    oneof response {
-        bytes Result = 1;
-        string Error = 2;
-    }
+    bytes Result = 1;
+    string Error = 2;
 }
 
 message BasicResponse {
-    oneof response {
-        bool Success = 1;
-        string Error = 2;
-    }
+    bool Success = 1;
+    string Error = 2;
 }
 
 message BootstrapResponse {
