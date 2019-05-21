@@ -25,29 +25,46 @@ import (
 type Node struct {
 	Host string `mapstructure:"host"`
 	Role string `mapstructure:"role"`
-	// KeyName used for generating keys file for discovery nodes
+	// KeyName is used for generating keys file for discovery nodes.
 	KeyName string `mapstructure:"key_name"`
-	// KeysFile used for setting insolard config
-	KeysFile string `mapstructure:"keys_file"`
+	// CertName is used for generating cert file for discovery nodes.
 	CertName string `mapstructure:"cert_name"`
+	// KeysFile is used to set path to keys file in insolard config for every non-discovery nodes
+	// (used only by generate_insolar_config.go).
+	KeysFile string `mapstructure:"keys_file"`
 }
 
 // Config contains all genesis config
 type Config struct {
-	RootKeysFile     string `mapstructure:"root_keys_file"`
+	// RootKeysFile is the root key place.
+	RootKeysFile string `mapstructure:"root_keys_file"`
+	// DiscoveryKeysDir is a default directory where save keys for discovery nodes.
 	DiscoveryKeysDir string `mapstructure:"discovery_keys_dir"`
-	KeysNameFormat   string `mapstructure:"keys_name_format"`
-	ReuseKeys        bool   `mapstructure:"reuse_keys"`
-	RootBalance      uint   `mapstructure:"root_balance"`
-	MajorityRule     int    `mapstructure:"majority_rule"`
-	MinRoles         struct {
+	// KeysNameFormat is the default key file name format for discovery nodes.
+	KeysNameFormat string `mapstructure:"keys_name_format"`
+	// ReuseKeys is a flag to reuse discovery nodes keys (don't use if your not understand how it works)
+	ReuseKeys bool `mapstructure:"reuse_keys"`
+
+	// RootBalance is a start balance for the root member's wallet.
+	RootBalance uint `mapstructure:"root_balance"`
+
+	// Discovery settings.
+
+	MajorityRule int `mapstructure:"majority_rule"`
+	MinRoles     struct {
 		Virtual       uint `mapstructure:"virtual"`
 		HeavyMaterial uint `mapstructure:"heavy_material"`
 		LightMaterial uint `mapstructure:"light_material"`
 	} `mapstructure:"min_roles"`
+	// DiscoveryNodes is a discovery nodes list.
+	DiscoveryNodes []Node `mapstructure:"discovery_nodes"`
+
+	// Nodes is not need on genesis and only used by generate_insolar_config.go
+	Nodes []Node `mapstructure:"nodes"`
+
+	// PulsarPublicKeys is the pulsar's public keys for pulses  validation
+	// (not in use, just for future features).
 	PulsarPublicKeys []string `mapstructure:"pulsar_public_keys"`
-	DiscoveryNodes   []Node   `mapstructure:"discovery_nodes"`
-	Nodes            []Node   `mapstructure:"nodes"`
 }
 
 // It's very light check. It's not about majority rule
