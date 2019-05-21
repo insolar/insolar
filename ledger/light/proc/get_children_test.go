@@ -31,10 +31,12 @@ func TestGetChildren_RedirectsToHeavyWhenNoIndex(t *testing.T) {
 	tf := testutils.NewDelegationTokenFactoryMock(t)
 	tf.IssueGetChildrenRedirectMock.Return(&delegationtoken.GetChildrenRedirectToken{Signature: []byte{1, 2, 3}}, nil)
 
-	childPointer := genRandomID(insolar.FirstPulseNumber)
+	idx := object.Lifeline{
+		ChildPointer: genRandomID(insolar.FirstPulseNumber),
+	}
 	gc := GetChildren{
-		currentChild: childPointer,
-		msg:          &msg,
+		index: idx,
+		msg:   &msg,
 		parcel: &message.Parcel{
 			Msg:         &msg,
 			Sender:      *genRandomRef(insolar.FirstPulseNumber),
@@ -64,19 +66,19 @@ func TestGetChildren_RedirectToLight(t *testing.T) {
 		Parent: *genRandomRef(0),
 	}
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
-	childPointer := genRandomID(insolar.FirstPulseNumber)
 
 	indexMemoryStor := object.NewInMemoryIndex()
 	ctx := context.TODO()
-	err := indexMemoryStor.Set(ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record(), object.Lifeline{
+	idx := object.Lifeline{
 		ChildPointer: genRandomID(insolar.FirstPulseNumber),
 		JetID:        insolar.JetID(jetID),
-	})
+	}
+	err := indexMemoryStor.Set(ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record(), idx)
 	require.NoError(t, err)
 
 	gc := GetChildren{
-		currentChild: childPointer,
-		msg:          &msg,
+		index: idx,
+		msg:   &msg,
 		parcel: &message.Parcel{
 			Msg:         &msg,
 			Sender:      *genRandomRef(insolar.FirstPulseNumber),
@@ -117,19 +119,19 @@ func TestGetChildren_RedirectToHeavy(t *testing.T) {
 		Parent: *genRandomRef(0),
 	}
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
-	childPointer := genRandomID(insolar.FirstPulseNumber)
 
 	indexMemoryStor := object.NewInMemoryIndex()
 	ctx := context.TODO()
-	err := indexMemoryStor.Set(ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record(), object.Lifeline{
+	idx := object.Lifeline{
 		ChildPointer: genRandomID(insolar.FirstPulseNumber),
 		JetID:        insolar.JetID(jetID),
-	})
+	}
+	err := indexMemoryStor.Set(ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record(), idx)
 	require.NoError(t, err)
 
 	gc := GetChildren{
-		currentChild: childPointer,
-		msg:          &msg,
+		index: idx,
+		msg:   &msg,
 		parcel: &message.Parcel{
 			Msg:         &msg,
 			Sender:      *genRandomRef(insolar.FirstPulseNumber),

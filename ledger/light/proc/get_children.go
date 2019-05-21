@@ -31,10 +31,10 @@ import (
 )
 
 type GetChildren struct {
-	currentChild *insolar.ID
-	msg          *message.GetChildren
-	parcel       insolar.Parcel
-	replyTo      chan<- bus.Reply
+	index   object.Lifeline
+	msg     *message.GetChildren
+	parcel  insolar.Parcel
+	replyTo chan<- bus.Reply
 
 	Dep struct {
 		Coordinator            jet.Coordinator
@@ -45,12 +45,12 @@ type GetChildren struct {
 	}
 }
 
-func NewGetChildren(currentChild *insolar.ID, msg *message.GetChildren, parcel insolar.Parcel, replyTo chan<- bus.Reply) *GetChildren {
+func NewGetChildren(index object.Lifeline, msg *message.GetChildren, parcel insolar.Parcel, replyTo chan<- bus.Reply) *GetChildren {
 	return &GetChildren{
-		currentChild: currentChild,
-		msg:          msg,
-		parcel:       parcel,
-		replyTo:      replyTo,
+		index:   index,
+		msg:     msg,
+		parcel:  parcel,
+		replyTo: replyTo,
 	}
 }
 
@@ -60,8 +60,31 @@ func (p *GetChildren) Proceed(ctx context.Context) error {
 }
 
 func (p *GetChildren) reply(ctx context.Context) bus.Reply {
+	// The object has no children.
+	if p.index.ChildPointer == nil {
+		return bus.Reply{
+			Reply: &reply.Children{Refs: nil, NextFrom: nil},
+		}
+	}
+
+	var currentChild *insolar.ID
+
+	// Counting from specified child or the latest.
+	if p.msg.FromChild != nil {
+		currentChild = p.msg.FromChild
+	} else {
+		currentChild = p.index.ChildPointer
+	}
+
+	// The object has no children.
+	if currentChild == nil {
+		return bus.Reply{
+			Reply: &reply.Children{Refs: nil, NextFrom: nil},
+		}
+	}
+
 	var childJet *insolar.ID
-	onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, p.parcel.Pulse(), p.currentChild.Pulse())
+	onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, p.parcel.Pulse(), currentChild.Pulse())
 	if err != nil && err != pulse.ErrNotFound {
 		return bus.Reply{Err: err}
 	}
@@ -70,7 +93,7 @@ func (p *GetChildren) reply(ctx context.Context) bus.Reply {
 		if err != nil {
 			return bus.Reply{Err: err}
 		}
-		repl, err := reply.NewGetChildrenRedirect(p.Dep.DelegationTokenFactory, p.parcel, node, *p.currentChild)
+		repl, err := reply.NewGetChildrenRedirect(p.Dep.DelegationTokenFactory, p.parcel, node, *currentChild)
 		if err != nil {
 			return bus.Reply{Err: err}
 		}
@@ -78,11 +101,11 @@ func (p *GetChildren) reply(ctx context.Context) bus.Reply {
 
 	}
 
-	childJetID, actual := p.Dep.JetStorage.ForID(ctx, p.currentChild.Pulse(), *p.msg.Parent.Record())
+	childJetID, actual := p.Dep.JetStorage.ForID(ctx, currentChild.Pulse(), *p.msg.Parent.Record())
 	childJet = (*insolar.ID)(&childJetID)
 
 	if !actual {
-		actualJet, err := p.Dep.JetTreeUpdater.Fetch(ctx, *p.msg.Parent.Record(), p.currentChild.Pulse())
+		actualJet, err := p.Dep.JetTreeUpdater.Fetch(ctx, *p.msg.Parent.Record(), currentChild.Pulse())
 		if err != nil {
 			return bus.Reply{Err: err}
 		}
@@ -90,14 +113,14 @@ func (p *GetChildren) reply(ctx context.Context) bus.Reply {
 	}
 
 	// Try to fetch the first child.
-	_, err = p.Dep.RecordAccessor.ForID(ctx, *p.currentChild)
+	_, err = p.Dep.RecordAccessor.ForID(ctx, *currentChild)
 
 	if err == object.ErrNotFound {
-		node, err := p.Dep.Coordinator.NodeForJet(ctx, *childJet, p.parcel.Pulse(), p.currentChild.Pulse())
+		node, err := p.Dep.Coordinator.NodeForJet(ctx, *childJet, p.parcel.Pulse(), currentChild.Pulse())
 		if err != nil {
 			return bus.Reply{Err: err}
 		}
-		repl, err := reply.NewGetChildrenRedirect(p.Dep.DelegationTokenFactory, p.parcel, node, *p.currentChild)
+		repl, err := reply.NewGetChildrenRedirect(p.Dep.DelegationTokenFactory, p.parcel, node, *currentChild)
 		if err != nil {
 			return bus.Reply{Err: err}
 		}
@@ -110,18 +133,18 @@ func (p *GetChildren) reply(ctx context.Context) bus.Reply {
 
 	var refs []insolar.Reference
 	counter := 0
-	for p.currentChild != nil {
+	for currentChild != nil {
 		// We have enough results.
 		if counter >= p.msg.Amount {
-			return bus.Reply{Reply: &reply.Children{Refs: refs, NextFrom: p.currentChild}}
+			return bus.Reply{Reply: &reply.Children{Refs: refs, NextFrom: currentChild}}
 		}
 		counter++
 
-		rec, err := p.Dep.RecordAccessor.ForID(ctx, *p.currentChild)
+		rec, err := p.Dep.RecordAccessor.ForID(ctx, *currentChild)
 
 		// We don't have this child reference. Return what was collected.
 		if err == object.ErrNotFound {
-			return bus.Reply{Reply: &reply.Children{Refs: refs, NextFrom: p.currentChild}}
+			return bus.Reply{Reply: &reply.Children{Refs: refs, NextFrom: currentChild}}
 		}
 		if err != nil {
 			return bus.Reply{Err: errors.New("failed to retrieve children")}
@@ -133,7 +156,7 @@ func (p *GetChildren) reply(ctx context.Context) bus.Reply {
 		if !ok {
 			return bus.Reply{Err: errors.New("failed to retrieve children")}
 		}
-		p.currentChild = &childRec.PrevChild
+		currentChild = &childRec.PrevChild
 
 		// Skip records later than specified pulse.
 		recPulse := childRec.Ref.Record().Pulse()

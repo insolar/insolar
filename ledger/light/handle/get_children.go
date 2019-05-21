@@ -23,7 +23,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
@@ -31,20 +30,28 @@ type GetChildren struct {
 	dep     *proc.Dependencies
 	replyTo chan<- bus.Reply
 
-	Message bus.Message
+	message bus.Message
+}
+
+func NewGetChildren(dep *proc.Dependencies, rep chan<- bus.Reply, msg bus.Message) *GetChildren {
+	return &GetChildren{
+		dep:     dep,
+		replyTo: rep,
+		message: msg,
+	}
 }
 
 func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
-	msg := s.Message.Parcel.Message().(*message.GetChildren)
+	msg := s.message.Parcel.Message().(*message.GetChildren)
 
 	var jetID insolar.JetID
-	if s.Message.Parcel.DelegationToken() == nil {
-		jet := proc.NewFetchJet(*msg.DefaultTarget().Record(), flow.Pulse(ctx), s.Message.ReplyTo)
+	if s.message.Parcel.DelegationToken() == nil {
+		jet := proc.NewFetchJet(*msg.DefaultTarget().Record(), flow.Pulse(ctx), s.message.ReplyTo)
 		s.dep.FetchJet(jet)
 		if err := f.Procedure(ctx, jet, false); err != nil {
 			return err
 		}
-		hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.Message.ReplyTo)
+		hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.message.ReplyTo)
 		s.dep.WaitHot(hot)
 		if err := f.Procedure(ctx, hot, false); err != nil {
 			return err
@@ -53,7 +60,7 @@ func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
 		jetID = jet.Result.Jet
 	} else {
 		// Workaround to fetch object states.
-		jet := proc.NewFetchJet(*msg.DefaultTarget().Record(), msg.FromChild.Pulse(), s.Message.ReplyTo)
+		jet := proc.NewFetchJet(*msg.DefaultTarget().Record(), msg.FromChild.Pulse(), s.message.ReplyTo)
 		s.dep.FetchJet(jet)
 		if err := f.Procedure(ctx, jet, false); err != nil {
 			return err
@@ -66,36 +73,8 @@ func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
 	if err := f.Procedure(ctx, getIndex, false); err != nil {
 		return err
 	}
-	// The object has no children.
-	if getIndex.Result.Index.ChildPointer == nil {
-		s.replyTo <- bus.Reply{
-			Reply: &reply.Children{Refs: nil, NextFrom: nil},
-		}
-		return nil
-	}
 
-	var currentChild *insolar.ID
-
-	// Counting from specified child or the latest.
-	if msg.FromChild != nil {
-		currentChild = msg.FromChild
-	} else {
-		currentChild = getIndex.Result.Index.ChildPointer
-	}
-
-	// The object has no children.
-	if currentChild == nil {
-		s.replyTo <- bus.Reply{
-			Reply: &reply.Children{Refs: nil, NextFrom: nil},
-		}
-		return nil
-	}
-
-	getChildren := proc.NewGetChildren(currentChild, msg, s.Message.Parcel, s.replyTo)
+	getChildren := proc.NewGetChildren(getIndex.Result.Index, msg, s.message.Parcel, s.replyTo)
 	s.dep.GetChildren(getChildren)
-	if err := f.Procedure(ctx, getChildren, false); err != nil {
-		return err
-	}
-
-	return nil
+	return f.Procedure(ctx, getChildren, false)
 }
