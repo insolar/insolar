@@ -35,7 +35,7 @@ import (
 
 func TestMessageBus_Send(t *testing.T) {
 	ctx := context.Background()
-	logger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
+	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	b := NewBus(pubsub)
 	externalMsgCh, err := pubsub.Subscribe(ctx, TopicOutgoing)
