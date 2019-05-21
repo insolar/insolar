@@ -36,7 +36,7 @@ func keysToNodeInfo(kp *secrets.KeyPair) nodeInfo {
 }
 
 func keyPairsToNodeInfo(kp ...*secrets.KeyPair) []nodeInfo {
-	var nodes []nodeInfo
+	nodes := make([]nodeInfo, 0, len(kp))
 	for _, p := range kp {
 		nodes = append(nodes, keysToNodeInfo(p))
 	}

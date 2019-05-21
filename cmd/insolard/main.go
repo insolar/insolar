@@ -65,6 +65,7 @@ func main() {
 	jww.SetStdoutThreshold(jww.LevelDebug)
 
 	if params.isGenesis {
+		// move it to insolar command, when built-in would be ready
 		genesis.NewInitializer(
 			params.configPath,
 			params.genesisConfigPath,

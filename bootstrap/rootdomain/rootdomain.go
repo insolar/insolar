@@ -54,7 +54,7 @@ func (r Record) ID() insolar.ID {
 	return *insolar.NewID(genesisPulse, hash)
 }
 
-// GenesisRef returns reference for genesis records based on rootdomain.
+// GenesisRef returns reference for genesis records based on the root domain.
 func GenesisRef(name string) insolar.Reference {
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
 	parcel := &message.Parcel{
