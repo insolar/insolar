@@ -215,6 +215,8 @@ func TestSetVerbose(t *testing.T) {
 	require.False(t, verbose)
 	SetVerbose(true)
 	require.True(t, verbose)
+	// restore original value for future tests, if -count 10 flag is used
+	SetVerbose(false)
 }
 
 func readConfigs(t *testing.T) (*UserConfigJSON, *RequestConfigJSON) {
