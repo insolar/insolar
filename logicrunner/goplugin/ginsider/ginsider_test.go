@@ -26,6 +26,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"sync"
 	"testing"
 
 	"github.com/stretchr/testify/suite"
@@ -41,8 +42,12 @@ type HealthCheckSuite struct {
 
 var binaryPath string
 var testHealthCheckPassed = false
+var testLock sync.Mutex
 
 func (s *HealthCheckSuite) TestHealthCheck() {
+	// make sure test is not executed multiple times in parallel
+	testLock.Lock()
+	defer testLock.Unlock()
 	if testHealthCheckPassed {
 		// Dirty hack. This test doesn't work properly with -count 10
 		// because it registers RPC handlers. Sadly there is no way

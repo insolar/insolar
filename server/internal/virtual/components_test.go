@@ -18,6 +18,7 @@ package virtual
 
 import (
 	"context"
+	"sync"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
@@ -25,8 +26,12 @@ import (
 )
 
 var testPassed = false
+var testLock sync.Mutex
 
 func TestInitComponents(t *testing.T) {
+	// make sure test is not executed multiple times in parallel
+	testLock.Lock()
+	defer testLock.Unlock()
 	if testPassed {
 		// Dirty hack. This test doesn't work properly with -count 10
 		// because it registers HTTP handlers. Sadly there is no way
