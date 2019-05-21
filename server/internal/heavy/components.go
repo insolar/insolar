@@ -24,6 +24,8 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/artifact"
+	"github.com/insolar/insolar/ledger/genesis"
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
@@ -185,11 +187,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	}
 
 	var (
-		Coordinator  jet.Coordinator
-		Pulses       pulse.Accessor
-		Jets         jet.Storage
-		PulseManager insolar.PulseManager
-		Handler      *handler.Handler
+		Coordinator         jet.Coordinator
+		Pulses              pulse.Accessor
+		Jets                jet.Storage
+		PulseManager        insolar.PulseManager
+		Handler             *handler.Handler
+		DiscoveryNodesStore insolar.DiscoveryNodesStore
 	)
 	{
 		conf := cfg.Ledger
@@ -239,6 +242,17 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Jets = jets
 		PulseManager = pm
 		Handler = h
+
+		artifactManager := &artifact.Scope{
+			PulseNumber:    insolar.FirstPulseNumber,
+			PCS:            CryptoScheme,
+			BlobStorage:    blobs,
+			RecordAccessor: records,
+			RecordModifier: records,
+			IndexModifier:  indexes,
+			IndexAccessor:  indexes,
+		}
+		DiscoveryNodesStore = genesis.NewDiscoveryCerts(artifactManager)
 	}
 
 	c.cmp.Inject(
@@ -264,6 +278,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		NodeNetwork,
 		NetworkService,
 		pubSub,
+		DiscoveryNodesStore,
 	)
 	err = c.cmp.Init(ctx)
 	if err != nil {

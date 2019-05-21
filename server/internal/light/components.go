@@ -42,6 +42,7 @@ import (
 	"github.com/insolar/insolar/keystore"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/light/pulsemanager"
@@ -325,6 +326,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		NodeNetwork,
 		NetworkService,
 		pubSub,
+		genesis.NewDiscoveryCertsZero(),
 	)
 
 	err = c.cmp.Init(ctx)

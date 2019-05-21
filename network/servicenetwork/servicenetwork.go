@@ -102,6 +102,7 @@ type ServiceNetwork struct {
 	Pub                 message.Publisher           `inject:""`
 	MessageBus          insolar.MessageBus          `inject:""`
 	ContractRequester   insolar.ContractRequester   `inject:""`
+	DiscoveryNodesStore insolar.DiscoveryNodesStore `inject:""`
 
 	// subcomponents
 	PhaseManager phases.PhaseManager `inject:"subcomponent"`
@@ -338,6 +339,12 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 
 	if err := n.PhaseManager.OnPulse(ctx, &newPulse, pulseStartTime); err != nil {
 		errMsg := "Failed to pass consensus: " + err.Error()
+		logger.Error(errMsg)
+		n.TerminationHandler.Abort(errMsg)
+	}
+
+	if err := n.DiscoveryNodesStore.StoreDiscoveryNodes(ctx, n.NodeKeeper.GetWorkingNodes()); err != nil {
+		errMsg := "Failed to save discovery nodes on heavy: " + err.Error()
 		logger.Error(errMsg)
 		n.TerminationHandler.Abort(errMsg)
 	}

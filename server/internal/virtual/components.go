@@ -39,6 +39,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
@@ -172,6 +173,7 @@ func initComponents(
 		nodeNetwork,
 		nw,
 		pulsemanager.NewPulseManager(),
+		genesis.NewDiscoveryCertsZero(),
 	)
 
 	components := []interface{}{
