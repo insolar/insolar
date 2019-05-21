@@ -194,7 +194,7 @@ func (m *Manager) Stop(ctx context.Context) error {
 	m.startStopLock.Lock()
 	defer m.startStopLock.Unlock()
 
-	if m.started == false {
+	if m.started {
 		glog().Debug("ComponentManager: components are not started. Skip stopping")
 		return nil
 	}
