@@ -47,7 +47,15 @@ import (
 const deliverRPCMethodName = "MessageBus.Deliver"
 
 var transferredToWatermill = map[insolar.MessageType]struct{}{
-	insolar.TypeGetObject: {},
+	insolar.TypeGetObject:          {},
+	insolar.TypeSetRecord:          {},
+	insolar.TypeSetBlob:            {},
+	insolar.TypeGetCode:            {},
+	insolar.TypeGetRequest:         {},
+	insolar.TypeUpdateObject:       {},
+	insolar.TypeGetPendingRequests: {},
+	insolar.TypeRegisterChild:      {},
+	insolar.TypeGetJet:             {},
 }
 
 // MessageBus is component that routes application logic requests,
