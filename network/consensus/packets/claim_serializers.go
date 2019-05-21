@@ -194,9 +194,9 @@ func (nac *NodeAnnounceClaim) SerializeRaw() ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write NodeJoinClaim part")
 	}
-	err = binary.Write(result, defaultByteOrder, nac.ETA)
+	err = binary.Write(result, defaultByteOrder, nac.LeavingETA)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write ETA")
+		return nil, errors.Wrap(err, "[ NodeAnnounceClaim.Serialize ] Can't write LeavingETA")
 	}
 	err = binary.Write(result, defaultByteOrder, nac.NodeAnnouncerIndex)
 	if err != nil {
@@ -245,9 +245,9 @@ func (nac *NodeAnnounceClaim) Deserialize(data io.Reader) error {
 	if err != nil {
 		return err
 	}
-	err = binary.Read(data, defaultByteOrder, &nac.ETA)
+	err = binary.Read(data, defaultByteOrder, &nac.LeavingETA)
 	if err != nil {
-		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read ETA")
+		return errors.Wrap(err, "[ NodeAnnounceClaim.Deserialize ] Can't read LeavingETA")
 	}
 	err = binary.Read(data, defaultByteOrder, &nac.NodeAnnouncerIndex)
 	if err != nil {
@@ -296,7 +296,7 @@ func (nlc *NodeLeaveClaim) Serialize() ([]byte, error) {
 	var result bytes.Buffer
 	err := binary.Write(&result, defaultByteOrder, nlc.ETA)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NodeLeaveClaim.Serialize ] failed to write ETA to buffer")
+		return nil, errors.Wrap(err, "[ NodeLeaveClaim.Serialize ] failed to write LeavingETA to buffer")
 	}
 	return result.Bytes(), nil
 }
@@ -305,7 +305,7 @@ func (nlc *NodeLeaveClaim) Serialize() ([]byte, error) {
 func (nlc *NodeLeaveClaim) Deserialize(data io.Reader) error {
 	err := binary.Read(data, defaultByteOrder, &nlc.ETA)
 	if err != nil {
-		return errors.Wrap(err, "[ NodeLeaveClaim.Deserialize ] failed to read a ETA")
+		return errors.Wrap(err, "[ NodeLeaveClaim.Deserialize ] failed to read a LeavingETA")
 	}
 	return nil
 }

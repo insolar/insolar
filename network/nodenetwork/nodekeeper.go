@@ -344,7 +344,7 @@ func (nk *nodekeeper) nodeToAnnounceClaim(mapper packets.BitSetMapper) (*packets
 		return nil, err
 	}
 	claim.NodeJoinClaim = *joinClaim
-	claim.ETA = uint32(nk.origin.LeavingETA())
+	claim.LeavingETA = uint32(nk.origin.LeavingETA())
 	claim.NodeCount = uint16(mapper.Length())
 	announcerIndex, err := mapper.RefToIndex(nk.origin.ID())
 	if err != nil {
