@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"go.opencensus.io/stats"
@@ -36,14 +37,12 @@ type LifelineModifier interface {
 	Set(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, lifeline Lifeline) error
 }
 
-//go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexPendingModifier -o ./ -s _mock.go
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.PendingModifier -o ./ -s _mock.go
 
-// IndexPendingModifier provides methods for modifying pending requests.
-type IndexPendingModifier interface {
-	// SetRequest adds a request to a bucket with provided pulseNumber and ID
-	SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error
-	// SetResultRecord adds a result record to a bucket with provided pulseNumber and ID
-	SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error
+// PendingModifier provides methods for modifying pending requests.
+type PendingModifier interface {
+	// SetRecord adds a record to a bucket with provided pulseNumber and ID
+	SetRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, rec record.Virtual) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/object.IndexBucketModifier -o ./ -s _mock.go
@@ -111,19 +110,12 @@ func (i *lockedIndexBucket) setLifelineLastUsed(pn insolar.PulseNumber) {
 	i.bucket.LifelineLastUsed = pn
 }
 
-// func (i *lockedIndexBucket) setRequest(reqID insolar.ID) {
-// 	i.requestLock.Lock()
-// 	defer i.requestLock.Unlock()
-//
-// 	i.bucket.Requests = append(i.bucket.Requests, reqID)
-// }
-//
-// func (i *lockedIndexBucket) setResult(resID insolar.ID) {
-// 	i.resultLock.Lock()
-// 	defer i.resultLock.Unlock()
-//
-// 	i.bucket.Results = append(i.bucket.Results, resID)
-// }
+func (i *lockedIndexBucket) setResult(rec record.Virtual) {
+	i.Lock()
+	defer i.Unlock()
+
+	i.bucket.Records = append(i.bucket.Records, rec)
+}
 
 // InMemoryIndex is a in-memory storage, that stores a collection of IndexBuckets
 type InMemoryIndex struct {
@@ -144,9 +136,8 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 
 	bucket := &lockedIndexBucket{
 		bucket: IndexBucket{
-			ObjID:    objID,
-			Results:  []insolar.ID{},
-			Requests: []insolar.ID{},
+			ObjID:   objID,
+			Records: []record.Virtual{},
 		},
 	}
 
@@ -189,27 +180,16 @@ func (i *InMemoryIndex) Set(ctx context.Context, pn insolar.PulseNumber, objID i
 	return nil
 }
 
-// SetRequest adds a request to a bucket with provided pulseNumber and ID
-// func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, reqID insolar.ID) error {
-// 	b := i.bucket(pn, objID)
-// 	if b == nil {
-// 		b = i.createBucket(ctx, pn, objID)
-// 	}
-// 	b.setRequest(reqID)
-//
-// 	return nil
-// }
+// SetRecord adds a request to a bucket with provided pulseNumber and ID
+func (i *InMemoryIndex) SetRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, rec record.Virtual) error {
+	b := i.bucket(pn, objID)
+	if b == nil {
+		return ErrLifelineNotFound
+	}
+	b.setResult(rec)
 
-// SetResultRecord adds a result record to a bucket with provided pulseNumber and ID
-// func (i *InMemoryIndex) SetResultRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, resID insolar.ID) error {
-// 	b := i.bucket(pn, objID)
-// 	if b == nil {
-// 		b = i.createBucket(ctx, pn, objID)
-// 	}
-// 	b.setResult(resID)
-//
-// 	return nil
-// }
+	return nil
+}
 
 // SetBucket adds a bucket with provided pulseNumber and ID
 func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket IndexBucket) error {
@@ -260,18 +240,15 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 		}
 
 		clonedLfl := CloneIndex(b.bucket.Lifeline)
-		var clonedResults []insolar.ID
-		var clonedRequests []insolar.ID
+		var clonedRecords []record.Virtual
 
-		clonedRequests = append(clonedRequests, b.bucket.Requests...)
-		clonedResults = append(clonedResults, b.bucket.Results...)
+		clonedRecords = append(clonedRecords, b.bucket.Records...)
 
 		res = append(res, IndexBucket{
 			ObjID:            b.bucket.ObjID,
 			Lifeline:         clonedLfl,
 			LifelineLastUsed: b.bucket.LifelineLastUsed,
-			Results:          clonedResults,
-			Requests:         clonedRequests,
+			Records:          clonedRecords,
 		})
 	}
 

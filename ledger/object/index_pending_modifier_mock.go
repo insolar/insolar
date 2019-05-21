@@ -3,20 +3,20 @@ package object
 /*
 DO NOT EDIT!
 This code was generated automatically using github.com/gojuno/minimock v1.9
-The original interface "IndexPendingModifier" can be found in github.com/insolar/insolar/ledger/object
+The original interface "PendingModifier" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
 
-//IndexPendingModifierMock implements github.com/insolar/insolar/ledger/object.IndexPendingModifier
+// IndexPendingModifierMock implements github.com/insolar/insolar/ledger/object.PendingModifier
 type IndexPendingModifierMock struct {
 	t minimock.Tester
 
@@ -31,7 +31,7 @@ type IndexPendingModifierMock struct {
 	SetResultRecordMock       mIndexPendingModifierMockSetResultRecord
 }
 
-//NewIndexPendingModifierMock returns a mock for github.com/insolar/insolar/ledger/object.IndexPendingModifier
+// NewIndexPendingModifierMock returns a mock for github.com/insolar/insolar/ledger/object.PendingModifier
 func NewIndexPendingModifierMock(t minimock.Tester) *IndexPendingModifierMock {
 	m := &IndexPendingModifierMock{t: t}
 
@@ -67,7 +67,7 @@ type IndexPendingModifierMockSetRequestResult struct {
 	r error
 }
 
-//Expect specifies that invocation of IndexPendingModifier.SetRequest is expected from 1 to Infinity times
+// Expect specifies that invocation of PendingModifier.SetRequest is expected from 1 to Infinity times
 func (m *mIndexPendingModifierMockSetRequest) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID) *mIndexPendingModifierMockSetRequest {
 	m.mock.SetRequestFunc = nil
 	m.expectationSeries = nil
@@ -79,7 +79,7 @@ func (m *mIndexPendingModifierMockSetRequest) Expect(p context.Context, p1 insol
 	return m
 }
 
-//Return specifies results of invocation of IndexPendingModifier.SetRequest
+// Return specifies results of invocation of PendingModifier.SetRequest
 func (m *mIndexPendingModifierMockSetRequest) Return(r error) *IndexPendingModifierMock {
 	m.mock.SetRequestFunc = nil
 	m.expectationSeries = nil
@@ -91,7 +91,7 @@ func (m *mIndexPendingModifierMockSetRequest) Return(r error) *IndexPendingModif
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of IndexPendingModifier.SetRequest is expected once
+// ExpectOnce specifies that invocation of PendingModifier.SetRequest is expected once
 func (m *mIndexPendingModifierMockSetRequest) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID) *IndexPendingModifierMockSetRequestExpectation {
 	m.mock.SetRequestFunc = nil
 	m.mainExpectation = nil
@@ -106,7 +106,7 @@ func (e *IndexPendingModifierMockSetRequestExpectation) Return(r error) {
 	e.result = &IndexPendingModifierMockSetRequestResult{r}
 }
 
-//Set uses given function f as a mock of IndexPendingModifier.SetRequest method
+// Set uses given function f as a mock of PendingModifier.SetRequest method
 func (m *mIndexPendingModifierMockSetRequest) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID) (r error)) *IndexPendingModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -115,7 +115,7 @@ func (m *mIndexPendingModifierMockSetRequest) Set(f func(p context.Context, p1 i
 	return m.mock
 }
 
-//SetRequest implements github.com/insolar/insolar/ledger/object.IndexPendingModifier interface
+// SetRequest implements github.com/insolar/insolar/ledger/object.PendingModifier interface
 func (m *IndexPendingModifierMock) SetRequest(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID) (r error) {
 	counter := atomic.AddUint64(&m.SetRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.SetRequestCounter, 1)
@@ -127,7 +127,7 @@ func (m *IndexPendingModifierMock) SetRequest(p context.Context, p1 insolar.Puls
 		}
 
 		input := m.SetRequestMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, IndexPendingModifierMockSetRequestInput{p, p1, p2, p3}, "IndexPendingModifier.SetRequest got unexpected parameters")
+		testify_assert.Equal(m.t, *input, IndexPendingModifierMockSetRequestInput{p, p1, p2, p3}, "PendingModifier.SetRequest got unexpected parameters")
 
 		result := m.SetRequestMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -144,7 +144,7 @@ func (m *IndexPendingModifierMock) SetRequest(p context.Context, p1 insolar.Puls
 
 		input := m.SetRequestMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, IndexPendingModifierMockSetRequestInput{p, p1, p2, p3}, "IndexPendingModifier.SetRequest got unexpected parameters")
+			testify_assert.Equal(m.t, *input, IndexPendingModifierMockSetRequestInput{p, p1, p2, p3}, "PendingModifier.SetRequest got unexpected parameters")
 		}
 
 		result := m.SetRequestMock.mainExpectation.result
@@ -217,7 +217,7 @@ type IndexPendingModifierMockSetResultRecordResult struct {
 	r error
 }
 
-//Expect specifies that invocation of IndexPendingModifier.SetResultRecord is expected from 1 to Infinity times
+// Expect specifies that invocation of PendingModifier.SetResultRecord is expected from 1 to Infinity times
 func (m *mIndexPendingModifierMockSetResultRecord) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID) *mIndexPendingModifierMockSetResultRecord {
 	m.mock.SetResultRecordFunc = nil
 	m.expectationSeries = nil
@@ -229,7 +229,7 @@ func (m *mIndexPendingModifierMockSetResultRecord) Expect(p context.Context, p1 
 	return m
 }
 
-//Return specifies results of invocation of IndexPendingModifier.SetResultRecord
+// Return specifies results of invocation of PendingModifier.SetResultRecord
 func (m *mIndexPendingModifierMockSetResultRecord) Return(r error) *IndexPendingModifierMock {
 	m.mock.SetResultRecordFunc = nil
 	m.expectationSeries = nil
@@ -241,7 +241,7 @@ func (m *mIndexPendingModifierMockSetResultRecord) Return(r error) *IndexPending
 	return m.mock
 }
 
-//ExpectOnce specifies that invocation of IndexPendingModifier.SetResultRecord is expected once
+// ExpectOnce specifies that invocation of PendingModifier.SetResultRecord is expected once
 func (m *mIndexPendingModifierMockSetResultRecord) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID) *IndexPendingModifierMockSetResultRecordExpectation {
 	m.mock.SetResultRecordFunc = nil
 	m.mainExpectation = nil
@@ -256,7 +256,7 @@ func (e *IndexPendingModifierMockSetResultRecordExpectation) Return(r error) {
 	e.result = &IndexPendingModifierMockSetResultRecordResult{r}
 }
 
-//Set uses given function f as a mock of IndexPendingModifier.SetResultRecord method
+// Set uses given function f as a mock of PendingModifier.SetResultRecord method
 func (m *mIndexPendingModifierMockSetResultRecord) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID) (r error)) *IndexPendingModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
@@ -265,7 +265,7 @@ func (m *mIndexPendingModifierMockSetResultRecord) Set(f func(p context.Context,
 	return m.mock
 }
 
-//SetResultRecord implements github.com/insolar/insolar/ledger/object.IndexPendingModifier interface
+// SetResultRecord implements github.com/insolar/insolar/ledger/object.PendingModifier interface
 func (m *IndexPendingModifierMock) SetResultRecord(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 insolar.ID) (r error) {
 	counter := atomic.AddUint64(&m.SetResultRecordPreCounter, 1)
 	defer atomic.AddUint64(&m.SetResultRecordCounter, 1)
@@ -277,7 +277,7 @@ func (m *IndexPendingModifierMock) SetResultRecord(p context.Context, p1 insolar
 		}
 
 		input := m.SetResultRecordMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, IndexPendingModifierMockSetResultRecordInput{p, p1, p2, p3}, "IndexPendingModifier.SetResultRecord got unexpected parameters")
+		testify_assert.Equal(m.t, *input, IndexPendingModifierMockSetResultRecordInput{p, p1, p2, p3}, "PendingModifier.SetResultRecord got unexpected parameters")
 
 		result := m.SetResultRecordMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -294,7 +294,7 @@ func (m *IndexPendingModifierMock) SetResultRecord(p context.Context, p1 insolar
 
 		input := m.SetResultRecordMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, IndexPendingModifierMockSetResultRecordInput{p, p1, p2, p3}, "IndexPendingModifier.SetResultRecord got unexpected parameters")
+			testify_assert.Equal(m.t, *input, IndexPendingModifierMockSetResultRecordInput{p, p1, p2, p3}, "PendingModifier.SetResultRecord got unexpected parameters")
 		}
 
 		result := m.SetResultRecordMock.mainExpectation.result

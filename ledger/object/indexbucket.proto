@@ -5,6 +5,7 @@ package object;
 
 import "github.com/gogo/protobuf/gogoproto/gogo.proto";
 import "ledger/object/lifeline.proto";
+import "insolar/record/record.proto";
 
 message IndexBucket {
     option (gogoproto.equal) = false;
@@ -14,6 +15,6 @@ message IndexBucket {
     bytes ObjID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     Lifeline Lifeline = 21 [(gogoproto.nullable) = false];
     uint32 LifelineLastUsed = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
-    repeated bytes Requests = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
-    repeated bytes Results = 24 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = true];
+
+    repeated record.Virtual Records = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar/record.Virtual", (gogoproto.nullable) = false];
 }

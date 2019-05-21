@@ -75,6 +75,7 @@ type MessageHandler struct {
 	LifelineIndex         object.LifelineIndex
 	IndexBucketModifier   object.IndexBucketModifier
 	LifelineStateModifier object.LifelineStateModifier
+	PendingModifier       object.PendingModifier
 
 	conf           *configuration.Ledger
 	middleware     *middleware
@@ -89,6 +90,7 @@ func NewMessageHandler(
 	index object.LifelineIndex,
 	indexBucketModifier object.IndexBucketModifier,
 	indexStateModifier object.LifelineStateModifier,
+	pendingModifier object.PendingModifier,
 	conf *configuration.Ledger,
 ) *MessageHandler {
 
@@ -98,6 +100,7 @@ func NewMessageHandler(
 		LifelineIndex:         index,
 		IndexBucketModifier:   indexBucketModifier,
 		LifelineStateModifier: indexStateModifier,
+		PendingModifier:       pendingModifier,
 	}
 
 	dep := &proc.Dependencies{
@@ -119,6 +122,7 @@ func NewMessageHandler(
 		},
 		SetRecord: func(p *proc.SetRecord) {
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
+			p.Dep.PendingModifier = h.PendingModifier
 			p.Dep.RecordModifier = h.RecordModifier
 			p.Dep.PCS = h.PCS
 			p.Dep.PendingRequestsLimit = h.conf.PendingRequestsLimit

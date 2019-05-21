@@ -38,6 +38,7 @@ type SetRecord struct {
 
 	Dep struct {
 		RecentStorageProvider recentstorage.Provider
+		PendingModifier       object.PendingModifier
 		PCS                   insolar.PlatformCryptographyScheme
 		RecordModifier        object.RecordModifier
 		PendingRequestsLimit  int
@@ -74,10 +75,20 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 			return bus.Reply{Reply: &reply.Error{ErrType: reply.ErrTooManyPendingRequests}}
 		}
 		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
-		recentStorage.AddPendingRequest(ctx, r.GetObject(), *calculatedID)
+		recentStorage.AddPendingRequest(ctx, r.Object, *calculatedID)
+
+		err = p.Dep.PendingModifier.SetRecord(ctx, flow.Pulse(ctx), r.GetObject(), virtRec)
+		if err != nil {
+			return bus.Reply{Err: errors.Wrap(err, "can't save request into filament-index")}
+		}
 	case *record.Result:
 		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
+
+		err = p.Dep.PendingModifier.SetRecord(ctx, flow.Pulse(ctx), r.Object, virtRec)
+		if err != nil {
+			return bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
+		}
 	}
 
 	hash = record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
