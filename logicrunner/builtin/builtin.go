@@ -29,10 +29,9 @@ import (
 
 // BuiltIn is a contract runner engine
 type BuiltIn struct {
-	RefRegistry map[insolar.Reference]string
 	// Prototype -> Code + Versions
-	PrototypeRegistry    map[string]preprocessor.ContractWrapper
-	PrototypeRefRegistry map[insolar.Reference]string
+	// PrototypeRegistry    map[string]preprocessor.ContractWrapper
+	// PrototypeRefRegistry map[insolar.Reference]string
 	// Code ->
 	CodeRegistry    map[string]preprocessor.ContractWrapper
 	CodeRefRegistry map[insolar.Reference]string
@@ -40,7 +39,10 @@ type BuiltIn struct {
 
 // NewBuiltIn is an constructor
 func NewBuiltIn(eb insolar.MessageBus, am artifacts.Client) *BuiltIn {
-	return &BuiltIn{}
+	return &BuiltIn{
+		CodeRefRegistry: InitializeCodeRefs(),
+		CodeRegistry:    InitializeContractMethods(),
+	}
 }
 
 func (bi *BuiltIn) Stop() error {

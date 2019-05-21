@@ -663,10 +663,17 @@ type ContractListEntry struct {
 	Path       string
 	Parsed     *ParsedFile
 	ImportPath string
+	Version    int
 }
 
-func (e *ContractListEntry) GenerateReference() *insolar.Reference {
-	return generateTextReference(insolar.BuiltinPulseNumber, []byte(e.Name))
+const (
+	CodeType      = "code"
+	PrototypeType = "prototype"
+)
+
+func (e *ContractListEntry) GenerateReference(tp string) *insolar.Reference {
+	contractID := fmt.Sprintf("%s::%s::v%02d", tp, e.Name, e.Version)
+	return generateTextReference(insolar.BuiltinPulseNumber, []byte(contractID))
 }
 
 type ContractList []ContractListEntry
@@ -675,10 +682,11 @@ func generateContractList(contracts ContractList) interface{} {
 	importList := make([]interface{}, 0)
 	for _, contract := range contracts {
 		data := map[string]interface{}{
-			"Name":       contract.Name,
-			"ImportName": contract.Name,
-			"ImportPath": contract.ImportPath,
-			"Reference":  contract.GenerateReference().String(),
+			"Name":               contract.Name,
+			"ImportName":         contract.Name,
+			"ImportPath":         contract.ImportPath,
+			"CodeReference":      contract.GenerateReference(CodeType).String(),
+			"PrototypeReference": contract.GenerateReference(PrototypeType).String(),
 		}
 		importList = append(importList, data)
 	}
