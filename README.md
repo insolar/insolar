@@ -88,7 +88,7 @@ Options:
 
 Run benchmark:
 
-    bin/benchmark -c 2 -r 4 -k=scripts/insolard/configs/root_member_keys.json
+    bin/benchmark -c=4 -r=25 -k=.artifacts/launchnet/configs/root_member_keys.json
 
 Options:
 * `-k`: Same as above, path to root user keypair.
