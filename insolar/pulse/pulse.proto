@@ -21,8 +21,9 @@ message PulseProto {
 }
 
 message PulseSenderConfirmationProto {
-    uint32 PulseNumber = 1;
-    bytes ChosenPublicKey = 2;
-    bytes Entropy = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Entropy", (gogoproto.nullable) = false];
-    bytes Signature = 4;
+    string PublicKey = 1;
+    uint32 PulseNumber = 2;
+    string ChosenPublicKey = 3;
+    bytes Entropy = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Entropy", (gogoproto.nullable) = false];
+    bytes Signature = 5;
 }
