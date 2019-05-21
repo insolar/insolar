@@ -317,7 +317,7 @@ type HotData struct {
 	ledgerMessage
 	Jet             insolar.Reference
 	Drop            drop.Drop
-	HotIndexes      map[insolar.ID]HotIndex
+	HotIndexes      []HotIndex
 	PendingRequests map[insolar.ID]recentstorage.PendingObjectContext
 	PulseNumber     insolar.PulseNumber
 }
@@ -345,6 +345,7 @@ func (*HotData) Type() insolar.MessageType {
 // HotIndex contains meat about hot-data
 type HotIndex struct {
 	LastUsed insolar.PulseNumber
+	ObjID    insolar.ID
 	Index    []byte
 }
 

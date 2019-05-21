@@ -17,7 +17,6 @@ local make_min_roles() = {
     root_keys_file: '/opt/insolar/config/root_member_keys.json',
     node_keys_dir: '/opt/insolar/config/nodes',
     discovery_keys_dir: '/opt/insolar/config/discovery',
-    keys_name_format: '/key-%02d.json',
     root_balance: 1000000000,
     majority_rule: 0,
     min_roles: make_min_roles(),
@@ -28,6 +27,7 @@ local make_min_roles() = {
       host: utils.host_template,
       role: '%s',
       cert_name: '%s-%d-cert.json',
+      key_name: '%s-%d-key.json',
     },
 
     discovery_nodes:
@@ -35,6 +35,7 @@ local make_min_roles() = {
         {
           host: discovery_nodes_tmpl().host % [id, insolar_params.tcp_transport_port],
           cert_name: discovery_nodes_tmpl().cert_name % [insolar_params.hostname, id],
+          key_name:  discovery_nodes_tmpl().key_name  % [insolar_params.hostname, id],
 
           role: discovery_nodes_tmpl().role % utils.id_to_node_type(id),
         }

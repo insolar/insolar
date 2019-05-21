@@ -75,9 +75,6 @@ func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error 
 	}
 
 	if err := f.Handle(ctx, s.Present); err != nil {
-		if err == flow.ErrCancelled {
-			f.Continue(ctx)
-		}
 		return errors.Wrap(err, "[ HandlePendingFinished ] StartQueueProcessorIfNeeded returns error")
 	}
 

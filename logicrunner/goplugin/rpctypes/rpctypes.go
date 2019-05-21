@@ -56,10 +56,10 @@ type DownCallConstructorResp struct {
 
 // UpBaseReq  is a base type for all insgorund -> logicrunner requests
 type UpBaseReq struct {
-	Mode      string
-	Callee    insolar.Reference
-	Prototype insolar.Reference
-	Request   insolar.Reference
+	Mode            string
+	Callee          insolar.Reference
+	CalleePrototype insolar.Reference
+	Request         insolar.Reference
 }
 
 // UpRespIface interface for UpBaseReq descendant responses
@@ -80,12 +80,12 @@ type UpGetCodeResp struct {
 // UpRouteReq is a set of arguments for Send RPC in goplugin
 type UpRouteReq struct {
 	UpBaseReq
-	Wait           bool
-	Immutable      bool
-	Object         insolar.Reference
-	Method         string
-	Arguments      insolar.Arguments
-	ProxyPrototype insolar.Reference
+	Wait      bool
+	Immutable bool
+	Object    insolar.Reference
+	Method    string
+	Arguments insolar.Arguments
+	Prototype insolar.Reference
 }
 
 // UpRouteResp is response from Send RPC in goplugin
@@ -111,7 +111,7 @@ type UpSaveAsChildResp struct {
 type UpGetObjChildrenIteratorReq struct {
 	UpBaseReq
 	IteratorID string
-	Obj        insolar.Reference
+	Object     insolar.Reference
 	Prototype  insolar.Reference
 }
 

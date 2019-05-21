@@ -24,14 +24,16 @@ import (
 
 	"github.com/gojuno/minimock"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
-	"github.com/stretchr/testify/require"
 )
 
 func mockMessageBus(t *testing.T, result insolar.Reply) *testutils.MessageBusMock {
@@ -44,14 +46,28 @@ func mockMessageBus(t *testing.T, result insolar.Reply) *testutils.MessageBusMoc
 
 func TestNew(t *testing.T) {
 	messageBus := mockMessageBus(t, nil)
+	pulseAccessor := pulse.NewAccessorMock(t)
 
 	contractRequester, err := New()
 
 	cm := &component.Manager{}
-	cm.Inject(messageBus, contractRequester)
+	cm.Inject(messageBus, contractRequester, pulseAccessor)
 
 	require.NoError(t, err)
 	require.Equal(t, messageBus, contractRequester.MessageBus)
+}
+
+func mockPulseAccessor(t *testing.T) pulse.Accessor {
+	pulseAccessor := pulse.NewAccessorMock(t)
+	currentPulse := insolar.FirstPulseNumber
+	pulseAccessor.LatestFunc = func(p context.Context) (r insolar.Pulse, r1 error) {
+		return insolar.Pulse{
+			PulseNumber:     insolar.PulseNumber(currentPulse),
+			NextPulseNumber: insolar.PulseNumber(currentPulse + 1),
+		}, nil
+	}
+
+	return pulseAccessor
 }
 
 func TestContractRequester_SendRequest(t *testing.T) {
@@ -62,6 +78,8 @@ func TestContractRequester_SendRequest(t *testing.T) {
 	cReq, err := New()
 	assert.NoError(t, err)
 	cReq.MessageBus = mbm
+
+	cReq.PulseAccessor = mockPulseAccessor(t)
 
 	mbm.MustRegisterMock.Return()
 	cReq.Start(ctx)
@@ -98,6 +116,7 @@ func TestContractRequester_SendRequest_RouteError(t *testing.T) {
 	cReq, err := New()
 	assert.NoError(t, err)
 	cReq.MessageBus = mbm
+	cReq.PulseAccessor = mockPulseAccessor(t)
 
 	mbm.MustRegisterMock.Return()
 	err = cReq.Start(ctx)
@@ -140,10 +159,8 @@ func TestCallMethodCanceled(t *testing.T) {
 
 	mb := testutils.NewMessageBusMock(mc)
 	cr.MessageBus = mb
+	cr.PulseAccessor = mockPulseAccessor(t)
 
-	msg := &message.BaseLogicMessage{
-		Nonce: randomUint64(),
-	}
 	ref := testutils.RandomRef()
 	prototypeRef := testutils.RandomRef()
 	method := testutils.RandomString()
@@ -152,7 +169,15 @@ func TestCallMethodCanceled(t *testing.T) {
 		return &reply.RegisterRequest{}, nil
 	}
 
-	_, err = cr.CallMethod(ctx, msg, false, false, &ref, method, insolar.Arguments{}, &prototypeRef)
+	msg := &message.CallMethod{
+		Request: record.Request{
+			Object:    &ref,
+			Prototype: &prototypeRef,
+			Method:    method,
+			Arguments: insolar.Arguments{},
+		},
+	}
+	_, err = cr.CallMethod(ctx, msg)
 	require.Error(t, err)
 	assert.Contains(t, "canceled", err.Error())
 
@@ -173,10 +198,8 @@ func TestCallMethodWaitResults(t *testing.T) {
 
 	mb := testutils.NewMessageBusMock(mc)
 	cr.MessageBus = mb
+	cr.PulseAccessor = mockPulseAccessor(t)
 
-	msg := &message.BaseLogicMessage{
-		Nonce: randomUint64(),
-	}
 	ref := testutils.RandomRef()
 	prototypeRef := testutils.RandomRef()
 	method := testutils.RandomString()
@@ -195,7 +218,17 @@ func TestCallMethodWaitResults(t *testing.T) {
 		}()
 		return &reply.RegisterRequest{}, nil
 	}
-	_, err = cr.CallMethod(ctx, msg, false, false, &ref, method, insolar.Arguments{}, &prototypeRef)
+
+	msg := &message.CallMethod{
+		Request: record.Request{
+			Object:    &ref,
+			Prototype: &prototypeRef,
+			Method:    method,
+			Arguments: insolar.Arguments{},
+		},
+	}
+
+	_, err = cr.CallMethod(ctx, msg)
 	require.NoError(t, err)
 }
 
@@ -215,10 +248,9 @@ func TestReceiveResult(t *testing.T) {
 	parcel := testutils.NewParcelMock(mc).MessageMock.Return(
 		msg,
 	)
-	parcel.PulseFunc = func() insolar.PulseNumber { return insolar.PulseNumber(100) }
 
 	// unexpected result
-	rep, err := cr.FlowDispatcher.WrapBusHandle(ctx, parcel)
+	rep, err := cr.ReceiveResult(ctx, parcel)
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, rep)
 
@@ -231,7 +263,7 @@ func TestReceiveResult(t *testing.T) {
 		chanResult <- <-cr.ResultMap[sequence]
 	}()
 
-	rep, err = cr.FlowDispatcher.WrapBusHandle(ctx, parcel)
+	rep, err = cr.ReceiveResult(ctx, parcel)
 
 	require.NoError(t, err)
 	require.Equal(t, &reply.OK{}, rep)
