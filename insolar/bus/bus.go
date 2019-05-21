@@ -18,12 +18,15 @@ package bus
 
 import (
 	"context"
+	"fmt"
 	"sync"
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
@@ -64,6 +67,7 @@ const (
 type Sender interface {
 	// Send a watermill's Message and returns channel for replies and function for closing that channel.
 	Send(ctx context.Context, msg *message.Message) (<-chan *message.Message, func())
+	SendAsync(ctx context.Context, msg *message.Message) error
 }
 
 type lockedReply struct {
@@ -104,6 +108,44 @@ func (b *Bus) removeReplyChannel(ctx context.Context, id string, reply *lockedRe
 		close(reply.messages)
 		inslogger.FromContext(ctx).Infof("close reply channel for message with correlationID %s", id)
 	})
+}
+
+func (b *Bus) SendAsync(ctx context.Context, msg *message.Message) error {
+	err := b.pub.Publish(TopicOutgoing, msg)
+	if err != nil {
+		return errors.Wrap(err, fmt.Sprintf("can't publish message to %s topic", TopicOutgoing))
+	}
+	return nil
+}
+
+func ErrorAsMessage(ctx context.Context, e error) *message.Message {
+	if e == nil {
+		inslogger.FromContext(ctx).Errorf("provided error is nil")
+		return nil
+	}
+	resInBytes, err := ErrorToBytes(e)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "can't convert error to bytes"))
+		return nil
+	}
+	resAsMsg := message.NewMessage(watermill.NewUUID(), resInBytes)
+	resAsMsg.Metadata.Set(MetaType, TypeError)
+	return resAsMsg
+}
+
+func ReplyAsMessage(ctx context.Context, rep insolar.Reply) *message.Message {
+	resInBytes := reply.ToBytes(rep)
+	resAsMsg := message.NewMessage(watermill.NewUUID(), resInBytes)
+	resAsMsg.Metadata.Set(MetaType, string(rep.Type()))
+	return resAsMsg
+}
+
+func SetMetaForRequest(ctx context.Context, request *message.Message, reply *message.Message) *message.Message {
+	receiver := request.Metadata.Get(MetaSender)
+	reply.Metadata.Set(MetaReceiver, receiver)
+	correlationID := middleware.MessageCorrelationID(request)
+	middleware.SetCorrelationID(correlationID, reply)
+	return reply
 }
 
 // Send a watermill's Message and returns channel for replies and function for closing that channel.
