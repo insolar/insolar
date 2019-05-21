@@ -87,7 +87,7 @@ type Bus struct {
 // NewBus creates Bus instance with provided values.
 func NewBus(pub message.Publisher) *Bus {
 	return &Bus{
-		timeout: time.Minute * 10,
+		timeout: time.Second * 20,
 		pub:     pub,
 		replies: make(map[string]*lockedReply),
 	}
