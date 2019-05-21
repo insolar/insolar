@@ -25,7 +25,7 @@ import (
 func TestTools_refByName(t *testing.T) {
 	var (
 		pubKey    = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n-----END PUBLIC KEY-----\n"
-		pubKeyRef = "1tJDHL2xCP6cLvVN54a9pz3fCHyVVFSPBZkwF2ak66.1tJBgM2tkggjcM6H8MVmjmCxk4abB9CErbwK8RmBe2"
+		pubKeyRef = "1tJE1DaQwSadLJ1gvD6KubfxmVFu76oNYgrUZa2XFt.1tJDJLGWcX3TCXZMzZodTYWZyJGVdsajgGqyq8Vidw"
 	)
 	genesisRef := refByName(pubKey)
 	require.Equal(t, pubKeyRef, genesisRef.String(), "reference by name always the same")

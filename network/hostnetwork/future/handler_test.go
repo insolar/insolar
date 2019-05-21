@@ -96,7 +96,7 @@ func TestPacketHandler_Handle_Response(t *testing.T) {
 
 	ph.Handle(context.Background(), resp)
 
-	res, err := future.WaitResponse(time.Millisecond)
+	res, err := future.WaitResponse(time.Minute)
 
 	require.NoError(t, err)
 	require.Equal(t, resp, res)
@@ -115,7 +115,7 @@ func TestPacketHandler_Handle_NotResponse(t *testing.T) {
 
 	ph.Handle(context.Background(), resp)
 
-	_, err := future.WaitResponse(time.Millisecond)
+	_, err := future.WaitResponse(time.Second)
 
 	require.Error(t, err)
 	require.Equal(t, err, ErrTimeout)
@@ -133,7 +133,7 @@ func TestPacketHandler_Handle_NotProcessable(t *testing.T) {
 
 	ph.Handle(context.Background(), resp)
 
-	_, err := future.WaitResponse(time.Millisecond)
+	_, err := future.WaitResponse(time.Minute)
 
 	require.Error(t, err)
 	require.Equal(t, err, ErrChannelClosed)

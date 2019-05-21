@@ -22,7 +22,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
@@ -36,7 +35,7 @@ import (
 type Manager interface {
 	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
 
-	RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error)
+	RegisterRequest(ctx context.Context, req record.Request) (*insolar.ID, error)
 	RegisterResult(ctx context.Context, obj, request insolar.Reference, payload []byte) (*insolar.ID, error)
 	ActivateObject(
 		ctx context.Context,
@@ -111,14 +110,8 @@ func (m *Scope) GetObject(
 	return desc, nil
 }
 
-func (m *Scope) RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error) {
-	req := record.Request{
-		Parcel:      message.ParcelToBytes(parcel),
-		MessageHash: message.ParcelMessageHash(m.PCS, parcel),
-		Object:      *objectRef.Record(),
-	}
+func (m *Scope) RegisterRequest(ctx context.Context, req record.Request) (*insolar.ID, error) {
 	virtRec := record.Wrap(req)
-
 	return m.setRecord(ctx, virtRec)
 }
 
