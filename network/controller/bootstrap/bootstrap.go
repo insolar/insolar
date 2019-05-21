@@ -698,7 +698,7 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Re
 		code = Redirected
 		err := bc.updatePermissionsOnRequest(bootstrapRequest)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to update a permission on request")
+			return nil, errors.Wrap(err, "failed to update a permission in request")
 		}
 	} else {
 		code, err = bc.getCodeFromPermission(bootstrapRequest.Permission)
@@ -740,7 +740,7 @@ func (bc *bootstrapper) getCodeFromPermission(permission Permission) (Code, erro
 func (bc *bootstrapper) updatePermissionsOnRequest(request *NodeBootstrapRequest) error {
 	request.Permission.DiscoveryRef = bc.NodeKeeper.GetOrigin().ID()
 	request.Permission.UTC = time.Now()
-	request.Permission.ReconnectTo = bc.getRandActiveDiscoveryAddress()
+	request.Permission.ReconnectTo = bc.getRandActiveDiscoveryAddress(request.JoinClaim.NodeAddress.String())
 
 	sign, err := bc.getPermissionSign(request.Permission)
 	if err != nil {
@@ -804,26 +804,25 @@ func (bc *bootstrapper) checkPermissionSign(permission Permission) (bool, error)
 		}
 	}
 	if !found {
-		return false, errors.New("Failed to find a discovery node from reference in permission")
+		return false, errors.New("failed to find a discovery node from reference in permission")
 	}
 	verified := bc.Cryptography.Verify(discoveryPubKey, insolar.SignatureFromBytes(permission.Signature), permission.RawBytes())
 	return verified, nil
 }
 
-func (bc *bootstrapper) getRandActiveDiscoveryAddress() string {
+func (bc *bootstrapper) getRandActiveDiscoveryAddress(exeptAddress string) string {
 	if len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) <= 1 {
 		return bc.NodeKeeper.GetOrigin().Address()
 	}
 
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
-
-	for {
-		index := r.Intn(len(bc.Certificate.GetDiscoveryNodes()))
-		node := bc.NodeKeeper.GetAccessor().GetActiveNode(*bc.Certificate.GetDiscoveryNodes()[index].GetNodeRef())
-		if node != nil {
-			return node.Address()
-		}
+	index := r.Intn(len(bc.Certificate.GetDiscoveryNodes()))
+	node := bc.NodeKeeper.GetAccessor().GetActiveNode(*bc.Certificate.GetDiscoveryNodes()[index].GetNodeRef())
+	if (node != nil) && (strings.Compare(exeptAddress, node.Address()) != 0) {
+		return node.Address()
 	}
+
+	return bc.NodeKeeper.GetOrigin().Address()
 }
 
 func (bc *bootstrapper) getPermissionSign(perm Permission) ([]byte, error) {
