@@ -51,10 +51,12 @@
 package host
 
 import (
+	"net"
 	"testing"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/testutils"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -141,7 +143,8 @@ func TestHost_Equal(t *testing.T) {
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.equal, Host{NodeID: test.id1, Address: test.addr1}.Equal(Host{NodeID: test.id2, Address: test.addr2}))
+			h := &Host{NodeID: test.id1, Address: test.addr1}
+			require.Equal(t, test.equal, h.Equal(&Host{NodeID: test.id2, Address: test.addr2}))
 		})
 	}
 }
