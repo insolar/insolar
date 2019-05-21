@@ -22,13 +22,15 @@ import (
 	"testing"
 
 	"github.com/gojuno/minimock"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
+
+	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/insolar/insolar/messagebus"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-	"github.com/stretchr/testify/suite"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/insolar"
@@ -223,7 +225,11 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 		mb.SendMock.Return(&reply.JetMiss{
 			JetID: insolar.ID(*insolar.NewJetID(5, []byte{1, 2, 3})),
 		}, nil)
-		_, err := am.RegisterRequest(s.ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.CallMethod{}})
+		ref := gen.Reference()
+		_, err := am.RegisterRequest(
+			s.ctx,
+			record.Request{Object: &ref},
+		)
 		require.Error(t, err)
 	})
 
@@ -240,7 +246,8 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 			retries--
 			return &reply.JetMiss{JetID: insolar.ID(*insolar.NewJetID(4, []byte{b_11010101})), Pulse: insolar.FirstPulseNumber}, nil
 		}
-		_, err := am.RegisterRequest(s.ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.CallMethod{}})
+		ref := gen.Reference()
+		_, err := am.RegisterRequest(s.ctx, record.Request{Object: &ref})
 		require.NoError(t, err)
 
 		jetID, actual := s.jetStorage.ForID(
@@ -267,9 +274,8 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	pulseAccessor := pulse.NewAccessorMock(s.T())
 	pulseAccessor.LatestMock.Return(*insolar.GenesisPulse, nil)
 
-	var parcel insolar.Parcel = &message.Parcel{PulseNumber: 123987}
 	req := record.Request{
-		Parcel: message.ParcelToBytes(parcel),
+		Method: "test",
 	}
 	virtRec := record.Wrap(req)
 	data, err := virtRec.Marshal()
@@ -305,6 +311,5 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 
 	// Assert
 	require.NoError(s.T(), err)
-	require.Equal(s.T(), parcel, res)
-
+	require.Equal(s.T(), "test", res.Message().(*message.CallMethod).Method)
 }

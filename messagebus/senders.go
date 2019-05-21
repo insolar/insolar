@@ -22,6 +22,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -164,26 +165,29 @@ func RetryJetSender(jetModifier jet.Modifier) PreSender {
 // RetryIncorrectPulse retries messages after small delay when pulses on source and destination are out of sync.
 // NOTE: This is not completely correct way to behave: 1) we should wait until pulse switches, not some hardcoded time,
 // 2) it should be handled by recipient and get it right with Flow "handles"
-func RetryIncorrectPulse() PreSender {
+func RetryIncorrectPulse(accessor pulse.Accessor) PreSender {
 	return func(sender Sender) Sender {
 		return func(
 			ctx context.Context, msg insolar.Message, options *insolar.MessageSendOptions,
 		) (insolar.Reply, error) {
-			retries := incorrectPulseRetryCount
+			var lastPulse insolar.PulseNumber
 			for {
+				currentPulse, err := accessor.Latest(ctx)
+				if err != nil {
+					return nil, errors.Wrap(err, "[ RetryIncorrectPulse ] Can't get latest pulse")
+				}
+
+				if currentPulse.PulseNumber == lastPulse {
+					inslogger.FromContext(ctx).Debug("[ RetryIncorrectPulse ]  wait for pulse change")
+					time.Sleep(100 * time.Millisecond)
+					continue
+				}
+				lastPulse = currentPulse.PulseNumber
+
 				rep, err := sender(ctx, msg, options)
 				if err == nil || !strings.Contains(err.Error(), "Incorrect message pulse") {
 					return rep, err
 				}
-
-				if retries <= 0 {
-					inslogger.FromContext(ctx).Warn("got incorrect message pulse too many times")
-					return rep, err
-
-				}
-				retries--
-
-				time.Sleep(100 * time.Millisecond)
 			}
 		}
 	}

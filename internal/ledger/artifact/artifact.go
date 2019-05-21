@@ -22,7 +22,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
@@ -36,7 +35,7 @@ import (
 type Manager interface {
 	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
 
-	RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error)
+	RegisterRequest(ctx context.Context, req record.Request) (*insolar.ID, error)
 	RegisterResult(ctx context.Context, obj, request insolar.Reference, payload []byte) (*insolar.ID, error)
 	ActivateObject(
 		ctx context.Context,
@@ -69,15 +68,15 @@ type Scope struct {
 	RecordModifier object.RecordModifier
 	RecordAccessor object.RecordAccessor
 
-	IndexModifier object.IndexModifier
-	IndexAccessor object.IndexAccessor
+	LifelineModifier object.LifelineModifier
+	LifelineAccessor object.LifelineAccessor
 }
 
 func (m *Scope) GetObject(
 	ctx context.Context,
 	head insolar.Reference,
 ) (ObjectDescriptor, error) {
-	idx, err := m.IndexAccessor.ForID(ctx, *head.Record())
+	idx, err := m.LifelineAccessor.ForID(ctx, m.PulseNumber, *head.Record())
 	if err != nil {
 		return nil, err
 	}
@@ -111,14 +110,8 @@ func (m *Scope) GetObject(
 	return desc, nil
 }
 
-func (m *Scope) RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error) {
-	req := record.Request{
-		Parcel:      message.ParcelToBytes(parcel),
-		MessageHash: message.ParcelMessageHash(m.PCS, parcel),
-		Object:      *objectRef.Record(),
-	}
+func (m *Scope) RegisterRequest(ctx context.Context, req record.Request) (*insolar.ID, error) {
 	virtRec := record.Wrap(req)
-
 	return m.setRecord(ctx, virtRec)
 }
 
@@ -162,7 +155,7 @@ func (m *Scope) activateObject(
 	asDelegate bool,
 	memory []byte,
 ) (ObjectDescriptor, error) {
-	parentIdx, err := m.IndexAccessor.ForID(ctx, *parent.Record())
+	parentIdx, err := m.LifelineAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
 	if err != nil {
 		return nil, errors.Wrap(err, "not found parent index for activated object")
 	}
@@ -292,7 +285,7 @@ func (m *Scope) registerChild(
 	asType *insolar.Reference,
 ) error {
 	var jetID = insolar.ID(insolar.ZeroJetID)
-	idx, err := m.IndexAccessor.ForID(ctx, *parent.Record())
+	idx, err := m.LifelineAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
 	if err != nil {
 		return err
 	}
@@ -318,11 +311,11 @@ func (m *Scope) registerChild(
 
 	idx.ChildPointer = child
 	if asType != nil {
-		idx.Delegates[*asType] = obj
+		idx.SetDelegate(*asType, obj)
 	}
 	idx.LatestUpdate = m.PulseNumber
 	idx.JetID = insolar.JetID(jetID)
-	return m.IndexModifier.Set(ctx, *parent.Record(), idx)
+	return m.LifelineModifier.Set(ctx, m.PulseNumber, *parent.Record(), idx)
 }
 
 func (m *Scope) updateStateObject(
@@ -349,17 +342,17 @@ func (m *Scope) updateStateObject(
 		panic("unknown state object type")
 	}
 
-	idx, err := m.IndexAccessor.ForID(ctx, *objRef.Record())
+	idx, err := m.LifelineAccessor.ForID(ctx, m.PulseNumber, *objRef.Record())
 	// No index on our node.
 	if err != nil {
-		if err != object.ErrIndexNotFound {
+		if err != object.ErrLifelineNotFound {
 			return nil, errors.Wrap(err, "failed get index for updating state object")
 		}
 		if stateObject.ID() != record.StateActivation {
 			return nil, errors.Wrap(err, "index not found for updating non Activation state object")
 		}
 		// We are activating the object. There is no index for it yet.
-		idx = object.Lifeline{State: record.StateUndefined}
+		idx = object.Lifeline{StateID: record.StateUndefined}
 	}
 	// TODO: validateState
 
@@ -370,14 +363,14 @@ func (m *Scope) updateStateObject(
 	}
 
 	// update index
-	idx.State = stateObject.ID()
+	idx.StateID = stateObject.ID()
 	idx.LatestState = id
 	idx.LatestUpdate = m.PulseNumber
 	if stateObject.ID() == record.StateActivation {
 		idx.Parent = stateObject.(record.Activate).Parent
 	}
 	idx.JetID = insolar.JetID(jetID)
-	err = m.IndexModifier.Set(ctx, *objRef.Record(), idx)
+	err = m.LifelineModifier.Set(ctx, m.PulseNumber, *objRef.Record(), idx)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail set index for state object")
 	}

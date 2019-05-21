@@ -24,6 +24,8 @@ import (
 	"path"
 	"strconv"
 
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/nodedomain"
 	"github.com/insolar/insolar/application/contract/noderecord"
@@ -32,10 +34,9 @@ import (
 	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -118,7 +119,7 @@ func (g *Generator) Run(ctx context.Context) error {
 		ctx,
 		g.config.DiscoveryKeysDir,
 		g.config.KeysNameFormat,
-		len(g.config.DiscoveryNodes),
+		g.config.DiscoveryNodes,
 		g.config.ReuseKeys,
 	)
 	if err != nil {
@@ -166,11 +167,9 @@ func (g *Generator) activateRootDomain(
 
 	_, err = g.artifactManager.RegisterRequest(
 		ctx,
-		insolar.GenesisRecord.Ref(),
-		&message.Parcel{
-			Msg: &message.GenesisRequest{
-				Name: rootDomain,
-			},
+		record.Request{
+			CallType: record.CTGenesis,
+			Method: rootDomain,
 		},
 	)
 	if err != nil {
@@ -211,9 +210,9 @@ func (g *Generator) activateNodeDomain(
 
 	contractID, err := g.artifactManager.RegisterRequest(
 		ctx,
-		*g.rootDomainContract,
-		&message.Parcel{
-			Msg: &message.GenesisRequest{Name: "NodeDomain"},
+		record.Request{
+			CallType: record.CTGenesis,
+			Method: "NodeDomain",
 		},
 	)
 
@@ -266,9 +265,9 @@ func (g *Generator) activateRootMember(
 
 	contractID, err := g.artifactManager.RegisterRequest(
 		ctx,
-		*g.rootDomainContract,
-		&message.Parcel{
-			Msg: &message.GenesisRequest{Name: "RootMember"},
+		record.Request{
+			CallType: record.CTGenesis,
+			Method: "RootMember",
 		},
 	)
 
@@ -336,9 +335,9 @@ func (g *Generator) activateRootMemberWallet(
 
 	contractID, err := g.artifactManager.RegisterRequest(
 		ctx,
-		*g.rootDomainContract,
-		&message.Parcel{
-			Msg: &message.GenesisRequest{Name: "RootWallet"},
+		record.Request{
+			CallType: record.CTGenesis,
+			Method: "RootWallet",
 		},
 	)
 
@@ -432,20 +431,20 @@ func (g *Generator) activateDiscoveryNodes(
 
 func (g *Generator) activateNodeRecord(
 	ctx context.Context,
-	record *noderecord.NodeRecord,
+	nRecord *noderecord.NodeRecord,
 	node nodeInfo,
 	nodeRecordProto insolar.Reference,
 ) (*insolar.Reference, error) {
-	nodeData, err := insolar.Serialize(record)
+	nodeData, err := insolar.Serialize(nRecord)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't serialize node instance")
 	}
 
 	nodeID, err := g.artifactManager.RegisterRequest(
 		ctx,
-		*g.rootDomainContract,
-		&message.Parcel{
-			Msg: &message.GenesisRequest{Name: node.publicKey},
+		record.Request{
+			CallType: record.CTGenesis,
+			Method: node.publicKey,
 		},
 	)
 	if err != nil {
