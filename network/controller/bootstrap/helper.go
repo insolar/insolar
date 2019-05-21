@@ -51,15 +51,12 @@
 package bootstrap
 
 import (
-	"crypto/rand"
-	"fmt"
 	"math"
 	"sort"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/utils"
-	"github.com/pkg/errors"
 )
 
 const nonceSize int = 128
@@ -131,29 +128,4 @@ func FindDiscovery(cert insolar.Certificate, ref insolar.Reference) insolar.Disc
 		}
 	}
 	return nil
-}
-
-func Xor(first, second []byte) []byte {
-	if len(second) < len(first) {
-		temp := second
-		second = first
-		first = temp
-	}
-	result := make([]byte, len(second))
-	for i, d := range second {
-		result[i] = first[i%len(first)] ^ d
-	}
-	return result
-}
-
-func GenerateNonce() (Nonce, error) {
-	buffer := [nonceSize]byte{}
-	l, err := rand.Read(buffer[:])
-	if err != nil {
-		return nil, errors.Wrapf(err, "error generating nonce")
-	}
-	if l != nonceSize {
-		return nil, errors.New(fmt.Sprintf("GenerateNonce: generated size %d does equal to required size %d", l, nonceSize))
-	}
-	return buffer[:], nil
 }

@@ -23,6 +23,7 @@ import (
 	"net/http"
 
 	"github.com/insolar/insolar/application/extractor"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 
 	"github.com/pkg/errors"
@@ -119,10 +120,11 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 		return errors.Wrap(err, "can't get domain reference")
 	}
 
+	base := testutils.RandomRef()
+
 	contractID, err := s.runner.ArtifactManager.RegisterRequest(
 		ctx,
-		insolar.GenesisRecord.Ref(),
-		&message.Parcel{Msg: &message.CallConstructor{PrototypeRef: testutils.RandomRef()}}, // TODO protoRef?
+		record.Request{CallType: record.CTSaveAsChild, Prototype: &base},
 	)
 
 	if err != nil {
@@ -181,14 +183,18 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 		return errors.Wrap(err, "can't get objectRef")
 	}
 
-	bm := message.BaseLogicMessage{
-		Caller: testutils.RandomRef(),
-		Nonce:  0,
-	}
-
 	argsSerialized, _ := insolar.Serialize(args.MethodArgs)
 
-	callMethodReply, err := s.runner.ContractRequester.CallMethod(ctx, &bm, false, false, objectRef, args.Method, argsSerialized, nil)
+	msg := &message.CallMethod{
+		Request: record.Request{
+			Caller: testutils.RandomRef(),
+			Object:    objectRef,
+			Method:    args.Method,
+			Arguments: argsSerialized,
+		},
+	}
+
+	callMethodReply, err := s.runner.ContractRequester.Call(ctx, msg)
 	if err != nil {
 		return errors.Wrap(err, "CallMethod failed with error")
 	}

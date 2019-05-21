@@ -25,6 +25,7 @@ import (
 
 var (
 	inmemoryStorage = insmetrics.MustTagKey("inmemorystorage")
+	dbStorage       = insmetrics.MustTagKey("dbstorage")
 )
 
 var (
@@ -36,6 +37,11 @@ var (
 	statIndexInMemoryRemovedCount = stats.Int64(
 		"indexstorage/removed/count",
 		"How many index-records have been removed from an index storage",
+		stats.UnitDimensionless,
+	)
+	statIndexDBAddedCount = stats.Int64(
+		"indexstorage/added/count",
+		"How many index-records have been saved in in-indexStorage index storage",
 		stats.UnitDimensionless,
 	)
 	statRecordInMemoryAddedCount = stats.Int64(
@@ -65,6 +71,13 @@ func init() {
 			Measure:     statIndexInMemoryRemovedCount,
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{inmemoryStorage},
+		},
+		&view.View{
+			Name:        statIndexDBAddedCount.Name(),
+			Description: statIndexDBAddedCount.Description(),
+			Measure:     statIndexDBAddedCount,
+			Aggregation: view.Count(),
+			TagKeys:     []tag.Key{dbStorage},
 		},
 		&view.View{
 			Name:        statRecordInMemoryAddedCount.Name(),

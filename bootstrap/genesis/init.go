@@ -94,12 +94,12 @@ func (s *Initializer) Run() {
 	checkError(ctx, err, "failed to start components")
 
 	genesisBaseRecord := &genesis.BaseRecord{
-		DB:             sc.storeBadgerDB,
-		DropModifier:   sc.dropDB,
-		PulseAppender:  sc.pulseDB,
-		PulseAccessor:  sc.pulseDB,
-		RecordModifier: sc.recordDB,
-		IndexModifier:  sc.indexDB,
+		DB:                    sc.storeBadgerDB,
+		DropModifier:          sc.dropDB,
+		PulseAppender:         sc.pulseDB,
+		PulseAccessor:         sc.pulseDB,
+		RecordModifier:        sc.recordDB,
+		IndexLifelineModifier: sc.indexDB,
 	}
 	isInit, err := genesisBaseRecord.CreateIfNeeded(ctx)
 	checkError(ctx, err, "failed to start genesis init")
@@ -112,8 +112,8 @@ func (s *Initializer) Run() {
 			RecordAccessor: sc.recordDB,
 			RecordModifier: sc.recordDB,
 
-			IndexModifier: sc.indexDB,
-			IndexAccessor: sc.indexDB,
+			LifelineModifier: sc.indexDB,
+			LifelineAccessor: sc.indexDB,
 		}
 
 		genesisGenerator := NewGenerator(
