@@ -19,8 +19,10 @@ package builtin
 
 import (
 	"context"
+	"errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/preprocessor"
 )
@@ -41,15 +43,46 @@ func NewBuiltIn(eb insolar.MessageBus, am artifacts.Client) *BuiltIn {
 	return &BuiltIn{}
 }
 
-func (bi *BuiltIn) CallConstructor(ctx context.Context, callCtx *insolar.LogicCallContext, code insolar.Reference, name string, args insolar.Arguments) (objectState []byte, err error) {
-	panic("implement me")
-}
-
 func (bi *BuiltIn) Stop() error {
 	return nil
 }
 
-// CallMethod runs a method on contract
-func (bi *BuiltIn) CallMethod(ctx context.Context, callCtx *insolar.LogicCallContext, codeRef insolar.Reference, data []byte, method string, args insolar.Arguments) (newObjectState []byte, methodResults insolar.Arguments, err error) {
-	panic("implement me")
+func (b *BuiltIn) CallConstructor(ctx context.Context, callCtx *insolar.LogicCallContext, codeRef insolar.Reference,
+	name string, args insolar.Arguments) ([]byte, error) {
+
+	ctx, span := instracer.StartSpan(ctx, "builtin.CallConstructor")
+	defer span.End()
+
+	contractName, ok := b.CodeRefRegistry[codeRef]
+	if !ok {
+		return nil, errors.New("failed to find contract with reference")
+	}
+	contract := b.CodeRegistry[contractName]
+
+	constructorFunc, ok := contract.Constructors[name]
+	if !ok {
+		return nil, errors.New("failed to find contracts method")
+	}
+
+	return constructorFunc(args)
+}
+
+func (b *BuiltIn) CallMethod(ctx context.Context, callCtx *insolar.LogicCallContext, codeRef insolar.Reference,
+	data []byte, method string, args insolar.Arguments) ([]byte, insolar.Arguments, error) {
+
+	ctx, span := instracer.StartSpan(ctx, "builtin.CallMethod")
+	defer span.End()
+
+	contractName, ok := b.CodeRefRegistry[codeRef]
+	if !ok {
+		return nil, nil, errors.New("failed to find contract with reference")
+	}
+	contract := b.CodeRegistry[contractName]
+
+	methodFunc, ok := contract.Methods[method]
+	if !ok {
+		return nil, nil, errors.New("failed to find contracts method")
+	}
+
+	return methodFunc(data, args)
 }
