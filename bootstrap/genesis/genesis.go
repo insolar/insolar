@@ -27,7 +27,6 @@ import (
 
 	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/nodedomain"
-	"github.com/insolar/insolar/application/contract/noderecord"
 	rootdomaincontract "github.com/insolar/insolar/application/contract/rootdomain"
 	walletcontract "github.com/insolar/insolar/application/contract/wallet"
 	"github.com/insolar/insolar/bootstrap"
@@ -100,7 +99,6 @@ func (g *Generator) Run(ctx context.Context) error {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("[ Genesis ] Starting  ...")
 
-	// TODO: join with buildPrototypes
 	inslog.Info("[ Genesis ] newContractBuilder ...")
 	cb := newContractBuilder(g.artifactManager)
 	defer cb.clean()
@@ -368,48 +366,6 @@ func (g *Generator) activateSmartContracts(
 	}
 
 	return nil
-}
-
-// TODO: remove unused method
-func (g *Generator) activateNodeRecord(
-	ctx context.Context,
-	nRecord *noderecord.NodeRecord,
-	node nodeInfo,
-	nodeRecordProto insolar.Reference,
-) (*insolar.Reference, error) {
-	nodeData, err := insolar.Serialize(nRecord)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't serialize node instance")
-	}
-
-	nodeID, err := g.artifactManager.RegisterRequest(
-		ctx,
-		record.Request{
-			CallType: record.CTGenesis,
-			Method:   node.publicKey,
-		},
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't register request")
-	}
-	contract := insolar.NewReference(*bootstrap.ContractRootDomain.Record(), *nodeID)
-	_, err = g.artifactManager.ActivateObject(
-		ctx,
-		insolar.Reference{},
-		*contract,
-		bootstrap.ContractNodeDomain,
-		nodeRecordProto,
-		false,
-		nodeData,
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ activateNodeRecord ] Could'n activateNodeRecord node object")
-	}
-	_, err = g.artifactManager.RegisterResult(ctx, bootstrap.ContractRootDomain, *contract, nil)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't register result")
-	}
-	return contract, nil
 }
 
 func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeInfo) error {
