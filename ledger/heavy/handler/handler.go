@@ -86,13 +86,23 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 }
 
 func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) (insolar.Reply, error) {
+	parcel, err := message.DeserializeParcel(bytes.NewBuffer(msg.Payload))
 	switch msg.Metadata.Get(bus.MetaType) {
 	case insolar.TypeGetObject.String():
-		parcel, err := message.DeserializeParcel(bytes.NewBuffer(msg.Payload))
 		if err != nil {
 			return nil, errors.Wrap(err, "can't deserialize payload")
 		}
 		return h.handleGetObject(ctx, parcel)
+	case insolar.TypeGetCode.String():
+		if err != nil {
+			return nil, errors.Wrap(err, "can't deserialize payload")
+		}
+		return h.handleGetCode(ctx, parcel)
+	case insolar.TypeGetRequest.String():
+		if err != nil {
+			return nil, errors.Wrap(err, "can't deserialize payload")
+		}
+		return h.handleGetRequest(ctx, parcel)
 
 	default:
 		return nil, fmt.Errorf("no handler for message type %s", msg.Metadata.Get(bus.MetaType))
@@ -103,11 +113,9 @@ func (h *Handler) Init(ctx context.Context) error {
 	// h.Bus.MustRegister(insolar.TypeHeavyStartStop, h.handleHeavyStartStop)
 	h.Bus.MustRegister(insolar.TypeHeavyPayload, h.handleHeavyPayload)
 
-	h.Bus.MustRegister(insolar.TypeGetCode, h.handleGetCode)
 	h.Bus.MustRegister(insolar.TypeGetDelegate, h.handleGetDelegate)
 	h.Bus.MustRegister(insolar.TypeGetChildren, h.handleGetChildren)
 	h.Bus.MustRegister(insolar.TypeGetObjectIndex, h.handleGetObjectIndex)
-	h.Bus.MustRegister(insolar.TypeGetRequest, h.handleGetRequest)
 	return nil
 }
 
