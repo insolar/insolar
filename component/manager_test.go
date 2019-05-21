@@ -77,3 +77,38 @@ func TestComponentManager_Inject(t *testing.T) {
 	require.NoError(t, cm.Start(nil))
 	require.NoError(t, cm.Stop(nil))
 }
+
+type Component3 struct {
+	started bool
+	stopped bool
+}
+
+func (c *Component3) Start(ctx context.Context) error {
+	c.started = true
+	return nil
+}
+
+func (c *Component3) Stop(ctx context.Context) error {
+	c.stopped = true
+	return nil
+}
+
+func TestComponentManager_NoCallStopIfNoCallStart(t *testing.T) {
+	c := Component3{}
+	cm := Manager{}
+	cm.Inject(&c)
+	err := cm.Stop(context.Background())
+	require.NoError(t, err)
+	require.False(t, c.stopped)
+	require.False(t, c.started)
+
+	err = cm.Start(context.Background())
+	require.NoError(t, err)
+	require.False(t, c.stopped)
+	require.True(t, c.started)
+
+	err = cm.Stop(context.Background())
+	require.NoError(t, err)
+	require.True(t, c.stopped)
+	require.True(t, c.started)
+}

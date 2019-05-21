@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 	"reflect"
+	"sync"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
@@ -29,8 +30,10 @@ import (
 
 // Manager provide methods to manage components lifecycle
 type Manager struct {
-	parent     *Manager
-	components []interface{}
+	parent        *Manager
+	components    []interface{}
+	startStopLock sync.Mutex
+	started       bool
 }
 
 // NewManager creates new component manager
@@ -120,6 +123,9 @@ func (m *Manager) isManaged(component interface{}) bool {
 
 // Start invokes Start method of all components which implements Starter interface
 func (m *Manager) Start(ctx context.Context) error {
+	m.startStopLock.Lock()
+	defer m.startStopLock.Unlock()
+
 	for _, c := range m.components {
 		if !m.isManaged(c) {
 			continue
@@ -136,6 +142,8 @@ func (m *Manager) Start(ctx context.Context) error {
 			glog().Debugf("ComponentManager: Component %s has no Start method", name)
 		}
 	}
+
+	m.started = true
 	return nil
 }
 
@@ -183,6 +191,13 @@ func (m *Manager) GracefulStop(ctx context.Context) error {
 
 // Stop invokes Stop method of all components which implements Starter interface
 func (m *Manager) Stop(ctx context.Context) error {
+	m.startStopLock.Lock()
+	defer m.startStopLock.Unlock()
+
+	if m.started == false {
+		glog().Debug("ComponentManager: components are not started. Skip stopping")
+		return nil
+	}
 
 	for i := len(m.components) - 1; i >= 0; i-- {
 		if !m.isManaged(m.components[i]) {
