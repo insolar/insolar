@@ -216,7 +216,9 @@ func (s *testSuite) TestNodeLeaveAtETA() {
 	s.NoError(err)
 
 	// next pulse will be last for this node
-	testNode.serviceNetwork.Leave(s.fixture().ctx, pulse.NextPulseNumber)
+	// leaving in 3 pulses
+	pulseDelta := pulse.NextPulseNumber - pulse.PulseNumber
+	testNode.serviceNetwork.Leave(s.fixture().ctx, pulse.PulseNumber+4*pulseDelta)
 
 	// node still active and working
 	s.waitForConsensus(1)
@@ -234,7 +236,7 @@ func (s *testSuite) TestNodeLeaveAtETA() {
 }
 
 func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
-	s.T().Skip("fix testcase in TESTNET 2.0")
+	// s.T().Skip("fix testcase in TESTNET 2.0")
 	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
 	}
