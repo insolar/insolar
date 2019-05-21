@@ -24,7 +24,7 @@ import (
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/platformpolicy"
@@ -126,18 +126,18 @@ func (g *DiscoveryNodeManager) addDiscoveryNodes(
 
 func (g *DiscoveryNodeManager) activateNodeRecord(
 	ctx context.Context,
-	record *noderecord.NodeRecord,
+	node *noderecord.NodeRecord,
 ) (*insolar.Reference, error) {
-	nodeData, err := insolar.Serialize(record)
+	nodeData, err := insolar.Serialize(node)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ activateNodeRecord ] Couldn't serialize nodeInfo instance")
 	}
 
 	nodeID, err := g.artifactManager.RegisterRequest(
 		ctx,
-		bootstrap.ContractRootDomain,
-		&message.Parcel{
-			Msg: &message.GenesisRequest{Name: record.Record.PublicKey},
+		record.Request{
+			CallType: record.CTGenesis,
+			Method:   node.Record.PublicKey,
 		},
 	)
 	if err != nil {

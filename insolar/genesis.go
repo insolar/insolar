@@ -25,8 +25,8 @@ const (
 	GenesisNameNodeRecord = "noderecord"
 	// GenesisNameRootMember is the name of root member contract for genesis record.
 	GenesisNameRootMember = "member"
-	// GenesisNameWallet is the name of wallet contract for genesis record.
-	GenesisNameWallet = "wallet"
+	// GenesisNameRootWallet is the name of wallet contract for genesis record.
+	GenesisNameRootWallet = "wallet"
 	// GenesisNameAllowance is the name of allowance contract for genesis record.
 	GenesisNameAllowance = "allowance"
 )

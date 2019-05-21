@@ -24,8 +24,6 @@ import (
 	"path"
 	"strconv"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/application/contract/member"
 	"github.com/insolar/insolar/application/contract/nodedomain"
 	"github.com/insolar/insolar/application/contract/noderecord"
@@ -35,10 +33,11 @@ import (
 	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
+	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
@@ -47,7 +46,7 @@ var contractNames = []string{
 	insolar.GenesisNameNodeDomain,
 	insolar.GenesisNameNodeRecord,
 	insolar.GenesisNameRootMember,
-	insolar.GenesisNameWallet,
+	insolar.GenesisNameRootWallet,
 	insolar.GenesisNameAllowance,
 }
 
@@ -159,7 +158,7 @@ func (g *Generator) activateRootDomain(
 		ctx,
 		record.Request{
 			CallType: record.CTGenesis,
-			Method: rootDomain,
+			Method:   insolar.GenesisNameRootDomain,
 		},
 	)
 	if err != nil {
@@ -203,7 +202,7 @@ func (g *Generator) activateNodeDomain(
 		ctx,
 		record.Request{
 			CallType: record.CTGenesis,
-			Method: "NodeDomain",
+			Method:   insolar.GenesisNameNodeDomain,
 		},
 	)
 
@@ -256,7 +255,7 @@ func (g *Generator) activateRootMember(
 		ctx,
 		record.Request{
 			CallType: record.CTGenesis,
-			Method: "RootMember",
+			Method:   insolar.GenesisNameRootMember,
 		},
 	)
 
@@ -301,7 +300,7 @@ func (g *Generator) activateRootMemberWallet(
 		ctx,
 		record.Request{
 			CallType: record.CTGenesis,
-			Method: "RootWallet",
+			Method:   insolar.GenesisNameRootWallet,
 		},
 	)
 
@@ -351,7 +350,7 @@ func (g *Generator) activateSmartContracts(
 		return errors.Wrap(err, "failed to store root GenesisNameRootMember contract")
 	}
 
-	err = g.activateRootMemberWallet(ctx, *prototypes[insolar.GenesisNameWallet])
+	err = g.activateRootMemberWallet(ctx, *prototypes[insolar.GenesisNameRootWallet])
 	if err != nil {
 		return errors.Wrap(err, "failed to store root rootMemberWallet contract")
 	}
@@ -374,7 +373,7 @@ func (g *Generator) activateNodeRecord(
 		ctx,
 		record.Request{
 			CallType: record.CTGenesis,
-			Method: node.publicKey,
+			Method:   node.publicKey,
 		},
 	)
 	if err != nil {

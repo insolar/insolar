@@ -245,13 +245,13 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Handler = h
 
 		artifactManager := &artifact.Scope{
-			PulseNumber:    insolar.FirstPulseNumber,
-			PCS:            CryptoScheme,
-			BlobStorage:    blobs,
-			RecordAccessor: records,
-			RecordModifier: records,
-			IndexModifier:  indexes,
-			IndexAccessor:  indexes,
+			PulseNumber:      insolar.FirstPulseNumber,
+			PCS:              CryptoScheme,
+			BlobStorage:      blobs,
+			RecordAccessor:   records,
+			RecordModifier:   records,
+			LifelineModifier: indexes,
+			LifelineAccessor: indexes,
 		}
 		DiscoveryNodesStore = genesis.NewDiscoveryCerts(artifactManager)
 	}

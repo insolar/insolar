@@ -30,27 +30,27 @@ func TestReferences(t *testing.T) {
 	}{
 		insolar.GenesisNameRootDomain: {
 			got:    ContractRootDomain,
-			expect: "1tJEEHUZYWYXXEa1KCTKKR8G6MrteZqCFPdcejHinR.1tJEEHUZYWYXXEa1KCTKKR8G6MrteZqCFPdcejHinR",
+			expect: "1tJDJLGWcX3TCXZMzZodTYWZyJGVdsajgGqyq8Vidw.1tJDJLGWcX3TCXZMzZodTYWZyJGVdsajgGqyq8Vidw",
 		},
 		insolar.GenesisNameNodeDomain: {
 			got:    ContractNodeDomain,
-			expect: "1tJCNCWXKnkKxE8DuNnquDXN4uQXw9UxWopL41ME8Y.1tJEEHUZYWYXXEa1KCTKKR8G6MrteZqCFPdcejHinR",
+			expect: "1tJDPXaGq1h3cHM8zSV4HDqZ5LtCz6EeV5bno3cCda.1tJDJLGWcX3TCXZMzZodTYWZyJGVdsajgGqyq8Vidw",
 		},
 		insolar.GenesisNameNodeRecord: {
 			got:    ContractNodeRecord,
-			expect: "1tJBvdpcKPQpcnpxWTYyDyqYrizXJrHsTGDLvwK39P.1tJEEHUZYWYXXEa1KCTKKR8G6MrteZqCFPdcejHinR",
+			expect: "1tJDsdZGUf7xqYxZcsYKJLKkeQMURphBi2xcR7G3dt.1tJDJLGWcX3TCXZMzZodTYWZyJGVdsajgGqyq8Vidw",
 		},
 		insolar.GenesisNameRootMember: {
 			got:    ContractRootMember,
-			expect: "1tJCdDBJ2dsjB9QdJddvYNsb2vamoagc3B2CNVrgr3.1tJEEHUZYWYXXEa1KCTKKR8G6MrteZqCFPdcejHinR",
+			expect: "1tJDL5m9pKyq2mbanYfgwQ5rSQdrpsXbzc1Dk7a53d.1tJDJLGWcX3TCXZMzZodTYWZyJGVdsajgGqyq8Vidw",
 		},
-		insolar.GenesisNameWallet: {
+		insolar.GenesisNameRootWallet: {
 			got:    ContractWallet,
-			expect: "1tJCTxgPKZuh7K8nSy8Z4L7UUtLrS4ZwQrbFgBELoa.1tJEEHUZYWYXXEa1KCTKKR8G6MrteZqCFPdcejHinR",
+			expect: "1tJCvhfv3caM2VuUJmd3pYc467nqNQhPzh8owVHvwY.1tJDJLGWcX3TCXZMzZodTYWZyJGVdsajgGqyq8Vidw",
 		},
 		insolar.GenesisNameAllowance: {
 			got:    ContractAllowance,
-			expect: "1tJDCCNyX2kMvt8t2x4bPkhzYrZ3aWBi9bKzNL3SXe.1tJEEHUZYWYXXEa1KCTKKR8G6MrteZqCFPdcejHinR",
+			expect: "1tJCxMpe8nTqQq38ByCkdg77LtHhfkcTF1teWWtYwi.1tJDJLGWcX3TCXZMzZodTYWZyJGVdsajgGqyq8Vidw",
 		},
 	}
 

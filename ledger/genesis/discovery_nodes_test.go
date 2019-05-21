@@ -30,7 +30,6 @@ import (
 	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -114,14 +113,8 @@ func initArtifactManager(t *testing.T) artifact.Manager {
 
 	amMock.RegisterRequestFunc = func(
 		_ context.Context,
-		objectRef insolar.Reference,
-		parcel insolar.Parcel,
+		req record.Request,
 	) (*insolar.ID, error) {
-		req := record.Request{
-			Parcel:      message.ParcelToBytes(parcel),
-			MessageHash: message.ParcelMessageHash(pcs, parcel),
-			Object:      *objectRef.Record(),
-		}
 		virtRec := record.Wrap(req)
 		hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
 		return insolar.NewID(insolar.FirstPulseNumber, hash), nil
