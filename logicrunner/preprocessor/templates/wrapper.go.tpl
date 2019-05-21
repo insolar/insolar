@@ -18,8 +18,9 @@ package {{ .Package }}
 
 import (
 {{- range $import, $i := .Imports }}
-	{{$import}}
+	{{ $import }}
 {{- end }}
+    XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
 )
 
 type ExtendableError struct{
@@ -160,16 +161,20 @@ func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error) {
 {{ end }}
 
 {{ if $.GenerateInitialize -}}
-func Initialize() map[string]interface{} {
-    return map[string]interface{}{
-        "INSMETHOD_GetCode": INSMETHOD_GetCode,
-        "INSMETHOD_GetPrototype": INSMETHOD_GetPrototype,
-{{ range $method := .Methods -}}
-        "INSMETHOD_{{ $method.Name }}": INSMETHOD_{{ $method.Name }},
-{{- end }}
-{{ range $f := .Functions -}}
-        "INSCONSTRUCTOR_{{ $f.Name }}": INSCONSTRUCTOR_{{ $f.Name }},
-{{ end }}
+func Initialize() XXX_preprocessor.ContractWrapper {
+    return XXX_preprocessor.ContractWrapper{
+        GetCode: INSMETHOD_GetCode,
+        GetPrototype: INSMETHOD_GetPrototype,
+        Methods: XXX_preprocessor.ContractMethods{
+            {{ range $method := .Methods -}}
+                    "{{ $method.Name }}": INSMETHOD_{{ $method.Name }},
+            {{- end }}
+        },
+        Constructors: XXX_preprocessor.ContractConstructors{
+            {{ range $f := .Functions -}}
+                    "{{ $f.Name }}": INSCONSTRUCTOR_{{ $f.Name }},
+            {{ end }}
+        },
     }
 }
 {{- end }}

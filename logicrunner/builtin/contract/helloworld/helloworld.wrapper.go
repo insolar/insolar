@@ -18,6 +18,7 @@ package helloworld
 
 import (
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+	XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
 )
 
 type ExtendableError struct {
@@ -150,11 +151,15 @@ func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
 	return ret, err
 }
 
-func Initialize() map[string]interface{} {
-	return map[string]interface{}{
-		"INSMETHOD_GetCode":      INSMETHOD_GetCode,
-		"INSMETHOD_GetPrototype": INSMETHOD_GetPrototype,
-		"INSMETHOD_Greet":        INSMETHOD_Greet,
-		"INSCONSTRUCTOR_New":     INSCONSTRUCTOR_New,
+func Initialize() XXX_preprocessor.ContractWrapper {
+	return XXX_preprocessor.ContractWrapper{
+		GetCode:      INSMETHOD_GetCode,
+		GetPrototype: INSMETHOD_GetPrototype,
+		Methods: XXX_preprocessor.ContractMethods{
+			"Greet": INSMETHOD_Greet,
+		},
+		Constructors: XXX_preprocessor.ContractConstructors{
+			"New": INSCONSTRUCTOR_New,
+		},
 	}
 }

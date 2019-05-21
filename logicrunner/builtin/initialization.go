@@ -21,10 +21,11 @@ import (
 	"github.com/pkg/errors"
 
 	XXX_insolar "github.com/insolar/insolar/insolar"
+	XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
 )
 
-func InitializeContractMethods() map[string]ContractMethods {
-	return map[string]ContractMethods{
+func InitializeContractMethods() map[string]XXX_preprocessor.ContractWrapper {
+	return map[string]XXX_preprocessor.ContractWrapper{
 		"helloworld": helloworld.Initialize(),
 	}
 }

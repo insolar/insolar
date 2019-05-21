@@ -18,7 +18,7 @@ package {{ .PackageName }}
 
 import (
 {{- range $import, $i := .Imports }}
-	{{$import}}
+	{{ $import }}
 {{- end }}
 )
 
