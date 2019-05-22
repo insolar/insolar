@@ -1804,7 +1804,7 @@ func (r *One) EmptyMethod() (error) {
 
 	_, prototype := s.getObjectInstance(ctx, am, cb, "one")
 
-	proto, err := am.GetObject(ctx, *prototype, nil, false)
+	proto, err := am.GetObject(ctx, *prototype)
 	codeRef, err := proto.Code()
 
 	s.NoError(err, "get contract code")
