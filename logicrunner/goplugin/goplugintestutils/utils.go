@@ -149,6 +149,13 @@ type TestArtifactManager struct {
 	Prototypes map[insolar.Reference]*TestObjectDescriptor
 }
 
+func (t *TestArtifactManager) InjectCodeDescriptor(_ insolar.Reference, _ artifacts.CodeDescriptor) {
+	panic("implement me")
+}
+func (t *TestArtifactManager) InjectObjectDescriptor(_ insolar.Reference, _ artifacts.ObjectDescriptor) {
+	panic("implement me")
+}
+
 func (t *TestArtifactManager) GetPendingRequest(ctx context.Context, objectID insolar.ID) (insolar.Parcel, error) {
 	panic("implement me")
 }

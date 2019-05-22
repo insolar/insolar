@@ -128,6 +128,9 @@ type Client interface {
 
 	// State returns hash state for artifact manager.
 	State() ([]byte, error)
+
+	InjectCodeDescriptor(insolar.Reference, CodeDescriptor)
+	InjectObjectDescriptor(insolar.Reference, ObjectDescriptor)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.CodeDescriptor -o ./ -s _mock.go
@@ -177,4 +180,9 @@ type ObjectDescriptor interface {
 type RefIterator interface {
 	Next() (*insolar.Reference, error)
 	HasNext() bool
+}
+
+type InjectableClient interface {
+	InjectCodeDescriptor(insolar.Reference, CodeDescriptor)
+	InjectObjectDescriptor(insolar.Reference, ObjectDescriptor)
 }

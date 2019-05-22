@@ -19,6 +19,7 @@ package artifacts
 import (
 	"context"
 	"fmt"
+	"sync"
 
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/bus"
@@ -43,6 +44,36 @@ const (
 	getChildrenChunkSize = 10 * 1000
 )
 
+type localStorage struct {
+	objectStorageLock sync.RWMutex
+	objectStorage     map[insolar.Reference]ObjectDescriptor
+
+	codeStorageLock sync.RWMutex
+	codeStorage     map[insolar.Reference]CodeDescriptor
+}
+
+func (s *localStorage) Code(reference insolar.Reference) CodeDescriptor {
+	s.codeStorageLock.RLock()
+	defer s.codeStorageLock.RUnlock()
+	return s.codeStorage[reference]
+}
+func (s *localStorage) SetCode(reference insolar.Reference, descriptor CodeDescriptor) {
+	s.codeStorageLock.Lock()
+	defer s.codeStorageLock.Unlock()
+	s.codeStorage[reference] = descriptor
+}
+
+func (s *localStorage) Object(reference insolar.Reference) ObjectDescriptor {
+	s.objectStorageLock.RLock()
+	defer s.objectStorageLock.RUnlock()
+	return s.objectStorage[reference]
+}
+func (s *localStorage) SetObject(reference insolar.Reference, descriptor ObjectDescriptor) {
+	s.objectStorageLock.Lock()
+	defer s.objectStorageLock.Unlock()
+	s.objectStorage[reference] = descriptor
+}
+
 // Client provides concrete API to storage for processing module.
 type client struct {
 	JetStorage     jet.Storage                        `inject:""`
@@ -54,6 +85,7 @@ type client struct {
 	sender               bus.Sender
 	getChildrenChunkSize int
 	senders              *messagebus.Senders
+	localStorage         localStorage
 }
 
 // State returns hash state for artifact manager.
@@ -121,7 +153,16 @@ func (m *client) RegisterRequest(
 func (m *client) GetCode(
 	ctx context.Context, code insolar.Reference,
 ) (CodeDescriptor, error) {
-	var err error
+	var (
+		desc CodeDescriptor
+		err  error
+	)
+
+	desc = m.localStorage.Code(code)
+	if desc != nil {
+		return desc, nil
+	}
+
 	instrumenter := instrument(ctx, "GetCode").err(&err)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.GetCode")
 	defer func() {
@@ -148,12 +189,12 @@ func (m *client) GetCode(
 
 	switch rep := genericReact.(type) {
 	case *reply.Code:
-		desc := codeDescriptor{
+		desc = &codeDescriptor{
 			ref:         code,
 			machineType: rep.MachineType,
 			code:        rep.Code,
 		}
-		return &desc, nil
+		return desc, nil
 	case *reply.Error:
 		return nil, rep.Error()
 	default:
@@ -172,6 +213,12 @@ func (m *client) GetObject(
 	var (
 		err error
 	)
+
+	desc = m.localStorage.Object(head)
+	if desc != nil {
+		return desc, nil
+	}
+
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.Getobject")
 	instrumenter := instrument(ctx, "GetObject").err(&err)
 	defer func() {
@@ -1021,4 +1068,12 @@ func (m *client) registerChild(
 	default:
 		return nil, fmt.Errorf("registerChild: unexpected reply: %#v", rep)
 	}
+}
+
+func (m *client) InjectCodeDescriptor(reference insolar.Reference, descriptor CodeDescriptor) {
+	m.localStorage.SetCode(reference, descriptor)
+}
+
+func (m *client) InjectObjectDescriptor(reference insolar.Reference, descriptor ObjectDescriptor) {
+	m.localStorage.SetObject(reference, descriptor)
 }

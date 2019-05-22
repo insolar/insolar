@@ -39,33 +39,7 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
-// StartRPC starts RPC server for isolated executors to use
-func StartRPC(ctx context.Context, lr *LogicRunner) *RPC {
-	rpcService := &RPC{lr: lr}
-
-	rpcServer := rpc.NewServer()
-	err := rpcServer.Register(rpcService)
-	if err != nil {
-		panic("Fail to register LogicRunner RPC Service: " + err.Error())
-	}
-
-	l, e := net.Listen(lr.Cfg.RPCProtocol, lr.Cfg.RPCListen)
-	if e != nil {
-		inslogger.FromContext(ctx).Fatal("couldn't setup listener on '"+lr.Cfg.RPCListen+"' over "+lr.Cfg.RPCProtocol+": ", e)
-	}
-	lr.sock = l
-
-	inslogger.FromContext(ctx).Infof("starting LogicRunner RPC service on %q over %s", lr.Cfg.RPCListen, lr.Cfg.RPCProtocol)
-	go func() {
-		rpcServer.Accept(l)
-		inslogger.FromContext(ctx).Info("LogicRunner RPC service stopped")
-	}()
-
-	return rpcService
-}
-
-// RPC is a RPC interface for runner to use for various tasks, e.g. code fetching
-type RPC struct {
+type RPCMethods struct {
 	lr *LogicRunner
 }
 
@@ -84,7 +58,7 @@ func recoverRPC(err *error) {
 }
 
 // GetCode is an RPC retrieving a code by its reference
-func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) (err error) {
+func (gpr *RPCMethods) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) (err error) {
 	defer recoverRPC(&err)
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
@@ -108,7 +82,7 @@ func (gpr *RPC) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp
 }
 
 // RouteCall routes call from a contract to a contract through event bus.
-func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (err error) {
+func (gpr *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (err error) {
 	defer recoverRPC(&err)
 
 	os := gpr.lr.MustObjectState(req.Callee)
@@ -160,7 +134,7 @@ func (gpr *RPC) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (e
 }
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) (err error) {
+func (gpr *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) (err error) {
 	defer recoverRPC(&err)
 
 	os := gpr.lr.MustObjectState(req.Callee)
@@ -195,7 +169,7 @@ func (gpr *RPC) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveA
 }
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) (err error) {
+func (gpr *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) (err error) {
 	defer recoverRPC(&err)
 
 	os := gpr.lr.MustObjectState(req.Callee)
@@ -233,7 +207,7 @@ var iteratorMapLock = sync.RWMutex{}
 var iteratorBuffSize = 1000
 
 // GetObjChildrenIterator is an RPC returns an iterator over object children with specified prototype
-func (gpr *RPC) GetObjChildrenIterator(
+func (gpr *RPCMethods) GetObjChildrenIterator(
 	req rpctypes.UpGetObjChildrenIteratorReq,
 	rep *rpctypes.UpGetObjChildrenIteratorResp,
 ) (
@@ -316,7 +290,7 @@ func (gpr *RPC) GetObjChildrenIterator(
 }
 
 // GetDelegate is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) (err error) {
+func (gpr *RPCMethods) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) (err error) {
 	defer recoverRPC(&err)
 
 	os := gpr.lr.MustObjectState(req.Callee)
@@ -337,11 +311,64 @@ func (gpr *RPC) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDe
 }
 
 // DeactivateObject is an RPC saving data as memory of a contract as child a parent
-func (gpr *RPC) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) (err error) {
+func (gpr *RPCMethods) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) (err error) {
 	defer recoverRPC(&err)
 
 	os := gpr.lr.MustObjectState(req.Callee)
 	es := os.MustModeState(req.Mode)
 	es.Current.Deactivate = true
+	return nil
+}
+
+// RPC is a RPC interface for runner to use for various tasks, e.g. code fetching
+type RPC struct {
+	server    *rpc.Server
+	methods   *RPCMethods
+	listener  net.Listener
+	proto     string
+	listen    string
+	isStarted bool
+}
+
+func NewRPC(ctx context.Context, lr *LogicRunner) *RPC {
+	rpcService := &RPC{
+		server:  rpc.NewServer(),
+		methods: &RPCMethods{},
+		proto:   lr.Cfg.RPCListen,
+		listen:  lr.Cfg.RPCProtocol,
+	}
+	if err := rpcService.server.Register(rpcService.methods); err != nil {
+		panic("Fail to register LogicRunner RPC Service: " + err.Error())
+	}
+
+	return rpcService
+}
+
+// StartRPC starts RPC server for isolated executors to use
+func (rpc *RPC) Start(ctx context.Context) {
+	var err error
+	logger := inslogger.FromContext(ctx)
+
+	rpc.listener, err = net.Listen(rpc.proto, rpc.listen)
+	if err != nil {
+		logger.Fatalf("couldn't setup listener on %q over %q: %s", rpc.listen, rpc.proto, err)
+	}
+
+	logger.Infof("starting LogicRunner RPC service on %q over %q", rpc.listen, rpc.proto)
+	rpc.isStarted = true
+
+	go func() {
+		rpc.server.Accept(rpc.listener)
+		logger.Info("LogicRunner RPC service stopped")
+	}()
+}
+
+func (rpc *RPC) Stop(_ context.Context) error {
+	if rpc.isStarted {
+		rpc.isStarted = false
+		if err := rpc.listener.Close(); err != nil {
+			return err
+		}
+	}
 	return nil
 }

@@ -20,7 +20,6 @@ package logicrunner
 import (
 	"bytes"
 	"context"
-	"net"
 	"strconv"
 	"sync"
 	"time"
@@ -166,7 +165,7 @@ type LogicRunner struct {
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
 	stateMutex sync.RWMutex
 
-	sock net.Listener
+	rpc *RPC
 
 	stopLock   sync.Mutex
 	isStopping bool
@@ -258,29 +257,56 @@ func initHandlers(lr *LogicRunner) error {
 	return nil
 }
 
+func (lr *LogicRunner) initializeBuiltin(ctx context.Context) error {
+	bi := builtin.NewBuiltIn(lr.MessageBus, lr.ArtifactManager)
+	if err := lr.RegisterExecutor(insolar.MachineTypeBuiltin, bi); err != nil {
+		return err
+	}
+	lr.machinePrefs = append(lr.machinePrefs, insolar.MachineTypeBuiltin)
+
+	// TODO: insert all necessary descriptors here
+	codeDescriptors := builtin.InitializeCodeDescriptors()
+	for _, codeDescriptor := range codeDescriptors {
+		lr.ArtifactManager.InjectCodeDescriptor(*codeDescriptor.Ref(), codeDescriptor)
+	}
+
+	prototypeDescriptors := builtin.InitializePrototypeDescriptors()
+	for _, prototypeDescriptor := range prototypeDescriptors {
+		lr.ArtifactManager.InjectObjectDescriptor(*prototypeDescriptor.HeadRef(), prototypeDescriptor)
+	}
+
+	return nil
+}
+
+func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
+	if lr.Cfg.RPCListen != "" {
+		lr.rpc.Start(ctx)
+	}
+
+	gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.MessageBus, lr.ArtifactManager)
+	if err != nil {
+		return err
+	}
+	if err := lr.RegisterExecutor(insolar.MachineTypeGoPlugin, gp); err != nil {
+		return err
+	}
+	lr.machinePrefs = append(lr.machinePrefs, insolar.MachineTypeGoPlugin)
+	return nil
+}
+
 // Start starts logic runner component
 func (lr *LogicRunner) Start(ctx context.Context) error {
 	if lr.Cfg.BuiltIn != nil {
-		bi := builtin.NewBuiltIn(lr.MessageBus, lr.ArtifactManager)
-		if err := lr.RegisterExecutor(insolar.MachineTypeBuiltin, bi); err != nil {
+		if err := lr.initializeBuiltin(ctx); err != nil {
 			return err
 		}
-		lr.machinePrefs = append(lr.machinePrefs, insolar.MachineTypeBuiltin)
 	}
 
+	lr.rpc = NewRPC(ctx, lr)
 	if lr.Cfg.GoPlugin != nil {
-		if lr.Cfg.RPCListen != "" {
-			StartRPC(ctx, lr)
-		}
-
-		gp, err := goplugin.NewGoPlugin(lr.Cfg, lr.MessageBus, lr.ArtifactManager)
-		if err != nil {
+		if err := lr.initializeGoPlugin(ctx); err != nil {
 			return err
 		}
-		if err := lr.RegisterExecutor(insolar.MachineTypeGoPlugin, gp); err != nil {
-			return err
-		}
-		lr.machinePrefs = append(lr.machinePrefs, insolar.MachineTypeGoPlugin)
 	}
 
 	lr.RegisterHandlers()
@@ -311,13 +337,12 @@ func (lr *LogicRunner) Stop(ctx context.Context) error {
 		}
 	}
 
-	if lr.sock != nil {
-		if err := lr.sock.Close(); err != nil {
-			return err
-		}
+	if err := lr.rpc.Stop(ctx); err != nil {
+		return err
 	}
-
-	lr.router.Close()
+	if err := lr.router.Close(); err != nil {
+		return err
+	}
 
 	return reterr
 }

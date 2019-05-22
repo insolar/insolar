@@ -38,14 +38,14 @@ type BuiltIn struct {
 }
 
 // NewBuiltIn is an constructor
-func NewBuiltIn(eb insolar.MessageBus, am artifacts.Client) *BuiltIn {
+func NewBuiltIn(_ insolar.MessageBus, _ artifacts.Client) *BuiltIn {
 	return &BuiltIn{
 		CodeRefRegistry: InitializeCodeRefs(),
 		CodeRegistry:    InitializeContractMethods(),
 	}
 }
 
-func (bi *BuiltIn) Stop() error {
+func (b *BuiltIn) Stop() error {
 	return nil
 }
 
