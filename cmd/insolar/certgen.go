@@ -61,7 +61,7 @@ func extractReference(response []byte, requestTypeMsg string) insolar.Reference 
 	err := json.Unmarshal(response, &r)
 	checkError(fmt.Sprintf("Failed to parse response from '%s' node request", requestTypeMsg), err)
 	if r.Error != "" {
-		fmt.Printf("Error while '%s' occured : %s ", requestTypeMsg, r.Error)
+		fmt.Printf("Error while '%s' occured : %s \n", requestTypeMsg, r.Error)
 		os.Exit(1)
 	}
 	if verbose {
