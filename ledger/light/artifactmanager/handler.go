@@ -269,15 +269,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	h.Bus.MustRegister(insolar.TypeGetJet, h.FlowDispatcher.WrapBusHandle)
 	h.Bus.MustRegister(insolar.TypeHotRecords, h.FlowDispatcher.WrapBusHandle)
 	h.Bus.MustRegister(insolar.TypeGetRequest, h.FlowDispatcher.WrapBusHandle)
-
-	h.Bus.MustRegister(
-		insolar.TypeGetPendingRequestID,
-		BuildMiddleware(
-			h.FlowDispatcher.WrapBusHandle,
-			instrumentHandler("handleGetPendingRequestID"),
-			m.checkJet,
-		),
-	)
+	h.Bus.MustRegister(insolar.TypeGetPendingRequestID, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeValidateRecord, h.handleValidateRecord)
 }
