@@ -53,8 +53,6 @@ package gateway
 import (
 	"context"
 
-	"github.com/insolar/insolar/network/utils"
-
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/log" // TODO remove before merge
@@ -125,6 +123,16 @@ func (g *Base) ValidateCert(ctx context.Context, certificate insolar.Authorizati
 	return false, errors.New("ValidateCert() in non active mode")
 }
 
-func (g *Base) CanNodeJoin(certificate insolar.Certificate, nodeKeeper network.NodeKeeper) bool {
-	return utils.OriginIsDiscovery(certificate)
+func (g *Base) FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode {
+	dNodes := make(map[insolar.Reference]struct{}, len(certificate.GetDiscoveryNodes()))
+	for _, dn := range certificate.GetDiscoveryNodes() {
+		dNodes[*dn.GetNodeRef()] = struct{}{}
+	}
+	ret := []insolar.NetworkNode{}
+	for _, n := range nodes {
+		if _, ok := dNodes[n.ID()]; ok {
+			ret = append(ret, n)
+		}
+	}
+	return ret
 }

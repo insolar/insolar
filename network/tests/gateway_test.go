@@ -88,3 +88,7 @@ func (g *FakeOk) GetState() insolar.NetworkState {
 func (g *FakeOk) ValidateCert(ctx context.Context, certificate insolar.AuthorizationCertificate) (bool, error) {
 	return true, nil
 }
+
+func (g *FakeOk) FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode {
+	return nodes
+}

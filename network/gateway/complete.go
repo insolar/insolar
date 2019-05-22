@@ -54,8 +54,6 @@ import (
 	"context"
 	"time"
 
-	"github.com/insolar/insolar/network"
-
 	"github.com/insolar/insolar/certificate"
 
 	"github.com/insolar/insolar/insolar/message"
@@ -93,8 +91,8 @@ func (g *Complete) OnPulse(ctx context.Context, pu insolar.Pulse) error {
 	return nil
 }
 
-func (g *Complete) CanNodeJoin(certificate insolar.Certificate, nodeKeeper network.NodeKeeper) bool {
-	return false
+func (g *Complete) FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode {
+	return nodes
 }
 
 // ValidateCert validates node certificate
