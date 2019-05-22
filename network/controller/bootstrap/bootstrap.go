@@ -677,11 +677,6 @@ func (bc *bootstrapper) StopCyclicBootstrap() {
 
 func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Request) (network.Response, error) {
 	var code Code
-	if bc.Gatewayer.Gateway().GetState() == insolar.CompleteNetworkState {
-		code = ReconnectRequired
-	} else {
-		code = Accepted
-	}
 	bootstrapRequest := request.GetData().(*NodeBootstrapRequest)
 	if bootstrapRequest == nil {
 		return nil, errors.New("received broken bootstrap request")
@@ -708,6 +703,10 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Re
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to get a code from permission")
 		}
+	}
+
+	if bc.Gatewayer.Gateway().GetState() == insolar.CompleteNetworkState {
+		code = ReconnectRequired
 	}
 
 	return bc.Network.BuildResponse(ctx, request,
@@ -747,7 +746,7 @@ func (bc *bootstrapper) updatePermissionsOnRequest(request *NodeBootstrapRequest
 		return errors.Wrap(err, "failed to encode a time")
 	}
 	request.Permission.UTC = t
-	request.Permission.ReconnectTo = bc.getRandActiveDiscoveryAddress(request.JoinClaim.NodeAddress.String())
+	request.Permission.ReconnectTo = bc.getRandActiveDiscoveryAddress()
 
 	sign, err := bc.getPermissionSign(request.Permission)
 	if err != nil {
@@ -817,7 +816,7 @@ func (bc *bootstrapper) checkPermissionSign(permission Permission) (bool, error)
 	return verified, nil
 }
 
-func (bc *bootstrapper) getRandActiveDiscoveryAddress(exeptAddress string) string {
+func (bc *bootstrapper) getRandActiveDiscoveryAddress() string {
 	if len(bc.NodeKeeper.GetAccessor().GetActiveNodes()) <= 1 {
 		return bc.NodeKeeper.GetOrigin().Address()
 	}
@@ -825,8 +824,8 @@ func (bc *bootstrapper) getRandActiveDiscoveryAddress(exeptAddress string) strin
 	r := rand.New(rand.NewSource(time.Now().UnixNano()))
 	index := r.Intn(len(bc.Certificate.GetDiscoveryNodes()))
 	node := bc.NodeKeeper.GetAccessor().GetActiveNode(*bc.Certificate.GetDiscoveryNodes()[index].GetNodeRef())
-	if (node != nil) && (strings.Compare(exeptAddress, node.Address()) != 0) {
-		return node.Address()
+	if (node != nil) && (node.GetState() == insolar.NodeReady) {
+		return bc.Certificate.GetDiscoveryNodes()[index].GetHost()
 	}
 
 	return bc.NodeKeeper.GetOrigin().Address()
