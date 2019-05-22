@@ -17,6 +17,7 @@ local make_min_roles() = {
     root_keys_file: '/opt/insolar/config/root_member_keys.json',
     node_keys_dir: '/opt/insolar/config/nodes',
     discovery_keys_dir: '/opt/insolar/config/discovery',
+    heavy_genesis_config_file: "/opt/insolar/config/heavy_genesis.json",
     root_balance: 1000000000,
     majority_rule: 0,
     min_roles: make_min_roles(),
