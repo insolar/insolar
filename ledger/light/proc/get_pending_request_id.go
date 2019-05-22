@@ -52,9 +52,10 @@ func (p *GetPendingRequestID) Proceed(ctx context.Context) error {
 
 	requests := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, jetID).GetRequestsForObject(msg.ObjectID)
 	if len(requests) == 0 {
-		p.replyTo <- bus.Reply{Reply: &reply.PendingRequest{Err: reply.Error{ErrType: reply.ErrNoPendingRequests}}}
+		p.replyTo <- bus.Reply{Reply: &reply.Error{ErrType: reply.ErrNoPendingRequests}}
+		return nil
 	}
-	p.replyTo <- bus.Reply{Reply: &reply.PendingRequest{ID: requests[0]}}
+	p.replyTo <- bus.Reply{Reply: &reply.ID{ID: requests[0]}}
 
 	return nil
 }
