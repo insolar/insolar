@@ -172,6 +172,9 @@ func NewMessageHandler(
 		GetPendingRequests: func(p *proc.GetPendingRequests) {
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 		},
+		GetPendingRequestID: func(p *proc.GetPendingRequestID) {
+			p.Dep.RecentStorageProvider = h.RecentStorageProvider
+		},
 		GetJet: func(p *proc.GetJet) {
 			p.Dep.Jets = h.JetStorage
 		},
