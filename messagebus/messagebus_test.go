@@ -203,7 +203,7 @@ func TestMessageBus_doDeliver_TwoAheadPulses(t *testing.T) {
 
 func TestMessageBus_createWatermillMessage(t *testing.T) {
 	ctx := context.Background()
-	mb, _, _, expectedRef := prepare(t, ctx, 100, 100)
+	mb, _, _, _ := prepare(t, ctx, 100, 100)
 
 	pulse := insolar.Pulse{
 		PulseNumber: insolar.PulseNumber(100),
@@ -218,30 +218,7 @@ func TestMessageBus_createWatermillMessage(t *testing.T) {
 	require.NotNil(t, msg.Payload)
 	require.Equal(t, fmt.Sprintf("%d", pulse.PulseNumber), msg.Metadata.Get(bus.MetaPulse))
 	require.Equal(t, parcel.Msg.Type().String(), msg.Metadata.Get(bus.MetaType))
-	require.Equal(t, expectedRef.String(), msg.Metadata.Get(bus.MetaReceiver))
 	require.Equal(t, insolar.Reference{}.String(), msg.Metadata.Get(bus.MetaSender))
-}
-
-func TestMessageBus_getReceiver(t *testing.T) {
-	ctx := context.Background()
-	mb, err := NewMessageBus(configuration.Configuration{})
-	require.NoError(t, err)
-	expectedRef := testutils.RandomRef()
-	jc := jet.NewCoordinatorMock(t)
-	jc.QueryRoleFunc = func(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber) (r []insolar.Reference, r1 error) {
-		return []insolar.Reference{expectedRef}, nil
-	}
-	mb.JetCoordinator = jc
-	pulse := insolar.Pulse{
-		PulseNumber: insolar.PulseNumber(100),
-	}
-	parcel := &message.Parcel{
-		Msg: &message.GetObject{},
-	}
-
-	r := mb.getReceiver(ctx, parcel, pulse, nil)
-
-	require.Equal(t, expectedRef.String(), r)
 }
 
 func TestMessageBus_deserializePayload_GetReply(t *testing.T) {

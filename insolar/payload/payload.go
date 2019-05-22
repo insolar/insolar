@@ -19,7 +19,9 @@ const (
 	TypeObjState  Type = 105
 )
 
-type Payload interface{}
+type Payload interface {
+	Marshal() ([]byte, error)
+}
 
 func Marshal(payload Payload) ([]byte, error) {
 	switch pl := payload.(type) {
@@ -57,4 +59,19 @@ func Unmarshal(data []byte) (Payload, error) {
 	}
 
 	return nil, errors.New("unknown payload type")
+}
+
+func UnmarshalFromMeta(meta []byte) (Payload, error) {
+	m := Meta{}
+	// Can be optimized by using proto.NewBuffer.
+	err := m.Unmarshal(meta)
+	if err != nil {
+		return nil, err
+	}
+	pl, err := Unmarshal(m.Payload)
+	if err != nil {
+		return nil, err
+	}
+
+	return pl, nil
 }

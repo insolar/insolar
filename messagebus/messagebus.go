@@ -28,7 +28,6 @@ import (
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/payload"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar/pulse"
@@ -161,22 +160,8 @@ func (mb *MessageBus) createWatermillMessage(ctx context.Context, parcel insolar
 
 	wmMsg.Metadata.Set(bus.MetaPulse, fmt.Sprintf("%d", currentPulse.PulseNumber))
 	wmMsg.Metadata.Set(bus.MetaType, parcel.Message().Type().String())
-	wmMsg.Metadata.Set(bus.MetaReceiver, mb.getReceiver(ctx, parcel, currentPulse, ops))
 	wmMsg.Metadata.Set(bus.MetaSender, mb.NodeNetwork.GetOrigin().ID().String())
 	return wmMsg
-}
-
-func (mb *MessageBus) getReceiver(ctx context.Context, parcel insolar.Parcel, currentPulse insolar.Pulse, options *insolar.MessageSendOptions) string {
-	nodes, err := mb.getReceiverNodes(ctx, parcel, currentPulse, options)
-	if err != nil {
-		inslogger.FromContext(ctx).Errorf("[ GetReceiver ] can't query role: %s", err.Error())
-		return ""
-	}
-	if len(nodes) > 1 {
-		inslogger.FromContext(ctx).Errorf("[ GetReceiver ] several nodes was queried for %s role: %s, first was chosen", parcel.DefaultRole(), nodes)
-	}
-	node := nodes[0]
-	return node.String()
 }
 
 func (mb *MessageBus) getReceiverNodes(ctx context.Context, parcel insolar.Parcel, currentPulse insolar.Pulse, options *insolar.MessageSendOptions) ([]insolar.Reference, error) {
@@ -219,7 +204,11 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 	_, ok := transferredToWatermill[msg.Type()]
 	if ok {
 		wmMsg := mb.createWatermillMessage(ctx, parcel, ops, currentPulse)
-		res, done := mb.Sender.Send(ctx, wmMsg)
+		nodes, err := mb.getReceiverNodes(ctx, parcel, currentPulse, ops)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to calculate role")
+		}
+		res, done := mb.Sender.SendTarget(ctx, wmMsg, nodes[0])
 		repMsg := <-res
 		done()
 		return deserializePayload(repMsg)
@@ -236,14 +225,6 @@ func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
 			return nil, errors.Wrap(err, "can't deserialize payload to error")
 		}
 		return nil, errReply
-	}
-	if msg.Metadata.Get(bus.MetaType) == payload.TypeError {
-		pl := payload.Error{}
-		err := pl.Unmarshal(msg.Payload)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to decode error")
-		}
-		return nil, errors.New(pl.Text)
 	}
 
 	rep, err := reply.Deserialize(bytes.NewBuffer(msg.Payload))

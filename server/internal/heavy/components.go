@@ -156,6 +156,29 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		}
 	}
 
+	// Role calculations.
+	var (
+		Coordinator jet.Coordinator
+		Pulses      *pulse.StorageMem
+		Jets        jet.Storage
+		Nodes       *node.Storage
+	)
+	{
+		Nodes = node.NewStorage()
+		Pulses = pulse.NewStorageMem()
+		Jets = jet.NewStore()
+
+		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+		c.PulseCalculator = Pulses
+		c.PulseAccessor = Pulses
+		c.JetAccessor = Jets
+		c.NodeNet = NodeNetwork
+		c.PlatformCryptographyScheme = CryptoScheme
+		c.Nodes = Nodes
+
+		Coordinator = c
+	}
+
 	// Communication.
 	var (
 		Tokens  insolar.DelegationTokenFactory
@@ -171,7 +194,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
-		WmBus = bus.NewBus(pubSub)
+		WmBus = bus.NewBus(pubSub, Pulses, Coordinator)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -185,9 +208,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	}
 
 	var (
-		Coordinator  jet.Coordinator
-		Pulses       pulse.Accessor
-		Jets         jet.Storage
 		PulseManager insolar.PulseManager
 		Handler      *handler.Handler
 	)
@@ -201,25 +221,15 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 
 		pulses := pulse.NewDB(db)
 		records := object.NewRecordDB(db)
-		nodes := node.NewStorage()
-		jets := jet.NewStore()
 		indexes := object.NewIndexDB(db)
 		blobs := blob.NewDB(db)
 		drops := drop.NewDB(db)
 
-		cord := jetcoordinator.NewJetCoordinator(conf.LightChainLimit)
-		cord.PulseCalculator = pulses
-		cord.PulseAccessor = pulses
-		cord.JetAccessor = jets
-		cord.NodeNet = NodeNetwork
-		cord.PlatformCryptographyScheme = CryptoScheme
-		cord.Nodes = nodes
-
 		pm := pulsemanager.NewPulseManager()
 		pm.Bus = Bus
 		pm.NodeNet = NodeNetwork
-		pm.NodeSetter = nodes
-		pm.Nodes = nodes
+		pm.NodeSetter = Nodes
+		pm.Nodes = Nodes
 		pm.PulseAppender = pulses
 
 		h := handler.New()
@@ -234,9 +244,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
 
-		Coordinator = cord
-		Pulses = pulses
-		Jets = jets
 		PulseManager = pm
 		Handler = h
 	}

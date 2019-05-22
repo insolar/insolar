@@ -30,6 +30,8 @@ message GetObject {
 
 message SetRecord {
     uint32 Polymorph = 16;
+
+    bytes Record = 20;
 }
 
 message ID {

@@ -123,8 +123,6 @@ func initComponents(
 	logger := watermill.NewStdLogger(false, false)
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 
-	b := bus.NewBus(pubsub)
-
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
 
@@ -174,15 +172,19 @@ func initComponents(
 		pulsemanager.NewPulseManager(),
 	)
 
+	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+	pulses := pulse.NewStorageMem()
+	b := bus.NewBus(pubsub, pulses, jc)
+
 	components := []interface{}{
 		b,
 		pubsub,
 		messageBus,
 		contractRequester,
 		artifacts.NewClient(),
-		pulse.NewStorageMem(),
+		jc,
+		pulses,
 		jet.NewStore(),
-		jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit),
 		node.NewStorage(),
 		delegationTokenFactory,
 		parcelFactory,

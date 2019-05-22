@@ -24,6 +24,9 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 )
@@ -55,15 +58,18 @@ const (
 
 const (
 	// TypeError is Type for messages with error in Payload
-	TypeError = "bus_error"
+	TypeError = "error"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock.go
 
 // Sender interface sends messages by watermill.
 type Sender interface {
-	// Send a watermill's Message and returns channel for replies and function for closing that channel.
-	Send(ctx context.Context, msg *message.Message) (<-chan *message.Message, func())
+	// SendRole a watermill's Message and returns channel for replies and function for closing that channel.
+	SendRole(
+		ctx context.Context, msg *message.Message, role insolar.DynamicRole, object insolar.Reference,
+	) (<-chan *message.Message, func())
+	SendTarget(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func())
 	Reply(ctx context.Context, origin, reply *message.Message)
 }
 
@@ -77,19 +83,23 @@ type lockedReply struct {
 
 // Bus is component that sends messages and gives access to replies for them.
 type Bus struct {
-	pub     message.Publisher
-	timeout time.Duration
+	pub         message.Publisher
+	timeout     time.Duration
+	pulses      pulse.Accessor
+	coordinator jet.Coordinator
 
 	repliesMutex sync.RWMutex
 	replies      map[string]*lockedReply
 }
 
 // NewBus creates Bus instance with provided values.
-func NewBus(pub message.Publisher) *Bus {
+func NewBus(pub message.Publisher, pulses pulse.Accessor, jc jet.Coordinator) *Bus {
 	return &Bus{
-		timeout: time.Second * 20,
-		pub:     pub,
-		replies: make(map[string]*lockedReply),
+		timeout:     time.Second * 20,
+		pub:         pub,
+		replies:     make(map[string]*lockedReply),
+		pulses:      pulses,
+		coordinator: jc,
 	}
 }
 
@@ -107,10 +117,35 @@ func (b *Bus) removeReplyChannel(ctx context.Context, id string, reply *lockedRe
 	})
 }
 
-// Send a watermill's Message and returns channel for replies and function for closing that channel.
-func (b *Bus) Send(ctx context.Context, msg *message.Message) (<-chan *message.Message, func()) {
+// SendRole a watermill's Message and returns channel for replies and function for closing that channel.
+func (b *Bus) SendRole(
+	ctx context.Context, msg *message.Message, role insolar.DynamicRole, object insolar.Reference,
+) (<-chan *message.Message, func()) {
+	handleError := func(err error) (<-chan *message.Message, func()) {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send message"))
+		res := make(chan *message.Message)
+		close(res)
+		return res, func() {}
+	}
+	latestPulse, err := b.pulses.Latest(ctx)
+	if err != nil {
+		return handleError(errors.Wrap(err, "failed to fetch pulse"))
+	}
+	nodes, err := b.coordinator.QueryRole(ctx, role, *object.Record(), latestPulse.PulseNumber)
+	if err != nil {
+		return handleError(errors.Wrap(err, "failed to calculate role"))
+	}
+
+	return b.SendTarget(ctx, msg, nodes[0])
+}
+
+func (b *Bus) SendTarget(
+	ctx context.Context, msg *message.Message, target insolar.Reference,
+) (<-chan *message.Message, func()) {
 	id := watermill.NewUUID()
 	middleware.SetCorrelationID(id, msg)
+
+	msg.Metadata.Set(MetaReceiver, target.String())
 
 	reply := &lockedReply{
 		messages: make(chan *message.Message),

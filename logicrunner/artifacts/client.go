@@ -21,11 +21,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill"
-	WMMessage "github.com/ThreeDotsLabs/watermill/message"
-
-	"github.com/insolar/insolar/insolar/bus"
-	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/messagebus"
@@ -53,7 +48,6 @@ type client struct {
 	PulseAccessor  pulse.Accessor                     `inject:""`
 	JetCoordinator jet.Coordinator                    `inject:""`
 
-	Sender               bus.Sender
 	getChildrenChunkSize int
 	senders              *messagebus.Senders
 }
@@ -848,40 +842,10 @@ func (m *client) setRecord(
 	rec record.Virtual,
 	target insolar.Reference,
 ) (*insolar.ID, error) {
-
-	var rep *WMMessage.Message
-	{
-		data, err := rec.Marshal()
-		if err != nil {
-			return nil, errors.Wrap(err, "setRecord: can't serialize record")
-		}
-		pl := payload.SetRecord{
-			Record: data,
-		}
-		buf, err := pl.Marshal()
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to encode payload")
-		}
-
-		reps, done := m.Sender.Send(ctx, WMMessage.NewMessage(watermill.NewUUID(), buf))
-		defer done()
-
-		var ok bool
-		rep, ok = <-reps
-		if !ok {
-			return nil, errors.New("failed to send message")
-		}
+	data, err := rec.Marshal()
+	if err != nil {
+		return nil, errors.Wrap(err, "setRecord: can't serialize record")
 	}
-
-	switch rep.Metadata.Get(bus.MetaType) {
-	case payload.TypeID:
-		pl := payload.ID{}
-		err := pl.Unmarshal(rep.Payload)
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to decode reply")
-		}
-	}
-
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
 		messagebus.RetryIncorrectPulse(),
