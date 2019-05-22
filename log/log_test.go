@@ -79,7 +79,7 @@ func TestLog_GlobalLogger_Env(t *testing.T) {
 		t.Run(name, func(t *testing.T) {
 			env := []string{"__TestLoggerWithEnv__=1"}
 			for _, e := range os.Environ() {
-				if e == logLevelEnvVarName {
+				if strings.HasPrefix(e, logLevelEnvVarName+"=") {
 					e = logLevelEnvVarName + "=" + val
 				}
 				env = append(env, e)
