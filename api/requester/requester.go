@@ -291,10 +291,6 @@ func LogOff(url string) (*StatusResponse, error) {
 	if statusResp.Error != nil {
 		return nil, errors.New("[ Status ] Field 'error' is not nil: " + fmt.Sprint(statusResp.Error))
 	}
-	res := &statusResp.Result
-	if res == nil {
-		return nil, errors.New("[ Status ] Field 'result' is nil")
-	}
 
-	return res, nil
+	return &statusResp.Result, nil
 }
