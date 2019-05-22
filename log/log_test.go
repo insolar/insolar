@@ -80,12 +80,9 @@ func TestLog_GlobalLogger_Env(t *testing.T) {
 			env := []string{"__TestLoggerWithEnv__=1"}
 			for _, e := range os.Environ() {
 				if e == logLevelEnvVarName {
-					continue
+					e = logLevelEnvVarName + "=" + val
 				}
 				env = append(env, e)
-			}
-			if val != "" {
-				env = append(env, logLevelEnvVarName+"="+val)
 			}
 
 			cmd := exec.Command(os.Args[0], "-test.run=TestLog_GlobalLogger_Env")
