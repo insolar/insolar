@@ -60,12 +60,12 @@ func extractReference(response []byte, requestTypeMsg string) insolar.Reference 
 	r := RegisterResult{}
 	err := json.Unmarshal(response, &r)
 	checkError(fmt.Sprintf("Failed to parse response from '%s' node request", requestTypeMsg), err)
+	if verbose {
+		fmt.Println("Response:", string(response))
+	}
 	if r.Error != "" {
 		fmt.Printf("Error while '%s' occured : %s \n", requestTypeMsg, r.Error)
 		os.Exit(1)
-	}
-	if verbose {
-		fmt.Println("Response:", string(response))
 	}
 
 	ref, err := insolar.NewReferenceFromBase58(r.Result)
