@@ -202,6 +202,7 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 			fmt.Printf("Network timeout, retry. Attempt: %d/%d\n", i, sendRetryCount)
 			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second)
+			resp.Error = netErr.Error()
 			continue
 		} else if err != nil {
 			return nil, err
@@ -215,12 +216,6 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 
 		if resp.Error == "" {
 			return resp.Result, nil
-		}
-		if strings.Contains(resp.Error, "Incorrect message pulse") {
-			fmt.Printf("Incorrect message pulse, retry. Attempt: %d/%d\n(error - %s)\n", i, sendRetryCount, resp.Error)
-			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second)
-			continue
 		}
 
 		if strings.Contains(resp.Error, "flow canceled") {
