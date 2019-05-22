@@ -31,7 +31,6 @@ import (
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
@@ -151,127 +150,6 @@ func (s *handlerSuite) AfterTest(suiteName, testName string) {
 	if err != nil {
 		s.T().Error("ComponentManager stop failed", err)
 	}
-}
-
-func (s *handlerSuite) TestMessageHandler_HandleGetChildren_Redirects() {
-	mc := minimock.NewController(s.T())
-	defer mc.Finish()
-	jetID := insolar.ID(*insolar.NewJetID(0, nil))
-
-	tf := testutils.NewDelegationTokenFactoryMock(mc)
-	tf.IssueGetChildrenRedirectMock.Return(&delegationtoken.GetChildrenRedirectToken{Signature: []byte{1, 2, 3}}, nil)
-	mb := testutils.NewMessageBusMock(mc)
-	mb.MustRegisterMock.Return()
-	jc := jet.NewCoordinatorMock(mc)
-
-	pendingMock := recentstorage.NewPendingStorageMock(s.T())
-
-	pendingMock.GetRequestsForObjectMock.Return(nil)
-	pendingMock.AddPendingRequestMock.Return()
-	pendingMock.RemovePendingRequestMock.Return()
-
-	provideMock := recentstorage.NewProviderMock(s.T())
-	provideMock.GetPendingStorageMock.Return(pendingMock)
-
-	msg := message.GetChildren{
-		Parent: *genRandomRef(0),
-	}
-	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{
-		LightChainLimit: 2,
-	})
-	h.JetCoordinator = jc
-	h.DelegationTokenFactory = tf
-	h.Bus = mb
-	h.JetStorage = s.jetStorage
-	h.Nodes = s.nodeStorage
-	h.RecordAccessor = s.recordAccessor
-
-	locker := object.NewIDLockerMock(s.T())
-	locker.LockMock.Return()
-	locker.UnlockMock.Return()
-	h.IDLocker = locker
-
-	err := h.Init(s.ctx)
-	require.NoError(s.T(), err)
-
-	h.RecentStorageProvider = provideMock
-
-	s.T().Run("redirects to heavy when no index", func(t *testing.T) {
-		objIndex := object.Lifeline{
-			LatestState:  genRandomID(insolar.FirstPulseNumber),
-			ChildPointer: genRandomID(insolar.FirstPulseNumber),
-		}
-		mb.SendFunc = func(c context.Context, gm insolar.Message, o *insolar.MessageSendOptions) (r insolar.Reply, r1 error) {
-			if m, ok := gm.(*message.GetObjectIndex); ok {
-				assert.Equal(t, msg.Parent, m.Object)
-				buf := object.EncodeIndex(objIndex)
-				require.NoError(t, err)
-				return &reply.ObjectIndex{Index: buf}, nil
-			}
-
-			panic("unexpected call")
-		}
-		heavyRef := genRandomRef(0)
-
-		jc.HeavyMock.Return(heavyRef, nil)
-		jc.IsBeyondLimitMock.Return(true, nil)
-		rep, err := h.handleGetChildren(contextWithJet(s.ctx, jetID), &message.Parcel{
-			Msg:         &msg,
-			PulseNumber: insolar.FirstPulseNumber + 1,
-		})
-		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetChildrenRedirectReply)
-		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetChildrenRedirectToken)
-		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-		assert.Equal(t, heavyRef, redirect.GetReceiver())
-
-		idx, err := s.indexMemoryStor.ForID(s.ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record())
-		require.NoError(t, err)
-		assert.Equal(t, objIndex.LatestState, idx.LatestState)
-	})
-
-	s.T().Run("redirect to light when has index and child later than limit", func(t *testing.T) {
-		lightRef := genRandomRef(0)
-		jc.IsBeyondLimitMock.Return(false, nil)
-		jc.NodeForJetMock.Return(lightRef, nil)
-		err = s.indexMemoryStor.Set(s.ctx, insolar.FirstPulseNumber+1, *msg.Parent.Record(), object.Lifeline{
-			ChildPointer: genRandomID(insolar.FirstPulseNumber),
-			JetID:        insolar.JetID(jetID),
-		})
-		require.NoError(t, err)
-		rep, err := h.handleGetChildren(contextWithJet(s.ctx, jetID), &message.Parcel{
-			Msg:         &msg,
-			PulseNumber: insolar.FirstPulseNumber + 1,
-		})
-		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetChildrenRedirectReply)
-		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetChildrenRedirectToken)
-		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-		assert.Equal(t, lightRef, redirect.GetReceiver())
-	})
-
-	s.T().Run("redirect to heavy when has index and child earlier than limit", func(t *testing.T) {
-		heavyRef := genRandomRef(0)
-		jc.IsBeyondLimitMock.Return(false, nil)
-		jc.NodeForJetMock.Return(heavyRef, nil)
-		err = s.indexMemoryStor.Set(s.ctx, insolar.FirstPulseNumber+2, *msg.Parent.Record(), object.Lifeline{
-			ChildPointer: genRandomID(insolar.FirstPulseNumber),
-			JetID:        insolar.JetID(jetID),
-		})
-		require.NoError(t, err)
-		rep, err := h.handleGetChildren(contextWithJet(s.ctx, jetID), &message.Parcel{
-			Msg:         &msg,
-			PulseNumber: insolar.FirstPulseNumber + 2,
-		})
-		require.NoError(t, err)
-		redirect, ok := rep.(*reply.GetChildrenRedirectReply)
-		require.True(t, ok)
-		token, ok := redirect.Token.(*delegationtoken.GetChildrenRedirectToken)
-		assert.Equal(t, []byte{1, 2, 3}, token.Signature)
-		assert.Equal(t, heavyRef, redirect.GetReceiver())
-	})
 }
 
 func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeavy() {
@@ -670,8 +548,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetRequest() {
 	jetID := insolar.ID(*insolar.NewJetID(0, nil))
 
 	req := record.Request{
-		MessageHash: []byte{1, 2, 3},
-		Object:      *genRandomID(0),
+		Object:      genRandomRef(0),
 	}
 
 	virtRec := record.Wrap(req)

@@ -36,6 +36,7 @@ type Dependencies struct {
 	RegisterChild      func(*RegisterChild)
 	GetPendingRequests func(*GetPendingRequests)
 	GetJet             func(*GetJet)
+	GetChildren        func(*GetChildren)
 	HotData            func(*HotData)
 }
 

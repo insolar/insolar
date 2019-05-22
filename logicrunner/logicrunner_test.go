@@ -35,6 +35,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"github.com/ugorji/go/codec"
 
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/light/artifactmanager"
 	"github.com/insolar/insolar/ledger/object"
 	"github.com/insolar/insolar/pulsar"
@@ -245,12 +246,14 @@ func executeMethod(
 	rlr := lr.(*LogicRunner)
 
 	msg := &message.CallMethod{
-		Caller:    testutils.RandomRef(),
-		Nonce:     nonce,
-		Object:    &objRef,
-		Prototype: &proxyPrototype,
-		Method:    method,
-		Arguments: argsSerialized,
+		Request: record.Request{
+			Caller: testutils.RandomRef(),
+			Nonce:     nonce,
+			Object:    &objRef,
+			Prototype: &proxyPrototype,
+			Method:    method,
+			Arguments: argsSerialized,
+		},
 	}
 
 	return rlr.ContractRequester.CallMethod(ctx, msg)
@@ -1130,11 +1133,9 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 	// Initializing Root Domain
 	rootDomainID, err := am.RegisterRequest(
 		ctx,
-		insolar.GenesisRecord.Ref(),
-		&message.Parcel{
-			Msg: &message.GenesisRequest{
-				Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa",
-			},
+		record.Request{
+			CallType: record.CTGenesis,
+			Method:   "RootDomain",
 		},
 	)
 	s.NoError(err)
@@ -1161,11 +1162,9 @@ func (s *LogicRunnerFuncSuite) TestRootDomainContractError() {
 
 	rootMemberID, err := am.RegisterRequest(
 		ctx,
-		insolar.GenesisRecord.Ref(),
-		&message.Parcel{
-			Msg: &message.GenesisRequest{
-				Name: "4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa",
-			},
+		record.Request{
+			CallType: record.CTGenesis,
+			Method:   "RootMember",
 		},
 	)
 	s.NoError(err)
@@ -1513,7 +1512,13 @@ func (r *One) CreateAllowance(member string) (error) {
 	kp := platformpolicy.NewKeyProcessor()
 
 	// Initializing Root Domain
-	rootDomainID, err := am.RegisterRequest(ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.GenesisRequest{Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa"}})
+	rootDomainID, err := am.RegisterRequest(
+		ctx,
+		record.Request{
+			CallType: record.CTGenesis,
+			Method:   "RootDomain",
+		},
+	)
 	s.NoError(err)
 	rootDomainRef := getRefFromID(rootDomainID)
 	rootDomainDesc, err := am.ActivateObject(
@@ -1536,11 +1541,9 @@ func (r *One) CreateAllowance(member string) (error) {
 
 	rootMemberID, err := am.RegisterRequest(
 		ctx,
-		insolar.GenesisRecord.Ref(),
-		&message.Parcel{
-			Msg: &message.GenesisRequest{
-				Name: "4K3NiGuqYGqKPnYp6XeGd2kdN4P9veL6rYcWkLKWXZCu.4FFB8zfQoGznSmzDxwv4njX1aR9ioL8GHSH17QXH2AFa",
-			},
+		record.Request{
+			CallType: record.CTGenesis,
+			Method:   "RootMember",
 		},
 	)
 	s.NoError(err)
@@ -1581,8 +1584,8 @@ func (r *One) CreateAllowance(member string) (error) {
 	domain, err := insolar.NewReferenceFromBase58("7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa.7ZQboaH24PH42sqZKUvoa7UBrpuuubRtShp6CKNuWGZa")
 	s.Require().NoError(err)
 	contractID, err := am.RegisterRequest(
-		ctx, insolar.GenesisRecord.Ref(),
-		&message.Parcel{Msg: &message.CallMethod{CallType: message.CTSaveAsChild}},
+		ctx,
+		record.Request{CallType: record.CTSaveAsChild},
 	)
 	s.NoError(err)
 	contract := getRefFromID(contractID)
@@ -2062,8 +2065,7 @@ func (s *LogicRunnerFuncSuite) getObjectInstance(ctx context.Context, am artifac
 
 	contractID, err := am.RegisterRequest(
 		ctx,
-		insolar.GenesisRecord.Ref(),
-		&message.Parcel{Msg: &message.CallMethod{CallType: message.CTSaveAsChild, Prototype: &proto}},
+		record.Request{CallType: record.CTSaveAsChild, Prototype: &proto},
 	)
 	s.NoError(err)
 	objectRef := getRefFromID(contractID)

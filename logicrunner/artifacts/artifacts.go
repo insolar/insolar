@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.Client -o ./ -s _mock.go
@@ -27,7 +28,7 @@ import (
 // Client is a high level storage interface.
 type Client interface {
 	// RegisterRequest creates request record in storage.
-	RegisterRequest(ctx context.Context, object insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error)
+	RegisterRequest(ctx context.Context, request record.Request) (*insolar.ID, error)
 
 	// RegisterValidation marks provided object state as approved or disapproved.
 	//

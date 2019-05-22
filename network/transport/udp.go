@@ -86,6 +86,10 @@ func newUDPTransport(listenAddress, fixedPublicAddress string, handler DatagramH
 
 // SendDatagram sends datagram to remote host
 func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []byte) error {
+	if atomic.LoadUint32(&t.started) != 1 {
+		return errors.New("failed to send datagram: transport is not started")
+	}
+
 	logger := inslogger.FromContext(ctx)
 	if len(data) > udpMaxPacketSize {
 		return fmt.Errorf(
@@ -97,19 +101,14 @@ func (t *udpTransport) SendDatagram(ctx context.Context, address string, data []
 
 	udpAddr, err := net.ResolveUDPAddr("udp", address)
 	if err != nil {
-		return errors.Wrap(err, "Failed to resolve UDP address")
+		return errors.Wrap(err, "failed to resolve UDP address")
 	}
 
 	logger.Debug("[ SendDatagram ] udpTransport.send: len = ", len(data))
-	conn, err := net.DialUDP("udp", nil, udpAddr)
-	if err != nil {
-		return errors.Wrap(err, "Failed to dial UDP")
-	}
-
-	n, err := conn.Write(data)
+	n, err := t.conn.WriteTo(data, udpAddr)
 	if err != nil {
 		// TODO: may be try to send second time if error
-		return errors.Wrap(err, "Failed to write data")
+		return errors.Wrap(err, "failed to write data")
 	}
 	stats.Record(ctx, consensus.SentSize.M(int64(n)))
 	return nil

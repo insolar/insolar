@@ -12,6 +12,7 @@ import (
 
 	"github.com/gojuno/minimock"
 	insolar "github.com/insolar/insolar/insolar"
+	record "github.com/insolar/insolar/insolar/record"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -75,7 +76,7 @@ type ClientMock struct {
 	HasPendingRequestsPreCounter uint64
 	HasPendingRequestsMock       mClientMockHasPendingRequests
 
-	RegisterRequestFunc       func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error)
+	RegisterRequestFunc       func(p context.Context, p1 record.Request) (r *insolar.ID, r1 error)
 	RegisterRequestCounter    uint64
 	RegisterRequestPreCounter uint64
 	RegisterRequestMock       mClientMockRegisterRequest
@@ -1829,8 +1830,7 @@ type ClientMockRegisterRequestExpectation struct {
 
 type ClientMockRegisterRequestInput struct {
 	p  context.Context
-	p1 insolar.Reference
-	p2 insolar.Parcel
+	p1 record.Request
 }
 
 type ClientMockRegisterRequestResult struct {
@@ -1839,14 +1839,14 @@ type ClientMockRegisterRequestResult struct {
 }
 
 //Expect specifies that invocation of Client.RegisterRequest is expected from 1 to Infinity times
-func (m *mClientMockRegisterRequest) Expect(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) *mClientMockRegisterRequest {
+func (m *mClientMockRegisterRequest) Expect(p context.Context, p1 record.Request) *mClientMockRegisterRequest {
 	m.mock.RegisterRequestFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ClientMockRegisterRequestExpectation{}
 	}
-	m.mainExpectation.input = &ClientMockRegisterRequestInput{p, p1, p2}
+	m.mainExpectation.input = &ClientMockRegisterRequestInput{p, p1}
 	return m
 }
 
@@ -1863,12 +1863,12 @@ func (m *mClientMockRegisterRequest) Return(r *insolar.ID, r1 error) *ClientMock
 }
 
 //ExpectOnce specifies that invocation of Client.RegisterRequest is expected once
-func (m *mClientMockRegisterRequest) ExpectOnce(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) *ClientMockRegisterRequestExpectation {
+func (m *mClientMockRegisterRequest) ExpectOnce(p context.Context, p1 record.Request) *ClientMockRegisterRequestExpectation {
 	m.mock.RegisterRequestFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &ClientMockRegisterRequestExpectation{}
-	expectation.input = &ClientMockRegisterRequestInput{p, p1, p2}
+	expectation.input = &ClientMockRegisterRequestInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -1878,7 +1878,7 @@ func (e *ClientMockRegisterRequestExpectation) Return(r *insolar.ID, r1 error) {
 }
 
 //Set uses given function f as a mock of Client.RegisterRequest method
-func (m *mClientMockRegisterRequest) Set(f func(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error)) *ClientMock {
+func (m *mClientMockRegisterRequest) Set(f func(p context.Context, p1 record.Request) (r *insolar.ID, r1 error)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1887,18 +1887,18 @@ func (m *mClientMockRegisterRequest) Set(f func(p context.Context, p1 insolar.Re
 }
 
 //RegisterRequest implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) RegisterRequest(p context.Context, p1 insolar.Reference, p2 insolar.Parcel) (r *insolar.ID, r1 error) {
+func (m *ClientMock) RegisterRequest(p context.Context, p1 record.Request) (r *insolar.ID, r1 error) {
 	counter := atomic.AddUint64(&m.RegisterRequestPreCounter, 1)
 	defer atomic.AddUint64(&m.RegisterRequestCounter, 1)
 
 	if len(m.RegisterRequestMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.RegisterRequestMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ClientMock.RegisterRequest. %v %v %v", p, p1, p2)
+			m.t.Fatalf("Unexpected call to ClientMock.RegisterRequest. %v %v", p, p1)
 			return
 		}
 
 		input := m.RegisterRequestMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ClientMockRegisterRequestInput{p, p1, p2}, "Client.RegisterRequest got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ClientMockRegisterRequestInput{p, p1}, "Client.RegisterRequest got unexpected parameters")
 
 		result := m.RegisterRequestMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -1916,7 +1916,7 @@ func (m *ClientMock) RegisterRequest(p context.Context, p1 insolar.Reference, p2
 
 		input := m.RegisterRequestMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ClientMockRegisterRequestInput{p, p1, p2}, "Client.RegisterRequest got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ClientMockRegisterRequestInput{p, p1}, "Client.RegisterRequest got unexpected parameters")
 		}
 
 		result := m.RegisterRequestMock.mainExpectation.result
@@ -1931,11 +1931,11 @@ func (m *ClientMock) RegisterRequest(p context.Context, p1 insolar.Reference, p2
 	}
 
 	if m.RegisterRequestFunc == nil {
-		m.t.Fatalf("Unexpected call to ClientMock.RegisterRequest. %v %v %v", p, p1, p2)
+		m.t.Fatalf("Unexpected call to ClientMock.RegisterRequest. %v %v", p, p1)
 		return
 	}
 
-	return m.RegisterRequestFunc(p, p1, p2)
+	return m.RegisterRequestFunc(p, p1)
 }
 
 //RegisterRequestMinimockCounter returns a count of ClientMock.RegisterRequestFunc invocations

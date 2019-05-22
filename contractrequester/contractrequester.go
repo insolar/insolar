@@ -28,6 +28,7 @@ import (
 
 	"github.com/pkg/errors"
 
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
@@ -78,9 +79,11 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 	}
 
 	msg := &message.CallMethod{
-		Object:    ref,
-		Method:    method,
-		Arguments: args,
+		Request: record.Request{
+			Object:    ref,
+			Method:    method,
+			Arguments: args,
+		},
 	}
 
 	routResult, err := cr.CallMethod(ctx, msg)
@@ -97,7 +100,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 
 	msg := inMsg.(*message.CallMethod)
 
-	async := msg.ReturnMode == message.ReturnNoWait
+	async := msg.ReturnMode == record.ReturnNoWait
 
 	if msg.Nonce == 0 {
 		msg.Nonce = randomUint64()
