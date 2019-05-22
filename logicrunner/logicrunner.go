@@ -30,6 +30,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+	"github.com/insolar/insolar/log"
 
 	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -195,7 +196,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 }
 
 func initHandlers(lr *LogicRunner) error {
-	wmLogger := watermill.NewStdLogger(false, false)
+	wmLogger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
 
 	dep := &Dependencies{

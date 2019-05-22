@@ -1,6 +1,6 @@
---------
+========
 Glossary
---------
+========
 
 Below is a list of terms Insolar uses to designate its important concepts.
 

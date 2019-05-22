@@ -1,6 +1,6 @@
---------------------
+====================
 Distinctive Features
---------------------
+====================
 
 The Insolar platform is built to satisfy enterprise requirements by combining distributed and cloud technologies and dozens of industry-first features. Insolar is currently designing the proposed platform in an incremental fashion allowing it to progressively grow into the ultimate decentralized collaborative environment for various kinds of industries, companies, governments, and communities.
 Insolar sees these many features and capabilities as a mandatory part of blockchain implementation and integrates them as part of the Insolar platform.
