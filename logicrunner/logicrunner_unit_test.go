@@ -833,7 +833,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	suite.am.GetCodeMock.Return(cd, nil)
 
 	suite.am.GetObjectFunc = func(
-		ctx context.Context, obj insolar.Reference, st *insolar.ID, approved bool,
+		ctx context.Context, obj insolar.Reference,
 	) (artifacts.ObjectDescriptor, error) {
 		switch obj {
 		case objectRef:
@@ -1060,7 +1060,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				cd.RefMock.Return(&codeRef)
 
 				suite.am.GetObjectFunc = func(
-					ctx context.Context, obj insolar.Reference, st *insolar.ID, approved bool,
+					ctx context.Context, obj insolar.Reference,
 				) (artifacts.ObjectDescriptor, error) {
 					switch obj {
 					case objectRef:
