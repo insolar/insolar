@@ -121,7 +121,7 @@ func TestFuture_SetResponse(t *testing.T) {
 
 	require.Equal(t, m, m2)
 
-	m3, err := f.WaitResponse(10 * time.Millisecond)
+	m3, err := f.WaitResponse(time.Minute)
 	// legal behavior, the channel is closed because of the previous f.Response() call finished the Future
 	require.EqualError(t, err, "channel closed")
 	require.Nil(t, m3)

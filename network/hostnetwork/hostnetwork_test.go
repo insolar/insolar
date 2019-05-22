@@ -362,7 +362,7 @@ func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, f.Request().GetSender(), request.GetSender())
 
-	r, err := f.WaitResponse(time.Second)
+	r, err := f.WaitResponse(time.Minute)
 	require.NoError(t, err)
 
 	d := r.GetData().(*Data)
