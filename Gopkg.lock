@@ -226,15 +226,24 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:8fabd77932704d59b96b0def07d4cfe28c1f12a906201fc188f3a1eebca60e22"
+  digest = "1:7a3f8cbef07b0f24fbba0a29c01140f92f16b1d7484b353b5698cbd5140ea62e"
   name = "github.com/insolar/x-crypto"
   packages = [
     ".",
+    "dsa",
     "ecdsa",
     "elliptic",
     "internal/randutil",
+    "md5",
+    "rand",
+    "rand/internal/unix",
+    "rsa",
+    "sha1",
+    "sha256",
     "sha512",
     "subtle",
+    "x509",
+    "x509/pkix",
   ]
   pruneopts = "UT"
   revision = "8a44764fa12afbd4ec83328367b778184a01e681"
@@ -519,9 +528,11 @@
 
 [[projects]]
   branch = "master"
-  digest = "1:e4586b31c81fa439fc720bddd652483d5de86524ae3742b2ffcbfe7babc52e7b"
+  digest = "1:e53ab73c2656ef32df87e4b51dc586b2b73bcc7ffa208049f821f8ee9b863959"
   name = "golang.org/x/crypto"
   packages = [
+    "cryptobyte",
+    "cryptobyte/asn1",
     "ed25519",
     "ed25519/internal/edwards25519",
     "pbkdf2",
@@ -647,8 +658,7 @@
     "github.com/gorilla/rpc/v2",
     "github.com/gorilla/rpc/v2/json2",
     "github.com/insolar/go-jose",
-    "github.com/insolar/x-crypto/ecdsa",
-    "github.com/insolar/x-crypto/elliptic",
+    "github.com/insolar/x-crypto/x509",
     "github.com/jbenet/go-base58",
     "github.com/magiconair/properties/assert",
     "github.com/olekukonko/tablewriter",

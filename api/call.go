@@ -19,6 +19,7 @@ package api
 import (
 	"context"
 	"encoding/json"
+	"github.com/insolar/go-jose"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -36,12 +37,17 @@ import (
 
 // Request is a representation of request struct to api
 type Request struct {
-	Reference string  `json:"reference"`
-	Method    string  `json:"method"`
-	Params    []byte  `json:"params"`
-	Seed      []byte  `json:"seed"`
-	Signature []byte  `json:"signature"`
+	PublicKey string  `json:"jwk"`
+	Signature string  `json:"jws"`
 	LogLevel  *string `json:"logLevel,omitempty"`
+}
+
+// Data which is signed
+type SignedPayload struct {
+	Reference string `json:"reference"` // contract reference
+	Method    string `json:"method"`    // method name
+	Params    string `json:"params"`    // json object
+	Seed      string `json:"seed"`      // seed
 }
 
 type answer struct {
@@ -50,7 +56,7 @@ type answer struct {
 	TraceID string      `json:"traceID,omitempty"`
 }
 
-// UnmarshalRequest unmarshals request to api
+// UnmarshalRequest unmarshal request to api
 func UnmarshalRequest(req *http.Request, params interface{}) ([]byte, error) {
 	body, err := ioutil.ReadAll(req.Body)
 	if err != nil {
@@ -80,7 +86,7 @@ func (ar *Runner) checkSeed(paramsSeed []byte) error {
 	return nil
 }
 
-func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, error) {
+func (ar *Runner) makeCall(ctx context.Context, params SignedPayload, public jose.JSONWebKey, signature jose.JSONWebSignature) (interface{}, error) {
 	ctx, span := instracer.StartSpan(ctx, "SendRequest "+params.Method)
 	defer span.End()
 
@@ -93,7 +99,7 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 		ctx,
 		reference,
 		"Call",
-		[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature},
+		[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), public, signature},
 	)
 
 	if err != nil {
@@ -126,8 +132,21 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		ctx, span := instracer.StartSpan(ctx, "callHandler")
 		defer span.End()
 
-		params := Request{}
+		// unmarshal jws
+		jws := Request{}
 		resp := answer{}
+
+		_, err := UnmarshalRequest(req, &jws)
+		if err != nil {
+			processError(err, "Can't unmarshal request", &resp, insLog)
+			return
+		}
+
+		params, public, signature, err := verify(jws.Signature, jws.PublicKey)
+		if err != nil {
+			processError(err, "Can't unmarshal request", &resp, insLog)
+			return
+		}
 
 		startTime := time.Now()
 		defer func() {
@@ -154,14 +173,8 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			}
 		}()
 
-		_, err := UnmarshalRequest(req, &params)
-		if err != nil {
-			processError(err, "Can't unmarshal request", &resp, insLog)
-			return
-		}
-
-		if params.LogLevel != nil {
-			logLevelNumber, err := insolar.ParseLevel(*params.LogLevel)
+		if jws.LogLevel != nil {
+			logLevelNumber, err := insolar.ParseLevel(*jws.LogLevel)
 			if err != nil {
 				processError(err, "Can't parse logLevel", &resp, insLog)
 				return
@@ -169,7 +182,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
 		}
 
-		err = ar.checkSeed(params.Seed)
+		err = ar.checkSeed([]byte(params.Seed))
 		if err != nil {
 			processError(err, "Can't checkSeed", &resp, insLog)
 			return
@@ -178,7 +191,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		var result interface{}
 		ch := make(chan interface{}, 1)
 		go func() {
-			result, err = ar.makeCall(ctx, params)
+			result, err = ar.makeCall(ctx, *params, *public, *signature)
 			ch <- nil
 		}()
 		select {
@@ -198,4 +211,32 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 		resp.Result = result
 	}
+}
+
+// verify and get payload
+// return parsed payload, public key, signature and error
+func verify(jws string, jwk string) (*SignedPayload, *jose.JSONWebKey, *jose.JSONWebSignature, error) {
+
+	// unmarshal public key
+	var public jose.JSONWebKey
+	err := public.UnmarshalJSON([]byte(jwk))
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	// parse jws token
+	signature, err := jose.ParseSigned(jws)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	var payloadRequest = SignedPayload{}
+
+	payload, err := signature.Verify(jwk)
+
+	err = json.Unmarshal(payload, payloadRequest)
+	if err != nil {
+		return nil, nil, nil, err
+	}
+
+	return &payloadRequest, &public, signature, nil
 }

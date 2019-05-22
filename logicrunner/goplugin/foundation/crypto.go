@@ -17,48 +17,30 @@
 package foundation
 
 import (
-	"crypto/ecdsa"
-	"github.com/go-jose"
-	"github.com/insolar/x-crypto/x509"
+	"github.com/insolar/go-jose"
 )
 
 // TODO: this file should be removed
 
-// Verify verifies signature.
-// TODO jose verify
-func Verify(jwsraw string, publicKey []byte) (bool, error) {
+// Verify verifies signature and return payload
+func Verify(jwsRaw string, publicKey []byte) ([]byte, error) {
 
 	var jwk jose.JSONWebKey
 	err := jwk.UnmarshalJSON([]byte(publicKey))
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
-	obj, err := jose.ParseSigned(jwsraw)
+	obj, err := jose.ParseSigned(jwsRaw)
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
-	_, err = obj.Verify(jwk)
+	payload, err := obj.Verify(jwk)
 
 	if err != nil {
-		return false, err
+		return nil, err
 	}
 
-	return true, nil
-}
-
-// JWK format to der
-func ExportPublicKey(publicKey []byte) (string, error) {
-	var jwk jose.JSONWebKey
-	err := jwk.UnmarshalJSON([]byte(publicKey))
-	if err != nil || !jwk.Valid() {
-		return "", err
-	}
-	//pk, _ := jwk.Key.(*jose.RawJSONWebKey).EcPublicKey()
-	pk, _ := jwk.Key.(*ecdsa.PublicKey)
-
-	pkder, _ := x509.MarshalPKIXPublicKey(pk)
-
-	return string(pkder), nil
+	return payload, nil
 }

@@ -202,6 +202,8 @@ func (ar *Runner) getMemberPubKey(ctx context.Context, ref string) (crypto.Publi
 	}
 
 	kp := platformpolicy.NewKeyProcessor()
+
+	// TODO: change PEM to DER format
 	publicKey, err = kp.ImportPublicKeyPEM([]byte(publicKeyString))
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to convert public key")
