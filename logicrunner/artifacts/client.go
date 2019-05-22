@@ -153,8 +153,6 @@ func (m *client) GetCode(
 func (m *client) GetObject(
 	ctx context.Context,
 	head insolar.Reference,
-	state *insolar.ID,
-	approved bool,
 ) (ObjectDescriptor, error) {
 	var (
 		desc ObjectDescriptor
@@ -175,8 +173,6 @@ func (m *client) GetObject(
 
 	getObjectMsg := &message.GetObject{
 		Head:     head,
-		State:    state,
-		Approved: approved,
 	}
 
 	sender := messagebus.BuildSender(
@@ -709,7 +705,7 @@ func (m *client) activateObject(
 	asDelegate bool,
 	memory []byte,
 ) (ObjectDescriptor, error) {
-	parentDesc, err := m.GetObject(ctx, parent, nil, false)
+	parentDesc, err := m.GetObject(ctx, parent)
 	if err != nil {
 		return nil, err
 	}

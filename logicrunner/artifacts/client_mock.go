@@ -61,7 +61,7 @@ type ClientMock struct {
 	GetDelegatePreCounter uint64
 	GetDelegateMock       mClientMockGetDelegate
 
-	GetObjectFunc       func(p context.Context, p1 insolar.Reference, p2 *insolar.ID, p3 bool) (r ObjectDescriptor, r1 error)
+	GetObjectFunc       func(p context.Context, p1 insolar.Reference) (r ObjectDescriptor, r1 error)
 	GetObjectCounter    uint64
 	GetObjectPreCounter uint64
 	GetObjectMock       mClientMockGetObject
@@ -1376,8 +1376,6 @@ type ClientMockGetObjectExpectation struct {
 type ClientMockGetObjectInput struct {
 	p  context.Context
 	p1 insolar.Reference
-	p2 *insolar.ID
-	p3 bool
 }
 
 type ClientMockGetObjectResult struct {
@@ -1386,14 +1384,14 @@ type ClientMockGetObjectResult struct {
 }
 
 //Expect specifies that invocation of Client.GetObject is expected from 1 to Infinity times
-func (m *mClientMockGetObject) Expect(p context.Context, p1 insolar.Reference, p2 *insolar.ID, p3 bool) *mClientMockGetObject {
+func (m *mClientMockGetObject) Expect(p context.Context, p1 insolar.Reference) *mClientMockGetObject {
 	m.mock.GetObjectFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &ClientMockGetObjectExpectation{}
 	}
-	m.mainExpectation.input = &ClientMockGetObjectInput{p, p1, p2, p3}
+	m.mainExpectation.input = &ClientMockGetObjectInput{p, p1}
 	return m
 }
 
@@ -1410,12 +1408,12 @@ func (m *mClientMockGetObject) Return(r ObjectDescriptor, r1 error) *ClientMock 
 }
 
 //ExpectOnce specifies that invocation of Client.GetObject is expected once
-func (m *mClientMockGetObject) ExpectOnce(p context.Context, p1 insolar.Reference, p2 *insolar.ID, p3 bool) *ClientMockGetObjectExpectation {
+func (m *mClientMockGetObject) ExpectOnce(p context.Context, p1 insolar.Reference) *ClientMockGetObjectExpectation {
 	m.mock.GetObjectFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &ClientMockGetObjectExpectation{}
-	expectation.input = &ClientMockGetObjectInput{p, p1, p2, p3}
+	expectation.input = &ClientMockGetObjectInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
@@ -1425,7 +1423,7 @@ func (e *ClientMockGetObjectExpectation) Return(r ObjectDescriptor, r1 error) {
 }
 
 //Set uses given function f as a mock of Client.GetObject method
-func (m *mClientMockGetObject) Set(f func(p context.Context, p1 insolar.Reference, p2 *insolar.ID, p3 bool) (r ObjectDescriptor, r1 error)) *ClientMock {
+func (m *mClientMockGetObject) Set(f func(p context.Context, p1 insolar.Reference) (r ObjectDescriptor, r1 error)) *ClientMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -1434,18 +1432,18 @@ func (m *mClientMockGetObject) Set(f func(p context.Context, p1 insolar.Referenc
 }
 
 //GetObject implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
-func (m *ClientMock) GetObject(p context.Context, p1 insolar.Reference, p2 *insolar.ID, p3 bool) (r ObjectDescriptor, r1 error) {
+func (m *ClientMock) GetObject(p context.Context, p1 insolar.Reference) (r ObjectDescriptor, r1 error) {
 	counter := atomic.AddUint64(&m.GetObjectPreCounter, 1)
 	defer atomic.AddUint64(&m.GetObjectCounter, 1)
 
 	if len(m.GetObjectMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.GetObjectMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to ClientMock.GetObject. %v %v %v %v", p, p1, p2, p3)
+			m.t.Fatalf("Unexpected call to ClientMock.GetObject. %v %v", p, p1)
 			return
 		}
 
 		input := m.GetObjectMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, ClientMockGetObjectInput{p, p1, p2, p3}, "Client.GetObject got unexpected parameters")
+		testify_assert.Equal(m.t, *input, ClientMockGetObjectInput{p, p1}, "Client.GetObject got unexpected parameters")
 
 		result := m.GetObjectMock.expectationSeries[counter-1].result
 		if result == nil {
@@ -1463,7 +1461,7 @@ func (m *ClientMock) GetObject(p context.Context, p1 insolar.Reference, p2 *inso
 
 		input := m.GetObjectMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, ClientMockGetObjectInput{p, p1, p2, p3}, "Client.GetObject got unexpected parameters")
+			testify_assert.Equal(m.t, *input, ClientMockGetObjectInput{p, p1}, "Client.GetObject got unexpected parameters")
 		}
 
 		result := m.GetObjectMock.mainExpectation.result
@@ -1478,11 +1476,11 @@ func (m *ClientMock) GetObject(p context.Context, p1 insolar.Reference, p2 *inso
 	}
 
 	if m.GetObjectFunc == nil {
-		m.t.Fatalf("Unexpected call to ClientMock.GetObject. %v %v %v %v", p, p1, p2, p3)
+		m.t.Fatalf("Unexpected call to ClientMock.GetObject. %v %v", p, p1)
 		return
 	}
 
-	return m.GetObjectFunc(p, p1, p2, p3)
+	return m.GetObjectFunc(p, p1)
 }
 
 //GetObjectMinimockCounter returns a count of ClientMock.GetObjectFunc invocations
