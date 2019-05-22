@@ -97,6 +97,9 @@ func (g *Base) NewGateway(state insolar.NetworkState) network.Gateway {
 }
 
 func (g *Base) OnPulse(ctx context.Context, pu insolar.Pulse) error {
+	if g.Nodekeeper == nil {
+		return nil
+	}
 	if g.Nodekeeper.IsBootstrapped() {
 		g.Network.SetGateway(g.Network.Gateway().NewGateway(insolar.CompleteNetworkState))
 		g.Network.Gateway().Run(ctx)
