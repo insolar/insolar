@@ -13,32 +13,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// +build slowtest
 
 package virtual
 
 import (
 	"context"
-	"sync"
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/stretchr/testify/require"
 )
 
-var testPassed = false
-var testLock sync.Mutex
-
 func TestInitComponents(t *testing.T) {
-	// make sure test is not executed multiple times in parallel
-	testLock.Lock()
-	defer testLock.Unlock()
-	if testPassed {
-		// Dirty hack. This test doesn't work properly with -count 10
-		// because it registers HTTP handlers. Sadly there is no way
-		// to unregister HTTP handlers in net/http package.
-		return
-	}
-
 	ctx := context.Background()
 	cfg := configuration.NewConfiguration()
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
@@ -73,6 +60,4 @@ func TestInitComponents(t *testing.T) {
 
 	err = cm.Stop(ctx)
 	require.NoError(t, err)
-
-	testPassed = true
 }
