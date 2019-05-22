@@ -87,6 +87,9 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		msg := s.Message.Parcel.Message().(*message.UpdateObject)
 		h := NewUpdateObject(s.Dep, s.Message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetChildren:
+		h := NewGetChildren(s.Dep, s.Message.ReplyTo, s.Message)
+		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetPendingRequests:
 		h := NewGetPendingRequests(s.Dep, s.Message.ReplyTo, s.Message.Parcel)
 		return f.Handle(ctx, h.Present)

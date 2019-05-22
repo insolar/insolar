@@ -30,12 +30,15 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+	"github.com/insolar/insolar/log"
 
 	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/record"
+
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar/pulse"
@@ -73,7 +76,7 @@ type CurrentExecution struct {
 	Request       *Ref
 	Sequence      uint64
 	RequesterNode *Ref
-	ReturnMode    message.MethodReturnMode
+	ReturnMode    record.Request_RM
 	SentResult    bool
 }
 
@@ -160,18 +163,18 @@ type LogicRunner struct {
 	state      map[Ref]*ObjectState // if object exists, we are validating or executing it right now
 	stateMutex sync.RWMutex
 
-	// Inner dispatcher will be merged with FlowDispatcher after
-	// complete migration to watermill.
-	FlowDispatcher      *dispatcher.Dispatcher
-	InnerFlowDispatcher *dispatcher.Dispatcher
-
 	sock net.Listener
 
 	stopLock   sync.Mutex
 	isStopping bool
 	stopChan   chan struct{}
 
-	router *watermillMsg.Router
+	// Inner dispatcher will be merged with FlowDispatcher after
+	// complete migration to watermill.
+	FlowDispatcher      *dispatcher.Dispatcher
+	innerFlowDispatcher *dispatcher.Dispatcher
+	publisher           watermillMsg.Publisher
+	router              *watermillMsg.Router
 }
 
 // NewLogicRunner is constructor for LogicRunner
@@ -193,7 +196,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 }
 
 func initHandlers(lr *LogicRunner) error {
-	wmLogger := watermill.NewStdLogger(false, false)
+	wmLogger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
 
 	dep := &Dependencies{
@@ -221,7 +224,7 @@ func initHandlers(lr *LogicRunner) error {
 		}
 	}
 
-	lr.InnerFlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
+	lr.innerFlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
 		return innerInitHandle(msg).Present
 	}, func(msg bus.Message) flow.Handle {
 		return innerInitHandle(msg).Present
@@ -236,7 +239,7 @@ func initHandlers(lr *LogicRunner) error {
 		"InnerMsgHandler",
 		InnerMsgTopic,
 		pubSub,
-		lr.InnerFlowDispatcher.InnerSubscriber,
+		lr.innerFlowDispatcher.InnerSubscriber,
 	)
 	go func() {
 		if err := router.Run(); err != nil {
@@ -247,6 +250,7 @@ func initHandlers(lr *LogicRunner) error {
 	<-router.Running()
 
 	lr.router = router
+	lr.publisher = pubSub
 
 	return nil
 }
@@ -350,16 +354,13 @@ func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel insolar.Parce
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.RegisterRequest")
 	defer span.End()
 
-	obj := parcel.Message().(*message.CallMethod).GetReference()
-	id, err := lr.ArtifactManager.RegisterRequest(ctx, obj, parcel)
+	msg := parcel.Message().(*message.CallMethod)
+	id, err := lr.ArtifactManager.RegisterRequest(ctx, msg.Request)
 	if err != nil {
 		return nil, err
 	}
 
-	res := obj
-	res.SetRecord(*id)
-
-	return &res, nil
+	return insolar.NewReference(insolar.DomainID, *id), nil
 }
 
 func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context {
@@ -378,12 +379,12 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	if es.Current.ReturnMode == message.ReturnNoWait {
+	if es.Current.ReturnMode == record.ReturnNoWait {
 		return false
 	}
 
 	msg, ok := parcel.Message().(*message.CallMethod)
-	if ok && msg.ReturnMode == message.ReturnNoWait {
+	if ok && msg.ReturnMode == record.ReturnNoWait {
 		return false
 	}
 
@@ -394,81 +395,6 @@ func (lr *LogicRunner) CheckExecutionLoop(
 	inslogger.FromContext(ctx).Debug("loop detected")
 
 	return true
-}
-
-func (lr *LogicRunner) StartQueueProcessorIfNeeded(
-	ctx context.Context, es *ExecutionState,
-) error {
-	es.Lock()
-	defer es.Unlock()
-
-	if !es.haveSomeToProcess() {
-		inslogger.FromContext(ctx).Debug("queue is empty. processor is not needed")
-		return nil
-	}
-
-	if es.QueueProcessorActive {
-		inslogger.FromContext(ctx).Debug("queue processor is already active. processor is not needed")
-		return nil
-	}
-
-	if es.pending == message.PendingUnknown {
-		return errors.New("shouldn't start queue processor with unknown pending state")
-	} else if es.pending == message.InPending {
-		inslogger.FromContext(ctx).Debug("object in pending. not starting queue processor")
-		return nil
-	}
-
-	inslogger.FromContext(ctx).Debug("Starting a new queue processor")
-	es.QueueProcessorActive = true
-	go lr.ProcessExecutionQueue(ctx, es)
-	go lr.getLedgerPendingRequest(ctx, es)
-
-	return nil
-}
-
-func (lr *LogicRunner) ProcessExecutionQueue(ctx context.Context, es *ExecutionState) {
-	for {
-		es.Lock()
-		if len(es.Queue) == 0 && es.LedgerQueueElement == nil {
-			inslogger.FromContext(ctx).Debug("Quiting queue processing, empty")
-			es.QueueProcessorActive = false
-			es.Current = nil
-			es.Unlock()
-			return
-		}
-
-		var qe ExecutionQueueElement
-		if es.LedgerQueueElement != nil {
-			qe = *es.LedgerQueueElement
-			es.LedgerQueueElement = nil
-		} else {
-			qe, es.Queue = es.Queue[0], es.Queue[1:]
-		}
-
-		sender := qe.parcel.GetSender()
-		current := CurrentExecution{
-			Request:       qe.request,
-			RequesterNode: &sender,
-			Context:       qe.ctx,
-		}
-		es.Current = &current
-
-		if msg, ok := qe.parcel.Message().(*message.CallMethod); ok {
-			current.ReturnMode = msg.ReturnMode
-			current.Sequence = msg.Sequence
-		}
-
-		es.Unlock()
-
-		lr.executeOrValidate(current.Context, es, qe.parcel)
-
-		if qe.fromLedger {
-			go lr.getLedgerPendingRequest(ctx, es)
-		}
-
-		lr.finishPendingIfNeeded(ctx, es)
-	}
 }
 
 // finishPendingIfNeeded checks whether last execution was a pending one.
@@ -524,11 +450,11 @@ func (lr *LogicRunner) executeOrValidate(
 	var re insolar.Reply
 	var err error
 	switch msg.CallType {
-	case message.CTMethod:
+	case record.CTMethod:
 		es.Current.LogicContext.Immutable = msg.Immutable
 		re, err = lr.executeMethodCall(ctx, es, msg)
 
-	case message.CTSaveAsChild, message.CTSaveAsDelegate:
+	case record.CTSaveAsChild, record.CTSaveAsDelegate:
 		re, err = lr.executeConstructorCall(ctx, es, msg)
 
 	default:
@@ -544,7 +470,7 @@ func (lr *LogicRunner) executeOrValidate(
 	defer es.Unlock()
 
 	es.Current.SentResult = true
-	if es.Current.ReturnMode != message.ReturnResult {
+	if es.Current.ReturnMode != record.ReturnResult {
 		return
 	}
 
@@ -589,25 +515,6 @@ func (lr *LogicRunner) getExecStateFromRef(ctx context.Context, rawRef []byte) *
 	es := os.ExecutionState
 
 	return es
-}
-
-// never call this under es.Lock(), this leads to deadlock
-func (lr *LogicRunner) getLedgerPendingRequest(ctx context.Context, es *ExecutionState) {
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getLedgerPendingRequest")
-	defer span.End()
-
-	es.getLedgerPendingMutex.Lock()
-	defer es.getLedgerPendingMutex.Unlock()
-
-	ref := lr.unsafeGetLedgerPendingRequest(ctx, es)
-	if ref == nil {
-		return
-	}
-
-	err := lr.StartQueueProcessorIfNeeded(ctx, es)
-	if err != nil {
-		inslogger.FromContext(ctx).Error("Couldn't start queue: ", err)
-	}
 }
 
 func (lr *LogicRunner) unsafeGetLedgerPendingRequest(ctx context.Context, es *ExecutionState) *insolar.Reference {
@@ -687,9 +594,11 @@ func init() {
 func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState, m *message.CallMethod) (insolar.Reply, error) {
 	if es.objectbody == nil {
 		objDesc, protoDesc, codeDesc, err := lr.getDescriptorsByObjectRef(ctx, *m.Object)
+
 		if err != nil {
 			return nil, errors.Wrap(err, "couldn't get descriptors by object reference")
 		}
+
 		es.objectbody = &ObjectBody{
 			objDescriptor:   objDesc,
 			Object:          objDesc.Memory(),
@@ -815,6 +724,7 @@ func (lr *LogicRunner) executeConstructorCall(
 	if err != nil {
 		return nil, es.WrapError(err, "couldn't descriptors")
 	}
+
 	current.LogicContext.Prototype = protoDesc.HeadRef()
 	current.LogicContext.Code = codeDesc.Ref()
 
@@ -829,10 +739,10 @@ func (lr *LogicRunner) executeConstructorCall(
 	}
 
 	switch m.CallType {
-	case message.CTSaveAsChild, message.CTSaveAsDelegate:
+	case record.CTSaveAsChild, record.CTSaveAsDelegate:
 		_, err = lr.ArtifactManager.ActivateObject(
 			ctx,
-			Ref{}, *current.Request, *m.Base, *m.Prototype, m.CallType == message.CTSaveAsDelegate, newData,
+			Ref{}, *current.Request, *m.Base, *m.Prototype, m.CallType == record.CTSaveAsDelegate, newData,
 		)
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't activate object")
@@ -848,10 +758,17 @@ func (lr *LogicRunner) executeConstructorCall(
 	}
 }
 
+func (lr *LogicRunner) startGetLedgerPendingRequest(ctx context.Context, es *ExecutionState) {
+	err := lr.publisher.Publish(InnerMsgTopic, makeWMMessage(ctx, es.Ref.Bytes(), getLedgerPendingRequestMsg))
+	if err != nil {
+		inslogger.FromContext(ctx).Warnf("can't send getLedgerPendingRequestMsg: ", err)
+	}
+}
+
 func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 	lr.stateMutex.Lock()
 	lr.FlowDispatcher.ChangePulse(ctx, pulse)
-	lr.InnerFlowDispatcher.ChangePulse(ctx, pulse)
+	lr.innerFlowDispatcher.ChangePulse(ctx, pulse)
 
 	ctx, span := instracer.StartSpan(ctx, "pulse.logicrunner")
 	defer span.End()
@@ -937,7 +854,7 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 					es.pending = message.NotPending
 					es.objectbody = nil
 					es.LedgerHasMoreRequests = true
-					go lr.getLedgerPendingRequest(ctx, es)
+					lr.startGetLedgerPendingRequest(ctx, es)
 				}
 				es.PendingConfirmed = false
 			}
@@ -1016,58 +933,4 @@ func convertQueueToMessageQueue(queue []ExecutionQueueElement) []message.Executi
 	}
 
 	return mq
-}
-
-func (lr *LogicRunner) ClarifyPendingState(
-	ctx context.Context, es *ExecutionState, parcel insolar.Parcel,
-) error {
-	es.Lock()
-	if es.pending != message.PendingUnknown {
-		es.Unlock()
-		return nil
-	}
-
-	if parcel != nil {
-		if parcel.Type() != insolar.TypeCallMethod {
-			es.Unlock()
-			es.pending = message.NotPending
-			return nil
-		}
-
-		msg := parcel.Message().(*message.CallMethod)
-		if msg.CallType != message.CTMethod {
-			es.Unlock()
-			es.pending = message.NotPending
-			return nil
-		}
-	}
-
-	es.Unlock()
-
-	es.HasPendingCheckMutex.Lock()
-	defer es.HasPendingCheckMutex.Unlock()
-
-	es.Lock()
-	if es.pending != message.PendingUnknown {
-		es.Unlock()
-		return nil
-	}
-	es.Unlock()
-
-	has, err := lr.ArtifactManager.HasPendingRequests(ctx, es.Ref)
-	if err != nil {
-		return err
-	}
-
-	es.Lock()
-	if es.pending == message.PendingUnknown {
-		if has {
-			es.pending = message.InPending
-		} else {
-			es.pending = message.NotPending
-		}
-	}
-	es.Unlock()
-
-	return nil
 }

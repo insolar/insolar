@@ -41,7 +41,7 @@ type HotData struct {
 		DropModifier          drop.Modifier
 		RecentStorageProvider recentstorage.Provider
 		MessageBus            insolar.MessageBus
-		IndexStateModifier    object.ExtendedIndexModifier
+		IndexBucketModifier   object.IndexBucketModifier
 		JetStorage            jet.Storage
 		JetFetcher            jet.Fetcher
 		JetReleaser           hot.JetReleaser
@@ -110,18 +110,30 @@ func (p *HotData) process(ctx context.Context) error {
 		}
 	}()
 
-	for id, meta := range p.msg.HotIndexes {
+	logger.Debugf("[handleHotRecords] received %v hot indexes", len(p.msg.HotIndexes))
+	for _, meta := range p.msg.HotIndexes {
 		decodedIndex, err := object.DecodeIndex(meta.Index)
 		if err != nil {
 			logger.Error(err)
 			continue
 		}
 
-		err = p.Dep.IndexStateModifier.SetWithMeta(ctx, id, meta.LastUsed, decodedIndex)
+		decodedIndex.JetID = jetID
+		err = p.Dep.IndexBucketModifier.SetBucket(
+			ctx,
+			p.msg.PulseNumber,
+			object.IndexBucket{
+				ObjID:            meta.ObjID,
+				Lifeline:         decodedIndex,
+				LifelineLastUsed: meta.LastUsed,
+				Results:          []insolar.ID{},
+				Requests:         []insolar.ID{}},
+		)
 		if err != nil {
-			logger.Error(err)
+			logger.Error(errors.Wrapf(err, "[handleHotRecords] failed to save index - %v", meta.ObjID.DebugString()))
 			continue
 		}
+		logger.Debugf("[handleHotRecords] lifeline with id - %v saved", meta.ObjID.DebugString())
 	}
 
 	p.Dep.JetStorage.Update(

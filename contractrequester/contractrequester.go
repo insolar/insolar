@@ -23,16 +23,14 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ThreeDotsLabs/watermill"
-	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/messagebus"
+
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/insolar/flow/dispatcher"
-
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -41,45 +39,22 @@ import (
 
 // ContractRequester helps to call contracts
 type ContractRequester struct {
-	MessageBus     insolar.MessageBus `inject:""`
-	ResultMutex    sync.Mutex
-	ResultMap      map[uint64]chan *message.ReturnResults
-	Sequence       uint64
-	FlowDispatcher *dispatcher.Dispatcher
+	MessageBus    insolar.MessageBus `inject:""`
+	ResultMutex   sync.Mutex
+	ResultMap     map[uint64]chan *message.ReturnResults
+	Sequence      uint64
+	PulseAccessor pulse.Accessor `inject:""`
 }
 
 // New creates new ContractRequester
 func New() (*ContractRequester, error) {
-	res := &ContractRequester{
+	return &ContractRequester{
 		ResultMap: make(map[uint64]chan *message.ReturnResults),
-	}
-
-	wmLogger := watermill.NewStdLogger(false, false)
-	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
-
-	dep := &Dependencies{
-		Publisher: pubSub,
-		cr:        res,
-	}
-
-	initHandle := func(msg bus.Message) *Init {
-		return &Init{
-			dep:     dep,
-			Message: msg,
-		}
-	}
-
-	res.FlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
-		return initHandle(msg).Present
-	}, func(msg bus.Message) flow.Handle {
-		return initHandle(msg).Present
-	})
-
-	return res, nil
+	}, nil
 }
 
 func (cr *ContractRequester) Start(ctx context.Context) error {
-	cr.MessageBus.MustRegister(insolar.TypeReturnResults, cr.FlowDispatcher.WrapBusHandle)
+	cr.MessageBus.MustRegister(insolar.TypeReturnResults, cr.ReceiveResult)
 	return nil
 }
 
@@ -104,9 +79,11 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 	}
 
 	msg := &message.CallMethod{
-		Object:    ref,
-		Method:    method,
-		Arguments: args,
+		Request: record.Request{
+			Object:    ref,
+			Method:    method,
+			Arguments: args,
+		},
 	}
 
 	routResult, err := cr.CallMethod(ctx, msg)
@@ -123,7 +100,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 
 	msg := inMsg.(*message.CallMethod)
 
-	async := msg.ReturnMode == message.ReturnNoWait
+	async := msg.ReturnMode == record.ReturnNoWait
 
 	if msg.Nonce == 0 {
 		msg.Nonce = randomUint64()
@@ -143,7 +120,9 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		cr.ResultMutex.Unlock()
 	}
 
-	res, err := cr.MessageBus.Send(ctx, msg, nil)
+	sender := messagebus.BuildSender(cr.MessageBus.Send, messagebus.RetryIncorrectPulse(cr.PulseAccessor))
+	res, err := sender(ctx, msg, nil)
+
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't dispatch event")
 	}
@@ -192,4 +171,30 @@ func (cr *ContractRequester) CallConstructor(ctx context.Context, inMsg insolar.
 		return nil, errors.New("Reply is not CallConstructor")
 	}
 	return rep.Object, nil
+}
+
+func (cr *ContractRequester) ReceiveResult(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
+	msg, ok := parcel.Message().(*message.ReturnResults)
+	if !ok {
+		return nil, errors.New("ReceiveResult() accepts only message.ReturnResults")
+	}
+
+	ctx, span := instracer.StartSpan(ctx, "ContractRequester.ReceiveResult")
+	defer span.End()
+
+	cr.ResultMutex.Lock()
+	defer cr.ResultMutex.Unlock()
+
+	logger := inslogger.FromContext(ctx)
+	c, ok := cr.ResultMap[msg.Sequence]
+	if !ok {
+		logger.Info("oops unwaited results seq=", msg.Sequence)
+		return &reply.OK{}, nil
+	}
+	logger.Debug("Got wanted results seq=", msg.Sequence)
+
+	c <- msg
+	delete(cr.ResultMap, msg.Sequence)
+
+	return &reply.OK{}, nil
 }

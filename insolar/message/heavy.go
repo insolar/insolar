@@ -23,12 +23,12 @@ import (
 // HeavyPayload carries Key/Value records and pulse number
 // that replicates to Heavy Material node.
 type HeavyPayload struct {
-	JetID    insolar.JetID
-	PulseNum insolar.PulseNumber
-	Indexes  map[insolar.ID][]byte
-	Drop     []byte
-	Blobs    [][]byte
-	Records  [][]byte
+	JetID        insolar.JetID
+	PulseNum     insolar.PulseNumber
+	IndexBuckets [][]byte
+	Drop         []byte
+	Blobs        [][]byte
+	Records      [][]byte
 }
 
 // AllowedSenderObjectAndRole implements interface method

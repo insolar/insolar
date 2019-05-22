@@ -55,7 +55,7 @@ func (s *RegisterChild) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	}
 
-	getIndex := proc.NewGetIndex(s.message.Parent, jet.Result.Jet, s.replyTo)
+	getIndex := proc.NewGetIndex(s.message.Parent, jet.Result.Jet, s.replyTo, flow.Pulse(ctx))
 	s.dep.GetIndex(getIndex)
 	err := f.Procedure(ctx, getIndex, false)
 	if err != nil {

@@ -38,10 +38,10 @@ type DataGatherer interface {
 
 // LightDataGatherer is a realisation of DataGatherer
 type LightDataGatherer struct {
-	dropAccessor    drop.Accessor
-	blobsAccessor   blob.CollectionAccessor
-	recsAccessor    object.RecordCollectionAccessor
-	indexesAccessor object.IndexCollectionAccessor
+	dropAccessor         drop.Accessor
+	blobsAccessor        blob.CollectionAccessor
+	recsAccessor         object.RecordCollectionAccessor
+	indexReplicaAccessor object.IndexBucketAccessor
 }
 
 // NewDataGatherer creates a new instance of LightDataGatherer
@@ -49,13 +49,13 @@ func NewDataGatherer(
 	dropAccessor drop.Accessor,
 	blobsAccessor blob.CollectionAccessor,
 	recsAccessor object.RecordCollectionAccessor,
-	indexesAccessor object.IndexCollectionAccessor,
+	indexReplicaAccessor object.IndexBucketAccessor,
 ) *LightDataGatherer {
 	return &LightDataGatherer{
-		dropAccessor:    dropAccessor,
-		blobsAccessor:   blobsAccessor,
-		recsAccessor:    recsAccessor,
-		indexesAccessor: indexesAccessor,
+		dropAccessor:         dropAccessor,
+		blobsAccessor:        blobsAccessor,
+		recsAccessor:         recsAccessor,
+		indexReplicaAccessor: indexReplicaAccessor,
 	}
 }
 
@@ -74,24 +74,30 @@ func (d *LightDataGatherer) ForPulseAndJet(
 	bls := d.blobsAccessor.ForPulse(ctx, jetID, pn)
 	records := d.recsAccessor.ForPulse(ctx, jetID, pn)
 
-	indexes := d.indexesAccessor.ForJet(ctx, jetID)
+	indexes := d.indexReplicaAccessor.ForPNAndJet(ctx, pn, jetID)
 
 	return &message.HeavyPayload{
-		JetID:    jetID,
-		PulseNum: pn,
-		Indexes:  convertIndexes(indexes),
-		Drop:     drop.MustEncode(&dr),
-		Blobs:    convertBlobs(bls),
-		Records:  convertRecords(ctx, records),
+		JetID:        jetID,
+		PulseNum:     pn,
+		IndexBuckets: convertIndexBuckets(ctx, indexes),
+		Drop:         drop.MustEncode(&dr),
+		Blobs:        convertBlobs(bls),
+		Records:      convertRecords(ctx, records),
 	}, nil
 }
 
-func convertIndexes(indexes map[insolar.ID]object.LifelineMeta) map[insolar.ID][]byte {
-	resIdx := map[insolar.ID][]byte{}
-	for id, idx := range indexes {
-		resIdx[id] = object.EncodeIndex(idx.Index)
+func convertIndexBuckets(ctx context.Context, buckets []object.IndexBucket) [][]byte {
+	convertedBucks := make([][]byte, len(buckets))
+	for i, buck := range buckets {
+		buff, err := buck.Marshal()
+		if err != nil {
+			inslogger.FromContext(ctx).Errorf("problems with marshaling bucket - %v", err)
+			continue
+		}
+		convertedBucks[i] = buff
 	}
-	return resIdx
+
+	return convertedBucks
 }
 
 func convertBlobs(blobs []blob.Blob) [][]byte {

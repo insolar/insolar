@@ -21,11 +21,15 @@ import (
 	"crypto"
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
+
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/delegationtoken"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
@@ -38,8 +42,6 @@ import (
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/nodekeeper"
 	"github.com/insolar/insolar/testutils/testmessagebus"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 func MessageBusTrivialBehavior(mb *testmessagebus.TestMessageBus, lr *LogicRunner) {
@@ -78,7 +80,7 @@ func TestBareHelloworld(t *testing.T) {
 	mb := testmessagebus.NewTestMessageBus(t)
 
 	// FIXME: TmpLedger is deprecated. Use mocks instead.
-	l, _ := artifacts.TmpLedger(
+	l, _, _ := artifacts.TmpLedger(
 		t,
 		"",
 		insolar.Components{
@@ -128,7 +130,7 @@ func TestBareHelloworld(t *testing.T) {
 	_, _, protoRef, err := goplugintestutils.AMPublishCode(t, am, *domain, *request, insolar.MachineTypeBuiltin, []byte("helloworld"))
 	assert.NoError(t, err)
 
-	contract, err := am.RegisterRequest(ctx, insolar.GenesisRecord.Ref(), &message.Parcel{Msg: &message.CallMethod{Prototype: byteRecorRef(4)}})
+	contract, err := am.RegisterRequest(ctx, record.Request{Prototype: byteRecorRef(4)})
 	assert.NoError(t, err)
 
 	// TODO: use proper conversion
@@ -143,9 +145,11 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, true, contract != nil, "contract created")
 
 	msg := &message.CallMethod{
-		Object: &reqref,
-		Method:    "Greet",
-		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
+		Request: record.Request{
+			Object:    &reqref,
+			Method:    "Greet",
+			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Vany"}),
+		},
 	}
 	parcel, err := parcelFactory.Create(ctx, msg, testutils.RandomRef(), nil, *insolar.GenesisPulse)
 	assert.NoError(t, err)
@@ -161,9 +165,11 @@ func TestBareHelloworld(t *testing.T) {
 	assert.Equal(t, []interface{}([]interface{}{"Hello Vany's world"}), r)
 
 	msg = &message.CallMethod{
-		Object: &reqref,
-		Method:    "Greet",
-		Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
+		Request: record.Request{
+			Object:    &reqref,
+			Method:    "Greet",
+			Arguments: goplugintestutils.CBORMarshal(t, []interface{}{"Ruz"}),
+		},
 	}
 	parcel, err = parcelFactory.Create(ctx, msg, testutils.RandomRef(), nil, *insolar.GenesisPulse)
 	assert.NoError(t, err)
