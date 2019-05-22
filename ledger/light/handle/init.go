@@ -69,11 +69,11 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeSetRecord:
 		msg := s.Message.Parcel.Message().(*message.SetRecord)
-		h := NewSetRecord(s.Dep, s.Message, msg)
+		h := NewSetRecord(s.Dep, s.Message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeSetBlob:
 		msg := s.Message.Parcel.Message().(*message.SetBlob)
-		h := NewSetBlob(s.Dep, s.Message, msg)
+		h := NewSetBlob(s.Dep, s.Message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetCode:
 		msg := s.Message.Parcel.Message().(*message.GetCode)
@@ -85,14 +85,14 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeUpdateObject:
 		msg := s.Message.Parcel.Message().(*message.UpdateObject)
-		h := NewUpdateObject(s.Dep, s.Message, msg)
+		h := NewUpdateObject(s.Dep, s.Message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetPendingRequests:
-		h := NewGetPendingRequests(s.Dep, s.Message, s.Message.Parcel)
+		h := NewGetPendingRequests(s.Dep, s.Message.ReplyTo, s.Message.Parcel)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeRegisterChild:
 		msg := s.Message.Parcel.Message().(*message.RegisterChild)
-		h := NewRegisterChild(s.Dep, s.Message, msg, s.Message.Parcel.Pulse())
+		h := NewRegisterChild(s.Dep, s.Message.ReplyTo, msg, s.Message.Parcel.Pulse())
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetJet:
 		msg := s.Message.Parcel.Message().(*message.GetJet)

@@ -404,7 +404,7 @@ func (n *ServiceNetwork) wrapMeta(msg *message.Message) (insolar.Reference, erro
 		return insolar.Reference{}, errors.Wrap(err, "failed to wrap message")
 	}
 	// Cleaning meta to prevent leaking.
-	msg.Metadata = message.Metadata{}
+	// msg.Metadata = message.Metadata{}
 	msg.Payload = buf
 
 	return *receiverRef, nil

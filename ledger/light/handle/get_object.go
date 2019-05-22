@@ -39,12 +39,12 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 
 	var jetID insolar.JetID
 	if s.Message.Parcel.DelegationToken() == nil {
-		jet := proc.NewFetchJet(*msg.Head.Record(), flow.Pulse(ctx), s.Message.WatermillMsg)
+		jet := proc.NewFetchJet(*msg.Head.Record(), flow.Pulse(ctx), s.Message.ReplyTo)
 		s.dep.FetchJet(jet)
 		if err := f.Procedure(ctx, jet, false); err != nil {
 			return err
 		}
-		hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.Message.WatermillMsg)
+		hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.Message.ReplyTo)
 		s.dep.WaitHot(hot)
 		if err := f.Procedure(ctx, hot, false); err != nil {
 			return err
@@ -53,7 +53,7 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 		jetID = jet.Result.Jet
 	} else {
 		// Workaround to fetch object states.
-		jet := proc.NewFetchJet(*msg.Head.Record(), msg.State.Pulse(), s.Message.WatermillMsg)
+		jet := proc.NewFetchJet(*msg.Head.Record(), msg.State.Pulse(), s.Message.ReplyTo)
 		s.dep.FetchJet(jet)
 		if err := f.Procedure(ctx, jet, false); err != nil {
 			return err

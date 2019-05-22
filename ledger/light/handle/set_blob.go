@@ -26,32 +26,32 @@ import (
 )
 
 type SetBlob struct {
-	dep        *proc.Dependencies
-	msg        *message.SetBlob
-	busMessage bus.Message
+	dep     *proc.Dependencies
+	msg     *message.SetBlob
+	replyTo chan<- bus.Reply
 }
 
-func NewSetBlob(dep *proc.Dependencies, busMessage bus.Message, msg *message.SetBlob) *SetBlob {
+func NewSetBlob(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.SetBlob) *SetBlob {
 	return &SetBlob{
-		dep:        dep,
-		msg:        msg,
-		busMessage: busMessage,
+		dep:     dep,
+		msg:     msg,
+		replyTo: rep,
 	}
 }
 
 func (s *SetBlob) Present(ctx context.Context, f flow.Flow) error {
-	jet := proc.NewFetchJet(*s.msg.TargetRef.Record(), flow.Pulse(ctx), s.busMessage.WatermillMsg)
+	jet := proc.NewFetchJet(*s.msg.TargetRef.Record(), flow.Pulse(ctx), s.replyTo)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		return err
 	}
-	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.busMessage.WatermillMsg)
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.replyTo)
 	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, true); err != nil {
 		return err
 	}
 
-	setBlob := proc.NewSetBlob(jet.Result.Jet, s.busMessage.ReplyTo, s.msg)
+	setBlob := proc.NewSetBlob(jet.Result.Jet, s.replyTo, s.msg)
 	s.dep.SetBlob(setBlob)
 	return f.Procedure(ctx, setBlob, false)
 }

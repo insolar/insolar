@@ -106,11 +106,9 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.JetUpdater = h.jetTreeUpdater
 			p.Dep.JetFetcher = h.jetTreeUpdater
-			p.Dep.Sender = h.Sender
 		},
 		WaitHot: func(p *proc.WaitHot) {
 			p.Dep.Waiter = h.HotDataWaiter
-			p.Dep.Sender = h.Sender
 		},
 		GetIndex: func(p *proc.GetIndex) {
 			p.Dep.IndexState = h.IndexStateModifier

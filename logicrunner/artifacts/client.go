@@ -163,12 +163,6 @@ func (m *client) GetObject(
 	state *insolar.ID,
 	approved bool,
 ) (ObjectDescriptor, error) {
-	if state != nil {
-		panic("state parameter is deprecated")
-	}
-	if approved == true {
-		panic("approved parameter is deprecated")
-	}
 	var (
 		desc ObjectDescriptor
 		err  error
