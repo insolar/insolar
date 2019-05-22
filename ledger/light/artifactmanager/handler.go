@@ -29,7 +29,6 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
-	WMBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
@@ -79,8 +78,6 @@ type MessageHandler struct {
 	conf           *configuration.Ledger
 	middleware     *middleware
 	jetTreeUpdater jet.Fetcher
-
-	Sender WMBus.Sender
 
 	FlowDispatcher *dispatcher.Dispatcher
 	handlers       map[insolar.MessageType]insolar.MessageHandler

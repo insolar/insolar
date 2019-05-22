@@ -189,6 +189,7 @@ func (m *client) GetObject(
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
 		messagebus.RetryIncorrectPulse(),
+		messagebus.FollowRedirectSender(m.DefaultBus),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
 

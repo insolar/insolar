@@ -355,6 +355,9 @@ func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, node insolar.D
 // SendMessageHandler async sends message with confirmation of delivery.
 func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Message, error) {
 	node, err := n.wrapMeta(msg)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to send message")
+	}
 
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
