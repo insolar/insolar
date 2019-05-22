@@ -109,7 +109,7 @@ func (e *HasPendingRequests) Type() insolar.ReplyType {
 	return TypePendingRequests
 }
 
-// HasPendingRequests contains unclosed requests for an object.
+// PendingRequest contains ID of unclosed requests for an object.
 type PendingRequest struct {
 	ID  insolar.ID
 	Err Error
