@@ -102,8 +102,11 @@ func (gp *GoPlugin) CloseDownstream() {
 	gp.clientMutex.Lock()
 	defer gp.clientMutex.Unlock()
 
-	gp.client.Close()
-	gp.client = nil
+	// this method can be called multiple times from callClientWithReconnect
+	if gp.client != nil {
+		gp.client.Close()
+		gp.client = nil
+	}
 }
 
 func (gp *GoPlugin) callClientWithReconnect(ctx context.Context, method string, req interface{}, res interface{}) error {
