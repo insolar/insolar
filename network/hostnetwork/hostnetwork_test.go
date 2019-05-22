@@ -418,7 +418,7 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 		assert.NoError(t, err)
 	}()
 
-	_, err = f.WaitResponse(time.Second * 2)
+	_, err = f.WaitResponse(time.Minute)
 	require.NoError(t, err)
 }
 

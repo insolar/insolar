@@ -194,7 +194,7 @@ func TestFuture_WaitResponse_Success(t *testing.T) {
 	p := &packet.Packet{}
 	c <- p
 
-	res, err := f.WaitResponse(time.Millisecond)
+	res, err := f.WaitResponse(time.Minute)
 	require.NoError(t, err)
 	require.Equal(t, res, p)
 }
