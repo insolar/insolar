@@ -18,8 +18,10 @@ package virtual
 
 import (
 	"context"
+	"errors"
 
 	"github.com/ThreeDotsLabs/watermill"
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
@@ -35,7 +37,9 @@ import (
 	"github.com/insolar/insolar/insolar/jetcoordinator"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
@@ -116,8 +120,7 @@ func initComponents(
 ) (*component.Manager, insolar.TerminationHandler, error) {
 	cm := component.Manager{}
 
-	// TODO: use insolar.Logger
-	logger := watermill.NewStdLogger(false, false)
+	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 
 	b := bus.NewBus(pubsub)
@@ -194,5 +197,58 @@ func initComponents(
 
 	cm.Inject(components...)
 
+	startWatermill(ctx, logger, pubsub, b, nw.SendMessageHandler, notFound)
+
 	return &cm, terminationHandler, nil
+}
+
+func notFound(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
+	return nil, errors.New("reply channel for this msg doesn't exist")
+}
+
+func startWatermill(
+	ctx context.Context,
+	logger watermill.LoggerAdapter,
+	pubSub watermillMsg.Subscriber,
+	b *bus.Bus,
+	outHandler, inHandler watermillMsg.HandlerFunc,
+) {
+	inRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
+	if err != nil {
+		panic(err)
+	}
+	outRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
+	if err != nil {
+		panic(err)
+	}
+
+	outRouter.AddNoPublisherHandler(
+		"OutgoingHandler",
+		bus.TopicOutgoing,
+		pubSub,
+		outHandler,
+	)
+
+	inRouter.AddMiddleware(
+		b.IncomingMessageRouter,
+	)
+
+	inRouter.AddNoPublisherHandler(
+		"IncomingHandler",
+		bus.TopicIncoming,
+		pubSub,
+		inHandler,
+	)
+
+	startRouter(ctx, inRouter)
+	startRouter(ctx, outRouter)
+}
+
+func startRouter(ctx context.Context, router *watermillMsg.Router) {
+	go func() {
+		if err := router.Run(); err != nil {
+			inslogger.FromContext(ctx).Error("Error while running router", err)
+		}
+	}()
+	<-router.Running()
 }

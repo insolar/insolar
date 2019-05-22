@@ -46,7 +46,9 @@ import (
 
 const deliverRPCMethodName = "MessageBus.Deliver"
 
-var transferredToWatermill = make(map[insolar.MessageType]struct{})
+var transferredToWatermill = map[insolar.MessageType]struct{}{
+	insolar.TypeGetObject: {},
+}
 
 // MessageBus is component that routes application logic requests,
 // e.g. glue between network and logic runner
@@ -219,15 +221,27 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 		res, done := mb.Sender.Send(ctx, wmMsg)
 		repMsg := <-res
 		done()
-		rep, err := reply.Deserialize(bytes.NewBuffer(repMsg.Payload))
-		if err != nil {
-			return nil, errors.Wrap(err, "can't deserialize payload")
-		}
-		return rep, nil
+		return deserializePayload(repMsg)
 	}
 
 	rep, err := mb.SendParcel(ctx, parcel, currentPulse, ops)
 	return rep, err
+}
+
+func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
+	if msg.Metadata.Get(bus.MetaType) == bus.TypeError {
+		errReply, err := bus.DeserializeError(bytes.NewBuffer(msg.Payload))
+		if err != nil {
+			return nil, errors.Wrap(err, "can't deserialize payload to error")
+		}
+		return nil, errReply
+	}
+
+	rep, err := reply.Deserialize(bytes.NewBuffer(msg.Payload))
+	if err != nil {
+		return nil, errors.Wrap(err, "can't deserialize payload to reply")
+	}
+	return rep, nil
 }
 
 // CreateParcel creates signed message from provided message.
@@ -372,14 +386,12 @@ func (mb *MessageBus) checkPulse(ctx context.Context, parcel insolar.Parcel, loc
 			*message.UpdateObject,
 			*message.RegisterChild,
 			*message.SetBlob,
-			*message.GetObjectIndex,
 			*message.GetPendingRequests,
 			*message.ValidateRecord,
-			*message.CallConstructor,
 			*message.HotData,
 			*message.CallMethod:
-			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", ppn, pulse.PulseNumber)
-			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)", ppn, pulse.PulseNumber)
+			inslogger.FromContext(ctx).Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d) Msg: %s", ppn, pulse.PulseNumber, parcel.Message().Type().String())
+			return fmt.Errorf("[ checkPulse ] Incorrect message pulse (parcel: %d, current: %d)  Msg: %s", ppn, pulse.PulseNumber, parcel.Message().Type().String())
 		}
 	}
 

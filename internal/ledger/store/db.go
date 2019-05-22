@@ -50,6 +50,8 @@ const (
 	ScopeJetDrop Scope = 3
 	// ScopeIndex is the scope for an index records.
 	ScopeIndex Scope = 4
+	// ScopeLastKnownIndexPN is the scope for a last known pulse number of the index bucket
+	ScopeLastKnownIndexPN Scope = 5
 
 	// ScopeBlob is the scope for a blobs records.
 	ScopeBlob Scope = 7
