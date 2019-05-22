@@ -304,7 +304,7 @@ func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.P
 			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
 				"jet": jetID.DebugString(),
 				"pn":  parcel.Pulse(),
-			}).Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", *msg.Head.Record()))
+			}).Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", msg.Head.Record().DebugString()))
 			return nil, errors.Wrapf(err, "failed to fetch index from heavy")
 		}
 	} else if err != nil {
