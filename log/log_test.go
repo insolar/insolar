@@ -23,6 +23,7 @@ import (
 	"os/exec"
 	"regexp"
 	"strings"
+	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -93,7 +94,12 @@ func TestLog_GlobalLogger_Env(t *testing.T) {
 			cmd.Stderr = os.Stderr
 			err := cmd.Run()
 			if e, ok := err.(*exec.ExitError); ok && !e.Success() {
-				t.Fatalf("test with log level %v=%v failed", logLevelEnvVarName, val)
+				exitCode := 0
+				if status, ok := e.Sys().(syscall.WaitStatus); ok {
+					exitCode = status.ExitStatus()
+				}
+				t.Fatalf("%v with env var %v=%v failed (status=%v, code=%v)",
+					os.Args[0], logLevelEnvVarName, val, e.String(), exitCode)
 			}
 		})
 	}
