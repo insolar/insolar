@@ -665,6 +665,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	_, err := suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+	suite.lr.Stop(suite.ctx)
 
 	// LedgerHasMoreRequests false
 	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
@@ -673,6 +674,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+	suite.lr.Stop(suite.ctx)
 
 	// LedgerHasMoreRequests already true
 	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
@@ -681,6 +683,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+	suite.lr.Stop(suite.ctx)
 }
 
 func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {
