@@ -39,6 +39,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+func TestData_EmptyDomainData(t *testing.T) {
+	ctx := inslogger.TestContext(t)
+
+	am := artifact.NewManagerMock(t)
+	// should no any calls on empty discovery nodes list
+	defer am.MinimockFinish()
+
+	dnm := NewDiscoveryNodeManager(am)
+	err := dnm.StoreDiscoveryNodes(ctx, nil)
+	require.NoError(t, err, "StoreDiscoveryNodes failed")
+}
+
 func TestData_WriteNodeDomainData(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 

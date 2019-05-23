@@ -48,6 +48,10 @@ func NewDiscoveryNodeManager(
 // StoreDiscoveryNodes saves discovery nodes objects and saves discovery nodes index in node domain index.
 // If node domain index not empty this method does nothing.
 func (g *DiscoveryNodeManager) StoreDiscoveryNodes(ctx context.Context, discoveryNodes []insolar.DiscoveryNodeRegister) error {
+	if len(discoveryNodes) == 0 {
+		return nil
+	}
+
 	nodeDomainDesc, err := g.artifactManager.GetObject(ctx, bootstrap.ContractNodeDomain)
 	if err != nil {
 		inslogger.FromContext(ctx).Error("got err: ", err)
