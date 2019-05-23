@@ -36,6 +36,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 	table := []data{
 		{tp: payload.TypeError, pl: &payload.Error{}},
 		{tp: payload.TypeID, pl: &payload.ID{}},
+		{tp: payload.TypeGetObject, pl: &payload.GetObject{}},
 	}
 
 	for _, d := range table {

@@ -23,6 +23,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
@@ -138,6 +139,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	jc.HeavyMock.Return(&insolar.Reference{}, nil)
 	jc.MeMock.Return(insolar.Reference{})
 	jc.IsBeyondLimitMock.Return(false, nil)
+	jc.QueryRoleMock.Return([]insolar.Reference{{}}, nil)
 
 	// Init components.
 	if c.MessageBus == nil {
@@ -178,7 +180,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	handler.PCS = pcs
 	handler.JetCoordinator = jc
 
-	sender := makeSender(ps, jc)
+	sender := makeSender(ps, jc, handler.FlowDispatcher.InnerSubscriber)
 
 	am := NewClient(sender)
 	am.PCS = testutils.NewPlatformCryptographyScheme()
@@ -259,60 +261,39 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 }
 
 type pubSubMock struct {
-}
-
-func (p *pubSubMock) Subscribe(ctx context.Context, topic string) (<-chan *message.Message, error) {
-	panic("implement me")
+	bus     *bus.Bus
+	handler message.HandlerFunc
 }
 
 func (p *pubSubMock) Publish(topic string, messages ...*message.Message) error {
-	panic("implement me")
+	for _, msg := range messages {
+		pl := payload.Meta{
+			Payload: msg.Payload,
+		}
+		buf, err := pl.Marshal()
+		if err != nil {
+			return err
+		}
+		msg.Payload = buf
+		_, _ = p.bus.IncomingMessageRouter(p.handler)(msg)
+	}
+	return nil
+}
+
+func (p *pubSubMock) handle(msg *message.Message) ([]*message.Message, error) {
+	return p.handler(msg)
 }
 
 func (p *pubSubMock) Close() error {
-	panic("implement me")
+	return nil
 }
 
-func makeSender(pulses pulse.Accessor, jets jet.Coordinator) bus.Sender {
-	// channelPubSub :=
-	pubSub := &pubSubMock{}
-	b := bus.NewBus(pubSub, pulses, jets)
-	//
-	// inRouter, err := message.NewRouter(message.RouterConfig{}, watermill.NewStdLogger(true, true))
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// outRouter, err := message.NewRouter(message.RouterConfig{}, watermill.NewStdLogger(true, true))
-	// if err != nil {
-	// 	panic(err)
-	// }
-	//
-	// inRouter.AddMiddleware(
-	// 	middleware.InstantAck,
-	// 	b.IncomingMessageRouter,
-	// 	middleware.CorrelationID,
-	// )
-	//
-	// inRouter.AddHandler(
-	// 	"IncomingHandler",
-	// 	bus.TopicIncoming,
-	// 	pubSub,
-	// 	bus.TopicOutgoing,
-	// 	pubSub,
-	// 	inHandler,
-	// )
-	//
-	// startRouter(ctx, inRouter)
-	// startRouter(ctx, outRouter)
-	//
-	return b
-}
-
-func startRouter(ctx context.Context, router *message.Router) {
-	go func() {
-		if err := router.Run(); err != nil {
-			inslogger.FromContext(ctx).Error("Error while running router", err)
-		}
-	}()
-	<-router.Running()
+func makeSender(pulses pulse.Accessor, jets jet.Coordinator, handle message.HandlerFunc) bus.Sender {
+	clientPub := &pubSubMock{handler: handle}
+	serverPub := &pubSubMock{}
+	clientBus := bus.NewBus(clientPub, pulses, jets)
+	serverBus := bus.NewBus(serverPub, pulses, jets)
+	clientPub.bus = serverBus
+	serverPub.bus = clientBus
+	return clientBus
 }

@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/messagebus"
@@ -158,8 +159,8 @@ func (m *client) GetObject(
 	head insolar.Reference,
 ) (ObjectDescriptor, error) {
 	var (
-		desc ObjectDescriptor
-		err  error
+		// desc ObjectDescriptor
+		err error
 	)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.Getobject")
 	instrumenter := instrument(ctx, "GetObject").err(&err)
@@ -174,38 +175,40 @@ func (m *client) GetObject(
 		instrumenter.end()
 	}()
 
-	getObjectMsg := &message.GetObject{
-		Head: head,
-	}
-
-	sender := messagebus.BuildSender(
-		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(m.PulseAccessor),
-		messagebus.FollowRedirectSender(m.DefaultBus),
-		messagebus.RetryJetSender(m.JetStorage),
-	)
-
-	genericReact, err := sender(ctx, getObjectMsg, nil)
+	msg, err := payload.NewMessage(&payload.GetObject{
+		ObjectID: *head.Record(),
+	})
 	if err != nil {
-		return nil, err
+		return nil, errors.Wrap(err, "failed to marshal message")
+	}
+	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, head)
+	defer done()
+
+	rep, ok := <-reps
+	if !ok {
+		return nil, errors.New("no reply")
+	}
+	replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal reply")
 	}
 
-	switch r := genericReact.(type) {
-	case *reply.Object:
-		desc = &objectDescriptor{
-			head:         r.Head,
-			state:        r.State,
-			prototype:    r.Prototype,
-			isPrototype:  r.IsPrototype,
-			childPointer: r.ChildPointer,
-			memory:       r.Memory,
-			parent:       r.Parent,
-		}
-		return desc, err
-	case *reply.Error:
-		return nil, r.Error()
+	switch p := replyPayload.(type) {
+	// case *reply.Object:
+	// 	desc = &objectDescriptor{
+	// 		head:         r.Head,
+	// 		state:        r.State,
+	// 		prototype:    r.Prototype,
+	// 		isPrototype:  r.IsPrototype,
+	// 		childPointer: r.ChildPointer,
+	// 		memory:       r.Memory,
+	// 		parent:       r.Parent,
+	// 	}
+	// 	return desc, err
+	case *payload.Error:
+		return nil, errors.New(p.Text)
 	default:
-		return nil, fmt.Errorf("GetObject: unexpected reply: %#v", genericReact)
+		return nil, fmt.Errorf("GetObject: unexpected reply: %#v", p)
 	}
 }
 

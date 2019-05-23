@@ -32,6 +32,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *ID:
 		pl.Polymorph = uint32(TypeID)
 		return pl.Marshal()
+	case *GetObject:
+		pl.Polymorph = uint32(TypeGetObject)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -55,6 +58,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeID:
 		pl := ID{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeGetObject:
+		pl := GetObject{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}
