@@ -45,19 +45,19 @@ func NewRegisterChild(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message
 func (s *RegisterChild) Present(ctx context.Context, f flow.Flow) error {
 	jet := proc.NewFetchJet(*s.message.DefaultTarget().Record(), flow.Pulse(ctx), s.replyTo)
 	s.dep.FetchJet(jet)
-	if err := f.Procedure(ctx, jet, false); err != nil {
+	if err := f.Procedure(ctx, jet, true); err != nil {
 		return err
 	}
 
 	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.replyTo)
 	s.dep.WaitHot(hot)
-	if err := f.Procedure(ctx, hot, false); err != nil {
+	if err := f.Procedure(ctx, hot, true); err != nil {
 		return err
 	}
 
 	getIndex := proc.NewGetIndex(s.message.Parent, jet.Result.Jet, s.replyTo, flow.Pulse(ctx))
 	s.dep.GetIndex(getIndex)
-	err := f.Procedure(ctx, getIndex, false)
+	err := f.Procedure(ctx, getIndex, true)
 	if err != nil {
 		return err
 	}
