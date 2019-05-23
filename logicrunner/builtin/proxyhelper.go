@@ -18,12 +18,12 @@ package builtin
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner"
+	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
 type ProxyHelper struct {
-	methods logicrunner.RPCMethods
+	methods lrCommon.RPCMethods
 }
 
 func NewProxyHelper(runner insolar.LogicRunner) *ProxyHelper {
