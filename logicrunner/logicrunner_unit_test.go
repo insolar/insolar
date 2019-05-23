@@ -776,6 +776,7 @@ func (suite *LogicRunnerTestSuite) TestNewLogicRunner() {
 	lr, err = NewLogicRunner(&configuration.LogicRunner{})
 	suite.Require().NoError(err)
 	suite.Require().NotNil(lr)
+	lr.Stop(context.Background())
 }
 
 func (suite *LogicRunnerTestSuite) TestStartStop() {
