@@ -22,9 +22,19 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
+type PayloadRequest struct {
+	Method    string `json:"method"`
+	Seed      string `json:"seed"`
+	Reference string `json:"reference"`
+	Params    []byte `json:"params"`
+}
+type Reference struct {
+	Reference string `json:"reference"`
+}
+
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("111145AjNzRRnnH8VizADQ2AW6o7inysgAx6FqCpFn.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113LDQrJjQJLmZyA82UWkQa17iiNwYspizwkhG6rT.11111111111111111111111111111111")
 
 // Member holds proxy type
 type Member struct {
@@ -326,13 +336,10 @@ func (r *Member) GetPublicKeyAsImmutable() (string, error) {
 }
 
 // Call is proxy generated method
-func (r *Member) Call(rootDomain insolar.Reference, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
-	var args [5]interface{}
+func (r *Member) Call(rootDomain insolar.Reference, params []byte) (interface{}, error) {
+	var args [2]interface{}
 	args[0] = rootDomain
-	args[1] = method
-	args[2] = params
-	args[3] = seed
-	args[4] = sign
+	args[1] = params
 
 	var argsSerialized []byte
 
@@ -364,13 +371,10 @@ func (r *Member) Call(rootDomain insolar.Reference, method string, params []byte
 }
 
 // CallNoWait is proxy generated method
-func (r *Member) CallNoWait(rootDomain insolar.Reference, method string, params []byte, seed []byte, sign []byte) error {
-	var args [5]interface{}
+func (r *Member) CallNoWait(rootDomain insolar.Reference, params []byte) error {
+	var args [2]interface{}
 	args[0] = rootDomain
-	args[1] = method
-	args[2] = params
-	args[3] = seed
-	args[4] = sign
+	args[1] = params
 
 	var argsSerialized []byte
 
@@ -388,13 +392,10 @@ func (r *Member) CallNoWait(rootDomain insolar.Reference, method string, params 
 }
 
 // CallAsImmutable is proxy generated method
-func (r *Member) CallAsImmutable(rootDomain insolar.Reference, method string, params []byte, seed []byte, sign []byte) (interface{}, error) {
-	var args [5]interface{}
+func (r *Member) CallAsImmutable(rootDomain insolar.Reference, params []byte) (interface{}, error) {
+	var args [2]interface{}
 	args[0] = rootDomain
-	args[1] = method
-	args[2] = params
-	args[3] = seed
-	args[4] = sign
+	args[1] = params
 
 	var argsSerialized []byte
 
