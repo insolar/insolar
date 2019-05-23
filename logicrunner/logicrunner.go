@@ -298,7 +298,6 @@ func (lr *LogicRunner) RegisterHandlers() {
 // Stop stops logic runner component and its executors
 func (lr *LogicRunner) Stop(ctx context.Context) error {
 	reterr := error(nil)
-
 	for _, e := range lr.Executors {
 		if e == nil {
 			continue
