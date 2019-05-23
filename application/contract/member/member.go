@@ -74,25 +74,11 @@ func NewOracleMember(name string, key string) (*Member, error) {
 }
 
 func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byte) error {
-	//args, err := insolar.MarshalArgs(m.GetReference(), method, params, seed)
-	//if err != nil {
-	//	return fmt.Errorf("[ verifySig ] Can't MarshalArgs: %s", err.Error())
-	//}
-
-	args, err := json.Marshal(struct {
-		Reference string `json:"reference"`
-		Method    string `json:"method"`
-		Params    string `json:"params"`
-		Seed      string `json:"seed"`
-	}{
-		Reference: m.GetReference().String(),
-		Method:    method,
-		Params:    string(params),
-		Seed:      string(seed),
-	})
+	args, err := insolar.MarshalArgs(m.GetReference(), method, params, seed)
 	if err != nil {
-		return fmt.Errorf("[ verifySig ] Can't json Marshal: %s", err.Error())
+		return fmt.Errorf("[ verifySig ] Can't MarshalArgs: %s", err.Error())
 	}
+
 	key, err := m.GetPublicKey()
 	if err != nil {
 		return fmt.Errorf("[ verifySig ]: %s", err.Error())
@@ -105,7 +91,7 @@ func (m *Member) verifySig(method string, params []byte, seed []byte, sign []byt
 
 	verified := foundation.Verify(args, sign, publicKey)
 	if !verified {
-		return fmt.Errorf("[ verifySig ] Incorrect signature1")
+		return fmt.Errorf("[ verifySig ] Incorrect signature")
 	}
 	return nil
 }
@@ -118,8 +104,6 @@ func (m *Member) Call(rootDomainRef insolar.Reference, method string, params []b
 	switch method {
 	case "CreateMember":
 		return m.createMemberCall(rootDomainRef, params)
-	case "CreateOracleMember":
-		return m.createOracleMemberCall(rootDomainRef, params)
 	}
 
 	if err := m.verifySig(method, params, seed, sign); err != nil {
@@ -156,52 +140,57 @@ func verifyKey(key string) (bool, error) {
 }
 
 func (m *Member) createMemberCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
-	rootDomain := rootdomain.GetObject(rdRef)
-	var name string
-	var key string
-	if err := signer.UnmarshalParams(params, &name, &key); err != nil {
-		return nil, fmt.Errorf("[ createMemberCall ]: %s", err.Error())
-	}
-
-	//valid, err := verifyKey(key)
-	//if err != nil {
-	//	return nil, fmt.Errorf("[ createMemberCall ] Can't verify key: %s", err.Error())
-	//}
-	//if !valid {
-	//	return nil, fmt.Errorf("[ createMemberCall ] Key is not valid: %s", err.Error())
-	//}
-
-	return rootDomain.CreateMember(name, key)
-}
-
-func (m *Member) createOracleMemberCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
 	var ethAddr string
 	var key string
 	if err := signer.UnmarshalParams(params, &ethAddr, &key); err != nil {
-		return nil, fmt.Errorf("[ createOracleMemberCall ]: %s", err.Error())
+		return nil, fmt.Errorf("[ createMemberCall ]: %s", err.Error())
 	}
 
+	return m.createMemberAndWallet(rdRef, ethAddr, key, 1000*1000*1000)
+}
+
+func (m *Member) createMemberAndWallet(rdRef insolar.Reference, ethAddr string, key string, amount uint) (interface{}, error) {
+
+	new, err := m.createMember(rdRef, ethAddr, key)
+	if err != nil {
+		return nil, fmt.Errorf("[ createMemberAndWallet ]: %s", err.Error())
+	}
+
+	_, err = m.createWallet(new.Reference, amount)
+	if err != nil {
+		return nil, fmt.Errorf("[ createMemberAndWallet ]: %s", err.Error())
+	}
+
+	return new.Reference.String(), nil
+}
+
+func (m *Member) createMember(rdRef insolar.Reference, ethAddr string, key string) (*member.Member, error) {
 	valid, err := verifyKey(key)
 	if err != nil {
-		return nil, fmt.Errorf("[ createOracleMemberCall ] Can't verify key: %s", err.Error())
+		return nil, fmt.Errorf("[ createMember ] Can't verify key: %s", err.Error())
 	}
 	if !valid {
-		return nil, fmt.Errorf("[ createOracleMemberCall ] Key is not valid: %s", err.Error())
+		return nil, fmt.Errorf("[ createMember ] Key is not valid: %s", err.Error())
 	}
 
 	memberHolder := member.New(ethAddr, key)
 	new, err := memberHolder.AsChild(rdRef)
 	if err != nil {
-		return nil, fmt.Errorf("[ createOracleMemberCall ] Can't save as child: %s", err.Error())
+		return nil, fmt.Errorf("[ createMember ] Can't save as child: %s", err.Error())
 	}
 
-	wHolder := wallet.New(1000 * 1000 * 1000)
-	_, err = wHolder.AsDelegate(new.GetReference())
+	return new, nil
+}
+
+func (m *Member) createWallet(mRef insolar.Reference, amount uint) (interface{}, error) {
+
+	wHolder := wallet.New(amount)
+	w, err := wHolder.AsDelegate(mRef)
 	if err != nil {
-		return nil, fmt.Errorf("[ createOracleMemberCall ] Can't save as delegate: %s", err.Error())
+		return nil, fmt.Errorf("[ createWallet ] Can't save as delegate: %s", err.Error())
 	}
 
-	return m.GetReference().String(), nil
+	return w.GetReference().String(), nil
 }
 
 func (m *Member) getMyBalanceCall() (interface{}, error) {

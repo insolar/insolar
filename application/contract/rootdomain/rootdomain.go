@@ -20,7 +20,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/insolar/insolar/application/proxy/member"
-	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
@@ -38,6 +37,11 @@ type RootDomain struct {
 
 var INSATTR_CreateMember_API = true
 
+// NewRootDomain creates new RootDomain
+func NewRootDomain() (*RootDomain, error) {
+	return &RootDomain{}, nil
+}
+
 func (rd *RootDomain) GetMDAdminMemberRef() (*insolar.Reference, error) {
 	return &rd.MDAdminMember, nil
 }
@@ -54,21 +58,9 @@ func (rd *RootDomain) GetRootMemberRef() (*insolar.Reference, error) {
 	return &rd.RootMember, nil
 }
 
-// CreateMember processes create member request
-func (rd *RootDomain) CreateMember(name string, key string) (string, error) {
-	memberHolder := member.New(name, key)
-	m, err := memberHolder.AsChild(rd.GetReference())
-	if err != nil {
-		return "", fmt.Errorf("[ CreateMember ] Can't save as child: %s", err.Error())
-	}
-
-	wHolder := wallet.New(1000 * 1000 * 1000)
-	_, err = wHolder.AsDelegate(m.GetReference())
-	if err != nil {
-		return "", fmt.Errorf("[ CreateMember ] Can't save as delegate: %s", err.Error())
-	}
-
-	return m.GetReference().String(), nil
+// GetNodeDomainRef returns reference of NodeDomain instance
+func (rd *RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
+	return rd.NodeDomain, nil
 }
 
 var INSATTR_Info_API = true
@@ -91,16 +83,6 @@ func (rd *RootDomain) Info() (interface{}, error) {
 		return nil, fmt.Errorf("[ Info ] Can't marshal res: %s", err.Error())
 	}
 	return resJSON, nil
-}
-
-// GetNodeDomainRef returns reference of NodeDomain instance
-func (rd *RootDomain) GetNodeDomainRef() (insolar.Reference, error) {
-	return rd.NodeDomain, nil
-}
-
-// NewRootDomain creates new RootDomain
-func NewRootDomain() (*RootDomain, error) {
-	return &RootDomain{}, nil
 }
 
 // DumpAllUsers processes dump all users request

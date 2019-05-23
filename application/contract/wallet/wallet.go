@@ -41,7 +41,13 @@ func New(balance uint) (*Wallet, error) {
 // Transfer transfers money to given wallet
 func (w *Wallet) Transfer(amount uint, to *insolar.Reference) error {
 
+	if to == nil {
+		return fmt.Errorf("[ Transfer ] Nil 'to' reference")
+	}
 	toWallet := wallet.GetObject(*to)
+	if toWallet == nil {
+		return fmt.Errorf("[ Transfer ] Nil 'toWallet' reference")
+	}
 
 	newBalance, err := safemath.Sub(w.Balance, amount)
 	if err != nil {
@@ -49,15 +55,15 @@ func (w *Wallet) Transfer(amount uint, to *insolar.Reference) error {
 	}
 	w.Balance = newBalance
 
-	err = toWallet.Accept(amount)
-	if err != nil {
+	acceptErr := toWallet.AcceptNoWait(amount)
+	if acceptErr != nil {
 		newBalance, err := safemath.Add(w.Balance, amount)
 		if err != nil {
 			return fmt.Errorf("[ Transfer ] Couldn't add amount back to balance: %s", err.Error())
 		}
 		w.Balance = newBalance
 
-		return fmt.Errorf("[ Transfer ] Cant accept balance to wallet: %s", err.Error())
+		return fmt.Errorf("[ Transfer ] Cant accept balance to wallet: %s", acceptErr.Error())
 	} else {
 		return nil
 	}
