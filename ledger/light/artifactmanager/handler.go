@@ -283,8 +283,10 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 }
 
 func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
+	// ctx, span := instracer.StartSpan(ctx, "MessageHandler.handleGetDelegate")
+	// defer span.End()
 	msg := parcel.Message().(*message.GetDelegate)
-	jetID := jetFromContext(ctx)
+	jetID := jetFromContext(ctx) //httpClient.Timeout = time.Second * 50
 
 	h.IDLocker.Lock(msg.Head.Record())
 	defer h.IDLocker.Unlock(msg.Head.Record())

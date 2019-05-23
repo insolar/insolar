@@ -148,7 +148,7 @@ func (s *transferDifferentMembersScenario) startMember(ctx context.Context, inde
 			goroutineTime += stop
 		} else if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
 			atomic.AddUint32(&s.timeouts, 1)
-			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer error with traceID: %s. Timeout.\n", index, traceID))
+			writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer error. Timeout. Error: %s \n", index, err.Error()))
 		} else {
 			atomic.AddUint32(&s.errors, 1)
 			atomic.AddInt64(&s.totalTime, int64(stop))

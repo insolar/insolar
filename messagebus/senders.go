@@ -23,6 +23,7 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -170,6 +171,10 @@ func RetryIncorrectPulse(accessor pulse.Accessor) PreSender {
 		return func(
 			ctx context.Context, msg insolar.Message, options *insolar.MessageSendOptions,
 		) (insolar.Reply, error) {
+
+			ctx, span := instracer.StartSpan(ctx, "RetryIncorrectPulse")
+			defer span.End()
+
 			var lastPulse insolar.PulseNumber
 			for {
 				currentPulse, err := accessor.Latest(ctx)
@@ -178,7 +183,7 @@ func RetryIncorrectPulse(accessor pulse.Accessor) PreSender {
 				}
 
 				if currentPulse.PulseNumber == lastPulse {
-					inslogger.FromContext(ctx).Debug("[ RetryIncorrectPulse ]  wait for pulse change")
+					inslogger.FromContext(ctx).Debugf("[ RetryIncorrectPulse ]  wait for pulse change. Current: %d", currentPulse)
 					time.Sleep(100 * time.Millisecond)
 					continue
 				}
@@ -188,6 +193,7 @@ func RetryIncorrectPulse(accessor pulse.Accessor) PreSender {
 				if err == nil || !strings.Contains(err.Error(), "Incorrect message pulse") {
 					return rep, err
 				}
+				inslogger.FromContext(ctx).Debug("[ RetryIncorrectPulse ]  Got Error: ", err)
 			}
 		}
 	}

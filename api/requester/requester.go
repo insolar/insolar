@@ -85,6 +85,8 @@ func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with marshaling params")
 	}
 
+	httpClient.Timeout = time.Second * 20
+
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with creating request")
@@ -94,12 +96,17 @@ func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with sending request")
 	}
+
+	if postResp == nil {
+		return nil, errors.Wrap(err, "[ getResponseBody ] Reponse is nil")
+	}
+
+	defer postResp.Body.Close()
 	if http.StatusOK != postResp.StatusCode {
 		return nil, errors.New("[ getResponseBody ] Bad http response code: " + strconv.Itoa(postResp.StatusCode))
 	}
 
 	body, err := ioutil.ReadAll(postResp.Body)
-	defer postResp.Body.Close()
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with reading body")
 	}

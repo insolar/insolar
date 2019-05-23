@@ -28,10 +28,10 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -95,7 +95,7 @@ func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Refer
 }
 
 func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (insolar.Reply, error) {
-	ctx, span := instracer.StartSpan(ctx, "ContractRequester.Call")
+	ctx, span := instracer.StartSpan(ctx, "ContractRequester.Call "+inMsg.Type().String())
 	defer span.End()
 
 	msg := inMsg.(*message.CallMethod)

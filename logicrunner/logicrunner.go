@@ -592,6 +592,9 @@ func init() {
 }
 
 func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState, m *message.CallMethod) (insolar.Reply, error) {
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeMethodCall")
+	defer span.End()
+
 	if es.objectbody == nil {
 		objDesc, protoDesc, codeDesc, err := lr.getDescriptorsByObjectRef(ctx, *m.Object)
 
@@ -664,6 +667,8 @@ func (lr *LogicRunner) getDescriptorsByPrototypeRef(
 ) (
 	artifacts.ObjectDescriptor, artifacts.CodeDescriptor, error,
 ) {
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getDescriptorsByPrototypeRef")
+	defer span.End()
 	protoDesc, err := lr.ArtifactManager.GetObject(ctx, protoRef)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't get prototype descriptor")
@@ -711,6 +716,9 @@ func (lr *LogicRunner) executeConstructorCall(
 ) (
 	insolar.Reply, error,
 ) {
+	ctx, span := instracer.StartSpan(ctx, "LogicRunner.executeConstructorCall")
+	defer span.End()
+
 	current := *es.Current
 	if current.LogicContext.Caller.IsEmpty() {
 		return nil, es.WrapError(nil, "Call constructor from nowhere")
