@@ -156,16 +156,22 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		}
 	}
 
-	// Role calculations.
+	// Storage.
 	var (
 		Coordinator jet.Coordinator
-		Pulses      *pulse.StorageMem
+		Pulses      *pulse.DB
 		Jets        jet.Storage
 		Nodes       *node.Storage
+		DB          *store.BadgerDB
 	)
 	{
+		var err error
+		DB, err = store.NewBadgerDB(cfg.Ledger.Storage.DataDirectory)
+		if err != nil {
+			panic(errors.Wrap(err, "failed to initialize DB"))
+		}
 		Nodes = node.NewStorage()
-		Pulses = pulse.NewStorageMem()
+		Pulses = pulse.NewDB(DB)
 		Jets = jet.NewStore()
 
 		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
@@ -212,18 +218,11 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Handler      *handler.Handler
 	)
 	{
-		conf := cfg.Ledger
-
-		db, err := store.NewBadgerDB(conf.Storage.DataDirectory)
-		if err != nil {
-			panic(errors.Wrap(err, "failed to initialize DB"))
-		}
-
-		pulses := pulse.NewDB(db)
-		records := object.NewRecordDB(db)
-		indexes := object.NewIndexDB(db)
-		blobs := blob.NewDB(db)
-		drops := drop.NewDB(db)
+		pulses := pulse.NewDB(DB)
+		records := object.NewRecordDB(DB)
+		indexes := object.NewIndexDB(DB)
+		blobs := blob.NewDB(DB)
+		drops := drop.NewDB(DB)
 
 		pm := pulsemanager.NewPulseManager()
 		pm.Bus = Bus

@@ -28,6 +28,7 @@ import (
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/payload"
 	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar/pulse"
@@ -219,15 +220,20 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 }
 
 func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
+	meta := payload.Meta{}
+	err := meta.Unmarshal(msg.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't deserialize meta payload")
+	}
 	if msg.Metadata.Get(bus.MetaType) == bus.TypeError {
-		errReply, err := bus.DeserializeError(bytes.NewBuffer(msg.Payload))
+		errReply, err := bus.DeserializeError(bytes.NewBuffer(meta.Payload))
 		if err != nil {
 			return nil, errors.Wrap(err, "can't deserialize payload to error")
 		}
 		return nil, errReply
 	}
 
-	rep, err := reply.Deserialize(bytes.NewBuffer(msg.Payload))
+	rep, err := reply.Deserialize(bytes.NewBuffer(meta.Payload))
 	if err != nil {
 		return nil, errors.Wrap(err, "can't deserialize payload to reply")
 	}
