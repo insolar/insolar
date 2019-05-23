@@ -27,7 +27,6 @@ import (
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/utils"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/utils/entropy"
 	"github.com/pkg/errors"
 )
@@ -105,19 +104,16 @@ func (jc *Coordinator) QueryRole(
 
 	case insolar.DynamicRoleLightExecutor:
 		if objID.Pulse() == insolar.PulseNumberJet {
-			inslogger.FromContext(ctx)
 			node, err := jc.LightExecutorForJet(ctx, objID, pulse)
 			if err != nil {
 				return nil, err
 			}
-			inslogger.FromContext(ctx).Debugf("[QueryRole] node calculated by jet - %v ", node)
 			return []insolar.Reference{*node}, nil
 		}
 		node, err := jc.LightExecutorForObject(ctx, objID, pulse)
 		if err != nil {
 			return nil, err
 		}
-		inslogger.FromContext(ctx).Debugf("[QueryRole] node calculated by obj - %v, objID - %v, pn - %v ", node, objID.DebugString(), pulse)
 		return []insolar.Reference{*node}, nil
 
 	case insolar.DynamicRoleLightValidator:
@@ -187,8 +183,6 @@ func (jc *Coordinator) LightExecutorForObject(
 	ctx context.Context, objID insolar.ID, pulse insolar.PulseNumber,
 ) (*insolar.Reference, error) {
 	jetID, _ := jc.JetAccessor.ForID(ctx, pulse, objID)
-	inslogger.FromContext(ctx).Debugf("[LightExecutorForObject] jetID - %v for objID - %v for pn - %v", jetID.DebugString(), objID.DebugString(), pulse)
-	ctx = context.WithValue(ctx, "objID", objID.DebugString())
 	return jc.LightExecutorForJet(ctx, insolar.ID(jetID), pulse)
 }
 
@@ -317,7 +311,6 @@ func (jc *Coordinator) lightMaterialsForJet(
 	prefix := insolar.JetID(jetID).Prefix()
 
 	candidates, err := jc.Nodes.InRole(pulse, insolar.StaticRoleLightMaterial)
-	inslogger.FromContext(ctx).Debugf("[lightMaterialsForJet] candidates obj - %v, candidates - %v", ctx.Value("objID"), candidates)
 	if err == node.ErrNoNodes {
 		return nil, err
 	}
@@ -333,14 +326,12 @@ func (jc *Coordinator) lightMaterialsForJet(
 		return nil, errors.Wrapf(err, "failed to fetch entropy for pulse %v", pulse)
 	}
 
-	refs, err := getRefs(
+	return getRefs(
 		jc.PlatformCryptographyScheme,
 		utils.CircleXOR(ent[:], prefix),
 		candidates,
 		count,
 	)
-	inslogger.FromContext(ctx).Debugf("[lightMaterialsForJet] refs obj - %v, refs - %v", ctx.Value("objID"), refs)
-	return refs, err
 }
 
 func (jc *Coordinator) entropy(ctx context.Context, pulse insolar.PulseNumber) (insolar.Entropy, error) {
