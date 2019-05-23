@@ -36,6 +36,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
+	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
@@ -58,6 +59,8 @@ type GoInsider struct {
 
 	plugins      map[insolar.Reference]*pluginRec
 	pluginsMutex sync.Mutex
+
+	lrCommon.Serializer
 }
 
 // NewGoInsider creates a new GoInsider instance validating arguments
@@ -66,6 +69,7 @@ func NewGoInsider(path, network, address string) *GoInsider {
 	res := GoInsider{dir: path, upstreamProtocol: network, upstreamAddress: address}
 	res.plugins = make(map[insolar.Reference]*pluginRec)
 	proxyctx.Current = &res
+	res.Serializer = lrCommon.NewCBORSerializer()
 	return &res
 }
 

@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package logicrunner
+package common
 
 import (
 	"context"
@@ -27,6 +27,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
+	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 
 	"github.com/pkg/errors"
@@ -40,7 +41,7 @@ import (
 )
 
 type RPCMethods struct {
-	lr *LogicRunner
+	lr *logicrunner.LogicRunner
 }
 
 func recoverRPC(err *error) {
@@ -330,7 +331,7 @@ type RPC struct {
 	isStarted bool
 }
 
-func NewRPC(ctx context.Context, lr *LogicRunner) *RPC {
+func NewRPC(ctx context.Context, lr *logicrunner.LogicRunner) *RPC {
 	rpcService := &RPC{
 		server:  rpc.NewServer(),
 		methods: &RPCMethods{},
