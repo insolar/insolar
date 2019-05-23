@@ -539,6 +539,7 @@ func (m *PulseManager) splitJets(ctx context.Context, jets []jetInfo, previous, 
 	for i, jet := range jets {
 		drop, err := m.DropAccessor.ForPulse(ctx, jet.id, previous)
 		if err != nil {
+			logger.Error(errors.Wrapf(err, "failed to get drop by jet.id=%v previous_pulse=%v", jet.id, previous))
 			continue
 		}
 
