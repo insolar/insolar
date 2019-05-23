@@ -260,7 +260,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Requester,
 		Tokens,
 		Parcels,
-		artifacts.NewClient(),
+		artifacts.NewClient(WmBus),
 		Genesis,
 		API,
 		KeyProcessor,

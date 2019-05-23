@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/messagebus"
@@ -47,6 +48,7 @@ type client struct {
 	PulseAccessor  pulse.Accessor                     `inject:""`
 	JetCoordinator jet.Coordinator                    `inject:""`
 
+	sender               bus.Sender
 	getChildrenChunkSize int
 	senders              *messagebus.Senders
 }
@@ -58,10 +60,11 @@ func (m *client) State() ([]byte, error) {
 }
 
 // NewClient creates new client instance.
-func NewClient() *client { // nolint
+func NewClient(sender bus.Sender) *client { // nolint
 	return &client{
 		getChildrenChunkSize: getChildrenChunkSize,
 		senders:              messagebus.NewSenders(),
+		sender:               sender,
 	}
 }
 
@@ -172,7 +175,7 @@ func (m *client) GetObject(
 	}()
 
 	getObjectMsg := &message.GetObject{
-		Head:     head,
+		Head: head,
 	}
 
 	sender := messagebus.BuildSender(
@@ -283,7 +286,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 			return nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", r)
 		}
 
-		return &message.Parcel{ Msg: &message.CallMethod{Request: *castedRecord} }, nil
+		return &message.Parcel{Msg: &message.CallMethod{Request: *castedRecord}}, nil
 	case *reply.Error:
 		return nil, r.Error()
 	default:

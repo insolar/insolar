@@ -20,7 +20,9 @@ import (
 	"context"
 	"testing"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
@@ -129,9 +131,6 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	recordAccessor := recordStorage
 	recordModifier := recordStorage
 
-	am := NewClient()
-	am.PCS = testutils.NewPlatformCryptographyScheme()
-
 	pm := pulsemanager.NewPulseManager()
 	jc := jet.NewCoordinatorMock(mc)
 	jc.IsAuthorizedMock.Return(true, nil)
@@ -179,6 +178,10 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	handler.PCS = pcs
 	handler.JetCoordinator = jc
 
+	sender := makeSender(ps, jc)
+
+	am := NewClient(sender)
+	am.PCS = testutils.NewPlatformCryptographyScheme()
 	am.DefaultBus = c.MessageBus
 	am.JetCoordinator = jc
 
@@ -253,4 +256,63 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	l := NewTestLedger(am, pm, jc)
 
 	return l, handler, index
+}
+
+type pubSubMock struct {
+}
+
+func (p *pubSubMock) Subscribe(ctx context.Context, topic string) (<-chan *message.Message, error) {
+	panic("implement me")
+}
+
+func (p *pubSubMock) Publish(topic string, messages ...*message.Message) error {
+	panic("implement me")
+}
+
+func (p *pubSubMock) Close() error {
+	panic("implement me")
+}
+
+func makeSender(pulses pulse.Accessor, jets jet.Coordinator) bus.Sender {
+	// channelPubSub :=
+	pubSub := &pubSubMock{}
+	b := bus.NewBus(pubSub, pulses, jets)
+	//
+	// inRouter, err := message.NewRouter(message.RouterConfig{}, watermill.NewStdLogger(true, true))
+	// if err != nil {
+	// 	panic(err)
+	// }
+	// outRouter, err := message.NewRouter(message.RouterConfig{}, watermill.NewStdLogger(true, true))
+	// if err != nil {
+	// 	panic(err)
+	// }
+	//
+	// inRouter.AddMiddleware(
+	// 	middleware.InstantAck,
+	// 	b.IncomingMessageRouter,
+	// 	middleware.CorrelationID,
+	// )
+	//
+	// inRouter.AddHandler(
+	// 	"IncomingHandler",
+	// 	bus.TopicIncoming,
+	// 	pubSub,
+	// 	bus.TopicOutgoing,
+	// 	pubSub,
+	// 	inHandler,
+	// )
+	//
+	// startRouter(ctx, inRouter)
+	// startRouter(ctx, outRouter)
+	//
+	return b
+}
+
+func startRouter(ctx context.Context, router *message.Router) {
+	go func() {
+		if err := router.Run(); err != nil {
+			inslogger.FromContext(ctx).Error("Error while running router", err)
+		}
+	}()
+	<-router.Running()
 }

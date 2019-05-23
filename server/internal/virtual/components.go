@@ -181,7 +181,7 @@ func initComponents(
 		pubsub,
 		messageBus,
 		contractRequester,
-		artifacts.NewClient(),
+		artifacts.NewClient(b),
 		jc,
 		pulses,
 		jet.NewStore(),
