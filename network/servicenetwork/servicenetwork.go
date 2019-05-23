@@ -335,7 +335,7 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 		return
 	}
 
-	if err := n.PhaseManager.OnPulse(ctx, &newPulse, pulseStartTime, n.connectToNewNetwork); err != nil {
+	if err := n.PhaseManager.OnPulse(ctx, &newPulse, pulseStartTime); err != nil {
 		errMsg := "Failed to pass consensus: " + err.Error()
 		logger.Error(errMsg)
 		n.TerminationHandler.Abort(errMsg)
