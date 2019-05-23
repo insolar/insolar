@@ -65,11 +65,18 @@ const (
 
 // Sender interface sends messages by watermill.
 type Sender interface {
-	// SendRole a watermill's Message and returns channel for replies and function for closing that channel.
+	// SendRole sends message to specified role. Node will be calculated automatically for the latest pulse. Use this
+	// method unless you need to send a message to a pre-calculated node.
+	// Replies will be written to the returned channel. Always read from the channel using multiple assignment
+	// (rep, ok := <-ch) because the channel will be closed on timeout.
 	SendRole(
 		ctx context.Context, msg *message.Message, role insolar.DynamicRole, object insolar.Reference,
 	) (<-chan *message.Message, func())
+	// SendTarget sends message to a specific node. If you don't know the exact node, use SendRole.
+	// Replies will be written to the returned channel. Always read from the channel using multiple assignment
+	// (rep, ok := <-ch) because the channel will be closed on timeout.
 	SendTarget(ctx context.Context, msg *message.Message, target insolar.Reference) (<-chan *message.Message, func())
+	// Reply sends message in response to another message.
 	Reply(ctx context.Context, origin, reply *message.Message)
 }
 
@@ -117,7 +124,10 @@ func (b *Bus) removeReplyChannel(ctx context.Context, id string, reply *lockedRe
 	})
 }
 
-// SendRole a watermill's Message and returns channel for replies and function for closing that channel.
+// SendRole sends message to specified role. Node will be calculated automatically for the latest pulse. Use this
+// method unless you need to send a message to a pre-calculated node.
+// Replies will be written to the returned channel. Always read from the channel using multiple assignment
+// (rep, ok := <-ch) because the channel will be closed on timeout.
 func (b *Bus) SendRole(
 	ctx context.Context, msg *message.Message, role insolar.DynamicRole, object insolar.Reference,
 ) (<-chan *message.Message, func()) {
@@ -139,6 +149,9 @@ func (b *Bus) SendRole(
 	return b.SendTarget(ctx, msg, nodes[0])
 }
 
+// SendTarget sends message to a specific node. If you don't know the exact node, use SendRole.
+// Replies will be written to the returned channel. Always read from the channel using multiple assignment
+// (rep, ok := <-ch) because the channel will be closed on timeout.
 func (b *Bus) SendTarget(
 	ctx context.Context, msg *message.Message, target insolar.Reference,
 ) (<-chan *message.Message, func()) {
@@ -184,6 +197,7 @@ func (b *Bus) SendTarget(
 	return reply.messages, done
 }
 
+// Reply sends message in response to another message.
 func (b *Bus) Reply(ctx context.Context, origin, reply *message.Message) {
 	id := middleware.MessageCorrelationID(origin)
 	middleware.SetCorrelationID(id, reply)

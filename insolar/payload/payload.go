@@ -19,6 +19,7 @@ const (
 	TypeObjState  Type = 105
 )
 
+// Payload represents any kind of data that can be encoded in consistent manner.
 type Payload interface {
 	Marshal() ([]byte, error)
 }
@@ -61,6 +62,8 @@ func Unmarshal(data []byte) (Payload, error) {
 	return nil, errors.New("unknown payload type")
 }
 
+// UnmarshalFromMeta reads only payload skipping meta decoding. Use this instead of regular Unmarshal if you don't need
+// Meta data.
 func UnmarshalFromMeta(meta []byte) (Payload, error) {
 	m := Meta{}
 	// Can be optimized by using proto.NewBuffer.
