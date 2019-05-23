@@ -77,6 +77,19 @@ func (p *PublisherMock) Close() error {
 	return nil
 }
 
+func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
+	cfg := configuration.NewConfiguration()
+
+	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
+
+	payload := []byte{1, 2, 3, 4, 5}
+	inMsg := message.NewMessage(watermill.NewUUID(), payload)
+
+	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
+	require.EqualError(t, err, "failed to send message: Receiver in msg.Metadata not set")
+	require.Nil(t, outMsgs)
+}
+
 func TestSendMessageHandler_SameNode(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.Service.Skip = 5

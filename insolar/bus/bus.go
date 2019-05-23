@@ -205,8 +205,10 @@ func (b *Bus) Reply(ctx context.Context, origin, reply *message.Message) {
 	originSender := origin.Metadata.Get(MetaSender)
 	if originSender == "" {
 		inslogger.FromContext(ctx).Error("failed to send reply (no sender)")
+		return
 	}
 	reply.Metadata.Set(MetaReceiver, originSender)
+	reply.Metadata.Set(MetaTraceID, origin.Metadata.Get(MetaTraceID))
 
 	err := b.pub.Publish(TopicOutgoing, reply)
 	if err != nil {

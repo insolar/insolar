@@ -36,7 +36,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestMessageBus_SendRole(t *testing.T) {
+func TestMessageBus_SendTarget(t *testing.T) {
 	ctx := context.Background()
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
