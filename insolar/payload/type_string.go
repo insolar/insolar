@@ -8,6 +8,7 @@ func _() {
 	// An "invalid array index" compiler error signifies that the constant values have changed.
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
+	_ = x[TypeUnknown-0]
 	_ = x[TypeError-100]
 	_ = x[TypeID-101]
 	_ = x[TypeJet-102]
@@ -16,14 +17,23 @@ func _() {
 	_ = x[TypeObjState-105]
 }
 
-const _Type_name = "TypeErrorTypeIDTypeJetTypeGetObjectTypeObjIndexTypeObjState"
+const (
+	_Type_name_0 = "TypeUnknown"
+	_Type_name_1 = "TypeErrorTypeIDTypeJetTypeGetObjectTypeObjIndexTypeObjState"
+)
 
-var _Type_index = [...]uint8{0, 9, 15, 22, 35, 47, 59}
+var (
+	_Type_index_1 = [...]uint8{0, 9, 15, 22, 35, 47, 59}
+)
 
 func (i Type) String() string {
-	i -= 100
-	if i >= Type(len(_Type_index)-1) {
-		return "Type(" + strconv.FormatInt(int64(i+100), 10) + ")"
+	switch {
+	case i == 0:
+		return _Type_name_0
+	case 100 <= i && i <= 105:
+		i -= 100
+		return _Type_name_1[_Type_index_1[i]:_Type_index_1[i+1]]
+	default:
+		return "Type(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
-	return _Type_name[_Type_index[i]:_Type_index[i+1]]
 }
