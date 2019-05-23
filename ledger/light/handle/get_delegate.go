@@ -43,13 +43,13 @@ func NewGetDelegate(dep *proc.Dependencies, rep chan<- bus.Reply, parcel insolar
 func (s *GetDelegate) Present(ctx context.Context, f flow.Flow) error {
 	msg := s.parcel.Message().(*message.GetDelegate)
 
-	jet := proc.NewFetchJet(*msg.DefaultTarget().Record(), flow.Pulse(ctx), s.replyTo)
+	jet := proc.NewFetchJet(*msg.Head.Record(), flow.Pulse(ctx), s.replyTo)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
 		return err
 	}
 
-	idx := proc.NewGetIndex(msg.Head, jet.Result.Jet, s.replyTo, s.parcel.Pulse())
+	idx := proc.NewGetIndex(msg.Head, jet.Result.Jet, s.replyTo, flow.Pulse(ctx))
 	s.dep.GetIndex(idx)
 	if err := f.Procedure(ctx, idx, false); err != nil {
 		return err
