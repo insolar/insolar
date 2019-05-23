@@ -170,7 +170,7 @@ ci_test_with_coverage:
 
 .PHONY: ci_test_unit
 ci_test_unit:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -v $(ALL_PACKAGES) -race -count 1 | tee unit.file
+	CGO_ENABLED=1 go test $(TEST_ARGS) -v $(ALL_PACKAGES) -race -count 10 | tee unit.file
 
 .PHONY: ci_test_slow
 ci_test_slow:
@@ -212,6 +212,8 @@ generate-protobuf:
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/payload/payload.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ ledger/object/lifeline.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ ledger/object/indexbucket.proto
 
 regen-builtin: $(BININSGOCC)
 	$(BININSGOCC) regen-builtin

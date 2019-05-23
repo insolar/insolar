@@ -40,12 +40,12 @@ type RegisterChild struct {
 	replyTo chan<- bus.Reply
 
 	Dep struct {
-		IDLocker           object.IDLocker
-		IndexStorage       object.IndexStorage
-		JetCoordinator     jet.Coordinator
-		RecordModifier     object.RecordModifier
-		IndexStateModifier object.ExtendedIndexModifier
-		PCS                insolar.PlatformCryptographyScheme
+		IDLocker              object.IDLocker
+		LifelineIndex         object.LifelineIndex
+		JetCoordinator        jet.Coordinator
+		RecordModifier        object.RecordModifier
+		LifelineStateModifier object.LifelineStateModifier
+		PCS                   insolar.PlatformCryptographyScheme
 	}
 }
 
@@ -82,8 +82,6 @@ func (p *RegisterChild) process(ctx context.Context) error {
 	p.Dep.IDLocker.Lock(p.msg.Parent.Record())
 	defer p.Dep.IDLocker.Unlock(p.msg.Parent.Record())
 
-	p.Dep.IndexStateModifier.SetUsageForPulse(ctx, *p.msg.Parent.Record(), p.pulse)
-
 	hash := record.HashVirtual(p.Dep.PCS.ReferenceHasher(), virtRec)
 	recID := insolar.NewID(p.pulse, hash)
 
@@ -111,13 +109,18 @@ func (p *RegisterChild) process(ctx context.Context) error {
 
 	p.idx.ChildPointer = child
 	if p.msg.AsType != nil {
-		p.idx.Delegates[*p.msg.AsType] = p.msg.Child
+		p.idx.SetDelegate(*p.msg.AsType, p.msg.Child)
 	}
 	p.idx.LatestUpdate = p.pulse
 	p.idx.JetID = p.jet
-	err = p.Dep.IndexStorage.Set(ctx, *p.msg.Parent.Record(), p.idx)
+
+	err = p.Dep.LifelineIndex.Set(ctx, p.pulse, *p.msg.Parent.Record(), p.idx)
 	if err != nil {
 		return err
+	}
+	err = p.Dep.LifelineStateModifier.SetLifelineUsage(ctx, p.pulse, *p.msg.Parent.Record())
+	if err != nil {
+		return errors.Wrap(err, "can't update a lifeline status")
 	}
 
 	p.replyTo <- bus.Reply{Reply: &reply.ID{ID: *child}}

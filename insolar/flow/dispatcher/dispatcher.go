@@ -125,6 +125,7 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	}
 	ctx, logger := inslogger.WithField(ctx, "pulse", msg.Metadata.Get(wmBus.MetaPulse))
 	ctx = pulse.ContextWith(ctx, p)
+	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(wmBus.MetaTraceID))
 	go func() {
 		f := thread.NewThread(msgBus, d.controller)
 		handle := d.getHandleByPulse(p)

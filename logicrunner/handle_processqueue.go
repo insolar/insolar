@@ -20,11 +20,12 @@ import (
 	"context"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/pkg/errors"
 )
 
 type ProcessExecutionQueue struct {
@@ -68,9 +69,7 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 
 		if msg, ok := qe.parcel.Message().(*message.CallMethod); ok {
 			current.ReturnMode = msg.ReturnMode
-		}
-		if msg, ok := qe.parcel.Message().(message.IBaseLogicMessage); ok {
-			current.Sequence = msg.GetBaseLogicMessage().Sequence
+			current.Sequence = msg.Sequence
 		}
 
 		es.Unlock()
@@ -80,7 +79,10 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 		if qe.fromLedger {
 			pub := p.dep.Publisher
 			err := pub.Publish(InnerMsgTopic, makeWMMessage(ctx, p.Message.Payload, getLedgerPendingRequestMsg))
-			inslogger.FromContext(ctx).Warnf("can't send processExecutionQueueMsg: ", err)
+			if err != nil {
+				inslogger.FromContext(ctx).Warnf("can't send processExecutionQueueMsg: ", err)
+			}
+
 		}
 
 		lr.finishPendingIfNeeded(ctx, es)

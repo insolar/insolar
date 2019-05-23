@@ -39,6 +39,7 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/keystore"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/pulsemanager"
@@ -119,8 +120,7 @@ func initComponents(
 ) (*component.Manager, insolar.TerminationHandler, error) {
 	cm := component.Manager{}
 
-	// TODO: use insolar.Logger
-	logger := watermill.NewStdLogger(false, false)
+	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())

@@ -30,6 +30,9 @@ func NewController() *Controller {
 }
 
 func (c *Controller) Cancel() <-chan struct{} {
+	c.cancelMu.Lock()
+	defer c.cancelMu.Unlock()
+
 	return c.cancel
 }
 

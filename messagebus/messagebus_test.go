@@ -26,6 +26,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 
@@ -223,8 +224,13 @@ func TestMessageBus_createWatermillMessage(t *testing.T) {
 
 func TestMessageBus_deserializePayload_GetReply(t *testing.T) {
 	rep := &reply.OK{}
-	payload := reply.ToBytes(rep)
-	msg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
+	pl := reply.ToBytes(rep)
+	meta := payload.Meta{
+		Payload: pl,
+	}
+	buf, err := meta.Marshal()
+	require.NoError(t, err)
+	msg := watermillMsg.NewMessage(watermill.NewUUID(), buf)
 	msg.Metadata.Set(bus.MetaType, string(rep.Type()))
 
 	r, err := deserializePayload(msg)
@@ -235,9 +241,14 @@ func TestMessageBus_deserializePayload_GetReply(t *testing.T) {
 
 func TestMessageBus_deserializePayload_GetError(t *testing.T) {
 	rep := errors.New("test error for deserializePayload")
-	payload, err := bus.ErrorToBytes(rep)
+	pl, err := bus.ErrorToBytes(rep)
 	require.NoError(t, err)
-	msg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
+	meta := payload.Meta{
+		Payload: pl,
+	}
+	buf, err := meta.Marshal()
+	require.NoError(t, err)
+	msg := watermillMsg.NewMessage(watermill.NewUUID(), buf)
 	msg.Metadata.Set(bus.MetaType, bus.TypeError)
 
 	r, err := deserializePayload(msg)
@@ -248,9 +259,14 @@ func TestMessageBus_deserializePayload_GetError(t *testing.T) {
 
 func TestMessageBus_deserializePayload_GetReply_WrongBytes(t *testing.T) {
 	rep := errors.New("test error for deserializePayload")
-	payload, err := bus.ErrorToBytes(rep)
+	pl, err := bus.ErrorToBytes(rep)
 	require.NoError(t, err)
-	msg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
+	meta := payload.Meta{
+		Payload: pl,
+	}
+	buf, err := meta.Marshal()
+	require.NoError(t, err)
+	msg := watermillMsg.NewMessage(watermill.NewUUID(), buf)
 	msg.Metadata.Set(bus.MetaType, string(testReply.Type()))
 
 	r, err := deserializePayload(msg)
@@ -262,8 +278,13 @@ func TestMessageBus_deserializePayload_GetReply_WrongBytes(t *testing.T) {
 
 func TestMessageBus_deserializePayload_GetError_WrongBytes(t *testing.T) {
 	rep := &reply.OK{}
-	payload := reply.ToBytes(rep)
-	msg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
+	pl := reply.ToBytes(rep)
+	meta := payload.Meta{
+		Payload: pl,
+	}
+	buf, err := meta.Marshal()
+	require.NoError(t, err)
+	msg := watermillMsg.NewMessage(watermill.NewUUID(), buf)
 	msg.Metadata.Set(bus.MetaType, bus.TypeError)
 
 	r, err := deserializePayload(msg)

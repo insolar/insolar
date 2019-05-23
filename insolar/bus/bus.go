@@ -144,6 +144,7 @@ func (b *Bus) SendTarget(
 ) (<-chan *message.Message, func()) {
 	id := watermill.NewUUID()
 	middleware.SetCorrelationID(id, msg)
+	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 
 	msg.Metadata.Set(MetaReceiver, target.String())
 

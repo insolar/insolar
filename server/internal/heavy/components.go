@@ -22,6 +22,8 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+	"github.com/insolar/insolar/log"
+
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 
@@ -104,8 +106,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	c.NodeRef = CertManager.GetCertificate().GetNodeRef().String()
 	c.NodeRole = CertManager.GetCertificate().GetRole().String()
 
-	// TODO: use insolar.Logger
-	logger := watermill.NewStdLogger(false, false)
+	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 
 	// Network.
@@ -235,8 +236,8 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		h.RecordAccessor = records
 		h.RecordModifier = records
 		h.JetCoordinator = Coordinator
-		h.IndexAccessor = indexes
-		h.IndexModifier = indexes
+		h.IndexLifelineAccessor = indexes
+		h.IndexBucketModifier = indexes
 		h.Bus = Bus
 		h.BlobAccessor = blobs
 		h.BlobModifier = blobs

@@ -30,13 +30,15 @@ import (
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
 func TestMessageBus_SendRole(t *testing.T) {
 	ctx := context.Background()
-	logger := watermill.NewStdLogger(false, false)
+	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 	externalMsgCh, err := pubsub.Subscribe(ctx, TopicOutgoing)
@@ -114,7 +116,7 @@ func isReplyExist(b *Bus, id string) bool {
 
 func TestMessageBus_Send_Timeout(t *testing.T) {
 	ctx := context.Background()
-	logger := watermill.NewStdLogger(false, false)
+	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 	b.timeout = time.Millisecond * 10
@@ -135,7 +137,7 @@ func TestMessageBus_Send_Timeout(t *testing.T) {
 
 func TestMessageBus_Send_Timeout_Close_Race(t *testing.T) {
 	ctx := context.Background()
-	logger := watermill.NewStdLogger(false, false)
+	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 	b.timeout = time.Second
@@ -150,7 +152,7 @@ func TestMessageBus_Send_Timeout_Close_Race(t *testing.T) {
 
 func TestMessageBus_IncomingMessageRouter_Request(t *testing.T) {
 	incomingHandlerCalls := 0
-	logger := watermill.NewStdLogger(false, false)
+	logger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 
@@ -174,7 +176,7 @@ func TestMessageBus_IncomingMessageRouter_Request(t *testing.T) {
 
 func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 	incomingHandlerCalls := 0
-	logger := watermill.NewStdLogger(false, false)
+	logger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 	correlationId := watermill.NewUUID()
@@ -212,7 +214,7 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 
 func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {
 	incomingHandlerCalls := 0
-	logger := watermill.NewStdLogger(false, false)
+	logger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 	b.timeout = time.Millisecond

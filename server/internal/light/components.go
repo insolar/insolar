@@ -48,6 +48,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/light/replication"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
@@ -105,8 +106,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	c.NodeRef = CertManager.GetCertificate().GetNodeRef().String()
 	c.NodeRole = CertManager.GetCertificate().GetRole().String()
 
-	// TODO: use insolar.Logger
-	logger := watermill.NewStdLogger(true, true)
+	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 
 	// Network.
@@ -219,7 +219,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		drops := drop.NewStorageMemory()
 		blobs := blob.NewStorageMemory()
 		records := object.NewRecordMemory()
-		indexes := object.NewIndexMemory()
+		indexes := object.NewInMemoryIndex()
 
 		c := component.Manager{}
 		c.Inject(CryptoScheme)
@@ -227,7 +227,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		hots := recentstorage.NewRecentStorageProvider()
 		waiter := hot.NewChannelWaiter()
 
-		handler := artifactmanager.NewMessageHandler(indexes, indexes, &conf)
+		handler := artifactmanager.NewMessageHandler(indexes, indexes, indexes, &conf)
 		handler.RecentStorageProvider = hots
 		handler.Bus = Bus
 		handler.PCS = CryptoScheme
@@ -245,9 +245,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.Nodes = Nodes
 		handler.HotDataWaiter = waiter
 		handler.JetReleaser = waiter
-		handler.IndexStorage = indexes
-		handler.IndexStateModifier = indexes
-		handler.IndexStorage = indexes
 
 		jetCalculator := jet.NewCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(
@@ -279,7 +276,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			records,
 			records,
 			indexes,
-			indexes,
 			lthSyncer,
 		)
 		pm.MessageHandler = handler
@@ -292,10 +288,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		pm.JetReleaser = waiter
 		pm.JetAccessor = Jets
 		pm.JetModifier = Jets
-		pm.IndexAccessor = indexes
-		pm.IndexModifier = indexes
-		pm.CollectionIndexAccessor = indexes
-		pm.IndexCleaner = indexes
 		pm.NodeSetter = Nodes
 		pm.Nodes = Nodes
 		pm.DropModifier = drops

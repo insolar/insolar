@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/record"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.Client -o ./ -s _mock.go
@@ -27,7 +28,7 @@ import (
 // Client is a high level storage interface.
 type Client interface {
 	// RegisterRequest creates request record in storage.
-	RegisterRequest(ctx context.Context, object insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error)
+	RegisterRequest(ctx context.Context, request record.Request) (*insolar.ID, error)
 
 	// RegisterValidation marks provided object state as approved or disapproved.
 	//
@@ -46,7 +47,7 @@ type Client interface {
 	//
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
-	GetObject(ctx context.Context, head insolar.Reference, state *insolar.ID, approved bool) (ObjectDescriptor, error)
+	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
 
 	// GetPendingRequest returns a pending request for object.
 	GetPendingRequest(ctx context.Context, objectID insolar.ID) (insolar.Parcel, error)
