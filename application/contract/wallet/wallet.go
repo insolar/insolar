@@ -41,12 +41,9 @@ func New(balance uint) (*Wallet, error) {
 // Transfer transfers money to given wallet
 func (w *Wallet) Transfer(amount uint, to *insolar.Reference) error {
 
-	if to == nil {
-		return fmt.Errorf("[ Transfer ] Nil 'to' reference")
-	}
-	toWallet := wallet.GetObject(*to)
-	if toWallet == nil {
-		return fmt.Errorf("[ Transfer ] Nil 'toWallet' reference")
+	toWallet, err := wallet.GetImplementationFrom(*to)
+	if err != nil {
+		return fmt.Errorf("[ Transfer ] Can't get implementation: %s", err.Error())
 	}
 
 	newBalance, err := safemath.Sub(w.Balance, amount)
@@ -55,7 +52,7 @@ func (w *Wallet) Transfer(amount uint, to *insolar.Reference) error {
 	}
 	w.Balance = newBalance
 
-	acceptErr := toWallet.AcceptNoWait(amount)
+	acceptErr := toWallet.Accept(amount)
 	if acceptErr != nil {
 		newBalance, err := safemath.Add(w.Balance, amount)
 		if err != nil {
