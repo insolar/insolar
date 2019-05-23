@@ -107,3 +107,84 @@ func (p *WaitHot) Proceed(ctx context.Context) error {
 
 	return nil
 }
+
+type FetchJetWM struct {
+	target  insolar.ID
+	pulse   insolar.PulseNumber
+	replyTo chan<- bus.Reply
+
+	Result struct {
+		Jet insolar.JetID
+	}
+
+	Dep struct {
+		JetAccessor jet.Accessor
+		Coordinator jet.Coordinator
+		JetUpdater  jet.Fetcher
+		JetFetcher  jet.Fetcher
+	}
+}
+
+func NewFetchJetWM(target insolar.ID, pn insolar.PulseNumber, rep chan<- bus.Reply) *FetchJetWM {
+	return &FetchJetWM{
+		target:  target,
+		pulse:   pn,
+		replyTo: rep,
+	}
+}
+
+func (p *FetchJetWM) Proceed(ctx context.Context) error {
+	// Special case for genesis pulse. No one was executor at that time, so anyone can fetch data from it.
+	if p.pulse <= insolar.FirstPulseNumber {
+		p.Result.Jet = *insolar.NewJetID(0, nil)
+		return nil
+	}
+
+	jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.target, p.pulse)
+	if err != nil {
+		err := errors.Wrap(err, "failed to fetch jet")
+		p.replyTo <- bus.Reply{Err: err}
+		return err
+	}
+	executor, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, p.pulse)
+	if err != nil {
+		err := errors.Wrap(err, "failed to calculate executor for jet")
+		p.replyTo <- bus.Reply{Err: err}
+		return err
+	}
+	if *executor != p.Dep.Coordinator.Me() {
+		p.replyTo <- bus.Reply{Reply: &reply.JetMiss{JetID: *jetID, Pulse: p.pulse}}
+		return errors.New("jet miss")
+	}
+
+	p.Result.Jet = insolar.JetID(*jetID)
+	return nil
+}
+
+type WaitHotWM struct {
+	jetID   insolar.JetID
+	pulse   insolar.PulseNumber
+	replyTo chan<- bus.Reply
+
+	Dep struct {
+		Waiter hot.JetWaiter
+	}
+}
+
+func NewWaitHotWM(j insolar.JetID, pn insolar.PulseNumber, rep chan<- bus.Reply) *WaitHotWM {
+	return &WaitHotWM{
+		jetID:   j,
+		pulse:   pn,
+		replyTo: rep,
+	}
+}
+
+func (p *WaitHotWM) Proceed(ctx context.Context) error {
+	err := p.Dep.Waiter.Wait(ctx, insolar.ID(p.jetID))
+	if err != nil {
+		p.replyTo <- bus.Reply{Reply: &reply.Error{ErrType: reply.ErrHotDataTimeout}}
+		return err
+	}
+
+	return nil
+}

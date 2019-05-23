@@ -115,6 +115,22 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
 		},
+		FetchJetWM: func(p *proc.FetchJetWM) {
+			p.Dep.JetAccessor = h.JetStorage
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.JetUpdater = h.jetTreeUpdater
+			p.Dep.JetFetcher = h.jetTreeUpdater
+		},
+		WaitHotWM: func(p *proc.WaitHotWM) {
+			p.Dep.Waiter = h.HotDataWaiter
+		},
+		GetIndexWM: func(p *proc.GetIndexWM) {
+			p.Dep.IndexState = h.LifelineStateModifier
+			p.Dep.Locker = h.IDLocker
+			p.Dep.Index = h.LifelineIndex
+			p.Dep.Coordinator = h.JetCoordinator
+			p.Dep.Bus = h.Bus
+		},
 		SetRecord: func(p *proc.SetRecord) {
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 			p.Dep.RecordModifier = h.RecordModifier

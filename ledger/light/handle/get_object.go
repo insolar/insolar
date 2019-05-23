@@ -40,13 +40,13 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 	var jetID insolar.JetID
 	var pn insolar.PulseNumber
 	if s.Message.Parcel.DelegationToken() == nil {
-		jet := proc.NewFetchJet(*msg.Head.Record(), flow.Pulse(ctx), s.Message.ReplyTo)
-		s.dep.FetchJet(jet)
+		jet := proc.NewFetchJetWM(*msg.Head.Record(), flow.Pulse(ctx), s.Message.ReplyTo)
+		s.dep.FetchJetWM(jet)
 		if err := f.Procedure(ctx, jet, false); err != nil {
 			return err
 		}
-		hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.Message.ReplyTo)
-		s.dep.WaitHot(hot)
+		hot := proc.NewWaitHotWM(jet.Result.Jet, flow.Pulse(ctx), s.Message.ReplyTo)
+		s.dep.WaitHotWM(hot)
 		if err := f.Procedure(ctx, hot, false); err != nil {
 			return err
 		}
@@ -55,8 +55,8 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 		pn = flow.Pulse(ctx)
 	} else {
 		// Workaround to fetch object states.
-		jet := proc.NewFetchJet(*msg.Head.Record(), msg.State.Pulse(), s.Message.ReplyTo)
-		s.dep.FetchJet(jet)
+		jet := proc.NewFetchJetWM(*msg.Head.Record(), msg.State.Pulse(), s.Message.ReplyTo)
+		s.dep.FetchJetWM(jet)
 		if err := f.Procedure(ctx, jet, false); err != nil {
 			return err
 		}
@@ -64,8 +64,8 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 		pn = msg.State.Pulse()
 	}
 
-	idx := proc.NewGetIndex(msg.Head, jetID, s.Message.ReplyTo, pn)
-	s.dep.GetIndex(idx)
+	idx := proc.NewGetIndexWM(msg.Head, jetID, s.Message.ReplyTo, pn)
+	s.dep.GetIndexWM(idx)
 	if err := f.Procedure(ctx, idx, false); err != nil {
 		return err
 	}
