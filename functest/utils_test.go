@@ -238,6 +238,13 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 			continue
 		}
 
+		if strings.Contains(resp.Error, "invalid state record") {
+			fmt.Printf("Invalid state record, retry. Attempt: %d/%d\n(error - %s)\n", currentInterNum, sendRetryCount, resp.Error)
+			fmt.Printf("Method: %s\n", method)
+			time.Sleep(time.Second)
+			continue
+		}
+
 		break
 	}
 
