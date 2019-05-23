@@ -94,10 +94,15 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
 	suite.mc.Wait(time.Minute)
 	suite.mc.Finish()
-	if suite.lr.Executors[insolar.MachineTypeBuiltin] != nil {
-		suite.lr.Executors[insolar.MachineTypeBuiltin].(*testutils.MachineLogicExecutorMock).StopMock.Expect().Return(nil)
-		suite.lr.Stop(suite.ctx) // free resources before next test
+	for _, e := range suite.lr.Executors {
+		if e == nil {
+			continue
+		}
+		// e.Stop() is about to be called in lr.Stop() method
+		e.(*testutils.MachineLogicExecutorMock).StopMock.Expect().Return(nil)
 	}
+	// free resources before next test
+	suite.lr.Stop(suite.ctx)
 }
 
 type LogicRunnerTestSuite struct {

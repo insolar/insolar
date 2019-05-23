@@ -241,6 +241,7 @@ func initHandlers(lr *LogicRunner) error {
 		pubSub,
 		lr.innerFlowDispatcher.InnerSubscriber,
 	)
+
 	go func() {
 		if err := router.Run(); err != nil {
 			ctx := context.Background()
