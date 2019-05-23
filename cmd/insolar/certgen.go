@@ -51,6 +51,7 @@ func (g *certGen) loadKeys() {
 }
 
 type RegisterResult struct {
+	Error   string `json:"error"`
 	Result  string `json:"result"`
 	TraceID string `json:"traceID"`
 }
@@ -61,6 +62,10 @@ func extractReference(response []byte, requestTypeMsg string) insolar.Reference 
 	checkError(fmt.Sprintf("Failed to parse response from '%s' node request", requestTypeMsg), err)
 	if verbose {
 		fmt.Println("Response:", string(response))
+	}
+	if r.Error != "" {
+		fmt.Printf("Error while '%s' occured : %s \n", requestTypeMsg, r.Error)
+		os.Exit(1)
 	}
 
 	ref, err := insolar.NewReferenceFromBase58(r.Result)

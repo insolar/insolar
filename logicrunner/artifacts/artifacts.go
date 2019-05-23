@@ -47,7 +47,7 @@ type Client interface {
 	//
 	// If provided state is nil, the latest state will be returned (with deactivation check). Returned descriptor will
 	// provide methods for fetching all related data.
-	GetObject(ctx context.Context, head insolar.Reference, state *insolar.ID, approved bool) (ObjectDescriptor, error)
+	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
 
 	// GetPendingRequest returns a pending request for object.
 	GetPendingRequest(ctx context.Context, objectID insolar.ID) (insolar.Parcel, error)

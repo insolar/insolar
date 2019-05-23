@@ -30,6 +30,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
+	"github.com/insolar/insolar/log"
 
 	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -195,7 +196,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 }
 
 func initHandlers(lr *LogicRunner) error {
-	wmLogger := watermill.NewStdLogger(false, false)
+	wmLogger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
 
 	dep := &Dependencies{
@@ -663,7 +664,7 @@ func (lr *LogicRunner) getDescriptorsByPrototypeRef(
 ) (
 	artifacts.ObjectDescriptor, artifacts.CodeDescriptor, error,
 ) {
-	protoDesc, err := lr.ArtifactManager.GetObject(ctx, protoRef, nil, false)
+	protoDesc, err := lr.ArtifactManager.GetObject(ctx, protoRef)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "couldn't get prototype descriptor")
 	}
@@ -687,7 +688,7 @@ func (lr *LogicRunner) getDescriptorsByObjectRef(
 	ctx, span := instracer.StartSpan(ctx, "LogicRunner.getDescriptorsByObjectRef")
 	defer span.End()
 
-	objDesc, err := lr.ArtifactManager.GetObject(ctx, objRef, nil, false)
+	objDesc, err := lr.ArtifactManager.GetObject(ctx, objRef)
 	if err != nil {
 		return nil, nil, nil, errors.Wrap(err, "couldn't get object")
 	}

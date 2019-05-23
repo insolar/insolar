@@ -110,6 +110,7 @@ func (b *Bus) removeReplyChannel(ctx context.Context, id string, reply *lockedRe
 func (b *Bus) Send(ctx context.Context, msg *message.Message) (<-chan *message.Message, func()) {
 	id := watermill.NewUUID()
 	middleware.SetCorrelationID(id, msg)
+	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
 
 	reply := &lockedReply{
 		messages: make(chan *message.Message),
