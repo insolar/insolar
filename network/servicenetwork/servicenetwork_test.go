@@ -90,6 +90,22 @@ func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
 	require.Nil(t, outMsgs)
 }
 
+func TestSendMessageHandler_IncorrectReceiver(t *testing.T) {
+	cfg := configuration.NewConfiguration()
+	cfg.Service.Skip = 5
+
+	serviceNetwork, err := NewServiceNetwork(cfg, &component.Manager{}, false)
+
+	payload := []byte{1, 2, 3, 4, 5}
+	inMsg := message.NewMessage(watermill.NewUUID(), payload)
+	inMsg.Metadata.Set(bus.MetaReceiver, "someBadValue")
+
+	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "incorrect Receiver in msg.Metadata")
+	require.Nil(t, outMsgs)
+}
+
 func TestSendMessageHandler_SameNode(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.Service.Skip = 5
