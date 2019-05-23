@@ -264,6 +264,62 @@ func (s *handlerSuite) TestMessageHandler_HandleHasPendingRequests() {
 	assert.True(s.T(), has.Has)
 }
 
+func (s *handlerSuite) TestMessageHandler_HandleGetPendingRequestID() {
+	mc := minimock.NewController(s.T())
+	defer mc.Finish()
+
+	msg := message.GetPendingRequestID{
+		ObjectID: *genRandomID(0),
+	}
+	fakeParcel := testutils.NewParcelMock(mc)
+	fakeParcel.MessageMock.Return(&msg)
+	fakeParcel.PulseMock.Return(insolar.FirstPulseNumber - 1)
+
+	firstID := *genRandomID(insolar.FirstPulseNumber - 2)
+	secondID := *genRandomID(insolar.FirstPulseNumber - 2)
+	pendingRequests := []insolar.ID{
+		firstID,
+		secondID,
+	}
+
+	recentStorageMock := recentstorage.NewPendingStorageMock(s.T())
+	recentStorageMock.GetRequestsForObjectMock.Return(pendingRequests)
+
+	jc := jet.NewCoordinatorMock(mc)
+	mb := testutils.NewMessageBusMock(mc)
+	mb.MustRegisterMock.Return()
+
+	h := NewMessageHandler(s.indexMemoryStor, s.indexMemoryStor, s.indexMemoryStor, &configuration.Ledger{})
+	h.JetCoordinator = jc
+	h.Bus = mb
+	h.JetStorage = s.jetStorage
+	h.Nodes = s.nodeStorage
+
+	err := h.Init(s.ctx)
+	require.NoError(s.T(), err)
+
+	provideMock := recentstorage.NewProviderMock(s.T())
+	provideMock.GetPendingStorageMock.Return(recentStorageMock)
+
+	h.RecentStorageProvider = provideMock
+
+	// call to object that has pending requests
+	rep, err := h.FlowDispatcher.WrapBusHandle(s.ctx, fakeParcel)
+	require.NoError(s.T(), err)
+	result, ok := rep.(*reply.ID)
+	require.True(s.T(), ok)
+	assert.Equal(s.T(), firstID, result.ID)
+
+	// call to object that hasn't pending requests
+	noPendingRequests := make([]insolar.ID, 0)
+	recentStorageMock.GetRequestsForObjectMock.Return(noPendingRequests)
+	rep, err = h.FlowDispatcher.WrapBusHandle(s.ctx, fakeParcel)
+	require.NoError(s.T(), err)
+	replyError, ok := rep.(*reply.Error)
+	require.True(s.T(), ok)
+	assert.Equal(s.T(), &reply.Error{ErrType: reply.ErrNoPendingRequests}, replyError)
+}
+
 func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHeavy() {
 	mc := minimock.NewController(s.T())
 	defer mc.Finish()

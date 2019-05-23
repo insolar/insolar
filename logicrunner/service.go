@@ -279,7 +279,7 @@ func (gpr *RPC) GetObjChildrenIterator(
 		}
 		rep.Iterator.CanFetch = iter.HasNext()
 
-		o, err := am.GetObject(ctx, *r, nil, false)
+		o, err := am.GetObject(ctx, *r)
 
 		if err != nil {
 			if err == insolar.ErrDeactivated {

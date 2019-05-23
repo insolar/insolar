@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -93,6 +94,15 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
 	suite.mc.Wait(time.Minute)
 	suite.mc.Finish()
+	for _, e := range suite.lr.Executors {
+		if e == nil {
+			continue
+		}
+		// e.Stop() is about to be called in lr.Stop() method
+		e.(*testutils.MachineLogicExecutorMock).StopMock.Expect().Return(nil)
+	}
+	// free resources before next test
+	suite.lr.Stop(suite.ctx)
 }
 
 type LogicRunnerTestSuite struct {
@@ -833,7 +843,7 @@ func (suite *LogicRunnerTestSuite) TestConcurrency() {
 	suite.am.GetCodeMock.Return(cd, nil)
 
 	suite.am.GetObjectFunc = func(
-		ctx context.Context, obj insolar.Reference, st *insolar.ID, approved bool,
+		ctx context.Context, obj insolar.Reference,
 	) (artifacts.ObjectDescriptor, error) {
 		switch obj {
 		case objectRef:
@@ -908,9 +918,9 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	notMeRef := testutils.RandomRef()
 	suite.jc.MeMock.Return(meRef)
 
-	pn := 100
+	var pn int32 = 100
 	suite.ps.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
-		return insolar.Pulse{PulseNumber: insolar.PulseNumber(pn)}, nil
+		return insolar.Pulse{PulseNumber: insolar.PulseNumber(atomic.LoadInt32(&pn))}, nil
 	}
 
 	mle := testutils.NewMachineLogicExecutorMock(suite.mc)
@@ -963,7 +973,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	for _, test := range table {
 		test := test
 		suite.T().Run(test.name, func(t *testing.T) {
-			pn = 100
+			atomic.StoreInt32(&pn, 100)
 
 			once := sync.Once{}
 
@@ -974,15 +984,15 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				once.Do(func() {
 					ch = make(chan struct{})
 
-					pn += 1
+					atomic.AddInt32(&pn, 1)
 
 					go func() {
 						defer wg.Done()
 						defer close(ch)
 
-						pulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(pn)}
+						pulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(atomic.LoadInt32(&pn))}
 
-						ctx := inslogger.ContextWithTrace(suite.ctx, "pulse-"+strconv.Itoa(pn))
+						ctx := inslogger.ContextWithTrace(suite.ctx, "pulse-"+strconv.Itoa(int(atomic.LoadInt32(&pn))))
 
 						err := suite.lr.OnPulse(ctx, pulse)
 						suite.Require().NoError(err)
@@ -999,13 +1009,13 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				}
 
 				if test.when == whenIsAuthorized {
-					changePulse()
-					for pn == 100 {
+					<-changePulse()
+					for atomic.LoadInt32(&pn) == 100 {
 						time.Sleep(time.Millisecond)
 					}
 				}
 
-				return pn == 100, nil
+				return atomic.LoadInt32(&pn) == 100, nil
 			}
 
 			if test.when > whenIsAuthorized {
@@ -1060,7 +1070,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				cd.RefMock.Return(&codeRef)
 
 				suite.am.GetObjectFunc = func(
-					ctx context.Context, obj insolar.Reference, st *insolar.ID, approved bool,
+					ctx context.Context, obj insolar.Reference,
 				) (artifacts.ObjectDescriptor, error) {
 					switch obj {
 					case objectRef:
