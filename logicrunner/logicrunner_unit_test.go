@@ -93,6 +93,8 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
 	suite.mc.Wait(time.Minute)
 	suite.mc.Finish()
+	suite.lr.Executors[insolar.MachineTypeBuiltin].(*testutils.MachineLogicExecutorMock).StopMock.Expect().Return(nil)
+	suite.lr.Stop(suite.ctx) // free resources before next test
 }
 
 type LogicRunnerTestSuite struct {
@@ -999,7 +1001,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				}
 
 				if test.when == whenIsAuthorized {
-					changePulse()
+					<-changePulse()
 					for pn == 100 {
 						time.Sleep(time.Millisecond)
 					}
