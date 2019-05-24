@@ -291,7 +291,7 @@ func (pf *ParsedFile) WriteWrapper(out io.Writer, packageName string) error {
 }
 
 func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]interface{} {
-	var res []map[string]interface{}
+	res := make([]map[string]interface{}, 0, len(list))
 	for _, fun := range list {
 		info := map[string]interface{}{
 			"Name":                fun.Name.Name,
@@ -349,7 +349,7 @@ func (pf *ParsedFile) WriteProxy(classReference string, out io.Writer) error {
 }
 
 func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]interface{} {
-	var res []map[string]interface{}
+	res := make([]map[string]interface{}, 0, len(list))
 
 	for _, fun := range list {
 		info := map[string]interface{}{
@@ -494,7 +494,7 @@ func isContractTypeSpec(typeNode *ast.TypeSpec) bool {
 }
 
 func generateTypes(parsed *ParsedFile) []string {
-	var types []string
+	types := make([]string, 0, len(parsed.types)
 	for _, t := range parsed.types {
 		types = append(types, "type "+parsed.codeOfNode(t))
 	}

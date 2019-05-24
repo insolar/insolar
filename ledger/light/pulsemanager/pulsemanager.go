@@ -322,7 +322,7 @@ func (m *PulseManager) processJets(ctx context.Context, previous, current, new i
 		return nil, nil
 	}
 
-	var results []jetInfo
+	results := make([]jetInfo, 0, 64)
 	ids := m.JetAccessor.All(ctx, new)
 	me := m.JetCoordinator.Me()
 	ids, err := m.filterOtherExecutors(ctx, current, ids)
