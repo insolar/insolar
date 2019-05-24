@@ -29,18 +29,28 @@ var (
 )
 
 var (
-	statIndexInMemoryAddedCount = stats.Int64(
-		"indexstorage/added/count",
+	statLifelineInMemoryAddedCount = stats.Int64(
+		"object/lifeline/added/count",
 		"How many index-records have been saved in in-indexStorage index storage",
 		stats.UnitDimensionless,
 	)
-	statIndexInMemoryRemovedCount = stats.Int64(
-		"indexstorage/removed/count",
+	statLifelineInMemoryRemovedCount = stats.Int64(
+		"object/lifeline/removed/count",
 		"How many index-records have been removed from an index storage",
 		stats.UnitDimensionless,
 	)
+	statObjectPendingRequestsInMemoryAddedCount = stats.Int64(
+		"оbject/pendings/added/count",
+		"How many index-records have been saved in in-indexStorage index storage",
+		stats.UnitDimensionless,
+	)
+	statObjectPendingRequestsInMemoryRemovedCount = stats.Int64(
+		"оbject/pendings/removed/count",
+		"How many index-records have been saved in in-indexStorage index storage",
+		stats.UnitDimensionless,
+	)
 	statIndexDBAddedCount = stats.Int64(
-		"indexstorage/added/count",
+		"object/lifeline/added/count",
 		"How many index-records have been saved in in-indexStorage index storage",
 		stats.UnitDimensionless,
 	)
@@ -50,7 +60,7 @@ var (
 		stats.UnitDimensionless,
 	)
 	statRecordInMemoryRemovedCount = stats.Int64(
-		"recordstorage/added/count",
+		"recordstorage/removed/count",
 		"How many records have been removed from a in-memory storage",
 		stats.UnitDimensionless,
 	)
@@ -59,16 +69,16 @@ var (
 func init() {
 	err := view.Register(
 		&view.View{
-			Name:        statIndexInMemoryAddedCount.Name(),
-			Description: statIndexInMemoryAddedCount.Description(),
-			Measure:     statIndexInMemoryAddedCount,
+			Name:        statLifelineInMemoryAddedCount.Name(),
+			Description: statLifelineInMemoryAddedCount.Description(),
+			Measure:     statLifelineInMemoryAddedCount,
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{inmemoryStorage},
 		},
 		&view.View{
-			Name:        statIndexInMemoryRemovedCount.Name(),
-			Description: statIndexInMemoryRemovedCount.Description(),
-			Measure:     statIndexInMemoryRemovedCount,
+			Name:        statLifelineInMemoryRemovedCount.Name(),
+			Description: statLifelineInMemoryRemovedCount.Description(),
+			Measure:     statLifelineInMemoryRemovedCount,
 			Aggregation: view.Count(),
 			TagKeys:     []tag.Key{inmemoryStorage},
 		},
