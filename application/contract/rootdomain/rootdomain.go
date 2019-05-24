@@ -17,6 +17,7 @@
 package rootdomain
 
 import (
+	"container/list"
 	"encoding/json"
 	"fmt"
 	"github.com/insolar/insolar/application/proxy/member"
@@ -28,11 +29,14 @@ import (
 // RootDomain is smart contract representing entrance point to system
 type RootDomain struct {
 	foundation.BaseContract
-	RootMember    insolar.Reference
-	OracleMembers map[string]insolar.Reference
-	MDAdminMember insolar.Reference
-	MDWallet      insolar.Reference
-	NodeDomain    insolar.Reference
+	RootMember        insolar.Reference
+	OracleMembers     map[string]insolar.Reference
+	MDAdminMember     insolar.Reference
+	MDWallet          insolar.Reference
+	BurnAddressMap    map[string]insolar.Reference
+	PublicKeyMap      map[string]insolar.Reference
+	FreeBurnAddresses list.List
+	NodeDomain        insolar.Reference
 }
 
 var INSATTR_CreateMember_API = true

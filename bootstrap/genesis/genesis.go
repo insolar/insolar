@@ -17,6 +17,7 @@
 package genesis
 
 import (
+	"container/list"
 	"context"
 	"crypto"
 	"encoding/json"
@@ -427,11 +428,14 @@ func (g *Generator) updateRootDomain(
 	ctx context.Context, domainDesc artifact.ObjectDescriptor,
 ) error {
 	updateData, err := insolar.Serialize(&rootdomaincontract.RootDomain{
-		RootMember:    *g.rootMemberContract,
-		OracleMembers: g.oracleMemberContracts,
-		MDAdminMember: *g.mdAdminMemberContract,
-		MDWallet:      *g.mdWalletContract,
-		NodeDomain:    *g.nodeDomainContract,
+		RootMember:        *g.rootMemberContract,
+		OracleMembers:     g.oracleMemberContracts,
+		MDAdminMember:     *g.mdAdminMemberContract,
+		MDWallet:          *g.mdWalletContract,
+		BurnAddressMap:    map[string]insolar.Reference{},
+		PublicKeyMap:      map[string]insolar.Reference{},
+		FreeBurnAddresses: *list.New(),
+		NodeDomain:        *g.nodeDomainContract,
 	})
 	if err != nil {
 		return errors.Wrap(err, "[ updateRootDomain ]")

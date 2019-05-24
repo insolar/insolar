@@ -24,7 +24,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("111122nyejthHJZbdoHPqFbU6mdWwNmzgB55LywYnKJ.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111YgZYNfWbYkMh5vTRyACF7mct5gQo4CkESDXzL7.11111111111111111111111111111111")
 
 // Wallet holds proxy type
 type Wallet struct {
@@ -155,10 +155,10 @@ func (r *Wallet) GetCode() (insolar.Reference, error) {
 }
 
 // Transfer is proxy generated method
-func (r *Wallet) Transfer(amount uint, to *insolar.Reference) error {
+func (r *Wallet) Transfer(amount uint, toMember *insolar.Reference) error {
 	var args [2]interface{}
 	args[0] = amount
-	args[1] = to
+	args[1] = toMember
 
 	var argsSerialized []byte
 
@@ -188,10 +188,10 @@ func (r *Wallet) Transfer(amount uint, to *insolar.Reference) error {
 }
 
 // TransferNoWait is proxy generated method
-func (r *Wallet) TransferNoWait(amount uint, to *insolar.Reference) error {
+func (r *Wallet) TransferNoWait(amount uint, toMember *insolar.Reference) error {
 	var args [2]interface{}
 	args[0] = amount
-	args[1] = to
+	args[1] = toMember
 
 	var argsSerialized []byte
 
@@ -209,10 +209,10 @@ func (r *Wallet) TransferNoWait(amount uint, to *insolar.Reference) error {
 }
 
 // TransferAsImmutable is proxy generated method
-func (r *Wallet) TransferAsImmutable(amount uint, to *insolar.Reference) error {
+func (r *Wallet) TransferAsImmutable(amount uint, toMember *insolar.Reference) error {
 	var args [2]interface{}
 	args[0] = amount
-	args[1] = to
+	args[1] = toMember
 
 	var argsSerialized []byte
 
