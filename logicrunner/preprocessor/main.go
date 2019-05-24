@@ -494,7 +494,7 @@ func isContractTypeSpec(typeNode *ast.TypeSpec) bool {
 }
 
 func generateTypes(parsed *ParsedFile) []string {
-	types := make([]string, 0, len(parsed.types)
+	types := make([]string, 0, len(parsed.types))
 	for _, t := range parsed.types {
 		types = append(types, "type "+parsed.codeOfNode(t))
 	}
