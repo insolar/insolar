@@ -25,7 +25,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11112eErXjwPAtk7zSpEzAVWTyfMZtg8gAW6KeGovUJ.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("11112zhzLbhnncxY1is5L3Mg4CRDyc9R5xeJSh99QPr.11111111111111111111111111111111")
 
 // Member holds proxy type
 type Member struct {
@@ -869,6 +869,97 @@ func (r *Member) DumpAllUsersAsImmutable(rdRef insolar.Reference) ([]byte, error
 	}
 
 	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "DumpAllUsers", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// AddBurnAddressCall is proxy generated method
+func (r *Member) AddBurnAddressCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
+	var args [2]interface{}
+	args[0] = rdRef
+	args[1] = params
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "AddBurnAddressCall", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// AddBurnAddressCallNoWait is proxy generated method
+func (r *Member) AddBurnAddressCallNoWait(rdRef insolar.Reference, params []byte) error {
+	var args [2]interface{}
+	args[0] = rdRef
+	args[1] = params
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "AddBurnAddressCall", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// AddBurnAddressCallAsImmutable is proxy generated method
+func (r *Member) AddBurnAddressCallAsImmutable(rdRef insolar.Reference, params []byte) (interface{}, error) {
+	var args [2]interface{}
+	args[0] = rdRef
+	args[1] = params
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 interface{}
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "AddBurnAddressCall", argsSerialized, *PrototypeReference)
 	if err != nil {
 		return ret0, err
 	}

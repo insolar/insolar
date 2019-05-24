@@ -123,6 +123,8 @@ func (m *Member) Call(rootDomainRef insolar.Reference, method string, params []b
 		return m.getNodeRefCall(rootDomainRef, params)
 	case "Migration":
 		return m.migrationCall(rootDomainRef, params)
+	case "AddBurnAddress":
+		return m.AddBurnAddressCall(rootDomainRef, params)
 	}
 	return nil, &foundation.Error{S: "Unknown method"}
 }
@@ -537,4 +539,24 @@ func (rootMember *Member) DumpAllUsers(rdRef insolar.Reference) ([]byte, error) 
 	}
 	resJSON, _ := json.Marshal(res)
 	return resJSON, nil
+}
+
+func (mdAdminMember *Member) AddBurnAddressCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
+
+	rootDomain := rootdomain.GetObject(rdRef)
+	mdAdminRef, err := rootDomain.GetMDAdminMemberRef()
+	if err != nil {
+		return nil, fmt.Errorf("[ AddBurnAddressCall ] Can't get migration deamon admin reference from root domain: %s", err.Error())
+	}
+
+	if mdAdminMember.GetReference() != *mdAdminRef {
+		return nil, fmt.Errorf("[ AddBurnAddressCall ] Only migration deamon admin can call this method")
+	}
+
+	var burnAddress string
+	if err := signer.UnmarshalParams(params, &burnAddress); err != nil {
+		return nil, fmt.Errorf("[ AddBurnAddressCall ] Can't unmarshal params: %s", err.Error())
+	}
+
+	return rootDomain.AddBurnAddress(burnAddress)
 }

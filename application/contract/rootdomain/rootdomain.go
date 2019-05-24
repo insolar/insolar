@@ -93,3 +93,19 @@ func (rd *RootDomain) Info() (interface{}, error) {
 func (rd *RootDomain) DumpAllUsers() (*proxyctx.ChildrenTypedIterator, error) {
 	return rd.NewChildrenTypedIterator(member.GetPrototype())
 }
+
+func (rd *RootDomain) AddBurnAddress(burnAddress string) (interface{}, error) {
+	rd.FreeBurnAddresses.PushBack(burnAddress)
+
+	return nil, nil
+}
+
+func (rd *RootDomain) GetBurnAddress() (interface{}, error) {
+	e := rd.FreeBurnAddresses.Front()
+	if e == nil {
+		return nil, fmt.Errorf("[ GetBurnAddress ] No more burn address left")
+	}
+	rd.FreeBurnAddresses.Remove(e)
+
+	return e.Value, nil
+}
