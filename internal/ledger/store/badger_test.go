@@ -124,7 +124,7 @@ func TestBadgerDB_NewIterator(t *testing.T) {
 	)
 
 	const (
-		ArrayLength = 1000
+		ArrayLength = 100
 	)
 
 	fuzz.New().NilChance(0).Fuzz(&commonScope)
