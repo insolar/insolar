@@ -60,11 +60,22 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/testutils"
 	networkUtils "github.com/insolar/insolar/testutils/network"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
+
+type PublisherMock struct{}
+
+func (p *PublisherMock) Publish(topic string, messages ...*message.Message) error {
+	return nil
+}
+
+func (p *PublisherMock) Close() error {
+	return nil
+}
 
 func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
 	cfg := configuration.NewConfiguration()
@@ -75,7 +86,7 @@ func TestSendMessageHandler_ReceiverNotSet(t *testing.T) {
 	inMsg := message.NewMessage(watermill.NewUUID(), payload)
 
 	outMsgs, err := serviceNetwork.SendMessageHandler(inMsg)
-	require.EqualError(t, err, "Receiver in msg.Metadata not set")
+	require.EqualError(t, err, "failed to send message: Receiver in msg.Metadata not set")
 	require.Nil(t, outMsgs)
 }
 
@@ -95,16 +106,6 @@ func TestSendMessageHandler_IncorrectReceiver(t *testing.T) {
 	require.Nil(t, outMsgs)
 }
 
-type PublisherMock struct{}
-
-func (p *PublisherMock) Publish(topic string, messages ...*message.Message) error {
-	return nil
-}
-
-func (p *PublisherMock) Close() error {
-	return nil
-}
-
 func TestSendMessageHandler_SameNode(t *testing.T) {
 	cfg := configuration.NewConfiguration()
 	cfg.Service.Skip = 5
@@ -119,6 +120,9 @@ func TestSendMessageHandler_SameNode(t *testing.T) {
 		return n
 	}
 	pubMock := &PublisherMock{}
+	pulseMock := pulse.NewAccessorMock(t)
+	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
+	serviceNetwork.PulseAccessor = pulseMock
 	serviceNetwork.NodeKeeper = nodeN
 	serviceNetwork.Pub = pubMock
 
@@ -147,6 +151,9 @@ func TestSendMessageHandler_SendError(t *testing.T) {
 	controller.SendBytesFunc = func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return nil, errors.New("test error")
 	}
+	pulseMock := pulse.NewAccessorMock(t)
+	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
+	serviceNetwork.PulseAccessor = pulseMock
 	serviceNetwork.Controller = controller
 	serviceNetwork.NodeKeeper = nodeN
 
@@ -176,6 +183,9 @@ func TestSendMessageHandler_WrongReply(t *testing.T) {
 	controller.SendBytesFunc = func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return nil, nil
 	}
+	pulseMock := pulse.NewAccessorMock(t)
+	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
+	serviceNetwork.PulseAccessor = pulseMock
 	serviceNetwork.Controller = controller
 	serviceNetwork.NodeKeeper = nodeN
 
@@ -205,6 +215,9 @@ func TestSendMessageHandler(t *testing.T) {
 	controller.SendBytesFunc = func(p context.Context, p1 insolar.Reference, p2 string, p3 []byte) (r []byte, r1 error) {
 		return ack, nil
 	}
+	pulseMock := pulse.NewAccessorMock(t)
+	pulseMock.LatestMock.Return(*insolar.GenesisPulse, nil)
+	serviceNetwork.PulseAccessor = pulseMock
 	serviceNetwork.Controller = controller
 	serviceNetwork.NodeKeeper = nodeN
 

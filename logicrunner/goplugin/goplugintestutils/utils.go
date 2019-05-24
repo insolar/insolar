@@ -190,7 +190,7 @@ func (t *TestArtifactManager) RegisterResult(
 }
 
 // GetObject implementation for tests
-func (t *TestArtifactManager) GetObject(ctx context.Context, object insolar.Reference, state *insolar.ID, approved bool) (artifacts.ObjectDescriptor, error) {
+func (t *TestArtifactManager) GetObject(ctx context.Context, object insolar.Reference) (artifacts.ObjectDescriptor, error) {
 	res, ok := t.Objects[object]
 	if !ok {
 		return nil, errors.New("No object")

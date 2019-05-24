@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
 )
@@ -45,7 +46,12 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		msgType := s.Message.WatermillMsg.Metadata.Get(wmBus.MetaType)
 		switch msgType {
 		case insolar.TypeGetObject.String():
-			parcel, err := message.DeserializeParcel(bytes.NewBuffer(s.Message.WatermillMsg.Payload))
+			meta := payload.Meta{}
+			err := meta.Unmarshal(s.Message.WatermillMsg.Payload)
+			if err != nil {
+				return errors.Wrap(err, "can't deserialize meta payload")
+			}
+			parcel, err := message.DeserializeParcel(bytes.NewBuffer(meta.Payload))
 			if err != nil {
 				return errors.Wrap(err, "can't deserialize payload")
 			}
@@ -87,8 +93,17 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		msg := s.Message.Parcel.Message().(*message.UpdateObject)
 		h := NewUpdateObject(s.Dep, s.Message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetChildren:
+		h := NewGetChildren(s.Dep, s.Message.ReplyTo, s.Message)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetDelegate:
+		h := NewGetDelegate(s.Dep, s.Message.ReplyTo, s.Message.Parcel)
+		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetPendingRequests:
 		h := NewGetPendingRequests(s.Dep, s.Message.ReplyTo, s.Message.Parcel)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetPendingRequestID:
+		h := NewGetPendingRequestID(s.Dep, s.Message.ReplyTo, s.Message.Parcel)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeRegisterChild:
 		msg := s.Message.Parcel.Message().(*message.RegisterChild)
