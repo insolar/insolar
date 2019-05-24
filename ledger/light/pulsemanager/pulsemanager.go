@@ -626,7 +626,7 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 	ctx, span := instracer.StartSpan(ctx, "early.close")
 	defer span.End()
 
-	m.JetReleaser.ThrowTimeout(ctx)
+	m.JetReleaser.ThrowTimeout(ctx, newPulse.PulseNumber)
 }
 
 // Start starts pulse manager
