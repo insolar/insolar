@@ -160,6 +160,35 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		}
 	}
 
+	// Storage.
+	var (
+		Coordinator jet.Coordinator
+		Pulses      *pulse.DB
+		Jets        jet.Storage
+		Nodes       *node.Storage
+		DB          *store.BadgerDB
+	)
+	{
+		var err error
+		DB, err = store.NewBadgerDB(cfg.Ledger.Storage.DataDirectory)
+		if err != nil {
+			panic(errors.Wrap(err, "failed to initialize DB"))
+		}
+		Nodes = node.NewStorage()
+		Pulses = pulse.NewDB(DB)
+		Jets = jet.NewStore()
+
+		c := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+		c.PulseCalculator = Pulses
+		c.PulseAccessor = Pulses
+		c.JetAccessor = Jets
+		c.NodeNet = NodeNetwork
+		c.PlatformCryptographyScheme = CryptoScheme
+		c.Nodes = Nodes
+
+		Coordinator = c
+	}
+
 	// Communication.
 	var (
 		Tokens  insolar.DelegationTokenFactory
@@ -175,7 +204,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to start MessageBus")
 		}
-		WmBus = bus.NewBus(pubSub)
+		WmBus = bus.NewBus(pubSub, Pulses, Coordinator)
 	}
 
 	metricsHandler, err := metrics.NewMetrics(
@@ -189,42 +218,22 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	}
 
 	var (
-		Coordinator         jet.Coordinator
-		Pulses              pulse.Accessor
-		Jets                jet.Storage
 		PulseManager        insolar.PulseManager
 		Handler             *handler.Handler
 		DiscoveryNodesStore *genesis.Genesis
 	)
 	{
-		conf := cfg.Ledger
-
-		db, err := store.NewBadgerDB(conf.Storage.DataDirectory)
-		if err != nil {
-			panic(errors.Wrap(err, "failed to initialize DB"))
-		}
-
-		pulses := pulse.NewDB(db)
-		records := object.NewRecordDB(db)
-		nodes := node.NewStorage()
-		jets := jet.NewStore()
-		indexes := object.NewIndexDB(db)
-		blobs := blob.NewDB(db)
-		drops := drop.NewDB(db)
-
-		cord := jetcoordinator.NewJetCoordinator(conf.LightChainLimit)
-		cord.PulseCalculator = pulses
-		cord.PulseAccessor = pulses
-		cord.JetAccessor = jets
-		cord.NodeNet = NodeNetwork
-		cord.PlatformCryptographyScheme = CryptoScheme
-		cord.Nodes = nodes
+		pulses := pulse.NewDB(DB)
+		records := object.NewRecordDB(DB)
+		indexes := object.NewIndexDB(DB)
+		blobs := blob.NewDB(DB)
+		drops := drop.NewDB(DB)
 
 		pm := pulsemanager.NewPulseManager()
 		pm.Bus = Bus
 		pm.NodeNet = NodeNetwork
-		pm.NodeSetter = nodes
-		pm.Nodes = nodes
+		pm.NodeSetter = Nodes
+		pm.Nodes = Nodes
 		pm.PulseAppender = pulses
 
 		h := handler.New()
@@ -239,9 +248,6 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
 
-		Coordinator = cord
-		Pulses = pulses
-		Jets = jets
 		PulseManager = pm
 		Handler = h
 
