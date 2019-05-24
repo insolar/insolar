@@ -28,3 +28,8 @@ pulsar:
 versionmanager:
   minalowedversion: v0.3.0
 keyspath: "{{ .BaseDir }}/configs/bootstrap_keys.json"
+tracer:
+  jaeger:
+    collectorendpoint: ""
+    agentendpoint: "{{ .AgentEndpoint }}"
+    probabilityrate: 1
