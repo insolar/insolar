@@ -26,7 +26,6 @@ import (
 
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/pkg/errors"
 
@@ -214,9 +213,6 @@ func (currentPulsar *Pulsar) StopServer(ctx context.Context) {
 
 // EstablishConnectionToPulsar is a method for creating connection to another pulsar
 func (currentPulsar *Pulsar) EstablishConnectionToPulsar(ctx context.Context, pubKey string) error {
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.EstablishConnectionToPulsar")
-	defer span.End()
-
 	inslogger.FromContext(ctx).Debug("[EstablishConnectionToPulsar]")
 	neighbour, err := currentPulsar.FetchNeighbour(pubKey)
 	if err != nil {
@@ -260,9 +256,6 @@ func (currentPulsar *Pulsar) EstablishConnectionToPulsar(ctx context.Context, pu
 
 // CheckConnectionsToPulsars is a method refreshing connections between pulsars
 func (currentPulsar *Pulsar) CheckConnectionsToPulsars(ctx context.Context) {
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.CheckConnectionsToPulsars")
-	defer span.End()
-
 	logger := inslogger.FromContext(ctx)
 	for pubKey, neighbour := range currentPulsar.Neighbours {
 		logger.Debugf("[CheckConnectionsToPulsars] refresh with %v", neighbour.ConnectionAddress)
@@ -291,9 +284,6 @@ func (currentPulsar *Pulsar) CheckConnectionsToPulsars(ctx context.Context) {
 
 // StartConsensusProcess starts process of calculating consensus between pulsars
 func (currentPulsar *Pulsar) StartConsensusProcess(ctx context.Context, pulseNumber insolar.PulseNumber) error {
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.StartConsensusProcess")
-	defer span.End()
-
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[StartConsensusProcess] pulse number - %v, host - %v", pulseNumber, currentPulsar.Config.MainListenerAddress)
 	logger.Debugf("[Before StartProcessLock]")
