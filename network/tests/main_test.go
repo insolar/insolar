@@ -57,7 +57,6 @@ import (
 	"fmt"
 	"sync"
 	"testing"
-	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
@@ -324,14 +323,6 @@ func TestServiceNetworkManyNodes(t *testing.T) {
 	suite.Run(t, s)
 }
 
-// Full timeout test
-type FullTimeoutPhaseManager struct {
-}
-
-func (ftpm *FullTimeoutPhaseManager) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
-	return nil
-}
-
 func (s *testSuite) TestFullTimeOut() {
 	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
@@ -492,6 +483,7 @@ func (s *testSuite) TestDiscoveryRestart() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
+
 }
 
 func (s *testSuite) TestDiscoveryRestartNoWait() {

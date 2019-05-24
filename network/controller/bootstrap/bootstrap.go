@@ -840,17 +840,16 @@ func (bc *bootstrapper) getPermissionSign(perm Permission) ([]byte, error) {
 }
 
 func permissionIsEmpty(perm Permission) bool {
-	empty := false
 	if len(perm.ReconnectTo) == 0 {
-		empty = true
+		return true
 	}
 	if perm.DiscoveryRef.IsEmpty() {
-		empty = true
+		return true
 	}
 	if len(perm.Signature) == 0 {
-		empty = true
+		return true
 	}
-	return empty
+	return false
 }
 
 func NewBootstrapper(options *common.Options, reconnectToNewNetwork func(ctx context.Context, address string)) Bootstrapper {
