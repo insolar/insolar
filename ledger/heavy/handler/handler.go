@@ -172,16 +172,12 @@ func (h *Handler) handleGetObject(
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 	}
 
-	var childPointer *insolar.ID
-	if idx.ChildPointer != nil {
-		childPointer = idx.ChildPointer
-	}
 	rep := reply.Object{
 		Head:         msg.Head,
 		State:        *stateID,
 		Prototype:    state.GetImage(),
 		IsPrototype:  state.GetIsPrototype(),
-		ChildPointer: childPointer,
+		ChildPointer: idx.ChildPointer,
 		Parent:       idx.Parent,
 	}
 

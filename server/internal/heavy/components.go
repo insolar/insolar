@@ -26,6 +26,8 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/artifact"
+	"github.com/insolar/insolar/ledger/genesis"
 
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
@@ -60,11 +62,12 @@ import (
 )
 
 type components struct {
-	cmp               component.Manager
-	NodeRef, NodeRole string
+	cmp      component.Manager
+	NodeRef  string
+	NodeRole string
 }
 
-func newComponents(ctx context.Context, cfg configuration.Configuration) (*components, error) {
+func newComponents(ctx context.Context, cfg configuration.Configuration, genesisCfg insolar.GenesisHeavyConfig) (*components, error) {
 	// Cryptography.
 	var (
 		KeyProcessor  insolar.KeyProcessor
@@ -186,11 +189,12 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	}
 
 	var (
-		Coordinator  jet.Coordinator
-		Pulses       pulse.Accessor
-		Jets         jet.Storage
-		PulseManager insolar.PulseManager
-		Handler      *handler.Handler
+		Coordinator         jet.Coordinator
+		Pulses              pulse.Accessor
+		Jets                jet.Storage
+		PulseManager        insolar.PulseManager
+		Handler             *handler.Handler
+		DiscoveryNodesStore *genesis.Genesis
 	)
 	{
 		conf := cfg.Ledger
@@ -240,6 +244,20 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		Jets = jets
 		PulseManager = pm
 		Handler = h
+
+		artifactManager := &artifact.Scope{
+			PulseNumber:      insolar.FirstPulseNumber,
+			PCS:              CryptoScheme,
+			BlobStorage:      blobs,
+			RecordAccessor:   records,
+			RecordModifier:   records,
+			LifelineModifier: indexes,
+			LifelineAccessor: indexes,
+		}
+		DiscoveryNodesStore = &genesis.Genesis{
+			DiscoveryNodeManager: genesis.NewDiscoveryNodeManager(artifactManager),
+			DiscoveryNodes:       genesisCfg.DiscoveryNodes,
+		}
 	}
 
 	c.cmp.Inject(
@@ -265,6 +283,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		NodeNetwork,
 		NetworkService,
 		pubSub,
+		DiscoveryNodesStore,
 	)
 	err = c.cmp.Init(ctx)
 	if err != nil {
