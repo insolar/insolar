@@ -37,6 +37,7 @@ CONFIGS_DIR=${LAUNCHNET_BASE_DIR}configs
 
 KEYS_FILE=$CONFIGS_DIR/bootstrap_keys.json
 ROOT_MEMBER_KEYS_FILE=${CONFIGS_DIR}/root_member_keys.json
+HEAVY_GENESIS_CONFIG_FILE=${CONFIGS_DIR}/heavy_genesis.json
 
 # TODO: use only heavy matereal data dir
 DISCOVERY_NODES_DATA=${LAUNCHNET_BASE_DIR}discoverynodes/
@@ -372,9 +373,18 @@ else
     echo "insgorund launch skip"
 fi
 
-echo "start discovery nodes ..."
+echo "start heavy node"
+set -x
+$INSOLARD \
+    --config ${DISCOVERY_NODES_DATA}1/insolard.yaml \
+    --heavy-genesis ${HEAVY_GENESIS_CONFIG_FILE} \
+    --trace &> ${DISCOVERY_NODE_LOGS}1/output.log &
+{ set +x; } 2>/dev/null
+echo "heavy node started in background"
+echo "log: ${DISCOVERY_NODE_LOGS}1/output.log"
 
-for i in `seq 1 $NUM_DISCOVERY_NODES`
+echo "start discovery nodes ..."
+for i in `seq 2 $NUM_DISCOVERY_NODES`
 do
     set -x
     $INSOLARD \

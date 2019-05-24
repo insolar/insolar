@@ -13,31 +13,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-// +build slowtest
 
-package heavy
+package secrets
 
 import (
-	"context"
+	"fmt"
 	"testing"
 
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
+	"github.com/magiconair/properties/assert"
 	"github.com/stretchr/testify/require"
 )
 
-func TestComponents(t *testing.T) {
-	ctx := context.Background()
-	cfg := configuration.NewConfiguration()
-	cfg.KeysPath = "testdata/bootstrap_keys.json"
-	cfg.CertificatePath = "testdata/certificate.json"
-
-	c, err := newComponents(ctx, cfg, insolar.GenesisHeavyConfig{})
-	require.NoError(t, err)
-
-	err = c.Start(ctx)
-	require.NoError(t, err)
-
-	err = c.Stop(ctx)
-	require.NoError(t, err)
+func TestKeys_GetKeysFromFile(t *testing.T) {
+	pair, err := ReadKeysFile("testdata/keypair.json")
+	require.NoError(t, err, "read keys from json")
+	assert.Equal(t, fmt.Sprintf("%T", pair.Private), "*ecdsa.PrivateKey", "private key has proper type")
+	assert.Equal(t, fmt.Sprintf("%T", pair.Public), "*ecdsa.PublicKey", "public key has proper type")
 }

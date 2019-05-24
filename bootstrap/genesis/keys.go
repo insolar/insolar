@@ -17,94 +17,30 @@
 package genesis
 
 import (
-	"bytes"
 	"context"
-	"crypto"
 	"encoding/json"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"path/filepath"
 
+	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"
 	"github.com/pkg/errors"
 )
 
-func getKeysFromFile(file string) (crypto.PrivateKey, string, error) {
-	absPath, err := filepath.Abs(file)
-	if err != nil {
-		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't get abs path")
+func keysToNodeInfo(kp *secrets.KeyPair) nodeInfo {
+	return nodeInfo{
+		privateKey: kp.Private,
+		publicKey:  platformpolicy.MustPublicKeyToString(kp.Public),
 	}
-	b, err := ioutil.ReadFile(absPath)
-	if err != nil {
-		return nil, "", errors.Wrap(err, "[ getKeyFromFile ] couldn't read keys file "+absPath)
-	}
-	return getKeys(bytes.NewReader(b))
 }
 
-func getKeys(r io.Reader) (crypto.PrivateKey, string, error) {
-	var keys map[string]string
-	err := json.NewDecoder(r).Decode(&keys)
-	if err != nil {
-		return nil, "", errors.Wrapf(err, "[ getKeys ] couldn't unmarshal keys data")
+func keyPairsToNodeInfo(kp ...*secrets.KeyPair) []nodeInfo {
+	nodes := make([]nodeInfo, 0, len(kp))
+	for _, p := range kp {
+		nodes = append(nodes, keysToNodeInfo(p))
 	}
-	if keys["private_key"] == "" {
-		return nil, "", errors.New("[ getKeys ] empty private key")
-	}
-	if keys["public_key"] == "" {
-		return nil, "", errors.New("[ getKeys ] empty public key")
-	}
-
-	kp := platformpolicy.NewKeyProcessor()
-	key, err := kp.ImportPrivateKeyPEM([]byte(keys["private_key"]))
-	if err != nil {
-		return nil, "", errors.Wrapf(err, "[ getKeys ] couldn't import private key")
-	}
-
-	return key, mustNormalizePublicKey(keys["public_key"]), nil
-}
-
-func mustNormalizePublicKey(s string) string {
-	ks := platformpolicy.NewKeyProcessor()
-	pubKey, err := ks.ImportPublicKeyPEM([]byte(s))
-	if err != nil {
-		panic(err)
-	}
-	return string(mustPublicKeyToBytes(pubKey))
-}
-
-func mustPublicKeyToBytes(key crypto.PublicKey) []byte {
-	ks := platformpolicy.NewKeyProcessor()
-	b, err := ks.ExportPublicKeyPEM(key)
-	if err != nil {
-		panic(err)
-	}
-	return b
-}
-
-func readKeysFromDir(dir string, amount int) ([]nodeInfo, error) {
-	files, err := ioutil.ReadDir(dir)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ uploadKeys ] can't read dir")
-	}
-
-	nodes := make([]nodeInfo, amount)
-	if len(files) != amount {
-		return nil, errors.New(fmt.Sprintf("[ uploadKeys ] amount of nodes != amount of files in directory: %d != %d", len(files), amount))
-	}
-
-	for i, f := range files {
-		privKey, nodePubKey, err := getKeysFromFile(filepath.Join(dir, f.Name()))
-		if err != nil {
-			return nil, errors.Wrap(err, "[ uploadKeys ] can't get keys from file")
-		}
-
-		nodes[i].publicKey = nodePubKey
-		nodes[i].privateKey = privKey
-	}
-
-	return nodes, nil
+	return nodes
 }
 
 func createKeysInDir(
@@ -116,33 +52,40 @@ func createKeysInDir(
 ) ([]nodeInfo, error) {
 	amount := len(discoveryNodes)
 
-	// XXX: Hack: works only for generated files by keyFilenameFormat
+	// XXX: Hack: works only for generated files with keyFilenameFormat
 	// TODO: reconsider this option implementation - (INS-2473) - @nordicdyno 16.May.2019
 	if reuse {
-		return readKeysFromDir(dir, amount)
+		pairs, err := secrets.ReadKeysFromDir(dir)
+		if err != nil {
+			return nil, err
+		}
+		if len(pairs) != amount {
+			return nil, errors.New(fmt.Sprintf("[ uploadKeys ] amount of nodes != amount of files in directory: %d != %d", len(pairs), amount))
+		}
+		return keyPairsToNodeInfo(pairs...), nil
 	}
 
-	nodes := make([]nodeInfo, amount)
-	for i, dn := range discoveryNodes {
-		name := fmt.Sprintf(keyFilenameFormat, i+1)
+	nodes := make([]nodeInfo, 0, amount)
+	for i := 0; i < amount; i++ {
+		dn := discoveryNodes[i]
+		keyname := fmt.Sprintf(keyFilenameFormat, i+1)
 		if len(dn.KeyName) > 0 {
-			name = dn.KeyName
+			keyname = dn.KeyName
+		}
+
+		pair, err := secrets.GenerateKeyPair()
+
+		if err != nil {
+			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't generate keys")
 		}
 
 		ks := platformpolicy.NewKeyProcessor()
-
-		privKey, err := ks.GeneratePrivateKey()
-		if err != nil {
-			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't generate private key")
-		}
-
-		privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
+		privKeyStr, err := ks.ExportPrivateKeyPEM(pair.Private)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't export private key")
 		}
 
-		pubKey := ks.ExtractPublicKey(privKey)
-		pubKeyStr, err := ks.ExportPublicKeyPEM(pubKey)
+		pubKeyStr, err := ks.ExportPublicKeyPEM(pair.Public)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't export public key")
 		}
@@ -155,14 +98,15 @@ func createKeysInDir(
 			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't marshal keys")
 		}
 
-		inslogger.FromContext(ctx).Info("Genesis write key " + filepath.Join(dir, name))
-		err = makeFileWithDir(dir, name, result)
+		inslogger.FromContext(ctx).Info("Genesis write key " + filepath.Join(dir, keyname))
+		err = makeFileWithDir(dir, keyname, result)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ createKeysInDir ] couldn't write keys to file")
 		}
 
-		nodes[i].publicKey = string(mustPublicKeyToBytes(pubKey))
-		nodes[i].privateKey = privKey
+		p := keysToNodeInfo(pair)
+		p.role = dn.Role
+		nodes = append(nodes, p)
 	}
 
 	return nodes, nil
