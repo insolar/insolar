@@ -39,9 +39,9 @@ func New(balance uint) (*Wallet, error) {
 }
 
 // Transfer transfers money to given wallet
-func (w *Wallet) Transfer(amount uint, to *insolar.Reference) error {
+func (w *Wallet) Transfer(amount uint, toMember *insolar.Reference) error {
 
-	toWallet, err := wallet.GetImplementationFrom(*to)
+	toWallet, err := wallet.GetImplementationFrom(*toMember)
 	if err != nil {
 		return fmt.Errorf("[ Transfer ] Can't get implementation: %s", err.Error())
 	}
