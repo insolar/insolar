@@ -135,7 +135,6 @@ func (cm *CommunicatorMock) Init(ctx context.Context) error {
 	return cm.communicator.Init(ctx)
 }
 
-// Full timeout test
 type FullTimeoutPhaseManager struct {
 }
 

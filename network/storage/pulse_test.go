@@ -85,4 +85,5 @@ func TestNewPulseStorage(t *testing.T) {
 	assert.Equal(t, pulse2, pulse)
 
 	err = cm.Stop(ctx)
+
 }

@@ -483,7 +483,6 @@ func (s *testSuite) TestDiscoveryRestart() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
 	s.Equal(s.getNodesCount(), len(activeNodes))
-
 }
 
 func (s *testSuite) TestDiscoveryRestartNoWait() {
