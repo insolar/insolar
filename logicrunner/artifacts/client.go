@@ -92,7 +92,7 @@ func (m *client) RegisterRequest(
 	switch request.CallType {
 	case record.CTMethod:
 		recRef = request.Object
-	case record.CTSaveAsChild, record.CTSaveAsDelegate:
+	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
 		hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
 		recID := insolar.NewID(currentPN, hash)
 		recRef = insolar.NewReference(insolar.DomainID, *recID)

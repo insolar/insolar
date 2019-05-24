@@ -259,13 +259,7 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	h.Bus.MustRegister(insolar.TypeGetCode, h.FlowDispatcher.WrapBusHandle)
 	h.Bus.MustRegister(insolar.TypeGetObject, h.FlowDispatcher.WrapBusHandle)
 	h.Bus.MustRegister(insolar.TypeUpdateObject, h.FlowDispatcher.WrapBusHandle)
-
-	h.Bus.MustRegister(insolar.TypeGetDelegate,
-		BuildMiddleware(h.handleGetDelegate,
-			instrumentHandler("handleGetDelegate"),
-			m.addFieldsToLogger,
-			m.checkJet,
-			m.waitForHotData))
+	h.Bus.MustRegister(insolar.TypeGetDelegate, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeGetChildren, h.FlowDispatcher.WrapBusHandle)
 
@@ -279,51 +273,6 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 	h.Bus.MustRegister(insolar.TypeGetPendingRequestID, h.FlowDispatcher.WrapBusHandle)
 
 	h.Bus.MustRegister(insolar.TypeValidateRecord, h.handleValidateRecord)
-}
-
-func (h *MessageHandler) handleGetDelegate(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetDelegate)
-	jetID := jetFromContext(ctx)
-
-	h.IDLocker.Lock(msg.Head.Record())
-	defer h.IDLocker.Unlock(msg.Head.Record())
-
-	idx, err := h.LifelineIndex.ForID(ctx, parcel.Pulse(), *msg.Head.Record())
-	if err == object.ErrLifelineNotFound {
-		heavy, err := h.JetCoordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		idx, err = h.saveIndexFromHeavy(ctx, parcel.Pulse(), jetID, msg.Head, heavy)
-		if err != nil {
-			inslogger.FromContext(ctx).WithFields(map[string]interface{}{
-				"jet": jetID.DebugString(),
-				"pn":  parcel.Pulse(),
-			}).Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", msg.Head.Record().DebugString()))
-			return nil, errors.Wrapf(err, "failed to fetch index from heavy")
-		}
-	} else if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch object index")
-	}
-	err = h.LifelineStateModifier.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Head.Record())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch object index")
-	}
-	err = h.LifelineStateModifier.SetLifelineUsage(ctx, parcel.Pulse(), *msg.Head.Record())
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch object index")
-	}
-
-	delegateRef, ok := idx.DelegateByKey(msg.AsType)
-	if !ok {
-		return nil, errors.New("the object has no delegate for this type")
-	}
-
-	rep := reply.Delegate{
-		Head: delegateRef,
-	}
-
-	return &rep, nil
 }
 
 func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {

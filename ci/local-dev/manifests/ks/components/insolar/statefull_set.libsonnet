@@ -125,7 +125,7 @@ local image_params = params.insolar.image;
 						"workingDir": "/opt/insolar",
 						"tty": true,
 						"stdin": true,
-						launch_cmd :: "/go/bin/insolard --config /opt/insolar/config/node-insolar.yaml --trace 2>&1",
+						launch_cmd :: "/go/bin/insolard --config /opt/insolar/config/node-insolar.yaml --heavy-genesis=/opt/bootstrap-config/heavy_genesis.json --trace 2>&1",
 						"command": [
 							"bash",
 							"-c",

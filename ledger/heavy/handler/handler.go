@@ -25,6 +25,7 @@ import (
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
@@ -91,7 +92,12 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) (insolar.Reply, error) {
 	switch msg.Metadata.Get(bus.MetaType) {
 	case insolar.TypeGetObject.String():
-		parcel, err := message.DeserializeParcel(bytes.NewBuffer(msg.Payload))
+		meta := payload.Meta{}
+		err := meta.Unmarshal(msg.Payload)
+		if err != nil {
+			return nil, errors.Wrap(err, "can't deserialize meta payload")
+		}
+		parcel, err := message.DeserializeParcel(bytes.NewBuffer(meta.Payload))
 		if err != nil {
 			return nil, errors.Wrap(err, "can't deserialize payload")
 		}
@@ -172,16 +178,12 @@ func (h *Handler) handleGetObject(
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 	}
 
-	var childPointer *insolar.ID
-	if idx.ChildPointer != nil {
-		childPointer = idx.ChildPointer
-	}
 	rep := reply.Object{
 		Head:         msg.Head,
 		State:        *stateID,
 		Prototype:    state.GetImage(),
 		IsPrototype:  state.GetIsPrototype(),
-		ChildPointer: childPointer,
+		ChildPointer: idx.ChildPointer,
 		Parent:       idx.Parent,
 	}
 

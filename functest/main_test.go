@@ -372,6 +372,16 @@ func setup() error {
 	return nil
 }
 
+func pulseWatcherPath() (string, string, error) {
+	p, err := build.Default.Import("github.com/insolar/insolar", "", build.FindOnly)
+	if err != nil {
+		return "", "", errors.Wrap(err, "Couldn't receive path to github.com/insolar/insolar")
+	}
+	pulseWatcher := filepath.Join(p.Dir, "bin", "pulsewatcher")
+	config := filepath.Join(p.Dir, ".artifacts", "launchnet", "pulsewatcher.yaml")
+	return pulseWatcher, config, nil
+}
+
 func teardown() {
 	var envSetting = os.Getenv("TEST_ENV")
 	var err error
@@ -401,7 +411,23 @@ func testMainWrapper(m *testing.M) int {
 		fmt.Println("error while setup, skip tests: ", err)
 		return 1
 	}
+
+	pulseWatcher, config, err := pulseWatcherPath()
+	if err != nil {
+		fmt.Println("PulseWatcher not found: ", err)
+		return 1
+	}
+
 	code := m.Run()
+
+	if code != 0 {
+		out, err := exec.Command(pulseWatcher, "-c", config, "-s").CombinedOutput()
+		if err != nil {
+			fmt.Println("PulseWatcher execution error: ", err)
+			return 1
+		}
+		fmt.Println(string(out))
+	}
 	return code
 }
 
