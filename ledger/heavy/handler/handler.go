@@ -156,11 +156,7 @@ func (h *Handler) handleGetObject(
 	if msg.State != nil {
 		stateID = msg.State
 	} else {
-		if msg.Approved {
-			stateID = idx.LatestStateApproved
-		} else {
-			stateID = idx.LatestState
-		}
+		stateID = idx.LatestState
 	}
 	if stateID == nil {
 		return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil

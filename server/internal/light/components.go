@@ -48,6 +48,7 @@ import (
 	"github.com/insolar/insolar/ledger/light/recentstorage"
 	"github.com/insolar/insolar/ledger/light/replication"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/messagebus"
 	"github.com/insolar/insolar/metrics"
@@ -105,8 +106,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 	c.NodeRef = CertManager.GetCertificate().GetNodeRef().String()
 	c.NodeRole = CertManager.GetCertificate().GetRole().String()
 
-	// TODO: use insolar.Logger
-	logger := watermill.NewStdLogger(false, false)
+	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, logger)
 
 	// Network.

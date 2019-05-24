@@ -13,7 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
-
+// +build slowtest
 // +build !race
 
 // TODO test failed in race test call. added build tag to ignore this test
@@ -35,11 +35,11 @@ import (
 	"github.com/insolar/insolar/testutils"
 )
 
-var binaryPath string
-
 type HealthCheckSuite struct {
 	suite.Suite
 }
+
+var binaryPath string
 
 func (s *HealthCheckSuite) TestHealthCheck() {
 	protocol := "unix"
