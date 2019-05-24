@@ -26,43 +26,38 @@ import (
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
-type RegisterChild struct {
+type GetDelegate struct {
 	dep     *proc.Dependencies
 	replyTo chan<- bus.Reply
-	message *message.RegisterChild
-	pulse   insolar.PulseNumber
+	parcel  insolar.Parcel
 }
 
-func NewRegisterChild(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.RegisterChild, pulse insolar.PulseNumber) *RegisterChild {
-	return &RegisterChild{
+func NewGetDelegate(dep *proc.Dependencies, rep chan<- bus.Reply, parcel insolar.Parcel) *GetDelegate {
+	return &GetDelegate{
 		dep:     dep,
+		parcel:  parcel,
 		replyTo: rep,
-		message: msg,
-		pulse:   pulse,
 	}
 }
 
-func (s *RegisterChild) Present(ctx context.Context, f flow.Flow) error {
-	jet := proc.NewFetchJet(*s.message.DefaultTarget().Record(), flow.Pulse(ctx), s.replyTo)
+func (s *GetDelegate) Present(ctx context.Context, f flow.Flow) error {
+	msg := s.parcel.Message().(*message.GetDelegate)
+
+	jet := proc.NewFetchJet(*msg.Head.Record(), flow.Pulse(ctx), s.replyTo)
 	s.dep.FetchJet(jet)
-	if err := f.Procedure(ctx, jet, true); err != nil {
+	if err := f.Procedure(ctx, jet, false); err != nil {
 		return err
 	}
 
-	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.replyTo)
-	s.dep.WaitHot(hot)
-	if err := f.Procedure(ctx, hot, true); err != nil {
+	idx := proc.NewGetIndex(msg.Head, jet.Result.Jet, s.replyTo, flow.Pulse(ctx))
+	s.dep.GetIndex(idx)
+	if err := f.Procedure(ctx, idx, false); err != nil {
 		return err
 	}
 
-	getIndex := proc.NewGetIndex(s.message.Parent, jet.Result.Jet, s.replyTo, flow.Pulse(ctx))
-	s.dep.GetIndex(getIndex)
-	err := f.Procedure(ctx, getIndex, true)
-	if err != nil {
+	getDelegate := proc.NewGetDelegate(msg, &idx.Result.Index, s.replyTo)
+	if err := f.Procedure(ctx, getDelegate, false); err != nil {
 		return err
 	}
-
-	registerChild := proc.NewRegisterChild(jet.Result.Jet, s.message, s.pulse, getIndex.Result.Index, s.replyTo)
-	s.dep.RegisterChild(registerChild)
-	return f.Procedure(ctx, registerChild, false)
+	return nil
 }

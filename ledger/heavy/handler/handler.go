@@ -65,6 +65,7 @@ func New() *Handler {
 
 func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
 	ctx, _ := inslogger.WithField(msg.Context(), "pulse", msg.Metadata.Get(bus.MetaPulse))
+	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
 
 	rep, err := h.handle(ctx, msg)
 
@@ -84,6 +85,7 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 	resAsMsg.Metadata.Set(bus.MetaType, replyType)
 	receiver := msg.Metadata.Get(bus.MetaSender)
 	resAsMsg.Metadata.Set(bus.MetaReceiver, receiver)
+	resAsMsg.Metadata.Set(bus.MetaTraceID, msg.Metadata.Get(bus.MetaTraceID))
 	return []*watermillMsg.Message{resAsMsg}, nil
 }
 
@@ -176,16 +178,12 @@ func (h *Handler) handleGetObject(
 		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
 	}
 
-	var childPointer *insolar.ID
-	if idx.ChildPointer != nil {
-		childPointer = idx.ChildPointer
-	}
 	rep := reply.Object{
 		Head:         msg.Head,
 		State:        *stateID,
 		Prototype:    state.GetImage(),
 		IsPrototype:  state.GetIsPrototype(),
-		ChildPointer: childPointer,
+		ChildPointer: idx.ChildPointer,
 		Parent:       idx.Parent,
 	}
 

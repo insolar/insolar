@@ -96,6 +96,9 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	case insolar.TypeGetChildren:
 		h := NewGetChildren(s.Dep, s.Message.ReplyTo, s.Message)
 		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetDelegate:
+		h := NewGetDelegate(s.Dep, s.Message.ReplyTo, s.Message.Parcel)
+		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetPendingRequests:
 		h := NewGetPendingRequests(s.Dep, s.Message.ReplyTo, s.Message.Parcel)
 		return f.Handle(ctx, h.Present)
