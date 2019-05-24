@@ -218,8 +218,9 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	}
 
 	var (
-		PulseManager insolar.PulseManager
-		Handler      *handler.HandlerDiscoveryNodesStore *genesis.Genesis
+		PulseManager        insolar.PulseManager
+		Handler             *handler.Handler
+		DiscoveryNodesStore *genesis.Genesis
 	)
 	{
 		pulses := pulse.NewDB(DB)
