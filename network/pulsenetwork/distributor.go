@@ -252,7 +252,11 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *insolar.Pulse,
 	ctx, span := instracer.StartSpan(ctx, "distributor.sendPulseToHosts")
 	defer span.End()
 	pb := packet.NewBuilder(d.pulsarHost)
-	pulseRequest := pb.Receiver(host).Request(&packet.RequestPulse{Pulse: *pulse, TraceSpanData: instracer.MustSerialize(ctx)}).RequestID(d.generateID()).Type(types.Pulse).Build()
+	pulseRequest := pb.Receiver(host).Request(
+		&packet.RequestPulse{
+			Pulse:         *pulse,
+			TraceSpanData: instracer.MustSerialize(ctx),
+		}).RequestID(d.generateID()).Type(types.Pulse).Build()
 	call, err := d.sendRequestToHost(ctx, pulseRequest, host)
 	if err != nil {
 		return err
