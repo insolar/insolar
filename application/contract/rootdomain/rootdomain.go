@@ -94,18 +94,25 @@ func (rd *RootDomain) DumpAllUsers() (*proxyctx.ChildrenTypedIterator, error) {
 	return rd.NewChildrenTypedIterator(member.GetPrototype())
 }
 
-func (rd *RootDomain) AddBurnAddress(burnAddress string) (interface{}, error) {
+func (rd *RootDomain) AddBurnAddress(burnAddress string) error {
 	rd.FreeBurnAddresses.PushBack(burnAddress)
 
-	return nil, nil
+	return nil
 }
 
-func (rd *RootDomain) GetBurnAddress() (interface{}, error) {
+func (rd *RootDomain) GetBurnAddress() (string, error) {
 	e := rd.FreeBurnAddresses.Front()
 	if e == nil {
-		return nil, fmt.Errorf("[ GetBurnAddress ] No more burn address left")
+		return "", fmt.Errorf("[ GetBurnAddress ] No more burn address left")
 	}
 	rd.FreeBurnAddresses.Remove(e)
 
-	return e.Value, nil
+	return e.Value.(string), nil
+}
+
+func (rd *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, memberRef insolar.Reference) error {
+	rd.PublicKeyMap[publicKey] = memberRef
+	rd.BurnAddressMap[burnAddress] = memberRef
+
+	return nil
 }

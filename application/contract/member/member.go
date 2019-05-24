@@ -130,25 +130,32 @@ func (m *Member) Call(rootDomainRef insolar.Reference, method string, params []b
 }
 
 func (m *Member) createMemberCall(rdRef insolar.Reference, params []byte) (interface{}, error) {
-	var ethAddr string
 	var key string
-	if err := signer.UnmarshalParams(params, &ethAddr, &key); err != nil {
+	if err := signer.UnmarshalParams(params, &key); err != nil {
 		return nil, fmt.Errorf("[ createMemberCall ]: %s", err.Error())
 	}
 
-	return m.createMemberAndWallet(rdRef, ethAddr, key, 1000*1000*1000)
+	return m.createMemberByKey(rdRef, key)
 }
 
-func (m *Member) createMemberAndWallet(rdRef insolar.Reference, ethAddr string, key string, amount uint) (interface{}, error) {
+func (m *Member) createMemberByKey(rdRef insolar.Reference, key string) (interface{}, error) {
 
-	new, err := m.createMember(rdRef, ethAddr, key)
+	rootDomain := rootdomain.GetObject(rdRef)
+	ba, err := rootDomain.GetBurnAddress()
 	if err != nil {
-		return nil, fmt.Errorf("[ createMemberAndWallet ]: %s", err.Error())
+		return nil, fmt.Errorf("[ createMemberByKey ] Can't get burn address: %s", err.Error())
 	}
 
-	_, err = m.createWallet(new.Reference, amount)
+	new, err := m.createMember(rdRef, ba, key)
 	if err != nil {
-		return nil, fmt.Errorf("[ createMemberAndWallet ]: %s", err.Error())
+		if e := rootDomain.AddBurnAddress(ba); e != nil {
+			return nil, fmt.Errorf("[ createMemberByKey ] Can't add burn address back: %s; after error: %s", e.Error(), err.Error())
+		}
+		return nil, fmt.Errorf("[ createMemberByKey ] Can't create member: %s", err.Error())
+	}
+
+	if err = rootDomain.AddNewMemberToMaps(key, ba, new.Reference); err != nil {
+		return nil, fmt.Errorf("[ createMemberByKey ] Can't add new member to maps: %s", err.Error())
 	}
 
 	return new.Reference.String(), nil
@@ -165,18 +172,13 @@ func (m *Member) createMember(rdRef insolar.Reference, ethAddr string, key strin
 		return nil, fmt.Errorf("[ createMember ] Can't save as child: %s", err.Error())
 	}
 
-	return new, nil
-}
-
-func (m *Member) createWallet(mRef insolar.Reference, amount uint) (interface{}, error) {
-
-	wHolder := wallet.New(amount)
-	w, err := wHolder.AsDelegate(mRef)
+	wHolder := wallet.New(0)
+	_, err = wHolder.AsDelegate(new.Reference)
 	if err != nil {
-		return nil, fmt.Errorf("[ createWallet ] Can't save as delegate: %s", err.Error())
+		return nil, fmt.Errorf("[ createMember ] Can't save as delegate: %s", err.Error())
 	}
 
-	return w.GetReference().String(), nil
+	return new, nil
 }
 
 func (m *Member) getBalanceCall() (interface{}, error) {
@@ -242,7 +244,7 @@ func (m *Member) transfer(amount uint, toMember *insolar.Reference) (interface{}
 
 	w, err := wallet.GetImplementationFrom(m.GetReference())
 	if err != nil {
-		return nil, fmt.Errorf("[ transferCall ] Can't get wallet implementation of sender: %s", err.Error())
+		return nil, fmt.Errorf("[ transfer ] Can't get wallet implementation of sender: %s", err.Error())
 	}
 
 	return nil, w.Transfer(amount, toMember)
@@ -444,16 +446,16 @@ func (m *Member) dumpUserInfoCall(rdRef insolar.Reference, params []byte) (inter
 	}
 	userRef, err := insolar.NewReferenceFromBase58(userRefIn)
 	if err != nil {
-		return nil, fmt.Errorf("[ migrationCall ] Failed to parse 'inInsAddr' param: %s", err.Error())
+		return nil, fmt.Errorf("[ dumpUserInfoCall ] Failed to parse 'inInsAddr' param: %s", err.Error())
 	}
 
 	rootDomain := rootdomain.GetObject(rdRef)
 	rootMember, err := rootDomain.GetRootMemberRef()
 	if err != nil {
-		return nil, fmt.Errorf("[ DumpUserInfo ] Can't get root member: %s", err.Error())
+		return nil, fmt.Errorf("[ dumpUserInfoCall ] Can't get root member: %s", err.Error())
 	}
 	if *userRef != m.GetReference() && m.GetReference() != *rootMember {
-		return nil, fmt.Errorf("[ DumpUserInfo ] You can dump only yourself")
+		return nil, fmt.Errorf("[ dumpUserInfoCall ] You can dump only yourself")
 	}
 
 	return m.DumpUserInfo(rdRef, *userRef)
@@ -463,10 +465,10 @@ func (m *Member) dumpAllUsersCall(rdRef insolar.Reference) (interface{}, error) 
 	rootDomain := rootdomain.GetObject(rdRef)
 	rootMember, err := rootDomain.GetRootMemberRef()
 	if err != nil {
-		return nil, fmt.Errorf("[ DumpUserInfo ] Can't get root member: %s", err.Error())
+		return nil, fmt.Errorf("[ dumpAllUsersCall ] Can't get root member: %s", err.Error())
 	}
 	if m.GetReference() != *rootMember {
-		return nil, fmt.Errorf("[ DumpUserInfo ] You can dump only yourself")
+		return nil, fmt.Errorf("[ dumpAllUsersCall ] You can dump only yourself")
 	}
 
 	return m.DumpAllUsers(rdRef)
@@ -558,5 +560,7 @@ func (mdAdminMember *Member) AddBurnAddressCall(rdRef insolar.Reference, params 
 		return nil, fmt.Errorf("[ AddBurnAddressCall ] Can't unmarshal params: %s", err.Error())
 	}
 
-	return rootDomain.AddBurnAddress(burnAddress)
+	err = rootDomain.AddBurnAddress(burnAddress)
+
+	return nil, err
 }
