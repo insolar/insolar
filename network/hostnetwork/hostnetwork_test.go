@@ -154,62 +154,45 @@ func TestNewHostNetwork_InvalidReference(t *testing.T) {
 	require.Nil(t, n)
 }
 
-func createTwoHostNetworks(id1, id2 string) (n1, n2 network.HostNetwork, err error) {
+func createTwoHostNetworks(t *testing.T, id1, id2 string) (n1, n2 network.HostNetwork) {
 	m := newMockResolver()
 
 	cm1 := component.NewManager(nil)
 	f1 := transport.NewFactory(configuration.NewHostNetwork().Transport)
-	n1, err = NewHostNetwork(ID1 + DOMAIN)
-	if err != nil {
-		return nil, nil, err
-	}
+	n1, err := NewHostNetwork(ID1 + DOMAIN)
+	require.NoError(t, err)
 	cm1.Inject(f1, n1, m)
 
 	cm2 := component.NewManager(nil)
 	f2 := transport.NewFactory(configuration.NewHostNetwork().Transport)
 	n2, err = NewHostNetwork(ID2 + DOMAIN)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 	cm2.Inject(f2, n2, m)
 
 	ctx := context.Background()
 
 	err = n1.Init(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 	err = n2.Init(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 
 	err = n1.Start(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 	err = n2.Start(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 
 	err = m.addMapping(id1, n1.PublicAddress())
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to add mapping %s -> %s", id1, n1.PublicAddress())
-	}
+	require.NoError(t, err, "failed to add mapping %s -> %s: %s", id1, n1.PublicAddress(), err)
 	err = m.addMapping(id2, n2.PublicAddress())
-	if err != nil {
-		return nil, nil, errors.Wrapf(err, "failed to add mapping %s -> %s", id2, n2.PublicAddress())
-	}
+	require.NoError(t, err, "failed to add mapping %s -> %s: %s", id2, n2.PublicAddress(), err)
 
-	return n1, n2, nil
+	return n1, n2
 }
 
 func TestNewHostNetwork(t *testing.T) {
 	ctx := context.Background()
 	ctx2 := context.Background()
-	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
-	require.NoError(t, err)
+	n1, n2 := createTwoHostNetworks(t, ID1+DOMAIN, ID2+DOMAIN)
 
 	count := 10
 	wg := sync.WaitGroup{}
@@ -222,7 +205,7 @@ func TestNewHostNetwork(t *testing.T) {
 	}
 	n2.RegisterRequestHandler(types.Ping, handler)
 
-	err = n2.Start(ctx2)
+	err := n2.Start(ctx2)
 	assert.NoError(t, err)
 	defer func() {
 		err = n2.Stop(ctx2)
@@ -288,8 +271,7 @@ func TestHostNetwork_SendRequestPacket(t *testing.T) {
 }
 
 func TestHostNetwork_SendRequestPacket2(t *testing.T) {
-	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
-	require.NoError(t, err)
+	n1, n2 := createTwoHostNetworks(t, ID1+DOMAIN, ID2+DOMAIN)
 	ctx := context.Background()
 	ctx2 := context.Background()
 
@@ -330,8 +312,7 @@ func TestHostNetwork_SendRequestPacket2(t *testing.T) {
 }
 
 func TestHostNetwork_SendRequestPacket3(t *testing.T) {
-	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
-	require.NoError(t, err)
+	n1, n2 := createTwoHostNetworks(t, ID1+DOMAIN, ID2+DOMAIN)
 	ctx := context.Background()
 	ctx2 := context.Background()
 
@@ -379,8 +360,7 @@ func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 }
 
 func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
-	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
-	require.NoError(t, err)
+	n1, n2 := createTwoHostNetworks(t, ID1+DOMAIN, ID2+DOMAIN)
 	ctx := context.Background()
 	ctx2 := context.Background()
 
@@ -391,7 +371,7 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 	}
 	n2.RegisterRequestHandler(types.Ping, handler)
 
-	err = n2.Start(ctx2)
+	err := n2.Start(ctx2)
 	require.NoError(t, err)
 
 	defer func() {
@@ -423,8 +403,7 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 }
 
 func TestHostNetwork_WrongHandler(t *testing.T) {
-	n1, n2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
-	require.NoError(t, err)
+	n1, n2 := createTwoHostNetworks(t, ID1+DOMAIN, ID2+DOMAIN)
 	ctx := context.Background()
 	ctx2 := context.Background()
 
@@ -457,12 +436,11 @@ func TestHostNetwork_WrongHandler(t *testing.T) {
 }
 
 func TestStartStopSend(t *testing.T) {
-	t1, t2, err := createTwoHostNetworks(ID1+DOMAIN, ID2+DOMAIN)
-	require.NoError(t, err)
+	t1, t2 := createTwoHostNetworks(t, ID1+DOMAIN, ID2+DOMAIN)
 	ctx := context.Background()
 	ctx2 := context.Background()
 
-	err = t2.Start(ctx2)
+	err := t2.Start(ctx2)
 	require.NoError(t, err)
 	defer t2.Stop(ctx2)
 
