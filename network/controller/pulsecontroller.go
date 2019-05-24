@@ -52,8 +52,10 @@ package controller
 
 import (
 	"context"
+	"strconv"
 	"sync/atomic"
 
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
@@ -103,8 +105,16 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Req
 	}
 	// if we are a joiner node, we should receive pulse from phase1 packet and ignore pulse from pulsar
 	if !pc.NodeKeeper.GetConsensusInfo().IsJoiner() {
+		// Because we want to save our trace-context from a pulsar node
+		// We fetch TraceSpanData from msg and set a trace id and other stuff to current context
 		parent := instracer.MustDeserialize(data.TraceSpanData)
 		newCtx := instracer.WithParentSpan(context.Background(), parent)
+		// Because we want to set InsTraceID (it's our custom traceID)
+		// Because @egorikas didn't have enough time for sending `insTraceID` from pulsar
+		// We calculate it 2 times, first time on a pulsar's side. Second time on a network's side
+		insTraceID := "pulse_" + strconv.FormatUint(uint64(data.Pulse.PulseNumber), 10)
+		newCtx = inslogger.ContextWithTrace(newCtx, insTraceID)
+
 		go pc.PulseHandler.HandlePulse(newCtx, data.Pulse)
 	} else {
 		log.Debugf("Ignore pulse %v from pulsar, waiting for consensus phase1 packet", data.Pulse)
