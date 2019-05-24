@@ -42,6 +42,7 @@ const (
 )
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.NetworkNode -o ../testutils/network -s _mock.go
+
 type NetworkNode interface {
 	// ID is the unique identifier of the node
 	ID() Reference
@@ -64,6 +65,7 @@ type NetworkNode interface {
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.NodeNetwork -o ../testutils/network -s _mock.go
+
 type NodeNetwork interface {
 	// GetOrigin get origin node for the current insolard. Returns nil if the current insolard is not a working node.
 	GetOrigin() NetworkNode

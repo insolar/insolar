@@ -141,3 +141,22 @@ func (gi *BaseRecord) CreateIfNeeded(ctx context.Context) (bool, error) {
 
 	return true, nil
 }
+
+// DiscoveryNodesStore provides interface for persisting discovery nodes.
+type DiscoveryNodesStore interface {
+	// StoreDiscoveryNodes saves discovery nodes on ledger, adds index with them to Node Domain object.
+	//
+	// If Node Domain object already has index - skip all saves.
+	StoreDiscoveryNodes(context.Context, []insolar.DiscoveryNodeRegister) error
+}
+
+type Genesis struct {
+	DiscoveryNodeManager DiscoveryNodesStore
+	DiscoveryNodes       []insolar.DiscoveryNodeRegister
+}
+
+// implements components.Initer
+func (g *Genesis) Init(ctx context.Context) error {
+	inslogger.FromContext(ctx).Info("CALL Genesis.Init()")
+	return g.DiscoveryNodeManager.StoreDiscoveryNodes(ctx, g.DiscoveryNodes)
+}

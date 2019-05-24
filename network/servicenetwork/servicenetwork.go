@@ -59,6 +59,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -359,15 +360,11 @@ func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, address string
 
 // SendMessageHandler async sends message with confirmation of delivery.
 func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Message, error) {
-	receiver := msg.Metadata.Get(bus.MetaReceiver)
-	if receiver == "" {
-		return nil, errors.New("Receiver in msg.Metadata not set")
-	}
-	ref, err := insolar.NewReferenceFromBase58(receiver)
+	node, err := n.wrapMeta(msg)
 	if err != nil {
-		return nil, errors.Wrap(err, "incorrect Receiver in msg.Metadata")
+		return nil, errors.Wrap(err, "failed to send message")
 	}
-	node := *ref
+
 	// Short path when sending to self node. Skip serialization
 	origin := n.NodeKeeper.GetOrigin()
 	if node.Equal(origin.ID()) {
@@ -381,7 +378,8 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	if err != nil {
 		return nil, errors.Wrap(err, "error while converting message to bytes")
 	}
-	res, err := n.Controller.SendBytes(msg.Context(), node, deliverWatermillMsg, msgBytes)
+	ctx := inslogger.ContextWithTrace(msg.Context(), msg.Metadata.Get(bus.MetaTraceID))
+	res, err := n.Controller.SendBytes(ctx, node, deliverWatermillMsg, msgBytes)
 	if err != nil {
 		return nil, errors.Wrap(err, "error while sending watermillMsg to controller")
 	}
@@ -389,6 +387,35 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 		return nil, errors.Errorf("reply is not ack: %s", res)
 	}
 	return nil, nil
+}
+
+func (n *ServiceNetwork) wrapMeta(msg *message.Message) (insolar.Reference, error) {
+	receiver := msg.Metadata.Get(bus.MetaReceiver)
+	if receiver == "" {
+		return insolar.Reference{}, errors.New("Receiver in msg.Metadata not set")
+	}
+	receiverRef, err := insolar.NewReferenceFromBase58(receiver)
+	if err != nil {
+		return insolar.Reference{}, errors.Wrap(err, "incorrect Receiver in msg.Metadata")
+	}
+
+	latestPulse, err := n.PulseAccessor.Latest(msg.Context())
+	if err != nil {
+		return insolar.Reference{}, errors.Wrap(err, "failed to fetch pulse")
+	}
+	wrapper := payload.Meta{
+		Payload:  msg.Payload,
+		Receiver: *receiverRef,
+		Sender:   n.NodeKeeper.GetOrigin().ID(),
+		Pulse:    latestPulse.PulseNumber,
+	}
+	buf, err := wrapper.Marshal()
+	if err != nil {
+		return insolar.Reference{}, errors.Wrap(err, "failed to wrap message")
+	}
+	msg.Payload = buf
+
+	return *receiverRef, nil
 }
 
 func getNode(address string, nodes []insolar.DiscoveryNode) (insolar.DiscoveryNode, error) {
