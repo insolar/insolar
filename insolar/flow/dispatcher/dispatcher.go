@@ -154,6 +154,7 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	resAsMsg.Metadata.Set(wmBus.MetaType, replyType)
 	receiver := msgBus.WatermillMsg.Metadata.Get(wmBus.MetaSender)
 	resAsMsg.Metadata.Set(wmBus.MetaReceiver, receiver)
+	resAsMsg.Metadata.Set(wmBus.MetaTraceID, msg.Metadata.Get(wmBus.MetaTraceID))
 	return []*message.Message{resAsMsg}, nil
 
 }
