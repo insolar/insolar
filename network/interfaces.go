@@ -267,6 +267,8 @@ type ClaimQueue interface {
 	Clear()
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network.Accessor -o ../testutils/network -s _mock.go
+
 // Accessor is interface that provides read access to nodekeeper internal snapshot
 type Accessor interface {
 	// GetWorkingNode get working node by its reference. Returns nil if node is not found or is not working.
