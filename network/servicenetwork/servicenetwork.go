@@ -53,7 +53,6 @@ package servicenetwork
 import (
 	"bytes"
 	"context"
-	"strconv"
 	"sync"
 	"time"
 
@@ -262,6 +261,7 @@ func (n *ServiceNetwork) Stop(ctx context.Context) error {
 
 func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse) {
 	pulseTime := time.Unix(0, newPulse.PulseTimestamp)
+	logger := inslogger.FromContext(ctx)
 
 	n.lock.Lock()
 	defer n.lock.Unlock()
@@ -269,8 +269,8 @@ func (n *ServiceNetwork) HandlePulse(ctx context.Context, newPulse insolar.Pulse
 	if n.isGenesis {
 		return
 	}
-	traceID := "pulse_" + strconv.FormatUint(uint64(newPulse.PulseNumber), 10)
-	ctx, logger := inslogger.WithTraceField(ctx, traceID)
+	// traceID := "pulse_" + strconv.FormatUint(uint64(newPulse.PulseNumber), 10)
+	// ctx, logger := inslogger.WithTraceField(ctx, traceID)
 	logger.Infof("Got new pulse number: %d", newPulse.PulseNumber)
 	ctx, span := instracer.StartSpan(ctx, "ServiceNetwork.Handlepulse")
 	span.AddAttributes(

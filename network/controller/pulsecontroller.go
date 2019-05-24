@@ -54,6 +54,7 @@ import (
 	"context"
 	"sync/atomic"
 
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 
@@ -102,7 +103,9 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Req
 	}
 	// if we are a joiner node, we should receive pulse from phase1 packet and ignore pulse from pulsar
 	if !pc.NodeKeeper.GetConsensusInfo().IsJoiner() {
-		go pc.PulseHandler.HandlePulse(context.Background(), data.Pulse)
+		parent := instracer.MustDeserialize(data.TraceSpanData)
+		newCtx := instracer.WithParentSpan(context.Background(), parent)
+		go pc.PulseHandler.HandlePulse(newCtx, data.Pulse)
 	} else {
 		log.Debugf("Ignore pulse %v from pulsar, waiting for consensus phase1 packet", data.Pulse)
 		skipped := atomic.AddUint32(&pc.skippedPulses, 1)
