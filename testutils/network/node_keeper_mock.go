@@ -88,6 +88,11 @@ type NodeKeeperMock struct {
 	MoveSyncToActivePreCounter uint64
 	MoveSyncToActiveMock       mNodeKeeperMockMoveSyncToActive
 
+	NodeToAnnounceClaimFunc       func(p insolar.NetworkNode, p1 packets.BitSetMapper) (r *packets.NodeAnnounceClaim, r1 error)
+	NodeToAnnounceClaimCounter    uint64
+	NodeToAnnounceClaimPreCounter uint64
+	NodeToAnnounceClaimMock       mNodeKeeperMockNodeToAnnounceClaim
+
 	SetCloudHashFunc       func(p []byte)
 	SetCloudHashCounter    uint64
 	SetCloudHashPreCounter uint64
@@ -130,6 +135,7 @@ func NewNodeKeeperMock(t minimock.Tester) *NodeKeeperMock {
 	m.GetWorkingNodesByRoleMock = mNodeKeeperMockGetWorkingNodesByRole{mock: m}
 	m.IsBootstrappedMock = mNodeKeeperMockIsBootstrapped{mock: m}
 	m.MoveSyncToActiveMock = mNodeKeeperMockMoveSyncToActive{mock: m}
+	m.NodeToAnnounceClaimMock = mNodeKeeperMockNodeToAnnounceClaim{mock: m}
 	m.SetCloudHashMock = mNodeKeeperMockSetCloudHash{mock: m}
 	m.SetInitialSnapshotMock = mNodeKeeperMockSetInitialSnapshot{mock: m}
 	m.SetIsBootstrappedMock = mNodeKeeperMockSetIsBootstrapped{mock: m}
@@ -1939,6 +1945,157 @@ func (m *NodeKeeperMock) MoveSyncToActiveFinished() bool {
 	return true
 }
 
+type mNodeKeeperMockNodeToAnnounceClaim struct {
+	mock              *NodeKeeperMock
+	mainExpectation   *NodeKeeperMockNodeToAnnounceClaimExpectation
+	expectationSeries []*NodeKeeperMockNodeToAnnounceClaimExpectation
+}
+
+type NodeKeeperMockNodeToAnnounceClaimExpectation struct {
+	input  *NodeKeeperMockNodeToAnnounceClaimInput
+	result *NodeKeeperMockNodeToAnnounceClaimResult
+}
+
+type NodeKeeperMockNodeToAnnounceClaimInput struct {
+	p  insolar.NetworkNode
+	p1 packets.BitSetMapper
+}
+
+type NodeKeeperMockNodeToAnnounceClaimResult struct {
+	r  *packets.NodeAnnounceClaim
+	r1 error
+}
+
+//Expect specifies that invocation of NodeKeeper.NodeToAnnounceClaim is expected from 1 to Infinity times
+func (m *mNodeKeeperMockNodeToAnnounceClaim) Expect(p insolar.NetworkNode, p1 packets.BitSetMapper) *mNodeKeeperMockNodeToAnnounceClaim {
+	m.mock.NodeToAnnounceClaimFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeKeeperMockNodeToAnnounceClaimExpectation{}
+	}
+	m.mainExpectation.input = &NodeKeeperMockNodeToAnnounceClaimInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of NodeKeeper.NodeToAnnounceClaim
+func (m *mNodeKeeperMockNodeToAnnounceClaim) Return(r *packets.NodeAnnounceClaim, r1 error) *NodeKeeperMock {
+	m.mock.NodeToAnnounceClaimFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &NodeKeeperMockNodeToAnnounceClaimExpectation{}
+	}
+	m.mainExpectation.result = &NodeKeeperMockNodeToAnnounceClaimResult{r, r1}
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of NodeKeeper.NodeToAnnounceClaim is expected once
+func (m *mNodeKeeperMockNodeToAnnounceClaim) ExpectOnce(p insolar.NetworkNode, p1 packets.BitSetMapper) *NodeKeeperMockNodeToAnnounceClaimExpectation {
+	m.mock.NodeToAnnounceClaimFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &NodeKeeperMockNodeToAnnounceClaimExpectation{}
+	expectation.input = &NodeKeeperMockNodeToAnnounceClaimInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+func (e *NodeKeeperMockNodeToAnnounceClaimExpectation) Return(r *packets.NodeAnnounceClaim, r1 error) {
+	e.result = &NodeKeeperMockNodeToAnnounceClaimResult{r, r1}
+}
+
+//Set uses given function f as a mock of NodeKeeper.NodeToAnnounceClaim method
+func (m *mNodeKeeperMockNodeToAnnounceClaim) Set(f func(p insolar.NetworkNode, p1 packets.BitSetMapper) (r *packets.NodeAnnounceClaim, r1 error)) *NodeKeeperMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.NodeToAnnounceClaimFunc = f
+	return m.mock
+}
+
+//NodeToAnnounceClaim implements github.com/insolar/insolar/network.NodeKeeper interface
+func (m *NodeKeeperMock) NodeToAnnounceClaim(p insolar.NetworkNode, p1 packets.BitSetMapper) (r *packets.NodeAnnounceClaim, r1 error) {
+	counter := atomic.AddUint64(&m.NodeToAnnounceClaimPreCounter, 1)
+	defer atomic.AddUint64(&m.NodeToAnnounceClaimCounter, 1)
+
+	if len(m.NodeToAnnounceClaimMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.NodeToAnnounceClaimMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to NodeKeeperMock.NodeToAnnounceClaim. %v %v", p, p1)
+			return
+		}
+
+		input := m.NodeToAnnounceClaimMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, NodeKeeperMockNodeToAnnounceClaimInput{p, p1}, "NodeKeeper.NodeToAnnounceClaim got unexpected parameters")
+
+		result := m.NodeToAnnounceClaimMock.expectationSeries[counter-1].result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeKeeperMock.NodeToAnnounceClaim")
+			return
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.NodeToAnnounceClaimMock.mainExpectation != nil {
+
+		input := m.NodeToAnnounceClaimMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, NodeKeeperMockNodeToAnnounceClaimInput{p, p1}, "NodeKeeper.NodeToAnnounceClaim got unexpected parameters")
+		}
+
+		result := m.NodeToAnnounceClaimMock.mainExpectation.result
+		if result == nil {
+			m.t.Fatal("No results are set for the NodeKeeperMock.NodeToAnnounceClaim")
+		}
+
+		r = result.r
+		r1 = result.r1
+
+		return
+	}
+
+	if m.NodeToAnnounceClaimFunc == nil {
+		m.t.Fatalf("Unexpected call to NodeKeeperMock.NodeToAnnounceClaim. %v %v", p, p1)
+		return
+	}
+
+	return m.NodeToAnnounceClaimFunc(p, p1)
+}
+
+//NodeToAnnounceClaimMinimockCounter returns a count of NodeKeeperMock.NodeToAnnounceClaimFunc invocations
+func (m *NodeKeeperMock) NodeToAnnounceClaimMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.NodeToAnnounceClaimCounter)
+}
+
+//NodeToAnnounceClaimMinimockPreCounter returns the value of NodeKeeperMock.NodeToAnnounceClaim invocations
+func (m *NodeKeeperMock) NodeToAnnounceClaimMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.NodeToAnnounceClaimPreCounter)
+}
+
+//NodeToAnnounceClaimFinished returns true if mock invocations count is ok
+func (m *NodeKeeperMock) NodeToAnnounceClaimFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.NodeToAnnounceClaimMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.NodeToAnnounceClaimCounter) == uint64(len(m.NodeToAnnounceClaimMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.NodeToAnnounceClaimMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.NodeToAnnounceClaimCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.NodeToAnnounceClaimFunc != nil {
+		return atomic.LoadUint64(&m.NodeToAnnounceClaimCounter) > 0
+	}
+
+	return true
+}
+
 type mNodeKeeperMockSetCloudHash struct {
 	mock              *NodeKeeperMock
 	mainExpectation   *NodeKeeperMockSetCloudHashExpectation
@@ -2513,6 +2670,10 @@ func (m *NodeKeeperMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to NodeKeeperMock.MoveSyncToActive")
 	}
 
+	if !m.NodeToAnnounceClaimFinished() {
+		m.t.Fatal("Expected call to NodeKeeperMock.NodeToAnnounceClaim")
+	}
+
 	if !m.SetCloudHashFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.SetCloudHash")
 	}
@@ -2598,6 +2759,10 @@ func (m *NodeKeeperMock) MinimockFinish() {
 		m.t.Fatal("Expected call to NodeKeeperMock.MoveSyncToActive")
 	}
 
+	if !m.NodeToAnnounceClaimFinished() {
+		m.t.Fatal("Expected call to NodeKeeperMock.NodeToAnnounceClaim")
+	}
+
 	if !m.SetCloudHashFinished() {
 		m.t.Fatal("Expected call to NodeKeeperMock.SetCloudHash")
 	}
@@ -2641,6 +2806,7 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetWorkingNodesByRoleFinished()
 		ok = ok && m.IsBootstrappedFinished()
 		ok = ok && m.MoveSyncToActiveFinished()
+		ok = ok && m.NodeToAnnounceClaimFinished()
 		ok = ok && m.SetCloudHashFinished()
 		ok = ok && m.SetInitialSnapshotFinished()
 		ok = ok && m.SetIsBootstrappedFinished()
@@ -2703,6 +2869,10 @@ func (m *NodeKeeperMock) MinimockWait(timeout time.Duration) {
 
 			if !m.MoveSyncToActiveFinished() {
 				m.t.Error("Expected call to NodeKeeperMock.MoveSyncToActive")
+			}
+
+			if !m.NodeToAnnounceClaimFinished() {
+				m.t.Error("Expected call to NodeKeeperMock.NodeToAnnounceClaim")
 			}
 
 			if !m.SetCloudHashFinished() {
@@ -2782,6 +2952,10 @@ func (m *NodeKeeperMock) AllMocksCalled() bool {
 	}
 
 	if !m.MoveSyncToActiveFinished() {
+		return false
+	}
+
+	if !m.NodeToAnnounceClaimFinished() {
 		return false
 	}
 
