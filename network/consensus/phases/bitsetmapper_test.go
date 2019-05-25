@@ -126,12 +126,13 @@ func TestNewSparseBitsetMapper(t *testing.T) {
 	assert.Equal(t, 1, index)
 }
 
-func newTestAnnounceClaim(announcerIndex, joinerIndex, count uint16, announcer insolar.Reference) *packets.NodeAnnounceClaim {
+func newTestAnnounceClaim(announcerIndex, joinerIndex, count uint16, announcer insolar.Reference, leavingETA uint32) *packets.NodeAnnounceClaim {
 	result := &packets.NodeAnnounceClaim{}
 	result.NodeJoinClaim.NodeRef = announcer
 	result.NodeAnnouncerIndex = announcerIndex
 	result.NodeJoinerIndex = joinerIndex
 	result.NodeCount = count
+	result.LeavingETA = leavingETA
 	result.NodeAddress, _ = packets.NewNodeAddress("127.0.0.1:0")
 	return result
 }
@@ -140,9 +141,9 @@ func TestApplyClaims(t *testing.T) {
 	mutator := node.NewMutator(node.NewSnapshot(insolar.FirstPulseNumber, nil))
 	count := 10
 	bm := NewSparseBitsetMapper(count)
-	announce1 := newTestAnnounceClaim(1, 5, uint16(count), insolar.Reference{11})
-	announce2 := newTestAnnounceClaim(2, 5, uint16(count), insolar.Reference{22})
-	announce3 := newTestAnnounceClaim(9, 5, uint16(count), insolar.Reference{99})
+	announce1 := newTestAnnounceClaim(1, 5, uint16(count), insolar.Reference{11}, 0)
+	announce2 := newTestAnnounceClaim(2, 5, uint16(count), insolar.Reference{22}, 0)
+	announce3 := newTestAnnounceClaim(9, 5, uint16(count), insolar.Reference{99}, 100)
 	cs := ConsensusState{NodesMutator: mutator, BitsetMapper: bm}
 	origin := node.NewNode(insolar.Reference{55}, insolar.StaticRoleLightMaterial, nil, "127.0.0.1:0", "")
 	claims := []packets.ReferendumClaim{announce1, announce2, announce3}
@@ -153,6 +154,9 @@ func TestApplyClaims(t *testing.T) {
 	assert.NotNil(t, mutator.GetActiveNode(insolar.Reference{22}))
 	assert.NotNil(t, mutator.GetActiveNode(insolar.Reference{55}))
 	assert.Nil(t, mutator.GetActiveNode(insolar.Reference{33}))
+	leavingNodes := mutator.GetLeavingNodes()
+	assert.Len(t, leavingNodes, 1)
+	assert.Equal(t, insolar.Reference{99}, leavingNodes[0].ID())
 
 	ref, err := bm.IndexToRef(2)
 	assert.NoError(t, err)
