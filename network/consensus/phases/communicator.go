@@ -170,7 +170,7 @@ func (nc *ConsensusCommunicator) sendRequestToNodes(ctx context.Context, partici
 	}
 }
 
-func (nc *ConsensusCommunicator) sendRequestToNodesWithOrigin(ctx context.Context, originClaim *packets.NodeAnnounceClaim,
+func (nc *ConsensusCommunicator) sendRequestToNodesWithOriginClaim(ctx context.Context, originClaim *packets.NodeAnnounceClaim,
 	participants []insolar.NetworkNode, packet *packets.Phase1Packet) error {
 
 	requests := make(map[insolar.Reference]packets.ConsensusPacket)
@@ -280,23 +280,17 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 	result[nc.NodeKeeper.GetOrigin().ID()] = packet
 	nc.setPulseNumber(packet.GetPulse().PulseNumber)
 
-	var request *packets.Phase1Packet
-
 	type none struct{}
 	sentRequests := make(map[insolar.Reference]none)
 
 	// TODO: awful, need rework
+	response := packet
 	if originClaim == nil {
-		request = packet
+		nc.sendRequestToNodes(ctx, participants, packet)
 	} else {
-		request = packet.Clone().(*packets.Phase1Packet)
-		request.RemoveAnnounceClaim()
-	}
-
-	if originClaim == nil {
-		nc.sendRequestToNodes(ctx, participants, request)
-	} else {
-		err := nc.sendRequestToNodesWithOrigin(ctx, originClaim, participants, packet)
+		response = packet.Clone().(*packets.Phase1Packet)
+		response.RemoveAnnounceClaim()
+		err := nc.sendRequestToNodesWithOriginClaim(ctx, originClaim, participants, packet)
 		if err != nil {
 			return nil, errors.Wrap(err, "Failed to send requests")
 		}
@@ -309,7 +303,6 @@ func (nc *ConsensusCommunicator) ExchangePhase1(
 		_, ok := sentRequests[ref]
 		return !ok
 	}
-	response := request
 
 	for {
 		select {

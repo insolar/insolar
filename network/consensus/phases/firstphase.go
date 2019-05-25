@@ -105,7 +105,6 @@ type FirstPhaseImpl struct {
 
 // Execute do first phase
 func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*FirstPhaseState, error) {
-	entry := &merkle.PulseEntry{Pulse: pulse}
 	logger := inslogger.FromContext(ctx)
 	ctx, span := instracer.StartSpan(ctx, "FirstPhase.Execute")
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(pulse.PulseNumber)))
@@ -113,6 +112,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 
 	state := NewConsensusState(fp.NodeKeeper.GetConsensusInfo(), fp.NodeKeeper.GetSnapshotCopy())
 
+	entry := &merkle.PulseEntry{Pulse: pulse}
 	pulseHash, pulseProof, err := fp.Calculator.GetPulseProof(entry)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to calculate pulse proof")
