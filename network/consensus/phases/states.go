@@ -98,9 +98,14 @@ type ConsensusState struct {
 }
 
 func NewConsensusState(consensusInfo network.ConsensusInfo, snapshot *node.Snapshot) *ConsensusState {
-	return &ConsensusState{
+	result := &ConsensusState{
 		ConsensusInfo: consensusInfo,
 		NodesMutator:  node.NewMutator(snapshot),
 		HashStorage:   NewHashStorage(),
 	}
+
+	if !consensusInfo.IsJoiner() {
+		result.BitsetMapper = NewBitsetMapper(result.NodesMutator.GetActiveNodes())
+	}
+	return result
 }

@@ -114,15 +114,10 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 	state := NewConsensusState(fp.NodeKeeper.GetConsensusInfo(), fp.NodeKeeper.GetSnapshotCopy())
 
 	pulseHash, pulseProof, err := fp.Calculator.GetPulseProof(entry)
-	if !state.ConsensusInfo.IsJoiner() {
-		state.BitsetMapper = NewBitsetMapper(state.NodesMutator.GetActiveNodes())
-	}
-
-	logger.Infof("[ NET Consensus phase-1 ] Calculated pulse proof: %s", base58.Encode(pulseHash))
-
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NET Consensus phase-1 ] Failed to calculate pulse proof")
 	}
+	logger.Infof("[ NET Consensus phase-1 ] Calculated pulse proof: %s", base58.Encode(pulseHash))
 
 	packet := packets.NewPhase1Packet(*pulse)
 	err = packet.SetPulseProof(pulseProof.StateHash, pulseProof.Signature.Bytes())
