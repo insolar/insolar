@@ -113,6 +113,7 @@ func (bm *BitsetMapper) Length() int {
 	return bm.length
 }
 
+// ApplyClaims processes Announce Claims and modifies  ConsensusState bitset and Mutator
 func ApplyClaims(state *ConsensusState, origin insolar.NetworkNode, claims []packets.ReferendumClaim) error {
 	var NodeJoinerIndex uint16
 	for _, claim := range claims {
