@@ -206,7 +206,12 @@ func (m *client) GetObject(
 		case *payload.State:
 			statePayload = p
 		case *payload.Error:
-			return nil, errors.New(p.Text)
+			switch p.Code {
+			case payload.CodeDeactivated:
+				return nil, insolar.ErrDeactivated
+			default:
+				return nil, errors.New(p.Text)
+			}
 		default:
 			return nil, fmt.Errorf("GetObject: unexpected reply: %#v", p)
 		}

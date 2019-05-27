@@ -9,34 +9,24 @@ func _() {
 	// Re-run the stringer command to generate them again.
 	var x [1]struct{}
 	_ = x[TypeUnknown-0]
-	_ = x[TypeError-100]
-	_ = x[TypeID-101]
-	_ = x[TypeObject-102]
-	_ = x[TypeState-103]
-	_ = x[TypeGetObject-104]
-	_ = x[TypePassState-105]
-	_ = x[TypeObjIndex-106]
-	_ = x[TypeObjState-107]
-	_ = x[TypeIndex-108]
+	_ = x[TypeError-1]
+	_ = x[TypeID-2]
+	_ = x[TypeObject-3]
+	_ = x[TypeState-4]
+	_ = x[TypeGetObject-5]
+	_ = x[TypePassState-6]
+	_ = x[TypeObjIndex-7]
+	_ = x[TypeObjState-8]
+	_ = x[TypeIndex-9]
 }
 
-const (
-	_Type_name_0 = "TypeUnknown"
-	_Type_name_1 = "TypeErrorTypeIDTypeObjectTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndex"
-)
+const _Type_name = "TypeUnknownTypeErrorTypeIDTypeObjectTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndex"
 
-var (
-	_Type_index_1 = [...]uint8{0, 9, 15, 25, 34, 47, 60, 72, 84, 93}
-)
+var _Type_index = [...]uint8{0, 11, 20, 26, 36, 45, 58, 71, 83, 95, 104}
 
 func (i Type) String() string {
-	switch {
-	case i == 0:
-		return _Type_name_0
-	case 100 <= i && i <= 108:
-		i -= 100
-		return _Type_name_1[_Type_index_1[i]:_Type_index_1[i+1]]
-	default:
+	if i >= Type(len(_Type_index)-1) {
 		return "Type(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
+	return _Type_name[_Type_index[i]:_Type_index[i+1]]
 }

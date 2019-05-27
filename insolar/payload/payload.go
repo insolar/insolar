@@ -11,15 +11,15 @@ type Type uint32
 
 const (
 	TypeUnknown   Type = 0
-	TypeError     Type = 100
-	TypeID        Type = 101
-	TypeObject    Type = 102
-	TypeState     Type = 103
-	TypeGetObject Type = 104
-	TypePassState Type = 105
-	TypeObjIndex  Type = 106
-	TypeObjState  Type = 107
-	TypeIndex     Type = 108
+	TypeError     Type = 1
+	TypeID        Type = 2
+	TypeObject    Type = 3
+	TypeState     Type = 4
+	TypeGetObject Type = 5
+	TypePassState Type = 6
+	TypeObjIndex  Type = 7
+	TypeObjState  Type = 8
+	TypeIndex     Type = 9
 )
 
 // Payload represents any kind of data that can be encoded in consistent manner.

@@ -71,7 +71,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		}
 
 		if state.ID() == record.StateDeactivation {
-			msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated"})
+			msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated", Code: payload.CodeDeactivated})
 			if err != nil {
 				return errors.Wrap(err, "failed to create reply")
 			}
