@@ -60,13 +60,14 @@ func (m *WriteController) Begin(ctx context.Context, pulse insolar.PulseNumber) 
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
+	logger := inslogger.FromContext(ctx)
+
 	if pulse != m.current {
-		inslogger.FromContext(ctx).
-			Errorf("can't begin writing for wrong pulse: opened - %v, requested - %v", m.current, pulse)
+		logger.Errorf("can't begin writing for wrong pulse: opened - %v, requested - %v", m.current, pulse)
 		return func() {}, ErrWriteClosed
 	}
 	if m.closed {
-		inslogger.FromContext(ctx).Error("requested pulse is closed for writing")
+		logger.Error("requested pulse is closed for writing")
 		return func() {}, ErrWriteClosed
 	}
 	m.wg.Add(1)
@@ -78,12 +79,14 @@ func (m *WriteController) Open(ctx context.Context, pulse insolar.PulseNumber) e
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
+	logger := inslogger.FromContext(ctx)
+
 	if pulse < m.current {
-		inslogger.FromContext(ctx).Error("can't open past pulse for writing: ", pulse)
+		logger.Error("can't open past pulse for writing: ", pulse)
 		return ErrWriteClosed
 	}
 	if pulse == m.current {
-		inslogger.FromContext(ctx).Warn("requested pulse already open for writing: ", pulse)
+		logger.Warn("requested pulse already opened for writing: ", pulse)
 		return nil
 	}
 
@@ -99,9 +102,15 @@ func (m *WriteController) CloseAndWait(ctx context.Context, pulse insolar.PulseN
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
+	logger := inslogger.FromContext(ctx)
+
 	if pulse != m.current {
-		inslogger.FromContext(ctx).Errorf("wrong pulse for closing: opened - %v, requested = %v", m.current, pulse)
+		logger.Errorf("wrong pulse for closing: opened - %v, requested = %v", m.current, pulse)
 		return ErrWriteClosed
+	}
+
+	if pulse == m.current && m.closed {
+		logger.Warn("requested pulse already closed for writing: ", pulse)
 	}
 
 	m.closed = true
