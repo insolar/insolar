@@ -52,8 +52,13 @@ package phases
 
 import (
 	"context"
-	"fmt"
 	"math"
+
+	"github.com/jbenet/go-base58"
+	"github.com/pkg/errors"
+	"go.opencensus.io/stats"
+	"go.opencensus.io/tag"
+	"go.opencensus.io/trace"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -65,11 +70,6 @@ import (
 	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/jbenet/go-base58"
-	"github.com/pkg/errors"
-	"go.opencensus.io/stats"
-	"go.opencensus.io/tag"
-	"go.opencensus.io/trace"
 )
 
 const BFTPercent = 2.0 / 3.0
@@ -110,6 +110,7 @@ func (fp *FirstPhaseImpl) Execute(ctx context.Context, pulse *insolar.Pulse) (*F
 	span.AddAttributes(trace.Int64Attribute("pulse", int64(pulse.PulseNumber)))
 	defer span.End()
 
+	// mutator from snapshot ??? why
 	state := NewConsensusState(fp.NodeKeeper.GetConsensusInfo(), fp.NodeKeeper.GetSnapshotCopy())
 
 	entry := &merkle.PulseEntry{Pulse: pulse}
@@ -246,8 +247,6 @@ func (fp *FirstPhaseImpl) generatePhase2Bitset(list packets.BitSetMapper, proofs
 
 	cells := make([]packets.BitSetCell, 0)
 	for node := range proofs {
-		fmt.Printf("!!!! ---- state: %s, ID: %s", node.GetState().String(), node.ID().String())
-		fmt.Println()
 		cells = append(cells, packets.BitSetCell{
 			NodeID: node.ID(),
 			State:  getNodeState(node, pulseNumber),

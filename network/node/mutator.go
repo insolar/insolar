@@ -78,7 +78,8 @@ func (m *Mutator) AddNode(n insolar.NetworkNode, t ListType) {
 	}
 	m.addToIndex(n)
 	m.snapshot.nodeList[t] = append(m.snapshot.nodeList[t], n)
-	if t == ListWorking {
-		m.active = append(m.active, n)
-	}
+	// TODO :
+	// if t == ListWorking {
+	m.active = append(m.active, n)
+	// }
 }

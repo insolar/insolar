@@ -220,7 +220,9 @@ func ClaimToNode(version string, c packets.ReferendumClaim) (insolar.NetworkNode
 			claim.NodeAddress.String(),
 			version)
 		node.SetShortID(claim.ShortNodeID)
-		node.SetLeavingETA(insolar.PulseNumber(claim.LeavingETA))
+		if claim.LeavingETA > 0 {
+			node.SetLeavingETA(insolar.PulseNumber(claim.LeavingETA))
+		}
 		return node, nil
 	}
 

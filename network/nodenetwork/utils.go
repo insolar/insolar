@@ -90,6 +90,7 @@ func GetMergedCopy(nodes []insolar.NetworkNode, claims []packets.ReferendumClaim
 	}, nil
 }
 
+// TODO: bronin
 func mergeClaim(nodes map[insolar.Reference]insolar.NetworkNode, claim packets.ReferendumClaim) (bool, error) {
 	isJoinClaim := false
 
@@ -103,6 +104,16 @@ func mergeClaim(nodes map[insolar.Reference]insolar.NetworkNode, claim packets.R
 		}
 		n.(node.MutableNode).SetState(insolar.NodePending)
 		nodes[n.ID()] = n
+	case *packets.NodeAnnounceClaim:
+		if t.LeavingETA > 0 {
+			nodes[t.NodeRef].(node.MutableNode).SetLeavingETA(insolar.PulseNumber(t.LeavingETA))
+		}
+		// n, err := node.ClaimToNode("", t)
+		// if err != nil {
+		// 	break
+		// }
+		// nodes[n.ID()] = n
+
 	case *packets.NodeLeaveClaim:
 		if nodes[t.NodeID] == nil {
 			break

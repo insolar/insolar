@@ -128,7 +128,7 @@ type NodeAnnounceClaim struct {
 
 	LeavingETA         uint32
 	NodeAnnouncerIndex uint16
-	NodeJoinerIndex    uint16 // ?? is needed ?
+	NodeJoinerIndex    uint16
 	NodeCount          uint16
 	CloudHash          [HashLength]byte
 
