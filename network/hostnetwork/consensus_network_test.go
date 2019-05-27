@@ -73,54 +73,75 @@ import (
 
 type consensusNetworkSuite struct {
 	suite.Suite
-	crypto insolar.CryptographyService
+	crypto     insolar.CryptographyService
+	id1, id2   string
+	sid1, sid2 insolar.ShortNodeID
+	ref1, ref2 insolar.Reference
 }
 
-func createTwoConsensusNetworks(t *testing.T, id1, id2 insolar.ShortNodeID) (_, _ network.ConsensusNetwork) {
-	m := newMockResolver()
+type consensusTestCase struct {
+	parent   *consensusNetworkSuite
+	ctx      context.Context
+	cn1, cn2 network.ConsensusNetwork
+	resolver *MockResolver
+}
+
+func (s *consensusNetworkSuite) newTestCase() *consensusTestCase {
+	resolver := newMockResolver()
 
 	cm1 := component.NewManager(nil)
 	f1 := transport.NewFactory(configuration.NewHostNetwork().Transport)
-	cn1, err := NewConsensusNetwork(ID1+DOMAIN, id1)
-	require.NoError(t, err)
-	cm1.Inject(f1, cn1, m)
+	cn1, err := NewConsensusNetwork(s.id1, s.sid1)
+	require.NoError(s.T(), err)
+	cm1.Inject(f1, cn1, resolver)
 
 	cm2 := component.NewManager(nil)
 	f2 := transport.NewFactory(configuration.NewHostNetwork().Transport)
-	cn2, err := NewConsensusNetwork(ID2+DOMAIN, id2)
-	require.NoError(t, err)
-	cm2.Inject(f2, cn2, m)
+	cn2, err := NewConsensusNetwork(s.id2, s.sid2)
+	require.NoError(s.T(), err)
+	cm2.Inject(f2, cn2, resolver)
 
 	ctx := context.Background()
 
 	err = cn1.Init(ctx)
-	require.NoError(t, err)
+	require.NoError(s.T(), err)
 	err = cn2.Init(ctx)
-	require.NoError(t, err)
+	require.NoError(s.T(), err)
 
-	err = cn1.Start(ctx)
-	require.NoError(t, err)
-	err = cn2.Start(ctx)
-	require.NoError(t, err)
+	return &consensusTestCase{
+		parent:   s,
+		ctx:      ctx,
+		cn1:      cn1,
+		cn2:      cn2,
+		resolver: resolver,
+	}
+}
 
-	ref1, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
-	require.NoError(t, err)
-	routing1, err := host.NewHostNS(cn1.PublicAddress(), *ref1, id1)
-	require.NoError(t, err)
-	ref2, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
-	require.NoError(t, err)
-	routing2, err := host.NewHostNS(cn2.PublicAddress(), *ref2, id2)
-	require.NoError(t, err)
-	m.addMappingHost(routing1)
-	m.addMappingHost(routing2)
+func (ctc *consensusTestCase) Start() {
+	// start the second consensusNetwork before the first because test cases perform sending packets first -> second,
+	// so the second consensusNetwork should be ready to receive packets when the first starts to send
+	err := ctc.cn2.Start(ctc.ctx)
+	require.NoError(ctc.parent.T(), err)
+	err = ctc.cn1.Start(ctc.ctx)
+	require.NoError(ctc.parent.T(), err)
 
-	return cn1, cn2
+	routing1, err := host.NewHostNS(ctc.cn1.PublicAddress(), ctc.parent.ref1, ctc.parent.sid1)
+	require.NoError(ctc.parent.T(), err)
+	routing2, err := host.NewHostNS(ctc.cn2.PublicAddress(), ctc.parent.ref2, ctc.parent.sid2)
+	require.NoError(ctc.parent.T(), err)
+	ctc.resolver.addMappingHost(routing1)
+	ctc.resolver.addMappingHost(routing2)
+}
+
+func (ctc *consensusTestCase) Stop() {
+	// stop consensusNetworks in the reverse order of their start
+	_ = ctc.cn1.Stop(ctc.ctx)
+	_ = ctc.cn2.Stop(ctc.ctx)
 }
 
 func (s *consensusNetworkSuite) sendPacket(packet packets.ConsensusPacket) {
-	cn1, cn2 := createTwoConsensusNetworks(s.T(), 0, 1)
-	ctx := context.Background()
-	ctx2 := context.Background()
+	ctc := s.newTestCase()
+	defer ctc.Stop()
 
 	wg := sync.WaitGroup{}
 	wg.Add(1)
@@ -129,21 +150,11 @@ func (s *consensusNetworkSuite) sendPacket(packet packets.ConsensusPacket) {
 		log.Info("handler triggered")
 		wg.Done()
 	}
-	cn2.RegisterPacketHandler(packet.GetType(), handler)
+	ctc.cn2.RegisterPacketHandler(packet.GetType(), handler)
 
-	err := cn2.Start(ctx2)
-	s.Require().NoError(err)
-	err = cn1.Start(ctx)
-	s.Require().NoError(err)
-	defer func() {
-		cn1.Stop(ctx)
-		cn2.Stop(ctx2)
-	}()
+	ctc.Start()
 
-	ref2, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
-	s.Require().NoError(err)
-
-	err = cn1.SignAndSendPacket(packet, *ref2, s.crypto)
+	err := ctc.cn1.SignAndSendPacket(packet, s.ref2, s.crypto)
 	s.Require().NoError(err)
 	wg.Wait()
 }
@@ -189,9 +200,8 @@ func (s *consensusNetworkSuite) TestSendPacketPhase3() {
 }
 
 func (s *consensusNetworkSuite) sendPacketAndVerify(packet packets.ConsensusPacket) {
-	cn1, cn2 := createTwoConsensusNetworks(s.T(), 0, 1)
-	ctx := context.Background()
-	ctx2 := context.Background()
+	ctc := s.newTestCase()
+	defer ctc.Stop()
 
 	result := make(chan bool, 1)
 
@@ -211,21 +221,11 @@ func (s *consensusNetworkSuite) sendPacketAndVerify(packet packets.ConsensusPack
 		}
 		result <- true
 	}
-	cn2.RegisterPacketHandler(packet.GetType(), handler)
+	ctc.cn2.RegisterPacketHandler(packet.GetType(), handler)
 
-	err := cn2.Start(ctx2)
-	s.Require().NoError(err)
-	err = cn1.Start(ctx)
-	s.Require().NoError(err)
-	defer func() {
-		cn1.Stop(ctx)
-		cn2.Stop(ctx2)
-	}()
+	ctc.Start()
 
-	ref2, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
-	s.Require().NoError(err)
-
-	err = cn1.SignAndSendPacket(packet, *ref2, s.crypto)
+	err := ctc.cn1.SignAndSendPacket(packet, s.ref2, s.crypto)
 	s.Require().NoError(err)
 	s.True(<-result)
 }
@@ -247,24 +247,30 @@ func (s *consensusNetworkSuite) TestVerifySignPhase3() {
 	s.sendPacketAndVerify(packet)
 }
 
-func NewSuite() (*consensusNetworkSuite, error) {
+func NewSuite(t *testing.T) *consensusNetworkSuite {
 	kp := platformpolicy.NewKeyProcessor()
 	sk, err := kp.GeneratePrivateKey()
-	if err != nil {
-		return nil, err
-	}
+	require.NoError(t, err)
 	cryptoService := cryptography.NewKeyBoundCryptographyService(sk)
+
+	id1 := ID1 + DOMAIN
+	id2 := ID2 + DOMAIN
+	sid1 := insolar.ShortNodeID(0)
+	sid2 := insolar.ShortNodeID(1)
+	ref1, err := insolar.NewReferenceFromBase58(id1)
+	require.NoError(t, err)
+	ref2, err := insolar.NewReferenceFromBase58(id2)
+	require.NoError(t, err)
 
 	return &consensusNetworkSuite{
 		Suite:  suite.Suite{},
 		crypto: cryptoService,
-	}, nil
+		id1:    id1, id2: id2, sid1: sid1, sid2: sid2, ref1: *ref1, ref2: *ref2,
+	}
 }
 
 func TestConsensusNetwork(t *testing.T) {
-	s, err := NewSuite()
-	require.NoError(t, err)
-	suite.Run(t, s)
+	suite.Run(t, NewSuite(t))
 }
 
 func TestNetworkConsensus_SignAndSendPacket_NotStarted(t *testing.T) {
