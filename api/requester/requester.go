@@ -127,12 +127,11 @@ func GetSeed(url string) ([]byte, error) {
 	if seedResp.Error != nil {
 		return nil, errors.New("[ getSeed ] Field 'error' is not nil: " + fmt.Sprint(seedResp.Error))
 	}
-	res := &seedResp.Result
-	if res == nil {
-		return nil, errors.New("[ getSeed ] Field 'result' is nil")
+	if len(seedResp.Result.Seed) == 0 {
+		return nil, errors.New("[ getSeed ] Field seed is empty")
 	}
 
-	return res.Seed, nil
+	return seedResp.Result.Seed, nil
 }
 
 func constructParams(params []interface{}) ([]byte, error) {
@@ -239,12 +238,8 @@ func Info(url string) (*InfoResponse, error) {
 	if infoResp.Error != nil {
 		return nil, errors.New("[ Info ] Field 'error' is not nil: " + fmt.Sprint(infoResp.Error))
 	}
-	res := &infoResp.Result
-	if res == nil {
-		return nil, errors.New("[ Info ] Field 'result' is nil")
-	}
 
-	return res, nil
+	return &infoResp.Result, nil
 }
 
 // Status makes rpc request to info.Status method and extracts it
@@ -265,10 +260,6 @@ func Status(url string) (*StatusResponse, error) {
 	if statusResp.Error != nil {
 		return nil, errors.New("[ Status ] Field 'error' is not nil: " + fmt.Sprint(statusResp.Error))
 	}
-	res := &statusResp.Result
-	if res == nil {
-		return nil, errors.New("[ Status ] Field 'result' is nil")
-	}
 
-	return res, nil
+	return &statusResp.Result, nil
 }
