@@ -23,10 +23,8 @@ import (
 	"github.com/tylerb/gls"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner"
 	lrCommon "github.com/insolar/insolar/logicrunner/common"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
 
@@ -36,13 +34,13 @@ const (
 
 type ProxyHelper struct {
 	lrCommon.Serializer
-	methods *lrCommon.RPCMethods
+	methods lrCommon.LogicRunnerRPCStub
 }
 
-func NewProxyHelper(runner *logicrunner.LogicRunner) *ProxyHelper {
+func NewProxyHelper(runner lrCommon.LogicRunnerRPCStub) *ProxyHelper {
 	return &ProxyHelper{
 		Serializer: lrCommon.NewCBORSerializer(),
-		methods:    &lrCommon.RPCMethods{lr: runner},
+		methods:    runner,
 	}
 }
 
@@ -110,7 +108,7 @@ func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constru
 }
 
 func (h *ProxyHelper) GetObjChildrenIterator(head insolar.Reference, prototype insolar.Reference,
-	iteratorID string) (*proxyctx.ChildrenTypedIterator, error) {
+	iteratorID string) (*lrCommon.ChildrenTypedIterator, error) {
 
 	res := rpctypes.UpGetObjChildrenIteratorResp{}
 	req := rpctypes.UpGetObjChildrenIteratorReq{
@@ -124,9 +122,9 @@ func (h *ProxyHelper) GetObjChildrenIterator(head insolar.Reference, prototype i
 	err := h.methods.GetObjChildrenIterator(req, &res)
 
 	if err != nil {
-		return &proxyctx.ChildrenTypedIterator{}, errors.Wrap(err, "on calling GetObjChildren")
+		return &lrCommon.ChildrenTypedIterator{}, errors.Wrap(err, "on calling GetObjChildren")
 	}
-	return &proxyctx.ChildrenTypedIterator{
+	return &lrCommon.ChildrenTypedIterator{
 		Parent:         head,
 		ChildPrototype: prototype,
 		IteratorID:     res.Iterator.ID,
@@ -185,6 +183,7 @@ func (h *ProxyHelper) DeactivateObject(object insolar.Reference) error {
 	return nil
 }
 
+/*
 func (h *ProxyHelper) Serialize(what interface{}, to *[]byte) error {
 	panic("implement me")
 }
@@ -192,6 +191,7 @@ func (h *ProxyHelper) Serialize(what interface{}, to *[]byte) error {
 func (h *ProxyHelper) Deserialize(from []byte, into interface{}) error {
 	panic("implement me")
 }
+*/
 
 func (h *ProxyHelper) MakeErrorSerializable(err error) error {
 	if err == nil || err == (*foundation.Error)(nil) || reflect.ValueOf(err).IsNil() {

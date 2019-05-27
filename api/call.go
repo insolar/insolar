@@ -89,12 +89,11 @@ func (ar *Runner) makeCall(ctx context.Context, params Request) (interface{}, er
 		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
 	}
 
-	res, err := ar.ContractRequester.SendRequest(
-		ctx,
-		reference,
-		"Call",
-		[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), params.Method, params.Params, params.Seed, params.Signature},
-	)
+	requestArgs := []interface{}{
+		*ar.CertificateManager.GetCertificate().GetRootDomainReference(),
+		params.Method, params.Params, params.Seed, params.Signature,
+	}
+	res, err := ar.ContractRequester.SendRequest(ctx, reference, "Call", requestArgs)
 
 	if err != nil {
 		return nil, errors.Wrap(err, "[ makeCall ] Can't send request")

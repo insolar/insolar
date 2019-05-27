@@ -20,7 +20,9 @@ import (
 {{- range $import, $i := .Imports }}
 	{{ $import }}
 {{- end }}
+{{ if $.GenerateInitialize -}}
     XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
+{{- end }}
 )
 
 type ExtendableError struct{
@@ -32,7 +34,7 @@ func ( e *ExtendableError ) Error() string{
 }
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 	self := new({{ $.ContractType }})
 
 	if len(object) == 0 {
@@ -58,7 +60,7 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 }
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 	self := new({{ $.ContractType }})
 
 	if len(object) == 0 {
@@ -85,7 +87,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 
 {{ range $method := .Methods }}
 func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 
 	self := new({{ $.ContractType }})
 
@@ -132,7 +134,7 @@ func INSMETHOD_{{ $method.Name }}(object []byte, data []byte) ([]byte, []byte, e
 
 {{ range $f := .Functions }}
 func INSCONSTRUCTOR_{{ $f.Name }}(data []byte) ([]byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 	{{ $f.ArgumentsZeroList }}
 	err := ph.Deserialize(data, &args)
 	if err != nil {

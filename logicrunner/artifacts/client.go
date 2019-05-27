@@ -74,6 +74,13 @@ func (s *localStorage) SetObject(reference insolar.Reference, descriptor ObjectD
 	s.objectStorage[reference] = descriptor
 }
 
+func newLocalStorage() *localStorage {
+	return &localStorage{
+		objectStorage: make(map[insolar.Reference]ObjectDescriptor),
+		codeStorage:   make(map[insolar.Reference]CodeDescriptor),
+	}
+}
+
 // Client provides concrete API to storage for processing module.
 type client struct {
 	JetStorage     jet.Storage                        `inject:""`
@@ -85,7 +92,7 @@ type client struct {
 	sender               bus.Sender
 	getChildrenChunkSize int
 	senders              *messagebus.Senders
-	localStorage         localStorage
+	localStorage         *localStorage
 }
 
 // State returns hash state for artifact manager.
@@ -100,6 +107,7 @@ func NewClient(sender bus.Sender) *client { // nolint
 		getChildrenChunkSize: getChildrenChunkSize,
 		senders:              messagebus.NewSenders(),
 		sender:               sender,
+		localStorage:         newLocalStorage(),
 	}
 }
 

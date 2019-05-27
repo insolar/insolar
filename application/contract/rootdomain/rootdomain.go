@@ -23,6 +23,7 @@ import (
 	"github.com/insolar/insolar/application/proxy/member"
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
@@ -47,6 +48,16 @@ func (rd *RootDomain) CreateMember(name string, key string) (string, error) {
 	_, err = wHolder.AsDelegate(m.GetReference())
 	if err != nil {
 		return "", fmt.Errorf("[ CreateMember ] Can't save as delegate: %s", err.Error())
+	}
+
+	return m.GetReference().String(), nil
+}
+
+func (rd *RootDomain) CreateHelloWorld() (string, error) {
+	helloWorldHolder := helloworld.New()
+	m, err := helloWorldHolder.AsChild(rd.GetReference())
+	if err != nil {
+		return "", fmt.Errorf("[ CreateHelloWorld ] Can't save as child: %s", err.Error())
 	}
 
 	return m.GetReference().String(), nil

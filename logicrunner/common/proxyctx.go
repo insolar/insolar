@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package proxyctx
+package common
 
 import (
 	"github.com/insolar/insolar/insolar"
@@ -34,7 +34,7 @@ type ProxyHelper interface {
 }
 
 // Current - hackish way to give proxies access to the current environment
-var Current ProxyHelper
+var CurrentProxyCtx ProxyHelper
 
 // ChildrenTypedIterator iterator over children of object with specified type
 // it uses cache on insolard service side, provided by IteratorID
@@ -86,7 +86,7 @@ func (oi *ChildrenTypedIterator) fetch() error {
 	oi.CanFetch = false
 	oi.Buff = nil
 
-	temp, err := Current.GetObjChildrenIterator(oi.Parent, oi.ChildPrototype, oi.IteratorID)
+	temp, err := CurrentProxyCtx.GetObjChildrenIterator(oi.Parent, oi.ChildPrototype, oi.IteratorID)
 	if err != nil {
 		oi.IteratorID = ""
 		return err

@@ -17,7 +17,7 @@
 package helloworld
 
 import (
-	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+	"github.com/insolar/insolar/logicrunner/common"
 	XXX_preprocessor "github.com/insolar/insolar/logicrunner/preprocessor"
 )
 
@@ -30,7 +30,7 @@ func (e *ExtendableError) Error() string {
 }
 
 func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -56,7 +56,7 @@ func INSMETHOD_GetCode(object []byte, data []byte) ([]byte, []byte, error) {
 }
 
 func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 	self := new(HelloWorld)
 
 	if len(object) == 0 {
@@ -82,7 +82,7 @@ func INSMETHOD_GetPrototype(object []byte, data []byte) ([]byte, []byte, error) 
 }
 
 func INSMETHOD_Greet(object []byte, data []byte) ([]byte, []byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 
 	self := new(HelloWorld)
 
@@ -123,7 +123,7 @@ func INSMETHOD_Greet(object []byte, data []byte) ([]byte, []byte, error) {
 }
 
 func INSCONSTRUCTOR_New(data []byte) ([]byte, error) {
-	ph := proxyctx.Current
+	ph := common.CurrentProxyCtx
 	args := []interface{}{}
 
 	err := ph.Deserialize(data, &args)

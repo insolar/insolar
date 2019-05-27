@@ -44,7 +44,7 @@ import (
 )
 
 var foundationPath = "github.com/insolar/insolar/logicrunner/goplugin/foundation"
-var proxyctxPath = "github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+var proxyctxPath = "github.com/insolar/insolar/logicrunner/common"
 var corePath = "github.com/insolar/insolar/insolar"
 
 var immutableFlag = "//ins:immutable"

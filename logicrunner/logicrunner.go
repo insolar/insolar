@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/pkg/errors"
+	uuid "github.com/satori/go.uuid"
 	"go.opencensus.io/trace"
 
 	"github.com/ThreeDotsLabs/watermill"
@@ -37,6 +38,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
+	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
@@ -108,17 +110,26 @@ func (lre Error) Error() string {
 	return buffer.String()
 }
 
-func (st *ObjectState) MustModeState(mode string) (res *ExecutionState) {
+func (st *ObjectState) GetModeState(mode string) (rv *ExecutionState, err error) {
 	switch mode {
 	case "execution":
-		res = st.ExecutionState
+		rv = st.ExecutionState
 	case "validation":
-		res = st.Validation
+		rv = st.Validation
 	default:
-		panic("'" + mode + "' is unknown object processing mode")
+		err = errors.Errorf("'%s' is unknown object processing mode", mode)
 	}
-	if res == nil {
-		panic("object is not in " + mode + " mode")
+
+	if rv == nil && err != nil {
+		err = errors.Errorf("object is not in '%s' mode", mode)
+	}
+	return rv, err
+}
+
+func (st *ObjectState) MustModeState(mode string) *ExecutionState {
+	res, err := st.GetModeState(mode)
+	if err != nil {
+		panic(err)
 	}
 	if res.Current == nil {
 		panic("object "+ res.Ref.String() +" has no Current")
@@ -273,6 +284,8 @@ func (lr *LogicRunner) initializeBuiltin(ctx context.Context) error {
 		lr.ArtifactManager.InjectObjectDescriptor(*prototypeDescriptor.HeadRef(), prototypeDescriptor)
 	}
 
+	lrCommon.CurrentProxyCtx = builtin.NewProxyHelper(lr)
+
 	return nil
 }
 
@@ -300,7 +313,7 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 		}
 	}
 
-	lr.rpc = NewRPC(ctx, lr)
+	lr.rpc = lrCommon.NewRPC(ctx, lr, lr.Cfg)
 	if lr.Cfg.GoPlugin != nil {
 		if err := lr.initializeGoPlugin(ctx); err != nil {
 			return err
@@ -902,4 +915,275 @@ func convertQueueToMessageQueue(ctx context.Context, queue []ExecutionQueueEleme
 	inslogger.FromContext(ctx).Debug("convertQueueToMessageQueue: ", traces)
 
 	return mq
+}
+
+// GetCode is an RPC retrieving a code by its reference
+func (lr *LogicRunner) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) (err error) {
+	os := lr.GetObjectState(req.Callee)
+	if os == nil {
+		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
+	}
+	es, err := os.GetModeState(req.Mode)
+	if err != nil {
+		return errors.Wrap(err, "Failed to find needed execution state")
+	}
+	ctx := es.Current.Context
+
+	inslogger.FromContext(ctx).Debug("In RPC.GetCode ....")
+
+	ctx, span := instracer.StartSpan(ctx, "service.GetCode")
+	defer span.End()
+
+	codeDescriptor, err := lr.ArtifactManager.GetCode(ctx, req.Code)
+	if err != nil {
+		return err
+	}
+	reply.Code, err = codeDescriptor.Code()
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// RouteCall routes call from a contract to a contract through event bus.
+func (lr *LogicRunner) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (err error) {
+	os := lr.GetObjectState(req.Callee)
+	if os == nil {
+		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
+	}
+	es, err := os.GetModeState(req.Mode)
+	if err != nil {
+		return errors.Wrap(err, "Failed to find needed execution state")
+	}
+	ctx := es.Current.Context
+
+	if os.ExecutionState.Current.LogicContext.Immutable {
+		return errors.New("Try to call route from immutable method")
+	}
+
+	// TODO: delegation token
+
+	es.nonce++
+
+	msg := &message.CallMethod{
+		Request: record.Request{
+			Caller:          req.Callee,
+			CallerPrototype: req.CalleePrototype,
+			Nonce:           es.nonce,
+
+			Immutable: req.Immutable,
+
+			Object:    &req.Object,
+			Prototype: &req.Prototype,
+			Method:    req.Method,
+			Arguments: req.Arguments,
+		},
+	}
+
+	if !req.Wait {
+		msg.ReturnMode = record.ReturnNoWait
+	}
+
+	res, err := lr.ContractRequester.CallMethod(ctx, msg)
+	if err != nil {
+		return err
+	}
+
+	if req.Wait {
+		rep.Result = res.(*reply.CallMethod).Result
+	}
+
+	return nil
+}
+
+// SaveAsChild is an RPC saving data as memory of a contract as child a parent
+func (lr *LogicRunner) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) (err error) {
+	os := lr.GetObjectState(req.Callee)
+	if os == nil {
+		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
+	}
+	es, err := os.GetModeState(req.Mode)
+	if err != nil {
+		return errors.Wrap(err, "Failed to find needed execution state")
+	}
+	ctx := es.Current.Context
+
+	es.nonce++
+
+	msg := &message.CallMethod{
+		Request: record.Request{
+			Caller:          req.Callee,
+			CallerPrototype: req.CalleePrototype,
+			Nonce:           es.nonce,
+
+			CallType:  record.CTSaveAsChild,
+			Base:      &req.Parent,
+			Prototype: &req.Prototype,
+			Method:    req.ConstructorName,
+			Arguments: req.ArgsSerialized,
+		},
+	}
+
+	ref, err := lr.ContractRequester.CallConstructor(ctx, msg)
+
+	rep.Reference = ref
+
+	return err
+}
+
+// SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
+func (lr *LogicRunner) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) (err error) {
+	os := lr.GetObjectState(req.Callee)
+	if os == nil {
+		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
+	}
+	es, err := os.GetModeState(req.Mode)
+	if err != nil {
+		return errors.Wrap(err, "Failed to find needed execution state")
+	}
+	ctx := es.Current.Context
+
+	es.nonce++
+
+	msg := &message.CallMethod{
+		Request: record.Request{
+			Caller:          req.Callee,
+			CallerPrototype: req.CalleePrototype,
+			Nonce:           es.nonce,
+
+			CallType:  record.CTSaveAsDelegate,
+			Base:      &req.Into,
+			Prototype: &req.Prototype,
+			Method:    req.ConstructorName,
+			Arguments: req.ArgsSerialized,
+		},
+	}
+
+	ref, err := lr.ContractRequester.CallConstructor(ctx, msg)
+
+	rep.Reference = ref
+	return err
+}
+
+var iteratorMap = make(map[string]artifacts.RefIterator)
+var iteratorMapLock = sync.RWMutex{}
+var iteratorBuffSize = 1000
+
+// GetObjChildrenIterator is an RPC returns an iterator over object children with specified prototype
+func (lr *LogicRunner) GetObjChildrenIterator(
+	req rpctypes.UpGetObjChildrenIteratorReq,
+	rep *rpctypes.UpGetObjChildrenIteratorResp,
+) (
+	err error,
+) {
+
+	os := lr.GetObjectState(req.Callee)
+	if os == nil {
+		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
+	}
+	es, err := os.GetModeState(req.Mode)
+	if err != nil {
+		return errors.Wrap(err, "Failed to find needed execution state")
+	}
+	ctx := es.Current.Context
+	am := lr.ArtifactManager
+	iteratorID := req.IteratorID
+
+	iteratorMapLock.RLock()
+	iterator, ok := iteratorMap[iteratorID]
+	iteratorMapLock.RUnlock()
+
+	if !ok {
+		newIterator, err := am.GetChildren(ctx, req.Object, nil)
+		if err != nil {
+			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't get children")
+		}
+
+		id, err := uuid.NewV4()
+		if err != nil {
+			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't generate UUID")
+		}
+
+		iteratorID = id.String()
+
+		iteratorMapLock.Lock()
+		iterator, ok = iteratorMap[iteratorID]
+		if !ok {
+			iteratorMap[iteratorID] = newIterator
+			iterator = newIterator
+		}
+		iteratorMapLock.Unlock()
+	}
+
+	iter := iterator
+
+	rep.Iterator.ID = iteratorID
+	rep.Iterator.CanFetch = iter.HasNext()
+	for len(rep.Iterator.Buff) < iteratorBuffSize && iter.HasNext() {
+		r, err := iter.Next()
+		if err != nil {
+			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't get Next")
+		}
+		rep.Iterator.CanFetch = iter.HasNext()
+
+		o, err := am.GetObject(ctx, *r, nil, false)
+
+		if err != nil {
+			if err == insolar.ErrDeactivated {
+				continue
+			}
+			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't call GetObject on Next")
+		}
+		protoRef, err := o.Prototype()
+		if err != nil {
+			return errors.Wrap(err, "[ GetObjChildrenIterator ] Can't get prototype reference")
+		}
+
+		if protoRef.Equal(req.Prototype) {
+			rep.Iterator.Buff = append(rep.Iterator.Buff, *r)
+		}
+	}
+
+	if !iter.HasNext() {
+		iteratorMapLock.Lock()
+		delete(iteratorMap, rep.Iterator.ID)
+		iteratorMapLock.Unlock()
+	}
+
+	return nil
+}
+
+// GetDelegate is an RPC saving data as memory of a contract as child a parent
+func (lr *LogicRunner) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) (err error) {
+	os := lr.GetObjectState(req.Callee)
+	if os == nil {
+		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
+	}
+	es, err := os.GetModeState(req.Mode)
+	if err != nil {
+		return errors.Wrap(err, "Failed to find needed execution state")
+	}
+	ctx := es.Current.Context
+
+	ref, err := lr.ArtifactManager.GetDelegate(ctx, req.Object, req.OfType)
+	if err != nil {
+		return err
+	}
+	rep.Object = *ref
+	return nil
+}
+
+// DeactivateObject is an RPC saving data as memory of a contract as child a parent
+func (lr *LogicRunner) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) (err error) {
+	os := lr.GetObjectState(req.Callee)
+	if os == nil {
+		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
+	}
+	es, err := os.GetModeState(req.Mode)
+	if err != nil {
+		return errors.Wrap(err, "Failed to find needed execution state")
+	}
+
+	es.deactivate = true
+	return nil
 }
