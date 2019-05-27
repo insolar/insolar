@@ -21,6 +21,7 @@ import (
 	"crypto"
 	"encoding/json"
 	"fmt"
+	"github.com/insolar/go-jose"
 	"io"
 	"os"
 
@@ -72,11 +73,16 @@ func extractReference(response []byte, requestTypeMsg string) insolar.Reference 
 func (g *certGen) registerNode() insolar.Reference {
 	userCfg := g.getUserConfig()
 
-	keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.pubKey)
+
+	//keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.pubKey)
+
+	var key = jose.JSONWebKey{Key: g.pubKey}
+	pubjs, err := key.MarshalJSON()
+
 	checkError("Failed to export public key:", err)
 	request := requester.RequestConfigJSON{
 		Method: "RegisterNode",
-		Params: []interface{}{keySerialized, g.staticRole.String()},
+		Params: []interface{}{pubjs, g.staticRole.String()},
 	}
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")

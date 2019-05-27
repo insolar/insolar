@@ -20,13 +20,16 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/insolar/go-jose"
+	"github.com/insolar/x-crypto/ecdsa"
+	"github.com/insolar/x-crypto/elliptic"
+	"github.com/insolar/x-crypto/rand"
 	"io"
 	"os"
 
 	"github.com/insolar/insolar/api/requester"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/platformpolicy"
 	"github.com/insolar/insolar/version"
 	"github.com/spf13/cobra"
 	"github.com/spf13/pflag"
@@ -163,18 +166,24 @@ type mixedConfig struct {
 }
 
 func createMember(sendURL string, userName string, serverLogLevel string) {
-	ks := platformpolicy.NewKeyProcessor()
+	//ks := platformpolicy.NewKeyProcessor()
 
 	logLevelInsolar, err := insolar.ParseLevel(serverLogLevel)
 	check("Failed to parse logging level", err)
 
-	privKey, err := ks.GeneratePrivateKey()
-	check("Problems with generating of private key:", err)
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256K(), rand.Reader)
+	if err != nil {
+		check("Problems with generating of private key:", err)
+	}
 
-	privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
+	priv := jose.JSONWebKey{Key: privateKey}
+	privKeyStr, err := priv.MarshalJSON()
+	//privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
 	check("Problems with serialization of private key:", err)
 
-	pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
+	pub := jose.JSONWebKey{Key: privateKey.Public()}
+	pubKeyStr, err := pub.MarshalJSON()
+	//pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
 	check("Problems with serialization of public key:", err)
 
 	cfg := mixedConfig{
@@ -222,22 +231,35 @@ func mustWrite(out io.Writer, data string) {
 }
 
 func generateKeysPair() {
-	ks := platformpolicy.NewKeyProcessor()
-
-	privKey, err := ks.GeneratePrivateKey()
+	//ks := platformpolicy.NewKeyProcessor()
+	//
+	//privKey, err := ks.GeneratePrivateKey()
+	//check("Problems with generating of private key:", err)
+	//
+	//privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
+	//check("Problems with serialization of private key:", err)
+	//
+	//pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
+	//check("Problems with serialization of public key:", err)
+	//
+	// TODO: check curve
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256K(), rand.Reader)
 	check("Problems with generating of private key:", err)
 
-	privKeyStr, err := ks.ExportPrivateKeyPEM(privKey)
-	check("Problems with serialization of private key:", err)
+	priv := jose.JSONWebKey{Key: privateKey}
+	privbjs, err := priv.MarshalJSON()
+	check("Problems with marshaling of private key:", err)
 
-	pubKeyStr, err := ks.ExportPublicKeyPEM(ks.ExtractPublicKey(privKey))
-	check("Problems with serialization of public key:", err)
-
+	pub := jose.JSONWebKey{Key: privateKey.Public()}
+	pubbjs, err := pub.MarshalJSON()
+	check("Problems with marshaling of public key:", err)
 	result, err := json.MarshalIndent(map[string]interface{}{
-		"private_key": string(privKeyStr),
-		"public_key":  string(pubKeyStr),
+		"private_key": string(privbjs),
+		"public_key":  string(pubbjs),
 	}, "", "    ")
 	check("Problems with marshaling keys:", err)
+
+	//data, err := jose.JSONWebKey.MarshalJSON(privateKey)
 
 	mustWrite(os.Stdout, string(result))
 }
