@@ -227,8 +227,8 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 		}, nil)
 		ref := gen.Reference()
 		_, err := am.RegisterRequest(
-			s.ctx, insolar.GenesisRecord.Ref(),
-			&message.Parcel{Msg: &message.CallMethod{Object: &ref}},
+			s.ctx,
+			record.Request{Object: &ref},
 		)
 		require.Error(t, err)
 	})
@@ -247,10 +247,7 @@ func (s *amSuite) TestLedgerArtifactManager_RegisterRequest_JetMiss() {
 			return &reply.JetMiss{JetID: insolar.ID(*insolar.NewJetID(4, []byte{b_11010101})), Pulse: insolar.FirstPulseNumber}, nil
 		}
 		ref := gen.Reference()
-		_, err := am.RegisterRequest(
-			s.ctx, insolar.GenesisRecord.Ref(),
-			&message.Parcel{Msg: &message.CallMethod{Object: &ref}},
-		)
+		_, err := am.RegisterRequest(s.ctx, record.Request{Object: &ref})
 		require.NoError(t, err)
 
 		jetID, actual := s.jetStorage.ForID(
@@ -277,9 +274,8 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 	pulseAccessor := pulse.NewAccessorMock(s.T())
 	pulseAccessor.LatestMock.Return(*insolar.GenesisPulse, nil)
 
-	var parcel insolar.Parcel = &message.Parcel{PulseNumber: 123987}
 	req := record.Request{
-		Parcel: message.ParcelToBytes(parcel),
+		Method: "test",
 	}
 	virtRec := record.Wrap(req)
 	data, err := virtRec.Marshal()
@@ -315,6 +311,5 @@ func (s *amSuite) TestLedgerArtifactManager_GetRequest_Success() {
 
 	// Assert
 	require.NoError(s.T(), err)
-	require.Equal(s.T(), parcel, res)
-
+	require.Equal(s.T(), "test", res.Message().(*message.CallMethod).Method)
 }

@@ -22,7 +22,6 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
@@ -30,26 +29,46 @@ import (
 
 //go:generate minimock -i github.com/insolar/insolar/internal/ledger/artifact.Manager -o ./ -s _gen_mock.go
 
-// Manager implements subset of methods from artifacts client required for genesis.
-// works
-// TODO: move common interface to insolar package
+// Manager implements methods required for direct ledger access.
 type Manager interface {
+	// GetObject returns descriptor for provided state.
+	//
+	// If provided state is nil, the latest state will be returned (w/o deactivation check).
 	GetObject(ctx context.Context, head insolar.Reference) (ObjectDescriptor, error)
 
-	RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error)
+	// RegisterRequest creates request record in storage.
+	RegisterRequest(ctx context.Context, req record.Request) (*insolar.ID, error)
+
+	// RegisterResult saves payload result in storage (emulates of save call result by VM).
 	RegisterResult(ctx context.Context, obj, request insolar.Reference, payload []byte) (*insolar.ID, error)
+
+	// ActivateObject creates activate object record in storage.
+	// If memory is not provided, the prototype default memory will be used.
+	//
+	// Request reference will be this object's identifier and referred as "object head".
 	ActivateObject(
 		ctx context.Context,
 		domain, obj, parent, prototype insolar.Reference,
 		asDelegate bool,
 		memory []byte,
 	) (ObjectDescriptor, error)
+
+	// ActivatePrototype creates activate object record in storage.
+	// Provided prototype reference will be used as objects prototype memory as memory of created object.
 	ActivatePrototype(
 		ctx context.Context,
 		domain, obj, parent, code insolar.Reference,
 		memory []byte,
 	) (ObjectDescriptor, error)
+
+	// UpdateObject creates amend object record in storage.
+	// Provided reference should be a reference to the head of the object.
+	// Provided memory well be the new object memory.
+	//
+	// Returned descriptor is the latest object state (exact) reference.
 	UpdateObject(ctx context.Context, domain, request insolar.Reference, obj ObjectDescriptor, memory []byte) (ObjectDescriptor, error)
+
+	// DeployCode creates new code record in storage (code records are used to activate prototypes).
 	DeployCode(
 		ctx context.Context,
 		domain insolar.Reference,
@@ -59,6 +78,7 @@ type Manager interface {
 	) (*insolar.ID, error)
 }
 
+// Scope implements Manager interface.
 type Scope struct {
 	PulseNumber insolar.PulseNumber
 
@@ -73,6 +93,9 @@ type Scope struct {
 	LifelineAccessor object.LifelineAccessor
 }
 
+// GetObject returns descriptor for provided state.
+//
+// If provided state is nil, the latest state will be returned (w/o deactivation check).
 func (m *Scope) GetObject(
 	ctx context.Context,
 	head insolar.Reference,
@@ -111,17 +134,13 @@ func (m *Scope) GetObject(
 	return desc, nil
 }
 
-func (m *Scope) RegisterRequest(ctx context.Context, objectRef insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error) {
-	req := record.Request{
-		Parcel:      message.ParcelToBytes(parcel),
-		MessageHash: message.ParcelMessageHash(m.PCS, parcel),
-		Object:      *objectRef.Record(),
-	}
+// RegisterRequest creates request record in storage.
+func (m *Scope) RegisterRequest(ctx context.Context, req record.Request) (*insolar.ID, error) {
 	virtRec := record.Wrap(req)
-
 	return m.setRecord(ctx, virtRec)
 }
 
+// RegisterResult saves payload result in storage (emulates of save call result by VM).
 func (m *Scope) RegisterResult(
 	ctx context.Context, obj, request insolar.Reference, payload []byte,
 ) (*insolar.ID, error) {
@@ -135,6 +154,10 @@ func (m *Scope) RegisterResult(
 	return m.setRecord(ctx, virtRec)
 }
 
+// ActivateObject creates activate object record in storage.
+// If memory is not provided, the prototype default memory will be used.
+//
+// Request reference will be this object's identifier and referred as "object head".
 func (m *Scope) ActivateObject(
 	ctx context.Context,
 	domain, obj, parent, prototype insolar.Reference,
@@ -144,6 +167,8 @@ func (m *Scope) ActivateObject(
 	return m.activateObject(ctx, domain, obj, prototype, false, parent, asDelegate, memory)
 }
 
+// ActivatePrototype creates activate object record in storage.
+// Provided prototype reference will be used as objects prototype memory as memory of created object.
 func (m *Scope) ActivatePrototype(
 	ctx context.Context,
 	domain, obj, parent, code insolar.Reference,
@@ -164,7 +189,7 @@ func (m *Scope) activateObject(
 ) (ObjectDescriptor, error) {
 	parentIdx, err := m.LifelineAccessor.ForID(ctx, m.PulseNumber, *parent.Record())
 	if err != nil {
-		return nil, errors.Wrap(err, "not found parent index for activated object")
+		return nil, errors.Wrapf(err, "not found parent index for activated object: %v", parent.String())
 	}
 
 	stateRecord := record.Activate{
@@ -198,6 +223,11 @@ func (m *Scope) activateObject(
 	return stateObj, nil
 }
 
+// UpdateObject creates amend object record in storage.
+// Provided reference should be a reference to the head of the object.
+// Provided memory well be the new object memory.
+//
+// Returned descriptor is the latest object state (exact) reference.
 func (m *Scope) UpdateObject(
 	ctx context.Context,
 	domain, request insolar.Reference,
@@ -232,6 +262,7 @@ func (m *Scope) UpdateObject(
 	return m.updateStateObject(ctx, *objDesc.HeadRef(), amendRecord, memory)
 }
 
+// DeployCode creates new code record in storage (code records are used to activate prototypes).
 func (m *Scope) DeployCode(
 	ctx context.Context,
 	domain insolar.Reference,
@@ -361,9 +392,7 @@ func (m *Scope) updateStateObject(
 		// We are activating the object. There is no index for it yet.
 		idx = object.Lifeline{StateID: record.StateUndefined}
 	}
-	// TODO: validateState
 
-	// TODO: validate index consistency
 	id, err := m.setRecord(ctx, virtRecord)
 	if err != nil {
 		return nil, errors.Wrap(err, "fail set record for state object")

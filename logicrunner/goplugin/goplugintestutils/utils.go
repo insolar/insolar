@@ -30,7 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/testutils"
@@ -177,7 +177,7 @@ func NewTestArtifactManager() *TestArtifactManager {
 }
 
 // RegisterRequest implementation for tests
-func (t *TestArtifactManager) RegisterRequest(ctx context.Context, obj insolar.Reference, parcel insolar.Parcel) (*insolar.ID, error) {
+func (t *TestArtifactManager) RegisterRequest(ctx context.Context, req record.Request) (*insolar.ID, error) {
 	nonce := testutils.RandomID()
 	return &nonce, nil
 }
@@ -190,7 +190,7 @@ func (t *TestArtifactManager) RegisterResult(
 }
 
 // GetObject implementation for tests
-func (t *TestArtifactManager) GetObject(ctx context.Context, object insolar.Reference, state *insolar.ID, approved bool) (artifacts.ObjectDescriptor, error) {
+func (t *TestArtifactManager) GetObject(ctx context.Context, object insolar.Reference) (artifacts.ObjectDescriptor, error) {
 	res, ok := t.Objects[object]
 	if !ok {
 		return nil, errors.New("No object")
@@ -393,8 +393,8 @@ func AMPublishCode(
 
 	nonce := testutils.RandomRef()
 	protoID, err := am.RegisterRequest(
-		ctx, insolar.GenesisRecord.Ref(),
-		&message.Parcel{Msg: &message.CallMethod{CallType: message.CTSaveAsChild, Prototype: &nonce}},
+		ctx,
+		record.Request{CallType: record.CTSaveAsChild, Prototype: &nonce},
 	)
 	assert.NoError(t, err)
 	protoRef = &insolar.Reference{}
@@ -448,11 +448,11 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 	for name := range contracts {
 		nonce := testutils.RandomRef()
 		protoID, err := cb.ArtifactManager.RegisterRequest(
-			ctx, insolar.GenesisRecord.Ref(),
-			&message.Parcel{Msg: &message.CallMethod{
-				CallType:  message.CTSaveAsChild,
+			ctx,
+			record.Request{
+				CallType:  record.CTSaveAsChild,
 				Prototype: &nonce,
-			}},
+			},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")
@@ -495,11 +495,11 @@ func (cb *ContractsBuilder) Build(contracts map[string]string) error {
 		}
 		nonce := testutils.RandomRef()
 		codeReq, err := cb.ArtifactManager.RegisterRequest(
-			ctx, insolar.GenesisRecord.Ref(),
-			&message.Parcel{Msg: &message.CallMethod{
-				CallType:  message.CTSaveAsChild,
+			ctx,
+			record.Request{
+				CallType:  record.CTSaveAsChild,
 				Prototype: &nonce,
-			}},
+			},
 		)
 		if err != nil {
 			return errors.Wrap(err, "[ Build ] Can't RegisterRequest")

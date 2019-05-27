@@ -17,7 +17,6 @@
 package artifacts
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
@@ -69,7 +68,7 @@ func NewClient() *client { // nolint
 // RegisterRequest sends message for request registration,
 // returns request record Ref if request successfully created or already exists.
 func (m *client) RegisterRequest(
-	ctx context.Context, obj insolar.Reference, parcel insolar.Parcel,
+	ctx context.Context, request record.Request,
 ) (*insolar.ID, error) {
 	var err error
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.RegisterRequest")
@@ -87,16 +86,19 @@ func (m *client) RegisterRequest(
 		return nil, err
 	}
 
-	req := record.Request{
-		Parcel:      message.ParcelToBytes(parcel),
-		MessageHash: message.ParcelMessageHash(m.PCS, parcel),
-		Object:      *obj.Record(),
-	}
+	virtRec := record.Wrap(request)
 
-	virtRec := record.Wrap(req)
-	hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
-	recID := insolar.NewID(currentPN, hash)
-	recRef := insolar.NewReference(*parcel.DefaultTarget().Domain(), *recID)
+	var recRef *insolar.Reference
+	switch request.CallType {
+	case record.CTMethod:
+		recRef = request.Object
+	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
+		hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
+		recID := insolar.NewID(currentPN, hash)
+		recRef = insolar.NewReference(insolar.DomainID, *recID)
+	default:
+		return nil, errors.New("not supported call type " + request.CallType.String())
+	}
 
 	id, err := m.setRecord(
 		ctx,
@@ -126,7 +128,7 @@ func (m *client) GetCode(
 
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		m.senders.CachedSender(m.PCS),
 		messagebus.FollowRedirectSender(m.DefaultBus),
 		messagebus.RetryJetSender(m.JetStorage),
@@ -160,8 +162,6 @@ func (m *client) GetCode(
 func (m *client) GetObject(
 	ctx context.Context,
 	head insolar.Reference,
-	state *insolar.ID,
-	approved bool,
 ) (ObjectDescriptor, error) {
 	var (
 		desc ObjectDescriptor
@@ -181,14 +181,12 @@ func (m *client) GetObject(
 	}()
 
 	getObjectMsg := &message.GetObject{
-		Head:     head,
-		State:    state,
-		Approved: approved,
+		Head: head,
 	}
 
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.FollowRedirectSender(m.DefaultBus),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
@@ -234,7 +232,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
 
@@ -294,7 +292,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 			return nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", r)
 		}
 
-		return message.DeserializeParcel(bytes.NewBuffer(castedRecord.Parcel))
+		return &message.Parcel{Msg: &message.CallMethod{Request: *castedRecord}}, nil
 	case *reply.Error:
 		return nil, r.Error()
 	default:
@@ -309,7 +307,7 @@ func (m *client) HasPendingRequests(
 ) (bool, error) {
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
 
@@ -349,7 +347,7 @@ func (m *client) GetDelegate(
 
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.FollowRedirectSender(m.DefaultBus),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
@@ -391,7 +389,7 @@ func (m *client) GetChildren(
 
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.FollowRedirectSender(m.DefaultBus),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
@@ -690,7 +688,7 @@ func (m *client) RegisterResult(
 	recid, err := m.setRecord(
 		ctx,
 		virtRec,
-		request,
+		obj,
 	)
 	return recid, err
 }
@@ -716,7 +714,7 @@ func (m *client) activateObject(
 	asDelegate bool,
 	memory []byte,
 ) (ObjectDescriptor, error) {
-	parentDesc, err := m.GetObject(ctx, parent, nil, false)
+	parentDesc, err := m.GetObject(ctx, parent)
 	if err != nil {
 		return nil, err
 	}
@@ -843,7 +841,7 @@ func (m *client) setRecord(
 	}
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
 	genericReply, err := sender(ctx, &message.SetRecord{
@@ -903,7 +901,7 @@ func (m *client) sendUpdateObject(
 	}
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
 	genericReply, err := sender(
@@ -941,7 +939,7 @@ func (m *client) registerChild(
 	}
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
-		messagebus.RetryIncorrectPulse(),
+		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
 	)
 	genericReact, err := sender(ctx, &message.RegisterChild{

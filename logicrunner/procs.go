@@ -18,11 +18,13 @@ package logicrunner
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 )
@@ -83,16 +85,13 @@ func (r *RegisterRequest) Proceed(ctx context.Context) error {
 	ctx, span := instracer.StartSpan(ctx, "RegisterRequest.Proceed")
 	defer span.End()
 
-	obj := r.parcel.Message().(*message.CallMethod).GetReference()
-	id, err := r.ArtifactManager.RegisterRequest(ctx, obj, r.parcel)
+	msg := r.parcel.Message().(*message.CallMethod)
+	id, err := r.ArtifactManager.RegisterRequest(ctx, msg.Request)
 	if err != nil {
 		return err
 	}
 
-	res := obj
-	res.SetRecord(*id)
-
-	r.setResult(&res)
+	r.setResult(insolar.NewReference(insolar.DomainID, *id))
 	return nil
 }
 
@@ -112,23 +111,32 @@ func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
 		return nil
 	}
 
-	if c.parcel != nil && c.parcel.Type() != insolar.TypeCallMethod {
-		c.es.Unlock()
-		c.es.pending = message.NotPending
-		return nil
+	if c.parcel != nil {
+		if c.parcel.Type() != insolar.TypeCallMethod {
+			// We expect ONLY CallMethods in LogicRunner.
+			c.es.Unlock()
+			return fmt.Errorf("unexpecxted parcel type during ClarifyPendingState: %v", c.parcel.Type())
+		}
+
+		msg := c.parcel.Message().(*message.CallMethod)
+		if msg.CallType != record.CTMethod {
+			// It's considered that we are not pending except someone calls a method.
+			c.es.pending = message.NotPending
+			c.es.Unlock()
+			return nil
+		}
 	}
+
 	c.es.Unlock()
 
 	c.es.HasPendingCheckMutex.Lock()
 	defer c.es.HasPendingCheckMutex.Unlock()
 
 	c.es.Lock()
-
 	if c.es.pending != message.PendingUnknown {
 		c.es.Unlock()
 		return nil
 	}
-
 	c.es.Unlock()
 
 	has, err := c.ArtifactManager.HasPendingRequests(ctx, c.es.Ref)

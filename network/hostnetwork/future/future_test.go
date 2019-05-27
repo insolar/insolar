@@ -122,7 +122,7 @@ func TestFuture_SetResponse(t *testing.T) {
 
 	require.Equal(t, m, m2)
 
-	m3, err := f.WaitResponse(10 * time.Millisecond)
+	m3, err := f.WaitResponse(time.Minute)
 	// legal behavior, the channel is closed because of the previous f.Response() call finished the Future
 	require.EqualError(t, err, "channel closed")
 	require.Nil(t, m3)
@@ -195,7 +195,7 @@ func TestFuture_WaitResponse_Success(t *testing.T) {
 	p := &packet.Packet{}
 	c <- p
 
-	res, err := f.WaitResponse(time.Millisecond)
+	res, err := f.WaitResponse(time.Minute)
 	require.NoError(t, err)
 	require.Equal(t, res, p)
 }

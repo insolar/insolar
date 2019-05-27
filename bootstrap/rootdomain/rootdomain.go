@@ -18,41 +18,48 @@ package rootdomain
 
 import (
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
-// Name is the constant name of root domain.
-const Name = "rootdomain"
-
 var genesisPulse = insolar.GenesisPulse.PulseNumber
 
+// Record provides methods to calculate root domain's identifiers.
 type Record struct {
 	PCS insolar.PlatformCryptographyScheme
 }
 
+// RootDomain is the root domain instance.
 var RootDomain = &Record{
 	PCS: platformpolicy.NewPlatformCryptographyScheme(),
 }
 
+// Ref returns insolar.Reference to root domain object.
 func (r Record) Ref() insolar.Reference {
 	id := r.ID()
 	return *insolar.NewReference(id, id)
 }
 
+// ID returns insolar.ID  to root domain object.
 func (r Record) ID() insolar.ID {
-	parcel := &message.Parcel{
-		Msg: &message.GenesisRequest{
-			Name: Name,
-		},
-	}
 	req := record.Request{
-		Parcel:      message.ParcelToBytes(parcel),
-		MessageHash: message.ParcelMessageHash(r.PCS, parcel),
-		Object:      insolar.GenesisRecord.ID(),
+		CallType: record.CTGenesis,
+		Method:   insolar.GenesisNameRootDomain,
 	}
 	virtRec := record.Wrap(req)
 	hash := record.HashVirtual(r.PCS.ReferenceHasher(), virtRec)
 	return *insolar.NewID(genesisPulse, hash)
+}
+
+// GenesisRef returns reference to any genesis records based on the root domain.
+func GenesisRef(name string) insolar.Reference {
+	pcs := platformpolicy.NewPlatformCryptographyScheme()
+	req := record.Request{
+		CallType: record.CTGenesis,
+		Method:   name,
+	}
+	virtRec := record.Wrap(req)
+	hash := record.HashVirtual(pcs.ReferenceHasher(), virtRec)
+	id := insolar.NewID(insolar.FirstPulseNumber, hash)
+	return *insolar.NewReference(RootDomain.ID(), *id)
 }

@@ -79,6 +79,28 @@ func (pn PulseNumber) Bytes() []byte {
 	return utils.UInt32ToBytes(uint32(pn))
 }
 
+func (pn *PulseNumber) MarshalTo(data []byte) (int, error) {
+	buf := pn.Bytes()
+	if len(data) < len(buf) {
+		return 0, errors.New("Not enough bytes to marshal PulseNumber")
+	}
+	copy(data, buf)
+	return len(buf), nil
+}
+
+func (pn *PulseNumber) Unmarshal(data []byte) error {
+	*pn = PulseNumber(binary.BigEndian.Uint32(data))
+	return nil
+}
+
+func (pn PulseNumber) Equal(other PulseNumber) bool {
+	return pn == other
+}
+
+func (pn PulseNumber) Size() int {
+	return len(pn.Bytes())
+}
+
 //go:generate minimock -i github.com/insolar/insolar/insolar.PulseManager -o ../testutils -s _mock.go
 
 // PulseManager provides Ledger's methods related to Pulse.

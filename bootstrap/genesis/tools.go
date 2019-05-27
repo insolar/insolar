@@ -19,23 +19,16 @@ package genesis
 import (
 	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/platformpolicy"
 )
 
 func refByName(name string) insolar.Reference {
 	pcs := platformpolicy.NewPlatformCryptographyScheme()
-	parcel := &message.Parcel{
-		Msg: &message.GenesisRequest{
-			Name: name,
-		},
-	}
-	vrec := record.Wrap(record.Request{
-		Parcel:      message.ParcelToBytes(parcel),
-		MessageHash: message.ParcelMessageHash(pcs, parcel),
-		Object:      rootdomain.RootDomain.ID(),
+	vRec := record.Wrap(record.Request{
+		CallType: record.CTGenesis,
+		Method:   name,
 	})
-	id := insolar.NewID(insolar.FirstPulseNumber, record.HashVirtual(pcs.ReferenceHasher(), vrec))
+	id := insolar.NewID(insolar.FirstPulseNumber, record.HashVirtual(pcs.ReferenceHasher(), vRec))
 	return *insolar.NewReference(rootdomain.RootDomain.ID(), *id)
 }
