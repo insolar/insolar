@@ -19,13 +19,12 @@ package logicrunner
 import (
 	"context"
 
-	"github.com/pkg/errors"
-
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/logicrunner/artifacts"
+	"github.com/pkg/errors"
 )
 
 // ------------- CheckOurRole
@@ -38,6 +37,9 @@ type CheckOurRole struct {
 }
 
 func (ch *CheckOurRole) Proceed(ctx context.Context) error {
+	ctx, span := instracer.StartSpan(ctx, "CheckOurRole")
+	defer span.End()
+
 	// TODO do map of supported objects for pulse, go to jetCoordinator only if map is empty for ref
 	target := ch.msg.DefaultTarget()
 	isAuthorized, err := ch.lr.JetCoordinator.IsAuthorized(
@@ -104,6 +106,9 @@ type ClarifyPendingState struct {
 }
 
 func (c *ClarifyPendingState) Proceed(ctx context.Context) error {
+	ctx, span := instracer.StartSpan(ctx, "ClarifyPendingState")
+	defer span.End()
+
 	c.es.Lock()
 	if c.es.pending != message.PendingUnknown {
 		c.es.Unlock()
