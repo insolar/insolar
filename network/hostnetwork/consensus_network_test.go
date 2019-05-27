@@ -76,70 +76,49 @@ type consensusNetworkSuite struct {
 	crypto insolar.CryptographyService
 }
 
-func createTwoConsensusNetworks(id1, id2 insolar.ShortNodeID) (t1, t2 network.ConsensusNetwork, err error) {
+func createTwoConsensusNetworks(t *testing.T, id1, id2 insolar.ShortNodeID) (_, _ network.ConsensusNetwork) {
 	m := newMockResolver()
 
 	cm1 := component.NewManager(nil)
 	f1 := transport.NewFactory(configuration.NewHostNetwork().Transport)
 	cn1, err := NewConsensusNetwork(ID1+DOMAIN, id1)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 	cm1.Inject(f1, cn1, m)
 
 	cm2 := component.NewManager(nil)
 	f2 := transport.NewFactory(configuration.NewHostNetwork().Transport)
 	cn2, err := NewConsensusNetwork(ID2+DOMAIN, id2)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 	cm2.Inject(f2, cn2, m)
 
 	ctx := context.Background()
 
 	err = cn1.Init(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 	err = cn2.Init(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 
 	err = cn1.Start(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 	err = cn2.Start(ctx)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 
-	ref1, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
-	if err != nil {
-		return nil, nil, err
-	}
+	ref1, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
+	require.NoError(t, err)
 	routing1, err := host.NewHostNS(cn1.PublicAddress(), *ref1, id1)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 	ref2, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 	routing2, err := host.NewHostNS(cn2.PublicAddress(), *ref2, id2)
-	if err != nil {
-		return nil, nil, err
-	}
+	require.NoError(t, err)
 	m.addMappingHost(routing1)
 	m.addMappingHost(routing2)
 
-	return cn1, cn2, nil
+	return cn1, cn2
 }
 
-func (t *consensusNetworkSuite) sendPacket(packet packets.ConsensusPacket) {
-	cn1, cn2, err := createTwoConsensusNetworks(0, 1)
-	t.Require().NoError(err)
+func (s *consensusNetworkSuite) sendPacket(packet packets.ConsensusPacket) {
+	cn1, cn2 := createTwoConsensusNetworks(s.T(), 0, 1)
 	ctx := context.Background()
 	ctx2 := context.Background()
 
@@ -152,20 +131,20 @@ func (t *consensusNetworkSuite) sendPacket(packet packets.ConsensusPacket) {
 	}
 	cn2.RegisterPacketHandler(packet.GetType(), handler)
 
-	err = cn2.Start(ctx2)
-	t.Require().NoError(err)
+	err := cn2.Start(ctx2)
+	s.Require().NoError(err)
 	err = cn1.Start(ctx)
-	t.Require().NoError(err)
+	s.Require().NoError(err)
 	defer func() {
 		cn1.Stop(ctx)
 		cn2.Stop(ctx2)
 	}()
 
 	ref2, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
-	t.Require().NoError(err)
+	s.Require().NoError(err)
 
-	err = cn1.SignAndSendPacket(packet, *ref2, t.crypto)
-	t.Require().NoError(err)
+	err = cn1.SignAndSendPacket(packet, *ref2, s.crypto)
+	s.Require().NoError(err)
 	wg.Wait()
 }
 
@@ -192,26 +171,25 @@ func newPhase3Packet() (*packets.Phase3Packet, error) {
 	return packets.NewPhase3Packet(insolar.PulseNumber(0), ghs, bitset), nil
 }
 
-func (t *consensusNetworkSuite) TestSendPacketPhase1() {
+func (s *consensusNetworkSuite) TestSendPacketPhase1() {
 	packet := newPhase1Packet()
-	t.sendPacket(packet)
+	s.sendPacket(packet)
 }
 
-func (t *consensusNetworkSuite) TestSendPacketPhase2() {
+func (s *consensusNetworkSuite) TestSendPacketPhase2() {
 	packet, err := newPhase2Packet()
-	require.NoError(t.T(), err)
-	t.sendPacket(packet)
+	require.NoError(s.T(), err)
+	s.sendPacket(packet)
 }
 
-func (t *consensusNetworkSuite) TestSendPacketPhase3() {
+func (s *consensusNetworkSuite) TestSendPacketPhase3() {
 	packet, err := newPhase3Packet()
-	require.NoError(t.T(), err)
-	t.sendPacket(packet)
+	require.NoError(s.T(), err)
+	s.sendPacket(packet)
 }
 
-func (t *consensusNetworkSuite) sendPacketAndVerify(packet packets.ConsensusPacket) {
-	cn1, cn2, err := createTwoConsensusNetworks(0, 1)
-	t.Require().NoError(err)
+func (s *consensusNetworkSuite) sendPacketAndVerify(packet packets.ConsensusPacket) {
+	cn1, cn2 := createTwoConsensusNetworks(s.T(), 0, 1)
 	ctx := context.Background()
 	ctx2 := context.Background()
 
@@ -219,13 +197,13 @@ func (t *consensusNetworkSuite) sendPacketAndVerify(packet packets.ConsensusPack
 
 	handler := func(incomingPacket packets.ConsensusPacket, sender insolar.Reference) {
 		log.Info("handler triggered")
-		pk, err := t.crypto.GetPublicKey()
+		pk, err := s.crypto.GetPublicKey()
 		if err != nil {
 			log.Error("handler get public key error: " + err.Error())
 			result <- false
 			return
 		}
-		err = incomingPacket.Verify(t.crypto, pk)
+		err = incomingPacket.Verify(s.crypto, pk)
 		if err != nil {
 			log.Error("verify signature error: " + err.Error())
 			result <- false
@@ -235,38 +213,38 @@ func (t *consensusNetworkSuite) sendPacketAndVerify(packet packets.ConsensusPack
 	}
 	cn2.RegisterPacketHandler(packet.GetType(), handler)
 
-	err = cn2.Start(ctx2)
-	t.Require().NoError(err)
+	err := cn2.Start(ctx2)
+	s.Require().NoError(err)
 	err = cn1.Start(ctx)
-	t.Require().NoError(err)
+	s.Require().NoError(err)
 	defer func() {
 		cn1.Stop(ctx)
 		cn2.Stop(ctx2)
 	}()
 
 	ref2, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
-	t.Require().NoError(err)
+	s.Require().NoError(err)
 
-	err = cn1.SignAndSendPacket(packet, *ref2, t.crypto)
-	t.Require().NoError(err)
-	t.True(<-result)
+	err = cn1.SignAndSendPacket(packet, *ref2, s.crypto)
+	s.Require().NoError(err)
+	s.True(<-result)
 }
 
-func (t *consensusNetworkSuite) TestVerifySignPhase1() {
+func (s *consensusNetworkSuite) TestVerifySignPhase1() {
 	packet := newPhase1Packet()
-	t.sendPacketAndVerify(packet)
+	s.sendPacketAndVerify(packet)
 }
 
-func (t *consensusNetworkSuite) TestVerifySignPhase2() {
+func (s *consensusNetworkSuite) TestVerifySignPhase2() {
 	packet, err := newPhase2Packet()
-	require.NoError(t.T(), err)
-	t.sendPacketAndVerify(packet)
+	require.NoError(s.T(), err)
+	s.sendPacketAndVerify(packet)
 }
 
-func (t *consensusNetworkSuite) TestVerifySignPhase3() {
+func (s *consensusNetworkSuite) TestVerifySignPhase3() {
 	packet, err := newPhase3Packet()
-	require.NoError(t.T(), err)
-	t.sendPacketAndVerify(packet)
+	require.NoError(s.T(), err)
+	s.sendPacketAndVerify(packet)
 }
 
 func NewSuite() (*consensusNetworkSuite, error) {
