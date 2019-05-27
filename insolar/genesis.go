@@ -16,6 +16,21 @@
 
 package insolar
 
+const (
+	// GenesisNameRootDomain is the name of root domain contract for genesis record.
+	GenesisNameRootDomain = "rootdomain"
+	// GenesisNameNodeDomain is the name of node domain contract for genesis record.
+	GenesisNameNodeDomain = "nodedomain"
+	// GenesisNameNodeRecord is the name of node contract for genesis record.
+	GenesisNameNodeRecord = "noderecord"
+	// GenesisNameRootMember is the name of root member contract for genesis record.
+	GenesisNameRootMember = "member"
+	// GenesisNameRootWallet is the name of wallet contract for genesis record.
+	GenesisNameRootWallet = "wallet"
+	// GenesisNameAllowance is the name of allowance contract for genesis record.
+	GenesisNameAllowance = "allowance"
+)
+
 type genesisBinary []byte
 
 // GenesisRecord is initial chain record.
@@ -30,4 +45,15 @@ func (r genesisBinary) ID() ID {
 func (r genesisBinary) Ref() Reference {
 	id := r.ID()
 	return *NewReference(id, id)
+}
+
+// DiscoveryNodeRegister carries data required for registering discovery node on genesis phase.
+type DiscoveryNodeRegister struct {
+	Role      string
+	PublicKey string
+}
+
+// GenesisHeavyConfig carries data required for initial genesis on heavy node.
+type GenesisHeavyConfig struct {
+	DiscoveryNodes []DiscoveryNodeRegister
 }

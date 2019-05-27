@@ -70,6 +70,8 @@ const (
 	TypeJetMiss
 	// TypePendingRequests contains unclosed requests for an object.
 	TypePendingRequests
+	// TypePendingRequestID contains ID of unclosed request for an object.
+	TypePendingRequestID
 	// TypeJet contains jet.
 	TypeJet
 	// TypeRequest contains request.
