@@ -68,6 +68,7 @@ type PulseManager struct {
 	JetModifier jet.Modifier `inject:""`
 
 	IndexBucketAccessor object.IndexBucketAccessor
+	PendingAccessor     object.PendingAccessor
 
 	NodeSetter node.Modifier `inject:""`
 	Nodes      node.Accessor `inject:""`
@@ -128,6 +129,7 @@ func NewPulseManager(
 	recSyncAccessor object.RecordCollectionAccessor,
 	idxReplicaAccessor object.IndexBucketAccessor,
 	lightToHeavySyncer replication.LightReplicator,
+	pendingAccessor object.PendingAccessor,
 ) *PulseManager {
 	pmconf := conf.PulseManager
 
@@ -146,6 +148,7 @@ func NewPulseManager(
 		RecSyncAccessor:     recSyncAccessor,
 		IndexBucketAccessor: idxReplicaAccessor,
 		LightReplicator:     lightToHeavySyncer,
+		PendingAccessor:     pendingAccessor,
 	}
 	return pm
 }
@@ -279,10 +282,17 @@ func (m *PulseManager) getExecutorHotData(
 		if meta.LifelineLastUsed < limitPN.PulseNumber {
 			continue
 		}
+
+		has, err := m.PendingAccessor.HasOpenPendingsBehind(ctx, currentPN, meta.ObjID)
+		if err != nil {
+			inslogger.FromContext(ctx).WithField("id", meta.ObjID.DebugString()).Error("failed to check open pendings")
+		}
+
 		hotIndexes = append(hotIndexes, message.HotIndex{
-			LifelineLastUsed: meta.LifelineLastUsed,
-			ObjID:            meta.ObjID,
-			Index:            encoded,
+			LifelineLastUsed:      meta.LifelineLastUsed,
+			ObjID:                 meta.ObjID,
+			Index:                 encoded,
+			HasOpenRequestsBehind: has,
 		})
 	}
 

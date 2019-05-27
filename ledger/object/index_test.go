@@ -312,9 +312,9 @@ func TestNewInMemoryIndex_DeleteForPN(t *testing.T) {
 
 	index := NewInMemoryIndex()
 
-	index.buckets[fPn] = map[insolar.ID]*lockedIndexBucket{}
-	index.buckets[sPn] = map[insolar.ID]*lockedIndexBucket{}
-	index.buckets[tPn] = map[insolar.ID]*lockedIndexBucket{}
+	index.buckets[fPn] = map[insolar.ID]*extendedIndexBucket{}
+	index.buckets[sPn] = map[insolar.ID]*extendedIndexBucket{}
+	index.buckets[tPn] = map[insolar.ID]*extendedIndexBucket{}
 
 	index.DeleteForPN(ctx, sPn)
 

@@ -30,4 +30,7 @@ var (
 	ErrLifelineNotFound = errors.New("lifeline not found")
 	// ErrIndexBucketNotFound is returned when an index not found.
 	ErrIndexBucketNotFound = errors.New("index bucket not found")
+
+	ErrPendingRequestNotFound  = errors.New("pending request not found")
+	ErrPendingResultAlreadySet = errors.New("pending result is already set")
 )

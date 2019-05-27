@@ -17,5 +17,6 @@ message IndexBucket {
     uint32 LifelineLastUsed = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
 
     repeated record.Virtual PendingRecords = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar/record.Virtual", (gogoproto.nullable) = false];
-    uint32 LastKnownPendingPN = 24 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    uint32 LastKnownPendingPN = 24 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = true];
+    bool HasOpenRequestsBehind = 25;
 }

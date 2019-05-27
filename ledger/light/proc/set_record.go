@@ -83,7 +83,8 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 			recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
 			recentStorage.AddPendingRequest(ctx, *r.Object.Record(), *calculatedID)
 
-			err = p.Dep.PendingModifier.SetRecord(ctx, flow.Pulse(ctx), *r.Object.Record(), virtRec)
+			req := concrete.(*record.Request)
+			err = p.Dep.PendingModifier.SetRequest(ctx, flow.Pulse(ctx), *r.Object.Record(), *req)
 			if err != nil {
 				return bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
 			}
@@ -92,7 +93,8 @@ func (p *SetRecord) reply(ctx context.Context) bus.Reply {
 		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 
-		err = p.Dep.PendingModifier.SetRecord(ctx, flow.Pulse(ctx), r.Object, virtRec)
+		res := concrete.(*record.Result)
+		err = p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, *res)
 		if err != nil {
 			return bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
 		}
