@@ -19,14 +19,26 @@ package deposit
 import (
 	"fmt"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"time"
+)
+
+type DepositStatus string
+
+const (
+	DEPOSIT_CONFIRMS uint = 3
+
+	OPEN    DepositStatus = "Open"
+	HOLDING DepositStatus = "Holding"
+	CLOSE   DepositStatus = "Close"
 )
 
 type Deposit struct {
 	foundation.BaseContract
+	Status         DepositStatus
 	OracleConfirms map[string]bool
 	Confirms       uint
 	TxHash         string
-	UnHoldDate     string
+	UnHoldDate     time.Time
 	Amount         uint
 }
 
@@ -38,37 +50,38 @@ func (d *Deposit) GetAmount() (uint, error) {
 	return d.Amount, nil
 }
 
-func New(oracleConfirms map[string]bool, txHash string, amount uint) (*Deposit, error) {
+func New(oracleConfirms map[string]bool, txHash string, amount uint, unHoldDate time.Time) (*Deposit, error) {
 	return &Deposit{
+		Status:         OPEN,
 		OracleConfirms: oracleConfirms,
 		Confirms:       0,
 		TxHash:         txHash,
+		UnHoldDate:     unHoldDate,
 		Amount:         amount,
 	}, nil
 }
 
-func (d *Deposit) Confirm(oracleName string, txHash string, amount uint) (bool, error) {
+func (d *Deposit) Confirm(oracleName string, txHash string, amount uint) (uint, error) {
 	if txHash != d.TxHash {
-		return false, fmt.Errorf("[ Confirm ] Transaction hash is incorrect")
+		return 0, fmt.Errorf("[ Confirm ] Transaction hash is incorrect")
 	}
 
 	if amount != d.Amount {
-		return false, fmt.Errorf("[ Confirm ] Amount is incorrect")
+		return 0, fmt.Errorf("[ Confirm ] Amount is incorrect")
 	}
 
 	if confirm, ok := d.OracleConfirms[oracleName]; ok {
 		if confirm {
-			return false, fmt.Errorf("[ Confirm ] Confirm from the oracle " + oracleName + " already exists")
+			return 0, fmt.Errorf("[ Confirm ] Confirm from the oracle " + oracleName + " already exists")
 		} else {
 			d.OracleConfirms[oracleName] = true
 			d.Confirms++
-			if d.Confirms == 1 {
-				return true, nil
-			} else {
-				return false, nil
+			if d.Confirms == DEPOSIT_CONFIRMS {
+				d.Status = HOLDING
 			}
+			return d.Confirms, nil
 		}
 	} else {
-		return false, fmt.Errorf("[ Confirm ] Oracle name is incorrect")
+		return 0, fmt.Errorf("[ Confirm ] Oracle name is incorrect")
 	}
 }

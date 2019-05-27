@@ -29,6 +29,8 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"math"
+	"strconv"
+	"time"
 )
 
 type Member struct {
@@ -256,6 +258,15 @@ func parseAmount(inAmount interface{}) (amount uint, err error) {
 	return amount, nil
 }
 
+func parseTimeStamp(timeStr string) (time.Time, error) {
+
+	i, err := strconv.ParseInt(timeStr, 10, 64)
+	if err != nil {
+		return time.Unix(0, 0), errors.New("Can't parse time")
+	}
+	return time.Unix(i, 0), nil
+}
+
 func (m *Member) transferCall(params []byte) (interface{}, error) {
 	var amount uint
 	var toMemberStr string
@@ -333,79 +344,66 @@ func (m *Member) getNodeRefCall(rdRef insolar.Reference, params []byte) (interfa
 	return nodeRef, nil
 }
 
-func (mdMember *Member) migration(rdRef insolar.Reference, txHash string, burnAddress string, amount uint) (string, error) {
+func (mdMember *Member) migration(rdRef insolar.Reference, txHash string, burnAddress string, amount uint, unHoldDate time.Time) (string, error) {
+	rd := rootdomain.GetObject(rdRef)
 
-	//
-	//insMember := member.GetObject(insAddr)
-	//
-	//validateInsMember := func() error {
-	//	insEthAddr, err := insMember.GetEthAddr()
-	//	if err != nil {
-	//		return fmt.Errorf("[ validateInsMember ] Failed to get ethAddr")
-	//	}
-	//	if insEthAddr != "" {
-	//		if ethAddr != insEthAddr {
-	//			return fmt.Errorf("[ validateInsMember ] Not equal ethereum Addr. ethAddr: " + ethAddr + ". insEthAddr: " + insEthAddr)
-	//		}
-	//	} else {
-	//		err := insMember.SetEthAddr(ethAddr)
-	//		if err != nil {
-	//			return fmt.Errorf("[ validateInsMember ] Failed to set ethAddr")
-	//		}
-	//	}
-	//
-	//	return nil
-	//}
-	//err = validateInsMember()
-	//if err != nil {
-	//	return "", fmt.Errorf("[ migrationCall ] Insolar member validation failed: %s", err.Error())
-	//}
-	//
-	//rd := rootdomain.GetObject(rdRef)
-	//oracleMembers, err := rd.GetOracleMembers()
-	//if err != nil {
-	//	return "", fmt.Errorf("[ migrationCall ] Can't get oracles map: %s", err.Error())
-	//}
-	//
-	//found, txDeposit, err := insMember.FindDeposit(txHash, amount)
-	//if err != nil {
-	//	return "", fmt.Errorf("[ migrationCall ] Can't get deposit: %s", err.Error())
-	//}
-	//if !found {
-	//	oracleConfirms := map[string]bool{}
-	//	for name, _ := range oracleMembers {
-	//		oracleConfirms[name] = false
-	//	}
-	//	dHolder := deposit.New(oracleConfirms, txHash, amount)
-	//	txDepositP, err := dHolder.AsDelegate(insAddr)
-	//	if err != nil {
-	//		return "", fmt.Errorf("[ migrationCall ] Can't save as delegate: %s", err.Error())
-	//	}
-	//	txDeposit = *txDepositP
-	//}
-	//
-	//if _, ok := oracleMembers[mdMember.Name]; !ok {
-	//	return "", fmt.Errorf("[ getOracleConfirms ] This oracle is not in the list")
-	//}
-	//allConfirmed, err := txDeposit.Confirm(mdMember.Name, txHash, amount)
-	//if err != nil {
-	//	return "", fmt.Errorf("[ migrationCall ] Confirmed failed: %s", err.Error())
-	//}
-	//
+	// Get oracle members
+	oracleMembers, err := rd.GetOracleMembers()
+	if err != nil {
+		return "", fmt.Errorf("[ migration ] Can't get oracles map: %s", err.Error())
+	}
+	// Check that caller is oracle
+	if _, ok := oracleMembers[mdMember.Name]; !ok {
+		return "", fmt.Errorf("[ migration ] This oracle is not in the list")
+	}
+
+	// Get member by burn address
+	mRef, err := rd.GetMemberByBurnAddress(burnAddress)
+	if err != nil {
+		return "", fmt.Errorf("[ migration ] Failed to get member by burn address")
+	}
+	m := member.GetObject(mRef)
+
+	// Find deposit for txHash
+	found, txDeposit, err := m.FindDeposit(txHash, amount)
+	if err != nil {
+		return "", fmt.Errorf("[ migration ] Can't get deposit: %s", err.Error())
+	}
+
+	// If deposit doesn't exist - create new deposit
+	if !found {
+		oracleConfirms := map[string]bool{}
+		for name, _ := range oracleMembers {
+			oracleConfirms[name] = false
+		}
+		dHolder := deposit.New(oracleConfirms, txHash, amount, unHoldDate)
+		txDepositP, err := dHolder.AsDelegate(mRef)
+		if err != nil {
+			return "", fmt.Errorf("[ migration ] Can't save as delegate: %s", err.Error())
+		}
+		txDeposit = *txDepositP
+	}
+
+	// Confirm tx by oracle
+	confirms, err := txDeposit.Confirm(mdMember.Name, txHash, amount)
+	if err != nil {
+		return "", fmt.Errorf("[ migration ] Confirmed failed: %s", err.Error())
+	}
+
 	//if allConfirmed {
 	//	w, err := wallet.GetImplementationFrom(insAddr)
 	//	if err != nil {
 	//		wHolder := wallet.New(0)
 	//		w, err = wHolder.AsDelegate(insAddr)
 	//		if err != nil {
-	//			return "", fmt.Errorf("[ migrationCall ] Can't save as delegate: %s", err.Error())
+	//			return "", fmt.Errorf("[ migration ] Can't save as delegate: %s", err.Error())
 	//		}
 	//	}
 	//
 	//	getMdWallet := func() (*wallet.Wallet, error) {
 	//		mdWalletRef, err := rd.GetMDWalletRef()
 	//		if err != nil {
-	//			return nil, fmt.Errorf("[ migrationCall ] Can't get md wallet ref: %s", err.Error())
+	//			return nil, fmt.Errorf("[ migration ] Can't get md wallet ref: %s", err.Error())
 	//		}
 	//		mdWallet := wallet.GetObject(*mdWalletRef)
 	//
@@ -413,18 +411,18 @@ func (mdMember *Member) migration(rdRef insolar.Reference, txHash string, burnAd
 	//	}
 	//	mdWallet, err := getMdWallet()
 	//	if err != nil {
-	//		return "", fmt.Errorf("[ migrationCall ] Can't get mdWallet: %s", err.Error())
+	//		return "", fmt.Errorf("[ migration ] Can't get mdWallet: %s", err.Error())
 	//	}
 	//
 	//	err = mdWallet.Transfer(amount, &w.Reference)
 	//	if err != nil {
-	//		return "", fmt.Errorf("[ migrationCall ] Can't transfer: %s", err.Error())
+	//		return "", fmt.Errorf("[ migration ] Can't transfer: %s", err.Error())
 	//	}
 	//
 	//}
 	//
 	//return insAddr.String(), nil
-	return "", nil
+	return strconv.Itoa(int(confirms)), nil
 }
 
 func (mdMember *Member) migrationCall(rdRef insolar.Reference, params []byte) (string, error) {
@@ -432,9 +430,9 @@ func (mdMember *Member) migrationCall(rdRef insolar.Reference, params []byte) (s
 		return "", fmt.Errorf("[ migrationCall ] Only oracles can call migrationCall")
 	}
 
-	var txHash, burnAddress, insRefStr string
+	var txHash, burnAddress, insRefStr, currentDate string
 	var inAmount interface{}
-	if err := signer.UnmarshalParams(params, &txHash, &burnAddress, &inAmount, &insRefStr); err != nil {
+	if err := signer.UnmarshalParams(params, &txHash, &burnAddress, &inAmount, &insRefStr, &currentDate); err != nil {
 		return "", fmt.Errorf("[ migrationCall ] Can't unmarshal params: %s", err.Error())
 	}
 
@@ -443,7 +441,12 @@ func (mdMember *Member) migrationCall(rdRef insolar.Reference, params []byte) (s
 		return "", fmt.Errorf("[ migrationCall ] Failed to parse amount: %s", err.Error())
 	}
 
-	return mdMember.migration(rdRef, txHash, burnAddress, amount)
+	unHoldDate, err := parseTimeStamp(currentDate)
+	if err != nil {
+		return "", fmt.Errorf("[ migrationCall ] Failed to parse unHoldDate: %s", err.Error())
+	}
+
+	return mdMember.migration(rdRef, txHash, burnAddress, amount, unHoldDate)
 }
 
 func (m *Member) FindDeposit(txHash string, amount uint) (bool, deposit.Deposit, error) {
