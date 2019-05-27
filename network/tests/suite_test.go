@@ -321,9 +321,10 @@ type networkNode struct {
 	host                string
 	ctx                 context.Context
 
-	componentManager *component.Manager
-	serviceNetwork   *servicenetwork.ServiceNetwork
-	consensusResult  chan error
+	componentManager   *component.Manager
+	serviceNetwork     *servicenetwork.ServiceNetwork
+	terminationHandler *testutils.TerminationHandlerMock
+	consensusResult    chan error
 }
 
 // newNetworkNode returns networkNode initialized only with id, host address and key pair
@@ -497,6 +498,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		testutils.NewMessageBusMock(t), testutils.NewContractRequesterMock(t))
 
 	node.serviceNetwork = serviceNetwork
+	node.terminationHandler = terminationHandler
 }
 
 func (s *testSuite) SetCommunicationPolicy(policy CommunicationPolicy) {
