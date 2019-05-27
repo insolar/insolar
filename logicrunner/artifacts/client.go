@@ -159,7 +159,6 @@ func (m *client) GetObject(
 	head insolar.Reference,
 ) (ObjectDescriptor, error) {
 	var (
-		// desc ObjectDescriptor
 		err error
 	)
 	ctx, span := instracer.StartSpan(ctx, "artifactmanager.Getobject")
@@ -184,32 +183,64 @@ func (m *client) GetObject(
 	reps, done := m.sender.SendRole(ctx, msg, insolar.DynamicRoleLightExecutor, head)
 	defer done()
 
-	rep, ok := <-reps
-	if !ok {
+	var (
+		index        *object.Lifeline
+		statePayload *payload.State
+	)
+	success := func() bool {
+		return index != nil && statePayload != nil
+	}
+	for rep := range reps {
+		replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to unmarshal reply")
+		}
+
+		switch p := replyPayload.(type) {
+		case *payload.Index:
+			index = &object.Lifeline{}
+			err := index.Unmarshal(p.Index)
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to unmarshal index")
+			}
+		case *payload.State:
+			statePayload = p
+		case *payload.Error:
+			return nil, errors.New(p.Text)
+		default:
+			return nil, fmt.Errorf("GetObject: unexpected reply: %#v", p)
+		}
+
+		if success() {
+			break
+		}
+	}
+	if !success() {
 		return nil, errors.New("no reply")
 	}
-	replyPayload, err := payload.UnmarshalFromMeta(rep.Payload)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to unmarshal reply")
-	}
 
-	switch p := replyPayload.(type) {
-	// case *reply.Object:
-	// 	desc = &objectDescriptor{
-	// 		head:         r.Head,
-	// 		state:        r.State,
-	// 		prototype:    r.Prototype,
-	// 		isPrototype:  r.IsPrototype,
-	// 		childPointer: r.ChildPointer,
-	// 		memory:       r.Memory,
-	// 		parent:       r.Parent,
-	// 	}
-	// 	return desc, err
-	case *payload.Error:
-		return nil, errors.New(p.Text)
-	default:
-		return nil, fmt.Errorf("GetObject: unexpected reply: %#v", p)
+	rec := record.Material{}
+	err = rec.Unmarshal(statePayload.Record)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unmarshal state")
 	}
+	virtual := record.Unwrap(rec.Virtual)
+	s, ok := virtual.(record.State)
+	if !ok {
+		return nil, errors.New("wrong state record")
+	}
+	state := s
+
+	desc := &objectDescriptor{
+		head:         head,
+		state:        *index.LatestState,
+		prototype:    state.GetImage(),
+		isPrototype:  state.GetIsPrototype(),
+		childPointer: index.ChildPointer,
+		memory:       statePayload.Memory,
+		parent:       index.Parent,
+	}
+	return desc, err
 }
 
 // GetPendingRequest returns an unclosed pending request

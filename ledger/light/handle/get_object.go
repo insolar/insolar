@@ -70,14 +70,14 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 	}
 	stateID = *idx.Result.Index.LatestState
 
-	jet := proc.NewFetchJetWM(stateID, stateID.Pulse(), s.message.WatermillMsg)
+	jet = proc.NewFetchJetWM(stateID, stateID.Pulse(), s.message.WatermillMsg)
 	s.dep.FetchJetWM(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
 		return err
 	}
 	stateJetID = jet.Result.Jet
 
-	send := proc.NewSendObject(s.message, jet.Result.Jet, idx.Result.Index)
+	send := proc.NewSendObject(s.message.WatermillMsg, s.payload, objJetID, stateJetID, idx.Result.Index)
 	s.dep.SendObject(send)
 	return f.Procedure(ctx, send, false)
 }
