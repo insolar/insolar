@@ -412,7 +412,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 	}
 
 	if oldPulse != nil && prevPN != nil {
-		err = m.WriteManager.CloseAndWait(ctx, oldPulse.PulseNumber) //TODO IMARKIN check error
+		err = m.WriteManager.CloseAndWait(ctx, oldPulse.PulseNumber)
 		if err != nil {
 			return errors.Wrap(err, "can't close pulse for writing")
 		}

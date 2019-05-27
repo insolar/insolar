@@ -100,7 +100,6 @@ func (m *WriteController) Open(ctx context.Context, pulse insolar.PulseNumber) e
 
 func (m *WriteController) CloseAndWait(ctx context.Context, pulse insolar.PulseNumber) error {
 	m.lock.Lock()
-	defer m.lock.Unlock()
 
 	logger := inslogger.FromContext(ctx)
 
@@ -110,10 +109,14 @@ func (m *WriteController) CloseAndWait(ctx context.Context, pulse insolar.PulseN
 	}
 
 	if pulse == m.current && m.closed {
-		logger.Warn("requested pulse already closed for writing: ", pulse)
+		logger.Error("requested pulse already closed for writing: ", pulse)
+		m.lock.Unlock()
+		return ErrWriteClosed
 	}
 
 	m.closed = true
+	m.lock.Unlock()
+
 	m.wg.Wait()
 
 	return nil
