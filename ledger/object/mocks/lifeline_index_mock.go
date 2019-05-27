@@ -1,4 +1,4 @@
-package object
+package mocks
 
 /*
 DO NOT EDIT!
@@ -6,12 +6,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "LifelineIndex" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/ledger/object"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,12 +21,12 @@ import (
 type LifelineIndexMock struct {
 	t minimock.Tester
 
-	ForIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r Lifeline, r1 error)
+	ForIDFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r object.Lifeline, r1 error)
 	ForIDCounter    uint64
 	ForIDPreCounter uint64
 	ForIDMock       mLifelineIndexMockForID
 
-	SetFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 Lifeline) (r error)
+	SetFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 object.Lifeline) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mLifelineIndexMockSet
@@ -63,7 +64,7 @@ type LifelineIndexMockForIDInput struct {
 }
 
 type LifelineIndexMockForIDResult struct {
-	r  Lifeline
+	r  object.Lifeline
 	r1 error
 }
 
@@ -80,7 +81,7 @@ func (m *mLifelineIndexMockForID) Expect(p context.Context, p1 insolar.PulseNumb
 }
 
 //Return specifies results of invocation of LifelineIndex.ForID
-func (m *mLifelineIndexMockForID) Return(r Lifeline, r1 error) *LifelineIndexMock {
+func (m *mLifelineIndexMockForID) Return(r object.Lifeline, r1 error) *LifelineIndexMock {
 	m.mock.ForIDFunc = nil
 	m.expectationSeries = nil
 
@@ -102,12 +103,12 @@ func (m *mLifelineIndexMockForID) ExpectOnce(p context.Context, p1 insolar.Pulse
 	return expectation
 }
 
-func (e *LifelineIndexMockForIDExpectation) Return(r Lifeline, r1 error) {
+func (e *LifelineIndexMockForIDExpectation) Return(r object.Lifeline, r1 error) {
 	e.result = &LifelineIndexMockForIDResult{r, r1}
 }
 
 //Set uses given function f as a mock of LifelineIndex.ForID method
-func (m *mLifelineIndexMockForID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r Lifeline, r1 error)) *LifelineIndexMock {
+func (m *mLifelineIndexMockForID) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r object.Lifeline, r1 error)) *LifelineIndexMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -116,7 +117,7 @@ func (m *mLifelineIndexMockForID) Set(f func(p context.Context, p1 insolar.Pulse
 }
 
 //ForID implements github.com/insolar/insolar/ledger/object.LifelineIndex interface
-func (m *LifelineIndexMock) ForID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r Lifeline, r1 error) {
+func (m *LifelineIndexMock) ForID(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID) (r object.Lifeline, r1 error) {
 	counter := atomic.AddUint64(&m.ForIDPreCounter, 1)
 	defer atomic.AddUint64(&m.ForIDCounter, 1)
 
@@ -212,7 +213,7 @@ type LifelineIndexMockSetInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
 	p2 insolar.ID
-	p3 Lifeline
+	p3 object.Lifeline
 }
 
 type LifelineIndexMockSetResult struct {
@@ -220,7 +221,7 @@ type LifelineIndexMockSetResult struct {
 }
 
 //Expect specifies that invocation of LifelineIndex.Set is expected from 1 to Infinity times
-func (m *mLifelineIndexMockSet) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 Lifeline) *mLifelineIndexMockSet {
+func (m *mLifelineIndexMockSet) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 object.Lifeline) *mLifelineIndexMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
@@ -244,7 +245,7 @@ func (m *mLifelineIndexMockSet) Return(r error) *LifelineIndexMock {
 }
 
 //ExpectOnce specifies that invocation of LifelineIndex.Set is expected once
-func (m *mLifelineIndexMockSet) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 Lifeline) *LifelineIndexMockSetExpectation {
+func (m *mLifelineIndexMockSet) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 object.Lifeline) *LifelineIndexMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
@@ -259,7 +260,7 @@ func (e *LifelineIndexMockSetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of LifelineIndex.Set method
-func (m *mLifelineIndexMockSet) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 Lifeline) (r error)) *LifelineIndexMock {
+func (m *mLifelineIndexMockSet) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 object.Lifeline) (r error)) *LifelineIndexMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -268,7 +269,7 @@ func (m *mLifelineIndexMockSet) Set(f func(p context.Context, p1 insolar.PulseNu
 }
 
 //Set implements github.com/insolar/insolar/ledger/object.LifelineIndex interface
-func (m *LifelineIndexMock) Set(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 Lifeline) (r error) {
+func (m *LifelineIndexMock) Set(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 object.Lifeline) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 

@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"github.com/gojuno/minimock"
+	"github.com/insolar/insolar/ledger/object/mocks"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
@@ -175,7 +176,7 @@ func (s *handlerSuite) TestMessageHandler_HandleGetDelegate_FetchesIndexFromHeav
 	h.Nodes = s.nodeStorage
 
 	h.RecentStorageProvider = provideMock
-	idLock := object.NewIDLockerMock(s.T())
+	idLock := mocks.NewIDLockerMock(s.T())
 	idLock.LockMock.Return()
 	idLock.UnlockMock.Return()
 	h.IDLocker = idLock
@@ -347,7 +348,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_FetchesIndexFromHe
 	h.PCS = s.scheme
 	h.RecordModifier = s.recordModifier
 
-	idLockMock := object.NewIDLockerMock(s.T())
+	idLockMock := mocks.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 	h.IDLocker = idLockMock
@@ -421,7 +422,7 @@ func (s *handlerSuite) TestMessageHandler_HandleRegisterChild_IndexStateUpdated(
 	h.PCS = s.scheme
 	h.RecordModifier = s.recordModifier
 
-	idLockMock := object.NewIDLockerMock(s.T())
+	idLockMock := mocks.NewIDLockerMock(s.T())
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 	h.IDLocker = idLockMock
@@ -536,9 +537,9 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		s.T().Fail()
 	}
 
-	idxStateModifierMock := object.NewLifelineStateModifierMock(s.T())
-	bucketMock := object.NewIndexBucketModifierMock(s.T())
-	idxMock := object.NewLifelineIndexMock(s.T())
+	idxStateModifierMock := mocks.NewLifelineStateModifierMock(s.T())
+	bucketMock := mocks.NewIndexBucketModifierMock(s.T())
+	idxMock := mocks.NewLifelineIndexMock(s.T())
 
 	bucketMock.SetBucketFunc = func(ctx context.Context, pn insolar.PulseNumber, ib object.IndexBucket) (r error) {
 		require.Equal(s.T(), *firstID, ib.ObjID)

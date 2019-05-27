@@ -29,7 +29,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/light/proc"
-	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/ledger/object/mocks"
 	"github.com/stretchr/testify/require"
 )
 
@@ -44,7 +44,7 @@ func TestGetCode_Proceed(t *testing.T) {
 	codeRec := codeRecord(blobID)
 	codeRef := gen.Reference()
 	getCode := proc.NewGetCode(codeRef, replyTo)
-	records := object.NewRecordAccessorMock(mc)
+	records := mocks.NewRecordAccessorMock(mc)
 	records.ForIDFunc = func(c context.Context, id insolar.ID) (record.Material, error) {
 		a.Equal(*codeRef.Record(), id)
 		return codeRec, nil

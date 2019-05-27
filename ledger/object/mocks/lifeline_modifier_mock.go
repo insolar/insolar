@@ -1,4 +1,4 @@
-package object
+package mocks
 
 /*
 DO NOT EDIT!
@@ -6,12 +6,13 @@ This code was generated automatically using github.com/gojuno/minimock v1.9
 The original interface "LifelineModifier" can be found in github.com/insolar/insolar/ledger/object
 */
 import (
-	context "context"
+	"context"
 	"sync/atomic"
 	"time"
 
 	"github.com/gojuno/minimock"
-	insolar "github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/ledger/object"
 
 	testify_assert "github.com/stretchr/testify/assert"
 )
@@ -20,7 +21,7 @@ import (
 type LifelineModifierMock struct {
 	t minimock.Tester
 
-	SetFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 Lifeline) (r error)
+	SetFunc       func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 object.Lifeline) (r error)
 	SetCounter    uint64
 	SetPreCounter uint64
 	SetMock       mLifelineModifierMockSet
@@ -54,7 +55,7 @@ type LifelineModifierMockSetInput struct {
 	p  context.Context
 	p1 insolar.PulseNumber
 	p2 insolar.ID
-	p3 Lifeline
+	p3 object.Lifeline
 }
 
 type LifelineModifierMockSetResult struct {
@@ -62,7 +63,7 @@ type LifelineModifierMockSetResult struct {
 }
 
 //Expect specifies that invocation of LifelineModifier.Set is expected from 1 to Infinity times
-func (m *mLifelineModifierMockSet) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 Lifeline) *mLifelineModifierMockSet {
+func (m *mLifelineModifierMockSet) Expect(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 object.Lifeline) *mLifelineModifierMockSet {
 	m.mock.SetFunc = nil
 	m.expectationSeries = nil
 
@@ -86,7 +87,7 @@ func (m *mLifelineModifierMockSet) Return(r error) *LifelineModifierMock {
 }
 
 //ExpectOnce specifies that invocation of LifelineModifier.Set is expected once
-func (m *mLifelineModifierMockSet) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 Lifeline) *LifelineModifierMockSetExpectation {
+func (m *mLifelineModifierMockSet) ExpectOnce(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 object.Lifeline) *LifelineModifierMockSetExpectation {
 	m.mock.SetFunc = nil
 	m.mainExpectation = nil
 
@@ -101,7 +102,7 @@ func (e *LifelineModifierMockSetExpectation) Return(r error) {
 }
 
 //Set uses given function f as a mock of LifelineModifier.Set method
-func (m *mLifelineModifierMockSet) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 Lifeline) (r error)) *LifelineModifierMock {
+func (m *mLifelineModifierMockSet) Set(f func(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 object.Lifeline) (r error)) *LifelineModifierMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -110,7 +111,7 @@ func (m *mLifelineModifierMockSet) Set(f func(p context.Context, p1 insolar.Puls
 }
 
 //Set implements github.com/insolar/insolar/ledger/object.LifelineModifier interface
-func (m *LifelineModifierMock) Set(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 Lifeline) (r error) {
+func (m *LifelineModifierMock) Set(p context.Context, p1 insolar.PulseNumber, p2 insolar.ID, p3 object.Lifeline) (r error) {
 	counter := atomic.AddUint64(&m.SetPreCounter, 1)
 	defer atomic.AddUint64(&m.SetCounter, 1)
 

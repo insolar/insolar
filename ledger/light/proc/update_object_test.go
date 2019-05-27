@@ -23,6 +23,7 @@ import (
 
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/ledger/object/mocks"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
@@ -76,7 +77,7 @@ func TestMessageHandler_HandleUpdateObject_FetchesIndexFromHeavy(t *testing.T) {
 	scheme := testutils.NewPlatformCryptographyScheme()
 	indexMemoryStor := object.NewInMemoryIndex()
 
-	idLockMock := object.NewIDLockerMock(t)
+	idLockMock := mocks.NewIDLockerMock(t)
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 
@@ -149,7 +150,7 @@ func TestMessageHandler_HandleUpdateObject_UpdateIndexState(t *testing.T) {
 	indexMemoryStor := object.NewInMemoryIndex()
 	recordStorage := object.NewRecordMemory()
 
-	idLockMock := object.NewIDLockerMock(t)
+	idLockMock := mocks.NewIDLockerMock(t)
 	idLockMock.LockMock.Return()
 	idLockMock.UnlockMock.Return()
 

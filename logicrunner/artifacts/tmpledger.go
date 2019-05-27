@@ -24,6 +24,7 @@ import (
 	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/ledger/object/mocks"
 
 	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/configuration"
@@ -170,7 +171,7 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	handler.RecordModifier = recordModifier
 	handler.RecordAccessor = recordAccessor
 
-	idLockerMock := object.NewIDLockerMock(t)
+	idLockerMock := mocks.NewIDLockerMock(t)
 	idLockerMock.LockMock.Return()
 	idLockerMock.UnlockMock.Return()
 

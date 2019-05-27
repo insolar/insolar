@@ -12,6 +12,7 @@ import (
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/object"
+	"github.com/insolar/insolar/ledger/object/mocks"
 	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -88,7 +89,7 @@ func TestGetChildren_RedirectToLight(t *testing.T) {
 	gc.Dep.Coordinator = jc
 	gc.Dep.JetStorage = jet.NewStore()
 	gc.Dep.JetStorage.Update(ctx, insolar.FirstPulseNumber+1, true)
-	ra := object.NewRecordAccessorMock(t)
+	ra := mocks.NewRecordAccessorMock(t)
 	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
 		return record.Material{}, object.ErrNotFound
 	}
@@ -141,7 +142,7 @@ func TestGetChildren_RedirectToHeavy(t *testing.T) {
 	gc.Dep.Coordinator = jc
 	gc.Dep.JetStorage = jet.NewStore()
 	gc.Dep.JetStorage.Update(ctx, insolar.FirstPulseNumber+1, true)
-	ra := object.NewRecordAccessorMock(t)
+	ra := mocks.NewRecordAccessorMock(t)
 	ra.ForIDFunc = func(ctx context.Context, id insolar.ID) (record.Material, error) {
 		return record.Material{}, object.ErrNotFound
 	}
