@@ -224,7 +224,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		c := component.Manager{}
 		c.Inject(CryptoScheme)
 
-		hots := recentstorage.NewRecentStorageProvider()
+		hots := recentstorage.NewProvider()
 		waiter := hot.NewChannelWaiter()
 
 		handler := artifactmanager.NewMessageHandler(indexes, indexes, indexes, &conf)
