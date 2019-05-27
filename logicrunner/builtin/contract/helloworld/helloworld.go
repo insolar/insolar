@@ -30,8 +30,6 @@ type HelloWorld struct {
 
 var INSATTR_Greet_API = true
 
-func (hw *HelloWorld) Call()
-
 // Greet greats the caller
 func (hw *HelloWorld) Greet(name string) (interface{}, error) {
 	hw.Greeted++

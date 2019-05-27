@@ -794,8 +794,12 @@ func (suite *LogicRunnerTestSuite) TestStartStop() {
 
 	suite.mb.MustRegisterMock.Return()
 	lr.MessageBus = suite.mb
+	suite.am.InjectCodeDescriptorMock.Return()
+	suite.am.InjectObjectDescriptorMock.Return()
+	lr.ArtifactManager = suite.am
 
 	err = lr.Start(suite.ctx)
+	log.Error(err)
 	suite.Require().NoError(err)
 
 	executor, err := lr.GetExecutor(insolar.MachineTypeBuiltin)

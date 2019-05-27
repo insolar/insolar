@@ -76,6 +76,16 @@ type ClientMock struct {
 	HasPendingRequestsPreCounter uint64
 	HasPendingRequestsMock       mClientMockHasPendingRequests
 
+	InjectCodeDescriptorFunc       func(p insolar.Reference, p1 CodeDescriptor)
+	InjectCodeDescriptorCounter    uint64
+	InjectCodeDescriptorPreCounter uint64
+	InjectCodeDescriptorMock       mClientMockInjectCodeDescriptor
+
+	InjectObjectDescriptorFunc       func(p insolar.Reference, p1 ObjectDescriptor)
+	InjectObjectDescriptorCounter    uint64
+	InjectObjectDescriptorPreCounter uint64
+	InjectObjectDescriptorMock       mClientMockInjectObjectDescriptor
+
 	RegisterRequestFunc       func(p context.Context, p1 record.Request) (r *insolar.ID, r1 error)
 	RegisterRequestCounter    uint64
 	RegisterRequestPreCounter uint64
@@ -126,6 +136,8 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 	m.GetObjectMock = mClientMockGetObject{mock: m}
 	m.GetPendingRequestMock = mClientMockGetPendingRequest{mock: m}
 	m.HasPendingRequestsMock = mClientMockHasPendingRequests{mock: m}
+	m.InjectCodeDescriptorMock = mClientMockInjectCodeDescriptor{mock: m}
+	m.InjectObjectDescriptorMock = mClientMockInjectObjectDescriptor{mock: m}
 	m.RegisterRequestMock = mClientMockRegisterRequest{mock: m}
 	m.RegisterResultMock = mClientMockRegisterResult{mock: m}
 	m.RegisterValidationMock = mClientMockRegisterValidation{mock: m}
@@ -1815,6 +1827,254 @@ func (m *ClientMock) HasPendingRequestsFinished() bool {
 	return true
 }
 
+type mClientMockInjectCodeDescriptor struct {
+	mock              *ClientMock
+	mainExpectation   *ClientMockInjectCodeDescriptorExpectation
+	expectationSeries []*ClientMockInjectCodeDescriptorExpectation
+}
+
+type ClientMockInjectCodeDescriptorExpectation struct {
+	input *ClientMockInjectCodeDescriptorInput
+}
+
+type ClientMockInjectCodeDescriptorInput struct {
+	p  insolar.Reference
+	p1 CodeDescriptor
+}
+
+//Expect specifies that invocation of Client.InjectCodeDescriptor is expected from 1 to Infinity times
+func (m *mClientMockInjectCodeDescriptor) Expect(p insolar.Reference, p1 CodeDescriptor) *mClientMockInjectCodeDescriptor {
+	m.mock.InjectCodeDescriptorFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClientMockInjectCodeDescriptorExpectation{}
+	}
+	m.mainExpectation.input = &ClientMockInjectCodeDescriptorInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of Client.InjectCodeDescriptor
+func (m *mClientMockInjectCodeDescriptor) Return() *ClientMock {
+	m.mock.InjectCodeDescriptorFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClientMockInjectCodeDescriptorExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Client.InjectCodeDescriptor is expected once
+func (m *mClientMockInjectCodeDescriptor) ExpectOnce(p insolar.Reference, p1 CodeDescriptor) *ClientMockInjectCodeDescriptorExpectation {
+	m.mock.InjectCodeDescriptorFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ClientMockInjectCodeDescriptorExpectation{}
+	expectation.input = &ClientMockInjectCodeDescriptorInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of Client.InjectCodeDescriptor method
+func (m *mClientMockInjectCodeDescriptor) Set(f func(p insolar.Reference, p1 CodeDescriptor)) *ClientMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.InjectCodeDescriptorFunc = f
+	return m.mock
+}
+
+//InjectCodeDescriptor implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
+func (m *ClientMock) InjectCodeDescriptor(p insolar.Reference, p1 CodeDescriptor) {
+	counter := atomic.AddUint64(&m.InjectCodeDescriptorPreCounter, 1)
+	defer atomic.AddUint64(&m.InjectCodeDescriptorCounter, 1)
+
+	if len(m.InjectCodeDescriptorMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.InjectCodeDescriptorMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ClientMock.InjectCodeDescriptor. %v %v", p, p1)
+			return
+		}
+
+		input := m.InjectCodeDescriptorMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ClientMockInjectCodeDescriptorInput{p, p1}, "Client.InjectCodeDescriptor got unexpected parameters")
+
+		return
+	}
+
+	if m.InjectCodeDescriptorMock.mainExpectation != nil {
+
+		input := m.InjectCodeDescriptorMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ClientMockInjectCodeDescriptorInput{p, p1}, "Client.InjectCodeDescriptor got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.InjectCodeDescriptorFunc == nil {
+		m.t.Fatalf("Unexpected call to ClientMock.InjectCodeDescriptor. %v %v", p, p1)
+		return
+	}
+
+	m.InjectCodeDescriptorFunc(p, p1)
+}
+
+//InjectCodeDescriptorMinimockCounter returns a count of ClientMock.InjectCodeDescriptorFunc invocations
+func (m *ClientMock) InjectCodeDescriptorMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.InjectCodeDescriptorCounter)
+}
+
+//InjectCodeDescriptorMinimockPreCounter returns the value of ClientMock.InjectCodeDescriptor invocations
+func (m *ClientMock) InjectCodeDescriptorMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.InjectCodeDescriptorPreCounter)
+}
+
+//InjectCodeDescriptorFinished returns true if mock invocations count is ok
+func (m *ClientMock) InjectCodeDescriptorFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.InjectCodeDescriptorMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.InjectCodeDescriptorCounter) == uint64(len(m.InjectCodeDescriptorMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.InjectCodeDescriptorMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.InjectCodeDescriptorCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.InjectCodeDescriptorFunc != nil {
+		return atomic.LoadUint64(&m.InjectCodeDescriptorCounter) > 0
+	}
+
+	return true
+}
+
+type mClientMockInjectObjectDescriptor struct {
+	mock              *ClientMock
+	mainExpectation   *ClientMockInjectObjectDescriptorExpectation
+	expectationSeries []*ClientMockInjectObjectDescriptorExpectation
+}
+
+type ClientMockInjectObjectDescriptorExpectation struct {
+	input *ClientMockInjectObjectDescriptorInput
+}
+
+type ClientMockInjectObjectDescriptorInput struct {
+	p  insolar.Reference
+	p1 ObjectDescriptor
+}
+
+//Expect specifies that invocation of Client.InjectObjectDescriptor is expected from 1 to Infinity times
+func (m *mClientMockInjectObjectDescriptor) Expect(p insolar.Reference, p1 ObjectDescriptor) *mClientMockInjectObjectDescriptor {
+	m.mock.InjectObjectDescriptorFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClientMockInjectObjectDescriptorExpectation{}
+	}
+	m.mainExpectation.input = &ClientMockInjectObjectDescriptorInput{p, p1}
+	return m
+}
+
+//Return specifies results of invocation of Client.InjectObjectDescriptor
+func (m *mClientMockInjectObjectDescriptor) Return() *ClientMock {
+	m.mock.InjectObjectDescriptorFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClientMockInjectObjectDescriptorExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Client.InjectObjectDescriptor is expected once
+func (m *mClientMockInjectObjectDescriptor) ExpectOnce(p insolar.Reference, p1 ObjectDescriptor) *ClientMockInjectObjectDescriptorExpectation {
+	m.mock.InjectObjectDescriptorFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ClientMockInjectObjectDescriptorExpectation{}
+	expectation.input = &ClientMockInjectObjectDescriptorInput{p, p1}
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of Client.InjectObjectDescriptor method
+func (m *mClientMockInjectObjectDescriptor) Set(f func(p insolar.Reference, p1 ObjectDescriptor)) *ClientMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.InjectObjectDescriptorFunc = f
+	return m.mock
+}
+
+//InjectObjectDescriptor implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
+func (m *ClientMock) InjectObjectDescriptor(p insolar.Reference, p1 ObjectDescriptor) {
+	counter := atomic.AddUint64(&m.InjectObjectDescriptorPreCounter, 1)
+	defer atomic.AddUint64(&m.InjectObjectDescriptorCounter, 1)
+
+	if len(m.InjectObjectDescriptorMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.InjectObjectDescriptorMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ClientMock.InjectObjectDescriptor. %v %v", p, p1)
+			return
+		}
+
+		input := m.InjectObjectDescriptorMock.expectationSeries[counter-1].input
+		testify_assert.Equal(m.t, *input, ClientMockInjectObjectDescriptorInput{p, p1}, "Client.InjectObjectDescriptor got unexpected parameters")
+
+		return
+	}
+
+	if m.InjectObjectDescriptorMock.mainExpectation != nil {
+
+		input := m.InjectObjectDescriptorMock.mainExpectation.input
+		if input != nil {
+			testify_assert.Equal(m.t, *input, ClientMockInjectObjectDescriptorInput{p, p1}, "Client.InjectObjectDescriptor got unexpected parameters")
+		}
+
+		return
+	}
+
+	if m.InjectObjectDescriptorFunc == nil {
+		m.t.Fatalf("Unexpected call to ClientMock.InjectObjectDescriptor. %v %v", p, p1)
+		return
+	}
+
+	m.InjectObjectDescriptorFunc(p, p1)
+}
+
+//InjectObjectDescriptorMinimockCounter returns a count of ClientMock.InjectObjectDescriptorFunc invocations
+func (m *ClientMock) InjectObjectDescriptorMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.InjectObjectDescriptorCounter)
+}
+
+//InjectObjectDescriptorMinimockPreCounter returns the value of ClientMock.InjectObjectDescriptor invocations
+func (m *ClientMock) InjectObjectDescriptorMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.InjectObjectDescriptorPreCounter)
+}
+
+//InjectObjectDescriptorFinished returns true if mock invocations count is ok
+func (m *ClientMock) InjectObjectDescriptorFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.InjectObjectDescriptorMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.InjectObjectDescriptorCounter) == uint64(len(m.InjectObjectDescriptorMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.InjectObjectDescriptorMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.InjectObjectDescriptorCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.InjectObjectDescriptorFunc != nil {
+		return atomic.LoadUint64(&m.InjectObjectDescriptorCounter) > 0
+	}
+
+	return true
+}
+
 type mClientMockRegisterRequest struct {
 	mock              *ClientMock
 	mainExpectation   *ClientMockRegisterRequestExpectation
@@ -2764,6 +3024,14 @@ func (m *ClientMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ClientMock.HasPendingRequests")
 	}
 
+	if !m.InjectCodeDescriptorFinished() {
+		m.t.Fatal("Expected call to ClientMock.InjectCodeDescriptor")
+	}
+
+	if !m.InjectObjectDescriptorFinished() {
+		m.t.Fatal("Expected call to ClientMock.InjectObjectDescriptor")
+	}
+
 	if !m.RegisterRequestFinished() {
 		m.t.Fatal("Expected call to ClientMock.RegisterRequest")
 	}
@@ -2849,6 +3117,14 @@ func (m *ClientMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ClientMock.HasPendingRequests")
 	}
 
+	if !m.InjectCodeDescriptorFinished() {
+		m.t.Fatal("Expected call to ClientMock.InjectCodeDescriptor")
+	}
+
+	if !m.InjectObjectDescriptorFinished() {
+		m.t.Fatal("Expected call to ClientMock.InjectObjectDescriptor")
+	}
+
 	if !m.RegisterRequestFinished() {
 		m.t.Fatal("Expected call to ClientMock.RegisterRequest")
 	}
@@ -2898,6 +3174,8 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetObjectFinished()
 		ok = ok && m.GetPendingRequestFinished()
 		ok = ok && m.HasPendingRequestsFinished()
+		ok = ok && m.InjectCodeDescriptorFinished()
+		ok = ok && m.InjectObjectDescriptorFinished()
 		ok = ok && m.RegisterRequestFinished()
 		ok = ok && m.RegisterResultFinished()
 		ok = ok && m.RegisterValidationFinished()
@@ -2954,6 +3232,14 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 
 			if !m.HasPendingRequestsFinished() {
 				m.t.Error("Expected call to ClientMock.HasPendingRequests")
+			}
+
+			if !m.InjectCodeDescriptorFinished() {
+				m.t.Error("Expected call to ClientMock.InjectCodeDescriptor")
+			}
+
+			if !m.InjectObjectDescriptorFinished() {
+				m.t.Error("Expected call to ClientMock.InjectObjectDescriptor")
 			}
 
 			if !m.RegisterRequestFinished() {
@@ -3033,6 +3319,14 @@ func (m *ClientMock) AllMocksCalled() bool {
 	}
 
 	if !m.HasPendingRequestsFinished() {
+		return false
+	}
+
+	if !m.InjectCodeDescriptorFinished() {
+		return false
+	}
+
+	if !m.InjectObjectDescriptorFinished() {
 		return false
 	}
 

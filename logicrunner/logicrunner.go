@@ -32,12 +32,11 @@ import (
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 
-	"github.com/insolar/insolar/log"
-
 	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 
 	"github.com/insolar/insolar/configuration"
@@ -274,17 +273,24 @@ func (lr *LogicRunner) initializeBuiltin(ctx context.Context) error {
 	lr.machinePrefs = append(lr.machinePrefs, insolar.MachineTypeBuiltin)
 
 	// TODO: insert all necessary descriptors here
+	log.Error("here")
 	codeDescriptors := builtin.InitializeCodeDescriptors()
 	for _, codeDescriptor := range codeDescriptors {
+		log.Errorf("inject to %s", lr.ArtifactManager)
 		lr.ArtifactManager.InjectCodeDescriptor(*codeDescriptor.Ref(), codeDescriptor)
+		log.Error("inject done")
+
 	}
+	log.Error("here")
 
 	prototypeDescriptors := builtin.InitializePrototypeDescriptors()
 	for _, prototypeDescriptor := range prototypeDescriptors {
 		lr.ArtifactManager.InjectObjectDescriptor(*prototypeDescriptor.HeadRef(), prototypeDescriptor)
 	}
+	log.Error("here")
 
 	lrCommon.CurrentProxyCtx = builtin.NewProxyHelper(lr)
+	log.Error("here")
 
 	return nil
 }
@@ -308,9 +314,12 @@ func (lr *LogicRunner) initializeGoPlugin(ctx context.Context) error {
 // Start starts logic runner component
 func (lr *LogicRunner) Start(ctx context.Context) error {
 	if lr.Cfg.BuiltIn != nil {
+		log.Error("Initializing builtin")
 		if err := lr.initializeBuiltin(ctx); err != nil {
+			log.Errorf("Initializing builtin not done: %s", err.Error())
 			return err
 		}
+		log.Error("Initializing builtin done")
 	}
 
 	lr.rpc = lrCommon.NewRPC(ctx, lr, lr.Cfg)
@@ -1126,7 +1135,7 @@ func (lr *LogicRunner) GetObjChildrenIterator(
 		}
 		rep.Iterator.CanFetch = iter.HasNext()
 
-		o, err := am.GetObject(ctx, *r, nil, false)
+		o, err := am.GetObject(ctx, *r)
 
 		if err != nil {
 			if err == insolar.ErrDeactivated {
