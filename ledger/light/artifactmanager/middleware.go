@@ -180,7 +180,7 @@ func (m *middleware) waitForHotData(handler insolar.MessageHandler) insolar.Mess
 		}
 
 		jetID := jetFromContext(ctx)
-		err := m.jetWaiter.Wait(ctx, jetID)
+		err := m.jetWaiter.Wait(ctx, jetID, parcel.Pulse())
 		if err != nil {
 			return &reply.Error{ErrType: reply.ErrHotDataTimeout}, nil
 		}
