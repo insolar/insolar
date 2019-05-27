@@ -97,10 +97,10 @@ type Future interface {
 type CancelCallback func(Future)
 
 type Manager interface {
-	Get(packet *packet.PacketBackend) Future
-	Create(packet *packet.PacketBackend) Future
+	Get(packet *packet.Packet) Future
+	Create(packet *packet.Packet) Future
 }
 
 type PacketHandler interface {
-	Handle(ctx context.Context, msg *packet.PacketBackend)
+	Handle(ctx context.Context, msg *packet.Packet)
 }

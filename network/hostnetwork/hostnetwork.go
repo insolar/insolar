@@ -161,8 +161,8 @@ func (hn *hostNetwork) Stop(ctx context.Context) error {
 }
 
 func (hn *hostNetwork) buildRequest(ctx context.Context, packetType types.PacketType,
-	requestData interface{}, receiver *host.Host) *packet.PacketBackend {
-	result := &packet.PacketBackend{
+	requestData interface{}, receiver *host.Host) *packet.Packet {
+	result := &packet.Packet{
 		Sender:   hn.getOrigin(),
 		Receiver: receiver,
 		// TODO: replace in protobuf with our type
@@ -179,7 +179,7 @@ func (hn *hostNetwork) PublicAddress() string {
 	return hn.getOrigin().Address.String()
 }
 
-func (hn *hostNetwork) handleRequest(p *packet.PacketBackend) {
+func (hn *hostNetwork) handleRequest(p *packet.Packet) {
 	ctx, logger := inslogger.WithTraceField(context.Background(), p.TraceID)
 	logger.Debugf("Got %s request from host %s; RequestID: %d", p.Type, p.Sender, p.RequestID)
 	handler, exist := hn.handlers[p.GetType()]
@@ -200,7 +200,7 @@ func (hn *hostNetwork) handleRequest(p *packet.PacketBackend) {
 		return
 	}
 
-	responsePacket := response.(*packet.PacketBackend)
+	responsePacket := response.(*packet.Packet)
 	responsePacket.RequestID = p.RequestID
 	err = SendPacket(ctx, hn.pool, responsePacket)
 	if err != nil {
@@ -241,7 +241,7 @@ func (hn *hostNetwork) RegisterPacketHandler(t types.PacketType, handler network
 
 // BuildResponse create response to an incoming request with Data set to responseData.
 func (hn *hostNetwork) BuildResponse(ctx context.Context, request network.Packet, responseData interface{}) network.Packet {
-	result := &packet.PacketBackend{
+	result := &packet.Packet{
 		Sender:   hn.getOrigin(),
 		Receiver: request.GetSenderHost(),
 		// TODO: replace in protobuf with our type

@@ -156,23 +156,23 @@ func init() {
 // 	})
 // }
 
-func marshalUnmarshal(t *testing.T, p1, p2 *PacketBackend) {
+func marshalUnmarshal(t *testing.T, p1, p2 *Packet) {
 	data, err := p1.Marshal()
 	require.NoError(t, err)
 	err = p2.Unmarshal(data)
 	require.NoError(t, err)
 }
 
-func marshalUnmarshalPacketRequest(t *testing.T, request interface{}) (p1, p2 *PacketBackend) {
-	p1, p2 = &PacketBackend{}, &PacketBackend{}
+func marshalUnmarshalPacketRequest(t *testing.T, request interface{}) (p1, p2 *Packet) {
+	p1, p2 = &Packet{}, &Packet{}
 	p1.SetRequest(request)
 	marshalUnmarshal(t, p1, p2)
 	require.NotNil(t, p2.GetRequest())
 	return p1, p2
 }
 
-func marshalUnmarshalPacketResponse(t *testing.T, response interface{}) (p1, p2 *PacketBackend) {
-	p1, p2 = &PacketBackend{}, &PacketBackend{}
+func marshalUnmarshalPacketResponse(t *testing.T, response interface{}) (p1, p2 *Packet) {
+	p1, p2 = &Packet{}, &Packet{}
 	p1.SetResponse(response)
 	marshalUnmarshal(t, p1, p2)
 	require.NotNil(t, p2.GetResponse())
@@ -183,7 +183,7 @@ func TestPacketBackend_SetRequest(t *testing.T) {
 	type SomeData struct {
 		someField int
 	}
-	p := PacketBackend{}
+	p := Packet{}
 	f := func() {
 		p.SetRequest(&SomeData{})
 	}
@@ -194,7 +194,7 @@ func TestPacketBackend_SetResponse(t *testing.T) {
 	type SomeData struct {
 		someField int
 	}
-	p := PacketBackend{}
+	p := Packet{}
 	f := func() {
 		p.SetResponse(&SomeData{})
 	}

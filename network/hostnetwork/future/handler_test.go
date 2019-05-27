@@ -62,10 +62,10 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func newPacket() *packet.PacketBackend {
+func newPacket() *packet.Packet {
 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
-	return &packet.PacketBackend{
+	return &packet.Packet{
 		Sender:    sender,
 		Receiver:  receiver,
 		RequestID: 123,

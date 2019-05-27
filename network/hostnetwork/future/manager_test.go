@@ -72,7 +72,7 @@ func TestFutureManager_Create(t *testing.T) {
 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 
-	p := &packet.PacketBackend{
+	p := &packet.Packet{
 		Sender:    sender,
 		Receiver:  receiver,
 		RequestID: 123,
@@ -91,7 +91,7 @@ func TestFutureManager_Get(t *testing.T) {
 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 
-	p := &packet.PacketBackend{
+	p := &packet.Packet{
 		Sender:    sender,
 		Receiver:  receiver,
 		RequestID: 123,
@@ -112,7 +112,7 @@ func TestFutureManager_Canceler(t *testing.T) {
 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
 
-	p := &packet.PacketBackend{
+	p := &packet.Packet{
 		Sender:    sender,
 		Receiver:  receiver,
 		RequestID: 123,

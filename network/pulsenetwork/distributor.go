@@ -113,7 +113,7 @@ func NewDistributor(conf configuration.PulseDistributor) (insolar.PulseDistribut
 }
 
 func (d *distributor) Init(ctx context.Context) error {
-	handler := hostnetwork.NewStreamHandler(func(p *packet.PacketBackend) {}, d.responseHandler)
+	handler := hostnetwork.NewStreamHandler(func(p *packet.Packet) {}, d.responseHandler)
 
 	var err error
 	d.transport, err = d.Factory.CreateStreamTransport(handler)
@@ -213,7 +213,7 @@ func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 	ctx, span := instracer.StartSpan(ctx, "distributor.pingHost")
 	defer span.End()
 
-	pingPacket := &packet.PacketBackend{
+	pingPacket := &packet.Packet{
 		Sender:   d.pulsarHost,
 		Receiver: host,
 		// TODO: replace in protobuf with our type
@@ -250,7 +250,7 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *insolar.Pulse,
 	ctx, span := instracer.StartSpan(ctx, "distributor.sendPulseToHosts")
 	defer span.End()
 
-	pulseRequest := &packet.PacketBackend{
+	pulseRequest := &packet.Packet{
 		Sender:   d.pulsarHost,
 		Receiver: host,
 		// TODO: replace in protobuf with our type
@@ -289,7 +289,7 @@ func (d *distributor) resume(ctx context.Context) error {
 	return d.transport.Start(ctx)
 }
 
-func (d *distributor) sendRequestToHost(ctx context.Context, packet *packet.PacketBackend, receiver *host.Host) (network.Future, error) {
+func (d *distributor) sendRequestToHost(ctx context.Context, packet *packet.Packet, receiver *host.Host) (network.Future, error) {
 	inslogger.FromContext(ctx).Debugf("Send %s request to %s with RequestID = %d",
 		packet.GetType(), receiver.String(), packet.GetRequestID())
 

@@ -65,7 +65,7 @@ import (
 )
 
 // RequestHandler is callback function for request handling
-type RequestHandler func(p *packet.PacketBackend)
+type RequestHandler func(p *packet.Packet)
 
 // StreamHandler parses packets from data stream and calls request handler or response handler
 type StreamHandler struct {
@@ -106,7 +106,7 @@ func (s *StreamHandler) HandleStream(address string, reader io.ReadWriteCloser) 
 }
 
 // SendPacket sends packet using connection from pool
-func SendPacket(ctx context.Context, pool pool.ConnectionPool, p *packet.PacketBackend) error {
+func SendPacket(ctx context.Context, pool pool.ConnectionPool, p *packet.Packet) error {
 	data, err := packet.SerializePacketBackend(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize packet")

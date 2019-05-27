@@ -64,14 +64,14 @@ import (
 type future struct {
 	response       chan network.Packet
 	receiver       *host.Host
-	request        *packet.PacketBackend
+	request        *packet.Packet
 	requestID      types.RequestID
 	cancelCallback CancelCallback
 	finished       uint32
 }
 
 // NewFuture creates a new Future.
-func NewFuture(requestID types.RequestID, receiver *host.Host, packet *packet.PacketBackend, cancelCallback CancelCallback) Future {
+func NewFuture(requestID types.RequestID, receiver *host.Host, packet *packet.Packet, cancelCallback CancelCallback) Future {
 	metrics.NetworkFutures.WithLabelValues(packet.GetType().String()).Inc()
 	return &future{
 		response:       make(chan network.Packet, 1),

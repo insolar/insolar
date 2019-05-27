@@ -8,7 +8,7 @@ import "github.com/insolar/insolar/insolar/pulse/pulse.proto";
 option (gogoproto.goproto_getters_all) = false;
 option (gogoproto.populate_all) = false;
 
-message PacketBackend {
+message Packet {
     bytes Sender = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
     bytes Receiver = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
     uint64 RequestID = 3;
