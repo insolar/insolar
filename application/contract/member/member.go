@@ -181,13 +181,53 @@ func (m *Member) createMember(rdRef insolar.Reference, ethAddr string, key strin
 	return new, nil
 }
 
+func (m *Member) getDeposits() ([]deposit.Deposit, error) {
+
+	iterator, err := m.NewChildrenTypedIterator(deposit.GetPrototype())
+	if err != nil {
+		return nil, fmt.Errorf("[ getDeposits ] Can't get children: %s", err.Error())
+	}
+
+	result := []deposit.Deposit{}
+	for iterator.HasNext() {
+		cref, err := iterator.Next()
+		if err != nil {
+			return nil, fmt.Errorf("[ getDeposits ] Can't get next child: %s", err.Error())
+		}
+
+		if !cref.IsEmpty() {
+			d := deposit.GetObject(cref)
+
+			result = append(result, *d)
+		}
+	}
+
+	return result, nil
+}
+
 func (m *Member) getBalanceCall() (interface{}, error) {
 	w, err := wallet.GetImplementationFrom(m.GetReference())
 	if err != nil {
-		return 0, fmt.Errorf("[ getBalanceCall ]: %s", err.Error())
+		return nil, fmt.Errorf("[ getBalanceCall ] Can't get implementation: %s", err.Error())
+	}
+	b, err := w.GetBalance()
+	if err != nil {
+		return nil, fmt.Errorf("[ getBalanceCall ] Can't get balance: %s", err.Error())
+	}
+	d, err := m.getDeposits()
+	if err != nil {
+		return nil, fmt.Errorf("[ getBalanceCall ] Can't get deposits: %s", err.Error())
 	}
 
-	return w.GetBalance()
+	jsonOut, err := json.Marshal(struct {
+		Balance  uint
+		Deposits []deposit.Deposit
+	}{
+		Balance:  b,
+		Deposits: d,
+	})
+
+	return jsonOut, nil
 }
 
 func parseAmount(inAmount interface{}) (amount uint, err error) {
@@ -294,6 +334,7 @@ func (m *Member) getNodeRefCall(rdRef insolar.Reference, params []byte) (interfa
 }
 
 func (mdMember *Member) migration(rdRef insolar.Reference, txHash string, burnAddress string, amount uint) (string, error) {
+
 	//
 	//insMember := member.GetObject(insAddr)
 	//

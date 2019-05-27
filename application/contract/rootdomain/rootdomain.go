@@ -116,3 +116,7 @@ func (rd *RootDomain) AddNewMemberToMaps(publicKey string, burnAddress string, m
 
 	return nil
 }
+
+func (rd *RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Reference, error) {
+	return rd.BurnAddressMap[burnAddress], nil
+}

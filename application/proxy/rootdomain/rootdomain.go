@@ -24,7 +24,7 @@ import (
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11117sExHyCKrVeubhFpTG9kHzGsEedMBs7hLD4PDK.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111ZqGfsrAJGSFcWorQPCR2H7kLMc1mjMgeThFsrV.11111111111111111111111111111111")
 
 // RootDomain holds proxy type
 type RootDomain struct {
@@ -1005,4 +1005,92 @@ func (r *RootDomain) AddNewMemberToMapsAsImmutable(publicKey string, burnAddress
 		return ret0
 	}
 	return nil
+}
+
+// GetMemberByBurnAddress is proxy generated method
+func (r *RootDomain) GetMemberByBurnAddress(burnAddress string) (insolar.Reference, error) {
+	var args [1]interface{}
+	args[0] = burnAddress
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 insolar.Reference
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, false, "GetMemberByBurnAddress", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
+}
+
+// GetMemberByBurnAddressNoWait is proxy generated method
+func (r *RootDomain) GetMemberByBurnAddressNoWait(burnAddress string) error {
+	var args [1]interface{}
+	args[0] = burnAddress
+
+	var argsSerialized []byte
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return err
+	}
+
+	_, err = proxyctx.Current.RouteCall(r.Reference, false, false, "GetMemberByBurnAddress", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// GetMemberByBurnAddressAsImmutable is proxy generated method
+func (r *RootDomain) GetMemberByBurnAddressAsImmutable(burnAddress string) (insolar.Reference, error) {
+	var args [1]interface{}
+	args[0] = burnAddress
+
+	var argsSerialized []byte
+
+	ret := [2]interface{}{}
+	var ret0 insolar.Reference
+	ret[0] = &ret0
+	var ret1 *foundation.Error
+	ret[1] = &ret1
+
+	err := proxyctx.Current.Serialize(args, &argsSerialized)
+	if err != nil {
+		return ret0, err
+	}
+
+	res, err := proxyctx.Current.RouteCall(r.Reference, true, true, "GetMemberByBurnAddress", argsSerialized, *PrototypeReference)
+	if err != nil {
+		return ret0, err
+	}
+
+	err = proxyctx.Current.Deserialize(res, &ret)
+	if err != nil {
+		return ret0, err
+	}
+
+	if ret1 != nil {
+		return ret0, ret1
+	}
+	return ret0, nil
 }
