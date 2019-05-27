@@ -30,8 +30,8 @@ func NewLightServer(cfgPath string, trace bool) Server {
 	return light.New(cfgPath, trace)
 }
 
-func NewHeavyServer(cfgPath string, trace bool) Server {
-	return heavy.New(cfgPath, trace)
+func NewHeavyServer(cfgPath string, gensisCfgPath string, trace bool) Server {
+	return heavy.New(cfgPath, gensisCfgPath, trace)
 }
 
 func NewVirtualServer(cfgPath string, trace bool) Server {

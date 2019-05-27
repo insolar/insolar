@@ -36,6 +36,16 @@ func Deserialize(data []byte, to interface{}) error {
 	return errors.Wrap(err, "[ Deserialize ]")
 }
 
+// MustSerialize serializes interface, panics on error.
+func MustSerialize(o interface{}) []byte {
+	ch := new(codec.CborHandle)
+	var data []byte
+	if err := codec.NewEncoderBytes(&data, ch).Encode(o); err != nil {
+		panic(err)
+	}
+	return data
+}
+
 // MustDeserialize deserializes data to specific interface, panics on error.
 func MustDeserialize(data []byte, to interface{}) {
 	ch := new(codec.CborHandle)

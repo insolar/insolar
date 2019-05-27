@@ -537,7 +537,7 @@
       "bars": false,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Prometheus",
+      "datasource": "prometheus",
       "fill": 1,
       "gridPos": {
         "h": 5,
@@ -636,7 +636,7 @@
       "bars": true,
       "dashLength": 10,
       "dashes": false,
-      "datasource": "Prometheus",
+      "datasource": "prometheus",
       "fill": 10,
       "gridPos": {
         "h": 5,

@@ -22,6 +22,7 @@ import (
 	"testing"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
 	"github.com/stretchr/testify/require"
 )
 
@@ -31,10 +32,12 @@ func TestComponents(t *testing.T) {
 	cfg.KeysPath = "testdata/bootstrap_keys.json"
 	cfg.CertificatePath = "testdata/certificate.json"
 
-	c, err := newComponents(ctx, cfg)
+	c, err := newComponents(ctx, cfg, insolar.GenesisHeavyConfig{})
 	require.NoError(t, err)
+
 	err = c.Start(ctx)
 	require.NoError(t, err)
+
 	err = c.Stop(ctx)
 	require.NoError(t, err)
 }

@@ -87,9 +87,18 @@ func (m *client) RegisterRequest(
 	}
 
 	virtRec := record.Wrap(request)
-	hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
-	recID := insolar.NewID(currentPN, hash)
-	recRef := insolar.NewReference(insolar.DomainID, *recID)
+
+	var recRef *insolar.Reference
+	switch request.CallType {
+	case record.CTMethod:
+		recRef = request.Object
+	case record.CTSaveAsChild, record.CTSaveAsDelegate, record.CTGenesis:
+		hash := record.HashVirtual(m.PCS.ReferenceHasher(), virtRec)
+		recID := insolar.NewID(currentPN, hash)
+		recRef = insolar.NewReference(insolar.DomainID, *recID)
+	default:
+		return nil, errors.New("not supported call type "+ request.CallType.String())
+	}
 
 	id, err := m.setRecord(
 		ctx,
@@ -682,7 +691,7 @@ func (m *client) RegisterResult(
 	recid, err := m.setRecord(
 		ctx,
 		virtRec,
-		request,
+		obj,
 	)
 	return recid, err
 }
