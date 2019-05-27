@@ -173,7 +173,7 @@ func (i *InMemoryIndex) Set(ctx context.Context, pn insolar.PulseNumber, objID i
 	b.setLifeline(lifeline, pn)
 
 	stats.Record(ctx,
-		statLifelineInMemoryAddedCount.M(1),
+		statBucketAddedCount.M(1),
 	)
 
 	inslogger.FromContext(ctx).Debugf("[Set] lifeline for obj - %v was set successfully", objID.DebugString())
@@ -211,7 +211,7 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 	}
 
 	stats.Record(ctx,
-		statLifelineInMemoryAddedCount.M(1),
+		statBucketAddedCount.M(1),
 	)
 
 	return nil
@@ -284,7 +284,7 @@ func (i *InMemoryIndex) DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
 	delete(i.buckets, pn)
 
 	stats.Record(ctx,
-		statLifelineInMemoryRemovedCount.M(int64(len(bucks))),
+		statBucketRemovedCount.M(int64(len(bucks))),
 	)
 
 	for _, buck := range bucks {
@@ -358,7 +358,7 @@ func (i *IndexDB) Set(ctx context.Context, pn insolar.PulseNumber, objID insolar
 	}
 
 	stats.Record(ctx,
-		statIndexDBAddedCount.M(1),
+		statBucketAddedCount.M(1),
 	)
 
 	inslogger.FromContext(ctx).Debugf("[Set] lifeline for obj - %v was set successfully", objID.DebugString())
@@ -377,7 +377,7 @@ func (i *IndexDB) SetBucket(ctx context.Context, pn insolar.PulseNumber, bucket 
 	}
 
 	stats.Record(ctx,
-		statIndexDBAddedCount.M(1),
+		statBucketAddedCount.M(1),
 	)
 
 	inslogger.FromContext(ctx).Debugf("[SetBucket] bucket for obj - %v was set successfully", bucket.ObjID.DebugString())
