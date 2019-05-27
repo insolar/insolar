@@ -105,6 +105,7 @@ func (m *WriteController) CloseAndWait(ctx context.Context, pulse insolar.PulseN
 
 	if pulse != m.current {
 		logger.Errorf("wrong pulse for closing: opened - %v, requested = %v", m.current, pulse)
+		m.lock.Unlock()
 		return ErrWriteClosed
 	}
 
