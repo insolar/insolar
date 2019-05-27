@@ -218,6 +218,7 @@ func main() {
 	for _, node := range genesisConf.DiscoveryNodes {
 		pulsarConf.BootstrapHosts = append(pulsarConf.BootstrapHosts, node.Host)
 	}
+	pulsarConf.AgentEndpoint = defaultJaegerEndPoint
 	writePulsarConfig(pulsarConf)
 
 	pwConfig.Interval = 500 * time.Millisecond
@@ -270,6 +271,7 @@ type pulsarConfigVars struct {
 	commonConfigVars
 	BootstrapHosts []string
 	DataDir        string
+	AgentEndpoint  string
 }
 
 func writePulsarConfig(pcv *pulsarConfigVars) {
@@ -279,7 +281,6 @@ func writePulsarConfig(pcv *pulsarConfigVars) {
 	var b bytes.Buffer
 	err = templates.Execute(&b, pcv)
 	check("Can't process template: "+pulsardConfigTmpl, err)
-
 	err = makeFile(pulsardFileName, b.String())
 	check("Can't makeFileWithDir: "+pulsardFileName, err)
 }
