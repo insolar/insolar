@@ -20,6 +20,7 @@ import (
 	"context"
 
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -35,6 +36,9 @@ type ProcessExecutionQueue struct {
 }
 
 func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error {
+	ctx, span := instracer.StartSpan(ctx, "ProcessExecutionQueue")
+	defer span.End()
+
 	lr := p.dep.lr
 	es := lr.getExecStateFromRef(ctx, p.Message.Payload)
 	if es == nil {
@@ -98,6 +102,9 @@ type StartQueueProcessorIfNeeded struct {
 }
 
 func (s *StartQueueProcessorIfNeeded) Present(ctx context.Context, f flow.Flow) error {
+	ctx, span := instracer.StartSpan(ctx, "StartQueueProcessorIfNeeded")
+	defer span.End()
+
 	s.es.Lock()
 	defer s.es.Unlock()
 
