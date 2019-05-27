@@ -203,6 +203,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		indexes := object.NewInMemoryIndex()
 		jets := jet.NewStore()
 		nodes := node.NewStorage()
+		writeManager := hot.NewWriteController()
 
 		c := component.Manager{}
 		c.Inject(CryptoScheme)
@@ -268,6 +269,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			records,
 			indexes,
 			lthSyncer,
+			writeManager,
 		)
 		pm.MessageHandler = handler
 		pm.Bus = Bus
