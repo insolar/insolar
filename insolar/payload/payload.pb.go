@@ -139,6 +139,129 @@ func (m *Error) GetText() string {
 	return ""
 }
 
+type Object struct {
+	Polymorph    uint32                                       `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
+	ObjectID     github_com_insolar_insolar_insolar.ID        `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ObjectID"`
+	StateID      github_com_insolar_insolar_insolar.ID        `protobuf:"bytes,21,opt,name=StateID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"StateID"`
+	Prototype    github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,22,opt,name=Prototype,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Prototype"`
+	Parent       github_com_insolar_insolar_insolar.Reference `protobuf:"bytes,23,opt,name=Parent,proto3,customtype=github.com/insolar/insolar/insolar.Reference" json:"Parent"`
+	IsPrototype  bool                                         `protobuf:"varint,24,opt,name=IsPrototype,proto3" json:"IsPrototype,omitempty"`
+	ChildPointer github_com_insolar_insolar_insolar.ID        `protobuf:"bytes,25,opt,name=ChildPointer,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ChildPointer"`
+	Memory       []byte                                       `protobuf:"bytes,26,opt,name=Memory,proto3" json:"Memory,omitempty"`
+}
+
+func (m *Object) Reset()      { *m = Object{} }
+func (*Object) ProtoMessage() {}
+func (*Object) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33334fec96407f54, []int{2}
+}
+func (m *Object) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Object) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Object.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *Object) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Object.Merge(m, src)
+}
+func (m *Object) XXX_Size() int {
+	return m.Size()
+}
+func (m *Object) XXX_DiscardUnknown() {
+	xxx_messageInfo_Object.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Object proto.InternalMessageInfo
+
+func (m *Object) GetPolymorph() uint32 {
+	if m != nil {
+		return m.Polymorph
+	}
+	return 0
+}
+
+func (m *Object) GetIsPrototype() bool {
+	if m != nil {
+		return m.IsPrototype
+	}
+	return false
+}
+
+func (m *Object) GetMemory() []byte {
+	if m != nil {
+		return m.Memory
+	}
+	return nil
+}
+
+type State struct {
+	Polymorph uint32 `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
+	Record    []byte `protobuf:"bytes,20,opt,name=Record,proto3" json:"Record,omitempty"`
+	Memory    []byte `protobuf:"bytes,21,opt,name=Memory,proto3" json:"Memory,omitempty"`
+}
+
+func (m *State) Reset()      { *m = State{} }
+func (*State) ProtoMessage() {}
+func (*State) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33334fec96407f54, []int{3}
+}
+func (m *State) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *State) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_State.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *State) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_State.Merge(m, src)
+}
+func (m *State) XXX_Size() int {
+	return m.Size()
+}
+func (m *State) XXX_DiscardUnknown() {
+	xxx_messageInfo_State.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_State proto.InternalMessageInfo
+
+func (m *State) GetPolymorph() uint32 {
+	if m != nil {
+		return m.Polymorph
+	}
+	return 0
+}
+
+func (m *State) GetRecord() []byte {
+	if m != nil {
+		return m.Record
+	}
+	return nil
+}
+
+func (m *State) GetMemory() []byte {
+	if m != nil {
+		return m.Memory
+	}
+	return nil
+}
+
 type GetObject struct {
 	Polymorph       uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
 	ObjectID        github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ObjectID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ObjectID"`
@@ -148,7 +271,7 @@ type GetObject struct {
 func (m *GetObject) Reset()      { *m = GetObject{} }
 func (*GetObject) ProtoMessage() {}
 func (*GetObject) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33334fec96407f54, []int{2}
+	return fileDescriptor_33334fec96407f54, []int{4}
 }
 func (m *GetObject) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -184,6 +307,58 @@ func (m *GetObject) GetPolymorph() uint32 {
 	return 0
 }
 
+type PassState struct {
+	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
+	Origin    []byte                                `protobuf:"bytes,20,opt,name=Origin,proto3" json:"Origin,omitempty"`
+	StateID   github_com_insolar_insolar_insolar.ID `protobuf:"bytes,21,opt,name=StateID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"StateID"`
+}
+
+func (m *PassState) Reset()      { *m = PassState{} }
+func (*PassState) ProtoMessage() {}
+func (*PassState) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33334fec96407f54, []int{5}
+}
+func (m *PassState) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *PassState) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_PassState.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *PassState) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_PassState.Merge(m, src)
+}
+func (m *PassState) XXX_Size() int {
+	return m.Size()
+}
+func (m *PassState) XXX_DiscardUnknown() {
+	xxx_messageInfo_PassState.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_PassState proto.InternalMessageInfo
+
+func (m *PassState) GetPolymorph() uint32 {
+	if m != nil {
+		return m.Polymorph
+	}
+	return 0
+}
+
+func (m *PassState) GetOrigin() []byte {
+	if m != nil {
+		return m.Origin
+	}
+	return nil
+}
+
 type SetRecord struct {
 	Polymorph uint32 `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
 	Record    []byte `protobuf:"bytes,20,opt,name=Record,proto3" json:"Record,omitempty"`
@@ -192,7 +367,7 @@ type SetRecord struct {
 func (m *SetRecord) Reset()      { *m = SetRecord{} }
 func (*SetRecord) ProtoMessage() {}
 func (*SetRecord) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33334fec96407f54, []int{3}
+	return fileDescriptor_33334fec96407f54, []int{6}
 }
 func (m *SetRecord) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -235,6 +410,57 @@ func (m *SetRecord) GetRecord() []byte {
 	return nil
 }
 
+type Index struct {
+	Polymorph uint32 `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
+	Index     []byte `protobuf:"bytes,20,opt,name=Index,proto3" json:"Index,omitempty"`
+}
+
+func (m *Index) Reset()      { *m = Index{} }
+func (*Index) ProtoMessage() {}
+func (*Index) Descriptor() ([]byte, []int) {
+	return fileDescriptor_33334fec96407f54, []int{7}
+}
+func (m *Index) XXX_Unmarshal(b []byte) error {
+	return m.Unmarshal(b)
+}
+func (m *Index) XXX_Marshal(b []byte, deterministic bool) ([]byte, error) {
+	if deterministic {
+		return xxx_messageInfo_Index.Marshal(b, m, deterministic)
+	} else {
+		b = b[:cap(b)]
+		n, err := m.MarshalTo(b)
+		if err != nil {
+			return nil, err
+		}
+		return b[:n], nil
+	}
+}
+func (m *Index) XXX_Merge(src proto.Message) {
+	xxx_messageInfo_Index.Merge(m, src)
+}
+func (m *Index) XXX_Size() int {
+	return m.Size()
+}
+func (m *Index) XXX_DiscardUnknown() {
+	xxx_messageInfo_Index.DiscardUnknown(m)
+}
+
+var xxx_messageInfo_Index proto.InternalMessageInfo
+
+func (m *Index) GetPolymorph() uint32 {
+	if m != nil {
+		return m.Polymorph
+	}
+	return 0
+}
+
+func (m *Index) GetIndex() []byte {
+	if m != nil {
+		return m.Index
+	}
+	return nil
+}
+
 type ID struct {
 	Polymorph uint32                                `protobuf:"varint,16,opt,name=Polymorph,proto3" json:"Polymorph,omitempty"`
 	ID        github_com_insolar_insolar_insolar.ID `protobuf:"bytes,20,opt,name=ID,proto3,customtype=github.com/insolar/insolar/insolar.ID" json:"ID"`
@@ -243,7 +469,7 @@ type ID struct {
 func (m *ID) Reset()      { *m = ID{} }
 func (*ID) ProtoMessage() {}
 func (*ID) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33334fec96407f54, []int{4}
+	return fileDescriptor_33334fec96407f54, []int{8}
 }
 func (m *ID) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -288,7 +514,7 @@ type Jet struct {
 func (m *Jet) Reset()      { *m = Jet{} }
 func (*Jet) ProtoMessage() {}
 func (*Jet) Descriptor() ([]byte, []int) {
-	return fileDescriptor_33334fec96407f54, []int{5}
+	return fileDescriptor_33334fec96407f54, []int{9}
 }
 func (m *Jet) XXX_Unmarshal(b []byte) error {
 	return m.Unmarshal(b)
@@ -327,8 +553,12 @@ func (m *Jet) GetPolymorph() uint32 {
 func init() {
 	proto.RegisterType((*Meta)(nil), "payload.Meta")
 	proto.RegisterType((*Error)(nil), "payload.Error")
+	proto.RegisterType((*Object)(nil), "payload.Object")
+	proto.RegisterType((*State)(nil), "payload.State")
 	proto.RegisterType((*GetObject)(nil), "payload.GetObject")
+	proto.RegisterType((*PassState)(nil), "payload.PassState")
 	proto.RegisterType((*SetRecord)(nil), "payload.SetRecord")
+	proto.RegisterType((*Index)(nil), "payload.Index")
 	proto.RegisterType((*ID)(nil), "payload.ID")
 	proto.RegisterType((*Jet)(nil), "payload.Jet")
 }
@@ -336,36 +566,45 @@ func init() {
 func init() { proto.RegisterFile("insolar/payload/payload.proto", fileDescriptor_33334fec96407f54) }
 
 var fileDescriptor_33334fec96407f54 = []byte{
-	// 456 bytes of a gzipped FileDescriptorProto
-	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xac, 0x93, 0xcf, 0x6e, 0xd3, 0x40,
-	0x10, 0xc6, 0xbd, 0xa1, 0x49, 0xeb, 0x11, 0x15, 0x68, 0x45, 0x8a, 0x85, 0x60, 0x5b, 0x59, 0x42,
-	0xca, 0x81, 0x3a, 0x48, 0x54, 0xdc, 0x38, 0x10, 0x0c, 0xc8, 0x55, 0x0b, 0xd6, 0x16, 0x89, 0xb3,
-	0xff, 0x4c, 0xd3, 0x20, 0x27, 0x1b, 0x36, 0x36, 0xa2, 0x37, 0x1e, 0x81, 0xc7, 0xe0, 0xc0, 0x0b,
-	0xf0, 0x06, 0xbd, 0x20, 0xe5, 0x58, 0x71, 0xa8, 0x88, 0x73, 0xe1, 0xd8, 0x47, 0x40, 0xde, 0x75,
-	0x1a, 0x94, 0x8b, 0xa3, 0xd0, 0xd3, 0xce, 0xec, 0xee, 0xf7, 0x9b, 0x9d, 0xcf, 0x63, 0x78, 0xd0,
-	0x1b, 0x8c, 0x44, 0x12, 0xc8, 0xf6, 0x30, 0x38, 0x4d, 0x44, 0x10, 0xcf, 0x56, 0x67, 0x28, 0x45,
-	0x2a, 0xe8, 0x7a, 0x99, 0xde, 0xdb, 0xed, 0xf6, 0xd2, 0x93, 0x2c, 0x74, 0x22, 0xd1, 0x6f, 0x77,
-	0x45, 0x57, 0xb4, 0xd5, 0x79, 0x98, 0x1d, 0xab, 0x4c, 0x25, 0x2a, 0xd2, 0x3a, 0xfb, 0x7b, 0x0d,
-	0xd6, 0x0e, 0x31, 0x0d, 0xe8, 0x7d, 0x30, 0x7d, 0x91, 0x9c, 0xf6, 0x85, 0x1c, 0x9e, 0x58, 0xb7,
-	0x77, 0x48, 0x6b, 0x93, 0xcf, 0x37, 0xa8, 0x05, 0xeb, 0xbe, 0x2e, 0x60, 0xdd, 0xd9, 0x21, 0xad,
-	0x9b, 0x7c, 0x96, 0xd2, 0x03, 0x68, 0x1c, 0xe1, 0x20, 0x46, 0x69, 0x35, 0x8b, 0x83, 0xce, 0xde,
-	0xd9, 0xc5, 0xb6, 0xf1, 0xeb, 0x62, 0xfb, 0xd1, 0x3f, 0xef, 0x98, 0x3d, 0x7d, 0x61, 0x75, 0x38,
-	0x1e, 0xa3, 0xc4, 0x41, 0x84, 0xbc, 0x64, 0x50, 0x1f, 0x36, 0x38, 0x46, 0xd8, 0xfb, 0x84, 0xd2,
-	0xda, 0xfa, 0x0f, 0xde, 0x15, 0x85, 0x1e, 0x40, 0xdd, 0xcf, 0x92, 0x11, 0x5a, 0x77, 0x15, 0xee,
-	0x69, 0x89, 0x73, 0x96, 0xc0, 0x29, 0xdd, 0x9b, 0xac, 0x1f, 0xa2, 0xe4, 0x1a, 0x62, 0x1f, 0x42,
-	0xfd, 0xa5, 0x94, 0x42, 0x56, 0xd8, 0x45, 0x61, 0xed, 0x85, 0x88, 0x51, 0x79, 0xb5, 0xc9, 0x55,
-	0x5c, 0xec, 0xbd, 0xc3, 0xcf, 0xa9, 0xb2, 0xc9, 0xe4, 0x2a, 0xb6, 0x7f, 0x12, 0x30, 0x5f, 0x63,
-	0xfa, 0x36, 0xfc, 0x80, 0x51, 0x5a, 0xc1, 0xf4, 0x60, 0x43, 0xdf, 0xf3, 0x5c, 0xfd, 0x0d, 0x3a,
-	0xbb, 0x65, 0x2f, 0x0f, 0x97, 0xe8, 0xc5, 0x73, 0xf9, 0x95, 0x9c, 0xbe, 0x87, 0x5b, 0x3a, 0xe6,
-	0xf8, 0x31, 0xc3, 0x51, 0x41, 0x6c, 0xae, 0x42, 0x5c, 0xa4, 0xd8, 0xcf, 0xc1, 0x3c, 0xc2, 0x94,
-	0x63, 0x24, 0x64, 0x5c, 0xd1, 0xce, 0x16, 0x34, 0xf4, 0xbd, 0x72, 0xa0, 0xca, 0xcc, 0x0e, 0xa0,
-	0xe6, 0xb9, 0x15, 0xda, 0x67, 0xc5, 0x9d, 0xd5, 0x4c, 0xa8, 0x79, 0xae, 0xfd, 0x83, 0xc0, 0x8d,
-	0x7d, 0xac, 0xf2, 0xfb, 0x15, 0xd4, 0xf7, 0x71, 0x6e, 0xf6, 0xe3, 0xb2, 0x4e, 0x6b, 0x89, 0x3a,
-	0x4a, 0xc7, 0xb5, 0x7c, 0x3e, 0x80, 0xcd, 0x6b, 0x18, 0xc0, 0xce, 0xde, 0x78, 0xc2, 0x8c, 0xf3,
-	0x09, 0x33, 0x2e, 0x27, 0x8c, 0x7c, 0xc9, 0x19, 0xf9, 0x96, 0x33, 0x72, 0x96, 0x33, 0x32, 0xce,
-	0x19, 0xf9, 0x9d, 0x33, 0xf2, 0x27, 0x67, 0xc6, 0x65, 0xce, 0xc8, 0xd7, 0x29, 0x33, 0xc6, 0x53,
-	0x66, 0x9c, 0x4f, 0x99, 0x11, 0x36, 0xd4, 0xcf, 0xfe, 0xe4, 0x6f, 0x00, 0x00, 0x00, 0xff, 0xff,
-	0x11, 0xd8, 0xc4, 0x01, 0x45, 0x04, 0x00, 0x00,
+	// 602 bytes of a gzipped FileDescriptorProto
+	0x1f, 0x8b, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0xff, 0xbc, 0x55, 0x41, 0x4f, 0x13, 0x4d,
+	0x18, 0xde, 0x01, 0x5a, 0xd8, 0xf7, 0x83, 0x7c, 0x66, 0x02, 0xb8, 0x12, 0x1d, 0x9a, 0x4d, 0x4c,
+	0x7a, 0x90, 0x62, 0x22, 0xf1, 0x62, 0x3c, 0x08, 0x55, 0xb2, 0x04, 0x64, 0x1d, 0x34, 0x9e, 0xb7,
+	0xed, 0x4b, 0x59, 0xd3, 0xee, 0xd4, 0xd9, 0xa9, 0xa1, 0x37, 0xcf, 0x9e, 0xfc, 0x19, 0x1e, 0xfc,
+	0x03, 0xfe, 0x03, 0x2e, 0x26, 0x1c, 0x89, 0x07, 0x22, 0xcb, 0x45, 0x6f, 0xfc, 0x04, 0xd3, 0xd9,
+	0x59, 0x0a, 0x5c, 0xb6, 0x16, 0xe2, 0x69, 0xdf, 0x67, 0x76, 0x9e, 0x67, 0x66, 0xdf, 0xe7, 0x99,
+	0x59, 0xb8, 0x17, 0x46, 0xb1, 0x68, 0x05, 0x72, 0xb9, 0x13, 0xf4, 0x5a, 0x22, 0x68, 0x64, 0xcf,
+	0x4a, 0x47, 0x0a, 0x25, 0xe8, 0xa4, 0x81, 0x0b, 0x4b, 0xcd, 0x50, 0xed, 0x75, 0x6b, 0x95, 0xba,
+	0x68, 0x2f, 0x37, 0x45, 0x53, 0x2c, 0xeb, 0xf7, 0xb5, 0xee, 0xae, 0x46, 0x1a, 0xe8, 0x2a, 0xe5,
+	0xb9, 0x5f, 0xc7, 0x60, 0x62, 0x0b, 0x55, 0x40, 0xef, 0x82, 0xed, 0x8b, 0x56, 0xaf, 0x2d, 0x64,
+	0x67, 0xcf, 0xb9, 0x55, 0x22, 0xe5, 0x19, 0x3e, 0x18, 0xa0, 0x0e, 0x4c, 0xfa, 0xe9, 0x02, 0xce,
+	0x6c, 0x89, 0x94, 0xa7, 0x79, 0x06, 0xe9, 0x26, 0x14, 0x77, 0x30, 0x6a, 0xa0, 0x74, 0xe6, 0xfa,
+	0x2f, 0x56, 0x57, 0x0e, 0x8e, 0x17, 0xad, 0x1f, 0xc7, 0x8b, 0x0f, 0x2e, 0xec, 0x23, 0xdb, 0xfa,
+	0x95, 0x67, 0x85, 0xe3, 0x2e, 0x4a, 0x8c, 0xea, 0xc8, 0x8d, 0x06, 0xf5, 0x61, 0x8a, 0x63, 0x1d,
+	0xc3, 0x0f, 0x28, 0x9d, 0xf9, 0x6b, 0xe8, 0x9d, 0xab, 0xd0, 0x4d, 0x28, 0xf8, 0xdd, 0x56, 0x8c,
+	0xce, 0x6d, 0x2d, 0xf7, 0xd8, 0xc8, 0x55, 0x86, 0x90, 0xd3, 0xbc, 0x97, 0xdd, 0x76, 0x0d, 0x25,
+	0x4f, 0x45, 0xdc, 0x2d, 0x28, 0x3c, 0x97, 0x52, 0xc8, 0x9c, 0x76, 0x51, 0x98, 0x58, 0x13, 0x0d,
+	0xd4, 0xbd, 0x9a, 0xe1, 0xba, 0xee, 0x8f, 0xbd, 0xc6, 0x7d, 0xa5, 0xdb, 0x64, 0x73, 0x5d, 0xbb,
+	0xbf, 0xc7, 0xa1, 0xb8, 0x5d, 0x7b, 0x87, 0x75, 0x95, 0x23, 0xe8, 0xc1, 0x54, 0x3a, 0xcf, 0xab,
+	0xa6, 0x06, 0xac, 0x2e, 0x99, 0x0f, 0xb9, 0x3f, 0xc4, 0x87, 0x78, 0x55, 0x7e, 0x4e, 0xa7, 0xeb,
+	0x30, 0xb9, 0xa3, 0x02, 0x85, 0x5e, 0xd5, 0x38, 0xf6, 0x97, 0x4a, 0x19, 0x9b, 0x72, 0xb0, 0xfd,
+	0x7e, 0x86, 0x54, 0xaf, 0x83, 0xd7, 0x32, 0x6b, 0x20, 0xd3, 0x4f, 0x93, 0x1f, 0x48, 0x8c, 0x94,
+	0xb1, 0x6b, 0xc4, 0x34, 0xa5, 0x1a, 0xb4, 0x04, 0xff, 0x79, 0xf1, 0x60, 0x8f, 0x4e, 0x89, 0x94,
+	0xa7, 0xf8, 0xc5, 0x21, 0xfa, 0x0a, 0xa6, 0xd7, 0xf6, 0xc2, 0x56, 0xc3, 0x17, 0x61, 0xa4, 0x50,
+	0x3a, 0x77, 0x46, 0xe9, 0xc8, 0x25, 0x09, 0x3a, 0x0f, 0xc5, 0x2d, 0x6c, 0x0b, 0xd9, 0x73, 0x16,
+	0xf4, 0x49, 0x31, 0xc8, 0x7d, 0x03, 0x05, 0xdd, 0xb9, 0x1c, 0xa7, 0xe7, 0xa1, 0xc8, 0xb1, 0x2e,
+	0x64, 0x76, 0xd0, 0x0c, 0xba, 0x20, 0x3b, 0x77, 0x49, 0xf6, 0x3b, 0x01, 0x7b, 0x1d, 0xd5, 0xbf,
+	0x4e, 0xd1, 0x5b, 0xf8, 0x3f, 0xad, 0x39, 0xbe, 0xef, 0x62, 0xac, 0x46, 0x4d, 0xd3, 0x55, 0x15,
+	0xf7, 0x13, 0x01, 0xdb, 0x0f, 0xe2, 0x78, 0xc8, 0x5e, 0x6d, 0xcb, 0xb0, 0x19, 0x46, 0x59, 0xaf,
+	0x52, 0x74, 0x63, 0x11, 0x77, 0x9f, 0x81, 0xbd, 0x83, 0xca, 0x38, 0x30, 0x92, 0x6f, 0xee, 0x13,
+	0x28, 0x78, 0x51, 0x03, 0xf7, 0x73, 0xe8, 0xb3, 0x66, 0x9a, 0x61, 0xa7, 0xc0, 0x0d, 0x60, 0xcc,
+	0xab, 0xe6, 0x30, 0x9f, 0xf6, 0xe7, 0x8c, 0x66, 0xe7, 0x98, 0x57, 0x75, 0xbf, 0x11, 0x18, 0xdf,
+	0xc0, 0xbc, 0xe4, 0xbc, 0x80, 0xc2, 0x06, 0x0e, 0x62, 0xf3, 0xd0, 0xac, 0x53, 0x1e, 0x62, 0x1d,
+	0xcd, 0xe3, 0x29, 0x7d, 0x70, 0x1b, 0xcf, 0xdd, 0xc0, 0x6d, 0xbc, 0xba, 0x72, 0x78, 0xc2, 0xac,
+	0xa3, 0x13, 0x66, 0x9d, 0x9d, 0x30, 0xf2, 0x31, 0x61, 0xe4, 0x4b, 0xc2, 0xc8, 0x41, 0xc2, 0xc8,
+	0x61, 0xc2, 0xc8, 0xcf, 0x84, 0x91, 0x5f, 0x09, 0xb3, 0xce, 0x12, 0x46, 0x3e, 0x9f, 0x32, 0xeb,
+	0xf0, 0x94, 0x59, 0x47, 0xa7, 0xcc, 0xaa, 0x15, 0xf5, 0x9f, 0xef, 0xd1, 0x9f, 0x00, 0x00, 0x00,
+	0xff, 0xff, 0x48, 0x34, 0x19, 0xb0, 0x52, 0x07, 0x00, 0x00,
 }
 
 func (this *Meta) Equal(that interface{}) bool {
@@ -434,6 +673,81 @@ func (this *Error) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *Object) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Object)
+	if !ok {
+		that2, ok := that.(Object)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Polymorph != that1.Polymorph {
+		return false
+	}
+	if !this.ObjectID.Equal(that1.ObjectID) {
+		return false
+	}
+	if !this.StateID.Equal(that1.StateID) {
+		return false
+	}
+	if !this.Prototype.Equal(that1.Prototype) {
+		return false
+	}
+	if !this.Parent.Equal(that1.Parent) {
+		return false
+	}
+	if this.IsPrototype != that1.IsPrototype {
+		return false
+	}
+	if !this.ChildPointer.Equal(that1.ChildPointer) {
+		return false
+	}
+	if !bytes.Equal(this.Memory, that1.Memory) {
+		return false
+	}
+	return true
+}
+func (this *State) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*State)
+	if !ok {
+		that2, ok := that.(State)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Polymorph != that1.Polymorph {
+		return false
+	}
+	if !bytes.Equal(this.Record, that1.Record) {
+		return false
+	}
+	if !bytes.Equal(this.Memory, that1.Memory) {
+		return false
+	}
+	return true
+}
 func (this *GetObject) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -464,6 +778,36 @@ func (this *GetObject) Equal(that interface{}) bool {
 	}
 	return true
 }
+func (this *PassState) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*PassState)
+	if !ok {
+		that2, ok := that.(PassState)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Polymorph != that1.Polymorph {
+		return false
+	}
+	if !bytes.Equal(this.Origin, that1.Origin) {
+		return false
+	}
+	if !this.StateID.Equal(that1.StateID) {
+		return false
+	}
+	return true
+}
 func (this *SetRecord) Equal(that interface{}) bool {
 	if that == nil {
 		return this == nil
@@ -487,6 +831,33 @@ func (this *SetRecord) Equal(that interface{}) bool {
 		return false
 	}
 	if !bytes.Equal(this.Record, that1.Record) {
+		return false
+	}
+	return true
+}
+func (this *Index) Equal(that interface{}) bool {
+	if that == nil {
+		return this == nil
+	}
+
+	that1, ok := that.(*Index)
+	if !ok {
+		that2, ok := that.(Index)
+		if ok {
+			that1 = &that2
+		} else {
+			return false
+		}
+	}
+	if that1 == nil {
+		return this == nil
+	} else if this == nil {
+		return false
+	}
+	if this.Polymorph != that1.Polymorph {
+		return false
+	}
+	if !bytes.Equal(this.Index, that1.Index) {
 		return false
 	}
 	return true
@@ -574,6 +945,35 @@ func (this *Error) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
+func (this *Object) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 12)
+	s = append(s, "&payload.Object{")
+	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
+	s = append(s, "ObjectID: "+fmt.Sprintf("%#v", this.ObjectID)+",\n")
+	s = append(s, "StateID: "+fmt.Sprintf("%#v", this.StateID)+",\n")
+	s = append(s, "Prototype: "+fmt.Sprintf("%#v", this.Prototype)+",\n")
+	s = append(s, "Parent: "+fmt.Sprintf("%#v", this.Parent)+",\n")
+	s = append(s, "IsPrototype: "+fmt.Sprintf("%#v", this.IsPrototype)+",\n")
+	s = append(s, "ChildPointer: "+fmt.Sprintf("%#v", this.ChildPointer)+",\n")
+	s = append(s, "Memory: "+fmt.Sprintf("%#v", this.Memory)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *State) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 7)
+	s = append(s, "&payload.State{")
+	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
+	s = append(s, "Record: "+fmt.Sprintf("%#v", this.Record)+",\n")
+	s = append(s, "Memory: "+fmt.Sprintf("%#v", this.Memory)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
 func (this *GetObject) GoString() string {
 	if this == nil {
 		return "nil"
@@ -586,6 +986,18 @@ func (this *GetObject) GoString() string {
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
+func (this *PassState) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 7)
+	s = append(s, "&payload.PassState{")
+	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
+	s = append(s, "Origin: "+fmt.Sprintf("%#v", this.Origin)+",\n")
+	s = append(s, "StateID: "+fmt.Sprintf("%#v", this.StateID)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
 func (this *SetRecord) GoString() string {
 	if this == nil {
 		return "nil"
@@ -594,6 +1006,17 @@ func (this *SetRecord) GoString() string {
 	s = append(s, "&payload.SetRecord{")
 	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
 	s = append(s, "Record: "+fmt.Sprintf("%#v", this.Record)+",\n")
+	s = append(s, "}")
+	return strings.Join(s, "")
+}
+func (this *Index) GoString() string {
+	if this == nil {
+		return "nil"
+	}
+	s := make([]string, 0, 6)
+	s = append(s, "&payload.Index{")
+	s = append(s, "Polymorph: "+fmt.Sprintf("%#v", this.Polymorph)+",\n")
+	s = append(s, "Index: "+fmt.Sprintf("%#v", this.Index)+",\n")
 	s = append(s, "}")
 	return strings.Join(s, "")
 }
@@ -731,6 +1154,142 @@ func (m *Error) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
+func (m *Object) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Object) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		dAtA[i] = 0x80
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(m.Polymorph))
+	}
+	dAtA[i] = 0xa2
+	i++
+	dAtA[i] = 0x1
+	i++
+	i = encodeVarintPayload(dAtA, i, uint64(m.ObjectID.Size()))
+	n4, err := m.ObjectID.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n4
+	dAtA[i] = 0xaa
+	i++
+	dAtA[i] = 0x1
+	i++
+	i = encodeVarintPayload(dAtA, i, uint64(m.StateID.Size()))
+	n5, err := m.StateID.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n5
+	dAtA[i] = 0xb2
+	i++
+	dAtA[i] = 0x1
+	i++
+	i = encodeVarintPayload(dAtA, i, uint64(m.Prototype.Size()))
+	n6, err := m.Prototype.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n6
+	dAtA[i] = 0xba
+	i++
+	dAtA[i] = 0x1
+	i++
+	i = encodeVarintPayload(dAtA, i, uint64(m.Parent.Size()))
+	n7, err := m.Parent.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n7
+	if m.IsPrototype {
+		dAtA[i] = 0xc0
+		i++
+		dAtA[i] = 0x1
+		i++
+		if m.IsPrototype {
+			dAtA[i] = 1
+		} else {
+			dAtA[i] = 0
+		}
+		i++
+	}
+	dAtA[i] = 0xca
+	i++
+	dAtA[i] = 0x1
+	i++
+	i = encodeVarintPayload(dAtA, i, uint64(m.ChildPointer.Size()))
+	n8, err := m.ChildPointer.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n8
+	if len(m.Memory) > 0 {
+		dAtA[i] = 0xd2
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(len(m.Memory)))
+		i += copy(dAtA[i:], m.Memory)
+	}
+	return i, nil
+}
+
+func (m *State) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *State) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		dAtA[i] = 0x80
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(m.Polymorph))
+	}
+	if len(m.Record) > 0 {
+		dAtA[i] = 0xa2
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(len(m.Record)))
+		i += copy(dAtA[i:], m.Record)
+	}
+	if len(m.Memory) > 0 {
+		dAtA[i] = 0xaa
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(len(m.Memory)))
+		i += copy(dAtA[i:], m.Memory)
+	}
+	return i, nil
+}
+
 func (m *GetObject) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -758,21 +1317,64 @@ func (m *GetObject) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.ObjectID.Size()))
-	n4, err := m.ObjectID.MarshalTo(dAtA[i:])
+	n9, err := m.ObjectID.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n4
+	i += n9
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.ObjectRequestID.Size()))
-	n5, err := m.ObjectRequestID.MarshalTo(dAtA[i:])
+	n10, err := m.ObjectRequestID.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n5
+	i += n10
+	return i, nil
+}
+
+func (m *PassState) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *PassState) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		dAtA[i] = 0x80
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(m.Polymorph))
+	}
+	if len(m.Origin) > 0 {
+		dAtA[i] = 0xa2
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(len(m.Origin)))
+		i += copy(dAtA[i:], m.Origin)
+	}
+	dAtA[i] = 0xaa
+	i++
+	dAtA[i] = 0x1
+	i++
+	i = encodeVarintPayload(dAtA, i, uint64(m.StateID.Size()))
+	n11, err := m.StateID.MarshalTo(dAtA[i:])
+	if err != nil {
+		return 0, err
+	}
+	i += n11
 	return i, nil
 }
 
@@ -809,6 +1411,39 @@ func (m *SetRecord) MarshalTo(dAtA []byte) (int, error) {
 	return i, nil
 }
 
+func (m *Index) Marshal() (dAtA []byte, err error) {
+	size := m.Size()
+	dAtA = make([]byte, size)
+	n, err := m.MarshalTo(dAtA)
+	if err != nil {
+		return nil, err
+	}
+	return dAtA[:n], nil
+}
+
+func (m *Index) MarshalTo(dAtA []byte) (int, error) {
+	var i int
+	_ = i
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		dAtA[i] = 0x80
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(m.Polymorph))
+	}
+	if len(m.Index) > 0 {
+		dAtA[i] = 0xa2
+		i++
+		dAtA[i] = 0x1
+		i++
+		i = encodeVarintPayload(dAtA, i, uint64(len(m.Index)))
+		i += copy(dAtA[i:], m.Index)
+	}
+	return i, nil
+}
+
 func (m *ID) Marshal() (dAtA []byte, err error) {
 	size := m.Size()
 	dAtA = make([]byte, size)
@@ -836,11 +1471,11 @@ func (m *ID) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.ID.Size()))
-	n6, err := m.ID.MarshalTo(dAtA[i:])
+	n12, err := m.ID.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n6
+	i += n12
 	return i, nil
 }
 
@@ -871,21 +1506,21 @@ func (m *Jet) MarshalTo(dAtA []byte) (int, error) {
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.JetID.Size()))
-	n7, err := m.JetID.MarshalTo(dAtA[i:])
+	n13, err := m.JetID.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n7
+	i += n13
 	dAtA[i] = 0xaa
 	i++
 	dAtA[i] = 0x1
 	i++
 	i = encodeVarintPayload(dAtA, i, uint64(m.Pulse.Size()))
-	n8, err := m.Pulse.MarshalTo(dAtA[i:])
+	n14, err := m.Pulse.MarshalTo(dAtA[i:])
 	if err != nil {
 		return 0, err
 	}
-	i += n8
+	i += n14
 	return i, nil
 }
 
@@ -939,6 +1574,55 @@ func (m *Error) Size() (n int) {
 	return n
 }
 
+func (m *Object) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		n += 2 + sovPayload(uint64(m.Polymorph))
+	}
+	l = m.ObjectID.Size()
+	n += 2 + l + sovPayload(uint64(l))
+	l = m.StateID.Size()
+	n += 2 + l + sovPayload(uint64(l))
+	l = m.Prototype.Size()
+	n += 2 + l + sovPayload(uint64(l))
+	l = m.Parent.Size()
+	n += 2 + l + sovPayload(uint64(l))
+	if m.IsPrototype {
+		n += 3
+	}
+	l = m.ChildPointer.Size()
+	n += 2 + l + sovPayload(uint64(l))
+	l = len(m.Memory)
+	if l > 0 {
+		n += 2 + l + sovPayload(uint64(l))
+	}
+	return n
+}
+
+func (m *State) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		n += 2 + sovPayload(uint64(m.Polymorph))
+	}
+	l = len(m.Record)
+	if l > 0 {
+		n += 2 + l + sovPayload(uint64(l))
+	}
+	l = len(m.Memory)
+	if l > 0 {
+		n += 2 + l + sovPayload(uint64(l))
+	}
+	return n
+}
+
 func (m *GetObject) Size() (n int) {
 	if m == nil {
 		return 0
@@ -955,6 +1639,24 @@ func (m *GetObject) Size() (n int) {
 	return n
 }
 
+func (m *PassState) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		n += 2 + sovPayload(uint64(m.Polymorph))
+	}
+	l = len(m.Origin)
+	if l > 0 {
+		n += 2 + l + sovPayload(uint64(l))
+	}
+	l = m.StateID.Size()
+	n += 2 + l + sovPayload(uint64(l))
+	return n
+}
+
 func (m *SetRecord) Size() (n int) {
 	if m == nil {
 		return 0
@@ -965,6 +1667,22 @@ func (m *SetRecord) Size() (n int) {
 		n += 2 + sovPayload(uint64(m.Polymorph))
 	}
 	l = len(m.Record)
+	if l > 0 {
+		n += 2 + l + sovPayload(uint64(l))
+	}
+	return n
+}
+
+func (m *Index) Size() (n int) {
+	if m == nil {
+		return 0
+	}
+	var l int
+	_ = l
+	if m.Polymorph != 0 {
+		n += 2 + sovPayload(uint64(m.Polymorph))
+	}
+	l = len(m.Index)
 	if l > 0 {
 		n += 2 + l + sovPayload(uint64(l))
 	}
@@ -1040,6 +1758,35 @@ func (this *Error) String() string {
 	}, "")
 	return s
 }
+func (this *Object) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Object{`,
+		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
+		`ObjectID:` + fmt.Sprintf("%v", this.ObjectID) + `,`,
+		`StateID:` + fmt.Sprintf("%v", this.StateID) + `,`,
+		`Prototype:` + fmt.Sprintf("%v", this.Prototype) + `,`,
+		`Parent:` + fmt.Sprintf("%v", this.Parent) + `,`,
+		`IsPrototype:` + fmt.Sprintf("%v", this.IsPrototype) + `,`,
+		`ChildPointer:` + fmt.Sprintf("%v", this.ChildPointer) + `,`,
+		`Memory:` + fmt.Sprintf("%v", this.Memory) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *State) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&State{`,
+		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
+		`Record:` + fmt.Sprintf("%v", this.Record) + `,`,
+		`Memory:` + fmt.Sprintf("%v", this.Memory) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *GetObject) String() string {
 	if this == nil {
 		return "nil"
@@ -1052,6 +1799,18 @@ func (this *GetObject) String() string {
 	}, "")
 	return s
 }
+func (this *PassState) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&PassState{`,
+		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
+		`Origin:` + fmt.Sprintf("%v", this.Origin) + `,`,
+		`StateID:` + fmt.Sprintf("%v", this.StateID) + `,`,
+		`}`,
+	}, "")
+	return s
+}
 func (this *SetRecord) String() string {
 	if this == nil {
 		return "nil"
@@ -1059,6 +1818,17 @@ func (this *SetRecord) String() string {
 	s := strings.Join([]string{`&SetRecord{`,
 		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
 		`Record:` + fmt.Sprintf("%v", this.Record) + `,`,
+		`}`,
+	}, "")
+	return s
+}
+func (this *Index) String() string {
+	if this == nil {
+		return "nil"
+	}
+	s := strings.Join([]string{`&Index{`,
+		`Polymorph:` + fmt.Sprintf("%v", this.Polymorph) + `,`,
+		`Index:` + fmt.Sprintf("%v", this.Index) + `,`,
 		`}`,
 	}, "")
 	return s
@@ -1422,6 +2192,437 @@ func (m *Error) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *Object) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPayload
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Object: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Object: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 16:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Polymorph", wireType)
+			}
+			m.Polymorph = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Polymorph |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 20:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ObjectID", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ObjectID.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 21:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field StateID", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.StateID.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 22:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Prototype", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Prototype.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 23:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Parent", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.Parent.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 24:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field IsPrototype", wireType)
+			}
+			var v int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				v |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			m.IsPrototype = bool(v != 0)
+		case 25:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field ChildPointer", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.ChildPointer.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		case 26:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Memory", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Memory = append(m.Memory[:0], dAtA[iNdEx:postIndex]...)
+			if m.Memory == nil {
+				m.Memory = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPayload(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *State) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPayload
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: State: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: State: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 16:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Polymorph", wireType)
+			}
+			m.Polymorph = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Polymorph |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 20:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Record", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Record = append(m.Record[:0], dAtA[iNdEx:postIndex]...)
+			if m.Record == nil {
+				m.Record = []byte{}
+			}
+			iNdEx = postIndex
+		case 21:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Memory", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Memory = append(m.Memory[:0], dAtA[iNdEx:postIndex]...)
+			if m.Memory == nil {
+				m.Memory = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPayload(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *GetObject) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -1560,6 +2761,145 @@ func (m *GetObject) Unmarshal(dAtA []byte) error {
 	}
 	return nil
 }
+func (m *PassState) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPayload
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: PassState: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: PassState: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 16:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Polymorph", wireType)
+			}
+			m.Polymorph = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Polymorph |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 20:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Origin", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Origin = append(m.Origin[:0], dAtA[iNdEx:postIndex]...)
+			if m.Origin == nil {
+				m.Origin = []byte{}
+			}
+			iNdEx = postIndex
+		case 21:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field StateID", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			if err := m.StateID.Unmarshal(dAtA[iNdEx:postIndex]); err != nil {
+				return err
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPayload(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
 func (m *SetRecord) Unmarshal(dAtA []byte) error {
 	l := len(dAtA)
 	iNdEx := 0
@@ -1640,6 +2980,112 @@ func (m *SetRecord) Unmarshal(dAtA []byte) error {
 			m.Record = append(m.Record[:0], dAtA[iNdEx:postIndex]...)
 			if m.Record == nil {
 				m.Record = []byte{}
+			}
+			iNdEx = postIndex
+		default:
+			iNdEx = preIndex
+			skippy, err := skipPayload(dAtA[iNdEx:])
+			if err != nil {
+				return err
+			}
+			if skippy < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if (iNdEx + skippy) < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if (iNdEx + skippy) > l {
+				return io.ErrUnexpectedEOF
+			}
+			iNdEx += skippy
+		}
+	}
+
+	if iNdEx > l {
+		return io.ErrUnexpectedEOF
+	}
+	return nil
+}
+func (m *Index) Unmarshal(dAtA []byte) error {
+	l := len(dAtA)
+	iNdEx := 0
+	for iNdEx < l {
+		preIndex := iNdEx
+		var wire uint64
+		for shift := uint(0); ; shift += 7 {
+			if shift >= 64 {
+				return ErrIntOverflowPayload
+			}
+			if iNdEx >= l {
+				return io.ErrUnexpectedEOF
+			}
+			b := dAtA[iNdEx]
+			iNdEx++
+			wire |= uint64(b&0x7F) << shift
+			if b < 0x80 {
+				break
+			}
+		}
+		fieldNum := int32(wire >> 3)
+		wireType := int(wire & 0x7)
+		if wireType == 4 {
+			return fmt.Errorf("proto: Index: wiretype end group for non-group")
+		}
+		if fieldNum <= 0 {
+			return fmt.Errorf("proto: Index: illegal tag %d (wire type %d)", fieldNum, wire)
+		}
+		switch fieldNum {
+		case 16:
+			if wireType != 0 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Polymorph", wireType)
+			}
+			m.Polymorph = 0
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				m.Polymorph |= uint32(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+		case 20:
+			if wireType != 2 {
+				return fmt.Errorf("proto: wrong wireType = %d for field Index", wireType)
+			}
+			var byteLen int
+			for shift := uint(0); ; shift += 7 {
+				if shift >= 64 {
+					return ErrIntOverflowPayload
+				}
+				if iNdEx >= l {
+					return io.ErrUnexpectedEOF
+				}
+				b := dAtA[iNdEx]
+				iNdEx++
+				byteLen |= int(b&0x7F) << shift
+				if b < 0x80 {
+					break
+				}
+			}
+			if byteLen < 0 {
+				return ErrInvalidLengthPayload
+			}
+			postIndex := iNdEx + byteLen
+			if postIndex < 0 {
+				return ErrInvalidLengthPayload
+			}
+			if postIndex > l {
+				return io.ErrUnexpectedEOF
+			}
+			m.Index = append(m.Index[:0], dAtA[iNdEx:postIndex]...)
+			if m.Index == nil {
+				m.Index = []byte{}
 			}
 			iNdEx = postIndex
 		default:

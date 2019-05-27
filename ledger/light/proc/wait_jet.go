@@ -19,9 +19,12 @@ package proc
 import (
 	"context"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
+	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/pkg/errors"
@@ -111,7 +114,7 @@ func (p *WaitHot) Proceed(ctx context.Context) error {
 type FetchJetWM struct {
 	target  insolar.ID
 	pulse   insolar.PulseNumber
-	replyTo chan<- bus.Reply
+	message *message.Message
 
 	Result struct {
 		Jet insolar.JetID
@@ -122,14 +125,15 @@ type FetchJetWM struct {
 		Coordinator jet.Coordinator
 		JetUpdater  jet.Fetcher
 		JetFetcher  jet.Fetcher
+		Sender      wbus.Sender
 	}
 }
 
-func NewFetchJetWM(target insolar.ID, pn insolar.PulseNumber, rep chan<- bus.Reply) *FetchJetWM {
+func NewFetchJetWM(target insolar.ID, pn insolar.PulseNumber, msg *message.Message) *FetchJetWM {
 	return &FetchJetWM{
 		target:  target,
 		pulse:   pn,
-		replyTo: rep,
+		message: msg,
 	}
 }
 
@@ -143,17 +147,25 @@ func (p *FetchJetWM) Proceed(ctx context.Context) error {
 	jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.target, p.pulse)
 	if err != nil {
 		err := errors.Wrap(err, "failed to fetch jet")
-		p.replyTo <- bus.Reply{Err: err}
+		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 		return err
 	}
 	executor, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, p.pulse)
 	if err != nil {
 		err := errors.Wrap(err, "failed to calculate executor for jet")
-		p.replyTo <- bus.Reply{Err: err}
+		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 		return err
 	}
 	if *executor != p.Dep.Coordinator.Me() {
-		p.replyTo <- bus.Reply{Reply: &reply.JetMiss{JetID: *jetID, Pulse: p.pulse}}
+		// p.replyTo <- bus.Reply{Reply: &reply.JetMiss{JetID: *jetID, Pulse: p.pulse}}
 		return errors.New("jet miss")
 	}
 
@@ -164,25 +176,30 @@ func (p *FetchJetWM) Proceed(ctx context.Context) error {
 type WaitHotWM struct {
 	jetID   insolar.JetID
 	pulse   insolar.PulseNumber
-	replyTo chan<- bus.Reply
+	message *message.Message
 
 	Dep struct {
 		Waiter hot.JetWaiter
+		Sender wbus.Sender
 	}
 }
 
-func NewWaitHotWM(j insolar.JetID, pn insolar.PulseNumber, rep chan<- bus.Reply) *WaitHotWM {
+func NewWaitHotWM(j insolar.JetID, pn insolar.PulseNumber, msg *message.Message) *WaitHotWM {
 	return &WaitHotWM{
 		jetID:   j,
 		pulse:   pn,
-		replyTo: rep,
+		message: msg,
 	}
 }
 
 func (p *WaitHotWM) Proceed(ctx context.Context) error {
 	err := p.Dep.Waiter.Wait(ctx, insolar.ID(p.jetID))
 	if err != nil {
-		p.replyTo <- bus.Reply{Reply: &reply.Error{ErrType: reply.ErrHotDataTimeout}}
+		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if err != nil {
+			return err
+		}
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 		return err
 	}
 

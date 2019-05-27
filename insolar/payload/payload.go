@@ -13,10 +13,13 @@ const (
 	TypeUnknown   Type = 0
 	TypeError     Type = 100
 	TypeID        Type = 101
-	TypeJet       Type = 102
-	TypeGetObject Type = 103
-	TypeObjIndex  Type = 104
-	TypeObjState  Type = 105
+	TypeObject    Type = 102
+	TypeState     Type = 103
+	TypeGetObject Type = 104
+	TypePassState Type = 105
+	TypeObjIndex  Type = 106
+	TypeObjState  Type = 107
+	TypeIndex     Type = 108
 )
 
 // Payload represents any kind of data that can be encoded in consistent manner.
@@ -32,8 +35,20 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *ID:
 		pl.Polymorph = uint32(TypeID)
 		return pl.Marshal()
+	case *Object:
+		pl.Polymorph = uint32(TypeObject)
+		return pl.Marshal()
+	case *State:
+		pl.Polymorph = uint32(TypeState)
+		return pl.Marshal()
 	case *GetObject:
 		pl.Polymorph = uint32(TypeGetObject)
+		return pl.Marshal()
+	case *PassState:
+		pl.Polymorph = uint32(TypePassState)
+		return pl.Marshal()
+	case *Index:
+		pl.Polymorph = uint32(TypeIndex)
 		return pl.Marshal()
 	}
 
@@ -60,8 +75,24 @@ func Unmarshal(data []byte) (Payload, error) {
 		pl := ID{}
 		err := pl.Unmarshal(data)
 		return &pl, err
+	case TypeObject:
+		pl := Object{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeState:
+		pl := State{}
+		err := pl.Unmarshal(data)
+		return &pl, err
 	case TypeGetObject:
 		pl := GetObject{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypePassState:
+		pl := PassState{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypeIndex:
+		pl := Index{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

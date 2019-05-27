@@ -11,26 +11,29 @@ func _() {
 	_ = x[TypeUnknown-0]
 	_ = x[TypeError-100]
 	_ = x[TypeID-101]
-	_ = x[TypeJet-102]
-	_ = x[TypeGetObject-103]
-	_ = x[TypeObjIndex-104]
-	_ = x[TypeObjState-105]
+	_ = x[TypeObject-102]
+	_ = x[TypeState-103]
+	_ = x[TypeGetObject-104]
+	_ = x[TypePassState-105]
+	_ = x[TypeObjIndex-106]
+	_ = x[TypeObjState-107]
+	_ = x[TypeIndex-108]
 }
 
 const (
 	_Type_name_0 = "TypeUnknown"
-	_Type_name_1 = "TypeErrorTypeIDTypeJetTypeGetObjectTypeObjIndexTypeObjState"
+	_Type_name_1 = "TypeErrorTypeIDTypeObjectTypeStateTypeGetObjectTypePassStateTypeObjIndexTypeObjStateTypeIndex"
 )
 
 var (
-	_Type_index_1 = [...]uint8{0, 9, 15, 22, 35, 47, 59}
+	_Type_index_1 = [...]uint8{0, 9, 15, 25, 34, 47, 60, 72, 84, 93}
 )
 
 func (i Type) String() string {
 	switch {
 	case i == 0:
 		return _Type_name_0
-	case 100 <= i && i <= 105:
+	case 100 <= i && i <= 108:
 		i -= 100
 		return _Type_name_1[_Type_index_1[i]:_Type_index_1[i+1]]
 	default:

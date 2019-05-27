@@ -20,25 +20,23 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/pkg/errors"
+
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/delegationtoken"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/object"
-	"github.com/insolar/insolar/messagebus"
-	"github.com/pkg/errors"
 )
 
 type SendObject struct {
-	message bus.Message
-	jet     insolar.JetID
-	index   object.Lifeline
+	message              *message.Message
+	payload              payload.GetObject
+	objJetID, stateJetID insolar.JetID
+	index                object.Lifeline
 
 	Dep struct {
 		Coordinator    jet.Coordinator
@@ -47,203 +45,100 @@ type SendObject struct {
 		RecordAccessor object.RecordAccessor
 		Blobs          blob.Storage
 		Bus            insolar.MessageBus
+		Sender         bus.Sender
 	}
 }
 
-func NewSendObject(msg bus.Message, jet insolar.JetID, idx object.Lifeline) *SendObject {
+func NewSendObject(
+	msg *message.Message, pl payload.GetObject, objJetID, stateJetID insolar.JetID, idx object.Lifeline,
+) *SendObject {
 	return &SendObject{
-		message: msg,
-		jet:     jet,
-		index:   idx,
+		message:    msg,
+		objJetID:   objJetID,
+		stateJetID: stateJetID,
+		index:      idx,
+		payload:    pl,
 	}
 }
 
 func (p *SendObject) Proceed(ctx context.Context) error {
-	r := bus.Reply{}
-	r.Reply, r.Err = p.handle(ctx, p.message.Parcel)
-	p.message.ReplyTo <- r
-	return r.Err
-}
-
-func (p *SendObject) handle(
-	ctx context.Context, parcel insolar.Parcel,
-) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetObject)
-	logger := inslogger.FromContext(ctx)
-
-	var stateID *insolar.ID
-	if msg.State != nil {
-		stateID = msg.State
-	} else {
-		stateID = p.index.LatestState
-	}
-	if stateID == nil {
-		return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
-	}
-
-	var (
-		stateJet *insolar.ID
-	)
-	onHeavy, err := p.Dep.Coordinator.IsBeyondLimit(ctx, parcel.Pulse(), stateID.Pulse())
-	if err != nil && err != pulse.ErrNotFound {
-		return nil, err
-	}
-	if onHeavy {
-		hNode, err := p.Dep.Coordinator.Heavy(ctx, parcel.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		logger.WithFields(map[string]interface{}{
-			"state":    stateID.DebugString(),
-			"going_to": hNode.String(),
-		}).Debug("fetching object (on heavy)")
-
-		obj, err := p.fetchObject(ctx, msg.Head, *hNode, stateID, parcel.Pulse())
-		if err != nil {
-			if err == insolar.ErrDeactivated {
-				return &reply.Error{ErrType: reply.ErrDeactivated}, nil
-			}
-			return nil, err
+	sendState := func(rec record.Material) error {
+		virtual := rec.Virtual
+		concrete := record.Unwrap(virtual)
+		state, ok := concrete.(record.State)
+		if !ok {
+			return fmt.Errorf("invalid object record %#v", virtual)
 		}
 
-		return &reply.Object{
-			Head:         msg.Head,
-			State:        *stateID,
-			Prototype:    obj.Prototype,
-			IsPrototype:  obj.IsPrototype,
-			ChildPointer: p.index.ChildPointer,
-			Parent:       p.index.Parent,
-			Memory:       obj.Memory,
-		}, nil
-	}
-
-	stateJetID, actual := p.Dep.Jets.ForID(ctx, stateID.Pulse(), *msg.Head.Record())
-	stateJet = (*insolar.ID)(&stateJetID)
-
-	if !actual {
-		actualJet, err := p.Dep.JetUpdater.Fetch(ctx, *msg.Head.Record(), stateID.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		stateJet = actualJet
-	}
-
-	// Fetch state record.
-	rec, err := p.Dep.RecordAccessor.ForID(ctx, *stateID)
-
-	if err == object.ErrNotFound {
-		// The record wasn't found on the current suitNode. Return redirect to the node that contains it.
-		// We get Jet tree for pulse when given state was added.
-		suitNode, err := p.Dep.Coordinator.NodeForJet(ctx, *stateJet, parcel.Pulse(), stateID.Pulse())
-		if err != nil {
-			return nil, err
-		}
-		logger.WithFields(map[string]interface{}{
-			"state":    stateID.DebugString(),
-			"going_to": suitNode.String(),
-		}).Debug("fetching object (record not found)")
-
-		obj, err := p.fetchObject(ctx, msg.Head, *suitNode, stateID, parcel.Pulse())
-		if err != nil {
-			if err == insolar.ErrDeactivated {
-				return &reply.Error{ErrType: reply.ErrDeactivated}, nil
-			}
-			return nil, err
-		}
-
-		return &reply.Object{
-			Head:         msg.Head,
-			State:        *stateID,
-			Prototype:    obj.Prototype,
-			IsPrototype:  obj.IsPrototype,
-			ChildPointer: p.index.ChildPointer,
-			Parent:       p.index.Parent,
-			Memory:       obj.Memory,
-		}, nil
-	}
-	if err != nil {
-		return nil, errors.Wrap(err, "can't fetch record from storage")
-	}
-
-	virtRec := rec.Virtual
-	concrete := record.Unwrap(virtRec)
-	state, ok := concrete.(record.State)
-	if !ok {
-		return nil, fmt.Errorf("invalid object record %#v", virtRec)
-	}
-
-	if state.ID() == record.StateDeactivation {
-		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
-	}
-
-	var childPointer *insolar.ID
-	if p.index.ChildPointer != nil {
-		childPointer = p.index.ChildPointer
-	}
-	rep := reply.Object{
-		Head:         msg.Head,
-		State:        *stateID,
-		Prototype:    state.GetImage(),
-		IsPrototype:  state.GetIsPrototype(),
-		ChildPointer: childPointer,
-		Parent:       p.index.Parent,
-	}
-
-	if state.GetMemory() != nil && state.GetMemory().NotEmpty() {
-		b, err := p.Dep.Blobs.ForID(ctx, *state.GetMemory())
-		if err == blob.ErrNotFound {
-			hNode, err := p.Dep.Coordinator.Heavy(ctx, parcel.Pulse())
+		if state.ID() == record.StateDeactivation {
+			msg, err := payload.NewMessage(&payload.Error{Text: "object is deactivated"})
 			if err != nil {
-				return nil, err
+				return errors.Wrap(err, "failed to create reply")
 			}
-			obj, err := p.fetchObject(ctx, msg.Head, *hNode, stateID, parcel.Pulse())
-			if err != nil {
-				return nil, err
-			}
-			err = p.Dep.Blobs.Set(ctx, *state.GetMemory(), blob.Blob{
-				JetID: p.jet,
-				Value: obj.Memory},
-			)
-			if err != nil {
-				return nil, err
-			}
-			b.Value = obj.Memory
+			go p.Dep.Sender.Reply(ctx, p.message, msg)
 		}
-		rep.Memory = b.Value
+
+		var memory []byte
+		if state.GetMemory() != nil && state.GetMemory().NotEmpty() {
+			b, err := p.Dep.Blobs.ForID(ctx, *state.GetMemory())
+			if err != nil {
+				return errors.Wrap(err, "failed to fetch blob")
+			}
+			memory = b.Value
+		}
+		buf, err := rec.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal state record")
+		}
+		msg, err := payload.NewMessage(&payload.State{
+			Record: buf,
+			Memory: memory,
+		})
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
+
+		return nil
 	}
 
-	return &rep, nil
-}
-
-func (p *SendObject) fetchObject(
-	ctx context.Context, obj insolar.Reference, node insolar.Reference, stateID *insolar.ID, pulse insolar.PulseNumber,
-) (*reply.Object, error) {
-	sender := messagebus.BuildSender(
-		p.Dep.Bus.Send,
-		messagebus.FollowRedirectSender(p.Dep.Bus),
-		messagebus.RetryJetSender(p.Dep.Jets),
-	)
-	genericReply, err := sender(
-		ctx,
-		&message.GetObject{
-			Head:     obj,
-			State:    stateID,
-		},
-		&insolar.MessageSendOptions{
-			Receiver: &node,
-			Token:    &delegationtoken.GetObjectRedirectToken{},
-		},
-	)
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to fetch object state")
-	}
-	if rep, ok := genericReply.(*reply.Error); ok {
-		return nil, rep.Error()
+	sendPassState := func(stateID insolar.ID) error {
+		msg, err := payload.NewMessage(&payload.PassState{
+			Origin:  p.message.Payload,
+			StateID: stateID,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+		nodes, err := p.Dep.Coordinator.QueryRole(ctx, insolar.DynamicRoleLightExecutor, stateID, stateID.Pulse())
+		if err != nil {
+			return errors.Wrap(err, "failed to calculate role")
+		}
+		go func() {
+			_, done := p.Dep.Sender.SendTarget(ctx, msg, nodes[0])
+			done()
+		}()
+		return nil
 	}
 
-	rep, ok := genericReply.(*reply.Object)
-	if !ok {
-		return nil, fmt.Errorf("failed to fetch object state: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
+	{
+		buf, err := p.index.Marshal()
+		if err != nil {
+			return errors.Wrap(err, "failed to marshal index")
+		}
+		msg, err := payload.NewMessage(&payload.Index{
+			Index: buf,
+		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create reply")
+		}
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 	}
-	return rep, nil
+
+	rec, err := p.Dep.RecordAccessor.ForID(ctx, *p.index.LatestState)
+	switch err {
+	case nil:
+		return sendState(rec)
+	case object.ErrNotFound:
+		return sendPassState(*p.index.LatestState)
+	default:
+		return errors.Wrap(err, "failed to fetch record")
+	}
 }

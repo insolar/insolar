@@ -22,7 +22,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/proc"
@@ -44,43 +43,41 @@ func NewGetObject(dep *proc.Dependencies, msg bus.Message, pl payload.GetObject)
 }
 
 func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
-	msg := s.message.Parcel.Message().(*message.GetObject)
-	ctx, _ = inslogger.WithField(ctx, "object", msg.Head.Record().DebugString())
+	ctx, _ = inslogger.WithField(ctx, "object", s.payload.ObjectID.DebugString())
 
-	var jetID insolar.JetID
-	var pn insolar.PulseNumber
-	if s.message.Parcel.DelegationToken() == nil {
-		jet := proc.NewFetchJetWM(*msg.Head.Record(), flow.Pulse(ctx), s.message.ReplyTo)
-		s.dep.FetchJetWM(jet)
-		if err := f.Procedure(ctx, jet, false); err != nil {
-			return err
-		}
-		hot := proc.NewWaitHotWM(jet.Result.Jet, flow.Pulse(ctx), s.message.ReplyTo)
-		s.dep.WaitHotWM(hot)
-		if err := f.Procedure(ctx, hot, false); err != nil {
-			return err
-		}
+	var (
+		objJetID, stateJetID insolar.JetID
+		stateID              insolar.ID
+	)
 
-		jetID = jet.Result.Jet
-		pn = flow.Pulse(ctx)
-	} else {
-		// Workaround to fetch object states.
-		jet := proc.NewFetchJetWM(*msg.Head.Record(), msg.State.Pulse(), s.message.ReplyTo)
-		s.dep.FetchJetWM(jet)
-		if err := f.Procedure(ctx, jet, false); err != nil {
-			return err
-		}
-		jetID = jet.Result.Jet
-		pn = msg.State.Pulse()
+	jet := proc.NewFetchJetWM(s.payload.ObjectID, flow.Pulse(ctx), s.message.WatermillMsg)
+	s.dep.FetchJetWM(jet)
+	if err := f.Procedure(ctx, jet, false); err != nil {
+		return err
+	}
+	objJetID = jet.Result.Jet
+
+	hot := proc.NewWaitHotWM(objJetID, flow.Pulse(ctx), s.message.WatermillMsg)
+	s.dep.WaitHotWM(hot)
+	if err := f.Procedure(ctx, hot, false); err != nil {
+		return err
 	}
 
-	idx := proc.NewGetIndexWM(msg.Head, jetID, s.message.ReplyTo, pn)
+	idx := proc.NewGetIndexWM(s.payload.ObjectID, objJetID, s.message.WatermillMsg)
 	s.dep.GetIndexWM(idx)
 	if err := f.Procedure(ctx, idx, false); err != nil {
 		return err
 	}
+	stateID = *idx.Result.Index.LatestState
 
-	send := proc.NewSendObject(s.message, jetID, idx.Result.Index)
+	jet := proc.NewFetchJetWM(stateID, stateID.Pulse(), s.message.WatermillMsg)
+	s.dep.FetchJetWM(jet)
+	if err := f.Procedure(ctx, jet, false); err != nil {
+		return err
+	}
+	stateJetID = jet.Result.Jet
+
+	send := proc.NewSendObject(s.message, jet.Result.Jet, idx.Result.Index)
 	s.dep.SendObject(send)
 	return f.Procedure(ctx, send, false)
 }

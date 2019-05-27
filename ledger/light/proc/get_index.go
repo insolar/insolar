@@ -20,11 +20,15 @@ import (
 	"context"
 	"fmt"
 
+	wmessage "github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar"
+	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
@@ -130,10 +134,9 @@ func (p *GetIndex) process(ctx context.Context) error {
 }
 
 type GetIndexWM struct {
-	object  insolar.Reference
+	object  insolar.ID
 	jet     insolar.JetID
-	replyTo chan<- bus.Reply
-	pn      insolar.PulseNumber
+	message *wmessage.Message
 
 	Result struct {
 		Index object.Lifeline
@@ -145,41 +148,42 @@ type GetIndexWM struct {
 		Locker      object.IDLocker
 		Coordinator jet.Coordinator
 		Bus         insolar.MessageBus
+		Sender      wbus.Sender
 	}
 }
 
-func NewGetIndexWM(obj insolar.Reference, jetID insolar.JetID, rep chan<- bus.Reply, pn insolar.PulseNumber) *GetIndexWM {
+func NewGetIndexWM(obj insolar.ID, jetID insolar.JetID, msg *wmessage.Message) *GetIndexWM {
 	return &GetIndexWM{
 		object:  obj,
 		jet:     jetID,
-		replyTo: rep,
-		pn:      pn,
+		message: msg,
 	}
 }
 
 func (p *GetIndexWM) Proceed(ctx context.Context) error {
 	err := p.process(ctx)
 	if err != nil {
-		p.replyTo <- bus.Reply{Err: err}
+		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if err != nil {
+			return err
+		}
+		go p.Dep.Sender.Reply(ctx, p.message, msg)
 	}
 	return err
 }
 
 func (p *GetIndexWM) process(ctx context.Context) error {
-	objectID := *p.object.Record()
 	logger := inslogger.FromContext(ctx)
 
-	p.Dep.Locker.Lock(&objectID)
-	defer p.Dep.Locker.Unlock(&objectID)
+	p.Dep.Locker.Lock(&p.object)
+	defer p.Dep.Locker.Unlock(&p.object)
 
-	idx, err := p.Dep.Index.ForID(ctx, p.pn, objectID)
+	idx, err := p.Dep.Index.ForID(ctx, flow.Pulse(ctx), p.object)
 	if err == nil {
 		p.Result.Index = idx
-		if flow.Pulse(ctx) == p.pn {
-			err = p.Dep.IndexState.SetLifelineUsage(ctx, p.pn, objectID)
-			if err != nil {
-				return errors.Wrap(err, "failed to update lifeline usage")
-			}
+		err = p.Dep.IndexState.SetLifelineUsage(ctx, flow.Pulse(ctx), p.object)
+		if err != nil {
+			return errors.Wrap(err, "failed to update lifeline usage")
 		}
 		return nil
 	}
@@ -193,7 +197,7 @@ func (p *GetIndexWM) process(ctx context.Context) error {
 		return errors.Wrap(err, "failed to calculate heavy")
 	}
 	genericReply, err := p.Dep.Bus.Send(ctx, &message.GetObjectIndex{
-		Object: p.object,
+		Object: *insolar.NewReference(insolar.ID{}, p.object),
 	}, &insolar.MessageSendOptions{
 		Receiver: heavy,
 	})
@@ -201,7 +205,7 @@ func (p *GetIndexWM) process(ctx context.Context) error {
 		logger.WithFields(map[string]interface{}{
 			"jet": p.jet.DebugString(),
 			"pn":  flow.Pulse(ctx),
-		}).Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", p.object.Record().DebugString()))
+		}).Error(errors.Wrapf(err, "failed to fetch index from heavy - %v", p.object.DebugString()))
 		return errors.Wrapf(err, "failed to fetch index from heavy")
 	}
 	rep, ok := genericReply.(*reply.ObjectIndex)
@@ -215,11 +219,11 @@ func (p *GetIndexWM) process(ctx context.Context) error {
 	}
 
 	p.Result.Index.JetID = p.jet
-	err = p.Dep.Index.Set(ctx, flow.Pulse(ctx), objectID, p.Result.Index)
+	err = p.Dep.Index.Set(ctx, flow.Pulse(ctx), p.object, p.Result.Index)
 	if err != nil {
 		return errors.Wrap(err, "failed to save lifeline")
 	}
-	err = p.Dep.IndexState.SetLifelineUsage(ctx, flow.Pulse(ctx), objectID)
+	err = p.Dep.IndexState.SetLifelineUsage(ctx, flow.Pulse(ctx), p.object)
 	if err != nil {
 		return errors.Wrap(err, "failed to update lifeline usage")
 	}

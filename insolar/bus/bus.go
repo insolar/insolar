@@ -26,6 +26,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
@@ -202,15 +203,17 @@ func (b *Bus) Reply(ctx context.Context, origin, reply *message.Message) {
 	id := middleware.MessageCorrelationID(origin)
 	middleware.SetCorrelationID(id, reply)
 
-	originSender := origin.Metadata.Get(MetaSender)
-	if originSender == "" {
-		inslogger.FromContext(ctx).Error("failed to send reply (no sender)")
+	originMeta := payload.Meta{}
+	err := originMeta.Unmarshal(origin.Payload)
+	if err != nil {
+		inslogger.FromContext(ctx).Error(errors.Wrap(err, "failed to send reply"))
 		return
 	}
-	reply.Metadata.Set(MetaReceiver, originSender)
+
+	reply.Metadata.Set(MetaReceiver, originMeta.Sender.String())
 	reply.Metadata.Set(MetaTraceID, origin.Metadata.Get(MetaTraceID))
 
-	err := b.pub.Publish(TopicOutgoing, reply)
+	err = b.pub.Publish(TopicOutgoing, reply)
 	if err != nil {
 		inslogger.FromContext(ctx).Errorf("can't publish message to %s topic: %s", TopicOutgoing, err.Error())
 	}

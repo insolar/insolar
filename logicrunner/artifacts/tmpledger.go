@@ -18,6 +18,7 @@ package artifacts
 
 import (
 	"context"
+	"fmt"
 	"testing"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -180,9 +181,11 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 	handler.PCS = pcs
 	handler.JetCoordinator = jc
 
-	sender := makeSender(ps, jc, handler.FlowDispatcher.InnerSubscriber)
+	clientSender, serverSender := makeSender(ps, jc, handler.FlowDispatcher.Process)
 
-	am := NewClient(sender)
+	handler.Sender = serverSender
+
+	am := NewClient(clientSender)
 	am.PCS = testutils.NewPlatformCryptographyScheme()
 	am.DefaultBus = c.MessageBus
 	am.JetCoordinator = jc
@@ -263,10 +266,15 @@ func TmpLedger(t *testing.T, dir string, c insolar.Components) (*TMPLedger, *art
 type pubSubMock struct {
 	bus     *bus.Bus
 	handler message.HandlerFunc
+	pulses  pulse.Accessor
 }
 
 func (p *pubSubMock) Publish(topic string, messages ...*message.Message) error {
 	for _, msg := range messages {
+		pn, err := p.pulses.Latest(context.Background())
+		if err != nil {
+			return err
+		}
 		pl := payload.Meta{
 			Payload: msg.Payload,
 		}
@@ -275,6 +283,7 @@ func (p *pubSubMock) Publish(topic string, messages ...*message.Message) error {
 			return err
 		}
 		msg.Payload = buf
+		msg.Metadata.Set(bus.MetaPulse, fmt.Sprintf("%d", pn.PulseNumber))
 		_, _ = p.bus.IncomingMessageRouter(p.handler)(msg)
 	}
 	return nil
@@ -288,12 +297,17 @@ func (p *pubSubMock) Close() error {
 	return nil
 }
 
-func makeSender(pulses pulse.Accessor, jets jet.Coordinator, handle message.HandlerFunc) bus.Sender {
-	clientPub := &pubSubMock{handler: handle}
-	serverPub := &pubSubMock{}
+func makeSender(pulses pulse.Accessor, jets jet.Coordinator, handle message.HandlerFunc) (bus.Sender, bus.Sender) {
+	clientPub := &pubSubMock{
+		pulses:  pulses,
+		handler: handle,
+	}
+	serverPub := &pubSubMock{
+		pulses: pulses,
+	}
 	clientBus := bus.NewBus(clientPub, pulses, jets)
 	serverBus := bus.NewBus(serverPub, pulses, jets)
 	clientPub.bus = serverBus
 	serverPub.bus = clientBus
-	return clientBus
+	return clientBus, serverBus
 }

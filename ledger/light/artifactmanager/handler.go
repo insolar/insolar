@@ -29,6 +29,7 @@ import (
 
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
+	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
@@ -78,6 +79,7 @@ type MessageHandler struct {
 	middleware     *middleware
 	jetTreeUpdater jet.Fetcher
 
+	Sender         wbus.Sender
 	FlowDispatcher *dispatcher.Dispatcher
 	handlers       map[insolar.MessageType]insolar.MessageHandler
 }
@@ -120,9 +122,11 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.JetUpdater = h.jetTreeUpdater
 			p.Dep.JetFetcher = h.jetTreeUpdater
+			p.Dep.Sender = h.Sender
 		},
 		WaitHotWM: func(p *proc.WaitHotWM) {
 			p.Dep.Waiter = h.HotDataWaiter
+			p.Dep.Sender = h.Sender
 		},
 		GetIndexWM: func(p *proc.GetIndexWM) {
 			p.Dep.IndexState = h.LifelineStateModifier
@@ -130,6 +134,7 @@ func NewMessageHandler(
 			p.Dep.Index = h.LifelineIndex
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
+			p.Dep.Sender = h.Sender
 		},
 		SetRecord: func(p *proc.SetRecord) {
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
@@ -149,6 +154,7 @@ func NewMessageHandler(
 			p.Dep.JetUpdater = h.jetTreeUpdater
 			p.Dep.Bus = h.Bus
 			p.Dep.RecordAccessor = h.RecordAccessor
+			p.Dep.Sender = h.Sender
 		},
 		GetCode: func(p *proc.GetCode) {
 			p.Dep.Bus = h.Bus
