@@ -211,6 +211,7 @@ docker: docker-insolard docker-genesis docker-insgorund
 generate-protobuf:
 	protoc -I./vendor -I./ --gogoslick_out=./ network/node/internal/node/node.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ insolar/record/record.proto
+	protoc -I./vendor -I./ --gogoslick_out=./ insolar/payload/payload.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ ledger/object/lifeline.proto
 	protoc -I./vendor -I./ --gogoslick_out=./ ledger/object/indexbucket.proto
 

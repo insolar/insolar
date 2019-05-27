@@ -26,6 +26,7 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
 )
@@ -47,7 +48,12 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	}
 	msgType := s.Message.WatermillMsg.Metadata.Get(wmBus.MetaType)
 
-	parcel, err := message.DeserializeParcel(bytes.NewBuffer(s.Message.WatermillMsg.Payload))
+	meta := payload.Meta{}
+	err := meta.Unmarshal(s.Message.WatermillMsg.Payload)
+	if err != nil {
+		return errors.Wrap(err, "can't deserialize meta payload")
+	}
+	parcel, err := message.DeserializeParcel(bytes.NewBuffer(meta.Payload))
 	if err != nil {
 		return errors.Wrap(err, "can't deserialize payload")
 	}
@@ -83,8 +89,14 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	case insolar.TypeGetChildren.String():
 		h := NewGetChildren(s.Dep, s.Message.ReplyTo, s.Message)
 		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetDelegate.String():
+		h := NewGetDelegate(s.Dep, s.Message.ReplyTo, s.Message.Parcel)
+		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetPendingRequests.String():
 		h := NewGetPendingRequests(s.Dep, s.Message.ReplyTo, s.Message.Parcel)
+		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetPendingRequestID.String():
+		h := NewGetPendingRequestID(s.Dep, s.Message.ReplyTo, s.Message.Parcel)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeRegisterChild.String():
 		msg := s.Message.Parcel.Message().(*message.RegisterChild)
@@ -94,7 +106,7 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		msg := s.Message.Parcel.Message().(*message.GetJet)
 		h := NewGetJet(s.Dep, s.Message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
-	case insolar.TypeHotRecords:
+	case insolar.TypeHotRecords.String():
 		msg := s.Message.Parcel.Message().(*message.HotData)
 		h := NewHotData(s.Dep, s.Message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)

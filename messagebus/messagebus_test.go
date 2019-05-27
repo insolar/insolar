@@ -26,6 +26,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 
@@ -203,7 +204,7 @@ func TestMessageBus_doDeliver_TwoAheadPulses(t *testing.T) {
 
 func TestMessageBus_createWatermillMessage(t *testing.T) {
 	ctx := context.Background()
-	mb, _, _, expectedRef := prepare(t, ctx, 100, 100)
+	mb, _, _, _ := prepare(t, ctx, 100, 100)
 
 	pulse := insolar.Pulse{
 		PulseNumber: insolar.PulseNumber(100),
@@ -218,36 +219,18 @@ func TestMessageBus_createWatermillMessage(t *testing.T) {
 	require.NotNil(t, msg.Payload)
 	require.Equal(t, fmt.Sprintf("%d", pulse.PulseNumber), msg.Metadata.Get(bus.MetaPulse))
 	require.Equal(t, parcel.Msg.Type().String(), msg.Metadata.Get(bus.MetaType))
-	require.Equal(t, expectedRef.String(), msg.Metadata.Get(bus.MetaReceiver))
 	require.Equal(t, insolar.Reference{}.String(), msg.Metadata.Get(bus.MetaSender))
-}
-
-func TestMessageBus_getReceiver(t *testing.T) {
-	ctx := context.Background()
-	mb, err := NewMessageBus(configuration.Configuration{})
-	require.NoError(t, err)
-	expectedRef := testutils.RandomRef()
-	jc := jet.NewCoordinatorMock(t)
-	jc.QueryRoleFunc = func(p context.Context, p1 insolar.DynamicRole, p2 insolar.ID, p3 insolar.PulseNumber) (r []insolar.Reference, r1 error) {
-		return []insolar.Reference{expectedRef}, nil
-	}
-	mb.JetCoordinator = jc
-	pulse := insolar.Pulse{
-		PulseNumber: insolar.PulseNumber(100),
-	}
-	parcel := &message.Parcel{
-		Msg: &message.GetObject{},
-	}
-
-	r := mb.getReceiver(ctx, parcel, pulse, nil)
-
-	require.Equal(t, expectedRef.String(), r)
 }
 
 func TestMessageBus_deserializePayload_GetReply(t *testing.T) {
 	rep := &reply.OK{}
-	payload := reply.ToBytes(rep)
-	msg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
+	pl := reply.ToBytes(rep)
+	meta := payload.Meta{
+		Payload: pl,
+	}
+	buf, err := meta.Marshal()
+	require.NoError(t, err)
+	msg := watermillMsg.NewMessage(watermill.NewUUID(), buf)
 	msg.Metadata.Set(bus.MetaType, string(rep.Type()))
 
 	r, err := deserializePayload(msg)
@@ -258,9 +241,14 @@ func TestMessageBus_deserializePayload_GetReply(t *testing.T) {
 
 func TestMessageBus_deserializePayload_GetError(t *testing.T) {
 	rep := errors.New("test error for deserializePayload")
-	payload, err := bus.ErrorToBytes(rep)
+	pl, err := bus.ErrorToBytes(rep)
 	require.NoError(t, err)
-	msg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
+	meta := payload.Meta{
+		Payload: pl,
+	}
+	buf, err := meta.Marshal()
+	require.NoError(t, err)
+	msg := watermillMsg.NewMessage(watermill.NewUUID(), buf)
 	msg.Metadata.Set(bus.MetaType, bus.TypeError)
 
 	r, err := deserializePayload(msg)
@@ -271,9 +259,14 @@ func TestMessageBus_deserializePayload_GetError(t *testing.T) {
 
 func TestMessageBus_deserializePayload_GetReply_WrongBytes(t *testing.T) {
 	rep := errors.New("test error for deserializePayload")
-	payload, err := bus.ErrorToBytes(rep)
+	pl, err := bus.ErrorToBytes(rep)
 	require.NoError(t, err)
-	msg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
+	meta := payload.Meta{
+		Payload: pl,
+	}
+	buf, err := meta.Marshal()
+	require.NoError(t, err)
+	msg := watermillMsg.NewMessage(watermill.NewUUID(), buf)
 	msg.Metadata.Set(bus.MetaType, string(testReply.Type()))
 
 	r, err := deserializePayload(msg)
@@ -285,8 +278,13 @@ func TestMessageBus_deserializePayload_GetReply_WrongBytes(t *testing.T) {
 
 func TestMessageBus_deserializePayload_GetError_WrongBytes(t *testing.T) {
 	rep := &reply.OK{}
-	payload := reply.ToBytes(rep)
-	msg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
+	pl := reply.ToBytes(rep)
+	meta := payload.Meta{
+		Payload: pl,
+	}
+	buf, err := meta.Marshal()
+	require.NoError(t, err)
+	msg := watermillMsg.NewMessage(watermill.NewUUID(), buf)
 	msg.Metadata.Set(bus.MetaType, bus.TypeError)
 
 	r, err := deserializePayload(msg)

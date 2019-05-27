@@ -155,7 +155,6 @@ func (t *tcpTransport) listen(ctx context.Context) {
 			logger.Error("[ listen ] Failed to accept connection: ", err)
 			return
 		}
-		logger = logger.WithField("address", conn.RemoteAddr())
 		logger.Infof("[ listen ] Accepted new connection")
 		setupConnection(ctx, conn)
 

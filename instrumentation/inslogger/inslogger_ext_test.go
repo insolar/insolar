@@ -60,6 +60,7 @@ func logFromContextWithSkip(ctx context.Context) insolar.Logger {
 func TestExt_Global(t *testing.T) {
 
 	l := logFromContextWithSkip(context.Background())
+	l, _ = l.WithLevel("info")
 	var b bytes.Buffer
 	l = l.WithOutput(&b)
 
@@ -76,6 +77,7 @@ func TestExt_Global_WithFunc(t *testing.T) {
 	var b bytes.Buffer
 	l = l.WithOutput(&b)
 	l = l.WithFuncName(true)
+	l, _ = l.WithLevel("info")
 
 	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
@@ -162,11 +164,12 @@ func TestExt_Global_SubCall(t *testing.T) {
 
 func logCallerGlobal(ctx context.Context, t *testing.T) (loggerField, string) {
 	l := inslogger.FromContext(ctx).WithSkipFrameCount(-2)
+	l, _ = l.WithLevel("info")
+
 	var b bytes.Buffer
 	l = l.WithOutput(&b)
 
 	_, _, line, _ := runtime.Caller(0)
 	l.Info("test")
-	// fmt.Print("logCaller:\n", b.String())
 	return logFields(t, b.Bytes()), strconv.Itoa(line + 1)
 }

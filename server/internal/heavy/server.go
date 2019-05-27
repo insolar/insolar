@@ -18,12 +18,15 @@ package heavy
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/insolar/insolar/configuration"
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/utils"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
@@ -32,14 +35,16 @@ import (
 )
 
 type Server struct {
-	cfgPath string
-	trace   bool
+	cfgPath        string
+	genesisCfgPath string
+	trace          bool
 }
 
-func New(cfgPath string, trace bool) *Server {
+func New(cfgPath string, genesisCfgPath string, trace bool) *Server {
 	return &Server{
-		cfgPath: cfgPath,
-		trace:   trace,
+		cfgPath:        cfgPath,
+		genesisCfgPath: genesisCfgPath,
+		trace:          trace,
 	}
 }
 
@@ -52,7 +57,17 @@ func (s *Server) Serve() {
 		err = cfgHolder.Load()
 	}
 	if err != nil {
-		log.Warn("failed to load configuration from file: ", err.Error())
+		log.Fatalf("failed to load configuration: %v", err.Error())
+	}
+
+	b, err := ioutil.ReadFile(s.genesisCfgPath)
+	if err != nil {
+		log.Fatalf("failed to load genesis configuration from file: %v", s.genesisCfgPath)
+	}
+	var genesisCfg insolar.GenesisHeavyConfig
+	err = json.Unmarshal(b, &genesisCfg)
+	if err != nil {
+		log.Fatalf("failed to pares genesis configuration from file: %v", s.genesisCfgPath)
 	}
 
 	cfg := &cfgHolder.Configuration
@@ -61,7 +76,7 @@ func (s *Server) Serve() {
 	fmt.Println("Starts with configuration:\n", configuration.ToString(cfgHolder.Configuration))
 
 	ctx := context.Background()
-	cmp, err := newComponents(ctx, *cfg)
+	cmp, err := newComponents(ctx, *cfg, genesisCfg)
 	fatal(ctx, err, "failed to create components")
 
 	traceID := "main_" + utils.RandTraceID()

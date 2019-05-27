@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package genesis
+package platformpolicy
 
 import (
 	"testing"
@@ -22,11 +22,15 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestTools_refByName(t *testing.T) {
+func TestKeys_publicKeyNormalize(t *testing.T) {
 	var (
-		pubKey    = "-----BEGIN PUBLIC KEY-----\nMFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n-----END PUBLIC KEY-----\n"
-		pubKeyRef = "1tJE1DaQwSadLJ1gvD6KubfxmVFu76oNYgrUZa2XFt.1tJDJLGWcX3TCXZMzZodTYWZyJGVdsajgGqyq8Vidw"
+		begin   = "-----BEGIN PUBLIC KEY-----\n"
+		end     = "-----END PUBLIC KEY-----\n"
+		pubKey1 = begin + "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n" + end
+		pubKey2 = begin + "\n" + "MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEf+vsMVU75xH8uj5WRcOqYdHXtaHH\nN0na2RVQ1xbhsVybYPae3ujNHeQCPj+RaJyMVhb6Aj/AOsTTOPFswwIDAQ==\n" + end
 	)
-	genesisRef := refByName(pubKey)
-	require.Equal(t, pubKeyRef, genesisRef.String(), "reference by name always the same")
+
+	s1 := MustNormalizePublicKey([]byte(pubKey1))
+	s2 := MustNormalizePublicKey([]byte(pubKey2))
+	require.Equal(t, s1, s2, "the same result for the same public key")
 }

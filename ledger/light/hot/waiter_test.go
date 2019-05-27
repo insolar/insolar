@@ -73,7 +73,7 @@ func TestHotDataWaiterConcrete_Wait_UnlockHotData(t *testing.T) {
 	// Act
 	go func() {
 		waitingStarted <- struct{}{}
-		err := hdwGetter().Wait(inslogger.TestContext(t), jetID)
+		err := hdwGetter().Wait(inslogger.TestContext(t), jetID, 124567)
 		require.Nil(t, err)
 		close(waitingFinished)
 	}()
@@ -118,7 +118,7 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout(t *testing.T) {
 	// Act
 	go func() {
 		waitingStarted <- struct{}{}
-		err := hdwGetter().Wait(inslogger.TestContext(t), jetID)
+		err := hdwGetter().Wait(inslogger.TestContext(t), jetID, 124567)
 		require.NotNil(t, err)
 		require.Equal(t, insolar.ErrHotDataTimeout, err)
 		close(waitingFinished)
@@ -127,7 +127,7 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout(t *testing.T) {
 	<-waitingStarted
 	time.Sleep(1 * time.Second)
 
-	hdwGetter().ThrowTimeout(inslogger.TestContext(t))
+	hdwGetter().ThrowTimeout(inslogger.TestContext(t), 1245678)
 
 	<-waitingFinished
 	require.Equal(t, 0, hdwLengthGetter())
@@ -160,14 +160,14 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout_MultipleMembers(t *testing.T) {
 	// Act
 	go func() {
 		waitingStarted <- struct{}{}
-		err := hdwGetter().Wait(inslogger.TestContext(t), jetID)
+		err := hdwGetter().Wait(inslogger.TestContext(t), jetID, 124567)
 		require.NotNil(t, err)
 		require.Equal(t, insolar.ErrHotDataTimeout, err)
 		waitingFinished <- struct{}{}
 	}()
 	go func() {
 		waitingStarted <- struct{}{}
-		err := hdwGetter().Wait(inslogger.TestContext(t), secondJetID)
+		err := hdwGetter().Wait(inslogger.TestContext(t), secondJetID, 124567)
 		require.NotNil(t, err)
 		require.Equal(t, insolar.ErrHotDataTimeout, err)
 		waitingFinished <- struct{}{}
@@ -177,10 +177,21 @@ func TestHotDataWaiterConcrete_Wait_ThrowTimeout_MultipleMembers(t *testing.T) {
 	<-waitingStarted
 	time.Sleep(1 * time.Second)
 
-	hdwGetter().ThrowTimeout(inslogger.TestContext(t))
+	hdwGetter().ThrowTimeout(inslogger.TestContext(t), 1245678)
 
 	<-waitingFinished
 	<-waitingFinished
 
 	require.Equal(t, 0, hdwLengthGetter())
+}
+
+func TestHotDataWaiterConcrete_WaitOldPulse(t *testing.T) {
+	t.Parallel()
+
+	hdw := NewChannelWaiter()
+
+	jetID := testutils.RandomID()
+	hdw.ThrowTimeout(inslogger.TestContext(t), 1245678)
+	err := hdw.Wait(inslogger.TestContext(t), jetID, 124567)
+	require.NoError(t, err)
 }

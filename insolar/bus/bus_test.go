@@ -27,17 +27,20 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
-func TestMessageBus_Send(t *testing.T) {
+func TestMessageBus_SendTarget(t *testing.T) {
 	ctx := context.Background()
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-	b := NewBus(pubsub)
+	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 	externalMsgCh, err := pubsub.Subscribe(ctx, TopicOutgoing)
 	require.NoError(t, err)
 
@@ -45,7 +48,7 @@ func TestMessageBus_Send(t *testing.T) {
 	msg := message.NewMessage(watermill.NewUUID(), payload)
 
 	mapSizeBefore := len(b.replies)
-	results, done := b.Send(ctx, msg)
+	results, done := b.SendTarget(ctx, msg, gen.Reference())
 
 	require.NotNil(t, results)
 	require.NotNil(t, done)
@@ -70,13 +73,14 @@ func (p *PublisherMock) Close() error {
 
 func TestMessageBus_Send_Publish_Err(t *testing.T) {
 	ctx := context.Background()
-	b := NewBus(&PublisherMock{pubErr: errors.New("test error in Publish")})
+	pub := &PublisherMock{pubErr: errors.New("test error in Publish")}
+	b := NewBus(pub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
 
 	mapSizeBefore := len(b.replies)
-	results, done := b.Send(ctx, msg)
+	results, done := b.SendTarget(ctx, msg, gen.Reference())
 
 	require.Nil(t, results)
 	require.Nil(t, done)
@@ -85,13 +89,13 @@ func TestMessageBus_Send_Publish_Err(t *testing.T) {
 
 func TestMessageBus_Send_Close(t *testing.T) {
 	ctx := context.Background()
-	b := NewBus(&PublisherMock{pubErr: nil})
+	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
 
 	mapSizeBefore := len(b.replies)
-	results, done := b.Send(ctx, msg)
+	results, done := b.SendTarget(ctx, msg, gen.Reference())
 
 	done()
 	select {
@@ -114,13 +118,13 @@ func TestMessageBus_Send_Timeout(t *testing.T) {
 	ctx := context.Background()
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-	b := NewBus(pubsub)
+	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 	b.timeout = time.Millisecond * 10
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
 
-	results, _ := b.Send(ctx, msg)
+	results, _ := b.SendTarget(ctx, msg, gen.Reference())
 
 	res, ok := <-results
 
@@ -135,13 +139,13 @@ func TestMessageBus_Send_Timeout_Close_Race(t *testing.T) {
 	ctx := context.Background()
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-	b := NewBus(pubsub)
+	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 	b.timeout = time.Second
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
 
-	_, done := b.Send(ctx, msg)
+	_, done := b.SendTarget(ctx, msg, gen.Reference())
 	<-time.After(b.timeout)
 	done()
 }
@@ -150,7 +154,7 @@ func TestMessageBus_IncomingMessageRouter_Request(t *testing.T) {
 	incomingHandlerCalls := 0
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-	b := NewBus(pubsub)
+	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 
 	resMsg := message.NewMessage(watermill.NewUUID(), []byte{10, 20, 30, 40, 50})
 
@@ -174,7 +178,7 @@ func TestMessageBus_IncomingMessageRouter_Reply(t *testing.T) {
 	incomingHandlerCalls := 0
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-	b := NewBus(pubsub)
+	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 	correlationId := watermill.NewUUID()
 	resChan := &lockedReply{
 		messages: make(chan *message.Message),
@@ -212,7 +216,7 @@ func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {
 	incomingHandlerCalls := 0
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubsub := gochannel.NewGoChannel(gochannel.Config{}, logger)
-	b := NewBus(pubsub)
+	b := NewBus(pubsub, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 	b.timeout = time.Millisecond
 	correlationId := watermill.NewUUID()
 	resChan := &lockedReply{
@@ -238,13 +242,13 @@ func TestMessageBus_IncomingMessageRouter_ReplyTimeout(t *testing.T) {
 }
 
 func TestMessageBus_Send_IncomingMessageRouter(t *testing.T) {
-	b := NewBus(&PublisherMock{pubErr: nil})
+	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 	ctx := context.Background()
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
 
-	results, _ := b.Send(ctx, msg)
+	results, _ := b.SendTarget(ctx, msg, gen.Reference())
 
 	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
 		return nil, nil
@@ -271,14 +275,14 @@ func TestMessageBus_Send_IncomingMessageRouter(t *testing.T) {
 }
 
 func TestMessageBus_Send_IncomingMessageRouter_ReadAfterTimeout(t *testing.T) {
-	b := NewBus(&PublisherMock{pubErr: nil})
+	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 	b.timeout = time.Millisecond * 10
 	ctx := context.Background()
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
 
-	results, _ := b.Send(ctx, msg)
+	results, _ := b.SendTarget(ctx, msg, gen.Reference())
 
 	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
 		return nil, nil
@@ -296,14 +300,14 @@ func TestMessageBus_Send_IncomingMessageRouter_ReadAfterTimeout(t *testing.T) {
 }
 
 func TestMessageBus_Send_IncomingMessageRouter_WriteAfterTimeout(t *testing.T) {
-	b := NewBus(&PublisherMock{pubErr: nil})
+	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 	b.timeout = time.Millisecond * 10
 	ctx := context.Background()
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
 
-	results, _ := b.Send(ctx, msg)
+	results, _ := b.SendTarget(ctx, msg, gen.Reference())
 
 	resSend, ok := <-results
 	require.False(t, ok)
@@ -324,7 +328,7 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 	count := 100
 	isReplyOk := make(chan bool)
 	done := make(chan error)
-	b := NewBus(&PublisherMock{pubErr: nil})
+	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 	ctx := context.Background()
 
 	payload := []byte{1, 2, 3, 4, 5}
@@ -336,7 +340,7 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 	// send messages
 	for i := 0; i < count; i++ {
 		go func(i int) {
-			results, _ := b.Send(ctx, msg[i])
+			results, _ := b.SendTarget(ctx, msg[i], gen.Reference())
 			done <- nil
 			_, ok := <-results
 			isReplyOk <- ok
@@ -376,14 +380,14 @@ func TestMessageBus_Send_IncomingMessageRouter_SeveralMsg(t *testing.T) {
 func TestMessageBus_Send_IncomingMessageRouter_SeveralMsgForOneSend(t *testing.T) {
 	ctx := context.Background()
 	count := 100
-	b := NewBus(&PublisherMock{pubErr: nil})
+	b := NewBus(&PublisherMock{pubErr: nil}, pulse.NewAccessorMock(t), jet.NewCoordinatorMock(t))
 	b.timeout = time.Millisecond * time.Duration(rand.Intn(10))
 
 	payload := []byte{1, 2, 3, 4, 5}
 	msg := message.NewMessage(watermill.NewUUID(), payload)
 
 	// send message
-	results, _ := b.Send(ctx, msg)
+	results, _ := b.SendTarget(ctx, msg, gen.Reference())
 
 	incomingHandler := func(msg *message.Message) ([]*message.Message, error) {
 		return nil, nil
