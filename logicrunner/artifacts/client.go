@@ -172,7 +172,7 @@ func (m *client) GetObject(
 	}()
 
 	getObjectMsg := &message.GetObject{
-		Head:     head,
+		Head: head,
 	}
 
 	sender := messagebus.BuildSender(
@@ -283,7 +283,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 			return nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", r)
 		}
 
-		return &message.Parcel{ Msg: &message.CallMethod{Request: *castedRecord} }, nil
+		return &message.Parcel{Msg: &message.CallMethod{Request: *castedRecord}}, nil
 	case *reply.Error:
 		return nil, r.Error()
 	default:
@@ -296,6 +296,9 @@ func (m *client) HasPendingRequests(
 	ctx context.Context,
 	object insolar.Reference,
 ) (bool, error) {
+	ctx, span := instracer.StartSpan(ctx, "artifactmanager.HasPendingRequests")
+	defer span.End()
+
 	sender := messagebus.BuildSender(
 		m.DefaultBus.Send,
 		messagebus.RetryIncorrectPulse(m.PulseAccessor),
