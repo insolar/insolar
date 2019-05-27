@@ -51,6 +51,9 @@ var immutableFlag = "//ins:immutable"
 
 const (
 	TemplateDirectory = "templates"
+
+	mainPkg   = "main"
+	errorType = "error"
 )
 
 // ParsedFile struct with prepared info we extract from source code
@@ -172,7 +175,7 @@ func (pf *ParsedFile) parseConstructor(fd *ast.FuncDecl) error {
 		return errors.Errorf("Constructor %q should return exactly two values", name)
 	}
 
-	if pf.typeName(res.List[1].Type) != "error" {
+	if pf.typeName(res.List[1].Type) != errorType {
 		return errors.Errorf("Constructor %q should return 'error'", name)
 	}
 
@@ -191,7 +194,7 @@ func (pf *ParsedFile) parseMethod(fd *ast.FuncDecl) error {
 	}
 
 	lastResType := pf.typeName(res.List[res.NumFields()-1].Type)
-	if lastResType != "error" {
+	if lastResType != errorType {
 		return errors.Errorf(
 			"Method %q should return 'error' as last value, but it's %q",
 			name, lastResType,
@@ -215,10 +218,10 @@ func (pf *ParsedFile) ProxyPackageName() (string, error) {
 	packageName := pf.node.Name.Name
 
 	proxyPackageName := packageName
-	if proxyPackageName == "main" {
+	if proxyPackageName == mainPkg {
 		proxyPackageName = match[2]
 	}
-	if proxyPackageName == "main" {
+	if proxyPackageName == mainPkg {
 		proxyPackageName = match[1]
 	}
 	return proxyPackageName, nil
@@ -298,7 +301,7 @@ func (pf *ParsedFile) functionInfoForWrapper(list []*ast.FuncDecl) []map[string]
 			"ArgumentsZeroList":   generateZeroListOfTypes(pf, "args", fun.Type.Params),
 			"Arguments":           numberedVars(fun.Type.Params, "args"),
 			"Results":             numberedVars(fun.Type.Results, "ret"),
-			"ErrorInterfaceInRes": typeIndexes(pf, fun.Type.Results, "error"),
+			"ErrorInterfaceInRes": typeIndexes(pf, fun.Type.Results, errorType),
 			"Immutable":           isImmutable(fun), // only for methods, not constructors
 		}
 		res = append(res, info)
@@ -371,7 +374,7 @@ func (pf *ParsedFile) functionInfoForProxy(list []*ast.FuncDecl) []map[string]in
 
 // ChangePackageToMain changes package of the parsed code to "main"
 func (pf *ParsedFile) ChangePackageToMain() {
-	pf.node.Name.Name = "main"
+	pf.node.Name.Name = mainPkg
 }
 
 // Write prints `out` contract's code, it could be changed with a few methods
@@ -508,7 +511,7 @@ func extendImportsMap(parsed *ParsedFile, params *ast.FieldList, imports map[str
 	}
 
 	for _, e := range params.List {
-		if parsed.codeOfNode(e.Type) == "error" {
+		if parsed.codeOfNode(e.Type) == errorType {
 			imports[fmt.Sprintf(`"%s"`, foundationPath)] = true
 		}
 	}
@@ -552,7 +555,7 @@ func generateZeroListOfTypes(parsed *ParsedFile, name string, list *ast.FieldLis
 
 	for i, arg := range list.List {
 		tname := parsed.codeOfNode(arg.Type)
-		if tname == "error" {
+		if tname == errorType {
 			tname = "*foundation.Error"
 		}
 
