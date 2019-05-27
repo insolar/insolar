@@ -183,7 +183,7 @@ var secondInsgorundCleaner func()
 
 func startInsgorund(listenPort string, upstreamPort string) (func(), error) {
 	// It starts on ports of "virtual" node
-	cleaner, err := goplugintestutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:"+listenPort, "tcp", "127.0.0.1:"+upstreamPort)
+	cleaner, err := goplugintestutils.StartInsgorund(insgorundPath, "tcp", "127.0.0.1:"+listenPort, "tcp", "127.0.0.1:"+upstreamPort, false)
 	if err != nil {
 		return cleaner, errors.Wrap(err, "[ startInsgorund ] couldn't wait for insolard to start completely: ")
 	}

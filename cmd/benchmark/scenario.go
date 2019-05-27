@@ -153,9 +153,8 @@ func (s *transferDifferentMembersScenario) startMember(ctx context.Context, inde
 			atomic.AddUint32(&s.errors, 1)
 			atomic.AddInt64(&s.totalTime, int64(stop))
 			goroutineTime += stop
-			if strings.Contains(err.Error(), "Incorrect message pulse") {
-				writeToOutput(s.out, fmt.Sprintf("[ OK ] Incorrect message pulse. Trace: %s.\n", traceID))
-			} else if strings.Contains(err.Error(), "invalid state record") {
+
+			if strings.Contains(err.Error(), "invalid state record") {
 				writeToOutput(s.out, fmt.Sprintf("[ OK ] Invalid state record.    Trace: %s.\n", traceID))
 			} else {
 				writeToOutput(s.out, fmt.Sprintf("[Member №%d] Transfer error with traceID: %s. Response: %s.\n", index, traceID, err.Error()))
