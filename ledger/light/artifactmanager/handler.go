@@ -209,6 +209,11 @@ func NewMessageHandler(
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.JetReleaser = h.JetReleaser
 		},
+		PassState: func(p *proc.PassState) {
+			p.Dep.Blobs = h.BlobAccessor
+			p.Dep.Sender = h.Sender
+			p.Dep.Records = h.RecordAccessor
+		},
 	}
 
 	initHandle := func(msg bus.Message) *handle.Init {

@@ -42,6 +42,7 @@ type Dependencies struct {
 	GetJet              func(*GetJet)
 	GetChildren         func(*GetChildren)
 	HotData             func(*HotData)
+	PassState           func(*PassState)
 }
 
 type ReturnReply struct {

@@ -43,7 +43,7 @@ type SendObject struct {
 		Jets           jet.Storage
 		JetUpdater     jet.Fetcher
 		RecordAccessor object.RecordAccessor
-		Blobs          blob.Storage
+		Blobs          blob.Accessor
 		Bus            insolar.MessageBus
 		Sender         bus.Sender
 	}

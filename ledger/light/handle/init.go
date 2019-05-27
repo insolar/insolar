@@ -49,6 +49,9 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		case *payload.GetObject:
 			h := NewGetObject(s.Dep, s.Message, *p)
 			return f.Handle(ctx, h.Present)
+		case *payload.PassState:
+			h := NewPassState(s.Dep, s.Message.WatermillMsg)
+			return f.Handle(ctx, h.Present)
 		default:
 			return fmt.Errorf("no handler for message type #%T", pl)
 		}
