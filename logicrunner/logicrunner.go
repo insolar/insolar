@@ -322,7 +322,6 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 		log.Error("Initializing builtin done")
 	}
 
-	lr.rpc = lrCommon.NewRPC(ctx, lr, lr.Cfg)
 	if lr.Cfg.GoPlugin != nil {
 		if err := lr.initializeGoPlugin(ctx); err != nil {
 			return err

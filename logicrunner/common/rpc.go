@@ -62,6 +62,9 @@ func NewRPC(_ context.Context, lr LogicRunnerRPCStub, cfg *configuration.LogicRu
 
 // StartRPC starts RPC server for isolated executors to use
 func (rpc *RPC) Start(ctx context.Context) {
+	if rpc == nil {
+		panic("Calling start on nil")
+	}
 	var err error
 	logger := inslogger.FromContext(ctx)
 
@@ -80,6 +83,9 @@ func (rpc *RPC) Start(ctx context.Context) {
 }
 
 func (rpc *RPC) Stop(_ context.Context) error {
+	if rpc == nil {
+		return nil
+	}
 	if rpc.isStarted {
 		rpc.isStarted = false
 		if err := rpc.listener.Close(); err != nil {
