@@ -187,7 +187,7 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 
 	msg := &message.CallMethod{
 		Request: record.Request{
-			Caller: testutils.RandomRef(),
+			Caller:    testutils.RandomRef(),
 			Object:    objectRef,
 			Method:    args.Method,
 			Arguments: argsSerialized,

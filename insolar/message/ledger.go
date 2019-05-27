@@ -88,8 +88,8 @@ func (*GetCode) Type() insolar.MessageType {
 // GetObject retrieves object From storage.
 type GetObject struct {
 	ledgerMessage
-	Head     insolar.Reference
-	State    *insolar.ID // If nil, will fetch the latest state.
+	Head  insolar.Reference
+	State *insolar.ID // If nil, will fetch the latest state.
 }
 
 // AllowedSenderObjectAndRole implements interface method
@@ -343,9 +343,10 @@ func (*HotData) Type() insolar.MessageType {
 
 // HotIndex contains meat about hot-data
 type HotIndex struct {
-	LastUsed insolar.PulseNumber
-	ObjID    insolar.ID
-	Index    []byte
+	LifelineLastUsed   insolar.PulseNumber
+	ObjID              insolar.ID
+	Index              []byte
+	LastKnownPendingPN insolar.PulseNumber
 }
 
 // GetPendingRequests fetches pending requests for object.

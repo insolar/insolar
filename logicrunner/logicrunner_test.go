@@ -204,9 +204,9 @@ func (s *LogicRunnerFuncSuite) incrementPulseHelper(
 	for _, meta := range bucks {
 		encoded, _ := meta.Lifeline.Marshal()
 		hotIndexes = append(hotIndexes, message.HotIndex{
-			LastUsed: meta.LifelineLastUsed,
-			ObjID:    meta.ObjID,
-			Index:    encoded,
+			LifelineLastUsed: meta.LifelineLastUsed,
+			ObjID:            meta.ObjID,
+			Index:            encoded,
 		})
 	}
 
@@ -247,7 +247,7 @@ func executeMethod(
 
 	msg := &message.CallMethod{
 		Request: record.Request{
-			Caller: testutils.RandomRef(),
+			Caller:    testutils.RandomRef(),
 			Nonce:     nonce,
 			Object:    &objRef,
 			Prototype: &proxyPrototype,

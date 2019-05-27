@@ -126,8 +126,8 @@ func (p *HotData) process(ctx context.Context) error {
 			object.IndexBucket{
 				ObjID:            meta.ObjID,
 				Lifeline:         decodedIndex,
-				LifelineLastUsed: meta.LastUsed,
-				Records:          []record.Virtual{},
+				LifelineLastUsed: meta.LifelineLastUsed,
+				PendingRecords:   []record.Virtual{},
 			},
 		)
 		if err != nil {

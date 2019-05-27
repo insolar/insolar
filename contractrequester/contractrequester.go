@@ -28,10 +28,10 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"

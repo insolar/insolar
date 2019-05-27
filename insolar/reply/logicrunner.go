@@ -22,7 +22,7 @@ import (
 
 // CallMethod - the most common reply
 type CallMethod struct {
-	Result  []byte
+	Result []byte
 }
 
 // Type returns type of the reply

@@ -509,9 +509,9 @@ func (s *handlerSuite) TestMessageHandler_HandleHotRecords() {
 		PulseNumber: insolar.FirstPulseNumber,
 		HotIndexes: []message.HotIndex{
 			{
-				Index:    firstIndex,
-				LastUsed: insolar.PulseNumber(234),
-				ObjID:    *firstID,
+				Index:            firstIndex,
+				LifelineLastUsed: insolar.PulseNumber(234),
+				ObjID:            *firstID,
 			},
 		},
 		PendingRequests: map[insolar.ID]recentstorage.PendingObjectContext{

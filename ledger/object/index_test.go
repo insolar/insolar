@@ -58,11 +58,11 @@ func TestInMemoryIndex_SetLifeline(t *testing.T) {
 		meta, metaOK := buck[id]
 		require.Equal(t, true, metaOK)
 		require.NotNil(t, meta)
-		require.NotNil(t, meta.bucket)
+		require.NotNil(t, meta.IndexBucket)
 
-		require.Equal(t, meta.bucket.Lifeline, idx)
-		require.Equal(t, meta.bucket.LifelineLastUsed, pn)
-		require.Equal(t, meta.bucket.ObjID, id)
+		require.Equal(t, meta.Lifeline, idx)
+		require.Equal(t, meta.LifelineLastUsed, pn)
+		require.Equal(t, meta.ObjID, id)
 	})
 
 	t.Run("save multiple values", func(t *testing.T) {
@@ -84,10 +84,10 @@ func TestInMemoryIndex_SetLifeline(t *testing.T) {
 		require.Equal(t, 2, len(storage.buckets))
 		require.Equal(t, 2, len(storage.buckets[1]))
 		require.Equal(t, 2, len(storage.buckets[2]))
-		require.Equal(t, *fID, storage.buckets[1][*fID].bucket.ObjID)
-		require.Equal(t, *sID, storage.buckets[1][*sID].bucket.ObjID)
-		require.Equal(t, *tID, storage.buckets[2][*tID].bucket.ObjID)
-		require.Equal(t, *fthID, storage.buckets[2][*fthID].bucket.ObjID)
+		require.Equal(t, *fID, storage.buckets[1][*fID].ObjID)
+		require.Equal(t, *sID, storage.buckets[1][*sID].ObjID)
+		require.Equal(t, *tID, storage.buckets[2][*tID].ObjID)
+		require.Equal(t, *fthID, storage.buckets[2][*fthID].ObjID)
 	})
 
 	t.Run("override indices is ok", func(t *testing.T) {
@@ -223,7 +223,7 @@ func TestInMemoryIndex_SetBucket(t *testing.T) {
 		require.NotNil(t, savedBuck)
 
 		buckBuf, _ := buck.Marshal()
-		savedBuckBuf, _ := savedBuck.bucket.Marshal()
+		savedBuckBuf, _ := savedBuck.Marshal()
 
 		require.Equal(t, buckBuf, savedBuckBuf)
 	})
@@ -253,7 +253,7 @@ func TestInMemoryIndex_SetBucket(t *testing.T) {
 		require.NotNil(t, savedBuck)
 
 		sBuckBuf, _ := sBuck.Marshal()
-		savedBuckBuf, _ := savedBuck.bucket.Marshal()
+		savedBuckBuf, _ := savedBuck.Marshal()
 
 		require.Equal(t, sBuckBuf, savedBuckBuf)
 	})
@@ -282,14 +282,14 @@ func TestInMemoryIndex_SetLifelineUsage(t *testing.T) {
 
 		_ = index.Set(ctx, pn, id, idx)
 
-		require.Equal(t, pn, index.buckets[pn][id].bucket.LifelineLastUsed)
+		require.Equal(t, pn, index.buckets[pn][id].LifelineLastUsed)
 
 		index.buckets[newPN] = index.buckets[pn]
 
 		err := index.SetLifelineUsage(ctx, newPN, id)
 
 		require.NoError(t, err)
-		require.Equal(t, newPN, index.buckets[newPN][id].bucket.LifelineLastUsed)
+		require.Equal(t, newPN, index.buckets[newPN][id].LifelineLastUsed)
 	})
 
 	t.Run("returns ErrLifelineNotFound if no bucket", func(t *testing.T) {

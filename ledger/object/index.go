@@ -41,6 +41,8 @@ type LifelineModifier interface {
 
 // PendingModifier provides methods for modifying pending requests.
 type PendingModifier interface {
+	// SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, req record.Request) error
+	// SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, req record.Result) error
 	// SetRecord adds a record to a bucket with provided pulseNumber and ID
 	SetRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, rec record.Virtual) error
 }
@@ -85,36 +87,36 @@ type IndexBucketAccessor interface {
 type lockedIndexBucket struct {
 	sync.RWMutex
 
-	bucket IndexBucket
+	IndexBucket
 }
 
 func (i *lockedIndexBucket) lifeline() (Lifeline, error) {
 	i.RLock()
 	defer i.RUnlock()
 
-	return CloneIndex(i.bucket.Lifeline), nil
+	return CloneIndex(i.Lifeline), nil
 }
 
 func (i *lockedIndexBucket) setLifeline(lifeline Lifeline, pn insolar.PulseNumber) {
 	i.Lock()
 	defer i.Unlock()
 
-	i.bucket.Lifeline = lifeline
-	i.bucket.LifelineLastUsed = pn
+	i.Lifeline = lifeline
+	i.LifelineLastUsed = pn
 }
 
 func (i *lockedIndexBucket) setLifelineLastUsed(pn insolar.PulseNumber) {
 	i.Lock()
 	defer i.Unlock()
 
-	i.bucket.LifelineLastUsed = pn
+	i.LifelineLastUsed = pn
 }
 
-func (i *lockedIndexBucket) setResult(rec record.Virtual) {
+func (i *lockedIndexBucket) setPendingRecord(rec record.Virtual) {
 	i.Lock()
 	defer i.Unlock()
 
-	i.bucket.Records = append(i.bucket.Records, rec)
+	i.PendingRecords = append(i.PendingRecords, rec)
 }
 
 // InMemoryIndex is a in-memory storage, that stores a collection of IndexBuckets
@@ -135,9 +137,9 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 	defer i.bucketsLock.Unlock()
 
 	bucket := &lockedIndexBucket{
-		bucket: IndexBucket{
-			ObjID:   objID,
-			Records: []record.Virtual{},
+		IndexBucket: IndexBucket{
+			ObjID:          objID,
+			PendingRecords: []record.Virtual{},
 		},
 	}
 
@@ -180,13 +182,26 @@ func (i *InMemoryIndex) Set(ctx context.Context, pn insolar.PulseNumber, objID i
 	return nil
 }
 
+// func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, req record.Request) error {
+// 	b := i.bucket(pn, objID)
+// 	if b == nil {
+// 		return ErrLifelineNotFound
+// 	}
+// }
+// func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, req record.Result) error {
+// 	b := i.bucket(pn, objID)
+// 	if b == nil {
+// 		return ErrLifelineNotFound
+// 	}
+// }
+
 // SetRecord adds a request to a bucket with provided pulseNumber and ID
 func (i *InMemoryIndex) SetRecord(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, rec record.Virtual) error {
 	b := i.bucket(pn, objID)
 	if b == nil {
 		return ErrLifelineNotFound
 	}
-	b.setResult(rec)
+	b.setPendingRecord(rec)
 
 	stats.Record(ctx,
 		statObjectPendingRequestsInMemoryAddedCount.M(int64(1)),
@@ -207,7 +222,7 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 	}
 
 	bucks[bucket.ObjID] = &lockedIndexBucket{
-		bucket: bucket,
+		IndexBucket: bucket,
 	}
 
 	stats.Record(ctx,
@@ -239,20 +254,20 @@ func (i *InMemoryIndex) ForPNAndJet(ctx context.Context, pn insolar.PulseNumber,
 	res := []IndexBucket{}
 
 	for _, b := range bucks {
-		if b.bucket.Lifeline.JetID != jetID {
+		if b.Lifeline.JetID != jetID {
 			continue
 		}
 
-		clonedLfl := CloneIndex(b.bucket.Lifeline)
+		clonedLfl := CloneIndex(b.Lifeline)
 		var clonedRecords []record.Virtual
 
-		clonedRecords = append(clonedRecords, b.bucket.Records...)
+		clonedRecords = append(clonedRecords, b.PendingRecords...)
 
 		res = append(res, IndexBucket{
-			ObjID:            b.bucket.ObjID,
+			ObjID:            b.ObjID,
 			Lifeline:         clonedLfl,
-			LifelineLastUsed: b.bucket.LifelineLastUsed,
-			Records:          clonedRecords,
+			LifelineLastUsed: b.LifelineLastUsed,
+			PendingRecords:   clonedRecords,
 		})
 	}
 
@@ -289,7 +304,7 @@ func (i *InMemoryIndex) DeleteForPN(ctx context.Context, pn insolar.PulseNumber)
 
 	for _, buck := range bucks {
 		stats.Record(ctx,
-			statObjectPendingRequestsInMemoryRemovedCount.M(int64(len(buck.bucket.Records))),
+			statObjectPendingRequestsInMemoryRemovedCount.M(int64(len(buck.PendingRecords))),
 		)
 	}
 }

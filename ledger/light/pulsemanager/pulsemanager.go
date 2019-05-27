@@ -280,9 +280,9 @@ func (m *PulseManager) getExecutorHotData(
 			continue
 		}
 		hotIndexes = append(hotIndexes, message.HotIndex{
-			LastUsed: meta.LifelineLastUsed,
-			ObjID:    meta.ObjID,
-			Index:    encoded,
+			LifelineLastUsed: meta.LifelineLastUsed,
+			ObjID:            meta.ObjID,
+			Index:            encoded,
 		})
 	}
 
