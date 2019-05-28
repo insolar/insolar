@@ -23,6 +23,7 @@ import (
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	wmBus "github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -117,16 +118,18 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 		WatermillMsg: msg,
 		ReplyTo:      make(chan bus.Reply),
 	}
-	p, err := pulseFromString(msg.Metadata.Get(wmBus.MetaPulse))
+
+	meta := payload.Meta{}
+	err := meta.Unmarshal(msg.Payload)
 	if err != nil {
-		return nil, errors.Wrap(err, "can't get pulse from string")
+		return nil, errors.Wrap(err, "failed to unmarshal meta")
 	}
 	ctx, logger := inslogger.WithField(ctx, "pulse", msg.Metadata.Get(wmBus.MetaPulse))
-	ctx = pulse.ContextWith(ctx, p)
+	ctx = pulse.ContextWith(ctx, meta.Pulse)
 	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(wmBus.MetaTraceID))
 	go func() {
 		f := thread.NewThread(msgBus, d.controller)
-		handle := d.getHandleByPulse(p)
+		handle := d.getHandleByPulse(meta.Pulse)
 		err := f.Run(ctx, handle(msgBus))
 		if err != nil {
 			logger.Error(errors.Wrap(err, "Handling failed"))
