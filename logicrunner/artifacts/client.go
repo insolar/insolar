@@ -97,7 +97,7 @@ func (m *client) RegisterRequest(
 		recID := insolar.NewID(currentPN, hash)
 		recRef = insolar.NewReference(insolar.DomainID, *recID)
 	default:
-		return nil, errors.New("not supported call type "+ request.CallType.String())
+		return nil, errors.New("not supported call type " + request.CallType.String())
 	}
 
 	id, err := m.setRecord(
@@ -181,7 +181,7 @@ func (m *client) GetObject(
 	}()
 
 	getObjectMsg := &message.GetObject{
-		Head:     head,
+		Head: head,
 	}
 
 	sender := messagebus.BuildSender(
@@ -292,7 +292,7 @@ func (m *client) GetPendingRequest(ctx context.Context, objectID insolar.ID) (in
 			return nil, fmt.Errorf("GetPendingRequest: unexpected message: %#v", r)
 		}
 
-		return &message.Parcel{ Msg: &message.CallMethod{Request: *castedRecord} }, nil
+		return &message.Parcel{Msg: &message.CallMethod{Request: *castedRecord}}, nil
 	case *reply.Error:
 		return nil, r.Error()
 	default:
@@ -843,6 +843,7 @@ func (m *client) setRecord(
 		m.DefaultBus.Send,
 		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
+		messagebus.RetryFlowCancelled(m.PulseAccessor),
 	)
 	genericReply, err := sender(ctx, &message.SetRecord{
 		Record:    data,
@@ -869,7 +870,11 @@ func (m *client) setBlob(
 	target insolar.Reference,
 ) (*insolar.ID, error) {
 
-	sender := messagebus.BuildSender(m.DefaultBus.Send, messagebus.RetryJetSender(m.JetStorage))
+	sender := messagebus.BuildSender(
+		m.DefaultBus.Send,
+		messagebus.RetryJetSender(m.JetStorage),
+		messagebus.RetryFlowCancelled(m.PulseAccessor),
+	)
 	genericReact, err := sender(ctx, &message.SetBlob{
 		Memory:    blob,
 		TargetRef: target,
@@ -903,6 +908,7 @@ func (m *client) sendUpdateObject(
 		m.DefaultBus.Send,
 		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
+		messagebus.RetryFlowCancelled(m.PulseAccessor),
 	)
 	genericReply, err := sender(
 		ctx,
@@ -941,6 +947,7 @@ func (m *client) registerChild(
 		m.DefaultBus.Send,
 		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
+		messagebus.RetryFlowCancelled(m.PulseAccessor),
 	)
 	genericReact, err := sender(ctx, &message.RegisterChild{
 		Record: data,
