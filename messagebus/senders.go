@@ -33,7 +33,7 @@ import (
 )
 
 const jetMissRetryCount = 10
-const incorrectPulseRetryCount = 3
+const incorrectPulseRetryCount = 2
 const flowCancelledRetryCount = 2
 
 // PreSender is an alias for a function
@@ -167,37 +167,24 @@ func RetryJetSender(jetModifier jet.Modifier) PreSender {
 // NOTE: This is not completely correct way to behave: 1) we should wait until pulse switches, not some hardcoded time,
 // 2) it should be handled by recipient and get it right with Flow "handles"
 func RetryIncorrectPulse(accessor pulse.Accessor) PreSender {
-	return func(sender Sender) Sender {
-		return func(
-			ctx context.Context, msg insolar.Message, options *insolar.MessageSendOptions,
-		) (insolar.Reply, error) {
-			var lastPulse insolar.PulseNumber
-			for {
-				currentPulse, err := accessor.Latest(ctx)
-				if err != nil {
-					return nil, errors.Wrap(err, "[ RetryIncorrectPulse ] Can't get latest pulse")
-				}
-
-				if currentPulse.PulseNumber == lastPulse {
-					inslogger.FromContext(ctx).Debug("[ RetryIncorrectPulse ]  wait for pulse change")
-					time.Sleep(100 * time.Millisecond)
-					continue
-				}
-				lastPulse = currentPulse.PulseNumber
-
-				rep, err := sender(ctx, msg, options)
-				if err == nil || !strings.Contains(err.Error(), "Incorrect message pulse") {
-					return rep, err
-				}
-			}
-		}
-	}
+	return retrier(accessor, incorrectPulseRetryCount,
+		"Incorrect message pulse",
+		"[ RetryIncorrectPulse ] incorrect message pulse, retrying",
+		"incorrect message pulse (retry limit exceeded on client)")
 }
 
+// RetryFlowCancelled retries message on next pulse when received flow cancelled error.
 func RetryFlowCancelled(accessor pulse.Accessor) PreSender {
+	return retrier(accessor, flowCancelledRetryCount,
+		"flow cancelled",
+		"[ RetryFlowCancelled ] flow cancelled, retrying",
+		"flow cancelled (retry limit exceeded on client)")
+}
+
+func retrier(accessor pulse.Accessor, retriesCount int, errSubstr string, debugStr string, err string) PreSender{
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg insolar.Message, options *insolar.MessageSendOptions) (insolar.Reply, error) {
-			retries := flowCancelledRetryCount
+			retries := retriesCount
 			var lastPulse insolar.PulseNumber
 			for retries > 0 {
 
@@ -214,14 +201,14 @@ func RetryFlowCancelled(accessor pulse.Accessor) PreSender {
 				lastPulse = currentPulse.PulseNumber
 
 				rep, err := sender(ctx, msg, options)
-				if err == nil || !strings.HasSuffix(err.Error(), "flow cancelled") {
+				if err == nil || !strings.Contains(err.Error(), errSubstr) {
 					return rep, err
 				}
 
-				inslogger.FromContext(ctx).Debug("[ RetryFlowCancelled ] flow cancelled, retrying")
+				inslogger.FromContext(ctx).Debug(debugStr)
 				retries--
 			}
-			return nil, errors.New("flow cancelled (retry limit exceeded on client)")
+			return nil, errors.New(err)
 		}
 	}
 }
