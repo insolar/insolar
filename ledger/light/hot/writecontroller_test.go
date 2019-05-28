@@ -23,7 +23,6 @@ import (
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -48,7 +47,7 @@ func TestWriteController_Open(t *testing.T) {
 		require.NoError(t, err)
 
 		err = m.Open(ctx, 1)
-		require.NoError(t, err)
+		require.Error(t, err)
 	})
 
 	t.Run("try to open previous pulse", func(t *testing.T) {
@@ -60,7 +59,7 @@ func TestWriteController_Open(t *testing.T) {
 		require.NoError(t, err)
 
 		err = m.Open(ctx, 1)
-		assert.EqualError(t, err, "requested pulse is closed for writing")
+		require.Error(t, err)
 	})
 }
 
@@ -87,7 +86,7 @@ func TestWriteController_CloseAndWait(t *testing.T) {
 		require.NoError(t, err)
 
 		err = m.CloseAndWait(ctx, 1)
-		assert.EqualError(t, err, "requested pulse is closed for writing")
+		require.Error(t, err)
 	})
 
 	t.Run("try to close incorrect pulse", func(t *testing.T) {
@@ -99,10 +98,10 @@ func TestWriteController_CloseAndWait(t *testing.T) {
 		require.NoError(t, err)
 
 		err = m.CloseAndWait(ctx, 1)
-		assert.EqualError(t, err, "requested pulse is closed for writing")
+		require.Error(t, err)
 
 		err = m.CloseAndWait(ctx, 3)
-		assert.EqualError(t, err, "requested pulse is closed for writing")
+		require.Error(t, err)
 	})
 }
 
@@ -115,7 +114,7 @@ func TestWriteController_Begin(t *testing.T) {
 
 		m := hot.NewWriteController()
 		_, err := m.Begin(ctx, 1)
-		assert.EqualError(t, err, "requested pulse is closed for writing")
+		require.Error(t, err)
 	})
 
 	t.Run("begin for closed pulse", func(t *testing.T) {
@@ -129,7 +128,7 @@ func TestWriteController_Begin(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = m.Begin(ctx, 1)
-		assert.EqualError(t, err, "requested pulse is closed for writing")
+		require.Error(t, err)
 	})
 
 	t.Run("begin for correct pulse", func(t *testing.T) {
@@ -171,7 +170,7 @@ func TestWriteController_Begin(t *testing.T) {
 		time.Sleep(time.Millisecond * 100)
 
 		_, err = m.Begin(ctx, 1)
-		assert.EqualError(t, err, "requested pulse is closed for writing")
+		require.Error(t, err)
 
 		done()
 	})

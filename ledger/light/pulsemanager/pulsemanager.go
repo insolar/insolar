@@ -411,10 +411,12 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 		return nil
 	}
 
+	logger := inslogger.FromContext(ctx)
+
 	if oldPulse != nil && prevPN != nil {
 		err = m.WriteManager.CloseAndWait(ctx, oldPulse.PulseNumber)
 		if err != nil {
-			return errors.Wrap(err, "can't close pulse for writing")
+			logger.Error("can't close pulse for writing", err)
 		}
 		err = m.processEndPulse(ctx, jets, *prevPN, *oldPulse, newPulse)
 		if err != nil {
@@ -426,7 +428,7 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 
 	err = m.WriteManager.Open(ctx, newPulse.PulseNumber)
 	if err != nil {
-		return errors.Wrap(err, "can't open pulse for writing")
+		logger.Error("can't open pulse for writing", err)
 	}
 
 	err = m.Bus.OnPulse(ctx, newPulse)

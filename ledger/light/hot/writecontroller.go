@@ -18,16 +18,16 @@ package hot
 
 import (
 	"context"
+	"fmt"
 	"sync"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/hot.WriteAccessor -o ./ -s _mock.go
 
 type WriteAccessor interface {
-	// Begin requests writing access for pulse number. If requested pulse is closed, ErrClosed will be returned.
+	// Begin requests writing access for pulse number. If requested pulse is closed, ErrWriteClosed will be returned.
 	// The caller must call returned "done" function when finished writing.
 	Begin(context.Context, insolar.PulseNumber) (done func(), err error)
 }
@@ -60,15 +60,11 @@ func (m *WriteController) Begin(ctx context.Context, pulse insolar.PulseNumber) 
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
-	logger := inslogger.FromContext(ctx)
-
 	if pulse != m.current {
-		logger.Errorf("can't begin writing for wrong pulse: opened - %v, requested - %v", m.current, pulse)
-		return func() {}, ErrWriteClosed
+		return func() {}, fmt.Errorf("can't begin writing for wrong pulse: opened - %v, requested - %v", m.current, pulse)
 	}
 	if m.closed {
-		logger.Error("requested pulse is closed for writing")
-		return func() {}, ErrWriteClosed
+		return func() {}, fmt.Errorf("requested pulse is closed for writing")
 	}
 	m.wg.Add(1)
 
@@ -79,15 +75,11 @@ func (m *WriteController) Open(ctx context.Context, pulse insolar.PulseNumber) e
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
-	logger := inslogger.FromContext(ctx)
-
 	if pulse < m.current {
-		logger.Error("can't open past pulse for writing: ", pulse)
-		return ErrWriteClosed
+		return fmt.Errorf("can't open past pulse for writing: %v", pulse)
 	}
 	if pulse == m.current {
-		logger.Warn("requested pulse already opened for writing: ", pulse)
-		return nil
+		return fmt.Errorf("requested pulse already opened for writing: %v", pulse)
 	}
 
 	m.wg = sync.WaitGroup{}
@@ -100,18 +92,14 @@ func (m *WriteController) Open(ctx context.Context, pulse insolar.PulseNumber) e
 func (m *WriteController) CloseAndWait(ctx context.Context, pulse insolar.PulseNumber) error {
 	m.lock.Lock()
 
-	logger := inslogger.FromContext(ctx)
-
 	if pulse != m.current {
-		logger.Errorf("wrong pulse for closing: opened - %v, requested = %v", m.current, pulse)
 		m.lock.Unlock()
-		return ErrWriteClosed
+		return fmt.Errorf("wrong pulse for closing: opened - %v, requested = %v", m.current, pulse)
 	}
 
-	if pulse == m.current && m.closed {
-		logger.Error("requested pulse already closed for writing: ", pulse)
+	if m.closed {
 		m.lock.Unlock()
-		return ErrWriteClosed
+		return fmt.Errorf("requested pulse already closed for writing: %v", pulse)
 	}
 
 	m.closed = true
