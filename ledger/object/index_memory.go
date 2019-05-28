@@ -178,7 +178,39 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	return nil
 }
 
-func (i *InMemoryIndex) HasOpenPendingsBehind(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (bool, *insolar.PulseNumber, error) {
+func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, recs []record.Virtual) error {
+	b := i.bucket(pn, objID)
+	if b == nil {
+		return ErrLifelineNotFound
+	}
+
+	b.Lock()
+	defer b.Unlock()
+
+	newChain := make([]record.Virtual, len(b.PendingRecords)+len(recs))
+	for _, rec := range recs {
+		switch r := record.Unwrap(&rec).(type) {
+		case *record.Request:
+			b.requestCache[*r.Object.Record()] = nil
+			newChain = append(newChain, rec)
+		case *record.Result:
+			res, ok := b.requestCache[*r.Request.Record()]
+			if !ok || res != nil {
+				panic("inconsistent chain state")
+			}
+			b.requestCache[*r.Request.Record()] = r
+			newChain = append(newChain, rec)
+		default:
+			panic("unknown record")
+		}
+	}
+	newChain = append(newChain, b.PendingRecords...)
+	b.PendingRecords = newChain
+
+	return nil
+}
+
+func (i *InMemoryIndex) Meta(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (bool, *insolar.PulseNumber, error) {
 	b := i.bucket(pn, objID)
 	if b == nil {
 		return false, nil, ErrLifelineNotFound
@@ -212,6 +244,30 @@ func (i *InMemoryIndex) HasOpenPendingsBehind(ctx context.Context, pn insolar.Pu
 	}
 
 	return false, lastKnowPN, nil
+}
+
+func (i *InMemoryIndex) HasPendingBehind(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (bool, error) {
+	b := i.bucket(currentPN, objID)
+	if b == nil {
+		return false, ErrLifelineNotFound
+	}
+
+	b.RLock()
+	defer b.RUnlock()
+
+	return b.HasOpenRequestsBehind, nil
+}
+
+func (i *InMemoryIndex) LastKnownPN(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (*insolar.PulseNumber, error) {
+	b := i.bucket(currentPN, objID)
+	if b == nil {
+		return nil, ErrLifelineNotFound
+	}
+
+	b.RLock()
+	defer b.RUnlock()
+
+	return b.LastKnownPendingPN, nil
 }
 
 // SetBucket adds a bucket with provided pulseNumber and ID

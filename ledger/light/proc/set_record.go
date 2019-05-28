@@ -20,6 +20,8 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/insolar/jet"
+	"github.com/insolar/insolar/insolar/message"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -40,10 +42,15 @@ type SetRecord struct {
 	Dep struct {
 		Bus                   insolar.MessageBus
 		RecentStorageProvider recentstorage.Provider
-		PendingModifier       object.PendingModifier
-		PCS                   insolar.PlatformCryptographyScheme
-		RecordModifier        object.RecordModifier
-		PendingRequestsLimit  int
+
+		Coordinator jet.Coordinator
+
+		PendingModifier object.PendingModifier
+		PendingAccessor object.PendingAccessor
+
+		PCS                  insolar.PlatformCryptographyScheme
+		RecordModifier       object.RecordModifier
+		PendingRequestsLimit int
 	}
 }
 
@@ -140,6 +147,77 @@ func (p *SetRecord) handleResult(ctx context.Context, concrete record.Record, r 
 	err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, r)
 	if err != object.ErrPendingRequestNotFound {
 		return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
+	}
+	if err == nil {
+		return nil
+	}
+
+	has, err := p.Dep.PendingAccessor.HasPendingBehind(ctx, flow.Pulse(ctx), r.Object)
+	if err != nil {
+		return &bus.Reply{Err: errors.Wrap(err, "can't check pendings behind")}
+	}
+	if !has {
+		return &bus.Reply{Err: errors.Wrap(err, "there aren't any unclosed requests")}
+	}
+	lastKnownPN, err := p.Dep.PendingAccessor.LastKnownPN(ctx, flow.Pulse(ctx), r.Object)
+	if err != nil || lastKnownPN == nil {
+		return &bus.Reply{Err: errors.Wrap(err, "pending chain is broken")}
+	}
+
+	err = p.fillPendingFilament(ctx, r.Object, *lastKnownPN)
+	if err != nil {
+		return &bus.Reply{Err: errors.Wrap(err, "can't traverse the pending filament")}
+	}
+
+	err = p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, r)
+	if err != nil {
+		return nil
+	}
+
+	return nil
+}
+
+func (p *SetRecord) fillPendingFilament(ctx context.Context, objID insolar.ID, destPN insolar.PulseNumber) error {
+	continueFilling := true
+
+	for continueFilling {
+		node, err := p.Dep.Coordinator.NodeForObject(ctx, objID, flow.Pulse(ctx), destPN)
+		if err != nil {
+			return err
+		}
+
+		rep, err := p.Dep.Bus.Send(
+			ctx,
+			&message.GetPendingFilament{ObjectID: objID},
+			&insolar.MessageSendOptions{
+				Receiver: node,
+			},
+		)
+		if err != nil {
+			return err
+		}
+
+		switch r := rep.(type) {
+		case *reply.PendingFilament:
+			if r.HasFullChain == true {
+				continueFilling = false
+			}
+			if r.LastKnownPN == nil {
+				continueFilling = false
+			} else {
+				destPN = *r.LastKnownPN
+			}
+
+			err := p.Dep.PendingModifier.SetFilament(ctx, flow.Pulse(ctx), objID, r.Records)
+			if err != nil {
+				return err
+			}
+
+		case *reply.Error:
+			return r.Error()
+		default:
+			return fmt.Errorf("fillPendingFilament: unexpected reply: %#v", rep)
+		}
 	}
 
 	return nil

@@ -226,6 +226,7 @@ const (
 	TypeGetRequest
 	// TypeGetPendingRequestID fetches a pending request id from ledger
 	TypeGetPendingRequestID
+	TypeGetPendingFilament
 
 	// Heavy replication
 

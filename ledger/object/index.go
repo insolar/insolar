@@ -89,8 +89,11 @@ type IndexBucketAccessor interface {
 type PendingModifier interface {
 	SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, req record.Request) error
 	SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, req record.Result) error
+	SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, recs []record.Virtual) error
 }
 
 type PendingAccessor interface {
-	HasOpenPendingsBehind(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (hasPendingsBehing bool, lastKnownPN *insolar.PulseNumber, err error)
+	Meta(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (hasPendingsBehind bool, lastKnownPN *insolar.PulseNumber, err error)
+	HasPendingBehind(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (bool, error)
+	LastKnownPN(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (*insolar.PulseNumber, error)
 }
