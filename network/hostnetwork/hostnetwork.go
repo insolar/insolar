@@ -195,7 +195,7 @@ func (hn *hostNetwork) handleRequest(p *packet.Packet) {
 	defer span.End()
 	response, err := handler(ctx, p)
 	if err != nil {
-		logger.Errorf("Error handling request %s from node %s: %s", p.Type, p.Sender.NodeID, err)
+		logger.Errorf("Error handling request %s from node %s: %s", p.GetType(), p.Sender.NodeID, err)
 		return
 	}
 
