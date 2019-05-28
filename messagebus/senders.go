@@ -34,6 +34,7 @@ import (
 
 const jetMissRetryCount = 10
 const incorrectPulseRetryCount = 3
+const flowCancelledRetryCount = 2
 
 // PreSender is an alias for a function
 // which is working like a `middleware` for messagebus.Send
@@ -192,3 +193,36 @@ func RetryIncorrectPulse(accessor pulse.Accessor) PreSender {
 		}
 	}
 }
+
+func RetryFlowCancelled(accessor pulse.Accessor) PreSender {
+	return func(sender Sender) Sender {
+		return func(ctx context.Context, msg insolar.Message, options *insolar.MessageSendOptions) (insolar.Reply, error) {
+			retries := flowCancelledRetryCount
+			var lastPulse insolar.PulseNumber
+			for retries > 0 {
+
+				currentPulse, err := accessor.Latest(ctx)
+				if err != nil {
+					return nil, errors.Wrap(err, "[ RetryIncorrectPulse ] Can't get latest pulse")
+				}
+
+				if currentPulse.PulseNumber == lastPulse {
+					inslogger.FromContext(ctx).Debug("[ RetryIncorrectPulse ]  wait for pulse change")
+					time.Sleep(100 * time.Millisecond)
+					continue
+				}
+				lastPulse = currentPulse.PulseNumber
+
+				rep, err := sender(ctx, msg, options)
+				if err == nil || !strings.HasSuffix(err.Error(), "flow cancelled") {
+					return rep, err
+				}
+
+				inslogger.FromContext(ctx).Debug("[ RetryFlowCancelled ] flow cancelled, retrying")
+				retries--
+			}
+			return nil, errors.New("flow cancelled (retry limit exceeded on client)")
+		}
+	}
+}
+
