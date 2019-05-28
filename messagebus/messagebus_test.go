@@ -18,7 +18,6 @@ package messagebus
 
 import (
 	"context"
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"testing"
@@ -217,7 +216,6 @@ func TestMessageBus_createWatermillMessage(t *testing.T) {
 
 	require.NotNil(t, msg)
 	require.NotNil(t, msg.Payload)
-	require.Equal(t, fmt.Sprintf("%d", pulse.PulseNumber), msg.Metadata.Get(bus.MetaPulse))
 	require.Equal(t, parcel.Msg.Type().String(), msg.Metadata.Get(bus.MetaType))
 	require.Equal(t, insolar.Reference{}.String(), msg.Metadata.Get(bus.MetaSender))
 }
@@ -249,7 +247,7 @@ func TestMessageBus_deserializePayload_GetError(t *testing.T) {
 	buf, err := meta.Marshal()
 	require.NoError(t, err)
 	msg := watermillMsg.NewMessage(watermill.NewUUID(), buf)
-	msg.Metadata.Set(bus.MetaType, bus.TypeError)
+	msg.Metadata.Set(bus.MetaType, bus.TypeErrorReply)
 
 	r, err := deserializePayload(msg)
 
@@ -285,7 +283,7 @@ func TestMessageBus_deserializePayload_GetError_WrongBytes(t *testing.T) {
 	buf, err := meta.Marshal()
 	require.NoError(t, err)
 	msg := watermillMsg.NewMessage(watermill.NewUUID(), buf)
-	msg.Metadata.Set(bus.MetaType, bus.TypeError)
+	msg.Metadata.Set(bus.MetaType, bus.TypeErrorReply)
 
 	r, err := deserializePayload(msg)
 

@@ -36,7 +36,7 @@ import (
 func TestNewDispatcher(t *testing.T) {
 	t.Parallel()
 	ok := false
-	var f flow.MakeHandle = func(bus.Message) flow.Handle {
+	var f flow.MakeHandle = func(watermillMsg.Message) flow.Handle {
 		ok = true
 		return nil
 	}
@@ -44,7 +44,7 @@ func TestNewDispatcher(t *testing.T) {
 
 	d := NewDispatcher(f, f)
 	require.NotNil(t, d.controller)
-	handle := d.handles.present(bus.Message{})
+	handle := d.handles.present(watermillMsg.Message{})
 	require.Nil(t, handle)
 	require.True(t, ok)
 }

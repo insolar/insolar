@@ -48,7 +48,7 @@ type Dependencies struct {
 type Init struct {
 	dep *Dependencies
 
-	Message message.Message
+	Message *message.Message
 }
 
 func (s *Init) Future(ctx context.Context, f flow.Flow) error {
@@ -72,35 +72,35 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	case insolar.TypeCallMethod.String():
 		h := &HandleCall{
 			dep:     s.dep,
-			Message: &s.Message,
+			Message: s.Message,
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
 	case insolar.TypePendingFinished.String():
 		h := &HandlePendingFinished{
 			dep:     s.dep,
-			Message: &s.Message,
+			Message: s.Message,
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeStillExecuting.String():
 		h := &HandleStillExecuting{
 			dep:     s.dep,
-			Message: &s.Message,
+			Message: s.Message,
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeAbandonedRequestsNotification.String():
 		h := &HandleAbandonedRequestsNotification{
 			dep:     s.dep,
-			Message: &s.Message,
+			Message: s.Message,
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeExecutorResults.String():
 		h := &HandleExecutorResults{
 			dep:     s.dep,
-			Message: &s.Message,
+			Message: s.Message,
 			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)

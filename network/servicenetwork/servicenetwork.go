@@ -371,7 +371,7 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	if err != nil {
 		return nil, errors.Wrap(err, "error while converting message to bytes")
 	}
-	ctx := inslogger.ContextWithTrace(msg.Context(), msg.Metadata.Get(bus.MetaTraceID))
+	ctx := inslogger.ContextWithTrace(context.Background(), msg.Metadata.Get(bus.MetaTraceID))
 	res, err := n.Controller.SendBytes(ctx, node, deliverWatermillMsg, msgBytes)
 	if err != nil {
 		return nil, errors.Wrap(err, "error while sending watermillMsg to controller")

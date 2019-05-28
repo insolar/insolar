@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"time"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/ledger/light/handle"
 	"github.com/pkg/errors"
@@ -31,7 +32,6 @@ import (
 	"github.com/insolar/insolar/insolar"
 	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
@@ -211,17 +211,16 @@ func NewMessageHandler(
 		Sender: h.Sender,
 	}
 
-	initHandle := func(msg bus.Message) *handle.Init {
+	initHandle := func(msg *watermillMsg.Message) *handle.Init {
 		return &handle.Init{
-			Dep: dep,
-			// TODO: use wm.Message instead of bus.Message
-			Message: *msg.WatermillMsg,
+			Dep:     dep,
+			Message: msg,
 		}
 	}
 
-	h.FlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
+	h.FlowDispatcher = dispatcher.NewDispatcher(func(msg *watermillMsg.Message) flow.Handle {
 		return initHandle(msg).Present
-	}, func(msg bus.Message) flow.Handle {
+	}, func(msg *watermillMsg.Message) flow.Handle {
 		return initHandle(msg).Future
 	})
 	return h

@@ -59,8 +59,10 @@ const (
 )
 
 const (
-	// TypeError is Type for messages with error in Payload
-	TypeError = "error"
+	// TypeErrorReply is Type for messages with error in reply's Payload
+	TypeErrorReply = "error"
+	// TypeReply is Type for messages with Reply in reply's Payload
+	TypeReply = "reply"
 )
 
 //go:generate minimock -i github.com/insolar/insolar/insolar/bus.Sender -o ./ -s _mock.go
@@ -146,23 +148,15 @@ func ErrorAsMessage(ctx context.Context, e error) *message.Message {
 		return nil
 	}
 	resAsMsg := message.NewMessage(watermill.NewUUID(), resInBytes)
-	resAsMsg.Metadata.Set(MetaType, TypeError)
+	resAsMsg.Metadata.Set(MetaType, TypeErrorReply)
 	return resAsMsg
 }
 
 func ReplyAsMessage(ctx context.Context, rep insolar.Reply) *message.Message {
 	resInBytes := reply.ToBytes(rep)
 	resAsMsg := message.NewMessage(watermill.NewUUID(), resInBytes)
-	resAsMsg.Metadata.Set(MetaType, string(rep.Type()))
+	resAsMsg.Metadata.Set(MetaType, TypeReply)
 	return resAsMsg
-}
-
-func SetMetaForRequest(ctx context.Context, request *message.Message, reply *message.Message) *message.Message {
-	receiver := request.Metadata.Get(MetaSender)
-	reply.Metadata.Set(MetaReceiver, receiver)
-	correlationID := middleware.MessageCorrelationID(request)
-	middleware.SetCorrelationID(correlationID, reply)
-	return reply
 }
 
 // SendRole sends message to specified role. Node will be calculated automatically for the latest pulse. Use this
@@ -265,6 +259,12 @@ func (b *Bus) IncomingMessageRouter(h message.HandlerFunc) message.HandlerFunc {
 		b.repliesMutex.RLock()
 		reply, ok := b.replies[id]
 		if !ok {
+			b.repliesMutex.RUnlock()
+			return h(msg)
+		}
+
+		msgType := msg.Metadata.Get(MetaType)
+		if msgType != TypeReply && msgType != TypeErrorReply {
 			b.repliesMutex.RUnlock()
 			return h(msg)
 		}

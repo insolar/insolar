@@ -48,15 +48,24 @@ import (
 const deliverRPCMethodName = "MessageBus.Deliver"
 
 var transferredToWatermill = map[insolar.MessageType]struct{}{
-	insolar.TypeGetObject:          {},
-	insolar.TypeSetRecord:          {},
-	insolar.TypeSetBlob:            {},
-	insolar.TypeGetCode:            {},
-	insolar.TypeGetRequest:         {},
-	insolar.TypeUpdateObject:       {},
-	insolar.TypeGetPendingRequests: {},
-	insolar.TypeRegisterChild:      {},
-	insolar.TypeGetJet:             {},
+	insolar.TypeGetObject:                     {},
+	insolar.TypeSetRecord:                     {},
+	insolar.TypeSetBlob:                       {},
+	insolar.TypeGetCode:                       {},
+	insolar.TypeGetChildren:                   {},
+	insolar.TypeGetRequest:                    {},
+	insolar.TypeUpdateObject:                  {},
+	insolar.TypeGetPendingRequests:            {},
+	insolar.TypeRegisterChild:                 {},
+	insolar.TypeGetJet:                        {},
+	insolar.TypeHotRecords:                    {},
+	insolar.TypeCallMethod:                    {},
+	insolar.TypePendingFinished:               {},
+	insolar.TypeStillExecuting:                {},
+	insolar.TypeAbandonedRequestsNotification: {},
+	insolar.TypeExecutorResults:               {},
+	insolar.TypeGetPendingRequestID:           {},
+	insolar.TypeGetDelegate:                   {},
 }
 
 // MessageBus is component that routes application logic requests,
@@ -167,7 +176,6 @@ func (mb *MessageBus) createWatermillMessage(ctx context.Context, parcel insolar
 	payload := message.ParcelToBytes(parcel)
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
 
-	wmMsg.Metadata.Set(bus.MetaPulse, fmt.Sprintf("%d", currentPulse.PulseNumber))
 	wmMsg.Metadata.Set(bus.MetaType, parcel.Message().Type().String())
 	wmMsg.Metadata.Set(bus.MetaSender, mb.NodeNetwork.GetOrigin().ID().String())
 	return wmMsg
@@ -228,12 +236,15 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 }
 
 func deserializePayload(msg *watermillMsg.Message) (insolar.Reply, error) {
+	if msg == nil {
+		return nil, errors.New("can't deserialize payload of nil message")
+	}
 	meta := payload.Meta{}
 	err := meta.Unmarshal(msg.Payload)
 	if err != nil {
 		return nil, errors.Wrap(err, "can't deserialize meta payload")
 	}
-	if msg.Metadata.Get(bus.MetaType) == bus.TypeError {
+	if msg.Metadata.Get(bus.MetaType) == bus.TypeErrorReply {
 		errReply, err := bus.DeserializeError(bytes.NewBuffer(meta.Payload))
 		if err != nil {
 			return nil, errors.Wrap(err, "can't deserialize payload to error")

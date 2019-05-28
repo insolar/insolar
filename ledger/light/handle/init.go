@@ -35,7 +35,7 @@ import (
 type Init struct {
 	Dep *proc.Dependencies
 
-	Message watermillMsg.Message
+	Message *watermillMsg.Message
 }
 
 func (s *Init) Future(ctx context.Context, f flow.Flow) error {
@@ -59,7 +59,7 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		fmt.Println("TypeGetObject gets inited")
 		h := &GetObject{
 			dep:     s.Dep,
-			Message: &s.Message,
+			Message: s.Message,
 			Parcel:  parcel,
 		}
 		err = f.Handle(ctx, h.Present)
@@ -67,47 +67,47 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		return err
 	case insolar.TypeSetRecord.String():
 		msg := parcel.Message().(*message.SetRecord)
-		h := NewSetRecord(s.Dep, &s.Message, msg)
+		h := NewSetRecord(s.Dep, s.Message, msg)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeSetBlob.String():
 		msg := parcel.Message().(*message.SetBlob)
-		h := NewSetBlob(s.Dep, &s.Message, msg)
+		h := NewSetBlob(s.Dep, s.Message, msg)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetCode.String():
 		msg := parcel.Message().(*message.GetCode)
-		h := NewGetCode(s.Dep, &s.Message, msg.Code)
+		h := NewGetCode(s.Dep, s.Message, msg.Code)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetRequest.String():
 		msg := parcel.Message().(*message.GetRequest)
-		h := NewGetRequest(s.Dep, &s.Message, msg.Request)
+		h := NewGetRequest(s.Dep, s.Message, msg.Request)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeUpdateObject.String():
 		msg := parcel.Message().(*message.UpdateObject)
-		h := NewUpdateObject(s.Dep, &s.Message, msg)
+		h := NewUpdateObject(s.Dep, s.Message, msg)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetChildren.String():
-		h := NewGetChildren(s.Dep, &s.Message, parcel)
+		h := NewGetChildren(s.Dep, s.Message, parcel)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetDelegate.String():
-		h := NewGetDelegate(s.Dep, &s.Message, parcel)
+		h := NewGetDelegate(s.Dep, s.Message, parcel)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetPendingRequests.String():
-		h := NewGetPendingRequests(s.Dep, &s.Message, parcel)
+		h := NewGetPendingRequests(s.Dep, s.Message, parcel)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetPendingRequestID.String():
-		h := NewGetPendingRequestID(s.Dep, &s.Message, parcel)
+		h := NewGetPendingRequestID(s.Dep, s.Message, parcel)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeRegisterChild.String():
 		msg := parcel.Message().(*message.RegisterChild)
-		h := NewRegisterChild(s.Dep, &s.Message, msg, parcel.Pulse())
+		h := NewRegisterChild(s.Dep, s.Message, msg, parcel.Pulse())
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetJet.String():
 		msg := parcel.Message().(*message.GetJet)
-		h := NewGetJet(s.Dep, &s.Message, msg)
+		h := NewGetJet(s.Dep, s.Message, msg)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeHotRecords.String():
 		msg := parcel.Message().(*message.HotData)
-		h := NewHotData(s.Dep, &s.Message, msg)
+		h := NewHotData(s.Dep, s.Message, msg)
 		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s", msgType)
@@ -116,7 +116,7 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 
 func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 	return f.Procedure(ctx, &proc.ReturnReply{
-		Message: &s.Message,
+		Message: s.Message,
 		Err:     errors.New("no past handler"),
 		Sender:  s.Dep.Sender,
 	}, false)

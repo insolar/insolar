@@ -22,7 +22,6 @@ import (
 	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
-	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/component"
@@ -245,6 +244,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		handler.Nodes = Nodes
 		handler.HotDataWaiter = waiter
 		handler.JetReleaser = waiter
+		handler.Sender = WmBus
 
 		jetCalculator := jet.NewCalculator(Coordinator, Jets)
 		var lightCleaner = replication.NewCleaner(
@@ -368,16 +368,12 @@ func startWatermill(
 	)
 
 	inRouter.AddMiddleware(
-		middleware.InstantAck,
 		b.IncomingMessageRouter,
-		middleware.CorrelationID,
 	)
 
-	inRouter.AddHandler(
+	inRouter.AddNoPublisherHandler(
 		"IncomingHandler",
 		bus.TopicIncoming,
-		pubSub,
-		bus.TopicOutgoing,
 		pubSub,
 		inHandler,
 	)

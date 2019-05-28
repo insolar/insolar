@@ -159,7 +159,6 @@ func initComponents(
 	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
 	checkError(ctx, err, "failed to start LogicRunner")
 
-	// logicRunner.Bus = b
 	err = logicrunner.InitHandlers(logicRunner, b)
 	if err != nil {
 		return nil, nil, errors.Wrap(err, "Error while init handlers for logic runner:")

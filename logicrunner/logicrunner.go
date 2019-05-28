@@ -34,7 +34,6 @@ import (
 
 	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/record"
@@ -200,30 +199,29 @@ func InitHandlers(lr *LogicRunner, b wmBus.Sender) error {
 		Bus:       b,
 	}
 
-	initHandle := func(msg bus.Message) *Init {
+	initHandle := func(msg *watermillMsg.Message) *Init {
 		return &Init{
 			dep: dep,
 			// TODO: use wm.Message instead of bus.Message
-			Message: *msg.WatermillMsg,
+			Message: msg,
 		}
 	}
-	lr.FlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
+	lr.FlowDispatcher = dispatcher.NewDispatcher(func(msg *watermillMsg.Message) flow.Handle {
 		return initHandle(msg).Present
-	}, func(msg bus.Message) flow.Handle {
+	}, func(msg *watermillMsg.Message) flow.Handle {
 		return initHandle(msg).Future
 	})
 
-	innerInitHandle := func(msg bus.Message) *InnerInit {
-		innerMsg := msg.WatermillMsg
+	innerInitHandle := func(msg *watermillMsg.Message) *InnerInit {
 		return &InnerInit{
 			dep:     dep,
-			Message: innerMsg,
+			Message: msg,
 		}
 	}
 
-	lr.innerFlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
+	lr.innerFlowDispatcher = dispatcher.NewDispatcher(func(msg *watermillMsg.Message) flow.Handle {
 		return innerInitHandle(msg).Present
-	}, func(msg bus.Message) flow.Handle {
+	}, func(msg *watermillMsg.Message) flow.Handle {
 		return innerInitHandle(msg).Present
 	})
 
