@@ -22,6 +22,7 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/delegationtoken"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
@@ -36,9 +37,10 @@ import (
 )
 
 type SendObject struct {
-	message bus.Message
-	jet     insolar.JetID
-	index   object.Lifeline
+	message        bus.Message
+	jet            insolar.JetID
+	index          object.Lifeline
+	returnPendings int
 
 	Dep struct {
 		Coordinator    jet.Coordinator
@@ -47,6 +49,9 @@ type SendObject struct {
 		RecordAccessor object.RecordAccessor
 		Blobs          blob.Storage
 		Bus            insolar.MessageBus
+
+		PendingAccessor object.PendingAccessor
+		PendingModifier object.PendingModifier
 	}
 }
 
@@ -114,6 +119,7 @@ func (p *SendObject) handle(
 			ChildPointer: p.index.ChildPointer,
 			Parent:       p.index.Parent,
 			Memory:       obj.Memory,
+			Pendings:     []record.Request{},
 		}, nil
 	}
 
@@ -127,6 +133,9 @@ func (p *SendObject) handle(
 		}
 		stateJet = actualJet
 	}
+
+	// Fetch pendings
+	pendings, err := p.fetchPendings(ctx, parcel.Pulse(), *msg.Head.Record())
 
 	// Fetch state record.
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, *stateID)
@@ -159,6 +168,7 @@ func (p *SendObject) handle(
 			ChildPointer: p.index.ChildPointer,
 			Parent:       p.index.Parent,
 			Memory:       obj.Memory,
+			Pendings:     pendings,
 		}, nil
 	}
 	if err != nil {
@@ -187,6 +197,7 @@ func (p *SendObject) handle(
 		IsPrototype:  state.GetIsPrototype(),
 		ChildPointer: childPointer,
 		Parent:       p.index.Parent,
+		Pendings:     pendings,
 	}
 
 	if state.GetMemory() != nil && state.GetMemory().NotEmpty() {
@@ -246,4 +257,77 @@ func (p *SendObject) fetchObject(
 		return nil, fmt.Errorf("failed to fetch object state: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
 	}
 	return rep, nil
+}
+
+func (p *SendObject) fetchPendings(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.Request, error) {
+	pendMeta, err := p.Dep.PendingAccessor.MetaForObjID(ctx, currentPN, objID)
+	if err != nil {
+		return []record.Request{}, err
+	}
+
+	// Because we are the first light in the chain
+	if pendMeta.PreviousPN == nil || pendMeta.IsChainCompleted == true {
+		return p.Dep.PendingAccessor.ForObjID(ctx, currentPN, objID, p.returnPendings)
+	}
+
+	if pendMeta.ReadUntil == nil {
+		panic("inconsistent state of the pending filament")
+	}
+
+	err = p.fillPendingFilament(ctx, currentPN, objID, *pendMeta.PreviousPN, *pendMeta.ReadUntil)
+	if err != nil {
+		return []record.Request{}, err
+	}
+
+	err = p.Dep.PendingModifier.RefreshState(ctx, currentPN, objID)
+	if err != nil {
+		return []record.Request{}, err
+	}
+
+	return p.Dep.PendingAccessor.ForObjID(ctx, currentPN, objID, p.returnPendings)
+}
+
+func (p *SendObject) fillPendingFilament(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, destPN insolar.PulseNumber, readUntil insolar.PulseNumber) error {
+	continueFilling := true
+
+	for continueFilling {
+		node, err := p.Dep.Coordinator.NodeForObject(ctx, objID, currentPN, destPN)
+		if err != nil {
+			return err
+		}
+
+		rep, err := p.Dep.Bus.Send(
+			ctx,
+			&message.GetPendingFilament{ObjectID: objID},
+			&insolar.MessageSendOptions{
+				Receiver: node,
+			},
+		)
+		if err != nil {
+			return err
+		}
+
+		switch r := rep.(type) {
+		case *reply.PendingFilament:
+			err := p.Dep.PendingModifier.SetFilament(ctx, flow.Pulse(ctx), objID, destPN, r.Records)
+			if err != nil {
+				return err
+			}
+
+			if r.HasFullChain == true {
+				continueFilling = false
+			}
+			if r.PreviousPendingPN == nil {
+				continueFilling = false
+			} else if *r.PreviousPendingPN > readUntil {
+				destPN = *r.PreviousPendingPN
+			}
+		case *reply.Error:
+			return r.Error()
+		default:
+			return fmt.Errorf("fillPendingFilament: unexpected reply: %#v", rep)
+		}
+	}
+
+	return nil
 }

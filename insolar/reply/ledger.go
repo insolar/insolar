@@ -41,6 +41,7 @@ type Object struct {
 	ChildPointer *insolar.ID
 	Memory       []byte
 	Parent       insolar.Reference
+	Pendings     []record.Request
 }
 
 // Type implementation of Reply interface.
@@ -133,10 +134,10 @@ func (r *Request) Type() insolar.ReplyType {
 }
 
 type PendingFilament struct {
-	ID           insolar.ID
-	Records      []record.Virtual
-	HasFullChain bool
-	LastKnownPN  *insolar.PulseNumber
+	ID                insolar.ID
+	Records           []record.Virtual
+	HasFullChain      bool
+	PreviousPendingPN *insolar.PulseNumber
 }
 
 // Type implementation of Reply interface.

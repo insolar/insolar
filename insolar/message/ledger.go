@@ -353,10 +353,9 @@ type HotIndex struct {
 	// It's being used for `ttl` of indexes
 	LifelineLastUsed insolar.PulseNumber
 
-	// LastKnownPendingPN say a pulse of last saving request/result
-	LastKnownPendingPN *insolar.PulseNumber
-	// HasOpenRequestsBehind indicates that there are some pending on other lights
-	HasOpenRequestsBehind bool
+	// PreviousPendingFilament say a pulse of last saving request/result
+	PreviousPendingFilament *insolar.PulseNumber
+	ReadToUntil             *insolar.PulseNumber
 }
 
 // GetPendingRequests fetches pending requests for object.

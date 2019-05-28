@@ -32,14 +32,15 @@ import (
 // Also it stores some meta-info, that is required for the work process
 type extendedIndexBucket struct {
 	sync.RWMutex
-
 	IndexBucket
 
-	requestCache map[insolar.ID]*record.Result
+	hasFullChain bool
+	pendingChain []chainLink
+}
 
-	hasFullChain     bool
-	pulsePendingMap  map[insolar.PulseNumber]int
-	fullPendingChain []record.Virtual
+type chainLink struct {
+	PN      insolar.PulseNumber
+	Records []record.Virtual
 }
 
 func (i *extendedIndexBucket) lifeline() (Lifeline, error) {
@@ -86,10 +87,8 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 			ObjID:          objID,
 			PendingRecords: []record.Virtual{},
 		},
-		requestCache:     map[insolar.ID]*record.Result{},
-		fullPendingChain: []record.Virtual{},
-		hasFullChain:     false,
-		pulsePendingMap:  map[insolar.PulseNumber]int{},
+		pendingChain: []chainLink{},
+		hasFullChain: false,
 	}
 
 	objsByPn, ok := i.buckets[pn]
@@ -142,8 +141,6 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 
 	b.PendingRecords = append(b.PendingRecords, record.Wrap(req))
 
-	b.requestCache[*req.Object.Record()] = nil
-
 	stats.Record(ctx,
 		statObjectPendingRequestsInMemoryAddedCount.M(int64(1)),
 	)
@@ -160,16 +157,7 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	b.Lock()
 	defer b.Unlock()
 
-	cachedRes, ok := b.requestCache[*res.Request.Record()]
-	if !ok {
-		return ErrPendingRequestNotFound
-	}
-	if cachedRes != nil {
-		return ErrPendingResultAlreadySet
-	}
-
 	b.PendingRecords = append(b.PendingRecords, record.Wrap(res))
-	b.requestCache[*res.Request.Record()] = &res
 
 	stats.Record(ctx,
 		statObjectPendingRequestsInMemoryAddedCount.M(int64(1)),
@@ -177,6 +165,9 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 
 	return nil
 }
+
+// SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, recs []record.Virtual) error
+// RefreshState(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
 
 func (i *InMemoryIndex) SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, recs []record.Virtual) error {
 	b := i.bucket(pn, objID)

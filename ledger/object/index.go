@@ -89,11 +89,17 @@ type IndexBucketAccessor interface {
 type PendingModifier interface {
 	SetRequest(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, req record.Request) error
 	SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, req record.Result) error
-	SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, recs []record.Virtual) error
+	SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, filPN insolar.PulseNumber, recs []record.Virtual) error
+	RefreshState(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
+}
+
+type PendingMeta struct {
+	PreviousPN       *insolar.PulseNumber
+	ReadUntil        *insolar.PulseNumber
+	IsChainCompleted bool
 }
 
 type PendingAccessor interface {
-	Meta(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (hasPendingsBehind bool, lastKnownPN *insolar.PulseNumber, err error)
-	HasPendingBehind(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (bool, error)
-	LastKnownPN(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (*insolar.PulseNumber, error)
+	MetaForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (PendingMeta, error)
+	ForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error)
 }

@@ -78,6 +78,8 @@ message Result {
     bytes Object = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
     bytes Request = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
     bytes Payload = 22;
+
+    bool IsExpired = 23;
 }
 
 message Type {
