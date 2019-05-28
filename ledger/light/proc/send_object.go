@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
@@ -103,8 +104,9 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 
 	sendPassState := func(stateID insolar.ID) error {
 		msg, err := payload.NewMessage(&payload.PassState{
-			Origin:  p.message.Payload,
-			StateID: stateID,
+			Origin:        p.message.Payload,
+			StateID:       stateID,
+			CorrelationID: []byte(middleware.MessageCorrelationID(p.message)),
 		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")

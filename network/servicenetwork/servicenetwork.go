@@ -58,6 +58,7 @@ import (
 	"time"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
 	"github.com/pkg/errors"
@@ -385,7 +386,10 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 		return nil, errors.Errorf("reply is not ack: %s", res)
 	}
 
-	logger.WithField("msg_type", msgType.String()).Info("Network sent message")
+	logger.WithFields(map[string]interface{}{
+		"msg_type":       msgType.String(),
+		"correlation_id": middleware.MessageCorrelationID(msg),
+	}).Info("Network sent message")
 
 	return nil, nil
 }
@@ -442,7 +446,10 @@ func (n *ServiceNetwork) processIncoming(ctx context.Context, args [][]byte) ([]
 	if err != nil {
 		logger.Error("failed to extract message type")
 	}
-	logger.WithField("msg_type", msgType.String()).Info("Network received message")
+	logger.WithFields(map[string]interface{}{
+		"msg_type":       msgType.String(),
+		"correlation_id": middleware.MessageCorrelationID(msg),
+	}).Info("Network received message")
 
 	err = n.Pub.Publish(bus.TopicIncoming, msg)
 	if err != nil {
