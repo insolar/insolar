@@ -347,7 +347,7 @@ func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, address string
 	n.NodeKeeper.GetClaimQueue().Push(&packets.ChangeNetworkClaim{Address: address})
 	logger := inslogger.FromContext(ctx)
 
-	node, err := getNode(address, n.CertificateManager.GetCertificate().GetDiscoveryNodes())
+	node, err := findNodeByAddress(address, n.CertificateManager.GetCertificate().GetDiscoveryNodes())
 	if err != nil {
 		logger.Warnf("Failed to find a discovery node: ", err)
 	}
@@ -418,7 +418,7 @@ func (n *ServiceNetwork) wrapMeta(msg *message.Message) (insolar.Reference, erro
 	return *receiverRef, nil
 }
 
-func getNode(address string, nodes []insolar.DiscoveryNode) (insolar.DiscoveryNode, error) {
+func findNodeByAddress(address string, nodes []insolar.DiscoveryNode) (insolar.DiscoveryNode, error) {
 	for _, node := range nodes {
 		if node.GetHost() == address {
 			return node, nil
