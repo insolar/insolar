@@ -47,12 +47,12 @@ func buildCLI(name string, functest bool) (string, error) {
 	return binPath, nil
 }
 
-func buildInsiderCLI() (string, error) {
-	return buildCLI("insgorund", false)
+func buildInsiderCLI(functest bool) (string, error) {
+	return buildCLI("insgorund", functest)
 }
 
-func BuildPreprocessor() (string, error) {
-	return buildCLI("insgocc", false)
+func BuildPreprocessor(functest bool) (string, error) {
+	return buildCLI("insgocc", functest)
 }
 
 func testdataPath() string {
