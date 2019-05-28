@@ -18,6 +18,7 @@ package dispatcher
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"sync/atomic"
 
@@ -124,7 +125,7 @@ func (d *Dispatcher) Process(msg *message.Message) ([]*message.Message, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to unmarshal meta")
 	}
-	ctx, logger := inslogger.WithField(ctx, "pulse", msg.Metadata.Get(wmBus.MetaPulse))
+	ctx, logger := inslogger.WithField(ctx, "pulse", fmt.Sprintf("%d", meta.Pulse))
 	ctx = pulse.ContextWith(ctx, meta.Pulse)
 	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(wmBus.MetaTraceID))
 	go func() {
