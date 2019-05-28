@@ -41,7 +41,7 @@ func buildCLI(name string) (string, error) {
 	return binPath, nil
 }
 
-func buildInciderCLI() (string, error) {
+func buildInsiderCLI() (string, error) {
 	return buildCLI("insgorund")
 }
 
@@ -59,7 +59,7 @@ func testdataPath() string {
 
 // Build compiles and return path to insgorund and insgocc binaries.
 func Build() (string, string, error) {
-	icc, err := buildInciderCLI()
+	icc, err := buildInsiderCLI()
 	if err != nil {
 		return "", "", err
 	}
