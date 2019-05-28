@@ -100,12 +100,9 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Pac
 
 	data := request.GetRequest().GetPulse()
 	pulse := *pulse.PulseFromProto(data.Pulse)
-	verified, err := pc.verifyPulseSign(pulse)
+	err := pc.verifyPulseSign(pulse)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ pulseController ] processPulse: error to verify a pulse sign")
-	}
-	if !verified {
-		return nil, errors.New("[ pulseController ] processPulse: failed to verify a pulse sign")
+		return nil, errors.Wrap(err, "[ pulseController ] processPulse: failed to verify pulse")
 	}
 	// if we are a joiner node, we should receive pulse from phase1 packet and ignore pulse from pulsar
 	if !pc.NodeKeeper.GetConsensusInfo().IsJoiner() {
@@ -125,29 +122,29 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Pac
 	return pc.Network.BuildResponse(ctx, request, &packet.BasicResponse{Success: true, Error: ""}), nil
 }
 
-func (pc *pulseController) verifyPulseSign(pulse insolar.Pulse) (bool, error) {
+func (pc *pulseController) verifyPulseSign(pulse insolar.Pulse) error {
 	hashProvider := pc.CryptographyScheme.IntegrityHasher()
 	if len(pulse.Signs) == 0 {
-		return false, errors.New("[ verifyPulseSign ] received empty pulse signs")
+		return errors.New("received empty pulse signs")
 	}
 	for _, psc := range pulse.Signs {
 		payload := pulsar.PulseSenderConfirmationPayload{PulseSenderConfirmation: psc}
 		hash, err := payload.Hash(hashProvider)
 		if err != nil {
-			return false, errors.Wrap(err, "[ verifyPulseSign ] error to get a hash from pulse payload")
+			return errors.Wrap(err, "failed to get hash from pulse payload")
 		}
 		key, err := pc.KeyProcessor.ImportPublicKeyPEM([]byte(psc.ChosenPublicKey))
 		if err != nil {
-			return false, errors.Wrap(err, "[ verifyPulseSign ] error to import a public key")
+			return errors.Wrap(err, "failed to import public key")
 		}
 
 		verified := pc.CryptographyService.Verify(key, insolar.SignatureFromBytes(psc.Signature), hash)
 
 		if !verified {
-			return false, errors.New("[ verifyPulseSign ] error to verify a pulse")
+			return errors.New("cryptographic signature verification failed")
 		}
 	}
-	return true, nil
+	return nil
 }
 
 func NewPulseController() PulseController {

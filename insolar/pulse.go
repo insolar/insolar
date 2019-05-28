@@ -45,7 +45,7 @@ func (entropy Entropy) MarshalTo(data []byte) (int, error) {
 	copy(data, entropy[:])
 	return EntropySize, nil
 }
-func (entropy Entropy) Unmarshal(data []byte) error {
+func (entropy *Entropy) Unmarshal(data []byte) error {
 	if len(data) != EntropySize {
 		return errors.New("Not enough bytes to unpack Entropy")
 	}

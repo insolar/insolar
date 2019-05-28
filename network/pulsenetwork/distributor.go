@@ -56,6 +56,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
@@ -247,7 +248,7 @@ func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 	return nil
 }
 
-func (d *distributor) sendPulseToHost(ctx context.Context, pulse *insolar.Pulse, host *host.Host) error {
+func (d *distributor) sendPulseToHost(ctx context.Context, p *insolar.Pulse, host *host.Host) error {
 	logger := inslogger.FromContext(ctx)
 	defer func() {
 		if x := recover(); x != nil {
@@ -263,7 +264,11 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *insolar.Pulse,
 		RequestID: uint64(d.generateID()),
 		Type:      uint32(types.Pulse),
 	}
-	pulseRequest.SetRequest(&packet.PulseRequest{TraceSpanData: instracer.MustSerialize(ctx)})
+	request := &packet.PulseRequest{
+		TraceSpanData: instracer.MustSerialize(ctx),
+		Pulse:         pulse.PulseToProto(p),
+	}
+	pulseRequest.SetRequest(request)
 	call, err := d.sendRequestToHost(ctx, pulseRequest, host)
 	if err != nil {
 		return err
