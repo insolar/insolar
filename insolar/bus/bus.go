@@ -159,8 +159,8 @@ func (b *Bus) SendTarget(
 	id := watermill.NewUUID()
 	middleware.SetCorrelationID(id, msg)
 	msg.Metadata.Set(MetaTraceID, inslogger.TraceID(ctx))
-
 	msg.Metadata.Set(MetaReceiver, target.String())
+	msg.SetContext(ctx)
 
 	reply := &lockedReply{
 		messages: make(chan *message.Message),
@@ -185,7 +185,7 @@ func (b *Bus) SendTarget(
 	go func() {
 		select {
 		case <-reply.done:
-			inslogger.FromContext(msg.Context()).Infof("Done waiting replies for message with correlationID %s", id)
+			inslogger.FromContext(ctx).Infof("Done waiting replies for message with correlationID %s", id)
 		case <-time.After(b.timeout):
 			inslogger.FromContext(ctx).Error(
 				errors.Errorf(
@@ -212,6 +212,7 @@ func (b *Bus) Reply(ctx context.Context, origin, reply *message.Message) {
 
 	reply.Metadata.Set(MetaReceiver, originMeta.Sender.String())
 	reply.Metadata.Set(MetaTraceID, origin.Metadata.Get(MetaTraceID))
+	reply.SetContext(ctx)
 
 	err = b.pub.Publish(TopicOutgoing, reply)
 	if err != nil {

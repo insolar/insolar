@@ -353,6 +353,12 @@ func (n *ServiceNetwork) connectToNewNetwork(ctx context.Context, node insolar.D
 
 // SendMessageHandler async sends message with confirmation of delivery.
 func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Message, error) {
+	logger := inslogger.FromContext(msg.Context())
+	msgType, err := payload.UnmarshalType(msg.Payload)
+	if err != nil {
+		logger.Error("failed to extract message type")
+	}
+
 	node, err := n.wrapMeta(msg)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to send message")
@@ -378,6 +384,9 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 	if !bytes.Equal(res, ack) {
 		return nil, errors.Errorf("reply is not ack: %s", res)
 	}
+
+	logger.WithField("msg_type", msgType.String()).Info("sent message")
+
 	return nil, nil
 }
 
@@ -428,6 +437,12 @@ func (n *ServiceNetwork) processIncoming(ctx context.Context, args [][]byte) ([]
 		return nil, err
 	}
 	// TODO: check pulse here
+
+	msgType, err := payload.UnmarshalType(msg.Payload)
+	if err != nil {
+		logger.Error("failed to extract message type")
+	}
+	logger.WithField("msg_type", msgType.String()).Info("received message")
 
 	err = n.Pub.Publish(bus.TopicIncoming, msg)
 	if err != nil {

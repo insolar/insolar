@@ -27,6 +27,20 @@ type Payload interface {
 	Marshal() ([]byte, error)
 }
 
+// UnmarshalType decodes payload type from given binary.
+func UnmarshalType(data []byte) (Type, error) {
+	buf := proto.NewBuffer(data)
+	_, err := buf.DecodeVarint()
+	if err != nil {
+		return TypeUnknown, errors.Wrap(err, "failed to decode polymorph")
+	}
+	morph, err := buf.DecodeVarint()
+	if err != nil {
+		return TypeUnknown, errors.Wrap(err, "failed to decode polymorph")
+	}
+	return Type(morph), nil
+}
+
 func Marshal(payload Payload) ([]byte, error) {
 	switch pl := payload.(type) {
 	case *Error:
@@ -56,17 +70,11 @@ func Marshal(payload Payload) ([]byte, error) {
 }
 
 func Unmarshal(data []byte) (Payload, error) {
-	buf := proto.NewBuffer(data)
-	_, err := buf.DecodeVarint()
+	tp, err := UnmarshalType(data)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to decode polymorph")
+		return nil, err
 	}
-	morph, err := buf.DecodeVarint()
-	if err != nil {
-		return nil, errors.Wrap(err, "failed to decode polymorph")
-	}
-
-	switch Type(morph) {
+	switch tp {
 	case TypeError:
 		pl := Error{}
 		err := pl.Unmarshal(data)
