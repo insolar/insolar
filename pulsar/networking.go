@@ -22,7 +22,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/pkg/errors"
@@ -41,9 +40,6 @@ func NewHandler(pulsar *Pulsar) *Handler {
 }
 
 func (handler *Handler) isRequestValid(ctx context.Context, request *Payload) (success bool, neighbour *Neighbour, err error) {
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.Handler.isRequestValid")
-	defer span.End()
-
 	if handler.Pulsar.IsStateFailed() {
 		return false, nil, nil
 	}
@@ -76,9 +72,7 @@ func (handler *Handler) HealthCheck(request *Payload, response *Payload) error {
 
 // MakeHandshake is a handler of call with handshake purpose
 func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error {
-	ctx, inslog := inslogger.WithTraceField(context.Background(), handler.Pulsar.ID)
-	_, span := instracer.StartSpan(ctx, "Pulsar.Handler.MakeHandshake")
-	defer span.End()
+	_, inslog := inslogger.WithTraceField(context.Background(), handler.Pulsar.ID)
 
 	inslog.Infof("[MakeHandshake] from %v", request.PublicKey)
 	neighbour, err := handler.Pulsar.FetchNeighbour(request.PublicKey)
@@ -124,8 +118,6 @@ func (handler *Handler) MakeHandshake(request *Payload, response *Payload) error
 // ReceiveSignatureForEntropy is a handler of call for receiving Sign of Entropy from one of the pulsars
 func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *Payload) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), handler.Pulsar.ID)
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.Handler.ReceiveSignatureForEntropy")
-	defer span.End()
 
 	inslog.Infof("[ReceiveSignatureForEntropy] from %v", request.PublicKey)
 	ok, _, err := handler.isRequestValid(ctx, request)
@@ -159,8 +151,6 @@ func (handler *Handler) ReceiveSignatureForEntropy(request *Payload, response *P
 // ReceiveEntropy is a handler of call for receiving Entropy from one of the pulsars
 func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), fmt.Sprintf("%v_%v", handler.Pulsar.ID, string(handler.Pulsar.ProcessingPulseNumber)))
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.Handler.ReceiveEntropy")
-	defer span.End()
 
 	inslog.Infof("[ReceiveEntropy] from %v", request.PublicKey)
 	ok, _, err := handler.isRequestValid(ctx, request)
@@ -201,8 +191,6 @@ func (handler *Handler) ReceiveEntropy(request *Payload, response *Payload) erro
 // ReceiveVector is a handler of call for receiving vector of Entropy
 func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), fmt.Sprintf("%v_%v", handler.Pulsar.ID, string(handler.Pulsar.ProcessingPulseNumber)))
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.Handler.ReceiveVector")
-	defer span.End()
 
 	log.Infof("[ReceiveVector] from %v", request.PublicKey)
 	ok, _, err := handler.isRequestValid(ctx, request)
@@ -231,8 +219,6 @@ func (handler *Handler) ReceiveVector(request *Payload, response *Payload) error
 // ReceiveChosenSignature is a handler of call with the confirmation signature
 func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Payload) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), fmt.Sprintf("%v_%v", handler.Pulsar.ID, string(handler.Pulsar.ProcessingPulseNumber)))
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.Handler.ReceiveChosenSignature")
-	defer span.End()
 
 	log.Infof("[ReceiveChosenSignature] from %v", request.PublicKey)
 	ok, _, err := handler.isRequestValid(ctx, request)
@@ -290,8 +276,6 @@ func (handler *Handler) ReceiveChosenSignature(request *Payload, response *Paylo
 // ReceivePulse is a handler of call with the freshest pulse
 func (handler *Handler) ReceivePulse(request *Payload, response *Payload) error {
 	ctx, inslog := inslogger.WithTraceField(context.Background(), fmt.Sprintf("%v_%v", handler.Pulsar.ID, string(handler.Pulsar.ProcessingPulseNumber)))
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.Handler.ReceivePulse")
-	defer span.End()
 
 	log.Infof("[ReceivePulse] from %v", request.PublicKey)
 	ok, _, err := handler.isRequestValid(ctx, request)

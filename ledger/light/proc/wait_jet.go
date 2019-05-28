@@ -99,7 +99,7 @@ func NewWaitHot(j insolar.JetID, pn insolar.PulseNumber, rep chan<- bus.Reply) *
 }
 
 func (p *WaitHot) Proceed(ctx context.Context) error {
-	err := p.Dep.Waiter.Wait(ctx, insolar.ID(p.jetID))
+	err := p.Dep.Waiter.Wait(ctx, insolar.ID(p.jetID), p.pulse)
 	if err != nil {
 		p.replyTo <- bus.Reply{Reply: &reply.Error{ErrType: reply.ErrHotDataTimeout}}
 		return err
