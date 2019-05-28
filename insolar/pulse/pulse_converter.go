@@ -20,7 +20,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 )
 
-func PulseFromProto(p *PulseProto) *insolar.Pulse {
+func FromProto(p *PulseProto) *insolar.Pulse {
 	result := &insolar.Pulse{
 		PulseNumber:      insolar.PulseNumber(p.PulseNumber),
 		PrevPulseNumber:  insolar.PulseNumber(p.PrevPulseNumber),
@@ -32,13 +32,13 @@ func PulseFromProto(p *PulseProto) *insolar.Pulse {
 	}
 	copy(result.OriginID[:], p.OriginID)
 	for _, sign := range p.Signs {
-		pk, confirmation := PulseSenderConfirmationFromProto(sign)
+		pk, confirmation := SenderConfirmationFromProto(sign)
 		result.Signs[pk] = confirmation
 	}
 	return result
 }
 
-func PulseToProto(p *insolar.Pulse) *PulseProto {
+func ToProto(p *insolar.Pulse) *PulseProto {
 	result := &PulseProto{
 		PulseNumber:      uint32(p.PulseNumber),
 		PrevPulseNumber:  uint32(p.PrevPulseNumber),
@@ -49,12 +49,12 @@ func PulseToProto(p *insolar.Pulse) *PulseProto {
 		Entropy:          p.Entropy,
 	}
 	for pk, sign := range p.Signs {
-		result.Signs = append(result.Signs, PulseSenderConfirmationToProto(pk, sign))
+		result.Signs = append(result.Signs, SenderConfirmationToProto(pk, sign))
 	}
 	return result
 }
 
-func PulseSenderConfirmationToProto(publicKey string, p insolar.PulseSenderConfirmation) *PulseSenderConfirmationProto {
+func SenderConfirmationToProto(publicKey string, p insolar.PulseSenderConfirmation) *PulseSenderConfirmationProto {
 	return &PulseSenderConfirmationProto{
 		PublicKey:       publicKey,
 		PulseNumber:     uint32(p.PulseNumber),
@@ -64,7 +64,7 @@ func PulseSenderConfirmationToProto(publicKey string, p insolar.PulseSenderConfi
 	}
 }
 
-func PulseSenderConfirmationFromProto(p *PulseSenderConfirmationProto) (string, insolar.PulseSenderConfirmation) {
+func SenderConfirmationFromProto(p *PulseSenderConfirmationProto) (string, insolar.PulseSenderConfirmation) {
 	return p.PublicKey, insolar.PulseSenderConfirmation{
 		PulseNumber:     insolar.PulseNumber(p.PulseNumber),
 		ChosenPublicKey: p.ChosenPublicKey,

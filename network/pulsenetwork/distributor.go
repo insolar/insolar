@@ -266,7 +266,7 @@ func (d *distributor) sendPulseToHost(ctx context.Context, p *insolar.Pulse, hos
 	}
 	request := &packet.PulseRequest{
 		TraceSpanData: instracer.MustSerialize(ctx),
-		Pulse:         pulse.PulseToProto(p),
+		Pulse:         pulse.ToProto(p),
 	}
 	pulseRequest.SetRequest(request)
 	call, err := d.sendRequestToHost(ctx, pulseRequest, host)

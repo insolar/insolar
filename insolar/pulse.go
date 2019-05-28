@@ -52,7 +52,7 @@ func (entropy *Entropy) Unmarshal(data []byte) error {
 	copy(entropy[:], data)
 	return nil
 }
-func (entropy Entropy) UnmarshalJSON(data []byte) error {
+func (entropy *Entropy) UnmarshalJSON(data []byte) error {
 	return json.Unmarshal(data, entropy)
 }
 func (entropy Entropy) Size() int { return EntropySize }

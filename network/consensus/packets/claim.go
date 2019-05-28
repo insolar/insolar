@@ -209,34 +209,34 @@ func NodeToClaim(node insolar.NetworkNode) (*NodeJoinClaim, error) {
 	}, nil
 }
 
-func (claim *NodeJoinClaim) Marshal() ([]byte, error) {
-	return claim.Serialize()
+func (njc *NodeJoinClaim) Marshal() ([]byte, error) {
+	return njc.Serialize()
 }
 
-func (claim *NodeJoinClaim) MarshalTo(data []byte) (int, error) {
-	tmp, err := claim.Serialize()
+func (njc *NodeJoinClaim) MarshalTo(data []byte) (int, error) {
+	tmp, err := njc.Serialize()
 	if err != nil {
 		return 0, errors.New("Error serializing NodeJoinClaim")
 	}
-	copy(data, tmp[:])
+	copy(data, tmp)
 	return len(tmp), nil
 }
 
-func (claim *NodeJoinClaim) Unmarshal(data []byte) error {
-	if len(data) != claim.Size() {
+func (njc *NodeJoinClaim) Unmarshal(data []byte) error {
+	if len(data) != njc.Size() {
 		return errors.New("Not enough bytes to unpack NodeJoinClaim")
 	}
-	return claim.Deserialize(bytes.NewReader(data))
+	return njc.Deserialize(bytes.NewReader(data))
 }
 
-func (claim *NodeJoinClaim) Size() int {
+func (njc *NodeJoinClaim) Size() int {
 	return int(claimSizeMap[TypeNodeJoinClaim])
 }
 
-func (claim *NodeJoinClaim) Compare(other NodeJoinClaim) int {
-	return claim.NodeRef.Compare(other.NodeRef)
+func (njc *NodeJoinClaim) Compare(other NodeJoinClaim) int {
+	return njc.NodeRef.Compare(other.NodeRef)
 }
 
-func (claim *NodeJoinClaim) Equal(other NodeJoinClaim) bool {
-	return claim.Compare(other) == 0
+func (njc *NodeJoinClaim) Equal(other NodeJoinClaim) bool {
+	return njc.Compare(other) == 0
 }

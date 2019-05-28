@@ -47,8 +47,8 @@ func TestPulseToProto(t *testing.T) {
 		Signs:            signs,
 	}
 
-	proto := PulseToProto(&p)
-	p2 := PulseFromProto(proto)
+	proto := ToProto(&p)
+	p2 := FromProto(proto)
 	assert.Equal(t, p.PulseNumber, p2.PulseNumber)
 	assert.Equal(t, p.PrevPulseNumber, p2.PrevPulseNumber)
 	assert.Equal(t, p.NextPulseNumber, p2.NextPulseNumber)
@@ -61,8 +61,8 @@ func TestPulseToProto(t *testing.T) {
 
 func TestPulseSenderConfirmationToProto(t *testing.T) {
 	p := generatePsc()
-	proto := PulseSenderConfirmationToProto("112", *p)
-	pk, p2 := PulseSenderConfirmationFromProto(proto)
+	proto := SenderConfirmationToProto("112", *p)
+	pk, p2 := SenderConfirmationFromProto(proto)
 	assert.Equal(t, "112", pk)
 	assert.EqualValues(t, p.PulseNumber, p2.PulseNumber)
 	assert.Equal(t, p.ChosenPublicKey, p2.ChosenPublicKey)

@@ -99,7 +99,7 @@ func (pc *pulseController) processPulse(ctx context.Context, request network.Pac
 	}
 
 	data := request.GetRequest().GetPulse()
-	pulse := *pulse.PulseFromProto(data.Pulse)
+	pulse := *pulse.FromProto(data.Pulse)
 	err := pc.verifyPulseSign(pulse)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ pulseController ] processPulse: failed to verify pulse")
