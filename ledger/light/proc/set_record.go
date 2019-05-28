@@ -38,6 +38,7 @@ type SetRecord struct {
 	jet     insolar.JetID
 
 	Dep struct {
+		Bus                   insolar.MessageBus
 		RecentStorageProvider recentstorage.Provider
 		PendingModifier       object.PendingModifier
 		PCS                   insolar.PlatformCryptographyScheme
@@ -97,12 +98,12 @@ func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID,
 	concrete := record.Unwrap(virtRec)
 	switch r := concrete.(type) {
 	case *record.Request:
-		rep := p.handleRequest(ctx, concrete, calculatedID, r)
+		rep := p.handleRequest(ctx, concrete, calculatedID, *r)
 		if rep != nil {
 			return rep
 		}
 	case *record.Result:
-		rep := p.handleResult(ctx, concrete, r)
+		rep := p.handleResult(ctx, concrete, *r)
 		if rep != nil {
 			return rep
 		}
@@ -111,7 +112,7 @@ func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID,
 	return nil
 }
 
-func (p *SetRecord) handleRequest(ctx context.Context, concrete record.Record, calculatedID insolar.ID, r *record.Request) *bus.Reply {
+func (p *SetRecord) handleRequest(ctx context.Context, concrete record.Record, calculatedID insolar.ID, r record.Request) *bus.Reply {
 	// Skip object creation and genesis
 	if r.CallType == record.CTMethod {
 		if r.Object == nil {
@@ -123,8 +124,7 @@ func (p *SetRecord) handleRequest(ctx context.Context, concrete record.Record, c
 		recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
 		recentStorage.AddPendingRequest(ctx, *r.Object.Record(), calculatedID)
 
-		req := concrete.(*record.Request)
-		err := p.Dep.PendingModifier.SetRequest(ctx, flow.Pulse(ctx), *r.Object.Record(), *req)
+		err := p.Dep.PendingModifier.SetRequest(ctx, flow.Pulse(ctx), *r.Object.Record(), r)
 		if err != nil {
 			return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
 		}
@@ -133,13 +133,12 @@ func (p *SetRecord) handleRequest(ctx context.Context, concrete record.Record, c
 	return nil
 }
 
-func (p *SetRecord) handleResult(ctx context.Context, concrete record.Record, r *record.Result) *bus.Reply {
+func (p *SetRecord) handleResult(ctx context.Context, concrete record.Record, r record.Result) *bus.Reply {
 	recentStorage := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, insolar.ID(p.jet))
 	recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 
-	res := concrete.(*record.Result)
-	err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, *res)
-	if err != nil {
+	err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, r)
+	if err != object.ErrPendingRequestNotFound {
 		return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
 	}
 

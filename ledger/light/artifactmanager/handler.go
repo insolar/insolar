@@ -18,12 +18,10 @@ package artifactmanager
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/ledger/light/handle"
-	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
 
@@ -32,7 +30,6 @@ import (
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
-	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/node"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -119,6 +116,7 @@ func NewMessageHandler(
 			p.Dep.Bus = h.Bus
 		},
 		SetRecord: func(p *proc.SetRecord) {
+			p.Dep.Bus = h.Bus
 			p.Dep.RecentStorageProvider = h.RecentStorageProvider
 			p.Dep.PendingModifier = h.PendingModifier
 			p.Dep.RecordModifier = h.RecordModifier
@@ -277,32 +275,4 @@ func (h *MessageHandler) setHandlersForLight(m *middleware) {
 
 func (h *MessageHandler) handleValidateRecord(ctx context.Context, parcel insolar.Parcel) (insolar.Reply, error) {
 	return &reply.OK{}, nil
-}
-
-func (h *MessageHandler) saveIndexFromHeavy(
-	ctx context.Context, parcelPN insolar.PulseNumber, jetID insolar.ID, obj insolar.Reference, heavy *insolar.Reference,
-) (object.Lifeline, error) {
-	genericReply, err := h.Bus.Send(ctx, &message.GetObjectIndex{
-		Object: obj,
-	}, &insolar.MessageSendOptions{
-		Receiver: heavy,
-	})
-	if err != nil {
-		return object.Lifeline{}, errors.Wrap(err, "failed to send")
-	}
-	rep, ok := genericReply.(*reply.ObjectIndex)
-	if !ok {
-		return object.Lifeline{}, fmt.Errorf("failed to fetch object index: unexpected reply type %T (reply=%+v)", genericReply, genericReply)
-	}
-	idx, err := object.DecodeIndex(rep.Index)
-	if err != nil {
-		return object.Lifeline{}, errors.Wrap(err, "failed to decode")
-	}
-
-	idx.JetID = insolar.JetID(jetID)
-	err = h.LifelineIndex.Set(ctx, parcelPN, *obj.Record(), idx)
-	if err != nil {
-		return object.Lifeline{}, errors.Wrap(err, "failed to save")
-	}
-	return idx, nil
 }
