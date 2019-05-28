@@ -25,7 +25,7 @@ import (
 func NewPulse(numberDelta uint32, previousPulseNumber insolar.PulseNumber, entropyGenerator entropygenerator.EntropyGenerator) *insolar.Pulse {
 	previousPulseNumber = previousPulseNumber + insolar.PulseNumber(numberDelta)
 	return &insolar.Pulse{
-		PulseNumber:     insolar.PulseNumber(previousPulseNumber),
+		PulseNumber:     previousPulseNumber,
 		NextPulseNumber: previousPulseNumber + insolar.PulseNumber(numberDelta),
 		Entropy:         entropyGenerator.GenerateEntropy(),
 	}

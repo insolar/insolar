@@ -45,7 +45,7 @@ func resetBits(value []byte, start uint8) []byte {
 
 	// Reset bits in starting byte.
 	mask := byte(0xFF)
-	mask <<= 8 - byte(startBit)
+	mask <<= 8 - startBit
 	result[startByte] = value[startByte] & mask
 
 	return result
@@ -116,7 +116,7 @@ func JetFromString(s string) insolar.ID {
 	jetPrefix := make([]byte, insolar.JetPrefixSize)
 	depth := uint8(len(s))
 	for i, char := range s {
-		byteOffset := int(i / 8)
+		byteOffset := i / 8
 		bitsOffset := 7 - uint(i%8)
 		switch char {
 		case '0':
