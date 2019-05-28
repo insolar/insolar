@@ -460,6 +460,7 @@ func (g *Generator) makeHeavyGenesisConfig(discoveryNodes []nodeInfo) error {
 	}
 	cfg := &insolar.GenesisHeavyConfig{
 		DiscoveryNodes: items,
+		ContractsDir:   g.config.HeavyGeneisContractsDir,
 	}
 	b, err := json.MarshalIndent(cfg, "", "    ")
 	if err != nil {

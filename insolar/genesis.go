@@ -55,5 +55,8 @@ type DiscoveryNodeRegister struct {
 
 // GenesisHeavyConfig carries data required for initial genesis on heavy node.
 type GenesisHeavyConfig struct {
+	// DiscoveryNodes is the list with discovery node info.
 	DiscoveryNodes []DiscoveryNodeRegister
+	// ContractsDir is the directory with contracts plugins and memory files.
+	ContractsDir string
 }
