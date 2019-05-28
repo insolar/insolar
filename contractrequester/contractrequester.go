@@ -20,7 +20,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
-	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -134,11 +134,10 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		err error
 	)
 
+	sender := messagebus.BuildSender(cr.MessageBus.Send, messagebus.RetryIncorrectPulse(cr.PulseAccessor))
 	for {
-		// TODO AALEKSEEV: move sender outside the loop?
-		sender := messagebus.BuildSender(cr.MessageBus.Send, messagebus.RetryIncorrectPulse(cr.PulseAccessor))
 		res, err = sender(ctx, msg, nil)
-		if err != fmt.Errorf("RPC call returned error: Please retry") {
+		if err == nil || !strings.HasSuffix(err.Error(), "Please retry") { // TODO AALEKSEEV use 'PSE AGN' constant
 			break
 		}
 	}
