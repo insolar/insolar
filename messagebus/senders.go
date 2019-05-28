@@ -167,7 +167,7 @@ func RetryJetSender(jetModifier jet.Modifier) PreSender {
 // NOTE: This is not completely correct way to behave: 1) we should wait until pulse switches, not some hardcoded time,
 // 2) it should be handled by recipient and get it right with Flow "handles"
 func RetryIncorrectPulse(accessor pulse.Accessor) PreSender {
-	return retrier(accessor, incorrectPulseRetryCount,
+	return retryer(accessor, incorrectPulseRetryCount,
 		"Incorrect message pulse",
 		"[ RetryIncorrectPulse ] incorrect message pulse, retrying",
 		"incorrect message pulse (retry limit exceeded on client)")
@@ -175,13 +175,13 @@ func RetryIncorrectPulse(accessor pulse.Accessor) PreSender {
 
 // RetryFlowCancelled retries message on next pulse when received flow cancelled error.
 func RetryFlowCancelled(accessor pulse.Accessor) PreSender {
-	return retrier(accessor, flowCancelledRetryCount,
+	return retryer(accessor, flowCancelledRetryCount,
 		"flow cancelled",
 		"[ RetryFlowCancelled ] flow cancelled, retrying",
 		"flow cancelled (retry limit exceeded on client)")
 }
 
-func retrier(accessor pulse.Accessor, retriesCount int, errSubstr string, debugStr string, err string) PreSender{
+func retryer(accessor pulse.Accessor, retriesCount int, errSubstr string, debugStr string, err string) PreSender{
 	return func(sender Sender) Sender {
 		return func(ctx context.Context, msg insolar.Message, options *insolar.MessageSendOptions) (insolar.Reply, error) {
 			retries := retriesCount
