@@ -22,9 +22,9 @@ import (
 
 func FromProto(p *PulseProto) *insolar.Pulse {
 	result := &insolar.Pulse{
-		PulseNumber:      insolar.PulseNumber(p.PulseNumber),
-		PrevPulseNumber:  insolar.PulseNumber(p.PrevPulseNumber),
-		NextPulseNumber:  insolar.PulseNumber(p.NextPulseNumber),
+		PulseNumber:      p.PulseNumber,
+		PrevPulseNumber:  p.PrevPulseNumber,
+		NextPulseNumber:  p.NextPulseNumber,
 		PulseTimestamp:   p.PulseTimestamp,
 		EpochPulseNumber: int(p.EpochPulseNumber),
 		Entropy:          p.Entropy,
@@ -66,7 +66,7 @@ func SenderConfirmationToProto(publicKey string, p insolar.PulseSenderConfirmati
 
 func SenderConfirmationFromProto(p *PulseSenderConfirmationProto) (string, insolar.PulseSenderConfirmation) {
 	return p.PublicKey, insolar.PulseSenderConfirmation{
-		PulseNumber:     insolar.PulseNumber(p.PulseNumber),
+		PulseNumber:     p.PulseNumber,
 		ChosenPublicKey: p.ChosenPublicKey,
 		Entropy:         p.Entropy,
 		Signature:       p.Signature,

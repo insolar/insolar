@@ -428,7 +428,7 @@ func (bc *bootstrapper) waitGenesisResults(ctx context.Context, ch <-chan *packe
 				return nil, nil, errors.Wrap(err, "Error deserializing node from discovery node")
 			}
 			result = append(result, discovery)
-			lastPulses = append(lastPulses, insolar.PulseNumber(res.Response.LastPulse))
+			lastPulses = append(lastPulses, res.Response.LastPulse)
 			inslogger.FromContext(ctx).Debugf("NetworkNode %s LastIgnoredPulse: %d", discovery.ID(), res.Response.LastPulse)
 			if len(result) == count {
 				return result, lastPulses, nil
@@ -588,7 +588,7 @@ func (bc *bootstrapper) processGenesis(ctx context.Context, request network.Pack
 	if err != nil {
 		return bc.Network.BuildResponse(ctx, request, &packet.GenesisResponse{Error: err.Error()}), nil
 	}
-	bc.SetLastPulse(insolar.PulseNumber(data.LastPulse))
+	bc.SetLastPulse(data.LastPulse)
 	bc.setRequest(request.GetSender(), data)
 	return bc.Network.BuildResponse(ctx, request, &packet.GenesisResponse{
 		Response: &packet.GenesisRequest{Discovery: discovery, LastPulse: bc.GetLastPulse()},
