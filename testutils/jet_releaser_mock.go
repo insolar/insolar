@@ -20,7 +20,7 @@ import (
 type JetReleaserMock struct {
 	t minimock.Tester
 
-	ThrowTimeoutFunc       func(p context.Context)
+	ThrowTimeoutFunc       func(p context.Context, p1 insolar.PulseNumber)
 	ThrowTimeoutCounter    uint64
 	ThrowTimeoutPreCounter uint64
 	ThrowTimeoutMock       mJetReleaserMockThrowTimeout
@@ -56,18 +56,19 @@ type JetReleaserMockThrowTimeoutExpectation struct {
 }
 
 type JetReleaserMockThrowTimeoutInput struct {
-	p context.Context
+	p  context.Context
+	p1 insolar.PulseNumber
 }
 
 //Expect specifies that invocation of JetReleaser.ThrowTimeout is expected from 1 to Infinity times
-func (m *mJetReleaserMockThrowTimeout) Expect(p context.Context) *mJetReleaserMockThrowTimeout {
+func (m *mJetReleaserMockThrowTimeout) Expect(p context.Context, p1 insolar.PulseNumber) *mJetReleaserMockThrowTimeout {
 	m.mock.ThrowTimeoutFunc = nil
 	m.expectationSeries = nil
 
 	if m.mainExpectation == nil {
 		m.mainExpectation = &JetReleaserMockThrowTimeoutExpectation{}
 	}
-	m.mainExpectation.input = &JetReleaserMockThrowTimeoutInput{p}
+	m.mainExpectation.input = &JetReleaserMockThrowTimeoutInput{p, p1}
 	return m
 }
 
@@ -84,18 +85,18 @@ func (m *mJetReleaserMockThrowTimeout) Return() *JetReleaserMock {
 }
 
 //ExpectOnce specifies that invocation of JetReleaser.ThrowTimeout is expected once
-func (m *mJetReleaserMockThrowTimeout) ExpectOnce(p context.Context) *JetReleaserMockThrowTimeoutExpectation {
+func (m *mJetReleaserMockThrowTimeout) ExpectOnce(p context.Context, p1 insolar.PulseNumber) *JetReleaserMockThrowTimeoutExpectation {
 	m.mock.ThrowTimeoutFunc = nil
 	m.mainExpectation = nil
 
 	expectation := &JetReleaserMockThrowTimeoutExpectation{}
-	expectation.input = &JetReleaserMockThrowTimeoutInput{p}
+	expectation.input = &JetReleaserMockThrowTimeoutInput{p, p1}
 	m.expectationSeries = append(m.expectationSeries, expectation)
 	return expectation
 }
 
 //Set uses given function f as a mock of JetReleaser.ThrowTimeout method
-func (m *mJetReleaserMockThrowTimeout) Set(f func(p context.Context)) *JetReleaserMock {
+func (m *mJetReleaserMockThrowTimeout) Set(f func(p context.Context, p1 insolar.PulseNumber)) *JetReleaserMock {
 	m.mainExpectation = nil
 	m.expectationSeries = nil
 
@@ -104,18 +105,18 @@ func (m *mJetReleaserMockThrowTimeout) Set(f func(p context.Context)) *JetReleas
 }
 
 //ThrowTimeout implements github.com/insolar/insolar/ledger/light/hot.JetReleaser interface
-func (m *JetReleaserMock) ThrowTimeout(p context.Context) {
+func (m *JetReleaserMock) ThrowTimeout(p context.Context, p1 insolar.PulseNumber) {
 	counter := atomic.AddUint64(&m.ThrowTimeoutPreCounter, 1)
 	defer atomic.AddUint64(&m.ThrowTimeoutCounter, 1)
 
 	if len(m.ThrowTimeoutMock.expectationSeries) > 0 {
 		if counter > uint64(len(m.ThrowTimeoutMock.expectationSeries)) {
-			m.t.Fatalf("Unexpected call to JetReleaserMock.ThrowTimeout. %v", p)
+			m.t.Fatalf("Unexpected call to JetReleaserMock.ThrowTimeout. %v %v", p, p1)
 			return
 		}
 
 		input := m.ThrowTimeoutMock.expectationSeries[counter-1].input
-		testify_assert.Equal(m.t, *input, JetReleaserMockThrowTimeoutInput{p}, "JetReleaser.ThrowTimeout got unexpected parameters")
+		testify_assert.Equal(m.t, *input, JetReleaserMockThrowTimeoutInput{p, p1}, "JetReleaser.ThrowTimeout got unexpected parameters")
 
 		return
 	}
@@ -124,18 +125,18 @@ func (m *JetReleaserMock) ThrowTimeout(p context.Context) {
 
 		input := m.ThrowTimeoutMock.mainExpectation.input
 		if input != nil {
-			testify_assert.Equal(m.t, *input, JetReleaserMockThrowTimeoutInput{p}, "JetReleaser.ThrowTimeout got unexpected parameters")
+			testify_assert.Equal(m.t, *input, JetReleaserMockThrowTimeoutInput{p, p1}, "JetReleaser.ThrowTimeout got unexpected parameters")
 		}
 
 		return
 	}
 
 	if m.ThrowTimeoutFunc == nil {
-		m.t.Fatalf("Unexpected call to JetReleaserMock.ThrowTimeout. %v", p)
+		m.t.Fatalf("Unexpected call to JetReleaserMock.ThrowTimeout. %v %v", p, p1)
 		return
 	}
 
-	m.ThrowTimeoutFunc(p)
+	m.ThrowTimeoutFunc(p, p1)
 }
 
 //ThrowTimeoutMinimockCounter returns a count of JetReleaserMock.ThrowTimeoutFunc invocations

@@ -39,6 +39,7 @@ type Certificate interface {
 }
 
 //go:generate minimock -i github.com/insolar/insolar/insolar.DiscoveryNode -o ../testutils -s _mock.go
+
 type DiscoveryNode interface {
 	NodeMeta
 

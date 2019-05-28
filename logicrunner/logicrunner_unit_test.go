@@ -21,6 +21,7 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -93,6 +94,15 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
 	suite.mc.Wait(time.Minute)
 	suite.mc.Finish()
+	for _, e := range suite.lr.Executors {
+		if e == nil {
+			continue
+		}
+		// e.Stop() is about to be called in lr.Stop() method
+		e.(*testutils.MachineLogicExecutorMock).StopMock.Expect().Return(nil)
+	}
+	// free resources before next test
+	suite.lr.Stop(suite.ctx)
 }
 
 type LogicRunnerTestSuite struct {
@@ -134,21 +144,17 @@ func (suite *LogicRunnerTestSuite) TestPendingFinished() {
 	suite.Require().Equal(message.NotPending, es.pending)
 
 	es.pending = message.InPending
-	es.objectbody = &ObjectBody{}
 	suite.mb.SendMock.ExpectOnce(suite.ctx, &message.PendingFinished{Reference: objectRef}, nil).Return(&reply.ID{}, nil)
 	suite.jc.IsAuthorizedMock.Return(false, nil)
 	suite.lr.finishPendingIfNeeded(suite.ctx, es)
 	suite.Require().Equal(message.NotPending, es.pending)
-	suite.Require().Nil(es.objectbody)
 
 	suite.mc.Wait(time.Minute) // message bus' send is called in a goroutine
 
 	es.pending = message.InPending
-	es.objectbody = &ObjectBody{}
 	suite.jc.IsAuthorizedMock.Return(true, nil)
 	suite.lr.finishPendingIfNeeded(suite.ctx, es)
 	suite.Require().Equal(message.NotPending, es.pending)
-	suite.Require().NotNil(es.objectbody)
 }
 
 func (suite *LogicRunnerTestSuite) TestStartQueueProcessorIfNeeded_DontStartQueueProcessorWhenPending() {
@@ -604,21 +610,33 @@ func (suite *LogicRunnerTestSuite) TestReleaseQueue() {
 }
 
 func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
+	cRef := testutils.RandomRef()
+	cDesc := artifacts.NewCodeDescriptorMock(suite.mc)
+	cDesc.RefMock.Return(&cRef)
+	cDesc.MachineTypeMock.Return(insolar.MachineTypeBuiltin)
+
+	pRef := testutils.RandomRef()
+	pDesc := artifacts.NewObjectDescriptorMock(suite.mc)
+	pDesc.HeadRefMock.Return(&pRef)
+
+	oDesc := artifacts.NewObjectDescriptorMock(suite.mc)
+	oDesc.ParentMock.Return(nil)
+
+	suite.am.GetObjectMock.Return(oDesc, nil)
 	suite.am.UpdateObjectMock.Return(nil, nil)
 
 	randRef := testutils.RandomRef()
 
 	es := &ExecutionState{Queue: make([]ExecutionQueueElement, 0)}
 	es.Queue = append(es.Queue, ExecutionQueueElement{})
-	es.objectbody = &ObjectBody{}
-	es.objectbody.CodeMachineType = insolar.MachineTypeBuiltin
+	es.PrototypeDescriptor = pDesc
+	es.CodeDescriptor = cDesc
 	es.Current = &CurrentExecution{}
 	es.Current.LogicContext = &insolar.LogicCallContext{}
 	es.Current.Request = &randRef
-	es.objectbody.CodeRef = &randRef
 
 	data := []byte(testutils.RandomString())
-	es.objectbody.Object = data
+	oDesc.MemoryMock.Return(data)
 
 	mle := testutils.NewMachineLogicExecutorMock(suite.mc)
 	suite.lr.Executors[insolar.MachineTypeBuiltin] = mle
@@ -655,6 +673,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	_, err := suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+	suite.lr.Stop(suite.ctx)
 
 	// LedgerHasMoreRequests false
 	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
@@ -663,6 +682,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+	suite.lr.Stop(suite.ctx)
 
 	// LedgerHasMoreRequests already true
 	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
@@ -671,6 +691,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
+	suite.lr.Stop(suite.ctx)
 }
 
 func (suite *LogicRunnerTestSuite) TestPrepareObjectStateChangePendingStatus() {
@@ -763,6 +784,7 @@ func (suite *LogicRunnerTestSuite) TestNewLogicRunner() {
 	lr, err = NewLogicRunner(&configuration.LogicRunner{})
 	suite.Require().NoError(err)
 	suite.Require().NotNil(lr)
+	lr.Stop(context.Background())
 }
 
 func (suite *LogicRunnerTestSuite) TestStartStop() {
@@ -908,9 +930,9 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	notMeRef := testutils.RandomRef()
 	suite.jc.MeMock.Return(meRef)
 
-	pn := 100
+	var pn int32 = 100
 	suite.ps.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
-		return insolar.Pulse{PulseNumber: insolar.PulseNumber(pn)}, nil
+		return insolar.Pulse{PulseNumber: insolar.PulseNumber(atomic.LoadInt32(&pn))}, nil
 	}
 
 	mle := testutils.NewMachineLogicExecutorMock(suite.mc)
@@ -963,7 +985,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	for _, test := range table {
 		test := test
 		suite.T().Run(test.name, func(t *testing.T) {
-			pn = 100
+			atomic.StoreInt32(&pn, 100)
 
 			once := sync.Once{}
 
@@ -974,15 +996,15 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				once.Do(func() {
 					ch = make(chan struct{})
 
-					pn += 1
+					atomic.AddInt32(&pn, 1)
 
 					go func() {
 						defer wg.Done()
 						defer close(ch)
 
-						pulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(pn)}
+						pulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(atomic.LoadInt32(&pn))}
 
-						ctx := inslogger.ContextWithTrace(suite.ctx, "pulse-"+strconv.Itoa(pn))
+						ctx := inslogger.ContextWithTrace(suite.ctx, "pulse-"+strconv.Itoa(int(atomic.LoadInt32(&pn))))
 
 						err := suite.lr.OnPulse(ctx, pulse)
 						suite.Require().NoError(err)
@@ -999,13 +1021,13 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				}
 
 				if test.when == whenIsAuthorized {
-					changePulse()
-					for pn == 100 {
+					<-changePulse()
+					for atomic.LoadInt32(&pn) == 100 {
 						time.Sleep(time.Millisecond)
 					}
 				}
 
-				return pn == 100, nil
+				return atomic.LoadInt32(&pn) == 100, nil
 			}
 
 			if test.when > whenIsAuthorized {

@@ -1,4 +1,5 @@
 root_keys_file: "{{ .BaseDir }}/configs/root_member_keys.json"
+heavy_genesis_config_file: "{{ .BaseDir }}/configs/heavy_genesis.json"
 discovery_keys_dir: "{{ .BaseDir }}/reusekeys/discovery"
 keys_name_format: "/node_%02d.json"
 reuse_keys: false

@@ -1,5 +1,7 @@
+#@IgnoreInspection BashAddShebang
 CONFIG_DIR=/opt/insolar/config
 GENESIS_CONFIG=$CONFIG_DIR/genesis.yaml
+HEAVY_GENESIS_CONFIG=$CONFIG_DIR/heavy_genesis.json
 NODES_DATA=$CONFIG_DIR/nodes
 DISCOVERY_KEYS=$CONFIG_DIR/discovery
 CERTS_KEYS=$CONFIG_DIR/certs
@@ -37,7 +39,9 @@ then
 else    
     echo "copy genesis"
     cp -vR $CONFIG_DIR/data /opt/work/
+    echo "copy configs"
     mkdir -vp /opt/work/config
     cp -v $CERTS_KEYS/$(hostname | awk -F'-' '{ printf "seed-%d-cert.json", $2 }')  /opt/work/config/node-cert.json
     cp -v $DISCOVERY_KEYS/$(hostname | awk -F'-' '{ printf "seed-%d-key.json", $2 }')  /opt/work/config/node-keys.json
+    cp -v ${HEAVY_GENESIS_CONFIG} /opt/work/config/heavy_genesis.json
 fi
