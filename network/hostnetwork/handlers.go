@@ -83,7 +83,7 @@ func NewStreamHandler(requestHandler RequestHandler, responseHandler future.Pack
 
 func (s *StreamHandler) HandleStream(address string, reader io.ReadWriteCloser) {
 	for {
-		p, err := packet.DeserializePacketBackend(reader)
+		p, err := packet.DeserializePacket(reader)
 
 		if err != nil {
 			if err == io.EOF || err == io.ErrUnexpectedEOF {
@@ -107,7 +107,7 @@ func (s *StreamHandler) HandleStream(address string, reader io.ReadWriteCloser) 
 
 // SendPacket sends packet using connection from pool
 func SendPacket(ctx context.Context, pool pool.ConnectionPool, p *packet.Packet) error {
-	data, err := packet.SerializePacketBackend(p)
+	data, err := packet.SerializePacket(p)
 	if err != nil {
 		return errors.Wrap(err, "Failed to serialize packet")
 	}

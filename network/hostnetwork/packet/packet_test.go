@@ -179,7 +179,7 @@ func marshalUnmarshalPacketResponse(t *testing.T, response interface{}) (p1, p2 
 	return p1, p2
 }
 
-func TestPacketBackend_SetRequest(t *testing.T) {
+func TestPacket_SetRequest(t *testing.T) {
 	type SomeData struct {
 		someField int
 	}
@@ -190,7 +190,7 @@ func TestPacketBackend_SetRequest(t *testing.T) {
 	assert.Panics(t, f)
 }
 
-func TestPacketBackend_SetResponse(t *testing.T) {
+func TestPacket_SetResponse(t *testing.T) {
 	type SomeData struct {
 		someField int
 	}
@@ -201,13 +201,13 @@ func TestPacketBackend_SetResponse(t *testing.T) {
 	assert.Panics(t, f)
 }
 
-func TestPacketBackend_GetRequest_GetPing(t *testing.T) {
+func TestPacket_GetRequest_GetPing(t *testing.T) {
 	ping := Ping{}
 	_, p2 := marshalUnmarshalPacketRequest(t, &ping)
 	assert.NotNil(t, p2.GetRequest().GetPing())
 }
 
-func TestPacketBackend_GetRequest_GetRPC(t *testing.T) {
+func TestPacket_GetRequest_GetRPC(t *testing.T) {
 	rpc := RPCRequest{Method: "meth", Data: []byte("123")}
 	p1, p2 := marshalUnmarshalPacketRequest(t, &rpc)
 	require.NotNil(t, p2.GetRequest().GetRPC())
@@ -215,7 +215,7 @@ func TestPacketBackend_GetRequest_GetRPC(t *testing.T) {
 	assert.Equal(t, p1.GetRequest().GetRPC().Data, p2.GetRequest().GetRPC().Data)
 }
 
-func TestPacketBackend_GetRequest_GetAuthorize(t *testing.T) {
+func TestPacket_GetRequest_GetAuthorize(t *testing.T) {
 	ss := []byte("onetwothree")
 	auth := AuthorizeRequest{Certificate: ss}
 	_, p2 := marshalUnmarshalPacketRequest(t, &auth)
@@ -223,7 +223,7 @@ func TestPacketBackend_GetRequest_GetAuthorize(t *testing.T) {
 	assert.Equal(t, ss, p2.GetRequest().GetAuthorize().Certificate)
 }
 
-func TestPacketBackend_GetResponse(t *testing.T) {
+func TestPacket_GetResponse(t *testing.T) {
 	cascade := BasicResponse{}
 	_, p2 := marshalUnmarshalPacketResponse(t, &cascade)
 	assert.NotNil(t, p2.GetResponse().GetBasic())

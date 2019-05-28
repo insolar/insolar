@@ -131,8 +131,8 @@ func (p *Packet) IsResponse() bool {
 	return p.GetResponse() != nil
 }
 
-// SerializePacketBackend converts packet to byte slice.
-func SerializePacketBackend(p *Packet) ([]byte, error) {
+// SerializePacket converts packet to byte slice.
+func SerializePacket(p *Packet) ([]byte, error) {
 	data, err := p.Marshal()
 	if err != nil {
 		return nil, errors.Wrap(err, "Failed to serialize packet")
@@ -148,8 +148,8 @@ func SerializePacketBackend(p *Packet) ([]byte, error) {
 	return result, nil
 }
 
-// DeserializePacketBackend reads packet from io.Reader.
-func DeserializePacketBackend(conn io.Reader) (*Packet, error) {
+// DeserializePacket reads packet from io.Reader.
+func DeserializePacket(conn io.Reader) (*Packet, error) {
 	lengthBytes := make([]byte, 8)
 	if _, err := io.ReadFull(conn, lengthBytes); err != nil {
 		return nil, err
