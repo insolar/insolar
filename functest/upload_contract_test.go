@@ -60,8 +60,6 @@ func TestCallUploadedContract(t *testing.T) {
 		Result  api.UploadReply `json:"result"`
 	}{}
 
-
-
 	err := json.Unmarshal(body, &res)
 	require.NoError(t, err)
 
