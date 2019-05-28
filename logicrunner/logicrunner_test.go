@@ -122,6 +122,12 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	})
 	s.NoError(err, "Initialize runner")
 
+	// This intentionally looks like a dirty hack, because this is exactly what it is.
+	// Here we increase the default timeout to 10 minutes to prevent accidental test fails on CI.
+	// In normal code the user of ContractRequester never has to do anything like this. For this
+	// reason ContractRequester interface doesn't has a SetCallTimeout method.
+	lr.ContractRequester.(*contractrequester.ContractRequester).SetCallTimeout(10 * time.Minute)
+
 	cryptoMock := testutils.NewCryptographyServiceMock(s.T())
 	cryptoMock.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
 		signature := insolar.SignatureFromBytes(nil)
