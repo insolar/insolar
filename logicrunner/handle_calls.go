@@ -82,7 +82,7 @@ func (h *HandleCall) executeActual(
 	}
 	es.Unlock()
 
-	request, err := lr.RegisterRequest(ctx, parcel)
+	request, err := lr.RegisterRequest(ctx, parcel) // AALEKSEEV TODO: use procs.RegisterRequest
 	if err != nil {
 		return nil, os.WrapError(err, "[ Execute ] can't create request")
 	}
