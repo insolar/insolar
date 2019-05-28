@@ -18,7 +18,6 @@ package api
 
 import (
 	"encoding/json"
-	"fmt"
 	"github.com/stretchr/testify/require"
 	"testing"
 )
@@ -39,10 +38,19 @@ func TestUnmarshalUpload(t *testing.T) {
 		Result  UploadReply `json:"result"`
 	}{}
 
+	expectedRes := struct {
+		Version string      `json:"jsonrpc"`
+		ID      string      `json:"id"`
+		Result  UploadReply `json:"result"`
+	}{
+		Version: "2.0",
+		ID: "",
+	}
+
 	err := json.Unmarshal([]byte(jsonResponse), &res)
 	require.NoError(t, err)
 
-	fmt.Printf("%#v \n", res.Result)
-
-	//require.Equal(t, jsonResponse, res)
+	require.Equal(t, expectedRes.Version, res.Version)
+	require.Equal(t, expectedRes.ID, res.ID)
+	require.NotEqual(t, "", res.Result.PrototypeRef)
 }
