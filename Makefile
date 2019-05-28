@@ -174,7 +174,7 @@ ci_test_unit:
 
 .PHONY: ci_test_slow
 ci_test_slow:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -json -v -tags slowtest ./logicrunner/ -count 1 | tee -a ci_test_unit.json
+	CGO_ENABLED=1 go test $(TEST_ARGS) -json -v -tags slowtest ./logicrunner/... ./server/internal/... -count 1 | tee -a ci_test_unit.json
 
 .PHONY: ci_test_func
 ci_test_func:
