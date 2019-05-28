@@ -101,7 +101,7 @@ func (h *ProxyHelper) SaveAsChild(parentRef, classRef insolar.Reference, constru
 	if err := h.methods.SaveAsChild(req, &res); err != nil {
 		return insolar.Reference{}, err
 	}
-	if res.Reference != nil {
+	if res.Reference == nil {
 		return insolar.Reference{}, errors.New("Unexpected result, empty reference")
 	}
 	return *res.Reference, nil
@@ -149,7 +149,7 @@ func (h *ProxyHelper) SaveAsDelegate(parentRef, classRef insolar.Reference, cons
 	if err := h.methods.SaveAsDelegate(req, &res); err != nil {
 		return insolar.Reference{}, err
 	}
-	if res.Reference != nil {
+	if res.Reference == nil {
 		return insolar.Reference{}, errors.New("Unexpected result, empty reference")
 	}
 	return *res.Reference, nil

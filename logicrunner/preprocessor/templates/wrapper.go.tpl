@@ -170,7 +170,7 @@ func Initialize() XXX_preprocessor.ContractWrapper {
         Methods: XXX_preprocessor.ContractMethods{
             {{ range $method := .Methods -}}
                     "{{ $method.Name }}": INSMETHOD_{{ $method.Name }},
-            {{- end }}
+            {{ end }}
         },
         Constructors: XXX_preprocessor.ContractConstructors{
             {{ range $f := .Functions -}}

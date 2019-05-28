@@ -26,7 +26,6 @@ import (
 	"github.com/insolar/insolar/application/proxy/rootdomain"
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/logicrunner/builtin/proxy/helloworld"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 )
 
@@ -85,13 +84,6 @@ func (m *Member) Call(rootDomain insolar.Reference, method string, params []byte
 		return m.createMemberCall(rootDomain, params)
 	case "CreateHelloWorld":
 		return rootdomain.GetObject(rootDomain).CreateHelloWorld()
-	case "GreetHelloWorld":
-		var name string
-		if err := signer.UnmarshalParams(params, &name); err != nil {
-			return nil, fmt.Errorf("[ GreetHelloWorld ]: %s", err.Error())
-		}
-
-		return helloworld.GetObject(m.GetReference()).Greet(name)
 	}
 
 	if err := m.verifySig(method, params, seed, sign); err != nil {

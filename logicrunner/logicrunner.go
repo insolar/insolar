@@ -196,6 +196,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		Cfg:   cfg,
 		state: make(map[Ref]*ObjectState),
 	}
+	res.rpc = lrCommon.NewRPC(&res, cfg)
 
 	err := initHandlers(&res)
 	if err != nil {

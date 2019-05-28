@@ -46,7 +46,7 @@ type RPC struct {
 	isStarted bool
 }
 
-func NewRPC(_ context.Context, lr LogicRunnerRPCStub, cfg *configuration.LogicRunner) *RPC {
+func NewRPC(lr LogicRunnerRPCStub, cfg *configuration.LogicRunner) *RPC {
 	rpcService := &RPC{
 		server:  rpc.NewServer(),
 		methods: lr,
