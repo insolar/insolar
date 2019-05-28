@@ -44,13 +44,21 @@ type ContractRequester struct {
 	ResultMap     map[uint64]chan *message.ReturnResults
 	Sequence      uint64
 	PulseAccessor pulse.Accessor `inject:""`
+	// callTimeout is mainly needed for unit tests which
+	// sometimes may unpredictably fail on CI with a default timeout
+	callTimeout time.Duration
 }
 
 // New creates new ContractRequester
 func New() (*ContractRequester, error) {
 	return &ContractRequester{
-		ResultMap: make(map[uint64]chan *message.ReturnResults),
+		ResultMap:   make(map[uint64]chan *message.ReturnResults),
+		callTimeout: time.Duration(configuration.NewAPIRunner().Timeout) * time.Second,
 	}, nil
+}
+
+func (cr *ContractRequester) SetCallTimeout(timeout time.Duration) {
+	cr.callTimeout = timeout
 }
 
 func (cr *ContractRequester) Start(ctx context.Context) error {
@@ -136,7 +144,7 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		return res, nil
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(configuration.NewAPIRunner().Timeout)*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, cr.callTimeout)
 	defer cancel()
 
 	inslogger.FromContext(ctx).Debug("Waiting for Method results ref=", r.Request)

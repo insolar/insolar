@@ -22,6 +22,7 @@ import (
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar/message"
+	"github.com/insolar/insolar/logicrunner/artifacts"
 )
 
 type ExecutionState struct {
@@ -29,7 +30,10 @@ type ExecutionState struct {
 
 	Ref Ref
 
-	objectbody *ObjectBody
+	ObjectDescriptor artifacts.ObjectDescriptor
+	PrototypeDescriptor artifacts.ObjectDescriptor
+	CodeDescriptor artifacts.CodeDescriptor
+
 	deactivate bool
 	nonce      uint64
 
@@ -53,8 +57,8 @@ func (es *ExecutionState) WrapError(err error, message string) error {
 		err = errors.Wrap(err, message)
 	}
 	res := Error{Err: err}
-	if es.objectbody != nil {
-		res.Contract = es.objectbody.objDescriptor.HeadRef()
+	if es.ObjectDescriptor != nil {
+		res.Contract = es.ObjectDescriptor.HeadRef()
 	}
 	if es.Current != nil {
 		res.Request = es.Current.Request

@@ -157,6 +157,10 @@ func (s *LogicRunnerFuncSuite) PrepareLrAmCbPm() (insolar.LogicRunner, artifacts
 	am := l.GetArtifactManager()
 	cm.Register(am, l.GetPulseManager(), l.GetJetCoordinator())
 	cr, err := contractrequester.New()
+	// Here we increase the default timeout to 10 minutes to prevent accidental test fails on CI.
+	// In normal code the user of ContractRequester never has to do anything like this. For this
+	// reason ContractRequester _interface_ doesn't has a SetCallTimeout method.
+	cr.SetCallTimeout(10 * time.Minute)
 	pulseAccessor := l.PulseManager.(*pulsemanager.PulseManager).PulseAccessor
 	nth := testutils.NewTerminationHandlerMock(s.T())
 
