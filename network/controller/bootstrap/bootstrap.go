@@ -311,7 +311,7 @@ func (bc *bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (*
 		return nil, errors.Wrapf(err, "Failed to prepare genesis request to address %s", h)
 	}
 	request := &packet.GenesisRequest{
-		LastPulse: uint32(bc.GetLastPulse()),
+		LastPulse: bc.GetLastPulse(),
 		Discovery: discovery,
 	}
 	future, err := bc.Network.SendRequestToHost(ctx, types.Genesis, request, h)
@@ -474,7 +474,7 @@ func (bc *bootstrapper) startBootstrap(ctx context.Context, address string) (*ne
 	}
 	request := &packet.BootstrapRequest{
 		JoinClaim:     claim,
-		LastNodePulse: uint32(lastPulse.PulseNumber),
+		LastNodePulse: lastPulse.PulseNumber,
 	}
 	future, err := bc.Network.SendRequestToHost(ctx, types.Bootstrap, request, bootstrapHost)
 	if err != nil {
@@ -572,7 +572,7 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Pa
 			RejectReason: "",
 			// TODO: calculate ETA
 			AssignShortID:    uint32(shortID),
-			UpdateSincePulse: uint32(lastPulse.PulseNumber),
+			UpdateSincePulse: lastPulse.PulseNumber,
 			// TODO: implement permissions
 			NetworkSize: uint32(len(bc.NodeKeeper.GetAccessor().GetActiveNodes())),
 		}), nil
@@ -591,7 +591,7 @@ func (bc *bootstrapper) processGenesis(ctx context.Context, request network.Pack
 	bc.SetLastPulse(insolar.PulseNumber(data.LastPulse))
 	bc.setRequest(request.GetSender(), data)
 	return bc.Network.BuildResponse(ctx, request, &packet.GenesisResponse{
-		Response: &packet.GenesisRequest{Discovery: discovery, LastPulse: uint32(bc.GetLastPulse())},
+		Response: &packet.GenesisRequest{Discovery: discovery, LastPulse: bc.GetLastPulse()},
 	}), nil
 }
 
