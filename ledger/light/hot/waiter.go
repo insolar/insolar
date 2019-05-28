@@ -26,19 +26,20 @@ import (
 
 // JetWaiter provides method for locking on jet id.
 type JetWaiter interface {
-	Wait(ctx context.Context, jetID insolar.ID) error
+	Wait(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) error
 }
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/hot.JetReleaser -o ../../../testutils -s _mock.go
 // JetReleaser provides methods for releasing jet waiters.
 type JetReleaser interface {
 	Unlock(ctx context.Context, jetID insolar.ID) error
-	ThrowTimeout(ctx context.Context)
+	ThrowTimeout(ctx context.Context, pulse insolar.PulseNumber)
 }
 
 // ChannelWaiter implements methods for locking and unlocking a certain jet id.
 type ChannelWaiter struct {
 	lock    sync.Mutex
+	pulse   insolar.PulseNumber
 	waiters map[insolar.ID]waiter
 	timeout chan struct{}
 }
@@ -58,6 +59,7 @@ func (w waiter) isClosed() bool {
 func NewChannelWaiter() *ChannelWaiter {
 	return &ChannelWaiter{
 		waiters: map[insolar.ID]waiter{},
+		pulse: insolar.FirstPulseNumber+1,
 		timeout: make(chan struct{}),
 	}
 }
@@ -72,8 +74,13 @@ func (w *ChannelWaiter) waiterForJet(jetID insolar.ID) waiter {
 // Wait waits for the raising one of two channels.
 // If hotDataChannel or timeoutChannel was raised, the method returns error
 // Either nil or ErrHotDataTimeout
-func (w *ChannelWaiter) Wait(ctx context.Context, jetID insolar.ID) error {
+func (w *ChannelWaiter) Wait(ctx context.Context, jetID insolar.ID, pulse insolar.PulseNumber) error {
 	w.lock.Lock()
+	if pulse < w.pulse {
+		w.lock.Unlock()
+		return nil
+	}
+
 	waiter := w.waiterForJet(jetID)
 	timeout := w.timeout
 	w.lock.Unlock()
@@ -100,7 +107,7 @@ func (w *ChannelWaiter) Unlock(ctx context.Context, jetID insolar.ID) error {
 }
 
 // ThrowTimeout raises all timeoutChannel
-func (w *ChannelWaiter) ThrowTimeout(ctx context.Context) {
+func (w *ChannelWaiter) ThrowTimeout(ctx context.Context, newPulse insolar.PulseNumber) {
 	w.lock.Lock()
 	defer w.lock.Unlock()
 
@@ -108,4 +115,5 @@ func (w *ChannelWaiter) ThrowTimeout(ctx context.Context) {
 	close(w.timeout)
 	w.timeout = make(chan struct{})
 	w.waiters = map[insolar.ID]waiter{}
+	w.pulse = newPulse
 }

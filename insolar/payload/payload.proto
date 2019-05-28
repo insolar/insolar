@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package payload;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+
+
+message Meta {
+    uint32 Polymorph = 16;
+
+    bytes Payload  = 20;
+    bytes Sender   = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Receiver = 22 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+    bytes Pulse    = 23 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+}
+
+message Error {
+    uint32 Polymorph = 16;
+
+    uint32 Code = 20;
+    string Text = 21;
+}
+
+message GetObject {
+    uint32 Polymorph = 16;
+
+    bytes ObjectID        = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+    bytes ObjectRequestID = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+}
+
+message SetRecord {
+    uint32 Polymorph = 16;
+
+    bytes Record = 20;
+}
+
+message ID {
+    uint32 Polymorph = 16;
+
+    bytes ID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.ID", (gogoproto.nullable) = false];
+}
+
+message Jet {
+    uint32 Polymorph = 16;
+
+    bytes JetID = 20 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.JetID", (gogoproto.nullable) = false];
+    bytes Pulse = 21 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+}

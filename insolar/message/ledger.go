@@ -90,7 +90,6 @@ type GetObject struct {
 	ledgerMessage
 	Head     insolar.Reference
 	State    *insolar.ID // If nil, will fetch the latest state.
-	Approved bool
 }
 
 // AllowedSenderObjectAndRole implements interface method

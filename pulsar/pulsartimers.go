@@ -21,20 +21,13 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
 func (currentPulsar *Pulsar) waitForPulseSigns(ctx context.Context) {
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.waitForPulseSigns")
-	defer span.End()
-
 	inslogger.FromContext(ctx).Debug("[waitForPulseSigns]")
 	ticker := time.NewTicker(10 * time.Millisecond)
 	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingSignsForChosenTimeout) * time.Millisecond)
 	go func() {
-		ctx, span := instracer.StartSpan(ctx, "goroutine")
-		defer span.End()
-
 		for range ticker.C {
 			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() > WaitingForPulseSigns {
 				ticker.Stop()
@@ -51,16 +44,10 @@ func (currentPulsar *Pulsar) waitForPulseSigns(ctx context.Context) {
 }
 
 func (currentPulsar *Pulsar) waitForEntropy(ctx context.Context) {
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.waitForEntropy")
-	defer span.End()
-
 	inslogger.FromContext(ctx).Debug("[waitForEntropy]")
 	ticker := time.NewTicker(10 * time.Millisecond)
 	timeout := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingNumberTimeout) * time.Millisecond)
 	go func() {
-		ctx, span := instracer.StartSpan(ctx, "goroutine")
-		defer span.End()
-
 		for range ticker.C {
 			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() > WaitingForEntropy {
 				ticker.Stop()
@@ -77,16 +64,10 @@ func (currentPulsar *Pulsar) waitForEntropy(ctx context.Context) {
 }
 
 func (currentPulsar *Pulsar) waitForEntropySigns(ctx context.Context) {
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.waitForEntropySigns")
-	defer span.End()
-
 	inslogger.FromContext(ctx).Debug("[waitForEntropySigns]")
 	ticker := time.NewTicker(10 * time.Millisecond)
 	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingSignTimeout) * time.Millisecond)
 	go func() {
-		ctx, span := instracer.StartSpan(ctx, "goroutine")
-		defer span.End()
-
 		for range ticker.C {
 			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() > WaitingForEntropySigns {
 				ticker.Stop()
@@ -103,16 +84,10 @@ func (currentPulsar *Pulsar) waitForEntropySigns(ctx context.Context) {
 }
 
 func (currentPulsar *Pulsar) waitForVectors(ctx context.Context) {
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.waitForVectors")
-	defer span.End()
-
 	inslogger.FromContext(ctx).Debug("[waitForVectors]")
 	ticker := time.NewTicker(10 * time.Millisecond)
 	currentTimeOut := time.Now().Add(time.Duration(currentPulsar.Config.ReceivingVectorTimeout) * time.Millisecond)
 	go func() {
-		ctx, span := instracer.StartSpan(ctx, "goroutine")
-		defer span.End()
-
 		for range ticker.C {
 			if currentPulsar.IsStateFailed() || currentPulsar.StateSwitcher.GetState() > WaitingForVectors {
 				ticker.Stop()
