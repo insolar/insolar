@@ -187,21 +187,17 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 		state: make(map[Ref]*ObjectState),
 	}
 
-	err := initHandlers(&res)
-	if err != nil {
-		return nil, errors.Wrap(err, "Error while init handlers for logic runner:")
-	}
-
 	return &res, nil
 }
 
-func initHandlers(lr *LogicRunner) error {
+func InitHandlers(lr *LogicRunner, b wmBus.Sender) error {
 	wmLogger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
 
 	dep := &Dependencies{
 		Publisher: pubSub,
 		lr:        lr,
+		Bus:       b,
 	}
 
 	initHandle := func(msg bus.Message) *Init {
@@ -286,13 +282,8 @@ func (lr *LogicRunner) Start(ctx context.Context) error {
 }
 
 func (lr *LogicRunner) RegisterHandlers() {
-	lr.MessageBus.MustRegister(insolar.TypeCallMethod, lr.FlowDispatcher.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeExecutorResults, lr.FlowDispatcher.WrapBusHandle)
 	lr.MessageBus.MustRegister(insolar.TypeValidateCaseBind, lr.HandleValidateCaseBindMessage)
 	lr.MessageBus.MustRegister(insolar.TypeValidationResults, lr.HandleValidationResultsMessage)
-	lr.MessageBus.MustRegister(insolar.TypePendingFinished, lr.FlowDispatcher.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeStillExecuting, lr.FlowDispatcher.WrapBusHandle)
-	lr.MessageBus.MustRegister(insolar.TypeAbandonedRequestsNotification, lr.FlowDispatcher.WrapBusHandle)
 }
 
 // Stop stops logic runner component and its executors
@@ -890,14 +881,6 @@ func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
 		}
 		lr.stopLock.Unlock()
 	}
-}
-
-func (lr *LogicRunner) HandleAbandonedRequestsNotificationMessage(
-	ctx context.Context, parcel insolar.Parcel,
-) (
-	insolar.Reply, error,
-) {
-	return lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
 }
 
 func (lr *LogicRunner) sendOnPulseMessagesAsync(ctx context.Context, messages []insolar.Message) {

@@ -18,10 +18,9 @@ package virtual
 
 import (
 	"context"
-	"errors"
 
 	"github.com/ThreeDotsLabs/watermill"
-	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/certificate"
@@ -52,6 +51,7 @@ import (
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
 	"github.com/insolar/insolar/version/manager"
+	"github.com/pkg/errors"
 )
 
 type bootstrapComponents struct {
@@ -126,9 +126,6 @@ func initComponents(
 	nodeNetwork, err := nodenetwork.NewNodeNetwork(cfg.Host.Transport, certManager.GetCertificate())
 	checkError(ctx, err, "failed to start NodeNetwork")
 
-	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
-	checkError(ctx, err, "failed to start LogicRunner")
-
 	nw, err := servicenetwork.NewServiceNetwork(cfg, &cm, isGenesis)
 	checkError(ctx, err, "failed to start Network")
 
@@ -155,6 +152,19 @@ func initComponents(
 	_, err = manager.NewVersionManager(cfg.VersionManager)
 	checkError(ctx, err, "failed to load VersionManager: ")
 
+	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
+	pulses := pulse.NewStorageMem()
+	b := bus.NewBus(pubsub, pulses, jc)
+
+	logicRunner, err := logicrunner.NewLogicRunner(&cfg.LogicRunner)
+	checkError(ctx, err, "failed to start LogicRunner")
+
+	// logicRunner.Bus = b
+	err = logicrunner.InitHandlers(logicRunner, b)
+	if err != nil {
+		return nil, nil, errors.Wrap(err, "Error while init handlers for logic runner:")
+	}
+
 	// move to logic runner ??
 	err = logicRunner.OnPulse(ctx, *pulsar.NewPulse(cfg.Pulsar.NumberDelta, 0, &entropygenerator.StandardEntropyGenerator{}))
 	checkError(ctx, err, "failed init pulse for LogicRunner")
@@ -171,10 +181,6 @@ func initComponents(
 		nw,
 		pulsemanager.NewPulseManager(),
 	)
-
-	jc := jetcoordinator.NewJetCoordinator(cfg.Ledger.LightChainLimit)
-	pulses := pulse.NewStorageMem()
-	b := bus.NewBus(pubsub, pulses, jc)
 
 	components := []interface{}{
 		b,
@@ -199,27 +205,23 @@ func initComponents(
 
 	cm.Inject(components...)
 
-	startWatermill(ctx, logger, pubsub, b, nw.SendMessageHandler, notFound)
+	startWatermill(ctx, logger, pubsub, b, nw.SendMessageHandler, logicRunner.FlowDispatcher.Process)
 
 	return &cm, terminationHandler, nil
-}
-
-func notFound(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
-	return nil, errors.New("reply channel for this msg doesn't exist")
 }
 
 func startWatermill(
 	ctx context.Context,
 	logger watermill.LoggerAdapter,
-	pubSub watermillMsg.Subscriber,
+	pubSub message.Subscriber,
 	b *bus.Bus,
-	outHandler, inHandler watermillMsg.HandlerFunc,
+	outHandler, inHandler message.HandlerFunc,
 ) {
-	inRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
+	inRouter, err := message.NewRouter(message.RouterConfig{}, logger)
 	if err != nil {
 		panic(err)
 	}
-	outRouter, err := watermillMsg.NewRouter(watermillMsg.RouterConfig{}, logger)
+	outRouter, err := message.NewRouter(message.RouterConfig{}, logger)
 	if err != nil {
 		panic(err)
 	}
@@ -246,7 +248,7 @@ func startWatermill(
 	startRouter(ctx, outRouter)
 }
 
-func startRouter(ctx context.Context, router *watermillMsg.Router) {
+func startRouter(ctx context.Context, router *message.Router) {
 	go func() {
 		if err := router.Run(); err != nil {
 			inslogger.FromContext(ctx).Error("Error while running router", err)

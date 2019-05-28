@@ -63,7 +63,6 @@ type MachineLogicExecutor interface {
 type LogicRunner interface {
 	HandleValidateCaseBindMessage(context.Context, Parcel) (res Reply, err error)
 	HandleValidationResultsMessage(context.Context, Parcel) (res Reply, err error)
-	HandleExecutorResultsMessage(context.Context, Parcel) (res Reply, err error)
 	OnPulse(context.Context, Pulse) error
 }
 

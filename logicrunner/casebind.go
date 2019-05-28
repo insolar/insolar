@@ -232,10 +232,6 @@ func (lr *LogicRunner) HandleValidationResultsMessage(ctx context.Context, inmsg
 	return &reply.OK{}, nil
 }
 
-func (lr *LogicRunner) HandleExecutorResultsMessage(ctx context.Context, inmsg insolar.Parcel) (insolar.Reply, error) {
-	return lr.FlowDispatcher.WrapBusHandle(ctx, inmsg)
-}
-
 func init() {
 	gob.Register(&CaseRequest{})
 	gob.Register(&CaseBind{})

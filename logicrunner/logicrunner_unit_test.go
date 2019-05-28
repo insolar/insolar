@@ -89,6 +89,8 @@ func (suite *LogicRunnerCommonTestSuite) SetupLogicRunner() {
 	suite.lr.JetCoordinator = suite.jc
 	suite.lr.PulseAccessor = suite.ps
 	suite.lr.NodeNetwork = suite.nn
+	err := InitHandlers(suite.lr, nil)
+	suite.Require().NoError(err)
 }
 
 func (suite *LogicRunnerCommonTestSuite) AfterTest(suiteName, testName string) {
@@ -662,7 +664,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	msg := &message.AbandonedRequestsNotification{Object: objectId}
 	parcel := &message.Parcel{Msg: msg}
 
-	_, err := suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
+	_, err := suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
 	suite.lr.Stop(suite.ctx)
@@ -671,7 +673,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
 	suite.lr.state[*msg.DefaultTarget()] = &ObjectState{ExecutionState: &ExecutionState{LedgerHasMoreRequests: false}}
 
-	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
+	_, err = suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
 	suite.lr.Stop(suite.ctx)
@@ -680,7 +682,7 @@ func (suite *LogicRunnerTestSuite) TestHandleAbandonedRequestsNotificationMessag
 	suite.lr, _ = NewLogicRunner(&configuration.LogicRunner{})
 	suite.lr.state[*msg.DefaultTarget()] = &ObjectState{ExecutionState: &ExecutionState{LedgerHasMoreRequests: true}}
 
-	_, err = suite.lr.HandleAbandonedRequestsNotificationMessage(suite.ctx, parcel)
+	_, err = suite.lr.FlowDispatcher.WrapBusHandle(suite.ctx, parcel)
 	suite.Require().NoError(err)
 	suite.Equal(true, suite.lr.state[*msg.DefaultTarget()].ExecutionState.LedgerHasMoreRequests)
 	suite.lr.Stop(suite.ctx)
@@ -1436,8 +1438,8 @@ func (s *LogicRunnerOnPulseTestSuite) TestLedgerHasMoreRequests() {
 			messagesQueue := convertQueueToMessageQueue(test.queue[:maxQueueLength])
 
 			expectedMessage := &message.ExecutorResults{
-				RecordRef:             s.objectRef,
-				Queue:                 messagesQueue,
+				RecordRef: s.objectRef,
+				Queue:     messagesQueue,
 				LedgerHasMoreRequests: test.hasMoreRequests,
 			}
 
@@ -1510,7 +1512,7 @@ func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestAlreadyHaveLedgerQueueEle
 
 func (s *LRUnsafeGetLedgerPendingRequestTestSuite) TestNoMoreRequestsInExecutionState() {
 	es := &ExecutionState{
-		Ref:                   s.ref,
+		Ref: s.ref,
 		LedgerHasMoreRequests: false,
 	}
 	s.lr.unsafeGetLedgerPendingRequest(s.ctx, es)
