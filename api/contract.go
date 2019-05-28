@@ -74,6 +74,7 @@ func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *Uploa
 
 	insgocc, err := goplugintestutils.BuildPreprocessor()
 	if err != nil {
+		inslog.Infof("[ ContractService.Upload ] can't build preprocessor %#v", err)
 		return errors.Wrap(err, "can't build preprocessor")
 	}
 	cb := goplugintestutils.NewContractBuilder(s.runner.ArtifactManager, insgocc)
