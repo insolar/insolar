@@ -26,10 +26,10 @@ import (
 )
 
 // provider provides a recent storage for jet
-type provider struct { // nolint: structcheck
+type provider struct {
 	pendingStorages map[insolar.ID]*PendingStorageConcrete
 
-	indexLock   sync.Mutex
+	indexLock   sync.Mutex // nolint: structcheck
 	pendingLock sync.Mutex
 }
 
