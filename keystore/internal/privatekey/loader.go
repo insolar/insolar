@@ -34,7 +34,7 @@ type keyLoader struct {
 
 func NewLoader() Loader {
 	return &keyLoader{
-		parseFunc: jwkParse,
+		parseFunc: pemParse,
 	}
 }
 
