@@ -68,11 +68,4 @@ func TestCallUploadedContract(t *testing.T) {
 	contractRef := insolar.Reference{}.FromSlice([]byte(res.Result.PrototypeRef))
 	emptyRef := make([]byte, insolar.RecordRefSize)
 	require.NotEqual(t, insolar.Reference{}.FromSlice(emptyRef), contractRef)
-
-	// CHECK ANSWER
-	//require.Equal(t, "", res)
-
-	//firstMember := createMember(t, "Member1")
-	//firstBalance := getBalanceNoErr(t, firstMember, firstMember.ref)
-	//require.Equal(t, 1000*1000*1000, firstBalance)
 }
