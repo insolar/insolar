@@ -56,5 +56,6 @@ import (
 
 // RequestPulse is data received from a pulsar.
 type RequestPulse struct {
-	Pulse insolar.Pulse
+	Pulse         insolar.Pulse
+	TraceSpanData []byte
 }
