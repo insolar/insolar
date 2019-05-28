@@ -144,7 +144,7 @@ test_network_integration:
 
 .PHONY: test_slow
 test_slow:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./logicrunner/
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./logicrunner/... ./server/internal/...
 
 .PHONY: test
 test: test_unit
