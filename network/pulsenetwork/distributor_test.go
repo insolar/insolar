@@ -78,9 +78,7 @@ const (
 
 func createHostNetwork(t *testing.T) (network.HostNetwork, error) {
 	m := mock.NewRoutingTableMock(t)
-	m.AddToKnownHostsMock.Set(func(p *host.Host) {
-
-	})
+	m.AddToKnownHostsMock.Set(func(*host.Host) {})
 
 	cm1 := component.NewManager(nil)
 	f1 := transport.NewFactory(configuration.NewHostNetwork().Transport)
@@ -113,12 +111,12 @@ func TestDistributor_Distribute(t *testing.T) {
 	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
 		if r.GetType() == types.Ping {
 			log.Info("handle Ping")
-			return n1.BuildResponse(ctx, r, nil), nil
+			return n1.BuildResponse(ctx, r, &packet.Ping{}), nil
 		}
 
 		log.Info("handle Pulse")
 		pulse := r.GetRequest().GetPulse()
-		assert.Equal(t, insolar.PulseNumber(PULSENUMBER), pulse.Pulse.PulseNumber)
+		assert.EqualValues(t, PULSENUMBER, pulse.Pulse.PulseNumber)
 		return n1.BuildResponse(ctx, r, &packet.BasicResponse{Success: true}), nil
 	}
 	n1.RegisterRequestHandler(types.Ping, handler)
