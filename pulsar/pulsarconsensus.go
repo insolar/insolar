@@ -23,7 +23,6 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 )
 
@@ -95,9 +94,6 @@ func (bftCell *BftCell) GetIsEntropyReceived() bool {
 }
 
 func (currentPulsar *Pulsar) verify(ctx context.Context) {
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.verify")
-	defer span.End()
-
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("[verify] - %v", currentPulsar.Config.MainListenerAddress)
 
@@ -217,9 +213,6 @@ func (currentPulsar *Pulsar) verify(ctx context.Context) {
 }
 
 func (currentPulsar *Pulsar) finalizeBft(ctx context.Context, finalEntropy insolar.Entropy, activePulsars []string) {
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.finalizeBft")
-	defer span.End()
-
 	currentPulsar.SetCurrentSlotEntropy(&finalEntropy)
 	chosenPulsar, err := selectByEntropy(
 		currentPulsar.PlatformCryptographyScheme, finalEntropy, activePulsars, 1)

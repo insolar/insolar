@@ -324,7 +324,6 @@ func (m *PulseManager) processJets(ctx context.Context, previous, current, new i
 
 	var results []jetInfo
 	ids := m.JetAccessor.All(ctx, new)
-	me := m.JetCoordinator.Me()
 	ids, err := m.filterOtherExecutors(ctx, current, ids)
 	if err != nil {
 		return nil, err
@@ -348,18 +347,7 @@ func (m *PulseManager) processJets(ctx context.Context, previous, current, new i
 		info := jetInfo{id: jetID}
 		if indexToSplit == i && splitCount > 0 {
 			splitCount--
-
 			info.split = true
-		} else {
-			// Set actual because we are the last executor for jet.
-			m.JetModifier.Update(ctx, new, true, jetID)
-			nextExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(jetID), new)
-			if err != nil {
-				return nil, err
-			}
-			if *nextExecutor == me {
-				info.mineNext = true
-			}
 		}
 		results = append(results, info)
 	}
@@ -593,8 +581,17 @@ func (m *PulseManager) splitJets(ctx context.Context, jets []jetInfo, previous, 
 			}).Info("jet split performed")
 
 			jets[i] = info
+		} else {
+			// Set actual because we are the last executor for jet.
+			m.JetModifier.Update(ctx, new, true, jet.id)
+			nextExecutor, err := m.JetCoordinator.LightExecutorForJet(ctx, insolar.ID(jet.id), new)
+			if err != nil {
+				return nil, err
+			}
+			if *nextExecutor == me {
+				info.mineNext = true
+			}
 		}
-
 	}
 	return jets, nil
 }
@@ -626,7 +623,7 @@ func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx cont
 	ctx, span := instracer.StartSpan(ctx, "early.close")
 	defer span.End()
 
-	m.JetReleaser.ThrowTimeout(ctx)
+	m.JetReleaser.ThrowTimeout(ctx, newPulse.PulseNumber)
 }
 
 // Start starts pulse manager

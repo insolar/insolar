@@ -192,17 +192,18 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 		return nil, err
 	}
 	var resp response
-	currentInterNum := 1
-	for ; currentInterNum <= sendRetryCount; currentInterNum++ {
+	currentIterNum := 1
+	for ; currentIterNum <= sendRetryCount; currentIterNum++ {
 		res, err := requester.Send(ctx, TestAPIURL, rootCfg, &requester.RequestConfigJSON{
 			Method: method,
 			Params: params,
 		})
 
 		if netErr, ok := errors.Cause(err).(net.Error); ok && netErr.Timeout() {
-			fmt.Printf("Network timeout, retry. Attempt: %d/%d\n", currentInterNum, sendRetryCount)
+			fmt.Printf("Network timeout, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
 			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second)
+			resp.Error = netErr.Error()
 			continue
 		} else if err != nil {
 			return nil, err
@@ -217,36 +218,16 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 		if resp.Error == "" {
 			return resp.Result, nil
 		}
-		if strings.Contains(resp.Error, "Incorrect message pulse") {
-			fmt.Printf("Incorrect message pulse, retry. Attempt: %d/%d\n(error - %s)\n", currentInterNum, sendRetryCount, resp.Error)
-			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second)
-			continue
-		}
 
 		if strings.Contains(resp.Error, "flow canceled") {
-			fmt.Printf("Flow canceled, retry. Attempt: %d/%d\n(error - %s)\n", currentInterNum, sendRetryCount, resp.Error)
+			fmt.Printf("Flow canceled, retry. Attempt: %d/%d\n(error - %s)\n", currentIterNum, sendRetryCount, resp.Error)
 			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second)
 			continue
 		}
 
 		if strings.Contains(resp.Error, "Messagebus timeout exceeded") {
-			fmt.Printf("Messagebus timeout exceeded, retry. Attempt: %d/%d\n", currentInterNum, sendRetryCount)
-			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second)
-			continue
-		}
-
-		if strings.Contains(resp.Error, "invalid state record") {
-			fmt.Printf("Invalid state record, retry. Attempt: %d/%d\n(error - %s)\n", currentInterNum, sendRetryCount, resp.Error)
-			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second)
-			continue
-		}
-
-		if strings.Contains(resp.Error, "invalid child record") {
-			fmt.Printf("Invalid child record, retry. Attempt: %d/%d\n(error - %s)\n", currentInterNum, sendRetryCount, resp.Error)
+			fmt.Printf("Messagebus timeout exceeded, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
 			fmt.Printf("Method: %s\n", method)
 			time.Sleep(time.Second)
 			continue
@@ -255,7 +236,7 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 		break
 	}
 
-	if currentInterNum > sendRetryCount {
+	if currentIterNum > sendRetryCount {
 		return nil, errors.New("Number of retries exceeded. " + resp.Error)
 	}
 
