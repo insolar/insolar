@@ -55,7 +55,7 @@ type UploadArgs struct {
 
 // UploadReply is reply that Contract.Upload returns
 type UploadReply struct {
-	PrototypeRef insolar.Reference `json:"PrototypeRef"`
+	PrototypeRef string `json:"PrototypeRef"`
 }
 
 // Upload builds code and return prototype ref
@@ -83,10 +83,11 @@ func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *Uploa
 
 	err = cb.Build(contractMap)
 	if err != nil {
+		inslog.Infof("[ ContractService.Upload ] can't build contract %#v", err)
 		return errors.Wrap(err, "can't build contract")
 	}
-
-	reply.PrototypeRef = *cb.Prototypes[args.Name]
+	reference := *cb.Prototypes[args.Name]
+	reply.PrototypeRef = reference.String()
 	return nil
 }
 
