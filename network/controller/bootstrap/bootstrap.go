@@ -244,6 +244,7 @@ func newNodeStruct(node insolar.NetworkNode) (*NodeStruct, error) {
 	}, nil
 }
 
+// Code is bootstrap result code
 type Code uint8
 
 const (
@@ -345,6 +346,7 @@ func (bc *bootstrapper) ZeroBootstrap(ctx context.Context) (*network.BootstrapRe
 	}, nil
 }
 
+// BootstrapDiscovery bootstrapping as discovery node
 func (bc *bootstrapper) BootstrapDiscovery(ctx context.Context) (*network.BootstrapResult, error) {
 	logger := inslogger.FromContext(ctx)
 	logger.Info("[ BootstrapDiscovery ] Network bootstrap between discovery nodes")
