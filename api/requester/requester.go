@@ -263,3 +263,25 @@ func Status(url string) (*StatusResponse, error) {
 
 	return &statusResp.Result, nil
 }
+
+// LogOff rpc request turns network state to NoNetwork to initiate reconnect sequence.
+func LogOff(url string) (*StatusResponse, error) {
+	params := getDefaultRPCParams("status.LogOff")
+
+	body, err := GetResponseBody(url+"/rpc", params)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Status ]")
+	}
+
+	statusResp := rpcStatusResponse{}
+
+	err = json.Unmarshal(body, &statusResp)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ Status ] Can't unmarshal")
+	}
+	if statusResp.Error != nil {
+		return nil, errors.New("[ Status ] Field 'error' is not nil: " + fmt.Sprint(statusResp.Error))
+	}
+
+	return &statusResp.Result, nil
+}
