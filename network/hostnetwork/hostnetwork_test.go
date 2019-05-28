@@ -347,7 +347,7 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 
 	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
-		time.Sleep(time.Second)
+		time.Sleep(time.Millisecond * 100)
 		return s.n2.BuildResponse(ctx, r, &packet.Ping{}), nil
 	}
 	s.n2.RegisterRequestHandler(types.Ping, handler)
@@ -359,7 +359,7 @@ func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 	f, err := s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
 	require.NoError(t, err)
 
-	_, err = f.WaitResponse(time.Millisecond)
+	_, err = f.WaitResponse(time.Microsecond * 10)
 	require.Error(t, err)
 
 	f, err = s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
