@@ -40,9 +40,9 @@ func FromProto(p *PulseProto) *insolar.Pulse {
 
 func ToProto(p *insolar.Pulse) *PulseProto {
 	result := &PulseProto{
-		PulseNumber:      uint32(p.PulseNumber),
-		PrevPulseNumber:  uint32(p.PrevPulseNumber),
-		NextPulseNumber:  uint32(p.NextPulseNumber),
+		PulseNumber:      p.PulseNumber,
+		PrevPulseNumber:  p.PrevPulseNumber,
+		NextPulseNumber:  p.NextPulseNumber,
 		PulseTimestamp:   p.PulseTimestamp,
 		EpochPulseNumber: int32(p.EpochPulseNumber),
 		OriginID:         p.OriginID[:],
@@ -57,7 +57,7 @@ func ToProto(p *insolar.Pulse) *PulseProto {
 func SenderConfirmationToProto(publicKey string, p insolar.PulseSenderConfirmation) *PulseSenderConfirmationProto {
 	return &PulseSenderConfirmationProto{
 		PublicKey:       publicKey,
-		PulseNumber:     uint32(p.PulseNumber),
+		PulseNumber:     p.PulseNumber,
 		ChosenPublicKey: p.ChosenPublicKey,
 		Entropy:         p.Entropy,
 		Signature:       p.Signature,
