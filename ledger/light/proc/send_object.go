@@ -98,7 +98,7 @@ func (p *SendObject) handle(
 			"going_to": hNode.String(),
 		}).Debug("fetching object (on heavy)")
 
-		obj, err := p.fetchObject(ctx, msg.Head, *hNode, stateID, parcel.Pulse())
+		obj, err := p.fetchObject(ctx, msg.Head, *hNode, stateID)
 		if err != nil {
 			if err == insolar.ErrDeactivated {
 				return &reply.Error{ErrType: reply.ErrDeactivated}, nil
@@ -143,7 +143,7 @@ func (p *SendObject) handle(
 			"going_to": suitNode.String(),
 		}).Debug("fetching object (record not found)")
 
-		obj, err := p.fetchObject(ctx, msg.Head, *suitNode, stateID, parcel.Pulse())
+		obj, err := p.fetchObject(ctx, msg.Head, *suitNode, stateID)
 		if err != nil {
 			if err == insolar.ErrDeactivated {
 				return &reply.Error{ErrType: reply.ErrDeactivated}, nil
@@ -196,7 +196,7 @@ func (p *SendObject) handle(
 			if err != nil {
 				return nil, err
 			}
-			obj, err := p.fetchObject(ctx, msg.Head, *hNode, stateID, parcel.Pulse())
+			obj, err := p.fetchObject(ctx, msg.Head, *hNode, stateID)
 			if err != nil {
 				return nil, err
 			}
@@ -216,7 +216,7 @@ func (p *SendObject) handle(
 }
 
 func (p *SendObject) fetchObject(
-	ctx context.Context, obj insolar.Reference, node insolar.Reference, stateID *insolar.ID, pulse insolar.PulseNumber,
+	ctx context.Context, obj insolar.Reference, node insolar.Reference, stateID *insolar.ID,
 ) (*reply.Object, error) {
 	sender := messagebus.BuildSender(
 		p.Dep.Bus.Send,
@@ -226,8 +226,8 @@ func (p *SendObject) fetchObject(
 	genericReply, err := sender(
 		ctx,
 		&message.GetObject{
-			Head:     obj,
-			State:    stateID,
+			Head:  obj,
+			State: stateID,
 		},
 		&insolar.MessageSendOptions{
 			Receiver: &node,

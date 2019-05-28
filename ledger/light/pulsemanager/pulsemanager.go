@@ -153,7 +153,6 @@ func NewPulseManager(
 func (m *PulseManager) processEndPulse(
 	ctx context.Context,
 	jets []jetInfo,
-	prevPulseNumber insolar.PulseNumber,
 	currentPulse, newPulse insolar.Pulse,
 ) error {
 	var g errgroup.Group
@@ -165,7 +164,7 @@ func (m *PulseManager) processEndPulse(
 		info := i
 
 		g.Go(func() error {
-			drop, dropSerialized, _, err := m.createDrop(ctx, info, currentPulse.PulseNumber)
+			drop, err := m.createDrop(ctx, info, currentPulse.PulseNumber)
 			if err != nil {
 				return errors.Wrapf(err, "create drop on pulse %v failed", currentPulse.PulseNumber)
 			}
@@ -190,7 +189,7 @@ func (m *PulseManager) processEndPulse(
 
 			if info.left == nil && info.right == nil {
 				msg, err := m.getExecutorHotData(
-					ctx, info.id, currentPulse.PulseNumber, newPulse.PulseNumber, drop, dropSerialized,
+					ctx, info.id, currentPulse.PulseNumber, newPulse.PulseNumber, drop,
 				)
 				if err != nil {
 					return errors.Wrapf(err, "getExecutorData failed for jet id %v", info.id)
@@ -199,7 +198,7 @@ func (m *PulseManager) processEndPulse(
 				go sender(*msg, info.id)
 			} else {
 				msg, err := m.getExecutorHotData(
-					ctx, info.id, currentPulse.PulseNumber, newPulse.PulseNumber, drop, dropSerialized,
+					ctx, info.id, currentPulse.PulseNumber, newPulse.PulseNumber, drop,
 				)
 				if err != nil {
 					return errors.Wrapf(err, "getExecutorData failed for jet id %v", info.id)
@@ -228,8 +227,6 @@ func (m *PulseManager) createDrop(
 	currentPulse insolar.PulseNumber,
 ) (
 	block *drop.Drop,
-	dropSerialized []byte,
-	messages [][]byte,
 	err error,
 ) {
 	block = &drop.Drop{
@@ -240,11 +237,10 @@ func (m *PulseManager) createDrop(
 
 	err = m.DropModifier.Set(ctx, *block)
 	if err != nil {
-		return nil, nil, nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
+		return nil, errors.Wrap(err, "[ createDrop ] Can't SetDrop")
 	}
 
-	dropSerialized = drop.MustEncode(block)
-	return
+	return block, nil
 }
 
 func (m *PulseManager) getExecutorHotData(
@@ -253,7 +249,6 @@ func (m *PulseManager) getExecutorHotData(
 	currentPN insolar.PulseNumber,
 	newPulsePN insolar.PulseNumber,
 	drop *drop.Drop,
-	dropSerialized []byte,
 ) (*message.HotData, error) {
 	ctx, span := instracer.StartSpan(ctx, "pulse.prepare_hot_data")
 	defer span.End()
@@ -401,11 +396,11 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 	// Run only on material executor.
 	// execute only on material executor
 	if m.NodeNet.GetOrigin().Role() == insolar.StaticRoleLightMaterial && oldPulse != nil && prevPN != nil {
-		err = m.processEndPulse(ctx, jets, *prevPN, *oldPulse, newPulse)
+		err = m.processEndPulse(ctx, jets, *oldPulse, newPulse)
 		if err != nil {
 			return err
 		}
-		m.postProcessJets(ctx, newPulse, jets)
+		m.postProcessJets(ctx, jets)
 		go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
 	}
 
@@ -505,7 +500,7 @@ func (m *PulseManager) setUnderGilSection(
 
 	if oldPulse != nil && prevPN != nil {
 		if m.NodeNet.GetOrigin().Role() == insolar.StaticRoleLightMaterial {
-			m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse, jets)
+			m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse)
 		}
 	}
 
@@ -608,7 +603,7 @@ func (m *PulseManager) hasSplitIntention(ctx context.Context, previous insolar.P
 	return drop.Split
 }
 
-func (m *PulseManager) postProcessJets(ctx context.Context, newPulse insolar.Pulse, jets []jetInfo) {
+func (m *PulseManager) postProcessJets(ctx context.Context, jets []jetInfo) {
 	ctx, span := instracer.StartSpan(ctx, "jets.post_process")
 	defer span.End()
 
@@ -619,7 +614,7 @@ func (m *PulseManager) postProcessJets(ctx context.Context, newPulse insolar.Pul
 	}
 }
 
-func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse insolar.Pulse, jets []jetInfo) {
+func (m *PulseManager) prepareArtifactManagerMessageHandlerForNextPulse(ctx context.Context, newPulse insolar.Pulse) {
 	ctx, span := instracer.StartSpan(ctx, "early.close")
 	defer span.End()
 

@@ -200,12 +200,9 @@ func NewMessageHandler(
 
 // Init initializes handlers and middleware.
 func (h *MessageHandler) Init(ctx context.Context) error {
-	m := newMiddleware(h)
-	h.middleware = m
-
+	h.middleware = newMiddleware(h)
 	h.jetTreeUpdater = jet.NewFetcher(h.Nodes, h.JetStorage, h.Bus, h.JetCoordinator)
-
-	h.setHandlersForLight(m)
+	h.setHandlersForLight()
 
 	return nil
 }
@@ -214,7 +211,7 @@ func (h *MessageHandler) OnPulse(ctx context.Context, pn insolar.Pulse) {
 	h.FlowDispatcher.ChangePulse(ctx, pn)
 }
 
-func (h *MessageHandler) setHandlersForLight(m *middleware) {
+func (h *MessageHandler) setHandlersForLight() {
 	// Generic.
 
 	h.Bus.MustRegister(insolar.TypeGetCode, h.FlowDispatcher.WrapBusHandle)

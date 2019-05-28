@@ -155,7 +155,7 @@ func (mb *MessageBus) MustRegister(p insolar.MessageType, handler insolar.Messag
 	}
 }
 
-func (mb *MessageBus) createWatermillMessage(ctx context.Context, parcel insolar.Parcel, ops *insolar.MessageSendOptions, currentPulse insolar.Pulse) *watermillMsg.Message {
+func (mb *MessageBus) createWatermillMessage(_ context.Context, parcel insolar.Parcel, currentPulse insolar.Pulse) *watermillMsg.Message {
 	payload := message.ParcelToBytes(parcel)
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payload)
 
@@ -204,7 +204,7 @@ func (mb *MessageBus) Send(ctx context.Context, msg insolar.Message, ops *insola
 
 	_, ok := transferredToWatermill[msg.Type()]
 	if ok {
-		wmMsg := mb.createWatermillMessage(ctx, parcel, ops, currentPulse)
+		wmMsg := mb.createWatermillMessage(ctx, parcel, currentPulse)
 		nodes, err := mb.getReceiverNodes(ctx, parcel, currentPulse, ops)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to calculate role")
@@ -485,7 +485,7 @@ func (mb *MessageBus) deliver(ctx context.Context, args [][]byte) (result []byte
 	return buf.Bytes(), nil
 }
 
-func (mb *MessageBus) checkParcel(ctx context.Context, parcel insolar.Parcel) error {
+func (mb *MessageBus) checkParcel(_ context.Context, parcel insolar.Parcel) error {
 	sender := parcel.GetSender()
 
 	if mb.signmessages {

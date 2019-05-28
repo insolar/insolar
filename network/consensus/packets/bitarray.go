@@ -64,7 +64,7 @@ const statesInByte = 4
 
 type bitArray []BitSetState
 
-func div(dividend, divider int) int {
+func div(dividend, divider int) int { // nolint: unparam
 	if (dividend % divider) == 0 {
 		return dividend / divider
 	}

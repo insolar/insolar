@@ -64,7 +64,7 @@ import (
 	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/merkle"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/jbenet/go-base58"
+	base58 "github.com/jbenet/go-base58"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 	"go.opencensus.io/tag"
@@ -278,7 +278,7 @@ func getNodeState(node insolar.NetworkNode, pulseNumber insolar.PulseNumber) pac
 
 func (fp *FirstPhaseImpl) checkPacketSignature(state *ConsensusState, packet *packets.Phase1Packet, recordRef insolar.Reference) error {
 	if state.ConsensusInfo.IsJoiner() {
-		return fp.checkPacketSignatureFromClaim(packet, recordRef)
+		return fp.checkPacketSignatureFromClaim(packet)
 	}
 
 	activeNode := fp.NodeKeeper.GetAccessor().GetActiveNode(recordRef)
@@ -289,7 +289,7 @@ func (fp *FirstPhaseImpl) checkPacketSignature(state *ConsensusState, packet *pa
 	return packet.Verify(fp.Cryptography, key)
 }
 
-func (fp *FirstPhaseImpl) checkPacketSignatureFromClaim(packet *packets.Phase1Packet, recordRef insolar.Reference) error {
+func (fp *FirstPhaseImpl) checkPacketSignatureFromClaim(packet *packets.Phase1Packet) error {
 	announceClaim := packet.GetAnnounceClaim()
 	if announceClaim == nil {
 		return errors.New("could not find announce claim")

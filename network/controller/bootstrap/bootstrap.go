@@ -428,7 +428,7 @@ func (bc *bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryN
 	// we need only one host to bootstrap
 	bootstrapResults := make(chan *network.BootstrapResult, needResponses)
 	for _, discoveryNode := range discoveryNodes {
-		go func(ctx context.Context, address string, ch chan<- *network.BootstrapResult) {
+		go func(ctx context.Context, address string) {
 			inslogger.FromContext(ctx).Infof("Starting bootstrap to address %s", address)
 			ctx, span := instracer.StartSpan(ctx, "Bootstrapper.getDiscoveryNodesChannel")
 			defer span.End()
@@ -441,7 +441,7 @@ func (bc *bootstrapper) getDiscoveryNodesChannel(ctx context.Context, discoveryN
 				return
 			}
 			bootstrapResults <- bootstrapResult
-		}(ctx, discoveryNode.GetHost(), bootstrapResults)
+		}(ctx, discoveryNode.GetHost())
 	}
 
 	return bootstrapResults
@@ -611,7 +611,7 @@ func (bc *bootstrapper) startCyclicBootstrap(ctx context.Context) {
 	}
 }
 
-func (bc *bootstrapper) getLagerNetorkIndex(ctx context.Context, results []*network.BootstrapResult) int {
+func (bc *bootstrapper) getLagerNetorkIndex(_ context.Context, results []*network.BootstrapResult) int {
 	networkSize := results[0].NetworkSize
 	index := 0
 	for i := 1; i < len(results); i++ {
