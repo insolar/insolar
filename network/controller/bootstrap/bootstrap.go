@@ -552,7 +552,9 @@ func (bc *bootstrapper) waitGenesisResults(ctx context.Context, ch <-chan *Genes
 	}
 }
 
-func bootstrap(ctx context.Context, address string, options *common.Options, bootstrapF func(context.Context, string, *Permission) (*network.BootstrapResult, error), perm *Permission) (*network.BootstrapResult, error) {
+type bootstrapFunc func(context.Context, string, *Permission) (*network.BootstrapResult, error)
+
+func bootstrap(ctx context.Context, address string, options *common.Options, bootstrapF bootstrapFunc, perm *Permission) (*network.BootstrapResult, error) {
 	minTO := options.MinTimeout
 	if !options.InfinityBootstrap {
 		return bootstrapF(ctx, address, perm)
