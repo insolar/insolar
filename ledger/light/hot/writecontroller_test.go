@@ -18,13 +18,12 @@ package hot_test
 
 import (
 	"math/rand"
-	"sync"
 	"testing"
 	"time"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/hot"
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -61,8 +60,7 @@ func TestWriteController_Open(t *testing.T) {
 		require.NoError(t, err)
 
 		err = m.Open(ctx, 1)
-		require.Error(t, err)
-		assert.Equal(t, hot.ErrWriteClosed, err)
+		assert.EqualError(t, err, "requested pulse is closed for writing")
 	})
 }
 
@@ -89,8 +87,7 @@ func TestWriteController_CloseAndWait(t *testing.T) {
 		require.NoError(t, err)
 
 		err = m.CloseAndWait(ctx, 1)
-		require.Error(t, err)
-		assert.Equal(t, hot.ErrWriteClosed, err)
+		assert.EqualError(t, err, "requested pulse is closed for writing")
 	})
 
 	t.Run("try to close incorrect pulse", func(t *testing.T) {
@@ -102,12 +99,10 @@ func TestWriteController_CloseAndWait(t *testing.T) {
 		require.NoError(t, err)
 
 		err = m.CloseAndWait(ctx, 1)
-		require.Error(t, err)
-		assert.Equal(t, hot.ErrWriteClosed, err)
+		assert.EqualError(t, err, "requested pulse is closed for writing")
 
 		err = m.CloseAndWait(ctx, 3)
-		require.Error(t, err)
-		assert.Equal(t, hot.ErrWriteClosed, err)
+		assert.EqualError(t, err, "requested pulse is closed for writing")
 	})
 }
 
@@ -120,8 +115,7 @@ func TestWriteController_Begin(t *testing.T) {
 
 		m := hot.NewWriteController()
 		_, err := m.Begin(ctx, 1)
-		require.Error(t, err)
-		assert.Equal(t, hot.ErrWriteClosed, err)
+		assert.EqualError(t, err, "requested pulse is closed for writing")
 	})
 
 	t.Run("begin for closed pulse", func(t *testing.T) {
@@ -135,8 +129,7 @@ func TestWriteController_Begin(t *testing.T) {
 		require.NoError(t, err)
 
 		_, err = m.Begin(ctx, 1)
-		require.Error(t, err)
-		assert.Equal(t, hot.ErrWriteClosed, err)
+		assert.EqualError(t, err, "requested pulse is closed for writing")
 	})
 
 	t.Run("begin for correct pulse", func(t *testing.T) {
@@ -166,28 +159,20 @@ func TestWriteController_Begin(t *testing.T) {
 		err := m.Open(ctx, 1)
 		require.NoError(t, err)
 
-		var wg sync.WaitGroup
+		done, _ := m.Begin(ctx, 1)
+		started := make(chan struct{})
 
-		wg.Add(1)
 		go func() {
-			for i := 0; i < 1000; i++ {
-				done, _ := m.Begin(ctx, 1)
-				go func() {
-					time.Sleep((time.Duration)(rand.Int31n(400)) * time.Millisecond)
-					done()
-				}()
-			}
-			_ = m.CloseAndWait(ctx, 1)
-			wg.Done()
+			close(started)
+			err = m.CloseAndWait(ctx, 1)
+			require.NoError(t, err)
 		}()
-
-		time.Sleep(time.Millisecond * 200)
+		<-started
+		time.Sleep(time.Millisecond * 100)
 
 		_, err = m.Begin(ctx, 1)
+		assert.EqualError(t, err, "requested pulse is closed for writing")
 
-		wg.Wait()
-
-		require.Error(t, err)
-		assert.Equal(t, hot.ErrWriteClosed, err)
+		done()
 	})
 }
