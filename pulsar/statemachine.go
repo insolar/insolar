@@ -21,7 +21,6 @@ import (
 	"sync"
 
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/instrumentation/instracer"
 )
 
 //go:generate stringer -type=State
@@ -100,9 +99,6 @@ func (switcher *StateSwitcherImpl) SetPulsar(pulsar *Pulsar) {
 
 // SwitchToState switches the state-machine to another step
 func (switcher *StateSwitcherImpl) SwitchToState(ctx context.Context, state State, args interface{}) {
-	ctx, span := instracer.StartSpan(ctx, "Pulsar.SwitchToState")
-	defer span.End()
-
 	logger := inslogger.FromContext(ctx)
 	logger.Debugf("Switch state from %v to %v, node - %v", switcher.GetState().String(), state.String(), switcher.pulsar.Config.MainListenerAddress)
 	if state < switcher.GetState() && (state != WaitingForStart && state != Failed) {
