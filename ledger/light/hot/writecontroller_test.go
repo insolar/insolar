@@ -150,7 +150,7 @@ func TestWriteController_Begin(t *testing.T) {
 		for i := 0; i < 1000; i++ {
 			done, _ := m.Begin(ctx, 1)
 			go func() {
-				time.Sleep((time.Duration)(rand.Int31n(1000)+10) * time.Millisecond)
+				time.Sleep((time.Duration)(rand.Int31n(100)) * time.Millisecond)
 				done()
 			}()
 		}
@@ -173,7 +173,7 @@ func TestWriteController_Begin(t *testing.T) {
 			for i := 0; i < 1000; i++ {
 				done, _ := m.Begin(ctx, 1)
 				go func() {
-					time.Sleep((time.Duration)(rand.Int31n(1000)) * time.Millisecond)
+					time.Sleep((time.Duration)(rand.Int31n(400)) * time.Millisecond)
 					done()
 				}()
 			}
@@ -181,7 +181,7 @@ func TestWriteController_Begin(t *testing.T) {
 			wg.Done()
 		}()
 
-		time.Sleep(time.Millisecond * 100)
+		time.Sleep(time.Millisecond * 200)
 
 		_, err = m.Begin(ctx, 1)
 
