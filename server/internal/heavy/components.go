@@ -243,6 +243,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		h.BlobModifier = blobs
 		h.DropModifier = drops
 		h.PCS = CryptoScheme
+		h.Sender = WmBus
 
 		PulseManager = pm
 		Handler = h

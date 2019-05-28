@@ -17,11 +17,9 @@
 package handler
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 
-	"github.com/ThreeDotsLabs/watermill"
 	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
@@ -30,6 +28,7 @@ import (
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/blob"
 	"github.com/insolar/insolar/ledger/drop"
+	"github.com/insolar/insolar/ledger/heavy/proc"
 	"github.com/pkg/errors"
 	"go.opencensus.io/stats"
 
@@ -52,57 +51,57 @@ type Handler struct {
 	IndexLifelineAccessor object.LifelineAccessor
 	IndexBucketModifier   object.IndexBucketModifier
 	DropModifier          drop.Modifier
+	Sender                bus.Sender
 
 	jetID insolar.JetID
+	dep   *proc.Dependencies
 }
 
 // New creates a new handler.
 func New() *Handler {
-	return &Handler{
+	h := &Handler{
 		jetID: *insolar.NewJetID(0, nil),
 	}
+	dep := proc.Dependencies{
+		PassState: func(p *proc.PassState) {
+			p.Dep.Blobs = h.BlobAccessor
+			p.Dep.Records = h.RecordAccessor
+			p.Dep.Sender = h.Sender
+		},
+	}
+	h.dep = &dep
+	return h
+
 }
 
 func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
-	ctx, _ := inslogger.WithField(msg.Context(), "pulse", msg.Metadata.Get(bus.MetaPulse))
-
-	rep, err := h.handle(ctx, msg)
-
-	var resInBytes []byte
-	var replyType string
+	meta := payload.Meta{}
+	err := meta.Unmarshal(msg.Payload)
 	if err != nil {
-		resInBytes, err = bus.ErrorToBytes(err)
-		if err != nil {
-			return nil, errors.Wrap(err, "can't convert error to bytes")
-		}
-		replyType = bus.TypeError
-	} else {
-		resInBytes = reply.ToBytes(rep)
-		replyType = string(rep.Type())
+		inslogger.FromContext(msg.Context()).Error(err)
 	}
-	resAsMsg := watermillMsg.NewMessage(watermill.NewUUID(), resInBytes)
-	resAsMsg.Metadata.Set(bus.MetaType, replyType)
-	receiver := msg.Metadata.Get(bus.MetaSender)
-	resAsMsg.Metadata.Set(bus.MetaReceiver, receiver)
-	return []*watermillMsg.Message{resAsMsg}, nil
+	ctx, logger := inslogger.WithField(msg.Context(), "pulse", fmt.Sprintf("%d", meta.Pulse))
+
+	err = h.handle(ctx, msg)
+	if err != nil {
+		logger.Error(err)
+	}
+
+	return nil, nil
 }
 
-func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) (insolar.Reply, error) {
-	switch msg.Metadata.Get(bus.MetaType) {
-	case insolar.TypeGetObject.String():
-		meta := payload.Meta{}
-		err := meta.Unmarshal(msg.Payload)
-		if err != nil {
-			return nil, errors.Wrap(err, "can't deserialize meta payload")
-		}
-		parcel, err := message.DeserializeParcel(bytes.NewBuffer(meta.Payload))
-		if err != nil {
-			return nil, errors.Wrap(err, "can't deserialize payload")
-		}
-		return h.handleGetObject(ctx, parcel)
-
+func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) error {
+	pl, err := payload.UnmarshalFromMeta(msg.Payload)
+	if err != nil {
+		return errors.Wrap(err, "can't deserialize meta payload")
+	}
+	switch pl.(type) {
+	case *payload.PassState:
+		p := proc.NewPassState(msg)
+		h.dep.PassState(p)
+		return p.Proceed(ctx)
 	default:
-		return nil, fmt.Errorf("no handler for message type %s", msg.Metadata.Get(bus.MetaType))
+		return fmt.Errorf("no handler for message type #%T", pl)
 	}
 }
 
@@ -133,68 +132,6 @@ func (h *Handler) handleGetCode(ctx context.Context, parcel insolar.Parcel) (ins
 	rep := reply.Code{
 		Code:        code.Value,
 		MachineType: codeRec.MachineType,
-	}
-
-	return &rep, nil
-}
-
-func (h *Handler) handleGetObject(
-	ctx context.Context, parcel insolar.Parcel,
-) (insolar.Reply, error) {
-	msg := parcel.Message().(*message.GetObject)
-
-	// Fetch object index. If not found redirect.
-	idx, err := h.IndexLifelineAccessor.ForID(ctx, parcel.Pulse(), *msg.Head.Record())
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to fetch object index for %s", msg.Head.Record().DebugString())
-	}
-
-	// Determine object state id.
-	var stateID *insolar.ID
-	if msg.State != nil {
-		stateID = msg.State
-	} else {
-		stateID = idx.LatestState
-	}
-	if stateID == nil {
-		return &reply.Error{ErrType: reply.ErrStateNotAvailable}, nil
-	}
-
-	// Fetch state record.
-	rec, err := h.RecordAccessor.ForID(ctx, *stateID)
-	if err != nil {
-		return nil, errors.Wrap(err, fmt.Sprintf("failed to fetch state %s for %s", stateID.DebugString(), msg.Head.Record()))
-	}
-
-	virtRec := rec.Virtual
-	concrete := record.Unwrap(virtRec)
-	state, ok := concrete.(record.State)
-	if !ok {
-		return nil, errors.New("invalid object record")
-	}
-	if state.ID() == record.StateDeactivation {
-		return &reply.Error{ErrType: reply.ErrDeactivated}, nil
-	}
-
-	var childPointer *insolar.ID
-	if idx.ChildPointer != nil {
-		childPointer = idx.ChildPointer
-	}
-	rep := reply.Object{
-		Head:         msg.Head,
-		State:        *stateID,
-		Prototype:    state.GetImage(),
-		IsPrototype:  state.GetIsPrototype(),
-		ChildPointer: childPointer,
-		Parent:       idx.Parent,
-	}
-
-	if state.GetMemory() != nil && state.GetMemory().NotEmpty() {
-		b, err := h.BlobAccessor.ForID(ctx, *state.GetMemory())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to fetch blob")
-		}
-		rep.Memory = b.Value
 	}
 
 	return &rep, nil
