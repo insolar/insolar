@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ThreeDotsLabs/watermill"
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/payload"
@@ -39,13 +40,15 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		return fmt.Errorf("unexpected payload type %T", pl)
 	}
 
+	replyTo := message.NewMessage(watermill.NewUUID(), pass.Origin)
+
 	rec, err := p.Dep.Records.ForID(ctx, pass.StateID)
 	if err == object.ErrNotFound {
 		msg, err := payload.NewMessage(&payload.Error{Text: "no such state"})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		go p.Dep.Sender.Reply(ctx, p.message, msg)
+		go p.Dep.Sender.Reply(ctx, replyTo, msg)
 		return nil
 	}
 	if err != nil {
@@ -64,7 +67,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		go p.Dep.Sender.Reply(ctx, p.message, msg)
+		go p.Dep.Sender.Reply(ctx, replyTo, msg)
 	}
 
 	var memory []byte
@@ -83,7 +86,7 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		Record: buf,
 		Memory: memory,
 	})
-	go p.Dep.Sender.Reply(ctx, p.message, msg)
+	go p.Dep.Sender.Reply(ctx, replyTo, msg)
 
 	return nil
 }
