@@ -35,7 +35,10 @@ type extendedIndexBucket struct {
 
 	IndexBucket
 
-	requestCache     map[insolar.ID]*record.Result
+	requestCache map[insolar.ID]*record.Result
+
+	hasFullChain     bool
+	pulsePendingMap  map[insolar.PulseNumber]int
 	fullPendingChain []record.Virtual
 }
 
@@ -83,6 +86,10 @@ func (i *InMemoryIndex) createBucket(ctx context.Context, pn insolar.PulseNumber
 			ObjID:          objID,
 			PendingRecords: []record.Virtual{},
 		},
+		requestCache:     map[insolar.ID]*record.Result{},
+		fullPendingChain: []record.Virtual{},
+		hasFullChain:     false,
+		pulsePendingMap:  map[insolar.PulseNumber]int{},
 	}
 
 	objsByPn, ok := i.buckets[pn]
@@ -171,10 +178,10 @@ func (i *InMemoryIndex) SetResult(ctx context.Context, pn insolar.PulseNumber, o
 	return nil
 }
 
-func (i *InMemoryIndex) HasOpenPendingsBehind(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (bool, error) {
+func (i *InMemoryIndex) HasOpenPendingsBehind(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (bool, *insolar.PulseNumber, error) {
 	b := i.bucket(pn, objID)
 	if b == nil {
-		return false, ErrLifelineNotFound
+		return false, nil, ErrLifelineNotFound
 	}
 
 	b.Lock()
@@ -186,14 +193,25 @@ func (i *InMemoryIndex) HasOpenPendingsBehind(ctx context.Context, pn insolar.Pu
 		case *record.Request:
 			cachedRes, ok := b.requestCache[*r.Object.Record()]
 			if !ok || cachedRes == nil {
-				return true, nil
+				return true, &pn, nil
 			}
 		case *record.Result:
 			panic("cases for closing result for previous slots")
 		}
 	}
 
-	return false, nil
+	if b.HasOpenRequestsBehind {
+		return true, b.LastKnownPendingPN, nil
+	}
+
+	// special case for the first pulse ever for an object
+	// if there are some requests, we know them
+	var lastKnowPN *insolar.PulseNumber = nil
+	if len(b.PendingRecords) > 0 {
+		lastKnowPN = &pn
+	}
+
+	return false, lastKnowPN, nil
 }
 
 // SetBucket adds a bucket with provided pulseNumber and ID
@@ -208,7 +226,8 @@ func (i *InMemoryIndex) SetBucket(ctx context.Context, pn insolar.PulseNumber, b
 	}
 
 	bucks[bucket.ObjID] = &extendedIndexBucket{
-		IndexBucket: bucket,
+		IndexBucket:  bucket,
+		requestCache: map[insolar.ID]*record.Result{},
 	}
 
 	stats.Record(ctx,

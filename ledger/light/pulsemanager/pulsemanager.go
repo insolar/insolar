@@ -283,7 +283,7 @@ func (m *PulseManager) getExecutorHotData(
 			continue
 		}
 
-		has, err := m.PendingAccessor.HasOpenPendingsBehind(ctx, currentPN, meta.ObjID)
+		has, lastKnownPN, err := m.PendingAccessor.HasOpenPendingsBehind(ctx, currentPN, meta.ObjID)
 		if err != nil {
 			inslogger.FromContext(ctx).WithField("id", meta.ObjID.DebugString()).Error("failed to check open pendings")
 		}
@@ -293,6 +293,7 @@ func (m *PulseManager) getExecutorHotData(
 			ObjID:                 meta.ObjID,
 			Index:                 encoded,
 			HasOpenRequestsBehind: has,
+			LastKnownPendingPN:    lastKnownPN,
 		})
 	}
 

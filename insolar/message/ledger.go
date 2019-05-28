@@ -343,10 +343,19 @@ func (*HotData) Type() insolar.MessageType {
 
 // HotIndex contains meat about hot-data
 type HotIndex struct {
-	LifelineLastUsed      insolar.PulseNumber
-	ObjID                 insolar.ID
-	Index                 []byte
-	LastKnownPendingPN    insolar.PulseNumber
+	// ObjID is needed for identifying lifeline
+	ObjID insolar.ID
+
+	// Index is decoded because of the circle-loops in the project
+	// We can't store it here as a Lifeline, because a project won't build
+	Index []byte
+	// LifelineLastUsed is a mark of pulse, when the lifeline was used for the last time
+	// It's being used for `ttl` of indexes
+	LifelineLastUsed insolar.PulseNumber
+
+	// LastKnownPendingPN say a pulse of last saving request/result
+	LastKnownPendingPN *insolar.PulseNumber
+	// HasOpenRequestsBehind indicates that there are some pending on other lights
 	HasOpenRequestsBehind bool
 }
 

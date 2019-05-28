@@ -124,10 +124,12 @@ func (p *HotData) process(ctx context.Context) error {
 			ctx,
 			p.msg.PulseNumber,
 			object.IndexBucket{
-				ObjID:            meta.ObjID,
-				Lifeline:         decodedIndex,
-				LifelineLastUsed: meta.LifelineLastUsed,
-				PendingRecords:   []record.Virtual{},
+				ObjID:                 meta.ObjID,
+				Lifeline:              decodedIndex,
+				LifelineLastUsed:      meta.LifelineLastUsed,
+				PendingRecords:        []record.Virtual{},
+				LastKnownPendingPN:    meta.LastKnownPendingPN,
+				HasOpenRequestsBehind: meta.HasOpenRequestsBehind,
 			},
 		)
 		if err != nil {

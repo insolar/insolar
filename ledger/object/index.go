@@ -92,5 +92,5 @@ type PendingModifier interface {
 }
 
 type PendingAccessor interface {
-	HasOpenPendingsBehind(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (bool, error)
+	HasOpenPendingsBehind(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) (hasPendingsBehing bool, lastKnownPN *insolar.PulseNumber, err error)
 }
