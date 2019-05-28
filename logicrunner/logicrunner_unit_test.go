@@ -1151,14 +1151,17 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			suite.lr.FlowDispatcher.ChangePulse(ctx, *pulse)
 			suite.lr.innerFlowDispatcher.ChangePulse(ctx, *pulse)
 
-			var err error
-			for {
-				_, err = suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
-				if err != fmt.Errorf("Please retry") { // OK scenario // TODO AALEXEEV
-					break
+			_, err := suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
+			// TODO AALEKSEEV fix TestLogicRunnner/TestCallMethodWithOnPulse/pulse_change_in_ReqisterRequest
+			/*
+				var err error
+				for {
+					_, err = suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
+					if err == nil || err.Error() != "Please retry" { // OK scenario for CallMethod // TODO AALEXEEV
+						break
+					}
 				}
-			}
-
+			*/
 			if test.errorExpected {
 				suite.Require().Error(err)
 			} else {

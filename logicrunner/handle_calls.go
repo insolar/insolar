@@ -19,7 +19,6 @@ package logicrunner
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
@@ -85,10 +84,6 @@ func (h *HandleCall) executeActual(
 	es.Unlock()
 
 	procRegisterRequest := NewRegisterRequest(parcel, h.dep)
-
-	if time.Now().Unix()%3 == 0 { // TODO delete this after fixing functests, test code
-		return nil, fmt.Errorf("Please retry")
-	}
 
 	if err := f.Procedure(ctx, procRegisterRequest, true); err != nil {
 		if err == flow.ErrCancelled {
