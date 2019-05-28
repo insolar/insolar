@@ -21,7 +21,6 @@ import (
 )
 
 func PulseFromProto(p *PulseProto) *insolar.Pulse {
-	// TODO: add protobuf methods to PulseNumber and modify PulseProto in pulse.proto
 	result := &insolar.Pulse{
 		PulseNumber:      insolar.PulseNumber(p.PulseNumber),
 		PrevPulseNumber:  insolar.PulseNumber(p.PrevPulseNumber),
@@ -40,7 +39,6 @@ func PulseFromProto(p *PulseProto) *insolar.Pulse {
 }
 
 func PulseToProto(p *insolar.Pulse) *PulseProto {
-	// TODO: add protobuf methods to PulseNumber and modify PulseProto in pulse.proto
 	result := &PulseProto{
 		PulseNumber:      uint32(p.PulseNumber),
 		PrevPulseNumber:  uint32(p.PrevPulseNumber),
@@ -57,7 +55,6 @@ func PulseToProto(p *insolar.Pulse) *PulseProto {
 }
 
 func PulseSenderConfirmationToProto(publicKey string, p insolar.PulseSenderConfirmation) *PulseSenderConfirmationProto {
-	// TODO: add protobuf methods to PulseNumber and modify PulseSenderConfirmationProto in pulse.proto
 	return &PulseSenderConfirmationProto{
 		PublicKey:       publicKey,
 		PulseNumber:     uint32(p.PulseNumber),
@@ -68,7 +65,6 @@ func PulseSenderConfirmationToProto(publicKey string, p insolar.PulseSenderConfi
 }
 
 func PulseSenderConfirmationFromProto(p *PulseSenderConfirmationProto) (string, insolar.PulseSenderConfirmation) {
-	// TODO: add protobuf methods to PulseNumber and modify PulseSenderConfirmationProto in pulse.proto
 	return p.PublicKey, insolar.PulseSenderConfirmation{
 		PulseNumber:     insolar.PulseNumber(p.PulseNumber),
 		ChosenPublicKey: p.ChosenPublicKey,

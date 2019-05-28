@@ -163,9 +163,8 @@ func (hn *hostNetwork) Stop(ctx context.Context) error {
 func (hn *hostNetwork) buildRequest(ctx context.Context, packetType types.PacketType,
 	requestData interface{}, receiver *host.Host) *packet.Packet {
 	result := &packet.Packet{
-		Sender:   hn.getOrigin(),
-		Receiver: receiver,
-		// TODO: replace in protobuf with our type
+		Sender:    hn.getOrigin(),
+		Receiver:  receiver,
 		RequestID: uint64(hn.sequenceGenerator.Generate()),
 		TraceID:   inslogger.TraceID(ctx),
 		Type:      uint32(packetType),
@@ -242,9 +241,8 @@ func (hn *hostNetwork) RegisterPacketHandler(t types.PacketType, handler network
 // BuildResponse create response to an incoming request with Data set to responseData.
 func (hn *hostNetwork) BuildResponse(ctx context.Context, request network.Packet, responseData interface{}) network.Packet {
 	result := &packet.Packet{
-		Sender:   hn.getOrigin(),
-		Receiver: request.GetSenderHost(),
-		// TODO: replace in protobuf with our type
+		Sender:    hn.getOrigin(),
+		Receiver:  request.GetSenderHost(),
 		RequestID: uint64(request.GetRequestID()),
 		TraceID:   inslogger.TraceID(ctx),
 		Type:      uint32(request.GetType()),

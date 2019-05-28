@@ -332,7 +332,6 @@ func (bc *bootstrapper) sendGenesisRequest(ctx context.Context, h *host.Host) (*
 	if err != nil {
 		return nil, errors.Wrapf(err, "Failed to prepare genesis request to address %s", h)
 	}
-	// TODO: remove PulseNumber convertions
 	request := &packet.GenesisRequest{
 		LastPulse: uint32(bc.GetLastPulse()),
 		Discovery: discovery,

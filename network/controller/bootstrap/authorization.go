@@ -235,7 +235,6 @@ func (ac *authorizationController) processRegisterRequest(ctx context.Context, r
 				data.Version, ac.NodeKeeper.GetOrigin().Version())}
 		return ac.Network.BuildResponse(ctx, request, response), nil
 	}
-	// TODO: remove SessionID convertions
 	response := ac.buildRegistrationResponse(SessionID(data.SessionID), data.JoinClaim)
 	if response.Code != packet.Confirmed {
 		return ac.Network.BuildResponse(ctx, request, response), nil
