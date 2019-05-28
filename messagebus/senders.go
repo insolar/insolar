@@ -33,8 +33,8 @@ import (
 )
 
 const jetMissRetryCount = 10
-const incorrectPulseRetryCount = 2
-const flowCancelledRetryCount = 2
+const incorrectPulseRetryCount = 1
+const flowCancelledRetryCount = 1
 
 // PreSender is an alias for a function
 // which is working like a `middleware` for messagebus.Send
@@ -186,7 +186,7 @@ func retryer(accessor pulse.Accessor, retriesCount int, errSubstr string, debugS
 		return func(ctx context.Context, msg insolar.Message, options *insolar.MessageSendOptions) (insolar.Reply, error) {
 			retries := retriesCount
 			var lastPulse insolar.PulseNumber
-			for retries > 0 {
+			for retries >= 0 {
 
 				currentPulse, err := accessor.Latest(ctx)
 				if err != nil {
