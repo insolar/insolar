@@ -315,4 +315,7 @@ type Auther interface {
 	// ValidateCert checks certificate signature
 	// TODO make this cert.validate()
 	ValidateCert(context.Context, insolar.AuthorizationCertificate) (bool, error)
+
+	// FilterJoinerNodes returns nodes which allowed to connect to this network in this state.
+	FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode
 }
