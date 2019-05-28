@@ -54,8 +54,6 @@ func TestCallUploadedContract(t *testing.T) {
 	})
 	require.NotEmpty(t, body)
 
-	//require.Equal(t, "", string(body))
-
 	res := struct {
 		Version string          `json:"jsonrpc"`
 		ID      string          `json:"id"`
