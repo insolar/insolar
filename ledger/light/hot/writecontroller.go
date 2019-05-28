@@ -90,8 +90,7 @@ func (m *WriteController) Open(ctx context.Context, pulse insolar.PulseNumber) e
 		return nil
 	}
 
-	var wg sync.WaitGroup
-	m.wg = wg
+	m.wg = sync.WaitGroup{}
 	m.current = pulse
 	m.closed = false
 
