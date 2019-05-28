@@ -339,7 +339,6 @@ func (n *ServiceNetwork) phaseManagerOnPulse(ctx context.Context, newPulse insol
 		errMsg := "Failed to pass consensus: " + err.Error()
 		logger.Error(errMsg)
 		n.SetGateway(n.Gateway().NewGateway(insolar.NoNetworkState))
-		//n.TerminationHandler.Abort(errMsg)
 	}
 }
 

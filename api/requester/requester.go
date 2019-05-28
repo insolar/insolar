@@ -273,7 +273,7 @@ func Status(url string) (*StatusResponse, error) {
 	return res, nil
 }
 
-// Status makes rpc request to info.Status method and extracts it
+// LogOff rpc request turns network state to NoNetwork to initiate reconnect sequence.
 func LogOff(url string) (*StatusResponse, error) {
 	params := getDefaultRPCParams("status.LogOff")
 
