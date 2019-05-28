@@ -430,9 +430,9 @@ func (mdMember *Member) migrationCall(rdRef insolar.Reference, params []byte) (s
 		return "", fmt.Errorf("[ migrationCall ] Only oracles can call migrationCall")
 	}
 
-	var txHash, burnAddress, insRefStr, currentDate string
+	var txHash, burnAddress, currentDate string
 	var inAmount interface{}
-	if err := signer.UnmarshalParams(params, &txHash, &burnAddress, &inAmount, &insRefStr, &currentDate); err != nil {
+	if err := signer.UnmarshalParams(params, &txHash, &burnAddress, &inAmount, &currentDate); err != nil {
 		return "", fmt.Errorf("[ migrationCall ] Can't unmarshal params: %s", err.Error())
 	}
 
