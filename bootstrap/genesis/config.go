@@ -34,6 +34,12 @@ type Node struct {
 	KeysFile string `mapstructure:"keys_file"`
 }
 
+// Contracts contains config for contract's plugins generation.
+type Contracts struct {
+	Insgocc string
+	OutDir  string
+}
+
 // Config contains all genesis config
 type Config struct {
 	// RootKeysFile is the root key place.
@@ -49,6 +55,9 @@ type Config struct {
 
 	// RootBalance is a start balance for the root member's wallet.
 	RootBalance uint `mapstructure:"root_balance"`
+
+	// Insgocc
+	Contracts Contracts
 
 	// Discovery settings.
 

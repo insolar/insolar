@@ -206,7 +206,7 @@ func (cb *contractsBuilder) build(ctx context.Context, contracts map[string]*pre
 		if err != nil {
 			return errors.Wrapf(err, "[ buildPrototypes ] Can't RegisterResult of prototype for code '%v'", name)
 		}
-		inslogger.FromContext(ctx).Debugf("%v registered result. ref=", name, *cb.prototypes[name])
+		inslogger.FromContext(ctx).Debugf("%v registered result. ref=%v", name, *cb.prototypes[name])
 	}
 
 	return nil

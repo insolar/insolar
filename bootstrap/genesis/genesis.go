@@ -120,6 +120,19 @@ func (g *Generator) Run(ctx context.Context) error {
 		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
 	}
 
+	err = generatePlugins(g.config.Contracts.OutDir, g.config.Contracts.Insgocc)
+	if err != nil {
+		panic(errors.Wrap(err, "[ Genesis ] could't compile smart contracts via insgocc"))
+	}
+	err = generateMemoryFiles(
+		g.config.Contracts.OutDir,
+		platformpolicy.MustPublicKeyToString(pair.Public),
+		g.config.RootBalance,
+	)
+	if err != nil {
+		panic(errors.Wrap(err, "[ Genesis ] can't generate memory files"))
+	}
+
 	inslog.Info("[ Genesis ] create keys ...")
 	discoveryNodes, err := createKeysInDir(
 		ctx,

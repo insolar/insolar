@@ -38,6 +38,7 @@ CONFIGS_DIR=${LAUNCHNET_BASE_DIR}configs
 KEYS_FILE=$CONFIGS_DIR/bootstrap_keys.json
 ROOT_MEMBER_KEYS_FILE=${CONFIGS_DIR}/root_member_keys.json
 HEAVY_GENESIS_CONFIG_FILE=${CONFIGS_DIR}/heavy_genesis.json
+CONTRACTS_PLUGINS_DIR=${LAUNCHNET_BASE_DIR}/contracts
 
 # TODO: use only heavy matereal data dir
 DISCOVERY_NODES_DATA=${LAUNCHNET_BASE_DIR}discoverynodes/
@@ -117,6 +118,7 @@ clear_dirs()
     rm -rfv ${LEDGER_DIR}
     rm -rfv ${DISCOVERY_NODES_DATA}
     rm -rfv ${LAUNCHNET_LOGS_DIR}
+    rm -rfv ${CONTRACTS_PLUGINS_DIR}
     { set +x; } 2>/dev/null
 
     for i in `seq 1 $NUM_DISCOVERY_NODES`
