@@ -56,8 +56,8 @@ message RPCRequest {
 }
 
 message Cascade {
-    repeated bytes NodeIds = 1;
-    bytes Entropy = 2;
+    repeated bytes NodeIds = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference"];
+    bytes Entropy = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Entropy", (gogoproto.nullable) = false];
     uint32 ReplicationFactor = 3;
 }
 

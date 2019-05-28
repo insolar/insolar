@@ -182,7 +182,6 @@ func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data in
 
 	_, span := instracer.StartSpan(context.Background(), "RPCController.requestCascadeSendMessage")
 	defer span.End()
-	// todo: fill cascade properly
 	request := &packet.CascadeRequest{
 		TraceID: inslogger.TraceID(ctx),
 		RPC: &packet.RPCRequest{
@@ -190,9 +189,9 @@ func (rpc *rpcController) requestCascadeSendMessage(ctx context.Context, data in
 			Data:   args,
 		},
 		Cascade: &packet.Cascade{
-			NodeIds:           nil,
-			Entropy:           nil,
-			ReplicationFactor: 0,
+			NodeIds:           data.NodeIds,
+			Entropy:           data.Entropy,
+			ReplicationFactor: uint32(data.ReplicationFactor),
 		},
 	}
 
@@ -319,8 +318,12 @@ func (rpc *rpcController) processCascade(ctx context.Context, request network.Pa
 		logger.Debugf("failed to invoke RPC: %s", invokeErr.Error())
 		generalError += invokeErr.Error() + "; "
 	}
-	// TODO: fill cascade data
-	sendErr := rpc.initCascadeSendMessage(ctx, insolar.Cascade{}, true, payload.RPC.Method, payload.RPC.Data)
+	cascade := insolar.Cascade{
+		NodeIds:           payload.Cascade.NodeIds,
+		Entropy:           payload.Cascade.Entropy,
+		ReplicationFactor: uint(payload.Cascade.ReplicationFactor),
+	}
+	sendErr := rpc.initCascadeSendMessage(ctx, cascade, true, payload.RPC.Method, payload.RPC.Data)
 	if sendErr != nil {
 		logger.Debugf("failed to send message to next cascade layer: %s", sendErr.Error())
 		generalError += sendErr.Error()
