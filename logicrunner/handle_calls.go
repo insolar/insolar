@@ -18,6 +18,8 @@ package logicrunner
 
 import (
 	"context"
+	"fmt"
+	"time"
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
@@ -82,10 +84,19 @@ func (h *HandleCall) executeActual(
 	}
 	es.Unlock()
 
-	request, err := lr.RegisterRequest(ctx, parcel) // AALEKSEEV TODO: use procs.RegisterRequest
-	if err != nil {
+	procRegisterRequest := NewRegisterRequest(parcel, h.dep)
+
+	if time.Now().Unix()%3 == 0 { // TODO delete this after fixing functests, test code
+		return nil, fmt.Errorf("Please retry")
+	}
+
+	if err := f.Procedure(ctx, procRegisterRequest, true); err != nil {
+		if err == flow.ErrCancelled {
+			return nil, fmt.Errorf("Please retry") // TODO AALEKSEEV move to some constant!
+		}
 		return nil, os.WrapError(err, "[ Execute ] can't create request")
 	}
+	request := procRegisterRequest.getResult()
 
 	es.Lock()
 	qElement := ExecutionQueueElement{

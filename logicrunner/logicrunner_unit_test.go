@@ -1150,7 +1150,15 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			pulse := pulsar.NewPulse(1, parcel.Pulse(), &entropygenerator.StandardEntropyGenerator{})
 			suite.lr.FlowDispatcher.ChangePulse(ctx, *pulse)
 			suite.lr.innerFlowDispatcher.ChangePulse(ctx, *pulse)
-			_, err := suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
+
+			var err error
+			for {
+				_, err = suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
+				if err != fmt.Errorf("Please retry") { // OK scenario // TODO AALEXEEV
+					break
+				}
+			}
+
 			if test.errorExpected {
 				suite.Require().Error(err)
 			} else {

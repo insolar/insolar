@@ -20,6 +20,7 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/binary"
+	"fmt"
 	"sync"
 	"time"
 
@@ -128,8 +129,19 @@ func (cr *ContractRequester) Call(ctx context.Context, inMsg insolar.Message) (i
 		cr.ResultMutex.Unlock()
 	}
 
-	sender := messagebus.BuildSender(cr.MessageBus.Send, messagebus.RetryIncorrectPulse(cr.PulseAccessor))
-	res, err := sender(ctx, msg, nil)
+	var (
+		res insolar.Reply
+		err error
+	)
+
+	for {
+		// TODO AALEKSEEV: move sender outside the loop?
+		sender := messagebus.BuildSender(cr.MessageBus.Send, messagebus.RetryIncorrectPulse(cr.PulseAccessor))
+		res, err = sender(ctx, msg, nil)
+		if err != fmt.Errorf("RPC call returned error: Please retry") {
+			break
+		}
+	}
 
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't dispatch event")
