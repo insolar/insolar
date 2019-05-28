@@ -20,7 +20,9 @@ import (
 	"context"
 	"fmt"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
+	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
@@ -35,10 +37,10 @@ import (
 )
 
 type UpdateObject struct {
-	JetID       insolar.JetID
-	Message     *message.UpdateObject
-	ReplyTo     chan<- bus.Reply
-	PulseNumber insolar.PulseNumber
+	JetID        insolar.JetID
+	Message      *message.UpdateObject
+	watermillMsg *watermillMsg.Message
+	PulseNumber  insolar.PulseNumber
 
 	Dep struct {
 		RecordModifier        object.RecordModifier
@@ -50,20 +52,28 @@ type UpdateObject struct {
 		IDLocker              object.IDLocker
 		LifelineIndex         object.LifelineIndex
 		LifelineStateModifier object.LifelineStateModifier
+		Sender                wmBus.Sender
 	}
 }
 
-func NewUpdateObject(jetID insolar.JetID, message *message.UpdateObject, pulseNumber insolar.PulseNumber, replyTo chan<- bus.Reply) *UpdateObject {
+func NewUpdateObject(jetID insolar.JetID, message *message.UpdateObject, pulseNumber insolar.PulseNumber, watermillMsg *watermillMsg.Message) *UpdateObject {
 	return &UpdateObject{
-		JetID:       jetID,
-		Message:     message,
-		ReplyTo:     replyTo,
-		PulseNumber: pulseNumber,
+		JetID:        jetID,
+		Message:      message,
+		watermillMsg: watermillMsg,
+		PulseNumber:  pulseNumber,
 	}
 }
 
 func (p *UpdateObject) Proceed(ctx context.Context) error {
-	p.ReplyTo <- p.handle(ctx)
+	r := p.handle(ctx)
+	var msg *watermillMsg.Message
+	if r.Err != nil {
+		msg = wmBus.ErrorAsMessage(ctx, r.Err)
+	} else {
+		msg = wmBus.ReplyAsMessage(ctx, r.Reply)
+	}
+	p.Dep.Sender.Reply(ctx, p.watermillMsg, msg)
 	return nil
 }
 

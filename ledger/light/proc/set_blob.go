@@ -19,7 +19,9 @@ package proc
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
+	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
@@ -29,7 +31,7 @@ import (
 )
 
 type SetBlob struct {
-	replyTo chan<- bus.Reply
+	message *watermillMsg.Message
 	msg     *message.SetBlob
 	jet     insolar.JetID
 
@@ -37,19 +39,27 @@ type SetBlob struct {
 		BlobAccessor               blob.Accessor
 		BlobModifier               blob.Modifier
 		PlatformCryptographyScheme insolar.PlatformCryptographyScheme
+		Sender                     wmBus.Sender
 	}
 }
 
-func NewSetBlob(jetID insolar.JetID, replyTo chan<- bus.Reply, msg *message.SetBlob) *SetBlob {
+func NewSetBlob(jetID insolar.JetID, message *watermillMsg.Message, msg *message.SetBlob) *SetBlob {
 	return &SetBlob{
 		msg:     msg,
-		replyTo: replyTo,
+		message: message,
 		jet:     jetID,
 	}
 }
 
 func (p *SetBlob) Proceed(ctx context.Context) error {
-	p.replyTo <- p.reply(ctx)
+	r := p.reply(ctx)
+	var msg *watermillMsg.Message
+	if r.Err != nil {
+		msg = wmBus.ErrorAsMessage(ctx, r.Err)
+	} else {
+		msg = wmBus.ReplyAsMessage(ctx, r.Reply)
+	}
+	p.Dep.Sender.Reply(ctx, p.message, msg)
 	return nil
 }
 

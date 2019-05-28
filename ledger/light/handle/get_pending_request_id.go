@@ -19,37 +19,37 @@ package handle
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type GetPendingRequestID struct {
-	dep      *proc.Dependencies
-	msg      *message.GetPendingRequestID
-	replyTo  chan<- bus.Reply
-	reqPulse insolar.PulseNumber
+	dep       *proc.Dependencies
+	msg       *message.GetPendingRequestID
+	wmmessage *watermillMsg.Message
+	reqPulse  insolar.PulseNumber
 }
 
-func NewGetPendingRequestID(dep *proc.Dependencies, rep chan<- bus.Reply, parcel insolar.Parcel) *GetPendingRequestID {
+func NewGetPendingRequestID(dep *proc.Dependencies, wmmessage *watermillMsg.Message, parcel insolar.Parcel) *GetPendingRequestID {
 	return &GetPendingRequestID{
-		dep:      dep,
-		msg:      parcel.Message().(*message.GetPendingRequestID),
-		replyTo:  rep,
-		reqPulse: parcel.Pulse(),
+		dep:       dep,
+		msg:       parcel.Message().(*message.GetPendingRequestID),
+		wmmessage: wmmessage,
+		reqPulse:  parcel.Pulse(),
 	}
 }
 
 func (s *GetPendingRequestID) Present(ctx context.Context, f flow.Flow) error {
-	jet := proc.NewFetchJet(*s.msg.DefaultTarget().Record(), flow.Pulse(ctx), s.replyTo)
+	jet := proc.NewFetchJet(*s.msg.DefaultTarget().Record(), flow.Pulse(ctx), s.wmmessage)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
 		return err
 	}
 
-	getPendingRequestID := proc.NewGetPendingRequestID(jet.Result.Jet, s.replyTo, s.msg, s.reqPulse)
+	getPendingRequestID := proc.NewGetPendingRequestID(jet.Result.Jet, s.wmmessage, s.msg, s.reqPulse)
 	s.dep.GetPendingRequestID(getPendingRequestID)
 	if err := f.Procedure(ctx, getPendingRequestID, false); err != nil {
 		return err

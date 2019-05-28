@@ -19,7 +19,9 @@ package proc
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
+	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
@@ -34,7 +36,7 @@ type GetChildren struct {
 	index   object.Lifeline
 	msg     *message.GetChildren
 	parcel  insolar.Parcel
-	replyTo chan<- bus.Reply
+	message *watermillMsg.Message
 
 	Dep struct {
 		Coordinator            jet.Coordinator
@@ -42,20 +44,28 @@ type GetChildren struct {
 		JetStorage             jet.Storage
 		JetTreeUpdater         jet.Fetcher
 		DelegationTokenFactory insolar.DelegationTokenFactory
+		Sender                 wmBus.Sender
 	}
 }
 
-func NewGetChildren(index object.Lifeline, msg *message.GetChildren, parcel insolar.Parcel, replyTo chan<- bus.Reply) *GetChildren {
+func NewGetChildren(index object.Lifeline, msg *message.GetChildren, parcel insolar.Parcel, message *watermillMsg.Message) *GetChildren {
 	return &GetChildren{
 		index:   index,
 		msg:     msg,
 		parcel:  parcel,
-		replyTo: replyTo,
+		message: message,
 	}
 }
 
 func (p *GetChildren) Proceed(ctx context.Context) error {
-	p.replyTo <- p.reply(ctx)
+	r := p.reply(ctx)
+	var msg *watermillMsg.Message
+	if r.Err != nil {
+		msg = wmBus.ErrorAsMessage(ctx, r.Err)
+	} else {
+		msg = wmBus.ReplyAsMessage(ctx, r.Reply)
+	}
+	p.Dep.Sender.Reply(ctx, p.message, msg)
 	return nil
 }
 

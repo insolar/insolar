@@ -20,9 +20,11 @@ import (
 	"context"
 	"fmt"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/delegationtoken"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/pulse"
@@ -36,7 +38,8 @@ import (
 )
 
 type SendObject struct {
-	message bus.Message
+	message *watermillMsg.Message
+	parcel  insolar.Parcel
 	jet     insolar.JetID
 	index   object.Lifeline
 
@@ -47,22 +50,29 @@ type SendObject struct {
 		RecordAccessor object.RecordAccessor
 		Blobs          blob.Storage
 		Bus            insolar.MessageBus
+		Sender         bus.Sender
 	}
 }
 
-func NewSendObject(msg bus.Message, jet insolar.JetID, idx object.Lifeline) *SendObject {
+func NewSendObject(msg *watermillMsg.Message, parcel insolar.Parcel, jet insolar.JetID, idx object.Lifeline) *SendObject {
 	return &SendObject{
 		message: msg,
+		parcel:  parcel,
 		jet:     jet,
 		index:   idx,
 	}
 }
 
 func (p *SendObject) Proceed(ctx context.Context) error {
-	r := bus.Reply{}
-	r.Reply, r.Err = p.handle(ctx, p.message.Parcel)
-	p.message.ReplyTo <- r
-	return r.Err
+	rep, err := p.handle(ctx, p.parcel)
+	var msg *watermillMsg.Message
+	if err != nil {
+		msg = bus.ErrorAsMessage(ctx, err)
+	} else {
+		msg = bus.ReplyAsMessage(ctx, rep)
+	}
+	p.Dep.Sender.Reply(ctx, p.message, msg)
+	return err
 }
 
 func (p *SendObject) handle(
@@ -226,8 +236,8 @@ func (p *SendObject) fetchObject(
 	genericReply, err := sender(
 		ctx,
 		&message.GetObject{
-			Head:     obj,
-			State:    stateID,
+			Head:  obj,
+			State: stateID,
 		},
 		&insolar.MessageSendOptions{
 			Receiver: &node,

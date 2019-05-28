@@ -19,8 +19,9 @@ package proc
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/light/hot"
@@ -30,7 +31,7 @@ import (
 type FetchJet struct {
 	target  insolar.ID
 	pulse   insolar.PulseNumber
-	replyTo chan<- bus.Reply
+	message *watermillMsg.Message
 
 	Result struct {
 		Jet insolar.JetID
@@ -41,14 +42,15 @@ type FetchJet struct {
 		Coordinator jet.Coordinator
 		JetUpdater  jet.Fetcher
 		JetFetcher  jet.Fetcher
+		Sender      bus.Sender
 	}
 }
 
-func NewFetchJet(target insolar.ID, pn insolar.PulseNumber, rep chan<- bus.Reply) *FetchJet {
+func NewFetchJet(target insolar.ID, pn insolar.PulseNumber, message *watermillMsg.Message) *FetchJet {
 	return &FetchJet{
 		target:  target,
 		pulse:   pn,
-		replyTo: rep,
+		message: message,
 	}
 }
 
@@ -62,17 +64,24 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 	jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.target, p.pulse)
 	if err != nil {
 		err := errors.Wrap(err, "failed to fetch jet")
-		p.replyTo <- bus.Reply{Err: err}
+		if err != nil {
+			msg := bus.ErrorAsMessage(ctx, err)
+			p.Dep.Sender.Reply(ctx, p.message, msg)
+		}
 		return err
 	}
 	executor, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, p.pulse)
 	if err != nil {
 		err := errors.Wrap(err, "failed to calculate executor for jet")
-		p.replyTo <- bus.Reply{Err: err}
+		if err != nil {
+			msg := bus.ErrorAsMessage(ctx, err)
+			p.Dep.Sender.Reply(ctx, p.message, msg)
+		}
 		return err
 	}
 	if *executor != p.Dep.Coordinator.Me() {
-		p.replyTo <- bus.Reply{Reply: &reply.JetMiss{JetID: *jetID, Pulse: p.pulse}}
+		msg := bus.ReplyAsMessage(ctx, &reply.JetMiss{JetID: *jetID, Pulse: p.pulse})
+		p.Dep.Sender.Reply(ctx, p.message, msg)
 		return errors.New("jet miss")
 	}
 
@@ -83,25 +92,27 @@ func (p *FetchJet) Proceed(ctx context.Context) error {
 type WaitHot struct {
 	jetID   insolar.JetID
 	pulse   insolar.PulseNumber
-	replyTo chan<- bus.Reply
+	message *watermillMsg.Message
 
 	Dep struct {
 		Waiter hot.JetWaiter
+		Sender bus.Sender
 	}
 }
 
-func NewWaitHot(j insolar.JetID, pn insolar.PulseNumber, rep chan<- bus.Reply) *WaitHot {
+func NewWaitHot(j insolar.JetID, pn insolar.PulseNumber, message *watermillMsg.Message) *WaitHot {
 	return &WaitHot{
 		jetID:   j,
 		pulse:   pn,
-		replyTo: rep,
+		message: message,
 	}
 }
 
 func (p *WaitHot) Proceed(ctx context.Context) error {
 	err := p.Dep.Waiter.Wait(ctx, insolar.ID(p.jetID), p.pulse)
 	if err != nil {
-		p.replyTo <- bus.Reply{Reply: &reply.Error{ErrType: reply.ErrHotDataTimeout}}
+		msg := bus.ReplyAsMessage(ctx, &reply.Error{ErrType: reply.ErrHotDataTimeout})
+		p.Dep.Sender.Reply(ctx, p.message, msg)
 		return err
 	}
 

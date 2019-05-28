@@ -20,9 +20,11 @@ import (
 	"context"
 	"fmt"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
@@ -34,7 +36,7 @@ import (
 type GetIndex struct {
 	object  insolar.Reference
 	jet     insolar.JetID
-	replyTo chan<- bus.Reply
+	message *watermillMsg.Message
 	pn      insolar.PulseNumber
 
 	Result struct {
@@ -47,14 +49,15 @@ type GetIndex struct {
 		Locker      object.IDLocker
 		Coordinator jet.Coordinator
 		Bus         insolar.MessageBus
+		Sender      bus.Sender
 	}
 }
 
-func NewGetIndex(obj insolar.Reference, jetID insolar.JetID, rep chan<- bus.Reply, pn insolar.PulseNumber) *GetIndex {
+func NewGetIndex(obj insolar.Reference, jetID insolar.JetID, msg *watermillMsg.Message, pn insolar.PulseNumber) *GetIndex {
 	return &GetIndex{
 		object:  obj,
 		jet:     jetID,
-		replyTo: rep,
+		message: msg,
 		pn:      pn,
 	}
 }
@@ -62,7 +65,8 @@ func NewGetIndex(obj insolar.Reference, jetID insolar.JetID, rep chan<- bus.Repl
 func (p *GetIndex) Proceed(ctx context.Context) error {
 	err := p.process(ctx)
 	if err != nil {
-		p.replyTo <- bus.Reply{Err: err}
+		msg := bus.ErrorAsMessage(ctx, err)
+		p.Dep.Sender.Reply(ctx, p.message, msg)
 	}
 	return err
 }

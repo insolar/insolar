@@ -19,28 +19,30 @@ package proc
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/ledger/light/recentstorage"
 )
 
 type GetPendingRequestID struct {
-	replyTo  chan<- bus.Reply
+	message  *watermillMsg.Message
 	msg      *message.GetPendingRequestID
 	jet      insolar.JetID
 	reqPulse insolar.PulseNumber
 
 	Dep struct {
 		RecentStorageProvider recentstorage.Provider
+		Sender                bus.Sender
 	}
 }
 
-func NewGetPendingRequestID(jetID insolar.JetID, replyTo chan<- bus.Reply, msg *message.GetPendingRequestID, reqPulse insolar.PulseNumber) *GetPendingRequestID {
+func NewGetPendingRequestID(jetID insolar.JetID, message *watermillMsg.Message, msg *message.GetPendingRequestID, reqPulse insolar.PulseNumber) *GetPendingRequestID {
 	return &GetPendingRequestID{
 		msg:      msg,
-		replyTo:  replyTo,
+		message:  message,
 		jet:      jetID,
 		reqPulse: reqPulse,
 	}
@@ -52,10 +54,11 @@ func (p *GetPendingRequestID) Proceed(ctx context.Context) error {
 
 	requests := p.Dep.RecentStorageProvider.GetPendingStorage(ctx, jetID).GetRequestsForObject(msg.ObjectID)
 	if len(requests) == 0 {
-		p.replyTo <- bus.Reply{Reply: &reply.Error{ErrType: reply.ErrNoPendingRequests}}
+		msg := bus.ReplyAsMessage(ctx, &reply.Error{ErrType: reply.ErrNoPendingRequests})
+		p.Dep.Sender.Reply(ctx, p.message, msg)
 		return nil
 	}
-	p.replyTo <- bus.Reply{Reply: &reply.ID{ID: requests[0]}}
-
+	m := bus.ReplyAsMessage(ctx, &reply.ID{ID: requests[0]})
+	p.Dep.Sender.Reply(ctx, p.message, m)
 	return nil
 }

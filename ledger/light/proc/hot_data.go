@@ -19,10 +19,11 @@ package proc
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
@@ -34,7 +35,7 @@ import (
 )
 
 type HotData struct {
-	replyTo chan<- bus.Reply
+	message *watermillMsg.Message
 	msg     *message.HotData
 
 	Dep struct {
@@ -45,20 +46,22 @@ type HotData struct {
 		JetStorage            jet.Storage
 		JetFetcher            jet.Fetcher
 		JetReleaser           hot.JetReleaser
+		Sender                bus.Sender
 	}
 }
 
-func NewHotData(msg *message.HotData, replyTo chan<- bus.Reply) *HotData {
+func NewHotData(msg *message.HotData, message *watermillMsg.Message) *HotData {
 	return &HotData{
 		msg:     msg,
-		replyTo: replyTo,
+		message: message,
 	}
 }
 
 func (p *HotData) Proceed(ctx context.Context) error {
 	err := p.process(ctx)
 	if err != nil {
-		p.replyTo <- bus.Reply{Err: err}
+		msg := bus.ErrorAsMessage(ctx, err)
+		p.Dep.Sender.Reply(ctx, p.message, msg)
 	}
 	return err
 }
@@ -142,7 +145,8 @@ func (p *HotData) process(ctx context.Context) error {
 
 	p.Dep.JetFetcher.Release(ctx, jetID, p.msg.PulseNumber)
 
-	p.replyTo <- bus.Reply{Reply: &reply.OK{}}
+	msg := bus.ReplyAsMessage(ctx, &reply.OK{})
+	p.Dep.Sender.Reply(ctx, p.message, msg)
 
 	p.releaseHotDataWaiters(ctx)
 	return nil

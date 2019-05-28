@@ -19,8 +19,9 @@ package proc
 import (
 	"context"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/bus"
 )
 
 type Dependencies struct {
@@ -39,18 +40,27 @@ type Dependencies struct {
 	GetJet              func(*GetJet)
 	GetChildren         func(*GetChildren)
 	HotData             func(*HotData)
+	GetDelegate         func(*GetDelegate)
+	Sender              bus.Sender
 }
 
 type ReturnReply struct {
-	ReplyTo chan<- bus.Reply
+	Message *message.Message
 	Err     error
 	Reply   insolar.Reply
+	Sender  bus.Sender
 }
 
 func (p *ReturnReply) Proceed(ctx context.Context) error {
 	select {
-	case p.ReplyTo <- bus.Reply{Reply: p.Reply, Err: p.Err}:
 	case <-ctx.Done():
 	}
+	var msg *message.Message
+	if p.Err != nil {
+		msg = bus.ErrorAsMessage(ctx, p.Err)
+	} else {
+		msg = bus.ReplyAsMessage(ctx, p.Reply)
+	}
+	p.Sender.Reply(ctx, p.Message, msg)
 	return nil
 }

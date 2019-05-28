@@ -64,10 +64,20 @@ func New() *Handler {
 }
 
 func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
-	ctx, _ := inslogger.WithField(msg.Context(), "pulse", msg.Metadata.Get(bus.MetaPulse))
+	meta := payload.Meta{}
+	err := meta.Unmarshal(msg.Payload)
+	if err != nil {
+		return nil, errors.Wrap(err, "can't deserialize meta payload")
+	}
+	ctx, _ := inslogger.WithField(context.Background(), "pulse", fmt.Sprint(meta.Pulse))
 	ctx = inslogger.ContextWithTrace(ctx, msg.Metadata.Get(bus.MetaTraceID))
 
-	rep, err := h.handle(ctx, msg)
+	parcel, err := message.DeserializeParcel(bytes.NewBuffer(meta.Payload))
+	if err != nil {
+		return nil, errors.Wrap(err, "can't deserialize payload to parcel")
+	}
+
+	rep, err := h.handle(ctx, parcel, msg.Metadata.Get(bus.MetaType))
 
 	var resInBytes []byte
 	var replyType string
@@ -76,10 +86,10 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 		if err != nil {
 			return nil, errors.Wrap(err, "can't convert error to bytes")
 		}
-		replyType = bus.TypeError
+		replyType = bus.TypeErrorReply
 	} else {
 		resInBytes = reply.ToBytes(rep)
-		replyType = string(rep.Type())
+		replyType = bus.TypeReply
 	}
 	resAsMsg := watermillMsg.NewMessage(watermill.NewUUID(), resInBytes)
 	resAsMsg.Metadata.Set(bus.MetaType, replyType)
@@ -89,41 +99,26 @@ func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, e
 	return []*watermillMsg.Message{resAsMsg}, nil
 }
 
-func (h *Handler) handle(ctx context.Context, msg *watermillMsg.Message) (insolar.Reply, error) {
-	parcel, err := message.DeserializeParcel(bytes.NewBuffer(msg.Payload))
-	switch msg.Metadata.Get(bus.MetaType) {
+func (h *Handler) handle(ctx context.Context, parcel insolar.Parcel, msgType string) (insolar.Reply, error) {
+	switch msgType {
 	case insolar.TypeGetObject.String():
-		meta := payload.Meta{}
-		err := meta.Unmarshal(msg.Payload)
-		if err != nil {
-			return nil, errors.Wrap(err, "can't deserialize meta payload")
-		}
-		parcel, err := message.DeserializeParcel(bytes.NewBuffer(meta.Payload))
-		if err != nil {
-			return nil, errors.Wrap(err, "can't deserialize payload")
-		}
 		return h.handleGetObject(ctx, parcel)
 	case insolar.TypeGetCode.String():
-		if err != nil {
-			return nil, errors.Wrap(err, "can't deserialize payload")
-		}
 		return h.handleGetCode(ctx, parcel)
 	case insolar.TypeGetRequest.String():
-		if err != nil {
-			return nil, errors.Wrap(err, "can't deserialize payload")
-		}
 		return h.handleGetRequest(ctx, parcel)
+	case insolar.TypeGetChildren.String():
+		return h.handleGetChildren(ctx, parcel)
+	case insolar.TypeGetDelegate.String():
+		return h.handleGetDelegate(ctx, parcel)
 
 	default:
-		return nil, fmt.Errorf("no handler for message type %s", msg.Metadata.Get(bus.MetaType))
+		return nil, fmt.Errorf("no handler for message type %s", msgType)
 	}
 }
 
 func (h *Handler) Init(ctx context.Context) error {
 	h.Bus.MustRegister(insolar.TypeHeavyPayload, h.handleHeavyPayload)
-
-	h.Bus.MustRegister(insolar.TypeGetDelegate, h.handleGetDelegate)
-	h.Bus.MustRegister(insolar.TypeGetChildren, h.handleGetChildren)
 	h.Bus.MustRegister(insolar.TypeGetObjectIndex, h.handleGetObjectIndex)
 	return nil
 }

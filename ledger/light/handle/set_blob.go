@@ -19,39 +19,39 @@ package handle
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type SetBlob struct {
-	dep     *proc.Dependencies
-	msg     *message.SetBlob
-	replyTo chan<- bus.Reply
+	dep       *proc.Dependencies
+	msg       *message.SetBlob
+	wmmessage *watermillMsg.Message
 }
 
-func NewSetBlob(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.SetBlob) *SetBlob {
+func NewSetBlob(dep *proc.Dependencies, wmmessage *watermillMsg.Message, msg *message.SetBlob) *SetBlob {
 	return &SetBlob{
-		dep:     dep,
-		msg:     msg,
-		replyTo: rep,
+		dep:       dep,
+		msg:       msg,
+		wmmessage: wmmessage,
 	}
 }
 
 func (s *SetBlob) Present(ctx context.Context, f flow.Flow) error {
-	jet := proc.NewFetchJet(*s.msg.TargetRef.Record(), flow.Pulse(ctx), s.replyTo)
+	jet := proc.NewFetchJet(*s.msg.TargetRef.Record(), flow.Pulse(ctx), s.wmmessage)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, true); err != nil {
 		return err
 	}
-	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.replyTo)
+	hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.wmmessage)
 	s.dep.WaitHot(hot)
 	if err := f.Procedure(ctx, hot, true); err != nil {
 		return err
 	}
 
-	setBlob := proc.NewSetBlob(jet.Result.Jet, s.replyTo, s.msg)
+	setBlob := proc.NewSetBlob(jet.Result.Jet, s.wmmessage, s.msg)
 	s.dep.SetBlob(setBlob)
 	return f.Procedure(ctx, setBlob, false)
 }

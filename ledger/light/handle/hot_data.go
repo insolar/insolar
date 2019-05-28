@@ -18,29 +18,31 @@ package handle
 
 import (
 	"context"
+	"fmt"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type HotData struct {
-	dep     *proc.Dependencies
-	replyTo chan<- bus.Reply
-	message *message.HotData
+	dep       *proc.Dependencies
+	wmmessage *watermillMsg.Message
+	message   *message.HotData
 }
 
-func NewHotData(dep *proc.Dependencies, rep chan<- bus.Reply, msg *message.HotData) *HotData {
+func NewHotData(dep *proc.Dependencies, wmmessage *watermillMsg.Message, msg *message.HotData) *HotData {
 	return &HotData{
-		dep:     dep,
-		replyTo: rep,
-		message: msg,
+		dep:       dep,
+		wmmessage: wmmessage,
+		message:   msg,
 	}
 }
 
 func (s *HotData) Present(ctx context.Context, f flow.Flow) error {
-	proc := proc.NewHotData(s.message, s.replyTo)
+	fmt.Println("start TypeHotRecords in Present")
+	proc := proc.NewHotData(s.message, s.wmmessage)
 	s.dep.HotData(proc)
 	return f.Procedure(ctx, proc, false)
 }

@@ -20,9 +20,11 @@ import (
 	"context"
 	"fmt"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/record"
@@ -33,7 +35,7 @@ import (
 )
 
 type SetRecord struct {
-	replyTo chan<- bus.Reply
+	message *watermillMsg.Message
 	record  []byte
 	jet     insolar.JetID
 
@@ -42,19 +44,27 @@ type SetRecord struct {
 		PCS                   insolar.PlatformCryptographyScheme
 		RecordModifier        object.RecordModifier
 		PendingRequestsLimit  int
+		Sender                wmBus.Sender
 	}
 }
 
-func NewSetRecord(jetID insolar.JetID, replyTo chan<- bus.Reply, record []byte) *SetRecord {
+func NewSetRecord(jetID insolar.JetID, message *watermillMsg.Message, record []byte) *SetRecord {
 	return &SetRecord{
 		record:  record,
-		replyTo: replyTo,
+		message: message,
 		jet:     jetID,
 	}
 }
 
 func (p *SetRecord) Proceed(ctx context.Context) error {
-	p.replyTo <- p.reply(ctx)
+	r := p.reply(ctx)
+	var msg *watermillMsg.Message
+	if r.Err != nil {
+		msg = wmBus.ErrorAsMessage(ctx, r.Err)
+	} else {
+		msg = wmBus.ReplyAsMessage(ctx, r.Reply)
+	}
+	p.Dep.Sender.Reply(ctx, p.message, msg)
 	return nil
 }
 

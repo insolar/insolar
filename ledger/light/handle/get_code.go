@@ -19,28 +19,28 @@ package handle
 import (
 	"context"
 
+	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type GetCode struct {
-	dep     *proc.Dependencies
-	code    insolar.Reference
-	replyTo chan<- bus.Reply
+	dep  *proc.Dependencies
+	code insolar.Reference
+	msg  *message.Message
 }
 
-func NewGetCode(dep *proc.Dependencies, rep chan<- bus.Reply, code insolar.Reference) *GetCode {
+func NewGetCode(dep *proc.Dependencies, msg *message.Message, code insolar.Reference) *GetCode {
 	return &GetCode{
-		dep:     dep,
-		code:    code,
-		replyTo: rep,
+		dep:  dep,
+		code: code,
+		msg:  msg,
 	}
 }
 
 func (s *GetCode) Present(ctx context.Context, f flow.Flow) error {
-	code := proc.NewGetCode(s.code, s.replyTo)
+	code := proc.NewGetCode(s.code, s.msg)
 	s.dep.GetCode(code)
 	return f.Procedure(ctx, code, false)
 }

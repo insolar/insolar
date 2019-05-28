@@ -19,9 +19,9 @@ package handle
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/proc"
@@ -30,22 +30,23 @@ import (
 type GetObject struct {
 	dep *proc.Dependencies
 
-	Message bus.Message
+	Message *watermillMsg.Message
+	Parcel  insolar.Parcel
 }
 
 func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
-	msg := s.Message.Parcel.Message().(*message.GetObject)
+	msg := s.Parcel.Message().(*message.GetObject)
 	ctx, _ = inslogger.WithField(ctx, "object", msg.Head.Record().DebugString())
 
 	var jetID insolar.JetID
 	var pn insolar.PulseNumber
-	if s.Message.Parcel.DelegationToken() == nil {
-		jet := proc.NewFetchJet(*msg.Head.Record(), flow.Pulse(ctx), s.Message.ReplyTo)
+	if s.Parcel.DelegationToken() == nil {
+		jet := proc.NewFetchJet(*msg.Head.Record(), flow.Pulse(ctx), s.Message)
 		s.dep.FetchJet(jet)
 		if err := f.Procedure(ctx, jet, false); err != nil {
 			return err
 		}
-		hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.Message.ReplyTo)
+		hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.Message)
 		s.dep.WaitHot(hot)
 		if err := f.Procedure(ctx, hot, false); err != nil {
 			return err
@@ -55,7 +56,7 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 		pn = flow.Pulse(ctx)
 	} else {
 		// Workaround to fetch object states.
-		jet := proc.NewFetchJet(*msg.Head.Record(), msg.State.Pulse(), s.Message.ReplyTo)
+		jet := proc.NewFetchJet(*msg.Head.Record(), msg.State.Pulse(), s.Message)
 		s.dep.FetchJet(jet)
 		if err := f.Procedure(ctx, jet, false); err != nil {
 			return err
@@ -64,13 +65,13 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 		pn = msg.State.Pulse()
 	}
 
-	idx := proc.NewGetIndex(msg.Head, jetID, s.Message.ReplyTo, pn)
+	idx := proc.NewGetIndex(msg.Head, jetID, s.Message, pn)
 	s.dep.GetIndex(idx)
 	if err := f.Procedure(ctx, idx, false); err != nil {
 		return err
 	}
 
-	send := proc.NewSendObject(s.Message, jetID, idx.Result.Index)
+	send := proc.NewSendObject(s.Message, s.Parcel, jetID, idx.Result.Index)
 	s.dep.SendObject(send)
 	return f.Procedure(ctx, send, false)
 }

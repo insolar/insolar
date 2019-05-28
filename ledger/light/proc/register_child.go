@@ -20,14 +20,15 @@ import (
 	"context"
 	"fmt"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/reply"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/record"
-	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/object"
 )
@@ -37,7 +38,7 @@ type RegisterChild struct {
 	msg     *message.RegisterChild
 	pulse   insolar.PulseNumber
 	idx     object.Lifeline
-	replyTo chan<- bus.Reply
+	message *watermillMsg.Message
 
 	Dep struct {
 		IDLocker              object.IDLocker
@@ -46,23 +47,25 @@ type RegisterChild struct {
 		RecordModifier        object.RecordModifier
 		LifelineStateModifier object.LifelineStateModifier
 		PCS                   insolar.PlatformCryptographyScheme
+		Sender                bus.Sender
 	}
 }
 
-func NewRegisterChild(jet insolar.JetID, msg *message.RegisterChild, pulse insolar.PulseNumber, index object.Lifeline, replyTo chan<- bus.Reply) *RegisterChild {
+func NewRegisterChild(jet insolar.JetID, msg *message.RegisterChild, pulse insolar.PulseNumber, index object.Lifeline, message *watermillMsg.Message) *RegisterChild {
 	return &RegisterChild{
 		jet:     jet,
 		msg:     msg,
 		pulse:   pulse,
 		idx:     index,
-		replyTo: replyTo,
+		message: message,
 	}
 }
 
 func (p *RegisterChild) Proceed(ctx context.Context) error {
 	err := p.process(ctx)
 	if err != nil {
-		p.replyTo <- bus.Reply{Err: err}
+		msg := bus.ErrorAsMessage(ctx, err)
+		p.Dep.Sender.Reply(ctx, p.message, msg)
 	}
 	return err
 }
@@ -123,6 +126,7 @@ func (p *RegisterChild) process(ctx context.Context) error {
 		return errors.Wrap(err, "can't update a lifeline status")
 	}
 
-	p.replyTo <- bus.Reply{Reply: &reply.ID{ID: *child}}
+	msg := bus.ReplyAsMessage(ctx, &reply.ID{ID: *child})
+	p.Dep.Sender.Reply(ctx, p.message, msg)
 	return nil
 }

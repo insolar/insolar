@@ -19,39 +19,39 @@ package handle
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type GetChildren struct {
-	dep     *proc.Dependencies
-	replyTo chan<- bus.Reply
+	dep *proc.Dependencies
 
-	message bus.Message
+	message *watermillMsg.Message
+	parcel  insolar.Parcel
 }
 
-func NewGetChildren(dep *proc.Dependencies, rep chan<- bus.Reply, msg bus.Message) *GetChildren {
+func NewGetChildren(dep *proc.Dependencies, msg *watermillMsg.Message, parcel insolar.Parcel) *GetChildren {
 	return &GetChildren{
 		dep:     dep,
-		replyTo: rep,
 		message: msg,
+		parcel:  parcel,
 	}
 }
 
 func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
-	msg := s.message.Parcel.Message().(*message.GetChildren)
+	msg := s.parcel.Message().(*message.GetChildren)
 
 	var jetID insolar.JetID
-	if s.message.Parcel.DelegationToken() == nil {
-		jet := proc.NewFetchJet(*msg.DefaultTarget().Record(), flow.Pulse(ctx), s.message.ReplyTo)
+	if s.parcel.DelegationToken() == nil {
+		jet := proc.NewFetchJet(*msg.DefaultTarget().Record(), flow.Pulse(ctx), s.message)
 		s.dep.FetchJet(jet)
 		if err := f.Procedure(ctx, jet, false); err != nil {
 			return err
 		}
-		hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.message.ReplyTo)
+		hot := proc.NewWaitHot(jet.Result.Jet, flow.Pulse(ctx), s.message)
 		s.dep.WaitHot(hot)
 		if err := f.Procedure(ctx, hot, false); err != nil {
 			return err
@@ -60,7 +60,7 @@ func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
 		jetID = jet.Result.Jet
 	} else {
 		// Workaround to fetch object states.
-		jet := proc.NewFetchJet(*msg.DefaultTarget().Record(), msg.FromChild.Pulse(), s.message.ReplyTo)
+		jet := proc.NewFetchJet(*msg.DefaultTarget().Record(), msg.FromChild.Pulse(), s.message)
 		s.dep.FetchJet(jet)
 		if err := f.Procedure(ctx, jet, false); err != nil {
 			return err
@@ -68,13 +68,13 @@ func (s *GetChildren) Present(ctx context.Context, f flow.Flow) error {
 		jetID = jet.Result.Jet
 	}
 
-	getIndex := proc.NewGetIndex(msg.Parent, jetID, s.replyTo, flow.Pulse(ctx))
+	getIndex := proc.NewGetIndex(msg.Parent, jetID, s.message, flow.Pulse(ctx))
 	s.dep.GetIndex(getIndex)
 	if err := f.Procedure(ctx, getIndex, false); err != nil {
 		return err
 	}
 
-	getChildren := proc.NewGetChildren(getIndex.Result.Index, msg, s.message.Parcel, s.replyTo)
+	getChildren := proc.NewGetChildren(getIndex.Result.Index, msg, s.parcel, s.message)
 	s.dep.GetChildren(getChildren)
 	return f.Procedure(ctx, getChildren, false)
 }

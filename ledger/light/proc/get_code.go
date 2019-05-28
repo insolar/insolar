@@ -20,7 +20,10 @@ import (
 	"context"
 	"fmt"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+
 	"github.com/insolar/insolar/insolar"
+	wmBus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/jet"
@@ -33,7 +36,7 @@ import (
 )
 
 type GetCode struct {
-	replyTo chan<- bus.Reply
+	message *watermillMsg.Message
 	code    insolar.Reference
 
 	Dep struct {
@@ -41,18 +44,26 @@ type GetCode struct {
 		RecordAccessor object.RecordAccessor
 		Coordinator    jet.Coordinator
 		BlobAccessor   blob.Accessor
+		Sender         wmBus.Sender
 	}
 }
 
-func NewGetCode(code insolar.Reference, replyTo chan<- bus.Reply) *GetCode {
+func NewGetCode(code insolar.Reference, message *watermillMsg.Message) *GetCode {
 	return &GetCode{
 		code:    code,
-		replyTo: replyTo,
+		message: message,
 	}
 }
 
 func (p *GetCode) Proceed(ctx context.Context) error {
-	p.replyTo <- p.reply(ctx)
+	r := p.reply(ctx)
+	var msg *watermillMsg.Message
+	if r.Err != nil {
+		msg = wmBus.ErrorAsMessage(ctx, r.Err)
+	} else {
+		msg = wmBus.ReplyAsMessage(ctx, r.Reply)
+	}
+	p.Dep.Sender.Reply(ctx, p.message, msg)
 	return nil
 }
 

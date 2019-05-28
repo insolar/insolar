@@ -19,43 +19,44 @@ package handle
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/ledger/light/proc"
 )
 
 type GetDelegate struct {
-	dep     *proc.Dependencies
-	replyTo chan<- bus.Reply
-	parcel  insolar.Parcel
+	dep    *proc.Dependencies
+	msg    *watermillMsg.Message
+	parcel insolar.Parcel
 }
 
-func NewGetDelegate(dep *proc.Dependencies, rep chan<- bus.Reply, parcel insolar.Parcel) *GetDelegate {
+func NewGetDelegate(dep *proc.Dependencies, msg *watermillMsg.Message, parcel insolar.Parcel) *GetDelegate {
 	return &GetDelegate{
-		dep:     dep,
-		parcel:  parcel,
-		replyTo: rep,
+		dep:    dep,
+		parcel: parcel,
+		msg:    msg,
 	}
 }
 
 func (s *GetDelegate) Present(ctx context.Context, f flow.Flow) error {
 	msg := s.parcel.Message().(*message.GetDelegate)
 
-	jet := proc.NewFetchJet(*msg.Head.Record(), flow.Pulse(ctx), s.replyTo)
+	jet := proc.NewFetchJet(*msg.Head.Record(), flow.Pulse(ctx), s.msg)
 	s.dep.FetchJet(jet)
 	if err := f.Procedure(ctx, jet, false); err != nil {
 		return err
 	}
 
-	idx := proc.NewGetIndex(msg.Head, jet.Result.Jet, s.replyTo, flow.Pulse(ctx))
+	idx := proc.NewGetIndex(msg.Head, jet.Result.Jet, s.msg, flow.Pulse(ctx))
 	s.dep.GetIndex(idx)
 	if err := f.Procedure(ctx, idx, false); err != nil {
 		return err
 	}
 
-	getDelegate := proc.NewGetDelegate(msg, &idx.Result.Index, s.replyTo)
+	getDelegate := proc.NewGetDelegate(msg, &idx.Result.Index, s.msg)
+	s.dep.GetDelegate(getDelegate)
 	if err := f.Procedure(ctx, getDelegate, false); err != nil {
 		return err
 	}
