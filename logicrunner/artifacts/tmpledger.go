@@ -18,7 +18,6 @@ package artifacts
 
 import (
 	"context"
-	"fmt"
 	"testing"
 
 	"github.com/ThreeDotsLabs/watermill/message"
@@ -277,13 +276,13 @@ func (p *pubSubMock) Publish(topic string, messages ...*message.Message) error {
 		}
 		pl := payload.Meta{
 			Payload: msg.Payload,
+			Pulse:   pn.PulseNumber,
 		}
 		buf, err := pl.Marshal()
 		if err != nil {
 			return err
 		}
 		msg.Payload = buf
-		msg.Metadata.Set(bus.MetaPulse, fmt.Sprintf("%d", pn.PulseNumber))
 		_, _ = p.bus.IncomingMessageRouter(p.handler)(msg)
 	}
 	return nil
