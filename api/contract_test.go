@@ -44,7 +44,7 @@ func TestUnmarshalUpload(t *testing.T) {
 		Result  UploadReply `json:"result"`
 	}{
 		Version: "2.0",
-		ID: "",
+		ID:      "",
 	}
 
 	err := json.Unmarshal([]byte(jsonResponse), &res)
