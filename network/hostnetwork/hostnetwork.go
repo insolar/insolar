@@ -247,6 +247,7 @@ func (hn *hostNetwork) BuildResponse(ctx context.Context, request network.Packet
 		// TODO: replace in protobuf with our type
 		RequestID: uint64(request.GetRequestID()),
 		TraceID:   inslogger.TraceID(ctx),
+		Type:      uint32(request.GetType()),
 	}
 	result.SetResponse(responseData)
 	return result
