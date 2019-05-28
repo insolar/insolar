@@ -144,28 +144,6 @@ func (bc *bootstrapper) setRequest(ref insolar.Reference, req *packet.GenesisReq
 	bc.genesisRequestsReceived[ref] = req
 }
 
-// type NodeBootstrapRequest struct {
-// 	// TODO: change to mandate cuz cert not registered for gob
-// 	// Certificate   insolar.Certificate
-// 	JoinClaim     packets.NodeJoinClaim
-// 	LastNodePulse insolar.PulseNumber
-// 	// Permission will be implemented later.
-// }
-
-// type NodeBootstrapResponse struct {
-// 	RejectReason string
-// 	// ETA - promise to accept joiner node to the network (in seconds).
-// 	ETA int
-// 	// AssignShortID is an demand to use this short id.
-// 	AssignShortID insolar.ShortNodeID
-// 	// UpdateSincePulse is a pulse number from which origin have to update storage.
-// 	UpdateSincePulse insolar.PulseNumber
-// 	// Permission will be implemented later.
-// 	RedirectHost string
-// 	// NetworkSize is a size of the network from bootstrap node.
-// 	NetworkSize int
-// }
-
 // Bootstrap on the discovery node (step 1 of the bootstrap process)
 func (bc *bootstrapper) Bootstrap(ctx context.Context) (*network.BootstrapResult, *DiscoveryNode, error) {
 	log.Info("Bootstrapping to discovery node")
