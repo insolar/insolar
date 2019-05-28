@@ -222,10 +222,10 @@ func (d *distributor) pingHost(ctx context.Context, host *host.Host) error {
 	defer span.End()
 
 	pingPacket := &packet.Packet{
-		Sender:   d.pulsarHost,
-		Receiver: host,
-		// TODO: replace in protobuf with our type
+		Sender:    d.pulsarHost,
+		Receiver:  host,
 		RequestID: uint64(d.generateID()),
+		Type:      uint32(types.Ping),
 	}
 	pingPacket.SetRequest(&packet.Ping{})
 	pingCall, err := d.sendRequestToHost(ctx, pingPacket, host)
@@ -258,12 +258,11 @@ func (d *distributor) sendPulseToHost(ctx context.Context, pulse *insolar.Pulse,
 	ctx, span := instracer.StartSpan(ctx, "distributor.sendPulseToHosts")
 	defer span.End()
 	pulseRequest := &packet.Packet{
-		Sender:   d.pulsarHost,
-		Receiver: host,
-		// TODO: replace in protobuf with our type
+		Sender:    d.pulsarHost,
+		Receiver:  host,
 		RequestID: uint64(d.generateID()),
+		Type:      uint32(types.Pulse),
 	}
-	// TODO: add real pulse
 	pulseRequest.SetRequest(&packet.PulseRequest{TraceSpanData: instracer.MustSerialize(ctx)})
 	call, err := d.sendRequestToHost(ctx, pulseRequest, host)
 	if err != nil {

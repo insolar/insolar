@@ -230,7 +230,7 @@ func (claim *NodeJoinClaim) Unmarshal(data []byte) error {
 }
 
 func (claim *NodeJoinClaim) Size() int {
-	return int(claimSizeMap[TypeNodeLeaveClaim])
+	return int(claimSizeMap[TypeNodeJoinClaim])
 }
 
 func (claim *NodeJoinClaim) Compare(other NodeJoinClaim) int {
