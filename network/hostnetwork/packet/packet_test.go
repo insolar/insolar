@@ -51,110 +51,103 @@
 package packet
 
 import (
-	"encoding/gob"
+	"bytes"
+	"math/rand"
 	"testing"
 
+	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
+	"github.com/insolar/insolar/testutils"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"github.com/stretchr/testify/suite"
 )
 
-func init() {
-	gob.Register(&RequestTest{})
+func testRPCPacket() *Packet {
+	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
+	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
+
+	return &Packet{
+		Sender:    sender,
+		Receiver:  receiver,
+		Type:      uint32(types.RPC),
+		TraceID:   "d6b44f62-7b5e-4249-90c7-ccae194a5baa",
+		RequestID: 123,
+	}
 }
 
-// func TestSerializePacket(t *testing.T) {
-// 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
-// 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
-// 	builder := NewBuilder(sender)
-// 	msg := builder.Receiver(receiver).Type(TestPacket).Request(&RequestTest{[]byte{0, 1, 2, 3}}).Build()
-//
-// 	_, err := SerializePacket(msg)
-//
-// 	require.NoError(t, err)
-// }
-//
-// func TestDeserializePacket(t *testing.T) {
-// 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
-// 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
-// 	builder := NewBuilder(sender)
-// 	msg := builder.Receiver(receiver).Type(TestPacket).Request(&RequestTest{[]byte{0, 1, 2, 3}}).Build()
-//
-// 	serialized, _ := SerializePacket(msg)
-//
-// 	var buffer bytes.Buffer
-//
-// 	buffer.Write(serialized)
-//
-// 	deserialized, err := DeserializePacket(&buffer)
-//
-// 	require.NoError(t, err)
-// 	require.Equal(t, deserialized, msg)
-// }
-//
-// func TestDeserializeBigPacket(t *testing.T) {
-// 	hostOne, _ := host.NewHost("127.0.0.1:31337")
-//
-// 	data := make([]byte, 1024*1024*10)
-// 	rand.Read(data)
-//
-// 	builder := NewBuilder(hostOne)
-// 	msg := builder.Receiver(hostOne).Type(TestPacket).Request(&RequestTest{data}).Build()
-//
-// 	serialized, err := SerializePacket(msg)
-// 	require.NoError(t, err)
-//
-// 	var buffer bytes.Buffer
-// 	buffer.Write(serialized)
-//
-// 	deserializedMsg, err := DeserializePacket(&buffer)
-// 	require.NoError(t, err)
-//
-// 	deserializedData := deserializedMsg.Data.(*RequestTest).Data
-// 	require.Equal(t, data, deserializedData)
-// }
-//
-// type PacketSuite struct {
-// 	suite.Suite
-// 	sender *host.Host
-// 	packet *Packet
-// }
-//
-// func (s *PacketSuite) TestGetSender() {
-// 	s.Equal(s.packet.GetSender(), s.sender.NodeID)
-// }
-//
-// func (s *PacketSuite) TestGetSenderHost() {
-// 	s.Equal(s.packet.GetSenderHost(), s.sender)
-// }
-//
-// func (s *PacketSuite) TestGetType() {
-// 	s.Equal(s.packet.GetType(), TestPacket)
-// }
-//
-// func (s *PacketSuite) TestGetData() {
-// 	s.Equal(s.packet.GetData(), &RequestTest{[]byte{0, 1, 2, 3}})
-// }
-//
-// func (s *PacketSuite) TestGetRequestID() {
-// 	s.Equal(s.packet.GetRequestID(), types.RequestID(123))
-// }
-//
-// func TestPacketMethods(t *testing.T) {
-// 	sender, _ := host.NewHostN("127.0.0.1:31337", testutils.RandomRef())
-// 	receiver, _ := host.NewHostN("127.0.0.2:31338", testutils.RandomRef())
-// 	builder := NewBuilder(sender)
-// 	p := builder.
-// 		Receiver(receiver).
-// 		Type(TestPacket).
-// 		Request(&RequestTest{[]byte{0, 1, 2, 3}}).
-// 		RequestID(types.RequestID(123)).
-// 		Build()
-//
-// 	suite.Run(t, &PacketSuite{
-// 		sender: sender,
-// 		packet: p,
-// 	})
-// }
+func TestSerializePacket(t *testing.T) {
+	msg := testRPCPacket()
+	msg.SetRequest(&RPCRequest{Method: "test", Data: []byte{0, 1, 2, 3}})
+
+	_, err := SerializePacket(msg)
+
+	require.NoError(t, err)
+}
+
+func TestDeserializePacket(t *testing.T) {
+	msg := testRPCPacket()
+	msg.SetRequest(&RPCRequest{Method: "test", Data: []byte{0, 1, 2, 3}})
+
+	serialized, _ := SerializePacket(msg)
+
+	var buffer bytes.Buffer
+
+	buffer.Write(serialized)
+
+	deserialized, err := DeserializePacket(&buffer)
+
+	require.NoError(t, err)
+	require.Equal(t, deserialized, msg)
+}
+
+func TestDeserializeBigPacket(t *testing.T) {
+	data := make([]byte, 1024*1024*10)
+	rand.Read(data)
+
+	msg := testRPCPacket()
+	msg.SetRequest(&RPCRequest{Method: "test", Data: data})
+
+	serialized, err := SerializePacket(msg)
+	require.NoError(t, err)
+
+	var buffer bytes.Buffer
+	buffer.Write(serialized)
+
+	deserializedMsg, err := DeserializePacket(&buffer)
+	require.NoError(t, err)
+
+	deserializedData := deserializedMsg.GetRequest().GetRPC().Data
+	require.Equal(t, data, deserializedData)
+}
+
+type PacketSuite struct {
+	suite.Suite
+	sender *host.Host
+	packet *Packet
+}
+
+func (s *PacketSuite) TestGetType() {
+	s.Equal(s.packet.GetType(), types.RPC)
+}
+
+func (s *PacketSuite) TestGetData() {
+	s.Equal(s.packet.GetRequest().GetRPC().Data, []byte{0, 1, 2, 3})
+}
+
+func (s *PacketSuite) TestGetRequestID() {
+	s.EqualValues(s.packet.GetRequestID(), 123)
+}
+
+func TestPacketMethods(t *testing.T) {
+	p := testRPCPacket()
+	p.SetRequest(&RPCRequest{Method: "test", Data: []byte{0, 1, 2, 3}})
+
+	suite.Run(t, &PacketSuite{
+		sender: p.Sender,
+		packet: p,
+	})
+}
 
 func marshalUnmarshal(t *testing.T, p1, p2 *Packet) {
 	data, err := p1.Marshal()
