@@ -19,9 +19,10 @@ package logicrunner
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -33,7 +34,8 @@ import (
 type HandleCall struct {
 	dep *Dependencies
 
-	Message bus.Message
+	Message *watermillMsg.Message
+	Parcel  insolar.Parcel
 }
 
 func (h *HandleCall) executeActual(
@@ -128,11 +130,10 @@ func (h *HandleCall) executeActual(
 }
 
 func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
-	parcel := h.Message.Parcel
-	ctx = loggerWithTargetID(ctx, parcel)
+	ctx = loggerWithTargetID(ctx, h.Parcel)
 	inslogger.FromContext(ctx).Debug("HandleCall.Present starts ...")
 
-	msg, ok := parcel.Message().(*message.CallMethod)
+	msg, ok := h.Parcel.Message().(*message.CallMethod)
 	if !ok {
 		return errors.New("is not CallMethod message")
 	}
@@ -143,10 +144,16 @@ func (h *HandleCall) Present(ctx context.Context, f flow.Flow) error {
 	)
 	defer span.End()
 
-	r := bus.Reply{}
-	r.Reply, r.Err = h.executeActual(ctx, parcel, msg, f)
+	rep, err := h.executeActual(ctx, h.Parcel, msg, f)
 
-	h.Message.ReplyTo <- r
+	var repMsg *watermillMsg.Message
+	if err != nil {
+		repMsg = bus.ErrorAsMessage(ctx, err)
+	} else {
+		repMsg = bus.ReplyAsMessage(ctx, rep)
+	}
+	h.dep.Bus.Reply(ctx, h.Message, repMsg)
+
 	return nil
 
 }

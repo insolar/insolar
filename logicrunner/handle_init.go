@@ -17,14 +17,18 @@
 package logicrunner
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/payload"
+	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
+	insolarMsg "github.com/insolar/insolar/insolar/message"
 )
 
 const InnerMsgTopic = "InnerMsg"
@@ -38,12 +42,13 @@ const (
 type Dependencies struct {
 	Publisher message.Publisher
 	lr        *LogicRunner
+	Bus       bus.Sender
 }
 
 type Init struct {
 	dep *Dependencies
 
-	Message bus.Message
+	Message message.Message
 }
 
 func (s *Init) Future(ctx context.Context, f flow.Flow) error {
@@ -51,39 +56,56 @@ func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
-	switch s.Message.Parcel.Message().Type() {
-	case insolar.TypeCallMethod:
+	meta := payload.Meta{}
+	err := meta.Unmarshal(s.Message.Payload)
+	if err != nil {
+		return errors.Wrap(err, "can't deserialize meta payload")
+	}
+	parcel, err := insolarMsg.DeserializeParcel(bytes.NewBuffer(meta.Payload))
+	if err != nil {
+		return errors.Wrap(err, "can't deserialize payload")
+	}
+
+	msgType := s.Message.Metadata.Get(bus.MetaType)
+
+	switch msgType {
+	case insolar.TypeCallMethod.String():
 		h := &HandleCall{
 			dep:     s.dep,
-			Message: s.Message,
+			Message: &s.Message,
+			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
-	case insolar.TypePendingFinished:
+	case insolar.TypePendingFinished.String():
 		h := &HandlePendingFinished{
 			dep:     s.dep,
-			Message: s.Message,
+			Message: &s.Message,
+			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
-	case insolar.TypeStillExecuting:
+	case insolar.TypeStillExecuting.String():
 		h := &HandleStillExecuting{
 			dep:     s.dep,
-			Message: s.Message,
+			Message: &s.Message,
+			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
-	case insolar.TypeAbandonedRequestsNotification:
+	case insolar.TypeAbandonedRequestsNotification.String():
 		h := &HandleAbandonedRequestsNotification{
 			dep:     s.dep,
-			Message: s.Message,
+			Message: &s.Message,
+			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
-	case insolar.TypeExecutorResults:
+	case insolar.TypeExecutorResults.String():
 		h := &HandleExecutorResults{
 			dep:     s.dep,
-			Message: s.Message,
+			Message: &s.Message,
+			Parcel:  parcel,
 		}
 		return f.Handle(ctx, h.Present)
 	default:
-		return fmt.Errorf("[ Init.Present ] no handler for message type %s", s.Message.Parcel.Message().Type().String())
+		return fmt.Errorf("[ Init.Present ] no handler for message type %s", msgType)
 	}
 }
 

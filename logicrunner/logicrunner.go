@@ -202,8 +202,9 @@ func InitHandlers(lr *LogicRunner, b wmBus.Sender) error {
 
 	initHandle := func(msg bus.Message) *Init {
 		return &Init{
-			dep:     dep,
-			Message: msg,
+			dep: dep,
+			// TODO: use wm.Message instead of bus.Message
+			Message: *msg.WatermillMsg,
 		}
 	}
 	lr.FlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {

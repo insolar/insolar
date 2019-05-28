@@ -19,11 +19,14 @@ package logicrunner
 import (
 	"context"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/pkg/errors"
 	"go.opencensus.io/trace"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
+
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -65,17 +68,17 @@ func (p *initializeAbandonedRequestsNotificationExecutionState) Proceed(ctx cont
 type HandleAbandonedRequestsNotification struct {
 	dep *Dependencies
 
-	Message bus.Message
+	Message *watermillMsg.Message
+	Parcel  insolar.Parcel
 }
 
 func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flow.Flow) error {
-	parcel := h.Message.Parcel
-	ctx = loggerWithTargetID(ctx, parcel)
+	ctx = loggerWithTargetID(ctx, h.Parcel)
 	logger := inslogger.FromContext(ctx)
 
 	logger.Debug("HandleAbandonedRequestsNotification.Present starts ...")
 
-	msg, ok := parcel.Message().(*message.AbandonedRequestsNotification)
+	msg, ok := h.Parcel.Message().(*message.AbandonedRequestsNotification)
 	if !ok {
 		return errors.New("HandleAbandonedRequestsNotification( ! message.AbandonedRequestsNotification )")
 	}
@@ -90,10 +93,11 @@ func (h *HandleAbandonedRequestsNotification) Present(ctx context.Context, f flo
 	}
 	if err := f.Procedure(ctx, &procInitializeExecutionState, false); err != nil {
 		err := errors.Wrap(err, "[ HandleExecutorResults ] Failed to initialize execution state")
-		h.Message.ReplyTo <- bus.Reply{Reply: &reply.Error{}, Err: err}
+		rep := bus.ErrorAsMessage(ctx, err)
+		h.dep.Bus.Reply(ctx, h.Message, rep)
 		return err
 	}
-
-	h.Message.ReplyTo <- bus.Reply{Reply: &reply.OK{}, Err: nil}
+	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
+	h.dep.Bus.Reply(ctx, h.Message, replyOk)
 	return nil
 }

@@ -19,8 +19,10 @@ package logicrunner
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -29,17 +31,17 @@ import (
 type HandleStillExecuting struct {
 	dep *Dependencies
 
-	Message bus.Message
+	Message *watermillMsg.Message
+	Parcel  insolar.Parcel
 }
 
 func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
-	parcel := h.Message.Parcel
-	ctx = loggerWithTargetID(ctx, parcel)
+	ctx = loggerWithTargetID(ctx, h.Parcel)
 	lr := h.dep.lr
 	inslogger.FromContext(ctx).Debug("HandleStillExecuting.Present starts ...")
-	replyOk := bus.Reply{Reply: &reply.OK{}, Err: nil}
+	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
 
-	msg := parcel.Message().(*message.StillExecuting)
+	msg := h.Parcel.Message().(*message.StillExecuting)
 	ref := msg.DefaultTarget()
 	os := lr.UpsertObjectState(*ref)
 
@@ -67,8 +69,8 @@ func (h *HandleStillExecuting) Present(ctx context.Context, f flow.Flow) error {
 		es.Unlock()
 	}
 	os.Unlock()
+	h.dep.Bus.Reply(ctx, h.Message, replyOk)
 
-	h.Message.ReplyTo <- replyOk
 	return nil
 
 }

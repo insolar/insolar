@@ -19,8 +19,10 @@ package logicrunner
 import (
 	"context"
 
+	watermillMsg "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
-	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
@@ -30,17 +32,17 @@ import (
 type HandlePendingFinished struct {
 	dep *Dependencies
 
-	Message bus.Message
+	Message *watermillMsg.Message
+	Parcel  insolar.Parcel
 }
 
 func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error {
-	parcel := h.Message.Parcel
-	ctx = loggerWithTargetID(ctx, parcel)
+	ctx = loggerWithTargetID(ctx, h.Parcel)
 	lr := h.dep.lr
 	inslogger.FromContext(ctx).Debug("HandlePendingFinished.Present starts ...")
-	replyOk := bus.Reply{Reply: &reply.OK{}, Err: nil}
+	replyOk := bus.ReplyAsMessage(ctx, &reply.OK{})
 
-	msg := parcel.Message().(*message.PendingFinished)
+	msg := h.Parcel.Message().(*message.PendingFinished)
 	ref := msg.DefaultTarget()
 	os := lr.UpsertObjectState(*ref)
 
@@ -54,7 +56,7 @@ func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error 
 		}
 		os.Unlock()
 
-		h.Message.ReplyTo <- replyOk
+		h.dep.Bus.Reply(ctx, h.Message, replyOk)
 		return nil
 	}
 	es := os.ExecutionState
@@ -78,7 +80,7 @@ func (h *HandlePendingFinished) Present(ctx context.Context, f flow.Flow) error 
 		return errors.Wrap(err, "[ HandlePendingFinished ] StartQueueProcessorIfNeeded returns error")
 	}
 
-	h.Message.ReplyTo <- replyOk
+	h.dep.Bus.Reply(ctx, h.Message, replyOk)
 	return nil
 
 }
