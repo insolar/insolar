@@ -144,7 +144,7 @@ test_network_integration:
 
 .PHONY: test_slow
 test_slow:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./logicrunner/
+	CGO_ENABLED=1 go test $(TEST_ARGS) -tags slowtest ./logicrunner/... ./server/internal/...
 
 .PHONY: test
 test: test_unit
@@ -174,7 +174,7 @@ ci_test_unit:
 
 .PHONY: ci_test_slow
 ci_test_slow:
-	CGO_ENABLED=1 go test $(TEST_ARGS) -json -v -tags slowtest ./logicrunner/ -count 1 | tee -a ci_test_unit.json
+	CGO_ENABLED=1 go test $(TEST_ARGS) -json -v -tags slowtest ./logicrunner/... ./server/internal/... -count 1 | tee -a ci_test_unit.json
 
 .PHONY: ci_test_func
 ci_test_func:
@@ -219,3 +219,4 @@ generate-protobuf:
 
 regen-builtin: $(BININSGOCC)
 	$(BININSGOCC) regen-builtin
+
