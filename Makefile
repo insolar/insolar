@@ -217,3 +217,4 @@ generate-protobuf:
 
 regen-builtin: $(BININSGOCC)
 	$(BININSGOCC) regen-builtin
+
