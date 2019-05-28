@@ -124,3 +124,15 @@ func UnmarshalFromMeta(meta []byte) (Payload, error) {
 
 	return pl, nil
 }
+
+// UnmarshalTypeFromMeta decodes payload type from given meta binary.
+func UnmarshalTypeFromMeta(data []byte) (Type, error) {
+	m := Meta{}
+	// Can be optimized by using proto.NewBuffer.
+	err := m.Unmarshal(data)
+	if err != nil {
+		return TypeUnknown, err
+	}
+
+	return UnmarshalType(m.Payload)
+}

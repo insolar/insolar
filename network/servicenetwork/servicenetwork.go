@@ -385,7 +385,7 @@ func (n *ServiceNetwork) SendMessageHandler(msg *message.Message) ([]*message.Me
 		return nil, errors.Errorf("reply is not ack: %s", res)
 	}
 
-	logger.WithField("msg_type", msgType.String()).Info("sent message")
+	logger.WithField("msg_type", msgType.String()).Info("Network sent message")
 
 	return nil, nil
 }
@@ -438,11 +438,11 @@ func (n *ServiceNetwork) processIncoming(ctx context.Context, args [][]byte) ([]
 	}
 	// TODO: check pulse here
 
-	msgType, err := payload.UnmarshalType(msg.Payload)
+	msgType, err := payload.UnmarshalTypeFromMeta(msg.Payload)
 	if err != nil {
 		logger.Error("failed to extract message type")
 	}
-	logger.WithField("msg_type", msgType.String()).Info("received message")
+	logger.WithField("msg_type", msgType.String()).Info("Network received message")
 
 	err = n.Pub.Publish(bus.TopicIncoming, msg)
 	if err != nil {

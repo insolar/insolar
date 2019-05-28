@@ -21,6 +21,8 @@ import (
 	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/insolar/insolar/insolar/flow"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -107,17 +109,18 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		nodes, err := p.Dep.Coordinator.QueryRole(ctx, insolar.DynamicRoleLightExecutor, stateID, stateID.Pulse())
+		node, err := p.Dep.Coordinator.NodeForObject(ctx, p.payload.ObjectID, flow.Pulse(ctx), stateID.Pulse())
 		if err != nil {
 			return errors.Wrap(err, "failed to calculate role")
 		}
 		go func() {
-			_, done := p.Dep.Sender.SendTarget(ctx, msg, nodes[0])
+			_, done := p.Dep.Sender.SendTarget(ctx, msg, *node)
 			done()
 		}()
 		return nil
 	}
 
+	logger := inslogger.FromContext(ctx)
 	{
 		buf, err := p.index.Marshal()
 		if err != nil {
@@ -130,13 +133,16 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 			return errors.Wrap(err, "failed to create reply")
 		}
 		go p.Dep.Sender.Reply(ctx, p.message, msg)
+		logger.Info("sending index")
 	}
 
 	rec, err := p.Dep.RecordAccessor.ForID(ctx, *p.index.LatestState)
 	switch err {
 	case nil:
+		logger.Info("sending state")
 		return sendState(rec)
 	case object.ErrNotFound:
+		logger.Info("state not found (sending pass)")
 		return sendPassState(*p.index.LatestState)
 	default:
 		return errors.Wrap(err, "failed to fetch record")
