@@ -35,8 +35,8 @@ oracle_keys_file:
 discovery_keys_dir: "{{ .BaseDir }}/reusekeys/discovery"
 keys_name_format: "/node_%02d.json"
 reuse_keys: false
-root_balance: 1000000000
-md_balance: 1000000000
+root_balance: "295147905179352825857"
+md_balance: "295147905179352825857"
 majority_rule: 0
 min_roles:
   virtual:  1
