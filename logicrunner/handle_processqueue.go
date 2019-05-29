@@ -61,7 +61,7 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 
 		sender := qe.parcel.GetSender()
 		current := CurrentExecution{
-			Request:       qe.request,
+			RequestRef:    qe.request,
 			RequesterNode: &sender,
 			Context:       qe.ctx,
 		}

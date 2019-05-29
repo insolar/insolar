@@ -61,7 +61,7 @@ func (es *ExecutionState) WrapError(err error, message string) error {
 		res.Contract = es.ObjectDescriptor.HeadRef()
 	}
 	if es.Current != nil {
-		res.Request = es.Current.Request
+		res.Request = es.Current.RequestRef
 	}
 	return res
 }

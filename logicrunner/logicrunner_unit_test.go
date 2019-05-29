@@ -633,7 +633,7 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 	es.CodeDescriptor = cDesc
 	es.Current = &CurrentExecution{}
 	es.Current.LogicContext = &insolar.LogicCallContext{}
-	es.Current.Request = &randRef
+	es.Current.RequestRef = &randRef
 
 	data := []byte(testutils.RandomString())
 	oDesc.MemoryMock.Return(data)
