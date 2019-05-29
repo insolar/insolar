@@ -201,6 +201,15 @@ func (cert *Certificate) GetDiscoveryNodes() []insolar.DiscoveryNode {
 	return result
 }
 
+func (cert *Certificate) GetMinRoles() (uint, uint, uint) {
+	return cert.MinRoles.Virtual, cert.MinRoles.HeavyMaterial, cert.MinRoles.LightMaterial
+}
+
+// GetMajorityRule returns majority rule number
+func (cert *Certificate) GetMajorityRule() int {
+	return cert.MajorityRule
+}
+
 // Dump returns all info about certificate in json format
 func (cert *Certificate) Dump() (string, error) {
 	result, err := json.MarshalIndent(cert, "", "    ")
