@@ -61,16 +61,16 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 
 		sender := qe.parcel.GetSender()
 		current := CurrentExecution{
-			Request:       qe.request,
+			RequestRef:    qe.request,
 			RequesterNode: &sender,
 			Context:       qe.ctx,
 		}
-		es.Current = &current
-
 		if msg, ok := qe.parcel.Message().(*message.CallMethod); ok {
-			current.ReturnMode = msg.ReturnMode
-			current.Sequence = msg.Sequence
+			current.Request = &msg.Request
+		} else {
+			panic("Not a call method message, should never happen")
 		}
+		es.Current = &current
 
 		es.Unlock()
 
