@@ -87,6 +87,7 @@ type ThirdPhaseState struct {
 	ActiveNodes    []insolar.NetworkNode
 	GlobuleProof   *merkle.GlobuleProof
 	ApprovedClaims []packets.ReferendumClaim
+	ReconnectTo    string
 }
 
 type ConsensusState struct {
