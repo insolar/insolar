@@ -21,7 +21,7 @@ import (
 	"crypto"
 	"encoding/json"
 	"fmt"
-	"github.com/insolar/go-jose"
+	"github.com/square/go-jose"
 	"io"
 	"os"
 
@@ -58,6 +58,7 @@ type RegisterResult struct {
 }
 
 func extractReference(response []byte, requestTypeMsg string) insolar.Reference {
+	fmt.Println("Response123:", string(response), requestTypeMsg)
 	r := RegisterResult{}
 	err := json.Unmarshal(response, &r)
 	checkError(fmt.Sprintf("Failed to parse response from '%s' node request", requestTypeMsg), err)
@@ -78,16 +79,18 @@ func extractReference(response []byte, requestTypeMsg string) insolar.Reference 
 func (g *certGen) registerNode() insolar.Reference {
 	userCfg := g.getUserConfig()
 
-
 	//keySerialized, err := g.keyProcessor.ExportPublicKeyPEM(g.pubKey)
 
+	//fmt.Println("TEST", g.pubKey)
+
 	var key = jose.JSONWebKey{Key: g.pubKey}
+
 	pubjs, err := key.MarshalJSON()
 
 	checkError("Failed to export public key:", err)
 	request := requester.RequestConfigJSON{
 		Method: "RegisterNode",
-		Params: []interface{}{pubjs, g.staticRole.String()},
+		Params: []interface{}{string(pubjs), g.staticRole.String()},
 	}
 
 	ctx := inslogger.ContextWithTrace(context.Background(), "insolarUtility")

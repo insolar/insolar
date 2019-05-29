@@ -22,8 +22,8 @@ import (
 	"encoding/json"
 	"encoding/pem"
 	"fmt"
-	"github.com/insolar/go-jose"
 	"github.com/pkg/errors"
+	"github.com/square/go-jose"
 	"io/ioutil"
 	"path/filepath"
 )

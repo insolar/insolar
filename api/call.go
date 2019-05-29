@@ -19,7 +19,7 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"github.com/insolar/go-jose"
+	"github.com/square/go-jose"
 	"io/ioutil"
 	"net/http"
 	"time"
@@ -47,7 +47,7 @@ type SignedPayload struct {
 	Reference string `json:"reference"` // contract reference
 	Method    string `json:"method"`    // method name
 	Params    string `json:"params"`    // json object
-	Seed      string `json:"seed"`      // seed
+	Seed      []byte `json:"seed"`
 }
 
 type answer struct {
@@ -86,19 +86,20 @@ func (ar *Runner) checkSeed(paramsSeed []byte) error {
 	return nil
 }
 
-func (ar *Runner) makeCall(ctx context.Context, params SignedPayload, public jose.JSONWebKey, signature jose.JSONWebSignature) (interface{}, error) {
-	ctx, span := instracer.StartSpan(ctx, "SendRequest "+params.Method)
+func (ar *Runner) makeCall(ctx context.Context, signedPayload SignedPayload, public jose.JSONWebKey, signature jose.JSONWebSignature) (interface{}, error) {
+	ctx, span := instracer.StartSpan(ctx, "SendRequest "+signedPayload.Method)
 	defer span.End()
 
-	reference, err := insolar.NewReferenceFromBase58(params.Reference)
+	reference, err := insolar.NewReferenceFromBase58(signedPayload.Reference)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ makeCall ] failed to parse params.Reference")
+		return nil, errors.Wrap(err, "[ makeCall ] failed to parse signedPayload.Reference")
 	}
 
 	res, err := ar.ContractRequester.SendRequest(
 		ctx,
 		reference,
 		"Call",
+		// TODO: Marshal?
 		[]interface{}{*ar.CertificateManager.GetCertificate().GetRootDomainReference(), public, signature},
 	)
 
@@ -133,18 +134,18 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		defer span.End()
 
 		// unmarshal jws
-		jws := Request{}
+		request := Request{}
 		resp := answer{}
 
-		_, err := UnmarshalRequest(req, &jws)
+		_, err := UnmarshalRequest(req, &request)
 		if err != nil {
 			processError(err, "Can't unmarshal request", &resp, insLog)
 			return
 		}
 
-		params, public, signature, err := verify(jws.Signature, jws.PublicKey)
+		signedPayload, public, signature, err := verify(request.PublicKey, request.Signature)
 		if err != nil {
-			processError(err, "Can't unmarshal request", &resp, insLog)
+			processError(err, "Can't verify signature", &resp, insLog)
 			return
 		}
 
@@ -154,7 +155,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			if resp.Error != "" {
 				success = "fail"
 			}
-			metrics.APIContractExecutionTime.WithLabelValues(params.Method, success).Observe(time.Since(startTime).Seconds())
+			metrics.APIContractExecutionTime.WithLabelValues(signedPayload.Method, success).Observe(time.Since(startTime).Seconds())
 		}()
 
 		resp.TraceID = traceID
@@ -173,8 +174,8 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			}
 		}()
 
-		if jws.LogLevel != nil {
-			logLevelNumber, err := insolar.ParseLevel(*jws.LogLevel)
+		if request.LogLevel != nil {
+			logLevelNumber, err := insolar.ParseLevel(*request.LogLevel)
 			if err != nil {
 				processError(err, "Can't parse logLevel", &resp, insLog)
 				return
@@ -182,7 +183,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 			ctx = inslogger.WithLoggerLevel(ctx, logLevelNumber)
 		}
 
-		err = ar.checkSeed([]byte(params.Seed))
+		err = ar.checkSeed(signedPayload.Seed)
 		if err != nil {
 			processError(err, "Can't checkSeed", &resp, insLog)
 			return
@@ -191,7 +192,7 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 		var result interface{}
 		ch := make(chan interface{}, 1)
 		go func() {
-			result, err = ar.makeCall(ctx, *params, *public, *signature)
+			result, err = ar.makeCall(ctx, *signedPayload, *public, *signature)
 			ch <- nil
 		}()
 		select {
@@ -215,25 +216,27 @@ func (ar *Runner) callHandler() func(http.ResponseWriter, *http.Request) {
 
 // verify and get payload
 // return parsed payload, public key, signature and error
-func verify(jws string, jwk string) (*SignedPayload, *jose.JSONWebKey, *jose.JSONWebSignature, error) {
-
+func verify(publicKey string, _signature string) (*SignedPayload, *jose.JSONWebKey, *jose.JSONWebSignature, error) {
 	// unmarshal public key
-	var public jose.JSONWebKey
-	err := public.UnmarshalJSON([]byte(jwk))
+	public := jose.JSONWebKey{}
+	err := public.UnmarshalJSON([]byte(publicKey))
 	if err != nil {
 		return nil, nil, nil, err
 	}
 
 	// parse jws token
-	signature, err := jose.ParseSigned(jws)
+	signature, err := jose.ParseSigned(_signature)
 	if err != nil {
 		return nil, nil, nil, err
 	}
 	var payloadRequest = SignedPayload{}
 
-	payload, err := signature.Verify(jwk)
+	payload, err := signature.Verify(&public)
+	if err != nil {
+		return nil, nil, nil, err
+	}
 
-	err = json.Unmarshal(payload, payloadRequest)
+	err = json.Unmarshal(payload, &payloadRequest)
 	if err != nil {
 		return nil, nil, nil, err
 	}

@@ -19,8 +19,10 @@ package requester
 import (
 	"bytes"
 	"context"
+	"crypto/ecdsa"
 	"encoding/json"
 	"fmt"
+	"github.com/square/go-jose"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -78,11 +80,25 @@ func SetVerbose(verb bool) {
 // PostParams represents params struct
 type PostParams = map[string]interface{}
 
+type SignedRequest struct {
+	PublicKey string  `json:"jwk"`
+	Token     string  `json:"jws"`
+}
+
 // GetResponseBody makes request and extracts body
 func GetResponseBody(url string, postP PostParams) ([]byte, error) {
 	jsonValue, err := json.Marshal(postP)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ getResponseBody ] Problem with marshaling params")
+	}
+
+	fmt.Println("call json",string(jsonValue))
+	var signedRequest = SignedRequest{}
+
+	err = json.Unmarshal(jsonValue, &signedRequest)
+
+	if err != nil {
+		fmt.Println("Unmarshal error", err)
 	}
 
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonValue))
@@ -159,33 +175,63 @@ func SendWithSeed(ctx context.Context, url string, userCfg *UserConfigJSON, reqC
 		return nil, errors.Wrap(err, "[ Send ] Failed to parse userCfg.Caller")
 	}
 
-	serRequest, err := insolar.MarshalArgs(
-		*callerRef,
-		reqCfg.Method,
-		params,
-		seed)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ Send ] Problem with serializing request")
+	//serRequest, err := insolar.MarshalArgs(
+	//	*callerRef,
+	//	reqCfg.Method,
+	//	params,
+	//	seed)
+	//if err != nil {
+	//	return nil, errors.Wrap(err, "[ Send ] Problem with serializing request")
+	//}
+
+	signedPayload := PostParams{
+		"reference": callerRef,
+		"method":    reqCfg.Method,
+		"params":    params,
+		"seed":      seed,
 	}
 
+	sp, err := json.Marshal(signedPayload)
 	verboseInfo(ctx, "Signing request ...")
-	cs := scheme.Signer(userCfg.privateKeyObject)
-	signature, err := cs.Sign(serRequest)
+	//cs := scheme.Signer(userCfg.privateKeyObject)
+	signer, err := jose.NewSigner(jose.SigningKey{Algorithm: jose.ES256, Key: userCfg.privateKeyObject}, nil)
+	signature, err := signer.Sign(sp)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ Send ] Problem with signing request")
 	}
 	verboseInfo(ctx, "Signing request completed")
 
+	jws, err := signature.CompactSerialize()
+
+	fmt.Println("token", jws)
+
+	key, ok := userCfg.privateKeyObject.(*ecdsa.PrivateKey)
+	if !ok {
+		return nil, errors.Wrap(err, "[ Send ] failed to cast private")
+	}
+
+	jwk := jose.JSONWebKey{Key: key.Public()}
+	jwkjs, err := jwk.MarshalJSON()
+
+	fmt.Println(string(jwkjs))
+
+	// TODO: make structure for JWK instead of string
+	//params1 := PostParams{
+	//	"kty": "EC",
+	//	"crv": "P-256",
+	//	"x": "yJre6H1ysL1CEPpni6LJbi4QKTiAwMZeNgSyj-Fi5EA",
+	//	"y": "XJ3SdW0KQMj4KMoqzM0osBewtRTtHQlOYj5PNgmA1BY",
+	//}
+
 	postParams := PostParams{
-		"params":    params,
-		"method":    reqCfg.Method,
-		"reference": userCfg.Caller,
-		"seed":      seed,
-		"signature": signature.Bytes(),
+		"jwk": string(jwkjs),           // string(jwkjs),
+		"jws": jws,
 	}
 	if reqCfg.LogLevel != nil {
 		postParams["logLevel"] = reqCfg.LogLevel
 	}
+
+	fmt.Println("postParams", postParams)
 
 	body, err := GetResponseBody(url, postParams)
 

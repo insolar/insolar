@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"github.com/insolar/go-jose"
-	"github.com/insolar/insolar/application/contract/member/signer"
 	"math"
 
 	"github.com/insolar/insolar/application/proxy/nodedomain"
@@ -40,11 +39,16 @@ type Member struct {
 	PublicKey string
 }
 
-type PayloadRequest struct {
-	Method    string `json:"method"`
+type SignedRequest struct {
+	PublicKey string  `json:"jwk"`
+	Token     string  `json:"jws"`
+}
+
+type SignedPayload struct {
+	Reference string `json:"reference"` // contract reference
+	Method    string `json:"method"`    // method name
+	Params    string `json:"params"`    // json object
 	Seed      string `json:"seed"`
-	Reference string `json:"reference"`
-	Params    []byte `json:"params"`
 }
 
 type Reference struct {
@@ -92,51 +96,58 @@ func (m *Member) verifySigAndComparePublic(public jose.JSONWebKey, signature jos
 }
 
 // Call method for authorized calls
-func (m *Member) Call(rootDomain insolar.Reference, params []byte) (interface{}, error) {
+func (m *Member) Call(rootDomain insolar.Reference, _signedRequest []byte) (interface{}, error) {
+
+	//return "TEST", nil
 
 	var jwk = jose.JSONWebKey{}
-	var jws = jose.JSONWebSignature{}
-	err := signer.UnmarshalParams(params, &jwk, &jws)
+
+	var signedRequest = SignedRequest{}
+	err := json.Unmarshal(_signedRequest, &signedRequest)
+
+
+	err = jwk.UnmarshalJSON([]byte(signedRequest.PublicKey))
+	jws, err := jose.ParseSigned(signedRequest.Token)
 
 	if err != nil {
-		return nil, fmt.Errorf("[ Call ] Can't unmarshal params: %s", err.Error())
+		return "test1", fmt.Errorf("[ Call ] Can't unmarshal params: %s", err.Error())
 	}
 
 	// Verify signature
-	payload, err := m.verifySigAndComparePublic(jwk, jws)
+	payload, err := m.verifySigAndComparePublic(jwk, *jws)
 	if err != nil {
-		return nil, fmt.Errorf("[ Call ]: %s", err.Error())
+		return "test2", fmt.Errorf("[ Call ]: %s", err.Error())
 	}
 
 	// Unmarshal payload
-	var payloadRequest = PayloadRequest{}
+	var payloadRequest = SignedPayload{}
 	err = json.Unmarshal(payload, payloadRequest)
 	if err != nil {
-		return nil, fmt.Errorf("[ Call ]: %s", err.Error())
+		return "test3", fmt.Errorf("[ Call ]: %s", err.Error())
 	}
 
 	switch payloadRequest.Method {
 	case "CreateMember":
-		return m.createMemberCall(rootDomain, payloadRequest.Params, jwk)
+		return m.createMemberCall(rootDomain, []byte(payloadRequest.Params), jwk)
 	}
 
 	switch payloadRequest.Method {
 	case "GetMyBalance":
 		return m.getMyBalanceCall()
 	case "GetBalance":
-		return m.getBalanceCall(payloadRequest.Params)
+		return m.getBalanceCall([]byte(payloadRequest.Params))
 	case "Transfer":
-		return m.transferCall(payloadRequest.Params)
+		return m.transferCall([]byte(payloadRequest.Params))
 	case "DumpUserInfo":
-		return m.dumpUserInfoCall(rootDomain, payloadRequest.Params)
+		return m.dumpUserInfoCall(rootDomain, []byte(payloadRequest.Params))
 	case "DumpAllUsers":
 		return m.dumpAllUsersCall(rootDomain)
 	case "RegisterNode":
-		return m.registerNodeCall(rootDomain, payloadRequest.Params)
+		return m.registerNodeCall(rootDomain, []byte(payloadRequest.Params))
 	case "GetNodeRef":
-		return m.getNodeRefCall(rootDomain, payloadRequest.Params)
+		return m.getNodeRefCall(rootDomain, []byte(payloadRequest.Params))
 	}
-	return nil, &foundation.Error{S: "Unknown method"}
+	return "test4", &foundation.Error{S: "Unknown method"}
 }
 
 func (m *Member) createMemberCall(ref insolar.Reference, params []byte, public jose.JSONWebKey) (interface{}, error) {

@@ -22,11 +22,15 @@ import (
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
 )
 
-type PayloadRequest struct {
-	Method    string `json:"method"`
+type SignedRequest struct {
+	PublicKey string `json:"jwk"`
+	Token     string `json:"jws"`
+}
+type SignedPayload struct {
+	Reference string `json:"reference"` // contract reference
+	Method    string `json:"method"`    // method name
+	Params    string `json:"params"`    // json object
 	Seed      string `json:"seed"`
-	Reference string `json:"reference"`
-	Params    []byte `json:"params"`
 }
 type Reference struct {
 	Reference string `json:"reference"`
@@ -34,7 +38,7 @@ type Reference struct {
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11113LDQrJjQJLmZyA82UWkQa17iiNwYspizwkhG6rT.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("11112yk2EFFABuL6onv3gSMyHVn71GrmxAkhFGSz4tJ.11111111111111111111111111111111")
 
 // Member holds proxy type
 type Member struct {
@@ -336,10 +340,10 @@ func (r *Member) GetPublicKeyAsImmutable() (string, error) {
 }
 
 // Call is proxy generated method
-func (r *Member) Call(rootDomain insolar.Reference, params []byte) (interface{}, error) {
+func (r *Member) Call(rootDomain insolar.Reference, _signedRequest []byte) (interface{}, error) {
 	var args [2]interface{}
 	args[0] = rootDomain
-	args[1] = params
+	args[1] = _signedRequest
 
 	var argsSerialized []byte
 
@@ -371,10 +375,10 @@ func (r *Member) Call(rootDomain insolar.Reference, params []byte) (interface{},
 }
 
 // CallNoWait is proxy generated method
-func (r *Member) CallNoWait(rootDomain insolar.Reference, params []byte) error {
+func (r *Member) CallNoWait(rootDomain insolar.Reference, _signedRequest []byte) error {
 	var args [2]interface{}
 	args[0] = rootDomain
-	args[1] = params
+	args[1] = _signedRequest
 
 	var argsSerialized []byte
 
@@ -392,10 +396,10 @@ func (r *Member) CallNoWait(rootDomain insolar.Reference, params []byte) error {
 }
 
 // CallAsImmutable is proxy generated method
-func (r *Member) CallAsImmutable(rootDomain insolar.Reference, params []byte) (interface{}, error) {
+func (r *Member) CallAsImmutable(rootDomain insolar.Reference, _signedRequest []byte) (interface{}, error) {
 	var args [2]interface{}
 	args[0] = rootDomain
-	args[1] = params
+	args[1] = _signedRequest
 
 	var argsSerialized []byte
 

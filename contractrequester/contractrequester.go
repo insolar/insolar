@@ -78,7 +78,7 @@ func randomUint64() uint64 {
 
 // SendRequest makes synchronously call to method of contract by its ref without additional information
 func (cr *ContractRequester) SendRequest(ctx context.Context, ref *insolar.Reference, method string, argsIn []interface{}) (insolar.Reply, error) {
-	ctx, span := instracer.StartSpan(ctx, "SendRequest "+method)
+	ctx, span := instracer.StartSpan(ctx, "SendRequest " + method)
 	defer span.End()
 
 	// TODO: how to pass jwk and jws forward?
