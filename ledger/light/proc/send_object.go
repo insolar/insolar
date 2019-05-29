@@ -287,6 +287,14 @@ func (p *SendObject) fillPendingFilament(ctx context.Context, currentPN insolar.
 	continueFilling := true
 
 	for continueFilling {
+		isBeyond, err := p.Dep.Coordinator.IsBeyondLimit(ctx, currentPN, destPN)
+		if err != nil {
+			return err
+		}
+		if isBeyond {
+			return nil
+		}
+
 		node, err := p.Dep.Coordinator.NodeForObject(ctx, objID, currentPN, destPN)
 		if err != nil {
 			return err

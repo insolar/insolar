@@ -14,36 +14,33 @@
 // limitations under the License.
 //
 
-package proc
+package handle
 
 import (
 	"context"
 
-	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
-	"github.com/insolar/insolar/insolar/jet"
 	"github.com/insolar/insolar/insolar/message"
-	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/ledger/light/proc"
 )
 
-type GetJet struct {
-	msg     *message.GetJet
+type GetPendingFilament struct {
+	dep     *proc.Dependencies
+	msg     *message.GetPendingFilament
 	replyTo chan<- bus.Reply
-
-	Dep struct {
-		Jets jet.Storage
-	}
 }
 
-func NewGetJet(msg *message.GetJet, rep chan<- bus.Reply) *GetJet {
-	return &GetJet{
+func NewGetPendingFilament(dep *proc.Dependencies, msg *message.GetPendingFilament, replyTo chan<- bus.Reply) *GetPendingFilament {
+	return &GetPendingFilament{
+		dep:     dep,
 		msg:     msg,
-		replyTo: rep,
+		replyTo: replyTo,
 	}
 }
 
-func (p *GetJet) Proceed(ctx context.Context) error {
-	jetID, actual := p.Dep.Jets.ForID(ctx, p.msg.Pulse, p.msg.Object)
-	p.replyTo <- bus.Reply{Reply: &reply.Jet{ID: insolar.ID(jetID), Actual: actual}, Err: nil}
-	return nil
+func (s *GetPendingFilament) Present(ctx context.Context, f flow.Flow) error {
+	getFilament := proc.NewGetPendingFilament(s.msg, s.replyTo)
+	s.dep.GetPendingFilament(getFilament)
+	return f.Procedure(ctx, getFilament, false)
 }

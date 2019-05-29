@@ -498,6 +498,7 @@ type GetPendingFilament struct {
 	ledgerMessage
 
 	ObjectID insolar.ID
+	PN       insolar.PulseNumber
 }
 
 // Type implementation of Message interface.

@@ -117,6 +117,10 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 		msg := s.Message.Parcel.Message().(*message.HotData)
 		h := NewHotData(s.Dep, s.Message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetPendingFilament:
+		msg := s.Message.Parcel.Message().(*message.GetPendingFilament)
+		h := NewGetPendingFilament(s.Dep, msg, s.Message.ReplyTo)
+		return f.Handle(ctx, h.Present)
 	default:
 		return fmt.Errorf("no handler for message type %s", s.Message.Parcel.Message().Type().String())
 	}
