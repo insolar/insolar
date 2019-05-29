@@ -28,17 +28,12 @@ const insolarImportPath = "github.com/insolar/insolar"
 
 var testdataDir = testdataPath()
 
-func buildCLI(name string, functest bool) (string, error) {
+func buildCLI(name string) (string, error) {
 	binPath := filepath.Join(testdataDir, name)
-
-	var tagsParam string
-	if functest {
-		tagsParam = "functest"
-	}
 
 	out, err := exec.Command(
 		"go", "build",
-		"-o", binPath, "-tags", tagsParam,
+		"-o", binPath,
 		filepath.Join(insolarImportPath, "cmd", name),
 	).CombinedOutput()
 	if err != nil {
@@ -47,12 +42,12 @@ func buildCLI(name string, functest bool) (string, error) {
 	return binPath, nil
 }
 
-func buildInsiderCLI(functest bool) (string, error) {
-	return buildCLI("insgorund", functest)
+func buildInsiderCLI() (string, error) {
+	return buildCLI("insgorund")
 }
 
-func BuildPreprocessor(functest bool) (string, error) {
-	return buildCLI("insgocc", functest)
+func BuildPreprocessor() (string, error) {
+	return buildCLI("insgocc")
 }
 
 func testdataPath() string {
