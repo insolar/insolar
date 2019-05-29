@@ -19,7 +19,6 @@ package artifacts
 import (
 	"context"
 	"fmt"
-	"sync"
 
 	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar/bus"
@@ -45,39 +44,57 @@ const (
 )
 
 type localStorage struct {
+	initialized bool
+	storage     map[insolar.Reference]interface{}
+}
+
+/*
 	objectStorageLock sync.RWMutex
 	objectStorage     map[insolar.Reference]ObjectDescriptor
 
 	codeStorageLock sync.RWMutex
 	codeStorage     map[insolar.Reference]CodeDescriptor
+}*/
+
+func (s *localStorage) Initialized() {
+	s.initialized = true
+}
+
+func (s *localStorage) StoreObject(reference insolar.Reference, descriptor interface{}) {
+	if s.initialized {
+		panic("Trying to initialize cache after initialization was finished")
+	}
+	s.storage[reference] = descriptor
 }
 
 func (s *localStorage) Code(reference insolar.Reference) CodeDescriptor {
-	s.codeStorageLock.RLock()
-	defer s.codeStorageLock.RUnlock()
-	return s.codeStorage[reference]
-}
-func (s *localStorage) SetCode(reference insolar.Reference, descriptor CodeDescriptor) {
-	s.codeStorageLock.Lock()
-	defer s.codeStorageLock.Unlock()
-	s.codeStorage[reference] = descriptor
+	codeDescI, ok := s.storage[reference]
+	if !ok {
+		return nil
+	}
+	codeDesc, ok := codeDescI.(CodeDescriptor)
+	if !ok {
+		return nil
+	}
+	return codeDesc
 }
 
 func (s *localStorage) Object(reference insolar.Reference) ObjectDescriptor {
-	s.objectStorageLock.RLock()
-	defer s.objectStorageLock.RUnlock()
-	return s.objectStorage[reference]
-}
-func (s *localStorage) SetObject(reference insolar.Reference, descriptor ObjectDescriptor) {
-	s.objectStorageLock.Lock()
-	defer s.objectStorageLock.Unlock()
-	s.objectStorage[reference] = descriptor
+	objectDescI, ok := s.storage[reference]
+	if !ok {
+		return nil
+	}
+	objectDesc, ok := objectDescI.(ObjectDescriptor)
+	if !ok {
+		return nil
+	}
+	return objectDesc
 }
 
 func newLocalStorage() *localStorage {
 	return &localStorage{
-		objectStorage: make(map[insolar.Reference]ObjectDescriptor),
-		codeStorage:   make(map[insolar.Reference]CodeDescriptor),
+		initialized: false,
+		storage:     make(map[insolar.Reference]interface{}),
 	}
 }
 
@@ -1079,9 +1096,13 @@ func (m *client) registerChild(
 }
 
 func (m *client) InjectCodeDescriptor(reference insolar.Reference, descriptor CodeDescriptor) {
-	m.localStorage.SetCode(reference, descriptor)
+	m.localStorage.StoreObject(reference, descriptor)
 }
 
 func (m *client) InjectObjectDescriptor(reference insolar.Reference, descriptor ObjectDescriptor) {
-	m.localStorage.SetObject(reference, descriptor)
+	m.localStorage.StoreObject(reference, descriptor)
+}
+
+func (m *client) InjectFinish() {
+	m.localStorage.Initialized()
 }

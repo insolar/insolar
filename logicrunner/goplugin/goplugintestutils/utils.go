@@ -155,6 +155,9 @@ func (t *TestArtifactManager) InjectCodeDescriptor(_ insolar.Reference, _ artifa
 func (t *TestArtifactManager) InjectObjectDescriptor(_ insolar.Reference, _ artifacts.ObjectDescriptor) {
 	panic("implement me")
 }
+func (t *TestArtifactManager) InjectFinish() {
+	panic("implement me")
+}
 
 func (t *TestArtifactManager) GetPendingRequest(ctx context.Context, objectID insolar.ID) (insolar.Parcel, error) {
 	panic("implement me")

@@ -282,6 +282,8 @@ func (lr *LogicRunner) initializeBuiltin(_ context.Context) error {
 		lr.ArtifactManager.InjectObjectDescriptor(*prototypeDescriptor.HeadRef(), prototypeDescriptor)
 	}
 
+	lr.ArtifactManager.InjectFinish()
+
 	lrCommon.CurrentProxyCtx = builtin.NewProxyHelper(NewRPCMethods(lr))
 
 	return nil

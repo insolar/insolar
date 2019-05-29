@@ -81,6 +81,11 @@ type ClientMock struct {
 	InjectCodeDescriptorPreCounter uint64
 	InjectCodeDescriptorMock       mClientMockInjectCodeDescriptor
 
+	InjectFinishFunc       func()
+	InjectFinishCounter    uint64
+	InjectFinishPreCounter uint64
+	InjectFinishMock       mClientMockInjectFinish
+
 	InjectObjectDescriptorFunc       func(p insolar.Reference, p1 ObjectDescriptor)
 	InjectObjectDescriptorCounter    uint64
 	InjectObjectDescriptorPreCounter uint64
@@ -137,6 +142,7 @@ func NewClientMock(t minimock.Tester) *ClientMock {
 	m.GetPendingRequestMock = mClientMockGetPendingRequest{mock: m}
 	m.HasPendingRequestsMock = mClientMockHasPendingRequests{mock: m}
 	m.InjectCodeDescriptorMock = mClientMockInjectCodeDescriptor{mock: m}
+	m.InjectFinishMock = mClientMockInjectFinish{mock: m}
 	m.InjectObjectDescriptorMock = mClientMockInjectObjectDescriptor{mock: m}
 	m.RegisterRequestMock = mClientMockRegisterRequest{mock: m}
 	m.RegisterResultMock = mClientMockRegisterResult{mock: m}
@@ -1951,6 +1957,116 @@ func (m *ClientMock) InjectCodeDescriptorFinished() bool {
 	return true
 }
 
+type mClientMockInjectFinish struct {
+	mock              *ClientMock
+	mainExpectation   *ClientMockInjectFinishExpectation
+	expectationSeries []*ClientMockInjectFinishExpectation
+}
+
+type ClientMockInjectFinishExpectation struct {
+}
+
+//Expect specifies that invocation of Client.InjectFinish is expected from 1 to Infinity times
+func (m *mClientMockInjectFinish) Expect() *mClientMockInjectFinish {
+	m.mock.InjectFinishFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClientMockInjectFinishExpectation{}
+	}
+
+	return m
+}
+
+//Return specifies results of invocation of Client.InjectFinish
+func (m *mClientMockInjectFinish) Return() *ClientMock {
+	m.mock.InjectFinishFunc = nil
+	m.expectationSeries = nil
+
+	if m.mainExpectation == nil {
+		m.mainExpectation = &ClientMockInjectFinishExpectation{}
+	}
+
+	return m.mock
+}
+
+//ExpectOnce specifies that invocation of Client.InjectFinish is expected once
+func (m *mClientMockInjectFinish) ExpectOnce() *ClientMockInjectFinishExpectation {
+	m.mock.InjectFinishFunc = nil
+	m.mainExpectation = nil
+
+	expectation := &ClientMockInjectFinishExpectation{}
+
+	m.expectationSeries = append(m.expectationSeries, expectation)
+	return expectation
+}
+
+//Set uses given function f as a mock of Client.InjectFinish method
+func (m *mClientMockInjectFinish) Set(f func()) *ClientMock {
+	m.mainExpectation = nil
+	m.expectationSeries = nil
+
+	m.mock.InjectFinishFunc = f
+	return m.mock
+}
+
+//InjectFinish implements github.com/insolar/insolar/logicrunner/artifacts.Client interface
+func (m *ClientMock) InjectFinish() {
+	counter := atomic.AddUint64(&m.InjectFinishPreCounter, 1)
+	defer atomic.AddUint64(&m.InjectFinishCounter, 1)
+
+	if len(m.InjectFinishMock.expectationSeries) > 0 {
+		if counter > uint64(len(m.InjectFinishMock.expectationSeries)) {
+			m.t.Fatalf("Unexpected call to ClientMock.InjectFinish.")
+			return
+		}
+
+		return
+	}
+
+	if m.InjectFinishMock.mainExpectation != nil {
+
+		return
+	}
+
+	if m.InjectFinishFunc == nil {
+		m.t.Fatalf("Unexpected call to ClientMock.InjectFinish.")
+		return
+	}
+
+	m.InjectFinishFunc()
+}
+
+//InjectFinishMinimockCounter returns a count of ClientMock.InjectFinishFunc invocations
+func (m *ClientMock) InjectFinishMinimockCounter() uint64 {
+	return atomic.LoadUint64(&m.InjectFinishCounter)
+}
+
+//InjectFinishMinimockPreCounter returns the value of ClientMock.InjectFinish invocations
+func (m *ClientMock) InjectFinishMinimockPreCounter() uint64 {
+	return atomic.LoadUint64(&m.InjectFinishPreCounter)
+}
+
+//InjectFinishFinished returns true if mock invocations count is ok
+func (m *ClientMock) InjectFinishFinished() bool {
+	// if expectation series were set then invocations count should be equal to expectations count
+	if len(m.InjectFinishMock.expectationSeries) > 0 {
+		return atomic.LoadUint64(&m.InjectFinishCounter) == uint64(len(m.InjectFinishMock.expectationSeries))
+	}
+
+	// if main expectation was set then invocations count should be greater than zero
+	if m.InjectFinishMock.mainExpectation != nil {
+		return atomic.LoadUint64(&m.InjectFinishCounter) > 0
+	}
+
+	// if func was set then invocations count should be greater than zero
+	if m.InjectFinishFunc != nil {
+		return atomic.LoadUint64(&m.InjectFinishCounter) > 0
+	}
+
+	return true
+}
+
 type mClientMockInjectObjectDescriptor struct {
 	mock              *ClientMock
 	mainExpectation   *ClientMockInjectObjectDescriptorExpectation
@@ -3028,6 +3144,10 @@ func (m *ClientMock) ValidateCallCounters() {
 		m.t.Fatal("Expected call to ClientMock.InjectCodeDescriptor")
 	}
 
+	if !m.InjectFinishFinished() {
+		m.t.Fatal("Expected call to ClientMock.InjectFinish")
+	}
+
 	if !m.InjectObjectDescriptorFinished() {
 		m.t.Fatal("Expected call to ClientMock.InjectObjectDescriptor")
 	}
@@ -3121,6 +3241,10 @@ func (m *ClientMock) MinimockFinish() {
 		m.t.Fatal("Expected call to ClientMock.InjectCodeDescriptor")
 	}
 
+	if !m.InjectFinishFinished() {
+		m.t.Fatal("Expected call to ClientMock.InjectFinish")
+	}
+
 	if !m.InjectObjectDescriptorFinished() {
 		m.t.Fatal("Expected call to ClientMock.InjectObjectDescriptor")
 	}
@@ -3175,6 +3299,7 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 		ok = ok && m.GetPendingRequestFinished()
 		ok = ok && m.HasPendingRequestsFinished()
 		ok = ok && m.InjectCodeDescriptorFinished()
+		ok = ok && m.InjectFinishFinished()
 		ok = ok && m.InjectObjectDescriptorFinished()
 		ok = ok && m.RegisterRequestFinished()
 		ok = ok && m.RegisterResultFinished()
@@ -3236,6 +3361,10 @@ func (m *ClientMock) MinimockWait(timeout time.Duration) {
 
 			if !m.InjectCodeDescriptorFinished() {
 				m.t.Error("Expected call to ClientMock.InjectCodeDescriptor")
+			}
+
+			if !m.InjectFinishFinished() {
+				m.t.Error("Expected call to ClientMock.InjectFinish")
 			}
 
 			if !m.InjectObjectDescriptorFinished() {
@@ -3323,6 +3452,10 @@ func (m *ClientMock) AllMocksCalled() bool {
 	}
 
 	if !m.InjectCodeDescriptorFinished() {
+		return false
+	}
+
+	if !m.InjectFinishFinished() {
 		return false
 	}
 

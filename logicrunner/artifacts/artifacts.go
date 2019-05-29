@@ -131,6 +131,7 @@ type Client interface {
 
 	InjectCodeDescriptor(insolar.Reference, CodeDescriptor)
 	InjectObjectDescriptor(insolar.Reference, ObjectDescriptor)
+	InjectFinish()
 }
 
 //go:generate minimock -i github.com/insolar/insolar/logicrunner/artifacts.CodeDescriptor -o ./ -s _mock.go
@@ -180,9 +181,4 @@ type ObjectDescriptor interface {
 type RefIterator interface {
 	Next() (*insolar.Reference, error)
 	HasNext() bool
-}
-
-type InjectableClient interface {
-	InjectCodeDescriptor(insolar.Reference, CodeDescriptor)
-	InjectObjectDescriptor(insolar.Reference, ObjectDescriptor)
 }

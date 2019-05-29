@@ -796,6 +796,7 @@ func (suite *LogicRunnerTestSuite) TestStartStop() {
 	lr.MessageBus = suite.mb
 	suite.am.InjectCodeDescriptorMock.Return()
 	suite.am.InjectObjectDescriptorMock.Return()
+	suite.am.InjectFinishMock.Return()
 	lr.ArtifactManager = suite.am
 
 	err = lr.Start(suite.ctx)
