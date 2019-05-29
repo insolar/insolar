@@ -65,19 +65,29 @@ type SDK struct {
 	logLevel   interface{}
 }
 
+func getKeys(path string) (memberKeys, error) {
+	keys := memberKeys{}
+
+	rawConf, err := ioutil.ReadFile(path)
+	if err != nil {
+		return keys, errors.Wrap(err, "[ NewSDK ] can't read keys from file")
+	}
+
+	err = json.Unmarshal(rawConf, &keys)
+	if err != nil {
+		return keys, errors.Wrap(err, "[ NewSDK ] can't unmarshal keys")
+	}
+
+	return keys, nil
+}
+
 // NewSDK creates insSDK object
 func NewSDK(urls []string, rootMemberKeysPath string) (*SDK, error) {
 	buffer := &ringBuffer{urls: urls}
 
-	rawConf, err := ioutil.ReadFile(rootMemberKeysPath)
+	rootKeys, err := getKeys(rootMemberKeysPath)
 	if err != nil {
-		return nil, errors.Wrap(err, "[ NewSDK ] can't read keys from file")
-	}
-
-	keys := memberKeys{}
-	err = json.Unmarshal(rawConf, &keys)
-	if err != nil {
-		return nil, errors.Wrap(err, "[ NewSDK ] can't unmarshal keys")
+		return nil, errors.Wrap(err, "[ NewSDK ] can't get root member keys")
 	}
 
 	response, err := requester.Info(buffer.next())
@@ -85,7 +95,7 @@ func NewSDK(urls []string, rootMemberKeysPath string) (*SDK, error) {
 		return nil, errors.Wrap(err, "[ NewSDK ] can't get info")
 	}
 
-	rootMember, err := requester.CreateUserConfig(response.RootMember, keys.Private)
+	rootMember, err := requester.CreateUserConfig(response.RootMember, rootKeys.Private)
 	if err != nil {
 		return nil, errors.Wrap(err, "[ NewSDK ] can't create user config")
 	}
