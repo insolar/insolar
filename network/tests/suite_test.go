@@ -116,6 +116,7 @@ func newFixture(t *testing.T) *fixture {
 	}
 }
 
+// testSuite is base test suite
 type testSuite struct {
 	suite.Suite
 	fixtureMap     map[string]*fixture
@@ -123,8 +124,12 @@ type testSuite struct {
 	nodesCount     int
 }
 
-func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
-	return &testSuite{
+type consensusSuite struct {
+	testSuite
+}
+
+func newTestSuite(bootstrapCount, nodesCount int) testSuite {
+	return testSuite{
 		Suite:          suite.Suite{},
 		fixtureMap:     make(map[string]*fixture, 0),
 		bootstrapCount: bootstrapCount,
@@ -132,12 +137,25 @@ func NewTestSuite(bootstrapCount, nodesCount int) *testSuite {
 	}
 }
 
+func newConsensusSuite(bootstrapCount, nodesCount int) *consensusSuite {
+	return &consensusSuite{
+		testSuite: newTestSuite(bootstrapCount, nodesCount),
+	}
+}
+
 func (s *testSuite) fixture() *fixture {
 	return s.fixtureMap[s.T().Name()]
 }
 
+// CheckDiscoveryCount skips test if bootstrap nodes count less then consensusMin
+func (s *consensusSuite) CheckBootstrapCount() {
+	if len(s.fixture().bootstrapNodes) < consensusMin {
+		s.T().Skip(consensusMinMsg)
+	}
+}
+
 // SetupSuite creates and run network with bootstrap and common nodes once before run all tests in the suite
-func (s *testSuite) SetupTest() {
+func (s *consensusSuite) SetupTest() {
 	s.fixtureMap[s.T().Name()] = newFixture(s.T())
 	var err error
 	s.fixture().pulsar, err = NewTestPulsar(pulseTimeMs, reqTimeoutMs, pulseDelta)
@@ -237,7 +255,7 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 }
 
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
-func (s *testSuite) TearDownTest() {
+func (s *consensusSuite) TearDownTest() {
 	log.Info("=================== TearDownTest()")
 	log.Info("Stop network nodes")
 	for _, n := range s.fixture().networkNodes {
@@ -253,7 +271,7 @@ func (s *testSuite) TearDownTest() {
 	s.fixture().pulsar.Stop(s.fixture().ctx)
 }
 
-func (s *testSuite) waitForConsensus(consensusCount int) {
+func (s *consensusSuite) waitForConsensus(consensusCount int) {
 	for i := 0; i < consensusCount; i++ {
 		for _, n := range s.fixture().bootstrapNodes {
 			err := <-n.consensusResult
@@ -267,7 +285,7 @@ func (s *testSuite) waitForConsensus(consensusCount int) {
 	}
 }
 
-func (s *testSuite) waitForConsensusExcept(consensusCount int, exception insolar.Reference) {
+func (s *consensusSuite) waitForConsensusExcept(consensusCount int, exception insolar.Reference) {
 	for i := 0; i < consensusCount; i++ {
 		for _, n := range s.fixture().bootstrapNodes {
 			if n.id.Equal(exception) {

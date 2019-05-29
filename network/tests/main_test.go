@@ -74,17 +74,35 @@ var (
 	consensusMinMsg = fmt.Sprintf("skip test for bootstrap nodes < %d", consensusMin)
 )
 
-func (s *testSuite) TestNetworkConsensus3Times() {
+func TestServiceNetworkOneBootstrap(t *testing.T) {
+	s := newConsensusSuite(1, 0)
+	suite.Run(t, s)
+}
+
+func TestServiceNetworkManyBootstraps(t *testing.T) {
+	s := newConsensusSuite(16, 0)
+	suite.Run(t, s)
+}
+
+func TestServiceNetworkManyNodes(t *testing.T) {
+	t.Skip("Long time setup, wait for mock bootstrap")
+	s := newConsensusSuite(5, 10)
+	suite.Run(t, s)
+}
+
+// Consensus suite tests
+
+func (s *consensusSuite) TestNetworkConsensus3Times() {
 	s.waitForConsensus(3)
 }
 
-func (s *testSuite) TestNodeConnect() {
+func (s *consensusSuite) TestNodeConnect() {
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 
 	s.InitNode(testNode)
 	s.StartNode(testNode)
-	defer func(s *testSuite) {
+	defer func(s *consensusSuite) {
 		s.StopNode(testNode)
 	}(s)
 
@@ -106,7 +124,7 @@ func (s *testSuite) TestNodeConnect() {
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 }
 
-func (s *testSuite) TestNodeConnectInvalidVersion() {
+func (s *consensusSuite) TestNodeConnectInvalidVersion() {
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 	testNode.serviceNetwork.NodeKeeper.GetOrigin().(node.MutableNode).SetVersion("ololo")
@@ -116,36 +134,35 @@ func (s *testSuite) TestNodeConnectInvalidVersion() {
 	log.Infof("Error: %s", err)
 }
 
-func (s *testSuite) TestManyNodesConnect() {
+func (s *consensusSuite) TestManyNodesConnect() {
 	s.T().Skip("test hangs in some situations, needs fix: INS-2200")
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
+
+	s.CheckBootstrapCount()
 
 	joinersCount := 10
 	nodes := make([]*networkNode, 0)
 	for i := 0; i < joinersCount; i++ {
-		node := s.newNetworkNode(fmt.Sprintf("testNode_%d", i))
-		nodes = append(nodes, node)
+		n := s.newNetworkNode(fmt.Sprintf("testNode_%d", i))
+		nodes = append(nodes, n)
 	}
 
 	wg := sync.WaitGroup{}
 	wg.Add(joinersCount)
 
-	for _, node := range nodes {
+	for _, n := range nodes {
 		go func(wg *sync.WaitGroup, node *networkNode) {
 			s.preInitNode(node)
 			s.InitNode(node)
 			s.StartNode(node)
 			wg.Done()
-		}(&wg, node)
+		}(&wg, n)
 	}
 
 	wg.Wait()
 
 	defer func() {
-		for _, node := range nodes {
-			s.StopNode(node)
+		for _, n := range nodes {
+			s.StopNode(n)
 		}
 	}()
 
@@ -156,17 +173,15 @@ func (s *testSuite) TestManyNodesConnect() {
 	s.Equal(s.getNodesCount()+joined, len(activeNodes))
 }
 
-func (s *testSuite) TestNodeLeave() {
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
+func (s *consensusSuite) TestNodeLeave() {
+	s.CheckBootstrapCount()
 
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 
 	s.InitNode(testNode)
 	s.StartNode(testNode)
-	defer func(s *testSuite) {
+	defer func(s *consensusSuite) {
 		s.StopNode(testNode)
 	}(s)
 
@@ -193,17 +208,15 @@ func (s *testSuite) TestNodeLeave() {
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 }
 
-func (s *testSuite) TestNodeLeaveAtETA() {
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
+func (s *consensusSuite) TestNodeLeaveAtETA() {
+	s.CheckBootstrapCount()
 
 	testNode := s.newNetworkNode("testNode")
 	s.preInitNode(testNode)
 
 	s.InitNode(testNode)
 	s.StartNode(testNode)
-	defer func(s *testSuite) {
+	defer func(s *consensusSuite) {
 		s.StopNode(testNode)
 	}(s)
 
@@ -233,7 +246,7 @@ func (s *testSuite) TestNodeLeaveAtETA() {
 	s.Equal(s.getNodesCount()+1, len(activeNodes))
 }
 
-func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
+func (s *consensusSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 	s.T().Skip("fix testcase in TESTNET 2.0")
 	if len(s.fixture().bootstrapNodes) < consensusMin {
 		s.T().Skip(consensusMinMsg)
@@ -244,7 +257,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 
 	s.InitNode(leavingNode)
 	s.StartNode(leavingNode)
-	defer func(s *testSuite) {
+	defer func(s *consensusSuite) {
 		s.StopNode(leavingNode)
 	}(s)
 
@@ -268,7 +281,7 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 
 	s.InitNode(newNode)
 	s.StartNode(newNode)
-	defer func(s *testSuite) {
+	defer func(s *consensusSuite) {
 		s.StopNode(newNode)
 	}(s)
 
@@ -306,27 +319,8 @@ func (s *testSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
 	s.Equal(s.getNodesCount()+1, len(newNodeWorkingNodes))
 }
 
-func TestServiceNetworkOneBootstrap(t *testing.T) {
-	s := NewTestSuite(1, 0)
-	suite.Run(t, s)
-}
-
-func TestServiceNetworkManyBootstraps(t *testing.T) {
-	s := NewTestSuite(16, 0)
-	suite.Run(t, s)
-}
-
-func TestServiceNetworkManyNodes(t *testing.T) {
-	t.Skip("tmp 123")
-
-	s := NewTestSuite(5, 10)
-	suite.Run(t, s)
-}
-
-func (s *testSuite) TestFullTimeOut() {
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
+func (s *consensusSuite) TestFullTimeOut() {
+	s.CheckBootstrapCount()
 
 	s.SetCommunicationPolicy(FullTimeout)
 
@@ -337,10 +331,8 @@ func (s *testSuite) TestFullTimeOut() {
 
 // Partial timeout
 
-func (s *testSuite) TestPartialPositive1PhaseTimeOut() {
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
+func (s *consensusSuite) TestPartialPositive1PhaseTimeOut() {
+	s.CheckBootstrapCount()
 
 	s.SetCommunicationPolicy(PartialPositive1Phase)
 
@@ -349,10 +341,8 @@ func (s *testSuite) TestPartialPositive1PhaseTimeOut() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
-func (s *testSuite) TestPartialPositive2PhaseTimeOut() {
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
+func (s *consensusSuite) TestPartialPositive2PhaseTimeOut() {
+	s.CheckBootstrapCount()
 
 	s.SetCommunicationPolicy(PartialPositive2Phase)
 
@@ -361,10 +351,8 @@ func (s *testSuite) TestPartialPositive2PhaseTimeOut() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
-func (s *testSuite) TestPartialNegative1PhaseTimeOut() {
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
+func (s *consensusSuite) TestPartialNegative1PhaseTimeOut() {
+	s.CheckBootstrapCount()
 
 	s.SetCommunicationPolicy(PartialNegative1Phase)
 
@@ -373,10 +361,8 @@ func (s *testSuite) TestPartialNegative1PhaseTimeOut() {
 	s.Equal(s.getNodesCount()-1, len(activeNodes))
 }
 
-func (s *testSuite) TestPartialNegative2PhaseTimeOut() {
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
+func (s *consensusSuite) TestPartialNegative2PhaseTimeOut() {
+	s.CheckBootstrapCount()
 
 	s.SetCommunicationPolicy(PartialNegative2Phase)
 
@@ -385,10 +371,8 @@ func (s *testSuite) TestPartialNegative2PhaseTimeOut() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
-func (s *testSuite) TestPartialNegative3PhaseTimeOut() {
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
+func (s *consensusSuite) TestPartialNegative3PhaseTimeOut() {
+	s.CheckBootstrapCount()
 
 	s.SetCommunicationPolicy(PartialNegative3Phase)
 
@@ -397,10 +381,8 @@ func (s *testSuite) TestPartialNegative3PhaseTimeOut() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
-func (s *testSuite) TestPartialPositive3PhaseTimeOut() {
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
+func (s *consensusSuite) TestPartialPositive3PhaseTimeOut() {
+	s.CheckBootstrapCount()
 
 	s.SetCommunicationPolicy(PartialPositive3Phase)
 
@@ -409,10 +391,8 @@ func (s *testSuite) TestPartialPositive3PhaseTimeOut() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
-func (s *testSuite) TestPartialNegative23PhaseTimeOut() {
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
+func (s *consensusSuite) TestPartialNegative23PhaseTimeOut() {
+	s.CheckBootstrapCount()
 
 	s.SetCommunicationPolicy(PartialNegative23Phase)
 
@@ -421,10 +401,8 @@ func (s *testSuite) TestPartialNegative23PhaseTimeOut() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
-func (s *testSuite) TestPartialPositive23PhaseTimeOut() {
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
+func (s *consensusSuite) TestPartialPositive23PhaseTimeOut() {
+	s.CheckBootstrapCount()
 
 	s.SetCommunicationPolicy(PartialPositive23Phase)
 
@@ -433,10 +411,8 @@ func (s *testSuite) TestPartialPositive23PhaseTimeOut() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
-func (s *testSuite) TestDiscoveryDown() {
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
+func (s *consensusSuite) TestDiscoveryDown() {
+	s.CheckBootstrapCount()
 
 	s.StopNode(s.fixture().bootstrapNodes[0])
 
@@ -456,10 +432,8 @@ func flushNodeKeeper(keeper network.NodeKeeper) {
 	keeper.GetOrigin().(node.MutableNode).SetState(insolar.NodeReady)
 }
 
-func (s *testSuite) TestDiscoveryRestart() {
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
+func (s *consensusSuite) TestDiscoveryRestart() {
+	s.CheckBootstrapCount()
 
 	s.waitForConsensus(2)
 
@@ -485,10 +459,8 @@ func (s *testSuite) TestDiscoveryRestart() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
-func (s *testSuite) TestDiscoveryRestartNoWait() {
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
+func (s *consensusSuite) TestDiscoveryRestartNoWait() {
+	s.CheckBootstrapCount()
 
 	s.waitForConsensus(2)
 
@@ -498,7 +470,7 @@ func (s *testSuite) TestDiscoveryRestartNoWait() {
 	log.Info("Discovery node stopped...")
 	s.Require().NoError(err)
 
-	go func(s *testSuite) {
+	go func(s *consensusSuite) {
 		log.Info("Discovery node starting...")
 		err = s.fixture().bootstrapNodes[0].serviceNetwork.Start(context.Background())
 		log.Info("Discovery node started")
@@ -515,10 +487,8 @@ func (s *testSuite) TestDiscoveryRestartNoWait() {
 	s.Equal(s.getNodesCount(), len(activeNodes))
 }
 
-func (s *testSuite) TestJoinerSplitPackets() {
-	if len(s.fixture().bootstrapNodes) < consensusMin {
-		s.T().Skip(consensusMinMsg)
-	}
+func (s *consensusSuite) TestJoinerSplitPackets() {
+	s.CheckBootstrapCount()
 
 	testNode := s.newNetworkNode("testNode")
 	s.SetCommunicationPolicyForNode(testNode.id, SplitCase)
@@ -526,7 +496,7 @@ func (s *testSuite) TestJoinerSplitPackets() {
 
 	s.InitNode(testNode)
 	s.StartNode(testNode)
-	defer func(s *testSuite) {
+	defer func(s *consensusSuite) {
 		s.StopNode(testNode)
 	}(s)
 
