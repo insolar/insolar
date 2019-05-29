@@ -175,7 +175,7 @@ func DeserializePacket(conn io.Reader) (*Packet, error) {
 		return nil, err
 	}
 
-	log.Debugf("[ DeserializePacket ] decoded packet to %#v", msg)
+	log.Debugf("[ DeserializePacket ] decoded packet to %s", msg)
 
 	return msg, nil
 }
