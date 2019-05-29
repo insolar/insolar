@@ -76,6 +76,8 @@ type CurrentExecution struct {
 	Request       *record.Request
 	RequesterNode *Ref
 	SentResult    bool
+	Nonce         uint64
+	Deactivate    bool
 }
 
 type ExecutionQueueElement struct {
@@ -585,7 +587,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 		es.CodeDescriptor = codeDesc
 	}
 
-	current := *es.Current
+	current := es.Current
 	current.LogicContext.Prototype = es.PrototypeDescriptor.HeadRef()
 	current.LogicContext.Code = es.CodeDescriptor.Ref()
 	current.LogicContext.Parent = es.ObjectDescriptor.Parent()
@@ -607,7 +609,7 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	}
 
 	am := lr.ArtifactManager
-	if es.deactivate {
+	if current.Deactivate {
 		_, err := am.DeactivateObject(
 			ctx, Ref{}, *current.RequestRef, es.ObjectDescriptor,
 		)
