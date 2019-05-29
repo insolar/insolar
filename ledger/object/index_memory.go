@@ -313,10 +313,15 @@ func (i *InMemoryIndex) MetaForObjID(ctx context.Context, currentPN insolar.Puls
 	b.RLock()
 	defer b.RUnlock()
 
+	var ppf *insolar.PulseNumber
+	if b.PreviousPendingFilament != currentPN {
+		ppf = &b.PreviousPendingFilament
+	}
+
 	return PendingMeta{
 		IsStateCalculated: b.isStateCalculated,
 		ReadUntil:         b.readPendingUntil,
-		PreviousPN:        b.PreviousPendingFilament,
+		PreviousPN:        ppf,
 	}, nil
 }
 

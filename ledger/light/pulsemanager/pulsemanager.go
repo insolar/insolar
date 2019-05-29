@@ -283,17 +283,21 @@ func (m *PulseManager) getExecutorHotData(
 			continue
 		}
 
-		has, lastKnownPN, err := m.PendingAccessor.HasOpenPendingsBehind(ctx, currentPN, meta.ObjID)
+		penMeta, err := m.PendingAccessor.MetaForObjID(ctx, currentPN, meta.ObjID)
 		if err != nil {
 			inslogger.FromContext(ctx).WithField("id", meta.ObjID.DebugString()).Error("failed to check open pendings")
+			continue
+		}
+		if penMeta.PreviousPN == nil {
+			penMeta.PreviousPN = &currentPN
 		}
 
 		hotIndexes = append(hotIndexes, message.HotIndex{
-			LifelineLastUsed:      meta.LifelineLastUsed,
-			ObjID:                 meta.ObjID,
-			Index:                 encoded,
-			HasOpenRequestsBehind: has,
-			LastKnownPendingPN:    lastKnownPN,
+			LifelineLastUsed:        meta.LifelineLastUsed,
+			ObjID:                   meta.ObjID,
+			Index:                   encoded,
+			PreviousPendingFilament: *penMeta.PreviousPN,
+			ReadToUntil:             penMeta.ReadUntil,
 		})
 	}
 

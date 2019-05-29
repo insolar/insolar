@@ -125,7 +125,7 @@ func (p *SetRecord) handlePendings(ctx context.Context, calculatedID insolar.ID,
 		recentStorage.RemovePendingRequest(ctx, r.Object, *r.Request.Record())
 
 		err := p.Dep.PendingModifier.SetResult(ctx, flow.Pulse(ctx), r.Object, *r)
-		if err != object.ErrPendingRequestNotFound {
+		if err != nil {
 			return &bus.Reply{Err: errors.Wrap(err, "can't save result into filament-index")}
 		}
 	}

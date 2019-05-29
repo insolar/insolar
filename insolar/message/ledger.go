@@ -354,7 +354,7 @@ type HotIndex struct {
 	LifelineLastUsed insolar.PulseNumber
 
 	// PreviousPendingFilament say a pulse of last saving request/result
-	PreviousPendingFilament *insolar.PulseNumber
+	PreviousPendingFilament insolar.PulseNumber
 	ReadToUntil             *insolar.PulseNumber
 }
 

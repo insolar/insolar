@@ -277,6 +277,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 			records,
 			indexes,
 			lthSyncer,
+			indexes,
 		)
 		pm.MessageHandler = handler
 		pm.Bus = Bus
