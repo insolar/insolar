@@ -17,6 +17,8 @@
 package logicrunner
 
 import (
+	"fmt"
+	"runtime/debug"
 	"sync"
 
 	"github.com/pkg/errors"
@@ -28,6 +30,7 @@ import (
 	"github.com/insolar/insolar/insolar/reply"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/instrumentation/instracer"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/logicrunner/goplugin/rpctypes"
 )
@@ -40,8 +43,24 @@ func NewRPCMethods(lr *LogicRunner) *RPCMethods {
 	return &RPCMethods{lr: lr}
 }
 
+func recoverRPC(err *error) {
+	if r := recover(); r != nil {
+		// Global logger is used because there is no access to context here
+		log.Errorf("Recovered panic:\n%s", string(debug.Stack()))
+		if err != nil {
+			if *err == nil {
+				*err = errors.New(fmt.Sprint(r))
+			} else {
+				*err = errors.New(fmt.Sprint(*err, r))
+			}
+		}
+	}
+}
+
 // GetCode is an RPC retrieving a code by its reference
 func (m *RPCMethods) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCodeResp) (err error) {
+	defer recoverRPC(&err)
+
 	os := m.lr.GetObjectState(req.Callee)
 	if os == nil {
 		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
@@ -70,6 +89,8 @@ func (m *RPCMethods) GetCode(req rpctypes.UpGetCodeReq, reply *rpctypes.UpGetCod
 
 // RouteCall routes call from a contract to a contract through event bus.
 func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteResp) (err error) {
+	defer recoverRPC(&err)
+
 	os := m.lr.GetObjectState(req.Callee)
 	if os == nil {
 		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
@@ -121,6 +142,8 @@ func (m *RPCMethods) RouteCall(req rpctypes.UpRouteReq, rep *rpctypes.UpRouteRes
 
 // SaveAsChild is an RPC saving data as memory of a contract as child a parent
 func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.UpSaveAsChildResp) (err error) {
+	defer recoverRPC(&err)
+
 	os := m.lr.GetObjectState(req.Callee)
 	if os == nil {
 		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
@@ -156,6 +179,8 @@ func (m *RPCMethods) SaveAsChild(req rpctypes.UpSaveAsChildReq, rep *rpctypes.Up
 
 // SaveAsDelegate is an RPC saving data as memory of a contract as child a parent
 func (m *RPCMethods) SaveAsDelegate(req rpctypes.UpSaveAsDelegateReq, rep *rpctypes.UpSaveAsDelegateResp) (err error) {
+	defer recoverRPC(&err)
+
 	os := m.lr.GetObjectState(req.Callee)
 	if os == nil {
 		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
@@ -199,6 +224,8 @@ func (m *RPCMethods) GetObjChildrenIterator(
 ) (
 	err error,
 ) {
+
+	defer recoverRPC(&err)
 
 	os := m.lr.GetObjectState(req.Callee)
 	if os == nil {
@@ -278,6 +305,8 @@ func (m *RPCMethods) GetObjChildrenIterator(
 
 // GetDelegate is an RPC saving data as memory of a contract as child a parent
 func (m *RPCMethods) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.UpGetDelegateResp) (err error) {
+	defer recoverRPC(&err)
+
 	os := m.lr.GetObjectState(req.Callee)
 	if os == nil {
 		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
@@ -298,6 +327,8 @@ func (m *RPCMethods) GetDelegate(req rpctypes.UpGetDelegateReq, rep *rpctypes.Up
 
 // DeactivateObject is an RPC saving data as memory of a contract as child a parent
 func (m *RPCMethods) DeactivateObject(req rpctypes.UpDeactivateObjectReq, rep *rpctypes.UpDeactivateObjectResp) (err error) {
+	defer recoverRPC(&err)
+
 	os := m.lr.GetObjectState(req.Callee)
 	if os == nil {
 		return errors.New("Failed to find requested object state. ref: " + req.Callee.String())
