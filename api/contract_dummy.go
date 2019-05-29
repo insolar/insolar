@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-// +build functest
+// +build !functest
 
 package api
 
