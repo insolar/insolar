@@ -61,7 +61,10 @@ func TestCallUploadedContract(t *testing.T) {
 	err := json.Unmarshal(body, &res)
 	require.NoError(t, err)
 
-	contractRef := insolar.Reference{}.FromSlice([]byte(res.Result.PrototypeRef))
+	contractRef, err := insolar.NewReferenceFromBase58(res.Result.PrototypeRef)
+	require.NoError(t, err)
+
 	emptyRef := make([]byte, insolar.RecordRefSize)
+
 	require.NotEqual(t, insolar.Reference{}.FromSlice(emptyRef), contractRef)
 }
