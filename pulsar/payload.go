@@ -60,7 +60,7 @@ type EntropySignaturePayload struct {
 
 // Hash calculates hash of payload
 func (es *EntropySignaturePayload) Hash(hashProvider insolar.Hasher) ([]byte, error) {
-	_, err := hashProvider.Write(es.EntropySignature[:])
+	_, err := hashProvider.Write(es.EntropySignature)
 	if err != nil {
 		return nil, err
 	}

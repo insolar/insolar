@@ -122,7 +122,7 @@ func JetFromString(s string) insolar.ID {
 		case '0':
 		case '1':
 			add := uint8(1 << bitsOffset)
-			jetPrefix[byteOffset] = jetPrefix[byteOffset] + add
+			jetPrefix[byteOffset] += add
 		default:
 			panic(fmt.Errorf(
 				"%v character is non 0 or 1, but %v (input string='%v')", i, char, s))

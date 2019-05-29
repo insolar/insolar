@@ -133,7 +133,7 @@ func NewIDFromString(s string) insolar.JetID {
 
 func parsePrefix(s string) []byte {
 	var prefix []byte
-	tail := s[:]
+	tail := s
 	for len(tail) > 0 {
 		offset := 8
 		if len(tail) < 8 {

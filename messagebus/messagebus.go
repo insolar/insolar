@@ -80,7 +80,7 @@ func (mb *MessageBus) Acquire(ctx context.Context) {
 	ctx, span := instracer.StartSpan(ctx, "MessageBus.Acquire")
 	defer span.End()
 	inslogger.FromContext(ctx).Info("Call Acquire in MessageBus: ", mb.counter)
-	mb.counter = mb.counter + 1
+	mb.counter++
 	if mb.counter-1 == 0 {
 		inslogger.FromContext(ctx).Info("Lock MB")
 		ctx, mb.span = instracer.StartSpan(context.Background(), "GIL Lock (Lock MB)")
@@ -95,7 +95,7 @@ func (mb *MessageBus) Release(ctx context.Context) {
 	if mb.counter == 0 {
 		panic("Trying to unlock without locking")
 	}
-	mb.counter = mb.counter - 1
+	mb.counter--
 	if mb.counter == 0 {
 		inslogger.FromContext(ctx).Info("Unlock MB")
 		mb.Unlock(ctx)

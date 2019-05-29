@@ -44,8 +44,8 @@ func New() *SeedManager {
 }
 
 // NewSpecified creates new seed manager with custom params
-func NewSpecified(TTL time.Duration, cleanPeriod time.Duration) *SeedManager {
-	sm := SeedManager{seedPool: make(map[Seed]Expiration), ttl: TTL}
+func NewSpecified(ttl time.Duration, cleanPeriod time.Duration) *SeedManager {
+	sm := SeedManager{seedPool: make(map[Seed]Expiration), ttl: ttl}
 	go func() {
 		for range time.Tick(cleanPeriod) {
 			sm.deleteExpired()
