@@ -21,8 +21,8 @@ import (
 
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
+	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/store"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -326,146 +326,114 @@ func TestNewInMemoryIndex_DeleteForPN(t *testing.T) {
 	require.Equal(t, true, ok)
 }
 
-func TestDBIndex_SetLifeline(t *testing.T) {
-	t.Parallel()
-
-	ctx := inslogger.TestContext(t)
-
-	jetID := gen.JetID()
-	id := gen.ID()
-	idx := Lifeline{
-		LatestState: &id,
-		JetID:       jetID,
-		Delegates:   []LifelineDelegate{},
-	}
-
-	t.Run("saves correct index-value", func(t *testing.T) {
-		t.Parallel()
-
-		storage := NewIndexDB(store.NewMemoryMockDB())
+func TestInMemoryIndex_SetRequest(t *testing.T) {
+	t.Run("err when no lifeline", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
 		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
 
-		err := storage.Set(ctx, pn, id, idx)
+		err := idx.SetRequest(ctx, pn, objID, record.Request{})
 
-		require.NoError(t, err)
+		require.Error(t, err, ErrLifelineNotFound)
 	})
 
-	t.Run("override indices is ok", func(t *testing.T) {
-		t.Parallel()
-
-		storage := NewInMemoryIndex()
+	t.Run("set first request on the object", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
 		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+		idx.createBucket(ctx, pn, objID)
 
-		err := storage.Set(ctx, pn, id, idx)
+		objRef := gen.Reference()
+		req := record.Request{Object: &objRef}
+
+		err := idx.SetRequest(ctx, pn, objID, req)
 		require.NoError(t, err)
 
-		err = storage.Set(ctx, pn, id, idx)
-		require.NoError(t, err)
-	})
-}
+		buck := idx.buckets[pn][objID]
 
-func TestDBIndexStorage_ForID(t *testing.T) {
-	t.Parallel()
+		require.Equal(t, pn, buck.PreviousPendingFilament)
 
-	ctx := inslogger.TestContext(t)
+		require.Equal(t, 1, len(buck.PendingRecords))
+		require.Equal(t, 1, len(buck.fullFilament))
+		require.Equal(t, 1, len(buck.fullFilament[0].Records))
 
-	jetID := gen.JetID()
-	id := gen.ID()
-	idx := Lifeline{
-		LatestState: &id,
-		JetID:       jetID,
-		Delegates:   []LifelineDelegate{},
-	}
+		require.Equal(t, record.Wrap(req), buck.PendingRecords[0])
+		require.Equal(t, pn, buck.fullFilament[0].PN)
+		require.Equal(t, record.Wrap(req), buck.fullFilament[0].Records[0])
 
-	t.Run("returns correct index-value", func(t *testing.T) {
-		t.Parallel()
+		require.Equal(t, 1, len(buck.requestPNIndex))
+		require.Equal(t, 1, len(buck.notClosedRequestsIndex))
+		require.Equal(t, 1, len(buck.notClosedRequests))
 
-		storage := NewIndexDB(store.NewMemoryMockDB())
-		pn := gen.PulseNumber()
-
-		err := storage.Set(ctx, pn, id, idx)
-		require.NoError(t, err)
-
-		res, err := storage.ForID(ctx, pn, id)
-		require.NoError(t, err)
-
-		idxBuf, _ := idx.Marshal()
-		resBuf, _ := res.Marshal()
-
-		assert.Equal(t, idxBuf, resBuf)
+		require.Equal(t, pn, buck.requestPNIndex[*req.Object.Record()])
+		require.Equal(t, req, *buck.notClosedRequestsIndex[pn][*req.Object.Record()])
+		require.Equal(t, req, buck.notClosedRequests[0])
 	})
 
-	t.Run("returns error when no index-value for id", func(t *testing.T) {
-		t.Parallel()
-
-		storage := NewIndexDB(store.NewMemoryMockDB())
+	t.Run("set two request on the object", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
 		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+		idx.createBucket(ctx, pn, objID)
 
-		_, err := storage.ForID(ctx, pn, id)
+		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		req := record.Request{Object: objRef}
 
-		assert.Equal(t, ErrLifelineNotFound, err)
+		err := idx.SetRequest(ctx, pn, objID, req)
+		require.NoError(t, err)
+
+		objRefS := insolar.NewReference(insolar.ID{}, *insolar.NewID(321, nil))
+		reqS := record.Request{Object: objRefS}
+
+		err = idx.SetRequest(ctx, pn, objID, reqS)
+		require.NoError(t, err)
+
+		buck := idx.buckets[pn][objID]
+		require.Equal(t, 2, len(buck.PendingRecords))
+		require.Equal(t, 1, len(buck.fullFilament))
+		require.Equal(t, 2, len(buck.fullFilament[0].Records))
+
+		require.Equal(t, record.Wrap(req), buck.PendingRecords[0])
+		require.Equal(t, record.Wrap(reqS), buck.PendingRecords[1])
+		require.Equal(t, pn, buck.fullFilament[0].PN)
+		require.Equal(t, record.Wrap(req), buck.fullFilament[0].Records[0])
+		require.Equal(t, record.Wrap(reqS), buck.fullFilament[0].Records[1])
+
+		require.Equal(t, 2, len(buck.requestPNIndex))
+		require.Equal(t, 1, len(buck.notClosedRequestsIndex))
+		require.Equal(t, 2, len(buck.notClosedRequests))
+
+		require.Equal(t, pn, buck.requestPNIndex[*req.Object.Record()])
+		require.Equal(t, req, *buck.notClosedRequestsIndex[pn][*req.Object.Record()])
+		require.Equal(t, req, buck.notClosedRequests[0])
+
+		require.Equal(t, pn, buck.requestPNIndex[*reqS.Object.Record()])
+		require.Equal(t, reqS, *buck.notClosedRequestsIndex[pn][*reqS.Object.Record()])
+		require.Equal(t, reqS, buck.notClosedRequests[1])
 	})
-}
 
-func TestDBIndex_SetBucket(t *testing.T) {
-	t.Parallel()
+	t.Run("test rebalanced fillaments buckets list", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := insolar.PulseNumber(123)
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+		idx.createBucket(ctx, pn, objID)
 
-	ctx := inslogger.TestContext(t)
-	objID := gen.ID()
-	lflID := gen.ID()
-	jetID := gen.JetID()
-	buck := IndexBucket{
-		ObjID: objID,
-		Lifeline: Lifeline{
-			LatestState: &lflID,
-			JetID:       jetID,
-			Delegates:   []LifelineDelegate{},
-		},
-	}
+		buck := idx.buckets[pn][objID]
+		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{}})
 
-	t.Run("saves correct bucket", func(t *testing.T) {
-		pn := gen.PulseNumber()
-		index := NewIndexDB(store.NewMemoryMockDB())
+		objRef := gen.Reference()
+		req := record.Request{Object: &objRef}
 
-		err := index.SetBucket(ctx, pn, buck)
+		err := idx.SetRequest(ctx, pn, objID, req)
 		require.NoError(t, err)
 
-		res, err := index.ForID(ctx, pn, objID)
-		require.NoError(t, err)
-
-		idxBuf, _ := buck.Lifeline.Marshal()
-		resBuf, _ := res.Marshal()
-
-		assert.Equal(t, idxBuf, resBuf)
+		require.Equal(t, 2, len(buck.fullFilament))
+		require.Equal(t, pn, buck.fullFilament[0].PN)
+		require.Equal(t, pn+1, buck.fullFilament[1].PN)
 	})
 
-	t.Run("re-save works fine", func(t *testing.T) {
-		pn := gen.PulseNumber()
-		index := NewIndexDB(store.NewMemoryMockDB())
-
-		err := index.SetBucket(ctx, pn, buck)
-		require.NoError(t, err)
-
-		sLlflID := gen.ID()
-		sJetID := gen.JetID()
-		sBuck := IndexBucket{
-			ObjID: objID,
-			Lifeline: Lifeline{
-				LatestState: &sLlflID,
-				JetID:       sJetID,
-				Delegates:   []LifelineDelegate{},
-			},
-		}
-
-		err = index.SetBucket(ctx, pn, sBuck)
-		require.NoError(t, err)
-
-		res, err := index.ForID(ctx, pn, objID)
-		require.NoError(t, err)
-
-		idxBuf, _ := sBuck.Lifeline.Marshal()
-		resBuf, _ := res.Marshal()
-
-		assert.Equal(t, idxBuf, resBuf)
-	})
 }
