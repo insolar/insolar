@@ -75,6 +75,7 @@ message PulseRequest {
 message BootstrapRequest {
     bytes JoinClaim = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim"];
     uint32 LastNodePulse = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    Permission Permission = 3;
 }
 
 message AuthorizeRequest {
@@ -102,6 +103,19 @@ enum ResponseCode {
     Rejected = 1;
     Redirected = 2;
     ReconnectRequired = 3;
+    UpdateSchedule = 4;
+}
+
+message Permission {
+    PermissionPayload Payload = 1 [(gogoproto.nullable) = false];
+    bytes Signature = 2;
+}
+
+message PermissionPayload {
+    bytes JoinerPublicKey = 1;
+	int64 UTC = 2;
+    string ReconnectTo = 3;
+    bytes DiscoveryRef = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
 }
 
 message BootstrapResponse {
@@ -112,6 +126,7 @@ message BootstrapResponse {
     uint32 UpdateSincePulse = 5 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
     string RedirectHost = 6;
     uint32 NetworkSize = 7;
+    Permission Permission = 8;
 }
 
 message BasicResponse {
