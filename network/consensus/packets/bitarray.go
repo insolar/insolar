@@ -184,7 +184,7 @@ func (ba bitArray) serializeCompressed() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func (ba bitArray) writeSequence(buf *bytes.Buffer, state BitSetState, count int) error {
+func (ba bitArray) writeSequence(buf io.Writer, state BitSetState, count int) error {
 	err := binary.Write(buf, binary.BigEndian, uint16(count))
 	if err != nil {
 		return errors.Wrap(err, "failed to write states count to buffer")

@@ -154,7 +154,7 @@ func (dbs *bitsetImpl) Serialize() ([]byte, error) {
 	return result.Bytes(), nil
 }
 
-func (dbs *bitsetImpl) serializeWithHLength(firstByte uint8, length int, result *bytes.Buffer) error {
+func (dbs *bitsetImpl) serializeWithHLength(firstByte uint8, length int, result io.Writer) error {
 	var secondByte uint8 // hBitLength
 	firstByte++
 	firstByte <<= lowLengthSize // move compressed and hBitLength bits to right
@@ -175,7 +175,7 @@ func (dbs *bitsetImpl) serializeWithHLength(firstByte uint8, length int, result 
 	return nil
 }
 
-func (dbs *bitsetImpl) serializeWithLLength(firstByte uint8, length int, result *bytes.Buffer) error {
+func (dbs *bitsetImpl) serializeWithLLength(firstByte uint8, length int, result io.Writer) error {
 	firstByte <<= lowLengthSize // move compressed and hbit flags to right
 	firstByte += uint8(length)
 	err := binary.Write(result, defaultByteOrder, firstByte)
