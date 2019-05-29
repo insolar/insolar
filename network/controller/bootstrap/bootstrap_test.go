@@ -52,20 +52,29 @@ package bootstrap
 
 import (
 	"context"
+	"crypto"
 	"strconv"
 	"testing"
 	"time"
 
 	"github.com/insolar/insolar/certificate"
+	"github.com/insolar/insolar/component"
 	"github.com/insolar/insolar/cryptography"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/pulse"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/network"
+	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/controller/common"
+	gateway2 "github.com/insolar/insolar/network/gateway"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
+	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/node"
 	"github.com/insolar/insolar/network/nodenetwork"
 	"github.com/insolar/insolar/platformpolicy"
-	"github.com/pkg/errors"
+	"github.com/insolar/insolar/testutils"
+	networkTest "github.com/insolar/insolar/testutils/network"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
@@ -73,6 +82,34 @@ import (
 const TestCert = "../../../certificate/testdata/cert.json"
 const TestKeys = "../../../certificate/testdata/keys.json"
 const activeNodesCount = 5
+
+type requestMock struct {
+	perm Permission
+}
+
+func (rm *requestMock) GetSender() insolar.Reference {
+	return testutils.RandomRef()
+}
+
+func (rm *requestMock) GetSenderHost() *host.Host {
+	return nil
+}
+
+func (rm *requestMock) GetType() types.PacketType {
+	return types.Bootstrap
+}
+
+func (rm *requestMock) GetData() interface{} {
+	return &NodeBootstrapRequest{
+		JoinClaim:     packets.NodeJoinClaim{},
+		LastNodePulse: 123,
+		Permission:    rm.perm,
+	}
+}
+
+func (rm *requestMock) GetRequestID() network.RequestID {
+	return 1
+}
 
 func getBootstrapResults(t *testing.T, ips []string) []*network.BootstrapResult {
 	results := make([]*network.BootstrapResult, activeNodesCount)
@@ -92,44 +129,15 @@ func getBootstrapResults(t *testing.T, ips []string) []*network.BootstrapResult 
 
 func getOptions(infinity bool) *common.Options {
 	return &common.Options{
-		TimeoutMult:       2 * time.Millisecond,
-		InfinityBootstrap: infinity,
-		MinTimeout:        100 * time.Millisecond,
-		MaxTimeout:        200 * time.Millisecond,
-		PingTimeout:       1 * time.Second,
-		PacketTimeout:     10 * time.Second,
-		BootstrapTimeout:  10 * time.Second,
+		TimeoutMult:            2 * time.Millisecond,
+		InfinityBootstrap:      infinity,
+		MinTimeout:             100 * time.Millisecond,
+		MaxTimeout:             200 * time.Millisecond,
+		PingTimeout:            1 * time.Second,
+		PacketTimeout:          10 * time.Second,
+		BootstrapTimeout:       10 * time.Second,
+		CyclicBootstrapEnabled: false,
 	}
-}
-
-var BootstrapError = errors.New("bootstrap without repeat")
-var InfinityBootstrapError = errors.New("infinity bootstrap")
-var bootstrapRetries = 0
-
-func mockBootstrap(context.Context, string) (*network.BootstrapResult, error) {
-	return nil, BootstrapError
-}
-
-func mockInfinityBootstrap(context.Context, string) (*network.BootstrapResult, error) {
-	bootstrapRetries++
-	if bootstrapRetries >= 5 {
-		return nil, nil
-	}
-	return nil, InfinityBootstrapError
-}
-
-func TestBootstrap(t *testing.T) {
-	t.Skip("flaky test")
-	ctx := context.Background()
-	_, err := bootstrap(ctx, "192.180.0.1:1234", getOptions(false), mockBootstrap)
-	assert.Error(t, err, BootstrapError)
-
-	startTime := time.Now()
-	expectedTime := startTime.Add(time.Millisecond * 700) // 100ms, 200ms, 200ms, 200ms, return nil error
-	_, err = bootstrap(ctx, "192.180.0.1:1234", getOptions(true), mockInfinityBootstrap)
-	endTime := time.Now()
-	assert.NoError(t, err)
-	assert.WithinDuration(t, expectedTime.Round(time.Millisecond), endTime.Round(time.Millisecond), time.Millisecond*100)
 }
 
 func TestCyclicBootstrap(t *testing.T) {
@@ -168,4 +176,214 @@ func TestCyclicBootstrap(t *testing.T) {
 		reconnectRequired = true
 	}
 	assert.True(t, reconnectRequired)
+}
+
+func TestBootstrapRedirect(t *testing.T) {
+	ctx := context.Background()
+
+	activeNodes := make([]insolar.NetworkNode, activeNodesCount)
+	refs := make([]insolar.Reference, activeNodesCount)
+	ips := make([]string, activeNodesCount)
+	for i := 0; i < activeNodesCount; i++ {
+		ip := "127.0.0.1:" + strconv.Itoa(i) + strconv.Itoa(i)
+		ips[i] = ip
+		refs[i] = testutils.RandomRef()
+		activeNodes[i] = node.NewNode(refs[i], insolar.StaticRoleUnknown, nil, ip, "")
+		activeNodes[i].(node.MutableNode).SetState(insolar.NodeReady)
+	}
+
+	node := node.NewNode(insolar.Reference{}, insolar.StaticRoleUnknown, nil, "127.0.0.1:8432", "")
+
+	origin := bootstrapper{
+		options:                 getOptions(false),
+		bootstrapLock:           make(chan struct{}),
+		genesisRequestsReceived: make(map[insolar.Reference]*GenesisRequest),
+	}
+
+	pulseAccessor := pulse.NewAccessorMock(t)
+	pulseAccessor.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
+		return *insolar.GenesisPulse, nil
+	}
+
+	cryptoService := testutils.NewCryptographyServiceMock(t)
+	cryptoService.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+		return &insolar.Signature{}, nil
+	}
+	cryptoService.VerifyFunc = func(crypto.PublicKey, insolar.Signature, []byte) bool {
+		return true
+	}
+
+	gateway := networkTest.NewGatewayerMock(t)
+	gateway.GatewayFunc = func() (r network.Gateway) {
+		return gateway2.NewNoNetwork(networkTest.NewGatewayerMock(t), testutils.NewGlobalInsolarLockMock(t),
+			networkTest.NewNodeKeeperMock(t), testutils.NewContractRequesterMock(t),
+			testutils.NewCryptographyServiceMock(t), testutils.NewMessageBusMock(t),
+			testutils.NewCertificateManagerMock(t))
+	}
+
+	hostNetwork := networkTest.NewHostNetworkMock(t)
+	hostNetwork.BuildResponseFunc = func(p context.Context, p1 network.Request, p2 interface{}) (r network.Response) {
+		sender := p1.GetSenderHost()
+		host, err := host.NewHost(node.Address())
+		assert.NoError(t, err)
+		r = packet.NewBuilder(host).Type(p1.GetType()).Receiver(sender).RequestID(p1.GetRequestID()).
+			Response(p2).TraceID(inslogger.TraceID(ctx)).Build()
+		return r
+	}
+
+	accessor := networkTest.NewAccessorMock(t)
+	accessor.GetActiveNodesFunc = func() (r []insolar.NetworkNode) {
+		return activeNodes
+	}
+	accessor.GetActiveNodeByShortIDFunc = func(p insolar.ShortNodeID) (r insolar.NetworkNode) {
+		return activeNodes[0]
+	}
+	accessor.GetActiveNodeFunc = func(r insolar.Reference) insolar.NetworkNode {
+		for _, n := range activeNodes {
+			if n.ID().Equal(r) {
+				return n
+			}
+		}
+		return nil
+	}
+
+	keeper := networkTest.NewNodeKeeperMock(t)
+	keeper.GetAccessorFunc = func() network.Accessor {
+		return accessor
+	}
+	keeper.GetOriginFunc = func() insolar.NetworkNode {
+		return node
+	}
+
+	discoveryNodes := make([]insolar.DiscoveryNode, activeNodesCount)
+	for i := range activeNodes {
+		n := testutils.NewDiscoveryNodeMock(t)
+		n.GetNodeRefFunc = func() *insolar.Reference {
+			return &refs[i]
+		}
+		n.GetHostFunc = func() string {
+			return activeNodes[i].Address()
+		}
+		discoveryNodes[i] = n
+	}
+
+	cert := testutils.NewCertificateMock(t)
+	cert.GetDiscoveryNodesFunc = func() []insolar.DiscoveryNode {
+		return discoveryNodes
+	}
+
+	mngr := component.NewManager(nil)
+	mngr.Register(&origin)
+	mngr.Inject(cert, hostNetwork, keeper, gateway, pulseAccessor, cryptoService)
+
+	request := requestMock{Permission{}}
+	response, err := origin.processBootstrap(ctx, &request)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, response.GetData().(*NodeBootstrapResponse).Permission.ReconnectTo)
+	assert.NotEqual(t, origin.NodeKeeper.GetOrigin().Address(), response.GetData().(*NodeBootstrapResponse).Permission.ReconnectTo)
+}
+
+func TestBootstrapRedirectToSelf(t *testing.T) {
+	ctx := context.Background()
+
+	activeNodes := make([]insolar.NetworkNode, activeNodesCount)
+	refs := make([]insolar.Reference, activeNodesCount)
+	ips := make([]string, activeNodesCount)
+	for i := 0; i < activeNodesCount; i++ {
+		ip := "127.0.0.1:" + strconv.Itoa(i) + strconv.Itoa(i)
+		ips[i] = ip
+		refs[i] = testutils.RandomRef()
+		activeNodes[i] = node.NewNode(refs[i], insolar.StaticRoleUnknown, nil, ip, "")
+		activeNodes[i].(node.MutableNode).SetState(insolar.NodePending)
+	}
+
+	node := node.NewNode(insolar.Reference{}, insolar.StaticRoleUnknown, nil, "127.0.0.1:8432", "")
+
+	origin := bootstrapper{
+		options:                 getOptions(false),
+		bootstrapLock:           make(chan struct{}),
+		genesisRequestsReceived: make(map[insolar.Reference]*GenesisRequest),
+	}
+
+	pulseAccessor := pulse.NewAccessorMock(t)
+	pulseAccessor.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
+		return *insolar.GenesisPulse, nil
+	}
+
+	cryptoService := testutils.NewCryptographyServiceMock(t)
+	cryptoService.SignFunc = func(p []byte) (r *insolar.Signature, r1 error) {
+		return &insolar.Signature{}, nil
+	}
+	cryptoService.VerifyFunc = func(crypto.PublicKey, insolar.Signature, []byte) bool {
+		return true
+	}
+
+	gateway := networkTest.NewGatewayerMock(t)
+	gateway.GatewayFunc = func() (r network.Gateway) {
+		return gateway2.NewNoNetwork(networkTest.NewGatewayerMock(t), testutils.NewGlobalInsolarLockMock(t),
+			networkTest.NewNodeKeeperMock(t), testutils.NewContractRequesterMock(t),
+			testutils.NewCryptographyServiceMock(t), testutils.NewMessageBusMock(t),
+			testutils.NewCertificateManagerMock(t))
+	}
+
+	hostNetwork := networkTest.NewHostNetworkMock(t)
+	hostNetwork.BuildResponseFunc = func(p context.Context, p1 network.Request, p2 interface{}) (r network.Response) {
+		sender := p1.GetSenderHost()
+		host, err := host.NewHost(node.Address())
+		assert.NoError(t, err)
+		r = packet.NewBuilder(host).Type(p1.GetType()).Receiver(sender).RequestID(p1.GetRequestID()).
+			Response(p2).TraceID(inslogger.TraceID(ctx)).Build()
+		return r
+	}
+
+	accessor := networkTest.NewAccessorMock(t)
+	accessor.GetActiveNodesFunc = func() (r []insolar.NetworkNode) {
+		return activeNodes
+	}
+	accessor.GetActiveNodeByShortIDFunc = func(p insolar.ShortNodeID) (r insolar.NetworkNode) {
+		return activeNodes[0]
+	}
+	accessor.GetActiveNodeFunc = func(r insolar.Reference) insolar.NetworkNode {
+		for _, n := range activeNodes {
+			if n.ID().Equal(r) {
+				return n
+			}
+		}
+		return nil
+	}
+
+	keeper := networkTest.NewNodeKeeperMock(t)
+	keeper.GetAccessorFunc = func() network.Accessor {
+		return accessor
+	}
+	keeper.GetOriginFunc = func() insolar.NetworkNode {
+		return node
+	}
+
+	discoveryNodes := make([]insolar.DiscoveryNode, activeNodesCount)
+	for i := range activeNodes {
+		n := testutils.NewDiscoveryNodeMock(t)
+		n.GetNodeRefFunc = func() *insolar.Reference {
+			return &refs[i]
+		}
+		n.GetHostFunc = func() string {
+			return activeNodes[i].Address()
+		}
+		discoveryNodes[i] = n
+	}
+
+	cert := testutils.NewCertificateMock(t)
+	cert.GetDiscoveryNodesFunc = func() []insolar.DiscoveryNode {
+		return discoveryNodes
+	}
+
+	mngr := component.NewManager(nil)
+	mngr.Register(&origin)
+	mngr.Inject(cert, hostNetwork, keeper, gateway, pulseAccessor, cryptoService)
+
+	request := requestMock{Permission{}}
+	response, err := origin.processBootstrap(ctx, &request)
+	assert.NoError(t, err)
+	assert.NotEmpty(t, response.GetData().(*NodeBootstrapResponse).Permission.ReconnectTo)
+	assert.Equal(t, origin.NodeKeeper.GetOrigin().Address(), response.GetData().(*NodeBootstrapResponse).Permission.ReconnectTo)
 }
