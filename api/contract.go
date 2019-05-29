@@ -185,8 +185,6 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 		return errors.Wrap(err, "can't get objectRef")
 	}
 
-	//argsSerialized, _ := insolar.Serialize(args.MethodArgs)
-
 	msg := &message.CallMethod{
 		Request: record.Request{
 			Caller:    testutils.RandomRef(),
