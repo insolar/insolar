@@ -862,6 +862,10 @@ func (lr *LogicRunner) OnPulse(ctx context.Context, pulse insolar.Pulse) error {
 }
 
 func (lr *LogicRunner) stopIfNeeded(ctx context.Context) {
+	// lock is required to access lr.state
+	lr.stateMutex.Lock()
+	defer lr.stateMutex.Unlock()
+
 	if len(lr.state) == 0 {
 		lr.stopLock.Lock()
 		if lr.isStopping {

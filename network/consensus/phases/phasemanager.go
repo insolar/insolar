@@ -103,7 +103,8 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 	pm.lastPulse = pulse.PulseNumber
 
 	consensusDelay := time.Since(pulseStartTime)
-	inslogger.FromContext(ctx).Infof("[ NET Consensus ] Starting consensus process, delay: %v", consensusDelay)
+	logger := inslogger.FromContext(ctx)
+	logger.Infof("[ NET Consensus ] Starting consensus process, delay: %v", consensusDelay)
 
 	pulseDuration := getPulseDuration(pulse)
 
@@ -152,6 +153,7 @@ func (pm *Phases) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartT
 		return errors.Wrap(err, "[ NET Consensus ] Error calculating cloud hash")
 	}
 	pm.NodeKeeper.SetCloudHash(hash)
+
 	inslogger.FromContext(ctx).Info("[ NET Consensus ] Done")
 
 	return pm.NodeKeeper.Sync(ctx, state.ActiveNodes, state.ApprovedClaims)
