@@ -115,7 +115,7 @@ func resetBits(value []byte, start uint8) []byte {
 
 	// Reset bits in starting byte.
 	mask := byte(0xFF)
-	mask <<= 8 - byte(startBit)
+	mask <<= 8 - startBit
 	result[startByte] = value[startByte] & mask
 
 	return result
