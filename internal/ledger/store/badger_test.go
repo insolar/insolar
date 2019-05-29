@@ -111,11 +111,14 @@ func TestBadgerDB_Set(t *testing.T) {
 func TestBadgerDB_NewIterator(t *testing.T) {
 	t.Parallel()
 
+	ctx := inslogger.TestContext(t)
+
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
 	db, err := NewBadgerDB(tmpdir)
+	defer db.Stop(ctx)
 	require.NoError(t, err)
 
 	type kv struct {
