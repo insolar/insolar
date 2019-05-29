@@ -61,10 +61,10 @@ func (m *WriteController) Begin(ctx context.Context, pulse insolar.PulseNumber) 
 	defer m.lock.RUnlock()
 
 	if pulse != m.current {
-		return func() {}, fmt.Errorf("can't begin writing for wrong pulse: opened - %v, requested - %v", m.current, pulse)
+		return nil, ErrWriteClosed
 	}
 	if m.closed {
-		return func() {}, fmt.Errorf("requested pulse is closed for writing")
+		return nil, ErrWriteClosed
 	}
 	m.wg.Add(1)
 
