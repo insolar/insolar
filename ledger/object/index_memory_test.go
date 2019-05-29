@@ -437,3 +437,41 @@ func TestInMemoryIndex_SetRequest(t *testing.T) {
 	})
 
 }
+
+func TestInMemoryIndex_SetFilament(t *testing.T) {
+	t.Run("err when no lifeline", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+
+		err := idx.SetFilament(ctx, pn, objID, gen.PulseNumber(), nil)
+
+		require.Error(t, err, ErrLifelineNotFound)
+	})
+
+	t.Run("works fine", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := insolar.PulseNumber(123)
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+		idx.createBucket(ctx, pn, objID)
+
+		buck := idx.buckets[pn][objID]
+		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{}})
+		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn - 10, Records: []record.Virtual{}})
+
+		objRef := gen.Reference()
+		req := record.Request{Object: &objRef}
+
+		err := idx.SetFilament(ctx, pn, objID, pn, []record.Virtual{record.Wrap(req)})
+		require.NoError(t, err)
+
+		require.Equal(t, 3, len(buck.fullFilament))
+		require.Equal(t, pn-10, buck.fullFilament[0].PN)
+		require.Equal(t, pn, buck.fullFilament[1].PN)
+		require.Equal(t, pn+1, buck.fullFilament[2].PN)
+
+		require.Equal(t, record.Wrap(req), buck.fullFilament[1].Records[0])
+	})
+}
