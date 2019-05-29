@@ -143,6 +143,28 @@ func (sdk *SDK) getResponse(body []byte) (*response, error) {
 }
 
 // CreateMember api request creates member with new random keys
+func (sdk *SDK) AddBurnAddress(burnAddress string) (string, error) {
+	ctx := inslogger.ContextWithTrace(context.Background(), "AddBurnAddress")
+
+	params := []interface{}{burnAddress}
+	body, err := sdk.sendRequest(ctx, "AddBurnAddress", params, sdk.rootMember)
+	if err != nil {
+		return "", errors.Wrap(err, "[ CreateMember ] can't send request")
+	}
+
+	response, err := sdk.getResponse(body)
+	if err != nil {
+		return "", errors.Wrap(err, "[ CreateMember ] can't get response")
+	}
+
+	if response.Error != "" {
+		return response.TraceID, errors.New(response.Error)
+	}
+
+	return response.TraceID, nil
+}
+
+// CreateMember api request creates member with new random keys
 func (sdk *SDK) CreateMember() (*Member, string, error) {
 	ctx := inslogger.ContextWithTrace(context.Background(), "CreateMember")
 	memberName := testutils.RandomString()
