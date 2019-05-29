@@ -82,7 +82,7 @@ func parseStatesFromByte(b uint8) [statesInByte]BitSetState {
 
 func deserialize(data []byte, length int) (bitArray, error) {
 	if len(data) != div(length, statesInByte) {
-		return nil, errors.Errorf("wrong size of data buffer, expected: %d, got: %d", int(div(length, statesInByte)), len(data))
+		return nil, errors.Errorf("wrong size of data buffer, expected: %d, got: %d", div(length, statesInByte), len(data))
 	}
 	result := make(bitArray, length)
 	statesLeft := length
