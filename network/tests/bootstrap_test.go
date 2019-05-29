@@ -53,17 +53,41 @@
 package tests
 
 import (
+	"context"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/network/consensus/packets"
 )
 
 type bootstrapSuite struct {
 	testSuite
 
 	joiner networkNode
+}
+
+type fakeConsensus struct {
+	node  *networkNode
+	suite *bootstrapSuite
+}
+
+func (f *fakeConsensus) OnPulse(ctx context.Context, pulse *insolar.Pulse, pulseStartTime time.Time) error {
+
+	activeNodes := make([]insolar.NetworkNode, 0)
+	for _, n := range f.suite.fixture().bootstrapNodes {
+		activeNodes = append(activeNodes, n.serviceNetwork.NodeKeeper.GetOrigin())
+	}
+
+	var claims []packets.ReferendumClaim
+	// snapshot := f.node.serviceNetwork.NodeKeeper.GetSnapshotCopy()
+	// snapshot.
+
+	return f.node.serviceNetwork.NodeKeeper.Sync(f.node.ctx, activeNodes, claims)
 }
 
 func (s *bootstrapSuite) SetupTest() {
@@ -74,6 +98,18 @@ func (s *bootstrapSuite) SetupTest() {
 
 	inslogger.FromContext(s.fixture().ctx).Info("SetupTest -- ")
 
+	for i := 0; i < s.bootstrapCount; i++ {
+		s.fixture().bootstrapNodes = append(s.fixture().bootstrapNodes, s.newNetworkNode(fmt.Sprintf("bootstrap_%d", i)))
+	}
+
+	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
+	for _, n := range s.fixture().bootstrapNodes {
+		n.serviceNetwork.PhaseManager.(*phaseManagerWrapper).original = &fakeConsensus{n, s}
+
+	}
+
+	// TODO: fake bootstrap
+	// s.StartNodesNetwork(s.fixture().bootstrapNodes)
 }
 
 func (s *bootstrapSuite) TearDownTest() {

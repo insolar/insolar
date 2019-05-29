@@ -182,6 +182,7 @@ func (s *consensusSuite) SetupTest() {
 
 	log.Info("Setup bootstrap nodes")
 	s.SetupNodesNetwork(s.fixture().bootstrapNodes)
+	s.StartNodesNetwork(s.fixture().bootstrapNodes)
 
 	expectedBootstrapsCount := len(s.fixture().bootstrapNodes)
 	retries := 100
@@ -205,6 +206,8 @@ func (s *consensusSuite) SetupTest() {
 	if len(s.fixture().networkNodes) > 0 {
 		log.Info("Setup network nodes")
 		s.SetupNodesNetwork(s.fixture().networkNodes)
+		s.StartNodesNetwork(s.fixture().networkNodes)
+
 		s.waitForConsensus(2)
 
 		// active nodes count verification
@@ -217,6 +220,15 @@ func (s *consensusSuite) SetupTest() {
 	fmt.Println("=================== SetupTest() Done")
 }
 
+func (s *testSuite) waitResults(results chan error, expected int) {
+	count := 0
+	for count < expected {
+		err := <-results
+		s.Require().NoError(err)
+		count++
+	}
+}
+
 func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 	for _, node := range nodes {
 		s.preInitNode(node)
@@ -227,31 +239,27 @@ func (s *testSuite) SetupNodesNetwork(nodes []*networkNode) {
 		err := node.init()
 		results <- err
 	}
-	startNode := func(node *networkNode) {
-		err := node.componentManager.Start(node.ctx)
-		results <- err
-	}
-
-	waitResults := func(results chan error, expected int) {
-		count := 0
-		for count < expected {
-			err := <-results
-			s.Require().NoError(err)
-			count++
-		}
-	}
 
 	log.Info("Init nodes")
 	for _, node := range nodes {
 		go initNode(node)
 	}
-	waitResults(results, len(nodes))
+	s.waitResults(results, len(nodes))
+}
 
+func (s *testSuite) StartNodesNetwork(nodes []*networkNode) {
 	log.Info("Start nodes")
+
+	results := make(chan error, len(nodes))
+	startNode := func(node *networkNode) {
+		err := node.componentManager.Start(node.ctx)
+		results <- err
+	}
+
 	for _, node := range nodes {
 		go startNode(node)
 	}
-	waitResults(results, len(nodes))
+	s.waitResults(results, len(nodes))
 }
 
 // TearDownSuite shutdowns all nodes in network, calls once after all tests in suite finished
