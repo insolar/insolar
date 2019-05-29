@@ -25,7 +25,6 @@ PULSARD=$BIN_DIR/pulsard
 PULSEWATCHER=$BIN_DIR/pulsewatcher
 
 LEDGER_DIR=${LAUNCHNET_BASE_DIR}data
-LEDGER_NEW_DIR=${LAUNCHNET_BASE_DIR}new-data
 
 # TODO: move to launchnet dir
 PULSAR_DATA_DIR=${LAUNCHNET_BASE_DIR}pulsar_data
@@ -133,7 +132,7 @@ create_required_dirs()
 {
     echo "create_required_dirs() starts ..."
     set -x
-    mkdir -p $LEDGER_DIR
+#    mkdir -p $LEDGER_DIR
     mkdir -p ${DISCOVERY_NODES_DATA}certs
     mkdir -p $CONFIGS_DIR
 
@@ -155,8 +154,7 @@ generate_insolard_configs()
 {
     echo "generate configs"
     set -x
-    go run scripts/generate_insolar_configs.go \
-        -p $INSGORUND_PORT_FILE
+    go run scripts/generate_insolar_configs.go -p ${INSGORUND_PORT_FILE}
     { set +x; } 2>/dev/null
 }
 
@@ -219,6 +217,9 @@ usage()
 
 process_input_params()
 {
+    # shell does not reset OPTIND automatically;
+    # it must be manually reset between multiple calls to getopts
+    # within the same shell invocation if a new set of parameters is to be used
     OPTIND=1
     while getopts "h?ngGlwC" opt; do
         case "$opt" in
@@ -272,13 +273,13 @@ launch_insgorund()
     done < "${INSGORUND_PORT_FILE}"
 }
 
-copy_data()
-{
-    echo "copy data dir to heavy"
-    set -x
-    mv ${LEDGER_DIR}/ ${DISCOVERY_NODES_HEAVY_DATA}data
-    { set +x; } 2>/dev/null
-}
+#copy_data()
+#{
+#    echo "copy data dir to heavy"
+#    set -x
+#    mv ${LEDGER_DIR}/ ${DISCOVERY_NODES_HEAVY_DATA}data
+#    { set +x; } 2>/dev/null
+#}
 
 copy_discovery_certs()
 {
@@ -347,8 +348,9 @@ genesis()
         exit $GENESIS_EXIT_CODE
     fi
     echo "genesis is done"
+#    exit 0
 
-    copy_data
+#    copy_data
     copy_discovery_certs
 }
 

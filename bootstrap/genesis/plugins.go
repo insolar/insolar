@@ -18,25 +18,16 @@ package genesis
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"os/exec"
-	"path/filepath"
 	"strings"
-
-	"github.com/insolar/insolar/application/contract/member"
-	"github.com/insolar/insolar/application/contract/nodedomain"
-	rootdomaincontract "github.com/insolar/insolar/application/contract/rootdomain"
-	walletcontract "github.com/insolar/insolar/application/contract/wallet"
-	"github.com/insolar/insolar/bootstrap"
-	"github.com/insolar/insolar/insolar"
-	"github.com/pkg/errors"
 )
 
-func generatePlugins(outDir string, insgoccBin string) error {
+func (g *Generator) generatePlugins() error {
+	insgoccBin := g.config.Contracts.Insgocc
 	args := []string{
 		"compile-genesis-plugins",
-		"-o", outDir,
+		"-o", g.config.Contracts.OutDir,
 	}
 
 	fmt.Println(insgoccBin, strings.Join(args, " "))
@@ -44,67 +35,4 @@ func generatePlugins(outDir string, insgoccBin string) error {
 	gocc.Stderr = os.Stderr
 	gocc.Stdout = os.Stdout
 	return gocc.Run()
-}
-
-type memout struct {
-	name   string
-	memory interface{}
-}
-
-func generateMemoryFiles(outDir string, rootPubKey string, rootBalance uint) error {
-	var outs []memout
-
-	outs = append(outs, memout{
-		name: insolar.GenesisNameRootDomain,
-		memory: &rootdomaincontract.RootDomain{
-			RootMember:    bootstrap.ContractRootMember,
-			NodeDomainRef: bootstrap.ContractNodeDomain,
-		},
-	})
-
-	nd, _ := nodedomain.NewNodeDomain()
-	outs = append(outs, memout{
-		name:   insolar.GenesisNameNodeDomain,
-		memory: nd,
-	})
-
-	m, err := member.New("RootMember", rootPubKey)
-	if err != nil {
-		return errors.Wrap(err, "root member constructor failed")
-	}
-	outs = append(outs, memout{
-		name:   insolar.GenesisNameRootMember,
-		memory: m,
-	})
-
-	w, err := walletcontract.New(rootBalance)
-	if err != nil {
-		return errors.Wrap(err, "failed to create wallet instance")
-	}
-	outs = append(outs, memout{
-		name:   insolar.GenesisNameRootWallet,
-		memory: w,
-	})
-
-	for _, o := range outs {
-		memFile := filepath.Join(outDir, o.name+".bin")
-		err := generateMemoryFile(memFile, o.memory)
-		if err != nil {
-			return errors.Wrapf(err, "failed to store domain memory for %v in file %v", o.name, memFile)
-		}
-	}
-
-	return nil
-}
-
-func generateMemoryFile(memfile string, data interface{}) error {
-	b, err := insolar.Serialize(data)
-	if err != nil {
-		return errors.Wrap(err, "[ activateNodeDomain ] node domain serialization")
-	}
-
-	return errors.Wrapf(
-		ioutil.WriteFile(memfile, b, 0600),
-		"can't write to file %v", memfile,
-	)
 }

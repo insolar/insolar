@@ -114,24 +114,19 @@ func (g *Generator) Run(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] couldn't get root keys")
 	}
+	publicKey := platformpolicy.MustPublicKeyToString(pair.Public)
 
-	err = g.activateSmartContracts(ctx, platformpolicy.MustPublicKeyToString(pair.Public), prototypes)
+	err = g.activateSmartContracts(ctx, publicKey, prototypes)
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] could't activate smart contracts"))
 	}
 
-	err = generatePlugins(g.config.Contracts.OutDir, g.config.Contracts.Insgocc)
+	inslog.Info("[ Genesis ] generate plugins ...")
+	err = g.generatePlugins()
 	if err != nil {
 		panic(errors.Wrap(err, "[ Genesis ] could't compile smart contracts via insgocc"))
 	}
-	err = generateMemoryFiles(
-		g.config.Contracts.OutDir,
-		platformpolicy.MustPublicKeyToString(pair.Public),
-		g.config.RootBalance,
-	)
-	if err != nil {
-		panic(errors.Wrap(err, "[ Genesis ] can't generate memory files"))
-	}
+	inslog.Info("[ Genesis ] generate memory files ...")
 
 	inslog.Info("[ Genesis ] create keys ...")
 	discoveryNodes, err := createKeysInDir(
@@ -152,7 +147,11 @@ func (g *Generator) Run(ctx context.Context) error {
 	}
 
 	inslog.Info("[ Genesis ] create heavy genesis config ...")
-	err = g.makeHeavyGenesisConfig(discoveryNodes)
+	contractsConfig := insolar.GenesisContractsConfig{
+		RootBalance:   g.config.RootBalance,
+		RootPublicKey: publicKey,
+	}
+	err = g.makeHeavyGenesisConfig(discoveryNodes, contractsConfig)
 	if err != nil {
 		return errors.Wrap(err, "[ Genesis ] generate heavy genesis config failed")
 	}
@@ -326,10 +325,10 @@ func (g *Generator) activateRootMemberWallet(
 			Method:   insolar.GenesisNameRootWallet,
 		},
 	)
-
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ] couldn't register root wallet")
 	}
+
 	contract := insolar.NewReference(rootdomain.RootDomain.ID(), *contractID)
 	_, err = g.artifactManager.ActivateObject(
 		ctx,
@@ -450,7 +449,10 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 	return nil
 }
 
-func (g *Generator) makeHeavyGenesisConfig(discoveryNodes []nodeInfo) error {
+func (g *Generator) makeHeavyGenesisConfig(
+	discoveryNodes []nodeInfo,
+	contractsConfig insolar.GenesisContractsConfig,
+) error {
 	items := make([]insolar.DiscoveryNodeRegister, 0, len(g.config.DiscoveryNodes))
 	for _, node := range discoveryNodes {
 		items = append(items, insolar.DiscoveryNodeRegister{
@@ -459,16 +461,18 @@ func (g *Generator) makeHeavyGenesisConfig(discoveryNodes []nodeInfo) error {
 		})
 	}
 	cfg := &insolar.GenesisHeavyConfig{
-		DiscoveryNodes: items,
-		ContractsDir:   g.config.HeavyGeneisContractsDir,
+		DiscoveryNodes:  items,
+		PluginsDir:      g.config.HeavyGenesisPluginsDir,
+		ContractsConfig: contractsConfig,
 	}
 	b, err := json.MarshalIndent(cfg, "", "    ")
 	if err != nil {
 		return errors.Wrapf(err, "[ makeHeavyGenesisConfig ] failed to decode heavy config to json")
 	}
 
-	err = ioutil.WriteFile(g.config.HeavyGeneisConfigFile, b, 0640)
-	return errors.Wrapf(err, "[ makeHeavyGenesisConfig ] failed to write heavy config "+g.config.HeavyGeneisConfigFile)
+	err = ioutil.WriteFile(g.config.HeavyGenesisConfigFile, b, 0600)
+	return errors.Wrapf(err,
+		"[ makeHeavyGenesisConfig ] failed to write heavy config %v", g.config.HeavyGenesisConfigFile)
 }
 
 func dumpAsJSON(data interface{}) string {
