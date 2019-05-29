@@ -289,8 +289,11 @@ func uploadContract(t *testing.T, contractCode string) *insolar.Reference {
 	err := json.Unmarshal(uploadBody, &uploadRes)
 	require.NoError(t, err)
 
-	contractRef, err := insolar.NewReferenceFromBase58(uploadRes.Result.PrototypeRef)
+	prototypeRef, err := insolar.NewReferenceFromBase58(uploadRes.Result.PrototypeRef)
 	require.NoError(t, err)
 
-	return contractRef
+	emptyRef := make([]byte, insolar.RecordRefSize)
+	require.NotEqual(t, insolar.Reference{}.FromSlice(emptyRef), prototypeRef)
+
+	return prototypeRef
 }

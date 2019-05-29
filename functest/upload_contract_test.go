@@ -43,9 +43,6 @@ func TestCallUploadedContract(t *testing.T) {
 
 	prototypeRef := uploadContract(t, contractCode)
 
-	emptyRef := make([]byte, insolar.RecordRefSize)
-	require.NotEqual(t, insolar.Reference{}.FromSlice(emptyRef), prototypeRef)
-
 	objectBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.CallConstructor",
