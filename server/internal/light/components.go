@@ -61,6 +61,8 @@ import (
 type components struct {
 	cmp               component.Manager
 	NodeRef, NodeRole string
+	inRouter          *watermillMsg.Router
+	outRouter         *watermillMsg.Router
 }
 
 func newComponents(ctx context.Context, cfg configuration.Configuration) (*components, error) {
@@ -331,7 +333,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		return nil, errors.Wrap(err, "failed to init components")
 	}
 
-	startWatermill(ctx, logger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.FlowDispatcher.Process)
+	c.startWatermill(ctx, logger, pubSub, WmBus, NetworkService.SendMessageHandler, Handler.FlowDispatcher.Process)
 
 	return c, nil
 }
@@ -341,10 +343,18 @@ func (c *components) Start(ctx context.Context) error {
 }
 
 func (c *components) Stop(ctx context.Context) error {
+	err := c.inRouter.Close()
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Error while closing router", err)
+	}
+	err = c.outRouter.Close()
+	if err != nil {
+		inslogger.FromContext(ctx).Error("Error while closing router", err)
+	}
 	return c.cmp.Stop(ctx)
 }
 
-func startWatermill(
+func (c *components) startWatermill(
 	ctx context.Context,
 	logger watermill.LoggerAdapter,
 	pubSub watermillMsg.PubSub,
@@ -369,6 +379,7 @@ func startWatermill(
 
 	inRouter.AddMiddleware(
 		b.IncomingMessageRouter,
+		b.CheckPulse,
 	)
 
 	inRouter.AddNoPublisherHandler(
@@ -379,7 +390,9 @@ func startWatermill(
 	)
 
 	startRouter(ctx, inRouter)
+	c.inRouter = inRouter
 	startRouter(ctx, outRouter)
+	c.outRouter = outRouter
 }
 
 func startRouter(ctx context.Context, router *watermillMsg.Router) {

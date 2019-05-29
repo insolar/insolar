@@ -117,7 +117,7 @@ func initComponents(
 	certManager insolar.CertificateManager,
 	isGenesis bool,
 
-) (*component.Manager, insolar.TerminationHandler, error) {
+) (*component.Manager, insolar.TerminationHandler, func(), error) {
 	cm := component.Manager{}
 
 	logger := log.NewWatermillLogAdapter(inslogger.FromContext(ctx))
@@ -161,7 +161,7 @@ func initComponents(
 
 	err = logicrunner.InitHandlers(logicRunner, b)
 	if err != nil {
-		return nil, nil, errors.Wrap(err, "Error while init handlers for logic runner:")
+		return nil, nil, nil, errors.Wrap(err, "Error while init handlers for logic runner:")
 	}
 
 	// move to logic runner ??
@@ -204,9 +204,9 @@ func initComponents(
 
 	cm.Inject(components...)
 
-	startWatermill(ctx, logger, pubsub, b, nw.SendMessageHandler, logicRunner.FlowDispatcher.Process)
+	stopper := startWatermill(ctx, logger, pubsub, b, nw.SendMessageHandler, logicRunner.FlowDispatcher.Process)
 
-	return &cm, terminationHandler, nil
+	return &cm, terminationHandler, stopper, nil
 }
 
 func startWatermill(
@@ -215,7 +215,7 @@ func startWatermill(
 	pubSub message.Subscriber,
 	b *bus.Bus,
 	outHandler, inHandler message.HandlerFunc,
-) {
+) func() {
 	inRouter, err := message.NewRouter(message.RouterConfig{}, logger)
 	if err != nil {
 		panic(err)
@@ -234,6 +234,7 @@ func startWatermill(
 
 	inRouter.AddMiddleware(
 		b.IncomingMessageRouter,
+		b.CheckPulse,
 	)
 
 	inRouter.AddNoPublisherHandler(
@@ -245,6 +246,8 @@ func startWatermill(
 
 	startRouter(ctx, inRouter)
 	startRouter(ctx, outRouter)
+
+	return stopWatermill(ctx, inRouter, outRouter)
 }
 
 func startRouter(ctx context.Context, router *message.Router) {
@@ -254,4 +257,17 @@ func startRouter(ctx context.Context, router *message.Router) {
 		}
 	}()
 	<-router.Running()
+}
+
+func stopWatermill(ctx context.Context, inRouter, outRouter *message.Router) func() {
+	return func() {
+		err := inRouter.Close()
+		if err != nil {
+			inslogger.FromContext(ctx).Error("Error while closing router", err)
+		}
+		err = outRouter.Close()
+		if err != nil {
+			inslogger.FromContext(ctx).Error("Error while closing router", err)
+		}
+	}
 }

@@ -32,7 +32,7 @@ import (
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/insolar/insolar/log"
 
-	wmBus "github.com/insolar/insolar/insolar/bus"
+	"github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/dispatcher"
 	"github.com/insolar/insolar/insolar/jet"
@@ -138,8 +138,8 @@ func (st *ObjectState) WrapError(err error, message string) error {
 
 func makeWMMessage(ctx context.Context, payLoad watermillMsg.Payload, msgType string) *watermillMsg.Message {
 	wmMsg := watermillMsg.NewMessage(watermill.NewUUID(), payLoad)
-	wmMsg.Metadata.Set(wmBus.MetaTraceID, inslogger.TraceID(ctx))
-	wmMsg.Metadata.Set(MessageTypeField, msgType)
+	wmMsg.Metadata.Set(bus.MetaTraceID, inslogger.TraceID(ctx))
+	wmMsg.Metadata.Set(bus.MetaType, msgType)
 
 	return wmMsg
 }
@@ -189,7 +189,7 @@ func NewLogicRunner(cfg *configuration.LogicRunner) (*LogicRunner, error) {
 	return &res, nil
 }
 
-func InitHandlers(lr *LogicRunner, b wmBus.Sender) error {
+func InitHandlers(lr *LogicRunner, b bus.Sender) error {
 	wmLogger := log.NewWatermillLogAdapter(inslogger.FromContext(context.Background()))
 	pubSub := gochannel.NewGoChannel(gochannel.Config{}, wmLogger)
 

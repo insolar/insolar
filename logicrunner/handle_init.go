@@ -32,7 +32,6 @@ import (
 )
 
 const InnerMsgTopic = "InnerMsg"
-const MessageTypeField = "Type"
 
 const (
 	processExecutionQueueMsg   = "ProcessExecutionQueue"
@@ -116,7 +115,7 @@ type InnerInit struct {
 }
 
 func (s *InnerInit) Present(ctx context.Context, f flow.Flow) error {
-	switch s.Message.Metadata.Get(MessageTypeField) {
+	switch s.Message.Metadata.Get(bus.MetaType) {
 	case processExecutionQueueMsg:
 		h := ProcessExecutionQueue{
 			dep:     s.dep,
