@@ -150,6 +150,10 @@ func (i *InMemoryIndex) SetRequest(ctx context.Context, pn insolar.PulseNumber, 
 	b.Lock()
 	defer b.Unlock()
 
+	if b.PreviousPendingFilament == 0 {
+		b.PreviousPendingFilament = pn
+	}
+
 	b.PendingRecords = append(b.PendingRecords, record.Wrap(req))
 
 	isInserted := false
@@ -339,6 +343,18 @@ func (i *InMemoryIndex) RequestsForObjID(ctx context.Context, currentPN insolar.
 	}
 
 	return append([]record.Request{}, b.notClosedRequests...), nil
+}
+
+func (i *InMemoryIndex) Records(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) ([]record.Virtual, error) {
+	b := i.bucket(currentPN, objID)
+	if b == nil {
+		return nil, ErrLifelineNotFound
+	}
+
+	b.RLock()
+	defer b.RLock()
+
+	return b.PendingRecords, nil
 }
 
 // SetBucket adds a bucket with provided pulseNumber and ID

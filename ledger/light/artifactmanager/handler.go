@@ -71,6 +71,7 @@ type MessageHandler struct {
 	IndexBucketModifier   object.IndexBucketModifier
 	LifelineStateModifier object.LifelineStateModifier
 	PendingModifier       object.PendingModifier
+	PendingAccessor       object.PendingAccessor
 
 	conf           *configuration.Ledger
 	middleware     *middleware
@@ -86,6 +87,7 @@ func NewMessageHandler(
 	indexBucketModifier object.IndexBucketModifier,
 	indexStateModifier object.LifelineStateModifier,
 	pendingModifier object.PendingModifier,
+	pendingAccessor object.PendingAccessor,
 	conf *configuration.Ledger,
 ) *MessageHandler {
 
@@ -96,6 +98,7 @@ func NewMessageHandler(
 		IndexBucketModifier:   indexBucketModifier,
 		LifelineStateModifier: indexStateModifier,
 		PendingModifier:       pendingModifier,
+		PendingAccessor:       pendingAccessor,
 	}
 
 	dep := &proc.Dependencies{
@@ -135,6 +138,8 @@ func NewMessageHandler(
 			p.Dep.JetUpdater = h.jetTreeUpdater
 			p.Dep.Bus = h.Bus
 			p.Dep.RecordAccessor = h.RecordAccessor
+			p.Dep.PendingAccessor = h.PendingAccessor
+			p.Dep.PendingModifier = h.PendingModifier
 		},
 		GetCode: func(p *proc.GetCode) {
 			p.Dep.Bus = h.Bus
@@ -188,6 +193,9 @@ func NewMessageHandler(
 			p.Dep.JetStorage = h.JetStorage
 			p.Dep.JetFetcher = h.jetTreeUpdater
 			p.Dep.JetReleaser = h.JetReleaser
+		},
+		GetPendingFilament: func(p *proc.GetPendingFilament) {
+			p.Dep.PendingAccessor = h.PendingAccessor
 		},
 	}
 

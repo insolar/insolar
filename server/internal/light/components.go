@@ -227,7 +227,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration) (*compo
 		hots := recentstorage.NewRecentStorageProvider()
 		waiter := hot.NewChannelWaiter()
 
-		handler := artifactmanager.NewMessageHandler(indexes, indexes, indexes, indexes, &conf)
+		handler := artifactmanager.NewMessageHandler(indexes, indexes, indexes, indexes, indexes, &conf)
 		handler.RecentStorageProvider = hots
 		handler.Bus = Bus
 		handler.PCS = CryptoScheme

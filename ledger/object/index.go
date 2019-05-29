@@ -100,6 +100,9 @@ type PendingMeta struct {
 	IsStateCalculated bool
 }
 
+//go:generate minimock -i github.com/insolar/insolar/ledger/object.PendingAccessor -o ./mocks -s _mock.go
+
+// PendingAccessor provides methods for fetching pending requests.
 type PendingAccessor interface {
 	MetaForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (PendingMeta, error)
 	RequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error)
