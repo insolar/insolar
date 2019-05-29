@@ -219,13 +219,6 @@ func signedRequest(user *user, method string, params ...interface{}) (interface{
 			return resp.Result, nil
 		}
 
-		if strings.Contains(resp.Error, "flow canceled") {
-			fmt.Printf("Flow canceled, retry. Attempt: %d/%d\n(error - %s)\n", currentIterNum, sendRetryCount, resp.Error)
-			fmt.Printf("Method: %s\n", method)
-			time.Sleep(time.Second)
-			continue
-		}
-
 		if strings.Contains(resp.Error, "Messagebus timeout exceeded") {
 			fmt.Printf("Messagebus timeout exceeded, retry. Attempt: %d/%d\n", currentIterNum, sendRetryCount)
 			fmt.Printf("Method: %s\n", method)

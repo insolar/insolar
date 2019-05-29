@@ -23,7 +23,6 @@ import (
 	"time"
 
 	"github.com/insolar/insolar/insolar/pulse"
-	"github.com/insolar/insolar/instrumentation/instracer"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -34,7 +33,8 @@ import (
 )
 
 const jetMissRetryCount = 10
-const incorrectPulseRetryCount = 3
+const incorrectPulseRetryCount = 1
+const flowCancelledRetryCount = 1
 
 // PreSender is an alias for a function
 // which is working like a `middleware` for messagebus.Send
@@ -167,16 +167,28 @@ func RetryJetSender(jetModifier jet.Modifier) PreSender {
 // NOTE: This is not completely correct way to behave: 1) we should wait until pulse switches, not some hardcoded time,
 // 2) it should be handled by recipient and get it right with Flow "handles"
 func RetryIncorrectPulse(accessor pulse.Accessor) PreSender {
+	return retryer(accessor, incorrectPulseRetryCount,
+		"Incorrect message pulse",
+		"[ RetryIncorrectPulse ] incorrect message pulse, retrying",
+		"incorrect message pulse (retry limit exceeded on client)")
+}
+
+// RetryFlowCancelled retries message on next pulse when received flow cancelled error.
+func RetryFlowCancelled(accessor pulse.Accessor) PreSender {
+	return retryer(accessor, flowCancelledRetryCount,
+		"flow cancelled",
+		"[ RetryFlowCancelled ] flow cancelled, retrying",
+		"flow cancelled (retry limit exceeded on client)")
+}
+
+func retryer(accessor pulse.Accessor, retriesCount int, errSubstr string, debugStr string, err string) PreSender {
 	return func(sender Sender) Sender {
-		return func(
-			ctx context.Context, msg insolar.Message, options *insolar.MessageSendOptions,
-		) (insolar.Reply, error) {
 
-			ctx, span := instracer.StartSpan(ctx, "RetryIncorrectPulse")
-			defer span.End()
-
+		return func(ctx context.Context, msg insolar.Message, options *insolar.MessageSendOptions) (insolar.Reply, error) {
+			retries := retriesCount
 			var lastPulse insolar.PulseNumber
-			for {
+			for retries >= 0 {
+
 				currentPulse, err := accessor.Latest(ctx)
 				if err != nil {
 					return nil, errors.Wrap(err, "[ RetryIncorrectPulse ] Can't get latest pulse")
@@ -190,11 +202,14 @@ func RetryIncorrectPulse(accessor pulse.Accessor) PreSender {
 				lastPulse = currentPulse.PulseNumber
 
 				rep, err := sender(ctx, msg, options)
-				if err == nil || !strings.Contains(err.Error(), "Incorrect message pulse") {
+				if err == nil || !strings.Contains(err.Error(), errSubstr) {
 					return rep, err
 				}
-				inslogger.FromContext(ctx).Debug("[ RetryIncorrectPulse ]  Got Error: ", err)
+
+				inslogger.FromContext(ctx).Debug(debugStr)
+				retries--
 			}
+			return nil, errors.New(err)
 		}
 	}
 }

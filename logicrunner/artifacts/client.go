@@ -97,7 +97,7 @@ func (m *client) RegisterRequest(
 		recID := insolar.NewID(currentPN, hash)
 		recRef = insolar.NewReference(insolar.DomainID, *recID)
 	default:
-		return nil, errors.New("not supported call type "+ request.CallType.String())
+		return nil, errors.New("not supported call type " + request.CallType.String())
 	}
 
 	id, err := m.setRecord(
@@ -846,6 +846,7 @@ func (m *client) setRecord(
 		m.DefaultBus.Send,
 		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
+		messagebus.RetryFlowCancelled(m.PulseAccessor),
 	)
 	genericReply, err := sender(ctx, &message.SetRecord{
 		Record:    data,
@@ -872,7 +873,11 @@ func (m *client) setBlob(
 	target insolar.Reference,
 ) (*insolar.ID, error) {
 
-	sender := messagebus.BuildSender(m.DefaultBus.Send, messagebus.RetryJetSender(m.JetStorage))
+	sender := messagebus.BuildSender(
+		m.DefaultBus.Send,
+		messagebus.RetryJetSender(m.JetStorage),
+		messagebus.RetryFlowCancelled(m.PulseAccessor),
+	)
 	genericReact, err := sender(ctx, &message.SetBlob{
 		Memory:    blob,
 		TargetRef: target,
@@ -906,6 +911,7 @@ func (m *client) sendUpdateObject(
 		m.DefaultBus.Send,
 		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
+		messagebus.RetryFlowCancelled(m.PulseAccessor),
 	)
 	genericReply, err := sender(
 		ctx,
@@ -944,6 +950,7 @@ func (m *client) registerChild(
 		m.DefaultBus.Send,
 		messagebus.RetryIncorrectPulse(m.PulseAccessor),
 		messagebus.RetryJetSender(m.JetStorage),
+		messagebus.RetryFlowCancelled(m.PulseAccessor),
 	)
 	genericReact, err := sender(ctx, &message.RegisterChild{
 		Record: data,
