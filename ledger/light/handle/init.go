@@ -21,18 +21,28 @@ import (
 	"fmt"
 
 	"github.com/insolar/insolar/insolar"
+	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
 	"github.com/insolar/insolar/insolar/message"
 	"github.com/insolar/insolar/insolar/payload"
+	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/ledger/light/proc"
 	"github.com/pkg/errors"
 )
 
 type Init struct {
-	Dep *proc.Dependencies
+	dep     *proc.Dependencies
+	message bus.Message
+	sender  wbus.Sender
+}
 
-	Message bus.Message
+func NewInit(dep *proc.Dependencies, sender wbus.Sender, msg bus.Message) *Init {
+	return &Init{
+		dep:     dep,
+		sender:  sender,
+		message: msg,
+	}
 }
 
 func (s *Init) Future(ctx context.Context, f flow.Flow) error {
@@ -40,73 +50,88 @@ func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 }
 
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
-	if s.Message.WatermillMsg != nil {
-		pl, err := payload.UnmarshalFromMeta(s.Message.WatermillMsg.Payload)
+	logger := inslogger.FromContext(ctx)
+	err := s.present(ctx, f)
+	if err != nil {
+		logger.Error(err)
+		errMsg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		if err != nil {
+			logger.Error(errors.Wrap(err, "failed to reply error"))
+			return err
+		}
+		go s.sender.Reply(ctx, s.message.WatermillMsg, errMsg)
+	}
+	return err
+}
+
+func (s *Init) present(ctx context.Context, f flow.Flow) error {
+	if s.message.WatermillMsg != nil {
+		pl, err := payload.UnmarshalFromMeta(s.message.WatermillMsg.Payload)
 		if err != nil {
 			return errors.Wrap(err, "can't deserialize meta payload")
 		}
 		switch p := pl.(type) {
 		case *payload.GetObject:
-			h := NewGetObject(s.Dep, s.Message, *p)
+			h := NewGetObject(s.dep, s.message, *p)
 			return f.Handle(ctx, h.Present)
 		case *payload.PassState:
-			h := NewPassState(s.Dep, s.Message.WatermillMsg)
+			h := NewPassState(s.dep, s.message.WatermillMsg)
 			return f.Handle(ctx, h.Present)
 		default:
 			return fmt.Errorf("no handler for message type #%T", pl)
 		}
 	}
 
-	switch s.Message.Parcel.Message().Type() {
+	switch s.message.Parcel.Message().Type() {
 	case insolar.TypeSetRecord:
-		msg := s.Message.Parcel.Message().(*message.SetRecord)
-		h := NewSetRecord(s.Dep, s.Message.ReplyTo, msg)
+		msg := s.message.Parcel.Message().(*message.SetRecord)
+		h := NewSetRecord(s.dep, s.message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeSetBlob:
-		msg := s.Message.Parcel.Message().(*message.SetBlob)
-		h := NewSetBlob(s.Dep, s.Message.ReplyTo, msg)
+		msg := s.message.Parcel.Message().(*message.SetBlob)
+		h := NewSetBlob(s.dep, s.message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetCode:
-		msg := s.Message.Parcel.Message().(*message.GetCode)
-		h := NewGetCode(s.Dep, s.Message.ReplyTo, msg.Code)
+		msg := s.message.Parcel.Message().(*message.GetCode)
+		h := NewGetCode(s.dep, s.message.ReplyTo, msg.Code)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetRequest:
-		msg := s.Message.Parcel.Message().(*message.GetRequest)
-		h := NewGetRequest(s.Dep, s.Message.ReplyTo, msg.Request)
+		msg := s.message.Parcel.Message().(*message.GetRequest)
+		h := NewGetRequest(s.dep, s.message.ReplyTo, msg.Request)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeUpdateObject:
-		msg := s.Message.Parcel.Message().(*message.UpdateObject)
-		h := NewUpdateObject(s.Dep, s.Message.ReplyTo, msg)
+		msg := s.message.Parcel.Message().(*message.UpdateObject)
+		h := NewUpdateObject(s.dep, s.message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetChildren:
-		h := NewGetChildren(s.Dep, s.Message.ReplyTo, s.Message)
+		h := NewGetChildren(s.dep, s.message.ReplyTo, s.message)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetPendingRequests:
-		h := NewGetPendingRequests(s.Dep, s.Message.ReplyTo, s.Message.Parcel)
+		h := NewGetPendingRequests(s.dep, s.message.ReplyTo, s.message.Parcel)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetPendingRequestID:
-		h := NewGetPendingRequestID(s.Dep, s.Message.ReplyTo, s.Message.Parcel)
+		h := NewGetPendingRequestID(s.dep, s.message.ReplyTo, s.message.Parcel)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeRegisterChild:
-		msg := s.Message.Parcel.Message().(*message.RegisterChild)
-		h := NewRegisterChild(s.Dep, s.Message.ReplyTo, msg, s.Message.Parcel.Pulse())
+		msg := s.message.Parcel.Message().(*message.RegisterChild)
+		h := NewRegisterChild(s.dep, s.message.ReplyTo, msg, s.message.Parcel.Pulse())
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetJet:
-		msg := s.Message.Parcel.Message().(*message.GetJet)
-		h := NewGetJet(s.Dep, s.Message.ReplyTo, msg)
+		msg := s.message.Parcel.Message().(*message.GetJet)
+		h := NewGetJet(s.dep, s.message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
 	case insolar.TypeHotRecords:
-		msg := s.Message.Parcel.Message().(*message.HotData)
-		h := NewHotData(s.Dep, s.Message.ReplyTo, msg)
+		msg := s.message.Parcel.Message().(*message.HotData)
+		h := NewHotData(s.dep, s.message.ReplyTo, msg)
 		return f.Handle(ctx, h.Present)
 	default:
-		return fmt.Errorf("no handler for message type %s", s.Message.Parcel.Message().Type().String())
+		return fmt.Errorf("no handler for message type %s", s.message.Parcel.Message().Type().String())
 	}
 }
 
 func (s *Init) Past(ctx context.Context, f flow.Flow) error {
 	return f.Procedure(ctx, &proc.ReturnReply{
-		ReplyTo: s.Message.ReplyTo,
+		ReplyTo: s.message.ReplyTo,
 		Err:     errors.New("no past handler"),
 	}, false)
 }

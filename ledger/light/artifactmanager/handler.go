@@ -217,10 +217,7 @@ func NewMessageHandler(
 	}
 
 	initHandle := func(msg bus.Message) *handle.Init {
-		return &handle.Init{
-			Dep:     dep,
-			Message: msg,
-		}
+		return handle.NewInit(dep, h.Sender, msg)
 	}
 
 	h.FlowDispatcher = dispatcher.NewDispatcher(func(msg bus.Message) flow.Handle {
