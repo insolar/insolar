@@ -42,7 +42,7 @@ func TestCallUploadedContract(t *testing.T) {
 		}`
 
 	prototypeRef := uploadContract(t, contractCode)
-	objectRef := makeObjectFromPrototype(t, prototypeRef)
+	objectRef := callConstructor(t, prototypeRef)
 
 	testParam := "test"
 	args := make([]string, 0)

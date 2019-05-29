@@ -298,7 +298,7 @@ func uploadContract(t *testing.T, contractCode string) *insolar.Reference {
 	return prototypeRef
 }
 
-func makeObjectFromPrototype(t *testing.T, prototypeRef *insolar.Reference) *insolar.Reference {
+func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Reference {
 	objectBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.CallConstructor",
