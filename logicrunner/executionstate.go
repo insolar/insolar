@@ -30,9 +30,9 @@ type ExecutionState struct {
 
 	Ref Ref
 
-	ObjectDescriptor artifacts.ObjectDescriptor
+	ObjectDescriptor    artifacts.ObjectDescriptor
 	PrototypeDescriptor artifacts.ObjectDescriptor
-	CodeDescriptor artifacts.CodeDescriptor
+	CodeDescriptor      artifacts.CodeDescriptor
 
 	deactivate bool
 	nonce      uint64

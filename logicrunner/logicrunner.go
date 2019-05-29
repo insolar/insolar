@@ -73,9 +73,8 @@ type CurrentExecution struct {
 	Context       context.Context
 	LogicContext  *insolar.LogicCallContext
 	RequestRef    *Ref
-	Sequence      uint64
+	Request       *record.Request
 	RequesterNode *Ref
-	ReturnMode    record.Request_RM
 	SentResult    bool
 }
 
@@ -378,7 +377,7 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	if es.Current.ReturnMode == record.ReturnNoWait {
+	if es.Current.Request.ReturnMode == record.ReturnNoWait {
 		return false
 	}
 
@@ -468,13 +467,13 @@ func (lr *LogicRunner) executeOrValidate(
 	defer es.Unlock()
 
 	es.Current.SentResult = true
-	if es.Current.ReturnMode != record.ReturnResult {
+	if es.Current.Request.ReturnMode != record.ReturnResult {
 		return
 	}
 
 	target := *es.Current.RequesterNode
 	request := *es.Current.RequestRef
-	seq := es.Current.Sequence
+	seq := es.Current.Request.Sequence
 
 	go func() {
 		inslogger.FromContext(ctx).Debugf("Sending Method Results for %#v", request)
