@@ -13,6 +13,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 //
+// +build slowtest
 
 package logicrunner
 
@@ -952,17 +953,19 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 		when                      whenType
 		messagesExpected          []insolar.MessageType
 		errorExpected             bool
+		flowCanceledExpected      bool
 		pendingInExecutorResults  message.PendingState
 		queueLenInExecutorResults int
 	}{
 		{
-			name:          "pulse change in IsAuthorized",
-			when:          whenIsAuthorized,
-			errorExpected: true,
+			name:                 "pulse change in IsAuthorized",
+			when:                 whenIsAuthorized,
+			flowCanceledExpected: true,
 		},
 		{
-			name: "pulse change in RegisterRequest",
-			when: whenRegisterRequest,
+			name:                 "pulse change in RegisterRequest",
+			when:                 whenRegisterRequest,
+			flowCanceledExpected: true,
 		},
 		{
 			name:                      "pulse change in HasPendingRequests",
@@ -1150,8 +1153,20 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			pulse := pulsar.NewPulse(1, parcel.Pulse(), &entropygenerator.StandardEntropyGenerator{})
 			suite.lr.FlowDispatcher.ChangePulse(ctx, *pulse)
 			suite.lr.innerFlowDispatcher.ChangePulse(ctx, *pulse)
+
+			// Make sure flow thread saw that the pulse changed.
+			// Unfortunately current flow implementation has no callbacks
+			// that would allow us to make this without using timeouts.
+			// This fact that in this test we depend on external goroutines that we have no control of
+			// makes this test suite not a common unit tests suite but a "slowtest".
+			time.Sleep(2000 * time.Millisecond)
+
 			_, err := suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
-			if test.errorExpected {
+
+			if test.flowCanceledExpected {
+				suite.Require().Error(err)
+				suite.Require().Equal(flow.ErrCancelled, err)
+			} else if test.errorExpected {
 				suite.Require().Error(err)
 			} else {
 				suite.Require().NoError(err)
