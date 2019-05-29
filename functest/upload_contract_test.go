@@ -28,8 +28,6 @@ import (
 )
 
 func TestCallUploadedContract(t *testing.T) {
-	//contractCode := `package main\r\n\r\nimport \"github.com\/insolar\/insolar\/logicrunner\/goplugin\/foundation\"\r\n\r\ntype One struct {\r\nfoundation.BaseContract\r\n}\r\n\r\nfunc New() (*One, error){\r\nreturn &One{}, nil\r\n}\r\n\r\n\r\nfunc (r *One) Hello(str string) (string, error) {\r\nreturn r.GetPrototype().String() + str, nil\r\n}`
-
 	contractCode := `
 		package main
 		import "github.com/insolar/insolar/logicrunner/goplugin/foundation"
