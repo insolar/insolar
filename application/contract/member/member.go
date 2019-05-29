@@ -28,7 +28,7 @@ import (
 	"github.com/insolar/insolar/application/proxy/wallet"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
-	"math"
+	"math/big"
 	"strconv"
 	"time"
 )
@@ -174,7 +174,7 @@ func (m *Member) createMember(rdRef insolar.Reference, ethAddr string, key strin
 		return nil, fmt.Errorf("[ createMember ] Can't save as child: %s", err.Error())
 	}
 
-	wHolder := wallet.New(0)
+	wHolder := wallet.New(big.Int{})
 	_, err = wHolder.AsDelegate(new.Reference)
 	if err != nil {
 		return nil, fmt.Errorf("[ createMember ] Can't save as delegate: %s", err.Error())
@@ -222,7 +222,7 @@ func (m *Member) getBalanceCall() (interface{}, error) {
 	}
 
 	jsonOut, err := json.Marshal(struct {
-		Balance  uint
+		Balance  big.Int
 		Deposits []deposit.Deposit
 	}{
 		Balance:  b,
@@ -230,32 +230,6 @@ func (m *Member) getBalanceCall() (interface{}, error) {
 	})
 
 	return jsonOut, nil
-}
-
-func parseAmount(inAmount interface{}) (amount uint, err error) {
-	switch a := inAmount.(type) {
-	case uint:
-		amount = a
-	case uint64:
-		if a > math.MaxUint32 {
-			return 0, errors.New("Transfer ammount bigger than integer")
-		}
-		amount = uint(a)
-	case float32:
-		if a > math.MaxUint32 {
-			return 0, errors.New("Transfer ammount bigger than integer")
-		}
-		amount = uint(a)
-	case float64:
-		if a > math.MaxUint32 {
-			return 0, errors.New("Transfer ammount bigger than integer")
-		}
-		amount = uint(a)
-	default:
-		return 0, fmt.Errorf("Wrong type for amount %t", inAmount)
-	}
-
-	return amount, nil
 }
 
 func parseTimeStamp(timeStr string) (time.Time, error) {
@@ -268,16 +242,15 @@ func parseTimeStamp(timeStr string) (time.Time, error) {
 }
 
 func (m *Member) transferCall(params []byte) (interface{}, error) {
-	var amount uint
-	var toMemberStr string
-	var inAmount interface{}
+	var toMemberStr, inAmount string
 	if err := signer.UnmarshalParams(params, &inAmount, &toMemberStr); err != nil {
 		return nil, fmt.Errorf("[ transferCall ] Can't unmarshal params: %s", err.Error())
 	}
 
-	amount, err := parseAmount(inAmount)
-	if err != nil {
-		return nil, fmt.Errorf("[ transferCall ] Failed to parse amount: %s", err.Error())
+	amount := new(big.Int)
+	amount, ok := amount.SetString(inAmount, 10)
+	if !ok {
+		return nil, fmt.Errorf("[ transferCall ] Failed to parse amount")
 	}
 
 	toMember, err := insolar.NewReferenceFromBase58(toMemberStr)
@@ -288,10 +261,10 @@ func (m *Member) transferCall(params []byte) (interface{}, error) {
 		return nil, fmt.Errorf("[ transferCall ] Recipient must be different from the sender")
 	}
 
-	return m.transfer(amount, toMember)
+	return m.transfer(*amount, toMember)
 }
 
-func (m *Member) transfer(amount uint, toMember *insolar.Reference) (interface{}, error) {
+func (m *Member) transfer(amount big.Int, toMember *insolar.Reference) (interface{}, error) {
 
 	w, err := wallet.GetImplementationFrom(m.GetReference())
 	if err != nil {
@@ -344,7 +317,7 @@ func (m *Member) getNodeRefCall(rdRef insolar.Reference, params []byte) (interfa
 	return nodeRef, nil
 }
 
-func (mdMember *Member) migration(rdRef insolar.Reference, txHash string, burnAddress string, amount uint, unHoldDate time.Time) (string, error) {
+func (mdMember *Member) migration(rdRef insolar.Reference, txHash string, burnAddress string, amount big.Int, unHoldDate time.Time) (string, error) {
 	rd := rootdomain.GetObject(rdRef)
 
 	// Get oracle members
@@ -430,15 +403,15 @@ func (mdMember *Member) migrationCall(rdRef insolar.Reference, params []byte) (s
 		return "", fmt.Errorf("[ migrationCall ] Only oracles can call migrationCall")
 	}
 
-	var txHash, burnAddress, currentDate string
-	var inAmount interface{}
+	var txHash, burnAddress, currentDate, inAmount string
 	if err := signer.UnmarshalParams(params, &txHash, &burnAddress, &inAmount, &currentDate); err != nil {
 		return "", fmt.Errorf("[ migrationCall ] Can't unmarshal params: %s", err.Error())
 	}
 
-	amount, err := parseAmount(inAmount)
-	if err != nil {
-		return "", fmt.Errorf("[ migrationCall ] Failed to parse amount: %s", err.Error())
+	amount := new(big.Int)
+	amount, ok := amount.SetString(inAmount, 10)
+	if !ok {
+		return "", fmt.Errorf("[ migrationCall ] Failed to parse amount")
 	}
 
 	unHoldDate, err := parseTimeStamp(currentDate)
@@ -446,10 +419,10 @@ func (mdMember *Member) migrationCall(rdRef insolar.Reference, params []byte) (s
 		return "", fmt.Errorf("[ migrationCall ] Failed to parse unHoldDate: %s", err.Error())
 	}
 
-	return mdMember.migration(rdRef, txHash, burnAddress, amount, unHoldDate)
+	return mdMember.migration(rdRef, txHash, burnAddress, *amount, unHoldDate)
 }
 
-func (m *Member) FindDeposit(txHash string, amount uint) (bool, deposit.Deposit, error) {
+func (m *Member) FindDeposit(txHash string, amount big.Int) (bool, deposit.Deposit, error) {
 	iterator, err := m.NewChildrenTypedIterator(deposit.GetPrototype())
 	if err != nil {
 		return false, deposit.Deposit{}, fmt.Errorf("[ findDeposit ] Can't get children: %s", err.Error())
@@ -473,7 +446,7 @@ func (m *Member) FindDeposit(txHash string, amount uint) (bool, deposit.Deposit,
 			}
 
 			if txHash == th {
-				if amount == a {
+				if (&amount).Cmp(&a) == 0 {
 					return true, *d, nil
 				}
 			}

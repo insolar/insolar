@@ -20,6 +20,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
 	"github.com/insolar/insolar/logicrunner/goplugin/proxyctx"
+	"math/big"
 	"time"
 )
 
@@ -27,7 +28,7 @@ type DepositStatus string
 
 // PrototypeReference to prototype of this contract
 // error checking hides in generator
-var PrototypeReference, _ = insolar.NewReferenceFromBase58("11112rnphQDarAfVbpB6zMRuCZJmpoqesH19WPbhnFP.11111111111111111111111111111111")
+var PrototypeReference, _ = insolar.NewReferenceFromBase58("1111oJeBNH8vu5wcAJrzXeUqowoiXrQfqnMcCsHK1T.11111111111111111111111111111111")
 
 // Deposit holds proxy type
 type Deposit struct {
@@ -80,7 +81,7 @@ func GetImplementationFrom(object insolar.Reference) (*Deposit, error) {
 }
 
 // New is constructor
-func New(oracleConfirms map[string]bool, txHash string, amount uint, unHoldDate time.Time) *ContractConstructorHolder {
+func New(oracleConfirms map[string]bool, txHash string, amount big.Int, unHoldDate time.Time) *ContractConstructorHolder {
 	var args [4]interface{}
 	args[0] = oracleConfirms
 	args[1] = txHash
@@ -246,13 +247,13 @@ func (r *Deposit) GetTxHashAsImmutable() (string, error) {
 }
 
 // GetAmount is proxy generated method
-func (r *Deposit) GetAmount() (uint, error) {
+func (r *Deposit) GetAmount() (big.Int, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 uint
+	var ret0 big.Int
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -298,13 +299,13 @@ func (r *Deposit) GetAmountNoWait() error {
 }
 
 // GetAmountAsImmutable is proxy generated method
-func (r *Deposit) GetAmountAsImmutable() (uint, error) {
+func (r *Deposit) GetAmountAsImmutable() (big.Int, error) {
 	var args [0]interface{}
 
 	var argsSerialized []byte
 
 	ret := [2]interface{}{}
-	var ret0 uint
+	var ret0 big.Int
 	ret[0] = &ret0
 	var ret1 *foundation.Error
 	ret[1] = &ret1
@@ -331,7 +332,7 @@ func (r *Deposit) GetAmountAsImmutable() (uint, error) {
 }
 
 // Confirm is proxy generated method
-func (r *Deposit) Confirm(oracleName string, txHash string, amount uint) (uint, error) {
+func (r *Deposit) Confirm(oracleName string, txHash string, amount big.Int) (uint, error) {
 	var args [3]interface{}
 	args[0] = oracleName
 	args[1] = txHash
@@ -367,7 +368,7 @@ func (r *Deposit) Confirm(oracleName string, txHash string, amount uint) (uint, 
 }
 
 // ConfirmNoWait is proxy generated method
-func (r *Deposit) ConfirmNoWait(oracleName string, txHash string, amount uint) error {
+func (r *Deposit) ConfirmNoWait(oracleName string, txHash string, amount big.Int) error {
 	var args [3]interface{}
 	args[0] = oracleName
 	args[1] = txHash
@@ -389,7 +390,7 @@ func (r *Deposit) ConfirmNoWait(oracleName string, txHash string, amount uint) e
 }
 
 // ConfirmAsImmutable is proxy generated method
-func (r *Deposit) ConfirmAsImmutable(oracleName string, txHash string, amount uint) (uint, error) {
+func (r *Deposit) ConfirmAsImmutable(oracleName string, txHash string, amount big.Int) (uint, error) {
 	var args [3]interface{}
 	args[0] = oracleName
 	args[1] = txHash

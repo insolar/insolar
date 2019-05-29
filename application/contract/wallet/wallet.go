@@ -18,6 +18,7 @@ package wallet
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/insolar/insolar/application/contract/wallet/safemath"
 	"github.com/insolar/insolar/application/proxy/wallet"
@@ -28,37 +29,37 @@ import (
 // Wallet - basic wallet contract
 type Wallet struct {
 	foundation.BaseContract
-	Balance uint
+	Balance big.Int
 }
 
 // New creates new wallet
-func New(balance uint) (*Wallet, error) {
+func New(balance big.Int) (*Wallet, error) {
 	return &Wallet{
 		Balance: balance,
 	}, nil
 }
 
 // Transfer transfers money to given wallet
-func (w *Wallet) Transfer(amount uint, toMember *insolar.Reference) error {
+func (w *Wallet) Transfer(amount big.Int, toMember *insolar.Reference) error {
 
 	toWallet, err := wallet.GetImplementationFrom(*toMember)
 	if err != nil {
 		return fmt.Errorf("[ Transfer ] Can't get implementation: %s", err.Error())
 	}
 
-	newBalance, err := safemath.Sub(w.Balance, amount)
+	newBalance, err := safemath.Sub(&w.Balance, &amount)
 	if err != nil {
 		return fmt.Errorf("[ Transfer ] Not enough balance for transfer: %s", err.Error())
 	}
-	w.Balance = newBalance
+	w.Balance = *newBalance
 
 	acceptErr := toWallet.Accept(amount)
 	if acceptErr != nil {
-		newBalance, err := safemath.Add(w.Balance, amount)
+		newBalance, err := safemath.Add(&w.Balance, &amount)
 		if err != nil {
 			return fmt.Errorf("[ Transfer ] Couldn't add amount back to balance: %s", err.Error())
 		}
-		w.Balance = newBalance
+		w.Balance = *newBalance
 
 		return fmt.Errorf("[ Transfer ] Cant accept balance to wallet: %s", acceptErr.Error())
 	} else {
@@ -67,15 +68,17 @@ func (w *Wallet) Transfer(amount uint, toMember *insolar.Reference) error {
 }
 
 // Accept transfer to balance
-func (w *Wallet) Accept(amount uint) (err error) {
-	w.Balance, err = safemath.Add(w.Balance, amount)
+func (w *Wallet) Accept(amount big.Int) (err error) {
+	b, err := safemath.Add(&w.Balance, &amount)
 	if err != nil {
 		return fmt.Errorf("[ Accept ] Couldn't add amount to balance: %s", err.Error())
 	}
+	w.Balance = *b
+
 	return nil
 }
 
 // GetBalance gets total balance
-func (w *Wallet) GetBalance() (uint, error) {
+func (w *Wallet) GetBalance() (big.Int, error) {
 	return w.Balance, nil
 }

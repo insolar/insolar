@@ -19,6 +19,7 @@ package deposit
 import (
 	"fmt"
 	"github.com/insolar/insolar/logicrunner/goplugin/foundation"
+	"math/big"
 	"time"
 )
 
@@ -39,18 +40,18 @@ type Deposit struct {
 	Confirms       uint
 	TxHash         string
 	UnHoldDate     time.Time
-	Amount         uint
+	Amount         big.Int
 }
 
 func (d *Deposit) GetTxHash() (string, error) {
 	return d.TxHash, nil
 }
 
-func (d *Deposit) GetAmount() (uint, error) {
+func (d *Deposit) GetAmount() (big.Int, error) {
 	return d.Amount, nil
 }
 
-func New(oracleConfirms map[string]bool, txHash string, amount uint, unHoldDate time.Time) (*Deposit, error) {
+func New(oracleConfirms map[string]bool, txHash string, amount big.Int, unHoldDate time.Time) (*Deposit, error) {
 	return &Deposit{
 		Status:         OPEN,
 		OracleConfirms: oracleConfirms,
@@ -61,12 +62,12 @@ func New(oracleConfirms map[string]bool, txHash string, amount uint, unHoldDate 
 	}, nil
 }
 
-func (d *Deposit) Confirm(oracleName string, txHash string, amount uint) (uint, error) {
+func (d *Deposit) Confirm(oracleName string, txHash string, amount big.Int) (uint, error) {
 	if txHash != d.TxHash {
 		return 0, fmt.Errorf("[ Confirm ] Transaction hash is incorrect")
 	}
 
-	if amount != d.Amount {
+	if (&amount).Cmp(&d.Amount) != 0 {
 		return 0, fmt.Errorf("[ Confirm ] Amount is incorrect")
 	}
 
