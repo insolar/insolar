@@ -591,11 +591,11 @@ func (bc *bootstrapper) processBootstrap(ctx context.Context, request network.Pa
 	}
 
 	var perm *packet.Permission
-	if bc.nodeShouldReconnectAsJoiner(data.JoinClaim.NodeRef) {
+	if bc.nodeShouldReconnectAsJoiner(data.JoinClaim.NodeRef) { //nolint
 		code = packet.ReconnectRequired
 	} else if data.Permission == nil {
 		code = packet.Redirected
-		perm, err = bc.generatePermission(data)
+		perm, err = bc.generatePermission(data.JoinClaim.NodePK[:])
 		if err != nil {
 			err = errors.Wrapf(err, "failed to generate permission")
 			return bc.rejectBootstrapRequest(ctx, request, err.Error()), nil
@@ -625,21 +625,21 @@ func (bc *bootstrapper) rejectBootstrapRequest(ctx context.Context, request netw
 	return bc.Network.BuildResponse(ctx, request, &packet.BootstrapResponse{Code: packet.Rejected, RejectReason: reason})
 }
 
-func (bc *bootstrapper) generatePermission(request *packet.BootstrapRequest) (*packet.Permission, error) {
+func (bc *bootstrapper) generatePermission(joinerPublicKey []byte) (*packet.Permission, error) {
 	result := packet.Permission{
 		Payload: packet.PermissionPayload{
 			DiscoveryRef:    bc.NodeKeeper.GetOrigin().ID(),
 			UTC:             time.Now().Unix(),
 			ReconnectTo:     bc.getRandActiveDiscoveryAddress(),
-			JoinerPublicKey: request.JoinClaim.NodePK[:],
+			JoinerPublicKey: joinerPublicKey,
 		}}
 
-	sign, err := bc.signPermission(request.Permission)
+	sign, err := bc.signPermission(&result.Payload)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to sign permission")
 	}
 
-	request.Permission.Signature = sign
+	result.Signature = sign
 	return &result, nil
 }
 
@@ -728,7 +728,7 @@ func (bc *bootstrapper) getRandActiveDiscoveryAddress() string {
 	return bc.NodeKeeper.GetOrigin().Address()
 }
 
-func (bc *bootstrapper) signPermission(perm *packet.Permission) ([]byte, error) {
+func (bc *bootstrapper) signPermission(perm *packet.PermissionPayload) ([]byte, error) {
 	data, err := perm.Marshal()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to marshal bootstrap permission")
