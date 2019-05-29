@@ -146,13 +146,7 @@ func (p *FetchJetWM) Proceed(ctx context.Context) error {
 
 	jetID, err := p.Dep.JetFetcher.Fetch(ctx, p.target, p.pulse)
 	if err != nil {
-		err := errors.Wrap(err, "failed to fetch jet")
-		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
-		if err != nil {
-			return errors.Wrap(err, "failed to create reply")
-		}
-		go p.Dep.Sender.Reply(ctx, p.message, msg)
-		return err
+		return errors.Wrap(err, "failed to fetch jet")
 	}
 	executor, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, p.pulse)
 	if err != nil {
@@ -193,15 +187,5 @@ func NewWaitHotWM(j insolar.JetID, pn insolar.PulseNumber, msg *message.Message)
 }
 
 func (p *WaitHotWM) Proceed(ctx context.Context) error {
-	err := p.Dep.Waiter.Wait(ctx, insolar.ID(p.jetID))
-	if err != nil {
-		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
-		if err != nil {
-			return err
-		}
-		go p.Dep.Sender.Reply(ctx, p.message, msg)
-		return err
-	}
-
-	return nil
+	return p.Dep.Waiter.Wait(ctx, insolar.ID(p.jetID))
 }
