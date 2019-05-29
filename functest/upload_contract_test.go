@@ -19,8 +19,6 @@
 package functest
 
 import (
-	"encoding/json"
-	"github.com/insolar/insolar/api"
 	"github.com/insolar/insolar/insolar"
 	"testing"
 
@@ -45,32 +43,11 @@ func TestCallUploadedContract(t *testing.T) {
 	objectRef := callConstructor(t, prototypeRef)
 
 	testParam := "test"
-	args := make([]string, 0)
-	args = append(args, testParam)
+	args := append(make([]string, 0), testParam)
 	argsSerialized, err := insolar.Serialize(args)
 	require.NoError(t, err)
 
-	callMethodBody := getRPSResponseBody(t, postParams{
-		"jsonrpc": "2.0",
-		"method":  "contract.CallMethod",
-		"id":      "",
-		"params": map[string]interface{}{
-			"ObjectRefString": objectRef.String(),
-			"Method":          "Hello",
-			"MethodArgs":      argsSerialized,
-		},
-	})
-	require.NotEmpty(t, callMethodBody)
+	methodResult := callMethod(t, objectRef, "Hello", argsSerialized)
 
-	callRes := struct {
-		Version string              `json:"jsonrpc"`
-		ID      string              `json:"id"`
-		Result  api.CallMethodReply `json:"result"`
-	}{}
-
-	err = json.Unmarshal(callMethodBody, &callRes)
-	require.NoError(t, err)
-
-	methodResult := callRes.Result.ExtractedReply.(string)
-	require.Equal(t, testParam, methodResult)
+	require.Equal(t, testParam, methodResult.(string))
 }

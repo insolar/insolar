@@ -325,3 +325,28 @@ func callConstructor(t *testing.T, prototypeRef *insolar.Reference) *insolar.Ref
 
 	return objectRef
 }
+
+func callMethod(t *testing.T, objectRef *insolar.Reference, method string, argsSerialized []byte) interface{} {
+	callMethodBody := getRPSResponseBody(t, postParams{
+		"jsonrpc": "2.0",
+		"method":  "contract.CallMethod",
+		"id":      "",
+		"params": map[string]interface{}{
+			"ObjectRefString": objectRef.String(),
+			"Method":          method,
+			"MethodArgs":      argsSerialized,
+		},
+	})
+	require.NotEmpty(t, callMethodBody)
+
+	callRes := struct {
+		Version string              `json:"jsonrpc"`
+		ID      string              `json:"id"`
+		Result  api.CallMethodReply `json:"result"`
+	}{}
+
+	err := json.Unmarshal(callMethodBody, &callRes)
+	require.NoError(t, err)
+
+	return callRes.Result.ExtractedReply
+}
