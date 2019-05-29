@@ -55,18 +55,18 @@ func storeDrop(
 	ctx context.Context,
 	drops drop.Modifier,
 	rawDrop []byte,
-) error {
+) (*drop.Drop, error) {
 	d, err := drop.Decode(rawDrop)
 	if err != nil {
 		inslogger.FromContext(ctx).Error(err)
-		return err
+		return nil, err
 	}
 	err = drops.Set(ctx, *d)
 	if err != nil {
-		return errors.Wrapf(err, "heavyserver: drop storing failed")
+		return nil, errors.Wrapf(err, "heavyserver: drop storing failed")
 	}
 
-	return nil
+	return d, nil
 }
 
 func storeBlobs(

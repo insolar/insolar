@@ -33,7 +33,6 @@ import (
 )
 
 const jetMissRetryCount = 10
-const incorrectPulseRetryCount = 3
 
 // PreSender is an alias for a function
 // which is working like a `middleware` for messagebus.Send

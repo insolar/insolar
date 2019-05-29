@@ -27,87 +27,105 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/gen"
 	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/internal/ledger/store"
 )
 
 // helper for tests
-func treeForPulse(s *Store, pulse insolar.PulseNumber) (*Tree, bool) {
-	ltree, ok := s.trees[pulse]
-	if !ok {
-		return nil, false
+func dbTreeForPulse(s *DBStore, pulse insolar.PulseNumber) *Tree {
+	store := s
+	serializedTree, err := store.db.Get(pulseKey(pulse))
+	if err != nil {
+		return nil
 	}
-	return ltree.t, true
+
+	recovered := &Tree{}
+	err = insolar.Deserialize(serializedTree, recovered)
+	if err != nil {
+		return nil
+	}
+	return recovered
 }
 
-func TestJetStorage_Empty(t *testing.T) {
+func TestDBStorage_Empty(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	s := NewStore()
+
+	db := store.NewMemoryMockDB()
+	s := NewDBStore(db)
 
 	all := s.All(ctx, gen.PulseNumber())
 	require.Equal(t, 1, len(all), "should be just one jet ID")
 	require.Equal(t, insolar.ZeroJetID, all[0], "JetID should be a zero on empty storage")
 }
 
-func TestJetStorage_UpdateJetTree(t *testing.T) {
+func TestDBStorage_UpdateJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	s := NewStore()
+
+	db := store.NewMemoryMockDB()
+	s := NewDBStore(db)
 
 	s.Update(ctx, 100, true, *insolar.NewJetID(0, nil))
 
-	tree, _ := treeForPulse(s, 100)
+	tree := dbTreeForPulse(s, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
 }
 
-func TestJetStorage_SplitJetTree(t *testing.T) {
+func TestDBStorage_SplitJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	s := NewStore()
 
-	zeroJet := insolar.ZeroJetID
-	left, right, err := s.Split(ctx, 100, insolar.ZeroJetID)
+	db := store.NewMemoryMockDB()
+	s := NewDBStore(db)
+
+	root := insolar.NewJetID(0, nil)
+	left, right, err := s.Split(ctx, 100, *root)
 	require.NoError(t, err)
-	require.Equal(t, "[JET 0 -]", zeroJet.DebugString())
+	require.Equal(t, "[JET 0 -]", root.DebugString())
 	require.Equal(t, "[JET 1 0]", left.DebugString())
 	require.Equal(t, "[JET 1 1]", right.DebugString())
 
-	tree, _ := treeForPulse(s, 100)
+	tree := dbTreeForPulse(s, 100)
 	require.Equal(t, "root (level=0 actual=false)\n 0 (level=1 actual=false)\n 1 (level=1 actual=false)\n", tree.String())
 }
 
-func TestJetStorage_CloneJetTree(t *testing.T) {
+func TestDBStorage_CloneJetTree(t *testing.T) {
 	ctx := inslogger.TestContext(t)
-	s := NewStore()
+
+	db := store.NewMemoryMockDB()
+	s := NewDBStore(db)
 
 	s.Update(ctx, 100, true, *insolar.NewJetID(0, nil))
 
-	tree, _ := treeForPulse(s, 100)
+	tree := dbTreeForPulse(s, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
 
 	s.Clone(ctx, 100, 101)
 
-	tree, _ = treeForPulse(s, 101)
+	tree = dbTreeForPulse(s, 101)
 	require.Equal(t, "root (level=0 actual=false)\n", tree.String())
 
-	tree, _ = treeForPulse(s, 100)
+	tree = dbTreeForPulse(s, 100)
 	require.Equal(t, "root (level=0 actual=true)\n", tree.String())
 }
 
-func TestJetStorage_DeleteJetTree(t *testing.T) {
-	ctx := inslogger.TestContext(t)
-	s := NewStore()
+// func TestDBStorage_DeleteJetTree(t *testing.T) {
+// 	ctx := inslogger.TestContext(t)
+//
+// 	db := store.NewMemoryMockDB()
+// 	s := NewDBStore(db)
+//
+// 	_, _, err := s.Split(ctx, 100, *insolar.NewJetID(0, nil))
+// 	require.NoError(t, err)
+//
+// 	s.DeleteForPN(ctx, 100)
+//
+// 	_ := dbTreeForPulse(s, 100)
+// 	require.False(t, ok, "tree should be an empty")
+//
+// 	all := s.All(ctx, 100)
+// 	require.Equal(t, 1, len(all), "should be just one jet ID")
+// 	require.Equal(t, insolar.ZeroJetID, all[0], "JetID should be a zero after tree removal")
+// }
 
-	_, _, err := s.Split(ctx, 100, *insolar.NewJetID(0, nil))
-	require.NoError(t, err)
-
-	s.DeleteForPN(ctx, 100)
-
-	_, ok := treeForPulse(s, 100)
-	require.False(t, ok, "tree should be an empty")
-
-	all := s.All(ctx, 100)
-	require.Equal(t, 1, len(all), "should be just one jet ID")
-	require.Equal(t, insolar.ZeroJetID, all[0], "JetID should be a zero after tree removal")
-}
-
-func TestJetStorage_ForID_Basic(t *testing.T) {
+func TestDBStorage_ForID_Basic(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 
 	pn := gen.PulseNumber()
@@ -122,7 +140,8 @@ func TestJetStorage_ForID_Basic(t *testing.T) {
 	copy(searchID[insolar.RecordHashOffset:], hash)
 
 	for _, actuality := range []bool{true, false} {
-		s := NewStore()
+		db := store.NewMemoryMockDB()
+		s := NewDBStore(db)
 		s.Update(ctx, pn, actuality, expectJetID)
 		found, ok := s.ForID(ctx, pn, searchID)
 		require.Equal(t, expectJetID, found, "got jet with exactly same prefix")
@@ -130,7 +149,7 @@ func TestJetStorage_ForID_Basic(t *testing.T) {
 	}
 }
 
-func TestJetStorage_ForID_Fuzz(t *testing.T) {
+func TestDBStorage_ForID_Fuzz(t *testing.T) {
 	ctx := inslogger.TestContext(t)
 	pn := gen.PulseNumber()
 
@@ -166,7 +185,8 @@ func TestJetStorage_ForID_Fuzz(t *testing.T) {
 	}
 
 	var searches []insolar.ID
-	s := NewStore()
+	db := store.NewMemoryMockDB()
+	s := NewDBStore(db)
 	// generate jet IDs, add them to jet store (actually to underlying jet tree)
 	// fill searches list with ID with hashes what should match with generated Jet ID
 	for i := 0; i < 100; i++ {
