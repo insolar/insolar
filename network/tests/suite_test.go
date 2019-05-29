@@ -339,9 +339,10 @@ type networkNode struct {
 	host                string
 	ctx                 context.Context
 
-	componentManager *component.Manager
-	serviceNetwork   *servicenetwork.ServiceNetwork
-	consensusResult  chan error
+	componentManager   *component.Manager
+	serviceNetwork     *servicenetwork.ServiceNetwork
+	terminationHandler *testutils.TerminationHandlerMock
+	consensusResult    chan error
 }
 
 // newNetworkNode returns networkNode initialized only with id, host address and key pair
@@ -515,6 +516,7 @@ func (s *testSuite) preInitNode(node *networkNode) {
 		testutils.NewMessageBusMock(t), testutils.NewContractRequesterMock(t))
 
 	node.serviceNetwork = serviceNetwork
+	node.terminationHandler = terminationHandler
 }
 
 func (s *testSuite) SetCommunicationPolicy(policy CommunicationPolicy) {
@@ -555,4 +557,14 @@ func (s *testSuite) SetCommunicationPolicyForNode(nodeID insolar.Reference, poli
 		phasemanager.SecondPhase.(*phases.SecondPhaseImpl).Communicator = wrapper
 		phasemanager.ThirdPhase.(*phases.ThirdPhaseImpl).Communicator = wrapper
 	}
+}
+
+func (s *testSuite) AssertActiveNodesCountDelta(delta int) {
+	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
+	s.Equal(s.getNodesCount()+delta, len(activeNodes))
+}
+
+func (s *testSuite) AssertWorkingNodesCountDelta(delta int) {
+	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetWorkingNodes()
+	s.Equal(s.getNodesCount()+delta, len(workingNodes))
 }

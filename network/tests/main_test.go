@@ -108,20 +108,17 @@ func (s *consensusSuite) TestNodeConnect() {
 
 	s.waitForConsensus(1)
 
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
+	s.AssertActiveNodesCountDelta(0)
 
 	s.waitForConsensus(1)
 
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
+	s.AssertActiveNodesCountDelta(1)
+	s.AssertWorkingNodesCountDelta(0)
 
 	s.waitForConsensus(2)
 
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount()+1, len(activeNodes))
-	activeNodes = testNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount()+1, len(activeNodes))
+	s.AssertActiveNodesCountDelta(1)
+	s.AssertWorkingNodesCountDelta(1)
 }
 
 func (s *consensusSuite) TestNodeConnectInvalidVersion() {
@@ -186,26 +183,23 @@ func (s *consensusSuite) TestNodeLeave() {
 	}(s)
 
 	s.waitForConsensus(2)
+	s.AssertActiveNodesCountDelta(1)
+	s.AssertWorkingNodesCountDelta(0)
 
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
-
+	// node become working after 3 consensuses
 	s.waitForConsensus(1)
-
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount()+1, len(activeNodes))
+	s.AssertActiveNodesCountDelta(1)
+	s.AssertWorkingNodesCountDelta(1)
 
 	testNode.serviceNetwork.Leave(context.Background(), 0)
 
 	s.waitForConsensus(2)
 
 	// one active node becomes "not working"
-	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount(), len(workingNodes))
+	s.AssertWorkingNodesCountDelta(0)
 
 	// but all nodes are active
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-	s.Equal(s.getNodesCount()+1, len(activeNodes))
+	s.AssertActiveNodesCountDelta(1)
 }
 
 func (s *consensusSuite) TestNodeLeaveAtETA() {
@@ -215,35 +209,42 @@ func (s *consensusSuite) TestNodeLeaveAtETA() {
 	s.preInitNode(testNode)
 
 	s.InitNode(testNode)
+	testNode.terminationHandler.OnLeaveApprovedFinished()
+	testNode.terminationHandler.OnLeaveApprovedFunc = func(p context.Context) {
+		s.StopNode(testNode)
+	}
 	s.StartNode(testNode)
 	defer func(s *consensusSuite) {
 		s.StopNode(testNode)
 	}(s)
 
-	// wait for node will be added at active list
-	s.waitForConsensus(2)
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-	s.Equal(s.getNodesCount()+1, len(activeNodes))
+	// wait for node will be added at active and working lists
+	s.waitForConsensus(3)
+	s.AssertActiveNodesCountDelta(1)
+	s.AssertWorkingNodesCountDelta(1)
 
 	pulse, err := s.fixture().bootstrapNodes[0].serviceNetwork.PulseAccessor.Latest(s.fixture().ctx)
 	s.NoError(err)
 
 	// next pulse will be last for this node
-	testNode.serviceNetwork.Leave(s.fixture().ctx, pulse.NextPulseNumber)
+	// leaving in 3 pulses
+	pulseDelta := pulse.NextPulseNumber - pulse.PulseNumber
+	testNode.serviceNetwork.Leave(s.fixture().ctx, pulse.PulseNumber+3*pulseDelta)
 
 	// node still active and working
 	s.waitForConsensus(1)
-	workingNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-	s.Equal(s.getNodesCount()+1, len(activeNodes))
-	s.Equal(s.getNodesCount()+1, len(workingNodes))
+	s.AssertActiveNodesCountDelta(1)
+	s.AssertWorkingNodesCountDelta(1)
 
 	// now node leaves, but it's still in active list
 	s.waitForConsensus(1)
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-	workingNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount(), len(workingNodes))
-	s.Equal(s.getNodesCount()+1, len(activeNodes))
+	s.AssertActiveNodesCountDelta(1)
+	s.AssertWorkingNodesCountDelta(0)
+	s.True(testNode.terminationHandler.OnLeaveApprovedFinished())
+
+	s.waitForConsensus(1)
+	s.AssertActiveNodesCountDelta(0)
+	s.AssertWorkingNodesCountDelta(0)
 }
 
 func (s *consensusSuite) TestNodeComeAfterAnotherNodeSendLeaveETA() {
@@ -325,8 +326,7 @@ func (s *consensusSuite) TestFullTimeOut() {
 	s.SetCommunicationPolicy(FullTimeout)
 
 	s.waitForConsensus(2)
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount()-1, len(activeNodes))
+	s.AssertWorkingNodesCountDelta(-1)
 }
 
 // Partial timeout
@@ -502,18 +502,15 @@ func (s *consensusSuite) TestJoinerSplitPackets() {
 
 	s.waitForConsensus(1)
 
-	activeNodes := s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetAccessor().GetActiveNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
+	s.AssertActiveNodesCountDelta(0)
 
 	s.waitForConsensus(1)
 
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount(), len(activeNodes))
+	s.AssertActiveNodesCountDelta(1)
+	s.AssertWorkingNodesCountDelta(0)
 
 	s.waitForConsensus(2)
 
-	activeNodes = s.fixture().bootstrapNodes[0].serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount()+1, len(activeNodes))
-	activeNodes = testNode.serviceNetwork.NodeKeeper.GetWorkingNodes()
-	s.Equal(s.getNodesCount()+1, len(activeNodes))
+	s.AssertActiveNodesCountDelta(1)
+	s.AssertWorkingNodesCountDelta(1)
 }
