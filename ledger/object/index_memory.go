@@ -253,7 +253,8 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 
 	for _, chainLink := range b.fullFilament {
 		for _, chainPart := range chainLink.Records {
-			switch r := record.Unwrap(&chainPart).(type) {
+			tChainPart := chainPart
+			switch r := record.Unwrap(&tChainPart).(type) {
 			case *record.Request:
 				notClosedRequests[chainLink.PN][*r.Object.Record()] = r
 				requestPN[*r.Object.Record()] = chainLink.PN
@@ -330,9 +331,9 @@ func (i *InMemoryIndex) RequestsForObjID(ctx context.Context, currentPN insolar.
 
 	if len(b.notClosedRequests) > count {
 		return append([]record.Request{}, b.notClosedRequests[:count]...), nil
-	} else {
-		return append([]record.Request{}, b.notClosedRequests...), nil
 	}
+
+	return append([]record.Request{}, b.notClosedRequests...), nil
 }
 
 // SetBucket adds a bucket with provided pulseNumber and ID
