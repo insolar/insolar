@@ -91,15 +91,16 @@ type PendingModifier interface {
 	SetResult(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, req record.Result) error
 	SetFilament(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, filPN insolar.PulseNumber, recs []record.Virtual) error
 	RefreshState(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID) error
+	SetReadUntil(ctx context.Context, pn insolar.PulseNumber, objID insolar.ID, readUntil *insolar.PulseNumber) error
 }
 
 type PendingMeta struct {
-	PreviousPN       *insolar.PulseNumber
-	ReadUntil        *insolar.PulseNumber
-	IsChainCompleted bool
+	PreviousPN        *insolar.PulseNumber
+	ReadUntil         *insolar.PulseNumber
+	IsStateCalculated bool
 }
 
 type PendingAccessor interface {
 	MetaForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID) (PendingMeta, error)
-	ForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error)
+	RequestsForObjID(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, count int) ([]record.Request, error)
 }

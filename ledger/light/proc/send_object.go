@@ -266,15 +266,11 @@ func (p *SendObject) fetchPendings(ctx context.Context, currentPN insolar.PulseN
 	}
 
 	// Because we are the first light in the chain
-	if pendMeta.PreviousPN == nil || pendMeta.IsChainCompleted == true {
+	if pendMeta.PreviousPN == nil || pendMeta.IsStateCalculated == true {
 		return p.Dep.PendingAccessor.ForObjID(ctx, currentPN, objID, p.returnPendings)
 	}
 
-	if pendMeta.ReadUntil == nil {
-		panic("inconsistent state of the pending filament")
-	}
-
-	err = p.fillPendingFilament(ctx, currentPN, objID, *pendMeta.PreviousPN, *pendMeta.ReadUntil)
+	err = p.fillPendingFilament(ctx, currentPN, objID, *pendMeta.PreviousPN, pendMeta.ReadUntil)
 	if err != nil {
 		return []record.Request{}, err
 	}
@@ -287,7 +283,7 @@ func (p *SendObject) fetchPendings(ctx context.Context, currentPN insolar.PulseN
 	return p.Dep.PendingAccessor.ForObjID(ctx, currentPN, objID, p.returnPendings)
 }
 
-func (p *SendObject) fillPendingFilament(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, destPN insolar.PulseNumber, readUntil insolar.PulseNumber) error {
+func (p *SendObject) fillPendingFilament(ctx context.Context, currentPN insolar.PulseNumber, objID insolar.ID, destPN insolar.PulseNumber, readUntil *insolar.PulseNumber) error {
 	continueFilling := true
 
 	for continueFilling {
@@ -319,8 +315,14 @@ func (p *SendObject) fillPendingFilament(ctx context.Context, currentPN insolar.
 			}
 			if r.PreviousPendingPN == nil {
 				continueFilling = false
-			} else if *r.PreviousPendingPN > readUntil {
+			}
+
+			// If know border read to the start of the chain
+			// In another way, read until limit
+			if readUntil == nil || *r.PreviousPendingPN > *readUntil {
 				destPN = *r.PreviousPendingPN
+			} else {
+				continueFilling = false
 			}
 		case *reply.Error:
 			return r.Error()
