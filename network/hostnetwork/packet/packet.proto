@@ -52,7 +52,7 @@ message Ping {
 
 message RPCRequest {
     string Method = 1;
-    bytes Data = 2;
+    bytes Data = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/packet/types.RPCPayload", (gogoproto.nullable) = false];
 }
 
 message Cascade {
