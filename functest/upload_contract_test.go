@@ -38,10 +38,10 @@ func TestCallUploadedContract(t *testing.T) {
 			return &One{}, nil}
 	
 		func (r *One) Hello(str string) (string, error) {
-			return r.GetPrototype().String() + str, nil
+			return str, nil
 		}`
 
-	body := getRPSResponseBody(t, postParams{
+	uploadBody := getRPSResponseBody(t, postParams{
 		"jsonrpc": "2.0",
 		"method":  "contract.Upload",
 		"id":      "",
@@ -50,21 +50,74 @@ func TestCallUploadedContract(t *testing.T) {
 			"code": contractCode,
 		},
 	})
-	require.NotEmpty(t, body)
+	require.NotEmpty(t, uploadBody)
 
-	res := struct {
+	uploadRes := struct {
 		Version string          `json:"jsonrpc"`
 		ID      string          `json:"id"`
 		Result  api.UploadReply `json:"result"`
 	}{}
 
-	err := json.Unmarshal(body, &res)
+	err := json.Unmarshal(uploadBody, &uploadRes)
 	require.NoError(t, err)
 
-	contractRef, err := insolar.NewReferenceFromBase58(res.Result.PrototypeRef)
+	contractRef, err := insolar.NewReferenceFromBase58(uploadRes.Result.PrototypeRef)
 	require.NoError(t, err)
 
 	emptyRef := make([]byte, insolar.RecordRefSize)
-
 	require.NotEqual(t, insolar.Reference{}.FromSlice(emptyRef), contractRef)
+
+	objectBody := getRPSResponseBody(t, postParams{
+		"jsonrpc": "2.0",
+		"method":  "contract.CallConstructor",
+		"id":      "",
+		"params": map[string]string{
+			"PrototypeRefString": uploadRes.Result.PrototypeRef,
+		},
+	})
+	require.NotEmpty(t, objectBody)
+
+	callConstructorRes := struct {
+		Version string                   `json:"jsonrpc"`
+		ID      string                   `json:"id"`
+		Result  api.CallConstructorReply `json:"result"`
+	}{}
+
+	err = json.Unmarshal(objectBody, &callConstructorRes)
+	require.NoError(t, err)
+
+	objectRef, err := insolar.NewReferenceFromBase58(callConstructorRes.Result.ObjectRef)
+	require.NoError(t, err)
+
+	require.NotEqual(t, insolar.Reference{}.FromSlice(emptyRef), objectRef)
+
+	testParam := "test"
+	args := make([]string, 0)
+	args = append(args, testParam)
+	argsSerialized, err := insolar.Serialize(args)
+	require.NoError(t, err)
+
+	callMethodBody := getRPSResponseBody(t, postParams{
+		"jsonrpc": "2.0",
+		"method":  "contract.CallMethod",
+		"id":      "",
+		"params": map[string]interface{}{
+			"ObjectRefString": callConstructorRes.Result.ObjectRef,
+			"Method":          "Hello",
+			"MethodArgs":      argsSerialized,
+		},
+	})
+	require.NotEmpty(t, callMethodBody)
+
+	callRes := struct {
+		Version string              `json:"jsonrpc"`
+		ID      string              `json:"id"`
+		Result  api.CallMethodReply `json:"result"`
+	}{}
+
+	err = json.Unmarshal(callMethodBody, &callRes)
+	require.NoError(t, err)
+
+	methodResult := callRes.Result.ExtractedReply.(string)
+	require.Equal(t, testParam, methodResult)
 }
