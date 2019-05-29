@@ -52,8 +52,7 @@ func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	logger := inslogger.FromContext(ctx)
 	err := s.present(ctx, f)
-	if err != nil {
-		logger.Error(err)
+	if err != nil && s.message.WatermillMsg != nil {
 		errMsg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
 		if err != nil {
 			logger.Error(errors.Wrap(err, "failed to reply error"))
