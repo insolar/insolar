@@ -117,7 +117,7 @@ func NewMessageHandler(
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.Bus = h.Bus
 		},
-		FetchJetWM: func(p *proc.FetchJetWM) {
+		FetchJetWM: func(p *proc.CheckJet) {
 			p.Dep.JetAccessor = h.JetStorage
 			p.Dep.Coordinator = h.JetCoordinator
 			p.Dep.JetUpdater = h.jetTreeUpdater

@@ -25,7 +25,7 @@ import (
 
 type Dependencies struct {
 	FetchJet            func(*FetchJet)
-	FetchJetWM          func(*FetchJetWM)
+	FetchJetWM          func(*CheckJet)
 	WaitHot             func(*WaitHot)
 	WaitHotWM           func(*WaitHotWM)
 	GetIndex            func(*GetIndex)

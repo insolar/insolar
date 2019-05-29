@@ -20,6 +20,7 @@ import (
 	"context"
 
 	"github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
 	"github.com/insolar/insolar/insolar"
 	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow/bus"
@@ -111,10 +112,11 @@ func (p *WaitHot) Proceed(ctx context.Context) error {
 	return nil
 }
 
-type FetchJetWM struct {
+type CheckJet struct {
 	target  insolar.ID
 	pulse   insolar.PulseNumber
 	message *message.Message
+	pass    bool
 
 	Result struct {
 		Jet insolar.JetID
@@ -129,15 +131,16 @@ type FetchJetWM struct {
 	}
 }
 
-func NewFetchJetWM(target insolar.ID, pn insolar.PulseNumber, msg *message.Message) *FetchJetWM {
-	return &FetchJetWM{
+func NewCheckJet(target insolar.ID, pn insolar.PulseNumber, msg *message.Message, pass bool) *CheckJet {
+	return &CheckJet{
 		target:  target,
 		pulse:   pn,
 		message: msg,
+		pass:    pass,
 	}
 }
 
-func (p *FetchJetWM) Proceed(ctx context.Context) error {
+func (p *CheckJet) Proceed(ctx context.Context) error {
 	// Special case for genesis pulse. No one was executor at that time, so anyone can fetch data from it.
 	if p.pulse <= insolar.FirstPulseNumber {
 		p.Result.Jet = *insolar.NewJetID(0, nil)
@@ -148,19 +151,28 @@ func (p *FetchJetWM) Proceed(ctx context.Context) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to fetch jet")
 	}
+
 	executor, err := p.Dep.Coordinator.LightExecutorForJet(ctx, *jetID, p.pulse)
 	if err != nil {
-		err := errors.Wrap(err, "failed to calculate executor for jet")
-		msg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
+		return errors.Wrap(err, "failed to calculate executor for jet")
+	}
+	if *executor != p.Dep.Coordinator.Me() {
+		if !p.pass {
+			return ErrNotExecutor
+		}
+
+		msg, err := payload.NewMessage(&payload.Pass{
+			Origin:        p.message.Payload,
+			CorrelationID: []byte(middleware.MessageCorrelationID(p.message)),
+		})
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		go p.Dep.Sender.Reply(ctx, p.message, msg)
-		return err
-	}
-	if *executor != p.Dep.Coordinator.Me() {
-		// p.replyTo <- bus.Reply{Reply: &reply.JetMiss{JetID: *jetID, Pulse: p.pulse}}
-		return errors.New("jet miss")
+		go func() {
+			_, done := p.Dep.Sender.SendTarget(ctx, msg, *executor)
+			done()
+		}()
+		return nil
 	}
 
 	p.Result.Jet = insolar.JetID(*jetID)

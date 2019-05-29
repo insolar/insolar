@@ -20,6 +20,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/ThreeDotsLabs/watermill"
+	wmessage "github.com/ThreeDotsLabs/watermill/message"
+	"github.com/ThreeDotsLabs/watermill/message/router/middleware"
+
 	"github.com/insolar/insolar/insolar"
 	wbus "github.com/insolar/insolar/insolar/bus"
 	"github.com/insolar/insolar/insolar/flow"
@@ -51,7 +55,7 @@ func (s *Init) Future(ctx context.Context, f flow.Flow) error {
 
 func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	logger := inslogger.FromContext(ctx)
-	err := s.present(ctx, f)
+	err := s.handle(ctx, f)
 	if err != nil && s.message.WatermillMsg != nil {
 		errMsg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
 		if err != nil {
@@ -63,21 +67,23 @@ func (s *Init) Present(ctx context.Context, f flow.Flow) error {
 	return err
 }
 
-func (s *Init) present(ctx context.Context, f flow.Flow) error {
+func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	if s.message.WatermillMsg != nil {
-		pl, err := payload.UnmarshalFromMeta(s.message.WatermillMsg.Payload)
+		payloadType, err := payload.UnmarshalTypeFromMeta(s.message.WatermillMsg.Payload)
 		if err != nil {
-			return errors.Wrap(err, "can't deserialize meta payload")
+			return errors.Wrap(err, "failed to unmarshal payload type")
 		}
-		switch p := pl.(type) {
-		case *payload.GetObject:
-			h := NewGetObject(s.dep, s.message, *p)
+		switch payloadType {
+		case payload.TypeGetObject:
+			h := NewGetObject(s.dep, s.message.WatermillMsg, false)
 			return f.Handle(ctx, h.Present)
-		case *payload.PassState:
+		case payload.TypePassState:
 			h := NewPassState(s.dep, s.message.WatermillMsg)
 			return f.Handle(ctx, h.Present)
+		case payload.TypePass:
+			return s.handlePass(ctx, f)
 		default:
-			return fmt.Errorf("no handler for message type #%T", pl)
+			return fmt.Errorf("no handler for message type %s", payloadType.String())
 		}
 	}
 
@@ -126,6 +132,31 @@ func (s *Init) present(ctx context.Context, f flow.Flow) error {
 	default:
 		return fmt.Errorf("no handler for message type %s", s.message.Parcel.Message().Type().String())
 	}
+}
+
+func (s *Init) handlePass(ctx context.Context, f flow.Flow) error {
+	pl, err := payload.UnmarshalFromMeta(s.message.WatermillMsg.Payload)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal pass payload")
+	}
+	pass, ok := pl.(*payload.Pass)
+	if !ok {
+		return errors.New("wrong pass payload")
+	}
+
+	payloadType, err := payload.UnmarshalTypeFromMeta(pass.Origin)
+	if err != nil {
+		return errors.Wrap(err, "failed to unmarshal payload type")
+	}
+
+	switch payloadType {
+	case payload.TypeGetObject:
+		origin := wmessage.NewMessage(watermill.NewUUID(), pass.Origin)
+		middleware.SetCorrelationID(string(pass.CorrelationID), origin)
+		h := NewGetObject(s.dep, s.message.WatermillMsg, true)
+		return f.Handle(ctx, h.Present)
+	}
+	return nil
 }
 
 func (s *Init) Past(ctx context.Context, f flow.Flow) error {

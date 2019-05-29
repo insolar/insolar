@@ -20,6 +20,7 @@ const (
 	TypeObjIndex  Type = 7
 	TypeObjState  Type = 8
 	TypeIndex     Type = 9
+	TypePass      Type = 10
 )
 
 // Payload represents any kind of data that can be encoded in consistent manner.
@@ -64,6 +65,9 @@ func Marshal(payload Payload) ([]byte, error) {
 	case *Index:
 		pl.Polymorph = uint32(TypeIndex)
 		return pl.Marshal()
+	case *Pass:
+		pl.Polymorph = uint32(TypePass)
+		return pl.Marshal()
 	}
 
 	return nil, errors.New("unknown payload type")
@@ -101,6 +105,10 @@ func Unmarshal(data []byte) (Payload, error) {
 		return &pl, err
 	case TypeIndex:
 		pl := Index{}
+		err := pl.Unmarshal(data)
+		return &pl, err
+	case TypePass:
+		pl := Pass{}
 		err := pl.Unmarshal(data)
 		return &pl, err
 	}

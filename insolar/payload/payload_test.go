@@ -41,6 +41,7 @@ func TestMarshalUnmarshal(t *testing.T) {
 		{tp: payload.TypeGetObject, pl: &payload.GetObject{}},
 		{tp: payload.TypePassState, pl: &payload.PassState{}},
 		{tp: payload.TypeIndex, pl: &payload.Index{}},
+		{tp: payload.TypePass, pl: &payload.Pass{}},
 	}
 
 	for _, d := range table {

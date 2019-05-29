@@ -36,10 +36,9 @@ import (
 )
 
 type SendObject struct {
-	message              *message.Message
-	payload              payload.GetObject
-	objJetID, stateJetID insolar.JetID
-	index                object.Lifeline
+	message  *message.Message
+	objectID insolar.ID
+	index    object.Lifeline
 
 	Dep struct {
 		Coordinator    jet.Coordinator
@@ -53,14 +52,12 @@ type SendObject struct {
 }
 
 func NewSendObject(
-	msg *message.Message, pl payload.GetObject, objJetID, stateJetID insolar.JetID, idx object.Lifeline,
+	msg *message.Message, id insolar.ID, idx object.Lifeline,
 ) *SendObject {
 	return &SendObject{
-		message:    msg,
-		objJetID:   objJetID,
-		stateJetID: stateJetID,
-		index:      idx,
-		payload:    pl,
+		message:  msg,
+		index:    idx,
+		objectID: id,
 	}
 }
 
@@ -111,7 +108,7 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to create reply")
 		}
-		node, err := p.Dep.Coordinator.NodeForObject(ctx, p.payload.ObjectID, flow.Pulse(ctx), stateID.Pulse())
+		node, err := p.Dep.Coordinator.NodeForObject(ctx, p.objectID, flow.Pulse(ctx), stateID.Pulse())
 		if err != nil {
 			return errors.Wrap(err, "failed to calculate role")
 		}
