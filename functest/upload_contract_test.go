@@ -65,7 +65,7 @@ func TestCallUploadedContract(t *testing.T) {
 	objectRef, err := insolar.NewReferenceFromBase58(callConstructorRes.Result.ObjectRef)
 	require.NoError(t, err)
 
-	require.NotEqual(t, insolar.Reference{}.FromSlice(emptyRef), objectRef)
+	require.NotEqual(t, insolar.Reference{}.FromSlice(make([]byte, insolar.RecordRefSize)), objectRef)
 
 	testParam := "test"
 	args := make([]string, 0)
