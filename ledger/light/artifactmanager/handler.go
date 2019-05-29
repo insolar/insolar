@@ -120,7 +120,8 @@ func NewMessageHandler(
 		SetBlob: func(p *proc.SetBlob) {
 			p.Dep.BlobAccessor = h.BlobAccessor
 			p.Dep.BlobModifier = h.BlobModifier
-			p.Dep.PlatformCryptographyScheme = h.PCS
+			p.Dep.PCS = h.PCS
+			p.Dep.WriteAccessor = h.WriteAccessor
 		},
 		SendObject: func(p *proc.SendObject) {
 			p.Dep.Jets = h.JetStorage
