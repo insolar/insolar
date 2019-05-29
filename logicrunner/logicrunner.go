@@ -121,6 +121,9 @@ func (st *ObjectState) MustModeState(mode string) (res *ExecutionState) {
 	if res == nil {
 		panic("object is not in " + mode + " mode")
 	}
+	if res.Current == nil {
+		panic("object "+ res.Ref.String() +" has no Current")
+	}
 	return res
 }
 
