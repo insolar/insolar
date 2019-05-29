@@ -42,30 +42,7 @@ func TestCallUploadedContract(t *testing.T) {
 		}`
 
 	prototypeRef := uploadContract(t, contractCode)
-
-	objectBody := getRPSResponseBody(t, postParams{
-		"jsonrpc": "2.0",
-		"method":  "contract.CallConstructor",
-		"id":      "",
-		"params": map[string]string{
-			"PrototypeRefString": prototypeRef.String(),
-		},
-	})
-	require.NotEmpty(t, objectBody)
-
-	callConstructorRes := struct {
-		Version string                   `json:"jsonrpc"`
-		ID      string                   `json:"id"`
-		Result  api.CallConstructorReply `json:"result"`
-	}{}
-
-	err := json.Unmarshal(objectBody, &callConstructorRes)
-	require.NoError(t, err)
-
-	objectRef, err := insolar.NewReferenceFromBase58(callConstructorRes.Result.ObjectRef)
-	require.NoError(t, err)
-
-	require.NotEqual(t, insolar.Reference{}.FromSlice(make([]byte, insolar.RecordRefSize)), objectRef)
+	objectRef := makeObjectFromPrototype(t, prototypeRef)
 
 	testParam := "test"
 	args := make([]string, 0)
@@ -78,7 +55,7 @@ func TestCallUploadedContract(t *testing.T) {
 		"method":  "contract.CallMethod",
 		"id":      "",
 		"params": map[string]interface{}{
-			"ObjectRefString": callConstructorRes.Result.ObjectRef,
+			"ObjectRefString": objectRef.String(),
 			"Method":          "Hello",
 			"MethodArgs":      argsSerialized,
 		},
