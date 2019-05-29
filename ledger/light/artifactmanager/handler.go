@@ -116,6 +116,7 @@ func NewMessageHandler(
 			p.Dep.RecordModifier = h.RecordModifier
 			p.Dep.PCS = h.PCS
 			p.Dep.PendingRequestsLimit = h.conf.PendingRequestsLimit
+			p.Dep.WriteAccessor = h.WriteAccessor
 		},
 		SetBlob: func(p *proc.SetBlob) {
 			p.Dep.BlobAccessor = h.BlobAccessor
