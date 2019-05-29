@@ -22,6 +22,7 @@ import (
 	"crypto"
 	"encoding/json"
 	"io/ioutil"
+	"math/big"
 	"path"
 	"strconv"
 
@@ -458,7 +459,13 @@ func (g *Generator) activateRootWallet(
 	ctx context.Context, domain *insolar.ID, walletContractProto insolar.Reference,
 ) error {
 
-	w, err := wallet.New(g.config.RootBalance)
+	b := new(big.Int)
+	b, ok := b.SetString(g.config.RootBalance, 10)
+	if !ok {
+		return errors.Errorf("[ ActivateRootWallet ] Failed to parse RootBalance")
+	}
+
+	w, err := wallet.New(*b)
 	if err != nil {
 		return errors.Wrap(err, "[ ActivateRootWallet ]")
 	}
@@ -504,7 +511,13 @@ func (g *Generator) activateMDWallet(
 	ctx context.Context, domain *insolar.ID, walletContractProto insolar.Reference,
 ) error {
 
-	w, err := wallet.New(g.config.MDBalance)
+	b := new(big.Int)
+	b, ok := b.SetString(g.config.MDBalance, 10)
+	if !ok {
+		return errors.Errorf("[ activateMDWallet ] Failed to parse MDBalance")
+	}
+
+	w, err := wallet.New(*b)
 	if err != nil {
 		return errors.Wrap(err, "[ activateMDWallet ]")
 	}

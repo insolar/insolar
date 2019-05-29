@@ -45,8 +45,8 @@ type Config struct {
 	DiscoveryKeysDir string   `mapstructure:"discovery_keys_dir"`
 	KeysNameFormat   string   `mapstructure:"keys_name_format"`
 	ReuseKeys        bool     `mapstructure:"reuse_keys"`
-	RootBalance      uint     `mapstructure:"root_balance"`
-	MDBalance        uint     `mapstructure:"md_balance"`
+	RootBalance      string   `mapstructure:"root_balance"`
+	MDBalance        string   `mapstructure:"md_balance"`
 	MajorityRule     int      `mapstructure:"majority_rule"`
 	MinRoles         struct {
 		Virtual       uint `mapstructure:"virtual"`
