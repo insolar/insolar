@@ -68,7 +68,7 @@ func (p *ProcessExecutionQueue) Present(ctx context.Context, f flow.Flow) error 
 		if msg, ok := qe.parcel.Message().(*message.CallMethod); ok {
 			current.Request = &msg.Request
 		} else {
-			inslogger.FromContext(ctx).Error("Not a call method message, should never happen")
+			panic("Not a call method message, should never happen")
 		}
 		es.Current = &current
 
