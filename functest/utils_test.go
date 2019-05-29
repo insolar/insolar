@@ -23,6 +23,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"github.com/insolar/insolar/api"
+	"github.com/insolar/insolar/insolar"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -264,4 +266,31 @@ func newUserWithKeys() (*user, error) {
 		privKey: string(privKeyStr),
 		pubKey:  string(pubKeyStr),
 	}, nil
+}
+
+func uploadContract(t *testing.T, contractCode string) *insolar.Reference {
+	uploadBody := getRPSResponseBody(t, postParams{
+		"jsonrpc": "2.0",
+		"method":  "contract.Upload",
+		"id":      "",
+		"params": map[string]string{
+			"name": "test",
+			"code": contractCode,
+		},
+	})
+	require.NotEmpty(t, uploadBody)
+
+	uploadRes := struct {
+		Version string          `json:"jsonrpc"`
+		ID      string          `json:"id"`
+		Result  api.UploadReply `json:"result"`
+	}{}
+
+	err := json.Unmarshal(uploadBody, &uploadRes)
+	require.NoError(t, err)
+
+	contractRef, err := insolar.NewReferenceFromBase58(uploadRes.Result.PrototypeRef)
+	require.NoError(t, err)
+
+	return contractRef
 }
