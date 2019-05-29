@@ -27,6 +27,8 @@ import (
 	fuzz "github.com/google/gofuzz"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"github.com/insolar/insolar/instrumentation/inslogger"
 )
 
 type testBadgerKey struct {
@@ -45,11 +47,14 @@ func (k testBadgerKey) ID() []byte {
 func TestBadgerDB_Get(t *testing.T) {
 	t.Parallel()
 
+	ctx := inslogger.TestContext(t)
+
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
 	db, err := NewBadgerDB(tmpdir)
+	defer db.Stop(ctx)
 	require.NoError(t, err)
 
 	var (
@@ -71,11 +76,14 @@ func TestBadgerDB_Get(t *testing.T) {
 func TestBadgerDB_Set(t *testing.T) {
 	t.Parallel()
 
+	ctx := inslogger.TestContext(t)
+
 	tmpdir, err := ioutil.TempDir("", "bdb-test-")
 	defer os.RemoveAll(tmpdir)
 	assert.NoError(t, err)
 
 	db, err := NewBadgerDB(tmpdir)
+	defer db.Stop(ctx)
 	require.NoError(t, err)
 
 	var (
