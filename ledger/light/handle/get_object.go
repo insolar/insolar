@@ -18,6 +18,7 @@ package handle
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/ThreeDotsLabs/watermill/message"
 	"github.com/insolar/insolar/insolar/payload"
@@ -50,7 +51,7 @@ func (s *GetObject) Present(ctx context.Context, f flow.Flow) error {
 	}
 	msg, ok := pl.(*payload.GetObject)
 	if !ok {
-		return errors.New("unexpected payload type")
+		return fmt.Errorf("unexpected payload type: %T", pl)
 	}
 
 	ctx, _ = inslogger.WithField(ctx, "object", msg.ObjectID.DebugString())

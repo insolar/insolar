@@ -155,7 +155,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow) error {
 	case payload.TypeGetObject:
 		origin := wmessage.NewMessage(watermill.NewUUID(), pass.Origin)
 		middleware.SetCorrelationID(string(pass.CorrelationID), origin)
-		h := NewGetObject(s.dep, s.message.WatermillMsg, true)
+		h := NewGetObject(s.dep, origin, true)
 		return f.Handle(ctx, h.Present)
 	}
 	return nil
