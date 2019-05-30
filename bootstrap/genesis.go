@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package genesis
+package bootstrap
 
 import (
 	"context"
@@ -179,7 +179,7 @@ func (g *Generator) makeCertificates(ctx context.Context, discoveryNodes []nodeI
 		}
 
 		certFile := path.Join(g.keyOut, node.CertName)
-		err = ioutil.WriteFile(certFile, cert, 0644)
+		err = ioutil.WriteFile(certFile, cert, 0600)
 		if err != nil {
 			return errors.Wrapf(err, "[ makeCertificates ] filed create ceritificate: %v", certFile)
 		}

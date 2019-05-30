@@ -14,7 +14,7 @@
 // limitations under the License.
 //
 
-package genesis
+package bootstrap
 
 import (
 	"github.com/pkg/errors"

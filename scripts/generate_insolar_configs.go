@@ -27,7 +27,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/insolar/insolar/bootstrap/genesis"
+	"github.com/insolar/insolar/bootstrap"
 	pulsewatcher "github.com/insolar/insolar/cmd/pulsewatcher/config"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar/defaults"
@@ -119,7 +119,7 @@ func main() {
 	writeBootstrapInsolardConfig()
 	writeGenesisConfig()
 
-	genesisConf, err := genesis.ParseGenesisConfig(genesisFileName)
+	genesisConf, err := bootstrap.ParseGenesisConfig(genesisFileName)
 	check("Can't read genesis config", err)
 
 	pwConfig := pulsewatcher.Config{}

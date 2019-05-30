@@ -14,15 +14,12 @@
 // limitations under the License.
 //
 
-package genesis
+package bootstrap
 
 import (
 	"context"
 
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/log"
 )
 
 type Initializer struct {
@@ -49,22 +46,6 @@ func (s *Initializer) Run(ctx context.Context) {
 	)
 	err = genesisGenerator.Run(ctx)
 	checkError(ctx, err, "failed to generate genesis")
-}
-
-func initLogger(ctx context.Context, cfg configuration.Log) (context.Context, insolar.Logger) {
-	inslog, err := log.NewLog(cfg)
-
-	if err != nil {
-		panic(err)
-	}
-
-	inslog, err = inslog.WithLevel(cfg.Level)
-	if err != nil {
-		panic(err.Error())
-	}
-
-	ctx = inslogger.SetLogger(ctx, inslog)
-	return ctx, inslog
 }
 
 func checkError(ctx context.Context, err error, message string) {

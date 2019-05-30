@@ -22,16 +22,15 @@ import (
 	"io/ioutil"
 	"path/filepath"
 
-	"github.com/pkg/errors"
-	"github.com/spf13/cobra"
-	jww "github.com/spf13/jwalterweatherman"
-
-	"github.com/insolar/insolar/bootstrap/genesis"
+	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/server"
+	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
+	jww "github.com/spf13/jwalterweatherman"
 )
 
 type inputParams struct {
@@ -69,7 +68,7 @@ func main() {
 
 	if params.isGenesis {
 		// move it to insolar command, when built-in would be ready
-		genesis.NewInitializer(
+		bootstrap.NewInitializer(
 			params.configPath,
 			params.genesisConfigPath,
 			params.genesisKeyOut,
