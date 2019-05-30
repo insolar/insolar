@@ -19,7 +19,7 @@ package jet
 import (
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestJetStorage_bitsToString(t *testing.T) {

@@ -302,6 +302,25 @@ func (nlc *NodeLeaveClaim) Deserialize(data io.Reader) error {
 	return nil
 }
 
+// Serialize implements interface method
+func (cnc *ChangeNetworkClaim) Serialize() ([]byte, error) {
+	var result bytes.Buffer
+	err := binary.Write(&result, defaultByteOrder, []byte(cnc.Address))
+	if err != nil {
+		return nil, errors.Wrap(err, "[ ChangeNetworkClaim.Serialize ] failed to write ETA to buffer")
+	}
+	return result.Bytes(), nil
+}
+
+// Deserialize implements interface method
+func (cnc *ChangeNetworkClaim) Deserialize(data io.Reader) error {
+	err := binary.Read(data, defaultByteOrder, &cnc.Address)
+	if err != nil {
+		return errors.Wrap(err, "[ ChangeNetworkClaim.Deserialize ] failed to read a ETA")
+	}
+	return nil
+}
+
 func serializeClaims(claims []ReferendumClaim) ([]byte, error) {
 	result := allocateBuffer(packetMaxSize)
 	for _, claim := range claims {
@@ -353,6 +372,8 @@ func parseReferendumClaim(data []byte) ([]ReferendumClaim, error) {
 			refClaim = &NodeLeaveClaim{}
 		case TypeNodeAnnounceClaim:
 			refClaim = &NodeAnnounceClaim{}
+		case TypeChangeNetworkClaim:
+			refClaim = &ChangeNetworkClaim{}
 		default:
 			return nil, errors.Wrap(err, "[ PacketHeader.parseReferendumClaim ] Unsupported claim type.")
 		}

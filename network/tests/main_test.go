@@ -74,10 +74,6 @@ var (
 	consensusMinMsg = fmt.Sprintf("skip test for bootstrap nodes < %d", consensusMin)
 )
 
-func TestServiceNetworkOneBootstrap(t *testing.T) {
-	s := newConsensusSuite(1, 0)
-	suite.Run(t, s)
-}
 
 func TestServiceNetworkManyBootstraps(t *testing.T) {
 	s := newConsensusSuite(16, 0)

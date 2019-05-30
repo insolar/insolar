@@ -51,6 +51,7 @@
 package packets
 
 import (
+	"bytes"
 	"crypto"
 
 	"github.com/insolar/insolar/insolar"
@@ -63,12 +64,27 @@ import (
 type ClaimType uint8
 
 const (
-	TypeNodeJoinClaim     = ClaimType(1)
-	TypeNodeAnnounceClaim = ClaimType(2)
-	TypeNodeLeaveClaim    = ClaimType(3)
+	TypeNodeJoinClaim      = ClaimType(1)
+	TypeNodeAnnounceClaim  = ClaimType(2)
+	TypeNodeLeaveClaim     = ClaimType(3)
+	TypeChangeNetworkClaim = ClaimType(4)
 )
 
 const claimHeaderSize = 2
+
+// ChangeNetworkClaim uses to change network state.
+type ChangeNetworkClaim struct {
+	Address string
+}
+
+func (cnc *ChangeNetworkClaim) Type() ClaimType {
+	return TypeChangeNetworkClaim
+}
+
+func (cnc *ChangeNetworkClaim) Clone() ReferendumClaim {
+	result := *cnc
+	return &result
+}
 
 type ReferendumClaim interface {
 	Serializer
@@ -206,4 +222,36 @@ func NodeToClaim(node insolar.NetworkNode) (*NodeJoinClaim, error) {
 		NodeAddress:             address,
 		Signature:               s,
 	}, nil
+}
+
+func (njc *NodeJoinClaim) Marshal() ([]byte, error) {
+	return njc.Serialize()
+}
+
+func (njc *NodeJoinClaim) MarshalTo(data []byte) (int, error) {
+	tmp, err := njc.Serialize()
+	if err != nil {
+		return 0, errors.New("Error serializing NodeJoinClaim")
+	}
+	copy(data, tmp)
+	return len(tmp), nil
+}
+
+func (njc *NodeJoinClaim) Unmarshal(data []byte) error {
+	if len(data) != njc.Size() {
+		return errors.New("Not enough bytes to unpack NodeJoinClaim")
+	}
+	return njc.Deserialize(bytes.NewReader(data))
+}
+
+func (njc *NodeJoinClaim) Size() int {
+	return int(claimSizeMap[TypeNodeJoinClaim])
+}
+
+func (njc *NodeJoinClaim) Compare(other NodeJoinClaim) int {
+	return njc.NodeRef.Compare(other.NodeRef)
+}
+
+func (njc *NodeJoinClaim) Equal(other NodeJoinClaim) bool {
+	return njc.Compare(other) == 0
 }

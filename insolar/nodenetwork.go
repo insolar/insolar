@@ -20,6 +20,10 @@ import (
 	"crypto"
 )
 
+const (
+	ShortNodeIDSize = 4
+)
+
 // ShortNodeID is the shortened ID of node that is unique inside the globe
 type ShortNodeID uint32
 

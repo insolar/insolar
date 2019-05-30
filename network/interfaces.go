@@ -58,6 +58,7 @@ import (
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/network/consensus/packets"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/node"
 )
@@ -92,8 +93,8 @@ type Controller interface {
 	AuthenticateToDiscoveryNode(ctx context.Context, discovery insolar.DiscoveryNode) error
 }
 
-// RequestHandler handler function to process incoming requests from network.
-type RequestHandler func(context.Context, Request) (Response, error)
+// RequestHandler handler function to process incoming requests from network and return responses to these requests.
+type RequestHandler func(ctx context.Context, request Packet) (response Packet, err error)
 
 //go:generate minimock -i github.com/insolar/insolar/network.HostNetwork -o ../testutils/network -s _mock.go
 
@@ -107,16 +108,14 @@ type HostNetwork interface {
 	PublicAddress() string
 
 	// SendRequest send request to a remote node addressed by reference.
-	SendRequest(ctx context.Context, request Request, receiver insolar.Reference) (Future, error)
+	SendRequest(ctx context.Context, t types.PacketType, requestData interface{}, receiver insolar.Reference) (Future, error)
 	// SendRequestToHost send request packet to a remote host.
-	SendRequestToHost(ctx context.Context, request Request, receiver *host.Host) (Future, error)
+	SendRequestToHost(ctx context.Context, t types.PacketType, requestData interface{}, receiver *host.Host) (Future, error)
 	// RegisterRequestHandler register a handler function to process incoming requests of a specific type.
 	// All RegisterRequestHandler calls should be executed before Start.
 	RegisterRequestHandler(t types.PacketType, handler RequestHandler)
-	// NewRequestBuilder create packet builder for an outgoing request with sender set to current node.
-	NewRequestBuilder() RequestBuilder
 	// BuildResponse create response to an incoming request with Data set to responseData.
-	BuildResponse(ctx context.Context, request Request, responseData interface{}) Response
+	BuildResponse(ctx context.Context, request Packet, responseData interface{}) Packet
 }
 
 // ConsensusPacketHandler callback function for consensus packets handling
@@ -139,36 +138,22 @@ type ConsensusNetwork interface {
 	RegisterPacketHandler(t packets.PacketType, handler ConsensusPacketHandler)
 }
 
-// RequestID is 64 bit unsigned int request id.
-type RequestID uint64
-
 // Packet is a packet that is transported via network by HostNetwork.
 type Packet interface {
 	GetSender() insolar.Reference
 	GetSenderHost() *host.Host
 	GetType() types.PacketType
-	GetData() interface{}
-	GetRequestID() RequestID
+	GetRequest() *packet.Request
+	GetResponse() *packet.Response
+	GetRequestID() types.RequestID
+	String() string
 }
-
-// Request is a packet that is sent from the current node.
-type Request Packet
-
-// Response is a packet that is received in response to a previously sent Request.
-type Response Packet
 
 // Future allows to handle responses to a previously sent request.
 type Future interface {
-	Request() Request
-	Response() <-chan Response
-	WaitResponse(duration time.Duration) (Response, error)
-}
-
-// RequestBuilder allows to build a Request.
-type RequestBuilder interface {
-	Type(packetType types.PacketType) RequestBuilder
-	Data(data interface{}) RequestBuilder
-	Build() Request
+	Request() Packet
+	Response() <-chan Packet
+	WaitResponse(duration time.Duration) (Packet, error)
 }
 
 //go:generate minimock -i github.com/insolar/insolar/network.PulseHandler -o ../testutils/network -s _mock.go
@@ -268,6 +253,8 @@ type ClaimQueue interface {
 	Clear()
 }
 
+//go:generate minimock -i github.com/insolar/insolar/network.Accessor -o ../testutils/network -s _mock.go
+
 // Accessor is interface that provides read access to nodekeeper internal snapshot
 type Accessor interface {
 	// GetWorkingNode get working node by its reference. Returns nil if node is not found or is not working.
@@ -315,4 +302,7 @@ type Auther interface {
 	// ValidateCert checks certificate signature
 	// TODO make this cert.validate()
 	ValidateCert(context.Context, insolar.AuthorizationCertificate) (bool, error)
+
+	// FilterJoinerNodes returns nodes which allowed to connect to this network in this state.
+	FilterJoinerNodes(certificate insolar.Certificate, nodes []insolar.NetworkNode) []insolar.NetworkNode
 }
