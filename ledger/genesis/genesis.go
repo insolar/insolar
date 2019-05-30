@@ -25,10 +25,10 @@ import (
 
 	"github.com/insolar/insolar/bootstrap"
 	"github.com/insolar/insolar/bootstrap/contracts"
-	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
+	"github.com/insolar/insolar/insolar/rootdomain"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/internal/ledger/artifact"
 	"github.com/insolar/insolar/internal/ledger/store"

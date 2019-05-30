@@ -19,8 +19,8 @@ package bootstrap
 import (
 	"testing"
 
-	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/rootdomain"
 	"github.com/stretchr/testify/require"
 )
 

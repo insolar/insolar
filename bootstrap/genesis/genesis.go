@@ -26,9 +26,9 @@ import (
 	"strconv"
 
 	"github.com/insolar/insolar/bootstrap"
-	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/certificate"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/rootdomain"
 	"github.com/insolar/insolar/insolar/secrets"
 	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/platformpolicy"

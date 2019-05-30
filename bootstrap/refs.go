@@ -17,8 +17,8 @@
 package bootstrap
 
 import (
-	"github.com/insolar/insolar/bootstrap/rootdomain"
 	"github.com/insolar/insolar/insolar"
+	"github.com/insolar/insolar/insolar/rootdomain"
 )
 
 var (
