@@ -982,7 +982,6 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	}
 
 	for _, test := range table {
-		test := test
 		suite.T().Run(test.name, func(t *testing.T) {
 			atomic.StoreInt32(&pn, 100)
 
