@@ -73,11 +73,11 @@ func New(name string, key string) (*Member, error) {
 
 // TODO: check if need to store public key when call node registry
 // TODO: some keys are in PEM format
-func (m *Member) verifySignatureAndComparePublic(signedRequest []byte) ([]byte, error) {
+func (m *Member) verifySignatureAndComparePublic(signedRequest []byte) (*SignedPayload, *jose.JSONWebKey, error) {
 	var jwks string
 	var jwss string
 
-	// cbored data
+	// decode jwk and jws data
 	err := signer.UnmarshalParams(signedRequest, &jwks, &jwss)
 
 	jwk := jose.JSONWebKey{}
@@ -86,7 +86,7 @@ func (m *Member) verifySignatureAndComparePublic(signedRequest []byte) ([]byte, 
 	jws, err := jose.ParseSigned(jwss)
 
 	if err != nil {
-		return nil, fmt.Errorf("[ Call ] Can't unmarshal params: %s", err.Error())
+		return nil, nil, fmt.Errorf("[ Call ] Can't unmarshal params: %s", err.Error())
 	}
 
 	//// public in pem format
@@ -107,47 +107,47 @@ func (m *Member) verifySignatureAndComparePublic(signedRequest []byte) ([]byte, 
 
 	payload, err := jws.Verify(jwk)
 	if err != nil {
-		return nil, fmt.Errorf("[ verifySig ] Incorrect signature")
+		return nil, nil, fmt.Errorf("[ verifySig ] Incorrect signature")
 	}
-	return payload, nil
+	// Unmarshal payload
+	var payloadRequest = SignedPayload{}
+	err = json.Unmarshal(payload, &payloadRequest)
+	if err != nil {
+		return nil, nil,  fmt.Errorf("[ Call ]: %s", err.Error())
+	}
+
+	return &payloadRequest, &jwk, nil
 }
 
 // Call method for authorized calls
 func (m *Member) Call(rootDomain insolar.Reference, signedRequest []byte) (interface{}, error) {
 
 	// Verify signature
-	payload, err := m.verifySignatureAndComparePublic(signedRequest)
+	payload, public, err := m.verifySignatureAndComparePublic(signedRequest)
 	if err != nil {
 		return nil, fmt.Errorf("[ Call ]: %s", err.Error())
 	}
 
-	// Unmarshal payload
-	var payloadRequest = SignedPayload{}
-	err = json.Unmarshal(payload, &payloadRequest)
-	if err != nil {
-		return nil, fmt.Errorf("[ Call ]: %s", err.Error())
-	}
-
-	switch payloadRequest.Method {
+	switch payload.Method {
 	case "CreateMember":
-		return m.createMemberCall(rootDomain, []byte(payloadRequest.Params), jwk)
+		return m.createMemberCall(rootDomain, []byte(payload.Params), *public)
 	}
 
-	switch payloadRequest.Method {
+	switch payload.Method {
 	case "GetMyBalance":
 		return m.getMyBalanceCall()
 	case "GetBalance":
-		return m.getBalanceCall([]byte(payloadRequest.Params))
+		return m.getBalanceCall(payload.Params)
 	case "Transfer":
-		return m.transferCall([]byte(payloadRequest.Params))
+		return m.transferCall(payload.Params)
 	case "DumpUserInfo":
-		return m.dumpUserInfoCall(rootDomain, []byte(payloadRequest.Params))
+		return m.dumpUserInfoCall(rootDomain, payload.Params)
 	case "DumpAllUsers":
 		return m.dumpAllUsersCall(rootDomain)
 	case "RegisterNode":
-		return m.registerNodeCall(rootDomain, []byte(payloadRequest.Params))
+		return m.registerNodeCall(rootDomain, payload.Params)
 	case "GetNodeRef":
-		return m.getNodeRefCall(rootDomain, []byte(payloadRequest.Params))
+		return m.getNodeRefCall(rootDomain, payload.Params)
 	}
 	return nil, &foundation.Error{S: "Unknown method"}
 }
