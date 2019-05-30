@@ -1002,10 +1002,9 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				lck.Lock()
 				defer lck.Unlock()
 				pn += 1
-				pnCopy := pn
 
-				pulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(pnCopy)}
-				ctx := inslogger.ContextWithTrace(suite.ctx, "pulse-"+strconv.Itoa(pnCopy))
+				pulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(pn)}
+				ctx := inslogger.ContextWithTrace(suite.ctx, "pulse-"+strconv.Itoa(pn))
 				err := suite.lr.OnPulse(ctx, pulse)
 				suite.Require().NoError(err)
 				return
