@@ -47,12 +47,12 @@ func NewDiscoveryNodeManager(
 
 // StoreDiscoveryNodes saves discovery nodes objects and saves discovery nodes index in node domain index.
 // If node domain index not empty this method does nothing.
-func (g *DiscoveryNodeManager) StoreDiscoveryNodes(ctx context.Context, discoveryNodes []insolar.DiscoveryNodeRegister) error {
+func (nm *DiscoveryNodeManager) StoreDiscoveryNodes(ctx context.Context, discoveryNodes []insolar.DiscoveryNodeRegister) error {
 	if len(discoveryNodes) == 0 {
 		return nil
 	}
 
-	nodeDomainDesc, err := g.artifactManager.GetObject(ctx, bootstrap.ContractNodeDomain)
+	nodeDomainDesc, err := nm.artifactManager.GetObject(ctx, bootstrap.ContractNodeDomain)
 	if err != nil {
 		return errors.Wrap(err, "failed to get node domain contract")
 	}
@@ -73,7 +73,7 @@ func (g *DiscoveryNodeManager) StoreDiscoveryNodes(ctx context.Context, discover
 			key:  platformpolicy.MustNormalizePublicKey([]byte(n.PublicKey)),
 		})
 	}
-	return g.updateDiscoveryData(ctx, nodesInfo)
+	return nm.updateDiscoveryData(ctx, nodesInfo)
 }
 
 // nodeInfo carries data for node objects required by DiscoveryNodeManager methods.
@@ -82,21 +82,21 @@ type nodeInfo struct {
 	key  string
 }
 
-func (g *DiscoveryNodeManager) updateDiscoveryData(
+func (nm *DiscoveryNodeManager) updateDiscoveryData(
 	ctx context.Context,
 	nodes []nodeInfo,
 ) error {
-	indexMap, err := g.addDiscoveryNodes(ctx, nodes)
+	indexMap, err := nm.addDiscoveryNodes(ctx, nodes)
 	if err != nil {
 		return errors.Wrap(err, "failed to add discovery nodes")
 	}
 
-	err = g.updateNodeDomainIndex(ctx, indexMap)
+	err = nm.updateNodeDomainIndex(ctx, indexMap)
 	return errors.Wrap(err, "failed to update node domain index")
 }
 
 // addDiscoveryNodes adds discovery nodeInfo's objects on ledger, returns index to store on nodeInfo domain.
-func (g *DiscoveryNodeManager) addDiscoveryNodes(
+func (nm *DiscoveryNodeManager) addDiscoveryNodes(
 	ctx context.Context,
 	nodes []nodeInfo,
 ) (map[string]string, error) {
@@ -109,7 +109,7 @@ func (g *DiscoveryNodeManager) addDiscoveryNodes(
 			},
 		}
 
-		contract, err := g.activateNodeRecord(ctx, nodeState)
+		contract, err := nm.activateNodeRecord(ctx, nodeState)
 		if err != nil {
 			return nil, errors.Wrap(err, "[ activateDiscoveryNodes ] Couldn't activateNodeRecord nodeInfo instance")
 		}
@@ -119,7 +119,7 @@ func (g *DiscoveryNodeManager) addDiscoveryNodes(
 	return indexMap, nil
 }
 
-func (g *DiscoveryNodeManager) activateNodeRecord(
+func (nm *DiscoveryNodeManager) activateNodeRecord(
 	ctx context.Context,
 	node *noderecord.NodeRecord,
 ) (*insolar.Reference, error) {
@@ -128,7 +128,7 @@ func (g *DiscoveryNodeManager) activateNodeRecord(
 		return nil, errors.Wrap(err, "failed to serialize node record data")
 	}
 
-	nodeID, err := g.artifactManager.RegisterRequest(
+	nodeID, err := nm.artifactManager.RegisterRequest(
 		ctx,
 		record.Request{
 			CallType: record.CTGenesis,
@@ -140,7 +140,7 @@ func (g *DiscoveryNodeManager) activateNodeRecord(
 	}
 
 	contract := insolar.NewReference(*bootstrap.ContractRootDomain.Record(), *nodeID)
-	_, err = g.artifactManager.ActivateObject(
+	_, err = nm.artifactManager.ActivateObject(
 		ctx,
 		insolar.Reference{},
 		*contract,
@@ -153,18 +153,18 @@ func (g *DiscoveryNodeManager) activateNodeRecord(
 		return nil, errors.Wrap(err, "failed to activate object of node record")
 	}
 
-	_, err = g.artifactManager.RegisterResult(ctx, bootstrap.ContractRootDomain, *contract, nil)
+	_, err = nm.artifactManager.RegisterResult(ctx, bootstrap.ContractRootDomain, *contract, nil)
 	if err != nil {
 		return nil, errors.Wrap(err, "couldn't register result for new node object")
 	}
 	return contract, nil
 }
 
-func (g *DiscoveryNodeManager) updateNodeDomainIndex(
+func (nm *DiscoveryNodeManager) updateNodeDomainIndex(
 	ctx context.Context,
 	indexMap map[string]string,
 ) error {
-	nodeDomainDesc, err := g.artifactManager.GetObject(ctx, bootstrap.ContractNodeDomain)
+	nodeDomainDesc, err := nm.artifactManager.GetObject(ctx, bootstrap.ContractNodeDomain)
 	if err != nil {
 		return err
 	}
@@ -178,7 +178,7 @@ func (g *DiscoveryNodeManager) updateNodeDomainIndex(
 		return errors.Wrap(err, "failed to serialize index for node domain")
 	}
 
-	_, err = g.artifactManager.UpdateObject(
+	_, err = nm.artifactManager.UpdateObject(
 		ctx,
 		bootstrap.ContractRootDomain,
 		bootstrap.ContractNodeDomain,

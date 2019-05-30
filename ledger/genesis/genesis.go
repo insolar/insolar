@@ -60,12 +60,12 @@ func (Key) Scope() store.Scope {
 
 // CreateIfNeeded creates new base genesis record if needed.
 // Returns reference of genesis record and flag if base record have been created.
-func (gi *BaseRecord) CreateIfNeeded(ctx context.Context) (bool, error) {
+func (br *BaseRecord) CreateIfNeeded(ctx context.Context) (bool, error) {
 	inslog := inslogger.FromContext(ctx)
 	inslog.Info("start storage bootstrap")
 
 	getGenesisRef := func() (*insolar.Reference, error) {
-		buff, err := gi.DB.Get(Key{})
+		buff, err := br.DB.Get(Key{})
 		if err != nil {
 			return nil, err
 		}
@@ -75,7 +75,7 @@ func (gi *BaseRecord) CreateIfNeeded(ctx context.Context) (bool, error) {
 	}
 
 	createGenesisRecord := func() error {
-		err := gi.PulseAppender.Append(
+		err := br.PulseAppender.Append(
 			ctx,
 			insolar.Pulse{
 				PulseNumber: insolar.GenesisPulse.PulseNumber,
@@ -86,12 +86,12 @@ func (gi *BaseRecord) CreateIfNeeded(ctx context.Context) (bool, error) {
 			return errors.Wrap(err, "fail to set genesis pulse")
 		}
 		// Add initial drop
-		err = gi.DropModifier.Set(ctx, drop.Drop{JetID: insolar.ZeroJetID})
+		err = br.DropModifier.Set(ctx, drop.Drop{JetID: insolar.ZeroJetID})
 		if err != nil {
 			return errors.Wrap(err, "fail to set initial drop")
 		}
 
-		lastPulse, err := gi.PulseAccessor.Latest(ctx)
+		lastPulse, err := br.PulseAccessor.Latest(ctx)
 		if err != nil {
 			return errors.Wrap(err, "fail to get last pulse")
 		}
@@ -110,12 +110,12 @@ func (gi *BaseRecord) CreateIfNeeded(ctx context.Context) (bool, error) {
 			Virtual: &virtRec,
 			JetID:   insolar.ZeroJetID,
 		}
-		err = gi.RecordModifier.Set(ctx, genesisID, rec)
+		err = br.RecordModifier.Set(ctx, genesisID, rec)
 		if err != nil {
 			return errors.Wrap(err, "can't save genesis record into storage")
 		}
 
-		err = gi.IndexLifelineModifier.Set(
+		err = br.IndexLifelineModifier.Set(
 			ctx,
 			insolar.FirstPulseNumber,
 			genesisID,
@@ -129,7 +129,7 @@ func (gi *BaseRecord) CreateIfNeeded(ctx context.Context) (bool, error) {
 			return errors.Wrap(err, "fail to set genesis index")
 		}
 
-		return gi.DB.Set(Key{}, insolar.GenesisRecord.Ref().Bytes())
+		return br.DB.Set(Key{}, insolar.GenesisRecord.Ref().Bytes())
 	}
 
 	_, err := getGenesisRef()
