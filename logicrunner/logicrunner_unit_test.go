@@ -21,7 +21,6 @@ import (
 	"fmt"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -929,9 +928,18 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	notMeRef := testutils.RandomRef()
 	suite.jc.MeMock.Return(meRef)
 
-	var pn int32 = 100
+	// If you think you are smart enough to make this test 'more effective'
+	// by using atomic variables or goroutines or anything else, you are wrong.
+	// Last time we spent two full workdays trying to find a race condition
+	// in our code before we realized this test has a logic error related
+	// to it concurrent nature. Keep the code as simple as possible. Don't be smart.
+	pn := 100
+	var lck sync.Mutex
+
 	suite.ps.LatestFunc = func(ctx context.Context) (insolar.Pulse, error) {
-		return insolar.Pulse{PulseNumber: insolar.PulseNumber(atomic.LoadInt32(&pn))}, nil
+		lck.Lock()
+		defer lck.Unlock()
+		return insolar.Pulse{PulseNumber: insolar.PulseNumber(pn)}, nil
 	}
 
 	mle := testutils.NewMachineLogicExecutorMock(suite.mc)
@@ -951,17 +959,19 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 		when                      whenType
 		messagesExpected          []insolar.MessageType
 		errorExpected             bool
+		flowCanceledExpected      bool
 		pendingInExecutorResults  message.PendingState
 		queueLenInExecutorResults int
 	}{
 		{
-			name:          "pulse change in IsAuthorized",
-			when:          whenIsAuthorized,
-			errorExpected: true,
+			name:                 "pulse change in IsAuthorized",
+			when:                 whenIsAuthorized,
+			flowCanceledExpected: true,
 		},
 		{
-			name: "pulse change in RegisterRequest",
-			when: whenRegisterRequest,
+			name:                 "pulse change in RegisterRequest",
+			when:                 whenRegisterRequest,
+			flowCanceledExpected: true,
 		},
 		{
 			name:                      "pulse change in HasPendingRequests",
@@ -984,31 +994,19 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 	for _, test := range table {
 		test := test
 		suite.T().Run(test.name, func(t *testing.T) {
-			atomic.StoreInt32(&pn, 100)
+			lck.Lock()
+			pn = 100
+			lck.Unlock()
 
-			once := sync.Once{}
+			changePulse := func() {
+				lck.Lock()
+				defer lck.Unlock()
+				pn += 1
 
-			wg := sync.WaitGroup{}
-			wg.Add(1)
-
-			changePulse := func() (ch chan struct{}) {
-				once.Do(func() {
-					ch = make(chan struct{})
-
-					atomic.AddInt32(&pn, 1)
-
-					go func() {
-						defer wg.Done()
-						defer close(ch)
-
-						pulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(atomic.LoadInt32(&pn))}
-
-						ctx := inslogger.ContextWithTrace(suite.ctx, "pulse-"+strconv.Itoa(int(atomic.LoadInt32(&pn))))
-
-						err := suite.lr.OnPulse(ctx, pulse)
-						suite.Require().NoError(err)
-					}()
-				})
+				pulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(pn)}
+				ctx := inslogger.ContextWithTrace(suite.ctx, "pulse-"+strconv.Itoa(pn))
+				err := suite.lr.OnPulse(ctx, pulse)
+				suite.Require().NoError(err)
 				return
 			}
 
@@ -1020,16 +1018,26 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				}
 
 				if test.when == whenIsAuthorized {
-					<-changePulse()
+					// Please note that changePulse calls lr.ChangePulse which calls IsAuthorized.
+					// In other words this procedure is not called sequentially!
+					changePulse()
 				}
 
-				return atomic.LoadInt32(&pn) == 100, nil
+				lck.Lock()
+				defer lck.Unlock()
+
+				return pn == 100, nil
 			}
 
 			if test.when > whenIsAuthorized {
 				suite.am.RegisterRequestFunc = func(ctx context.Context, req record.Request) (*insolar.ID, error) {
 					if test.when == whenRegisterRequest {
-						<-changePulse()
+						changePulse()
+						// Due to specific implementation of HandleCall.executeActual
+						// for this particular test we have to explicitly return
+						// ErrCancelled. Otherwise it's possible that RegisterRequest
+						// Procedure will return normally before Flow cancels it.
+						return nil, flow.ErrCancelled
 					}
 
 					reqId := testutils.RandomID()
@@ -1040,7 +1048,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			if test.when > whenRegisterRequest {
 				suite.am.HasPendingRequestsFunc = func(ctx context.Context, r insolar.Reference) (bool, error) {
 					if test.when == whenHasPendingRequest {
-						<-changePulse()
+						changePulse()
 					}
 
 					return false, nil
@@ -1053,7 +1061,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 					mem []byte, method string, args insolar.Arguments,
 				) ([]byte, insolar.Arguments, error) {
 					if test.when == whenCallMethod {
-						<-changePulse()
+						changePulse()
 					}
 
 					return []byte{1, 2, 3}, []byte{}, nil
@@ -1099,6 +1107,7 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				}
 			}
 
+			wg := sync.WaitGroup{}
 			wg.Add(len(test.messagesExpected))
 
 			if len(test.messagesExpected) > 0 {
@@ -1142,13 +1151,16 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			parcel.GetSenderMock.Return(notMeRef)
 
 			ctx := inslogger.ContextWithTrace(suite.ctx, "req")
-
 			pulse := pulsar.NewPulse(1, parcel.Pulse(), &entropygenerator.StandardEntropyGenerator{})
 			err := suite.lr.OnPulse(ctx, *pulse)
 			suite.Require().NoError(err)
 
 			_, err = suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
-			if test.errorExpected {
+
+			if test.flowCanceledExpected {
+				suite.Require().Error(err)
+				suite.Require().Equal(flow.ErrCancelled, err)
+			} else if test.errorExpected {
 				suite.Require().Error(err)
 			} else {
 				suite.Require().NoError(err)
@@ -1160,7 +1172,16 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 }
 
 func TestLogicRunner(t *testing.T) {
-	t.Parallel()
+	// Hello my friend! I bet you would like to place t.Parallel() here.
+	// Of course this may sound as a good idea. This will run multiple
+	// test in parallel which will make them execute faster. Right?
+	// Wrong! You see, by historical reasons LogicRunnerTestSuite
+	// is in fact 4 independent tests which share their state (suite.* fields).
+	// Guess what happens when they run in parallel? Right, it seem to work
+	// at first but after some time someone will spent a lot of exciting
+	// days trying to figure out why these test sometimes fail (e.g. on CI).
+	// In other words dont you dare to use t.Parallel() here unless you are
+	// willing to completely rewrite the whole LogicRunnerTestSuite, OK?
 	suite.Run(t, new(LogicRunnerTestSuite))
 }
 

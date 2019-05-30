@@ -348,19 +348,6 @@ func (lr *LogicRunner) CheckOurRole(ctx context.Context, msg insolar.Message, ro
 	return nil
 }
 
-func (lr *LogicRunner) RegisterRequest(ctx context.Context, parcel insolar.Parcel) (*Ref, error) {
-	ctx, span := instracer.StartSpan(ctx, "LogicRunner.RegisterRequest")
-	defer span.End()
-
-	msg := parcel.Message().(*message.CallMethod)
-	id, err := lr.ArtifactManager.RegisterRequest(ctx, msg.Request)
-	if err != nil {
-		return nil, err
-	}
-
-	return insolar.NewReference(insolar.DomainID, *id), nil
-}
-
 func loggerWithTargetID(ctx context.Context, msg insolar.Parcel) context.Context {
 	context, _ := inslogger.WithField(ctx, "targetid", msg.DefaultTarget().String())
 	return context
