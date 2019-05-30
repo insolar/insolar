@@ -542,7 +542,7 @@ func (bc *BootstrapperImpl) startCyclicBootstrap(ctx context.Context) {
 			results = append(results, res)
 		}
 		if len(results) != 0 {
-			index := bc.getLargerNetworkIndex(ctx, results)
+			index := bc.getLargerNetworkIndex(results)
 			if index >= 0 {
 				bc.reconnectToNewNetwork(ctx, nodes[index].GetHost())
 			}
@@ -551,7 +551,7 @@ func (bc *BootstrapperImpl) startCyclicBootstrap(ctx context.Context) {
 	}
 }
 
-func (bc *BootstrapperImpl) getLargerNetworkIndex(ctx context.Context, results []*network.BootstrapResult) int {
+func (bc *BootstrapperImpl) getLargerNetworkIndex(results []*network.BootstrapResult) int {
 	networkSize := results[0].NetworkSize
 	index := 0
 	for i := 1; i < len(results); i++ {
