@@ -75,16 +75,18 @@ func New() *Handler {
 }
 
 func (h *Handler) Process(msg *watermillMsg.Message) ([]*watermillMsg.Message, error) {
+	ctx := inslogger.ContextWithTrace(msg.Context(), msg.Metadata.Get(bus.MetaTraceID))
+
 	meta := payload.Meta{}
 	err := meta.Unmarshal(msg.Payload)
 	if err != nil {
-		inslogger.FromContext(msg.Context()).Error(err)
+		inslogger.FromContext(ctx).Error(err)
 	}
-	ctx, logger := inslogger.WithField(msg.Context(), "pulse", fmt.Sprintf("%d", meta.Pulse))
+	ctx, logger := inslogger.WithField(ctx, "pulse", fmt.Sprintf("%d", meta.Pulse))
 
 	err = h.handle(ctx, msg)
 	if err != nil {
-		logger.Error(err)
+		logger.Error(errors.Wrap(err, "handle error"))
 		errMsg, err := payload.NewMessage(&payload.Error{Text: err.Error()})
 		if err != nil {
 			logger.Error(errors.Wrap(err, "failed to reply error"))
