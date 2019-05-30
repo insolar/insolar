@@ -673,7 +673,7 @@ const (
 
 func (e *ContractListEntry) GenerateReference(tp string) *insolar.Reference {
 	contractID := fmt.Sprintf("%s::%s::v%02d", tp, e.Name, e.Version)
-	return generateTextReference(insolar.BuiltinPulseNumber, []byte(contractID))
+	return generateTextReference(insolar.BuiltinContractPulseNumber, []byte(contractID))
 }
 
 type ContractList []ContractListEntry
