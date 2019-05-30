@@ -1056,6 +1056,10 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 					//defer registerRequestLock.Unlock()
 					if test.when == whenRegisterRequest {
 						changePulse()
+						// This test uses real Flow implementation which may react
+						// to the pulse change with a little delay. Thus we have to
+						// explicitly return ErrCancelled as if RegisterRequest was
+						// canceled by the Flow descriptor.
 						return nil, flow.ErrCancelled
 					}
 
