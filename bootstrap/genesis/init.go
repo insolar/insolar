@@ -23,8 +23,6 @@ import (
 	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/instrumentation/inslogger"
-	"github.com/insolar/insolar/internal/ledger/artifact"
-	"github.com/insolar/insolar/ledger/genesis"
 	"github.com/insolar/insolar/log"
 )
 
@@ -92,37 +90,12 @@ func (s *Initializer) Run() {
 	err = cm.Start(ctx)
 	checkError(ctx, err, "failed to start components")
 
-	genesisBaseRecord := &genesis.BaseRecord{
-		DB:                    sc.storeBadgerDB,
-		DropModifier:          sc.dropDB,
-		PulseAppender:         sc.pulseDB,
-		PulseAccessor:         sc.pulseDB,
-		RecordModifier:        sc.recordDB,
-		IndexLifelineModifier: sc.indexDB,
-	}
-	isInit, err := genesisBaseRecord.CreateIfNeeded(ctx)
-	checkError(ctx, err, "failed to start genesis init")
-	if isInit {
-		artifactManager := &artifact.Scope{
-			PulseNumber: insolar.FirstPulseNumber,
-
-			PCS:            bc.PlatformCryptographyScheme,
-			BlobStorage:    sc.blobDB,
-			RecordAccessor: sc.recordDB,
-			RecordModifier: sc.recordDB,
-
-			LifelineModifier: sc.indexDB,
-			LifelineAccessor: sc.indexDB,
-		}
-
-		genesisGenerator := NewGenerator(
-			genesisConfig,
-			artifactManager,
-			s.genesisKeyOut,
-		)
-		err = genesisGenerator.Run(ctx)
-		checkError(ctx, err, "failed to generate genesis")
-	}
+	genesisGenerator := NewGenerator(
+		genesisConfig,
+		s.genesisKeyOut,
+	)
+	err = genesisGenerator.Run(ctx)
+	checkError(ctx, err, "failed to generate genesis")
 
 	err = cm.Stop(ctx)
 	checkError(ctx, err, "failed to stop components")

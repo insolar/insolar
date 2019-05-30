@@ -297,7 +297,6 @@ func (g *Genesis) prepareContractPrototype(ctx context.Context, name string, bin
 	}
 
 	codeRef := insolar.NewReference(rootDomainID, *codeID)
-	assertGenesisRef(*codeRef, name+"_code")
 
 	_, err = g.ArtifactManager.RegisterResult(ctx, rootDomainRef, *codeRef, nil)
 	if err != nil {
@@ -346,7 +345,7 @@ func assertGenesisRef(gotRef insolar.Reference, name string) {
 	expectRef := rootdomain.GenesisRef(name)
 	// check just in case
 	if gotRef != expectRef {
-		panic(errors.Errorf(
+		panic(fmt.Sprintf(
 			"mismatch actual reference and expected for name %v (got=%v; expected=%v)",
 			name, gotRef, expectRef,
 		))
