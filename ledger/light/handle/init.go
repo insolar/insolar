@@ -116,6 +116,9 @@ func (s *Init) handle(ctx context.Context, f flow.Flow) error {
 	case insolar.TypeGetDelegate:
 		h := NewGetDelegate(s.dep, s.message.ReplyTo, s.message.Parcel)
 		return f.Handle(ctx, h.Present)
+	case insolar.TypeGetDelegate:
+		h := NewGetDelegate(s.Dep, s.Message.ReplyTo, s.Message.Parcel)
+		return f.Handle(ctx, h.Present)
 	case insolar.TypeGetPendingRequests:
 		h := NewGetPendingRequests(s.dep, s.message.ReplyTo, s.message.Parcel)
 		return f.Handle(ctx, h.Present)
