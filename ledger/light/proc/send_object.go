@@ -94,6 +94,9 @@ func (p *SendObject) Proceed(ctx context.Context) error {
 			Record: buf,
 			Memory: memory,
 		})
+		if err != nil {
+			return errors.Wrap(err, "failed to create message")
+		}
 		go p.Dep.Sender.Reply(ctx, p.message, msg)
 
 		return nil

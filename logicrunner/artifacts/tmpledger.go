@@ -294,7 +294,7 @@ func (p *pubSubMock) Publish(topic string, messages ...*message.Message) error {
 	return nil
 }
 
-func (p *pubSubMock) handle(msg *message.Message) ([]*message.Message, error) {
+func (p *pubSubMock) handle(msg *message.Message) ([]*message.Message, error) { // nolint
 	return p.handler(msg)
 }
 

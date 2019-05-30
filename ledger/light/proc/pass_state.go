@@ -104,6 +104,9 @@ func (p *PassState) Proceed(ctx context.Context) error {
 		Record: buf,
 		Memory: memory,
 	})
+	if err != nil {
+		return errors.Wrap(err, "failed to create message")
+	}
 	go p.Dep.Sender.Reply(ctx, replyTo, msg)
 
 	return nil

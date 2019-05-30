@@ -154,7 +154,7 @@ func (s *Init) handlePass(ctx context.Context, f flow.Flow) error {
 		return errors.Wrap(err, "failed to unmarshal payload type")
 	}
 
-	switch payloadType {
+	switch payloadType { // nolint
 	case payload.TypeGetObject:
 		origin := wmessage.NewMessage(watermill.NewUUID(), pass.Origin)
 		middleware.SetCorrelationID(string(pass.CorrelationID), origin)
