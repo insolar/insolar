@@ -61,6 +61,8 @@ type MessageHandler struct {
 	HotDataWaiter hot.JetWaiter   `inject:""`
 	JetReleaser   hot.JetReleaser `inject:""`
 
+	WriteAccessor hot.WriteAccessor
+
 	LifelineIndex         object.LifelineIndex
 	IndexBucketModifier   object.IndexBucketModifier
 	LifelineStateModifier object.LifelineStateModifier
@@ -110,11 +112,13 @@ func NewMessageHandler(
 			p.Dep.RecordModifier = h.RecordModifier
 			p.Dep.PCS = h.PCS
 			p.Dep.PendingRequestsLimit = h.conf.PendingRequestsLimit
+			p.Dep.WriteAccessor = h.WriteAccessor
 		},
 		SetBlob: func(p *proc.SetBlob) {
 			p.Dep.BlobAccessor = h.BlobAccessor
 			p.Dep.BlobModifier = h.BlobModifier
-			p.Dep.PlatformCryptographyScheme = h.PCS
+			p.Dep.PCS = h.PCS
+			p.Dep.WriteAccessor = h.WriteAccessor
 		},
 		SendObject: func(p *proc.SendObject) {
 			p.Dep.Jets = h.JetStorage
@@ -143,6 +147,7 @@ func NewMessageHandler(
 			p.Dep.IDLocker = h.IDLocker
 			p.Dep.LifelineStateModifier = h.LifelineStateModifier
 			p.Dep.LifelineIndex = h.LifelineIndex
+			p.Dep.WriteAccessor = h.WriteAccessor
 		},
 		GetChildren: func(p *proc.GetChildren) {
 			p.Dep.Coordinator = h.JetCoordinator

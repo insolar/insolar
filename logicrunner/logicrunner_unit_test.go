@@ -28,12 +28,12 @@ import (
 	message2 "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/gojuno/minimock"
-	"github.com/insolar/insolar/log"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/insolar/insolar/configuration"
 	"github.com/insolar/insolar/insolar"
 	"github.com/insolar/insolar/insolar/flow"
 	"github.com/insolar/insolar/insolar/flow/bus"
@@ -42,12 +42,11 @@ import (
 	"github.com/insolar/insolar/insolar/pulse"
 	"github.com/insolar/insolar/insolar/record"
 	"github.com/insolar/insolar/insolar/reply"
+	"github.com/insolar/insolar/instrumentation/inslogger"
+	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/logicrunner/artifacts"
 	"github.com/insolar/insolar/pulsar"
 	"github.com/insolar/insolar/pulsar/entropygenerator"
-
-	"github.com/insolar/insolar/configuration"
-	"github.com/insolar/insolar/instrumentation/inslogger"
 	"github.com/insolar/insolar/testutils"
 	"github.com/insolar/insolar/testutils/network"
 )
@@ -501,8 +500,8 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 		&message.CallMethod{Request: record.Request{ReturnMode: record.ReturnResult}},
 	)
 	es.Current = &CurrentExecution{
-		ReturnMode: record.ReturnResult,
-		Context:    ctxA,
+		Request: &record.Request{ReturnMode: record.ReturnResult},
+		Context: ctxA,
 	}
 
 	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
@@ -515,22 +514,22 @@ func (suite *LogicRunnerTestSuite) TestCheckExecutionLoop() {
 		&message.CallMethod{Request: record.Request{ReturnMode: record.ReturnNoWait}},
 	)
 	es.Current = &CurrentExecution{
-		ReturnMode: record.ReturnResult,
-		Context:    ctxA,
+		Request: &record.Request{ReturnMode: record.ReturnResult},
+		Context: ctxA,
 	}
 	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
 	suite.Require().False(loop)
 
 	parcel = testutils.NewParcelMock(suite.mc)
 	es.Current = &CurrentExecution{
-		ReturnMode: record.ReturnNoWait,
-		Context:    ctxA,
+		Request: &record.Request{ReturnMode: record.ReturnNoWait},
+		Context: ctxA,
 	}
 	loop = suite.lr.CheckExecutionLoop(ctxA, es, parcel)
 	suite.Require().False(loop)
 
 	es.Current = &CurrentExecution{
-		ReturnMode: record.ReturnNoWait,
+		Request:    &record.Request{ReturnMode: record.ReturnNoWait},
 		Context:    ctxA,
 		SentResult: true,
 	}
@@ -633,7 +632,7 @@ func (suite *LogicRunnerTestSuite) TestNoExcessiveAmends() {
 	es.CodeDescriptor = cDesc
 	es.Current = &CurrentExecution{}
 	es.Current.LogicContext = &insolar.LogicCallContext{}
-	es.Current.Request = &randRef
+	es.Current.RequestRef = &randRef
 
 	data := []byte(testutils.RandomString())
 	oDesc.MemoryMock.Return(data)
@@ -1022,9 +1021,6 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 
 				if test.when == whenIsAuthorized {
 					<-changePulse()
-					for atomic.LoadInt32(&pn) == 100 {
-						time.Sleep(time.Millisecond)
-					}
 				}
 
 				return atomic.LoadInt32(&pn) == 100, nil
@@ -1148,9 +1144,10 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			ctx := inslogger.ContextWithTrace(suite.ctx, "req")
 
 			pulse := pulsar.NewPulse(1, parcel.Pulse(), &entropygenerator.StandardEntropyGenerator{})
-			suite.lr.FlowDispatcher.ChangePulse(ctx, *pulse)
-			suite.lr.innerFlowDispatcher.ChangePulse(ctx, *pulse)
-			_, err := suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
+			err := suite.lr.OnPulse(ctx, *pulse)
+			suite.Require().NoError(err)
+
+			_, err = suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
 			if test.errorExpected {
 				suite.Require().Error(err)
 			} else {
@@ -1161,37 +1158,6 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 		})
 	}
 }
-
-/*
-func (suite *LogicRunnerTestSuite) TestGracefulStop() {
-	suite.lr.isStopping = false
-	suite.lr.stopChan = make(chan struct{}, 0)
-
-	stopFinished := make(chan struct{}, 1)
-
-	var err error
-	go func() {
-		err = suite.lr.GracefulStop(suite.ctx)
-		stopFinished <- struct{}{}
-	}()
-
-	for cap(suite.lr.stopChan) < 1 {
-		time.Sleep(100 * time.Millisecond)
-		suite.Require().Equal(true, suite.lr.isStopping)
-		suite.Require().Equal(1, cap(suite.lr.stopChan))
-	}
-
-	suite.lr.stopChan <- struct{}{}
-	select {
-	case <-stopFinished:
-		break
-	case <-time.After(2 * time.Second):
-		suite.Fail("GracefulStop not finished")
-	}
-
-	suite.Require().NoError(err)
-}
-*/
 
 func TestLogicRunner(t *testing.T) {
 	t.Parallel()

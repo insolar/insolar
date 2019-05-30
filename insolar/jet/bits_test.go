@@ -21,7 +21,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 // bitsToString converts byte slice to plain string representation in bits.

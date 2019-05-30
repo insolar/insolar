@@ -55,7 +55,7 @@ type UploadArgs struct {
 
 // UploadReply is reply that Contract.Upload returns
 type UploadReply struct {
-	PrototypeRef insolar.Reference `json:"PrototypeRef"`
+	PrototypeRef string `json:"PrototypeRef"`
 }
 
 // Upload builds code and return prototype ref
@@ -74,6 +74,7 @@ func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *Uploa
 
 	insgocc, err := goplugintestutils.BuildPreprocessor()
 	if err != nil {
+		inslog.Infof("[ ContractService.Upload ] can't build preprocessor %#v", err)
 		return errors.Wrap(err, "can't build preprocessor")
 	}
 	cb := goplugintestutils.NewContractBuilder(s.runner.ArtifactManager, insgocc)
@@ -83,10 +84,11 @@ func (s *ContractService) Upload(r *http.Request, args *UploadArgs, reply *Uploa
 
 	err = cb.Build(contractMap)
 	if err != nil {
+		inslog.Infof("[ ContractService.Upload ] can't build contract %#v", err)
 		return errors.Wrap(err, "can't build contract")
 	}
-
-	reply.PrototypeRef = *cb.Prototypes[args.Name]
+	reference := *cb.Prototypes[args.Name]
+	reply.PrototypeRef = reference.String()
 	return nil
 }
 
@@ -97,7 +99,7 @@ type CallConstructorArgs struct {
 
 // CallConstructorReply is reply that Contract.CallConstructor returns
 type CallConstructorReply struct {
-	ObjectRef insolar.Reference `json:"ObjectRef"`
+	ObjectRef string `json:"ObjectRef"`
 }
 
 // CallConstructor make an object from its prototype
@@ -150,7 +152,7 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 		return errors.Wrap(err, "can't activate object")
 	}
 
-	reply.ObjectRef = objectRef
+	reply.ObjectRef = objectRef.String()
 
 	return nil
 }
@@ -159,13 +161,13 @@ func (s *ContractService) CallConstructor(r *http.Request, args *CallConstructor
 type CallMethodArgs struct {
 	ObjectRefString string
 	Method          string
-	MethodArgs      []interface{}
+	MethodArgs      []byte
 }
 
 // CallMethodReply is reply that Contract.CallMethod returns
 type CallMethodReply struct {
-	Reply          reply.CallMethod
-	ExtractedReply interface{}
+	Reply          reply.CallMethod `json:"Reply"`
+	ExtractedReply interface{}      `json:"ExtractedReply"`
 }
 
 // CallConstructor make an object from its prototype
@@ -183,14 +185,12 @@ func (s *ContractService) CallMethod(r *http.Request, args *CallMethodArgs, re *
 		return errors.Wrap(err, "can't get objectRef")
 	}
 
-	argsSerialized, _ := insolar.Serialize(args.MethodArgs)
-
 	msg := &message.CallMethod{
 		Request: record.Request{
-			Caller: testutils.RandomRef(),
+			Caller:    testutils.RandomRef(),
 			Object:    objectRef,
 			Method:    args.Method,
-			Arguments: argsSerialized,
+			Arguments: args.MethodArgs,
 		},
 	}
 

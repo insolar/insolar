@@ -54,6 +54,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/instrumentation/instracer"
@@ -71,12 +72,11 @@ type Pinger struct {
 func (p *Pinger) Ping(ctx context.Context, address string, timeout time.Duration) (*host.Host, error) {
 	ctx, span := instracer.StartSpan(ctx, "Pinger.Ping")
 	defer span.End()
-	request := p.transport.NewRequestBuilder().Type(types.Ping).Build()
 	h, err := host.NewHost(address)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to resolve address %s", address)
 	}
-	future, err := p.transport.SendRequestToHost(ctx, request, h)
+	future, err := p.transport.SendRequestToHost(ctx, types.Ping, &packet.Ping{}, h)
 	if err != nil {
 		return nil, errors.Wrapf(err, "failed to ping address %s", address)
 	}

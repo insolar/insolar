@@ -52,7 +52,6 @@ package hostnetwork
 
 import (
 	"context"
-	"encoding/gob"
 	"sync"
 	"testing"
 	"time"
@@ -63,6 +62,7 @@ import (
 	"github.com/insolar/insolar/log"
 	"github.com/insolar/insolar/network"
 	"github.com/insolar/insolar/network/hostnetwork/host"
+	"github.com/insolar/insolar/network/hostnetwork/packet"
 	"github.com/insolar/insolar/network/hostnetwork/packet/types"
 	"github.com/insolar/insolar/network/transport"
 	"github.com/insolar/insolar/network/utils"
@@ -72,8 +72,6 @@ import (
 )
 
 const (
-	InvalidPacket types.PacketType = 1024
-
 	ID1       = "4K2V1kpVycZ6qSFsNdz2FtpNxnJs17eBNzf9rdCMcKoe"
 	ID2       = "4NwnA4HWZurKyXWNowJwYmb9CwX4gBKzwQKov1ExMf8M"
 	ID3       = "4Ss5JMkXAD9Z7cktFEdrqeMuT6jGMF1pVozTyPHZ6zT4"
@@ -219,20 +217,19 @@ func TestNewHostNetwork(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(count)
 
-	handler := func(ctx context.Context, request network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, request network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
 		wg.Done()
-		return s.n2.BuildResponse(ctx, request, nil), nil
+		return s.n2.BuildResponse(ctx, request, &packet.Ping{}), nil
 	}
 	s.n2.RegisterRequestHandler(types.Ping, handler)
 
 	s.Start()
 
 	for i := 0; i < count; i++ {
-		request := s.n1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 		ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 		require.NoError(t, err)
-		_, err = s.n1.SendRequest(s.ctx, request, *ref)
+		_, err = s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
 		require.NoError(t, err)
 	}
 
@@ -263,8 +260,7 @@ func TestHostNetwork_SendRequestPacket(t *testing.T) {
 	require.NoError(t, err)
 
 	// should return error because cannot resolve NodeID -> Address
-	request := n1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
-	_, err = n1.SendRequest(ctx, request, *unknownID)
+	_, err = n1.SendRequest(ctx, types.Ping, &packet.Ping{}, *unknownID)
 	require.Error(t, err)
 
 	err = m.addMapping(ID2+DOMAIN, "abirvalg")
@@ -275,7 +271,7 @@ func TestHostNetwork_SendRequestPacket(t *testing.T) {
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
 	// should return error because resolved address is invalid
-	_, err = n1.SendRequest(ctx, request, *ref)
+	_, err = n1.SendRequest(ctx, types.Ping, &packet.Ping{}, *ref)
 	require.Error(t, err)
 }
 
@@ -286,29 +282,23 @@ func TestHostNetwork_SendRequestPacket2(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
 		ref, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
 		require.NoError(t, err)
 		require.Equal(t, *ref, r.GetSender())
 		require.Equal(t, s.n1.PublicAddress(), r.GetSenderHost().Address.String())
 		wg.Done()
-		return s.n2.BuildResponse(ctx, r, nil), nil
+		return s.n2.BuildResponse(ctx, r, &packet.Ping{}), nil
 	}
 
 	s.n2.RegisterRequestHandler(types.Ping, handler)
 
 	s.Start()
 
-	request := s.n1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
-	ref, err := insolar.NewReferenceFromBase58(ID1 + DOMAIN)
+	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
-	require.Equal(t, *ref, request.GetSender())
-	require.Equal(t, s.n1.PublicAddress(), request.GetSenderHost().Address.String())
-
-	ref, err = insolar.NewReferenceFromBase58(ID2 + DOMAIN)
-	require.NoError(t, err)
-	_, err = s.n1.SendRequest(s.ctx, request, *ref)
+	_, err = s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
 	require.NoError(t, err)
 
 	wg.Wait()
@@ -318,67 +308,61 @@ func TestHostNetwork_SendRequestPacket3(t *testing.T) {
 	s := newHostSuite(t)
 	defer s.Stop()
 
-	type Data struct {
-		Number int
-	}
-	gob.Register(&Data{})
-
-	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
-		d := r.GetData().(*Data)
-		return s.n2.BuildResponse(ctx, r, &Data{Number: d.Number + 1}), nil
+		data := r.GetRequest().GetPulse()
+		error := string(data.TraceSpanData) + string(data.TraceSpanData)
+		return s.n2.BuildResponse(ctx, r, &packet.BasicResponse{Error: error}), nil
 	}
-	s.n2.RegisterRequestHandler(types.Ping, handler)
+	s.n2.RegisterRequestHandler(types.Pulse, handler)
 
 	s.Start()
 
-	magicNumber := 42
-	request := s.n1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
+	data := []byte("123")
+	request := &packet.PulseRequest{TraceSpanData: data}
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
-	f, err := s.n1.SendRequest(s.ctx, request, *ref)
+	f, err := s.n1.SendRequest(s.ctx, types.Pulse, request, *ref)
 	require.NoError(t, err)
-	require.Equal(t, f.Request().GetSender(), request.GetSender())
 
 	r, err := f.WaitResponse(time.Minute)
 	require.NoError(t, err)
 
-	d := r.GetData().(*Data)
-	require.Equal(t, magicNumber+1, d.Number)
+	d := r.GetResponse().GetBasic().Error
+	require.Equal(t, "123123", d)
 
-	magicNumber = 666
-	request = s.n1.NewRequestBuilder().Type(types.Ping).Data(&Data{Number: magicNumber}).Build()
-	f, err = s.n1.SendRequest(s.ctx, request, *ref)
+	data = []byte("666")
+	request = &packet.PulseRequest{TraceSpanData: data}
+	f, err = s.n1.SendRequest(s.ctx, types.Pulse, request, *ref)
 	require.NoError(t, err)
 
 	r = <-f.Response()
-	d = r.GetData().(*Data)
-	require.Equal(t, magicNumber+1, d.Number)
+	d = r.GetResponse().GetBasic().Error
+	require.Equal(t, d, "666666")
 }
 
 func TestHostNetwork_SendRequestPacket_errors(t *testing.T) {
 	s := newHostSuite(t)
 	defer s.Stop()
 
-	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
-		time.Sleep(time.Second)
-		return s.n2.BuildResponse(ctx, r, nil), nil
+		time.Sleep(time.Millisecond * 100)
+		return s.n2.BuildResponse(ctx, r, &packet.Ping{}), nil
 	}
 	s.n2.RegisterRequestHandler(types.Ping, handler)
 
 	s.Start()
 
-	request := s.n1.NewRequestBuilder().Type(types.Ping).Data(nil).Build()
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
-	f, err := s.n1.SendRequest(s.ctx, request, *ref)
+	f, err := s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
 	require.NoError(t, err)
 
-	_, err = f.WaitResponse(time.Millisecond)
+	_, err = f.WaitResponse(time.Microsecond * 10)
 	require.Error(t, err)
 
-	f, err = s.n1.SendRequest(s.ctx, request, *ref)
+	f, err = s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
 	require.NoError(t, err)
 
 	_, err = f.WaitResponse(time.Minute)
@@ -392,19 +376,18 @@ func TestHostNetwork_WrongHandler(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(1)
 
-	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
 		wg.Done()
 		return s.n2.BuildResponse(ctx, r, nil), nil
 	}
-	s.n2.RegisterRequestHandler(InvalidPacket, handler)
+	s.n2.RegisterRequestHandler(types.Pulse, handler)
 
 	s.Start()
 
-	request := s.n1.NewRequestBuilder().Type(types.Ping).Build()
 	ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 	require.NoError(t, err)
-	_, err = s.n1.SendRequest(s.ctx, request, *ref)
+	_, err = s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
 	require.NoError(t, err)
 
 	// should timeout because there is no handler set for Ping packet
@@ -419,20 +402,19 @@ func TestStartStopSend(t *testing.T) {
 	wg := sync.WaitGroup{}
 	wg.Add(2)
 
-	handler := func(ctx context.Context, r network.Request) (network.Response, error) {
+	handler := func(ctx context.Context, r network.Packet) (network.Packet, error) {
 		log.Info("handler triggered")
 		wg.Done()
-		return s.n2.BuildResponse(ctx, r, nil), nil
+		return s.n2.BuildResponse(ctx, r, &packet.Ping{}), nil
 	}
 	s.n2.RegisterRequestHandler(types.Ping, handler)
 
 	s.Start()
 
 	send := func() {
-		request := s.n1.NewRequestBuilder().Type(types.Ping).Build()
 		ref, err := insolar.NewReferenceFromBase58(ID2 + DOMAIN)
 		require.NoError(t, err)
-		f, err := s.n1.SendRequest(s.ctx, request, *ref)
+		f, err := s.n1.SendRequest(s.ctx, types.Ping, &packet.Ping{}, *ref)
 		require.NoError(t, err)
 		<-f.Response()
 	}
@@ -452,6 +434,6 @@ func TestHostNetwork_SendRequestToHost_NotStarted(t *testing.T) {
 	hn, err := NewHostNetwork(ID1 + DOMAIN)
 	require.NoError(t, err)
 
-	_, err = hn.SendRequestToHost(context.Background(), nil, nil)
+	_, err = hn.SendRequestToHost(context.Background(), types.Ping, nil, nil)
 	require.EqualError(t, err, "host network is not started")
 }

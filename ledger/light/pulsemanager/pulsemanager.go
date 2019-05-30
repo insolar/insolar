@@ -46,6 +46,7 @@ import (
 )
 
 //go:generate minimock -i github.com/insolar/insolar/ledger/light/pulsemanager.ActiveListSwapper -o ../../../testutils -s _mock.go
+
 type ActiveListSwapper interface {
 	MoveSyncToActive(ctx context.Context, number insolar.PulseNumber) error
 }
@@ -89,6 +90,8 @@ type PulseManager struct {
 
 	LightReplicator replication.LightReplicator
 
+	WriteManager hot.WriteManager
+
 	currentPulse insolar.Pulse
 
 	// setLock locks Set method call.
@@ -128,6 +131,7 @@ func NewPulseManager(
 	recSyncAccessor object.RecordCollectionAccessor,
 	idxReplicaAccessor object.IndexBucketAccessor,
 	lightToHeavySyncer replication.LightReplicator,
+	writeManager hot.WriteManager,
 ) *PulseManager {
 	pmconf := conf.PulseManager
 
@@ -146,6 +150,7 @@ func NewPulseManager(
 		RecSyncAccessor:     recSyncAccessor,
 		IndexBucketAccessor: idxReplicaAccessor,
 		LightReplicator:     lightToHeavySyncer,
+		WriteManager:        writeManager,
 	}
 	return pm
 }
@@ -313,11 +318,7 @@ func (m *PulseManager) processJets(ctx context.Context, previous, current, new i
 
 	m.JetModifier.Clone(ctx, current, new)
 
-	if m.NodeNet.GetOrigin().Role() != insolar.StaticRoleLightMaterial {
-		return nil, nil
-	}
-
-	results := make([]jetInfo, 0, 64)
+	var results []jetInfo
 	ids := m.JetAccessor.All(ctx, new)
 	ids, err := m.filterOtherExecutors(ctx, current, ids)
 	if err != nil {
@@ -393,15 +394,24 @@ func (m *PulseManager) Set(ctx context.Context, newPulse insolar.Pulse, persist 
 		return nil
 	}
 
-	// Run only on material executor.
-	// execute only on material executor
-	if m.NodeNet.GetOrigin().Role() == insolar.StaticRoleLightMaterial && oldPulse != nil && prevPN != nil {
+	logger := inslogger.FromContext(ctx)
+
+	if oldPulse != nil && prevPN != nil {
+		err = m.WriteManager.CloseAndWait(ctx, oldPulse.PulseNumber)
+		if err != nil {
+			logger.Error("can't close pulse for writing", err)
+		}
 		err = m.processEndPulse(ctx, jets, *oldPulse, newPulse)
 		if err != nil {
 			return err
 		}
 		m.postProcessJets(ctx, jets)
 		go m.LightReplicator.NotifyAboutPulse(ctx, newPulse.PulseNumber)
+	}
+
+	err = m.WriteManager.Open(ctx, newPulse.PulseNumber)
+	if err != nil {
+		logger.Error("can't open pulse for writing", err)
 	}
 
 	err = m.Bus.OnPulse(ctx, newPulse)
@@ -477,10 +487,6 @@ func (m *PulseManager) setUnderGilSection(
 		}
 	}
 
-	if m.NodeNet.GetOrigin().Role() == insolar.StaticRoleHeavyMaterial {
-		return nil, nil, nil, nil
-	}
-
 	var jets []jetInfo
 	if persist && prevPN != nil && oldPulse != nil {
 		jets, err = m.processJets(ctx, *prevPN, oldPulse.PulseNumber, newPulse.PulseNumber)
@@ -499,9 +505,7 @@ func (m *PulseManager) setUnderGilSection(
 	}
 
 	if oldPulse != nil && prevPN != nil {
-		if m.NodeNet.GetOrigin().Role() == insolar.StaticRoleLightMaterial {
-			m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse)
-		}
+		m.prepareArtifactManagerMessageHandlerForNextPulse(ctx, newPulse)
 	}
 
 	if persist && oldPulse != nil {

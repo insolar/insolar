@@ -72,10 +72,9 @@ type ObjectState struct {
 type CurrentExecution struct {
 	Context       context.Context
 	LogicContext  *insolar.LogicCallContext
-	Request       *Ref
-	Sequence      uint64
+	RequestRef    *Ref
+	Request       *record.Request
 	RequesterNode *Ref
-	ReturnMode    record.Request_RM
 	SentResult    bool
 }
 
@@ -378,7 +377,7 @@ func (lr *LogicRunner) CheckExecutionLoop(
 		return false
 	}
 
-	if es.Current.ReturnMode == record.ReturnNoWait {
+	if es.Current.Request.ReturnMode == record.ReturnNoWait {
 		return false
 	}
 
@@ -438,7 +437,7 @@ func (lr *LogicRunner) executeOrValidate(
 		Mode:            "execution",
 		Caller:          msg.GetCaller(),
 		Callee:          &ref,
-		Request:         es.Current.Request,
+		Request:         es.Current.RequestRef,
 		Time:            time.Now(), // TODO: probably we should take it earlier
 		Pulse:           *lr.pulse(ctx),
 		TraceID:         inslogger.TraceID(ctx),
@@ -468,13 +467,13 @@ func (lr *LogicRunner) executeOrValidate(
 	defer es.Unlock()
 
 	es.Current.SentResult = true
-	if es.Current.ReturnMode != record.ReturnResult {
+	if es.Current.Request.ReturnMode != record.ReturnResult {
 		return
 	}
 
 	target := *es.Current.RequesterNode
-	request := *es.Current.Request
-	seq := es.Current.Sequence
+	request := *es.Current.RequestRef
+	seq := es.Current.Request.Sequence
 
 	go func() {
 		inslogger.FromContext(ctx).Debugf("Sending Method Results for %#v", request)
@@ -621,18 +620,18 @@ func (lr *LogicRunner) executeMethodCall(ctx context.Context, es *ExecutionState
 	am := lr.ArtifactManager
 	if es.deactivate {
 		_, err := am.DeactivateObject(
-			ctx, Ref{}, *current.Request, es.ObjectDescriptor,
+			ctx, Ref{}, *current.RequestRef, es.ObjectDescriptor,
 		)
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't deactivate object")
 		}
 	} else if !bytes.Equal(es.ObjectDescriptor.Memory(), newData) {
-		_, err := am.UpdateObject(ctx, Ref{}, *current.Request, es.ObjectDescriptor, newData)
+		_, err := am.UpdateObject(ctx, Ref{}, *current.RequestRef, es.ObjectDescriptor, newData)
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't update object")
 		}
 	}
-	_, err = am.RegisterResult(ctx, *m.Object, *current.Request, result)
+	_, err = am.RegisterResult(ctx, *m.Object, *current.RequestRef, result)
 	if err != nil {
 		return nil, es.WrapError(err, "couldn't save results")
 	}
@@ -697,16 +696,16 @@ func (lr *LogicRunner) executeConstructorCall(
 	case record.CTSaveAsChild, record.CTSaveAsDelegate:
 		_, err = lr.ArtifactManager.ActivateObject(
 			ctx,
-			Ref{}, *current.Request, *m.Base, *m.Prototype, m.CallType == record.CTSaveAsDelegate, newData,
+			Ref{}, *current.RequestRef, *m.Base, *m.Prototype, m.CallType == record.CTSaveAsDelegate, newData,
 		)
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't activate object")
 		}
-		_, err = lr.ArtifactManager.RegisterResult(ctx, *current.Request, *current.Request, nil)
+		_, err = lr.ArtifactManager.RegisterResult(ctx, *current.RequestRef, *current.RequestRef, nil)
 		if err != nil {
 			return nil, es.WrapError(err, "couldn't save results")
 		}
-		return &reply.CallConstructor{Object: current.Request}, err
+		return &reply.CallConstructor{Object: current.RequestRef}, err
 
 	default:
 		return nil, es.WrapError(nil, "unsupported type of save object")

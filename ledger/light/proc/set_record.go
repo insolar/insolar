@@ -20,6 +20,7 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/insolar/insolar/ledger/light/hot"
 	"github.com/pkg/errors"
 
 	"github.com/insolar/insolar/insolar"
@@ -41,6 +42,7 @@ type SetRecord struct {
 		RecentStorageProvider recentstorage.Provider
 		PCS                   insolar.PlatformCryptographyScheme
 		RecordModifier        object.RecordModifier
+		WriteAccessor         hot.WriteAccessor
 		PendingRequestsLimit  int
 	}
 }
@@ -59,8 +61,14 @@ func (p *SetRecord) Proceed(ctx context.Context) error {
 }
 
 func (p *SetRecord) reply(ctx context.Context) bus.Reply {
+	done, err := p.Dep.WriteAccessor.Begin(ctx, flow.Pulse(ctx))
+	if err == hot.ErrWriteClosed {
+		return bus.Reply{Err: flow.ErrCancelled}
+	}
+	defer done()
+
 	virtRec := record.Virtual{}
-	err := virtRec.Unmarshal(p.record)
+	err = virtRec.Unmarshal(p.record)
 	if err != nil {
 		return bus.Reply{Err: errors.Wrap(err, "can't deserialize record")}
 	}
