@@ -278,6 +278,7 @@ func newComponents(ctx context.Context, cfg configuration.Configuration, genesis
 	}
 
 	c.cmp.Inject(
+		DB,
 		WmBus,
 		Handler,
 		PulseManager,

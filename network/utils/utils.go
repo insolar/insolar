@@ -88,9 +88,13 @@ func GenerateUintShortID(ref insolar.Reference) uint32 {
 }
 
 func OriginIsDiscovery(cert insolar.Certificate) bool {
+	return IsDiscovery(*cert.GetNodeRef(), cert)
+}
+
+func IsDiscovery(nodeID insolar.Reference, cert insolar.Certificate) bool {
 	bNodes := cert.GetDiscoveryNodes()
 	for _, discoveryNode := range bNodes {
-		if cert.GetNodeRef().Equal(*discoveryNode.GetNodeRef()) {
+		if nodeID.Equal(*discoveryNode.GetNodeRef()) {
 			return true
 		}
 	}

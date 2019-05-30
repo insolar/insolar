@@ -226,8 +226,8 @@ func (p *SendObject) fetchObject(
 	genericReply, err := sender(
 		ctx,
 		&message.GetObject{
-			Head:     obj,
-			State:    stateID,
+			Head:  obj,
+			State: stateID,
 		},
 		&insolar.MessageSendOptions{
 			Receiver: &node,

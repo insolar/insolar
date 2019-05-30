@@ -20,7 +20,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/magiconair/properties/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 type tCase struct {

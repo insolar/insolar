@@ -1,0 +1,163 @@
+syntax = "proto3";
+
+package packet;
+
+import "github.com/gogo/protobuf/gogoproto/gogo.proto";
+import "github.com/insolar/insolar/insolar/pulse/pulse.proto";
+
+option (gogoproto.goproto_getters_all) = false;
+option (gogoproto.populate_all) = false;
+
+message Packet {
+    bytes Sender = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
+    bytes Receiver = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/host.Host"];
+    uint64 RequestID = 3;
+    string TraceID = 4;
+    uint32 Type = 5;
+
+    oneof Payload {
+        Request Request = 6;
+        Response Response = 7;
+    }
+}
+
+message Request {
+    oneof Request {
+        Ping Ping = 1;
+        RPCRequest RPC = 2;
+        CascadeRequest Cascade = 3;
+        PulseRequest Pulse = 4;
+        BootstrapRequest Bootstrap = 5;
+        AuthorizeRequest Authorize = 6;
+        RegisterRequest Register = 7;
+        GenesisRequest Genesis = 8;
+    }
+}
+
+message Response {
+    oneof Response {
+        Ping Ping = 1;
+        RPCResponse RPC = 2;
+        BasicResponse Basic = 3; // response for Cascade and Pulse requests
+        BootstrapResponse Bootstrap = 4;
+        AuthorizeResponse Authorize = 5;
+        RegisterResponse Register = 6;
+        GenesisResponse Genesis = 7;
+    }
+}
+
+message Ping {
+    // nuff said
+}
+
+message RPCRequest {
+    string Method = 1;
+    bytes Data = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/network/hostnetwork/packet/types.RPCPayload", (gogoproto.nullable) = false];
+}
+
+message Cascade {
+    repeated bytes NodeIds = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference"];
+    bytes Entropy = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Entropy", (gogoproto.nullable) = false];
+    uint32 ReplicationFactor = 3;
+}
+
+message CascadeRequest {
+    string TraceID = 1;
+    RPCRequest RPC = 2;
+    Cascade Cascade = 3;
+}
+
+message PulseRequest {
+    pulse.PulseProto Pulse = 1;
+    bytes TraceSpanData = 2;
+}
+
+message BootstrapRequest {
+    bytes JoinClaim = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim"];
+    uint32 LastNodePulse = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    Permission Permission = 3;
+}
+
+message AuthorizeRequest {
+    bytes Certificate = 1;
+}
+
+message RegisterRequest {
+    uint64 SessionID = 1;
+    string Version = 2;
+    bytes JoinClaim = 3 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim"];
+}
+
+message GenesisRequest {
+    uint32 LastPulse = 1 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    bytes Discovery = 2 [(gogoproto.customtype) = "github.com/insolar/insolar/network/consensus/packets.NodeJoinClaim"];
+}
+
+message RPCResponse {
+    bytes Result = 1;
+    string Error = 2;
+}
+
+enum ResponseCode {
+    Accepted = 0;
+    Rejected = 1;
+    Redirected = 2;
+    ReconnectRequired = 3;
+    UpdateSchedule = 4;
+}
+
+message Permission {
+    PermissionPayload Payload = 1 [(gogoproto.nullable) = false];
+    bytes Signature = 2;
+}
+
+message PermissionPayload {
+    bytes JoinerPublicKey = 1;
+	int64 UTC = 2;
+    string ReconnectTo = 3;
+    bytes DiscoveryRef = 4 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.Reference", (gogoproto.nullable) = false];
+}
+
+message BootstrapResponse {
+    ResponseCode Code = 1;
+    string RejectReason = 2;
+    uint32 ETA = 3;
+    uint32 AssignShortID = 4;
+    uint32 UpdateSincePulse = 5 [(gogoproto.customtype) = "github.com/insolar/insolar/insolar.PulseNumber", (gogoproto.nullable) = false];
+    string RedirectHost = 6;
+    uint32 NetworkSize = 7;
+    Permission Permission = 8;
+}
+
+message BasicResponse {
+    bool Success = 1;
+    string Error = 2;
+}
+
+enum BasicResponseCode {
+    Confirmed = 0;
+    Denied = 1;
+    Retry = 2;
+}
+
+message AuthorizeResponse {
+    BasicResponseCode Code = 1;
+    string Error = 2;
+    AuthorizationData Data = 3;
+}
+
+message AuthorizationData {
+    uint64 SessionID = 1;
+    uint32 AssignShortID = 2;
+}
+
+message RegisterResponse {
+    BasicResponseCode Code = 1;
+    int64 RetryIn = 2;
+    string Error = 3;
+}
+
+message GenesisResponse {
+    GenesisRequest Response = 1;
+    string Error = 2;
+}
