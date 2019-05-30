@@ -24,6 +24,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/insolar/insolar/pulsar"
+	"github.com/insolar/insolar/pulsar/entropygenerator"
+
 	message2 "github.com/ThreeDotsLabs/watermill/message"
 	"github.com/ThreeDotsLabs/watermill/message/infrastructure/gochannel"
 	"github.com/gojuno/minimock"
@@ -1151,11 +1154,9 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			parcel.GetSenderMock.Return(notMeRef)
 
 			ctx := inslogger.ContextWithTrace(suite.ctx, "req")
-
-			changePulse()
-			//pulse := pulsar.NewPulse(1, parcel.Pulse(), &entropygenerator.StandardEntropyGenerator{})
-			//err := suite.lr.OnPulse(ctx, *pulse)
-			//suite.Require().NoError(err)
+			pulse := pulsar.NewPulse(1, parcel.Pulse(), &entropygenerator.StandardEntropyGenerator{})
+			err := suite.lr.OnPulse(ctx, *pulse)
+			suite.Require().NoError(err)
 
 			_, err = suite.lr.FlowDispatcher.WrapBusHandle(ctx, parcel)
 
