@@ -47,7 +47,7 @@ func getCallInfo(skipCallNumber int) *callInfo {
 	}
 }
 
-func stripPackageName(packageName string) string { // nolint: deadcode
+func stripPackageName(packageName string) string { // nolint: deadcode, unused
 	result := strings.TrimPrefix(packageName, insolarPrefix)
 	i := strings.Index(result, ".")
 	if result == packageName || i == -1 {

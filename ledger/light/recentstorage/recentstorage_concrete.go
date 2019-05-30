@@ -29,7 +29,6 @@ import (
 type ConcreteProvider struct {
 	pendingStorages map[insolar.ID]*PendingStorageConcrete
 
-	indexLock   sync.Mutex // nolint: structcheck
 	pendingLock sync.Mutex
 }
 
