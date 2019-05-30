@@ -758,5 +758,138 @@ func TestInMemoryIndex_SetResult(t *testing.T) {
 		require.Equal(t, pn, buck.fullFilament[0].PN)
 		require.Equal(t, pn+1, buck.fullFilament[1].PN)
 	})
+}
 
+func TestInMemoryIndex_RefreshState(t *testing.T) {
+	t.Run("err when no lifeline", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+
+		err := idx.RefreshState(ctx, pn, objID)
+
+		require.Error(t, err, ErrLifelineNotFound)
+	})
+
+	t.Run("works fine. req and res", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+		idx.createBucket(ctx, pn, objID)
+		buck := idx.buckets[pn][objID]
+		buck.notClosedRequestsIndex = map[insolar.PulseNumber]map[insolar.ID]*record.Request{
+			pn + 1: {},
+			pn:     {},
+		}
+		buck.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
+
+		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		req := record.Request{Object: objRef}
+		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{record.Wrap(req)}})
+
+		res := record.Result{Request: *objRef}
+		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(res)}})
+
+		err := idx.RefreshState(ctx, pn, objID)
+		require.NoError(t, err)
+
+		require.Equal(t, true, buck.isStateCalculated)
+		require.Equal(t, 2, len(buck.fullFilament))
+		require.Equal(t, 0, len(buck.notClosedRequests))
+		require.Equal(t, 0, len(buck.notClosedRequestsIndex[pn]))
+		require.Equal(t, 0, len(buck.notClosedRequestsIndex[pn+1]))
+	})
+
+	t.Run("works fine. req and res", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+		idx.createBucket(ctx, pn, objID)
+		buck := idx.buckets[pn][objID]
+		buck.notClosedRequestsIndex = map[insolar.PulseNumber]map[insolar.ID]*record.Request{
+			pn + 1: {},
+			pn:     {},
+		}
+		buck.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
+
+		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		req := record.Request{Object: objRef}
+		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{record.Wrap(req)}})
+
+		res := record.Result{Request: *objRef}
+		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(res)}})
+
+		err := idx.RefreshState(ctx, pn, objID)
+		require.NoError(t, err)
+
+		require.Equal(t, true, buck.isStateCalculated)
+		require.Equal(t, 2, len(buck.fullFilament))
+		require.Equal(t, 0, len(buck.notClosedRequests))
+		require.Equal(t, 0, len(buck.notClosedRequestsIndex[pn]))
+		require.Equal(t, 0, len(buck.notClosedRequestsIndex[pn+1]))
+	})
+
+	t.Run("works fine. open pending", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+		idx.createBucket(ctx, pn, objID)
+		buck := idx.buckets[pn][objID]
+		buck.notClosedRequestsIndex = map[insolar.PulseNumber]map[insolar.ID]*record.Request{
+			pn: {},
+		}
+		buck.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
+
+		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		req := record.Request{Object: objRef}
+		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(req)}})
+
+		err := idx.RefreshState(ctx, pn, objID)
+		require.NoError(t, err)
+
+		require.Equal(t, true, buck.isStateCalculated)
+		require.Equal(t, 1, len(buck.fullFilament))
+		require.Equal(t, 1, len(buck.notClosedRequests))
+		require.Equal(t, req, buck.notClosedRequests[0])
+		require.Equal(t, 1, len(buck.notClosedRequestsIndex[pn]))
+	})
+
+	t.Run("calculates readPendingUntil properly", func(t *testing.T) {
+		ctx := inslogger.TestContext(t)
+		pn := gen.PulseNumber()
+		objID := gen.ID()
+		idx := NewInMemoryIndex()
+		idx.createBucket(ctx, pn, objID)
+		buck := idx.buckets[pn][objID]
+
+		objRef := insolar.NewReference(insolar.ID{}, *insolar.NewID(123, nil))
+		req := record.Request{Object: objRef}
+		res := record.Result{Request: *objRef}
+		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn, Records: []record.Virtual{record.Wrap(req), record.Wrap(res)}})
+
+		objRefS := insolar.NewReference(insolar.ID{}, *insolar.NewID(567, nil))
+		reqS := record.Request{Object: objRefS}
+		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn + 1, Records: []record.Virtual{record.Wrap(reqS)}})
+
+		objRefT := insolar.NewReference(insolar.ID{}, *insolar.NewID(888, nil))
+		reqT := record.Request{Object: objRefT}
+		resT := record.Result{Request: *objRefT}
+		buck.fullFilament = append(buck.fullFilament, chainLink{PN: pn + 2, Records: []record.Virtual{record.Wrap(reqT), record.Wrap(resT)}})
+
+		buck.notClosedRequestsIndex = map[insolar.PulseNumber]map[insolar.ID]*record.Request{
+			pn:     {},
+			pn + 1: {},
+			pn + 2: {},
+		}
+		buck.requestPNIndex = map[insolar.ID]insolar.PulseNumber{}
+
+		err := idx.RefreshState(ctx, pn, objID)
+		require.NoError(t, err)
+
+		require.Equal(t, pn, *buck.readPendingUntil)
+	})
 }

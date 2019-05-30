@@ -257,20 +257,17 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 	b.Lock()
 	defer b.Unlock()
 
-	notClosedRequests := map[insolar.PulseNumber]map[insolar.ID]*record.Request{}
-	requestPN := map[insolar.ID]insolar.PulseNumber{}
-
 	for _, chainLink := range b.fullFilament {
 		for _, chainPart := range chainLink.Records {
 			tChainPart := chainPart
 			switch r := record.Unwrap(&tChainPart).(type) {
 			case *record.Request:
-				notClosedRequests[chainLink.PN][*r.Object.Record()] = r
-				requestPN[*r.Object.Record()] = chainLink.PN
+				b.notClosedRequestsIndex[chainLink.PN][*r.Object.Record()] = r
+				b.requestPNIndex[*r.Object.Record()] = chainLink.PN
 			case *record.Result:
-				reqPN, ok := requestPN[*r.Request.Record()]
+				reqPN, ok := b.requestPNIndex[*r.Request.Record()]
 				if ok {
-					delete(notClosedRequests[reqPN], *r.Request.Record())
+					delete(b.notClosedRequestsIndex[reqPN], *r.Request.Record())
 				}
 			}
 		}
@@ -278,17 +275,17 @@ func (i *InMemoryIndex) RefreshState(ctx context.Context, pn insolar.PulseNumber
 
 	isEarliestFound := false
 
-	for _, chainLink := range b.fullFilament {
-		if len(notClosedRequests[chainLink.PN]) == 0 {
+	for i, chainLink := range b.fullFilament {
+		if len(b.notClosedRequestsIndex[chainLink.PN]) == 0 {
 			if isEarliestFound {
 				continue
 			}
 
-			b.readPendingUntil = &chainLink.PN
+			b.readPendingUntil = &b.fullFilament[i].PN
 			isEarliestFound = true
 
 		} else {
-			for _, ncr := range notClosedRequests[chainLink.PN] {
+			for _, ncr := range b.notClosedRequestsIndex[chainLink.PN] {
 				b.notClosedRequests = append(b.notClosedRequests, *ncr)
 			}
 		}
