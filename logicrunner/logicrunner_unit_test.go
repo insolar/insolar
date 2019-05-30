@@ -997,14 +997,10 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 			lck.Unlock()
 
 			changePulse := func() {
-				//fmt.Printf("AALEKEEV: changePulse() called:\n%s\n\n\n", debug.Stack())
-				//time.Sleep(1 * time.Second)
-
 				lck.Lock()
 				defer lck.Unlock()
 				pn += 1
 				pnCopy := pn
-				//lck.Unlock()
 
 				pulse := insolar.Pulse{PulseNumber: insolar.PulseNumber(pnCopy)}
 				ctx := inslogger.ContextWithTrace(suite.ctx, "pulse-"+strconv.Itoa(pnCopy))
@@ -1013,47 +1009,28 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				return
 			}
 
-			if test.when == whenRegisterRequest {
-				// This is a special case because TODO
-				suite.jc.IsAuthorizedFunc = func(
-					ctx context.Context, role insolar.DynamicRole, id insolar.ID, pnArg insolar.PulseNumber, obj insolar.Reference,
-				) (bool, error) {
-					return true, nil
+			suite.jc.IsAuthorizedFunc = func(
+				ctx context.Context, role insolar.DynamicRole, id insolar.ID, pnArg insolar.PulseNumber, obj insolar.Reference,
+			) (bool, error) {
+				if pnArg == 101 {
+					return false, nil
 				}
-			} else {
-				//var isAuthorizedLock sync.Mutex
-				suite.jc.IsAuthorizedFunc = func(
-					ctx context.Context, role insolar.DynamicRole, id insolar.ID, pnArg insolar.PulseNumber, obj insolar.Reference,
-				) (bool, error) {
-					//isAuthorizedLock.Lock()
-					//defer isAuthorizedLock.Unlock()
-					//fmt.Printf("AALEKSEEV: IsAuthorized called, pnArg = %v\n", pnArg)
-					if pnArg == 101 {
-						//fmt.Printf("AALEKSEEV: IsAuthorized - returns false\n")
-						return false, nil
-					}
 
-					if test.when == whenIsAuthorized {
-						//fmt.Printf("AALEKSEEV: IsAuthorized - calls changePulse\n")
-						// Please note that changePulse calls lr.ChangePulse which calls IsAuthorized.
-						// In other words this procedure is not called sequentially!
-						changePulse()
-					}
-
-					lck.Lock()
-					defer lck.Unlock()
-
-					//fmt.Printf("AALEKSEEV: IsAuthorized - pn == %v, returns %v\n", pn, pn == 100)
-					return pn == 100, nil
+				if test.when == whenIsAuthorized {
+					// Please note that changePulse calls lr.ChangePulse which calls IsAuthorized.
+					// In other words this procedure is not called sequentially!
+					changePulse()
+					//// return false, flow.ErrCancelled
 				}
+
+				lck.Lock()
+				defer lck.Unlock()
+
+				return pn == 100, nil
 			}
 
 			if test.when > whenIsAuthorized {
-				// THIS LOCKS!
-				//var registerRequestLock sync.Mutex
 				suite.am.RegisterRequestFunc = func(ctx context.Context, req record.Request) (*insolar.ID, error) {
-					//registerRequestLock.Lock()
-					//defer registerRequestLock.Unlock()
 					if test.when == whenRegisterRequest {
 						changePulse()
 						// This test uses real Flow implementation which may react
