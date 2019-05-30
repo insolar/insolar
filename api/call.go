@@ -19,7 +19,6 @@ package api
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"github.com/square/go-jose"
 	"io/ioutil"
 	"net/http"
@@ -98,19 +97,19 @@ func (ar *Runner) makeCall(ctx context.Context, signedPayload SignedPayload, pub
 
 	type PostParams = map[string]interface{}
 
-	pb,_  := public.MarshalJSON()
-	sg,_  := signature.CompactSerialize()
+	publicJSON, err := public.MarshalJSON()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ makeCall ] failed to marshal public")
+	}
+	jwsToken, err := signature.CompactSerialize()
+	if err != nil {
+		return nil, errors.Wrap(err, "[ makeCall ] failed to serialize jws token")
+	}
 
-	//postParams := PostParams{
-	//	"jwk": string(pb),
-	//	"jws": sg,
-	//}
-
-	fmt.Println("insMarshalData", string(pb), sg)
-
-	args, err := insolar.MarshalArgs(string(pb), sg)
-
-	fmt.Println("insMarshal", args)
+	args, err := insolar.MarshalArgs(string(publicJSON), jwsToken)
+	if err != nil {
+		return nil, errors.Wrap(err, "[ makeCall ] failed to marshal arguments")
+	}
 
 	res, err := ar.ContractRequester.SendRequest(
 		ctx,
