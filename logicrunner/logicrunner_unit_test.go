@@ -1023,7 +1023,6 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 					// Please note that changePulse calls lr.ChangePulse which calls IsAuthorized.
 					// In other words this procedure is not called sequentially!
 					changePulse()
-					//// return false, flow.ErrCancelled
 				}
 
 				lck.Lock()
@@ -1036,10 +1035,10 @@ func (suite *LogicRunnerTestSuite) TestCallMethodWithOnPulse() {
 				suite.am.RegisterRequestFunc = func(ctx context.Context, req record.Request) (*insolar.ID, error) {
 					if test.when == whenRegisterRequest {
 						changePulse()
-						// This test uses real Flow implementation which may react
-						// to the pulse change with a little delay. Thus we have to
-						// explicitly return ErrCancelled as if RegisterRequest was
-						// canceled by the Flow descriptor.
+						// Due to specific implementation of HandleCall.executeActual
+						// for this particular test we have to explicitly return
+						// ErrCancelled. Otherwise it's possible that RegisterRequest
+						// Procedure will return normally before Flow cancels it.
 						return nil, flow.ErrCancelled
 					}
 
@@ -1179,8 +1178,8 @@ func TestLogicRunner(t *testing.T) {
 	// Of course this may sound as a good idea. This will run multiple
 	// test in parallel which will make them execute faster. Right?
 	// Wrong! You see, by historical reasons LogicRunnerTestSuite
-	// is in fact 4 independent tests which share their state. Guess
-	// what happens when they run in parallel? Right, it seem to work
+	// is in fact 4 independent tests which share their state (suite.* fields).
+	// Guess what happens when they run in parallel? Right, it seem to work
 	// at first but after some time someone will spent a lot of exciting
 	// days trying to figure out why these test sometimes fail on CI.
 	// In other words dont you dare to use t.Parallel() here unless you are
