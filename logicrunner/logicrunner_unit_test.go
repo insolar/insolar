@@ -1179,7 +1179,7 @@ func TestLogicRunner(t *testing.T) {
 	// is in fact 4 independent tests which share their state (suite.* fields).
 	// Guess what happens when they run in parallel? Right, it seem to work
 	// at first but after some time someone will spent a lot of exciting
-	// days trying to figure out why these test sometimes fail on CI.
+	// days trying to figure out why these test sometimes fail (e.g. on CI).
 	// In other words dont you dare to use t.Parallel() here unless you are
 	// willing to completely rewrite the whole LogicRunnerTestSuite, OK?
 	suite.Run(t, new(LogicRunnerTestSuite))
